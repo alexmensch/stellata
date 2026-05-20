@@ -1387,5 +1387,608 @@ class AstrometryCountsTests(unittest.TestCase):
         self.assertEqual(counts["hip2_long_baseline"], 0)
 
 
+# ─── Stage 4: orbital-element selection ──────────────────────────────
+
+
+def _ti_from_campbell(
+    a_mas: float, i_rad: float, Omega_rad: float, omega_rad: float,
+) -> tuple[float, float, float, float]:
+    """Forward Thiele-Innes from Campbell — Halbwachs+ 2023 Eq. (16)
+    convention. The unit tests round-trip through ``_thiele_innes_to_
+    campbell`` so any sign/ordering drift in the inverse algebra
+    surfaces immediately.
+    """
+    co, so = math.cos(omega_rad), math.sin(omega_rad)
+    cO, sO = math.cos(Omega_rad), math.sin(Omega_rad)
+    ci = math.cos(i_rad)
+    A = a_mas * (co * cO - so * sO * ci)
+    B = a_mas * (co * sO + so * cO * ci)
+    F = a_mas * (-so * cO - co * sO * ci)
+    G = a_mas * (-so * sO + co * cO * ci)
+    return A, B, F, G
+
+
+class ThieleInnesAlgebraTests(unittest.TestCase):
+    def test_roundtrip_recovers_campbell(self) -> None:
+        # Pick a non-trivial orbit well away from any boundary case
+        # (i!=0, Ω in upper half, ω in lower half).
+        a_in, i_in = 12.5, math.radians(57.3)
+        Omega_in, omega_in = math.radians(110.0), math.radians(45.0)
+        A, B, F, G = _ti_from_campbell(a_in, i_in, Omega_in, omega_in)
+        got = bb._thiele_innes_to_campbell(A, B, F, G)
+        self.assertIsNotNone(got)
+        assert got is not None
+        a_out, i_out, Omega_out, omega_out = got
+        self.assertAlmostEqual(a_out, a_in, places=9)
+        self.assertAlmostEqual(i_out, i_in, places=9)
+        self.assertAlmostEqual(Omega_out, Omega_in, places=9)
+        self.assertAlmostEqual(omega_out, omega_in, places=9)
+
+    def test_omega_wrapped_into_upper_half(self) -> None:
+        # Feed a Campbell with Ω in the lower half — the inverse must
+        # collapse it into [0, π) and rotate ω by π so the physical
+        # orbit stays the same.
+        a_in, i_in = 10.0, math.radians(45.0)
+        Omega_in = math.radians(220.0)   # > π
+        omega_in = math.radians(60.0)
+        A, B, F, G = _ti_from_campbell(a_in, i_in, Omega_in, omega_in)
+        got = bb._thiele_innes_to_campbell(A, B, F, G)
+        self.assertIsNotNone(got)
+        assert got is not None
+        a_out, i_out, Omega_out, omega_out = got
+        self.assertAlmostEqual(a_out, a_in, places=9)
+        self.assertAlmostEqual(i_out, i_in, places=9)
+        self.assertGreaterEqual(Omega_out, 0.0)
+        self.assertLess(Omega_out, math.pi)
+        # The physical orbit is invariant under (Ω → Ω+π, ω → ω+π).
+        self.assertAlmostEqual(Omega_out, Omega_in - math.pi, places=9)
+        self.assertAlmostEqual(
+            omega_out, (omega_in + math.pi) % (2.0 * math.pi), places=9,
+        )
+
+    def test_degenerate_ti_returns_none(self) -> None:
+        # All zero TI quartet → degenerate. Helper returns None.
+        self.assertIsNone(bb._thiele_innes_to_campbell(0.0, 0.0, 0.0, 0.0))
+
+
+def _nss_orbital_row(
+    *, a_mas: float = 12.5, i_deg: float = 57.3,
+    Omega_deg: float = 110.0, omega_deg: float = 45.0,
+    period_days: float = 365.0,
+    t_periastron_rel_days: float = 100.0,
+    eccentricity: float = 0.1,
+) -> dict[str, str]:
+    A, B, F, G = _ti_from_campbell(
+        a_mas, math.radians(i_deg),
+        math.radians(Omega_deg), math.radians(omega_deg),
+    )
+    return {
+        "nss_solution_type": "Orbital",
+        "period": f"{period_days}",
+        "t_periastron": f"{t_periastron_rel_days}",
+        "eccentricity": f"{eccentricity}",
+        "a_thiele_innes": f"{A}",
+        "b_thiele_innes": f"{B}",
+        "f_thiele_innes": f"{F}",
+        "g_thiele_innes": f"{G}",
+    }
+
+
+class NssToCanonicalElementsTests(unittest.TestCase):
+    def test_orbital_type_recovers_full_geometry(self) -> None:
+        plx = 10.0
+        row = _nss_orbital_row(
+            a_mas=20.0, i_deg=60.0,
+            Omega_deg=30.0, omega_deg=120.0,
+            period_days=730.5, t_periastron_rel_days=200.0,
+            eccentricity=0.3,
+        )
+        o = bb.nss_to_canonical_elements(row, plx)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.P_days or 0.0, 730.5)
+        self.assertAlmostEqual(
+            o.T_jd or 0.0, 200.0 + bb.GAIA_DR3_REF_EPOCH_JD,
+        )
+        self.assertAlmostEqual(o.e or 0.0, 0.3)
+        self.assertAlmostEqual(o.a_AU or 0.0, 20.0 / plx)
+        self.assertAlmostEqual(o.i_rad or 0.0, math.radians(60.0))
+        self.assertAlmostEqual(o.Omega_rad or 0.0, math.radians(30.0))
+        self.assertAlmostEqual(o.omega_rad or 0.0, math.radians(120.0))
+        self.assertIsNone(o.q)
+        self.assertAlmostEqual(o.distance_pc or 0.0, 100.0)
+
+    def test_orbital_without_parallax_keeps_angles_drops_a_au(self) -> None:
+        row = _nss_orbital_row(a_mas=20.0)
+        o = bb.nss_to_canonical_elements(row, None)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertIsNone(o.a_AU)
+        self.assertIsNone(o.distance_pc)
+        self.assertIsNotNone(o.i_rad)
+        self.assertIsNotNone(o.Omega_rad)
+        self.assertIsNotNone(o.omega_rad)
+
+    def test_eclipsing_reads_stored_inclination_and_omega(self) -> None:
+        row = {
+            "nss_solution_type": "EclipsingBinary",
+            "period": "1.5",
+            "t_periastron": "0.0",
+            "eccentricity": "0.0",
+            "inclination": "89.5",
+            "arg_periastron": "45.0",
+        }
+        o = bb.nss_to_canonical_elements(row, 5.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.P_days or 0.0, 1.5)
+        self.assertAlmostEqual(o.i_rad or 0.0, math.radians(89.5))
+        self.assertAlmostEqual(o.omega_rad or 0.0, math.radians(45.0))
+        self.assertIsNone(o.a_AU)
+        self.assertIsNone(o.Omega_rad)
+
+    def test_eclipsing_spectro_carries_mass_ratio(self) -> None:
+        row = {
+            "nss_solution_type": "EclipsingSpectro",
+            "period": "2.0", "t_periastron": "1.0", "eccentricity": "0.0",
+            "inclination": "88.0", "arg_periastron": "10.0",
+            "mass_ratio": "0.6",
+        }
+        o = bb.nss_to_canonical_elements(row, 5.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.q or 0.0, 0.6)
+
+    def test_sb1_only_carries_omega(self) -> None:
+        row = {
+            "nss_solution_type": "SB1",
+            "period": "100.0", "t_periastron": "10.0", "eccentricity": "0.2",
+            "arg_periastron": "75.0",
+        }
+        o = bb.nss_to_canonical_elements(row, 8.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.omega_rad or 0.0, math.radians(75.0))
+        self.assertIsNone(o.i_rad)
+        self.assertIsNone(o.Omega_rad)
+        self.assertIsNone(o.a_AU)
+
+    def test_sb2_carries_mass_ratio(self) -> None:
+        row = {
+            "nss_solution_type": "SB2",
+            "period": "50.0", "t_periastron": "5.0", "eccentricity": "0.1",
+            "arg_periastron": "30.0", "mass_ratio": "0.85",
+        }
+        o = bb.nss_to_canonical_elements(row, 8.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.q or 0.0, 0.85)
+
+    def test_sb1c_compact_has_no_geometry_beyond_pte(self) -> None:
+        # "Compact" SB1C variant — only P/T/e stored. No omega.
+        row = {
+            "nss_solution_type": "SB1C",
+            "period": "12.0", "t_periastron": "3.0", "eccentricity": "0.05",
+        }
+        o = bb.nss_to_canonical_elements(row, 5.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.P_days or 0.0, 12.0)
+        self.assertIsNone(o.omega_rad)
+        self.assertIsNone(o.i_rad)
+        self.assertIsNone(o.Omega_rad)
+        self.assertIsNone(o.a_AU)
+
+    def test_unsupported_solution_type_returns_none(self) -> None:
+        row = {"nss_solution_type": "FutureNewType", "period": "1.0"}
+        self.assertIsNone(bb.nss_to_canonical_elements(row, 5.0))
+
+
+def _orb6_visual(
+    *, P_val: float = 50.0, P_unit: str = "y",
+    a_val: float = 1.0, a_unit: str = "a",
+    i_deg: float = 90.0, Omega_deg: float = 45.0, omega_deg: float = 30.0,
+    e: float = 0.5,
+    T0_val: float = 1990.0, T0_unit: str = "y",
+    grade: int = 2, ref: str = "Ref2020",
+) -> "bb.Orb6Entry":
+    return bb.Orb6Entry(
+        wds_id="00000+0000", discoverer="TST   1", components="AB",
+        hd=None, hip=None,
+        P_val=P_val, P_unit=P_unit,
+        a_val=a_val, a_unit=a_unit,
+        i_deg=i_deg, Omega_deg=Omega_deg, omega_deg=omega_deg,
+        e=e, T0_val=T0_val, T0_unit=T0_unit,
+        grade=grade, ref=ref,
+    )
+
+
+class Orb6ToCanonicalElementsTests(unittest.TestCase):
+    def test_years_arcsec_julian_year(self) -> None:
+        # α Cen-shaped row: P=79.762 y, a=17.493 arcsec.
+        entry = _orb6_visual(
+            P_val=79.762, P_unit="y",
+            a_val=17.493, a_unit="a",
+            i_deg=79.0, Omega_deg=204.0, omega_deg=232.0,
+            e=0.5179, T0_val=1875.66, T0_unit="y",
+        )
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=755.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.P_days or 0.0, 79.762 * 365.25)
+        # a_AU = 17.493 arcsec / 0.755" = 23.17 AU (α Cen sanity-check
+        # from dch.8 close-reason).
+        self.assertAlmostEqual(o.a_AU or 0.0, 17.493 * 1000.0 / 755.0)
+        self.assertAlmostEqual(o.i_rad or 0.0, math.radians(79.0))
+        self.assertAlmostEqual(o.T_jd or 0.0,
+                               bb.J2000_REF_EPOCH_JD + (1875.66 - 2000.0) * 365.25)
+        self.assertAlmostEqual(o.distance_pc or 0.0, 1000.0 / 755.0)
+
+    def test_days_mas_jd(self) -> None:
+        # Short-period close binary stored in days + mas + JD.
+        entry = _orb6_visual(
+            P_val=10.0, P_unit="d",
+            a_val=500.0, a_unit="m",
+            T0_val=2451545.0, T0_unit="d",
+        )
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=100.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.P_days or 0.0, 10.0)
+        self.assertAlmostEqual(o.a_AU or 0.0, 500.0 / 100.0)
+        self.assertAlmostEqual(o.T_jd or 0.0, 2451545.0)
+
+    def test_mjd_t0_offset(self) -> None:
+        entry = _orb6_visual(T0_val=51544.5, T0_unit="m")
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=10.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.T_jd or 0.0, 51544.5 + bb.MJD_TO_JD_OFFSET)
+
+    def test_centuries_period(self) -> None:
+        entry = _orb6_visual(P_val=15.0, P_unit="c")
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=10.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.P_days or 0.0, 15.0 * 100.0 * 365.25)
+
+    def test_unknown_period_unit_returns_none(self) -> None:
+        # ORB6 has a handful of stray '0'/'9'/'3'/'1' codes from
+        # fixed-column misalignment — skip rather than guess.
+        entry = _orb6_visual(P_unit="0")
+        self.assertIsNone(bb.orb6_to_canonical_elements(entry, plx_mas=10.0))
+
+    def test_missing_parallax_drops_a_au_but_keeps_angles(self) -> None:
+        entry = _orb6_visual()
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=None)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertIsNone(o.a_AU)
+        self.assertIsNone(o.distance_pc)
+        self.assertIsNotNone(o.i_rad)
+        self.assertIsNotNone(o.Omega_rad)
+        self.assertIsNotNone(o.omega_rad)
+
+
+class PickBestOrb6Tests(unittest.TestCase):
+    def test_lowest_grade_wins(self) -> None:
+        a = _orb6_visual(grade=4, ref="Old2010")
+        b = _orb6_visual(grade=2, ref="Old1995")
+        c = _orb6_visual(grade=3, ref="New2024")
+        self.assertIs(bb._pick_best_orb6([a, b, c]), b)
+
+    def test_grade_tie_breaks_to_most_recent_ref(self) -> None:
+        a = _orb6_visual(grade=2, ref="Ake2021")
+        b = _orb6_visual(grade=2, ref="Hei1995")
+        c = _orb6_visual(grade=2, ref="Kpt2025")
+        self.assertIs(bb._pick_best_orb6([a, b, c]), c)
+
+    def test_ref_without_year_sorts_to_bottom_on_tie(self) -> None:
+        a = _orb6_visual(grade=2, ref="Hei1995")
+        b = _orb6_visual(grade=2, ref="OldRef")     # no parseable year
+        self.assertIs(bb._pick_best_orb6([a, b]), a)
+
+
+class SystemParallaxMasTests(unittest.TestCase):
+    def test_primary_preferred(self) -> None:
+        p = bb.ComponentAstrometry(
+            astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
+            parallax_mas=5.0, pmra_masyr=0.0, pmdec_masyr=0.0,
+            ref_epoch=2016.0,
+        )
+        s = bb.ComponentAstrometry(
+            astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
+            parallax_mas=4.5, pmra_masyr=0.0, pmdec_masyr=0.0,
+            ref_epoch=2016.0,
+        )
+        self.assertEqual(bb._system_parallax_mas([p, s]), 5.0)
+
+    def test_secondary_fallback_when_primary_missing(self) -> None:
+        p = bb.ComponentAstrometry(
+            astrometry_via="unresolved", ra_deg=None, dec_deg=None,
+            parallax_mas=None, pmra_masyr=None, pmdec_masyr=None,
+            ref_epoch=None,
+        )
+        s = bb.ComponentAstrometry(
+            astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
+            parallax_mas=3.2, pmra_masyr=0.0, pmdec_masyr=0.0,
+            ref_epoch=2016.0,
+        )
+        self.assertEqual(bb._system_parallax_mas([p, s]), 3.2)
+
+    def test_no_parallax_returns_none(self) -> None:
+        a = bb.ComponentAstrometry(
+            astrometry_via="unresolved", ra_deg=None, dec_deg=None,
+            parallax_mas=None, pmra_masyr=None, pmdec_masyr=None,
+            ref_epoch=None,
+        )
+        self.assertIsNone(bb._system_parallax_mas([a, a]))
+
+    def test_non_positive_parallax_skipped(self) -> None:
+        # Negative-parallax DR3 rows (within the noise of distant
+        # sources) are skipped at the system level — they would map
+        # to a negative distance otherwise.
+        bad = bb.ComponentAstrometry(
+            astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
+            parallax_mas=-1.0, pmra_masyr=0.0, pmdec_masyr=0.0,
+            ref_epoch=2016.0,
+        )
+        good = bb.ComponentAstrometry(
+            astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
+            parallax_mas=2.5, pmra_masyr=0.0, pmdec_masyr=0.0,
+            ref_epoch=2016.0,
+        )
+        self.assertEqual(bb._system_parallax_mas([bad, good]), 2.5)
+
+
+def _ast(parallax_mas: float | None = 10.0) -> "bb.ComponentAstrometry":
+    return bb.ComponentAstrometry(
+        astrometry_via="gaia_5p",
+        ra_deg=0.0, dec_deg=0.0,
+        parallax_mas=parallax_mas,
+        pmra_masyr=0.0, pmdec_masyr=0.0,
+        ref_epoch=2016.0,
+    )
+
+
+def _indices_for_orbit(
+    *, src_to_nss: dict[int, dict[str, str]] | None = None,
+) -> "bb.IdentifierIndices":
+    return bb.build_indices(
+        athyg=[], hip2=[],
+        hip_to_gaia={}, tyc_to_gaia={},
+        src_to_nss=src_to_nss or {},
+    )
+
+
+class SelectOrbitTests(unittest.TestCase):
+    def test_nss_wins_inside_regime(self) -> None:
+        nss_row = _nss_orbital_row(period_days=200.0)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        # ORB6 visual entry also exists, but NSS takes precedence.
+        orb = [_orb6_visual(grade=1, ref="Hei2020")]
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "gaia_nss")
+        self.assertIsNotNone(orbit)
+
+    def test_orb6_visual_when_nss_period_out_of_regime(self) -> None:
+        # P = 10 yr, a not derivable below 1″ from TI (a_mas synthesised
+        # at 5_000 mas = 5″ — outside both gates).
+        nss_row = _nss_orbital_row(period_days=10 * 365.25, a_mas=5000.0)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orb = [_orb6_visual(grade=2, ref="Hei2020")]
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "orb6")
+        self.assertIsNotNone(orbit)
+
+    def test_nss_long_period_but_sub_arcsec_still_wins(self) -> None:
+        # 10 yr but a = 500 mas → < 1″ gate trips, NSS still wins.
+        nss_row = _nss_orbital_row(period_days=10 * 365.25, a_mas=500.0)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orb = [_orb6_visual(grade=2, ref="Hei2020")]
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "gaia_nss")
+        self.assertIsNotNone(orbit)
+
+    def test_secondary_nss_row_used_when_primary_has_none(self) -> None:
+        nss_row = _nss_orbital_row(period_days=100.0)
+        idx = _indices_for_orbit(src_to_nss={99: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=99, component="B", is_primary=False)
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=[], indices=idx,
+        )
+        self.assertEqual(via, "gaia_nss")
+        self.assertIsNotNone(orbit)
+
+    def test_orb6_grade_tiebreak_lowest_wins(self) -> None:
+        idx = _indices_for_orbit()
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        # Tag each grade with a distinct T0_val so the assertion below
+        # confirms which entry was actually picked.
+        orb = [
+            _orb6_visual(grade=4, ref="Old1990", T0_val=1990.0),
+            _orb6_visual(grade=2, ref="Old1985", T0_val=1985.0),
+            _orb6_visual(grade=3, ref="New2025", T0_val=2025.0),
+        ]
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "orb6")
+        self.assertIsNotNone(orbit)
+        assert orbit is not None
+        self.assertAlmostEqual(
+            orbit.T_jd or 0.0,
+            bb.J2000_REF_EPOCH_JD + (1985.0 - 2000.0) * 365.25,
+        )
+
+    def test_orb6_spectroscopic_grade_9_when_no_visual(self) -> None:
+        idx = _indices_for_orbit()
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orb = [_orb6_visual(grade=9, ref="Spc2020")]
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "orb6_spectroscopic")
+        self.assertIsNotNone(orbit)
+
+    def test_visual_orb6_beats_spectroscopic_when_both_present(self) -> None:
+        idx = _indices_for_orbit()
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orb = [
+            _orb6_visual(grade=4, ref="Vis1990"),
+            _orb6_visual(grade=9, ref="Spc2025"),
+        ]
+        _, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "orb6")
+
+    def test_visual_only_pair_with_no_orbits_routes_to_none(self) -> None:
+        idx = _indices_for_orbit()
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=[], indices=idx,
+        )
+        self.assertEqual(via, "none")
+        self.assertIsNone(orbit)
+
+    def test_grade_7_orb6_falls_through_both_gates(self) -> None:
+        # Grade 7 isn't in the visual set OR the spectroscopic set —
+        # rare/preliminary fits get no orbit_via (none) rather than a
+        # default that misleads downstream.
+        idx = _indices_for_orbit()
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orb = [_orb6_visual(grade=7, ref="Prelim2020")]
+        _, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=orb, indices=idx,
+        )
+        self.assertEqual(via, "none")
+
+
+class IterDecomposingPairsTests(unittest.TestCase):
+    def test_skips_non_decomposing_pair(self) -> None:
+        # Pair "ABC" doesn't split (3-letter unbraced is ambiguous).
+        # Resolve_all_pairs would emit zero components for it; the
+        # iterator must skip without consuming a slot.
+        p1 = _wds_pair(wds_id="W1", components="AB")
+        p2 = _wds_pair(wds_id="W2", components="ABC")
+        p3 = _wds_pair(wds_id="W3", components="CD")
+        comps = [
+            _resolved(gaia=1, wds_id="W1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="W1", component="B", is_primary=False),
+            _resolved(gaia=3, wds_id="W3", component="C", is_primary=True),
+            _resolved(gaia=4, wds_id="W3", component="D", is_primary=False),
+        ]
+        ast = [_ast(), _ast(), _ast(), _ast()]
+        yielded = list(bb.iter_decomposing_pairs([p1, p2, p3], comps, ast))
+        self.assertEqual(len(yielded), 2)
+        self.assertEqual(yielded[0][0].wds_id, "W1")
+        self.assertEqual(yielded[1][0].wds_id, "W3")
+
+    def test_cursor_desync_raises(self) -> None:
+        # Inject a mismatch: pair W1 expects components named W1 but
+        # the parallel list has W2 in slot 0 → must raise.
+        p = _wds_pair(wds_id="W1", components="AB")
+        comps = [
+            _resolved(gaia=1, wds_id="W2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="W2", component="B", is_primary=False),
+        ]
+        ast = [_ast(), _ast()]
+        with self.assertRaises(RuntimeError):
+            list(bb.iter_decomposing_pairs([p], comps, ast))
+
+    def test_length_mismatch_raises(self) -> None:
+        p = _wds_pair(wds_id="W1", components="AB")
+        with self.assertRaises(ValueError):
+            list(bb.iter_decomposing_pairs(
+                [p],
+                [_resolved(gaia=1)],
+                [_ast(), _ast()],
+            ))
+
+
+class SelectOrbitsAllTests(unittest.TestCase):
+    def test_per_pair_emission_order_matches_pairs(self) -> None:
+        nss_row = _nss_orbital_row(period_days=200.0)
+        p1 = _wds_pair(wds_id="W1", components="AB")
+        p2 = _wds_pair(wds_id="W2", components="AB")
+        comps = [
+            _resolved(gaia=42, wds_id="W1", component="A", is_primary=True),
+            _resolved(gaia=None, wds_id="W1", component="B", is_primary=False),
+            _resolved(gaia=43, wds_id="W2", component="A", is_primary=True),
+            _resolved(gaia=None, wds_id="W2", component="B", is_primary=False),
+        ]
+        ast = [_ast(), _ast(), _ast(), _ast()]
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        # Visual ORB6 only on W2.
+        orb6 = [_orb6_visual(grade=2, ref="Hei2020")]
+        orb6[0] = bb.Orb6Entry(  # rebind to W2's id+components
+            wds_id="W2", discoverer="TST   1", components="AB",
+            hd=None, hip=None,
+            P_val=50.0, P_unit="y", a_val=1.0, a_unit="a",
+            i_deg=90.0, Omega_deg=45.0, omega_deg=30.0, e=0.5,
+            T0_val=1990.0, T0_unit="y",
+            grade=2, ref="Ref2020",
+        )
+        out = bb.select_orbits_all(
+            pairs=[p1, p2], components=comps, astrometry=ast,
+            orb6=orb6, indices=idx,
+        )
+        self.assertEqual(len(out), 2)
+        self.assertEqual(out[0][1], "gaia_nss")
+        self.assertEqual(out[1][1], "orb6")
+
+
+class OrbitCountsTests(unittest.TestCase):
+    def test_every_canonical_key_present(self) -> None:
+        rows: list[tuple[bb.OrbitElements | None, str]] = [
+            (None, "gaia_nss"),
+            (None, "orb6"),
+            (None, "none"),
+        ]
+        counts = bb.orbit_counts(rows)
+        self.assertEqual(set(counts.keys()), set(bb.ORBIT_VIA_VALUES))
+        self.assertEqual(counts["gaia_nss"], 1)
+        self.assertEqual(counts["orb6"], 1)
+        self.assertEqual(counts["orb6_spectroscopic"], 0)
+        self.assertEqual(counts["none"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
