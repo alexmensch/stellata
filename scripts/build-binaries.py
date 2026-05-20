@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Catalogue builder for the source-ID-anchored binary-system pipeline — Stages 1-4.
+"""Catalogue builder for the source-ID-anchored binary-system pipeline — Stages 1-7.
 
 Stage 1 (``stellata-dch.27``) loads every reference catalog the resolution
 chain needs (WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia HIP/Tyc
@@ -46,9 +46,29 @@ none}``.
 Stage 2 emits ``data/gaia_astrometry_source_id_request.tsv`` (the deduped
 union of source_ids resolved in tiers 1-2), which
 ``scripts/refresh-gaia-astrometry.py`` (dch.29) reads to drive its ADQL
-query. The final ``data/multiples.tsv`` is produced by Stage 6
-(``stellata-dch.32``); until Stages 5-7 land this script remains a
-load-resolve-attach-pick-and-report harness.
+query.
+
+Stage 5 (``stellata-dch.32``) classifies each WDS pair as physical or
+optical via a 5-tier ID-anchored cascade: WDS Notes flag chars (T/V/Z
+keep, S/U/X/Y reject) → both-Gaia gate (parallax 3σ + per-axis PM
+≤5 mas/yr) → asymmetric-Gaia gate (Gaia primary + HIP2-anchored
+secondary, or vice versa; catches Sirius A-C/D/E/F directly) →
+orbit-on-file override (Stage 4 selected real orbital elements, so
+the pair is empirically bound; rescues WD-companion pairs like
+Sirius A-B that mag-gap alone would reject) → mag-gap heuristic
+backstop (|Δmag| ≤ 5 keep).
+
+Stage 6 (``stellata-dch.32``) emits ``data/multiples.tsv`` — two rows
+per kept pair, columns per ``MULTIPLES_TSV_COLUMNS`` (system_id,
+component, hip / gaia_source_id, ICRS x/y/z parsec position, AT-HYG
+photometric / spectral metadata, orbital elements from Stage 4,
+resolve / astrometry / orbit provenance tags). Phase 3's v6 binary
+writer is the consumer.
+
+Stage 7 (``stellata-dch.32``) flattens per-strategy + per-tier counters
+into ``scripts/build-binaries-expected.json`` for ``stellata-dch.39``
+(Phase 4 Tier B) to gate population statistical bounds against.
+Refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
 
 Run via ``npm run build:binaries`` (or directly: ``python3
 scripts/build-binaries.py``). Idempotent against ``data/multiples.tsv``;
@@ -61,7 +81,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -93,6 +115,13 @@ SRC_GAIA_ASTROMETRY = DATA / "gaia_dr3_astrometry.tsv"
 
 OUT_MULTIPLES = DATA / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia_astrometry_source_id_request.tsv"
+
+# Committed snapshot of per-strategy / per-tier counts emitted at the
+# end of every build. ``stellata-dch.39`` (Phase 4 Tier B) will pin
+# bounds against this file from the TS side. The Python comparator
+# below mirrors ``build-catalog.ts``'s ``assertOrUpdateBuildCounts``
+# flow — refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
+EXPECTED_COUNTS = SCRIPT.parent / "build-binaries-expected.json"
 
 # Expected fraction of AT-HYG rows that carry a Gaia DR3 source_id. AT-HYG
 # documentation reports ~98% coverage (the remainder are bright stars Gaia
@@ -569,15 +598,19 @@ class GaiaAstrometryRow:
     """One row of ``gaia_dr3_astrometry.tsv``. Stage 3 reads the 5p
     columns plus the two quality flags (``ruwe`` and
     ``ipd_frac_multi_peak``) that gate the NSS-systemic fallback;
-    photometry columns are surfaced for future Stage 5 use (parallax-
-    3σ + mag-gap optical filter)."""
+    Stage 5 reads the per-axis errors for the parallax-3σ /
+    pm-difference both-Gaia gate, and the photometry columns for the
+    mag-gap heuristic backstop."""
 
     source_id: int
     ra_deg: float
     dec_deg: float
     parallax_mas: float | None
+    parallax_error_mas: float | None
     pmra_masyr: float | None
+    pmra_error_masyr: float | None
     pmdec_masyr: float | None
+    pmdec_error_masyr: float | None
     ref_epoch: float
     ruwe: float | None
     ipd_frac_multi_peak: float | None
@@ -614,8 +647,11 @@ def parse_gaia_astrometry(path: Path) -> dict[int, GaiaAstrometryRow]:
                 ra_deg=ra,
                 dec_deg=dec,
                 parallax_mas=safe_float(r.get("parallax") or ""),
+                parallax_error_mas=safe_float(r.get("parallax_error") or ""),
                 pmra_masyr=safe_float(r.get("pmra") or ""),
+                pmra_error_masyr=safe_float(r.get("pmra_error") or ""),
                 pmdec_masyr=safe_float(r.get("pmdec") or ""),
+                pmdec_error_masyr=safe_float(r.get("pmdec_error") or ""),
                 ref_epoch=ref_epoch,
                 ruwe=safe_float(r.get("ruwe") or ""),
                 ipd_frac_multi_peak=safe_float(r.get("ipd_frac_multi_peak") or ""),
@@ -2008,6 +2044,697 @@ def orbit_counts(
     return counts
 
 
+# ─── Stage 5: optical-pair filter cascade ────────────────────────────
+
+
+# Per-pair classification tags Stage 5 may emit. Both the headline log
+# line and ``optical_counts`` walk this tuple so adding a new tier (or
+# splitting an existing tier) only edits the canonical ordering here.
+OPTICAL_VIA_VALUES: tuple[str, ...] = (
+    "wds_notes_kept",
+    "wds_notes_rejected",
+    "gaia_kept",
+    "gaia_rejected",
+    "asymm_kept",
+    "asymm_rejected",
+    "orbit_kept",
+    "mag_heuristic_kept",
+    "mag_heuristic_rejected",
+)
+
+# Orbit-via values that count as "orbit on file" for tier 4. Tier 4
+# fires for pairs Stage 4 selected real orbital elements for — these
+# are direct evidence of physical association that beats the mag-gap
+# heuristic (e.g. Sirius A-B has a grade-2 ORB6 visual orbit but a
+# 9.9-mag gap to its white-dwarf companion, which mag-gap alone would
+# misclassify as optical).
+ORBIT_VIA_ON_FILE: frozenset[str] = frozenset({
+    "gaia_nss", "orb6", "orb6_spectroscopic",
+})
+
+# WDS Notes flag-char semantics (cols 107-110 of WDS_SUMM). The "kept"
+# chars confirm physical association (common proper motion, parallax,
+# orbital arc); the "rejected" chars confirm optical contamination
+# (catalog-flagged not-physical, unconfirmed, or spurious). Other chars
+# carry orthogonal meta (orbit grades, identifier collisions, …) and
+# leave the tier silent so the Gaia / mag-gap tiers can decide.
+WDS_NOTES_PHYSICAL_CHARS: frozenset[str] = frozenset({"T", "V", "Z"})
+WDS_NOTES_OPTICAL_CHARS: frozenset[str] = frozenset({"S", "U", "X", "Y"})
+
+# Both-Gaia gate (tier 2). Parallax must agree within 3σ of the
+# combined-axis error; per-axis PM differences must each be within
+# 5 mas/yr. Parallax is the dominant signal — a 3σ disagreement on
+# parallax alone is enough to reject. PM is a refinement: if parallax
+# agrees and PM data is missing, accept; if parallax agrees but PM
+# disagrees on any populated axis, reject.
+BOTH_GAIA_PLX_GATE_SIGMA = 3.0
+BOTH_GAIA_PM_GATE_DELTA_MASYR = 5.0
+
+# Asymmetric-Gaia gate (tier 3). When only one component has a Gaia
+# 5p row and the other is Gaia-saturated, the saturated star's HIP2
+# parallax becomes the anchor distance. The 3σ test runs against the
+# combined Gaia + HIP2 parallax error. Sirius A-C/D/E/F is the
+# motivating case: A (Sirius) has ~378 mas via HIP2; C/D/E/F have
+# <1 mas via Gaia — an enormous excess versus the σ_combined floor.
+ASYMM_PLX_GATE_SIGMA = 3.0
+
+# Mag-gap backstop (tier 4). Used only when both Gaia tiers are silent
+# (faint Tycho-only systems where neither component has a Gaia 5p
+# row, plus the rare AT-HYG-only / position-tier residual). Physical
+# WDS pairs are usually within ~5 mag — wider gaps shade into chance
+# projection. Coarse gate; the strong filtering is in the Gaia tiers.
+MAG_GAP_HEURISTIC_THRESHOLD = 5.0
+
+
+@dataclass
+class OpticalClassification:
+    """Per-pair Stage 5 verdict. ``is_physical`` is the join the
+    multiples.tsv emit step keys on; ``optical_via`` carries the tier
+    that decided so Stage 7's stats line can attribute each
+    keep/reject correctly."""
+
+    is_physical: bool
+    optical_via: str
+
+
+def _gaia_for_component(
+    component: ResolvedComponent, indices: IdentifierIndices,
+) -> GaiaAstrometryRow | None:
+    """Tier 2 / tier 3 helper: the component's Gaia 5p astrometry row
+    if both (a) the component resolved to a source_id and (b) that
+    source_id is covered by ``gaia_dr3_astrometry.tsv``. Returns
+    ``None`` for Gaia-saturated bright primaries — those route through
+    HIP2 in the tier-3 asymmetric branch."""
+    if component.gaia_source_id is None:
+        return None
+    return indices.src_to_astrometry.get(component.gaia_source_id)
+
+
+def _hip2_anchor(
+    component: ResolvedComponent, indices: IdentifierIndices,
+) -> tuple[float, float | None] | None:
+    """Tier 3 helper: the HIP2 (parallax, e_parallax) anchor for a
+    Gaia-saturated component. Returns ``None`` when no HIP is known
+    (component never resolved through any tier with a HIP) or the
+    HIP2 catalog doesn't cover the HIP, or the HIP2 row lacks a
+    parallax value. The error term may be ``None`` — the tier's
+    consistency test treats a missing σ_HIP2 as the Gaia σ alone
+    (the HIP2 contribution drops out of the quadrature)."""
+    hip = component.hip
+    if hip is None:
+        return None
+    row = indices.hip_to_hip2.get(hip)
+    if row is None or row.plx_mas is None:
+        return None
+    return row.plx_mas, row.e_plx_mas
+
+
+def _both_gaia_consistent(
+    p: GaiaAstrometryRow, s: GaiaAstrometryRow,
+) -> bool | None:
+    """Tier 2 verdict. Returns ``True`` (physical), ``False`` (optical),
+    or ``None`` (tier silent — fall through to mag-gap heuristic)
+    when there is not enough Gaia data to evaluate the parallax test
+    on at least one axis.
+
+    Parallax-only sufficient: a 3σ-passing parallax with missing PM on
+    one or both components is still classified as physical. The PM
+    refinement can only flip a parallax-pass to optical when PM
+    positively disagrees on a populated axis.
+    """
+    if (
+        p.parallax_mas is None or s.parallax_mas is None
+        or p.parallax_error_mas is None or s.parallax_error_mas is None
+    ):
+        return None
+    sigma_combined = math.hypot(p.parallax_error_mas, s.parallax_error_mas)
+    if abs(p.parallax_mas - s.parallax_mas) >= BOTH_GAIA_PLX_GATE_SIGMA * sigma_combined:
+        return False
+
+    if (
+        p.pmra_masyr is not None and s.pmra_masyr is not None
+        and abs(p.pmra_masyr - s.pmra_masyr) >= BOTH_GAIA_PM_GATE_DELTA_MASYR
+    ):
+        return False
+    if (
+        p.pmdec_masyr is not None and s.pmdec_masyr is not None
+        and abs(p.pmdec_masyr - s.pmdec_masyr) >= BOTH_GAIA_PM_GATE_DELTA_MASYR
+    ):
+        return False
+    return True
+
+
+def _asymm_gaia_consistent(
+    gaia: GaiaAstrometryRow, anchor_plx_mas: float, anchor_e_plx_mas: float | None,
+) -> bool | None:
+    """Tier 3 verdict. Returns ``True`` / ``False`` / ``None`` — same
+    convention as the tier-2 helper. ``None`` only when the Gaia side
+    is missing parallax or its error (the anchor σ is treated as 0
+    when missing, since the HIP2 catalog often does carry σ even
+    when downstream parsers don't surface it)."""
+    if gaia.parallax_mas is None or gaia.parallax_error_mas is None:
+        return None
+    e_anchor = anchor_e_plx_mas if anchor_e_plx_mas is not None else 0.0
+    sigma_combined = math.hypot(gaia.parallax_error_mas, e_anchor)
+    if abs(gaia.parallax_mas - anchor_plx_mas) >= ASYMM_PLX_GATE_SIGMA * sigma_combined:
+        return False
+    return True
+
+
+def classify_pair_optical(
+    pair: WdsPair,
+    primary: ResolvedComponent,
+    secondary: ResolvedComponent,
+    orbit_via: str,
+    indices: IdentifierIndices,
+) -> OpticalClassification:
+    """5-tier cascade per WDS pair:
+
+    1. WDS Notes flag chars — T/V/Z keep (physical), S/U/X/Y reject
+       (optical), other chars silent.
+    2. Both-components-Gaia gate — both components carry a Gaia 5p row.
+       Compare parallax (3σ on combined error) AND per-axis PM
+       (≤5 mas/yr). Passes physical, fails optical.
+    3. Asymmetric-Gaia gate — exactly one component has a Gaia 5p row,
+       the other has a HIP2 parallax anchor (Gaia-saturated bright
+       primary). Compare the Gaia parallax against the HIP2 anchor at
+       3σ. Catches Sirius A-C/D/E/F directly: anchor 378 mas vs Gaia
+       <1 mas → enormous excess, reject.
+    4. Orbit-on-file override — Stage 4 selected real orbital elements
+       (Gaia NSS or any ORB6 grade). An empirical orbit fit is direct
+       evidence of physical association; it overrides the mag-gap
+       heuristic for cases like Sirius A-B where the WD companion
+       creates a wide photometric gap on a known-physical pair.
+    5. Mag-gap backstop — |Δmag| ≤ 5 magnitudes keep, otherwise reject.
+       Used when no other tier fired (rare under the source-ID
+       resolution chain but possible for Tycho-only systems without
+       orbits). If the pair has no usable mags either, the backstop
+       keeps it — the absence of evidence is not evidence of optical
+       contamination.
+    """
+    # Tier 1 — WDS Notes flag chars.
+    notes_chars = set(pair.notes.upper())
+    if notes_chars & WDS_NOTES_OPTICAL_CHARS:
+        return OpticalClassification(False, "wds_notes_rejected")
+    if notes_chars & WDS_NOTES_PHYSICAL_CHARS:
+        return OpticalClassification(True, "wds_notes_kept")
+
+    # Tier 2 — both-Gaia.
+    p_gaia = _gaia_for_component(primary, indices)
+    s_gaia = _gaia_for_component(secondary, indices)
+    if p_gaia is not None and s_gaia is not None:
+        verdict = _both_gaia_consistent(p_gaia, s_gaia)
+        if verdict is True:
+            return OpticalClassification(True, "gaia_kept")
+        if verdict is False:
+            return OpticalClassification(False, "gaia_rejected")
+        # verdict is None — Gaia rows lacked the data to gate; fall
+        # through to the mag-gap heuristic.
+
+    # Tier 3 — asymmetric Gaia + HIP2 anchor.
+    if p_gaia is None and s_gaia is not None:
+        anchor = _hip2_anchor(primary, indices)
+        if anchor is not None:
+            verdict = _asymm_gaia_consistent(s_gaia, anchor[0], anchor[1])
+            if verdict is True:
+                return OpticalClassification(True, "asymm_kept")
+            if verdict is False:
+                return OpticalClassification(False, "asymm_rejected")
+    if s_gaia is None and p_gaia is not None:
+        anchor = _hip2_anchor(secondary, indices)
+        if anchor is not None:
+            verdict = _asymm_gaia_consistent(p_gaia, anchor[0], anchor[1])
+            if verdict is True:
+                return OpticalClassification(True, "asymm_kept")
+            if verdict is False:
+                return OpticalClassification(False, "asymm_rejected")
+
+    # Tier 4 — orbit on file. Stage 4 selected real orbital elements
+    # for this pair; that's empirical evidence beating the mag-gap
+    # backstop. Famous WD-companion physical pairs (Sirius A-B, Procyon
+    # A-B) need this override.
+    if orbit_via in ORBIT_VIA_ON_FILE:
+        return OpticalClassification(True, "orbit_kept")
+
+    # Tier 5 — mag-gap backstop. Default policy when no other tier
+    # fired is to keep the pair (so e.g. naked-WDS rows without any
+    # photometric data ride through).
+    if pair.mag_pri is not None and pair.mag_sec is not None:
+        if abs(pair.mag_pri - pair.mag_sec) > MAG_GAP_HEURISTIC_THRESHOLD:
+            return OpticalClassification(False, "mag_heuristic_rejected")
+    return OpticalClassification(True, "mag_heuristic_kept")
+
+
+def classify_all_pairs(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    orbits: list[tuple[OrbitElements | None, str]],
+    indices: IdentifierIndices,
+) -> list[OpticalClassification]:
+    """One ``OpticalClassification`` per decomposing WDS pair, in
+    ``resolve_all_pairs`` iteration order. Stage 6 zips this list back
+    against the per-pair iteration to drop optical pairs from
+    multiples.tsv emit (and surface ``optical_via`` for keepers). The
+    Stage 4 ``orbits`` list runs parallel to decomposing pairs (one
+    entry per pair) and feeds the orbit-on-file tier of the cascade.
+    """
+    if len(orbits) != sum(
+        1 for p in pairs if split_components(p.components) is not None
+    ):
+        raise ValueError(
+            "Stage 5 input cardinality disagreement — orbits must run "
+            "parallel to decomposing pairs"
+        )
+    out: list[OpticalClassification] = []
+    i = 0
+    j = 0
+    for pair in pairs:
+        if split_components(pair.components) is None:
+            continue
+        if i + 1 >= len(components):
+            raise RuntimeError(
+                "Stage 5 cursor exhausted before pairs did — Stage 2 "
+                "output truncated"
+            )
+        p = components[i]
+        s = components[i + 1]
+        _, orbit_via = orbits[j]
+        out.append(classify_pair_optical(pair, p, s, orbit_via, indices))
+        i += 2
+        j += 1
+    return out
+
+
+def optical_counts(
+    classifications: list[OpticalClassification],
+) -> dict[str, int]:
+    """Per-tag counters in canonical ``OPTICAL_VIA_VALUES`` order.
+    Every key is present (zero-filled) so the log line shape stays
+    stable across runs."""
+    counts: dict[str, int] = {k: 0 for k in OPTICAL_VIA_VALUES}
+    for c in classifications:
+        counts[c.optical_via] = counts.get(c.optical_via, 0) + 1
+    return counts
+
+
+# ─── Stage 6: multiples.tsv emit ─────────────────────────────────────
+
+
+# multiples.tsv column order. Read by Phase 3 (binary format v6) and
+# Phase 4 (statistical gates against curated SIMBAD). The order is
+# canonical — changes break downstream readers and must propagate
+# through ``build-binaries-expected.json`` + Phase 3 binary writer.
+MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
+    "system_id",
+    "comp",
+    "hip",
+    "gaia_source_id",
+    "x_pc", "y_pc", "z_pc",
+    "absmag", "ci", "spect", "name",
+    "source", "regime",
+    "resolve_via", "astrometry_via", "orbit_via",
+    "orbit_role",
+    "P_days", "T_jd", "e", "a_AU",
+    "i_rad", "omega_rad", "Omega_rad",
+    "q", "dist_pc",
+)
+
+
+# orbit_via → numeric ``regime`` tag for parity with the legacy
+# pre-dch.27 column. 0 = no orbital information; 2 = full orbital
+# elements (Gaia NSS or ORB6 visual); 3 = spectroscopic-only. Phase 3's
+# v6 binary writer keys orbit-element population off this tag; finer
+# provenance lives in ``orbit_via`` alongside.
+ORBIT_VIA_TO_REGIME: dict[str, int] = {
+    "gaia_nss": 2,
+    "orb6": 2,
+    "orb6_spectroscopic": 3,
+    "none": 0,
+}
+
+
+@dataclass
+class MultiplesRow:
+    """One per-component row of multiples.tsv. All numeric fields are
+    optional — Phase 3's binary writer treats missing values as "skip
+    this column for this record" rather than imputing a sentinel."""
+
+    system_id: str
+    comp: str
+    hip: int | None
+    gaia_source_id: int | None
+    x_pc: float | None
+    y_pc: float | None
+    z_pc: float | None
+    absmag: float | None
+    ci: float | None
+    spect: str
+    name: str
+    source: str            # AT-HYG row provenance: "athyg" / "wds"
+    regime: int
+    resolve_via: str
+    astrometry_via: str
+    orbit_via: str
+    orbit_role: str        # "primary" / "secondary"
+    P_days: float | None
+    T_jd: float | None
+    e: float | None
+    a_AU: float | None
+    i_rad: float | None
+    omega_rad: float | None
+    Omega_rad: float | None
+    q: float | None
+    dist_pc: float | None
+
+
+def _athyg_row_for_component(
+    component: ResolvedComponent, indices: IdentifierIndices,
+) -> AthygRow | None:
+    """Look up AT-HYG row for a resolved component, preferring the
+    gaia_source_id index (most reliable; carries Gaia source_id direct
+    from AT-HYG's own ingest). Falls back to the HIP index for
+    Gaia-saturated bright primaries (Sirius / α Cen / Procyon) whose
+    AT-HYG row carries the HIP but not the Gaia source.
+    """
+    if component.gaia_source_id is not None:
+        row = indices.src_to_athyg.get(component.gaia_source_id)
+        if row is not None:
+            return row
+    if component.hip is not None:
+        return indices.hip_to_athyg.get(component.hip)
+    return None
+
+
+def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, float] | None:
+    """ICRS RA/Dec + parallax → (x_pc, y_pc, z_pc, dist_pc). Returns
+    ``None`` when the astrometry row is unresolved or carries no
+    positive parallax — Phase 3 reads the empty columns as "no
+    position constraint" and falls back to the AT-HYG single-component
+    position if needed."""
+    if (
+        astrometry.ra_deg is None
+        or astrometry.dec_deg is None
+        or astrometry.parallax_mas is None
+        or astrometry.parallax_mas <= 0.0
+    ):
+        return None
+    dist_pc = 1000.0 / astrometry.parallax_mas
+    x, y, z = _spherical_to_unit_vec(astrometry.ra_deg, astrometry.dec_deg)
+    return x * dist_pc, y * dist_pc, z * dist_pc, dist_pc
+
+
+def build_multiples_row(
+    pair: WdsPair,
+    component: ResolvedComponent,
+    astrometry: ComponentAstrometry,
+    orbit: OrbitElements | None,
+    orbit_via: str,
+    is_primary: bool,
+    indices: IdentifierIndices,
+) -> MultiplesRow:
+    """Project Stage 2-4 outputs for one component into one canonical
+    ``MultiplesRow``. The ``system_id`` is ``"{wds_id}-{components}"``
+    (e.g. ``"00491+5749-AB"``) — stable across A-row and B-row of the
+    same pair so the catalog binary writer can group them. Position is
+    computed at the astrometry's native epoch; proper-motion-to-J2000
+    propagation is deferred to Phase 3 per the Stage 3 docstring."""
+    athyg = _athyg_row_for_component(component, indices)
+    position = _position_pc(astrometry)
+
+    return MultiplesRow(
+        system_id=f"{pair.wds_id}-{pair.components}",
+        comp=component.component,
+        hip=component.hip,
+        gaia_source_id=component.gaia_source_id,
+        x_pc=position[0] if position is not None else None,
+        y_pc=position[1] if position is not None else None,
+        z_pc=position[2] if position is not None else None,
+        absmag=athyg.absmag if athyg is not None else None,
+        ci=athyg.ci if athyg is not None else None,
+        spect=athyg.spect if athyg is not None else "",
+        name=athyg.proper if athyg is not None else "",
+        source="athyg" if athyg is not None else "wds",
+        regime=ORBIT_VIA_TO_REGIME.get(orbit_via, 0),
+        resolve_via=component.resolve_via,
+        astrometry_via=astrometry.astrometry_via,
+        orbit_via=orbit_via,
+        orbit_role="primary" if is_primary else "secondary",
+        P_days=orbit.P_days if orbit is not None else None,
+        T_jd=orbit.T_jd if orbit is not None else None,
+        e=orbit.e if orbit is not None else None,
+        a_AU=orbit.a_AU if orbit is not None else None,
+        i_rad=orbit.i_rad if orbit is not None else None,
+        omega_rad=orbit.omega_rad if orbit is not None else None,
+        Omega_rad=orbit.Omega_rad if orbit is not None else None,
+        q=orbit.q if orbit is not None else None,
+        dist_pc=position[3] if position is not None else None,
+    )
+
+
+def build_multiples_rows(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+    orbits: list[tuple[OrbitElements | None, str]],
+    classifications: list[OpticalClassification],
+    indices: IdentifierIndices,
+) -> list[MultiplesRow]:
+    """Walk the per-pair Stage 2/3/4/5 outputs in lockstep. Skips pairs
+    Stage 5 classified as optical (their rows are absent from the TSV
+    entirely — downstream consumers should not see optical-flagged
+    SYN-NNN injections), and skips pairs where both components lack
+    any astrometry (no position constraint to emit).
+    """
+    n_pairs = sum(1 for p in pairs if split_components(p.components) is not None)
+    if not (len(orbits) == n_pairs == len(classifications)):
+        raise ValueError(
+            "Stage 6 input cardinality disagreement — orbits / "
+            "classifications must run parallel to decomposing pairs"
+        )
+
+    out: list[MultiplesRow] = []
+    i = 0       # cursor into components / astrometry
+    j = 0       # cursor into orbits / classifications
+    for pair in pairs:
+        if split_components(pair.components) is None:
+            continue
+        cls = classifications[j]
+        if cls.is_physical:
+            primary = components[i]
+            secondary = components[i + 1]
+            p_ast = astrometry[i]
+            s_ast = astrometry[i + 1]
+            orbit, via = orbits[j]
+            p_pos = _position_pc(p_ast)
+            s_pos = _position_pc(s_ast)
+            if p_pos is not None or s_pos is not None:
+                out.append(build_multiples_row(
+                    pair, primary, p_ast, orbit, via,
+                    is_primary=True, indices=indices,
+                ))
+                out.append(build_multiples_row(
+                    pair, secondary, s_ast, orbit, via,
+                    is_primary=False, indices=indices,
+                ))
+        i += 2
+        j += 1
+    return out
+
+
+def _fmt_float(v: float | None, places: int) -> str:
+    return f"{v:.{places}f}" if v is not None else ""
+
+
+def _fmt_int(v: int | None) -> str:
+    return str(v) if v is not None else ""
+
+
+def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
+    """Emit ``rows`` to ``path`` as a tab-separated table with the
+    canonical ``MULTIPLES_TSV_COLUMNS`` header. Numeric precision is
+    chosen so the round-trip into Phase 3's binary format loses no
+    user-visible precision: positions 6 dp (~µpc), magnitudes 4 dp,
+    radians 6 dp, period 6 dp, eccentricity 6 dp.
+    """
+    with path.open("w") as fh:
+        fh.write("\t".join(MULTIPLES_TSV_COLUMNS) + "\n")
+        for r in rows:
+            fh.write("\t".join((
+                r.system_id,
+                r.comp,
+                _fmt_int(r.hip),
+                _fmt_int(r.gaia_source_id),
+                _fmt_float(r.x_pc, 6),
+                _fmt_float(r.y_pc, 6),
+                _fmt_float(r.z_pc, 6),
+                _fmt_float(r.absmag, 4),
+                _fmt_float(r.ci, 4),
+                r.spect,
+                r.name,
+                r.source,
+                str(r.regime),
+                r.resolve_via,
+                r.astrometry_via,
+                r.orbit_via,
+                r.orbit_role,
+                _fmt_float(r.P_days, 6),
+                _fmt_float(r.T_jd, 4),
+                _fmt_float(r.e, 6),
+                _fmt_float(r.a_AU, 6),
+                _fmt_float(r.i_rad, 6),
+                _fmt_float(r.omega_rad, 6),
+                _fmt_float(r.Omega_rad, 6),
+                _fmt_float(r.q, 6),
+                _fmt_float(r.dist_pc, 6),
+            )) + "\n")
+    return len(rows)
+
+
+# ─── Stage 7: build-time stats ───────────────────────────────────────
+
+
+# Environment variable that flips the counts snapshot from compare
+# mode (the default) to write-or-overwrite. Shared with
+# ``build-catalog.ts`` so a single refresh command updates both
+# snapshots when the pipeline shifts.
+UPDATE_COUNTS_ENV_VAR = "UPDATE_BUILD_COUNTS"
+
+
+def build_binaries_counts(
+    *,
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+    orbits: list[tuple[OrbitElements | None, str]],
+    classifications: list[OpticalClassification],
+    multiples_rows: list[MultiplesRow],
+) -> dict[str, int]:
+    """Collect every headline number the run emits into a flat
+    ``{key: int}`` dict, suitable for JSON serialisation and per-key
+    comparison. Keys flatten the per-strategy + per-tier counters via
+    ``<section>_<tag>`` so the JSON stays grep-friendly and the
+    snapshot diff is a flat dict-diff.
+
+    Decomposing-pair count is the number of WDS pairs whose components
+    string split into two; aligns with ``len(orbits) ==
+    len(classifications)``.
+    """
+    res = resolution_counts(components)
+    ast = astrometry_counts(astrometry)
+    orb = orbit_counts(orbits)
+    opt = optical_counts(classifications)
+
+    out: dict[str, int] = {
+        "wds_pairs_total": len(pairs),
+        "decomposing_pairs": len(orbits),
+        "components_total": len(components),
+        "multiples_rows_emitted": len(multiples_rows),
+    }
+    for tag in RESOLVE_VIA_VALUES:
+        out[f"resolution_{tag}"] = res[tag]
+    for tag in ASTROMETRY_VIA_VALUES:
+        out[f"astrometry_{tag}"] = ast[tag]
+    for tag in ORBIT_VIA_VALUES:
+        out[f"orbit_{tag}"] = orb[tag]
+    for tag in OPTICAL_VIA_VALUES:
+        out[f"optical_{tag}"] = opt[tag]
+    return out
+
+
+@dataclass
+class CountDiff:
+    """One row of the snapshot diff. ``status`` is ``"match"``,
+    ``"mismatch"``, ``"missing_actual"`` (key in expected but not in
+    actual), or ``"missing_expected"`` (key in actual but not in
+    expected — typically a newly-introduced counter)."""
+
+    key: str
+    status: str
+    expected: int | None
+    actual: int | None
+
+
+def compare_build_counts(
+    expected: dict[str, int], actual: dict[str, int],
+) -> list[CountDiff]:
+    """Per-key diff between two flat count dicts. The union of keys is
+    walked so newly-added or newly-removed counters surface explicitly
+    rather than disappearing into the matched set."""
+    out: list[CountDiff] = []
+    for key in sorted(expected.keys() | actual.keys()):
+        e = expected.get(key)
+        a = actual.get(key)
+        if key not in actual:
+            out.append(CountDiff(key, "missing_actual", e, None))
+        elif key not in expected:
+            out.append(CountDiff(key, "missing_expected", None, a))
+        elif e == a:
+            out.append(CountDiff(key, "match", e, a))
+        else:
+            out.append(CountDiff(key, "mismatch", e, a))
+    return out
+
+
+def format_count_diff(diff: list[CountDiff]) -> str:
+    """Pretty-printer matching ``build-counts.ts``'s ``formatCountDiff``
+    shape — single match line when everything passes, otherwise the
+    mismatches listed first (each with signed delta), then any new /
+    removed keys."""
+    mismatches = [d for d in diff if d.status == "mismatch"]
+    missing_actual = [d for d in diff if d.status == "missing_actual"]
+    missing_expected = [d for d in diff if d.status == "missing_expected"]
+    total_diffs = len(mismatches) + len(missing_actual) + len(missing_expected)
+    lines: list[str] = []
+    if total_diffs == 0:
+        lines.append(f"build-binaries counts: all {len(diff)} counts match")
+        return "\n".join(lines)
+    lines.append(
+        f"build-binaries counts: {total_diffs} of {len(diff)} counts differ"
+    )
+    for m in mismatches:
+        delta = (m.actual or 0) - (m.expected or 0)
+        sign = "+" if delta > 0 else ""
+        lines.append(
+            f"  {m.key:<40} expected {m.expected}, got {m.actual} ({sign}{delta})"
+        )
+    for m in missing_actual:
+        lines.append(f"  {m.key:<40} expected {m.expected}, missing in actual")
+    for m in missing_expected:
+        lines.append(f"  {m.key:<40} new key, got {m.actual} (no snapshot)")
+    return "\n".join(lines)
+
+
+def assert_or_update_counts(actual: dict[str, int], expected_path: Path) -> bool:
+    """Compare ``actual`` against the committed snapshot at
+    ``expected_path``. Returns ``True`` on full match, ``False``
+    otherwise. Side effect: when the env var ``UPDATE_BUILD_COUNTS=1``
+    is set OR the snapshot file is missing, write ``actual`` to disk
+    and return ``True``.
+
+    Mirrors ``build-catalog.ts``'s ``assertOrUpdateBuildCounts`` so a
+    single ``UPDATE_BUILD_COUNTS=1`` refresh covers both the TS and
+    Python sides of the pipeline.
+    """
+    should_update = os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1"
+
+    if should_update or not expected_path.exists():
+        expected_path.write_text(json.dumps(actual, indent=2) + "\n")
+        try:
+            shown = expected_path.relative_to(ROOT)
+        except ValueError:
+            shown = expected_path
+        log(
+            f"{'Updated' if should_update else 'Wrote initial'} {shown}"
+        )
+        return True
+
+    expected = json.loads(expected_path.read_text())
+    diff = compare_build_counts(expected, actual)
+    report = format_count_diff(diff)
+    log(report)
+    return all(d.status == "match" for d in diff)
+
+
 # ─── Driver ──────────────────────────────────────────────────────────
 
 
@@ -2154,7 +2881,53 @@ def run(force: bool) -> int:
         + ", ".join(f"{k}={o_counts[k]:,}" for k in ORBIT_VIA_VALUES)
     )
 
-    log("Stage 4 complete. Stages 5-7 (optical-filter / emit / stats) land in stellata-dch.32.")
+    log("Stage 4 complete. Classifying optical-vs-physical pairs (Stage 5) …")
+
+    classifications = classify_all_pairs(
+        pairs=wds_pairs, components=components,
+        orbits=orbits, indices=indices,
+    )
+    op_counts = optical_counts(classifications)
+    log(
+        "optical-pair cascade: "
+        + ", ".join(f"{k}={op_counts[k]:,}" for k in OPTICAL_VIA_VALUES)
+    )
+    rejected = sum(
+        op_counts[k] for k in OPTICAL_VIA_VALUES if k.endswith("_rejected")
+    )
+    total = len(classifications)
+    rejected_rate = rejected / total if total else 0.0
+    log(f"optical rejected rate: {rejected_rate:.1%} ({rejected:,} / {total:,})")
+
+    log("Stage 5 complete. Emitting multiples.tsv (Stage 6) …")
+
+    rows = build_multiples_rows(
+        pairs=wds_pairs, components=components,
+        astrometry=astrometry, orbits=orbits,
+        classifications=classifications, indices=indices,
+    )
+    n_emitted = write_multiples_tsv(rows, OUT_MULTIPLES)
+    log(
+        f"wrote {OUT_MULTIPLES.relative_to(ROOT)} with {n_emitted:,} "
+        f"component rows ({n_emitted // 2:,} physical pairs)"
+    )
+
+    log("Stage 6 complete. Comparing build counts against snapshot (Stage 7) …")
+
+    counts = build_binaries_counts(
+        pairs=wds_pairs, components=components, astrometry=astrometry,
+        orbits=orbits, classifications=classifications, multiples_rows=rows,
+    )
+    counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
+    if not counts_match:
+        log(
+            f"build-binaries count assertion failed. If the change is "
+            f"intentional, refresh with: "
+            f"{UPDATE_COUNTS_ENV_VAR}=1 npm run build:binaries"
+        )
+        return 1
+
+    log("Stage 7 complete. data/multiples.tsv ready for Phase 3 ingest.")
     return 0
 
 
