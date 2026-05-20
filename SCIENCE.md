@@ -144,6 +144,20 @@ enough to see it.
   the ORB6 ReadMe; consulted by `scripts/build-binaries.py` but not
   committed. Retrieved 2026-05-11. Public-domain (U.S. Government
   work).
+- **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).
+  Curated per-component cross-IDs between WDS pair identifiers
+  (`WDS J<id><comp>`) and Gaia DR3 source_ids, drawn from SIMBAD's
+  `ident` and `basic` tables. Stage 2 of `scripts/build-binaries.py`
+  uses this as the principled cross-identification path —
+  `stellata-dch.60` validated that SIMBAD reliably stores Gaia DR3
+  source_ids per WDS component for the well-known multi-component
+  systems (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima).
+  Refresh: `scripts/refresh-simbad-wds-xids.py` runs a two-phase TAP
+  pull (WDS identifiers → SIMBAD oids, then oids → cross-IDs) and
+  commits `data/simbad_wds_xids.tsv` (~23k components, ~1.2 MB,
+  regular git). Public access policy: SIMBAD is open via CDS's TAP
+  service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite Wenger et
+  al (2000), A&AS 143, 9.
 - **Stellarium modern sky culture** (constellation stick figures):
   https://github.com/Stellarium/stellarium/tree/master/skycultures/modern
   — MIT-licensed JSON, HIP-indexed polylines. Committed as

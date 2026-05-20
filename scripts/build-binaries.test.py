@@ -372,6 +372,56 @@ class GaiaXmatchTests(unittest.TestCase):
         self.assertEqual(m[33711199137024]["period"], "773.09")
 
 
+class ParseSimbadWdsXidsTests(unittest.TestCase):
+    HEADER = (
+        "wds_id\tcomponent\tsimbad_oid\tsimbad_main_id\tgaia_source_id\thip"
+    )
+
+    def test_parses_row_with_full_xrefs(self) -> None:
+        body = (
+            f"{self.HEADER}\n"
+            "00491+5749\tA\t106647\t* eta Cas\t425040000962559616\t3821\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "simbad_wds_xids.tsv", body)
+            out = bb.parse_simbad_wds_xids(p)
+        self.assertEqual(len(out), 1)
+        row = out[("00491+5749", "A")]
+        self.assertEqual(row.simbad_oid, 106647)
+        self.assertEqual(row.simbad_main_id, "* eta Cas")
+        self.assertEqual(row.gaia_source_id, 425040000962559616)
+        self.assertEqual(row.hip, 3821)
+
+    def test_blank_gaia_source_id_yields_none(self) -> None:
+        # α Cen A-shape: SIMBAD oid + HIP present, Gaia DR3 blank
+        # (saturation gap). The parser must surface that as ``None``
+        # not 0, so downstream cascade logic stays correct.
+        body = (
+            f"{self.HEADER}\n"
+            "14396-6050\tA\t3396054\t* alf Cen A\t\t71683\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "simbad_wds_xids.tsv", body)
+            out = bb.parse_simbad_wds_xids(p)
+        row = out[("14396-6050", "A")]
+        self.assertIsNone(row.gaia_source_id)
+        self.assertEqual(row.hip, 71683)
+
+    def test_skips_rows_missing_essential_keys(self) -> None:
+        # Defensive: any of wds_id / component / simbad_oid blank →
+        # skip the row rather than indexing it as a partial record.
+        body = (
+            f"{self.HEADER}\n"
+            "\tA\t1\tx\t\t\n"        # blank wds_id
+            "X\t\t2\tx\t\t\n"        # blank component
+            "X\tA\t\tx\t\t\n"        # blank simbad_oid
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "simbad_wds_xids.tsv", body)
+            out = bb.parse_simbad_wds_xids(p)
+        self.assertEqual(out, {})
+
+
 class SplitComponentsTests(unittest.TestCase):
     def test_two_letter_pair(self) -> None:
         self.assertEqual(bb.split_components("AB"), ("A", "B"))
@@ -519,8 +569,8 @@ class GroupOrb6ByPairTests(unittest.TestCase):
 class ResolveAllPairsTests(unittest.TestCase):
     def test_pipeline_emits_primary_and_secondary(self) -> None:
         # Primary resolves via ORB6's HIP; secondary has no HIP signal
-        # and falls through to ``unresolved`` (the SIMBAD-backed tier
-        # 2 supplement, dch.60, would pick this case up later).
+        # and no SIMBAD side-file passed in, so it falls through to
+        # ``unresolved``. The SIMBAD-fed variant is covered below.
         pair = _wds_pair(components="AB")
         orb6 = [_orb6(wds_id=pair.wds_id, components="AB", hip=1)]
         idx = _indices(hip_to_gaia={1: 1001})
@@ -543,6 +593,28 @@ class ResolveAllPairsTests(unittest.TestCase):
             pairs=[pair], orb6=[], indices=idx, athyg=[],
         )
         self.assertEqual(results, [])
+
+    def test_pipeline_resolves_via_simbad_when_id_signal_absent(self) -> None:
+        # Secondary has no ORB6 HIP and no AT-HYG via HIP. SIMBAD's
+        # side-file provides the (wds_id, component) → Gaia binding —
+        # cascade tags this as ``simbad_xid``.
+        pair = _wds_pair(wds_id="00491+5749", components="AB")
+        idx = _indices()
+        xids = {
+            ("00491+5749", "B"): bb.SimbadWdsXid(
+                simbad_oid=106493, simbad_main_id="* eta Cas B",
+                gaia_source_id=425040000962497792, hip=None,
+            ),
+        }
+        results = bb.resolve_all_pairs(
+            pairs=[pair], orb6=[], indices=idx, athyg=[],
+            simbad_xids=xids,
+        )
+        self.assertEqual(len(results), 2)
+        primary, secondary = results
+        self.assertEqual(primary.resolve_via, "unresolved")
+        self.assertEqual(secondary.resolve_via, "simbad_xid")
+        self.assertEqual(secondary.gaia_source_id, 425040000962497792)
 
 
 def _wds_pair_with_pos(
@@ -700,7 +772,8 @@ class ResolveViaPositionTests(unittest.TestCase):
 
     def test_skips_when_athyg_row_has_no_gaia(self) -> None:
         # The matched AT-HYG row exists but its gaia field is empty —
-        # tier 3 must not invent a value; component stays unresolved.
+        # position-match must not invent a value; component stays
+        # unresolved.
         pair = _wds_pair_with_pos(
             components="AB",
             precise_ra=100.0, precise_dec=0.0,
@@ -714,6 +787,96 @@ class ResolveViaPositionTests(unittest.TestCase):
         bb.resolve_via_position([c], pairs=[pair], athyg=athyg)
         self.assertEqual(c.resolve_via, "unresolved")
         self.assertIsNone(c.gaia_source_id)
+
+
+class ResolveViaSimbadTests(unittest.TestCase):
+    def test_binds_gaia_and_hip_when_both_present(self) -> None:
+        # SIMBAD carries both Gaia DR3 and HIP for the component —
+        # bind both, retag ``resolve_via`` to ``simbad_xid``.
+        c = bb.ResolvedComponent(
+            wds_id="00491+5749", discoverer="STF   60",
+            component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        xids = {
+            ("00491+5749", "A"): bb.SimbadWdsXid(
+                simbad_oid=106647, simbad_main_id="* eta Cas",
+                gaia_source_id=425040000962559616, hip=3821,
+            ),
+        }
+        bb.resolve_via_simbad([c], xids)
+        self.assertEqual(c.resolve_via, "simbad_xid")
+        self.assertEqual(c.gaia_source_id, 425040000962559616)
+        self.assertEqual(c.hip, 3821)
+
+    def test_binds_hip_only_when_gaia_missing(self) -> None:
+        # α Cen A-shaped: SIMBAD has the oid + HIP but no Gaia DR3
+        # source_id (bright-star saturation gap). HIP must bind so
+        # Stage 3's HIP2 fallback engages; resolve_via stays
+        # ``unresolved`` so the cascade can keep going.
+        c = bb.ResolvedComponent(
+            wds_id="14396-6050", discoverer="RHD   1",
+            component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        xids = {
+            ("14396-6050", "A"): bb.SimbadWdsXid(
+                simbad_oid=3396054, simbad_main_id="* alf Cen A",
+                gaia_source_id=None, hip=71683,
+            ),
+        }
+        bb.resolve_via_simbad([c], xids)
+        self.assertEqual(c.resolve_via, "unresolved")
+        self.assertIsNone(c.gaia_source_id)
+        self.assertEqual(c.hip, 71683)
+
+    def test_skips_already_resolved_components(self) -> None:
+        # ``orb6_hip`` already bound — SIMBAD pass must not overwrite,
+        # even if SIMBAD would have published a different source_id.
+        c = bb.ResolvedComponent(
+            wds_id="X", discoverer="D", component="A", is_primary=True,
+            gaia_source_id=42, resolve_via="orb6_hip", hip=99,
+        )
+        xids = {
+            ("X", "A"): bb.SimbadWdsXid(
+                simbad_oid=1, simbad_main_id="other",
+                gaia_source_id=999, hip=999,
+            ),
+        }
+        bb.resolve_via_simbad([c], xids)
+        self.assertEqual(c.resolve_via, "orb6_hip")
+        self.assertEqual(c.gaia_source_id, 42)
+        self.assertEqual(c.hip, 99)
+
+    def test_does_not_override_existing_hip(self) -> None:
+        # Component carried a HIP forward from ``resolve_component`` —
+        # SIMBAD's HIP must NOT clobber it. The two could disagree
+        # (e.g. ORB6's HIP for the system vs SIMBAD's per-component
+        # suffix); preferring resolve_component's keeps Stage 3's
+        # HIP2 routing aligned with the rest of the cascade.
+        c = bb.ResolvedComponent(
+            wds_id="X", discoverer="D", component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved", hip=32349,
+        )
+        xids = {
+            ("X", "A"): bb.SimbadWdsXid(
+                simbad_oid=1, simbad_main_id="other",
+                gaia_source_id=None, hip=99,
+            ),
+        }
+        bb.resolve_via_simbad([c], xids)
+        self.assertEqual(c.hip, 32349)
+        self.assertEqual(c.resolve_via, "unresolved")
+
+    def test_skips_components_not_in_simbad(self) -> None:
+        c = bb.ResolvedComponent(
+            wds_id="X", discoverer="D", component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        bb.resolve_via_simbad([c], {})
+        self.assertEqual(c.resolve_via, "unresolved")
+        self.assertIsNone(c.gaia_source_id)
+        self.assertIsNone(c.hip)
 
 
 class PropagateWithinSystemTests(unittest.TestCase):
@@ -751,6 +914,35 @@ class PropagateWithinSystemTests(unittest.TestCase):
         )
         bb.propagate_within_system([x_a, y_a])
         self.assertIsNone(y_a.gaia_source_id)
+
+    def test_priority_aware_tag_when_letters_tie(self) -> None:
+        # Three rows share (X, "A"): simbad_xid iterates first, orb6_hip
+        # second, then an unresolved A. The OLD setdefault-based code
+        # would surface simbad_xid for the propagated tag because it
+        # claimed the slot first; priority-aware selection must surface
+        # orb6_hip (the stronger tier per RESOLVE_VIA_PRIORITY) and
+        # propagate that tag onto the unresolved entry. The
+        # gaia_source_id is identical across rows by construction —
+        # same letter / same physical star — only the tag differs.
+        simbad_first = bb.ResolvedComponent(
+            wds_id="X", discoverer="DA", component="A", is_primary=True,
+            gaia_source_id=42, resolve_via="simbad_xid",
+        )
+        orb6_later = bb.ResolvedComponent(
+            wds_id="X", discoverer="DB", component="A", is_primary=True,
+            gaia_source_id=42, resolve_via="orb6_hip",
+        )
+        unresolved_a = bb.ResolvedComponent(
+            wds_id="X", discoverer="DC", component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        bb.propagate_within_system([simbad_first, orb6_later, unresolved_a])
+        self.assertEqual(unresolved_a.gaia_source_id, 42)
+        self.assertEqual(unresolved_a.resolve_via, "orb6_hip")
+        # The directly-resolved rows keep the tag they entered with —
+        # propagation never rewrites an already-resolved row.
+        self.assertEqual(simbad_first.resolve_via, "simbad_xid")
+        self.assertEqual(orb6_later.resolve_via, "orb6_hip")
 
 
 class ResolutionCountsTests(unittest.TestCase):

@@ -6,13 +6,23 @@ chain needs (WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia HIP/Tyc
 cross-walks + Gaia NSS + Gaia 5p astrometry) and builds the identifier
 indices that Stages 2-7 consume.
 
-Stage 2 (``stellata-dch.28``) resolves each WDS component to a Gaia DR3
-``source_id`` via a four-tier priority chain: ORB6's published HIP,
-AT-HYG's natively-stored ``gaia`` field reached either through a HIP or
-via a 2″ position match against the WDS precise coordinates, then PM-
-propagated and bare position match against ``data/gaia_dr3_astrometry.tsv``
-(the latter two land in the same bead as Stage 3). A SIMBAD-backed
-supplement for the residual set is tracked in ``stellata-dch.60``.
+Stage 2 (``stellata-dch.28`` + ``.60``) resolves each WDS component to a
+Gaia DR3 ``source_id`` via the cascade canonicalised in
+``RESOLVE_VIA_VALUES``:
+
+* ``orb6_hip`` — primary's ORB6-published HIP → Gaia HIP xwalk.
+* ``athyg_gaia_native`` — AT-HYG's natively-stored ``gaia`` field
+  reached either through the same HIP or, in a later pass, via a 2″
+  position match against the WDS precise coordinates.
+* ``simbad_xid`` (``stellata-dch.60``) — SIMBAD's curated
+  ``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs read from the committed
+  ``data/simbad_wds_xids.tsv`` side-file (refresh script
+  ``scripts/refresh-simbad-wds-xids.py``). Per-component resolution
+  with reliable coverage of the well-known hard cases.
+* ``position_pm`` / ``position_nopm`` — PM-propagated and bare
+  position match against ``data/gaia_dr3_astrometry.tsv``. Stubbed
+  (placeholder tier names; ``stellata-dch.29`` lands the data file
+  but the cascade hand-off for these tiers is future work).
 
 Stage 3 (``stellata-dch.30``) attaches the most-trustworthy astrometric
 measurement to each resolved component, routing between Gaia DR3 5p,
@@ -44,7 +54,7 @@ algebra is ~10 lines. Returns ``(orbit_dict, orbit_via)`` per pair via
 none}``.
 
 Stage 2 emits ``data/gaia_astrometry_source_id_request.tsv`` (the deduped
-union of source_ids resolved in tiers 1-2), which
+union of every Gaia source_id Stage 2 resolved, across every tier), which
 ``scripts/refresh-gaia-astrometry.py`` (dch.29) reads to drive its ADQL
 query.
 
@@ -112,6 +122,7 @@ SRC_GAIA_HIP_XM = DATA / "gaia_dr3_hip_xmatch.tsv"
 SRC_GAIA_TYC_XM = DATA / "gaia_dr3_tyc_xmatch.tsv"
 SRC_GAIA_NSS = DATA / "gaia_dr3_nss_two_body.tsv"
 SRC_GAIA_ASTROMETRY = DATA / "gaia_dr3_astrometry.tsv"
+SRC_SIMBAD_WDS_XIDS = DATA / "simbad_wds_xids.tsv"
 
 OUT_MULTIPLES = DATA / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia_astrometry_source_id_request.tsv"
@@ -136,10 +147,19 @@ ATHYG_GAIA_COVERAGE_BOUNDS = (0.90, 1.00)
 RESOLVE_VIA_VALUES: tuple[str, ...] = (
     "orb6_hip",
     "athyg_gaia_native",
+    "simbad_xid",
     "position_pm",
     "position_nopm",
     "unresolved",
 )
+
+# Strict priority lookup keyed off ``RESOLVE_VIA_VALUES``. Lower index =
+# stronger evidence. Consumed by ``propagate_within_system`` to pick the
+# canonical tag when multiple pair rows resolve the same component
+# letter through different tiers.
+RESOLVE_VIA_PRIORITY: dict[str, int] = {
+    tag: i for i, tag in enumerate(RESOLVE_VIA_VALUES)
+}
 
 # ─── Parsing primitives ──────────────────────────────────────────────
 
@@ -678,6 +698,48 @@ def parse_gaia_nss(path: Path) -> dict[int, dict[str, str]]:
     return by_src
 
 
+# ─── SIMBAD WDS cross-IDs side-file ──────────────────────────────────
+
+
+@dataclass
+class SimbadWdsXid:
+    """One row of ``data/simbad_wds_xids.tsv`` — SIMBAD's curated
+    ``WDS J<wds_id><component>`` cross-reference. Produced by
+    ``scripts/refresh-simbad-wds-xids.py``. ``gaia_source_id`` is
+    ``None`` when SIMBAD resolves the component to an oid but has no
+    Gaia DR3 cross-ID (α Cen A/B's saturation gap is the canonical
+    case — HIP is still set, so Stage 3's HIP2 fallback can attach
+    astrometry)."""
+
+    simbad_oid: int
+    simbad_main_id: str
+    gaia_source_id: int | None
+    hip: int | None
+
+
+def parse_simbad_wds_xids(path: Path) -> dict[tuple[str, str], SimbadWdsXid]:
+    """Load the SIMBAD WDS↔Gaia side-file into a
+    ``(wds_id, component) -> SimbadWdsXid`` map. Stage 2's
+    ``simbad_xid`` tier looks every unresolved component up in this
+    map after the HIP-mediated tier-1/2 passes."""
+    out: dict[tuple[str, str], SimbadWdsXid] = {}
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(fh, delimiter="\t")
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            component = (r.get("component") or "").strip()
+            oid = safe_int(r.get("simbad_oid") or "")
+            if not wds_id or not component or oid is None:
+                continue
+            out[(wds_id, component)] = SimbadWdsXid(
+                simbad_oid=oid,
+                simbad_main_id=(r.get("simbad_main_id") or "").strip(),
+                gaia_source_id=safe_int(r.get("gaia_source_id") or ""),
+                hip=safe_int(r.get("hip") or ""),
+            )
+    return out
+
+
 # ─── Identifier indices ──────────────────────────────────────────────
 
 
@@ -813,11 +875,11 @@ def group_orb6_by_pair(
 def _gaia_from_athyg_via_hip(
     hip: int, indices: IdentifierIndices,
 ) -> int | None:
-    """Tier 2 (HIP branch) lookup. AT-HYG's gaia field (~98% coverage)
-    is broader than Gaia's HIP cross-walk because AT-HYG ingests
-    source_ids through its own pipeline. When a HIP exists but Gaia's
-    published xwalk misses it, AT-HYG often still carries a gaia
-    value."""
+    """HIP-mediated AT-HYG lookup. AT-HYG's gaia field (~98% coverage) is
+    broader than Gaia's HIP cross-walk because AT-HYG ingests source_ids
+    through its own pipeline. When a HIP exists but Gaia's published
+    xwalk misses it, AT-HYG often still carries a gaia value. Tagged
+    ``athyg_gaia_native`` in ``RESOLVE_VIA_VALUES``."""
     row = indices.hip_to_athyg.get(hip)
     if row is None or row.gaia is None:
         return None
@@ -832,17 +894,14 @@ def resolve_component(
     indices: IdentifierIndices,
 ) -> ResolvedComponent:
     """Resolve a single WDS component to a Gaia DR3 source_id via the
-    identifier-anchored tiers 1-2 (ORB6's HIP → Gaia xwalk, then
-    AT-HYG's natively-stored ``gaia`` for the same HIP). Returns an
-    ``unresolved`` record when neither tier fires; the position-match
-    pass in ``resolve_via_position`` then takes a second swing, and
-    tiers 3-4 (against ``data/gaia_dr3_astrometry.tsv``) are stubbed
-    until ``stellata-dch.29`` lands.
+    HIP-anchored cascade prefix (``orb6_hip`` → ``athyg_gaia_native``
+    HIP-mediated). Returns an ``unresolved`` record when neither fires;
+    ``resolve_via_simbad`` and ``resolve_via_position`` then take
+    successive swings before the cascade falls through.
 
     Secondary components have no direct ORB6 signal (ORB6 publishes one
-    HIP per orbit row, which by convention is the primary's), so tier 1
-    only applies to primaries. A SIMBAD-backed supplement for the
-    residual set is tracked in ``stellata-dch.60``.
+    HIP per orbit row, which by convention is the primary's), so
+    ``orb6_hip`` only applies to primaries.
     """
     def emit(gaia: int | None, via: str, hip: int | None) -> ResolvedComponent:
         return ResolvedComponent(
@@ -862,7 +921,7 @@ def resolve_component(
             if e.hip is None:
                 continue
             candidate_hips.append(e.hip)
-            # Tier 1: Gaia-published HIP xwalk is the canonical source.
+            # ``orb6_hip``: Gaia-published HIP xwalk is the canonical source.
             gaia = indices.hip_to_gaia.get(e.hip)
             if gaia is not None:
                 return emit(gaia, "orb6_hip", e.hip)
@@ -872,22 +931,67 @@ def resolve_component(
         if gaia is not None:
             return emit(gaia, "athyg_gaia_native", hip)
 
-    # Tier 1+2 both missed. Keep the first ORB6-published HIP (if any)
-    # so Stage 3's HIP2 fallback can still attach astrometry for stars
-    # Gaia couldn't observe — Sirius / α Cen-shaped saturated primaries.
+    # HIP-anchored prefix missed. Keep the first ORB6-published HIP (if
+    # any) so Stage 3's HIP2 fallback can still attach astrometry for
+    # stars Gaia couldn't observe — Sirius / α Cen-shaped saturated
+    # primaries.
     return emit(None, "unresolved", candidate_hips[0] if candidate_hips else None)
 
 
-# ─── Tier 2 position-match path ──────────────────────────────────────
+# ─── SIMBAD-backed cross-ID path ─────────────────────────────────────
 
 
-# Position-match tolerance for the AT-HYG position branch of tier 2
-# (WDS precise coords → AT-HYG row). 2″ matches the bead's stated bar
-# and is well below the typical AT-HYG inter-source separation away
-# from the densest clusters. High-PM stars may miss at this tolerance
-# — that's intentional; tier 3 (PM-propagated match against Gaia
-# astrometry, stubbed until ``stellata-dch.29``) is the principled fix
-# for the PM-driven epoch-residual class.
+def resolve_via_simbad(
+    components: list[ResolvedComponent],
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid],
+) -> None:
+    """Cascade pass following ``resolve_component`` and preceding
+    ``resolve_via_position``. For every component still unresolved by
+    the HIP-anchored prefix, look up ``(wds_id, component)`` in the
+    SIMBAD WDS↔Gaia side-file and bind whichever cross-IDs SIMBAD
+    carries. Mutates ``components`` in place.
+
+    Binding rules:
+
+    * SIMBAD has a Gaia DR3 source_id → set ``gaia_source_id``,
+      rewrite ``resolve_via`` to ``simbad_xid``, and fill ``hip`` if
+      SIMBAD has one and the component doesn't yet.
+    * SIMBAD has a HIP but no Gaia (α Cen A/B-shaped saturation gap) →
+      fill ``hip`` only; leave ``gaia_source_id`` ``None`` and
+      ``resolve_via`` ``unresolved`` so Stage 3's HIP2 long-baseline
+      fallback can route on the freshly-bound HIP.
+    * SIMBAD doesn't have the component → leave it alone.
+
+    Suffixed-HIP forms in SIMBAD (``HIP 55203A``) are filtered out by
+    the refresh script (see ``refresh-simbad-wds-xids.py``); only
+    plain-integer HIPs reach this map, so no ambiguity-handling is
+    needed here.
+    """
+    for c in components:
+        if c.gaia_source_id is not None:
+            continue
+        xid = simbad_xids.get((c.wds_id, c.component))
+        if xid is None:
+            continue
+        if xid.gaia_source_id is not None:
+            c.gaia_source_id = xid.gaia_source_id
+            c.resolve_via = "simbad_xid"
+            if c.hip is None and xid.hip is not None:
+                c.hip = xid.hip
+        elif xid.hip is not None and c.hip is None:
+            c.hip = xid.hip
+
+
+# ─── Position-match path ─────────────────────────────────────────────
+
+
+# Position-match tolerance for the AT-HYG position branch. 2″ matches
+# the bead's stated bar and is well below the typical AT-HYG inter-
+# source separation away from the densest clusters. High-PM stars may
+# miss at this tolerance — that's intentional; the ``position_pm``
+# (PM-propagated match against Gaia astrometry, stubbed until a future
+# bead lands) is the principled fix for the PM-driven epoch-residual
+# class.
 ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0
 
 
@@ -1020,12 +1124,12 @@ def resolve_via_position(
     athyg: list[AthygRow],
     tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
 ) -> None:
-    """Second pass over components that fell through tier 1 (ORB6 HIP)
-    and the HIP-mediated branch of tier 2 (AT-HYG via HIP). Position-
-    matches WDS precise coordinates into AT-HYG and reads the resulting
-    row's natively-stored gaia field. Mutates ``components`` in place —
-    sets ``gaia_source_id`` and rewrites ``resolve_via`` from
-    ``unresolved`` to ``athyg_gaia_native`` on hit.
+    """Cascade pass following ``resolve_via_simbad``. For components
+    still unresolved after the HIP-anchored prefix and the SIMBAD-backed
+    cross-ID pass, position-matches WDS precise coordinates into AT-HYG
+    and reads the resulting row's natively-stored gaia field. Mutates
+    ``components`` in place — sets ``gaia_source_id`` and rewrites
+    ``resolve_via`` from ``unresolved`` to ``athyg_gaia_native`` on hit.
 
     Primary uses the WDS pair's ``precise_ra/dec``; secondary uses that
     plus the pair's last-reported ``(ρ, θ)`` offset, EXCLUDING the
@@ -1100,21 +1204,30 @@ def resolve_all_pairs(
     orb6: list[Orb6Entry],
     indices: IdentifierIndices,
     athyg: list[AthygRow],
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
     position_tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
 ) -> list[ResolvedComponent]:
-    """Run Stage 2's full resolution chain — identifier-then-position
-    over every WDS pair that decomposes into two components. System-
-    level rows (empty ``components``) and rows we cannot split are
-    skipped.
+    """Run Stage 2's full resolution chain over every WDS pair that
+    decomposes into two components. System-level rows (empty
+    ``components``) and rows we cannot split are skipped. Cascade
+    strategies and order are canonicalised in ``RESOLVE_VIA_VALUES``.
 
-    Pass 1 (identifier): for each component, run tier 1 (ORB6's HIP →
-    Gaia xwalk) and tier 2 (AT-HYG's natively-stored gaia via the same
-    HIP).
-    Pass 2 (position): for components left unresolved, match WDS
-    precise coordinates against AT-HYG and read AT-HYG's gaia field
-    directly. This also classifies as ``athyg_gaia_native`` because it
-    does NOT touch ``data/gaia_dr3_astrometry.tsv`` — that file backs
-    tiers 3-4 (stubbed until ``stellata-dch.29``).
+    1. ``resolve_component`` runs the HIP-anchored prefix:
+       ``orb6_hip`` (primary's ORB6 HIP → Gaia xwalk) then
+       ``athyg_gaia_native`` (HIP-mediated AT-HYG lookup).
+    2. ``resolve_via_simbad`` runs the SIMBAD-backed cross-ID pass
+       against the committed ``data/simbad_wds_xids.tsv`` side-file —
+       tagged ``simbad_xid``. Skipped when ``simbad_xids`` is empty /
+       absent (the in-process tests pass ``None``).
+    3. ``resolve_via_position`` runs the AT-HYG position-match pass —
+       tagged ``athyg_gaia_native`` (the same tag as branch 1's
+       HIP-mediated AT-HYG read because both routes land on AT-HYG's
+       natively-stored gaia field; the ``position_pm`` /
+       ``position_nopm`` tags are reserved for a future PM-propagated
+       match against ``data/gaia_dr3_astrometry.tsv``).
+    4. ``propagate_within_system`` copies a resolved letter binding
+       (and any HIP it carries) across every pair row that shares the
+       same ``(wds_id, letter)``.
     """
     orb6_by_pair = group_orb6_by_pair(orb6)
     out: list[ResolvedComponent] = []
@@ -1132,6 +1245,8 @@ def resolve_all_pairs(
             pair, secondary, is_primary=False,
             orb6_for_pair=orb6_for_pair, indices=indices,
         ))
+    if simbad_xids:
+        resolve_via_simbad(components=out, simbad_xids=simbad_xids)
     resolve_via_position(
         components=out, pairs=pairs, athyg=athyg,
         tolerance_arcsec=position_tolerance_arcsec,
@@ -1144,26 +1259,36 @@ def propagate_within_system(components: list[ResolvedComponent]) -> None:
     """Within each WDS system, the same component letter always refers
     to the same physical star (e.g. component A of WDS 00491+5749 is η
     Cas A whether it appears in the AB, AC, AD, …, AH pair rows). When
-    one pair's A primary resolves via HIP-mediated AT-HYG lookup but
-    the other A primaries can't (their pair has no ORB6 entry and the
-    WDS precise coord drift exceeds the 2″ position tolerance), this
-    pass copies the resolved binding forward. The inherited
-    ``resolve_via`` classification is preserved so the per-tier counts
-    log the strategy that actually fetched the source_id, not a
-    synthetic propagation tag.
+    one pair's A primary resolves but the other A primaries can't
+    (their pair has no ORB6 entry and the WDS precise coord drift
+    exceeds the 2″ position tolerance), this pass copies the resolved
+    binding forward. The inherited ``resolve_via`` classification is
+    preserved so the per-tier counts log the strategy that actually
+    fetched the source_id, not a synthetic propagation tag.
+
+    When more than one pair row in the same system resolves the
+    same letter through different strategies (e.g. one A hits
+    ``orb6_hip`` while another A hits ``simbad_xid``), the canonical
+    binding is the highest-priority tag per ``RESOLVE_VIA_PRIORITY``,
+    not whichever happened to iterate first. The underlying
+    ``gaia_source_id`` is identical either way — same letter / same
+    physical star — only the tag the cascade counter sees differs.
 
     HIP propagation runs alongside source_id propagation but is
     independent: a saturated bright primary (Sirius / α Cen) has no
     Gaia source_id to propagate but still surfaces its HIP across
     every pair row in the system so Stage 3's HIP2 fallback engages
-    consistently across the wide companions too.
+    consistently across the wide companions too. No priority ordering
+    exists across HIP sources, so first-write-wins is correct.
     """
     by_system_letter: dict[tuple[str, str], tuple[int, str]] = {}
     hip_by_system_letter: dict[tuple[str, str], int] = {}
     for c in components:
         key = (c.wds_id, c.component)
         if c.gaia_source_id is not None:
-            by_system_letter.setdefault(key, (c.gaia_source_id, c.resolve_via))
+            cur = by_system_letter.get(key)
+            if cur is None or RESOLVE_VIA_PRIORITY[c.resolve_via] < RESOLVE_VIA_PRIORITY[cur[1]]:
+                by_system_letter[key] = (c.gaia_source_id, c.resolve_via)
         if c.hip is not None:
             hip_by_system_letter.setdefault(key, c.hip)
     for c in components:
@@ -1192,7 +1317,8 @@ def resolution_counts(
 def write_astrometry_request(
     components: list[ResolvedComponent], path: Path,
 ) -> int:
-    """Emit the deduped union of source_ids resolved in tiers 1-2.
+    """Emit the deduped union of every Gaia source_id Stage 2 resolved,
+    across every tier in ``RESOLVE_VIA_VALUES``.
 
     ``stellata-dch.29`` (``scripts/refresh-gaia-astrometry.py``) reads
     this file to drive its ADQL ``WHERE source_id IN (...)`` query — so
@@ -2751,6 +2877,7 @@ def _iter_input_paths() -> Iterator[Path]:
     yield SRC_GAIA_TYC_XM
     yield SRC_GAIA_NSS
     yield SRC_GAIA_ASTROMETRY
+    yield SRC_SIMBAD_WDS_XIDS
 
 
 def log(msg: str) -> None:
@@ -2825,6 +2952,14 @@ def run(force: bool) -> int:
         f"loaded Gaia 5p astrometry for {len(src_to_astrometry):,} source_ids"
     )
 
+    simbad_wds_xids = parse_simbad_wds_xids(SRC_SIMBAD_WDS_XIDS)
+    n_simbad_gaia = sum(1 for x in simbad_wds_xids.values() if x.gaia_source_id is not None)
+    n_simbad_hip = sum(1 for x in simbad_wds_xids.values() if x.hip is not None)
+    log(
+        f"loaded SIMBAD WDS xids for {len(simbad_wds_xids):,} components "
+        f"({n_simbad_gaia:,} Gaia DR3 / {n_simbad_hip:,} HIP)"
+    )
+
     indices = build_indices(
         athyg, hip2, hip_to_gaia, tyc_to_gaia, src_to_nss,
         src_to_astrometry=src_to_astrometry,
@@ -2845,6 +2980,7 @@ def run(force: bool) -> int:
     components = resolve_all_pairs(
         pairs=wds_pairs, orb6=orb6,
         indices=indices, athyg=athyg,
+        simbad_xids=simbad_wds_xids,
     )
     counts = resolution_counts(components)
     log(
