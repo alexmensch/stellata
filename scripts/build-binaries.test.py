@@ -915,6 +915,35 @@ class PropagateWithinSystemTests(unittest.TestCase):
         bb.propagate_within_system([x_a, y_a])
         self.assertIsNone(y_a.gaia_source_id)
 
+    def test_priority_aware_tag_when_letters_tie(self) -> None:
+        # Three rows share (X, "A"): simbad_xid iterates first, orb6_hip
+        # second, then an unresolved A. The OLD setdefault-based code
+        # would surface simbad_xid for the propagated tag because it
+        # claimed the slot first; priority-aware selection must surface
+        # orb6_hip (the stronger tier per RESOLVE_VIA_PRIORITY) and
+        # propagate that tag onto the unresolved entry. The
+        # gaia_source_id is identical across rows by construction —
+        # same letter / same physical star — only the tag differs.
+        simbad_first = bb.ResolvedComponent(
+            wds_id="X", discoverer="DA", component="A", is_primary=True,
+            gaia_source_id=42, resolve_via="simbad_xid",
+        )
+        orb6_later = bb.ResolvedComponent(
+            wds_id="X", discoverer="DB", component="A", is_primary=True,
+            gaia_source_id=42, resolve_via="orb6_hip",
+        )
+        unresolved_a = bb.ResolvedComponent(
+            wds_id="X", discoverer="DC", component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        bb.propagate_within_system([simbad_first, orb6_later, unresolved_a])
+        self.assertEqual(unresolved_a.gaia_source_id, 42)
+        self.assertEqual(unresolved_a.resolve_via, "orb6_hip")
+        # The directly-resolved rows keep the tag they entered with —
+        # propagation never rewrites an already-resolved row.
+        self.assertEqual(simbad_first.resolve_via, "simbad_xid")
+        self.assertEqual(orb6_later.resolve_via, "orb6_hip")
+
 
 class ResolutionCountsTests(unittest.TestCase):
     def test_every_canonical_key_present(self) -> None:

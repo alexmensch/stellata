@@ -153,6 +153,14 @@ RESOLVE_VIA_VALUES: tuple[str, ...] = (
     "unresolved",
 )
 
+# Strict priority lookup keyed off ``RESOLVE_VIA_VALUES``. Lower index =
+# stronger evidence. Consumed by ``propagate_within_system`` to pick the
+# canonical tag when multiple pair rows resolve the same component
+# letter through different tiers.
+RESOLVE_VIA_PRIORITY: dict[str, int] = {
+    tag: i for i, tag in enumerate(RESOLVE_VIA_VALUES)
+}
+
 # ─── Parsing primitives ──────────────────────────────────────────────
 
 
@@ -1251,26 +1259,36 @@ def propagate_within_system(components: list[ResolvedComponent]) -> None:
     """Within each WDS system, the same component letter always refers
     to the same physical star (e.g. component A of WDS 00491+5749 is η
     Cas A whether it appears in the AB, AC, AD, …, AH pair rows). When
-    one pair's A primary resolves via HIP-mediated AT-HYG lookup but
-    the other A primaries can't (their pair has no ORB6 entry and the
-    WDS precise coord drift exceeds the 2″ position tolerance), this
-    pass copies the resolved binding forward. The inherited
-    ``resolve_via`` classification is preserved so the per-tier counts
-    log the strategy that actually fetched the source_id, not a
-    synthetic propagation tag.
+    one pair's A primary resolves but the other A primaries can't
+    (their pair has no ORB6 entry and the WDS precise coord drift
+    exceeds the 2″ position tolerance), this pass copies the resolved
+    binding forward. The inherited ``resolve_via`` classification is
+    preserved so the per-tier counts log the strategy that actually
+    fetched the source_id, not a synthetic propagation tag.
+
+    When more than one pair row in the same system resolves the
+    same letter through different strategies (e.g. one A hits
+    ``orb6_hip`` while another A hits ``simbad_xid``), the canonical
+    binding is the highest-priority tag per ``RESOLVE_VIA_PRIORITY``,
+    not whichever happened to iterate first. The underlying
+    ``gaia_source_id`` is identical either way — same letter / same
+    physical star — only the tag the cascade counter sees differs.
 
     HIP propagation runs alongside source_id propagation but is
     independent: a saturated bright primary (Sirius / α Cen) has no
     Gaia source_id to propagate but still surfaces its HIP across
     every pair row in the system so Stage 3's HIP2 fallback engages
-    consistently across the wide companions too.
+    consistently across the wide companions too. No priority ordering
+    exists across HIP sources, so first-write-wins is correct.
     """
     by_system_letter: dict[tuple[str, str], tuple[int, str]] = {}
     hip_by_system_letter: dict[tuple[str, str], int] = {}
     for c in components:
         key = (c.wds_id, c.component)
         if c.gaia_source_id is not None:
-            by_system_letter.setdefault(key, (c.gaia_source_id, c.resolve_via))
+            cur = by_system_letter.get(key)
+            if cur is None or RESOLVE_VIA_PRIORITY[c.resolve_via] < RESOLVE_VIA_PRIORITY[cur[1]]:
+                by_system_letter[key] = (c.gaia_source_id, c.resolve_via)
         if c.hip is not None:
             hip_by_system_letter.setdefault(key, c.hip)
     for c in components:
