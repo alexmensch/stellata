@@ -872,8 +872,11 @@ def _gaia_astrometry_row(
     source_id: int = 100,
     ra_deg: float = 100.0, dec_deg: float = 0.0,
     parallax_mas: float | None = 10.0,
+    parallax_error_mas: float | None = 0.05,
     pmra_masyr: float | None = 1.0,
+    pmra_error_masyr: float | None = 0.05,
     pmdec_masyr: float | None = -1.0,
+    pmdec_error_masyr: float | None = 0.05,
     ref_epoch: float = 2016.0,
     ruwe: float | None = 1.0,
     ipd_frac_multi_peak: float | None = 0.0,
@@ -882,7 +885,9 @@ def _gaia_astrometry_row(
         source_id=source_id,
         ra_deg=ra_deg, dec_deg=dec_deg,
         parallax_mas=parallax_mas,
-        pmra_masyr=pmra_masyr, pmdec_masyr=pmdec_masyr,
+        parallax_error_mas=parallax_error_mas,
+        pmra_masyr=pmra_masyr, pmra_error_masyr=pmra_error_masyr,
+        pmdec_masyr=pmdec_masyr, pmdec_error_masyr=pmdec_error_masyr,
         ref_epoch=ref_epoch,
         ruwe=ruwe, ipd_frac_multi_peak=ipd_frac_multi_peak,
         g_mag=None, bp_mag=None, rp_mag=None,
@@ -956,6 +961,9 @@ class ParseGaiaAstrometryTests(unittest.TestCase):
         self.assertEqual(set(m.keys()), {2947050466531873024})
         row = m[2947050466531873024]
         self.assertAlmostEqual(row.pmra_masyr or 0.0, -461.57)
+        self.assertAlmostEqual(row.parallax_error_mas or 0.0, 0.23)
+        self.assertAlmostEqual(row.pmra_error_masyr or 0.0, 0.05)
+        self.assertAlmostEqual(row.pmdec_error_masyr or 0.0, 0.03)
         self.assertEqual(row.ref_epoch, 2016.00)
         self.assertEqual(row.ruwe, 1.78)
         self.assertEqual(row.ipd_frac_multi_peak, 0.012)
@@ -1988,6 +1996,550 @@ class OrbitCountsTests(unittest.TestCase):
         self.assertEqual(counts["orb6"], 1)
         self.assertEqual(counts["orb6_spectroscopic"], 0)
         self.assertEqual(counts["none"], 1)
+
+
+# ─── Stage 5 (optical-pair filter) ───────────────────────────────────
+
+
+def _wds_pair(
+    *,
+    wds_id: str = "WDS-1",
+    discoverer: str = "TST   1",
+    components: str = "AB",
+    notes: str = "    ",
+    rho_last: float | None = 5.0,
+    theta_last: float | None = 90.0,
+    mag_pri: float | None = 4.0,
+    mag_sec: float | None = 6.0,
+    precise_ra_deg: float | None = 100.0,
+    precise_dec_deg: float | None = 0.0,
+    date_last: int | None = 2020,
+    spectral: str = "",
+) -> "bb.WdsPair":
+    return bb.WdsPair(
+        wds_id=wds_id, discoverer=discoverer, components=components,
+        date_last=date_last, rho_last=rho_last, theta_last=theta_last,
+        mag_pri=mag_pri, mag_sec=mag_sec, spectral=spectral,
+        notes=notes,
+        precise_ra_deg=precise_ra_deg, precise_dec_deg=precise_dec_deg,
+    )
+
+
+class ClassifyPairOpticalTests(unittest.TestCase):
+    """Stage 5 cascade per-tier branches. Each test pins one tier with
+    a fixture that no other tier can decide, so the routing is
+    unambiguous."""
+
+    def _classify(
+        self,
+        *,
+        notes: str = "    ",
+        primary_gaia: int | None = None,
+        secondary_gaia: int | None = None,
+        primary_hip: int | None = None,
+        secondary_hip: int | None = None,
+        src_to_astrometry: dict[int, "bb.GaiaAstrometryRow"] | None = None,
+        hip2: list["bb.Hip2Row"] | None = None,
+        mag_pri: float | None = None,
+        mag_sec: float | None = None,
+        orbit_via: str = "none",
+    ) -> "bb.OpticalClassification":
+        pair = _wds_pair(notes=notes, mag_pri=mag_pri, mag_sec=mag_sec)
+        primary = _resolved(
+            gaia=primary_gaia, hip=primary_hip,
+            component="A", is_primary=True,
+        )
+        secondary = _resolved(
+            gaia=secondary_gaia, hip=secondary_hip,
+            component="B", is_primary=False,
+        )
+        indices = _indices_with_astrometry(
+            src_to_astrometry=src_to_astrometry or {},
+            hip2=hip2 or [],
+        )
+        return bb.classify_pair_optical(
+            pair, primary, secondary, orbit_via, indices,
+        )
+
+    def test_wds_notes_physical_keeps(self) -> None:
+        # 'V' = visual physical pair (common proper motion confirmed).
+        result = self._classify(notes="V   ")
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "wds_notes_kept")
+
+    def test_wds_notes_optical_rejects(self) -> None:
+        # 'U' = catalog-flagged uncertain (treated as optical).
+        result = self._classify(notes="U   ")
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "wds_notes_rejected")
+
+    def test_wds_notes_optical_wins_over_physical_when_both_present(self) -> None:
+        # Conservative bias: any S/U/X/Y in the 4-char block rejects.
+        result = self._classify(notes="VU  ")
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "wds_notes_rejected")
+
+    def test_both_gaia_consistent_plx_keeps(self) -> None:
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
+            pmra_masyr=10.0, pmdec_masyr=-5.0,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.01, parallax_error_mas=0.05,
+            pmra_masyr=10.1, pmdec_masyr=-4.9,
+        )
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=2,
+            src_to_astrometry={1: p, 2: s},
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_kept")
+
+    def test_both_gaia_disagreeing_plx_rejects(self) -> None:
+        # 10 mas vs 1 mas with σ=0.05 each: well past 3σ.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=1.0, parallax_error_mas=0.05,
+        )
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=2,
+            src_to_astrometry={1: p, 2: s},
+        )
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_rejected")
+
+    def test_both_gaia_disagreeing_pm_rejects(self) -> None:
+        # Parallax agrees, PM disagrees by >5 mas/yr on RA axis.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
+            pmra_masyr=20.0, pmdec_masyr=0.0,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.0, parallax_error_mas=0.05,
+            pmra_masyr=0.0, pmdec_masyr=0.0,
+        )
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=2,
+            src_to_astrometry={1: p, 2: s},
+        )
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_rejected")
+
+    def test_asymm_gaia_sirius_shaped_rejects(self) -> None:
+        # Sirius A-C archetype: A at 378 mas (HIP2, ~2.64 pc), C at
+        # ~0.5 mas (Gaia, ~2 kpc). σ_combined dominated by HIP2's
+        # ~0.4 mas — the difference is ~1000σ.
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=0.5, parallax_error_mas=0.1,
+        )
+        hip2 = _hip2_row(hip=32349, plx_mas=378.0)
+        # The HIP2 helper defaults to e_plx_mas=None — that's OK; the
+        # gate falls back to using Gaia σ alone, and 1000× excess
+        # still rejects.
+        result = self._classify(
+            primary_gaia=None, secondary_gaia=2,
+            primary_hip=32349,
+            src_to_astrometry={2: s},
+            hip2=[hip2],
+        )
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "asymm_rejected")
+
+    def test_asymm_gaia_consistent_keeps(self) -> None:
+        # Asymm: B has Gaia 10.0 mas, A has HIP2 anchor 10.01 mas —
+        # within tolerance, physical.
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.0, parallax_error_mas=0.1,
+        )
+        hip2 = _hip2_row(hip=1, plx_mas=10.01)
+        result = self._classify(
+            primary_gaia=None, secondary_gaia=2,
+            primary_hip=1,
+            src_to_astrometry={2: s},
+            hip2=[hip2],
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "asymm_kept")
+
+    def test_asymm_symmetric_primary_gaia_secondary_hip2(self) -> None:
+        # Inverse asymmetry: A has Gaia, B has HIP2. Should match.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.1,
+        )
+        hip2 = _hip2_row(hip=2, plx_mas=10.01)
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=None,
+            secondary_hip=2,
+            src_to_astrometry={1: p},
+            hip2=[hip2],
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "asymm_kept")
+
+    def test_mag_heuristic_keeps_close_pair(self) -> None:
+        # No Gaia, no HIP2, |Δmag|=2 — under 5-mag threshold.
+        result = self._classify(mag_pri=4.0, mag_sec=6.0)
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_mag_heuristic_rejects_wide_gap(self) -> None:
+        result = self._classify(mag_pri=2.0, mag_sec=10.0)
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_rejected")
+
+    def test_mag_heuristic_keeps_when_no_data(self) -> None:
+        # Truly empty: defaults to mag_heuristic_kept rather than
+        # silently dropping the pair.
+        result = self._classify()
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_orbit_on_file_overrides_mag_gap_sirius_ab(self) -> None:
+        # Sirius A-B archetype: 9.9-mag gap (would normally reject as
+        # mag_heuristic_rejected) but a grade-2 ORB6 visual orbit is
+        # on file → orbit_kept wins.
+        result = self._classify(
+            mag_pri=-1.47, mag_sec=8.44, orbit_via="orb6",
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "orbit_kept")
+
+    def test_orbit_on_file_overrides_no_data_case(self) -> None:
+        # NSS orbit available, no mags at all → orbit_kept (not the
+        # default mag_heuristic_kept fallback).
+        result = self._classify(orbit_via="gaia_nss")
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "orbit_kept")
+
+    def test_orbit_on_file_does_not_override_gaia_disagreement(self) -> None:
+        # An ORB6 orbit on file does NOT rescue a pair Gaia already
+        # rejected — Gaia is empirical for the modern epoch and beats
+        # potentially-stale ORB6 fits.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=1.0, parallax_error_mas=0.05,
+        )
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=2,
+            src_to_astrometry={1: p, 2: s},
+            orbit_via="orb6",
+        )
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_rejected")
+
+
+class OpticalCountsTests(unittest.TestCase):
+    def test_every_canonical_key_present(self) -> None:
+        rows = [
+            bb.OpticalClassification(True, "gaia_kept"),
+            bb.OpticalClassification(False, "asymm_rejected"),
+            bb.OpticalClassification(True, "wds_notes_kept"),
+            bb.OpticalClassification(True, "orbit_kept"),
+        ]
+        counts = bb.optical_counts(rows)
+        self.assertEqual(set(counts.keys()), set(bb.OPTICAL_VIA_VALUES))
+        self.assertEqual(counts["gaia_kept"], 1)
+        self.assertEqual(counts["asymm_rejected"], 1)
+        self.assertEqual(counts["wds_notes_kept"], 1)
+        self.assertEqual(counts["orbit_kept"], 1)
+        self.assertEqual(counts["mag_heuristic_rejected"], 0)
+
+
+# ─── Stage 6 (multiples.tsv emit) ────────────────────────────────────
+
+
+def _component_astrometry(
+    *,
+    astrometry_via: str = "gaia_5p",
+    ra_deg: float | None = 100.0,
+    dec_deg: float | None = 0.0,
+    parallax_mas: float | None = 10.0,
+    pmra_masyr: float | None = 1.0,
+    pmdec_masyr: float | None = -1.0,
+    ref_epoch: float | None = 2016.0,
+) -> "bb.ComponentAstrometry":
+    return bb.ComponentAstrometry(
+        astrometry_via=astrometry_via,
+        ra_deg=ra_deg, dec_deg=dec_deg,
+        parallax_mas=parallax_mas,
+        pmra_masyr=pmra_masyr, pmdec_masyr=pmdec_masyr,
+        ref_epoch=ref_epoch,
+    )
+
+
+class BuildMultiplesRowsTests(unittest.TestCase):
+    def test_drops_optical_classified_pairs(self) -> None:
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True, via="orb6_hip"),
+            _resolved(gaia=2, component="B", is_primary=False, via="orb6_hip"),
+        ]
+        astrometry = [_component_astrometry(), _component_astrometry()]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(False, "gaia_rejected")]
+        indices = _indices_with_astrometry()
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(rows, [])
+
+    def test_emits_two_rows_per_physical_pair(self) -> None:
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True, via="orb6_hip"),
+            _resolved(gaia=2, component="B", is_primary=False, via="athyg_gaia_native"),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry()
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].orbit_role, "primary")
+        self.assertEqual(rows[1].orbit_role, "secondary")
+        self.assertEqual(rows[0].system_id, "WDS-1-AB")
+        self.assertEqual(rows[0].resolve_via, "orb6_hip")
+        self.assertEqual(rows[1].resolve_via, "athyg_gaia_native")
+        self.assertEqual(rows[0].comp, "A")
+        self.assertEqual(rows[1].comp, "B")
+
+    def test_drops_pair_when_both_components_lack_position(self) -> None:
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry()
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(rows, [])
+
+    def test_position_pc_from_parallax_and_radec(self) -> None:
+        # 10 mas parallax → 100 pc; (RA, Dec) = (0, 0) → x-axis.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry()
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertAlmostEqual(rows[0].dist_pc or 0.0, 100.0, places=6)
+        self.assertAlmostEqual(rows[0].x_pc or 0.0, 100.0, places=6)
+        self.assertAlmostEqual(rows[0].y_pc or 0.0, 0.0, places=6)
+        self.assertAlmostEqual(rows[0].z_pc or 0.0, 0.0, places=6)
+
+    def test_orbit_via_to_regime_mapping(self) -> None:
+        # Sanity-check: every ORBIT_VIA_VALUES key maps cleanly, and
+        # the legacy regime numbering (0 = none, 2 = full, 3 = spec)
+        # is preserved.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [_component_astrometry(), _component_astrometry()]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry()
+
+        for via, expected_regime in (
+            ("gaia_nss", 2), ("orb6", 2),
+            ("orb6_spectroscopic", 3), ("none", 0),
+        ):
+            rows = bb.build_multiples_rows(
+                pairs=[pair], components=components, astrometry=astrometry,
+                orbits=[(None, via)], classifications=classifications,
+                indices=indices,
+            )
+            self.assertEqual(rows[0].regime, expected_regime, msg=via)
+            self.assertEqual(rows[1].regime, expected_regime, msg=via)
+
+
+class WriteMultiplesTsvTests(unittest.TestCase):
+    def test_header_and_row_round_trip(self) -> None:
+        row = bb.MultiplesRow(
+            system_id="WDS-1-AB", comp="A",
+            hip=12345, gaia_source_id=99999,
+            x_pc=1.5, y_pc=2.5, z_pc=-3.5,
+            absmag=4.5, ci=0.6, spect="G2V", name="Sirius",
+            source="athyg", regime=2,
+            resolve_via="orb6_hip", astrometry_via="gaia_5p", orbit_via="orb6",
+            orbit_role="primary",
+            P_days=365.25, T_jd=2451545.0, e=0.1, a_AU=1.0,
+            i_rad=0.5, omega_rad=0.6, Omega_rad=0.7,
+            q=0.5, dist_pc=10.0,
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "multiples.tsv"
+            n = bb.write_multiples_tsv([row], p)
+            self.assertEqual(n, 1)
+            lines = p.read_text().splitlines()
+        self.assertEqual(len(lines), 2)
+        header = lines[0].split("\t")
+        self.assertEqual(tuple(header), bb.MULTIPLES_TSV_COLUMNS)
+        cells = lines[1].split("\t")
+        self.assertEqual(cells[header.index("system_id")], "WDS-1-AB")
+        self.assertEqual(cells[header.index("hip")], "12345")
+        self.assertEqual(cells[header.index("gaia_source_id")], "99999")
+        self.assertEqual(cells[header.index("name")], "Sirius")
+        self.assertEqual(cells[header.index("regime")], "2")
+
+    def test_empty_optional_fields_emit_empty_cells(self) -> None:
+        row = bb.MultiplesRow(
+            system_id="WDS-2-AB", comp="A",
+            hip=None, gaia_source_id=None,
+            x_pc=None, y_pc=None, z_pc=None,
+            absmag=None, ci=None, spect="", name="",
+            source="wds", regime=0,
+            resolve_via="unresolved", astrometry_via="unresolved", orbit_via="none",
+            orbit_role="primary",
+            P_days=None, T_jd=None, e=None, a_AU=None,
+            i_rad=None, omega_rad=None, Omega_rad=None,
+            q=None, dist_pc=None,
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "multiples.tsv"
+            bb.write_multiples_tsv([row], p)
+            lines = p.read_text().splitlines()
+        cells = lines[1].split("\t")
+        header = lines[0].split("\t")
+        for col in ("hip", "gaia_source_id", "x_pc", "y_pc", "z_pc",
+                    "absmag", "ci", "P_days", "T_jd", "e", "a_AU",
+                    "i_rad", "omega_rad", "Omega_rad", "q", "dist_pc"):
+            self.assertEqual(cells[header.index(col)], "",
+                             msg=f"empty optional {col} should be empty cell")
+
+
+# ─── Stage 7 (build-time stats / snapshot compare) ───────────────────
+
+
+class BuildBinariesCountsTests(unittest.TestCase):
+    def test_collects_every_canonical_section(self) -> None:
+        # Construct minimal Stage 2-5 outputs and verify every section
+        # (resolution / astrometry / orbit / optical) shows up as a
+        # flat key prefix.
+        counts = bb.build_binaries_counts(
+            pairs=[_wds_pair(components="AB")],
+            components=[
+                _resolved(gaia=1, component="A", is_primary=True),
+                _resolved(gaia=2, component="B", is_primary=False),
+            ],
+            astrometry=[_component_astrometry(), _component_astrometry()],
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            multiples_rows=[],
+        )
+        for tag in bb.RESOLVE_VIA_VALUES:
+            self.assertIn(f"resolution_{tag}", counts)
+        for tag in bb.ASTROMETRY_VIA_VALUES:
+            self.assertIn(f"astrometry_{tag}", counts)
+        for tag in bb.ORBIT_VIA_VALUES:
+            self.assertIn(f"orbit_{tag}", counts)
+        for tag in bb.OPTICAL_VIA_VALUES:
+            self.assertIn(f"optical_{tag}", counts)
+        self.assertEqual(counts["wds_pairs_total"], 1)
+        self.assertEqual(counts["decomposing_pairs"], 1)
+        self.assertEqual(counts["components_total"], 2)
+        self.assertEqual(counts["optical_wds_notes_kept"], 1)
+
+
+class CompareBuildCountsTests(unittest.TestCase):
+    def test_match_when_equal(self) -> None:
+        a = {"x": 1, "y": 2}
+        diff = bb.compare_build_counts(a, a)
+        self.assertTrue(all(d.status == "match" for d in diff))
+
+    def test_mismatch_signed_delta(self) -> None:
+        diff = bb.compare_build_counts({"x": 10, "y": 5}, {"x": 12, "y": 5})
+        statuses = {d.key: d.status for d in diff}
+        self.assertEqual(statuses, {"x": "mismatch", "y": "match"})
+
+    def test_missing_keys_classified(self) -> None:
+        diff = bb.compare_build_counts({"a": 1, "b": 2}, {"b": 2, "c": 3})
+        statuses = {d.key: d.status for d in diff}
+        self.assertEqual(statuses["a"], "missing_actual")
+        self.assertEqual(statuses["b"], "match")
+        self.assertEqual(statuses["c"], "missing_expected")
+
+
+class AssertOrUpdateCountsTests(unittest.TestCase):
+    def test_writes_initial_snapshot_when_missing(self) -> None:
+        import json as _json
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            ok = bb.assert_or_update_counts({"x": 1, "y": 2}, p)
+            self.assertTrue(ok)
+            self.assertTrue(p.exists())
+            written = _json.loads(p.read_text())
+        self.assertEqual(written, {"x": 1, "y": 2})
+
+    def test_compares_against_existing_snapshot_match(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"x": 1, "y": 2}\n')
+            ok = bb.assert_or_update_counts({"x": 1, "y": 2}, p)
+        self.assertTrue(ok)
+
+    def test_compares_against_existing_snapshot_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"x": 1, "y": 2}\n')
+            ok = bb.assert_or_update_counts({"x": 1, "y": 3}, p)
+            self.assertFalse(ok)
+            # Snapshot file must NOT be silently rewritten on mismatch.
+            self.assertEqual(p.read_text(), '{"x": 1, "y": 2}\n')
+
+    def test_env_var_forces_update_on_mismatch(self) -> None:
+        import json as _json
+        import os as _os
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"x": 1}\n')
+            try:
+                _os.environ[bb.UPDATE_COUNTS_ENV_VAR] = "1"
+                ok = bb.assert_or_update_counts({"x": 2}, p)
+            finally:
+                _os.environ.pop(bb.UPDATE_COUNTS_ENV_VAR, None)
+            self.assertTrue(ok)
+            written = _json.loads(p.read_text())
+        self.assertEqual(written, {"x": 2})
 
 
 if __name__ == "__main__":
