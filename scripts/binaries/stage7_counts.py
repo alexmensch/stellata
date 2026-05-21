@@ -37,7 +37,8 @@ from stage5_optical import (  # noqa: E402
     optical_counts,
 )
 from stage6_multiples import (  # noqa: E402
-    ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES, MultiplesRow,
+    ASTROMETRY_VIA_SYSTEM_INHERITED, ORBIT_ROLE_STANDALONE,
+    SPECT_VIA_VALUES, MultiplesRow,
 )
 
 # Stage 7 logs from inside ``assert_or_update_counts``; defining a
@@ -97,7 +98,7 @@ def build_binaries_counts(
     # tier independently of Stage 3's per-component counts.
     multiples_inherited = sum(
         1 for r in multiples_rows
-        if r.astrometry_via == "system_inherited"
+        if r.astrometry_via == ASTROMETRY_VIA_SYSTEM_INHERITED
     )
     standalone_emitted = sum(
         1 for r in multiples_rows

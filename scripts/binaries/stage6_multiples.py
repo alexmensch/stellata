@@ -81,6 +81,13 @@ SOURCE_WDS = "wds"
 SOURCE_SIMBAD = "simbad"
 
 
+# Stage-6-owned ``astrometry_via`` value — promoted from Stage 3's tag
+# tuple when a component inherits the system anchor's position. Listed
+# here (not in stage3_astrometry.ASTROMETRY_VIA_VALUES) because Stage 3
+# itself never emits it; Stage 7 counts it directly off emitted rows.
+ASTROMETRY_VIA_SYSTEM_INHERITED = "system_inherited"
+
+
 # orbit_via → numeric ``regime`` tag for parity with the legacy v5
 # column. 0 = no orbital information; 2 = full orbital elements (Gaia
 # NSS or ORB6 visual); 3 = spectroscopic-only. Phase 3's v6 binary
@@ -271,7 +278,7 @@ def build_multiples_row(
         spect_via = SPECT_VIA_NONE
 
     astrometry_via = (
-        "system_inherited" if inherited else astrometry.astrometry_via
+        ASTROMETRY_VIA_SYSTEM_INHERITED if inherited else astrometry.astrometry_via
     )
 
     return MultiplesRow(
@@ -422,7 +429,7 @@ def build_standalone_rows(
             anchor = system_anchors.get(wds_id)
             if anchor is not None:
                 position = anchor
-                astrometry_via = "system_inherited"
+                astrometry_via = ASTROMETRY_VIA_SYSTEM_INHERITED
 
         simbad_spect = indices.simbad_wds_spectra.get((wds_id, component))
         if simbad_spect:

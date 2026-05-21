@@ -85,7 +85,8 @@ from stage5_optical import (  # noqa: E402, F401
     classify_all_pairs, classify_pair_optical, optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
-    MULTIPLES_TSV_COLUMNS, ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
+    ASTROMETRY_VIA_SYSTEM_INHERITED, MULTIPLES_TSV_COLUMNS,
+    ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
     MultiplesRow,
     build_multiples_rows, build_standalone_rows,
     compute_system_anchors, write_multiples_tsv,

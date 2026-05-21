@@ -3229,12 +3229,12 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         bc_b = next(r for r in rows if r.system_id == "04153-0739-BC" and r.comp == "B")
         self.assertEqual(bc_b.spect, "DA2.9")
         self.assertEqual(bc_b.spect_via, "simbad")
-        self.assertEqual(bc_b.astrometry_via, "system_inherited")
+        self.assertEqual(bc_b.astrometry_via, bb.ASTROMETRY_VIA_SYSTEM_INHERITED)
         self.assertAlmostEqual(bc_b.dist_pc or 0.0, 100.0, places=6)
         # AB-B's astrometry was unresolved but it still inherits the
         # anchor; the via flips to system_inherited.
         ab_b = next(r for r in rows if r.system_id == "04153-0739-AB" and r.comp == "B")
-        self.assertEqual(ab_b.astrometry_via, "system_inherited")
+        self.assertEqual(ab_b.astrometry_via, bb.ASTROMETRY_VIA_SYSTEM_INHERITED)
         # AB-A keeps its native gaia_5p tag.
         ab_a = next(r for r in rows if r.system_id == "04153-0739-AB" and r.comp == "A")
         self.assertEqual(ab_a.astrometry_via, "gaia_5p")
@@ -3287,7 +3287,7 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         self.assertEqual(c_row.regime, 0)
         self.assertEqual(c_row.hip, 42)
         self.assertEqual(c_row.gaia_source_id, 3)
-        self.assertEqual(c_row.astrometry_via, "system_inherited")
+        self.assertEqual(c_row.astrometry_via, bb.ASTROMETRY_VIA_SYSTEM_INHERITED)
         self.assertAlmostEqual(c_row.dist_pc or 0.0, 100.0, places=6)
 
     def test_standalone_sweep_skips_already_emitted_components(self) -> None:
