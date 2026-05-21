@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { Picker, type PickerDeps } from './picker';
 import { ALL_SPECT_MASK, type FilterState } from '../stellata';
 import type { Catalog } from '../loaders/catalog-loader';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { MolecularClouds } from '../molecular-clouds/molecular-clouds';
 import type { PlanetBodyField } from '../solar-system/planet-body-field';
 import type { Heliopause } from '../solar-system/heliopause';
@@ -92,25 +93,20 @@ function makeCatalog(
   const sortedDist = new Float32Array(n);
   for (let i = 0; i < n; i++) sortedDist[i] = distSol[sortedIdx[i]];
 
-  const catalog: Catalog = {
-    count: n,
-    positions: pos,
-    absmag: new Float32Array(opts.absmag ?? Array(n).fill(0)),
-    ci: new Float32Array(n),
-    spectClass: new Float32Array(opts.spectClass ?? Array(n).fill(3)), // default G
-    luminosityClass: new Uint8Array(n),
-    physicalRadius: new Float32Array(Array(n).fill(1)),
-    constellation: new Float32Array(n),
-    flags: new Uint8Array(n),
-    companion: new Int32Array(Array(n).fill(-1)),
-    periodDays: new Float32Array(opts.periodDays ?? Array(n).fill(0)),
-    amplitudeMag: new Float32Array(opts.amplitudeMag ?? Array(n).fill(0)),
-    hip: new Uint32Array(n),
-    gaiaSourceId: new BigUint64Array(n),
-    names: new Map(),
-    solIndex: -1,
-    constellations: [],
-  };
+  const catalog = makeEmptyCatalog(n);
+  catalog.positions = pos;
+  if (opts.absmag) for (let i = 0; i < opts.absmag.length; i++) catalog.absmag[i] = opts.absmag[i];
+  if (opts.spectClass) {
+    for (let i = 0; i < opts.spectClass.length; i++) catalog.spectClass[i] = opts.spectClass[i];
+  } else {
+    catalog.spectClass.fill(3); // default G
+  }
+  if (opts.periodDays) {
+    for (let i = 0; i < opts.periodDays.length; i++) catalog.periodDays[i] = opts.periodDays[i];
+  }
+  if (opts.amplitudeMag) {
+    for (let i = 0; i < opts.amplitudeMag.length; i++) catalog.amplitudeMag[i] = opts.amplitudeMag[i];
+  }
 
   return {
     catalog,
