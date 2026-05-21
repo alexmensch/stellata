@@ -156,10 +156,7 @@ float ballesterosBvFromTeff(float teff) {
     return u / 0.92;
 }
 
-// Tier-1 routing: when Apsis Teff is available, derive the intrinsic B-V
-// via Ballesteros⁻¹ and let dust reddening (absorbAV / R_V already folded
-// into bvVal by the caller) ride on top. Otherwise fall through to the
-// catalog's iCi-derived B-V — the existing Tier-1 path from PR #89.
+// Sample the dust-reddened-B-V → sRGB LUT.
 vec3 ciToColor(float bvVal) {
     float t = clamp((bvVal - BV_MIN) / (BV_MAX - BV_MIN), 0.0, 1.0);
     return texture(uColorLut, vec2(t, 0.5)).rgb;
