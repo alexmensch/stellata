@@ -3,11 +3,13 @@ import {
   bestApsisTeff,
   NO_APSIS_TEFF,
   pickTeffSource,
-  SOLAR_BV_FALLBACK,
   type ColorRoutingRecord,
 } from './star-color-routing-pure';
 import { ballesterosTeff } from '../../../scripts/colour/blackbody-lut-pure';
-import { parseSpectral } from '../../../scripts/catalog/catalog-pure';
+import {
+  SOLAR_BV_FALLBACK,
+  parseSpectral,
+} from '../../../scripts/catalog/catalog-pure';
 
 // ---- Per-tier coverage ------------------------------------------------
 

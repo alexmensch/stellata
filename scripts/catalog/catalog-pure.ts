@@ -5,6 +5,12 @@
 // transforms (spectral parsing, Stefan-Boltzmann radius, GCVS field
 // extraction, binary spatial inference) without spinning up the build.
 
+/** Solar-type B-V used as a fallback when no chromaticity input is
+ *  available. ~0.65 yields a yellow disc rather than a hot blue or
+ *  cold red default. Consumed by stars-parse's AT-HYG read (blank ci
+ *  cells) and by star-color-routing-pure's tier-6 fallback. */
+export const SOLAR_BV_FALLBACK = 0.65;
+
 // ---- Spectral classification --------------------------------------------
 
 export interface SpectralInfo {

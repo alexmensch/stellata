@@ -13,7 +13,11 @@
 // without re-deriving the priority logic.
 
 import { ballesterosTeff } from '../../../scripts/colour/blackbody-lut-pure';
-import { tempKelvin, type SpectralInfo } from '../../../scripts/catalog/catalog-pure';
+import {
+  SOLAR_BV_FALLBACK,
+  tempKelvin,
+  type SpectralInfo,
+} from '../../../scripts/catalog/catalog-pure';
 
 export type TeffSource =
   | 'apsis-phot'
@@ -22,12 +26,6 @@ export type TeffSource =
   | 'spectral'
   | 'wd'
   | 'solar';
-
-/** Fallback B-V matching the AT-HYG `ci` cell's solar default in
- *  `scripts/catalog/stars-parse.ts` (`DEFAULT_CI`). Hoisted so the
- *  routing helper, the test, and any future runtime check share one
- *  source of truth. */
-export const SOLAR_BV_FALLBACK = 0.65;
 
 /** Sentinel float written to the per-instance Apsis Teff attribute when
  *  no Apsis Teff is available. 0.0 is unambiguous — Apsis Teff is always
