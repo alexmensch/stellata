@@ -428,12 +428,36 @@ folds three physically-grounded steps:
    negative components (hot O-stars whose Planckian chromaticity falls
    outside sRGB) clip to zero before normalisation.
 
+### Per-star intrinsic Teff routing
+
+For each star, the LUT-input intrinsic B-V is sourced via a six-tier
+priority chain (`pickTeffSource` in
+`src/client/shaders/star-color-routing-pure.ts`). First match wins:
+
+1. **Gaia DR3 Apsis `teff_gspphot`** — primary, ~62% of catalog records.
+2. **Gaia DR3 Apsis `teff_gspspec`** — covers some gspphot gaps;
+   combined Apsis coverage (gspphot ∪ gspspec) ≈ 84.6% of records.
+3. **Ballesteros(B-V)** — Tier 1 fallback when no Apsis solution exists
+   but AT-HYG carries a B-V.
+4. **Spectral-class T_TABLE** — fallback when neither B-V nor Apsis is
+   available but the spectral class is parseable.
+5. **White-dwarf Sion Teff** — `50400 / wd_subclass` for parsed WD types.
+6. **Solar fallback** — `Ballesteros(0.65)` ≈ 5778 K when nothing
+   else resolves.
+
+Where Apsis Teff is used, the LUT-input B-V is recovered via the
+analytic Ballesteros inverse so the LUT (which is keyed on B-V) samples
+the chromaticity expected for that Teff. Apsis Teff is the **intrinsic**
+parameter (Apsis fits include line-of-sight extinction `A0` explicitly),
+so the camera-position-dependent dust reddening composes downstream of
+this Apsis-derived intrinsic B-V without double-counting extinction.
+
 Dust reddening composes upstream of the LUT: the shader integrates A_V
 along the camera-to-star sightline via the Edenhofer 3D dust map and
-shifts the B-V used for LUT sampling by `E(B-V) = A_V / 3.1`. The LUT
-input is therefore the **observed** (dust-reddened) B-V from the
-camera's vantage, not the intrinsic value, so colour drifts physically
-as the camera traverses dust between observer and star (the Mu Cephei
+shifts the LUT-input B-V by `E(B-V) = A_V / 3.1`. The LUT input is
+therefore the **observed** (dust-reddened) B-V from the camera's
+vantage, not the intrinsic value, so colour drifts physically as the
+camera traverses dust between observer and star (the Mu Cephei
 "Garnet Star ↔ Peach Star" case study in
 `research/star-spectral-rendition/RECOMMENDATION.md`).
 

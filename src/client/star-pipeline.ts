@@ -28,6 +28,10 @@ export interface StarPipelineOptions {
    *  `length(iPosition)` derivation, which broke when iPosition shifted
    *  to local-frame after the floating-origin recentre. */
   distSol: Float32Array;
+  /** Per-star best Apsis Teff (K). 0 = no Apsis solution; gates the
+   *  shader's Apsis-direct routing tier (`iTeffApsis > 0`). Built from
+   *  the catalog's gspphot/gspspec fields by `bestApsisTeff` upstream. */
+  teffApsis: Float32Array;
   /** Buffer backing the dynamic `iPosition` attribute. Owned by the
    *  caller — Stellata's floating-origin recentre rewrites it in place
    *  and bumps `iPositionAttr.needsUpdate`. Must outlive the pipeline. */
@@ -77,8 +81,9 @@ export class StarPipeline {
 
   constructor(opts: StarPipelineOptions) {
     const {
-      scene, catalog, logRadii, lumClassF32, distSol, localPositions,
-      vertexShader, fragmentShader, sharedUniforms, boundingSphereRadiusPc,
+      scene, catalog, logRadii, lumClassF32, distSol, teffApsis,
+      localPositions, vertexShader, fragmentShader, sharedUniforms,
+      boundingSphereRadiusPc,
     } = opts;
     this.scene = scene;
 
@@ -107,6 +112,7 @@ export class StarPipeline {
     this.geometry.setAttribute('iAmplitudeMag', new THREE.InstancedBufferAttribute(catalog.amplitudeMag, 1));
     this.geometry.setAttribute('iLumClass', new THREE.InstancedBufferAttribute(lumClassF32, 1));
     this.geometry.setAttribute('iDistSol', new THREE.InstancedBufferAttribute(distSol, 1));
+    this.geometry.setAttribute('iTeffApsis', new THREE.InstancedBufferAttribute(teffApsis, 1));
     this.geometry.instanceCount = catalog.count;
     this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), boundingSphereRadiusPc);
 

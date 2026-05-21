@@ -115,6 +115,10 @@ in float iPeriodDays;   // 0 = not a variable
 in float iAmplitudeMag; // 0 = not a variable
 in float iLumClass;     // 0=WD, 2=V, 4=III, 6-9=supergiant/hypergiant, 255=?
 in float iDistSol;      // |absolute position| — precomputed at load
+// Best Gaia DR3 Apsis Teff per star (gspphot ∪ gspspec), 0.0 when neither
+// solution is available. Gates the Apsis-direct branch in ciToColor below;
+// the JS-side mirror is bestApsisTeff() in star-color-routing-pure.ts.
+in float iTeffApsis;
 
 out float vAppMag;
 out vec3 vColor;
@@ -142,8 +146,19 @@ uniform sampler2D uColorLut;
 const float BV_MIN = -0.4;
 const float BV_MAX = 2.0;
 
-vec3 ciToColor(float ciVal) {
-    float t = clamp((ciVal - BV_MIN) / (BV_MAX - BV_MIN), 0.0, 1.0);
+// Analytic inverse of Ballesteros 2012. Mirrored from
+// `ballesterosBvFromTeff` in scripts/colour/blackbody-lut-pure.ts — keep
+// the two in sync. Picks the positive quadratic root.
+float ballesterosBvFromTeff(float teff) {
+    float k = teff / 4600.0;
+    float disc = sqrt(4.0 + 1.1664 * k * k);
+    float u = (2.0 - 2.32 * k + disc) / (2.0 * k);
+    return u / 0.92;
+}
+
+// Sample the dust-reddened-B-V → sRGB LUT.
+vec3 ciToColor(float bvVal) {
+    float t = clamp((bvVal - BV_MIN) / (BV_MAX - BV_MIN), 0.0, 1.0);
     return texture(uColorLut, vec2(t, 0.5)).rgb;
 }
 
@@ -302,7 +317,15 @@ void main() {
     // value, and the colour is reddened by E(B-V) = A_V / R_V.
     float absorbAV = dustExtinctionAV(worldPos + uWorldOffset, uCameraPos + uWorldOffset);
     appMag += absorbAV;
-    float effectiveCi = iCi + absorbAV / R_V;
+    // Intrinsic B-V from the Apsis-first routing priority. Tier 1/2
+    // (Apsis gspphot ∪ gspspec) walks back through Ballesteros⁻¹; tier 3
+    // (Ballesteros via catalog ci, with stars-parse's 0.65 solar fallback
+    // baked in) is the fall-through. Dust reddening then composes on top
+    // for the observer-position-dependent chromaticity shift.
+    float intrinsicBv = (iTeffApsis > 0.0)
+        ? ballesterosBvFromTeff(iTeffApsis)
+        : iCi;
+    float effectiveCi = intrinsicBv + absorbAV / R_V;
 
     // Final magnitude check with the extincted value. Soft taper: stars
     // within +0.5 mag of the limit still pass through and render in the
