@@ -402,10 +402,7 @@ def main() -> None:
         t0 = time.time()
         for offset in range(0, len(candidates), IDENT_BATCH):
             batch = candidates[offset : offset + IDENT_BATCH]
-            inlist = ",".join(f"'{i}'" for i in batch)
-            table = client.run(
-                f"SELECT id, oidref FROM ident WHERE id IN ({inlist})"
-            )
+            table = query_ident_batch(client, batch)
             for row in table:
                 cascade_rows.append({
                     "id": str(rl.coerce_masked(row["id"]) or ""),
