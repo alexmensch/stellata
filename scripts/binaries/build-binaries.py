@@ -1,109 +1,20 @@
 #!/usr/bin/env python3
-"""Catalogue builder for the source-ID-anchored binary-system pipeline — Stages 1-7.
+"""Orchestration shell for the WDS → Gaia source-ID binary-system pipeline.
 
-Stage 1 (``stellata-dch.27``) loads every reference catalog the resolution
-chain needs (WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia HIP/Tyc
-cross-walks + Gaia NSS + Gaia 5p astrometry) and builds the identifier
-indices that Stages 2-7 consume.
+Reads WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS, 5p
+astrometry) + SIMBAD WDS xids; writes ``data/binaries/multiples.tsv``
+(two rows per kept physical pair) plus
+``data/gaia/gaia_astrometry_source_id_request.tsv`` (the deduped
+source_id list the Gaia astrometry refresh script reads). Stage logic
+lives in sibling modules ``parsers``, ``indices``, ``stage2_resolve``,
+``stage3_astrometry``, ``stage4_orbits``, ``stage5_optical``,
+``stage6_multiples``, ``stage7_counts``.
 
-Stage 2 (``stellata-dch.28`` + ``.60`` + ``.61``) resolves each WDS
-component to a Gaia DR3 ``source_id`` via the cascade canonicalised in
-``RESOLVE_VIA_VALUES``:
-
-* ``orb6_hip`` — primary's ORB6-published HIP → Gaia HIP xwalk.
-* ``athyg_gaia_native`` — AT-HYG's natively-stored ``gaia`` field
-  reached either through the same HIP or, in a later pass, via a 2″
-  position match against the WDS precise coordinates (PM-propagated;
-  see ``ATHYG_REFERENCE_EPOCH``).
-* ``simbad_xid`` (``stellata-dch.60``) — SIMBAD's curated
-  ``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs read from the committed
-  ``data/simbad/simbad_wds_xids.tsv`` side-file (refresh script
-  ``scripts/refresh/refresh-simbad-wds-xids.py``). Per-component
-  resolution with reliable coverage of the well-known hard cases.
-* ``ccdm_hip`` (``stellata-dch.61``) — Hipparcos CCDM annex
-  (``data/hipparcos/hip_ccdm.tsv``) lists every HIP that co-belongs to a
-  CCDM-identified multiple system. For each WDS pair whose ``wds_id``
-  matches a CCDM identifier, the candidate-HIP set is restricted to
-  CCDM co-members and a tight position match against AT-HYG
-  disambiguates which sibling HIP is which WDS component letter. Then
-  the same Gaia HIP xwalk / AT-HYG-native paths fire on the bound HIP.
-  Picks up α Cen B and Proxima-shaped cases that the primary-only
-  ``orb6_hip`` and the bare position match would have missed.
-* ``position_pm`` / ``position_nopm`` — PM-propagated and bare
-  position match against ``data/gaia/gaia_dr3_astrometry.tsv``. Stubbed
-  (placeholder tier names; ``stellata-dch.29`` lands the data file
-  but the cascade hand-off for these tiers is future work).
-
-Stage 3 (``stellata-dch.30``) attaches the most-trustworthy astrometric
-measurement to each resolved component, routing between Gaia DR3 5p,
-Gaia NSS-systemic, and Hipparcos-2 long-baseline solutions:
-
-* ``gaia_nss_systemic`` — source has an NSS two-body-orbit row AND the
-  5p solution is flagged unreliable (``ruwe > 1.4`` OR
-  ``ipd_frac_multi_peak > 0.02``). Gaia DR3 refits ``gaia_source`` to
-  the centre-of-mass for NSS-modeled sources, so the same row's values
-  surface with this routing tag distinguishing provenance for Stage 4.
-* ``hip2_long_baseline`` — the WDS pair has a close companion (min
-  ρ across all pair rows the source participates in is ≤ 5″) AND
-  ``|pmRA_gaia − pmRA_hip2| > 50 mas/yr`` OR ``|pmDE_gaia − pmDE_hip2|
-  > 50 mas/yr``. Hipparcos's J1991.25-anchored long baseline averages
-  a different window of the orbit than Gaia's 2014-2017 window; for
-  bright close binaries (Sirius, α Cen, Castor) the long-baseline PM
-  is closer to the systemic motion of the centre of mass.
-* ``gaia_5p`` — default.
-
-Stage 4 (``stellata-dch.31``) picks orbital elements per WDS pair from
-Gaia NSS two-body orbits or ORB6, preferring NSS inside Gaia's
-astrometric-detectability regime (P < ~3 yr OR a < 1″). ORB6 grades
-1-5 own the visual-orbit fallback; ORB6 grades 8-9 own the
-spectroscopic-only fallback. The Thiele-Innes → Campbell algebra
-(Heintz 1978 / Halbwachs+ 2023 Appendix B) is implemented in-repo
-rather than via ESA NSSTools — the dependency is unmaintained and the
-algebra is ~10 lines. Returns ``(orbit_dict, orbit_via)`` per pair via
-``select_orbit``; ``orbit_via`` ∈ ``{gaia_nss, orb6, orb6_spectroscopic,
-none}``.
-
-Stage 2 emits ``data/gaia/gaia_astrometry_source_id_request.tsv`` (the
-deduped union of every Gaia source_id Stage 2 resolved, across every
-tier), which ``scripts/refresh/refresh-gaia-astrometry.py`` (dch.29)
-reads to drive its ADQL query.
-
-Stage 5 (``stellata-dch.32``) classifies each WDS pair as physical or
-optical via a 5-tier ID-anchored cascade: WDS Notes flag chars (T/V/Z
-keep, S/U/X/Y reject) → both-Gaia gate (parallax 3σ + per-axis PM
-≤5 mas/yr) → asymmetric-Gaia gate (Gaia primary + HIP2-anchored
-secondary, or vice versa; catches Sirius A-C/D/E/F directly) →
-orbit-on-file override (Stage 4 selected real orbital elements, so
-the pair is empirically bound; rescues WD-companion pairs like
-Sirius A-B that mag-gap alone would reject) → mag-gap heuristic
-backstop (|Δmag| ≤ 5 keep).
-
-Stage 6 (``stellata-dch.32``) emits ``data/binaries/multiples.tsv`` — two rows
-per kept pair, columns per ``MULTIPLES_TSV_COLUMNS`` (system_id,
-component, hip / gaia_source_id, ICRS x/y/z parsec position, AT-HYG
-photometric / spectral metadata, orbital elements from Stage 4,
-resolve / astrometry / orbit provenance tags). Phase 3's v6 binary
-writer is the consumer.
-
-Stage 7 (``stellata-dch.32``) flattens per-strategy + per-tier counters
-into ``scripts/binaries/build-binaries-expected.json`` for ``stellata-dch.39``
-(Phase 4 Tier B) to gate population statistical bounds against.
-Refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
-
-Run via ``npm run build:binaries`` (or directly: ``python3
+Run via ``npm run build:binaries`` (or ``python3
 scripts/binaries/build-binaries.py``). Idempotent against
 ``data/binaries/multiples.tsv``; pass ``--force`` to ignore the mtime
-check and reload everything.
-
-See the parent epic ``stellata-dch`` for the seven-stage architecture.
-
-Decomposition history: stellata-9mm.204 split Stages 1-7 into sibling
-modules (``parsers``, ``indices``, ``stage2_resolve``,
-``stage3_astrometry``, ``stage4_orbits``, ``stage5_optical``,
-``stage6_multiples``, ``stage7_counts``). This file is the
-orchestration shell — pipeline entry point, source-path constants, and
-namespace replication so the existing test loader's ``bb.<name>``
-access pattern keeps working without per-stage rewiring.
+check. See ``docs/build-and-data.md`` § Binary system pipeline for the
+full architecture.
 """
 
 from __future__ import annotations
@@ -126,38 +37,60 @@ sys.path.insert(0, str(SCRIPT.parent))
 
 from refresh_lib import is_up_to_date  # noqa: E402
 
-import parsers  # noqa: E402
-import indices as _indices_module  # noqa: E402
-import stage2_resolve  # noqa: E402
-import stage3_astrometry  # noqa: E402
-import stage4_orbits  # noqa: E402
-import stage5_optical  # noqa: E402
-import stage6_multiples  # noqa: E402
-import stage7_counts  # noqa: E402
+# Explicit per-stage re-exports. Two consumers load this file via
+# ``spec_from_file_location("build_binaries", …)`` and reach stage
+# symbols as ``bb.<name>``: ``scripts/binaries/build-binaries.test.py``
+# (including the four underscore-prefixed internals listed below), and
+# ``scripts/refresh/refresh-simbad-wds-xids.py`` (reuses
+# ``parse_wds_summ`` + ``split_components``). ``run()`` below also
+# consumes these names directly.
 
-# Replicate every symbol from each sibling stage module into this
-# module's namespace. Two consumers rely on the ``build_binaries.<name>``
-# contract this preserves:
-#   1. ``scripts/binaries/build-binaries.test.py`` loads this file via
-#      ``spec_from_file_location("build_binaries", …)`` and accesses
-#      stage symbols as ``bb.parse_wds_summ``, ``bb._thiele_innes_to_campbell``,
-#      etc. — including underscore-prefixed internals that ``import *``
-#      would skip.
-#   2. ``scripts/refresh/refresh-simbad-wds-xids.py`` loads this file
-#      the same way to reuse ``parse_wds_summ`` and ``split_components``.
-# Both pre-date the stellata-9mm.204 stage split; the loop keeps them
-# working without per-call-site rewiring.
-for _mod in (
-    parsers, _indices_module, stage2_resolve, stage3_astrometry,
-    stage4_orbits, stage5_optical, stage6_multiples, stage7_counts,
-):
-    for _name in dir(_mod):
-        if _name.startswith("__"):
-            continue
-        globals().setdefault(_name, getattr(_mod, _name))
-del _mod, _name
-del parsers, _indices_module, stage2_resolve, stage3_astrometry
-del stage4_orbits, stage5_optical, stage6_multiples, stage7_counts
+from parsers import (  # noqa: E402, F401
+    AthygRow, CcdmRow, GaiaAstrometryRow, Hip2Row, Orb6Entry,
+    SimbadWdsXid, WdsPair,
+    parse_athyg, parse_ccdm, parse_gaia_astrometry,
+    parse_gaia_hip_xmatch, parse_gaia_nss, parse_gaia_tyc_xmatch,
+    parse_gcvs, parse_gcvs_crossid, parse_hip2,
+    parse_orb6, parse_simbad_wds_xids, parse_wds_summ,
+)
+from indices import (  # noqa: E402, F401
+    IdentifierIndices, WDS_PRECISE_COORD_EPOCH, build_indices,
+)
+from stage2_resolve import (  # noqa: E402, F401
+    RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
+    _athyg_position_at_epoch,
+    build_athyg_position_grid, build_pair_by_wds_disc,
+    find_nearest_athyg_at_position, group_orb6_by_pair,
+    predict_secondary_position, propagate_within_system,
+    resolution_counts, resolve_all_pairs, resolve_component,
+    resolve_via_ccdm, resolve_via_position, resolve_via_simbad,
+    split_components, write_astrometry_request,
+)
+from stage3_astrometry import (  # noqa: E402, F401
+    ASTROMETRY_VIA_VALUES, ComponentAstrometry,
+    astrometry_counts, attach_astrometry, attach_astrometry_all,
+    compute_min_rho_per_source, gaia_5p_unreliable,
+)
+from stage4_orbits import (  # noqa: E402, F401
+    GAIA_DR3_REF_EPOCH_JD, J2000_REF_EPOCH_JD, MJD_TO_JD_OFFSET,
+    ORBIT_VIA_VALUES, OrbitElements,
+    _pick_best_orb6, _system_parallax_mas, _thiele_innes_to_campbell,
+    iter_decomposing_pairs, nss_to_canonical_elements,
+    orb6_to_canonical_elements, orbit_counts,
+    select_orbit, select_orbits_all,
+)
+from stage5_optical import (  # noqa: E402, F401
+    OPTICAL_VIA_VALUES, OpticalClassification,
+    classify_all_pairs, classify_pair_optical, optical_counts,
+)
+from stage6_multiples import (  # noqa: E402, F401
+    MULTIPLES_TSV_COLUMNS, MultiplesRow,
+    build_multiples_rows, write_multiples_tsv,
+)
+from stage7_counts import (  # noqa: E402, F401
+    UPDATE_COUNTS_ENV_VAR,
+    assert_or_update_counts, build_binaries_counts, compare_build_counts,
+)
 
 SRC_WDS_SUMM = DATA / "wds" / "wds_summ.txt"
 SRC_ORB6 = DATA / "wds" / "orb6_orbits.txt"
@@ -176,11 +109,9 @@ OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
 
 # Committed snapshot of per-strategy / per-tier counts emitted at the
-# end of every build. ``stellata-dch.39`` (Phase 4 Tier B) will pin
-# bounds against this file from the TS side. The Python comparator
-# in stage7_counts.py mirrors ``scripts/catalog/build-catalog.ts``'s
-# ``assertOrUpdateBuildCounts`` flow — refresh deliberately with
-# ``UPDATE_BUILD_COUNTS=1``.
+# end of every build. The Python comparator in stage7_counts.py mirrors
+# ``scripts/catalog/build-catalog.ts``'s ``assertOrUpdateBuildCounts``
+# flow — refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
 EXPECTED_COUNTS = SCRIPT.parent / "build-binaries-expected.json"
 
 # Expected fraction of AT-HYG rows that carry a Gaia DR3 source_id. AT-HYG
@@ -323,7 +254,7 @@ def run(force: bool) -> int:
     n_requested = write_astrometry_request(components, OUT_ASTROMETRY_REQUEST)
     log(
         f"wrote {OUT_ASTROMETRY_REQUEST.relative_to(ROOT)} with "
-        f"{n_requested:,} unique source_ids (input for stellata-dch.29)"
+        f"{n_requested:,} unique source_ids (input for the Gaia astrometry refresh)"
     )
 
     log("Stage 2 complete. Attaching per-component astrometry (Stage 3) …")
