@@ -17,6 +17,7 @@ import {
   isInLmcCone,
   resolveGaiaSourceId,
   parseGaiaSourceIdStr,
+  SOLAR_BV_FALLBACK,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -28,11 +29,6 @@ import {
 // stable; the LMC override snaps those back inside the cutoff before
 // it fires.
 const MAX_DIST_PC = 50_000;
-
-// Used when the AT-HYG row's ci cell is blank. ~0.65 corresponds to a
-// solar-type B-V, so a row with no colour falls back to a yellow disc
-// in the renderer rather than a hot blue or cold red default.
-const DEFAULT_CI = 0.65;
 
 export interface Star {
   x: number; y: number; z: number;
@@ -208,7 +204,7 @@ export async function readStars(
       dropped.tooFar++;
       continue;
     }
-    const ci = parseFloatOrNull(row.ci) ?? DEFAULT_CI;
+    const ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
 
     const spectRaw = (row.spect ?? '').trim();
     const spectInfo = parseSpectral(spectRaw);

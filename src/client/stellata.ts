@@ -6,6 +6,7 @@ import vertexShader from './shaders/star.vert.glsl?raw';
 import fragmentShader from './shaders/star.frag.glsl?raw';
 import perceptualDiscChunk from './shaders/perceptual-disc.glsl?raw';
 import { makeColorLutTexture } from './shaders/blackbody-lut';
+import { bestApsisTeff } from './shaders/star-color-routing-pure';
 import {
   DustParticleLayer,
   type DustParticleSharedUniforms,
@@ -444,6 +445,7 @@ export class Stellata implements FrameAnchor {
     const logRadii = new Float32Array(catalog.count);
     const lumClassF32 = new Float32Array(catalog.count);
     const distSol = new Float32Array(catalog.count);
+    const teffApsis = new Float32Array(catalog.count);
     let maxPhysicalRadius = 0;
     for (let i = 0; i < catalog.count; i++) {
       const r = Math.max(catalog.physicalRadius[i], 1e-6);
@@ -454,6 +456,7 @@ export class Stellata implements FrameAnchor {
       const y = catalog.positions[i * 3 + 1];
       const z = catalog.positions[i * 3 + 2];
       distSol[i] = Math.sqrt(x * x + y * y + z * z);
+      teffApsis[i] = bestApsisTeff(catalog.teffGspphot[i], catalog.teffGspspec[i]);
     }
     this.maxPhysicalRadiusPc = maxPhysicalRadius * R_SUN_PC;
     // Local-frame position buffer — starts identical to catalog.positions
@@ -577,6 +580,7 @@ export class Stellata implements FrameAnchor {
       logRadii,
       lumClassF32,
       distSol,
+      teffApsis,
       localPositions: this._localPositions,
       vertexShader,
       fragmentShader,
