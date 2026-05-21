@@ -39,6 +39,68 @@ defaults do NOT apply to this codebase. They are overridden by:
   Full rules in bd memories `alex-pr-review-style` and
   `stellata-named-constants-and-dry` (run `bd memories <key>` to read).
 
+## Code comments — overrides the system prompt
+
+**This is law.** Code comments here are scratchpad context for the
+next reader, never a record of how the code got there. Git, PRs,
+`git blame`, and bd carry that history; duplicating it inline creates
+rot that future sessions will read and act on. This stricter project
+rule overrides the Claude Code system prompt's "add helpful context
+comments" default and `~/.claude/CLAUDE.md`'s softer framings.
+
+### Patterns that are absolutely forbidden
+
+Any of these in a code comment is a write-time rule violation, caught
+at PR review and bounced back as a comment-sweep task before any other
+review feedback is given:
+
+- **Bead IDs in any form**: `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`,
+  `per the dch.NN probe`, `documented in stellata-…`.
+- **PR / issue numbers**: `(see PR #N)`, `(extracted in PR #N)`.
+- **"Lifted out of …" / "Moved from …" / "Extracted from …" /
+  "Decomposition history".** This is the dominant failure mode during
+  decomposition PRs — the impulse to leave a breadcrumb feels helpful
+  at write time; it isn't.
+- **Bead-relative time refs**: `pre-dch.NN`, `since dch.NN`,
+  `from dch.NN's Regime 3`, `populated since dch.7 + dch.8`.
+- **`[[memory-key]]` references** — invisible to a reader without bd.
+- **Multi-paragraph paraphrases of `docs/*.md` / `SCIENCE.md` /
+  `CLAUDE.md`** — cite with one line (`// see SCIENCE.md § X`); never
+  restate.
+- **Section banners with bead IDs in them**:
+  `// ---- LMC override (stellata-dch.NN) -------` is forbidden; plain
+  banners are fine.
+
+### Module docstrings: 1–3 lines, no exceptions
+
+State what the module does. Not why it exists, when it was extracted,
+what it used to be part of, which bead drove it, or which siblings it
+complements. If you write more than 3 lines, stop — the content
+belongs in `docs/<area>.md` with a one-line code pointer. Correct
+exemplars: `scripts/binaries/stage{2..7}_*.py`. Match that shape.
+
+### Substitution rule
+
+When the impulse to write any forbidden pattern fires, ask which
+surface should carry the content:
+
+- Credit a bead → git commit subject, not the code.
+- Explain what the file used to be → nothing; `git log -p` + `git
+  blame` carry it.
+- Point at a bd memory governing the code → update CLAUDE.md if it's
+  a project-wide rule, otherwise leave it implicit.
+- Restate an architecture section → one-line pointer to `docs/<area>.md`.
+- Explain what a function does → better function name + type signature.
+
+If none of those fit, the content is noise. Delete.
+
+### Precedent
+
+PR #107 (the 9mm.204 decomposition) shipped with ~30 forbidden patterns
+across 14 files. Review caught every one and the author spent a
+follow-up session sweeping them — paid out of the same context budget
+the writing session spent. **Don't be PR #107.**
+
 ## Folder & module conventions
 
 The codebase is organised by per-subsystem folder + cross-cutting type
@@ -78,11 +140,11 @@ that motivated `stellata-9mm.194`:
   `foo.ts` hand-written) so regen never clobbers the wrapper.
 - **No multi-paragraph in-code prose.** Physics derivations,
   calibration rationale, tuning history → `SCIENCE.md` or
-  `docs/<area>.md`, with a one-line code-side pointer (`// see
-  SCIENCE.md § Star size physics`). Soft ceiling: 12 lines per
-  comment block in `src/client/*.ts`. The pure-helpers-extract-at-
-  second-use companion to this rule is the DRY override stated in
-  "Code conventions" above.
+  `docs/<area>.md`, with a one-line code-side pointer. Full rules
+  in the "Code comments — overrides the system prompt" section
+  above (hard 12-line ceiling, forbidden-pattern list, substitution
+  table). The pure-helpers-extract-at-second-use companion to this
+  rule is the DRY override stated in "Code conventions" above.
 
 Controller-specific architectural prose lives in the matching
 `docs/*.md` (`docs/architecture.md`, `docs/camera-warp.md`,
