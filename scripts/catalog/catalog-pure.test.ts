@@ -24,8 +24,10 @@ import {
   RECORD_FIELD_SIZES,
   HEADER_SIZE,
   RECORD_SIZE,
+  NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  parseGaiaApsisTsv,
   type SpectralInfo,
   type BinaryStar,
   type DoublesStar,
@@ -687,18 +689,26 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
-  it('record fields cover the v5 byte plan (one byte 37 reserved, gaiaSourceId at byte 44)', () => {
-    // gaiaSourceId is the last field; with its 8 bytes the record fills
-    // exactly RECORD_SIZE except for byte 37 (reserved for future
-    // variability type).
+  it('record fields cover the v6 byte plan (Apsis 7×float32 at 52..79)', () => {
     expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
-    expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(RECORD_SIZE);
-    expect(RECORD_SIZE).toBe(52);
+    expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(52); // gaiaSourceId end
+    expect(RECORD_SIZE).toBe(80);
     // Reserved byte 37 sits between ampUnits (36) and period (38).
     expect(RECORD_LAYOUT.ampUnits + 1).toBe(37);
     expect(RECORD_LAYOUT.period).toBe(38);
     // hip (uint32 at 40) immediately precedes gaiaSourceId.
     expect(RECORD_LAYOUT.hip + 4).toBe(RECORD_LAYOUT.gaiaSourceId);
+    // Apsis bank: gspphot (4 floats) then gspspec (3 floats), each 4 bytes,
+    // starting immediately after gaiaSourceId at byte 52 and filling the
+    // record to RECORD_SIZE.
+    expect(RECORD_LAYOUT.teffGspphot).toBe(52);
+    expect(RECORD_LAYOUT.loggGspphot).toBe(56);
+    expect(RECORD_LAYOUT.mhGspphot).toBe(60);
+    expect(RECORD_LAYOUT.azeroGspphot).toBe(64);
+    expect(RECORD_LAYOUT.teffGspspec).toBe(68);
+    expect(RECORD_LAYOUT.loggGspspec).toBe(72);
+    expect(RECORD_LAYOUT.mhGspspec).toBe(76);
+    expect(RECORD_LAYOUT.mhGspspec + 4).toBe(RECORD_SIZE);
   });
 
   it('FLAGS registry entries are distinct single-bit values', () => {
@@ -806,6 +816,83 @@ describe('catalog-pure / parseBailerJonesTsv', () => {
     const map = parseBailerJonesTsv(tsv);
     expect(map.size).toBe(1);
     expect(map.get('111')).toBe(99);
+  });
+});
+
+describe('catalog-pure / parseGaiaApsisTsv', () => {
+  const HDR =
+    'source_id\tteff_gspphot\tlogg_gspphot\tmh_gspphot\tazero_gspphot\t' +
+    'teff_gspspec\tlogg_gspspec\tmh_gspspec\n';
+
+  it('parses source_id as string, both gspphot and gspspec triples', () => {
+    const tsv = HDR +
+      '7632157690368\t5028.8\t3.1614\t-0.1016\t0.2131\t4864.0\t2.6600\t-0.2000\n' +
+      '44358422235136\t5787.8\t4.3140\t0.3385\t0.0648\t\t\t\n';
+    const map = parseGaiaApsisTsv(tsv);
+    expect(map.size).toBe(2);
+    const a = map.get('7632157690368')!;
+    expect(a.teffGspphot).toBe(5028.8);
+    expect(a.loggGspphot).toBe(3.1614);
+    expect(a.mhGspphot).toBe(-0.1016);
+    expect(a.azeroGspphot).toBe(0.2131);
+    expect(a.teffGspspec).toBe(4864.0);
+    expect(a.loggGspspec).toBe(2.6600);
+    expect(a.mhGspspec).toBe(-0.2000);
+    const b = map.get('44358422235136')!;
+    expect(b.teffGspphot).toBe(5787.8);
+    expect(b.teffGspspec).toBeNull();
+    expect(b.loggGspspec).toBeNull();
+    expect(b.mhGspspec).toBeNull();
+  });
+
+  it('decodes blank cells as null without dropping the row', () => {
+    const tsv = HDR + '999\t\t\t\t\t6000\t4.0\t0.0\n';
+    const map = parseGaiaApsisTsv(tsv);
+    const r = map.get('999')!;
+    expect(r.teffGspphot).toBeNull();
+    expect(r.loggGspphot).toBeNull();
+    expect(r.mhGspphot).toBeNull();
+    expect(r.azeroGspphot).toBeNull();
+    expect(r.teffGspspec).toBe(6000);
+    expect(r.loggGspspec).toBe(4.0);
+    expect(r.mhGspspec).toBe(0.0);
+  });
+
+  it('skips rows with a blank source_id', () => {
+    const tsv = HDR + '\t5000\t4\t0\t0\t5000\t4\t0\n';
+    const map = parseGaiaApsisTsv(tsv);
+    expect(map.size).toBe(0);
+  });
+
+  it('throws on missing required columns', () => {
+    expect(() => parseGaiaApsisTsv('source_id\tteff_gspphot\n1\t5000\n'))
+      .toThrow(/azero_gspphot|logg_gspphot|mh_gspphot|teff_gspspec/);
+  });
+});
+
+describe('catalog-pure / NO_APSIS sentinel', () => {
+  it('is NaN, distinguishable from every finite Apsis value', () => {
+    expect(Number.isNaN(NO_APSIS)).toBe(true);
+  });
+
+  it('round-trips through Float32 DataView as NaN', () => {
+    const buf = new ArrayBuffer(4);
+    const view = new DataView(buf);
+    view.setFloat32(0, NO_APSIS, true);
+    expect(Number.isNaN(view.getFloat32(0, true))).toBe(true);
+  });
+
+  it('finite values survive Float32 round-trip without becoming the sentinel', () => {
+    const buf = new ArrayBuffer(4);
+    const view = new DataView(buf);
+    // Pick values from the bead spec's spot-check stars (Sirius-region
+    // Teff ~10000K, K-dwarf logg ~4.5, halo [M/H] ~-1.5, mild A0 ~0.2).
+    for (const v of [10000.0, 4.5, -1.5, 0.2]) {
+      view.setFloat32(0, v, true);
+      const r = view.getFloat32(0, true);
+      expect(Number.isNaN(r)).toBe(false);
+      expect(r).toBeCloseTo(v, 3);
+    }
   });
 });
 

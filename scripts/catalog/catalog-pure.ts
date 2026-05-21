@@ -228,15 +228,21 @@ export function parseGcvsNumber(s: string): number | null {
 // MAGIC, extend the LAYOUT + SIZES pair with the new offset and kind, and
 // the writer + reader + tests pick the change up automatically.
 
-export const MAGIC = 'HYG5';
-export const BINARY_VERSION = 5;
+export const MAGIC = 'HYG6';
+export const BINARY_VERSION = 6;
 export const HEADER_SIZE = 32;
-export const RECORD_SIZE = 52;
+export const RECORD_SIZE = 80;
 export const NO_COMPANION = 0xffffffff;
 // Sentinel uint64 stored at RECORD_LAYOUT.gaiaSourceId when AT-HYG's
 // `gaia` column is blank. Valid Gaia DR3 source_ids are positive 63-bit
 // integers, so 0 is unambiguous.
 export const NO_GAIA_SOURCE_ID = 0n;
+// Float32 NaN is the null sentinel for the seven Gaia DR3 Apsis fields
+// (teff/logg/[M/H]/A0 from gspphot ∪ gspspec). NaN survives IEEE-754
+// round-trip through DataView.setFloat32/getFloat32 and never collides
+// with a physical value — Teff > 0, logg > 0, A0 ≥ 0, [M/H] is finite.
+// Consumers test with `Number.isNaN(x)`.
+export const NO_APSIS = NaN;
 
 export const HEADER_LAYOUT = {
   magic: 0,            // 4 bytes ASCII
@@ -276,6 +282,14 @@ export const RECORD_LAYOUT = {
   period: 38,     // uint16 (×0.1 days)
   hip: 40,        // uint32 (0 = no HIP)
   gaiaSourceId: 44, // uint64 LE (0 = no Gaia DR3 source_id)
+  // Gaia DR3 Apsis (gspphot ∪ gspspec). NO_APSIS (NaN) for the ~15% gap.
+  teffGspphot: 52,  // float32 (K)
+  loggGspphot: 56,  // float32 (log cgs)
+  mhGspphot: 60,    // float32 ([M/H] dex)
+  azeroGspphot: 64, // float32 (mag, line-of-sight extinction)
+  teffGspspec: 68,  // float32 (K)
+  loggGspspec: 72,  // float32 (log cgs)
+  mhGspspec: 76,    // float32 ([M/H] dex)
 } as const;
 
 /** Per-field byte width keyed by RECORD_LAYOUT name. As with
@@ -286,6 +300,8 @@ export const RECORD_FIELD_SIZES: Record<keyof typeof RECORD_LAYOUT, number> = {
   companion: 4, nameOffset: 4,
   spectClass: 1, lumClass: 1, conIndex: 1, flags: 1, ampUnits: 1,
   period: 2, hip: 4, gaiaSourceId: 8,
+  teffGspphot: 4, loggGspphot: 4, mhGspphot: 4, azeroGspphot: 4,
+  teffGspspec: 4, loggGspspec: 4, mhGspspec: 4,
 };
 
 // Name table layout: two zero bytes of padding so name offset 0 reads as
@@ -652,6 +668,75 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
       : Number.isFinite(geo) ? geo : NaN;
     if (!Number.isFinite(d) || d <= 0) continue;
     out.set(sourceId, d);
+  }
+  return out;
+}
+
+// ---- Gaia DR3 Apsis astrophysical parameters ----------------------------
+
+/** Per-source Apsis fields from `data/gaia/gaia_dr3_apsis.tsv`. All seven
+ *  are float | null — gspphot and gspspec are independent solutions and
+ *  either or both may be absent for a given source_id. NaN-when-empty
+ *  decoding lifts to the binary layer via `NO_APSIS`. */
+export interface ApsisRow {
+  teffGspphot: number | null;
+  loggGspphot: number | null;
+  mhGspphot: number | null;
+  azeroGspphot: number | null;
+  teffGspspec: number | null;
+  loggGspspec: number | null;
+  mhGspspec: number | null;
+}
+
+/** Parse the TSV produced by `scripts/refresh/refresh-gaia-apsis.py` into
+ *  a Gaia DR3 source_id → ApsisRow map. `source_id` is kept as a string:
+ *  Gaia source_ids exceed Number.MAX_SAFE_INTEGER so any numeric parse
+ *  would silently corrupt the join key. Blank cells decode to `null` —
+ *  the writer maps `null` to `NO_APSIS` (NaN) at pack time. */
+export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
+  const out = new Map<string, ApsisRow>();
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return out;
+  const header = lines[0].split('\t').map((h) => h.trim());
+  const cols = [
+    'source_id',
+    'teff_gspphot', 'logg_gspphot', 'mh_gspphot', 'azero_gspphot',
+    'teff_gspspec', 'logg_gspspec', 'mh_gspspec',
+  ] as const;
+  const idx: Record<(typeof cols)[number], number> = Object.create(null);
+  const missing: string[] = [];
+  for (const c of cols) {
+    const i = header.indexOf(c);
+    if (i < 0) missing.push(c);
+    idx[c] = i;
+  }
+  if (missing.length) {
+    throw new Error(
+      `Gaia DR3 Apsis TSV is missing required columns: ${missing.join(', ')}. ` +
+        `Re-run scripts/refresh/refresh-gaia-apsis.py.`,
+    );
+  }
+  const cell = (cells: string[], i: number): number | null => {
+    const s = (cells[i] ?? '').trim();
+    if (!s) return null;
+    const v = parseFloat(s);
+    return Number.isFinite(v) ? v : null;
+  };
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const cells = line.split('\t');
+    const sourceId = (cells[idx.source_id] ?? '').trim();
+    if (!sourceId) continue;
+    out.set(sourceId, {
+      teffGspphot: cell(cells, idx.teff_gspphot),
+      loggGspphot: cell(cells, idx.logg_gspphot),
+      mhGspphot: cell(cells, idx.mh_gspphot),
+      azeroGspphot: cell(cells, idx.azero_gspphot),
+      teffGspspec: cell(cells, idx.teff_gspspec),
+      loggGspspec: cell(cells, idx.logg_gspspec),
+      mhGspspec: cell(cells, idx.mh_gspspec),
+    });
   }
   return out;
 }
