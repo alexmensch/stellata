@@ -101,17 +101,17 @@ enough to see it.
 
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
   — maintained by David Nash. The classic-IDs subset at
-  `data/subsets/athyg_33_classic_ids.csv` is what we consume (every star
+  `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star
   carries at least one classical designation: IAU proper name, Bayer,
   Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0.
 - **GCVS 5.1** (variable-star catalogue + cross-identification):
   http://www.sai.msu.su/gcvs/gcvs/ — Samus et al, Sternberg Astronomical
-  Institute. `gcvs5.txt` (main file) + `crossid.txt` (Hip/HD/Tyc/etc. →
-  GCVS name mappings). Free for research/educational use with
-  attribution.
+  Institute. `data/gcvs/gcvs5.txt` (main file) + `data/gcvs/crossid.txt`
+  (Hip/HD/Tyc/etc. → GCVS name mappings). Free for research/educational
+  use with attribution.
 - **Hipparcos CCDM + MultFlag cross-reference**: VizieR
   `I/239/hip_main`, HIP main catalogue. We commit a three-column
-  slice (`-out=HIP,CCDM,MultFlag`) as `data/hip_ccdm.tsv`, used as
+  slice (`-out=HIP,CCDM,MultFlag`) as `data/hipparcos/hip_ccdm.tsv`, used as
   the HIP-keyed visual-doubles flag. CCDM links each Hipparcos
   star to the Catalog of the Components of Double and Multiple
   stars (Dommanget & Nys 1994); `MultFlag` is Hipparcos's own
@@ -130,42 +130,44 @@ enough to see it.
   collapses to a single row: visually-resolved separations ρ and
   position angles θ from WDS, full orbital element fits (P, T, e,
   a, i, ω, Ω) from ORB6 for ~4k systems. Raw fixed-width text files
-  committed under `data/`, downloaded directly from
+  committed under `data/wds/`, downloaded directly from
   http://www.astro.gsu.edu/wds/:
-    - `wds_summ.txt` — main summary, ~157k pair systems with ρ/θ,
-      component magnitudes, spectral types, HIP/HD cross-IDs
-      (`Webtextfiles/wdsweb_summ2.txt`).
-    - `wds_notes.txt` — notes accompanying the catalog
+    - `data/wds/wds_summ.txt` — main summary, ~157k pair systems
+      with ρ/θ, component magnitudes, spectral types, HIP/HD
+      cross-IDs (`Webtextfiles/wdsweb_summ2.txt`).
+    - `data/wds/wds_notes.txt` — notes accompanying the catalog
       (`Webtextfiles/wdsnewnotes_main.txt`).
-    - `wds_refs.txt` — discoverer codes and references
+    - `data/wds/wds_refs.txt` — discoverer codes and references
       (`Webtextfiles/wdsnewref.txt`).
-    - `orb6_orbits.txt` — orbital elements (`orb6/orb6orbits.txt`).
+    - `data/wds/orb6_orbits.txt` — orbital elements
+      (`orb6/orb6orbits.txt`).
   Field offsets are documented upstream in `wdsweb_format.txt` and
-  the ORB6 ReadMe; consulted by `scripts/build-binaries.py` but not
-  committed. Retrieved 2026-05-11. Public-domain (U.S. Government
-  work).
+  the ORB6 ReadMe; consulted by `scripts/binaries/build-binaries.py`
+  but not committed. Retrieved 2026-05-11. Public-domain
+  (U.S. Government work).
 - **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).
   Curated per-component cross-IDs between WDS pair identifiers
   (`WDS J<id><comp>`) and Gaia DR3 source_ids, drawn from SIMBAD's
-  `ident` and `basic` tables. Stage 2 of `scripts/build-binaries.py`
-  uses this as the principled cross-identification path —
-  `stellata-dch.60` validated that SIMBAD reliably stores Gaia DR3
-  source_ids per WDS component for the well-known multi-component
-  systems (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima).
-  Refresh: `scripts/refresh-simbad-wds-xids.py` runs a two-phase TAP
-  pull (WDS identifiers → SIMBAD oids, then oids → cross-IDs) and
-  commits `data/simbad_wds_xids.tsv` (~23k components, ~1.2 MB,
+  `ident` and `basic` tables. Stage 2 of `scripts/binaries/build-binaries.py`
+  uses this as the principled cross-identification path — SIMBAD
+  reliably stores Gaia DR3 source_ids per WDS component for the
+  well-known multi-component systems (η Cas A/B/C, ξ UMa A/B,
+  ζ Cnc A/B/C, α Cen A/B/Proxima).
+  Refresh: `scripts/refresh/refresh-simbad-wds-xids.py` runs a
+  two-phase TAP pull (WDS identifiers → SIMBAD oids, then oids →
+  cross-IDs) and commits `data/simbad/simbad_wds_xids.tsv` (~23k
+  components, ~1.2 MB,
   regular git). Public access policy: SIMBAD is open via CDS's TAP
   service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite Wenger et
   al (2000), A&AS 143, 9.
 - **Stellarium modern sky culture** (constellation stick figures):
   https://github.com/Stellarium/stellarium/tree/master/skycultures/modern
   — MIT-licensed JSON, HIP-indexed polylines. Committed as
-  `data/stellarium-modern-skyculture.json`; essentially never changes.
+  `data/stellarium/stellarium-modern-skyculture.json`; essentially never changes.
 - **Edenhofer 2023 3D dust map** (interstellar extinction + ISM density):
   https://doi.org/10.5281/zenodo.8187943 — Gordian Edenhofer & Greg Green.
   Downloaded via the `dustmaps` Python package and resampled by
-  `scripts/build-dust.py` onto a 512³ Cartesian voxel grid in ICRS pc.
+  `scripts/dust/build-dust.py` onto a 512³ Cartesian voxel grid in ICRS pc.
   Produces `data/dust/chunk_*.bin` (64 chunks, 128 MiB total, LFS) plus
   `data/dust/particles.bin` (50K importance-sampled dust points, LFS).
   Density in E_ZGR per parsec; A_V/E_ZGR ≈ 2.742 at V band.
@@ -174,7 +176,7 @@ enough to see it.
 > 2021 cloud distances and 3D bounding boxes drive the molecular-cloud
 > ellipsoid layer, which is committed but not currently rendered while
 > the visual treatment is being refined. The build script
-> (`scripts/build-clouds.py`) and source files
+> (`scripts/clouds/build-clouds.py`) and source files
 > (`data/molecular-clouds/`) remain in the repository for the future
 > re-enable.
 
@@ -208,7 +210,7 @@ V_T ≈ 11.5. This matters because rendering decisions like the
 family, while widening to `binoculars` (10.5) or `all` (15) progressively
 exposes the Tycho-dominated population.
 
-**What we keep at build time.** `scripts/build-catalog.ts` (`readStars`)
+**What we keep at build time.** `scripts/catalog/build-catalog.ts` (`readStars`)
 applies three filters and nothing else:
 
 1. Drop rows missing `x0`/`y0`/`z0` (no usable 3D position).
@@ -263,7 +265,7 @@ also rescues ~15 stars previously dropped at filter (3): catastrophic
 parallax inversions whose Bayesian distance is < 50 kpc.
 
 Data file: `data/bailer-jones-dr3.tsv` (~310k rows, refreshed by
-`scripts/refresh-bailer-jones.py`).
+`scripts/refresh/refresh-bailer-jones.py`).
 
 **LMC kinematic distance refinement.** Bailer-Jones's Galactic-density
 prior has no LMC — so for AT-HYG's ~60 LMC supergiants (HDE 268xxx
@@ -300,7 +302,7 @@ Tycho+Gaia-DR3 composite rows are the bulk of the new population.
 Treatment (filter by source, wait for Gaia DR4, or live with it) is
 deferred until a denser-than-mag-11 ingest makes the call necessary.
 
-Implementation: `scripts/build-catalog.ts` (filters live in `readStars`,
+Implementation: `scripts/catalog/build-catalog.ts` (filters live in `readStars`,
 binary schema in the `pack*` helpers); see `docs/build-and-data.md` for
 the per-record byte layout and the GCVS / CCDM cross-match passes that
 run after the AT-HYG read.
@@ -328,7 +330,7 @@ pathological catalog rows don't produce absurd sizes. White dwarfs are
 special-cased to 0.013 R☉ (typical WD radius; absmag doesn't translate
 reliably for them).
 
-Implementation: `scripts/build-catalog.ts`, see
+Implementation: `scripts/catalog/build-catalog.ts`, see
 `docs/build-and-data.md` §Physical radius and spectral parsing for the
 spectral-string parser and the surrounding pipeline.
 
@@ -393,7 +395,7 @@ Live tuning via `debug.panel()` in the browser console.
 
 Per-star chromaticity is sampled from a 256-entry blackbody → sRGB
 lookup table indexed by B-V. The table is precomputed at build time
-(`scripts/blackbody-lut.ts` → `src/client/shaders/blackbody-lut.ts`)
+(`scripts/colour/blackbody-lut.ts` → `src/client/shaders/blackbody-lut-data.ts`)
 and bound to the star shader as a 256×1 `DataTexture`. Each entry
 folds three physically-grounded steps:
 
@@ -445,7 +447,7 @@ Sources:
   at http://www.vendian.org/mncharity/dir3/blackbody/ (agreement
   ΔE ≤ 5 across 3000–30000 K).
 
-Implementation: `scripts/blackbody-lut.ts` (LUT generator + pure
+Implementation: `scripts/colour/blackbody-lut.ts` (LUT generator + pure
 helpers), `src/client/shaders/blackbody-lut.ts` (generated artifact),
 `src/client/shaders/star.vert.glsl` (`ciToColor` sampler), and
 `src/client/stellata.ts::makeColorLutTexture`.
@@ -596,7 +598,7 @@ and structural parameter comes from peer-reviewed catalogues:
 Journal of Astrophysics, arXiv:2411.07424 (CC0). A frozen snapshot of
 the `dwarf_all` table lives at `data/local-group/lvdb-snapshot.csv` —
 909 rows covering the full Local Volume. The build pipeline
-(`scripts/build-local-group.ts`) filters to `confirmed_real = 1`,
+(`scripts/local-group/build-local-group.ts`) filters to `confirmed_real = 1`,
 `confirmed_galaxy = 1`, and heliocentric distance ≤ 2 Mpc; ~121
 objects pass the filter.
 
@@ -666,8 +668,9 @@ update automatically; only the overrides need re-review against any
 structural-paper updates.
 
 Implementation: `src/client/local-group.ts`,
-`src/client/local-group-loader.ts`, `scripts/build-local-group.ts`,
-`scripts/build-local-group-pure.ts`. Rendering walkthrough in
+`src/client/local-group/local-group-loader.ts`,
+`scripts/local-group/build-local-group.ts`,
+`scripts/local-group/build-local-group-pure.ts`. Rendering walkthrough in
 `docs/local-group.md`.
 
 ## Galactic coordinate system
@@ -776,7 +779,7 @@ surfaces Sirius, Mizar, Castor, α Cen, Albireo, γ And, ε Lyr,
 classic_ids subset, and the renderer's zoom-fit code already
 guards on `companion ≥ 0`.
 
-Implementation: `scripts/build-catalog.ts`; see
+Implementation: `scripts/catalog/build-catalog.ts`; see
 `docs/build-and-data.md` §Geometric binary inference and
 §TDSC double-star cross-match for the per-pass details.
 
@@ -790,7 +793,7 @@ time. Any unresolved HIP is a hard build error unless explicitly listed
 and μ Sgr (HIP 89341), both stars Stellarium references that have empty
 position columns in the AT-HYG CSV.
 
-Implementation: `scripts/build-catalog.ts`; see
+Implementation: `scripts/catalog/build-catalog.ts`; see
 `docs/build-and-data.md` §Stick figures from Stellarium for the
 pipeline + missing-HIP policy.
 

@@ -20,7 +20,7 @@ import {
 import { GalacticDisc } from './galactic/galactic-disc';
 import { LocalGroupLayer } from './local-group/local-group';
 import type { LgCatalog } from './local-group/local-group-loader';
-import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/build-local-group-pure';
+import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { GalacticGrid } from './galactic/galactic-grid';
 import { HudOverlay } from './overlays/hud-overlay';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';

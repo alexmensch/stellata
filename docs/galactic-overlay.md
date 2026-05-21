@@ -34,7 +34,7 @@ paper-chart aesthetic, and the arrows + sphere already provide
 orientation.
 
 **Local Group wireframes** (`local-group.ts` + `local-group-loader.ts`,
-build pipeline `scripts/build-local-group.ts`) — LineLoop outlines for
+build pipeline `scripts/local-group/build-local-group.ts`) — LineLoop outlines for
 ~120 confirmed-galaxy objects out to the 2 Mpc Local Group boundary:
 LMC (inclined disc), SMC (line-of-sight elongated triaxial), Sagittarius
 dSph, the classical dSphs (Sculptor / Draco / Fornax / Carina / Sextans /

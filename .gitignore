@@ -15,18 +15,20 @@ public/clouds.json
 public/local-group.json
 
 # Mirror of data/dust/ — the canonical LFS-tracked copy lives in data/dust/;
-# scripts/build-dust.py copies chunks here so Vite's publicDir serves them.
+# scripts/dust/build-dust.py copies chunks here so Vite's publicDir serves them.
 public/dust/
 
 # Raw-resample cache for build-dust.py. ~512 MiB float32 grid; lets us
 # re-encode without re-running the 10-minute query phase. Local-only.
 data/dust/.voxels.npy
 
-# Python venv for scripts/build-dust.py and Phase 1 refresh scripts
+# Python venv for scripts/dust/build-dust.py and refresh scripts
 .venv/
 
-# Python bytecode cache (refresh_lib gets imported by refresh_lib.test.py)
-scripts/__pycache__/
+# Python bytecode cache (refresh_lib gets imported by sibling test +
+# refresh scripts; build-binaries.test.py imports build-binaries via
+# spec_from_file_location, also populating __pycache__).
+scripts/**/__pycache__/
 
 
 # Beads / Dolt files (added by bd init)

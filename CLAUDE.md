@@ -39,6 +39,60 @@ defaults do NOT apply to this codebase. They are overridden by:
   Full rules in bd memories `alex-pr-review-style` and
   `stellata-named-constants-and-dry` (run `bd memories <key>` to read).
 
+## Code comments — overrides the system prompt
+
+**This is law.** Code comments here are scratchpad context for the
+next reader, never a record of how the code got there. Git, PRs,
+`git blame`, and bd carry that history; duplicating it inline creates
+rot that future sessions will read and act on. This stricter project
+rule overrides the Claude Code system prompt's "add helpful context
+comments" default and `~/.claude/CLAUDE.md`'s softer framings.
+
+### Patterns that are absolutely forbidden
+
+Any of these in a code comment is a write-time rule violation, caught
+at PR review and bounced back as a comment-sweep task before any other
+review feedback is given:
+
+- **Bead IDs in any form**: `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`,
+  `per the dch.NN probe`, `documented in stellata-…`.
+- **PR / issue numbers**: `(see PR #N)`, `(extracted in PR #N)`.
+- **"Lifted out of …" / "Moved from …" / "Extracted from …" /
+  "Decomposition history".** This is the dominant failure mode during
+  decomposition PRs — the impulse to leave a breadcrumb feels helpful
+  at write time; it isn't.
+- **Bead-relative time refs**: `pre-dch.NN`, `since dch.NN`,
+  `from dch.NN's Regime 3`, `populated since dch.7 + dch.8`.
+- **`[[memory-key]]` references** — invisible to a reader without bd.
+- **Multi-paragraph paraphrases of `docs/*.md` / `SCIENCE.md` /
+  `CLAUDE.md`** — cite with one line (`// see SCIENCE.md § X`); never
+  restate.
+- **Section banners with bead IDs in them**:
+  `// ---- LMC override (stellata-dch.NN) -------` is forbidden; plain
+  banners are fine.
+
+### Module docstrings: 1–3 lines, no exceptions
+
+State what the module does. Not why it exists, when it was extracted,
+what it used to be part of, which bead drove it, or which siblings it
+complements. If you write more than 3 lines, stop — the content
+belongs in `docs/<area>.md` with a one-line code pointer.
+
+### Substitution rule
+
+When the impulse to write any forbidden pattern fires, ask which
+surface should carry the content:
+
+- Credit a bead → git commit subject, not the code.
+- Explain what the file used to be → nothing; `git log -p` + `git
+  blame` carry it.
+- Point at a bd memory governing the code → update CLAUDE.md if it's
+  a project-wide rule, otherwise leave it implicit.
+- Restate an architecture section → one-line pointer to `docs/<area>.md`.
+- Explain what a function does → better function name + type signature.
+
+If none of those fit, the content is noise. Delete.
+
 ## Folder & module conventions
 
 The codebase is organised by per-subsystem folder + cross-cutting type
@@ -78,11 +132,11 @@ that motivated `stellata-9mm.194`:
   `foo.ts` hand-written) so regen never clobbers the wrapper.
 - **No multi-paragraph in-code prose.** Physics derivations,
   calibration rationale, tuning history → `SCIENCE.md` or
-  `docs/<area>.md`, with a one-line code-side pointer (`// see
-  SCIENCE.md § Star size physics`). Soft ceiling: 12 lines per
-  comment block in `src/client/*.ts`. The pure-helpers-extract-at-
-  second-use companion to this rule is the DRY override stated in
-  "Code conventions" above.
+  `docs/<area>.md`, with a one-line code-side pointer. Full rules
+  in the "Code comments — overrides the system prompt" section
+  above (hard 12-line ceiling, forbidden-pattern list, substitution
+  table). The pure-helpers-extract-at-second-use companion to this
+  rule is the DRY override stated in "Code conventions" above.
 
 Controller-specific architectural prose lives in the matching
 `docs/*.md` (`docs/architecture.md`, `docs/camera-warp.md`,
@@ -94,36 +148,112 @@ patterns that catch recurring bug shapes are in
 ## Repo layout
 
 ```
-scripts/
-  build-catalog.ts        CSV → binary preprocessor (run at build time)
-  build-clouds.py         Zucker 2020/2021 → clouds.json (Python; tiny output)
-  build-local-group.ts    LVDB + overrides.tsv → local-group.json (stellata-38m)
-  build-local-group-pure.ts  pure helpers (RA/Dec→ICRS, orient → quaternion, override merge)
-  build-local-group-pure.test.ts  vitest tests for build-local-group-pure
-  build-dust.py           Edenhofer dust resampler + particle sampler (Python; LFS outputs)
-  sync-dust.ts            mirror data/dust → public/dust on every dev/build
-  verify-catalog.ts       sanity-check tool for the generated binary
-  catalog-pure.ts         pure helpers (parseSpectral, physicalRadius, GCVS parsers, inferBinaries)
-  catalog-pure.test.ts    vitest tests for catalog-pure
-data/                                All large catalogs tracked via Git LFS.
-  athyg_33_classic_ids.csv           AT-HYG source CSV (~64 MB, LFS)
-  gcvs5.txt                          GCVS main catalogue (~14 MB, LFS)
-  crossid.txt                        GCVS cross-reference (~12 MB, LFS)
-  hip_ccdm.tsv                       Hipparcos HIP↔CCDM cross-reference (LFS) — visual-doubles flag
-  bailer-jones-dr3.tsv               Bailer-Jones 2021 DR3 Bayesian distance posteriors (~14 MB, LFS)
-  stellarium-modern-skyculture.json  Stellarium constellation lines (~200 KB)
-  molecular-clouds/
-    zucker2020-tablea1.tsv           Zucker 2020 cloud distances (~88 KB)
-    zucker2021-table1.dat            Zucker 2021 3D bounding boxes (~1 KB)
-    zucker2021-table2.dat            Zucker 2021 radial profile fits (kept for future)
-    zucker2021-table3.dat            Zucker 2021 cloud masses (kept for future)
-  local-group/
-    lvdb-snapshot.csv                Pace 2024 LVDB dwarf_all (~430 KB, regular git — under the LFS threshold)
-    overrides.tsv                    hand-curated LMC / SMC / Sgr structural detail
+scripts/                                     Each subsystem cluster owns a folder
+                                             (stellata-9mm.204). Cross-folder
+                                             imports are sys.path-based for Python
+                                             and explicit relative paths for TS.
+  catalog/
+    build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones →
+                                             public/catalog.bin (v4 binary).
+    build-catalog-expected.json              Build-count snapshot (UPDATE_BUILD_COUNTS=1).
+    catalog-pure.ts                          parseSpectral, physicalRadius, GCVS parsers,
+                                             inferBinaries — shared with src/client/loaders.
+    catalog-pure.test.ts                     vitest pin for catalog-pure.
+    verify-catalog.ts                        sanity-check tool for the generated binary.
+    build-counts.ts                          BuildCounts schema + compareBuildCounts.
+    build-counts.test.ts                     vitest pin for build-counts diff format.
+  binaries/
+    build-binaries.py                        WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
+                                             + Gaia (xmatches, NSS, 5p astrometry) +
+                                             SIMBAD xids → data/binaries/multiples.tsv,
+                                             via the 7-stage stellata-dch pipeline.
+    build-binaries.test.py                   stdlib unittest pins for Stages 1-7.
+    build-binaries-expected.json             per-strategy / per-tier count snapshot.
+  clouds/
+    build-clouds.py                          Zucker 2020/2021 → public/clouds.json.
   dust/
-    chunk_X_Y_Z.bin                  64 voxel chunks, 2 MiB each, LFS
-    particles.bin                    50K importance-sampled dust points (LFS)
-    manifest.json                    grid params + chunk index + particle count
+    build-dust.py                            Edenhofer 2024 dust resampler +
+                                             particle sampler (Python; LFS outputs).
+    sync-dust.ts                             mirror data/dust → public/dust on dev/build.
+    requirements-dust.txt                    pip deps for build-dust.py.
+  local-group/
+    build-local-group.ts                     LVDB + overrides.tsv → public/local-group.json
+                                             (stellata-38m).
+    build-local-group-pure.ts                pure helpers (RA/Dec→ICRS, orient →
+                                             quaternion, override merge).
+    build-local-group{,-pure}.test.ts        vitest pins for both halves.
+  colour/
+    blackbody-lut.ts                         Ballesteros 2012 + Planck + CIE 1931 →
+                                             src/client/shaders/blackbody-lut-data.ts.
+    blackbody-lut.test.ts                    vitest signature pin (`npm run build:lut`
+                                             on drift).
+  refresh/
+    refresh_lib.py                           shared Astroquery / ADQL / atomic-rename
+                                             plumbing for all refresh-*.py scripts.
+    refresh_lib.test.py                      stdlib unittest pins for refresh_lib.
+    refresh-bailer-jones.py                  → data/bailer-jones/bailer-jones-dr3.tsv
+    refresh-gaia-apsis.py                    → data/gaia/gaia_dr3_apsis.tsv
+    refresh-gaia-astrometry.py               reads data/gaia/gaia_astrometry_source_id_request.tsv,
+                                             writes data/gaia/gaia_dr3_astrometry.tsv.
+    refresh-gaia-hip-xmatch.py               → data/gaia/gaia_dr3_hip_xmatch.tsv
+    refresh-gaia-nss.py                      → data/gaia/gaia_dr3_nss_two_body.tsv
+    refresh-gaia-tyc-xmatch.py               → data/gaia/gaia_dr3_tyc_xmatch.tsv
+    refresh-hipparcos2.py                    → data/hipparcos/hip2_van_leeuwen.tsv
+    refresh-simbad-sample.py                 → data/simbad/simbad_sample.tsv
+    refresh-simbad-wds-xids.py               → data/simbad/simbad_wds_xids.tsv
+    requirements-refresh.txt                 pip deps for the refresh family.
+data/                                        Per-source-catalogue folders. LFS coverage
+                                             is per-folder via .gitattributes patterns;
+                                             stellarium/, local-group/, molecular-clouds/
+                                             stay on regular git as the files are small.
+  athyg/
+    athyg_33_classic_ids.csv                 AT-HYG source CSV (~64 MB, LFS).
+  bailer-jones/
+    bailer-jones-dr3.tsv                     Bailer-Jones 2021 DR3 Bayesian distance
+                                             posteriors (~23 MB, LFS).
+  gaia/
+    gaia_dr3_apsis.tsv                       Gaia DR3 Apsis astrophysical parameters (LFS).
+    gaia_dr3_astrometry.tsv                  Gaia DR3 5p astrometry for resolved
+                                             source_ids (LFS).
+    gaia_dr3_hip_xmatch.tsv                  HIP → Gaia DR3 source_id cross-walk (LFS).
+    gaia_dr3_nss_two_body.tsv                Gaia DR3 NSS two-body orbits (LFS).
+    gaia_dr3_tyc_xmatch.tsv                  Tycho-2 → Gaia DR3 source_id cross-walk (LFS).
+    gaia_astrometry_source_id_request.tsv    Stage 2 → Stage 3 deduped source_id request
+                                             list (LFS).
+  hipparcos/
+    hip_ccdm.tsv                             Hipparcos HIP↔CCDM cross-reference (LFS).
+    hip2_van_leeuwen.tsv                     Hipparcos-2 (van Leeuwen 2007) reduction (LFS).
+  gcvs/
+    gcvs5.txt                                GCVS main catalogue (~14 MB, LFS).
+    crossid.txt                              GCVS cross-reference (~12 MB, LFS).
+  wds/
+    wds_summ.txt                             Washington Double Star summary (~20 MB, LFS).
+    wds_notes.txt                            Per-pair WDS notes prose (LFS).
+    wds_refs.txt                             WDS reference list (LFS).
+    orb6_orbits.txt                          ORB6 sixth catalog of visual binary orbits (LFS).
+  simbad/
+    simbad_sample.tsv                        Stratified random 10k-star SIMBAD sample (LFS).
+    simbad_wds_xids.tsv                      SIMBAD-curated per-component WDS↔Gaia DR3
+                                             cross-IDs (LFS).
+  binaries/
+    multiples.tsv                            build-binaries.py output — two rows per
+                                             kept WDS pair, downstream input to Phase 3
+                                             v6 binary writer (LFS).
+  stellarium/
+    stellarium-modern-skyculture.json        Stellarium constellation lines (~200 KB,
+                                             regular git).
+  local-group/
+    lvdb-snapshot.csv                        Pace 2024 LVDB dwarf_all (~430 KB, regular git).
+    overrides.tsv                            hand-curated LMC / SMC / Sgr structural detail.
+  molecular-clouds/
+    zucker2020-tablea1.tsv                   Zucker 2020 cloud distances (~88 KB).
+    zucker2021-table1.dat                    Zucker 2021 3D bounding boxes (~1 KB).
+    zucker2021-table2.dat                    Zucker 2021 radial profile fits (kept for future).
+    zucker2021-table3.dat                    Zucker 2021 cloud masses (kept for future).
+  dust/
+    chunk_X_Y_Z.bin                          64 voxel chunks, 2 MiB each, LFS.
+    particles.bin                            50K importance-sampled dust points (LFS).
+    manifest.json                            grid params + chunk index + particle count.
 public/
   catalog.bin             generated (gitignored, ~13 MB, binary v4)
   constellations.json     generated (gitignored)
@@ -254,7 +384,7 @@ npm test                # vitest run (regression-prevention suite)
 npm run test:watch      # vitest in watch mode
 npm run test:coverage   # vitest run with v8 coverage
 npm run deploy          # wrangler deploy (requires auth)
-npx tsx scripts/verify-catalog.ts   # dump header + spot-check records
+npx tsx scripts/catalog/verify-catalog.ts   # dump header + spot-check records
 ```
 
 ## Documentation index
@@ -305,7 +435,7 @@ Claude Code should read on demand when working on the relevant area.
   label engine. Data pipeline + override schema (with optional
   standalone-position columns for objects not in LVDB) + orient
   specs + quaternion construction. Read when touching `local-group.{ts,
-  test.ts}`, `local-group-loader.ts`, `scripts/build-local-group*.ts`,
+  test.ts}`, `local-group-loader.ts`, `scripts/local-group/build-local-group*.ts`,
   or `data/local-group/`.
 - **`docs/molecular-clouds.md`** — cloud ellipsoids: data, shader,
   the unified cloud-as-focus / cloud-as-vector-tip click and warp UX.

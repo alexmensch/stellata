@@ -15,25 +15,37 @@ disk at build time. The build does NOT fetch from the network — no
 
 Why: the build keeps working long-term even when external sources go
 offline, change schemas, or move URLs. Existing pattern reflects this
-across every input — `athyg_33_classic_ids.csv`, `gcvs5.txt`,
-`crossid.txt`, `stellarium-modern-skyculture.json`, Edenhofer dust via
+across every input — `data/athyg/athyg_33_classic_ids.csv`,
+`data/gcvs/gcvs5.txt`, `data/gcvs/crossid.txt`,
+`data/stellarium/stellarium-modern-skyculture.json`, Edenhofer dust via
 committed `data/dust/*.bin`, Pace 2024 LVDB
-`data/local-group/lvdb-snapshot.csv`, Hipparcos `data/hip_ccdm.tsv`.
-Refresh from upstream is an explicit, manual, infrequent step, not a
-build dependency.
+`data/local-group/lvdb-snapshot.csv`, Hipparcos
+`data/hipparcos/hip_ccdm.tsv`. Refresh from upstream is an explicit,
+manual, infrequent step, not a build dependency.
+
+`data/` is organised by upstream source catalogue (stellata-9mm.204):
+`wds/`, `gaia/`, `hipparcos/`, `gcvs/`, `athyg/`, `bailer-jones/`,
+`simbad/`, `stellarium/`, plus `local-group/`, `molecular-clouds/`,
+`dust/` for sources with multi-file layouts. The pipeline-derived
+`binaries/multiples.tsv` lives alongside its source folders under
+`data/binaries/` so the source-vs-derived split reads cleanly.
 
 When adding new external data:
 
 1. Fetch once (manually or via a one-shot helper) and commit the raw
-   file under `data/`. Files over ~1 MB ride Git LFS (see the existing
-   AT-HYG / GCVS / Edenhofer entries; the LVDB snapshot is under the
-   threshold and rides regular git).
+   file under the matching `data/<source>/` folder, or create a new
+   per-source folder if none fits. Files over ~1 MB ride Git LFS (see
+   the existing AT-HYG / GCVS / Edenhofer entries; the LVDB snapshot
+   is under the threshold and rides regular git). LFS patterns are
+   per-folder in `.gitattributes`, so a new source folder needs a new
+   `data/<source>/*.{tsv,csv,txt,…} filter=lfs …` line.
 2. Document the source URL + retrieval date in `SCIENCE.md` § Data
    sources.
-3. Build scripts read from `data/<file>`. They do not hit the network.
+3. Build scripts read from `data/<source>/<file>`. They do not hit the
+   network.
 4. If you write a fetch helper, name it explicitly (e.g.
-   `scripts/refresh-clouds.py`) and gate it from `npm run build` —
-   refresh is a separate command, not a build step.
+   `scripts/refresh/refresh-clouds.py`) and gate it from `npm run
+   build` — refresh is a separate command, not a build step.
 
 Applies to JSON / CSV / FITS / HDF5 / TSV catalogs, sky-culture JSON,
 dust map binaries — anything sourced from outside the repo.
@@ -87,25 +99,25 @@ Amplitude encoding saturates at 255 × 0.05 = 12.75 mag; periods over
 majority of real variables (a few multi-decade symbiotics and extreme
 eclipsers clip but those render imperceptibly slowly anyway).
 
-The byte plan above is encoded once in `scripts/catalog-pure.ts` as
+The byte plan above is encoded once in `scripts/catalog/catalog-pure.ts` as
 `HEADER_LAYOUT`, `RECORD_LAYOUT`, `HEADER_SIZE`, `RECORD_SIZE`, `MAGIC`,
-`BINARY_VERSION`, and `NO_COMPANION`. Writer (`scripts/build-catalog.ts`),
+`BINARY_VERSION`, and `NO_COMPANION`. Writer (`scripts/catalog/build-catalog.ts`),
 runtime reader (`src/client/catalog-loader.ts`), and the verify tool
-(`scripts/verify-catalog.ts`) all index off those constants — there are
+(`scripts/catalog/verify-catalog.ts`) all index off those constants — there are
 no inline byte offsets to drift apart. If you add fields, keep the
 44-byte stride (pad as needed), extend `RECORD_LAYOUT`, and **bump
 `BINARY_VERSION` + `MAGIC`** in `catalog-pure.ts`. Free flag bits today
 are `0x08`, `0x20`, `0x40`, `0x80` (see `FLAG_*` exports). Layout
 consistency is pinned by the `binary-format constants` block in
-`scripts/catalog-pure.test.ts`.
+`scripts/catalog/catalog-pure.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,
 search-index entries, etc.) against
-`scripts/build-catalog-expected.json` at the end of each run. A
+`scripts/catalog/build-catalog-expected.json` at the end of each run. A
 deliberate change refreshes the manifest with
 `UPDATE_BUILD_COUNTS=1 npm run build:catalog`; an unintended drift
-exits non-zero with a per-key diff. `scripts/build-counts.ts` carries
+exits non-zero with a per-key diff. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage.
 
 ## Search index (`public/search-index.json`)
@@ -118,7 +130,7 @@ One JSON array entry per star that has at least one searchable identifier
 `s` field carries the raw spectral designation from the AT-HYG source
 ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display.
 
-Field shape pinned in `scripts/catalog-pure.ts` as the `SearchEntry`
+Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
 (`src/client/search.ts`) both import it; drift = compile error.
 
@@ -138,11 +150,11 @@ Bayer variants shows up once.
 
 Classical asterism lines are sourced from Stellarium's modern sky culture
 `index.json` (CC/MIT-compatible, HIP-indexed). The source file is
-committed to `data/stellarium-modern-skyculture.json` — it essentially
+committed to `data/stellarium/stellarium-modern-skyculture.json` — it essentially
 never changes, so fetching it at build time each time would be wasted
 work.
 
-Pipeline in `scripts/build-catalog.ts`:
+Pipeline in `scripts/catalog/build-catalog.ts`:
 
 1. The HYG CSV parser reads the `hip` column into each star record.
 2. After sorting stars by absmag (so record indices are final), a
@@ -268,7 +280,7 @@ rows where both components survive the classic-IDs cut); the CCDM
 pass pulls in everything else where the primary has a HIP — Sirius,
 Mizar, Castor, α Cen, Polaris, Albireo, γ And, ε Lyr, etc.
 
-`parseHipCcdm` in `build-catalog.ts` reads `data/hip_ccdm.tsv`, a
+`parseHipCcdm` in `build-catalog.ts` reads `data/hipparcos/hip_ccdm.tsv`, a
 three-column slice of the **Hipparcos main catalogue** (VizieR
 `I/239/hip_main`). The `CCDM` column on each Hipparcos row carries
 the cross-reference into the Catalog of the Components of Double
@@ -351,11 +363,11 @@ geometric pass still runs and chart mode still works, just with the
 
 ## Bailer-Jones DR3 distance override
 
-`scripts/build-catalog.ts` swaps AT-HYG's naive `1 / π` distances for
+`scripts/catalog/build-catalog.ts` swaps AT-HYG's naive `1 / π` distances for
 the Bayesian posteriors published by Bailer-Jones et al. 2021 (CDS
 I/352). The pipeline:
 
-1. Load `data/bailer-jones-dr3.tsv` via `parseBailerJonesTsv` into a
+1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via `parseBailerJonesTsv` into a
    `Map<source_id, distance_pc>` keyed by Gaia DR3 `source_id`. The
    key is kept as a **string** — Gaia source_ids regularly exceed
    `Number.MAX_SAFE_INTEGER`, so any numeric parse would silently
@@ -379,11 +391,11 @@ I/352). The pipeline:
    `dist > 50,000 pc` filter: catastrophic-parallax-inversion
    supergiants whose Bayesian distance falls below the cap.
 
-If `data/bailer-jones-dr3.tsv` is absent (fresh clone without LFS
+If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone without LFS
 pulled), the build logs and continues — every star keeps its naive
 AT-HYG distance.
 
-Data refresh: `scripts/refresh-bailer-jones.py`. See SCIENCE.md
+Data refresh: `scripts/refresh/refresh-bailer-jones.py`. See SCIENCE.md
 § Bailer-Jones DR3 distance override for the physics rationale.
 
 ## Reference epoch and proper motion
@@ -407,7 +419,7 @@ only "now" layer in the scene. The two share a frame orientation
 ### `pm_*` columns are loaded into nothing
 
 The AT-HYG CSV carries `pm_ra`, `pm_dec`, and `pm_src` columns.
-`scripts/build-catalog.ts` and `scripts/catalog-pure.ts` never read
+`scripts/catalog/build-catalog.ts` and `scripts/catalog/catalog-pure.ts` never read
 them — `grep -n 'pm_ra\|pm_dec' scripts/` returns zero hits. The
 preprocessor reads only the precomputed Cartesian `x0/y0/z0` triple
 and ignores proper-motion data entirely. This is deliberate: no
@@ -434,12 +446,145 @@ At constellation-scale FOV (10–30°) these are tiny but technically
 wrong; at close approach or in OBSERVE mode the highest-PM stars
 are visibly mis-located.
 
+## Binary system pipeline (`scripts/binaries/build-binaries.py`)
+
+Separate pipeline from `build-catalog.ts`. Where the catalog builder
+turns one source CSV (AT-HYG) into the renderer's main binary, the
+binary-system pipeline cross-matches *eleven* reference catalogues —
+WDS, ORB6, AT-HYG, GCVS, CCDM, HIP2, the Gaia DR3 HIP / Tycho cross-
+walks, Gaia NSS two-body orbits, Gaia DR3 5-parameter astrometry, and
+SIMBAD's curated WDS↔Gaia cross-IDs — to produce one canonical
+multi-star record per WDS pair: `data/binaries/multiples.tsv`. Phase 3
+turns that TSV into a v6 catalog binary that the renderer reads
+alongside `catalog.bin`.
+
+The pipeline runs in seven stages, each in its own module under
+`scripts/binaries/`. The split matters because the source files together
+are ~140 MB and the cross-match logic is fiddly — keeping each stage in
+its own module means a session editing (say) the orbit selector reads
+~600 lines instead of a 3,000-line monolith.
+
+| Module | Stage | Purpose |
+|---|---|---|
+| `parsers.py` | 1 | Row dataclasses + parse functions for every reference catalogue. |
+| `indices.py` | 1 | `IdentifierIndices` — HIP/Tyc→Gaia, src→HIP/NSS/astrometry/AT-HYG, HIP→HIP2/CCDM, CCDM→HIP-list. Built once; every Stage 2-7 lookup is O(1). |
+| `stage2_resolve.py` | 2 | WDS-component → Gaia DR3 `source_id` resolution cascade. |
+| `stage3_astrometry.py` | 3 | Per-component astrometry routing: Gaia 5p / Gaia NSS-systemic / HIP2 long-baseline. |
+| `stage4_orbits.py` | 4 | Per-pair orbital-element selection: Gaia NSS / ORB6 visual / ORB6 spectroscopic. |
+| `stage5_optical.py` | 5 | Per-pair physical-vs-optical classification cascade. |
+| `stage6_multiples.py` | 6 | Emit `data/binaries/multiples.tsv` for kept pairs. |
+| `stage7_counts.py` | 7 | Per-strategy / per-tier counter snapshot for regression-gate. |
+
+`build-binaries.py` is the orchestration shell — pipeline entry point,
+source-path constants, and the per-stage log lines.
+
+### Stage 2 — resolution cascade
+
+Each WDS component (e.g. `α Cen A`, `α Cen B`) is resolved to a Gaia
+DR3 `source_id` through a strict-priority cascade. The order is
+declared once in `RESOLVE_VIA_VALUES`; earlier tiers win when more than
+one would succeed.
+
+| Tier | Mechanism |
+|---|---|
+| `orb6_hip` | Primary's ORB6-published HIP → Gaia HIP cross-walk. |
+| `athyg_gaia_native` | AT-HYG's natively-stored Gaia source_id, reached via HIP or via a 2″ position match against WDS precise coordinates (PM-propagated from `ATHYG_REFERENCE_EPOCH = J1991.25` to `WDS_PRECISE_COORD_EPOCH = J2000.0`). |
+| `simbad_xid` | SIMBAD's curated `WDS J<id><comp>` ↔ Gaia DR3 cross-IDs from `data/simbad/simbad_wds_xids.tsv`. Per-component resolution with reliable coverage of the well-known hard cases. |
+| `ccdm_hip` | Hipparcos CCDM annex co-membership → tight position match against AT-HYG → bound HIP → Gaia. Picks up α Cen B and Proxima-shaped cases that the primary-only `orb6_hip` and bare position match would miss. |
+| `position_pm` / `position_nopm` | PM-propagated and bare position match against Gaia 5p astrometry. Stubbed — placeholder tier names. |
+| `unresolved` | Cascade exhausted without a binding. |
+
+For ultra-wide pairs WDS writes `ρ = 999.9` as an overflow sentinel
+(`WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC`) — the (ρ, θ) offset cannot
+predict the secondary's position, so position-match tiers short-circuit
+and the per-component identifier tiers (SIMBAD, CCDM) carry the load.
+
+Stage 2 also emits `data/gaia/gaia_astrometry_source_id_request.tsv` —
+the deduped union of every Gaia source_id resolved across all tiers.
+`scripts/refresh/refresh-gaia-astrometry.py` reads it to drive its ADQL
+`WHERE source_id IN (...)` query so Stage 3 onward has 5p astrometry
+for exactly the sources Stage 2 resolved.
+
+### Stage 3 — astrometry routing
+
+Each resolved component picks one of four routes, declared in
+`ASTROMETRY_VIA_VALUES`:
+
+| Route | Condition |
+|---|---|
+| `gaia_nss_systemic` | Source has an NSS two-body row AND the 5p solution is flagged unreliable (`ruwe > 1.4` OR `ipd_frac_multi_peak > 0.02`). Gaia DR3 refits the source to the centre-of-mass for NSS-modelled sources, so the same row's values surface here with provenance distinguishing for Stage 4. |
+| `hip2_long_baseline` | Either: (a) Gaia astrometry exists, the system has a known companion within 5″ (`min ρ` across all pair rows the source participates in), AND `|Δ pmRA| > 50 mas/yr` OR `|Δ pmDE| > 50 mas/yr` between Gaia and HIP2; or (b) no Gaia source was resolved (saturated bright primary like Sirius / α Cen) but a HIP is known and HIP2 covers it. Hipparcos's J1991.25 baseline averages a different window of the orbit than Gaia's 2014-2017 window — closer to the systemic motion for bright close binaries. |
+| `gaia_5p` | Default. |
+| `unresolved` | Stage 2 left source_id None AND no HIP2 fallback available. |
+
+The 5″ separation gate is checked against the **minimum** WDS ρ across
+all pair rows the source participates in, not the current pair row's
+ρ — a star in both a tight AB pair and a wide AC pair takes the tight
+ρ so the same physical star always routes consistently.
+
+### Stage 4 — orbital-element selection
+
+Per WDS pair, in priority order (`ORBIT_VIA_VALUES`):
+
+| Route | When it fires |
+|---|---|
+| `gaia_nss` | Any component carries an NSS two-body row AND the solution falls inside Gaia's astrometric-detectability regime: `period < 3 yr` OR apparent angular semi-major axis `< 1″`. ~95.8% of DR3 NSS rows pass the period gate; the sub-arcsec gate captures the residual long-period sub-arcsec-photocentre rows. |
+| `orb6` | ORB6 visual orbit, grade ∈ {1, 2, 3, 4, 5}. Grade tiebreak (lowest grade wins); reference-year secondary tiebreak. |
+| `orb6_spectroscopic` | ORB6 grade ∈ {8, 9}. Same tiebreaks. |
+| `none` | No orbital information on file. |
+
+NSS solution-type routing inside `gaia_nss`:
+
+| Solution types | Path |
+|---|---|
+| `Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`, `AstroSpectroSB1` | Recover `(a, i, Ω, ω)` from `(A, B, F, G)` via the Heintz 1978 / Halbwachs et al. 2023 Thiele-Innes → Campbell algebra. The algebra is inlined in `_thiele_innes_to_campbell` (`scripts/binaries/stage4_orbits.py`) rather than imported from ESA NSSTools — the dependency is unmaintained and the closed form is ~10 lines. The docstring carries the derivation. |
+| `EclipsingBinary`, `EclipsingSpectro` | Inclination + arg-periastron read directly from the stored columns; eclipse photometry doesn't constrain `a` or `Ω`. |
+| `SB1`, `SB2`, `SB1C`, `SB2C` | Spectroscopic-only: arg-periastron when stored. Inclination and longitude-of-ascending-node are unrecoverable from RV alone. |
+
+Each `select_orbit` call returns `(OrbitElements | None, orbit_via)`.
+Field-by-field `None` is significant — a row may carry period + T + e
+but no `a_AU` because no system parallax was attached. Downstream
+consumers choose their own fallback.
+
+### Stage 5 — physical-vs-optical classification
+
+Per-pair 5-tier cascade (`OPTICAL_VIA_VALUES`):
+
+| Tier | Mechanism |
+|---|---|
+| `wds_notes_*` | WDS Notes flag chars: `T/V/Z` confirm physical (common proper motion / parallax / orbital arc), `S/U/X/Y` confirm optical contamination, other chars silent. |
+| `gaia_*` | Both components have a Gaia 5p row. Compare parallax (3σ on combined error) AND per-axis PM (≤ 5 mas/yr). |
+| `asymm_*` | Exactly one component has a Gaia 5p row; the other is Gaia-saturated and has a HIP2 parallax anchor. 3σ test against the HIP2 anchor. Catches Sirius A-C/D/E/F directly: anchor 378 mas vs Gaia <1 mas → enormous excess, reject. |
+| `orbit_kept` | Stage 4 selected real orbital elements (any route). Empirical orbit fit beats the mag-gap heuristic — necessary for WD-companion pairs like Sirius A-B where the photometric gap alone would misclassify. |
+| `mag_heuristic_*` | `\|Δmag\| ≤ 5` keep, otherwise reject. Coarse backstop; the strong filtering is in the Gaia tiers. Pairs missing both mags ride through ("absence of evidence is not evidence of optical contamination"). |
+
+### Stages 6-7 — emit and gate
+
+Stage 6 writes `data/binaries/multiples.tsv`: two rows per kept
+(physical) pair, columns per `MULTIPLES_TSV_COLUMNS`. Pairs Stage 5
+classified as optical are dropped — downstream consumers never see
+optical-flagged rows in this file. The `regime` integer column is the
+legacy v5-style provenance tag (`0` = no orbital info, `2` = full
+elements from Gaia NSS or ORB6 visual, `3` = spectroscopic-only); the
+finer `orbit_via` string column carries the per-row source.
+
+Stage 7 flattens per-strategy / per-tier counters into
+`scripts/binaries/build-binaries-expected.json` and compares against the
+committed snapshot — the same `UPDATE_BUILD_COUNTS=1` flow as
+`build-catalog.ts`. The Python comparator mirrors the TS one in
+`scripts/catalog/build-counts.ts`.
+
+`build-binaries.py` is idempotent against `data/binaries/multiples.tsv`
+the same way `build-catalog.ts` is against `public/catalog.bin` — mtime
+checks across every reference catalogue input plus the script itself,
+overridable with `--force`.
+
 ## Preprocessor idempotency
 
-`scripts/build-catalog.ts isUpToDate` skips rebuild if `catalog.bin`,
+`scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if `catalog.bin`,
 `constellations.json`, **and** `search-index.json` are newer than all
 source inputs (AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos
 CCDM TSV, and the script itself). If you change field mapping but
 not the script mtime (e.g. edit in a way that updates atime only),
-you may need to `touch scripts/build-catalog.ts` or delete the
+you may need to `touch scripts/catalog/build-catalog.ts` or delete the
 generated files.

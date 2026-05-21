@@ -4,7 +4,7 @@ import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import { TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
-import type { SearchEntry } from '../../../scripts/catalog-pure';
+import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
 
 export type { SearchEntry };
 
