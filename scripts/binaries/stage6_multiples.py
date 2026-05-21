@@ -15,7 +15,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import AthygRow, WdsPair  # noqa: E402
+from parsers import AthygRow, SimbadWdsXid, WdsPair  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
@@ -60,6 +60,26 @@ SPECT_VIA_NONE = "none"
 SPECT_VIA_VALUES: tuple[str, ...] = (
     SPECT_VIA_SIMBAD, SPECT_VIA_ATHYG, SPECT_VIA_NONE,
 )
+
+
+# ``orbit_role`` values. ``primary`` / ``secondary`` are the two sides of
+# a WDS pair row; ``standalone`` is the dch.66 augmentation — a row for a
+# SIMBAD-known WDS component that the pair-walk didn't already emit (the
+# 40 Eri B case: B is in BC, BD, BE pair rows but every one of those is
+# dropped at Stage 6's position gate because neither B nor C has Gaia 5p
+# astrometry).
+ORBIT_ROLE_PRIMARY = "primary"
+ORBIT_ROLE_SECONDARY = "secondary"
+ORBIT_ROLE_STANDALONE = "standalone"
+
+
+# ``source`` values. ``athyg`` when an AT-HYG row backed the photometry /
+# proper-name fields; ``wds`` for components resolved with no AT-HYG row;
+# ``simbad`` for dch.66 standalone-augment rows (no AT-HYG hit, but
+# SIMBAD has at least an sp_type and a cross-ID).
+SOURCE_ATHYG = "athyg"
+SOURCE_WDS = "wds"
+SOURCE_SIMBAD = "simbad"
 
 
 # orbit_via → numeric ``regime`` tag for parity with the legacy v5
@@ -146,6 +166,63 @@ def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, 
     return x * dist_pc, y * dist_pc, z * dist_pc, dist_pc
 
 
+SystemAnchor = tuple[float, float, float, float]
+
+
+def compute_system_anchors(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+) -> dict[str, SystemAnchor]:
+    """One (x_pc, y_pc, z_pc, dist_pc) anchor per wds_id — used by Stage 6
+    when a component's own astrometry resolved to ``unresolved`` but the
+    same system has another component with a real Gaia 5p (or HIP2) row.
+    Tight inner binaries blend in Gaia (40 Eri B/C, Castor C/D) and never
+    get a per-component 5p fit, but the outer pair's primary always does;
+    the inner pair's components sit at the primary's distance to within a
+    handful of AU, which at parsec scales is no measurable offset.
+
+    Iteration order matches the decomposing-pair walk so the first
+    resolved component in a system wins the anchor slot; on a tie the
+    primary's row (lower iteration index) takes precedence over the
+    secondary. Pairs Stage 2 skipped (system-level / ambiguous
+    ``components`` strings) are silent.
+    """
+    out: dict[str, SystemAnchor] = {}
+    i = 0
+    for pair in pairs:
+        if split_components(pair.components) is None:
+            continue
+        for offset in (0, 1):
+            comp = components[i + offset]
+            ast = astrometry[i + offset]
+            if comp.wds_id in out:
+                continue
+            pos = _position_pc(ast)
+            if pos is not None:
+                out[comp.wds_id] = pos
+        i += 2
+    return out
+
+
+def _resolve_position(
+    astrometry: ComponentAstrometry,
+    anchor: SystemAnchor | None,
+) -> tuple[SystemAnchor, bool] | None:
+    """Position resolution with the dch.66 anchor fallback. Returns the
+    (x_pc, y_pc, z_pc, dist_pc) tuple plus an ``inherited`` flag — True
+    when the anchor backstopped a component whose own astrometry was
+    unresolved. Returns ``None`` only when both the component AND its
+    system anchor are unknown (entirely Gaia-blind WDS systems).
+    """
+    own = _position_pc(astrometry)
+    if own is not None:
+        return own, False
+    if anchor is not None:
+        return anchor, True
+    return None
+
+
 def build_multiples_row(
     pair: WdsPair,
     component: ResolvedComponent,
@@ -154,15 +231,27 @@ def build_multiples_row(
     orbit_via: str,
     is_primary: bool,
     indices: IdentifierIndices,
+    system_anchor: SystemAnchor | None = None,
 ) -> MultiplesRow:
     """Project Stage 2-4 outputs for one component into one canonical
     ``MultiplesRow``. The ``system_id`` is ``"{wds_id}-{components}"``
     (e.g. ``"00491+5749-AB"``) — stable across A-row and B-row of the
     same pair so the catalog binary writer can group them. Position is
     computed at the astrometry's native epoch; proper-motion-to-J2000
-    propagation is deferred to Phase 3 per the Stage 3 docstring."""
+    propagation is deferred to Phase 3 per the Stage 3 docstring.
+
+    ``system_anchor`` is the dch.66 fallback — when the component's own
+    astrometry resolved to ``"unresolved"`` (tight inner binary blended
+    out of Gaia DR3), the row inherits the system primary's position and
+    promotes ``astrometry_via`` to ``"system_inherited"``.
+    """
     athyg = _athyg_row_for_component(component, indices)
-    position = _position_pc(astrometry)
+    resolved = _resolve_position(astrometry, system_anchor)
+    if resolved is None:
+        position = None
+        inherited = False
+    else:
+        position, inherited = resolved[0], resolved[1]
     # SIMBAD's per-component sp_type wins over the AT-HYG row's
     # ``spect`` — AT-HYG carries a single per-system string that gets
     # inherited by every component, even when each component has its own
@@ -181,6 +270,10 @@ def build_multiples_row(
         spect = ""
         spect_via = SPECT_VIA_NONE
 
+    astrometry_via = (
+        "system_inherited" if inherited else astrometry.astrometry_via
+    )
+
     return MultiplesRow(
         system_id=f"{pair.wds_id}-{pair.components}",
         comp=component.component,
@@ -193,13 +286,13 @@ def build_multiples_row(
         ci=athyg.ci if athyg is not None else None,
         spect=spect,
         name=athyg.proper if athyg is not None else "",
-        source="athyg" if athyg is not None else "wds",
+        source=SOURCE_ATHYG if athyg is not None else SOURCE_WDS,
         regime=ORBIT_VIA_TO_REGIME.get(orbit_via, 0),
         resolve_via=component.resolve_via,
-        astrometry_via=astrometry.astrometry_via,
+        astrometry_via=astrometry_via,
         orbit_via=orbit_via,
         spect_via=spect_via,
-        orbit_role="primary" if is_primary else "secondary",
+        orbit_role=ORBIT_ROLE_PRIMARY if is_primary else ORBIT_ROLE_SECONDARY,
         P_days=orbit.P_days if orbit is not None else None,
         T_jd=orbit.T_jd if orbit is not None else None,
         e=orbit.e if orbit is not None else None,
@@ -219,12 +312,22 @@ def build_multiples_rows(
     orbits: list[tuple[OrbitElements | None, str]],
     classifications: list[OpticalClassification],
     indices: IdentifierIndices,
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
 ) -> list[MultiplesRow]:
     """Walk the per-pair Stage 2/3/4/5 outputs in lockstep. Skips pairs
     Stage 5 classified as optical (their rows are absent from the TSV
     entirely — downstream consumers should not see optical-flagged
-    SYN-NNN injections), and skips pairs where both components lack
-    any astrometry (no position constraint to emit).
+    SYN-NNN injections), and skips pairs where neither the components'
+    own astrometry NOR the system-anchor backstop yields a position
+    (entirely Gaia-blind WDS systems — Aitken-only doubles with no HIP /
+    AT-HYG cover at all).
+
+    ``simbad_xids`` opt-in argument turns on the dch.66 per-component
+    augmentation: after the pair-walk, sweep every (wds_id, component)
+    SIMBAD knows about and emit a standalone row for any combination not
+    already represented in the pair output. Position falls back through
+    component-native → system-anchor → ``None`` in the same order as the
+    pair rows.
     """
     n_pairs = sum(1 for p in pairs if split_components(p.components) is not None)
     if not (len(orbits) == n_pairs == len(classifications)):
@@ -233,7 +336,10 @@ def build_multiples_rows(
             "classifications must run parallel to decomposing pairs"
         )
 
+    system_anchors = compute_system_anchors(pairs, components, astrometry)
+
     out: list[MultiplesRow] = []
+    emitted_keys: set[tuple[str, str]] = set()
     i = 0       # cursor into components / astrometry
     j = 0       # cursor into orbits / classifications
     for pair in pairs:
@@ -246,19 +352,108 @@ def build_multiples_rows(
             p_ast = astrometry[i]
             s_ast = astrometry[i + 1]
             orbit, via = orbits[j]
-            p_pos = _position_pc(p_ast)
-            s_pos = _position_pc(s_ast)
+            anchor = system_anchors.get(pair.wds_id)
+            p_pos = _resolve_position(p_ast, anchor)
+            s_pos = _resolve_position(s_ast, anchor)
             if p_pos is not None or s_pos is not None:
                 out.append(build_multiples_row(
                     pair, primary, p_ast, orbit, via,
                     is_primary=True, indices=indices,
+                    system_anchor=anchor,
                 ))
                 out.append(build_multiples_row(
                     pair, secondary, s_ast, orbit, via,
                     is_primary=False, indices=indices,
+                    system_anchor=anchor,
                 ))
+                emitted_keys.add((pair.wds_id, primary.component))
+                emitted_keys.add((pair.wds_id, secondary.component))
         i += 2
         j += 1
+
+    if simbad_xids:
+        out.extend(build_standalone_rows(
+            simbad_xids=simbad_xids,
+            emitted_keys=emitted_keys,
+            system_anchors=system_anchors,
+            indices=indices,
+        ))
+    return out
+
+
+def build_standalone_rows(
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid],
+    emitted_keys: set[tuple[str, str]],
+    system_anchors: dict[str, SystemAnchor],
+    indices: IdentifierIndices,
+) -> list[MultiplesRow]:
+    """dch.66 augmentation — for every (wds_id, component) SIMBAD has a
+    cross-ID for that isn't already in ``emitted_keys`` (from the pair
+    walk), emit a standalone row. Captures sub-component cases the
+    pair-walk structurally can't reach (e.g. a SIMBAD-known component
+    that WDS never enumerates as the side of any decomposing pair).
+
+    Position falls back through component-native Gaia 5p →
+    system-anchor → ``None``; ``orbit_role=standalone`` distinguishes
+    these rows downstream so the binary writer can model them as
+    single-source enrichment rather than half of a pair.
+    """
+    out: list[MultiplesRow] = []
+    for (wds_id, component), xid in simbad_xids.items():
+        if (wds_id, component) in emitted_keys:
+            continue
+        # Position lookup: gaia_5p direct → system anchor → none.
+        position: SystemAnchor | None = None
+        astrometry_via = "unresolved"
+        if xid.gaia_source_id is not None:
+            gaia = indices.src_to_astrometry.get(xid.gaia_source_id)
+            if gaia is not None:
+                pos = _position_pc(ComponentAstrometry(
+                    astrometry_via="gaia_5p",
+                    ra_deg=gaia.ra_deg, dec_deg=gaia.dec_deg,
+                    parallax_mas=gaia.parallax_mas,
+                    pmra_masyr=gaia.pmra_masyr, pmdec_masyr=gaia.pmdec_masyr,
+                    ref_epoch=gaia.ref_epoch,
+                ))
+                if pos is not None:
+                    position = pos
+                    astrometry_via = "gaia_5p"
+        if position is None:
+            anchor = system_anchors.get(wds_id)
+            if anchor is not None:
+                position = anchor
+                astrometry_via = "system_inherited"
+
+        simbad_spect = indices.simbad_wds_spectra.get((wds_id, component))
+        if simbad_spect:
+            spect = simbad_spect
+            spect_via = SPECT_VIA_SIMBAD
+        else:
+            spect = ""
+            spect_via = SPECT_VIA_NONE
+
+        out.append(MultiplesRow(
+            system_id=f"{wds_id}-_{component}",
+            comp=component,
+            hip=xid.hip,
+            gaia_source_id=xid.gaia_source_id,
+            x_pc=position[0] if position is not None else None,
+            y_pc=position[1] if position is not None else None,
+            z_pc=position[2] if position is not None else None,
+            absmag=None, ci=None,
+            spect=spect, name=xid.simbad_main_id,
+            source=SOURCE_SIMBAD,
+            regime=0,
+            resolve_via="simbad_xid",
+            astrometry_via=astrometry_via,
+            orbit_via="none",
+            spect_via=spect_via,
+            orbit_role=ORBIT_ROLE_STANDALONE,
+            P_days=None, T_jd=None, e=None, a_AU=None,
+            i_rad=None, omega_rad=None, Omega_rad=None,
+            q=None,
+            dist_pc=position[3] if position is not None else None,
+        ))
     return out
 
 
