@@ -1,28 +1,33 @@
-import { createReadStream, statSync, existsSync, readFileSync } from 'node:fs';
+// AT-HYG + GCVS + CCDM + Bailer-Jones + Stellarium → public/catalog.bin
+// (v4 binary), public/constellations.json, public/search-index.json.
+//
+// stellata-9mm.204 split the parsing concerns into sibling modules so a
+// future session editing one input doesn't pay the cost of the others:
+//
+//   constellations.ts   IAU-88 table + Stellarium polyline resolver
+//   visual-doubles.ts   Hipparcos CCDM parser + KNOWN_VISUAL_DOUBLES
+//                       overrides + applyDoublesFlag
+//   gcvs-parse.ts       gcvs5.txt + crossid.txt + applyVariability
+//   stars-parse.ts      AT-HYG CSV reader (with B-J / LMC overrides)
+//                       + Star + parseFloatOrNull / parseIntOrNull / nonEmpty
+//   catalog-pure.ts     pre-existing — binary layout constants, pure
+//                       helpers (parseSpectral, physicalRadius,
+//                       inferBinaries, Bailer-Jones algebra, etc.)
+//
+// This file is the integration shell: source-path constants, the
+// orchestration in main(), idempotency check, and the v4 binary writer.
+
+import { statSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parse } from 'csv-parse';
+
 import {
-  parseSpectral,
-  physicalRadius,
-  normalizeGcvsName,
-  parseGcvsNumber,
-  inferBinaries,
-  applyDoublesFlag as applyDoublesFlagPure,
   parseBailerJonesTsv,
-  applyBailerJonesOverride,
-  isBailerJonesEligible,
-  applyLmcKinematicOverride,
-  angularSeparationDeg,
-  LMC_CENTRE_RA_HOURS,
-  LMC_CENTRE_DEC_DEG,
-  LMC_CONE_HALF_ANGLE_DEG,
+  inferBinaries,
   DIST_SRC_BAILER_JONES,
   DIST_SRC_LMC_KIN,
-  FLAG_HAS_NAME,
   FLAG_IS_SOL,
-  FLAG_HAS_BAYER,
   HEADER_LAYOUT,
   RECORD_LAYOUT,
   HEADER_SIZE,
@@ -39,6 +44,21 @@ import {
   formatCountDiff,
   type BuildCounts,
 } from './build-counts';
+import {
+  CONSTELLATIONS,
+  CON_INDEX,
+  buildFigureLines,
+} from './constellations';
+import {
+  parseHipCcdm,
+  applyDoublesFlag,
+} from './visual-doubles';
+import {
+  parseGcvsMain,
+  parseGcvsCrossref,
+  applyVariability,
+} from './gcvs-parse';
+import { readStars } from './stars-parse';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -54,154 +74,6 @@ const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
 const EXPECTED_COUNTS = resolve(__dirname, 'build-catalog-expected.json');
-
-const MAX_DIST_PC = 50_000;
-const DEFAULT_CI = 0.65;
-
-const CONSTELLATIONS: { code: string; name: string }[] = [
-  { code: 'And', name: 'Andromeda' },
-  { code: 'Ant', name: 'Antlia' },
-  { code: 'Aps', name: 'Apus' },
-  { code: 'Aql', name: 'Aquila' },
-  { code: 'Aqr', name: 'Aquarius' },
-  { code: 'Ara', name: 'Ara' },
-  { code: 'Ari', name: 'Aries' },
-  { code: 'Aur', name: 'Auriga' },
-  { code: 'Boo', name: 'Boötes' },
-  { code: 'Cae', name: 'Caelum' },
-  { code: 'Cam', name: 'Camelopardalis' },
-  { code: 'Cap', name: 'Capricornus' },
-  { code: 'Car', name: 'Carina' },
-  { code: 'Cas', name: 'Cassiopeia' },
-  { code: 'Cen', name: 'Centaurus' },
-  { code: 'Cep', name: 'Cepheus' },
-  { code: 'Cet', name: 'Cetus' },
-  { code: 'Cha', name: 'Chamaeleon' },
-  { code: 'Cir', name: 'Circinus' },
-  { code: 'CMa', name: 'Canis Major' },
-  { code: 'CMi', name: 'Canis Minor' },
-  { code: 'Cnc', name: 'Cancer' },
-  { code: 'Col', name: 'Columba' },
-  { code: 'Com', name: 'Coma Berenices' },
-  { code: 'CrA', name: 'Corona Australis' },
-  { code: 'CrB', name: 'Corona Borealis' },
-  { code: 'Crt', name: 'Crater' },
-  { code: 'Cru', name: 'Crux' },
-  { code: 'Crv', name: 'Corvus' },
-  { code: 'CVn', name: 'Canes Venatici' },
-  { code: 'Cyg', name: 'Cygnus' },
-  { code: 'Del', name: 'Delphinus' },
-  { code: 'Dor', name: 'Dorado' },
-  { code: 'Dra', name: 'Draco' },
-  { code: 'Equ', name: 'Equuleus' },
-  { code: 'Eri', name: 'Eridanus' },
-  { code: 'For', name: 'Fornax' },
-  { code: 'Gem', name: 'Gemini' },
-  { code: 'Gru', name: 'Grus' },
-  { code: 'Her', name: 'Hercules' },
-  { code: 'Hor', name: 'Horologium' },
-  { code: 'Hya', name: 'Hydra' },
-  { code: 'Hyi', name: 'Hydrus' },
-  { code: 'Ind', name: 'Indus' },
-  { code: 'Lac', name: 'Lacerta' },
-  { code: 'Leo', name: 'Leo' },
-  { code: 'Lep', name: 'Lepus' },
-  { code: 'Lib', name: 'Libra' },
-  { code: 'LMi', name: 'Leo Minor' },
-  { code: 'Lup', name: 'Lupus' },
-  { code: 'Lyn', name: 'Lynx' },
-  { code: 'Lyr', name: 'Lyra' },
-  { code: 'Men', name: 'Mensa' },
-  { code: 'Mic', name: 'Microscopium' },
-  { code: 'Mon', name: 'Monoceros' },
-  { code: 'Mus', name: 'Musca' },
-  { code: 'Nor', name: 'Norma' },
-  { code: 'Oct', name: 'Octans' },
-  { code: 'Oph', name: 'Ophiuchus' },
-  { code: 'Ori', name: 'Orion' },
-  { code: 'Pav', name: 'Pavo' },
-  { code: 'Peg', name: 'Pegasus' },
-  { code: 'Per', name: 'Perseus' },
-  { code: 'Phe', name: 'Phoenix' },
-  { code: 'Pic', name: 'Pictor' },
-  { code: 'PsA', name: 'Piscis Austrinus' },
-  { code: 'Psc', name: 'Pisces' },
-  { code: 'Pup', name: 'Puppis' },
-  { code: 'Pyx', name: 'Pyxis' },
-  { code: 'Ret', name: 'Reticulum' },
-  { code: 'Scl', name: 'Sculptor' },
-  { code: 'Sco', name: 'Scorpius' },
-  { code: 'Sct', name: 'Scutum' },
-  { code: 'Ser', name: 'Serpens' },
-  { code: 'Sex', name: 'Sextans' },
-  { code: 'Sge', name: 'Sagitta' },
-  { code: 'Sgr', name: 'Sagittarius' },
-  { code: 'Tau', name: 'Taurus' },
-  { code: 'Tel', name: 'Telescopium' },
-  { code: 'TrA', name: 'Triangulum Australe' },
-  { code: 'Tri', name: 'Triangulum' },
-  { code: 'Tuc', name: 'Tucana' },
-  { code: 'UMa', name: 'Ursa Major' },
-  { code: 'UMi', name: 'Ursa Minor' },
-  { code: 'Vel', name: 'Vela' },
-  { code: 'Vir', name: 'Virgo' },
-  { code: 'Vol', name: 'Volans' },
-  { code: 'Vul', name: 'Vulpecula' },
-];
-
-if (CONSTELLATIONS.length !== 88) {
-  throw new Error(`Expected 88 constellations, got ${CONSTELLATIONS.length}`);
-}
-
-const CON_INDEX: Map<string, number> = new Map(
-  CONSTELLATIONS.map((c, i) => [c.code.toLowerCase(), i])
-);
-
-// HIPs that Stellarium's modern sky culture references but the underlying
-// catalog does not carry 3D positions for. Every entry must include a
-// human-readable reason so a future audit can decide whether upstream data
-// has been fixed. `buildFigureLines` silently skips these; any other
-// unmatched HIP is a hard build error.
-const KNOWN_MISSING_HIPS: Map<number, string> = new Map([
-  [5165, 'α Phoenicis (Ankaa) — HYG lacks parallax for this multiple-star system; upstream data gap'],
-  [89341, 'μ Sagittarii (Polis) — HYG lacks parallax; upstream data gap'],
-]);
-
-// Curated visual-double systems that the CCDM+MultFlag filter (see
-// parseHipCcdm) drops because Hipparcos's main catalogue modelled
-// them as single stars (`MultFlag` blank, `Ncomp=1`). Each entry is a
-// system: a list of HIPs (one or more components found in this
-// catalog) plus a justification. parseHipCcdm groups these as
-// synthetic CCDM systems so the primary-only flagging in
-// applyDoublesFlag picks exactly one component per system.
-//
-// Visual review of new chart-mode renders may surface more — extend
-// conservatively, only for systems where the pair is canonical enough
-// to expect wings on the chart.
-interface VisualDoubleSystem {
-  components: number[]; // HIPs of components present in our catalog
-  reason: string;
-}
-const KNOWN_VISUAL_DOUBLES: VisualDoubleSystem[] = [
-  {
-    components: [11767],
-    reason: 'Polaris (α UMi) — Polaris B at sep ≈ 18″ is a real companion; Hipparcos modelled as Ncomp=1',
-  },
-  {
-    components: [91971],
-    reason: 'ε¹ Lyr — inner pair Aa+Ab at sep ≈ 2.4″; ε² Lyr (HIP 91926) carries MultFlag=C as the analogue',
-  },
-  {
-    components: [104214, 104217],
-    reason: '61 Cyg A/B — famous nearby K-dwarf pair at sep ≈ 30″ between HIP 104214 (A) and HIP 104217 (B)',
-  },
-];
-
-// HIPs that appear anywhere in KNOWN_VISUAL_DOUBLES; pre-built once
-// for fast membership checks during the CCDM file scan.
-const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
-  KNOWN_VISUAL_DOUBLES.flatMap((s) => s.components),
-);
 
 function isUpToDate(): boolean {
   if (!existsSync(OUT_BIN) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
@@ -224,503 +96,6 @@ function isUpToDate(): boolean {
     binMtime > hipCcdmMtime &&
     binMtime > bjMtime
   );
-}
-
-// GCVS variable-star catalogue parsing. We load two files:
-//   - gcvs5.txt    : the main catalogue with period, max/min magnitudes,
-//                    and variability type for each variable star (keyed by
-//                    GCVS designation like "R And", "V0640 Cas").
-//   - crossid.txt  : the cross-identification file that maps foreign
-//                    catalogue IDs (Hip/HD/Tyc/SAO/etc.) to those GCVS
-//                    designations.
-// Together they let us cross-match most AT-HYG stars with HIP or HD to a
-// GCVS entry and carry its period + amplitude into the binary.
-
-interface VarStarData {
-  periodDays: number;
-  amplitudeMag: number;
-}
-
-// Both GCVS files (gcvs5.txt and crossid.txt) are pipe-delimited with
-// trailing whitespace inside each cell. Yields per-line trimmed-field
-// arrays. Callers are expected to gate on file existence before calling.
-function* readPipeDelimited(path: string): Iterable<string[]> {
-  const text = readFileSync(path, 'utf8');
-  for (const line of text.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    yield line.split('|').map((f) => f.trim());
-  }
-}
-
-function parseGcvsMain(): Map<string, VarStarData> {
-  const out = new Map<string, VarStarData>();
-  for (const fields of readPipeDelimited(SRC_GCVS)) {
-    // Expect ~22 fields; headers / malformed rows are shorter.
-    if (fields.length < 12) continue;
-    const name = normalizeGcvsName(fields[1] ?? '');
-    if (!name) continue;
-    const maxMag = parseGcvsNumber(fields[4] ?? '');
-    const minMag = parseGcvsNumber(fields[5] ?? '');
-    const periodDays = parseGcvsNumber(fields[10] ?? '');
-    if (periodDays === null || periodDays <= 0) continue;
-    if (maxMag === null || minMag === null) continue;
-    const amp = minMag - maxMag; // min is dimmer (higher number) than max
-    if (amp <= 0) continue;
-    out.set(name, { periodDays, amplitudeMag: amp });
-  }
-  return out;
-}
-
-interface VarStarXref {
-  byHip: Map<number, string>;
-  byHd: Map<number, string>;
-}
-
-function parseGcvsCrossref(): VarStarXref {
-  const byHip = new Map<number, string>();
-  const byHd = new Map<number, string>();
-  for (const fields of readPipeDelimited(SRC_GCVS_XREF)) {
-    // Each line: "<CATALOG> <NUM>          | = <GCVS_NAME>  | | |"
-    // We only care about Hip and HD since those are what AT-HYG carries.
-    const leftRaw = fields[0] ?? '';
-    const rightRaw = fields[1] ?? '';
-    if (!leftRaw || !rightRaw) continue;
-
-    // Left side examples: "Hip  000008", "HD   000015"
-    const leftMatch = leftRaw.match(/^(\w+)\s+(\d+)/);
-    if (!leftMatch) continue;
-    const prefix = leftMatch[1].toLowerCase();
-    if (prefix !== 'hip' && prefix !== 'hd') continue;
-    const num = parseInt(leftMatch[2], 10);
-    if (!Number.isFinite(num) || num <= 0) continue;
-
-    // Right side: "=<GCVS_NAME>", strip the leading "=" and normalize.
-    const rightMatch = rightRaw.match(/^=\s*(.+?)\s*$/);
-    if (!rightMatch) continue;
-    const gcvsName = normalizeGcvsName(rightMatch[1]);
-    if (!gcvsName) continue;
-
-    if (prefix === 'hip') byHip.set(num, gcvsName);
-    else byHd.set(num, gcvsName);
-  }
-  return { byHip, byHd };
-}
-
-// Hipparcos main catalogue carries a CCDM cross-reference per star: the
-// `CCDM` column is non-blank when the star is a component of a system in
-// the Catalog of the Components of Double and Multiple stars (Dommanget &
-// Nys 1994), the curated pre-WDS reference for visual doubles. CCDM alone
-// is too permissive — it lumps physical doubles together with wide
-// line-of-sight optical pairs (so Vega and Pollux end up tagged) — so we
-// gate it with Hipparcos's own `MultFlag` column (H59):
-//
-//   C = component star in a Hipparcos-resolved system
-//   G = double resolved within the Hipparcos field
-//   O = orbit known (spectroscopic / astrometric)
-//   blank, V, X = unconfirmed by Hipparcos's own astrometry
-//
-// Keeping `{C, G, O}` removes the bulk of CCDM optical pairs while
-// preserving real binaries Hipparcos modelled. A handful of canonical
-// visual doubles are still dropped this way (Polaris, ε¹ Lyr, 61 Cyg —
-// wide pairs Hipparcos treated as single stars); KNOWN_VISUAL_DOUBLES
-// recovers them.
-//
-// Expected file: VizieR TSV from
-// `asu-tsv?-source=I/239/hip_main&-out=HIP,CCDM,MultFlag&-out.max=unlimited`.
-// The parser tolerates VizieR's preamble (`#` comments, header row,
-// dash-separator row, then data).
-
-// Returns a map from CCDM_ID → list of component HIPs. Curated visual
-// doubles are NOT included here — they live in KNOWN_VISUAL_DOUBLES and
-// applyDoublesFlag unions both sources at flag time. Keeping them
-// separate avoids minting synthetic CCDM keys that share a type with
-// real CCDM IDs.
-// Components in the same group are siblings of one system —
-// applyDoublesFlag picks the brightest as the primary.
-function parseHipCcdm(): Map<string, number[]> {
-  const groups = new Map<string, number[]>();
-
-  if (!existsSync(SRC_HIP_CCDM)) return groups;
-
-  const text = readFileSync(SRC_HIP_CCDM, 'utf8');
-  const rawLines = text.split(/\r?\n/);
-
-  let header: string[] | null = null;
-  let hipIdx = -1, ccdmIdx = -1, mfIdx = -1;
-  let scanned = 0, kept = 0, viaOverride = 0;
-  let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
-
-  for (const line of rawLines) {
-    if (!line || !line.trim()) continue;
-    if (line.startsWith('#')) continue;
-
-    const cols = line.split('\t');
-    // VizieR TSVs include a dash-separator row right after the header.
-    if (cols.every((c) => /^[-\s]+$/.test(c) && c.includes('-'))) continue;
-
-    if (!header) {
-      header = cols.map((c) => c.trim());
-      hipIdx = header.indexOf('HIP');
-      ccdmIdx = header.indexOf('CCDM');
-      mfIdx = header.indexOf('MultFlag');
-      const missing: string[] = [];
-      if (hipIdx < 0) missing.push('HIP');
-      if (ccdmIdx < 0) missing.push('CCDM');
-      if (mfIdx < 0) missing.push('MultFlag');
-      if (missing.length) {
-        throw new Error(
-          `Hipparcos CCDM TSV is missing required columns: ${missing.join(', ')}.\n` +
-            `  Header was: ${header.map((h) => JSON.stringify(h)).join(', ')}\n` +
-            `  Re-fetch from VizieR with -out=HIP,CCDM,MultFlag.`,
-        );
-      }
-      continue;
-    }
-
-    scanned++;
-    const hipStr = (cols[hipIdx] ?? '').trim();
-    if (!hipStr) { droppedNoHip++; continue; }
-    const hip = parseInt(hipStr, 10);
-    if (!Number.isFinite(hip) || hip <= 0) { droppedNoHip++; continue; }
-
-    if (KNOWN_VISUAL_DOUBLE_HIPS.has(hip)) {
-      viaOverride++;
-      continue; // already in an OVERRIDE-* group
-    }
-
-    const ccdm = (cols[ccdmIdx] ?? '').trim();
-    if (!ccdm) { droppedNoCcdm++; continue; }
-
-    const mf = (cols[mfIdx] ?? '').trim();
-    if (mf !== 'C' && mf !== 'G' && mf !== 'O') {
-      droppedMultFlag++;
-      continue;
-    }
-
-    const list = groups.get(ccdm);
-    if (list) list.push(hip);
-    else groups.set(ccdm, [hip]);
-    kept++;
-  }
-
-  console.log(
-    `  ${kept} HIPs via CCDM+MultFlag(C/G/O); ` +
-      `${groups.size} systems total; ` +
-      `${scanned} scanned, dropped ${droppedNoHip} no-HIP, ${droppedNoCcdm} blank CCDM, ${droppedMultFlag} unconfirmed MultFlag, ${viaOverride} skipped(in-override)`,
-  );
-  return groups;
-}
-
-// Build the union of CCDM groups (parsed from Hipparcos) and the curated
-// KNOWN_VISUAL_DOUBLES overrides, then delegate to the pure
-// `applyDoublesFlag` helper. The pure helper handles the per-group
-// "brightest in-catalog component, idempotent with existing flags" logic
-// — see catalog-pure.ts for the contract.
-function applyDoublesFlag(
-  stars: Star[],
-  ccdmGroups: Map<string, number[]>,
-): { systems: number; flagged: number } {
-  const allGroups: Iterable<Iterable<number>> = (function* () {
-    yield* ccdmGroups.values();
-    for (const sys of KNOWN_VISUAL_DOUBLES) yield sys.components;
-  })();
-  return applyDoublesFlagPure(stars, allGroups);
-}
-
-interface Star {
-  x: number; y: number; z: number;
-  absmag: number;
-  ci: number;
-  spectClass: number;
-  lumClass: number;
-  physicalRadius: number;  // solar radii
-  conIndex: number;
-  flags: number;
-  proper: string | null;
-  bayer: string | null;
-  hip: number | null;
-  hd: number | null;
-  hr: number | null;
-  flam: number | null;
-  gl: string | null;
-  spectDisplay: string | null; // cleaned-up spectral string for tooltip display
-  companionIdx: number;     // assigned later in inferBinaries; -1 = none
-  periodDays: number;       // 0 = not a variable known to GCVS
-  amplitudeMag: number;     // 0 if not variable
-}
-
-function parseFloatOrNull(s: string | undefined | null): number | null {
-  if (s === '' || s === undefined || s === null) return null;
-  const v = Number(s);
-  return Number.isFinite(v) ? v : null;
-}
-
-function parseIntOrNull(s: string | undefined | null): number | null {
-  const v = parseFloatOrNull(s);
-  return v === null ? null : Math.trunc(v);
-}
-
-function nonEmpty(s: string | undefined | null): string | null {
-  if (s === undefined || s === null) return null;
-  const t = s.trim();
-  return t ? t : null;
-}
-
-// Subset of AT-HYG v3.3 columns this build script reads. Every column we
-// touch must be declared here; a typo on `row.foo` then becomes a compile
-// error rather than a silent `undefined` that corrupts the binary.
-// `cast: false` keeps every cell as a string; the parseFloat/parseInt
-// helpers below normalise them.
-interface AthygRow {
-  x0: string; y0: string; z0: string;
-  absmag: string;
-  dist: string;
-  dist_src: string;
-  ci: string;
-  spect: string;
-  con: string;
-  proper: string;
-  bayer: string;
-  flam: string;
-  hip: string;
-  hd: string;
-  hr: string;
-  gl: string;
-  ra: string;
-  dec: string;
-  mag: string;
-  gaia: string;
-  pm_ra: string;
-  pm_dec: string;
-}
-
-async function readStars(
-  bjMap: Map<string, number>,
-): Promise<{
-  stars: Star[];
-  stats: {
-    total: number;
-    dropped: Record<string, number>;
-    bjEligible: number;       // rows with a Gaia DR3 source_id
-    bjOverridden: number;     // bjEligible rows that hit a B-J entry
-    lmcCandidates: number;    // rows inside the LMC sky cone (any PM)
-    lmcOverridden: number;    // lmcCandidates passing the PM gate (snapped to LMC)
-  };
-}> {
-  const parser = createReadStream(SRC_CSV).pipe(
-    parse({ columns: true, skip_empty_lines: true, cast: false })
-  ) as AsyncIterable<AthygRow>;
-
-  const stars: Star[] = [];
-  const dropped: Record<string, number> = {
-    noCoords: 0,
-    noAbsmag: 0,
-    tooFar: 0,
-    unknownCon: 0,
-  };
-  let total = 0;
-  let bjEligible = 0;
-  let bjOverridden = 0;
-  let lmcCandidates = 0;
-  let lmcOverridden = 0;
-
-  for await (const row of parser) {
-    total++;
-    let x = parseFloatOrNull(row.x0);
-    let y = parseFloatOrNull(row.y0);
-    let z = parseFloatOrNull(row.z0);
-    if (x === null || y === null || z === null) {
-      dropped.noCoords++;
-      continue;
-    }
-    let absmag = parseFloatOrNull(row.absmag);
-    if (absmag === null) {
-      dropped.noAbsmag++;
-      continue;
-    }
-
-    // Bailer-Jones (DR3) override: when this row has a Gaia source_id
-    // AND its AT-HYG dist_src marks the catalogued distance as a Gaia
-    // inverse (G_R3 / G_R2), swap dist/x/y/z/absmag for the B-J
-    // posterior. Rows with dist_src=HIP / GJ / N / OTHER already carry
-    // a non-Gaia parallax — leave them alone, since B-J's
-    // Galactic-density prior tail would silently move them to 10–40 kpc
-    // when the Gaia parallax has low S/N. See SCIENCE.md § Distances /
-    // Bailer-Jones DR3 override.
-    const gaiaSourceId = nonEmpty(row.gaia);
-    const distSrc = nonEmpty(row.dist_src);
-    const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, distSrc);
-    let dist = parseFloatOrNull(row.dist);
-    const ra = parseFloatOrNull(row.ra);
-    const dec = parseFloatOrNull(row.dec);
-    const mag = parseFloatOrNull(row.mag);
-    if (bjEligibleRow) bjEligible++;
-    if (bjEligibleRow && bjMap.size > 0) {
-      if (ra !== null && dec !== null && mag !== null) {
-        const ovr = applyBailerJonesOverride(ra, dec, mag, gaiaSourceId, bjMap);
-        if (ovr) {
-          x = ovr.x; y = ovr.y; z = ovr.z;
-          absmag = ovr.absmag;
-          dist = ovr.dist;
-          bjOverridden++;
-        }
-      }
-    }
-
-    // LMC kinematic override: B-J's Galactic-density prior pulls real
-    // LMC supergiants to ~5-20 kpc instead of 49.59 kpc. Sky-cone + bulk-PM
-    // filter snaps the ~60 affected AT-HYG rows back to Pietrzyński 2019's
-    // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
-    // mis-anchored value on the same rows.
-    if (ra !== null && dec !== null && mag !== null) {
-      const sep = angularSeparationDeg(
-        ra, dec, LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG,
-      );
-      if (sep <= LMC_CONE_HALF_ANGLE_DEG) lmcCandidates++;
-      const pmRa = parseFloatOrNull(row.pm_ra);
-      const pmDec = parseFloatOrNull(row.pm_dec);
-      const ovr = applyLmcKinematicOverride(ra, dec, mag, pmRa, pmDec);
-      if (ovr) {
-        x = ovr.x; y = ovr.y; z = ovr.z;
-        absmag = ovr.absmag;
-        dist = ovr.dist;
-        lmcOverridden++;
-      }
-    }
-
-    if (dist !== null && dist > MAX_DIST_PC) {
-      dropped.tooFar++;
-      continue;
-    }
-    const ci = parseFloatOrNull(row.ci) ?? DEFAULT_CI;
-
-    const spectRaw = (row.spect ?? '').trim();
-    const spectInfo = parseSpectral(spectRaw);
-    const physRadius = physicalRadius(absmag, spectInfo);
-
-    const conCode: string = (row.con ?? '').trim();
-    let conIndex = 255;
-    if (conCode) {
-      const idx = CON_INDEX.get(conCode.toLowerCase());
-      if (idx === undefined) {
-        dropped.unknownCon++;
-      } else {
-        conIndex = idx;
-      }
-    }
-
-    const proper = nonEmpty(row.proper);
-    const bayer = nonEmpty(row.bayer);
-    const flam = parseIntOrNull(row.flam);
-    const hip = parseIntOrNull(row.hip);
-    const hd = parseIntOrNull(row.hd);
-    const hr = parseIntOrNull(row.hr);
-    const gl = nonEmpty(row.gl);
-    const spectDisplay = spectRaw
-      ? spectRaw.replace(/\*+$/, '').trim().replace(/\s+/g, ' ')
-      : null;
-
-    const isSol = proper === 'Sol';
-    let flags = 0;
-    if (proper) flags |= FLAG_HAS_NAME;
-    if (isSol) flags |= FLAG_IS_SOL;
-    if (bayer) flags |= FLAG_HAS_BAYER;
-
-    stars.push({
-      x, y, z, absmag, ci,
-      spectClass: spectInfo.classIdx,
-      lumClass: spectInfo.lumClass,
-      physicalRadius: physRadius,
-      conIndex, flags,
-      proper, bayer, hip, hd, hr, flam, gl,
-      spectDisplay,
-      companionIdx: -1,
-      periodDays: 0,
-      amplitudeMag: 0,
-    });
-  }
-
-  return {
-    stars,
-    stats: { total, dropped, bjEligible, bjOverridden, lmcCandidates, lmcOverridden },
-  };
-}
-
-// Cross-match each star against GCVS via HIP (first) or HD (fallback). Most
-// AT-HYG stars with a Hipparcos or HD designation that appears in GCVS will
-// get period + amplitude here; stars without either ID, or whose cross-ref
-// GCVS entry lacks a period (irregular variables, SN, etc.), stay at 0/0
-// and won't pulse.
-function applyVariability(
-  stars: Star[],
-  gcvsData: Map<string, VarStarData>,
-  xref: VarStarXref,
-): { matched: number } {
-  let matched = 0;
-  for (const s of stars) {
-    let gcvsName: string | undefined;
-    if (s.hip !== null) gcvsName = xref.byHip.get(s.hip);
-    if (!gcvsName && s.hd !== null) gcvsName = xref.byHd.get(s.hd);
-    if (!gcvsName) continue;
-    const data = gcvsData.get(gcvsName);
-    if (!data) continue;
-    s.periodDays = data.periodDays;
-    s.amplitudeMag = data.amplitudeMag;
-    matched++;
-  }
-  return { matched };
-}
-
-// Extracts classical stick-figure lines per IAU constellation from
-// Stellarium's modern sky culture `index.json`. Each polyline in the source
-// is a list of HIP integers; we resolve each HIP to a record index via
-// `hipToIndex`. Missing HIPs are a hard error unless in KNOWN_MISSING_HIPS —
-// the whole point of using Stellarium data (vs. fuzzy RA/Dec match) is
-// deterministic mapping.
-function buildFigureLines(
-  hipToIndex: Map<number, number>,
-): Map<number, number[][]> {
-  const raw = JSON.parse(readFileSync(SRC_STELLARIUM, 'utf8'));
-  const source: Array<{ id: string; lines?: number[][] }> = raw.constellations ?? [];
-
-  const out = new Map<number, number[][]>();
-  const missing: Array<{ code: string; hip: number }> = [];
-
-  for (const entry of source) {
-    if (!entry.lines || entry.lines.length === 0) continue;
-    const parts = entry.id.split(/\s+/);
-    const code = parts[parts.length - 1];
-    const conIndex = CON_INDEX.get(code.toLowerCase());
-    if (conIndex === undefined) {
-      throw new Error(`Stellarium constellation code not in IAU-88 table: ${code}`);
-    }
-
-    const resolved: number[][] = [];
-    for (const polyline of entry.lines) {
-      const starIndices: number[] = [];
-      for (const hip of polyline) {
-        const idx = hipToIndex.get(hip);
-        if (idx === undefined) {
-          if (!KNOWN_MISSING_HIPS.has(hip)) missing.push({ code, hip });
-          continue;
-        }
-        starIndices.push(idx);
-      }
-      if (starIndices.length >= 2) resolved.push(starIndices);
-    }
-    if (resolved.length) out.set(conIndex, resolved);
-  }
-
-  if (missing.length) {
-    const sample = missing.slice(0, 10).map((m) => `${m.code}/HIP ${m.hip}`);
-    throw new Error(
-      `Stellarium figures reference ${missing.length} HIP(s) not found in catalog and not in KNOWN_MISSING_HIPS. ` +
-        `First ${sample.length}: ${sample.join(', ')}. ` +
-        `If this is expected, add each HIP to KNOWN_MISSING_HIPS with a justification; otherwise investigate the data mismatch.`,
-    );
-  }
-
-  return out;
 }
 
 async function main() {
@@ -783,7 +158,7 @@ async function main() {
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = await readStars(bjMap);
+  const { stars, stats } = await readStars(SRC_CSV, CON_INDEX, bjMap);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
   console.log(`  dropped:`, stats.dropped);
@@ -821,7 +196,7 @@ async function main() {
 
   // Resolve Stellarium stick-figure lines to star indices. Throws if any
   // referenced HIP is missing from the catalog.
-  const figureLines = buildFigureLines(hipToIndex);
+  const figureLines = buildFigureLines(SRC_STELLARIUM, hipToIndex);
 
   // Geometric binary inference.
   console.log('Inferring binary/multiple systems...');
@@ -838,8 +213,8 @@ async function main() {
   if (existsSync(SRC_GCVS) && existsSync(SRC_GCVS_XREF)) {
     console.log('Parsing GCVS variable-star catalogue...');
     const tGcvs = Date.now();
-    const gcvsData = parseGcvsMain();
-    const xref = parseGcvsCrossref();
+    const gcvsData = parseGcvsMain(SRC_GCVS);
+    const xref = parseGcvsCrossref(SRC_GCVS_XREF);
     const { matched } = applyVariability(stars, gcvsData, xref);
     console.log(
       `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ${xref.byHd.size} HD xrefs, ${matched} catalog stars matched in ${Date.now() - tGcvs}ms`,
@@ -859,7 +234,7 @@ async function main() {
   if (existsSync(SRC_HIP_CCDM)) {
     console.log('Parsing Hipparcos CCDM double-star cross-reference...');
     const tCcdm = Date.now();
-    const ccdmGroups = parseHipCcdm();
+    const ccdmGroups = parseHipCcdm(SRC_HIP_CCDM);
     const { systems, flagged } = applyDoublesFlag(stars, ccdmGroups);
     console.log(
       `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged in ${Date.now() - tCcdm}ms`,
