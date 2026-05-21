@@ -109,15 +109,11 @@ def parse_hd_or_hip_from_ident(ident: str) -> tuple[str, int] | None:
     """Pure parser for an `HD<pad><num>` or `HIP <num>` ident string.
 
     Returns (`"HD"` | `"HIP"`, integer) or None on parse failure.
-    Strips trailing component suffix if present (caller never feeds those
-    in — the script's `pull_primary_aliases` filter uses `LIKE 'HD %'`
-    plus `LIKE 'HIP %'`, and component-suffixed forms like `HD 48915B`
-    pass that filter too). Per-component aliases parse to the BASE
-    integer, dropping the component letter — that's correct, since we
-    use the base integer to compose `HD<num><comp>` candidates and the
-    component-suffixed source ident shouldn't be a candidate for itself.
+    Per-component suffixes (`HD 48915B`, `HIP 32349B`) parse to the
+    BASE integer — the component letter is what the cascade looks UP,
+    not what we already have.
     """
-    if ident.startswith("HD ") or ident.startswith("HD\t"):
+    if ident.startswith("HD "):
         prefix = "HD"
         body = ident[3:].strip()
     elif ident.startswith("HIP "):
