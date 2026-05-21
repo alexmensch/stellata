@@ -34,6 +34,8 @@ TSV columns (5)
 Identical 5-column shape to refresh-gaia-hip-xmatch.py so Stage 1 can
 ingest both with one parser.
 
+Runtime: ~1-3 min (single ESA Gaia TAP query, ~2.5M rows).
+
 Idempotent — exits early if the output is newer than this script. Pass
 `--force` to rebuild unconditionally. Backend fallback (ESA → CDS) is
 provided by refresh_lib.TapClient.

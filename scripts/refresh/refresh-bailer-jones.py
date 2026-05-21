@@ -40,6 +40,12 @@ spot — runtime is superlinear in batch size beyond this.
 Coverage expectation: ≥ 90% of AT-HYG.gaia source_ids resolve. The ~10%
 gap is the bright-end saturation cliff that Gaia's own astrometry hits.
 
+Runtime: ~80 min for the full 315k AT-HYG sweep (63 batches of 5000
+ids each on CDS TAP). CDS occasionally drops the connection mid-batch;
+pyvo surfaces this as DALQueryError, which the current refresh_lib
+retry classifier does NOT treat as transient — re-run from the start
+if it happens.
+
 Idempotent — exits early if the output is newer than this script AND the
 AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
 

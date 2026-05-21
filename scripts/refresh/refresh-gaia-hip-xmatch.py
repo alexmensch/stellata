@@ -30,6 +30,8 @@ TSV columns (5)
     number_of_neighbours int   — ambiguity flag (1 = unique Gaia neighbour)
     xm_flag              int   — Gaia cross-match flag (see DR3 docs)
 
+Runtime: ~30 s (single ESA Gaia TAP query, ~99k rows).
+
 Idempotent — exits early if the output is newer than this script. Pass
 `--force` to rebuild unconditionally. Backend fallback (ESA → CDS) is
 provided by refresh_lib.TapClient.
