@@ -200,7 +200,19 @@ scripts/                                     Each subsystem cluster owns a folde
     refresh-gaia-tyc-xmatch.py               → data/gaia/gaia_dr3_tyc_xmatch.tsv
     refresh-hipparcos2.py                    → data/hipparcos/hip2_van_leeuwen.tsv
     refresh-simbad-sample.py                 → data/simbad/simbad_sample.tsv
+    refresh-simbad-sptype.py                 → data/simbad/simbad_sptype.tsv —
+                                             orchestration shell over scripts/refresh/simbad/
+                                             that pulls sp_type / sp_qual / sp_bibcode
+                                             / otype + HIP / Gaia DR3 cross-IDs.
     refresh-simbad-wds-xids.py               → data/simbad/simbad_wds_xids.tsv
+    simbad/                                  reusable SIMBAD-pull plumbing —
+                                             specs (ColumnSpec / IdentLookup),
+                                             inputs (per-source-file id iterators),
+                                             query (ADQL builders + batched
+                                             executors), tsv (spec-driven writer).
+                                             Modelled on scripts/binaries; future
+                                             SIMBAD pulls (RV, photometry, …)
+                                             reuse every file here.
     requirements-refresh.txt                 pip deps for the refresh family.
 data/                                        Per-source-catalogue folders. LFS coverage
                                              is per-folder via .gitattributes patterns;

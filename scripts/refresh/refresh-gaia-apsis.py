@@ -25,7 +25,8 @@ either pipeline — a downstream stat, not the query's row count.
 ADQL (per batch)
     SELECT source_id,
            teff_gspphot, logg_gspphot, mh_gspphot, azero_gspphot,
-           teff_gspspec, logg_gspspec, mh_gspspec
+           teff_gspspec, logg_gspspec, mh_gspspec,
+           spectraltype_esphs
     FROM gaiadr3.astrophysical_parameters
     WHERE source_id IN (<AT-HYG source_id batch>)
     ORDER BY source_id
@@ -34,9 +35,14 @@ Backend: ESA Gaia archive (default refresh_lib ESA → CDS fallback).
 Batched IN-clause queries per dch.21; 5000 ids per batch matches the
 empirical bailer-jones sweet spot.
 
-TSV columns (8) — see file docstring for `gaiadr3.astrophysical_parameters`
+TSV columns (9) — see file docstring for `gaiadr3.astrophysical_parameters`
 upstream documentation. All upstream column names preserved verbatim;
 empty cells in the TSV correspond to masked (NULL) values from TAP.
+``spectraltype_esphs`` is the ESP-HS spectral-type enum (single letter:
+``O B A F G K M``) — categorical, not numeric, so it bypasses float
+rounding on write.
+
+Runtime: ~3 min.
 
 Idempotent — exits early if the output is newer than this script AND the
 AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
@@ -71,7 +77,13 @@ TSV_COLUMNS = [
     "teff_gspspec",
     "logg_gspspec",
     "mh_gspspec",
+    "spectraltype_esphs",
 ]
+
+# Columns that must be passed through as strings on write — distinguishes
+# the ESP-HS enum from the numeric Apsis fields. Adding a new categorical
+# column means one append here in addition to TSV_COLUMNS + EXPECTED_SCHEMA.
+STRING_COLUMNS: frozenset[str] = frozenset({"spectraltype_esphs"})
 
 ADQL_TEMPLATE = (
     "SELECT " + ", ".join(TSV_COLUMNS) + " "
@@ -91,6 +103,7 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
     "teff_gspspec": float,
     "logg_gspspec": float,
     "mh_gspspec": float,
+    "spectraltype_esphs": str,
 }
 
 # 5000 ids per IN-clause — same empirical sweet spot as refresh-bailer-jones.py
@@ -108,6 +121,11 @@ EXPECTED_ROW_COUNT_MAX = 330_000
 
 # Union-(teff+logg) coverage projection — the actual ingestable bucket.
 EXPECTED_UNION_COVERAGE_MIN = 0.80
+
+# ESP-HS spectral-type enum coverage floor. ESP-HS is the hottest-star
+# branch of the Apsis chain and resolves spectraltype_esphs for ~30%+
+# of DR3 sources. Below this floor the pull is likely broken.
+EXPECTED_SPECTRALTYPE_COVERAGE_MIN = 0.20
 
 # Teff has order ~1-10 K formal uncertainty, logg ~0.01-0.1 dex,
 # [M/H] ~0.01-0.1 dex, A_0 ~0.01-0.1 mag. 4 decimals on logg/mh/azero
@@ -215,12 +233,15 @@ def report_coverage(rows_by_id: dict[int, Any], total_input: int) -> float:
 def write_row(row: Any) -> dict[str, Any]:
     """Build one output dict — coerce_masked every cell, round floats so
     write_tsv emits stable widths. Teff stays at 1 decimal; logg / [M/H]
-    / A_0 at 4 decimals (~1% of formal uncertainty, see DEX_DECIMALS)."""
+    / A_0 at 4 decimals (~1% of formal uncertainty, see DEX_DECIMALS).
+    Categorical columns in ``STRING_COLUMNS`` pass through as strings."""
     out: dict[str, Any] = {"source_id": int(row["source_id"])}
     for col in TSV_COLUMNS[1:]:
         v = rl.coerce_masked(row[col])
         if v is None:
             out[col] = None
+        elif col in STRING_COLUMNS:
+            out[col] = str(v)
         elif col.startswith("teff_"):
             out[col] = f"{float(v):.{TEFF_DECIMALS}f}"
         else:
@@ -284,6 +305,24 @@ def main() -> None:
             f"{union_coverage:.1%} below floor "
             f"{EXPECTED_UNION_COVERAGE_MIN:.0%} — Apsis pipeline output "
             f"or AT-HYG cross-match has regressed; investigate."
+        )
+
+    spectraltype_filled = sum(
+        1 for r in rows_by_id.values()
+        if rl.coerce_masked(r["spectraltype_esphs"]) is not None
+        and str(rl.coerce_masked(r["spectraltype_esphs"])).strip()
+    )
+    spectraltype_coverage = spectraltype_filled / total
+    print(
+        f"  spectraltype_esphs non-null:     {spectraltype_filled:>6} "
+        f"({100*spectraltype_coverage:.1f}%)"
+    )
+    if spectraltype_coverage < EXPECTED_SPECTRALTYPE_COVERAGE_MIN:
+        raise SystemExit(
+            f"refresh-gaia-apsis: spectraltype_esphs coverage "
+            f"{spectraltype_coverage:.1%} below floor "
+            f"{EXPECTED_SPECTRALTYPE_COVERAGE_MIN:.0%} — verify the SELECT "
+            f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
 
     for spec in SPOT_CHECKS:
