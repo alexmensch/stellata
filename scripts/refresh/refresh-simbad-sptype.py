@@ -6,7 +6,7 @@ Orchestration shell over scripts/refresh/simbad/; adding a column /
 cross-ID / input source is a one-line append to BASIC_COLUMNS /
 IDENT_LOOKUPS / collect_oid_requests below.
 
-Runtime: ~60-120 min.
+Runtime: ~8 min.
 """
 
 from __future__ import annotations

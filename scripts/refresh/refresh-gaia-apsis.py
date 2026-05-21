@@ -42,7 +42,7 @@ empty cells in the TSV correspond to masked (NULL) values from TAP.
 ``O B A F G K M``) — categorical, not numeric, so it bypasses float
 rounding on write.
 
-Runtime: ~20-30 min.
+Runtime: ~3 min.
 
 Idempotent — exits early if the output is newer than this script AND the
 AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
