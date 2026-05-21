@@ -32,7 +32,7 @@ data/local-group/
                       standalone rows for M31 and M33 (omitted from
                       LVDB's dwarf_all table — they're major spirals).
 
-scripts/
+scripts/local-group/
   build-local-group.ts        I/O orchestration + idempotency. TSV
                               parser handles both LVDB-merge and
                               standalone-position override rows.
@@ -101,7 +101,7 @@ through three branches:
 
 ## MAX_DISTANCE_PC
 
-`scripts/build-local-group-pure.ts` exports `MAX_DISTANCE_PC =
+`scripts/local-group/build-local-group-pure.ts` exports `MAX_DISTANCE_PC =
 2_000_000` — the heliocentric envelope the build filter applies.
 2 Mpc covers the canonical Local Group (M31 + M33 + their satellites,
 plus the outer dIrrs out to ~1.4 Mpc) with comfort headroom past the
@@ -122,7 +122,7 @@ fully zoomed-out view shows the entire rendered catalogue.
 The build script computes each object's local→ICRS quaternion via
 Shepperd's method on a right-handed orthonormal basis. The basis
 construction is exercised end-to-end in
-`scripts/build-local-group-pure.test.ts` (rotated +Z lands on line of
+`scripts/local-group/build-local-group-pure.test.ts` (rotated +Z lands on line of
 sight for `los`, rotated +X lies in the sky plane for `pa`, disc normal
 at i=0 lands on line of sight for `disc`, etc.).
 

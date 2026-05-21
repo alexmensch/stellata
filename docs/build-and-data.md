@@ -15,25 +15,37 @@ disk at build time. The build does NOT fetch from the network — no
 
 Why: the build keeps working long-term even when external sources go
 offline, change schemas, or move URLs. Existing pattern reflects this
-across every input — `athyg_33_classic_ids.csv`, `gcvs5.txt`,
-`crossid.txt`, `stellarium-modern-skyculture.json`, Edenhofer dust via
+across every input — `data/athyg/athyg_33_classic_ids.csv`,
+`data/gcvs/gcvs5.txt`, `data/gcvs/crossid.txt`,
+`data/stellarium/stellarium-modern-skyculture.json`, Edenhofer dust via
 committed `data/dust/*.bin`, Pace 2024 LVDB
-`data/local-group/lvdb-snapshot.csv`, Hipparcos `data/hip_ccdm.tsv`.
-Refresh from upstream is an explicit, manual, infrequent step, not a
-build dependency.
+`data/local-group/lvdb-snapshot.csv`, Hipparcos
+`data/hipparcos/hip_ccdm.tsv`. Refresh from upstream is an explicit,
+manual, infrequent step, not a build dependency.
+
+`data/` is organised by upstream source catalogue (stellata-9mm.204):
+`wds/`, `gaia/`, `hipparcos/`, `gcvs/`, `athyg/`, `bailer-jones/`,
+`simbad/`, `stellarium/`, plus `local-group/`, `molecular-clouds/`,
+`dust/` for sources with multi-file layouts. The pipeline-derived
+`binaries/multiples.tsv` lives alongside its source folders under
+`data/binaries/` so the source-vs-derived split reads cleanly.
 
 When adding new external data:
 
 1. Fetch once (manually or via a one-shot helper) and commit the raw
-   file under `data/`. Files over ~1 MB ride Git LFS (see the existing
-   AT-HYG / GCVS / Edenhofer entries; the LVDB snapshot is under the
-   threshold and rides regular git).
+   file under the matching `data/<source>/` folder, or create a new
+   per-source folder if none fits. Files over ~1 MB ride Git LFS (see
+   the existing AT-HYG / GCVS / Edenhofer entries; the LVDB snapshot
+   is under the threshold and rides regular git). LFS patterns are
+   per-folder in `.gitattributes`, so a new source folder needs a new
+   `data/<source>/*.{tsv,csv,txt,…} filter=lfs …` line.
 2. Document the source URL + retrieval date in `SCIENCE.md` § Data
    sources.
-3. Build scripts read from `data/<file>`. They do not hit the network.
+3. Build scripts read from `data/<source>/<file>`. They do not hit the
+   network.
 4. If you write a fetch helper, name it explicitly (e.g.
-   `scripts/refresh-clouds.py`) and gate it from `npm run build` —
-   refresh is a separate command, not a build step.
+   `scripts/refresh/refresh-clouds.py`) and gate it from `npm run
+   build` — refresh is a separate command, not a build step.
 
 Applies to JSON / CSV / FITS / HDF5 / TSV catalogs, sky-culture JSON,
 dust map binaries — anything sourced from outside the repo.
@@ -87,25 +99,25 @@ Amplitude encoding saturates at 255 × 0.05 = 12.75 mag; periods over
 majority of real variables (a few multi-decade symbiotics and extreme
 eclipsers clip but those render imperceptibly slowly anyway).
 
-The byte plan above is encoded once in `scripts/catalog-pure.ts` as
+The byte plan above is encoded once in `scripts/catalog/catalog-pure.ts` as
 `HEADER_LAYOUT`, `RECORD_LAYOUT`, `HEADER_SIZE`, `RECORD_SIZE`, `MAGIC`,
-`BINARY_VERSION`, and `NO_COMPANION`. Writer (`scripts/build-catalog.ts`),
+`BINARY_VERSION`, and `NO_COMPANION`. Writer (`scripts/catalog/build-catalog.ts`),
 runtime reader (`src/client/catalog-loader.ts`), and the verify tool
-(`scripts/verify-catalog.ts`) all index off those constants — there are
+(`scripts/catalog/verify-catalog.ts`) all index off those constants — there are
 no inline byte offsets to drift apart. If you add fields, keep the
 44-byte stride (pad as needed), extend `RECORD_LAYOUT`, and **bump
 `BINARY_VERSION` + `MAGIC`** in `catalog-pure.ts`. Free flag bits today
 are `0x08`, `0x20`, `0x40`, `0x80` (see `FLAG_*` exports). Layout
 consistency is pinned by the `binary-format constants` block in
-`scripts/catalog-pure.test.ts`.
+`scripts/catalog/catalog-pure.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,
 search-index entries, etc.) against
-`scripts/build-catalog-expected.json` at the end of each run. A
+`scripts/catalog/build-catalog-expected.json` at the end of each run. A
 deliberate change refreshes the manifest with
 `UPDATE_BUILD_COUNTS=1 npm run build:catalog`; an unintended drift
-exits non-zero with a per-key diff. `scripts/build-counts.ts` carries
+exits non-zero with a per-key diff. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage.
 
 ## Search index (`public/search-index.json`)
@@ -118,7 +130,7 @@ One JSON array entry per star that has at least one searchable identifier
 `s` field carries the raw spectral designation from the AT-HYG source
 ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display.
 
-Field shape pinned in `scripts/catalog-pure.ts` as the `SearchEntry`
+Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
 (`src/client/search.ts`) both import it; drift = compile error.
 
@@ -138,11 +150,11 @@ Bayer variants shows up once.
 
 Classical asterism lines are sourced from Stellarium's modern sky culture
 `index.json` (CC/MIT-compatible, HIP-indexed). The source file is
-committed to `data/stellarium-modern-skyculture.json` — it essentially
+committed to `data/stellarium/stellarium-modern-skyculture.json` — it essentially
 never changes, so fetching it at build time each time would be wasted
 work.
 
-Pipeline in `scripts/build-catalog.ts`:
+Pipeline in `scripts/catalog/build-catalog.ts`:
 
 1. The HYG CSV parser reads the `hip` column into each star record.
 2. After sorting stars by absmag (so record indices are final), a
@@ -268,7 +280,7 @@ rows where both components survive the classic-IDs cut); the CCDM
 pass pulls in everything else where the primary has a HIP — Sirius,
 Mizar, Castor, α Cen, Polaris, Albireo, γ And, ε Lyr, etc.
 
-`parseHipCcdm` in `build-catalog.ts` reads `data/hip_ccdm.tsv`, a
+`parseHipCcdm` in `build-catalog.ts` reads `data/hipparcos/hip_ccdm.tsv`, a
 three-column slice of the **Hipparcos main catalogue** (VizieR
 `I/239/hip_main`). The `CCDM` column on each Hipparcos row carries
 the cross-reference into the Catalog of the Components of Double
@@ -351,11 +363,11 @@ geometric pass still runs and chart mode still works, just with the
 
 ## Bailer-Jones DR3 distance override
 
-`scripts/build-catalog.ts` swaps AT-HYG's naive `1 / π` distances for
+`scripts/catalog/build-catalog.ts` swaps AT-HYG's naive `1 / π` distances for
 the Bayesian posteriors published by Bailer-Jones et al. 2021 (CDS
 I/352). The pipeline:
 
-1. Load `data/bailer-jones-dr3.tsv` via `parseBailerJonesTsv` into a
+1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via `parseBailerJonesTsv` into a
    `Map<source_id, distance_pc>` keyed by Gaia DR3 `source_id`. The
    key is kept as a **string** — Gaia source_ids regularly exceed
    `Number.MAX_SAFE_INTEGER`, so any numeric parse would silently
@@ -379,11 +391,11 @@ I/352). The pipeline:
    `dist > 50,000 pc` filter: catastrophic-parallax-inversion
    supergiants whose Bayesian distance falls below the cap.
 
-If `data/bailer-jones-dr3.tsv` is absent (fresh clone without LFS
+If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone without LFS
 pulled), the build logs and continues — every star keeps its naive
 AT-HYG distance.
 
-Data refresh: `scripts/refresh-bailer-jones.py`. See SCIENCE.md
+Data refresh: `scripts/refresh/refresh-bailer-jones.py`. See SCIENCE.md
 § Bailer-Jones DR3 distance override for the physics rationale.
 
 ## Reference epoch and proper motion
@@ -407,7 +419,7 @@ only "now" layer in the scene. The two share a frame orientation
 ### `pm_*` columns are loaded into nothing
 
 The AT-HYG CSV carries `pm_ra`, `pm_dec`, and `pm_src` columns.
-`scripts/build-catalog.ts` and `scripts/catalog-pure.ts` never read
+`scripts/catalog/build-catalog.ts` and `scripts/catalog/catalog-pure.ts` never read
 them — `grep -n 'pm_ra\|pm_dec' scripts/` returns zero hits. The
 preprocessor reads only the precomputed Cartesian `x0/y0/z0` triple
 and ignores proper-motion data entirely. This is deliberate: no
@@ -436,10 +448,10 @@ are visibly mis-located.
 
 ## Preprocessor idempotency
 
-`scripts/build-catalog.ts isUpToDate` skips rebuild if `catalog.bin`,
+`scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if `catalog.bin`,
 `constellations.json`, **and** `search-index.json` are newer than all
 source inputs (AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos
 CCDM TSV, and the script itself). If you change field mapping but
 not the script mtime (e.g. edit in a way that updates atime only),
-you may need to `touch scripts/build-catalog.ts` or delete the
+you may need to `touch scripts/catalog/build-catalog.ts` or delete the
 generated files.
