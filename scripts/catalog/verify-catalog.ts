@@ -25,7 +25,7 @@ const count = view.getUint32(HEADER_LAYOUT.count, true);
 const nameTableOffset = view.getUint32(HEADER_LAYOUT.nameTableOffset, true);
 const nameTableLength = view.getUint32(HEADER_LAYOUT.nameTableLength, true);
 
-console.log(`magic=${magic} version=${version} count=${count}`);
+console.log(`magic=${magic} version=${version} count=${count} recordSize=${RECORD_SIZE}`);
 console.log(`nameTableOffset=${nameTableOffset} nameTableLength=${nameTableLength}`);
 console.log(`file size=${ab.byteLength}, expected=${HEADER_SIZE + count * RECORD_SIZE + nameTableLength}`);
 
@@ -55,6 +55,7 @@ function readRecord(i: number) {
   const comp = view.getUint32(off + RECORD_LAYOUT.companion, true);
   const conIdx = view.getUint8(off + RECORD_LAYOUT.conIndex);
   const hip = view.getUint32(off + RECORD_LAYOUT.hip, true);
+  const gaiaSourceId = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
   return {
     i,
     x: view.getFloat32(off + RECORD_LAYOUT.x, true),
@@ -71,6 +72,7 @@ function readRecord(i: number) {
     amplitudeMag: view.getUint8(off + RECORD_LAYOUT.ampUnits) * 0.05,
     periodDays: view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1,
     hip: hip === 0 ? null : hip,
+    gaiaSourceId: gaiaSourceId === 0n ? null : gaiaSourceId.toString(),
     name,
     con: conIdx === 255 ? null : constellations[conIdx]?.code,
   };

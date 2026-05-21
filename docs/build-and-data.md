@@ -53,19 +53,21 @@ dust map binaries — anything sourced from outside the repo.
 ## Binary catalog format (`public/catalog.bin`)
 
 Fixed-size records, sorted brightest-first by `absmag`. Current version is
-**v4** with a 44-byte stride. Magic and version step together
-(v3=`HYG3`, v4=`HYG4`). v4 added a `uint32` HIP at bytes 40–43 so the
-URL-state encoder can use Hipparcos numbers as stable star IDs that
-survive future catalog reorderings.
+**v5** with a 52-byte stride. Magic and version step together
+(v3=`HYG3`, v4=`HYG4`, v5=`HYG5`). v5 appended a `uint64` Gaia DR3
+`source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM, NSS,
+Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
+pipeline uses everywhere else; ~99.6% of records carry one (the residual
+~0.4% are the famous bright binaries Gaia couldn't fit a 5p PM to).
 
 - Header (32 bytes)
-  - 0–3   ASCII `HYG4`
-  - 4–7   `uint32` version (currently 4)
+  - 0–3   ASCII `HYG5`
+  - 4–7   `uint32` version (currently 5)
   - 8–11  `uint32` count
   - 12–15 `uint32` nameTableOffset
   - 16–19 `uint32` nameTableLength
   - 20–31 reserved
-- Record (44 bytes per star)
+- Record (52 bytes per star)
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
   - 12–15 `float32`      absmag
   - 16–19 `float32`      ci (B–V colour index, default 0.65 for missing)
@@ -85,6 +87,10 @@ survive future catalog reorderings.
                           shared URLs. Max observed HIP is 120,404 (fits in
                           17 bits) so 24 bits would suffice, but `uint32`
                           keeps the record stride a multiple of 4.
+  - 44–51 `uint64`       **Gaia DR3 source_id** little-endian (0 = none).
+                          Sourced from AT-HYG's native `gaia` column;
+                          IDs routinely exceed 2^53 so the JS reader
+                          exposes them via `BigUint64Array`.
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
   **Offset 0 is reserved** as the "no name" sentinel (2 zero bytes of
   padding); real names start at offset ≥ 2.

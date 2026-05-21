@@ -39,6 +39,7 @@ function makeCatalog(
     periodDays: new Float32Array(n),
     amplitudeMag: new Float32Array(n),
     hip: new Uint32Array(n),
+    gaiaSourceId: new BigUint64Array(n),
     names: new Map(),
     solIndex: -1,
     constellations: [],

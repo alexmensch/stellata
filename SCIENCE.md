@@ -218,11 +218,13 @@ applies three filters and nothing else:
 3. Drop rows with `dist > 50,000 pc` (out of any plausible volume of
    interest; safety net for catalog noise).
 
-There is no source-aware filtering. The 44-byte v4 binary record
+There is no source-aware filtering. The 52-byte v5 binary record
 preserves none of the `*_src` columns either, so the renderer can't
 distinguish a Tycho-positioned, Gaia-distanced row from a "pure"
 Hipparcos one — every star is shaded by the same physical model
-(§Stellar physics, §Stellar perception model).
+(§Stellar physics, §Stellar perception model). v5 does carry each
+star's Gaia DR3 `source_id` (when AT-HYG has it) as the cross-match
+anchor downstream consumers key off.
 
 **Bailer-Jones DR3 distance override.** AT-HYG's `dist` for the
 ~98% G_R3 majority is Gaia DR3's naive `1 / π` parallax inversion —

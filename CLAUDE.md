@@ -154,7 +154,7 @@ scripts/                                     Each subsystem cluster owns a folde
                                              and explicit relative paths for TS.
   catalog/
     build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones →
-                                             public/catalog.bin (v4 binary).
+                                             public/catalog.bin (v5 binary).
     build-catalog-expected.json              Build-count snapshot (UPDATE_BUILD_COUNTS=1).
     catalog-pure.ts                          parseSpectral, physicalRadius, GCVS parsers,
                                              inferBinaries — shared with src/client/loaders.
@@ -255,7 +255,7 @@ data/                                        Per-source-catalogue folders. LFS c
     particles.bin                            50K importance-sampled dust points (LFS).
     manifest.json                            grid params + chunk index + particle count.
 public/
-  catalog.bin             generated (gitignored, ~13 MB, binary v4)
+  catalog.bin             generated (gitignored, ~16 MB, binary v5)
   constellations.json     generated (gitignored)
   search-index.json       generated (gitignored, ~13 MB raw, ~2 MB gzipped)
   clouds.json             generated (gitignored, ~30 KB)

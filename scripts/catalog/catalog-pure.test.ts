@@ -638,7 +638,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
   });
 });
 
-// Pin the v4 byte layout. The writer (build-catalog.ts) and the readers
+// Pin the v5 byte layout. The writer (build-catalog.ts) and the readers
 // (catalog-loader.ts, verify-catalog.ts) all index off these constants;
 // drift between the two would silently produce a corrupt binary, so the
 // constants themselves get the regression coverage.
@@ -685,13 +685,18 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
-  it('record fields cover the v4 byte plan (one byte 37 reserved)', () => {
-    // hip is the last field; with its 4 bytes the record fills exactly
-    // RECORD_SIZE except for byte 37 (reserved for future variability type).
-    expect(RECORD_LAYOUT.hip + 4).toBe(RECORD_SIZE);
+  it('record fields cover the v5 byte plan (one byte 37 reserved, gaiaSourceId at byte 44)', () => {
+    // gaiaSourceId is the last field; with its 8 bytes the record fills
+    // exactly RECORD_SIZE except for byte 37 (reserved for future
+    // variability type).
+    expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
+    expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(RECORD_SIZE);
+    expect(RECORD_SIZE).toBe(52);
     // Reserved byte 37 sits between ampUnits (36) and period (38).
     expect(RECORD_LAYOUT.ampUnits + 1).toBe(37);
     expect(RECORD_LAYOUT.period).toBe(38);
+    // hip (uint32 at 40) immediately precedes gaiaSourceId.
+    expect(RECORD_LAYOUT.hip + 4).toBe(RECORD_LAYOUT.gaiaSourceId);
   });
 
   it('FLAGS registry entries are distinct single-bit values', () => {

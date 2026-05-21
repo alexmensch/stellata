@@ -228,11 +228,15 @@ export function parseGcvsNumber(s: string): number | null {
 // MAGIC, extend the LAYOUT + SIZES pair with the new offset and kind, and
 // the writer + reader + tests pick the change up automatically.
 
-export const MAGIC = 'HYG4';
-export const BINARY_VERSION = 4;
+export const MAGIC = 'HYG5';
+export const BINARY_VERSION = 5;
 export const HEADER_SIZE = 32;
-export const RECORD_SIZE = 44;
+export const RECORD_SIZE = 52;
 export const NO_COMPANION = 0xffffffff;
+// Sentinel uint64 stored at RECORD_LAYOUT.gaiaSourceId when AT-HYG's
+// `gaia` column is blank. Valid Gaia DR3 source_ids are positive 63-bit
+// integers, so 0 is unambiguous.
+export const NO_GAIA_SOURCE_ID = 0n;
 
 export const HEADER_LAYOUT = {
   magic: 0,            // 4 bytes ASCII
@@ -271,6 +275,7 @@ export const RECORD_LAYOUT = {
   // byte 37 reserved (variability type)
   period: 38,     // uint16 (×0.1 days)
   hip: 40,        // uint32 (0 = no HIP)
+  gaiaSourceId: 44, // uint64 LE (0 = no Gaia DR3 source_id)
 } as const;
 
 /** Per-field byte width keyed by RECORD_LAYOUT name. As with
@@ -280,7 +285,7 @@ export const RECORD_FIELD_SIZES: Record<keyof typeof RECORD_LAYOUT, number> = {
   x: 4, y: 4, z: 4, absmag: 4, ci: 4, physRadius: 4,
   companion: 4, nameOffset: 4,
   spectClass: 1, lumClass: 1, conIndex: 1, flags: 1, ampUnits: 1,
-  period: 2, hip: 4,
+  period: 2, hip: 4, gaiaSourceId: 8,
 };
 
 // Name table layout: two zero bytes of padding so name offset 0 reads as

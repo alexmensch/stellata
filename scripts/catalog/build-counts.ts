@@ -61,6 +61,11 @@ export interface BuildCounts {
   figureCount: number;
   /** Constellations that carry at least one stick-figure polyline. */
   figureConstellations: number;
+  /** Records emitted with a non-zero Gaia DR3 source_id at
+   *  RECORD_LAYOUT.gaiaSourceId. AT-HYG carries `gaia` for ~98% of
+   *  rows; a sharp drop here means the AT-HYG column changed or the
+   *  builder lost the plumbing. */
+  gaiaSourceIdResolved: number;
 }
 
 export type CountDiff =

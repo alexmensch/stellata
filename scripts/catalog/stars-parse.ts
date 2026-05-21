@@ -48,6 +48,7 @@ export interface Star {
   hr: number | null;
   flam: number | null;
   gl: string | null;
+  gaiaSourceId: string | null; // Gaia DR3 source_id as decimal string; >2^53, never coerce to number
   spectDisplay: string | null; // cleaned-up spectral string for tooltip display
   companionIdx: number;     // assigned later in inferBinaries; -1 = none
   periodDays: number;       // 0 = not a variable known to GCVS
@@ -237,6 +238,7 @@ export async function readStars(
       physicalRadius: physRadius,
       conIndex, flags,
       proper, bayer, hip, hd, hr, flam, gl,
+      gaiaSourceId,
       spectDisplay,
       companionIdx: -1,
       periodDays: 0,

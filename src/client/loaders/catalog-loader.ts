@@ -40,6 +40,10 @@ export interface Catalog {
   periodDays: Float32Array;      // length = count, 0 = not variable
   amplitudeMag: Float32Array;    // length = count, 0 = not variable
   hip: Uint32Array;              // length = count, 0 = no HIP
+  // Gaia DR3 source_id per record; 0n sentinel = no Gaia DR3 source_id.
+  // Stored as BigUint64Array because IDs routinely exceed 2^53 and would
+  // truncate as plain Numbers. Convert with `String(arr[i])` at query time.
+  gaiaSourceId: BigUint64Array;  // length = count
   names: Map<number, string>;    // star index -> proper name (named stars only)
   solIndex: number;              // -1 if not found
   constellations: Constellation[];
@@ -120,6 +124,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   const periodDays = new Float32Array(count);
   const amplitudeMag = new Float32Array(count);
   const hip = new Uint32Array(count);
+  const gaiaSourceId = new BigUint64Array(count);
   const nameOffsetArr = new Uint32Array(count);
 
   let solIndex = -1;
@@ -141,6 +146,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     amplitudeMag[i] = view.getUint8(off + RECORD_LAYOUT.ampUnits) * 0.05;
     periodDays[i] = view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1;
     hip[i] = view.getUint32(off + RECORD_LAYOUT.hip, true);
+    gaiaSourceId[i] = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
     if (flags[i] & FLAG_IS_SOL) solIndex = i;
   }
 
@@ -184,6 +190,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     periodDays,
     amplitudeMag,
     hip,
+    gaiaSourceId,
     names,
     solIndex,
     constellations,

@@ -1,10 +1,8 @@
 // Orchestration shell: AT-HYG + GCVS + CCDM + Bailer-Jones + Stellarium
-// → public/catalog.bin (v4 binary), public/constellations.json,
+// → public/catalog.bin (v5 binary), public/constellations.json,
 // public/search-index.json. Per-input parsing lives in sibling modules
 // (constellations, visual-doubles, gcvs-parse, stars-parse) with shared
-// algebra + binary-layout constants in catalog-pure. This file owns
-// source-path constants, main()'s orchestration, the idempotency check,
-// and the v4 binary writer.
+// algebra + binary-layout constants in catalog-pure.
 
 import { statSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -24,6 +22,7 @@ import {
   BINARY_VERSION,
   MAGIC,
   NO_COMPANION,
+  NO_GAIA_SOURCE_ID,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
   type SearchEntry,
@@ -129,6 +128,7 @@ async function main() {
     solIndex: -1,
     figureCount: 0,
     figureConstellations: 0,
+    gaiaSourceIdResolved: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -278,6 +278,7 @@ async function main() {
   let off = HEADER_SIZE;
   let solIndex = -1;
   let variableCount = 0;
+  let gaiaSourceIdResolved = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     view.setFloat32(off + RECORD_LAYOUT.x, s.x, true);
@@ -306,6 +307,11 @@ async function main() {
       view.setUint16(off + RECORD_LAYOUT.period, 0, true);
     }
     view.setUint32(off + RECORD_LAYOUT.hip, s.hip ?? 0, true);
+    // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
+    // AT-HYG column as BigInt to preserve every bit before writing.
+    const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
+    view.setBigUint64(off + RECORD_LAYOUT.gaiaSourceId, gaiaSourceId, true);
+    if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
     if (s.flags & FLAG_IS_SOL) solIndex = i;
     off += RECORD_SIZE;
   }
@@ -375,6 +381,7 @@ async function main() {
   counts.solIndex = solIndex;
   counts.figureCount = figureCount;
   counts.figureConstellations = figureLines.size;
+  counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
 
   await assertOrUpdateBuildCounts(counts);
 }
