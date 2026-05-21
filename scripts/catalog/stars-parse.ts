@@ -15,6 +15,7 @@ import {
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
   isInLmcCone,
+  resolveGaiaSourceId,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -104,15 +105,17 @@ export async function readStars(
   srcCsvPath: string,
   conIndexLookup: Map<string, number>,
   bjMap: Map<string, number>,
+  hipToGaia: Map<number, string> | null = null,
 ): Promise<{
   stars: Star[];
   stats: {
     total: number;
     dropped: Record<string, number>;
-    bjEligible: number;       // rows with a Gaia DR3 source_id
-    bjOverridden: number;     // bjEligible rows that hit a B-J entry
-    lmcCandidates: number;    // rows inside the LMC sky cone (any PM)
-    lmcOverridden: number;    // lmcCandidates passing the PM gate (snapped to LMC)
+    bjEligible: number;            // rows with a Gaia DR3 source_id
+    bjOverridden: number;          // bjEligible rows that hit a B-J entry
+    lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
+    lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
+    gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
   };
 }> {
   const parser = createReadStream(srcCsvPath).pipe(
@@ -131,6 +134,7 @@ export async function readStars(
   let bjOverridden = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
+  let gaiaSourceIdBackfilled = 0;
 
   for await (const row of parser) {
     total++;
@@ -147,6 +151,16 @@ export async function readStars(
       continue;
     }
 
+    // Resolve the Gaia DR3 source_id: AT-HYG native > HIP cross-walk
+    // fallback. Gaia-saturated bright binaries (Sirius, Vega, …) are
+    // absent from both AT-HYG.gaia AND the cross-walk and stay null —
+    // their orbital rendering flows through data/binaries/multiples.tsv,
+    // not this slot.
+    const hip = parseIntOrNull(row.hip);
+    const resolved = resolveGaiaSourceId(nonEmpty(row.gaia), hip, hipToGaia);
+    const gaiaSourceId = resolved.gaiaSourceId;
+    if (resolved.backfilled) gaiaSourceIdBackfilled++;
+
     // Bailer-Jones (DR3) override: when this row has a Gaia source_id
     // AND its AT-HYG dist_src marks the catalogued distance as a Gaia
     // inverse (G_R3 / G_R2), swap dist/x/y/z/absmag for the B-J
@@ -155,7 +169,6 @@ export async function readStars(
     // Galactic-density prior tail would silently move them to 10–40 kpc
     // when the Gaia parallax has low S/N. See SCIENCE.md § Distances /
     // Bailer-Jones DR3 override.
-    const gaiaSourceId = nonEmpty(row.gaia);
     const distSrc = nonEmpty(row.dist_src);
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, distSrc);
     let dist = parseFloatOrNull(row.dist);
@@ -217,7 +230,6 @@ export async function readStars(
     const proper = nonEmpty(row.proper);
     const bayer = nonEmpty(row.bayer);
     const flam = parseIntOrNull(row.flam);
-    const hip = parseIntOrNull(row.hip);
     const hd = parseIntOrNull(row.hd);
     const hr = parseIntOrNull(row.hr);
     const gl = nonEmpty(row.gl);
@@ -248,6 +260,14 @@ export async function readStars(
 
   return {
     stars,
-    stats: { total, dropped, bjEligible, bjOverridden, lmcCandidates, lmcOverridden },
+    stats: {
+      total,
+      dropped,
+      bjEligible,
+      bjOverridden,
+      lmcCandidates,
+      lmcOverridden,
+      gaiaSourceIdBackfilled,
+    },
   };
 }

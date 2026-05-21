@@ -33,6 +33,7 @@ function baseCounts(): BuildCounts {
     figureCount: 500,
     figureConstellations: 88,
     gaiaSourceIdResolved: 307000,
+    gaiaSourceIdBackfilled: 191,
   };
 }
 

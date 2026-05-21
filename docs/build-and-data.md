@@ -89,8 +89,17 @@ pipeline uses everywhere else; ~99.6% of records carry one (the residual
                           keeps the record stride a multiple of 4.
   - 44–51 `uint64`       **Gaia DR3 source_id** little-endian (0 = none).
                           Sourced from AT-HYG's native `gaia` column;
+                          rows with that column blank fall back to a HIP→Gaia
+                          DR3 cross-walk (Gaia's `hipparcos2_best_neighbour`,
+                          loaded from `data/gaia/gaia_dr3_hip_xmatch.tsv`).
                           IDs routinely exceed 2^53 so the JS reader
-                          exposes them via `BigUint64Array`.
+                          exposes them via `BigUint64Array`. The ~0.4%
+                          residual without a source_id is dominated by
+                          Gaia-saturated bright binaries (Sirius, Vega,
+                          Procyon, …) absent from both AT-HYG and the
+                          best-neighbour cross-walk; their orbital
+                          rendering flows through `data/binaries/multiples.tsv`
+                          instead.
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
   **Offset 0 is reserved** as the "no name" sentinel (2 zero bytes of
   padding); real names start at offset ≥ 2.

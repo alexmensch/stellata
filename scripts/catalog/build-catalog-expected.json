@@ -7,14 +7,14 @@
   "gcvsHdXrefs": 13926,
   "gcvsGaiaXrefs": 9678,
   "gcvsMatched": 3677,
-  "gcvsMatchedByGaia": 2468,
-  "gcvsMatchedByHip": 320,
+  "gcvsMatchedByGaia": 2469,
+  "gcvsMatchedByHip": 319,
   "gcvsMatchedByHd": 889,
   "ccdmGroups": 12496,
   "ccdmResolved": 12393,
   "ccdmFlagged": 12383,
   "bjEntries": 310952,
-  "bjEligible": 311001,
+  "bjEligible": 311015,
   "bjOverridden": 310368,
   "lmcCandidates": 4727,
   "lmcOverridden": 54,
@@ -24,5 +24,6 @@
   "solIndex": 298176,
   "figureCount": 219,
   "figureConstellations": 88,
-  "gaiaSourceIdResolved": 312023
+  "gaiaSourceIdResolved": 312087,
+  "gaiaSourceIdBackfilled": 64
 }

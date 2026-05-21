@@ -575,6 +575,30 @@ export function isBailerJonesEligible(
   return BJ_ELIGIBLE_DIST_SRCS.has(distSrc);
 }
 
+/** Resolve an AT-HYG row's Gaia DR3 source_id, falling back to a
+ *  HIP→Gaia cross-walk when the AT-HYG `gaia` column is blank.
+ *  Precedence: AT-HYG native > HIP cross-walk; returns null when
+ *  neither source has a hit. Gaia-saturated bright binaries (Sirius,
+ *  Vega, Procyon, Polaris, Betelgeuse, …) are absent from BOTH
+ *  AT-HYG.gaia AND Gaia's `hipparcos2_best_neighbour` cross-walk for
+ *  the same physical reason (Gaia's 5-parameter fit fails on
+ *  saturated sources), and therefore remain null here. They are
+ *  resolved instead through the build-binaries.py pipeline writing
+ *  data/binaries/multiples.tsv. */
+export function resolveGaiaSourceId(
+  gaiaSourceId: string | null,
+  hip: number | null,
+  hipToGaia: Map<number, string> | null,
+): { gaiaSourceId: string | null; backfilled: boolean } {
+  if (gaiaSourceId) return { gaiaSourceId, backfilled: false };
+  if (hip === null || hip <= 0 || !hipToGaia) {
+    return { gaiaSourceId: null, backfilled: false };
+  }
+  const hit = hipToGaia.get(hip);
+  if (!hit) return { gaiaSourceId: null, backfilled: false };
+  return { gaiaSourceId: hit, backfilled: true };
+}
+
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
