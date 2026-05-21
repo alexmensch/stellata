@@ -1,21 +1,10 @@
-// AT-HYG + GCVS + CCDM + Bailer-Jones + Stellarium → public/catalog.bin
-// (v4 binary), public/constellations.json, public/search-index.json.
-//
-// stellata-9mm.204 split the parsing concerns into sibling modules so a
-// future session editing one input doesn't pay the cost of the others:
-//
-//   constellations.ts   IAU-88 table + Stellarium polyline resolver
-//   visual-doubles.ts   Hipparcos CCDM parser + KNOWN_VISUAL_DOUBLES
-//                       overrides + applyDoublesFlag
-//   gcvs-parse.ts       gcvs5.txt + crossid.txt + applyVariability
-//   stars-parse.ts      AT-HYG CSV reader (with B-J / LMC overrides)
-//                       + Star + parseFloatOrNull / parseIntOrNull / nonEmpty
-//   catalog-pure.ts     pre-existing — binary layout constants, pure
-//                       helpers (parseSpectral, physicalRadius,
-//                       inferBinaries, Bailer-Jones algebra, etc.)
-//
-// This file is the integration shell: source-path constants, the
-// orchestration in main(), idempotency check, and the v4 binary writer.
+// Orchestration shell: AT-HYG + GCVS + CCDM + Bailer-Jones + Stellarium
+// → public/catalog.bin (v4 binary), public/constellations.json,
+// public/search-index.json. Per-input parsing lives in sibling modules
+// (constellations, visual-doubles, gcvs-parse, stars-parse) with shared
+// algebra + binary-layout constants in catalog-pure. This file owns
+// source-path constants, main()'s orchestration, the idempotency check,
+// and the v4 binary writer.
 
 import { statSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -114,10 +103,10 @@ async function main() {
   }
 
   // Accumulator for the headline counts asserted against
-  // scripts/catalog/build-catalog-expected.json at the end of the build
-  // (stellata-9mm.183). Every field has a default so a code path that
-  // legitimately skips a section (missing GCVS files, no Sol) doesn't
-  // leave the field undefined.
+  // scripts/catalog/build-catalog-expected.json at the end of the
+  // build. Every field has a default so a code path that legitimately
+  // skips a section (missing GCVS files, no Sol) doesn't leave the
+  // field undefined.
   const counts: BuildCounts = {
     recordCount: 0,
     binaryPairs: 0,
@@ -391,9 +380,7 @@ async function main() {
 }
 
 /** Compare actual build counts against the committed expected manifest
- *  (or refresh the manifest when run with UPDATE_BUILD_COUNTS=1).
- *  stellata-9mm.183 — replaces the per-PR eyeball smoke step on the
- *  build-catalog log lines with a programmatic assertion. */
+ *  (or refresh the manifest when run with UPDATE_BUILD_COUNTS=1). */
 async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
   const shouldUpdate = process.env.UPDATE_BUILD_COUNTS === '1';
   const expectedExists = existsSync(EXPECTED_COUNTS);

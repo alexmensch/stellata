@@ -9,8 +9,6 @@ every Stage 2-7 lookup is O(1).
 Also hosts the three sentinel constants Stage 2's position-match path
 reads — they describe input-catalogue conventions that don't belong on
 any one stage's function.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations

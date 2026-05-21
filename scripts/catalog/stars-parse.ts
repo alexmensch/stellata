@@ -1,7 +1,5 @@
-// AT-HYG CSV reader + Bailer-Jones / LMC distance overrides.
-//
-// Lifted out of build-catalog.ts in stellata-9mm.204. The Star
-// dataclass is the in-memory record shape every other Stage of
+// AT-HYG CSV reader + Bailer-Jones / LMC distance overrides. The Star
+// dataclass is the in-memory record shape every other parser in
 // build-catalog reads or mutates (variability cross-match, doubles
 // flag, name table, search index, binary writer). readStars produces
 // it from AT-HYG v3.3 with per-row Bailer-Jones DR3 and LMC kinematic

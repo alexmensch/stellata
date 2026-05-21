@@ -665,7 +665,7 @@ export function applyBailerJonesOverride(
   return { dist, x, y, z, absmag: apparentToAbsoluteMagnitude(mag, dist) };
 }
 
-// ---- LMC kinematic distance override (stellata-dch.8l0) -----------------
+// ---- LMC kinematic distance override -------------------------------------
 
 // dist_src tag for stars whose distance was set by the LMC kinematic
 // filter (sky cone + bulk proper motion). Runs AFTER the Bailer-Jones

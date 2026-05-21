@@ -1,6 +1,4 @@
-// Hipparcos CCDM + curated visual-double overrides.
-//
-// Lifted out of build-catalog.ts in stellata-9mm.204. parseHipCcdm reads
+// Hipparcos CCDM + curated visual-double overrides. parseHipCcdm reads
 // VizieR's HIP/CCDM/MultFlag TSV and returns CCDM_ID → list of component
 // HIPs, gated on `MultFlag ∈ {C,G,O}` to drop optical chance alignments.
 // KNOWN_VISUAL_DOUBLES carries the small handful of canonical pairs that

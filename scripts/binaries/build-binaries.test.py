@@ -81,8 +81,8 @@ class AthygTests(unittest.TestCase):
 
 
 class AthygMissingSentinelTests(unittest.TestCase):
-    """9mm.198 H5 + D7 — AT-HYG uses '' or '0' as the missing-sentinel
-    for hip/tyc/gaia/hd. Both must collapse to None at parse time so
+    """AT-HYG uses '' or '0' as the missing-sentinel for
+    hip/tyc/gaia/hd. Both must collapse to None at parse time so
     downstream indices keyed on these ids never include a sentinel-0
     row.
     """
@@ -133,9 +133,9 @@ class AthygMissingSentinelTests(unittest.TestCase):
 
 
 class AthygMissingColumnRaisesTests(unittest.TestCase):
-    """9mm.198 H4 — parse_athyg must NOT silently drop every row when a
-    required column header is renamed. A missing required column is a
-    fatal misconfiguration; the build should surface it loudly.
+    """parse_athyg must NOT silently drop every row when a required
+    column header is renamed. A missing required column is a fatal
+    misconfiguration; the build should surface it loudly.
     """
 
     def test_missing_required_column_raises(self) -> None:
@@ -318,10 +318,10 @@ class GaiaXmatchTests(unittest.TestCase):
         self.assertEqual(m[3], 2881742980523997824)
 
     def test_hip_xmatch_malformed_angular_distance_loses(self) -> None:
-        # stellata-9mm.197: a row with empty / malformed angular_distance
-        # used to coerce to 0.0 — the most-preferred value — and silently
-        # displace a real match. Confirm the real match (0.5″) wins over
-        # the malformed row.
+        # A row with empty / malformed angular_distance must not coerce
+        # to 0.0 (the most-preferred value) and silently displace a real
+        # match. Confirm the real match (0.5″) wins over the malformed
+        # row.
         body = (
             "hip\tgaia_source_id\tangular_distance\tnumber_of_neighbours\txm_flag\n"
             "42\t1111111111111111111\t\t1\t8\n"      # malformed: empty
@@ -346,9 +346,8 @@ class GaiaXmatchTests(unittest.TestCase):
         self.assertEqual(m["1000-1006-1"], 4493609606459508864)
 
     def test_tyc_xmatch_malformed_angular_distance_loses(self) -> None:
-        # Companion to test_hip_xmatch_malformed_angular_distance_loses
-        # (stellata-9mm.197). Same coercion rule applies to the Tycho
-        # cross-walk.
+        # Companion to test_hip_xmatch_malformed_angular_distance_loses.
+        # Same coercion rule applies to the Tycho cross-walk.
         body = (
             "tyc\tgaia_source_id\tangular_distance\tnumber_of_neighbours\txm_flag\n"
             "9-1-1\t5555555555555555555\t\t1\t8\n"      # malformed
@@ -885,11 +884,11 @@ class ResolveViaSimbadTests(unittest.TestCase):
 
 
 class ResolveViaCcdmTests(unittest.TestCase):
-    """CCDM-anchored sibling-HIP tier (stellata-dch.61). Tier between
-    ``simbad_xid`` and ``position_pm`` — restricts the candidate HIP
-    set to CCDM co-system rows, position-matches a sibling to the
-    component, then routes the bound HIP through the same Gaia xwalk
-    / AT-HYG-native lookups the earlier tiers use.
+    """CCDM-anchored sibling-HIP tier. Sits between ``simbad_xid`` and
+    ``position_pm`` — restricts the candidate HIP set to CCDM co-system
+    rows, position-matches a sibling to the component, then routes the
+    bound HIP through the same Gaia xwalk / AT-HYG-native lookups the
+    earlier tiers use.
     """
 
     def _indices_with_ccdm(
@@ -1465,8 +1464,8 @@ class BuildIndicesTests(unittest.TestCase):
 
 class ResolveViaCanonicalKeysTests(unittest.TestCase):
     """``RESOLVE_VIA_VALUES`` is the canonical priority list every tier
-    label is keyed off. ``stellata-dch.61`` inserts ``ccdm_hip``
-    between ``simbad_xid`` and ``position_pm``.
+    label is keyed off. ``ccdm_hip`` sits between ``simbad_xid`` and
+    ``position_pm``.
     """
 
     def test_ccdm_hip_present_and_above_position_tiers(self) -> None:
@@ -1660,9 +1659,9 @@ class AttachAstrometryTests(unittest.TestCase):
 
     def test_hip2_fallback_when_gaia_source_lacks_astrometry(self) -> None:
         # The component has a Gaia source_id but the astrometry table
-        # doesn't cover it (e.g. dch.29 dropped the row). With a
-        # known HIP we still fall back to HIP2 rather than emit
-        # unresolved.
+        # doesn't cover it (e.g. the upstream ADQL refresh dropped the
+        # row). With a known HIP we still fall back to HIP2 rather than
+        # emit unresolved.
         hip2 = _hip2_row(hip=99, pm_ra_masyr=10.0, pm_de_masyr=10.0)
         idx = _indices_with_astrometry(
             src_to_astrometry={},
@@ -1808,9 +1807,9 @@ class AttachAstrometryTests(unittest.TestCase):
 
 
 class ResolvedComponentHipTests(unittest.TestCase):
-    """9mm.198/dch.30 — Stage 2 records the HIP when known even if no
-    Gaia source_id could be resolved, so Stage 3's HIP2 fallback
-    engages for Gaia-saturated bright primaries.
+    """Stage 2 records the HIP when known even if no Gaia source_id
+    could be resolved, so Stage 3's HIP2 fallback engages for
+    Gaia-saturated bright primaries.
     """
 
     def test_unresolved_primary_retains_orb6_hip(self) -> None:
@@ -2249,8 +2248,7 @@ class Orb6ToCanonicalElementsTests(unittest.TestCase):
         self.assertIsNotNone(o)
         assert o is not None
         self.assertAlmostEqual(o.P_days or 0.0, 79.762 * 365.25)
-        # a_AU = 17.493 arcsec / 0.755" = 23.17 AU (α Cen sanity-check
-        # from dch.8 close-reason).
+        # a_AU = 17.493 arcsec / 0.755" = 23.17 AU (α Cen sanity-check).
         self.assertAlmostEqual(o.a_AU or 0.0, 17.493 * 1000.0 / 755.0)
         self.assertAlmostEqual(o.i_rad or 0.0, math.radians(79.0))
         self.assertAlmostEqual(o.T_jd or 0.0,

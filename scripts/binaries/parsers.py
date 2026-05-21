@@ -6,9 +6,6 @@ Each ``parse_*`` function returns a list (or dict) of plain dataclasses
 read off a fixed-width text file or a TSV / CSV. Per-row dirty data
 drops just that row; a missing required column propagates as a fatal
 error — a header rename is a misconfiguration, not data noise.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204 so Stages 2-7
-can pull only the Row types they care about.
 """
 
 from __future__ import annotations
@@ -447,8 +444,7 @@ def parse_gaia_hip_xmatch(path: Path) -> dict[int, int]:
     """Returns ``hip -> gaia_source_id``. Many-to-one collisions keep the
     nearest match (lowest ``angular_distance``). Rows with missing /
     malformed ``angular_distance`` are coerced to ``+inf`` so they
-    cannot win the tie-break and silently displace a real match (see
-    stellata-9mm.197)."""
+    cannot win the tie-break and silently displace a real match."""
     by_hip: dict[int, tuple[float, int]] = {}
     with path.open(newline="") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
@@ -469,7 +465,7 @@ def parse_gaia_hip_xmatch(path: Path) -> dict[int, int]:
 def parse_gaia_tyc_xmatch(path: Path) -> dict[str, int]:
     """Returns ``tyc -> gaia_source_id`` (nearest match per Tycho ID).
     Same malformed-``angular_distance`` handling as
-    ``parse_gaia_hip_xmatch`` (stellata-9mm.197)."""
+    ``parse_gaia_hip_xmatch``."""
     by_tyc: dict[str, tuple[float, int]] = {}
     with path.open(newline="") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
@@ -515,8 +511,8 @@ class GaiaAstrometryRow:
 
 def parse_gaia_astrometry(path: Path) -> dict[int, GaiaAstrometryRow]:
     """Returns ``source_id -> GaiaAstrometryRow``. The TSV is produced by
-    ``scripts/refresh/refresh-gaia-astrometry.py`` (``stellata-dch.29``)
-    and contains one row per resolved source_id in
+    ``scripts/refresh/refresh-gaia-astrometry.py`` and contains one row
+    per resolved source_id in
     ``data/gaia/gaia_astrometry_source_id_request.tsv``.
 
     Rows missing the four mandatory positional columns (``source_id``,

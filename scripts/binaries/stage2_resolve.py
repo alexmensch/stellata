@@ -2,17 +2,15 @@
 """Stage 2 — WDS-component → Gaia DR3 ``source_id`` resolution cascade.
 
 Per ``RESOLVE_VIA_VALUES`` priority: ``orb6_hip`` → ``athyg_gaia_native``
-→ ``simbad_xid`` (dch.60) → ``ccdm_hip`` (dch.61) → ``position_pm`` /
-``position_nopm`` (future tiers; placeholder names). Each branch is a
-sibling ``resolve_via_*`` function; ``resolve_all_pairs`` wires them
-together and ``propagate_within_system`` smears each binding across
-sibling pair rows.
+→ ``simbad_xid`` → ``ccdm_hip`` → ``position_pm`` / ``position_nopm``
+(future tiers; placeholder names). Each branch is a sibling
+``resolve_via_*`` function; ``resolve_all_pairs`` wires them together
+and ``propagate_within_system`` smears each binding across sibling
+pair rows.
 
 Stage 2's output (the per-component resolution + source_id) feeds
 Stages 3-7. ``write_astrometry_request`` emits the deduped source_id
 list that ``scripts/refresh/refresh-gaia-astrometry.py`` consumes.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations
@@ -893,10 +891,10 @@ def write_astrometry_request(
     """Emit the deduped union of every Gaia source_id Stage 2 resolved,
     across every tier in ``RESOLVE_VIA_VALUES``.
 
-    ``stellata-dch.29`` (``scripts/refresh/refresh-gaia-astrometry.py``) reads
-    this file to drive its ADQL ``WHERE source_id IN (...)`` query — so
-    Stage 3 onward has 5-parameter Gaia astrometry for exactly the
-    sources we resolved here.
+    ``scripts/refresh/refresh-gaia-astrometry.py`` reads this file to
+    drive its ADQL ``WHERE source_id IN (...)`` query — so Stage 3
+    onward has 5-parameter Gaia astrometry for exactly the sources we
+    resolved here.
     """
     ids = sorted({c.gaia_source_id for c in components if c.gaia_source_id is not None})
     with path.open("w") as fh:

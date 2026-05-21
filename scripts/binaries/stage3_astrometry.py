@@ -11,8 +11,6 @@ baseline solutions per the rules in ``ComponentAstrometry.via``:
   between Gaia and HIP2.
 * ``gaia_5p`` — default.
 * ``unresolved`` — Stage 2 left source_id None.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations

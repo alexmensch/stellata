@@ -10,8 +10,6 @@ unmaintained and the algebra is ~10 lines.
 
 Output: ``(orbit_dict, orbit_via)`` per pair via ``select_orbit``;
 ``orbit_via`` in ``{gaia_nss, orb6, orb6_spectroscopic, none}``.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations
@@ -68,10 +66,9 @@ J2000_REF_EPOCH_JD = 2451545.0
 MJD_TO_JD_OFFSET = 2400000.5
 
 # NSS solution types whose Thiele-Innes constants encode the full
-# orbital geometry (A,B,F,G populated in 100% of rows per the dch.25
-# probe). The TI → Campbell algebra recovers a (mas), i (rad), Ω (rad),
-# ω (rad); the stored inclination / arg_periastron columns are null
-# for these rows.
+# orbital geometry (A,B,F,G populated in 100% of DR3 rows). The TI →
+# Campbell algebra recovers a (mas), i (rad), Ω (rad), ω (rad); the
+# stored inclination / arg_periastron columns are null for these rows.
 NSS_TI_DERIVED_SOLUTION_TYPES: frozenset[str] = frozenset({
     "Orbital",
     "OrbitalAlternative",
@@ -86,8 +83,7 @@ NSS_TI_DERIVED_SOLUTION_TYPES: frozenset[str] = frozenset({
 # ratio from spectroscopy. No semi-major axis is recoverable from
 # eclipse photometry alone, so ``a_AU`` / ``Omega_rad`` are left None
 # and the downstream renderer is expected to fall back to conventional
-# defaults for these axes (mirrors how Regime-3 ORB6 entries were
-# handled in dch.8).
+# defaults for these axes.
 NSS_ECLIPSING_SOLUTION_TYPES: frozenset[str] = frozenset({
     "EclipsingBinary",
     "EclipsingSpectro",
@@ -120,17 +116,15 @@ ORB6_SPECTROSCOPIC_GRADES: frozenset[int] = frozenset({8, 9})
 
 @dataclass
 class OrbitElements:
-    """Canonical per-system orbital-element payload — the v5 schema
-    populated since dch.7 + dch.8. Mirrors the runtime units that
-    ``binary-orbit-pure.ts`` consumes (days / JD / radians) so Stage 6's
-    multiples.tsv writer + Phase 3's v6-binary writer can serialise
-    without per-consumer unit conversion.
+    """Canonical per-system orbital-element payload. Mirrors the runtime
+    units that ``binary-orbit-pure.ts`` consumes (days / JD / radians) so
+    Stage 6's multiples.tsv writer + Phase 3's v6-binary writer can
+    serialise without per-consumer unit conversion.
 
     Fields are ``None`` when the underlying solution doesn't constrain
-    them. The ``orb6_spectroscopic`` route from dch.8's Regime 3
-    historically filled ``i`` with a conventional default at the
-    renderer; Stage 4 keeps the underdetermination explicit here and
-    leaves the convention to the downstream consumer.
+    them. The ``orb6_spectroscopic`` route leaves the underdetermined
+    angles ``None`` rather than filling a conventional default — the
+    convention is the downstream consumer's call.
     """
 
     P_days: float | None
@@ -334,8 +328,8 @@ def _nss_in_regime(nss_row: dict[str, str]) -> bool:
 def _orb6_period_days(entry: Orb6Entry) -> float | None:
     """Normalise ORB6's ``P_val`` to days. Returns ``None`` for unknown
     or garbage unit codes (rare; ~3 rows of 4,054 use stray digits from
-    fixed-format misalignment per the dch.25 probe — those rows are
-    skipped rather than guessed)."""
+    fixed-format misalignment — those rows are skipped rather than
+    guessed)."""
     if entry.P_val is None:
         return None
     unit = entry.P_unit

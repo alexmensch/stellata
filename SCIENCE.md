@@ -149,10 +149,10 @@ enough to see it.
   Curated per-component cross-IDs between WDS pair identifiers
   (`WDS J<id><comp>`) and Gaia DR3 source_ids, drawn from SIMBAD's
   `ident` and `basic` tables. Stage 2 of `scripts/binaries/build-binaries.py`
-  uses this as the principled cross-identification path —
-  `stellata-dch.60` validated that SIMBAD reliably stores Gaia DR3
-  source_ids per WDS component for the well-known multi-component
-  systems (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima).
+  uses this as the principled cross-identification path — SIMBAD
+  reliably stores Gaia DR3 source_ids per WDS component for the
+  well-known multi-component systems (η Cas A/B/C, ξ UMa A/B,
+  ζ Cnc A/B/C, α Cen A/B/Proxima).
   Refresh: `scripts/refresh/refresh-simbad-wds-xids.py` runs a
   two-phase TAP pull (WDS identifiers → SIMBAD oids, then oids →
   cross-IDs) and commits `data/simbad/simbad_wds_xids.tsv` (~23k

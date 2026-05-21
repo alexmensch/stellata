@@ -10,8 +10,6 @@ heuristic backstop (|Δmag| ≤ 5 keep).
 ``classify_all_pairs`` walks every pair through the cascade and tags
 each rejection / acceptance with its tier so Stage 7's counts and the
 multiples.tsv ``optical_via`` column carry provenance.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations

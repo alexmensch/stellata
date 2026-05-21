@@ -6,8 +6,6 @@ system_id, component, hip / gaia_source_id, ICRS x/y/z parsec position,
 AT-HYG photometric / spectral metadata, orbital elements from Stage 4,
 resolve / astrometry / orbit provenance tags. Phase 3's v6 binary
 writer is the consumer.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations
@@ -52,11 +50,11 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
 )
 
 
-# orbit_via → numeric ``regime`` tag for parity with the legacy
-# pre-dch.27 column. 0 = no orbital information; 2 = full orbital
-# elements (Gaia NSS or ORB6 visual); 3 = spectroscopic-only. Phase 3's
-# v6 binary writer keys orbit-element population off this tag; finer
-# provenance lives in ``orbit_via`` alongside.
+# orbit_via → numeric ``regime`` tag for parity with the legacy v5
+# column. 0 = no orbital information; 2 = full orbital elements (Gaia
+# NSS or ORB6 visual); 3 = spectroscopic-only. Phase 3's v6 binary
+# writer keys orbit-element population off this tag; finer provenance
+# lives in ``orbit_via`` alongside.
 ORBIT_VIA_TO_REGIME: dict[str, int] = {
     "gaia_nss": 2,
     "orb6": 2,

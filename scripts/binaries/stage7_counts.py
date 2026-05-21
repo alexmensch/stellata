@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Stage 7 — flatten per-strategy / per-tier counters into a snapshot
-JSON for ``stellata-dch.39`` (Phase 4 Tier B) to pin bounds against.
+JSON the build asserts against on every run.
 
 Mirrors ``scripts/catalog/build-catalog.ts``'s ``assertOrUpdateBuildCounts``
 flow — refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
-
-Lifted out of ``build-binaries.py`` in stellata-9mm.204.
 """
 
 from __future__ import annotations

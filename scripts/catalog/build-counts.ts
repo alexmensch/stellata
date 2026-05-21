@@ -1,4 +1,4 @@
-// Pure helpers for the build-catalog count assertion (stellata-9mm.183).
+// Pure helpers for the build-catalog count assertion.
 //
 // `BuildCounts` is a flat record of every headline number `build-catalog.ts`
 // logs at the end of a successful build. The committed

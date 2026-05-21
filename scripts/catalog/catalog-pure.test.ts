@@ -844,11 +844,11 @@ describe('catalog-pure / apparentToAbsoluteMagnitude', () => {
 });
 
 describe('catalog-pure / applyBailerJonesOverride', () => {
-  // Tier-A fixtures: real AT-HYG + Bailer-Jones DR3 values for stars
-  // documented in stellata-dch.47 / dch.46 — the four catastrophic
-  // parallax-inversion supergiants and a well-measured F-dwarf control.
-  // Numbers pin the override outcome: drift here means the override
-  // changed semantics or the upstream catalogues drifted.
+  // Tier-A fixtures: real AT-HYG + Bailer-Jones DR3 values for the
+  // four catastrophic parallax-inversion supergiants and a
+  // well-measured F-dwarf control. Numbers pin the override outcome:
+  // drift here means the override changed semantics or the upstream
+  // catalogues drifted.
   interface Fixture {
     label: string;
     ra: number; dec: number; mag: number; sourceId: string;
