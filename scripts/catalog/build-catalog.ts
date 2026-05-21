@@ -537,39 +537,59 @@ async function main() {
   await assertOrUpdateDistanceOutliers(stars);
 }
 
-/** Compare actual build counts against the committed expected manifest
- *  (or refresh the manifest when run with UPDATE_BUILD_COUNTS=1). */
-async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
-  const shouldUpdate = process.env.UPDATE_BUILD_COUNTS === '1';
-  const expectedExists = existsSync(EXPECTED_COUNTS);
+async function assertOrUpdateSnapshot<T>(opts: {
+  envVar: string;
+  snapshotPath: string;
+  actual: T;
+  compare: (expected: T, actual: T) => { drifted: boolean; report: string };
+  refreshTransform?: (expected: T, actual: T) => T;
+  failureLabel: string;
+  refreshCommand: string;
+}): Promise<void> {
+  const shouldUpdate = process.env[opts.envVar] === '1';
+  const expected = existsSync(opts.snapshotPath)
+    ? (JSON.parse(readFileSync(opts.snapshotPath, 'utf8')) as T)
+    : null;
 
-  if (shouldUpdate || !expectedExists) {
-    await writeFile(EXPECTED_COUNTS, JSON.stringify(actual, null, 2) + '\n');
-    console.log(
-      `${shouldUpdate ? 'Updated' : 'Wrote initial'} ${EXPECTED_COUNTS}`,
-    );
+  if (shouldUpdate || !expected) {
+    const toWrite = expected && opts.refreshTransform
+      ? opts.refreshTransform(expected, opts.actual)
+      : opts.actual;
+    await writeFile(opts.snapshotPath, JSON.stringify(toWrite, null, 2) + '\n');
+    console.log(`${shouldUpdate ? 'Updated' : 'Wrote initial'} ${opts.snapshotPath}`);
     return;
   }
 
-  const expected = JSON.parse(readFileSync(EXPECTED_COUNTS, 'utf8')) as BuildCounts;
-  const diff = compareBuildCounts(expected, actual);
-  const report = formatCountDiff(diff);
+  const { drifted, report } = opts.compare(expected, opts.actual);
   console.log(report);
-  if (diff.some((d) => d.status === 'mismatch')) {
+  if (drifted) {
     console.error(
-      `\nbuild-catalog count assertion failed. If the change is intentional,\n` +
-      `refresh the snapshot with: UPDATE_BUILD_COUNTS=1 npm run build:catalog`,
+      `\n${opts.failureLabel} assertion failed. If the change is intentional,\n` +
+        `refresh the snapshot with: ${opts.refreshCommand}`,
     );
     process.exit(1);
   }
 }
 
-/** Cross-check the pipeline's final distances against (a) the AT-HYG input
- *  value's category-aware threshold and (b) the committed SIMBAD sample.
- *  Diff against the snapshot in `build-distance-outliers-expected.json`;
- *  refresh with `UPDATE_DISTANCE_OUTLIERS=1`. Missing `simbad_sample.tsv`
- *  is a hard fail — the file is committed (LFS), and absence indicates
- *  the working tree is in a broken state. */
+async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
+  await assertOrUpdateSnapshot<BuildCounts>({
+    envVar: 'UPDATE_BUILD_COUNTS',
+    snapshotPath: EXPECTED_COUNTS,
+    actual,
+    compare: (expected, actual) => {
+      const diff = compareBuildCounts(expected, actual);
+      return {
+        drifted: diff.some((d) => d.status === 'mismatch'),
+        report: formatCountDiff(diff),
+      };
+    },
+    failureLabel: 'build-catalog count',
+    refreshCommand: 'UPDATE_BUILD_COUNTS=1 npm run build:catalog',
+  });
+}
+
+// Missing simbad_sample.tsv is a hard fail — the file is committed (LFS)
+// and absence indicates a broken working tree.
 async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<void> {
   if (!existsSync(SRC_SIMBAD_SAMPLE)) {
     console.error(
@@ -586,30 +606,21 @@ async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<v
       `SIMBAD outliers=${report.simbad.length}`,
   );
 
-  const shouldUpdate = process.env.UPDATE_DISTANCE_OUTLIERS === '1';
-  const expectedExists = existsSync(EXPECTED_OUTLIERS);
-  const expected = expectedExists
-    ? (JSON.parse(readFileSync(EXPECTED_OUTLIERS, 'utf8')) as RegressionReport)
-    : null;
-
-  if (shouldUpdate || !expected) {
-    const toWrite = expected ? mergeReasonsFromSnapshot(expected, report) : report;
-    await writeFile(EXPECTED_OUTLIERS, JSON.stringify(toWrite, null, 2) + '\n');
-    console.log(
-      `${shouldUpdate ? 'Updated' : 'Wrote initial'} ${EXPECTED_OUTLIERS}`,
-    );
-    return;
-  }
-
-  const diff = compareRegressionReports(expected, report);
-  console.log(formatRegressionDiff(diff));
-  if (diff.some((d) => d.status !== 'unchanged')) {
-    console.error(
-      `\ndistance-regression assertion failed. If the change is intentional,\n` +
-        `refresh the snapshot with: UPDATE_DISTANCE_OUTLIERS=1 npm run build:catalog`,
-    );
-    process.exit(1);
-  }
+  await assertOrUpdateSnapshot<RegressionReport>({
+    envVar: 'UPDATE_DISTANCE_OUTLIERS',
+    snapshotPath: EXPECTED_OUTLIERS,
+    actual: report,
+    refreshTransform: mergeReasonsFromSnapshot,
+    compare: (expected, actual) => {
+      const diff = compareRegressionReports(expected, actual);
+      return {
+        drifted: diff.some((d) => d.status !== 'unchanged'),
+        report: formatRegressionDiff(diff),
+      };
+    },
+    failureLabel: 'distance-regression',
+    refreshCommand: 'UPDATE_DISTANCE_OUTLIERS=1 npm run build:catalog',
+  });
 }
 
 main().catch((err) => {
