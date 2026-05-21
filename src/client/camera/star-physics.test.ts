@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { FilterState } from '../stellata';
 import {
   fovMinorRad,
@@ -18,32 +19,11 @@ import {
 } from './star-physics';
 import { R_SUN_PC, AU_PC } from '../solar-system/astronomy-constants';
 
-// Build a minimal Catalog with `n` rows; per-row fields default to the
-// non-variable / no-companion case. Tests pass per-row overrides via
-// `populate` so each scenario sets exactly the fields it asserts on.
 function makeCatalog(
   n: number,
   populate: (cat: Catalog) => void = () => undefined,
 ): Catalog {
-  const cat: Catalog = {
-    count: n,
-    positions: new Float32Array(n * 3),
-    absmag: new Float32Array(n),
-    ci: new Float32Array(n),
-    spectClass: new Float32Array(n),
-    luminosityClass: new Uint8Array(n).fill(255),
-    physicalRadius: new Float32Array(n).fill(1), // 1 Rsol
-    constellation: new Float32Array(n),
-    flags: new Uint8Array(n),
-    companion: new Int32Array(n).fill(-1),
-    periodDays: new Float32Array(n),
-    amplitudeMag: new Float32Array(n),
-    hip: new Uint32Array(n),
-    gaiaSourceId: new BigUint64Array(n),
-    names: new Map(),
-    solIndex: -1,
-    constellations: [],
-  };
+  const cat = makeEmptyCatalog(n);
   populate(cat);
   return cat;
 }

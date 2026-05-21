@@ -1,8 +1,9 @@
-// Orchestration shell: AT-HYG + GCVS + CCDM + Bailer-Jones + Stellarium
-// → public/catalog.bin (v5 binary), public/constellations.json,
-// public/search-index.json. Per-input parsing lives in sibling modules
-// (constellations, visual-doubles, gcvs-parse, stars-parse) with shared
-// algebra + binary-layout constants in catalog-pure.
+// Orchestration shell: AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis
+// + Stellarium → public/catalog.bin (v6 binary),
+// public/constellations.json, public/search-index.json. Per-input parsing
+// lives in sibling modules (constellations, visual-doubles, gcvs-parse,
+// stars-parse) with shared algebra + binary-layout constants in
+// catalog-pure.
 
 import { statSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -11,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   parseBailerJonesTsv,
+  parseGaiaApsisTsv,
   inferBinaries,
   DIST_SRC_BAILER_JONES,
   DIST_SRC_LMC_KIN,
@@ -23,8 +25,10 @@ import {
   MAGIC,
   NO_COMPANION,
   NO_GAIA_SOURCE_ID,
+  NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  type ApsisRow,
   type SearchEntry,
 } from './catalog-pure';
 import {
@@ -61,6 +65,7 @@ const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
+const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
@@ -80,6 +85,7 @@ function isUpToDate(): boolean {
   const gaiaHipXmatchMtime = existsSync(SRC_GAIA_HIP_XMATCH)
     ? statSync(SRC_GAIA_HIP_XMATCH).mtimeMs
     : 0;
+  const apsisMtime = existsSync(SRC_GAIA_APSIS) ? statSync(SRC_GAIA_APSIS).mtimeMs : 0;
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -89,7 +95,8 @@ function isUpToDate(): boolean {
     binMtime > xrefMtime &&
     binMtime > hipCcdmMtime &&
     binMtime > bjMtime &&
-    binMtime > gaiaHipXmatchMtime
+    binMtime > gaiaHipXmatchMtime &&
+    binMtime > apsisMtime
   );
 }
 
@@ -141,6 +148,9 @@ async function main() {
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
     gaiaSourceIdBackfilled: 0,
+    apsisEntries: 0,
+    apsisMatched: 0,
+    apsisTeffEither: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -155,6 +165,20 @@ async function main() {
     counts.bjEntries = bjMap.size;
   } else {
     console.log('Bailer-Jones DR3 file not found; skipping distance override.');
+  }
+
+  // Gaia DR3 Apsis (gspphot ∪ gspspec) astrophysical parameters. Optional
+  // in CI / fresh-clone builds where the LFS file hasn't pulled yet —
+  // without it every record gets the NO_APSIS sentinel.
+  let apsisMap = new Map<string, ApsisRow>();
+  if (existsSync(SRC_GAIA_APSIS)) {
+    console.log('Parsing Gaia DR3 Apsis astrophysical parameters...');
+    const tApsis = Date.now();
+    apsisMap = parseGaiaApsisTsv(readFileSync(SRC_GAIA_APSIS, 'utf8'));
+    console.log(`  ${apsisMap.size} entries in ${Date.now() - tApsis}ms`);
+    counts.apsisEntries = apsisMap.size;
+  } else {
+    console.log('Gaia DR3 Apsis file not found; skipping astrophysical-parameter surface.');
   }
 
   // HIP → Gaia DR3 source_id cross-walk: loaded once and shared between
@@ -323,6 +347,8 @@ async function main() {
   let solIndex = -1;
   let variableCount = 0;
   let gaiaSourceIdResolved = 0;
+  let apsisMatched = 0;
+  let apsisTeffEither = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     view.setFloat32(off + RECORD_LAYOUT.x, s.x, true);
@@ -356,6 +382,25 @@ async function main() {
     const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
     view.setBigUint64(off + RECORD_LAYOUT.gaiaSourceId, gaiaSourceId, true);
     if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
+
+    // Apsis lookup keyed by gaia_source_id string (BigInt key would
+    // require a parallel string map). NO_APSIS (NaN) fills every cell
+    // when the source_id is absent from the TSV or the row's cell is blank.
+    const apsis = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
+    const f = (v: number | null | undefined): number =>
+      v === null || v === undefined ? NO_APSIS : v;
+    view.setFloat32(off + RECORD_LAYOUT.teffGspphot, f(apsis?.teffGspphot), true);
+    view.setFloat32(off + RECORD_LAYOUT.loggGspphot, f(apsis?.loggGspphot), true);
+    view.setFloat32(off + RECORD_LAYOUT.mhGspphot, f(apsis?.mhGspphot), true);
+    view.setFloat32(off + RECORD_LAYOUT.azeroGspphot, f(apsis?.azeroGspphot), true);
+    view.setFloat32(off + RECORD_LAYOUT.teffGspspec, f(apsis?.teffGspspec), true);
+    view.setFloat32(off + RECORD_LAYOUT.loggGspspec, f(apsis?.loggGspspec), true);
+    view.setFloat32(off + RECORD_LAYOUT.mhGspspec, f(apsis?.mhGspspec), true);
+    if (apsis) apsisMatched++;
+    if (apsis && (apsis.teffGspphot !== null || apsis.teffGspspec !== null)) {
+      apsisTeffEither++;
+    }
+
     if (s.flags & FLAG_IS_SOL) solIndex = i;
     off += RECORD_SIZE;
   }
@@ -426,6 +471,17 @@ async function main() {
   counts.figureCount = figureCount;
   counts.figureConstellations = figureLines.size;
   counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
+  counts.apsisMatched = apsisMatched;
+  counts.apsisTeffEither = apsisTeffEither;
+
+  if (apsisMap.size > 0) {
+    const matchedPct = ((apsisMatched / stars.length) * 100).toFixed(1);
+    const teffPct = ((apsisTeffEither / stars.length) * 100).toFixed(1);
+    console.log(
+      `Gaia DR3 Apsis: ${apsisMatched} / ${stars.length} records matched (${matchedPct}%), ` +
+        `Teff (gspphot OR gspspec) on ${apsisTeffEither} (${teffPct}%)`,
+    );
+  }
 
   await assertOrUpdateBuildCounts(counts);
 }

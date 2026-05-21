@@ -22,6 +22,7 @@ import type { ObserveControls } from './observe-controls';
 import type { ObserveTransition } from './observe-transition';
 import type { WarpController } from './warp-controller';
 import type { Catalog } from '../loaders/catalog-loader';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../stellata';
 import { EventBus } from '../util/event-bus';
 import { FOCUS_LERP_MS } from './timing';
@@ -93,11 +94,10 @@ function makeObserveStub(): ObserveTransition & ObserveStub {
   } as unknown as ObserveTransition & ObserveStub;
 }
 
-// Minimal Catalog stub for FocusController. Seeds N stars at evenly
-// spaced positions along +X with a uniform physical radius so
-// parkDistForStar / minOrbitDistForStar are deterministic. solIndex
-// defaults to 0 so the initial `setFocus(0)` round-trip mirrors the
-// production cold-start.
+// Seeds N stars at evenly spaced positions along +X with a uniform
+// physical radius so parkDistForStar / minOrbitDistForStar are
+// deterministic. solIndex defaults to 0 so the initial `setFocus(0)`
+// round-trip mirrors the production cold-start.
 function makeCatalog(opts: {
   count?: number;
   positions?: number[];
@@ -106,40 +106,19 @@ function makeCatalog(opts: {
   solIndex?: number;
 } = {}): Catalog {
   const count = opts.count ?? 4;
-  const positions = new Float32Array(count * 3);
+  const cat = makeEmptyCatalog(count);
   if (opts.positions) {
-    for (let i = 0; i < opts.positions.length; i++) positions[i] = opts.positions[i];
+    for (let i = 0; i < opts.positions.length; i++) cat.positions[i] = opts.positions[i];
   } else {
-    // Stars at (0,0,0), (10,0,0), (50,0,0), (100,0,0) by default.
     const xs = [0, 10, 50, 100];
-    for (let i = 0; i < count; i++) positions[i * 3] = xs[i] ?? i * 10;
+    for (let i = 0; i < count; i++) cat.positions[i * 3] = xs[i] ?? i * 10;
   }
-  const physicalRadius = new Float32Array(count).fill(opts.physicalRadius ?? 1.0);
-  const absmag = new Float32Array(count);
+  cat.physicalRadius.fill(opts.physicalRadius ?? 1.0);
   if (opts.absmag) {
-    for (let i = 0; i < opts.absmag.length; i++) absmag[i] = opts.absmag[i];
-  } else {
-    absmag.fill(0);
+    for (let i = 0; i < opts.absmag.length; i++) cat.absmag[i] = opts.absmag[i];
   }
-  return {
-    count,
-    positions,
-    absmag,
-    ci: new Float32Array(count),
-    spectClass: new Float32Array(count),
-    luminosityClass: new Uint8Array(count).fill(255),
-    physicalRadius,
-    constellation: new Float32Array(count),
-    flags: new Uint8Array(count),
-    companion: new Int32Array(count).fill(-1),
-    periodDays: new Float32Array(count),
-    amplitudeMag: new Float32Array(count),
-    hip: new Uint32Array(count),
-    gaiaSourceId: new BigUint64Array(count),
-    names: new Map(),
-    solIndex: opts.solIndex ?? 0,
-    constellations: [],
-  };
+  cat.solIndex = opts.solIndex ?? 0;
+  return cat;
 }
 
 // FrameAnchor stub — mirrors the production behaviour: shifts a

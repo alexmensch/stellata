@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
 import {
   SOL_PLANETS,
@@ -16,28 +17,10 @@ import {
   VENUS_PHASE,
 } from './phase-function';
 
-// Synthetic catalog stub — only fields used by the planet-system module
-// matter; the rest stay zero/empty so tests don't drag in catalog parsing.
 function stubCatalog(solIndex: number, count = Math.max(solIndex + 1, 1)): Catalog {
-  return {
-    count,
-    positions: new Float32Array(count * 3),
-    absmag: new Float32Array(count),
-    ci: new Float32Array(count),
-    spectClass: new Float32Array(count),
-    luminosityClass: new Uint8Array(count),
-    physicalRadius: new Float32Array(count),
-    constellation: new Float32Array(count),
-    flags: new Uint8Array(count),
-    companion: new Int32Array(count),
-    periodDays: new Float32Array(count),
-    amplitudeMag: new Float32Array(count),
-    hip: new Uint32Array(count),
-    gaiaSourceId: new BigUint64Array(count),
-    names: new Map(),
-    solIndex,
-    constellations: [],
-  };
+  const cat = makeEmptyCatalog(count);
+  cat.solIndex = solIndex;
+  return cat;
 }
 
 describe('hasPlanets', () => {

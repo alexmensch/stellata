@@ -56,6 +56,10 @@ function readRecord(i: number) {
   const conIdx = view.getUint8(off + RECORD_LAYOUT.conIndex);
   const hip = view.getUint32(off + RECORD_LAYOUT.hip, true);
   const gaiaSourceId = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
+  const apsisCell = (offsetField: number): number | null => {
+    const v = view.getFloat32(off + offsetField, true);
+    return Number.isNaN(v) ? null : v;
+  };
   return {
     i,
     x: view.getFloat32(off + RECORD_LAYOUT.x, true),
@@ -73,6 +77,13 @@ function readRecord(i: number) {
     periodDays: view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1,
     hip: hip === 0 ? null : hip,
     gaiaSourceId: gaiaSourceId === 0n ? null : gaiaSourceId.toString(),
+    teffGspphot: apsisCell(RECORD_LAYOUT.teffGspphot),
+    loggGspphot: apsisCell(RECORD_LAYOUT.loggGspphot),
+    mhGspphot: apsisCell(RECORD_LAYOUT.mhGspphot),
+    azeroGspphot: apsisCell(RECORD_LAYOUT.azeroGspphot),
+    teffGspspec: apsisCell(RECORD_LAYOUT.teffGspspec),
+    loggGspspec: apsisCell(RECORD_LAYOUT.loggGspspec),
+    mhGspspec: apsisCell(RECORD_LAYOUT.mhGspspec),
     name,
     con: conIdx === 255 ? null : constellations[conIdx]?.code,
   };
@@ -94,6 +105,34 @@ for (let i = 0; i < count && founds < targets.size; i++) {
     console.log({ ...r, dist_pc: dist.toFixed(3) });
     founds++;
   }
+}
+
+console.log('\nGaia DR3 Apsis coverage:');
+{
+  let matched = 0;
+  let teffGspphot = 0;
+  let teffGspspec = 0;
+  let teffEither = 0;
+  for (let i = 0; i < count; i++) {
+    const off = HEADER_SIZE + i * RECORD_SIZE;
+    const tPhot = view.getFloat32(off + RECORD_LAYOUT.teffGspphot, true);
+    const tSpec = view.getFloat32(off + RECORD_LAYOUT.teffGspspec, true);
+    const loggP = view.getFloat32(off + RECORD_LAYOUT.loggGspphot, true);
+    const loggS = view.getFloat32(off + RECORD_LAYOUT.loggGspspec, true);
+    const hasPhot = !Number.isNaN(tPhot);
+    const hasSpec = !Number.isNaN(tSpec);
+    if (hasPhot) teffGspphot++;
+    if (hasSpec) teffGspspec++;
+    if (hasPhot || hasSpec) teffEither++;
+    if (hasPhot || hasSpec || !Number.isNaN(loggP) || !Number.isNaN(loggS)) {
+      matched++;
+    }
+  }
+  const pct = (n: number) => ((n / count) * 100).toFixed(1);
+  console.log(`  any Apsis field: ${matched} / ${count} (${pct(matched)}%)`);
+  console.log(`  Teff gspphot:    ${teffGspphot} / ${count} (${pct(teffGspphot)}%)`);
+  console.log(`  Teff gspspec:    ${teffGspspec} / ${count} (${pct(teffGspspec)}%)`);
+  console.log(`  Teff either:     ${teffEither} / ${count} (${pct(teffEither)}%)`);
 }
 
 console.log('\nVariable star count and 5 examples:');

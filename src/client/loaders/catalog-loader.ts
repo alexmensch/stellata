@@ -44,6 +44,16 @@ export interface Catalog {
   // Stored as BigUint64Array because IDs routinely exceed 2^53 and would
   // truncate as plain Numbers. Convert with `String(arr[i])` at query time.
   gaiaSourceId: BigUint64Array;  // length = count
+  // Gaia DR3 Apsis astrophysical parameters per record. NaN (NO_APSIS) =
+  // absent; consumers test with `Number.isNaN(arr[i])`. gspphot and
+  // gspspec are independent Gaia solutions, either or both may be absent.
+  teffGspphot: Float32Array;     // length = count, Kelvin
+  loggGspphot: Float32Array;     // length = count, log cgs
+  mhGspphot: Float32Array;       // length = count, [M/H] dex
+  azeroGspphot: Float32Array;    // length = count, mag (line-of-sight extinction)
+  teffGspspec: Float32Array;     // length = count, Kelvin
+  loggGspspec: Float32Array;     // length = count, log cgs
+  mhGspspec: Float32Array;       // length = count, [M/H] dex
   names: Map<number, string>;    // star index -> proper name (named stars only)
   solIndex: number;              // -1 if not found
   constellations: Constellation[];
@@ -125,6 +135,13 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   const amplitudeMag = new Float32Array(count);
   const hip = new Uint32Array(count);
   const gaiaSourceId = new BigUint64Array(count);
+  const teffGspphot = new Float32Array(count);
+  const loggGspphot = new Float32Array(count);
+  const mhGspphot = new Float32Array(count);
+  const azeroGspphot = new Float32Array(count);
+  const teffGspspec = new Float32Array(count);
+  const loggGspspec = new Float32Array(count);
+  const mhGspspec = new Float32Array(count);
   const nameOffsetArr = new Uint32Array(count);
 
   let solIndex = -1;
@@ -147,6 +164,13 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     periodDays[i] = view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1;
     hip[i] = view.getUint32(off + RECORD_LAYOUT.hip, true);
     gaiaSourceId[i] = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
+    teffGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.teffGspphot, true);
+    loggGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.loggGspphot, true);
+    mhGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.mhGspphot, true);
+    azeroGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.azeroGspphot, true);
+    teffGspspec[i] = view.getFloat32(off + RECORD_LAYOUT.teffGspspec, true);
+    loggGspspec[i] = view.getFloat32(off + RECORD_LAYOUT.loggGspspec, true);
+    mhGspspec[i] = view.getFloat32(off + RECORD_LAYOUT.mhGspspec, true);
     if (flags[i] & FLAG_IS_SOL) solIndex = i;
   }
 
@@ -191,6 +215,13 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     amplitudeMag,
     hip,
     gaiaSourceId,
+    teffGspphot,
+    loggGspphot,
+    mhGspphot,
+    azeroGspphot,
+    teffGspspec,
+    loggGspspec,
+    mhGspspec,
     names,
     solIndex,
     constellations,

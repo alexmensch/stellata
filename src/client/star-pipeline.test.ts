@@ -1,32 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
-import type { Catalog } from './loaders/catalog-loader';
-
-function makeCatalog(count: number): Catalog {
-  return {
-    count,
-    positions: new Float32Array(count * 3),
-    absmag: new Float32Array(count),
-    ci: new Float32Array(count),
-    spectClass: new Float32Array(count),
-    luminosityClass: new Uint8Array(count),
-    physicalRadius: new Float32Array(count).fill(1),
-    constellation: new Float32Array(count),
-    flags: new Uint8Array(count),
-    companion: new Int32Array(count).fill(-1),
-    periodDays: new Float32Array(count),
-    amplitudeMag: new Float32Array(count),
-    hip: new Uint32Array(count),
-    gaiaSourceId: new BigUint64Array(count),
-    names: new Map(),
-    solIndex: -1,
-    constellations: [],
-  };
-}
+import { makeEmptyCatalog } from './loaders/catalog-mock';
 
 function makeOpts(count = 4) {
-  const catalog = makeCatalog(count);
+  const catalog = makeEmptyCatalog(count);
   const sharedUniforms = {
     uCameraPos: { value: new THREE.Vector3() },
     uTime: { value: 0 },

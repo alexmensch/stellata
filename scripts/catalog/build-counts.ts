@@ -82,6 +82,15 @@ export interface BuildCounts {
    *  (Sirius, Vega, …) are excluded from both AT-HYG.gaia and the
    *  cross-walk, so they remain unresolved and are not counted here. */
   gaiaSourceIdBackfilled: number;
+  /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
+  apsisEntries: number;
+  /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
+   *  upper bound on per-record Apsis coverage. */
+  apsisMatched: number;
+  /** Records with a non-null Teff in either gspphot OR gspspec — the
+   *  population the downstream Tier 2 colour-LUT re-routing can use as
+   *  Apsis-direct Teff. Pinned against the zsr.1 84.8% probe figure. */
+  apsisTeffEither: number;
 }
 
 export type CountDiff =
