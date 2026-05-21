@@ -241,19 +241,67 @@ def compute_system_anchors(
 
 
 def _resolve_position(
-    astrometry: ComponentAstrometry,
+    astrometry: ComponentAstrometry | None,
     anchor: SystemAnchor | None,
 ) -> tuple[SystemAnchor | None, bool]:
     """Position resolution with the system-anchor fallback. Returns the
     (x_pc, y_pc, z_pc, dist_pc) tuple plus an ``inherited`` flag — True
     when the anchor backstopped a component whose own astrometry was
-    unresolved. Position is ``None`` only when both the component AND
-    its system anchor are unknown (entirely Gaia-blind WDS systems);
-    ``inherited`` is False in that case."""
-    own = _position_pc(astrometry)
+    unresolved or missing. Position is ``None`` only when both the
+    component AND its system anchor are unknown (entirely Gaia-blind
+    WDS systems); ``inherited`` is False in that case."""
+    own = _position_pc(astrometry) if astrometry is not None else None
     if own is not None:
         return own, False
     return anchor, anchor is not None
+
+
+def _astrometry_via(
+    astrometry: ComponentAstrometry | None, inherited: bool,
+) -> str:
+    """Map the (astrometry, inherited) pair to a multiples-row
+    ``astrometry_via`` tag. Inherited rows always tag as
+    ``ASTROMETRY_VIA_SYSTEM_INHERITED`` regardless of what the source
+    astrometry resolved to; rows without astrometry (the standalone
+    no-Gaia case) tag ``"unresolved"``."""
+    if inherited:
+        return ASTROMETRY_VIA_SYSTEM_INHERITED
+    if astrometry is None:
+        return "unresolved"
+    return astrometry.astrometry_via
+
+
+def _resolve_spect(
+    wds_id: str, component: str,
+    athyg: AthygRow | None, indices: IdentifierIndices,
+) -> tuple[str, str]:
+    """Per-component spectral type with SIMBAD → AT-HYG → none fallback,
+    returned alongside the ``spect_via`` provenance tag. SIMBAD's
+    per-component sp_type wins because AT-HYG carries a single
+    per-system string that gets inherited by every component, even
+    when each has its own MK / WD class. Standalone rows pass
+    ``athyg=None``."""
+    simbad_spect = indices.simbad_wds_spectra.get((wds_id, component))
+    if simbad_spect:
+        return simbad_spect, SPECT_VIA_SIMBAD
+    athyg_spect = athyg.spect if athyg is not None else ""
+    if athyg_spect:
+        return athyg_spect, SPECT_VIA_ATHYG
+    return "", SPECT_VIA_NONE
+
+
+def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
+    """Wrap a per-source ``GaiaAstrometryRow`` into a
+    ``ComponentAstrometry`` tagged ``gaia_5p``, so the standalone path
+    can share ``_position_pc`` / ``_resolve_position`` /
+    ``_astrometry_via`` with the pair walk."""
+    return ComponentAstrometry(
+        astrometry_via="gaia_5p",
+        ra_deg=gaia.ra_deg, dec_deg=gaia.dec_deg,
+        parallax_mas=gaia.parallax_mas,
+        pmra_masyr=gaia.pmra_masyr, pmdec_masyr=gaia.pmdec_masyr,
+        ref_epoch=gaia.ref_epoch,
+    )
 
 
 def build_multiples_row(
@@ -279,27 +327,10 @@ def build_multiples_row(
     """
     athyg = _athyg_row_for_component(component, indices)
     position, inherited = _resolve_position(astrometry, system_anchor)
-    # SIMBAD's per-component sp_type wins over the AT-HYG row's
-    # ``spect`` — AT-HYG carries a single per-system string that gets
-    # inherited by every component, even when each component has its own
-    # MK / WD class. SIMBAD has the per-oid value directly.
-    simbad_spect = indices.simbad_wds_spectra.get(
-        (pair.wds_id, component.component),
+    spect, spect_via = _resolve_spect(
+        pair.wds_id, component.component, athyg, indices,
     )
-    athyg_spect = athyg.spect if athyg is not None else ""
-    if simbad_spect:
-        spect = simbad_spect
-        spect_via = SPECT_VIA_SIMBAD
-    elif athyg_spect:
-        spect = athyg_spect
-        spect_via = SPECT_VIA_ATHYG
-    else:
-        spect = ""
-        spect_via = SPECT_VIA_NONE
-
-    astrometry_via = (
-        ASTROMETRY_VIA_SYSTEM_INHERITED if inherited else astrometry.astrometry_via
-    )
+    astrometry_via = _astrometry_via(astrometry, inherited)
 
     return MultiplesRow(
         system_id=_system_id_for_pair(pair),
@@ -424,35 +455,16 @@ def build_standalone_rows(
     for (wds_id, component), xid in simbad_xids.items():
         if (wds_id, component) in emitted_keys:
             continue
-        # Position lookup: gaia_5p direct → system anchor → none.
-        position: SystemAnchor | None = None
-        astrometry_via = "unresolved"
+        synth_ast: ComponentAstrometry | None = None
         if xid.gaia_source_id is not None:
             gaia = indices.src_to_astrometry.get(xid.gaia_source_id)
             if gaia is not None:
-                pos = _position_pc(ComponentAstrometry(
-                    astrometry_via="gaia_5p",
-                    ra_deg=gaia.ra_deg, dec_deg=gaia.dec_deg,
-                    parallax_mas=gaia.parallax_mas,
-                    pmra_masyr=gaia.pmra_masyr, pmdec_masyr=gaia.pmdec_masyr,
-                    ref_epoch=gaia.ref_epoch,
-                ))
-                if pos is not None:
-                    position = pos
-                    astrometry_via = "gaia_5p"
-        if position is None:
-            anchor = system_anchors.get(wds_id)
-            if anchor is not None:
-                position = anchor
-                astrometry_via = ASTROMETRY_VIA_SYSTEM_INHERITED
-
-        simbad_spect = indices.simbad_wds_spectra.get((wds_id, component))
-        if simbad_spect:
-            spect = simbad_spect
-            spect_via = SPECT_VIA_SIMBAD
-        else:
-            spect = ""
-            spect_via = SPECT_VIA_NONE
+                synth_ast = _component_astrometry_from_gaia(gaia)
+        position, inherited = _resolve_position(
+            synth_ast, system_anchors.get(wds_id),
+        )
+        astrometry_via = _astrometry_via(synth_ast, inherited)
+        spect, spect_via = _resolve_spect(wds_id, component, None, indices)
 
         out.append(MultiplesRow(
             system_id=_system_id_for_standalone(wds_id, component),
