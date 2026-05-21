@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import type { Star } from './stars-parse';
+import { makeStar } from './star-fixture';
 import {
   SELF_CONSISTENCY_THRESHOLDS,
   SIMBAD_DISTANCE_THRESHOLD,
@@ -16,36 +17,6 @@ import {
   type RegressionReport,
   type SimbadDistanceEntry,
 } from './distance-regression-check';
-
-function makeStar(overrides: Partial<Star>): Star {
-  return {
-    x: 0,
-    y: 0,
-    z: 0,
-    absmag: 5,
-    ci: 0.65,
-    spectClass: 5,
-    lumClass: 5,
-    physicalRadius: 1,
-    conIndex: 255,
-    flags: 0,
-    proper: null,
-    bayer: null,
-    hip: null,
-    hd: null,
-    hr: null,
-    flam: null,
-    gl: null,
-    gaiaSourceId: null,
-    spectDisplay: null,
-    companionIdx: -1,
-    periodDays: 0,
-    amplitudeMag: 0,
-    athygDist: null,
-    athygDistSrc: null,
-    ...overrides,
-  };
-}
 
 // Place a star at (d, 0, 0) so finalDistance(star) === d.
 function starAt(d: number, overrides: Partial<Star> = {}): Star {
