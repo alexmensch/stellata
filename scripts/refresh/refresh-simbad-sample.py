@@ -92,10 +92,10 @@ SEED = 20260515
 # local random.sample step has slack to work with, small enough that the
 # TAP response stays under MAXREC and under a few-MB transfer. Tuned
 # against live populations probed 2026-05-18:
-#     V<6           5,056 stars  → K=1  → all 5056 candidates
-#     V 6-9       125,047 stars  → K=14 → ~8,932 candidates
-#     V 9-11.5  1,414,045 stars  → K=118→ ~11,983 candidates
-#     V 11.5-15 2,321,952 stars  → K=387→ ~6,000 candidates
+#     V<6           5,056 stars  → K=1  → all 5056 candidates (target 5000)
+#     V 6-9       125,047 stars  → K=3  → ~41,682 candidates (target 15000)
+#     V 9-11.5  1,414,045 stars  → K=23 → ~61,480 candidates (target 20000)
+#     V 11.5-15 2,321,952 stars  → K=77 → ~30,155 candidates (target 10000)
 # Re-tune K (downward) if SIMBAD growth pushes the candidate set below
 # ~2× target.
 @dataclass(frozen=True)
@@ -107,10 +107,10 @@ class Bin:
 
 
 BINS: tuple[Bin, ...] = (
-    Bin(v_min=None, v_max=6.0,  target=1000, mod_K=1),
-    Bin(v_min=6.0,  v_max=9.0,  target=3000, mod_K=14),
-    Bin(v_min=9.0,  v_max=11.5, target=4000, mod_K=118),
-    Bin(v_min=11.5, v_max=15.0, target=2000, mod_K=387),
+    Bin(v_min=None, v_max=6.0,  target= 5000, mod_K=1),
+    Bin(v_min=6.0,  v_max=9.0,  target=15000, mod_K=3),
+    Bin(v_min=9.0,  v_max=11.5, target=20000, mod_K=23),
+    Bin(v_min=11.5, v_max=15.0, target=10000, mod_K=77),
 )
 
 # Expected total — sum of BINS targets. Drives the row-count guard.
