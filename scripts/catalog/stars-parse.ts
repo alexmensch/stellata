@@ -16,6 +16,7 @@ import {
   applyLmcKinematicOverride,
   isInLmcCone,
   resolveGaiaSourceId,
+  parseGaiaSourceIdStr,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -151,23 +152,20 @@ export async function readStars(
       continue;
     }
 
-    // Resolve the Gaia DR3 source_id: AT-HYG native > HIP cross-walk
-    // fallback. Gaia-saturated bright binaries (Sirius, Vega, …) are
-    // absent from both AT-HYG.gaia AND the cross-walk and stay null —
-    // their orbital rendering flows through data/binaries/multiples.tsv,
-    // not this slot.
+    // Resolve the Gaia DR3 source_id: AT-HYG native > HIP cross-walk.
+    // See resolveGaiaSourceId for the precedence + Gaia-saturated
+    // bright-binary handling.
     const hip = parseIntOrNull(row.hip);
-    const resolved = resolveGaiaSourceId(nonEmpty(row.gaia), hip, hipToGaia);
+    const resolved = resolveGaiaSourceId(parseGaiaSourceIdStr(row.gaia), hip, hipToGaia);
     const gaiaSourceId = resolved.gaiaSourceId;
     if (resolved.backfilled) gaiaSourceIdBackfilled++;
 
-    // Bailer-Jones (DR3) override: when this row has a Gaia source_id
-    // AND its AT-HYG dist_src marks the catalogued distance as a Gaia
-    // inverse (G_R3 / G_R2), swap dist/x/y/z/absmag for the B-J
-    // posterior. Rows with dist_src=HIP / GJ / N / OTHER already carry
-    // a non-Gaia parallax — leave them alone, since B-J's
-    // Galactic-density prior tail would silently move them to 10–40 kpc
-    // when the Gaia parallax has low S/N. See SCIENCE.md § Distances /
+    // Bailer-Jones (DR3) override fires when (a) the row resolves to a
+    // Gaia source_id by either path above and (b) dist_src marks the
+    // catalogued distance as a Gaia inverse (G_R3 / G_R2). Other
+    // dist_src values (HIP / GJ / N / OTHER) carry a non-Gaia parallax;
+    // applying B-J there would silently move low-S/N rows to ~10–40 kpc
+    // via the Galactic-density prior tail. See SCIENCE.md § Distances /
     // Bailer-Jones DR3 override.
     const distSrc = nonEmpty(row.dist_src);
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, distSrc);

@@ -575,6 +575,19 @@ export function isBailerJonesEligible(
   return BJ_ELIGIBLE_DIST_SRCS.has(distSrc);
 }
 
+/** Parse a Gaia DR3 source_id cell into a decimal string suitable for
+ *  `BigInt()`. Returns null for blank cells AND for cells that aren't
+ *  pure decimal digits — guards the build's `BigInt(s.gaiaSourceId)`
+ *  call against a malformed AT-HYG row throwing a SyntaxError mid-write.
+ *  Same `/^\d+$/` shape gate as `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
+export function parseGaiaSourceIdStr(s: string | undefined | null): string | null {
+  if (s === undefined || s === null) return null;
+  const t = s.trim();
+  if (!t) return null;
+  if (!/^\d+$/.test(t)) return null;
+  return t;
+}
+
 /** Resolve an AT-HYG row's Gaia DR3 source_id, falling back to a
  *  HIP→Gaia cross-walk when the AT-HYG `gaia` column is blank.
  *  Precedence: AT-HYG native > HIP cross-walk; returns null when
