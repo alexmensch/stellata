@@ -10,6 +10,7 @@ import { parse } from 'csv-parse';
 
 import {
   resolveSpectralInfo,
+  resolveSpectDisplay,
   physicalRadius,
   isBailerJonesEligible,
   applyBailerJonesOverride,
@@ -246,15 +247,7 @@ export async function readStars(
     const hd = parseIntOrNull(row.hd);
     const hr = parseIntOrNull(row.hr);
     const gl = nonEmpty(row.gl);
-    // Hover/search display: prefer SIMBAD's MK-canonical string so the
-    // tooltip matches the resolved classIdx/lumClass instead of any
-    // variability-type annotation AT-HYG's spect cell may carry.
-    const spectRawDisplay = (row.spect ?? '').trim();
-    const spectDisplay =
-      spectral.spectDisplay ??
-      (spectRawDisplay
-        ? spectRawDisplay.replace(/\*+$/, '').trim().replace(/\s+/g, ' ')
-        : null);
+    const spectDisplay = resolveSpectDisplay(spectral.spectDisplay, row.spect ?? '');
 
     const isSol = proper === 'Sol';
     let flags = 0;

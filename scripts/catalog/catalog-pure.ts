@@ -109,6 +109,25 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): Spectr
   const s = rawSpType.replace(/\s+/g, '');
   if (!s) return null;
 
+  // Yerkes lowercase prefix: "d" = dwarf (lumClass V), "g" = giant (III).
+  // SIMBAD keeps the convention on nearby M dwarfs / late-type giants
+  // ("dM4.0", "gK0"). The prefix IS the luminosity declaration, so any
+  // trailing Roman is overridden. Without this short-circuit the
+  // first-char gate further down rejects the leading lowercase letter
+  // and the row leaks to the GSP-Spec tier.
+  const yerkesMatch = s.match(/^([dg])(?=[OBAFGKM])/);
+  if (yerkesMatch) {
+    const rest = s.slice(1);
+    const classIdx = spectClassIndex(rest.charAt(0));
+    const subMatch = rest.substring(1).match(/^(\d)(?:\.\d)?/);
+    const subclass = subMatch ? Number(subMatch[1]) : 5;
+    return {
+      classIdx, subclass,
+      lumClass: yerkesMatch[1] === 'g' ? 4 : 2,
+      isWhiteDwarf: false, wdSubclass: 0,
+    };
+  }
+
   // White dwarfs: SIMBAD canonical form is D followed by one or more
   // subtype letters from {A, B, C, O, Q, X, Z, H, V} and an optional
   // digit. The strict letter set prevents the bug-table cases (DELTA
@@ -234,6 +253,19 @@ export function resolveSpectralInfo(
     }
   }
   return { info: SPECTRAL_UNKNOWN, source: 'fallback', spectDisplay: null };
+}
+
+/** Hover/search display string: prefer the resolver's MK-canonical
+ *  output, fall back to a cleaned-up AT-HYG raw cell (trailing `*+`
+ *  stripped, internal whitespace collapsed). Returns null when both
+ *  are blank. */
+export function resolveSpectDisplay(
+  resolved: string | null, rawSpect: string,
+): string | null {
+  if (resolved) return resolved;
+  const t = rawSpect.trim();
+  if (!t) return null;
+  return t.replace(/\*+$/, '').trim().replace(/\s+/g, ' ');
 }
 
 // ---- Stefan-Boltzmann physical-radius chain -----------------------------
