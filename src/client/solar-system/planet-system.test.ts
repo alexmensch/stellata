@@ -33,6 +33,7 @@ function stubCatalog(solIndex: number, count = Math.max(solIndex + 1, 1)): Catal
     periodDays: new Float32Array(count),
     amplitudeMag: new Float32Array(count),
     hip: new Uint32Array(count),
+    gaiaSourceId: new BigUint64Array(count),
     names: new Map(),
     solIndex,
     constellations: [],

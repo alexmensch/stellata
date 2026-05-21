@@ -18,6 +18,7 @@ function makeCatalog(count: number): Catalog {
     periodDays: new Float32Array(count),
     amplitudeMag: new Float32Array(count),
     hip: new Uint32Array(count),
+    gaiaSourceId: new BigUint64Array(count),
     names: new Map(),
     solIndex: -1,
     constellations: [],

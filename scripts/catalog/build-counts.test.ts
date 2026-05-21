@@ -28,6 +28,7 @@ function baseCounts(): BuildCounts {
     solIndex: 100000,
     figureCount: 500,
     figureConstellations: 88,
+    gaiaSourceIdResolved: 307000,
   };
 }
 
