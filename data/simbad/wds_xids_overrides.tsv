@@ -1,0 +1,26 @@
+# Hand-curated SIMBAD oid overrides — residual escape hatch.
+#
+# The primary recovery mechanism for components SIMBAD stores under
+# non-`WDS J<id><comp>` aliases is the HD/CCDM/HIP cascade in
+# refresh-simbad-wds-xids.py's Phase A.6 (auto, no manual list). This
+# file exists for residual cases the cascade can't resolve — e.g.
+# systems where SIMBAD has the per-component oid but doesn't carry any
+# of the cascade's catalog aliases (HD, CCDM-J, HIP) under a recognisable
+# `<id><comp>` form. Empty unless such a case is discovered.
+#
+# Schema (4 tab-separated columns):
+#   wds_id        — WDS positional anchor as parsed by parse_wds_summ
+#                    (e.g. "06451-1643"). Must match a (wds_id, component)
+#                    tuple emitted by split_components(parse_wds_summ).
+#   component     — single component letter (e.g. "B"). Same constraint.
+#   simbad_oid    — SIMBAD basic.oid integer. The refresh script's Phase B
+#                    pulls main_id, Gaia DR3 source_id, and HIP through this
+#                    oid via the standard JOIN.
+#   reason        — human-readable rationale for the override. Not used by
+#                    the script — present so a future maintainer can audit
+#                    each row without re-deriving the SIMBAD lookup chain.
+#
+# Lines starting with '#' are skipped. Empty lines are skipped. The first
+# non-blank, non-comment line is the header.
+
+wds_id	component	simbad_oid	reason
