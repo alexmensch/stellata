@@ -14,10 +14,7 @@ import {
   isBailerJonesEligible,
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
-  angularSeparationDeg,
-  LMC_CENTRE_RA_HOURS,
-  LMC_CENTRE_DEC_DEG,
-  LMC_CONE_HALF_ANGLE_DEG,
+  isInLmcCone,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -182,11 +179,8 @@ export async function readStars(
     // filter snaps the ~60 affected AT-HYG rows back to Pietrzyński 2019's
     // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
     // mis-anchored value on the same rows.
-    if (ra !== null && dec !== null && mag !== null) {
-      const sep = angularSeparationDeg(
-        ra, dec, LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG,
-      );
-      if (sep <= LMC_CONE_HALF_ANGLE_DEG) lmcCandidates++;
+    if (ra !== null && dec !== null && mag !== null && isInLmcCone(ra, dec)) {
+      lmcCandidates++;
       const pmRa = parseFloatOrNull(row.pm_ra);
       const pmDec = parseFloatOrNull(row.pm_dec);
       const ovr = applyLmcKinematicOverride(ra, dec, mag, pmRa, pmDec);

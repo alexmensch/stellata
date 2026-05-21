@@ -638,7 +638,12 @@ export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number
   return mag - 5 * Math.log10(distPc / 10);
 }
 
-export interface BailerJonesOverride {
+/** Shared shape produced by every distance-override layer (Bailer-Jones,
+ *  LMC kinematic, and future SMC kinematic / structural-disc / OGLE
+ *  Cepheid layers). Each `apply*Override` returns one of these or null.
+ *  Recomputing absmag with the snapped distance is essential — without
+ *  it, stars get placed at the new distance but lit for the old one. */
+export interface DistanceOverride {
   dist: number;
   x: number;
   y: number;
@@ -646,23 +651,38 @@ export interface BailerJonesOverride {
   absmag: number;
 }
 
+/** Single source of truth for assembling a `DistanceOverride` from a
+ *  snapped distance — applies `icrsSphericalToCartesian` and
+ *  `apparentToAbsoluteMagnitude` consistently across all override
+ *  layers. */
+export function buildDistanceOverride(
+  raHours: number,
+  decDegrees: number,
+  mag: number,
+  distPc: number,
+): DistanceOverride {
+  const { x, y, z } = icrsSphericalToCartesian(raHours, decDegrees, distPc);
+  return {
+    dist: distPc,
+    x, y, z,
+    absmag: apparentToAbsoluteMagnitude(mag, distPc),
+  };
+}
+
 /** When `gaiaSourceId` has a Bailer-Jones entry, returns the override
- *  (dist, x, y, z, absmag) for that star; otherwise null. The caller
- *  swaps these into the star record and tags `dist_src = "BJ"`.
- *  Recomputing absmag with the new distance is essential — without it,
- *  stars get placed at the new distance but lit for the old one. */
+ *  for that star; otherwise null. The caller swaps the fields into the
+ *  star record and tags `dist_src = "BJ"`. */
 export function applyBailerJonesOverride(
   raHours: number,
   decDegrees: number,
   mag: number,
   gaiaSourceId: string | null,
   bjMap: Map<string, number>,
-): BailerJonesOverride | null {
+): DistanceOverride | null {
   if (!gaiaSourceId) return null;
   const dist = bjMap.get(gaiaSourceId);
   if (dist === undefined) return null;
-  const { x, y, z } = icrsSphericalToCartesian(raHours, decDegrees, dist);
-  return { dist, x, y, z, absmag: apparentToAbsoluteMagnitude(mag, dist) };
+  return buildDistanceOverride(raHours, decDegrees, mag, dist);
 }
 
 // ---- LMC kinematic distance override -------------------------------------
@@ -718,35 +738,36 @@ export function angularSeparationDeg(
   return Math.acos(dot) * (180 / Math.PI);
 }
 
-export interface LmcKinematicOverride {
-  dist: number;
-  x: number;
-  y: number;
-  z: number;
-  absmag: number;
+/** Whether (raHours, decDegrees) falls within the LMC sky cone — the
+ *  per-row eligibility predicate shared by the LMC kinematic override
+ *  and the `lmcCandidates` build-counter. Hoisted out of
+ *  `applyLmcKinematicOverride` so callers can evaluate the cone once
+ *  per row and reuse the result for both the counter and the override
+ *  call, avoiding ~313k redundant `angularSeparationDeg` evaluations. */
+export function isInLmcCone(raHours: number, decDegrees: number): boolean {
+  const sep = angularSeparationDeg(
+    raHours, decDegrees,
+    LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG,
+  );
+  return sep <= LMC_CONE_HALF_ANGLE_DEG;
 }
 
-/** When (ra, dec) lies inside the LMC sky cone AND (pmRa, pmDec) lies
- *  within tolerance of the LMC bulk-PM centre, returns the override
- *  (dist, x, y, z, absmag) snapped to Pietrzyński 2019's distance.
- *  Otherwise null — caller leaves the row's existing values in place
- *  (which after B-J is either the B-J posterior or AT-HYG's 1/π). */
+/** PRECONDITION: caller has already verified `isInLmcCone(raHours,
+ *  decDegrees)`. When (pmRa, pmDec) lies within tolerance of the LMC
+ *  bulk-PM centre, returns the override snapped to Pietrzyński 2019's
+ *  distance. Otherwise null — caller leaves the row's existing values
+ *  in place (which after B-J is either the B-J posterior or AT-HYG's
+ *  1/π). The cone check is the caller's responsibility so the
+ *  `lmcCandidates` counter and this gate share a single evaluation. */
 export function applyLmcKinematicOverride(
   raHours: number,
   decDegrees: number,
   mag: number,
   pmRa: number | null,
   pmDec: number | null,
-): LmcKinematicOverride | null {
+): DistanceOverride | null {
   if (pmRa === null || pmDec === null) return null;
-  const sep = angularSeparationDeg(
-    raHours, decDegrees,
-    LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG,
-  );
-  if (sep > LMC_CONE_HALF_ANGLE_DEG) return null;
   if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return null;
   if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return null;
-  const dist = LMC_DISTANCE_PC;
-  const { x, y, z } = icrsSphericalToCartesian(raHours, decDegrees, dist);
-  return { dist, x, y, z, absmag: apparentToAbsoluteMagnitude(mag, dist) };
+  return buildDistanceOverride(raHours, decDegrees, mag, LMC_DISTANCE_PC);
 }
