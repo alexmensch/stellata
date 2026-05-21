@@ -1,27 +1,6 @@
-"""Phase A.6 cascade for refresh-simbad-wds-xids.py — recover components
-whose SIMBAD oid exists but isn't stored under `WDS J<id><comp>`.
-
-Empirical motivation (2026-05-21 sweep, see dch.65 PR description): Phase
-A's bare `WDS J<id><comp>` lookup hits 38% of WDS component tuples. Of
-the unresolved residual, ~198 distinct (wds_id, comp) tuples ARE in
-SIMBAD's ident table under a non-WDS-J alias keyed by either:
-  - the system's HD number + component letter (`HD<padded><comp>`), or
-  - the CCDM catalog's identifier at the same positional anchor as WDS
-    (`CCDM J<wds_id><comp>`), or
-  - the system's HIP number + component letter (`HIP <num><comp>` /
-    `HIP <num> <comp>`), small yield.
-
-Sirius B is the canonical case (recoverable via `HD  48915B`). The
-cascade replaces what would otherwise be a hand-curated list — see the
-dch.65 sweep section in the PR body for the recovery-rate breakdown and
-the reason h_link hierarchy traversal was rejected (97% non-WDS noise).
-
-The expensive impure step (`pull_primary_aliases`) batches one ADQL
-query per ~1000 primary oids against SIMBAD's ident table; the cascade
-candidate query is a single batched IN-clause sweep. The pure helpers
-(`build_cascade_candidates`, `filter_cascade_hits`) are independently
-testable.
-"""
+"""Pure helpers for the HD/CCDM/HIP alias cascade in refresh-simbad-wds-xids.py:
+build cascade candidates from resolved-primary HD/HIP aliases, filter the
+batched ident-table query result back into (wds_id, component) → oid."""
 
 from __future__ import annotations
 

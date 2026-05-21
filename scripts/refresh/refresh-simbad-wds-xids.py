@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/simbad/simbad_wds_xids.tsv — per-component SIMBAD-curated WDS↔Gaia DR3 cross-IDs.
 
-Stage 2 supplement (stellata-dch.60) for build-binaries.py's WDS-component →
+Stage 2 supplement for build-binaries.py's WDS-component →
 Gaia source_id resolution cascade. The principled alternative to a hand-rolled
 regex parser over WDS Notes prose: SIMBAD's ``ident`` table holds curated
 ``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs for the well-known multi-component
@@ -38,9 +38,8 @@ produce byte-identical TSVs.
 
 Phase A.5 + A.6 cascade — recover components SIMBAD stores under
 non-WDS-J aliases (HD/CCDM/HIP). See scripts/refresh/wds_xids_cascade.py
-for the strategy detail and dch.65 PR description for the empirical
-sweep that justified the cascade-over-hand-curation choice. The cascade
-adds ~225 component recoveries on top of Phase A's ~23.4k.
+for the strategy. The cascade adds ~225 component recoveries on top of
+Phase A's ~23.4k.
 
 Backend: SIMBAD TAP only (refresh_lib.simbad_backend) — SIMBAD's ADQL
 dialect diverges from ESA / CDS (LIKE forbidden on basic.otype, MOD()
