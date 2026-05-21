@@ -228,19 +228,17 @@ def compute_system_anchors(
 def _resolve_position(
     astrometry: ComponentAstrometry,
     anchor: SystemAnchor | None,
-) -> tuple[SystemAnchor, bool] | None:
+) -> tuple[SystemAnchor | None, bool]:
     """Position resolution with the system-anchor fallback. Returns the
     (x_pc, y_pc, z_pc, dist_pc) tuple plus an ``inherited`` flag — True
     when the anchor backstopped a component whose own astrometry was
-    unresolved. Returns ``None`` only when both the component AND its
-    system anchor are unknown (entirely Gaia-blind WDS systems).
-    """
+    unresolved. Position is ``None`` only when both the component AND
+    its system anchor are unknown (entirely Gaia-blind WDS systems);
+    ``inherited`` is False in that case."""
     own = _position_pc(astrometry)
     if own is not None:
         return own, False
-    if anchor is not None:
-        return anchor, True
-    return None
+    return anchor, anchor is not None
 
 
 def build_multiples_row(
@@ -265,12 +263,7 @@ def build_multiples_row(
     ``"system_inherited"``.
     """
     athyg = _athyg_row_for_component(component, indices)
-    resolved = _resolve_position(astrometry, system_anchor)
-    if resolved is None:
-        position = None
-        inherited = False
-    else:
-        position, inherited = resolved[0], resolved[1]
+    position, inherited = _resolve_position(astrometry, system_anchor)
     # SIMBAD's per-component sp_type wins over the AT-HYG row's
     # ``spect`` — AT-HYG carries a single per-system string that gets
     # inherited by every component, even when each component has its own
@@ -372,9 +365,11 @@ def build_multiples_rows(
             s_ast = astrometry[i + 1]
             orbit, via = orbits[j]
             anchor = system_anchors.get(pair.wds_id)
-            p_pos = _resolve_position(p_ast, anchor)
-            s_pos = _resolve_position(s_ast, anchor)
-            if p_pos is not None or s_pos is not None:
+            if (
+                anchor is not None
+                or _position_pc(p_ast) is not None
+                or _position_pc(s_ast) is not None
+            ):
                 out.append(build_multiples_row(
                     pair, primary, p_ast, orbit, via,
                     is_primary=True, indices=indices,
