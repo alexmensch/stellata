@@ -5,6 +5,13 @@ sp_qual + sp_bibcode + otype + HIP / Gaia DR3 cross-IDs.
 Orchestration shell over scripts/refresh/simbad/; adding a column /
 cross-ID / input source is a one-line append to BASIC_COLUMNS /
 IDENT_LOOKUPS / collect_oid_requests below.
+
+Runtime: ~60-120 min on SIMBAD TAP. Five batched-IN passes over
+~300k oids: two ident-resolution passes (Gaia DR3 source_id →
+oid, then HIP-only AT-HYG → oid), one basic-table pull, one
+ident-lookup back to (HIP, Gaia DR3) cross-IDs. SIMBAD's TAP
+runs slower than ESA Gaia per batch; the unioned oid set after
+dedup is ~300k rows.
 """
 
 from __future__ import annotations
