@@ -1,15 +1,11 @@
-// GCVS variable-star catalogue parsing.
-//
-// Lifted out of build-catalog.ts in stellata-9mm.204. Reads gcvs5.txt
-// (main catalogue: period, max/min mags, variability type keyed by
+// GCVS variable-star catalogue parsing. Reads gcvs5.txt (main
+// catalogue: period, max/min mags, variability type keyed by
 // designation like "R And") and crossid.txt (Hip/HD/Tyc/SAO/etc. →
 // GCVS designation). applyVariability then cross-matches every Star
-// via HIP first, HD fallback.
-//
-// Both source files are pipe-delimited with trailing whitespace inside
-// cells; readPipeDelimited normalises that. Stars without a period
-// (irregular variables, SN) stay at 0/0 and don't pulse in the
-// renderer.
+// via HIP first, HD fallback. Both source files are pipe-delimited
+// with trailing whitespace inside cells; readPipeDelimited normalises
+// that. Stars without a period (irregular variables, SN) stay at 0/0
+// and don't pulse in the renderer.
 import { readFileSync } from 'node:fs';
 
 import { normalizeGcvsName, parseGcvsNumber } from './catalog-pure';
@@ -25,6 +21,17 @@ export interface VarStarXref {
   byHd: Map<number, string>;
 }
 
+// gcvs5.txt column indices (pipe-delimited, ~22 fields).
+const GCVS_MAIN_MIN_FIELDS = 12;
+const GCVS_MAIN_COL_NAME = 1;
+const GCVS_MAIN_COL_MAX_MAG = 4;
+const GCVS_MAIN_COL_MIN_MAG = 5;
+const GCVS_MAIN_COL_PERIOD = 10;
+
+// crossid.txt column indices (pipe-delimited).
+const GCVS_CROSSID_COL_LEFT = 0;   // "<CATALOG> <NUM>"
+const GCVS_CROSSID_COL_RIGHT = 1;  // "= <GCVS_NAME>"
+
 // Both GCVS files (gcvs5.txt and crossid.txt) are pipe-delimited with
 // trailing whitespace inside each cell. Yields per-line trimmed-field
 // arrays. Callers are expected to gate on file existence before calling.
@@ -39,13 +46,12 @@ function* readPipeDelimited(path: string): Iterable<string[]> {
 export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
   const out = new Map<string, VarStarData>();
   for (const fields of readPipeDelimited(srcPath)) {
-    // Expect ~22 fields; headers / malformed rows are shorter.
-    if (fields.length < 12) continue;
-    const name = normalizeGcvsName(fields[1] ?? '');
+    if (fields.length < GCVS_MAIN_MIN_FIELDS) continue;
+    const name = normalizeGcvsName(fields[GCVS_MAIN_COL_NAME] ?? '');
     if (!name) continue;
-    const maxMag = parseGcvsNumber(fields[4] ?? '');
-    const minMag = parseGcvsNumber(fields[5] ?? '');
-    const periodDays = parseGcvsNumber(fields[10] ?? '');
+    const maxMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MAX_MAG] ?? '');
+    const minMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MIN_MAG] ?? '');
+    const periodDays = parseGcvsNumber(fields[GCVS_MAIN_COL_PERIOD] ?? '');
     if (periodDays === null || periodDays <= 0) continue;
     if (maxMag === null || minMag === null) continue;
     const amp = minMag - maxMag; // min is dimmer (higher number) than max
@@ -61,8 +67,8 @@ export function parseGcvsCrossref(srcPath: string): VarStarXref {
   for (const fields of readPipeDelimited(srcPath)) {
     // Each line: "<CATALOG> <NUM>          | = <GCVS_NAME>  | | |"
     // We only care about Hip and HD since those are what AT-HYG carries.
-    const leftRaw = fields[0] ?? '';
-    const rightRaw = fields[1] ?? '';
+    const leftRaw = fields[GCVS_CROSSID_COL_LEFT] ?? '';
+    const rightRaw = fields[GCVS_CROSSID_COL_RIGHT] ?? '';
     if (!leftRaw || !rightRaw) continue;
 
     // Left side examples: "Hip  000008", "HD   000015"
