@@ -42,9 +42,7 @@ empty cells in the TSV correspond to masked (NULL) values from TAP.
 ``O B A F G K M``) — categorical, not numeric, so it bypasses float
 rounding on write.
 
-Runtime: ~20-30 min for the full 315k AT-HYG sweep (63 batches of 5000
-source_ids on ESA Gaia TAP). Single-server pull; no fallback to CDS
-because gaiadr3.astrophysical_parameters is ESA-hosted.
+Runtime: ~20-30 min.
 
 Idempotent — exits early if the output is newer than this script AND the
 AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
