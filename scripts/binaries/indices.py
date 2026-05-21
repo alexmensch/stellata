@@ -80,8 +80,8 @@ class IdentifierIndices:
     hip_to_ccdm: dict[int, str]
     ccdm_to_hips: dict[str, list[int]]
     # SIMBAD per-component spectral types, keyed on (wds_id, component).
-    # Produced by joining ``data/simbad/simbad_sptype.tsv`` (dch.64.1's
-    # unified per-oid spectral pull) against ``simbad_wds_xids.tsv`` on
+    # Produced by joining ``data/simbad/simbad_sptype.tsv`` (unified
+    # per-oid spectral pull) against ``simbad_wds_xids.tsv`` on
     # ``simbad_oid``. Stage 6 prefers this over AT-HYG's per-system
     # ``spect`` column so each WDS component carries its own MK / WD
     # classification — Sirius A as A0mA1Va vs an inherited string, 40 Eri

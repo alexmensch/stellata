@@ -85,8 +85,11 @@ from stage5_optical import (  # noqa: E402, F401
     classify_all_pairs, classify_pair_optical, optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
-    MULTIPLES_TSV_COLUMNS, SPECT_VIA_VALUES, MultiplesRow,
-    build_multiples_rows, write_multiples_tsv,
+    ASTROMETRY_VIA_SYSTEM_INHERITED, MULTIPLES_TSV_COLUMNS,
+    ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
+    MultiplesRow,
+    build_multiples_rows, build_standalone_rows,
+    compute_system_anchors, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401
     UPDATE_COUNTS_ENV_VAR,
@@ -316,6 +319,7 @@ def run(force: bool) -> int:
         pairs=wds_pairs, components=components,
         astrometry=astrometry, orbits=orbits,
         classifications=classifications, indices=indices,
+        simbad_xids=simbad_wds_xids,
     )
     n_emitted = write_multiples_tsv(rows, OUT_MULTIPLES)
     log(

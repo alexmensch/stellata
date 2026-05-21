@@ -619,9 +619,9 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         self.assertEqual(out, {})
 
     def test_column_order_independence(self) -> None:
-        # Future dch.64.1 column additions (rv, photometry, …) must not
-        # break this consumer. Verify reordered columns parse cleanly
-        # by name, not by position.
+        # Future column additions (rv, photometry, …) must not break
+        # this consumer. Verify reordered columns parse cleanly by
+        # name, not by position.
         sptype = (
             "source_id\thip\tsimbad_main_id\tsimbad_oid\totype\t"
             "sp_bibcode\tsp_qual\tsp_type\n"
@@ -3161,7 +3161,9 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         self.assertEqual(rows[0].comp, "A")
         self.assertEqual(rows[1].comp, "B")
 
-    def test_drops_pair_when_both_components_lack_position(self) -> None:
+    def test_drops_pair_when_both_components_lack_position_and_no_anchor(self) -> None:
+        # No other pair in the system has astrometry → the wds_id has no
+        # anchor → inheritance can't recover, and the pair drops.
         pair = _wds_pair(components="AB")
         components = [
             _resolved(gaia=1, component="A", is_primary=True),
@@ -3183,6 +3185,197 @@ class BuildMultiplesRowsTests(unittest.TestCase):
             indices=indices,
         )
         self.assertEqual(rows, [])
+
+    def test_inherits_system_anchor_when_pair_lacks_position(self) -> None:
+        # 40 Eri BC shape — the AB pair anchors the system with A's
+        # Gaia 5p; the BC pair's components both have unresolved
+        # astrometry (tight inner binary blended out of DR3). System
+        # inheritance lets BC emit with A's position and the
+        # ``astrometry_via=system_inherited`` tag.
+        ab_pair = _wds_pair(wds_id="04153-0739", components="AB")
+        bc_pair = _wds_pair(wds_id="04153-0739", components="BC")
+        components = [
+            _resolved(gaia=1, wds_id="04153-0739", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="04153-0739", component="B", is_primary=False),
+            _resolved(gaia=3, wds_id="04153-0739", component="B", is_primary=True),
+            _resolved(gaia=4, wds_id="04153-0739", component="C", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+        ]
+        orbits = [(None, "none"), (None, "none")]
+        classifications = [
+            bb.OpticalClassification(True, "wds_notes_kept"),
+            bb.OpticalClassification(True, "wds_notes_kept"),
+        ]
+        indices = _indices_with_astrometry(simbad_wds_spectra={
+            ("04153-0739", "B"): "DA2.9",
+        })
+
+        rows = bb.build_multiples_rows(
+            pairs=[ab_pair, bc_pair], components=components,
+            astrometry=astrometry, orbits=orbits,
+            classifications=classifications, indices=indices,
+        )
+        # AB → 2 rows (A direct, B unresolved-but-inherits anchor).
+        # BC → 2 rows (B and C both inherit anchor).
+        self.assertEqual(len(rows), 4)
+        bc_b = next(r for r in rows if r.system_id == "04153-0739-BC" and r.comp == "B")
+        self.assertEqual(bc_b.spect, "DA2.9")
+        self.assertEqual(bc_b.spect_via, "simbad")
+        self.assertEqual(bc_b.astrometry_via, bb.ASTROMETRY_VIA_SYSTEM_INHERITED)
+        self.assertAlmostEqual(bc_b.dist_pc or 0.0, 100.0, places=6)
+        # AB-B's astrometry was unresolved but it still inherits the
+        # anchor; the via flips to system_inherited.
+        ab_b = next(r for r in rows if r.system_id == "04153-0739-AB" and r.comp == "B")
+        self.assertEqual(ab_b.astrometry_via, bb.ASTROMETRY_VIA_SYSTEM_INHERITED)
+        # AB-A keeps its native gaia_5p tag.
+        ab_a = next(r for r in rows if r.system_id == "04153-0739-AB" and r.comp == "A")
+        self.assertEqual(ab_a.astrometry_via, "gaia_5p")
+
+    def test_standalone_sweep_emits_simbad_components_outside_pair_walk(self) -> None:
+        # A SIMBAD-known (wds_id, component) that doesn't appear as any
+        # decomposing-pair side gets a standalone row via the standalone
+        # sweep. Position inherits the system anchor; orbit_role is
+        # ``standalone``.
+        ab_pair = _wds_pair(wds_id="11111+1111", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="11111+1111", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="11111+1111", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        simbad_xids = {
+            ("11111+1111", "A"): bb.SimbadWdsXid(
+                simbad_oid=10, simbad_main_id="* A", gaia_source_id=1, hip=None,
+            ),
+            ("11111+1111", "B"): bb.SimbadWdsXid(
+                simbad_oid=20, simbad_main_id="* B", gaia_source_id=2, hip=None,
+            ),
+            # C is SIMBAD-known but appears in no pair row.
+            ("11111+1111", "C"): bb.SimbadWdsXid(
+                simbad_oid=30, simbad_main_id="* C", gaia_source_id=3, hip=42,
+            ),
+        }
+        indices = _indices_with_astrometry(simbad_wds_spectra={
+            ("11111+1111", "C"): "M5V",
+        })
+
+        rows = bb.build_multiples_rows(
+            pairs=[ab_pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices, simbad_xids=simbad_xids,
+        )
+        # AB → 2 rows; C → 1 standalone row.
+        self.assertEqual(len(rows), 3)
+        c_row = next(r for r in rows if r.comp == "C")
+        self.assertEqual(c_row.system_id, "11111+1111-_C")
+        self.assertEqual(c_row.orbit_role, "standalone")
+        self.assertEqual(c_row.source, "simbad")
+        self.assertEqual(c_row.spect, "M5V")
+        self.assertEqual(c_row.spect_via, "simbad")
+        self.assertEqual(c_row.regime, 0)
+        self.assertEqual(c_row.hip, 42)
+        self.assertEqual(c_row.gaia_source_id, 3)
+        self.assertEqual(c_row.astrometry_via, bb.ASTROMETRY_VIA_SYSTEM_INHERITED)
+        self.assertAlmostEqual(c_row.dist_pc or 0.0, 100.0, places=6)
+
+    def test_standalone_sweep_skips_already_emitted_components(self) -> None:
+        # A and B were emitted by the pair walk; the sweep must NOT
+        # double-emit them even though they are in simbad_xids.
+        ab_pair = _wds_pair(wds_id="22222+2222", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="22222+2222", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="22222+2222", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        simbad_xids = {
+            ("22222+2222", "A"): bb.SimbadWdsXid(
+                simbad_oid=10, simbad_main_id="* A", gaia_source_id=1, hip=None,
+            ),
+            ("22222+2222", "B"): bb.SimbadWdsXid(
+                simbad_oid=20, simbad_main_id="* B", gaia_source_id=2, hip=None,
+            ),
+        }
+        indices = _indices_with_astrometry()
+
+        rows = bb.build_multiples_rows(
+            pairs=[ab_pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices, simbad_xids=simbad_xids,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(
+            {r.orbit_role for r in rows}, {"primary", "secondary"},
+        )
+
+
+class ComputeSystemAnchorsTests(unittest.TestCase):
+    def test_picks_first_resolved_component_in_system(self) -> None:
+        # Primary has unresolved astrometry, secondary resolves — the
+        # secondary's position becomes the anchor.
+        pair = _wds_pair(wds_id="ZZ-1", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="ZZ-1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="ZZ-1", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        anchors = bb.compute_system_anchors([pair], components, astrometry)
+        self.assertIn("ZZ-1", anchors)
+        x, y, z, dist = anchors["ZZ-1"]
+        self.assertAlmostEqual(dist, 100.0, places=6)
+        self.assertAlmostEqual(x, 100.0, places=6)
+
+    def test_prefers_primary_when_both_resolved(self) -> None:
+        # First (primary) component wins the anchor slot when both have
+        # astrometry — set distinctly so the slot is observably the
+        # primary's value.
+        pair = _wds_pair(wds_id="ZZ-2", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="ZZ-2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="ZZ-2", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=20.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        anchors = bb.compute_system_anchors([pair], components, astrometry)
+        _, _, _, dist = anchors["ZZ-2"]
+        self.assertAlmostEqual(dist, 100.0, places=6)
+
+    def test_emits_no_anchor_when_no_component_in_system_resolves(self) -> None:
+        pair = _wds_pair(wds_id="ZZ-3", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="ZZ-3", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="ZZ-3", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+        ]
+        anchors = bb.compute_system_anchors([pair], components, astrometry)
+        self.assertNotIn("ZZ-3", anchors)
 
     def test_position_pc_from_parallax_and_radec(self) -> None:
         # 10 mas parallax → 100 pc; (RA, Dec) = (0, 0) → x-axis.
