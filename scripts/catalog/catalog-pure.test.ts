@@ -4,6 +4,7 @@ import {
   classifyFromSimbad,
   classifyFromGspspec,
   resolveSpectralInfo,
+  resolveSpectDisplay,
   parseSimbadSptypeTsv,
   SPECTRAL_UNKNOWN,
   tempKelvin,
@@ -247,6 +248,65 @@ describe('catalog-pure / classifyFromSimbad — non-MK AT-HYG bug rows', () => {
 
   it('covers all 14 known non-MK bug rows', () => {
     expect(rows).toHaveLength(14);
+  });
+});
+
+// SIMBAD retains Yerkes lowercase prefixes ("d" = dwarf, "g" = giant)
+// on nearby M dwarfs and late-type giants. The prefix IS the luminosity
+// declaration, so it overrides any trailing Roman. Without explicit
+// handling these rows fail the first-char gate and leak to the GSP-Spec
+// tier; counting confirms 169 dM* rows in the live TSV at fix time.
+describe('catalog-pure / classifyFromSimbad — Yerkes prefix', () => {
+  interface YerkesRow {
+    spType: string;
+    classIdx: number;
+    subclass: number;
+    lumClass: number;
+  }
+  const rows: YerkesRow[] = [
+    { spType: 'dM4.0',  classIdx: 6, subclass: 4, lumClass: 2 },
+    { spType: 'dM3.5',  classIdx: 6, subclass: 3, lumClass: 2 },
+    { spType: 'dM5',    classIdx: 6, subclass: 5, lumClass: 2 },
+    { spType: 'dM4.5e', classIdx: 6, subclass: 4, lumClass: 2 },
+    { spType: 'dK0',    classIdx: 5, subclass: 0, lumClass: 2 },
+    { spType: 'gK0',    classIdx: 5, subclass: 0, lumClass: 4 },
+    { spType: 'dM3+dM3', classIdx: 6, subclass: 3, lumClass: 2 },
+  ];
+
+  it.each(rows)(
+    '"$spType" → classIdx=$classIdx subclass=$subclass lumClass=$lumClass (not WD)',
+    ({ spType, classIdx, subclass, lumClass }) => {
+      const info = classifyFromSimbad(spType);
+      expect(info).not.toBeNull();
+      expect(info!.isWhiteDwarf).toBe(false);
+      expect(info!.classIdx).toBe(classIdx);
+      expect(info!.subclass).toBe(subclass);
+      expect(info!.lumClass).toBe(lumClass);
+    },
+  );
+
+  it('does not strip "d" when followed by a non-MK letter (lets the WD branch see it)', () => {
+    expect(classifyFromSimbad('dX0')).toBeNull();
+  });
+});
+
+describe('catalog-pure / resolveSpectDisplay', () => {
+  it('passes through the resolver-supplied string when present', () => {
+    expect(resolveSpectDisplay('A6V', 'DELTA DEL')).toBe('A6V');
+  });
+
+  it('falls back to the cleaned raw cell when the resolver returned null', () => {
+    expect(resolveSpectDisplay(null, '  G2  V**  ')).toBe('G2 V');
+  });
+
+  it('returns null when both resolver and raw cell are blank', () => {
+    expect(resolveSpectDisplay(null, '')).toBeNull();
+    expect(resolveSpectDisplay(null, '   ')).toBeNull();
+  });
+
+  it('strips trailing AT-HYG continuation markers (*+) but not leading ones', () => {
+    expect(resolveSpectDisplay(null, 'M3V***')).toBe('M3V');
+    expect(resolveSpectDisplay(null, '+K0III')).toBe('+K0III');
   });
 });
 
