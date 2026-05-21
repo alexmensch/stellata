@@ -37,6 +37,7 @@ from stage5_optical import (  # noqa: E402
     optical_counts,
 )
 from stage6_multiples import (  # noqa: E402
+    ASTROMETRY_VIA_SYSTEM_INHERITED, ORBIT_ROLE_STANDALONE,
     SPECT_VIA_VALUES, MultiplesRow,
 )
 
@@ -91,11 +92,26 @@ def build_binaries_counts(
     for r in multiples_rows:
         spect_counts[r.spect_via] = spect_counts.get(r.spect_via, 0) + 1
 
+    # Count system-anchor-inherited positions and standalone
+    # (per-component augmentation) rows directly off the emitted
+    # multiples list so the snapshot diff catches drift in either
+    # tier independently of Stage 3's per-component counts.
+    multiples_inherited = sum(
+        1 for r in multiples_rows
+        if r.astrometry_via == ASTROMETRY_VIA_SYSTEM_INHERITED
+    )
+    standalone_emitted = sum(
+        1 for r in multiples_rows
+        if r.orbit_role == ORBIT_ROLE_STANDALONE
+    )
+
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
         "decomposing_pairs": len(orbits),
         "components_total": len(components),
         "multiples_rows_emitted": len(multiples_rows),
+        "multiples_astrometry_system_inherited": multiples_inherited,
+        "multiples_standalone_emitted": standalone_emitted,
     }
     for tag in SPECT_VIA_VALUES:
         out[f"spect_{tag}"] = spect_counts[tag]

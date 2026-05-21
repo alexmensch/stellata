@@ -40,7 +40,10 @@ from stage2_resolve import (  # noqa: E402
 
 # Routing tags Stage 3 may emit for any component, in priority order.
 # `astrometry_counts` and the canonical build-time log line read from
-# this tuple so renaming a route only edits one place.
+# this tuple so renaming a route only edits one place. Stage 6 owns one
+# additional tag (``ASTROMETRY_VIA_SYSTEM_INHERITED``) it promotes on
+# multiples rows whose component inherited the system-anchor position;
+# that one is counted directly off emitted rows in Stage 7.
 ASTROMETRY_VIA_VALUES: tuple[str, ...] = (
     "gaia_nss_systemic",
     "hip2_long_baseline",
