@@ -76,8 +76,7 @@ review feedback is given:
 State what the module does. Not why it exists, when it was extracted,
 what it used to be part of, which bead drove it, or which siblings it
 complements. If you write more than 3 lines, stop — the content
-belongs in `docs/<area>.md` with a one-line code pointer. Correct
-exemplars: `scripts/binaries/stage{2..7}_*.py`. Match that shape.
+belongs in `docs/<area>.md` with a one-line code pointer.
 
 ### Substitution rule
 
@@ -93,13 +92,6 @@ surface should carry the content:
 - Explain what a function does → better function name + type signature.
 
 If none of those fit, the content is noise. Delete.
-
-### Precedent
-
-PR #107 (the 9mm.204 decomposition) shipped with ~30 forbidden patterns
-across 14 files. Review caught every one and the author spent a
-follow-up session sweeping them — paid out of the same context budget
-the writing session spent. **Don't be PR #107.**
 
 ## Folder & module conventions
 
