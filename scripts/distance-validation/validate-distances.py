@@ -132,7 +132,7 @@ def read_reference_tsv(path: Path) -> list[RefRow]:
     rows: list[RefRow] = []
     with path.open(encoding="utf-8") as f:
         header = f.readline().rstrip("\n").split("\t")
-        idx = {col: header.index(col) for col in header}
+        idx = {col: i for i, col in enumerate(header)}
         for line in f:
             cells = line.rstrip("\n").split("\t")
             sid_cell = cells[idx["gaia_source_id"]]
@@ -200,24 +200,25 @@ def build_report(
     bj_unresolved: list[str] = []
 
     for row in refs:
+        is_edsd = row.adopted == ADOPTED_EDSD_NEW
+        unresolved = edsd_unresolved if is_edsd else bj_unresolved
+        diffs = edsd_diffs if is_edsd else bj_diffs
         if row.gaia_source_id is None:
-            (edsd_unresolved if row.adopted == ADOPTED_EDSD_NEW else bj_unresolved).append(row.name)
+            unresolved.append(row.name)
             continue
         catalog_pc = bj.get(row.gaia_source_id)
         if catalog_pc is None:
-            (edsd_unresolved if row.adopted == ADOPTED_EDSD_NEW else bj_unresolved).append(row.name)
+            unresolved.append(row.name)
             continue
-        paper_pc = row.d_new_pc if row.adopted == ADOPTED_EDSD_NEW else row.d_bj_paper_pc
-        fd = fractional_diff(catalog_pc, paper_pc)
-        item = Disagreement(
+        paper_pc = row.d_new_pc if is_edsd else row.d_bj_paper_pc
+        diffs.append(Disagreement(
             name=row.name,
             source_id=row.gaia_source_id,
             catalog_pc=catalog_pc,
             paper_pc=paper_pc,
-            frac_diff=fd,
+            frac_diff=fractional_diff(catalog_pc, paper_pc),
             snr_tot=row.snr_tot,
-        )
-        (edsd_diffs if row.adopted == ADOPTED_EDSD_NEW else bj_diffs).append(item)
+        ))
 
     edsd_stats = aggregate_stats([d.frac_diff for d in edsd_diffs])
     bj_stats = aggregate_stats([d.frac_diff for d in bj_diffs])
@@ -268,9 +269,6 @@ def format_report(report: ValidationReport) -> str:
         f"validate-distances: EDSD_new |frac diff|>50%: {len(report.edsd_large)} "
         f"(bar ≤ {LARGE_DIFF_COUNT_MAX})"
     )
-    if report.edsd_large:
-        for d in report.edsd_large:
-            lines.append(f"    {_format_disagreement(d)}")
     lines.append(
         f"validate-distances: EDSD_new top-{TOP_N_REPORTED} disagreements:"
     )
