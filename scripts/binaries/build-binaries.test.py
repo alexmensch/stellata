@@ -619,9 +619,9 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         self.assertEqual(out, {})
 
     def test_column_order_independence(self) -> None:
-        # Future dch.64.1 column additions (rv, photometry, …) must not
-        # break this consumer. Verify reordered columns parse cleanly
-        # by name, not by position.
+        # Future column additions (rv, photometry, …) must not break
+        # this consumer. Verify reordered columns parse cleanly by
+        # name, not by position.
         sptype = (
             "source_id\thip\tsimbad_main_id\tsimbad_oid\totype\t"
             "sp_bibcode\tsp_qual\tsp_type\n"
