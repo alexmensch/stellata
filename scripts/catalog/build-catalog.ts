@@ -140,6 +140,7 @@ async function main() {
     figureCount: 0,
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
+    gaiaSourceIdBackfilled: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -156,9 +157,22 @@ async function main() {
     console.log('Bailer-Jones DR3 file not found; skipping distance override.');
   }
 
+  // HIP → Gaia DR3 source_id cross-walk: loaded once and shared between
+  // the AT-HYG single-star backfill in readStars and the GCVS byGaia
+  // bridge below.
+  let hipToGaia: Map<number, string> | null = null;
+  if (existsSync(SRC_GAIA_HIP_XMATCH)) {
+    console.log('Parsing Gaia DR3 ↔ HIP cross-walk...');
+    const tHx = Date.now();
+    hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
+    console.log(`  ${hipToGaia.size} entries in ${Date.now() - tHx}ms`);
+  } else {
+    console.log('Gaia DR3 ↔ HIP cross-walk not found; backfill + GCVS bridge skipped.');
+  }
+
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = await readStars(SRC_CSV, CON_INDEX, bjMap);
+  const { stars, stats } = await readStars(SRC_CSV, CON_INDEX, bjMap, hipToGaia);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
   console.log(`  dropped:`, stats.dropped);
@@ -176,11 +190,17 @@ async function main() {
         `LMC-cone stars (${pct}%) → dist_src='${DIST_SRC_LMC_KIN}'`,
     );
   }
+  if (stats.gaiaSourceIdBackfilled > 0) {
+    console.log(
+      `  gaia_source_id backfill: ${stats.gaiaSourceIdBackfilled} rows via HIP→Gaia cross-walk`,
+    );
+  }
   counts.recordCount = stars.length;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
+  counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
 
   // Sort by absolute magnitude ascending (brightest first). Record indices
   // are final after this point.
@@ -217,13 +237,8 @@ async function main() {
     const tGcvs = Date.now();
     const gcvsData = parseGcvsMain(SRC_GCVS);
     const xref = parseGcvsCrossref(SRC_GCVS_XREF);
-    if (existsSync(SRC_GAIA_HIP_XMATCH)) {
-      const hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
+    if (hipToGaia) {
       bridgeGcvsByGaia(xref, hipToGaia);
-    } else {
-      console.log(
-        '  Gaia DR3 ↔ HIP cross-walk not found; GCVS byGaia bridge skipped.',
-      );
     }
     const m = applyVariability(stars, gcvsData, xref);
     console.log(

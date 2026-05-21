@@ -75,6 +75,13 @@ export interface BuildCounts {
    *  rows; a sharp drop here means the AT-HYG column changed or the
    *  builder lost the plumbing. */
   gaiaSourceIdResolved: number;
+  /** AT-HYG rows whose `gaia` cell was blank but whose `hip` resolved
+   *  through `gaia_dr3_hip_xmatch.tsv` — surfaced as `gaia_source_id`
+   *  in the binary via the HIP→Gaia cross-walk fallback. Counted as
+   *  part of `gaiaSourceIdResolved`. Gaia-saturated bright binaries
+   *  (Sirius, Vega, …) are excluded from both AT-HYG.gaia and the
+   *  cross-walk, so they remain unresolved and are not counted here. */
+  gaiaSourceIdBackfilled: number;
 }
 
 export type CountDiff =

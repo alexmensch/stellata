@@ -35,6 +35,7 @@ import {
   buildDistanceOverride,
   applyBailerJonesOverride,
   isBailerJonesEligible,
+  resolveGaiaSourceId,
   BJ_ELIGIBLE_DIST_SRCS,
   DIST_SRC_BAILER_JONES,
   applyLmcKinematicOverride,
@@ -970,6 +971,61 @@ describe('catalog-pure / isBailerJonesEligible', () => {
     expect(BJ_ELIGIBLE_DIST_SRCS.has('G_R3')).toBe(true);
     expect(BJ_ELIGIBLE_DIST_SRCS.has('G_R2')).toBe(true);
     expect(BJ_ELIGIBLE_DIST_SRCS.has('HIP')).toBe(false);
+  });
+});
+
+describe('catalog-pure / resolveGaiaSourceId', () => {
+  const map = new Map<number, string>([
+    [2, '2341871673090078592'],
+    [3, '2881742980523997824'],
+  ]);
+
+  it('returns AT-HYG native source_id untouched (precedence over cross-walk)', () => {
+    expect(resolveGaiaSourceId('999', 2, map)).toEqual({
+      gaiaSourceId: '999',
+      backfilled: false,
+    });
+  });
+
+  it('backfills from HIP cross-walk when AT-HYG gaia is null', () => {
+    expect(resolveGaiaSourceId(null, 2, map)).toEqual({
+      gaiaSourceId: '2341871673090078592',
+      backfilled: true,
+    });
+  });
+
+  it('returns null when HIP is absent (no cross-walk key available)', () => {
+    expect(resolveGaiaSourceId(null, null, map)).toEqual({
+      gaiaSourceId: null,
+      backfilled: false,
+    });
+  });
+
+  it('returns null when HIP is not in the cross-walk (Gaia-saturated bright stars)', () => {
+    // Sirius (HIP 32349), Vega (91262), Procyon (37279) etc. are absent
+    // from `hipparcos2_best_neighbour` — they stay unresolved here.
+    expect(resolveGaiaSourceId(null, 32349, map)).toEqual({
+      gaiaSourceId: null,
+      backfilled: false,
+    });
+  });
+
+  it('returns null when the HIP cross-walk itself is null (build without xmatch file)', () => {
+    expect(resolveGaiaSourceId(null, 2, null)).toEqual({
+      gaiaSourceId: null,
+      backfilled: false,
+    });
+  });
+
+  it('rejects non-positive HIP values', () => {
+    expect(resolveGaiaSourceId(null, 0, map)).toEqual({
+      gaiaSourceId: null,
+      backfilled: false,
+    });
+    expect(resolveGaiaSourceId(null, -1, map)).toEqual({
+      gaiaSourceId: null,
+      backfilled: false,
+    });
   });
 });
 
