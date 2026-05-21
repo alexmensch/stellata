@@ -25,5 +25,8 @@
   "figureCount": 219,
   "figureConstellations": 88,
   "gaiaSourceIdResolved": 312087,
-  "gaiaSourceIdBackfilled": 64
+  "gaiaSourceIdBackfilled": 64,
+  "apsisEntries": 314726,
+  "apsisMatched": 311925,
+  "apsisTeffEither": 265040
 }
