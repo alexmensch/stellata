@@ -201,47 +201,7 @@ SPOT_CHECKS: list[dict[str, Any]] = [
 ]
 
 
-def check_spot_row(rows_by_id: dict[int, Any], spec: dict[str, Any]) -> None:
-    """Assert one pinned row matches expectations; raise SystemExit listing
-    every mismatched field (not just the first) so a future DR4 column
-    rename / unit change / re-routing of solution types shows the full
-    delta in a single failure message.
-
-    Expected-value forms in `spec`:
-      - str                  : exact match (e.g. nss_solution_type)
-      - (float, float)       : (expected, abs-tolerance)
-      - None                 : the cell must be masked / null
-    """
-    sid = spec["source_id"]
-    row = rows_by_id.get(sid)
-    if row is None:
-        raise SystemExit(
-            f"refresh-gaia-nss: spot-check source_id {sid} missing from query result — "
-            f"upstream selection has changed."
-        )
-    deltas: list[str] = []
-    for field, expected in spec.items():
-        if field == "source_id":
-            continue
-        actual = rl.coerce_masked(row[field])
-        if expected is None:
-            if actual is not None:
-                deltas.append(f"  {field}: expected NULL, got {actual!r}")
-        elif isinstance(expected, tuple):
-            want, tol = expected
-            if actual is None:
-                deltas.append(f"  {field}: expected ~{want} (±{tol}), got NULL")
-            elif abs(float(actual) - float(want)) > tol:
-                deltas.append(f"  {field}: expected ~{want} (±{tol}), got {float(actual)}")
-        else:
-            if str(actual) != str(expected):
-                deltas.append(f"  {field}: expected {expected!r}, got {actual!r}")
-    if deltas:
-        joined = "\n".join(deltas)
-        raise SystemExit(
-            f"refresh-gaia-nss: spot-check source_id {sid} drift — "
-            f"{len(deltas)} field(s) outside tolerance:\n{joined}"
-        )
+SCRIPT_NAME = "refresh-gaia-nss"
 
 
 def main() -> None:
@@ -270,7 +230,11 @@ def main() -> None:
 
     rows_by_id = {int(r["source_id"]): r for r in table}
     for spec in SPOT_CHECKS:
-        check_spot_row(rows_by_id, spec)
+        if not rl.check_spot_row(rows_by_id, spec, script_name=SCRIPT_NAME):
+            raise SystemExit(
+                f"{SCRIPT_NAME}: spot-check source_id {spec['source_id']} "
+                f"missing from query result — upstream selection has changed."
+            )
 
     rows = (
         {col: rl.coerce_masked(row[col]) for col in TSV_COLUMNS}

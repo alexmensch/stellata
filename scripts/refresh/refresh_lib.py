@@ -397,6 +397,66 @@ def _default_backends() -> list[TapBackend]:
     return [esa_backend(), cds_backend()]
 
 
+# ─── Spot-check pin helper ────────────────────────────────────────────
+
+def check_spot_row(
+    rows_by_id: Mapping[Any, Any],
+    spec: Mapping[str, Any],
+    *,
+    script_name: str,
+    key_field: str = "source_id",
+) -> bool:
+    """Assert one pinned row in a query result matches the expected
+    values. Returns True when the row is present AND all fields match.
+    Returns False when the keyed row is absent from ``rows_by_id`` —
+    callers decide whether absence is a hard fail (xmatch: a HIP /
+    Tycho identifier can't retire, missing row is a real signal) or a
+    soft warning (Bailer-Jones: a DR4 maintenance reload may quietly
+    retire a handful of source_ids).
+
+    Raises SystemExit when the row IS present but any field drifts.
+    All field deltas are reported in a single failure message — so a
+    future column rename, unit shift, or value drift surfaces every
+    mismatched field at once instead of failing on the first one.
+
+    Expected-value forms in ``spec``:
+      - ``str`` / ``int``       : exact match (string-compared, so
+                                  numeric types coerce cleanly).
+      - ``(float, float)``      : ``(expected, abs-tolerance)``.
+      - ``None``                : the cell must be masked / null.
+    """
+    key = spec[key_field]
+    row = rows_by_id.get(key)
+    if row is None:
+        return False
+    deltas: list[str] = []
+    for field, expected in spec.items():
+        if field == key_field:
+            continue
+        actual = coerce_masked(row[field])
+        if expected is None:
+            if actual is not None:
+                deltas.append(f"  {field}: expected NULL, got {actual!r}")
+        elif isinstance(expected, tuple):
+            want, tol = expected
+            if actual is None:
+                deltas.append(f"  {field}: expected ~{want} (±{tol}), got NULL")
+            elif abs(float(actual) - float(want)) > tol:
+                deltas.append(
+                    f"  {field}: expected ~{want} (±{tol}), got {float(actual)}"
+                )
+        else:
+            if actual is None or str(actual) != str(expected):
+                deltas.append(f"  {field}: expected {expected!r}, got {actual!r}")
+    if deltas:
+        joined = "\n".join(deltas)
+        raise SystemExit(
+            f"{script_name}: spot-check {key_field}={key} drift — "
+            f"{len(deltas)} field(s) outside tolerance:\n{joined}"
+        )
+    return True
+
+
 # ─── Masked-value normaliser ──────────────────────────────────────────
 
 def coerce_masked(value: Any) -> Any:

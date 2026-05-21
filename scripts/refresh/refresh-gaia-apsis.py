@@ -173,42 +173,7 @@ def query_batch(client: rl.TapClient, ids: list[int]):
     return client.run(ADQL_TEMPLATE.format(inlist=inlist))
 
 
-def check_spot_row(rows_by_id: dict[int, Any], spec: dict[str, Any]) -> None:
-    """Assert one pinned row matches expectations; raise SystemExit listing
-    every mismatched field (not just the first) so a future DR3.x reload
-    or column rename shows the full delta in a single failure message.
-
-    Expected-value forms in `spec`:
-      - (float, float)       : (expected, abs-tolerance)
-      - None                 : the cell must be masked / null
-    """
-    sid = spec["source_id"]
-    row = rows_by_id.get(sid)
-    if row is None:
-        raise SystemExit(
-            f"refresh-gaia-apsis: spot-check source_id {sid} missing from "
-            f"query result — upstream selection has changed."
-        )
-    deltas: list[str] = []
-    for field, expected in spec.items():
-        if field == "source_id":
-            continue
-        actual = rl.coerce_masked(row[field])
-        if expected is None:
-            if actual is not None:
-                deltas.append(f"  {field}: expected NULL, got {actual!r}")
-        else:
-            want, tol = expected
-            if actual is None:
-                deltas.append(f"  {field}: expected ~{want} (±{tol}), got NULL")
-            elif abs(float(actual) - float(want)) > tol:
-                deltas.append(f"  {field}: expected ~{want} (±{tol}), got {float(actual)}")
-    if deltas:
-        joined = "\n".join(deltas)
-        raise SystemExit(
-            f"refresh-gaia-apsis: spot-check source_id {sid} drift — "
-            f"{len(deltas)} field(s) outside tolerance:\n{joined}"
-        )
+SCRIPT_NAME = "refresh-gaia-apsis"
 
 
 def report_coverage(rows_by_id: dict[int, Any], total_input: int) -> float:
@@ -322,7 +287,11 @@ def main() -> None:
         )
 
     for spec in SPOT_CHECKS:
-        check_spot_row(rows_by_id, spec)
+        if not rl.check_spot_row(rows_by_id, spec, script_name=SCRIPT_NAME):
+            raise SystemExit(
+                f"{SCRIPT_NAME}: spot-check source_id {spec['source_id']} "
+                f"missing from query result — upstream selection has changed."
+            )
 
     # Emit sorted by source_id so re-runs are byte-identical.
     rows = (write_row(rows_by_id[sid]) for sid in sorted(rows_by_id))

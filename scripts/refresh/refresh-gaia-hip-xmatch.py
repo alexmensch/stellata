@@ -30,6 +30,8 @@ TSV columns (5)
     number_of_neighbours int   — ambiguity flag (1 = unique Gaia neighbour)
     xm_flag              int   — Gaia cross-match flag (see DR3 docs)
 
+Runtime: ~30 s (single ESA Gaia TAP query, ~99k rows).
+
 Idempotent — exits early if the output is newer than this script. Pass
 `--force` to rebuild unconditionally. Backend fallback (ESA → CDS) is
 provided by refresh_lib.TapClient.
@@ -44,6 +46,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -90,6 +93,38 @@ EXPECTED_ROW_COUNT_MAX = 99_600
 # (1e-3 arcsec) — 6 decimals preserves it with no loss of useful signal.
 ANGULAR_DISTANCE_DECIMALS = 6
 
+SCRIPT_NAME = "refresh-gaia-hip-xmatch"
+
+# Pinned HIP → gaia_source_id rows. HIP identifiers are the external
+# anchor — they don't retire across Gaia releases, so absence of a
+# pinned row is a real signal that warrants a hard fail (no
+# pin-with-tolerance pattern needed for xmatch tables). Tolerances on
+# angular_distance accommodate the fact that the underlying float
+# precision exceeds what the 6-decimal TSV write preserves.
+SPOT_CHECKS: list[dict[str, Any]] = [
+    {
+        "hip":                  8102,                  # Tau Ceti (G8.5V)
+        "gaia_source_id":       2452378776434477184,
+        "angular_distance":     (0.007540, 0.001),
+        "number_of_neighbours": 1,
+        "xm_flag":              8,
+    },
+    {
+        "hip":                  38430,                 # B-J outlier fixture in catalog-pure tests
+        "gaia_source_id":       5602025904044961536,
+        "angular_distance":     (0.005562, 0.001),
+        "number_of_neighbours": 1,
+        "xm_flag":              8,
+    },
+    {
+        "hip":                  46144,                 # B-J outlier fixture in catalog-pure tests
+        "gaia_source_id":       1040043514891491968,
+        "angular_distance":     (0.000844, 0.001),
+        "number_of_neighbours": 1,
+        "xm_flag":              8,
+    },
+]
+
 
 def main() -> None:
     force = "--force" in sys.argv
@@ -107,10 +142,21 @@ def main() -> None:
     n = len(table)
     if not (EXPECTED_ROW_COUNT_MIN <= n <= EXPECTED_ROW_COUNT_MAX):
         raise SystemExit(
-            f"refresh-gaia-hip-xmatch: row count {n} outside expected "
+            f"{SCRIPT_NAME}: row count {n} outside expected "
             f"[{EXPECTED_ROW_COUNT_MIN}, {EXPECTED_ROW_COUNT_MAX}] — "
             f"upstream schema or selection has changed; investigate before re-pinning."
         )
+
+    rows_by_hip = {int(r["hip"]): r for r in table}
+    for spec in SPOT_CHECKS:
+        if not rl.check_spot_row(
+            rows_by_hip, spec, script_name=SCRIPT_NAME, key_field="hip",
+        ):
+            raise SystemExit(
+                f"{SCRIPT_NAME}: pinned hip={spec['hip']} missing from "
+                f"xmatch — Gaia DR3 has dropped this row; investigate "
+                f"before re-pinning."
+            )
 
     rows = ({col: row[col] for col in TSV_COLUMNS} for row in table)
     written = rl.write_tsv(
