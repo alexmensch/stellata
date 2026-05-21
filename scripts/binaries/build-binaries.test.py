@@ -34,6 +34,11 @@ bb = importlib.util.module_from_spec(_SPEC)
 sys.modules["build_binaries"] = bb
 _SPEC.loader.exec_module(bb)
 
+# build-binaries.py re-exports the parser entry points but not the
+# private sanity-net helper or its floor constants. Import them
+# directly for the helper-level tests below.
+import parsers as _parsers_mod  # noqa: E402
+
 
 def _write(dirpath: Path, name: str, body: str) -> Path:
     p = dirpath / name
@@ -230,6 +235,127 @@ class Orb6Tests(unittest.TestCase):
         self.assertEqual(rows[0].components, "")
         self.assertEqual(rows[0].grade, 3)
         self.assertEqual(rows[0].hip, 25)
+
+
+# ─── Fixed-width parser sanity nets ──────────────────────────────────
+
+# Synthetic-row builders for the column-offset-drift tests. Each helper
+# produces a real-shape line; the `drift` variant truncates / blanks the
+# headline column so the parser's per-row safe_float / precise-coord
+# parse returns None.
+
+def _wds_line(*, with_precise: bool) -> str:
+    base = (
+        "00000+7530A  1248      1904 1982    5 246 235   0.8   0.6 "
+        "10.27 11.5  A7IV      +034+005          +74 1056      "
+    )
+    if with_precise:
+        return (base + "000006.64+752859.8").ljust(130)
+    return base.ljust(130)  # cols 112-130 blank → precise coord is None
+
+
+def _orb6_line(*, with_period: bool) -> str:
+    # Real ORB6 row with a 11.06y period at cols 81:92. Blank that
+    # span for the drift variant; the rest of the line is unchanged.
+    line = "000233.44+184100.1 00026+1841 HDS   2Aa,Ab   .     225000    201   8.49  10.62     22.68    y   0.34       0.1106 a  0.0028   59.8      1.3     17.4       2.3     2020.967       0.074    0.6313   0.0130   302.2      3.1    2000 2023 3 n Tok2024a wds00026+1841b.png"
+    if with_period:
+        return line
+    return line[:81] + (" " * 11) + line[92:]
+
+
+class WdsSummSanityNetTests(unittest.TestCase):
+    def test_passes_when_precise_coord_present(self) -> None:
+        # 20 rows, all with precise coords → no SystemExit.
+        body = "banner\n" + "\n".join(
+            [_wds_line(with_precise=True) for _ in range(20)]
+        ) + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "wds.txt", body)
+            pairs = bb.parse_wds_summ(p)
+        self.assertEqual(len(pairs), 20)
+
+    def test_raises_when_precise_coord_drifts_below_floor(self) -> None:
+        # 20 rows, 18 blank precise coords (10% non-null) → SystemExit.
+        # Floor is 95% so this is well below.
+        lines = [_wds_line(with_precise=False) for _ in range(18)]
+        lines += [_wds_line(with_precise=True) for _ in range(2)]
+        body = "banner\n" + "\n".join(lines) + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "wds.txt", body)
+            with self.assertRaises(SystemExit) as cm:
+                bb.parse_wds_summ(p)
+        msg = str(cm.exception)
+        self.assertIn("parse_wds_summ", msg)
+        self.assertIn("precise_ra_deg", msg)
+        self.assertIn("column-offset drift", msg)
+
+
+class Orb6SanityNetTests(unittest.TestCase):
+    def test_passes_when_period_present(self) -> None:
+        lines = [_orb6_line(with_period=True) for _ in range(20)]
+        body = "banner\n" + "\n".join(lines) + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            rows = bb.parse_orb6(p)
+        self.assertEqual(len(rows), 20)
+
+    def test_raises_when_period_column_drifts_below_floor(self) -> None:
+        # 20 rows, 19 with blanked-out period column → 5% non-null.
+        # Floor is 90% so this is well below.
+        lines = [_orb6_line(with_period=False) for _ in range(19)]
+        lines += [_orb6_line(with_period=True) for _ in range(1)]
+        body = "banner\n" + "\n".join(lines) + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            with self.assertRaises(SystemExit) as cm:
+                bb.parse_orb6(p)
+        msg = str(cm.exception)
+        self.assertIn("parse_orb6", msg)
+        self.assertIn("P_val", msg)
+        self.assertIn("column-offset drift", msg)
+
+
+class AssertFieldCoverageTests(unittest.TestCase):
+    """The shared helper itself — covers the empty-input + floor-band
+    cases the per-parser tests don't directly exercise."""
+
+    def test_empty_rows_is_a_noop(self) -> None:
+        # No rows: no SystemExit (the helper can't tell drift from a
+        # legitimately empty input).
+        _parsers_mod._assert_field_coverage(
+            [], "parse_test", "field", 0.99,
+        )
+
+    def test_passes_at_exact_floor(self) -> None:
+        # Floor is inclusive only above — rate >= floor passes.
+        from dataclasses import dataclass
+
+        @dataclass
+        class Row:
+            x: int | None
+
+        rows = [Row(1), Row(1), Row(1), Row(1), Row(None)]  # 80%
+        _parsers_mod._assert_field_coverage(
+            rows, "parse_test", "x", 0.80,
+        )
+
+    def test_raises_below_floor_with_diagnostic(self) -> None:
+        from dataclasses import dataclass
+
+        @dataclass
+        class Row:
+            x: int | None
+
+        rows = [Row(1), Row(None), Row(None), Row(None), Row(None)]  # 20%
+        with self.assertRaises(SystemExit) as cm:
+            _parsers_mod._assert_field_coverage(
+                rows, "parse_test", "x", 0.50,
+            )
+        msg = str(cm.exception)
+        self.assertIn("parse_test", msg)
+        self.assertIn("'x'", msg)
+        self.assertIn("20.0%", msg)
+        self.assertIn("50%", msg)
 
 
 class GcvsTests(unittest.TestCase):

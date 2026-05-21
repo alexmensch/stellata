@@ -47,6 +47,42 @@ def safe_int(s: str) -> int | None:
         return None
 
 
+# Per-parser non-null floors for headline fixed-width columns. A drop
+# below the floor signals that the source catalog's column offsets have
+# shifted (which has historically happened to WDS / ORB6), at which point
+# every downstream stage that reads the field would silently receive
+# None. Calibrated against current committed data — both fields pass at
+# ~100%; the gap to 95% / 90% absorbs the small fraction of historical
+# WDS / ORB6 rows that legitimately omit the field without flagging a
+# legitimate build as broken.
+WDS_SUMM_PRECISE_COORD_FLOOR = 0.95
+ORB6_PERIOD_COVERAGE_FLOOR = 0.90
+
+
+def _assert_field_coverage(
+    rows: list,
+    parser_name: str,
+    field_name: str,
+    floor: float,
+) -> None:
+    """Raise SystemExit when fewer than `floor` of `rows` carry a
+    non-None `field_name`. Pinned at parser exit so a silent column-
+    offset drift in a future WDS / ORB6 release fails the build
+    immediately rather than letting every downstream stage parse all-
+    None values from a misaligned field."""
+    if not rows:
+        return
+    n_ok = sum(1 for r in rows if getattr(r, field_name) is not None)
+    rate = n_ok / len(rows)
+    if rate < floor:
+        raise SystemExit(
+            f"{parser_name}: '{field_name}' non-null rate {rate:.1%} "
+            f"({n_ok:,}/{len(rows):,}) below {floor:.0%} floor — likely "
+            f"a column-offset drift in the source file. Re-verify the "
+            f"fixed-width layout against the parser indices."
+        )
+
+
 # ─── AT-HYG ──────────────────────────────────────────────────────────
 
 
@@ -203,6 +239,10 @@ def parse_wds_summ(path: Path) -> list[WdsPair]:
                 precise_ra_deg=precise[0] if precise else None,
                 precise_dec_deg=precise[1] if precise else None,
             ))
+    _assert_field_coverage(
+        pairs, "parse_wds_summ", "precise_ra_deg",
+        WDS_SUMM_PRECISE_COORD_FLOOR,
+    )
     return pairs
 
 
@@ -279,6 +319,9 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
                 grade=int(grade_str) if grade_str.isdigit() else 5,
                 ref=line[237:245].strip(),
             ))
+    _assert_field_coverage(
+        out, "parse_orb6", "P_val", ORB6_PERIOD_COVERAGE_FLOOR,
+    )
     return out
 
 
