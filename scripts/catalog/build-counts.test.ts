@@ -34,6 +34,9 @@ function baseCounts(): BuildCounts {
     figureConstellations: 88,
     gaiaSourceIdResolved: 307000,
     gaiaSourceIdBackfilled: 191,
+    apsisEntries: 270000,
+    apsisMatched: 260000,
+    apsisTeffEither: 255000,
   };
 }
 
