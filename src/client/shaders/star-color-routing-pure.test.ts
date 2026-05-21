@@ -8,14 +8,18 @@ import {
 import { ballesterosTeff } from '../../../scripts/colour/blackbody-lut-pure';
 import {
   SOLAR_BV_FALLBACK,
-  parseSpectral,
+  classifyFromSimbad,
+  SPECTRAL_UNKNOWN,
 } from '../../../scripts/catalog/catalog-pure';
 
 // ---- Per-tier coverage ------------------------------------------------
 
-const SPECTRAL_G5V = parseSpectral('G5V');
-const SPECTRAL_WD_DA2 = parseSpectral('DA2');
-const SPECTRAL_UNPARSEABLE = parseSpectral('???');
+const SPECTRAL_G5V = classifyFromSimbad('G5V')!;
+const SPECTRAL_WD_DA2 = classifyFromSimbad('DA2')!;
+// Unparseable input is what the resolver's `fallback` tier yields — share
+// the same SPECTRAL_UNKNOWN constant so test + production agree on the
+// sentinel shape.
+const SPECTRAL_UNPARSEABLE = SPECTRAL_UNKNOWN;
 
 function record(over: Partial<ColorRoutingRecord> = {}): ColorRoutingRecord {
   return {

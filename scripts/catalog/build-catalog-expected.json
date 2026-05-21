@@ -28,5 +28,9 @@
   "gaiaSourceIdBackfilled": 64,
   "apsisEntries": 314726,
   "apsisMatched": 311925,
-  "apsisTeffEither": 265040
+  "apsisTeffEither": 265040,
+  "simbadSptypeEntries": 325226,
+  "spectralBySimbad": 276861,
+  "spectralByGspspec": 33923,
+  "spectralFallback": 2473
 }

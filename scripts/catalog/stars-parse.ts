@@ -9,7 +9,7 @@ import { createReadStream } from 'node:fs';
 import { parse } from 'csv-parse';
 
 import {
-  parseSpectral,
+  resolveSpectralInfo,
   physicalRadius,
   isBailerJonesEligible,
   applyBailerJonesOverride,
@@ -21,6 +21,8 @@ import {
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
+  type ApsisRow,
+  type SimbadSpectralRow,
 } from './catalog-pure';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
@@ -103,6 +105,8 @@ export async function readStars(
   conIndexLookup: Map<string, number>,
   bjMap: Map<string, number>,
   hipToGaia: Map<number, string> | null = null,
+  simbadMap: Map<string, SimbadSpectralRow> = new Map(),
+  apsisMap: Map<string, ApsisRow> = new Map(),
 ): Promise<{
   stars: Star[];
   stats: {
@@ -113,6 +117,9 @@ export async function readStars(
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
+    spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
+    spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
+    spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
   };
 }> {
   const parser = createReadStream(srcCsvPath).pipe(
@@ -132,6 +139,9 @@ export async function readStars(
   let lmcCandidates = 0;
   let lmcOverridden = 0;
   let gaiaSourceIdBackfilled = 0;
+  let spectralBySimbad = 0;
+  let spectralByGspspec = 0;
+  let spectralFallback = 0;
 
   for await (const row of parser) {
     total++;
@@ -206,8 +216,17 @@ export async function readStars(
     }
     const ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
 
-    const spectRaw = (row.spect ?? '').trim();
-    const spectInfo = parseSpectral(spectRaw);
+    // Three-tier spectral resolver. SIMBAD's sp_type column is the
+    // canonical Morgan-Keenan source — free of variability-type
+    // contamination by SIMBAD's schema split. Gaia DR3 GSP-Spec's
+    // spectraltype_esphs enum fills in the long tail. Rows hit by
+    // neither tier render with classIdx=8 / lumClass=255 (neutral
+    // 5000 K temperature, no luminosity-class softness ramp).
+    const spectral = resolveSpectralInfo(gaiaSourceId, simbadMap, apsisMap);
+    const spectInfo = spectral.info;
+    if (spectral.source === 'simbad') spectralBySimbad++;
+    else if (spectral.source === 'gspspec') spectralByGspspec++;
+    else spectralFallback++;
     const physRadius = physicalRadius(absmag, spectInfo);
 
     const conCode: string = (row.con ?? '').trim();
@@ -227,9 +246,15 @@ export async function readStars(
     const hd = parseIntOrNull(row.hd);
     const hr = parseIntOrNull(row.hr);
     const gl = nonEmpty(row.gl);
-    const spectDisplay = spectRaw
-      ? spectRaw.replace(/\*+$/, '').trim().replace(/\s+/g, ' ')
-      : null;
+    // Hover/search display: prefer SIMBAD's MK-canonical string so the
+    // tooltip matches the resolved classIdx/lumClass instead of any
+    // variability-type annotation AT-HYG's spect cell may carry.
+    const spectRawDisplay = (row.spect ?? '').trim();
+    const spectDisplay =
+      spectral.spectDisplay ??
+      (spectRawDisplay
+        ? spectRawDisplay.replace(/\*+$/, '').trim().replace(/\s+/g, ' ')
+        : null);
 
     const isSol = proper === 'Sol';
     let flags = 0;
@@ -262,6 +287,9 @@ export async function readStars(
       lmcCandidates,
       lmcOverridden,
       gaiaSourceIdBackfilled,
+      spectralBySimbad,
+      spectralByGspspec,
+      spectralFallback,
     },
   };
 }
