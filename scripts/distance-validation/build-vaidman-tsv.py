@@ -40,8 +40,12 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Sequence
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from common import ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 OUT = ROOT / "data" / "distance-validation" / "vaidman-2025-supergiants.tsv"
@@ -59,9 +63,6 @@ TSV_COLUMNS = (
     "adopted",
     "gaia_source_id",
 )
-
-ADOPTED_EDSD_NEW = "EDSD_new"
-ADOPTED_BJ_OLD = "BJ_old"
 
 EXPECTED_A1_ROWS = 119
 EXPECTED_A2_ROWS = 13

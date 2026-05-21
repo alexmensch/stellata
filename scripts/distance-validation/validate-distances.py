@@ -45,12 +45,12 @@ import sys
 from pathlib import Path
 from typing import NamedTuple, Sequence
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from common import ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW, read_tsv_rows  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 REF_TSV = ROOT / "data" / "distance-validation" / "vaidman-2025-supergiants.tsv"
 BJ_TSV = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
-
-ADOPTED_EDSD_NEW = "EDSD_new"
-ADOPTED_BJ_OLD = "BJ_old"
 
 # Acceptance bars on the 119-star EDSD_new subset (see header for rationale).
 MEDIAN_FRAC_DIFF_MAX = 0.15
@@ -130,22 +130,18 @@ def read_reference_tsv(path: Path) -> list[RefRow]:
     them — the build step is supposed to hard-fail on unresolved names,
     so seeing one here means someone hand-edited the TSV."""
     rows: list[RefRow] = []
-    with path.open(encoding="utf-8") as f:
-        header = f.readline().rstrip("\n").split("\t")
-        idx = {col: i for i, col in enumerate(header)}
-        for line in f:
-            cells = line.rstrip("\n").split("\t")
-            sid_cell = cells[idx["gaia_source_id"]]
-            rows.append(
-                RefRow(
-                    name=cells[idx["name"]],
-                    gaia_source_id=int(sid_cell) if sid_cell else None,
-                    d_bj_paper_pc=float(cells[idx["d_bj_paper_pc"]]),
-                    d_new_pc=float(cells[idx["d_new_pc"]]),
-                    snr_tot=float(cells[idx["snr_tot"]]),
-                    adopted=cells[idx["adopted"]],
-                )
+    for row in read_tsv_rows(path):
+        sid_cell = row["gaia_source_id"]
+        rows.append(
+            RefRow(
+                name=row["name"],
+                gaia_source_id=int(sid_cell) if sid_cell else None,
+                d_bj_paper_pc=float(row["d_bj_paper_pc"]),
+                d_new_pc=float(row["d_new_pc"]),
+                snr_tot=float(row["snr_tot"]),
+                adopted=row["adopted"],
             )
+        )
     return rows
 
 
@@ -156,16 +152,11 @@ def read_bailer_jones_tsv(path: Path) -> dict[int, float]:
     that fail their photometric joint fit and the TSV carries those cells
     as the astropy "--" sentinel."""
     out: dict[int, float] = {}
-    with path.open(encoding="utf-8") as f:
-        header = f.readline().rstrip("\n").split("\t")
-        idx_sid = header.index("source_id")
-        idx_dist = header.index("r_med_photogeo")
-        for line in f:
-            cells = line.rstrip("\n").split("\t")
-            dist_cell = cells[idx_dist]
-            if not dist_cell or dist_cell == "--":
-                continue
-            out[int(cells[idx_sid])] = float(dist_cell)
+    for row in read_tsv_rows(path):
+        dist_cell = row["r_med_photogeo"]
+        if not dist_cell or dist_cell == "--":
+            continue
+        out[int(row["source_id"])] = float(dist_cell)
     return out
 
 
