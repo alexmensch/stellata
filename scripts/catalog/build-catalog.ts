@@ -43,6 +43,7 @@ import {
   buildRegressionReport,
   compareRegressionReports,
   formatRegressionDiff,
+  mergeReasonsFromSnapshot,
   parseSimbadSampleTsv,
   type RegressionReport,
 } from './distance-regression-check';
@@ -587,16 +588,19 @@ async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<v
 
   const shouldUpdate = process.env.UPDATE_DISTANCE_OUTLIERS === '1';
   const expectedExists = existsSync(EXPECTED_OUTLIERS);
+  const expected = expectedExists
+    ? (JSON.parse(readFileSync(EXPECTED_OUTLIERS, 'utf8')) as RegressionReport)
+    : null;
 
-  if (shouldUpdate || !expectedExists) {
-    await writeFile(EXPECTED_OUTLIERS, JSON.stringify(report, null, 2) + '\n');
+  if (shouldUpdate || !expected) {
+    const toWrite = expected ? mergeReasonsFromSnapshot(expected, report) : report;
+    await writeFile(EXPECTED_OUTLIERS, JSON.stringify(toWrite, null, 2) + '\n');
     console.log(
       `${shouldUpdate ? 'Updated' : 'Wrote initial'} ${EXPECTED_OUTLIERS}`,
     );
     return;
   }
 
-  const expected = JSON.parse(readFileSync(EXPECTED_OUTLIERS, 'utf8')) as RegressionReport;
   const diff = compareRegressionReports(expected, report);
   console.log(formatRegressionDiff(diff));
   if (diff.some((d) => d.status !== 'unchanged')) {

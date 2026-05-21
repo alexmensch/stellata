@@ -60,12 +60,20 @@ export interface SimbadDistanceEntry {
   distancePc: number;
 }
 
+// `reason` is a hand-edited rationale carried in the committed snapshot —
+// "ρ Cas yellow hypergiant; SIMBAD's 1/π is the noisy Hipparcos value",
+// "LMC kinematic snap legitimate", etc. Omitted on fresh detection;
+// preserved across UPDATE_DISTANCE_OUTLIERS=1 refreshes via mergeReasons
+// so a refresh never silently drops the rationale a human wrote. Not part
+// of the equality check — editing a reason in the snapshot does not fail
+// the build.
 export interface SelfConsistencyOutlier {
   id: string;          // canonical join key — "gaia:<source_id>" or "hip:<N>"
   distSrc: string;     // AT-HYG dist_src category that tripped the threshold
   athygDist: number;   // AT-HYG input distance (pc)
   finalDist: number;   // pipeline final distance (pc)
   logRatio: number;    // log10(finalDist / athygDist), rounded to 3 decimals
+  reason?: string;
 }
 
 export interface SimbadOutlier {
@@ -74,6 +82,7 @@ export interface SimbadOutlier {
   simbadDist: number;       // pc
   simbadMainId: string;     // SIMBAD's main_id, surfaced for human eyeballs
   logRatio: number;
+  reason?: string;
 }
 
 export interface RegressionReport {
@@ -224,6 +233,17 @@ export type OutlierDiff =
       actual: SelfConsistencyOutlier | SimbadOutlier;
     };
 
+/** Equality on data fields only — `reason` is hand-edited metadata and
+ *  varying it must not flip a snapshot from match to changed. */
+function outliersEqual<T extends SelfConsistencyOutlier | SimbadOutlier>(
+  a: T,
+  b: T,
+): boolean {
+  const { reason: _ra, ...aRest } = a;
+  const { reason: _rb, ...bRest } = b;
+  return JSON.stringify(aRest) === JSON.stringify(bRest);
+}
+
 function diffSection<T extends SelfConsistencyOutlier | SimbadOutlier>(
   section: 'selfConsistency' | 'simbad',
   expected: readonly T[],
@@ -236,7 +256,7 @@ function diffSection<T extends SelfConsistencyOutlier | SimbadOutlier>(
     const act = actualById.get(id);
     if (!act) {
       diffs.push({ section, status: 'removed', id });
-    } else if (JSON.stringify(exp) !== JSON.stringify(act)) {
+    } else if (!outliersEqual(exp, act)) {
       diffs.push({ section, status: 'changed', id, expected: exp, actual: act });
     } else {
       diffs.push({ section, status: 'unchanged', id });
@@ -248,6 +268,28 @@ function diffSection<T extends SelfConsistencyOutlier | SimbadOutlier>(
     }
   }
   return diffs;
+}
+
+/** Carry over hand-edited `reason` rationales from a prior snapshot onto
+ *  a freshly-computed report. Called on UPDATE_DISTANCE_OUTLIERS=1
+ *  refreshes so existing reasons survive an explicit rebaseline; new
+ *  outliers land without a reason for the committing human to fill in. */
+export function mergeReasonsFromSnapshot(
+  expected: RegressionReport,
+  actual: RegressionReport,
+): RegressionReport {
+  const expectedSc = new Map(expected.selfConsistency.map((o) => [o.id, o]));
+  const expectedSb = new Map(expected.simbad.map((o) => [o.id, o]));
+  return {
+    selfConsistency: actual.selfConsistency.map((o) => {
+      const prev = expectedSc.get(o.id);
+      return prev?.reason ? { ...o, reason: prev.reason } : o;
+    }),
+    simbad: actual.simbad.map((o) => {
+      const prev = expectedSb.get(o.id);
+      return prev?.reason ? { ...o, reason: prev.reason } : o;
+    }),
+  };
 }
 
 /** Compare two reports and emit per-outlier diffs. Pure — no I/O. */

@@ -10,6 +10,7 @@ import {
   detectSimbadOutlier,
   finalDistance,
   formatRegressionDiff,
+  mergeReasonsFromSnapshot,
   parseSimbadSampleTsv,
   starKey,
   type RegressionReport,
@@ -332,5 +333,104 @@ describe('compareRegressionReports + formatRegressionDiff', () => {
     };
     const diff = compareRegressionReports(expected, actual);
     expect(diff.some((d) => d.status === 'changed')).toBe(true);
+  });
+
+  it('ignores reason-only differences (hand-edited metadata never trips the gate)', () => {
+    const expected: RegressionReport = {
+      selfConsistency: [
+        {
+          id: 'hip:1',
+          distSrc: 'HIP',
+          athygDist: 100,
+          finalDist: 1000,
+          logRatio: 1,
+          reason: 'old rationale',
+        },
+      ],
+      simbad: [],
+    };
+    const actual: RegressionReport = {
+      selfConsistency: [
+        // Same data, reason missing (as freshly detected).
+        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1000, logRatio: 1 },
+      ],
+      simbad: [],
+    };
+    const diff = compareRegressionReports(expected, actual);
+    expect(diff.every((d) => d.status === 'unchanged')).toBe(true);
+  });
+});
+
+describe('mergeReasonsFromSnapshot', () => {
+  it('carries hand-edited reasons over on matching ids', () => {
+    const expected: RegressionReport = {
+      selfConsistency: [
+        {
+          id: 'hip:1',
+          distSrc: 'HIP',
+          athygDist: 100,
+          finalDist: 1000,
+          logRatio: 1,
+          reason: 'known calibrated outlier',
+        },
+      ],
+      simbad: [
+        {
+          id: 'gaia:42',
+          finalDist: 6000,
+          simbadDist: 1000,
+          simbadMainId: '* rho Cas',
+          logRatio: 0.778,
+          reason: 'noisy Hipparcos parallax',
+        },
+      ],
+    };
+    const actual: RegressionReport = {
+      selfConsistency: [
+        // Slightly refreshed numbers, no reason.
+        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1010, logRatio: 1.004 },
+      ],
+      simbad: [
+        { id: 'gaia:42', finalDist: 6050, simbadDist: 1000, simbadMainId: '* rho Cas', logRatio: 0.782 },
+      ],
+    };
+    const merged = mergeReasonsFromSnapshot(expected, actual);
+    expect(merged.selfConsistency[0].reason).toBe('known calibrated outlier');
+    expect(merged.selfConsistency[0].finalDist).toBe(1010);
+    expect(merged.simbad[0].reason).toBe('noisy Hipparcos parallax');
+    expect(merged.simbad[0].finalDist).toBe(6050);
+  });
+
+  it('leaves new outliers without a reason for the human to fill in', () => {
+    const expected: RegressionReport = { selfConsistency: [], simbad: [] };
+    const actual: RegressionReport = {
+      selfConsistency: [
+        { id: 'hip:999', distSrc: 'HIP', athygDist: 50, finalDist: 500, logRatio: 1 },
+      ],
+      simbad: [],
+    };
+    const merged = mergeReasonsFromSnapshot(expected, actual);
+    expect(merged.selfConsistency[0].reason).toBeUndefined();
+  });
+
+  it('drops the reason when the outlier is no longer present', () => {
+    // A star that used to be an outlier (with a reason) is no longer detected.
+    // The fresh actual report omits it; mergeReasons must not resurrect it.
+    const expected: RegressionReport = {
+      selfConsistency: [
+        {
+          id: 'hip:1',
+          distSrc: 'HIP',
+          athygDist: 100,
+          finalDist: 1000,
+          logRatio: 1,
+          reason: 'historical',
+        },
+      ],
+      simbad: [],
+    };
+    const actual: RegressionReport = { selfConsistency: [], simbad: [] };
+    const merged = mergeReasonsFromSnapshot(expected, actual);
+    expect(merged.selfConsistency).toEqual([]);
   });
 });
