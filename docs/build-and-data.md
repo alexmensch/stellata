@@ -53,21 +53,27 @@ dust map binaries — anything sourced from outside the repo.
 ## Binary catalog format (`public/catalog.bin`)
 
 Fixed-size records, sorted brightest-first by `absmag`. Current version is
-**v5** with a 52-byte stride. Magic and version step together
-(v3=`HYG3`, v4=`HYG4`, v5=`HYG5`). v5 appended a `uint64` Gaia DR3
-`source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM, NSS,
-Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
+**v6** with an 80-byte stride. Magic and version step together
+(v3=`HYG3`, v4=`HYG4`, v5=`HYG5`, v6=`HYG6`). v5 appended a `uint64` Gaia
+DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
+NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
 pipeline uses everywhere else; ~99.6% of records carry one (the residual
-~0.4% are the famous bright binaries Gaia couldn't fit a 5p PM to).
+~0.4% are the famous bright binaries Gaia couldn't fit a 5p PM to). v6
+appended seven `float32` Gaia DR3 Apsis astrophysical parameters at
+bytes 52–79 (gspphot Teff/logg/[M/H]/A0 then gspspec Teff/logg/[M/H]),
+keyed by the v5 `gaia_source_id` field — 99.6% of records match an Apsis
+row, with non-null Teff in either gspphot OR gspspec on ~85% (the
+population the runtime colour-LUT path can re-key from
+Ballesteros(B–V) → Apsis-direct).
 
 - Header (32 bytes)
-  - 0–3   ASCII `HYG5`
-  - 4–7   `uint32` version (currently 5)
+  - 0–3   ASCII `HYG6`
+  - 4–7   `uint32` version (currently 6)
   - 8–11  `uint32` count
   - 12–15 `uint32` nameTableOffset
   - 16–19 `uint32` nameTableLength
   - 20–31 reserved
-- Record (52 bytes per star)
+- Record (80 bytes per star)
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
   - 12–15 `float32`      absmag
   - 16–19 `float32`      ci (B–V colour index, default 0.65 for missing)
@@ -100,6 +106,20 @@ pipeline uses everywhere else; ~99.6% of records carry one (the residual
                           best-neighbour cross-walk; their orbital
                           rendering flows through `data/binaries/multiples.tsv`
                           instead.
+  - 52–55 `float32`      **teff_gspphot** (K) — Gaia DR3 Apsis Teff from
+                          gspphot. `NaN` (`NO_APSIS` sentinel) for the
+                          ~15% of records absent from gspphot or whose
+                          cell was blank. Tested with `Number.isNaN`.
+  - 56–59 `float32`      **logg_gspphot** (log cgs); NaN = absent.
+  - 60–63 `float32`      **mh_gspphot** ([M/H] dex); NaN = absent.
+  - 64–67 `float32`      **azero_gspphot** (mag, line-of-sight extinction); NaN = absent.
+  - 68–71 `float32`      **teff_gspspec** (K) — independent Gaia DR3
+                          Apsis Teff from gspspec. gspphot and gspspec
+                          are independent solutions; consumers preferring
+                          Apsis-direct Teff typically use gspphot first,
+                          gspspec as fallback. NaN = absent.
+  - 72–75 `float32`      **logg_gspspec** (log cgs); NaN = absent.
+  - 76–79 `float32`      **mh_gspspec** ([M/H] dex); NaN = absent.
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
   **Offset 0 is reserved** as the "no name" sentinel (2 zero bytes of
   padding); real names start at offset ≥ 2.
@@ -116,15 +136,15 @@ eclipsers clip but those render imperceptibly slowly anyway).
 
 The byte plan above is encoded once in `scripts/catalog/catalog-pure.ts` as
 `HEADER_LAYOUT`, `RECORD_LAYOUT`, `HEADER_SIZE`, `RECORD_SIZE`, `MAGIC`,
-`BINARY_VERSION`, and `NO_COMPANION`. Writer (`scripts/catalog/build-catalog.ts`),
-runtime reader (`src/client/catalog-loader.ts`), and the verify tool
-(`scripts/catalog/verify-catalog.ts`) all index off those constants — there are
-no inline byte offsets to drift apart. If you add fields, keep the
-44-byte stride (pad as needed), extend `RECORD_LAYOUT`, and **bump
-`BINARY_VERSION` + `MAGIC`** in `catalog-pure.ts`. Free flag bits today
-are `0x08`, `0x20`, `0x40`, `0x80` (see `FLAG_*` exports). Layout
-consistency is pinned by the `binary-format constants` block in
-`scripts/catalog/catalog-pure.test.ts`.
+`BINARY_VERSION`, `NO_COMPANION`, and `NO_APSIS`. Writer
+(`scripts/catalog/build-catalog.ts`), runtime reader
+(`src/client/loaders/catalog-loader.ts`), and the verify tool
+(`scripts/catalog/verify-catalog.ts`) all index off those constants —
+there are no inline byte offsets to drift apart. If you add fields,
+extend `RECORD_LAYOUT` and **bump `BINARY_VERSION` + `MAGIC`** in
+`catalog-pure.ts`. Free flag bits today are `0x08`, `0x20`, `0x40`,
+`0x80` (see `FLAG_*` exports). Layout consistency is pinned by the
+`binary-format constants` block in `scripts/catalog/catalog-pure.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,
