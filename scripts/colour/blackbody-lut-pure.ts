@@ -1,8 +1,5 @@
-// Pure colour-LUT math shared by the generator (`blackbody-lut.ts`), the
-// runtime DataTexture wrapper (`src/client/shaders/blackbody-lut.ts`),
-// the GLSL shader (mirrored), and the star-colour routing helper
-// (`src/client/shaders/star-color-routing-pure.ts`). No node:* imports —
-// safe to import from the browser bundle.
+// Pure colour-LUT math: Ballesteros 2012 (and its analytic inverse) plus
+// LUT shape constants. Node-free so client code can import it.
 
 // ---- LUT shape (must match src/client/shaders/blackbody-lut-data.ts) ----
 
@@ -45,28 +42,4 @@ export function ballesterosBvFromTeff(teff: number): number {
 /** B-V value at LUT index i ∈ [0, LUT_SIZE-1]. Endpoints map to BV_MIN / BV_MAX. */
 export function bvAtIndex(i: number): number {
   return BV_MIN + (i / (LUT_SIZE - 1)) * (BV_MAX - BV_MIN);
-}
-
-// ---- Teff → LUT t -------------------------------------------------------
-
-/** Effective Teff at the LUT's hot end (B-V = BV_MIN). Stars with Apsis
- *  Teff above this clamp to the hottest LUT entry — physically blue-white
- *  is the right asymptote for O/early-B / hot DA white dwarfs. */
-export const TEFF_AT_BV_MIN = ballesterosTeff(BV_MIN);
-
-/** Effective Teff at the LUT's cool end (B-V = BV_MAX). Apsis Teff
- *  below this clamps to the coolest LUT entry. */
-export const TEFF_AT_BV_MAX = ballesterosTeff(BV_MAX);
-
-/**
- * Convert a Teff (K) to a normalised LUT t coordinate in [0, 1] suitable
- * for `texture(uColorLut, vec2(t, 0.5))`. Walks back through Ballesteros
- * 2012's inverse to land in the LUT's B-V parameter space, then
- * normalises against [BV_MIN, BV_MAX]. Out-of-range Teff clamps to the
- * nearer endpoint.
- */
-export function teffToLutT(teff: number): number {
-  const bv = ballesterosBvFromTeff(teff);
-  const t = (bv - BV_MIN) / (BV_MAX - BV_MIN);
-  return Math.min(1.0, Math.max(0.0, t));
 }
