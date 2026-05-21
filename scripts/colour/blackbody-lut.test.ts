@@ -14,7 +14,7 @@ import {
   LUT_SIZE as CONSUMER_LUT_SIZE,
   BV_MIN as CONSUMER_BV_MIN,
   BV_MAX as CONSUMER_BV_MAX,
-} from '../src/client/shaders/blackbody-lut-data';
+} from '../../src/client/shaders/blackbody-lut-data';
 
 // ---- Ballesteros parity ----------------------------------------------
 //
@@ -39,8 +39,8 @@ describe('ballesterosTeff', () => {
 
 // ---- LUT consumer module is in sync ---------------------------------
 //
-// The generated module in src/client/shaders/blackbody-lut.ts must match
-// what scripts/blackbody-lut.ts emits today. Drift = regenerate via
+// The generated module in src/client/shaders/blackbody-lut-data.ts must match
+// what scripts/colour/blackbody-lut.ts emits today. Drift = regenerate via
 // `npm run build:lut` and commit both files in the same PR.
 
 describe('LUT byte signature', () => {

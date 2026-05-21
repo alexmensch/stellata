@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data/simbad_wds_xids.tsv — per-component SIMBAD-curated WDS↔Gaia DR3 cross-IDs.
+"""Refresh data/simbad/simbad_wds_xids.tsv — per-component SIMBAD-curated WDS↔Gaia DR3 cross-IDs.
 
 Stage 2 supplement (stellata-dch.60) for build-binaries.py's WDS-component →
 Gaia source_id resolution cascade. The principled alternative to a hand-rolled
@@ -44,7 +44,7 @@ bypassed via ``backends=[simbad_backend()]``.
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-simbad-wds-xids.py
+    .venv/bin/python scripts/refresh/refresh-simbad-wds-xids.py
 """
 
 from __future__ import annotations
@@ -59,17 +59,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT_DIR = Path(__file__).resolve().parent
-SRC_WDS_SUMM = ROOT / "data" / "wds_summ.txt"
-OUT = ROOT / "data" / "simbad_wds_xids.tsv"
+SRC_WDS_SUMM = ROOT / "data" / "wds" / "wds_summ.txt"
+OUT = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 
 # Reuse build-binaries.py's WDS parser + split_components so the input
 # universe is byte-identical to what Stage 2 will look up. spec_from_file
 # is required because the script filename contains a hyphen, which
 # `import build_binaries` cannot resolve. Mirrors the test file's loader.
 _SPEC = importlib.util.spec_from_file_location(
-    "build_binaries", SCRIPT_DIR / "build-binaries.py",
+    "build_binaries", SCRIPT_DIR.parent / "binaries" / "build-binaries.py",
 )
 assert _SPEC and _SPEC.loader
 _bb = importlib.util.module_from_spec(_SPEC)

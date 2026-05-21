@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia_dr3_astrometry.tsv — Gaia DR3 astrometry by source_id.
+"""Refresh data/gaia/gaia_dr3_astrometry.tsv — Gaia DR3 astrometry by source_id.
 
 Phase 2 Stage 2-output consumer (stellata-dch.29). Reads the deduped
-``data/gaia_astrometry_source_id_request.tsv`` produced by
-scripts/build-binaries.py Stage 2 (stellata-dch.28), chunks the
+``data/gaia/gaia_astrometry_source_id_request.tsv`` produced by
+scripts/binaries/build-binaries.py Stage 2 (stellata-dch.28), chunks the
 source_id list, queries ``gaiadr3.gaia_source`` via TAP, and writes
 the per-source astrometry needed by Stage 3 (stellata-dch.30) and
 Stage 4 (stellata-dch.31).
@@ -52,7 +52,7 @@ that are confirmed members of the request file (see SPOT_CHECKS).
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-gaia-astrometry.py
+    .venv/bin/python scripts/refresh/refresh-gaia-astrometry.py
 """
 
 from __future__ import annotations
@@ -66,9 +66,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-REQUEST = ROOT / "data" / "gaia_astrometry_source_id_request.tsv"
-OUT = ROOT / "data" / "gaia_dr3_astrometry.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+REQUEST = ROOT / "data" / "gaia" / "gaia_astrometry_source_id_request.tsv"
+OUT = ROOT / "data" / "gaia" / "gaia_dr3_astrometry.tsv"
 
 TSV_COLUMNS = [
     "source_id",
@@ -214,7 +214,7 @@ SPOT_CHECKS: list[dict[str, Any]] = [
 def read_source_ids(path: Path) -> list[int]:
     """Read the one-column request TSV; skip the header row.
 
-    Contract from scripts/build-binaries.py:write_astrometry_request —
+    Contract from scripts/binaries/build-binaries.py:write_astrometry_request —
     one ``gaia_source_id`` column, sorted, unique, non-null.
     """
     ids: list[int] = []

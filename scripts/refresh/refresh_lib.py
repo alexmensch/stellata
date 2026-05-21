@@ -31,7 +31,7 @@ Provides:
   validate_schema  — assert column names + dtypes on the returned table
                      (astropy Table / pandas DataFrame / dict-of-columns).
   is_up_to_date    — mtime-based idempotency check; mirrors the
-                     scripts/build-clouds.py pattern.
+                     scripts/clouds/build-clouds.py pattern.
   write_tsv        — canonical tab-separated writer (header + rows;
                      None → empty cell; optional float rounding).
 
@@ -40,7 +40,7 @@ Venv setup:
     .venv/bin/pip install -r scripts/requirements-refresh.txt
 
 Test (no network):
-    .venv/bin/python scripts/refresh_lib.test.py
+    .venv/bin/python scripts/refresh/refresh_lib.test.py
 """
 
 from __future__ import annotations

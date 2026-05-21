@@ -42,14 +42,14 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '..', '..');
 
-const SRC_CSV = resolve(ROOT, 'data/athyg_33_classic_ids.csv');
-const SRC_STELLARIUM = resolve(ROOT, 'data/stellarium-modern-skyculture.json');
-const SRC_GCVS = resolve(ROOT, 'data/gcvs5.txt');
-const SRC_GCVS_XREF = resolve(ROOT, 'data/crossid.txt');
-const SRC_HIP_CCDM = resolve(ROOT, 'data/hip_ccdm.tsv');
-const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones-dr3.tsv');
+const SRC_CSV = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
+const SRC_STELLARIUM = resolve(ROOT, 'data/stellarium/stellarium-modern-skyculture.json');
+const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
+const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
+const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
+const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
@@ -739,7 +739,7 @@ async function main() {
   }
 
   // Accumulator for the headline counts asserted against
-  // scripts/build-catalog-expected.json at the end of the build
+  // scripts/catalog/build-catalog-expected.json at the end of the build
   // (stellata-9mm.183). Every field has a default so a code path that
   // legitimately skips a section (missing GCVS files, no Sol) doesn't
   // leave the field undefined.

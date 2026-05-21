@@ -10,7 +10,7 @@ import {
   NO_COMPANION,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
-} from '../../../scripts/catalog-pure';
+} from '../../../scripts/catalog/catalog-pure';
 
 export interface Constellation {
   code: string;

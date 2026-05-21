@@ -12,7 +12,7 @@
 //      the GPU texture via gl.texSubImage3D. Subsequent frames sample the
 //      newly-populated region automatically.
 //
-// The format must stay in sync with scripts/build-dust.py — both derive
+// The format must stay in sync with scripts/dust/build-dust.py — both derive
 // constants from the manifest at runtime, so bumping gridSize/chunkSize/
 // bounds in the Python script automatically flows through here.
 

@@ -11,7 +11,7 @@ import {
   RECORD_SIZE,
   MAGIC,
   BINARY_VERSION,
-} from '../../../scripts/catalog-pure';
+} from '../../../scripts/catalog/catalog-pure';
 
 interface StarRecord {
   pos: [number, number, number];

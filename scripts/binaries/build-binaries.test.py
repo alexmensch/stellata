@@ -6,7 +6,7 @@ directory. No network, no large catalog files — the suite runs in well
 under a second.
 
 Run:
-    python3 scripts/build-binaries.test.py
+    python3 scripts/binaries/build-binaries.test.py
 
 (The `.test.py` filename matches the project's `.test.ts` convention but
 trips Python's `-m unittest` module-path parser on the dot; invoking the

@@ -1,4 +1,4 @@
-// Pure helpers for scripts/build-local-group.ts — kept off the I/O
+// Pure helpers for scripts/local-group/build-local-group.ts — kept off the I/O
 // path so vitest can exercise the distance filter, override-merge,
 // orientation quaternion construction, and label-threshold defaulting
 // without touching the filesystem.

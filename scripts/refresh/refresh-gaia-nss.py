@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia_dr3_nss_two_body.tsv — Gaia DR3 NSS two-body orbits.
+"""Refresh data/gaia/gaia_dr3_nss_two_body.tsv — Gaia DR3 NSS two-body orbits.
 
 Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
 Pulls the full `gaiadr3.nss_two_body_orbit` table — 443,205 rows of
@@ -51,7 +51,7 @@ Idempotent — exits early if the output is newer than this script. Pass
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-gaia-nss.py
+    .venv/bin/python scripts/refresh/refresh-gaia-nss.py
 """
 
 from __future__ import annotations
@@ -65,8 +65,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "gaia_dr3_nss_two_body.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+OUT = ROOT / "data" / "gaia" / "gaia_dr3_nss_two_body.tsv"
 
 TSV_COLUMNS = [
     "source_id",

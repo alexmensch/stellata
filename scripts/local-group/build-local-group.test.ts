@@ -84,7 +84,7 @@ describe('LVDB-band display-name coverage (stellata-1ui)', () => {
   // rather than only at build-output review time. Reading committed
   // data follows the pattern in src/client/stellata-events.test.ts.
   const here = dirname(fileURLToPath(import.meta.url));
-  const csvPath = join(here, '..', 'data', 'local-group', 'lvdb-snapshot.csv');
+  const csvPath = join(here, '..', '..', 'data', 'local-group', 'lvdb-snapshot.csv');
   const lvdb = parseLvdb(readFileSync(csvPath, 'utf8'));
   const renderable = filterForRendering(lvdb);
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical parameters.
+"""Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical parameters.
 
 Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
 Pulls per-Gaia-source spectroscopic stellar parameters from
@@ -44,7 +44,7 @@ AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-gaia-apsis.py
+    .venv/bin/python scripts/refresh/refresh-gaia-apsis.py
 """
 
 from __future__ import annotations
@@ -58,9 +58,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-ATHYG = ROOT / "data" / "athyg_33_classic_ids.csv"
-OUT = ROOT / "data" / "gaia_dr3_apsis.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+ATHYG = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
+OUT = ROOT / "data" / "gaia" / "gaia_dr3_apsis.tsv"
 
 TSV_COLUMNS = [
     "source_id",

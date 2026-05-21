@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data/hip2_van_leeuwen.tsv — Hipparcos-2 (van Leeuwen 2007) reduction.
+"""Refresh data/hipparcos/hip2_van_leeuwen.tsv — Hipparcos-2 (van Leeuwen 2007) reduction.
 
 Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
 HIP2 (VizieR I/311/hip2) is the improved astrometric reduction of all
@@ -51,7 +51,7 @@ Idempotent — exits early if the output is newer than this script. Pass
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-hipparcos2.py
+    .venv/bin/python scripts/refresh/refresh-hipparcos2.py
 """
 
 from __future__ import annotations
@@ -64,8 +64,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "hip2_van_leeuwen.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+OUT = ROOT / "data" / "hipparcos" / "hip2_van_leeuwen.tsv"
 
 # Bounds around HIP2's published row count (117,955). Slack accommodates
 # the small drift Vizier mirrors occasionally show without false-negatives.

@@ -34,9 +34,9 @@ Encoding:
   decode as "very dense" so the visual effect is preserved.
 
 Usage:
-  python3 scripts/build-dust.py                 # fetch + resample real map (main flavor)
-  python3 scripts/build-dust.py --synthetic     # fake pattern for dev
-  python3 scripts/build-dust.py --flavor less_data_but_2kpc   # extended-range validation run
+  python3 scripts/dust/build-dust.py                 # fetch + resample real map (main flavor)
+  python3 scripts/dust/build-dust.py --synthetic     # fake pattern for dev
+  python3 scripts/dust/build-dust.py --flavor less_data_but_2kpc   # extended-range validation run
 
 The real mode needs `pip install -r scripts/requirements-dust.txt` and
 downloads ~3.2 GB via `dustmaps` on first run.
@@ -93,7 +93,7 @@ ZGR_TO_AV = 2.742   # mag A_V per E_ZGR (dimensionless)
 # sightline 200 pc → 10 E_ZGR → 27 mag A_V peak-through-the-densest-filament
 # (matches published values; most real sightlines clip far below this).
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DUST = ROOT / "data" / "dust"
 PUBLIC_DUST = ROOT / "public" / "dust"
 

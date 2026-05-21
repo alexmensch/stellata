@@ -38,7 +38,7 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '..', '..');
 
 const SRC_CSV = resolve(ROOT, 'data/local-group/lvdb-snapshot.csv');
 const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');

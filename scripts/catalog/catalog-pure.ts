@@ -213,8 +213,9 @@ export function parseGcvsNumber(s: string): number | null {
 // ---- Binary catalog format ----------------------------------------------
 
 // Single source of truth for the catalog.bin file layout, shared by the
-// writer (scripts/build-catalog), the runtime reader
-// (src/client/catalog-loader), and the verify tool (scripts/verify-catalog).
+// writer (scripts/catalog/build-catalog), the runtime reader
+// (src/client/loaders/catalog-loader), and the verify tool
+// (scripts/catalog/verify-catalog).
 //
 // File structure:
 //   [0,                       HEADER_SIZE)                              header
@@ -311,7 +312,7 @@ export interface SearchEntry {
 // ---- Catalog flag bits --------------------------------------------------
 
 // Per-star bitfield stored at RECORD_LAYOUT.flags. Single source of truth
-// for both writers (scripts/build-catalog, scripts/catalog-pure
+// for both writers (scripts/catalog/build-catalog, scripts/catalog/catalog-pure
 // inferBinaries) and readers (catalog-loader, chart-labels,
 // verify-catalog). Adding a bit means adding a name to the FLAGS
 // registry, not sprinkling another magic number — the regression tests
@@ -569,7 +570,7 @@ export function isBailerJonesEligible(
   return BJ_ELIGIBLE_DIST_SRCS.has(distSrc);
 }
 
-/** Parse the TSV produced by `scripts/refresh-bailer-jones.py` into a
+/** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
  *  numeric parse would silently corrupt the join key.
@@ -593,7 +594,7 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
   if (missing.length) {
     throw new Error(
       `Bailer-Jones TSV is missing required columns: ${missing.join(', ')}. ` +
-        `Re-run scripts/refresh-bailer-jones.py.`,
+        `Re-run scripts/refresh/refresh-bailer-jones.py.`,
     );
   }
   for (let i = 1; i < lines.length; i++) {

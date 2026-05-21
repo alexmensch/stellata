@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data/bailer-jones-dr3.tsv — Bayesian DR3 distance posteriors.
+"""Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bayesian DR3 distance posteriors.
 
 Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
 Bailer-Jones et al. 2021 (AJ 161, 147; VizieR I/352) publishes Bayesian
@@ -46,7 +46,7 @@ AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-bailer-jones.py
+    .venv/bin/python scripts/refresh/refresh-bailer-jones.py
 """
 
 from __future__ import annotations
@@ -59,9 +59,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-ATHYG = ROOT / "data" / "athyg_33_classic_ids.csv"
-OUT = ROOT / "data" / "bailer-jones-dr3.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+ATHYG = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
+OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
 # 5000 ids → ~98 KB query, ~80 s round-trip on CDS TAP. 10000 was ~5 min
 # (superlinear server cost in IN-clause length).

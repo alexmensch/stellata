@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia_dr3_tyc_xmatch.tsv — Tycho-2 → Gaia DR3 source_id cross-walk.
+"""Refresh data/gaia/gaia_dr3_tyc_xmatch.tsv — Tycho-2 → Gaia DR3 source_id cross-walk.
 
 Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
-Companion to scripts/refresh-gaia-hip-xmatch.py: HIP covers V ≲ 9 and
+Companion to scripts/refresh/refresh-gaia-hip-xmatch.py: HIP covers V ≲ 9 and
 Tycho-2 (with TDSC merged in) extends down to V ~ 11.5, so this TSV is
 how the Stage 1 indexer resolves any Tycho-2 / TDSC component to a Gaia
 DR3 source_id without a position match.
@@ -41,7 +41,7 @@ provided by refresh_lib.TapClient.
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-gaia-tyc-xmatch.py
+    .venv/bin/python scripts/refresh/refresh-gaia-tyc-xmatch.py
 """
 
 from __future__ import annotations
@@ -53,8 +53,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "gaia_dr3_tyc_xmatch.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+OUT = ROOT / "data" / "gaia" / "gaia_dr3_tyc_xmatch.tsv"
 
 ADQL = """
 SELECT

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import type { ChartModeContext } from './chart-mode';
 import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
-import { FLAG_BINARY_PRIMARY } from '../../../scripts/catalog-pure';
+import { FLAG_BINARY_PRIMARY } from '../../../scripts/catalog/catalog-pure';
 import { projectToScreen } from '../overlays/overlay-project';
 import { setNumAttr } from '../overlays/dirty-attr';
 import { getChartDiscParams } from '../camera/star-physics';

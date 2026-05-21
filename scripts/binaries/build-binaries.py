@@ -17,11 +17,11 @@ component to a Gaia DR3 ``source_id`` via the cascade canonicalised in
   see ``ATHYG_REFERENCE_EPOCH``).
 * ``simbad_xid`` (``stellata-dch.60``) — SIMBAD's curated
   ``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs read from the committed
-  ``data/simbad_wds_xids.tsv`` side-file (refresh script
-  ``scripts/refresh-simbad-wds-xids.py``). Per-component resolution
-  with reliable coverage of the well-known hard cases.
+  ``data/simbad/simbad_wds_xids.tsv`` side-file (refresh script
+  ``scripts/refresh/refresh-simbad-wds-xids.py``). Per-component
+  resolution with reliable coverage of the well-known hard cases.
 * ``ccdm_hip`` (``stellata-dch.61``) — Hipparcos CCDM annex
-  (``data/hip_ccdm.tsv``) lists every HIP that co-belongs to a
+  (``data/hipparcos/hip_ccdm.tsv``) lists every HIP that co-belongs to a
   CCDM-identified multiple system. For each WDS pair whose ``wds_id``
   matches a CCDM identifier, the candidate-HIP set is restricted to
   CCDM co-members and a tight position match against AT-HYG
@@ -30,7 +30,7 @@ component to a Gaia DR3 ``source_id`` via the cascade canonicalised in
   Picks up α Cen B and Proxima-shaped cases that the primary-only
   ``orb6_hip`` and the bare position match would have missed.
 * ``position_pm`` / ``position_nopm`` — PM-propagated and bare
-  position match against ``data/gaia_dr3_astrometry.tsv``. Stubbed
+  position match against ``data/gaia/gaia_dr3_astrometry.tsv``. Stubbed
   (placeholder tier names; ``stellata-dch.29`` lands the data file
   but the cascade hand-off for these tiers is future work).
 
@@ -63,10 +63,10 @@ algebra is ~10 lines. Returns ``(orbit_dict, orbit_via)`` per pair via
 ``select_orbit``; ``orbit_via`` ∈ ``{gaia_nss, orb6, orb6_spectroscopic,
 none}``.
 
-Stage 2 emits ``data/gaia_astrometry_source_id_request.tsv`` (the deduped
-union of every Gaia source_id Stage 2 resolved, across every tier), which
-``scripts/refresh-gaia-astrometry.py`` (dch.29) reads to drive its ADQL
-query.
+Stage 2 emits ``data/gaia/gaia_astrometry_source_id_request.tsv`` (the
+deduped union of every Gaia source_id Stage 2 resolved, across every
+tier), which ``scripts/refresh/refresh-gaia-astrometry.py`` (dch.29)
+reads to drive its ADQL query.
 
 Stage 5 (``stellata-dch.32``) classifies each WDS pair as physical or
 optical via a 5-tier ID-anchored cascade: WDS Notes flag chars (T/V/Z
@@ -78,7 +78,7 @@ the pair is empirically bound; rescues WD-companion pairs like
 Sirius A-B that mag-gap alone would reject) → mag-gap heuristic
 backstop (|Δmag| ≤ 5 keep).
 
-Stage 6 (``stellata-dch.32``) emits ``data/multiples.tsv`` — two rows
+Stage 6 (``stellata-dch.32``) emits ``data/binaries/multiples.tsv`` — two rows
 per kept pair, columns per ``MULTIPLES_TSV_COLUMNS`` (system_id,
 component, hip / gaia_source_id, ICRS x/y/z parsec position, AT-HYG
 photometric / spectral metadata, orbital elements from Stage 4,
@@ -86,13 +86,14 @@ resolve / astrometry / orbit provenance tags). Phase 3's v6 binary
 writer is the consumer.
 
 Stage 7 (``stellata-dch.32``) flattens per-strategy + per-tier counters
-into ``scripts/build-binaries-expected.json`` for ``stellata-dch.39``
+into ``scripts/binaries/build-binaries-expected.json`` for ``stellata-dch.39``
 (Phase 4 Tier B) to gate population statistical bounds against.
 Refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
 
 Run via ``npm run build:binaries`` (or directly: ``python3
-scripts/build-binaries.py``). Idempotent against ``data/multiples.tsv``;
-pass ``--force`` to ignore the mtime check and reload everything.
+scripts/binaries/build-binaries.py``). Idempotent against
+``data/binaries/multiples.tsv``; pass ``--force`` to ignore the mtime
+check and reload everything.
 
 See the parent epic ``stellata-dch`` for the seven-stage architecture.
 """
@@ -110,32 +111,32 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DATA = ROOT / "data"
 SCRIPT = Path(__file__).resolve()
 
-sys.path.insert(0, str(SCRIPT.parent))
+sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
 from refresh_lib import (  # noqa: E402
     athyg_int_or_none,
     athyg_str_or_none,
     is_up_to_date,
 )
 
-SRC_WDS_SUMM = DATA / "wds_summ.txt"
-SRC_ORB6 = DATA / "orb6_orbits.txt"
-SRC_ATHYG = DATA / "athyg_33_classic_ids.csv"
-SRC_GCVS = DATA / "gcvs5.txt"
-SRC_GCVS_CROSSID = DATA / "crossid.txt"
-SRC_CCDM = DATA / "hip_ccdm.tsv"
-SRC_HIP2 = DATA / "hip2_van_leeuwen.tsv"
-SRC_GAIA_HIP_XM = DATA / "gaia_dr3_hip_xmatch.tsv"
-SRC_GAIA_TYC_XM = DATA / "gaia_dr3_tyc_xmatch.tsv"
-SRC_GAIA_NSS = DATA / "gaia_dr3_nss_two_body.tsv"
-SRC_GAIA_ASTROMETRY = DATA / "gaia_dr3_astrometry.tsv"
-SRC_SIMBAD_WDS_XIDS = DATA / "simbad_wds_xids.tsv"
+SRC_WDS_SUMM = DATA / "wds" / "wds_summ.txt"
+SRC_ORB6 = DATA / "wds" / "orb6_orbits.txt"
+SRC_ATHYG = DATA / "athyg" / "athyg_33_classic_ids.csv"
+SRC_GCVS = DATA / "gcvs" / "gcvs5.txt"
+SRC_GCVS_CROSSID = DATA / "gcvs" / "crossid.txt"
+SRC_CCDM = DATA / "hipparcos" / "hip_ccdm.tsv"
+SRC_HIP2 = DATA / "hipparcos" / "hip2_van_leeuwen.tsv"
+SRC_GAIA_HIP_XM = DATA / "gaia" / "gaia_dr3_hip_xmatch.tsv"
+SRC_GAIA_TYC_XM = DATA / "gaia" / "gaia_dr3_tyc_xmatch.tsv"
+SRC_GAIA_NSS = DATA / "gaia" / "gaia_dr3_nss_two_body.tsv"
+SRC_GAIA_ASTROMETRY = DATA / "gaia" / "gaia_dr3_astrometry.tsv"
+SRC_SIMBAD_WDS_XIDS = DATA / "simbad" / "simbad_wds_xids.tsv"
 
-OUT_MULTIPLES = DATA / "multiples.tsv"
-OUT_ASTROMETRY_REQUEST = DATA / "gaia_astrometry_source_id_request.tsv"
+OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
+OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
 
 # Committed snapshot of per-strategy / per-tier counts emitted at the
 # end of every build. ``stellata-dch.39`` (Phase 4 Tier B) will pin
@@ -439,7 +440,7 @@ class GcvsRow:
 
     Only the fields Stage 5 (intrinsic-variability cross-match) actually
     needs are pinned here; type / period / amplitude parsing live in
-    ``scripts/catalog-pure.ts`` for the TS-side consumer and need not be
+    ``scripts/catalog/catalog-pure.ts`` for the TS-side consumer and need not be
     duplicated for Stage 1's load-and-count.
     """
 
@@ -660,9 +661,9 @@ class GaiaAstrometryRow:
 
 def parse_gaia_astrometry(path: Path) -> dict[int, GaiaAstrometryRow]:
     """Returns ``source_id -> GaiaAstrometryRow``. The TSV is produced by
-    ``scripts/refresh-gaia-astrometry.py`` (``stellata-dch.29``) and
-    contains one row per resolved source_id in
-    ``data/gaia_astrometry_source_id_request.tsv``.
+    ``scripts/refresh/refresh-gaia-astrometry.py`` (``stellata-dch.29``)
+    and contains one row per resolved source_id in
+    ``data/gaia/gaia_astrometry_source_id_request.tsv``.
 
     Rows missing the four mandatory positional columns (``source_id``,
     ``ra``, ``dec``, ``ref_epoch``) are skipped — those represent
@@ -722,9 +723,9 @@ def parse_gaia_nss(path: Path) -> dict[int, dict[str, str]]:
 
 @dataclass
 class SimbadWdsXid:
-    """One row of ``data/simbad_wds_xids.tsv`` — SIMBAD's curated
+    """One row of ``data/simbad/simbad_wds_xids.tsv`` — SIMBAD's curated
     ``WDS J<wds_id><component>`` cross-reference. Produced by
-    ``scripts/refresh-simbad-wds-xids.py``. ``gaia_source_id`` is
+    ``scripts/refresh/refresh-simbad-wds-xids.py``. ``gaia_source_id`` is
     ``None`` when SIMBAD resolves the component to an oid but has no
     Gaia DR3 cross-ID (α Cen A/B's saturation gap is the canonical
     case — HIP is still set, so Stage 3's HIP2 fallback can attach
@@ -1522,7 +1523,7 @@ def resolve_all_pairs(
        ``orb6_hip`` (primary's ORB6 HIP → Gaia xwalk) then
        ``athyg_gaia_native`` (HIP-mediated AT-HYG lookup).
     2. ``resolve_via_simbad`` runs the SIMBAD-backed cross-ID pass
-       against the committed ``data/simbad_wds_xids.tsv`` side-file —
+       against the committed ``data/simbad/simbad_wds_xids.tsv`` side-file —
        tagged ``simbad_xid``. Skipped when ``simbad_xids`` is empty /
        absent (the in-process tests pass ``None``).
     3. ``resolve_via_ccdm`` consults the Hipparcos CCDM annex for
@@ -1537,7 +1538,7 @@ def resolve_all_pairs(
        AT-HYG read because both routes land on AT-HYG's natively-stored
        gaia field; the ``position_pm`` / ``position_nopm`` tags are
        reserved for a future PM-propagated match against
-       ``data/gaia_dr3_astrometry.tsv``).
+       ``data/gaia/gaia_dr3_astrometry.tsv``).
     5. ``propagate_within_system`` copies a resolved letter binding
        (and any HIP it carries) across every pair row that shares the
        same ``(wds_id, letter)``, plus an ``Aa → A`` hierarchy step
@@ -1697,7 +1698,7 @@ def write_astrometry_request(
     """Emit the deduped union of every Gaia source_id Stage 2 resolved,
     across every tier in ``RESOLVE_VIA_VALUES``.
 
-    ``stellata-dch.29`` (``scripts/refresh-gaia-astrometry.py``) reads
+    ``stellata-dch.29`` (``scripts/refresh/refresh-gaia-astrometry.py``) reads
     this file to drive its ADQL ``WHERE source_id IN (...)`` query — so
     Stage 3 onward has 5-parameter Gaia astrometry for exactly the
     sources we resolved here.
@@ -3446,7 +3447,7 @@ def run(force: bool) -> int:
         )
         return 1
 
-    log("Stage 7 complete. data/multiples.tsv ready for Phase 3 ingest.")
+    log("Stage 7 complete. data/binaries/multiples.tsv ready for Phase 3 ingest.")
     return 0
 
 

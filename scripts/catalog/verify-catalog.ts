@@ -11,7 +11,7 @@ import {
 } from './catalog-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '..', '..');
 const BIN = resolve(ROOT, 'public/catalog.bin');
 const CON = resolve(ROOT, 'public/constellations.json');
 

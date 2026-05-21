@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data/simbad_sample.tsv — stratified random 10k-star SIMBAD sample.
+"""Refresh data/simbad/simbad_sample.tsv — stratified random 10k-star SIMBAD sample.
 
 Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
 Builds an independent external-authority reference set for the Phase 4
@@ -59,7 +59,7 @@ catalogue lives upstream at SIMBAD.)
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
     .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh-simbad-sample.py
+    .venv/bin/python scripts/refresh/refresh-simbad-sample.py
 """
 
 from __future__ import annotations
@@ -76,8 +76,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "simbad_sample.tsv"
+ROOT = Path(__file__).resolve().parent.parent.parent
+OUT = ROOT / "data" / "simbad" / "simbad_sample.tsv"
 
 # Reproducibility seed. Bumping this regenerates every row; treat it as a
 # breaking change to the validation corpus (downstream pinned hashes

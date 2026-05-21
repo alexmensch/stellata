@@ -37,7 +37,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SRC_2020 = ROOT / 'data' / 'molecular-clouds' / 'zucker2020-tablea1.tsv'
 SRC_2021 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
 OUT = ROOT / 'public' / 'clouds.json'
