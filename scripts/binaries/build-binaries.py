@@ -51,7 +51,8 @@ from parsers import (  # noqa: E402, F401
     parse_athyg, parse_ccdm, parse_gaia_astrometry,
     parse_gaia_hip_xmatch, parse_gaia_nss, parse_gaia_tyc_xmatch,
     parse_gcvs, parse_gcvs_crossid, parse_hip2,
-    parse_orb6, parse_simbad_wds_xids, parse_wds_summ,
+    parse_orb6, parse_simbad_wds_spectra, parse_simbad_wds_xids,
+    parse_wds_summ,
 )
 from indices import (  # noqa: E402, F401
     IdentifierIndices, WDS_PRECISE_COORD_EPOCH, build_indices,
@@ -84,7 +85,7 @@ from stage5_optical import (  # noqa: E402, F401
     classify_all_pairs, classify_pair_optical, optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
-    MULTIPLES_TSV_COLUMNS, MultiplesRow,
+    MULTIPLES_TSV_COLUMNS, SPECT_VIA_VALUES, MultiplesRow,
     build_multiples_rows, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401
@@ -104,6 +105,7 @@ SRC_GAIA_TYC_XM = DATA / "gaia" / "gaia_dr3_tyc_xmatch.tsv"
 SRC_GAIA_NSS = DATA / "gaia" / "gaia_dr3_nss_two_body.tsv"
 SRC_GAIA_ASTROMETRY = DATA / "gaia" / "gaia_dr3_astrometry.tsv"
 SRC_SIMBAD_WDS_XIDS = DATA / "simbad" / "simbad_wds_xids.tsv"
+SRC_SIMBAD_SPTYPE = DATA / "simbad" / "simbad_sptype.tsv"
 
 OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
@@ -135,6 +137,7 @@ def _iter_input_paths() -> Iterator[Path]:
     yield SRC_GAIA_NSS
     yield SRC_GAIA_ASTROMETRY
     yield SRC_SIMBAD_WDS_XIDS
+    yield SRC_SIMBAD_SPTYPE
 
 
 def log(msg: str) -> None:
@@ -217,10 +220,19 @@ def run(force: bool) -> int:
         f"({n_simbad_gaia:,} Gaia DR3 / {n_simbad_hip:,} HIP)"
     )
 
+    simbad_wds_spectra = parse_simbad_wds_spectra(
+        SRC_SIMBAD_SPTYPE, SRC_SIMBAD_WDS_XIDS,
+    )
+    log(
+        f"loaded SIMBAD per-component sp_type for "
+        f"{len(simbad_wds_spectra):,} (wds_id, component) pairs"
+    )
+
     indices = build_indices(
         athyg, hip2, hip_to_gaia, tyc_to_gaia, src_to_nss,
         src_to_astrometry=src_to_astrometry,
         ccdm=ccdm,
+        simbad_wds_spectra=simbad_wds_spectra,
     )
     log(
         f"built AT-HYG identifier views: "
@@ -309,6 +321,15 @@ def run(force: bool) -> int:
     log(
         f"wrote {OUT_MULTIPLES.relative_to(ROOT)} with {n_emitted:,} "
         f"component rows ({n_emitted // 2:,} physical pairs)"
+    )
+    spect_via_counts = {tag: 0 for tag in SPECT_VIA_VALUES}
+    for r in rows:
+        spect_via_counts[r.spect_via] = spect_via_counts.get(r.spect_via, 0) + 1
+    log(
+        "spect provenance: "
+        + ", ".join(
+            f"{tag}={spect_via_counts[tag]:,}" for tag in SPECT_VIA_VALUES
+        )
     )
 
     log("Stage 6 complete. Comparing build counts against snapshot (Stage 7) …")

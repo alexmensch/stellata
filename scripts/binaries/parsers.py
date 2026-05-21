@@ -653,3 +653,45 @@ def parse_simbad_wds_xids(path: Path) -> dict[tuple[str, str], SimbadWdsXid]:
     return out
 
 
+def parse_simbad_wds_spectra(
+    simbad_sptype_path: Path, simbad_wds_xids_path: Path,
+) -> dict[tuple[str, str], str]:
+    """Join SIMBAD's unified per-oid spectral pull (``simbad_sptype.tsv``,
+    produced by ``scripts/refresh/refresh-simbad-sptype.py``) against the
+    WDS cross-ID side-file (``simbad_wds_xids.tsv``) on ``simbad_oid``,
+    returning a ``(wds_id, component) -> sp_type`` map.
+
+    Stage 6 prefers this map over the AT-HYG ``spect`` column when
+    emitting per-component rows — SIMBAD's ``sp_type`` is Morgan-Keenan
+    canonical and is the only source that carries per-component
+    classifications (e.g. 40 Eri B as DA2.9 vs the inherited K0V).
+
+    Components SIMBAD has no ``sp_type`` for (blank cell), or whose oid
+    isn't referenced from the WDS xid file, are absent from the result —
+    Stage 6's caller falls through to the AT-HYG value for those rows.
+
+    TSV reading is column-by-name (``csv.DictReader``) so future column
+    additions to ``simbad_sptype.tsv`` (rv, photometry, …) cannot break
+    this consumer.
+    """
+    sp_by_oid: dict[int, str] = {}
+    with simbad_sptype_path.open(newline="") as fh:
+        reader = csv.DictReader(fh, delimiter="\t")
+        for r in reader:
+            oid = safe_int(r.get("simbad_oid") or "")
+            if oid is None:
+                continue
+            sp = (r.get("sp_type") or "").strip()
+            if not sp:
+                continue
+            sp_by_oid[oid] = sp
+
+    out: dict[tuple[str, str], str] = {}
+    xids = parse_simbad_wds_xids(simbad_wds_xids_path)
+    for (wds_id, component), xid in xids.items():
+        sp = sp_by_oid.get(xid.simbad_oid)
+        if sp:
+            out[(wds_id, component)] = sp
+    return out
+
+
