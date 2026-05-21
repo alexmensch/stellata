@@ -6,19 +6,29 @@ chain needs (WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia HIP/Tyc
 cross-walks + Gaia NSS + Gaia 5p astrometry) and builds the identifier
 indices that Stages 2-7 consume.
 
-Stage 2 (``stellata-dch.28`` + ``.60``) resolves each WDS component to a
-Gaia DR3 ``source_id`` via the cascade canonicalised in
+Stage 2 (``stellata-dch.28`` + ``.60`` + ``.61``) resolves each WDS
+component to a Gaia DR3 ``source_id`` via the cascade canonicalised in
 ``RESOLVE_VIA_VALUES``:
 
 * ``orb6_hip`` — primary's ORB6-published HIP → Gaia HIP xwalk.
 * ``athyg_gaia_native`` — AT-HYG's natively-stored ``gaia`` field
   reached either through the same HIP or, in a later pass, via a 2″
-  position match against the WDS precise coordinates.
+  position match against the WDS precise coordinates (PM-propagated;
+  see ``ATHYG_REFERENCE_EPOCH``).
 * ``simbad_xid`` (``stellata-dch.60``) — SIMBAD's curated
   ``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs read from the committed
   ``data/simbad_wds_xids.tsv`` side-file (refresh script
   ``scripts/refresh-simbad-wds-xids.py``). Per-component resolution
   with reliable coverage of the well-known hard cases.
+* ``ccdm_hip`` (``stellata-dch.61``) — Hipparcos CCDM annex
+  (``data/hip_ccdm.tsv``) lists every HIP that co-belongs to a
+  CCDM-identified multiple system. For each WDS pair whose ``wds_id``
+  matches a CCDM identifier, the candidate-HIP set is restricted to
+  CCDM co-members and a tight position match against AT-HYG
+  disambiguates which sibling HIP is which WDS component letter. Then
+  the same Gaia HIP xwalk / AT-HYG-native paths fire on the bound HIP.
+  Picks up α Cen B and Proxima-shaped cases that the primary-only
+  ``orb6_hip`` and the bare position match would have missed.
 * ``position_pm`` / ``position_nopm`` — PM-propagated and bare
   position match against ``data/gaia_dr3_astrometry.tsv``. Stubbed
   (placeholder tier names; ``stellata-dch.29`` lands the data file
@@ -148,6 +158,7 @@ RESOLVE_VIA_VALUES: tuple[str, ...] = (
     "orb6_hip",
     "athyg_gaia_native",
     "simbad_xid",
+    "ccdm_hip",
     "position_pm",
     "position_nopm",
     "unresolved",
@@ -211,6 +222,12 @@ class AthygRow:
     ci: float | None
     spect: str
     proper: str
+    # cos(dec)-applied (i.e. μ_α* = μ_α cos δ), matching the convention
+    # AT-HYG inherits from Hipparcos / Gaia. Stage 2's PM-propagation
+    # uses these to bring J1991.25-effective HIP-sourced rows forward
+    # to the WDS precise_coord epoch before the position-match check.
+    pm_ra_masyr: float | None
+    pm_de_masyr: float | None
 
 
 def parse_athyg(path: Path) -> list[AthygRow]:
@@ -255,6 +272,8 @@ def parse_athyg(path: Path) -> list[AthygRow]:
                 ci=safe_float(r.get("ci") or ""),
                 spect=(r.get("spect") or "").strip(),
                 proper=(r.get("proper") or "").strip(),
+                pm_ra_masyr=safe_float(r.get("pm_ra") or ""),
+                pm_de_masyr=safe_float(r.get("pm_dec") or ""),
             ))
     return rows
 
@@ -743,6 +762,33 @@ def parse_simbad_wds_xids(path: Path) -> dict[tuple[str, str], SimbadWdsXid]:
 # ─── Identifier indices ──────────────────────────────────────────────
 
 
+# WDS catalog's overflow sentinel for ρ (and θ): when the published
+# value exceeds the 5-char field width, WDS writes ``999.9`` rather
+# than truncating. For very wide pairs (e.g. α Cen A vs Proxima, LDS
+# 494 AC: ρ ≈ 9000″) the (ρ, θ) offset cannot be used to predict the
+# secondary's position — Stage 2 short-circuits the predicted-secondary
+# match when ρ ≥ this threshold and relies on per-component identifier
+# bindings (SIMBAD, CCDM) for ultra-wide companions.
+WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC = 999.0
+
+# AT-HYG's documented reference epoch is J2000.0, but for HIP-sourced
+# rows the stored ``ra``/``dec`` are empirically at HIP1's native
+# epoch J1991.25 (e.g. α Cen A is at 219.92041, which is HIP1's
+# published J1991.25 RA, not the J2000-propagated 219.9020°). Stage 2
+# propagates each AT-HYG row forward by ``WDS_PRECISE_COORD_EPOCH -
+# ATHYG_REFERENCE_EPOCH`` years using the row's own PM before
+# comparing to WDS precise_coord, which is J2000-frame. For low-PM
+# stars the 8.75-yr propagation moves the row by < tolerance, so the
+# match still fires when the row was already at J2000.
+ATHYG_REFERENCE_EPOCH = 1991.25
+
+# WDS precise_coord (cols 113-130) is at J2000 — the same precise coord
+# string is shared across every pair row in a WDS system regardless of
+# the per-row ``date_last``, confirming a system-level static coord
+# rather than a date_last-anchored one.
+WDS_PRECISE_COORD_EPOCH = 2000.0
+
+
 @dataclass
 class IdentifierIndices:
     """Output of Stage 1. Every Stage 2-7 lookup goes through these maps
@@ -758,6 +804,14 @@ class IdentifierIndices:
     tyc_to_athyg: dict[str, AthygRow]
     src_to_athyg: dict[int, AthygRow]
     hip_to_hip2: dict[int, Hip2Row]
+    # Hipparcos CCDM annex maps. The CCDM identifier is the multiple-
+    # system anchor — every HIP that belongs to the same physical
+    # multiple system shares the same CCDM string. WDS system ids
+    # are positional ("HHMMm±DDMM") and match CCDM ids for the vast
+    # majority of systems, so Stage 2 keys the ``ccdm_hip`` tier on
+    # ``wds_id``-as-CCDM lookups against ``ccdm_to_hips``.
+    hip_to_ccdm: dict[int, str]
+    ccdm_to_hips: dict[str, list[int]]
 
 
 def build_indices(
@@ -767,6 +821,7 @@ def build_indices(
     tyc_to_gaia: dict[str, int],
     src_to_nss: dict[int, dict[str, str]],
     src_to_astrometry: dict[int, GaiaAstrometryRow] | None = None,
+    ccdm: list[CcdmRow] | None = None,
 ) -> IdentifierIndices:
     hip_to_athyg: dict[int, AthygRow] = {}
     tyc_to_athyg: dict[str, AthygRow] = {}
@@ -788,6 +843,13 @@ def build_indices(
     src_to_hip: dict[int, int] = {}
     for hip, src in hip_to_gaia.items():
         src_to_hip.setdefault(src, hip)
+    hip_to_ccdm: dict[int, str] = {}
+    ccdm_to_hips: dict[str, list[int]] = {}
+    for row in ccdm or []:
+        if not row.ccdm:
+            continue
+        hip_to_ccdm[row.hip] = row.ccdm
+        ccdm_to_hips.setdefault(row.ccdm, []).append(row.hip)
     return IdentifierIndices(
         hip_to_gaia=hip_to_gaia,
         tyc_to_gaia=tyc_to_gaia,
@@ -798,6 +860,8 @@ def build_indices(
         tyc_to_athyg=tyc_to_athyg,
         src_to_athyg=src_to_athyg,
         hip_to_hip2=hip_to_hip2,
+        hip_to_ccdm=hip_to_ccdm,
+        ccdm_to_hips=ccdm_to_hips,
     )
 
 
@@ -982,17 +1046,225 @@ def resolve_via_simbad(
             c.hip = xid.hip
 
 
+# ─── CCDM-anchored sibling-HIP path ──────────────────────────────────
+
+
+# CCDM-anchored search tolerance. CCDM's candidate set is restricted to
+# co-system HIPs (typically 1-3 stars per system), so a wider window
+# stays unambiguous and absorbs the residual PM uncertainty that the
+# stored AT-HYG position carries beyond what the J1991.25→J2000
+# propagation corrects. Stays well below typical WDS inter-component
+# separations for ``AB``/``AC``/``BC`` pairs.
+CCDM_POSITION_MATCH_TOLERANCE_ARCSEC = 10.0
+
+
+def _ccdm_candidate_hip_for_position(
+    *, ra_deg: float, dec_deg: float,
+    candidate_hips: list[int],
+    indices: IdentifierIndices,
+    tolerance_arcsec: float,
+    target_epoch: float = WDS_PRECISE_COORD_EPOCH,
+) -> int | None:
+    """Pick the CCDM-sibling HIP whose AT-HYG row sits nearest to the
+    given target position (within ``tolerance_arcsec``).
+
+    Each candidate's AT-HYG position is PM-propagated to ``target_epoch``
+    before comparison so HIP-sourced rows (effectively at J1991.25) are
+    measured against the same epoch as the WDS precise_coord query.
+    Returns ``None`` when no candidate has an AT-HYG row or none are
+    within tolerance — Stage 2 then falls through to position-match.
+    """
+    threshold_chord_sq = (
+        2.0 * math.sin(math.radians(tolerance_arcsec / 3600.0) / 2.0)
+    ) ** 2
+    qx, qy, qz = _spherical_to_unit_vec(ra_deg, dec_deg)
+    best_hip: int | None = None
+    best_chord_sq = float("inf")
+    for hip in candidate_hips:
+        row = indices.hip_to_athyg.get(hip)
+        if row is None:
+            continue
+        ra_cand, dec_cand = _athyg_position_at_epoch(row, target_epoch)
+        rx, ry, rz = _spherical_to_unit_vec(ra_cand, dec_cand)
+        dx = rx - qx
+        dy = ry - qy
+        dz = rz - qz
+        d_sq = dx * dx + dy * dy + dz * dz
+        if d_sq < best_chord_sq:
+            best_chord_sq = d_sq
+            best_hip = hip
+    if best_hip is None or best_chord_sq > threshold_chord_sq:
+        return None
+    return best_hip
+
+
+def resolve_via_ccdm(
+    components: list[ResolvedComponent],
+    pairs: list[WdsPair],
+    indices: IdentifierIndices,
+    tolerance_arcsec: float = CCDM_POSITION_MATCH_TOLERANCE_ARCSEC,
+) -> None:
+    """Cascade pass following ``resolve_via_simbad`` and preceding
+    ``resolve_via_position``. Resolves WDS components by anchoring on
+    HIPs that share a CCDM identifier with the system. Mutates
+    ``components`` in place — sets ``hip`` (always when a sibling
+    matches) and, when possible, ``gaia_source_id`` + tags
+    ``resolve_via`` as ``ccdm_hip``.
+
+    Mechanism (per pair, primary then secondary):
+
+    1. Look up ``indices.ccdm_to_hips[pair.wds_id]`` — the WDS system id
+       and CCDM identifier follow the same positional convention, so
+       this hits for the vast majority of multi-HIP CCDM systems.
+    2. Exclude HIPs already claimed by the pair's primary (so the
+       secondary slot can't reuse the primary's HIP).
+    3. Primary: pick the candidate HIP whose PM-propagated AT-HYG
+       position sits nearest the WDS precise_coord.
+    4. Secondary: same, but against the (ρ, θ)-predicted secondary
+       position. Skipped when ρ exceeds the WDS overflow sentinel — the
+       prediction is meaningless at that separation and the CCDM
+       sibling set is small enough that mis-attributing the wide
+       companion would be silently wrong.
+    5. Once a HIP is bound, surface ``gaia_source_id`` via the Gaia
+       HIP xwalk → AT-HYG-native fall-through. Bare-HIP-only hits
+       (Sirius-B-shaped: HIP exists, no Gaia source) still bind ``hip``
+       so Stage 3's HIP2 fallback engages — but ``resolve_via`` stays
+       ``unresolved`` because the Gaia source_id is the cascade's
+       primary output.
+    """
+    if not indices.ccdm_to_hips:
+        return
+
+    pair_by_wds_disc = build_pair_by_wds_disc(pairs)
+
+    # Pass 1 — primaries. Cache the HIP each primary claims so the
+    # secondary pass can exclude it (CCDM systems with two HIPs would
+    # otherwise both bind to whichever sibling sits nearest the
+    # primary's coord).
+    primary_hip_by_pair: dict[tuple[str, str, str], int] = {}
+    for c in components:
+        if c.gaia_source_id is not None or not c.is_primary:
+            continue
+        pair = find_owning_pair(c, pair_by_wds_disc)
+        if pair is None or pair.precise_ra_deg is None or pair.precise_dec_deg is None:
+            continue
+        candidates = indices.ccdm_to_hips.get(pair.wds_id)
+        if not candidates:
+            continue
+        # Prefer the HIP the component already carries forward (from
+        # ORB6 or SIMBAD) — those bindings are stronger evidence than
+        # any position-match could provide. The position-match path
+        # only fires when the component has no HIP yet.
+        if c.hip is not None and c.hip in candidates:
+            primary_hip_by_pair[(c.wds_id, c.discoverer, pair.components)] = c.hip
+            _bind_ccdm_hip(c, c.hip, indices)
+            continue
+        match_hip = _ccdm_candidate_hip_for_position(
+            ra_deg=pair.precise_ra_deg, dec_deg=pair.precise_dec_deg,
+            candidate_hips=candidates,
+            indices=indices, tolerance_arcsec=tolerance_arcsec,
+        )
+        if match_hip is None:
+            continue
+        primary_hip_by_pair[(c.wds_id, c.discoverer, pair.components)] = match_hip
+        _bind_ccdm_hip(c, match_hip, indices)
+
+    # Pass 2 — secondaries. Use the WDS (ρ, θ) prediction to pick the
+    # right CCDM sibling, excluding whichever HIP the primary claimed.
+    for c in components:
+        if c.gaia_source_id is not None or c.is_primary:
+            continue
+        pair = find_owning_pair(c, pair_by_wds_disc)
+        if (
+            pair is None
+            or pair.precise_ra_deg is None
+            or pair.precise_dec_deg is None
+            or pair.rho_last is None
+            or pair.theta_last is None
+            or pair.rho_last >= WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
+        ):
+            continue
+        candidates = indices.ccdm_to_hips.get(pair.wds_id)
+        if not candidates:
+            continue
+        primary_hip = primary_hip_by_pair.get(
+            (c.wds_id, c.discoverer, pair.components),
+        )
+        narrowed = [h for h in candidates if h != primary_hip]
+        if not narrowed:
+            continue
+        # Prefer the HIP the component already carries forward (SIMBAD
+        # may have bound a per-component HIP without a Gaia source).
+        if c.hip is not None and c.hip in narrowed:
+            _bind_ccdm_hip(c, c.hip, indices)
+            continue
+        secondary_ra, secondary_dec = predict_secondary_position(
+            pair.precise_ra_deg, pair.precise_dec_deg,
+            pair.rho_last, pair.theta_last,
+        )
+        match_hip = _ccdm_candidate_hip_for_position(
+            ra_deg=secondary_ra, dec_deg=secondary_dec,
+            candidate_hips=narrowed,
+            indices=indices, tolerance_arcsec=tolerance_arcsec,
+        )
+        if match_hip is None:
+            continue
+        _bind_ccdm_hip(c, match_hip, indices)
+
+
+def _bind_ccdm_hip(
+    c: ResolvedComponent, hip: int, indices: IdentifierIndices,
+) -> None:
+    """Helper: stamp ``hip`` onto ``c`` (if it has none yet) and try the
+    HIP-anchored Gaia lookups. Tags ``resolve_via`` ``ccdm_hip`` when a
+    Gaia source surfaces; leaves the tag as-is when only the HIP binds
+    (Stage 3's HIP2 fallback still picks it up).
+    """
+    if c.hip is None:
+        c.hip = hip
+    gaia = indices.hip_to_gaia.get(hip)
+    if gaia is None:
+        gaia = _gaia_from_athyg_via_hip(hip, indices)
+    if gaia is not None:
+        c.gaia_source_id = gaia
+        c.resolve_via = "ccdm_hip"
+
+
 # ─── Position-match path ─────────────────────────────────────────────
 
 
 # Position-match tolerance for the AT-HYG position branch. 2″ matches
 # the bead's stated bar and is well below the typical AT-HYG inter-
-# source separation away from the densest clusters. High-PM stars may
-# miss at this tolerance — that's intentional; the ``position_pm``
-# (PM-propagated match against Gaia astrometry, stubbed until a future
-# bead lands) is the principled fix for the PM-driven epoch-residual
-# class.
+# source separation away from the densest clusters. The match runs
+# with ``target_epoch=WDS_PRECISE_COORD_EPOCH`` so high-PM rows whose
+# J1991.25 stored ra/dec drift past 2″ at J2000 (α Cen, Sirius) still
+# resolve through this tier.
 ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0
+
+
+def _athyg_position_at_epoch(
+    row: AthygRow, target_epoch: float,
+) -> tuple[float, float]:
+    """Propagate ``row``'s ``(ra_deg, dec_deg)`` from ``ATHYG_REFERENCE_EPOCH``
+    to ``target_epoch`` using the row's own PM (cos δ-applied μ_α*).
+
+    Returns ``(row.ra_deg, row.dec_deg)`` unchanged when either PM
+    component is missing — Stage 2 has no signal to propagate with, so
+    the raw position is the best estimate.
+
+    AT-HYG's documented epoch is J2000 but HIP-sourced rows are
+    empirically at J1991.25 (the HIP1 catalog's native epoch); the
+    propagation kicks low-PM rows by a fraction of an arcsec — well
+    inside the 2″ tolerance — so the same call works correctly for the
+    rows that are genuinely at J2000 too.
+    """
+    if row.pm_ra_masyr is None or row.pm_de_masyr is None:
+        return row.ra_deg, row.dec_deg
+    dt = target_epoch - ATHYG_REFERENCE_EPOCH
+    cos_dec = max(math.cos(math.radians(row.dec_deg)), 1e-3)
+    delta_ra_deg = (row.pm_ra_masyr * dt) / (3600.0 * 1000.0 * cos_dec)
+    delta_dec_deg = (row.pm_de_masyr * dt) / (3600.0 * 1000.0)
+    return (row.ra_deg + delta_ra_deg) % 360.0, row.dec_deg + delta_dec_deg
 
 
 def _spherical_to_unit_vec(ra_deg: float, dec_deg: float) -> tuple[float, float, float]:
@@ -1030,15 +1302,36 @@ def find_nearest_athyg_at_position(
     athyg: list[AthygRow],
     tol_arcsec: float,
     exclude_idx: int | None = None,
+    target_epoch: float | None = None,
 ) -> int | None:
     """Return the AT-HYG list index nearest to ``(ra_deg, dec_deg)`` within
     ``tol_arcsec`` (or ``None`` if no row is within tolerance).
 
     ``exclude_idx`` skips a known row — used when matching a secondary
     component so the primary's own AT-HYG row cannot win.
+
+    ``target_epoch`` (when set) PM-propagates each candidate's stored
+    ``ra``/``dec`` from ``ATHYG_REFERENCE_EPOCH`` to ``target_epoch``
+    before measuring distance. Required for high-PM HIP-sourced rows
+    (α Cen ≈ -3614 mas/yr) whose stored position is at J1991.25 — the
+    raw J1991.25 ra/dec sits ~tens-to-hundreds of arcsec from the WDS
+    J2000 precise_coord, and the 2″ tolerance silently misses without
+    propagation. Rows without PM stay at their raw position (the
+    propagation step is a no-op).
+
+    The grid search widens vertically by ``epoch_search_pad`` rows to
+    pull in high-PM stars whose J1991.25 position has since drifted
+    out of the 1° dec cell anchored at the query.
     """
     cos_dec = max(math.cos(math.radians(dec_deg)), 1e-3)
-    ra_window = max(1, int(math.ceil(1.0 / cos_dec)))
+    # Widen the RA window proportionally to 1/cos(dec) — and a touch
+    # further when PM-propagating, so a high-PM star whose J1991.25
+    # position sits in a neighbouring cell still surfaces as a
+    # candidate before its PM correction is applied.
+    base_ra_window = max(1, int(math.ceil(1.0 / cos_dec)))
+    epoch_pad = 1 if target_epoch is not None else 0
+    ra_window = base_ra_window + epoch_pad
+    dec_pad = 1 + epoch_pad
     base_ra = int(ra_deg) % 360
     base_dec = int(dec_deg) + 90
     qx, qy, qz = _spherical_to_unit_vec(ra_deg, dec_deg)
@@ -1046,16 +1339,18 @@ def find_nearest_athyg_at_position(
 
     best_idx: int | None = None
     best_chord_sq = float("inf")
-    for ddec in (-1, 0, 1):
+    for ddec in range(-dec_pad, dec_pad + 1):
         dec_key = base_dec + ddec
         for dra in range(-ra_window, ra_window + 1):
             ra_key = (base_ra + dra) % 360
             for i in grid.get((ra_key, dec_key), ()):
                 if i == exclude_idx:
                     continue
-                rx, ry, rz = _spherical_to_unit_vec(
-                    athyg[i].ra_deg, athyg[i].dec_deg,
-                )
+                if target_epoch is not None:
+                    ra_cand, dec_cand = _athyg_position_at_epoch(athyg[i], target_epoch)
+                else:
+                    ra_cand, dec_cand = athyg[i].ra_deg, athyg[i].dec_deg
+                rx, ry, rz = _spherical_to_unit_vec(ra_cand, dec_cand)
                 dx = rx - qx
                 dy = ry - qy
                 dz = rz - qz
@@ -1131,11 +1426,19 @@ def resolve_via_position(
     ``components`` in place — sets ``gaia_source_id`` and rewrites
     ``resolve_via`` from ``unresolved`` to ``athyg_gaia_native`` on hit.
 
+    AT-HYG positions are PM-propagated to ``WDS_PRECISE_COORD_EPOCH``
+    (J2000) before the comparison so high-PM HIP-sourced rows whose
+    stored ra/dec are at J1991.25 still match within the 2″ tolerance.
+
     Primary uses the WDS pair's ``precise_ra/dec``; secondary uses that
     plus the pair's last-reported ``(ρ, θ)`` offset, EXCLUDING the
     primary's matched row so a close-binary primary cannot claim its own
     secondary slot. Components without precise coords (or, for
-    secondaries, without ρ/θ) stay unresolved here.
+    secondaries, without ρ/θ) stay unresolved here. The predicted-
+    secondary path is also short-circuited when ρ ≥ the WDS overflow
+    sentinel (``999.9″``) — wide-pair (ρ, θ) is degenerate at that
+    level and a small-offset prediction would land on a random AT-HYG
+    row.
     """
     grid = build_athyg_position_grid(athyg)
     pair_by_wds_disc = build_pair_by_wds_disc(pairs)
@@ -1153,6 +1456,7 @@ def resolve_via_position(
         match_idx = find_nearest_athyg_at_position(
             pair.precise_ra_deg, pair.precise_dec_deg,
             grid, athyg, tolerance_arcsec,
+            target_epoch=WDS_PRECISE_COORD_EPOCH,
         )
         if match_idx is None:
             continue
@@ -1176,6 +1480,7 @@ def resolve_via_position(
             or pair.precise_dec_deg is None
             or pair.rho_last is None
             or pair.theta_last is None
+            or pair.rho_last >= WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
         ):
             continue
         secondary_ra, secondary_dec = predict_secondary_position(
@@ -1188,6 +1493,7 @@ def resolve_via_position(
         match_idx = find_nearest_athyg_at_position(
             secondary_ra, secondary_dec,
             grid, athyg, tolerance_arcsec, exclude_idx=primary_idx,
+            target_epoch=WDS_PRECISE_COORD_EPOCH,
         )
         if match_idx is None:
             continue
@@ -1219,15 +1525,23 @@ def resolve_all_pairs(
        against the committed ``data/simbad_wds_xids.tsv`` side-file —
        tagged ``simbad_xid``. Skipped when ``simbad_xids`` is empty /
        absent (the in-process tests pass ``None``).
-    3. ``resolve_via_position`` runs the AT-HYG position-match pass —
-       tagged ``athyg_gaia_native`` (the same tag as branch 1's
-       HIP-mediated AT-HYG read because both routes land on AT-HYG's
-       natively-stored gaia field; the ``position_pm`` /
-       ``position_nopm`` tags are reserved for a future PM-propagated
-       match against ``data/gaia_dr3_astrometry.tsv``).
-    4. ``propagate_within_system`` copies a resolved letter binding
+    3. ``resolve_via_ccdm`` consults the Hipparcos CCDM annex for
+       sibling HIPs co-resident in the WDS system, position-matches
+       against the candidate-restricted set, then routes the matched
+       HIP through the same Gaia xwalk / AT-HYG-native paths —
+       tagged ``ccdm_hip``. Skipped when ``indices.ccdm_to_hips`` is
+       empty (tests can pass ``ccdm=None`` to ``build_indices``).
+    4. ``resolve_via_position`` runs the AT-HYG position-match pass
+       (PM-propagated, ρ ≥ 999.9 short-circuited) — tagged
+       ``athyg_gaia_native`` (the same tag as branch 1's HIP-mediated
+       AT-HYG read because both routes land on AT-HYG's natively-stored
+       gaia field; the ``position_pm`` / ``position_nopm`` tags are
+       reserved for a future PM-propagated match against
+       ``data/gaia_dr3_astrometry.tsv``).
+    5. ``propagate_within_system`` copies a resolved letter binding
        (and any HIP it carries) across every pair row that shares the
-       same ``(wds_id, letter)``.
+       same ``(wds_id, letter)``, plus an ``Aa → A`` hierarchy step
+       for WDS subcomponents that share a Gaia source with the parent.
     """
     orb6_by_pair = group_orb6_by_pair(orb6)
     out: list[ResolvedComponent] = []
@@ -1247,12 +1561,34 @@ def resolve_all_pairs(
         ))
     if simbad_xids:
         resolve_via_simbad(components=out, simbad_xids=simbad_xids)
+    resolve_via_ccdm(components=out, pairs=pairs, indices=indices)
     resolve_via_position(
         components=out, pairs=pairs, athyg=athyg,
         tolerance_arcsec=position_tolerance_arcsec,
     )
     propagate_within_system(out)
     return out
+
+
+_SUBCOMPONENT_LETTER_RE = re.compile(r"^([A-Z])[a-z]+$")
+
+
+def _parent_letter(component: str) -> str | None:
+    """For a WDS sub-component letter like ``"Aa"`` or ``"Bbc"``, return
+    the parent letter (``"A"`` / ``"B"``). Returns ``None`` for bare
+    single-letter components and for forms the regex does not match.
+
+    The propagation pass uses this so an ``A`` component without its
+    own binding can inherit ``Aa``'s — Gaia rarely resolves the
+    subcomponents separately (Aa+Ab share one Gaia source whose light
+    centroid sits at the brighter Aa), so propagating the binding from
+    Aa to A is correct in practice for the spectroscopic-companion
+    cases (e.g. Castor STF1110 A inheriting from CIA 29 Aa).
+    """
+    match = _SUBCOMPONENT_LETTER_RE.match(component)
+    if match is None:
+        return None
+    return match.group(1)
 
 
 def propagate_within_system(components: list[ResolvedComponent]) -> None:
@@ -1280,6 +1616,14 @@ def propagate_within_system(components: list[ResolvedComponent]) -> None:
     every pair row in the system so Stage 3's HIP2 fallback engages
     consistently across the wide companions too. No priority ordering
     exists across HIP sources, so first-write-wins is correct.
+
+    A second pass handles the WDS sub-component letter hierarchy:
+    when a bare letter ``A`` is unresolved but ``Aa`` (its brighter
+    spectroscopic sub-component) is, ``A`` inherits ``Aa``'s binding.
+    Gaia cannot resolve sub-arcsec sub-components, so ``A``/``Aa``/
+    ``Ab`` typically share the single Gaia source whose centroid sits
+    at the brighter ``Aa``. Castor STF1110 A inheriting from CIA 29
+    Aa is the canonical case.
     """
     by_system_letter: dict[tuple[str, str], tuple[int, str]] = {}
     hip_by_system_letter: dict[tuple[str, str], int] = {}
@@ -1299,6 +1643,39 @@ def propagate_within_system(components: list[ResolvedComponent]) -> None:
                 c.gaia_source_id, c.resolve_via = binding
         if c.hip is None:
             hip = hip_by_system_letter.get(key)
+            if hip is not None:
+                c.hip = hip
+
+    # Letter-hierarchy pass: bare ``A`` inherits from sub-component
+    # ``Aa`` (likewise ``B``/``Ba``, ``C``/``Ca``). The reverse
+    # direction (``Aa`` ← ``A``) is intentionally NOT propagated —
+    # ``A`` is a coarser slot that may not match the brighter Aa's
+    # source if a future pipeline resolved Aa and Ab separately.
+    sub_by_system_parent: dict[tuple[str, str], tuple[int, str]] = {}
+    sub_hip_by_system_parent: dict[tuple[str, str], int] = {}
+    for c in components:
+        parent = _parent_letter(c.component)
+        if parent is None:
+            continue
+        key = (c.wds_id, parent)
+        if c.gaia_source_id is not None:
+            cur = sub_by_system_parent.get(key)
+            if cur is None or RESOLVE_VIA_PRIORITY[c.resolve_via] < RESOLVE_VIA_PRIORITY[cur[1]]:
+                sub_by_system_parent[key] = (c.gaia_source_id, c.resolve_via)
+        if c.hip is not None:
+            sub_hip_by_system_parent.setdefault(key, c.hip)
+    for c in components:
+        if c.component != c.component.upper() or len(c.component) != 1:
+            # Only the bare single-letter parents inherit; sub-components
+            # (Aa, Ab, …) skip this pass.
+            continue
+        key = (c.wds_id, c.component)
+        if c.gaia_source_id is None:
+            binding = sub_by_system_parent.get(key)
+            if binding is not None:
+                c.gaia_source_id, c.resolve_via = binding
+        if c.hip is None:
+            hip = sub_hip_by_system_parent.get(key)
             if hip is not None:
                 c.hip = hip
 
@@ -2963,12 +3340,18 @@ def run(force: bool) -> int:
     indices = build_indices(
         athyg, hip2, hip_to_gaia, tyc_to_gaia, src_to_nss,
         src_to_astrometry=src_to_astrometry,
+        ccdm=ccdm,
     )
     log(
         f"built AT-HYG identifier views: "
         f"hip -> row {len(indices.hip_to_athyg):,}, "
         f"tyc -> row {len(indices.tyc_to_athyg):,}, "
         f"gaia_source_id -> row {len(indices.src_to_athyg):,}"
+    )
+    log(
+        f"built CCDM views: hip -> ccdm of cardinality "
+        f"{len(indices.hip_to_ccdm):,}, ccdm -> hip-list spanning "
+        f"{len(indices.ccdm_to_hips):,} systems"
     )
     log(
         f"built hip -> hip2_row of cardinality {len(indices.hip_to_hip2):,}, "
