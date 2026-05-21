@@ -446,6 +446,139 @@ At constellation-scale FOV (10–30°) these are tiny but technically
 wrong; at close approach or in OBSERVE mode the highest-PM stars
 are visibly mis-located.
 
+## Binary system pipeline (`scripts/binaries/build-binaries.py`)
+
+Separate pipeline from `build-catalog.ts`. Where the catalog builder
+turns one source CSV (AT-HYG) into the renderer's main binary, the
+binary-system pipeline cross-matches *eleven* reference catalogues —
+WDS, ORB6, AT-HYG, GCVS, CCDM, HIP2, the Gaia DR3 HIP / Tycho cross-
+walks, Gaia NSS two-body orbits, Gaia DR3 5-parameter astrometry, and
+SIMBAD's curated WDS↔Gaia cross-IDs — to produce one canonical
+multi-star record per WDS pair: `data/binaries/multiples.tsv`. Phase 3
+turns that TSV into a v6 catalog binary that the renderer reads
+alongside `catalog.bin`.
+
+The pipeline runs in seven stages, each in its own module under
+`scripts/binaries/`. The split matters because the source files together
+are ~140 MB and the cross-match logic is fiddly — keeping each stage in
+its own module means a session editing (say) the orbit selector reads
+~600 lines instead of a 3,000-line monolith.
+
+| Module | Stage | Purpose |
+|---|---|---|
+| `parsers.py` | 1 | Row dataclasses + parse functions for every reference catalogue. |
+| `indices.py` | 1 | `IdentifierIndices` — HIP/Tyc→Gaia, src→HIP/NSS/astrometry/AT-HYG, HIP→HIP2/CCDM, CCDM→HIP-list. Built once; every Stage 2-7 lookup is O(1). |
+| `stage2_resolve.py` | 2 | WDS-component → Gaia DR3 `source_id` resolution cascade. |
+| `stage3_astrometry.py` | 3 | Per-component astrometry routing: Gaia 5p / Gaia NSS-systemic / HIP2 long-baseline. |
+| `stage4_orbits.py` | 4 | Per-pair orbital-element selection: Gaia NSS / ORB6 visual / ORB6 spectroscopic. |
+| `stage5_optical.py` | 5 | Per-pair physical-vs-optical classification cascade. |
+| `stage6_multiples.py` | 6 | Emit `data/binaries/multiples.tsv` for kept pairs. |
+| `stage7_counts.py` | 7 | Per-strategy / per-tier counter snapshot for regression-gate. |
+
+`build-binaries.py` is the orchestration shell — pipeline entry point,
+source-path constants, and the per-stage log lines.
+
+### Stage 2 — resolution cascade
+
+Each WDS component (e.g. `α Cen A`, `α Cen B`) is resolved to a Gaia
+DR3 `source_id` through a strict-priority cascade. The order is
+declared once in `RESOLVE_VIA_VALUES`; earlier tiers win when more than
+one would succeed.
+
+| Tier | Mechanism |
+|---|---|
+| `orb6_hip` | Primary's ORB6-published HIP → Gaia HIP cross-walk. |
+| `athyg_gaia_native` | AT-HYG's natively-stored Gaia source_id, reached via HIP or via a 2″ position match against WDS precise coordinates (PM-propagated from `ATHYG_REFERENCE_EPOCH = J1991.25` to `WDS_PRECISE_COORD_EPOCH = J2000.0`). |
+| `simbad_xid` | SIMBAD's curated `WDS J<id><comp>` ↔ Gaia DR3 cross-IDs from `data/simbad/simbad_wds_xids.tsv`. Per-component resolution with reliable coverage of the well-known hard cases. |
+| `ccdm_hip` | Hipparcos CCDM annex co-membership → tight position match against AT-HYG → bound HIP → Gaia. Picks up α Cen B and Proxima-shaped cases that the primary-only `orb6_hip` and bare position match would miss. |
+| `position_pm` / `position_nopm` | PM-propagated and bare position match against Gaia 5p astrometry. Stubbed — placeholder tier names. |
+| `unresolved` | Cascade exhausted without a binding. |
+
+For ultra-wide pairs WDS writes `ρ = 999.9` as an overflow sentinel
+(`WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC`) — the (ρ, θ) offset cannot
+predict the secondary's position, so position-match tiers short-circuit
+and the per-component identifier tiers (SIMBAD, CCDM) carry the load.
+
+Stage 2 also emits `data/gaia/gaia_astrometry_source_id_request.tsv` —
+the deduped union of every Gaia source_id resolved across all tiers.
+`scripts/refresh/refresh-gaia-astrometry.py` reads it to drive its ADQL
+`WHERE source_id IN (...)` query so Stage 3 onward has 5p astrometry
+for exactly the sources Stage 2 resolved.
+
+### Stage 3 — astrometry routing
+
+Each resolved component picks one of four routes, declared in
+`ASTROMETRY_VIA_VALUES`:
+
+| Route | Condition |
+|---|---|
+| `gaia_nss_systemic` | Source has an NSS two-body row AND the 5p solution is flagged unreliable (`ruwe > 1.4` OR `ipd_frac_multi_peak > 0.02`). Gaia DR3 refits the source to the centre-of-mass for NSS-modelled sources, so the same row's values surface here with provenance distinguishing for Stage 4. |
+| `hip2_long_baseline` | Either: (a) Gaia astrometry exists, the system has a known companion within 5″ (`min ρ` across all pair rows the source participates in), AND `|Δ pmRA| > 50 mas/yr` OR `|Δ pmDE| > 50 mas/yr` between Gaia and HIP2; or (b) no Gaia source was resolved (saturated bright primary like Sirius / α Cen) but a HIP is known and HIP2 covers it. Hipparcos's J1991.25 baseline averages a different window of the orbit than Gaia's 2014-2017 window — closer to the systemic motion for bright close binaries. |
+| `gaia_5p` | Default. |
+| `unresolved` | Stage 2 left source_id None AND no HIP2 fallback available. |
+
+The 5″ separation gate is checked against the **minimum** WDS ρ across
+all pair rows the source participates in, not the current pair row's
+ρ — a star in both a tight AB pair and a wide AC pair takes the tight
+ρ so the same physical star always routes consistently.
+
+### Stage 4 — orbital-element selection
+
+Per WDS pair, in priority order (`ORBIT_VIA_VALUES`):
+
+| Route | When it fires |
+|---|---|
+| `gaia_nss` | Any component carries an NSS two-body row AND the solution falls inside Gaia's astrometric-detectability regime: `period < 3 yr` OR apparent angular semi-major axis `< 1″`. ~95.8% of DR3 NSS rows pass the period gate; the sub-arcsec gate captures the residual long-period sub-arcsec-photocentre rows. |
+| `orb6` | ORB6 visual orbit, grade ∈ {1, 2, 3, 4, 5}. Grade tiebreak (lowest grade wins); reference-year secondary tiebreak. |
+| `orb6_spectroscopic` | ORB6 grade ∈ {8, 9}. Same tiebreaks. |
+| `none` | No orbital information on file. |
+
+NSS solution-type routing inside `gaia_nss`:
+
+| Solution types | Path |
+|---|---|
+| `Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`, `AstroSpectroSB1` | Recover `(a, i, Ω, ω)` from `(A, B, F, G)` via the Heintz 1978 / Halbwachs et al. 2023 Thiele-Innes → Campbell algebra. The algebra is inlined in `_thiele_innes_to_campbell` (`scripts/binaries/stage4_orbits.py`) rather than imported from ESA NSSTools — the dependency is unmaintained and the closed form is ~10 lines. The docstring carries the derivation. |
+| `EclipsingBinary`, `EclipsingSpectro` | Inclination + arg-periastron read directly from the stored columns; eclipse photometry doesn't constrain `a` or `Ω`. |
+| `SB1`, `SB2`, `SB1C`, `SB2C` | Spectroscopic-only: arg-periastron when stored. Inclination and longitude-of-ascending-node are unrecoverable from RV alone. |
+
+Each `select_orbit` call returns `(OrbitElements | None, orbit_via)`.
+Field-by-field `None` is significant — a row may carry period + T + e
+but no `a_AU` because no system parallax was attached. Downstream
+consumers choose their own fallback.
+
+### Stage 5 — physical-vs-optical classification
+
+Per-pair 5-tier cascade (`OPTICAL_VIA_VALUES`):
+
+| Tier | Mechanism |
+|---|---|
+| `wds_notes_*` | WDS Notes flag chars: `T/V/Z` confirm physical (common proper motion / parallax / orbital arc), `S/U/X/Y` confirm optical contamination, other chars silent. |
+| `gaia_*` | Both components have a Gaia 5p row. Compare parallax (3σ on combined error) AND per-axis PM (≤ 5 mas/yr). |
+| `asymm_*` | Exactly one component has a Gaia 5p row; the other is Gaia-saturated and has a HIP2 parallax anchor. 3σ test against the HIP2 anchor. Catches Sirius A-C/D/E/F directly: anchor 378 mas vs Gaia <1 mas → enormous excess, reject. |
+| `orbit_kept` | Stage 4 selected real orbital elements (any route). Empirical orbit fit beats the mag-gap heuristic — necessary for WD-companion pairs like Sirius A-B where the photometric gap alone would misclassify. |
+| `mag_heuristic_*` | `\|Δmag\| ≤ 5` keep, otherwise reject. Coarse backstop; the strong filtering is in the Gaia tiers. Pairs missing both mags ride through ("absence of evidence is not evidence of optical contamination"). |
+
+### Stages 6-7 — emit and gate
+
+Stage 6 writes `data/binaries/multiples.tsv`: two rows per kept
+(physical) pair, columns per `MULTIPLES_TSV_COLUMNS`. Pairs Stage 5
+classified as optical are dropped — downstream consumers never see
+optical-flagged rows in this file. The `regime` integer column is the
+legacy v5-style provenance tag (`0` = no orbital info, `2` = full
+elements from Gaia NSS or ORB6 visual, `3` = spectroscopic-only); the
+finer `orbit_via` string column carries the per-row source.
+
+Stage 7 flattens per-strategy / per-tier counters into
+`scripts/binaries/build-binaries-expected.json` and compares against the
+committed snapshot — the same `UPDATE_BUILD_COUNTS=1` flow as
+`build-catalog.ts`. The Python comparator mirrors the TS one in
+`scripts/catalog/build-counts.ts`.
+
+`build-binaries.py` is idempotent against `data/binaries/multiples.tsv`
+the same way `build-catalog.ts` is against `public/catalog.bin` — mtime
+checks across every reference catalogue input plus the script itself,
+overridable with `--force`.
+
 ## Preprocessor idempotency
 
 `scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if `catalog.bin`,
