@@ -198,7 +198,8 @@ def pull_primary_aliases(
         table = client.run(
             "SELECT oidref, id FROM ident "
             f"WHERE oidref IN ({inlist}) "
-            f"AND (id LIKE '{HIP_LIKE}' OR id LIKE 'HD %')"
+            f"AND (id LIKE '{HIP_LIKE}' OR id LIKE 'HD %') "
+            "ORDER BY oidref, id"
         )
         for row in table:
             oid = int(row["oidref"])
@@ -370,7 +371,16 @@ def main() -> None:
         if wds_ident(wds_id, component) not in ident_to_oid
         and wds_id in siblings_by_wds
     ]
-    primary_oids_for_cascade = sorted(set(ident_to_oid.values()))
+    # Only fetch HD/HIP aliases for primaries whose system has at least one
+    # unresolved sibling — the cascade's fan-out source. The conflict-detect
+    # set later uses the FULL Phase A oid set, so narrowing here doesn't
+    # admit alias-points-at-another-system's-primary false positives.
+    wds_ids_needing_cascade = {wds_id for wds_id, _ in unresolved_with_siblings}
+    primary_oids_for_cascade = sorted({
+        sib_oid
+        for wds_id in wds_ids_needing_cascade
+        for _, sib_oid in siblings_by_wds.get(wds_id, ())
+    })
     if unresolved_with_siblings:
         print(
             f"Phase A.5: pulling HD/HIP aliases for {len(primary_oids_for_cascade):,} "
@@ -397,7 +407,7 @@ def main() -> None:
             f"Phase A.6: querying {len(candidates):,} cascade candidates "
             f"(HD / CCDM / HIP)…"
         )
-        resolved_oids_set = set(primary_oids_for_cascade)
+        resolved_oids_set = set(ident_to_oid.values())
         cascade_rows: list[dict[str, Any]] = []
         t0 = time.time()
         for offset in range(0, len(candidates), IDENT_BATCH):
