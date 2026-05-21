@@ -62,6 +62,19 @@ class AggregateStatsTests(unittest.TestCase):
         self.assertAlmostEqual(stats["p84"], 0.07)
         self.assertAlmostEqual(stats["max"], 0.07)
 
+    def test_drops_nan_inputs(self) -> None:
+        # `fractional_diff` returns NaN on non-positive paper_pc; ensure
+        # those don't corrupt the median via undefined NaN sort order.
+        stats = vd.aggregate_stats([0.10, math.nan, -0.20, math.nan, 0.30])
+        self.assertEqual(stats["count"], 3)
+        self.assertAlmostEqual(stats["median"], 0.20)
+        self.assertAlmostEqual(stats["max"], 0.30)
+
+    def test_all_nan_collapses_to_empty(self) -> None:
+        stats = vd.aggregate_stats([math.nan, math.nan])
+        self.assertEqual(stats["count"], 0)
+        self.assertTrue(math.isnan(stats["median"]))
+
 
 class TopNDisagreementsTests(unittest.TestCase):
     def _disagreement(self, name: str, fd: float) -> vd.Disagreement:

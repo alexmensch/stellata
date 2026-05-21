@@ -88,11 +88,13 @@ def fractional_diff(catalog_pc: float, paper_pc: float) -> float:
 
 
 def aggregate_stats(diffs: Sequence[float]) -> dict[str, float]:
-    """Median, 84th-percentile, and max of `|diffs|`. Empty input returns
-    NaN for each — caller surfaces the absence as a hard error."""
-    if not diffs:
+    """Median, 84th-percentile, and max of `|diffs|`. NaN inputs (returned
+    by `fractional_diff` when paper_pc<=0) are dropped before sorting —
+    leaving them in would corrupt the median via Python's undefined NaN
+    sort order. Empty input returns NaN for each."""
+    abs_diffs = sorted(abs(d) for d in diffs if not math.isnan(d))
+    if not abs_diffs:
         return {"median": math.nan, "p84": math.nan, "max": math.nan, "count": 0}
-    abs_diffs = sorted(abs(d) for d in diffs)
     return {
         "median": _percentile(abs_diffs, 50.0),
         "p84": _percentile(abs_diffs, 84.0),
