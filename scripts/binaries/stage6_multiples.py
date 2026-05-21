@@ -189,6 +189,25 @@ def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, 
 SystemAnchor = tuple[float, float, float, float]
 
 
+def _iter_decomposing_pairs(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+):
+    """Yield ``(pair, primary, secondary, p_ast, s_ast)`` for each
+    decomposing WDS pair, skipping the ones Stage 2 left as
+    system-level / ambiguous ``components`` strings. Shared by
+    ``compute_system_anchors`` and ``build_multiples_rows`` so both
+    paths agree on the cursor (any change to the skip condition lands
+    in exactly one place)."""
+    i = 0
+    for pair in pairs:
+        if split_components(pair.components) is None:
+            continue
+        yield pair, components[i], components[i + 1], astrometry[i], astrometry[i + 1]
+        i += 2
+
+
 def compute_system_anchors(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
@@ -202,26 +221,22 @@ def compute_system_anchors(
     the inner pair's components sit at the primary's distance to within a
     handful of AU, which at parsec scales is no measurable offset.
 
-    Iteration order matches the decomposing-pair walk so the first
-    resolved component in a system wins the anchor slot; on a tie the
-    primary's row (lower iteration index) takes precedence over the
-    secondary. Pairs Stage 2 skipped (system-level / ambiguous
-    ``components`` strings) are silent.
+    The first resolved component in a system wins the anchor slot; on a
+    tie the primary takes precedence over the secondary.
     """
     out: dict[str, SystemAnchor] = {}
-    i = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
+    for pair, primary, secondary, p_ast, s_ast in _iter_decomposing_pairs(
+        pairs, components, astrometry,
+    ):
+        if pair.wds_id in out:
             continue
-        for offset in (0, 1):
-            comp = components[i + offset]
-            ast = astrometry[i + offset]
-            if comp.wds_id in out:
-                continue
-            pos = _position_pc(ast)
-            if pos is not None:
-                out[comp.wds_id] = pos
-        i += 2
+        pos = _position_pc(p_ast)
+        if pos is not None:
+            out[pair.wds_id] = pos
+            continue
+        pos = _position_pc(s_ast)
+        if pos is not None:
+            out[pair.wds_id] = pos
     return out
 
 
@@ -352,38 +367,31 @@ def build_multiples_rows(
 
     out: list[MultiplesRow] = []
     emitted_keys: set[tuple[str, str]] = set()
-    i = 0       # cursor into components / astrometry
-    j = 0       # cursor into orbits / classifications
-    for pair in pairs:
-        if split_components(pair.components) is None:
+    for j, (pair, primary, secondary, p_ast, s_ast) in enumerate(
+        _iter_decomposing_pairs(pairs, components, astrometry),
+    ):
+        if not classifications[j].is_physical:
             continue
-        cls = classifications[j]
-        if cls.is_physical:
-            primary = components[i]
-            secondary = components[i + 1]
-            p_ast = astrometry[i]
-            s_ast = astrometry[i + 1]
-            orbit, via = orbits[j]
-            anchor = system_anchors.get(pair.wds_id)
-            if (
-                anchor is not None
-                or _position_pc(p_ast) is not None
-                or _position_pc(s_ast) is not None
-            ):
-                out.append(build_multiples_row(
-                    pair, primary, p_ast, orbit, via,
-                    is_primary=True, indices=indices,
-                    system_anchor=anchor,
-                ))
-                out.append(build_multiples_row(
-                    pair, secondary, s_ast, orbit, via,
-                    is_primary=False, indices=indices,
-                    system_anchor=anchor,
-                ))
-                emitted_keys.add((pair.wds_id, primary.component))
-                emitted_keys.add((pair.wds_id, secondary.component))
-        i += 2
-        j += 1
+        orbit, via = orbits[j]
+        anchor = system_anchors.get(pair.wds_id)
+        if (
+            anchor is None
+            and _position_pc(p_ast) is None
+            and _position_pc(s_ast) is None
+        ):
+            continue
+        out.append(build_multiples_row(
+            pair, primary, p_ast, orbit, via,
+            is_primary=True, indices=indices,
+            system_anchor=anchor,
+        ))
+        out.append(build_multiples_row(
+            pair, secondary, s_ast, orbit, via,
+            is_primary=False, indices=indices,
+            system_anchor=anchor,
+        ))
+        emitted_keys.add((pair.wds_id, primary.component))
+        emitted_keys.add((pair.wds_id, secondary.component))
 
     if simbad_xids:
         out.extend(build_standalone_rows(
