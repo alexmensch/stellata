@@ -136,6 +136,20 @@ class MultiplesRow:
     dist_pc: float | None
 
 
+def _system_id_for_pair(pair: WdsPair) -> str:
+    """``"{wds_id}-{components}"`` (e.g. ``"00491+5749-AB"``) — stable
+    across both rows of the same WDS pair so the catalog binary writer
+    can group them."""
+    return f"{pair.wds_id}-{pair.components}"
+
+
+def _system_id_for_standalone(wds_id: str, component: str) -> str:
+    """``"{wds_id}-_{component}"`` (leading underscore is the standalone
+    marker). The ``-_`` prefix never collides with a pair-row id because
+    WDS ``components`` strings are letters/digits only — no underscore."""
+    return f"{wds_id}-_{component}"
+
+
 def _athyg_row_for_component(
     component: ResolvedComponent, indices: IdentifierIndices,
 ) -> AthygRow | None:
@@ -240,9 +254,7 @@ def build_multiples_row(
     system_anchor: SystemAnchor | None = None,
 ) -> MultiplesRow:
     """Project Stage 2-4 outputs for one component into one canonical
-    ``MultiplesRow``. The ``system_id`` is ``"{wds_id}-{components}"``
-    (e.g. ``"00491+5749-AB"``) — stable across A-row and B-row of the
-    same pair so the catalog binary writer can group them. Position is
+    ``MultiplesRow`` keyed by ``_system_id_for_pair``. Position is
     computed at the astrometry's native epoch; proper-motion-to-J2000
     propagation is deferred to Phase 3 per the Stage 3 docstring.
 
@@ -282,7 +294,7 @@ def build_multiples_row(
     )
 
     return MultiplesRow(
-        system_id=f"{pair.wds_id}-{pair.components}",
+        system_id=_system_id_for_pair(pair),
         comp=component.component,
         hip=component.hip,
         gaia_source_id=component.gaia_source_id,
@@ -440,7 +452,7 @@ def build_standalone_rows(
             spect_via = SPECT_VIA_NONE
 
         out.append(MultiplesRow(
-            system_id=f"{wds_id}-_{component}",
+            system_id=_system_id_for_standalone(wds_id, component),
             comp=component,
             hip=xid.hip,
             gaia_source_id=xid.gaia_source_id,
