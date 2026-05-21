@@ -445,16 +445,29 @@ export function markPrimaryIfUnflagged(
 // Mutates `stars[i].flags` in place via `markPrimaryIfUnflagged`. Pure
 // otherwise — does not read or write any other fields.
 export interface DoublesStar { absmag: number; flags: number; hip: number | null; }
+
+// HIP → record-index lookup over a star list. When the same HIP appears
+// on multiple rows (rare; binary companions sharing an identifier), the
+// FIRST occurrence wins via the `!has` check — so against the
+// absmag-sorted star array build-catalog.ts produces, the value is the
+// brightest row. Shared between the constellation stick-figure resolver
+// and the CCDM doubles pass so the two never disagree on a duplicate.
+export function buildHipToIndex(
+  stars: { hip: number | null }[],
+): Map<number, number> {
+  const m = new Map<number, number>();
+  for (let i = 0; i < stars.length; i++) {
+    const h = stars[i].hip;
+    if (h !== null && h > 0 && !m.has(h)) m.set(h, i);
+  }
+  return m;
+}
+
 export function applyDoublesFlag(
   stars: DoublesStar[],
   groups: Iterable<Iterable<number>>,
+  hipToIndex: Map<number, number>,
 ): { systems: number; flagged: number } {
-  const hipToIndex = new Map<number, number>();
-  for (let i = 0; i < stars.length; i++) {
-    const h = stars[i].hip;
-    if (h !== null && h > 0) hipToIndex.set(h, i);
-  }
-
   let systems = 0;
   let flagged = 0;
   for (const hips of groups) {

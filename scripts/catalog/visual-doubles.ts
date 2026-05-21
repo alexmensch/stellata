@@ -163,10 +163,11 @@ export function parseHipCcdm(srcPath: string): Map<string, number[]> {
 export function applyDoublesFlag(
   stars: Star[],
   ccdmGroups: Map<string, number[]>,
+  hipToIndex: Map<number, number>,
 ): { systems: number; flagged: number } {
   const allGroups: Iterable<Iterable<number>> = (function* () {
     yield* ccdmGroups.values();
     for (const sys of KNOWN_VISUAL_DOUBLES) yield sys.components;
   })();
-  return applyDoublesFlagPure(stars, allGroups);
+  return applyDoublesFlagPure(stars, allGroups, hipToIndex);
 }

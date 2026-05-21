@@ -11,6 +11,7 @@ import {
   markPrimary,
   markPrimaryIfUnflagged,
   applyDoublesFlag,
+  buildHipToIndex,
   BINARY_MAX_SEP_PC,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -553,6 +554,29 @@ describe("catalog-pure / markPrimaryIfUnflagged", () => {
   });
 });
 
+describe('catalog-pure / buildHipToIndex', () => {
+  it('maps positive HIPs to their record index and skips null / non-positive', () => {
+    const m = buildHipToIndex([
+      { hip: 100 },
+      { hip: null },
+      { hip: 0 },
+      { hip: 200 },
+    ]);
+    expect(m.size).toBe(2);
+    expect(m.get(100)).toBe(0);
+    expect(m.get(200)).toBe(3);
+  });
+
+  it('keeps the FIRST occurrence on duplicate HIPs (brightest under absmag-sorted input)', () => {
+    const m = buildHipToIndex([
+      { hip: 100 },
+      { hip: 100 },
+      { hip: 100 },
+    ]);
+    expect(m.get(100)).toBe(0);
+  });
+});
+
 describe('catalog-pure / applyDoublesFlag', () => {
   // Mini Star fixture with just the fields applyDoublesFlag reads/writes.
   function s(absmag: number, hip: number | null, flags = 0): DoublesStar {
@@ -563,7 +587,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
     // Three stars; the group covers them all. Lowest absmag (=brightest)
     // should get FLAG_BINARY_PRIMARY; the others stay clean.
     const stars: DoublesStar[] = [s(4, 100), s(2, 200), s(6, 300)];
-    const r = applyDoublesFlag(stars, [[100, 200, 300]]);
+    const r = applyDoublesFlag(stars, [[100, 200, 300]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(1);
     expect(stars[1].flags).toBe(FLAG_BINARY_PRIMARY);
@@ -573,7 +597,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
 
   it('silently drops groups whose HIPs are all missing from the catalog', () => {
     const stars: DoublesStar[] = [s(4, 100), s(5, 200)];
-    const r = applyDoublesFlag(stars, [[999, 1000]]);
+    const r = applyDoublesFlag(stars, [[999, 1000]], buildHipToIndex(stars));
     expect(r.systems).toBe(0);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);
@@ -585,7 +609,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
     // pick the brighter one but must defer per markPrimaryIfUnflagged's
     // contract.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
-    const r = applyDoublesFlag(stars, [[100, 200]]);
+    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);                    // not re-flagged
@@ -597,7 +621,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
       s(2, 100), s(3, 101), // group A — 100 brightest
       s(5, 200), s(4, 201), // group B — 201 brightest
     ];
-    const r = applyDoublesFlag(stars, [[100, 101], [200, 201]]);
+    const r = applyDoublesFlag(stars, [[100, 101], [200, 201]], buildHipToIndex(stars));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     expect(stars[0].flags).toBe(FLAG_BINARY_PRIMARY); // 100 won group A
@@ -612,7 +636,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
     // sources behave identically once unioned.
     const stars: DoublesStar[] = [s(3, 100), s(2, 101)];
     // Pretend the CCDM pass produced one group, the override another.
-    const r = applyDoublesFlag(stars, [[100], [101]]);
+    const r = applyDoublesFlag(stars, [[100], [101]], buildHipToIndex(stars));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     // Each single-member group flags its own brightest (and only)
@@ -623,7 +647,7 @@ describe('catalog-pure / applyDoublesFlag', () => {
 
   it('skips HIP=0 / null records when building the lookup', () => {
     const stars: DoublesStar[] = [s(2, null), s(4, 0), s(3, 100)];
-    const r = applyDoublesFlag(stars, [[100]]);
+    const r = applyDoublesFlag(stars, [[100]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(stars[2].flags).toBe(FLAG_BINARY_PRIMARY);
     // The 0/null-HIP rows must never be hit by HIP→index lookup.
@@ -633,9 +657,10 @@ describe('catalog-pure / applyDoublesFlag', () => {
 
   it('is idempotent under re-application', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    applyDoublesFlag(stars, [[100, 200]]);
+    const idx = buildHipToIndex(stars);
+    applyDoublesFlag(stars, [[100, 200]], idx);
     const flagsBefore = stars.map((x) => x.flags);
-    applyDoublesFlag(stars, [[100, 200]]);
+    applyDoublesFlag(stars, [[100, 200]], idx);
     // Second pass sees the existing primary bit and bails — no
     // additional bits set.
     expect(stars.map((x) => x.flags)).toEqual(flagsBefore);
