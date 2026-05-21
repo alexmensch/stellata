@@ -278,16 +278,24 @@ of the LMC's true ~50 kpc. Without a second layer this regresses today's
 behaviour: a "line of stars between MW and LMC in the intergalactic
 void". After the B-J override fires we run a population-specific second
 pass: any row inside a 15° cone of the LMC photometric centre
-(RA 78.76°, Dec −69.19°) whose proper motion lies within ±0.5 mas/yr of
-the LMC bulk centre-of-mass PM (van der Marel & Kallivayalil 2014:
-+1.85 mas/yr in RA, +0.20 mas/yr in Dec) has its `dist` snapped to the
-LMC's eclipsing-binary distance (49.594 kpc, Pietrzyński et al. 2019,
-Nature 567, 200; CDS J/other/Natur/567.200), with `x0`/`y0`/`z0`/`absmag`
-recomputed from the new distance. ~54 rows are flagged at LMC depth
-each build — close to the ~60 estimated from the AT-HYG/Gaia source
-data. SMC, Sgr dSph, and other Magellanic-system populations are too
-faint for AT-HYG's brightness cut today; the same approach will extend
-when DR4 lands or AT-HYG goes deeper.
+(RA 78.76°, Dec −69.19°) whose proper motion sits inside a per-component
+window around the LMC bulk PM (RA ±0.5 mas/yr of +1.85, Dec ±0.55 mas/yr
+of +0.30) has its `dist` snapped to the LMC's eclipsing-binary distance
+(49.594 kpc, Pietrzyński et al. 2019, Nature 567, 200; CDS
+J/other/Natur/567.200), with `x0`/`y0`/`z0`/`absmag` recomputed from the
+new distance. The RA centre matches van der Marel & Kallivayalil 2014's
+CoM bulk PM (+1.85, +0.23); the Dec centre is shifted +0.07 mas/yr above
+that literature value to the empirical mean of the AT-HYG-cone LMC-PM
+population (+0.30, std 0.285 mas/yr) — disc rotation across the 15° cone
+plus DR3 per-source uncertainty produce a wider pm_dec spread than pm_ra
+(empirical std 0.205) and bias the in-cone mean above the CoM. Dec
+tolerance is ~2σ on that empirical scatter, asymmetric per-component
+because pm_ra doesn't need the extra width. ~59 rows are flagged at LMC
+depth each build (54 under the prior symmetric ±0.5 / +0.20 gate; +5
+high-pm_dec supergiants — including HIP 27655, HD 269953, HD 270100 —
+that the prior gate missed). SMC, Sgr dSph, and other Magellanic-system
+populations are too faint for AT-HYG's brightness cut today; the same
+approach will extend when DR4 lands or AT-HYG goes deeper.
 
 **Known cross-match completeness artefact.** Filter (1) above is the
 load-bearing one: AT-HYG can only emit `x0`/`y0`/`z0` for a Tycho-2

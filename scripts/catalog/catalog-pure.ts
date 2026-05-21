@@ -843,15 +843,20 @@ export const DIST_SRC_LMC_KIN = 'LMC_KIN';
 //   - LMC photometric centre: (RA, Dec) ≈ (05h 23m 34s, −69° 45′) = (78.76°,
 //     −69.19°). The 15° cone is wide enough to admit the visible disc and
 //     30 Doradus while keeping confusion with Galactic foreground low.
-// Tolerances chosen so AT-HYG halo / runaway stars in the same sky region
-// (which have very different PMs) fail the test — see catalog-pure.test.ts.
+// PM centre and tolerances are per-component and asymmetric in Dec vs RA:
+// the AT-HYG-cone empirical distribution is wider in pm_dec than pm_ra
+// (disc rotation + DR3 scatter). See SCIENCE.md § "LMC kinematic distance
+// refinement" for the empirical mean / std and the ~2σ derivation. Halo /
+// runaway stars in the same sky region have PMs an order of magnitude
+// further out and fail the test — see catalog-pure.test.ts.
 export const LMC_DISTANCE_PC = 49_594;
 export const LMC_CENTRE_RA_HOURS = 5.25067;       // 78.76° / 15
 export const LMC_CENTRE_DEC_DEG = -69.19;
 export const LMC_CONE_HALF_ANGLE_DEG = 15;
 export const LMC_PM_RA_CENTRE = 1.85;             // mas/yr
-export const LMC_PM_DEC_CENTRE = 0.20;            // mas/yr
-export const LMC_PM_TOLERANCE = 0.5;              // mas/yr per component
+export const LMC_PM_DEC_CENTRE = 0.30;            // mas/yr
+export const LMC_PM_RA_TOLERANCE = 0.5;           // mas/yr
+export const LMC_PM_DEC_TOLERANCE = 0.55;         // mas/yr
 
 /** Angular separation (degrees) between two ICRS positions. Vector
  *  dot-product form — stable for small and wide separations alike, no
@@ -907,7 +912,7 @@ export function applyLmcKinematicOverride(
   pmDec: number | null,
 ): DistanceOverride | null {
   if (pmRa === null || pmDec === null) return null;
-  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return null;
-  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return null;
+  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_RA_TOLERANCE) return null;
+  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_DEC_TOLERANCE) return null;
   return buildDistanceOverride(raHours, decDegrees, mag, LMC_DISTANCE_PC);
 }

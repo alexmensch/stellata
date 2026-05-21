@@ -52,7 +52,8 @@ import {
   LMC_CONE_HALF_ANGLE_DEG,
   LMC_PM_RA_CENTRE,
   LMC_PM_DEC_CENTRE,
-  LMC_PM_TOLERANCE,
+  LMC_PM_RA_TOLERANCE,
+  LMC_PM_DEC_TOLERANCE,
 } from './catalog-pure';
 
 describe('catalog-pure / spectClassIndex', () => {
@@ -1243,6 +1244,12 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     { label: 'HD 268749 (B7 IAB LMC supergiant)', ra: 4.8915, dec: -69.409, mag: 12.029, pmRa: 2.044, pmDec: -0.096, athygDist: 13368.7 },
     { label: 'HD 268718',                         ra: 4.866, dec: -69.426, mag: 10.596, pmRa: 2.093, pmDec: -0.138, athygDist: 46323.4 },
     { label: 'HD 268654 (smeared to 196 kpc)',    ra: 4.820, dec: -69.457, mag: 10.5,   pmRa: 2.033, pmDec: -0.198, athygDist: 196078.4 },
+    // High-pm_dec tail: supergiants whose pm_dec sits above the literature
+    // CoM but is well inside LMC internal kinematics + DR3 scatter. Caught
+    // once the Dec centre shifts to the AT-HYG-cone empirical mean (+0.30).
+    { label: 'HIP 27655 / HD 270196',             ra: 5.85576786, dec: -70.28588602, mag: 11.61, pmRa: 2.089, pmDec: 0.775, athygDist: 85470.09 },
+    { label: 'HD 269953',                         ra: 5.67005049, dec: -69.66801821, mag: 10.046, pmRa: 1.888, pmDec: 0.720, athygDist: 24893.44 },
+    { label: 'HD 270100',                         ra: 5.7473789,  dec: -67.49457689, mag: 12.22,  pmRa: 1.575, pmDec: 0.742, athygDist: 62206.41 },
   ];
   const LMC_PM_NON_HITS: Fixture[] = [
     // Inside the LMC cone but PM ≠ LMC bulk — a halo star or runaway,
@@ -1299,19 +1306,24 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     const eps = 1e-9;
     const passEdgeRa = applyLmcKinematicOverride(
       LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
-      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
+      LMC_PM_RA_CENTRE + LMC_PM_RA_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
     );
     expect(passEdgeRa).not.toBeNull();
     const passBothEdges = applyLmcKinematicOverride(
       LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
-      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE - LMC_PM_TOLERANCE + eps,
+      LMC_PM_RA_CENTRE + LMC_PM_RA_TOLERANCE - eps, LMC_PM_DEC_CENTRE - LMC_PM_DEC_TOLERANCE + eps,
     );
     expect(passBothEdges).not.toBeNull();
-    const failJustOver = applyLmcKinematicOverride(
+    const failJustOverRa = applyLmcKinematicOverride(
       LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
-      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
+      LMC_PM_RA_CENTRE + LMC_PM_RA_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
     );
-    expect(failJustOver).toBeNull();
+    expect(failJustOverRa).toBeNull();
+    const failJustOverDec = applyLmcKinematicOverride(
+      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
+      LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE + LMC_PM_DEC_TOLERANCE + eps,
+    );
+    expect(failJustOverDec).toBeNull();
   });
 
   it('DIST_SRC_LMC_KIN tag is "LMC_KIN" (distinct from BJ + AT-HYG namespace)', () => {
