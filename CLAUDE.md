@@ -156,8 +156,9 @@ scripts/                                     Each subsystem cluster owns a folde
     build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis →
                                              public/catalog.bin (v6 binary).
     build-catalog-expected.json              Build-count snapshot (UPDATE_BUILD_COUNTS=1).
-    catalog-pure.ts                          parseSpectral, physicalRadius, GCVS parsers,
-                                             inferBinaries — shared with src/client/loaders.
+    catalog-pure.ts                          resolveSpectralInfo (SIMBAD/GSP-Spec/fallback),
+                                             physicalRadius, GCVS parsers, inferBinaries —
+                                             shared with src/client/loaders.
     catalog-pure.test.ts                     vitest pin for catalog-pure.
     verify-catalog.ts                        sanity-check tool for the generated binary.
     build-counts.ts                          BuildCounts schema + compareBuildCounts.

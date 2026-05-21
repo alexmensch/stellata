@@ -91,6 +91,17 @@ export interface BuildCounts {
    *  population the downstream Tier 2 colour-LUT re-routing can use as
    *  Apsis-direct Teff. Pinned against the zsr.1 84.8% probe figure. */
   apsisTeffEither: number;
+  /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
+  simbadSptypeEntries: number;
+  /** Records whose spectral classification (classIdx + subclass + lumClass)
+   *  came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
+  spectralBySimbad: number;
+  /** Records that fell through to Gaia DR3 GSP-Spec's
+   *  `spectraltype_esphs` enum — second-tier letter-only classification. */
+  spectralByGspspec: number;
+  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
+   *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
+  spectralFallback: number;
 }
 
 export type CountDiff =

@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
+  parseSimbadSptypeTsv,
   buildHipToIndex,
   inferBinaries,
   DIST_SRC_BAILER_JONES,
@@ -31,6 +32,7 @@ import {
   NAME_LENGTH_PREFIX_BYTES,
   type ApsisRow,
   type SearchEntry,
+  type SimbadSpectralRow,
 } from './catalog-pure';
 import {
   compareBuildCounts,
@@ -67,6 +69,7 @@ const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
+const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
@@ -87,6 +90,7 @@ function isUpToDate(): boolean {
     ? statSync(SRC_GAIA_HIP_XMATCH).mtimeMs
     : 0;
   const apsisMtime = existsSync(SRC_GAIA_APSIS) ? statSync(SRC_GAIA_APSIS).mtimeMs : 0;
+  const simbadMtime = existsSync(SRC_SIMBAD_SPTYPE) ? statSync(SRC_SIMBAD_SPTYPE).mtimeMs : 0;
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -97,7 +101,8 @@ function isUpToDate(): boolean {
     binMtime > hipCcdmMtime &&
     binMtime > bjMtime &&
     binMtime > gaiaHipXmatchMtime &&
-    binMtime > apsisMtime
+    binMtime > apsisMtime &&
+    binMtime > simbadMtime
   );
 }
 
@@ -152,6 +157,10 @@ async function main() {
     apsisEntries: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
+    simbadSptypeEntries: 0,
+    spectralBySimbad: 0,
+    spectralByGspspec: 0,
+    spectralFallback: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -182,6 +191,24 @@ async function main() {
     console.log('Gaia DR3 Apsis file not found; skipping astrophysical-parameter surface.');
   }
 
+  // SIMBAD sp_type per Gaia DR3 source_id. First tier of the spectral
+  // resolver; the binary defaults to GSP-Spec + unknown sentinel without it.
+  let simbadSpectralMap = new Map<string, SimbadSpectralRow>();
+  if (existsSync(SRC_SIMBAD_SPTYPE)) {
+    console.log('Parsing SIMBAD sp_type catalogue...');
+    const tSimbad = Date.now();
+    simbadSpectralMap = parseSimbadSptypeTsv(readFileSync(SRC_SIMBAD_SPTYPE, 'utf8'));
+    console.log(`  ${simbadSpectralMap.size} entries in ${Date.now() - tSimbad}ms`);
+    counts.simbadSptypeEntries = simbadSpectralMap.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_SIMBAD_SPTYPE} not found — spectral classification will\n` +
+      `         fall through to Gaia DR3 GSP-Spec and the unknown sentinel.\n` +
+      `         Re-run scripts/refresh/refresh-simbad-sptype.py to restore\n` +
+      `         the SIMBAD tier.`,
+    );
+  }
+
   // HIP → Gaia DR3 source_id cross-walk: loaded once and shared between
   // the AT-HYG single-star backfill in readStars and the GCVS byGaia
   // bridge below.
@@ -197,7 +224,9 @@ async function main() {
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = await readStars(SRC_CSV, CON_INDEX, bjMap, hipToGaia);
+  const { stars, stats } = await readStars(
+    SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectralMap, apsisMap,
+  );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
   console.log(`  dropped:`, stats.dropped);
@@ -226,6 +255,18 @@ async function main() {
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
   counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
+  counts.spectralBySimbad = stats.spectralBySimbad;
+  counts.spectralByGspspec = stats.spectralByGspspec;
+  counts.spectralFallback = stats.spectralFallback;
+
+  const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
+  const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
+  const fallbackPct = ((stats.spectralFallback / stars.length) * 100).toFixed(1);
+  console.log(
+    `  spectral classification: SIMBAD ${stats.spectralBySimbad} (${simbadPct}%), ` +
+      `GSP-Spec ${stats.spectralByGspspec} (${gspspecPct}%), ` +
+      `unknown ${stats.spectralFallback} (${fallbackPct}%)`,
+  );
 
   // Sort by absolute magnitude ascending (brightest first). Record indices
   // are final after this point.

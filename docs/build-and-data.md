@@ -221,13 +221,27 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 
 ## Physical radius and spectral parsing
 
-`parseSpectral` in `build-catalog.ts` walks tolerant regexes over the (often
-messy) AT-HYG `spect` string to extract `{ classIdx, subclass, lumClass,
-isWhiteDwarf }`. It handles the common pathological forms seen in the
-catalog (composite `"K0III+K6V"`, prefix colons, ranges like `"F5-F9"`,
-subdwarf `sdB`, white-dwarf `DA2`, etc.) by using prefix-anchored matches
-for the luminosity numeral and falling back to `lumClass=255` when no
-pattern matches.
+`resolveSpectralInfo` in `catalog-pure.ts` resolves
+`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a three-tier
+priority chain keyed on the Gaia DR3 `source_id`:
+
+1. **SIMBAD `sp_type`** (`data/simbad/simbad_sptype.tsv` from
+   `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises sp_type
+   to Morgan-Keenan only — variability annotations live in `otype`, never
+   in sp_type — so the parser (`classifyFromSimbad`) is a strict MK walker
+   covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs (`DA`,
+   `DB2`, `DAH`), subdwarfs (`sdB5`), carbon / Wolf-Rayet (`C5,2e`, `WN5`),
+   and Am/Ap composites (`kA5hA8mF1(III)SiEuBa` → metallic-line type wins).
+2. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (the new column on
+   `data/gaia/gaia_dr3_apsis.tsv`). Letter-only enum; `classifyFromGspspec`
+   maps each letter to its `classIdx` with neutral subclass=5 / lumClass=255.
+3. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=8` / `lumClass=255` for
+   rows neither upstream covers.
+
+AT-HYG's contaminated `spect` cell is no longer consulted for
+classification (build-counts: ~88% SIMBAD / ~11% GSP-Spec / <1% fallback
+against the v3.3 classic-IDs subset); it is still used as a last-resort
+hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
 

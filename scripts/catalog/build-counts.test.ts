@@ -37,6 +37,10 @@ function baseCounts(): BuildCounts {
     apsisEntries: 270000,
     apsisMatched: 260000,
     apsisTeffEither: 255000,
+    simbadSptypeEntries: 320000,
+    spectralBySimbad: 280000,
+    spectralByGspspec: 25000,
+    spectralFallback: 8000,
   };
 }
 

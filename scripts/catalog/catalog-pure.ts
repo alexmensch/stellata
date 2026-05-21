@@ -42,60 +42,198 @@ export function spectClassIndex(firstChar: string): number {
   }
 }
 
-export function parseSpectral(raw: string): SpectralInfo {
-  // Strip leading junk colons and quotes; collapse spaces.
-  const s = raw.replace(/^["':\s]+/, '').replace(/\s+/g, '').toUpperCase();
-  if (!s) {
-    return { classIdx: 8, subclass: 5, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 };
-  }
+/** Canonical "no classification available" SpectralInfo. Consumed by
+ *  callers that need a SpectralInfo even when SIMBAD + GSP-Spec both
+ *  missed (the binary writer still needs to pack a spectClass/lumClass
+ *  byte). classIdx=8 routes through T_TABLE[8]'s neutral 5000 K row;
+ *  lumClass=255 is the renderer's "no luminosity-class softness"
+ *  sentinel. */
+export const SPECTRAL_UNKNOWN: SpectralInfo = {
+  classIdx: 8, subclass: 5, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0,
+};
 
-  // White dwarf: starts with "D" followed by another letter (DA, DB, DC, DO,
-  // DZ, DQ, DX) and an optional digit. Plain "D" alone (rare) also counts.
-  if (s[0] === 'D' && (s.length === 1 || /[A-Z]/.test(s[1]))) {
-    const m = s.match(/^D[A-Z]*(\d(?:\.\d)?)?/);
-    const wdSub = m && m[1] ? Math.round(Number(m[1])) : 5;
+// Roman-numeral luminosity-class lookup. Ordered: longest prefix first so
+// "III" never matches as "II" + "I" etc. Each entry is a regex anchored at
+// the start of the post-subclass scan window. The list is consulted by
+// both classifyFromSimbad's MK walker and the composite-tag fallback so a
+// new Roman variant gets picked up in one place.
+const LUMINOSITY_PREFIXES: ReadonlyArray<readonly [RegExp, number]> = [
+  [/^IA\+|^0(?!\d)/,  9],
+  [/^IAB/,            7],
+  [/^IA(?!B)/,        8],
+  [/^IB/,             6],
+  [/^III/,            4],
+  [/^II(?!I)/,        5],
+  [/^IV/,             3],
+  [/^VII/,            0],
+  [/^VI(?!I)/,        1],
+  [/^V(?!I)/,         2],
+  [/^I(?![IV])/,      7], // bare "I" — treat as Iab to centre the supergiant softness ramp
+];
+
+function lookupLumClass(window: string): number {
+  // SIMBAD writes Roman luminosity-class suffixes mixed-case — uppercase
+  // I/V plus lowercase a/b ("Ia", "Iab", "Ib"). Fold to uppercase once
+  // here so each per-pattern regex stays case-sensitive (and won't
+  // accidentally match elsewhere in the string).
+  const upper = window.toUpperCase();
+  for (const [re, lc] of LUMINOSITY_PREFIXES) {
+    if (re.test(upper)) return lc;
+  }
+  return 255;
+}
+
+/** Strict Morgan-Keenan classifier for SIMBAD-canonical `sp_type`
+ *  strings. Returns null when the string is not parseable (caller
+ *  falls through to the next tier). SIMBAD's schema separates spectral
+ *  type from variability type (`otype`), so sp_type is MK-only — this
+ *  parser does NOT need to defend against variability-annotation
+ *  contamination in its input.
+ *
+ *  Handles:
+ *   - Plain MK: "G2V", "K0III", "M1.5Iab-b", "A0V", "F1Vn"
+ *   - White dwarfs: "DA", "DB2", "DAH", "DC"
+ *   - Subdwarfs: "sdB5", "sdO"
+ *   - Carbon/S/Wolf-Rayet: "C5,2e", "WN5" → classIdx=7, lumClass unknown
+ *   - Am/Ap composite: "kA5hA8mF1(III)SiEuBa" → the "m" (metallic) type
+ *     wins (F1 here), with the parenthesised luminosity class read off
+ *     the tail. Falls back to "h" then "k" if no "m" tag is present.
+ *
+ *  Composite-tag preference order (m → h → k) follows the convention
+ *  that the metallic-line type is closest to the effective surface
+ *  temperature for Am stars; the H-line and Ca-K-line types diverge
+ *  from it by design.
+ */
+export function classifyFromSimbad(rawSpType: string | null | undefined): SpectralInfo | null {
+  if (!rawSpType) return null;
+  const s = rawSpType.replace(/\s+/g, '');
+  if (!s) return null;
+
+  // White dwarfs: SIMBAD canonical form is D followed by one or more
+  // subtype letters from {A, B, C, O, Q, X, Z, H, V} and an optional
+  // digit. The strict letter set prevents the bug-table cases (DELTA
+  // DEL / dK0 / DF) from falling into this branch — none of them
+  // would survive SIMBAD's curation in the first place, and the
+  // canonical form is uppercase so we don't need to fold case here.
+  const wdMatch = s.match(/^D[ABCOHQXZV]+(\d(?:\.\d)?)?/);
+  if (wdMatch) {
+    const wdSub = wdMatch[1] ? Math.round(Number(wdMatch[1])) : 5;
     return {
       classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true,
       wdSubclass: Math.max(0, Math.min(9, wdSub)),
     };
   }
 
-  // Subdwarf prefix: "sdB", "sdO", etc. — lumClass=1, classIdx from the letter.
-  if (s.startsWith('SD')) {
-    const letter = s.charAt(2);
-    const cls = spectClassIndex(letter);
-    const subMatch = s.substring(3).match(/^(\d)/);
-    const sub = subMatch ? Number(subMatch[1]) : 5;
+  // Subdwarf prefix: "sdB", "sdO", etc. → lumClass=1 (subdwarf).
+  const sdMatch = s.match(/^sd([OBAFGKM])(\d(?:\.\d)?)?/);
+  if (sdMatch) {
+    const cls = spectClassIndex(sdMatch[1]);
+    const sub = sdMatch[2] ? Number(sdMatch[2].split('.')[0]) : 5;
     return { classIdx: cls, subclass: sub, lumClass: 1, isWhiteDwarf: false, wdSubclass: 0 };
   }
 
-  // Leading letter is the primary spectral class.
-  const firstChar = s.charAt(0);
+  // Composite Am/Ap tags: kA5hA8mF1(III)... — walk every [khm]<class><digit?>
+  // group, retaining the latest per-tag, then pick m > h > k as the canonical
+  // body and resume luminosity-class scanning from just after the composite
+  // tail.
+  const compositeRe = /([khm])([OBAFGKM])(\d(?:\.\d)?)?/g;
+  let lastM = '', lastH = '', lastK = '';
+  let compositeEnd = -1;
+  let cm: RegExpExecArray | null;
+  while ((cm = compositeRe.exec(s)) !== null) {
+    const tagBody = cm[2] + (cm[3] ?? '');
+    if (cm[1] === 'm') lastM = tagBody;
+    else if (cm[1] === 'h') lastH = tagBody;
+    else lastK = tagBody;
+    compositeEnd = cm.index + cm[0].length;
+  }
+
+  let body: string;
+  let lumWindow: string;
+  if (lastM || lastH || lastK) {
+    body = lastM || lastH || lastK;
+    // After the composite tags, a parenthesised "(III)" or bare Roman
+    // numeral can appear before the chemical-peculiarity tail.
+    lumWindow = s.substring(compositeEnd).replace(/^\(+/, '');
+  } else {
+    body = s;
+    lumWindow = '';
+  }
+
+  const firstChar = body.charAt(0);
+  if (!/[OBAFGKMCSWNR]/.test(firstChar)) return null;
   const classIdx = spectClassIndex(firstChar);
 
-  // Subclass digit (0-9), optionally with a decimal — take the integer part.
-  // The full match includes the decimal portion so afterPrefix skips past it,
-  // letting the luminosity-class regex see "Iab" rather than ".5Iab".
-  const subMatch = s.substring(1).match(/^(\d)(?:\.\d)?/);
-  const subclass = subMatch ? Number(subMatch[1]) : 5;
+  // Subclass digit: take the integer part of an optionally-fractional digit.
+  let subclass = 5;
+  let afterSub = 1;
+  const subMatch = body.substring(1).match(/^(\d)(?:\.\d)?/);
+  if (subMatch) {
+    subclass = Number(subMatch[1]);
+    afterSub += subMatch[0].length;
+  }
 
-  // Luminosity Roman numeral — order from most specific to least so we don't
-  // mis-match "II" as "I" etc. Matched anywhere after the first 2-3 chars.
-  const afterPrefix = s.substring(1 + (subMatch ? subMatch[0].length : 0));
-  let lumClass = 255;
-  if (/^(IA\+|0)/.test(afterPrefix)) lumClass = 9;
-  else if (/^IAB/.test(afterPrefix)) lumClass = 7;
-  else if (/^IA/.test(afterPrefix)) lumClass = 8;
-  else if (/^IB/.test(afterPrefix)) lumClass = 6;
-  else if (/^III/.test(afterPrefix)) lumClass = 4;
-  else if (/^II(?!I)/.test(afterPrefix)) lumClass = 5;
-  else if (/^IV/.test(afterPrefix)) lumClass = 3;
-  else if (/^VII/.test(afterPrefix)) lumClass = 0;
-  else if (/^VI(?!I)/.test(afterPrefix)) lumClass = 1;
-  else if (/^V/.test(afterPrefix)) lumClass = 2;
-  else if (/^I(?![IV])/.test(afterPrefix)) lumClass = 7; // bare "I" — treat as Iab
+  // Carbon / S / Wolf-Rayet bucket: classIdx=7, no luminosity-class slot.
+  // SIMBAD writes carbon stars as "C5,2e" (subclass + abundance index) and
+  // Wolf-Rayets as "WN5" / "WC4"; both lack a Roman luminosity class.
+  if (classIdx === 7) {
+    return { classIdx, subclass, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 };
+  }
+
+  if (!lumWindow) {
+    lumWindow = body.substring(afterSub);
+  }
+  const lumClass = lookupLumClass(lumWindow);
 
   return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
+}
+
+/** Map Gaia DR3 GSP-Spec's `spectraltype_esphs` enum to a SpectralInfo.
+ *  The enum is letter-only (Recio-Blanco et al. 2023, A&A 674, A29);
+ *  there's no subclass or luminosity class, so subclass defaults to 5
+ *  (mid-range) and lumClass to 255 (unknown). Returns null for the
+ *  catch-all "unknown" value and for unrecognised letters. */
+export function classifyFromGspspec(esphs: string | null | undefined): SpectralInfo | null {
+  if (!esphs) return null;
+  const s = esphs.trim().toUpperCase();
+  if (!s || s === 'UNKNOWN') return null;
+  if (s === 'CSTAR') {
+    return { classIdx: 7, subclass: 5, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 };
+  }
+  const firstChar = s.charAt(0);
+  if (!/[OBAFGKM]/.test(firstChar)) return null;
+  return {
+    classIdx: spectClassIndex(firstChar), subclass: 5, lumClass: 255,
+    isWhiteDwarf: false, wdSubclass: 0,
+  };
+}
+
+/** Three-tier spectral resolver — SIMBAD `sp_type` first, then Gaia DR3
+ *  GSP-Spec `spectraltype_esphs`, then SPECTRAL_UNKNOWN. SIMBAD and
+ *  GSP-Spec each separate Morgan-Keenan classification from
+ *  variability-type annotation at the schema level (sp_type vs otype
+ *  for SIMBAD; the dedicated enum column for GSP-Spec), so neither
+ *  upstream needs the string-disambiguation defences that AT-HYG's
+ *  conflated `spect` column required. */
+export type SpectralSource = 'simbad' | 'gspspec' | 'fallback';
+export function resolveSpectralInfo(
+  gaiaSourceId: string | null,
+  simbadMap: Map<string, SimbadSpectralRow>,
+  apsisMap: Map<string, ApsisRow>,
+): { info: SpectralInfo; source: SpectralSource; spectDisplay: string | null } {
+  if (gaiaSourceId) {
+    const simbad = simbadMap.get(gaiaSourceId);
+    if (simbad?.spType) {
+      const info = classifyFromSimbad(simbad.spType);
+      if (info) return { info, source: 'simbad', spectDisplay: simbad.spType };
+    }
+    const apsis = apsisMap.get(gaiaSourceId);
+    if (apsis?.spectraltypeEsphs) {
+      const info = classifyFromGspspec(apsis.spectraltypeEsphs);
+      if (info) return { info, source: 'gspspec', spectDisplay: apsis.spectraltypeEsphs };
+    }
+  }
+  return { info: SPECTRAL_UNKNOWN, source: 'fallback', spectDisplay: null };
 }
 
 // ---- Stefan-Boltzmann physical-radius chain -----------------------------
@@ -693,10 +831,14 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
 
 // ---- Gaia DR3 Apsis astrophysical parameters ----------------------------
 
-/** Per-source Apsis fields from `data/gaia/gaia_dr3_apsis.tsv`. All seven
- *  are float | null — gspphot and gspspec are independent solutions and
- *  either or both may be absent for a given source_id. NaN-when-empty
- *  decoding lifts to the binary layer via `NO_APSIS`. */
+/** Per-source Apsis fields from `data/gaia/gaia_dr3_apsis.tsv`. The seven
+ *  float columns (gspphot ∪ gspspec) are `number | null` — gspphot and
+ *  gspspec are independent solutions and either or both may be absent
+ *  for a given source_id. NaN-when-empty decoding lifts to the binary
+ *  layer via `NO_APSIS`. `spectraltypeEsphs` is the GSP-Spec spectral-type
+ *  enum (Recio-Blanco+23): one of "O", "B", "A", "F", "G", "K", "M",
+ *  "CSTAR", or "unknown"; consumed by the spectral resolver as the
+ *  second tier after SIMBAD sp_type. */
 export interface ApsisRow {
   teffGspphot: number | null;
   loggGspphot: number | null;
@@ -705,6 +847,7 @@ export interface ApsisRow {
   teffGspspec: number | null;
   loggGspspec: number | null;
   mhGspspec: number | null;
+  spectraltypeEsphs: string | null;
 }
 
 /** Parse the TSV produced by `scripts/refresh/refresh-gaia-apsis.py` into
@@ -721,6 +864,7 @@ export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
     'source_id',
     'teff_gspphot', 'logg_gspphot', 'mh_gspphot', 'azero_gspphot',
     'teff_gspspec', 'logg_gspspec', 'mh_gspspec',
+    'spectraltype_esphs',
   ] as const;
   const idx: Record<(typeof cols)[number], number> = Object.create(null);
   const missing: string[] = [];
@@ -741,6 +885,10 @@ export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
     const v = parseFloat(s);
     return Number.isFinite(v) ? v : null;
   };
+  const strCell = (cells: string[], i: number): string | null => {
+    const s = (cells[i] ?? '').trim();
+    return s ? s : null;
+  };
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
@@ -755,7 +903,62 @@ export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
       teffGspspec: cell(cells, idx.teff_gspspec),
       loggGspspec: cell(cells, idx.logg_gspspec),
       mhGspspec: cell(cells, idx.mh_gspspec),
+      spectraltypeEsphs: strCell(cells, idx.spectraltype_esphs),
     });
+  }
+  return out;
+}
+
+// ---- SIMBAD spectral classification --------------------------------------
+
+/** Per-source SIMBAD spectral-classification row from
+ *  `data/simbad/simbad_sptype.tsv`. `spType` is the canonical
+ *  Morgan-Keenan string (free of variability-type contamination by
+ *  SIMBAD's schema split). `spQual` is the per-row quality letter
+ *  (A=best, … E=worst); `otype` is SIMBAD's object-type classification
+ *  (separate column — never bleeds into sp_type). Both carried for
+ *  display + future filtering, but the spectral resolver consumes only
+ *  spType. */
+export interface SimbadSpectralRow {
+  spType: string | null;
+  spQual: string | null;
+  otype: string | null;
+}
+
+/** Parse the TSV produced by `scripts/refresh/refresh-simbad-sptype.py`
+ *  into a Gaia DR3 source_id → SimbadSpectralRow map. source_id is kept
+ *  as a string for the same > Number.MAX_SAFE_INTEGER reason that
+ *  `parseGaiaApsisTsv` uses. Rows whose source_id cell is blank are
+ *  silently skipped — the TSV carries WDS-only HIP→oid joins that have
+ *  no Gaia source_id, and they're not addressable by this map. */
+export function parseSimbadSptypeTsv(text: string): Map<string, SimbadSpectralRow> {
+  const out = new Map<string, SimbadSpectralRow>();
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return out;
+  const header = lines[0].split('\t').map((h) => h.trim());
+  const idIdx = header.indexOf('source_id');
+  const spTypeIdx = header.indexOf('sp_type');
+  const spQualIdx = header.indexOf('sp_qual');
+  const otypeIdx = header.indexOf('otype');
+  const missing: string[] = [];
+  if (idIdx < 0) missing.push('source_id');
+  if (spTypeIdx < 0) missing.push('sp_type');
+  if (missing.length) {
+    throw new Error(
+      `SIMBAD sptype TSV missing required columns: ${missing.join(', ')}. ` +
+        `Re-run scripts/refresh/refresh-simbad-sptype.py.`,
+    );
+  }
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const cells = line.split('\t');
+    const sourceId = (cells[idIdx] ?? '').trim();
+    if (!sourceId) continue;
+    const spType = (cells[spTypeIdx] ?? '').trim() || null;
+    const spQual = spQualIdx >= 0 ? ((cells[spQualIdx] ?? '').trim() || null) : null;
+    const otype = otypeIdx >= 0 ? ((cells[otypeIdx] ?? '').trim() || null) : null;
+    out.set(sourceId, { spType, spQual, otype });
   }
   return out;
 }
