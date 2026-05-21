@@ -54,6 +54,7 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -115,6 +116,57 @@ ADQL_TEMPLATE = (
     'WHERE "Source" IN ({inlist})'
 )
 
+SCRIPT_NAME = "refresh-bailer-jones"
+
+# Pinned source_id → posterior rows from VizieR I/352/gedr3dis (the
+# machine-readable form of Bailer-Jones et al. 2021, AJ 161, 147). Unlike
+# the HIP / Tyc xmatch tables, the external anchor here IS the Gaia
+# source_id — which a future DR4 maintenance reload could quietly retire
+# for 1-2 IDs in a 5-ID sample. Tolerate up to MAX_MISSING_PINS quiet
+# retirements (logged as a warning); above that, hard-fail. The helper
+# still raises immediately on any present-but-drifting row, so the
+# regression-detection goal is preserved.
+MAX_MISSING_PINS = 1
+
+# Five fixtures cross-listed with scripts/catalog/catalog-pure.test.ts —
+# the four catastrophic-parallax-inversion supergiants (HIP 22365, 25733,
+# 38430, 46144) and the well-measured F-dwarf HIP 23785 control. r_med_*
+# values agree to the per-row resolution published in the paper; pinning
+# both r_med_geo + r_med_photogeo guards against a column-rename or unit
+# shift either pipeline.
+SPOT_CHECKS: list[dict[str, Any]] = [
+    {
+        "source_id":      204531088580182016,    # HIP 22365 (37% B-J pullback)
+        "r_med_geo":      (6366.668, 0.5),
+        "r_med_photogeo": (6244.791, 0.5),
+        "flag":           10033,
+    },
+    {
+        "source_id":      183255985260080896,    # HIP 25733 (62% B-J pullback)
+        "r_med_geo":      (5839.921, 0.5),
+        "r_med_photogeo": (5466.246, 0.5),
+        "flag":           10033,
+    },
+    {
+        "source_id":      5602025904044961536,   # HIP 38430 (51% B-J pullback)
+        "r_med_geo":      (6622.035, 0.5),
+        "r_med_photogeo": (6215.232, 0.5),
+        "flag":           10033,
+    },
+    {
+        "source_id":      1040043514891491968,   # HIP 46144 (18% B-J pullback)
+        "r_med_geo":      (7509.293, 0.5),
+        "r_med_photogeo": (7515.496, 0.5),
+        "flag":           10022,
+    },
+    {
+        "source_id":      4773096563064098432,   # HIP 23785 (F-dwarf, within 5%)
+        "r_med_geo":      (93.528, 0.5),
+        "r_med_photogeo": (92.871, 0.5),
+        "flag":           10023,
+    },
+]
+
 
 def query_batch(client: rl.TapClient, ids: list[int]):
     inlist = ",".join(str(i) for i in ids)
@@ -169,15 +221,32 @@ def main() -> None:
     )
     if coverage < EXPECTED_COVERAGE_MIN:
         raise SystemExit(
-            f"refresh-bailer-jones: coverage {coverage:.1%} below floor "
+            f"{SCRIPT_NAME}: coverage {coverage:.1%} below floor "
             f"{EXPECTED_COVERAGE_MIN:.0%} — VizieR table or AT-HYG source_id "
             f"set has changed; investigate before re-pinning."
         )
     if matched > EXPECTED_ROW_COUNT_MAX:
         raise SystemExit(
-            f"refresh-bailer-jones: row count {matched} above ceiling "
+            f"{SCRIPT_NAME}: row count {matched} above ceiling "
             f"{EXPECTED_ROW_COUNT_MAX} — input set must have grown; "
             f"raise the ceiling intentionally."
+        )
+
+    rows_by_id = {int(r["source_id"]): r for r in rows}
+    missing: list[int] = []
+    for spec in SPOT_CHECKS:
+        if not rl.check_spot_row(rows_by_id, spec, script_name=SCRIPT_NAME):
+            missing.append(spec["source_id"])
+            print(
+                f"  WARNING: pinned source_id {spec['source_id']} not in "
+                f"result (a DR4 maintenance reload may have retired this ID)"
+            )
+    if len(missing) > MAX_MISSING_PINS:
+        raise SystemExit(
+            f"{SCRIPT_NAME}: {len(missing)} pinned source_ids missing "
+            f"(tolerance {MAX_MISSING_PINS}): {missing} — VizieR I/352 "
+            f"has dropped more rows than expected; investigate before "
+            f"re-pinning."
         )
 
     written = rl.write_tsv(

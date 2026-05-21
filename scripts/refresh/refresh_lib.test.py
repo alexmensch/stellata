@@ -525,5 +525,88 @@ class ReadAthygSourceIdsTests(unittest.TestCase):
         self.assertEqual(ids, [2341871673090078592])
 
 
+# ─── check_spot_row ──────────────────────────────────────────────────
+
+class CheckSpotRowTests(unittest.TestCase):
+    """Pinned-row drift detector lifted from refresh-gaia-nss /
+    refresh-gaia-apsis (stellata-9mm.199). Covers the exact-match /
+    numeric-tolerance / NULL branches and the present-vs-missing
+    return contract."""
+
+    def test_returns_true_when_row_matches_all_fields(self) -> None:
+        rows = {1: {"a": "x", "b": 10.5, "c": None}}
+        ok = rl.check_spot_row(
+            rows,
+            {"id": 1, "a": "x", "b": (10.5, 0.001), "c": None},
+            script_name="test", key_field="id",
+        )
+        self.assertTrue(ok)
+
+    def test_returns_false_when_row_is_absent(self) -> None:
+        ok = rl.check_spot_row(
+            {1: {"a": 1}}, {"id": 999, "a": 1},
+            script_name="test", key_field="id",
+        )
+        self.assertFalse(ok)
+
+    def test_raises_with_all_deltas_when_row_drifts(self) -> None:
+        rows = {1: {"a": "y", "b": 12.0, "c": "not-null"}}
+        with self.assertRaises(SystemExit) as cm:
+            rl.check_spot_row(
+                rows,
+                {"id": 1, "a": "x", "b": (10.5, 0.001), "c": None},
+                script_name="my-script", key_field="id",
+            )
+        msg = str(cm.exception)
+        # All three deltas surface in one failure, not just the first.
+        self.assertIn("my-script", msg)
+        self.assertIn("id=1", msg)
+        self.assertIn("3 field(s)", msg)
+        self.assertIn("  a:", msg)
+        self.assertIn("expected 'x'", msg)
+        self.assertIn("  b:", msg)
+        self.assertIn("  c:", msg)
+        self.assertIn("expected NULL", msg)
+
+    def test_numeric_tolerance_passes_at_boundary(self) -> None:
+        # Tolerance is abs-diff <= tol (inclusive at boundary).
+        rows = {1: {"v": 10.001}}
+        ok = rl.check_spot_row(
+            rows, {"id": 1, "v": (10.0, 0.001)},
+            script_name="test", key_field="id",
+        )
+        self.assertTrue(ok)
+
+    def test_numeric_tolerance_fails_just_over(self) -> None:
+        rows = {1: {"v": 10.0011}}
+        with self.assertRaises(SystemExit) as cm:
+            rl.check_spot_row(
+                rows, {"id": 1, "v": (10.0, 0.001)},
+                script_name="test", key_field="id",
+            )
+        self.assertIn("  v:", str(cm.exception))
+
+    def test_default_key_field_is_source_id(self) -> None:
+        # The xmatch scripts override key_field; nss / apsis rely on
+        # the default. Pin the default so a future rename doesn't
+        # silently break those callers.
+        ok = rl.check_spot_row(
+            {42: {"a": 1}},
+            {"source_id": 42, "a": 1},
+            script_name="test",
+        )
+        self.assertTrue(ok)
+
+    def test_int_expected_matches_int_actual(self) -> None:
+        # Bare-integer expected values (xm_flag, number_of_neighbours)
+        # take the str-coerce branch. Verify ints compare cleanly.
+        rows = {1: {"flag": 8}}
+        ok = rl.check_spot_row(
+            rows, {"id": 1, "flag": 8},
+            script_name="test", key_field="id",
+        )
+        self.assertTrue(ok)
+
+
 if __name__ == "__main__":
     unittest.main()
