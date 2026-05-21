@@ -20,8 +20,17 @@ export interface BuildCounts {
   gcvsHipXrefs: number;
   /** GCVS cross-reference Henry Draper lookups. */
   gcvsHdXrefs: number;
+  /** GCVS xrefs bridged from byHip via gaia_dr3_hip_xmatch.tsv onto
+   *  gaia_source_id as primary key. */
+  gcvsGaiaXrefs: number;
   /** Variables matched into the catalog after cross-reference resolution. */
   gcvsMatched: number;
+  /** gcvsMatched component resolved via xref.byGaia (gaia_source_id). */
+  gcvsMatchedByGaia: number;
+  /** gcvsMatched component resolved via xref.byHip (HIP fallback). */
+  gcvsMatchedByHip: number;
+  /** gcvsMatched component resolved via xref.byHd (HD fallback). */
+  gcvsMatchedByHd: number;
   /** Total CCDM systems in the source TSV. */
   ccdmGroups: number;
   /** CCDM systems resolved against catalog records. */

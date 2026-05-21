@@ -2,10 +2,19 @@
 // catalogue: period, max/min mags, variability type keyed by
 // designation like "R And") and crossid.txt (Hip/HD/Tyc/SAO/etc. →
 // GCVS designation). applyVariability then cross-matches every Star
-// via HIP first, HD fallback. Both source files are pipe-delimited
-// with trailing whitespace inside cells; readPipeDelimited normalises
-// that. Stars without a period (irregular variables, SN) stay at 0/0
-// and don't pulse in the renderer.
+// via gaia_source_id (when bridged), HIP, then HD. Both source files
+// are pipe-delimited with trailing whitespace inside cells;
+// readPipeDelimited normalises that. Stars without a period
+// (irregular variables, SN) stay at 0/0 and don't pulse in the
+// renderer.
+//
+// The byGaia map is bridged from the canonical HIP→Gaia DR3 cross-walk
+// (data/gaia/gaia_dr3_hip_xmatch.tsv) rather than parsed from
+// crossid.txt directly — GCVS publishes only HIP/HD/Tyc/SAO/GSC IDs,
+// no Gaia DR3 source_ids. The bridge promotes gaia_source_id to
+// primary key so AT-HYG rows that resolve through the wider Gaia
+// xmatch (e.g. rows whose AT-HYG HIP cell is empty but whose
+// gaia_source_id matches a GCVS HIP via the xmatch) start matching.
 import { readFileSync } from 'node:fs';
 
 import { normalizeGcvsName, parseGcvsNumber } from './catalog-pure';
@@ -19,6 +28,7 @@ export interface VarStarData {
 export interface VarStarXref {
   byHip: Map<number, string>;
   byHd: Map<number, string>;
+  byGaia: Map<string, string>;
 }
 
 // gcvs5.txt column indices (pipe-delimited, ~22 fields).
@@ -88,30 +98,74 @@ export function parseGcvsCrossref(srcPath: string): VarStarXref {
     if (prefix === 'hip') byHip.set(num, gcvsName);
     else byHd.set(num, gcvsName);
   }
-  return { byHip, byHd };
+  return { byHip, byHd, byGaia: new Map() };
 }
 
-// Cross-match each star against GCVS via HIP (first) or HD (fallback). Most
-// AT-HYG stars with a Hipparcos or HD designation that appears in GCVS will
-// get period + amplitude here; stars without either ID, or whose cross-ref
-// GCVS entry lacks a period (irregular variables, SN, etc.), stay at 0/0
-// and won't pulse.
+// Bridge the HIP-keyed half of the crossref onto gaia_source_id via the
+// canonical Gaia DR3 ↔ HIP cross-walk. Mutates xref.byGaia in place.
+// Returns the bridged byGaia map (size = how many HIP xrefs found a
+// gaia_source_id in the walk).
+export function bridgeGcvsByGaia(
+  xref: VarStarXref,
+  hipToGaia: Map<number, string>,
+): Map<string, string> {
+  xref.byGaia.clear();
+  for (const [hip, gcvsName] of xref.byHip) {
+    const gaia = hipToGaia.get(hip);
+    if (!gaia) continue;
+    xref.byGaia.set(gaia, gcvsName);
+  }
+  return xref.byGaia;
+}
+
+export interface ApplyVariabilityResult {
+  matched: number;
+  matchedByGaia: number;
+  matchedByHip: number;
+  matchedByHd: number;
+}
+
+// Cross-match each star against GCVS via gaia_source_id (first; bridged
+// from the HIP↔Gaia DR3 cross-walk), HIP (second), or HD (third). The
+// gaia-first priority lets AT-HYG rows that carry a gaia_source_id
+// but have an empty HIP cell still resolve through xref.byGaia, where
+// the HIP-only path would miss them.
 export function applyVariability(
   stars: Star[],
   gcvsData: Map<string, VarStarData>,
   xref: VarStarXref,
-): { matched: number } {
-  let matched = 0;
+): ApplyVariabilityResult {
+  let matchedByGaia = 0;
+  let matchedByHip = 0;
+  let matchedByHd = 0;
   for (const s of stars) {
     let gcvsName: string | undefined;
-    if (s.hip !== null) gcvsName = xref.byHip.get(s.hip);
-    if (!gcvsName && s.hd !== null) gcvsName = xref.byHd.get(s.hd);
-    if (!gcvsName) continue;
+    let source: 'gaia' | 'hip' | 'hd' | null = null;
+    if (s.gaiaSourceId !== null) {
+      gcvsName = xref.byGaia.get(s.gaiaSourceId);
+      if (gcvsName) source = 'gaia';
+    }
+    if (!gcvsName && s.hip !== null) {
+      gcvsName = xref.byHip.get(s.hip);
+      if (gcvsName) source = 'hip';
+    }
+    if (!gcvsName && s.hd !== null) {
+      gcvsName = xref.byHd.get(s.hd);
+      if (gcvsName) source = 'hd';
+    }
+    if (!gcvsName || !source) continue;
     const data = gcvsData.get(gcvsName);
     if (!data) continue;
     s.periodDays = data.periodDays;
     s.amplitudeMag = data.amplitudeMag;
-    matched++;
+    if (source === 'gaia') matchedByGaia++;
+    else if (source === 'hip') matchedByHip++;
+    else matchedByHd++;
   }
-  return { matched };
+  return {
+    matched: matchedByGaia + matchedByHip + matchedByHd,
+    matchedByGaia,
+    matchedByHip,
+    matchedByHd,
+  };
 }

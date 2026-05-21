@@ -44,8 +44,10 @@ import {
 import {
   parseGcvsMain,
   parseGcvsCrossref,
+  bridgeGcvsByGaia,
   applyVariability,
 } from './gcvs-parse';
+import { readGaiaHipXmatch } from './gaia-xmatch';
 import { readStars } from './stars-parse';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -58,6 +60,7 @@ const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
 const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
+const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
@@ -74,6 +77,9 @@ function isUpToDate(): boolean {
   const xrefMtime = existsSync(SRC_GCVS_XREF) ? statSync(SRC_GCVS_XREF).mtimeMs : 0;
   const hipCcdmMtime = existsSync(SRC_HIP_CCDM) ? statSync(SRC_HIP_CCDM).mtimeMs : 0;
   const bjMtime = existsSync(SRC_BAILER_JONES) ? statSync(SRC_BAILER_JONES).mtimeMs : 0;
+  const gaiaHipXmatchMtime = existsSync(SRC_GAIA_HIP_XMATCH)
+    ? statSync(SRC_GAIA_HIP_XMATCH).mtimeMs
+    : 0;
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -82,7 +88,8 @@ function isUpToDate(): boolean {
     binMtime > gcvsMtime &&
     binMtime > xrefMtime &&
     binMtime > hipCcdmMtime &&
-    binMtime > bjMtime
+    binMtime > bjMtime &&
+    binMtime > gaiaHipXmatchMtime
   );
 }
 
@@ -113,7 +120,11 @@ async function main() {
     gcvsEntries: 0,
     gcvsHipXrefs: 0,
     gcvsHdXrefs: 0,
+    gcvsGaiaXrefs: 0,
     gcvsMatched: 0,
+    gcvsMatchedByGaia: 0,
+    gcvsMatchedByHip: 0,
+    gcvsMatchedByHd: 0,
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
@@ -198,20 +209,38 @@ async function main() {
   counts.binaryMutualPairs = binStats.mutualPairs;
 
   // GCVS variable-star cross-match. Optional — if the files aren't present
-  // we just skip, no variability rendered.
+  // we just skip, no variability rendered. xref.byGaia is bridged from
+  // byHip via gaia_dr3_hip_xmatch.tsv when present, so AT-HYG rows that
+  // carry a gaia_source_id but no HIP cell still resolve.
   if (existsSync(SRC_GCVS) && existsSync(SRC_GCVS_XREF)) {
     console.log('Parsing GCVS variable-star catalogue...');
     const tGcvs = Date.now();
     const gcvsData = parseGcvsMain(SRC_GCVS);
     const xref = parseGcvsCrossref(SRC_GCVS_XREF);
-    const { matched } = applyVariability(stars, gcvsData, xref);
+    if (existsSync(SRC_GAIA_HIP_XMATCH)) {
+      const hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
+      bridgeGcvsByGaia(xref, hipToGaia);
+    } else {
+      console.log(
+        '  Gaia DR3 ↔ HIP cross-walk not found; GCVS byGaia bridge skipped.',
+      );
+    }
+    const m = applyVariability(stars, gcvsData, xref);
     console.log(
-      `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ${xref.byHd.size} HD xrefs, ${matched} catalog stars matched in ${Date.now() - tGcvs}ms`,
+      `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ` +
+        `${xref.byHd.size} HD + ${xref.byGaia.size} Gaia xrefs, ` +
+        `${m.matched} catalog stars matched ` +
+        `(via gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
+        `in ${Date.now() - tGcvs}ms`,
     );
     counts.gcvsEntries = gcvsData.size;
     counts.gcvsHipXrefs = xref.byHip.size;
     counts.gcvsHdXrefs = xref.byHd.size;
-    counts.gcvsMatched = matched;
+    counts.gcvsGaiaXrefs = xref.byGaia.size;
+    counts.gcvsMatched = m.matched;
+    counts.gcvsMatchedByGaia = m.matchedByGaia;
+    counts.gcvsMatchedByHip = m.matchedByHip;
+    counts.gcvsMatchedByHd = m.matchedByHd;
   } else {
     console.log('GCVS files not found; skipping variability cross-match.');
   }
