@@ -3163,7 +3163,7 @@ class BuildMultiplesRowsTests(unittest.TestCase):
 
     def test_drops_pair_when_both_components_lack_position_and_no_anchor(self) -> None:
         # No other pair in the system has astrometry → the wds_id has no
-        # anchor → dch.66 inheritance can't recover, and the pair drops.
+        # anchor → inheritance can't recover, and the pair drops.
         pair = _wds_pair(components="AB")
         components = [
             _resolved(gaia=1, component="A", is_primary=True),
@@ -3189,8 +3189,8 @@ class BuildMultiplesRowsTests(unittest.TestCase):
     def test_inherits_system_anchor_when_pair_lacks_position(self) -> None:
         # 40 Eri BC shape — the AB pair anchors the system with A's
         # Gaia 5p; the BC pair's components both have unresolved
-        # astrometry (tight inner binary blended out of DR3). dch.66
-        # inheritance lets BC emit with A's position and the new
+        # astrometry (tight inner binary blended out of DR3). System
+        # inheritance lets BC emit with A's position and the
         # ``astrometry_via=system_inherited`` tag.
         ab_pair = _wds_pair(wds_id="04153-0739", components="AB")
         bc_pair = _wds_pair(wds_id="04153-0739", components="BC")
@@ -3241,9 +3241,9 @@ class BuildMultiplesRowsTests(unittest.TestCase):
 
     def test_standalone_sweep_emits_simbad_components_outside_pair_walk(self) -> None:
         # A SIMBAD-known (wds_id, component) that doesn't appear as any
-        # decomposing-pair side gets a standalone row via the dch.66
-        # sweep. Position inherits the system anchor; orbit_role is the
-        # new ``standalone`` value.
+        # decomposing-pair side gets a standalone row via the standalone
+        # sweep. Position inherits the system anchor; orbit_role is
+        # ``standalone``.
         ab_pair = _wds_pair(wds_id="11111+1111", components="AB")
         components = [
             _resolved(gaia=1, wds_id="11111+1111", component="A", is_primary=True),

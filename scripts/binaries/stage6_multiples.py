@@ -63,11 +63,10 @@ SPECT_VIA_VALUES: tuple[str, ...] = (
 
 
 # ``orbit_role`` values. ``primary`` / ``secondary`` are the two sides of
-# a WDS pair row; ``standalone`` is the dch.66 augmentation — a row for a
-# SIMBAD-known WDS component that the pair-walk didn't already emit (the
-# 40 Eri B case: B is in BC, BD, BE pair rows but every one of those is
-# dropped at Stage 6's position gate because neither B nor C has Gaia 5p
-# astrometry).
+# a WDS pair row; ``standalone`` is for a SIMBAD-known WDS component the
+# pair-walk didn't already emit (the 40 Eri B case: B is in BC, BD, BE
+# pair rows but every one is dropped at Stage 6's position gate because
+# neither B nor C has Gaia 5p astrometry).
 ORBIT_ROLE_PRIMARY = "primary"
 ORBIT_ROLE_SECONDARY = "secondary"
 ORBIT_ROLE_STANDALONE = "standalone"
@@ -75,8 +74,8 @@ ORBIT_ROLE_STANDALONE = "standalone"
 
 # ``source`` values. ``athyg`` when an AT-HYG row backed the photometry /
 # proper-name fields; ``wds`` for components resolved with no AT-HYG row;
-# ``simbad`` for dch.66 standalone-augment rows (no AT-HYG hit, but
-# SIMBAD has at least an sp_type and a cross-ID).
+# ``simbad`` for standalone-augment rows (no AT-HYG hit, but SIMBAD has
+# at least an sp_type and a cross-ID).
 SOURCE_ATHYG = "athyg"
 SOURCE_WDS = "wds"
 SOURCE_SIMBAD = "simbad"
@@ -209,7 +208,7 @@ def _resolve_position(
     astrometry: ComponentAstrometry,
     anchor: SystemAnchor | None,
 ) -> tuple[SystemAnchor, bool] | None:
-    """Position resolution with the dch.66 anchor fallback. Returns the
+    """Position resolution with the system-anchor fallback. Returns the
     (x_pc, y_pc, z_pc, dist_pc) tuple plus an ``inherited`` flag — True
     when the anchor backstopped a component whose own astrometry was
     unresolved. Returns ``None`` only when both the component AND its
@@ -240,10 +239,11 @@ def build_multiples_row(
     computed at the astrometry's native epoch; proper-motion-to-J2000
     propagation is deferred to Phase 3 per the Stage 3 docstring.
 
-    ``system_anchor`` is the dch.66 fallback — when the component's own
-    astrometry resolved to ``"unresolved"`` (tight inner binary blended
-    out of Gaia DR3), the row inherits the system primary's position and
-    promotes ``astrometry_via`` to ``"system_inherited"``.
+    ``system_anchor`` is the inherited-position fallback — when the
+    component's own astrometry resolved to ``"unresolved"`` (tight inner
+    binary blended out of Gaia DR3), the row inherits the system
+    primary's position and promotes ``astrometry_via`` to
+    ``"system_inherited"``.
     """
     athyg = _athyg_row_for_component(component, indices)
     resolved = _resolve_position(astrometry, system_anchor)
@@ -322,12 +322,12 @@ def build_multiples_rows(
     (entirely Gaia-blind WDS systems — Aitken-only doubles with no HIP /
     AT-HYG cover at all).
 
-    ``simbad_xids`` opt-in argument turns on the dch.66 per-component
-    augmentation: after the pair-walk, sweep every (wds_id, component)
-    SIMBAD knows about and emit a standalone row for any combination not
-    already represented in the pair output. Position falls back through
-    component-native → system-anchor → ``None`` in the same order as the
-    pair rows.
+    ``simbad_xids`` opt-in argument turns on per-component augmentation:
+    after the pair-walk, sweep every (wds_id, component) SIMBAD knows
+    about and emit a standalone row for any combination not already
+    represented in the pair output. Position falls back through
+    component-native → system-anchor → ``None`` in the same order as
+    the pair rows.
     """
     n_pairs = sum(1 for p in pairs if split_components(p.components) is not None)
     if not (len(orbits) == n_pairs == len(classifications)):
@@ -387,11 +387,11 @@ def build_standalone_rows(
     system_anchors: dict[str, SystemAnchor],
     indices: IdentifierIndices,
 ) -> list[MultiplesRow]:
-    """dch.66 augmentation — for every (wds_id, component) SIMBAD has a
-    cross-ID for that isn't already in ``emitted_keys`` (from the pair
-    walk), emit a standalone row. Captures sub-component cases the
-    pair-walk structurally can't reach (e.g. a SIMBAD-known component
-    that WDS never enumerates as the side of any decomposing pair).
+    """For every (wds_id, component) SIMBAD has a cross-ID for that
+    isn't already in ``emitted_keys`` (from the pair walk), emit a
+    standalone row. Captures sub-component cases the pair-walk
+    structurally can't reach (e.g. a SIMBAD-known component that WDS
+    never enumerates as the side of any decomposing pair).
 
     Position falls back through component-native Gaia 5p →
     system-anchor → ``None``; ``orbit_role=standalone`` distinguishes

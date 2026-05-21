@@ -91,10 +91,10 @@ def build_binaries_counts(
     for r in multiples_rows:
         spect_counts[r.spect_via] = spect_counts.get(r.spect_via, 0) + 1
 
-    # dch.66 additions: count system-anchor-inherited positions and
-    # standalone (per-component augmentation) rows directly off the
-    # emitted multiples list so the snapshot diff catches drift in
-    # either tier independently of Stage 3's per-component counts.
+    # Count system-anchor-inherited positions and standalone
+    # (per-component augmentation) rows directly off the emitted
+    # multiples list so the snapshot diff catches drift in either
+    # tier independently of Stage 3's per-component counts.
     multiples_inherited = sum(
         1 for r in multiples_rows
         if r.astrometry_via == "system_inherited"
