@@ -1,24 +1,9 @@
-// Test-only Catalog factory. Production code never imports this. Tests
-// across multiple folders synthesise a Catalog to exercise renderers /
-// pickers / camera math without spinning up the binary loader; every
-// version bump of the binary format would otherwise need to thread new
-// fields through every duplicated mock. Single source of truth keeps
-// the next field addition to one edit.
-//
-// Defaults are the "valid star, no companion" baseline: physicalRadius
-// = 1 Rsol, companion = -1, lumClass = 255 (unknown), Apsis fields =
-// NaN (the canonical NO_APSIS sentinel). Callers mutate per-row state
-// after the factory returns.
+// Test-only Catalog factory. Defaults: physicalRadius=1 Rsol,
+// companion=-1, lumClass=255 (unknown), Apsis fields=NaN (NO_APSIS).
 
 import type { Catalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {
-  // Matches the on-disk Apsis null sentinel (NO_APSIS = NaN). A
-  // Float32Array seeded with `new Float32Array(count)` is zeros — which
-  // would silently read as Teff=0 / logg=0 in any consumer treating the
-  // value as "present" rather than "null". Use NaN to mirror the
-  // production loader's behaviour for records absent from gspphot ∪
-  // gspspec.
   const a = new Float32Array(count);
   a.fill(NaN);
   return a;

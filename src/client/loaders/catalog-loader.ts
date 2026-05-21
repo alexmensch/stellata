@@ -44,12 +44,9 @@ export interface Catalog {
   // Stored as BigUint64Array because IDs routinely exceed 2^53 and would
   // truncate as plain Numbers. Convert with `String(arr[i])` at query time.
   gaiaSourceId: BigUint64Array;  // length = count
-  // Gaia DR3 Apsis astrophysical parameters per record. NaN = no value
-  // (the ~15% of catalog records absent from gspphot ∪ gspspec, or rows
-  // where the individual cell was blank). Consumers test with
-  // `Number.isNaN(arr[i])`. gspphot and gspspec are independent Gaia
-  // solutions; a re-routing layer that prefers Apsis-direct Teff over
-  // Ballesteros(B-V) typically uses gspphot first, gspspec as fallback.
+  // Gaia DR3 Apsis astrophysical parameters per record. NaN (NO_APSIS) =
+  // absent; consumers test with `Number.isNaN(arr[i])`. gspphot and
+  // gspspec are independent Gaia solutions, either or both may be absent.
   teffGspphot: Float32Array;     // length = count, Kelvin
   loggGspphot: Float32Array;     // length = count, log cgs
   mhGspphot: Float32Array;       // length = count, [M/H] dex

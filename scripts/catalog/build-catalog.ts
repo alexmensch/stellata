@@ -169,8 +169,7 @@ async function main() {
 
   // Gaia DR3 Apsis (gspphot ∪ gspspec) astrophysical parameters. Optional
   // in CI / fresh-clone builds where the LFS file hasn't pulled yet —
-  // without it every record gets the NO_APSIS sentinel and the runtime
-  // colour LUT falls back to Ballesteros(B-V) for every star.
+  // without it every record gets the NO_APSIS sentinel.
   let apsisMap = new Map<string, ApsisRow>();
   if (existsSync(SRC_GAIA_APSIS)) {
     console.log('Parsing Gaia DR3 Apsis astrophysical parameters...');
