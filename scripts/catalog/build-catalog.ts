@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
+  buildHipToIndex,
   inferBinaries,
   DIST_SRC_BAILER_JONES,
   DIST_SRC_LMC_KIN,
@@ -230,13 +231,9 @@ async function main() {
   // are final after this point.
   stars.sort((a, b) => a.absmag - b.absmag);
 
-  // Build HIP → record index map against the post-sort order. Duplicate HIPs
-  // are rare (binary companions sharing an identifier); keep the brightest.
-  const hipToIndex = new Map<number, number>();
-  for (let i = 0; i < stars.length; i++) {
-    const h = stars[i].hip;
-    if (h !== null && h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
-  }
+  // HIP → record index over the absmag-sorted star array. Shared with the
+  // CCDM doubles pass below so duplicate HIPs resolve identically.
+  const hipToIndex = buildHipToIndex(stars);
 
   // Resolve Stellarium stick-figure lines to star indices. Throws if any
   // referenced HIP is missing from the catalog.
@@ -292,7 +289,7 @@ async function main() {
     console.log('Parsing Hipparcos CCDM double-star cross-reference...');
     const tCcdm = Date.now();
     const ccdmGroups = parseHipCcdm(SRC_HIP_CCDM);
-    const { systems, flagged } = applyDoublesFlag(stars, ccdmGroups);
+    const { systems, flagged } = applyDoublesFlag(stars, ccdmGroups, hipToIndex);
     console.log(
       `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged in ${Date.now() - tCcdm}ms`,
     );
