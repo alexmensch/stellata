@@ -79,6 +79,14 @@ class IdentifierIndices:
     # ``wds_id``-as-CCDM lookups against ``ccdm_to_hips``.
     hip_to_ccdm: dict[int, str]
     ccdm_to_hips: dict[str, list[int]]
+    # SIMBAD per-component spectral types, keyed on (wds_id, component).
+    # Produced by joining ``data/simbad/simbad_sptype.tsv`` (dch.64.1's
+    # unified per-oid spectral pull) against ``simbad_wds_xids.tsv`` on
+    # ``simbad_oid``. Stage 6 prefers this over AT-HYG's per-system
+    # ``spect`` column so each WDS component carries its own MK / WD
+    # classification — Sirius A as A0mA1Va vs an inherited string, 40 Eri
+    # B as DA2.9 vs the K0V the AT-HYG row would propagate.
+    simbad_wds_spectra: dict[tuple[str, str], str]
 
 
 def build_indices(
@@ -89,6 +97,7 @@ def build_indices(
     src_to_nss: dict[int, dict[str, str]],
     src_to_astrometry: dict[int, GaiaAstrometryRow] | None = None,
     ccdm: list[CcdmRow] | None = None,
+    simbad_wds_spectra: dict[tuple[str, str], str] | None = None,
 ) -> IdentifierIndices:
     hip_to_athyg: dict[int, AthygRow] = {}
     tyc_to_athyg: dict[str, AthygRow] = {}
@@ -129,6 +138,7 @@ def build_indices(
         hip_to_hip2=hip_to_hip2,
         hip_to_ccdm=hip_to_ccdm,
         ccdm_to_hips=ccdm_to_hips,
+        simbad_wds_spectra=simbad_wds_spectra or {},
     )
 
 

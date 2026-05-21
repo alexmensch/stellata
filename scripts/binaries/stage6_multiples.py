@@ -42,11 +42,23 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "x_pc", "y_pc", "z_pc",
     "absmag", "ci", "spect", "name",
     "source", "regime",
-    "resolve_via", "astrometry_via", "orbit_via",
+    "resolve_via", "astrometry_via", "orbit_via", "spect_via",
     "orbit_role",
     "P_days", "T_jd", "e", "a_AU",
     "i_rad", "omega_rad", "Omega_rad",
     "q", "dist_pc",
+)
+
+
+# ``spect_via`` provenance tags for the per-component spectral column.
+# Mirrors the per-section ``_VIA_VALUES`` pattern from the other stages
+# (resolve / astrometry / orbit / optical) so stage 7's count-snapshot
+# diff surfaces each tier independently.
+SPECT_VIA_SIMBAD = "simbad"
+SPECT_VIA_ATHYG = "athyg"
+SPECT_VIA_NONE = "none"
+SPECT_VIA_VALUES: tuple[str, ...] = (
+    SPECT_VIA_SIMBAD, SPECT_VIA_ATHYG, SPECT_VIA_NONE,
 )
 
 
@@ -85,6 +97,7 @@ class MultiplesRow:
     resolve_via: str
     astrometry_via: str
     orbit_via: str
+    spect_via: str         # "simbad" / "athyg" / "none"
     orbit_role: str        # "primary" / "secondary"
     P_days: float | None
     T_jd: float | None
@@ -150,6 +163,23 @@ def build_multiples_row(
     propagation is deferred to Phase 3 per the Stage 3 docstring."""
     athyg = _athyg_row_for_component(component, indices)
     position = _position_pc(astrometry)
+    # SIMBAD's per-component sp_type wins over the AT-HYG row's
+    # ``spect`` — AT-HYG carries a single per-system string that gets
+    # inherited by every component, even when each component has its own
+    # MK / WD class. SIMBAD has the per-oid value directly.
+    simbad_spect = indices.simbad_wds_spectra.get(
+        (pair.wds_id, component.component),
+    )
+    athyg_spect = athyg.spect if athyg is not None else ""
+    if simbad_spect:
+        spect = simbad_spect
+        spect_via = SPECT_VIA_SIMBAD
+    elif athyg_spect:
+        spect = athyg_spect
+        spect_via = SPECT_VIA_ATHYG
+    else:
+        spect = ""
+        spect_via = SPECT_VIA_NONE
 
     return MultiplesRow(
         system_id=f"{pair.wds_id}-{pair.components}",
@@ -161,13 +191,14 @@ def build_multiples_row(
         z_pc=position[2] if position is not None else None,
         absmag=athyg.absmag if athyg is not None else None,
         ci=athyg.ci if athyg is not None else None,
-        spect=athyg.spect if athyg is not None else "",
+        spect=spect,
         name=athyg.proper if athyg is not None else "",
         source="athyg" if athyg is not None else "wds",
         regime=ORBIT_VIA_TO_REGIME.get(orbit_via, 0),
         resolve_via=component.resolve_via,
         astrometry_via=astrometry.astrometry_via,
         orbit_via=orbit_via,
+        spect_via=spect_via,
         orbit_role="primary" if is_primary else "secondary",
         P_days=orbit.P_days if orbit is not None else None,
         T_jd=orbit.T_jd if orbit is not None else None,
@@ -266,6 +297,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 r.resolve_via,
                 r.astrometry_via,
                 r.orbit_via,
+                r.spect_via,
                 r.orbit_role,
                 _fmt_float(r.P_days, 6),
                 _fmt_float(r.T_jd, 4),

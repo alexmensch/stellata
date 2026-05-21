@@ -547,6 +547,97 @@ class ParseSimbadWdsXidsTests(unittest.TestCase):
         self.assertEqual(out, {})
 
 
+class ParseSimbadWdsSpectraTests(unittest.TestCase):
+    SPTYPE_HEADER = (
+        "simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id"
+    )
+    XIDS_HEADER = (
+        "wds_id\tcomponent\tsimbad_oid\tsimbad_main_id\tgaia_source_id\thip"
+    )
+
+    def test_joins_xids_to_sptype_on_simbad_oid(self) -> None:
+        # 40 Eri: A=K0V, B=DA2.9, C=M4.5V — three components, three
+        # SIMBAD oids. The join must return all three as per-component
+        # sp_type strings.
+        sptype = (
+            f"{self.SPTYPE_HEADER}\n"
+            "702026\t* omi02 Eri\tK0V\tB\tref1\tPM*\t19849\t3195919528989223040\n"
+            "701944\t* omi02 Eri B\tDA2.9\tC\tref2\tWD*\t\t3195919254111315712\n"
+            "701829\t* omi02 Eri C\tM4.5V\tB\tref3\tPM*\t\t3195919254111314816\n"
+        )
+        xids = (
+            f"{self.XIDS_HEADER}\n"
+            "04153-0739\tA\t702026\t* omi02 Eri\t3195919528989223040\t19849\n"
+            "04153-0739\tB\t701944\t* omi02 Eri B\t3195919254111315712\t\n"
+            "04153-0739\tC\t701829\t* omi02 Eri C\t3195919254111314816\t\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
+            out = bb.parse_simbad_wds_spectra(sp, xd)
+        self.assertEqual(out[("04153-0739", "A")], "K0V")
+        self.assertEqual(out[("04153-0739", "B")], "DA2.9")
+        self.assertEqual(out[("04153-0739", "C")], "M4.5V")
+
+    def test_omits_components_without_simbad_sptype(self) -> None:
+        # Sirius A is in WDS xids and SIMBAD has sp_type; Sirius B is in
+        # WDS xids but SIMBAD has no sp_type entry for the oid (blank
+        # cell). The B component must be ABSENT from the result so
+        # stage 6's caller falls through to AT-HYG rather than
+        # overwriting with an empty string.
+        sptype = (
+            f"{self.SPTYPE_HEADER}\n"
+            "8399845\t* alf CMa\tA0mA1Va\tC\tref\tSB*\t32349\t\n"
+            "8399846\t* alf CMa B\t\t\t\tWD*\t\t\n"      # blank sp_type
+        )
+        xids = (
+            f"{self.XIDS_HEADER}\n"
+            "06451-1643\tA\t8399845\t* alf CMa\t\t32349\n"
+            "06451-1643\tB\t8399846\t* alf CMa B\t\t\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
+            out = bb.parse_simbad_wds_spectra(sp, xd)
+        self.assertEqual(out, {("06451-1643", "A"): "A0mA1Va"})
+
+    def test_omits_xids_with_no_sptype_row(self) -> None:
+        # WDS xid references simbad_oid 999, but the sptype TSV has no
+        # row at that oid — defensive fallthrough.
+        sptype = (
+            f"{self.SPTYPE_HEADER}\n"
+            "1\tmain\tG2V\t\t\t\t\t\n"
+        )
+        xids = (
+            f"{self.XIDS_HEADER}\n"
+            "X\tA\t999\tnomatch\t\t\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
+            out = bb.parse_simbad_wds_spectra(sp, xd)
+        self.assertEqual(out, {})
+
+    def test_column_order_independence(self) -> None:
+        # Future dch.64.1 column additions (rv, photometry, …) must not
+        # break this consumer. Verify reordered columns parse cleanly
+        # by name, not by position.
+        sptype = (
+            "source_id\thip\tsimbad_main_id\tsimbad_oid\totype\t"
+            "sp_bibcode\tsp_qual\tsp_type\n"
+            "\t1\tmain\t42\t**\t\t\tF5V\n"
+        )
+        xids = (
+            f"{self.XIDS_HEADER}\n"
+            "X\tA\t42\tmain\t\t1\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
+            out = bb.parse_simbad_wds_spectra(sp, xd)
+        self.assertEqual(out, {("X", "A"): "F5V"})
+
+
 class SplitComponentsTests(unittest.TestCase):
     def test_two_letter_pair(self) -> None:
         self.assertEqual(bb.split_components("AB"), ("A", "B"))
@@ -1683,13 +1774,16 @@ def _indices_with_astrometry(
     src_to_nss: dict[int, dict[str, str]] | None = None,
     hip_to_gaia: dict[int, int] | None = None,
     hip2: list["bb.Hip2Row"] | None = None,
+    athyg: list["bb.AthygRow"] | None = None,
+    simbad_wds_spectra: dict[tuple[str, str], str] | None = None,
 ) -> "bb.IdentifierIndices":
     return bb.build_indices(
-        athyg=[], hip2=hip2 or [],
+        athyg=athyg or [], hip2=hip2 or [],
         hip_to_gaia=hip_to_gaia or {},
         tyc_to_gaia={},
         src_to_nss=src_to_nss or {},
         src_to_astrometry=src_to_astrometry or {},
+        simbad_wds_spectra=simbad_wds_spectra or {},
     )
 
 
@@ -3115,6 +3209,135 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0].y_pc or 0.0, 0.0, places=6)
         self.assertAlmostEqual(rows[0].z_pc or 0.0, 0.0, places=6)
 
+    def test_simbad_spectra_override_athyg_spect(self) -> None:
+        # 40 Eri-shape: AT-HYG carries the primary's K0V across all
+        # components (per-system inheritance). SIMBAD provides per-
+        # component sp_type — DA2.9 for B. Stage 6 must prefer SIMBAD
+        # and tag the row's ``spect_via`` accordingly.
+        pair = _wds_pair(wds_id="04153-0739", components="AB")
+        # AT-HYG rows: primary K0V, secondary inherits the same string
+        # (the bug the SIMBAD migration fixes).
+        athyg_rows = [
+            bb.AthygRow(
+                hip=19849, tyc=None, gaia=1, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=1.0, v_mag=None, absmag=4.4,
+                ci=None, spect="K0V", proper="40 Eri A",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+            bb.AthygRow(
+                hip=None, tyc=None, gaia=2, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=1.0, v_mag=None, absmag=11.2,
+                ci=None, spect="K0V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        components = [
+            _resolved(gaia=1, wds_id="04153-0739",
+                      component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="04153-0739",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry(
+            athyg=athyg_rows,
+            simbad_wds_spectra={
+                ("04153-0739", "A"): "K0V",
+                ("04153-0739", "B"): "DA2.9",
+            },
+        )
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].spect, "K0V")
+        self.assertEqual(rows[0].spect_via, "simbad")
+        self.assertEqual(rows[1].spect, "DA2.9")
+        self.assertEqual(rows[1].spect_via, "simbad")
+
+    def test_athyg_fallback_when_simbad_missing(self) -> None:
+        # SIMBAD has no entry for this (wds_id, component) — fall back
+        # to AT-HYG and tag ``spect_via="athyg"``.
+        pair = _wds_pair(wds_id="XX-1", components="AB")
+        athyg_rows = [
+            bb.AthygRow(
+                hip=None, tyc=None, gaia=10, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=1.0, v_mag=None, absmag=5.0,
+                ci=None, spect="G2V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+            bb.AthygRow(
+                hip=None, tyc=None, gaia=20, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=1.0, v_mag=None, absmag=6.0,
+                ci=None, spect="G2V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        components = [
+            _resolved(gaia=10, wds_id="XX-1",
+                      component="A", is_primary=True),
+            _resolved(gaia=20, wds_id="XX-1",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry(athyg=athyg_rows)
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(rows[0].spect, "G2V")
+        self.assertEqual(rows[0].spect_via, "athyg")
+        self.assertEqual(rows[1].spect, "G2V")
+        self.assertEqual(rows[1].spect_via, "athyg")
+
+    def test_spect_via_none_when_neither_source_has_spect(self) -> None:
+        # AT-HYG row missing (component resolved via WDS-only path) and
+        # no SIMBAD entry — spect is empty and ``spect_via="none"``.
+        pair = _wds_pair(wds_id="YY-1", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="YY-1",
+                      component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="YY-1",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry()
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(rows[0].spect, "")
+        self.assertEqual(rows[0].spect_via, "none")
+
     def test_orbit_via_to_regime_mapping(self) -> None:
         # Sanity-check: every ORBIT_VIA_VALUES key maps cleanly, and
         # the legacy regime numbering (0 = none, 2 = full, 3 = spec)
@@ -3150,6 +3373,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             absmag=4.5, ci=0.6, spect="G2V", name="Sirius",
             source="athyg", regime=2,
             resolve_via="orb6_hip", astrometry_via="gaia_5p", orbit_via="orb6",
+            spect_via="athyg",
             orbit_role="primary",
             P_days=365.25, T_jd=2451545.0, e=0.1, a_AU=1.0,
             i_rad=0.5, omega_rad=0.6, Omega_rad=0.7,
@@ -3169,6 +3393,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
         self.assertEqual(cells[header.index("gaia_source_id")], "99999")
         self.assertEqual(cells[header.index("name")], "Sirius")
         self.assertEqual(cells[header.index("regime")], "2")
+        self.assertEqual(cells[header.index("spect_via")], "athyg")
 
     def test_empty_optional_fields_emit_empty_cells(self) -> None:
         row = bb.MultiplesRow(
@@ -3178,6 +3403,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             absmag=None, ci=None, spect="", name="",
             source="wds", regime=0,
             resolve_via="unresolved", astrometry_via="unresolved", orbit_via="none",
+            spect_via="none",
             orbit_role="primary",
             P_days=None, T_jd=None, e=None, a_AU=None,
             i_rad=None, omega_rad=None, Omega_rad=None,

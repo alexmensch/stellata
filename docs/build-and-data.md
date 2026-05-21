@@ -617,6 +617,15 @@ legacy v5-style provenance tag (`0` = no orbital info, `2` = full
 elements from Gaia NSS or ORB6 visual, `3` = spectroscopic-only); the
 finer `orbit_via` string column carries the per-row source.
 
+The `spect` column prefers SIMBAD's per-component `sp_type` (joined
+from `data/simbad/simbad_sptype.tsv` via the
+`(wds_id, component) → simbad_oid` map in `simbad_wds_xids.tsv`) over
+the AT-HYG `spect` string. `spect_via` carries provenance:
+`simbad` / `athyg` / `none`. AT-HYG inherits one spectral string across
+every component of a system, so WDS components with their own MK / WD
+class (40 Eri B as DA2.9, Sirius A as A0mA1Va) only render correctly
+once SIMBAD overrides the inherited string.
+
 Stage 7 flattens per-strategy / per-tier counters into
 `scripts/binaries/build-binaries-expected.json` and compares against the
 committed snapshot — the same `UPDATE_BUILD_COUNTS=1` flow as

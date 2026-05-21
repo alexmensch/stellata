@@ -36,7 +36,9 @@ from stage5_optical import (  # noqa: E402
     OpticalClassification,
     optical_counts,
 )
-from stage6_multiples import MultiplesRow  # noqa: E402
+from stage6_multiples import (  # noqa: E402
+    SPECT_VIA_VALUES, MultiplesRow,
+)
 
 # Stage 7 logs from inside ``assert_or_update_counts``; defining a
 # local ``log`` keeps the module standalone (no back-import from
@@ -83,12 +85,20 @@ def build_binaries_counts(
     orb = orbit_counts(orbits)
     opt = optical_counts(classifications)
 
+    # Per-component spect provenance via the row's ``spect_via`` tag
+    # (mirrors the per-section ``_via`` counters below).
+    spect_counts: dict[str, int] = {tag: 0 for tag in SPECT_VIA_VALUES}
+    for r in multiples_rows:
+        spect_counts[r.spect_via] = spect_counts.get(r.spect_via, 0) + 1
+
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
         "decomposing_pairs": len(orbits),
         "components_total": len(components),
         "multiples_rows_emitted": len(multiples_rows),
     }
+    for tag in SPECT_VIA_VALUES:
+        out[f"spect_{tag}"] = spect_counts[tag]
     for tag in RESOLVE_VIA_VALUES:
         out[f"resolution_{tag}"] = res[tag]
     for tag in ASTROMETRY_VIA_VALUES:

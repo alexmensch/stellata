@@ -166,7 +166,7 @@ scripts/                                     Each subsystem cluster owns a folde
   binaries/
     build-binaries.py                        WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
                                              + Gaia (xmatches, NSS, 5p astrometry) +
-                                             SIMBAD xids → data/binaries/multiples.tsv,
+                                             SIMBAD xids + SIMBAD sp_type → data/binaries/multiples.tsv,
                                              via the 7-stage stellata-dch pipeline.
     build-binaries.test.py                   stdlib unittest pins for Stages 1-7.
     build-binaries-expected.json             per-strategy / per-tier count snapshot.
