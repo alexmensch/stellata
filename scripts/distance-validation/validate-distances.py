@@ -1,41 +1,12 @@
 #!/usr/bin/env python3
-"""Distance validation harness — compares the catalogue's adopted distances
-for Vaidman et al. 2025's 132 Galactic BA-supergiants against the paper's
-independently-derived Bayesian distances.
-
-Reads:
-  data/distance-validation/vaidman-2025-supergiants.tsv  (reference; built
-                                                         by build-vaidman-tsv.py)
-  data/bailer-jones/bailer-jones-dr3.tsv                 (the catalogue's
-                                                         per-source override
-                                                         input — see dch.46/.47)
-
-Comparison logic:
-  EDSD_new subset (119 stars). The paper's d_new is an independent Bayesian
-    recalculation; the catalogue uses Bailer-Jones r_med_photogeo (post-dch.47
-    override). Per-star fractional difference vs d_new, aggregated to median,
-    84th-pct, max, and a top-5 list. The acceptance bars come from the
-    paper's own SNR-stratified analysis (Vaidman §3): tight 1:1 at high SNR,
-    modest ~10-30% offsets at SNR 2.5-5.
-
-      median |frac diff| ≤ 15%
-      ≤ 5 stars with |frac diff| > 50%
-
-  BJ_old subset (13 stars). The paper adopted d_BJ (= Bailer-Jones
-    r_med_photogeo by their citation), and dch.47 also ships
-    r_med_photogeo for these stars — so this section is a self-consistency
-    check on the override, not an independent validation. Report-only.
-
-Why this validator uses the B-J TSV directly and not the shipped catalog
-binary: the binary schema is in flux (Phase 3 v6+ writer); reading the
-B-J TSV decouples cleanest from in-flight schema work. Catching a future
-distance-override priority change in `build-catalog.ts` would require
-extending the validator to consume a binary dump — out of scope for the
-initial validation harness; the dch.47 override is the only source of
-truth for these 132 source_ids today.
-
-Exit code 0 on pass, 1 on bar miss or hard data error.
-"""
+"""Distance validation harness — compares the catalogue's Bailer-Jones
+override against Vaidman et al. 2025's independent Bayesian distances
+for 132 Galactic BA-supergiants. Reads the B-J TSV directly rather than
+the shipped catalog binary so the harness stays decoupled from in-flight
+v6+ writer schema changes; the override is the only distance source for
+these source_ids today. See data/distance-validation/README.md for the
+reference dataset and SCIENCE.md § distance-override validation for the
+project-level rationale. Exit code 0 on pass, 1 on bar miss."""
 
 from __future__ import annotations
 

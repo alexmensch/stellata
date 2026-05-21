@@ -1,39 +1,9 @@
 #!/usr/bin/env python3
 """Build data/distance-validation/vaidman-2025-supergiants.tsv from the
-Vaidman et al. 2025 paper PDF (Universe 11, 359; DOI 10.3390/universe11110359).
-
-Table contents are © Vaidman et al. 2025 and are redistributed here under
-CC BY 4.0 with attribution carried in:
-  - data/distance-validation/README.md (per-dataset provenance)
-  - SCIENCE.md (project-wide reference list)
-
-Two paper tables are extracted:
-  Table A1 (119 rows) — quality-controlled sample whose adopted distance is
-                        EDSD_new (the paper's Bayesian recalculation).
-  Table A2  (13 rows) — low-SNR / high-RUWE sample whose adopted distance
-                        reverts to BJ_old; included for completeness but
-                        explicitly NOT recommended for quantitative use.
-
-For each row the script:
-  1. parses (N, name, dBJ, sigma_dBJ, RUWE, Gmag, dnew, sigma_dnew, SNRtot, L)
-     from a layout-preserving pdftotext dump (system 'pdftotext -layout');
-  2. joins on the committed NAME_TO_GAIA_DR3 mapping below to populate the
-     `gaia_source_id` column;
-  3. emits a row to vaidman-2025-supergiants.tsv with the table's adopted-
-     distance regime as the second-to-last column.
-
-The name → source_id map is hand-resolved once via SIMBAD's Sesame ASCII
-endpoint (sim-id?Ident=NAME&output.format=ASCII). Each ID was verified by
-matching the Gaia DR3 G_mag against the paper's reported Gmag. The
-resolution procedure is documented in data/distance-validation/README.md.
-
-Usage:
-    .venv/bin/python scripts/distance-validation/build-vaidman-tsv.py \\
-        --pdf universe-11-00359.pdf
-
-The script is one-shot — the resulting TSV is committed and frozen reference
-data. Re-run only if the paper publishes an erratum.
-"""
+Vaidman et al. 2025 paper PDF (Universe 11, 359; CC BY 4.0). One-shot:
+the resulting TSV is committed reference data, re-run only on an
+erratum. Provenance, name-resolution recipe, and license carried in
+data/distance-validation/README.md."""
 
 from __future__ import annotations
 
