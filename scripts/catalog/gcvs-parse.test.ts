@@ -30,6 +30,8 @@ function makeStar(partial: Partial<Star>): Star {
     companionIdx: -1,
     periodDays: 0,
     amplitudeMag: 0,
+    athygDist: null,
+    athygDistSrc: null,
     ...partial,
   };
 }

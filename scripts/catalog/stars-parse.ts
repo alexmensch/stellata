@@ -54,6 +54,11 @@ export interface Star {
   companionIdx: number;     // assigned later in inferBinaries; -1 = none
   periodDays: number;       // 0 = not a variable known to GCVS
   amplitudeMag: number;     // 0 if not variable
+  // Build-time-only diagnostic fields. Captured from the AT-HYG row before
+  // any override fires; consumed by the post-build distance-regression check
+  // and NOT written to the binary.
+  athygDist: number | null;     // AT-HYG `dist` column, pre-override
+  athygDistSrc: string | null;  // AT-HYG `dist_src` column
 }
 
 export function parseFloatOrNull(s: string | undefined | null): number | null {
@@ -174,9 +179,10 @@ export async function readStars(
     // applying B-J there would silently move low-S/N rows to ~10–40 kpc
     // via the Galactic-density prior tail. See SCIENCE.md § Distances /
     // Bailer-Jones DR3 override.
-    const distSrc = nonEmpty(row.dist_src);
-    const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, distSrc);
-    let dist = parseFloatOrNull(row.dist);
+    const athygDistSrc = nonEmpty(row.dist_src);
+    const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, athygDistSrc);
+    const athygDist = parseFloatOrNull(row.dist);
+    let dist = athygDist;
     const ra = parseFloatOrNull(row.ra);
     const dec = parseFloatOrNull(row.dec);
     const mag = parseFloatOrNull(row.mag);
@@ -267,6 +273,8 @@ export async function readStars(
       companionIdx: -1,
       periodDays: 0,
       amplitudeMag: 0,
+      athygDist,
+      athygDistSrc,
     });
   }
 
