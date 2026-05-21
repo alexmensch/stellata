@@ -111,6 +111,52 @@ class ReadBailerJonesTsvTests(unittest.TestCase):
         self.assertEqual(out, {100: 252.5, 300: 151.0})
 
 
+class FormatReportTests(unittest.TestCase):
+    """Pin the `validate-distances:` headline markers — they're documented
+    as stable identifiers for CI / shell-scripting downstream and changes
+    to their wording could silently break consumer scripts."""
+
+    def _disagreement(self, name: str, fd: float) -> vd.Disagreement:
+        return vd.Disagreement(
+            name=name, source_id=42, catalog_pc=100.0, paper_pc=110.0,
+            frac_diff=fd, snr_tot=8.0,
+        )
+
+    def _report(self, *, with_unresolved: bool = False, large: int = 0) -> vd.ValidationReport:
+        return vd.ValidationReport(
+            edsd_total=10, edsd_compared=8,
+            edsd_unresolved=["X", "Y"] if with_unresolved else [],
+            edsd_stats={"median": 0.05, "p84": 0.10, "max": 0.60, "count": 8},
+            edsd_large=[self._disagreement("BIG", 0.60)] * large,
+            edsd_top=[self._disagreement("BIG", 0.60), self._disagreement("MED", 0.20)],
+            bj_total=2, bj_compared=2,
+            bj_unresolved=[],
+            bj_stats={"median": 0.0, "p84": 0.0, "max": 0.0, "count": 2},
+            bj_top=[self._disagreement("SC", 0.0)],
+        )
+
+    def test_emits_expected_headlines(self) -> None:
+        out = vd.format_report(self._report(with_unresolved=True, large=1))
+        # The 5 stable headline markers any downstream grep can rely on:
+        self.assertIn("validate-distances: EDSD_new subset — compared 8/10", out)
+        self.assertIn("validate-distances: EDSD_new unresolved (2): X, Y", out)
+        self.assertIn("validate-distances: EDSD_new |frac diff|>50%: 1 (bar ≤ 5)", out)
+        self.assertIn("validate-distances: EDSD_new top-5 disagreements:", out)
+        self.assertIn("validate-distances: BJ_old subset (report-only) — compared 2/2", out)
+
+    def test_skips_unresolved_line_when_empty(self) -> None:
+        out = vd.format_report(self._report(with_unresolved=False))
+        self.assertNotIn("EDSD_new unresolved", out)
+
+    def test_nan_stats_render_as_na(self) -> None:
+        report = self._report()
+        report = report._replace(
+            edsd_stats={"median": math.nan, "p84": math.nan, "max": math.nan, "count": 0},
+        )
+        out = vd.format_report(report)
+        self.assertIn("median |frac diff|=n/a", out)
+
+
 class BuildReportTests(unittest.TestCase):
     """The end-to-end behaviour the validator's exit code rides on.
     Builds a 3-EDSD / 2-BJ reference + B-J map by hand and asserts the
