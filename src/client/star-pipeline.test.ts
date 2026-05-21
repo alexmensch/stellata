@@ -15,6 +15,7 @@ function makeOpts(count = 4) {
     logRadii: new Float32Array(count),
     lumClassF32: new Float32Array(count),
     distSol: new Float32Array(count),
+    teffApsis: new Float32Array(count),
     localPositions: new Float32Array(count * 3),
     vertexShader: 'void main(){ gl_Position = vec4(0.0); }',
     fragmentShader: 'void main(){}',

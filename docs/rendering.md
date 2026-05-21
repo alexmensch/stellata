@@ -441,7 +441,9 @@ overlays follow the pulsating disc size exactly frame-by-frame.
 
 Per-star extinction reads the Edenhofer dust texture in `star.vert.glsl`,
 raymarches camera→star, and applies A_V to `appMag` (dimming) and
-E(B−V) = A_V/3.1 to `iCi` (reddening). Default strength = 1 (physical
+E(B−V) = A_V/3.1 to the intrinsic LUT-input B-V (sourced via the
+six-tier Apsis-first routing — see SCIENCE.md § "Star colour
+calibration"). Default strength = 1 (physical
 realism); user knob: `stellata.setExtinctionStrength(x)` from the dev
 console. This is the canonical "view of the dust" in the app — looking
 through dust dims and reddens stars behind it, which is what you'd
