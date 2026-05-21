@@ -271,6 +271,29 @@ parallax inversions whose Bayesian distance is < 50 kpc.
 Data file: `data/bailer-jones-dr3.tsv` (~310k rows, refreshed by
 `scripts/refresh/refresh-bailer-jones.py`).
 
+**Distance-override validation against Vaidman et al. 2025.** Vaidman,
+Khokhlov, Miroshnichenko, Agishev & Yermekbayev 2025 (*Universe* 11, 359;
+DOI [10.3390/universe11110359](https://doi.org/10.3390/universe11110359))
+publish a Bayesian recalculation of Gaia DR3 distances for 132 Galactic
+BA-type supergiants — exactly the failure-mode population the Bailer-Jones
+override above is designed to rescue. The paper's appendix tables list
+their adopted distance per star together with Bailer-Jones's
+`r_med_photogeo` (their direct comparand) and the parallax SNR each
+decision rode on, an independent third-party reference set we use to
+spot-check the override on a recurring basis.
+
+The 132 rows live under CC BY 4.0 at
+`data/distance-validation/vaidman-2025-supergiants.tsv` (provenance and
+SIMBAD name-resolution recipe in `data/distance-validation/README.md`);
+`scripts/distance-validation/validate-distances.py` runs the comparison
+end-to-end and reports the per-star fractional difference distribution
+(median, 84th-pct, and top-5 disagreements) against the override's
+Bailer-Jones input. The harness is built to re-run on every distance-
+source change — a DR4 Bailer-Jones refresh, a switch to StarHorse or a
+B-J successor, or any change to `build-catalog.ts`'s distance-priority
+logic — so each migration gets a calibrated named-disagreements report
+rather than a "trust the diff" sign-off.
+
 **LMC kinematic distance refinement.** Bailer-Jones's Galactic-density
 prior has no LMC — so for AT-HYG's ~60 LMC supergiants (HDE 268xxx
 range), the posterior peaks somewhere intermediate (5–20 kpc) instead
