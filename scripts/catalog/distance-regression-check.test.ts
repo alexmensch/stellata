@@ -84,8 +84,7 @@ describe('threshold constants', () => {
 });
 
 describe('detectSelfConsistencyOutlier', () => {
-  it('trips on a HIP-sourced star shifted 20× — the dch.47 bug shape', () => {
-    // HIP 25097: AT-HYG dist ~305 pc, pipeline rendered at ~18 500 pc (factor 60).
+  it('trips on a HIP-sourced star shifted ~60× from its parallax-anchored input', () => {
     const star = starAt(18_500, {
       hip: 25097,
       athygDist: 305,

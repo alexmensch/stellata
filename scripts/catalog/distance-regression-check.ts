@@ -1,47 +1,14 @@
-// Post-build distance-regression check — guards against override-misfire
-// bugs of the shape that produced dch.47 (eleven stars rendered at 16-40 kpc
-// instead of their correct 0.2-1 kpc Hipparcos distances).
-//
-// Two layered checks:
-//
-//   (1) Self-consistency. For each star with an AT-HYG `dist` and a
-//       `dist_src` we have a threshold opinion on, compare the AT-HYG
-//       input distance against the pipeline's final distance. Threshold
-//       is bracketed by source category — HIP / GJ / N are parallax-
-//       based ground truth where a 3× shift is a strong misfire signal;
-//       G_R3 / G_R2 are Gaia inverse-parallax where even catastrophic-
-//       inversion outliers shouldn't shift by more than ~30× post-B-J.
-//
-//   (2) SIMBAD cross-check. For each star reachable via the committed
-//       `data/simbad/simbad_sample.tsv` (~10k V-mag-stratified rows, key
-//       on Gaia DR3 source_id with HIP fallback), compare the pipeline
-//       distance against SIMBAD's parallax-derived distance. Any ratio
-//       outside [1/5, 5] is flagged.
-//
-// The SIMBAD check is an offline file join — no network call. The
-// upstream `refresh-simbad-sample.py` is manual + idempotent per
-// `frozen-external-data`.
-//
-// Both check halves return structured outlier records. Build-catalog.ts
-// diffs the report against a committed `build-distance-outliers-expected.json`
-// snapshot and fails the build on any new or stale outlier. Refresh
-// deliberately with `UPDATE_DISTANCE_OUTLIERS=1 npm run build:catalog`.
+// Post-build self-consistency + SIMBAD distance gate: flags stars whose
+// pipeline distance has drifted from its AT-HYG input or from SIMBAD's
+// parallax-derived value. Snapshot-pinned by build-catalog.ts.
 
 import type { Star } from './stars-parse';
 
-// Per AT-HYG `dist_src` category, the |log10(final/athyg)| threshold
-// above which a star is flagged as a self-consistency outlier.
-//
-// STRICT (factor 3+, log10 ≈ 0.477) — HIP/GJ/N are parallax-anchored;
-// a 3× shift indicates an override misfire on a row whose input was
-// already trustworthy. The dch.47 bug exemplars sat at 20-146× from
-// their HIP values.
-//
-// LOOSE (factor 30+, log10 ≈ 1.477) — G_R3/G_R2 are Gaia inverse
-// parallaxes whose low-S/N tail legitimately gets re-anchored by
-// Bailer-Jones; flagging only the very largest residuals after override.
-//
-// Categories not present in this table (OTHER, blank) are not checked.
+// HIP/GJ/N are parallax-anchored ground truth — a 3× shift signals an
+// override misfire. G_R3/G_R2 are Gaia inverse parallaxes whose low-S/N
+// tail legitimately gets re-anchored by Bailer-Jones, so only the very
+// largest residuals are flagged. Categories absent here (OTHER, blank)
+// are not checked.
 export const SELF_CONSISTENCY_THRESHOLDS: Readonly<Record<string, number>> = {
   HIP: Math.log10(3),
   GJ: Math.log10(3),
@@ -50,8 +17,6 @@ export const SELF_CONSISTENCY_THRESHOLDS: Readonly<Record<string, number>> = {
   G_R2: Math.log10(30),
 };
 
-// SIMBAD cross-check threshold — any |log10(final / simbad)| beyond this
-// is flagged. Catches the dch.47-shaped systematic 20-150× misfires.
 export const SIMBAD_DISTANCE_THRESHOLD = Math.log10(5);
 
 export interface SimbadDistanceEntry {
