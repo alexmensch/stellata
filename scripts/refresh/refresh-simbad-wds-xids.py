@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/simbad/simbad_wds_xids.tsv — per-component SIMBAD-curated WDS↔Gaia DR3 cross-IDs.
 
-Stage 2 supplement (stellata-dch.60) for build-binaries.py's WDS-component →
+Stage 2 supplement for build-binaries.py's WDS-component →
 Gaia source_id resolution cascade. The principled alternative to a hand-rolled
 regex parser over WDS Notes prose: SIMBAD's ``ident`` table holds curated
 ``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs for the well-known multi-component
@@ -36,10 +36,18 @@ SRC_WDS_SUMM. Pass ``--force`` to rebuild unconditionally. Output is
 sorted by (wds_id, component) so re-runs against an unchanged SIMBAD
 produce byte-identical TSVs.
 
+Phase A.5 + A.6 cascade — recover components SIMBAD stores under
+non-WDS-J aliases (HD/CCDM/HIP). See scripts/refresh/wds_xids_cascade.py
+for the strategy. The cascade adds ~225 component recoveries on top of
+Phase A's ~23.4k.
+
 Backend: SIMBAD TAP only (refresh_lib.simbad_backend) — SIMBAD's ADQL
 dialect diverges from ESA / CDS (LIKE forbidden on basic.otype, MOD()
 but no ``%`` operator) so the default ESA→CDS fallback chain is
 bypassed via ``backends=[simbad_backend()]``.
+
+Runtime: ~1.5 min (62 Phase A batches of 1000 idents, 24 Phase B oid
+batches, 42 Phase A.6 cascade batches; CDS/SIMBAD latency dominates).
 
 Venv setup (see scripts/requirements-refresh.txt):
     python3 -m venv .venv
@@ -58,10 +66,17 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import refresh_lib as rl  # noqa: E402
+from wds_xids_cascade import (  # noqa: E402
+    build_cascade_candidates,
+    filter_cascade_hits,
+    parse_hd_or_hip_from_ident,
+)
+from wds_xids_overrides import load_overrides, validate_against_components  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT_DIR = Path(__file__).resolve().parent
 SRC_WDS_SUMM = ROOT / "data" / "wds" / "wds_summ.txt"
+SRC_OVERRIDES = ROOT / "data" / "simbad" / "wds_xids_overrides.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 
 # Reuse build-binaries.py's WDS parser + split_components so the input
@@ -157,6 +172,49 @@ def query_ident_batch(
     )
 
 
+def pull_primary_aliases(
+    client: rl.TapClient,
+    primary_oids: list[int],
+) -> tuple[dict[int, int], dict[int, int]]:
+    """Phase A.5. Pull HD and HIP aliases for the given resolved primary
+    oids — feeds the Phase A.6 cascade. Returns
+    ``(hd_by_oid, hip_by_oid)`` mapping each oid to the integer HD / HIP
+    number. Oids without a HD or HIP alias are simply absent from the
+    respective map.
+
+    Per-component aliases (`HD 48915B`, `HIP 32349B`) parse to the
+    BASE integer — the component letter is what we want to LOOK UP, not
+    what we already have. parse_hd_or_hip_from_ident's trailing-suffix
+    strip handles both bare and per-component forms uniformly.
+    """
+    hd_by_oid: dict[int, int] = {}
+    hip_by_oid: dict[int, int] = {}
+    if not primary_oids:
+        return hd_by_oid, hip_by_oid
+    for offset in range(0, len(primary_oids), IDENT_BATCH):
+        batch = primary_oids[offset : offset + IDENT_BATCH]
+        inlist = ",".join(str(o) for o in batch)
+        table = client.run(
+            "SELECT oidref, id FROM ident "
+            f"WHERE oidref IN ({inlist}) "
+            f"AND (id LIKE '{HIP_LIKE}' OR id LIKE 'HD %') "
+            "ORDER BY oidref, id"
+        )
+        for row in table:
+            oid = int(row["oidref"])
+            parsed = parse_hd_or_hip_from_ident(
+                str(rl.coerce_masked(row["id"]) or "")
+            )
+            if parsed is None:
+                continue
+            kind, num = parsed
+            if kind == "HD":
+                hd_by_oid.setdefault(oid, num)
+            else:
+                hip_by_oid.setdefault(oid, num)
+    return hd_by_oid, hip_by_oid
+
+
 def query_xrefs_batch(
     client: rl.TapClient,
     oids: list[int],
@@ -228,7 +286,9 @@ def query_xrefs_batch(
 
 def main() -> None:
     force = "--force" in sys.argv
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), SRC_WDS_SUMM]):
+    if not force and rl.is_up_to_date(
+        OUT, [Path(__file__), SRC_WDS_SUMM, SRC_OVERRIDES]
+    ):
         print(
             f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)"
         )
@@ -236,6 +296,14 @@ def main() -> None:
 
     components = collect_unique_components()
     print(f"collected {len(components):,} unique (wds_id, component) tuples")
+
+    overrides = load_overrides(SRC_OVERRIDES)
+    if overrides:
+        validate_against_components(overrides, components)
+        print(
+            f"loaded {len(overrides)} override(s) from "
+            f"{SRC_OVERRIDES.relative_to(ROOT)}"
+        )
 
     client = rl.TapClient(backends=[rl.simbad_backend()])
 
@@ -286,6 +354,88 @@ def main() -> None:
             f"WDS components matched SIMBAD ident "
             f"({len(ident_to_oid) / len(all_idents):.1%})"
         )
+
+    # Phase A.5: pull HD/HIP aliases for resolved primaries, used by the
+    # Phase A.6 cascade. Building siblings_by_wds requires the inverse of
+    # ident_to_oid back to (wds_id, comp), so we index from the parsed
+    # components list against ident_to_oid.
+    siblings_by_wds: dict[str, list[tuple[str, int]]] = {}
+    for wds_id, component in components:
+        oid = ident_to_oid.get(wds_ident(wds_id, component))
+        if oid is not None:
+            siblings_by_wds.setdefault(wds_id, []).append((component, oid))
+    unresolved_with_siblings = [
+        (wds_id, component)
+        for wds_id, component in components
+        if wds_ident(wds_id, component) not in ident_to_oid
+        and wds_id in siblings_by_wds
+    ]
+    # Only fetch HD/HIP aliases for primaries whose system has at least one
+    # unresolved sibling — the cascade's fan-out source. The conflict-detect
+    # set later uses the FULL Phase A oid set, so narrowing here doesn't
+    # admit alias-points-at-another-system's-primary false positives.
+    wds_ids_needing_cascade = {wds_id for wds_id, _ in unresolved_with_siblings}
+    primary_oids_for_cascade = sorted({
+        sib_oid
+        for wds_id in wds_ids_needing_cascade
+        for _, sib_oid in siblings_by_wds.get(wds_id, ())
+    })
+    if unresolved_with_siblings:
+        print(
+            f"Phase A.5: pulling HD/HIP aliases for {len(primary_oids_for_cascade):,} "
+            f"resolved primaries (cascade fan-out covers "
+            f"{len(unresolved_with_siblings):,} unresolved component(s))…"
+        )
+        t0 = time.time()
+        hd_by_oid, hip_by_oid = pull_primary_aliases(
+            client, primary_oids_for_cascade,
+        )
+        print(
+            f"  pulled {len(hd_by_oid):,} HD / {len(hip_by_oid):,} HIP aliases "
+            f"in {time.time() - t0:.1f}s"
+        )
+
+        # Phase A.6: cascade — try HD/CCDM/HIP alias forms for unresolved
+        # components, batched. Filter results to keep only oids not already
+        # in Phase A's resolved set (an alias that points back to a known
+        # primary is not a new component).
+        candidates, cand_to_key = build_cascade_candidates(
+            unresolved_with_siblings, siblings_by_wds, hd_by_oid, hip_by_oid,
+        )
+        print(
+            f"Phase A.6: querying {len(candidates):,} cascade candidates "
+            f"(HD / CCDM / HIP)…"
+        )
+        resolved_oids_set = set(ident_to_oid.values())
+        cascade_rows: list[dict[str, Any]] = []
+        t0 = time.time()
+        for offset in range(0, len(candidates), IDENT_BATCH):
+            batch = candidates[offset : offset + IDENT_BATCH]
+            table = query_ident_batch(client, batch)
+            for row in table:
+                cascade_rows.append({
+                    "id": str(rl.coerce_masked(row["id"]) or ""),
+                    "oidref": int(row["oidref"]),
+                })
+        recoveries, strategy_counts = filter_cascade_hits(
+            cascade_rows, cand_to_key, resolved_oids_set,
+        )
+        for (wds_id, component), oid in recoveries.items():
+            ident_to_oid[wds_ident(wds_id, component)] = oid
+        print(
+            f"  cascade recovered {len(recoveries):,} component(s) "
+            f"(by strategy: HD={strategy_counts['HD']}, "
+            f"CCDM={strategy_counts['CCDM']}, "
+            f"HIP={strategy_counts['HIP']}) "
+            f"in {time.time() - t0:.1f}s"
+        )
+
+    # Phase A.7: apply hand-curated overrides. These win over Phase A and
+    # A.6 on conflict — the residual escape hatch for SIMBAD curation
+    # idiosyncrasies the cascade can't handle. See
+    # data/simbad/wds_xids_overrides.tsv for the (currently empty) list.
+    for (wds_id, component), oid in overrides.items():
+        ident_to_oid[wds_ident(wds_id, component)] = oid
 
     # Phase B: cross-IDs for the matched oids.
     unique_oids = sorted(set(ident_to_oid.values()))
