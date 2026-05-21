@@ -15,6 +15,16 @@ import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
+import {
+  BV_MAX,
+  BV_MIN,
+  LUT_SIZE,
+  ballesterosTeff,
+  bvAtIndex,
+} from './blackbody-lut-pure';
+
+export { BV_MAX, BV_MIN, LUT_SIZE, ballesterosTeff, bvAtIndex };
+
 // ---- Physical constants ------------------------------------------------
 
 const H = 6.62607015e-34;   // Planck (J·s)
@@ -25,36 +35,6 @@ const KB = 1.380649e-23;    // Boltzmann (J/K)
 const LAMBDA_NM_MIN = 380.0;
 const LAMBDA_NM_MAX = 780.0;
 const LAMBDA_NM_STEP = 5.0;
-
-// ---- LUT shape (must match the consumer in src/client/shaders/blackbody-lut.ts) ----
-
-/** Number of RGB entries in the LUT. 256 keeps cache lines clean and is plenty
- *  of resolution for B-V over a 2.4-magnitude span. */
-export const LUT_SIZE = 256;
-
-/** Inclusive B-V range covered by the LUT. Span is chosen to cover the
- *  full AT-HYG catalog after dust reddening — extreme M giants reach
- *  B-V ≈ +2 (Mu Cep ≈ +2.4 when heavily reddened), hot O stars dip below
- *  -0.3 (Mintaka -0.17 intrinsic). */
-export const BV_MIN = -0.4;
-export const BV_MAX = 2.0;
-
-// ---- Ballesteros 2012 -------------------------------------------------
-
-/**
- * Ballesteros 2012 empirical relation: B-V → Teff in Kelvin.
- *
- *   Teff = 4600 × ( 1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62) )
- *
- * Calibrated across A–K with reasonable extrapolation into M/B; less
- * accurate at the extremes. See RECOMMENDATION.md § Tier 1 for accuracy
- * envelope.
- */
-export function ballesterosTeff(bv: number): number {
-  const a = 0.92 * bv + 1.7;
-  const b = 0.92 * bv + 0.62;
-  return 4600.0 * (1.0 / a + 1.0 / b);
-}
 
 // ---- Planck spectral radiance -----------------------------------------
 
@@ -160,11 +140,6 @@ export function blackbodyToSrgb(tempK: number): [number, number, number] {
 }
 
 // ---- LUT build --------------------------------------------------------
-
-/** B-V value at LUT index i ∈ [0, LUT_SIZE-1]. Endpoints map to BV_MIN / BV_MAX. */
-export function bvAtIndex(i: number): number {
-  return BV_MIN + (i / (LUT_SIZE - 1)) * (BV_MAX - BV_MIN);
-}
 
 /**
  * Build the 256-entry RGB LUT as a flat Uint8Array of 768 bytes (R, G, B
