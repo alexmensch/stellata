@@ -15,24 +15,16 @@ file directly executes `unittest.main()` in the `__main__` block below.)
 
 from __future__ import annotations
 
-import importlib.util
 import math
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-# build-binaries.py contains a hyphen and a `from __future__` style import
-# that prevents a normal `import build_binaries`. Load it via spec_from_file
-# so the test module can address its parsers directly.
-_HERE = Path(__file__).resolve().parent
-_SPEC = importlib.util.spec_from_file_location(
-    "build_binaries", _HERE / "build-binaries.py",
-)
-assert _SPEC and _SPEC.loader
-bb = importlib.util.module_from_spec(_SPEC)
-sys.modules["build_binaries"] = bb
-_SPEC.loader.exec_module(bb)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from test_helpers import load_kebab_sibling  # noqa: E402
+
+bb = load_kebab_sibling(__file__, "build_binaries", "build-binaries.py")
 
 # build-binaries.py re-exports the parser entry points but not the
 # private sanity-net helper or its floor constants. Import them

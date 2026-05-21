@@ -8,19 +8,14 @@ Run:
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 import unittest
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_SPEC = importlib.util.spec_from_file_location(
-    "build_vaidman_tsv", _HERE / "build-vaidman-tsv.py",
-)
-assert _SPEC and _SPEC.loader
-bv = importlib.util.module_from_spec(_SPEC)
-sys.modules["build_vaidman_tsv"] = bv
-_SPEC.loader.exec_module(bv)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from test_helpers import load_kebab_sibling  # noqa: E402
+
+bv = load_kebab_sibling(__file__, "build_vaidman_tsv", "build-vaidman-tsv.py")
 
 
 class ParseAppendixRowTests(unittest.TestCase):

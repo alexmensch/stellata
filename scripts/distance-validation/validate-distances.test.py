@@ -9,21 +9,16 @@ Run:
 
 from __future__ import annotations
 
-import importlib.util
 import math
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_SPEC = importlib.util.spec_from_file_location(
-    "validate_distances", _HERE / "validate-distances.py",
-)
-assert _SPEC and _SPEC.loader
-vd = importlib.util.module_from_spec(_SPEC)
-sys.modules["validate_distances"] = vd
-_SPEC.loader.exec_module(vd)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from test_helpers import load_kebab_sibling  # noqa: E402
+
+vd = load_kebab_sibling(__file__, "validate_distances", "validate-distances.py")
 
 
 class FractionalDiffTests(unittest.TestCase):
