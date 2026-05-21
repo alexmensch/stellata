@@ -1,16 +1,7 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/refresh/simbad.
+"""Unit tests for scripts/refresh/simbad — pin spec → ADQL → row roundtrip.
 
-Pins the spec → ADQL → row roundtrip so a future column addition can't
-silently break the derivation: SELECT clause, schema validator, TSV
-header, and row dict are all derived from ColumnSpec / IdentLookup
-lists, and each derivation is asserted here.
-
-No network — every backend call is stubbed with an in-memory dict
-table that mimics astropy's row-mapping iteration shape.
-
-Run:
-    python3 scripts/refresh/simbad/simbad.test.py
+Run: python3 scripts/refresh/simbad/simbad.test.py
 """
 
 from __future__ import annotations
@@ -31,11 +22,7 @@ from simbad.specs import (  # noqa: E402
 
 class FakeBackend:
     """In-memory backend that returns a precomputed table per query.
-
-    ``responses`` is a list of (substring, table) pairs — the first
-    substring matching a query is returned. The table is a list of
-    dicts; each dict's keys are the SELECTed aliases.
-    """
+    ``responses`` is a list of (substring, table) pairs — first match wins."""
 
     def __init__(self, responses):
         self.responses = list(responses)
@@ -48,8 +35,6 @@ class FakeBackend:
                 return table
         raise AssertionError(f"unexpected query (no matching needle):\n{q}")
 
-
-# ─── specs ─────────────────────────────────────────────────────────────
 
 class SpecsTests(unittest.TestCase):
 
@@ -68,8 +53,6 @@ class SpecsTests(unittest.TestCase):
         self.assertEqual(GAIA_DR3.prefix_len, 9)
 
 
-# ─── query.build_basic_select ──────────────────────────────────────────
-
 class BuildBasicSelectTests(unittest.TestCase):
 
     def test_renders_select_aliases_and_in_clause(self):
@@ -85,10 +68,7 @@ class BuildBasicSelectTests(unittest.TestCase):
     def test_extra_column_extends_select(self):
         cols = [OID, SP_TYPE, OTYPE]
         q = query.build_basic_select(cols, "42")
-        # Spec-driven: appending OTYPE to the column list adds its
-        # SELECT fragment without any other edit.
         self.assertIn("b.otype AS otype", q)
-        # Order matches the spec list order.
         sp_pos = q.index("b.sp_type")
         otype_pos = q.index("b.otype")
         self.assertLess(sp_pos, otype_pos)
@@ -98,14 +78,10 @@ class BuildBasicSelectTests(unittest.TestCase):
         self.assertEqual(schema, {"oid": int, "main_id": str, "sp_type": str})
 
 
-# ─── query.fetch_basic_columns ─────────────────────────────────────────
-
 class FetchBasicColumnsTests(unittest.TestCase):
 
     def test_returns_oid_keyed_rows_with_aliases(self):
         cols = [OID, SP_TYPE]
-        # Schema validation requires the table to expose colnames / dtypes.
-        # Stub with an astropy-style object via a dict + columns property.
         table = FakeTable(
             colnames=["oid", "sp_type"],
             dtypes={"oid": int, "sp_type": str},
@@ -130,8 +106,6 @@ class FetchBasicColumnsTests(unittest.TestCase):
         self.assertEqual(backend.calls, [])
 
 
-# ─── query.resolve_oids_by_prefix ──────────────────────────────────────
-
 class ResolveOidsByPrefixTests(unittest.TestCase):
 
     def test_gaia_dr3_lookup_resolves_value_to_oid(self):
@@ -150,8 +124,7 @@ class ResolveOidsByPrefixTests(unittest.TestCase):
         self.assertEqual(result, {12345: 100, 67890: 200})
 
     def test_suffixed_ident_silently_skipped(self):
-        # "HIP 12345 A" — component suffix — fails the integer cast and
-        # is skipped; refresh-simbad-sample comment justifies this path.
+        # "HIP 12345 A" — component suffix — fails int cast, skipped.
         table = FakeTable(
             colnames=["oidref", "id"],
             dtypes={"oidref": int, "id": str},
@@ -166,8 +139,6 @@ class ResolveOidsByPrefixTests(unittest.TestCase):
         )
         self.assertEqual(result, {12345: 100})
 
-
-# ─── query.fetch_ident_lookups ─────────────────────────────────────────
 
 class FetchIdentLookupsTests(unittest.TestCase):
 
@@ -190,12 +161,9 @@ class FetchIdentLookupsTests(unittest.TestCase):
             {100: {"hip": 1, "source_id": 9999},
              200: {"source_id": 8888}},
         )
-        # OR-ed LIKE clause includes both lookups.
         self.assertIn("id LIKE 'HIP %'", backend.calls[0])
         self.assertIn("id LIKE 'Gaia DR3 %'", backend.calls[0])
 
-
-# ─── tsv.build_tsv_header / build_row_dict / write_simbad_tsv ──────────
 
 class TsvShapeTests(unittest.TestCase):
 
@@ -230,8 +198,18 @@ class TsvShapeTests(unittest.TestCase):
         self.assertIsNone(row["sp_type"])
         self.assertIsNone(row["hip"])
 
+    def test_row_dict_no_oid_column_does_not_crash(self):
+        # OID-absent column lists must not StopIteration. The orchestration
+        # shell always includes OID, but custom callers might not.
+        row = tsv.build_row_dict(
+            oid=42,
+            basic_row={"sp_type": "G2V"},
+            ident_values=None,
+            columns=[SP_TYPE],
+            ident_lookups=[],
+        )
+        self.assertEqual(row, {"sp_type": "G2V"})
 
-# ─── End-to-end: spec list → byte-identical TSV ────────────────────────
 
 class TsvRoundtripTests(unittest.TestCase):
 
@@ -240,7 +218,7 @@ class TsvRoundtripTests(unittest.TestCase):
         cols = [OID, SP_TYPE]
         idents = [HIP]
         with tempfile.TemporaryDirectory() as d:
-            out = Path(d) / "spectral.tsv"
+            out = Path(d) / "sptype.tsv"
             n = tsv.write_simbad_tsv(
                 output=out,
                 oids=[2, 1],  # passed unsorted; writer sorts
@@ -259,15 +237,12 @@ class TsvRoundtripTests(unittest.TestCase):
             self.assertEqual(text[2], "2\tDA2\t200")
 
     def test_appending_column_to_spec_adds_tsv_column(self):
-        """Spec extensibility regression: adding OTYPE to ``columns``
-        and re-running with no other code change extends the TSV.
-
-        Pins the user-visible "one-line spec change" property.
-        """
+        """Spec extensibility: appending OTYPE to the column list extends
+        the TSV with no other code change."""
         import tempfile
         cols = [OID, SP_TYPE, OTYPE]
         with tempfile.TemporaryDirectory() as d:
-            out = Path(d) / "spectral.tsv"
+            out = Path(d) / "sptype.tsv"
             tsv.write_simbad_tsv(
                 output=out,
                 oids=[1],
@@ -281,11 +256,9 @@ class TsvRoundtripTests(unittest.TestCase):
             self.assertEqual(text[1], "1\tG2V\t*")
 
 
-# ─── Fakes ─────────────────────────────────────────────────────────────
-
 class FakeTable:
-    """Mimics astropy Table's relevant attributes: ``colnames`` (list),
-    ``dtype`` lookup per column, iteration yielding dict-like rows."""
+    """Mimics astropy Table: ``colnames`` list, dtype lookup per column,
+    iteration yielding dict-like rows."""
 
     def __init__(self, colnames, dtypes, rows):
         self.colnames = list(colnames)
@@ -299,8 +272,6 @@ class FakeTable:
         return len(self._rows)
 
     def __getitem__(self, key):
-        # Used by refresh_lib.validate_schema via _column_dtype, which
-        # returns getattr(column, 'dtype', type(column)).
         return _FakeColumn(self._dtypes[key])
 
 

@@ -40,8 +40,7 @@ upstream documentation. All upstream column names preserved verbatim;
 empty cells in the TSV correspond to masked (NULL) values from TAP.
 ``spectraltype_esphs`` is the ESP-HS spectral-type enum (single letter:
 ``O B A F G K M``) — categorical, not numeric, so it bypasses float
-rounding on write. Used by stellata-dch.64.2 as a second-tier source
-for spectral classification when SIMBAD ``sp_type`` is unavailable.
+rounding on write.
 
 Idempotent — exits early if the output is newer than this script AND the
 AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
@@ -123,9 +122,7 @@ EXPECTED_UNION_COVERAGE_MIN = 0.80
 
 # ESP-HS spectral-type enum coverage floor. ESP-HS is the hottest-star
 # branch of the Apsis chain and resolves spectraltype_esphs for ~30%+
-# of DR3 sources (varies with magnitude tail). Below this floor the
-# pull is likely broken; consumers in stellata-dch.64.2 treat it as a
-# best-effort second-tier source so a moderate dip is not catastrophic.
+# of DR3 sources. Below this floor the pull is likely broken.
 EXPECTED_SPECTRALTYPE_COVERAGE_MIN = 0.20
 
 # Teff has order ~1-10 K formal uncertainty, logg ~0.01-0.1 dex,
@@ -322,9 +319,8 @@ def main() -> None:
         raise SystemExit(
             f"refresh-gaia-apsis: spectraltype_esphs coverage "
             f"{spectraltype_coverage:.1%} below floor "
-            f"{EXPECTED_SPECTRALTYPE_COVERAGE_MIN:.0%} — ESP-HS column was "
-            f"recently added (dch.64.1); verify the SELECT extension lands "
-            f"the column with real values rather than all-NULL."
+            f"{EXPECTED_SPECTRALTYPE_COVERAGE_MIN:.0%} — verify the SELECT "
+            f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
 
     for spec in SPOT_CHECKS:

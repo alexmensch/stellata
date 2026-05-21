@@ -200,10 +200,10 @@ scripts/                                     Each subsystem cluster owns a folde
     refresh-gaia-tyc-xmatch.py               → data/gaia/gaia_dr3_tyc_xmatch.tsv
     refresh-hipparcos2.py                    → data/hipparcos/hip2_van_leeuwen.tsv
     refresh-simbad-sample.py                 → data/simbad/simbad_sample.tsv
-    refresh-simbad-spectral.py               → data/simbad/simbad_spectral.tsv —
-                                             orchestration shell over scripts/refresh/simbad/.
-                                             Consumed by build-catalog (dch.64.2) +
-                                             build-binaries stage 6 (dch.63).
+    refresh-simbad-sptype.py                 → data/simbad/simbad_sptype.tsv —
+                                             orchestration shell over scripts/refresh/simbad/
+                                             that pulls sp_type / sp_qual / sp_bibcode
+                                             / otype + HIP / Gaia DR3 cross-IDs.
     refresh-simbad-wds-xids.py               → data/simbad/simbad_wds_xids.tsv
     simbad/                                  reusable SIMBAD-pull plumbing —
                                              specs (ColumnSpec / IdentLookup),

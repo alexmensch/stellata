@@ -1,52 +1,10 @@
 #!/usr/bin/env python3
-"""Refresh data/simbad/simbad_spectral.tsv — SIMBAD per-source spectral types.
+"""Refresh data/simbad/simbad_sptype.tsv — SIMBAD per-source sp_type +
+sp_qual + sp_bibcode + otype + HIP / Gaia DR3 cross-IDs.
 
-Phase 3 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch.64.1).
-Single SIMBAD pull that serves both the build-catalog single-star path
-(consumed in stellata-dch.64.2 to retire the parseSpectral regex chain)
-and the build-binaries per-component path (consumed in stellata-dch.63
-to anchor WDS-pair spectral types on SIMBAD's per-component sp_type).
-
-ADQL (per batch, against SIMBAD TAP)
-    SELECT b.oid, b.main_id, b.sp_type, b.sp_qual, b.sp_bibcode, b.otype
-    FROM basic AS b
-    WHERE b.oid IN (<oid batch>)
-
-    SELECT oidref, id FROM ident
-    WHERE oidref IN (<oid batch>)
-    AND (id LIKE 'HIP %' OR id LIKE 'Gaia DR3 %')
-
-TSV columns (8)
-    simbad_oid       int   — SIMBAD basic.oid (stable primary key)
-    simbad_main_id   str   — SIMBAD basic.main_id (e.g. "* alf CMa")
-    sp_type          str|"" — basic.sp_type (canonical MK string)
-    sp_qual          str|"" — basic.sp_qual (A/B/C/D/E quality grade)
-    sp_bibcode       str|"" — basic.sp_bibcode (reference)
-    otype            str|"" — basic.otype (SIMBAD hierarchical short code)
-    hip              int|"" — ident-resolved Hipparcos number
-    source_id        int|"" — ident-resolved Gaia DR3 source_id
-
-Input sources (composed into the deduped oid request set):
-    1. AT-HYG `gaia` column → resolve via ident WHERE id IN ('Gaia DR3 N')
-    2. AT-HYG `hip` column for no-Gaia rows → resolve via ident WHERE id IN ('HIP N')
-    3. data/simbad/simbad_wds_xids.tsv `simbad_oid` column → direct
-
-Extensibility — see ``scripts/refresh/simbad/__init__.py`` for the
-sibling-module decomposition. Adding a new SIMBAD column is one
-``ColumnSpec`` append to ``BASIC_COLUMNS`` below; adding a new cross-ID
-is one ``IdentLookup`` append to ``IDENT_LOOKUPS``; adding a new input
-source is one iter-helper in ``simbad/inputs.py`` plus one composition
-line in ``collect_oid_requests`` below.
-
-Backend: SIMBAD TAP only — same dialect quirks as refresh-simbad-sample.py.
-
-Idempotent — exits early if the output is newer than this script AND
-than the AT-HYG / WDS-xids inputs. Pass `--force` to rebuild.
-
-Venv setup (see scripts/refresh/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/refresh/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-simbad-spectral.py
+Orchestration shell over scripts/refresh/simbad/; adding a column /
+cross-ID / input source is a one-line append to BASIC_COLUMNS /
+IDENT_LOOKUPS / collect_oid_requests below.
 """
 
 from __future__ import annotations
@@ -66,32 +24,21 @@ from simbad.specs import (  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent.parent
 ATHYG_CSV = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
 WDS_XIDS_TSV = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
-OUT = ROOT / "data" / "simbad" / "simbad_spectral.tsv"
+OUT = ROOT / "data" / "simbad" / "simbad_sptype.tsv"
 
-
-# ─── Spec lists — extend here to extend the pull ─────────────────────
 
 BASIC_COLUMNS = [OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE]
 IDENT_LOOKUPS = [HIP, GAIA_DR3]
 
 
-# Coverage floor for the union sp_type non-null rate. SIMBAD has
-# sp_type for most bright stars (HIP regime) but coverage drops
-# sharply in the faint Tycho-only tail. 50% is the rough lower
-# bound observed on probe runs; below this the pull is likely broken.
+# SIMBAD sp_type non-null rate — drops sharply in the faint Tycho tail.
+# 50% is the rough lower bound observed; below this the pull is likely broken.
 SP_TYPE_COVERAGE_MIN = 0.50
 
 
-def collect_oid_requests(
-    client: rl.TapClient,
-) -> list[int]:
+def collect_oid_requests(client: rl.TapClient) -> list[int]:
     """Compose every input source, resolve non-oid identifiers via the
-    ident table, union into a deduplicated sorted oid list. Each source
-    is added as a separate, named step so progress logging tracks where
-    coverage gaps land.
-
-    Returns the sorted list of unique SIMBAD oids to fetch.
-    """
+    ident table, union into a deduplicated sorted oid list."""
     oids: set[int] = set()
 
     print("[1/3] AT-HYG Gaia DR3 source_ids → SIMBAD oid (via ident)…")
@@ -126,20 +73,12 @@ def collect_oid_requests(
 def main() -> None:
     force = "--force" in sys.argv
 
-    # Idempotency: re-run if any input file has moved AHEAD of the
-    # output, OR if this script / refresh_lib / a sibling simbad/*
-    # module has been edited (mtime check folds in refresh_lib.py and
-    # this file via is_up_to_date's automatic plumbing; sibling
-    # simbad/ modules need to be listed explicitly).
     simbad_pkg = Path(__file__).resolve().parent / "simbad"
-    sources = [
-        ATHYG_CSV, WDS_XIDS_TSV,
-        Path(__file__),
-        simbad_pkg / "specs.py",
-        simbad_pkg / "inputs.py",
-        simbad_pkg / "query.py",
-        simbad_pkg / "tsv.py",
-    ]
+    sources = [ATHYG_CSV, WDS_XIDS_TSV, Path(__file__)]
+    sources.extend(
+        p for p in sorted(simbad_pkg.glob("*.py"))
+        if not p.name.startswith("_") and "test" not in p.name
+    )
     if not force and rl.is_up_to_date(OUT, sources):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
@@ -152,7 +91,7 @@ def main() -> None:
     print(f"\nTotal unique oids to query: {len(oids)} "
           f"(elapsed {(time.time()-start)/60:.1f}m)")
 
-    print("\n=== Phase B: pull basic-table spectral columns ===")
+    print("\n=== Phase B: pull basic-table columns ===")
     basic_rows = query.fetch_basic_columns(
         client, oids, BASIC_COLUMNS, progress_label="basic",
     )
@@ -171,7 +110,7 @@ def main() -> None:
     print(f"sp_type non-null: {sp_type_filled}/{len(basic_rows)} = {coverage:.1%}")
     if coverage < SP_TYPE_COVERAGE_MIN:
         raise SystemExit(
-            f"refresh-simbad-spectral: sp_type coverage {coverage:.1%} below "
+            f"refresh-simbad-sptype: sp_type coverage {coverage:.1%} below "
             f"floor {SP_TYPE_COVERAGE_MIN:.0%} — SIMBAD response shape or the "
             f"ColumnSpec list has drifted; investigate before pinning."
         )
