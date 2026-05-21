@@ -40,6 +40,13 @@ import {
   type BuildCounts,
 } from './build-counts';
 import {
+  buildRegressionReport,
+  compareRegressionReports,
+  formatRegressionDiff,
+  parseSimbadSampleTsv,
+  type RegressionReport,
+} from './distance-regression-check';
+import {
   CONSTELLATIONS,
   CON_INDEX,
   buildFigureLines,
@@ -55,7 +62,7 @@ import {
   applyVariability,
 } from './gcvs-parse';
 import { readGaiaHipXmatch } from './gaia-xmatch';
-import { readStars } from './stars-parse';
+import { readStars, type Star } from './stars-parse';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -70,10 +77,12 @@ const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv')
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
+const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
 const EXPECTED_COUNTS = resolve(__dirname, 'build-catalog-expected.json');
+const EXPECTED_OUTLIERS = resolve(__dirname, 'build-distance-outliers-expected.json');
 
 function isUpToDate(): boolean {
   if (!existsSync(OUT_BIN) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
@@ -91,6 +100,7 @@ function isUpToDate(): boolean {
     : 0;
   const apsisMtime = existsSync(SRC_GAIA_APSIS) ? statSync(SRC_GAIA_APSIS).mtimeMs : 0;
   const simbadMtime = existsSync(SRC_SIMBAD_SPTYPE) ? statSync(SRC_SIMBAD_SPTYPE).mtimeMs : 0;
+  const simbadSampleMtime = existsSync(SRC_SIMBAD_SAMPLE) ? statSync(SRC_SIMBAD_SAMPLE).mtimeMs : 0;
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -102,7 +112,8 @@ function isUpToDate(): boolean {
     binMtime > bjMtime &&
     binMtime > gaiaHipXmatchMtime &&
     binMtime > apsisMtime &&
-    binMtime > simbadMtime
+    binMtime > simbadMtime &&
+    binMtime > simbadSampleMtime
   );
 }
 
@@ -522,6 +533,7 @@ async function main() {
   }
 
   await assertOrUpdateBuildCounts(counts);
+  await assertOrUpdateDistanceOutliers(stars);
 }
 
 /** Compare actual build counts against the committed expected manifest
@@ -546,6 +558,51 @@ async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
     console.error(
       `\nbuild-catalog count assertion failed. If the change is intentional,\n` +
       `refresh the snapshot with: UPDATE_BUILD_COUNTS=1 npm run build:catalog`,
+    );
+    process.exit(1);
+  }
+}
+
+/** Cross-check the pipeline's final distances against (a) the AT-HYG input
+ *  value's category-aware threshold and (b) the committed SIMBAD sample.
+ *  Diff against the snapshot in `build-distance-outliers-expected.json`;
+ *  refresh with `UPDATE_DISTANCE_OUTLIERS=1`. Missing `simbad_sample.tsv`
+ *  is a hard fail — the file is committed (LFS), and absence indicates
+ *  the working tree is in a broken state. */
+async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<void> {
+  if (!existsSync(SRC_SIMBAD_SAMPLE)) {
+    console.error(
+      `Missing ${SRC_SIMBAD_SAMPLE} — committed SIMBAD sample is unavailable.\n` +
+        `Confirm git LFS is pulled (\`git lfs pull\`) and the file is present.`,
+    );
+    process.exit(1);
+  }
+  const simbadSample = parseSimbadSampleTsv(readFileSync(SRC_SIMBAD_SAMPLE, 'utf8'));
+  const report = buildRegressionReport(stars, simbadSample);
+  console.log(
+    `distance-regression: SIMBAD sample loaded (${simbadSample.size} keys); ` +
+      `selfConsistency outliers=${report.selfConsistency.length}, ` +
+      `SIMBAD outliers=${report.simbad.length}`,
+  );
+
+  const shouldUpdate = process.env.UPDATE_DISTANCE_OUTLIERS === '1';
+  const expectedExists = existsSync(EXPECTED_OUTLIERS);
+
+  if (shouldUpdate || !expectedExists) {
+    await writeFile(EXPECTED_OUTLIERS, JSON.stringify(report, null, 2) + '\n');
+    console.log(
+      `${shouldUpdate ? 'Updated' : 'Wrote initial'} ${EXPECTED_OUTLIERS}`,
+    );
+    return;
+  }
+
+  const expected = JSON.parse(readFileSync(EXPECTED_OUTLIERS, 'utf8')) as RegressionReport;
+  const diff = compareRegressionReports(expected, report);
+  console.log(formatRegressionDiff(diff));
+  if (diff.some((d) => d.status !== 'unchanged')) {
+    console.error(
+      `\ndistance-regression assertion failed. If the change is intentional,\n` +
+        `refresh the snapshot with: UPDATE_DISTANCE_OUTLIERS=1 npm run build:catalog`,
     );
     process.exit(1);
   }

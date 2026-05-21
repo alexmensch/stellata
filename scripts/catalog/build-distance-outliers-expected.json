@@ -1,0 +1,62 @@
+{
+  "selfConsistency": [
+    {
+      "id": "gaia:1814070838667074560",
+      "distSrc": "G_R3",
+      "athygDist": 19.683,
+      "finalDist": 6270.931,
+      "logRatio": 2.503
+    },
+    {
+      "id": "gaia:434690036551517952",
+      "distSrc": "G_R3",
+      "athygDist": 17.205,
+      "finalDist": 3892.837,
+      "logRatio": 2.355
+    },
+    {
+      "id": "gaia:4658107884688023040",
+      "distSrc": "G_R3",
+      "athygDist": 280.148,
+      "finalDist": 49594,
+      "logRatio": 2.248
+    },
+    {
+      "id": "gaia:4660699674131931008",
+      "distSrc": "G_R3",
+      "athygDist": 999.492,
+      "finalDist": 49594,
+      "logRatio": 1.696
+    },
+    {
+      "id": "gaia:4661719299382753408",
+      "distSrc": "G_R3",
+      "athygDist": 1142.874,
+      "finalDist": 49594,
+      "logRatio": 1.637
+    },
+    {
+      "id": "gaia:4677073601271449856",
+      "distSrc": "G_R3",
+      "athygDist": 1419.513,
+      "finalDist": 49594,
+      "logRatio": 1.543
+    },
+    {
+      "id": "gaia:5970190191419437696",
+      "distSrc": "G_R2",
+      "athygDist": 146.828,
+      "finalDist": 6655.979,
+      "logRatio": 1.656
+    }
+  ],
+  "simbad": [
+    {
+      "id": "gaia:1998148532777850880",
+      "finalDist": 6346.552,
+      "simbadDist": 1055.966,
+      "simbadMainId": "* rho Cas",
+      "logRatio": 0.779
+    }
+  ]
+}
