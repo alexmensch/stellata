@@ -163,6 +163,15 @@ scripts/                                     Each subsystem cluster owns a folde
     verify-catalog.ts                        sanity-check tool for the generated binary.
     build-counts.ts                          BuildCounts schema + compareBuildCounts.
     build-counts.test.ts                     vitest pin for build-counts diff format.
+    distance-regression-check.ts             Post-build distance gate — self-consistency
+                                             (AT-HYG dist vs final) + SIMBAD cross-check
+                                             (vs simbad_sample.tsv). Snapshot-pinned in
+                                             build-distance-outliers-expected.json
+                                             (UPDATE_DISTANCE_OUTLIERS=1).
+    distance-regression-check.test.ts        vitest pin for the regression-check module.
+    build-distance-outliers-expected.json    Known-acceptable distance outliers (LMC
+                                             kinematic snaps, B-J overrides on noisy
+                                             G_R3 parallaxes, ρ Cas-class hypergiants).
   binaries/
     build-binaries.py                        WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
                                              + Gaia (xmatches, NSS, 5p astrometry) +

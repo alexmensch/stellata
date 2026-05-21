@@ -1,0 +1,70 @@
+{
+  "selfConsistency": [
+    {
+      "id": "gaia:1814070838667074560",
+      "distSrc": "G_R3",
+      "athygDist": 19.683,
+      "finalDist": 6270.931,
+      "logRatio": 2.503,
+      "reason": "Catastrophic Gaia DR3 inverse-parallax inversion (near-zero parallax mapped to ~20 pc); Bailer-Jones 2021 Bayesian posterior re-anchors to the Galactic-density-prior tail at multi-kpc."
+    },
+    {
+      "id": "gaia:434690036551517952",
+      "distSrc": "G_R3",
+      "athygDist": 17.205,
+      "finalDist": 3892.837,
+      "logRatio": 2.355,
+      "reason": "Catastrophic Gaia DR3 inverse-parallax inversion (near-zero parallax mapped to ~17 pc); Bailer-Jones 2021 Bayesian posterior re-anchors to the Galactic-density-prior tail at multi-kpc."
+    },
+    {
+      "id": "gaia:4658107884688023040",
+      "distSrc": "G_R3",
+      "athygDist": 280.148,
+      "finalDist": 49594,
+      "logRatio": 2.248,
+      "reason": "LMC kinematic snap — sky cone + bulk-PM gate matched, distance snapped to Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
+    },
+    {
+      "id": "gaia:4660699674131931008",
+      "distSrc": "G_R3",
+      "athygDist": 999.492,
+      "finalDist": 49594,
+      "logRatio": 1.696,
+      "reason": "LMC kinematic snap (see sibling entry). Bright supergiant whose AT-HYG G_R3 distance underestimated the LMC anchor by ~50×."
+    },
+    {
+      "id": "gaia:4661719299382753408",
+      "distSrc": "G_R3",
+      "athygDist": 1142.874,
+      "finalDist": 49594,
+      "logRatio": 1.637,
+      "reason": "LMC kinematic snap (see sibling entry)."
+    },
+    {
+      "id": "gaia:4677073601271449856",
+      "distSrc": "G_R3",
+      "athygDist": 1419.513,
+      "finalDist": 49594,
+      "logRatio": 1.543,
+      "reason": "LMC kinematic snap (see sibling entry)."
+    },
+    {
+      "id": "gaia:5970190191419437696",
+      "distSrc": "G_R2",
+      "athygDist": 146.828,
+      "finalDist": 6655.979,
+      "logRatio": 1.656,
+      "reason": "Noisy Gaia DR2 inverse-parallax (G_R2 input, 147 pc); Bailer-Jones 2021 DR3 posterior re-anchors to multi-kpc — the same override shape as the G_R3 cases above, just on a DR2-sourced input."
+    }
+  ],
+  "simbad": [
+    {
+      "id": "gaia:1998148532777850880",
+      "finalDist": 6346.552,
+      "simbadDist": 1055.966,
+      "simbadMainId": "* rho Cas",
+      "logRatio": 0.779,
+      "reason": "Yellow hypergiant ρ Cas. SIMBAD's distance is 1000/plx_value off the noisy Hipparcos parallax (~1.06 kpc); modern Gaia DR3 + Bailer-Jones posterior places ρ Cas at multi-kpc. Stellata's pipeline value (6.35 kpc) is the more physically correct one — the disagreement reflects SIMBAD lagging modern distance estimates for highly uncertain supergiant parallaxes, not a pipeline bug."
+    }
+  ]
+}
