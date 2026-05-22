@@ -153,32 +153,127 @@ scripts/                                     Each subsystem cluster owns a folde
                                              imports are sys.path-based for Python
                                              and explicit relative paths for TS.
   catalog/
-    build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis →
-                                             public/catalog.bin (v6 binary).
+    build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis
+                                             + SIMBAD sp_type + Stellarium →
+                                             public/catalog.bin (v6 binary) +
+                                             public/constellations.json +
+                                             public/search-index.json.
     build-catalog-expected.json              Build-count snapshot (UPDATE_BUILD_COUNTS=1).
-    catalog-pure.ts                          resolveSpectralInfo (SIMBAD/GSP-Spec/fallback),
-                                             physicalRadius, GCVS parsers, inferBinaries —
-                                             shared with src/client/loaders.
-    catalog-pure.test.ts                     vitest pin for catalog-pure.
+    catalog-pure.ts                          Single source of truth for the v6 binary
+                                             layout (HEADER_LAYOUT / RECORD_LAYOUT / MAGIC
+                                             / NO_APSIS), resolveSpectralInfo (SIMBAD →
+                                             GSP-Spec → fallback), physicalRadius,
+                                             applyBailerJonesOverride, applyLmcKinematicOverride,
+                                             inferBinaries, parseBailerJonesTsv,
+                                             parseGaiaApsisTsv, parseSimbadSptypeTsv.
+                                             Shared with src/client/loaders.
+    catalog-pure.test.ts                     vitest pin for catalog-pure (binary-format
+                                             constants, B-J / LMC override math, spectral
+                                             parser shape).
+    stars-parse.ts                           readStars — per-row AT-HYG ingest with the
+                                             three-layer distance stack (B-J → LMC →
+                                             MAX_DIST_PC), three-tier spectral resolver,
+                                             Apsis routing, Gaia source_id resolution
+                                             (AT-HYG-native + HIP→Gaia backfill).
+                                             MAX_DIST_PC = 50,000 lives here.
+    constellations.ts                        IAU constellation table + figure-line
+                                             resolver from Stellarium HIP polylines.
+    gaia-xmatch.ts                           Gaia DR3 HIP cross-walk reader
+                                             (data/gaia/gaia_dr3_hip_xmatch.tsv) +
+                                             companion vitest.
+    gcvs-parse.ts                            parseGcvsMain + parseGcvsCrossref +
+                                             bridgeGcvsByGaia + applyVariability +
+                                             companion vitest.
+    visual-doubles.ts                        Hipparcos CCDM parser with MultFlag {C,G,O}
+                                             gate + curated KNOWN_VISUAL_DOUBLES set
+                                             (Polaris / ε¹ Lyr / 61 Cyg).
+    gaia-xmatch.test.ts, gcvs-parse.test.ts  vitest pins for those modules. (Other
+                                             siblings — stars-parse, constellations,
+                                             visual-doubles — are exercised through the
+                                             catalog-pure / known-stars / distance-
+                                             regression tests rather than per-file
+                                             pins.)
     verify-catalog.ts                        sanity-check tool for the generated binary.
+    catalog-lookup.ts                        runtime lookup helper used by known-stars.test.ts.
+    star-fixture.ts                          shared test fixture for catalog-lookup-based tests.
     build-counts.ts                          BuildCounts schema + compareBuildCounts.
     build-counts.test.ts                     vitest pin for build-counts diff format.
     distance-regression-check.ts             Post-build distance gate — self-consistency
                                              (AT-HYG dist vs final) + SIMBAD cross-check
                                              (vs simbad_sample.tsv). Snapshot-pinned in
                                              build-distance-outliers-expected.json
-                                             (UPDATE_DISTANCE_OUTLIERS=1).
+                                             (UPDATE_DISTANCE_OUTLIERS=1). Hand-edited
+                                             `reason` strings survive snapshot refresh
+                                             via mergeReasonsFromSnapshot.
     distance-regression-check.test.ts        vitest pin for the regression-check module.
     build-distance-outliers-expected.json    Known-acceptable distance outliers (LMC
                                              kinematic snaps, B-J overrides on noisy
                                              G_R3 parallaxes, ρ Cas-class hypergiants).
+    known-stars.tsv                          Tier A validation corpus (~50 hand-curated
+                                             systems with HIP / Gaia source_id / distance ±
+                                             1σ / absmag / spectral type / per-component
+                                             tuples). Asserted against catalog.bin +
+                                             multiples.tsv.
+    known-stars.test.ts                      vitest driver for the Tier A corpus.
+    validate-simbad-sample.ts                Tier C — cross-check the built catalog.bin
+                                             against the committed SIMBAD random 10k
+                                             sample. Manual run (`npm run validate:simbad`).
+    validate-simbad-sample.test.ts           vitest pin for the validator helpers.
   binaries/
     build-binaries.py                        WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
-                                             + Gaia (xmatches, NSS, 5p astrometry) +
-                                             SIMBAD xids + SIMBAD sp_type → data/binaries/multiples.tsv,
-                                             via the 7-stage stellata-dch pipeline.
+                                             + Gaia (HIP/Tyc xwalks, NSS, 5p astrometry)
+                                             + SIMBAD WDS xids + SIMBAD per-component
+                                             sp_type → data/binaries/multiples.tsv.
+                                             Orchestration shell; per-stage logic in
+                                             stage{2..7}_*.py.
+    parsers.py                               Row dataclasses + parse functions for every
+                                             reference catalogue (Stage 1).
+    indices.py                               IdentifierIndices builder (HIP/Tyc → Gaia,
+                                             src_id → astrometry / NSS / AT-HYG,
+                                             HIP → HIP2 / CCDM, CCDM → HIP-list, etc.).
+                                             Built once at Stage 1; every Stage 2-7
+                                             lookup is O(1).
+    stage2_resolve.py                        WDS-component → Gaia DR3 source_id cascade
+                                             (orb6_hip → athyg_gaia_native → simbad_xid
+                                             → ccdm_hip → AT-HYG position-match), with
+                                             same-letter + Aa→A propagation.
+    stage3_astrometry.py                     Per-component astrometry routing (gaia_5p /
+                                             gaia_nss_systemic / hip2_long_baseline /
+                                             unresolved). HIP2 is the Gaia-saturated
+                                             bright-primary fallback.
+    stage4_orbits.py                         Per-pair orbital-element selection
+                                             (gaia_nss / orb6 / orb6_spectroscopic /
+                                             none). Inline Heintz 1978 / Halbwachs+ 2023
+                                             Thiele-Innes → Campbell algebra.
+    stage5_optical.py                        Five-tier physical-vs-optical classification
+                                             (WDS-notes → both-Gaia → asymmetric-Gaia
+                                             → orbit-on-file → mag-gap).
+    stage6_multiples.py                      Emit data/binaries/multiples.tsv with
+                                             per-component provenance columns +
+                                             system-anchor inheritance for tight inner
+                                             binaries + SIMBAD standalone augmentation.
+    stage7_counts.py                         Build-counts + build-rates snapshot writer
+                                             (mirrors scripts/catalog/build-counts.ts).
+    mass_estimate.py                         Phase 5 spectral-class-aware mass-ratio q
+                                             backfill from Cox 2000 §15.2 / Pecaut &
+                                             Mamajek 2013 tables.
     build-binaries.test.py                   stdlib unittest pins for Stages 1-7.
-    build-binaries-expected.json             per-strategy / per-tier count snapshot.
+    build-binaries-expected.json             per-strategy / per-tier count snapshot
+                                             (UPDATE_BUILD_COUNTS=1).
+    build-binaries-rates-expected.json       per-strategy rate snapshot — catches
+                                             population-mix shifts that don't shift
+                                             absolute counts.
+  distance-validation/
+    validate-distances.py                    Compare build-catalog.ts output against
+                                             Vaidman et al. 2025 BA-supergiant distances.
+                                             Reports per-star fractional difference
+                                             distribution; runs on every distance-source
+                                             change (DR4 / StarHorse / B-J successor).
+    validate-distances.test.py               stdlib unittest pin for the validator.
+    build-vaidman-tsv.py                     One-time builder: paper appendix tables →
+                                             data/distance-validation/vaidman-2025-supergiants.tsv.
+    build-vaidman-tsv.test.py                stdlib unittest pin for the builder.
+    common.py                                Shared helpers for both scripts.
   clouds/
     build-clouds.py                          Zucker 2020/2021 → public/clouds.json.
   dust/
@@ -214,7 +309,19 @@ scripts/                                     Each subsystem cluster owns a folde
                                              orchestration shell over scripts/refresh/simbad/
                                              that pulls sp_type / sp_qual / sp_bibcode
                                              / otype + HIP / Gaia DR3 cross-IDs.
-    refresh-simbad-wds-xids.py               → data/simbad/simbad_wds_xids.tsv
+    refresh-simbad-wds-xids.py               → data/simbad/simbad_wds_xids.tsv —
+                                             orchestrates the WDS↔Gaia cross-ID pull
+                                             via wds_xids_cascade.py + wds_xids_overrides.py.
+    wds_xids_cascade.py                      Per-component identifier cascade
+                                             (HIP / Tycho / WDS-J variants) shared with
+                                             refresh-simbad-wds-xids.py.
+    wds_xids_cascade.test.py                 stdlib unittest pin for the cascade logic.
+    wds_xids_overrides.py                    Hand-curated WDS-J coalesce overrides
+                                             (Sirius B-shaped systems where SIMBAD
+                                             collapses multiple WDS-J variants onto
+                                             one Gaia source).
+    wds_xids_overrides.test.py               stdlib unittest pin for the override
+                                             merge logic.
     simbad/                                  reusable SIMBAD-pull plumbing —
                                              specs (ColumnSpec / IdentLookup),
                                              inputs (per-source-file id iterators),
@@ -223,7 +330,11 @@ scripts/                                     Each subsystem cluster owns a folde
                                              Modelled on scripts/binaries; future
                                              SIMBAD pulls (RV, photometry, …)
                                              reuse every file here.
-    requirements-refresh.txt                 pip deps for the refresh family.
+    requirements-refresh.txt                 pip deps for the refresh family (astropy,
+                                             astroquery, numpy). Install once via
+                                             `python3 -m venv .venv &&
+                                              .venv/bin/pip install -r
+                                              scripts/refresh/requirements-refresh.txt`.
 data/                                        Per-source-catalogue folders. LFS coverage
                                              is per-folder via .gitattributes patterns;
                                              stellarium/, local-group/, molecular-clouds/
@@ -259,8 +370,19 @@ data/                                        Per-source-catalogue folders. LFS c
                                              cross-IDs (LFS).
   binaries/
     multiples.tsv                            build-binaries.py output — two rows per
-                                             kept WDS pair, downstream input to Phase 3
-                                             v6 binary writer (LFS).
+                                             kept WDS pair, plus standalone rows for
+                                             SIMBAD-known components the pair walk
+                                             didn't reach. Consumed today by the Tier A
+                                             validation harness + ad-hoc debugging; the
+                                             future per-frame binary-orbit runtime layer
+                                             will read it directly (not merged into
+                                             catalog.bin). (LFS)
+  distance-validation/
+    vaidman-2025-supergiants.tsv             Vaidman et al. 2025 BA-supergiant distance
+                                             recalculation (132 rows; CC BY 4.0).
+                                             Reference set for scripts/distance-validation/
+                                             validate-distances.py.
+    README.md                                Provenance + SIMBAD name-resolution recipe.
   stellarium/
     stellarium-modern-skyculture.json        Stellarium constellation lines (~200 KB,
                                              regular git).
@@ -398,7 +520,8 @@ src/
 ## Local commands
 
 ```bash
-npm run build:catalog   # regenerate binary (idempotent)
+npm run build:catalog   # regenerate public/catalog.bin (idempotent)
+npm run build:binaries  # regenerate data/binaries/multiples.tsv (idempotent)
 npm run dev             # preprocess + Vite dev server
 npm run build           # full production build
 npm run typecheck       # tsc --noEmit over src/ and scripts/
@@ -408,6 +531,34 @@ npm run test:coverage   # vitest run with v8 coverage
 npm run deploy          # wrangler deploy (requires auth)
 npx tsx scripts/catalog/verify-catalog.ts   # dump header + spot-check records
 ```
+
+External-catalogue refresh (manual, never wired into `npm run build` —
+see `docs/build-and-data.md` § Layer 2 for the protocol +
+`RELEASING.md` § Catalogue refresh policy for cadence):
+
+```bash
+npm run refresh:gaia-hip          # Gaia DR3 HIP cross-walk
+npm run refresh:gaia-tyc          # Gaia DR3 Tycho-2 cross-walk
+npm run refresh:gaia-astrometry   # Gaia DR3 5p astrometry for resolved source_ids
+npm run refresh:gaia-nss          # Gaia DR3 NSS two-body orbits
+npm run refresh:gaia-apsis        # Gaia DR3 Apsis (gspphot ∪ gspspec)
+npm run refresh:bailer-jones      # Bailer-Jones 2021 distance posteriors
+npm run refresh:hip2              # Hipparcos-2 van Leeuwen reduction
+npm run refresh:simbad            # SIMBAD random 10k validation sample
+npm run validate:simbad           # Tier C cross-check of catalog.bin vs SIMBAD sample
+```
+
+The refresh scripts use astroquery + astropy + numpy. One-time setup:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r scripts/refresh/requirements-refresh.txt
+```
+
+Then activate (`source .venv/bin/activate`) before running any
+`npm run refresh:*` target. `refresh-simbad-sptype.py` and
+`refresh-simbad-wds-xids.py` (no npm target yet) are invoked directly
+with `python3 scripts/refresh/refresh-simbad-*.py`.
 
 ## Documentation index
 
@@ -422,8 +573,21 @@ Claude Code should read on demand when working on the relevant area.
 - **`docs/build-and-data.md`** — binary catalog format, search index,
   build scripts (`build-catalog.ts`, `build-clouds.py`, `build-dust.py`),
   Stellarium HIP resolution, geometric-binary inference, GCVS
-  cross-match, reference epoch + PM-not-applied contract, idempotency.
-  Read when touching `scripts/` or `data/`.
+  cross-match, Layer 1 reference-data table + Layer 2 refresh
+  protocol, multi-layer distance refinement (B-J → LMC → MAX_DIST_PC)
+  + Apsis surfacing, reference epoch + PM-not-applied contract,
+  binary-system pipeline (Stages 1-7), idempotency. Read when
+  touching `scripts/` or `data/`.
+- **`docs/cross-match.md`** — engineer-audience walk-through of the
+  source-ID-anchored catalogue pipeline. Stage-by-stage as-built
+  behaviour of `build-binaries.py` + the catalog-side B-J / LMC /
+  MAX_DIST_PC / Apsis routing, with canonical enum values
+  (`RESOLVE_VIA_VALUES`, `ASTROMETRY_VIA_VALUES`, `ORBIT_VIA_VALUES`,
+  `OPTICAL_VIA_VALUES`) + numeric thresholds quoted from code. Tier
+  A/B/C validation harness, DR4 refresh recipe, debug recipes. ~10
+  min read. Read when refreshing external catalogues, adding to the
+  Tier A corpus, or debugging a per-star resolution / distance /
+  spectral-classification failure.
 - **`docs/architecture.md`** — event bus, click-state machine, focused
   constellation aim, floating origin, pin-to-center, FocusTarget
   contract. The cross-cutting patterns the rest of the codebase
