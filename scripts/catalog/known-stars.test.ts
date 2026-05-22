@@ -397,33 +397,17 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
     });
 
     it('orbital_period_days matches multiples.tsv P_days within ±5%', () => {
-      // Catalog.bin's `periodDays` field carries GCVS variability periods,
-      // not ORB6/NSS orbital periods. The corpus orbital_period_days check
-      // therefore validates multiples.tsv (which is where build-binaries.py
-      // surfaces ORB6 + Gaia NSS orbits) rather than catalog.bin.
+      // catalog.bin's `periodDays` field carries GCVS variability periods;
+      // ORB6 / Gaia NSS orbital periods land in multiples.tsv (P_days)
+      // via build-binaries.py.
       const orbited = corpus.filter(r => r.orbitalPeriodDays !== null);
       for (const row of orbited) {
-        // Look up the wds pair in multiples.tsv whose comp row carries the
-        // primary's HIP (or Gaia ID) — that's the row where build-binaries.py
-        // wrote the P_days field. With the corpus's wds_id as system-level
-        // prefix, the bucket may contain multiple pairs; pick the one whose
-        // P_days is non-empty AND nearest the expected value.
         expect(
           row.wdsId,
           `${row.systemName}: rows with orbital_period_days must set wds_id (multiples.tsv lookup key)`,
         ).not.toBeNull();
         const bucket = multiplesByWds.get(row.wdsId as string) ?? [];
         const expected = row.orbitalPeriodDays as number;
-        // Read P_days off the raw multiples.tsv rows — we didn't decode it
-        // into MultiplesRow above to keep that struct narrow, so re-parse
-        // here from the bucket's source columns isn't possible. Fold the
-        // P_days into MultiplesRow if/when more callers need it; for now
-        // require the corpus author to encode the period via a multiples
-        // lookup that the harness can verify.
-        //
-        // Implementation: pull every P_days value seen across the bucket
-        // (set on `Row.periodDays`) and pass the closest one through the
-        // tolerance gate.
         const observed = bestPeriodMatch(bucket, expected);
         expect(
           observed,
