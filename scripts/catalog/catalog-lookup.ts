@@ -8,12 +8,17 @@ import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  BINARY_VERSION,
   FLAG_HAS_NAME,
   HEADER_LAYOUT,
+  MAGIC,
+  NAME_LENGTH_PREFIX_BYTES,
+  NAME_TABLE_PADDING,
+  NO_COMPANION,
+  NO_CONSTELLATION_INDEX,
   RECORD_LAYOUT,
   HEADER_SIZE,
   RECORD_SIZE,
-  NO_COMPANION,
 } from './catalog-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -82,7 +87,11 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
   const view = new DataView(ab);
 
   const magic = new TextDecoder().decode(new Uint8Array(ab, HEADER_LAYOUT.magic, 4));
+  if (magic !== MAGIC) throw new Error(`Bad magic: ${magic}`);
   const version = view.getUint32(HEADER_LAYOUT.version, true);
+  if (version !== BINARY_VERSION) {
+    throw new Error(`Unsupported catalog version: ${version} (expected ${BINARY_VERSION})`);
+  }
   const count = view.getUint32(HEADER_LAYOUT.count, true);
   const nameTableOffset = view.getUint32(HEADER_LAYOUT.nameTableOffset, true);
   const nameTableLength = view.getUint32(HEADER_LAYOUT.nameTableLength, true);
@@ -92,12 +101,12 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
   const nameAt = new Map<number, string>();
   {
     const td = new TextDecoder('utf-8');
-    let p = nameTableOffset + 2;
+    let p = nameTableOffset + NAME_TABLE_PADDING;
     const end = nameTableOffset + nameTableLength;
     while (p < end) {
       const relOff = p - nameTableOffset;
       const len = view.getUint16(p, true);
-      p += 2;
+      p += NAME_LENGTH_PREFIX_BYTES;
       nameAt.set(relOff, td.decode(new Uint8Array(ab, p, len)));
       p += len;
     }
@@ -141,7 +150,7 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
       loggGspspec: apsisCell(RECORD_LAYOUT.loggGspspec),
       mhGspspec: apsisCell(RECORD_LAYOUT.mhGspspec),
       name,
-      conCode: conIdx === 255 ? null : constellations[conIdx]?.code ?? null,
+      conCode: conIdx === NO_CONSTELLATION_INDEX ? null : constellations[conIdx]?.code ?? null,
     };
   }
 

@@ -409,6 +409,10 @@ export const BINARY_VERSION = 6;
 export const HEADER_SIZE = 32;
 export const RECORD_SIZE = 80;
 export const NO_COMPANION = 0xffffffff;
+// Sentinel uint8 stored at RECORD_LAYOUT.conIndex when the star has no
+// constellation assignment. Valid IAU constellation indexes are
+// 0..87 (88 modern constellations); 255 is unambiguous.
+export const NO_CONSTELLATION_INDEX = 0xff;
 // Sentinel uint64 stored at RECORD_LAYOUT.gaiaSourceId when AT-HYG's
 // `gaia` column is blank. Valid Gaia DR3 source_ids are positive 63-bit
 // integers, so 0 is unambiguous.
@@ -451,7 +455,7 @@ export const RECORD_LAYOUT = {
   nameOffset: 28, // uint32 (0 = unnamed)
   spectClass: 32, // uint8
   lumClass: 33,   // uint8
-  conIndex: 34,   // uint8 (255 = none)
+  conIndex: 34,   // uint8 (NO_CONSTELLATION_INDEX = none)
   flags: 35,      // uint8 (FLAG_*)
   ampUnits: 36,   // uint8 (×0.05 mag)
   // byte 37 reserved (variability type)
