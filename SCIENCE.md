@@ -65,11 +65,10 @@ When scoping data-processing / cross-match / catalog-ingest work:
 Per-object near, statistical far. When scoping a layer beyond the
 AT-HYG catalog reach, prefer statistical / aggregate sources (HiPS-
 derived counts, binned populations) over hand-extending per-object
-data. The closer-to-Sol layer queue lives in the prioritisation
-framework (`bd memories stellata-prioritization-framework`); the
-mapping of catalog sources to the regime where they earn their keep is
-the CDS / VizieR ecosystem orientation captured in `bd show
-stellata-36y`.
+data. Each tier in the catalogue ecosystem (CDS / VizieR / Gaia /
+HiPS surveys) earns its keep in a specific distance regime — pick
+the one matched to the layer being added rather than the most
+familiar.
 
 ### Defer detail until zoom affordance
 
@@ -86,11 +85,11 @@ perceive it is wasted effort and wasted bundle.
 When scoping a new visual layer, ask first: at what camera-to-object
 distance is this detail perceptible? If the answer is closer than the
 user can navigate to under existing focus + minDistance affordances,
-file the detail under the relevant zoom-in epic (currently
-`stellata-2f6` for planet detail, `stellata-bk5.3` for exoplanet
-bodies) and ship the layer without it. Don't reach for shader
-complexity to compensate for a perceptual constraint that's better
-fixed by a camera affordance.
+defer the detail until the renderer exposes a closer-zoom affordance
+(per-planet detail waits on planet focus; per-exoplanet detail waits
+on the exoplanet ingest pass) and ship the layer without it. Don't
+reach for shader complexity to compensate for a perceptual constraint
+that's better fixed by a camera affordance.
 
 Same logic generalises beyond planets — any catalog object rendered as
 a billboarded disc has the same regime: detail beyond a single
@@ -219,11 +218,12 @@ applies three filters and nothing else:
    statement about which populations the model represents**, not a
    primary include/exclude filter. The cutoff is positioned just past
    the LMC distance (49.59 kpc, Pietrzyński et al. 2019) because the
-   stellar populations Stellata models reach Sol → LMC for v1. Stars
-   beyond LMC depth are unmodelled extragalactic by construction; SMC,
-   Sgr dSph, and M31 supergiants would be candidates for future
-   modelled populations, and the cutoff bumps in sync with each new
-   population the renderer takes responsibility for. The filter runs
+   stellar populations currently modelled reach from Sol out to and
+   including the LMC. Stars beyond LMC depth are unmodelled
+   extragalactic by construction; SMC, Sgr dSph, and M31 supergiants
+   would be candidates for future modelled populations, and the cutoff
+   bumps in sync with each new population the renderer takes
+   responsibility for. The filter runs
    **after** the multi-layer distance-refinement stack below, so a
    star that B-J or the LMC kinematic override rescued from a
    catastrophic 1/π estimate keeps its corrected distance whenever
@@ -624,8 +624,8 @@ build-time matching rules.
 When a host star with planets is focused, Stellata renders the eight
 planets, Pluto, faint orbit rings, and the heliopause boundary in the
 local frame around the host. Sol is the only populated host so far; the
-machinery is generic so future exoplanet-host work (`stellata-bk5`)
-can plug in without changing the renderer.
+machinery is generic so future exoplanet-host work can plug in
+without changing the renderer.
 
 **Planet positions.** Heliocentric ecliptic positions are computed
 from the **JPL Standish 1992 Keplerian-elements approximation**
@@ -640,8 +640,9 @@ sub-arcsecond accuracy ±4000 years from J2000. We dropped it during
 implementation: planets render as billboarded discs at a pixel-size
 floor, and sub-arcminute precision is invisible at every zoom the
 user can reach. The Standish approximation is ~50 lines of code over
-an 8-row element table, with no dependency cost. Deep-time follow-up
-is filed as `stellata-1gh`.
+an 8-row element table, with no dependency cost. Extending validity
+beyond ±3000 years from J2000 would need a higher-precision ephemeris
+model (VSOP87 or a perturbation-theory series) and is deferred.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major
@@ -649,15 +650,15 @@ axes and eccentricities from JPL DE440 mean elements at J2000. Pluto
 data from New Horizons 2015 reconnaissance (mean radius 1188 km,
 tan-pink colour from MVIC imagery). Representative single-colour RGB
 values per planet are observation-derived; pixel-accurate texturing,
-banding, and atmospheric haloes are deferred to the planet-zoom
-affordance epic (`stellata-2f6`).
+banding, and atmospheric haloes are deferred until the renderer
+exposes a planet-zoom affordance close enough for them to register.
 
 **Planet geometric albedos** (V-band) from Mallama et al. 2018
 (https://doi.org/10.1016/j.icarus.2017.05.018) and the NASA fact
 sheets above: Mercury 0.142, Venus 0.689, Earth 0.434, Mars 0.170,
 Jupiter 0.538, Saturn 0.499, Uranus 0.488, Neptune 0.442, Pluto 0.49
 (HST + New Horizons reconnaissance). Drives the reflected-light
-apparent magnitude formula (3re.16).
+apparent magnitude formula in `src/client/solar-system/`.
 
 **Planet phase functions.** Per-planet empirical V-band phase curves
 from Mallama, Krobusek, Pavlov 2018, "Comprehensive wide-band
@@ -677,18 +678,18 @@ validity bound. Mallama 2018 publishes no phase polynomial for
 Uranus, Neptune or Pluto — the first two because their max α from
 Earth is "negligible" (the paper models latitude/temporal effects
 instead), Pluto because the paper doesn't cover it. Those three —
-and every exoplanet (`stellata-bk5`) — fall back to the Lambertian
-phase function `φ(α) = (sin α + (π − α)·cos α)/π`. See
+and every future exoplanet — fall back to the Lambertian phase
+function `φ(α) = (sin α + (π − α)·cos α)/π`. See
 `src/client/phase-function.ts` for the per-planet coefficients.
 
 **Orbital plane orientation.** Sol's planet system is rendered in its
 native ecliptic plane (J2000 obliquity ε = 23.4392911°), so the ring
 layout matches what an observer at Sol sees on the sky. For all
-*other* host stars (future exoplanets via `stellata-bk5`), ring
-planes default to the galactic plane — exoplanet-system orientations
-are generally unknown, and aligning to the galactic plane gives the
-user a consistent visual cue that a focused star has planets without
-implying a measured orientation we don't have. The per-host-plane →
+*other* host stars (future exoplanets), ring planes default to the
+galactic plane — exoplanet-system orientations are generally unknown,
+and aligning to the galactic plane gives the user a consistent visual
+cue that a focused star has planets without implying a measured
+orientation we don't have. The per-host-plane →
 ICRS rotation is composed once at attach and reused by the orbit-ring
 and planet-body renderers (`src/client/orbit-rings-layer.ts` for the
 focus-only ring layer; `src/client/planet-body-field.ts` for the
@@ -703,7 +704,7 @@ clock that drives variable-star pulsation — they don't share a value.
 Per-`t` cache granularity is 60 seconds: at billboarded-disc pixel
 scale, sub-minute planet motion is invisible (Mercury moves ~3e-5 rad
 seen from Earth in 60s ≈ 6″, well below pixel resolution at any
-zoom). Future time-scrubber UI (`stellata-nmu`) plugs in by overriding
+zoom). A future time-scrubber UI would plug in by overriding
 `Stellata.setT()`.
 
 **Heliopause boundary.** Modelled as an asymmetric ellipsoid centred
@@ -1205,8 +1206,9 @@ science it relates to.
   upwind boundary is real (~few AU peak-to-peak) but well below the
   layer's coarse 122-AU anchor; we treat the shell as static.
 - **Planet textures, banding, atmospheric haloes, ring systems,
-  axial-tilt cues, day-night phase shading.** All deferred to the
-  planet-as-object zoom-in epic (`stellata-2f6`) — at the user-
-  reachable camera distances every planet floors at the disc-pixel
-  minimum, so detail rendering would be invisible. See § Scope
-  principles — Defer detail until zoom affordance above.
+  axial-tilt cues, day-night phase shading.** All deferred until the
+  renderer can fly the camera close enough to a single planet for the
+  detail to register. At the user-reachable camera distances today
+  every planet floors at the disc-pixel minimum, so detail rendering
+  would be invisible. See § Scope principles — Defer detail until
+  zoom affordance above.

@@ -44,9 +44,17 @@ hand-off:
    (`stars-parse.ts`, `catalog-pure.ts`, `gcvs-parse.ts`,
    `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`).
 
-Phase 1 produces the per-pair detail Phase 2 doesn't see; Phase 2
-produces the per-star catalogue every renderer pass keys off. Both
-phases write their build-time statistics into snapshot JSONs
+The two outputs feed different runtime paths and are not merged. The
+per-star renderer keys off `public/catalog.bin`; `data/binaries/multiples.tsv`
+is consumed today by the Tier A validation harness
+(`known-stars.test.ts`) and ad-hoc debugging, and will additionally
+drive the future per-frame binary-orbit renderer layer when that
+lands — a parallel runtime layer alongside the per-star,
+planet-body, local-group, and other layers, not a merge into
+`catalog.bin`. `build-catalog.ts` does not ingest `multiples.tsv`;
+the per-component WDS detail rides into the runtime via the
+binary-orbit layer's own loader. Both phases write their build-time
+statistics into snapshot JSONs
 (`build-binaries-{expected,rates-expected}.json`,
 `build-catalog-expected.json`, `build-distance-outliers-expected.json`)
 that gate the next build.
@@ -279,8 +287,8 @@ walks through:
 4. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
    (`stars-parse.ts:34`). Drops rows still beyond LMC depth after both
    overrides. The cutoff is a function of which populations are
-   modelled, not a primary include/exclude filter — see SCIENCE.md
-   § Stellar catalog ingestion.
+   currently modelled, not a primary include/exclude filter — see
+   SCIENCE.md § Stellar catalog ingestion.
 5. **Spectral classification** (`resolveSpectralInfo` in
    `catalog-pure.ts`). Three tiers keyed by Gaia source_id:
    - SIMBAD `sp_type` from `data/simbad/simbad_sptype.tsv`
@@ -329,10 +337,10 @@ The **ordering matters and is non-commutative.** B-J runs first because
 the LMC stars carry Gaia source_ids that B-J's map covers; if LMC
 override ran first, B-J would clobber the kinematic snap back onto its
 mis-anchored prior tail. The MAX_DIST_PC gate runs last so it's a
-bounded-scope statement about what the model represents — Sol → LMC for
-v1 — not a primary include/exclude filter. Future Magellanic-system or
-M31 layers extend the cone+PM pattern of Layer 2 and bump the cutoff in
-sync.
+bounded-scope statement about what the model currently represents —
+Sol out to and including the LMC — not a primary include/exclude
+filter. Future Magellanic-system or M31 layers extend the cone+PM
+pattern of Layer 2 and bump the cutoff in sync.
 
 `scripts/catalog/distance-regression-check.ts` then sweeps the
 finished catalogue and writes
