@@ -220,5 +220,187 @@ def assert_or_update_counts(actual: dict[str, int], expected_path: Path) -> bool
     return all(d.status == "match" for d in diff)
 
 
+# ─── Stage 7B — derived rate snapshot ────────────────────────────────
+
+
+# Default ±tolerance (relative to expected value) applied when a rate
+# is first written into the snapshot. Hand-edited per-key tolerances
+# survive refreshes via mergeReasonsFromSnapshot-style preservation in
+# ``assert_or_update_rates``.
+DEFAULT_RATE_TOLERANCE = 0.20
+
+# Stage-2 resolution tiers that carry a source-ID anchor. ``ccdm_hip``
+# uses HIP cross-reference and is intentionally excluded — the rate is
+# specifically the source-ID-anchored fraction, not 'all-resolved'.
+GAIA_RESOLVE_TAGS: tuple[str, ...] = (
+    "orb6_hip", "athyg_gaia_native", "simbad_xid",
+)
+
+# Optical cascade tiers that REJECT a candidate pair. Per ``orbit_kept``
+# survives in any case (orbital evidence overrides the cascade), the
+# rate is over the union of cascade decisions, denominator =
+# ``decomposing_pairs``.
+OPTICAL_REJECT_TAGS: tuple[str, ...] = (
+    "wds_notes_rejected", "gaia_rejected",
+    "asymm_rejected", "mag_heuristic_rejected",
+)
+
+# Orbital-source tiers other than ``none`` — the population the
+# NSS-vs-ORB6 routing applies to.
+ORBIT_RESOLVED_TAGS: tuple[str, ...] = (
+    "gaia_nss", "orb6", "orb6_spectroscopic",
+)
+
+
+def build_binaries_rates(counts: dict[str, int]) -> dict[str, float]:
+    """Derive headline rates from the int counters. Each rate is
+    dimensionless and bounded [0, 1]; denominators that would divide
+    by zero return 0.0 so a half-populated build doesn't NaN the
+    snapshot diff. Pure — no I/O."""
+    components_total = counts.get("components_total", 0)
+    decomposing_pairs = counts.get("decomposing_pairs", 0)
+
+    source_id_anchored = sum(
+        counts.get(f"resolution_{tag}", 0) for tag in GAIA_RESOLVE_TAGS
+    )
+    gaia_resolve_rate = (
+        source_id_anchored / components_total if components_total > 0 else 0.0
+    )
+
+    optical_rejected = sum(
+        counts.get(f"optical_{tag}", 0) for tag in OPTICAL_REJECT_TAGS
+    )
+    optical_rejected_rate = (
+        optical_rejected / decomposing_pairs if decomposing_pairs > 0 else 0.0
+    )
+
+    orbits_resolved = sum(
+        counts.get(f"orbit_{tag}", 0) for tag in ORBIT_RESOLVED_TAGS
+    )
+    nss_orbit = counts.get("orbit_gaia_nss", 0)
+    nss_orbit_rate = nss_orbit / orbits_resolved if orbits_resolved > 0 else 0.0
+
+    hip2_fallback_rate = (
+        counts.get("astrometry_hip2_long_baseline", 0) / components_total
+        if components_total > 0 else 0.0
+    )
+
+    return {
+        "gaia_resolve_rate": gaia_resolve_rate,
+        "optical_rejected_rate": optical_rejected_rate,
+        "nss_orbit_rate": nss_orbit_rate,
+        "hip2_fallback_rate": hip2_fallback_rate,
+    }
+
+
+@dataclass
+class RateDiff:
+    """One row of the rates snapshot diff. ``status`` is ``"match"``,
+    ``"drift"`` (relative deviation > tolerance), ``"missing_actual"``,
+    or ``"missing_expected"`` (newly-introduced rate)."""
+
+    key: str
+    status: str
+    expected: float | None
+    actual: float | None
+    tolerance: float | None
+
+
+def compare_build_rates(
+    expected: dict[str, dict[str, float]], actual: dict[str, float],
+) -> list[RateDiff]:
+    """Per-rate tolerance-based diff. Expected entries carry a ``value``
+    + ``tolerance``; pass window is ``|actual - value| / max(|value|,
+    1e-9) <= tolerance``. Missing-on-either-side rates surface as their
+    own statuses so a forgotten snapshot refresh doesn't mask a new key.
+    Pure — no I/O."""
+    out: list[RateDiff] = []
+    for key in sorted(set(expected.keys()) | set(actual.keys())):
+        if key not in actual:
+            exp = expected.get(key, {})
+            out.append(RateDiff(
+                key, "missing_actual",
+                exp.get("value"), None, exp.get("tolerance"),
+            ))
+            continue
+        if key not in expected:
+            out.append(RateDiff(key, "missing_expected", None, actual[key], None))
+            continue
+        e = expected[key]
+        ev = float(e["value"])
+        tol = float(e["tolerance"])
+        av = actual[key]
+        denom = max(abs(ev), 1e-9)
+        if abs(av - ev) / denom <= tol:
+            out.append(RateDiff(key, "match", ev, av, tol))
+        else:
+            out.append(RateDiff(key, "drift", ev, av, tol))
+    return out
+
+
+def format_rate_diff(diff: list[RateDiff]) -> str:
+    """Pretty-printer mirroring ``format_count_diff`` shape — single
+    match line when everything passes, otherwise drift / missing rows
+    listed."""
+    drift = [d for d in diff if d.status == "drift"]
+    missing_actual = [d for d in diff if d.status == "missing_actual"]
+    missing_expected = [d for d in diff if d.status == "missing_expected"]
+    total_diffs = len(drift) + len(missing_actual) + len(missing_expected)
+    if total_diffs == 0:
+        return f"build-binaries rates: all {len(diff)} rates within tolerance"
+    lines = [f"build-binaries rates: {total_diffs} of {len(diff)} rates drifted"]
+    for d in drift:
+        ev = d.expected if d.expected is not None else 0.0
+        av = d.actual if d.actual is not None else 0.0
+        tol = d.tolerance if d.tolerance is not None else 0.0
+        lines.append(
+            f"  {d.key:<28} expected {ev:.4f} ± {tol:.0%}, got {av:.4f}"
+        )
+    for d in missing_actual:
+        ev = d.expected if d.expected is not None else 0.0
+        lines.append(f"  {d.key:<28} expected {ev:.4f}, missing in actual")
+    for d in missing_expected:
+        av = d.actual if d.actual is not None else 0.0
+        lines.append(f"  {d.key:<28} new rate, got {av:.4f} (no snapshot)")
+    return "\n".join(lines)
+
+
+def assert_or_update_rates(
+    actual: dict[str, float], expected_path: Path,
+) -> bool:
+    """Tolerance-aware sibling of ``assert_or_update_counts``. Refresh
+    preserves per-key ``tolerance`` overrides from the existing snapshot
+    so an explicit ``UPDATE_BUILD_COUNTS=1`` doesn't silently reset them.
+    Snapshot values are rounded to 6 decimals for stable diffs across
+    floating-point round-trips."""
+    should_update = os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1"
+
+    if should_update or not expected_path.exists():
+        existing: dict[str, dict[str, float]] = {}
+        if expected_path.exists():
+            existing = json.loads(expected_path.read_text())
+        merged = {
+            k: {
+                "value": round(v, 6),
+                "tolerance": float(
+                    existing.get(k, {}).get("tolerance", DEFAULT_RATE_TOLERANCE),
+                ),
+            }
+            for k, v in actual.items()
+        }
+        expected_path.write_text(json.dumps(merged, indent=2) + "\n")
+        try:
+            shown = expected_path.relative_to(ROOT)
+        except ValueError:
+            shown = expected_path
+        log(f"{'Updated' if should_update else 'Wrote initial'} {shown}")
+        return True
+
+    expected = json.loads(expected_path.read_text())
+    diff = compare_build_rates(expected, actual)
+    log(format_rate_diff(diff))
+    return all(d.status == "match" for d in diff)
+
+
 # ─── Driver ──────────────────────────────────────────────────────────
 
