@@ -1,0 +1,86 @@
+# known-stars.tsv — Phase 4 tier-A validation corpus for the v6 binary
+# catalogue. Each row is one star system the pipeline must reproduce
+# correctly; scripts/catalog/known-stars.test.ts drives per-row
+# assertions against public/catalog.bin via the catalog-lookup library.
+#
+# ---- Columns -------------------------------------------------------------
+#
+# wds_id                    WDS positional ID (e.g. "06451-1643"). Empty
+#                           for single stars.
+# system_name               Display name ("Sirius", "α Cen", "Vega").
+# primary_hip               Hipparcos number of the primary. Empty for
+#                           HIP-less systems (Tycho-only / no HIP).
+# primary_gaia_source_id    Gaia DR3 source_id of the primary (int64).
+#                           Empty when no Gaia DR3 match exists (e.g.
+#                           Sirius A — saturated in Gaia DR3).
+# primary_distance_pc       Expected pipeline distance to the primary
+#                           in parsecs.
+# primary_distance_pc_err   1-sigma uncertainty on primary_distance_pc.
+#                           Used in the tolerance gate (see below).
+# primary_absmag            Expected absolute magnitude of the primary.
+# primary_spectral          Expected MK spectral type as a human-readable
+#                           string ("A0V", "M5.5Ve", "DA1.9"). The test
+#                           parses it via classifyFromSimbad and asserts
+#                           classIdx + lumClass match record.spectClass +
+#                           record.lumClass. The binary stores only those
+#                           two bytes; subclass round-trips through the
+#                           resolver but is not pinned in catalog.bin.
+# companions                Semicolon-separated tuples:
+#                             comp_letter:hip:gaia_id:absmag
+#                           Empty for single-star rows. Components with
+#                           no HIP leave the hip slot empty
+#                           ("B::4658136172363835776:11.34"). Companion
+#                           hip + gaia_id + absmag are pulled from
+#                           data/binaries/multiples.tsv (post-dch.65,
+#                           which is itself the validation target —
+#                           SIMBAD spot-checks the primaries).
+# orbital_period_days       Expected pipeline orbital period in days
+#                           (companion record .periodDays). Empty when
+#                           the system lacks a well-determined orbit or
+#                           the pipeline does not propagate one.
+# notes_source              Provenance citation. Required on every row.
+#                           Format: "SIMBAD <permalink>" /
+#                           "ORB6 entry P=…" / "Gaia DR3 ADQL
+#                           spot-check 2026-MM-DD" / "Pietrzyński 2019
+#                           LMC distance".
+#
+# ---- Tolerances ----------------------------------------------------------
+#
+# Asserted by known-stars.test.ts:
+#   primary_distance_pc       ±0.01 pc OR 1-sigma, whichever is larger
+#   primary_absmag            ±0.05
+#   primary_spectral          classIdx (record.spectClass) exact match;
+#                             lumClass exact match unless the row's
+#                             spectral string is bare-class (no Roman).
+#   companion absmag          ±0.05
+#   companion hip / gaia_id   exact match
+#   orbital_period_days       ±5% (only checked when row has a value)
+#
+# ---- Authoring discipline ----------------------------------------------
+#
+# Every row carries notes_source — no row added without a traceable
+# citation. Distance + absmag verified against AT LEAST TWO independent
+# sources where possible (SIMBAD + Gaia DR3 ADQL; ORB6 + van Leeuwen
+# HIP2; etc.). Companion rows use multiples.tsv (post-dch.65) as one
+# source; SIMBAD per-oid as the second. The TSV is the contract — the
+# vitest exercises every row, every column.
+#
+# ---- Format ----------------------------------------------------------
+#
+# Tab-separated. Lines beginning with "#" are skipped by the parser.
+# Empty cells render as adjacent tabs.
+#
+wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primary_distance_pc_err	primary_absmag	primary_spectral	companions	orbital_period_days	notes_source
+# ---- Distance-refinement regression cases ------------------------------
+# B-J override re-anchored from catastrophic AT-HYG G_R3 distance:
+	HD 30353	22365	204531088580182016	6244.791	10	-6.278	A5Iap			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 30353 sp_type=A5Iap (sg*).
+	HD 35921	25733	183255985260080896	5466.246	10	-6.908	O9II			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 35921 sp_type=O9II.
+	HD 64315	38430	5602025904044961536	6215.232	10	-4.777	O5.5Vz+O7V			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 64315 sp_type=O5.5Vz+O7V (eclipsing binary).
+	HIP 46144	46144	1040043514891491968	7515.496	10	-4.240	A0			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HIP 46144 sp_type=A0 (bare; no lumClass pin).
+# B-J no-degradation guard — well-measured nearby F-dwarf, B-J must not perturb:
+	HD 33305	23785	4773096563064098432	92.871	0.5	3.551	F5V			B-J no-degradation guard: high-S/N nearby F-dwarf; Bailer-Jones posterior must not shift the AT-HYG value. SIMBAD HD 33305 sp_type=F5V.
+# LMC kinematic snaps — pinned to Pietrzyński 2019 49.594 kpc:
+	HD 269529		4658107884688023040	49593.999	1	-7.272	G0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare).
+	HD 271416		4660699674131931008	49593.998	1	-7.138	K0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
+	HD 268691		4661719299382753408	49593.999	1	-7.582	K7			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare).
+	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.527	M0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
