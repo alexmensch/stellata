@@ -3,8 +3,7 @@
 // catalog-lookup library) and data/binaries/multiples.tsv. Authoring rules
 // + tolerances are documented in known-stars.tsv's header block.
 
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
@@ -131,8 +130,8 @@ function parseCompanions(cell: string): CorpusCompanion[] {
   });
 }
 
-async function loadCorpus(): Promise<CorpusRow[]> {
-  const text = await readFile(KNOWN_STARS_TSV, 'utf-8');
+function loadCorpusSync(): CorpusRow[] {
+  const text = readFileSync(KNOWN_STARS_TSV, 'utf-8');
   const rows = parse(text, {
     delimiter: '\t',
     columns: true,
@@ -142,16 +141,17 @@ async function loadCorpus(): Promise<CorpusRow[]> {
   }) as Record<string, string>[];
 
   return rows.map((row, i) => {
+    const name = (row.system_name ?? '').trim();
     const required = (col: string): number => {
       const v = parseFloatOrNull(row[col] ?? '');
       if (v === null) {
-        throw new Error(`row ${i + 1} (${row.system_name}): missing required numeric column "${col}"`);
+        throw new Error(`row ${i + 1} (${name}): missing required numeric column "${col}"`);
       }
       return v;
     };
     return {
       wdsId: nonEmpty(row.wds_id ?? ''),
-      systemName: (row.system_name ?? '').trim(),
+      systemName: name,
       primaryHip: parseIntOrNull(row.primary_hip ?? ''),
       primaryGaiaSourceId: nonEmpty(row.primary_gaia_source_id ?? ''),
       primaryDistancePc: required('primary_distance_pc'),
@@ -165,8 +165,8 @@ async function loadCorpus(): Promise<CorpusRow[]> {
   });
 }
 
-async function loadMultiplesIndex(): Promise<Map<string, MultiplesRow[]>> {
-  const text = await readFile(MULTIPLES_TSV, 'utf-8');
+function loadMultiplesIndexSync(): Map<string, MultiplesRow[]> {
+  const text = readFileSync(MULTIPLES_TSV, 'utf-8');
   const rows = parse(text, {
     delimiter: '\t',
     columns: true,
@@ -223,18 +223,40 @@ function spectralStringIsBareClass(s: string): boolean {
   return !/[IV]/.test(s);
 }
 
-// ---- Loaded fixtures (populated in beforeAll) ---------------------------
+// ---- Test-collection-time fixtures --------------------------------------
+//
+// Corpus + multiples load synchronously at module top so `it.each` can
+// enumerate per-row tests at collection time (vitest collects tests
+// before beforeAll runs). The TSV is always in the repo; multiples.tsv
+// is LFS-tracked and gated by FIXTURES_READY. catalog.bin stays async
+// because it's a 24 MB binary read.
+
+const CORPUS: CorpusRow[] = loadCorpusSync();
+const MULTIPLES_BY_WDS: Map<string, MultiplesRow[]> = FIXTURES_READY
+  ? loadMultiplesIndexSync()
+  : new Map();
+
+// Sentinel substrings in notes_source carry the regression-case tag.
+// Authors mark a row by prefixing its notes_source with one of these.
+function isDistanceRefinementCase(row: CorpusRow): boolean {
+  const n = row.notesSource;
+  return n.startsWith('B-J override:')
+    || n.startsWith('B-J no-degradation guard:')
+    || n.startsWith('LMC kinematic snap:');
+}
+
+const SINGLES = CORPUS.filter(r => r.companions.length === 0 && !isDistanceRefinementCase(r));
+const BINARIES = CORPUS.filter(r => r.companions.length > 0);
+const ORBITED = CORPUS.filter(r => r.orbitalPeriodDays !== null);
+const BJ_OVERRIDES = CORPUS.filter(r => r.notesSource.startsWith('B-J override:'));
+const BJ_GUARDS = CORPUS.filter(r => r.notesSource.startsWith('B-J no-degradation guard:'));
+const LMC_SNAPS = CORPUS.filter(r => r.notesSource.startsWith('LMC kinematic snap:'));
 
 let catalog: Catalog;
-let corpus: CorpusRow[];
-let multiplesByWds: Map<string, MultiplesRow[]>;
+const multiplesByWds = MULTIPLES_BY_WDS;
 
 beforeAll(async () => {
-  [catalog, corpus, multiplesByWds] = await Promise.all([
-    loadCatalog(),
-    loadCorpus(),
-    loadMultiplesIndex(),
-  ]);
+  catalog = await loadCatalog();
 });
 
 // ---- Per-row assertions -------------------------------------------------
@@ -344,22 +366,13 @@ function lookupPrimary(row: CorpusRow): CatalogRecord {
 
 // ---- Test driver --------------------------------------------------------
 
-function isDistanceRefinementCase(row: CorpusRow): boolean {
-  // Sentinel substrings in notes_source carry the regression-case tag.
-  // Authors mark a row by prefixing its notes_source with one of these.
-  const n = row.notesSource;
-  return n.startsWith('B-J override:')
-    || n.startsWith('B-J no-degradation guard:')
-    || n.startsWith('LMC kinematic snap:');
-}
-
 describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   it('contains at least one row', () => {
-    expect(corpus.length).toBeGreaterThan(0);
+    expect(CORPUS.length).toBeGreaterThan(0);
   });
 
   it('every row has a notes_source', () => {
-    const missing = corpus.filter(r => !r.notesSource);
+    const missing = CORPUS.filter(r => !r.notesSource);
     expect(
       missing,
       `rows missing notes_source: ${missing.map(r => r.systemName).join(', ')}`,
@@ -367,7 +380,7 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   });
 
   it('every row sets at least one primary identifier (HIP or Gaia)', () => {
-    const orphans = corpus.filter(r => r.primaryHip === null && r.primaryGaiaSourceId === null);
+    const orphans = CORPUS.filter(r => r.primaryHip === null && r.primaryGaiaSourceId === null);
     expect(
       orphans,
       `rows with no HIP and no Gaia source_id: ${orphans.map(r => r.systemName).join(', ')}`,
@@ -375,84 +388,76 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   });
 
   describe('single stars', () => {
-    it('iterates each row', () => {
-      const singles = corpus.filter(r => r.companions.length === 0 && !isDistanceRefinementCase(r));
-      for (const row of singles) {
-        const record = lookupPrimary(row);
-        assertPrimary(row, record);
-      }
+    it.each(SINGLES)('$systemName', (row) => {
+      const record = lookupPrimary(row);
+      assertPrimary(row, record);
     });
   });
 
   describe('visual binaries', () => {
-    it('iterates each row, validates primary + each companion', () => {
-      const binaries = corpus.filter(r => r.companions.length > 0);
-      for (const row of binaries) {
-        const record = lookupPrimary(row);
-        assertPrimary(row, record);
-        for (const companion of row.companions) {
-          assertCompanion(row, companion);
-        }
+    it.each(BINARIES)('$systemName — primary + companions', (row) => {
+      const record = lookupPrimary(row);
+      assertPrimary(row, record);
+      for (const companion of row.companions) {
+        assertCompanion(row, companion);
       }
     });
 
-    it('orbital_period_days matches multiples.tsv P_days within ±5%', () => {
-      // catalog.bin's `periodDays` field carries GCVS variability periods;
-      // ORB6 / Gaia NSS orbital periods land in multiples.tsv (P_days)
-      // via build-binaries.py.
-      const orbited = corpus.filter(r => r.orbitalPeriodDays !== null);
-      for (const row of orbited) {
-        expect(
-          row.wdsId,
-          `${row.systemName}: rows with orbital_period_days must set wds_id (multiples.tsv lookup key)`,
-        ).not.toBeNull();
-        const bucket = multiplesByWds.get(row.wdsId as string) ?? [];
-        const expected = row.orbitalPeriodDays as number;
-        const observed = bestPeriodMatch(bucket, expected);
-        expect(
-          observed,
-          `${row.systemName}: no orbital period found in multiples.tsv bucket for wds_id=${row.wdsId} matching expected ${expected} d (bucket size=${bucket.length})`,
-        ).not.toBeNull();
-        const rel = Math.abs((observed as number) - expected) / expected;
-        expect(
-          rel,
-          `${row.systemName}: expected orbital period ${expected} d, multiples.tsv has ${observed} d (relative diff ${(rel * 100).toFixed(2)}% > ${(PERIOD_REL_TOLERANCE * 100).toFixed(0)}%)`,
-        ).toBeLessThanOrEqual(PERIOD_REL_TOLERANCE);
-      }
+    // catalog.bin's `periodDays` field carries GCVS variability periods;
+    // ORB6 / Gaia NSS orbital periods land in multiples.tsv (P_days)
+    // via build-binaries.py.
+    it.each(ORBITED)('$systemName — orbital period matches multiples.tsv P_days', (row) => {
+      expect(
+        row.wdsId,
+        `${row.systemName}: rows with orbital_period_days must set wds_id (multiples.tsv lookup key)`,
+      ).not.toBeNull();
+      const bucket = multiplesByWds.get(row.wdsId as string) ?? [];
+      const expected = row.orbitalPeriodDays as number;
+      const observed = bestPeriodMatch(bucket, expected);
+      expect(
+        observed,
+        `${row.systemName}: no orbital period found in multiples.tsv bucket for wds_id=${row.wdsId} matching expected ${expected} d (bucket size=${bucket.length})`,
+      ).not.toBeNull();
+      const rel = Math.abs((observed as number) - expected) / expected;
+      expect(
+        rel,
+        `${row.systemName}: expected orbital period ${expected} d, multiples.tsv has ${observed} d (relative diff ${(rel * 100).toFixed(2)}% > ${(PERIOD_REL_TOLERANCE * 100).toFixed(0)}%)`,
+      ).toBeLessThanOrEqual(PERIOD_REL_TOLERANCE);
     });
   });
 
-  describe('distance-refinement regression cases', () => {
-    it('B-J override re-anchored distances are pinned (≥25% inward from AT-HYG)', () => {
-      const cases = corpus.filter(r => r.notesSource.startsWith('B-J override:'));
-      expect(cases.length, 'expected ≥1 B-J override regression case').toBeGreaterThan(0);
-      for (const row of cases) {
-        const record = lookupPrimary(row);
-        assertPrimary(row, record);
-      }
+  describe('distance-refinement: B-J override re-anchored from catastrophic AT-HYG distance', () => {
+    it('corpus has ≥1 case', () => {
+      expect(BJ_OVERRIDES.length, 'expected ≥1 B-J override regression case').toBeGreaterThan(0);
     });
-
-    it('B-J no-degradation guard rows preserve well-measured nearby distances', () => {
-      const cases = corpus.filter(r => r.notesSource.startsWith('B-J no-degradation guard:'));
-      expect(cases.length, 'expected ≥1 B-J no-degradation guard').toBeGreaterThan(0);
-      for (const row of cases) {
-        const record = lookupPrimary(row);
-        assertPrimary(row, record);
-      }
+    it.each(BJ_OVERRIDES)('$systemName', (row) => {
+      const record = lookupPrimary(row);
+      assertPrimary(row, record);
     });
+  });
 
-    it('LMC kinematic snaps pin to Pietrzyński 2019 49.594 kpc', () => {
-      const cases = corpus.filter(r => r.notesSource.startsWith('LMC kinematic snap:'));
-      expect(cases.length, 'expected ≥1 LMC kinematic snap row').toBeGreaterThan(0);
-      for (const row of cases) {
-        const record = lookupPrimary(row);
-        assertPrimary(row, record);
-        // Sanity: a snap row's expected distance should be within Pietrzyński's 49.594 kpc envelope.
-        expect(
-          row.primaryDistancePc,
-          `${row.systemName}: tagged as LMC kinematic snap but expected distance ${row.primaryDistancePc} pc is outside the LMC envelope`,
-        ).toBeGreaterThan(48_000);
-      }
+  describe('distance-refinement: B-J no-degradation guard (well-measured nearby)', () => {
+    it('corpus has ≥1 case', () => {
+      expect(BJ_GUARDS.length, 'expected ≥1 B-J no-degradation guard').toBeGreaterThan(0);
+    });
+    it.each(BJ_GUARDS)('$systemName', (row) => {
+      const record = lookupPrimary(row);
+      assertPrimary(row, record);
+    });
+  });
+
+  describe('distance-refinement: LMC kinematic snap to Pietrzyński 2019 49.594 kpc', () => {
+    it('corpus has ≥1 case', () => {
+      expect(LMC_SNAPS.length, 'expected ≥1 LMC kinematic snap row').toBeGreaterThan(0);
+    });
+    it.each(LMC_SNAPS)('$systemName', (row) => {
+      const record = lookupPrimary(row);
+      assertPrimary(row, record);
+      // LMC envelope sanity check on the corpus value itself.
+      expect(
+        row.primaryDistancePc,
+        `${row.systemName}: tagged as LMC kinematic snap but expected distance ${row.primaryDistancePc} pc is outside the LMC envelope`,
+      ).toBeGreaterThan(48_000);
     });
   });
 });
