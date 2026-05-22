@@ -23,6 +23,89 @@ strategy stamps onto its output.
   route, a new optical-pair filter tier, or a new SIMBAD-anchored
   cross-ID side-file.
 
+## Files in this area
+
+The binary-system pipeline. `scripts/binaries/` is the orchestration
+shell + per-stage modules; `data/wds/` + `data/binaries/` carry the
+inputs and pipeline output. The single-star catalog build under
+`scripts/catalog/` and its data inputs (Gaia / B-J / SIMBAD sample /
+AT-HYG / GCVS / Hipparcos / Stellarium) live in
+`docs/build-and-data.md`.
+
+```
+scripts/binaries/
+  build-binaries.py               WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
+                                  + Gaia (HIP/Tyc xwalks, NSS, 5p
+                                  astrometry) + SIMBAD WDS xids + SIMBAD
+                                  per-component sp_type →
+                                  data/binaries/multiples.tsv.
+                                  Orchestration shell; per-stage logic in
+                                  stage{2..7}_*.py.
+  parsers.py                      Row dataclasses + parse functions for
+                                  every reference catalogue (Stage 1).
+  indices.py                      IdentifierIndices builder (HIP/Tyc →
+                                  Gaia, src_id → astrometry / NSS / AT-HYG,
+                                  HIP → HIP2 / CCDM, CCDM → HIP-list,
+                                  etc.). Built once at Stage 1; every
+                                  Stage 2-7 lookup is O(1).
+  stage2_resolve.py               WDS-component → Gaia DR3 source_id
+                                  cascade (orb6_hip → athyg_gaia_native →
+                                  simbad_xid → ccdm_hip → AT-HYG
+                                  position-match), with same-letter +
+                                  Aa→A propagation.
+  stage3_astrometry.py            Per-component astrometry routing
+                                  (gaia_5p / gaia_nss_systemic /
+                                  hip2_long_baseline / unresolved).
+                                  HIP2 is the Gaia-saturated
+                                  bright-primary fallback.
+  stage4_orbits.py                Per-pair orbital-element selection
+                                  (gaia_nss / orb6 / orb6_spectroscopic /
+                                  none). Inline Heintz 1978 /
+                                  Halbwachs+ 2023 Thiele-Innes → Campbell
+                                  algebra.
+  stage5_optical.py               Five-tier physical-vs-optical
+                                  classification (WDS-notes → both-Gaia →
+                                  asymmetric-Gaia → orbit-on-file →
+                                  mag-gap).
+  stage6_multiples.py             Emit data/binaries/multiples.tsv with
+                                  per-component provenance columns +
+                                  system-anchor inheritance for tight
+                                  inner binaries + SIMBAD standalone
+                                  augmentation.
+  stage7_counts.py                Build-counts + build-rates snapshot
+                                  writer (mirrors
+                                  scripts/catalog/build-counts.ts).
+  mass_estimate.py                Spectral-class-aware mass-ratio q
+                                  backfill from Cox 2000 §15.2 /
+                                  Pecaut & Mamajek 2013 tables.
+  build-binaries.test.py          stdlib unittest pins for Stages 1-7.
+  build-binaries-expected.json    per-strategy / per-tier count snapshot
+                                  (UPDATE_BUILD_COUNTS=1).
+  build-binaries-rates-expected.json
+                                  per-strategy rate snapshot — catches
+                                  population-mix shifts that don't move
+                                  absolute counts.
+
+data/wds/
+  wds_summ.txt                    Washington Double Star summary
+                                  (~20 MB, LFS).
+  wds_notes.txt                   Per-pair WDS notes prose (LFS).
+  wds_refs.txt                    WDS reference list (LFS).
+  orb6_orbits.txt                 ORB6 sixth catalog of visual binary
+                                  orbits (LFS).
+
+data/binaries/
+  multiples.tsv                   build-binaries.py output — two rows
+                                  per kept WDS pair, plus standalone rows
+                                  for SIMBAD-known components the pair
+                                  walk didn't reach. Consumed today by
+                                  the Tier A validation harness +
+                                  ad-hoc debugging; the future per-frame
+                                  binary-orbit runtime layer will read
+                                  it directly (not merged into
+                                  catalog.bin). (LFS)
+```
+
 ## Pipeline at a glance
 
 Two build steps, run in order, with `data/binaries/multiples.tsv` as the

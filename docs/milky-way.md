@@ -12,6 +12,26 @@ accumulating emission with running dust extinction. The two meshes'
 contributions add via additive blending. Default-on; URL `mw=0`
 disables. Hidden in chart mode.
 
+## Files in this area
+
+```
+src/client/milkyway/
+  milkyway.ts                     Volumetric disc + bulge renderer.
+                                  Composes the two proxy meshes; owns the
+                                  setIsobar chart-mode handoff
+                                  (currently hides the meshes — see
+                                  docs/chart-mode.md).
+  milkyway-tuning.ts              Tuning section in the debug panel.
+
+src/client/shaders/
+  milkyway.vert.glsl,
+  milkyway.frag.glsl              Ray-sphere intersect + log-distributed
+                                  raymarch, additive-blended.
+```
+
+`galactic-coords.ts` (`GAL_TO_ICRS`, `GALACTIC_CENTRE_PC`) is shared
+with the rest of the galactic overlay — see `docs/galactic-overlay.md`.
+
 **Why a volumetric mesh, not a skybox.** An earlier version (rev 1) put
 the integration in a 50 kpc camera-anchored skybox sphere and marched
 camera→back-surface. Mathematically defensible, but visually it was a

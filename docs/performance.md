@@ -3,6 +3,26 @@
 How to profile a running build, what's already been tuned, and where to
 look first when something feels slow.
 
+## Files in this area
+
+```
+src/client/debug/
+  debug.ts                        Dev console handle (`window.debug`
+                                  surface). Owns the panel-open path.
+  debug-panel.ts                  Unified debug panel — four collapsible
+                                  sections (Perf / Star tuning / Pin
+                                  debug / Arrow-fade debug).
+  perf-hud.ts                     Ring-buffer instrumentation +
+                                  histogram + per-label table. Module-
+                                  level mark/measure/frame swapped from
+                                  no-op to real on panel open.
+  pin-debug-hud.ts                Pin-to-center diagnostic HUD.
+  arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
+  star-tuning.ts                  Live-tunable star exaggeration /
+                                  magnitude / size knobs.
+  (+ tests for each.)
+```
+
 ## Running the perf HUD
 
 The HUD is an opt-in dev tool, not a user feature. Activation paths:

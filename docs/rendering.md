@@ -13,6 +13,51 @@ docs:
 
 For the underlying physics and density profiles, see `SCIENCE.md`.
 
+## Files in this area
+
+The shared star renderer core. Per-layer renderers (planet bodies,
+clouds, Milky Way disc, galactic overlay, dust, chart mode) live in
+their matching layer docs and bring their own shaders.
+
+```
+src/client/
+  star-pipeline.ts                InstancedBufferGeometry + disc / glow /
+                                  coreMask ShaderMaterials + meshes.
+                                  Owns applyDiscBlendDefaults +
+                                  setMonochromeBlend + dispose.
+  star-pipeline.test.ts           dispose + uniform-sharing + blend
+                                  defaults.
+  disc-blend.test.ts              Star-disc / glow blend-equation parity
+                                  test (`stellata-9mm.11`-style guard).
+
+src/client/shaders/
+  star.vert.glsl, star.frag.glsl  GLSL3 / WebGL2 star shaders.
+  perceptual-disc.glsl            Shared point-of-light disc / glow chunk
+                                  (stars + planets).
+  blackbody-lut-data.ts           AUTO-GENERATED Ballesteros 2012 + Planck
+                                  + CIE 1931 LUT. Paired with
+                                  scripts/colour/blackbody-lut.ts (see
+                                  docs/build-and-data.md).
+```
+
+### Dust layer (shelved)
+
+Renders shelved at `strength = 0` (mesh hidden → zero per-frame cost);
+machinery preserved.
+
+```
+src/client/dust/
+  dust-particle-layer.ts (+ test) Instanced additive billboards.
+  (DustField + dust-loader stay in loaders/ — see
+  docs/build-and-data.md.)
+
+src/client/shaders/
+  dust-particle.vert.glsl,
+  dust-particle.frag.glsl         Shelved dust splats.
+
+scripts/dust/, data/dust/         Documented in docs/build-and-data.md.
+```
+
 ## Full render stack — front to back
 
 There is no z-ordering between WebGL and SVG. The WebGL canvas paints

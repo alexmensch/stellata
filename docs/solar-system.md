@@ -8,6 +8,51 @@ shell. Sol is the only populated host so far; the framework is
 deliberately generic so the future exoplanet epic (`stellata-bk5`)
 can plug in without changing the renderer.
 
+## Files in this area
+
+```
+src/client/solar-system/
+  planet-system.ts                Planet / PlanetSystem contract.
+                                  hasPlanets + getPlanetSystem; SOL_PLANETS
+                                  table (eight majors + Pluto).
+  ephemeris.ts                    JPL Standish 1992 Keplerian-elements
+                                  approximation + cubic Jupiter–Neptune
+                                  correction terms. Heliocentric ecliptic
+                                  parsecs out.
+  astronomy-constants.ts          Shared physical / astronomical constants
+                                  (AU, parsec, J2000 obliquity).
+  time.ts                         Simulation time `t` (UTC seconds offset)
+                                  + UTC ↔ Julian-day helpers. Single source
+                                  of truth for the time scrubber.
+  time-readout.ts                 UTC readout display next to the time
+                                  scrubber.
+  planet-body-field.ts            Instanced planet-body renderer. Three-pass
+                                  (depth-only mask + disc + glow), shares
+                                  the unified disc/glow chunk with stars
+                                  (perceptual-disc.glsl) — see
+                                  docs/rendering.md.
+  orbit-rings-layer.ts            Faint orbit rings in the host's orbital
+                                  plane.
+  perceptual-magnitude.ts         Per-planet apparent-magnitude model
+                                  (Lambertian + Mallama phase factors).
+                                  Drives both the body field's disc/glow
+                                  sizing and the per-planet label gating.
+  phase-function.ts (+ test)      Lambertian + Mallama phase functions.
+                                  Pure helpers with vitest coverage.
+  planet-labels.ts                Per-planet SVG labels, distance-gated.
+  heliopause.ts                   Sol's heliopause boundary as a translucent
+                                  asymmetric shell (Sol-only).
+  first-load.ts                   Canonical no-URL first-load view: 5 AU
+                                  galactic-centre-aimed park.
+
+src/client/shaders/
+  planet.vert.glsl,
+  planet.frag.glsl                Three-pass instanced planet bodies.
+  perceptual-disc.glsl            Shared point-of-light disc/glow chunk
+                                  (stars + planets) — see docs/rendering.md.
+  (heliopause shaders live alongside heliopause.ts.)
+```
+
 ## Data model
 
 `planet-system.ts` defines the contract every host's planet system

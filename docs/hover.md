@@ -8,6 +8,19 @@ implements `HoverProvider` and registers with the engine; the engine
 owns the pointer listener, the dwell timer, the cross-provider
 disambiguator, and the `#tooltip` render.
 
+## Files in this area
+
+The full file roster is in § Architecture below. The hover subsystem
+lives entirely under `src/client/hover/`:
+
+- `hover-engine.ts` — the engine.
+- `hover-types.ts` — the `HoverProvider` contract.
+- `hover-pick-disambiguator.ts` — cross-provider picker tiebreak.
+- `*-hover-provider.ts` (one per layer) — stars, planets, Local Group,
+  heliopause, …
+- `formatters/*-hover-format.ts` (one per layer) — pure functions with
+  their own vitest coverage.
+
 ## Architecture
 
 - **`hover-engine.ts`** — canvas pointer listener, 280 ms dwell, 14 px

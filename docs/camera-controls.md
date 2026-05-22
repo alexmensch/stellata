@@ -5,6 +5,54 @@ TrackballControls tuning, and the two-finger roll gesture that works
 in both navigate and observe modes. For warp animation see
 `docs/camera-warp.md`; for OBSERVE mode see `docs/camera-observe.md`.
 
+## Files in this area
+
+`src/client/camera/` houses the camera controllers + their shared
+plumbing. Per-controller docs split the folder by area:
+
+- Steady-state geometry + cross-mode plumbing → this doc.
+- Warp + focus FSMs → `docs/camera-warp.md`.
+- Arrival math → `docs/camera-arrival.md`.
+- OBSERVE mode → `docs/camera-observe.md`.
+
+```
+src/client/camera/
+  controls.ts                     TrackballControls subclass; manual-zoom
+                                  floor + auto-park orbit distance hooks.
+  mode-toggle.ts                  Navigate / observe pill in the topbar.
+  picker.ts                       Pure target resolver; click + hover pick
+                                  paths for stars / clouds / planets /
+                                  Local Group / heliopause.
+  aim-controller.ts               Mode-aware aim slerps (navigate
+                                  orbit-pivot + observe quaternion-in-place),
+                                  shared `aimDurationMs` ramp.
+  camera-up-align.ts              Re-anchors `camera.up` before any lookAt
+                                  on the observe→navigate seam.
+  up-align-pure.ts                alignCameraUpToQuaternion helper.
+                                  Paired with camera-up-align.test.ts
+                                  algebra fixture.
+  star-geometry.ts                Pure star angular-geometry formulae
+                                  (θ = 2·atan(R/d), parkDistForStar
+                                  derivations).
+  star-physics.ts                 Per-star camera / screen geometry:
+                                  fovMinorRad, peakAmplitudeFactor,
+                                  binaryCompanionFloorPc,
+                                  minOrbitDistForStar, parkDistForStar,
+                                  renderedSizePx, renderedDiscPxAtPeak,
+                                  getChartDiscParams + canonical
+                                  ZOOM_FLOOR_FRACTION /
+                                  VAR_TROUGH_FLOOR_FRACTION /
+                                  BINARY_VIEWPORT_HALF_ANGLE_RAD /
+                                  BINARY_MIN_DIST_FACTOR. Sits between
+                                  star-geometry's pure formulae and the
+                                  per-frame uniform reads in stellata.
+  timing.ts                       Canonical camera-wide constants:
+                                  CAMERA_LERP_MS / WARP_*_MS / AIM_*_MS /
+                                  OBSERVE_TRANSITION_MS / DCAM_LOG_FLOOR_PC
+                                  / WARP_BASE_DIR.
+  (+ tests for each pure module.)
+```
+
 ## Camera near plane vs controls minDistance
 
 `camera.near = 1e-10`, `controls.minDistance` (when no star is focused)

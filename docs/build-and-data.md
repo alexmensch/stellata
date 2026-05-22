@@ -5,6 +5,182 @@ renderer-ready binaries in `public/`. Everything in this doc is about
 `scripts/*` and the file formats they produce. For the science of *what*
 gets computed (Stefan–Boltzmann radii, etc.), see `SCIENCE.md`.
 
+## Files in this area
+
+The catalog + reference-data build pipeline. `scripts/binaries/` +
+`data/wds/` + `data/binaries/` (the binary-system pipeline) live in
+`docs/cross-match.md`; per-layer sources (`scripts/clouds/` +
+`data/molecular-clouds/`, `scripts/local-group/` + `data/local-group/`,
+dust) live with their respective `docs/<layer>.md`.
+
+```
+scripts/catalog/
+  build-catalog.ts                AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia
+                                  Apsis + SIMBAD sp_type + Stellarium →
+                                  public/catalog.bin (v6 binary) +
+                                  public/constellations.json +
+                                  public/search-index.json.
+  build-catalog-expected.json     Build-count snapshot (UPDATE_BUILD_COUNTS=1).
+  catalog-pure.ts                 Single source of truth for the v6 binary
+                                  layout (HEADER_LAYOUT / RECORD_LAYOUT /
+                                  MAGIC / NO_APSIS), resolveSpectralInfo
+                                  (SIMBAD → GSP-Spec → fallback),
+                                  physicalRadius, applyBailerJonesOverride,
+                                  applyLmcKinematicOverride, inferBinaries,
+                                  parseBailerJonesTsv, parseGaiaApsisTsv,
+                                  parseSimbadSptypeTsv. Shared with
+                                  src/client/loaders.
+  catalog-pure.test.ts            vitest pin for catalog-pure (binary-format
+                                  constants, B-J / LMC override math,
+                                  spectral parser shape).
+  stars-parse.ts                  readStars — per-row AT-HYG ingest with the
+                                  three-layer distance stack (B-J → LMC →
+                                  MAX_DIST_PC), three-tier spectral resolver,
+                                  Apsis routing, Gaia source_id resolution
+                                  (AT-HYG-native + HIP→Gaia backfill).
+                                  MAX_DIST_PC = 50,000 lives here.
+  constellations.ts               IAU constellation table + figure-line
+                                  resolver from Stellarium HIP polylines.
+  gaia-xmatch.ts                  Gaia DR3 HIP cross-walk reader.
+  gcvs-parse.ts                   parseGcvsMain + parseGcvsCrossref +
+                                  bridgeGcvsByGaia + applyVariability.
+  visual-doubles.ts               Hipparcos CCDM parser with MultFlag
+                                  {C,G,O} gate + curated
+                                  KNOWN_VISUAL_DOUBLES set (Polaris /
+                                  ε¹ Lyr / 61 Cyg).
+  gaia-xmatch.test.ts,
+  gcvs-parse.test.ts              vitest pins. (stars-parse, constellations,
+                                  visual-doubles are exercised through the
+                                  catalog-pure / known-stars /
+                                  distance-regression tests.)
+  verify-catalog.ts               sanity-check tool for the generated binary.
+  catalog-lookup.ts               runtime lookup helper used by
+                                  known-stars.test.ts.
+  star-fixture.ts                 shared test fixture.
+  build-counts.ts                 BuildCounts schema + compareBuildCounts.
+  build-counts.test.ts            vitest pin.
+  distance-regression-check.ts    Post-build distance gate —
+                                  self-consistency (AT-HYG dist vs final) +
+                                  SIMBAD cross-check (vs simbad_sample.tsv).
+                                  Snapshot-pinned in
+                                  build-distance-outliers-expected.json
+                                  (UPDATE_DISTANCE_OUTLIERS=1). Hand-edited
+                                  `reason` strings survive snapshot refresh
+                                  via mergeReasonsFromSnapshot.
+  distance-regression-check.test.ts
+                                  vitest pin.
+  build-distance-outliers-expected.json
+                                  Known-acceptable distance outliers (LMC
+                                  kinematic snaps, B-J overrides on noisy
+                                  G_R3 parallaxes, ρ Cas hypergiants).
+  known-stars.tsv                 Tier A validation corpus (~50 hand-curated
+                                  systems with HIP / Gaia source_id /
+                                  distance ± 1σ / absmag / spectral type /
+                                  per-component tuples). Asserted against
+                                  catalog.bin + multiples.tsv.
+  known-stars.test.ts             vitest driver for the Tier A corpus.
+  validate-simbad-sample.ts       Tier C — cross-check the built
+                                  catalog.bin against the committed SIMBAD
+                                  random 10k sample. Manual
+                                  (`npm run validate:simbad`).
+  validate-simbad-sample.test.ts  vitest pin for the validator helpers.
+
+scripts/distance-validation/
+  validate-distances.py           Compare build-catalog.ts output against
+                                  Vaidman 2025 BA-supergiant distances.
+                                  Runs on every distance-source change
+                                  (DR4 / StarHorse / B-J successor).
+  validate-distances.test.py      stdlib unittest pin.
+  build-vaidman-tsv.py            One-time builder: paper appendix tables →
+                                  data/distance-validation/vaidman-2025-supergiants.tsv.
+  build-vaidman-tsv.test.py       stdlib unittest pin.
+  common.py                       Shared helpers.
+
+scripts/colour/
+  blackbody-lut.ts                Ballesteros 2012 + Planck + CIE 1931 →
+                                  src/client/shaders/blackbody-lut-data.ts.
+  blackbody-lut.test.ts           vitest signature pin
+                                  (`npm run build:lut` on drift).
+
+scripts/refresh/                  External-catalogue refresh (manual; not
+                                  wired into `npm run build` — see § Layer 2).
+  refresh_lib.py                  shared Astroquery / ADQL / atomic-rename
+                                  plumbing for all refresh-*.py scripts.
+  refresh_lib.test.py             stdlib unittest pins for refresh_lib.
+  refresh-bailer-jones.py         → data/bailer-jones/bailer-jones-dr3.tsv
+  refresh-gaia-apsis.py           → data/gaia/gaia_dr3_apsis.tsv
+  refresh-gaia-astrometry.py      reads data/gaia/gaia_astrometry_source_id_request.tsv,
+                                  writes data/gaia/gaia_dr3_astrometry.tsv.
+  refresh-gaia-hip-xmatch.py      → data/gaia/gaia_dr3_hip_xmatch.tsv
+  refresh-gaia-nss.py             → data/gaia/gaia_dr3_nss_two_body.tsv
+  refresh-gaia-tyc-xmatch.py      → data/gaia/gaia_dr3_tyc_xmatch.tsv
+  refresh-hipparcos2.py           → data/hipparcos/hip2_van_leeuwen.tsv
+  refresh-simbad-sample.py        → data/simbad/simbad_sample.tsv
+  refresh-simbad-sptype.py        → data/simbad/simbad_sptype.tsv.
+                                  Orchestrates scripts/refresh/simbad/.
+  refresh-simbad-wds-xids.py      → data/simbad/simbad_wds_xids.tsv.
+                                  Orchestrates the WDS↔Gaia cross-ID pull
+                                  via wds_xids_cascade.py +
+                                  wds_xids_overrides.py.
+  wds_xids_cascade.py             Per-component identifier cascade
+                                  (HIP / Tycho / WDS-J variants).
+  wds_xids_cascade.test.py        stdlib unittest pin.
+  wds_xids_overrides.py           Hand-curated WDS-J coalesce overrides
+                                  (Sirius B-shaped systems).
+  wds_xids_overrides.test.py      stdlib unittest pin.
+  simbad/                         reusable SIMBAD-pull plumbing — specs
+                                  (ColumnSpec / IdentLookup), inputs,
+                                  query (ADQL builders + batched
+                                  executors), tsv writer. Modelled on
+                                  scripts/binaries; future SIMBAD pulls
+                                  (RV, photometry, …) reuse every file.
+  requirements-refresh.txt        pip deps (astropy, astroquery, numpy).
+
+data/                             Per-source-catalogue folders. LFS coverage
+                                  is per-folder via .gitattributes patterns;
+                                  stellarium/, local-group/, molecular-clouds/
+                                  stay on regular git as the files are small.
+  athyg/athyg_33_classic_ids.csv  AT-HYG source CSV (~64 MB, LFS).
+  bailer-jones/bailer-jones-dr3.tsv
+                                  Bailer-Jones 2021 DR3 Bayesian distance
+                                  posteriors (~23 MB, LFS).
+  gaia/                           Gaia DR3 Apsis / 5p astrometry /
+                                  HIP-xmatch / Tyc-xmatch / NSS two-body
+                                  orbits + the Stage 2 → Stage 3 deduped
+                                  source_id request list (all LFS).
+  hipparcos/                      HIP↔CCDM cross-reference (hip_ccdm.tsv) +
+                                  Hipparcos-2 (van Leeuwen 2007) reduction
+                                  (hip2_van_leeuwen.tsv) (LFS).
+  gcvs/                           GCVS5 main (~14 MB) + crossid
+                                  cross-reference (~12 MB) (LFS).
+  simbad/                         Stratified random 10k sample
+                                  (simbad_sample.tsv) + SIMBAD-curated
+                                  per-component WDS↔Gaia DR3 cross-IDs
+                                  (simbad_wds_xids.tsv) (LFS).
+  distance-validation/            vaidman-2025-supergiants.tsv (132 rows;
+                                  CC BY 4.0) + README with provenance +
+                                  SIMBAD name-resolution recipe.
+  stellarium/stellarium-modern-skyculture.json
+                                  Stellarium constellation lines
+                                  (~200 KB, regular git).
+
+src/client/loaders/
+  catalog-loader.ts (+ test)      Fetch + parse public/catalog.bin into
+                                  the in-memory Catalog.
+  dust-loader.ts (+ test)         Fetch dust manifest + chunks (shelved
+                                  dust layer).
+  (cloud-loader lives under molecular-clouds/; local-group-loader under
+  local-group/.)
+
+public/                           Generated artifacts; all gitignored.
+  catalog.bin                     ~24 MB, binary v6.
+  constellations.json
+  search-index.json               ~13 MB raw, ~2 MB gzipped.
+  clouds.json                     ~30 KB.
+  local-group.json                ~20 KB.
+  dust/                           mirror of data/dust/.
+```
+
 ## Frozen external data
 
 External scientific catalogs in Stellata's pipeline (stellar, ISM,

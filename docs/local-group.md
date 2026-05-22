@@ -21,6 +21,20 @@ Chart mode hides the layer entirely. Chart-mode's paper-aesthetic
 treatment for galactic structure is `stellata-m40`'s remit; this layer
 turns off cleanly until that lands.
 
+## Files in this area
+
+```
+src/client/local-group/
+  local-group.ts                  LineLoop renderer + per-galaxy fade
+                                  (shared FADE_INNER_PC / FADE_OUTER_PC
+                                  from galactic-fade.ts).
+  local-group-loader.ts (+ test)  Fetch + parse public/local-group.json.
+  local-group-tuning.ts           Tuning section in the debug panel.
+  (+ tests for the renderer.)
+```
+
+The build pipeline + reference data live in § Data pipeline below.
+
 ## Data pipeline
 
 ```

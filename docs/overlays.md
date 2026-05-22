@@ -9,6 +9,35 @@ The Sol/GC arrows themselves are documented in
 `docs/galactic-overlay.md` because they're tightly coupled to the
 galactic-overlay feature group.
 
+## Files in this area
+
+```
+src/client/overlays/
+  constellation-overlay.ts        Stellarium HIP polyline asterism
+                                  renderer; masked by disc-mask.
+  disc-mask.ts (+ pure + test)    Per-frame circle cutouts for the
+                                  most-recently-focused star + binary
+                                  companion + highlighted constellation's
+                                  vertex discs.
+  distance-vector-overlay.ts      Yellow distance line A → B with
+                                  near-plane clipping; chevrons +
+                                  warp-trigger label.
+  focus-ring-overlay.ts           SVG ring around the focused star.
+  hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
+                                  docs/galactic-overlay.md.
+  poi-overlay.ts                  Pinned-POI labels + rings + arrows
+                                  (OBSERVE mode).
+  dirty-attr.ts (+ test)          Dirty-tracked SVG attribute writer
+                                  (sentinel-init pattern — see
+                                  docs/authoring-patterns.md).
+  overlay-project.ts (+ test)     Shared world → screen-space projector
+                                  with near-plane clipping.
+  arrow-fade.ts (+ test)          Shared shaft-fade curve for Sol/GC
+                                  arrows + future arrow consumers.
+  arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)
+                                  used by hud-overlay and others.
+```
+
 ## Constellation stick-figure overlay
 
 `FilterState.showConstellation` is the master visibility flag for both

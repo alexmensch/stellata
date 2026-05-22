@@ -3,6 +3,27 @@
 Cloudflare Workers static-assets site. Notes on the worker build and
 Wrangler configuration.
 
+## Files in this area
+
+```
+src/worker.ts                     Cloudflare Worker entry; thin
+                                  passthrough to env.ASSETS.fetch().
+                                  Inlines its own minimal Fetcher
+                                  interface — see § @cloudflare/workers-types
+                                  leaks globally.
+wrangler.toml                     Wrangler config: custom_domain,
+                                  observability (logs + traces),
+                                  compatibility_date, smart placement.
+.github/workflows/deploy.yml      Deploy workflow on main; extracts the
+                                  ## Release notes block from the merged
+                                  PR and posts to the GitHub release.
+.github/workflows/release-notes-guard.yml
+                                  CI check that fails a PR if the
+                                  ## Release notes block is empty
+                                  (HTML comments don't count). Skipped
+                                  for PRs labelled skip-version-bump.
+```
+
 ## Why a Worker (vs assets-only)
 
 `src/worker.ts` is a thin passthrough that hands every request to

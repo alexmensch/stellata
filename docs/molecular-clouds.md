@@ -8,6 +8,35 @@
 > refined. Chart-mode integration (`setCloudsIsobar`) is still wired
 > against the now-invisible group.
 
+## Files in this area
+
+```
+src/client/molecular-clouds/
+  molecular-clouds.ts             Cloud ellipsoid renderer + click /
+                                  warp / measurement participation.
+                                  Shelved (see status above).
+  cloud-loader.ts (+ test)        Fetch + parse public/clouds.json.
+
+src/client/shaders/
+  cloud.vert.glsl, cloud.frag.glsl
+                                  Molecular cloud ellipsoids;
+                                  premultiplied-alpha additive.
+
+scripts/clouds/
+  build-clouds.py                 Zucker 2020 + Zucker 2021 →
+                                  public/clouds.json.
+
+data/molecular-clouds/
+  zucker2020-tablea1.tsv          Zucker 2020 cloud distances (~88 KB).
+  zucker2021-table1.dat           Zucker 2021 3D bounding boxes (~1 KB).
+  zucker2021-table2.dat           Zucker 2021 radial profile fits
+                                  (kept for future).
+  zucker2021-table3.dat           Zucker 2021 cloud masses
+                                  (kept for future).
+
+public/clouds.json                Generated, gitignored (~30 KB).
+```
+
 `molecular-clouds.ts` renders ~96 named local SF clouds as soft warm
 ellipsoids. Originally default-on with a toggle in the Galactic-overlays
 panel section; the toggle is now gone and the layer renders nothing.

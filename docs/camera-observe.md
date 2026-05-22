@@ -8,6 +8,21 @@ animation that connects observe→observe arrivals see
 `docs/camera-warp.md`; for the steady-state camera geometry see
 `docs/camera-controls.md`.
 
+## Files in this area
+
+```
+src/client/camera/
+  observe-controls.ts             Custom look-around controller: drag
+                                  mechanics, momentum, FOV-on-wheel,
+                                  single/double click handlers (pin POI
+                                  / aim-at).
+  observe-transition.ts           Navigate↔observe FSM:
+                                  ObserveTransitionState + setMode +
+                                  startExit + startUnfocusLerp +
+                                  ObserveFocusOps seam.
+  (+ tests.)
+```
+
 The navigate↔observe mode-switch orchestrator — the
 `ObserveTransitionState` slot, the `enter` / `exit` / `unfocus` kinds,
 and the per-frame lerp — lives in

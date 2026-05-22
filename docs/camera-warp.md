@@ -18,6 +18,37 @@ clear) lives behind the `FocusOps` interface implemented by
 FocusController; the `focus:` dep wire updates
 in one line.
 
+## Files in this area
+
+```
+src/client/camera/
+  warp-controller.ts              3-phase warp FSM (reorient → fly →
+                                  post-arrival) + WarpState +
+                                  tryMidFlyRecentre + swapObserveAnchor +
+                                  FocusOps cross-controller seam.
+  warp-pure.ts (+ test)           Pure phase math (slerp, ease, recentre
+                                  predicate).
+  warp-tuning.ts                  Tuning section in the debug panel.
+  warp-button.ts                  Yellow distance label → warp trigger
+                                  click handler + "→ Warp" hover suffix.
+  focus-controller.ts             Focus FSM + focus-park lerp + per-kind
+                                  FocusTarget factories + pin-engage
+                                  geometry. FocusOps seam consumed by
+                                  WarpController; ObserveFocusOps seam
+                                  consumed by ObserveTransition. Canonical
+                                  home for GLOBAL_MIN_DIST_PC +
+                                  PIN_ENGAGE_THRESHOLD_SQ_PC.
+  focus-target.ts                 FocusTarget contract (per-kind: star /
+                                  cloud / planet / Local Group /
+                                  heliopause). FrameAnchor
+                                  (recenterOrigin + worldOffset +
+                                  starLocalPosition) stays on stellata.ts.
+  focus-transition.ts             tickFocusLerp — focus-park lerp via
+                                  the shared camera-motion.ts arrival
+                                  profile (see docs/camera-arrival.md).
+  (+ tests for each pure module.)
+```
+
 ## Warp animation
 
 An animated camera flight between the focused star (A) and the distance

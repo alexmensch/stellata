@@ -9,6 +9,33 @@ the HUD layer (Sol/GC arrows plus the OBSERVE-mode ring). Together they
 give the user "which way is out, how far am I from the centre, and what
 else is nearby at galactic scales" without obscuring the local stars.
 
+## Files in this area
+
+```
+src/client/galactic/
+  galactic-coords.ts (+ test)     Shared GAL_TO_ICRS (Matrix4) +
+                                  GALACTIC_CENTRE_PC (Vector3 at R₀ =
+                                  8.122 kpc). Reused by the Milky Way
+                                  volumetric layer (docs/milky-way.md).
+  galactic-disc.ts                15 kpc midplane ring + ±400 pc
+                                  thickness rings + 3 × 1.5 kpc bulge
+                                  wireframe; always-on in dark mode,
+                                  hidden in chart mode.
+  galactic-fade.ts                Shared FADE_INNER_PC / FADE_OUTER_PC
+                                  smoothstep curve. Imported by
+                                  galactic-disc + local-group so both
+                                  layers reveal in lockstep.
+  galactic-grid.ts                Toggleable b/l coordinate sphere.
+
+src/client/overlays/                  (full overlay roster in docs/overlays.md)
+  hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
+                                  overlays/ but the feature group is
+                                  documented here.
+```
+
+Local Group wireframes + per-galaxy labels are a separate layer; see
+`docs/local-group.md`.
+
 **Shared module** `galactic-coords.ts` exports `GAL_TO_ICRS` (Matrix4)
 and `GALACTIC_CENTRE_PC` (Vector3 at R₀ = 8.122 kpc), built from the
 J2000 IAU galactic-pole and galactic-centre angles with explicit

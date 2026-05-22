@@ -10,6 +10,17 @@ typical share lands at ~10–25 chars, and worst-case (every field
 overridden) tops out around 70 chars. See `src/client/url-state.ts`
 for the format and the `FIELDS_V3` table.
 
+## Files in this area
+
+```
+src/client/util/
+  url-state.ts (+ test)           ?v= encode / decode (v1 / v2 / v3
+                                  formats), default-compression presence
+                                  mask, per-component vec3 sub-masks,
+                                  applyFromUrl entry point + post-debounce
+                                  v2→v3 rewrite, startUrlSync subscription.
+```
+
 Three wire formats coexist. **v3** (current) carries an LEB128 presence
 mask and per-component vec3 sub-masks: `cam`, `tgt`, `up`, and
 `worldOffset` each prefix their payload with a 1-byte sub-mask, and

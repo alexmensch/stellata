@@ -7,6 +7,42 @@ two-finger roll gesture, see `docs/camera-controls.md`; for the warp
 animation see `docs/camera-warp.md`; for OBSERVE camera mode see
 `docs/camera-observe.md`.
 
+## Files in this area
+
+```
+src/client/ui/
+  panel-layout.ts                 Right-side panel + topbar layout
+                                  containers; collapse/expand state.
+  scale-bar.ts                    Bottom-center scale bar (pc /
+                                  arc-degree depending on mode).
+  theme-toggle.ts                 Dark / mono palette flip; chart mode
+                                  flips through this.
+  unit-toggle.ts                  pc / AU / km radius readouts.
+  distance-util.ts                Shared format helpers (pc → ly, AU,
+                                  km, units).
+  distance-gated-label.ts         Shared distance-gated SVG label engine
+                                  (used by Local Group dwarfs + planet
+                                  labels + future POIs).
+  keyboard-shortcuts.ts (+ pure)  Single capture-phase keydown dispatch;
+                                  thin wrappers around public APIs so
+                                  behaviour changes propagate.
+  dom-util.ts (+ test)            qs/qsa/cls helpers.
+
+src/client/typeahead/
+  typeahead.ts                    Star + constellation picker;
+                                  capture-phase dismiss handler.
+  typeahead-util.ts (+ test)      Pure ranking / scoring helpers.
+  constellation-typeahead.ts      Constellation-name picker
+                                  (highlights asterism).
+  search.ts (+ test)              fuse.js-backed star search.
+
+src/client/modals/
+  info-modal.ts                   Generic modal-dismissal helper.
+  brand-modal.ts                  About / Credits tabbed modal + share.
+  help-modal.ts                   `?` help overlay.
+  modal-dismiss.ts                ESC / backdrop / close-button binding.
+```
+
 ## Brand box, About/Credits modal, and Share
 
 `.ui-top-left` is a fixed top-left container holding the "Stellata"

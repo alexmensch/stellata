@@ -6,6 +6,36 @@ this before changing focus/vector behavior, state mutation paths, or
 anything that reads star positions. For the `?v=` URL wire format see
 `docs/url-state.md`.
 
+## Files in this area
+
+The integration shell + cross-cutting plumbing. Per-subsystem folders
+(`solar-system/`, `local-group/`, `milkyway/`, `galactic/`,
+`molecular-clouds/`, `chart-mode/`, `hover/`, `camera/`, `overlays/`,
+`ui/`, `typeahead/`, `modals/`, `debug/`, `loaders/`) are each
+rostered in their matching `docs/<area>.md`. The star renderer
+(`star-pipeline.ts`, shaders) is in `docs/rendering.md`.
+
+```
+src/client/
+  main.ts                         Bootstrap.
+  stellata.ts                     Three.js scene + state machine + event
+                                  bus. Composes subsystem controllers
+                                  (Picker / AimController / WarpController
+                                  / ObserveTransition / FocusController)
+                                  and owns the click-state machine,
+                                  floating-origin recentre, and
+                                  per-frame animate() loop.
+  index.html, styles.css,
+  globals.d.ts
+  stellata-events.test.ts         Integration-shell event-emission test.
+  util/
+    event-bus.ts (+ test)         The `Stellata.on(name, fn)` bus
+                                  described in § Event bus.
+    (url-state.ts is rostered in docs/url-state.md.)
+
+src/worker.ts                     Documented in docs/deployment.md.
+```
+
 ## Event bus on `Stellata`
 
 Subscribers register via `stellata.on(name, fn)` and receive a typed

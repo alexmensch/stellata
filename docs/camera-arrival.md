@@ -6,6 +6,19 @@ cloud, planet, or any future click-focusable host. Companion to
 (warp animation phases), and `docs/camera-observe.md` (OBSERVE mode).
 Defines the math the `camera-motion.ts` helper applies.
 
+## Files in this area
+
+```
+src/client/camera/
+  camera-motion.ts                tickArrival helper — owns both the
+                                  time and the distance profile for
+                                  focus-park, warp Fly, and unfocus.
+  arrival-curves.ts (+ test)      Pure deceleration shape (log-distance
+                                  smoothstep) used by camera-motion.
+                                  Excerpts of the math worked here so
+                                  the test can pin the curve.
+```
+
 ## The angular-arrival problem
 
 A star's angular subtense scales as `θ = 2·atan(R/d)`, which for

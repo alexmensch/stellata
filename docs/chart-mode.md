@@ -8,6 +8,27 @@ on observe→navigate. URL state persists `chart=1` only when both flags
 are set (FLAG_CHART = 1 << 6 in the flags byte; see
 `docs/url-state.md`).
 
+## Files in this area
+
+```
+src/client/chart-mode/
+  chart-mode.ts                   Orchestrator. Toggles body.chart class,
+                                  mono theme, cloud + Milky Way isobar
+                                  handoffs, chart-labels engine, and
+                                  the constellation overlay's
+                                  draw-all-asterisms branch.
+  chart-labels.ts                 Per-frame label engine: proper names,
+                                  Bayer Greek glyphs, constellation
+                                  Latin labels, cloud labels (no-op
+                                  while clouds are shelved). Dirty-tracked
+                                  SVG writes + centroid cache + sorted
+                                  apparent-size top-N — see
+                                  docs/performance.md § Chart-mode
+                                  optimisations.
+  chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
+                                  pixel-size mapping in chart mode.
+```
+
 `chart-mode.ts` toggles five things on entry:
 
 1. `body.chart` class for CSS palette swaps (paper background, ink
