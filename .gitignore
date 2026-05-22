@@ -18,6 +18,10 @@ public/local-group.json
 # scripts/dust/build-dust.py copies chunks here so Vite's publicDir serves them.
 public/dust/
 
+# Manual-run validation report emitted by `npm run validate:simbad`.
+# Local-only — re-run when investigating drift.
+docs/validation-residuals.md
+
 # Raw-resample cache for build-dust.py. ~512 MiB float32 grid; lets us
 # re-encode without re-running the 10-minute query phase. Local-only.
 data/dust/.voxels.npy

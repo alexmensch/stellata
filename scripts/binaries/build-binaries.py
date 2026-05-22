@@ -92,8 +92,10 @@ from stage6_multiples import (  # noqa: E402, F401
     compute_system_anchors, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401
-    UPDATE_COUNTS_ENV_VAR,
-    assert_or_update_counts, build_binaries_counts, compare_build_counts,
+    DEFAULT_RATE_TOLERANCE, UPDATE_COUNTS_ENV_VAR,
+    assert_or_update_counts, assert_or_update_rates,
+    build_binaries_counts, build_binaries_rates, compare_build_counts,
+    compare_build_rates,
 )
 
 SRC_WDS_SUMM = DATA / "wds" / "wds_summ.txt"
@@ -118,6 +120,7 @@ OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
 # ``scripts/catalog/build-catalog.ts``'s ``assertOrUpdateBuildCounts``
 # flow — refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
 EXPECTED_COUNTS = SCRIPT.parent / "build-binaries-expected.json"
+EXPECTED_RATES = SCRIPT.parent / "build-binaries-rates-expected.json"
 
 # Expected fraction of AT-HYG rows that carry a Gaia DR3 source_id. AT-HYG
 # documentation reports ~98% coverage (the remainder are bright stars Gaia
@@ -343,9 +346,11 @@ def run(force: bool) -> int:
         orbits=orbits, classifications=classifications, multiples_rows=rows,
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
-    if not counts_match:
+    rates = build_binaries_rates(counts)
+    rates_match = assert_or_update_rates(rates, EXPECTED_RATES)
+    if not counts_match or not rates_match:
         log(
-            f"build-binaries count assertion failed. If the change is "
+            f"build-binaries assertion failed. If the change is "
             f"intentional, refresh with: "
             f"{UPDATE_COUNTS_ENV_VAR}=1 npm run build:binaries"
         )

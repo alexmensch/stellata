@@ -3702,5 +3702,126 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
         self.assertEqual(written, {"x": 2})
 
 
+class BuildBinariesRatesTests(unittest.TestCase):
+    def _baseline_counts(self) -> dict[str, int]:
+        return {
+            "components_total": 10000,
+            "decomposing_pairs": 5000,
+            "resolution_orb6_hip": 100,
+            "resolution_athyg_gaia_native": 1000,
+            "resolution_simbad_xid": 3400,
+            "resolution_ccdm_hip": 500,
+            "resolution_position_pm": 0,
+            "resolution_position_nopm": 0,
+            "resolution_unresolved": 5000,
+            "astrometry_gaia_nss_systemic": 100,
+            "astrometry_hip2_long_baseline": 200,
+            "astrometry_gaia_5p": 2000,
+            "astrometry_unresolved": 7700,
+            "orbit_gaia_nss": 150,
+            "orbit_orb6": 100,
+            "orbit_orb6_spectroscopic": 50,
+            "orbit_none": 4700,
+            "optical_wds_notes_rejected": 500,
+            "optical_gaia_rejected": 100,
+            "optical_asymm_rejected": 50,
+            "optical_mag_heuristic_rejected": 850,
+        }
+
+    def test_gaia_resolve_rate_is_source_id_anchored_fraction(self) -> None:
+        rates = bb.build_binaries_rates(self._baseline_counts())
+        # (100 + 1000 + 3400) / 10000 = 0.45 — ccdm_hip excluded.
+        self.assertAlmostEqual(rates["gaia_resolve_rate"], 0.45)
+
+    def test_optical_rejected_rate_sums_cascade_rejections(self) -> None:
+        rates = bb.build_binaries_rates(self._baseline_counts())
+        # (500 + 100 + 50 + 850) / 5000 = 0.30
+        self.assertAlmostEqual(rates["optical_rejected_rate"], 0.30)
+
+    def test_nss_orbit_rate_uses_only_resolved_orbit_population(self) -> None:
+        rates = bb.build_binaries_rates(self._baseline_counts())
+        # 150 / (150 + 100 + 50) = 0.5
+        self.assertAlmostEqual(rates["nss_orbit_rate"], 0.5)
+
+    def test_hip2_fallback_rate_is_per_component_fraction(self) -> None:
+        rates = bb.build_binaries_rates(self._baseline_counts())
+        # 200 / 10000 = 0.02
+        self.assertAlmostEqual(rates["hip2_fallback_rate"], 0.02)
+
+    def test_zero_denominator_returns_zero_rate(self) -> None:
+        rates = bb.build_binaries_rates({
+            "components_total": 0,
+            "decomposing_pairs": 0,
+        })
+        for key, value in rates.items():
+            self.assertEqual(value, 0.0, msg=key)
+
+
+class CompareBuildRatesTests(unittest.TestCase):
+    def test_match_when_within_tolerance(self) -> None:
+        expected = {"r": {"value": 0.50, "tolerance": 0.20}}
+        diff = bb.compare_build_rates(expected, {"r": 0.55})
+        self.assertEqual(diff[0].status, "match")
+
+    def test_drift_when_outside_tolerance(self) -> None:
+        expected = {"r": {"value": 0.50, "tolerance": 0.20}}
+        diff = bb.compare_build_rates(expected, {"r": 0.65})
+        self.assertEqual(diff[0].status, "drift")
+
+    def test_missing_keys_classified(self) -> None:
+        expected = {"r1": {"value": 0.5, "tolerance": 0.2}}
+        actual = {"r2": 0.3}
+        diff = bb.compare_build_rates(expected, actual)
+        statuses = {d.key: d.status for d in diff}
+        self.assertEqual(statuses, {"r1": "missing_actual", "r2": "missing_expected"})
+
+    def test_negative_or_zero_expected_does_not_divide_by_zero(self) -> None:
+        expected = {"r": {"value": 0.0, "tolerance": 0.20}}
+        diff = bb.compare_build_rates(expected, {"r": 0.0})
+        self.assertEqual(diff[0].status, "match")
+        # Tiny actual against zero expected: ratio uses 1e-9 floor, so
+        # any non-zero actual exceeds tolerance.
+        diff2 = bb.compare_build_rates(expected, {"r": 0.0001})
+        self.assertEqual(diff2[0].status, "drift")
+
+
+class AssertOrUpdateRatesTests(unittest.TestCase):
+    def test_writes_initial_snapshot_with_default_tolerance(self) -> None:
+        import json as _json
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "rates.json"
+            ok = bb.assert_or_update_rates({"r": 0.42}, p)
+            self.assertTrue(ok)
+            written = _json.loads(p.read_text())
+        self.assertEqual(written["r"]["value"], 0.42)
+        self.assertEqual(written["r"]["tolerance"], bb.DEFAULT_RATE_TOLERANCE)
+
+    def test_preserves_hand_edited_tolerance_on_refresh(self) -> None:
+        import json as _json
+        import os as _os
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "rates.json"
+            p.write_text(_json.dumps({"r": {"value": 0.30, "tolerance": 0.05}}))
+            try:
+                _os.environ[bb.UPDATE_COUNTS_ENV_VAR] = "1"
+                ok = bb.assert_or_update_rates({"r": 0.42}, p)
+            finally:
+                _os.environ.pop(bb.UPDATE_COUNTS_ENV_VAR, None)
+            self.assertTrue(ok)
+            written = _json.loads(p.read_text())
+        self.assertEqual(written["r"]["value"], 0.42)
+        # Hand-edited tolerance must survive the refresh.
+        self.assertEqual(written["r"]["tolerance"], 0.05)
+
+    def test_returns_false_on_drift_without_rewriting_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "rates.json"
+            body = '{"r": {"value": 0.50, "tolerance": 0.10}}'
+            p.write_text(body)
+            ok = bb.assert_or_update_rates({"r": 0.80}, p)
+            self.assertFalse(ok)
+            self.assertEqual(p.read_text(), body)
+
+
 if __name__ == "__main__":
     unittest.main()

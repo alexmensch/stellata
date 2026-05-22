@@ -142,16 +142,37 @@ export function buildRegressionReport(
   return { selfConsistency, simbad };
 }
 
-/** Parse the SIMBAD sample TSV into a join-key Map. Each row may
- *  contribute up to two entries (gaia:N and hip:N) when both identifiers
- *  are present, so star-side lookup can succeed via either key. Rows
- *  with no usable distance are skipped. */
-export function parseSimbadSampleTsv(
-  text: string,
-): Map<string, SimbadDistanceEntry> {
-  const out = new Map<string, SimbadDistanceEntry>();
+/** Full-row view of the SIMBAD sample TSV — every field downstream
+ *  consumers might want, with no joining or filtering applied. Distance-
+ *  only consumers project to `SimbadDistanceEntry` via `parseSimbadSampleTsv`;
+ *  the validate-simbad-sample script wants the wider surface (PM, absmag,
+ *  parallax errors) for residual histograms. */
+export interface SimbadSampleRow {
+  simbadOid: number;
+  simbadMainId: string;
+  hip: number | null;
+  gaiaSourceId: string | null;
+  plxValue: number | null;
+  plxErr: number | null;
+  pmra: number | null;
+  pmdec: number | null;
+  vMag: number | null;
+  distancePc: number | null;
+  absmag: number | null;
+}
+
+function parseNumOrNull(raw: string | undefined): number | null {
+  if (raw === undefined || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Sole TSV-parsing surface — single source of truth for column names,
+ *  numeric coercion, and missing-value handling. Both `parseSimbadSampleTsv`
+ *  (distance-regression-check) and `validate-simbad-sample.ts` build on it. */
+export function parseSimbadSampleRows(text: string): SimbadSampleRow[] {
   const lines = text.split('\n');
-  if (lines.length < 2) return out;
+  if (lines.length < 2) return [];
   const header = lines[0].split('\t');
   const col = (name: string): number => {
     const idx = header.indexOf(name);
@@ -164,24 +185,54 @@ export function parseSimbadSampleTsv(
   const cMainId = col('simbad_main_id');
   const cHip = col('hip');
   const cGaia = col('gaia_source_id');
+  const cPlxValue = col('plx_value');
+  const cPlxErr = col('plx_err');
+  const cPmra = col('pmra');
+  const cPmdec = col('pmdec');
+  const cVmag = col('v_mag');
   const cDist = col('distance_pc');
+  const cAbsmag = col('absmag');
+  const rows: SimbadSampleRow[] = [];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
     const cols = line.split('\t');
-    const distStr = cols[cDist];
-    if (!distStr) continue;
-    const distancePc = Number(distStr);
-    if (!Number.isFinite(distancePc) || distancePc <= 0) continue;
-    const entry: SimbadDistanceEntry = {
+    const hipRaw = cols[cHip];
+    const gaiaRaw = cols[cGaia];
+    rows.push({
       simbadOid: Number(cols[cOid]),
       simbadMainId: cols[cMainId] ?? '',
-      distancePc,
+      hip: hipRaw ? Number(hipRaw) : null,
+      gaiaSourceId: gaiaRaw || null,
+      plxValue: parseNumOrNull(cols[cPlxValue]),
+      plxErr: parseNumOrNull(cols[cPlxErr]),
+      pmra: parseNumOrNull(cols[cPmra]),
+      pmdec: parseNumOrNull(cols[cPmdec]),
+      vMag: parseNumOrNull(cols[cVmag]),
+      distancePc: parseNumOrNull(cols[cDist]),
+      absmag: parseNumOrNull(cols[cAbsmag]),
+    });
+  }
+  return rows;
+}
+
+/** Parse the SIMBAD sample TSV into a join-key Map. Each row may
+ *  contribute up to two entries (gaia:N and hip:N) when both identifiers
+ *  are present, so star-side lookup can succeed via either key. Rows
+ *  with no usable distance are skipped. */
+export function parseSimbadSampleTsv(
+  text: string,
+): Map<string, SimbadDistanceEntry> {
+  const out = new Map<string, SimbadDistanceEntry>();
+  for (const row of parseSimbadSampleRows(text)) {
+    if (row.distancePc === null || row.distancePc <= 0) continue;
+    const entry: SimbadDistanceEntry = {
+      simbadOid: row.simbadOid,
+      simbadMainId: row.simbadMainId,
+      distancePc: row.distancePc,
     };
-    const gaia = cols[cGaia];
-    if (gaia) out.set(`gaia:${gaia}`, entry);
-    const hip = cols[cHip];
-    if (hip) out.set(`hip:${hip}`, entry);
+    if (row.gaiaSourceId) out.set(`gaia:${row.gaiaSourceId}`, entry);
+    if (row.hip !== null) out.set(`hip:${row.hip}`, entry);
   }
   return out;
 }

@@ -18,6 +18,7 @@
     "refresh:gaia-astrometry": "python3 scripts/refresh/refresh-gaia-astrometry.py",
     "refresh:hip2": "python3 scripts/refresh/refresh-hipparcos2.py",
     "refresh:simbad": "python3 scripts/refresh/refresh-simbad-sample.py",
+    "validate:simbad": "tsx scripts/catalog/validate-simbad-sample.ts",
     "build:local-group": "tsx scripts/local-group/build-local-group.ts",
     "build:dust-sync": "tsx scripts/dust/sync-dust.ts",
     "build:client": "vite build",
