@@ -13,9 +13,8 @@ overrides.tsv       hand-curated structural detail for LMC, SMC,
                     LVDB's dwarf_all table — they're major spirals).
 ```
 
-Refresh of `lvdb-snapshot.csv` is a manual step — per
-`data/README.md` § Frozen external data the build never reaches the
-network:
+Refresh of `lvdb-snapshot.csv` is a manual step — the build never
+reaches the network (frozen-data policy in `data/README.md`):
 
 ```
 curl -sSL \
@@ -35,7 +34,7 @@ the major spirals).
 | ------------------- | ----- |
 | `name`              | Matches LVDB's `name` column for merge, **or** names a standalone object not in LVDB. |
 | `a_pc / b_pc / c_pc`| Local-frame semi-axes in parsecs. |
-| `orient`            | Orientation spec — see `scripts/local-group/README.md` § Orientation specs for `pa`, `disc`, `los` semantics. |
+| `orient`            | Orientation spec: `pa:X` (sky-plane PA), `disc:i=X,pa=Y` (Magellanic-style inclined disc), `los` (line-of-sight elongated). |
 | `ref_doi`           | Primary structural reference. |
 | `ra_deg`            | *Optional standalone position.* Populated for objects not in LVDB; leave empty for LVDB-merge rows. |
 | `dec_deg`           | *Optional standalone position.* Same — all three must be set together or all three empty. |

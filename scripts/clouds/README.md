@@ -2,10 +2,7 @@
 
 `build-clouds.py` — Zucker 2020 Table A1 + Zucker 2021 Table 1 →
 `public/clouds.json`. Z2021 entries take precedence over Z2020 for the
-clouds both cover.
-
-Reference data: `data/molecular-clouds/README.md`. Runtime renderer:
-`src/client/molecular-clouds/README.md` (currently shelved).
+clouds both cover. Renderer is currently shelved at the runtime.
 
 ## Merge logic
 

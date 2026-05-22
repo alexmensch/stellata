@@ -21,8 +21,6 @@ themselves.
   cross-cutting UI.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.
 
-For the URL wire format see `src/client/util/url-state/README.md`.
-
 ## Event bus on `Stellata`
 
 Subscribers register via `stellata.on(name, fn)` and receive a typed

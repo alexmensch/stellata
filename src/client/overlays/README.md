@@ -2,12 +2,9 @@
 
 The SVG layer above the canvas. Constellation stick-figures, the disc
 mask that lets WebGL stars show through SVG paths, the focus ring,
-the distance vector with near-plane clipping, and the shared arrow
-helper that the Sol/GC arrows reuse.
-
-The Sol/GC arrows themselves are documented in
-`src/client/galactic/README.md` because they're tightly coupled to the
-galactic-overlay feature group.
+the distance vector with near-plane clipping, the HUD ring + Sol/GC
+arrows, the per-frame world-to-screen projector, and the shared arrow
+geometry helper.
 
 ## Files in this area
 
@@ -45,13 +42,12 @@ the stick-figure overlay and the chart-mode Latin-name labels (default
 on, panel toggle at the top of Overlays). When false the overlay clears
 itself and skips the per-frame projection pass entirely; the picker UI
 in the panel is also disabled while the flag is off so users can't
-mutate the unseen `highlightCon`. See `src/client/ui/README.md`
-§Constellation typeahead.
+mutate the unseen `highlightCon`.
 
-When a constellation is highlighted, `constellation-overlay.ts` draws the
-classical asterism lines (sourced from Stellarium — see
-`scripts/README.md` §Stick figures from Stellarium) as
-an SVG `<path id="con-figure">`. Every segment is emitted as a separate
+When a constellation is highlighted, `constellation-overlay.ts` draws
+the classical asterism lines (sourced from Stellarium at build time
+and embedded in `public/constellations.json`) as an SVG
+`<path id="con-figure">`. Every segment is emitted as a separate
 `M..L..` subpath with both endpoints pulled back by `STAR_GAP_PX`, and
 the path uses `stroke-linecap: round`. Net effect: each stick-figure
 line is a rounded-end segment with a circular gap around every
@@ -133,9 +129,7 @@ The Sol/GC arrows + the HUD ring do **not** hide — they're the HUD,
 gated by `filter.showHud` independently of camera mode. In OBSERVE the
 arrows attach to the HUD ring rim and swivel around it; through the
 transition the focus ring shrinks while the HUD ring grows so the
-arrows stay tangent to whichever circle is dominant. See
-`src/client/galactic/README.md` § HUD ring / Shaft start radius for the
-projection math.
+arrows stay tangent to whichever circle is dominant.
 
 ## Chart-mode labels and glyphs
 
@@ -156,15 +150,14 @@ mode is active:
 Both layers pool their elements by stable key per frame so adding /
 removing entries is free. The same `renderableAppMag` filter that
 gates the GPU disc also gates the glyphs — a hidden inner disc takes
-its ring or wings offscreen with it. See `src/client/chart-mode/README.md` for
-the magnitude-driven sizing formula and flux-weighted constellation
-centroid math.
+its ring or wings offscreen with it. The magnitude-driven sizing
+formula + flux-weighted constellation centroid math live in chart
+mode's renderer.
 
 ## Points of interest (OBSERVE-only)
 
 `poi-overlay.ts` renders user-pinned stars (single-click on a star in
-OBSERVE — see `src/client/camera/observe/README.md` for the click dispatcher). Three
-SVG groups under `#overlay`:
+OBSERVE mode). Three SVG groups under `#overlay`:
 
 - `<g id="poi-arrows">` — pooled `<path>` + `<text>` per POI for
   off-screen arrows on the HUD ring rim. Arrow geometry comes from
@@ -202,8 +195,7 @@ contrast against the beige paper background. See `.poi-arrow`,
 `.poi-label`, `.poi-arrow-label`, and `.poi-ring` in `styles.css`.
 
 POIs survive page reloads via the `?v=` blob (HIP-only encoding,
-observe-only emission — see `scripts/README.md`-adjacent notes
-in `url-state.ts`). Cleared automatically on every observe→navigate
+observe-only emission). Cleared automatically on every observe→navigate
 transition; no UI element exposes "clear all" because Esc already
 exits observe and clears them as a side-effect.
 

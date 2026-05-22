@@ -1,9 +1,10 @@
 # Event bus
 
 `EventBus` — typed publish/subscribe used by `stellata.ts` to fan out
-state changes to overlays, controllers, and the URL-sync module. See
-`src/client/README.md` § Event bus on `Stellata` for the
-canonical event list + payload contract.
+state changes to overlays, controllers, and the URL-sync module.
+The canonical event list + payload map (`StellataEventMap`) is
+declared in `stellata.ts` since that's where the events emit; the
+class here is the generic transport.
 
 The contract is intentionally minimal:
 

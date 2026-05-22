@@ -81,7 +81,7 @@ bit order, so mode isn't known until the field loop completes).
   otherwise flood history with intermediate poses.
 
 Cloud-related state (cloud focus, cloud measurement vector, MC overlay
-toggle) lives in the same `?v=` blob — see `src/client/molecular-clouds/README.md`.
+toggle) lives in the same `?v=` blob.
 
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
 `focusedStar === null` AND the offset isn't ≈Sol — see

@@ -7,5 +7,6 @@ on dev/build.
 
 Python deps in `requirements-dust.txt`.
 
-Layer is shelved at the renderer (strength = 0 → mesh hidden); see
-`src/client/dust/README.md`.
+Particle-layer rendering is currently shelved (strength = 0 → mesh
+hidden); voxel extinction (read per-star in the star pipeline) stays
+live.

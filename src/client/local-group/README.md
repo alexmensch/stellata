@@ -1,18 +1,12 @@
 # Local Group wireframe layer
 
-A second always-on reference overlay alongside the Milky Way disc
-(`src/client/galactic/README.md`). Renders LineLoop outlines for the
+Always-on reference overlay rendering LineLoop outlines for the
 Magellanic Clouds, Sagittarius dSph, classical dSphs and ultra-faints
 within 250 kpc, plus M31, M33, the M31 satellite subgroup, and the
 outer-band dwarfs (NGC 6822, IC 10, IC 1613, Leo A, WLM, Sextans A/B,
 …) out to the canonical 2 Mpc Local Group boundary — plus the Milky
-Way label (the disc itself stays in `galactic-disc.ts`; only the SVG
+Way label (the disc itself lives in `../galactic/`; only the SVG
 label lives here).
-
-Build pipeline + reference data live with their respective folders:
-
-- Build script: `scripts/local-group/README.md`.
-- Reference data + override schema: `data/local-group/README.md`.
 
 ## Visibility model — no toggle, no URL flag
 
@@ -117,8 +111,7 @@ SVG slots live in `index.html` next to the heliopause label:
 
 Per-object `<text id="lg-<slug>-label">` children are minted at runtime
 by `createLocalGroupLabels` from the loaded catalog. Display names are
-rewritten through `DISPLAY_NAME_OVERRIDES` at build time (see
-`scripts/local-group/README.md` § Display-name rules) so LVDB's
+rewritten through `DISPLAY_NAME_OVERRIDES` at build time so LVDB's
 `LMC` / `SMC` shortform expands to `Large Magellanic Cloud` /
 `Small Magellanic Cloud` in the catalog JSON.
 

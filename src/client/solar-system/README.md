@@ -44,13 +44,13 @@ src/client/solar-system/
                                   asymmetric shell (Sol-only).
   first-load.ts                   Canonical no-URL first-load view: 5 AU
                                   galactic-centre-aimed park.
-
-src/client/shaders/
   planet.vert.glsl,
   planet.frag.glsl                Three-pass instanced planet bodies.
-  perceptual-disc.glsl            Shared point-of-light disc/glow chunk
-                                  (stars + planets) — see src/client/star-pipeline/README.md.
-  (heliopause shaders live alongside heliopause.ts.)
+                                  Imports `perceptual-disc.glsl` from
+                                  `../star-pipeline/` (shared disc/glow
+                                  chunk with stars).
+  heliopause.vert.glsl,
+  heliopause.frag.glsl            Asymmetric heliopause shell shaders.
 ```
 
 ## Data model
@@ -168,8 +168,7 @@ back across the same region so disc / glow at 3 / 4 still depth-test
 correctly against other planets and stars. Background layers (MW /
 clouds / stars) paint colour into the framebuffer before the corrupt
 pass overwrites depth, so they still peek through the perceptual
-halo. See `src/client/star-pipeline/README.md §RenderOrder ladder` for the full
-cross-layer hierarchy. Surface detail (textures, atmospheric haloes,
+halo. Surface detail (textures, atmospheric haloes,
 banding, axial-tilt cue) stays **deliberately deferred** to the
 planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles
 — Defer detail until zoom affordance.

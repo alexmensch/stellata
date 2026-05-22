@@ -533,8 +533,7 @@ legitimate", "ρ Cas yellow hypergiant — SIMBAD's 1/π is the noisy
 Hipparcos value") that survive `UPDATE_DISTANCE_OUTLIERS=1` refreshes
 via `mergeReasonsFromSnapshot`. A new outlier fails the build until
 the snapshot is refreshed and a rationale is filled in; a removed or
-changed outlier likewise. See `scripts/binaries/README.md` § Multi-layer
-distance refinement for the developer recipe.
+changed outlier likewise.
 
 ## Gaia DR3 Apsis surfacing
 
@@ -556,7 +555,7 @@ The seven floats are surfaced directly to the runtime via
 `mhGspspec`). Consumers test absence with `Number.isNaN(arr[i])`.
 Today's downstream consumers:
 
-- **Per-star intrinsic Teff routing** (`src/client/shaders/star-color-routing-pure.ts`)
+- **Per-star intrinsic Teff routing** (`src/client/star-pipeline/star-color-routing-pure.ts`)
   — six-tier `pickTeffSource` ramps gspphot first, gspspec second,
   Ballesteros(B-V) third, spectral-class T_TABLE fourth, WD Sion Teff
   fifth, solar fallback last.

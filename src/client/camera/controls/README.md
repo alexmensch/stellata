@@ -2,56 +2,27 @@
 
 Camera setup that's mode-agnostic: near-plane vs minDistance geometry,
 TrackballControls tuning, and the two-finger roll gesture that works
-in both navigate and observe modes. For warp animation see
-`src/client/camera/warp/README.md`; for OBSERVE mode see `src/client/camera/observe/README.md`.
+in both navigate and observe modes.
 
-## Files in this area
+## Files
 
-`src/client/camera/` houses the camera controllers + their shared
-plumbing. Per-controller docs split the folder by area:
-
-- Steady-state geometry + cross-mode plumbing → this doc.
-- Warp + focus FSMs → `src/client/camera/warp/README.md`.
-- Arrival math → `src/client/camera/arrival/README.md`.
-- OBSERVE mode → `src/client/camera/observe/README.md`.
-
-```
-src/client/camera/
-  controls.ts                     TrackballControls subclass; manual-zoom
-                                  floor + auto-park orbit distance hooks.
-  mode-toggle.ts                  Navigate / observe pill in the topbar.
-  picker.ts                       Pure target resolver; click + hover pick
-                                  paths for stars / clouds / planets /
-                                  Local Group / heliopause.
-  aim-controller.ts               Mode-aware aim slerps (navigate
-                                  orbit-pivot + observe quaternion-in-place),
-                                  shared `aimDurationMs` ramp.
-  camera-up-align.ts              Re-anchors `camera.up` before any lookAt
-                                  on the observe→navigate seam.
-  up-align-pure.ts                alignCameraUpToQuaternion helper.
-                                  Paired with camera-up-align.test.ts
-                                  algebra fixture.
-  star-geometry.ts                Pure star angular-geometry formulae
-                                  (θ = 2·atan(R/d), parkDistForStar
-                                  derivations).
-  star-physics.ts                 Per-star camera / screen geometry:
-                                  fovMinorRad, peakAmplitudeFactor,
-                                  binaryCompanionFloorPc,
-                                  minOrbitDistForStar, parkDistForStar,
-                                  renderedSizePx, renderedDiscPxAtPeak,
-                                  getChartDiscParams + canonical
-                                  ZOOM_FLOOR_FRACTION /
-                                  VAR_TROUGH_FLOOR_FRACTION /
-                                  BINARY_VIEWPORT_HALF_ANGLE_RAD /
-                                  BINARY_MIN_DIST_FACTOR. Sits between
-                                  star-geometry's pure formulae and the
-                                  per-frame uniform reads in stellata.
-  timing.ts                       Canonical camera-wide constants:
-                                  CAMERA_LERP_MS / WARP_*_MS / AIM_*_MS /
-                                  OBSERVE_TRANSITION_MS / DCAM_LOG_FLOOR_PC
-                                  / WARP_BASE_DIR.
-  (+ tests for each pure module.)
-```
+- `controls.ts` — TrackballControls subclass; manual-zoom floor +
+  auto-park orbit distance hooks.
+- `mode-toggle.ts` — navigate / observe pill in the topbar.
+- `picker.ts` — pure target resolver; click + hover pick paths for
+  stars / clouds / planets / Local Group / heliopause.
+- `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
+  + observe quaternion-in-place), shared `aimDurationMs` ramp.
+- `up-align-pure.ts` — `alignCameraUpToQuaternion` helper.
+  `camera-up-align.test.ts` is the algebra fixture.
+- `star-geometry.ts` — pure star angular-geometry formulae
+  (θ = 2·atan(R/d), `parkDistForStar` derivations).
+- `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
+  `peakAmplitudeFactor`, `binaryCompanionFloorPc`,
+  `minOrbitDistForStar`, `parkDistForStar`, `renderedSizePx`,
+  `renderedDiscPxAtPeak`, `getChartDiscParams` + canonical
+  `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`,
+  `BINARY_VIEWPORT_HALF_ANGLE_RAD`, `BINARY_MIN_DIST_FACTOR`.
 
 ## Camera near plane vs controls minDistance
 
@@ -61,8 +32,8 @@ the float32-cancellation threshold so an unfocused orbit can't drift
 into the regime where projection precision breaks down — to get any
 closer than that, the user must focus a star, which then engages the
 per-star `minOrbitDistForStar` floor (sub-pc for Sol-class) plus the
-`uPinFocusToCenter` shader pin (see `src/client/README.md`
-§ Pin-to-center) which sidesteps the float32 cancellation entirely. The near plane must stay
+`uPinFocusToCenter` shader pin which sidesteps the float32
+cancellation entirely. The near plane must stay
 **strictly less** than the closest orbit distance, otherwise a centered
 star lands on the clip plane at max zoom and gets culled. The log depth
 buffer (`logarithmicDepthBuffer: true` on the WebGL renderer) gives this
@@ -127,7 +98,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 ## Focus-park lerp (r9q.2)
 
 Click-focus on a star (or `flyToCloud` for clouds) no longer teleports.
-The lerp lives in `src/client/focus-transition.ts` as the generic
+The lerp lives in `../warp/focus-transition.ts` as the generic
 `parkDistance(...)` + `newFocusLerpFrom(...)` + `tickFocusLerp(...)`
 trio — stars consume it now; clouds compose the same primitives;
 future focusable types (nebulae, etc.) plug in the same way.

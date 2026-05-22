@@ -2,12 +2,7 @@
 
 The right-side settings panel, layout containers, keyboard shortcuts,
 magnitude / FOV / exaggeration / theme controls, scale bar, and CSS
-gotchas. Sister folders carry the pickers
-(`src/client/typeahead/README.md`) and modal overlays
-(`src/client/modals/README.md`). For TrackballControls tuning see
-`src/client/camera/controls/README.md`; for the warp animation see
-`src/client/camera/warp/README.md`; for OBSERVE mode see
-`src/client/camera/observe/README.md`.
+gotchas.
 
 ## Keyboard shortcuts
 
@@ -180,8 +175,7 @@ URL state encodes the preset only when not on the default
 (`naked-eye`); `mag` only when diverged from the active preset's
 value; `smin/smax/span` only when their override flag is true.
 Receiver applies the preset first, then layers the explicit overrides
-on top. See `src/client/util/url-state/README.md` for the binary `?v=`
-format.
+on top.
 
 **Active-preset highlight.** The reverse-sync in `controls.ts` compares
 `f.maxAppMag` against `MAG_PRESETS[*].maxAppMag` (epsilon 0.05) and

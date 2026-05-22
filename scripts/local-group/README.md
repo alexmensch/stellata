@@ -7,9 +7,7 @@ merge, standalone-row builder, display-name + catalog-designation
 rules, distance filter); vitest-pinned in `*.test.ts`.
 
 The TSV parser handles both LVDB-merge and standalone-position
-override rows. Reference data + override schema live in
-`data/local-group/README.md`. The runtime renderer is in
-`src/client/local-group/README.md`.
+override rows.
 
 ## Display-name rules
 

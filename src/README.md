@@ -9,7 +9,7 @@ Cloudflare Worker entry + browser client.
   `stellata.xyz` there is no path prefix to strip. `wrangler.toml`
   (repo root) drives the deploy; CI workflow lives in
   `.github/workflows/` (see its README).
-- `client/` — browser app. See `src/client/README.md`.
+- `client/` — browser app.
 
 ## `@cloudflare/workers-types` leaks globally
 

@@ -15,5 +15,5 @@ reference.
 - `common.py` — shared helpers for both scripts.
 - `*.test.py` — stdlib unittest pins.
 
-See `scripts/README.md` § Multi-layer distance refinement for the
-upstream algorithm.
+The upstream B-J / LMC / MAX_DIST_PC override stack lives in the
+catalog build (`scripts/catalog/`); this validator is the cross-check.

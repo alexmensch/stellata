@@ -9,10 +9,6 @@ NSS detectability regimes, HIP2 long-baseline corrections) is in
 `SCIENCE.md`; this file is the engineering side — layered strategies,
 numeric thresholds, provenance fields.
 
-For the single-star catalog build see `scripts/catalog/README.md`.
-For the Layer 2 refresh protocol that feeds new Gaia / HIP2 / SIMBAD
-side-files into this pipeline see `scripts/refresh/README.md`.
-
 ## When to read this
 
 - You're refreshing external catalogues — Gaia DR4 landed, AT-HYG cut a

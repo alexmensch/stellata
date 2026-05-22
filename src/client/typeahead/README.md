@@ -2,9 +2,8 @@
 
 Star + constellation pickers. Used by the search row (top-right) and
 the Constellation row in the panel; also re-used by the `G` / `C`
-keyboard-shortcut modals via DOM relocation (see
-`src/client/ui/README.md` § Go / Constellation pickers — DOM
-relocation).
+keyboard-shortcut modals via DOM relocation (the same widget
+elements are moved into the modal on open and restored on close).
 
 ## Star search
 

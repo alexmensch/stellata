@@ -1,13 +1,11 @@
 # Galactic reference system
 
-Four layers anchor the local star clump against the Milky Way's geometry:
-the galactic disc outline (always-on midplane ring + bulge wireframe),
-the Local Group wireframe layer (Magellanic Clouds + dwarf satellites
-plus M31 / M33 / the M31 subgroup + outer-band dIrrs out to 2 Mpc —
-`src/client/local-group/README.md`), the toggleable galactic coordinate sphere, and
-the HUD layer (Sol/GC arrows plus the OBSERVE-mode ring). Together they
-give the user "which way is out, how far am I from the centre, and what
-else is nearby at galactic scales" without obscuring the local stars.
+Three layers anchor the local star clump against the Milky Way's
+geometry: the galactic disc outline (always-on midplane ring + bulge
+wireframe), the toggleable galactic coordinate sphere, and the HUD
+layer (Sol/GC arrows plus the OBSERVE-mode ring). Together they give
+the user "which way is out, how far am I from the centre" without
+obscuring the local stars.
 
 ## Files in this area
 
@@ -39,9 +37,8 @@ Local Group wireframes + per-galaxy labels are a separate layer; see
 **Shared module** `galactic-coords.ts` exports `GAL_TO_ICRS` (Matrix4)
 and `GALACTIC_CENTRE_PC` (Vector3 at R₀ = 8.122 kpc), built from the
 J2000 IAU galactic-pole and galactic-centre angles with explicit
-re-orthogonalisation. The Milky Way volumetric layer
-(see `src/client/milkyway/README.md`) reuses these constants directly — keep the
-module minimal and stable.
+re-orthogonalisation. The Milky Way volumetric layer reuses these
+constants directly — keep the module minimal and stable.
 
 **Galactic disc outline** (`galactic-disc.ts`) — *always on in dark mode,
 hidden in chart mode*. A 15 kpc midplane ring, two thickness rings at
@@ -59,21 +56,6 @@ wireframe layer so both reveal in lockstep). In chart mode the layer is
 hidden entirely — a 15 kpc reference ring reads as visual noise on a
 paper-chart aesthetic, and the arrows + sphere already provide
 orientation.
-
-**Local Group wireframes** (`local-group.ts` + `local-group-loader.ts`,
-build pipeline `scripts/local-group/build-local-group.ts`) — LineLoop outlines for
-~120 confirmed-galaxy objects out to the 2 Mpc Local Group boundary:
-LMC (inclined disc), SMC (line-of-sight elongated triaxial), Sagittarius
-dSph, the classical dSphs (Sculptor / Draco / Fornax / Carina / Sextans /
-Leo I/II / Ursa Minor) and ultra-faints at ≤ 250 kpc; M31 (inclined
-disc), M33 (inclined disc), M 32 + NGC 205 + the M31 satellite subgroup,
-IC 10, NGC 6822, Leo A, IC 1613, WLM and the outer-band dIrrs beyond.
-Same fade curve as the disc — invisible during local browsing, present
-once the camera sits more than ~5 kpc from Sol. Labels (MW at the
-galactic centre, per-object for the largest LG members) bind through the
-shared `distance-gated-label.ts` engine; visibility is governed by the
-per-frame apparent-size ranking (top-N + sub-pixel floor + inside-MW
-guard). Full detail in `src/client/local-group/README.md`.
 
 **Galactic coordinate sphere** (`galactic-grid.ts`, toggleable) —
 equator + 16 latitude rings every 10° (range −80° to +80°) + 36
@@ -172,12 +154,11 @@ its target projecting close to the focused star the still-full sibling
 drives the threshold), and the distance-vector chevron computes its own
 alpha against its own drawn shaft length. The distance-vector is
 typically longer than the nominal Sol/GC chevrons — it spans focal star
-→ destination — so it outlasts them by design. The shared smoothstep
-lives in `src/client/arrow-fade.ts` as `focusedArrowFadeAlpha`, called
-from `HudOverlay.update` for Sol/GC and from `distance-vector-overlay`
-for the distance-vector. Each consumer feeds *this frame's* shaft
-length (no one-frame lag — eliminates the toggle-on flash that the
-prior last-frame-drawn-lengths design produced). Coverage is
+→ destination — so it outlasts them by design. Each consumer feeds
+*this frame's* shaft length (no one-frame lag — eliminates the
+toggle-on flash that the prior last-frame-drawn-lengths design
+produced). The shared smoothstep
+lives in `../overlays/arrow-fade.ts`. Coverage is
 `(discRadius − shaftStart) / shaftLength`, where `discRadius` is the
 focal star's *peak-amplitude* disc radius (so a high-amplitude
 variable's pulsation doesn't oscillate the fade). Smoothstep eased over
@@ -286,7 +267,7 @@ The warp suffix follows by full label width (label switched from
 The disc has no toggle by design — it's the orientation primitive the
 catalog itself was missing, and is hidden in chart mode anyway.
 
-**Chart mode** (see `src/client/chart-mode/README.md`):
+**Chart mode**:
 - Disc layer hides entirely (the 15 kpc reference ring reads as
   visual noise on a paper-chart background).
 - Sphere + grid swap stroke colour to dark grey (`#3a3530`), no

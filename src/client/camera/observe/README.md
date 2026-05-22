@@ -3,44 +3,31 @@
 A second camera mode that parks the camera at the focused star and
 swaps `TrackballControls` for a custom look-around controller. Drag
 mechanics, momentum, FOV-on-wheel, aim slerps, POI dispatch, and the
-click handlers (single = pin a POI, double = aim-at). For the warp
-animation that connects observe→observe arrivals see
-`src/client/camera/warp/README.md`; for the steady-state camera geometry see
-`src/client/camera/controls/README.md`.
+click handlers (single = pin a POI, double = aim-at).
 
-## Files in this area
+## Files
 
-```
-src/client/camera/
-  observe-controls.ts             Custom look-around controller: drag
-                                  mechanics, momentum, FOV-on-wheel,
-                                  single/double click handlers (pin POI
-                                  / aim-at).
-  observe-transition.ts           Navigate↔observe FSM:
-                                  ObserveTransitionState + setMode +
-                                  startExit + startUnfocusLerp +
-                                  ObserveFocusOps seam.
-  (+ tests.)
-```
+- `observe-controls.ts` — custom look-around controller: drag
+  mechanics, momentum, FOV-on-wheel, single/double click handlers
+  (pin POI / aim-at).
+- `observe-transition.ts` — Navigate↔observe FSM:
+  `ObserveTransitionState`, `setMode`, `startExit`, `startUnfocusLerp`,
+  and the `ObserveFocusOps` cross-controller seam.
 
 The navigate↔observe mode-switch orchestrator — the
 `ObserveTransitionState` slot, the `enter` / `exit` / `unfocus` kinds,
-and the per-frame lerp — lives in
-`src/client/camera/observe-transition.ts`. The integration shell
-composes the controller alongside Picker / AimController /
-WarpController and delegates the animate-loop tick when
-`observe.isAnyActive()` returns true. Stellata still owns the
-`cameraMode` field (~20 unrelated read sites) and writes it through
-the controller's `setCameraModeValue` dep callback so the controller's
-state machine stays the canonical mode-switcher.
-`alignCameraUpToQuaternion` (re-anchor `camera.up` before any `lookAt`
-on the observe→navigate seam) lifted to
-`src/client/camera/up-align-pure.ts` in the same PR — the controller
-imports it without inheriting from Stellata. Cross-controller coupling
-(focused-star inspection, parkDistForStar lookup, vector-slot clears,
-focus-change side effects) lives behind the `ObserveFocusOps` interface
-that Stellata implements directly today; 9mm.194.8 hands that seam to
-FocusController and the `focus:` dep wire updates in one line.
+and the per-frame lerp — lives in `observe-transition.ts`. The
+integration shell composes the controller and delegates the animate-
+loop tick when `observe.isAnyActive()` returns true. Stellata still
+owns the `cameraMode` field (~20 unrelated read sites) and writes it
+through the controller's `setCameraModeValue` dep callback so the
+controller's state machine stays the canonical mode-switcher.
+`alignCameraUpToQuaternion` (re-anchor `camera.up` before any
+`lookAt` on the observe→navigate seam) lives in
+`../controls/up-align-pure.ts`. Cross-controller coupling
+(focused-star inspection, `parkDistForStar` lookup, vector-slot
+clears, focus-change side effects) lives behind the `ObserveFocusOps`
+interface, implemented by `FocusController` (in `../warp/`).
 
 Public surface:
 - `setMode(mode, opts)` — mode-pill toggle, keyboard O, URL restore.
@@ -159,9 +146,7 @@ falls back to screen centre (the focal-star projection is degenerate
 since camera ≈ focal star) and the shaft start radius equals the HUD
 ring's `ringRadiusPx(fov, w, h)` so the arrows attach to the ring rim
 and swivel around it. The same shaft-start value lerps through the
-navigate↔observe transition so there's no pop on entry/exit. See
-`src/client/galactic/README.md` § HUD ring / Shaft start radius for the
-formula and projection math.
+navigate↔observe transition so there's no pop on entry/exit.
 
 **Aim from observe:** `aimAt(localPoint)` (Sol/GC labels +
 constellation typeahead) has an observe-mode branch that builds a
@@ -181,8 +166,7 @@ star-only by design.
 **Picking a new location** routes through `warpTo(idx)` instead of
 `focusStar(idx)`. The warp animation flies between anchors and the
 post-arrival slerp leaves the camera pointing in the original celestial
-direction from the new vantage — see `src/client/camera/warp/README.md` §Warp
-animation phase 3.
+direction from the new vantage.
 
 **X button (clear focus from observe):** `unfocus()` detects observe +
 focused-star and immediately clears focus *before* starting the
@@ -251,8 +235,7 @@ when the timer elapses.
   `togglePoi()` pins or unpins it. Sol is rejected (the dedicated
   `#sol-arrow` already covers it); stars without HIP are rejected
   (URL state is HIP-only); the cap is 16 (adding past the cap is a
-  no-op). The POI overlay (`src/client/overlays/README.md` § Points of interest)
-  renders the resulting label + arrow.
+  no-op). The POI overlay renders the resulting label + arrow.
 - *Double-click:* unprojects the click into a world-space ray, builds
   a far point along it, and feeds that to `aimAt()` — the existing
   observe-aim path slerps the camera so the clicked direction lands
@@ -328,6 +311,3 @@ remaining inline writer that bypasses startExit — it calls
 focal star is changing and the target needs to wait for the downstream
 `recenterFocusToStar` block.
 
-See `src/client/camera/observe/README.md` for the per-feature notes (drag mechanics,
-HUD locators, click dispatch) and the inherited contract that the
-controller honours.

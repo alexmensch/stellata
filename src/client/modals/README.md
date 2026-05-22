@@ -23,9 +23,8 @@ no last-viewed memory. ESC, the close button, or the backdrop
 dismisses; there's no "don't show again" opt-out because the modal
 is user-initiated.
 
-`share ⧉` copies `window.location.href` (which encodes the full
-view via `url-state.ts` — see
-`src/client/util/url-state/README.md`) to the clipboard and briefly
+`share ⧉` copies `window.location.href` (the full view encoded into
+the URL via `?v=`) to the clipboard and briefly
 flips its trailing glyph to `✓` on success or `⨯` on failure
 (insecure context / no `navigator.clipboard`). The `.share-link`
 class width-locks the slot so the glyph swap never reflows the flex

@@ -230,8 +230,8 @@ re-prosecuted.
 2. Read the section table top-down. The histogram tells you whether
    it's a sustained cost or a periodic spike.
 3. If `gpu.render` dominates, the bottleneck is in shaders /
-   overdraw — see `src/client/star-pipeline/README.md` and the milky-way / dust
-   docs.
+   overdraw — start with whichever render layer (star, milkyway,
+   dust, …) is hot.
 4. If `frame.handlers` dominates and it's not chart mode, suspect a
    per-frame overlay; check the self-gating fast-paths haven't
    regressed.

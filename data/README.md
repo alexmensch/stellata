@@ -108,7 +108,7 @@ only "now" layer in the scene. The two share a frame orientation
 | Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever AT-HYG places the figure stars, so the line endpoints inherit J2000.0 transitively. |
 | Local Group dwarfs | J2000.0 | Pace 2024 LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible. |
 | Edenhofer 2023 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
-| Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date; see `src/client/solar-system/README.md` § Time `t` and the readout. |
+| Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date — no committed positions; the planet renderer evaluates ephemerides per frame. |
 
 ### `pm_*` columns are loaded into nothing
 

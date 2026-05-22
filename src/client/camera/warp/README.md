@@ -3,13 +3,10 @@
 The animated camera flight between the focused star (A) and the
 distance-vector destination (B). State machine, phase math, scale-bar
 behaviour, and the navigate↔observe interactions on launch/arrival.
-For the steady-state camera geometry (minDistance / TrackballControls)
-see `src/client/camera/controls/README.md`; for OBSERVE mode see
-`src/client/camera/observe/README.md`.
 
 The 3-phase FSM, `WarpState`, the `startWarp` / `finishWarp` /
 `updateWarp` / `tryMidFlyRecentre` / `swapObserveAnchor` methods, plus
-the warp-only scratch state all live in `src/client/camera/warp-controller.ts`.
+the warp-only scratch state all live in `warp-controller.ts`.
 The integration shell composes the controller alongside Picker /
 AimController and delegates the animate-loop tick when
 `warp.isActive()` returns true. Cross-controller coupling (focus
@@ -58,8 +55,7 @@ muted ghost pill at top-center (shown only while warping), or `Esc` /
 `Space`. Click-tip-to-travel routes through `focusStar(idx)` for
 consistency with search-select (parks at `parkDistForStar(idx)` — same
 auto-park every landing uses; lerps over `FOCUS_LERP_MS` or stays put
-when already inside park, see `src/client/camera/observe/README.md` § Focus-park
-lerp).
+when already inside park).
 
 Two- or three-phase animation in `WarpController.updateWarp` (called
 per frame via `WarpController.tick(nowMs)`), depending on whether the
@@ -141,8 +137,8 @@ warp re-enters OBSERVE on arrival:
 
    **Chart-mode plateau-trigger.** Chart mode renders stars as
    magnitude-driven discs (`pxSize = mix(maxPx, minPx, chartT)` with
-   `chartT = clamp((appMag − magBright)/(maxAppMag − magBright), 0, 1)`
-   — see `src/client/chart-mode/README.md` §Star disc sizing). Once the camera is
+   `chartT = clamp((appMag − magBright)/(maxAppMag − magBright), 0, 1)`).
+   Once the camera is
    close enough that `appMag ≤ uChartMagBright`, `chartT` floors to 0
    and the disc plateaus at `uChartDiscMaxPx`. Under both the hybrid
    inner regime and the cubic-Hermite fallback, the camera spends much
@@ -299,10 +295,7 @@ Bus events emitted from the controller:
   navigate arrivals).
 - `'focus'` (number | null) — only from `swapObserveAnchor`.
 
-See `src/client/camera/warp/README.md` for the phase math and `src/client/camera/arrival/README.md`
-for the shared Fly arrival profile.
-
-## FocusController (`camera/focus-controller.ts`)
+## FocusController (`focus-controller.ts`)
 
 `FocusController` owns the focus FSM and the focus-park lerp:
 
@@ -517,7 +510,7 @@ focused star is the source, not the destination the camera is
 flying toward.
 
 **Where to look:**
-- `src/client/shaders/star.vert.glsl` — `uPinFocusToCenter` decl + use site.
+- `../../star-pipeline/star.vert.glsl` — `uPinFocusToCenter` decl + use site.
 - `src/client/camera/focus-controller.ts` — `GLOBAL_MIN_DIST_PC = 5e-3`,
   `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body (the
   post-recenter snap to origin in the focused branch; empty unfocus

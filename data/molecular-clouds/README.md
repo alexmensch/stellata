@@ -1,8 +1,8 @@
 # Molecular cloud reference data
 
-Zucker 2020 + Zucker 2021 cloud distance / geometry tables, consumed by
-`scripts/clouds/build-clouds.py` → `public/clouds.json`. Runtime
-renderer (shelved): `src/client/molecular-clouds/README.md`.
+Zucker 2020 + Zucker 2021 cloud distance / geometry tables, consumed
+at build time by `scripts/clouds/build-clouds.py` →
+`public/clouds.json` (renderer currently shelved).
 
 ```
 zucker2020-tablea1.tsv   Zucker 2020 cloud distances (~88 KB,

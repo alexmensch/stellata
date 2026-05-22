@@ -1,23 +1,16 @@
 # Camera arrival profile
 
 How the camera decelerates as it lands on a focused object — star,
-cloud, planet, or any future click-focusable host. Companion to
-`src/client/camera/controls/README.md` (steady-state geometry), `src/client/camera/warp/README.md`
-(warp animation phases), and `src/client/camera/observe/README.md` (OBSERVE mode).
-Defines the math the `camera-motion.ts` helper applies.
+cloud, planet, or any future click-focusable host. Defines the math
+the `camera-motion.ts` helper applies for focus-park lerps, warp Fly
+landings, and navigate-mode unfocus zoom-out.
 
-## Files in this area
+## Files
 
-```
-src/client/camera/
-  camera-motion.ts                tickArrival helper — owns both the
-                                  time and the distance profile for
-                                  focus-park, warp Fly, and unfocus.
-  arrival-curves.ts (+ test)      Pure deceleration shape (log-distance
-                                  smoothstep) used by camera-motion.
-                                  Excerpts of the math worked here so
-                                  the test can pin the curve.
-```
+- `camera-motion.ts` — `tickArrival` helper. Owns both the time and
+  the distance profile applied by every park-arrival caller.
+- `arrival-curves.ts` (+ test) — pure deceleration shape
+  (log-distance smoothstep) consumed by `camera-motion.ts`.
 
 ## The angular-arrival problem
 
@@ -406,8 +399,8 @@ export function shiftArrivalWaypoints(
 present) `camera.quaternion`. Returns `done: true` once
 `nowMs ≥ startMs + durationMs`, mirroring `tickFocusLerp`'s contract.
 
-`parkDistance(...)` stays in `focus-transition.ts` — it computes a
-per-object property and isn't a motion concern. The per-object
-geometry that warp / arrival reads (anchor, local position,
-park radius) flows through the `FocusTarget` contract — see
-`src/client/README.md` § FocusTarget contract.
+`parkDistance(...)` stays in `focus-transition.ts` (under `../warp/`)
+— it computes a per-object property and isn't a motion concern. The
+per-object geometry that warp / arrival reads (anchor, local
+position, park radius) flows through the `FocusTarget` contract
+declared in `../warp/focus-target.ts`.

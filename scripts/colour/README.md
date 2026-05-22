@@ -11,6 +11,5 @@ inverse, CIE chromaticity → sRGB). Re-used by
 `src/client/star-pipeline/star-color-routing-pure.ts` for the runtime
 six-tier routing.
 
-See `src/client/star-pipeline/README.md` for how the LUT is consumed at
-render time (DataTexture sampled per-instance from the star vertex
-shader).
+The LUT is consumed at render time via `DataTexture` sampling in the
+star vertex shader.

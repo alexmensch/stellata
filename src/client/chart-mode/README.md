@@ -5,8 +5,7 @@ Paper-aesthetic alternate render path inspired by Sky Atlas 2000.0
 `setFilter({ chart: true })`. **Observe-only** — the `chart-mode.ts`
 orchestrator listens to the `'cameraMode'` event and auto-clears the flag
 on observe→navigate. URL state persists `chart=1` only when both flags
-are set (FLAG_CHART = 1 << 6 in the flags byte; see
-`src/client/util/url-state/README.md`).
+are set (FLAG_CHART = 1 << 6 in the flags byte).
 
 ## Files in this area
 
@@ -46,10 +45,10 @@ src/client/chart-mode/
 
 Exit reverses each step.
 
-> **Shelved layers.** The molecular cloud layer is shelved (see
-> `src/client/molecular-clouds/README.md`), so its isobar pass is a no-op against an
-> invisible group. The Milky Way isobar is also disabled —
-> `Milkyway.setIsobar(true)` now hard-hides the disc + bulge meshes
+> **Shelved layers.** The molecular cloud layer is shelved, so its
+> isobar pass is a no-op against an invisible group. The Milky Way
+> isobar is also disabled — `Milkyway.setIsobar(true)` now hard-hides
+> the disc + bulge meshes
 > instead of emitting the contour. The blending / `uChartIsobar` switch
 > is preserved in code so the contour pass can return after refinement.
 
@@ -152,10 +151,9 @@ uses `min(appMag) ≤ maxAppMag` over all members. The full member walk
 is needed to fix a bug where constellations with no single dominant
 intrinsic-brightest star (Vela, Pyxis, Sagittarius, etc.) silently
 dropped their label, but the result is **cached** under a 0.5 pc
-camera-translation threshold + filter version (see
-`src/client/debug/README.md` § Cached constellation centroids). The cached
-centroid is still re-projected every frame; only the inner per-member
-loop is elided.
+camera-translation threshold + filter version. The cached centroid is
+still re-projected every frame; only the inner per-member loop is
+elided.
 
 **Variable rings** size to the bright-extreme magnitude
 (`appMag - amplitude/2`) plus a `VARIABLE_RING_MIN_GAP_PX = 1.0` radial
@@ -251,6 +249,6 @@ Wings are driven by `flags` bit 4. Two build-time passes set that bit:
   Procyon, Algol, etc. without the optical-pair tail.
 
 Both passes hit the same flag bit, so chart-mode rendering is
-agnostic to which source flagged a given star. See
-`scripts/README.md` §TDSC double-star cross-match for the
-filter rationale and parser format.
+agnostic to which source flagged a given star. The build-time filter
+rationale + parser format are in the catalog build's CCDM cross-match
+section.
