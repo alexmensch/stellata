@@ -102,10 +102,11 @@ that motivated the convention:
   When adding the next layer of the model (Local Bubble, nebulae,
   Radcliffe Wave, etc.), the first file lands in `src/client/<name>/`,
   not flat. Day 1 includes: the renderer file, its loader, its
-  `*-pure.ts` helpers, its tests, its tuning section. CLAUDE.md's
-  module roster gets the entry in the same PR. Existing examples:
-  `solar-system/`, `local-group/`, `milkyway/`, `galactic/`,
-  `molecular-clouds/`, `chart-mode/`.
+  `*-pure.ts` helpers, its tests, its tuning section. The matching
+  `docs/<name>.md` gets a "Files in this area" section in the same PR
+  (see § Repo layout below). Existing examples: `solar-system/`,
+  `local-group/`, `milkyway/`, `galactic/`, `molecular-clouds/`,
+  `chart-mode/`.
 - **Cross-cutting plumbing lands in the matching type folder.**
   Includes small one-off helpers — texture/buffer factories, parsers,
   adapters, sentinel constants — not just large utilities. `overlays/`,
@@ -145,366 +146,30 @@ patterns that catch recurring bug shapes are in
 
 ## Repo layout
 
+Top-level shape only — per-area file rosters live in the matching
+`docs/<area>.md` (see § Documentation index below). Each area doc
+carries its `scripts/` + `data/` + `src/client/` slices.
+
 ```
-scripts/                                     Each subsystem cluster owns a folder.
-                                             Cross-folder imports are sys.path-based
-                                             for Python and explicit relative paths
-                                             for TS.
-  catalog/
-    build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis
-                                             + SIMBAD sp_type + Stellarium →
-                                             public/catalog.bin (v6 binary) +
-                                             public/constellations.json +
-                                             public/search-index.json.
-    build-catalog-expected.json              Build-count snapshot (UPDATE_BUILD_COUNTS=1).
-    catalog-pure.ts                          Single source of truth for the v6 binary
-                                             layout (HEADER_LAYOUT / RECORD_LAYOUT / MAGIC
-                                             / NO_APSIS), resolveSpectralInfo (SIMBAD →
-                                             GSP-Spec → fallback), physicalRadius,
-                                             applyBailerJonesOverride, applyLmcKinematicOverride,
-                                             inferBinaries, parseBailerJonesTsv,
-                                             parseGaiaApsisTsv, parseSimbadSptypeTsv.
-                                             Shared with src/client/loaders.
-    catalog-pure.test.ts                     vitest pin for catalog-pure (binary-format
-                                             constants, B-J / LMC override math, spectral
-                                             parser shape).
-    stars-parse.ts                           readStars — per-row AT-HYG ingest with the
-                                             three-layer distance stack (B-J → LMC →
-                                             MAX_DIST_PC), three-tier spectral resolver,
-                                             Apsis routing, Gaia source_id resolution
-                                             (AT-HYG-native + HIP→Gaia backfill).
-                                             MAX_DIST_PC = 50,000 lives here.
-    constellations.ts                        IAU constellation table + figure-line
-                                             resolver from Stellarium HIP polylines.
-    gaia-xmatch.ts                           Gaia DR3 HIP cross-walk reader
-                                             (data/gaia/gaia_dr3_hip_xmatch.tsv) +
-                                             companion vitest.
-    gcvs-parse.ts                            parseGcvsMain + parseGcvsCrossref +
-                                             bridgeGcvsByGaia + applyVariability +
-                                             companion vitest.
-    visual-doubles.ts                        Hipparcos CCDM parser with MultFlag {C,G,O}
-                                             gate + curated KNOWN_VISUAL_DOUBLES set
-                                             (Polaris / ε¹ Lyr / 61 Cyg).
-    gaia-xmatch.test.ts, gcvs-parse.test.ts  vitest pins for those modules. (Other
-                                             siblings — stars-parse, constellations,
-                                             visual-doubles — are exercised through the
-                                             catalog-pure / known-stars / distance-
-                                             regression tests rather than per-file
-                                             pins.)
-    verify-catalog.ts                        sanity-check tool for the generated binary.
-    catalog-lookup.ts                        runtime lookup helper used by known-stars.test.ts.
-    star-fixture.ts                          shared test fixture for catalog-lookup-based tests.
-    build-counts.ts                          BuildCounts schema + compareBuildCounts.
-    build-counts.test.ts                     vitest pin for build-counts diff format.
-    distance-regression-check.ts             Post-build distance gate — self-consistency
-                                             (AT-HYG dist vs final) + SIMBAD cross-check
-                                             (vs simbad_sample.tsv). Snapshot-pinned in
-                                             build-distance-outliers-expected.json
-                                             (UPDATE_DISTANCE_OUTLIERS=1). Hand-edited
-                                             `reason` strings survive snapshot refresh
-                                             via mergeReasonsFromSnapshot.
-    distance-regression-check.test.ts        vitest pin for the regression-check module.
-    build-distance-outliers-expected.json    Known-acceptable distance outliers (LMC
-                                             kinematic snaps, B-J overrides on noisy
-                                             G_R3 parallaxes, ρ Cas-class hypergiants).
-    known-stars.tsv                          Tier A validation corpus (~50 hand-curated
-                                             systems with HIP / Gaia source_id / distance ±
-                                             1σ / absmag / spectral type / per-component
-                                             tuples). Asserted against catalog.bin +
-                                             multiples.tsv.
-    known-stars.test.ts                      vitest driver for the Tier A corpus.
-    validate-simbad-sample.ts                Tier C — cross-check the built catalog.bin
-                                             against the committed SIMBAD random 10k
-                                             sample. Manual run (`npm run validate:simbad`).
-    validate-simbad-sample.test.ts           vitest pin for the validator helpers.
-  binaries/
-    build-binaries.py                        WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
-                                             + Gaia (HIP/Tyc xwalks, NSS, 5p astrometry)
-                                             + SIMBAD WDS xids + SIMBAD per-component
-                                             sp_type → data/binaries/multiples.tsv.
-                                             Orchestration shell; per-stage logic in
-                                             stage{2..7}_*.py.
-    parsers.py                               Row dataclasses + parse functions for every
-                                             reference catalogue (Stage 1).
-    indices.py                               IdentifierIndices builder (HIP/Tyc → Gaia,
-                                             src_id → astrometry / NSS / AT-HYG,
-                                             HIP → HIP2 / CCDM, CCDM → HIP-list, etc.).
-                                             Built once at Stage 1; every Stage 2-7
-                                             lookup is O(1).
-    stage2_resolve.py                        WDS-component → Gaia DR3 source_id cascade
-                                             (orb6_hip → athyg_gaia_native → simbad_xid
-                                             → ccdm_hip → AT-HYG position-match), with
-                                             same-letter + Aa→A propagation.
-    stage3_astrometry.py                     Per-component astrometry routing (gaia_5p /
-                                             gaia_nss_systemic / hip2_long_baseline /
-                                             unresolved). HIP2 is the Gaia-saturated
-                                             bright-primary fallback.
-    stage4_orbits.py                         Per-pair orbital-element selection
-                                             (gaia_nss / orb6 / orb6_spectroscopic /
-                                             none). Inline Heintz 1978 / Halbwachs+ 2023
-                                             Thiele-Innes → Campbell algebra.
-    stage5_optical.py                        Five-tier physical-vs-optical classification
-                                             (WDS-notes → both-Gaia → asymmetric-Gaia
-                                             → orbit-on-file → mag-gap).
-    stage6_multiples.py                      Emit data/binaries/multiples.tsv with
-                                             per-component provenance columns +
-                                             system-anchor inheritance for tight inner
-                                             binaries + SIMBAD standalone augmentation.
-    stage7_counts.py                         Build-counts + build-rates snapshot writer
-                                             (mirrors scripts/catalog/build-counts.ts).
-    mass_estimate.py                         Phase 5 spectral-class-aware mass-ratio q
-                                             backfill from Cox 2000 §15.2 / Pecaut &
-                                             Mamajek 2013 tables.
-    build-binaries.test.py                   stdlib unittest pins for Stages 1-7.
-    build-binaries-expected.json             per-strategy / per-tier count snapshot
-                                             (UPDATE_BUILD_COUNTS=1).
-    build-binaries-rates-expected.json       per-strategy rate snapshot — catches
-                                             population-mix shifts that don't shift
-                                             absolute counts.
-  distance-validation/
-    validate-distances.py                    Compare build-catalog.ts output against
-                                             Vaidman et al. 2025 BA-supergiant distances.
-                                             Reports per-star fractional difference
-                                             distribution; runs on every distance-source
-                                             change (DR4 / StarHorse / B-J successor).
-    validate-distances.test.py               stdlib unittest pin for the validator.
-    build-vaidman-tsv.py                     One-time builder: paper appendix tables →
-                                             data/distance-validation/vaidman-2025-supergiants.tsv.
-    build-vaidman-tsv.test.py                stdlib unittest pin for the builder.
-    common.py                                Shared helpers for both scripts.
-  clouds/
-    build-clouds.py                          Zucker 2020/2021 → public/clouds.json.
-  dust/
-    build-dust.py                            Edenhofer 2024 dust resampler +
-                                             particle sampler (Python; LFS outputs).
-    sync-dust.ts                             mirror data/dust → public/dust on dev/build.
-    requirements-dust.txt                    pip deps for build-dust.py.
-  local-group/
-    build-local-group.ts                     LVDB + overrides.tsv → public/local-group.json.
-    build-local-group-pure.ts                pure helpers (RA/Dec→ICRS, orient →
-                                             quaternion, override merge).
-    build-local-group{,-pure}.test.ts        vitest pins for both halves.
-  colour/
-    blackbody-lut.ts                         Ballesteros 2012 + Planck + CIE 1931 →
-                                             src/client/shaders/blackbody-lut-data.ts.
-    blackbody-lut.test.ts                    vitest signature pin (`npm run build:lut`
-                                             on drift).
-  refresh/
-    refresh_lib.py                           shared Astroquery / ADQL / atomic-rename
-                                             plumbing for all refresh-*.py scripts.
-    refresh_lib.test.py                      stdlib unittest pins for refresh_lib.
-    refresh-bailer-jones.py                  → data/bailer-jones/bailer-jones-dr3.tsv
-    refresh-gaia-apsis.py                    → data/gaia/gaia_dr3_apsis.tsv
-    refresh-gaia-astrometry.py               reads data/gaia/gaia_astrometry_source_id_request.tsv,
-                                             writes data/gaia/gaia_dr3_astrometry.tsv.
-    refresh-gaia-hip-xmatch.py               → data/gaia/gaia_dr3_hip_xmatch.tsv
-    refresh-gaia-nss.py                      → data/gaia/gaia_dr3_nss_two_body.tsv
-    refresh-gaia-tyc-xmatch.py               → data/gaia/gaia_dr3_tyc_xmatch.tsv
-    refresh-hipparcos2.py                    → data/hipparcos/hip2_van_leeuwen.tsv
-    refresh-simbad-sample.py                 → data/simbad/simbad_sample.tsv
-    refresh-simbad-sptype.py                 → data/simbad/simbad_sptype.tsv —
-                                             orchestration shell over scripts/refresh/simbad/
-                                             that pulls sp_type / sp_qual / sp_bibcode
-                                             / otype + HIP / Gaia DR3 cross-IDs.
-    refresh-simbad-wds-xids.py               → data/simbad/simbad_wds_xids.tsv —
-                                             orchestrates the WDS↔Gaia cross-ID pull
-                                             via wds_xids_cascade.py + wds_xids_overrides.py.
-    wds_xids_cascade.py                      Per-component identifier cascade
-                                             (HIP / Tycho / WDS-J variants) shared with
-                                             refresh-simbad-wds-xids.py.
-    wds_xids_cascade.test.py                 stdlib unittest pin for the cascade logic.
-    wds_xids_overrides.py                    Hand-curated WDS-J coalesce overrides
-                                             (Sirius B-shaped systems where SIMBAD
-                                             collapses multiple WDS-J variants onto
-                                             one Gaia source).
-    wds_xids_overrides.test.py               stdlib unittest pin for the override
-                                             merge logic.
-    simbad/                                  reusable SIMBAD-pull plumbing —
-                                             specs (ColumnSpec / IdentLookup),
-                                             inputs (per-source-file id iterators),
-                                             query (ADQL builders + batched
-                                             executors), tsv (spec-driven writer).
-                                             Modelled on scripts/binaries; future
-                                             SIMBAD pulls (RV, photometry, …)
-                                             reuse every file here.
-    requirements-refresh.txt                 pip deps for the refresh family (astropy,
-                                             astroquery, numpy). Install once via
-                                             `python3 -m venv .venv &&
-                                              .venv/bin/pip install -r
-                                              scripts/refresh/requirements-refresh.txt`.
-data/                                        Per-source-catalogue folders. LFS coverage
-                                             is per-folder via .gitattributes patterns;
-                                             stellarium/, local-group/, molecular-clouds/
-                                             stay on regular git as the files are small.
-  athyg/
-    athyg_33_classic_ids.csv                 AT-HYG source CSV (~64 MB, LFS).
-  bailer-jones/
-    bailer-jones-dr3.tsv                     Bailer-Jones 2021 DR3 Bayesian distance
-                                             posteriors (~23 MB, LFS).
-  gaia/
-    gaia_dr3_apsis.tsv                       Gaia DR3 Apsis astrophysical parameters (LFS).
-    gaia_dr3_astrometry.tsv                  Gaia DR3 5p astrometry for resolved
-                                             source_ids (LFS).
-    gaia_dr3_hip_xmatch.tsv                  HIP → Gaia DR3 source_id cross-walk (LFS).
-    gaia_dr3_nss_two_body.tsv                Gaia DR3 NSS two-body orbits (LFS).
-    gaia_dr3_tyc_xmatch.tsv                  Tycho-2 → Gaia DR3 source_id cross-walk (LFS).
-    gaia_astrometry_source_id_request.tsv    Stage 2 → Stage 3 deduped source_id request
-                                             list (LFS).
-  hipparcos/
-    hip_ccdm.tsv                             Hipparcos HIP↔CCDM cross-reference (LFS).
-    hip2_van_leeuwen.tsv                     Hipparcos-2 (van Leeuwen 2007) reduction (LFS).
-  gcvs/
-    gcvs5.txt                                GCVS main catalogue (~14 MB, LFS).
-    crossid.txt                              GCVS cross-reference (~12 MB, LFS).
-  wds/
-    wds_summ.txt                             Washington Double Star summary (~20 MB, LFS).
-    wds_notes.txt                            Per-pair WDS notes prose (LFS).
-    wds_refs.txt                             WDS reference list (LFS).
-    orb6_orbits.txt                          ORB6 sixth catalog of visual binary orbits (LFS).
-  simbad/
-    simbad_sample.tsv                        Stratified random 10k-star SIMBAD sample (LFS).
-    simbad_wds_xids.tsv                      SIMBAD-curated per-component WDS↔Gaia DR3
-                                             cross-IDs (LFS).
-  binaries/
-    multiples.tsv                            build-binaries.py output — two rows per
-                                             kept WDS pair, plus standalone rows for
-                                             SIMBAD-known components the pair walk
-                                             didn't reach. Consumed today by the Tier A
-                                             validation harness + ad-hoc debugging; the
-                                             future per-frame binary-orbit runtime layer
-                                             will read it directly (not merged into
-                                             catalog.bin). (LFS)
-  distance-validation/
-    vaidman-2025-supergiants.tsv             Vaidman et al. 2025 BA-supergiant distance
-                                             recalculation (132 rows; CC BY 4.0).
-                                             Reference set for scripts/distance-validation/
-                                             validate-distances.py.
-    README.md                                Provenance + SIMBAD name-resolution recipe.
-  stellarium/
-    stellarium-modern-skyculture.json        Stellarium constellation lines (~200 KB,
-                                             regular git).
-  local-group/
-    lvdb-snapshot.csv                        Pace 2024 LVDB dwarf_all (~430 KB, regular git).
-    overrides.tsv                            hand-curated LMC / SMC / Sgr structural detail.
-  molecular-clouds/
-    zucker2020-tablea1.tsv                   Zucker 2020 cloud distances (~88 KB).
-    zucker2021-table1.dat                    Zucker 2021 3D bounding boxes (~1 KB).
-    zucker2021-table2.dat                    Zucker 2021 radial profile fits (kept for future).
-    zucker2021-table3.dat                    Zucker 2021 cloud masses (kept for future).
-  dust/
-    chunk_X_Y_Z.bin                          64 voxel chunks, 2 MiB each, LFS.
-    particles.bin                            50K importance-sampled dust points (LFS).
-    manifest.json                            grid params + chunk index + particle count.
-public/
-  catalog.bin             generated (gitignored, ~24 MB, binary v6)
-  constellations.json     generated (gitignored)
-  search-index.json       generated (gitignored, ~13 MB raw, ~2 MB gzipped)
-  clouds.json             generated (gitignored, ~30 KB)
-  local-group.json        generated (gitignored, ~20 KB)
-  dust/                   gitignored mirror of data/dust/
-src/
-  worker.ts               Cloudflare Worker entry (passthrough to ASSETS)
-  client/
-    main.ts               bootstrap
-    stellata.ts           Three.js scene + state machine + event bus
-    star-pipeline.ts      InstancedBufferGeometry + disc/glow/coreMask
-                          ShaderMaterials + meshes; owns applyDiscBlendDefaults
-                          + setMonochromeBlend + dispose.
-    index.html, styles.css, globals.d.ts
-    stellata-events.test.ts integration-shell event-emission test
-    disc-blend.test.ts    star-disc/glow blend-equation parity test
-    star-pipeline.test.ts dispose + uniform-sharing + blend defaults
-    shaders/
-      star.vert.glsl, star.frag.glsl              GLSL3/WebGL2
-      planet.vert.glsl, planet.frag.glsl          three-pass instanced planet bodies
-      perceptual-disc.glsl                        shared point-of-light disc/glow chunk (stars + planets)
-      dust-particle.vert.glsl, dust-particle.frag.glsl   shelved dust splats
-      cloud.vert.glsl, cloud.frag.glsl                   molecular cloud ellipsoids
-    # ─── per-subsystem folders (rule 1) ─────────────────────────────
-    solar-system/         planet-system, orbit-rings-layer, planet-body-field,
-                          perceptual-magnitude, planet-labels, time, time-readout,
-                          ephemeris, astronomy-constants, heliopause, first-load,
-                          phase-function (+ tests for each)
-    local-group/          local-group, local-group-loader, local-group-tuning
-                          (+ tests). Local Group wireframes + MW + dwarf labels
-    milkyway/             milkyway, milkyway-tuning. Volumetric disc + bulge
-    galactic/             galactic-disc, galactic-fade, galactic-grid,
-                          galactic-coords (+ tests). Disc outline / b-l grid /
-                          GALACTIC_CENTRE_PC / shared fade smoothstep
-    molecular-clouds/     molecular-clouds, cloud-loader (+ tests). Shelved
-    dust/                 dust-particle-layer (+ tests). Instanced additive
-                          billboards; shelved (strength=0 → mesh hidden
-                          → zero per-frame cost). DustField + dust-loader stay
-                          in loaders/.
-    chart-mode/           chart-mode, chart-labels, chart-disc-pure (+ tests).
-                          Observe-only paper aesthetic
-    hover/                hover-engine, hover-types, hover-pick-disambiguator,
-                          per-layer hover providers, formatters/ (5 + tests)
-    # ─── cross-cutting type folders (rule 2) ────────────────────────
-    overlays/             constellation-overlay, disc-mask (+ pure),
-                          distance-vector-overlay, focus-ring-overlay,
-                          hud-overlay, poi-overlay, dirty-attr, overlay-project,
-                          arrow-fade, arrow-path (+ tests)
-    camera/               controls, observe-controls, focus-transition,
-                          focus-target, arrival-curves, camera-motion, warp-pure,
-                          warp-button, warp-tuning, mode-toggle, star-geometry,
-                          star-physics, camera-up-align, up-align-pure, picker,
-                          aim-controller, warp-controller, observe-transition,
-                          focus-controller (+ tests).
-                          timing.ts — CAMERA_LERP_MS / WARP_*_MS /
-                          AIM_*_MS / OBSERVE_TRANSITION_MS / DCAM_LOG_FLOOR_PC /
-                          WARP_BASE_DIR (canonical camera-wide constants).
-                          picker.ts — pure target resolver; click + hover
-                          pick paths for stars / clouds / planets / Local Group /
-                          heliopause.
-                          aim-controller.ts — mode-aware aim slerps (navigate
-                          orbit-pivot + observe quaternion-in-place), shared
-                          `aimDurationMs` ramp.
-                          warp-controller.ts — 3-phase warp FSM (reorient
-                          → fly → post-arrival) + WarpState + tryMidFlyRecentre
-                          + swapObserveAnchor + FocusOps cross-controller seam.
-                          observe-transition.ts — navigate↔observe FSM:
-                          ObserveTransitionState + setMode + startExit +
-                          startUnfocusLerp + ObserveFocusOps seam.
-                          up-align-pure.ts — alignCameraUpToQuaternion
-                          helper; paired with camera-up-align.test.ts
-                          algebra fixture.
-                          star-physics.ts — per-star camera/screen geometry:
-                          fovMinorRad, peakAmplitudeFactor,
-                          binaryCompanionFloorPc, minOrbitDistForStar,
-                          parkDistForStar, renderedSizePx,
-                          renderedDiscPxAtPeak, getChartDiscParams +
-                          canonical ZOOM_FLOOR_FRACTION /
-                          VAR_TROUGH_FLOOR_FRACTION /
-                          BINARY_VIEWPORT_HALF_ANGLE_RAD /
-                          BINARY_MIN_DIST_FACTOR — sits between
-                          star-geometry's pure formulae and the
-                          per-frame uniform reads in stellata.
-                          focus-controller.ts — focus FSM + focus-park
-                          lerp + per-kind FocusTarget factories +
-                          pin-engage geometry; FocusOps seam consumed
-                          by WarpController; ObserveFocusOps seam
-                          consumed by ObserveTransition. Canonical home
-                          for GLOBAL_MIN_DIST_PC + PIN_ENGAGE_THRESHOLD_SQ_PC.
-                          FrameAnchor (recenterOrigin + worldOffset +
-                          starLocalPosition) stays on stellata.ts —
-                          cleaner extraction is coupled to the
-                          StarPipeline extract.
-    loaders/              catalog-loader, dust-loader (+ tests). cloud-loader
-                          lives under molecular-clouds/; local-group-loader
-                          under local-group/
-    ui/                   panel-layout, scale-bar, theme-toggle, unit-toggle,
-                          distance-util, distance-gated-label, keyboard-shortcuts
-                          (+ pure), dom-util (+ tests)
-    util/                 event-bus, url-state (+ tests). Project-agnostic plumbing
-    typeahead/            typeahead, typeahead-util, constellation-typeahead,
-                          search (+ tests). Picker UI surface
-    modals/               info-modal, brand-modal, help-modal, modal-dismiss.
-                          Welcome / about / help overlays
-    debug/                debug, debug-panel, perf-hud, pin-debug-hud,
-                          arrow-fade-debug-hud, star-tuning (+ tests).
-                          Debug-panel chrome + per-area tuning sections
+scripts/  Build scripts. Per-pipeline folders: catalog/, binaries/,
+          distance-validation/, clouds/, dust/, local-group/, colour/,
+          refresh/.
+data/     Reference inputs. Per-source-catalogue folders; LFS coverage
+          is per-folder via .gitattributes patterns.
+public/   Generated artifacts (gitignored).
+src/      Worker entry + client. Per-subsystem folders under
+          src/client/ per § Folder & module conventions above.
+docs/     Topic-area docs; one per subsystem.
+tests/    Repo-meta tests (CLAUDE.md size guard, etc.).
 ```
+
+When adding a new module or folder, the matching `docs/<area>.md`
+gets the "Files in this area" entry in the SAME PR — that's the
+single source of truth that keeps the per-area rosters from drifting
+out of sync with the code. A vitest size guard
+(`tests/claude-md-size.test.ts`) holds this file at its budget; if a
+new top-level concept doesn't fit the existing topic-tree shape,
+raise it with the user before expanding CLAUDE.md.
 
 ## Local commands
 
@@ -552,8 +217,10 @@ with `python3 scripts/refresh/refresh-simbad-*.py`.
 ## Documentation index
 
 This file is the always-loaded entry point. The rest of the project's
-constraints, formulas, and gotchas live in topic-specific docs that
-Claude Code should read on demand when working on the relevant area.
+constraints, formulas, gotchas — AND the per-area file rosters — live
+in topic-specific docs that Claude Code should read on demand when
+working on the relevant area. Each doc opens with "Files in this area"
+listing every `scripts/` / `data/` / `src/client/` file the area owns.
 
 - **`SCIENCE.md`** — every external data source (catalogues, papers, DOIs,
   licences) and the physics/modelling decisions baked into the build
