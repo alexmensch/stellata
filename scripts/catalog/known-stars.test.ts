@@ -3,6 +3,7 @@
 // catalog-lookup library) and data/binaries/multiples.tsv. Authoring rules
 // + tolerances are documented in known-stars.tsv's header block.
 
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +11,7 @@ import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import { classifyFromSimbad, SPECTRAL_UNKNOWN, type SpectralInfo } from './catalog-pure';
 import {
+  DEFAULT_CATALOG_BIN,
   type Catalog,
   type CatalogRecord,
   distancePc,
@@ -22,6 +24,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
 const KNOWN_STARS_TSV = resolve(__dirname, 'known-stars.tsv');
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
+
+// The corpus needs public/catalog.bin and data/binaries/multiples.tsv —
+// the first is generated (gitignored, ~24 MB), the second is LFS-tracked.
+// CI's plain `npm test` job pulls neither, so the suite skips itself with
+// a console hint when either is missing. The .github/workflows/test.yml
+// `build-catalog` job runs the full suite after `npm run build:catalog`
+// + LFS pull, so the assertions execute against real data on every PR.
+const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_BIN);
+const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV);
+const FIXTURES_READY = CATALOG_BIN_PRESENT && MULTIPLES_PRESENT;
+if (!FIXTURES_READY) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[known-stars] skipping corpus assertions — ` +
+    `catalog.bin ${CATALOG_BIN_PRESENT ? 'present' : 'MISSING'}, ` +
+    `multiples.tsv ${MULTIPLES_PRESENT ? 'present' : 'MISSING'}. ` +
+    `Run \`npm run build:catalog\` (with LFS pulled) to exercise this suite.`,
+  );
+}
 
 // ---- Tolerances --------------------------------------------------------
 //
@@ -332,7 +353,7 @@ function isDistanceRefinementCase(row: CorpusRow): boolean {
     || n.startsWith('LMC kinematic snap:');
 }
 
-describe('known-stars corpus', () => {
+describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   it('contains at least one row', () => {
     expect(corpus.length).toBeGreaterThan(0);
   });

@@ -34,3 +34,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build:catalog
+      # The known-stars corpus harness needs public/catalog.bin and the
+      # LFS-tracked data/binaries/multiples.tsv. The bare `test` job above
+      # checks out neither and self-skips that suite; here we re-run the
+      # full vitest against the real catalog so the corpus assertions
+      # execute on every PR.
+      - run: npm test
