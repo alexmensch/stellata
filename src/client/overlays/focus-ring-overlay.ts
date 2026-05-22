@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { renderedSizePx } from '../camera/star-physics';
+import { renderedSizePx } from '../camera/controls/star-physics';
 import { projectToScreen } from './overlay-project';
 import { setNumAttr, setStyle } from './dirty-attr';
 

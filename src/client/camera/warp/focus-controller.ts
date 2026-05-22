@@ -3,28 +3,28 @@
 // The frame-anchor primitive (recenterOrigin / worldOffset /
 // starLocalPosition) stays on Stellata via `FrameAnchor`.
 //
-// See docs/architecture.md § FocusTarget contract.
+// See src/client/README.md § FocusTarget contract.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import type { Catalog } from '../loaders/catalog-loader';
-import type { CameraMode, StellataEventMap } from '../stellata';
-import type { EventBus } from '../util/event-bus';
-import type { AimController } from './aim-controller';
-import type { ObserveControls } from './observe-controls';
-import type { ObserveTransition } from './observe-transition';
+import type { Catalog } from '../../loaders/catalog-loader';
+import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { EventBus } from '../../util/event-bus';
+import type { AimController } from '../controls/aim-controller';
+import type { ObserveControls } from '../observe/observe-controls';
+import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from './warp-controller';
 import type { FocusTarget } from './focus-target';
-import type { MolecularClouds } from '../molecular-clouds/molecular-clouds';
-import { cloudViewingDistancePc } from '../molecular-clouds/molecular-clouds';
+import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
+import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
 import {
   type PlanetSystem,
   getPlanetSystem,
   hasPlanets,
-} from '../solar-system/planet-system';
-import { R_SUN_PC } from '../solar-system/astronomy-constants';
-import { chartPlateauDistancePc } from '../chart-mode/chart-disc-pure';
-import * as starPhysics from './star-physics';
+} from '../../solar-system/planet-system';
+import { R_SUN_PC } from '../../solar-system/astronomy-constants';
+import { chartPlateauDistancePc } from '../../chart-mode/chart-disc-pure';
+import * as starPhysics from '../controls/star-physics';
 import {
   type FocusLerpState,
   newFocusLerpFrom,
@@ -32,8 +32,8 @@ import {
   tickFocusLerp,
 } from './focus-transition';
 import { warpArrivalEaseFn } from './warp-tuning';
-import { FOCUS_LERP_MS } from './timing';
-import { alignCameraUpToQuaternion } from './up-align-pure';
+import { FOCUS_LERP_MS } from '../timing';
+import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
 /** Fallback orbit-controls floor when no star is focused. Sized to keep
  *  the camera comfortably outside any single star's physical envelope
@@ -658,7 +658,7 @@ export class FocusController implements FocusOps {
   // pick / click handling to it, then everything below
   // (warp animation, mid-Fly recentre, pin guard, finishWarp event
   // family) just works without touching the warp internals. See
-  // `docs/architecture.md` § FocusTarget contract.
+  // `src/client/README.md` § FocusTarget contract.
 
   /** Build a FocusTarget for the star at catalog index `idx`. */
   makeStarFocusTarget(idx: number): FocusTarget {

@@ -11,8 +11,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { AimController, aimDurationMs, type AimControllerDeps } from './aim-controller';
-import { AIM_T_MAX_MS, AIM_T_MIN_MS } from './timing';
-import type { ObserveControls } from './observe-controls';
+import { AIM_T_MAX_MS, AIM_T_MIN_MS } from '../timing';
+import type { ObserveControls } from '../observe/observe-controls';
 
 // Minimal stub for TrackballControls — only `enabled`, `target`, and
 // `update()` are touched by the controller.

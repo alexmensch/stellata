@@ -7,7 +7,7 @@ import * as THREE from 'three';
  *  against world (0,1,0) and snaps any pitch the user accumulated in
  *  OBSERVE back through the horizontal plane — a jump proportional to
  *  how much they looked around. See `camera-up-align.test.ts` for the
- *  pure-algebra fixture and `docs/camera-observe.md` for the seam
+ *  pure-algebra fixture and `src/client/camera/observe/README.md` for the seam
  *  context. */
 export function alignCameraUpToQuaternion(camera: THREE.Camera): void {
   camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion);

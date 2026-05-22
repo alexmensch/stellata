@@ -1,6 +1,6 @@
-import { Stellata, ALL_SPECT_MASK, DEFAULT_FOV, MAG_PRESETS, type MagPresetName } from '../stellata';
-import { fmtDist, onUnitChange, getUnit } from '../ui/distance-util';
-import { bindConstellationTypeahead } from '../typeahead/constellation-typeahead';
+import { Stellata, ALL_SPECT_MASK, DEFAULT_FOV, MAG_PRESETS, type MagPresetName } from '../../stellata';
+import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
+import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
 
 const SPECT_LABELS: { key: string; label: string; bit: number }[] = [
   { key: 'O', label: 'O', bit: 0 },

@@ -15,7 +15,7 @@
 // recentre, pin guard, scale-bar focus tracking, …) is kind-agnostic
 // above this seam and does not need to change.
 //
-// See `docs/architecture.md` § FocusTarget contract for the bigger
+// See `src/client/README.md` § FocusTarget contract for the bigger
 // picture and the rationale (the unified arrival profile — the cubic-Hermite log-d
 // Fly profile exposed a class of Float32-precision bugs in lookAt(B)
 // that recentring the floating origin mid-Fly fixes; the kind-agnostic

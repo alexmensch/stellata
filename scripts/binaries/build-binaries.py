@@ -13,7 +13,7 @@ lives in sibling modules ``parsers``, ``indices``, ``stage2_resolve``,
 Run via ``npm run build:binaries`` (or ``python3
 scripts/binaries/build-binaries.py``). Idempotent against
 ``data/binaries/multiples.tsv``; pass ``--force`` to ignore the mtime
-check. See ``docs/build-and-data.md`` § Binary system pipeline for the
+check. See ``scripts/README.md`` § Binary system pipeline for the
 full architecture.
 """
 

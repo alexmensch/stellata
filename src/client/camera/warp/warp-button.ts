@@ -1,4 +1,4 @@
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 
 // Warp UI wiring. When a distance vector is drawn, the SVG distance label
 // itself doubles as the warp affordance — hovering reveals a "→ Warp"

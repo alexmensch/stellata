@@ -1,15 +1,15 @@
 // 3-phase warp FSM (reorient → fly → post-arrival). Coupling via
 // `FocusOps` (defined in ./focus-controller; re-exported here).
 //
-// See docs/camera-warp.md and docs/camera-arrival.md.
+// See src/client/camera/warp/README.md and src/client/camera/arrival/README.md.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import type { CameraMode, StellataEventMap } from '../stellata';
-import type { EventBus } from '../util/event-bus';
+import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { EventBus } from '../../util/event-bus';
 import type { FocusTarget } from './focus-target';
 import { type FocusOps } from './focus-controller';
-import type { ObserveControls } from './observe-controls';
+import type { ObserveControls } from '../observe/observe-controls';
 
 export type { FocusOps };
 import {
@@ -17,9 +17,9 @@ import {
   newArrival,
   shiftArrivalWaypoints,
   tickArrival,
-} from './camera-motion';
+} from '../arrival/camera-motion';
 import { shiftWarpWaypoints } from './warp-pure';
-import { WARP_BASE_DIR } from './timing';
+import { WARP_BASE_DIR } from '../timing';
 import {
   recordLastWarp,
   warpArrivalEaseFn,
@@ -34,7 +34,7 @@ import {
   warpObserveTransitionMs,
   warpReorientMs,
 } from './warp-tuning';
-import { hybridUSeam } from './arrival-curves';
+import { hybridUSeam } from '../arrival/arrival-curves';
 
 export type WarpPhaseKind = 'reorient' | 'fly' | 'post-arrival';
 

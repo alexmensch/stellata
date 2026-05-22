@@ -19,11 +19,11 @@ import {
   type ObserveFocusOps,
   type ObserveTransitionDeps,
 } from './observe-transition';
-import type { AimController } from './aim-controller';
+import type { AimController } from '../controls/aim-controller';
 import type { ObserveControls } from './observe-controls';
-import type { CameraMode, StellataEventMap } from '../stellata';
-import { EventBus } from '../util/event-bus';
-import { OBSERVE_TRANSITION_MS } from './timing';
+import type { CameraMode, StellataEventMap } from '../../stellata';
+import { EventBus } from '../../util/event-bus';
+import { OBSERVE_TRANSITION_MS } from '../timing';
 
 function makeControlsStub(): TrackballControls & {
   update: ReturnType<typeof vi.fn>;

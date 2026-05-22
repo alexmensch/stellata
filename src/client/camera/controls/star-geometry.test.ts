@@ -10,7 +10,7 @@ import {
   distAtFillFraction,
   peakAmplitudeFactor,
 } from './star-geometry';
-import { R_SUN_PC } from '../solar-system/astronomy-constants';
+import { R_SUN_PC } from '../../solar-system/astronomy-constants';
 
 // Canonical viewport / FOV used across the tests below. 1080 vertical
 // pixels at 50° vertical FOV ≈ 1238 px / radian — close to the live

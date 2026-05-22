@@ -4,7 +4,7 @@
 // + Planck + CIE 1931 (Wyman 2013 multi-Gaussian fits) + sRGB D65 transform.
 //
 // Runs at build time via `npm run build:lut`. The output module
-// src/client/shaders/blackbody-lut.ts is committed; the byte signature is
+// src/client/star-pipeline/blackbody-lut-data.ts is committed; the byte signature is
 // pinned by vitest so any change here forces a deliberate update on both
 // sides.
 //
@@ -180,7 +180,7 @@ export function sampleLut(
   return [r, g, b];
 }
 
-// ---- CLI entry: write src/client/shaders/blackbody-lut.ts ------------
+// ---- CLI entry: write src/client/star-pipeline/blackbody-lut-data.ts ----
 
 function formatBytesAsLines(bytes: Uint8Array, perLine = 24): string {
   const lines: string[] = [];
@@ -220,7 +220,7 @@ ${formatBytesAsLines(bytes)}
 
 async function main(): Promise<void> {
   const here = dirname(fileURLToPath(import.meta.url));
-  const out = resolve(here, '..', '..', 'src/client/shaders/blackbody-lut-data.ts');
+  const out = resolve(here, '..', '..', 'src/client/star-pipeline/blackbody-lut-data.ts');
   const bytes = buildLut();
   await writeFile(out, renderModule(bytes));
   console.log(`Wrote ${out} (${bytes.length} LUT bytes)`);

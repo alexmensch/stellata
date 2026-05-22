@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Catalog } from './loaders/catalog-loader';
+import type { Catalog } from '../loaders/catalog-loader';
 
 // Disc-pass blending state. Applied at material construction and re-applied
 // on chart-mode -> colour-mode swap-back, since chart mode swaps the disc

@@ -5,8 +5,8 @@
 //
 // Five materials share the geometry — three mirror the star pipeline
 // (core / disc / glow) and two are the planet-only corrupt+restore
-// pair around the orbit ring layer. See docs/solar-system.md § orbit
-// ring corrupt+restore and docs/rendering.md § render-order table.
+// pair around the orbit ring layer. See src/client/solar-system/README.md § orbit
+// ring corrupt+restore and src/client/star-pipeline/README.md § render-order table.
 
 import * as THREE from 'three';
 import type { PlanetSystem } from './planet-system';
@@ -16,7 +16,7 @@ import {
   peakPhaseFactor,
   type PhaseCoefficients,
 } from './phase-function';
-import { applyDiscBlendDefaults } from '../star-pipeline';
+import { applyDiscBlendDefaults } from '../star-pipeline/star-pipeline';
 import { AU_PC, KM_PC } from './astronomy-constants';
 import {
   orbitalPlaneNormalFor,
@@ -34,10 +34,10 @@ import {
   pickFromCandidates,
   physSizePx,
   type PickCandidate,
-} from '../camera/star-geometry';
+} from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
-import planetVert from '../shaders/planet.vert.glsl?raw';
-import planetFrag from '../shaders/planet.frag.glsl?raw';
+import planetVert from './planet.vert.glsl?raw';
+import planetFrag from './planet.frag.glsl?raw';
 
 /**
  * Shared per-frame uniforms the body materials read from. The star

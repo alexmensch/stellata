@@ -1,4 +1,4 @@
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 
 // Two-button pill in the top-right card. Switches the camera between
 // NAVIGATE (default orbit) and OBSERVE (parked at the focused star, custom

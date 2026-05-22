@@ -3,22 +3,22 @@
 // enter/exit but isn't an observe transition, so isActive / getProgress
 // exclude it; isAnyActive is the union used by Stellata.isCameraBusy().
 //
-// See docs/camera-observe.md.
+// See src/client/camera/observe/README.md.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import type { CameraMode, StellataEventMap } from '../stellata';
-import type { EventBus } from '../util/event-bus';
-import type { AimController } from './aim-controller';
+import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { EventBus } from '../../util/event-bus';
+import type { AimController } from '../controls/aim-controller';
 import type { ObserveControls } from './observe-controls';
 import {
   type ArrivalState,
   newArrival,
   tickArrival,
-} from './camera-motion';
-import { OBSERVE_TRANSITION_MS } from './timing';
-import { warpArrivalEaseFn } from './warp-tuning';
-import { alignCameraUpToQuaternion } from './up-align-pure';
+} from '../arrival/camera-motion';
+import { OBSERVE_TRANSITION_MS } from '../timing';
+import { warpArrivalEaseFn } from '../warp/warp-tuning';
+import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
 /** Cross-controller seam consumed by ObserveTransition. Stellata
  * implements this in 194.6; in 194.8 it migrates to FocusController and
@@ -76,7 +76,7 @@ interface ObserveTransitionState {
   // the unfocus path; tick() delegates that branch to tickArrival so
  // 's log-distance profile can be swapped in by touching the
   // helper alone. enter/exit aren't park-arrivals (see
-  // docs/camera-arrival.md § Inventory) and keep their inline
+  // src/client/camera/arrival/README.md § Inventory) and keep their inline
   // time-smoothstep.
   arrival?: ArrivalState;
 }
@@ -341,7 +341,7 @@ export class ObserveTransition {
  * 's log-distance swap lands in one place. 'enter' / 'exit' are
    *  observe-mode handovers — endpoints are AT or near the focal star,
    *  not at parkDist — so they keep the inline time-smoothstep (see
-   *  docs/camera-arrival.md § Inventory). */
+   *  src/client/camera/arrival/README.md § Inventory). */
   tick(nowMs: number): void {
     const state = this.state;
     if (!state) return;

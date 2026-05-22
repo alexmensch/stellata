@@ -1,7 +1,7 @@
 // Local Group wireframe layer. Geometry pre-baked in absolute ICRS
 // pc; group position rebases to -worldOffset per frame for floating
 // origin. Opacity tracks galactic-fade.ts so LG and MW disc reveal in
-// lockstep. See docs/local-group.md.
+// lockstep. See src/client/local-group/README.md.
 //
 // Object kinds: disc (Magellanic-style — midplane + two thickness
 // rings) and ellipsoid (three orthogonal meridian LineLoops).
@@ -18,7 +18,7 @@ import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
   type PickCandidate,
-} from '../camera/star-geometry';
+} from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
 
 // LG-specific pick candidate. Carries `cameraDistancePc` so the

@@ -1,5 +1,5 @@
 // Hybrid arrival profile consumed by camera-motion.ts's tickArrival
-// log-d formula. See docs/camera-arrival.md § Profile for the
+// log-d formula. See src/client/camera/arrival/README.md § Profile for the
 // two-regime construction (linear-d outer + angular-size inner) and
 // the seam_k knob. Falls back to cubic-Hermite log-d for outbound
 // trajectories, null targetRadius, or no resolved context.
@@ -55,7 +55,7 @@ export function hybridUSeam(
 
 /** Hybrid two-regime arrival profile — returns log-d-equivalent
  *  eased-u so the tickArrival consumer line is unchanged. See
- *  docs/camera-arrival.md § Profile. */
+ *  src/client/camera/arrival/README.md § Profile. */
 export function easeHybrid(
   u: number,
   d0: number,

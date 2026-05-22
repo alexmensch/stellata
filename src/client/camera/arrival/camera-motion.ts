@@ -2,7 +2,7 @@
 // — focus-park (star, cloud), warp Fly phase, navigate-mode unfocus —
 // constructs an `ArrivalState` and ticks it through `tickArrival`, so
 // the deceleration shape lives in exactly one place. See
-// `docs/camera-arrival.md` for the math and the inventory of arrival
+// `src/client/camera/arrival/README.md` for the math and the inventory of arrival
 // sites. Warp Phase 3 stays inline by design (it's an observe-mode
 // handover, not a park-arrival).
 
@@ -130,7 +130,7 @@ export function shiftArrivalWaypoints(
  *
  *  Position evolves as a smoothstep over `log d` — equal time per decade
  *  of distance, giving uniform octaves-per-second of angular size. See
- *  `docs/camera-arrival.md` § Profile. The endpoints are written
+ *  `src/client/camera/arrival/README.md` § Profile. The endpoints are written
  *  bit-exact (`pStart` at `u ≤ 0`, `pEnd` at `u ≥ 1`) so callers that
  *  compare `camera.position.equals(pEnd)` after landing still match. */
 export function tickArrival(

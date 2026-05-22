@@ -17,16 +17,16 @@ import {
   type WarpControllerDeps,
 } from './warp-controller';
 import type { FocusTarget } from './focus-target';
-import type { ObserveControls } from './observe-controls';
-import type { CameraMode, StellataEventMap } from '../stellata';
-import { EventBus } from '../util/event-bus';
+import type { ObserveControls } from '../observe/observe-controls';
+import type { CameraMode, StellataEventMap } from '../../stellata';
+import { EventBus } from '../../util/event-bus';
 import {
   WARP_REORIENT_MS,
   WARP_T_K_MS,
   WARP_T_MAX_MS,
   WARP_T_MIN_MS,
   OBSERVE_TRANSITION_MS,
-} from './timing';
+} from '../timing';
 
 // Mirror of WarpController's Fly duration formula. Used by tests that
 // need to land their `tick(nowMs)` precisely inside the post-arrival

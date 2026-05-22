@@ -7,7 +7,7 @@ import * as THREE from 'three';
 //
 // Coexists with TrackballControls — caller must set
 // TrackballControls.enabled = false while this is enabled.
-// See docs/camera-observe.md.
+// See src/client/camera/observe/README.md.
 export class ObserveControls {
   private static FOV_STEP_PER_WHEEL = 1.5; // degrees per typical wheel notch
   private static FOV_MIN = 10;

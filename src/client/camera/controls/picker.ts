@@ -8,18 +8,18 @@
 // (pickCloud returns null mid-warp).
 
 import * as THREE from 'three';
-import type { Catalog } from '../loaders/catalog-loader';
-import type { FilterState } from '../stellata';
-import type { MolecularClouds } from '../molecular-clouds/molecular-clouds';
-import type { LocalGroupLayer } from '../local-group/local-group';
-import type { PlanetBodyField } from '../solar-system/planet-body-field';
+import type { Catalog } from '../../loaders/catalog-loader';
+import type { FilterState } from '../../stellata';
+import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
+import type { LocalGroupLayer } from '../../local-group/local-group';
+import type { PlanetBodyField } from '../../solar-system/planet-body-field';
 import {
   Heliopause,
   HELIOPAUSE_APEX_LOCAL_PC,
   HELIOPAUSE_LABEL_ELEMENT_ID,
   HELIOPAUSE_SAMPLE_POINTS_LOCAL,
-} from '../solar-system/heliopause';
-import { DCAM_LOG_FLOOR_PC } from './timing';
+} from '../../solar-system/heliopause';
+import { DCAM_LOG_FLOOR_PC } from '../timing';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
@@ -28,7 +28,7 @@ import {
   type PickResult,
   type StarPickCandidate,
 } from './star-geometry';
-import type { HoverHit } from '../hover/hover-types';
+import type { HoverHit } from '../../hover/hover-types';
 
 export interface PickerDeps {
   domElement: HTMLElement;

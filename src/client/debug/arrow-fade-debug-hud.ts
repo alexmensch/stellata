@@ -1,6 +1,6 @@
 import type { Stellata } from '../stellata';
 import type { ArrowDebugRecord } from '../overlays/hud-overlay';
-import { renderedDiscPxAtPeak } from '../camera/star-physics';
+import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 
 // Live diagnostic readouts for the navigate-mode Sol/GC arrow fade.
 // Mounted as a section inside the unified debug panel (see debug.ts).

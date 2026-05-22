@@ -15,17 +15,17 @@
 //   stellata.ts      — wires the per-frame uniforms and dispatches.
 
 import * as THREE from 'three';
-import type { Catalog } from '../loaders/catalog-loader';
-import type { FilterState } from '../stellata';
+import type { Catalog } from '../../loaders/catalog-loader';
+import type { FilterState } from '../../stellata';
 import {
   physSizePx,
   varEffectiveAmplitude,
   distAtFillFraction,
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
-import { parkDistance } from './focus-transition';
-import { R_SUN_PC } from '../solar-system/astronomy-constants';
-import { DCAM_LOG_FLOOR_PC } from './timing';
+import { parkDistance } from '../warp/focus-transition';
+import { R_SUN_PC } from '../../solar-system/astronomy-constants';
+import { DCAM_LOG_FLOOR_PC } from '../timing';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-
 // zoom orbit floor. The shader reads this as `uMaxPhysFrac` and clamps

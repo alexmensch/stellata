@@ -3,12 +3,12 @@
 // their own R_pc / dMinFloor inputs so the focus UX stays uniform.
 
 import * as THREE from 'three';
-import { AU_PC } from '../solar-system/astronomy-constants';
+import { AU_PC } from '../../solar-system/astronomy-constants';
 import {
   type ArrivalState,
   newArrival,
   tickArrival,
-} from './camera-motion';
+} from '../arrival/camera-motion';
 
 export interface ParkDistanceInputs {
   /** Effective object radius in parsecs (Reff for stars; major semi-axis

@@ -5,7 +5,7 @@ import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
 import { FLAG_BINARY_PRIMARY } from '../../../scripts/catalog/catalog-pure';
 import { projectToScreen } from '../overlays/overlay-project';
 import { setNumAttr } from '../overlays/dirty-attr';
-import { getChartDiscParams } from '../camera/star-physics';
+import { getChartDiscParams } from '../camera/controls/star-physics';
 
 // Chart-mode label engine. Per-frame, projects every candidate
 // label (proper-named star, Bayer-letter star, constellation Latin name,

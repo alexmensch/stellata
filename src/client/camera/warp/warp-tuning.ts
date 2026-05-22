@@ -1,8 +1,8 @@
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 import {
   type ArrivalCurveContext,
   resolveHybridCurve,
-} from './arrival-curves';
+} from '../arrival/arrival-curves';
 
 // Warp-curve tuning section for the unified debug panel. Module-level
 // mutable knobs read at startWarp time (changes take effect on the
@@ -20,7 +20,7 @@ import {
   WARP_T_MAX_MS,
   WARP_T_K_MS,
   OBSERVE_TRANSITION_MS,
-} from './timing';
+} from '../timing';
 
 /** Linear |camera−B| / |A−B| threshold at which the mid-Fly recentre
  *  fires (0.5 = midpoint, matching the shipped `0.25` squared-form in

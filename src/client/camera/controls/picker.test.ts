@@ -12,12 +12,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Picker, type PickerDeps } from './picker';
-import { ALL_SPECT_MASK, type FilterState } from '../stellata';
-import type { Catalog } from '../loaders/catalog-loader';
-import { makeEmptyCatalog } from '../loaders/catalog-mock';
-import type { MolecularClouds } from '../molecular-clouds/molecular-clouds';
-import type { PlanetBodyField } from '../solar-system/planet-body-field';
-import type { Heliopause } from '../solar-system/heliopause';
+import { ALL_SPECT_MASK, type FilterState } from '../../stellata';
+import type { Catalog } from '../../loaders/catalog-loader';
+import { makeEmptyCatalog } from '../../loaders/catalog-mock';
+import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
+import type { PlanetBodyField } from '../../solar-system/planet-body-field';
+import type { Heliopause } from '../../solar-system/heliopause';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so

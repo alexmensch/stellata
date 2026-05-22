@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { type ArrivalState, newArrival, shiftArrivalWaypoints, tickArrival } from './camera-motion';
-import { AU_PC } from '../solar-system/astronomy-constants';
+import { AU_PC } from '../../solar-system/astronomy-constants';
 
 // Co-linear arrival builder. pStart at d0 along +X, pEnd at dEnd along +X,
 // target at the origin — so the camera's x coordinate IS its distance from
@@ -22,7 +22,7 @@ function makeCamera(): THREE.PerspectiveCamera {
 }
 
 // Reference implementation of d(u) — the cubic-Hermite log-distance profile
-// from docs/camera-arrival.md § Profile. The helper runs the same Math.pow
+// from src/client/camera/arrival/README.md § Profile. The helper runs the same Math.pow
 // in the same order, so `toBe` (bit-exact) holds.
 function expectedD(d0: number, dEnd: number, u: number): number {
   const f = u * u * (3 - 2 * u);
@@ -115,7 +115,7 @@ describe('camera-motion tickArrival — curve pin (cubic-Hermite log-distance)',
   });
 });
 
-describe('camera-motion tickArrival — worked examples (docs/camera-arrival.md)', () => {
+describe('camera-motion tickArrival — worked examples (src/client/camera/arrival/README.md)', () => {
   // Sol from 1 pc. parkDist ≈ AU_PC per the doc's worked example. Doc
   // table at u ∈ {0, 0.25, 0.5, 0.75, 1} shows d (pc) ≈
   //   {1.0, 0.148, 2.20·10⁻³, 3.28·10⁻⁵, AU_PC}.

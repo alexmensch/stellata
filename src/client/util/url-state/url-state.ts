@@ -5,14 +5,14 @@ import {
   MAG_PRESETS,
   DEFAULT_FOV,
   ALL_SPECT_MASK,
-} from '../stellata';
-import { sliderToDist, distToSlider, SLIDER_STEPS } from '../camera/controls';
-import { setUnit, getUnit, onUnitChange } from '../ui/distance-util';
-import { isLive } from '../solar-system/time';
+} from '../../stellata';
+import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
+import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
+import { isLive } from '../../solar-system/time';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Three
 // wire formats coexist (v1/v2/v3); old shared URLs auto-upgrade to v3
-// on load. See docs/url-state.md for the wire format and the
+// on load. See src/client/util/url-state/README.md for the wire format and the
 // "adding a field" recipe.
 //
 // Buffer order (FIELDS bit-index order) is independent of the dispatch

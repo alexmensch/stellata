@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
-import { makeEmptyCatalog } from './loaders/catalog-mock';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
 
 function makeOpts(count = 4) {
   const catalog = makeEmptyCatalog(count);

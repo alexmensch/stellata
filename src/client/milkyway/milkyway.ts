@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import milkywayVert from '../shaders/milkyway.vert.glsl?raw';
-import milkywayFrag from '../shaders/milkyway.frag.glsl?raw';
+import milkywayVert from './milkyway.vert.glsl?raw';
+import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import type { DustField } from '../loaders/dust-loader';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
 // bulge), AdditiveBlending. Analytical-only dust here — voxel sampling
 // along 8–15 kpc rays aliases into parallel streaks regardless of step
-// distribution. See docs/milky-way.md.
+// distribution. See src/client/milkyway/README.md.
 
 // --- Geometry / density parameters -------------------------------------
 
