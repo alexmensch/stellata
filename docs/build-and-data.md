@@ -23,7 +23,7 @@ committed `data/dust/*.bin`, Pace 2024 LVDB
 `data/hipparcos/hip_ccdm.tsv`. Refresh from upstream is an explicit,
 manual, infrequent step, not a build dependency.
 
-`data/` is organised by upstream source catalogue (stellata-9mm.204):
+`data/` is organised by upstream source catalogue:
 `wds/`, `gaia/`, `hipparcos/`, `gcvs/`, `athyg/`, `bailer-jones/`,
 `simbad/`, `stellarium/`, plus `local-group/`, `molecular-clouds/`,
 `dust/` for sources with multi-file layouts. The pipeline-derived
@@ -49,6 +49,102 @@ When adding new external data:
 
 Applies to JSON / CSV / FITS / HDF5 / TSV catalogs, sky-culture JSON,
 dust map binaries — anything sourced from outside the repo.
+
+## Layer 1 — committed reference data
+
+Every external file the build reads, with its upstream source and the
+build step that consumes it. Sized files are LFS-backed; small files
+ride regular git. Per-source provenance and citations are in
+SCIENCE.md § Data sources.
+
+| File | Upstream source | Consumed by |
+|---|---|---|
+| `athyg/athyg_33_classic_ids.csv` | AT-HYG v3.3 (Astronexus) | `build-catalog.ts` |
+| `bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 (VizieR I/352) | `build-catalog.ts` (Layer 1 distance override) |
+| `gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) | `build-catalog.ts` (Teff/logg/[M/H]/A0 + GSP-Spec sp_type) |
+| `gaia/gaia_dr3_hip_xmatch.tsv` | Gaia DR3 `hipparcos2_best_neighbour` | `build-catalog.ts` (HIP→Gaia backfill) + `build-binaries.py` Stage 1 |
+| `gaia/gaia_dr3_tyc_xmatch.tsv` | Gaia DR3 `tyco2tdsc_merge_best_neighbour` | `build-binaries.py` Stage 1 |
+| `gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 `gaia_source` (subset queried by source_id) | `build-binaries.py` Stage 3 |
+| `gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` | `build-binaries.py` Stages 3 + 4 |
+| `gaia/gaia_astrometry_source_id_request.tsv` | derived from `build-binaries.py` Stage 2 | input to `refresh-gaia-astrometry.py` |
+| `gcvs/gcvs5.txt` | GCVS 5.1 (Samus et al. 2017) | `build-catalog.ts` + `build-binaries.py` Stage 1 |
+| `gcvs/crossid.txt` | GCVS cross-IDs | `build-catalog.ts` + `build-binaries.py` Stage 1 |
+| `hipparcos/hip_ccdm.tsv` | Hipparcos main (VizieR I/239, `HIP/CCDM/MultFlag` slice) | `build-catalog.ts` + `build-binaries.py` Stage 2 (CCDM tier) |
+| `hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007, VizieR I/311) | `build-binaries.py` Stage 3 (long-baseline + Gaia-saturated fallback) |
+| `simbad/simbad_sample.tsv` | SIMBAD stratified random 10k sample | `distance-regression-check.ts` + `validate-simbad-sample.ts` |
+| `simbad/simbad_sptype.tsv` | SIMBAD per-source `sp_type` | `build-catalog.ts` (Tier 1 spectral) + `build-binaries.py` Stage 6 |
+| `simbad/simbad_wds_xids.tsv` | SIMBAD curated `(WDS-J, comp) → (Gaia DR3, HIP)` | `build-binaries.py` Stage 2 (`simbad_xid` tier) |
+| `wds/wds_summ.txt` | WDS summary (Mason et al. 2001) | `build-binaries.py` Stage 1 |
+| `wds/wds_notes.txt` | WDS notes prose | `build-binaries.py` Stage 5 (flag-char tier) |
+| `wds/wds_refs.txt` | WDS reference list | (committed; not parsed today) |
+| `wds/orb6_orbits.txt` | ORB6 (Hartkopf, Mason & Worley 2001) | `build-binaries.py` Stages 2 + 4 |
+| `binaries/multiples.tsv` | derived from `build-binaries.py` | `known-stars.test.ts` (Tier A) + future per-frame binary-orbit runtime |
+| `distance-validation/vaidman-2025-supergiants.tsv` | Vaidman et al. 2025 (CC BY 4.0) | `scripts/distance-validation/validate-distances.py` |
+| `stellarium/stellarium-modern-skyculture.json` | Stellarium modern sky culture | `build-catalog.ts` (constellation lines) |
+| `local-group/lvdb-snapshot.csv` | Pace 2024 LVDB `dwarf_all` | `build-local-group.ts` |
+| `local-group/overrides.tsv` | hand-curated structural detail | `build-local-group.ts` |
+| `molecular-clouds/zucker2020-tablea1.tsv` | Zucker 2020 cloud distances (shelved) | `build-clouds.py` |
+| `molecular-clouds/zucker2021-table*.dat` | Zucker 2021 cloud geometry (shelved) | `build-clouds.py` |
+| `dust/chunk_*.bin`, `particles.bin`, `manifest.json` | Edenhofer 2023 dust map (resampled by `build-dust.py`) | runtime dust loader |
+
+LFS coverage is per-folder via `.gitattributes`; `stellarium/`,
+`local-group/`, `molecular-clouds/`, `distance-validation/` stay on
+regular git as the files are small.
+
+## Layer 2 — refresh scripts
+
+Every refresh script is **manually invoked**, never wired into
+`npm run build`. The freshness policy (above) drives the split: build
+reads committed files, refresh writes them. Each script lives under
+`scripts/refresh/`, takes no required arguments (the deduped source_id
+request file is the one exception — `refresh-gaia-astrometry.py` reads
+the file Stage 2 writes), and atomically replaces its output TSV under
+`data/`.
+
+### One-time setup
+
+The refresh scripts use astroquery + astropy + numpy. Pin them to a
+local virtualenv so the system Python stays clean:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r scripts/refresh/requirements-refresh.txt
+```
+
+After that, prefix every `python3` invocation with `.venv/bin/`, or
+shell-activate via `source .venv/bin/activate`. The npm targets below
+call bare `python3` — activate the venv (or alias `python3` to the
+venv binary) in the shell that runs them.
+
+### Per-script targets
+
+| npm target | Script | Output | What it pulls |
+|---|---|---|---|
+| `refresh:gaia-hip` | `refresh-gaia-hip-xmatch.py` | `data/gaia/gaia_dr3_hip_xmatch.tsv` | HIP → Gaia DR3 source_id cross-walk from `hipparcos2_best_neighbour`. |
+| `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tyco2tdsc_merge_best_neighbour`. |
+| `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
+| `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `npm run build:binaries`. |
+| `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. |
+| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id. |
+| `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007) reduction. |
+| `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
+| `validate:simbad` | `scripts/catalog/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
+
+`refresh-simbad-sptype.py` and `refresh-simbad-wds-xids.py` don't yet
+have dedicated npm targets — invoke directly with `python3
+scripts/refresh/refresh-simbad-sptype.py` /
+`refresh-simbad-wds-xids.py`. Both share `scripts/refresh/simbad/`
+plumbing (`specs.py`, `inputs.py`, `query.py`, `tsv.py`) so adding new
+SIMBAD-anchored pulls reuses the entire stack.
+
+`scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
+atomic-rename plumbing every refresh script imports — handles retry,
+batching, schema validation, and partial-write protection so a
+mid-run failure never leaves a half-written TSV under `data/`.
+
+See `RELEASING.md` § Catalogue refresh policy for the cadence
+(event-driven, not scheduled) and the version-bump policy for a
+catalogue-refresh PR.
 
 ## Binary catalog format (`public/catalog.bin`)
 
@@ -410,42 +506,180 @@ If the CCDM file is absent the build logs and continues — the
 geometric pass still runs and chart mode still works, just with the
 ~14-pair coverage.
 
-## Bailer-Jones DR3 distance override
+## Multi-layer distance refinement
 
-`scripts/catalog/build-catalog.ts` swaps AT-HYG's naive `1 / π` distances for
-the Bayesian posteriors published by Bailer-Jones et al. 2021 (CDS
-I/352). The pipeline:
+Every star's final distance is the output of an ordered three-layer
+stack run inside `readStars` (`scripts/catalog/stars-parse.ts`). The
+order is non-commutative — see SCIENCE.md § Stellar catalog ingestion
+§ Multi-layer distance refinement for the physical rationale; the
+diagram below is the build-side view:
 
-1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via `parseBailerJonesTsv` into a
-   `Map<source_id, distance_pc>` keyed by Gaia DR3 `source_id`. The
-   key is kept as a **string** — Gaia source_ids regularly exceed
-   `Number.MAX_SAFE_INTEGER`, so any numeric parse would silently
-   corrupt the join. Photogeometric `r_med_photogeo` is preferred;
-   `r_med_geo` is the fallback when photogeo is absent.
+```
+AT-HYG `dist` column  (whatever dist_src carries)
+   │
+   ▼
+[ Layer 1: Bailer-Jones DR3 override ]   only for dist_src ∈ {G_R3, G_R2}
+   │                                       AND gaia_source_id resolved
+   │                                       AND bjMap has the source_id
+   ▼
+[ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
+   │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
+   ▼
+[ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
+   │
+   ▼
+`public/catalog.bin` record
+```
+
+Each override layer returns a `DistanceOverride` (`dist`, `x`, `y`,
+`z`, `absmag`) — the absmag recompute matters because skipping it
+places the star at the new distance but lights it at the old one,
+breaking the disc/glow size chain in the renderer. Both override
+helpers (`applyBailerJonesOverride`, `applyLmcKinematicOverride`)
+live in `catalog-pure.ts` so the algebra is testable in isolation
+(`catalog-pure.test.ts`).
+
+### Layer 1 — Bailer-Jones (DR3) override
+
+`scripts/catalog/build-catalog.ts` swaps AT-HYG's naive `1 / π`
+distances for the Bayesian posteriors published by Bailer-Jones et
+al. 2021 (CDS I/352). The pipeline:
+
+1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via
+   `parseBailerJonesTsv` into a `Map<source_id, distance_pc>` keyed
+   by Gaia DR3 `source_id`. The key is kept as a **string** — Gaia
+   source_ids regularly exceed `Number.MAX_SAFE_INTEGER`, so any
+   numeric parse would silently corrupt the join. Photogeometric
+   `r_med_photogeo` is preferred; `r_med_geo` is the fallback when
+   photogeo is absent.
 2. During `readStars`, every AT-HYG row with a non-empty `gaia`
-   source_id is looked up in the map. On a hit, `applyBailerJonesOverride`
-   (in `catalog-pure.ts`) returns the new `{ dist, x, y, z, absmag }`:
-   - `x/y/z` via `icrsSphericalToCartesian(ra, dec, bjDist)` —
-     matches AT-HYG's own ICRS Cartesian basis so the override slots
-     back into the same coordinate space.
-   - `absmag = mag − 5·log₁₀(dist / 10)` — recomputed from the
-     original apparent magnitude with the new distance. Skipping
-     this step would place stars at the new distance but light them
-     for the old one, breaking the disc/glow size chain.
-3. The override fires for ~99.5% of Gaia-DR3-bearing AT-HYG rows.
+   source_id AND `dist_src ∈ {G_R3, G_R2}` is looked up in the map.
+   The eligibility predicate `isBailerJonesEligible` is the single
+   gate; rows with `dist_src ∈ {HIP, GJ, N, OTHER}` are excluded
+   deliberately (their distances are non-Gaia parallaxes B-J would
+   silently regress onto its Galactic prior tail).
+3. On a hit, `applyBailerJonesOverride` returns
+   `{ dist, x, y, z, absmag }` with `x/y/z` recomputed via
+   `icrsSphericalToCartesian(ra, dec, bjDist)` (matches AT-HYG's
+   ICRS Cartesian basis) and `absmag = mag − 5·log₁₀(dist / 10)`.
+4. The override fires for ~99.5% of Gaia-DR3-bearing AT-HYG rows.
    The residual ~0.5% are source_ids absent from the Bailer-Jones
-   publication (small G_R2 / HIP / GJ tail) and keep their AT-HYG
-   values unchanged.
-4. The build also rescues ~15 stars previously dropped at the
-   `dist > 50,000 pc` filter: catastrophic-parallax-inversion
-   supergiants whose Bayesian distance falls below the cap.
+   publication and keep their AT-HYG values unchanged.
+5. The build also rescues ~15 stars previously dropped at Layer 3:
+   catastrophic-parallax-inversion supergiants whose Bayesian
+   distance falls below the cap.
 
-If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone without LFS
-pulled), the build logs and continues — every star keeps its naive
-AT-HYG distance.
+If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone
+without LFS pulled), the build logs and continues — every star keeps
+its naive AT-HYG distance. Data refresh: `npm run refresh:bailer-jones`.
 
-Data refresh: `scripts/refresh/refresh-bailer-jones.py`. See SCIENCE.md
-§ Bailer-Jones DR3 distance override for the physics rationale.
+### Layer 2 — LMC kinematic override
+
+Bailer-Jones's Galactic-density prior doesn't cover the LMC, so the
+~60 AT-HYG LMC supergiants (HDE 268xxx range) land somewhere
+intermediate (5–20 kpc) after Layer 1 instead of the LMC's true
+~50 kpc. Layer 2 identifies these stars by sky-cone + bulk proper
+motion and snaps their distance to the eclipsing-binary anchor in
+Pietrzyński et al. 2019 (49.594 kpc).
+
+Constants in `catalog-pure.ts`:
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `LMC_DISTANCE_PC` | 49,594 | Pietrzyński 2019 LMC centre-of-mass distance. |
+| `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC photometric centre RA. |
+| `LMC_CENTRE_DEC_DEG` | −69.19 | LMC photometric centre Dec. |
+| `LMC_CONE_HALF_ANGLE_DEG` | 15 | Sky-cone half-angle. |
+| `LMC_PM_RA_CENTRE` | 1.85 mas/yr | van der Marel & Kallivayalil 2014 LMC bulk μ_α*. |
+| `LMC_PM_DEC_CENTRE` | 0.20 mas/yr | Same paper, μ_δ. |
+| `LMC_PM_TOLERANCE` | 0.5 mas/yr | Per-axis tolerance around the bulk PM. |
+
+`isInLmcCone(raHours, decDegrees)` evaluates the cone independently
+of the PM gate so `readStars` can count cone-membership candidates
+(`lmcCandidates` in `build-counts-expected.json`) separately from
+PM-passing overrides (`lmcOverridden`). The override fires for ~54
+of ~60 candidates each build; the residual ~6 fail the PM tolerance
+(MW halo / runaway stars whose PMs sit far from the LMC bulk
+centroid).
+
+The override **must** run after Layer 1: LMC supergiants typically
+carry Gaia source_ids that B-J's map covers, so Layer 1 fires on
+them first with a mis-anchored intermediate distance. If Layer 2 ran
+first, Layer 1 would clobber its snap back to that intermediate
+value. The codepath in `readStars` enforces this by sequencing the
+calls; the regression test `catalog-pure.test.ts` pins the LMC
+constants and the override math.
+
+### Layer 3 — MAX_DIST_PC bounded-scope cutoff
+
+`MAX_DIST_PC = 50_000` (defined at `stars-parse.ts:34`) drops any row
+whose final distance still exceeds 50 kpc after Layers 1 and 2. This
+is **not** a noise filter — it's a statement about which populations
+the model currently represents (Sol out to and including the LMC).
+The cutoff bumps in sync with each new modelled population the
+renderer takes responsibility for (future SMC, Sgr dSph, M31
+supergiant layers would extend it). See SCIENCE.md § Stellar catalog
+ingestion for the framing rationale.
+
+### Post-build distance-regression check
+
+After the binary is written, `scripts/catalog/distance-regression-check.ts`
+sweeps the catalogue and emits two snapshot sections into
+`scripts/catalog/build-distance-outliers-expected.json`:
+
+- **Self-consistency outliers** — stars whose final distance has
+  drifted from their AT-HYG input beyond per-`dist_src` thresholds
+  (`HIP`/`GJ`/`N`: 3× ratio; `G_R3`/`G_R2`: 30× ratio since B-J
+  legitimately re-anchors low-S/N Gaia parallaxes).
+- **SIMBAD-anchored outliers** — stars whose final distance disagrees
+  with SIMBAD's parallax-derived distance by more than 5× on the
+  random 10k stratified sample in `data/simbad/simbad_sample.tsv`.
+
+Both sections carry hand-edited `reason` strings ("LMC kinematic snap
+legitimate", "ρ Cas yellow hypergiant — SIMBAD's 1/π is the noisy
+Hipparcos value") that survive `UPDATE_DISTANCE_OUTLIERS=1` refreshes
+via `mergeReasonsFromSnapshot`. A new outlier fails the build until
+the snapshot is refreshed and a rationale is filled in; a removed or
+changed outlier likewise. See `docs/cross-match.md` § Multi-layer
+distance refinement for the developer recipe.
+
+## Gaia DR3 Apsis surfacing
+
+`scripts/catalog/build-catalog.ts` loads
+`data/gaia/gaia_dr3_apsis.tsv` via `parseGaiaApsisTsv` into a
+`Map<source_id, ApsisRow>` and writes seven `float32` Apsis fields
+per record into the v6 binary (offsets 52–79; see § Binary catalog
+format above). Coverage: ~99.6% of records that resolve to a Gaia
+source_id match an Apsis row; ~85% have a non-null Teff in either
+gspphot or gspspec. The remaining ~15% (typically faint Tycho-only
+stars without high-S/N BP/RP photometry, plus hot O/B stars where
+gspphot doesn't converge) are written as `NaN` (the `NO_APSIS`
+sentinel) and the spectral resolver falls through to GSP-Spec's
+letter-only enum or the unknown-class fallback.
+
+The seven floats are surfaced directly to the runtime via
+`catalog-loader.ts`'s per-array views (`teffGspphot`, `loggGspphot`,
+`mhGspphot`, `azeroGspphot`, `teffGspspec`, `loggGspspec`,
+`mhGspspec`). Consumers test absence with `Number.isNaN(arr[i])`.
+Today's downstream consumers:
+
+- **Per-star intrinsic Teff routing** (`src/client/shaders/star-color-routing-pure.ts`)
+  — six-tier `pickTeffSource` ramps gspphot first, gspspec second,
+  Ballesteros(B-V) third, spectral-class T_TABLE fourth, WD Sion Teff
+  fifth, solar fallback last.
+- **Spectral classification fall-through** (`resolveSpectralInfo` in
+  `catalog-pure.ts`) — when SIMBAD has no sp_type, GSP-Spec's
+  `spectraltype_esphs` enum is the second tier before
+  `SPECTRAL_UNKNOWN`.
+- **Per-record handles** for future Phase 5 consumers (geometric
+  occlusion photometry's limb-darkening Teff dependence; mass-ratio
+  refinement using direct `logg_gspphot` for giant / subgiant
+  classification) — already loaded; no rebuild needed when those
+  consumers come online.
+
+Data refresh: `npm run refresh:gaia-apsis`. See SCIENCE.md
+§ Astrophysical parameters from Gaia DR3 Apsis for the science
+framing.
 
 ## Reference epoch and proper motion
 

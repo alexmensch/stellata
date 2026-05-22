@@ -60,6 +60,48 @@ metadata PRs (e.g. `bd` issue-sync, no shipped code, CI workflow
 edits) can attach the `skip-version-bump` label to opt out — use
 sparingly. PRs without a bump don't redeploy.
 
+## Catalogue refresh policy
+
+External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +
+NSS + Apsis, Bailer-Jones DR3, Hipparcos-2 van Leeuwen, SIMBAD pulls)
+are refreshed by manual `npm run refresh:*` invocations, **not** by
+`npm run build` or the deploy workflow. The build reads the committed
+files under `data/<source>/` and never hits the network — see
+`docs/build-and-data.md` § Frozen external data for the rationale.
+
+**Cadence.** Refresh is event-driven, not scheduled. The trigger is an
+upstream catalogue release:
+
+- **Gaia DR transition** (DR3 → DR4 expected late 2026) — the largest
+  refresh. Re-run every `refresh-gaia-*.py` script + `refresh-bailer-
+  jones.py` in lockstep with the AT-HYG drop that re-keys to the new
+  source_ids. Tier-A `known-stars.tsv` rows may need per-row source_id
+  updates against the DR3↔DR4 cross-walk.
+- **AT-HYG point release** — drop the new
+  `data/athyg/athyg_3X_classic_ids.csv` in, rebuild, refresh the
+  source_id-keyed side-files if AT-HYG's gaia coverage changed.
+- **Bailer-Jones republication** — drop the new
+  `bailer-jones-drN.tsv` in, rebuild. Runs independently of any other
+  refresh; the override gate (`dist_src ∈ {G_R3, G_R2}`) is
+  unchanged.
+- **SIMBAD / Hipparcos-2** — refresh on demand; both are rolling
+  catalogues and a sample-time anchor is fine for the validation tier.
+
+The full refresh recipe + ordering constraints + post-refresh
+validation steps are in `docs/cross-match.md` § Refreshing data when
+DR4 / new AT-HYG lands.
+
+**Version bump on catalogue refresh.** A catalogue refresh PR that
+changes the user-visible scene (e.g. star count, per-star distance
+distribution, new variable-star matches) bumps `package.json#version`
+per § Version policy above — minor when the change is significant
+(new layer / new ingest source / numerical drift visible at default
+magnitude preset), patch when the refresh is mechanical and the diff
+against `public/catalog.bin` is within the noise floor. Pure pipeline
+internals that don't change the live binary (refresh that lands
+data but doesn't wire it into `build-catalog.ts`) attach
+`skip-version-bump`.
+
 ## What the deploy workflow does
 
 On every push to `main`, `deploy.yml`:
