@@ -567,7 +567,7 @@ therefore the **observed** (dust-reddened) B-V from the camera's
 vantage, not the intrinsic value, so colour drifts physically as the
 camera traverses dust between observer and star (the Mu Cephei
 "Garnet Star ↔ Peach Star" case study in
-`research/star-spectral-rendition/RECOMMENDATION.md`).
+`research/star-spectral-rendition/README.md`).
 
 The LUT spans B-V ∈ [-0.4, +2.0] in 256 entries; values are clamped
 to the endpoints before sampling. Hotter / cooler tails saturate at

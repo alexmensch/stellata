@@ -9,7 +9,7 @@
 // sides.
 //
 // See SCIENCE.md § "Star colour calibration" and
-// research/star-spectral-rendition/RECOMMENDATION.md § Tier 1.
+// research/star-spectral-rendition/README.md § Tier 1.
 
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

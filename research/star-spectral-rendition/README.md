@@ -285,7 +285,7 @@ Integration points:
 | `apsis_coverage.txt` | Step 3 summary |
 | `p3_swatches.py` | Tier 3 follow-up — Display P3 vs sRGB demonstration |
 | `p3_swatches.png` | Display-P3-tagged comparison image (open in Preview/Safari on a P3 monitor) |
-| `RECOMMENDATION.md` | this file |
+| `README.md` | this file |
 
 Every script is re-runnable from this directory with
 `.venv/bin/python <script>.py`. The Apsis probe is deterministic for

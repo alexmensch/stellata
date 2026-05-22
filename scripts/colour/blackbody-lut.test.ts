@@ -106,7 +106,8 @@ describe('sampleLut at named-star B-V values', () => {
     ['Betelgeuse', 1.860, [255, 195, 129]],
     ['Mintaka',   -0.170, [188, 206, 255]],
     // Mu Cep at observed (dust-reddened) B-V = +2.4 — the load-bearing
-    // case study (RECOMMENDATION.md § Mu Cephei). Tier 1 must land at
+    // case study (research/star-spectral-rendition/README.md § Mu Cephei).
+    // Tier 1 must land at
     // pumpkin-amber, not the current shader's over-saturated red. The LUT
     // clamps inputs at BV_MAX = 2.0, so this samples the table's hottest-end
     // entry — slightly warmer than the un-clamped pumpkin, but the visual

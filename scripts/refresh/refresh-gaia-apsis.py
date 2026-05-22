@@ -7,7 +7,7 @@ Pulls per-Gaia-source spectroscopic stellar parameters from
 of the Apsis processing chain (Creevey+22 GSP-Phot, Recio-Blanco+23
 GSP-Spec). Coverage of (Teff, logg) goes from 29.3% (spectral-class
 parsing in `catalog-pure.ts`) to 84.8% — see
-research/star-spectral-rendition/RECOMMENDATION.md § Tier 2.
+research/star-spectral-rendition/README.md § Tier 2.
 
 Two pipelines per source:
   * GSP-Phot — BP/RP photometric spectra, ~470 M DR3 sources, robust to
@@ -197,7 +197,7 @@ SCRIPT_NAME = "refresh-gaia-apsis"
 def report_coverage(rows_by_id: dict[int, Any], total_input: int) -> float:
     """Log per-pipeline and union (Teff AND logg) coverage; return union %.
     Union coverage is the headline number motivating Apsis ingest — see
-    research/star-spectral-rendition/RECOMMENDATION.md § Tier 2.
+    research/star-spectral-rendition/README.md § Tier 2.
     """
     n = len(rows_by_id)
     phot = sum(
