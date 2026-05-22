@@ -84,3 +84,34 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 	HD 271416		4660699674131931008	49593.998	1	-7.138	K0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
 	HD 268691		4661719299382753408	49593.999	1	-7.582	K7			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare).
 	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.527	M0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
+# ---- Single stars ------------------------------------------------------
+# Bright stars saturated in Gaia DR3 have null gaia_source_id; the
+# pipeline's spectral resolver requires a Gaia source_id, so spectClass
+# falls back to 8 (unknown). The corpus pins spectClass=8 via empty
+# primary_spectral; SIMBAD's true sp_type is annotated in notes_source.
+	Vega	91262		7.679	0.05	0.604				SIMBAD * alf Lyr sp_type=A0V; HIP2 parallax 130.23 mas. Bright star saturated in Gaia DR3, pipeline spectral=unknown.
+	Altair	97649		5.129	0.05	2.210				SIMBAD * alf Aql sp_type=A7Vn; HIP2 parallax. Bright star, no Gaia DR3 match.
+	Polaris	11767		132.626	0.7	-3.643				SIMBAD * alf UMi sp_type=F8Ib; Cepheid variable. HIP-anchored distance, pipeline spectral=unknown.
+	Procyon	37279		3.514	0.05	2.671				SIMBAD * alf CMi sp_type=F5IV-V+DQZ; HIP2 parallax. Bright primary, no Gaia DR3 match.
+	Betelgeuse	27989		152.672	1.0	-5.469				SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored.
+	Arcturus	69673		11.257	0.1	-0.307				SIMBAD * alf Boo sp_type=K1.5IIIFe-0.5. Bright nearby giant, pipeline spectral=unknown.
+	Aldebaran	21421		20.434	0.2	-0.682				SIMBAD * alf Tau sp_type=K5+III. Bright giant, no Gaia DR3 match.
+	Rigel	24436		264.551	1.5	-6.933				SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
+	Antares	80763		169.780	1.0	-5.089				SIMBAD * alf Sco sp_type=M1.5Iab+B2Vn. Bright red supergiant with B-star companion.
+	Spica	65474		76.570	0.5	-3.440				SIMBAD * alf Vir sp_type=B1V. Bright early-B variable (β Cep), tight spectroscopic binary.
+	Deneb	102098		432.900	2.5	-6.932				SIMBAD * alf Cyg sp_type=A2Ia. Bright supergiant; AT-HYG distance from HIP2 with high uncertainty (true distance ~800 pc per Gaia DR2).
+	Capella	24608		13.123	0.1	-0.510				SIMBAD * alf Aur sp_type=G3III:. Bright quad system (Aa+Ab giants); HIP-anchored.
+	Canopus	30438		94.787	0.5	-5.504				SIMBAD * alf Car sp_type=A9II. Bright supergiant, pipeline spectral=unknown.
+	Achernar	7588		42.754	0.3	-2.705				SIMBAD * alf Eri sp_type=B6Vpe; emission-line Be star, rapid rotator.
+	Fomalhaut	113368		7.704	0.05	1.737				SIMBAD * alf PsA sp_type=A4V. Nearby A-dwarf with debris disc.
+# ---- Visual binaries with multiples.tsv-validated companions -----------
+# Systems where (a) primary has a catalog.bin record and (b) at least one
+# companion has a per-component multiples.tsv row with non-inherited HIP /
+# Gaia source_id / absmag. Companions whose multiples.tsv absmag is empty
+# or inherited from the primary (e.g. Sirius B at 1.454, Procyon B blank)
+# are deliberately excluded — pinning known-bad data would mislead future
+# regression detection.
+14396-6050	α Centauri	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437		SIMBAD * alf Cen A sp_type=G2V (saturated in Gaia DR3 → pipeline spectral=unknown). ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima). Companion data per multiples.tsv post-dch.65.
+21069+3845	61 Cygni	104214	1872046609345556480	3.496	0.05	7.482	K5V	B:104217:1872046574983497216:8.332		SIMBAD * 61 Cyg A sp_type=K5V; companion B sp_type=K7V (multiples.tsv). Common-proper-motion pair, no well-determined orbit.
+13239+5456	Mizar–Alcor	65378	1563590579347125632	24.867	0.2	0.252	A1.5Vas	C:65477::1.995		SIMBAD * zet01 UMa sp_type=A1.5Vas (primary Mizar Aa). Companion C is Alcor (HIP 65477, A5V), validated against multiples.tsv wds 13239+5456-AC. Wide visual pair (~0.2 pc separation).
+14396-6050	α Centauri AB (orbit)	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739	29133.07	α Cen AB orbital period — ORB6 entry 14396-6050 P=29133.07 d propagated through multiples.tsv. Duplicates 14396-6050 row above but pins orbital_period_days for the orbit-pinned tier check.
