@@ -215,8 +215,19 @@ applies three filters and nothing else:
 
 1. Drop rows missing `x0`/`y0`/`z0` (no usable 3D position).
 2. Drop rows missing `absmag` (can't size or shade them).
-3. Drop rows with `dist > 50,000 pc` (out of any plausible volume of
-   interest; safety net for catalog noise).
+3. Drop rows with `dist > 50,000 pc`. This is a **bounded-scope
+   statement about which populations the model represents**, not a
+   primary include/exclude filter. The cutoff is positioned just past
+   the LMC distance (49.59 kpc, Pietrzyński et al. 2019) because the
+   stellar populations Stellata models reach Sol → LMC for v1. Stars
+   beyond LMC depth are unmodelled extragalactic by construction; SMC,
+   Sgr dSph, and M31 supergiants would be candidates for future
+   modelled populations, and the cutoff bumps in sync with each new
+   population the renderer takes responsibility for. The filter runs
+   **after** the multi-layer distance-refinement stack below, so a
+   star that B-J or the LMC kinematic override rescued from a
+   catastrophic 1/π estimate keeps its corrected distance whenever
+   that distance falls inside scope.
 
 There is no source-aware filtering. The 80-byte v6 binary record
 preserves none of the `*_src` columns either, so the renderer can't
@@ -228,21 +239,56 @@ astrophysical parameters (Teff/logg/[M/H]/A0 from gspphot ∪ gspspec)
 keyed by it — the source-ID anchor downstream consumers (cross-match
 and Apsis-direct stellar parameters) key off.
 
-**Bailer-Jones DR3 distance override.** AT-HYG's `dist` for the
-~98% G_R3 majority is Gaia DR3's naive `1 / π` parallax inversion —
+**Multi-layer distance refinement.** Three overrides run in fixed order
+on every AT-HYG row before the bounded-scope cutoff above fires:
+
+1. **Bailer-Jones (2021) Bayesian posterior** — replaces the catastrophic
+   1/π Gaia inverse-parallax estimator for AT-HYG rows whose distance
+   was sourced from Gaia DR3 (or DR2) parallax. Targets the noisy
+   regime that hosts the brightest, most luminous, longest-baseline
+   stars (B/A supergiants, AGB stars), where Lutz-Kelker bias plus the
+   sampling distribution's heavy tail push individual estimators by an
+   order of magnitude.
+2. **LMC kinematic override** — replaces B-J's mis-anchored posterior
+   for AT-HYG entries in the LMC field, using a sky-cone + bulk-PM
+   identification pinned to Pietrzyński et al. (2019)'s eclipsing-
+   binary distance to the LMC's centre of mass.
+3. **Bounded-scope cutoff** at 50,000 pc — drops rows still beyond LMC
+   depth as unmodelled extragalactic per the framing above.
+
+Ordering is non-commutative. Bailer-Jones runs first because its
+posterior is well-calibrated everywhere the Galactic-density prior is
+valid; the LMC kinematic layer runs second so it can override B-J on
+the ~60 AT-HYG rows where B-J's smooth prior fails (B-J has no LMC).
+If LMC ran first, B-J would clobber the kinematic snap back onto its
+intermediate-wrong posterior because LMC stars carry Gaia source_ids
+that B-J's map covers. The cutoff runs last so it acts on the refined
+distance, not the catastrophic input.
+
+Future Magellanic-system or M31 layers will sit alongside the LMC
+kinematic layer (same sky-cone + bulk-PM identification pattern,
+distinct anchor distances) and bump the cutoff as each new modelled
+population enters scope.
+
+**Bailer-Jones DR3 distance override (Layer 1).** AT-HYG's `dist` for
+the ~98% G_R3 majority is Gaia DR3's naive `1 / π` parallax inversion —
 unbiased only when parallax S/N is high. For low-S/N parallaxes (the
 distant luminous stars that dominate the visual scene's outer
 volume) the inverse-parallax estimator catastrophically fails:
 its sampling distribution has a long tail to large distances, and a
 handful of supergiants end up at 9–14 kpc instead of their true
-2–5 kpc. Bailer-Jones et al. 2021 (AJ 161, 147 — CDS I/352)
-publishes Bayesian distance posteriors for every Gaia DR3 source
-that combine the parallax likelihood with a Galactic-density prior;
-the photogeometric variant additionally combines the prior with G
-and BP–RP photometry. At high S/N the posterior collapses onto the
-likelihood (well-measured stars don't move); at low S/N it collapses
-onto the prior (catastrophic outliers get pulled back to plausible
-disc distances). This is the principled fix and we apply it where
+2–5 kpc. Bailer-Jones et al. 2021 (*AJ* 161, 147,
+DOI 10.3847/1538-3881/abd806; CDS I/352) publishes Bayesian distance
+posteriors for every Gaia DR3 source that combine the parallax
+likelihood with a Galactic-density prior; the photogeometric variant
+additionally combines the prior with G and BP–RP photometry. The
+parallax-zero-point bias documented in Lindegren et al. 2021
+(*A&A* 649, A4, DOI 10.1051/0004-6361/202039653) is applied upstream
+in B-J's own pipeline, so we consume the posteriors directly without
+applying a separate correction. At high S/N the posterior collapses
+onto the likelihood (well-measured stars don't move); at low S/N it
+collapses onto the prior (catastrophic outliers get pulled back to
+plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
 — i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
 rows we swap `dist`, `x0`, `y0`, `z0`, and `absmag` for the
@@ -268,8 +314,8 @@ Bailer-Jones publication and keep their AT-HYG values. The override
 also rescues ~15 stars previously dropped at filter (3): catastrophic
 parallax inversions whose Bayesian distance is < 50 kpc.
 
-Data file: `data/bailer-jones-dr3.tsv` (~310k rows, refreshed by
-`scripts/refresh/refresh-bailer-jones.py`).
+Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (~310k rows,
+refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
 **Distance-override validation against Vaidman et al. 2025.** Vaidman,
 Khokhlov, Miroshnichenko, Agishev & Yermekbayev 2025 (*Universe* 11, 359;
@@ -294,23 +340,70 @@ B-J successor, or any change to `build-catalog.ts`'s distance-priority
 logic — so each migration gets a calibrated named-disagreements report
 rather than a "trust the diff" sign-off.
 
-**LMC kinematic distance refinement.** Bailer-Jones's Galactic-density
-prior has no LMC — so for AT-HYG's ~60 LMC supergiants (HDE 268xxx
-range), the posterior peaks somewhere intermediate (5–20 kpc) instead
-of the LMC's true ~50 kpc. Without a second layer this regresses today's
-behaviour: a "line of stars between MW and LMC in the intergalactic
-void". After the B-J override fires we run a population-specific second
-pass: any row inside a 15° cone of the LMC photometric centre
-(RA 78.76°, Dec −69.19°) whose proper motion lies within ±0.5 mas/yr of
-the LMC bulk centre-of-mass PM (van der Marel & Kallivayalil 2014:
-+1.85 mas/yr in RA, +0.20 mas/yr in Dec) has its `dist` snapped to the
-LMC's eclipsing-binary distance (49.594 kpc, Pietrzyński et al. 2019,
-Nature 567, 200; CDS J/other/Natur/567.200), with `x0`/`y0`/`z0`/`absmag`
-recomputed from the new distance. ~54 rows are flagged at LMC depth
-each build — close to the ~60 estimated from the AT-HYG/Gaia source
-data. SMC, Sgr dSph, and other Magellanic-system populations are too
-faint for AT-HYG's brightness cut today; the same approach will extend
-when DR4 lands or AT-HYG goes deeper.
+**LMC kinematic distance refinement (Layer 2).** Bailer-Jones's
+Galactic-density prior has no LMC — so for AT-HYG's ~60 LMC
+supergiants (HDE 268xxx range), the posterior peaks somewhere
+intermediate (5–20 kpc) instead of the LMC's true ~50 kpc. Without a
+second layer this regresses today's behaviour: a "line of stars
+between MW and LMC in the intergalactic void". After the B-J override
+fires we run a population-specific second pass: any row inside a 15°
+cone of the LMC photometric centre (RA 78.76°, Dec −69.19°) whose
+proper motion lies within ±0.5 mas/yr of the LMC bulk centre-of-mass
+PM (van der Marel & Kallivayalil 2014, *ApJ* 781, 121,
+DOI 10.1088/0004-637X/781/2/121: +1.85 mas/yr in RA, +0.20 mas/yr in
+Dec) has its `dist` snapped to the LMC's eclipsing-binary distance
+(49.594 kpc, Pietrzyński et al. 2019, *Nature* 567, 200,
+DOI 10.1038/s41586-019-0999-4; CDS J/other/Natur/567.200), with
+`x0`/`y0`/`z0`/`absmag` recomputed from the new distance. ~54 rows are
+flagged at LMC depth each build — close to the ~60 estimated from the
+AT-HYG/Gaia source data. SMC, Sgr dSph, and other Magellanic-system
+populations are too faint for AT-HYG's brightness cut today; the same
+approach will extend when DR4 lands or AT-HYG goes deeper.
+
+**Astrophysical parameters from Gaia DR3 Apsis.** Apsis is Gaia DR3's
+astrophysical-parameters pipeline (Creevey et al. 2023, *A&A* 674,
+A26, DOI 10.1051/0004-6361/202243688). It publishes two independent
+solutions per source: `gspphot` (photometric fit to BP/RP spectra +
+parallax — Andrae et al. 2023, *A&A* 674, A27,
+DOI 10.1051/0004-6361/202243462) and `gspspec` (spectroscopic fit to
+RVS spectra — Recio-Blanco et al. 2023, *A&A* 674, A29,
+DOI 10.1051/0004-6361/202243750). Each emits (T_eff, log g, [M/H]);
+gspphot additionally emits `A0` (line-of-sight monochromatic
+extinction at 547.7 nm) and gspspec additionally emits a coarse
+spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
+`unknown`).
+
+Stellata pulls all seven Apsis floats plus the gspspec spectral-type
+enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
+writes them per record into the v6 binary at offsets 52–79 (see
+`docs/build-and-data.md` § Binary catalog format). Coverage: ~99.6% of
+AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
+~85% have a non-null T_eff in at least one of gspphot or gspspec. That
+last number is the population the renderer's colour LUT path can re-
+key from the Ballesteros (2012) B-V relation to Apsis-direct T_eff;
+the ~15% gap (typically faint Tycho-only stars without high-S/N BP/RP
+photometry, plus hot O/B stars where gspphot doesn't converge) falls
+back to spectral-class T_TABLE.
+
+Three downstream paths consume Apsis directly:
+
+- **Stellar colour calibration** uses Apsis T_eff as the intrinsic
+  temperature when available — see §Star colour calibration §Per-star
+  intrinsic Teff routing for the six-tier resolver and why Apsis
+  beats Ballesteros(B-V) here (gspphot fits include `A0` explicitly,
+  so dust reddening composes downstream without double-counting
+  extinction).
+- **Spectral classification fall-through** uses gspspec's
+  `spectraltype_esphs` enum as the second tier after SIMBAD sp_type.
+  Letter-only — no subclass or luminosity class — but anchors the
+  colour ramp where SIMBAD missed.
+- **Future multi-star refinements** (mass-ratio refinement for giants
+  using direct log g; geometric occlusion photometry using direct
+  T_eff for limb-darkening) read the per-record Apsis floats without
+  a binary-version bump.
+
+A `NaN` cell at any of the seven Apsis float offsets is the canonical
+absent sentinel; consumers test with `Number.isNaN(x)`.
 
 **Known cross-match completeness artefact.** Filter (1) above is the
 load-bearing one: AT-HYG can only emit `x0`/`y0`/`z0` for a Tycho-2
@@ -800,10 +893,225 @@ Implementation: `src/client/shaders/star.vert.glsl` (per-star) and
 `docs/rendering.md` §Dust extinction + the shelved particle layer and
 `docs/milky-way.md`.
 
-## Binary inference threshold
+## Multiple-star pipeline
 
-Binaries are flagged at build time from two sources, both ORing onto
-the same `flags` bit so the chart-mode wings glyph surfaces either:
+AT-HYG's classic-IDs subset is a single-row-per-system table. Bright
+multi-component systems collapse into one row — the brighter primary's
+HIP / HD entry — and the visually-distinguishable secondaries
+(Sirius B's white dwarf, α Cen B, Procyon B, Algol B/C, every
+component of Castor, η Cas, ξ UMa, ζ Cnc, the Trapezium) are absent.
+Recovering binary-pair geometry on top of AT-HYG therefore needs an
+external pipeline keyed off catalogues that resolve every component
+individually.
+
+The architectural consequence of the data-fidelity principle stated in
+§ Scope principles is two-fold: **prefer official source-ID
+cross-walks over position-based matching whenever the cross-walk
+exists**, and **default to the generalised solution, not famous-star
+carve-outs + heuristic fallbacks**. Position-based matching fails
+systematically on exactly the famous bright close binaries: Gaia's
+published 5-parameter PM for Sirius, α Cen, Castor, Algol, Procyon is
+corrupted by orbital wobble, so backward-propagating it to J2000 lands
+them tens of arcsec off their WDS positions and any position-based
+cross-match misses them.
+
+### Architecture
+
+Five layers feed the binary-system pipeline; the boundary between them
+is intentional so each can evolve independently as upstream catalogues
+update.
+
+**Layer 1 — committed reference data.** Frozen under `data/` per the
+freshness policy in `docs/build-and-data.md` § Frozen external data:
+
+- **Washington Double Star Catalog (WDS)** + **Sixth Catalog of Orbits
+  of Visual Binary Stars (ORB6)** — Mason et al. 2001, *AJ* 122, 3466
+  (WDS); Hartkopf, Mason & Worley 2001, *AJ* 122, 3472 (ORB6).
+  Maintained at the U.S. Naval Observatory and Georgia State
+  University. Provides ρ/θ separations, position angles, component
+  magnitudes, spectral types, HIP/HD cross-IDs (WDS) and full visual
+  orbital element fits (P, T, e, a, i, ω, Ω) for ~4k systems (ORB6).
+- **Hipparcos van Leeuwen 2007 reduction** — van Leeuwen 2007,
+  *A&A* 474, 653, DOI 10.1051/0004-6361:20078357. VizieR I/311/hip2.
+  Improved Hipparcos astrometry; the long-baseline PM fallback for
+  bright-binary Gaia contamination.
+- **CCDM-keyed Hipparcos visual-doubles flag** — Hipparcos main
+  catalogue `CCDM` + `MultFlag` columns, as described in
+  §Stellar catalog ingestion under § Data sources.
+- **Gaia DR3 cross-walks** — `gaiadr3.hipparcos2_best_neighbour`,
+  `gaiadr3.tyco2tdsc_merge_best_neighbour`, queried per Gaia
+  Collaboration et al. 2023, *A&A* 674, A1,
+  DOI 10.1051/0004-6361/202243940. Committed as
+  `data/gaia/gaia_dr3_hip_xmatch.tsv` + `gaia_dr3_tyc_xmatch.tsv`.
+- **Gaia DR3 5-parameter astrometry** — `gaiadr3.gaia_source`,
+  queried for the deduped source_id list the WDS resolution stage
+  produces. Per-source RA/Dec/parallax/PM with errors and ref_epoch
+  J2016.0; ~99% coverage on resolved WDS components. Committed as
+  `data/gaia/gaia_dr3_astrometry.tsv`.
+- **Gaia DR3 NSS two-body orbits** — `gaiadr3.nss_two_body_orbit`,
+  the non-single-star catalogue, with Thiele-Innes orbital fits
+  (Halbwachs et al. 2023, *A&A* 674, A9,
+  DOI 10.1051/0004-6361/202243969). Covers the period regime
+  P < ~3 yr / sub-arcsec separation where Gaia's astrometric mission
+  detects orbits directly. Committed as
+  `data/gaia/gaia_dr3_nss_two_body.tsv`.
+- **SIMBAD WDS↔Gaia DR3 cross-IDs** — curated by CDS Strasbourg from
+  SIMBAD's `ident` and `basic` tables (Wenger et al. 2000,
+  *A&AS* 143, 9, DOI 10.1051/aas:2000332). Per-component cross-IDs
+  between WDS pair identifiers (`WDS J<id><comp>`) and Gaia DR3
+  source_ids. The principled cross-identification path for
+  sub-arcsec sub-components ORB6 doesn't enumerate (η Cas A/B/C,
+  ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). Committed as
+  `data/simbad/simbad_wds_xids.tsv`.
+- **SIMBAD per-component spectral types** —
+  `data/simbad/simbad_sptype.tsv`. SIMBAD curates per-component
+  MK sp_type strings free of variability-type contamination (the
+  schema separates sp_type from object-type `otype`), so a
+  mixed-class pair like Sirius A0V + DA1.9 surfaces both spectra
+  rather than AT-HYG's single inherited "A0V+DA" string.
+
+**Layer 2 — manual-run refresh scripts.** One per dataset, idempotent,
+**not** wired into `npm run build`. Per the freshness policy: external
+catalogues update on their own clock (Gaia DR3 → DR4 transition window;
+WDS rolling daily; HIP2 frozen; SIMBAD rolling continuously), and
+freezing the inputs at commit time keeps the build reproducible long-
+term. All scripts share `scripts/refresh/refresh_lib.py` (TAP client
++ retry + batching + schema validation); SIMBAD pulls share
+`scripts/refresh/simbad/` (specs / inputs / query / TSV plumbing).
+
+**Layer 3 — catalogue builder.** `scripts/binaries/build-binaries.py`
+orchestrates seven stages with explicit per-component provenance.
+See `docs/cross-match.md` for the engineer-level walk-through; the
+astronomer-relevant summary:
+
+1. **Load** WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia
+   cross-walks + Gaia astrometry + Gaia NSS + SIMBAD WDS xids +
+   SIMBAD per-component spectra into identifier-keyed indices.
+2. **Resolve each WDS component to a Gaia DR3 source_id** via a strict
+   priority cascade. ORB6's published HIP wins where it has one;
+   AT-HYG-native gaia field (HIP-mediated) is next; SIMBAD's curated
+   per-component WDS cross-ID is the principled fallback for
+   sub-arcsec components; CCDM-sibling HIP position-match handles
+   systems CCDM enumerates that the prior tiers missed; AT-HYG
+   position-match (PM-propagated to J2000) is the final fall-through.
+   ~99% of decomposing WDS pairs resolve at least one component
+   through this cascade; the residual unresolved fraction is
+   dominated by Aitken-only Tycho doubles with no Gaia coverage at
+   all.
+3. **Attach the most-trustworthy astrometric measurement** per
+   component. Priority: Gaia DR3 5-parameter where the fit is clean
+   (`ruwe ≤ 1.4` AND `ipd_frac_multi_peak ≤ 2%`); Gaia NSS
+   centre-of-mass when the 5p is orbit-corrupted AND the source has
+   an NSS row; HIP2 long-baseline when the system has any close
+   companion (ρ ≤ 5″) AND Gaia-vs-HIP2 PM disagrees by >50 mas/yr on
+   either axis (Hipparcos's J1991.25 measurement averages a different
+   window of the orbit). Bright Gaia-saturated primaries with no
+   Gaia source at all (Sirius, α Cen, Procyon, Algol) take HIP2 by
+   construction.
+4. **Select orbital elements per system.** Gaia NSS wins inside Gaia's
+   astrometric-detectability regime (period < ~3 yr OR apparent
+   semi-major axis < 1″) — covers 95.8% of DR3 NSS rows directly,
+   plus the sub-arcsec long-period tail through the TI algebra.
+   ORB6 visual orbits (grades 1–5: definitive → indeterminate) cover
+   wider pairs. ORB6 spectroscopic / interferometric-only orbits
+   (grades 8–9) come last. The Thiele-Innes → Campbell algebra
+   recovers (a, i, Ω, ω) from NSS's stored (A, B, F, G) quartet via
+   the Heintz 1978 / Halbwachs+ 2023 Appendix C closed form, inlined
+   rather than imported from ESA's unmaintained NSSTools package.
+5. **Classify each pair as physical or optical** via a 5-tier
+   cascade — WDS Notes flag chars confirm or reject directly when
+   set; both-components-Gaia parallax (3σ on combined error) and PM
+   (≤5 mas/yr per axis) checks are next; the asymmetric-Gaia gate
+   handles Sirius A-C/D/E/F shaped cases where only the secondaries
+   carry Gaia and the primary's HIP2 parallax is the anchor; the
+   orbit-on-file override keeps pairs Stage 4 produced real orbital
+   elements for (Sirius A-B, Procyon A-B with their white-dwarf
+   companions); the mag-gap heuristic backstops the residual
+   Tycho-only systems.
+6. **Emit `data/binaries/multiples.tsv`** — two rows per kept
+   physical pair (+ standalone rows for SIMBAD-known components the
+   pair walk didn't reach), with explicit per-component provenance
+   columns recording which tier of each cascade above decided.
+   Spectral type is SIMBAD per-component-preferred / AT-HYG
+   per-system inherited as fallback; mass ratio `q` rides through
+   from Gaia NSS / SB2 spectroscopy where present, with per-class
+   mass-table backfill from Cox 2000 §15.2 / Pecaut & Mamajek 2013
+   for visual orbits without spectroscopy.
+7. **Assert against snapshots.** Per-stage counts gate
+   `build-binaries-expected.json`; per-strategy rates gate
+   `build-binaries-rates-expected.json`. A regression in either
+   surfaces in the build log as a per-key diff and refuses to
+   advance. Refreshes are explicit (`UPDATE_BUILD_COUNTS=1`); silent
+   drift is impossible.
+
+**Layer 4 — validation harness.** Three tiers covered in
+`docs/cross-match.md`: a hand-curated Tier A known-stars corpus
+(`scripts/catalog/known-stars.tsv`) the binary catalogue must
+reproduce; population-statistic Tier B snapshots
+(`build-counts-expected.json`); a stratified random 10k SIMBAD sample
+Tier C cross-checker (`validate-simbad-sample.ts` + the
+`distance-regression-check.ts` build-time subset that surfaces in
+`build-distance-outliers-expected.json` with hand-edited reasons).
+
+**Layer 5 — documentation.** This file (astronomer audience —
+sources, physics, decisions); `docs/cross-match.md` (engineer audience
+— functions, thresholds, provenance fields); `docs/build-and-data.md`
+(formats — v6 byte plan, name table, search index).
+
+### Worked examples
+
+- **Sirius A-B.** Sirius A is Gaia-saturated (HIP 32349, no DR3
+  source_id; ~378 mas via HIP2). Sirius B (the famous DA1.9 white
+  dwarf, ~50× fainter at V) resolves to a Gaia DR3 source via
+  SIMBAD's WDS xids side-file. The pair has a grade-2 ORB6 visual
+  orbit (P = 50.13 yr), so Stage 4 produces real elements; Stage 5's
+  optical-pair filter routes through the orbit-on-file tier and keeps
+  the pair despite the 9.9-mag photometric gap. Sirius A's HIP2
+  astrometry rides through Stage 3's Gaia-saturated branch into
+  multiples.tsv; Sirius B's Gaia 5p astrometry rides through the
+  default tier. Both components emit per their own spectral type
+  (SIMBAD: A0V + DA1.9), not the inherited AT-HYG "A0m+DA" string.
+- **α Cen A-B + Proxima.** Both A and B are Gaia-saturated; both
+  carry HIPs (71683, 71681) but no DR3 source_id. SIMBAD's WDS xids
+  bind the HIPs per-component; Stage 3 routes both through HIP2
+  long-baseline (5″ companion gate engages on the AB pair). Proxima
+  (HIP 70890) is the wider WDS member and resolves to its Gaia
+  source via AT-HYG-native; its Gaia 5p astrometry rides through.
+  Phase 5 will eventually derive the AB orbital geometry from the
+  ORB6 grade-1 visual orbit (P = 79.91 yr, the canonical reference
+  fit).
+- **Algol.** β Per A-B-C is the classic eclipsing binary at
+  ~28 pc. The inner AB pair has a Gaia DR3 NSS Eclipsing solution
+  recovered from RVS spectra; Stage 4 routes through `gaia_nss` and
+  reads inclination + arg_periastron directly from the NSS columns
+  (eclipsing types don't constrain `a` from photometry alone). The
+  wider AC pair takes the ORB6 visual orbit. Stage 5 keeps both
+  pairs through the orbit-on-file override despite the magnitude gap
+  to the C component.
+- **HIP 25733 — a Bailer-Jones refinement case.** AT-HYG's `dist_src`
+  marks this row's catalogued 14.3 kpc as a Gaia DR3 inverse-parallax
+  estimate (`G_R3`) with low S/N; Bailer-Jones's photogeometric
+  posterior pulls it back to ~5–7 kpc. This is the dominant failure
+  mode the B-J Layer 1 override is designed to rescue and is one of
+  the cases the Vaidman 2025 validation harness pins.
+- **An LMC supergiant — e.g. HDE 268743 / R 90, S Dor analogue.**
+  AT-HYG's `dist_src = G_R3` plus a low-S/N Gaia parallax routes it
+  through B-J first, which lands somewhere intermediate (5–20 kpc;
+  B-J's smooth Galactic-density prior has no LMC). The LMC kinematic
+  override fires on the second pass — sky-cone match + PM within
+  ±0.5 mas/yr of (μ_α* = 1.85, μ_δ = 0.20) — and snaps `dist` to
+  Pietrzyński 2019's 49.594 kpc. The bounded-scope cutoff then keeps
+  it (49.594 kpc < 50 kpc); without the LMC layer it would either
+  have been dropped or rendered as a Galactic foreground star at a
+  catastrophic intermediate distance.
+
+### Catalog-side binary detection
+
+The Phase 3 build (`scripts/catalog/build-catalog.ts`) does its own
+binary flagging at the single-star catalogue level — independent of
+the WDS/ORB6 pipeline above and serving a different purpose. Both
+sources OR onto the same `flags` bit so the chart-mode wings glyph
+surfaces either, but neither pretends to recover orbital geometry.
 
 **Geometric pass.** Spatial nearest-neighbour pass at separation
 `BINARY_MAX_SEP_PC = 0.005 pc` (≈1030 AU). Rationale: at the
@@ -822,17 +1130,24 @@ permissive — it tags wide line-of-sight optical pairs Hipparcos
 didn't confirm — so the build script gates it with `MultFlag`,
 keeping only `C` (component), `G` (resolved-in-field), and `O`
 (orbit known) entries. A small curated `KNOWN_VISUAL_DOUBLES` set
-in `build-catalog.ts` recovers canonical visual doubles Hipparcos
-modelled as single stars (Polaris, ε¹ Lyr, 61 Cyg A/B). This
-surfaces Sirius, Mizar, Castor, α Cen, Albireo, γ And, ε Lyr,
-70 Oph, Procyon, Algol, etc. that the geometric pass misses. No
-`companionIdx` is assigned — the secondary is usually not in the
-classic_ids subset, and the renderer's zoom-fit code already
-guards on `companion ≥ 0`.
+in `scripts/catalog/visual-doubles.ts` recovers canonical visual
+doubles Hipparcos modelled as single stars (Polaris, ε¹ Lyr,
+61 Cyg A/B). Together with the CCDM pass this surfaces Sirius,
+Mizar, Castor, α Cen, Albireo, γ And, ε Lyr, 70 Oph, Procyon,
+Algol, etc. that the geometric pass misses. No `companionIdx` is
+assigned — the secondary is usually not in the classic_ids subset,
+and the renderer's zoom-fit code already guards on
+`companion ≥ 0`.
 
-Implementation: `scripts/catalog/build-catalog.ts`; see
-`docs/build-and-data.md` §Geometric binary inference and
-§TDSC double-star cross-match for the per-pass details.
+The full WDS+ORB6 pipeline above (multiples.tsv) is the source of
+truth for per-system orbital geometry; the catalog-side pass is a
+visual-aid bit for chart mode.
+
+Implementation: `scripts/binaries/build-binaries.py` for the WDS+ORB6
+pipeline (engineer walk-through in `docs/cross-match.md`);
+`scripts/catalog/build-catalog.ts` + `visual-doubles.ts` for the
+catalog-side passes (see `docs/build-and-data.md` § Geometric binary
+inference and § TDSC double-star cross-match for per-pass detail).
 
 ## Constellation stick figures
 
