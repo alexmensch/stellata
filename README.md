@@ -324,14 +324,18 @@ source CSV has changed) and starts Vite on
 
 ### Project documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** — project conventions, folder layout,
-  and the documentation index. Start here when navigating the
-  codebase.
+- **[CLAUDE.md](./CLAUDE.md)** — project conventions and the top-level
+  folder layout. Start here when navigating the codebase.
 - **[SCIENCE.md](./SCIENCE.md)** — every data source, citation,
   formula, and modelling decision.
-- **[`docs/`](./docs/)** — topic-specific deep dives (architecture,
-  rendering pipeline, URL state, camera modes, etc.). The
-  documentation index in CLAUDE.md describes what each one covers.
+- **Per-folder `README.md` files** — topic-specific deep dives live
+  next to the code they describe (see `src/client/<subsystem>/README.md`,
+  `scripts/<pipeline>/README.md`, `data/<source>/README.md`). The
+  folder tree itself is the documentation index.
+- **[`docs/`](./docs/)** — genuinely cross-cutting notes that don't
+  belong to a single folder: code-review patterns
+  (`authoring-patterns.md`), UX-tweak reference table
+  (`ux-tweaks.md`).
 
 ## Sponsorship
 

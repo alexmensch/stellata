@@ -1,6 +1,6 @@
 // Heliopause asymmetric-ellipsoid wireframe. Boundary dimensions and
 // apex orientation come from SCIENCE.md § Heliopause; construction
-// details in docs/solar-system.md § Heliopause boundary.
+// details in src/client/solar-system/README.md § Heliopause boundary.
 //
 // Back-face culling hides the shell when the camera is inside — by
 // design. Mesh + apex label live here; main.ts wires the SVG label
@@ -11,8 +11,8 @@ import type { Stellata } from '../stellata';
 import { AU_PC } from './astronomy-constants';
 import { LABEL_OFFSET_PX } from './planet-labels';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
-import heliopauseVert from '../shaders/heliopause.vert.glsl?raw';
-import heliopauseFrag from '../shaders/heliopause.frag.glsl?raw';
+import heliopauseVert from './heliopause.vert.glsl?raw';
+import heliopauseFrag from './heliopause.frag.glsl?raw';
 
 // Solar apex (upwind) direction in ICRS Cartesian. Pure unit vector.
 const APEX_RA_RAD = (17 + 53 / 60) * 15 * Math.PI / 180; // 268.25°
@@ -106,7 +106,7 @@ export class Heliopause {
   constructor() {
     this.group = new THREE.Group();
     // renderOrder = 1: shares the slot with star glow (both are dim
-    // chrome). See docs/rendering.md §RenderOrder ladder for the full
+    // chrome). See src/client/star-pipeline/README.md §RenderOrder ladder for the full
     // cross-layer hierarchy.
     this.group.renderOrder = 1;
     this.group.visible = false;

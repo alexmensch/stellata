@@ -1,7 +1,7 @@
 // Always-callable instrumentation. mark / measure / frame are no-ops
 // until buildPerfSection() runs once; dispose() restores them to
 // no-ops and clears all session state. Re-opening the panel is a cold
-// start — out-of-session cost must be zero. See docs/performance.md.
+// start — out-of-session cost must be zero. See src/client/debug/README.md.
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;

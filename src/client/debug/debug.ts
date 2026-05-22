@@ -6,7 +6,7 @@ import { buildDeepFieldSection } from '../local-group/local-group-tuning';
 import { buildPerfSection } from './perf-hud';
 import { buildPinSection } from './pin-debug-hud';
 import { buildArrowSection } from './arrow-fade-debug-hud';
-import { buildWarpSection } from '../camera/warp-tuning';
+import { buildWarpSection } from '../camera/warp/warp-tuning';
 import {
   type DecodedView,
   type IdMaps,

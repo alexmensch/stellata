@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { renderedSizePx, renderedDiscPxAtPeak } from '../camera/star-physics';
+import { renderedSizePx, renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import { fmtDist } from '../ui/distance-util';
 import {
   buildArrowSvgPath,

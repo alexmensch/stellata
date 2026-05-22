@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Cloud, CloudCatalog } from './cloud-loader';
-import cloudVert from '../shaders/cloud.vert.glsl?raw';
-import cloudFrag from '../shaders/cloud.frag.glsl?raw';
+import cloudVert from './cloud.vert.glsl?raw';
+import cloudFrag from './cloud.frag.glsl?raw';
 
 // Shared sphere geometry — every cloud is a unit sphere scaled by its
 // semi-axes via the per-cloud Mesh matrix. 32×16 segmentation gives a

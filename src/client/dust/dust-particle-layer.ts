@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { DustParticleData } from '../loaders/dust-loader';
-import dustParticleVert from '../shaders/dust-particle.vert.glsl?raw';
-import dustParticleFrag from '../shaders/dust-particle.frag.glsl?raw';
+import dustParticleVert from './dust-particle.vert.glsl?raw';
+import dustParticleFrag from './dust-particle.frag.glsl?raw';
 
 // Star-material uniforms shared with the particle shader. Reference-
 // shared (not cloned) so floating-origin recenters, resize updates, and
@@ -15,7 +15,7 @@ export interface DustParticleSharedUniforms {
   uDustLogRatio: { value: number };
 }
 
-// Currently shelved — see docs/rendering.md § "Dust extinction + the
+// Currently shelved — see src/client/star-pipeline/README.md § "Dust extinction + the
 // shelved particle layer" and bd issue stellata-zq3 for the open
 // questions. Default strength = 0 → mesh.visible = false → zero
 // per-frame cost.

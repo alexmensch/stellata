@@ -1,6 +1,10 @@
 name = "stellata"
 main = "src/worker.ts"
+# Bump deliberately when you need new runtime features; `wrangler deploy`
+# logs that it's overriding whatever the dashboard has.
 compatibility_date = "2026-04-22"
+# Smart placement co-locates the Worker with its dominant downstream
+# (Cloudflare's edge in our case — pure static-assets passthrough).
 placement = { mode = "smart" }
 
 # custom_domain = true makes wrangler auto-register the proxied DNS
@@ -16,6 +20,10 @@ routes = [
 directory = "./dist"
 binding = "ASSETS"
 
+# [observability] top-level: `head_sampling_rate` MUST stay defined
+# even with enabled = false, otherwise the nested sub-sections below
+# fail to load. Wrangler treats the top-level field as the default
+# applied when sub-blocks omit their own rate.
 [observability]
 enabled = false
 head_sampling_rate = 1

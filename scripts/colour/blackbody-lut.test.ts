@@ -14,7 +14,7 @@ import {
   LUT_SIZE as CONSUMER_LUT_SIZE,
   BV_MIN as CONSUMER_BV_MIN,
   BV_MAX as CONSUMER_BV_MAX,
-} from '../../src/client/shaders/blackbody-lut-data';
+} from '../../src/client/star-pipeline/blackbody-lut-data';
 
 // ---- Ballesteros parity ----------------------------------------------
 //
@@ -39,7 +39,7 @@ describe('ballesterosTeff', () => {
 
 // ---- LUT consumer module is in sync ---------------------------------
 //
-// The generated module in src/client/shaders/blackbody-lut-data.ts must match
+// The generated module in src/client/star-pipeline/blackbody-lut-data.ts must match
 // what scripts/colour/blackbody-lut.ts emits today. Drift = regenerate via
 // `npm run build:lut` and commit both files in the same PR.
 
@@ -106,7 +106,8 @@ describe('sampleLut at named-star B-V values', () => {
     ['Betelgeuse', 1.860, [255, 195, 129]],
     ['Mintaka',   -0.170, [188, 206, 255]],
     // Mu Cep at observed (dust-reddened) B-V = +2.4 — the load-bearing
-    // case study (RECOMMENDATION.md § Mu Cephei). Tier 1 must land at
+    // case study (research/star-spectral-rendition/README.md § Mu Cephei).
+    // Tier 1 must land at
     // pumpkin-amber, not the current shader's over-saturated red. The LUT
     // clamps inputs at BV_MAX = 2.0, so this samples the table's hottest-end
     // entry — slightly warmer than the un-clamped pumpkin, but the visual

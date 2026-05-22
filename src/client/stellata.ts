@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from './loaders/catalog-loader';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
-import vertexShader from './shaders/star.vert.glsl?raw';
-import fragmentShader from './shaders/star.frag.glsl?raw';
-import perceptualDiscChunk from './shaders/perceptual-disc.glsl?raw';
-import { makeColorLutTexture } from './shaders/blackbody-lut';
-import { bestApsisTeff } from './shaders/star-color-routing-pure';
+import vertexShader from './star-pipeline/star.vert.glsl?raw';
+import fragmentShader from './star-pipeline/star.frag.glsl?raw';
+import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
+import { makeColorLutTexture } from './star-pipeline/blackbody-lut';
+import { bestApsisTeff } from './star-pipeline/star-color-routing-pure';
 import {
   DustParticleLayer,
   type DustParticleSharedUniforms,
@@ -28,30 +28,30 @@ import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
 import { MolecularClouds, renderedCloudSizePx } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
-import { ObserveControls } from './camera/observe-controls';
+import { ObserveControls } from './camera/observe/observe-controls';
 import { mark as perfMark, measure as perfMeasure, frame as perfFrame } from './debug/perf-hud';
 import {
   angularToPx as angularToPxPure,
   sortedDistRange,
-} from './camera/star-geometry';
-import * as starPhysics from './camera/star-physics';
+} from './camera/controls/star-geometry';
+import * as starPhysics from './camera/controls/star-physics';
 import {
   ZOOM_FLOOR_FRACTION,
   VAR_TROUGH_FLOOR_FRACTION,
-} from './camera/star-physics';
-import { Picker } from './camera/picker';
-import { AimController } from './camera/aim-controller';
+} from './camera/controls/star-physics';
+import { Picker } from './camera/controls/picker';
+import { AimController } from './camera/controls/aim-controller';
 import {
   WarpController,
   type WarpInfo,
   type WarpPhaseInfo,
-} from './camera/warp-controller';
-import { ObserveTransition } from './camera/observe-transition';
+} from './camera/warp/warp-controller';
+import { ObserveTransition } from './camera/observe/observe-transition';
 import {
   FocusController,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
-} from './camera/focus-controller';
+} from './camera/focus/focus-controller';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
@@ -72,7 +72,7 @@ export {
   WARP_T_MIN_MS,
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
-import { StarPipeline } from './star-pipeline';
+import { StarPipeline } from './star-pipeline/star-pipeline';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
 
@@ -272,7 +272,7 @@ export class Stellata implements FrameAnchor {
   // from this file; the encapsulation is resource ownership only.
   private starPipeline!: StarPipeline;
   // Dust-particle render layer. Currently shelved — see
-  // docs/rendering.md § "Dust extinction + the shelved particle layer".
+  // src/client/star-pipeline/README.md § "Dust extinction + the shelved particle layer".
   private dustParticles!: DustParticleLayer;
 
   // Floating origin to dodge float32 cancellation when zoomed close to
@@ -1189,7 +1189,7 @@ export class Stellata implements FrameAnchor {
   private tmpVec3b = new THREE.Vector3();
 
   /** Build the dust-particle mesh from loaded data. See bd issue
-   *  stellata-zq3 + docs/rendering.md § "Dust extinction + the shelved
+   *  stellata-zq3 + src/client/star-pipeline/README.md § "Dust extinction + the shelved
    *  particle layer" for the open questions before re-enabling. */
   attachDustParticles(data: DustParticleData) {
     this.dustParticles.attach(data);

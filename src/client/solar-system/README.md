@@ -1,0 +1,343 @@
+# Solar-system layer
+
+Solar-system layer (`stellata-3re`). When a focusable star carries a planet
+system, Stellata renders the planets as billboarded discs at their
+heliocentric positions, faint orbit rings on the host's orbital plane,
+and (Sol only) the heliopause boundary as a translucent asymmetric
+shell. Sol is the only populated host so far; the framework is
+deliberately generic so the future exoplanet epic (`stellata-bk5`)
+can plug in without changing the renderer.
+
+## Files in this area
+
+```
+src/client/solar-system/
+  planet-system.ts                Planet / PlanetSystem contract.
+                                  hasPlanets + getPlanetSystem; SOL_PLANETS
+                                  table (eight majors + Pluto).
+  ephemeris.ts                    JPL Standish 1992 Keplerian-elements
+                                  approximation + cubic Jupiter–Neptune
+                                  correction terms. Heliocentric ecliptic
+                                  parsecs out.
+  astronomy-constants.ts          Shared physical / astronomical constants
+                                  (AU, parsec, J2000 obliquity).
+  time.ts                         Simulation time `t` (UTC seconds offset)
+                                  + UTC ↔ Julian-day helpers. Single source
+                                  of truth for the time scrubber.
+  time-readout.ts                 UTC readout display next to the time
+                                  scrubber.
+  planet-body-field.ts            Instanced planet-body renderer. Three-pass
+                                  (depth-only mask + disc + glow), shares
+                                  the unified disc/glow chunk with stars
+                                  (perceptual-disc.glsl) — see
+                                  src/client/star-pipeline/README.md.
+  orbit-rings-layer.ts            Faint orbit rings in the host's orbital
+                                  plane.
+  perceptual-magnitude.ts         Per-planet apparent-magnitude model
+                                  (Lambertian + Mallama phase factors).
+                                  Drives both the body field's disc/glow
+                                  sizing and the per-planet label gating.
+  phase-function.ts (+ test)      Lambertian + Mallama phase functions.
+                                  Pure helpers with vitest coverage.
+  planet-labels.ts                Per-planet SVG labels, distance-gated.
+  heliopause.ts                   Sol's heliopause boundary as a translucent
+                                  asymmetric shell (Sol-only).
+  first-load.ts                   Canonical no-URL first-load view: 5 AU
+                                  galactic-centre-aimed park.
+  planet.vert.glsl,
+  planet.frag.glsl                Three-pass instanced planet bodies.
+                                  Imports `perceptual-disc.glsl` from
+                                  `../star-pipeline/` (shared disc/glow
+                                  chunk with stars).
+  heliopause.vert.glsl,
+  heliopause.frag.glsl            Asymmetric heliopause shell shaders.
+```
+
+## Data model
+
+`planet-system.ts` defines the contract every host's planet system
+satisfies:
+
+- `Planet` — name, equatorial radius (km), semi-major axis (AU),
+  eccentricity, type (`rocky` / `gas_giant` / `ice_giant`),
+  representative RGB colour.
+- `PlanetSystem` — host star catalog index, `planets` array,
+  optional `positionsAt(t, out)` resolver writing 3 floats per planet
+  in the host's local orbital-plane frame, optional
+  `orbitOrientations` for the orbit-ring renderer.
+
+Sync probe: `hasPlanets(catalog, idx)` — currently hardwires "planets ⇔ Sol".
+Async resolver: `getPlanetSystem(catalog, idx)` returns the system or
+`null`. The Promise wrapper is intentional so `bk5` can lazily fetch
+per-host JSON shards without changing the call sites.
+
+`SOL_PLANETS` is the eight major planets + Pluto with constants
+sourced from NASA Planetary Fact Sheets (radii) and JPL DE440 (mean
+elements at J2000). Pluto comes from New Horizons 2015 reconnaissance.
+See `SCIENCE.md` §Solar system for the citation rationale.
+
+## Ephemerides
+
+`ephemeris.ts` implements the **JPL Standish 1992 Keplerian-elements
+approximation** with the cubic Jupiter–Neptune correction terms
+(Table 2a/2b inlined). Sub-arcminute accuracy 3000 BC – 3000 AD,
+which is overkill for billboarded discs that floor at ~2 px regardless
+of zoom. VSOP87 was rejected during 3re.3: the precision difference is
+invisible at user-reachable framings and the dependency cost was not
+worth it. Deep-time (sub-arcminute outside Standish's window) is filed
+as `stellata-1gh`.
+
+Returned positions are heliocentric **ecliptic** parsecs, not ICRS —
+the rotation onto ICRS happens in the caller via the per-host
+orbital-plane orientation quaternion. Sol's quaternion is the J2000
+obliquity rotation; future exoplanet hosts (`bk5`) get a galactic-
+plane-aligned default per the 3re.8 rule below.
+
+Per-`t` cache granularity is 60 seconds. At billboarded-disc pixel
+scale, sub-minute planet motion is invisible — Mercury moves ~3e-5 rad
+seen from Earth over 60 s, well below pixel resolution at any zoom we
+afford. The cache key is `t / CACHE_GRANULARITY_SEC` floored, so
+multiple frames within the same minute reuse the same `Vec3` triplet.
+A future time scrubber (`stellata-nmu`) reducing the granularity to
+sub-second is straightforward — the cache key just bucketises finer.
+
+## Time `t` and the readout
+
+`time.ts` defines `t` as a Unix-seconds double. It is currently pinned
+to "now" via `Stellata.getT()` returning `Date.now() / 1000`; the time
+scrubber (`stellata-nmu`) plugs in via `Stellata.setT()`.
+
+`time-readout.ts` renders the live UTC timestamp the planet positions
+correspond to in `.ui-bottom`'s `#time-readout`. Visibility tracks two
+gates:
+
+1. The focused star carries a planet system (`hasPlanets`).
+2. No camera transition (warp / observe-enter / observe-exit) is in
+   flight — the readout would flash mid-warp otherwise.
+
+Format is UTC Zulu: `YYYY-MM-DD HH:MM:SS UTC`. `isLive(t)` is true
+when `|t − now| < 1 s`; in that case the readout appends "(live)".
+Once a scrubber lands, scrubbed values drop the suffix.
+
+`t` is **independent of `uTime`**. `uTime` is the cosmetic clock that
+drives variable-star pulsation and keeps ticking at
+`uSecondsPerDay = 0.2` regardless of what `t` is. Variable-star phase
+must never read from `t`.
+
+## Planet rendering
+
+Planet rendering splits across two layers (stellata-3re.15):
+
+- **`planet-body-field.ts`** — global, instanced mesh holding every
+  attached host's planet bodies. Sol attaches once at startup; bk5
+  will iterate exoplanet hosts in. Bodies are physical objects:
+  they render whenever attached, regardless of which host the camera
+  is focused on. Each frame, for each host:
+
+  1. Skip the work entirely if the camera is past the host's
+     `cullDistancePc` — the closed-form distance at which its
+     brightest planet would just cross the magnitude slider.
+  2. Otherwise call `positionsAt(t, scratch)` to refresh local-frame
+     positions, apply the per-host orientation quaternion, and write
+     into the host's iLocalRel slot in the global instance buffer.
+
+- **`orbit-rings-layer.ts`** — per-host orbit-ring layer. Geometry
+  rebuilds whenever the focused star's PlanetSystem changes; per-frame
+  tick drives the pixel-gap visibility heuristic. Representational
+  only — rings hide when the host loses focus.
+
+Bodies render as billboarded discs through the same perceptual-disc
+abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
+Apparent magnitude is computed in the vertex shader from reflected
+host-star light through a per-planet phase function — Mallama 2018
+empirical polynomials for Mercury, Venus, Earth, Mars, Jupiter and
+Saturn (3re.18); Lambertian fallback for Uranus, Neptune, Pluto and
+every exoplanet (`stellata-bk5`), since Mallama 2018 publishes no
+phase-angle polynomial for those. The slider visibility cutoff
+applies — sub-cutoff planets fade naturally, no unconditional pixel
+floor. Five passes: the star-pipeline trio (core depth-mask + disc
++ glow) plus a planet-only **corrupt + restore** pair around the
+orbit ring layer (stellata-3re.19). The CORRUPT pass
+(`uRenderMode == 3`, renderOrder 1.5) writes `gl_FragDepth = 0.0`
+across the planet's bright body (`glow >= uCoreThreshold`); the orbit
+ring at renderOrder 2 then depth-fails for every fragment landing on
+the body — far-side AND near-side, regardless of the ring's actual 3D
+position. The RESTORE pass (`uRenderMode == 4`, renderOrder 2.5,
+`depthFunc: AlwaysDepth`) writes the planet's actual `gl_FragCoord.z`
+back across the same region so disc / glow at 3 / 4 still depth-test
+correctly against other planets and stars. Background layers (MW /
+clouds / stars) paint colour into the framebuffer before the corrupt
+pass overwrites depth, so they still peek through the perceptual
+halo. Surface detail (textures, atmospheric haloes,
+banding, axial-tilt cue) stays **deliberately deferred** to the
+planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles
+— Defer detail until zoom affordance.
+
+### Apparent-magnitude formula
+
+For a planet of geometric albedo `p` and equatorial radius `R`, with
+the viewer at distance `d_vp` from the planet, `d_vh` from the host,
+and `d_hp` from the host to the planet:
+
+```
+m_host_at_viewer = M_host + 5·log10(d_vh / 10pc)
+m_planet         = m_host_at_viewer
+                 − 2.5·log10( p · (R/d_vp)² · (d_vh/d_hp)² · φ(α) )
+```
+
+where `α = ∠(viewer–planet–host)` is the phase angle and `φ(α)` is
+the per-planet phase factor — Mallama 2018 empirical polynomial
+`10^(−ΔV(α)/2.5)` inside each planet's published α range, anchor-
+scaled Lambertian past it (Lambert(α) × poly(αmax)/Lambert(αmax) so
+brightness stays continuous and each planet's empirical character
+extends past αmax instead of snapping to a uniform Lambertian
+sphere), pure Lambertian `(sin α + (π − α)·cos α)/π` for bodies
+without published curves. Verified Jupiter values (under Lambert):
+−2.7 from Earth at opposition, +5.2 from ~150 AU outside the
+heliopause, +21 from α Cen at 1.34 pc.
+
+### Per-host distance cull
+
+Closed-form bound on the visibility distance for the brightest
+planet of an attached host:
+
+```
+d_cull = 10 pc · √(p · (R/a)²) · 10^((maxAppMag − M_host) / 5)
+```
+
+where `(R/a)` for the brightest planet (proxy for "roundtrip flux")
+makes the formula geometry-independent. Sol's Jupiter under naked-eye
+preset gives ~290 AU — confirming that any non-Sol focus already
+collapses Sol's bodies far past the cull distance, exactly as
+intended. `PlanetBodyField.setMaxAppMag` recomputes the cache on
+every slider move.
+
+`planet-labels.ts` draws per-planet body-anchored SVG labels above
+the canvas. The label engine is independent of the chart-mode label
+engine (`chart-labels.ts`); planet labels are always-on when a planet
+system is attached, and hidden in chart mode so the chart-mode glyph
+contract isn't doubled up.
+
+## Orbit rings
+
+The orbit-ring layer (`orbit-rings-layer.ts`) draws each planet's
+orbit as an ellipse with the host star at one focus. Geometry:
+`b = a · √(1 − e²)`, focal offset `c = a · e`. The perihelion is placed
+along the local +x axis as a placeholder; per-planet
+longitude-of-perihelion landed alongside Standish elements in 3re.13.
+
+Ring visibility is gated on an angular-separation heuristic so
+distant host stars don't spam invisible rings into the framebuffer.
+
+### Orbital plane convention
+
+Per the 3re.8 design rule:
+
+- **Sol's orbit rings sit on the ecliptic.** The host orientation
+  quaternion rotates the local plane so +Z aligns with the ecliptic
+  pole (J2000 obliquity ε = 23.4392911°). This matches what an
+  observer at Sol sees on the sky.
+- **All other host stars' orbit rings sit on the galactic plane.**
+  Exoplanet system orientations are not generally known; aligning to
+  the galactic plane gives a consistent visual "this star has
+  planets" cue without implying a measured orientation we don't have.
+
+The per-host quaternion is composed once at `getPlanetSystem` attach
+time and reused for both the body positions and the ring renderer.
+Ring renderer composes `Rz(Ω) · Rx(I) · Rz(ω)` per planet (from the
+Sol-only `orbitOrientations` array, when present) before the
+host-plane → ICRS rotation, so rings line up with the body positions
+emitted by `positionsAt`.
+
+## Heliopause boundary
+
+`heliopause.ts` and the matching shaders. Asymmetric ellipsoid centred
+on Sol, aligned to the solar apex of motion through the local
+interstellar medium. Geometry is fixed (no `t` dependence on human
+timescales):
+
+- Upwind boundary at **122 AU** — Voyager 1 heliopause crossing,
+  2012-08-25.
+- Flank inferred at **~115 AU** from Voyager 2 heliopause crossing
+  2018-11-05, combined with the apex-aligned ellipsoid model.
+- Heliotail at **200 AU** — IBEX / Cassini ENA estimate.
+- Apex direction: ICRS RA 17h53m, Dec +27.4°, after Frisch & Slavin
+  2013.
+
+Construction: unit sphere → scale to (115, 115, 161) AU → translate
+the centre 39 AU toward antiapex → rotate so +Z lands on the antiapex.
+Result: upwind apex at +122 AU, downwind at −200 AU along the apex.
+
+Rendering uses a Fresnel limb-darkening fragment shader: alpha peaks
+at the silhouette where the view ray grazes the surface and falls to
+a small floor face-on, so the upwind apex region doesn't paint the
+shell as a flat disc against the starfield. Back-face culling means
+the shell disappears from inside (Sol focus, zoomed in) — this is
+intentional, since from inside there's nothing geometrically
+informative to show.
+
+The "Heliopause" SVG label is anchored to the upwind apex's projected
+silhouette by `createHeliopauseLabel` in `main.ts`. Visibility tracks
+the same orbit-ring heuristic so the label disappears in lockstep
+with the planet labels when the host system is too far for the
+geometry to read.
+
+## First-load default and `minDistance` relaxation
+
+When the URL carries no view state, `first-load.ts` applies a
+canonical `FIRST_LOAD_VIEW`: camera parked at exactly **5 AU** from
+Sol aimed at the galactic centre, with the HUD ring on. Sol stays
+the default focus; no constellation highlight is set so the bulge
+shines through cleanly without an asterism layered over the brightest
+patch of sky. The view is applied via `applyDecodedView` from
+`url-state.ts` — the same pipeline used for `?v=` URL restores —
+which keeps the "first interaction is the first URL write" contract
+intact: `startUrlSync` seeds its frame-tracking baseline from the
+live camera state on registration, so the URL stays empty until the
+user actually moves the camera or changes a setting.
+
+The Stellata constructor calls `setFocus(catalog.solIndex)` to
+recentre the local frame on Sol but does not park the camera —
+both bootstrap paths (`applyFirstLoadView` for the bare URL, and
+`applyFromUrl` for `?v=` URLs) own the cam pose end-to-end and
+run before first paint in `main.ts`.
+
+Other arrival flows (warp, observe-exit, search-select) use
+`minDistForStar` — only the bare-URL bootstrap reads
+`first-load.ts`.
+
+When focused on Sol, `controls.minDistance` drops to
+`minOrbitDistForStar(Sol) ≈ 0.011 AU` so the user can fly into the
+inner solar system and resolve individual planets. This is safe
+specifically because Sol sits at the world origin — the float32
+jitter that bites at small distances *from non-origin focal stars*
+doesn't apply when the focal frame is also the world frame. Other
+focal stars retain the global `0.005 pc` (~1031 AU) floor.
+
+`camera.near` is at `1e-10 pc` — well below `minOrbitDistForStar` —
+so very-close planet inspection isn't culled. The strict-less-than
+`camera.near < minDistance` invariant holds.
+
+## Gotchas
+
+- **Ecliptic ↔ equatorial obliquity.** Use J2000 ε = 23.4392911°
+  consistently when composing the Sol-host quaternion. Do not reach
+  for the time-varying obliquity term — Standish's accuracy budget
+  doesn't need it and the apparent-position match is unaffected.
+- **`t` vs `uTime`.** Variable-star pulsation is cosmetic — it must
+  never depend on `t`. The two clocks are deliberately decoupled.
+- **Per-focus minDistance override.** When focus switches *away*
+  from Sol, the floor must snap back to `0.005 pc` *before* the new
+  focus's recenter pulls the camera in. `setFocus` is the right hook
+  and already handles this; any new focus path must as well.
+- **Planet-system attach is async.** `getPlanetSystem` is a Promise
+  even for Sol (which currently resolves synchronously). Don't assume the
+  system is attached the same frame `setFocus` fires; the renderer
+  handles `planetSystem === null` gracefully.
+- **Heliopause label visibility.** Hidden when the camera is inside
+  the shell or when the host is not Sol. Don't add a "show always"
+  toggle without thinking through the dual gating.
+- **Orbital plane rule for new hosts.** Any new planet-bearing host
+  must declare its plane via the orientation quaternion. The default
+  for non-Sol hosts is the galactic plane — don't accidentally
+  default to the ecliptic.
