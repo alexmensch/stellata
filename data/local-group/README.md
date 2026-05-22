@@ -1,0 +1,50 @@
+# Local Group reference data
+
+Frozen reference data feeding the build script
+`scripts/local-group/build-local-group.ts` → `public/local-group.json`,
+which the runtime renderer (`src/client/local-group/`) consumes.
+
+```
+lvdb-snapshot.csv   committed snapshot of Pace et al. 2024 dwarf_all
+                    (CC0, peer-reviewed; arXiv:2411.07424). 909 rows.
+overrides.tsv       hand-curated structural detail for LMC, SMC,
+                    Sagittarius dSph, M 32, NGC 205, plus full
+                    standalone rows for M31 and M33 (omitted from
+                    LVDB's dwarf_all table — they're major spirals).
+```
+
+Refresh of `lvdb-snapshot.csv` is a manual step — per
+`data/README.md` § Frozen external data the build never reaches the
+network:
+
+```
+curl -sSL \
+  https://raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv \
+  -o data/local-group/lvdb-snapshot.csv
+npm run build:local-group -- --force
+```
+
+## Override schema
+
+`overrides.tsv` carries one row per object whose LVDB summary is too
+coarse for meaningful 3D rendering, **plus** the rare case of an object
+that's not in LVDB at all (M31, M33 — LVDB's `dwarf_all` table excludes
+the major spirals).
+
+| Column              | Notes |
+| ------------------- | ----- |
+| `name`              | Matches LVDB's `name` column for merge, **or** names a standalone object not in LVDB. |
+| `a_pc / b_pc / c_pc`| Local-frame semi-axes in parsecs. |
+| `orient`            | Orientation spec — see `scripts/local-group/README.md` § Orientation specs for `pa`, `disc`, `los` semantics. |
+| `ref_doi`           | Primary structural reference. |
+| `ra_deg`            | *Optional standalone position.* Populated for objects not in LVDB; leave empty for LVDB-merge rows. |
+| `dec_deg`           | *Optional standalone position.* Same — all three must be set together or all three empty. |
+| `distance_kpc`      | *Optional standalone position.* Same. |
+
+For LVDB-merge rows, the override **replaces** the structural detail
+an LVDB row would otherwise produce; **position (RA/Dec/distance)
+still comes from LVDB.** For standalone rows (M31, M33), the override
+provides the position directly — no LVDB merge happens. Other
+LVDB-only dwarfs render as sky-plane oblate ellipsoids from
+`rhalf_physical` + `ellipticity` + `position_angle` — no override row
+needed.

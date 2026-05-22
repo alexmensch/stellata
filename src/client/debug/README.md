@@ -238,3 +238,20 @@ re-prosecuted.
 5. If `chart.*` dominates, the eligibility lists or centroid cache
    may have invalidated unexpectedly — check whether the `'filter'`
    event is firing more than expected.
+
+
+## Debug panel
+
+`window.debug.panel()` toggles the unified debug panel — a draggable,
+collapsible host with five sections: Star disc (`star-tuning.ts`),
+Milky Way (`milkyway-tuning.ts`), Perf (`perf-hud.ts`), Pin
+(`pin-debug-hud.ts`), and Arrows (`arrow-fade-debug-hud.ts`). Drag the
+title bar to move it, click any section header to fold/unfold; both the
+position and per-section collapse state persist in `sessionStorage`
+(resets on reload, since calibration state shouldn't survive between
+sessions). The chrome (drag handle, collapsible-section helper,
+slider/colour helpers) lives in `debug-panel.ts` — see
+`src/client/debug/README.md`. Add a new tool by writing either a plain
+section element (collapsible-section + sliders) or a
+`{element, dispose, setVisible}` builder and wiring it inside
+`togglePanel` in `debug.ts`.

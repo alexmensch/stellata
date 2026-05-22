@@ -1,40 +1,27 @@
-# Architecture
+# Browser client
 
-Cross-cutting patterns the rest of the codebase assumes: event flow,
-state machine for clicks, and the floating-origin precision trick. Read
-this before changing focus/vector behavior, state mutation paths, or
-anything that reads star positions. For the `?v=` URL wire format see
-`src/client/util/url-state/README.md`.
+The integration shell + cross-cutting plumbing. `stellata.ts` is the
+Three.js scene + state machine + event bus that composes the
+per-subsystem controllers. Per-subsystem folders (every other
+directory under `src/client/`) own their own topic and document
+themselves.
 
-## Files in this area
+## Folder layout
 
-The integration shell + cross-cutting plumbing. Per-subsystem folders
-(`solar-system/`, `local-group/`, `milkyway/`, `galactic/`,
-`molecular-clouds/`, `chart-mode/`, `hover/`, `camera/`, `overlays/`,
-`ui/`, `typeahead/`, `modals/`, `debug/`, `loaders/`) are each
-rostered in their matching `docs/<area>.md`. The star renderer
-(`star-pipeline.ts`, shaders) is in `src/client/star-pipeline/README.md`.
+- `main.ts`, `stellata.ts`, `index.html`, `styles.css`, `globals.d.ts`
+  — bootstrap + integration shell.
+- `stellata-events.test.ts` — integration-shell event-emission test.
+- `util/` — project-agnostic plumbing (event bus, URL state).
+- `camera/` — camera controllers split across `controls/`, `warp/`,
+  `observe/`, `arrival/`.
+- `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
+  `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/` — render
+  layers.
+- `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
+  cross-cutting UI.
+- `loaders/` — runtime fetch/parse of `public/` artifacts.
 
-```
-src/client/
-  main.ts                         Bootstrap.
-  stellata.ts                     Three.js scene + state machine + event
-                                  bus. Composes subsystem controllers
-                                  (Picker / AimController / WarpController
-                                  / ObserveTransition / FocusController)
-                                  and owns the click-state machine,
-                                  floating-origin recentre, and
-                                  per-frame animate() loop.
-  index.html, styles.css,
-  globals.d.ts
-  stellata-events.test.ts         Integration-shell event-emission test.
-  util/
-    event-bus.ts (+ test)         The `Stellata.on(name, fn)` bus
-                                  described in § Event bus.
-    (url-state.ts is rostered in src/client/util/url-state/README.md.)
-
-src/worker.ts                     Documented in src/README.md.
-```
+For the URL wire format see `src/client/util/url-state/README.md`.
 
 ## Event bus on `Stellata`
 
@@ -84,261 +71,6 @@ custom look-around controller (direct-manipulation drag + wheel-FOV)
 instead. The SVG-layer Sol/GC arrow labels remain clickable; they route
 through `aimAt(localPoint)`, which has its own observe-mode branch that
 slerps the camera quaternion in place.
-
-## OBSERVE mode and the warp state machine
-
-OBSERVE parks the camera at the focused star's local origin and hides
-the focal disc via `uHideFocusIdx`. Two gotchas worth noting up front:
-
-1. **`cameraMode` stays `'observe'` throughout an observe→observe warp.**
-   `startWarp` from observe disables `observeControls` and sets a
-   per-warp `returnToObserve` flag, but does not flip `cameraMode` or
-   emit `'cameraMode'`. The animate loop branches on `warpState`
-   first, so the value is purely cosmetic during the flight — but every
-   listener bound to `'cameraMode'` (mode toggle, search-row
-   label, etc.) stays settled. Without this, observe→observe arrival
-   visibly flickers through navigate mid-warp.
-2. **`finishWarp` re-anchors via `swapObserveAnchor`**, not `setFocus`,
-   when `returnToObserve` is true. `setFocus` would see
-   `cameraMode === 'observe'` and run its observe-cleanup branch
-   (`uHideFocusIdx = -1`, emit `'cameraMode'`), recreating the
-   flicker. `swapObserveAnchor` recentres the floating origin, updates
-   `focusedStar`, repoints `uHideFocusIdx` to the new anchor, and snaps
-   the camera to `(0, 0, 0)` local without touching `cameraMode`.
-
-Source-star hide (`uHideFocusIdx = focusedStar`) stays pinned across the
-entire warp duration when launched from observe — the reorient phase
-starts with the camera *at* the source star, and unhiding it would
-briefly render the disc from inside.
-
-## Picking a constellation aims the camera
-
-`Stellata.aimAtConstellation(conIndex)` swings the camera so the chosen
-constellation is centred in view, without moving `controls.target` or
-changing orbit radius — only the camera's position on the orbit sphere
-moves. The aim point is the brightness-weighted centroid of the top-8
-figure stars as ranked by apparent magnitude **from the current orbit
-target** (not from Sol). This matters when the user has travelled far
-from Sol: the same constellation is still centred on whichever members
-visually dominate from *there*, not from Earth.
-
-Called **only from the constellation dropdown change handler** in
-`controls.ts`. URL state restore, reset button, and any other path that
-sets `highlightCon` via `setFilter` deliberately do **not** trigger the
-aim — a shareable URL's camera pose is authoritative, and the "reset"
-button means "clear the selection", not "jump somewhere".
-
-In OBSERVE mode the orbit-pivot rotation is degenerate (camera ≈
-target), so `aimAtConstellation` instead routes the centroid through
-`aimAt(c)`, which slerps the camera quaternion in place — same code
-path Sol/GC label clicks use.
-
-## Warp controller (`camera/warp-controller.ts`)
-
-`WarpController` owns the 3-phase warp FSM:
-
-1. **Reorient** — quaternion slerp + radial easing around the source
-   anchor, ending with the camera on the A→B line outside the source's
-   parking radius. Per-frame `lookAt(A)` in navigate mode; a captured
-   `reorientEndQuaternion` for observe-launches where `mag0 ≈ 0`
-   collapses the lookAt path.
-2. **Fly** — position lerp along the line, delegated to
-   `camera-motion.ts`'s `tickArrival` so focus-park, unfocus, and warp
-   Fly share one arrival profile. Fires a one-shot mid-Fly
-   floating-origin recentre onto the destination via `tryMidFlyRecentre`
-   once the camera passes the trajectory midpoint, plus a chart-mode
-   plateau-trigger that pivots to phase 3 early when the destination
-   disc has flatlined.
-3. **Post-arrival** — quaternion slerp back to the warp-start orientation
-   (parallax view), plus an observe-mode position lerp `pEnd → B`. Skipped
-   on navigate arrivals because `TrackballControls.update()`'s per-frame
-   `lookAt(target)` would overwrite a slerped quaternion one frame later.
-
-Public surface — `warpTo(destIdx)`, `warpToCloud(destIdx)`, `skip()`,
-`tick(nowMs)`, `isActive()`, `isRecenteredToDest()`, `getWarpInfo()`,
-`getWarpPhase(nowMs?)`, `dispose()`.
-
-Cross-controller coupling lives behind the `FocusOps` interface
-(declared in `focus-controller.ts`, re-exported from
-`warp-controller.ts` for back-compat with prior import paths):
-per-kind `FocusTarget` factories, current-focus dispatch,
-floating-origin recentre, mutation of `focusedStar` / `focusedCloud` /
-vector slots, observe-transition busy gate, and the lerp-cancel pair
-`startWarp` calls before claiming the camera. `FocusController` is
-the implementor (9mm.194.8); the frame-anchor and vector-slot
-methods on the interface are delegated back to the integration shell
-via `FrameAnchor` and `setVectorTo` / `setVectorToCloud` deps so the
-star-pipeline buffer (`_localPositions`) keeps living next to the
-resources it touches.
-
-Bus events emitted from the controller:
-- `'warp'` (boolean) — true at startWarp, false at finishWarp.
-- `'state'` — at startWarp, at finishWarp (via swapObserveAnchor on
-  observe→observe arrivals, or via `setFocus` / `setFocusedCloud` on
-  navigate arrivals).
-- `'focus'` (number | null) — only from `swapObserveAnchor`.
-
-See `src/client/camera/warp/README.md` for the phase math and `src/client/camera/arrival/README.md`
-for the shared Fly arrival profile.
-
-## Aim controller (`camera/aim-controller.ts`)
-
-`AimController` owns the two aim-slerp state machines:
-
-- **navigate slot** — orbits the camera around `controls.target` at
-  constant radius, slerping two quaternions that rotate `WARP_BASE_DIR`
-  to the start / end radial directions. Disables TrackballControls for
-  the duration so its damping doesn't fight the slerp.
-- **observe slot** — camera position is fixed at the focal star's local
-  origin; only the camera quaternion changes, slerping the live pose
-  toward a `lookAt(point)` target. Disables `ObserveControls` so a stray
-  drag doesn't fight the slerp.
-
-Both branches share `aimDurationMs`: a linear ramp from `AIM_T_MIN_MS`
-(floor for trivial nudges) to `AIM_T_MAX_MS` (cap for a half-circle
-swing). The observe branch's swing angle uses the geodesic quaternion
-formula `2·acos(|q0·q1|)`; the navigate branch uses the planar
-`acos(dir0·dir1)` between unit direction vectors.
-
-Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that
-owns the cross-controller busy gates (`warp.isActive()`,
-`cancelUnfocusLerp`, `cancelFocusLerp`, `isObserveTransitionActive`)
-before delegating to `this.aim.aimAt(pointLocal)`. The controller knows
-only the mode it runs in and its own slot state.
-
-Cancellation contract — `aim.cancel()` drops both slot states but does
-**not** touch `controls.enabled` or call `observeControls.enable()`.
-That re-enable only happens on natural completion of the slerp.
-Cancellation sites (warp start, observe-exit, focus change while in
-observe) are moving control elsewhere and own the next input-handler
-transition themselves.
-
-## ObserveTransition (`camera/observe-transition.ts`)
-
-`ObserveTransition` owns the navigate↔observe mode-switch orchestrator:
-
-- **`enter` kind** — animated navigate → observe entry. Lerps
-  `camera.position` from its current pose to the focal-star local origin
-  `(0,0,0)` over `OBSERVE_TRANSITION_MS = 1800` with an inline
-  time-smoothstep. `uHideFocusIdx` is held at -1 across the glide so
-  the focal star stays visible until the camera parks at it; the finish
-  branch then writes `uHideFocusIdx = focusedStar` and enables
-  `ObserveControls`.
-- **`exit` kind** — animated observe → navigate exit. Captures `forward`
-  from `camera.quaternion` at startExit time and translates the camera
-  backward along it to `parkDistForStar(focusedStar)` so the user keeps
-  facing whatever they were observing. The finish branch sets
-  `controls.target = fromPos` (so `TrackballControls`' built-in
-  `lookAt(target)` is a no-op for orientation), realigns `camera.up`
-  via the lifted `up-align-pure` helper, runs `controls.update()`, and
-  re-enables `TrackballControls`. `clearFocusOnExit` routes through
-  `focus.setFocus(null)` on landing — the search-row X-button path.
-- **`unfocus` kind** — navigate-mode close-zoom outbound park-arrival
-  (a7d.2.6). Reuses the state slot but isn't an observe transition;
-  delegated to `camera-motion.ts`'s `tickArrival` so focus-park, warp
-  Fly, and unfocus all share one arrival profile. `isActive()` and
-  `getProgress()` exclude it so overlays gating on observe visibility
-  stay steady-state-navigate during close-zoom; `isAnyActive()` is the
-  union, used by `Stellata.isCameraBusy()`. The finish branch tightens
-  `controls.minDistance` to the parking distance so manual zoom-in is
-  bounded.
-
-Public surface — `setMode(mode, opts)`, `startExit(opts)`,
-`startUnfocusLerp(from, to, finalMinDist)`, `tick(nowMs)`, `isActive`,
-`isAnyActive`, `getProgress`, `cancelUnfocusLerp`, `cancelTransition`,
-`dispose`.
-
-Cross-controller coupling lives behind the `ObserveFocusOps` interface
-(declared in `observe-transition.ts`): focused-star inspection,
-`parkDistForStar` lookup, vector-slot clears at observe entry,
-`setFocus` on `clearFocusOnExit`, and the `isCameraBusy` gate setMode
-consults before claiming the camera. `FocusController` is the
-implementor (9mm.194.8) — `parkDistForStar` reads through the same
-`star-physics.ts` helper Stellata used previously, `isCameraBusy`
-unions the in-flight warp / aim / focus-lerp / observe states.
-
-Bus events emitted from the controller:
-- `'cameraMode'` (CameraMode) — at every successful setMode + startExit
-  entry, in lock-step with the field write through
-  `setCameraModeValue`.
-- `'state'` — at every cameraMode emit, plus at startUnfocusLerp and
-  at each finish branch.
-
-Stellata still owns the `cameraMode` field (~20 unrelated read sites)
-and writes it through the controller's `setCameraModeValue` dep
-callback so the controller's state machine stays the canonical
-mode-switcher. `Stellata.setFocus`'s observe-cleanup branch is the one
-remaining inline writer that bypasses startExit — it calls
-`observe.cancelTransition()` to clear any in-flight slot, then sets
-`cameraMode = 'navigate'` and runs an abbreviated snap (no
-`controls.target.set(0,0,0)`, no `controls.update()`) because the
-focal star is changing and the target needs to wait for the downstream
-`recenterFocusToStar` block.
-
-See `src/client/camera/observe/README.md` for the per-feature notes (drag mechanics,
-HUD locators, click dispatch) and the inherited contract that the
-controller honours.
-
-## FocusController (`camera/focus-controller.ts`)
-
-`FocusController` owns the focus FSM and the focus-park lerp:
-
-- **Focus state** — `focusedStar`, `focusedCloud`, `focusedPlanetSystem`,
-  `planetSystemToken`. Mutually exclusive (star ↔ cloud); the second
-  setter clears the first via the standard `setFocus(null)` /
-  `setFocusedCloud(null)` paths so a single event ordering rule
-  (`'cloudFocus'` before `'focus'`) covers every swap.
-- **Focus-park lerp** — `focusLerpState` plus `startFocusLerp` /
-  `endFocusLerp` so subscribers see exactly one true→false `'focusLerp'`
-  edge per lerp regardless of how many `setFocus` writes happen during
-  the in-flight animation. `tick(nowMs)` ticks the lerp through
-  `tickFocusLerp`; the integration shell dispatches here when
-  `isFocusLerpActive()` is true.
-- **Click/select-driven focus** — `focusStar`, `setOrbitTarget`,
-  `flyToCloud`, `setOrbitTargetCloud`, `unfocus`. Each gates on
-  `getWarp().isActive()` and cancels any in-flight focus-park /
-  unfocus lerp before claiming the camera.
-- **Pin geometry** — `isPinEngaged()`, `getPinEngageThresholdSq()`.
-  The per-frame guard reads the controller; see the dedicated
-  Pin-to-center section below.
-- **`FocusTarget` factories** — `makeStarFocusTarget`,
-  `makeCloudFocusTarget`, `currentFocusTarget`. Each closes over the
-  current focus state and the controller's deps (catalog, controls,
-  camera, bus, frame anchor, clouds getter) so the returned object can
-  read absolute / local positions, mutate per-kind state, and emit
-  through the shared event bus without exposing controller privates to
-  `focus-target.ts`.
-
-Public surface — see the file for the full method list. The cross-
-controller seam is the `FocusOps` interface (consumed by WarpController)
-and `ObserveFocusOps` (consumed by ObserveTransition); FocusController
-implements both, with frame-anchor + vector-slot methods delegated
-back to the integration shell.
-
-Construction cycle — `WarpController` and `ObserveTransition` both
-take `focus: FocusOps` from `FocusController`, but `FocusController`'s
-guards read back into those controllers (`getWarp().isActive()` etc.).
-The cycle is broken by `getWarp: () => this.warp` and
-`getObserve: () => this.observe` lazy refs: FocusController is
-constructed first (with neither dep wired), Warp + Observe are
-constructed next (with `focus: this.focus`), and the lazy getters
-resolve at first request. This is the same pattern Picker uses for
-async-attached layers (`getClouds`, `getLocalGroup`).
-
-Bus events emitted from the controller:
-- `'focus'` (number | null), `'cloudFocus'` (number | null),
-  `'planetSystem'` (PlanetSystem | null) — focus state mutations.
-- `'focusLerp'` (boolean) — focus-park lerp start / end edges.
-- `'cameraMode'` (CameraMode) — from `setFocus`'s observe-cleanup
-  branch (focal star changing while in observe mode).
-- `'state'` — at every focus mutation + focus-lerp edges.
-
-The `FrameAnchor` interface stays on Stellata — `recenterOrigin`,
-`getWorldOffset`, `starLocalPosition`, `starLocalPositionInto`. These
-read or rewrite the star-pipeline `_localPositions` buffer plus
-the `iPositionAttr.needsUpdate` write, which all live next to the
-ShaderMaterial they touch. Cleaner extraction is coupled to the
-StarPipeline extract (9mm.43) and deferred until then.
 
 ## Floating origin (large-world precision)
 
@@ -424,145 +156,126 @@ catalog index space. Float32 precision is sufficient at any magnitude
 because the user-visible pose is the cam/tgt offset *within* the
 local frame, stored at full Float32 precision relative to the anchor.
 
-## FocusTarget contract
+## Full render stack — front to back
 
-Warp, focus-park lerp, mid-Fly recentre, and any future camera-transition
-code consume focusable objects through the **`FocusTarget` interface**
-(`src/client/camera/focus-target.ts`). The warp animation has no
-kind-switch statements — adding a new focusable kind (planet, probe,
-nebula, exoplanet, …) consists of:
+There is no z-ordering between WebGL and SVG. The WebGL canvas paints
+first; the SVG `#overlay` always sits above it (`z-index: 5`,
+`pointer-events: none`). Inside each layer the ordering is local:
+WebGL by `THREE.Object3D.renderOrder`, SVG by source order in
+`src/client/index.html` (later child = on top). The disc-mask cuts
+holes through the constellation stick-figure path so close discs read
+as if they were in front of the lines — it is not a real z-order
+mechanism.
 
-1. Implementing the interface (typically as a factory method on
-   `FocusController` that returns an object closing over the per-kind
-   catalog / state / event-bus references).
-2. Plumbing pick / click handling for the new kind so its
-   `FocusTarget` can be passed to `startWarp` / `focusStar`-style
-   entry points.
+| Layer                                            | Surface | Mechanism                                          | Order |
+| ------------------------------------------------ | ------- | -------------------------------------------------- | :---: |
+| Focus ring                                       | SVG     | source order (last child)                          | front |
+| Heliopause label                                 | SVG     | source order                                       |       |
+| Planet labels                                    | SVG     | source order                                       |       |
+| POI labels                                       | SVG     | source order                                       |       |
+| POI rings                                        | SVG     | source order                                       |       |
+| POI arrows                                       | SVG     | source order                                       |       |
+| Sol/GC arrow labels                              | SVG     | source order                                       |       |
+| Distance label + warp pill                       | SVG     | source order                                       |       |
+| Distance vector + bg                             | SVG     | source order                                       |       |
+| Sol/GC arrows + bg                               | SVG     | source order                                       |       |
+| HUD ring                                         | SVG     | source order                                       |       |
+| **Constellation stick-figure**                   | SVG     | first SVG child + `mask="url(#disc-occlude-mask)"` |       |
+| *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     |
+| Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       |
+| Planet disc                                      | WebGL   | `renderOrder: 3`                                   |       |
+| Planet restore (depth-only)                      | WebGL   | `renderOrder: 2.5`                                 |       |
+| Orbit rings                                      | WebGL   | `renderOrder: 2`                                   |       |
+| Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       |
+| Planet corrupt (depth-only)                      | WebGL   | `renderOrder: 1.5`                                 |       |
+| Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       |
+| Star disc                                        | WebGL   | `renderOrder: 0`                                   |       |
+| Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       |
+| Molecular clouds (shelved)                       | WebGL   | `renderOrder: -2`                                  |       |
+| Milky Way volume                                 | WebGL   | `renderOrder: -3`                                  |       |
+| Star core depth-mask + planet core (depth-only)  | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  |
 
-That's it. The warp internals (`updateWarp`, `finishWarp`, mid-Fly
-recentre, pin guard, scale-bar focus tracking, …) stay agnostic above
-this seam and do not need to change. This is the bar set by
-stellata-2br.5 — no future-kind work should ever need to touch the
-warp animation code again.
+### Per-layer visibility gates
 
-### The interface
+Several layers hide/show as state changes — observed as "the order
+changed" but actually visibility flips with a fixed paint order.
 
-```ts
-interface FocusTarget {
-  readonly kind: 'star' | 'cloud';   // extend the union per new kind
-  readonly idx: number;
-  anchorInto(out: Vector3): boolean;        // absolute-space anchor
-  localPositionInto(out: Vector3): boolean; // current floating-frame position
-  parkRadius(): number;                     // camera-to-anchor at parked pose
-  applyFocus(): void;                       // per-kind state mutation, no events
-  emitFocusEvents(): void;                  // deferred event family fire
-  physicalRadius(): number | null;          // geometric radius (pc) or null when undefined
-  chartPlateauDistance(magBright: number): number | null;  // chart-mode disc plateau distance
-}
-```
+| Layer                              | Hides when…                                                                                                                                                            | Source                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Constellation stick-figure         | `!filter.showConstellation`; `highlightCon < 0` and not chart-mode                                                                                                     | `constellation-overlay.ts`                    |
+| Disc-mask cutouts (whole-mask)     | `cameraMode === 'observe'` or observe transition active                                                                                                                | `disc-mask.ts`                                |
+| Disc-mask cutout SOURCES           | always: most-recently-focused star + companion (persists across Esc-unfocus until disc shrinks); + vertices of the highlighted constellation whose disc > 48 px        | `disc-mask.ts`, `disc-mask-pure.ts`           |
+| Focus ring                         | no focus; observe + no transition; `renderedSizePx(focus) > 48 px`; `anyOrbitRingVisible()`                                                                            | `focus-ring-overlay.ts`                       |
+| HUD ring + Sol/GC arrows           | `!filter.showHud`; `body.warping` (CSS hide during warp)                                                                                                               | `hud-overlay.ts`                              |
+| POI overlay                        | `cameraMode !== 'observe'`; `!filter.showHud`; warp; navigate↔observe transition                                                                                       | `poi-overlay.ts`                              |
+| Planet labels                      | no planet system attached; chart mode active                                                                                                                           | `planet-labels.ts`                            |
+| Distance vector + To-row           | no destination; observe (defensive); near-plane clipped beyond viewport                                                                                                | `distance-vector-overlay.ts`                  |
+| Star core depth-mask (WebGL -4)    | no star is close enough to enter the disc pass — gated each frame by a Float32Array scan of `_localPositions`                                                          | `stellata.ts` (see *Star rendering* below)    |
+| Variable star disc + glow          | `renderableAppMag` magnitude cap                                                                                                                                       | star vertex shader                            |
 
-| Method | Role |
-|---|---|
-| `anchorInto` | Input to `recenterOrigin`. The floating origin lands here when the object is focused. |
-| `localPositionInto` | Per-frame `camera.lookAt(...)` source during warp Fly. Also used by overlays that project the object's position, and as the warp's source-`A` derivation in `warpTo` / `warpToCloud`. |
-| `parkRadius` | The warp computes `pStart` / `pEnd` as `anchor − travelDir · parkRadius()` for source and destination respectively — symmetric across both endpoints. |
-| `applyFocus` | Sets the per-kind `focusedStar` / `focusedCloud` / etc. field, updates derived state (`minDistance`, planet system attach), clears whichever sibling-kind focus was set. **No events fire.** |
-| `emitFocusEvents` | Fires the deferred event family — typically `'focus'` / `'cloudFocus'` (plus a sibling-clearing `null` emit when the previously-focused object was a different kind), then `'state'`. Called from `finishWarp` after the camera lands. |
-| `physicalRadius` | Geometric radius in parsecs, or `null` when the kind has no single radius (clouds — ellipsoid axes don't reduce to one). Consumed by arrival curves that need angular size — the hybrid curve's inner regime uses `θ = R/d` for the close-approach smoothstep. Kinds returning `null` silently fall back to a log-d profile. |
-| `chartPlateauDistance` | Camera-to-anchor distance at which the chart-mode disc plateaus at `uChartDiscMaxPx`, given the current `uChartMagBright` threshold. Returns `null` when the chart-mode treatment isn't a magnitude-driven disc (clouds → isobar contour). Used by `updateWarp` to pivot Fly → phase 3 early when chart mode is active and the destination disc would stop growing perceptibly. |
+### Where constellation lines can still paint on top of a disc
 
-The applyFocus/emitFocusEvents split is what lets the mid-Fly recentre
-(stellata-2br.5) mutate focus state at the trajectory midpoint
-without firing UI-visible events ~half a warp duration before the
-camera actually arrives — events settle in lock-step with the
-landing.
+The disc-mask is keyed to four sources: most-recently-focused, its
+companion, vertices of the highlighted constellation, and a 48 px
+threshold gate. Lines paint on top in these cases:
 
-### How the warp consumes it
+1. **Disc below 48 px.** Intended — the visual delta is too small to be
+   worth a cutout. Threshold: `DISC_THRESHOLD_PX` in `disc-mask.ts`.
+2. **Close-disc star that has never been focused and is not a vertex of
+   the highlighted constellation** (e.g. drifting past a bright star
+   post-warp). Requires a spatial scan over close stars rather than the
+   catalog at large — deferred.
+3. **Renderable-mag gate hides the disc but the mask still cuts** — the
+   mask circle uses `renderedSizePx`, which mirrors shader math. If the
+   disc is magnitude-gated out, the cutout still appears but reveals an
+   empty hole rather than a disc. Worth checking if you observe a black
+   hole in the lines while sweeping the magnitude slider.
 
-`WarpState` carries `source: FocusTarget` and `dest: FocusTarget`. The
-warp animation reads geometry via the interface methods and mutates
-focus state via `dest.applyFocus()` (mid-Fly recentre) and
-`dest.emitFocusEvents()` (`finishWarp`). No `destKind` switches
-remain in the warp pipeline; the dispatch table sits in the
-`makeStarFocusTarget` / `makeCloudFocusTarget` factory methods on
-`FocusController`, which is the one place that needs editing when a
-new kind is added.
+## RenderOrder ladder
 
-## Pin-to-center (`uPinFocusToCenter`)
+Single source of truth for the cross-layer `renderOrder` hierarchy.
+Inline ladder comments in individual files have been removed in favour
+of pointers here, so adding a layer is a one-line edit. Within the
+same `renderOrder` value, the opaque-before-transparent rule of the
+three.js renderer determines order; opaque depth-write meshes establish
+the depth buffer that transparent passes test against.
 
-After the physical-orbit floor (`R / tan(0.45·fovMinor)` for a Sol-class
-star) brings the camera to ~5e-8 pc on close approach, float32 cancellation
-in the projection chain (`projectionMatrix * modelViewMatrix * vec4(0)`)
-drifts the projected centre by visible pixels even though the focused
-star is mathematically at view-origin. Float64 emulation was rejected
-as too heavy; instead `star.vert.glsl` exposes a `uPinFocusToCenter: int`
-uniform (-1 = disabled). When set, the shader replaces the projection
-chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
-`gl_InstanceID` — bypassing matrix-multiply cancellation entirely. One
-int uniform, ~5 lines of GLSL, no CPU cost.
+| renderOrder | Layer                                            | Source |
+|-------------|--------------------------------------------------|--------|
+| `-4`        | star core depth mask                             | `stellata.ts` |
+| `-4`        | planet core depth mask                           | `planet-body-field.ts` |
+| `-3`        | Milky Way (volumetric disc + bulge)              | `milkyway.ts` |
+| `-2`        | molecular clouds                                 | `molecular-clouds.ts` |
+| `-1`        | galactic disc + galactic grid + Local Group      | `galactic-disc.ts`, `galactic-grid.ts`, `local-group.ts` |
+| `0`         | star discs                                       | `stellata.ts` |
+| `1`         | star glow                                        | `stellata.ts` |
+| `1`         | heliopause shell                                 | `heliopause.ts` |
+| `1.5`       | planet bodies — outer-disc CORRUPT (depth = 0)   | `planet-body-field.ts` (3re.19) |
+| `2`         | orbit rings                                      | `orbit-rings-layer.ts` |
+| `2`         | dust particles (shelved)                         | `stellata.ts` |
+| `2.5`       | planet bodies — outer-disc RESTORE (actual depth)| `planet-body-field.ts` (3re.19) |
+| `3`         | planet bodies — disc pass                        | `planet-body-field.ts` |
+| `4`         | planet bodies — glow pass                        | `planet-body-field.ts` |
 
-JS-side per frame in `stellata.ts`: pin engages iff
-`FocusController.isPinEngaged()`, which checks
-`focusedStar !== null && cameraMode === 'navigate'
-&& (!warp.isActive() || warp.isRecenteredToDest())
-&& !aim.isActive() && !focusLerpState
-&& controls.target.lengthSq() < 1e-12`.
+Pinning notes:
 
-The `warp.isRecenteredToDest()` clause relaxes the pin guard for the
-post-recentre window of warp Fly: after the mid-Fly recentre
-(stellata-2br.5) the destination is at local `(0,0,0)` and the camera
-is doing `lookAt(local origin)` per frame, so pin-to-NDC matches the
-geometry `lookAt` is already computing. The shader pin then bypasses
-any residual Float32 noise in the projection chain through to
-`finishWarp`. The `focusLerpState` clause stays unconditional —
-focus-park slerps the camera quaternion through an arc that's not
-continuously aimed at the focal star, so pinning would snap-jump it
-to NDC origin before the slerp finishes rotating into it.
-
-**Load-bearing invariant:** `controls.target` must be `(0,0,0)`
-*exactly* (length < 1e-6 pc). Any code path that engages focus while
-leaving target at a non-trivial residual silently disengages the pin.
-Three residual sources have bitten this:
-
-1. **Sol's catalog offset.** Sol is at AT-HYG `(5e-6, 0, 0)` pc, not
-   `(0,0,0)`. `recenterOrigin(solPos)` shifts target by `5e-6` →
-   guard fails on first frame.
-2. **Float32 truncation on long warps.** `finishWarp`/`focusStar`
-   read target from `_localPositions` (Float32Array), then
-   `recenterOrigin` shifts target by a delta computed fresh in
-   float64. The two representations of `|AB|` differ by Float32 ULP
-   (~`|AB|·1e-7`); for Sol→Rigel (265 pc) that's `~5e-5 pc`,
-   comparable to Rigel's arrival endOffset → 30%-of-screen drift.
-3. **Unfocus from close approach.** Solved by removing the
-   `recenterOrigin(0,0,0)` from the `setFocus(null)` branch (see
-   above) — `worldOffset` stays put on unfocus.
-
-**Fix for #1 and #2** lives at the choke point in
-`FocusController.setFocus`'s `idx !== null` branch: after
-`recenterOrigin`, subtract `target` from `camera.position` (preserving
-cam-to-target offset) and snap target to `(0,0,0)`. Eliminates both
-residuals for every caller of `setFocus`.
-
-Limitations: pan moves target away → pin disengages (intentional;
-post-pan the focused star isn't at view centre). Doesn't fire in
-observe mode or during aim animations. Pin DOES fire during the
-post-recentre window of warp Fly (see `warp.isRecenteredToDest()`
-in the guard above); pre-recentre Fly stays guarded because the
-focused star is the source, not the destination the camera is
-flying toward.
-
-**Where to look:**
-- `src/client/shaders/star.vert.glsl` — `uPinFocusToCenter` decl + use site.
-- `src/client/camera/focus-controller.ts` — `GLOBAL_MIN_DIST_PC = 5e-3`,
-  `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body (the
-  post-recenter snap to origin in the focused branch; empty unfocus
-  branch), `isPinEngaged` gating rules.
-- `src/client/stellata.ts` — per-frame pin guard in the animate loop
-  (reads `focus.isPinEngaged()` + `focus.getFocusedStar()`).
-- `src/client/util/url-state.ts` — `DecodedView.worldOffset`,
-  encoder/loader.
-- `src/client/util/url-state.test.ts` — round-trip regression test.
-- `src/client/debug/pin-debug-hud.ts` — Pin section in the unified debug
-  panel (`debug.panel()`); live readouts with latched directional
-  extremes. **Always use this when investigating any "star drifts
-  off-screen" report.**
+- **`-4` core depth masks** run first so background layers (MW, clouds,
+  galactic grid — all with `depthTest: true`) depth-fail behind close-
+  range bright cores instead of bleeding through. Stars and planets
+  share this slot; both write opaque depth with `colorWrite: false`.
+- **`1.5` + `2.5` planet outer-disc corrupt + restore pair** is the
+  mechanism that keeps the planet reading as a solid body across an
+  orbit ring (stellata-3re.19). The corrupt pass at 1.5 writes
+  `gl_FragDepth = 0.0` (near plane, smallest possible depth) across
+  the planet's core region (`glow >= uCoreThreshold`). The orbit ring
+  at renderOrder 2 then depth-fails at every fragment landing on the
+  planet's body — far-side AND near-side, regardless of the ring's
+  actual 3D position. The restore pass at 2.5 writes the planet's
+  actual `gl_FragCoord.z` back across the same region (with
+  `depthFunc: AlwaysDepth` so it can overwrite the 0.0), so the disc /
+  glow passes at 3 / 4 still depth-test correctly against other
+  planets and stars. Both materials are `transparent: true` so their
+  `renderOrder` is honoured in the transparent queue.
+- The planet-body-field test pins these values for the five planet
+  passes; a future reorder (e.g. moving restore before orbit rings)
+  fails CI rather than silently regressing.

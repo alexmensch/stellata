@@ -264,3 +264,70 @@ clear is wired via the `'cameraMode'` event inside the constructor, so
 all three exit paths — mode toggle, focus change, search-X clear —
 get the same cleanup). They round-trip through the `?v=` blob *only*
 in observe mode (see §URL state), encoded HIP-only at bit 19.
+
+
+## ObserveTransition (`camera/observe-transition.ts`)
+
+`ObserveTransition` owns the navigate↔observe mode-switch orchestrator:
+
+- **`enter` kind** — animated navigate → observe entry. Lerps
+  `camera.position` from its current pose to the focal-star local origin
+  `(0,0,0)` over `OBSERVE_TRANSITION_MS = 1800` with an inline
+  time-smoothstep. `uHideFocusIdx` is held at -1 across the glide so
+  the focal star stays visible until the camera parks at it; the finish
+  branch then writes `uHideFocusIdx = focusedStar` and enables
+  `ObserveControls`.
+- **`exit` kind** — animated observe → navigate exit. Captures `forward`
+  from `camera.quaternion` at startExit time and translates the camera
+  backward along it to `parkDistForStar(focusedStar)` so the user keeps
+  facing whatever they were observing. The finish branch sets
+  `controls.target = fromPos` (so `TrackballControls`' built-in
+  `lookAt(target)` is a no-op for orientation), realigns `camera.up`
+  via the lifted `up-align-pure` helper, runs `controls.update()`, and
+  re-enables `TrackballControls`. `clearFocusOnExit` routes through
+  `focus.setFocus(null)` on landing — the search-row X-button path.
+- **`unfocus` kind** — navigate-mode close-zoom outbound park-arrival
+  (a7d.2.6). Reuses the state slot but isn't an observe transition;
+  delegated to `camera-motion.ts`'s `tickArrival` so focus-park, warp
+  Fly, and unfocus all share one arrival profile. `isActive()` and
+  `getProgress()` exclude it so overlays gating on observe visibility
+  stay steady-state-navigate during close-zoom; `isAnyActive()` is the
+  union, used by `Stellata.isCameraBusy()`. The finish branch tightens
+  `controls.minDistance` to the parking distance so manual zoom-in is
+  bounded.
+
+Public surface — `setMode(mode, opts)`, `startExit(opts)`,
+`startUnfocusLerp(from, to, finalMinDist)`, `tick(nowMs)`, `isActive`,
+`isAnyActive`, `getProgress`, `cancelUnfocusLerp`, `cancelTransition`,
+`dispose`.
+
+Cross-controller coupling lives behind the `ObserveFocusOps` interface
+(declared in `observe-transition.ts`): focused-star inspection,
+`parkDistForStar` lookup, vector-slot clears at observe entry,
+`setFocus` on `clearFocusOnExit`, and the `isCameraBusy` gate setMode
+consults before claiming the camera. `FocusController` is the
+implementor (9mm.194.8) — `parkDistForStar` reads through the same
+`star-physics.ts` helper Stellata used previously, `isCameraBusy`
+unions the in-flight warp / aim / focus-lerp / observe states.
+
+Bus events emitted from the controller:
+- `'cameraMode'` (CameraMode) — at every successful setMode + startExit
+  entry, in lock-step with the field write through
+  `setCameraModeValue`.
+- `'state'` — at every cameraMode emit, plus at startUnfocusLerp and
+  at each finish branch.
+
+Stellata still owns the `cameraMode` field (~20 unrelated read sites)
+and writes it through the controller's `setCameraModeValue` dep
+callback so the controller's state machine stays the canonical
+mode-switcher. `Stellata.setFocus`'s observe-cleanup branch is the one
+remaining inline writer that bypasses startExit — it calls
+`observe.cancelTransition()` to clear any in-flight slot, then sets
+`cameraMode = 'navigate'` and runs an abbreviated snap (no
+`controls.target.set(0,0,0)`, no `controls.update()`) because the
+focal star is changing and the target needs to wait for the downstream
+`recenterFocusToStar` block.
+
+See `src/client/camera/observe/README.md` for the per-feature notes (drag mechanics,
+HUD locators, click dispatch) and the inherited contract that the
+controller honours.

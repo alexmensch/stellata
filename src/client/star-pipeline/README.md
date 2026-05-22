@@ -3,13 +3,19 @@
 The shared core of the WebGL star renderer — instanced quads, three
 passes, physical-size scaling, the super-Gaussian intensity profile,
 luminosity-class softness, variable-star pulsation, and the per-star
-dust-extinction read. The other rendering subsystems live in sibling
-docs:
+dust-extinction read. For the full cross-folder render-stack
+composition (where star, planet, cloud, MW, dust, galactic layers
+sit in z-order with the SVG overlay), see `src/client/README.md`
+§ Full render stack.
 
-- `src/client/galactic/README.md` — disc + sphere grid + Sol/GC arrows + HUD ring
-- `src/client/molecular-clouds/README.md` — cloud ellipsoids
-- `src/client/milkyway/README.md` — volumetric disc / bulge
-- `src/client/chart-mode/README.md` — paper aesthetic (flat discs, isobars, labels)
+Other rendering subsystems live in sibling docs:
+
+- `src/client/galactic/README.md` — disc + sphere grid + Sol/GC
+  arrows + HUD ring.
+- `src/client/molecular-clouds/README.md` — cloud ellipsoids.
+- `src/client/milkyway/README.md` — volumetric disc + bulge.
+- `src/client/chart-mode/README.md` — paper aesthetic (flat discs,
+  isobars, labels).
 
 For the underlying physics and density profiles, see `SCIENCE.md`.
 
@@ -57,81 +63,6 @@ src/client/shaders/
 
 scripts/dust/, data/dust/         Documented in scripts/README.md.
 ```
-
-## Full render stack — front to back
-
-There is no z-ordering between WebGL and SVG. The WebGL canvas paints
-first; the SVG `#overlay` always sits above it (`z-index: 5`,
-`pointer-events: none`). Inside each layer the ordering is local:
-WebGL by `THREE.Object3D.renderOrder`, SVG by source order in
-`src/client/index.html` (later child = on top). The disc-mask cuts
-holes through the constellation stick-figure path so close discs read
-as if they were in front of the lines — it is not a real z-order
-mechanism.
-
-| Layer                                            | Surface | Mechanism                                          | Order |
-| ------------------------------------------------ | ------- | -------------------------------------------------- | :---: |
-| Focus ring                                       | SVG     | source order (last child)                          | front |
-| Heliopause label                                 | SVG     | source order                                       |       |
-| Planet labels                                    | SVG     | source order                                       |       |
-| POI labels                                       | SVG     | source order                                       |       |
-| POI rings                                        | SVG     | source order                                       |       |
-| POI arrows                                       | SVG     | source order                                       |       |
-| Sol/GC arrow labels                              | SVG     | source order                                       |       |
-| Distance label + warp pill                       | SVG     | source order                                       |       |
-| Distance vector + bg                             | SVG     | source order                                       |       |
-| Sol/GC arrows + bg                               | SVG     | source order                                       |       |
-| HUD ring                                         | SVG     | source order                                       |       |
-| **Constellation stick-figure**                   | SVG     | first SVG child + `mask="url(#disc-occlude-mask)"` |       |
-| *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     |
-| Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       |
-| Planet disc                                      | WebGL   | `renderOrder: 3`                                   |       |
-| Planet restore (depth-only)                      | WebGL   | `renderOrder: 2.5`                                 |       |
-| Orbit rings                                      | WebGL   | `renderOrder: 2`                                   |       |
-| Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       |
-| Planet corrupt (depth-only)                      | WebGL   | `renderOrder: 1.5`                                 |       |
-| Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       |
-| Star disc                                        | WebGL   | `renderOrder: 0`                                   |       |
-| Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       |
-| Molecular clouds (shelved)                       | WebGL   | `renderOrder: -2`                                  |       |
-| Milky Way volume                                 | WebGL   | `renderOrder: -3`                                  |       |
-| Star core depth-mask + planet core (depth-only)  | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  |
-
-### Per-layer visibility gates
-
-Several layers hide/show as state changes — observed as "the order
-changed" but actually visibility flips with a fixed paint order.
-
-| Layer                              | Hides when…                                                                                                                                                            | Source                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Constellation stick-figure         | `!filter.showConstellation`; `highlightCon < 0` and not chart-mode                                                                                                     | `constellation-overlay.ts`                    |
-| Disc-mask cutouts (whole-mask)     | `cameraMode === 'observe'` or observe transition active                                                                                                                | `disc-mask.ts`                                |
-| Disc-mask cutout SOURCES           | always: most-recently-focused star + companion (persists across Esc-unfocus until disc shrinks); + vertices of the highlighted constellation whose disc > 48 px        | `disc-mask.ts`, `disc-mask-pure.ts`           |
-| Focus ring                         | no focus; observe + no transition; `renderedSizePx(focus) > 48 px`; `anyOrbitRingVisible()`                                                                            | `focus-ring-overlay.ts`                       |
-| HUD ring + Sol/GC arrows           | `!filter.showHud`; `body.warping` (CSS hide during warp)                                                                                                               | `hud-overlay.ts`                              |
-| POI overlay                        | `cameraMode !== 'observe'`; `!filter.showHud`; warp; navigate↔observe transition                                                                                       | `poi-overlay.ts`                              |
-| Planet labels                      | no planet system attached; chart mode active                                                                                                                           | `planet-labels.ts`                            |
-| Distance vector + To-row           | no destination; observe (defensive); near-plane clipped beyond viewport                                                                                                | `distance-vector-overlay.ts`                  |
-| Star core depth-mask (WebGL -4)    | no star is close enough to enter the disc pass — gated each frame by a Float32Array scan of `_localPositions`                                                          | `stellata.ts` (see *Star rendering* below)    |
-| Variable star disc + glow          | `renderableAppMag` magnitude cap                                                                                                                                       | star vertex shader                            |
-
-### Where constellation lines can still paint on top of a disc
-
-The disc-mask is keyed to four sources: most-recently-focused, its
-companion, vertices of the highlighted constellation, and a 48 px
-threshold gate. Lines paint on top in these cases:
-
-1. **Disc below 48 px.** Intended — the visual delta is too small to be
-   worth a cutout. Threshold: `DISC_THRESHOLD_PX` in `disc-mask.ts`.
-2. **Close-disc star that has never been focused and is not a vertex of
-   the highlighted constellation** (e.g. drifting past a bright star
-   post-warp). Requires a spatial scan over close stars rather than the
-   catalog at large — deferred.
-3. **Renderable-mag gate hides the disc but the mask still cuts** — the
-   mask circle uses `renderedSizePx`, which mirrors shader math. If the
-   disc is magnitude-gated out, the cutout still appears but reveals an
-   empty hole rather than a disc. Worth checking if you observe a black
-   hole in the lines while sweeping the magnitude slider.
 
 ## Star rendering: instanced quads, two passes
 
@@ -204,55 +135,6 @@ Chart mode swaps both star materials to `MultiplyBlending` +
 disables depth for an ink-on-paper look against the light canvas, and
 replaces the super-Gaussian profile with flat hard-edged discs sized
 linearly by magnitude. See `src/client/chart-mode/README.md` for the full feature.
-
-## RenderOrder ladder
-
-Single source of truth for the cross-layer `renderOrder` hierarchy.
-Inline ladder comments in individual files have been removed in favour
-of pointers here, so adding a layer is a one-line edit. Within the
-same `renderOrder` value, the opaque-before-transparent rule of the
-three.js renderer determines order; opaque depth-write meshes establish
-the depth buffer that transparent passes test against.
-
-| renderOrder | Layer                                            | Source |
-|-------------|--------------------------------------------------|--------|
-| `-4`        | star core depth mask                             | `stellata.ts` |
-| `-4`        | planet core depth mask                           | `planet-body-field.ts` |
-| `-3`        | Milky Way (volumetric disc + bulge)              | `milkyway.ts` |
-| `-2`        | molecular clouds                                 | `molecular-clouds.ts` |
-| `-1`        | galactic disc + galactic grid + Local Group      | `galactic-disc.ts`, `galactic-grid.ts`, `local-group.ts` |
-| `0`         | star discs                                       | `stellata.ts` |
-| `1`         | star glow                                        | `stellata.ts` |
-| `1`         | heliopause shell                                 | `heliopause.ts` |
-| `1.5`       | planet bodies — outer-disc CORRUPT (depth = 0)   | `planet-body-field.ts` (3re.19) |
-| `2`         | orbit rings                                      | `orbit-rings-layer.ts` |
-| `2`         | dust particles (shelved)                         | `stellata.ts` |
-| `2.5`       | planet bodies — outer-disc RESTORE (actual depth)| `planet-body-field.ts` (3re.19) |
-| `3`         | planet bodies — disc pass                        | `planet-body-field.ts` |
-| `4`         | planet bodies — glow pass                        | `planet-body-field.ts` |
-
-Pinning notes:
-
-- **`-4` core depth masks** run first so background layers (MW, clouds,
-  galactic grid — all with `depthTest: true`) depth-fail behind close-
-  range bright cores instead of bleeding through. Stars and planets
-  share this slot; both write opaque depth with `colorWrite: false`.
-- **`1.5` + `2.5` planet outer-disc corrupt + restore pair** is the
-  mechanism that keeps the planet reading as a solid body across an
-  orbit ring (stellata-3re.19). The corrupt pass at 1.5 writes
-  `gl_FragDepth = 0.0` (near plane, smallest possible depth) across
-  the planet's core region (`glow >= uCoreThreshold`). The orbit ring
-  at renderOrder 2 then depth-fails at every fragment landing on the
-  planet's body — far-side AND near-side, regardless of the ring's
-  actual 3D position. The restore pass at 2.5 writes the planet's
-  actual `gl_FragCoord.z` back across the same region (with
-  `depthFunc: AlwaysDepth` so it can overwrite the 0.0), so the disc /
-  glow passes at 3 / 4 still depth-test correctly against other
-  planets and stars. Both materials are `transparent: true` so their
-  `renderOrder` is honoured in the transparent queue.
-- The planet-body-field test pins these values for the five planet
-  passes; a future reorder (e.g. moving restore before orbit rings)
-  fails CI rather than silently regressing.
 
 ## Depth encoding
 
@@ -508,3 +390,4 @@ is artistically pretty but inverts physical reality. See bd issue
 
 The data plumbing (preprocessor, manifest, LFS, loader, mesh) is fully
 wired so revisit work is purely render-tuning, not infrastructure.
+

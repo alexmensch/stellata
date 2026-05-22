@@ -234,3 +234,58 @@ Sign convention: finger rotation CW on the screen → world rotates CW.
 rotates `camera.up` CCW when viewed from behind the forward vector
 (standard right-hand rule), and rotating `up` CCW in world space makes
 world content appear CW in the camera's view.
+
+
+## Aim controller (`camera/aim-controller.ts`)
+
+`AimController` owns the two aim-slerp state machines:
+
+- **navigate slot** — orbits the camera around `controls.target` at
+  constant radius, slerping two quaternions that rotate `WARP_BASE_DIR`
+  to the start / end radial directions. Disables TrackballControls for
+  the duration so its damping doesn't fight the slerp.
+- **observe slot** — camera position is fixed at the focal star's local
+  origin; only the camera quaternion changes, slerping the live pose
+  toward a `lookAt(point)` target. Disables `ObserveControls` so a stray
+  drag doesn't fight the slerp.
+
+Both branches share `aimDurationMs`: a linear ramp from `AIM_T_MIN_MS`
+(floor for trivial nudges) to `AIM_T_MAX_MS` (cap for a half-circle
+swing). The observe branch's swing angle uses the geodesic quaternion
+formula `2·acos(|q0·q1|)`; the navigate branch uses the planar
+`acos(dir0·dir1)` between unit direction vectors.
+
+Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that
+owns the cross-controller busy gates (`warp.isActive()`,
+`cancelUnfocusLerp`, `cancelFocusLerp`, `isObserveTransitionActive`)
+before delegating to `this.aim.aimAt(pointLocal)`. The controller knows
+only the mode it runs in and its own slot state.
+
+Cancellation contract — `aim.cancel()` drops both slot states but does
+**not** touch `controls.enabled` or call `observeControls.enable()`.
+That re-enable only happens on natural completion of the slerp.
+Cancellation sites (warp start, observe-exit, focus change while in
+observe) are moving control elsewhere and own the next input-handler
+transition themselves.
+
+## Picking a constellation aims the camera
+
+`Stellata.aimAtConstellation(conIndex)` swings the camera so the chosen
+constellation is centred in view, without moving `controls.target` or
+changing orbit radius — only the camera's position on the orbit sphere
+moves. The aim point is the brightness-weighted centroid of the top-8
+figure stars as ranked by apparent magnitude **from the current orbit
+target** (not from Sol). This matters when the user has travelled far
+from Sol: the same constellation is still centred on whichever members
+visually dominate from *there*, not from Earth.
+
+Called **only from the constellation dropdown change handler** in
+`controls.ts`. URL state restore, reset button, and any other path that
+sets `highlightCon` via `setFilter` deliberately do **not** trigger the
+aim — a shareable URL's camera pose is authoritative, and the "reset"
+button means "clear the selection", not "jump somewhere".
+
+In OBSERVE mode the orbit-pivot rotation is degenerate (camera ≈
+target), so `aimAtConstellation` instead routes the centroid through
+`aimAt(c)`, which slerps the camera quaternion in place — same code
+path Sol/GC label clicks use.
