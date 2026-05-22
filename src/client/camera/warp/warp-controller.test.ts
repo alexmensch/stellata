@@ -16,7 +16,7 @@ import {
   type FocusOps,
   type WarpControllerDeps,
 } from './warp-controller';
-import type { FocusTarget } from './focus-target';
+import type { FocusTarget } from '../focus/focus-target';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';

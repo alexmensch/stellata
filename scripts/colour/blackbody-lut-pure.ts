@@ -1,7 +1,7 @@
 // Pure colour-LUT math: Ballesteros 2012 (and its analytic inverse) plus
 // LUT shape constants. Node-free so client code can import it.
 
-// ---- LUT shape (must match src/client/shaders/blackbody-lut-data.ts) ----
+// ---- LUT shape (must match src/client/star-pipeline/blackbody-lut-data.ts) ----
 
 /** Number of RGB entries in the LUT. 256 keeps cache lines clean and is
  *  plenty of resolution for B-V over a 2.4-magnitude span. */

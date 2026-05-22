@@ -403,4 +403,4 @@ present) `camera.quaternion`. Returns `done: true` once
 — it computes a per-object property and isn't a motion concern. The
 per-object geometry that warp / arrival reads (anchor, local
 position, park radius) flows through the `FocusTarget` contract
-declared in `../warp/focus-target.ts`.
+declared in `../focus/focus-target.ts`.

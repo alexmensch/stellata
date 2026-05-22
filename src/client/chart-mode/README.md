@@ -22,8 +22,8 @@ src/client/chart-mode/
                                   while clouds are shelved). Dirty-tracked
                                   SVG writes + centroid cache + sorted
                                   apparent-size top-N — see
-                                  src/client/debug/README.md § Chart-mode
-                                  optimisations.
+                                  src/client/debug/README.md § What got
+                                  optimised.
   chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
                                   pixel-size mapping in chart mode.
 ```

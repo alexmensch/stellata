@@ -39,7 +39,7 @@ describe('ballesterosTeff', () => {
 
 // ---- LUT consumer module is in sync ---------------------------------
 //
-// The generated module in src/client/shaders/blackbody-lut-data.ts must match
+// The generated module in src/client/star-pipeline/blackbody-lut-data.ts must match
 // what scripts/colour/blackbody-lut.ts emits today. Drift = regenerate via
 // `npm run build:lut` and commit both files in the same PR.
 

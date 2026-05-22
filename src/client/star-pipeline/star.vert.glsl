@@ -141,7 +141,7 @@ const float LOG10 = 2.302585093;
 // Blackbody → sRGB lookup table indexed by B-V. 256×1 texture; the
 // Ballesteros 2012 B-V→Teff conversion and Planck + CIE 1931 + sRGB
 // D65 transform are baked in at LUT build time (see scripts/colour/blackbody-lut.ts).
-// BV_MIN / BV_MAX must match src/client/shaders/blackbody-lut.ts.
+// BV_MIN / BV_MAX must match ./blackbody-lut.ts.
 uniform sampler2D uColorLut;
 const float BV_MIN = -0.4;
 const float BV_MAX = 2.0;

@@ -98,7 +98,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 ## Focus-park lerp (r9q.2)
 
 Click-focus on a star (or `flyToCloud` for clouds) no longer teleports.
-The lerp lives in `../warp/focus-transition.ts` as the generic
+The lerp lives in `../focus/focus-transition.ts` as the generic
 `parkDistance(...)` + `newFocusLerpFrom(...)` + `tickFocusLerp(...)`
 trio — stars consume it now; clouds compose the same primitives;
 future focusable types (nebulae, etc.) plug in the same way.

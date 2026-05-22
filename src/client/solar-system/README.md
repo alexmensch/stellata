@@ -318,25 +318,6 @@ focal stars retain the global `0.005 pc` (~1031 AU) floor.
 so very-close planet inspection isn't culled. The strict-less-than
 `camera.near < minDistance` invariant holds.
 
-## File map
-
-- `ephemeris.ts` — JPL Standish positions; `getPlanetPositions(t)`.
-- `time.ts` — `t` helpers (`tToJDE`, `isLive`).
-- `time-readout.ts` — bottom-right UTC readout binding.
-- `planet-system.ts` — `PlanetSystem` data model; `SOL_PLANETS` (radii,
-  semi-major axes, eccentricities, types, colours, geometric albedos).
-- `orbit-rings-layer.ts` — per-host orbit-ring renderer (focus-only).
-- `planet-body-field.ts` — global instanced planet-body field with
-  per-host distance cull (focus-independent).
-- `perceptual-magnitude.ts` — pure helpers for the apparent-mag /
-  disc-pixel mapping shared with the star pipeline; vitest-covered.
-- `planet-labels.ts` — per-planet SVG labels.
-- `heliopause.ts` — heliopause shell + apex label hook.
-- `shaders/heliopause.{vert,frag}.glsl` — Fresnel-limbed shell.
-- `shaders/planet.{vert,frag}.glsl` — billboarded planet disc.
-- `stellata.ts` — `SOL_FIRST_LOAD_PARK_PC` constant; planet-system
-  attach in the constructor; minDistance relaxation in `setFocus`.
-
 ## Gotchas
 
 - **Ecliptic ↔ equatorial obliquity.** Use J2000 ε = 23.4392911°

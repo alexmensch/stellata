@@ -8,7 +8,8 @@
 //
 // Composes the lower-level primitives in `star-geometry.ts`
 // (`physSizePx`, `varEffectiveAmplitude`, `distAtFillFraction`,
-// `peakAmplitudeFactor`) and `focus-transition.ts` (`parkDistance`).
+// `peakAmplitudeFactor`) and `../focus/focus-transition.ts`
+// (`parkDistance`).
 // Layer responsibilities:
 //   star-geometry.ts — pure formulae (no catalog, no uniforms).
 //   star-physics.ts  — catalog-indexed wrappers (this file).
@@ -23,7 +24,7 @@ import {
   distAtFillFraction,
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
-import { parkDistance } from '../warp/focus-transition';
+import { parkDistance } from '../focus/focus-transition';
 import { R_SUN_PC } from '../../solar-system/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 

@@ -139,79 +139,31 @@ Two specific freezes use this:
 - **`showConstellation === false`** disables `#con-input` and the
   surrounding `#con-picker` styling.
 
-## Reverse-sync in `controls.ts`
+## Reverse-sync (DOM ← FilterState)
 
-Widgets subscribe to `stellata.on('filter', …)` and write DOM from the filter
-state. This is how URL restores and `naked eye`/`all` presets update sliders
-and chip states. **Setting `.value` programmatically does NOT dispatch
-`input`**, so there's no feedback loop. If you add a filter field, remember
-to handle it in `syncFromFilter`.
+Panel widgets subscribe to `stellata.on('filter', …)` and write DOM
+from the filter state. This is how URL restores and `naked eye`/`all`
+presets update sliders and chip states. **Setting `.value`
+programmatically does NOT dispatch `input`**, so there's no feedback
+loop. If you add a filter field, remember to handle it in the panel's
+`syncFromFilter`.
 
-The FOV control reads `stellata.getCameraFov()` directly inside
-`syncFromFilter` rather than going through `FilterState` — FOV lives on
-the camera, not the filter — but otherwise behaves the same. `setCameraFov`
-fires the filter-change handlers so the slider re-syncs after a debug-panel
-or URL-restore change.
+The FOV slider's reverse-sync is the one carve-out: it reads
+`stellata.getCameraFov()` directly because FOV lives on the camera,
+not in `FilterState`. `setCameraFov` fires the filter-change handlers
+so the slider re-syncs after a debug-panel or URL-restore change.
 
-## Magnitude presets and override flags
+The **active-preset highlight** on the magnitude-preset buttons is
+value-driven, not click-driven: the reverse-sync compares
+`f.maxAppMag` against each preset's value (epsilon 0.05) and toggles
+the `.on` class on the matching button — so dragging the slider to
+6.5 lights up "naked eye" the same as clicking it. Styling lives in
+`styles.css :.mag-preset.on`.
 
-Three magnitude presets live in `MAG_PRESETS` (`stellata.ts`): `naked-eye`,
-`binoculars`, `all`. Buttons in the panel dispatch on `data-preset` →
-`stellata.applyMagnitudePreset(name)`. The preset is the canonical source
-of `maxAppMag` and `sizeSpan`, plus angular sizeMin/Max which are converted
-to pixels per current viewport.
-
-Per-field override flags (`sizeMinOverridden`, `sizeMaxOverridden`,
-`sizeSpanOverridden` on `FilterState`) decide whether a preset switch
-or viewport resize gets to write into that field. Slider input sets the
-flag; the per-section reset buttons (`size-reset`, `span-reset`) call
-`clearSizeOverrides([...])` which clears the flag(s) and writes the
-active preset's value back. `maxAppMag` has no override flag — clicking
-a preset always sets it; the magnitude slider can still tweak it (and
-the value survives viewport resizes since `recomputePresetPxSizes` only
-touches sizeMin/Max).
-
-URL state encodes the preset only when not on the default
-(`naked-eye`); `mag` only when diverged from the active preset's
-value; `smin/smax/span` only when their override flag is true.
-Receiver applies the preset first, then layers the explicit overrides
-on top.
-
-**Active-preset highlight.** The reverse-sync in `controls.ts` compares
-`f.maxAppMag` against `MAG_PRESETS[*].maxAppMag` (epsilon 0.05) and
-toggles the `.on` class on the matching preset button. The match is
-value-driven, not click-driven — dragging the slider to 6.5 lights up
-"naked eye" the same as clicking it. Styling lives in
-`styles.css :.mag-preset.on` (accent colour + faint pill background,
-matching `.toggle-btn.on`).
-
-## Field of view
-
-User-facing slider in the panel (`#fov`, 10°–120° / 1° step) plus a reset
-button that snaps to `DEFAULT_FOV` = 50°. `setCameraFov` updates
-`camera.fov`, calls `updateProjectionMatrix()`, and triggers
-`recomputePresetPxSizes` since arcsec/px depends on FOV.
-
-## Star size exaggeration
-
-`#exag` slider in the Camera group — range 1 (Realistic) to 20
-(Extreme), step 0.5. Drives `setStarExaggerationK`, which patches the
-*active* preset's K (one of `STAR_EXAGGERATION_K_DEFAULTS`: naked-eye
-= 12, binoculars = 9, all = 5) and runs `computeMagPresets` to derive
-new angular size targets. The slider snaps to the active preset's K
-on every preset change, and the reset button restores that preset's
-default. Defaults are calibrated per preset because the visible star
-population shifts dramatically with the magnitude limit — naked-eye
-needs more exaggeration to feel populated, while "all" with ~313k
-stars needs a smaller K to avoid the field becoming a solid wash.
-Pure physical sizing leaves most stars sub-pixel at typical viewports
-— at 50° / 1080-tall, K=1 puts the threshold-disc star at ~0.18 px
-and floors it to 1 px. The 1-px floor in `computePresetPxSizes` is
-applied symmetrically to sizeMin and sizeMax so the saturation disc
-never inverts below the threshold disc at low K.
-`recomputePresetPxSizes` additionally enforces `max >= min` post-patch
-to handle the case where the user has manually overridden one of the
-two and the other gets recomputed to a value that would invert.
+For the underlying magnitude / FOV / star-size-exaggeration model
+(presets, override flags, K table, soft-knee saturation), see
+`../star-pipeline/README.md` § Magnitude presets and angular-size
+calibration.
 
 ## Theme
 

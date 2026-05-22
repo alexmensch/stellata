@@ -51,7 +51,7 @@ import {
   FocusController,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
-} from './camera/warp/focus-controller';
+} from './camera/focus/focus-controller';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';

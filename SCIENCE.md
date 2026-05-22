@@ -506,7 +506,7 @@ cost of strict angular fidelity in the secondary axis. Three.js's
 `camera.fov` is the *vertical* FOV; horizontal arcsec/px would be
 identical only for square viewports.
 
-Implementation: `src/client/shaders/star.{vert,frag}.glsl` (`sqrt`
+Implementation: `src/client/star-pipeline/star.{vert,frag}.glsl` (`sqrt`
 brightness curve + smoothstep taper) and `src/client/stellata.ts`
 (`MAG_PRESETS`, `applyMagnitudePreset`, `computePresetPxSizes`).
 Live tuning via `debug.panel()` in the browser console.
@@ -515,7 +515,7 @@ Live tuning via `debug.panel()` in the browser console.
 
 Per-star chromaticity is sampled from a 256-entry blackbody → sRGB
 lookup table indexed by B-V. The table is precomputed at build time
-(`scripts/colour/blackbody-lut.ts` → `src/client/shaders/blackbody-lut-data.ts`)
+(`scripts/colour/blackbody-lut.ts` → `src/client/star-pipeline/blackbody-lut-data.ts`)
 and bound to the star shader as a 256×1 `DataTexture`. Each entry
 folds three physically-grounded steps:
 
@@ -540,7 +540,7 @@ folds three physically-grounded steps:
 
 For each star, the LUT-input intrinsic B-V is sourced via a six-tier
 priority chain (`pickTeffSource` in
-`src/client/shaders/star-color-routing-pure.ts`). First match wins:
+`src/client/star-pipeline/star-color-routing-pure.ts`). First match wins:
 
 1. **Gaia DR3 Apsis `teff_gspphot`** — primary, ~62% of catalog records.
 2. **Gaia DR3 Apsis `teff_gspspec`** — covers some gspphot gaps;
@@ -592,8 +592,8 @@ Sources:
   ΔE ≤ 5 across 3000–30000 K).
 
 Implementation: `scripts/colour/blackbody-lut.ts` (LUT generator + pure
-helpers), `src/client/shaders/blackbody-lut.ts` (generated artifact),
-`src/client/shaders/star.vert.glsl` (`ciToColor` sampler), and
+helpers), `src/client/star-pipeline/blackbody-lut.ts` (generated artifact),
+`src/client/star-pipeline/star.vert.glsl` (`ciToColor` sampler), and
 `src/client/stellata.ts::makeColorLutTexture`.
 
 ## Variable-star modelling
@@ -613,10 +613,10 @@ GCVS rows without a parseable period, or with zero amplitude, are
 skipped at build time — that excludes constant stars, supernovae, and
 irregular variables. Typical match rate: ~3.7k of 313k catalog stars.
 
-Implementation: `src/client/shaders/star.vert.glsl` and
-`src/client/camera/star-physics.ts` (CPU-side `renderedSizePx`
+Implementation: `src/client/star-pipeline/star.vert.glsl` and
+`src/client/camera/controls/star-physics.ts` (CPU-side `renderedSizePx`
 mirror); see `src/client/star-pipeline/README.md` §Variable star rendering, and
-`scripts/README.md` §GCVS variability cross-match for the
+`scripts/catalog/README.md` §GCVS variability cross-match for the
 build-time matching rules.
 
 ## Solar system
@@ -728,7 +728,7 @@ Construction details (sphere scale, offset, rotation), rendering, and
 label anchoring: see `src/client/solar-system/README.md` § Heliopause boundary.
 
 Implementation: `src/client/heliopause.ts` and
-`src/client/shaders/heliopause.{vert,frag}.glsl`.
+`src/client/solar-system/heliopause.{vert,frag}.glsl`.
 
 ## Local Group wireframes
 
@@ -889,8 +889,8 @@ band — voxel structure (~5 pc native) aliases into visible streaks
 along long camera→fragment rays (8–15 kpc) regardless of step
 distribution. Voxels stay in use for short per-star sightlines.
 
-Implementation: `src/client/shaders/star.vert.glsl` (per-star) and
-`src/client/shaders/milkyway.frag.glsl` (volumetric); see
+Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
+`src/client/milkyway/milkyway.frag.glsl` (volumetric); see
 `src/client/star-pipeline/README.md` §Dust extinction + the shelved particle layer and
 `src/client/milkyway/README.md`.
 

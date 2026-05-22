@@ -3,7 +3,7 @@
 // The frame-anchor primitive (recenterOrigin / worldOffset /
 // starLocalPosition) stays on Stellata via `FrameAnchor`.
 //
-// See src/client/README.md § FocusTarget contract.
+// See src/client/camera/focus/README.md.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
@@ -13,7 +13,7 @@ import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
-import type { WarpController } from './warp-controller';
+import type { WarpController } from '../warp/warp-controller';
 import type { FocusTarget } from './focus-target';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
@@ -31,7 +31,7 @@ import {
   parkDistance,
   tickFocusLerp,
 } from './focus-transition';
-import { warpArrivalEaseFn } from './warp-tuning';
+import { warpArrivalEaseFn } from '../warp/warp-tuning';
 import { FOCUS_LERP_MS } from '../timing';
 import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
