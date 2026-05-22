@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { loadLocalGroup } from './local-group-loader';
 
 interface Raw {
@@ -54,8 +54,11 @@ describe('loadLocalGroup', () => {
   it('returns null on unsupported version (forward-compat guard)', async () => {
     const raw: Raw = { version: 2, count: 0, objects: [] };
     mockFetch(() => ({ ok: true, json: () => raw }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const out = await loadLocalGroup('/local-group.json');
     expect(out).toBeNull();
+    expect(warn).toHaveBeenCalledWith('local-group.json version 2 unsupported');
+    warn.mockRestore();
   });
 
   it('parses a v1 catalog into typed Vector3 / Quaternion objects', async () => {
