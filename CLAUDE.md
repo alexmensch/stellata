@@ -36,8 +36,6 @@ defaults do NOT apply to this codebase. They are overridden by:
 - **Review-grade at write time.** Duplicated logic, magic numbers,
   and parallel implementations are review-blocking defects here. Code
   that would fail review should not be written in the first place.
-  Full rules in bd memories `alex-pr-review-style` and
-  `stellata-named-constants-and-dry` (run `bd memories <key>` to read).
 
 ## Code comments — overrides the system prompt
 
@@ -98,7 +96,7 @@ If none of those fit, the content is noise. Delete.
 The codebase is organised by per-subsystem folder + cross-cutting type
 folder + a minimal root. Adding a new module follows five rules so we
 don't re-incur the kind of flat-folder / 4kloc-integration-shell drift
-that motivated `stellata-9mm.194`:
+that motivated the convention:
 
 - **Physical / visual / thematic subsystems get a folder from day 1.**
   When adding the next layer of the model (Local Bubble, nebulae,
@@ -148,10 +146,10 @@ patterns that catch recurring bug shapes are in
 ## Repo layout
 
 ```
-scripts/                                     Each subsystem cluster owns a folder
-                                             (stellata-9mm.204). Cross-folder
-                                             imports are sys.path-based for Python
-                                             and explicit relative paths for TS.
+scripts/                                     Each subsystem cluster owns a folder.
+                                             Cross-folder imports are sys.path-based
+                                             for Python and explicit relative paths
+                                             for TS.
   catalog/
     build-catalog.ts                         AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis
                                              + SIMBAD sp_type + Stellarium →
@@ -282,8 +280,7 @@ scripts/                                     Each subsystem cluster owns a folde
     sync-dust.ts                             mirror data/dust → public/dust on dev/build.
     requirements-dust.txt                    pip deps for build-dust.py.
   local-group/
-    build-local-group.ts                     LVDB + overrides.tsv → public/local-group.json
-                                             (stellata-38m).
+    build-local-group.ts                     LVDB + overrides.tsv → public/local-group.json.
     build-local-group-pure.ts                pure helpers (RA/Dec→ICRS, orient →
                                              quaternion, override merge).
     build-local-group{,-pure}.test.ts        vitest pins for both halves.
@@ -412,15 +409,14 @@ src/
     stellata.ts           Three.js scene + state machine + event bus
     star-pipeline.ts      InstancedBufferGeometry + disc/glow/coreMask
                           ShaderMaterials + meshes; owns applyDiscBlendDefaults
-                          + setMonochromeBlend + dispose. Extracted from
-                          stellata.ts in 9mm.43.
+                          + setMonochromeBlend + dispose.
     index.html, styles.css, globals.d.ts
     stellata-events.test.ts integration-shell event-emission test
     disc-blend.test.ts    star-disc/glow blend-equation parity test
     star-pipeline.test.ts dispose + uniform-sharing + blend defaults
     shaders/
       star.vert.glsl, star.frag.glsl              GLSL3/WebGL2
-      planet.vert.glsl, planet.frag.glsl          three-pass instanced planet bodies (3re.16-17)
+      planet.vert.glsl, planet.frag.glsl          three-pass instanced planet bodies
       perceptual-disc.glsl                        shared point-of-light disc/glow chunk (stars + planets)
       dust-particle.vert.glsl, dust-particle.frag.glsl   shelved dust splats
       cloud.vert.glsl, cloud.frag.glsl                   molecular cloud ellipsoids
@@ -439,7 +435,7 @@ src/
     dust/                 dust-particle-layer (+ tests). Instanced additive
                           billboards; shelved (strength=0 → mesh hidden
                           → zero per-frame cost). DustField + dust-loader stay
-                          in loaders/. Extracted from stellata.ts in 9mm.194/70.
+                          in loaders/.
     chart-mode/           chart-mode, chart-labels, chart-disc-pure (+ tests).
                           Observe-only paper aesthetic
     hover/                hover-engine, hover-types, hover-pick-disambiguator,
@@ -457,27 +453,22 @@ src/
                           focus-controller (+ tests).
                           timing.ts — CAMERA_LERP_MS / WARP_*_MS /
                           AIM_*_MS / OBSERVE_TRANSITION_MS / DCAM_LOG_FLOOR_PC /
-                          WARP_BASE_DIR (canonical camera-wide constants;
-                          renamed from warp-constants in 9mm.194.1).
+                          WARP_BASE_DIR (canonical camera-wide constants).
                           picker.ts — pure target resolver; click + hover
                           pick paths for stars / clouds / planets / Local Group /
-                          heliopause (extracted from stellata.ts in 9mm.194.3)
+                          heliopause.
                           aim-controller.ts — mode-aware aim slerps (navigate
                           orbit-pivot + observe quaternion-in-place), shared
-                          `aimDurationMs` ramp (extracted from stellata.ts in
-                          9mm.194.4)
+                          `aimDurationMs` ramp.
                           warp-controller.ts — 3-phase warp FSM (reorient
                           → fly → post-arrival) + WarpState + tryMidFlyRecentre
-                          + swapObserveAnchor + FocusOps cross-controller seam
-                          (extracted from stellata.ts in 9mm.194.5)
+                          + swapObserveAnchor + FocusOps cross-controller seam.
                           observe-transition.ts — navigate↔observe FSM:
                           ObserveTransitionState + setMode + startExit +
-                          startUnfocusLerp + ObserveFocusOps seam (extracted
-                          from stellata.ts in 9mm.194.6)
+                          startUnfocusLerp + ObserveFocusOps seam.
                           up-align-pure.ts — alignCameraUpToQuaternion
-                          helper (lifted from stellata.ts in 9mm.194.6;
-                          paired with the existing camera-up-align.test.ts
-                          algebra fixture)
+                          helper; paired with camera-up-align.test.ts
+                          algebra fixture.
                           star-physics.ts — per-star camera/screen geometry:
                           fovMinorRad, peakAmplitudeFactor,
                           binaryCompanionFloorPc, minOrbitDistForStar,
@@ -486,10 +477,9 @@ src/
                           canonical ZOOM_FLOOR_FRACTION /
                           VAR_TROUGH_FLOOR_FRACTION /
                           BINARY_VIEWPORT_HALF_ANGLE_RAD /
-                          BINARY_MIN_DIST_FACTOR (extracted from
-                          stellata.ts in 9mm.194.9; sits between
+                          BINARY_MIN_DIST_FACTOR — sits between
                           star-geometry's pure formulae and the
-                          per-frame uniform reads in stellata)
+                          per-frame uniform reads in stellata.
                           focus-controller.ts — focus FSM + focus-park
                           lerp + per-kind FocusTarget factories +
                           pin-engage geometry; FocusOps seam consumed
@@ -499,8 +489,7 @@ src/
                           FrameAnchor (recenterOrigin + worldOffset +
                           starLocalPosition) stays on stellata.ts —
                           cleaner extraction is coupled to the
-                          StarPipeline extract (9mm.43). Extracted from
-                          stellata.ts in 9mm.194.8.
+                          StarPipeline extract.
     loaders/              catalog-loader, dust-loader (+ tests). cloud-loader
                           lives under molecular-clouds/; local-group-loader
                           under local-group/
@@ -630,8 +619,8 @@ Claude Code should read on demand when working on the relevant area.
   profiles, magnitude-consistency conversion, analytical-only dust,
   render-order placement, brightness/glow calibration. Read when
   tuning `milkyway.{ts,frag.glsl}`.
-- **`docs/solar-system.md`** — solar-system layer (`stellata-3re`):
-  JPL Standish ephemerides, planet-bodies + orbit-rings + heliopause
+- **`docs/solar-system.md`** — solar-system layer: JPL Standish
+  ephemerides, planet-bodies + orbit-rings + heliopause
   rendering, ecliptic-vs-galactic-plane orientation rule, time `t`
   and the UTC readout, Sol-focus minDistance relaxation, the canonical
   no-URL first-load view (5 AU galactic-centre-aimed park via `first-load.ts`).

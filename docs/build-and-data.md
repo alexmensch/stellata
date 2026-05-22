@@ -23,7 +23,7 @@ committed `data/dust/*.bin`, Pace 2024 LVDB
 `data/hipparcos/hip_ccdm.tsv`. Refresh from upstream is an explicit,
 manual, infrequent step, not a build dependency.
 
-`data/` is organised by upstream source catalogue (stellata-9mm.204):
+`data/` is organised by upstream source catalogue:
 `wds/`, `gaia/`, `hipparcos/`, `gcvs/`, `athyg/`, `bailer-jones/`,
 `simbad/`, `stellarium/`, plus `local-group/`, `molecular-clouds/`,
 `dust/` for sources with multi-file layouts. The pipeline-derived
