@@ -81,11 +81,11 @@ bit order, so mode isn't known until the field loop completes).
   otherwise flood history with intermediate poses.
 
 Cloud-related state (cloud focus, cloud measurement vector, MC overlay
-toggle) lives in the same `?v=` blob — see `docs/molecular-clouds.md`.
+toggle) lives in the same `?v=` blob — see `src/client/molecular-clouds/README.md`.
 
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
 `focusedStar === null` AND the offset isn't ≈Sol — see
-`docs/architecture.md` § Floating origin for the precision-anchor
+`src/client/README.md` § Floating origin for the precision-anchor
 semantics that make this round-trip safe.
 
 **Adding a field.** Claim the next free presence bit in `FIELDS_V3`,

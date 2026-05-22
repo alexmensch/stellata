@@ -4,7 +4,7 @@ Four layers anchor the local star clump against the Milky Way's geometry:
 the galactic disc outline (always-on midplane ring + bulge wireframe),
 the Local Group wireframe layer (Magellanic Clouds + dwarf satellites
 plus M31 / M33 / the M31 subgroup + outer-band dIrrs out to 2 Mpc —
-`docs/local-group.md`), the toggleable galactic coordinate sphere, and
+`src/client/local-group/README.md`), the toggleable galactic coordinate sphere, and
 the HUD layer (Sol/GC arrows plus the OBSERVE-mode ring). Together they
 give the user "which way is out, how far am I from the centre, and what
 else is nearby at galactic scales" without obscuring the local stars.
@@ -16,7 +16,7 @@ src/client/galactic/
   galactic-coords.ts (+ test)     Shared GAL_TO_ICRS (Matrix4) +
                                   GALACTIC_CENTRE_PC (Vector3 at R₀ =
                                   8.122 kpc). Reused by the Milky Way
-                                  volumetric layer (docs/milky-way.md).
+                                  volumetric layer (src/client/milkyway/README.md).
   galactic-disc.ts                15 kpc midplane ring + ±400 pc
                                   thickness rings + 3 × 1.5 kpc bulge
                                   wireframe; always-on in dark mode,
@@ -27,20 +27,20 @@ src/client/galactic/
                                   layers reveal in lockstep.
   galactic-grid.ts                Toggleable b/l coordinate sphere.
 
-src/client/overlays/                  (full overlay roster in docs/overlays.md)
+src/client/overlays/                  (full overlay roster in src/client/overlays/README.md)
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
                                   overlays/ but the feature group is
                                   documented here.
 ```
 
 Local Group wireframes + per-galaxy labels are a separate layer; see
-`docs/local-group.md`.
+`src/client/local-group/README.md`.
 
 **Shared module** `galactic-coords.ts` exports `GAL_TO_ICRS` (Matrix4)
 and `GALACTIC_CENTRE_PC` (Vector3 at R₀ = 8.122 kpc), built from the
 J2000 IAU galactic-pole and galactic-centre angles with explicit
 re-orthogonalisation. The Milky Way volumetric layer
-(see `docs/milky-way.md`) reuses these constants directly — keep the
+(see `src/client/milkyway/README.md`) reuses these constants directly — keep the
 module minimal and stable.
 
 **Galactic disc outline** (`galactic-disc.ts`) — *always on in dark mode,
@@ -73,7 +73,7 @@ once the camera sits more than ~5 kpc from Sol. Labels (MW at the
 galactic centre, per-object for the largest LG members) bind through the
 shared `distance-gated-label.ts` engine; visibility is governed by the
 per-frame apparent-size ranking (top-N + sub-pixel floor + inside-MW
-guard). Full detail in `docs/local-group.md`.
+guard). Full detail in `src/client/local-group/README.md`.
 
 **Galactic coordinate sphere** (`galactic-grid.ts`, toggleable) —
 equator + 16 latitude rings every 10° (range −80° to +80°) + 36
@@ -286,7 +286,7 @@ The warp suffix follows by full label width (label switched from
 The disc has no toggle by design — it's the orientation primitive the
 catalog itself was missing, and is hidden in chart mode anyway.
 
-**Chart mode** (see `docs/chart-mode.md`):
+**Chart mode** (see `src/client/chart-mode/README.md`):
 - Disc layer hides entirely (the 15 kpc reference ring reads as
   visual noise on a paper-chart background).
 - Sphere + grid swap stroke colour to dark grey (`#3a3530`), no

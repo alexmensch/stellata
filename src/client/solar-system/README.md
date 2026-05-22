@@ -30,7 +30,7 @@ src/client/solar-system/
                                   (depth-only mask + disc + glow), shares
                                   the unified disc/glow chunk with stars
                                   (perceptual-disc.glsl) — see
-                                  docs/rendering.md.
+                                  src/client/star-pipeline/README.md.
   orbit-rings-layer.ts            Faint orbit rings in the host's orbital
                                   plane.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
@@ -49,7 +49,7 @@ src/client/shaders/
   planet.vert.glsl,
   planet.frag.glsl                Three-pass instanced planet bodies.
   perceptual-disc.glsl            Shared point-of-light disc/glow chunk
-                                  (stars + planets) — see docs/rendering.md.
+                                  (stars + planets) — see src/client/star-pipeline/README.md.
   (heliopause shaders live alongside heliopause.ts.)
 ```
 
@@ -168,7 +168,7 @@ back across the same region so disc / glow at 3 / 4 still depth-test
 correctly against other planets and stars. Background layers (MW /
 clouds / stars) paint colour into the framebuffer before the corrupt
 pass overwrites depth, so they still peek through the perceptual
-halo. See `docs/rendering.md §RenderOrder ladder` for the full
+halo. See `src/client/star-pipeline/README.md §RenderOrder ladder` for the full
 cross-layer hierarchy. Surface detail (textures, atmospheric haloes,
 banding, axial-tilt cue) stays **deliberately deferred** to the
 planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles

@@ -5,8 +5,8 @@ swaps `TrackballControls` for a custom look-around controller. Drag
 mechanics, momentum, FOV-on-wheel, aim slerps, POI dispatch, and the
 click handlers (single = pin a POI, double = aim-at). For the warp
 animation that connects observe→observe arrivals see
-`docs/camera-warp.md`; for the steady-state camera geometry see
-`docs/camera-controls.md`.
+`src/client/camera/warp/README.md`; for the steady-state camera geometry see
+`src/client/camera/controls/README.md`.
 
 ## Files in this area
 
@@ -160,7 +160,7 @@ since camera ≈ focal star) and the shaft start radius equals the HUD
 ring's `ringRadiusPx(fov, w, h)` so the arrows attach to the ring rim
 and swivel around it. The same shaft-start value lerps through the
 navigate↔observe transition so there's no pop on entry/exit. See
-`docs/galactic-overlay.md` § HUD ring / Shaft start radius for the
+`src/client/galactic/README.md` § HUD ring / Shaft start radius for the
 formula and projection math.
 
 **Aim from observe:** `aimAt(localPoint)` (Sol/GC labels +
@@ -181,7 +181,7 @@ star-only by design.
 **Picking a new location** routes through `warpTo(idx)` instead of
 `focusStar(idx)`. The warp animation flies between anchors and the
 post-arrival slerp leaves the camera pointing in the original celestial
-direction from the new vantage — see `docs/camera-warp.md` §Warp
+direction from the new vantage — see `src/client/camera/warp/README.md` §Warp
 animation phase 3.
 
 **X button (clear focus from observe):** `unfocus()` detects observe +
@@ -251,7 +251,7 @@ when the timer elapses.
   `togglePoi()` pins or unpins it. Sol is rejected (the dedicated
   `#sol-arrow` already covers it); stars without HIP are rejected
   (URL state is HIP-only); the cap is 16 (adding past the cap is a
-  no-op). The POI overlay (`docs/overlays.md` § Points of interest)
+  no-op). The POI overlay (`src/client/overlays/README.md` § Points of interest)
   renders the resulting label + arrow.
 - *Double-click:* unprojects the click into a world-space ray, builds
   a far point along it, and feeds that to `aimAt()` — the existing

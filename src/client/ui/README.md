@@ -1,79 +1,13 @@
-# UI and controls
+# UI and panel
 
-The right-side settings panel, top-left brand surface, keyboard
-shortcuts, layout containers, and a few CSS gotchas that bit hard
-enough to be worth documenting. For TrackballControls tuning and the
-two-finger roll gesture, see `docs/camera-controls.md`; for the warp
-animation see `docs/camera-warp.md`; for OBSERVE camera mode see
-`docs/camera-observe.md`.
-
-## Files in this area
-
-```
-src/client/ui/
-  panel-layout.ts                 Right-side panel + topbar layout
-                                  containers; collapse/expand state.
-  scale-bar.ts                    Bottom-center scale bar (pc /
-                                  arc-degree depending on mode).
-  theme-toggle.ts                 Dark / mono palette flip; chart mode
-                                  flips through this.
-  unit-toggle.ts                  pc / AU / km radius readouts.
-  distance-util.ts                Shared format helpers (pc → ly, AU,
-                                  km, units).
-  distance-gated-label.ts         Shared distance-gated SVG label engine
-                                  (used by Local Group dwarfs + planet
-                                  labels + future POIs).
-  keyboard-shortcuts.ts (+ pure)  Single capture-phase keydown dispatch;
-                                  thin wrappers around public APIs so
-                                  behaviour changes propagate.
-  dom-util.ts (+ test)            qs/qsa/cls helpers.
-
-src/client/typeahead/
-  typeahead.ts                    Star + constellation picker;
-                                  capture-phase dismiss handler.
-  typeahead-util.ts (+ test)      Pure ranking / scoring helpers.
-  constellation-typeahead.ts      Constellation-name picker
-                                  (highlights asterism).
-  search.ts (+ test)              fuse.js-backed star search.
-
-src/client/modals/
-  info-modal.ts                   Generic modal-dismissal helper.
-  brand-modal.ts                  About / Credits tabbed modal + share.
-  help-modal.ts                   `?` help overlay.
-  modal-dismiss.ts                ESC / backdrop / close-button binding.
-```
-
-## Brand box, About/Credits modal, and Share
-
-`.ui-top-left` is a fixed top-left container holding the "Stellata"
-title plus a small `about · share ⧉` link row (always visible — no
-hover affordance, since touch devices have no hover state). The
-`.brand-box` flex column is `align-items: center` so the narrow
-title and the wider link row sit symmetrically around the centre
-axis.
-
-`about` opens a single tabbed `<div class="modal">` card that
-combines what used to be two separate modals. The title row is a
-`.modal-tabs` tab bar: `ABOUT STELLATA · credits`, with the active
-tab at title weight (`var(--fg)`) and the inactive at `var(--fg-dim)`
-acting as a `.link-btn`-style click target. Clicking the inactive
-tab swaps which `.modal-pane` is visible and flips both `is-active`
-states. Opening from the brand box always resets to the About tab —
-no last-viewed memory. ESC, the close button, or the backdrop
-dismisses; there's no "don't show again" opt-out because the modal
-is user-initiated.
-
-`share ⧉` copies `window.location.href` (which encodes the full
-view via `url-state.ts`) to the clipboard and briefly flips its
-trailing glyph to `✓` on success or `⨯` on failure (insecure context
-/ no `navigator.clipboard`). The `.share-link` class width-locks the
-slot so the glyph swap never reflows the flex row.
-
-`brand-modal.ts` wires the modal-dismissal helper, the tab swap,
-and the share-button click handler in one `bindBrandModals()` call.
-The `.ui-top-left` container sits independently of `.ui-top` so
-changes to the right-side stack's width / wrap behaviour don't
-affect the brand.
+The right-side settings panel, layout containers, keyboard shortcuts,
+magnitude / FOV / exaggeration / theme controls, scale bar, and CSS
+gotchas. Sister folders carry the pickers
+(`src/client/typeahead/README.md`) and modal overlays
+(`src/client/modals/README.md`). For TrackballControls tuning see
+`src/client/camera/controls/README.md`; for the warp animation see
+`src/client/camera/warp/README.md`; for OBSERVE mode see
+`src/client/camera/observe/README.md`.
 
 ## Keyboard shortcuts
 
@@ -184,38 +118,6 @@ with an `<h3>` title and a chevron `<button class="group-toggle">`.
 `.row-actions` (reset / all / none) live inside `.group-body`, not
 the header, so their clicks don't bubble into the toggle.
 
-## Constellation typeahead
-
-`constellation-typeahead.ts` replaces the old `<select id="con-select">`
-with an `<input id="con-input">` + dropdown. Substring filter against
-constellation name plus 3-letter IAU code; full alphabetised list shows
-when the input is empty and focused. Single-select — picking fires
-both `setFilter({ highlightCon })` and `aimAtConstellation`, matching
-the prior `<select>` behaviour. Reverse-sync from the `'filter'` event
-keeps the input in step with URL restores.
-
-A synthetic `NONE_ENTRY` (`idx: -1`, `search: ''`) is prepended to the
-results whenever the input is empty, so users can clear the highlight
-by selecting "None" the same way they'd pick any other constellation
-(Cmd+A → Delete → Enter). The empty `search` field keeps it out of
-filtered results so it can't outrank a real match. `pick()` skips
-`aimAtConstellation` when `idx < 0` so the clear path doesn't try to
-aim at a non-existent target.
-
-**Master toggle (`showConstellation`).** A `<input id="show-constellation">`
-checkbox at the top of the Overlays group gates the entire constellation
-overlay — both the highlighted-only-in-navigate and the all-at-once
-chart-mode pass, plus the chart-mode Latin-name labels. When off,
-`controls.ts` disables `#con-input` and adds `.disabled` to `#con-picker`
-(faded sub-label), and a single `C` keypress is a no-op. A **double-tap
-on `C`** flips the master toggle in either direction — single taps are
-deferred by `C_DOUBLE_TAP_MS` (200 ms) so a second press inside the
-window can intercept the picker-open and switch to the toggle action.
-Key repeat (held key) is ignored so the flag doesn't oscillate.
-`highlightCon` is preserved while disabled, so re-enabling restores
-the prior selection. URL flag bit 7 (`FLAG_CON_DISABLED`) encodes the
-off state; default (on) is implicit.
-
 ## Disabled-control styling
 
 `controls.ts` toggles native `.disabled` on inputs whose state is
@@ -236,8 +138,9 @@ preserved-but-frozen, and the panel CSS leans on the standard
 Two specific freezes use this:
 
 - **Star chart mode** disables `#show-milkyway` (the Milky Way layer is
-  hidden under chart anyway, see `docs/chart-mode.md`); `f.showMilkyway`
-  is preserved so the toggle restores its prior state on chart-off.
+  hidden under chart anyway, see
+  `src/client/chart-mode/README.md`); `f.showMilkyway` is preserved so
+  the toggle restores its prior state on chart-off.
 - **`showConstellation === false`** disables `#con-input` and the
   surrounding `#con-picker` styling.
 
@@ -277,7 +180,8 @@ URL state encodes the preset only when not on the default
 (`naked-eye`); `mag` only when diverged from the active preset's
 value; `smin/smax/span` only when their override flag is true.
 Receiver applies the preset first, then layers the explicit overrides
-on top. See `docs/url-state.md` for the binary `?v=` format.
+on top. See `src/client/util/url-state/README.md` for the binary `?v=`
+format.
 
 **Active-preset highlight.** The reverse-sync in `controls.ts` compares
 `f.maxAppMag` against `MAG_PRESETS[*].maxAppMag` (epsilon 0.05) and
@@ -293,21 +197,6 @@ User-facing slider in the panel (`#fov`, 10°–120° / 1° step) plus a reset
 button that snaps to `DEFAULT_FOV` = 50°. `setCameraFov` updates
 `camera.fov`, calls `updateProjectionMatrix()`, and triggers
 `recomputePresetPxSizes` since arcsec/px depends on FOV.
-
-## Debug panel
-
-`window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with five sections: Star disc (`star-tuning.ts`),
-Milky Way (`milkyway-tuning.ts`), Perf (`perf-hud.ts`), Pin
-(`pin-debug-hud.ts`), and Arrows (`arrow-fade-debug-hud.ts`). Drag the
-title bar to move it, click any section header to fold/unfold; both the
-position and per-section collapse state persist in `sessionStorage`
-(resets on reload, since calibration state shouldn't survive between
-sessions). The chrome (drag handle, collapsible-section helper,
-slider/colour helpers) lives in `debug-panel.ts`. Add a new tool by
-writing either a plain section element (collapsible-section + sliders)
-or a `{element, dispose, setVisible}` builder and wiring it inside
-`togglePanel` in `debug.ts`.
 
 ## Star size exaggeration
 
@@ -408,11 +297,11 @@ AU, so we never need scientific notation in normal use). See
 shows the source while the camera is on the source side of the warp
 axis, then flips to the destination once `(camera − A) · (B − A) > 0`.
 Trajectory-relative test, not camera-attitude — stays stable under
-future curved-warp paths (a7d.2.9). Reads `Stellata.getWarpInfo()` for
-the destination identity + endpoints. The horizontal scale-bar
-behaviour is independent: its scene-scale already targets B from warp
-start (since `controls.target` is repointed at B at warp launch — see
-`docs/camera-warp.md` § Scale-bar smoothness).
+future curved-warp paths. Reads `Stellata.getWarpInfo()` for the
+destination identity + endpoints. The horizontal scale-bar behaviour
+is independent: its scene-scale already targets B from warp start
+(since `controls.target` is repointed at B at warp launch — see
+`src/client/camera/warp/README.md` § Scale-bar smoothness).
 
 **SVG sizing.** `overflow: visible` on the SVG so off-default-angle
 z-axis lines and long names extend past the SVG bounds without being
@@ -420,6 +309,22 @@ clipped (the widget is non-interactive, so overflow is fine). The SVG
 height is computed for the worst-case (default-angle) z-axis projection
 regardless of actual angle or visibility, so the bar's screen position
 is steady across focus/unfocus and any line angle.
+
+## Debug panel
+
+`window.debug.panel()` toggles the unified debug panel — a draggable,
+collapsible host with five sections: Star disc (`star-tuning.ts`),
+Milky Way (`milkyway-tuning.ts`), Perf (`perf-hud.ts`), Pin
+(`pin-debug-hud.ts`), and Arrows (`arrow-fade-debug-hud.ts`). Drag the
+title bar to move it, click any section header to fold/unfold; both the
+position and per-section collapse state persist in `sessionStorage`
+(resets on reload, since calibration state shouldn't survive between
+sessions). The chrome (drag handle, collapsible-section helper,
+slider/colour helpers) lives in `debug-panel.ts` — see
+`src/client/debug/README.md`. Add a new tool by writing either a plain
+section element (collapsible-section + sliders) or a
+`{element, dispose, setVisible}` builder and wiring it inside
+`togglePanel` in `debug.ts`.
 
 ## `[hidden]` specificity and `.modal { display: grid }`
 

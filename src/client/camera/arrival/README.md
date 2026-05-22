@@ -2,8 +2,8 @@
 
 How the camera decelerates as it lands on a focused object — star,
 cloud, planet, or any future click-focusable host. Companion to
-`docs/camera-controls.md` (steady-state geometry), `docs/camera-warp.md`
-(warp animation phases), and `docs/camera-observe.md` (OBSERVE mode).
+`src/client/camera/controls/README.md` (steady-state geometry), `src/client/camera/warp/README.md`
+(warp animation phases), and `src/client/camera/observe/README.md` (OBSERVE mode).
 Defines the math the `camera-motion.ts` helper applies.
 
 ## Files in this area
@@ -410,4 +410,4 @@ present) `camera.quaternion`. Returns `done: true` once
 per-object property and isn't a motion concern. The per-object
 geometry that warp / arrival reads (anchor, local position,
 park radius) flows through the `FocusTarget` contract — see
-`docs/architecture.md` § FocusTarget contract.
+`src/client/README.md` § FocusTarget contract.

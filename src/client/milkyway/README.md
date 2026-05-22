@@ -20,7 +20,7 @@ src/client/milkyway/
                                   Composes the two proxy meshes; owns the
                                   setIsobar chart-mode handoff
                                   (currently hides the meshes — see
-                                  docs/chart-mode.md).
+                                  src/client/chart-mode/README.md).
   milkyway-tuning.ts              Tuning section in the debug panel.
 
 src/client/shaders/
@@ -30,7 +30,7 @@ src/client/shaders/
 ```
 
 `galactic-coords.ts` (`GAL_TO_ICRS`, `GALACTIC_CENTRE_PC`) is shared
-with the rest of the galactic overlay — see `docs/galactic-overlay.md`.
+with the rest of the galactic overlay — see `src/client/galactic/README.md`.
 
 **Why a volumetric mesh, not a skybox.** An earlier version (rev 1) put
 the integration in a 50 kpc camera-anchored skybox sphere and marched
@@ -150,7 +150,7 @@ GLOW_MAG_OFFSET — the two settings cooperate, so retune them together
 if the visual feel changes.
 
 **Chart mode** swaps the volumetric raymarch for a single-line **isobar
-contour** along the magnitude limit (see `docs/chart-mode.md`
+contour** along the magnitude limit (see `src/client/chart-mode/README.md`
 §Isobar contours). The diffuse glow doesn't suit a paper-chart
 aesthetic, but a thin ink line tracking "where the integrated MW would
 equal the visible magnitude limit" reads as an exact paper-atlas
@@ -165,7 +165,7 @@ panel checkbox or `mw=0` URL.
 unified dev panel, which hosts four collapsible sections:
 - **Star disc** (`star-tuning.ts`): seven sliders for the super-Gaussian
   profile knobs — visibleThreshold, coreThreshold, discardThreshold,
-  distN min/max, lumBias dwarf/hypergiant. See `docs/rendering.md`
+  distN min/max, lumBias dwarf/hypergiant. See `src/client/star-pipeline/README.md`
   §Star intensity profile for what each one shapes.
 - **Milky Way** (`milkyway-tuning.ts`): log-scale slider for brightness
   + linear sliders for glowMagOffset / discDensity / bulgeDensity /

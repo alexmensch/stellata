@@ -9,7 +9,7 @@ gets computed (Stefan–Boltzmann radii, etc.), see `SCIENCE.md`.
 
 The catalog + reference-data build pipeline. `scripts/binaries/` +
 `data/wds/` + `data/binaries/` (the binary-system pipeline) live in
-`docs/cross-match.md`; per-layer sources (`scripts/clouds/` +
+`scripts/binaries/README.md`; per-layer sources (`scripts/clouds/` +
 `data/molecular-clouds/`, `scripts/local-group/` + `data/local-group/`,
 dust) live with their respective `docs/<layer>.md`.
 
@@ -816,7 +816,7 @@ legitimate", "ρ Cas yellow hypergiant — SIMBAD's 1/π is the noisy
 Hipparcos value") that survive `UPDATE_DISTANCE_OUTLIERS=1` refreshes
 via `mergeReasonsFromSnapshot`. A new outlier fails the build until
 the snapshot is refreshed and a rationale is filled in; a removed or
-changed outlier likewise. See `docs/cross-match.md` § Multi-layer
+changed outlier likewise. See `scripts/binaries/README.md` § Multi-layer
 distance refinement for the developer recipe.
 
 ## Gaia DR3 Apsis surfacing
@@ -873,7 +873,7 @@ only "now" layer in the scene. The two share a frame orientation
 | Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever AT-HYG places the figure stars, so the line endpoints inherit J2000.0 transitively. |
 | Local Group dwarfs | J2000.0 | Pace 2024 LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible. |
 | Edenhofer 2023 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
-| Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date; see `docs/solar-system.md` § Time `t` and the readout. |
+| Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date; see `src/client/solar-system/README.md` § Time `t` and the readout. |
 
 ### `pm_*` columns are loaded into nothing
 

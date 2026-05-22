@@ -4,7 +4,7 @@ Cross-cutting patterns the rest of the codebase assumes: event flow,
 state machine for clicks, and the floating-origin precision trick. Read
 this before changing focus/vector behavior, state mutation paths, or
 anything that reads star positions. For the `?v=` URL wire format see
-`docs/url-state.md`.
+`src/client/util/url-state/README.md`.
 
 ## Files in this area
 
@@ -13,7 +13,7 @@ The integration shell + cross-cutting plumbing. Per-subsystem folders
 `molecular-clouds/`, `chart-mode/`, `hover/`, `camera/`, `overlays/`,
 `ui/`, `typeahead/`, `modals/`, `debug/`, `loaders/`) are each
 rostered in their matching `docs/<area>.md`. The star renderer
-(`star-pipeline.ts`, shaders) is in `docs/rendering.md`.
+(`star-pipeline.ts`, shaders) is in `src/client/star-pipeline/README.md`.
 
 ```
 src/client/
@@ -31,9 +31,9 @@ src/client/
   util/
     event-bus.ts (+ test)         The `Stellata.on(name, fn)` bus
                                   described in § Event bus.
-    (url-state.ts is rostered in docs/url-state.md.)
+    (url-state.ts is rostered in src/client/util/url-state/README.md.)
 
-src/worker.ts                     Documented in docs/deployment.md.
+src/worker.ts                     Documented in src/README.md.
 ```
 
 ## Event bus on `Stellata`
@@ -75,7 +75,7 @@ The payload map is `StellataEventMap` in `stellata.ts`.
 This is the UX the user settled on. No double-click, no modifier keys.
 
 Clouds are full participants in this state machine alongside stars — see
-`docs/molecular-clouds.md` for how cloud picks dispatch through
+`src/client/molecular-clouds/README.md` for how cloud picks dispatch through
 `onPointerUp`.
 
 In OBSERVE mode the click-state machine no-ops on the canvas — `onPointerUp`
@@ -178,7 +178,7 @@ Bus events emitted from the controller:
   navigate arrivals).
 - `'focus'` (number | null) — only from `swapObserveAnchor`.
 
-See `docs/camera-warp.md` for the phase math and `docs/camera-arrival.md`
+See `src/client/camera/warp/README.md` for the phase math and `src/client/camera/arrival/README.md`
 for the shared Fly arrival profile.
 
 ## Aim controller (`camera/aim-controller.ts`)
@@ -275,7 +275,7 @@ remaining inline writer that bypasses startExit — it calls
 focal star is changing and the target needs to wait for the downstream
 `recenterFocusToStar` block.
 
-See `docs/camera-observe.md` for the per-feature notes (drag mechanics,
+See `src/client/camera/observe/README.md` for the per-feature notes (drag mechanics,
 HUD locators, click dispatch) and the inherited contract that the
 controller honours.
 

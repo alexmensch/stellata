@@ -6,10 +6,10 @@ luminosity-class softness, variable-star pulsation, and the per-star
 dust-extinction read. The other rendering subsystems live in sibling
 docs:
 
-- `docs/galactic-overlay.md` — disc + sphere grid + Sol/GC arrows + HUD ring
-- `docs/molecular-clouds.md` — cloud ellipsoids
-- `docs/milky-way.md` — volumetric disc / bulge
-- `docs/chart-mode.md` — paper aesthetic (flat discs, isobars, labels)
+- `src/client/galactic/README.md` — disc + sphere grid + Sol/GC arrows + HUD ring
+- `src/client/molecular-clouds/README.md` — cloud ellipsoids
+- `src/client/milkyway/README.md` — volumetric disc / bulge
+- `src/client/chart-mode/README.md` — paper aesthetic (flat discs, isobars, labels)
 
 For the underlying physics and density profiles, see `SCIENCE.md`.
 
@@ -37,7 +37,7 @@ src/client/shaders/
   blackbody-lut-data.ts           AUTO-GENERATED Ballesteros 2012 + Planck
                                   + CIE 1931 LUT. Paired with
                                   scripts/colour/blackbody-lut.ts (see
-                                  docs/build-and-data.md).
+                                  scripts/README.md).
 ```
 
 ### Dust layer (shelved)
@@ -49,13 +49,13 @@ machinery preserved.
 src/client/dust/
   dust-particle-layer.ts (+ test) Instanced additive billboards.
   (DustField + dust-loader stay in loaders/ — see
-  docs/build-and-data.md.)
+  scripts/README.md.)
 
 src/client/shaders/
   dust-particle.vert.glsl,
   dust-particle.frag.glsl         Shelved dust splats.
 
-scripts/dust/, data/dust/         Documented in docs/build-and-data.md.
+scripts/dust/, data/dust/         Documented in scripts/README.md.
 ```
 
 ## Full render stack — front to back
@@ -192,7 +192,7 @@ flash the focal disc as the camera pulls away. Cleared back to `-1` by
 `uPinFocusToCenter` (int, default `-1`) replaces the standard projection
 chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
 instance, sidestepping the float32 cancellation that close-approach
-otherwise produces. See `docs/architecture.md` § Pin-to-center
+otherwise produces. See `src/client/README.md` § Pin-to-center
 (`uPinFocusToCenter`) for the full rationale, the load-bearing
 `controls.target` invariant, and the diagnostic HUD pointer.
 
@@ -203,7 +203,7 @@ GLSL1 — the mask logic would need to be rewritten as per-class bools.
 Chart mode swaps both star materials to `MultiplyBlending` +
 disables depth for an ink-on-paper look against the light canvas, and
 replaces the super-Gaussian profile with flat hard-edged discs sized
-linearly by magnitude. See `docs/chart-mode.md` for the full feature.
+linearly by magnitude. See `src/client/chart-mode/README.md` for the full feature.
 
 ## RenderOrder ladder
 
@@ -262,7 +262,7 @@ camera dollying from `~1e-10` pc (intra-star) to `~3e4` pc (galactic
 centre) without z-fighting at intermediate scales — log depth maps
 `log(z+1) / log(far+1)` into the depth buffer so precision is roughly
 constant in `log(z)` instead of collapsing near the far plane. This is
-what enables `camera.near = 1e-10` (see `docs/camera-controls.md`).
+what enables `camera.near = 1e-10` (see `src/client/camera/controls/README.md`).
 
 Per-pass overrides on top of the chunk default:
 

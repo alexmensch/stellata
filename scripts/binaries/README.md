@@ -30,7 +30,7 @@ shell + per-stage modules; `data/wds/` + `data/binaries/` carry the
 inputs and pipeline output. The single-star catalog build under
 `scripts/catalog/` and its data inputs (Gaia / B-J / SIMBAD sample /
 AT-HYG / GCVS / Hipparcos / Stellarium) live in
-`docs/build-and-data.md`.
+`scripts/README.md`.
 
 ```
 scripts/binaries/
@@ -391,7 +391,7 @@ visual-doubles flagging (`visual-doubles.ts` — CCDM groups + a tiny
 curated `KNOWN_VISUAL_DOUBLES` set for Polaris / ε¹ Lyr / 61 Cyg that
 the MultFlag gate drops), and writes the 80-byte v6 record per star
 including the seven `float32` Apsis fields (gspphot + gspspec — see
-`docs/build-and-data.md` § Binary catalog format for the byte plan).
+`scripts/README.md` § Binary catalog format for the byte plan).
 
 ## Multi-layer distance refinement
 

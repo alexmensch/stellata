@@ -79,7 +79,7 @@ picked under the cursor — a cloud pick from a star focus sets a
 star→cloud measurement vector; a cloud pick from a cloud focus sets a
 cloud→cloud vector; clicking the current vector tip (star or cloud)
 triggers a focus-park lerp via `focusStar` or `flyToCloud` (see
-`docs/camera-controls.md` § Focus-park lerp); pressing W or clicking
+`src/client/camera/controls/README.md` § Focus-park lerp); pressing W or clicking
 the distance label dispatches to `warpTo` or `warpToCloud` based on
 which vector slot is active. The two cloud-specific carve-outs are
 (a) no focus ring (the SVG overlay reads `getFocusedStar` only and

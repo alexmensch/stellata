@@ -6,7 +6,7 @@ Paper-aesthetic alternate render path inspired by Sky Atlas 2000.0
 orchestrator listens to the `'cameraMode'` event and auto-clears the flag
 on observe→navigate. URL state persists `chart=1` only when both flags
 are set (FLAG_CHART = 1 << 6 in the flags byte; see
-`docs/url-state.md`).
+`src/client/util/url-state/README.md`).
 
 ## Files in this area
 
@@ -23,7 +23,7 @@ src/client/chart-mode/
                                   while clouds are shelved). Dirty-tracked
                                   SVG writes + centroid cache + sorted
                                   apparent-size top-N — see
-                                  docs/performance.md § Chart-mode
+                                  src/client/debug/README.md § Chart-mode
                                   optimisations.
   chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
                                   pixel-size mapping in chart mode.
@@ -47,7 +47,7 @@ src/client/chart-mode/
 Exit reverses each step.
 
 > **Shelved layers.** The molecular cloud layer is shelved (see
-> `docs/molecular-clouds.md`), so its isobar pass is a no-op against an
+> `src/client/molecular-clouds/README.md`), so its isobar pass is a no-op against an
 > invisible group. The Milky Way isobar is also disabled —
 > `Milkyway.setIsobar(true)` now hard-hides the disc + bulge meshes
 > instead of emitting the contour. The blending / `uChartIsobar` switch
@@ -153,7 +153,7 @@ is needed to fix a bug where constellations with no single dominant
 intrinsic-brightest star (Vela, Pyxis, Sagittarius, etc.) silently
 dropped their label, but the result is **cached** under a 0.5 pc
 camera-translation threshold + filter version (see
-`docs/performance.md` § Cached constellation centroids). The cached
+`src/client/debug/README.md` § Cached constellation centroids). The cached
 centroid is still re-projected every frame; only the inner per-member
 loop is elided.
 
@@ -252,5 +252,5 @@ Wings are driven by `flags` bit 4. Two build-time passes set that bit:
 
 Both passes hit the same flag bit, so chart-mode rendering is
 agnostic to which source flagged a given star. See
-`docs/build-and-data.md` §TDSC double-star cross-match for the
+`scripts/README.md` §TDSC double-star cross-match for the
 filter rationale and parser format.

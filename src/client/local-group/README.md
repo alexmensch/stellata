@@ -1,7 +1,7 @@
 # Local Group wireframe layer
 
 A second always-on reference overlay alongside the Milky Way disc
-(`docs/galactic-overlay.md`). Renders LineLoop outlines for the Magellanic
+(`src/client/galactic/README.md`). Renders LineLoop outlines for the Magellanic
 Clouds, Sagittarius dSph, classical dSphs and ultra-faints within
 250 kpc, plus M31, M33, the M31 satellite subgroup, and the outer-band
 dwarfs (NGC 6822, IC 10, IC 1613, Leo A, WLM, Sextans A/B, …) out to the
@@ -60,7 +60,7 @@ public/local-group.json       generated artifact (gitignored).
 ```
 
 Refresh of `lvdb-snapshot.csv` is a manual step — per
-`docs/build-and-data.md` § Frozen external data the build never
+`scripts/README.md` § Frozen external data the build never
 reaches the network:
 
 ```

@@ -4,8 +4,8 @@ The animated camera flight between the focused star (A) and the
 distance-vector destination (B). State machine, phase math, scale-bar
 behaviour, and the navigate↔observe interactions on launch/arrival.
 For the steady-state camera geometry (minDistance / TrackballControls)
-see `docs/camera-controls.md`; for OBSERVE mode see
-`docs/camera-observe.md`.
+see `src/client/camera/controls/README.md`; for OBSERVE mode see
+`src/client/camera/observe/README.md`.
 
 The 3-phase FSM, `WarpState`, the `startWarp` / `finishWarp` /
 `updateWarp` / `tryMidFlyRecentre` / `swapObserveAnchor` methods, plus
@@ -45,7 +45,7 @@ src/client/camera/
                                   starLocalPosition) stays on stellata.ts.
   focus-transition.ts             tickFocusLerp — focus-park lerp via
                                   the shared camera-motion.ts arrival
-                                  profile (see docs/camera-arrival.md).
+                                  profile (see src/client/camera/arrival/README.md).
   (+ tests for each pure module.)
 ```
 
@@ -58,7 +58,7 @@ muted ghost pill at top-center (shown only while warping), or `Esc` /
 `Space`. Click-tip-to-travel routes through `focusStar(idx)` for
 consistency with search-select (parks at `parkDistForStar(idx)` — same
 auto-park every landing uses; lerps over `FOCUS_LERP_MS` or stays put
-when already inside park, see `docs/camera-observe.md` § Focus-park
+when already inside park, see `src/client/camera/observe/README.md` § Focus-park
 lerp).
 
 Two- or three-phase animation in `WarpController.updateWarp` (called
@@ -73,7 +73,7 @@ warp re-enters OBSERVE on arrival:
    is straight ahead, beyond A. Quaternion slerp is used for the
    angular interp (robust against antipodal starting positions).
    `sourceOffset` is the source's own auto-park distance (see
-   `docs/camera-controls.md` § Camera near plane vs controls minDistance),
+   `src/client/camera/controls/README.md` § Camera near plane vs controls minDistance),
    separate from `endOffset` (the destination's). Decoupling these
    handles asymmetric warps cleanly: a Betelgeuse → Sol flight starts
    well outside Betelgeuse's giant disc and arrives at Sol's small park
@@ -102,7 +102,7 @@ warp re-enters OBSERVE on arrival:
    (rocket-impulse, parallax-driven) → quintic smootherstep on
    angular-size inner (smooth perceptual landing on disc growth), with
    a single tunable seam-distance multiplier. See
-   `docs/camera-arrival.md` § Profile for the geometry and the
+   `src/client/camera/arrival/README.md` § Profile for the geometry and the
    panel-knob wiring. `camera.lookAt(B)` throughout.
 
    **Mid-Fly floating-origin recentre.** The moment the camera passes
@@ -142,7 +142,7 @@ warp re-enters OBSERVE on arrival:
    **Chart-mode plateau-trigger.** Chart mode renders stars as
    magnitude-driven discs (`pxSize = mix(maxPx, minPx, chartT)` with
    `chartT = clamp((appMag − magBright)/(maxAppMag − magBright), 0, 1)`
-   — see `docs/chart-mode.md` §Star disc sizing). Once the camera is
+   — see `src/client/chart-mode/README.md` §Star disc sizing). Once the camera is
    close enough that `appMag ≤ uChartMagBright`, `chartT` floors to 0
    and the disc plateaus at `uChartDiscMaxPx`. Under both the hybrid
    inner regime and the cubic-Hermite fallback, the camera spends much
@@ -222,7 +222,7 @@ target would otherwise switch from A to B at arrival.
 
 The bottom-left widget's separate **focus z-axis indicator** (the
 perspective recession line above the scale bar; see
-`docs/ui-and-controls.md` §Bottom-left widget) follows a different
+`src/client/ui/README.md` §Bottom-left widget) follows a different
 rule: during warp it shows the source star/cloud while the camera is
 on the source side of the A→B axis, and flips to the destination once
 `(camera − A) · (B − A) > 0`. Trajectory-relative test, not camera-
@@ -241,7 +241,7 @@ duration (the animate loop branches on `warpState` first, so the value
 is purely cosmetic) and keeps `uHideFocusIdx` pinned to the source star
 across all three phases — the reorient starts with the camera at A, and
 unhiding it would briefly render the focal disc from inside. See
-`docs/architecture.md` §OBSERVE mode and the warp state machine for the
+`src/client/README.md` §OBSERVE mode and the warp state machine for the
 finishWarp anchor-swap that avoids a mid-warp UI flicker.
 
 Distance-label-as-warp-trigger UI:

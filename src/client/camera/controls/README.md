@@ -3,7 +3,7 @@
 Camera setup that's mode-agnostic: near-plane vs minDistance geometry,
 TrackballControls tuning, and the two-finger roll gesture that works
 in both navigate and observe modes. For warp animation see
-`docs/camera-warp.md`; for OBSERVE mode see `docs/camera-observe.md`.
+`src/client/camera/warp/README.md`; for OBSERVE mode see `src/client/camera/observe/README.md`.
 
 ## Files in this area
 
@@ -11,9 +11,9 @@ in both navigate and observe modes. For warp animation see
 plumbing. Per-controller docs split the folder by area:
 
 - Steady-state geometry + cross-mode plumbing → this doc.
-- Warp + focus FSMs → `docs/camera-warp.md`.
-- Arrival math → `docs/camera-arrival.md`.
-- OBSERVE mode → `docs/camera-observe.md`.
+- Warp + focus FSMs → `src/client/camera/warp/README.md`.
+- Arrival math → `src/client/camera/arrival/README.md`.
+- OBSERVE mode → `src/client/camera/observe/README.md`.
 
 ```
 src/client/camera/
@@ -61,7 +61,7 @@ the float32-cancellation threshold so an unfocused orbit can't drift
 into the regime where projection precision breaks down — to get any
 closer than that, the user must focus a star, which then engages the
 per-star `minOrbitDistForStar` floor (sub-pc for Sol-class) plus the
-`uPinFocusToCenter` shader pin (see `docs/architecture.md`
+`uPinFocusToCenter` shader pin (see `src/client/README.md`
 § Pin-to-center) which sidesteps the float32 cancellation entirely. The near plane must stay
 **strictly less** than the closest orbit distance, otherwise a centered
 star lands on the clip plane at max zoom and gets culled. The log depth
@@ -157,7 +157,7 @@ effect until the lerp lands. Disabling explicitly would race
 `TrackballControls`' pointerup handler (Stellata's pointerup → focus
 click runs *before* TC's dynamically-added pointerup), leaving TC's
 `_state` stuck at `ROTATE` and the cursor "captured" until the next
-click. Same precedent as the unfocus lerp (`docs/camera-observe.md`).
+click. Same precedent as the unfocus lerp (`src/client/camera/observe/README.md`).
 
 The focus-star pin (`uPinFocusToCenter`) is suppressed while the lerp
 is in flight — `controls.target` is already `(0,0,0)` in the
@@ -180,7 +180,7 @@ focus-park glide and aim animation read as the same family. The warp's
 moved it slightly under the canonical lerp — the reorient phase reads
 snappier than a generic camera glide. `WARP_T_K_MS = 3000` is a
 separate literal — a log-scale flight coefficient (see
-`docs/camera-warp.md`), not a duration.
+`src/client/camera/warp/README.md`), not a duration.
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusStar`, `flyToCloud`, `unfocus`, `startWarp`,

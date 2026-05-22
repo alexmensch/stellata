@@ -1,10 +1,10 @@
 # UX knobs
 
 Reference table of common tweaks the user may ask for and where to find them.
-See also `docs/rendering.md`, `docs/galactic-overlay.md`,
-`docs/molecular-clouds.md`, `docs/milky-way.md`, `docs/chart-mode.md`,
-`docs/camera-controls.md`, `docs/camera-warp.md`, `docs/camera-observe.md`,
-`docs/ui-and-controls.md`, and `docs/overlays.md`
+See also `src/client/star-pipeline/README.md`, `src/client/galactic/README.md`,
+`src/client/molecular-clouds/README.md`, `src/client/milkyway/README.md`, `src/client/chart-mode/README.md`,
+`src/client/camera/controls/README.md`, `src/client/camera/warp/README.md`, `src/client/camera/observe/README.md`,
+`src/client/ui/README.md`, and `src/client/overlays/README.md`
 for the surrounding context.
 
 ## Known UX knobs you may be asked to tweak
