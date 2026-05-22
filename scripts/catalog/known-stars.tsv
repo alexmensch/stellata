@@ -111,10 +111,9 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # or inherited from the primary (e.g. Sirius B at 1.454, Procyon B blank)
 # are deliberately excluded — pinning known-bad data would mislead future
 # regression detection.
-14396-6050	α Centauri	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437		SIMBAD * alf Cen A sp_type=G2V (saturated in Gaia DR3 → pipeline spectral=unknown). ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima). Companion data per multiples.tsv post-dch.65.
+14396-6050	α Centauri	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437	29133.07	SIMBAD * alf Cen A sp_type=G2V (saturated in Gaia DR3 → pipeline spectral=unknown). ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima); bestPeriodMatch picks the AB orbit nearest the expected value. Companion data per multiples.tsv post-dch.65.
 21069+3845	61 Cygni	104214	1872046609345556480	3.496	0.05	7.482	K5V	B:104217:1872046574983497216:8.332		SIMBAD * 61 Cyg A sp_type=K5V; companion B sp_type=K7V (multiples.tsv). Common-proper-motion pair, no well-determined orbit.
 13239+5456	Mizar–Alcor	65378	1563590579347125632	24.867	0.2	0.252	A1.5Vas	C:65477::1.995		SIMBAD * zet01 UMa sp_type=A1.5Vas (primary Mizar Aa). Companion C is Alcor (HIP 65477, A5V), validated against multiples.tsv wds 13239+5456-AC. Wide visual pair (~0.2 pc separation).
-14396-6050	α Centauri AB (orbit)	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739	29133.07	α Cen AB orbital period — ORB6 entry 14396-6050 P=29133.07 d propagated through multiples.tsv. Duplicates 14396-6050 row above but pins orbital_period_days for the orbit-pinned tier check.
 # ---- Nearby resolved binaries (≤30 pc, both components in multiples.tsv with non-inherited data) ----
 18428+5938	Σ 2398 / Gliese 725	91768	2154880616774131840	3.523	0.05	11.205	M3V	B:91772:2154880616774131712:11.965		SIMBAD HD 173739 sp_type=M3V; nearby M-dwarf binary at 3.5 pc. Companion B (HD 173740, M3.5V) from multiples.tsv post-dch.65.
 14575-2125	ξ Boötis	73184	6232511606838403968	5.886	0.05	6.871	K4V	B:73182:6232511675556408320:9.146	2369944.24	SIMBAD HD 131977 sp_type=K4V (primary ξ Boö A). Companion B (M1.5V) per multiples.tsv. ORB6 P=2369944.24 d (~6489 yr).
