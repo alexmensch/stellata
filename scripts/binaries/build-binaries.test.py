@@ -3823,5 +3823,378 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             self.assertEqual(p.read_text(), body)
 
 
+# ─── mass_estimate (Phase 5 — spectral-class-aware mass-ratio q) ─────
+
+
+import mass_estimate as me  # noqa: E402
+
+
+class ParseSpectralTypeTests(unittest.TestCase):
+    def test_plain_main_sequence(self) -> None:
+        p = me.parse_spectral_type("G2V")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (4, 2, 2))
+        self.assertFalse(p.isWhiteDwarf)
+
+    def test_subclass_fractional_truncates_to_integer(self) -> None:
+        p = me.parse_spectral_type("M3.5V")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (6, 3, 2))
+
+    def test_white_dwarf_da_with_temperature_subclass(self) -> None:
+        p = me.parse_spectral_type("DA1.9")
+        assert p is not None
+        self.assertTrue(p.isWhiteDwarf)
+        self.assertEqual(p.lumClass, 0)
+
+    def test_white_dwarf_composite_subtype(self) -> None:
+        # Procyon B's SIMBAD sp_type is "DQZ" — multi-letter composite.
+        p = me.parse_spectral_type("DQZ")
+        assert p is not None
+        self.assertTrue(p.isWhiteDwarf)
+
+    def test_subgiant_iv(self) -> None:
+        p = me.parse_spectral_type("F5IV-V")
+        assert p is not None
+        # IV beats V because the regex anchors at the start of the
+        # post-subclass window. F5IV-V → IV.
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (3, 5, 3))
+
+    def test_giant_iii(self) -> None:
+        p = me.parse_spectral_type("K0III")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (5, 0, 4))
+
+    def test_supergiant_ia(self) -> None:
+        p = me.parse_spectral_type("B8Ia")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (1, 8, 8))
+
+    def test_supergiant_iab(self) -> None:
+        p = me.parse_spectral_type("M1Iab")
+        assert p is not None
+        self.assertEqual(p.lumClass, 7)
+
+    def test_yerkes_dwarf_prefix_overrides_lum_class(self) -> None:
+        p = me.parse_spectral_type("dM4.0")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (6, 4, 2))
+
+    def test_yerkes_giant_prefix(self) -> None:
+        p = me.parse_spectral_type("gK0")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.lumClass), (5, 4))
+
+    def test_subdwarf(self) -> None:
+        p = me.parse_spectral_type("sdB5")
+        assert p is not None
+        self.assertEqual((p.classIdx, p.subclass, p.lumClass), (1, 5, 1))
+
+    def test_wolf_rayet_lands_in_carbon_bucket(self) -> None:
+        p = me.parse_spectral_type("WN5")
+        assert p is not None
+        self.assertEqual(p.classIdx, 7)
+
+    def test_empty_returns_none(self) -> None:
+        self.assertIsNone(me.parse_spectral_type(""))
+        self.assertIsNone(me.parse_spectral_type(None))
+        self.assertIsNone(me.parse_spectral_type("   "))
+
+    def test_unknown_first_letter_returns_none(self) -> None:
+        self.assertIsNone(me.parse_spectral_type("XYZ"))
+
+
+class MassFromSpectralClassTests(unittest.TestCase):
+    def test_solar_analog_g2v_near_one_solar_mass(self) -> None:
+        m = me.mass_from_spectral_class("G2V", None)
+        assert m is not None
+        self.assertAlmostEqual(m, 1.0, places=2)
+
+    def test_a1v_near_two_point_six(self) -> None:
+        # Sirius A: A1V. Per the MS table A1V → 2.6 M_sun (Pecaut/Mamajek
+        # zero-age values; true Sirius A = 2.06 M_sun, but the table is
+        # a generic A1V anchor not a Sirius-specific calibration).
+        m = me.mass_from_spectral_class("A1V", None)
+        assert m is not None
+        self.assertAlmostEqual(m, 2.6, places=2)
+
+    def test_white_dwarf_default_mass(self) -> None:
+        m = me.mass_from_spectral_class("DA1.9", None)
+        self.assertEqual(m, me.WD_MASS_DEFAULT)
+
+    def test_white_dwarf_dqz_default_mass(self) -> None:
+        # Procyon B is DQZ — composite-subtype WD; still gets the
+        # default 0.6 M_sun.
+        m = me.mass_from_spectral_class("DQZ", None)
+        self.assertEqual(m, me.WD_MASS_DEFAULT)
+
+    def test_k1v_companion_mass(self) -> None:
+        m = me.mass_from_spectral_class("K1V", None)
+        assert m is not None
+        self.assertAlmostEqual(m, 0.76, places=2)
+
+    def test_giant_k0iii(self) -> None:
+        m = me.mass_from_spectral_class("K0III", None)
+        assert m is not None
+        # Cox 2000: K III ≈ 1.5 M_sun.
+        self.assertAlmostEqual(m, 1.5, places=2)
+
+    def test_supergiant_b0ia(self) -> None:
+        m = me.mass_from_spectral_class("B0Ia", None)
+        assert m is not None
+        # Supergiant table B0Ia is at the high end; mass ~25 M_sun.
+        self.assertAlmostEqual(m, 25.0, places=1)
+
+    def test_unparseable_returns_none(self) -> None:
+        self.assertIsNone(me.mass_from_spectral_class("", None))
+        self.assertIsNone(me.mass_from_spectral_class(None, None))
+        self.assertIsNone(me.mass_from_spectral_class("???", None))
+
+    def test_subgiant_interpolates_between_ms_and_giant(self) -> None:
+        # G2IV should land between G2V (~1.0) and G2III (~2.1).
+        m_ms = me.mass_from_spectral_class("G2V", None)
+        m_iv = me.mass_from_spectral_class("G2IV", None)
+        m_iii = me.mass_from_spectral_class("G2III", None)
+        assert m_ms is not None and m_iv is not None and m_iii is not None
+        self.assertGreater(m_iv, m_ms)
+        self.assertLess(m_iv, m_iii)
+
+
+class MassRatioFromComponentsTests(unittest.TestCase):
+    def test_sirius_like_wd_primary_ms_a1v(self) -> None:
+        # Sirius A (A1V) + Sirius B (DA1.9 WD). Model: M_A=2.6, M_B=0.6
+        # → q = 0.6 / (2.6 + 0.6) = 0.1875. True external value is 0.33
+        # (M_B=1.0, off-track from the WD default); model improves on
+        # the q=None baseline but cannot recover Sirius B's anomalously
+        # high mass from sp_type alone.
+        q = me.mass_ratio_from_components("A1V", 1.42, "DA1.9", 11.36)
+        assert q is not None
+        self.assertAlmostEqual(q, 0.1875, places=3)
+
+    def test_procyon_like_subgiant_primary_wd(self) -> None:
+        # Procyon A (F5IV-V) + Procyon B (DQZ WD). Model: M_A is the
+        # IV interpolation between F5V (1.4) and F5III (1.8) → ~1.62,
+        # M_B = 0.6 → q ≈ 0.27.
+        q = me.mass_ratio_from_components("F5IV-V", 2.671, "DQZ", 13.04)
+        assert q is not None
+        self.assertGreater(q, 0.20)
+        self.assertLess(q, 0.35)
+
+    def test_alpha_cen_like_g2v_plus_k1v(self) -> None:
+        # α Cen A (G2V) + α Cen B (K1V). Model: M_A=1.0, M_B=0.76 →
+        # q ≈ 0.43. External truth (Pourbaix 2016): q=0.453. The MS+MS
+        # case lands within ~5% of the external value because there is
+        # no WD mass-recovery uncertainty.
+        q = me.mass_ratio_from_components("G2V", 4.379, "K1V", 5.71)
+        assert q is not None
+        self.assertAlmostEqual(q, 0.432, places=2)
+
+    def test_returns_none_when_primary_spect_unparseable(self) -> None:
+        self.assertIsNone(me.mass_ratio_from_components("", 4.0, "K1V", 5.0))
+
+    def test_returns_none_when_secondary_spect_unparseable(self) -> None:
+        self.assertIsNone(me.mass_ratio_from_components("G2V", 4.0, "", 5.0))
+
+
+class Stage6QFallbackTests(unittest.TestCase):
+    """Stage 6 fills q from spectral-class masses when an ORB6 visual
+    orbit was emitted but Gaia NSS didn't supply a mass_ratio."""
+
+    def _orbit_orb6(self) -> "bb.OrbitElements":
+        return bb.OrbitElements(
+            P_days=29133.07, T_jd=2451545.0, e=0.5,
+            a_AU=23.0, i_rad=1.0,
+            omega_rad=0.2, Omega_rad=0.3,
+            q=None,                       # ORB6 visual route — no q
+            distance_pc=1.3,
+        )
+
+    def test_orb6_visual_fills_q_from_spectral_classes(self) -> None:
+        # α Cen-shaped: ORB6 visual orbit, G2V primary + K1V secondary,
+        # both with AT-HYG absmag. q is filled on both rows.
+        pair = _wds_pair(wds_id="14396-6050", components="AB")
+        athyg_rows = [
+            bb.AthygRow(
+                hip=71683, tyc=None, gaia=1, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=1.3, v_mag=None, absmag=4.379,
+                ci=None, spect="G2V", proper="alf Cen A",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+            bb.AthygRow(
+                hip=71681, tyc=None, gaia=2, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=1.3, v_mag=None, absmag=5.71,
+                ci=None, spect="K1V", proper="alf Cen B",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        components = [
+            _resolved(gaia=1, wds_id="14396-6050",
+                      component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="14396-6050",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=750.0),
+            _component_astrometry(parallax_mas=750.0),
+        ]
+        orbits = [(self._orbit_orb6(), "orb6")]
+        classifications = [bb.OpticalClassification(True, "orbit_kept")]
+        indices = _indices_with_astrometry(athyg=athyg_rows)
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(len(rows), 2)
+        # Both rows carry the same q (one orbit, both sides of the pair).
+        self.assertIsNotNone(rows[0].q)
+        self.assertIsNotNone(rows[1].q)
+        assert rows[0].q is not None and rows[1].q is not None
+        self.assertAlmostEqual(rows[0].q, rows[1].q, places=6)
+        # G2V primary (1.0 M_sun) + K1V secondary (0.76) → q ≈ 0.43.
+        self.assertAlmostEqual(rows[0].q, 0.432, places=2)
+
+    def test_nss_supplied_q_is_preserved(self) -> None:
+        # Gaia NSS already supplied q=0.85. The spectral-class fallback
+        # must NOT overwrite it even when both components have spect.
+        pair = _wds_pair(wds_id="22150+5703", components="AB")
+        nss_orbit = bb.OrbitElements(
+            P_days=1.0, T_jd=2451545.0, e=0.1,
+            a_AU=0.1, i_rad=1.0,
+            omega_rad=0.2, Omega_rad=0.3,
+            q=0.85,
+            distance_pc=26.2,
+        )
+        athyg_rows = [
+            bb.AthygRow(
+                hip=109857, tyc=None, gaia=1, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=26.2, v_mag=None, absmag=2.088,
+                ci=None, spect="F0V", proper="eps Cep",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+            bb.AthygRow(
+                hip=None, tyc=None, gaia=2, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=26.2, v_mag=None, absmag=1.048,
+                ci=None, spect="A5V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        components = [
+            _resolved(gaia=1, wds_id="22150+5703",
+                      component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="22150+5703",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=38.0),
+            _component_astrometry(parallax_mas=38.0),
+        ]
+        orbits = [(nss_orbit, "gaia_nss")]
+        classifications = [bb.OpticalClassification(True, "orbit_kept")]
+        indices = _indices_with_astrometry(athyg=athyg_rows)
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].q, 0.85)
+        self.assertEqual(rows[1].q, 0.85)
+
+    def test_no_q_fill_when_one_component_lacks_spect(self) -> None:
+        # ORB6 orbit emitted but the secondary has no spectral class
+        # (no SIMBAD entry, no AT-HYG row). The fallback yields None and
+        # both rows stay with q=None.
+        pair = _wds_pair(wds_id="00000+0001", components="AB")
+        athyg_rows = [
+            bb.AthygRow(
+                hip=1, tyc=None, gaia=1, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=10.0, v_mag=None, absmag=4.0,
+                ci=None, spect="G2V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        components = [
+            _resolved(gaia=1, wds_id="00000+0001",
+                      component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="00000+0001",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=100.0),
+            _component_astrometry(parallax_mas=100.0),
+        ]
+        orbits = [(self._orbit_orb6(), "orb6")]
+        classifications = [bb.OpticalClassification(True, "orbit_kept")]
+        indices = _indices_with_astrometry(athyg=athyg_rows)
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertIsNone(rows[0].q)
+        self.assertIsNone(rows[1].q)
+
+    def test_no_q_fill_when_no_orbit(self) -> None:
+        # No orbit emitted at all → q is None on both rows even when
+        # both have spect. Fallback only kicks in when orbital geometry
+        # was resolved but q wasn't.
+        pair = _wds_pair(wds_id="00000+0002", components="AB")
+        athyg_rows = [
+            bb.AthygRow(
+                hip=1, tyc=None, gaia=1, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=10.0, v_mag=None, absmag=4.0,
+                ci=None, spect="G2V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+            bb.AthygRow(
+                hip=None, tyc=None, gaia=2, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=10.0, v_mag=None, absmag=5.0,
+                ci=None, spect="K0V", proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        components = [
+            _resolved(gaia=1, wds_id="00000+0002",
+                      component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="00000+0002",
+                      component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=100.0),
+            _component_astrometry(parallax_mas=100.0),
+        ]
+        orbits = [(None, "none")]
+        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
+        indices = _indices_with_astrometry(athyg=athyg_rows)
+
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertIsNone(rows[0].q)
+        self.assertIsNone(rows[1].q)
+
+
 if __name__ == "__main__":
     unittest.main()

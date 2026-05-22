@@ -25,6 +25,7 @@ from stage2_resolve import (  # noqa: E402
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import OrbitElements  # noqa: E402
 from stage5_optical import OpticalClassification  # noqa: E402
+from mass_estimate import mass_ratio_from_components  # noqa: E402
 
 
 # ─── Stage 6: multiples.tsv emit ─────────────────────────────────────
@@ -411,16 +412,31 @@ def build_multiples_rows(
             and _position_pc(s_ast) is None
         ):
             continue
-        out.append(build_multiples_row(
+        primary_row = build_multiples_row(
             pair, primary, p_ast, orbit, via,
             is_primary=True, indices=indices,
             system_anchor=anchor,
-        ))
-        out.append(build_multiples_row(
+        )
+        secondary_row = build_multiples_row(
             pair, secondary, s_ast, orbit, via,
             is_primary=False, indices=indices,
             system_anchor=anchor,
-        ))
+        )
+        if (
+            orbit is not None
+            and orbit.q is None
+            and primary_row.q is None
+            and secondary_row.q is None
+        ):
+            estimated_q = mass_ratio_from_components(
+                primary_row.spect, primary_row.absmag,
+                secondary_row.spect, secondary_row.absmag,
+            )
+            if estimated_q is not None:
+                primary_row.q = estimated_q
+                secondary_row.q = estimated_q
+        out.append(primary_row)
+        out.append(secondary_row)
         emitted_keys.add((pair.wds_id, primary.component))
         emitted_keys.add((pair.wds_id, secondary.component))
 
