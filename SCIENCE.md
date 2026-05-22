@@ -376,7 +376,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the v6 binary at offsets 52–79 (see
-`docs/build-and-data.md` § Binary catalog format). Coverage: ~99.6% of
+`scripts/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-
@@ -423,7 +423,7 @@ Treatment (filter by source, wait for Gaia DR4, or live with it) is
 deferred until a denser-than-mag-11 ingest makes the call necessary.
 
 Implementation: `scripts/catalog/build-catalog.ts` (filters live in `readStars`,
-binary schema in the `pack*` helpers); see `docs/build-and-data.md` for
+binary schema in the `pack*` helpers); see `scripts/README.md` for
 the per-record byte layout and the GCVS / CCDM cross-match passes that
 run after the AT-HYG read.
 
@@ -451,7 +451,7 @@ special-cased to 0.013 R☉ (typical WD radius; absmag doesn't translate
 reliably for them).
 
 Implementation: `scripts/catalog/build-catalog.ts`, see
-`docs/build-and-data.md` §Physical radius and spectral parsing for the
+`scripts/README.md` §Physical radius and spectral parsing for the
 spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model
@@ -615,8 +615,8 @@ irregular variables. Typical match rate: ~3.7k of 313k catalog stars.
 
 Implementation: `src/client/shaders/star.vert.glsl` and
 `src/client/camera/star-physics.ts` (CPU-side `renderedSizePx`
-mirror); see `docs/rendering.md` §Variable star rendering, and
-`docs/build-and-data.md` §GCVS variability cross-match for the
+mirror); see `src/client/star-pipeline/README.md` §Variable star rendering, and
+`scripts/README.md` §GCVS variability cross-match for the
 build-time matching rules.
 
 ## Solar system
@@ -725,7 +725,7 @@ variations in the upwind distance are at the few-AU level across the
 the boundary.
 
 Construction details (sphere scale, offset, rotation), rendering, and
-label anchoring: see `docs/solar-system.md` § Heliopause boundary.
+label anchoring: see `src/client/solar-system/README.md` § Heliopause boundary.
 
 Implementation: `src/client/heliopause.ts` and
 `src/client/shaders/heliopause.{vert,frag}.glsl`.
@@ -798,7 +798,7 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   from the Cepheid measurement of Bonanos et al. 2006, *ApJ* 652, 313
   (DOI 10.1086/508140). Standalone row.
 
-Per the build's data-freshness policy (`docs/build-and-data.md`
+Per the build's data-freshness policy (`scripts/README.md`
 § Frozen external data), refreshing the LVDB snapshot is an explicit
 manual step (curl + `npm run build:local-group --force`) — `npm run
 build` never touches the network.
@@ -816,7 +816,7 @@ Implementation: `src/client/local-group.ts`,
 `src/client/local-group/local-group-loader.ts`,
 `scripts/local-group/build-local-group.ts`,
 `scripts/local-group/build-local-group-pure.ts`. Rendering walkthrough in
-`docs/local-group.md`.
+`src/client/local-group/README.md`.
 
 ## Galactic coordinate system
 
@@ -836,7 +836,7 @@ These are reused by:
 - The Sol/GC SVG arrow overlay.
 - The volumetric Milky Way disc + bulge layer.
 
-Implementation details: see `docs/galactic-overlay.md`.
+Implementation details: see `src/client/galactic/README.md`.
 
 ## Milky Way density profiles
 
@@ -858,7 +858,7 @@ ray. The density at each step is:
 
 Each component multiplies a population colour pre-integration so the
 band's hue varies by line of sight. Defaults are visually calibrated;
-see `docs/milky-way.md` for the calibrated values, the magnitude-
+see `src/client/milkyway/README.md` for the calibrated values, the magnitude-
 consistency conversion that ties Milky Way brightness to the same
 magnitude slider as the discrete star catalog, and the full
 coordinate-handling chain.
@@ -891,8 +891,8 @@ distribution. Voxels stay in use for short per-star sightlines.
 
 Implementation: `src/client/shaders/star.vert.glsl` (per-star) and
 `src/client/shaders/milkyway.frag.glsl` (volumetric); see
-`docs/rendering.md` §Dust extinction + the shelved particle layer and
-`docs/milky-way.md`.
+`src/client/star-pipeline/README.md` §Dust extinction + the shelved particle layer and
+`src/client/milkyway/README.md`.
 
 ## Multiple-star pipeline
 
@@ -923,7 +923,7 @@ is intentional so each can evolve independently as upstream catalogues
 update.
 
 **Layer 1 — committed reference data.** Frozen under `data/` per the
-freshness policy in `docs/build-and-data.md` § Frozen external data:
+freshness policy in `scripts/README.md` § Frozen external data:
 
 - **Washington Double Star Catalog (WDS)** + **Sixth Catalog of Orbits
   of Visual Binary Stars (ORB6)** — Mason et al. 2001, *AJ* 122, 3466
@@ -982,7 +982,7 @@ term. All scripts share `scripts/refresh/refresh_lib.py` (TAP client
 
 **Layer 3 — catalogue builder.** `scripts/binaries/build-binaries.py`
 orchestrates seven stages with explicit per-component provenance.
-See `docs/cross-match.md` for the engineer-level walk-through; the
+See `scripts/binaries/README.md` for the engineer-level walk-through; the
 astronomer-relevant summary:
 
 1. **Load** WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia
@@ -1046,7 +1046,7 @@ astronomer-relevant summary:
    drift is impossible.
 
 **Layer 4 — validation harness.** Three tiers covered in
-`docs/cross-match.md`: a hand-curated Tier A known-stars corpus
+`scripts/binaries/README.md`: a hand-curated Tier A known-stars corpus
 (`scripts/catalog/known-stars.tsv`) the binary catalogue must
 reproduce; population-statistic Tier B snapshots
 (`build-counts-expected.json`); a stratified random 10k SIMBAD sample
@@ -1055,8 +1055,8 @@ Tier C cross-checker (`validate-simbad-sample.ts` + the
 `build-distance-outliers-expected.json` with hand-edited reasons).
 
 **Layer 5 — documentation.** This file (astronomer audience —
-sources, physics, decisions); `docs/cross-match.md` (engineer audience
-— functions, thresholds, provenance fields); `docs/build-and-data.md`
+sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
+— functions, thresholds, provenance fields); `scripts/README.md`
 (formats — v6 byte plan, name table, search index).
 
 ### Worked examples
@@ -1145,9 +1145,9 @@ truth for per-system orbital geometry; the catalog-side pass is a
 visual-aid bit for chart mode.
 
 Implementation: `scripts/binaries/build-binaries.py` for the WDS+ORB6
-pipeline (engineer walk-through in `docs/cross-match.md`);
+pipeline (engineer walk-through in `scripts/binaries/README.md`);
 `scripts/catalog/build-catalog.ts` + `visual-doubles.ts` for the
-catalog-side passes (see `docs/build-and-data.md` § Geometric binary
+catalog-side passes (see `scripts/README.md` § Geometric binary
 inference and § TDSC double-star cross-match for per-pass detail).
 
 ## Constellation stick figures
@@ -1161,7 +1161,7 @@ and μ Sgr (HIP 89341), both stars Stellarium references that have empty
 position columns in the AT-HYG CSV.
 
 Implementation: `scripts/catalog/build-catalog.ts`; see
-`docs/build-and-data.md` §Stick figures from Stellarium for the
+`scripts/README.md` §Stick figures from Stellarium for the
 pipeline + missing-HIP policy.
 
 ## Modelling decisions deliberately not made
@@ -1180,7 +1180,7 @@ science it relates to.
   61 Cyg A) are visibly off by 2–5 arcmin from their current sky
   positions; the rest of the catalog is well below an arcminute. Per-
   layer epoch table and the staleness audit live in
-  `docs/build-and-data.md` § Reference epoch and proper motion.
+  `scripts/README.md` § Reference epoch and proper motion.
 - **Spiral-arm overdensities** in the Milky Way volumetric background.
   The Reid et al. masers offer a maser-anchored spiral model that could
   ride atop the smooth disc profile, but the smooth band reads

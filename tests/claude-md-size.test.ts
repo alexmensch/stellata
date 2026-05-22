@@ -2,8 +2,8 @@ import { describe, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const MAX_LINES = 500;
-const MAX_BYTES = 26 * 1024;
+const MAX_LINES = 380;
+const MAX_BYTES = 18 * 1024;
 
 const claudeMdPath = resolve(process.cwd(), 'CLAUDE.md');
 const content = readFileSync(claudeMdPath, 'utf8');
@@ -20,21 +20,27 @@ function failureMessage(): string {
     'CLAUDE.md is loaded into EVERY Claude Code session, so every',
     'line here costs context for the rest of the session.',
     '',
-    'Per-area file rosters, architectural prose, and topic-specific',
-    'gotchas belong in docs/<area>.md — see CLAUDE.md § Repo layout',
-    'and § Documentation index for the topic-tree convention.',
+    'The codebase is organised as a wiki: every folder owns one topic,',
+    'documented in its own README.md. Per-area architectural prose,',
+    'file rosters, and topic-specific gotchas belong in the folder\'s',
+    'README.md — NOT in CLAUDE.md. See CLAUDE.md § Repo layout for',
+    'the wiki convention.',
     '',
     'If you are about to add something here:',
-    '  1. Check whether a docs/<area>.md already covers the topic.',
-    '     If yes, add the content there. CLAUDE.md only needs a',
-    '     one-line trigger in § Documentation index pointing at it.',
-    '  2. If it is a new top-level concept that does not fit the',
-    '     existing topic tree, STOP and consult the user before',
-    '     expanding CLAUDE.md or restructuring the docs tree. A',
-    '     larger reorg (new top-level surface, threshold bump,',
-    '     re-shaping the wiki) is a deliberate decision the user',
-    '     wants in on.',
-    '  3. Otherwise, trim or compress to fit the budget.',
+    '  1. Check whether the matching folder\'s README.md already covers',
+    '     the topic. If yes, add the content there. CLAUDE.md should',
+    '     not need to mention it — the folder + README is the index.',
+    '  2. If the topic is genuinely cross-cutting (spans the whole',
+    '     codebase, not one folder), it may belong in docs/. Examples:',
+    '     authoring-patterns.md (write-time rules), ux-tweaks.md (knob',
+    '     reference across many files). Default is still a folder',
+    '     README — only fall back to docs/ if no folder fits.',
+    '  3. If it is a new top-level convention that the existing wiki',
+    '     shape cannot host, STOP and consult the user before',
+    '     expanding CLAUDE.md or restructuring the wiki. A larger reorg',
+    '     (new top-level folder surface, threshold bump, re-shaping the',
+    '     wiki) is a deliberate decision the user wants in on.',
+    '  4. Otherwise, trim or compress to fit the budget.',
     '',
   ].join('\n');
 }
