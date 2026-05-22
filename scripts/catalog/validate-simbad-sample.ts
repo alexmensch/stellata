@@ -7,10 +7,13 @@
 // view — residual histograms, percentile stats, and the top-N outliers
 // for a human pass.
 //
-// PM is intentionally out of scope: the binary catalog stores positions
-// derived from PM but not the PMs themselves, so a PM residual would
-// compare AT-HYG's PM to SIMBAD's PM rather than anything Stellata
-// emits.
+// PM is intentionally out of scope WHILE catalog.bin remains
+// J2000-epoch: the binary stores AT-HYG positions without PM
+// propagation, so a PM residual would compare AT-HYG's PM to SIMBAD's
+// PM rather than anything Stellata emits. Revisit if stellata-nmu.1's
+// time-scrubber design decision lands and the build starts applying
+// PM to bring positions to render epoch — `parseSimbadSampleRows`
+// already surfaces pmra / pmdec for that case.
 //
 // Run: `npm run validate:simbad`. Writes
 // `docs/validation-residuals.md` and exits non-zero when the smoke
