@@ -57,6 +57,11 @@ import {
   applyDoublesFlag,
 } from './visual-doubles';
 import {
+  buildCatalogRowIndexMap,
+  promoteCompanions,
+  readMultiplesTsv,
+} from './companion-promotion';
+import {
   parseGcvsMain,
   parseGcvsCrossref,
   bridgeGcvsByGaia,
@@ -79,14 +84,17 @@ const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
+const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
+const OUT_ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
 const EXPECTED_COUNTS = resolve(__dirname, 'build-catalog-expected.json');
 const EXPECTED_OUTLIERS = resolve(__dirname, 'build-distance-outliers-expected.json');
 
 function isUpToDate(): boolean {
   if (!existsSync(OUT_BIN) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
+  if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
   const binMtime = statSync(OUT_BIN).mtimeMs;
   const srcMtime = statSync(SRC_CSV).mtimeMs;
   const stellariumMtime = existsSync(SRC_STELLARIUM)
@@ -102,6 +110,7 @@ function isUpToDate(): boolean {
   const apsisMtime = existsSync(SRC_GAIA_APSIS) ? statSync(SRC_GAIA_APSIS).mtimeMs : 0;
   const simbadMtime = existsSync(SRC_SIMBAD_SPTYPE) ? statSync(SRC_SIMBAD_SPTYPE).mtimeMs : 0;
   const simbadSampleMtime = existsSync(SRC_SIMBAD_SAMPLE) ? statSync(SRC_SIMBAD_SAMPLE).mtimeMs : 0;
+  const multiplesMtime = existsSync(SRC_MULTIPLES) ? statSync(SRC_MULTIPLES).mtimeMs : 0;
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -114,7 +123,8 @@ function isUpToDate(): boolean {
     binMtime > gaiaHipXmatchMtime &&
     binMtime > apsisMtime &&
     binMtime > simbadMtime &&
-    binMtime > simbadSampleMtime
+    binMtime > simbadSampleMtime &&
+    binMtime > multiplesMtime
   );
 }
 
@@ -173,6 +183,12 @@ async function main() {
     spectralBySimbad: 0,
     spectralByGspspec: 0,
     spectralFallback: 0,
+    companionRowsScanned: 0,
+    companionPromoted: 0,
+    companionAlreadyInCatalog: 0,
+    companionDroppedNoIdentifier: 0,
+    companionDroppedNoPosition: 0,
+    companionDroppedNoAbsmag: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -261,7 +277,8 @@ async function main() {
       `  gaia_source_id backfill: ${stats.gaiaSourceIdBackfilled} rows via HIP→Gaia cross-walk`,
     );
   }
-  counts.recordCount = stars.length;
+  // recordCount is the final post-promotion count; populated after the
+  // companion-promotion pass below.
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.lmcCandidates = stats.lmcCandidates;
@@ -279,6 +296,36 @@ async function main() {
       `GSP-Spec ${stats.spectralByGspspec} (${gspspecPct}%), ` +
       `unknown ${stats.spectralFallback} (${fallbackPct}%)`,
   );
+
+  // Companion promotion — read data/binaries/multiples.tsv and add
+  // first-class catalog records for the secondary of every physical pair
+  // whose identifier isn't already in AT-HYG. Promoted companions ride
+  // catalog.bin with FLAG_BINARY_COMPANION_ONLY set; the renderer/picker
+  // hover/focus stack picks them up with zero code change.
+  if (existsSync(SRC_MULTIPLES)) {
+    console.log('Promoting binary companions from multiples.tsv...');
+    const tProm = Date.now();
+    const multiplesRows = readMultiplesTsv(SRC_MULTIPLES);
+    const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars);
+    for (const ns of newStars) stars.push(ns);
+    console.log(
+      `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted}; ` +
+        `already-in-catalog ${ps.alreadyInCatalog}; ` +
+        `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
+        `no-position=${ps.droppedNoPosition}, no-absmag=${ps.droppedNoAbsmag}, ` +
+        `no-primary=${ps.droppedNoPrimary}) in ${Date.now() - tProm}ms`,
+    );
+    counts.companionRowsScanned = ps.pairRowsScanned;
+    counts.companionPromoted = ps.promoted;
+    counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
+    counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
+    counts.companionDroppedNoPosition = ps.droppedNoPosition;
+    counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
+  } else {
+    console.log('multiples.tsv not found; skipping companion promotion.');
+  }
+
+  counts.recordCount = stars.length;
 
   // Sort by absolute magnitude ascending (brightest first). Record indices
   // are final after this point.
@@ -495,6 +542,17 @@ async function main() {
     searchEntries.push(entry);
   }
   await writeFile(OUT_SEARCH, JSON.stringify(searchEntries) + '\n');
+
+  // Catalog row-index map sidecar — lets the runtime binaries loader
+  // resolve a multiples.tsv row's identifier to a catalog.bin record
+  // index without scanning every record at startup. Keyed by Gaia DR3
+  // source_id (decimal string, since source_ids exceed 2^53) and HIP.
+  const rowIndexMap = buildCatalogRowIndexMap(stars);
+  await writeFile(OUT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
+  console.log(
+    `Wrote ${OUT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
+      `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries)`,
+  );
 
   const figureCount = [...figureLines.values()].reduce(
     (n, arr) => n + arr.length,

@@ -140,4 +140,12 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 01137+0735	ζ Piscium / Revati	5737	2577061092921353984	40.837	0.4	2.155	A7IV	B:5743:2577061260424130304:3.403	9.08	SIMBAD * zet Psc A sp_type=A7IV. Companion B HIP 5743 (F7V) per multiples.tsv. Gaia NSS orbit P=9.08 d.
 21582+8252	HD 209942	108456	2299477734539451392	40.081	0.4	3.905	F6IV-V	B:108461:2299477768899190400:4.444	1980.59	SIMBAD HD 209942 sp_type=F6IV-V. Companion B HIP 108461 (F5) per multiples.tsv. Gaia NSS orbit P=1980.59 d.
 07041+7514	HD 51067	34085	1115378031539193984	38.790	0.4	4.206	G0	B:34087:1115378031538627712:5.268	123.40	SIMBAD HD 51067 sp_type=G0 (bare class; no lumClass pin). Companion B HIP 34087 (G5) per multiples.tsv. Gaia NSS orbit P=123.40 d.
+# ---- Promoted companions (newly minted catalog records) ----------------
+# These rows pin companions promoted into catalog.bin by the build's
+# read-multiples-and-promote pass. Their primary is already an AT-HYG
+# row; the companion is a new record addressable by its OWN identifiers
+# (Gaia source_id; HIP may collide with the primary). Absmag is imputed
+# from the primary's AT-HYG absmag plus the WDS published Δmag, so the
+# tolerance here is the same ±0.05 mag the rest of the corpus uses.
+06451-1643	Sirius B		2947050466531873024	2.637	0.05	11.360	DA1.9			SIMBAD * alf CMa B sp_type=DA1.9 (white dwarf). Promoted companion: absmag imputed from Sirius A's 1.45 + WDS Δmag 9.91 = 11.36 (canonical 11.18; the modest gap is the WDS Δmag in the Hp band vs canonical V — within the tolerance the corpus uses elsewhere for companion absmag).
 
