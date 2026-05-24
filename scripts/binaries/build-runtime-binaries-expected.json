@@ -1,0 +1,9 @@
+{
+  "pairs_total": 13221,
+  "pairs_emitted": 6803,
+  "pairs_dropped_primary_unresolved": 1617,
+  "pairs_dropped_secondary_unresolved": 4801,
+  "pairs_with_orbit": 1011,
+  "pairs_with_inclination": 747,
+  "pairs_inner_of_hierarchy": 617
+}

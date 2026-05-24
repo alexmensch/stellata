@@ -9,6 +9,7 @@
     "build:catalog": "tsx scripts/catalog/build-catalog.ts",
     "build:lut": "tsx scripts/colour/blackbody-lut.ts",
     "build:binaries": "python3 scripts/binaries/build-binaries.py",
+    "build:binaries-runtime": "python3 scripts/binaries/build-runtime-binaries.py",
     "build:clouds": "python3 scripts/clouds/build-clouds.py",
     "refresh:gaia-hip": "python3 scripts/refresh/refresh-gaia-hip-xmatch.py",
     "refresh:gaia-tyc": "python3 scripts/refresh/refresh-gaia-tyc-xmatch.py",

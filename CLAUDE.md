@@ -172,8 +172,8 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           subfolder per subsystem (solar-system/, local-group/,
           milkyway/, galactic/, molecular-clouds/, chart-mode/,
           star-pipeline/, hover/, overlays/, camera/, ui/, typeahead/,
-          modals/, debug/, util/, loaders/, dust/) — each with its
-          own README.
+          modals/, debug/, util/, loaders/, dust/, binaries/) —
+          each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, ux-tweaks.md. New docs default
           to "find the right folder and put a README.md there"; only
