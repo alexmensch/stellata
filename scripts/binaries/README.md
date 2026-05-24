@@ -165,7 +165,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    physical pair carrying Kepler elements + sep+PA + hierarchical
    parent-relation index. Run via `npm run build:binaries-runtime`.
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
-   per-frame by the BinaryOrbitField (lmh.5).
+   per-frame by the BinaryOrbitField (future runtime layer).
 
 The Tier A validation harness (`scripts/catalog/known-stars.test.ts`)
 reads multiples.tsv directly for per-component sanity checks

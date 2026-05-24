@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Refresh data/simbad/simbad_sample.tsv — stratified random 10k-star SIMBAD sample.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 Builds an independent external-authority reference set for the Phase 4
-Tier-C validator (stellata-dch.39) to cross-check Stellata's catalog
+Tier-C validator to cross-check Stellata's catalog
 against SIMBAD without paying SIMBAD-query cost per-validation-run.
 
 Sample is V-magnitude-stratified for diversity across the AT-HYG depth

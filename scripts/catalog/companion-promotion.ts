@@ -1,10 +1,6 @@
-// Reads data/binaries/multiples.tsv and promotes binary companions that
-// aren't already in AT-HYG into first-class catalog.bin records. The
-// promotion path projects the companion's xyz from the primary's xyz
-// via WDS sep+PA tangent-plane geometry, imputes absmag from primary +
-// WDS Δmag, and inherits spectral class through the existing resolver.
-// Companions whose absmag can't be imputed are dropped — never make up
-// a brightness value.
+// Reads data/binaries/multiples.tsv and promotes physical-pair
+// secondaries not in AT-HYG into first-class catalog.bin records.
+// See scripts/catalog/README.md § Companion promotion.
 
 import { readFileSync } from 'node:fs';
 
@@ -298,25 +294,10 @@ function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
   return groups;
 }
 
-// Companion B-V (ci) resolution. As with absmag, the multiples.tsv row's
-// `ci` column is the AT-HYG row's ci — when the companion shares its
-// parent's AT-HYG row (Sirius B inherits Sirius A's ci=0.009), that
-// value is the primary's colour, not the companion's. For inherited-ci
-// rows, recover the companion's intrinsic B-V from its spectral
-// info via tempKelvin → ballesterosBvFromTeff. Sirius B's DA1.9 →
-// T_eff ≈ 25200 K → B-V ≈ -0.44 (deep blue / hot end of the LUT), vs
-// Sirius A's tabulated 0.009 (A0V white).
-//
-// Resolution order:
-//   1. row.ci is null → derive from spectral info.
-//   2. primary.ci is non-null AND row.ci === primary.ci (inherited
-//      photometry) → derive from spectral info.
-//   3. else → use row.ci.
-//
-// "Derive from spectral info" needs a parseable spect cell; when
-// classifyFromSimbad returns SPECTRAL_UNKNOWN the routing falls
-// through to SOLAR_BV_FALLBACK so the companion gets a sensible
-// neutral colour rather than zero.
+// Companion B-V (ci). When the row inherited the primary's AT-HYG ci
+// (Sirius B carrying Sirius A's 0.009 white instead of its own DA1.9
+// blue), derive from spectral info via tempKelvin → ballesterosBvFromTeff.
+// SPECTRAL_UNKNOWN falls through to SOLAR_BV_FALLBACK.
 export function imputeCompanionCi(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
@@ -343,20 +324,10 @@ export function imputeCompanionCi(
 }
 
 
-// Companion absmag resolution. The multiples.tsv row's `absmag` column is
-// the AT-HYG row's absmag — when a companion inherits the system's AT-HYG
-// row (Sirius B has the same AT-HYG entry as Sirius A), that value is the
-// primary's brightness, not the companion's. Prefer Δmag-imputation in
-// that case so the companion ends up at its true brightness, not the
-// primary's.
-//
-// Resolution order:
-//   1. If the row's astrometry_via is system_inherited OR the row's gaia
-//      doesn't match any AT-HYG row's own gaia — i.e. it inherited photo —
-//      and primary absmag + dmag are both available → impute.
-//   2. Else if the row carries its own absmag → use it directly.
-//   3. Else if primary + dmag available → impute.
-//   4. Else → null (drop).
+// Companion absmag. When the row inherited the primary's AT-HYG absmag
+// (Sirius B carrying Sirius A's 1.45), impute as primary + WDS Δmag;
+// otherwise prefer the row's own absmag and fall back to primary +
+// Δmag. Returns null when no path produces a value — caller drops.
 export function imputeCompanionAbsmag(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,

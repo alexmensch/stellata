@@ -137,7 +137,7 @@ describe('url-state', () => {
       expect(out.cam![2]).toBeCloseTo(3.95e-5, 9);
     });
 
-    // 9mm.61: guards the architectural claim from the encoder design
+    //: guards the architectural claim from the encoder design
     // comment that "Float32 ULP at megaparsec absolute scale is ~10⁻²
     // pc — invisible in any view because the user-visible pose is the
     // cam/tgt offset within the local frame, and that's encoded at full

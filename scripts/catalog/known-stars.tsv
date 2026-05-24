@@ -31,8 +31,8 @@
 #                           no HIP leave the hip slot empty
 #                           ("B::4658136172363835776:11.34"). Companion
 #                           hip + gaia_id + absmag are pulled from
-#                           data/binaries/multiples.tsv (post-dch.65,
-#                           which is itself the validation target —
+#                           data/binaries/multiples.tsv, which is
+#                           itself the validation target —
 #                           SIMBAD spot-checks the primaries).
 # orbital_period_days       Expected pipeline orbital period in days
 #                           (companion record .periodDays). Empty when
@@ -61,8 +61,8 @@
 # Every row carries notes_source — no row added without a traceable
 # citation. Distance + absmag verified against AT LEAST TWO independent
 # sources where possible (SIMBAD + Gaia DR3 ADQL; ORB6 + van Leeuwen
-# HIP2; etc.). Companion rows use multiples.tsv (post-dch.65) as one
-# source; SIMBAD per-oid as the second. The TSV is the contract — the
+# HIP2; etc.). Companion rows use multiples.tsv as one source;
+# SIMBAD per-oid as the second. The TSV is the contract — the
 # vitest exercises every row, every column.
 #
 # ---- Format ----------------------------------------------------------
@@ -111,15 +111,15 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # or inherited from the primary (e.g. Sirius B at 1.454, Procyon B blank)
 # are deliberately excluded — pinning known-bad data would mislead future
 # regression detection.
-14396-6050	α Centauri	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437	29133.07	SIMBAD * alf Cen A sp_type=G2V (saturated in Gaia DR3 → pipeline spectral=unknown). ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima); bestPeriodMatch picks the AB orbit nearest the expected value. Companion data per multiples.tsv post-dch.65.
+14396-6050	α Centauri	71683		1.325	0.05	4.379		B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437	29133.07	SIMBAD * alf Cen A sp_type=G2V (saturated in Gaia DR3 → pipeline spectral=unknown). ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima); bestPeriodMatch picks the AB orbit nearest the expected value. Companion data per multiples.tsv.
 21069+3845	61 Cygni	104214	1872046609345556480	3.496	0.05	7.482	K5V	B:104217:1872046574983497216:8.332		SIMBAD * 61 Cyg A sp_type=K5V; companion B sp_type=K7V (multiples.tsv). Common-proper-motion pair, no well-determined orbit.
 13239+5456	Mizar–Alcor	65378	1563590579347125632	24.867	0.2	0.252	A1.5Vas	C:65477::1.995		SIMBAD * zet01 UMa sp_type=A1.5Vas (primary Mizar Aa). Companion C is Alcor (HIP 65477, A5V), validated against multiples.tsv wds 13239+5456-AC. Wide visual pair (~0.2 pc separation).
 # ---- Nearby resolved binaries (≤30 pc, both components in multiples.tsv with non-inherited data) ----
-18428+5938	Σ 2398 / Gliese 725	91768	2154880616774131840	3.523	0.05	11.205	M3V	B:91772:2154880616774131712:11.965		SIMBAD HD 173739 sp_type=M3V; nearby M-dwarf binary at 3.5 pc. Companion B (HD 173740, M3.5V) from multiples.tsv post-dch.65.
+18428+5938	Σ 2398 / Gliese 725	91768	2154880616774131840	3.523	0.05	11.205	M3V	B:91772:2154880616774131712:11.965		SIMBAD HD 173739 sp_type=M3V; nearby M-dwarf binary at 3.5 pc. Companion B (HD 173740, M3.5V) from multiples.tsv.
 14575-2125	ξ Boötis	73184	6232511606838403968	5.886	0.05	6.871	K4V	B:73182:6232511675556408320:9.146	2369944.24	SIMBAD HD 131977 sp_type=K4V (primary ξ Boö A). Companion B (M1.5V) per multiples.tsv. ORB6 P=2369944.24 d (~6489 yr).
-17153-2636	36 Ophiuchi / Guniibuu	84405	4109030160308320128	5.951	0.05	5.457	K1V	C:84478:4109034455276324608:7.456	171996.23	SIMBAD * 36 Oph sp_type=K1V. multiples.tsv post-dch.65 carries primary gaia 4109030160308317312 but catalog.bin uses 4109030160308320128 from the HIP→Gaia cross-walk; corpus pins the catalog-side ID. Companion C (K5V) per multiples.tsv. ORB6 P=171996 d.
+17153-2636	36 Ophiuchi / Guniibuu	84405	4109030160308320128	5.951	0.05	5.457	K1V	C:84478:4109034455276324608:7.456	171996.23	SIMBAD * 36 Oph sp_type=K1V. multiples.tsv carries primary gaia 4109030160308317312 but catalog.bin uses 4109030160308320128 from the HIP→Gaia cross-walk; corpus pins the catalog-side ID. Companion C (K5V) per multiples.tsv. ORB6 P=171996 d.
 22577-2937	Fomalhaut + Fomalhaut B	113368		7.704	0.05	1.737		B:113283:6604147121141267712:7.076		SIMBAD * alf PsA sp_type=A4V (saturated in Gaia DR3 → pipeline spectral=unknown). Companion Fomalhaut B (TW PsA, K4Ve, common-proper-motion pair) per multiples.tsv.
-01026+6221	HD 6440 / AC+27 28217	4872	522863309964987520	9.856	0.05	9.591	M1.5V	B::522864272041351296:13.690		SIMBAD BD+61 195 sp_type=M1.5V. Companion B (HIP-less, Gaia DR3 source 522864272041351296) at absmag 13.69 — wide nearby pair from multiples.tsv post-dch.65.
+01026+6221	HD 6440 / AC+27 28217	4872	522863309964987520	9.856	0.05	9.591	M1.5V	B::522864272041351296:13.690		SIMBAD BD+61 195 sp_type=M1.5V. Companion B (HIP-less, Gaia DR3 source 522864272041351296) at absmag 13.69 — wide nearby pair from multiples.tsv.
 09144+5241	HD 79210 / HD 79211	45343	1022456139210632064	6.332	0.05	8.632	K7V	B:120005:1022456104850892928:8.692		SIMBAD HD 79210 sp_type=K7V. Companion HIP 120005 = HD 79211 M0V — common-proper-motion K+M pair at 6.3 pc.
 16555-0820	HD 152751	82817		6.196	0.05	10.060		C:82809:4339465360510320128:12.666	627.28	SIMBAD HD 152751 sp_type=M3.5Ve (saturated → pipeline spectral=unknown). Companion C HIP 82809 (M3.5V) per multiples.tsv. ORB6 P=627.28 d.
 20452-3120	HD 197481 / AU Mic system	102409	6794047652729201024	9.711	0.05	8.874	M1VeBa1	B:102141:6792436799475128960:10.124	53107.35	SIMBAD HD 197481 sp_type=M1VeBa1 (AU Mic, young M-dwarf with debris disc). Companion B HIP 102141 (M4.5Ve, AT Mic) per multiples.tsv. ORB6 P=53107 d.

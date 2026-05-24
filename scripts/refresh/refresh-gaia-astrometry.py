@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_astrometry.tsv — Gaia DR3 astrometry by source_id.
 
-Phase 2 Stage 2-output consumer (stellata-dch.29). Reads the deduped
+Phase 2 Stage 2-output consumer. Reads the deduped
 ``data/gaia/gaia_astrometry_source_id_request.tsv`` produced by
-scripts/binaries/build-binaries.py Stage 2 (stellata-dch.28), chunks the
+scripts/binaries/build-binaries.py Stage 2, chunks the
 source_id list, queries ``gaiadr3.gaia_source`` via TAP, and writes
-the per-source astrometry needed by Stage 3 (stellata-dch.30) and
-Stage 4 (stellata-dch.31).
+the per-source astrometry needed by Stage 3 and
+Stage 4.
 
 Querying by source_id rather than position bypasses the orbital-
 contamination problem entirely for close binaries — there is no
@@ -29,7 +29,7 @@ bailer-jones sweet spot. The Gaia archive's IN-list cap is ~5000.
 TSV columns (17) — see file docstring for `gaiadr3.gaia_source`
 upstream documentation. All upstream column names preserved verbatim;
 empty cells correspond to masked (NULL) values from TAP. ``ruwe`` +
-``ipd_frac_multi_peak`` are consumed by Stage 3 (stellata-dch.30) to
+``ipd_frac_multi_peak`` are consumed by Stage 3 to
 flag unreliable single-star solutions.
 
 Coverage expectation: ≥ 95% of input source_ids resolve. The small
@@ -42,7 +42,7 @@ the Stage-2 request file. Pass ``--force`` to rebuild unconditionally.
 
 Note on the bead's original Sirius-A spot-check: Sirius A's
 ``source_id`` 2947050466531873024 is NOT in the Stage-2 request file.
-Stage 2 dch.28 only resolves components via the Gaia cross-match
+Stage 2 only resolves components via the Gaia cross-match
 tables (``gaiadr3.hipparcos2_best_neighbour`` /
 ``gaiadr3.tycho2tdsc_merge_best_neighbour``); Sirius A (V=-1.46)
 saturates Gaia and is absent from both. The bead description was

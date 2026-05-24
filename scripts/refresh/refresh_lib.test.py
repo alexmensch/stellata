@@ -510,7 +510,7 @@ class AthygMissingSentinelTests(unittest.TestCase):
 
 class ReadAthygSourceIdsTests(unittest.TestCase):
     def test_round_trip_three_row_fixture(self) -> None:
-        # Per stellata-9mm.198 acceptance (c): one valid row, one empty
+        # Three-row fixture: one valid Gaia source_id, one empty
         # gaia, one '0' gaia. The walker returns only the valid one.
         body = (
             "id,gaia,hip\n"
@@ -529,7 +529,7 @@ class ReadAthygSourceIdsTests(unittest.TestCase):
 
 class CheckSpotRowTests(unittest.TestCase):
     """Pinned-row drift detector lifted from refresh-gaia-nss /
-    refresh-gaia-apsis (stellata-9mm.199). Covers the exact-match /
+    refresh-gaia-apsis. Covers the exact-match /
     numeric-tolerance / NULL branches and the present-vs-missing
     return contract."""
 

@@ -1,4 +1,4 @@
-// Picker integration tests (stellata-9mm.194.3). The reducer in
+// Picker integration tests. The reducer in
 // star-geometry.ts already has thorough unit coverage; these tests
 // exercise the full pickStar pipeline — projection, distance window,
 // spectral mask, prime / fallback tier classification, the overlap-

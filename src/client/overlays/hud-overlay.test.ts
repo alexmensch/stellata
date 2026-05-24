@@ -13,7 +13,7 @@ function makeFadeEls() {
 
 describe('hud-overlay applyFade', () => {
   it('writes opacity to all three elements on the first call from a fresh state', () => {
-    // Regression test for the original-9mm.167 / sentinel-init bug where
+    // Regression test for the original sentinel-init bug where
     // `lastOpacity: NaN` poisoned applyFade's early-write gate
     // (`Math.abs(α − NaN) = NaN; NaN >= 0.0005 = false`) and silently
     // skipped every opacity write — leaving the Sol/GC arrows pinned at
@@ -59,8 +59,8 @@ describe('hud-overlay applyFade', () => {
     expect(state.lastPointerEvents).toBe('none');
   });
 
-  it('resetArrowSentinels wipes every per-attribute sentinel back to its poison-init value (9mm.170)', () => {
-    // Regression for 9mm.170: hideArrow must wipe the numeric / text /
+  it('resetArrowSentinels wipes every per-attribute sentinel back to its poison-init value', () => {
+    // hideArrow must wipe the numeric / text /
     // opacity / pointer-events sentinels, not just the visible d / display
     // pair. Without this, the next show-from-hide cycle would inherit
     // stale cx/cy/lx/ly from the prior visible session whenever the new
@@ -91,7 +91,7 @@ describe('hud-overlay applyFade', () => {
   });
 
   it("first pointer-events write lands from poison '\\0' sentinel even when alpha=1 yields ''", () => {
-    // Regression test for the original-9mm.167 case where
+    // Regression test for the original case where
     // `lastPointerEvents: ''` matched the steady-state derived value and
     // the first restore-to-clickable write was skipped. The fresh sentinel
     // must be poison ('\0') so the first apply writes through.

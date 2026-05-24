@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_nss_two_body.tsv — Gaia DR3 NSS two-body orbits.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 Pulls the full `gaiadr3.nss_two_body_orbit` table — 443,205 rows of
 orbital solutions Gaia DR3 fit directly from astrometry, spectroscopy,
-or eclipses. Phase 2 Stage 4 (stellata-dch.31) prefers these over ORB6
+or eclipses. Phase 2 Stage 4 prefers these over ORB6
 inside Gaia's observability regime (P < ~10 yr, separation < ~1").
 
 ADQL
@@ -28,9 +28,9 @@ ADQL
 Schema notes (from live probe 2026-05-18):
   * DR3 NSS uses Thiele-Innes constants (A, B, F, G in mas; C, H in AU
     for AstroSpectro* rows) — NOT classical Campbell elements. The
-    helper `nss_to_canonical_elements` in dch.31 (Phase 2 Stage 4)
+    helper `nss_to_canonical_elements` in Phase 2 Stage 4
     derives (a, i, Omega, omega) from Thiele-Innes via Heintz 1978 /
-    Pourbaix algebra. See dch.31 description.
+    Pourbaix algebra
   * `inclination` and `arg_periastron` columns exist but are NULL for
     pure-astrometric solutions (`Orbital`*); they're populated only for
     AstroSpectroSB1 / spectroscopic-orbit rows where one is observed

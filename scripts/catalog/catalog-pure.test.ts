@@ -1489,7 +1489,7 @@ describe('catalog-pure / isInLmcCone', () => {
 
   it('rejects the SMC direction (out of scope)', () => {
     // SMC centre ≈ (0.877 h, -72.8°). Outside the LMC cone — the SMC
-    // override gets its own pipeline (Phase-3 dch.55).
+    // override gets its own pipeline.
     expect(isInLmcCone(0.877, -72.8)).toBe(false);
   });
 

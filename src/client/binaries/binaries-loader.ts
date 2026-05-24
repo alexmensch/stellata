@@ -1,7 +1,5 @@
-// Parses public/binaries.bin (the runtime artifact written by
-// scripts/binaries/build-runtime-binaries.py) into a typed record-set
-// the BinaryOrbitField walks per frame. Format match: see
-// scripts/binaries/build-runtime-binaries.py § Binary format.
+// Parses public/binaries.bin into a typed record-set the runtime
+// reads per frame. See src/client/binaries/README.md § Format contract.
 
 export const MAGIC = 'BIN1';
 export const VERSION = 1;

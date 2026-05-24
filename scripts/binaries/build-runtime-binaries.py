@@ -1,21 +1,7 @@
 #!/usr/bin/env python3
-"""Build ``public/binaries.bin`` — the runtime layer's compact binary
-of one record per physical binary relation. Loaded by
-``src/client/binaries/binaries-loader.ts`` and consumed by
-``BinaryOrbitField`` for per-frame Kepler evaluation.
-
-Inputs:
-- ``data/binaries/multiples.tsv`` (Stage 6 output; one row per
-  component of each kept physical pair).
-- ``public/catalog-row-index-map.json`` (build-catalog sidecar; resolves
-  Gaia source_id / HIP to catalog.bin record indices).
-
-Output:
-- ``public/binaries.bin`` — header (magic "BIN1" + version + count) plus
-  one fixed-size record per pair. See `RECORD_LAYOUT` below.
-- ``scripts/binaries/build-runtime-binaries-expected.json`` — count
-  snapshot (UPDATE_BUILD_COUNTS=1 to refresh).
-"""
+"""Build ``public/binaries.bin`` — one record per physical binary
+pair for the runtime layer. See scripts/binaries/README.md
+§ Files in this area."""
 
 from __future__ import annotations
 

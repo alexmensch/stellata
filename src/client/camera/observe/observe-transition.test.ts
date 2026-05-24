@@ -1,4 +1,4 @@
-// ObserveTransition tests (stellata-9mm.194.6). The four mode-switch
+// ObserveTransition tests. The four mode-switch
 // entry points + the unfocus-lerp variant + cancellation paths +
 // isActive / isAnyActive contracts. Hybrid arrival-curve internals are
 // covered by arrival-curves.test.ts and camera-motion.test.ts — here we

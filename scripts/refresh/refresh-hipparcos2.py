@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Refresh data/hipparcos/hip2_van_leeuwen.tsv — Hipparcos-2 (van Leeuwen 2007) reduction.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 HIP2 (VizieR I/311/hip2) is the improved astrometric reduction of all
 117,955 HIP stars on a longer baseline than the original ESA 1997 release.
-Critical for the bright-binary fallback (Phase 2 Stage 3 stellata-dch.30):
+Critical for the bright-binary fallback (Phase 2 Stage 3):
 where Gaia DR3's 5-parameter PM is corrupted by orbital wobble in close
 binaries (Sirius, α Cen, Castor, Algol) or by saturation (V ≲ 4 — Sirius A,
 Polaris, Vega), HIP2 averages over a different window on the orbit and is

@@ -1,4 +1,4 @@
-// FocusController tests (stellata-9mm.194.8). Exercise the focus FSM
+// FocusController tests. Exercise the focus FSM
 // + focus-park lerp + pin engage geometry + FocusTarget round-trip +
 // the observe-cleanup / unfocus-close-zoom branches of setFocus /
 // unfocus. The hybrid arrival-curve internals are covered by

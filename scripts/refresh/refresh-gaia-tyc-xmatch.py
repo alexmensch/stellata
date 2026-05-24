@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_tyc_xmatch.tsv — Tycho-2 → Gaia DR3 source_id cross-walk.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 Companion to scripts/refresh/refresh-gaia-hip-xmatch.py: HIP covers V ≲ 9 and
 Tycho-2 (with TDSC merged in) extends down to V ~ 11.5, so this TSV is
 how the Stage 1 indexer resolves any Tycho-2 / TDSC component to a Gaia
