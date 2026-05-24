@@ -17,7 +17,7 @@ import {
   BINARY_VIEWPORT_HALF_ANGLE_RAD,
   BINARY_MIN_DIST_FACTOR,
 } from './star-physics';
-import { R_SUN_PC, AU_PC } from '../../solar-system/astronomy-constants';
+import { R_SUN_PC, AU_PC } from '../../util/astronomy-constants';
 
 function makeCatalog(
   n: number,

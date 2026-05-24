@@ -25,7 +25,7 @@ import {
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
 import { parkDistance } from '../focus/focus-transition';
-import { R_SUN_PC } from '../../solar-system/astronomy-constants';
+import { R_SUN_PC } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-

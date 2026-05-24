@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { type ArrivalState, newArrival, shiftArrivalWaypoints, tickArrival } from './camera-motion';
-import { AU_PC } from '../../solar-system/astronomy-constants';
+import { AU_PC } from '../../util/astronomy-constants';
 
 // Co-linear arrival builder. pStart at d0 along +X, pEnd at dEnd along +X,
 // target at the origin — so the camera's x coordinate IS its distance from

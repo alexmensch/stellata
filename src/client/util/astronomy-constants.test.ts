@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARCSEC_TO_RAD,
   AU_KM,
   AU_PC,
   AU_PER_PC,
+  DAYS_PER_JULIAN_YEAR,
+  J2000_JD,
   KM_PC,
   R_SUN_PC,
 } from './astronomy-constants';
@@ -29,5 +32,18 @@ describe('astronomy-constants', () => {
 
   it('R_SUN_PC is one solar radius in parsecs', () => {
     expect(R_SUN_PC).toBe(2.2543e-8);
+  });
+
+  it('ARCSEC_TO_RAD matches 1 / AU_PER_PC (1 AU subtends 1 arcsec at 1 pc)', () => {
+    expect(ARCSEC_TO_RAD).toBe(Math.PI / (180.0 * 3600.0));
+    expect(ARCSEC_TO_RAD).toBeCloseTo(AU_PC, 15);
+  });
+
+  it('J2000_JD is the IAU J2000.0 epoch', () => {
+    expect(J2000_JD).toBe(2451545.0);
+  });
+
+  it('DAYS_PER_JULIAN_YEAR is 365.25', () => {
+    expect(DAYS_PER_JULIAN_YEAR).toBe(365.25);
   });
 });

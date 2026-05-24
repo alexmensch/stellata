@@ -16,7 +16,7 @@
 // via the per-host orbital-plane orientation quaternion (Sol lands in
 // the ecliptic; exoplanet hosts default to the galactic plane).
 
-import { AU_PC } from './astronomy-constants';
+import { AU_PC } from '../util/astronomy-constants';
 import { tToJDE } from './time';
 
 // JD at J2000.0 (2000-01-01T12:00 TT).

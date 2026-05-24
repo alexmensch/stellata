@@ -56,7 +56,7 @@ import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/p
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import { Heliopause } from './solar-system/heliopause';
-import { R_SUN_PC } from './solar-system/astronomy-constants';
+import { R_SUN_PC } from './util/astronomy-constants';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
 import { DCAM_LOG_FLOOR_PC } from './camera/timing';

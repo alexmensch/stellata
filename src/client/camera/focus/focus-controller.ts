@@ -22,7 +22,7 @@ import {
   getPlanetSystem,
   hasPlanets,
 } from '../../solar-system/planet-system';
-import { R_SUN_PC } from '../../solar-system/astronomy-constants';
+import { R_SUN_PC } from '../../util/astronomy-constants';
 import { chartPlateauDistancePc } from '../../chart-mode/chart-disc-pure';
 import * as starPhysics from '../controls/star-physics';
 import {

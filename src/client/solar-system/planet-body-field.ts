@@ -17,7 +17,7 @@ import {
   type PhaseCoefficients,
 } from './phase-function';
 import { applyDiscBlendDefaults } from '../star-pipeline/star-pipeline';
-import { AU_PC, KM_PC } from './astronomy-constants';
+import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import {
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,

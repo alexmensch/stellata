@@ -22,6 +22,7 @@ import {
   type SpectralInfo,
 } from './catalog-pure';
 import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
+import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
 import type { Star } from './stars-parse';
 
 // ---- TSV row schema -----------------------------------------------------
@@ -145,8 +146,6 @@ export function readMultiplesTsv(path: string): MultiplesTsvRow[] {
 }
 
 // ---- Tangent-plane projection ------------------------------------------
-
-const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
 
 export interface CompanionPlacement {
   x: number;

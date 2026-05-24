@@ -11,7 +11,7 @@ import {
   ringVisibility,
   solidityForType,
 } from './orbit-rings-layer';
-import { AU_KM, AU_PC, KM_PC } from './astronomy-constants';
+import { AU_KM, AU_PC, KM_PC } from '../util/astronomy-constants';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import type { Planet, PlanetSystem } from './planet-system';
 
