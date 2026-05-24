@@ -1,46 +1,7 @@
 #!/usr/bin/env python3
-"""Resample the Edenhofer+ 2023 3D dust map onto a Cartesian voxel grid and
-emit it as 64 chunks for progressive client-side loading.
-
-Output format (canonical; must stay in sync with src/client/dust-loader.ts):
-
-  data/dust/
-    manifest.json          # grid params, chunk index, encoding constants
-    chunk_XXX_YYY_ZZZ.bin  # raw uint8 voxels, 128**3 = 2,097,152 bytes each
-
-Grid:
-  - 512**3 voxels total, split into 4**3 = 64 chunks of 128**3.
-  - Covers a symmetric cube [-1250, +1250] pc on each axis in heliocentric
-    equatorial (ICRS) Cartesian coordinates. Matches the frame of
-    catalog.bin, so the renderer can sample the texture using the same
-    star xyz positions without any rotation.
-  - Voxel size = 2500 / 512 ≈ 4.883 pc.
-
-Encoding:
-  Edenhofer density spans ~6 orders of magnitude (1e-7 diffuse ISM to
-  ~1e-1 dense cloud cores). Linear or log1p encoding collapses this range
-  poorly — most voxels end up at uint8=0 while dense cores saturate at
-  uint8=255. We use pure log encoding over a fixed [DENSITY_MIN,
-  DENSITY_MAX] window instead:
-
-    log_clamped = log10(clamp(d, d_min, d_max))
-    encoded     = round(255 * (log_clamped - log10(d_min)) / log10(d_max/d_min))
-    decoded     = d_min * pow(d_max/d_min, encoded/255)   # shader does this
-
-  DENSITY_MIN is well below the noise floor (~1e-7) so "empty" voxels
-  decode to a vanishingly small density that integrates to < 0.01 mag A_V
-  over any realistic sightline. DENSITY_MAX covers the 99.95th percentile
-  of real data — the few hundred voxels above it saturate to 255 but still
-  decode as "very dense" so the visual effect is preserved.
-
-Usage:
-  python3 scripts/dust/build-dust.py                 # fetch + resample real map (main flavor)
-  python3 scripts/dust/build-dust.py --synthetic     # fake pattern for dev
-  python3 scripts/dust/build-dust.py --flavor less_data_but_2kpc   # extended-range validation run
-
-The real mode needs `pip install -r scripts/requirements-dust.txt` and
-downloads ~3.2 GB via `dustmaps` on first run.
-"""
+"""Resample the Edenhofer+ 2023 3D dust map onto a Cartesian voxel grid
+and emit it as 64 chunks for progressive client-side loading. See
+scripts/dust/README.md for grid params, encoding, and CLI usage."""
 
 from __future__ import annotations
 

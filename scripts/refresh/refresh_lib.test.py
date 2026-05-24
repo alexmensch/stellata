@@ -1,16 +1,6 @@
 #!/usr/bin/env python3
-"""Unit tests for refresh_lib.
-
-No network. Uses synthetic exceptions (`TransientError`) and in-memory
-backends so the suite runs in < 1 s without astroquery / pyvo installed.
-
-Run:
-    python3 scripts/refresh_lib.test.py
-
-(The `.test.py` filename matches the project's `.test.ts` convention but
-trips Python's `-m unittest` module-path parser on the dot; invoking the
-file directly executes `unittest.main()` in the `__main__` block below.)
-"""
+"""Unit tests for refresh_lib (no network; synthetic exceptions +
+in-memory backends). Run via `python3 scripts/refresh/refresh_lib.test.py`."""
 
 from __future__ import annotations
 

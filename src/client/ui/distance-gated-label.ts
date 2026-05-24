@@ -1,17 +1,6 @@
 // Per-frame SVG label anchored to a 3D object's projected silhouette,
-// with a per-target visibility predicate that gates "is this label
-// worth showing right now?". Factored out of the heliopause label
-// (originally at heliopause.ts:217-315 before this lift); the Local
-// Group wireframe layer reuses it for the Milky Way label + per-object
-// dwarf-galaxy labels, with the predicate switched from "any orbit
-// ring visible" (heliopause) to "camera-to-object distance past
-// threshold" (Local Group / MW).
-//
-// per DRY rule 2, "schemas / structures
-// / functions that are mostly-identical share a builder" — the
-// heliopause and Local Group label families differ only in their
-// sample geometry and visibility predicate, so they share this builder
-// rather than copy-paste with attribution.
+// with a caller-supplied visibility predicate. Shared by the heliopause
+// and Local Group label families.
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';

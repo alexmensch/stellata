@@ -1,12 +1,6 @@
-// Shared open/close machinery for `.modal` elements (welcome, about,
-// credits, help). Each modal hides via `hidden` attribute, dismisses on
-// ESC, on click of any `[data-modal-dismiss]` descendant, and runs an
-// optional `beforeClose` hook (used by the welcome modal to persist its
-// "don't show again" choice).
-//
-// Returns `open` / `close` so callers can wire them onto buttons and
-// keyboard shortcuts. The keydown listener is added on open and removed
-// on close so an inactive modal isn't intercepting keystrokes.
+// Shared open/close machinery for `.modal` elements: `hidden` toggle,
+// ESC + `[data-modal-dismiss]` binding, optional `beforeClose` hook.
+// See src/client/modals/README.md.
 
 export interface ModalHandle {
   open: () => void;

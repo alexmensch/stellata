@@ -1,23 +1,6 @@
-// Molecular cloud hover provider. Sibling of star /
-// planet / Local Group / heliopause providers for the molecular-cloud
-// ellipsoid layer.
-//
-// Visibility ⇒ hoverable per hover Rule 2:
-// the provider does NOT gate on focused-host / mode / warp state.
-// `Picker.pickCloudHit` mirrors the renderer's "is this drawn?"
-// predicate — the cloud layer is attached AND its group is visible —
-// so any cloud the user can see surfaces a hover card. The provider
-// is registered in main.ts only when `stellata.cloudLayer` is non-null,
-// which is itself gated on the un-shelve toggle (currently the
-// commented-out `attachClouds(cloudCatalog)` call in main.ts).
-//
-// Rule 3 — whole-object hit surface for an extended visible object.
-// Three.js raycast against the cloud meshes naturally hits the full
-// ellipsoid silhouette (front face), so the fallback-tier hit covers
-// "anywhere on the cloud you see" without needing a separate label
-// rect. Tier is fallback so any star or planet visually atop the
-// cloud still wins its own prime hover via the cross-layer
-// disambiguator — the cloud never blocks see-through picks.
+// Molecular cloud hover provider — fallback-tier raycast against the
+// ellipsoid meshes. See ./README.md for the engine contract and UX
+// rules this provider follows.
 
 import type { Stellata } from '../stellata';
 import {

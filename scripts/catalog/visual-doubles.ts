@@ -1,11 +1,6 @@
-// Hipparcos CCDM + curated visual-double overrides. parseHipCcdm reads
-// VizieR's HIP/CCDM/MultFlag TSV and returns CCDM_ID → list of component
-// HIPs, gated on `MultFlag ∈ {C,G,O}` to drop optical chance alignments.
-// KNOWN_VISUAL_DOUBLES carries the small handful of canonical pairs that
-// the MultFlag filter mis-rejects (Polaris, ε¹ Lyr, 61 Cyg). applyDoublesFlag
-// unions both sources and delegates to catalog-pure.ts's pure helper for
-// the per-system "brightest in-catalog component, idempotent with existing
-// flags" logic.
+// Hipparcos CCDM parser plus curated visual-double overrides, feeding
+// the chart-mode wings glyph. See scripts/catalog/README.md § CCDM
+// double-star cross-match.
 import { existsSync, readFileSync } from 'node:fs';
 
 import {

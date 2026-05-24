@@ -1,33 +1,6 @@
 #!/usr/bin/env python3
 """Build the molecular cloud catalog consumed by the client renderer.
-
-Reads two committed source files under data/molecular-clouds/:
-  - zucker2020-tablea1.tsv  (326 sightlines, ~96 unique cloud names, distances)
-  - zucker2021-table1.dat   (12 famous local SF clouds with 3D bounding boxes)
-
-Emits public/clouds.json with one entry per cloud:
-
-  {
-    "name":       "Taurus",                   # display name
-    "id":         "taurus",                   # slug, also used by URL/search
-    "center":     [x, y, z],                  # ICRS heliocentric pc
-    "axes":       [a, b, c],                  # semi-axes in pc, sphere = [r,r,r]
-    "quat":       [qx, qy, qz, qw],           # rotation, identity = [0,0,0,1]
-    "source":     "Z2021T1" | "Z2020" ,       # provenance
-    "distance":   d,                          # heliocentric distance to centroid (pc)
-  }
-
-The Zucker 2021 entries are the authoritative source for the 12 clouds they
-cover: their bounding boxes are axis-aligned in galactic Cartesian, so the
-ellipsoid axes align to the galactic basis and `quat` is the GAL_TO_ICRS
-rotation. Zucker 2020 entries are aggregated to one record per unique name,
-sphere-shaped (orientation irrelevant, quat = identity), with radius
-estimated from the spread of sightlines for that cloud (or a 5 pc default
-when only one sightline exists).
-
-Idempotent — exits early if public/clouds.json is newer than this script
-and both source files. Run via `npm run build:clouds`.
-"""
+See scripts/clouds/README.md for sources, schema, and merge logic."""
 
 from __future__ import annotations
 

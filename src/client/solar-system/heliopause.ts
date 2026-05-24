@@ -1,10 +1,5 @@
-// Heliopause asymmetric-ellipsoid wireframe. Boundary dimensions and
-// apex orientation come from SCIENCE.md § Heliopause; construction
-// details in src/client/solar-system/README.md § Heliopause boundary.
-//
-// Back-face culling hides the shell when the camera is inside — by
-// design. Mesh + apex label live here; main.ts wires the SVG label
-// via createHeliopauseLabel.
+// Heliopause asymmetric-ellipsoid shell + apex SVG label. See
+// src/client/solar-system/README.md § Heliopause boundary.
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';

@@ -1,12 +1,5 @@
-// Local Group hover provider. Sibling of star /
-// planet hover providers for the Local Group wireframe layer.
-//
-// Visibility ⇒ hoverable per hover Rule 2:
-// the provider does NOT gate on focused-host / focused-star / mode
-// state. `Picker.pickLocalGroupHit` (and `LocalGroupLayer.pick`
-// underneath) mirror the renderer's "is this drawn?" predicate — chart
-// (mono) mode and the distance-fade smoothstep both encoded by
-// `group.visible`. If the wireframe is drawn, the object is hoverable.
+// Local Group hover provider — picks against the wireframe layer.
+// See ./README.md.
 
 import type { Stellata } from '../stellata';
 import {

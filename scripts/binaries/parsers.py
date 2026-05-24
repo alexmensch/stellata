@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""Stage 1 parsers + Row dataclasses for every reference catalog the
-binary pipeline reads.
-
-Each ``parse_*`` function returns a list (or dict) of plain dataclasses
-read off a fixed-width text file or a TSV / CSV. Per-row dirty data
-drops just that row; a missing required column propagates as a fatal
-error — a header rename is a misconfiguration, not data noise.
+"""Stage 1 parsers + Row dataclasses for the reference catalogs.
+Per-row dirty data drops just that row; a missing required column is fatal.
 """
 
 from __future__ import annotations

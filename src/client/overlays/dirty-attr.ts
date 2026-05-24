@@ -1,23 +1,6 @@
-// Shared dirty-track helpers for per-frame SVG attribute / textContent /
-// inline-style writes across the overlay layer (constellation-overlay,
-// disc-mask, distance-vector-overlay, focus-ring-overlay, hud-overlay,
-// poi-overlay) and chart-labels. All four helpers are pure w.r.t. caller-
-// managed state — the helper doesn't store anything; the caller keeps its
-// existing sentinel fields (struct properties, module-level lets) and
-// updates them through the return value.
-//
-// Migrate from:
-//   if (Math.abs(value - s.lastCx) >= ATTR_DIRTY_PX) {
-//     s.el.setAttribute('cx', value.toFixed(1));
-//     s.lastCx = value;
-//   }
-// To:
-//   s.lastCx = setNumAttr(s.el, 'cx', value, s.lastCx);
-//
-// Sentinel init: use NaN for `last:number` and a poison string like '\0'
-// for `last:string`. Any real value differs (NaN comparisons are always
-// false; '\0' never equals a sensible attribute/text/style value), so the
-// first write always lands through the gate.
+// Dirty-track helpers for per-frame SVG attribute / textContent /
+// inline-style writes; caller-managed sentinel state.
+// See docs/authoring-patterns.md § Sentinel-init for dirty-track.
 
 /**
  * Half a .toFixed(1) step — below this, the attribute string round-trips

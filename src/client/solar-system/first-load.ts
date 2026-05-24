@@ -1,19 +1,6 @@
-// Default first-load view. When the user lands on the
-// bare URL with no `?v=` view fragment, park the camera 5 AU from Sol
-// aimed at the galactic centre with the HUD on. The galactic-centre
-// framing puts Sgr / Sco low on the horizon and the brightest part
-// of the Milky Way bulge filling the background — a clean "you are
-// here" anchor without the visual noise of a highlighted constellation
-// asterism layered over it.
-//
-// The camera direction was hand-tuned via the share URL
-// `AgUgABxe0bUcwKA3M1hyN3JRp77d8BW_muE9PwI`. The magnitude in that
-// share landed at ~4.96 AU; we renormalise to exactly 5 AU here.
-//
-// Per the bead's URL contract, this module deliberately doesn't write
-// to the URL — `startUrlSync` seeds its frame-tracking baseline from
-// the camera state at registration time, so the user-visible URL
-// stays empty until first interaction.
+// Canonical no-URL first-load view: camera parked 5 AU from Sol aimed at
+// the galactic centre with the HUD on. See
+// src/client/solar-system/README.md § First-load default.
 
 import { applyDecodedView, type DecodedView, type IdMaps } from '../util/url-state';
 import { AU_PC } from '../util/astronomy-constants';

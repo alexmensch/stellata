@@ -1,7 +1,6 @@
-"""Shared helpers for the distance-validation harness — the regime
-constants written to vaidman-2025-supergiants.tsv's `adopted` column
-(wire format between build-vaidman-tsv.py and validate-distances.py)
-and the TSV-row iterator both consumers read with."""
+"""Shared helpers for the distance-validation harness: regime constants
+written to the TSV's `adopted` column and the TSV-row iterator both
+the builder and the validator consume."""
 
 from __future__ import annotations
 

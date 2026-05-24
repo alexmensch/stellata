@@ -1,18 +1,6 @@
-// Camera-wide timing constants shared between `stellata.ts` (the warp
-// state machine + camera-lerp consumer) and `warp-tuning.ts` (the debug
-// panel that exposes them as live-tunable knobs). Lifted to their own
-// module to break the import cycle that the tuning surface otherwise
-// introduces: `stellata.ts` imports the getter functions from
-// `warp-tuning`, while `warp-tuning` needs these constants as the
-// initial knob defaults. Reading them via `stellata.ts` left the
-// constants in the temporal dead zone at module-load time —
-// `warp-tuning`'s top-level `const knobs = { ... }` initializer ran
-// before stellata's `export const WARP_REORIENT_MS = ...` line was
-// evaluated, so the catalogue (and indeed the rest of the app) never
-// got to boot.
-//
-// Adding new camera / lerp / numeric-floor knobs: define them here,
-// re-export or import from `stellata.ts` and `warp-tuning.ts` as needed.
+// Camera-wide timing constants. Single source of truth for
+// `CAMERA_LERP_MS`, `WARP_*_MS`, `AIM_*_MS`, `OBSERVE_TRANSITION_MS`,
+// `DCAM_LOG_FLOOR_PC`, `WARP_BASE_DIR`. See src/client/camera/README.md.
 
 import * as THREE from 'three';
 

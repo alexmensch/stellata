@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/refresh/wds_xids_overrides.py — load_overrides
-parser semantics + validate_against_components orphan detection.
-
-Run: python3 scripts/refresh/wds_xids_overrides.test.py
-"""
+"""Unit tests for scripts/refresh/wds_xids_overrides.py — parser
+semantics and orphan-detection for the hand-curated overrides table."""
 
 from __future__ import annotations
 

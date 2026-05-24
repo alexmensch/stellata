@@ -28,6 +28,16 @@ across all five.
 `DCAM_LOG_FLOOR_PC`, `WARP_BASE_DIR`. Imported by every subsystem so
 phase boundaries stay aligned across controllers.
 
+The constants live in their own module specifically to break the
+import cycle between `stellata.ts` (the warp state machine + camera-
+lerp consumer) and `warp/warp-tuning.ts` (the debug-panel surface that
+exposes them as live-tunable knobs). When the constants lived on
+`stellata.ts`, `warp-tuning.ts`'s top-level `const knobs = { ... }`
+initializer ran before stellata's `export const WARP_REORIENT_MS = ...`
+line was evaluated, leaving the values in the temporal dead zone at
+module-load time — the catalogue (and the rest of the app) never got
+to boot. New camera / lerp / numeric-floor knobs land here.
+
 ## Cross-controller seams
 
 - `FocusOps` interface — `focus/focus-controller.ts` exposes this to

@@ -1,20 +1,5 @@
-// GCVS variable-star catalogue parsing. Reads gcvs5.txt (main
-// catalogue: period, max/min mags, variability type keyed by
-// designation like "R And") and crossid.txt (Hip/HD/Tyc/SAO/etc. →
-// GCVS designation). applyVariability then cross-matches every Star
-// via gaia_source_id (when bridged), HIP, then HD. Both source files
-// are pipe-delimited with trailing whitespace inside cells;
-// readPipeDelimited normalises that. Stars without a period
-// (irregular variables, SN) stay at 0/0 and don't pulse in the
-// renderer.
-//
-// The byGaia map is bridged from the canonical HIP→Gaia DR3 cross-walk
-// (data/gaia/gaia_dr3_hip_xmatch.tsv) rather than parsed from
-// crossid.txt directly — GCVS publishes only HIP/HD/Tyc/SAO/GSC IDs,
-// no Gaia DR3 source_ids. The bridge promotes gaia_source_id to
-// primary key so AT-HYG rows that resolve through the wider Gaia
-// xmatch (e.g. rows whose AT-HYG HIP cell is empty but whose
-// gaia_source_id matches a GCVS HIP via the xmatch) start matching.
+// GCVS variable-star catalogue parsing and per-Star cross-match. See
+// scripts/catalog/README.md § GCVS variability cross-match.
 import { readFileSync } from 'node:fs';
 
 import { normalizeGcvsName, parseGcvsNumber } from './catalog-pure';

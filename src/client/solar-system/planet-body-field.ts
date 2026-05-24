@@ -1,12 +1,5 @@
-// Global planet-body field: one InstancedBufferGeometry holds every
-// attached host's planet bodies (host-agnostic so per-host cost stays
-// bounded). Bodies are physical objects rendered regardless of focus;
-// gating is per-planet apparent magnitude + a per-host distance cull.
-//
-// Five materials share the geometry — three mirror the star pipeline
-// (core / disc / glow) and two are the planet-only corrupt+restore
-// pair around the orbit ring layer. See src/client/solar-system/README.md § orbit
-// ring corrupt+restore and src/client/star-pipeline/README.md § render-order table.
+// Global instanced planet-body field across every attached host. See
+// src/client/solar-system/README.md § Planet rendering.
 
 import * as THREE from 'three';
 import type { PlanetSystem } from './planet-system';

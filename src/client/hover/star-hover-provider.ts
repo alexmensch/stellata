@@ -1,11 +1,5 @@
-// Star hover provider. The first concrete `HoverProvider`
-// against the engine — extracted verbatim from the inline provider that
-// previously lived in main.ts.
-//
-// The pick path delegates to `Picker.pickStarHit`, which wraps the
-// canonical pickStar reducer and lifts its winning idx into a `HoverHit`
-// (tier + camera distance). The formatter is the pure `formatStarHover`
-// against a bound context bundle.
+// Star hover provider — picks via `Picker.pickStarHit` and formats via
+// `formatStarHover`. See ./README.md.
 
 import type { Stellata } from '../stellata';
 import { formatStarHover, type StarHoverFormatContext } from './formatters/star-hover-format';

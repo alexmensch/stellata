@@ -1,23 +1,6 @@
-// Manual-run Tier-C validator — cross-checks Stellata's catalog.bin
-// absmag and distance against SIMBAD's published values for the
-// 50k-row sample in data/simbad/simbad_sample.tsv. Build-time distance
-// regression detection is already gated by
-// `scripts/catalog/distance-regression-check.ts` (per-star factor-5
-// threshold, snapshot-pinned); this script is the deeper population
-// view — residual histograms, percentile stats, and the top-N outliers
-// for a human pass.
-//
-// PM is intentionally out of scope WHILE catalog.bin remains
-// J2000-epoch: the binary stores AT-HYG positions without PM
-// propagation, so a PM residual would compare AT-HYG's PM to SIMBAD's
-// PM rather than anything Stellata emits. Revisit if the time-scrubber epic's
-// time-scrubber design decision lands and the build starts applying
-// PM to bring positions to render epoch — `parseSimbadSampleRows`
-// already surfaces pmra / pmdec for that case.
-//
-// Run: `npm run validate:simbad`. Writes
-// `docs/validation-residuals.md` and exits non-zero when the smoke
-// thresholds in `RESIDUAL_THRESHOLDS` fire.
+// Manual-run Tier-C validator cross-checking catalog.bin absmag and
+// distance against SIMBAD's published values. Run: `npm run
+// validate:simbad`. See scripts/catalog/README.md § Validation harness.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';

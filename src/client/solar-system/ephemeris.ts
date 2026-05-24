@@ -1,20 +1,5 @@
 // Heliocentric ecliptic positions for the eight planets at any wall-clock
-// `t` (Unix-seconds). Implements the JPL Keplerian-elements approximation
-// (Standish 1992) with the cubic Jupiter–Neptune correction terms valid
-// 3000 BC – 3000 AD to ~arcminute accuracy. Source table:
-// https://ssd.jpl.nasa.gov/planets/approx_pos.html
-//
-// Why JPL Standish over the full VSOP87 series: VSOP87 gives sub-arcsec
-// accuracy ±4000 years, but planets in stellata render as billboarded
-// discs at a pixel-size floor — sub-arcminute precision is invisible at
-// any zoom we afford. Standish gives the same visual fidelity at zero
-// dependency cost (~50 lines + an 8-row element table) over a slightly
-// narrower validity window.
-//
-// Returned positions are heliocentric **ecliptic** parsecs, NOT ICRS —
-// the rotation onto ICRS happens in the caller (planet-body-field.ts)
-// via the per-host orbital-plane orientation quaternion (Sol lands in
-// the ecliptic; exoplanet hosts default to the galactic plane).
+// `t` (Unix-seconds). See src/client/solar-system/README.md § Ephemerides.
 
 import { AU_PC } from '../util/astronomy-constants';
 import { tToJDE } from './time';

@@ -1,58 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia/gaia_dr3_nss_two_body.tsv — Gaia DR3 NSS two-body orbits.
-
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
-Pulls the full `gaiadr3.nss_two_body_orbit` table — 443,205 rows of
-orbital solutions Gaia DR3 fit directly from astrometry, spectroscopy,
-or eclipses. Phase 2 Stage 4 prefers these over ORB6
-inside Gaia's observability regime (P < ~10 yr, separation < ~1").
-
-ADQL
-    SELECT source_id, nss_solution_type,
-           period, period_error,
-           t_periastron, t_periastron_error,
-           eccentricity, eccentricity_error,
-           a_thiele_innes, a_thiele_innes_error,
-           b_thiele_innes, b_thiele_innes_error,
-           f_thiele_innes, f_thiele_innes_error,
-           g_thiele_innes, g_thiele_innes_error,
-           c_thiele_innes, c_thiele_innes_error,
-           h_thiele_innes, h_thiele_innes_error,
-           inclination, inclination_error,
-           arg_periastron, arg_periastron_error,
-           mass_ratio, mass_ratio_error,
-           goodness_of_fit, significance
-    FROM gaiadr3.nss_two_body_orbit
-    ORDER BY source_id
-
-Schema notes (from live probe 2026-05-18):
-  * DR3 NSS uses Thiele-Innes constants (A, B, F, G in mas; C, H in AU
-    for AstroSpectro* rows) — NOT classical Campbell elements. The
-    helper `nss_to_canonical_elements` in Phase 2 Stage 4
-    derives (a, i, Omega, omega) from Thiele-Innes via Heintz 1978 /
-    Pourbaix algebra
-  * `inclination` and `arg_periastron` columns exist but are NULL for
-    pure-astrometric solutions (`Orbital`*); they're populated only for
-    AstroSpectroSB1 / spectroscopic-orbit rows where one is observed
-    directly.
-  * `nss_solution_type` is categorical across 12 distinct values
-    (SB1 / Orbital / EclipsingBinary / AstroSpectroSB1 / SB2 / ...).
-    Downstream consumers must route conversion logic per type.
-
-TSV columns (27) — see file docstring for `gaiadr3.nss_two_body_orbit`
-upstream documentation. All upstream column names preserved verbatim;
-empty cells in the TSV correspond to masked (NULL) values from TAP.
-
-Backend: ESA Gaia archive (default refresh_lib ESA → CDS fallback).
-
-Idempotent — exits early if the output is newer than this script. Pass
-`--force` to rebuild unconditionally.
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-gaia-nss.py
-"""
+"""Refresh data/gaia/gaia_dr3_nss_two_body.tsv — full
+gaiadr3.nss_two_body_orbit table (Thiele-Innes orbital solutions)."""
 
 from __future__ import annotations
 

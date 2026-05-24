@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for build-vaidman-tsv.py — PDF parsing and source-id join.
-No network, no PDF; all fixtures are inline string literals.
-
-Run:
-    python3 scripts/distance-validation/build-vaidman-tsv.test.py
-"""
+"""Unit tests for build-vaidman-tsv.py — PDF parsing and source-id join."""
 
 from __future__ import annotations
 

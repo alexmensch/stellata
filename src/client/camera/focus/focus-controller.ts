@@ -1,8 +1,4 @@
-// Focus FSM + focus-park lerp + pin-engage geometry. Cross-controller
-// coupling: WarpController and ObserveTransition consume `FocusOps`.
-// The frame-anchor primitive (recenterOrigin / worldOffset /
-// starLocalPosition) stays on Stellata via `FrameAnchor`.
-//
+// Focus FSM + focus-park lerp + pin-engage geometry.
 // See src/client/camera/focus/README.md.
 
 import * as THREE from 'three';

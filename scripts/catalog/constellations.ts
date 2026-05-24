@@ -1,12 +1,5 @@
-// IAU-88 constellation table + Stellarium stick-figure pipeline.
-// CONSTELLATIONS is the canonical code/name list (3-letter IAU +
-// display name); CON_INDEX is its case-insensitive reverse lookup,
-// consumed by readStars to map AT-HYG's `con` column to a uint8
-// record-layout index. buildFigureLines resolves Stellarium's
-// HIP-indexed polylines against the post-sort HIP→index map;
-// KNOWN_MISSING_HIPS lists upstream gaps that aren't a build failure
-// — every other unresolved HIP throws so data drift surfaces
-// immediately.
+// IAU-88 constellation table and Stellarium stick-figure pipeline.
+// See scripts/catalog/README.md § Stick figures from Stellarium.
 import { readFileSync } from 'node:fs';
 
 export const CONSTELLATIONS: { code: string; name: string }[] = [

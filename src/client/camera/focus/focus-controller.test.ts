@@ -1,11 +1,6 @@
-// FocusController tests. Exercise the focus FSM
-// + focus-park lerp + pin engage geometry + FocusTarget round-trip +
-// the observe-cleanup / unfocus-close-zoom branches of setFocus /
-// unfocus. The hybrid arrival-curve internals are covered by
-// arrival-curves.test.ts; star-physics formulas have their own tests
-// in star-physics.test.ts. Here we just confirm FocusController
-// routes the right context into each helper and fires the right
-// events.
+// FocusController tests — focus FSM, focus-park lerp, pin-engage
+// geometry, FocusTarget round-trip, observe-cleanup / unfocus-close-zoom
+// branches.
 
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';

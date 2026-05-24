@@ -1,8 +1,6 @@
-// Diagnostic CLI over the v6 binary catalogue: header dump, brightest /
-// dimmest spot-checks, named-star sanity rows, Gaia DR3 Apsis coverage,
-// variable-star samples. Library logic (loadCatalog / lookupByHip /
-// lookupByGaiaSourceId) lives in catalog-lookup.ts so the vitest harness
-// and other tooling don't reimplement the parse.
+// Diagnostic CLI over the v6 binary catalogue — header dump,
+// brightest/dimmest rows, named-star sanity checks, Apsis coverage,
+// variable-star samples.
 
 import { HEADER_SIZE, RECORD_SIZE } from './catalog-pure';
 import {

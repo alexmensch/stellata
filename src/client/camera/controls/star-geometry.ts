@@ -1,12 +1,6 @@
-// Pure-math star-geometry helpers extracted from Stellata.ts so the
-// angular-diameter pipeline is unit-testable and so the disc
-// formula isn't typed three times across the renderer's TypeScript path
-// (renderedSizePx, renderedDiscPxAtPeak) and the GLSL vertex shader.
-//
-// The vertex shader has its own copy of `physSizePx` (intentionally — a
-// build-time GLSL include is more complexity than a paired comment) but
-// the variability-headroom rule lives only here on the TS side; the
-// shader replicates it inline keyed off the same uniforms.
+// Pure-math star-geometry helpers (angular diameter, disc-size,
+// variability headroom). The vertex shader keeps its own copy of
+// `physSizePx`; the variability-headroom rule lives only here.
 
 // Pixel-per-radian conversion. Mirrors the shader's
 // `viewport.y / max(fovYRad, 1e-9)`. Floor on fovYRad keeps the divide

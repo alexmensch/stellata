@@ -1,8 +1,6 @@
-// Hybrid arrival profile consumed by camera-motion.ts's tickArrival
-// log-d formula. See src/client/camera/arrival/README.md § Profile for the
-// two-regime construction (linear-d outer + angular-size inner) and
-// the seam_k knob. Falls back to cubic-Hermite log-d for outbound
-// trajectories, null targetRadius, or no resolved context.
+// Hybrid arrival profile (linear-d outer + angular-size inner) with a
+// cubic-Hermite log-d fallback.
+// See src/client/camera/arrival/README.md § Profile.
 
 export interface ArrivalCurveContext {
   d0: number;

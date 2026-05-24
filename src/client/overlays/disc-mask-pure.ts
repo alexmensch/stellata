@@ -1,8 +1,5 @@
-// Pure index-selection contract for the disc-mask SVG cutout pass. Lives
-// alongside the DOM-touching factory in disc-mask.ts; isolating the
-// dedup + ordering rules here keeps them vitest-covered so a regression
-// in the fan-in across focal/companion/constellation iteration can't
-// silently drop or double-count stars.
+// Pure index-selection contract for the disc-mask SVG cutout pass.
+// See src/client/overlays/README.md § Constellation stick-figure overlay.
 
 export interface ConstellationLike {
   lines?: ReadonlyArray<ReadonlyArray<number>>;

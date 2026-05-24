@@ -1,19 +1,6 @@
-// Per-star camera/screen-geometry helpers. Extracted from stellata.ts
-// — these were a cluster of methods (renderedSizePx,
-// parkDistForStar, ...) that read `this.camera` / `this.catalog` /
-// `this.material.uniforms` / `this.filter`. Lifted here as pure
-// functions parameterised on those inputs so the integration shell
-// stops holding camera/screen math, and so the formulae are
-// unit-testable without a Three.js scene.
-//
-// Composes the lower-level primitives in `star-geometry.ts`
-// (`physSizePx`, `varEffectiveAmplitude`, `distAtFillFraction`,
-// `peakAmplitudeFactor`) and `../focus/focus-transition.ts`
-// (`parkDistance`).
-// Layer responsibilities:
-//   star-geometry.ts — pure formulae (no catalog, no uniforms).
-//   star-physics.ts  — catalog-indexed wrappers (this file).
-//   stellata.ts      — wires the per-frame uniforms and dispatches.
+// Per-star camera/screen-geometry helpers — catalog-indexed wrappers
+// over `star-geometry.ts` primitives + `../focus/focus-transition.ts`
+// `parkDistance`. See src/client/camera/controls/README.md.
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';

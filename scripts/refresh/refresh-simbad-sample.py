@@ -1,66 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/simbad/simbad_sample.tsv — stratified random 10k-star SIMBAD sample.
-
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
-Builds an independent external-authority reference set for the Phase 4
-Tier-C validator to cross-check Stellata's catalog
-against SIMBAD without paying SIMBAD-query cost per-validation-run.
-
-Sample is V-magnitude-stratified for diversity across the AT-HYG depth
-range, with a stable seed so re-runs are reproducible:
-    V <    6.0  →  1000  stars  (naked-eye bright)
-    V 6.0-9.0   →  3000  stars  (HIP-completeness regime)
-    V 9.0-11.5  →  4000  stars  (Tycho-2 completeness)
-    V 11.5-15.0 →  2000  stars  (faint Tycho-Gaia merge)
-                  -----
-                   10000 total
-
-Backend: SIMBAD TAP only (refresh_lib.simbad_backend; refresh-bailer-jones.py's
-cds-only override is the structural precedent). SIMBAD's ADQL dialect
-diverges from ESA/CDS — LIKE is disallowed on `basic.otype`, MOD() is
-supported but the `%` operator is not — so SIMBAD never sits in the
-default ESA→CDS fallback list; refresh scripts targeting SIMBAD pass
-`backends=[rl.simbad_backend()]` explicitly.
-
-TSV columns (15)
-    simbad_oid       int    — SIMBAD basic.oid (stable primary key)
-    simbad_main_id   str    — SIMBAD basic.main_id (e.g. "* alf Car")
-    hip              int|"" — Hipparcos number (from ident.id LIKE 'HIP %')
-    gaia_source_id   int|"" — Gaia DR3 source_id (from ident.id LIKE 'Gaia DR3 %')
-    ra               float  — basic.ra (deg, ICRS J2000)
-    dec              float  — basic.dec (deg, ICRS J2000)
-    plx_value        float|"" — basic.plx_value (mas)
-    plx_err          float|"" — basic.plx_err (mas)
-    pmra             float|"" — basic.pmra (mas/yr)
-    pmdec            float|"" — basic.pmdec (mas/yr)
-    v_mag            float  — allfluxes.V (mag) — preserved so validator can
-                              verify the stratification it received
-    distance_pc      float|"" — derived: 1000/plx_value when plx_value>0
-    absmag           float|"" — derived: v_mag − 5·log10(distance_pc/10)
-                              when both v_mag and distance_pc exist
-    sp_type          str|""  — basic.sp_type
-    otype            str    — basic.otype (SIMBAD hierarchical short code)
-
-Sampling — stratified MOD-then-local-random for determinism. For each
-bin: if the live population (filtered by `basic.otype` matching the
-star branch of `otypedef` and `allfluxes.V NOT NULL`) is small enough
-to fetch whole, fetch all candidates; otherwise pre-filter server-side
-with `MOD(basic.oid, K) = SEED % K` to a candidate set ~3× the bin
-target. Then `random.Random(SEED).sample(candidates, target)` locally.
-The MOD subsample is necessary because SIMBAD's largest bins (V≥9)
-hold >1 M stars — fetching whole would exceed both client memory and
-TAP MAXREC. Resulting selection is fully deterministic in (SEED, live
-SIMBAD oid distribution).
-
-Idempotent — exits early if the output is newer than this script.
-Pass `--force` to rebuild unconditionally. (No input-data file: the
-catalogue lives upstream at SIMBAD.)
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-simbad-sample.py
-"""
+"""Refresh data/simbad/simbad_sample.tsv — V-magnitude-stratified
+deterministic 50k-star SIMBAD sample used by the Tier-C validator."""
 
 from __future__ import annotations
 

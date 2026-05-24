@@ -24,6 +24,12 @@ in both navigate and observe modes.
   `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`,
   `BINARY_VIEWPORT_HALF_ANGLE_RAD`, `BINARY_MIN_DIST_FACTOR`.
 
+### star-geometry vs star-physics vs stellata.ts
+
+- `star-geometry.ts` — pure formulae (no catalog, no uniforms).
+- `star-physics.ts` — catalog-indexed wrappers around those formulae.
+- `stellata.ts` — wires per-frame uniforms and dispatches.
+
 ## Camera near plane vs controls minDistance
 
 `camera.near = 1e-10`, `controls.minDistance` (when no star is focused)

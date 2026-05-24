@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 """Stage 4 — orbital-element selection per WDS pair.
-
-Prefers Gaia NSS two-body fits inside Gaia's astrometric-detectability
-regime (P < ~3 yr OR a < 1") then falls back to ORB6 grades 1-5 (visual
-orbit) and finally grades 8-9 (spectroscopic-only). The Thiele-Innes →
-Campbell algebra (Heintz 1978 / Halbwachs+ 2023 Appendix B) is
-implemented in-repo rather than via ESA NSSTools — the dependency is
-unmaintained and the algebra is ~10 lines.
-
-Output: ``(orbit_dict, orbit_via)`` per pair via ``select_orbit``;
-``orbit_via`` in ``{gaia_nss, orb6, orb6_spectroscopic, none}``.
+Picks between Gaia NSS, ORB6 visual, and ORB6 spectroscopic orbits.
 """
 
 from __future__ import annotations

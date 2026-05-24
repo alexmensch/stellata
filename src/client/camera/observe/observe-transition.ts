@@ -1,9 +1,5 @@
-// Navigate↔observe mode-switch orchestrator. The 'unfocus' kind is
-// the navigate-mode close-zoom outbound lerp — shares state shape with
-// enter/exit but isn't an observe transition, so isActive / getProgress
-// exclude it; isAnyActive is the union used by Stellata.isCameraBusy().
-//
-// See src/client/camera/observe/README.md.
+// Navigate↔observe mode-switch orchestrator.
+// See src/client/camera/observe/README.md § ObserveTransition kinds.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';

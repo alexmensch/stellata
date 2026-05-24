@@ -1,46 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia/gaia_dr3_hip_xmatch.tsv — HIP → Gaia DR3 source_id cross-walk.
-
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
-This table is the cornerstone of the new pipeline: every WDS / GCVS / SIMBAD
-component that carries a HIP identifier resolves to a Gaia DR3 source_id via
-this committed TSV, without any position-based match.
-
-ADQL
-    SELECT
-      original_ext_source_id AS hip,
-      source_id              AS gaia_source_id,
-      angular_distance,
-      number_of_neighbours,
-      xm_flag
-    FROM gaiadr3.hipparcos2_best_neighbour
-    WHERE source_id IS NOT NULL
-    ORDER BY original_ext_source_id
-
-`gaiadr3.hipparcos2_best_neighbour` exposes the official Gaia DR3 ×
-Hipparcos-2 (van Leeuwen 2007) cross-match — 99,525 rows, all with a
-non-null source_id. Sirius / Polaris / Vega and other V ≲ 4 stars are
-absent (Gaia saturates on the brightest stars); brightness-driven gaps
-are handled downstream by Hipparcos-2-anchored fallbacks.
-
-TSV columns (5)
-    hip                  int   — Hipparcos identifier (HIP number)
-    gaia_source_id       int   — Gaia DR3 source_id
-    angular_distance     float — match separation, arcsec (6 decimals)
-    number_of_neighbours int   — ambiguity flag (1 = unique Gaia neighbour)
-    xm_flag              int   — Gaia cross-match flag (see DR3 docs)
-
-Runtime: ~30 s (single ESA Gaia TAP query, ~99k rows).
-
-Idempotent — exits early if the output is newer than this script. Pass
-`--force` to rebuild unconditionally. Backend fallback (ESA → CDS) is
-provided by refresh_lib.TapClient.
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-gaia-hip-xmatch.py
-"""
+"""Refresh data/gaia/gaia_dr3_hip_xmatch.tsv — HIP → Gaia DR3 source_id
+cross-walk from gaiadr3.hipparcos2_best_neighbour."""
 
 from __future__ import annotations
 

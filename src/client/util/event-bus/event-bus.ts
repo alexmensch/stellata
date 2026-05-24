@@ -1,10 +1,6 @@
 // Generic typed pub/sub. `M` is an event-name → payload-type map; the
-// compiler enforces handler/payload alignment per event. `on()` returns an
-// unsubscribe — Set-backed registration dedupes identical handlers and
-// makes mid-emit unsubscribe well-defined (the removed handler is skipped
-// if not yet visited). The `Record<string, unknown>` constraint exists
-// to forbid accidental non-object payload maps; entries typed as `void`
-// (no-payload events) satisfy it because `void` is assignable to `unknown`.
+// compiler enforces handler/payload alignment per event.
+// See src/client/util/event-bus/README.md.
 
 export class EventBus<M extends Record<string, unknown>> {
   private handlers = new Map<keyof M, Set<(payload: never) => void>>();

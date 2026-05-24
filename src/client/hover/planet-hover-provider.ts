@@ -1,18 +1,5 @@
-// Planet hover provider. Sibling of star-hover-provider
-// for Sol's planet layer, ready to extend to any future exoplanet host
-// without touching the engine.
-//
-// Visibility ⇒ hoverable per hover Rule 2:
-// the provider does NOT gate on focus state. The picker walks every
-// attached host's planets and the shader's own kill condition
-// (appMag > maxAppMag + 0.5) is the only visibility predicate. v1 only
-// attaches Sol, so the picker effectively walks Sol's planets; bk5
-// adds further hosts without touching this provider.
-//
-// HoverHit carries an optional `hostStarIdx` so the formatter can
-// resolve `(hostStarIdx, planetIdx)` back to a Planet record without
-// re-walking the field's hosts map. The star provider leaves the slot
-// unset; the disambiguator ignores it.
+// Planet hover provider — picks across every attached host's planets.
+// See ./README.md.
 
 import type { Stellata } from '../stellata';
 import {

@@ -1,13 +1,5 @@
-// Planet hover formatter. Layout (4 lines max):
-//   Line 1 — planet name
-//   Line 2 — current host→planet distance · apparent V-band magnitude
-//   Line 3 — Period <years>
-//   Line 4 — Radius <kilometres>
-//
-// Pure: takes only its inputs as a context bundle. host→planet
-// distance and apparent magnitude come in as functions so the
-// formatter doesn't need a Three.js camera or a live PlanetBodyField.
-// `fmtDistAuto` switches to AU below 0.01 pc for sub-Oort scales.
+// Planet hover formatter — name, host→planet distance · Vmag, period,
+// radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
 import type { Planet } from '../../solar-system/planet-system';

@@ -1,11 +1,6 @@
 // Aim-slerp state machines: rotate camera so a world point lands at
-// view centre. Navigate orbits around controls.target at constant
-// radius; observe holds camera position and slerps quaternion in place.
-//
-// Each branch disables its host input controller for the duration and
-// re-enables on natural completion. `cancel()` is the supersession path
-// (warp.start / observe-exit): nullifies state but does NOT re-enable,
-// because the caller is moving control elsewhere.
+// view centre. See src/client/camera/controls/README.md § Aim
+// controller.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';

@@ -1,10 +1,6 @@
-// Shared camera-arrival primitive. Every park-arrival in the renderer
-// — focus-park (star, cloud), warp Fly phase, navigate-mode unfocus —
-// constructs an `ArrivalState` and ticks it through `tickArrival`, so
-// the deceleration shape lives in exactly one place. See
-// `src/client/camera/arrival/README.md` for the math and the inventory of arrival
-// sites. Warp Phase 3 stays inline by design (it's an observe-mode
-// handover, not a park-arrival).
+// Shared camera-arrival primitive. Every park-arrival site constructs
+// an `ArrivalState` and ticks it through `tickArrival`.
+// See src/client/camera/arrival/README.md.
 
 import * as THREE from 'three';
 import { cubicHermite } from './arrival-curves';

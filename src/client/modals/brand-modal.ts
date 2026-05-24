@@ -1,11 +1,5 @@
 // Brand-box info modal (About + Credits tabs) plus the Share affordance.
-// Reuses the `.modal` markup and styling from the welcome modal — only
-// difference is dismissal isn't sticky (these are user-initiated, so no
-// localStorage opt-out). About and Credits share one modal element with two
-// panes toggled by a tab bar in the title row; opening from the brand box
-// always resets to the About tab. Share copies window.location.href to the
-// clipboard and flashes the trailing glyph; the URL already encodes the full
-// view via url-state.ts.
+// See src/client/modals/README.md.
 
 import { bindModalDismissal } from './modal-dismiss';
 

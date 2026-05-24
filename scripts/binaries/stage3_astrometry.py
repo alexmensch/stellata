@@ -1,16 +1,6 @@
 #!/usr/bin/env python3
-"""Stage 3 — attach the best astrometric measurement to each resolved
-component.
-
-Routes between Gaia DR3 5p, Gaia NSS-systemic, and Hipparcos-2 long-
-baseline solutions per the rules in ``ComponentAstrometry.via``:
-
-* ``gaia_nss_systemic`` — source has NSS two-body AND 5p flagged
-  unreliable.
-* ``hip2_long_baseline`` — close pair (min ρ ≤ 5") AND |Δpm| > 50 mas/yr
-  between Gaia and HIP2.
-* ``gaia_5p`` — default.
-* ``unresolved`` — Stage 2 left source_id None.
+"""Stage 3 — attach the best astrometric measurement per component.
+Routes between Gaia 5p, Gaia NSS-systemic, and HIP2 long-baseline.
 """
 
 from __future__ import annotations

@@ -1,10 +1,5 @@
-// Always-on planet name labels for the focused host's PlanetSystem.
-// Hidden in chart mode (chart-mode owns its own planet glyphs) and
-// during warp (parent #overlay SVG hides via body.warping CSS).
-//
-// Reads cached local-frame positions from
-// Stellata.getFocusedPlanetLocalPositions() so the labels stay in
-// sync with the body-mesh instance positions.
+// Always-on planet-name SVG labels for the focused host's PlanetSystem.
+// Hidden in chart mode and during warp.
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';

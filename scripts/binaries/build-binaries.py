@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
-"""Orchestration shell for the WDS → Gaia source-ID binary-system pipeline.
-
-Reads WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS, 5p
-astrometry) + SIMBAD WDS xids; writes ``data/binaries/multiples.tsv``
-(two rows per kept physical pair) plus
-``data/gaia/gaia_astrometry_source_id_request.tsv`` (the deduped
-source_id list the Gaia astrometry refresh script reads). Stage logic
-lives in sibling modules ``parsers``, ``indices``, ``stage2_resolve``,
-``stage3_astrometry``, ``stage4_orbits``, ``stage5_optical``,
-``stage6_multiples``, ``stage7_counts``.
-
-Run via ``npm run build:binaries`` (or ``python3
-scripts/binaries/build-binaries.py``). Idempotent against
-``data/binaries/multiples.tsv``; pass ``--force`` to ignore the mtime
-check. See ``scripts/README.md`` § Binary system pipeline for the
-full architecture.
+"""Orchestration shell for the WDS → Gaia binary-system pipeline.
+Wires the per-stage modules into ``npm run build:binaries``.
 """
 
 from __future__ import annotations

@@ -1,12 +1,6 @@
-// WarpController tests. The 3-phase FSM is the
-// focus: we exercise the reorient → fly → post-arrival progression,
-// the four source/dest variants the bead enumerates (star→star,
-// star→cloud, cloud→star, observe→observe), the mid-Fly recentre
-// trigger, skipWarp during each phase, the coincident-source bail,
-// the no-focus bail, and the per-phase getWarpPhase / getWarpInfo
-// outputs. Hybrid arrival curve internals are covered by
-// arrival-curves.test.ts — here we just confirm WarpController hands
-// the right context (`d0`, `dEnd`, `targetRadius`) to that helper.
+// WarpController tests — 3-phase FSM progression, four source/dest
+// variants, mid-Fly recentre, skip / coincident-source / no-focus
+// bails, per-phase getWarpPhase / getWarpInfo outputs.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';

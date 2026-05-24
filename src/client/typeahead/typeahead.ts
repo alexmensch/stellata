@@ -1,12 +1,5 @@
-// Generic typeahead dropdown. Ports the behaviour of the prior
-// `SearchBox` class in `search.ts` and the closure-bag binding in
-// `constellation-typeahead.ts` — both were parallel implementations
-// of the same UI primitive (focus/blur lifecycle, deferred hide,
-// arrow-nav with wraparound, mousedown picking, reverse-sync of the
-// displayed name).
-//
-// Pure helpers live in `typeahead-util.ts` (applyHoverClass,
-// TYPEAHEAD_MAX_RESULTS) — this file is the DOM glue.
+// Generic typeahead dropdown (DOM glue; pure helpers in `typeahead-util.ts`).
+// See src/client/typeahead/README.md.
 
 import { applyHoverClass } from './typeahead-util';
 import { escapeHtml } from '../ui/dom-util';

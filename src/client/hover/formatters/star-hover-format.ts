@@ -1,16 +1,5 @@
-// Star hover formatter. Port of the prior inline
-// `describeStarDetailed` in main.ts.
-//
-// Line 1 is the star name (falling back through proper name → Bayer →
-// Flamsteed → HIP/HD/HR/Gl → "Unnamed #idx"). Subsequent lines
-// progressively disclose: constellation + distance, full spectral
-// classification (preserving composite/peculiar markers), and
-// variability info if any.
-//
-// Pure: takes only its inputs as a context bundle, calls no DOM or
-// scene APIs. The unit-bound `fmtDist` it calls reads module-level
-// state from distance-util — set the unit explicitly in tests via
-// `setUnit('pc')` to keep golden output stable.
+// Star hover formatter — name (tier-ordered fallback), constellation +
+// distance, spectral class, variability. See ./README.md.
 
 import { fmtDist } from '../../ui/distance-util';
 import type { HoverPayload } from '../hover-types';

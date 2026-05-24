@@ -1,7 +1,6 @@
-// Phase 4 tier-A regression-prevention harness. Drives per-row assertions
-// over scripts/catalog/known-stars.tsv against public/catalog.bin (via the
-// catalog-lookup library) and data/binaries/multiples.tsv. Authoring rules
-// + tolerances are documented in known-stars.tsv's header block.
+// Tier-A regression harness driving per-row assertions over
+// known-stars.tsv against public/catalog.bin and
+// data/binaries/multiples.tsv.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';

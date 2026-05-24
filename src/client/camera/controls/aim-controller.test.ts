@@ -1,11 +1,5 @@
-// AimController tests.
-//
-// Covers: slerp lifecycle (start → tick → land), supersession via
-// cancel(), dispose tear-down, navigate vs observe branches. The two
-// numeric facts the bead pins via toBe(N) (per stellata-test-coverage-
-// discipline) are: the AIM_T_MIN_MS floor on `aimDurationMs(0)`, and the
-// 2·acos(|q0·q1|) geodesic-angle formula that drives the observe-branch
-// duration.
+// AimController tests — slerp lifecycle, cancel(), dispose, navigate vs
+// observe branches.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';

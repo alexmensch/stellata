@@ -1,11 +1,6 @@
-// Hand-written runtime wrapper around the generated LUT data
-// (`blackbody-lut-data.ts`). Re-exports the bytes + constants and owns
-// the three.js DataTexture construction so the consumer in stellata.ts
-// (and any future caller) only needs one import.
-//
-// The data sibling is regenerated wholesale by `npm run build:lut`;
-// keep all hand-written code in THIS file so the generator's overwrite
-// never clobbers it.
+// Hand-written runtime wrapper around `blackbody-lut-data.ts`:
+// re-exports the bytes/constants and owns the DataTexture construction.
+// See src/client/star-pipeline/README.md.
 
 import * as THREE from 'three';
 import { BV_MAX, BV_MIN, LUT_BYTES, LUT_SIZE } from './blackbody-lut-data';

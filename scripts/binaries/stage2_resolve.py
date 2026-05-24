@@ -1,16 +1,6 @@
 #!/usr/bin/env python3
 """Stage 2 — WDS-component → Gaia DR3 ``source_id`` resolution cascade.
-
-Per ``RESOLVE_VIA_VALUES`` priority: ``orb6_hip`` → ``athyg_gaia_native``
-→ ``simbad_xid`` → ``ccdm_hip`` → ``position_pm`` / ``position_nopm``
-(future tiers; placeholder names). Each branch is a sibling
-``resolve_via_*`` function; ``resolve_all_pairs`` wires them together
-and ``propagate_within_system`` smears each binding across sibling
-pair rows.
-
-Stage 2's output (the per-component resolution + source_id) feeds
-Stages 3-7. ``write_astrometry_request`` emits the deduped source_id
-list that ``scripts/refresh/refresh-gaia-astrometry.py`` consumes.
+See ``scripts/binaries/README.md`` § Stage 2 for the cascade priority.
 """
 
 from __future__ import annotations

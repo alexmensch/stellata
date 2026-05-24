@@ -1,10 +1,6 @@
-// AT-HYG CSV reader + Bailer-Jones / LMC distance overrides. The Star
-// dataclass is the in-memory record shape every other parser in
-// build-catalog reads or mutates (variability cross-match, doubles
-// flag, name table, search index, binary writer). readStars produces
-// it from AT-HYG v3.3 with per-row Bailer-Jones DR3 and LMC kinematic
-// distance overrides applied; the override math itself lives in
-// catalog-pure.ts.
+// AT-HYG CSV reader applying per-row Bailer-Jones and LMC distance
+// overrides; produces the in-memory Star records every downstream
+// builder step consumes. See scripts/catalog/README.md.
 import { createReadStream } from 'node:fs';
 import { parse } from 'csv-parse';
 
