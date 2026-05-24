@@ -536,6 +536,21 @@ export function promoteCompanions(
             z: existingStars[primaryCatalogIdx].z,
           }
         : null;
+
+      // HIP inheritance gate. The multiples.tsv carries the primary's
+      // HIP on both component rows when AT-HYG had a single entry for
+      // the system (Sirius A and B both list HIP 32349 — Hipparcos
+      // resolved the pair as one star). Letting the companion adopt
+      // that HIP collides with the primary in every HIP-keyed lookup:
+      // url-state's refFromIndex encodes by HIP, and resolveStarRef
+      // decodes via a first-wins map, so a shared link or page reload
+      // collapses both records onto the primary. Set hip=null when
+      // the row's HIP equals the primary row's HIP — Hipparcos owns
+      // that identifier for the brighter component.
+      const inheritedHip = cursor.primary !== null
+        && row.hip !== null && row.hip > 0
+        && cursor.primary.hip === row.hip;
+      const companionHip = inheritedHip ? null : row.hip;
       const position = resolvePosition(row, cursor.primary, anchor);
       if (position === null) {
         stats.droppedNoPosition++;
@@ -562,7 +577,7 @@ export function promoteCompanions(
         flags,
         proper: properName,
         bayer: null,
-        hip: row.hip,
+        hip: companionHip,
         hd: null,
         hr: null,
         flam: null,

@@ -286,6 +286,10 @@ describe('promoteCompanions', () => {
     expect(b.gaiaSourceId).toBe('2947050466531873024');
     expect(b.absmag).toBeCloseTo(11.36, 4);
     expect(b.proper).toBe('Sirius B');
+    // HIP must NOT be inherited — Hipparcos resolved Sirius as one
+    // star, so HIP 32349 belongs to A. Sharing it across A and B
+    // collapses both records in URL-state's HIP-keyed encoding.
+    expect(b.hip).toBeNull();
     expect(b.flags & FLAG_BINARY_COMPANION_ONLY).toBeTruthy();
     expect(b.flags & FLAG_HAS_NAME).toBeTruthy();
     // White dwarf parsing: classifyFromSimbad("DA1.9") → classIdx=8 (the
