@@ -253,7 +253,7 @@ describe('promoteCompanions', () => {
       multiplesRow({
         systemId: '06451-1643-AB', comp: 'A',
         hip: 32349, gaiaSourceId: null,
-        x_pc: -0.494, y_pc: 2.477, z_pc: -0.758, distPc: 2.637,
+        x_pc: -0.494399, y_pc: 2.476801, z_pc: -0.758367, distPc: 2.637,
         absmag: 1.45, ci: 0.01, spect: 'A0mA1Va',
         name: 'Sirius',
         source: 'athyg', astrometryVia: 'hip2_long_baseline',
@@ -265,7 +265,7 @@ describe('promoteCompanions', () => {
       multiplesRow({
         systemId: '06451-1643-AB', comp: 'B',
         hip: 32349, gaiaSourceId: '2947050466531873024',
-        x_pc: -0.494, y_pc: 2.477, z_pc: -0.758, distPc: 2.637,
+        x_pc: -0.494399, y_pc: 2.476801, z_pc: -0.758367, distPc: 2.637,
         absmag: 1.45, ci: 0.01, spect: 'DA1.9',
         name: 'Sirius',
         source: 'athyg', astrometryVia: 'hip2_long_baseline',
@@ -344,6 +344,32 @@ describe('promoteCompanions', () => {
     const sep = Math.sqrt(dx * dx + dy * dy + dz * dz);
     expect(sep).toBeGreaterThan(0);
     expect(sep).toBeLessThan(1e-3);
+  });
+
+  it("anchors the tangent projection on the EXISTING catalog star, not the multiples.tsv primary row", () => {
+    // Pipeline-precision gap: AT-HYG truncates xyz to ~3 sig figs
+    // (-0.494, 2.477, -0.758), the binaries pipeline keeps 6 from
+    // HIP2 (-0.494399, 2.476801, -0.758367). Their delta (~100 AU
+    // for Sirius) must NOT leak into the companion's offset from the
+    // existing primary record.
+    const rows = siriusRows();
+    expect(rows[0].x_pc).toBe(-0.494399);  // multiples.tsv primary
+    expect(sirius_a_existing.x).toBeCloseTo(-0.494, 3);  // catalog primary
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing]);
+    expect(newStars).toHaveLength(1);
+    const b = newStars[0];
+    // Sep+PA at 11.1″ × 2.637 pc / 206265 ≈ 1.42e-4 pc ≈ 29 AU. The
+    // companion must land within ~one sep_arcsec of the primary's
+    // CATALOG xyz, not anywhere near the pipeline-precision gap.
+    const dx = b.x - sirius_a_existing.x;
+    const dy = b.y - sirius_a_existing.y;
+    const dz = b.z - sirius_a_existing.z;
+    const sep = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    expect(sep).toBeLessThan(2e-4);
+    // And distinctly NOT at the multiples.tsv primary row's xyz —
+    // would be the case if we'd anchored on the wrong source.
+    const dxRow = b.x - rows[0].x_pc!;
+    expect(Math.abs(dxRow)).toBeGreaterThan(1e-5);
   });
 
   it('projects from sep+PA when the secondary shares xyz with the primary (shared-HIP case)', () => {

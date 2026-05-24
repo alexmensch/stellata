@@ -382,9 +382,25 @@ export function imputeCompanionAbsmag(
   return null;
 }
 
+/** Anchor xyz the sep+PA projection should orbit around. When the
+ *  companion's primary already has a catalog.bin record, the existing
+ *  star's xyz is the authoritative anchor — AT-HYG and the binaries
+ *  pipeline emit positions at different precisions (AT-HYG truncates to
+ *  3–4 sig figs, the binaries pipeline keeps 6 from HIP2), so
+ *  projecting from the multiples.tsv primary row would offset the
+ *  companion by the pipeline-precision gap (~100 AU for Sirius)
+ *  instead of just the published sep+PA.
+ */
+export interface ProjectionAnchor {
+  x: number;
+  y: number;
+  z: number;
+}
+
 function resolvePosition(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
+  anchor: ProjectionAnchor | null,
 ): CompanionPlacement | null {
   const ownAstrometry =
     row.astrometryVia !== 'system_inherited'
@@ -396,9 +412,8 @@ function resolvePosition(
   // even when astrometry_via reads "hip2_long_baseline" or similar —
   // the tag is the SOURCE of the astrometry, not whether the
   // secondary got its own per-component fit. Detect collocation by
-  // exact xyz equality with the primary and fall through to the
-  // sep+PA tangent projection so the companion lands at a visually
-  // distinct point.
+  // exact xyz equality with the primary's multiples row and fall
+  // through to the sep+PA tangent projection.
   const collocatedWithPrimary =
     ownAstrometry
     && primary !== null
@@ -413,17 +428,20 @@ function resolvePosition(
       distPc: row.distPc as number,
     };
   }
-  if (primary === null
-      || primary.x_pc === null || primary.y_pc === null || primary.z_pc === null) {
+  // Tangent projection branch. Prefer the existing catalog anchor when
+  // one was supplied (primary already in catalog.bin); otherwise fall
+  // back to the multiples.tsv primary row's xyz.
+  let anchorX: number, anchorY: number, anchorZ: number;
+  if (anchor !== null) {
+    anchorX = anchor.x; anchorY = anchor.y; anchorZ = anchor.z;
+  } else if (primary !== null
+      && primary.x_pc !== null && primary.y_pc !== null && primary.z_pc !== null) {
+    anchorX = primary.x_pc; anchorY = primary.y_pc; anchorZ = primary.z_pc;
+  } else {
     return null;
   }
-  // Tangent-plane projection from primary + sep + PA. sep + PA are
-  // pair-wide and populated on every pair row by Stage 6.
   if (row.sepArcsec === null || row.paDeg === null) return null;
-  return projectFromSepPa(
-    primary.x_pc, primary.y_pc, primary.z_pc,
-    row.sepArcsec, row.paDeg,
-  );
+  return projectFromSepPa(anchorX, anchorY, anchorZ, row.sepArcsec, row.paDeg);
 }
 
 // Spectral inheritance for a promoted companion. The row's own
@@ -504,7 +522,21 @@ export function promoteCompanions(
         continue;
       }
 
-      const position = resolvePosition(row, cursor.primary);
+      // If the primary already lives in catalog.bin, anchor the sep+PA
+      // projection on that existing record's xyz rather than the
+      // multiples.tsv row's xyz — keeps the companion physically close
+      // to its visual parent regardless of pipeline-precision gaps.
+      const primaryCatalogIdx = cursor.primary !== null
+        ? findExisting(cursor.primary, existing)
+        : null;
+      const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
+        ? {
+            x: existingStars[primaryCatalogIdx].x,
+            y: existingStars[primaryCatalogIdx].y,
+            z: existingStars[primaryCatalogIdx].z,
+          }
+        : null;
+      const position = resolvePosition(row, cursor.primary, anchor);
       if (position === null) {
         stats.droppedNoPosition++;
         continue;

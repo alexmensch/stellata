@@ -75,21 +75,21 @@
     },
     {
       "id": "gaia:4468305823820330112",
-      "finalDist": 117.653,
+      "finalDist": 117.053,
       "simbadDist": 2199.736,
       "simbadMainId": "IRAS 18055+0213",
-      "logRatio": -1.272
+      "logRatio": -1.274
     },
     {
       "id": "gaia:517650628413515264",
-      "finalDist": 45.29,
+      "finalDist": 45.248,
       "simbadDist": 357.526,
       "simbadMainId": "HD  15149",
-      "logRatio": -0.897
+      "logRatio": -0.898
     },
     {
       "id": "gaia:6858313115237732224",
-      "finalDist": 19.071,
+      "finalDist": 19.056,
       "simbadDist": 858.885,
       "simbadMainId": "GSC 06339-00363",
       "logRatio": -1.654
