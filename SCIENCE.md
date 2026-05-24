@@ -1141,14 +1141,35 @@ and the renderer's zoom-fit code already guards on
 `companion ≥ 0`.
 
 The full WDS+ORB6 pipeline above (multiples.tsv) is the source of
-truth for per-system orbital geometry; the catalog-side pass is a
-visual-aid bit for chart mode.
+truth for per-system orbital geometry. The catalog-side passes
+consume it in two complementary ways:
+
+1. **Companion promotion.** `scripts/catalog/companion-promotion.ts`
+   reads multiples.tsv and promotes the secondary of every physical
+   pair whose identifier isn't already in AT-HYG into a first-class
+   catalog.bin record. Position comes from the row's own Gaia 5p
+   astrometry when available, otherwise from a sky-plane tangent
+   projection of the primary's xyz using the published WDS sep + PA;
+   absmag is imputed from the primary's AT-HYG absmag plus the WDS
+   Δmag when the row inherits its parent's photometry. Promoted
+   companions ride catalog.bin with `FLAG_BINARY_COMPANION_ONLY`
+   set; the renderer / picker / hover / focus stack picks them up
+   with zero code change.
+
+2. **Runtime artifact.** `scripts/binaries/build-runtime-binaries.py`
+   emits `public/binaries.bin` — one record per kept physical pair,
+   carrying Kepler elements (when known) plus the sep+PA the
+   `BinaryOrbitField` uses for per-frame orbital evaluation.
+   `public/catalog-row-index-map.json` joins the runtime binary's
+   primary/secondary indices back to catalog.bin record indices.
 
 Implementation: `scripts/binaries/build-binaries.py` for the WDS+ORB6
 pipeline (engineer walk-through in `scripts/binaries/README.md`);
-`scripts/catalog/build-catalog.ts` + `visual-doubles.ts` for the
-catalog-side passes (see `scripts/README.md` § Geometric binary
-inference and § TDSC double-star cross-match for per-pass detail).
+`scripts/binaries/build-runtime-binaries.py` for the runtime artifact;
+`scripts/catalog/build-catalog.ts` + `visual-doubles.ts` +
+`companion-promotion.ts` for the catalog-side passes (see
+`scripts/README.md` § Geometric binary inference and § TDSC double-
+star cross-match for per-pass detail).
 
 ## Constellation stick figures
 

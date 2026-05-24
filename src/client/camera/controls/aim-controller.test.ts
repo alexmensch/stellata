@@ -1,4 +1,4 @@
-// AimController tests (stellata-9mm.194.4).
+// AimController tests.
 //
 // Covers: slerp lifecycle (start → tick → land), supersession via
 // cancel(), dispose tear-down, navigate vs observe branches. The two

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 
-// Pure-algebra regression for stellata-a8w (PR #23). The fix is:
+// Pure-algebra regression. The fix is:
 //
 //   camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion);
 //
@@ -13,11 +13,11 @@ import * as THREE from 'three';
 // accumulated in observe gets rolled back through the horizontal plane
 // on exit.
 //
-// 9mm.29 extracts this into alignCameraUpToQuaternion() and applies it
+// extracts this into alignCameraUpToQuaternion() and applies it
 // on all three observe-exit paths; this test pins the underlying
 // algebra so a future quaternion convention change can't silently
 // break it.
-describe('camera-up alignment (a8w / 9mm.29)', () => {
+describe('camera-up alignment (a8w)', () => {
   it('aligns camera.up with the camera-local +Y basis vector', () => {
     // Pitch 30° up so the camera is no longer looking flat.
     const quat = new THREE.Quaternion().setFromAxisAngle(

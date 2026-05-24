@@ -5,7 +5,7 @@ import {
   parkDistance,
   tickFocusLerp,
 } from './focus-transition';
-import { AU_PC, R_SUN_PC } from '../../solar-system/astronomy-constants';
+import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import {
   AIM_T_MAX_MS,
   CAMERA_LERP_MS,
@@ -13,7 +13,7 @@ import {
   WARP_REORIENT_MS,
 } from '../../stellata';
 
-describe('camera-lerp duration consolidation (r9q.2)', () => {
+describe('camera-lerp duration consolidation)', () => {
   it('routes AIM_T_MAX_MS / FOCUS_LERP_MS through CAMERA_LERP_MS', () => {
     expect(CAMERA_LERP_MS).toBe(2000);
     expect(AIM_T_MAX_MS).toBe(CAMERA_LERP_MS);

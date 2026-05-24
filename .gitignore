@@ -9,10 +9,12 @@ coverage/
 
 # Generated catalog artifacts (regenerated from source CSV)
 public/catalog.bin
+public/catalog-row-index-map.json
 public/constellations.json
 public/search-index.json
 public/clouds.json
 public/local-group.json
+public/binaries.bin
 
 # Mirror of data/dust/ — the canonical LFS-tracked copy lives in data/dust/;
 # scripts/dust/build-dust.py copies chunks here so Vite's publicDir serves them.

@@ -8,7 +8,7 @@
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { AU_PC } from './astronomy-constants';
+import { AU_PC } from '../util/astronomy-constants';
 import { LABEL_OFFSET_PX } from './planet-labels';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import heliopauseVert from './heliopause.vert.glsl?raw';

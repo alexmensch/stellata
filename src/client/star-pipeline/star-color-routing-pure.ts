@@ -1,5 +1,5 @@
 // Pure TS routing helper for the star-colour LUT input. Mirrors the
-// six-tier priority chain documented in stellata-zsr.4: Apsis-direct
+// six-tier priority chain: Apsis-direct
 // (gspphot, then gspspec) wins over Ballesteros(B-V); Ballesteros falls
 // back to spectral-class T_TABLE, then white-dwarf Sion Teff, then a
 // solar Teff floor.

@@ -12,7 +12,7 @@ import {
   type IdMaps,
 } from './url-state';
 import { DEFAULT_FILTER, DEFAULT_FOV, type Stellata } from '../../stellata';
-import { AU_PC } from '../../solar-system/astronomy-constants';
+import { AU_PC } from '../astronomy-constants';
 
 // Round-trips the view through the wire format and returns the decoded
 // view + version. Anything the encoder omits (e.g. default values) reads
@@ -116,7 +116,7 @@ describe('url-state', () => {
     });
 
     it('round-trips worldOffset alongside small local-frame cam/tgt', () => {
-      // The close-orbit unfocus case (stellata-a7d.2.11): worldOffset
+      // The close-orbit unfocus case: worldOffset
       // sits at a far-from-Sol focal star, cam/tgt are sub-µpc local
       // values. Float32 preserves both magnitudes cleanly when stored
       // in their natural frames (worldOffset absolute, cam/tgt local),
@@ -137,7 +137,7 @@ describe('url-state', () => {
       expect(out.cam![2]).toBeCloseTo(3.95e-5, 9);
     });
 
-    // 9mm.61: guards the architectural claim from the encoder design
+    //: guards the architectural claim from the encoder design
     // comment that "Float32 ULP at megaparsec absolute scale is ~10⁻²
     // pc — invisible in any view because the user-visible pose is the
     // cam/tgt offset within the local frame, and that's encoded at full
@@ -962,7 +962,7 @@ describe('url-state', () => {
 
   describe('bit-21 t (Float64 wall-clock)', () => {
     // The `t` field is wired in v2/v3 but never emitted by
-    // `currentStateOf` until the time-scrubber epic stellata-nmu
+    // `currentStateOf` until the time-scrubber
     // flips on emission (gated on isLive). Pin the round-trip path
     // now so a regression in float64 LE write/read won't surface
     // only at nmu's first emission.
@@ -979,7 +979,7 @@ describe('url-state', () => {
       // 4 bytes — one more than v2's flat u24. The bead's design
       // comment calls this out explicitly: "bit 21 (t) is the only
       // field that costs an extra byte vs u24, and it doesn't emit
-      // yet (gated on the time-scrubber epic stellata-nmu)".
+      // yet (gated on the time-scrubber)".
       const blob = encodeBlob({ t: 0 });
       expect(blobBytes(blob)).toBe(13);
     });

@@ -15,6 +15,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 from parsers import AthygRow, SimbadWdsXid, WdsPair  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
@@ -26,6 +27,7 @@ from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import OrbitElements  # noqa: E402
 from stage5_optical import OpticalClassification  # noqa: E402
 from mass_estimate import mass_ratio_from_components  # noqa: E402
+from astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR  # noqa: E402
 
 
 # ─── Stage 6: multiples.tsv emit ─────────────────────────────────────
@@ -44,11 +46,41 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "absmag", "ci", "spect", "name",
     "source", "regime",
     "resolve_via", "astrometry_via", "orbit_via", "spect_via",
+    "photometry_via",
     "orbit_role",
     "P_days", "T_jd", "e", "a_AU",
     "i_rad", "omega_rad", "Omega_rad",
     "q", "dist_pc",
+    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag",
 )
+
+
+def wds_dmag(mag_pri: float | None, mag_sec: float | None) -> float | None:
+    """``mag_sec − mag_pri`` from a WDS pair row, or ``None`` when
+    either magnitude is missing. Survives intact through the V/absolute-
+    mag transform — both components sit at the same distance, so an
+    apparent Δmag equals the absolute Δmag. Companion promotion uses
+    this to impute the secondary's absmag when the row inherits the
+    primary's AT-HYG absmag."""
+    if mag_pri is None or mag_sec is None:
+        return None
+    return mag_sec - mag_pri
+
+
+# WDS publishes ``date_last`` as a 4-digit year of the last reported
+# observation. Convert to Julian Date treating the year as a Julian-year
+# epoch (start of that calendar year) — sub-day precision is irrelevant
+# because the sep/PA columns drive a static placement, not a time-
+# resolved propagation.
+
+
+def wds_year_to_jd(year: int | None) -> float | None:
+    """Convert a WDS ``date_last`` 4-digit year integer to JD. ``None``
+    passes through so a row without an observation date keeps an empty
+    epoch cell."""
+    if year is None:
+        return None
+    return J2000_JD + (float(year) - 2000.0) * DAYS_PER_JULIAN_YEAR
 
 
 # ``spect_via`` provenance tags for the per-component spectral column.
@@ -60,6 +92,22 @@ SPECT_VIA_ATHYG = "athyg"
 SPECT_VIA_NONE = "none"
 SPECT_VIA_VALUES: tuple[str, ...] = (
     SPECT_VIA_SIMBAD, SPECT_VIA_ATHYG, SPECT_VIA_NONE,
+)
+
+
+# ``photometry_via`` provenance for the per-component absmag + ci
+# columns. ``athyg_own`` means the component's OWN AT-HYG row supplied
+# the photometry; ``athyg_system_inherited`` means the AT-HYG row that
+# answered is shared with the system primary (Hipparcos resolved the
+# system as one star; both component rows return the same AT-HYG row
+# from _athyg_row_for_component). ``none`` means no AT-HYG row at all —
+# absmag and ci are empty. Companion promotion uses this tag instead
+# of a float-equality heuristic to detect the inherited-photometry case.
+PHOTOMETRY_VIA_OWN = "athyg_own"
+PHOTOMETRY_VIA_SYSTEM_INHERITED = "athyg_system_inherited"
+PHOTOMETRY_VIA_NONE = "none"
+PHOTOMETRY_VIA_VALUES: tuple[str, ...] = (
+    PHOTOMETRY_VIA_OWN, PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_NONE,
 )
 
 
@@ -125,6 +173,7 @@ class MultiplesRow:
     astrometry_via: str
     orbit_via: str
     spect_via: str         # "simbad" / "athyg" / "none"
+    photometry_via: str    # "athyg_own" / "athyg_system_inherited" / "none"
     orbit_role: str        # "primary" / "secondary"
     P_days: float | None
     T_jd: float | None
@@ -135,6 +184,19 @@ class MultiplesRow:
     Omega_rad: float | None
     q: float | None
     dist_pc: float | None
+    # WDS pair geometry — sep + position angle of the secondary relative
+    # to the primary at ``sep_pa_epoch_jd`` (WDS ``date_last``). Populated
+    # on BOTH component rows of a pair to keep the per-row schema simple.
+    # Standalone rows leave all three as ``None``; the pair-walk hasn't
+    # seen the (wds_id, component) combination so there is no anchor.
+    sep_arcsec: float | None
+    pa_deg: float | None
+    sep_pa_epoch_jd: float | None
+    # WDS apparent-magnitude difference (mag_sec − mag_pri). Companion
+    # promotion uses it to impute the secondary's absmag when the
+    # multiples row inherited the primary's AT-HYG entry. ``None`` when
+    # either WDS magnitude is missing — promotion drops the row.
+    dmag: float | None
 
 
 def _system_id_for_pair(pair: WdsPair) -> str:
@@ -291,6 +353,28 @@ def _resolve_spect(
     return "", SPECT_VIA_NONE
 
 
+def _photometry_via(
+    athyg: AthygRow | None,
+    primary_athyg: AthygRow | None,
+    *,
+    is_primary: bool,
+) -> str:
+    """``photometry_via`` tag for a row. The primary is always
+    ``athyg_own`` when an AT-HYG row resolved. The secondary is
+    ``athyg_system_inherited`` when its AT-HYG row IS the primary's —
+    Hipparcos resolved both as a single star, so the absmag/ci that
+    came through ``_athyg_row_for_component`` actually belongs to the
+    brighter component. Companion promotion uses this tag to switch
+    to Δmag imputation."""
+    if athyg is None:
+        return PHOTOMETRY_VIA_NONE
+    if is_primary:
+        return PHOTOMETRY_VIA_OWN
+    if primary_athyg is not None and athyg is primary_athyg:
+        return PHOTOMETRY_VIA_SYSTEM_INHERITED
+    return PHOTOMETRY_VIA_OWN
+
+
 def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
     """Wrap a per-source ``GaiaAstrometryRow`` into a
     ``ComponentAstrometry`` tagged ``gaia_5p``, so the standalone path
@@ -314,6 +398,7 @@ def build_multiples_row(
     is_primary: bool,
     indices: IdentifierIndices,
     system_anchor: SystemAnchor | None = None,
+    primary_athyg: AthygRow | None = None,
 ) -> MultiplesRow:
     """Project Stage 2-4 outputs for one component into one canonical
     ``MultiplesRow`` keyed by ``_system_id_for_pair``. Position is
@@ -325,6 +410,13 @@ def build_multiples_row(
     binary blended out of Gaia DR3), the row inherits the system
     primary's position and promotes ``astrometry_via`` to
     ``"system_inherited"``.
+
+    ``primary_athyg`` lets the call site flag the inherited-photometry
+    case: when the secondary's own AT-HYG row resolves to the same
+    AthygRow instance as the primary's, ``photometry_via`` becomes
+    ``athyg_system_inherited`` (the photometry actually belongs to the
+    primary; companion promotion downstream uses Δmag imputation).
+    Pass ``None`` for primary rows and standalone rows.
     """
     athyg = _athyg_row_for_component(component, indices)
     position, inherited = _resolve_position(astrometry, system_anchor)
@@ -332,6 +424,7 @@ def build_multiples_row(
         pair.wds_id, component.component, athyg, indices,
     )
     astrometry_via = _astrometry_via(astrometry, inherited)
+    photometry_via = _photometry_via(athyg, primary_athyg, is_primary=is_primary)
 
     return MultiplesRow(
         system_id=_system_id_for_pair(pair),
@@ -351,6 +444,7 @@ def build_multiples_row(
         astrometry_via=astrometry_via,
         orbit_via=orbit_via,
         spect_via=spect_via,
+        photometry_via=photometry_via,
         orbit_role=ORBIT_ROLE_PRIMARY if is_primary else ORBIT_ROLE_SECONDARY,
         P_days=orbit.P_days if orbit is not None else None,
         T_jd=orbit.T_jd if orbit is not None else None,
@@ -361,6 +455,10 @@ def build_multiples_row(
         Omega_rad=orbit.Omega_rad if orbit is not None else None,
         q=orbit.q if orbit is not None else None,
         dist_pc=position[3] if position is not None else None,
+        sep_arcsec=pair.rho_last,
+        pa_deg=pair.theta_last,
+        sep_pa_epoch_jd=wds_year_to_jd(pair.date_last),
+        dmag=wds_dmag(pair.mag_pri, pair.mag_sec),
     )
 
 
@@ -412,6 +510,7 @@ def build_multiples_rows(
             and _position_pc(s_ast) is None
         ):
             continue
+        primary_athyg = _athyg_row_for_component(primary, indices)
         primary_row = build_multiples_row(
             pair, primary, p_ast, orbit, via,
             is_primary=True, indices=indices,
@@ -421,6 +520,7 @@ def build_multiples_rows(
             pair, secondary, s_ast, orbit, via,
             is_primary=False, indices=indices,
             system_anchor=anchor,
+            primary_athyg=primary_athyg,
         )
         if (
             orbit is not None
@@ -498,11 +598,14 @@ def build_standalone_rows(
             astrometry_via=astrometry_via,
             orbit_via="none",
             spect_via=spect_via,
+            photometry_via=PHOTOMETRY_VIA_NONE,
             orbit_role=ORBIT_ROLE_STANDALONE,
             P_days=None, T_jd=None, e=None, a_AU=None,
             i_rad=None, omega_rad=None, Omega_rad=None,
             q=None,
             dist_pc=position[3] if position is not None else None,
+            sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
+            dmag=None,
         ))
     return out
 
@@ -520,7 +623,9 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
     canonical ``MULTIPLES_TSV_COLUMNS`` header. Numeric precision is
     chosen so the round-trip into Phase 3's binary format loses no
     user-visible precision: positions 6 dp (~µpc), magnitudes 4 dp,
-    radians 6 dp, period 6 dp, eccentricity 6 dp.
+    radians 6 dp, period 6 dp, eccentricity 6 dp, WDS sep 3 dp
+    (matches the ρ catalogue's published resolution), PA 2 dp
+    (matches θ), epoch 4 dp (mirrors T_jd).
     """
     with path.open("w") as fh:
         fh.write("\t".join(MULTIPLES_TSV_COLUMNS) + "\n")
@@ -543,6 +648,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 r.astrometry_via,
                 r.orbit_via,
                 r.spect_via,
+                r.photometry_via,
                 r.orbit_role,
                 _fmt_float(r.P_days, 6),
                 _fmt_float(r.T_jd, 4),
@@ -553,6 +659,10 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 _fmt_float(r.Omega_rad, 6),
                 _fmt_float(r.q, 6),
                 _fmt_float(r.dist_pc, 6),
+                _fmt_float(r.sep_arcsec, 3),
+                _fmt_float(r.pa_deg, 2),
+                _fmt_float(r.sep_pa_epoch_jd, 4),
+                _fmt_float(r.dmag, 4),
             )) + "\n")
     return len(rows)
 

@@ -89,7 +89,7 @@ export interface BuildCounts {
   apsisMatched: number;
   /** Records with a non-null Teff in either gspphot OR gspspec — the
    *  population the downstream Tier 2 colour-LUT re-routing can use as
-   *  Apsis-direct Teff. Pinned against the zsr.1 84.8% probe figure. */
+   *  Apsis-direct Teff. Pinned against the 84.8% probe figure. */
   apsisTeffEither: number;
   /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
   simbadSptypeEntries: number;
@@ -102,6 +102,26 @@ export interface BuildCounts {
   /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
    *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
   spectralFallback: number;
+  /** Pair rows in multiples.tsv scanned by the companion-promotion pass
+   *  (excludes standalone rows). */
+  companionRowsScanned: number;
+  /** Newly minted catalog records — companions whose identifier wasn't
+   *  already in AT-HYG and that survived the position + absmag gates. */
+  companionPromoted: number;
+  /** Pair rows whose identifier already resolved to an existing
+   *  catalog row (most pair rows fall here — the brighter component is
+   *  almost always AT-HYG'd). */
+  companionAlreadyInCatalog: number;
+  /** Pair rows dropped because both gaia_source_id AND hip were blank
+   *  on the secondary — no way for runtime code to address them. */
+  companionDroppedNoIdentifier: number;
+  /** Pair rows dropped because neither the secondary's own astrometry
+   *  nor sep+PA tangent projection from the primary yielded a 3D
+   *  position. */
+  companionDroppedNoPosition: number;
+  /** Pair rows dropped because the secondary's absmag couldn't be
+   *  imputed — no own absmag AND no primary+Δmag combo. */
+  companionDroppedNoAbsmag: number;
 }
 
 export type CountDiff =

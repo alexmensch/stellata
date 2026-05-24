@@ -215,8 +215,8 @@ describe('distance-vector-overlay / label-width cache + fonts.ready invalidation
     expect(cache.px).toBe(0);
   });
 
-  it('invalidates the cache when document.fonts.ready resolves (9mm.149)', async () => {
-    // Regression for 9mm.149: when a webfont finishes loading after the
+  it('invalidates the cache when document.fonts.ready resolves', async () => {
+    // when a webfont finishes loading after the
     // first getComputedTextLength call, the cached width is pinned to the
     // fallback-font measurement and the right-edge clamp / warp
     // affordance mis-anchor for the page's lifetime. fonts.ready settles

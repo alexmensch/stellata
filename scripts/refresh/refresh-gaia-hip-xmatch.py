@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_hip_xmatch.tsv — HIP → Gaia DR3 source_id cross-walk.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 This table is the cornerstone of the new pipeline: every WDS / GCVS / SIMBAD
 component that carries a HIP identifier resolves to a Gaia DR3 source_id via
 this committed TSV, without any position-based match.
@@ -21,7 +21,7 @@ ADQL
 Hipparcos-2 (van Leeuwen 2007) cross-match — 99,525 rows, all with a
 non-null source_id. Sirius / Polaris / Vega and other V ≲ 4 stars are
 absent (Gaia saturates on the brightest stars); brightness-driven gaps
-are handled downstream by Hipparcos-2-anchored fallbacks (stellata-dch.24).
+are handled downstream by Hipparcos-2-anchored fallbacks.
 
 TSV columns (5)
     hip                  int   — Hipparcos identifier (HIP number)

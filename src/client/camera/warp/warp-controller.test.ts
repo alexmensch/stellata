@@ -1,4 +1,4 @@
-// WarpController tests (stellata-9mm.194.5). The 3-phase FSM is the
+// WarpController tests. The 3-phase FSM is the
 // focus: we exercise the reorient → fly → post-arrival progression,
 // the four source/dest variants the bead enumerates (star→star,
 // star→cloud, cloud→star, observe→observe), the mid-Fly recentre

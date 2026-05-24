@@ -10,7 +10,7 @@ import {
   distAtFillFraction,
   peakAmplitudeFactor,
 } from './star-geometry';
-import { R_SUN_PC } from '../../solar-system/astronomy-constants';
+import { R_SUN_PC } from '../../util/astronomy-constants';
 
 // Canonical viewport / FOV used across the tests below. 1080 vertical
 // pixels at 50° vertical FOV ≈ 1238 px / radian — close to the live
@@ -57,7 +57,7 @@ describe('star-geometry / physSizePx', () => {
     expect(huge).toBeGreaterThan(ceiling * 0.999);
   });
 
-  // Acceptance #2 from stellata-a7d.2 — resolved-disc ratio matches R ratio.
+  // Acceptance #2 — resolved-disc ratio matches R ratio.
   // Betelgeuse R ≈ 887 R_sun, Sirius R ≈ 1.71 R_sun. At a fixed close-but-not-
   // saturating dCam, the rendered sizes should be in the same ratio.
   it('Betelgeuse:Sirius rendered ratio matches their physical-radius ratio', () => {
@@ -104,7 +104,7 @@ describe('star-geometry / varEffectiveAmplitude', () => {
 });
 
 describe('star-geometry / distAtFillFraction', () => {
-  // Acceptance #3 from stellata-a7d.2 — at d = minOrbit, a Sol-sized star
+  // Acceptance #3 — at d = minOrbit, a Sol-sized star
   // fills 90% of the viewport's minor axis.
   it('inverts physSizePx: fill-fraction at distAtFillFraction(R, fov, frac)', () => {
     const R_pc = 1 * R_SUN_PC;

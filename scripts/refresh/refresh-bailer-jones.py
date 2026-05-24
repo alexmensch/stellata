@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bayesian DR3 distance posteriors.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 Bailer-Jones et al. 2021 (AJ 161, 147; VizieR I/352) publishes Bayesian
 distance posteriors (`r_med_geo`, `r_med_photogeo`) for every Gaia DR3
 source. The principled fix for AT-HYG's naive-1/parallax distances on
-low-S/N parallaxes (see stellata-dch.46 for the OB-supergiant outlier
-class that motivated this).
+low-S/N parallaxes — notably the OB-supergiant outlier class that
+motivated this.
 
 ADQL
     SELECT bj."Source", bj."rgeo", bj."b_rgeo", bj."B_rgeo",

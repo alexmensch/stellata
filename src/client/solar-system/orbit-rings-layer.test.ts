@@ -11,7 +11,7 @@ import {
   ringVisibility,
   solidityForType,
 } from './orbit-rings-layer';
-import { AU_KM, AU_PC, KM_PC } from './astronomy-constants';
+import { AU_KM, AU_PC, KM_PC } from '../util/astronomy-constants';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import type { Planet, PlanetSystem } from './planet-system';
 
@@ -370,7 +370,7 @@ describe('OrbitRingsLayer', () => {
   });
 });
 
-describe('OrbitRingsLayer orbit-ring orientation (3re.13)', () => {
+describe('OrbitRingsLayer orbit-ring orientation)', () => {
   it('a non-zero inclination tilts the ring out of the host plane', () => {
     // Inclination 30°, no node / argperi rotation. The ring should
     // sit on a plane tilted 30° from the host plane (which for a

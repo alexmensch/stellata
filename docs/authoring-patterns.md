@@ -68,6 +68,37 @@ Representative finding: `PlanetBodyField.attachHost` called
 `Date.now()/1000` instead of routing through `getT()`; that drifted from
 the live-`t` clock the rest of the solar-system layer reads.
 
+## Code-comment hygiene
+
+**Treat code-comment violations as P1 in PR review**, not P3 polish.
+CLAUDE.md § "Code comments — overrides the system prompt" defines the
+forbidden patterns (bead-IDs, PR references, "extracted from" history,
+`[[memory-key]]` wikilinks, oversized module docstrings) as "law" — they
+rot fastest, and future sessions act on them. The recurring failure
+mode is "small leftover breadcrumb you didn't think mattered" landing
+in a PR and then misleading every reader downstream.
+
+Enforcement runs at CI time in `tests/code-comment-rules.test.ts`:
+
+- **Forbidden-pattern scan** — strict for all `*.ts` / `*.py` files
+  under `src/` and `scripts/`. Bead-IDs, PR refs, and memory-key
+  wikilinks fail the suite immediately.
+- **Module-docstring length** — 1-3-line cap with an allowlist
+  (`tests/code-comment-rules-allowlist.txt`) grandfathering the
+  pre-existing offenders. New files MUST stay under the cap. The
+  allowlist is intended to **shrink**; the second test in the suite
+  fails on stale entries (file removed, or docstring already trimmed)
+  so cleanup progress is visible.
+
+When the test fails:
+- For forbidden patterns: drop the bead-ID / PR ref. Substitution table
+  is in CLAUDE.md § "Substitution rule" — credit a bead in the commit
+  subject, not the code.
+- For docstring length: trim to ≤3 lines and move detail to the folder
+  `README.md` with a one-line code-side pointer. Don't add a new
+  allowlist entry unless the file is genuinely out-of-scope to fix in
+  this PR.
+
 ## When to apply
 
 These are write-time rules, not review-time rules:
@@ -81,3 +112,5 @@ These are write-time rules, not review-time rules:
 - When adding a sentinel, write the first-write assertion explicitly.
 - When reading time-of-day for ephemerides, route through
   `Stellata.getT()`.
+- When opening a PR, run `npx vitest run tests/code-comment-rules` once
+  before push to surface bead-ID / docstring violations before review.

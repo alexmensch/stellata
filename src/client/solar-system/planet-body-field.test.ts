@@ -5,7 +5,7 @@ import {
   PlanetBodyField,
   type PlanetMaterialUniforms,
 } from './planet-body-field';
-import { AU_PC, KM_PC } from './astronomy-constants';
+import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import type { PlanetSystem, Planet } from './planet-system';
 import { SATURN_PHASE, peakPhaseFactor } from './phase-function';
 
@@ -188,7 +188,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('exposes five render passes with the documented renderOrder layout (stellata-3re.19)', () => {
+  it('exposes five render passes with the documented renderOrder layout', () => {
     // The contract is: orbit rings (2) sit BETWEEN the corrupt pass
     // (1.5, writes near-plane depth across the planet's core) and the
     // restore pass (2.5, writes the planet's actual depth back so the

@@ -3549,6 +3549,224 @@ class ComputeSystemAnchorsTests(unittest.TestCase):
             self.assertEqual(rows[1].regime, expected_regime, msg=via)
 
 
+class SepPaEpochPropagationTests(unittest.TestCase):
+    """Stage 6 must thread WDS ``rho_last`` / ``theta_last`` /
+    ``date_last`` / Δmag through to the per-pair geometry columns so
+    the runtime layer can project Tier-3 (no-orbit) companions at
+    their published sky offset and the companion-promotion step in
+    build-catalog can impute absmag from Δmag."""
+
+    def test_pair_rows_carry_published_rho_theta_year(self) -> None:
+        pair = _wds_pair(
+            components="AB", rho_last=8.502, theta_last=174.5, date_last=2015,
+            mag_pri=1.46, mag_sec=8.49,
+        )
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(),
+        )
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            self.assertEqual(row.sep_arcsec, 8.502)
+            self.assertEqual(row.pa_deg, 174.5)
+            # 2015.0 → JD 2451545 + 15 * 365.25 = 2457023.75.
+            self.assertAlmostEqual(row.sep_pa_epoch_jd, 2457023.75, places=4)
+            # Sirius A/B: V_pri = 1.46, V_sec = 8.49 → Δmag = 7.03.
+            self.assertAlmostEqual(row.dmag, 7.03, places=4)
+
+    def test_missing_pair_geometry_propagates_as_none(self) -> None:
+        pair = _wds_pair(
+            components="AB",
+            rho_last=None, theta_last=None, date_last=None,
+            mag_pri=None, mag_sec=None,
+        )
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(),
+        )
+        for row in rows:
+            self.assertIsNone(row.sep_arcsec)
+            self.assertIsNone(row.pa_deg)
+            self.assertIsNone(row.sep_pa_epoch_jd)
+            self.assertIsNone(row.dmag)
+
+    def test_standalone_rows_have_no_pair_geometry(self) -> None:
+        # SIMBAD-augmented standalone rows aren't sides of a WDS pair, so
+        # the three columns stay None even when the corresponding WDS
+        # ``date_last`` exists on the unrelated pair row.
+        simbad_xids = {
+            ("99999+9999", "X"): bb.SimbadWdsXid(
+                simbad_oid=42, simbad_main_id="SIMBAD-X",
+                gaia_source_id=None, hip=None,
+            ),
+        }
+        rows = bb.build_standalone_rows(
+            simbad_xids=simbad_xids,
+            emitted_keys=set(),
+            system_anchors={},
+            indices=_indices_with_astrometry(),
+        )
+        # No anchor + no Gaia astrometry → position-less row, but the row
+        # still emits (orbit_role=standalone, position cells empty). All
+        # three pair-geometry columns are None.
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0].sep_arcsec)
+        self.assertIsNone(rows[0].pa_deg)
+        self.assertIsNone(rows[0].sep_pa_epoch_jd)
+        self.assertIsNone(rows[0].dmag)
+
+
+class PhotometryViaTests(unittest.TestCase):
+    """Stage 6 emits a per-row ``photometry_via`` tag that captures
+    whether the absmag/ci on the row is the COMPONENT's own AT-HYG
+    photometry (``athyg_own``), the SYSTEM primary's AT-HYG photometry
+    inherited via a shared HIP entry (``athyg_system_inherited``), or
+    absent (``none``). Companion promotion uses this tag instead of
+    a float-equality heuristic on absmag."""
+
+    def test_primary_with_own_athyg_tags_athyg_own(self) -> None:
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        # Two distinct AT-HYG entries — one per component (the normal
+        # case for well-separated visual binaries).
+        athyg_a = _athyg_row(gaia=1)
+        athyg_b = _athyg_row(gaia=2)
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(athyg=[athyg_a, athyg_b]),
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].photometry_via, bb.PHOTOMETRY_VIA_OWN)
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_OWN)
+
+    def test_secondary_sharing_primary_athyg_tags_inherited(self) -> None:
+        # Sirius A/B shape: both components resolve to the SAME AT-HYG
+        # row via HIP fall-through (only one HIP in AT-HYG covers the
+        # system). photometry_via on the secondary captures that the
+        # absmag/ci it surfaced is the primary's, not its own.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=None, hip=32349, component="A", is_primary=True),
+            _resolved(gaia=None, hip=32349, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        # Single AT-HYG row keyed on HIP 32349 — both components hit it.
+        shared_athyg = _athyg_row(hip=32349)
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(athyg=[shared_athyg]),
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].photometry_via, bb.PHOTOMETRY_VIA_OWN)
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_SYSTEM_INHERITED)
+
+    def test_row_with_no_athyg_tags_none(self) -> None:
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(),  # no AT-HYG entries
+        )
+        for row in rows:
+            self.assertEqual(row.photometry_via, bb.PHOTOMETRY_VIA_NONE)
+
+    def test_standalone_rows_tag_none(self) -> None:
+        simbad_xids = {
+            ("99999+9999", "X"): bb.SimbadWdsXid(
+                simbad_oid=42, simbad_main_id="SIMBAD-X",
+                gaia_source_id=None, hip=None,
+            ),
+        }
+        rows = bb.build_standalone_rows(
+            simbad_xids=simbad_xids,
+            emitted_keys=set(),
+            system_anchors={},
+            indices=_indices_with_astrometry(),
+        )
+        self.assertEqual(rows[0].photometry_via, bb.PHOTOMETRY_VIA_NONE)
+
+
+class WdsDmagTests(unittest.TestCase):
+    """``wds_dmag`` returns ``mag_sec − mag_pri`` or ``None`` when
+    either magnitude is missing — apparent Δmag = absolute Δmag for two
+    components at the same distance, so the runtime can use it
+    directly to impute companion absmag."""
+
+    def test_signed_difference(self) -> None:
+        # Sirius A V=1.46, Sirius B V=8.49 → Δmag = +7.03 (secondary
+        # is dimmer).
+        self.assertAlmostEqual(bb.wds_dmag(1.46, 8.49), 7.03, places=4)
+
+    def test_missing_primary_returns_none(self) -> None:
+        self.assertIsNone(bb.wds_dmag(None, 8.49))
+
+    def test_missing_secondary_returns_none(self) -> None:
+        self.assertIsNone(bb.wds_dmag(1.46, None))
+
+
+class WdsYearToJdTests(unittest.TestCase):
+    """``wds_year_to_jd`` converts a 4-digit observation year to a Julian
+    Date anchored at J2000. Sub-day precision is irrelevant — the runtime
+    consumer uses the epoch for static-placement projection only."""
+
+    def test_j2000_year_returns_j2000_jd(self) -> None:
+        self.assertEqual(bb.wds_year_to_jd(2000), 2451545.0)
+
+    def test_year_offset_uses_julian_year_length(self) -> None:
+        # 2020 - 2000 = 20 Julian years × 365.25 d = +7305 d → JD 2458850.
+        self.assertEqual(bb.wds_year_to_jd(2020), 2458850.0)
+
+    def test_pre_2000_year_returns_pre_j2000_jd(self) -> None:
+        # 1980 - 2000 = -20 Julian years × 365.25 d = -7305 d → JD 2444240.
+        self.assertEqual(bb.wds_year_to_jd(1980), 2444240.0)
+
+    def test_none_year_passes_through(self) -> None:
+        self.assertIsNone(bb.wds_year_to_jd(None))
+
+
 class WriteMultiplesTsvTests(unittest.TestCase):
     def test_header_and_row_round_trip(self) -> None:
         row = bb.MultiplesRow(
@@ -3559,10 +3777,14 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             source="athyg", regime=2,
             resolve_via="orb6_hip", astrometry_via="gaia_5p", orbit_via="orb6",
             spect_via="athyg",
+            photometry_via="athyg_own",
             orbit_role="primary",
             P_days=365.25, T_jd=2451545.0, e=0.1, a_AU=1.0,
             i_rad=0.5, omega_rad=0.6, Omega_rad=0.7,
             q=0.5, dist_pc=10.0,
+            sep_arcsec=7.123, pa_deg=265.45,
+            sep_pa_epoch_jd=2458850.0,
+            dmag=7.0234,
         )
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "multiples.tsv"
@@ -3579,6 +3801,10 @@ class WriteMultiplesTsvTests(unittest.TestCase):
         self.assertEqual(cells[header.index("name")], "Sirius")
         self.assertEqual(cells[header.index("regime")], "2")
         self.assertEqual(cells[header.index("spect_via")], "athyg")
+        self.assertEqual(cells[header.index("sep_arcsec")], "7.123")
+        self.assertEqual(cells[header.index("pa_deg")], "265.45")
+        self.assertEqual(cells[header.index("sep_pa_epoch_jd")], "2458850.0000")
+        self.assertEqual(cells[header.index("dmag")], "7.0234")
 
     def test_empty_optional_fields_emit_empty_cells(self) -> None:
         row = bb.MultiplesRow(
@@ -3589,10 +3815,13 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             source="wds", regime=0,
             resolve_via="unresolved", astrometry_via="unresolved", orbit_via="none",
             spect_via="none",
+            photometry_via="none",
             orbit_role="primary",
             P_days=None, T_jd=None, e=None, a_AU=None,
             i_rad=None, omega_rad=None, Omega_rad=None,
             q=None, dist_pc=None,
+            sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
+            dmag=None,
         )
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "multiples.tsv"
@@ -3602,7 +3831,8 @@ class WriteMultiplesTsvTests(unittest.TestCase):
         header = lines[0].split("\t")
         for col in ("hip", "gaia_source_id", "x_pc", "y_pc", "z_pc",
                     "absmag", "ci", "P_days", "T_jd", "e", "a_AU",
-                    "i_rad", "omega_rad", "Omega_rad", "q", "dist_pc"):
+                    "i_rad", "omega_rad", "Omega_rad", "q", "dist_pc",
+                    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag"):
             self.assertEqual(cells[header.index(col)], "",
                              msg=f"empty optional {col} should be empty cell")
 

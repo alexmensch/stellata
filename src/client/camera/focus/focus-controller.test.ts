@@ -1,4 +1,4 @@
-// FocusController tests (stellata-9mm.194.8). Exercise the focus FSM
+// FocusController tests. Exercise the focus FSM
 // + focus-park lerp + pin engage geometry + FocusTarget round-trip +
 // the observe-cleanup / unfocus-close-zoom branches of setFocus /
 // unfocus. The hybrid arrival-curve internals are covered by
@@ -277,7 +277,7 @@ describe('FocusController.setFocus — star focus FSM', () => {
     expect(h.busEvents[0].payload).toBe(1);
   });
 
-  it('setFocus(null) does NOT recentre worldOffset (a7d.2.11 invariant)', () => {
+  it('setFocus(null) does NOT recentre worldOffset)', () => {
     const h = makeHarness();
     h.focus.setFocus(1);
     h.busEvents.length = 0;

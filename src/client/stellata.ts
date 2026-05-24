@@ -56,7 +56,7 @@ import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/p
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import { Heliopause } from './solar-system/heliopause';
-import { R_SUN_PC } from './solar-system/astronomy-constants';
+import { R_SUN_PC } from './util/astronomy-constants';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
 import { DCAM_LOG_FLOOR_PC } from './camera/timing';
@@ -899,7 +899,7 @@ export class Stellata implements FrameAnchor {
    *  cloud picking is suppressed during warp only, etc. */
   isCameraBusy(): boolean { return this.focus.isCameraBusy(); }
 
-  // Cancellation hooks for the focus-park lerp (r9q.2) and the
+  // Cancellation hooks for the focus-park lerp) and the
  // navigate-mode unfocus lerp — both must clear before a new
   // camera-changing action (focus, warp, aim, click) proceeds. Forward
   // to FocusController which owns the focus-park slot and delegates the
@@ -1189,7 +1189,7 @@ export class Stellata implements FrameAnchor {
   private tmpVec3b = new THREE.Vector3();
 
   /** Build the dust-particle mesh from loaded data. See bd issue
-   *  stellata-zq3 + src/client/star-pipeline/README.md § "Dust extinction + the shelved
+   *  src/client/star-pipeline/README.md § "Dust extinction + the shelved
    *  particle layer" for the open questions before re-enabling. */
   attachDustParticles(data: DustParticleData) {
     this.dustParticles.attach(data);

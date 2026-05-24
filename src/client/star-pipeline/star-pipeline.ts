@@ -63,7 +63,7 @@ export interface StarPipelineOptions {
  * Per-frame uniform writes still go through
  * `pipeline.discMaterial.uniforms.<name>.value` from the integration
  * shell — the encapsulation here is resource ownership + dispose, not
- * access discipline. See bd issue stellata-9mm.43.
+ * access discipline.
  */
 export class StarPipeline {
   readonly geometry: THREE.InstancedBufferGeometry;

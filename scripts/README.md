@@ -5,8 +5,14 @@ cross-script policy and pointers.
 
 ## Subfolders
 
-- `catalog/` — single-star catalog build → `public/catalog.bin`.
-- `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`.
+- `catalog/` — single-star catalog build → `public/catalog.bin` (+
+  `public/catalog-row-index-map.json`; companions promoted from
+  `data/binaries/multiples.tsv` ride catalog.bin as first-class
+  records with `FLAG_BINARY_COMPANION_ONLY` set).
+- `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
+  (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
+  `public/binaries.bin` (runtime artifact, one record per pair, for
+  the `BinaryOrbitField` per-frame Kepler walk).
 - `distance-validation/` — Vaidman 2025 BA-supergiant cross-check.
 - `refresh/` — Layer 2 external-catalogue refresh (manual,
   infrequent).
@@ -15,10 +21,11 @@ cross-script policy and pointers.
 
 ## Preprocessor idempotency
 
-`scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if `catalog.bin`,
-`constellations.json`, **and** `search-index.json` are newer than all
-source inputs (AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos
-CCDM TSV, and the script itself). If you change field mapping but
-not the script mtime (e.g. edit in a way that updates atime only),
-you may need to `touch scripts/catalog/build-catalog.ts` or delete the
-generated files.
+`scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if
+`catalog.bin`, `constellations.json`, `search-index.json`, **and**
+`catalog-row-index-map.json` are newer than all source inputs
+(AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos CCDM TSV,
+`data/binaries/multiples.tsv`, and the script itself). If you change
+field mapping but not the script mtime (e.g. edit in a way that
+updates atime only), you may need to `touch
+scripts/catalog/build-catalog.ts` or delete the generated files.

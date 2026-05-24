@@ -7,7 +7,7 @@ import { applyDiscBlendDefaults } from './star-pipeline';
 // MaxEquation switch (constructor + chart-mode swap-back). The helper
 // now owns both; this test guards against future drift between the
 // constructor's intent and what ends up on the material after a
-// chart-mode toggle. See stellata-9mm.1 + 9mm.11.
+// chart-mode toggle.
 describe('applyDiscBlendDefaults', () => {
   function makeMaterial(): THREE.ShaderMaterial {
     return new THREE.ShaderMaterial({});

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { FIRST_LOAD_VIEW } from './first-load';
 import { encodeBlob, decodeBlob } from '../util/url-state';
-import { AU_PC } from './astronomy-constants';
+import { AU_PC } from '../util/astronomy-constants';
 
 describe('first-load', () => {
   describe('FIRST_LOAD_VIEW', () => {

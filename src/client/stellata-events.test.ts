@@ -15,7 +15,7 @@ import type { StellataEventMap } from './stellata';
 // below: adding an entry to `StellataEventMap` without listing it here
 // fails `tsc`. At runtime we then walk every `.ts` (excluding tests) in
 // src/client and scan for `bus.emit('<name>'` — emitters now live in
-// stellata.ts AND the controllers extracted under stellata-9mm.194
+// stellata.ts AND the controller modules
 // (WarpController is the first; AimController doesn't emit today but
 // future controllers will).
 //

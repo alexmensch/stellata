@@ -131,9 +131,12 @@ The byte plan above is encoded once in `scripts/catalog/catalog-pure.ts` as
 (`scripts/catalog/verify-catalog.ts`) all index off those constants —
 there are no inline byte offsets to drift apart. If you add fields,
 extend `RECORD_LAYOUT` and **bump `BINARY_VERSION` + `MAGIC`** in
-`catalog-pure.ts`. Free flag bits today are `0x08`, `0x20`, `0x40`,
-`0x80` (see `FLAG_*` exports). Layout consistency is pinned by the
-`binary-format constants` block in `scripts/catalog/catalog-pure.test.ts`.
+`catalog-pure.ts`. Free flag bits today are `0x20`, `0x40`, `0x80`
+(see `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` —
+set on records added by `companion-promotion.ts` (no bump needed,
+the bit comes from the `RESERVED_FLAG_BITS` pool). Layout
+consistency is pinned by the `binary-format constants` block in
+`scripts/catalog/catalog-pure.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,
@@ -282,6 +285,66 @@ Mutual-only avoids over-flagging in dense clusters where a star's
 directed nearest happens to be a third star already paired with
 someone else, and ensures the chart-mode wings glyph appears once
 per system on the canonical anchor.
+
+## Companion promotion from `data/binaries/multiples.tsv`
+
+`companion-promotion.ts` runs BEFORE the absmag sort. It reads the
+binaries pipeline output and adds first-class catalog records for
+the secondary of every physical pair whose identifier isn't already
+in AT-HYG. ~4k companions promoted into the current build (Sirius B,
+Achird B, Porrima B, Fomalhaut C, …).
+
+Per-row gates and resolution:
+
+- **Identifier.** Skip when both gaia_source_id and hip are blank
+  (no addressable handle). Skip when the row already resolves to an
+  existing catalog star (gaia first, then hip when no gaia).
+- **Position.** Prefer the row's own xyz when its astrometry is a
+  real per-component fit AND its xyz differs from the primary row's
+  xyz. Else apply a sky-tangent projection from the EXISTING catalog
+  primary's xyz at the published WDS sep+PA — anchoring on the
+  catalog primary (not the multiples.tsv primary row) avoids a
+  pipeline-precision gap between AT-HYG's 3-4 sig figs and the
+  binaries pipeline's 6 sig figs (Sirius A and B were ~100 AU apart
+  for that reason before the fix).
+- **Absmag.** Prefer Δmag-imputation when the row inherited its
+  parent's AT-HYG photometry (Sirius B's row carried Sirius A's
+  1.45 absmag, not the WD's 11.36); use `primary_absmag +
+  WDS Δmag`. Else use the row's own absmag. Drop the row when
+  neither path produces a value.
+- **B-V (ci).** Same inheritance-detection trick: when the row's
+  ci matches the primary's exactly, recompute from the spectral
+  info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's DA1.9
+  stores ci = -0.443 (deep blue at the LUT) rather than the
+  inherited 0.009 white.
+- **Spectral / lum class.** From `classifyFromSimbad(row.spect)` —
+  the multiples.tsv row carries SIMBAD's per-component sp_type
+  when available (DA1.9 for Sirius B, K7Ve for Achird B). Falls
+  back to `SPECTRAL_UNKNOWN` if unparseable.
+- **HIP inheritance gate.** When the row's HIP equals the primary
+  row's HIP, set `hip = null` on the promoted record. Hipparcos
+  resolved the system as one star and the HIP belongs to the
+  brighter component; inheriting it would collide with the
+  primary in every HIP-keyed lookup (url-state's `refFromIndex`
+  notably).
+- **Proper name.** Compose as `<primary_proper> <comp>` —
+  "Sirius B", "Achird B", "Porrima B". The secondary's own `name`
+  cell wins when populated (source=athyg); the primary row's name
+  is the fallback when the secondary's row is source=wds with no
+  AT-HYG entry of its own.
+
+Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`. They
+are pushed onto `stars` before the absmag sort so they receive the
+same final record indexing as everything else. The post-sort
+`buildCatalogRowIndexMap` emits `public/catalog-row-index-map.json`
+(gaia + hip → record index) which lets the runtime binaries layer
+resolve multiples.tsv rows back to catalog.bin records.
+
+The companion-promotion path is the seam where bugs in the
+binaries pipeline become user-visible. The Tier A regression
+corpus in `known-stars.tsv` pins Sirius B's record specifically
+(addressed by gaia_source_id, no HIP) as a stand-in for the
+broader category.
 
 ## GCVS variability cross-match
 

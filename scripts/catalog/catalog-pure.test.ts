@@ -21,6 +21,7 @@ import {
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
+  FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
   FLAGS,
   RESERVED_FLAG_BITS,
@@ -1021,6 +1022,7 @@ describe('catalog-pure / binary-format constants', () => {
     expect(FLAG_HAS_NAME).toBe(FLAGS.hasName);
     expect(FLAG_IS_SOL).toBe(FLAGS.isSol);
     expect(FLAG_HAS_BAYER).toBe(FLAGS.hasBayer);
+    expect(FLAG_BINARY_COMPANION_ONLY).toBe(FLAGS.binaryCompanionOnly);
     expect(FLAG_BINARY_PRIMARY).toBe(FLAGS.binaryPrimary);
   });
 
@@ -1487,7 +1489,7 @@ describe('catalog-pure / isInLmcCone', () => {
 
   it('rejects the SMC direction (out of scope)', () => {
     // SMC centre ≈ (0.877 h, -72.8°). Outside the LMC cone — the SMC
-    // override gets its own pipeline (Phase-3 dch.55).
+    // override gets its own pipeline.
     expect(isInLmcCone(0.877, -72.8)).toBe(false);
   });
 

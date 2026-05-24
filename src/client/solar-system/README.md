@@ -19,8 +19,6 @@ src/client/solar-system/
                                   approximation + cubic Jupiter–Neptune
                                   correction terms. Heliocentric ecliptic
                                   parsecs out.
-  astronomy-constants.ts          Shared physical / astronomical constants
-                                  (AU, parsec, J2000 obliquity).
   time.ts                         Simulation time `t` (UTC seconds offset)
                                   + UTC ↔ Julian-day helpers. Single source
                                   of truth for the time scrubber.

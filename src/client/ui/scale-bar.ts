@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { AU_PER_PC } from '../solar-system/astronomy-constants';
+import { AU_PER_PC } from '../util/astronomy-constants';
 import {
   fmtDistAuto,
   niceRound,

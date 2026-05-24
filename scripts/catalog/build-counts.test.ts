@@ -41,6 +41,12 @@ function baseCounts(): BuildCounts {
     spectralBySimbad: 280000,
     spectralByGspspec: 25000,
     spectralFallback: 8000,
+    companionRowsScanned: 13000,
+    companionPromoted: 4500,
+    companionAlreadyInCatalog: 7000,
+    companionDroppedNoIdentifier: 100,
+    companionDroppedNoPosition: 500,
+    companionDroppedNoAbsmag: 900,
   };
 }
 

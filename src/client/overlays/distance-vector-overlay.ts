@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { renderedSizePx, renderedDiscPxAtPeak } from '../camera/controls/star-physics';
-import { fmtDist } from '../ui/distance-util';
+import { fmtDistAuto } from '../ui/distance-util';
 import {
   buildArrowSvgPath,
   ARROW_HEAD_DEPTH_PX,
@@ -187,7 +187,7 @@ export function createDistanceVectorOverlay(
       lastDistUiDisplay = setStyle(distUi, 'display', '', lastDistUiDisplay);
       visible = true;
     }
-    const labelText = `${destLabel} · ${fmtDist(distPc)}`;
+    const labelText = `${destLabel} · ${fmtDistAuto(distPc)}`;
     lastLabelText = setText(label, labelText, lastLabelText);
     // The label is anchor-start so `x` is its left edge; subtract its width
     // from the right-side clamp so the visible text stays inside the

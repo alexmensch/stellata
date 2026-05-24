@@ -5,7 +5,7 @@ import {
   perceptualAppSizePx,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
-import { AU_PC } from './astronomy-constants';
+import { AU_PC } from '../util/astronomy-constants';
 
 describe('apparentMagnitude', () => {
   it('returns the absolute magnitude at 10 pc by definition', () => {

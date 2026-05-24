@@ -39,7 +39,7 @@ function blendings(c: MolecularClouds): THREE.Blending[] {
   );
 }
 
-describe('MolecularClouds / blending state coordination (9mm.33, mu9)', () => {
+describe('MolecularClouds / blending state coordination (mu9)', () => {
   const u1 = { value: 7.5 };
 
   it('starts in AdditiveBlending (colour mode, no isobar)', () => {
@@ -85,7 +85,7 @@ describe('MolecularClouds / blending state coordination (9mm.33, mu9)', () => {
   });
 
   it('setMonochrome while isobar is live does not clobber the isobar blending', () => {
-    // Regression for 9mm.33: pre-fix, setMonochrome(true) would
+    // pre-fix, setMonochrome(true) would
     // unconditionally write NormalBlending and setMonochrome(false)
     // would write AdditiveBlending — the latter would clobber a live
     // isobar. The applyBlending helper now derives from both flags.

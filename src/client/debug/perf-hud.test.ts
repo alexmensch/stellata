@@ -65,7 +65,7 @@ function makeDomStub(): { createElement: () => unknown; createTextNode: () => un
   };
 }
 
-describe('perf-hud / install → dispose teardown (9mm.190.1)', () => {
+describe('perf-hud / install → dispose teardown', () => {
   let prevDoc: unknown;
   let perfNowSpy: ReturnType<typeof vi.spyOn>;
 

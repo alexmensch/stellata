@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical parameters.
 
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite (stellata-dch).
+Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
 Pulls per-Gaia-source spectroscopic stellar parameters from
 `gaiadr3.astrophysical_parameters` — the (Teff, logg, [M/H], A0) products
 of the Apsis processing chain (Creevey+22 GSP-Phot, Recio-Blanco+23
@@ -32,7 +32,7 @@ ADQL (per batch)
     ORDER BY source_id
 
 Backend: ESA Gaia archive (default refresh_lib ESA → CDS fallback).
-Batched IN-clause queries per dch.21; 5000 ids per batch matches the
+Batched IN-clause queries; 5000 ids per batch matches the
 empirical bailer-jones sweet spot.
 
 TSV columns (9) — see file docstring for `gaiadr3.astrophysical_parameters`
