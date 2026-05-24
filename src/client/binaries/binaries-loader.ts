@@ -1,6 +1,8 @@
 // Parses public/binaries.bin into a typed record-set the runtime
 // reads per frame. See src/client/binaries/README.md § Format contract.
 
+import { J2000_JD } from '../util/astronomy-constants';
+
 export const MAGIC = 'BIN1';
 export const VERSION = 1;
 export const HEADER_SIZE = 16;
@@ -62,7 +64,11 @@ export interface BinaryRelation {
   sepArcsec: number;
   /** WDS position angle, degrees east of north, at sep_pa_epoch_jd. */
   paDeg: number;
-  /** Epoch of the published WDS sep+PA, JD. */
+  /** Epoch of the published WDS sep+PA, absolute JD. Stored on the
+   *  wire as a float32 offset from J2000_JD (2451545.0) so float32
+   *  retains ~minute-scale precision instead of the ~0.3-day loss that
+   *  encoding the full JD would force. The loader adds J2000_JD back
+   *  before exposing the field. */
   sepPaEpochJd: number;
 }
 
@@ -149,7 +155,8 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
       q: view.getFloat32(off + RECORD_LAYOUT.q, true),
       sepArcsec: view.getFloat32(off + RECORD_LAYOUT.sep_arcsec, true),
       paDeg: view.getFloat32(off + RECORD_LAYOUT.pa_deg, true),
-      sepPaEpochJd: view.getFloat32(off + RECORD_LAYOUT.sep_pa_epoch_jd, true),
+      sepPaEpochJd:
+        view.getFloat32(off + RECORD_LAYOUT.sep_pa_epoch_jd, true) + J2000_JD,
     };
   }
 

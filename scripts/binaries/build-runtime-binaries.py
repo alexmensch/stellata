@@ -17,9 +17,11 @@ from typing import Iterator
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
+sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
 sys.path.insert(0, str(SCRIPT.parent))
 
 from refresh_lib import is_up_to_date  # noqa: E402
+from astronomy_constants import J2000_JD  # noqa: E402
 
 SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
 SRC_ROW_INDEX_MAP = ROOT / "public" / "catalog-row-index-map.json"
@@ -57,7 +59,7 @@ RECORD_LAYOUT = {
     "q": 52,                # float32
     "sep_arcsec": 56,       # float32
     "pa_deg": 60,           # float32
-    "sep_pa_epoch_jd": 64,  # float32 (absolute JD; ~half-day precision at JD ~2.46e6)
+    "sep_pa_epoch_jd": 64,  # float32 (JD - J2000_JD; loader adds J2000 back)
     # bytes 68..71 reserved
 }
 
@@ -445,7 +447,10 @@ def write_binary(
             struct.pack_into("<f", buf, RECORD_LAYOUT["q"], _f32(p.q))
             struct.pack_into("<f", buf, RECORD_LAYOUT["sep_arcsec"], _f32(p.sep_arcsec))
             struct.pack_into("<f", buf, RECORD_LAYOUT["pa_deg"], _f32(p.pa_deg))
-            struct.pack_into("<f", buf, RECORD_LAYOUT["sep_pa_epoch_jd"], _f32(p.sep_pa_epoch_jd))
+            epoch_offset = (
+                p.sep_pa_epoch_jd - J2000_JD if p.sep_pa_epoch_jd is not None else None
+            )
+            struct.pack_into("<f", buf, RECORD_LAYOUT["sep_pa_epoch_jd"], _f32(epoch_offset))
             fh.write(buf)
 
     return stats

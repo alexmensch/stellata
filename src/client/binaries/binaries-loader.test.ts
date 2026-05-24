@@ -13,6 +13,7 @@ import {
   FLAG_IS_INNER_OF_HIERARCHY,
   NO_PARENT,
 } from './binaries-loader';
+import { J2000_JD } from '../util/astronomy-constants';
 
 // Round-trip fixture builder mirroring the Python writer. Keeping the
 // encoder local to the test pins the wire contract without dragging
@@ -61,7 +62,13 @@ function encodeFixture(records: FixtureRecord[]): ArrayBuffer {
     view.setFloat32(off + RECORD_LAYOUT.q, r.q, true);
     view.setFloat32(off + RECORD_LAYOUT.sep_arcsec, r.sepArcsec, true);
     view.setFloat32(off + RECORD_LAYOUT.pa_deg, r.paDeg, true);
-    view.setFloat32(off + RECORD_LAYOUT.sep_pa_epoch_jd, r.sepPaEpochJd, true);
+    // sep_pa_epoch_jd is stored as a J2000 offset on the wire — write
+    // the offset so the loader round-trips back to the same absolute
+    // JD the fixture caller supplies. NaN passes through unchanged.
+    const wireEpoch = Number.isNaN(r.sepPaEpochJd)
+      ? NaN
+      : r.sepPaEpochJd - J2000_JD;
+    view.setFloat32(off + RECORD_LAYOUT.sep_pa_epoch_jd, wireEpoch, true);
   }
   return buf;
 }
@@ -161,6 +168,22 @@ describe('parseBinaries', () => {
     expect(out.iRad).toBeCloseTo(1.383051, 5);
     expect(out.q).toBeCloseTo(0.431818, 5);
     expect(out.sepArcsec).toBeCloseTo(8.1, 5);
+    // sepPaEpochJd is stored on the wire as a J2000 offset; the loader
+    // adds J2000_JD back. JD 2459945.75 is ~8400.75 days from J2000, so
+    // float32 precision at that magnitude is ~2^-10 ≈ 0.001 day — well
+    // under one minute.
+    expect(out.sepPaEpochJd).toBeCloseTo(2459945.75, 2);
+  });
+
+  it('preserves wire-format precision: a 1980 epoch survives the JD→offset→JD round-trip', () => {
+    // 1980 sits ~36525 days before J2000; the worst-case offset magnitude
+    // in the WDS window (~125 years span). float32 precision at |offset|
+    // ≈ 36525 is ~2^-7 ≈ 0.008 day; the absolute JD survives to within
+    // ~10 minutes — sufficient for static-placement consumers.
+    const jd1980 = 2444240.0;  // J2000 - 20 × 365.25
+    const r = record({ primaryIdx: 1, secondaryIdx: 2, sepPaEpochJd: jd1980 });
+    const data = parseBinaries(encodeFixture([r]));
+    expect(data.relations[0].sepPaEpochJd).toBeCloseTo(jd1980, 1);
   });
 
   it('builds a primary index → relations map keyed by primaryIdx', () => {

@@ -15,6 +15,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 from parsers import AthygRow, SimbadWdsXid, WdsPair  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
@@ -26,6 +27,7 @@ from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import OrbitElements  # noqa: E402
 from stage5_optical import OpticalClassification  # noqa: E402
 from mass_estimate import mass_ratio_from_components  # noqa: E402
+from astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR  # noqa: E402
 
 
 # ─── Stage 6: multiples.tsv emit ─────────────────────────────────────
@@ -68,9 +70,7 @@ def wds_dmag(mag_pri: float | None, mag_sec: float | None) -> float | None:
 # observation. Convert to Julian Date treating the year as a Julian-year
 # epoch (start of that calendar year) — sub-day precision is irrelevant
 # because the sep/PA columns drive a static placement, not a time-
-# resolved propagation. The reference anchor is J2000 = JD 2451545.0.
-_JD_J2000 = 2451545.0
-_DAYS_PER_JULIAN_YEAR = 365.25
+# resolved propagation.
 
 
 def wds_year_to_jd(year: int | None) -> float | None:
@@ -79,7 +79,7 @@ def wds_year_to_jd(year: int | None) -> float | None:
     epoch cell."""
     if year is None:
         return None
-    return _JD_J2000 + (float(year) - 2000.0) * _DAYS_PER_JULIAN_YEAR
+    return J2000_JD + (float(year) - 2000.0) * DAYS_PER_JULIAN_YEAR
 
 
 # ``spect_via`` provenance tags for the per-component spectral column.
