@@ -2,12 +2,19 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCatalogRowIndexMap,
   imputeCompanionAbsmag,
+  imputeCompanionCi,
   parseMultiplesTsv,
   projectFromSepPa,
   promoteCompanions,
   type MultiplesTsvRow,
 } from './companion-promotion';
-import { FLAG_BINARY_COMPANION_ONLY, FLAG_HAS_NAME } from './catalog-pure';
+import {
+  FLAG_BINARY_COMPANION_ONLY,
+  FLAG_HAS_NAME,
+  SOLAR_BV_FALLBACK,
+  SPECTRAL_UNKNOWN,
+  classifyFromSimbad,
+} from './catalog-pure';
 import type { Star } from './stars-parse';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
@@ -186,6 +193,49 @@ describe('imputeCompanionAbsmag', () => {
   });
 });
 
+describe('imputeCompanionCi', () => {
+  const primary = multiplesRow({ orbitRole: 'primary', comp: 'A', ci: 0.009 });
+  const wdInfo = classifyFromSimbad('DA1.9')!;
+  const mDwarfInfo = classifyFromSimbad('M3V')!;
+
+  it('derives a hot-WD B-V from the WD subclass when ci is inherited', () => {
+    const sec = multiplesRow({ comp: 'B', ci: 0.009 });
+    const bv = imputeCompanionCi(sec, primary, wdInfo);
+    // T_eff(DA1.9) = 50400/2 = 25200 K → Ballesteros⁻¹ ≈ -0.44.
+    // The shader's LUT clamps to BV_MIN=-0.4 at lookup time; we store
+    // the unclamped value so the raw temperature stays recoverable.
+    expect(bv).toBeLessThan(-0.4);
+    expect(bv).toBeGreaterThan(-0.5);
+  });
+
+  it('uses row.ci when the secondary carries a per-component value distinct from the primary', () => {
+    const sec = multiplesRow({ comp: 'B', ci: 1.42 });
+    expect(imputeCompanionCi(sec, primary, mDwarfInfo)).toBe(1.42);
+  });
+
+  it('derives from spectral info when row.ci is null', () => {
+    const sec = multiplesRow({ comp: 'B', ci: null });
+    const bv = imputeCompanionCi(sec, primary, mDwarfInfo);
+    expect(bv).toBeGreaterThan(0.5);
+    expect(bv).toBeLessThan(2.0);
+  });
+
+  it('falls through to SOLAR_BV_FALLBACK for unparseable spectral info', () => {
+    const sec = multiplesRow({ comp: 'B', ci: 0.009 });
+    expect(imputeCompanionCi(sec, primary, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('falls through to SOLAR_BV_FALLBACK when spectral classIdx is 8 and not a WD', () => {
+    // A SIMBAD-Gaia-saturated row with parseable lumClass but
+    // classIdx=8 (the "other / unknown" bucket) carries no
+    // temperature anchor → don't trust the 5000 K default.
+    const sec = multiplesRow({ comp: 'B', ci: null });
+    const unknownButLumClass = { ...SPECTRAL_UNKNOWN, lumClass: 2 };
+    expect(imputeCompanionCi(sec, primary, unknownButLumClass)).toBe(SOLAR_BV_FALLBACK);
+  });
+});
+
+
 describe('promoteCompanions', () => {
   // 06451-1643-AB shape: Sirius A in AT-HYG (HIP 32349, gaia missing),
   // Sirius B not in AT-HYG. Promotion path should pick B up.
@@ -242,6 +292,10 @@ describe('promoteCompanions', () => {
     // "other / white dwarf" bucket), lumClass=0 (D).
     expect(b.spectClass).toBe(8);
     expect(b.lumClass).toBe(0);
+    // ci is recomputed from the WD's blackbody temperature rather
+    // than inherited from Sirius A. T(DA1.9)=25200 K → Ballesteros⁻¹
+    // ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
+    expect(b.ci).toBeLessThan(-0.4);
   });
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {
@@ -283,6 +337,27 @@ describe('promoteCompanions', () => {
     expect(newStars).toHaveLength(1);
     // Tangent-plane offset of 11.1″ at 2.637 pc ≈ 1.42e-4 pc. Companion
     // sits within that of the primary.
+    const b = newStars[0];
+    const dx = b.x - sirius_a_existing.x;
+    const dy = b.y - sirius_a_existing.y;
+    const dz = b.z - sirius_a_existing.z;
+    const sep = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    expect(sep).toBeGreaterThan(0);
+    expect(sep).toBeLessThan(1e-3);
+  });
+
+  it('projects from sep+PA when the secondary shares xyz with the primary (shared-HIP case)', () => {
+    // Sirius A and B both list HIP 32349, so Stage 3 of the binary
+    // pipeline emits identical xyz on both rows even though
+    // astrometry_via reads hip2_long_baseline. Without the
+    // collocation detection the companion lands on top of the primary
+    // and the renderer sees both at the same screen pixel.
+    const rows = siriusRows();
+    expect(rows[0].astrometryVia).toBe('hip2_long_baseline');
+    expect(rows[1].astrometryVia).toBe('hip2_long_baseline');
+    expect(rows[1].x_pc).toBe(rows[0].x_pc);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing]);
+    expect(newStars).toHaveLength(1);
     const b = newStars[0];
     const dx = b.x - sirius_a_existing.x;
     const dy = b.y - sirius_a_existing.y;

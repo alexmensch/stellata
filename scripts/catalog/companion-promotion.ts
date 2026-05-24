@@ -18,8 +18,10 @@ import {
   parseGaiaSourceIdStr,
   physicalRadius,
   resolveSpectDisplay,
+  tempKelvin,
   type SpectralInfo,
 } from './catalog-pure';
+import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
 import type { Star } from './stars-parse';
 
 // ---- TSV row schema -----------------------------------------------------
@@ -301,6 +303,51 @@ function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
   return groups;
 }
 
+// Companion B-V (ci) resolution. As with absmag, the multiples.tsv row's
+// `ci` column is the AT-HYG row's ci — when the companion shares its
+// parent's AT-HYG row (Sirius B inherits Sirius A's ci=0.009), that
+// value is the primary's colour, not the companion's. For inherited-ci
+// rows, recover the companion's intrinsic B-V from its spectral
+// info via tempKelvin → ballesterosBvFromTeff. Sirius B's DA1.9 →
+// T_eff ≈ 25200 K → B-V ≈ -0.44 (deep blue / hot end of the LUT), vs
+// Sirius A's tabulated 0.009 (A0V white).
+//
+// Resolution order:
+//   1. row.ci is null → derive from spectral info.
+//   2. primary.ci is non-null AND row.ci === primary.ci (inherited
+//      photometry) → derive from spectral info.
+//   3. else → use row.ci.
+//
+// "Derive from spectral info" needs a parseable spect cell; when
+// classifyFromSimbad returns SPECTRAL_UNKNOWN the routing falls
+// through to SOLAR_BV_FALLBACK so the companion gets a sensible
+// neutral colour rather than zero.
+export function imputeCompanionCi(
+  secondary: MultiplesTsvRow,
+  primary: MultiplesTsvRow | null,
+  spectralInfo: SpectralInfo,
+): number {
+  const inherited =
+    secondary.ci !== null
+    && primary !== null
+    && primary.ci !== null
+    && secondary.ci === primary.ci;
+  const needsDerivation = secondary.ci === null || inherited;
+  if (!needsDerivation) {
+    return secondary.ci as number;
+  }
+  // SPECTRAL_UNKNOWN's tempKelvin is the 5000 K row of T_TABLE[8] —
+  // a yellow-white default. Detect that explicitly so the fallback
+  // routes through SOLAR_BV_FALLBACK instead, mirroring stars-parse's
+  // handling for AT-HYG rows with blank ci AND unparseable spect.
+  if (spectralInfo === SPECTRAL_UNKNOWN
+      || (spectralInfo.classIdx === 8 && !spectralInfo.isWhiteDwarf)) {
+    return SOLAR_BV_FALLBACK;
+  }
+  return ballesterosBvFromTeff(tempKelvin(spectralInfo));
+}
+
+
 // Companion absmag resolution. The multiples.tsv row's `absmag` column is
 // the AT-HYG row's absmag — when a companion inherits the system's AT-HYG
 // row (Sirius B has the same AT-HYG entry as Sirius A), that value is the
@@ -339,18 +386,39 @@ function resolvePosition(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
 ): CompanionPlacement | null {
-  if (row.astrometryVia !== 'system_inherited'
-      && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
-      && row.distPc !== null) {
-    return { x: row.x_pc, y: row.y_pc, z: row.z_pc, distPc: row.distPc };
+  const ownAstrometry =
+    row.astrometryVia !== 'system_inherited'
+    && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
+    && row.distPc !== null;
+
+  // Components that share a primary's HIP (Sirius A and B both list
+  // HIP 32349) inherit the system anchor's astrometry from Stage 3
+  // even when astrometry_via reads "hip2_long_baseline" or similar —
+  // the tag is the SOURCE of the astrometry, not whether the
+  // secondary got its own per-component fit. Detect collocation by
+  // exact xyz equality with the primary and fall through to the
+  // sep+PA tangent projection so the companion lands at a visually
+  // distinct point.
+  const collocatedWithPrimary =
+    ownAstrometry
+    && primary !== null
+    && primary.x_pc !== null && primary.y_pc !== null && primary.z_pc !== null
+    && row.x_pc === primary.x_pc
+    && row.y_pc === primary.y_pc
+    && row.z_pc === primary.z_pc;
+
+  if (ownAstrometry && !collocatedWithPrimary) {
+    return {
+      x: row.x_pc as number, y: row.y_pc as number, z: row.z_pc as number,
+      distPc: row.distPc as number,
+    };
   }
   if (primary === null
       || primary.x_pc === null || primary.y_pc === null || primary.z_pc === null) {
     return null;
   }
-  // Tangent-plane projection from primary + sep + PA. Both must be on
-  // the secondary's row; sep + PA are pair-wide and populated on every
-  // pair row by Stage 6.
+  // Tangent-plane projection from primary + sep + PA. sep + PA are
+  // pair-wide and populated on every pair row by Stage 6.
   if (row.sepArcsec === null || row.paDeg === null) return null;
   return projectFromSepPa(
     primary.x_pc, primary.y_pc, primary.z_pc,
@@ -447,7 +515,7 @@ export function promoteCompanions(
         continue;
       }
       const spectral = resolveCompanionSpectral(row);
-      const ci = row.ci ?? SOLAR_BV_FALLBACK;
+      const ci = imputeCompanionCi(row, cursor.primary, spectral.info);
       const properName = composeCompanionName(row);
       let flags = FLAG_BINARY_COMPANION_ONLY;
       if (properName) flags |= FLAG_HAS_NAME;

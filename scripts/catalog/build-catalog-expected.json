@@ -1,7 +1,7 @@
 {
   "recordCount": 317333,
-  "binaryPairs": 372,
-  "binaryMutualPairs": 180,
+  "binaryPairs": 370,
+  "binaryMutualPairs": 179,
   "gcvsEntries": 38881,
   "gcvsHipXrefs": 11316,
   "gcvsHdXrefs": 13926,
@@ -12,7 +12,7 @@
   "gcvsMatchedByHd": 889,
   "ccdmGroups": 12496,
   "ccdmResolved": 12393,
-  "ccdmFlagged": 12305,
+  "ccdmFlagged": 12306,
   "bjEntries": 310952,
   "bjEligible": 311015,
   "bjOverridden": 310368,
