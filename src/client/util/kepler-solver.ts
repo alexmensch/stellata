@@ -1,8 +1,5 @@
-// Newton-Raphson solver for Kepler's equation `M = E − e·sin(E)`.
-// Shared between Sol's planet ephemeris (`solar-system/ephemeris.ts`,
-// e ≲ 0.25) and binary-star orbits (`binaries/binary-orbit-pure.ts`,
-// e up to ~0.95). The defaults converge in ~3 iterations for planets
-// and ~15 for the most eccentric binaries.
+// Newton solver for Kepler's equation M = E − e·sin(E). Shared between
+// planet ephemerides and binary orbits.
 
 export function wrapAngle(a: number): number {
   const twoPi = 2 * Math.PI;

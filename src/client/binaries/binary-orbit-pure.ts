@@ -1,13 +1,6 @@
-// Per-frame orbital evolution for binary / multiple-star systems. Pure
-// math; the runtime field in `binary-orbit-field.ts` owns lifecycle and
-// caching. See `src/client/binaries/README.md` § Tier mapping for the
-// Tier 1 / Tier 2 split.
-//
-// Sky-plane angle conventions follow ORB6:
-//   i  : inclination (rad). i=0 face-on, i=π/2 edge-on.
-//   ω  : argument of periastron (rad), measured in the sky plane.
-//   Ω  : longitude of ascending node (rad), position angle east of
-//        north.
+// Pure orbital math for binaries: Kepler + Thiele-Innes + tangent-plane
+// (Tier 1) and galactic-plane fallback (Tier 2). See
+// src/client/binaries/README.md § Tier mapping.
 
 import * as THREE from 'three';
 import { AU_PC, J2000_JD } from '../util/astronomy-constants';

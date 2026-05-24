@@ -18,6 +18,11 @@ uniform uint uSpectMask;
 // every other mode disables the suppression by construction (gl_InstanceID
 // is non-negative).
 uniform int uHideFocusIdx;
+// Pass index — 0=glow, 1=disc, 2=core mask. Shared with the frag shader;
+// the vert reads it so the composite-suppress sentinel below can drop
+// the disc and core-mask passes for sub-pixel binary secondaries while
+// the glow pass still runs.
+uniform int uRenderMode;
 // Force-center the focused star at NDC (0,0). At extreme close approach
 // (~5×10⁻⁸ pc for Sol-class stars), float32 cancellation in the matrix
 // chain can drift the projected centre by visible pixels even though
@@ -119,6 +124,11 @@ in float iDistSol;      // |absolute position| — precomputed at load
 // solution is available. Gates the Apsis-direct branch in ciToColor below;
 // the JS-side mirror is bestApsisTeff() in star-color-routing-pure.ts.
 in float iTeffApsis;
+// Composite-suppress flag written by BinaryOrbitField each frame. 1.0 =
+// collapse the disc + core-mask passes for this instance (the additive
+// glow pass still runs and sums the two near-coincident point sources
+// correctly). Used for the dimmer member of a sub-pixel binary pair.
+in float iCompositeSuppress;
 
 out float vAppMag;
 out vec3 vColor;
@@ -211,6 +221,22 @@ void main() {
     // that makes the off-screen position per-vertex would break this
     // invariant and need to write vFragDepth before returning.
     if (gl_InstanceID == uHideFocusIdx) {
+        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+        vAppMag = 0.0;
+        vColor = vec3(0.0);
+        vUv = aCorner;
+        vPhysRatio = 0.0;
+        vSoftness = 0.0;
+        vAaWidth = 0.0;
+        return;
+    }
+    // Sub-pixel binary secondaries: drop the opaque disc (mode 1) and
+    // the core depth-mask (mode 2). The additive glow (mode 0) still
+    // runs so the two co-located point sources sum brightness under
+    // additive blending. Same off-screen-sentinel pattern as the focus
+    // hide above — see the comment block there for the vFragDepth
+    // safety argument.
+    if (iCompositeSuppress > 0.5 && (uRenderMode == 1 || uRenderMode == 2)) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
         vAppMag = 0.0;
         vColor = vec3(0.0);
