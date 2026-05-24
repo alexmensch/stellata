@@ -16,7 +16,7 @@ export interface DustParticleSharedUniforms {
 }
 
 // Currently shelved — see src/client/star-pipeline/README.md § "Dust extinction + the
-// shelved particle layer" and bd issue stellata-zq3 for the open
+// shelved particle layer" for the open
 // questions. Default strength = 0 → mesh.visible = false → zero
 // per-frame cost.
 export class DustParticleLayer {

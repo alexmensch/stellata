@@ -89,7 +89,7 @@ export interface BuildCounts {
   apsisMatched: number;
   /** Records with a non-null Teff in either gspphot OR gspspec — the
    *  population the downstream Tier 2 colour-LUT re-routing can use as
-   *  Apsis-direct Teff. Pinned against the zsr.1 84.8% probe figure. */
+   *  Apsis-direct Teff. Pinned against the 84.8% probe figure. */
   apsisTeffEither: number;
   /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
   simbadSptypeEntries: number;

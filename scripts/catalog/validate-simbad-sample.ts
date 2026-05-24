@@ -10,7 +10,7 @@
 // PM is intentionally out of scope WHILE catalog.bin remains
 // J2000-epoch: the binary stores AT-HYG positions without PM
 // propagation, so a PM residual would compare AT-HYG's PM to SIMBAD's
-// PM rather than anything Stellata emits. Revisit if stellata-nmu.1's
+// PM rather than anything Stellata emits. Revisit if the time-scrubber epic's
 // time-scrubber design decision lands and the build starts applying
 // PM to bring positions to render epoch — `parseSimbadSampleRows`
 // already surfaces pmra / pmdec for that case.

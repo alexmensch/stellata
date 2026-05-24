@@ -497,7 +497,7 @@ export class FocusController implements FocusOps {
 
   /** Cloud-side analogue of focusStar — used by search-select and
    *  click-vector-tip. Routes through the same focus-park primitives
-   *  (r9q.3) so the lerp-or-noop UX matches stars. `animate: false`
+   *) so the lerp-or-noop UX matches stars. `animate: false`
    *  (URL restore) snaps without a transition. setFocus(null) below
  * leaves worldOffset alone, so no frame-shift handling
    *  is needed here — target is `cloud.centerAbs - worldOffset` in the

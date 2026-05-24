@@ -277,7 +277,7 @@ describe('FocusController.setFocus — star focus FSM', () => {
     expect(h.busEvents[0].payload).toBe(1);
   });
 
-  it('setFocus(null) does NOT recentre worldOffset (a7d.2.11 invariant)', () => {
+  it('setFocus(null) does NOT recentre worldOffset)', () => {
     const h = makeHarness();
     h.focus.setFocus(1);
     h.busEvents.length = 0;

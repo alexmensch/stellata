@@ -2,7 +2,7 @@
 // The pure geometry / orientation / merge helpers are covered in
 // build-local-group-pure.test.ts; this file exercises the override
 // TSV parser, including the optional standalone-position columns the
-// 2 Mpc expansion (stellata-1ui) added. The second describe block is
+// 2 Mpc expansion added. The second describe block is
 // an integration test that reads the committed LVDB CSV and pins the
 // display-name routing for every renderable name — so future snapshots
 // that introduce an unclassified name surface at test time before they
@@ -78,7 +78,7 @@ describe('parseOverrides', () => {
   });
 });
 
-describe('LVDB-band display-name coverage (stellata-1ui)', () => {
+describe('LVDB-band display-name coverage', () => {
   // Read the committed LVDB snapshot at test time so a future refresh
   // that introduces a name the renderer would mis-suffix surfaces here
   // rather than only at build-output review time. Reading committed

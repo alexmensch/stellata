@@ -74,7 +74,7 @@ describe('Heliopause', () => {
   });
 
   it('createHeliopauseLabel writes display:none synchronously on init', () => {
-    // Regression for stellata-8ee: on first-load (camera parked inside
+    // Regression: on first-load (camera parked inside
     // the heliopause shell), the label must not paint at SVG (0,0).
     // The controller's setVisible(false) at init MUST land — i.e. the
     // sentinel must disagree with `false`. Element starts at display=''

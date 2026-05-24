@@ -29,27 +29,46 @@ const SELF = resolve(__filename);
 
 interface Pattern {
   name: string;
-  // Regex source as a string so a literal pattern in this file
-  // (which mentions bead-ID shapes by necessity) doesn't trip the
-  // scan when this file is excluded. Constructed inside scanFile.
   re: RegExp;
 }
+
+// Stellata bead IDs follow the shape `<epic>.<NN>[.<MM>]` where the
+// epic is a 3-character alphanumeric token (`9mm`, `dch`, `lmh`,
+// `1ui`, …) — that's the bd default for this project across every
+// epic ever created. Matching the shape rather than an enumerated
+// list keeps the regex future-proof: new epics auto-covered without
+// test edits.
+//
+// The negative lookahead `(?![0-9]{3}\b)` rejects pure-numeric
+// 3-char prefixes so decimal numbers like `365.25`, `180.0`, `100.5`
+// don't false-fire. Every real stellata epic contains at least one
+// letter, so this preserves coverage without enumerating epics.
+const EPIC_SHAPE = '(?![0-9]{3}\\b)[a-z0-9]{3}';
 
 const FORBIDDEN: Pattern[] = [
   {
     name: 'bead-ID with stellata- prefix',
-    // `stellata-9mm`, `stellata-dch.43`, `stellata-lmh.5`.
-    re: /\bstellata-(?:9mm|dch|lmh)\b/,
+    // Trailing `(?:\.\d+)*` so a sub-sub-issue like
+    // `stellata-a7d.2.11` matches in full (better diagnostic snippet);
+    // the trailing `\b` keeps filename-style references like
+    // `stellata-events.test.ts` from matching as `stellata-eve`.
+    re: new RegExp(`\\bstellata-${EPIC_SHAPE}(?:\\.\\d+)*\\b`),
   },
   {
-    name: 'bare bead-ID (9mm.NN / dch.NN / lmh.NN)',
-    // Negative lookbehind for word-char / hyphen so things like
-    // `2025-9mm-…` or version strings don't false-fire.
-    re: /(?<![\w-])(?:9mm|dch|lmh)\.\d/,
+    name: 'bare bead-ID (<epic>.NN[.MM…])',
+    // Lookbehind excludes word char (preceding identifier), hyphen
+    // (e.g. `hip-2.5`), AND backslash (Python `\t20.85` TSV escapes
+    // would otherwise read as `t20.8`). Trailing `(?:\.\d+)+` keeps
+    // sub-sub-issues like `a7d.2.11` in the match span.
+    re: new RegExp(`(?<![\\w\\\\-])${EPIC_SHAPE}(?:\\.\\d+)+\\b`),
   },
   {
-    name: 'bead-relative time (pre-/post-/since-<epic>)',
-    re: /(?<![\w-])(?:pre|post|since)-(?:9mm|dch|lmh)\b/,
+    name: 'bead-relative time (pre-/post-/since-<epic>.NN)',
+    // The `.NN` suffix is required to distinguish bead-relative refs
+    // (`pre-dch.5`, `post-9mm.43`) from legitimate English compounds
+    // (`pre-fix`, `pre-cap`, `post-build`) that happen to follow a
+    // 3-char word.
+    re: new RegExp(`(?<![\\w\\\\-])(?:pre|post|since)-${EPIC_SHAPE}\\.\\d`),
   },
   {
     name: 'memory-key wikilink [[name]]',

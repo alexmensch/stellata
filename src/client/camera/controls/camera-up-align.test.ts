@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 
-// Pure-algebra regression for stellata-a8w (PR #23). The fix is:
+// Pure-algebra regression. The fix is:
 //
 //   camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion);
 //
