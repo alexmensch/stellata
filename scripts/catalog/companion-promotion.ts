@@ -467,11 +467,19 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
 }
 
 // Compose the companion's display name as "<primary_proper> <comp>".
-// Falls back to no proper name when the multiples row has no `name` cell —
-// the row's primary either has no AT-HYG proper name or no AT-HYG row at
-// all, so we can't synthesise a sensible label.
-function composeCompanionName(row: MultiplesTsvRow): string | null {
-  const base = row.name.trim();
+// The secondary's own `name` cell is populated only when source=athyg
+// (the row found an AT-HYG entry); for source=wds rows it's empty even
+// when the PRIMARY's AT-HYG entry has a perfectly good proper name to
+// inherit. Fall back to the primary row's name in that case so
+// "Achird B", "Porrima B", "Capella B" etc. become searchable rather
+// than rendering as anonymous-companion records nobody can find.
+function composeCompanionName(
+  row: MultiplesTsvRow,
+  primary: MultiplesTsvRow | null,
+): string | null {
+  const ownBase = row.name.trim();
+  const primaryBase = (primary?.name ?? '').trim();
+  const base = ownBase || primaryBase;
   if (!base) return null;
   const comp = row.comp.trim();
   if (!comp) return base;
@@ -563,7 +571,7 @@ export function promoteCompanions(
       }
       const spectral = resolveCompanionSpectral(row);
       const ci = imputeCompanionCi(row, cursor.primary, spectral.info);
-      const properName = composeCompanionName(row);
+      const properName = composeCompanionName(row, cursor.primary);
       let flags = FLAG_BINARY_COMPANION_ONLY;
       if (properName) flags |= FLAG_HAS_NAME;
 
