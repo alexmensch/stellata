@@ -264,15 +264,11 @@ function findExisting(
     const hit = existing.byGaia.get(row.gaiaSourceId);
     if (hit !== undefined) return hit;
   }
-  // Companions sharing the primary's HIP must NOT collapse onto the
-  // primary's record here. The shared-HIP case is recognised by:
-  //   - The row has a gaia_source_id (it was a true distinct component
-  //     with its own Gaia entry, e.g. Sirius B); OR
-  //   - The (system_id, comp) pair makes it a secondary by role.
-  // The strict resolver only consults HIP when the row carries no
-  // gaia_source_id AT ALL. Sirius B's row carries a Gaia source_id so
-  // the gaia-miss-above (Sirius B's gaia isn't in AT-HYG) lets it fall
-  // through to promotion regardless of the HIP collision.
+  // HIP fall-through fires only when the row carries no gaia_source_id
+  // at all. Companions that share the primary's HIP (Sirius A and B
+  // both list HIP 32349) dodge the collision when their own gaia is
+  // set — the gaia lookup above already returned null, so promotion
+  // proceeds without HIP-collapsing them onto the primary's record.
   if (row.gaiaSourceId === null && row.hip !== null && row.hip > 0) {
     const hit = existing.byHip.get(row.hip);
     if (hit !== undefined) return hit;
@@ -504,7 +500,7 @@ export function promoteCompanions(
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
     // pair; their primary slot is empty. Skip — promoting them without
-    // pair geometry needs a different rule than this lmh.4 path.
+    // pair geometry needs a different rule than this path.
     if (cursor.primary === null) continue;
 
     for (const row of cursor.secondaries) {

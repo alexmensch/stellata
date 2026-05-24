@@ -69,9 +69,9 @@ RECORD_LAYOUT = {
     "omega_rad": 44,        # float32
     "Omega_rad": 48,        # float32
     "q": 52,                # float32
-    "sep_arcsec": 56,       # float32 (epoch in sep_pa_epoch_jd field, currently unused at runtime)
+    "sep_arcsec": 56,       # float32
     "pa_deg": 60,           # float32
-    "sep_pa_epoch_jd": 64,  # float32 (J2000-anchored offset truncated to ~half-day precision)
+    "sep_pa_epoch_jd": 64,  # float32 (absolute JD; ~half-day precision at JD ~2.46e6)
     # bytes 68..71 reserved
 }
 
@@ -421,7 +421,7 @@ def write_binary(
         fh.write(struct.pack("<II", VERSION, stats.pairs_emitted))
         fh.write(b"\x00" * 4)
 
-        for out_i, input_i in enumerate(emit_indices):
+        for input_i in emit_indices:
             p = pairs[input_i]
             primary_idx = resolved_primary[input_i]
             secondary_idx = resolved_secondary[input_i]
@@ -461,7 +461,6 @@ def write_binary(
             struct.pack_into("<f", buf, RECORD_LAYOUT["pa_deg"], _f32(p.pa_deg))
             struct.pack_into("<f", buf, RECORD_LAYOUT["sep_pa_epoch_jd"], _f32(p.sep_pa_epoch_jd))
             fh.write(buf)
-            _ = out_i  # output-order index — used implicitly by emit_indices length
 
     return stats
 
