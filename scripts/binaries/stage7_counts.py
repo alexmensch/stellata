@@ -118,6 +118,7 @@ def build_binaries_counts(
     sep_pa_epoch_populated = sum(
         1 for r in multiples_rows if r.sep_pa_epoch_jd is not None
     )
+    dmag_populated = sum(1 for r in multiples_rows if r.dmag is not None)
 
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
@@ -129,6 +130,7 @@ def build_binaries_counts(
         "multiples_sep_arcsec_populated": sep_arcsec_populated,
         "multiples_pa_deg_populated": pa_deg_populated,
         "multiples_sep_pa_epoch_populated": sep_pa_epoch_populated,
+        "multiples_dmag_populated": dmag_populated,
     }
     for tag in SPECT_VIA_VALUES:
         out[f"spect_{tag}"] = spect_counts[tag]

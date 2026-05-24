@@ -48,8 +48,20 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "P_days", "T_jd", "e", "a_AU",
     "i_rad", "omega_rad", "Omega_rad",
     "q", "dist_pc",
-    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd",
+    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag",
 )
+
+
+def wds_dmag(mag_pri: float | None, mag_sec: float | None) -> float | None:
+    """``mag_sec − mag_pri`` from a WDS pair row, or ``None`` when
+    either magnitude is missing. Survives intact through the V/absolute-
+    mag transform — both components sit at the same distance, so an
+    apparent Δmag equals the absolute Δmag. Companion promotion uses
+    this to impute the secondary's absmag when the row inherits the
+    primary's AT-HYG absmag."""
+    if mag_pri is None or mag_sec is None:
+        return None
+    return mag_sec - mag_pri
 
 
 # WDS publishes ``date_last`` as a 4-digit year of the last reported
@@ -162,6 +174,11 @@ class MultiplesRow:
     sep_arcsec: float | None
     pa_deg: float | None
     sep_pa_epoch_jd: float | None
+    # WDS apparent-magnitude difference (mag_sec − mag_pri). Companion
+    # promotion uses it to impute the secondary's absmag when the
+    # multiples row inherited the primary's AT-HYG entry. ``None`` when
+    # either WDS magnitude is missing — promotion drops the row.
+    dmag: float | None
 
 
 def _system_id_for_pair(pair: WdsPair) -> str:
@@ -391,6 +408,7 @@ def build_multiples_row(
         sep_arcsec=pair.rho_last,
         pa_deg=pair.theta_last,
         sep_pa_epoch_jd=wds_year_to_jd(pair.date_last),
+        dmag=wds_dmag(pair.mag_pri, pair.mag_sec),
     )
 
 
@@ -534,6 +552,7 @@ def build_standalone_rows(
             q=None,
             dist_pc=position[3] if position is not None else None,
             sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
+            dmag=None,
         ))
     return out
 
@@ -589,6 +608,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 _fmt_float(r.sep_arcsec, 3),
                 _fmt_float(r.pa_deg, 2),
                 _fmt_float(r.sep_pa_epoch_jd, 4),
+                _fmt_float(r.dmag, 4),
             )) + "\n")
     return len(rows)
 

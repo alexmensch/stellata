@@ -3551,13 +3551,15 @@ class ComputeSystemAnchorsTests(unittest.TestCase):
 
 class SepPaEpochPropagationTests(unittest.TestCase):
     """Stage 6 must thread WDS ``rho_last`` / ``theta_last`` /
-    ``date_last`` through to ``MultiplesRow.sep_arcsec`` / ``pa_deg`` /
-    ``sep_pa_epoch_jd`` so the runtime layer can project Tier-3
-    (no-orbit) companions at their published sky offset."""
+    ``date_last`` / Δmag through to the per-pair geometry columns so
+    the runtime layer can project Tier-3 (no-orbit) companions at
+    their published sky offset and the companion-promotion step in
+    build-catalog can impute absmag from Δmag."""
 
     def test_pair_rows_carry_published_rho_theta_year(self) -> None:
         pair = _wds_pair(
             components="AB", rho_last=8.502, theta_last=174.5, date_last=2015,
+            mag_pri=1.46, mag_sec=8.49,
         )
         components = [
             _resolved(gaia=1, component="A", is_primary=True),
@@ -3579,11 +3581,14 @@ class SepPaEpochPropagationTests(unittest.TestCase):
             self.assertEqual(row.pa_deg, 174.5)
             # 2015.0 → JD 2451545 + 15 * 365.25 = 2457023.75.
             self.assertAlmostEqual(row.sep_pa_epoch_jd, 2457023.75, places=4)
+            # Sirius A/B: V_pri = 1.46, V_sec = 8.49 → Δmag = 7.03.
+            self.assertAlmostEqual(row.dmag, 7.03, places=4)
 
     def test_missing_pair_geometry_propagates_as_none(self) -> None:
         pair = _wds_pair(
             components="AB",
             rho_last=None, theta_last=None, date_last=None,
+            mag_pri=None, mag_sec=None,
         )
         components = [
             _resolved(gaia=1, component="A", is_primary=True),
@@ -3603,6 +3608,7 @@ class SepPaEpochPropagationTests(unittest.TestCase):
             self.assertIsNone(row.sep_arcsec)
             self.assertIsNone(row.pa_deg)
             self.assertIsNone(row.sep_pa_epoch_jd)
+            self.assertIsNone(row.dmag)
 
     def test_standalone_rows_have_no_pair_geometry(self) -> None:
         # SIMBAD-augmented standalone rows aren't sides of a WDS pair, so
@@ -3627,6 +3633,25 @@ class SepPaEpochPropagationTests(unittest.TestCase):
         self.assertIsNone(rows[0].sep_arcsec)
         self.assertIsNone(rows[0].pa_deg)
         self.assertIsNone(rows[0].sep_pa_epoch_jd)
+        self.assertIsNone(rows[0].dmag)
+
+
+class WdsDmagTests(unittest.TestCase):
+    """``wds_dmag`` returns ``mag_sec − mag_pri`` or ``None`` when
+    either magnitude is missing — apparent Δmag = absolute Δmag for two
+    components at the same distance, so the runtime can use it
+    directly to impute companion absmag."""
+
+    def test_signed_difference(self) -> None:
+        # Sirius A V=1.46, Sirius B V=8.49 → Δmag = +7.03 (secondary
+        # is dimmer).
+        self.assertAlmostEqual(bb.wds_dmag(1.46, 8.49), 7.03, places=4)
+
+    def test_missing_primary_returns_none(self) -> None:
+        self.assertIsNone(bb.wds_dmag(None, 8.49))
+
+    def test_missing_secondary_returns_none(self) -> None:
+        self.assertIsNone(bb.wds_dmag(1.46, None))
 
 
 class WdsYearToJdTests(unittest.TestCase):
@@ -3665,6 +3690,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             q=0.5, dist_pc=10.0,
             sep_arcsec=7.123, pa_deg=265.45,
             sep_pa_epoch_jd=2458850.0,
+            dmag=7.0234,
         )
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "multiples.tsv"
@@ -3684,6 +3710,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
         self.assertEqual(cells[header.index("sep_arcsec")], "7.123")
         self.assertEqual(cells[header.index("pa_deg")], "265.45")
         self.assertEqual(cells[header.index("sep_pa_epoch_jd")], "2458850.0000")
+        self.assertEqual(cells[header.index("dmag")], "7.0234")
 
     def test_empty_optional_fields_emit_empty_cells(self) -> None:
         row = bb.MultiplesRow(
@@ -3699,6 +3726,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             i_rad=None, omega_rad=None, Omega_rad=None,
             q=None, dist_pc=None,
             sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
+            dmag=None,
         )
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "multiples.tsv"
@@ -3709,7 +3737,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
         for col in ("hip", "gaia_source_id", "x_pc", "y_pc", "z_pc",
                     "absmag", "ci", "P_days", "T_jd", "e", "a_AU",
                     "i_rad", "omega_rad", "Omega_rad", "q", "dist_pc",
-                    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd"):
+                    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag"):
             self.assertEqual(cells[header.index(col)], "",
                              msg=f"empty optional {col} should be empty cell")
 
