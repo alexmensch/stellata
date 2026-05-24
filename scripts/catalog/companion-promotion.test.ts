@@ -53,6 +53,7 @@ function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow
     source: 'wds',
     astrometryVia: 'gaia_5p',
     spectVia: 'none',
+    photometryVia: 'athyg_own',
     orbitRole: 'secondary',
     distPc: 100,
     sepArcsec: null,
@@ -69,7 +70,7 @@ describe('parseMultiplesTsv', () => {
       'system_id','comp','hip','gaia_source_id',
       'x_pc','y_pc','z_pc','absmag','ci','spect','name',
       'source','regime','resolve_via','astrometry_via','orbit_via',
-      'spect_via','orbit_role',
+      'spect_via','photometry_via','orbit_role',
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
@@ -78,7 +79,7 @@ describe('parseMultiplesTsv', () => {
       'WDS-X-AB','A','12345','1234567890123456',
       '1.0','2.0','3.0','5.50','0.45','G2V','Sirius',
       'athyg','2','orb6_hip','gaia_5p','orb6',
-      'simbad','primary',
+      'simbad','athyg_own','primary',
       '365.25','2451545.0','0.1','1.0','0.5','0.6','0.7',
       '0.5','10.0',
       '7.123','265.45','2458850.0','0.85',
@@ -93,6 +94,7 @@ describe('parseMultiplesTsv', () => {
     expect(r.x_pc).toBe(1.0);
     expect(r.absmag).toBe(5.5);
     expect(r.spect).toBe('G2V');
+    expect(r.photometryVia).toBe('athyg_own');
     expect(r.orbitRole).toBe('primary');
     expect(r.sepArcsec).toBe(7.123);
     expect(r.paDeg).toBe(265.45);
@@ -104,7 +106,7 @@ describe('parseMultiplesTsv', () => {
       'system_id','comp','hip','gaia_source_id',
       'x_pc','y_pc','z_pc','absmag','ci','spect','name',
       'source','regime','resolve_via','astrometry_via','orbit_via',
-      'spect_via','orbit_role',
+      'spect_via','photometry_via','orbit_role',
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
@@ -113,7 +115,7 @@ describe('parseMultiplesTsv', () => {
       'WDS-X-AB','B','','',
       '','','','','','','',
       'wds','0','unresolved','unresolved','none',
-      'none','secondary',
+      'none','none','secondary',
       '','','','','','','',
       '','',
       '','','','',
@@ -170,37 +172,49 @@ describe('projectFromSepPa', () => {
 describe('imputeCompanionAbsmag', () => {
   const primary = multiplesRow({ orbitRole: 'primary', comp: 'A', absmag: 1.45 });
 
-  it('imputes from primary + Δmag when secondary inherited the primary absmag', () => {
+  it('imputes from primary + Δmag when stage 6 tagged photometry as inherited', () => {
     const sec = multiplesRow({
       comp: 'B', absmag: 1.45, dmag: 9.91,
+      photometryVia: 'athyg_system_inherited',
     });
     expect(imputeCompanionAbsmag(sec, primary)).toBeCloseTo(11.36, 4);
   });
 
-  it('uses the secondary own absmag when it differs from primary', () => {
-    const sec = multiplesRow({ comp: 'B', absmag: 11.18, dmag: 9.7 });
+  it('uses the secondary own absmag when photometry is its own', () => {
+    const sec = multiplesRow({
+      comp: 'B', absmag: 11.18, dmag: 9.7,
+      photometryVia: 'athyg_own',
+    });
     expect(imputeCompanionAbsmag(sec, primary)).toBe(11.18);
   });
 
   it('falls through to primary + Δmag when secondary absmag is null', () => {
-    const sec = multiplesRow({ comp: 'B', absmag: null, dmag: 9.91 });
+    const sec = multiplesRow({
+      comp: 'B', absmag: null, dmag: 9.91,
+      photometryVia: 'none',
+    });
     expect(imputeCompanionAbsmag(sec, primary)).toBeCloseTo(11.36, 4);
   });
 
   it('returns null when no path can produce an absmag', () => {
-    const sec = multiplesRow({ comp: 'B', absmag: null, dmag: null });
+    const sec = multiplesRow({
+      comp: 'B', absmag: null, dmag: null,
+      photometryVia: 'none',
+    });
     expect(imputeCompanionAbsmag(sec, primary)).toBeNull();
   });
 });
 
 describe('imputeCompanionCi', () => {
-  const primary = multiplesRow({ orbitRole: 'primary', comp: 'A', ci: 0.009 });
   const wdInfo = classifyFromSimbad('DA1.9')!;
   const mDwarfInfo = classifyFromSimbad('M3V')!;
 
   it('derives a hot-WD B-V from the WD subclass when ci is inherited', () => {
-    const sec = multiplesRow({ comp: 'B', ci: 0.009 });
-    const bv = imputeCompanionCi(sec, primary, wdInfo);
+    const sec = multiplesRow({
+      comp: 'B', ci: 0.009,
+      photometryVia: 'athyg_system_inherited',
+    });
+    const bv = imputeCompanionCi(sec, wdInfo);
     // T_eff(DA1.9) = 50400/2 = 25200 K → Ballesteros⁻¹ ≈ -0.44.
     // The shader's LUT clamps to BV_MIN=-0.4 at lookup time; we store
     // the unclamped value so the raw temperature stays recoverable.
@@ -208,30 +222,36 @@ describe('imputeCompanionCi', () => {
     expect(bv).toBeGreaterThan(-0.5);
   });
 
-  it('uses row.ci when the secondary carries a per-component value distinct from the primary', () => {
-    const sec = multiplesRow({ comp: 'B', ci: 1.42 });
-    expect(imputeCompanionCi(sec, primary, mDwarfInfo)).toBe(1.42);
+  it('uses row.ci when the secondary carries its own photometry', () => {
+    const sec = multiplesRow({
+      comp: 'B', ci: 1.42, photometryVia: 'athyg_own',
+    });
+    expect(imputeCompanionCi(sec, mDwarfInfo)).toBe(1.42);
   });
 
   it('derives from spectral info when row.ci is null', () => {
-    const sec = multiplesRow({ comp: 'B', ci: null });
-    const bv = imputeCompanionCi(sec, primary, mDwarfInfo);
+    const sec = multiplesRow({
+      comp: 'B', ci: null, photometryVia: 'none',
+    });
+    const bv = imputeCompanionCi(sec, mDwarfInfo);
     expect(bv).toBeGreaterThan(0.5);
     expect(bv).toBeLessThan(2.0);
   });
 
   it('falls through to SOLAR_BV_FALLBACK for unparseable spectral info', () => {
-    const sec = multiplesRow({ comp: 'B', ci: 0.009 });
-    expect(imputeCompanionCi(sec, primary, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
+    const sec = multiplesRow({
+      comp: 'B', ci: 0.009,
+      photometryVia: 'athyg_system_inherited',
+    });
+    expect(imputeCompanionCi(sec, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
   });
 
   it('falls through to SOLAR_BV_FALLBACK when spectral classIdx is 8 and not a WD', () => {
-    // A SIMBAD-Gaia-saturated row with parseable lumClass but
-    // classIdx=8 (the "other / unknown" bucket) carries no
-    // temperature anchor → don't trust the 5000 K default.
-    const sec = multiplesRow({ comp: 'B', ci: null });
+    const sec = multiplesRow({
+      comp: 'B', ci: null, photometryVia: 'none',
+    });
     const unknownButLumClass = { ...SPECTRAL_UNKNOWN, lumClass: 2 };
-    expect(imputeCompanionCi(sec, primary, unknownButLumClass)).toBe(SOLAR_BV_FALLBACK);
+    expect(imputeCompanionCi(sec, unknownButLumClass)).toBe(SOLAR_BV_FALLBACK);
   });
 });
 
@@ -270,6 +290,7 @@ describe('promoteCompanions', () => {
         name: 'Sirius',
         source: 'athyg', astrometryVia: 'hip2_long_baseline',
         spectVia: 'simbad',
+        photometryVia: 'athyg_system_inherited',
         orbitRole: 'secondary',
         sepArcsec: 11.1, paDeg: 59.0, sepPaEpochJd: 2460311.0,
         dmag: 9.91,

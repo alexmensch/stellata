@@ -40,6 +40,11 @@ export interface MultiplesTsvRow {
   source: string;
   astrometryVia: string;
   spectVia: string;
+  /** Stage 6's per-row photometry provenance. `athyg_own` /
+   *  `athyg_system_inherited` / `none`. Companion promotion reads
+   *  this to detect inherited photometry directly instead of
+   *  comparing absmag to the primary's by float equality. */
+  photometryVia: string;
   orbitRole: OrbitRole;
   distPc: number | null;
   sepArcsec: number | null;
@@ -47,6 +52,10 @@ export interface MultiplesTsvRow {
   sepPaEpochJd: number | null;
   dmag: number | null;
 }
+
+export const PHOTOMETRY_VIA_OWN = 'athyg_own';
+export const PHOTOMETRY_VIA_SYSTEM_INHERITED = 'athyg_system_inherited';
+export const PHOTOMETRY_VIA_NONE = 'none';
 
 function nonEmpty(s: string | undefined): string | null {
   if (!s) return null;
@@ -97,6 +106,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     source: col('source'),
     astrometryVia: col('astrometry_via'),
     spectVia: col('spect_via'),
+    photometryVia: col('photometry_via'),
     orbitRole: col('orbit_role'),
     distPc: col('dist_pc'),
     sepArcsec: col('sep_arcsec'),
@@ -126,6 +136,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       source: cells[idx.source] ?? '',
       astrometryVia: cells[idx.astrometryVia] ?? '',
       spectVia: cells[idx.spectVia] ?? '',
+      photometryVia: cells[idx.photometryVia] ?? '',
       orbitRole: role,
       distPc: parseFloatOrNull(cells[idx.distPc]),
       sepArcsec: parseFloatOrNull(cells[idx.sepArcsec]),
@@ -294,20 +305,16 @@ function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
   return groups;
 }
 
-// Companion B-V (ci). When the row inherited the primary's AT-HYG ci
-// (Sirius B carrying Sirius A's 0.009 white instead of its own DA1.9
-// blue), derive from spectral info via tempKelvin → ballesterosBvFromTeff.
-// SPECTRAL_UNKNOWN falls through to SOLAR_BV_FALLBACK.
+// Companion B-V (ci). When Stage 6 tags the row's photometry as
+// inherited from the system primary (Sirius B's row carrying Sirius A's
+// 0.009 white instead of its own DA1.9 blue), derive from spectral info
+// via tempKelvin → ballesterosBvFromTeff. SPECTRAL_UNKNOWN falls
+// through to SOLAR_BV_FALLBACK.
 export function imputeCompanionCi(
   secondary: MultiplesTsvRow,
-  primary: MultiplesTsvRow | null,
   spectralInfo: SpectralInfo,
 ): number {
-  const inherited =
-    secondary.ci !== null
-    && primary !== null
-    && primary.ci !== null
-    && secondary.ci === primary.ci;
+  const inherited = secondary.photometryVia === PHOTOMETRY_VIA_SYSTEM_INHERITED;
   const needsDerivation = secondary.ci === null || inherited;
   if (!needsDerivation) {
     return secondary.ci as number;
@@ -324,8 +331,8 @@ export function imputeCompanionCi(
 }
 
 
-// Companion absmag. When the row inherited the primary's AT-HYG absmag
-// (Sirius B carrying Sirius A's 1.45), impute as primary + WDS Δmag;
+// Companion absmag. When Stage 6 tags the row's photometry as
+// inherited from the system primary, impute as primary + WDS Δmag;
 // otherwise prefer the row's own absmag and fall back to primary +
 // Δmag. Returns null when no path produces a value — caller drops.
 export function imputeCompanionAbsmag(
@@ -335,12 +342,9 @@ export function imputeCompanionAbsmag(
   const primaryAbsmag = primary?.absmag ?? null;
   const dmag = secondary.dmag;
   const inheritedPhotometry =
-    primary !== null
-      && secondary.absmag !== null
-      && primaryAbsmag !== null
-      && Math.abs(secondary.absmag - primaryAbsmag) < 1e-9;
+    secondary.photometryVia === PHOTOMETRY_VIA_SYSTEM_INHERITED;
 
-  if (inheritedPhotometry && dmag !== null) {
+  if (inheritedPhotometry && primaryAbsmag !== null && dmag !== null) {
     return primaryAbsmag + dmag;
   }
   if (secondary.absmag !== null) return secondary.absmag;
@@ -544,7 +548,7 @@ export function promoteCompanions(
         continue;
       }
       const spectral = resolveCompanionSpectral(row);
-      const ci = imputeCompanionCi(row, cursor.primary, spectral.info);
+      const ci = imputeCompanionCi(row, spectral.info);
       const properName = composeCompanionName(row, cursor.primary);
       let flags = FLAG_BINARY_COMPANION_ONLY;
       if (properName) flags |= FLAG_HAS_NAME;

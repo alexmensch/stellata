@@ -87,6 +87,8 @@ from stage5_optical import (  # noqa: E402, F401
 from stage6_multiples import (  # noqa: E402, F401
     ASTROMETRY_VIA_SYSTEM_INHERITED, MULTIPLES_TSV_COLUMNS,
     ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
+    PHOTOMETRY_VIA_NONE, PHOTOMETRY_VIA_OWN,
+    PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_VALUES,
     MultiplesRow,
     build_multiples_rows, build_standalone_rows,
     compute_system_anchors, wds_dmag, wds_year_to_jd, write_multiples_tsv,
