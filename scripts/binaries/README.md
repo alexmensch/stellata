@@ -68,7 +68,8 @@ scripts/binaries/
                                   mag-gap).
   stage6_multiples.py             Emit data/binaries/multiples.tsv with
                                   per-component provenance columns +
-                                  system-anchor inheritance for tight
+                                  per-pair WDS sep+PA+epoch+Δmag columns
+                                  + system-anchor inheritance for tight
                                   inner binaries + SIMBAD standalone
                                   augmentation.
   stage7_counts.py                Build-counts + build-rates snapshot
@@ -77,6 +78,17 @@ scripts/binaries/
   mass_estimate.py                Spectral-class-aware mass-ratio q
                                   backfill from Cox 2000 §15.2 /
                                   Pecaut & Mamajek 2013 tables.
+  build-runtime-binaries.py       Read multiples.tsv +
+                                  public/catalog-row-index-map.json,
+                                  emit public/binaries.bin (v1 BIN1,
+                                  72-byte records, one per physical
+                                  pair). Detects hierarchical chains
+                                  (Algol Aa1,Aa2 inside Aa,Ab) via
+                                  WDS component-letter prefix
+                                  matching, writes records in
+                                  topological outer-before-inner
+                                  order. Run via
+                                  npm run build:binaries-runtime.
   build-binaries.test.py          stdlib unittest pins for Stages 1-7.
   build-binaries-expected.json    per-strategy / per-tier count snapshot
                                   (UPDATE_BUILD_COUNTS=1).
@@ -84,6 +96,9 @@ scripts/binaries/
                                   per-strategy rate snapshot — catches
                                   population-mix shifts that don't move
                                   absolute counts.
+  build-runtime-binaries-expected.json
+                                  pair-emission count snapshot for
+                                  build-runtime-binaries.py.
 
 data/wds/
   wds_summ.txt                    Washington Double Star summary
@@ -97,18 +112,21 @@ data/binaries/
   multiples.tsv                   build-binaries.py output — two rows
                                   per kept WDS pair, plus standalone rows
                                   for SIMBAD-known components the pair
-                                  walk didn't reach. Consumed today by
-                                  the Tier A validation harness +
-                                  ad-hoc debugging; the future per-frame
-                                  binary-orbit runtime layer will read
-                                  it directly (not merged into
-                                  catalog.bin). (LFS)
+                                  walk didn't reach. Carries per-pair
+                                  sep_arcsec, pa_deg, sep_pa_epoch_jd,
+                                  dmag for the static-placement and
+                                  Δmag-imputation paths. Consumed by
+                                  scripts/catalog/companion-promotion.ts
+                                  (build-time, surfaces companions in
+                                  catalog.bin), build-runtime-binaries.py
+                                  (emits public/binaries.bin), and the
+                                  Tier A validation harness. (LFS)
 ```
 
 ## Pipeline at a glance
 
-Two build steps, run in order, with `data/binaries/multiples.tsv` as the
-hand-off:
+Three build steps in order, with `data/binaries/multiples.tsv` and
+`public/catalog-row-index-map.json` as hand-offs:
 
 1. **Binary-system pipeline** (`scripts/binaries/build-binaries.py`).
    Reads WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS,
@@ -118,28 +136,47 @@ hand-off:
    the pair walk didn't reach. Run via `npm run build:binaries`. Seven
    stages, one module per stage under `scripts/binaries/`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
-   Reads AT-HYG + the SIMBAD sp_type / Gaia Apsis / Bailer-Jones /
-   Gaia HIP-xmatch side-files + Stellarium constellations + GCVS +
-   Hipparcos CCDM. Emits `public/catalog.bin` (v6, 80-byte records),
-   `public/constellations.json`, `public/search-index.json`. Run via
+   Reads AT-HYG + multiples.tsv (companion promotion) + the SIMBAD
+   sp_type / Gaia Apsis / Bailer-Jones / Gaia HIP-xmatch side-files +
+   Stellarium constellations + GCVS + Hipparcos CCDM. Emits
+   `public/catalog.bin` (v6, 80-byte records), `public/constellations.json`,
+   `public/search-index.json`, `public/catalog-row-index-map.json`.
+   Run via
    `npm run build:catalog`. Per-stage logic lives in sibling modules
    (`stars-parse.ts`, `catalog-pure.ts`, `gcvs-parse.ts`,
-   `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`).
+   `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`,
+   `companion-promotion.ts`).
 
-The two outputs feed different runtime paths and are not merged. The
-per-star renderer keys off `public/catalog.bin`; `data/binaries/multiples.tsv`
-is consumed today by the Tier A validation harness
-(`known-stars.test.ts`) and ad-hoc debugging, and will additionally
-drive the future per-frame binary-orbit renderer layer when that
-lands — a parallel runtime layer alongside the per-star,
-planet-body, local-group, and other layers, not a merge into
-`catalog.bin`. `build-catalog.ts` does not ingest `multiples.tsv`;
-the per-component WDS detail rides into the runtime via the
-binary-orbit layer's own loader. Both phases write their build-time
-statistics into snapshot JSONs
-(`build-binaries-{expected,rates-expected}.json`,
-`build-catalog-expected.json`, `build-distance-outliers-expected.json`)
-that gate the next build.
+   Companion promotion is the build-catalog seam that reads
+   multiples.tsv: `scripts/catalog/companion-promotion.ts` adds
+   first-class catalog records for the secondary of every physical
+   pair whose identifier isn't already in AT-HYG. Promoted records
+   carry `FLAG_BINARY_COMPANION_ONLY`; positions come from the
+   row's own Gaia 5p astrometry when distinct from the primary's,
+   otherwise from a sky-tangent projection of the EXISTING catalog
+   primary's xyz at the published WDS sep+PA. Absmag is imputed
+   from primary + WDS Δmag when the row inherits its parent's
+   AT-HYG photometry. The renderer / picker / hover / focus stack
+   picks companions up with zero code change. ~4k companions
+   promoted into the current build.
+3. **Runtime side artifact** (`scripts/binaries/build-runtime-binaries.py`).
+   Reads multiples.tsv + `public/catalog-row-index-map.json`,
+   emits `public/binaries.bin` — one fixed-size record per
+   physical pair carrying Kepler elements + sep+PA + hierarchical
+   parent-relation index. Run via `npm run build:binaries-runtime`.
+   Loaded by `src/client/binaries/binaries-loader.ts`; consumed
+   per-frame by the BinaryOrbitField (lmh.5).
+
+The Tier A validation harness (`scripts/catalog/known-stars.test.ts`)
+reads multiples.tsv directly for per-component sanity checks
+(SIMBAD spectral type, absmag-from-Δmag).
+
+Build-time statistics for every phase land in snapshot JSONs:
+`build-binaries-{expected,rates-expected}.json`,
+`build-runtime-binaries-expected.json`,
+`build-catalog-expected.json`,
+`build-distance-outliers-expected.json` — each gates the next
+build via `UPDATE_BUILD_COUNTS=1` refresh.
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
 
@@ -287,8 +324,20 @@ x_pc, y_pc, z_pc, absmag, ci, spect, name,
 source, regime,
 resolve_via, astrometry_via, orbit_via, spect_via,
 orbit_role,
-P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc
+P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
+sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag
 ```
+
+The last four columns carry WDS pair geometry — populated on both
+component rows of a decomposing pair (standalone rows leave them
+empty). `sep_arcsec` and `pa_deg` feed companion-promotion's
+tangent-plane projection for the Tier-3 (no-orbit) path and the
+runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
+WDS observation year (`date_last`) converted to JD via
+`wds_year_to_jd` so a future runtime layer can propagate sep+PA
+forward in time. `dmag` is the published apparent Δmag
+(`mag_sec - mag_pri`) used to impute the companion's absmag when
+the secondary row inherits its parent's AT-HYG photometry.
 
 Three system-level mechanisms run at emit time:
 
