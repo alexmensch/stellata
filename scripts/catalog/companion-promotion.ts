@@ -473,6 +473,19 @@ export function promoteCompanions(
     // pair geometry needs a different rule than this path.
     if (cursor.primary === null) continue;
 
+    // Resolve the primary's catalog row once per system. Used both for
+    // anchoring the sep+PA projection AND for the inherited-HIP escape
+    // below (so findExisting hits against the primary's record don't
+    // wrongly collapse a no-gaia secondary that's inheriting HIP).
+    const primaryCatalogIdx = findExisting(cursor.primary, existing);
+    const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
+      ? {
+          x: existingStars[primaryCatalogIdx].x,
+          y: existingStars[primaryCatalogIdx].y,
+          z: existingStars[primaryCatalogIdx].z,
+        }
+      : null;
+
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') continue;
       stats.pairRowsScanned++;
@@ -482,7 +495,17 @@ export function promoteCompanions(
         stats.droppedNoIdentifier++;
         continue;
       }
-      if (findExisting(row, existing) !== null) {
+      // findExisting + inherited-HIP escape. When a no-gaia secondary
+      // row matches the primary's catalog record on HIP, that's the
+      // inheritance-collision case (Hipparcos resolved A+B as one star),
+      // not a real "already in catalog" hit — promotion should proceed.
+      const existingIdx = findExisting(row, existing);
+      const inheritedHipCollision =
+        existingIdx !== null
+        && row.gaiaSourceId === null
+        && primaryCatalogIdx !== null
+        && existingIdx === primaryCatalogIdx;
+      if (existingIdx !== null && !inheritedHipCollision) {
         stats.alreadyInCatalog++;
         continue;
       }
@@ -495,21 +518,6 @@ export function promoteCompanions(
         stats.alreadyInCatalog++;
         continue;
       }
-
-      // If the primary already lives in catalog.bin, anchor the sep+PA
-      // projection on that existing record's xyz rather than the
-      // multiples.tsv row's xyz — keeps the companion physically close
-      // to its visual parent regardless of pipeline-precision gaps.
-      const primaryCatalogIdx = cursor.primary !== null
-        ? findExisting(cursor.primary, existing)
-        : null;
-      const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
-        ? {
-            x: existingStars[primaryCatalogIdx].x,
-            y: existingStars[primaryCatalogIdx].y,
-            z: existingStars[primaryCatalogIdx].z,
-          }
-        : null;
 
       // HIP inheritance gate. The multiples.tsv carries the primary's
       // HIP on both component rows when AT-HYG had a single entry for

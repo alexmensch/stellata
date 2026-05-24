@@ -322,6 +322,41 @@ describe('promoteCompanions', () => {
     expect(stats.promoted).toBe(0);
   });
 
+  it('promotes a no-gaia secondary whose HIP was inherited from the primary (findExisting escape)', () => {
+    // Hypothetical: Stage 2 returned `unresolved` for B so the secondary
+    // carries no gaia, but multiples.tsv inherited the system primary's
+    // HIP from AT-HYG. findExisting would match the primary's catalog
+    // record via HIP fall-through — the inherited-HIP escape lets
+    // promotion proceed anyway.
+    const rows = siriusRows();
+    rows[1].gaiaSourceId = null;       // strip B's distinct gaia
+    rows[1].hip = 32349;               // still shares primary's HIP
+    rows[1].astrometryVia = 'system_inherited';
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing]);
+    expect(stats.alreadyInCatalog).toBe(0);
+    expect(stats.promoted).toBe(1);
+    expect(newStars).toHaveLength(1);
+    // The HIP-inheritance gate elsewhere strips the inherited HIP so the
+    // promoted record doesn't collide with the primary in HIP lookups.
+    expect(newStars[0].hip).toBeNull();
+  });
+
+  it('still reports alreadyInCatalog for a no-gaia row whose HIP matches a NON-primary AT-HYG record', () => {
+    // Discriminator for the inherited-HIP escape: it only fires when the
+    // matched catalog row IS the cursor primary. If the secondary's HIP
+    // matches some other AT-HYG record entirely (in practice: a SIMBAD
+    // cross-ID quirk), the match is a real "already in catalog" hit.
+    const otherStar: Star = makeStar({
+      gaiaSourceId: null, hip: 99999, absmag: 5.0,
+    });
+    const rows = siriusRows();
+    rows[1].gaiaSourceId = null;
+    rows[1].hip = 99999;  // matches `otherStar`, NOT Sirius A
+    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar]);
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.promoted).toBe(0);
+  });
+
   it('drops secondaries with no absmag path (no own absmag, no Δmag)', () => {
     const rows = siriusRows();
     rows[1].absmag = null;
