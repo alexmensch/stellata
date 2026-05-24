@@ -100,6 +100,20 @@ documentation index. Recursively — when a folder accumulates content
 that doesn't fit a single coherent topic, **split into subfolders**;
 don't add a second sibling doc.
 
+**Per-folder README is context, not just output.** Before editing
+files inside a subfolder that has its own `README.md`, read it if
+you haven't this session — it carries invariants, conventions, and
+historical decisions the code alone won't tell you (the file roster
+explains what each module owns; the prose explains *why*). When
+your changes invalidate a claim in the README — renamed file,
+changed data flow, new consumer, dropped feature, shifted
+ownership — update the README in the same PR. Folder READMEs are
+the prose-only surface a `grep` for renamed symbols won't catch;
+they need their own audit pass at commit time. Forgetting to read
+leaks pre-existing context to next session; forgetting to update
+leaks misleading context. The five "adding new code" rules below
+are why the README exists; this paragraph is how to USE it.
+
 Five rules for adding new code:
 
 - **Physical / visual / thematic subsystems get a folder from day 1,
