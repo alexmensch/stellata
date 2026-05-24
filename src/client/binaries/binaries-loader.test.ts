@@ -278,11 +278,30 @@ describe('loadBinaries', () => {
     expect(out!.relations[0].primaryIdx).toBe(7);
   });
 
-  it('rethrows on a present-but-malformed payload (hard failure signal)', async () => {
-    const bogus = new ArrayBuffer(HEADER_SIZE);
-    new Uint8Array(bogus).set(new TextEncoder().encode('XXXX'), 0);
+  it('returns null on a magic-byte mismatch (covers the Vite dev-server HTML5 fallback case)', async () => {
+    const htmlLike = new TextEncoder().encode('<!DOCTYPE html><html><head>');
     mockFetch(async () =>
-      ({ ok: true, arrayBuffer: async () => bogus }) as Response);
+      ({ ok: true, arrayBuffer: async () => htmlLike.buffer }) as Response);
+    const out = await loadBinaries('/binaries.bin');
+    expect(out).toBeNull();
+  });
+
+  it('returns null on a payload smaller than the 4-byte magic', async () => {
+    const tiny = new ArrayBuffer(2);
+    mockFetch(async () =>
+      ({ ok: true, arrayBuffer: async () => tiny }) as Response);
+    const out = await loadBinaries('/binaries.bin');
+    expect(out).toBeNull();
+  });
+
+  it('rethrows on a present BIN1 payload that is version-mismatched (hard failure signal)', async () => {
+    // BIN1 magic + version=99 (unsupported) + count=0 — header-size buffer.
+    const buf = new ArrayBuffer(HEADER_SIZE);
+    const u8 = new Uint8Array(buf);
+    u8.set(new TextEncoder().encode('BIN1'), 0);
+    new DataView(buf).setUint32(4, 99, true);
+    mockFetch(async () =>
+      ({ ok: true, arrayBuffer: async () => buf }) as Response);
     await expect(loadBinaries('/binaries.bin'))
       .rejects.toBeInstanceOf(BinariesParseError);
   });

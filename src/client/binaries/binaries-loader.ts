@@ -182,10 +182,12 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
 
 /**
  * Fetch binaries.bin and parse it. Returns null when the file is
- * absent (404 / network error) so the renderer can fall through to a
- * "no orbital animation, static placements only" path. Throws
- * `BinariesParseError` only on a present-but-malformed payload (a hard
- * failure that signals an artifact / format mismatch).
+ * absent (404, network error, or the dev server's HTML5 fallback —
+ * detected by the magic-byte mismatch) so the renderer can fall through
+ * to a "no orbital animation, static placements only" path. Throws
+ * `BinariesParseError` only on a present-but-malformed payload whose
+ * header magic IS `BIN1` — version mismatch or truncated tail — since
+ * those are the signals of a real data-pipeline bug.
  */
 export async function loadBinaries(url: string): Promise<BinariesData | null> {
   let res: Response;
@@ -196,5 +198,8 @@ export async function loadBinaries(url: string): Promise<BinariesData | null> {
   }
   if (!res.ok) return null;
   const buf = await res.arrayBuffer();
+  if (buf.byteLength < 4) return null;
+  const magic = new TextDecoder('ascii').decode(new Uint8Array(buf, 0, 4));
+  if (magic !== MAGIC) return null;
   return parseBinaries(buf);
 }
