@@ -105,6 +105,20 @@ def build_binaries_counts(
         if r.orbit_role == ORBIT_ROLE_STANDALONE
     )
 
+    # Per-pair sep + PA + epoch fill rates. The runtime layer reads
+    # sep+PA to project the secondary on the static-placement path,
+    # so a silent drop in fill rate breaks Tier-3 without showing up
+    # in any other counter.
+    sep_arcsec_populated = sum(
+        1 for r in multiples_rows if r.sep_arcsec is not None
+    )
+    pa_deg_populated = sum(
+        1 for r in multiples_rows if r.pa_deg is not None
+    )
+    sep_pa_epoch_populated = sum(
+        1 for r in multiples_rows if r.sep_pa_epoch_jd is not None
+    )
+
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
         "decomposing_pairs": len(orbits),
@@ -112,6 +126,9 @@ def build_binaries_counts(
         "multiples_rows_emitted": len(multiples_rows),
         "multiples_astrometry_system_inherited": multiples_inherited,
         "multiples_standalone_emitted": standalone_emitted,
+        "multiples_sep_arcsec_populated": sep_arcsec_populated,
+        "multiples_pa_deg_populated": pa_deg_populated,
+        "multiples_sep_pa_epoch_populated": sep_pa_epoch_populated,
     }
     for tag in SPECT_VIA_VALUES:
         out[f"spect_{tag}"] = spect_counts[tag]

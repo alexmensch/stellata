@@ -89,7 +89,7 @@ from stage6_multiples import (  # noqa: E402, F401
     ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
     MultiplesRow,
     build_multiples_rows, build_standalone_rows,
-    compute_system_anchors, write_multiples_tsv,
+    compute_system_anchors, wds_year_to_jd, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401
     DEFAULT_RATE_TOLERANCE, UPDATE_COUNTS_ENV_VAR,

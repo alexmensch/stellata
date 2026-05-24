@@ -48,7 +48,26 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "P_days", "T_jd", "e", "a_AU",
     "i_rad", "omega_rad", "Omega_rad",
     "q", "dist_pc",
+    "sep_arcsec", "pa_deg", "sep_pa_epoch_jd",
 )
+
+
+# WDS publishes ``date_last`` as a 4-digit year of the last reported
+# observation. Convert to Julian Date treating the year as a Julian-year
+# epoch (start of that calendar year) — sub-day precision is irrelevant
+# because the sep/PA columns drive a static placement, not a time-
+# resolved propagation. The reference anchor is J2000 = JD 2451545.0.
+_JD_J2000 = 2451545.0
+_DAYS_PER_JULIAN_YEAR = 365.25
+
+
+def wds_year_to_jd(year: int | None) -> float | None:
+    """Convert a WDS ``date_last`` 4-digit year integer to JD. ``None``
+    passes through so a row without an observation date keeps an empty
+    epoch cell."""
+    if year is None:
+        return None
+    return _JD_J2000 + (float(year) - 2000.0) * _DAYS_PER_JULIAN_YEAR
 
 
 # ``spect_via`` provenance tags for the per-component spectral column.
@@ -135,6 +154,14 @@ class MultiplesRow:
     Omega_rad: float | None
     q: float | None
     dist_pc: float | None
+    # WDS pair geometry — sep + position angle of the secondary relative
+    # to the primary at ``sep_pa_epoch_jd`` (WDS ``date_last``). Populated
+    # on BOTH component rows of a pair to keep the per-row schema simple.
+    # Standalone rows leave all three as ``None``; the pair-walk hasn't
+    # seen the (wds_id, component) combination so there is no anchor.
+    sep_arcsec: float | None
+    pa_deg: float | None
+    sep_pa_epoch_jd: float | None
 
 
 def _system_id_for_pair(pair: WdsPair) -> str:
@@ -361,6 +388,9 @@ def build_multiples_row(
         Omega_rad=orbit.Omega_rad if orbit is not None else None,
         q=orbit.q if orbit is not None else None,
         dist_pc=position[3] if position is not None else None,
+        sep_arcsec=pair.rho_last,
+        pa_deg=pair.theta_last,
+        sep_pa_epoch_jd=wds_year_to_jd(pair.date_last),
     )
 
 
@@ -503,6 +533,7 @@ def build_standalone_rows(
             i_rad=None, omega_rad=None, Omega_rad=None,
             q=None,
             dist_pc=position[3] if position is not None else None,
+            sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
         ))
     return out
 
@@ -520,7 +551,9 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
     canonical ``MULTIPLES_TSV_COLUMNS`` header. Numeric precision is
     chosen so the round-trip into Phase 3's binary format loses no
     user-visible precision: positions 6 dp (~µpc), magnitudes 4 dp,
-    radians 6 dp, period 6 dp, eccentricity 6 dp.
+    radians 6 dp, period 6 dp, eccentricity 6 dp, WDS sep 3 dp
+    (matches the ρ catalogue's published resolution), PA 2 dp
+    (matches θ), epoch 4 dp (mirrors T_jd).
     """
     with path.open("w") as fh:
         fh.write("\t".join(MULTIPLES_TSV_COLUMNS) + "\n")
@@ -553,6 +586,9 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 _fmt_float(r.Omega_rad, 6),
                 _fmt_float(r.q, 6),
                 _fmt_float(r.dist_pc, 6),
+                _fmt_float(r.sep_arcsec, 3),
+                _fmt_float(r.pa_deg, 2),
+                _fmt_float(r.sep_pa_epoch_jd, 4),
             )) + "\n")
     return len(rows)
 
