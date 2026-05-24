@@ -1,7 +1,6 @@
-// Gaia DR3 ↔ classical-catalog cross-walks (currently HIP, with room
-// for TYC) used by the catalog builder to bridge GCVS / CCDM cross-IDs
-// onto gaia_source_id anchors. Same shape as scripts/binaries/parsers.py
-// parse_gaia_hip_xmatch — many-to-one collisions keep the nearest match.
+// Gaia DR3 cross-walks (HIP, room for TYC) bridging classical catalog
+// IDs onto gaia_source_id anchors. Many-to-one collisions keep the
+// nearest match.
 import { readFileSync } from 'node:fs';
 
 const HIP_COL = 'hip';

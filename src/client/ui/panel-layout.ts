@@ -1,9 +1,5 @@
-// Collapse/expand toggles for the settings panel. The panel itself
-// collapses as a single unit (top-level), and each `.group[data-group]`
-// inside the panel collapses independently with its own persisted state.
-// Layout itself is pure CSS — the panel sits inside `.ui-top`'s flex
-// column, so nothing needs to measure the topbar or reposition on
-// resize.
+// Collapse/expand toggles for the settings panel (top-level + per-group).
+// See src/client/ui/README.md § Per-group collapse in the settings panel.
 
 const PANEL_KEY = 'stellata.panel-collapsed';
 const GROUP_KEY_PREFIX = 'stellata.group-collapsed.';

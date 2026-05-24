@@ -1,7 +1,5 @@
-// Pure-math helpers for the warp pipeline. Lives alongside
-// `perceptual-magnitude.ts` / `catalog-pure.ts` — small,
-// dependency-free, vitest-covered so the invariants the warp
-// jitter fix rests on can't silently regress.
+// Pure-math helpers for the warp pipeline (slerp, ease, recentre
+// predicate, floating-origin waypoint migration).
 
 import * as THREE from 'three';
 

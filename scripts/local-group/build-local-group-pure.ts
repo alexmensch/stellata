@@ -1,7 +1,6 @@
-// Pure helpers for scripts/local-group/build-local-group.ts — kept off the I/O
-// path so vitest can exercise the distance filter, override-merge,
-// orientation quaternion construction, and label-threshold defaulting
-// without touching the filesystem.
+// Pure helpers for build-local-group.ts: distance filter, override
+// merge, orientation quaternion construction, display-name routing.
+// Kept off the I/O path so vitest can exercise them directly.
 
 /** Max heliocentric distance (parsecs) we render. 2 Mpc covers the
  *  canonical Local Group: M31 + M33 + their satellite subgroup, plus

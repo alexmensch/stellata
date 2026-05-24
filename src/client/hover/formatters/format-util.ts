@@ -1,10 +1,5 @@
-// Shared helpers for the hover-card formatters.
-//
-// Lifted here at the second usage (Local Group + cloud both surface
-// "Size <major> × <minor>" axis pairs) per the named-constants-and-dry
-// rule. Future hover surfaces that summarise extended-object axes
-// (nebulae, Radcliffe Wave segments, large DSOs) reach for this rather
-// than re-implementing the suffix elision.
+// Shared helpers for the hover-card formatters (axis-pair stringifier,
+// unit-aware distance). See ./README.md.
 
 import { fmtDist } from '../../ui/distance-util';
 

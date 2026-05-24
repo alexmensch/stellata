@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/simbad/simbad_sptype.tsv — SIMBAD per-source sp_type +
-sp_qual + sp_bibcode + otype + HIP / Gaia DR3 cross-IDs.
-
-Orchestration shell over scripts/refresh/simbad/; adding a column /
-cross-ID / input source is a one-line append to BASIC_COLUMNS /
-IDENT_LOOKUPS / collect_oid_requests below.
-
-Runtime: ~8 min.
-"""
+"""Refresh data/simbad/simbad_sptype.tsv — SIMBAD per-source sp_type,
+sp_qual, sp_bibcode, otype, and HIP / Gaia DR3 cross-IDs."""
 
 from __future__ import annotations
 

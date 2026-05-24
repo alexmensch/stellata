@@ -1,11 +1,6 @@
-// Pure helpers for the build-catalog count assertion.
-//
-// `BuildCounts` is a flat record of every headline number `build-catalog.ts`
-// logs at the end of a successful build. The committed
-// `build-catalog-expected.json` carries the last known-good snapshot, and
-// `compareBuildCounts` produces a structured diff for the build script to
-// pretty-print on mismatch. Refresh the expected file deliberately with
-// `UPDATE_BUILD_COUNTS=1 npm run build:catalog`.
+// Pure helpers for the build-catalog count assertion — diff a
+// BuildCounts record against the committed snapshot. See
+// scripts/catalog/README.md § Validation harness.
 
 export interface BuildCounts {
   /** Records written to catalog.bin after filtering and sort. */

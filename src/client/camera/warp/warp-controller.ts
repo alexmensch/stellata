@@ -1,7 +1,5 @@
-// 3-phase warp FSM (reorient → fly → post-arrival). Coupling via
-// `FocusOps` (defined in ../focus/focus-controller; re-exported here).
-//
-// See src/client/camera/warp/README.md and src/client/camera/arrival/README.md.
+// 3-phase warp FSM (reorient → fly → post-arrival).
+// See src/client/camera/warp/README.md.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';

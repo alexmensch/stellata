@@ -1,10 +1,6 @@
-"""Shared test-side utilities for scripts/*/*.test.py files.
-
-`.test.py` siblings of kebab-cased source files (build-binaries.py,
-build-vaidman-tsv.py, validate-distances.py, …) cannot `import
-build-binaries` directly — the hyphen is a syntax error. This module
-wraps `importlib.util.spec_from_file_location` so each test file
-declares the load in one line instead of seven."""
+"""Shared test-side utilities for scripts/*/*.test.py files. Wraps
+`importlib.util.spec_from_file_location` so a kebab-cased sibling
+(unimportable via `import` due to the hyphen) loads in one line."""
 
 from __future__ import annotations
 

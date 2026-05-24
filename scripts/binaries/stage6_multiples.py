@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """Stage 6 — emit ``data/binaries/multiples.tsv``.
-
-Two rows per kept (physical) pair, columns per ``MULTIPLES_TSV_COLUMNS``:
-system_id, component, hip / gaia_source_id, ICRS x/y/z parsec position,
-AT-HYG photometric / spectral metadata, orbital elements from Stage 4,
-resolve / astrometry / orbit provenance tags. Phase 3's v6 binary
-writer is the consumer.
+Column order is ``MULTIPLES_TSV_COLUMNS``.
 """
 
 from __future__ import annotations

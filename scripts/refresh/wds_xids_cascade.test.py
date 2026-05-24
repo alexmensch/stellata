@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/refresh/wds_xids_cascade.py — pure helpers for
-the HD/CCDM/HIP cascade fallback in refresh-simbad-wds-xids.py.
-
-Run: python3 scripts/refresh/wds_xids_cascade.test.py
-"""
+"""Unit tests for scripts/refresh/wds_xids_cascade.py — the HD/CCDM/HIP
+cascade fallback for SIMBAD's WDS-component xref pull."""
 
 from __future__ import annotations
 

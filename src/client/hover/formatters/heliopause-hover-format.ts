@@ -1,9 +1,5 @@
-// Heliopause hover formatter. Static payload (geometry is fixed,
-// shell doesn't deform on human timescales). See SCIENCE.md §
-// Heliopause for the dimensions / apex orientation.
-//
-// Layout: name; upwind + lateral extents on one line; downwind tail
-// on its own line.
+// Heliopause hover formatter — static layout (upwind + lateral on one
+// line, downwind tail on the next). See SCIENCE.md § Heliopause.
 
 import { HELIOPAUSE_UPWIND_APEX_AU } from '../../solar-system/heliopause';
 import type { HoverPayload } from '../hover-types';

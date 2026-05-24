@@ -1,9 +1,6 @@
-// Orchestration shell: AT-HYG + GCVS + CCDM + Bailer-Jones + Gaia Apsis
-// + Stellarium → public/catalog.bin (v6 binary),
-// public/constellations.json, public/search-index.json. Per-input parsing
-// lives in sibling modules (constellations, visual-doubles, gcvs-parse,
-// stars-parse) with shared algebra + binary-layout constants in
-// catalog-pure.
+// Orchestrator for the catalog build pipeline — writes
+// public/catalog.bin, public/constellations.json, and
+// public/search-index.json. See scripts/catalog/README.md.
 
 import { statSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';

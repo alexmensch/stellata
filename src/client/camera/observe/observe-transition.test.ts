@@ -1,15 +1,5 @@
-// ObserveTransition tests. The four mode-switch
-// entry points + the unfocus-lerp variant + cancellation paths +
-// isActive / isAnyActive contracts. Hybrid arrival-curve internals are
-// covered by arrival-curves.test.ts and camera-motion.test.ts — here we
-// just confirm ObserveTransition routes the right context into the
-// shared helpers.
-//
-// The harness mirrors warp-controller.test.ts's shape: stub controls,
-// observeControls, AimController, plus a FocusFixture that records
-// every call into the ObserveFocusOps surface. setCameraModeValue is
-// wired to a mutable closure so the controller's "Stellata still owns
-// cameraMode" handshake works end-to-end.
+// ObserveTransition tests — mode-switch entry points, unfocus-lerp
+// variant, cancellation paths, isActive / isAnyActive contracts.
 
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';

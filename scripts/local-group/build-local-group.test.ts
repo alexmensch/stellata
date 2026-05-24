@@ -1,12 +1,6 @@
-// Tests for the I/O-adjacent helpers in build-local-group.ts.
-// The pure geometry / orientation / merge helpers are covered in
-// build-local-group-pure.test.ts; this file exercises the override
-// TSV parser, including the optional standalone-position columns the
-// 2 Mpc expansion added. The second describe block is
-// an integration test that reads the committed LVDB CSV and pins the
-// display-name routing for every renderable name — so future snapshots
-// that introduce an unclassified name surface at test time before they
-// render with the wrong morphology suffix.
+// Tests for I/O-adjacent helpers in build-local-group.ts: the override
+// TSV parser plus an integration test that reads the committed LVDB
+// CSV and pins display-name routing for every renderable name.
 
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

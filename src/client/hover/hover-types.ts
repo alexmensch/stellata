@@ -1,12 +1,5 @@
-// Shared types for the hover-label engine.
-//
-// One engine, many providers. Each renderable layer (stars, Sol planets,
-// Local Group wireframes, heliopause apex, …) implements `HoverProvider`
-// and registers with the engine; the engine handles the pointermove
-// listener, the 280 ms delay, cross-provider disambiguation, and the
-// #tooltip render. The contract lets future object classes wire in by
-// supplying a pick path + a per-class schema, without touching the
-// engine.
+// Shared types for the hover-label engine — `HoverProvider`,
+// `HoverHit`, `HoverPayload`. See ./README.md.
 
 // One pick result from a single layer's pick path. `tier` mirrors the
 // star picker's two-tier shape (prime = cursor inside the rendered

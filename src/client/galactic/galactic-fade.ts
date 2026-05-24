@@ -1,15 +1,6 @@
-// Shared zoom-based fade curve for far-field reference geometry that
-// should be invisible during local browsing and reveal itself as the
-// camera pulls away from Sol. The MW disc was the first consumer; the
-// Local Group wireframe layer adopts the same curve so the two layers
-// fade in lockstep, presenting as a single "context overlay" rather
-// than two layers with disjoint visibility thresholds.
-//
-// `distFromSolPc` is interpreted as ||camera.position + worldOffset||,
-// i.e. the absolute distance from Sol in ICRS parsecs (Edenhofer's
-// voxel grid reaches 1.25 kpc, so by 500 pc the disc is no longer
-// visually noisy). Below FADE_INNER_PC the geometry is invisible;
-// above FADE_OUTER_PC it's at its full base opacity.
+// Shared distance-from-Sol fade curve for far-field reference geometry
+// (galactic disc, Local Group wireframe). See
+// src/client/galactic/README.md.
 
 /** Inner edge of the fade-in band (distance from Sol, parsecs). */
 export const FADE_INNER_PC = 500;

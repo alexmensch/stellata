@@ -1,17 +1,6 @@
-// Generic dev tuning/diagnostics panel — chrome (drag-to-move host with
-// title bar) plus collapsible-section, slider, and colour-picker helpers
-// that every section reuses. Each domain (Star disc, Milky Way, Perf,
-// Pin) builds a labelled section and appends it to the shared panel root.
-//
-// State persisted in sessionStorage (not localStorage — calibration state
-// should reset on reload):
-//   stellata.debug.position           "{x,y}"
-//   stellata.debug.collapsed.<key>    "1" | "0"
-//
-// Intentionally unstyled beyond inline CSS — this exists for calibration
-// iteration, not production polish. The slider thumb/track styling does
-// require pseudo-elements, so it lives in a one-shot <style> block
-// injected on first panel build.
+// Draggable dev tuning panel chrome plus collapsible-section, slider,
+// and colour-picker helpers shared across sections. See
+// src/client/debug/README.md § Debug panel.
 
 const POS_KEY = 'stellata.debug.position';
 const collapsedKey = (key: string) => 'stellata.debug.collapsed.' + key;

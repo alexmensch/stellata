@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for validate-distances.py — pure helpers and report build.
-No network, no committed TSVs touched; fixtures are inline string literals
-and dict literals.
-
-Run:
-    python3 scripts/distance-validation/validate-distances.test.py
-"""
+"""Unit tests for validate-distances.py — pure helpers and report build."""
 
 from __future__ import annotations
 

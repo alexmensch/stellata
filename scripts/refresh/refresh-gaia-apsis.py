@@ -1,57 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical parameters.
-
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
-Pulls per-Gaia-source spectroscopic stellar parameters from
-`gaiadr3.astrophysical_parameters` — the (Teff, logg, [M/H], A0) products
-of the Apsis processing chain (Creevey+22 GSP-Phot, Recio-Blanco+23
-GSP-Spec). Coverage of (Teff, logg) goes from 29.3% (spectral-class
-parsing in `catalog-pure.ts`) to 84.8% — see
-research/star-spectral-rendition/README.md § Tier 2.
-
-Two pipelines per source:
-  * GSP-Phot — BP/RP photometric spectra, ~470 M DR3 sources, robust to
-    crowding; columns `*_gspphot`.
-  * GSP-Spec — RVS high-resolution spectra, ~5 M sources at G_RVS ≤ 14;
-    columns `*_gspspec`. Higher-quality but bright-end only.
-
-Either pipeline can return NULL for any cell independently — see the live
-2026-05-18 probe in research/star-spectral-rendition/apsis_coverage.txt.
-The unfiltered query returns ~99.9% of AT-HYG.gaia source_ids (a row
-exists per source even when every Apsis column is masked). The 84.8%
-figure that motivates ingest is the UNION of (Teff, logg) populated by
-either pipeline — a downstream stat, not the query's row count.
-
-ADQL (per batch)
-    SELECT source_id,
-           teff_gspphot, logg_gspphot, mh_gspphot, azero_gspphot,
-           teff_gspspec, logg_gspspec, mh_gspspec,
-           spectraltype_esphs
-    FROM gaiadr3.astrophysical_parameters
-    WHERE source_id IN (<AT-HYG source_id batch>)
-    ORDER BY source_id
-
-Backend: ESA Gaia archive (default refresh_lib ESA → CDS fallback).
-Batched IN-clause queries; 5000 ids per batch matches the
-empirical bailer-jones sweet spot.
-
-TSV columns (9) — see file docstring for `gaiadr3.astrophysical_parameters`
-upstream documentation. All upstream column names preserved verbatim;
-empty cells in the TSV correspond to masked (NULL) values from TAP.
-``spectraltype_esphs`` is the ESP-HS spectral-type enum (single letter:
-``O B A F G K M``) — categorical, not numeric, so it bypasses float
-rounding on write.
-
-Runtime: ~3 min.
-
-Idempotent — exits early if the output is newer than this script AND the
-AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-gaia-apsis.py
-"""
+"""Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical
+parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) per
+AT-HYG source_id."""
 
 from __future__ import annotations
 

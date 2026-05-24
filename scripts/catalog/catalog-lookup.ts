@@ -1,8 +1,6 @@
-// AoS reader + per-key indexes for the v6 binary catalogue. Built for
-// test-time corpus iteration (50-80 lookups per run) — the renderer's
-// SoA loader at src/client/loaders/catalog-loader.ts keeps the streaming
-// fast path. Both readers consume the same LAYOUT constants in
-// catalog-pure.ts; a binary-format change picks up here automatically.
+// AoS reader + per-key indexes for the v6 binary catalogue, used by
+// test-time corpus iteration. Shares LAYOUT constants with
+// catalog-pure.ts.
 
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';

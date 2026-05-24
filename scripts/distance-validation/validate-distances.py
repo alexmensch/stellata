@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """Distance validation harness — compares the catalogue's Bailer-Jones
 override against Vaidman et al. 2025's independent Bayesian distances
-for 132 Galactic BA-supergiants. Reads the B-J TSV directly rather than
-the shipped catalog binary so the harness stays decoupled from in-flight
-v6+ writer schema changes; the override is the only distance source for
-these source_ids today. See data/distance-validation/README.md for the
-reference dataset and SCIENCE.md § distance-override validation for the
-project-level rationale. Exit code 0 on pass, 1 on bar miss."""
+for 132 Galactic BA-supergiants. See scripts/distance-validation/README.md."""
 
 from __future__ import annotations
 

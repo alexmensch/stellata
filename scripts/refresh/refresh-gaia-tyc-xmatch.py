@@ -1,50 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia/gaia_dr3_tyc_xmatch.tsv — Tycho-2 → Gaia DR3 source_id cross-walk.
-
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
-Companion to scripts/refresh/refresh-gaia-hip-xmatch.py: HIP covers V ≲ 9 and
-Tycho-2 (with TDSC merged in) extends down to V ~ 11.5, so this TSV is
-how the Stage 1 indexer resolves any Tycho-2 / TDSC component to a Gaia
-DR3 source_id without a position match.
-
-ADQL
-    SELECT
-      original_ext_source_id AS tyc,
-      source_id              AS gaia_source_id,
-      angular_distance,
-      number_of_neighbours,
-      xm_flag
-    FROM gaiadr3.tycho2tdsc_merge_best_neighbour
-    WHERE source_id IS NOT NULL
-    ORDER BY original_ext_source_id
-
-`gaiadr3.tycho2tdsc_merge_best_neighbour` is the official Gaia DR3 ×
-(Tycho-2 + TDSC) cross-match — ~2.52M rows, all with a non-null
-source_id. The merged source catalogue rolls TDSC double-star
-components into Tycho-2 identifiers; rows are keyed by the bare
-`NNNN-NNNN-N` form (no "TYC " prefix).
-
-TSV columns (5)
-    tyc                  str   — Tycho-2 / TDSC identifier ("NNNN-NNNN-N")
-    gaia_source_id       int   — Gaia DR3 source_id
-    angular_distance     float — match separation, arcsec (6 decimals)
-    number_of_neighbours int   — ambiguity flag (1 = unique Gaia neighbour)
-    xm_flag              int   — Gaia cross-match flag (see DR3 docs)
-
-Identical 5-column shape to refresh-gaia-hip-xmatch.py so Stage 1 can
-ingest both with one parser.
-
-Runtime: ~1-3 min (single ESA Gaia TAP query, ~2.5M rows).
-
-Idempotent — exits early if the output is newer than this script. Pass
-`--force` to rebuild unconditionally. Backend fallback (ESA → CDS) is
-provided by refresh_lib.TapClient.
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-gaia-tyc-xmatch.py
-"""
+"""Refresh data/gaia/gaia_dr3_tyc_xmatch.tsv — Tycho-2 / TDSC → Gaia DR3
+source_id cross-walk from gaiadr3.tycho2tdsc_merge_best_neighbour."""
 
 from __future__ import annotations
 

@@ -1,11 +1,5 @@
-// Hover-label engine. Owns the canvas pointer listener,
-// the hover-delay timer, the provider registry, and the #tooltip render.
-//
-// Behaviour is byte-identical to the prior `bindHoverTooltip` for stars
-// — same 280 ms delay, same 14 px pick threshold, same hide-on-drag /
-// hide-on-leave / hide-on-pointermove gating — generalised so any
-// `HoverProvider` (Sol planets, Local Group wireframes, heliopause
-// apex, …) wires in without touching the engine.
+// Hover-label engine — canvas pointer listener, dwell timer, provider
+// registry, #tooltip render. See ./README.md.
 
 import { escapeHtml } from '../ui/dom-util';
 import {

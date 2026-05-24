@@ -1,7 +1,5 @@
-"""TSV writer driven by ColumnSpec + IdentLookup lists. The header is
-exactly ``[c.tsv_name for c in columns] + [l.tsv_name for l in
-ident_lookups]`` so a future-added spec entry lands as a new TSV
-column at the end of the row."""
+"""TSV writer driven by ColumnSpec + IdentLookup lists; header is
+``[c.tsv_name for c in columns] + [l.tsv_name for l in ident_lookups]``."""
 
 from __future__ import annotations
 

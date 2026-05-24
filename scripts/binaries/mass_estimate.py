@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 """Per-component stellar mass estimate from a SIMBAD/MK spectral string.
-
-Used by Stage 6 to derive a mass-ratio q for visual binaries (ORB6
-route) where Gaia NSS spectroscopy didn't already supply one. The Gaia
-NSS ``mass_ratio`` column always wins; this module is the fallback.
-
-Returns mass in solar masses or ``None`` when the spectral string is
-unparseable. Reference tables condensed from Cox 2000 §15.2 (Allen's
-Astrophysical Quantities 4th ed.) for MS / III / IV / I, plus the
-solar-neighbourhood mean WD mass (~0.6 M_sun). The white-dwarf branch
-intentionally ignores the WD subclass digit: per-WD masses span 0.3 to
-1.4 M_sun on cooling tracks and cannot be recovered from sp_type
-alone (Sirius B's 1.0 M_sun is the canonical counterexample).
+Fallback mass-ratio source for Stage 6 when Gaia NSS didn't supply ``q``.
 """
 
 from __future__ import annotations

@@ -1,59 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/gaia/gaia_dr3_astrometry.tsv — Gaia DR3 astrometry by source_id.
-
-Phase 2 Stage 2-output consumer. Reads the deduped
-``data/gaia/gaia_astrometry_source_id_request.tsv`` produced by
-scripts/binaries/build-binaries.py Stage 2, chunks the
-source_id list, queries ``gaiadr3.gaia_source`` via TAP, and writes
-the per-source astrometry needed by Stage 3 and
-Stage 4.
-
-Querying by source_id rather than position bypasses the orbital-
-contamination problem entirely for close binaries — there is no
-"nearest neighbour" ambiguity when the source_id is already resolved
-upstream.
-
-ADQL (per batch)
-    SELECT source_id, ra, ra_error, dec, dec_error,
-           parallax, parallax_error,
-           pmra, pmra_error, pmdec, pmdec_error,
-           ref_epoch, ruwe, ipd_frac_multi_peak,
-           phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag
-    FROM gaiadr3.gaia_source
-    WHERE source_id IN (<Stage-2 source_id batch>)
-
-Backend: ESA Gaia archive (default refresh_lib ESA → CDS fallback).
-Batched IN-clause queries; 5000 ids per batch matches the empirical
-bailer-jones sweet spot. The Gaia archive's IN-list cap is ~5000.
-
-TSV columns (17) — see file docstring for `gaiadr3.gaia_source`
-upstream documentation. All upstream column names preserved verbatim;
-empty cells correspond to masked (NULL) values from TAP. ``ruwe`` +
-``ipd_frac_multi_peak`` are consumed by Stage 3 to
-flag unreliable single-star solutions.
-
-Coverage expectation: ≥ 95% of input source_ids resolve. The small
-shortfall covers retracted-DR3 sources and any IDs Stage 2 emitted
-that the live ``gaia_source`` table no longer carries. The bead spec's
-±5% acceptance is encoded as ``EXPECTED_COVERAGE_MIN``.
-
-Idempotent — exits early if the output is newer than this script AND
-the Stage-2 request file. Pass ``--force`` to rebuild unconditionally.
-
-Note on the bead's original Sirius-A spot-check: Sirius A's
-``source_id`` 2947050466531873024 is NOT in the Stage-2 request file.
-Stage 2 only resolves components via the Gaia cross-match
-tables (``gaiadr3.hipparcos2_best_neighbour`` /
-``gaiadr3.tycho2tdsc_merge_best_neighbour``); Sirius A (V=-1.46)
-saturates Gaia and is absent from both. The bead description was
-updated to drop the Sirius example; this script uses pinned source_ids
-that are confirmed members of the request file (see SPOT_CHECKS).
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-gaia-astrometry.py
-"""
+"""Refresh data/gaia/gaia_dr3_astrometry.tsv — Gaia DR3 5-parameter
+astrometry for the source_ids in the build-binaries Stage 2 request file."""
 
 from __future__ import annotations
 

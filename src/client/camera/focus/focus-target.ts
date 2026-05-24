@@ -1,26 +1,6 @@
-// Per-object contract consumed by warp / focus-lerp / arrival code.
-//
-// The warp + camera-transition machinery operates on FocusTargets, NEVER
-// on `kind` switch statements. Adding a new focusable object kind
-// (planet, probe, exoplanet, nebula, …) consists of:
-//
-//   1. Implementing this interface (typically as a factory on Stellata
-//      returning an object that closes over the per-kind catalog /
-//      state / event-bus references).
-//   2. Plumbing the new kind through click / pick handling so its
-//      FocusTarget can be passed to `startWarp` / `focusStar`-style
-//      entry points.
-//
-// The warp animation code (`updateWarp`, `finishWarp`, mid-Fly
-// recentre, pin guard, scale-bar focus tracking, …) is kind-agnostic
-// above this seam and does not need to change.
-//
-// See `src/client/README.md` § FocusTarget contract for the bigger
-// picture and the rationale (the unified arrival profile — the cubic-Hermite log-d
-// Fly profile exposed a class of Float32-precision bugs in lookAt(B)
-// that recentring the floating origin mid-Fly fixes; the kind-agnostic
-// version of that fix lives on this contract so future kinds inherit
-// the correctness automatically).
+// Per-object FocusTarget contract consumed by warp / focus-lerp /
+// arrival code. See src/client/camera/focus/README.md § FocusTarget
+// contract.
 
 import * as THREE from 'three';
 

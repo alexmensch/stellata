@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
-"""Stage 1 — identifier-index construction.
-
-``IdentifierIndices`` carries every map Stage 2's resolution cascade
-consults: HIP/Tyc → Gaia, src → HIP / NSS / astrometry / AT-HYG, HIP
-→ HIP2 / CCDM, CCDM → HIP-list. Built once in ``build_indices`` so
-every Stage 2-7 lookup is O(1).
-
-Also hosts the three sentinel constants Stage 2's position-match path
-reads — they describe input-catalogue conventions that don't belong on
-any one stage's function.
+"""Stage 1 — cross-catalog identifier index.
+Builds the ``IdentifierIndices`` lookup tables every later stage reads.
 """
 
 from __future__ import annotations

@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/refresh/simbad — pin spec → ADQL → row roundtrip.
-
-Run: python3 scripts/refresh/simbad/simbad.test.py
-"""
+"""Unit tests for scripts/refresh/simbad — pin spec → ADQL → row roundtrip."""
 
 from __future__ import annotations
 

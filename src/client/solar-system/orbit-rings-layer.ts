@@ -1,11 +1,5 @@
-// Per-planet orbit-rings — Keplerian ellipses for the focused host's
-// planet system, oriented by orbitalPlaneNormalFor (Sol = ecliptic,
-// everything else = galactic plane). One pixel-gap heuristic
-// suppresses inner rings when they pile up at far framings.
-//
-// Host-agnostic — orbit rings are representational (only render on
-// host focus); planet bodies are physical and live in PlanetBodyField.
-// See src/client/solar-system/README.md.
+// Per-planet orbit-ring ellipses for the focused host's planet system.
+// See src/client/solar-system/README.md § Orbit rings.
 
 import * as THREE from 'three';
 import type { PlanetSystem, Planet, PlanetType } from './planet-system';

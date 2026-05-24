@@ -1,8 +1,5 @@
-// Molecular cloud hover formatter. Layout: name; distance; major ×
-// minor size pair. Z2020 sphere clouds emit equal semi-axes (collapse
-// to "<r> × <r>"); Z2021T1 ellipsoids show genuine major/minor span.
-//
-// Pure: tests pin the unit via setUnit('pc') for stable golden strings.
+// Molecular cloud hover formatter — name, distance, major × minor
+// axis pair. See ./README.md.
 
 import type { Cloud } from '../../molecular-clouds/cloud-loader';
 import { fmtDistAuto } from '../../ui/distance-util';

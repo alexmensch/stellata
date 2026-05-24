@@ -1,59 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh data/simbad/simbad_wds_xids.tsv — per-component SIMBAD-curated WDS↔Gaia DR3 cross-IDs.
-
-Stage 2 supplement for build-binaries.py's WDS-component →
-Gaia source_id resolution cascade. The principled alternative to a hand-rolled
-regex parser over WDS Notes prose: SIMBAD's ``ident`` table holds curated
-``WDS J<id><comp>`` ↔ Gaia DR3 cross-IDs for the well-known multi-component
-systems (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen / Proxima, etc.).
-
-Per-component resolution is reliable — spot-checked 2026-05-20 against 4
-systems / 12 components: 9/9 main components resolved to a SIMBAD oid; 7/9
-carried a Gaia DR3 source_id. The two α Cen A/B exceptions are Gaia bright-
-star saturation (handled by Stage 3's HIP2 long-baseline fallback) — SIMBAD
-itself resolves the component to an oid in both cases. Sub-component depth
-(Ba/Bb) is NOT stored in SIMBAD's ``ident`` and is gracefully skipped.
-
-TSV columns (6)
-    wds_id          str — "HHMMm±DDMM" WDS positional anchor (matches WdsPair.wds_id)
-    component       str — component letter(s) — 'A', 'B', 'Aa', 'Ab', etc.
-    simbad_oid      int — SIMBAD basic.oid (stable primary key)
-    simbad_main_id  str — SIMBAD basic.main_id (e.g. "* eta Cas A")
-    gaia_source_id  int|"" — Gaia DR3 source_id from ident table (blank when SIMBAD
-                             resolves the component but has no Gaia DR3 cross-ID — e.g.
-                             α Cen A/B's Gaia saturation gap)
-    hip             int|"" — Hipparcos number from ident table
-
-Algorithm — two-phase pull. Phase A bulk-queries SIMBAD's ``ident`` table
-for every ``WDS J<id><comp>`` identifier from parse_wds_summ + split_components.
-Phase B fans out from the matched oids to pull main_id + HIP + Gaia DR3
-cross-IDs. Composing the output is then a local join keyed on the WDS
-identifier. Batch size 1000 keeps every POST body well under SIMBAD's
-~64 KB ceiling; ~40-60 batches per phase at current WDS volumes.
-
-Idempotent — exits early if the output is newer than this script AND
-SRC_WDS_SUMM. Pass ``--force`` to rebuild unconditionally. Output is
-sorted by (wds_id, component) so re-runs against an unchanged SIMBAD
-produce byte-identical TSVs.
-
-Phase A.5 + A.6 cascade — recover components SIMBAD stores under
-non-WDS-J aliases (HD/CCDM/HIP). See scripts/refresh/wds_xids_cascade.py
-for the strategy. The cascade adds ~225 component recoveries on top of
-Phase A's ~23.4k.
-
-Backend: SIMBAD TAP only (refresh_lib.simbad_backend) — SIMBAD's ADQL
-dialect diverges from ESA / CDS (LIKE forbidden on basic.otype, MOD()
-but no ``%`` operator) so the default ESA→CDS fallback chain is
-bypassed via ``backends=[simbad_backend()]``.
-
-Runtime: ~1.5 min (62 Phase A batches of 1000 idents, 24 Phase B oid
-batches, 42 Phase A.6 cascade batches; CDS/SIMBAD latency dominates).
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-simbad-wds-xids.py
-"""
+"""Refresh data/simbad/simbad_wds_xids.tsv — per-component SIMBAD-curated
+WDS-component ↔ Gaia DR3 / HIP cross-IDs (with HD/CCDM/HIP alias cascade
+for components SIMBAD stores under non-WDS-J idents)."""
 
 from __future__ import annotations
 

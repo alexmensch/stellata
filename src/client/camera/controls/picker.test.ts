@@ -1,13 +1,5 @@
-// Picker integration tests. The reducer in
-// star-geometry.ts already has thorough unit coverage; these tests
-// exercise the full pickStar pipeline — projection, distance window,
-// spectral mask, prime / fallback tier classification, the overlap-
-// disambiguation seam (Double Double), and the cross-method
-// pickStar / pickStarHit round-trip the disambiguator depends on.
-//
-// Heavy layer pickers (clouds, planets, Local Group, heliopause) are
-// tested in their respective layer suites — Picker just delegates to
-// their pick methods.
+// Picker integration tests — full pickStar pipeline and cross-method
+// pickStar / pickStarHit round-trip used by the overlap disambiguator.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Build data/distance-validation/vaidman-2025-supergiants.tsv from the
-Vaidman et al. 2025 paper PDF (Universe 11, 359; CC BY 4.0). One-shot:
-the resulting TSV is committed reference data, re-run only on an
-erratum. Provenance, name-resolution recipe, and license carried in
-data/distance-validation/README.md."""
+Vaidman et al. 2025 paper PDF. One-shot reference-data builder; see
+data/distance-validation/README.md for provenance and license."""
 
 from __future__ import annotations
 

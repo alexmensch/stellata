@@ -1,59 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bayesian DR3 distance posteriors.
-
-Phase 1 of the source-ID-anchored catalogue-pipeline rewrite.
-Bailer-Jones et al. 2021 (AJ 161, 147; VizieR I/352) publishes Bayesian
-distance posteriors (`r_med_geo`, `r_med_photogeo`) for every Gaia DR3
-source. The principled fix for AT-HYG's naive-1/parallax distances on
-low-S/N parallaxes — notably the OB-supergiant outlier class that
-motivated this.
-
-ADQL
-    SELECT bj."Source", bj."rgeo", bj."b_rgeo", bj."B_rgeo",
-           bj."rpgeo", bj."b_rpgeo", bj."B_rpgeo", bj."Flag"
-    FROM "I/352/gedr3dis" AS bj
-    WHERE bj."Source" IN (<AT-HYG source_id batch>)
-
-VizieR exposes the table with case-sensitive column names: `Source`,
-`rgeo` / `b_rgeo` / `B_rgeo` (lowercase b = lower bound, uppercase B =
-upper bound), `rpgeo` / `b_rpgeo` / `B_rpgeo`, `Flag`. The script renames
-to the paper's `r_med_*` / `r_lo_*` / `r_hi_*` form on write — the TSV
-is self-documenting against the Bailer-Jones 2021 reference.
-
-TSV columns (8)
-    source_id        int   — Gaia DR3 source_id
-    r_med_geo        float — geometric posterior median distance (pc)
-    r_lo_geo         float — geometric posterior 16th-percentile lower bound
-    r_hi_geo         float — geometric posterior 84th-percentile upper bound
-    r_med_photogeo   float — photogeometric posterior median (pc)
-    r_lo_photogeo    float — photogeometric posterior 16th-percentile lower
-    r_hi_photogeo    float — photogeometric posterior 84th-percentile upper
-    flag             int   — Bailer-Jones quality flag (see I/352 docs)
-
-Backend: CDS only. I/352/gedr3dis is a VizieR-published external catalogue
-not hosted on the ESA Gaia archive, so the default ESA→CDS fallback does
-not apply.
-
-Batch size: 5000 source_ids per IN-clause query. Empirical CDS sweet
-spot — runtime is superlinear in batch size beyond this.
-
-Coverage expectation: ≥ 90% of AT-HYG.gaia source_ids resolve. The ~10%
-gap is the bright-end saturation cliff that Gaia's own astrometry hits.
-
-Runtime: ~80 min for the full 315k AT-HYG sweep (63 batches of 5000
-ids each on CDS TAP). CDS occasionally drops the connection mid-batch;
-pyvo surfaces this as DALQueryError, which the current refresh_lib
-retry classifier does NOT treat as transient — re-run from the start
-if it happens.
-
-Idempotent — exits early if the output is newer than this script AND the
-AT-HYG source CSV. Pass `--force` to rebuild unconditionally.
-
-Venv setup (see scripts/requirements-refresh.txt):
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-    .venv/bin/python scripts/refresh/refresh-bailer-jones.py
-"""
+"""Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bailer-Jones 2021
+(VizieR I/352) Bayesian DR3 distance posteriors per AT-HYG source_id."""
 
 from __future__ import annotations
 

@@ -1,9 +1,6 @@
-// Pure data-transform helpers shared by build-catalog.ts and its tests.
-// Anything in this file must be deterministic, side-effect-free, and
-// import nothing from node:fs / node:path / globals — these helpers are
-// the seam where unit tests pin down the catalog's most error-prone
-// transforms (spectral parsing, Stefan-Boltzmann radius, GCVS field
-// extraction, binary spatial inference) without spinning up the build.
+// Pure, deterministic, side-effect-free transforms shared by
+// build-catalog.ts and its tests — binary layout constants, spectral
+// parsing, Stefan-Boltzmann radius, GCVS field extraction.
 
 /** Solar-type B-V used as a fallback when no chromaticity input is
  *  available. ~0.65 yields a yellow disc rather than a hot blue or

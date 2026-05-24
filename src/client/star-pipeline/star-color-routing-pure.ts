@@ -1,16 +1,5 @@
-// Pure TS routing helper for the star-colour LUT input. Mirrors the
-// six-tier priority chain: Apsis-direct
-// (gspphot, then gspspec) wins over Ballesteros(B-V); Ballesteros falls
-// back to spectral-class T_TABLE, then white-dwarf Sion Teff, then a
-// solar Teff floor.
-//
-// `pickTeffSource` is the canonical spec. The GLSL shader implements the
-// reachable subset of this spec given the v6 binary inputs — Apsis-direct
-// vs Ballesteros(iCi) — and collapses tiers 3-6 into the latter branch
-// since wd_subclass and a `real-B-V` flag aren't carried in v6. The
-// helper exposes the full chain for unit-test coverage and so that a
-// future format bump can pull tiers 4/5 into shader-visible behaviour
-// without re-deriving the priority logic.
+// Canonical six-tier `pickTeffSource` routing for the star-colour LUT
+// input. See src/client/star-pipeline/README.md.
 
 import { ballesterosTeff } from '../../../scripts/colour/blackbody-lut-pure';
 import {

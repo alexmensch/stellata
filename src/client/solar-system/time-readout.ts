@@ -1,9 +1,5 @@
-// Plain-English UTC timestamp for the current `t` driving planet
-// positions. Visible iff focused star has a planet system, chart mode
-// is off, and no warp is in flight. The warp gate exists because
-// focused-planet-system stays pinned to the source for the duration
-// of a warp — without it the readout would tick during a warp where
-// the time has no logical referent.
+// UTC timestamp readout for the current `t`. See
+// src/client/solar-system/README.md § Time.
 
 import type { Stellata } from '../stellata';
 

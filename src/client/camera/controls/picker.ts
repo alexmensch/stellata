@@ -1,11 +1,5 @@
-// Per-layer pick paths. Click picks (pickStar / pickCloud) return raw
-// catalog indices; hover picks (pickStarHit / pickCloudHit / etc.)
-// return HoverHit so the cross-provider disambiguator can rank without
-// re-projecting.
-//
-// Hover visibility mirrors the renderer's own draw predicates exactly
-// (visibility ⇒ hoverable). Click pickers keep an extra warp gate
-// (pickCloud returns null mid-warp).
+// Per-layer pick paths. Click picks return raw catalog indices; hover
+// picks return HoverHit for the cross-provider disambiguator.
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';

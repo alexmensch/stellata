@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Stage 7 — flatten per-strategy / per-tier counters into a snapshot
-JSON the build asserts against on every run.
-
-Mirrors ``scripts/catalog/build-catalog.ts``'s ``assertOrUpdateBuildCounts``
-flow — refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
+"""Stage 7 — write the build-counts and per-strategy-rates snapshot JSONs.
+Refresh with ``UPDATE_BUILD_COUNTS=1``.
 """
 
 from __future__ import annotations

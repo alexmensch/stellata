@@ -9,6 +9,27 @@ rules, distance filter); vitest-pinned in `*.test.ts`.
 The TSV parser handles both LVDB-merge and standalone-position
 override rows.
 
+## Inputs and output
+
+Reads two committed source files under `data/local-group/`:
+
+- `lvdb-snapshot.csv` — Pace et al. 2024 LVDB dwarf_all table (CC0).
+- `overrides.tsv` — hand-curated structural detail for LMC, SMC,
+  Sagittarius dSph, M 32, NGC 205; plus standalone-position rows for
+  M31 and M33 which LVDB's dwarf_all table excludes.
+
+Emits `public/local-group.json` with one entry per renderable object
+within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
+`LgObject` type in `build-local-group-pure.ts`; the client loader at
+`src/client/local-group-loader.ts` mirrors it 1:1.
+
+Idempotent — exits early if `public/local-group.json` is newer than
+the script and both source files. Run via
+`npm run build:local-group`. No live fetches at build time; refresh
+of the LVDB snapshot is a manual `curl` of
+`raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv`
+→ `data/local-group/lvdb-snapshot.csv`.
+
 ## Display-name rules
 
 `displayName(lvdbName)` decides the on-screen string for each object

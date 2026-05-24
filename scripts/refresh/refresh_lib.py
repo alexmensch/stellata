@@ -1,47 +1,6 @@
 #!/usr/bin/env python3
-"""Shared infrastructure for Phase 1 catalogue-refresh scripts.
-
-Each refresh script (refresh-gaia-hip-xmatch.py, refresh-hipparcos2.py,
-refresh-gaia-nss.py, refresh-gaia-tyc-xmatch.py, refresh-gaia-astrometry.py,
-refresh-simbad-sample.py, refresh-bailer-jones.py, refresh-gaia-apsis.py)
-runs ADQL against an external archive and writes a TSV under data/ that
-is then committed (LFS where >1 MB). These scripts are MANUAL-RUN — they
-are NOT part of `npm run build`.
-
-Provides:
-  athyg_int_or_none / athyg_str_or_none / read_athyg_source_ids
-                   — AT-HYG missing-sentinel handling. AT-HYG uses '' OR
-                     '0' as the missing-sentinel for hip/tyc/gaia/hd;
-                     these helpers collapse both to None so consumers
-                     cannot install rows under sentinel-0 keys.
-                     read_athyg_source_ids is the canonical "list of
-                     Gaia source_ids from AT-HYG" walker used by every
-                     Gaia-keyed refresh script.
-  TapClient        — backend-agnostic TAP wrapper. Tries each backend in
-                     order; auto-falls-back to the next on 5xx / connection
-                     errors. Default backends: ESA Gaia archive via
-                     astroquery.gaia, then CDS TAP via pyvo. SIMBAD
-                     (simbad_backend) speaks a divergent ADQL dialect and
-                     is always used as a single-backend override.
-  retry            — exponential-backoff retry over a callable, with
-                     injectable transient-error classifier, sleep, and
-                     RNG hooks for deterministic testing.
-  run_batched      — chunked-query helper for `WHERE id IN (...)` style
-                     queries where the id list exceeds TAP IN-clause limits.
-  validate_schema  — assert column names + dtypes on the returned table
-                     (astropy Table / pandas DataFrame / dict-of-columns).
-  is_up_to_date    — mtime-based idempotency check; mirrors the
-                     scripts/clouds/build-clouds.py pattern.
-  write_tsv        — canonical tab-separated writer (header + rows;
-                     None → empty cell; optional float rounding).
-
-Venv setup:
-    python3 -m venv .venv
-    .venv/bin/pip install -r scripts/requirements-refresh.txt
-
-Test (no network):
-    .venv/bin/python scripts/refresh/refresh_lib.test.py
-"""
+"""Shared TAP / Astroquery / atomic-rename plumbing for the refresh
+scripts. See scripts/refresh/README.md."""
 
 from __future__ import annotations
 

@@ -1,12 +1,6 @@
-// Per-star planet data model for the solar-system layer.
-//
-// This module is intentionally generic: any focusable star *may* carry a
-// planet system, even though Sol is currently the only one populated.
-// The future exoplanet epic plugs additional hosts in by extending the
-// resolver below without changing the renderer-side shape.
-//
-// Rendering layers (planet bodies, orbit rings, heliopause) gate on
-// Stellata.getFocusedPlanetSystem(), not on "is this Sol?" directly.
+// Planet / PlanetSystem contract + SOL_PLANETS table. Generic across
+// hosts; gating is via Stellata.getFocusedPlanetSystem(). See
+// src/client/solar-system/README.md § Data model.
 
 import type { Catalog } from '../loaders/catalog-loader';
 import {

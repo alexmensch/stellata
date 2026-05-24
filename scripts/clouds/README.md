@@ -4,6 +4,29 @@
 `public/clouds.json`. Z2021 entries take precedence over Z2020 for the
 clouds both cover. Renderer is currently shelved at the runtime.
 
+Sources under `data/molecular-clouds/`:
+
+- `zucker2020-tablea1.tsv` — 326 sightlines, ~96 unique cloud names.
+- `zucker2021-table1.dat` — 12 famous local SF clouds with 3D bounding
+  boxes.
+
+Idempotent — exits early if `public/clouds.json` is newer than the
+script and both source files. Run via `npm run build:clouds`.
+
+## Output schema
+
+One entry per cloud in `public/clouds.json`:
+
+| Field      | Meaning |
+| ---------- | ------- |
+| `name`     | Display name. |
+| `id`       | Slug, also used by URL/search. |
+| `center`   | `[x, y, z]` ICRS heliocentric pc. |
+| `axes`     | `[a, b, c]` semi-axes in pc. Sphere = `[r, r, r]`. |
+| `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |
+| `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
+| `distance` | Heliocentric distance to centroid (pc). |
+
 ## Merge logic
 
 - **Z2021 Table 1** → 12 ellipsoid clouds with axis-aligned bounding

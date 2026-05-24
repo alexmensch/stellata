@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 """Stage 5 — classify each WDS pair as physical or optical.
-
-Five-tier ID-anchored cascade: WDS Notes flag chars (T/V/Z keep,
-S/U/X/Y reject) → both-Gaia parallax+PM gate → asymmetric-Gaia gate
-(Gaia primary + HIP2-anchored secondary, or vice versa) → orbit-on-file
-override (Stage 4 produced real orbital elements → keep) → mag-gap
-heuristic backstop (|Δmag| ≤ 5 keep).
-
-``classify_all_pairs`` walks every pair through the cascade and tags
-each rejection / acceptance with its tier so Stage 7's counts and the
-multiples.tsv ``optical_via`` column carry provenance.
+Five-tier cascade; each verdict carries the deciding tier as provenance.
 """
 
 from __future__ import annotations

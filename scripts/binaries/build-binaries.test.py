@@ -1,16 +1,6 @@
 #!/usr/bin/env python3
-"""Unit tests for build-binaries.py Stage 1 parsers.
-
-Pins each loader against tiny fixture inputs written to a temporary
-directory. No network, no large catalog files — the suite runs in well
-under a second.
-
-Run:
-    python3 scripts/binaries/build-binaries.test.py
-
-(The `.test.py` filename matches the project's `.test.ts` convention but
-trips Python's `-m unittest` module-path parser on the dot; invoking the
-file directly executes `unittest.main()` in the `__main__` block below.)
+"""Stdlib-unittest pins for the binary pipeline stages.
+Run directly — the dotted filename trips ``python -m unittest``.
 """
 
 from __future__ import annotations

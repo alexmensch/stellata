@@ -1,20 +1,6 @@
-// Progressive loader for the 3D dust-extinction voxel grid.
-//
-// The grid is large (~128 MiB) so we never block the initial render on it.
-// Instead:
-//   1. We allocate a zero-filled Data3DTexture upfront and force its GPU
-//      upload via renderer.initTexture(). Zero density = no extinction, so
-//      the scene renders exactly as it does today while the dust is missing.
-//   2. We fetch manifest.json + all 64 chunk files in parallel (with a small
-//      concurrency cap so mobile browsers don't choke) in priority order
-//      (closest chunks to the camera first).
-//   3. Each arriving chunk is uploaded into the appropriate sub-volume of
-//      the GPU texture via gl.texSubImage3D. Subsequent frames sample the
-//      newly-populated region automatically.
-//
-// The format must stay in sync with scripts/dust/build-dust.py — both derive
-// constants from the manifest at runtime, so bumping gridSize/chunkSize/
-// bounds in the Python script automatically flows through here.
+// Progressive loader for the 3D dust-extinction voxel grid: zero-fill
+// Data3DTexture, fetch chunks priority-ordered, gl.texSubImage3D each
+// arrival. See src/client/loaders/README.md.
 
 import * as THREE from 'three';
 

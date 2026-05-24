@@ -1,8 +1,5 @@
-// Local Group hover formatter. Layout: display name, distance, kind
-// ("Disc" | "Ellipsoid"), major × minor size pair.
-//
-// Apparent V mag is out of scope — the local-group JSON schema has
-// no M_V plumbed yet. Pure: tests pin the unit via setUnit('pc').
+// Local Group hover formatter — display name, distance, kind
+// ("Disc" | "Ellipsoid"), major × minor axis pair. See ./README.md.
 
 import { fmtDistAuto } from '../../ui/distance-util';
 import {

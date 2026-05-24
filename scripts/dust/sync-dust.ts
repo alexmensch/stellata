@@ -1,12 +1,6 @@
-// Copies data/dust/* → public/dust/ so Vite + the Cloudflare static-asset
-// build serve the voxel chunks without the Python preprocessor having to
-// know about two locations.
-//
-// Canonical source of truth is data/dust/ (LFS-tracked); public/dust/ is a
-// gitignored mirror. Run this on every `npm run dev` / `npm run build` so
-// a fresh checkout with LFS data "just works" without having to re-run
-// build-dust.py. A missing data/dust/ is not an error — dust is optional
-// and the loader handles its absence.
+// Mirrors data/dust/ (LFS-tracked source of truth) → public/dust/
+// (gitignored) so Vite + the Cloudflare static-asset build serve the
+// voxel chunks. Missing data/dust/ is not an error — dust is optional.
 
 import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';

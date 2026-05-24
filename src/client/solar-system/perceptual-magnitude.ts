@@ -1,14 +1,6 @@
-// Perceptual disc abstraction — TS mirror of shaders/perceptual-disc.glsl.
-//
-// CPU-side helpers for the same brightness → disc-radius mapping the
-// star and planet vertex shaders use. Pure functions; vitest-covered
-// (see perceptual-magnitude.test.ts). Future consumers: search ranking
-// (rank by appMag), label gating (hide labels when source falls below
-// the slider cutoff), debug-panel readouts.
-//
-// The shader is the production source of truth; this mirror exists so
-// downstream TS code can ask "would this source render?" without
-// reaching into GPU state, and so the math is pinned by tests.
+// CPU-side mirror of shaders/perceptual-disc.glsl — apparent-magnitude
+// math and brightness → disc-radius mapping the star and planet vertex
+// shaders use. Shader is the source of truth; this mirror is test-pinned.
 
 /**
  * Standard apparent-magnitude formula for an unobscured emitter.

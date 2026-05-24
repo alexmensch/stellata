@@ -1,12 +1,5 @@
-// Wall-clock time variable `t` and conversion helpers for the solar-
-// system layer.
-//
-// `t` is a Unix-seconds double. Anything driven by ephemerides reads
-// the live value via Stellata.getT(). Currently pinned to "now"; the
-// time-scrubber overrides via Stellata.setT().
-//
-// Variable-star pulsation has its own cosmetic `uTime` clock — it
-// keeps ticking regardless of `t` and is not affected by these helpers.
+// Simulation time `t` (Unix-seconds double) + UTC ↔ Julian-day helpers.
+// See src/client/solar-system/README.md § Time.
 
 // Julian Date of the Unix epoch (1970-01-01T00:00:00Z). Subtracting
 // from any JD gives Unix-seconds × 86400.
