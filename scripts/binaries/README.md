@@ -90,6 +90,11 @@ scripts/binaries/
                                   order. Run via
                                   npm run build:binaries-runtime.
   build-binaries.test.py          stdlib unittest pins for Stages 1-7.
+  build-runtime-binaries.test.py  stdlib unittest pins for the pure
+                                  helpers (_split_components,
+                                  _parent_token, assign_parent_relations,
+                                  topological_walk_order) and the
+                                  write_binary parent-index remapping.
   build-binaries-expected.json    per-strategy / per-tier count snapshot
                                   (UPDATE_BUILD_COUNTS=1).
   build-binaries-rates-expected.json
