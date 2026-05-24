@@ -58,7 +58,9 @@ export interface BinaryRelation {
   omegaRad: number;
   /** Longitude of ascending node, radians. */
   OmegaRad: number;
-  /** Mass ratio M_secondary / M_primary. */
+  /** Mass-fraction split q = M_secondary / (M_primary + M_secondary).
+   *  Primary moves by −q·R, secondary by +(1−q)·R about the barycentre.
+   *  Range (0, 0.5] when the brighter side is the primary. */
   q: number;
   /** WDS separation, arcsec, at sep_pa_epoch_jd. */
   sepArcsec: number;

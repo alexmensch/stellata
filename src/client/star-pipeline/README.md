@@ -88,6 +88,15 @@ focal star — disc would render from inside) and held pinned to the
 source star throughout an observe-launched warp so the reorient phase
 doesn't flash the focal disc as the camera pulls away.
 
+`iCompositeSuppress` (float, per-instance) collapses a star's disc
+(mode 1) and core depth-mask (mode 2) passes — but not the additive
+glow (mode 0) — under the same clip-space-sentinel mechanism, gated on
+`uRenderMode`. Written by `BinaryOrbitField` (see
+`../binaries/README.md`) for the dimmer member of a sub-pixel binary
+pair: the two near-coincident point sources sum brightness correctly
+under AdditiveBlending in the glow pass, and dropping the opaque disc
++ depth mask avoids z-fighting between the two overlapping cores.
+
 `uPinFocusToCenter` (int, default `-1`) replaces the standard
 projection chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the
 matched instance, sidestepping float32 cancellation in the projection

@@ -265,7 +265,10 @@ Noted here so we don't re-debate scope:
 - WASD / flight controls (removed after early review).
 - Desktop two-finger roll on Chrome / Firefox (no rotate gesture exists in
   those browsers; Safari-only on desktop by design).
-- Time-series proper motion (positions are snapshot-only, no T animation).
+- Time-series proper motion (single-star positions are snapshot-only,
+  no T animation). Binary / multiple-star orbital motion IS live —
+  driven by `BinaryOrbitField` against `getT()` — but only for pairs
+  with published Kepler elements in `public/binaries.bin`.
 - Spiral-arm overdensities in the Milky Way volumetric background. The
   Reid et al. masers offer a maser-anchored spiral model that could ride
   atop the smooth disc profile, but the smooth band reads convincingly

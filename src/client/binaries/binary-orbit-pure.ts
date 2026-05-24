@@ -24,7 +24,8 @@ export interface OrbitalElements {
   omega: number;
   /** Longitude of ascending node, rad. Ignored in Tier 2. */
   Omega: number;
-  /** Mass ratio M_secondary / M_primary in (0, 1]. */
+  /** Mass-fraction split q = M_secondary / (M_primary + M_secondary).
+   *  Primary moves by −q·R, secondary by +(1−q)·R about the barycentre. */
   q: number;
 }
 
