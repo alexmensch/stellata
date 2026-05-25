@@ -329,6 +329,28 @@ function findExisting(
   return null;
 }
 
+// Cursor-primary lookup. More permissive than findExisting: tries HIP
+// even when gaia is set, because AT-HYG sometimes carries only HIP for
+// the primary while multiples.tsv has the Gaia source_id from SIMBAD's
+// cross-walk (70 Oph A — HIP 88601 in AT-HYG, no own gaia; multiples
+// row carries gaia=4468557611984384512 from simbad_xid). For primaries
+// the shared-HIP-with-secondary ambiguity doesn't apply — the cursor
+// primary IS the system anchor, not a sibling that might collide.
+function findExistingPrimary(
+  row: MultiplesTsvRow,
+  existing: ExistingIndexes,
+): number | null {
+  if (row.gaiaSourceId) {
+    const hit = existing.byGaia.get(row.gaiaSourceId);
+    if (hit !== undefined) return hit;
+  }
+  if (row.hip !== null && row.hip > 0) {
+    const hit = existing.byHip.get(row.hip);
+    if (hit !== undefined) return hit;
+  }
+  return null;
+}
+
 interface PairCursor {
   primary: MultiplesTsvRow | null;
   secondaries: MultiplesTsvRow[];
@@ -499,29 +521,67 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
   return { info: SPECTRAL_UNKNOWN, display: null };
 }
 
-// Compose the companion's display name as "<primary_proper> <comp>".
-// The secondary's own `name` cell is populated only when source=athyg
-// (the row found an AT-HYG entry); for source=wds rows it's empty even
-// when the PRIMARY's AT-HYG entry has a perfectly good proper name to
-// inherit. Fall back to the primary row's name in that case so
-// "Achird B", "Porrima B", "Capella B" etc. become searchable rather
-// than rendering as anonymous-companion records nobody can find.
+// Compose the companion's display name as "<base> <canonicalComp>".
+// Base falls through five sources in order of preference:
+//   1. row's own `name` cell (Stage 6 populates when source=athyg).
+//   2. multiples primary row's `name` cell (Achird / Porrima / Capella
+//      class — secondary row is source=wds but primary has AT-HYG
+//      proper).
+//   3. primary Star's `proper` (post-override; covers cases where
+//      Stage 6 didn't carry the AT-HYG proper into multiples.tsv).
+//   4. primary Star's Bayer + constellation abbrev → "Xi Boo".
+//   5. primary Star's Flamsteed + constellation abbrev → "70 Oph".
+// Constellation abbrev alone is NOT a fallback — refuse and return
+// null rather than colliding with every other star in the same
+// constellation. Without a base the promoted record stays nameless
+// (searchable through synth-ID, but no display name).
 function composeCompanionName(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
   canonicalComp: string,
+  primaryStar: Star | null,
+  constellations: { code: string; name: string }[],
 ): string | null {
-  const ownBase = row.name.trim();
-  const primaryBase = (primary?.name ?? '').trim();
-  const base = ownBase || primaryBase;
+  const base = resolveCompanionNameBase(row, primary, primaryStar, constellations);
   if (!base) return null;
   if (!canonicalComp) return base;
   return `${base} ${canonicalComp}`;
 }
 
+function resolveCompanionNameBase(
+  row: MultiplesTsvRow,
+  primary: MultiplesTsvRow | null,
+  primaryStar: Star | null,
+  constellations: { code: string; name: string }[],
+): string | null {
+  const ownBase = row.name.trim();
+  if (ownBase) return ownBase;
+  const primaryBase = (primary?.name ?? '').trim();
+  if (primaryBase) return primaryBase;
+  if (primaryStar === null) return null;
+  const proper = (primaryStar.proper ?? '').trim();
+  if (proper) return proper;
+  const conCode = constellationCode(primaryStar.conIndex, constellations);
+  if (conCode === null) return null;
+  const bayer = (primaryStar.bayer ?? '').trim();
+  if (bayer) return `${bayer} ${conCode}`;
+  if (primaryStar.flam !== null) return `${primaryStar.flam} ${conCode}`;
+  return null;
+}
+
+function constellationCode(
+  conIndex: number,
+  constellations: { code: string; name: string }[],
+): string | null {
+  if (conIndex < 0 || conIndex >= constellations.length) return null;
+  const entry = constellations[conIndex];
+  return entry ? entry.code : null;
+}
+
 export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
+  constellations: { code: string; name: string }[],
 ): { newStars: Star[]; stats: PromotionStats } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
@@ -545,7 +605,7 @@ export function promoteCompanions(
     // anchoring the sep+PA projection AND for the inherited-HIP escape
     // below (so findExisting hits against the primary's record don't
     // wrongly collapse a no-gaia secondary that's inheriting HIP).
-    const primaryCatalogIdx = findExisting(cursor.primary, existing);
+    const primaryCatalogIdx = findExistingPrimary(cursor.primary, existing);
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
       ? {
           x: existingStars[primaryCatalogIdx].x,
@@ -631,7 +691,12 @@ export function promoteCompanions(
       }
       const spectral = resolveCompanionSpectral(row);
       const ci = imputeCompanionCi(row, spectral.info);
-      const properName = composeCompanionName(row, cursor.primary, canonicalComp);
+      const primaryStar = primaryCatalogIdx !== null
+        ? existingStars[primaryCatalogIdx]
+        : null;
+      const properName = composeCompanionName(
+        row, cursor.primary, canonicalComp, primaryStar, constellations,
+      );
       let flags = FLAG_BINARY_COMPANION_ONLY;
       if (properName) flags |= FLAG_HAS_NAME;
       if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;

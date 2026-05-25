@@ -18,6 +18,7 @@ import {
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,
 } from './catalog-pure';
+import { CONSTELLATIONS } from './constellations';
 import type { Star } from './stars-parse';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
@@ -303,7 +304,7 @@ describe('promoteCompanions', () => {
   }
 
   it('promotes Sirius B with imputed absmag, FLAG_BINARY_COMPANION_ONLY, "Sirius B" name', () => {
-    const { newStars, stats } = promoteCompanions(siriusRows(), [sirius_a_existing]);
+    const { newStars, stats } = promoteCompanions(siriusRows(), [sirius_a_existing], CONSTELLATIONS);
     expect(stats.promoted).toBe(1);
     expect(stats.alreadyInCatalog).toBe(0);
     expect(newStars).toHaveLength(1);
@@ -332,7 +333,7 @@ describe('promoteCompanions', () => {
     const existing = makeStar({
       gaiaSourceId: '2947050466531873024', hip: 32349, absmag: 11.18,
     });
-    const { newStars, stats } = promoteCompanions(rows, [existing, sirius_a_existing]);
+    const { newStars, stats } = promoteCompanions(rows, [existing, sirius_a_existing], CONSTELLATIONS);
     expect(stats.promoted).toBe(0);
     expect(stats.alreadyInCatalog).toBe(1);
     expect(newStars).toHaveLength(0);
@@ -345,7 +346,7 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
-    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing]);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoIdentifier).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(stats.promotedSynthetic).toBe(1);
@@ -389,7 +390,7 @@ describe('promoteCompanions', () => {
       x: 14.189408, y: 15.238769, z: 18.072089,
       absmag: -0.112, hip: 14576, proper: 'Algol',
     });
-    const { newStars, stats } = promoteCompanions(rows, [algolPrimary]);
+    const { newStars, stats } = promoteCompanions(rows, [algolPrimary], CONSTELLATIONS);
     expect(stats.promotedSynthetic).toBe(1);
     expect(newStars).toHaveLength(1);
     const aa2 = newStars[0];
@@ -402,7 +403,7 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
     rows[1].comp = '';
-    const { stats } = promoteCompanions(rows, [sirius_a_existing]);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoIdentifier).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -420,7 +421,7 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;       // strip B's distinct gaia
     rows[1].hip = 32349;               // still shares primary's HIP
     rows[1].astrometryVia = 'system_inherited';
-    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing]);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.alreadyInCatalog).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(stats.promotedSynthetic).toBe(1);
@@ -446,7 +447,7 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;
     rows[1].hip = 99999;  // matches `otherStar`, NOT Sirius A
-    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar]);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar], CONSTELLATIONS);
     expect(stats.alreadyInCatalog).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -458,7 +459,7 @@ describe('promoteCompanions', () => {
     // Primary's absmag is 1.45 (inherited), so the secondary's null
     // absmag can't ride the inheritance shortcut either.
     rows[0].absmag = null;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing]);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoAbsmag).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -466,7 +467,7 @@ describe('promoteCompanions', () => {
   it('projects secondary position from sep+PA when astrometry is system_inherited', () => {
     const rows = siriusRows();
     rows[1].astrometryVia = 'system_inherited';
-    const { newStars } = promoteCompanions(rows, [sirius_a_existing]);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(newStars).toHaveLength(1);
     // Tangent-plane offset of 11.1″ at 2.637 pc ≈ 1.42e-4 pc. Companion
     // sits within that of the primary.
@@ -488,7 +489,7 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     expect(rows[0].x_pc).toBe(-0.494399);  // multiples.tsv primary
     expect(sirius_a_existing.x).toBeCloseTo(-0.494, 3);  // catalog primary
-    const { newStars } = promoteCompanions(rows, [sirius_a_existing]);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
     // Sep+PA at 11.1″ × 2.637 pc / 206265 ≈ 1.42e-4 pc ≈ 29 AU. The
@@ -544,7 +545,7 @@ describe('promoteCompanions', () => {
         dmag: 2.48,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [algolPrimary]);
+    const { newStars, stats } = promoteCompanions(rows, [algolPrimary], CONSTELLATIONS);
     expect(stats.promotedSynthetic).toBe(1);
     expect(newStars).toHaveLength(1);
     const ab = newStars[0];
@@ -586,7 +587,7 @@ describe('promoteCompanions', () => {
     const existing = makeStar({
       x: 0, y: 0, z: 2.637, absmag: 1.45, hip: 32349, proper: 'Test',
     });
-    const { newStars } = promoteCompanions([primaryRow, secondaryRow], [existing]);
+    const { newStars } = promoteCompanions([primaryRow, secondaryRow], [existing], CONSTELLATIONS);
     expect(newStars).toHaveLength(1);
     // Companion takes its own z (own-astrometry branch), not sep+PA from
     // primary anchor.
@@ -603,7 +604,7 @@ describe('promoteCompanions', () => {
     expect(rows[0].astrometryVia).toBe('hip2_long_baseline');
     expect(rows[1].astrometryVia).toBe('hip2_long_baseline');
     expect(rows[1].x_pc).toBe(rows[0].x_pc);
-    const { newStars } = promoteCompanions(rows, [sirius_a_existing]);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
     const dx = b.x - sirius_a_existing.x;
@@ -622,7 +623,7 @@ describe('promoteCompanions', () => {
     rows[1].astrometryVia = 'athyg_position';
     rows[1].sepArcsec = -1.0;
     rows[1].paDeg = -1.0;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing]);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -632,9 +633,140 @@ describe('promoteCompanions', () => {
     rows[1].astrometryVia = 'system_inherited';
     rows[1].sepArcsec = null;
     rows[1].paDeg = null;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing]);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
+  });
+
+  it("falls back to primary Star's proper when both multiples name cells are blank", () => {
+    // Stage 6's name cell can be blank on BOTH primary and secondary rows
+    // even when the primary's AT-HYG record has a perfectly good proper.
+    // The promoted companion must reach for the primary Star (post-
+    // override) rather than coming out anonymous.
+    const primary = makeStar({
+      gaiaSourceId: 'g_prim', proper: 'AnchorName', conIndex: 0,
+    });
+    const rows = [
+      multiplesRow({
+        systemId: 'WDS-X-AB', comp: 'A',
+        gaiaSourceId: 'g_prim', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 10, distPc: 10,
+        absmag: 5.0, orbitRole: 'primary',
+        sepArcsec: 1.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 4.0,
+      }),
+      multiplesRow({
+        systemId: 'WDS-X-AB', comp: 'B',
+        gaiaSourceId: 'g_sec', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 10, distPc: 10,
+        absmag: 5.0, ci: 0.6, spect: 'M3V',
+        photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
+        sepArcsec: 1.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 4.0,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].proper).toBe('AnchorName B');
+  });
+
+  it("falls back to Bayer + constellation abbrev when primary has no proper (xi Boo shape)", () => {
+    // xi Boo A (HIP 72659) carries bayer="Xi", flam=37, conIndex=Boo,
+    // but proper=null. composeCompanionName must reach the Bayer ladder
+    // to produce a searchable "Xi Boo B" rather than dropping the name.
+    const booIdx = CONSTELLATIONS.findIndex(c => c.code === 'Boo');
+    const primary = makeStar({
+      gaiaSourceId: 'g_xiboo', proper: null, bayer: 'Xi',
+      flam: 37, conIndex: booIdx,
+    });
+    const rows = [
+      multiplesRow({
+        systemId: 'WDS-Y-AB', comp: 'A',
+        gaiaSourceId: 'g_xiboo', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 6.7, distPc: 6.7,
+        absmag: 5.0, orbitRole: 'primary',
+        sepArcsec: 5.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 1.5,
+      }),
+      multiplesRow({
+        systemId: 'WDS-Y-AB', comp: 'B',
+        gaiaSourceId: 'g_xiboo_b', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 6.7, distPc: 6.7,
+        absmag: 6.5, ci: 1.0, spect: 'K4V',
+        photometryVia: 'athyg_own', orbitRole: 'secondary',
+        sepArcsec: 5.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 1.5,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].proper).toBe('Xi Boo B');
+  });
+
+  it("falls back to Flamsteed + constellation abbrev when bayer is absent (70 Oph shape)", () => {
+    // 70 Oph A (HIP 88601) carries flam=70, conIndex=Oph, but proper=null
+    // AND bayer=null. The Flamsteed step in the fallback ladder produces
+    // "70 Oph B".
+    const ophIdx = CONSTELLATIONS.findIndex(c => c.code === 'Oph');
+    const primary = makeStar({
+      gaiaSourceId: 'g_70oph', proper: null, bayer: null,
+      flam: 70, conIndex: ophIdx,
+    });
+    const rows = [
+      multiplesRow({
+        systemId: 'WDS-Z-AB', comp: 'A',
+        gaiaSourceId: 'g_70oph', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 5.1, distPc: 5.1,
+        absmag: 5.7, orbitRole: 'primary',
+        sepArcsec: 6.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 1.7,
+      }),
+      multiplesRow({
+        systemId: 'WDS-Z-AB', comp: 'B',
+        gaiaSourceId: 'g_70oph_b', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 5.1, distPc: 5.1,
+        absmag: 7.4, ci: 1.2, spect: 'K5V',
+        photometryVia: 'athyg_own', orbitRole: 'secondary',
+        sepArcsec: 6.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 1.7,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].proper).toBe('70 Oph B');
+  });
+
+  it("returns null name when primary has no proper, no Bayer, no Flamsteed", () => {
+    // No identifier ladder anchor — refuse rather than emitting
+    // constellation-only ("Boo B") which would collide with every
+    // unnamed star in the same constellation.
+    const booIdx = CONSTELLATIONS.findIndex(c => c.code === 'Boo');
+    const primary = makeStar({
+      gaiaSourceId: 'g_anon', proper: null, bayer: null,
+      flam: null, conIndex: booIdx,
+    });
+    const rows = [
+      multiplesRow({
+        systemId: 'WDS-W-AB', comp: 'A',
+        gaiaSourceId: 'g_anon', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 20, distPc: 20,
+        absmag: 5.0, orbitRole: 'primary',
+        sepArcsec: 2.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 1.0,
+      }),
+      multiplesRow({
+        systemId: 'WDS-W-AB', comp: 'B',
+        gaiaSourceId: 'g_anon_b', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 20, distPc: 20,
+        absmag: 6.0, ci: 1.0, spect: 'M0V',
+        photometryVia: 'athyg_own', orbitRole: 'secondary',
+        sepArcsec: 2.0, paDeg: 0.0, sepPaEpochJd: 2460000.0,
+        dmag: 1.0,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].proper).toBeNull();
   });
 
   it('skips standalone-role rows (orbit_role !== "secondary")', () => {
@@ -645,7 +777,7 @@ describe('promoteCompanions', () => {
         absmag: 5.0,
       }),
     ];
-    const { stats } = promoteCompanions(rows, []);
+    const { stats } = promoteCompanions(rows, [], CONSTELLATIONS);
     expect(stats.promoted).toBe(0);
     expect(stats.pairRowsScanned).toBe(0);
   });

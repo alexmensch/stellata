@@ -304,7 +304,7 @@ async function main() {
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
     const multiplesRows = readMultiplesTsv(SRC_MULTIPLES);
-    const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars);
+    const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS);
     for (const ns of newStars) stars.push(ns);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
