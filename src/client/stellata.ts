@@ -2177,6 +2177,18 @@ export class Stellata implements FrameAnchor {
     requestAnimationFrame(this.animate);
   };
 
+  // Three layers tick every frame regardless of warp state: orbit
+  // rings, planet bodies, and binary orbit perturbations. All three
+  // read wall-clock t (or per-frame camera state) and need a fresh
+  // update on the warp path too — the warp branch in
+  // updateGalacticLayers calls into this once, the non-warp branch
+  // once, so the trio stays in lockstep with no per-call drift.
+  private updateContinuouslyTickingLayers() {
+    this.orbitRingsLayer.update(this.camera, window.innerHeight);
+    this.planetBodyField.update(this.camera, this.getT());
+    this.updateBinaryOrbits();
+  }
+
   // Drive the disc fade, grid attachment, and arrow projection each frame.
   // All three galactic layers are hidden during a warp — the camera is in
   // motion and their reference function is exactly the kind of context warp
@@ -2191,17 +2203,13 @@ export class Stellata implements FrameAnchor {
       // Orbit rings are focus-only — no warp-destination ring preview.
       // Planet bodies belong to the global PlanetBodyField; they fade
       // in naturally as the camera nears each host's cull distance.
-      this.orbitRingsLayer.update(this.camera, window.innerHeight);
-      this.planetBodyField.update(this.camera, this.getT());
-      this.updateBinaryOrbits();
+      this.updateContinuouslyTickingLayers();
       // Cloud layer is currently shelved (CLAUDE.md): visible=false. Flip
       // to true (or restore a FilterState flag) when re-enabling.
       this.clouds?.update(this.worldOffset, false);
       return;
     }
-    this.orbitRingsLayer.update(this.camera, window.innerHeight);
-    this.planetBodyField.update(this.camera, this.getT());
-    this.updateBinaryOrbits();
+    this.updateContinuouslyTickingLayers();
 
     // Refresh camera matrices before any SVG projection — controls.update()
     // mutates camera.position/quaternion but doesn't propagate to
