@@ -240,6 +240,17 @@ export class BinaryOrbitField {
     for (let i = 0; i < relations.length; i++) {
       const r = relations[i];
       if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
+      // Defensive: a stale binaries.bin from before the builder's
+      // has_orbit predicate was tightened could flag a relation as
+      // has_orbit while leaving q / a / e / P / T as NaN. evaluateDelta
+      // would then return NaN ΔR each frame and update() would write
+      // NaN into localPositions[primaryIdx]. Skip the cache entry so
+      // the relation stays at its J2000 baseline.
+      if (
+        !Number.isFinite(r.q) || !Number.isFinite(r.aAU)
+        || !Number.isFinite(r.e) || !Number.isFinite(r.pDays)
+        || !Number.isFinite(r.tJd) || !Number.isFinite(r.omegaRad)
+      ) continue;
       const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
       const elements = relationToElements(r);
       let refSkyAU: { northAU: number; eastAU: number } | null = null;

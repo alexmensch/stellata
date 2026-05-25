@@ -425,7 +425,17 @@ def write_binary(
             secondary_idx = resolved_secondary[input_i]
             assert primary_idx is not None and secondary_idx is not None
 
-            has_orbit = p.P_days is not None and p.T_jd is not None
+            # has_orbit gates per-frame Kepler eval in BinaryOrbitField:
+            # every required element of evaluateOrbitSkyAU / In-PlaneAU
+            # plus the q split must be present, else ΔR(t) is NaN and the
+            # runtime writes NaN into localPositions for the primary every
+            # frame — poisoning constellation centroids in chart-labels and
+            # any other consumer of localPositions[primaryIdx].
+            has_orbit = (
+                p.P_days is not None and p.T_jd is not None
+                and p.e is not None and p.a_AU is not None
+                and p.omega_rad is not None and p.q is not None
+            )
             has_inclination = has_orbit and p.i_rad is not None
             parent_input = parents[input_i]
             parent_output = input_to_output.get(parent_input, NO_PARENT)
