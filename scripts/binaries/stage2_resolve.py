@@ -62,6 +62,14 @@ class ResolvedComponent:
     Stage 3 reads ``hip`` for its HIP2 fallback so saturated bright
     stars (Sirius, α Cen) that have no Gaia source still attach
     astrometry.
+
+    ``athyg_row`` carries the position-matched AT-HYG row reference for
+    components whose identifier-indexed lookups (``src_to_athyg``,
+    ``hip_to_athyg``) would miss because the AT-HYG row carries neither
+    ``hip`` nor ``gaia``. Stage 6 consults this before the indexed
+    paths so AT-HYG-only rows still surface their absmag / spect /
+    proper name. Set by ``resolve_via_position`` (Stage 2) and
+    ``attach_athyg_position_fallback`` (Stage 3).
     """
 
     wds_id: str
@@ -71,6 +79,7 @@ class ResolvedComponent:
     gaia_source_id: int | None
     resolve_via: str
     hip: int | None = None
+    athyg_row: "AthygRow | None" = None
 
 
 def split_components(comp_str: str) -> tuple[str, str] | None:
@@ -646,6 +655,8 @@ def resolve_via_position(
             continue
         row = athyg[match_idx]
         primary_athyg_idx[(c.wds_id, c.discoverer, pair.components)] = match_idx
+        if c.athyg_row is None:
+            c.athyg_row = row
         if c.hip is None and row.hip is not None:
             c.hip = row.hip
         if row.gaia is not None:
@@ -682,6 +693,8 @@ def resolve_via_position(
         if match_idx is None:
             continue
         row = athyg[match_idx]
+        if c.athyg_row is None:
+            c.athyg_row = row
         if c.hip is None and row.hip is not None:
             c.hip = row.hip
         if row.gaia is not None:

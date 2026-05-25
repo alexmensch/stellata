@@ -247,7 +247,8 @@ astrometric measurement for it. Routes in `ASTROMETRY_VIA_VALUES`:
 | `hip2_long_baseline` (orbit-corrupted PM) | The system has any pair with min ρ ≤ 5″ AND `|pmRA_gaia − pmRA_hip2| > 50 mas/yr` OR same on Dec. Hipparcos averages a different window of the orbit than Gaia's 2014–2017 mission baseline; for bright close binaries with both available, HIP2 is closer to the systemic motion. |
 | `gaia_5p` | Default. The 5p row is clean and no orbit-correction signal fires. |
 | `hip2_long_baseline` (Gaia-saturated) | The component has no usable Gaia parallax — either no Gaia source resolved at all (Sirius A, α Cen, Algol, Procyon) or the Gaia row exists with ra/dec but `parallax=NULL` because Gaia couldn't fit a 5p solution (Castor STF1110 AB). HIP is known and HIP2 covers it; HIP2 is the only parallax source available. |
-| `unresolved` | Neither Gaia astrometry nor HIP2 reach the component. |
+| `athyg_position` | Post-pass after the Gaia / HIP2 cascade. For components still `unresolved`, the WDS precise_coord position-matches an AT-HYG row (dual-epoch: PM-propagated J1991.25→J2000 then unpropagated for GJ-anchored rows that store ra/dec at J2000). Position comes from the row's stored ra/dec; parallax = 1000/dist_pc. Canonical case: ξ UMa — Gaia source absent from `gaia_dr3_astrometry.tsv` (G≈4.3 saturated), HIP 55203 absent from HIP2 (van Leeuwen excluded orbit-corrupted entry), but AT-HYG carries the GJ-anchored distance 10.42 pc. |
+| `unresolved` | None of Gaia 5p, HIP2, or the AT-HYG position-match reach the component. |
 
 The HIP2-discrepancy 5″ gate runs against the **minimum** WDS ρ across
 every pair row a source_id participates in. A primary that's in both a
@@ -259,6 +260,10 @@ Stage 3 reports per-route counts in build log order. `astrometry_via` is
 also written to every `multiples.tsv` row in Stage 6 (with a Stage-6-owned
 extra value, `system_inherited`, for components that inherit a
 system-anchor position because their own row resolved to `unresolved`).
+The `athyg_position` route also surfaces the matched AT-HYG row reference
+on `ResolvedComponent.athyg_row`; Stage 6's photometry / proper-name
+lookup consults that reference first, ahead of the gaia / HIP indexes,
+so AT-HYG-HD-only rows still surface their absmag / spect / proper name.
 
 ## Stage 4 — Orbital element selection per pair
 

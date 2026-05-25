@@ -211,12 +211,21 @@ def _system_id_for_standalone(wds_id: str, component: str) -> str:
 def _athyg_row_for_component(
     component: ResolvedComponent, indices: IdentifierIndices,
 ) -> AthygRow | None:
-    """Look up AT-HYG row for a resolved component, preferring the
-    gaia_source_id index (most reliable; carries Gaia source_id direct
-    from AT-HYG's own ingest). Falls back to the HIP index for
-    Gaia-saturated bright primaries (Sirius / α Cen / Procyon) whose
-    AT-HYG row carries the HIP but not the Gaia source.
+    """Look up AT-HYG row for a resolved component. Strict priority:
+
+    1. ``component.athyg_row`` — the position-matched row set by Stage 2's
+       ``resolve_via_position`` or Stage 3's ``attach_athyg_position_fallback``.
+       Bound when the row exists in AT-HYG but carries neither ``hip``
+       nor ``gaia`` (ξ UMa-shape: AT-HYG-HD-only WDS systems). The
+       identifier-indexed lookups below would miss these rows.
+    2. ``src_to_athyg`` — Gaia source_id index. Most reliable for
+       components Stage 2 resolved to a Gaia DR3 source.
+    3. ``hip_to_athyg`` — HIP index. Fallback for Gaia-saturated bright
+       primaries (Sirius / α Cen / Procyon) whose AT-HYG row carries
+       the HIP but not the Gaia source.
     """
+    if component.athyg_row is not None:
+        return component.athyg_row
     if component.gaia_source_id is not None:
         row = indices.src_to_athyg.get(component.gaia_source_id)
         if row is not None:

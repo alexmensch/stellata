@@ -2279,6 +2279,229 @@ class AstrometryCountsTests(unittest.TestCase):
         self.assertEqual(counts["unresolved"], 1)
         self.assertEqual(counts["gaia_nss_systemic"], 0)
         self.assertEqual(counts["hip2_long_baseline"], 0)
+        self.assertEqual(counts["athyg_position"], 0)
+
+
+class AthygPositionFallbackTests(unittest.TestCase):
+    """Stage 3's AT-HYG-position fallback. Fires when both Gaia 5p and
+    HIP2 miss for a component but the WDS precise_coord position-matches
+    an AT-HYG row whose stored ra/dec/dist_pc carry a usable astrometric
+    anchor. Canonical population: ξ UMa-shape systems where the bright
+    primary is Gaia-saturated AND HIP2 dropped the entry (van Leeuwen
+    excludes orbit-corrupted HIP fits).
+    """
+
+    def test_athyg_position_fires_when_gaia_and_hip2_miss(self) -> None:
+        pair = _wds_pair_with_pos(
+            wds_id="11182+3132", components="AB",
+            precise_ra=169.5454, precise_dec=31.5292,
+            rho=2.6, theta=135.0,
+        )
+        # AT-HYG row at the same coord. dist_pc=10.4 (ξ UMa-like).
+        # pm fields populated but the J1991.25→J2000 propagation has to
+        # round-trip via the row's stored ra/dec — see the dual-epoch
+        # match helper.
+        athyg = [_athyg_row_at(
+            ra=169.5454, dec=31.5292, gaia=None, hip=None,
+            pm_ra_masyr=-425.24, pm_de_masyr=-581.01,
+        )]
+        athyg[0].dist_pc = 10.4
+        # Both components carry a Gaia source_id from SIMBAD xid but
+        # neither source is in the 5p table.
+        components = [
+            bb.ResolvedComponent(
+                wds_id=pair.wds_id, discoverer=pair.discoverer,
+                component="A", is_primary=True,
+                gaia_source_id=756853643638639104, resolve_via="simbad_xid",
+                hip=55203,  # ORB6 hip, but HIP2 doesn't cover it.
+            ),
+            bb.ResolvedComponent(
+                wds_id=pair.wds_id, discoverer=pair.discoverer,
+                component="B", is_primary=False,
+                gaia_source_id=756853643637996160, resolve_via="simbad_xid",
+            ),
+        ]
+        idx = _indices_with_astrometry(
+            src_to_astrometry={},  # no 5p coverage
+            athyg=athyg,
+            hip2=[],  # HIP 55203 missing from HIP2
+        )
+        out = bb.attach_astrometry_all(
+            components, pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "athyg_position")
+        self.assertEqual(out[1].astrometry_via, "athyg_position")
+        # Parallax derived from dist_pc.
+        self.assertAlmostEqual(out[0].parallax_mas or 0.0, 1000.0 / 10.4, places=4)
+
+    def test_gaia_5p_beats_athyg_position(self) -> None:
+        # The Gaia / HIP2 cascade runs first; the AT-HYG fallback only
+        # touches components still tagged unresolved.
+        gaia = _gaia_astrometry_row(source_id=42)
+        athyg = [_athyg_row_at(ra=100.0, dec=20.0, gaia=42)]
+        athyg[0].dist_pc = 50.0
+        pair = _wds_pair_with_pos(
+            wds_id="X", components="AB",
+            precise_ra=100.0, precise_dec=20.0, rho=5.0, theta=0.0,
+        )
+        c = _resolved(gaia=42, wds_id="X", discoverer=pair.discoverer,
+                      component="A", is_primary=True)
+        idx = _indices_with_astrometry(
+            src_to_astrometry={42: gaia}, athyg=athyg,
+        )
+        out = bb.attach_astrometry_all(
+            [c], pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "gaia_5p")
+
+    def test_hip2_beats_athyg_position(self) -> None:
+        # Sirius-shape: no Gaia source but HIP is known and HIP2 covers
+        # it. AT-HYG fallback must not run because the cascade resolved
+        # via hip2_long_baseline.
+        hip2 = _hip2_row(hip=32349)
+        athyg = [_athyg_row_at(ra=100.0, dec=20.0, gaia=None, hip=32349)]
+        athyg[0].dist_pc = 2.6
+        pair = _wds_pair_with_pos(
+            wds_id="06451-1643", components="AB",
+            precise_ra=100.0, precise_dec=20.0, rho=10.0, theta=0.0,
+        )
+        c = _resolved(
+            gaia=None, hip=32349,
+            wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="A", is_primary=True,
+        )
+        idx = _indices_with_astrometry(
+            src_to_astrometry={}, hip2=[hip2], athyg=athyg,
+        )
+        out = bb.attach_astrometry_all(
+            [c], pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "hip2_long_baseline")
+
+    def test_secondary_inherits_primary_athyg_row_when_blend(self) -> None:
+        # Hipparcos-unresolved AB blend: both components share one
+        # AT-HYG row (same x/y/z). Secondary's predicted position is
+        # within tolerance of the same row, so primary_idx exclusion
+        # forces the secondary slot back to the primary's row.
+        pair = _wds_pair_with_pos(
+            wds_id="11182+3132", components="AB",
+            precise_ra=169.5454, precise_dec=31.5292,
+            rho=2.6, theta=90.0,
+        )
+        athyg = [_athyg_row_at(
+            ra=169.5454, dec=31.5292, gaia=None, hip=None,
+        )]
+        athyg[0].dist_pc = 10.4
+        components = [
+            bb.ResolvedComponent(
+                wds_id=pair.wds_id, discoverer=pair.discoverer,
+                component="A", is_primary=True,
+                gaia_source_id=1, resolve_via="simbad_xid",
+            ),
+            bb.ResolvedComponent(
+                wds_id=pair.wds_id, discoverer=pair.discoverer,
+                component="B", is_primary=False,
+                gaia_source_id=2, resolve_via="simbad_xid",
+            ),
+        ]
+        idx = _indices_with_astrometry(
+            src_to_astrometry={}, athyg=athyg, hip2=[],
+        )
+        out = bb.attach_astrometry_all(
+            components, pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "athyg_position")
+        self.assertEqual(out[1].astrometry_via, "athyg_position")
+
+    def test_no_athyg_match_stays_unresolved(self) -> None:
+        # The component is unresolved AND the WDS precise_coord doesn't
+        # land within tolerance of any AT-HYG row.
+        pair = _wds_pair_with_pos(
+            wds_id="X", components="AB",
+            precise_ra=200.0, precise_dec=-40.0, rho=3.0, theta=0.0,
+        )
+        athyg = [_athyg_row_at(ra=100.0, dec=20.0, gaia=None, hip=None)]
+        athyg[0].dist_pc = 5.0
+        c = _resolved(
+            gaia=99, wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="A", is_primary=True, via="simbad_xid",
+        )
+        idx = _indices_with_astrometry(
+            src_to_astrometry={}, athyg=athyg,
+        )
+        out = bb.attach_astrometry_all(
+            [c], pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "unresolved")
+
+    def test_no_athyg_passed_keeps_unresolved(self) -> None:
+        # In-process orchestrator path with no AT-HYG context (tests
+        # that don't load AT-HYG). Fallback must not run.
+        pair = _wds_pair_with_pos(
+            wds_id="X", components="AB",
+            precise_ra=100.0, precise_dec=20.0, rho=3.0, theta=0.0,
+        )
+        c = _resolved(
+            gaia=99, wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="A", is_primary=True, via="simbad_xid",
+        )
+        idx = _indices_with_astrometry(src_to_astrometry={})
+        out = bb.attach_astrometry_all([c], pairs=[pair], indices=idx)
+        self.assertEqual(out[0].astrometry_via, "unresolved")
+
+    def test_unpropagated_branch_matches_high_pm_gj_row(self) -> None:
+        # AT-HYG GJ-sourced row stores ra/dec at J2000; the row has
+        # high PM populated. Propagating by 8.75 yr would shift the
+        # row 4-6″ from the WDS precise_coord and miss the 2″
+        # tolerance, so the dual-epoch helper retries with no
+        # propagation. ξ UMa is the canonical case.
+        pair = _wds_pair_with_pos(
+            wds_id="11182+3132", components="AB",
+            precise_ra=169.5454, precise_dec=31.5292,
+            rho=2.6, theta=135.0,
+        )
+        athyg = [_athyg_row_at(
+            ra=169.5454, dec=31.5292, gaia=None, hip=None,
+            pm_ra_masyr=-425.24, pm_de_masyr=-581.01,
+        )]
+        athyg[0].dist_pc = 10.4
+        c = _resolved(
+            gaia=1, wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="A", is_primary=True, via="simbad_xid",
+        )
+        idx = _indices_with_astrometry(
+            src_to_astrometry={}, athyg=athyg,
+        )
+        out = bb.attach_astrometry_all(
+            [c], pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "athyg_position")
+        # Position comes from the AT-HYG row's stored J2000 coord
+        # (the no-propagation branch).
+        self.assertAlmostEqual(out[0].ra_deg or 0.0, 169.5454)
+        self.assertAlmostEqual(out[0].dec_deg or 0.0, 31.5292)
+
+    def test_zero_dist_athyg_stays_unresolved(self) -> None:
+        # Defensive: AT-HYG row with dist_pc=0 carries no usable
+        # parallax — synthesis returns None and the component stays
+        # tagged unresolved rather than emitting a 1/0 parallax.
+        pair = _wds_pair_with_pos(
+            wds_id="X", components="AB",
+            precise_ra=100.0, precise_dec=20.0,
+        )
+        athyg = [_athyg_row_at(ra=100.0, dec=20.0, gaia=None, hip=None)]
+        athyg[0].dist_pc = 0.0
+        c = _resolved(
+            gaia=99, wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="A", is_primary=True, via="simbad_xid",
+        )
+        idx = _indices_with_astrometry(
+            src_to_astrometry={}, athyg=athyg,
+        )
+        out = bb.attach_astrometry_all(
+            [c], pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "unresolved")
 
 
 # ─── Stage 4: orbital-element selection ──────────────────────────────
