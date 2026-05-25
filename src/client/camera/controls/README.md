@@ -18,11 +18,9 @@ in both navigate and observe modes.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
-  `peakAmplitudeFactor`, `binaryCompanionFloorPc`,
-  `minOrbitDistForStar`, `parkDistForStar`, `renderedSizePx`,
-  `renderedDiscPxAtPeak`, `getChartDiscParams` + canonical
-  `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`,
-  `BINARY_VIEWPORT_HALF_ANGLE_RAD`, `BINARY_MIN_DIST_FACTOR`.
+  `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
+  `renderedSizePx`, `renderedDiscPxAtPeak`, `getChartDiscParams` +
+  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`.
 
 ### star-geometry vs star-physics vs stellata.ts
 
@@ -59,13 +57,12 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    d_min = R / tan(ZOOM_FLOOR_FRACTION × fov_minor / 2)
    ```
    `fov_minor = min(fov_x, fov_y)` so the 90% target reads consistently
-   across portrait + landscape viewports. Binary companions get an
-   additional `Math.max(d_min, sep × BINARY_MIN_DIST_FACTOR)` bump so
-   the partner stays in frame. This lets the user orbit close enough
-   that any star fills 90% of the smaller viewport axis at max zoom,
-   with `d_min` scaling linearly with the star's physical radius —
-   inspecting a Sol-class star vs Betelgeuse vs Sirius B looks the same
-   on screen.
+   across portrait + landscape viewports. The rule is uniform across
+   the catalog — binary primaries get the same close-approach floor as
+   single stars, so the user can inspect either component of α Cen,
+   Sirius, or any multiple system without the controls bouncing.
+   `d_min` scales linearly with the star's physical radius — inspecting
+   a Sol-class star vs Betelgeuse vs Sirius B looks the same on screen.
 
 2. **Auto-park target** — `parkDistForStar(idx)`: where the camera
    automatically lands. Used by:
@@ -88,10 +85,9 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    Composes the generic `parkDistance(...)` primitive from
    `focus-transition.ts` with star-specific inputs:
    ```
-   parkDistForStar = max(AU_PC + Reff, dMinFloor, binaryFloor)
+   parkDistForStar = max(AU_PC + Reff, dMinFloor)
      Reff       = R_pc · peakAmplitudeFactor       (handles variables)
      dMinFloor  = distAtFillFraction(Reff, fov_minor, ZOOM_FLOOR_FRACTION=0.9)
-     binaryFloor = binaryCompanionFloorPc(idx)     (0 for non-binaries)
    ```
    Sol parks at ~1.005 AU (just outside Earth's orbit); a supergiant
    parks at the 90 %-fill clamp.

@@ -6,7 +6,6 @@ import type { FilterState } from '../../stellata';
 import {
   fovMinorRad,
   peakAmplitudeFactor,
-  binaryCompanionFloorPc,
   minOrbitDistForStar,
   parkDistForStar,
   renderedSizePx,
@@ -14,8 +13,6 @@ import {
   getChartDiscParams,
   ZOOM_FLOOR_FRACTION,
   VAR_TROUGH_FLOOR_FRACTION,
-  BINARY_VIEWPORT_HALF_ANGLE_RAD,
-  BINARY_MIN_DIST_FACTOR,
 } from './star-physics';
 import { R_SUN_PC, AU_PC } from '../../util/astronomy-constants';
 
@@ -73,11 +70,6 @@ describe('star-physics / constants', () => {
     expect(ZOOM_FLOOR_FRACTION).toBe(0.9);
     expect(VAR_TROUGH_FLOOR_FRACTION).toBe(0.2);
   });
-
-  it('derives BINARY_MIN_DIST_FACTOR from the 25° half-angle', () => {
-    expect(BINARY_VIEWPORT_HALF_ANGLE_RAD).toBe((25 * Math.PI) / 180);
-    expect(BINARY_MIN_DIST_FACTOR).toBe(1 / Math.tan(BINARY_VIEWPORT_HALF_ANGLE_RAD));
-  });
 });
 
 describe('star-physics / fovMinorRad', () => {
@@ -122,42 +114,6 @@ describe('star-physics / peakAmplitudeFactor (catalog-indexed)', () => {
   });
 });
 
-describe('star-physics / binaryCompanionFloorPc', () => {
-  it('returns 0 for stars without a companion', () => {
-    const cat = makeCatalog(1);
-    expect(binaryCompanionFloorPc(cat, 0)).toBe(0);
-  });
-
-  it('returns separation × BINARY_MIN_DIST_FACTOR when companion is set', () => {
-    const cat = makeCatalog(2, c => {
-      c.positions[0 * 3] = 0;
-      c.positions[1 * 3] = 0.001;
-      c.companion[0] = 1;
-    });
-    // Float32 round-trip; reconstruct expected from cat values for a bit-exact pin.
-    const dx = cat.positions[1 * 3] - cat.positions[0 * 3];
-    const expected = Math.sqrt(dx * dx) * BINARY_MIN_DIST_FACTOR;
-    expect(binaryCompanionFloorPc(cat, 0)).toBe(expected);
-  });
-
-  it('uses 3D Euclidean separation across all three axes', () => {
-    const cat = makeCatalog(2, c => {
-      c.positions[0 * 3 + 0] = 0;
-      c.positions[0 * 3 + 1] = 0;
-      c.positions[0 * 3 + 2] = 0;
-      c.positions[1 * 3 + 0] = 0.003;
-      c.positions[1 * 3 + 1] = 0.004;
-      c.positions[1 * 3 + 2] = 0;
-      c.companion[0] = 1;
-    });
-    const dx = cat.positions[1 * 3] - cat.positions[0];
-    const dy = cat.positions[1 * 3 + 1] - cat.positions[1];
-    const dz = cat.positions[1 * 3 + 2] - cat.positions[2];
-    const expected = Math.sqrt(dx * dx + dy * dy + dz * dz) * BINARY_MIN_DIST_FACTOR;
-    expect(binaryCompanionFloorPc(cat, 0)).toBe(expected);
-  });
-});
-
 describe('star-physics / parkDistForStar', () => {
   // fovMinor used across the parking tests — fovY = 60° at 16:9 aspect.
   const fovMinor = Math.PI / 3;
@@ -195,16 +151,14 @@ describe('star-physics / parkDistForStar', () => {
     expect(parkDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(dMinFloor);
   });
 
-  it('bumps to binary-companion floor when companion is wide-separated', () => {
-    const cat = makeCatalog(2, c => {
-      c.physicalRadius[0] = 1;
-      // 0.01 pc separation — orders of magnitude beyond AU.
+  it('parks a binary primary identically to a non-binary star of the same radius', () => {
+    const single = makeCatalog(1);
+    const pair = makeCatalog(2, c => {
       c.positions[1 * 3] = 0.01;
       c.companion[0] = 1;
     });
-    // Reconstruct via float32 round-trip so the expectation is bit-exact.
-    const sepFloor = cat.positions[1 * 3] * BINARY_MIN_DIST_FACTOR;
-    expect(parkDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(sepFloor);
+    expect(parkDistForStar({ catalog: pair, idx: 0, fovMinorRad: fovMinor }))
+      .toBe(parkDistForStar({ catalog: single, idx: 0, fovMinorRad: fovMinor }));
   });
 });
 
@@ -229,17 +183,15 @@ describe('star-physics / minOrbitDistForStar', () => {
     expect(minOrbitDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(expected);
   });
 
-  it('bumps to binary-companion floor when the companion sets a tighter requirement than disc-fill', () => {
-    const cat = makeCatalog(2, c => {
+  it('returns the same floor for a binary primary as for a same-radius single star', () => {
+    const single = makeCatalog(1, c => { c.physicalRadius[0] = 1; });
+    const pair = makeCatalog(2, c => {
       c.physicalRadius[0] = 1;
       c.positions[1 * 3] = 0.005;
       c.companion[0] = 1;
     });
-    const sep = cat.positions[1 * 3] * BINARY_MIN_DIST_FACTOR;
-    const Reff = cat.physicalRadius[0] * R_SUN_PC;
-    const fill = Reff / Math.tan((ZOOM_FLOOR_FRACTION * fovMinor) / 2);
-    expect(sep).toBeGreaterThan(fill);
-    expect(minOrbitDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(sep);
+    expect(minOrbitDistForStar({ catalog: pair, idx: 0, fovMinorRad: fovMinor }))
+      .toBe(minOrbitDistForStar({ catalog: single, idx: 0, fovMinorRad: fovMinor }));
   });
 });
 
