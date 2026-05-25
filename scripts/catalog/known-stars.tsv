@@ -140,6 +140,14 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 01137+0735	ζ Piscium / Revati	5737	2577061092921353984	40.837	0.4	2.155	A7IV	B:5743:2577061260424130304:3.403	9.08	SIMBAD * zet Psc A sp_type=A7IV. Companion B HIP 5743 (F7V) per multiples.tsv. Gaia NSS orbit P=9.08 d.
 21582+8252	HD 209942	108456	2299477734539451392	40.081	0.4	3.905	F6IV-V	B:108461:2299477768899190400:4.444	1980.59	SIMBAD HD 209942 sp_type=F6IV-V. Companion B HIP 108461 (F5) per multiples.tsv. Gaia NSS orbit P=1980.59 d.
 07041+7514	HD 51067	34085	1115378031539193984	38.790	0.4	4.206	G0	B:34087:1115378031538627712:5.268	123.40	SIMBAD HD 51067 sp_type=G0 (bare class; no lumClass pin). Companion B HIP 34087 (G5) per multiples.tsv. Gaia NSS orbit P=123.40 d.
+# ---- Multi-star showcase systems ---------------------------------------
+# Castor (α Gem) is a 6-star multiple. Catalog.bin holds the primary
+# anchor (HIP 36850 = Gaia 892348694913501952, shared by all A/B/Aa/Ab/
+# Ba/Bb components because Gaia did not separate them) and the YY Gem
+# companion (Castor C, Gaia 892348454394856064, no HIP). multiples.tsv
+# carries STF1110 AB (P=459.1 yr — the famous Savary 1828 visual orbit),
+# CIA 29 Aa,Ab (P=9.21 d) and CIA 29 Ba,Bb (P=2.93 d).
+07346+3153	Castor	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+	C::892348454394856064:8.515	167686.275	SIMBAD * alf Gem A sp_type=A1.5IV+. Multi-star showcase: STF1110 AB visual orbit P=167686.275 d (459.1 yr, ORB6 historical-first orbit Savary 1828). Companion C is YY Gem (Castor C, M0.5VeFe-2 eclipsing pair, no HIP, Gaia 892348454394856064) — absmag from companion-promotion via Δmag imputation. HIP2 parallax 64.12 mas → 15.6 pc; Gaia could not fit a 5p solution for source 892348694913501952 (parallax=NULL in gaia_dr3_astrometry.tsv), so Stage 3 routes through hip2_long_baseline.
 # ---- Promoted companions (newly minted catalog records) ----------------
 # These rows pin companions promoted into catalog.bin by the build's
 # read-multiples-and-promote pass. Their primary is already an AT-HYG
