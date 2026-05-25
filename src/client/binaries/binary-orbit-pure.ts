@@ -110,12 +110,43 @@ export function projectGalacticPlaneToICRS(
   return { x: gal4.x, y: gal4.y, z: gal4.z };
 }
 
+/** Tier 1 full relative ICRS Δxyz (pc): R_B(t) − R_A(t) about the
+ *  barycentre, expressed as a pc-valued ICRS offset. Caller supplies the
+ *  cached J2000 reference `refSky` (single Kepler solve per call) and
+ *  applies the q : (1−q) barycentric split — or the focal-star rebase —
+ *  outside. */
+export function evaluateOrbitDeltaPcTier1(
+  elements: OrbitalElements,
+  refSky: { northAU: number; eastAU: number },
+  tJd: number,
+  systemXyzPc: Vec3,
+): Vec3 {
+  const now = evaluateOrbitSkyAU(elements, tJd);
+  const dnPc = (now.northAU - refSky.northAU) * AU_PC;
+  const dePc = (now.eastAU - refSky.eastAU) * AU_PC;
+  return projectSkyToICRS(systemXyzPc, dnPc, dePc);
+}
+
+/** Tier 2 full relative ICRS Δxyz (pc): galactic-plane fallback when
+ *  inclination is unknown. Caller supplies the cached J2000 reference
+ *  `refInPlane`. No sign — caller splits. */
+export function evaluateOrbitDeltaPcTier2(
+  elements: OrbitalElements,
+  refInPlane: { xAU: number; yAU: number },
+  tJd: number,
+): Vec3 {
+  const now = evaluateOrbitInPlaneAU(elements, tJd);
+  const dxPc = (now.xAU - refInPlane.xAU) * AU_PC;
+  const dyPc = (now.yAU - refInPlane.yAU) * AU_PC;
+  return projectGalacticPlaneToICRS(dxPc, dyPc);
+}
+
 /** Tier 1 per-component ICRS Δxyz (pc) for `elements` at JDE `tJd`. The
  *  stored catalog xyz already encodes the J2000 offset baked-in via the
  *  ΔR(t) − R(J2000) baseline contract, split q : (1−q) between A and B.
  *
- *  Two Kepler solves per call (now + J2000). For per-frame use the runtime
- *  field caches `R(J2000)` separately and calls `evaluateOrbitSkyAU`
+ *  Two Kepler solves per call (now + J2000). For per-frame use the
+ *  runtime field caches `R(J2000)` and calls `evaluateOrbitDeltaPcTier1`
  *  directly. */
 export function evaluateBinaryOffsetTier1(
   elements: OrbitalElements,
@@ -123,12 +154,10 @@ export function evaluateBinaryOffsetTier1(
   isSecondary: boolean,
   systemXyzPc: Vec3,
 ): Vec3 {
-  const now = evaluateOrbitSkyAU(elements, tJd);
   const ref = evaluateOrbitSkyAU(elements, J2000_JD);
+  const delta = evaluateOrbitDeltaPcTier1(elements, ref, tJd, systemXyzPc);
   const sign = isSecondary ? (1 - elements.q) : -elements.q;
-  const dnPc = (now.northAU - ref.northAU) * AU_PC * sign;
-  const dePc = (now.eastAU - ref.eastAU) * AU_PC * sign;
-  return projectSkyToICRS(systemXyzPc, dnPc, dePc);
+  return { x: delta.x * sign, y: delta.y * sign, z: delta.z * sign };
 }
 
 /** Tier 2 per-component ICRS Δxyz (pc) for `elements` at JDE `tJd`.
@@ -138,10 +167,8 @@ export function evaluateBinaryOffsetTier2(
   tJd: number,
   isSecondary: boolean,
 ): Vec3 {
-  const now = evaluateOrbitInPlaneAU(elements, tJd);
   const ref = evaluateOrbitInPlaneAU(elements, J2000_JD);
+  const delta = evaluateOrbitDeltaPcTier2(elements, ref, tJd);
   const sign = isSecondary ? (1 - elements.q) : -elements.q;
-  const dxPc = (now.xAU - ref.xAU) * AU_PC * sign;
-  const dyPc = (now.yAU - ref.yAU) * AU_PC * sign;
-  return projectGalacticPlaneToICRS(dxPc, dyPc);
+  return { x: delta.x * sign, y: delta.y * sign, z: delta.z * sign };
 }

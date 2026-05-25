@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   evaluateOrbitSkyAU,
   evaluateOrbitInPlaneAU,
+  evaluateOrbitDeltaPcTier1,
+  evaluateOrbitDeltaPcTier2,
   evaluateBinaryOffsetTier1,
   evaluateBinaryOffsetTier2,
   projectSkyToICRS,
@@ -180,6 +182,54 @@ describe('projectGalacticPlaneToICRS', () => {
       out.y * GALACTIC_NORTH_POLE_ICRS.y +
       out.z * GALACTIC_NORTH_POLE_ICRS.z;
     expect(Math.abs(dot)).toBeLessThan(1e-10);
+  });
+});
+
+describe('evaluateOrbitDeltaPcTier1 — relative motion (no sign)', () => {
+  const elements = elt({
+    P: 50.13 * 365.25, T: J2000_JD - 10 * 365.25,
+    e: 0.591, a: 19.77, q: 0.33,
+    i: 2.5, omega: 0.7, Omega: 0.8,
+  });
+  const systemXyz = { x: 2.64, y: 0, z: 0 };
+  const refSky = evaluateOrbitSkyAU(elements, J2000_JD);
+
+  it('returns zero at t = J2000 (reference cancels)', () => {
+    const out = evaluateOrbitDeltaPcTier1(elements, refSky, J2000_JD, systemXyz);
+    expect(Math.hypot(out.x, out.y, out.z)).toBeLessThan(1e-15);
+  });
+
+  it('matches |evaluateBinaryOffsetTier1| / (1−q) at the secondary side', () => {
+    // Off-J2000 phase ⇒ non-trivial offset. The full relative motion
+    // (no-sign helper) equals the secondary's offset scaled up by 1/(1−q).
+    const tHalf = J2000_JD + elements.P / 2;
+    const delta = evaluateOrbitDeltaPcTier1(elements, refSky, tHalf, systemXyz);
+    const secondary = evaluateBinaryOffsetTier1(elements, tHalf, true, systemXyz);
+    const ratio = Math.hypot(delta.x, delta.y, delta.z)
+      / Math.hypot(secondary.x, secondary.y, secondary.z);
+    expect(ratio).toBeCloseTo(1 / (1 - elements.q), 10);
+  });
+});
+
+describe('evaluateOrbitDeltaPcTier2 — relative motion (no sign)', () => {
+  const elements = elt({
+    P: 50 * 365.25, T: J2000_JD, e: 0.4, a: 5, q: 0.4,
+    omega: 0.7, Omega: 0, i: 0,
+  });
+  const refInPlane = evaluateOrbitInPlaneAU(elements, J2000_JD);
+
+  it('returns zero at t = J2000', () => {
+    const out = evaluateOrbitDeltaPcTier2(elements, refInPlane, J2000_JD);
+    expect(Math.hypot(out.x, out.y, out.z)).toBeLessThan(1e-15);
+  });
+
+  it('matches |evaluateBinaryOffsetTier2| / (1−q) at the secondary side', () => {
+    const tHalf = J2000_JD + elements.P / 2;
+    const delta = evaluateOrbitDeltaPcTier2(elements, refInPlane, tHalf);
+    const secondary = evaluateBinaryOffsetTier2(elements, tHalf, true);
+    const ratio = Math.hypot(delta.x, delta.y, delta.z)
+      / Math.hypot(secondary.x, secondary.y, secondary.z);
+    expect(ratio).toBeCloseTo(1 / (1 - elements.q), 10);
   });
 });
 

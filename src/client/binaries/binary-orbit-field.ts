@@ -2,13 +2,13 @@
 // positions. See src/client/binaries/README.md § Tier mapping + LOD.
 
 import * as THREE from 'three';
-import { AU_PC, ARCSEC_TO_RAD, J2000_JD } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD, J2000_JD } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
 import {
   evaluateOrbitSkyAU,
   evaluateOrbitInPlaneAU,
-  projectSkyToICRS,
-  projectGalacticPlaneToICRS,
+  evaluateOrbitDeltaPcTier1,
+  evaluateOrbitDeltaPcTier2,
   type OrbitalElements,
 } from './binary-orbit-pure';
 import {
@@ -103,8 +103,10 @@ export class BinaryOrbitField {
    *    camera's vertical field of view. Together they convert an angle
    *    in radians to pixels: `pxPerRad = viewportPx / fovYRad`.
    *
-   *  Returns the number of relations that passed both visibility
-   *  filters this frame — perf-hud uses this. */
+   *  Returns the count of relations that cleared the magnitude + horizon
+   *  visibility filters this frame, including those collapsed by the
+   *  screen-separation gate. Surfaced for test assertions on the LOD
+   *  cascade; the runtime caller ignores it. */
   update(
     t: number,
     cameraPos: Readonly<THREE.Vector3>,
@@ -265,30 +267,20 @@ export class BinaryOrbitField {
     r: BinaryRelation,
     tJd: number,
   ): void {
+    let v: { x: number; y: number; z: number };
     if (rc.tier === 1) {
-      const now = evaluateOrbitSkyAU(rc.elements, tJd);
-      const ref = rc.refSkyAU!;
-      const dnPc = (now.northAU - ref.northAU) * AU_PC;
-      const dePc = (now.eastAU - ref.eastAU) * AU_PC;
       const abs = this.opts.absolutePositions;
       const pBase = r.primaryIdx * 3;
       SYSTEM_XYZ.x = abs[pBase + 0];
       SYSTEM_XYZ.y = abs[pBase + 1];
       SYSTEM_XYZ.z = abs[pBase + 2];
-      const v = projectSkyToICRS(SYSTEM_XYZ, dnPc, dePc);
-      DELTA_OUT.x = v.x;
-      DELTA_OUT.y = v.y;
-      DELTA_OUT.z = v.z;
+      v = evaluateOrbitDeltaPcTier1(rc.elements, rc.refSkyAU!, tJd, SYSTEM_XYZ);
     } else {
-      const now = evaluateOrbitInPlaneAU(rc.elements, tJd);
-      const ref = rc.refInPlaneAU!;
-      const dxPc = (now.xAU - ref.xAU) * AU_PC;
-      const dyPc = (now.yAU - ref.yAU) * AU_PC;
-      const v = projectGalacticPlaneToICRS(dxPc, dyPc);
-      DELTA_OUT.x = v.x;
-      DELTA_OUT.y = v.y;
-      DELTA_OUT.z = v.z;
+      v = evaluateOrbitDeltaPcTier2(rc.elements, rc.refInPlaneAU!, tJd);
     }
+    DELTA_OUT.x = v.x;
+    DELTA_OUT.y = v.y;
+    DELTA_OUT.z = v.z;
   }
 }
 
