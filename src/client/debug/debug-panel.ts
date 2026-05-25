@@ -2,20 +2,22 @@
 // and colour-picker helpers shared across sections. See
 // src/client/debug/README.md § Debug panel.
 
+import {
+  PANEL_WIDTH,
+  type Pos,
+  clampToViewport as clampPure,
+  hexToRgb,
+  parsePosition,
+  rgbToHex,
+} from './debug-panel-pure';
+
 const POS_KEY = 'stellata.debug.position';
 const collapsedKey = (key: string) => 'stellata.debug.collapsed.' + key;
 
-const PANEL_WIDTH = 300;
-
-interface Pos { x: number; y: number; }
-
 function loadPosition(): Pos | null {
   try {
-    const raw = sessionStorage.getItem(POS_KEY);
-    if (!raw) return null;
-    const p = JSON.parse(raw);
-    if (typeof p?.x === 'number' && typeof p?.y === 'number') return p;
-  } catch { /* swallow — sessionStorage unavailable / corrupt */ }
+    return parsePosition(sessionStorage.getItem(POS_KEY));
+  } catch { /* sessionStorage unavailable */ }
   return null;
 }
 
@@ -32,13 +34,7 @@ function saveCollapsed(key: string, collapsed: boolean): void {
 }
 
 function clampToViewport(x: number, y: number): Pos {
-  const margin = 8;
-  const maxX = Math.max(margin, window.innerWidth - PANEL_WIDTH - margin);
-  const maxY = Math.max(margin, window.innerHeight - 80);
-  return {
-    x: Math.max(margin, Math.min(maxX, x)),
-    y: Math.max(margin, Math.min(maxY, y)),
-  };
+  return clampPure(x, y, window.innerWidth, window.innerHeight);
 }
 
 let stylesInjected = false;
@@ -363,16 +359,3 @@ export function makeColor(opts: ColorOpts): HTMLDivElement {
   return row;
 }
 
-function rgbToHex(r: number, g: number, b: number): string {
-  const c = (v: number) =>
-    Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
-  return '#' + c(r) + c(g) + c(b);
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  return {
-    r: parseInt(hex.slice(1, 3), 16) / 255,
-    g: parseInt(hex.slice(3, 5), 16) / 255,
-    b: parseInt(hex.slice(5, 7), 16) / 255,
-  };
-}
