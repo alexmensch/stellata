@@ -111,6 +111,7 @@ export class BinaryOrbitField {
     maxAppMag: number,
     viewportPx: number,
     fovYRad: number,
+    focalIdx: number | null = null,
   ): number {
     const tJd = tToJDE(t);
     const pxPerRad = viewportPx / Math.max(fovYRad, 1e-9);
@@ -188,17 +189,34 @@ export class BinaryOrbitField {
       const dxDelta = DELTA_OUT.x;
       const dyDelta = DELTA_OUT.y;
       const dzDelta = DELTA_OUT.z;
-      const q = rc.elements.q;
-      const minusQ = -q;
-      const oneMinusQ = 1 - q;
-      local[pBase + 0] = aPx + dxDelta * minusQ;
-      local[pBase + 1] = aPy + dyDelta * minusQ;
-      local[pBase + 2] = aPz + dzDelta * minusQ;
+      // Focus-aware rebase: when the focal star is a member of this pair,
+      // anchor it at (0,0,0) and put the FULL relative motion on the
+      // companion. The disc shader's uPinFocusToCenter pins the focused
+      // instance to NDC origin; without this rebase, _localPositions[focal]
+      // drifts to a non-zero perturbation and overlays (focus ring,
+      // distance vector, hover) project to a point separated from the
+      // rendered disc.
+      let pCoeff: number;
+      let sCoeff: number;
+      if (focalIdx === pIdx) {
+        pCoeff = 0;
+        sCoeff = 1;
+      } else if (focalIdx === sIdx) {
+        pCoeff = -1;
+        sCoeff = 0;
+      } else {
+        const q = rc.elements.q;
+        pCoeff = -q;
+        sCoeff = 1 - q;
+      }
+      local[pBase + 0] = aPx + dxDelta * pCoeff;
+      local[pBase + 1] = aPy + dyDelta * pCoeff;
+      local[pBase + 2] = aPz + dzDelta * pCoeff;
       // Secondary's slot still holds the J2000-minus-worldOffset baseline
       // from the reset pass above; secondary moves additively from there.
-      local[sBase + 0] += dxDelta * oneMinusQ;
-      local[sBase + 1] += dyDelta * oneMinusQ;
-      local[sBase + 2] += dzDelta * oneMinusQ;
+      local[sBase + 0] += dxDelta * sCoeff;
+      local[sBase + 1] += dyDelta * sCoeff;
+      local[sBase + 2] += dzDelta * sCoeff;
     }
 
     this.opts.iPositionAttr.needsUpdate = true;

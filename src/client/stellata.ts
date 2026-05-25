@@ -1169,6 +1169,7 @@ export class Stellata implements FrameAnchor {
       this.filter.maxAppMag,
       viewport.y,
       fovYRad,
+      this.focus.getFocusedStar(),
     );
   }
 

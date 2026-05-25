@@ -77,6 +77,22 @@ and secondary about the system barycentre — primary moves by
 `−q·ΔR(t)`, secondary by `+(1−q)·ΔR(t)`, where q = M_s/(M_p + M_s) is
 the mass-fraction stored on each record.
 
+### Focal-star rebase
+
+When the focal star is a member of the pair (primary or secondary),
+the split rebases so the focal stays at the local origin and the
+companion carries the FULL relative motion `ΔR(t)`. The disc shader's
+`uPinFocusToCenter` pins the focused instance to NDC (0,0)
+regardless of `iPosition`; without the rebase, `_localPositions[focal]`
+drifts to a non-zero perturbation while the GPU keeps the disc at
+screen centre, and every CPU consumer (focus ring, distance vector,
+HUD shafts, hover picker) projects to a point separated from where
+the disc actually renders. Coefficients applied in the walk loop:
+
+- focal = primary: `pCoeff = 0`, `sCoeff = 1`.
+- focal = secondary: `pCoeff = -1`, `sCoeff = 0`.
+- focal not in pair: `pCoeff = -q`, `sCoeff = 1-q` (barycentric).
+
 ## Walk-active LOD
 
 Two filters on top of the magnitude slider gate per-frame Kepler

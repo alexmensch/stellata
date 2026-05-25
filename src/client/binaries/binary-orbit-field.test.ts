@@ -357,3 +357,128 @@ describe('BinaryOrbitField — physical sanity (Sirius-shaped)', () => {
     expect(maxOffset).toBeLessThan(expectedPeak * 1.2);
   });
 });
+
+describe('BinaryOrbitField.update — focal-star rebase', () => {
+  // When the focal star is a member of a binary pair, anchor it at the
+  // local origin (matching the disc shader's uPinFocusToCenter) and load
+  // the FULL relative motion onto the companion. Without this the focus
+  // ring / distance vector / hover pick all project to a perturbed point
+  // separated from where the GPU pins the disc.
+
+  // One-relation fixture: avoids the makeFixture()'s nested inner pair
+  // bleeding into the primary's slot and confusing the q-scaling ratio.
+  function singleRelationFixture(qVal: number) {
+    const positions = new Float32Array([
+      2.0, 0.0, 0.0,
+      1.5, 0.5, 0.0,
+    ]);
+    const mags = new Float32Array([2.0, 4.0]);
+    const local = new Float32Array(positions);
+    const suppress = new Float32Array(2);
+    const relation: BinaryRelation = {
+      primaryIdx: 0,
+      secondaryIdx: 1,
+      flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION,
+      parentRelation: NO_PARENT,
+      pDays: 365.25 * 100,
+      tJd: J2000_JD,
+      e: 0.2,
+      aAU: 10.0,
+      iRad: 0.5,
+      omegaRad: 0.3,
+      OmegaRad: 0.4,
+      q: qVal,
+      sepArcsec: 5.0,
+      paDeg: 90.0,
+      sepPaEpochJd: J2000_JD,
+    };
+    const binaries: BinariesData = {
+      version: 1,
+      relations: [relation],
+      primaryIdxToRelations: new Map([[0, [0]]]),
+      secondaryIdxToRelation: new Map([[1, 0]]),
+    };
+    const iPositionAttr = new THREE.InstancedBufferAttribute(local, 3);
+    const iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(suppress, 1);
+    return {
+      binaries,
+      absolutePositions: positions,
+      absoluteMags: mags,
+      localPositions: local,
+      compositeSuppress: suppress,
+      iPositionAttr,
+      iCompositeSuppressAttr,
+    };
+  }
+
+  const closeCamera = new THREE.Vector3(1.999, 0, 0);
+  const tNonZero = (J2000_JD - 2440587.5) * 86400 + 12 * 365.25 * 86400;
+
+  it('focal=primary: primary stays at baseline, companion takes full ΔR', () => {
+    const fxA = singleRelationFixture(0.4);
+    const fieldA = new BinaryOrbitField(fxA);
+    fieldA.update(tNonZero, closeCamera, 15, 1080, 0.8, 0);
+
+    const fxB = singleRelationFixture(0.4);
+    const fieldB = new BinaryOrbitField(fxB);
+    fieldB.update(tNonZero, closeCamera, 15, 1080, 0.8, null);
+
+    expect(fxA.localPositions[0]).toBeCloseTo(fxA.absolutePositions[0], 10);
+    expect(fxA.localPositions[1]).toBeCloseTo(fxA.absolutePositions[1], 10);
+    expect(fxA.localPositions[2]).toBeCloseTo(fxA.absolutePositions[2], 10);
+
+    const sFull = Math.hypot(
+      fxA.localPositions[3] - fxA.absolutePositions[3],
+      fxA.localPositions[4] - fxA.absolutePositions[4],
+      fxA.localPositions[5] - fxA.absolutePositions[5],
+    );
+    const sBary = Math.hypot(
+      fxB.localPositions[3] - fxB.absolutePositions[3],
+      fxB.localPositions[4] - fxB.absolutePositions[4],
+      fxB.localPositions[5] - fxB.absolutePositions[5],
+    );
+    // q=0.4 ⇒ (1−q) = 0.6 ⇒ 1.0 / 0.6 ≈ 1.667.
+    expect(sFull / sBary).toBeCloseTo(1 / 0.6, 2);
+  });
+
+  it('focal=secondary: secondary stays at baseline, primary takes full −ΔR', () => {
+    const fxA = singleRelationFixture(0.4);
+    const fieldA = new BinaryOrbitField(fxA);
+    fieldA.update(tNonZero, closeCamera, 15, 1080, 0.8, 1);
+
+    const fxB = singleRelationFixture(0.4);
+    const fieldB = new BinaryOrbitField(fxB);
+    fieldB.update(tNonZero, closeCamera, 15, 1080, 0.8, null);
+
+    expect(fxA.localPositions[3]).toBeCloseTo(fxA.absolutePositions[3], 10);
+    expect(fxA.localPositions[4]).toBeCloseTo(fxA.absolutePositions[4], 10);
+    expect(fxA.localPositions[5]).toBeCloseTo(fxA.absolutePositions[5], 10);
+
+    const pFull = Math.hypot(
+      fxA.localPositions[0] - fxA.absolutePositions[0],
+      fxA.localPositions[1] - fxA.absolutePositions[1],
+      fxA.localPositions[2] - fxA.absolutePositions[2],
+    );
+    const pBary = Math.hypot(
+      fxB.localPositions[0] - fxB.absolutePositions[0],
+      fxB.localPositions[1] - fxB.absolutePositions[1],
+      fxB.localPositions[2] - fxB.absolutePositions[2],
+    );
+    // q=0.4 ⇒ 1.0 / 0.4 = 2.5.
+    expect(pFull / pBary).toBeCloseTo(1 / 0.4, 2);
+  });
+
+  it('focal=unrelated star: barycentric split preserved (no rebase)', () => {
+    const fxA = singleRelationFixture(0.4);
+    const fieldA = new BinaryOrbitField(fxA);
+    fieldA.update(tNonZero, closeCamera, 15, 1080, 0.8, 99);
+
+    const fxB = singleRelationFixture(0.4);
+    const fieldB = new BinaryOrbitField(fxB);
+    fieldB.update(tNonZero, closeCamera, 15, 1080, 0.8, null);
+
+    for (let i = 0; i < fxA.localPositions.length; i++) {
+      expect(fxA.localPositions[i]).toBeCloseTo(fxB.localPositions[i], 12);
+    }
+  });
+});
