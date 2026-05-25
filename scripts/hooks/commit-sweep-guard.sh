@@ -50,8 +50,14 @@ fi
 # message body literally into the command string, so a grep over the
 # command catches `[readme-skip: ...]` whether it's a `-m`-arg or
 # HEREDOC inline message.
+#
+# Flatten newlines to spaces first so the regex `[^]]*` (which doesn't
+# span newlines in line-mode grep) still spans a multi-line skip
+# reason. Without this a HEREDOC message that wraps the bracketed
+# reason across lines is silently ignored — surprise denials on
+# what looks like a valid opt-out.
 opt_out=0
-if printf '%s' "$cmd" | grep -qE '\[readme-skip:[^]]*\]'; then
+if printf '%s' "$cmd" | tr '\n' ' ' | grep -qE '\[readme-skip:[^]]*\]'; then
   opt_out=1
 fi
 

@@ -72,7 +72,11 @@ matched commit:
    set. Suppressed when the commit command string contains
    `[readme-skip: <reason>]` — works for both `-m "msg [readme-skip:
    …]"` and HEREDOC-style messages, since both put the literal text
-   in the command.
+   in the command. The skip-tag scan flattens newlines to spaces
+   before matching so a multi-line reason inside the brackets still
+   counts — without that, a HEREDOC message that wraps the bracketed
+   reason was silently ignored (`[^]]*` doesn't span newlines under
+   line-mode `grep -E`).
 
 2. **Comment-rule sweep.** Runs `git diff --cached -U0` filtered to
    added lines (`^\+`, excluding `+++` headers) against the same
