@@ -6,6 +6,7 @@ import {
   measureCandidate,
   filterByDistAndSpect,
   projectVec,
+  starLabelOffsetPx,
   type Candidate,
 } from './chart-labels';
 
@@ -323,5 +324,47 @@ describe('chart-labels / projectVec', () => {
     const cam = makeCamera();
     const p = new THREE.Vector3(1000, 0, -1);
     expect(projectVec(p, cam, 800, 600)).toBeNull();
+  });
+});
+
+describe('chart-labels / starLabelOffsetPx', () => {
+  it('floors to the minimum offset for sub-pixel discs', () => {
+    // Faint stars render at minPx = 1.5 px (radius 0.75 px); a tiny
+    // disc-relative offset would crowd the label up against the dot.
+    // The 9 px floor preserves readable breathing room.
+    expect(starLabelOffsetPx(1.5)).toBe(9);
+  });
+
+  it('floors to the minimum offset for mid-size discs where radius + gap is still small', () => {
+    // 9 px disc → radius 4.5 → 4.5 + 4 = 8.5 < 9, still floor.
+    expect(starLabelOffsetPx(9)).toBe(9);
+  });
+
+  it('scales with disc radius for large discs', () => {
+    // 28 px disc (the chart-mode max) → radius 14 → 14 + 4 = 18.
+    expect(starLabelOffsetPx(28)).toBe(18);
+  });
+
+  it('is monotonic non-decreasing in disc size', () => {
+    let prev = -Infinity;
+    for (const d of [0, 1.5, 5, 9, 12, 16, 20, 28, 40]) {
+      const off = starLabelOffsetPx(d);
+      expect(off).toBeGreaterThanOrEqual(prev);
+      prev = off;
+    }
+  });
+
+  it("places the label's bottom-left corner outside the disc edge at max size", () => {
+    // The label sits at (centre + (offset, -offset)) with text height
+    // ~14 px and dominant-baseline=central. Its closest corner to the
+    // star centre is roughly (offset, -offset + 7) — the bottom-left
+    // of the start-anchored text box. That corner must lie outside the
+    // disc of radius discPx/2 at the largest configured size.
+    const discPx = 28;
+    const off = starLabelOffsetPx(discPx);
+    const cornerX = off;
+    const cornerY = -off + 7; // text-height/2 below the y-anchor
+    const cornerDist = Math.hypot(cornerX, cornerY);
+    expect(cornerDist).toBeGreaterThan(discPx / 2);
   });
 });

@@ -1,6 +1,12 @@
 // Pure helpers mirroring the GLSL math in `star.vert.glsl`'s chart-mode
 // branch. See src/client/chart-mode/README.md § Star disc sizing.
 
+export interface ChartDiscParams {
+  maxPx: number;
+  minPx: number;
+  magBright: number;
+}
+
 /**
  * Distance (parsecs) at which the chart-mode rendered disc reaches its
  * `uChartDiscMaxPx` plateau for a star of absolute magnitude `absMag`,
@@ -14,4 +20,22 @@
  */
 export function chartPlateauDistancePc(absMag: number, magBright: number): number {
   return Math.pow(10, (magBright - absMag + 5) / 5);
+}
+
+/**
+ * Chart-mode rendered disc diameter (CSS pixels) for a star of apparent
+ * magnitude `appMag`, mirroring the vertex shader's
+ * `mix(maxPx, minPx, clamp((appMag − magBright) / (maxAppMag − magBright), 0, 1))`.
+ * Returns `maxPx` at the bright end (`appMag ≤ magBright`) and `minPx`
+ * at the slider limit (`appMag = maxAppMag`).
+ */
+export function chartDiscPxForAppMag(
+  appMag: number,
+  params: ChartDiscParams,
+  maxAppMag: number,
+): number {
+  const t = Math.max(0, Math.min(1,
+    (appMag - params.magBright) /
+      Math.max(maxAppMag - params.magBright, 0.001)));
+  return params.maxPx + (params.minPx - params.maxPx) * t;
 }

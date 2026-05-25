@@ -14,6 +14,7 @@ import {
 import { parkDistance } from '../focus/focus-transition';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
+import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-
 // zoom orbit floor. The shader reads this as `uMaxPhysFrac` and clamps
@@ -193,7 +194,7 @@ export function renderedDiscPxAtPeak(args: PeakDiscArgs): number {
 // values the chart-mode shader does.
 export function getChartDiscParams(
   uniforms: ChartDiscUniforms,
-): { maxPx: number; minPx: number; magBright: number } {
+): ChartDiscParams {
   return {
     maxPx: uniforms.uChartDiscMaxPx.value,
     minPx: uniforms.uChartDiscMinPx.value,
