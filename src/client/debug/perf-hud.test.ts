@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mark, measure, frame, buildPerfSection } from './perf-hud';
+import { mark, measure, frame, buildPerfSection, _sectionsForTest } from './perf-hud';
 
 describe('perf-hud / no-op API', () => {
   it('mark/measure/frame are safe to call without installing the HUD', () => {
@@ -101,6 +101,23 @@ describe('perf-hud / install → dispose teardown', () => {
     measure('test.b');
     for (let i = 0; i < 100; i++) frame();
     expect(perfNowSpy.mock.calls.length).toBe(0);
+  });
+
+  it('section-GC: drops labels silent for a full ring window', () => {
+    // Silent-section GC is the mechanism that lets `chart.*` entries fall
+    // off the HUD after exiting chart mode. Without it the HUD averages
+    // stale ring data forever.
+    const section = buildPerfSection();
+
+    mark('test.gc');
+    measure('test.gc');
+    expect(_sectionsForTest().has('test.gc')).toBe(true);
+
+    // RING_SIZE = 60. After RING_SIZE+1 silent frames the section drops.
+    for (let i = 0; i < 62; i++) frame();
+    expect(_sectionsForTest().has('test.gc')).toBe(false);
+
+    section.dispose();
   });
 
   it('dispose + re-build re-arms the install — `installed` flag was cleared', () => {

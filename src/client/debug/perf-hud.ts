@@ -43,15 +43,26 @@ let panelEl: HTMLDivElement | null = null;
 let lastDomUpdateMs = 0;
 
 // Persistent DOM handles populated by buildPerfDom() and mutated each tick.
-let headlineEl: HTMLDivElement | null = null;
 let captionEl: HTMLDivElement | null = null;
 let lastCaptionN = -1;
+// Typed headline node refs. The "FPS N " prefix lives on a Text node, the
+// "low N" / "gpu N.NNms" segments on their own spans — writing through
+// these refs avoids the childNodes / .children index walk that silently
+// scrambles when the headline shape changes.
+let headlineFpsText: Text | null = null;
+let headlineLowSpan: HTMLSpanElement | null = null;
+let headlineGpuSpan: HTMLSpanElement | null = null;
 const rowPool: { line: HTMLDivElement; label: HTMLSpanElement; values: HTMLSpanElement }[] = [];
 const histoBars: HTMLSpanElement[] = [];
 // Per-bar last-written height/colour so per-tick writes skip identical
 // values — same dirty-tracking pattern chart-labels.ts uses for SVG.
 const histoLastHeight: number[] = [];
 const histoLastColour: string[] = [];
+// Per-row last-written colour. style.color's CSSOM getter returns the
+// serialised form (#cfe → rgb(204,238,255)), so comparing against the
+// input hex always mismatches; cache the input hex separately. Mirrors
+// histoLastColour above.
+const rowLastColour: string[] = [];
 
 // Scratch row data reused across ticks. Index 0..N-1 holds the current
 // frame's top sections in descending-avg order; only the first N rows
@@ -80,6 +91,12 @@ function realMeasure(label: string): void {
   s.idx = (s.idx + 1) % RING_SIZE;
   if (s.count < RING_SIZE) s.count++;
   s.lastFrame = frameCounter;
+}
+
+// Exported for vitest only — lets the GC behaviour be observed without
+// driving the panel through a render loop.
+export function _sectionsForTest(): ReadonlyMap<string, SectionStats> {
+  return sections;
 }
 
 function realFrame(): void {
@@ -124,6 +141,7 @@ export function buildPerfSection(): PerfSection {
   histoBars.length = 0;
   histoLastHeight.length = 0;
   histoLastColour.length = 0;
+  rowLastColour.length = 0;
 
   const div = document.createElement('div');
   div.id = 'perf-hud';
@@ -137,12 +155,15 @@ export function buildPerfSection(): PerfSection {
     minWidth: '240px',
   } as CSSStyleDeclaration);
 
-  // Headline: rebuilt each tick via textContent on three nested spans so
-  // we never reparse markup. Layout is "FPS NN low NN gpu N.NNms".
+  // Headline: "FPS NN low NN gpu N.NNms". Three named refs (one Text +
+  // two SpanElements) so per-tick writes go through typed locals instead
+  // of childNodes / .children index walks that scramble silently if the
+  // headline shape ever gains another text node or reorders.
   const headline = document.createElement('div');
   headline.style.fontWeight = '600';
   headline.style.color = '#fff';
-  headline.appendChild(document.createTextNode(''));            // "FPS NN "
+  const fpsText = document.createTextNode('');
+  headline.appendChild(fpsText);
   const lowSpan = document.createElement('span');
   lowSpan.style.color = '#fc8';
   lowSpan.appendChild(document.createTextNode(''));
@@ -153,7 +174,9 @@ export function buildPerfSection(): PerfSection {
   gpuSpan.appendChild(document.createTextNode(''));
   headline.appendChild(gpuSpan);
   div.appendChild(headline);
-  headlineEl = headline;
+  headlineFpsText = fpsText;
+  headlineLowSpan = lowSpan;
+  headlineGpuSpan = gpuSpan;
 
   // Static table header row.
   const header = document.createElement('div');
@@ -186,6 +209,7 @@ export function buildPerfSection(): PerfSection {
     line.appendChild(values);
     rowsParent.appendChild(line);
     rowPool.push({ line, label, values });
+    rowLastColour.push('');
   }
   div.appendChild(rowsParent);
 
@@ -243,7 +267,9 @@ export function buildPerfSection(): PerfSection {
       lastDomUpdateMs = 0;
       visible = false;
       panelEl = null;
-      headlineEl = null;
+      headlineFpsText = null;
+      headlineLowSpan = null;
+      headlineGpuSpan = null;
       captionEl = null;
       lastCaptionN = -1;
     },
@@ -254,7 +280,7 @@ export function buildPerfSection(): PerfSection {
 }
 
 function renderPanel(): void {
-  if (!panelEl || !headlineEl) return;
+  if (!panelEl || !headlineFpsText || !headlineLowSpan || !headlineGpuSpan) return;
 
   const total = sections.get('frame.total');
   const totalStats = total ? summarize(total) : { avg: 0, max: 0 };
@@ -264,11 +290,9 @@ function renderPanel(): void {
   const gpu = sections.get('gpu.render');
   const gpuAvg = gpu ? summarize(gpu).avg : 0;
 
-  // Headline text nodes (3 children: textNode, lowSpan, textNode, gpuSpan).
-  const headlineNodes = headlineEl.childNodes;
-  headlineNodes[0].nodeValue = `FPS ${fpsAvg.toFixed(0)} `;
-  headlineEl.children[0].firstChild!.nodeValue = `low ${fpsLow.toFixed(0)}`;
-  headlineEl.children[1].firstChild!.nodeValue = `gpu ${fmtMs(gpuAvg)}ms`;
+  headlineFpsText.nodeValue = `FPS ${fpsAvg.toFixed(0)} `;
+  headlineLowSpan.firstChild!.nodeValue = `low ${fpsLow.toFixed(0)}`;
+  headlineGpuSpan.firstChild!.nodeValue = `gpu ${fmtMs(gpuAvg)}ms`;
 
   // Single-pass row build: walk the sections map once, summarise, and
   // insertion-sort into rowScratch (only need the top MAX_TABLE_ROWS so
@@ -296,7 +320,10 @@ function renderPanel(): void {
     const valStr = `${fmtMs(r.avg)} / ${fmtMs(r.max)}`;
     if (slot.values.textContent !== valStr) slot.values.textContent = valStr;
     const colour = colourForAvg(r.avg);
-    if (slot.line.style.color !== colour) slot.line.style.color = colour;
+    if (rowLastColour[i] !== colour) {
+      slot.line.style.color = colour;
+      rowLastColour[i] = colour;
+    }
   }
 
   // Histogram: write only the bars that changed. Cap at 2× the 60Hz frame
