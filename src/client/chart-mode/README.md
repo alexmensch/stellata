@@ -139,11 +139,19 @@ Per-frame engine that emits two SVG layers under `#overlay`:
 
 **Greedy collision pass** with axis-aligned bounding rectangles, sorted
 by priority (proper name 1 → Bayer 2 → cloud 3). Constellation names
-**bypass** the collision pass entirely — they always render with
-outline-style typography (16 px, 0.32em letter-spacing, weight 600,
-`rgba(0,0,0,0.55)`, no halo) so they read as a sparse semi-transparent
-overlay à la Sky Atlas, allowed to overlap small star symbols
-underneath.
+**bypass** the collision pass entirely — they always render at
+`#chart-labels .chart-label.kind-con`'s sparse semi-transparent outline
+typography, allowed to overlap small star symbols underneath à la Sky
+Atlas; see styles.css for the live size / weight / letter-spacing.
+
+**Star-name + Bayer label offsets** scale with the rendered disc.
+`starLabelOffsetPx(discPx) = max(STAR_LABEL_OFFSET_MIN_PX,
+discPx/2 + STAR_LABEL_GAP_PX)` so the label's bottom-left corner clears
+the disc edge across the chart-mode magnitude range (faint sub-pixel
+discs keep the floor; the brightest 28 px disc pushes the label out
+to 18 px diagonal). `discPx` comes from `chartDiscPxForAppMag` in
+`chart-disc-pure.ts`, which mirrors the vertex shader's chart-branch
+formula.
 
 The constellation centroid is the **flux-weighted** position of every
 member (`weight = 10^(-0.4 × appMag)` per star). The visibility gate

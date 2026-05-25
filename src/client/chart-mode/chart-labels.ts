@@ -6,6 +6,7 @@ import { FLAG_BINARY_PRIMARY } from '../../../scripts/catalog/catalog-pure';
 import { projectToScreen } from '../overlays/overlay-project';
 import { setNumAttr } from '../overlays/dirty-attr';
 import { getChartDiscParams } from '../camera/controls/star-physics';
+import { chartDiscPxForAppMag } from './chart-disc-pure';
 
 // Chart-mode label engine. Per-frame, projects every candidate
 // label (proper-named star, Bayer-letter star, constellation Latin name,
@@ -23,9 +24,20 @@ import { getChartDiscParams } from '../camera/controls/star-physics';
 // Inflated AABB around each label's bounding rect, in CSS pixels. Wider
 // padding = more aggressive culling = sparser, more readable layout.
 const COLLISION_PAD_PX = 4;
-// Star-name labels reject any label that lands inside this radius from
-// the star centre — keeps the name from sitting on top of its glyph.
-const STAR_LABEL_OFFSET_PX = 9;
+// Star-name labels sit `discRadius + GAP_PX` from the star centre along
+// both x and y, so the label's bottom-left corner clears the rendered
+// disc edge at every magnitude. Floored to MIN_PX so faint sub-pixel
+// discs still get readable breathing room.
+const STAR_LABEL_GAP_PX = 4;
+const STAR_LABEL_OFFSET_MIN_PX = 9;
+// Cloud labels share the minimum-offset constant — clouds have no disc
+// against which to size, and the floor matches the historical star
+// offset for visual consistency.
+const CLOUD_LABEL_OFFSET_PX = STAR_LABEL_OFFSET_MIN_PX;
+
+export function starLabelOffsetPx(discPx: number): number {
+  return Math.max(STAR_LABEL_OFFSET_MIN_PX, discPx * 0.5 + STAR_LABEL_GAP_PX);
+}
 // Sky-Atlas-style horizontal wings on double / multiple stars extend
 // beyond the disc edge by `discPx * RATIO` pixels on each side, so the
 // wings stay visually proportional across the chart-mode magnitude range
@@ -344,6 +356,12 @@ function tick(
   lastTickViewportW = w;
   lastTickViewportH = h;
 
+  // Disc-tuning bag drives both the per-label offset (label clears the
+  // rendered disc edge regardless of magnitude) and the glyph loops
+  // below (variable rings + binary wings sized off the same px formula
+  // the GPU disc uses).
+  const discParams = getChartDiscParams(stellata.uniforms);
+
   const candidates: Candidate[] = [];
   const seen = new Set<number>(); // dedupe star idx across name+bayer
 
@@ -357,11 +375,12 @@ function tick(
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
     if (appMag > f.maxAppMag) continue;
+    const offset = starLabelOffsetPx(chartDiscPxForAppMag(appMag, discParams, f.maxAppMag));
     candidates.push({
       kind: 'name',
       text: name,
-      x: xy[0] + STAR_LABEL_OFFSET_PX,
-      y: xy[1] - STAR_LABEL_OFFSET_PX,
+      x: xy[0] + offset,
+      y: xy[1] - offset,
       width: 0,
       height: 0,
       priority: 1 + appMag * 0.001, // brightness tie-break inside the kind
@@ -384,11 +403,12 @@ function tick(
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
     if (appMag > f.maxAppMag) continue;
+    const offset = starLabelOffsetPx(chartDiscPxForAppMag(appMag, discParams, f.maxAppMag));
     candidates.push({
       kind: 'bayer',
       text: `${info.greek}${info.suffix}`,
-      x: xy[0] + STAR_LABEL_OFFSET_PX,
-      y: xy[1] - STAR_LABEL_OFFSET_PX,
+      x: xy[0] + offset,
+      y: xy[1] - offset,
       width: 0,
       height: 0,
       // Ranks after named stars; brightness tie-break inside the kind.
@@ -497,8 +517,8 @@ function tick(
       candidates.push({
         kind: 'cloud',
         text: clouds.clouds[i].name,
-        x: xy[0] + STAR_LABEL_OFFSET_PX,
-        y: xy[1] + STAR_LABEL_OFFSET_PX,
+        x: xy[0] + CLOUD_LABEL_OFFSET_PX,
+        y: xy[1] + CLOUD_LABEL_OFFSET_PX,
         width: 0,
         height: 0,
         priority: 3 + i * 0.0001,
@@ -565,18 +585,11 @@ function tick(
 
   // ---- Glyphs (variable rings + binary wings) ----
   // Both layers paint screen-space SVG primitives sized in the same
-  // space the GPU disc renders. We mirror the chart-mode magnitude →
-  // pixel formula (vertex shader's chart branch) here so the visual
-  // matches the rendered disc exactly.
-  const discParams = getChartDiscParams(stellata.uniforms);
+  // space the GPU disc renders — `chartDiscPxForAppMag` mirrors the
+  // vertex shader's chart-branch formula so the visual matches the
+  // rendered disc exactly.
   const usedRings = new Set<number>();
   const usedWings = new Set<number>();
-  const discPxFor = (appMag: number): number => {
-    const t = Math.max(0, Math.min(1,
-      (appMag - discParams.magBright) /
-        Math.max(f.maxAppMag - discParams.magBright, 0.001)));
-    return discParams.maxPx + (discParams.minPx - discParams.maxPx) * t;
-  };
 
   // Spectral mask + Sol-distance bounds are encoded in variableEligible
   // and binaryEligible (rebuilt on filter change), so the per-frame loops
@@ -620,7 +633,7 @@ function tick(
       // radius, guaranteeing a visible gap even for low-amplitude
       // variables where the disc would otherwise grow flush with the
       // ring. Adds 2× to the diameter (one gap on each side).
-      const peakDiscPx = discPxFor(ringMag);
+      const peakDiscPx = chartDiscPxForAppMag(ringMag, discParams, f.maxAppMag);
       const ringPx = peakDiscPx + 2 * VARIABLE_RING_MIN_GAP_PX;
       const ringR = ringPx * 0.5;
       let p = ringPool.get(idx);
@@ -666,7 +679,7 @@ function tick(
         : absmag[idx];
       // Magnitude gate before the projection — same reasoning as above.
       if (appMag > f.maxAppMag) continue;
-      const discPx = discPxFor(appMag);
+      const discPx = chartDiscPxForAppMag(appMag, discParams, f.maxAppMag);
       const ext = discPx * BINARY_WING_EXTENSION_RATIO;
       if (ext < BINARY_WING_MIN_EXTENSION_PX) continue;
       const xy = projectStar(idx, positions, camera, w, h);
