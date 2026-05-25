@@ -9,7 +9,8 @@ import {
   type PhaseCoefficients,
   lambertianPhaseFactor,
   mallamaPhaseFactor,
-  peakPhaseFactor,
+  alphaZeroPhaseFactor,
+  phaseFactorFor,
 } from './phase-function';
 
 const DEG = Math.PI / 180;
@@ -278,24 +279,77 @@ describe('mallamaPhaseFactor', () => {
   });
 });
 
-describe('peakPhaseFactor', () => {
+describe('alphaZeroPhaseFactor', () => {
   it('returns 1 for undefined coefficients (Lambertian fallback)', () => {
-    expect(peakPhaseFactor(undefined)).toBe(1);
+    expect(alphaZeroPhaseFactor(undefined)).toBe(1);
   });
 
   it('returns 1 for any zeroed-out planet (c0 = 0)', () => {
-    expect(peakPhaseFactor(EARTH_PHASE)).toBeCloseTo(1, 12);
-    expect(peakPhaseFactor(JUPITER_PHASE)).toBeCloseTo(1, 12);
+    expect(alphaZeroPhaseFactor(EARTH_PHASE)).toBeCloseTo(1, 12);
+    expect(alphaZeroPhaseFactor(JUPITER_PHASE)).toBeCloseTo(1, 12);
   });
 
   it('returns the c0-boost flux multiplier for Saturn', () => {
-    expect(peakPhaseFactor(SATURN_PHASE)).toBeCloseTo(10 ** (0.55 / 2.5), 6);
+    expect(alphaZeroPhaseFactor(SATURN_PHASE)).toBeCloseTo(10 ** (0.55 / 2.5), 6);
   });
 
   it('returns 1 when alphaMaxDeg = 0 (sentinel — Mallama disabled)', () => {
     const sentinel: PhaseCoefficients = {
       c0: -1, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, alphaMaxDeg: 0,
     };
-    expect(peakPhaseFactor(sentinel)).toBe(1);
+    expect(alphaZeroPhaseFactor(sentinel)).toBe(1);
+  });
+});
+
+describe('phaseFactorFor', () => {
+  it('Lambertian fallback when coefs are undefined (Pluto / exoplanets)', () => {
+    // Planet at (1, 0, 0), host at (1, 1, 0), viewer at origin.
+    // dv = viewer→planet = (1, 0, 0); dh = viewer→host = (1, 1, 0).
+    // planet→viewer = (-1, 0, 0); planet→host = (0, 1, 0); cos α = 0
+    // → α = 90°, Lambert(π/2) = 1/π.
+    const dvx = 1, dvy = 0, dvz = 0;
+    const dhx = 1, dhy = 1, dhz = 0;
+    expect(phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, undefined))
+      .toBeCloseTo(1 / Math.PI, 6);
+  });
+
+  it('Mallama branch matches a direct mallamaPhaseFactor call at known α', () => {
+    // Construct a geometry where the angle at the planet between the
+    // viewer and host directions is exactly α = 30°. Planet at the
+    // origin (relative to viewer), viewer along -x, host at α relative
+    // to the viewer ray seen from the planet. dv = viewer→planet =
+    // (1, 0, 0) ⇒ planet→viewer = (-1, 0, 0). For planet→host to make
+    // 30° with that, dh - dv must be (-cos α, sin α, 0), giving
+    // dh = (1 - cos α, sin α, 0).
+    const a = 30 * DEG;
+    const dvx = 1, dvy = 0, dvz = 0;
+    const dhx = 1 - Math.cos(a), dhy = Math.sin(a), dhz = 0;
+    const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, MARS_PHASE);
+    expect(phi).toBeCloseTo(mallamaPhaseFactor(MARS_PHASE, a), 6);
+  });
+
+  it('returns 1 when the viewer→planet leg is degenerate (lenV = 0)', () => {
+    // Viewer sits on top of the planet — α is undefined; the safe
+    // floor returns full-phase brightness rather than NaN.
+    expect(phaseFactorFor(0, 0, 0, 1, 0, 0, MARS_PHASE)).toBe(1);
+  });
+
+  it('returns 1 when the planet→host leg is degenerate (lenHp = 0)', () => {
+    // Host sits on top of the planet (dh == dv).
+    expect(phaseFactorFor(1, 0, 0, 1, 0, 0, MARS_PHASE)).toBe(1);
+  });
+
+  it('α = 0 matches alphaZeroPhaseFactor exactly (viewer behind host)', () => {
+    // Viewer behind the host, looking through the host toward the
+    // planet — planet→viewer and planet→host both point along -x →
+    // α = 0. Planet at (2, 0, 0); host at (1, 0, 0); viewer at origin
+    // ⇒ dv = (2, 0, 0); dh = (1, 0, 0); planet→viewer = (-1, 0, 0);
+    // planet→host = (-1, 0, 0); cos α = 1.
+    const dvx = 2, dvy = 0, dvz = 0;
+    const dhx = 1, dhy = 0, dhz = 0;
+    for (const coefs of [MARS_PHASE, SATURN_PHASE, JUPITER_PHASE, undefined]) {
+      const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, coefs);
+      expect(phi).toBeCloseTo(alphaZeroPhaseFactor(coefs), 6);
+    }
   });
 });

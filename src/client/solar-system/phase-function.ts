@@ -72,10 +72,57 @@ export function mallamaPhaseFactor(
  *  the per-host visibility cull (see `cullDistancePc` in
  *  `planet-body-field.ts`): for almost every planet this is 1, but
  *  Saturn's ring term raises it materially and the cull distance has
- *  to widen to match. */
-export function peakPhaseFactor(coefs: PhaseCoefficients | undefined): number {
+ *  to widen to match.
+ *
+ *  The α=0 framing is deliberate, not a proxy for the polynomial's
+ *  maximum: for Venus the true polynomial peak sits ~3° above zero,
+ *  ~0.1% above φ(0). The cull stays a conservative outer bound — at
+ *  any α the actual flux is ≤ this value plus that sub-millimagnitude
+ *  Venus margin — so the α=0 reading is what the cache wants. */
+export function alphaZeroPhaseFactor(coefs: PhaseCoefficients | undefined): number {
   if (!coefs || coefs.alphaMaxDeg <= 0) return 1;
   return Math.exp(-coefs.c0 * 0.4 * LOG10);
+}
+
+/**
+ * Phase factor φ(α) given viewer→planet and viewer→host displacement
+ * vectors. Computes α = ∠(viewer–planet–host) from the two vectors and
+ * dispatches into Mallama (when a polynomial exists) or Lambertian (the
+ * default fallback for Pluto + every exoplanet). Mirrors the
+ * `if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg)` branch in
+ * `planet.vert.glsl` exactly through the shared helpers above.
+ *
+ * The `(dvx, dvy, dvz)` vector is the viewer → planet displacement and
+ * `(dhx, dhy, dhz)` is the viewer → host displacement (both in any
+ * consistent frame); the planet → host leg is the difference. Returns 1
+ * if either leg has zero length (degenerate viewer/host/planet
+ * coincidence).
+ */
+export function phaseFactorFor(
+  dvx: number,
+  dvy: number,
+  dvz: number,
+  dhx: number,
+  dhy: number,
+  dhz: number,
+  coefs: PhaseCoefficients | undefined,
+): number {
+  // vphHat = planet → viewer (= −view-space planet direction).
+  // hphHat = planet → host. Both normalised; cos α is the dot product.
+  const lenV = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
+  const lenHp = Math.sqrt(
+    (dhx - dvx) ** 2 + (dhy - dvy) ** 2 + (dhz - dvz) ** 2,
+  );
+  if (lenV <= 0 || lenHp <= 0) return 1;
+  const vphX = -dvx / lenV;
+  const vphY = -dvy / lenV;
+  const vphZ = -dvz / lenV;
+  const hphX = (dhx - dvx) / lenHp;
+  const hphY = (dhy - dvy) / lenHp;
+  const hphZ = (dhz - dvz) / lenHp;
+  const cosA = Math.max(-1, Math.min(1, vphX * hphX + vphY * hphY + vphZ * hphZ));
+  const alpha = Math.acos(cosA);
+  return coefs ? mallamaPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
 }
 
 // Per-planet coefficients from Mallama 2018 (Icarus 282). Each

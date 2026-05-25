@@ -15,6 +15,12 @@ read.
   `star.frag.glsl` and (via relative `?raw` import) by
   `../solar-system/planet.frag.glsl` so stars and planet bodies share
   the same brightness-PSF saturation physics.
+- `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
+  the chunk consumes. The star pipeline's `sharedUniforms` map in
+  `stellata.ts` `satisfies` this interface, and
+  `PlanetBodyField.buildMaterials` picks exactly these keys out via
+  `pickPerceptualDiscUniforms`. Single source of truth so the two
+  pipelines can't drift at the chunk's interface.
 - `star-color-routing-pure.ts` — pure six-tier `pickTeffSource`:
   `teff_gspphot` → `teff_gspspec` → Ballesteros(B–V) → spectral-class
   `T_TABLE` → WD Sion Teff → solar fallback. Vitest-pinned.
