@@ -201,12 +201,31 @@ canonical tag set is `RESOLVE_VIA_VALUES`:
 
 The position-match pass deserves its own note. AT-HYG's stored
 ra/dec is documented as J2000 but HIP-sourced rows are empirically at
-J1991.25. The position-match helper PM-propagates each AT-HYG row's
-coord to `WDS_PRECISE_COORD_EPOCH` (J2000) using the row's own
-`pm_ra` / `pm_dec` before measuring against the 2″ tolerance, so high-PM
-stars (α Cen at ~3614 mas/yr) still match. Secondaries are predicted
-from primary + WDS (ρ, θ), with a short-circuit when ρ exceeds the WDS
-overflow sentinel (`999.9″`).
+J1991.25 (the HIP1 native epoch), while GJ / Tycho-sourced rows are
+closer to J2000. Stage 2 and Stage 3 share `iter_pair_athyg_matches`
+to walk the pair-iteration cascade (primary match against the WDS
+precise_coord, then predicted-secondary match with primary-row
+exclusion, with the wide-pair short-circuit when ρ ≥ the WDS overflow
+sentinel `999.9″`). The default matcher,
+`match_athyg_position_either_epoch`, tries the row PM-propagated
+J1991.25→J2000 first, then the unpropagated stored coord — propagated
+wins on tie, the unpropagated retry covers high-PM GJ-anchored rows
+(ξ UMa at -425/-581 mas/yr drifts ~5″ off under propagation, beyond
+the 2″ tolerance).
+
+The two stages compose:
+
+- **Stage 2** binds identifiers — sets `c.athyg_row` always on match,
+  and surfaces `gaia` / `hip` from the row when the row carries them
+  (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
+  Opts OUT of secondary blend-inheritance because copying the
+  primary's AT-HYG row to the secondary slot would also propagate the
+  primary's Gaia source onto the secondary.
+- **Stage 3** synthesizes astrometry — `attach_athyg_position_fallback`
+  routes any remaining `unresolved` component through the same
+  cascade, opting INTO blend-inheritance so Hipparcos-unresolved
+  pairs (A, B sharing one AT-HYG row at sub-AU separation) both
+  emit `astrometry_via=athyg_position`.
 
 After the cascade, `propagate_within_system` (same file) smears each
 letter binding across every WDS pair row in the same system that

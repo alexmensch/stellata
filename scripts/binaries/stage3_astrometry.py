@@ -5,7 +5,6 @@ Routes between Gaia 5p, Gaia NSS-systemic, and HIP2 long-baseline.
 
 from __future__ import annotations
 
-import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,17 +19,13 @@ from parsers import (  # noqa: E402
 from indices import (  # noqa: E402
     ATHYG_REFERENCE_EPOCH,
     IdentifierIndices,
-    WDS_PRECISE_COORD_EPOCH,
-    WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC,
 )
 from stage2_resolve import (  # noqa: E402
     ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
     ResolvedComponent,
-    build_athyg_position_grid,
     build_pair_by_wds_disc,
-    find_nearest_athyg_at_position,
     find_owning_pair,
-    predict_secondary_position,
+    iter_pair_athyg_matches,
 )
 
 
@@ -174,22 +169,10 @@ def _from_hip2(hip2: Hip2Row) -> ComponentAstrometry:
 
 def _from_athyg_position(row: AthygRow) -> ComponentAstrometry | None:
     """Synthesize ``ComponentAstrometry`` from an AT-HYG row's stored
-    position when neither Gaia 5p nor HIP2 reach the component. Returns
-    ``None`` when ``dist_pc`` is missing or non-positive — the row
-    carries no usable parallax.
-
-    Used by the AT-HYG-position fallback for systems Stage 2 resolved
-    only through SIMBAD xids whose Gaia source_ids aren't in the 5p
-    table (typically G < 5 saturated bright stars) AND whose HIP is
-    excluded from HIP2 (van Leeuwen drops entries corrupted by
-    orbital motion — ξ UMa's HIP 55203 is the canonical case).
-
-    AT-HYG's stored ``ra/dec/dist_pc`` is often a GJ-catalogue
-    measurement for nearby bright systems — a legitimate astrometric
-    anchor even when the row has neither HIP nor Gaia populated.
-    ``ref_epoch`` is the AT-HYG reference (J1991.25 for HIP-sourced
-    rows; the J2000-published rows match within sub-tolerance after
-    the row's PM propagates 8.75 yr).
+    ra/dec + parallax (=1000/``dist_pc``). Returns ``None`` when
+    ``dist_pc`` is absent or non-positive — the row carries no usable
+    parallax. See ``scripts/binaries/README.md`` § Stage 3 for the
+    population this route serves.
     """
     if row.dist_pc is None or row.dist_pc <= 0:
         return None
@@ -370,137 +353,29 @@ def attach_athyg_position_fallback(
 ) -> None:
     """Post-pass after the Gaia / HIP2 cascade. For every component
     still tagged ``unresolved``, position-match the WDS precise_coord
-    (PM-propagated to J2000) against AT-HYG and synthesize
-    ``ComponentAstrometry`` from the matched row's ra/dec + parallax
-    (=1000/``dist_pc``). Mutates ``astrometry`` in place at the matched
-    indices; rows that can't be matched stay ``unresolved``.
+    against AT-HYG (via ``iter_pair_athyg_matches``) and synthesize
+    ``ComponentAstrometry`` from the matched row. Mutates ``astrometry``
+    in place; rows that can't be matched stay ``unresolved``.
 
-    Closes the gap between Stage 2's ``resolve_via_position`` (which
-    only binds the AT-HYG row's hip/gaia identifiers and leaves the
-    component unresolved when both are empty) and Stage 3's
-    Gaia-5p / HIP2 cascade (which can't see AT-HYG positions at all).
-    The dominant affected population is AT-HYG-HD-only WDS systems
-    with SIMBAD xids but no HIP+Gaia anchor — ξ UMa (HIP 55203 absent
-    from HIP2 due to AB orbital corruption) is the canonical case.
-
-    Two passes — primary against the pair's precise_coord, secondary
-    against the (ρ, θ)-predicted secondary position. Secondary
-    fallback inherits the primary's AT-HYG row when the secondary's
-    own match misses (Hipparcos-unresolved blends where A and B share
-    a single AT-HYG entry at sub-AU separation).
+    See ``scripts/binaries/README.md`` § Stage 3 for how this composes
+    with Stage 2's identifier-binding pass over the same cascade.
+    Opts into secondary blend-inheritance so Hipparcos-unresolved
+    blends (A and B sharing a single AT-HYG entry at sub-AU
+    separation) both get astrometry.
     """
-    grid = build_athyg_position_grid(athyg)
-    pair_by_wds_disc = build_pair_by_wds_disc(pairs)
-
-    primary_idx_by_pair: dict[tuple[str, str, str], int] = {}
-
-    for i, c in enumerate(components):
-        if astrometry[i].astrometry_via != "unresolved":
-            continue
-        if not c.is_primary:
-            continue
-        pair = find_owning_pair(c, pair_by_wds_disc)
-        if (
-            pair is None
-            or pair.precise_ra_deg is None
-            or pair.precise_dec_deg is None
-        ):
-            continue
-        match_idx = _athyg_match_either_epoch(
-            ra_deg=pair.precise_ra_deg, dec_deg=pair.precise_dec_deg,
-            grid=grid, athyg=athyg, tolerance_arcsec=tolerance_arcsec,
-        )
-        if match_idx is None:
-            continue
-        synth = _from_athyg_position(athyg[match_idx])
+    for event in iter_pair_athyg_matches(
+        components, pairs, athyg,
+        skip_predicate=lambda i, _c: astrometry[i].astrometry_via != "unresolved",
+        allow_blend_inherit=True,
+        tolerance_arcsec=tolerance_arcsec,
+    ):
+        c = components[event.component_idx]
+        synth = _from_athyg_position(athyg[event.athyg_match_idx])
         if synth is None:
             continue
-        primary_idx_by_pair[(c.wds_id, c.discoverer, pair.components)] = match_idx
-        astrometry[i] = synth
+        astrometry[event.component_idx] = synth
         if c.athyg_row is None:
-            c.athyg_row = athyg[match_idx]
-
-    for i, c in enumerate(components):
-        if astrometry[i].astrometry_via != "unresolved":
-            continue
-        if c.is_primary:
-            continue
-        pair = find_owning_pair(c, pair_by_wds_disc)
-        if (
-            pair is None
-            or pair.precise_ra_deg is None
-            or pair.precise_dec_deg is None
-        ):
-            continue
-        primary_idx = primary_idx_by_pair.get(
-            (c.wds_id, c.discoverer, pair.components),
-        )
-        secondary_match: int | None = None
-        if (
-            pair.rho_last is not None
-            and pair.theta_last is not None
-            and pair.rho_last < WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
-        ):
-            secondary_ra, secondary_dec = predict_secondary_position(
-                pair.precise_ra_deg, pair.precise_dec_deg,
-                pair.rho_last, pair.theta_last,
-            )
-            secondary_match = _athyg_match_either_epoch(
-                ra_deg=secondary_ra, dec_deg=secondary_dec,
-                grid=grid, athyg=athyg, tolerance_arcsec=tolerance_arcsec,
-                exclude_idx=primary_idx,
-            )
-        if secondary_match is not None:
-            synth = _from_athyg_position(athyg[secondary_match])
-            if synth is not None:
-                astrometry[i] = synth
-                if c.athyg_row is None:
-                    c.athyg_row = athyg[secondary_match]
-                continue
-        if primary_idx is not None:
-            synth = _from_athyg_position(athyg[primary_idx])
-            if synth is not None:
-                astrometry[i] = synth
-                if c.athyg_row is None:
-                    c.athyg_row = athyg[primary_idx]
-
-
-def _athyg_match_either_epoch(
-    *,
-    ra_deg: float, dec_deg: float,
-    grid: dict[tuple[int, int], list[int]],
-    athyg: list[AthygRow],
-    tolerance_arcsec: float,
-    exclude_idx: int | None = None,
-) -> int | None:
-    """Position-match an AT-HYG row against a J2000 sky position, trying
-    both the PM-propagated and unpropagated row positions and picking
-    whichever match falls inside ``tolerance_arcsec``.
-
-    AT-HYG mixes epoch conventions per ``pos_src``: HIP-sourced rows are
-    empirically at J1991.25, while GJ / Tycho / Gaia-sourced rows are
-    closer to J2000. Stage 2's ``resolve_via_position`` always propagates
-    by 8.75 yr from ATHYG_REFERENCE_EPOCH, which works for HIP-sourced
-    rows (the dominant case) but pushes high-PM GJ-sourced rows
-    (ξ UMa at -425/-581 mas/yr) 4-6″ off — beyond the 2″ tolerance.
-    Trying both directions here catches the high-PM GJ tail without
-    requiring an authoritative per-row epoch tag.
-
-    Propagated match wins on tie (HIP-sourced rows are the larger
-    population in the affected set).
-    """
-    propagated = find_nearest_athyg_at_position(
-        ra_deg, dec_deg, grid, athyg, tolerance_arcsec,
-        exclude_idx=exclude_idx,
-        target_epoch=WDS_PRECISE_COORD_EPOCH,
-    )
-    if propagated is not None:
-        return propagated
-    return find_nearest_athyg_at_position(
-        ra_deg, dec_deg, grid, athyg, tolerance_arcsec,
-        exclude_idx=exclude_idx,
-        target_epoch=None,
-    )
+            c.athyg_row = athyg[event.athyg_match_idx]
 
 
 def astrometry_counts(

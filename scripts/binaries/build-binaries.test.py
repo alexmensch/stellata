@@ -2481,6 +2481,52 @@ class AthygPositionFallbackTests(unittest.TestCase):
         self.assertAlmostEqual(out[0].ra_deg or 0.0, 169.5454)
         self.assertAlmostEqual(out[0].dec_deg or 0.0, 31.5292)
 
+    def test_wide_pair_skips_predicted_secondary_match(self) -> None:
+        # ρ ≥ WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC (999″ sentinel) — the
+        # (ρ, θ) prediction is degenerate at that level. Secondary's
+        # own predicted-position match is skipped; with primary still
+        # matched, blend-inheritance fires instead and the secondary
+        # inherits the primary's row.
+        pair = _wds_pair_with_pos(
+            wds_id="X", components="AB",
+            precise_ra=100.0, precise_dec=20.0,
+            rho=999.9, theta=0.0,
+        )
+        # Two AT-HYG rows: one at the primary's coord, another well
+        # inside the synthetic 999.9″ predicted-secondary window. If the
+        # short-circuit fails, the secondary would match the second
+        # row; with the short-circuit working, it inherits the primary's.
+        athyg = [
+            _athyg_row_at(ra=100.0, dec=20.0, gaia=None, hip=None),
+            _athyg_row_at(ra=100.0, dec=20.0 + 999.0 / 3600.0,
+                          gaia=None, hip=None),
+        ]
+        athyg[0].dist_pc = 10.0
+        athyg[1].dist_pc = 50.0
+        components = [
+            bb.ResolvedComponent(
+                wds_id=pair.wds_id, discoverer=pair.discoverer,
+                component="A", is_primary=True,
+                gaia_source_id=1, resolve_via="simbad_xid",
+            ),
+            bb.ResolvedComponent(
+                wds_id=pair.wds_id, discoverer=pair.discoverer,
+                component="B", is_primary=False,
+                gaia_source_id=2, resolve_via="simbad_xid",
+            ),
+        ]
+        idx = _indices_with_astrometry(
+            src_to_astrometry={}, athyg=athyg, hip2=[],
+        )
+        out = bb.attach_astrometry_all(
+            components, pairs=[pair], indices=idx, athyg=athyg,
+        )
+        self.assertEqual(out[0].astrometry_via, "athyg_position")
+        self.assertEqual(out[1].astrometry_via, "athyg_position")
+        # Both rows share the primary's parallax (=1000/10) — confirms
+        # blend-inheritance picked athyg[0], not athyg[1].
+        self.assertAlmostEqual(out[1].parallax_mas or 0.0, 100.0, places=4)
+
     def test_zero_dist_athyg_stays_unresolved(self) -> None:
         # Defensive: AT-HYG row with dist_pc=0 carries no usable
         # parallax — synthesis returns None and the component stays
