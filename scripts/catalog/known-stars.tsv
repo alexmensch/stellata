@@ -26,7 +26,7 @@
 #                           two bytes; subclass round-trips through the
 #                           resolver but is not pinned in catalog.bin.
 # companions                Semicolon-separated tuples:
-#                             comp_letter:hip:gaia_id:absmag
+#                             comp_letter:hip:gaia_id:absmag[:max_sep_au]
 #                           Empty for single-star rows. Components with
 #                           no HIP leave the hip slot empty
 #                           ("B::4658136172363835776:11.34"). Companion
@@ -34,6 +34,14 @@
 #                           data/binaries/multiples.tsv, which is
 #                           itself the validation target —
 #                           SIMBAD spot-checks the primaries).
+#                           Optional max_sep_au pins the companion's
+#                           catalog.bin xyz to within that many AU of
+#                           the primary's catalog.bin xyz. Used to
+#                           regression-guard synth-promoted companions
+#                           whose tangent-projected position depends on
+#                           the route-detector in companion-promotion
+#                           (Algol Ab/Aa2, Polaris Ab, Capella Ab,
+#                           Betelgeuse Ab).
 # orbital_period_days       Expected pipeline orbital period in days
 #                           (companion record .periodDays). Empty when
 #                           the system lacks a well-determined orbit or
@@ -91,16 +99,16 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # primary_spectral; SIMBAD's true sp_type is annotated in notes_source.
 	Vega	91262		7.679	0.05	0.604				SIMBAD * alf Lyr sp_type=A0V; HIP2 parallax 130.23 mas. Bright star saturated in Gaia DR3, pipeline spectral=unknown.
 	Altair	97649		5.129	0.05	2.210				SIMBAD * alf Aql sp_type=A7Vn; HIP2 parallax. Bright star, no Gaia DR3 match.
-	Polaris	11767		132.626	0.7	-3.643				SIMBAD * alf UMi sp_type=F8Ib; Cepheid variable. HIP-anchored distance, pipeline spectral=unknown.
+02318+8916	Polaris	11767		132.626	0.7	-3.643		Ab:::-1.643:20.0	10744.194	SIMBAD * alf UMi sp_type=F8Ib; Cepheid variable. HIP-anchored distance, pipeline spectral=unknown. ORB6 inner orbit Aa,Ab P=10744 d (29.4 yr); companion Ab promoted via synth-02318+8916-Ab (no own gaia/hip). max_sep_au=20.0 guards the dch.80 fix — Ab projects to 13.26 AU from Polaris via sep+PA (0.1″ × 132.626 pc); pre-fix it landed 128 AU off via the athyg_position float residue.
 	Procyon	37279		3.514	0.05	2.671				SIMBAD * alf CMi sp_type=F5IV-V+DQZ; HIP2 parallax. Bright primary, no Gaia DR3 match.
-	Betelgeuse	27989		152.672	1.0	-5.469				SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored.
+05552+0724	Betelgeuse	27989		152.672	1.0	-5.469		Ab:::-5.469:20.0		SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored. Companion Ab promoted via synth-05552+0724-Ab (no own gaia/hip); absmag inherited (dmag empty in multiples). max_sep_au=20.0 guards the dch.80 fix — Ab projects to 15.27 AU from Betelgeuse via sep+PA (0.1″ × 152.67 pc); pre-fix it landed at AT-HYG-precision residue offset from the catalog primary.
 	Arcturus	69673		11.257	0.1	-0.307				SIMBAD * alf Boo sp_type=K1.5IIIFe-0.5. Bright nearby giant, pipeline spectral=unknown.
 	Aldebaran	21421		20.434	0.2	-0.682				SIMBAD * alf Tau sp_type=K5+III. Bright giant, no Gaia DR3 match.
 	Rigel	24436		264.551	1.5	-6.933				SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
 	Antares	80763		169.780	1.0	-5.089				SIMBAD * alf Sco sp_type=M1.5Iab+B2Vn. Bright red supergiant with B-star companion.
 	Spica	65474		76.570	0.5	-3.440				SIMBAD * alf Vir sp_type=B1V. Bright early-B variable (β Cep), tight spectroscopic binary.
 	Deneb	102098		432.900	2.5	-6.932				SIMBAD * alf Cyg sp_type=A2Ia. Bright supergiant; AT-HYG distance from HIP2 with high uncertainty (true distance ~800 pc per Gaia DR2).
-	Capella	24608		13.123	0.1	-0.510				SIMBAD * alf Aur sp_type=G3III:. Bright quad system (Aa+Ab giants); HIP-anchored.
+05167+4600	Capella	24608		13.123	0.1	-0.510		Ab:::-0.410:1.0	104.02128	SIMBAD * alf Aur sp_type=G3III:. Bright quad system (Aa+Ab giants); HIP-anchored. ORB6 inner orbit Aa,Ab P=104.02 d; companion Ab promoted via synth-05167+4600-Ab (no own gaia/hip). max_sep_au=1.0 guards the dch.80 fix — Ab projects to ~0 AU from Capella via sep+PA (0.0″ at 13.123 pc); BinaryOrbitField overlays the ~0.74 AU inner orbit at runtime.
 	Canopus	30438		94.787	0.5	-5.504				SIMBAD * alf Car sp_type=A9II. Bright supergiant, pipeline spectral=unknown.
 	Achernar	7588		42.754	0.3	-2.705				SIMBAD * alf Eri sp_type=B6Vpe; emission-line Be star, rapid rotator.
 	Fomalhaut	113368		7.704	0.05	1.737				SIMBAD * alf PsA sp_type=A4V. Nearby A-dwarf with debris disc.
@@ -162,8 +170,8 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # carry no own gaia/hip; dch.77 mints synth-03082+4057-Ab and
 # synth-03082+4057-2 so companion-promotion surfaces them in catalog.bin
 # and build-runtime-binaries can address them through the row-index map.
-03082+4057	Algol	14576		27.571	0.05	-0.112			680.168	SIMBAD * bet Per A sp_type=B8V; saturated in Gaia DR3 → no source_id, pipeline spectral falls back to unknown (classIdx=8). Empty primary_spectral pins the saturated convention. ORB6 LAB outer orbit Aa,Ab P=680.168 d, e=0.227, i=83.66°. Companion Ab promoted via synthetic ID synth-03082+4057-Ab (no own gaia/hip).
-03082+4057	Algol (Aa1,Aa2 inner)	14576		27.571	0.05	-0.112			2.867328	Inner spectroscopic / eclipsing pair Aa1,Aa2 (ORB6 CSI1, P=2.867 d, i=98.70°). multiples.tsv emits the secondary cell with comp set to the WDS prefix-truncation shorthand 2 (= Aa2); dch.77 mints synth-03082+4057-2 from the raw cell so the runtime resolves through the same key. Primary spectral=unknown (saturated, no Gaia source_id).
+03082+4057	Algol	14576		27.571	0.05	-0.112		Ab:::2.368:5.0	680.168	SIMBAD * bet Per A sp_type=B8V; saturated in Gaia DR3 → no source_id, pipeline spectral falls back to unknown (classIdx=8). Empty primary_spectral pins the saturated convention. ORB6 LAB outer orbit Aa,Ab P=680.168 d, e=0.227, i=83.66°. Companion Ab promoted via synthetic ID synth-03082+4057-Ab (no own gaia/hip). max_sep_au=5.0 guards the dch.80 route-based collocation fix — Ab projects to 2.76 AU from Algol via sep+PA (0.1″ × 27.571 pc); pre-fix it landed ~100 AU off.
+03082+4057	Algol (Aa1,Aa2 inner)	14576		27.571	0.05	-0.112		Aa2:::-0.112:0.5	2.867328	Inner spectroscopic / eclipsing pair Aa1,Aa2 (ORB6 CSI1, P=2.867 d, i=98.70°). multiples.tsv emits the secondary cell with comp set to the WDS prefix-truncation shorthand 2 (= Aa2); dch.77 mints synth-03082+4057-Aa2 from the canonical comp so the runtime resolves through the same key. Primary spectral=unknown (saturated, no Gaia source_id). max_sep_au=0.5 guards the dch.80 collocation fix — Aa2 projects to ~0 AU from Algol via sep+PA (0.0″ at 27.571 pc); BinaryOrbitField overlays the ~0.06 AU inner orbit at runtime.
 # AR Cassiopeiae — bright multi-star system (HIP 115990 B3V). Catalog.bin
 # carries the primary; outer visual components AB / AC / AI / CD / CI /
 # FG / Ia,Ib are emitted as Tier-3 (no orbit) pair rows in multiples.tsv.

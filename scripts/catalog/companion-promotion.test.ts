@@ -505,6 +505,94 @@ describe('promoteCompanions', () => {
     expect(Math.abs(dxRow)).toBeGreaterThan(1e-5);
   });
 
+  it('projects from sep+PA when the secondary xyz differs from primary only by Stage 3 float residue (HIP-only-system case)', () => {
+    // Algol Aa,Ab shape: primary route is hip2_long_baseline, secondary
+    // route is athyg_position. Both anchor on the same AT-HYG row, but
+    // different float paths through Stage 3 leave a µpc-scale residue
+    // (here ~3 µpc on x, ~2 µpc on y, ~3 µpc on z → ~5 µpc total ≈ 1
+    // mAU). Strict-equality collocation detection misses this and the
+    // secondary lands at multiples.tsv xyz while the catalog primary
+    // stays at AT-HYG-truncated xyz → ~100 AU gap.
+    const algolPrimary = makeStar({
+      // AT-HYG-truncated catalog xyz (Stage 3 vs catalog can also drift):
+      x: 14.18941, y: 15.23877, z: 18.07209,
+      absmag: -0.112, hip: 14576, proper: 'Algol',
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '03082+4057-Aa,Ab', comp: 'Aa',
+        hip: 14576, gaiaSourceId: null,
+        x_pc: 14.189408, y_pc: 15.238769, z_pc: 18.072089, distPc: 27.571,
+        absmag: -0.112, ci: -0.003, spect: 'B8V',
+        name: 'Algol', source: 'athyg',
+        astrometryVia: 'hip2_long_baseline', spectVia: 'athyg',
+        photometryVia: 'athyg_own', orbitRole: 'primary',
+        sepArcsec: 0.1, paDeg: 304.0, sepPaEpochJd: 2455197.5,
+        dmag: 2.48,
+      }),
+      multiplesRow({
+        systemId: '03082+4057-Aa,Ab', comp: 'Ab',
+        hip: null, gaiaSourceId: null,
+        // 3 µpc, 2 µpc, 3 µpc deltas — far below 10 AU tolerance,
+        // far above strict equality.
+        x_pc: 14.189411, y_pc: 15.238771, z_pc: 18.072092, distPc: 27.571,
+        absmag: -0.112, ci: -0.003, spect: 'B8V',
+        name: '', source: 'athyg',
+        astrometryVia: 'athyg_position', spectVia: 'athyg',
+        photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
+        sepArcsec: 0.1, paDeg: 304.0, sepPaEpochJd: 2455197.5,
+        dmag: 2.48,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [algolPrimary]);
+    expect(stats.promotedSynthetic).toBe(1);
+    expect(newStars).toHaveLength(1);
+    const ab = newStars[0];
+    // Tangent projection from CATALOG anchor at 0.1″ × 27.571 pc /
+    // 206264.8 ≈ 1.34e-5 pc ≈ 2.76 AU. Without the tolerance fix Ab
+    // would land at multiples.tsv xyz, which is offset from the catalog
+    // anchor by max(|dx|=2e-6, |dy|=2e-6, |dz|=2e-6) ~ several mAU plus
+    // the catalog truncation delta (~µpc here, can be O(0.1 pc) at
+    // wider precision gaps) — neither matches the published 2.76 AU.
+    const dx = ab.x - algolPrimary.x;
+    const dy = ab.y - algolPrimary.y;
+    const dz = ab.z - algolPrimary.z;
+    const sepPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const sepAu = sepPc * 206264.80624709636;
+    expect(sepAu).toBeGreaterThan(2.5);
+    expect(sepAu).toBeLessThan(3.0);
+  });
+
+  it('honours own per-component astrometry when xyz delta exceeds the collocation tolerance', () => {
+    // Hypothetical resolved-Gaia secondary that has its OWN per-component
+    // fit ~50 AU from the primary anchor. The collocation tolerance must
+    // NOT catch this — the row's own xyz is the authoritative position.
+    const primaryRow = multiplesRow({
+      orbitRole: 'primary', comp: 'A',
+      hip: 32349, gaiaSourceId: null,
+      x_pc: 0, y_pc: 0, z_pc: 2.637, distPc: 2.637,
+      absmag: 1.45, name: 'Test',
+      astrometryVia: 'gaia_5p',
+    });
+    const secondaryRow = multiplesRow({
+      orbitRole: 'secondary', comp: 'B',
+      hip: null, gaiaSourceId: '999',
+      // 50 AU from primary on z → above the 10 AU tolerance, should win.
+      x_pc: 0, y_pc: 0, z_pc: 2.637 + 50 / 206264.80624709636,
+      distPc: 2.637, absmag: 11.5, ci: 0.0, spect: 'M5V',
+      name: 'Test', astrometryVia: 'gaia_5p',
+      photometryVia: 'athyg_own',
+    });
+    const existing = makeStar({
+      x: 0, y: 0, z: 2.637, absmag: 1.45, hip: 32349, proper: 'Test',
+    });
+    const { newStars } = promoteCompanions([primaryRow, secondaryRow], [existing]);
+    expect(newStars).toHaveLength(1);
+    // Companion takes its own z (own-astrometry branch), not sep+PA from
+    // primary anchor.
+    expect(newStars[0].z).toBeCloseTo(2.637 + 50 / 206264.80624709636, 8);
+  });
+
   it('projects from sep+PA when the secondary shares xyz with the primary (shared-HIP case)', () => {
     // Sirius A and B both list HIP 32349, so Stage 3 of the binary
     // pipeline emits identical xyz on both rows even though
@@ -524,6 +612,19 @@ describe('promoteCompanions', () => {
     const sep = Math.sqrt(dx * dx + dy * dy + dz * dz);
     expect(sep).toBeGreaterThan(0);
     expect(sep).toBeLessThan(1e-3);
+  });
+
+  it('drops a secondary when sep_arcsec is the WDS -1 sentinel (no measured separation)', () => {
+    // Spica-shape: WDS Summary emits rho=-1 / theta=-1 for pairs whose
+    // separation isn't measured. The sep+PA tangent branch must reject
+    // the sentinel rather than projecting -1″ as a real offset.
+    const rows = siriusRows();
+    rows[1].astrometryVia = 'athyg_position';
+    rows[1].sepArcsec = -1.0;
+    rows[1].paDeg = -1.0;
+    const { stats } = promoteCompanions(rows, [sirius_a_existing]);
+    expect(stats.droppedNoPosition).toBe(1);
+    expect(stats.promoted).toBe(0);
   });
 
   it('drops a secondary when astrometry is system_inherited but sep+PA are missing', () => {

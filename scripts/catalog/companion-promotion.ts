@@ -23,6 +23,15 @@ import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
 import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
 import type { Star } from './stars-parse';
 
+// Stage 3 astrometry routes that re-anchor a secondary per-component
+// rather than reproducing the system anchor under a different float path.
+// Only secondaries whose route is one of these AND that carry their own
+// (non-inherited) identifier are treated as having independent xyz.
+const INDEPENDENT_FIT_ROUTES: ReadonlySet<string> = new Set([
+  'gaia_5p',
+  'hip2_long_baseline',
+]);
+
 // ---- TSV row schema -----------------------------------------------------
 
 export type OrbitRole = 'primary' | 'secondary' | 'standalone';
@@ -415,22 +424,30 @@ function resolvePosition(
     && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
     && row.distPc !== null;
 
-  // Components that share a primary's HIP (Sirius A and B both list
-  // HIP 32349) inherit the system anchor's astrometry from Stage 3
-  // even when astrometry_via reads "hip2_long_baseline" or similar —
-  // the tag is the SOURCE of the astrometry, not whether the
-  // secondary got its own per-component fit. Detect collocation by
-  // exact xyz equality with the primary's multiples row and fall
-  // through to the sep+PA tangent projection.
-  const collocatedWithPrimary =
+  // A secondary's xyz is "independent" only when Stage 3 re-anchored it
+  // per-component. gaia_5p with its own gaia_source_id, or
+  // hip2_long_baseline with its own HIP, count. Every other route —
+  // athyg_position, gaia_nss_systemic, system_inherited (and the
+  // shared-identifier shape inside the routes above) — reproduces the
+  // SYSTEM anchor under a different float path. Strict xyz equality
+  // missed this because float residue ranges from µpc at nearby systems
+  // (Algol Aa↔Ab) to tens of AU at hundreds of pc (Polaris Aa↔Ab); the
+  // tag itself is the reliable signal. The catalog primary's xyz is the
+  // authoritative position, and sep+PA tangent projection from it keeps
+  // every component of one system rendered coherently.
+  const primaryGaia = primary?.gaiaSourceId ?? null;
+  const primaryHip = primary?.hip ?? null;
+  const independentAstrometry =
     ownAstrometry
-    && primary !== null
-    && primary.x_pc !== null && primary.y_pc !== null && primary.z_pc !== null
-    && row.x_pc === primary.x_pc
-    && row.y_pc === primary.y_pc
-    && row.z_pc === primary.z_pc;
+    && INDEPENDENT_FIT_ROUTES.has(row.astrometryVia)
+    && ((row.astrometryVia === 'gaia_5p'
+         && row.gaiaSourceId !== null
+         && row.gaiaSourceId !== primaryGaia)
+      || (row.astrometryVia === 'hip2_long_baseline'
+          && row.hip !== null && row.hip > 0
+          && row.hip !== primaryHip));
 
-  if (ownAstrometry && !collocatedWithPrimary) {
+  if (independentAstrometry) {
     return {
       x: row.x_pc as number, y: row.y_pc as number, z: row.z_pc as number,
       distPc: row.distPc as number,
@@ -448,8 +465,16 @@ function resolvePosition(
   } else {
     return null;
   }
-  if (row.sepArcsec === null || row.paDeg === null) return null;
-  return projectFromSepPa(anchorX, anchorY, anchorZ, row.sepArcsec, row.paDeg);
+  // WDS Summary emits `rho=-1` / `theta=-1` for pairs with no measured
+  // separation (spectroscopic / interferometric inner pairs reported
+  // only at the orbital-element level). Normalise the sentinel to null
+  // here so the drop path fires honestly — projecting a negative
+  // arc-sec offset would place the secondary tens of AU off the anchor
+  // for no astrophysical reason.
+  const sepArcsec = row.sepArcsec !== null && row.sepArcsec >= 0 ? row.sepArcsec : null;
+  const paDeg = row.paDeg !== null && row.paDeg >= 0 ? row.paDeg : null;
+  if (sepArcsec === null || paDeg === null) return null;
+  return projectFromSepPa(anchorX, anchorY, anchorZ, sepArcsec, paDeg);
 }
 
 // Spectral inheritance for a promoted companion. The row's own
