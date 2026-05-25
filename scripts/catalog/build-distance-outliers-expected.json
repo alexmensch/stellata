@@ -81,6 +81,14 @@
       "logRatio": -1.274
     },
     {
+      "id": "gaia:496410365865308544",
+      "finalDist": 228.833,
+      "simbadDist": 1904.037,
+      "simbadMainId": "IRAS 04546+6953",
+      "logRatio": -0.92,
+      "reason": "Companion-promotion (WDS 05001+6958 AC). Stage 3 routes the companion's position through the system anchor at 228.8 pc; SIMBAD's 1.9 kpc is the companion's own parallax-derived distance. The system-anchor inheritance is the more useful rendering anchor for tight-pair companions; SIMBAD's individual distance is not adopted. Surfaced once broader companion promotion reached this row."
+    },
+    {
       "id": "gaia:517650628413515264",
       "finalDist": 45.248,
       "simbadDist": 357.526,
