@@ -18,22 +18,15 @@ export interface ParkDistanceInputs {
    *  user can no longer pull the camera in. For stars this is the 90 %-fill
    *  floor; clouds will pass their analogue. */
   dMinFloor: number;
-  /** Optional additional floor (e.g. binary-companion bump for stars). */
-  extraFloor?: number;
 }
 
 /**
  * Where the camera auto-parks when focusing an object. Lands 1 AU outside
  * the object's surface — close enough that Sol parks at ~1.005 AU (just
- * outside Earth's orbit) — but never closer than the manual-zoom floor or
- * any type-specific extra floor.
+ * outside Earth's orbit) — but never closer than the manual-zoom floor.
  */
 export function parkDistance(opts: ParkDistanceInputs): number {
-  return Math.max(
-    AU_PC + opts.R_pc,
-    opts.dMinFloor,
-    opts.extraFloor ?? 0,
-  );
+  return Math.max(AU_PC + opts.R_pc, opts.dMinFloor);
 }
 
 /** The focus-park lerp is one of the three park-arrival sites that share

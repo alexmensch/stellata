@@ -33,8 +33,7 @@ describe('parkDistance', () => {
   const SOL_R_PC = R_SUN_PC;
 
   it('parks Sol just outside Earth\'s orbit', () => {
-    // dMinFloor and extraFloor are tiny vs 1 AU so the AU_PC + R term wins.
-    const d = parkDistance({ R_pc: SOL_R_PC, dMinFloor: 0, extraFloor: 0 });
+    const d = parkDistance({ R_pc: SOL_R_PC, dMinFloor: 0 });
     expect(d).toBe(AU_PC + SOL_R_PC);
     expect(d / AU_PC).toBeGreaterThan(1.0);
     expect(d / AU_PC).toBeLessThan(1.01);
@@ -50,26 +49,11 @@ describe('parkDistance', () => {
     expect(d).toBe(dMinFloor);
   });
 
-  it('clamps to extraFloor when a binary companion pushes the camera back', () => {
-    const extraFloor = 100 * AU_PC;
-    const d = parkDistance({
-      R_pc: SOL_R_PC,
-      dMinFloor: 0,
-      extraFloor,
-    });
-    expect(d).toBe(extraFloor);
-  });
-
   it('handles a variable star where Reff exceeds R', () => {
     // A high-amplitude pulsator with R_peak = 2× the static radius.
     const Rpeak = 2 * R_SUN_PC;
     const d = parkDistance({ R_pc: Rpeak, dMinFloor: 0 });
     expect(d).toBe(AU_PC + Rpeak);
-  });
-
-  it('treats extraFloor as zero when omitted', () => {
-    const d = parkDistance({ R_pc: SOL_R_PC, dMinFloor: 0 });
-    expect(d).toBe(AU_PC + SOL_R_PC);
   });
 });
 
