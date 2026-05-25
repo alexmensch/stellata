@@ -90,7 +90,7 @@ describe('camera-motion tickArrival — curve pin (cubic-Hermite log-distance)',
   //
   // Pinned bit-exact via toBe so any drift in the formula or the helper
   // (e.g. accidental f → u swap, lost short-circuit, wrong direction)
-  // fails the suite. Per stellata-test-coverage-discipline.
+  // fails the suite.
   it.each([
     { u: 0,    nowMs: 0    },
     { u: 0.25, nowMs: 250  },
