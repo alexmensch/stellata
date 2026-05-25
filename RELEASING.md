@@ -139,7 +139,8 @@ On every push to `main`, `deploy.yml`:
 1. Compares `HEAD:package.json#version` against `HEAD~1:package.json#version`.
    No change → exits silently.
 2. Checks out with LFS, sets up Node 20 + Python 3, runs `npm ci`
-   and `npm run build` (catalog + clouds + dust-sync + client).
+   and `npm run build` (binaries + catalog + binaries-runtime +
+   clouds + local-group + dust-sync + client).
 3. Deploys to Cloudflare via `cloudflare/wrangler-action@v3`.
 4. Tags `v<version>` and pushes the tag.
 5. Extracts the `## Release notes` section from the merging PR's
