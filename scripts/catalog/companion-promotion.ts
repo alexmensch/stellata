@@ -242,6 +242,11 @@ export interface PromotionStats {
   /** Dropped because the secondary's own absmag was missing AND Δmag
    *  couldn't impute one. */
   droppedNoAbsmag: number;
+  /** Dropped because the secondary's comp letter is an unresolved
+   *  compound aggregate (e.g. "BC" / "AB" / "ABC") whose constituent
+   *  single-letter components appear as sibling cursors in the same
+   *  WDS root — not a single star. */
+  droppedCompoundComp: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -254,6 +259,7 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoPosition: 0,
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
+    droppedCompoundComp: 0,
   };
 }
 
@@ -589,6 +595,83 @@ export function wdsRootOf(systemId: string): string | null {
   return root || null;
 }
 
+/** Index of single-character comp letters present in each WDS root.
+ *  Both primary and secondary slots contribute. Used by
+ *  isUnresolvedCompound to confirm a candidate compound's constituent
+ *  letters actually appear as resolved components. */
+function buildWdsRootSingleLetters(
+  groups: Map<string, PairCursor>,
+): Map<string, Set<string>> {
+  const m = new Map<string, Set<string>>();
+  for (const [sysId, cursor] of groups) {
+    const root = wdsRootOf(sysId);
+    if (root === null) continue;
+    let set = m.get(root);
+    if (!set) {
+      set = new Set<string>();
+      m.set(root, set);
+    }
+    if (cursor.primary !== null && cursor.primary.comp.length === 1) {
+      set.add(cursor.primary.comp);
+    }
+    for (const sec of cursor.secondaries) {
+      if (sec.comp.length === 1) set.add(sec.comp);
+    }
+  }
+  return m;
+}
+
+/** A comp letter is an "unresolved compound" — WDS shorthand for the
+ *  combined light/position of two-or-more components treated as one
+ *  source — when it spans 2+ characters AND every character appears as
+ *  a single-letter comp on a sibling cursor in the same WDS root.
+ *  Pure relational test: the constituent stars must be resolved
+ *  elsewhere in the same WDS root for the compound to be confirmed.
+ *  40 Eri's "BC" passes (B and C are resolved as primary of BC and
+ *  secondary of BC/AC respectively); "Aa" / "Aa2" / "A1" / "A" all
+ *  fail (their characters aren't single-letter component comps). */
+export function isUnresolvedCompound(
+  comp: string,
+  wdsRoot: string,
+  singleLettersByRoot: Map<string, Set<string>>,
+): boolean {
+  if (comp.length < 2) return false;
+  const singleLetters = singleLettersByRoot.get(wdsRoot);
+  if (!singleLetters) return false;
+  for (let i = 0; i < comp.length; i++) {
+    if (!singleLetters.has(comp[i])) return false;
+  }
+  return true;
+}
+
+/** Find a sep+PA proxy for a single-letter pair-row primary by walking
+ *  sibling cursors in the same WDS root for an unresolved-compound
+ *  secondary whose letters include this primary's comp letter. 40 Eri's
+ *  pair-row primary "B" (in BC/BD/BE groups) borrows the A,BC group's
+ *  83.2″/~108° A→BC sep+PA as an A→B proxy — vastly better than
+ *  collocating B at A's position when no AB orbital pair animates it at
+ *  runtime. Returns null when no such sibling exists. */
+function findCompoundProxySepPa(
+  primaryComp: string,
+  wdsRoot: string,
+  groups: Map<string, PairCursor>,
+  singleLettersByRoot: Map<string, Set<string>>,
+): { sepArcsec: number; paDeg: number } | null {
+  if (primaryComp.length !== 1) return null;
+  for (const [sysId, cursor] of groups) {
+    if (wdsRootOf(sysId) !== wdsRoot) continue;
+    for (const sec of cursor.secondaries) {
+      if (sec.orbitRole !== 'secondary') continue;
+      if (!sec.comp.includes(primaryComp)) continue;
+      if (!isUnresolvedCompound(sec.comp, wdsRoot, singleLettersByRoot)) continue;
+      if (sec.sepArcsec === null || sec.paDeg === null) continue;
+      if (sec.sepArcsec < 0 || sec.paDeg < 0) continue;
+      return { sepArcsec: sec.sepArcsec, paDeg: sec.paDeg };
+    }
+  }
+  return null;
+}
+
 interface SystemAnchor {
   star: Star;
   primaryRow: MultiplesTsvRow;
@@ -806,6 +889,7 @@ export function promoteCompanions(
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
   const wdsRootAnchors = buildWdsRootAnchors(groups, existing, existingStars);
+  const singleLettersByRoot = buildWdsRootSingleLetters(groups);
   const newStars: Star[] = [];
   // Track promotions by gaia + hip + synth so two pair rows in the same
   // system that reference the same record (Sirius A appears as primary
@@ -848,7 +932,8 @@ export function promoteCompanions(
       // secondary of A, so the existing secondary loop never
       // reached it).
       primaryCatalogIdx = tryPromoteCursorPrimary(
-        cursor, wdsRootAnchors, state, constellations, stats,
+        cursor, wdsRootAnchors, groups, singleLettersByRoot,
+        state, constellations, stats,
       );
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
@@ -865,6 +950,18 @@ export function promoteCompanions(
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') continue;
       stats.pairRowsScanned++;
+      // WDS compound-secondary guard. "BC" / "AB" / "ABC" represent
+      // unresolved aggregates of two-or-more components, not single
+      // stars; promoting them would double-count the resolved
+      // sibling-cursor records (40 Eri's "Keid BC" alongside
+      // "Keid B" + "Keid C"). Confirmed via the sibling-cursor
+      // relational test, not a string heuristic.
+      const wdsRoot = wdsRootOf(row.systemId);
+      if (wdsRoot !== null
+          && isUnresolvedCompound(row.comp, wdsRoot, singleLettersByRoot)) {
+        stats.droppedCompoundComp++;
+        continue;
+      }
       const canonicalComp = canonicalCompLetter(
         cursor.primary?.comp ?? '', row.comp,
       );
@@ -903,6 +1000,8 @@ function lookupPromoted(
 function tryPromoteCursorPrimary(
   cursor: PairCursor,
   wdsRootAnchors: Map<string, SystemAnchor>,
+  groups: Map<string, PairCursor>,
+  singleLettersByRoot: Map<string, Set<string>>,
   state: PromotionState,
   constellations: { code: string; name: string }[],
   stats: PromotionStats,
@@ -919,16 +1018,32 @@ function tryPromoteCursorPrimary(
   const anchor = wdsRootAnchors.get(wdsRoot);
   if (!anchor) return null;
   if (anchor.primaryRow === primary) return null;  // would self-promote
-  // Position: collocate at the WDS-root system anchor. We don't have a
-  // reliable AB sep+PA when the row is a sub-pair primary (the row's own
-  // sep+PA describes its sub-pair, not its relationship to the system
-  // anchor). BinaryOrbitField overlays orbital motion at runtime, so
-  // the static position sitting on the anchor is acceptable until a
-  // cross-group AB sep+PA pass lands as a follow-up.
-  const position: CompanionPlacement = {
-    x: anchor.star.x, y: anchor.star.y, z: anchor.star.z,
-    distPc: Math.hypot(anchor.star.x, anchor.star.y, anchor.star.z),
-  };
+  // Position. Preference order:
+  //  1. Project from a sibling cursor's unresolved-compound sep+PA when
+  //     the compound contains this row's comp letter — 40 Eri B (in
+  //     BC/BD/BE) borrows the A,BC group's anchor→BC sep+PA as an
+  //     anchor→B proxy. Approximate (it's anchor→BC-barycentre, not
+  //     anchor→B), but vastly better than collocation when no AB
+  //     orbital pair animates B at runtime.
+  //  2. Collocate at the system anchor — last-resort fallback when no
+  //     compound sibling exists. BinaryOrbitField overlays orbital
+  //     motion when an animating pair is wired up.
+  let position: CompanionPlacement | null = null;
+  const proxy = findCompoundProxySepPa(
+    primary.comp, wdsRoot, groups, singleLettersByRoot,
+  );
+  if (proxy !== null) {
+    position = projectFromSepPa(
+      anchor.star.x, anchor.star.y, anchor.star.z,
+      proxy.sepArcsec, proxy.paDeg,
+    );
+  }
+  if (position === null) {
+    position = {
+      x: anchor.star.x, y: anchor.star.y, z: anchor.star.z,
+      distPc: Math.hypot(anchor.star.x, anchor.star.y, anchor.star.z),
+    };
+  }
   return promoteRow(
     {
       row: primary,

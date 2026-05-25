@@ -122,6 +122,12 @@ export interface BuildCounts {
   /** Pair rows dropped because the secondary's absmag couldn't be
    *  imputed — no own absmag AND no primary+Δmag combo. */
   companionDroppedNoAbsmag: number;
+  /** Pair rows dropped because the secondary's comp letter is a WDS
+   *  unresolved compound (e.g. "BC" / "AB" / "ABC") whose constituent
+   *  single-letter components are already resolved as sibling cursors
+   *  in the same WDS root. The aggregate isn't a single star and would
+   *  double-count its components if promoted. */
+  companionDroppedCompoundComp: number;
 }
 
 export type CountDiff =

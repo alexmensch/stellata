@@ -840,6 +840,96 @@ describe('promoteCompanions', () => {
     expect(b.z).toBeCloseTo(keid.z, 6);
   });
 
+  it('drops the unresolved-compound secondary "BC" and projects pair-row "B" off the A,BC sep+PA', () => {
+    // 40 Eri (canonical case). The A,BC group's secondary "BC" is the
+    // WDS unresolved-compound; it must NOT promote (otherwise the
+    // catalog gets a ghost "Keid BC" record at ~416 AU from A, alongside
+    // the resolved "Keid B" and "Keid C" — double-counting the BC
+    // aggregate). And the pair-row primary "B" — appearing in BC, BD,
+    // BE groups but never as a secondary of A — must NOT collocate at
+    // A; it should land at the A,BC group's projected sep+PA (the only
+    // available proxy for A→B since no AB orbital pair animates B at
+    // runtime).
+    const keid: Star = makeStar({
+      gaiaSourceId: '3195919528989223040', hip: 19849,
+      absmag: 5.931, proper: 'Keid',
+      x: 2.191467, y: 4.455210, z: -0.668480,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '04153-0739-A,BC', comp: 'A',
+        gaiaSourceId: '3195919528989223040', hip: 19849,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, name: 'Keid', source: 'athyg',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-A,BC', comp: 'BC',
+        gaiaSourceId: null, hip: null,  // compound — no own identifier
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.4, spect: '',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-AC', comp: 'A',
+        gaiaSourceId: '3195919528989223040', hip: 19849,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, name: 'Keid', source: 'athyg',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-AC', comp: 'C',
+        gaiaSourceId: '3195919254111314816', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, ci: 0.82, spect: 'M4.5V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BC', comp: 'B',
+        gaiaSourceId: '3195919254111315712', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.0, spect: 'DA2.9',
+        photometryVia: 'athyg_own', name: '',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BC', comp: 'C',
+        gaiaSourceId: '3195919254111314816', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.82, spect: 'M4.5V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [keid], CONSTELLATIONS);
+    // The "BC" compound row drops; B and C both promote.
+    expect(stats.droppedCompoundComp).toBe(1);
+    expect(stats.promoted).toBe(2);
+    const properNames = newStars.map(s => s.proper).sort();
+    expect(properNames).toEqual(['Keid B', 'Keid C']);
+    expect(newStars.find(s => s.proper === 'Keid BC')).toBeUndefined();
+    // B's xyz comes from projecting A,BC's 83.2″ / 108° off the anchor —
+    // NOT collocated on Keid (collocation would put B inside A's disc
+    // when no AB orbital pair animates it at runtime).
+    const b = newStars.find(s => s.proper === 'Keid B');
+    expect(b).toBeDefined();
+    if (!b) return;
+    const dxAuFromKeid = Math.hypot(
+      b.x - keid.x, b.y - keid.y, b.z - keid.z,
+    ) * 206264.806;  // pc → AU at 1 pc, scaled by Keid's distance
+    // 83.2″ at Keid's distance (~5 pc) projects to ~416 AU separation.
+    expect(dxAuFromKeid).toBeGreaterThan(300);
+    expect(dxAuFromKeid).toBeLessThan(500);
+  });
+
   it('reuses a freshly-promoted pair-row primary as the anchor for later sub-pair groups', () => {
     // 40 Eri's BD group has B as primary again. By the time we reach
     // BD, B was promoted in BC. The BD secondary D must find B via the

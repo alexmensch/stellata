@@ -48,6 +48,7 @@ function baseCounts(): BuildCounts {
     companionDroppedNoIdentifier: 100,
     companionDroppedNoPosition: 500,
     companionDroppedNoAbsmag: 900,
+    companionDroppedCompoundComp: 40,
   };
 }
 

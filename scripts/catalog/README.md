@@ -304,6 +304,16 @@ the identifier gate below).
 
 Per-row gates and resolution:
 
+- **WDS unresolved-compound guard.** Secondary rows whose `comp` letter
+  is an unresolved compound aggregate ("BC" / "AB" / "ABC") — every
+  character appears as a single-letter comp on a sibling cursor in the
+  same WDS root — drop early without promotion. 40 Eri's `A,BC` row
+  carries `comp="BC"`, and the WDS root also has resolved `BC` /
+  `AC` cursors with single-letter primaries B and C; the relational
+  test confirms "BC" is shorthand for the unresolved B+C aggregate and
+  not a single star. Promoting it would add a "Keid BC" record at
+  ~416 AU from Keid alongside the resolved Keid B and Keid C, double-
+  counting the BC pair's light + position.
 - **Identifier.** Real-ID resolution (gaia first, then hip)
   attempts to match the row against an existing catalog star;
   skip when it hits a row that ISN'T the system primary
@@ -321,6 +331,15 @@ Per-row gates and resolution:
   pipeline-precision gap between AT-HYG's 3-4 sig figs and the
   binaries pipeline's 6 sig figs (Sirius A and B were ~100 AU apart
   for that reason before the fix).
+- **Position for pair-row primaries.** When the cursor primary itself
+  needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
+  of A), prefer projecting off a sibling cursor's compound sep+PA
+  whose compound contains this row's comp letter: 40 Eri B borrows
+  the A,BC group's 83.2″ / 108° A→BC sep+PA as the best available
+  A→B proxy. Falls back to collocating on the WDS-root system anchor
+  only when no compound sibling provides usable sep+PA. Collocation
+  alone leaves B buried inside A's disc when no AB orbital pair
+  exists to animate it at runtime.
 - **Absmag.** Prefer Δmag-imputation when the row inherited its
   parent's AT-HYG photometry (Sirius B's row carried Sirius A's
   1.45 absmag, not the WD's 11.36); use `primary_absmag +

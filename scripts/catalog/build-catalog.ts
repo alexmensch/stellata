@@ -187,6 +187,7 @@ async function main() {
     companionDroppedNoIdentifier: 0,
     companionDroppedNoPosition: 0,
     companionDroppedNoAbsmag: 0,
+    companionDroppedCompoundComp: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -312,7 +313,8 @@ async function main() {
         `already-in-catalog ${ps.alreadyInCatalog}; ` +
         `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
         `no-position=${ps.droppedNoPosition}, no-absmag=${ps.droppedNoAbsmag}, ` +
-        `no-primary=${ps.droppedNoPrimary}) in ${Date.now() - tProm}ms`,
+        `no-primary=${ps.droppedNoPrimary}, ` +
+        `compound-comp=${ps.droppedCompoundComp}) in ${Date.now() - tProm}ms`,
     );
     counts.companionRowsScanned = ps.pairRowsScanned;
     counts.companionPromoted = ps.promoted;
@@ -321,6 +323,7 @@ async function main() {
     counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
     counts.companionDroppedNoPosition = ps.droppedNoPosition;
     counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
+    counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');
   }
