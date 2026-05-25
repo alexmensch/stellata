@@ -102,6 +102,7 @@
       "simbadMainId": "TYC 4021-159-1",
       "logRatio": -1.004,
       "reason": "Pair-row primary promoted (WDS 01036+6341 C, appears as primary in CD/CE groups, never as a secondary). Stage 6 routes the position through the bright system anchor at 91 pc via system_inherited; SIMBAD's 922 pc is the component's own DR3 parallax, exposing C as an optical pair (chance line-of-sight alignment) rather than a physical companion. Same optical-pair-false-positive class as the UCAC4 364-071058 entry below; the underlying Stage 5 mag-heuristic gate is the upstream tighten point."
+    },
     {
       "id": "gaia:6260731122524961152",
       "finalDist": 98.043,
