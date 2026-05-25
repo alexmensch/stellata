@@ -2,13 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// star.vert.glsl mirrors ballesterosBvFromTeff (and the upstream
-// ballesterosTeff coefficients) by hand — a silent drift on either side
-// would change observed star chromaticity for ~85% of stars at runtime
-// without breaking any current test.
-//
-// This file pins the GLSL function body byte-for-byte against the TS
-// impl's literals. Intentional edits update both sides AND this assertion.
+// Pin the GLSL ballesterosBvFromTeff body against the TS canonical
+// literals in scripts/colour/blackbody-lut-pure.ts. Intentional edits
+// update both sides AND this assertion.
 
 const GLSL_PATH = join(import.meta.dirname, '..', '..', 'src', 'client', 'star-pipeline', 'star.vert.glsl');
 const GLSL = readFileSync(GLSL_PATH, 'utf8');

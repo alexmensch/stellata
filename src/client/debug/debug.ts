@@ -15,16 +15,9 @@ import {
   encodeBlob,
 } from '../util/url-state';
 
-// Optional dev tooling exposed via `window.debug`. The unified panel
-// surfaces every section side-by-side: star/milkyway/deep-field sliders
-// plus perf, pin, arrow, warp readouts. `debug.panel()` is the sole entry
-// point (also revealed by the hidden triple-tap-D keyboard affordance).
-// State (drag position, per-section collapse) lives in sessionStorage and
-// resets on reload.
-//
-// Add a new section: build it in its own *-tuning.ts / *-hud.ts module
-// returning a DebugSection ({element, dispose, setVisible}) and append
-// to the SECTIONS array below.
+// `window.debug.*` dev tooling — panel toggle plus URL-state codec.
+// See src/client/debug/README.md § Debug panel for the section catalogue
+// and the "how to add a section" recipe.
 
 export interface DebugTools {
   /** Toggle the unified dev panel. */

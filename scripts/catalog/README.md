@@ -227,8 +227,8 @@ priority chain keyed on the Gaia DR3 `source_id`:
 2. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (the new column on
    `data/gaia/gaia_dr3_apsis.tsv`). Letter-only enum; `classifyFromGspspec`
    maps each letter to its `classIdx` with neutral subclass=5 / lumClass=255.
-3. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=8` / `lumClass=255` for
-   rows neither upstream covers.
+3. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
+   `lumClass=255` for rows neither upstream covers.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (build-counts: ~88% SIMBAD / ~11% GSP-Spec / <1% fallback
