@@ -272,13 +272,8 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
     """Returns one entry per orbit row. Multiple fits per system are
     possible (different grades / refs); Stage 4 tie-breaks.
 
-    Discoverer and components occupy separate fixed-width spans in ORB6
-    (discoverer at [30:37], components at [37:44]). A heuristic search
-    for trailing component-letters can't distinguish discoverers like
-    ``STF1110`` from ``STF1110AB`` because both are pure letter+digit
-    runs with no internal whitespace — anchor on the column boundary
-    instead so the discoverer/component split survives all naming
-    conventions in the catalog.
+    Discoverer at [30:37], components at [37:44] — fixed-width per
+    the ORB6 file format.
     """
     out: list[Orb6Entry] = []
     with path.open(errors="replace") as fh:
