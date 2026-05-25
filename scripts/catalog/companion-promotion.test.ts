@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildCatalogRowIndexMap,
+  canonicalCompLetter,
   composeSyntheticId,
   imputeCompanionAbsmag,
   imputeCompanionCi,
@@ -357,6 +358,45 @@ describe('promoteCompanions', () => {
     expect(b.flags & FLAG_BINARY_COMPANION_ONLY).toBeTruthy();
   });
 
+  it('canonicalises the WDS-truncated bare-digit secondary for both synth ID and display name', () => {
+    // Algol Aa1,2: multiples.tsv emits primary comp="Aa1", secondary
+    // comp="2". The canonical WDS form is "Aa2"; both the synth key
+    // and the proper name must reflect that — otherwise the user-
+    // visible name reads "Algol 2" instead of "Algol Aa2".
+    const rows = [
+      multiplesRow({
+        systemId: '03082+4057-Aa1,2', comp: 'Aa1',
+        hip: 14576, gaiaSourceId: null,
+        x_pc: 14.189408, y_pc: 15.238769, z_pc: 18.072089, distPc: 27.571,
+        absmag: -0.112, ci: -0.003, spect: 'B8V',
+        name: 'Algol', source: 'athyg',
+        astrometryVia: 'hip2_long_baseline', spectVia: 'athyg',
+        photometryVia: 'athyg_own', orbitRole: 'primary',
+        sepArcsec: 0.0, paDeg: 43.0, sepPaEpochJd: 2455197.5,
+      }),
+      multiplesRow({
+        systemId: '03082+4057-Aa1,2', comp: '2',
+        hip: null, gaiaSourceId: null,
+        x_pc: 14.189411, y_pc: 15.238771, z_pc: 18.072092, distPc: 27.571,
+        absmag: -0.112, ci: -0.003, spect: 'B8V',
+        name: '', source: 'athyg',
+        astrometryVia: 'athyg_position', spectVia: 'athyg',
+        photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
+        sepArcsec: 0.0, paDeg: 43.0, sepPaEpochJd: 2455197.5,
+      }),
+    ];
+    const algolPrimary = makeStar({
+      x: 14.189408, y: 15.238769, z: 18.072089,
+      absmag: -0.112, hip: 14576, proper: 'Algol',
+    });
+    const { newStars, stats } = promoteCompanions(rows, [algolPrimary]);
+    expect(stats.promotedSynthetic).toBe(1);
+    expect(newStars).toHaveLength(1);
+    const aa2 = newStars[0];
+    expect(aa2.syntheticId).toBe('synth-03082+4057-Aa2');
+    expect(aa2.proper).toBe('Algol Aa2');
+  });
+
   it('drops a secondary when both gaia/hip are blank AND no synth ID can be composed (no comp letter)', () => {
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;
@@ -563,5 +603,25 @@ describe('composeSyntheticId', () => {
 
   it('returns null when system_id has no dash (malformed)', () => {
     expect(composeSyntheticId('NODASH', 'Ab')).toBeNull();
+  });
+});
+
+describe('canonicalCompLetter', () => {
+  it('re-anchors WDS prefix-truncated bare-digit secondary onto primary stem', () => {
+    // Algol Aa1,2 — secondary cell carries "2" not "Aa2".
+    expect(canonicalCompLetter('Aa1', '2')).toBe('Aa2');
+  });
+
+  it('passes through non-digit secondary unchanged', () => {
+    expect(canonicalCompLetter('A', 'B')).toBe('B');
+    expect(canonicalCompLetter('Aa', 'Ab')).toBe('Ab');
+  });
+
+  it('passes through when primary has no trailing digit', () => {
+    expect(canonicalCompLetter('AB', '2')).toBe('2');
+  });
+
+  it('passes through for single-character primary (no stem to extract)', () => {
+    expect(canonicalCompLetter('A', '2')).toBe('2');
   });
 });

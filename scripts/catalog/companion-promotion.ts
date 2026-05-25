@@ -263,6 +263,23 @@ export function composeSyntheticId(
   return `synth-${wdsId}-${c}`;
 }
 
+/** Re-anchor WDS prefix-truncation on a secondary's `comp` cell.
+ *  Stage 6 emits `comp="2"` for the secondary side of `"Aa1,2"`
+ *  pairs; canonical WDS form is `"Aa2"` (primary stem + secondary
+ *  digit). Used for both the synthetic-ID key and the display name
+ *  so the catalog and runtime share one canonical comp form. */
+export function canonicalCompLetter(
+  primaryComp: string,
+  secondaryComp: string,
+): string {
+  const sec = secondaryComp.trim();
+  const pri = primaryComp.trim();
+  if (sec && /^\d+$/.test(sec) && pri.length >= 2 && /\d$/.test(pri)) {
+    return pri.slice(0, -1) + sec;
+  }
+  return sec;
+}
+
 interface ExistingIndexes {
   byGaia: Map<string, number>;
   byHip: Map<number, number>;
@@ -467,14 +484,14 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
 function composeCompanionName(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
+  canonicalComp: string,
 ): string | null {
   const ownBase = row.name.trim();
   const primaryBase = (primary?.name ?? '').trim();
   const base = ownBase || primaryBase;
   if (!base) return null;
-  const comp = row.comp.trim();
-  if (!comp) return base;
-  return `${base} ${comp}`;
+  if (!canonicalComp) return base;
+  return `${base} ${canonicalComp}`;
 }
 
 export function promoteCompanions(
@@ -515,7 +532,10 @@ export function promoteCompanions(
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') continue;
       stats.pairRowsScanned++;
-      const synthId = composeSyntheticId(row.systemId, row.comp);
+      const canonicalComp = canonicalCompLetter(
+        cursor.primary?.comp ?? '', row.comp,
+      );
+      const synthId = composeSyntheticId(row.systemId, canonicalComp);
       const rowHasOwnHip = row.hip !== null && row.hip > 0;
       if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
         stats.droppedNoIdentifier++;
@@ -586,7 +606,7 @@ export function promoteCompanions(
       }
       const spectral = resolveCompanionSpectral(row);
       const ci = imputeCompanionCi(row, spectral.info);
-      const properName = composeCompanionName(row, cursor.primary);
+      const properName = composeCompanionName(row, cursor.primary, canonicalComp);
       let flags = FLAG_BINARY_COMPANION_ONLY;
       if (properName) flags |= FLAG_HAS_NAME;
       if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;

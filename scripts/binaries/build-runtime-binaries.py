@@ -83,8 +83,8 @@ class MultiplesPair:
     system_id: str
     wds_id: str          # everything left of the final "-"
     components: str       # everything right of the final "-"
-    primary_comp: str    # raw ``comp`` cell of the primary row
-    secondary_comp: str  # raw ``comp`` cell of the secondary row
+    primary_comp: str    # canonical primary comp (WDS-anchored)
+    secondary_comp: str  # canonical secondary comp (WDS-anchored)
     primary_gaia: str | None
     primary_hip: int | None
     secondary_gaia: str | None
@@ -129,6 +129,19 @@ def _parse_gaia(s: str) -> str | None:
     return s
 
 
+def _canonical_comp_pair(
+    primary_comp: str, secondary_comp: str,
+) -> tuple[str, str]:
+    """Re-anchor WDS prefix-truncation on the secondary comp cell.
+    Mirrors `canonicalCompLetter` in companion-promotion.ts so the
+    synth keys composed on the catalog and runtime sides match."""
+    pri = primary_comp.strip()
+    sec = secondary_comp.strip()
+    if sec and sec.isdigit() and len(pri) >= 2 and pri[-1].isdigit():
+        sec = pri[:-1] + sec
+    return pri, sec
+
+
 def load_pairs(path: Path) -> list[MultiplesPair]:
     """Read multiples.tsv and group primary+secondary rows into
     ``MultiplesPair`` records. Standalone rows are skipped — they aren't
@@ -165,12 +178,17 @@ def load_pairs(path: Path) -> list[MultiplesPair]:
         dash = sys_id.rfind("-")
         wds_id = sys_id[:dash]
         components = sys_id[dash + 1:]
+        raw_primary_comp = p[idx["comp"]].strip()
+        raw_secondary_comp = s[idx["comp"]].strip()
+        primary_comp, secondary_comp = _canonical_comp_pair(
+            raw_primary_comp, raw_secondary_comp,
+        )
         pairs.append(MultiplesPair(
             system_id=sys_id,
             wds_id=wds_id,
             components=components,
-            primary_comp=p[idx["comp"]].strip(),
-            secondary_comp=s[idx["comp"]].strip(),
+            primary_comp=primary_comp,
+            secondary_comp=secondary_comp,
             primary_gaia=_parse_gaia(p[idx["gaia_source_id"]]),
             primary_hip=_parse_int(p[idx["hip"]]),
             secondary_gaia=_parse_gaia(s[idx["gaia_source_id"]]),

@@ -188,6 +188,32 @@ class TopologicalWalkOrderTests(unittest.TestCase):
         self.assertEqual(brb.topological_walk_order([brb.NO_PARENT, 0, 1]), [0, 1, 2])
 
 
+class CanonicalCompPairTests(unittest.TestCase):
+    """``_canonical_comp_pair`` re-anchors WDS prefix-truncated
+    secondary cells (bare digits) onto the primary's stem so the
+    catalog and runtime synth keys agree on the canonical form."""
+
+    def test_wds_truncation_re_anchored(self) -> None:
+        # "Aa1,2" → ("Aa1", "Aa2") — the bare digit picks up the
+        # primary's "Aa" stem.
+        self.assertEqual(brb._canonical_comp_pair("Aa1", "2"), ("Aa1", "Aa2"))
+
+    def test_non_digit_secondary_passes_through(self) -> None:
+        self.assertEqual(brb._canonical_comp_pair("A", "B"), ("A", "B"))
+        self.assertEqual(brb._canonical_comp_pair("Aa", "Ab"), ("Aa", "Ab"))
+
+    def test_primary_without_trailing_digit_passes_through(self) -> None:
+        # "AB,2" wouldn't happen in WDS, but defensively leave alone.
+        self.assertEqual(brb._canonical_comp_pair("AB", "2"), ("AB", "2"))
+
+    def test_one_char_primary_passes_through(self) -> None:
+        # Bare "A,2" — primary is too short to extract a stem.
+        self.assertEqual(brb._canonical_comp_pair("A", "2"), ("A", "2"))
+
+    def test_whitespace_trimmed(self) -> None:
+        self.assertEqual(brb._canonical_comp_pair(" Aa1 ", " 2 "), ("Aa1", "Aa2"))
+
+
 class SyntheticIdTests(unittest.TestCase):
     """``synthetic_id`` composes the build-time fallback key for rows
     whose own gaia/hip don't address the catalog record."""
@@ -477,22 +503,23 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertFalse(flags & brb.FLAG_HAS_ORBIT)
         self.assertFalse(flags & brb.FLAG_HAS_INCLINATION)
 
-    def test_wds_truncation_secondary_resolves_via_raw_comp(self) -> None:
+    def test_wds_truncation_secondary_resolves_via_canonical_comp(self) -> None:
         # Algol Aa1,2 (WDS shorthand for Aa1,Aa2): multiples.tsv emits
-        # the secondary row with comp="2", and companion-promotion
-        # mints synth-03082+4057-2 from that raw cell. The runtime
-        # resolver MUST use the same raw cell, not the parsed-from-
-        # components token "Aa2", or the lookup silently misses.
+        # the secondary row with comp="2"; load_pairs canonicalises it to
+        # "Aa2" before constructing the MultiplesPair, and companion-
+        # promotion mints synth-03082+4057-Aa2 from the same canonical
+        # form. The resolver must look up the canonical key, not the
+        # raw "2".
         m = brb.RowIndexMap(
             by_gaia={},
             by_hip={14576: 100},
-            by_synth={"synth-03082+4057-2": 200},
+            by_synth={"synth-03082+4057-Aa2": 200},
         )
         pairs = [_pair(
             system_id="03082+4057-Aa1,2",
             components="Aa1,2",
             primary_comp="Aa1",
-            secondary_comp="2",
+            secondary_comp="Aa2",  # canonical form post-load_pairs
             primary_gaia=None, primary_hip=14576,
             secondary_gaia=None, secondary_hip=None,
         )]
