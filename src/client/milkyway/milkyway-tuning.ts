@@ -1,5 +1,5 @@
 import type { MilkyWay } from './milkyway';
-import { makeCollapsibleSection, makeColor, makeSlider } from '../debug/debug-panel';
+import { type DebugSection, makeColor, makeSlider } from '../debug/debug-panel';
 
 // Dev-only tuning section for the volumetric Milky Way layer. Builds a
 // labelled section with sliders + colour pickers wired to the layer's
@@ -25,12 +25,8 @@ function sliderToBrightness(s: number): number {
   return Math.pow(10, BRIGHTNESS_LOG_MIN + s * BRIGHTNESS_LOG_RANGE);
 }
 
-export function buildMilkywaySection(layer: MilkyWay): HTMLDivElement {
-  const { section, body } = makeCollapsibleSection({
-    title: 'Milky Way',
-    storageKey: 'milkyway',
-  });
-
+export function buildMilkywaySection(layer: MilkyWay): DebugSection {
+  const body = document.createElement('div');
   const v = layer.getValues();
 
   // Brightness — log-scale slider over [1e-7, 1e1]
@@ -116,5 +112,9 @@ export function buildMilkywaySection(layer: MilkyWay): HTMLDivElement {
     }));
   }
 
-  return section;
+  return {
+    element: body,
+    dispose: () => {},
+    setVisible: () => {},
+  };
 }

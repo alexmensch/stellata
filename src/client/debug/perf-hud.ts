@@ -122,13 +122,9 @@ export function mark(label: string): void { _mark(label); }
 export function measure(label: string): void { _measure(label); }
 export function frame(): void { _frame(); }
 
-export interface PerfSection {
-  element: HTMLDivElement;
-  dispose: () => void;
-  setVisible: (v: boolean) => void;
-}
+import type { DebugSection } from './debug-panel';
 
-export function buildPerfSection(): PerfSection {
+export function buildPerfSection(): DebugSection {
   if (!installed) {
     installed = true;
     _mark = realMark;

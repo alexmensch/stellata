@@ -226,6 +226,17 @@ export interface CollapsibleSection {
   isCollapsed: () => boolean;
 }
 
+// Every section mounted in the debug panel returns this shape. Static
+// sections (slider banks) use no-op dispose + setVisible; live sections
+// (per-frame readouts) own their unsubscribe + visibility gate. The host
+// wraps each in a collapsible-section; sections never call
+// makeCollapsibleSection directly.
+export interface DebugSection {
+  element: HTMLElement;
+  dispose: () => void;
+  setVisible: (v: boolean) => void;
+}
+
 export function makeCollapsibleSection(opts: {
   title: string;
   storageKey: string;

@@ -1,6 +1,7 @@
 import type { Stellata } from '../stellata';
 import type { ArrowDebugRecord } from '../overlays/hud-overlay';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
+import type { DebugSection } from './debug-panel';
 
 // Live diagnostic readouts for the navigate-mode Sol/GC arrow fade.
 // Mounted as a section inside the unified debug panel (see debug.ts).
@@ -36,13 +37,7 @@ function emptyLatch(): Latch {
   };
 }
 
-export interface ArrowSection {
-  element: HTMLDivElement;
-  dispose: () => void;
-  setVisible: (v: boolean) => void;
-}
-
-export function buildArrowSection(stellata: Stellata): ArrowSection {
+export function buildArrowSection(stellata: Stellata): DebugSection {
   const latch = emptyLatch();
   let visible = true;
 

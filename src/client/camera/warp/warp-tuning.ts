@@ -1,4 +1,5 @@
 import type { Stellata } from '../../stellata';
+import type { DebugSection } from '../../debug/debug-panel';
 import {
   type ArrivalCurveContext,
   resolveHybridCurve,
@@ -108,15 +109,7 @@ export function recordLastWarp(summary: LastWarpSummary): void {
   lastWarp = summary;
 }
 
-// LiveSection contract — matches the shape `debug.ts:mountLiveSection`
-// expects.
-export interface WarpTuningSection {
-  element: HTMLElement;
-  dispose: () => void;
-  setVisible: (v: boolean) => void;
-}
-
-export function buildWarpSection(stellata: Stellata): WarpTuningSection {
+export function buildWarpSection(stellata: Stellata): DebugSection {
   let visible = true;
 
   const root = document.createElement('div');

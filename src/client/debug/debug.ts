@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { makeCollapsibleSection, makeDebugPanel } from './debug-panel';
+import { type DebugSection, makeCollapsibleSection, makeDebugPanel } from './debug-panel';
 import { buildMilkywaySection } from '../milkyway/milkyway-tuning';
 import { buildStarSection } from './star-tuning';
 import { buildDeepFieldSection } from '../local-group/local-group-tuning';
@@ -16,16 +16,15 @@ import {
 } from '../util/url-state';
 
 // Optional dev tooling exposed via `window.debug`. The unified panel
-// surfaces every collapsible-section side-by-side: star/milkyway tuning
-// sliders plus perf, pin, and arrow-fade diagnostic readouts.
-// `debug.panel()` is the sole entry point (also revealed by the hidden
-// triple-tap-D keyboard affordance). State (drag position, per-section
-// collapse) lives in sessionStorage and resets on reload.
+// surfaces every section side-by-side: star/milkyway/deep-field sliders
+// plus perf, pin, arrow, warp readouts. `debug.panel()` is the sole entry
+// point (also revealed by the hidden triple-tap-D keyboard affordance).
+// State (drag position, per-section collapse) lives in sessionStorage and
+// resets on reload.
 //
 // Add a new section: build it in its own *-tuning.ts / *-hud.ts module
-// (returning either a raw section element or a LiveSection — see
-// mountLiveSection below for the latter shape) and wire it into
-// `togglePanel`.
+// returning a DebugSection ({element, dispose, setVisible}) and append
+// to the SECTIONS array below.
 
 export interface DebugTools {
   /** Toggle the unified dev panel. */
@@ -36,24 +35,15 @@ export interface DebugTools {
   encodeView(): string;
 }
 
-/** Shape every live (per-frame-updating) debug section returns. The
- *  module owns its own per-frame subscription; the panel host owns
- *  collapse + visibility-gating + lifecycle. */
-interface LiveSection {
-  element: HTMLElement;
-  dispose: () => void;
-  setVisible: (v: boolean) => void;
-}
-
-/** Wrap a LiveSection in a collapsible-section, mount it on the panel,
- *  and return its disposer for the closePanel cleanup pass. The
- *  visibility gate is wired both ways: collapse → setVisible(false),
- *  initial-from-storage → setVisible(!collapsed). */
-function mountLiveSection(
+/** Wrap a DebugSection in a collapsible-section and mount it on the panel.
+ *  Visibility gate wires both ways: collapse → setVisible(false),
+ *  initial-from-storage → setVisible(!collapsed). Returns the module's
+ *  disposer for the closePanel cleanup pass. */
+function mountSection(
   body: HTMLDivElement,
   title: string,
   storageKey: string,
-  module: LiveSection,
+  module: DebugSection,
 ): () => void {
   const section = makeCollapsibleSection({
     title,
@@ -68,14 +58,14 @@ function mountLiveSection(
 
 export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   let panel: HTMLDivElement | null = null;
-  let liveDisposers: Array<() => void> = [];
+  let disposers: Array<() => void> = [];
 
   const closePanel = () => {
     if (!panel) return;
     panel.remove();
     panel = null;
-    for (const dispose of liveDisposers) dispose();
-    liveDisposers = [];
+    for (const dispose of disposers) dispose();
+    disposers = [];
   };
 
   const togglePanel = () => {
@@ -84,20 +74,18 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     const built = makeDebugPanel({ onClose: closePanel });
     panel = built.element;
 
-    built.body.appendChild(buildStarSection(stellata));
-    built.body.appendChild(buildMilkywaySection(stellata.milkywayLayer));
-    built.body.appendChild(buildDeepFieldSection());
-
-    // Live sections — each owns its per-frame subscription via
-    // stellata.on('frame', ...) and exposes setVisible to gate DOM writes
-    // when collapsed. Latches inside each module keep updating
-    // independent of visibility.
-    liveDisposers.push(
-      mountLiveSection(built.body, 'Perf', 'perf', buildPerfSection()),
-      mountLiveSection(built.body, 'Pin', 'pin', buildPinSection(stellata)),
-      mountLiveSection(built.body, 'Arrows', 'arrows', buildArrowSection(stellata)),
-      mountLiveSection(built.body, 'Warp', 'warp', buildWarpSection(stellata)),
-    );
+    const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
+      { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
+      { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkywayLayer) },
+      { title: 'Deep field', storageKey: 'deep-field', build: () => buildDeepFieldSection() },
+      { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection() },
+      { title: 'Pin',        storageKey: 'pin',        build: () => buildPinSection(stellata) },
+      { title: 'Arrows',     storageKey: 'arrows',     build: () => buildArrowSection(stellata) },
+      { title: 'Warp',       storageKey: 'warp',       build: () => buildWarpSection(stellata) },
+    ];
+    for (const s of sections) {
+      disposers.push(mountSection(built.body, s.title, s.storageKey, s.build()));
+    }
 
     document.body.appendChild(panel);
   };

@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { makeCollapsibleSection, makeSlider } from './debug-panel';
+import { type DebugSection, makeSlider } from './debug-panel';
 
 // Dev-only tuning section for star-disc rendering. Each slider drives one
 // uniform on the shared star material. Defaults match the production
@@ -12,11 +12,8 @@ import { makeCollapsibleSection, makeSlider } from './debug-panel';
 //
 // No reverse sync — see `SliderOpts.initial` in debug-panel.ts.
 
-export function buildStarSection(stellata: Stellata): HTMLDivElement {
-  const { section, body } = makeCollapsibleSection({
-    title: 'Star disc',
-    storageKey: 'star',
-  });
+export function buildStarSection(stellata: Stellata): DebugSection {
+  const body = document.createElement('div');
   const v = stellata.getStarRenderParams();
 
   body.appendChild(makeSlider({
@@ -104,5 +101,9 @@ export function buildStarSection(stellata: Stellata): HTMLDivElement {
     onChange: (x) => stellata.setStarRenderParams({ sizeKnee: x }),
   }));
 
-  return section;
+  return {
+    element: body,
+    dispose: () => {},
+    setVisible: () => {},
+  };
 }

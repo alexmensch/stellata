@@ -1,4 +1,5 @@
 import type { Stellata } from '../stellata';
+import type { DebugSection } from './debug-panel';
 
 // Focused-star-pin diagnostics. Latched signed min/max per axis
 // capture transient excursions (trackpad pans can swing target by
@@ -29,13 +30,7 @@ function emptyLatch(): Latch {
   };
 }
 
-export interface PinSection {
-  element: HTMLDivElement;
-  dispose: () => void;
-  setVisible: (v: boolean) => void;
-}
-
-export function buildPinSection(stellata: Stellata): PinSection {
+export function buildPinSection(stellata: Stellata): DebugSection {
   const latch = emptyLatch();
   let visible = true;
 
