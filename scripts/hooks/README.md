@@ -9,12 +9,20 @@ path reference.
 
 ```
 scripts/hooks/
-  readme-guard.sh    Blocks Read / Grep / Edit / Write / NotebookEdit
-                     against files under src/**, scripts/**, data/**,
-                     docs/** until the containing folder's README.md
-                     has been Read this session. Enforces CLAUDE.md
-                     § Folder READMEs (the scout pass) as a hard
-                     gate, not just a written rule.
+  readme-guard.sh          Blocks Read / Grep / Edit / Write /
+                           NotebookEdit against files under src/**,
+                           scripts/**, data/**, docs/** until the
+                           containing folder's README.md has been Read
+                           this session. Enforces CLAUDE.md § Folder
+                           READMEs (the scout pass) as a hard gate.
+  commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
+                           staged tree touches a guarded folder
+                           without updating its README.md (CLAUDE.md
+                           § Folder READMEs trigger 4 — "At commit
+                           time, update"), and/or when the staged
+                           diff introduces forbidden code-comment
+                           patterns (same set as
+                           tests/code-comment-rules.test.ts).
 ```
 
 ## How readme-guard works
@@ -50,17 +58,49 @@ harness executing the rule, which Claude cannot bypass without
 fixing it. Same shape as `~/.claude/hooks/worktree-guard.sh` (the
 "every edit must be in a worktree" rule).
 
+## How commit-sweep-guard works
+
+`PreToolUse` on `Bash`. Filters down to `git commit ...` invocations
+(handles `git -C <path> commit` and rejects subcommands like
+`git commit-tree`); other Bash calls pass straight through. For a
+matched commit:
+
+1. **README staleness.** Walks the `git diff --cached --name-only`
+   set. For each modified non-README under `src/`, `scripts/`,
+   `data/`, `docs/`, finds the closest folder containing a
+   `README.md` and reports if that README is missing from the staged
+   set. Suppressed when the commit command string contains
+   `[readme-skip: <reason>]` — works for both `-m "msg [readme-skip:
+   …]"` and HEREDOC-style messages, since both put the literal text
+   in the command.
+
+2. **Comment-rule sweep.** Runs `git diff --cached -U0` filtered to
+   added lines (`^\+`, excluding `+++` headers) against the same
+   forbidden-pattern set `tests/code-comment-rules.test.ts` uses —
+   bead-IDs, bead-relative time refs, memory wikilinks, PR
+   references. Scoped to NEW content so pre-existing legacy
+   violations don't block unrelated commits.
+
+Either check fires a `permissionDecision: "deny"` with a per-finding
+breakdown and the relevant CLAUDE.md substitution rule.
+
+Scope caveat: `-a` / `--all` commits aren't fully inspected; only
+already-staged files are checked. The standard `git add <files> &&
+git commit` flow Claude uses is covered correctly.
+
 ## Disabling
 
 Two paths:
 
-1. **One call only.** Clear the seen-state file for the current
-   session: `rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`.
-   The next call will deny again until a README is Read.
+1. **One call only.** For `readme-guard`: clear the seen-state file
+   (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`).
+   For `commit-sweep-guard`: pass `[readme-skip: <reason>]` in the
+   commit message (covers the README check; comment violations still
+   block — fix the comments).
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
-   temporarily move `scripts/hooks/readme-guard.sh` aside.
+   temporarily move the hook script aside.
 
 Disabling is the right call when investigating a folder that
-genuinely has no subsystem ownership (e.g. ad-hoc scratch under
-`scripts/refresh/`) — but the default answer is to Read the README.
+genuinely has no subsystem ownership (e.g. ad-hoc scratch) — but the
+default answer is to read or update the README.
