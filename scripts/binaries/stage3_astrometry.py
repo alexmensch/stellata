@@ -221,15 +221,25 @@ def attach_astrometry(
         else None
     )
 
-    if gaia is None:
-        # No Gaia astrometry — try HIP2 directly. Bright saturated
-        # stars never get past this branch.
+    # No usable Gaia parallax — try HIP2. Two shapes route through here:
+    # the saturated-bright case (Sirius / α Cen — no gaia_dr3_astrometry
+    # row at all) and the position-only Gaia case (Gaia detected the
+    # source but couldn't fit a 5p solution, so the row exists with
+    # ra/dec populated but parallax=NULL — Castor STF1110 AB is the
+    # canary). Both need HIP2 as the only parallax source.
+    if gaia is None or gaia.parallax_mas is None:
         hip = _component_hip(component, indices)
         if hip is not None:
             hip2 = indices.hip_to_hip2.get(hip)
-            if hip2 is not None:
+            if hip2 is not None and hip2.plx_mas is not None:
                 return _from_hip2(hip2)
-        return _unresolved_astrometry()
+        if gaia is None:
+            return _unresolved_astrometry()
+        # Gaia row exists with ra/dec but no parallax and HIP2 missed —
+        # fall through to ``gaia_5p`` so downstream stages still see
+        # the row's positional anchor (Stage 5's both-Gaia consistency
+        # check sees ``parallax_mas is None`` and falls silent to the
+        # mag-gap tier; Stage 6's ``_position_pc`` returns None).
 
     has_nss = component.gaia_source_id in indices.src_to_nss
     if has_nss and gaia_5p_unreliable(gaia):

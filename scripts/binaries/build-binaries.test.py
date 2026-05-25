@@ -218,6 +218,29 @@ class Orb6Tests(unittest.TestCase):
         self.assertEqual(rows[0].grade, 3)
         self.assertEqual(rows[0].hip, 25)
 
+    def test_splits_discoverer_from_components_when_unspaced(self) -> None:
+        # ``STF1110AB`` shape — discoverer code packed against the
+        # component letters with no internal space. The fixed-width
+        # column split must isolate ``STF1110`` from ``AB``; a regex
+        # anchored on trailing letter-runs cannot distinguish the two
+        # because both look like ``[A-Za-z]+[0-9]+[A-Z]+``. Castor
+        # STF1110 AB (HIP 36850) is the canary — pre-fix it parsed as
+        # ``components="STF1110AB"`` and orb6_hip never fired against
+        # the WDS pair whose components column was ``"AB"``.
+        line = "073435.86+315317.8 07346+3153 STF1110AB       6175  60178  36850   1.93   2.97    459.1     y   2.3        6.722  a  0.021   115.107    0.060   41.304     0.085   1959.59    y   0.021    0.3382   0.0023   251.84     0.38   2000 2021 3 n CIA2022d wds07346+3153r.png"
+        body = "banner\n" + line + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            rows = bb.parse_orb6(p)
+        self.assertEqual(len(rows), 1)
+        e = rows[0]
+        self.assertEqual(e.wds_id, "07346+3153")
+        self.assertEqual(e.discoverer, "STF1110")
+        self.assertEqual(e.components, "AB")
+        self.assertEqual(e.hip, 36850)
+        self.assertEqual(e.hd, 60178)
+        self.assertEqual(e.grade, 3)
+
 
 # ─── Fixed-width parser sanity nets ──────────────────────────────────
 
@@ -1873,6 +1896,43 @@ class AttachAstrometryTests(unittest.TestCase):
             _resolved(gaia=42, hip=99), None, idx,
         )
         self.assertEqual(a.astrometry_via, "hip2_long_baseline")
+
+    def test_hip2_fallback_when_gaia_row_has_null_parallax(self) -> None:
+        # Castor STF1110 AB shape: Gaia detected the source and stored
+        # ra/dec but couldn't fit a 5p solution, so the gaia_dr3_astrometry
+        # row exists with parallax=None. HIP2 has the parallax (Castor at
+        # 64.12 mas → 15.6 pc). Stage 3 must route through hip2_long_baseline
+        # rather than ``gaia_5p`` — otherwise downstream consumers see an
+        # astrometry row with no position constraint and Stage 6 drops the
+        # pair as Gaia-blind.
+        gaia_row = _gaia_astrometry_row(
+            source_id=1000, parallax_mas=None, parallax_error_mas=None,
+        )
+        hip2 = _hip2_row(hip=36850, plx_mas=64.12)
+        idx = _indices_with_astrometry(
+            src_to_astrometry={1000: gaia_row},
+            hip2=[hip2],
+        )
+        a = bb.attach_astrometry(
+            _resolved(gaia=1000, hip=36850), None, idx,
+        )
+        self.assertEqual(a.astrometry_via, "hip2_long_baseline")
+        self.assertEqual(a.parallax_mas, 64.12)
+
+    def test_null_parallax_gaia_falls_through_to_gaia_5p_when_hip2_missing(
+        self,
+    ) -> None:
+        # Symmetric edge: Gaia row exists with null parallax AND no HIP2
+        # row available. The route falls through to ``gaia_5p`` (carrying
+        # the null parallax) rather than ``unresolved`` so downstream
+        # stages still see the row's ra/dec positional anchor.
+        gaia_row = _gaia_astrometry_row(
+            source_id=1000, parallax_mas=None, parallax_error_mas=None,
+        )
+        idx = _indices_with_astrometry(src_to_astrometry={1000: gaia_row})
+        a = bb.attach_astrometry(_resolved(gaia=1000, hip=99), None, idx)
+        self.assertEqual(a.astrometry_via, "gaia_5p")
+        self.assertIsNone(a.parallax_mas)
 
     def test_no_gaia_no_hip2_still_unresolved(self) -> None:
         # HIP known but HIP2 doesn't cover it — unresolved.
