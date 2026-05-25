@@ -504,7 +504,7 @@ export class Stellata implements FrameAnchor {
       // magnitude reference; vertex shader uses these only when
       // uMonochrome > 0.5. The same constants are read JS-side by
       // chart-labels.ts to size variable rings + binary wings.
-      uChartDiscMaxPx: { value: 16.0 },
+      uChartDiscMaxPx: { value: 28.0 },
       uChartDiscMinPx: { value: 1.5 },
       uChartMagBright: { value: -2.0 },
       // Camera vertical FOV in radians, mirrored from camera.fov whenever

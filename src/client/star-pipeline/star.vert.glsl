@@ -46,7 +46,7 @@ uniform float uSizeKnee;
 // matching naked-eye perception (defined that way). Uniforms read only
 // when uMonochrome > 0.5; outside chart mode the existing physical-size
 // + apparent-magnitude blend formula runs unchanged.
-uniform float uChartDiscMaxPx;   // brightest end (e.g. 16 px)
+uniform float uChartDiscMaxPx;   // brightest end (e.g. 28 px)
 uniform float uChartDiscMinPx;   // faintest end (e.g. 1.5 px)
 uniform float uChartMagBright;   // magnitude that maps to MAX (e.g. -2.0)
 uniform float uMonochrome;       // 0 = colour mode, 1 = chart mode (shared with frag)

@@ -68,7 +68,7 @@ vPhysRatio = 1.0;  // force the frag shader's disc-pass branch
 
 Three tunable uniforms shared with JS via `getChartDiscParams()`:
 
-- `uChartDiscMaxPx` (default 16 px) — diameter at the bright end.
+- `uChartDiscMaxPx` (default 28 px) — diameter at the bright end.
 - `uChartDiscMinPx` (default 1.5 px) — diameter at the faint end.
 - `uChartMagBright` (default −2.0) — magnitude that maps to MAX
   (covers Sirius/Vega/etc. at any vantage short of standing-on-a-
