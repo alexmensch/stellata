@@ -22,12 +22,29 @@ const SOURCE_OFFSET_PX = FOCUS_RING_RADIUS_PX + RING_HALO_GAP_PX;
 // Cap how far past the viewport the clipped "off-screen" endpoint can extend,
 // so the generated SVG path doesn't contain absurd coordinates.
 const MAX_OFFSCREEN_FACTOR = 1.5;
-// Module-level scratches for projectWithNearClip — the function is called
-// at most once per frame from this module's onFrame handler, so a shared
-// scratch costs nothing and avoids three Vector3 allocations per frame.
-const projVa = /*@__PURE__*/ new THREE.Vector3();
-const projVb = /*@__PURE__*/ new THREE.Vector3();
-const projEnd = /*@__PURE__*/ new THREE.Vector3();
+
+/**
+ * Three scratch vectors that projectWithNearClip mutates per call. Callers
+ * that invoke the function in a hot path own one stable scratch in their
+ * own scope and thread it in; ad-hoc / test callers omit the parameter and
+ * accept a per-call allocation. Encapsulating the scratch in a parameter
+ * (rather than at module scope) keeps the function safe to call from
+ * sibling overlays, tests, or a shared util refactor without silent stale-
+ * data hazards under back-to-back invocation.
+ */
+export interface ProjectScratch {
+  va: THREE.Vector3;
+  vb: THREE.Vector3;
+  end: THREE.Vector3;
+}
+
+export function makeProjectScratch(): ProjectScratch {
+  return {
+    va: new THREE.Vector3(),
+    vb: new THREE.Vector3(),
+    end: new THREE.Vector3(),
+  };
+}
 
 export function createDistanceVectorOverlay(
   stellata: Stellata,
@@ -42,6 +59,7 @@ export function createDistanceVectorOverlay(
 
   const tmpA = new THREE.Vector3();
   const tmpB = new THREE.Vector3();
+  const projScratch = makeProjectScratch();
 
   // Idempotent hide: skip the SVG attribute writes and style mutation when
   // the vector is already hidden. The per-frame handler short-circuits to
@@ -132,7 +150,7 @@ export function createDistanceVectorOverlay(
       destLabel = cat ? cat.clouds[toCloud].name : 'Cloud';
     }
 
-    const projected = projectWithNearClip(tmpA, tmpB, camera, w, h);
+    const projected = projectWithNearClip(tmpA, tmpB, camera, w, h, projScratch);
     if (!projected) { hide(); return; }
     const { pA, pB } = projected;
 
@@ -258,31 +276,30 @@ export function projectWithNearClip(
   camera: THREE.PerspectiveCamera,
   w: number,
   h: number,
+  scratch?: ProjectScratch,
 ): { pA: [number, number]; pB: [number, number] } | null {
-  // Module-scope scratches replace the per-call .clone() — caller invokes
-  // this at most once per frame so a shared scratch is safe and avoids the
-  // three Vector3 allocations.
-  projVa.copy(worldA).applyMatrix4(camera.matrixWorldInverse);
-  projVb.copy(worldB).applyMatrix4(camera.matrixWorldInverse);
+  const s = scratch ?? makeProjectScratch();
+  s.va.copy(worldA).applyMatrix4(camera.matrixWorldInverse);
+  s.vb.copy(worldB).applyMatrix4(camera.matrixWorldInverse);
   const threshold = -camera.near;
 
   // If the focus star itself is behind the camera, we can't draw a
   // meaningful origin — bail out.
-  if (projVa.z >= threshold) return null;
+  if (s.va.z >= threshold) return null;
 
-  let endView = projVb;
-  if (projVb.z >= threshold) {
+  let endView = s.vb;
+  if (s.vb.z >= threshold) {
     // Destination is behind the camera; clip the segment at the near plane
     // so the chevrons still extend toward where it would be.
-    const denom = projVb.z - projVa.z;
+    const denom = s.vb.z - s.va.z;
     if (Math.abs(denom) < 1e-9) return null;
-    const t = (threshold - projVa.z) / denom;
+    const t = (threshold - s.va.z) / denom;
     if (!(t > 0 && t <= 1)) return null;
-    endView = projEnd.copy(projVa).lerp(projVb, t);
+    endView = s.end.copy(s.va).lerp(s.vb, t);
     endView.z = threshold - 1e-4;
   }
 
-  const ndcA = projVa.applyMatrix4(camera.projectionMatrix);
+  const ndcA = s.va.applyMatrix4(camera.projectionMatrix);
   const ndcB = endView.applyMatrix4(camera.projectionMatrix);
 
   const pA: [number, number] = [
