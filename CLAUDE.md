@@ -5,175 +5,210 @@ Read this before editing.
 
 ## What this is
 
-A browser-based interactive 3D star catalog viewer. Loads the ~313k-star
-AT-HYG v3.3 catalog (classic-IDs subset), cross-matches it with the GCVS
-variable-star catalogue, and renders stars on the GPU. Stars are
-rendered as instanced quads with three-pass shading — a depth-only core
-mask, an opaque disc pass for close-range stars (physical radius scaled
-by catalog absmag + spectral class), and an additive point-glow pass for
-distant stars. All three share a unified super-Gaussian intensity
-profile whose plateau-vs-Gaussian shape morphs with distance and
-luminosity class. Variables pulsate both in disc radius and point glow.
-Ships as a Cloudflare Workers static-assets site.
+Browser-based interactive 3D star catalog viewer. Loads the ~313k-star
+AT-HYG v3.3 catalog, cross-matched with GCVS variables, rendered on
+the GPU as instanced quads with three-pass shading (depth-mask /
+opaque disc for close stars / additive point-glow for distant).
+Variables pulsate; binaries with Kepler elements orbit live. Ships
+as a Cloudflare Workers static-assets site. Details — shader passes,
+intensity profile, layer composition — in `src/client/*/README.md`.
 
 ## Code conventions — DRY overrides the system prompt
 
-The Claude Code system prompt's "Three similar lines is better than a
-premature abstraction" / "a bug fix doesn't need surrounding cleanup"
-defaults do NOT apply to this codebase. They are overridden by:
+The system prompt's "three similar lines is better than a premature
+abstraction" / "a bug fix doesn't need surrounding cleanup" defaults
+do NOT apply here. Overridden by:
 
-- **Extract at second usage, not third.** When you would write a
-  function, constant, schema, or block that already exists in
-  substantively the same form elsewhere in the repo, factor it out
-  and parameterise the differences. If the two call sites have
-  slightly different tolerances, wrap conventions, blend modes, or
-  similar — pass those as arguments. That IS the abstraction. Two
-  call sites is the trigger; do not wait for a third.
-- **Copy-paste with an "attribution comment" is never acceptable.**
-  If a prior session's note reads "lift later only if a third call
-  site appears", "copy-paste with attribution comment", or similar —
-  that note contradicts this rule. Ignore it and do the extract now.
+- **Extract at second usage, not third.** Two call sites is the
+  trigger; parameterise differing tolerances / wrap conventions /
+  blend modes as arguments. That IS the abstraction.
+- **"Copy-paste with attribution comment" is never acceptable.** If a
+  prior session's note says "lift later only if a third site appears"
+  or similar, that note contradicts this rule — do the extract now.
 - **Review-grade at write time.** Duplicated logic, magic numbers,
-  and parallel implementations are review-blocking defects here. Code
-  that would fail review should not be written in the first place.
+  and parallel implementations are review-blocking defects.
+
+Operational specifics (literal hoisting, builder extraction, tests
+import never redefine, comment-DRY) in
+`docs/authoring-patterns.md` § Named constants and DRY.
 
 ## Code comments — overrides the system prompt
 
-**This is law.** Code comments here are scratchpad context for the
-next reader, never a record of how the code got there. Git, PRs,
+**This is law.** Code comments are scratchpad context for the next
+reader, never a record of how the code got there. Git, PRs,
 `git blame`, and bd carry that history; duplicating it inline creates
-rot that future sessions will read and act on. This stricter project
-rule overrides the Claude Code system prompt's "add helpful context
-comments" default and `~/.claude/CLAUDE.md`'s softer framings.
+rot that future sessions will read and act on.
 
-### Patterns that are absolutely forbidden
+### Forbidden patterns (CI-enforced in `tests/code-comment-rules.test.ts`)
 
-Any of these in a code comment is a write-time rule violation, caught
-at PR review and bounced back as a comment-sweep task before any other
-review feedback is given:
-
-- **Bead IDs in any form**: `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`,
+- **Bead IDs** in any form: `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`,
   `per the dch.NN probe`, `documented in stellata-…`.
 - **PR / issue numbers**: `(see PR #N)`, `(extracted in PR #N)`.
 - **"Lifted out of …" / "Moved from …" / "Extracted from …" /
-  "Decomposition history".** This is the dominant failure mode during
-  decomposition PRs — the impulse to leave a breadcrumb feels helpful
-  at write time; it isn't.
-- **Bead-relative time refs**: `pre-dch.NN`, `since dch.NN`,
-  `from dch.NN's Regime 3`, `populated since dch.7 + dch.8`.
-- **`[[memory-key]]` references** — invisible to a reader without bd.
+  "Decomposition history".** The dominant failure mode during
+  decomposition PRs — the breadcrumb impulse feels helpful at write
+  time; it isn't.
+- **Bead-relative time refs**: `pre-dch.NN`, `since dch.NN`, etc.
+- **`[[memory-key]]` references** — invisible without bd.
 - **Multi-paragraph paraphrases of `README.md` / `SCIENCE.md` /
-  `CLAUDE.md`** — cite with one line (`// see SCIENCE.md § X`); never
-  restate.
-- **Section banners with bead IDs in them**:
-  `// ---- LMC override (stellata-dch.NN) -------` is forbidden; plain
-  banners are fine.
+  `CLAUDE.md`** — cite with one line; never restate.
+- **Bead-ID-tagged section banners** (`// --- foo (stellata-dch.NN) ---`).
 
 ### Module docstrings: 1–3 lines, no exceptions
 
 State what the module does. Not why it exists, when it was extracted,
-what it used to be part of, which bead drove it, or which siblings it
-complements. If you write more than 3 lines, stop — the content
-belongs in the folder's `README.md` with a one-line code pointer.
+which bead drove it. Detail belongs in the folder's `README.md` with
+a one-line code-side pointer.
 
-### Substitution rule
-
-When the impulse to write any forbidden pattern fires, ask which
-surface should carry the content:
+### Substitution rule — where forbidden content actually goes
 
 - Credit a bead → git commit subject, not the code.
-- Explain what the file used to be → nothing; `git log -p` + `git
-  blame` carry it.
-- Point at a bd memory governing the code → update CLAUDE.md if it's
-  a project-wide rule, otherwise leave it implicit.
-- Restate an architecture section → one-line pointer to the folder's
-  `README.md`.
-- Explain what a function does → better function name + type signature.
+- "What this file used to be" → nothing; `git log -p` carries it.
+- Project-wide rule → update CLAUDE.md.
+- Architecture restatement → one-line pointer to folder's `README.md`.
+- What a function does → better function name + type signature.
 
-If none of those fit, the content is noise. Delete.
+If none fit, the content is noise. Delete.
 
-## Folder & module conventions — one folder, one topic, one README
+## Write-time discipline — triggers and pointers
 
-The codebase is organised as a wiki: every folder owns one topic,
-documented in its own `README.md`. The folder name + README is the
-documentation index. Recursively — when a folder accumulates content
-that doesn't fit a single coherent topic, **split into subfolders**;
-don't add a second sibling doc.
+When the trigger fires, the rule applies. Full text (rule + why +
+how-to-apply) in `docs/authoring-patterns.md` § <named section>;
+the trigger word here is the always-loaded hook that tells future-me
+which section to open.
 
-**Per-folder README is context, not just output.** Before editing
-OR debugging files inside a subfolder that has its own `README.md`,
-read it if you haven't this session — it carries invariants,
-conventions, and historical decisions the code alone won't tell you
-(the file roster explains what each module owns; the prose explains
-*why*). The trigger is "editing OR debugging," not just editing:
-when a bug is reported in a subsystem, the scout pass kicks in
-*before* the first grep. A README sentence describing a shader
-uniform / NDC pin / sentinel / override is frequently the entire
-explanation of a bug whose symptom looks unrelated — skim past it
-once and the next 30 minutes are spent re-deriving it. **Stop-rule:
-if you've spent ≥5 minutes investigating a bug and haven't
-re-confirmed every README in the implicated folders has been read
-*this session*, stop and read them.** When your changes invalidate
-a claim in the README — renamed file, changed data flow, new
-consumer, dropped feature, shifted ownership — update the README in
-the same PR. Folder READMEs are the prose-only surface a `grep` for
-renamed symbols won't catch; they need their own audit pass at
-commit time. Forgetting to read leaks pre-existing context to next
-session; forgetting to update leaks misleading context. The five
-"adding new code" rules below are why the README exists; this
-paragraph is how to USE it.
+- **Adding `bus.on(...)`** → wire unsub into dispose, same diff.
+  § Lifecycle pairing.
+- **Implementing one of a sibling pair** (lambertian/mallama,
+  encode/decode, v2/v3, prime/fallback) → copy-skim sibling,
+  replicate defences. § Sibling symmetry.
+- **Introducing dirty-track / cache** → sentinel must fail
+  first-write; dispose resets every sentinel; cache key covers every
+  input dimension. § Sentinel-init.
+- **Wall-clock time mid-animation** → route through
+  `Stellata.getT()`, never `Date.now()`. § Single source of truth.
+- **Code comment violations** → P1 in PR review. CLAUDE.md § Code
+  comments above + authoring-patterns § Code comment hygiene.
+- **Renaming an API OR changing semantics** → `grep -rn` old name +
+  sweep every folder README in the diff. § Rename + stale-prose sweep.
+- **Writing new code** → tests in the SAME PR; pure helpers in
+  `*-pure.ts`; numeric headline claims pinned with `toBe(N)`, never
+  `toBeLessThanOrEqual`. § Test coverage at write time.
+- **Refactor framed "apply pattern X to all Y"** → enumerate peer set
+  in PR description; verify zero remaining call sites of old pattern.
+  § Pattern coverage across peers.
+- **Numeric literals + DRY operational specifics** → § Code
+  conventions above carries the 2-call-site override (law);
+  authoring-patterns § Named constants and DRY carries detail
+  (hoist at second usage, tests import never redefine, builder
+  extraction for mostly-identical schemas).
+- **Mid-implementation doc-edit impulse** → defer to commit-time
+  sweep. § Defer doc updates.
+- **Large PR (~10+ beads)** → distinguish High / Medium / Low test
+  confidence in PR body; flag manual-smoke paths.
+  § Large-PR honesty.
+- **Multi-concern diff** → split into topical commits, one concept
+  each, committed along the way. § Commit granularity.
 
-Five rules for adding new code:
+## Folder READMEs — read before editing, debugging, planning; update at commit
+
+**This is law.** Every folder under `src/`, `scripts/`, `data/`,
+`docs/` has a `README.md`. **A folder without one is a bug** — file
+it (or write the README) before continuing past that folder. A CI
+guard (`tests/folder-readme-coverage.test.ts`) refuses to land code
+that breaks this invariant.
+
+The codebase is a wiki by **progressive disclosure**: folder name
+signals the topic, `README.md` carries the load-bearing context, code
+is the implementation. Skip the README and you have the topic but
+none of the context — and the context (invariants, uniform pins,
+sentinels, override mechanisms, data-flow claims, file-roster
+ownership) is exactly what the code alone cannot tell you. A README
+sentence describing a shader uniform / NDC pin / sentinel / override
+is frequently the entire explanation of a bug whose symptom looks
+unrelated.
+
+### Four triggers — when to read or update
+
+1. **Before editing.** For every folder you're about to edit (or
+   whose contents the bead names as edit targets), read its README
+   first if you haven't already this session. Pre-edit batch read
+   beats just-in-time per-file reads — the per-file impulse is
+   exactly when the read gets skipped.
+2. **Before debugging.** The moment a bug is reported in a subsystem
+   OR you start investigating unexpected behaviour, the scout pass
+   kicks in *before* the first grep. Investigation grep counts as a
+   code read, not a free action. **Stop-rule: if you've spent
+   ≥5 minutes investigating without re-confirming every README in
+   the implicated folders has been read *this session*, stop and
+   read them.**
+3. **During planning.** Before proposing an approach that touches
+   files in folder X, read `X/README.md`. Planning that names a
+   folder is itself a folder-touch.
+4. **At commit time — update.** When your changes invalidate a claim
+   in the README (renamed file, changed data flow, new consumer,
+   dropped feature, shifted ownership), update the README in the
+   **same PR**. Folder READMEs are the prose-only surface a `grep`
+   for renamed symbols won't catch; they need their own audit pass
+   at commit time. Forgetting to update leaks misleading context to
+   the next session.
+
+### Scan pattern + missing-README protocol
+
+While reading, tag any **uniform / sentinel / pin / override / "kept
+at" / "regardless of" / "substitutes"** phrasing — these override
+mechanisms mask the obvious explanation, the highest-value content
+in any README. If during edit/debug/plan you discover a folder
+without a README, **stop** — write it in the current PR (preferred
+when the folder is small) or file a bead before proceeding past it.
+
+## Folder & module conventions — where new code lands
+
+The "every folder has a README" invariant above is non-negotiable;
+these rules govern *where* new code goes.
 
 - **Physical / visual / thematic subsystems get a folder from day 1,
-  with a README.** When adding the next layer of the model (Local
-  Bubble, nebulae, Radcliffe Wave, etc.), the first file lands in
-  `src/client/<name>/`, not flat. Day 1 includes: the renderer file,
-  its loader, its `*-pure.ts` helpers, its tests, its tuning section,
-  AND `src/client/<name>/README.md` describing the topic. Existing
-  examples: `solar-system/`, `local-group/`, `milkyway/`, `galactic/`,
-  `molecular-clouds/`, `chart-mode/`, `star-pipeline/`.
+  with a README.** The first file lands in `src/client/<name>/`, not
+  flat. Day 1 includes renderer + loader + `*-pure.ts` helpers +
+  tests + README. Examples: `solar-system/`, `local-group/`,
+  `milkyway/`, `galactic/`, `molecular-clouds/`, `chart-mode/`,
+  `star-pipeline/`.
 - **Cross-cutting plumbing lands in the matching type folder.**
-  Includes small one-off helpers — texture/buffer factories, parsers,
-  adapters, sentinel constants — not just large utilities. `overlays/`,
-  `camera/`, `loaders/`, `ui/`, `util/`, `typeahead/`, `modals/`,
-  `debug/`. A new top-level type folder is only justified when 3+
-  files belong there.
-- **Controllers extract at write time, not retrospectively.** State
-  with the shape "state struct + tick + dispose + state-changes-via-method"
-  lands as its own controller class. Camera-bound: in the matching
-  `camera/<subtopic>/` subfolder. Layer-bound: in the layer folder.
+  `overlays/`, `camera/`, `loaders/`, `ui/`, `util/`, `typeahead/`,
+  `modals/`, `debug/`. Small one-off helpers (texture/buffer
+  factories, parsers, sentinel constants) count too. New top-level
+  type folder only justified at 3+ files.
+- **Controllers extract at write time.** "state struct + tick +
+  dispose + state-changes-via-method" → its own class. Camera-bound
+  → `camera/<subtopic>/`; layer-bound → the layer folder.
 - **`stellata.ts` is the integration shell, not a default home.** New
-  module-scope functions — factories, adapters, pure transforms — go
-  in their matching subsystem folder even when small (a 5–20 line
-  helper still qualifies). Default question before adding a top-level
-  `function` / `const` in `stellata.ts`: would a future reader look
-  here, or in `star-pipeline/` / `loaders/` / `camera/<sub>/` / `util/`
-  / the layer's folder? If anywhere else, put it there. If genuinely
-  nowhere else, that's the signal a new subsystem folder is justified,
-  not that `stellata.ts` should grow. Generated artifacts marked
-  `// AUTO-GENERATED` cannot host hand-written helpers — pair them
-  with a sibling wrapper module (e.g. `foo-data.ts` generated +
-  `foo.ts` hand-written) so regen never clobbers the wrapper.
+  module-scope functions go in their matching subsystem folder, even
+  when small (5–20 lines still qualifies). `// AUTO-GENERATED`
+  artifacts pair with a sibling hand-written wrapper module so regen
+  doesn't clobber it.
 - **No multi-paragraph in-code prose.** Physics derivations,
-  calibration rationale, tuning history → `SCIENCE.md` or the folder's
-  `README.md`, with a one-line code-side pointer. Full rules in the
-  "Code comments — overrides the system prompt" section above (hard
-  12-line ceiling, forbidden-pattern list, substitution table). The
-  pure-helpers-extract-at-second-use companion to this rule is the
-  DRY override stated in "Code conventions" above.
+  calibration rationale → `SCIENCE.md` or folder `README.md` with a
+  one-line code-side pointer. See § Code comments above.
 
-The recursive split rule: a folder's README should be FOCUSED on its
-one topic. If you're tempted to write a second sibling doc, or the
-README has grown to cover unrelated concerns, the right move is to
-**create a subfolder** and move the relevant code + README into it.
-The parent becomes a thin coordinator (README + any genuinely shared
-cross-subtopic file). `src/client/camera/` is the canonical example
-(controls/ + warp/ + observe/ + arrival/ subfolders + shared
-`timing.ts` + coordinator README).
+**Recursive split rule:** a folder's README is FOCUSED on its one
+topic. If tempted to add a second sibling doc — or the README grew
+to cover unrelated concerns — **create a subfolder** and move the
+code + README into it. `src/client/camera/` is the canonical example.
 
-Code-review patterns that catch recurring bug shapes are in
-`docs/authoring-patterns.md`.
+## Camera-anywhere perception — a mental-model rule
+
+Stellata is a 3D model where the camera can fly to **any** point —
+any star focus, LMC warp, OBSERVE-mode from inside a constellation,
+solar-system fly-through. When proposing a precision tradeoff,
+**never** frame the metric as "eye discrimination from Sol." A 5 kpc
+depth spread at 50 kpc is invisible from Sol (~0.1°) but is the
+entire visible structure from the LMC vicinity (~10° at 30 kpc).
+
+How to apply: state which **viewing distance** the precision is
+evaluated at; default to the **closest realistic** viewpoint, not
+Sol. Physical-accuracy wins over "you can't see the difference."
+SCIENCE.md § Detail-floor principle is the complementary upper-bound
+rule (don't add detail the user can never get close enough to see).
 
 ## Repo layout — the structure is the index
 
@@ -204,93 +239,85 @@ docs/     Genuinely cross-cutting docs that don't belong to one
 tests/    Repo-meta tests (CLAUDE.md size guard, etc.).
 ```
 
-Read `SCIENCE.md` for every external data source (catalogues, papers,
-DOIs, licences) and the physics/modelling decisions baked into the
-build pipeline + renderer.
-
-When adding a new folder, write its `README.md` in the same PR — the
-folder + README is the topic doc, and the file system stays
-self-documenting only if every subsystem has one. A vitest size guard
-(`tests/claude-md-size.test.ts`) holds this file at its budget; if you
-need a new top-level surface or want to grow CLAUDE.md, raise it with
-the user before expanding.
+`SCIENCE.md` covers every external data source (catalogues, papers,
+DOIs, licences) + physics/modelling decisions baked into the build
+pipeline and renderer. A vitest size guard
+(`tests/claude-md-size.test.ts`) holds this file at its budget — if
+you need to grow CLAUDE.md or add a new top-level surface, raise it
+with the user before expanding.
 
 ## Local commands
 
 ```bash
 npm run build:catalog   # regenerate public/catalog.bin (idempotent)
-npm run build:binaries  # regenerate data/binaries/multiples.tsv (idempotent)
+npm run build:binaries  # regenerate data/binaries/multiples.tsv
 npm run dev             # preprocess + Vite dev server
 npm run build           # full production build
 npm run typecheck       # tsc --noEmit over src/ and scripts/
-npm test                # vitest run (regression-prevention suite)
-npm run test:watch      # vitest in watch mode
-npm run test:coverage   # vitest run with v8 coverage
+npm test                # vitest (regression-prevention suite)
 npm run deploy          # wrangler deploy (requires auth)
-npx tsx scripts/catalog/verify-catalog.ts   # dump header + spot-check records
 ```
 
-External-catalogue refresh (manual, never wired into `npm run build` —
-see `scripts/refresh/README.md` for the protocol +
-`RELEASING.md` § Catalogue refresh policy for cadence):
+Watch / coverage variants of `npm test`, the catalogue verify script,
+and the manual `npm run refresh:*` / `npm run validate:simbad` chain
+are documented in `scripts/refresh/README.md` and `RELEASING.md`
+§ Catalogue refresh policy.
 
-```bash
-npm run refresh:gaia-hip          # Gaia DR3 HIP cross-walk
-npm run refresh:gaia-tyc          # Gaia DR3 Tycho-2 cross-walk
-npm run refresh:gaia-astrometry   # Gaia DR3 5p astrometry for resolved source_ids
-npm run refresh:gaia-nss          # Gaia DR3 NSS two-body orbits
-npm run refresh:gaia-apsis        # Gaia DR3 Apsis (gspphot ∪ gspspec)
-npm run refresh:bailer-jones      # Bailer-Jones 2021 distance posteriors
-npm run refresh:hip2              # Hipparcos-2 van Leeuwen reduction
-npm run refresh:simbad            # SIMBAD random 10k validation sample
-npm run validate:simbad           # Tier C cross-check of catalog.bin vs SIMBAD sample
-```
+## Temporarily shelved — machinery preserved, rendering disabled
 
-One-time Python venv setup is documented in `scripts/refresh/README.md`.
+Don't refactor these layers' machinery away; each is paused until its
+visual treatment is refined. Details + flags in each folder README.
 
-## Temporarily shelved
+- Molecular cloud overlay — `src/client/molecular-clouds/README.md`.
+- Volumetric Milky Way in chart mode — `src/client/milkyway/README.md`.
+- Dust particle layer — `src/client/dust/README.md`.
 
-Code paths preserved; rendering / visibility disabled until the visual
-treatment is refined. Don't refactor the underlying machinery away.
+## Things deliberately kept out — don't re-debate scope
 
-- **Molecular cloud overlay.** Layer renders nothing — the user toggle
-  is removed and `FilterState.showMolecularClouds` defaults to false;
-  URL flag bit 2 is reserved. Chart-mode still calls `setCloudsIsobar`
-  against the invisible group. See `src/client/molecular-clouds/README.md`.
-- **Volumetric Milky Way in chart mode.** `Milkyway.setIsobar` hides
-  the disc + bulge meshes when chart engages. The chart-isobar uniform
-  / blending switches stay wired so the contour pass can return. See
-  `src/client/milkyway/README.md`.
-- **Dust particle layer.** Rendered at strength=0 → mesh hidden → zero
-  per-frame cost. Machinery preserved. See `src/client/dust/README.md`.
+Non-goals, noted so the scoping question doesn't recur. Per-feature
+detail (where relevant) lives in the closest folder README or
+SCIENCE.md.
 
-## Things deliberately kept out
-
-Noted here so we don't re-debate scope:
-
-- IAU constellation **boundary** datasets (only the asterism lines are
-  included — boundaries would be a separate Stellarium dataset).
+- IAU constellation **boundary** datasets (asterisms only).
 - HR diagram side panel.
-- WASD / flight controls (removed after early review).
-- Desktop two-finger roll on Chrome / Firefox (no rotate gesture exists in
-  those browsers; Safari-only on desktop by design).
-- Time-series proper motion (single-star positions are snapshot-only,
-  no T animation). Binary / multiple-star orbital motion IS live —
-  driven by `BinaryOrbitField` against `getT()` — but only for pairs
-  with published Kepler elements in `public/binaries.bin`.
-- Spiral-arm overdensities in the Milky Way volumetric background. The
-  Reid et al. masers offer a maser-anchored spiral model that could ride
-  atop the smooth disc profile, but the smooth band reads convincingly
-  enough that re-introducing higher spatial frequency (and the aliasing
-  risk it carries through 32-step raymarching) isn't worth the complexity.
-- Irregular / supernova variables (GCVS entries without a period are
-  skipped — can't animate without one).
-- Temperature-swing component of variable-star brightness change. We use
-  `R ∝ √L` (constant-T assumption); real pulsating variables split the
-  brightness change between R and T swings. Modelling T changes per
-  variable type is more complexity than the visualisation warrants.
+- WASD / flight controls.
+- Desktop two-finger roll on Chrome / Firefox (Safari-only by design;
+  no rotate gesture in the other browsers).
+- Time-series proper motion (single-star positions are snapshot-only).
+  Binary / multiple-star orbital motion IS live — `BinaryOrbitField`
+  against `getT()`, for pairs with Kepler elements in `binaries.bin`.
+- Spiral-arm overdensities in the Milky Way background (aliasing risk
+  through 32-step raymarching outweighs the structural gain).
+- Irregular / supernova variables (no GCVS period → no animation).
+- Temperature-swing component of variable brightness (we use
+  `R ∝ √L`, constant-T; T-swing modelling per variable type is more
+  complexity than the visualisation warrants).
 
-## PR template — `## Release notes` block is required
+## Git workflow — worktree, PR, merge
+
+**Never push or commit to main.** Diff size is never a justification.
+Every change goes through:
+
+1. Fresh git worktree (call `EnterWorktree`).
+2. Feature branch.
+3. Push with `-u`.
+4. `gh pr create` (attach `skip-version-bump` label for pure docs /
+   CI / `.beads` / repo-config — see `RELEASING.md` § Version policy +
+   the skip-version-bump rule there for the "live-app consumer" test).
+5. **Merge through GitHub UI / CLI — never `gh pr merge` without
+   explicit per-PR user approval, even when CI is green.** The PR
+   open is authorised by the standing worktree-PR flow; the merge is
+   a separate decision. After CI passes, stop and report
+   "ready to merge when you are."
+
+`.beads/issues.jsonl` rides the next feature PR; never opens its own.
+bd writes persist to local Dolt immediately, the pre-commit hook
+regenerates JSONL on every commit, and feature commits bundle the
+JSONL diff alongside code — expected. Do NOT open a memory-grooming
+or JSONL-sync-only PR; exit the worktree without committing and let
+the JSONL ride the next feature commit.
+
+### PR body — `## Release notes` is required when version bumps
 
 Every PR with a `package.json` version bump must fill the
 `## Release notes` block in the PR body (Summary / New features /

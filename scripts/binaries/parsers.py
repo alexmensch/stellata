@@ -268,12 +268,13 @@ class Orb6Entry:
     ref: str
 
 
-_ORB6_COMPONENTS_RE = re.compile(r"([A-Za-z][A-Za-z\d,\-]*)$")
-
-
 def parse_orb6(path: Path) -> list[Orb6Entry]:
     """Returns one entry per orbit row. Multiple fits per system are
-    possible (different grades / refs); Stage 4 tie-breaks."""
+    possible (different grades / refs); Stage 4 tie-breaks.
+
+    Discoverer at [30:37], components at [37:44] — fixed-width per
+    the ORB6 file format.
+    """
     out: list[Orb6Entry] = []
     with path.open(errors="replace") as fh:
         for raw in fh:
@@ -287,17 +288,12 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
             wds_id = line[19:29].strip()
             if not wds_id:
                 continue
-            disc_field = line[30:44]
-            # Component designator (Aa,Ab / AB / B,C) is appended to the
-            # discoverer field for some rows but absent for the majority.
-            # Stage 4 orbit-picking treats the empty string as "system-
-            # level / pair-default"; do not skip these rows at load time.
-            m = _ORB6_COMPONENTS_RE.search(disc_field.rstrip())
-            components = m.group(1) if m else ""
+            discoverer = line[30:37].strip()
+            components = line[37:44].strip()
             grade_str = line[233:234].strip()
             out.append(Orb6Entry(
                 wds_id=wds_id,
-                discoverer=disc_field.strip(),
+                discoverer=discoverer,
                 components=components,
                 hd=safe_int(line[51:57]),
                 hip=safe_int(line[58:64]),
