@@ -2,6 +2,7 @@ import { loadCatalog } from './loaders/catalog-loader';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadClouds } from './molecular-clouds/cloud-loader';
 import { loadLocalGroup } from './local-group/local-group-loader';
+import { loadBinaries } from './binaries/binaries-loader';
 import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
@@ -48,7 +49,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, lgCatalog] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, lgCatalog, binaries] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}catalog.bin`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -74,6 +75,11 @@ async function main() {
       // `npm run build:local-group`). No-op layer in that case —
       // outlines simply don't render.
       loadLocalGroup(`${import.meta.env.BASE_URL}local-group.json`),
+      // Binary / multiple-star orbital elements. ~64 KB; null when the
+      // artifact is missing (fresh checkout without
+      // `npm run build:binaries`). The renderer renders identically
+      // without the field; orbital evolution simply doesn't fire.
+      loadBinaries(`${import.meta.env.BASE_URL}binaries.bin`),
     ]);
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
@@ -98,6 +104,11 @@ async function main() {
     // Local Group wireframes. Always-on when the artifact is present —
     // same model as the MW disc, no toggle / URL flag.
     if (lgCatalog) stellata.attachLocalGroup(lgCatalog);
+
+    // Binary-orbit runtime — visible orbital motion for ~hundreds of
+    // catalog pairs against `Stellata.getT()`. Static placements remain
+    // identical when this artifact is absent.
+    if (binaries) stellata.attachBinaries(binaries);
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.

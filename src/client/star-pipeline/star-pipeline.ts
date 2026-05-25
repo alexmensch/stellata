@@ -36,6 +36,12 @@ export interface StarPipelineOptions {
    *  caller — Stellata's floating-origin recentre rewrites it in place
    *  and bumps `iPositionAttr.needsUpdate`. Must outlive the pipeline. */
   localPositions: Float32Array;
+  /** Buffer backing the dynamic `iCompositeSuppress` attribute. 1.0
+   *  collapses the disc and core-mask passes for that instance to an
+   *  off-screen clip-space sentinel; the additive glow pass still runs.
+   *  Written by `BinaryOrbitField` for sub-pixel binary secondaries.
+   *  Must outlive the pipeline. */
+  compositeSuppress: Float32Array;
   vertexShader: string;
   fragmentShader: string;
   /** Shared uniforms map. Each pass spreads it with its own
@@ -70,6 +76,8 @@ export class StarPipeline {
   /** Dynamic — overwritten on every Stellata.recenterOrigin. Callers
    *  set `needsUpdate = true` after rewriting the backing buffer. */
   readonly iPositionAttr: THREE.InstancedBufferAttribute;
+  /** Dynamic — rewritten by BinaryOrbitField each frame. */
+  readonly iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
   readonly discMaterial: THREE.ShaderMaterial;
   readonly glowMaterial: THREE.ShaderMaterial;
   readonly coreMaskMaterial: THREE.ShaderMaterial;
@@ -82,8 +90,8 @@ export class StarPipeline {
   constructor(opts: StarPipelineOptions) {
     const {
       scene, catalog, logRadii, lumClassF32, distSol, teffApsis,
-      localPositions, vertexShader, fragmentShader, sharedUniforms,
-      boundingSphereRadiusPc,
+      localPositions, compositeSuppress, vertexShader, fragmentShader,
+      sharedUniforms, boundingSphereRadiusPc,
     } = opts;
     this.scene = scene;
 
@@ -104,6 +112,9 @@ export class StarPipeline {
     this.iPositionAttr = new THREE.InstancedBufferAttribute(localPositions, 3);
     this.iPositionAttr.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('iPosition', this.iPositionAttr);
+    this.iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(compositeSuppress, 1);
+    this.iCompositeSuppressAttr.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('iCompositeSuppress', this.iCompositeSuppressAttr);
     this.geometry.setAttribute('iAbsmag', new THREE.InstancedBufferAttribute(catalog.absmag, 1));
     this.geometry.setAttribute('iCi', new THREE.InstancedBufferAttribute(catalog.ci, 1));
     this.geometry.setAttribute('iSpectClass', new THREE.InstancedBufferAttribute(catalog.spectClass, 1));

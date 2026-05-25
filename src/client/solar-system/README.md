@@ -105,17 +105,16 @@ sub-second is straightforward — the cache key just bucketises finer.
 to "now" via `Stellata.getT()` returning `Date.now() / 1000`; the time
 scrubber (`stellata-nmu`) plugs in via `Stellata.setT()`.
 
-`time-readout.ts` renders the live UTC timestamp the planet positions
-correspond to in `.ui-bottom`'s `#time-readout`. Visibility tracks two
-gates:
+`time-readout.ts` renders the live UTC timestamp the rendered positions
+correspond to in `.ui-bottom`'s `#time-readout`. **Always visible** —
+binary orbital evolution ticks against `getT()` in every mode (free
+fly, chart, warp, observe), so the user always benefits from knowing
+which moment is being rendered.
 
-1. The focused star carries a planet system (`hasPlanets`).
-2. No camera transition (warp / observe-enter / observe-exit) is in
-   flight — the readout would flash mid-warp otherwise.
-
-Format is UTC Zulu: `YYYY-MM-DD HH:MM:SS UTC`. `isLive(t)` is true
-when `|t − now| < 1 s`; in that case the readout appends "(live)".
-Once a scrubber lands, scrubbed values drop the suffix.
+Format is plain-English UTC: `D MMM YYYY, HH:MM:SS UTC`
+(e.g. `7 May 2026, 18:23:45 UTC`). Locale-independent — month
+abbreviations are hard-coded en-US to avoid DD/MM vs MM/DD ambiguity
+across browsers.
 
 `t` is **independent of `uTime`**. `uTime` is the cosmetic clock that
 drives variable-star pulsation and keeps ticking at

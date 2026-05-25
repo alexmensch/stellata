@@ -73,6 +73,8 @@ export {
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import { StarPipeline } from './star-pipeline/star-pipeline';
+import { BinaryOrbitField } from './binaries/binary-orbit-field';
+import type { BinariesData } from './binaries/binaries-loader';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
 
@@ -282,6 +284,14 @@ export class Stellata implements FrameAnchor {
   // `localPositions` getter so every path stays in the camera's frame.
   private worldOffset = new THREE.Vector3();
   private _localPositions: Float32Array;
+  // Composite-suppress flag per catalog instance. 0 = render normally;
+  // 1 = drop the disc + core depth-mask passes (additive glow still
+  // runs). BinaryOrbitField writes per-frame for sub-pixel secondaries.
+  private _compositeSuppress: Float32Array;
+  // Lazily attached when main.ts loads public/binaries.bin. Null until
+  // then — the renderer functions identically with the static catalog
+  // positions; binary orbital evolution simply doesn't fire.
+  private binaryOrbitField: BinaryOrbitField | null = null;
 
   // Sorted-by-distance-from-Sol index for the core-mask query. Distance
   // from Sol is intrinsic (computed from absolute catalog positions) and
@@ -463,6 +473,7 @@ export class Stellata implements FrameAnchor {
     // since worldOffset is (0,0,0) at construction. Recenter rewrites this
     // in place.
     this._localPositions = new Float32Array(catalog.positions);
+    this._compositeSuppress = new Float32Array(catalog.count);
     // Sort indices by distance from Sol (ascending). The sorted view lets
     // shouldEnableCoreMask() walk only stars whose Sol-distance falls
     // within `[camDistFromSol - dThresh, camDistFromSol + dThresh]` —
@@ -582,6 +593,7 @@ export class Stellata implements FrameAnchor {
       distSol,
       teffApsis,
       localPositions: this._localPositions,
+      compositeSuppress: this._compositeSuppress,
       vertexShader,
       fragmentShader,
       sharedUniforms,
@@ -1084,6 +1096,7 @@ export class Stellata implements FrameAnchor {
     // Each attached host's iHostLocalPos = hostAbs - worldOffset; refresh
     // them so the planet shader sees correct local-frame host positions.
     this.planetBodyField.recenter(newOrigin);
+    this.binaryOrbitField?.recenter(newOrigin);
     return this._recenterDelta.set(dx, dy, dz);
   }
 
@@ -1121,6 +1134,43 @@ export class Stellata implements FrameAnchor {
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
     this.milkyway.attachDust(dust);
+  }
+
+  /** Attach (or replace) the parsed binaries.bin runtime table. Idempotent;
+   *  passing null detaches. From the moment the field is attached every
+   *  frame walks the binary relation list and perturbs the relevant
+   *  star-pipeline `iPosition` slots against `getT()`. */
+  attachBinaries(binaries: BinariesData | null): void {
+    this.binaryOrbitField?.dispose();
+    if (binaries === null) {
+      this.binaryOrbitField = null;
+      return;
+    }
+    this.binaryOrbitField = new BinaryOrbitField({
+      binaries,
+      absolutePositions: this.catalog.positions,
+      absoluteMags: this.catalog.absmag,
+      localPositions: this._localPositions,
+      compositeSuppress: this._compositeSuppress,
+      iPositionAttr: this.starPipeline.iPositionAttr,
+      iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
+    });
+    this.binaryOrbitField.recenter(this.worldOffset);
+  }
+
+  private updateBinaryOrbits(): void {
+    if (!this.binaryOrbitField) return;
+    const uniforms = this.starPipeline.discMaterial.uniforms;
+    const viewport = uniforms.uViewport.value as THREE.Vector2;
+    const fovYRad = uniforms.uFovYRad.value as number;
+    this.binaryOrbitField.update(
+      this.getT(),
+      this.camera.position,
+      this.filter.maxAppMag,
+      viewport.y,
+      fovYRad,
+      this.focus.getFocusedStar(),
+    );
   }
 
   /** User-facing extinction multiplier. 0 disables; 1 = physical realism;
@@ -2127,6 +2177,18 @@ export class Stellata implements FrameAnchor {
     requestAnimationFrame(this.animate);
   };
 
+  // Three layers tick every frame regardless of warp state: orbit
+  // rings, planet bodies, and binary orbit perturbations. All three
+  // read wall-clock t (or per-frame camera state) and need a fresh
+  // update on the warp path too — the warp branch in
+  // updateGalacticLayers calls into this once, the non-warp branch
+  // once, so the trio stays in lockstep with no per-call drift.
+  private updateContinuouslyTickingLayers() {
+    this.orbitRingsLayer.update(this.camera, window.innerHeight);
+    this.planetBodyField.update(this.camera, this.getT());
+    this.updateBinaryOrbits();
+  }
+
   // Drive the disc fade, grid attachment, and arrow projection each frame.
   // All three galactic layers are hidden during a warp — the camera is in
   // motion and their reference function is exactly the kind of context warp
@@ -2141,15 +2203,13 @@ export class Stellata implements FrameAnchor {
       // Orbit rings are focus-only — no warp-destination ring preview.
       // Planet bodies belong to the global PlanetBodyField; they fade
       // in naturally as the camera nears each host's cull distance.
-      this.orbitRingsLayer.update(this.camera, window.innerHeight);
-      this.planetBodyField.update(this.camera, this.getT());
+      this.updateContinuouslyTickingLayers();
       // Cloud layer is currently shelved (CLAUDE.md): visible=false. Flip
       // to true (or restore a FilterState flag) when re-enabling.
       this.clouds?.update(this.worldOffset, false);
       return;
     }
-    this.orbitRingsLayer.update(this.camera, window.innerHeight);
-    this.planetBodyField.update(this.camera, this.getT());
+    this.updateContinuouslyTickingLayers();
 
     // Refresh camera matrices before any SVG projection — controls.update()
     // mutates camera.position/quaternion but doesn't propagate to
@@ -2255,6 +2315,7 @@ export class Stellata implements FrameAnchor {
     this.galacticGrid.dispose();
     this.orbitRingsLayer.dispose();
     this.planetBodyField.dispose();
+    this.binaryOrbitField?.dispose();
     this.heliopause.dispose();
     this.milkyway.dispose();
     // The dust voxel grid is the largest single GPU allocation in the app

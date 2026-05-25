@@ -3,6 +3,7 @@
 
 import type { Stellata } from '../stellata';
 
+
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -29,46 +30,18 @@ export interface TimeReadoutDeps {
   stellata: Stellata;
 }
 
-/** Mount the readout into `el`. Subscribes to planet-system focus
- *  changes and filter changes (for chart mode) to gate visibility;
- *  ticks once per second to refresh the displayed value. Returns a
- *  teardown function for tests / HMR. */
+/** Mount the readout into `el`. Always visible — orbital evolution
+ *  ticks against `Stellata.getT()` in every mode (chart, warp, observe,
+ *  free fly), so the user always benefits from knowing which moment
+ *  the rendered positions correspond to. Ticks once per second to
+ *  refresh the displayed value. Returns a teardown function for
+ *  tests / HMR. */
 export function createTimeReadout({ el, stellata }: TimeReadoutDeps): () => void {
-  let timer: ReturnType<typeof setInterval> | undefined;
-
   const tick = () => {
     el.textContent = formatTimeReadout(stellata.getT());
   };
-
-  const updateVisibility = () => {
-    const visible = stellata.getFocusedPlanetSystem() !== null
-      && !stellata.getFilter().chart
-      && !stellata.getWarpActive();
-    if (el.hidden === !visible) return;
-    el.hidden = !visible;
-    if (visible) {
-      tick();
-      if (timer === undefined) {
-        timer = setInterval(tick, 1000);
-      }
-    } else if (timer !== undefined) {
-      clearInterval(timer);
-      timer = undefined;
-    }
-  };
-
-  const offPlanetSystem = stellata.on('planetSystem', updateVisibility);
-  const offFilter = stellata.on('filter', updateVisibility);
-  const offWarp = stellata.on('warp', updateVisibility);
-  updateVisibility();
-
-  return () => {
-    if (timer !== undefined) {
-      clearInterval(timer);
-      timer = undefined;
-    }
-    offPlanetSystem();
-    offFilter();
-    offWarp();
-  };
+  el.hidden = false;
+  tick();
+  const timer = setInterval(tick, 1000);
+  return () => clearInterval(timer);
 }

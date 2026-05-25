@@ -9,6 +9,9 @@ build scripts, tests, and shader uniforms.
   `R_SUN_PC` / `ARCSEC_TO_RAD` / `J2000_JD` / `DAYS_PER_JULIAN_YEAR`.
   Import from here rather than re-derive — drift between sites is the
   failure mode this module is designed to prevent.
+- `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
+  solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
+  orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `url-state/` — `?v=` URL wire format (v1/v2/v3) and the address-bar
   round-trip.

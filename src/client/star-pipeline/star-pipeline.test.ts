@@ -17,6 +17,7 @@ function makeOpts(count = 4) {
     distSol: new Float32Array(count),
     teffApsis: new Float32Array(count),
     localPositions: new Float32Array(count * 3),
+    compositeSuppress: new Float32Array(count),
     vertexShader: 'void main(){ gl_Position = vec4(0.0); }',
     fragmentShader: 'void main(){}',
     sharedUniforms,
@@ -76,6 +77,16 @@ describe('StarPipeline', () => {
     // Buffer identity preserved — recenterOrigin rewrites this same
     // Float32Array in place and bumps needsUpdate.
     expect(attr.array).toBe(opts.localPositions);
+    expect(attr.usage).toBe(THREE.DynamicDrawUsage);
+  });
+
+  it('binds the caller-owned compositeSuppress buffer to iCompositeSuppress', () => {
+    const opts = makeOpts(3);
+    opts.compositeSuppress.set([1, 0, 1]);
+    const pipe = new StarPipeline(opts);
+    const attr = pipe.geometry.getAttribute('iCompositeSuppress') as THREE.InstancedBufferAttribute;
+    expect(attr).toBe(pipe.iCompositeSuppressAttr);
+    expect(attr.array).toBe(opts.compositeSuppress);
     expect(attr.usage).toBe(THREE.DynamicDrawUsage);
   });
 

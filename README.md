@@ -311,12 +311,14 @@ source CSV has changed) and starts Vite on
 
 ### Other commands
 
-| Command                   | What it does                                           |
-| ------------------------- | ------------------------------------------------------ |
-| `npm run build:catalog`   | Regenerate `public/catalog.bin` from the CSV           |
-| `npm run build:clouds`    | Regenerate `public/clouds.json` from the Zucker tables |
-| `npm run build:dust-sync` | Mirror `data/dust/` voxel chunks to `public/dust/`     |
-| `npm run build`           | Full production build into `dist/`                     |
+| Command                          | What it does                                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run build:binaries`         | Regenerate `data/binaries/multiples.tsv` from WDS / ORB6 / Gaia NSS / SIMBAD              |
+| `npm run build:catalog`          | Regenerate `public/catalog.bin` + `search-index.json` + `catalog-row-index-map.json`      |
+| `npm run build:binaries-runtime` | Regenerate `public/binaries.bin` (runtime artifact for `BinaryOrbitField`)                |
+| `npm run build:clouds`           | Regenerate `public/clouds.json` from the Zucker tables                                    |
+| `npm run build:dust-sync`        | Mirror `data/dust/` voxel chunks to `public/dust/`                                        |
+| `npm run build`                  | Full production build into `dist/` (runs every step above in order)                       |
 | `npm run typecheck`       | `tsc --noEmit` over everything                         |
 | `npm test`                | Run the vitest regression suite                        |
 | `npm run test:coverage`   | Vitest run with v8 coverage report                     |

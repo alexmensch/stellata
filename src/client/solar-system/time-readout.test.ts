@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createTimeReadout, formatTimeReadout } from './time-readout';
 import type { Stellata } from '../stellata';
 
@@ -37,8 +37,6 @@ describe('formatTimeReadout', () => {
 
   it('handles fractional Unix-seconds (truncates to integer second)', () => {
     const t = Date.UTC(2026, 4, 7, 18, 23, 45) / 1000 + 0.7;
-    // The fractional .7s rounds down in Date because Date(ms) takes ms;
-    // 0.7s = 700ms, which is still within the same UTC second.
     expect(formatTimeReadout(t)).toBe('7 May 2026, 18:23:45 UTC');
   });
 
@@ -50,32 +48,40 @@ describe('formatTimeReadout', () => {
   });
 });
 
-describe('createTimeReadout teardown', () => {
-  function makeMockStellata() {
-    const counts = { planetSystem: 0, filter: 0, warp: 0 };
-    const stellata = {
-      on(name: 'planetSystem' | 'filter' | 'warp') {
-        counts[name]++;
-        return () => {
-          counts[name]--;
-        };
-      },
-      getT: () => 0,
-      getFocusedPlanetSystem: () => null,
-      getFilter: () => ({ chart: false }),
-      getWarpActive: () => false,
+describe('createTimeReadout', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function makeMockStellata(t = 946728000) {
+    return {
+      getT: () => t,
     } as unknown as Stellata;
-    return { stellata, counts };
   }
 
-  it('unsubscribes its three bus listeners on teardown', () => {
-    // Vitest runs in Node — no DOM. createTimeReadout only touches
-    // `el.textContent` and `el.hidden`, so a plain object satisfies it.
+  it('always-on: mounts visible regardless of focus / warp / chart state', () => {
     const el = { textContent: '', hidden: true } as unknown as HTMLElement;
-    const { stellata, counts } = makeMockStellata();
+    const stellata = makeMockStellata();
     const teardown = createTimeReadout({ el, stellata });
-    expect(counts).toEqual({ planetSystem: 1, filter: 1, warp: 1 });
+    expect(el.hidden).toBe(false);
+    expect(el.textContent).toBe('1 Jan 2000, 12:00:00 UTC');
     teardown();
-    expect(counts).toEqual({ planetSystem: 0, filter: 0, warp: 0 });
+  });
+
+  it('teardown clears the per-second tick timer', () => {
+    vi.useFakeTimers();
+    const el = { textContent: '', hidden: true } as unknown as HTMLElement;
+    let t = 1_000_000_000;
+    const stellata = { getT: () => t } as unknown as Stellata;
+    const teardown = createTimeReadout({ el, stellata });
+    const initial = el.textContent;
+    t += 60; // 60 s elapsed
+    vi.advanceTimersByTime(1000);
+    expect(el.textContent).not.toBe(initial);
+    teardown();
+    const afterTeardown = el.textContent;
+    t += 60;
+    vi.advanceTimersByTime(5000);
+    expect(el.textContent).toBe(afterTeardown);
   });
 });
