@@ -60,6 +60,36 @@ metadata PRs (e.g. `bd` issue-sync, no shipped code, CI workflow
 edits) can attach the `skip-version-bump` label to opt out — use
 sparingly. PRs without a bump don't redeploy.
 
+### What "no user-visible behaviour change" actually means
+
+"Patch" reads as the floor for any code change, but it isn't:
+internal pipeline / build-script / tooling work whose output is **not
+yet wired into the live deployed app** is a `skip-version-bump`, not
+a patch. The bump rides the PR that wires new code into the live
+consumer, not the PR that adds new code in isolation.
+
+At commit time, ask: **does merging this PR change anything the
+deployed site surfaces by the next push to main?** If no (data
+pipeline output unused by current `build-catalog.ts` /
+`catalog-loader.ts`; refresh-script work producing a TSV the build
+doesn't yet read; CI / tooling / internal docs; partial multi-stage
+rewrites mid-stream):
+
+1. Do NOT bump `package.json#version`.
+2. Attach the `skip-version-bump` label (`gh pr edit <N> --add-label
+   skip-version-bump`).
+3. `release-notes-guard` skips the `## Release notes` check when the
+   label is on, so the section is optional for pure no-bump PRs.
+
+When the wiring lands (a later stage wires earlier-stage output into
+the build → new binary version), **that** PR carries the bump for
+whichever semver tier the cumulative user-visible change deserves.
+
+Multi-bead PRs that mix internal pipeline work with one user-visible
+change: the user-visible change drives the bump tier. Pipeline PR
+that ALSO touches a renderer knob → bump. Pipeline PR that only
+touches scripts / data files unused by the deployed bundle → skip.
+
 ## Catalogue refresh policy
 
 External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +
