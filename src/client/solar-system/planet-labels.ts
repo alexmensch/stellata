@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
+import { setStyle } from '../overlays/dirty-attr';
 
 // Pixel offset from the projected planet centre to the label baseline,
 // applied as both the x and y component (so the diagonal magnitude is
@@ -46,13 +47,16 @@ export function createPlanetLabels(stellata: Stellata): void {
     }
   }
 
-  // Idempotent group-level visibility — avoids touching `style.display`
-  // every idle frame when the overlay is dormant.
-  let groupVisible = false;
+  // Idempotent group-level visibility. Uses dirty-attr's setStyle with a
+  // '\0' poison sentinel rather than a bespoke boolean closure variable,
+  // so the first matching-state write always lands — the SVG container has
+  // no inline `display: none` in index.html, so its effective initial
+  // state is visible, and a boolean sentinel initialised to `false` would
+  // silently no-op on the first `setGroupVisible(false)` call. Same shape
+  // as the heliopause first-load fix (consistency-at-the-seam §3).
+  let lastGroupDisplay = '\0';
   function setGroupVisible(on: boolean): void {
-    if (on === groupVisible) return;
-    group!.style.display = on ? '' : 'none';
-    groupVisible = on;
+    lastGroupDisplay = setStyle(group!, 'display', on ? '' : 'none', lastGroupDisplay);
   }
   setGroupVisible(false);
 

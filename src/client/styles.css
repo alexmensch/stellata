@@ -1086,7 +1086,7 @@ body.monochrome #con-results {
    yield to nothing. The halo is suppressed so the type reads as
    transparent ink rather than competing with star-name labels. */
 #chart-labels .chart-label.kind-con {
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;

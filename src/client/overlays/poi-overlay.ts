@@ -34,11 +34,32 @@ import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 // observe, when the HUD checkbox is off, during warp (CSS rule), and
 // during the navigate↔observe transition.
 
-const MIN_SHAFT_PIXEL_LENGTH = 8;
 // Detection margin: a star within ~40 px of the viewport edge still counts
 // as on-screen so its label survives small look-around drifts without
 // flipping to arrow mode every couple of frames.
-const ON_SCREEN_PULL_IN_PX = 40;
+export const ON_SCREEN_PULL_IN_PX = 40;
+
+/**
+ * Decide whether a projected POI should render as an on-screen label /
+ * ring or as an off-screen arrow chevron on the HUD ring rim. True only
+ * when the projection succeeded AND the point sits inside the viewport
+ * with at least `ON_SCREEN_PULL_IN_PX` margin on every edge — the margin
+ * suppresses the rapid flip between on-screen-label and off-screen-arrow
+ * presentations during small look-around drifts at the viewport edges.
+ */
+export function isPoiOnScreen(
+  projected: [number, number] | null,
+  w: number,
+  h: number,
+): boolean {
+  return (
+    projected !== null &&
+    projected[0] >= ON_SCREEN_PULL_IN_PX &&
+    projected[0] <= w - ON_SCREEN_PULL_IN_PX &&
+    projected[1] >= ON_SCREEN_PULL_IN_PX &&
+    projected[1] <= h - ON_SCREEN_PULL_IN_PX
+  );
+}
 // Per-POI ring around the pinned star — same screen radius as the focus
 // ring so the two read as the same kind of indicator (shared
 // FOCUS_RING_RADIUS_PX). The on-screen label rides just outside this rim
@@ -48,12 +69,7 @@ const ON_SCREEN_PULL_IN_PX = 40;
 const LABEL_RIM_GAP_PX = 6;
 const LABEL_DIAG = (FOCUS_RING_RADIUS_PX + LABEL_RIM_GAP_PX) / Math.SQRT2;
 
-interface Entry {
-  idx: number;
-  arrowPath: SVGPathElement;
-  arrowLabel: SVGTextElement;
-  ring: SVGCircleElement;
-  onScreenLabel: SVGTextElement;
+export interface EntryDirtyState {
   // Dirty-tracked attribute / style state — POI entries persist for the
   // lifetime of the pin, so storing the last-written value lets the per-
   // frame handler skip identical writes during stationary observe
@@ -70,6 +86,55 @@ interface Entry {
   lastOnScreenLabelText: string;
   lastOnScreenLabelX: number;
   lastOnScreenLabelY: number;
+}
+
+interface Entry extends EntryDirtyState {
+  idx: number;
+  arrowPath: SVGPathElement;
+  arrowLabel: SVGTextElement;
+  ring: SVGCircleElement;
+  onScreenLabel: SVGTextElement;
+}
+
+/**
+ * Poison-init values for every per-attribute sentinel on a POI Entry. Used
+ * by createEntry — first-time init wipes every sentinel so the very first
+ * visible frame's writes through the dirty-attr gate all land.
+ */
+export function emptyEntryDirtyState(): EntryDirtyState {
+  return {
+    lastArrowD: '\0',
+    lastArrowLabelDisplay: '\0',
+    lastArrowLabelText: '\0',
+    lastArrowLabelX: NaN,
+    lastArrowLabelY: NaN,
+    lastRingDisplay: '\0',
+    lastRingCx: NaN,
+    lastRingCy: NaN,
+    lastOnScreenLabelDisplay: '\0',
+    lastOnScreenLabelText: '\0',
+    lastOnScreenLabelX: NaN,
+    lastOnScreenLabelY: NaN,
+  };
+}
+
+/**
+ * Wipe the post-hide subset of an Entry's per-attribute sentinels back to
+ * poison. The visible `d` + `display` sentinels are NOT wiped — they pass
+ * through the dirty-attr gate in hideEntry, so the cached value already
+ * reflects the hidden state (`''` for d, `'none'` for display). Used by
+ * hideEntry so the next show-from-hide cycle's first text/x/y/cx/cy write
+ * lands — same shape as hud-overlay's resetArrowSentinels.
+ */
+export function resetEntrySentinels(state: EntryDirtyState): void {
+  state.lastArrowLabelText = '\0';
+  state.lastArrowLabelX = NaN;
+  state.lastArrowLabelY = NaN;
+  state.lastRingCx = NaN;
+  state.lastRingCy = NaN;
+  state.lastOnScreenLabelText = '\0';
+  state.lastOnScreenLabelX = NaN;
+  state.lastOnScreenLabelY = NaN;
 }
 
 export function createPoiOverlay(
@@ -129,18 +194,7 @@ export function createPoiOverlay(
 
     return {
       idx, arrowPath, arrowLabel, ring, onScreenLabel,
-      lastArrowD: '\0',
-      lastArrowLabelDisplay: '\0',
-      lastArrowLabelText: '\0',
-      lastArrowLabelX: NaN,
-      lastArrowLabelY: NaN,
-      lastRingDisplay: '\0',
-      lastRingCx: NaN,
-      lastRingCy: NaN,
-      lastOnScreenLabelDisplay: '\0',
-      lastOnScreenLabelText: '\0',
-      lastOnScreenLabelX: NaN,
-      lastOnScreenLabelY: NaN,
+      ...emptyEntryDirtyState(),
     };
   }
 
@@ -166,25 +220,17 @@ export function createPoiOverlay(
   }
 
   // Hide an entry. The visible d / display writes go through the dirty-
-  // track gate; the remaining numeric + text sentinels are reset to poison
-  // so the next show-from-hide cycle's first write always lands — without
-  // this reset, re-pinning at slightly different geometry could skip the
-  // setAttribute and inherit stale cx/cy/lx/ly from the prior session
-  // (mirrors the heliopause fix in PR #64 and consistency-at-the-seam §3).
+  // track gate; the remaining numeric + text sentinels are wiped via
+  // resetEntrySentinels so the next show-from-hide cycle's first write
+  // always lands — without this reset, re-pinning at slightly different
+  // geometry could skip the setAttribute and inherit stale cx/cy/lx/ly
+  // from the prior session.
   function hideEntry(e: Entry) {
     e.lastArrowD = setStrAttr(e.arrowPath, 'd', '', e.lastArrowD);
     e.lastArrowLabelDisplay = setStyle(e.arrowLabel, 'display', 'none', e.lastArrowLabelDisplay);
     e.lastRingDisplay = setStyle(e.ring, 'display', 'none', e.lastRingDisplay);
     e.lastOnScreenLabelDisplay = setStyle(e.onScreenLabel, 'display', 'none', e.lastOnScreenLabelDisplay);
-    // Wipe per-attribute caches so the next visible frame writes through.
-    e.lastArrowLabelText = '\0';
-    e.lastArrowLabelX = NaN;
-    e.lastArrowLabelY = NaN;
-    e.lastRingCx = NaN;
-    e.lastRingCy = NaN;
-    e.lastOnScreenLabelText = '\0';
-    e.lastOnScreenLabelX = NaN;
-    e.lastOnScreenLabelY = NaN;
+    resetEntrySentinels(e);
   }
 
   // Idempotent show/hide: track visibility so the per-frame handler
@@ -261,13 +307,7 @@ export function createPoiOverlay(
         localPositions[idx * 3 + 2],
       );
       const projected = projectToScreen(tmpStarLocal, camera, w, h);
-
-      const onScreen =
-        projected !== null &&
-        projected[0] >= ON_SCREEN_PULL_IN_PX &&
-        projected[0] <= w - ON_SCREEN_PULL_IN_PX &&
-        projected[1] >= ON_SCREEN_PULL_IN_PX &&
-        projected[1] <= h - ON_SCREEN_PULL_IN_PX;
+      const onScreen = isPoiOnScreen(projected, w, h);
 
       const px = absPos[idx * 3];
       const py = absPos[idx * 3 + 1];
@@ -347,7 +387,7 @@ export function createPoiOverlay(
           if (allowed < shaftLengthPx) shaftLengthPx = allowed;
         }
       }
-      if (shaftLengthPx < MIN_SHAFT_PIXEL_LENGTH) {
+      if (shaftLengthPx <= 0) {
         hideEntry(e);
         continue;
       }
