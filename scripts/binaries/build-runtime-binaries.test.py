@@ -309,7 +309,59 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(flags & brb.FLAG_IS_INNER_OF_HIERARCHY, 0)
 
     def test_has_orbit_flag_set_when_kepler_elements_present(self) -> None:
-        pairs = [_pair(P_days=365.25, T_jd=2451545.0)]
+        pairs = [_pair(
+            P_days=365.25, T_jd=2451545.0,
+            e=0.5, a_AU=10.0, omega_rad=1.0, q=0.5,
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            brb.write_binary(pairs, [brb.NO_PARENT], [0], self._row_map(), out)
+            data = out.read_bytes()
+        off = brb.HEADER_SIZE
+        (flags,) = struct.unpack(
+            "<I",
+            data[off + brb.RECORD_LAYOUT["flags"]:
+                 off + brb.RECORD_LAYOUT["flags"] + 4],
+        )
+        self.assertTrue(flags & brb.FLAG_HAS_ORBIT)
+        self.assertFalse(flags & brb.FLAG_HAS_INCLINATION)
+
+    def test_has_orbit_requires_all_kepler_elements(self) -> None:
+        # P + T alone is not enough — q, a, e, omega all gate has_orbit
+        # because the runtime BinaryOrbitField hits NaN for missing
+        # elements and writes NaN into localPositions[primaryIdx],
+        # poisoning every downstream consumer (chart-mode constellation
+        # centroids, focus ring, distance vector).
+        for missing in ("e", "a_AU", "omega_rad", "q"):
+            kwargs = {
+                "P_days": 365.25, "T_jd": 2451545.0,
+                "e": 0.5, "a_AU": 10.0, "omega_rad": 1.0, "q": 0.5,
+            }
+            kwargs[missing] = None
+            pairs = [_pair(**kwargs)]
+            with tempfile.TemporaryDirectory() as td:
+                out = Path(td) / "binaries.bin"
+                brb.write_binary(pairs, [brb.NO_PARENT], [0], self._row_map(), out)
+                data = out.read_bytes()
+            off = brb.HEADER_SIZE
+            (flags,) = struct.unpack(
+                "<I",
+                data[off + brb.RECORD_LAYOUT["flags"]:
+                     off + brb.RECORD_LAYOUT["flags"] + 4],
+            )
+            self.assertFalse(
+                flags & brb.FLAG_HAS_ORBIT,
+                f"has_orbit must be unset when {missing} is missing",
+            )
+
+    def test_has_orbit_set_with_full_element_set_minus_inclination(self) -> None:
+        # Tier 2 path: P + T + e + a + omega + q present, i_rad absent.
+        # has_orbit=1, has_inclination=0.
+        pairs = [_pair(
+            P_days=365.25, T_jd=2451545.0,
+            e=0.5, a_AU=10.0, omega_rad=1.0, q=0.5,
+            i_rad=None,
+        )]
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / "binaries.bin"
             brb.write_binary(pairs, [brb.NO_PARENT], [0], self._row_map(), out)

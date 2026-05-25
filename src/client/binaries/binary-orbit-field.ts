@@ -240,6 +240,19 @@ export class BinaryOrbitField {
     for (let i = 0; i < relations.length; i++) {
       const r = relations[i];
       if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
+      // binaries.bin invariant restated at the consumer: has_orbit=1
+      // implies all elements needed for ΔR(t) are finite (P, T, e, a,
+      // ω, q — i and Ω fall back to 0 in relationToElements). A record
+      // that violates that contract would drive evaluateDelta to NaN
+      // ΔR every frame and update() would write NaN into
+      // localPositions[primaryIdx], poisoning every downstream
+      // consumer of the primary's position. Skip the cache entry so
+      // the relation stays at its J2000 baseline.
+      if (
+        !Number.isFinite(r.q) || !Number.isFinite(r.aAU)
+        || !Number.isFinite(r.e) || !Number.isFinite(r.pDays)
+        || !Number.isFinite(r.tJd) || !Number.isFinite(r.omegaRad)
+      ) continue;
       const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
       const elements = relationToElements(r);
       let refSkyAU: { northAU: number; eastAU: number } | null = null;

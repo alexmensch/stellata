@@ -104,6 +104,34 @@ describe('BinaryOrbitField construction', () => {
     expect(field.cachedRelations[0].tier).toBe(1);
     expect(field.cachedRelations[1].tier).toBe(1);
   });
+
+  it.each(['q', 'aAU', 'e', 'pDays', 'tJd', 'omegaRad'] as const)(
+    'skips has_orbit relations with NaN %s — stale binaries.bin defence',
+    (field) => {
+      const fx = makeFixture();
+      // Construct a record that violates the binaries.bin invariant:
+      // has_orbit=1 with NaN in a required Kepler element. Without the
+      // buildCache guard, evaluateDelta would yield NaN ΔR each frame
+      // and update() would write NaN into localPositions[primaryIdx],
+      // poisoning every downstream consumer (chart-mode constellation
+      // centroids, focus ring, …).
+      fx.binaries.relations[0][field] = Number.NaN;
+      const f = new BinaryOrbitField(fx);
+      expect(f.cachedRelations).toHaveLength(1);
+      expect(f.cachedRelations[0].relationIdx).toBe(1);
+
+      // Confirm the protection holds at the per-frame seam too: a full
+      // update() over the poisoned relation must leave localPositions
+      // finite at the primary's slot.
+      f.update(
+        0, new THREE.Vector3(0, 0, 0), 10, 1000, Math.PI / 4,
+      );
+      const base = fx.binaries.relations[0].primaryIdx * 3;
+      expect(Number.isFinite(fx.localPositions[base + 0])).toBe(true);
+      expect(Number.isFinite(fx.localPositions[base + 1])).toBe(true);
+      expect(Number.isFinite(fx.localPositions[base + 2])).toBe(true);
+    },
+  );
 });
 
 describe('BinaryOrbitField.update — visibility filters', () => {

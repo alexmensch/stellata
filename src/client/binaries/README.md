@@ -40,7 +40,11 @@ The v1 wire format is the single contract between the Python writer
   Trailing 8 bytes are reserved for forward-compat.
 
 Flag bits on each record (`flags` uint32):
-- `0x1` has_orbit — Kepler elements present (P, T, e, a, ω, Ω all valid).
+- `0x1` has_orbit — every element BinaryOrbitField consumes is finite:
+  P, T, e, a, ω, q. (Ω is optional — `relationToElements` falls back
+  to 0 when absent; only Tier 1 reads it.) `build-runtime-binaries.py`
+  refuses to set this bit when any required element is `None`, so a
+  pair surfacing this flag is guaranteed Kepler-evaluable.
 - `0x2` has_inclination — inclination i_rad is valid (Tier-1 canonical
   Kepler). When unset, runtime uses the galactic-Z fallback orbit normal
   (Tier 2).
