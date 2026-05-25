@@ -822,15 +822,10 @@ export class Stellata implements FrameAnchor {
    *  (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean { return this.orbitRingsLayer.anyOrbitRingVisible(); }
   /** Local-frame positions of the focused host's planets (xyz triples,
-   *  length 3·N), or null if no system is attached. Reads from the
-   *  global PlanetBodyField — overlays must not mutate. Used by
-   *  planet-labels to project bodies to screen space.
-   *
-   *  WARNING: the returned Float32Array is a `subarray` view into
-   *  `PlanetBodyField.bufLocalRel`, invalidated by attach-driven
-   *  capacity grow and by detach-driven tail-shift. Callers must
-   *  re-fetch each frame (planet-labels does this on the `frame`
-   *  event); never cache the slice across frames. */
+   *  length 3·N), or null if no system is attached. Returns a fresh
+   *  Float32Array copy each call (see
+   *  `PlanetBodyField.getHostLocalPositions`) — safe to cache across
+   *  frames; the value semantics survive attach grow / detach shift. */
   getFocusedPlanetLocalPositions(): Float32Array | null {
     const ps = this.focus.getFocusedPlanetSystem();
     if (!ps) return null;

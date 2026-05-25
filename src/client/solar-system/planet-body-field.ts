@@ -314,26 +314,25 @@ export class PlanetBodyField {
   }
 
   /**
-   * Read-only slice of the focused host's planet local-frame positions.
-   * Layout: 3 floats per planet, ordering matches PlanetSystem.planets.
-   * Returns null when the host isn't attached.
+   * Fresh-copy snapshot of the focused host's planet local-frame
+   * positions. Layout: 3 floats per planet, ordering matches
+   * PlanetSystem.planets. Returns null when the host isn't attached.
    *
    * The planet-labels overlay reads this so labels project to the same
    * positions the body shader renders at, without re-running the
    * Keplerian math itself.
    *
-   * WARNING: the returned view is a `subarray` of the internal
-   * `bufLocalRel`, invalidated by capacity grow (any `attachHost` that
-   * overflows the current allocation reallocates the backing buffer)
-   * and by `detachHost` (the tail-shift relocates the host's slot).
-   * Callers MUST re-fetch each frame; never cache the slice across
-   * frames. `planet-labels.ts` already re-fetches per frame, which
-   * keeps the overlay correct under bk5's dynamic exoplanet attaches.
+   * Returns a Float32Array `.slice()` (copy), not a `.subarray()`
+   * view — the copy survives attach-driven capacity grow and
+   * detach-driven tail-shift, so callers can hold a cached reference
+   * without silently reading stale data the next frame. The allocation
+   * cost is ~3·count·4 bytes per call (108 B at Sol scale), dwarfed by
+   * the projection math that follows.
    */
   getHostLocalPositions(hostStarIdx: number): Float32Array | null {
     const host = this.hosts.get(hostStarIdx);
     if (!host) return null;
-    return this.bufLocalRel.subarray(
+    return this.bufLocalRel.slice(
       host.startInstance * 3,
       (host.startInstance + host.count) * 3,
     );

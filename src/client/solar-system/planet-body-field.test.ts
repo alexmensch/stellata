@@ -216,6 +216,51 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('getHostLocalPositions returns a copy that survives capacity grow', () => {
+    // Pin the value-semantics contract structurally. If a future
+    // refactor swaps `.slice()` back to `.subarray()` to save the
+    // allocation, this test fails because the cached reference would
+    // become a view into the orphaned old buffer and read [0,0,0]
+    // (the original allocation is GC'd / overwritten depending on
+    // how growCapacity is implemented).
+    const f = new PlanetBodyField(makeSharedUniforms());
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1 })],
+        positionsAt: (_t, out) => { out[0] = 0.42; out[1] = -1.5; out[2] = 7; },
+      },
+      4.83,
+      new THREE.Vector3(),
+      0,
+      0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hosts = (f as any).hosts as Map<number, { orientation: THREE.Quaternion }>;
+    hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera();
+    f.update(camera, 0);
+
+    const cached = f.getHostLocalPositions(0)!;
+    expect(cached[0]).toBeCloseTo(0.42, 6);
+    expect(cached[1]).toBeCloseTo(-1.5, 6);
+    expect(cached[2]).toBeCloseTo(7,    6);
+
+    // Force growCapacity by overflowing the initial allocation.
+    // INITIAL_CAPACITY = 16, so 20 single-planet hosts trigger one grow.
+    for (let i = 1; i < 20; i++) {
+      f.attachHost(i, makePlanetSystem(i, 1), 4.83, new THREE.Vector3(), 0, 0);
+    }
+    // Cached reference must still read the original values — the
+    // backing buffer has been reallocated, but `.slice()` decoupled
+    // us from it.
+    expect(cached[0]).toBeCloseTo(0.42, 6);
+    expect(cached[1]).toBeCloseTo(-1.5, 6);
+    expect(cached[2]).toBeCloseTo(7,    6);
+    f.dispose();
+  });
+
   it('grows capacity when many hosts attach beyond the initial budget', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     // Initial capacity is 16; attach 20 single-planet hosts.
