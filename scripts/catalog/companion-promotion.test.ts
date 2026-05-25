@@ -769,6 +769,185 @@ describe('promoteCompanions', () => {
     expect(newStars[0].proper).toBeNull();
   });
 
+  it('promotes a pair-row primary that never appears as a secondary (40 Eri B class)', () => {
+    // 40 Eri's WDS rows: A,BC has A primary + BC compound secondary
+    // (dropped, no ID); AC has A primary + C secondary (C promoted);
+    // BC has B primary + C secondary (B is a pair-row primary that
+    // never appears as a secondary in any cursor). Without the
+    // pair-row-primary escape, B never gets promoted and the BC
+    // orbital pair can't resolve in build-runtime-binaries.
+    const keid: Star = makeStar({
+      gaiaSourceId: '3195919528989223040', hip: 19849,
+      absmag: 5.931, proper: 'Keid',
+      x: 2.191467, y: 4.455210, z: -0.668480,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '04153-0739-AC', comp: 'A',
+        gaiaSourceId: '3195919528989223040', hip: 19849,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, name: 'Keid', source: 'athyg',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-AC', comp: 'C',
+        gaiaSourceId: '3195919254111314816', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, ci: 0.82, spect: 'M4.5V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BC', comp: 'B',
+        gaiaSourceId: '3195919254111315712', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.0, spect: 'DA2.9',
+        photometryVia: 'athyg_own', name: '',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BC', comp: 'C',
+        gaiaSourceId: '3195919254111314816', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.82, spect: 'M4.5V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [keid], CONSTELLATIONS);
+    // Both C (via AC group) AND B (via BC group's pair-row-primary escape)
+    // get promoted. C in the BC group is skipped — already promoted.
+    expect(stats.promoted).toBe(2);
+    expect(newStars).toHaveLength(2);
+    const byGaia = new Map(newStars.map(s => [s.gaiaSourceId, s]));
+    const b = byGaia.get('3195919254111315712');
+    const c = byGaia.get('3195919254111314816');
+    expect(b, 'B promoted').toBeDefined();
+    expect(c, 'C promoted').toBeDefined();
+    if (!b || !c) return;
+    expect(b.proper).toBe('Keid B');
+    expect(c.proper).toBe('Keid C');
+    // B sits at the WDS-root anchor (Keid's xyz) — sep+PA from the AB
+    // pair isn't available in 40 Eri's WDS rows, so collocation on the
+    // anchor is the best static position; BinaryOrbitField overlays
+    // orbital motion at runtime.
+    expect(b.x).toBeCloseTo(keid.x, 6);
+    expect(b.y).toBeCloseTo(keid.y, 6);
+    expect(b.z).toBeCloseTo(keid.z, 6);
+  });
+
+  it('reuses a freshly-promoted pair-row primary as the anchor for later sub-pair groups', () => {
+    // 40 Eri's BD group has B as primary again. By the time we reach
+    // BD, B was promoted in BC. The BD secondary D must find B via the
+    // promoted-record lookup (otherwise D would also need the
+    // pair-row-primary escape, which doesn't apply to D since D never
+    // appears as a primary).
+    const keid: Star = makeStar({
+      gaiaSourceId: '3195919528989223040', hip: 19849,
+      absmag: 5.931, proper: 'Keid',
+      x: 2.191467, y: 4.455210, z: -0.668480,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '04153-0739-AC', comp: 'A',
+        gaiaSourceId: '3195919528989223040', hip: 19849,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, name: 'Keid', source: 'athyg',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BC', comp: 'B',
+        gaiaSourceId: '3195919254111315712', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.0, spect: 'DA2.9',
+        photometryVia: 'athyg_own', name: '',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BC', comp: 'C',
+        gaiaSourceId: '3195919254111314816', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.82, spect: 'M4.5V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BD', comp: 'B',
+        gaiaSourceId: '3195919254111315712', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.0, spect: 'DA2.9',
+        photometryVia: 'athyg_own', name: '',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-BD', comp: 'D',
+        gaiaSourceId: '3196027418567684992', hip: null,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 1.5, spect: 'M5V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [keid], CONSTELLATIONS);
+    // C, B, D all promoted. Only one B record (the BD group's "B primary"
+    // hits the promoted lookup and short-circuits the escape).
+    const gaiaIds = newStars.map(s => s.gaiaSourceId).sort();
+    expect(gaiaIds).toEqual([
+      '3195919254111314816',  // C
+      '3195919254111315712',  // B
+      '3196027418567684992',  // D
+    ].sort());
+    // D's name composes through Keid (via B→Keid chain... actually D's
+    // primary in BD is B, and B's proper is "Keid B", so composeCompanionName
+    // gets base="Keid B" → "Keid B D". Reasonable for now; sibling-pair
+    // bead can tighten if the form looks wrong in practice.
+    const d = newStars.find(s => s.gaiaSourceId === '3196027418567684992');
+    expect(d?.proper).toMatch(/^Keid B/);
+  });
+
+  it('skips pair-row-primary promotion when the row has no own gaia AND no own hip', () => {
+    // Defensive: a pair-row primary without an identifier can't be
+    // addressed post-promotion. Falls through with no escape; the
+    // cursor's secondaries proceed without an anchor, and most drop
+    // for lack of a primary's catalog row.
+    const keid: Star = makeStar({
+      gaiaSourceId: '3195919528989223040', hip: 19849,
+      absmag: 5.931, proper: 'Keid',
+      x: 2.191467, y: 4.455210, z: -0.668480,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '04153-0739-AC', comp: 'A',
+        gaiaSourceId: '3195919528989223040', hip: 19849,
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 5.931, name: 'Keid', source: 'athyg',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
+      }),
+      multiplesRow({
+        systemId: '04153-0739-XY', comp: 'X',
+        gaiaSourceId: null, hip: null,  // no own ID
+        x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
+        absmag: 11.0, ci: 0.0, spect: '',
+        photometryVia: 'athyg_own', name: '',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.0,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [keid], CONSTELLATIONS);
+    // No promotion for the no-ID X primary.
+    expect(newStars.find(s => s.proper === 'Keid X')).toBeUndefined();
+  });
+
   it('skips standalone-role rows (orbit_role !== "secondary")', () => {
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
