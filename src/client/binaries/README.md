@@ -122,10 +122,23 @@ Beyond that, the screen-separation gate fires before Kepler runs:
 ## Hierarchical walk
 
 Inner pairs (Algol Aa1↔Aa2 inside Aa↔Ab) walk after their parent in
-topological order. Each relation reads primary's CURRENT
-`localPositions` slot — which may have been perturbed by the parent —
-as the anchor for adding its own `−q·ΔR` perturbation. Secondaries
-reset to the J2000-minus-worldOffset baseline at the top of each
-update() pass, so they only carry the relation's own perturbation
-(grandchild secondary motion under the outer barycentre is bounded by
-the outer perturbation magnitude — typically sub-mas).
+topological order. Each relation reads the primary's CURRENT
+`localPositions` slot as the anchor — for a hierarchical inner pair
+that anchor already carries the parent pair's `−q·ΔR_outer`
+perturbation. The secondary slot then takes
+`local[pBase] + (abs[sBase] − abs[pBase]) + ΔR` so the secondary
+inherits the SAME parent perturbation the primary carries; the inner
+pair's relative offset stays clean of the parent. (`sCoeff − pCoeff =
+1` in every regime — focal-pin or barycentric split — so a single
+formula covers both.)
+
+When the focal star IS the inner-pair secondary (focal=sIdx), the
+walk uses the absolute baseline instead of the current local[pBase]
+so the focal-pin re-centres on the inner pair's orbital frame and
+absorbs the parent's barycentric shift. The inner pair physically
+moves rigidly under the outer barycentre, and pinning on the inner
+secondary reflects that: from Aa2's viewpoint, Aa1 sits at −ΔR_inner
+regardless of outer phase. Without this branch the parent's
+perturbation on Aa1 would leak into the displacement as a
+parent-period oscillation of ~q_outer·a_outer in magnitude (~1 AU for
+Algol's Aa↔Ab; 18× the inner-pair semi-major).

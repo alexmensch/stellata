@@ -299,6 +299,130 @@ describe('BinaryOrbitField.update — hierarchical walk', () => {
   });
 });
 
+describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
+  // Algol-shaped fixture: outer pair (Aa↔Ab, P≈680d, a≈2.8 AU) plus
+  // inner spectroscopic pair (Aa1↔Aa2, P≈2.87d, a≈0.06 AU) sharing the
+  // primary slot. Aa1 (catalog idx 0) is the shared primary; Aa2
+  // (catalog idx 1) is collocated with Aa1 (synth-promotion); Ab
+  // (catalog idx 2) lives at the published sep+PA. The inner pair's
+  // relative offset must come out as ΔR_inner regardless of the outer
+  // pair's current phase — otherwise the parent's barycentric shift on
+  // Aa leaks into the inner-pair displacement as a ~q_outer·a_outer
+  // oscillation (~1.1 AU contamination on Algol's 0.06 AU inner orbit).
+  function makeAlgolFixture() {
+    const positions = new Float32Array([
+      2.64, 0, 0,   // 0: Aa1 (shared inner+outer primary)
+      2.64, 0, 0,   // 1: Aa2 (inner secondary, collocated)
+      2.64, 1e-5, 0, // 2: Ab (outer secondary, slight offset)
+    ]);
+    const mags = new Float32Array([2.1, 6.0, 3.4]);
+    const local = new Float32Array(positions);
+    const suppress = new Float32Array(3);
+    const outer: BinaryRelation = {
+      primaryIdx: 0, secondaryIdx: 2,
+      flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION,
+      parentRelation: NO_PARENT,
+      pDays: 680.0, tJd: J2000_JD, e: 0.0, aAU: 2.8,
+      iRad: 1.4, omegaRad: 0.5, OmegaRad: 0.0,
+      q: 0.4,
+      sepArcsec: 0.1, paDeg: 90.0, sepPaEpochJd: J2000_JD,
+    };
+    const inner: BinaryRelation = {
+      primaryIdx: 0, secondaryIdx: 1,
+      flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION | FLAG_IS_INNER_OF_HIERARCHY,
+      parentRelation: 0,
+      pDays: 2.87, tJd: J2000_JD, e: 0.0, aAU: 0.06,
+      iRad: 1.7, omegaRad: 0.0, OmegaRad: 0.0,
+      q: 0.5,
+      sepArcsec: 0.001, paDeg: 0.0, sepPaEpochJd: J2000_JD,
+    };
+    const binaries: BinariesData = {
+      version: 1,
+      relations: [outer, inner],
+      primaryIdxToRelations: new Map([[0, [0, 1]]]),
+      secondaryIdxToRelation: new Map([[1, 1], [2, 0]]),
+    };
+    const iPositionAttr = new THREE.InstancedBufferAttribute(local, 3);
+    const iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(suppress, 1);
+    return {
+      binaries,
+      absolutePositions: positions,
+      absoluteMags: mags,
+      localPositions: local,
+      compositeSuppress: suppress,
+      iPositionAttr,
+      iCompositeSuppressAttr,
+    };
+  }
+
+  // Inner pair's displacement envelope (e=0 ⇒ |R(t)−R(J2000)| ≤ 2·a).
+  // 1 AU = 1/206265 pc.
+  const INNER_DISPLACEMENT_PC = 2 * 0.06 * (1 / 206264.806);
+  // Outer pair's primary-side perturbation envelope: q·2·a.
+  // Pre-fix this leaked into the inner-pair displacement as the bug.
+  const OUTER_PERTURB_PC = 0.4 * 2 * 2.8 * (1 / 206264.806);
+  // Camera ~0.0001 pc (~20 AU) from the primary so the inner pair's
+  // 0.06 AU envelope clears SUB_PIXEL_THRESHOLD_PX. At Algol's true
+  // 28 pc distance the inner pair is too compact to render its orbit
+  // anyway — peak ~2 mas — so a contrived close-camera is what
+  // exercises the hierarchical walk.
+  const closeCamera = new THREE.Vector3(2.6399, 0, 0);
+  // Pick t so outer is at peak parent perturbation (¼ period off
+  // periapsis for a circular orbit).
+  const tQuarter = (J2000_JD - 2440587.5) * 86400 + (680 / 4) * 86400;
+
+  it('inner-pair relative offset stays ~ΔR_inner regardless of outer phase (no focal)', () => {
+    const fx = makeAlgolFixture();
+    const field = new BinaryOrbitField(fx);
+    field.update(tQuarter, closeCamera, 15, 1080, 0.8);
+    const innerSep = Math.hypot(
+      fx.localPositions[3] - fx.localPositions[0],
+      fx.localPositions[4] - fx.localPositions[1],
+      fx.localPositions[5] - fx.localPositions[2],
+    );
+    // Tight bound: ≤ a·(1+e) plus a small float-residue margin. Must
+    // stay well below the outer-trace magnitude (where the pre-fix bug
+    // landed it).
+    expect(innerSep).toBeLessThanOrEqual(INNER_DISPLACEMENT_PC * 1.05);
+    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
+  });
+
+  it('inner-pair offset clean when focal=inner secondary (Aa2 pin absorbs outer shift)', () => {
+    const fx = makeAlgolFixture();
+    const field = new BinaryOrbitField(fx);
+    field.update(tQuarter, closeCamera, 15, 1080, 0.8, 1);
+    // Aa2 (idx 1) must stay pinned at its J2000 baseline.
+    expect(fx.localPositions[3]).toBeCloseTo(fx.absolutePositions[3], 10);
+    expect(fx.localPositions[4]).toBeCloseTo(fx.absolutePositions[4], 10);
+    expect(fx.localPositions[5]).toBeCloseTo(fx.absolutePositions[5], 10);
+    // Aa1's position should be at −ΔR_inner from Aa2 — outer perturbation
+    // absorbed by the focal-pin.
+    const innerSep = Math.hypot(
+      fx.localPositions[3] - fx.localPositions[0],
+      fx.localPositions[4] - fx.localPositions[1],
+      fx.localPositions[5] - fx.localPositions[2],
+    );
+    expect(innerSep).toBeLessThanOrEqual(INNER_DISPLACEMENT_PC * 1.05);
+    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
+  });
+
+  it('inner-pair offset clean when focal=inner primary (Aa1 pin)', () => {
+    const fx = makeAlgolFixture();
+    const field = new BinaryOrbitField(fx);
+    field.update(tQuarter, closeCamera, 15, 1080, 0.8, 0);
+    // Aa1 (idx 0) stays pinned at baseline.
+    expect(fx.localPositions[0]).toBeCloseTo(fx.absolutePositions[0], 10);
+    expect(fx.localPositions[1]).toBeCloseTo(fx.absolutePositions[1], 10);
+    expect(fx.localPositions[2]).toBeCloseTo(fx.absolutePositions[2], 10);
+    const innerSep = Math.hypot(
+      fx.localPositions[3] - fx.localPositions[0],
+      fx.localPositions[4] - fx.localPositions[1],
+      fx.localPositions[5] - fx.localPositions[2],
+    );
+    expect(innerSep).toBeLessThanOrEqual(INNER_DISPLACEMENT_PC * 1.05);
+  });
+});
+
 describe('BinaryOrbitField.recenter', () => {
   it('writes positions in the new local frame on next update', () => {
     const fx = makeFixture();

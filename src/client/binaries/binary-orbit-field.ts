@@ -198,27 +198,38 @@ export class BinaryOrbitField {
       // drifts to a non-zero perturbation and overlays (focus ring,
       // distance vector, hover) project to a point separated from the
       // rendered disc.
-      let pCoeff: number;
-      let sCoeff: number;
-      if (focalIdx === pIdx) {
-        pCoeff = 0;
-        sCoeff = 1;
-      } else if (focalIdx === sIdx) {
-        pCoeff = -1;
-        sCoeff = 0;
+      if (focalIdx === sIdx) {
+        // Pin secondary at its J2000 baseline. For an inner pair sharing
+        // its primary with a parent relation, aPx carries the parent's
+        // accumulated perturbation; using baseline_pri (not aPx) as the
+        // primary's anchor lets the focal-pin absorb the parent's
+        // barycentric shift, which is the physical truth (the inner pair
+        // moves rigidly under the outer barycentre).
+        local[pBase + 0] = (abs[pBase + 0] - wox) - dxDelta;
+        local[pBase + 1] = (abs[pBase + 1] - woy) - dyDelta;
+        local[pBase + 2] = (abs[pBase + 2] - woz) - dzDelta;
+        local[sBase + 0] = abs[sBase + 0] - wox;
+        local[sBase + 1] = abs[sBase + 1] - woy;
+        local[sBase + 2] = abs[sBase + 2] - woz;
       } else {
-        const q = rc.elements.q;
-        pCoeff = -q;
-        sCoeff = 1 - q;
+        // pCoeff drives the primary's perturbation; the secondary then
+        // tracks the primary's resulting position plus the absolute
+        // baseline separation plus the full orbital ΔR. The barycentric
+        // split (sCoeff = 1 − q for non-focal) and focal-rebase (sCoeff = 1
+        // for focal=primary) both fall out of this formulation without
+        // a second coefficient: sCoeff − pCoeff = 1 in every regime.
+        // Hierarchical inner pairs propagate cleanly — aPx carries the
+        // parent's perturbation, so both the inner primary AND inner
+        // secondary inherit it, and the inner pair's relative offset
+        // stays clean of the outer perturbation.
+        const pCoeff = focalIdx === pIdx ? 0 : -rc.elements.q;
+        local[pBase + 0] = aPx + dxDelta * pCoeff;
+        local[pBase + 1] = aPy + dyDelta * pCoeff;
+        local[pBase + 2] = aPz + dzDelta * pCoeff;
+        local[sBase + 0] = local[pBase + 0] + (abs[sBase + 0] - abs[pBase + 0]) + dxDelta;
+        local[sBase + 1] = local[pBase + 1] + (abs[sBase + 1] - abs[pBase + 1]) + dyDelta;
+        local[sBase + 2] = local[pBase + 2] + (abs[sBase + 2] - abs[pBase + 2]) + dzDelta;
       }
-      local[pBase + 0] = aPx + dxDelta * pCoeff;
-      local[pBase + 1] = aPy + dyDelta * pCoeff;
-      local[pBase + 2] = aPz + dzDelta * pCoeff;
-      // Secondary's slot still holds the J2000-minus-worldOffset baseline
-      // from the reset pass above; secondary moves additively from there.
-      local[sBase + 0] += dxDelta * sCoeff;
-      local[sBase + 1] += dyDelta * sCoeff;
-      local[sBase + 2] += dzDelta * sCoeff;
     }
 
     this.opts.iPositionAttr.needsUpdate = true;
