@@ -81,11 +81,21 @@ class MultiplesPair:
     elements the runtime layer evaluates. Missing-Kepler-elements rows
     keep the float fields as ``None`` and the binary writer encodes them
     as NaN.
+
+    ``primary_comp`` / ``secondary_comp`` carry the raw ``comp`` cell
+    from each side's multiples.tsv row — the exact string Stage 6 emitted.
+    ``_split_components(components)`` re-anchors WDS-truncated forms
+    (``"Aa1,2" → ("Aa1", "Aa2")``) for parent-relation walks, but
+    companion-promotion mints synth IDs from the raw cell ("2" here),
+    so the runtime resolver must use the same raw cells when composing
+    its synth lookup key.
     """
 
     system_id: str
     wds_id: str          # everything left of the final "-"
     components: str       # everything right of the final "-"
+    primary_comp: str    # raw ``comp`` cell of the primary row
+    secondary_comp: str  # raw ``comp`` cell of the secondary row
     primary_gaia: str | None
     primary_hip: int | None
     secondary_gaia: str | None
@@ -170,6 +180,8 @@ def load_pairs(path: Path) -> list[MultiplesPair]:
             system_id=sys_id,
             wds_id=wds_id,
             components=components,
+            primary_comp=p[idx["comp"]].strip(),
+            secondary_comp=s[idx["comp"]].strip(),
             primary_gaia=_parse_gaia(p[idx["gaia_source_id"]]),
             primary_hip=_parse_int(p[idx["hip"]]),
             secondary_gaia=_parse_gaia(s[idx["gaia_source_id"]]),
@@ -195,26 +207,48 @@ class RowIndexMap:
 
     by_gaia: dict[str, int]
     by_hip: dict[int, int]
+    by_synth: dict[str, int]
 
 
 def load_row_index_map(path: Path) -> RowIndexMap:
     raw = json.loads(path.read_text())
     by_gaia: dict[str, int] = dict(raw.get("byGaia", {}))
     by_hip: dict[int, int] = {int(k): v for k, v in raw.get("byHip", {}).items()}
-    return RowIndexMap(by_gaia=by_gaia, by_hip=by_hip)
+    by_synth: dict[str, int] = dict(raw.get("bySynth", {}))
+    return RowIndexMap(by_gaia=by_gaia, by_hip=by_hip, by_synth=by_synth)
+
+
+def synthetic_id(wds_id: str, comp: str) -> str | None:
+    """Build the synthetic identifier used by companion-promotion for
+    rows that carry no own gaia/hip (Algol Ab). Returns ``None`` when
+    either side is empty — the row is then unaddressable through this
+    path and the caller must drop the pair."""
+    c = comp.strip()
+    if not c or not wds_id:
+        return None
+    return f"synth-{wds_id}-{c}"
 
 
 def resolve_idx(
-    gaia: str | None, hip: int | None, m: RowIndexMap,
+    gaia: str | None,
+    hip: int | None,
+    synth_key: str | None,
+    m: RowIndexMap,
 ) -> int | None:
-    """Catalog row resolution: Gaia source_id beats HIP. HIP-only is the
-    fallback (Sirius / Vega / Procyon and friends saturated in Gaia)."""
+    """Catalog row resolution: Gaia source_id beats HIP, HIP beats the
+    synthetic-ID fallback. The synth path covers promoted companions that
+    have no own gaia and (after the inherited-HIP escape) no addressable
+    hip — Algol Ab is the canonical case."""
     if gaia is not None:
         hit = m.by_gaia.get(gaia)
         if hit is not None:
             return hit
     if hip is not None:
-        return m.by_hip.get(hip)
+        hit = m.by_hip.get(hip)
+        if hit is not None:
+            return hit
+    if synth_key is not None:
+        return m.by_synth.get(synth_key)
     return None
 
 
@@ -370,12 +404,26 @@ def write_binary(
     pair's position in the EMITTED order, not the input order."""
     # Pre-resolve every pair so we know which ones are emittable. Pairs
     # whose primary or secondary doesn't resolve to a catalog row are
-    # dropped — the runtime layer can't address them.
+    # dropped — the runtime layer can't address them. The synthetic-ID
+    # fallback addresses promoted companions whose own gaia/hip both
+    # miss the row-index map (Algol Ab); compose the key from the pair's
+    # wds_id + component letter.
     resolved_primary: list[int | None] = []
     resolved_secondary: list[int | None] = []
     for p in pairs:
-        resolved_primary.append(resolve_idx(p.primary_gaia, p.primary_hip, row_map))
-        resolved_secondary.append(resolve_idx(p.secondary_gaia, p.secondary_hip, row_map))
+        # Synth keys mirror the raw `comp` cells Stage 6 emitted, since
+        # companion-promotion minted its IDs from those same cells. WDS
+        # prefix truncation ("Aa1,2") means the parsed-from-components
+        # token ("Aa2") differs from the raw cell ("2"); the catalog
+        # carries the raw form, so the runtime must too.
+        primary_synth = synthetic_id(p.wds_id, p.primary_comp)
+        secondary_synth = synthetic_id(p.wds_id, p.secondary_comp)
+        resolved_primary.append(
+            resolve_idx(p.primary_gaia, p.primary_hip, primary_synth, row_map),
+        )
+        resolved_secondary.append(
+            resolve_idx(p.secondary_gaia, p.secondary_hip, secondary_synth, row_map),
+        )
 
     # Walk in topological order; for each emittable pair, record its
     # output index so parent_relation can be remapped from input-index
@@ -553,7 +601,8 @@ def run(force: bool) -> int:
     row_map = load_row_index_map(SRC_ROW_INDEX_MAP)
     log(
         f"loaded row-index map: {len(row_map.by_gaia):,} Gaia entries, "
-        f"{len(row_map.by_hip):,} HIP entries"
+        f"{len(row_map.by_hip):,} HIP entries, "
+        f"{len(row_map.by_synth):,} synthetic entries"
     )
 
     parents = assign_parent_relations(pairs)

@@ -182,6 +182,7 @@ async function main() {
     spectralFallback: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
+    companionPromotedSynthetic: 0,
     companionAlreadyInCatalog: 0,
     companionDroppedNoIdentifier: 0,
     companionDroppedNoPosition: 0,
@@ -306,7 +307,8 @@ async function main() {
     const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars);
     for (const ns of newStars) stars.push(ns);
     console.log(
-      `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted}; ` +
+      `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
+        `(${ps.promotedSynthetic} via synthetic ID); ` +
         `already-in-catalog ${ps.alreadyInCatalog}; ` +
         `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
         `no-position=${ps.droppedNoPosition}, no-absmag=${ps.droppedNoAbsmag}, ` +
@@ -314,6 +316,7 @@ async function main() {
     );
     counts.companionRowsScanned = ps.pairRowsScanned;
     counts.companionPromoted = ps.promoted;
+    counts.companionPromotedSynthetic = ps.promotedSynthetic;
     counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
     counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
     counts.companionDroppedNoPosition = ps.droppedNoPosition;
@@ -543,12 +546,15 @@ async function main() {
   // Catalog row-index map sidecar — lets the runtime binaries loader
   // resolve a multiples.tsv row's identifier to a catalog.bin record
   // index without scanning every record at startup. Keyed by Gaia DR3
-  // source_id (decimal string, since source_ids exceed 2^53) and HIP.
+  // source_id (decimal string, since source_ids exceed 2^53), HIP, and
+  // synthetic identifier (`synth-<wds_id>-<comp>` for promoted companions
+  // that carry no real ID — Algol Ab).
   const rowIndexMap = buildCatalogRowIndexMap(stars);
   await writeFile(OUT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
   console.log(
     `Wrote ${OUT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
-      `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries)`,
+      `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
+      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );
 
   const figureCount = [...figureLines.values()].reduce(

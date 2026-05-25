@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import {
   FLAG_HAS_NAME,
   FLAG_BINARY_COMPANION_ONLY,
+  FLAG_BINARY_COMPANION_SYNTHETIC,
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
@@ -220,7 +221,12 @@ export interface PromotionStats {
   alreadyInCatalog: number;
   /** Newly minted companion records added to the catalog. */
   promoted: number;
-  /** Dropped because no identifier (gaia + hip both blank). */
+  /** Subset of `promoted` whose only identifier is a synthetic key
+   *  (`synth-<wds_id>-<comp>`) because the row carried no own gaia and
+   *  no non-inherited hip. */
+  promotedSynthetic: number;
+  /** Dropped because no identifier (gaia + hip both blank) AND no
+   *  synthetic key could be composed (system_id has no dash, comp empty). */
   droppedNoIdentifier: number;
   /** Dropped because no anchor — neither own astrometry nor sep+PA. */
   droppedNoPosition: number;
@@ -236,11 +242,30 @@ export function emptyPromotionStats(): PromotionStats {
     pairRowsScanned: 0,
     alreadyInCatalog: 0,
     promoted: 0,
+    promotedSynthetic: 0,
     droppedNoIdentifier: 0,
     droppedNoPosition: 0,
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
   };
+}
+
+/** Synthetic identifier minted for promoted secondaries whose pair-row
+ *  carries no own Gaia source_id and no non-inherited HIP. Format:
+ *  `synth-<wds_id>-<comp>`. Indexed in the row-index map's `bySynth`
+ *  table so build-runtime-binaries can resolve the secondary side of
+ *  pairs like Algol Aa,Ab whose Ab cell has neither Gaia nor HIP. */
+export function composeSyntheticId(
+  systemId: string,
+  comp: string,
+): string | null {
+  const c = comp.trim();
+  if (!c) return null;
+  const dash = systemId.lastIndexOf('-');
+  if (dash < 0) return null;
+  const wdsId = systemId.slice(0, dash);
+  if (!wdsId) return null;
+  return `synth-${wdsId}-${c}`;
 }
 
 interface ExistingIndexes {
@@ -469,8 +494,12 @@ export function promoteCompanions(
   // reference the same secondary (e.g. Sirius A appears as primary in
   // 06451-1643-AB AND would have been "primary" again if WDS broke the
   // same components into a sub-pair) don't get double-promoted.
+  // promotedSynth dedupes synthetic-ID promotions across the same build
+  // run — a (wds_id, comp) pair appearing in multiple rows resolves to a
+  // single catalog record.
   const promotedGaia = new Set<string>();
   const promotedHip = new Set<number>();
+  const promotedSynth = new Set<string>();
 
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
@@ -494,9 +523,16 @@ export function promoteCompanions(
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') continue;
       stats.pairRowsScanned++;
-      // Identifier check — skip if both gaia + hip blank. The row exists
-      // in multiples.tsv but has no way to be addressed by runtime code.
-      if (row.gaiaSourceId === null && (row.hip === null || row.hip <= 0)) {
+      // Synthetic-ID candidate, used as a last-resort identifier when the
+      // row carries neither own gaia nor non-inherited hip. Compute up
+      // front so the "is the final record addressable?" gate has the same
+      // information at every decision point below.
+      const synthId = composeSyntheticId(row.systemId, row.comp);
+      const rowHasOwnHip = row.hip !== null && row.hip > 0;
+      // Identifier check — drop only when no real ID AND no synth fallback
+      // can be composed. Algol Ab carries gaia=null + hip=null + a valid
+      // (wds_id, comp) pair, so it survives via the synthetic-ID path.
+      if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
         stats.droppedNoIdentifier++;
         continue;
       }
@@ -504,22 +540,27 @@ export function promoteCompanions(
       // row matches the primary's catalog record on HIP, that's the
       // inheritance-collision case (Hipparcos resolved A+B as one star),
       // not a real "already in catalog" hit — promotion should proceed.
-      const existingIdx = findExisting(row, existing);
-      const inheritedHipCollision =
-        existingIdx !== null
-        && row.gaiaSourceId === null
-        && primaryCatalogIdx !== null
-        && existingIdx === primaryCatalogIdx;
-      if (existingIdx !== null && !inheritedHipCollision) {
-        stats.alreadyInCatalog++;
-        continue;
+      // Skip the lookup entirely when the row has no real IDs to query.
+      let existingIdx: number | null = null;
+      let inheritedHipCollision = false;
+      if (row.gaiaSourceId !== null || rowHasOwnHip) {
+        existingIdx = findExisting(row, existing);
+        inheritedHipCollision =
+          existingIdx !== null
+          && row.gaiaSourceId === null
+          && primaryCatalogIdx !== null
+          && existingIdx === primaryCatalogIdx;
+        if (existingIdx !== null && !inheritedHipCollision) {
+          stats.alreadyInCatalog++;
+          continue;
+        }
       }
       if (row.gaiaSourceId && promotedGaia.has(row.gaiaSourceId)) {
         stats.alreadyInCatalog++;
         continue;
       }
-      if (row.hip !== null && row.hip > 0 && row.gaiaSourceId === null
-          && promotedHip.has(row.hip)) {
+      if (rowHasOwnHip && row.gaiaSourceId === null
+          && promotedHip.has(row.hip as number)) {
         stats.alreadyInCatalog++;
         continue;
       }
@@ -538,6 +579,24 @@ export function promoteCompanions(
         && row.hip !== null && row.hip > 0
         && cursor.primary.hip === row.hip;
       const companionHip = inheritedHip ? null : row.hip;
+      // Synthetic-ID gate: take the synthetic path when the final
+      // record will have neither gaia nor non-inherited hip — Algol Ab
+      // (entry: gaia=null + hip=null) and the inherited-HIP escape's
+      // after-stripping case both land here.
+      const usesSynth = row.gaiaSourceId === null && companionHip === null;
+      if (usesSynth) {
+        if (synthId === null) {
+          // composeSyntheticId already screens for this above, but a
+          // primary-side inherited-HIP escape with no system_id format
+          // could in principle reach here — drop conservatively.
+          stats.droppedNoIdentifier++;
+          continue;
+        }
+        if (promotedSynth.has(synthId)) {
+          stats.alreadyInCatalog++;
+          continue;
+        }
+      }
       const position = resolvePosition(row, cursor.primary, anchor);
       if (position === null) {
         stats.droppedNoPosition++;
@@ -553,6 +612,7 @@ export function promoteCompanions(
       const properName = composeCompanionName(row, cursor.primary);
       let flags = FLAG_BINARY_COMPANION_ONLY;
       if (properName) flags |= FLAG_HAS_NAME;
+      if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
       newStars.push({
         x: position.x, y: position.y, z: position.z,
@@ -576,8 +636,13 @@ export function promoteCompanions(
         amplitudeMag: 0,
         athygDist: null,
         athygDistSrc: null,
+        syntheticId: usesSynth ? synthId : null,
       });
       stats.promoted++;
+      if (usesSynth) {
+        stats.promotedSynthetic++;
+        promotedSynth.add(synthId as string);
+      }
       if (row.gaiaSourceId) promotedGaia.add(row.gaiaSourceId);
       if (row.hip !== null && row.hip > 0) promotedHip.add(row.hip);
     }
@@ -592,6 +657,11 @@ export interface CatalogRowIndexMap {
   byGaia: Record<string, number>;
   /** Hipparcos catalog number → catalog.bin record index. */
   byHip: Record<string, number>;
+  /** Synthetic identifier (`synth-<wds_id>-<comp>`) → catalog.bin record
+   *  index. Populated for promoted companions whose own gaia/hip can't
+   *  address the record (Algol Ab — no IDs at all; the inherited-HIP
+   *  escape stripping path — IDs collide with the primary). */
+  bySynth: Record<string, number>;
 }
 
 // Build the lookup sidecar after the final absmag sort. The runtime
@@ -601,6 +671,7 @@ export interface CatalogRowIndexMap {
 export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
   const byHip: Record<string, number> = {};
+  const bySynth: Record<string, number> = {};
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     if (s.gaiaSourceId && !(s.gaiaSourceId in byGaia)) {
@@ -609,6 +680,9 @@ export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
     if (s.hip !== null && s.hip > 0 && !(`${s.hip}` in byHip)) {
       byHip[`${s.hip}`] = i;
     }
+    if (s.syntheticId && !(s.syntheticId in bySynth)) {
+      bySynth[s.syntheticId] = i;
+    }
   }
-  return { byGaia, byHip };
+  return { byGaia, byHip, bySynth };
 }

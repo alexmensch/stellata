@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildCatalogRowIndexMap,
+  composeSyntheticId,
   imputeCompanionAbsmag,
   imputeCompanionCi,
   parseMultiplesTsv,
@@ -10,6 +11,7 @@ import {
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
+  FLAG_BINARY_COMPANION_SYNTHETIC,
   FLAG_HAS_NAME,
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
@@ -37,6 +39,7 @@ function makeStar(overrides: Partial<Star> = {}): Star {
     amplitudeMag: 0,
     athygDist: null,
     athygDistSrc: null,
+    syntheticId: null,
     ...overrides,
   };
 }
@@ -334,21 +337,45 @@ describe('promoteCompanions', () => {
     expect(newStars).toHaveLength(0);
   });
 
-  it('drops secondaries with no identifier (gaia + hip both blank)', () => {
+  it('mints a synthetic identifier for secondaries with no own gaia AND no own hip', () => {
+    // Algol-Ab shape: pair-row carries neither gaia nor hip on the
+    // secondary. The synthetic-ID fallback (`synth-<wds_id>-<comp>`)
+    // makes the promoted record addressable from build-runtime-binaries.
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing]);
+    expect(stats.droppedNoIdentifier).toBe(0);
+    expect(stats.promoted).toBe(1);
+    expect(stats.promotedSynthetic).toBe(1);
+    expect(newStars).toHaveLength(1);
+    const b = newStars[0];
+    expect(b.gaiaSourceId).toBeNull();
+    expect(b.hip).toBeNull();
+    expect(b.syntheticId).toBe('synth-06451-1643-B');
+    expect(b.flags & FLAG_BINARY_COMPANION_SYNTHETIC).toBeTruthy();
+    expect(b.flags & FLAG_BINARY_COMPANION_ONLY).toBeTruthy();
+  });
+
+  it('drops a secondary when both gaia/hip are blank AND no synth ID can be composed (no comp letter)', () => {
+    const rows = siriusRows();
+    rows[1].gaiaSourceId = null;
+    rows[1].hip = null;
+    rows[1].comp = '';
     const { stats } = promoteCompanions(rows, [sirius_a_existing]);
     expect(stats.droppedNoIdentifier).toBe(1);
     expect(stats.promoted).toBe(0);
   });
 
-  it('promotes a no-gaia secondary whose HIP was inherited from the primary (findExisting escape)', () => {
+  it('promotes a no-gaia secondary whose HIP was inherited from the primary (findExisting escape) and mints a synthetic ID', () => {
     // Hypothetical: Stage 2 returned `unresolved` for B so the secondary
     // carries no gaia, but multiples.tsv inherited the system primary's
     // HIP from AT-HYG. findExisting would match the primary's catalog
     // record via HIP fall-through — the inherited-HIP escape lets
-    // promotion proceed anyway.
+    // promotion proceed anyway. Without a synthetic ID the promoted
+    // record would be unaddressable at runtime (both gaia and the
+    // stripped hip end up null); the synth-<wds_id>-<comp> identifier
+    // is what build-runtime-binaries resolves the secondary side through.
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;       // strip B's distinct gaia
     rows[1].hip = 32349;               // still shares primary's HIP
@@ -356,10 +383,16 @@ describe('promoteCompanions', () => {
     const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing]);
     expect(stats.alreadyInCatalog).toBe(0);
     expect(stats.promoted).toBe(1);
+    expect(stats.promotedSynthetic).toBe(1);
     expect(newStars).toHaveLength(1);
-    // The HIP-inheritance gate elsewhere strips the inherited HIP so the
-    // promoted record doesn't collide with the primary in HIP lookups.
-    expect(newStars[0].hip).toBeNull();
+    const b = newStars[0];
+    // The HIP-inheritance gate strips the inherited HIP so the promoted
+    // record doesn't collide with the primary in HIP lookups; the synth
+    // ID is what the runtime resolver uses instead.
+    expect(b.hip).toBeNull();
+    expect(b.gaiaSourceId).toBeNull();
+    expect(b.syntheticId).toBe('synth-06451-1643-B');
+    expect(b.flags & FLAG_BINARY_COMPANION_SYNTHETIC).toBeTruthy();
   });
 
   it('still reports alreadyInCatalog for a no-gaia row whose HIP matches a NON-primary AT-HYG record', () => {
@@ -496,5 +529,39 @@ describe('buildCatalogRowIndexMap', () => {
     const map = buildCatalogRowIndexMap(stars);
     expect(Object.keys(map.byGaia)).toEqual(['g1']);
     expect(Object.keys(map.byHip)).toHaveLength(0);
+    expect(Object.keys(map.bySynth)).toHaveLength(0);
+  });
+
+  it('indexes synthetic-ID records into bySynth', () => {
+    const stars: Star[] = [
+      makeStar({ gaiaSourceId: 'g1', hip: 100 }),
+      makeStar({ syntheticId: 'synth-03082+4057-Ab' }),
+      makeStar({ syntheticId: 'synth-03082+4057-Aa2' }),
+    ];
+    const map = buildCatalogRowIndexMap(stars);
+    expect(map.bySynth['synth-03082+4057-Ab']).toBe(1);
+    expect(map.bySynth['synth-03082+4057-Aa2']).toBe(2);
+    // Synthetic-only records carry no gaia/hip key.
+    expect(Object.keys(map.byGaia)).toEqual(['g1']);
+    expect(Object.keys(map.byHip)).toEqual(['100']);
+  });
+});
+
+describe('composeSyntheticId', () => {
+  it('builds "synth-<wds_id>-<comp>" from a Stage 6 system_id', () => {
+    expect(composeSyntheticId('03082+4057-Aa,Ab', 'Ab')).toBe('synth-03082+4057-Ab');
+  });
+
+  it('preserves negative-Dec wds_id intact', () => {
+    expect(composeSyntheticId('16120-1928-Aa,Ab', 'Ab')).toBe('synth-16120-1928-Ab');
+  });
+
+  it('returns null for empty comp letter', () => {
+    expect(composeSyntheticId('03082+4057-Aa,Ab', '')).toBeNull();
+    expect(composeSyntheticId('03082+4057-Aa,Ab', '   ')).toBeNull();
+  });
+
+  it('returns null when system_id has no dash (malformed)', () => {
+    expect(composeSyntheticId('NODASH', 'Ab')).toBeNull();
   });
 });

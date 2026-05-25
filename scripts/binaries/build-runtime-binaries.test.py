@@ -21,6 +21,8 @@ def _pair(
     system_id: str = "00000+0000-AB",
     *,
     components: str | None = None,
+    primary_comp: str | None = None,
+    secondary_comp: str | None = None,
     primary_gaia: str | None = "1",
     primary_hip: int | None = None,
     secondary_gaia: str | None = "2",
@@ -43,8 +45,21 @@ def _pair(
         dash = system_id.rfind("-")
         components = system_id[dash + 1:] if dash >= 0 else "AB"
     wds_id = system_id[:system_id.rfind("-")] if "-" in system_id else system_id
+    # Default per-side comp letters from the components string: "AB" →
+    # ("A", "B"); "Aa,Ab" → ("Aa", "Ab"). Tests override when they're
+    # exercising the WDS prefix-truncation case ("Aa1,2" with
+    # secondary_comp="2").
+    if "," in components:
+        parts = components.split(",")
+        default_primary, default_secondary = parts[0], parts[1] if len(parts) > 1 else ""
+    elif len(components) == 2:
+        default_primary, default_secondary = components[0], components[1]
+    else:
+        default_primary, default_secondary = components, ""
     return brb.MultiplesPair(
         system_id=system_id, wds_id=wds_id, components=components,
+        primary_comp=primary_comp if primary_comp is not None else default_primary,
+        secondary_comp=secondary_comp if secondary_comp is not None else default_secondary,
         primary_gaia=primary_gaia, primary_hip=primary_hip,
         secondary_gaia=secondary_gaia, secondary_hip=secondary_hip,
         P_days=P_days, T_jd=T_jd, e=e, a_AU=a_AU,
@@ -173,6 +188,75 @@ class TopologicalWalkOrderTests(unittest.TestCase):
         self.assertEqual(brb.topological_walk_order([brb.NO_PARENT, 0, 1]), [0, 1, 2])
 
 
+class SyntheticIdTests(unittest.TestCase):
+    """``synthetic_id`` composes the build-time fallback key for rows
+    whose own gaia/hip don't address the catalog record."""
+
+    def test_canonical_shape(self) -> None:
+        self.assertEqual(
+            brb.synthetic_id("03082+4057", "Ab"),
+            "synth-03082+4057-Ab",
+        )
+
+    def test_negative_dec_preserved(self) -> None:
+        self.assertEqual(
+            brb.synthetic_id("16120-1928", "Aa2"),
+            "synth-16120-1928-Aa2",
+        )
+
+    def test_empty_comp_returns_none(self) -> None:
+        self.assertIsNone(brb.synthetic_id("03082+4057", ""))
+        self.assertIsNone(brb.synthetic_id("03082+4057", "   "))
+
+    def test_empty_wds_id_returns_none(self) -> None:
+        self.assertIsNone(brb.synthetic_id("", "Ab"))
+
+
+class ResolveIdxTests(unittest.TestCase):
+    """``resolve_idx`` walks gaia → hip → synth in priority order."""
+
+    def _row_map(self) -> brb.RowIndexMap:
+        return brb.RowIndexMap(
+            by_gaia={"1": 100, "2": 200},
+            by_hip={14576: 300},
+            by_synth={"synth-03082+4057-Ab": 400},
+        )
+
+    def test_gaia_beats_hip(self) -> None:
+        m = self._row_map()
+        # Gaia present and resolvable — HIP path not consulted.
+        self.assertEqual(brb.resolve_idx("1", 999, None, m), 100)
+
+    def test_hip_fallback_when_gaia_none(self) -> None:
+        m = self._row_map()
+        self.assertEqual(brb.resolve_idx(None, 14576, None, m), 300)
+
+    def test_synth_fallback_when_gaia_and_hip_miss(self) -> None:
+        m = self._row_map()
+        self.assertEqual(
+            brb.resolve_idx(None, None, "synth-03082+4057-Ab", m),
+            400,
+        )
+
+    def test_synth_not_consulted_when_gaia_resolves(self) -> None:
+        m = self._row_map()
+        # Even with a valid synth key, a resolvable gaia wins.
+        self.assertEqual(
+            brb.resolve_idx("1", None, "synth-03082+4057-Ab", m),
+            100,
+        )
+
+    def test_unknown_synth_key_returns_none(self) -> None:
+        m = self._row_map()
+        self.assertIsNone(
+            brb.resolve_idx(None, None, "synth-99999+9999-Z", m),
+        )
+
+    def test_all_inputs_none_returns_none(self) -> None:
+        m = self._row_map()
+        self.assertIsNone(brb.resolve_idx(None, None, None, m))
+
+
 class WriteBinaryTests(unittest.TestCase):
     """``write_binary`` resolves catalog indices, remaps parent_relation
     from input to output indices, and writes the wire format."""
@@ -181,6 +265,7 @@ class WriteBinaryTests(unittest.TestCase):
         return brb.RowIndexMap(
             by_gaia={"1": 100, "2": 200, "3": 300, "4": 400},
             by_hip={},
+            by_synth={},
         )
 
     def test_header_magic_version_count(self) -> None:
@@ -237,7 +322,7 @@ class WriteBinaryTests(unittest.TestCase):
         # Variant of the Castor shape: secondary has no gaia but shares
         # the primary's HIP. `resolve_idx` falls through to HIP and
         # lands on the same catalog row.
-        row_map = brb.RowIndexMap(by_gaia={}, by_hip={36850: 100})
+        row_map = brb.RowIndexMap(by_gaia={}, by_hip={36850: 100}, by_synth={})
         pairs = [_pair(
             primary_gaia=None, primary_hip=36850,
             secondary_gaia=None, secondary_hip=36850,
@@ -391,6 +476,68 @@ class WriteBinaryTests(unittest.TestCase):
         )
         self.assertFalse(flags & brb.FLAG_HAS_ORBIT)
         self.assertFalse(flags & brb.FLAG_HAS_INCLINATION)
+
+    def test_wds_truncation_secondary_resolves_via_raw_comp(self) -> None:
+        # Algol Aa1,2 (WDS shorthand for Aa1,Aa2): multiples.tsv emits
+        # the secondary row with comp="2", and companion-promotion
+        # mints synth-03082+4057-2 from that raw cell. The runtime
+        # resolver MUST use the same raw cell, not the parsed-from-
+        # components token "Aa2", or the lookup silently misses.
+        m = brb.RowIndexMap(
+            by_gaia={},
+            by_hip={14576: 100},
+            by_synth={"synth-03082+4057-2": 200},
+        )
+        pairs = [_pair(
+            system_id="03082+4057-Aa1,2",
+            components="Aa1,2",
+            primary_comp="Aa1",
+            secondary_comp="2",
+            primary_gaia=None, primary_hip=14576,
+            secondary_gaia=None, secondary_hip=None,
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(pairs, [brb.NO_PARENT], [0], m, out)
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_secondary_unresolved, 0)
+
+    def test_secondary_resolves_via_synthetic_id(self) -> None:
+        # Algol Aa,Ab shape: pair has primary HIP 14576 (resolves via
+        # by_hip) and secondary with no gaia/hip (resolves via
+        # by_synth["synth-03082+4057-Ab"]). write_binary must compose
+        # the secondary's synth key from wds_id + the secondary
+        # component-letter and emit the pair.
+        m = brb.RowIndexMap(
+            by_gaia={},
+            by_hip={14576: 100},
+            by_synth={"synth-03082+4057-Ab": 200},
+        )
+        pairs = [_pair(
+            system_id="03082+4057-Aa,Ab",
+            components="Aa,Ab",
+            primary_gaia=None, primary_hip=14576,
+            secondary_gaia=None, secondary_hip=None,
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(pairs, [brb.NO_PARENT], [0], m, out)
+            data = out.read_bytes()
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_secondary_unresolved, 0)
+        off = brb.HEADER_SIZE
+        (pri,) = struct.unpack(
+            "<I",
+            data[off + brb.RECORD_LAYOUT["primary_idx"]:
+                 off + brb.RECORD_LAYOUT["primary_idx"] + 4],
+        )
+        (sec,) = struct.unpack(
+            "<I",
+            data[off + brb.RECORD_LAYOUT["secondary_idx"]:
+                 off + brb.RECORD_LAYOUT["secondary_idx"] + 4],
+        )
+        self.assertEqual(pri, 100)
+        self.assertEqual(sec, 200)
 
     def test_sep_pa_epoch_jd_stored_as_j2000_offset(self) -> None:
         # Wire format pins JD - J2000_JD as float32 to preserve sub-day
