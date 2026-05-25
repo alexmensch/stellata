@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 import re
 import sys
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -62,6 +63,14 @@ class ResolvedComponent:
     Stage 3 reads ``hip`` for its HIP2 fallback so saturated bright
     stars (Sirius, α Cen) that have no Gaia source still attach
     astrometry.
+
+    ``athyg_row`` carries the position-matched AT-HYG row reference for
+    components whose identifier-indexed lookups (``src_to_athyg``,
+    ``hip_to_athyg``) would miss because the AT-HYG row carries neither
+    ``hip`` nor ``gaia``. Stage 6 consults this before the indexed
+    paths so AT-HYG-only rows still surface their absmag / spect /
+    proper name. Set by ``resolve_via_position`` (Stage 2) and
+    ``attach_athyg_position_fallback`` (Stage 3).
     """
 
     wds_id: str
@@ -71,6 +80,7 @@ class ResolvedComponent:
     gaia_source_id: int | None
     resolve_via: str
     hip: int | None = None
+    athyg_row: AthygRow | None = None
 
 
 def split_components(comp_str: str) -> tuple[str, str] | None:
@@ -597,6 +607,145 @@ def find_owning_pair(
     return None
 
 
+@dataclass(frozen=True)
+class PairAthygMatchEvent:
+    """One AT-HYG position-match hit emitted by ``iter_pair_athyg_matches``.
+
+    ``is_blend_inherit`` is ``True`` only for the secondary blend-fallback
+    branch (secondary's own predicted-position match missed AND the
+    caller opted into blend inheritance via ``allow_blend_inherit``).
+    """
+
+    component_idx: int
+    athyg_match_idx: int
+    is_blend_inherit: bool
+
+
+def match_athyg_position_either_epoch(
+    *,
+    ra_deg: float,
+    dec_deg: float,
+    grid: dict[tuple[int, int], list[int]],
+    athyg: list[AthygRow],
+    tolerance_arcsec: float,
+    exclude_idx: int | None = None,
+) -> int | None:
+    """Position-match AT-HYG trying PM-propagated J1991.25→J2000 first,
+    then unpropagated. Propagated wins on tie. See
+    ``scripts/binaries/README.md`` § Stage 2 / Stage 3 for the
+    GJ-vs-HIP epoch convention rationale that makes the dual pass
+    necessary.
+    """
+    propagated = find_nearest_athyg_at_position(
+        ra_deg, dec_deg, grid, athyg, tolerance_arcsec,
+        exclude_idx=exclude_idx,
+        target_epoch=WDS_PRECISE_COORD_EPOCH,
+    )
+    if propagated is not None:
+        return propagated
+    return find_nearest_athyg_at_position(
+        ra_deg, dec_deg, grid, athyg, tolerance_arcsec,
+        exclude_idx=exclude_idx,
+        target_epoch=None,
+    )
+
+
+def iter_pair_athyg_matches(
+    components: list[ResolvedComponent],
+    pairs: list[WdsPair],
+    athyg: list[AthygRow],
+    *,
+    skip_predicate: Callable[[int, ResolvedComponent], bool],
+    match_fn: Callable[..., int | None] = match_athyg_position_either_epoch,
+    allow_blend_inherit: bool,
+    tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+) -> Iterator[PairAthygMatchEvent]:
+    """Walk the WDS-pair → AT-HYG position-match cascade and yield one
+    event per component whose match succeeds, in primary-then-secondary
+    order. The secondary pass excludes the primary's matched row so a
+    close-binary primary cannot claim its own secondary slot, and skips
+    the predicted-secondary path when ρ ≥ ``WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC``
+    (wide-pair (ρ, θ) is degenerate at the WDS overflow sentinel).
+
+    Shared between Stage 2's ``resolve_via_position`` (identifier
+    binding) and Stage 3's ``attach_athyg_position_fallback`` (astrometry
+    synthesis). Per-stage knobs:
+
+    - ``skip_predicate(i, c)``: components that should NOT participate.
+      Stage 2 skips already-resolved (gaia_source_id bound) components;
+      Stage 3 skips components whose astrometry is already non-unresolved.
+    - ``match_fn``: how to position-match against AT-HYG. Defaults to
+      ``match_athyg_position_either_epoch`` (propagated then unpropagated).
+    - ``allow_blend_inherit``: when ``True``, yield a blend-inherit event
+      for secondaries whose own predicted-position match missed but
+      whose primary did match. Stage 3 opts in (Hipparcos-unresolved
+      blends share one AT-HYG row); Stage 2 opts out (the secondary
+      would otherwise inherit the primary's Gaia source).
+    """
+    grid = build_athyg_position_grid(athyg)
+    pair_by_wds_disc = build_pair_by_wds_disc(pairs)
+    primary_idx_by_pair: dict[tuple[str, str, str], int] = {}
+
+    # Pass 1 — primaries. Cache the matched AT-HYG row per pair so the
+    # secondary pass can exclude it.
+    for i, c in enumerate(components):
+        if skip_predicate(i, c) or not c.is_primary:
+            continue
+        pair = find_owning_pair(c, pair_by_wds_disc)
+        if pair is None or pair.precise_ra_deg is None or pair.precise_dec_deg is None:
+            continue
+        match_idx = match_fn(
+            ra_deg=pair.precise_ra_deg, dec_deg=pair.precise_dec_deg,
+            grid=grid, athyg=athyg, tolerance_arcsec=tolerance_arcsec,
+            exclude_idx=None,
+        )
+        if match_idx is None:
+            continue
+        primary_idx_by_pair[(c.wds_id, c.discoverer, pair.components)] = match_idx
+        yield PairAthygMatchEvent(
+            component_idx=i, athyg_match_idx=match_idx, is_blend_inherit=False,
+        )
+
+    # Pass 2 — secondaries. Predict position from primary + (ρ, θ),
+    # exclude the primary's AT-HYG row. Optionally fall back to the
+    # primary's row when the secondary's own match misses.
+    for i, c in enumerate(components):
+        if skip_predicate(i, c) or c.is_primary:
+            continue
+        pair = find_owning_pair(c, pair_by_wds_disc)
+        if pair is None or pair.precise_ra_deg is None or pair.precise_dec_deg is None:
+            continue
+        primary_idx = primary_idx_by_pair.get(
+            (c.wds_id, c.discoverer, pair.components),
+        )
+        secondary_match: int | None = None
+        if (
+            pair.rho_last is not None
+            and pair.theta_last is not None
+            and pair.rho_last < WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
+        ):
+            secondary_ra, secondary_dec = predict_secondary_position(
+                pair.precise_ra_deg, pair.precise_dec_deg,
+                pair.rho_last, pair.theta_last,
+            )
+            secondary_match = match_fn(
+                ra_deg=secondary_ra, dec_deg=secondary_dec,
+                grid=grid, athyg=athyg, tolerance_arcsec=tolerance_arcsec,
+                exclude_idx=primary_idx,
+            )
+        if secondary_match is not None:
+            yield PairAthygMatchEvent(
+                component_idx=i, athyg_match_idx=secondary_match,
+                is_blend_inherit=False,
+            )
+            continue
+        if allow_blend_inherit and primary_idx is not None:
+            yield PairAthygMatchEvent(
+                component_idx=i, athyg_match_idx=primary_idx,
+                is_blend_inherit=True,
+            )
+
+
 def resolve_via_position(
     components: list[ResolvedComponent],
     pairs: list[WdsPair],
@@ -610,78 +759,23 @@ def resolve_via_position(
     ``components`` in place — sets ``gaia_source_id`` and rewrites
     ``resolve_via`` from ``unresolved`` to ``athyg_gaia_native`` on hit.
 
-    AT-HYG positions are PM-propagated to ``WDS_PRECISE_COORD_EPOCH``
-    (J2000) before the comparison so high-PM HIP-sourced rows whose
-    stored ra/dec are at J1991.25 still match within the 2″ tolerance.
-
-    Primary uses the WDS pair's ``precise_ra/dec``; secondary uses that
-    plus the pair's last-reported ``(ρ, θ)`` offset, EXCLUDING the
-    primary's matched row so a close-binary primary cannot claim its own
-    secondary slot. Components without precise coords (or, for
-    secondaries, without ρ/θ) stay unresolved here. The predicted-
-    secondary path is also short-circuited when ρ ≥ the WDS overflow
-    sentinel (``999.9″``) — wide-pair (ρ, θ) is degenerate at that
-    level and a small-offset prediction would land on a random AT-HYG
-    row.
+    The pair-iteration cascade (primary match, predicted-secondary
+    match with primary-exclusion) is shared with Stage 3's
+    ``attach_athyg_position_fallback`` via ``iter_pair_athyg_matches``.
+    Stage 2 opts out of secondary blend-inheritance because binding the
+    secondary to the primary's AT-HYG row would also propagate the
+    primary's Gaia source onto the secondary slot.
     """
-    grid = build_athyg_position_grid(athyg)
-    pair_by_wds_disc = build_pair_by_wds_disc(pairs)
-
-    # Pass 1 — primaries. Cache the AT-HYG row each primary claims so
-    # the secondary pass can exclude it (close-binary primaries must not
-    # be matched twice for both slots of the same pair).
-    primary_athyg_idx: dict[tuple[str, str, str], int] = {}
-    for c in components:
-        if c.gaia_source_id is not None or not c.is_primary:
-            continue
-        pair = find_owning_pair(c, pair_by_wds_disc)
-        if pair is None or pair.precise_ra_deg is None or pair.precise_dec_deg is None:
-            continue
-        match_idx = find_nearest_athyg_at_position(
-            pair.precise_ra_deg, pair.precise_dec_deg,
-            grid, athyg, tolerance_arcsec,
-            target_epoch=WDS_PRECISE_COORD_EPOCH,
-        )
-        if match_idx is None:
-            continue
-        row = athyg[match_idx]
-        primary_athyg_idx[(c.wds_id, c.discoverer, pair.components)] = match_idx
-        if c.hip is None and row.hip is not None:
-            c.hip = row.hip
-        if row.gaia is not None:
-            c.gaia_source_id = row.gaia
-            c.resolve_via = "athyg_gaia_native"
-
-    # Pass 2 — secondaries. Predict position from primary + (ρ, θ),
-    # exclude the primary's AT-HYG row.
-    for c in components:
-        if c.gaia_source_id is not None or c.is_primary:
-            continue
-        pair = find_owning_pair(c, pair_by_wds_disc)
-        if (
-            pair is None
-            or pair.precise_ra_deg is None
-            or pair.precise_dec_deg is None
-            or pair.rho_last is None
-            or pair.theta_last is None
-            or pair.rho_last >= WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
-        ):
-            continue
-        secondary_ra, secondary_dec = predict_secondary_position(
-            pair.precise_ra_deg, pair.precise_dec_deg,
-            pair.rho_last, pair.theta_last,
-        )
-        primary_idx = primary_athyg_idx.get(
-            (c.wds_id, c.discoverer, pair.components),
-        )
-        match_idx = find_nearest_athyg_at_position(
-            secondary_ra, secondary_dec,
-            grid, athyg, tolerance_arcsec, exclude_idx=primary_idx,
-            target_epoch=WDS_PRECISE_COORD_EPOCH,
-        )
-        if match_idx is None:
-            continue
-        row = athyg[match_idx]
+    for event in iter_pair_athyg_matches(
+        components, pairs, athyg,
+        skip_predicate=lambda _i, c: c.gaia_source_id is not None,
+        allow_blend_inherit=False,
+        tolerance_arcsec=tolerance_arcsec,
+    ):
+        c = components[event.component_idx]
+        row = athyg[event.athyg_match_idx]
+        if c.athyg_row is None:
+            c.athyg_row = row
         if c.hip is None and row.hip is not None:
             c.hip = row.hip
         if row.gaia is not None:

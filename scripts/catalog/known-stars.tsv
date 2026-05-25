@@ -148,6 +148,16 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # carries STF1110 AB (P=459.1 yr — the famous Savary 1828 visual orbit),
 # CIA 29 Aa,Ab (P=9.21 d) and CIA 29 Ba,Bb (P=2.93 d).
 07346+3153	Castor	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+	C::892348454394856064:8.515	167686.275	SIMBAD * alf Gem A sp_type=A1.5IV+. Multi-star showcase: STF1110 AB visual orbit P=167686.275 d (459.1 yr, ORB6 historical-first orbit Savary 1828). Companion C is YY Gem (Castor C, M0.5VeFe-2 eclipsing pair, no HIP, Gaia 892348454394856064) — absmag from companion-promotion via Δmag imputation. HIP2 parallax 64.12 mas → 15.6 pc; Gaia could not fit a 5p solution for source 892348694913501952 (parallax=NULL in gaia_dr3_astrometry.tsv), so Stage 3 routes through hip2_long_baseline.
+# ξ Ursae Majoris (Alula Australis, STF1523 AB) — Tier A pin pending
+# the catalog.bin identifier backfill (separate bead). AT-HYG carries
+# the system as HD-only (no HIP, no Gaia on either component row);
+# catalog.bin inherits the empty identifiers and Tier A's
+# lookupByHip / lookupByGaiaSourceId both miss the primary record
+# even though multiples.tsv (post-dch.74) correctly carries
+# hip=55203 + gaia=756853643638639104 from ORB6 + SIMBAD xids.
+# The multiples.tsv pair-emit smoke (P=21874.93 d, q=0.47,
+# astrometry_via=athyg_position) is verified directly; a Tier A row
+# follows once the catalog-side backfill lands.
 # ---- Promoted companions (newly minted catalog records) ----------------
 # These rows pin companions promoted into catalog.bin by the build's
 # read-multiples-and-promote pass. Their primary is already an AT-HYG
