@@ -10,6 +10,7 @@ import {
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
+  UNKNOWN_CLASS_IDX,
   classifyFromSimbad,
   parseGaiaSourceIdStr,
   physicalRadius,
@@ -319,12 +320,12 @@ export function imputeCompanionCi(
   if (!needsDerivation) {
     return secondary.ci as number;
   }
-  // SPECTRAL_UNKNOWN's tempKelvin is the 5000 K row of T_TABLE[8] —
-  // a yellow-white default. Detect that explicitly so the fallback
-  // routes through SOLAR_BV_FALLBACK instead, mirroring stars-parse's
-  // handling for AT-HYG rows with blank ci AND unparseable spect.
+  // SPECTRAL_UNKNOWN's tempKelvin is the neutral 5000 K row — a yellow-
+  // white default. Detect that explicitly so the fallback routes through
+  // SOLAR_BV_FALLBACK instead, mirroring stars-parse's handling for
+  // AT-HYG rows with blank ci AND unparseable spect.
   if (spectralInfo === SPECTRAL_UNKNOWN
-      || (spectralInfo.classIdx === 8 && !spectralInfo.isWhiteDwarf)) {
+      || (spectralInfo.classIdx === UNKNOWN_CLASS_IDX && !spectralInfo.isWhiteDwarf)) {
     return SOLAR_BV_FALLBACK;
   }
   return ballesterosBvFromTeff(tempKelvin(spectralInfo));
