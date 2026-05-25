@@ -4,6 +4,7 @@
 import { ballesterosTeff } from '../../../scripts/colour/blackbody-lut-pure';
 import {
   SOLAR_BV_FALLBACK,
+  UNKNOWN_CLASS_IDX,
   tempKelvin,
   type SpectralInfo,
 } from '../../../scripts/catalog/catalog-pure';
@@ -53,9 +54,7 @@ export function pickTeffSource(rec: ColorRoutingRecord): TeffPick {
     if (rec.spectralInfo.isWhiteDwarf) {
       return { teff: tempKelvin(rec.spectralInfo), source: 'wd' };
     }
-    // 8 = catalog-pure's `classIdx` for an unparseable / unknown class.
-    // Treat that as no spectral info for routing purposes and fall through.
-    if (rec.spectralInfo.classIdx !== 8) {
+    if (rec.spectralInfo.classIdx !== UNKNOWN_CLASS_IDX) {
       return { teff: tempKelvin(rec.spectralInfo), source: 'spectral' };
     }
   }
@@ -70,7 +69,10 @@ export function bestApsisTeff(
   teffGspphot: number,
   teffGspspec: number,
 ): number {
-  if (Number.isFinite(teffGspphot) && teffGspphot > 0) return teffGspphot;
-  if (Number.isFinite(teffGspspec) && teffGspspec > 0) return teffGspspec;
+  // `x > 0` rejects NaN, zero, and negatives in one predicate. The only
+  // additional case Number.isFinite would catch is +Infinity, which the
+  // Apsis ingest doesn't produce.
+  if (teffGspphot > 0) return teffGspphot;
+  if (teffGspspec > 0) return teffGspspec;
   return NO_APSIS_TEFF;
 }

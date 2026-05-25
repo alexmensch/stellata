@@ -18,6 +18,12 @@ export interface SpectralInfo {
   wdSubclass: number;   // only valid if isWhiteDwarf (the digit after D)
 }
 
+/** Sentinel classIdx for "unparseable / unknown spectral class". Routes
+ *  through T_TABLE[UNKNOWN_CLASS_IDX]'s neutral 5000 K row in tempKelvin
+ *  / boloCorr, and tells the renderer's star-color routing to treat the
+ *  spectral tier as missing and fall through to ballesteros / solar. */
+export const UNKNOWN_CLASS_IDX = 8;
+
 // Luminosity-class encoding shared with the renderer:
 //   0 = VII / D  (white dwarf)        5 = II        (bright giant)
 //   1 = VI / sd  (subdwarf)           6 = Ib        (less-luminous supergiant)
@@ -35,25 +41,21 @@ export function spectClassIndex(firstChar: string): number {
     case 'K': return 5;
     case 'M': return 6;
     case 'C': case 'S': case 'W': case 'N': case 'R': return 7;
-    default: return 8;
+    default: return UNKNOWN_CLASS_IDX;
   }
 }
 
 /** Canonical "no classification available" SpectralInfo. Consumed by
  *  callers that need a SpectralInfo even when SIMBAD + GSP-Spec both
  *  missed (the binary writer still needs to pack a spectClass/lumClass
- *  byte). classIdx=8 routes through T_TABLE[8]'s neutral 5000 K row;
- *  lumClass=255 is the renderer's "no luminosity-class softness"
+ *  byte). lumClass=255 is the renderer's "no luminosity-class softness"
  *  sentinel. */
 export const SPECTRAL_UNKNOWN: SpectralInfo = {
-  classIdx: 8, subclass: 5, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0,
+  classIdx: UNKNOWN_CLASS_IDX, subclass: 5, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0,
 };
 
-// Roman-numeral luminosity-class lookup. Ordered: longest prefix first so
-// "III" never matches as "II" + "I" etc. Each entry is a regex anchored at
-// the start of the post-subclass scan window. The list is consulted by
-// both classifyFromSimbad's MK walker and the composite-tag fallback so a
-// new Roman variant gets picked up in one place.
+// Roman luminosity-class lookup, longest prefix first so "III" never
+// matches as "II" + "I".
 const LUMINOSITY_PREFIXES: ReadonlyArray<readonly [RegExp, number]> = [
   [/^IA\+|^0(?!\d)/,  9],
   [/^IAB/,            7],
@@ -81,26 +83,9 @@ function lookupLumClass(window: string): number {
 }
 
 /** Strict Morgan-Keenan classifier for SIMBAD-canonical `sp_type`
- *  strings. Returns null when the string is not parseable (caller
- *  falls through to the next tier). SIMBAD's schema separates spectral
- *  type from variability type (`otype`), so sp_type is MK-only — this
- *  parser does NOT need to defend against variability-annotation
- *  contamination in its input.
- *
- *  Handles:
- *   - Plain MK: "G2V", "K0III", "M1.5Iab-b", "A0V", "F1Vn"
- *   - White dwarfs: "DA", "DB2", "DAH", "DC"
- *   - Subdwarfs: "sdB5", "sdO"
- *   - Carbon/S/Wolf-Rayet: "C5,2e", "WN5" → classIdx=7, lumClass unknown
- *   - Am/Ap composite: "kA5hA8mF1(III)SiEuBa" → the "m" (metallic) type
- *     wins (F1 here), with the parenthesised luminosity class read off
- *     the tail. Falls back to "h" then "k" if no "m" tag is present.
- *
- *  Composite-tag preference order (m → h → k) follows the convention
- *  that the metallic-line type is closest to the effective surface
- *  temperature for Am stars; the H-line and Ca-K-line types diverge
- *  from it by design.
- */
+ *  strings; returns null on unparseable input. See
+ *  scripts/catalog/README.md § Physical radius and spectral parsing for
+ *  handled shapes and the Am/Ap composite-tag preference order. */
 export function classifyFromSimbad(rawSpType: string | null | undefined): SpectralInfo | null {
   if (!rawSpType) return null;
   const s = rawSpType.replace(/\s+/g, '');
@@ -135,7 +120,7 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): Spectr
   if (wdMatch) {
     const wdSub = wdMatch[1] ? Math.round(Number(wdMatch[1])) : 5;
     return {
-      classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true,
+      classIdx: UNKNOWN_CLASS_IDX, subclass: 5, lumClass: 0, isWhiteDwarf: true,
       wdSubclass: Math.max(0, Math.min(9, wdSub)),
     };
   }
@@ -309,7 +294,7 @@ export function tempKelvin(info: SpectralInfo): number {
     const n = Math.max(1, info.wdSubclass);
     return 50400 / n;
   }
-  return interpolate(T_TABLE[info.classIdx] ?? T_TABLE[8], info.subclass);
+  return interpolate(T_TABLE[info.classIdx] ?? T_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
 }
 
 // Bolometric correction by spectral class + subclass. Mostly negligible for
@@ -336,7 +321,7 @@ export function boloCorr(info: SpectralInfo): number {
     if (T > 8000) return -0.2;
     return 0.3;
   }
-  return interpolate(BC_TABLE[info.classIdx] ?? BC_TABLE[8], info.subclass);
+  return interpolate(BC_TABLE[info.classIdx] ?? BC_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
 }
 
 const T_SUN = 5778;

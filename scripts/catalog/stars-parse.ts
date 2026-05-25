@@ -219,12 +219,6 @@ export async function readStars(
     }
     const ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
 
-    // Three-tier spectral resolver. SIMBAD's sp_type column is the
-    // canonical Morgan-Keenan source — free of variability-type
-    // contamination by SIMBAD's schema split. Gaia DR3 GSP-Spec's
-    // spectraltype_esphs enum fills in the long tail. Rows hit by
-    // neither tier render with classIdx=8 / lumClass=255 (neutral
-    // 5000 K temperature, no luminosity-class softness ramp).
     const spectral = resolveSpectralInfo(gaiaSourceId, simbadMap, apsisMap);
     const spectInfo = spectral.info;
     if (spectral.source === 'simbad') spectralBySimbad++;

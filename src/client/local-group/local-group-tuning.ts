@@ -1,4 +1,4 @@
-import { makeCollapsibleSection, makeSlider } from '../debug/debug-panel';
+import { type DebugSection, makeSlider } from '../debug/debug-panel';
 import {
   DEFAULT_TOP_N,
   DEFAULT_MIN_PIXEL_SIZE_PX,
@@ -38,11 +38,8 @@ const MW_INSIDE_MIN = 0;
 const MW_INSIDE_MAX = 20_000;
 const MW_INSIDE_STEP = 250;
 
-export function buildDeepFieldSection(): HTMLDivElement {
-  const { section, body } = makeCollapsibleSection({
-    title: 'Deep field',
-    storageKey: 'deep-field',
-  });
+export function buildDeepFieldSection(): DebugSection {
+  const body = document.createElement('div');
 
   body.appendChild(makeSlider({
     label: 'top N labels',
@@ -83,5 +80,9 @@ export function buildDeepFieldSection(): HTMLDivElement {
     onChange: (x) => setMwInsideDiscPc(x),
   }));
 
-  return section;
+  return {
+    element: body,
+    dispose: () => {},
+    setVisible: () => {},
+  };
 }

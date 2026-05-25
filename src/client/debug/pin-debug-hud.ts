@@ -1,4 +1,5 @@
 import type { Stellata } from '../stellata';
+import { type DebugSection, buildDiagnosticReadout } from './debug-panel';
 
 // Focused-star-pin diagnostics. Latched signed min/max per axis
 // capture transient excursions (trackpad pans can swing target by
@@ -29,37 +30,13 @@ function emptyLatch(): Latch {
   };
 }
 
-export interface PinSection {
-  element: HTMLDivElement;
-  dispose: () => void;
-  setVisible: (v: boolean) => void;
-}
-
-export function buildPinSection(stellata: Stellata): PinSection {
+export function buildPinSection(stellata: Stellata): DebugSection {
   const latch = emptyLatch();
   let visible = true;
 
-  const root = document.createElement('div');
-  root.style.cssText =
-    'font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
-    'color:#0f0;padding:6px 8px;border-radius:4px;' +
-    'white-space:pre;overflow-x:auto;user-select:text;';
-
-  // Body: live readouts. Selectable text so the user can drag-copy values.
-  const body = document.createElement('div');
-  body.style.cssText = 'user-select:text;cursor:text;';
-  root.appendChild(body);
-
-  // Reset link: only THIS element is clickable (so dragging across the body
-  // to copy values doesn't reset the latches).
-  const reset = document.createElement('div');
-  reset.textContent = '[click to reset latches]';
-  reset.style.cssText = 'margin-top:6px;cursor:pointer;color:#999;user-select:none;';
-  reset.title = 'reset latched extremes';
-  reset.addEventListener('click', () => {
-    Object.assign(latch, emptyLatch());
+  const { root, body } = buildDiagnosticReadout({
+    onResetLatches: () => { Object.assign(latch, emptyLatch()); },
   });
-  root.appendChild(reset);
 
   const fmt = (n: number) => {
     if (n === 0) return '0';

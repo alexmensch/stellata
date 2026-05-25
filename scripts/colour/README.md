@@ -11,5 +11,11 @@ inverse, CIE chromaticity → sRGB). Re-used by
 `src/client/star-pipeline/star-color-routing-pure.ts` for the runtime
 six-tier routing.
 
+`ballesteros-glsl-drift.test.ts` — pins the `ballesterosBvFromTeff`
+function body in `src/client/star-pipeline/star.vert.glsl` against the
+TS coefficients in `blackbody-lut-pure.ts`. A coefficient drift on
+either side fails the test; intentional edits update both sides AND
+the inline snapshot.
+
 The LUT is consumed at render time via `DataTexture` sampling in the
 star vertex shader.

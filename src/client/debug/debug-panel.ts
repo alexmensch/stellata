@@ -2,20 +2,22 @@
 // and colour-picker helpers shared across sections. See
 // src/client/debug/README.md § Debug panel.
 
+import {
+  PANEL_WIDTH,
+  type Pos,
+  clampToViewport as clampPure,
+  hexToRgb,
+  parsePosition,
+  rgbToHex,
+} from './debug-panel-pure';
+
 const POS_KEY = 'stellata.debug.position';
 const collapsedKey = (key: string) => 'stellata.debug.collapsed.' + key;
 
-const PANEL_WIDTH = 300;
-
-interface Pos { x: number; y: number; }
-
 function loadPosition(): Pos | null {
   try {
-    const raw = sessionStorage.getItem(POS_KEY);
-    if (!raw) return null;
-    const p = JSON.parse(raw);
-    if (typeof p?.x === 'number' && typeof p?.y === 'number') return p;
-  } catch { /* swallow — sessionStorage unavailable / corrupt */ }
+    return parsePosition(sessionStorage.getItem(POS_KEY));
+  } catch { /* sessionStorage unavailable */ }
   return null;
 }
 
@@ -32,13 +34,7 @@ function saveCollapsed(key: string, collapsed: boolean): void {
 }
 
 function clampToViewport(x: number, y: number): Pos {
-  const margin = 8;
-  const maxX = Math.max(margin, window.innerWidth - PANEL_WIDTH - margin);
-  const maxY = Math.max(margin, window.innerHeight - 80);
-  return {
-    x: Math.max(margin, Math.min(maxX, x)),
-    y: Math.max(margin, Math.min(maxY, y)),
-  };
+  return clampPure(x, y, window.innerWidth, window.innerHeight);
 }
 
 let stylesInjected = false;
@@ -230,6 +226,61 @@ export interface CollapsibleSection {
   isCollapsed: () => boolean;
 }
 
+// Every section mounted in the debug panel returns this shape. Static
+// sections (slider banks) use no-op dispose + setVisible; live sections
+// (per-frame readouts) own their unsubscribe + visibility gate. The host
+// wraps each in a collapsible-section; sections never call
+// makeCollapsibleSection directly.
+export interface DebugSection {
+  element: HTMLElement;
+  dispose: () => void;
+  setVisible: (v: boolean) => void;
+}
+
+export interface DiagnosticReadout {
+  /** Outer container. Live readouts can mutate root.style.color (pin's
+   *  pin-engaged alert) or root.style.borderLeftColor (arrow's
+   *  independent-state alert) for state cues. */
+  root: HTMLDivElement;
+  /** Selectable text container — the live readout writes textContent here. */
+  body: HTMLDivElement;
+}
+
+export interface DiagnosticReadoutOpts {
+  /** Render a green left-border bar (3 px). Without this, no border. */
+  withLeftBorder?: boolean;
+  /** Latch reset handler; wired to the [click to reset latches] link. */
+  onResetLatches: () => void;
+}
+
+/** Green-on-black mono readout chrome shared by pin-debug-hud and
+ *  arrow-fade-debug-hud: root div with monospace text, optional left
+ *  border (arrow only), selectable body, and the [click to reset
+ *  latches] link. */
+export function buildDiagnosticReadout(opts: DiagnosticReadoutOpts): DiagnosticReadout {
+  const root = document.createElement('div');
+  root.style.cssText =
+    'font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
+    'color:#0f0;padding:6px 8px;border-radius:4px;' +
+    'white-space:pre;overflow-x:auto;user-select:text;' +
+    (opts.withLeftBorder ? 'border-left:3px solid #0f0;' : '');
+
+  const body = document.createElement('div');
+  body.style.cssText = 'user-select:text;cursor:text;';
+  root.appendChild(body);
+
+  // Reset link: only THIS element is clickable so dragging across the
+  // body to copy values doesn't trigger a reset.
+  const reset = document.createElement('div');
+  reset.textContent = '[click to reset latches]';
+  reset.style.cssText = 'margin-top:6px;cursor:pointer;color:#999;user-select:none;';
+  reset.title = 'reset latched extremes';
+  reset.addEventListener('click', opts.onResetLatches);
+  root.appendChild(reset);
+
+  return { root, body };
+}
+
 export function makeCollapsibleSection(opts: {
   title: string;
   storageKey: string;
@@ -363,16 +414,3 @@ export function makeColor(opts: ColorOpts): HTMLDivElement {
   return row;
 }
 
-function rgbToHex(r: number, g: number, b: number): string {
-  const c = (v: number) =>
-    Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
-  return '#' + c(r) + c(g) + c(b);
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  return {
-    r: parseInt(hex.slice(1, 3), 16) / 255,
-    g: parseInt(hex.slice(3, 5), 16) / 255,
-    b: parseInt(hex.slice(5, 7), 16) / 255,
-  };
-}
