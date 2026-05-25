@@ -2,16 +2,19 @@
 // until buildPerfSection() runs; dispose() restores them.
 // See src/client/debug/README.md.
 
+import {
+  MS_PER_FRAME_60,
+  colourForAvg,
+  fmtMs,
+  insertSorted,
+  summarize,
+  type RowDatum,
+} from './perf-hud-pure';
+
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
-const MS_PER_FRAME_60 = 1000 / 60;
 const MAX_TABLE_ROWS = 8;
 
-// Row-colour ramp: amber when average ms approaches the 60Hz budget.
-// Absolute threshold rather than a fraction so the rows colour amber a
-// touch earlier than the histogram, which keeps the at-a-glance summary
-// trailing-pessimistic.
-const AVG_AMBER_MS = 4;
 // Histogram bar ramp: amber threshold expressed as a fraction of the
 // 60Hz frame budget (~11.7 ms at MS_PER_FRAME_60 * 0.7).
 const HISTO_AMBER_RATIO = 0.7;
@@ -53,7 +56,6 @@ const histoLastColour: string[] = [];
 // Scratch row data reused across ticks. Index 0..N-1 holds the current
 // frame's top sections in descending-avg order; only the first N rows
 // in rowPool are visible, the rest are display:none.
-interface RowDatum { label: string; avg: number; max: number; }
 const rowScratch: RowDatum[] = [];
 
 function ensureSection(label: string): SectionStats {
@@ -251,24 +253,6 @@ export function buildPerfSection(): PerfSection {
   };
 }
 
-function summarize(s: SectionStats): { avg: number; max: number } {
-  if (s.count === 0) return { avg: 0, max: 0 };
-  let sum = 0;
-  let max = 0;
-  for (let i = 0; i < s.count; i++) {
-    const v = s.ring[i];
-    sum += v;
-    if (v > max) max = v;
-  }
-  return { avg: sum / s.count, max };
-}
-
-function fmtMs(v: number): string { return v.toFixed(v >= 10 ? 1 : 2); }
-
-function colourForAvg(avg: number): string {
-  return avg > MS_PER_FRAME_60 ? '#f88' : avg > AVG_AMBER_MS ? '#fc8' : '#cfe';
-}
-
 function renderPanel(): void {
   if (!panelEl || !headlineEl) return;
 
@@ -294,7 +278,7 @@ function renderPanel(): void {
   for (const [label, s] of sections) {
     if (label === 'frame.total') continue;
     const stats = summarize(s);
-    insertSorted(rowScratch, { label, avg: stats.avg, max: stats.max });
+    insertSorted(rowScratch, { label, avg: stats.avg, max: stats.max }, MAX_TABLE_ROWS);
   }
 
   // Project rowScratch into the row pool: visible rows update, the rest
@@ -361,17 +345,4 @@ function renderPanel(): void {
       }
     }
   }
-}
-
-// Insertion into a fixed-cap descending-by-avg array. Walk the existing
-// rows once, find insert position, splice (drops the last one if at cap).
-// For ≤8 visible rows this is cheaper than a full sort over N sections.
-function insertSorted(arr: RowDatum[], r: RowDatum): void {
-  let pos = arr.length;
-  for (let i = 0; i < arr.length; i++) {
-    if (r.avg > arr[i].avg) { pos = i; break; }
-  }
-  if (pos === MAX_TABLE_ROWS) return;
-  arr.splice(pos, 0, r);
-  if (arr.length > MAX_TABLE_ROWS) arr.length = MAX_TABLE_ROWS;
 }
