@@ -199,6 +199,52 @@ observe-only emission). Cleared automatically on every observe→navigate
 transition; no UI element exposes "clear all" because Esc already
 exits observe and clears them as a side-effect.
 
+## Dirty-track strategies: signature vs per-attribute
+
+Two dirty-track styles coexist in this layer; both are valid but they have
+different sweet spots, and **the next overlay's author should pick on
+purpose, not by mimicry of whichever neighbour they read first.**
+
+- **Whole-frame signature** (used by `scale-bar.ts`). Build one
+  `sig = '...|...'` string at the top of `onFrame` keyed on every input
+  that drives any output, compare against `lastSig`, bail when matched.
+  When the signature differs, redraw every attribute unconditionally.
+  - **Wins when:** every attribute is keyed off the same small set of
+    inputs (bar pixel count + label string drive both the horizontal
+    bar geometry AND every z-axis line). A stationary frame skips the
+    whole geometry computation; a changing frame redoes it wholesale.
+  - **Loses when:** independent attributes can change at different rates
+    — one independent input flipping forces the full redraw even though
+    only one attribute would actually change.
+
+- **Per-attribute dirty-track** (used by `constellation-overlay.ts`,
+  `disc-mask.ts`, `distance-vector-overlay.ts`, `hud-overlay.ts`,
+  `poi-overlay.ts`). Always run the full per-frame computation, then gate
+  each `setAttribute` / `setStyle` / `textContent` write through
+  `dirty-attr.ts` helpers (`setNumAttr`, `setStrAttr`, `setStyle`,
+  `setText`) against a per-attribute sentinel.
+  - **Wins when:** independent attributes change at different rates (HUD
+    ring radius + arrow path + label all driven by independent inputs).
+    The cheap attributes skip their writes even when an expensive
+    attribute changed.
+  - **Loses when:** the per-frame computation itself dominates and every
+    attribute keys off the same input — strictly more JS work than the
+    signature gate on a stationary frame.
+
+The **default for new overlays is per-attribute**, matching the five files
+the pattern scaled to in PR #55. Pick whole-frame signature only when the
+inputs collapse cleanly into a small key string AND the per-frame
+computation is more expensive than the SVG writes it would gate. Mixing
+the two strategies on a single overlay's outputs is a mistake — the
+shapes don't compose.
+
+The poison-init rule applies to both: sentinels (closure variables for
+signature, helper-call arguments for per-attribute) must be initialised
+to a value the first real write cannot match (`'\0'` for strings, `NaN`
+or `-Infinity` for numbers depending on the gate direction, `null` for
+booleans). Without poison init, the first matching-state write silently
+no-ops and the element paints at SVG defaults.
+
 ## SVG hide semantics
 
 Missing coordinate attributes on SVG elements default to **0**, not "don't
