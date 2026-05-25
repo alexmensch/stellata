@@ -22,6 +22,7 @@ import {
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   FLAG_BINARY_COMPANION_ONLY,
+  FLAG_BINARY_COMPANION_SYNTHETIC,
   FLAG_BINARY_PRIMARY,
   FLAGS,
   RESERVED_FLAG_BITS,
@@ -1024,6 +1025,7 @@ describe('catalog-pure / binary-format constants', () => {
     expect(FLAG_HAS_BAYER).toBe(FLAGS.hasBayer);
     expect(FLAG_BINARY_COMPANION_ONLY).toBe(FLAGS.binaryCompanionOnly);
     expect(FLAG_BINARY_PRIMARY).toBe(FLAGS.binaryPrimary);
+    expect(FLAG_BINARY_COMPANION_SYNTHETIC).toBe(FLAGS.binaryCompanionSynthetic);
   });
 
   it('RESERVED_FLAG_BITS does not collide with any registered FLAGS value', () => {

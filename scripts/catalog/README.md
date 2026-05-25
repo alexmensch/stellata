@@ -131,12 +131,18 @@ The byte plan above is encoded once in `scripts/catalog/catalog-pure.ts` as
 (`scripts/catalog/verify-catalog.ts`) all index off those constants —
 there are no inline byte offsets to drift apart. If you add fields,
 extend `RECORD_LAYOUT` and **bump `BINARY_VERSION` + `MAGIC`** in
-`catalog-pure.ts`. Free flag bits today are `0x20`, `0x40`, `0x80`
-(see `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` —
-set on records added by `companion-promotion.ts` (no bump needed,
-the bit comes from the `RESERVED_FLAG_BITS` pool). Layout
-consistency is pinned by the `binary-format constants` block in
-`scripts/catalog/catalog-pure.test.ts`.
+`catalog-pure.ts`. Free flag bits today are `0x40`, `0x80` (see
+`FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` — set on
+records added by `companion-promotion.ts`. `0x20` is
+`FLAG_BINARY_COMPANION_SYNTHETIC` — set additionally when the
+promoted record's only addressable identifier is a synthetic key
+(`synth-<wds_id>-<comp>`) because the multiples.tsv row carries
+no own gaia and no non-inherited HIP (Algol Ab, the Aa1,2 WDS-
+truncated secondary, and the inherited-HIP escape's after-
+stripping output land here). Bits come from the
+`RESERVED_FLAG_BITS` pool — no `BINARY_VERSION` bump needed.
+Layout consistency is pinned by the `binary-format constants`
+block in `scripts/catalog/catalog-pure.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,
@@ -291,14 +297,32 @@ per system on the canonical anchor.
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-in AT-HYG. ~4k companions promoted into the current build (Sirius B,
-Achird B, Porrima B, Fomalhaut C, …).
+in AT-HYG. ~8.6k companions promoted into the current build
+(Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
+half via real Gaia/HIP keys, half via synthetic identifiers (see
+the identifier gate below).
 
 Per-row gates and resolution:
 
-- **Identifier.** Skip when both gaia_source_id and hip are blank
-  (no addressable handle). Skip when the row already resolves to an
-  existing catalog star (gaia first, then hip when no gaia).
+- **WDS unresolved-compound guard.** Secondary rows whose `comp` letter
+  is an unresolved compound aggregate ("BC" / "AB" / "ABC") — every
+  character appears as a single-letter comp on a sibling cursor in the
+  same WDS root — drop early without promotion. 40 Eri's `A,BC` row
+  carries `comp="BC"`, and the WDS root also has resolved `BC` /
+  `AC` cursors with single-letter primaries B and C; the relational
+  test confirms "BC" is shorthand for the unresolved B+C aggregate and
+  not a single star. Promoting it would add a "Keid BC" record at
+  ~416 AU from Keid alongside the resolved Keid B and Keid C, double-
+  counting the BC pair's light + position.
+- **Identifier.** Real-ID resolution (gaia first, then hip)
+  attempts to match the row against an existing catalog star;
+  skip when it hits a row that ISN'T the system primary
+  (alreadyInCatalog). When the row carries no own gaia AND no
+  own hip, mint `synth-<wds_id>-<comp>` and proceed —
+  `FLAG_BINARY_COMPANION_SYNTHETIC` flags the result. Same path
+  fires when the inherited-HIP escape strips the row's hip to
+  null, since the final record has nothing else addressable.
+  Algol Aa,Ab + Aa1,2 are the canonical surfacing cases.
 - **Position.** Prefer the row's own xyz when its astrometry is a
   real per-component fit AND its xyz differs from the primary row's
   xyz. Else apply a sky-tangent projection from the EXISTING catalog
@@ -307,6 +331,15 @@ Per-row gates and resolution:
   pipeline-precision gap between AT-HYG's 3-4 sig figs and the
   binaries pipeline's 6 sig figs (Sirius A and B were ~100 AU apart
   for that reason before the fix).
+- **Position for pair-row primaries.** When the cursor primary itself
+  needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
+  of A), prefer projecting off a sibling cursor's compound sep+PA
+  whose compound contains this row's comp letter: 40 Eri B borrows
+  the A,BC group's 83.2″ / 108° A→BC sep+PA as the best available
+  A→B proxy. Falls back to collocating on the WDS-root system anchor
+  only when no compound sibling provides usable sep+PA. Collocation
+  alone leaves B buried inside A's disc when no AB orbital pair
+  exists to animate it at runtime.
 - **Absmag.** Prefer Δmag-imputation when the row inherited its
   parent's AT-HYG photometry (Sirius B's row carried Sirius A's
   1.45 absmag, not the WD's 11.36); use `primary_absmag +
@@ -333,12 +366,16 @@ Per-row gates and resolution:
   is the fallback when the secondary's row is source=wds with no
   AT-HYG entry of its own.
 
-Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`. They
-are pushed onto `stars` before the absmag sort so they receive the
-same final record indexing as everything else. The post-sort
-`buildCatalogRowIndexMap` emits `public/catalog-row-index-map.json`
-(gaia + hip → record index) which lets the runtime binaries layer
-resolve multiples.tsv rows back to catalog.bin records.
+Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
+additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
+record lacks own gaia/hip and is addressed exclusively through a
+`synth-<wds_id>-<comp>` key. They're pushed onto `stars` before
+the absmag sort so they receive the same final record indexing as
+everything else. The post-sort `buildCatalogRowIndexMap` emits
+`public/catalog-row-index-map.json` with three sections —
+`byGaia`, `byHip`, `bySynth` — which lets the runtime binaries
+layer resolve multiples.tsv rows back to catalog.bin records in
+that priority order.
 
 The companion-promotion path is the seam where bugs in the
 binaries pipeline become user-visible. The Tier A regression

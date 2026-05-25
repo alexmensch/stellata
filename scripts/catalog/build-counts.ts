@@ -103,6 +103,11 @@ export interface BuildCounts {
   /** Newly minted catalog records — companions whose identifier wasn't
    *  already in AT-HYG and that survived the position + absmag gates. */
   companionPromoted: number;
+  /** Subset of `companionPromoted` addressable only via a synthetic
+   *  identifier (`synth-<wds_id>-<comp>`) because the row carried no
+   *  own Gaia source_id and no non-inherited HIP. Algol Aa,Ab + Aa1,2's
+   *  Ab / Aa2 sit here. */
+  companionPromotedSynthetic: number;
   /** Pair rows whose identifier already resolved to an existing
    *  catalog row (most pair rows fall here — the brighter component is
    *  almost always AT-HYG'd). */
@@ -117,6 +122,12 @@ export interface BuildCounts {
   /** Pair rows dropped because the secondary's absmag couldn't be
    *  imputed — no own absmag AND no primary+Δmag combo. */
   companionDroppedNoAbsmag: number;
+  /** Pair rows dropped because the secondary's comp letter is a WDS
+   *  unresolved compound (e.g. "BC" / "AB" / "ABC") whose constituent
+   *  single-letter components are already resolved as sibling cursors
+   *  in the same WDS root. The aggregate isn't a single star and would
+   *  double-count its components if promoted. */
+  companionDroppedCompoundComp: number;
 }
 
 export type CountDiff =

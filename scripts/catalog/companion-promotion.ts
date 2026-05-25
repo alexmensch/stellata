@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import {
   FLAG_HAS_NAME,
   FLAG_BINARY_COMPANION_ONLY,
+  FLAG_BINARY_COMPANION_SYNTHETIC,
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
@@ -21,6 +22,15 @@ import {
 import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
 import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
 import type { Star } from './stars-parse';
+
+// Stage 3 astrometry routes that re-anchor a secondary per-component
+// rather than reproducing the system anchor under a different float path.
+// Only secondaries whose route is one of these AND that carry their own
+// (non-inherited) identifier are treated as having independent xyz.
+const INDEPENDENT_FIT_ROUTES: ReadonlySet<string> = new Set([
+  'gaia_5p',
+  'hip2_long_baseline',
+]);
 
 // ---- TSV row schema -----------------------------------------------------
 
@@ -220,7 +230,10 @@ export interface PromotionStats {
   alreadyInCatalog: number;
   /** Newly minted companion records added to the catalog. */
   promoted: number;
-  /** Dropped because no identifier (gaia + hip both blank). */
+  /** Subset of `promoted` addressable only via the synthetic-ID path. */
+  promotedSynthetic: number;
+  /** Dropped because no identifier could be formed (gaia + hip both
+   *  blank AND synthetic key uncomposable). */
   droppedNoIdentifier: number;
   /** Dropped because no anchor — neither own astrometry nor sep+PA. */
   droppedNoPosition: number;
@@ -229,6 +242,11 @@ export interface PromotionStats {
   /** Dropped because the secondary's own absmag was missing AND Δmag
    *  couldn't impute one. */
   droppedNoAbsmag: number;
+  /** Dropped because the secondary's comp letter is an unresolved
+   *  compound aggregate (e.g. "BC" / "AB" / "ABC") whose constituent
+   *  single-letter components appear as sibling cursors in the same
+   *  WDS root — not a single star. */
+  droppedCompoundComp: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -236,11 +254,45 @@ export function emptyPromotionStats(): PromotionStats {
     pairRowsScanned: 0,
     alreadyInCatalog: 0,
     promoted: 0,
+    promotedSynthetic: 0,
     droppedNoIdentifier: 0,
     droppedNoPosition: 0,
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
+    droppedCompoundComp: 0,
   };
+}
+
+/** Compose `synth-<wds_id>-<comp>`. See scripts/catalog/README.md
+ *  § Companion promotion for when this fires. */
+export function composeSyntheticId(
+  systemId: string,
+  comp: string,
+): string | null {
+  const c = comp.trim();
+  if (!c) return null;
+  const dash = systemId.lastIndexOf('-');
+  if (dash < 0) return null;
+  const wdsId = systemId.slice(0, dash);
+  if (!wdsId) return null;
+  return `synth-${wdsId}-${c}`;
+}
+
+/** Re-anchor WDS prefix-truncation on a secondary's `comp` cell.
+ *  Stage 6 emits `comp="2"` for the secondary side of `"Aa1,2"`
+ *  pairs; canonical WDS form is `"Aa2"` (primary stem + secondary
+ *  digit). Used for both the synthetic-ID key and the display name
+ *  so the catalog and runtime share one canonical comp form. */
+export function canonicalCompLetter(
+  primaryComp: string,
+  secondaryComp: string,
+): string {
+  const sec = secondaryComp.trim();
+  const pri = primaryComp.trim();
+  if (sec && /^\d+$/.test(sec) && pri.length >= 2 && /\d$/.test(pri)) {
+    return pri.slice(0, -1) + sec;
+  }
+  return sec;
 }
 
 interface ExistingIndexes {
@@ -277,6 +329,28 @@ function findExisting(
   // set — the gaia lookup above already returned null, so promotion
   // proceeds without HIP-collapsing them onto the primary's record.
   if (row.gaiaSourceId === null && row.hip !== null && row.hip > 0) {
+    const hit = existing.byHip.get(row.hip);
+    if (hit !== undefined) return hit;
+  }
+  return null;
+}
+
+// Cursor-primary lookup. More permissive than findExisting: tries HIP
+// even when gaia is set, because AT-HYG sometimes carries only HIP for
+// the primary while multiples.tsv has the Gaia source_id from SIMBAD's
+// cross-walk (70 Oph A — HIP 88601 in AT-HYG, no own gaia; multiples
+// row carries gaia=4468557611984384512 from simbad_xid). For primaries
+// the shared-HIP-with-secondary ambiguity doesn't apply — the cursor
+// primary IS the system anchor, not a sibling that might collide.
+function findExistingPrimary(
+  row: MultiplesTsvRow,
+  existing: ExistingIndexes,
+): number | null {
+  if (row.gaiaSourceId) {
+    const hit = existing.byGaia.get(row.gaiaSourceId);
+    if (hit !== undefined) return hit;
+  }
+  if (row.hip !== null && row.hip > 0) {
     const hit = existing.byHip.get(row.hip);
     if (hit !== undefined) return hit;
   }
@@ -378,22 +452,30 @@ function resolvePosition(
     && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
     && row.distPc !== null;
 
-  // Components that share a primary's HIP (Sirius A and B both list
-  // HIP 32349) inherit the system anchor's astrometry from Stage 3
-  // even when astrometry_via reads "hip2_long_baseline" or similar —
-  // the tag is the SOURCE of the astrometry, not whether the
-  // secondary got its own per-component fit. Detect collocation by
-  // exact xyz equality with the primary's multiples row and fall
-  // through to the sep+PA tangent projection.
-  const collocatedWithPrimary =
+  // A secondary's xyz is "independent" only when Stage 3 re-anchored it
+  // per-component. gaia_5p with its own gaia_source_id, or
+  // hip2_long_baseline with its own HIP, count. Every other route —
+  // athyg_position, gaia_nss_systemic, system_inherited (and the
+  // shared-identifier shape inside the routes above) — reproduces the
+  // SYSTEM anchor under a different float path. Strict xyz equality
+  // missed this because float residue ranges from µpc at nearby systems
+  // (Algol Aa↔Ab) to tens of AU at hundreds of pc (Polaris Aa↔Ab); the
+  // tag itself is the reliable signal. The catalog primary's xyz is the
+  // authoritative position, and sep+PA tangent projection from it keeps
+  // every component of one system rendered coherently.
+  const primaryGaia = primary?.gaiaSourceId ?? null;
+  const primaryHip = primary?.hip ?? null;
+  const independentAstrometry =
     ownAstrometry
-    && primary !== null
-    && primary.x_pc !== null && primary.y_pc !== null && primary.z_pc !== null
-    && row.x_pc === primary.x_pc
-    && row.y_pc === primary.y_pc
-    && row.z_pc === primary.z_pc;
+    && INDEPENDENT_FIT_ROUTES.has(row.astrometryVia)
+    && ((row.astrometryVia === 'gaia_5p'
+         && row.gaiaSourceId !== null
+         && row.gaiaSourceId !== primaryGaia)
+      || (row.astrometryVia === 'hip2_long_baseline'
+          && row.hip !== null && row.hip > 0
+          && row.hip !== primaryHip));
 
-  if (ownAstrometry && !collocatedWithPrimary) {
+  if (independentAstrometry) {
     return {
       x: row.x_pc as number, y: row.y_pc as number, z: row.z_pc as number,
       distPc: row.distPc as number,
@@ -411,8 +493,16 @@ function resolvePosition(
   } else {
     return null;
   }
-  if (row.sepArcsec === null || row.paDeg === null) return null;
-  return projectFromSepPa(anchorX, anchorY, anchorZ, row.sepArcsec, row.paDeg);
+  // WDS Summary emits `rho=-1` / `theta=-1` for pairs with no measured
+  // separation (spectroscopic / interferometric inner pairs reported
+  // only at the orbital-element level). Normalise the sentinel to null
+  // here so the drop path fires honestly — projecting a negative
+  // arc-sec offset would place the secondary tens of AU off the anchor
+  // for no astrophysical reason.
+  const sepArcsec = row.sepArcsec !== null && row.sepArcsec >= 0 ? row.sepArcsec : null;
+  const paDeg = row.paDeg !== null && row.paDeg >= 0 ? row.paDeg : null;
+  if (sepArcsec === null || paDeg === null) return null;
+  return projectFromSepPa(anchorX, anchorY, anchorZ, sepArcsec, paDeg);
 }
 
 // Spectral inheritance for a promoted companion. The row's own
@@ -437,40 +527,389 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
   return { info: SPECTRAL_UNKNOWN, display: null };
 }
 
-// Compose the companion's display name as "<primary_proper> <comp>".
-// The secondary's own `name` cell is populated only when source=athyg
-// (the row found an AT-HYG entry); for source=wds rows it's empty even
-// when the PRIMARY's AT-HYG entry has a perfectly good proper name to
-// inherit. Fall back to the primary row's name in that case so
-// "Achird B", "Porrima B", "Capella B" etc. become searchable rather
-// than rendering as anonymous-companion records nobody can find.
+// Compose the companion's display name as "<base> <canonicalComp>".
+// Base falls through five sources in order of preference:
+//   1. row's own `name` cell (Stage 6 populates when source=athyg).
+//   2. multiples primary row's `name` cell (Achird / Porrima / Capella
+//      class — secondary row is source=wds but primary has AT-HYG
+//      proper).
+//   3. primary Star's `proper` (post-override; covers cases where
+//      Stage 6 didn't carry the AT-HYG proper into multiples.tsv).
+//   4. primary Star's Bayer + constellation abbrev → "Xi Boo".
+//   5. primary Star's Flamsteed + constellation abbrev → "70 Oph".
+// Constellation abbrev alone is NOT a fallback — refuse and return
+// null rather than colliding with every other star in the same
+// constellation. Without a base the promoted record stays nameless
+// (searchable through synth-ID, but no display name).
 function composeCompanionName(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
+  canonicalComp: string,
+  primaryStar: Star | null,
+  constellations: { code: string; name: string }[],
+): string | null {
+  const base = resolveCompanionNameBase(row, primary, primaryStar, constellations);
+  if (!base) return null;
+  if (!canonicalComp) return base;
+  return `${base} ${canonicalComp}`;
+}
+
+function resolveCompanionNameBase(
+  row: MultiplesTsvRow,
+  primary: MultiplesTsvRow | null,
+  primaryStar: Star | null,
+  constellations: { code: string; name: string }[],
 ): string | null {
   const ownBase = row.name.trim();
+  if (ownBase) return ownBase;
   const primaryBase = (primary?.name ?? '').trim();
-  const base = ownBase || primaryBase;
-  if (!base) return null;
-  const comp = row.comp.trim();
-  if (!comp) return base;
-  return `${base} ${comp}`;
+  if (primaryBase) return primaryBase;
+  if (primaryStar === null) return null;
+  const proper = (primaryStar.proper ?? '').trim();
+  if (proper) return proper;
+  const conCode = constellationCode(primaryStar.conIndex, constellations);
+  if (conCode === null) return null;
+  const bayer = (primaryStar.bayer ?? '').trim();
+  if (bayer) return `${bayer} ${conCode}`;
+  if (primaryStar.flam !== null) return `${primaryStar.flam} ${conCode}`;
+  return null;
+}
+
+function constellationCode(
+  conIndex: number,
+  constellations: { code: string; name: string }[],
+): string | null {
+  if (conIndex < 0 || conIndex >= constellations.length) return null;
+  const entry = constellations[conIndex];
+  return entry ? entry.code : null;
+}
+
+/** Extracts the WDS positional ID from a Stage 6 system_id. The system_id
+ *  is `<wds_id>-<pair_components>` (e.g. `04153-0739-BC`), so the WDS
+ *  root is everything before the last dash. Matches composeSyntheticId's
+ *  split so both promotion and synthetic-ID paths see the same root. */
+export function wdsRootOf(systemId: string): string | null {
+  const dash = systemId.lastIndexOf('-');
+  if (dash < 0) return null;
+  const root = systemId.slice(0, dash);
+  return root || null;
+}
+
+/** Index of single-character comp letters present in each WDS root.
+ *  Both primary and secondary slots contribute. Used by
+ *  isUnresolvedCompound to confirm a candidate compound's constituent
+ *  letters actually appear as resolved components. */
+function buildWdsRootSingleLetters(
+  groups: Map<string, PairCursor>,
+): Map<string, Set<string>> {
+  const m = new Map<string, Set<string>>();
+  for (const [sysId, cursor] of groups) {
+    const root = wdsRootOf(sysId);
+    if (root === null) continue;
+    let set = m.get(root);
+    if (!set) {
+      set = new Set<string>();
+      m.set(root, set);
+    }
+    if (cursor.primary !== null && cursor.primary.comp.length === 1) {
+      set.add(cursor.primary.comp);
+    }
+    for (const sec of cursor.secondaries) {
+      if (sec.comp.length === 1) set.add(sec.comp);
+    }
+  }
+  return m;
+}
+
+/** A comp letter is an "unresolved compound" — WDS shorthand for the
+ *  combined light/position of two-or-more components treated as one
+ *  source — when it spans 2+ characters AND every character appears as
+ *  a single-letter comp on a sibling cursor in the same WDS root.
+ *  Pure relational test: the constituent stars must be resolved
+ *  elsewhere in the same WDS root for the compound to be confirmed.
+ *  40 Eri's "BC" passes (B and C are resolved as primary of BC and
+ *  secondary of BC/AC respectively); "Aa" / "Aa2" / "A1" / "A" all
+ *  fail (their characters aren't single-letter component comps). */
+export function isUnresolvedCompound(
+  comp: string,
+  wdsRoot: string,
+  singleLettersByRoot: Map<string, Set<string>>,
+): boolean {
+  if (comp.length < 2) return false;
+  const singleLetters = singleLettersByRoot.get(wdsRoot);
+  if (!singleLetters) return false;
+  for (let i = 0; i < comp.length; i++) {
+    if (!singleLetters.has(comp[i])) return false;
+  }
+  return true;
+}
+
+/** Find a sep+PA proxy for a single-letter pair-row primary by walking
+ *  sibling cursors in the same WDS root for an unresolved-compound
+ *  secondary whose letters include this primary's comp letter. 40 Eri's
+ *  pair-row primary "B" (in BC/BD/BE groups) borrows the A,BC group's
+ *  83.2″/~108° A→BC sep+PA as an A→B proxy — vastly better than
+ *  collocating B at A's position when no AB orbital pair animates it at
+ *  runtime. Returns null when no such sibling exists. */
+function findCompoundProxySepPa(
+  primaryComp: string,
+  wdsRoot: string,
+  groups: Map<string, PairCursor>,
+  singleLettersByRoot: Map<string, Set<string>>,
+): { sepArcsec: number; paDeg: number } | null {
+  if (primaryComp.length !== 1) return null;
+  for (const [sysId, cursor] of groups) {
+    if (wdsRootOf(sysId) !== wdsRoot) continue;
+    for (const sec of cursor.secondaries) {
+      if (sec.orbitRole !== 'secondary') continue;
+      if (!sec.comp.includes(primaryComp)) continue;
+      if (!isUnresolvedCompound(sec.comp, wdsRoot, singleLettersByRoot)) continue;
+      if (sec.sepArcsec === null || sec.paDeg === null) continue;
+      if (sec.sepArcsec < 0 || sec.paDeg < 0) continue;
+      return { sepArcsec: sec.sepArcsec, paDeg: sec.paDeg };
+    }
+  }
+  return null;
+}
+
+interface SystemAnchor {
+  star: Star;
+  primaryRow: MultiplesTsvRow;
+  catalogIdx: number;
+}
+
+/** Pick the more-canonical of two pair primaries sharing a WDS root.
+ *  Prefer comp="A" over "Aa" over "B" etc. — the system's canonical
+ *  anchor is the row whose comp letter is shortest and alphabetically
+ *  first. Used by buildWdsRootAnchors when several cursors map to one
+ *  WDS root (40 Eri has A,BC / AC / BC / BD / BE rows all sharing
+ *  `04153-0739`; we want A as the system anchor, not B). */
+function isMoreCanonicalAnchor(
+  candidateComp: string,
+  incumbentComp: string,
+): boolean {
+  if (candidateComp === incumbentComp) return false;
+  if (candidateComp === 'A' && incumbentComp !== 'A') return true;
+  if (candidateComp !== 'A' && incumbentComp === 'A') return false;
+  if (candidateComp.length !== incumbentComp.length) {
+    return candidateComp.length < incumbentComp.length;
+  }
+  return candidateComp < incumbentComp;
+}
+
+function buildWdsRootAnchors(
+  groups: Map<string, PairCursor>,
+  existing: ExistingIndexes,
+  existingStars: Star[],
+): Map<string, SystemAnchor> {
+  const anchors = new Map<string, SystemAnchor>();
+  for (const cursor of groups.values()) {
+    if (cursor.primary === null) continue;
+    const wdsRoot = wdsRootOf(cursor.primary.systemId);
+    if (wdsRoot === null) continue;
+    const idx = findExistingPrimary(cursor.primary, existing);
+    if (idx === null) continue;
+    const candidate: SystemAnchor = {
+      star: existingStars[idx],
+      primaryRow: cursor.primary,
+      catalogIdx: idx,
+    };
+    const incumbent = anchors.get(wdsRoot);
+    if (!incumbent
+        || isMoreCanonicalAnchor(cursor.primary.comp, incumbent.primaryRow.comp)) {
+      anchors.set(wdsRoot, candidate);
+    }
+  }
+  return anchors;
+}
+
+/** Per-row promotion shared by the secondary loop and the
+ *  pair-row-primary escape. Both paths run the same identifier
+ *  resolution, dedup, photometry, spectral, and naming pipeline; only
+ *  the position and anchor sources differ between callers.
+ *  Returns the absolute catalog index of the new record, or null when
+ *  any gate (dedup, missing position/absmag/identifier) drops the row.
+ *  Increments the matching stats counter on each drop. */
+interface PromoteRowContext {
+  row: MultiplesTsvRow;
+  /** Multiples row of the anchor primary — drives composeCompanionName's
+   *  primary-row-name fallback and the inherited-HIP gate. For the
+   *  secondary loop this is cursor.primary; for the pair-row-primary
+   *  escape this is the WDS-root system anchor's primary row. */
+  anchorPrimaryRow: MultiplesTsvRow;
+  /** Catalog Star of the anchor primary — drives composeCompanionName's
+   *  Bayer/Flamsteed/constellation fallback and the inherited-HIP gate. */
+  anchorStar: Star | null;
+  /** Catalog index of the anchor primary — used by the inherited-HIP
+   *  collision escape so the row's HIP-match-against-anchor doesn't
+   *  classify as alreadyInCatalog. */
+  anchorCatalogIdx: number | null;
+  /** Pre-computed position for the row. Caller is responsible for
+   *  resolving it (resolvePosition for secondaries; collocate-on-anchor
+   *  for pair-row primaries). Null signals the position couldn't be
+   *  resolved — drop with droppedNoPosition. */
+  position: CompanionPlacement | null;
+  /** Canonical comp letter for the row — drives both the synthetic ID
+   *  and the display name. */
+  canonicalComp: string;
+}
+
+interface PromotionState {
+  existing: ExistingIndexes;
+  existingStarsLength: number;
+  newStars: Star[];
+  promotedByGaia: Map<string, number>;
+  promotedByHip: Map<number, number>;
+  promotedBySynth: Map<string, number>;
+}
+
+function promoteRow(
+  ctx: PromoteRowContext,
+  state: PromotionState,
+  constellations: { code: string; name: string }[],
+  stats: PromotionStats,
+): number | null {
+  const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx,
+          position, canonicalComp } = ctx;
+  const synthId = composeSyntheticId(row.systemId, canonicalComp);
+  const rowHasOwnHip = row.hip !== null && row.hip > 0;
+  if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
+    stats.droppedNoIdentifier++;
+    return null;
+  }
+  // Dedup against existing catalog + previously-promoted records.
+  // The inherited-HIP escape lets a no-gaia secondary match the anchor's
+  // record via HIP fall-through without being classified as alreadyInCatalog
+  // (Sirius A+B both list HIP 32349 — Hipparcos resolved them as one star).
+  let existingIdx: number | null = null;
+  let inheritedHipCollision = false;
+  if (row.gaiaSourceId !== null || rowHasOwnHip) {
+    existingIdx = findExisting(row, state.existing);
+    inheritedHipCollision =
+      existingIdx !== null
+      && row.gaiaSourceId === null
+      && anchorCatalogIdx !== null
+      && existingIdx === anchorCatalogIdx;
+    if (existingIdx !== null && !inheritedHipCollision) {
+      stats.alreadyInCatalog++;
+      return null;
+    }
+  }
+  if (row.gaiaSourceId && state.promotedByGaia.has(row.gaiaSourceId)) {
+    stats.alreadyInCatalog++;
+    return null;
+  }
+  if (rowHasOwnHip && row.gaiaSourceId === null
+      && state.promotedByHip.has(row.hip as number)) {
+    stats.alreadyInCatalog++;
+    return null;
+  }
+
+  // HIP inheritance gate. The multiples.tsv carries the primary's
+  // HIP on both component rows when AT-HYG had a single entry for
+  // the system (Sirius A and B both list HIP 32349). Letting the
+  // companion adopt that HIP collides with the primary in every
+  // HIP-keyed lookup: url-state's refFromIndex encodes by HIP and
+  // decodes first-wins, so a shared link or page reload collapses
+  // both records onto the primary. Strip when the row's HIP equals
+  // the anchor row's HIP.
+  const inheritedHip = row.hip !== null && row.hip > 0
+    && anchorPrimaryRow.hip === row.hip;
+  const companionHip = inheritedHip ? null : row.hip;
+  const usesSynth = row.gaiaSourceId === null && companionHip === null;
+  if (usesSynth) {
+    if (synthId === null) {
+      stats.droppedNoIdentifier++;
+      return null;
+    }
+    if (state.promotedBySynth.has(synthId)) {
+      stats.alreadyInCatalog++;
+      return null;
+    }
+  }
+  if (position === null) {
+    stats.droppedNoPosition++;
+    return null;
+  }
+  const absmag = imputeCompanionAbsmag(row, anchorPrimaryRow);
+  if (absmag === null) {
+    stats.droppedNoAbsmag++;
+    return null;
+  }
+  const spectral = resolveCompanionSpectral(row);
+  const ci = imputeCompanionCi(row, spectral.info);
+  const properName = composeCompanionName(
+    row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
+  );
+  let flags = FLAG_BINARY_COMPANION_ONLY;
+  if (properName) flags |= FLAG_HAS_NAME;
+  if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
+
+  state.newStars.push({
+    x: position.x, y: position.y, z: position.z,
+    absmag, ci,
+    spectClass: spectral.info.classIdx,
+    lumClass: spectral.info.lumClass,
+    physicalRadius: physicalRadius(absmag, spectral.info),
+    conIndex: NO_CONSTELLATION_INDEX,
+    flags,
+    proper: properName,
+    bayer: null,
+    hip: companionHip,
+    hd: null,
+    hr: null,
+    flam: null,
+    gl: null,
+    gaiaSourceId: row.gaiaSourceId,
+    spectDisplay: spectral.display,
+    companionIdx: -1,
+    periodDays: 0,
+    amplitudeMag: 0,
+    athygDist: null,
+    athygDistSrc: null,
+    syntheticId: usesSynth ? synthId : null,
+  });
+  const newIdx = state.existingStarsLength + state.newStars.length - 1;
+  stats.promoted++;
+  if (usesSynth) {
+    stats.promotedSynthetic++;
+    state.promotedBySynth.set(synthId as string, newIdx);
+  }
+  if (row.gaiaSourceId) state.promotedByGaia.set(row.gaiaSourceId, newIdx);
+  if (companionHip !== null) state.promotedByHip.set(companionHip, newIdx);
+  return newIdx;
 }
 
 export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
+  constellations: { code: string; name: string }[],
 ): { newStars: Star[]; stats: PromotionStats } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
+  const wdsRootAnchors = buildWdsRootAnchors(groups, existing, existingStars);
+  const singleLettersByRoot = buildWdsRootSingleLetters(groups);
   const newStars: Star[] = [];
-  // Track promotions by gaia+hip so two pair rows in the same system that
-  // reference the same secondary (e.g. Sirius A appears as primary in
-  // 06451-1643-AB AND would have been "primary" again if WDS broke the
-  // same components into a sub-pair) don't get double-promoted.
-  const promotedGaia = new Set<string>();
-  const promotedHip = new Set<number>();
+  // Track promotions by gaia + hip + synth so two pair rows in the same
+  // system that reference the same record (Sirius A appears as primary
+  // in 06451-1643-AB and would have been "primary" again if WDS broke
+  // the same components into a sub-pair) don't get double-promoted.
+  // Maps (not sets) so the cursor.primary lookup can find a previously-
+  // promoted record (40 Eri B promoted in the BC group, then anchored
+  // as a parent in the BD/BE groups).
+  const state: PromotionState = {
+    existing,
+    existingStarsLength: existingStars.length,
+    newStars,
+    promotedByGaia: new Map(),
+    promotedByHip: new Map(),
+    promotedBySynth: new Map(),
+  };
+  const getStarAt = (idx: number): Star =>
+    idx < existingStars.length
+      ? existingStars[idx]
+      : newStars[idx - existingStars.length];
 
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
@@ -478,111 +917,144 @@ export function promoteCompanions(
     // pair geometry needs a different rule than this path.
     if (cursor.primary === null) continue;
 
-    // Resolve the primary's catalog row once per system. Used both for
-    // anchoring the sep+PA projection AND for the inherited-HIP escape
-    // below (so findExisting hits against the primary's record don't
-    // wrongly collapse a no-gaia secondary that's inheriting HIP).
-    const primaryCatalogIdx = findExisting(cursor.primary, existing);
+    // Resolve the cursor primary's catalog row. Check existing AT-HYG
+    // first, then previously-promoted records (40 Eri B class — promoted
+    // in BC, then reused as anchor for BD).
+    let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing);
+    if (primaryCatalogIdx === null) {
+      primaryCatalogIdx = lookupPromoted(cursor.primary, state);
+    }
+    if (primaryCatalogIdx === null) {
+      // Cursor primary isn't in catalog and hasn't been promoted yet.
+      // Pair-row-primary escape: promote it as a companion of the
+      // WDS-root system anchor (40 Eri B is the canonical case — it
+      // appears as a primary in BC/BD/BE groups but never as a
+      // secondary of A, so the existing secondary loop never
+      // reached it).
+      primaryCatalogIdx = tryPromoteCursorPrimary(
+        cursor, wdsRootAnchors, groups, singleLettersByRoot,
+        state, constellations, stats,
+      );
+    }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
       ? {
-          x: existingStars[primaryCatalogIdx].x,
-          y: existingStars[primaryCatalogIdx].y,
-          z: existingStars[primaryCatalogIdx].z,
+          x: getStarAt(primaryCatalogIdx).x,
+          y: getStarAt(primaryCatalogIdx).y,
+          z: getStarAt(primaryCatalogIdx).z,
         }
+      : null;
+    const anchorStar = primaryCatalogIdx !== null
+      ? getStarAt(primaryCatalogIdx)
       : null;
 
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') continue;
       stats.pairRowsScanned++;
-      // Identifier check — skip if both gaia + hip blank. The row exists
-      // in multiples.tsv but has no way to be addressed by runtime code.
-      if (row.gaiaSourceId === null && (row.hip === null || row.hip <= 0)) {
-        stats.droppedNoIdentifier++;
+      // WDS compound-secondary guard. "BC" / "AB" / "ABC" represent
+      // unresolved aggregates of two-or-more components, not single
+      // stars; promoting them would double-count the resolved
+      // sibling-cursor records (40 Eri's "Keid BC" alongside
+      // "Keid B" + "Keid C"). Confirmed via the sibling-cursor
+      // relational test, not a string heuristic.
+      const wdsRoot = wdsRootOf(row.systemId);
+      if (wdsRoot !== null
+          && isUnresolvedCompound(row.comp, wdsRoot, singleLettersByRoot)) {
+        stats.droppedCompoundComp++;
         continue;
       }
-      // findExisting + inherited-HIP escape. When a no-gaia secondary
-      // row matches the primary's catalog record on HIP, that's the
-      // inheritance-collision case (Hipparcos resolved A+B as one star),
-      // not a real "already in catalog" hit — promotion should proceed.
-      const existingIdx = findExisting(row, existing);
-      const inheritedHipCollision =
-        existingIdx !== null
-        && row.gaiaSourceId === null
-        && primaryCatalogIdx !== null
-        && existingIdx === primaryCatalogIdx;
-      if (existingIdx !== null && !inheritedHipCollision) {
-        stats.alreadyInCatalog++;
-        continue;
-      }
-      if (row.gaiaSourceId && promotedGaia.has(row.gaiaSourceId)) {
-        stats.alreadyInCatalog++;
-        continue;
-      }
-      if (row.hip !== null && row.hip > 0 && row.gaiaSourceId === null
-          && promotedHip.has(row.hip)) {
-        stats.alreadyInCatalog++;
-        continue;
-      }
-
-      // HIP inheritance gate. The multiples.tsv carries the primary's
-      // HIP on both component rows when AT-HYG had a single entry for
-      // the system (Sirius A and B both list HIP 32349 — Hipparcos
-      // resolved the pair as one star). Letting the companion adopt
-      // that HIP collides with the primary in every HIP-keyed lookup:
-      // url-state's refFromIndex encodes by HIP, and resolveStarRef
-      // decodes via a first-wins map, so a shared link or page reload
-      // collapses both records onto the primary. Set hip=null when
-      // the row's HIP equals the primary row's HIP — Hipparcos owns
-      // that identifier for the brighter component.
-      const inheritedHip = cursor.primary !== null
-        && row.hip !== null && row.hip > 0
-        && cursor.primary.hip === row.hip;
-      const companionHip = inheritedHip ? null : row.hip;
+      const canonicalComp = canonicalCompLetter(
+        cursor.primary?.comp ?? '', row.comp,
+      );
       const position = resolvePosition(row, cursor.primary, anchor);
-      if (position === null) {
-        stats.droppedNoPosition++;
-        continue;
-      }
-      const absmag = imputeCompanionAbsmag(row, cursor.primary);
-      if (absmag === null) {
-        stats.droppedNoAbsmag++;
-        continue;
-      }
-      const spectral = resolveCompanionSpectral(row);
-      const ci = imputeCompanionCi(row, spectral.info);
-      const properName = composeCompanionName(row, cursor.primary);
-      let flags = FLAG_BINARY_COMPANION_ONLY;
-      if (properName) flags |= FLAG_HAS_NAME;
-
-      newStars.push({
-        x: position.x, y: position.y, z: position.z,
-        absmag, ci,
-        spectClass: spectral.info.classIdx,
-        lumClass: spectral.info.lumClass,
-        physicalRadius: physicalRadius(absmag, spectral.info),
-        conIndex: NO_CONSTELLATION_INDEX,
-        flags,
-        proper: properName,
-        bayer: null,
-        hip: companionHip,
-        hd: null,
-        hr: null,
-        flam: null,
-        gl: null,
-        gaiaSourceId: row.gaiaSourceId,
-        spectDisplay: spectral.display,
-        companionIdx: -1,
-        periodDays: 0,
-        amplitudeMag: 0,
-        athygDist: null,
-        athygDistSrc: null,
-      });
-      stats.promoted++;
-      if (row.gaiaSourceId) promotedGaia.add(row.gaiaSourceId);
-      if (row.hip !== null && row.hip > 0) promotedHip.add(row.hip);
+      promoteRow(
+        {
+          row,
+          anchorPrimaryRow: cursor.primary,
+          anchorStar,
+          anchorCatalogIdx: primaryCatalogIdx,
+          position,
+          canonicalComp,
+        },
+        state, constellations, stats,
+      );
     }
   }
   return { newStars, stats };
+}
+
+function lookupPromoted(
+  row: MultiplesTsvRow,
+  state: PromotionState,
+): number | null {
+  if (row.gaiaSourceId) {
+    const hit = state.promotedByGaia.get(row.gaiaSourceId);
+    if (hit !== undefined) return hit;
+  }
+  if (row.hip !== null && row.hip > 0) {
+    const hit = state.promotedByHip.get(row.hip);
+    if (hit !== undefined) return hit;
+  }
+  return null;
+}
+
+function tryPromoteCursorPrimary(
+  cursor: PairCursor,
+  wdsRootAnchors: Map<string, SystemAnchor>,
+  groups: Map<string, PairCursor>,
+  singleLettersByRoot: Map<string, Set<string>>,
+  state: PromotionState,
+  constellations: { code: string; name: string }[],
+  stats: PromotionStats,
+): number | null {
+  const primary = cursor.primary;
+  if (primary === null) return null;
+  // Need own identifier (gaia or hip) to be addressable post-promotion.
+  // 40 Eri B has gaia=3195919254111315712 but no HIP.
+  const hasOwnGaia = primary.gaiaSourceId !== null;
+  const hasOwnHip = primary.hip !== null && primary.hip > 0;
+  if (!hasOwnGaia && !hasOwnHip) return null;
+  const wdsRoot = wdsRootOf(primary.systemId);
+  if (wdsRoot === null) return null;
+  const anchor = wdsRootAnchors.get(wdsRoot);
+  if (!anchor) return null;
+  if (anchor.primaryRow === primary) return null;  // would self-promote
+  // Position. Preference order:
+  //  1. Project from a sibling cursor's unresolved-compound sep+PA when
+  //     the compound contains this row's comp letter — 40 Eri B (in
+  //     BC/BD/BE) borrows the A,BC group's anchor→BC sep+PA as an
+  //     anchor→B proxy. Approximate (it's anchor→BC-barycentre, not
+  //     anchor→B), but vastly better than collocation when no AB
+  //     orbital pair animates B at runtime.
+  //  2. Collocate at the system anchor — last-resort fallback when no
+  //     compound sibling exists. BinaryOrbitField overlays orbital
+  //     motion when an animating pair is wired up.
+  let position: CompanionPlacement | null = null;
+  const proxy = findCompoundProxySepPa(
+    primary.comp, wdsRoot, groups, singleLettersByRoot,
+  );
+  if (proxy !== null) {
+    position = projectFromSepPa(
+      anchor.star.x, anchor.star.y, anchor.star.z,
+      proxy.sepArcsec, proxy.paDeg,
+    );
+  }
+  if (position === null) {
+    position = {
+      x: anchor.star.x, y: anchor.star.y, z: anchor.star.z,
+      distPc: Math.hypot(anchor.star.x, anchor.star.y, anchor.star.z),
+    };
+  }
+  return promoteRow(
+    {
+      row: primary,
+      anchorPrimaryRow: anchor.primaryRow,
+      anchorStar: anchor.star,
+      anchorCatalogIdx: anchor.catalogIdx,
+      position,
+      canonicalComp: primary.comp,
+    },
+    state, constellations, stats,
+  );
 }
 
 // ---- Catalog row-index map sidecar -------------------------------------
@@ -592,6 +1064,9 @@ export interface CatalogRowIndexMap {
   byGaia: Record<string, number>;
   /** Hipparcos catalog number → catalog.bin record index. */
   byHip: Record<string, number>;
+  /** Synthetic identifier → catalog.bin record index. See
+   *  scripts/catalog/README.md § Companion promotion. */
+  bySynth: Record<string, number>;
 }
 
 // Build the lookup sidecar after the final absmag sort. The runtime
@@ -601,6 +1076,7 @@ export interface CatalogRowIndexMap {
 export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
   const byHip: Record<string, number> = {};
+  const bySynth: Record<string, number> = {};
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     if (s.gaiaSourceId && !(s.gaiaSourceId in byGaia)) {
@@ -609,6 +1085,9 @@ export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
     if (s.hip !== null && s.hip > 0 && !(`${s.hip}` in byHip)) {
       byHip[`${s.hip}`] = i;
     }
+    if (s.syntheticId && !(s.syntheticId in bySynth)) {
+      bySynth[s.syntheticId] = i;
+    }
   }
-  return { byGaia, byHip };
+  return { byGaia, byHip, bySynth };
 }

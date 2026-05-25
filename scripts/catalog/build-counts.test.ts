@@ -43,10 +43,12 @@ function baseCounts(): BuildCounts {
     spectralFallback: 8000,
     companionRowsScanned: 13000,
     companionPromoted: 4500,
+    companionPromotedSynthetic: 12,
     companionAlreadyInCatalog: 7000,
     companionDroppedNoIdentifier: 100,
     companionDroppedNoPosition: 500,
     companionDroppedNoAbsmag: 900,
+    companionDroppedCompoundComp: 40,
   };
 }
 

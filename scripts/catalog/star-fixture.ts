@@ -28,6 +28,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     amplitudeMag: 0,
     athygDist: null,
     athygDistSrc: null,
+    syntheticId: null,
     ...overrides,
   };
 }

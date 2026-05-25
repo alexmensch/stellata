@@ -55,6 +55,9 @@ export interface Star {
   // and NOT written to the binary.
   athygDist: number | null;     // AT-HYG `dist` column, pre-override
   athygDistSrc: string | null;  // AT-HYG `dist_src` column
+  /** Build-time-only synthetic identifier. See
+   *  scripts/catalog/README.md § Companion promotion. */
+  syntheticId: string | null;
 }
 
 export function parseFloatOrNull(s: string | undefined | null): number | null {
@@ -265,6 +268,7 @@ export async function readStars(
       amplitudeMag: 0,
       athygDist,
       athygDistSrc,
+      syntheticId: null,
     });
   }
 

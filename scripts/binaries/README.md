@@ -156,21 +156,30 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    multiples.tsv: `scripts/catalog/companion-promotion.ts` adds
    first-class catalog records for the secondary of every physical
    pair whose identifier isn't already in AT-HYG. Promoted records
-   carry `FLAG_BINARY_COMPANION_ONLY`; positions come from the
-   row's own Gaia 5p astrometry when distinct from the primary's,
-   otherwise from a sky-tangent projection of the EXISTING catalog
-   primary's xyz at the published WDS sep+PA. Absmag is imputed
-   from primary + WDS Δmag when the row inherits its parent's
-   AT-HYG photometry. The renderer / picker / hover / focus stack
-   picks companions up with zero code change. ~4k companions
-   promoted into the current build.
+   carry `FLAG_BINARY_COMPANION_ONLY`, plus
+   `FLAG_BINARY_COMPANION_SYNTHETIC` when the row carries no own
+   gaia and no non-inherited HIP (Algol Ab and friends — see
+   `scripts/catalog/README.md` § Companion promotion for the
+   identifier gate). Positions come from the row's own Gaia 5p
+   astrometry when distinct from the primary's, otherwise from a
+   sky-tangent projection of the EXISTING catalog primary's xyz at
+   the published WDS sep+PA. Absmag is imputed from primary + WDS
+   Δmag when the row inherits its parent's AT-HYG photometry. The
+   renderer / picker / hover / focus stack picks companions up
+   with zero code change. ~8.6k companions promoted into the
+   current build (half via real Gaia/HIP keys, half via synthetic).
 3. **Runtime side artifact** (`scripts/binaries/build-runtime-binaries.py`).
-   Reads multiples.tsv + `public/catalog-row-index-map.json`,
-   emits `public/binaries.bin` — one fixed-size record per
-   physical pair carrying Kepler elements + sep+PA + hierarchical
-   parent-relation index. Run via `npm run build:binaries-runtime`.
+   Reads multiples.tsv + `public/catalog-row-index-map.json`
+   (which now carries a `bySynth` section alongside `byGaia` and
+   `byHip`), emits `public/binaries.bin` — one fixed-size record
+   per physical pair carrying Kepler elements + sep+PA +
+   hierarchical parent-relation index. The Python `resolve_idx`
+   walks gaia → hip → synth in priority order; the synth key is
+   composed from the pair's raw `comp` cells (so WDS-truncated
+   forms like `Aa1,2` resolve through the same `synth-…-2` key
+   the catalog minted). Run via `npm run build:binaries-runtime`.
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
-   per-frame by the BinaryOrbitField (future runtime layer).
+   per-frame by the BinaryOrbitField runtime layer.
 
 The Tier A validation harness (`scripts/catalog/known-stars.test.ts`)
 reads multiples.tsv directly for per-component sanity checks

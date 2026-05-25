@@ -16,7 +16,9 @@ import {
   loadCatalog,
   lookupByHip,
   lookupByGaiaSourceId,
+  lookupByName,
 } from './catalog-lookup';
+import { AU_PER_PC } from '../../src/client/util/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
@@ -59,6 +61,12 @@ interface CorpusCompanion {
   hip: number | null;
   gaiaSourceId: string | null;
   absmag: number;
+  /** Optional pin: companion's catalog.bin xyz must sit within this
+   *  many AU of the primary's catalog.bin xyz. Regression-guards
+   *  synth-promoted secondaries whose tangent-projected position
+   *  depends on companion-promotion's route-based collocation
+   *  detector. */
+  maxSepAuFromPrimary: number | null;
 }
 
 interface CorpusRow {
@@ -112,19 +120,28 @@ function parseCompanions(cell: string): CorpusCompanion[] {
   if (!trimmed) return [];
   return trimmed.split(';').map(chunk => {
     const parts = chunk.split(':');
-    if (parts.length !== 4) {
-      throw new Error(`malformed companion tuple "${chunk}" — expected letter:hip:gaia_id:absmag`);
+    if (parts.length !== 4 && parts.length !== 5) {
+      throw new Error(`malformed companion tuple "${chunk}" — expected letter:hip:gaia_id:absmag[:max_sep_au]`);
     }
-    const [letter, hipStr, gaiaStr, absmagStr] = parts;
+    const [letter, hipStr, gaiaStr, absmagStr, sepStr] = parts;
     const absmag = Number(absmagStr);
     if (!Number.isFinite(absmag)) {
       throw new Error(`companion "${chunk}" — absmag "${absmagStr}" is not a finite number`);
+    }
+    let maxSepAuFromPrimary: number | null = null;
+    if (sepStr !== undefined && sepStr.trim()) {
+      const v = Number(sepStr);
+      if (!Number.isFinite(v) || v < 0) {
+        throw new Error(`companion "${chunk}" — max_sep_au "${sepStr}" must be a non-negative number`);
+      }
+      maxSepAuFromPrimary = v;
     }
     return {
       letter: letter.trim(),
       hip: parseIntOrNull(hipStr),
       gaiaSourceId: nonEmpty(gaiaStr),
       absmag,
+      maxSepAuFromPrimary,
     };
   });
 }
@@ -302,14 +319,35 @@ function findCompanionInMultiples(
   return bucket.find(m => m.comp === companion.letter) ?? null;
 }
 
-function assertCompanion(row: CorpusRow, companion: CorpusCompanion): void {
+function assertCompanion(
+  row: CorpusRow,
+  companion: CorpusCompanion,
+  primary: CatalogRecord,
+): void {
+  // Two assertion paths. Real-ID companions (Sirius B-shape — own
+  // gaia / hip in multiples.tsv) pin against multiples.tsv columns;
+  // the corpus absmag is the per-component upstream value.
+  // Synth-promoted companions (Algol Ab-shape — opt into the
+  // maxSepAuFromPrimary pin) pin against catalog.bin via lookupByName
+  // because multiples carries inherited values that don't match the
+  // post-imputation record the runtime sees.
+  if (companion.maxSepAuFromPrimary !== null) {
+    assertSynthPromotedCompanion(row, companion, primary);
+    return;
+  }
+  assertMultiplesCompanion(row, companion);
+}
+
+function assertMultiplesCompanion(
+  row: CorpusRow,
+  companion: CorpusCompanion,
+): void {
   const m = findCompanionInMultiples(row, companion);
   expect(
     m,
     `${row.systemName} companion ${companion.letter}: not found in multiples.tsv for wds_id=${row.wdsId}`,
   ).not.toBeNull();
   if (!m) return;
-
   if (companion.hip !== null) {
     expect(
       m.hip,
@@ -329,6 +367,43 @@ function assertCompanion(row: CorpusRow, companion: CorpusCompanion): void {
       `${row.systemName} companion ${companion.letter}: expected absmag ${companion.absmag}, multiples.tsv has ${m.absmag} (diff ${diff.toFixed(3)} > tolerance ${ABSMAG_TOLERANCE})`,
     ).toBeLessThanOrEqual(ABSMAG_TOLERANCE);
   }
+}
+
+function assertSynthPromotedCompanion(
+  row: CorpusRow,
+  companion: CorpusCompanion,
+  primary: CatalogRecord,
+): void {
+  // composeCompanionName in scripts/catalog/companion-promotion.ts emits
+  // `${primary_name_cell} ${canonicalComp}` — reconstruct the same shape
+  // from the primary's catalog name + corpus comp letter so a naming
+  // drift on either side surfaces here as a missing-lookup failure.
+  const companionName = primary.name !== null
+    ? `${primary.name} ${companion.letter}`
+    : null;
+  const companionRecord = companionName !== null
+    ? lookupByName(catalog, companionName)
+    : null;
+  expect(
+    companionRecord,
+    `${row.systemName} companion ${companion.letter}: lookupByName("${companionName}") returned null — companion missing from catalog.bin or naming convention drifted`,
+  ).not.toBeNull();
+  if (companionRecord === null) return;
+  const absmagDiff = Math.abs(companionRecord.absmag - companion.absmag);
+  expect(
+    absmagDiff,
+    `${row.systemName} companion ${companion.letter}: expected absmag ${companion.absmag}, catalog.bin has ${companionRecord.absmag.toFixed(3)} (diff ${absmagDiff.toFixed(3)} > tolerance ${ABSMAG_TOLERANCE})`,
+  ).toBeLessThanOrEqual(ABSMAG_TOLERANCE);
+  const sepPc = Math.hypot(
+    companionRecord.x - primary.x,
+    companionRecord.y - primary.y,
+    companionRecord.z - primary.z,
+  );
+  const sepAu = sepPc * AU_PER_PC;
+  expect(
+    sepAu,
+    `${row.systemName} companion ${companion.letter}: catalog.bin xyz sits ${sepAu.toFixed(2)} AU from primary, expected ≤ ${companion.maxSepAuFromPrimary} AU. Companion-promotion's route-based collocation detector likely regressed — secondaries with athyg_position route must tangent-project from the catalog anchor.`,
+  ).toBeLessThanOrEqual(companion.maxSepAuFromPrimary as number);
 }
 
 function lookupPrimary(row: CorpusRow): CatalogRecord {
@@ -398,7 +473,7 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
       const record = lookupPrimary(row);
       assertPrimary(row, record);
       for (const companion of row.companions) {
-        assertCompanion(row, companion);
+        assertCompanion(row, companion, record);
       }
     });
 

@@ -509,18 +509,22 @@ export const FLAGS = {
   hasBayer: 0x04,
   binaryCompanionOnly: 0x08,
   binaryPrimary: 0x10,
+  /** Companion addressable only via the row-index map's `bySynth`
+   *  table. See scripts/catalog/README.md § Companion promotion. */
+  binaryCompanionSynthetic: 0x20,
 } as const;
 export const FLAG_HAS_NAME = FLAGS.hasName;
 export const FLAG_IS_SOL = FLAGS.isSol;
 export const FLAG_HAS_BAYER = FLAGS.hasBayer;
 export const FLAG_BINARY_COMPANION_ONLY = FLAGS.binaryCompanionOnly;
 export const FLAG_BINARY_PRIMARY = FLAGS.binaryPrimary;
+export const FLAG_BINARY_COMPANION_SYNTHETIC = FLAGS.binaryCompanionSynthetic;
 
 /** Bits intentionally left free for future use — adding functionality
  *  that fits inside one of these does not require a BINARY_VERSION bump.
  *  The reservation is pinned by a regression test: drifting RESERVED into
  *  any FLAGS value forces a deliberate edit here. */
-export const RESERVED_FLAG_BITS = 0x20 | 0x40 | 0x80;
+export const RESERVED_FLAG_BITS = 0x40 | 0x80;
 
 // ---- Geometric binary inference -----------------------------------------
 

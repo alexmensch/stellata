@@ -76,16 +76,15 @@ NO_PARENT = -1
 @dataclass
 class MultiplesPair:
     """One physical pair, primary + secondary rows joined by system_id.
-
-    Carries the lookup keys the row-index map resolves and the orbital
-    elements the runtime layer evaluates. Missing-Kepler-elements rows
-    keep the float fields as ``None`` and the binary writer encodes them
-    as NaN.
-    """
+    See ``scripts/binaries/README.md`` § Runtime side artifact for the
+    raw-comp synth-key invariant ``primary_comp`` / ``secondary_comp``
+    encode."""
 
     system_id: str
     wds_id: str          # everything left of the final "-"
     components: str       # everything right of the final "-"
+    primary_comp: str    # canonical primary comp (WDS-anchored)
+    secondary_comp: str  # canonical secondary comp (WDS-anchored)
     primary_gaia: str | None
     primary_hip: int | None
     secondary_gaia: str | None
@@ -130,6 +129,19 @@ def _parse_gaia(s: str) -> str | None:
     return s
 
 
+def _canonical_comp_pair(
+    primary_comp: str, secondary_comp: str,
+) -> tuple[str, str]:
+    """Re-anchor WDS prefix-truncation on the secondary comp cell.
+    Mirrors `canonicalCompLetter` in companion-promotion.ts so the
+    synth keys composed on the catalog and runtime sides match."""
+    pri = primary_comp.strip()
+    sec = secondary_comp.strip()
+    if sec and sec.isdigit() and len(pri) >= 2 and pri[-1].isdigit():
+        sec = pri[:-1] + sec
+    return pri, sec
+
+
 def load_pairs(path: Path) -> list[MultiplesPair]:
     """Read multiples.tsv and group primary+secondary rows into
     ``MultiplesPair`` records. Standalone rows are skipped — they aren't
@@ -166,10 +178,17 @@ def load_pairs(path: Path) -> list[MultiplesPair]:
         dash = sys_id.rfind("-")
         wds_id = sys_id[:dash]
         components = sys_id[dash + 1:]
+        raw_primary_comp = p[idx["comp"]].strip()
+        raw_secondary_comp = s[idx["comp"]].strip()
+        primary_comp, secondary_comp = _canonical_comp_pair(
+            raw_primary_comp, raw_secondary_comp,
+        )
         pairs.append(MultiplesPair(
             system_id=sys_id,
             wds_id=wds_id,
             components=components,
+            primary_comp=primary_comp,
+            secondary_comp=secondary_comp,
             primary_gaia=_parse_gaia(p[idx["gaia_source_id"]]),
             primary_hip=_parse_int(p[idx["hip"]]),
             secondary_gaia=_parse_gaia(s[idx["gaia_source_id"]]),
@@ -195,26 +214,42 @@ class RowIndexMap:
 
     by_gaia: dict[str, int]
     by_hip: dict[int, int]
+    by_synth: dict[str, int]
 
 
 def load_row_index_map(path: Path) -> RowIndexMap:
     raw = json.loads(path.read_text())
     by_gaia: dict[str, int] = dict(raw.get("byGaia", {}))
     by_hip: dict[int, int] = {int(k): v for k, v in raw.get("byHip", {}).items()}
-    return RowIndexMap(by_gaia=by_gaia, by_hip=by_hip)
+    by_synth: dict[str, int] = dict(raw.get("bySynth", {}))
+    return RowIndexMap(by_gaia=by_gaia, by_hip=by_hip, by_synth=by_synth)
+
+
+def synthetic_id(wds_id: str, comp: str) -> str | None:
+    """Compose ``synth-<wds_id>-<comp>``; ``None`` when either is empty."""
+    c = comp.strip()
+    if not c or not wds_id:
+        return None
+    return f"synth-{wds_id}-{c}"
 
 
 def resolve_idx(
-    gaia: str | None, hip: int | None, m: RowIndexMap,
+    gaia: str | None,
+    hip: int | None,
+    synth_key: str | None,
+    m: RowIndexMap,
 ) -> int | None:
-    """Catalog row resolution: Gaia source_id beats HIP. HIP-only is the
-    fallback (Sirius / Vega / Procyon and friends saturated in Gaia)."""
+    """Catalog row resolution: gaia → hip → synth in priority order."""
     if gaia is not None:
         hit = m.by_gaia.get(gaia)
         if hit is not None:
             return hit
     if hip is not None:
-        return m.by_hip.get(hip)
+        hit = m.by_hip.get(hip)
+        if hit is not None:
+            return hit
+    if synth_key is not None:
+        return m.by_synth.get(synth_key)
     return None
 
 
@@ -374,8 +409,14 @@ def write_binary(
     resolved_primary: list[int | None] = []
     resolved_secondary: list[int | None] = []
     for p in pairs:
-        resolved_primary.append(resolve_idx(p.primary_gaia, p.primary_hip, row_map))
-        resolved_secondary.append(resolve_idx(p.secondary_gaia, p.secondary_hip, row_map))
+        primary_synth = synthetic_id(p.wds_id, p.primary_comp)
+        secondary_synth = synthetic_id(p.wds_id, p.secondary_comp)
+        resolved_primary.append(
+            resolve_idx(p.primary_gaia, p.primary_hip, primary_synth, row_map),
+        )
+        resolved_secondary.append(
+            resolve_idx(p.secondary_gaia, p.secondary_hip, secondary_synth, row_map),
+        )
 
     # Walk in topological order; for each emittable pair, record its
     # output index so parent_relation can be remapped from input-index
@@ -553,7 +594,8 @@ def run(force: bool) -> int:
     row_map = load_row_index_map(SRC_ROW_INDEX_MAP)
     log(
         f"loaded row-index map: {len(row_map.by_gaia):,} Gaia entries, "
-        f"{len(row_map.by_hip):,} HIP entries"
+        f"{len(row_map.by_hip):,} HIP entries, "
+        f"{len(row_map.by_synth):,} synthetic entries"
     )
 
     parents = assign_parent_relations(pairs)
