@@ -154,9 +154,6 @@ describe('star-physics / parkDistForStar', () => {
   it('parks a binary primary identically to a non-binary star of the same radius', () => {
     const single = makeCatalog(1);
     const pair = makeCatalog(2, c => {
-      // Wide companion (0.01 pc separation) — under the dropped rule this
-      // would have pushed park out by ~thousands of AU. After dropping, the
-      // primary parks at the same Sol-like AU_PC + R distance.
       c.positions[1 * 3] = 0.01;
       c.companion[0] = 1;
     });
