@@ -509,12 +509,8 @@ export const FLAGS = {
   hasBayer: 0x04,
   binaryCompanionOnly: 0x08,
   binaryPrimary: 0x10,
-  /** Set on a promoted companion whose only identifier is a build-time
-   *  synthetic key (`synth-<wds_id>-<comp>`) — the multiples.tsv row
-   *  carries no own gaia/hip (Algol Ab) or inherits them from a sibling
-   *  via Stage 6 system-anchor inheritance. Bare gaia/hip lookups won't
-   *  reach the record; the runtime layer must consult the row-index
-   *  map's `bySynth` table. */
+  /** Companion addressable only via the row-index map's `bySynth`
+   *  table. See scripts/catalog/README.md § Companion promotion. */
   binaryCompanionSynthetic: 0x20,
 } as const;
 export const FLAG_HAS_NAME = FLAGS.hasName;

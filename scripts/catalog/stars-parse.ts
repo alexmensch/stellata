@@ -55,11 +55,8 @@ export interface Star {
   // and NOT written to the binary.
   athygDist: number | null;     // AT-HYG `dist` column, pre-override
   athygDistSrc: string | null;  // AT-HYG `dist_src` column
-  /** Build-time-only synthetic identifier (`synth-<wds_id>-<comp>`).
-   *  Set by companion-promotion for promoted secondaries that lack a
-   *  real Gaia source_id and lack a non-inherited HIP — Algol Ab is the
-   *  canonical case. Indexes the row in `bySynth` of the row-index map
-   *  so build-runtime-binaries can resolve the pair's secondary side. */
+  /** Build-time-only synthetic identifier. See
+   *  scripts/catalog/README.md § Companion promotion. */
   syntheticId: string | null;
 }
 

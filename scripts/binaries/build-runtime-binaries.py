@@ -76,20 +76,9 @@ NO_PARENT = -1
 @dataclass
 class MultiplesPair:
     """One physical pair, primary + secondary rows joined by system_id.
-
-    Carries the lookup keys the row-index map resolves and the orbital
-    elements the runtime layer evaluates. Missing-Kepler-elements rows
-    keep the float fields as ``None`` and the binary writer encodes them
-    as NaN.
-
-    ``primary_comp`` / ``secondary_comp`` carry the raw ``comp`` cell
-    from each side's multiples.tsv row — the exact string Stage 6 emitted.
-    ``_split_components(components)`` re-anchors WDS-truncated forms
-    (``"Aa1,2" → ("Aa1", "Aa2")``) for parent-relation walks, but
-    companion-promotion mints synth IDs from the raw cell ("2" here),
-    so the runtime resolver must use the same raw cells when composing
-    its synth lookup key.
-    """
+    See ``scripts/binaries/README.md`` § Runtime side artifact for the
+    raw-comp synth-key invariant ``primary_comp`` / ``secondary_comp``
+    encode."""
 
     system_id: str
     wds_id: str          # everything left of the final "-"
@@ -219,10 +208,7 @@ def load_row_index_map(path: Path) -> RowIndexMap:
 
 
 def synthetic_id(wds_id: str, comp: str) -> str | None:
-    """Build the synthetic identifier used by companion-promotion for
-    rows that carry no own gaia/hip (Algol Ab). Returns ``None`` when
-    either side is empty — the row is then unaddressable through this
-    path and the caller must drop the pair."""
+    """Compose ``synth-<wds_id>-<comp>``; ``None`` when either is empty."""
     c = comp.strip()
     if not c or not wds_id:
         return None
@@ -235,10 +221,7 @@ def resolve_idx(
     synth_key: str | None,
     m: RowIndexMap,
 ) -> int | None:
-    """Catalog row resolution: Gaia source_id beats HIP, HIP beats the
-    synthetic-ID fallback. The synth path covers promoted companions that
-    have no own gaia and (after the inherited-HIP escape) no addressable
-    hip — Algol Ab is the canonical case."""
+    """Catalog row resolution: gaia → hip → synth in priority order."""
     if gaia is not None:
         hit = m.by_gaia.get(gaia)
         if hit is not None:
@@ -404,18 +387,10 @@ def write_binary(
     pair's position in the EMITTED order, not the input order."""
     # Pre-resolve every pair so we know which ones are emittable. Pairs
     # whose primary or secondary doesn't resolve to a catalog row are
-    # dropped — the runtime layer can't address them. The synthetic-ID
-    # fallback addresses promoted companions whose own gaia/hip both
-    # miss the row-index map (Algol Ab); compose the key from the pair's
-    # wds_id + component letter.
+    # dropped — the runtime layer can't address them.
     resolved_primary: list[int | None] = []
     resolved_secondary: list[int | None] = []
     for p in pairs:
-        # Synth keys mirror the raw `comp` cells Stage 6 emitted, since
-        # companion-promotion minted its IDs from those same cells. WDS
-        # prefix truncation ("Aa1,2") means the parsed-from-components
-        # token ("Aa2") differs from the raw cell ("2"); the catalog
-        # carries the raw form, so the runtime must too.
         primary_synth = synthetic_id(p.wds_id, p.primary_comp)
         secondary_synth = synthetic_id(p.wds_id, p.secondary_comp)
         resolved_primary.append(
