@@ -240,11 +240,13 @@ export class BinaryOrbitField {
     for (let i = 0; i < relations.length; i++) {
       const r = relations[i];
       if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
-      // Defensive: a stale binaries.bin from before the builder's
-      // has_orbit predicate was tightened could flag a relation as
-      // has_orbit while leaving q / a / e / P / T as NaN. evaluateDelta
-      // would then return NaN ΔR each frame and update() would write
-      // NaN into localPositions[primaryIdx]. Skip the cache entry so
+      // binaries.bin invariant restated at the consumer: has_orbit=1
+      // implies all elements needed for ΔR(t) are finite (P, T, e, a,
+      // ω, q — i and Ω fall back to 0 in relationToElements). A record
+      // that violates that contract would drive evaluateDelta to NaN
+      // ΔR every frame and update() would write NaN into
+      // localPositions[primaryIdx], poisoning every downstream
+      // consumer of the primary's position. Skip the cache entry so
       // the relation stays at its J2000 baseline.
       if (
         !Number.isFinite(r.q) || !Number.isFinite(r.aAU)

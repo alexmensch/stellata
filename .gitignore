@@ -2,7 +2,8 @@ node_modules/
 dist/
 .wrangler/
 .vite/
-.claude/
+.claude/*
+!.claude/settings.json
 .DS_Store
 *.log
 coverage/

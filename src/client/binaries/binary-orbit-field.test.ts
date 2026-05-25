@@ -109,8 +109,9 @@ describe('BinaryOrbitField construction', () => {
     'skips has_orbit relations with NaN %s — stale binaries.bin defence',
     (field) => {
       const fx = makeFixture();
-      // Simulate a stale binaries.bin: has_orbit set but a required
-      // Kepler element NaN. evaluateDelta would yield NaN ΔR each frame
+      // Construct a record that violates the binaries.bin invariant:
+      // has_orbit=1 with NaN in a required Kepler element. Without the
+      // buildCache guard, evaluateDelta would yield NaN ΔR each frame
       // and update() would write NaN into localPositions[primaryIdx],
       // poisoning every downstream consumer (chart-mode constellation
       // centroids, focus ring, …).
