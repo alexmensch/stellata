@@ -153,7 +153,7 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # the system as HD-only (no HIP, no Gaia on either component row);
 # catalog.bin inherits the empty identifiers and Tier A's
 # lookupByHip / lookupByGaiaSourceId both miss the primary record
-# even though multiples.tsv (post-dch.74) correctly carries
+# even though multiples.tsv correctly carries
 # hip=55203 + gaia=756853643638639104 from ORB6 + SIMBAD xids.
 # The multiples.tsv pair-emit smoke (P=21874.93 d, q=0.47,
 # astrometry_via=athyg_position) is verified directly; a Tier A row
