@@ -65,9 +65,6 @@ for the surrounding context.
 - **Luminosity-class softness range** — `mix(3.0, 1.8, vSoftness)` for
   glow falloff and `mix(0.48, 0.38, vSoftness)` for disc edge AA in
   `star.frag.glsl`. Widen the gaps for more dramatic differentiation.
-- **Binary-companion viewport margin** — `BINARY_VIEWPORT_HALF_ANGLE_RAD`
-  in `stellata.ts` (25°). Controls how much padding is left around a
-  system when focused. Smaller angle = more padding.
 - **Info-modal dismissal** — cleared by removing the
   `stellata.info-dismissed` localStorage key.
 - **Chart-mode disc size range** — `uChartDiscMaxPx` (16 px) and

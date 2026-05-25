@@ -30,17 +30,6 @@ export const ZOOM_FLOOR_FRACTION = 0.9;
 // keep the SVG focus ring and disc mask aligned with the rendered disc.
 export const VAR_TROUGH_FLOOR_FRACTION = 0.2;
 
-// Half-angle of the cone we keep a known binary companion inside when
-// the camera parks on the primary. 25° was chosen so the companion is
-// comfortably in frame at typical FOVs without dictating the park
-// distance for wide separations.
-export const BINARY_VIEWPORT_HALF_ANGLE_RAD = (25 * Math.PI) / 180;
-
-// Distance-per-separation factor for the binary-companion floor:
-// d = separation × BINARY_MIN_DIST_FACTOR keeps the companion at the
-// half-angle above.
-export const BINARY_MIN_DIST_FACTOR = 1 / Math.tan(BINARY_VIEWPORT_HALF_ANGLE_RAD);
-
 // Subset of the star-shader uniforms read by renderedSizePx /
 // renderedDiscPxAtPeak. The fields shape-match `THREE.IUniform<T>` so
 // callers pass `material.uniforms` directly under a typed assertion.
@@ -81,19 +70,6 @@ export function peakAmplitudeFactor(catalog: Catalog, idx: number): number {
   );
 }
 
-// Floor on the focused-star camera distance imposed by a binary
-// companion: keeps the partner inside the BINARY_VIEWPORT_HALF_ANGLE
-// cone. Returns 0 for stars without a flagged companion.
-export function binaryCompanionFloorPc(catalog: Catalog, idx: number): number {
-  const comp = catalog.companion[idx];
-  if (comp < 0) return 0;
-  const p = catalog.positions;
-  const dx = p[comp * 3] - p[idx * 3];
-  const dy = p[comp * 3 + 1] - p[idx * 3 + 1];
-  const dz = p[comp * 3 + 2] - p[idx * 3 + 2];
-  return Math.sqrt(dx * dx + dy * dy + dz * dz) * BINARY_MIN_DIST_FACTOR;
-}
-
 export interface ParkArgs {
   catalog: Catalog;
   idx: number;
@@ -109,30 +85,23 @@ export interface ParkArgs {
 // variables, R is bumped to peak-amplitude so the pulse peak hits
 // ZOOM_FLOOR_FRACTION and the trough is correspondingly smaller, rather
 // than the static R hitting the floor and the peak overshooting the
-// viewport. Binary companions still get the half-angle bump so the
-// partner stays in frame.
+// viewport.
 export function minOrbitDistForStar(args: ParkArgs): number {
   const R = Math.max(args.catalog.physicalRadius[args.idx], 1e-9) * R_SUN_PC;
   const Reff = R * peakAmplitudeFactor(args.catalog, args.idx);
-  const base = distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
-  return Math.max(base, binaryCompanionFloorPc(args.catalog, args.idx));
+  return distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
 }
 
 // Auto-park target — composed from the generic `parkDistance` primitive
 // with star-specific inputs: Reff = R · peakAmplitudeFactor (variables
-// park clear of their pulse peak), the 90 %-fill manual-zoom floor as
-// dMinFloor, and the binary-companion bump as the optional extraFloor.
-// Result is "1 AU outside the surface, but never closer than dMin or
-// the companion floor."
+// park clear of their pulse peak) and the 90 %-fill manual-zoom floor
+// as dMinFloor. Result is "1 AU outside the surface, but never closer
+// than dMin."
 export function parkDistForStar(args: ParkArgs): number {
   const R = Math.max(args.catalog.physicalRadius[args.idx], 1e-9) * R_SUN_PC;
   const Reff = R * peakAmplitudeFactor(args.catalog, args.idx);
   const dMinFloor = distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
-  return parkDistance({
-    R_pc: Reff,
-    dMinFloor,
-    extraFloor: binaryCompanionFloorPc(args.catalog, args.idx),
-  });
+  return parkDistance({ R_pc: Reff, dMinFloor });
 }
 
 export interface RenderedSizeArgs {

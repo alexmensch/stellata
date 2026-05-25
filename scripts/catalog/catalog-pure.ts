@@ -651,8 +651,8 @@ export function applyDoublesFlag(
 // neighbour within BINARY_MAX_SEP_PC and record it as `companionIdx`.
 // `companionIdx` is the **directed** nearest neighbour (A's nearest may
 // be B while B's nearest is some third star C); the renderer reads it
-// as "the partner to keep in frame," which is well-defined even when
-// the relationship is one-way.
+// as "the partner for SVG disc-mask cutouts and chart-mode wings,"
+// which is well-defined even when the relationship is one-way.
 //
 // The `0x10` flag is stricter: set only on the brighter member of a
 // **mutual** pair (A's nearest is B AND B's nearest is A). The chart-
