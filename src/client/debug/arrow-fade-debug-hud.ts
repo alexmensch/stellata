@@ -1,7 +1,7 @@
 import type { Stellata } from '../stellata';
 import type { ArrowDebugRecord } from '../overlays/hud-overlay';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
-import type { DebugSection } from './debug-panel';
+import { type DebugSection, buildDiagnosticReadout } from './debug-panel';
 
 // Live diagnostic readouts for the navigate-mode Sol/GC arrow fade.
 // Mounted as a section inside the unified debug panel (see debug.ts).
@@ -41,27 +41,10 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
   const latch = emptyLatch();
   let visible = true;
 
-  const root = document.createElement('div');
-  root.style.cssText =
-    'font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
-    'color:#0f0;padding:6px 8px;border-radius:4px;' +
-    'white-space:pre;overflow-x:auto;user-select:text;' +
-    'border-left:3px solid #0f0;';
-
-  const body = document.createElement('div');
-  body.style.cssText = 'user-select:text;cursor:text;';
-  root.appendChild(body);
-
-  // Reset link: only THIS element is clickable (so dragging across the
-  // body to copy values doesn't reset the latches).
-  const reset = document.createElement('div');
-  reset.textContent = '[click to reset latches]';
-  reset.style.cssText = 'margin-top:6px;cursor:pointer;color:#999;user-select:none;';
-  reset.title = 'reset latched extremes';
-  reset.addEventListener('click', () => {
-    Object.assign(latch, emptyLatch());
+  const { root, body } = buildDiagnosticReadout({
+    withLeftBorder: true,
+    onResetLatches: () => { Object.assign(latch, emptyLatch()); },
   });
-  root.appendChild(reset);
 
   const fmt = (n: number) => {
     if (n === 0) return '0';

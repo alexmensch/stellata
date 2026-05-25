@@ -237,6 +237,50 @@ export interface DebugSection {
   setVisible: (v: boolean) => void;
 }
 
+export interface DiagnosticReadout {
+  /** Outer container. Live readouts can mutate root.style.color (pin's
+   *  pin-engaged alert) or root.style.borderLeftColor (arrow's
+   *  independent-state alert) for state cues. */
+  root: HTMLDivElement;
+  /** Selectable text container — the live readout writes textContent here. */
+  body: HTMLDivElement;
+}
+
+export interface DiagnosticReadoutOpts {
+  /** Render a green left-border bar (3 px). Without this, no border. */
+  withLeftBorder?: boolean;
+  /** Latch reset handler; wired to the [click to reset latches] link. */
+  onResetLatches: () => void;
+}
+
+/** Green-on-black mono readout chrome shared by pin-debug-hud and
+ *  arrow-fade-debug-hud: root div with monospace text, optional left
+ *  border (arrow only), selectable body, and the [click to reset
+ *  latches] link. */
+export function buildDiagnosticReadout(opts: DiagnosticReadoutOpts): DiagnosticReadout {
+  const root = document.createElement('div');
+  root.style.cssText =
+    'font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
+    'color:#0f0;padding:6px 8px;border-radius:4px;' +
+    'white-space:pre;overflow-x:auto;user-select:text;' +
+    (opts.withLeftBorder ? 'border-left:3px solid #0f0;' : '');
+
+  const body = document.createElement('div');
+  body.style.cssText = 'user-select:text;cursor:text;';
+  root.appendChild(body);
+
+  // Reset link: only THIS element is clickable so dragging across the
+  // body to copy values doesn't trigger a reset.
+  const reset = document.createElement('div');
+  reset.textContent = '[click to reset latches]';
+  reset.style.cssText = 'margin-top:6px;cursor:pointer;color:#999;user-select:none;';
+  reset.title = 'reset latched extremes';
+  reset.addEventListener('click', opts.onResetLatches);
+  root.appendChild(reset);
+
+  return { root, body };
+}
+
 export function makeCollapsibleSection(opts: {
   title: string;
   storageKey: string;
