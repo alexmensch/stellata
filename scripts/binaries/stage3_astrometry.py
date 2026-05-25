@@ -5,7 +5,6 @@ Routes between Gaia 5p, Gaia NSS-systemic, and HIP2 long-baseline.
 
 from __future__ import annotations
 
-import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,11 +16,16 @@ from parsers import (  # noqa: E402
     Hip2Row,
     WdsPair,
 )
-from indices import IdentifierIndices  # noqa: E402
+from indices import (  # noqa: E402
+    ATHYG_REFERENCE_EPOCH,
+    IdentifierIndices,
+)
 from stage2_resolve import (  # noqa: E402
+    ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
     ResolvedComponent,
     build_pair_by_wds_disc,
     find_owning_pair,
+    iter_pair_athyg_matches,
 )
 
 
@@ -38,6 +42,7 @@ ASTROMETRY_VIA_VALUES: tuple[str, ...] = (
     "gaia_nss_systemic",
     "hip2_long_baseline",
     "gaia_5p",
+    "athyg_position",
     "unresolved",
 )
 
@@ -162,6 +167,27 @@ def _from_hip2(hip2: Hip2Row) -> ComponentAstrometry:
     )
 
 
+def _from_athyg_position(row: AthygRow) -> ComponentAstrometry | None:
+    """Synthesize ``ComponentAstrometry`` from an AT-HYG row's stored
+    ra/dec + parallax (=1000/``dist_pc``). Returns ``None`` when
+    ``dist_pc`` is absent or non-positive — the row carries no usable
+    parallax. See ``scripts/binaries/README.md`` § Stage 3 for the
+    population this route serves.
+    """
+    if row.dist_pc is None or row.dist_pc <= 0:
+        return None
+    parallax_mas = 1000.0 / row.dist_pc
+    return ComponentAstrometry(
+        astrometry_via="athyg_position",
+        ra_deg=row.ra_deg,
+        dec_deg=row.dec_deg,
+        parallax_mas=parallax_mas,
+        pmra_masyr=row.pm_ra_masyr,
+        pmdec_masyr=row.pm_de_masyr,
+        ref_epoch=ATHYG_REFERENCE_EPOCH,
+    )
+
+
 def _component_hip(
     component: ResolvedComponent, indices: IdentifierIndices,
 ) -> int | None:
@@ -212,8 +238,10 @@ def attach_astrometry(
 
     Returns ``ComponentAstrometry`` tagged ``"unresolved"`` (all
     values ``None``) when neither a Gaia astrometry row nor a HIP2
-    row can be reached — Stage 5 can still emit the row with whatever
-    upstream signals exist.
+    row can be reached. ``attach_athyg_position_fallback`` runs as a
+    post-pass over the cascade output and may upgrade the row to
+    ``athyg_position`` if the WDS precise_coord position-matches an
+    AT-HYG row.
     """
     gaia = (
         indices.src_to_astrometry.get(component.gaia_source_id)
@@ -280,16 +308,24 @@ def attach_astrometry_all(
     components: list[ResolvedComponent],
     pairs: list[WdsPair],
     indices: IdentifierIndices,
+    athyg: list[AthygRow] | None = None,
+    athyg_position_tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
 ) -> list[ComponentAstrometry]:
     """Route astrometry for every component. The returned list is
     parallel to ``components`` (same order, same length) so Stage 4-7
     can zip the two together. The HIP2 5″ gate uses the per-source
     min ρ (see ``compute_min_rho_per_source``) rather than the current
     pair row's ρ in isolation.
+
+    After the Gaia / HIP2 cascade, ``attach_athyg_position_fallback``
+    runs a post-pass that synthesizes ``ComponentAstrometry`` for any
+    component still tagged ``unresolved`` by position-matching the WDS
+    precise_coord against AT-HYG. Skipped when ``athyg`` is empty /
+    omitted (the in-process tests).
     """
     pair_by_wds_disc = build_pair_by_wds_disc(pairs)
     min_rho = compute_min_rho_per_source(components, pair_by_wds_disc)
-    return [
+    astrometry = [
         attach_astrometry(
             c,
             min_rho.get(c.gaia_source_id) if c.gaia_source_id is not None else None,
@@ -297,6 +333,49 @@ def attach_astrometry_all(
         )
         for c in components
     ]
+    if athyg:
+        attach_athyg_position_fallback(
+            components=components,
+            astrometry=astrometry,
+            pairs=pairs,
+            athyg=athyg,
+            tolerance_arcsec=athyg_position_tolerance_arcsec,
+        )
+    return astrometry
+
+
+def attach_athyg_position_fallback(
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+    pairs: list[WdsPair],
+    athyg: list[AthygRow],
+    tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+) -> None:
+    """Post-pass after the Gaia / HIP2 cascade. For every component
+    still tagged ``unresolved``, position-match the WDS precise_coord
+    against AT-HYG (via ``iter_pair_athyg_matches``) and synthesize
+    ``ComponentAstrometry`` from the matched row. Mutates ``astrometry``
+    in place; rows that can't be matched stay ``unresolved``.
+
+    See ``scripts/binaries/README.md`` § Stage 3 for how this composes
+    with Stage 2's identifier-binding pass over the same cascade.
+    Opts into secondary blend-inheritance so Hipparcos-unresolved
+    blends (A and B sharing a single AT-HYG entry at sub-AU
+    separation) both get astrometry.
+    """
+    for event in iter_pair_athyg_matches(
+        components, pairs, athyg,
+        skip_predicate=lambda i, _c: astrometry[i].astrometry_via != "unresolved",
+        allow_blend_inherit=True,
+        tolerance_arcsec=tolerance_arcsec,
+    ):
+        c = components[event.component_idx]
+        synth = _from_athyg_position(athyg[event.athyg_match_idx])
+        if synth is None:
+            continue
+        astrometry[event.component_idx] = synth
+        if c.athyg_row is None:
+            c.athyg_row = athyg[event.athyg_match_idx]
 
 
 def astrometry_counts(

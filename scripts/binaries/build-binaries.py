@@ -267,6 +267,7 @@ def run(force: bool) -> int:
 
     astrometry = attach_astrometry_all(
         components=components, pairs=wds_pairs, indices=indices,
+        athyg=athyg,
     )
     a_counts = astrometry_counts(astrometry)
     log(
