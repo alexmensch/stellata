@@ -351,6 +351,7 @@ class WriteStats:
     pairs_emitted: int
     pairs_dropped_primary_unresolved: int
     pairs_dropped_secondary_unresolved: int
+    pairs_dropped_degenerate_idx: int
     pairs_with_orbit: int
     pairs_with_inclination: int
     pairs_inner_of_hierarchy: int
@@ -386,6 +387,7 @@ def write_binary(
         pairs_emitted=0,
         pairs_dropped_primary_unresolved=0,
         pairs_dropped_secondary_unresolved=0,
+        pairs_dropped_degenerate_idx=0,
         pairs_with_orbit=0,
         pairs_with_inclination=0,
         pairs_inner_of_hierarchy=0,
@@ -396,6 +398,14 @@ def write_binary(
             continue
         if resolved_secondary[i] is None:
             stats.pairs_dropped_secondary_unresolved += 1
+            continue
+        if resolved_primary[i] == resolved_secondary[i]:
+            # Primary and secondary must map to distinct catalog rows —
+            # the runtime walks them as independent slots and can't
+            # perturb two pair ends through one. Pairs whose secondary
+            # shares the primary's gaia/hip cross-walk collapse to a
+            # self-referencing entry; drop them here.
+            stats.pairs_dropped_degenerate_idx += 1
             continue
         input_to_output[i] = len(emit_indices)
         emit_indices.append(i)
@@ -462,6 +472,7 @@ def stats_to_counts(stats: WriteStats) -> dict[str, int]:
         "pairs_emitted": stats.pairs_emitted,
         "pairs_dropped_primary_unresolved": stats.pairs_dropped_primary_unresolved,
         "pairs_dropped_secondary_unresolved": stats.pairs_dropped_secondary_unresolved,
+        "pairs_dropped_degenerate_idx": stats.pairs_dropped_degenerate_idx,
         "pairs_with_orbit": stats.pairs_with_orbit,
         "pairs_with_inclination": stats.pairs_with_inclination,
         "pairs_inner_of_hierarchy": stats.pairs_inner_of_hierarchy,
@@ -553,7 +564,8 @@ def run(force: bool) -> int:
     )
     log(
         f"dropped: primary_unresolved={stats.pairs_dropped_primary_unresolved}, "
-        f"secondary_unresolved={stats.pairs_dropped_secondary_unresolved}"
+        f"secondary_unresolved={stats.pairs_dropped_secondary_unresolved}, "
+        f"degenerate_idx={stats.pairs_dropped_degenerate_idx}"
     )
 
     if not assert_or_update_counts(stats_to_counts(stats), EXPECTED_COUNTS):

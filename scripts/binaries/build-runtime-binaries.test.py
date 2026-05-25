@@ -217,6 +217,39 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(stats.pairs_emitted, 0)
         self.assertEqual(stats.pairs_dropped_secondary_unresolved, 1)
 
+    def test_pair_with_degenerate_indices_is_dropped(self) -> None:
+        # Castor shape: both components carry the SAME gaia/hip cross-walk,
+        # so `resolve_idx` returns the same catalog row for primary AND
+        # secondary. The runtime can't address two pair ends through one
+        # slot — drop the pair.
+        pairs = [_pair(primary_gaia="1", secondary_gaia="1")]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT], [0], self._row_map(), out,
+            )
+        self.assertEqual(stats.pairs_emitted, 0)
+        self.assertEqual(stats.pairs_dropped_degenerate_idx, 1)
+        self.assertEqual(stats.pairs_dropped_primary_unresolved, 0)
+        self.assertEqual(stats.pairs_dropped_secondary_unresolved, 0)
+
+    def test_pair_with_degenerate_indices_via_shared_hip_is_dropped(self) -> None:
+        # Variant of the Castor shape: secondary has no gaia but shares
+        # the primary's HIP. `resolve_idx` falls through to HIP and
+        # lands on the same catalog row.
+        row_map = brb.RowIndexMap(by_gaia={}, by_hip={36850: 100})
+        pairs = [_pair(
+            primary_gaia=None, primary_hip=36850,
+            secondary_gaia=None, secondary_hip=36850,
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT], [0], row_map, out,
+            )
+        self.assertEqual(stats.pairs_emitted, 0)
+        self.assertEqual(stats.pairs_dropped_degenerate_idx, 1)
+
     def test_parent_relation_remaps_from_input_to_output_index(self) -> None:
         # Three input pairs: idx 0 root, idx 1 child of 0, idx 2 child
         # of 1. All three resolve. Walk order is [0, 1, 2], output
