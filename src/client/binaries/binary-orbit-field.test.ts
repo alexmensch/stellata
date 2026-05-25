@@ -210,9 +210,10 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
     const camera = new THREE.Vector3(0, 0, -900);
     const t = (J2000_JD - 2440587.5) * 86400 + 50 * 365.25 * 86400;
     const active = field.update(t, camera, 15, 1080, 0.8);
-    // The outer relation is still within VISIBILITY_HORIZON_PC (1000 pc)
-    // and bright enough to pass the slider gate, so it counts as active.
-    expect(active).toBeGreaterThanOrEqual(1);
+    // Both relations (outer + inner) share the same primary at 900 pc,
+    // pass mag + horizon, and increment activeCount before the sub-pixel
+    // suppress branch fires.
+    expect(active).toBe(2);
     // The outer secondary (idx 2) is composite-suppressed.
     expect(fx.compositeSuppress[2]).toBe(1);
     // And its position stays at J2000-minus-worldOffset (= absolute since
@@ -262,10 +263,11 @@ describe('BinaryOrbitField.update — hierarchical walk', () => {
     const outerMag = Math.hypot(...outerEstP);
     expect(outerMag).toBeGreaterThan(1e-7);
     expect(outerMag).toBeLessThan(1e-3);
-    // The inner-only perturbation magnitude should be a couple orders of
-    // magnitude smaller (a=0.05 AU vs a=10 AU).
+    // Inner-only should be substantially smaller — inner a=1 AU vs outer
+    // a=10 AU gives a ratio of ~1/10 on amplitude; q split tilts further
+    // (inner q=0.5 ⇒ primary side ~0.5·a, outer q=0.4 ⇒ ~0.6·a).
     const innerMag = Math.hypot(...innerOnlyP);
-    expect(innerMag).toBeLessThan(outerMag);
+    expect(innerMag).toBeLessThan(outerMag * 0.2);
   });
 });
 
