@@ -43,9 +43,6 @@ export class EclipsePhotometryField {
 
   constructor(opts: EclipsePhotometryFieldOptions) {
     this.opts = opts;
-    // Initialise to "no dim" so unwritten slots render at full flux.
-    opts.eclipseDimBuffer.fill(1);
-    opts.iEclipseDimAttr.needsUpdate = true;
     this.buildCache();
   }
 

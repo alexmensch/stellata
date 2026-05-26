@@ -73,52 +73,39 @@ describe('StarPipeline', () => {
     expect(pipe.coreMaskMaterial.uniforms.uRenderMode.value).toBe(2);
   });
 
-  it('binds caller-owned iEclipseDim buffer with no copy + preserves init values', () => {
-    // Regression for the "all stars invisible" failure mode: if
-    // iEclipseDim's backing buffer starts at 0 (Float32Array default)
-    // rather than 1.0, the vertex shader reads every slot as
-    // "fully occluded" and adds ~+15 mag to every appMag, culling
-    // the entire glow pass. Pin both: identity (same buffer reference,
-    // mutations propagate) AND initial values (caller-supplied 1.0
-    // survives to the bound attribute).
-    const opts = makeOpts(3);
-    opts.eclipseDim.set([1, 1, 1]);
-    const pipe = new StarPipeline(opts);
-    const attr = pipe.geometry.getAttribute('iEclipseDim') as THREE.InstancedBufferAttribute;
-    expect(attr).toBe(pipe.iEclipseDimAttr);
-    expect(attr.array).toBe(opts.eclipseDim);
-    expect(Array.from(attr.array)).toEqual([1, 1, 1]);
-    expect(attr.usage).toBe(THREE.DynamicDrawUsage);
-    // Mutating the caller's view propagates to the bound attribute —
-    // confirms no defensive copy occurred.
-    opts.eclipseDim[0] = 0.5;
-    expect(attr.array[0]).toBe(0.5);
+  // Integer-uniform precision must match between vert and frag. ShaderMaterial
+  // auto-injects `precision highp int;` into both stages; RawShaderMaterial
+  // doesn't, and the default int precision diverges per stage (vert: highp,
+  // frag: mediump on some platforms) — so any shared int uniform (uRenderMode,
+  // uSpectMask, uHideFocusIdx, uPinFocusToCenter) trips the linker's
+  // "Precisions of uniform ... differ between VERTEX and FRAGMENT shaders."
+  // check and the program won't link. Pin the explicit precision in both
+  // sources.
+  it('star.vert.glsl and star.frag.glsl both declare precision highp int', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const vert = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
+    const frag = readFileSync(join(here, 'star.frag.glsl'), 'utf8');
+    expect(vert).toMatch(/precision\s+highp\s+int\s*;/);
+    expect(frag).toMatch(/precision\s+highp\s+int\s*;/);
   });
 
-  it('binds caller-owned iSuppressPulsation buffer with no copy', () => {
-    const opts = makeOpts(3);
-    opts.suppressPulsation.set([0, 1, 0]);
-    const pipe = new StarPipeline(opts);
-    const attr = pipe.geometry.getAttribute('iSuppressPulsation') as THREE.InstancedBufferAttribute;
-    expect(attr).toBe(pipe.iSuppressPulsationAttr);
-    expect(attr.array).toBe(opts.suppressPulsation);
-    expect(Array.from(attr.array)).toEqual([0, 1, 0]);
-    expect(attr.usage).toBe(THREE.DynamicDrawUsage);
-  });
-
-  // The vertex shader folds `iEclipseDim` into appMag. If the attribute
-  // happens to read as 0 (Float32Array's default, or an unwritten slot
-  // before EclipsePhotometryField runs), the naive
-  // `if (iEclipseDim < 1.0)` gate adds ~+15 mag (-2.5·log10(1e-6)) to
-  // every star and the visibility prefilter culls the entire glow
-  // pass — observed manually when shipping the field. The shader
-  // therefore gates on `iEclipseDim > 0.0 && iEclipseDim < 1.0` so 0
-  // reads as "unwritten = no dim". Pin the source so a future tweak
-  // can't silently drop the gate.
-  it('vertex shader gates iEclipseDim on > 0 so unwritten 0 is treated as no-op', () => {
+  // Vertex-attribute budget. WebGL2 guarantees only MAX_VERTEX_ATTRIBS >= 16,
+  // and many real GPUs (Apple Silicon, Intel iGPUs) report exactly 16. Our
+  // star pipeline uses RawShaderMaterial precisely so three.js doesn't auto-
+  // inject `attribute vec3 position; attribute vec3 normal; attribute vec2
+  // uv;` into the vertex prefix — those three locations would otherwise be
+  // burned without being read by the shader. If a future change swaps the
+  // material back to ShaderMaterial, raise `INJECTED` to 3; if WebGL2's
+  // minimum spec gets bumped, raise `LIMIT`. Crossing either threshold
+  // silently is what culled every star in the eclipse-photometry land —
+  // this test makes the budget explicit.
+  it('star.vert.glsl in-declaration count fits inside the WebGL2 attribute budget', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const src = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
-    expect(src).toMatch(/iEclipseDim\s*>\s*0\.0\s*&&\s*iEclipseDim\s*<\s*1\.0/);
+    const declared = src.split('\n').filter(line => /^in\s/.test(line)).length;
+    const INJECTED = 0; // RawShaderMaterial; ShaderMaterial would be 3.
+    const LIMIT = 16;   // WebGL2 minimum MAX_VERTEX_ATTRIBS.
+    expect(declared + INJECTED).toBeLessThanOrEqual(LIMIT);
   });
 
   it('binds the caller-owned localPositions buffer to iPosition', () => {

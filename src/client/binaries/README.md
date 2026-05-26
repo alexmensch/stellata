@@ -177,23 +177,17 @@ sum additively in the glow pass. Limb darkening is not modelled
 `iEclipseDim` is folded into appMag in the **glow pass only**
 (`uRenderMode == 0`). The disc pass resolves geometric occlusion
 via the depth buffer at close range, so applying the dim there
-would also dim the back disc's non-occluded fragments. Default
-value is 1.0 (no dim); the field writes lower values onto the
+would also dim the back disc's non-occluded fragments. The
+integration shell initialises the buffer to 1.0 at allocation
+and on every re-attach; the field writes lower values onto the
 back component each frame and resets touched-last-frame slots so
 transient occlusions clear.
 
-The attribute uses **0 as an unwritten-slot sentinel** — the shader
-gates on `iEclipseDim > 0.0 && iEclipseDim < 1.0` so a slot the
-field hasn't touched yet (Float32Array's default zero fill, or an
-upload race during attribute initialisation) reads as "no dim"
-instead of "fully occluded → +15 mag → culled by the visibility
-prefilter". To keep the sentinel clean, `eclipse-photometry-pure`
-floors its return value at `DIM_FLOOR = 0.001` (≈ 7.5 mag of dim,
-dark enough to read as invisible in the additive glow composite,
-but never aliasing onto zero). Without that floor a full geometric
-eclipse would write exactly 0 and the shader would silently
-*un-*dim the back component — exactly inverting the intended
-photometry.
+`eclipse-photometry-pure` floors its return value at
+`DIM_FLOOR = 0.001` rather than 0 so `-2.5·log10(dim)` stays
+finite for a full geometric eclipse. 7.5 mag of dim reads as
+effectively invisible in the additive glow composite — the
+floor is a numeric-domain guard, not a sentinel encoding.
 
 ### Pulsation gate for eclipsing binaries
 

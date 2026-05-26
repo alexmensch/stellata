@@ -1,4 +1,5 @@
 precision highp float;
+precision highp int;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>

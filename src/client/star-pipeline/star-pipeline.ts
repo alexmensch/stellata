@@ -68,7 +68,7 @@ export interface StarPipelineOptions {
 }
 
 /**
- * Owns the InstancedBufferGeometry + the three ShaderMaterials + their
+ * Owns the InstancedBufferGeometry + the three RawShaderMaterials + their
  * meshes that make up the star render pipeline:
  *
  *   - core depth-mask (renderOrder -4, depth-only, gated each frame)
@@ -152,11 +152,20 @@ export class StarPipeline {
     this.geometry.instanceCount = catalog.count;
     this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), boundingSphereRadiusPc);
 
+    // RawShaderMaterial (not ShaderMaterial) so three.js doesn't auto-inject
+    // `attribute vec3 position; attribute vec3 normal; attribute vec2 uv;`
+    // into the vertex prefix. Those three would burn three of the GPU's 16
+    // guaranteed vertex-attribute locations even though our shader doesn't
+    // reference them. The vert/frag pair declares `modelViewMatrix` and
+    // `projectionMatrix` explicitly; three.js still uploads them per draw
+    // regardless of material type, so the only cost is the two uniform lines
+    // in the shader.
+
     // Disc pass: per-channel max so overlapping discs/halos don't sum.
     // Shader writes premultiplied (C·α, α); MaxEquation gives
     // dst = max(src, dst) per channel. Depth write stays on so the
     // glow pass can depth-test against the disc silhouettes.
-    this.discMaterial = new THREE.ShaderMaterial({
+    this.discMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: { ...sharedUniforms, uRenderMode: { value: 1 } },
       vertexShader,
@@ -169,7 +178,7 @@ export class StarPipeline {
     // (catalog density preserved). No depth write so multiple glows at the
     // same pixel all contribute. Depth *test* is on so glows behind a disc
     // drawn in the disc pass are correctly occluded.
-    this.glowMaterial = new THREE.ShaderMaterial({
+    this.glowMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: { ...sharedUniforms, uRenderMode: { value: 0 } },
       vertexShader,
@@ -186,7 +195,7 @@ export class StarPipeline {
     // through. colorWrite off → cheaper than a colour pass and never paints
     // anything visible. Visibility gated each frame on focus / warp state by
     // the integration shell.
-    this.coreMaskMaterial = new THREE.ShaderMaterial({
+    this.coreMaskMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: { ...sharedUniforms, uRenderMode: { value: 2 } },
       vertexShader,

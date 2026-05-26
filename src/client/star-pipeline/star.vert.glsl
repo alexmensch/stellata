@@ -1,4 +1,5 @@
 precision highp float;
+precision highp int;
 
 #include <common>
 #include <logdepthbuf_pars_vertex>
@@ -98,6 +99,13 @@ uniform float uDustAvPerDensityPc;  // ZGR23 density × pc → A_V magnitude
 uniform float uDustEnabled;         // 0 = no texture bound, 1 = bound
 uniform float uExtinctionStrength;  // user knob; multiplied onto uDustEnabled
 uniform vec3 uWorldOffset;          // absolute coord of renderer's local origin
+
+// Object/camera matrices. RawShaderMaterial doesn't auto-inject these
+// (ShaderMaterial would); declare what we use. Three.js's WebGLRenderer
+// still uploads modelViewMatrix per-object and projectionMatrix per-camera
+// regardless of material type, so declaration alone is enough.
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
 
 const int DUST_STEPS = 48;
 const float R_V = 3.1; // canonical interstellar reddening ratio: A_V / E(B-V)
@@ -313,18 +321,12 @@ void main() {
         radiusFactor = pow(10.0, -magMod / 5.0);
     }
 
-    // Geometric eclipse-occlusion dim, glow pass only. Resolved discs
-    // in the disc pass (uRenderMode == 1) handle occlusion via the
-    // depth buffer; applying iEclipseDim there would also dim the back
-    // disc's non-occluded fragments, which is wrong.
-    //
-    // iEclipseDim ∈ (0, 1] when written by EclipsePhotometryField; the
-    // pure helper clamps dim to a positive floor so the sentinel
-    // `iEclipseDim == 0` cleanly identifies an unwritten / uninitialised
-    // slot and short-circuits to "no dim". Without this gate, an
-    // uninitialised 0-filled buffer would add ~+15 mag to every star
-    // and cull the entire glow pass.
-    if (uRenderMode == 0 && iEclipseDim > 0.0 && iEclipseDim < 1.0) {
+    // Geometric eclipse-occlusion dim, glow pass only. Disc pass at
+    // close range resolves the occlusion via the depth buffer; double-
+    // applying here would dim the back disc's non-occluded fragments.
+    // Buffer defaults to 1.0 (no-dim); EclipsePhotometryField writes
+    // values in [DIM_FLOOR, 1) onto the back component per frame.
+    if (uRenderMode == 0 && iEclipseDim < 1.0) {
         appMag += -2.5 * log(iEclipseDim) / LOG10;
     }
 

@@ -1182,6 +1182,12 @@ export class Stellata implements FrameAnchor {
       iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
     });
     this.binaryOrbitField.recenter(this.worldOffset);
+    // Re-attach scrubs the prior attach's residual per-instance state.
+    // EclipsePhotometryField only resets touched-last-frame slots, so
+    // values written under the previous binaries set would otherwise
+    // persist on stars the new set doesn't touch.
+    this._eclipseDim.fill(1);
+    this.starPipeline.iEclipseDimAttr.needsUpdate = true;
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
       localPositions: this._localPositions,

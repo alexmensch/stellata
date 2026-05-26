@@ -16,7 +16,10 @@ function makeFixture(positions: Float32Array) {
   const absoluteMags = new Float32Array([2.0, 5.0, 6.0]);
   const physicalRadiusSolar = new Float32Array([10, 5, 1]);
   const localPositions = new Float32Array(positions);
-  const eclipseDimBuffer = new Float32Array(3);
+  // Caller-init contract: integration shell sets the buffer to 1.0 on
+  // allocation + re-attach; the field reads/writes but doesn't own that
+  // lifecycle. See stellata.ts attachBinaries.
+  const eclipseDimBuffer = new Float32Array(3).fill(1);
   const iEclipseDimAttr = new THREE.InstancedBufferAttribute(eclipseDimBuffer, 1);
 
   const rel: BinaryRelation = {
@@ -54,13 +57,6 @@ function makeFixture(positions: Float32Array) {
 }
 
 describe('EclipsePhotometryField construction', () => {
-  it('initialises eclipseDim buffer to 1.0', () => {
-    const positions = new Float32Array([10, 0, 0, 10, 0, 0, 100, 0, 0]);
-    const fx = makeFixture(positions);
-    new EclipsePhotometryField(fx);
-    expect(Array.from(fx.eclipseDimBuffer)).toEqual([1, 1, 1]);
-  });
-
   it('caches one entry per has_orbit relation', () => {
     const positions = new Float32Array([10, 0, 0, 10, 0, 0, 100, 0, 0]);
     const fx = makeFixture(positions);
