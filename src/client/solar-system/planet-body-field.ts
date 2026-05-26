@@ -4,12 +4,14 @@
 import * as THREE from 'three';
 import type { PlanetSystem } from './planet-system';
 import {
-  lambertianPhaseFactor,
-  mallamaPhaseFactor,
-  peakPhaseFactor,
-  type PhaseCoefficients,
+  alphaZeroPhaseFactor,
+  phaseFactorFor,
 } from './phase-function';
 import { applyDiscBlendDefaults } from '../star-pipeline/star-pipeline';
+import {
+  pickPerceptualDiscUniforms,
+  type PerceptualDiscUniforms,
+} from '../star-pipeline/perceptual-disc-uniforms';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import {
   orbitalPlaneNormalFor,
@@ -32,32 +34,6 @@ import type { HoverHit } from '../hover/hover-types';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
-/**
- * Shared per-frame uniforms the body materials read from. The star
- * pipeline owns the canonical references (initialised once in
- * stellata.ts and mutated as state changes); the body materials hold
- * pointers to the same `{ value }` objects so a single update on the
- * star side propagates everywhere.
- */
-export interface PlanetMaterialUniforms {
-  uMaxAppMag: { value: number };
-  uSizeMin: { value: number };
-  uSizeMax: { value: number };
-  uSizeSpan: { value: number };
-  uSizeKnee: { value: number };
-  uVisibleThreshold: { value: number };
-  uVisibleK: { value: number };
-  uCoreThreshold: { value: number };
-  uDiscardThreshold: { value: number };
-  uDistNMin: { value: number };
-  uDistNMax: { value: number };
-  uLumBiasMin: { value: number };
-  uLumBiasMax: { value: number };
-  uViewport: { value: THREE.Vector2 };
-  uPixelRatio: { value: number };
-  uFovYRad: { value: number };
-}
-
 // Initial slot capacity. v1 attaches Sol (9 planets) once; bk5 may
 // grow this as exoplanet hosts come online. Resizing reallocates the
 // instanced attribute buffers — relatively cheap compared to a frame.
@@ -76,12 +52,13 @@ const INITIAL_CAPACITY = 16;
  *   d_cull = 10 pc · √(p · (R/a)²) · 10^((maxAppMag − M_host) / 5)
  *         = 10 pc · sqrt(p) · (R/a) · 10^((maxAppMag − M_host) / 5)
  *
- * The caller folds `peakPhaseFactor(coefs)` into `brightestReflectance`
- * before passing it in (see `attachHost`). For most planets that's a
- * 1× no-op (c0 = 0 ⇒ φ(0) = 1); Saturn's c0 = −0.55 ring boost lifts
- * φ(0) to ~1.66, widening Saturn's cull by ~√1.66 ≈ 1.29×. The cull
- * remains a conservative outer bound: at any α the actual flux factor
- * is ≤ φ_peak, so a host past d_cull is genuinely sub-cutoff.
+ * The caller folds `alphaZeroPhaseFactor(coefs)` into
+ * `brightestReflectance` before passing it in (see `attachHost`). For
+ * most planets that's a 1× no-op (c0 = 0 ⇒ φ(0) = 1); Saturn's c0 =
+ * −0.55 ring boost lifts φ(0) to ~1.66, widening Saturn's cull by
+ * ~√1.66 ≈ 1.29×. The cull remains a conservative outer bound: at any
+ * α the actual flux factor is ≤ φ(0) plus a sub-millimagnitude Venus
+ * polynomial-peak margin, so a host past d_cull is sub-cutoff.
  *
  * Pure function — exported for tests.
  */
@@ -109,11 +86,11 @@ interface AttachedHost {
   orientation: THREE.Quaternion;
   positionsAt: ((t: number, out: Float32Array) => void) | null;
   positionsScratch: Float32Array | null;
-  /** max over planets of `p · (R / a)² · peakPhaseFactor(coefs)` —
-   *  the geometry-independent reflectance proxy folded with each
+  /** max over planets of `p · (R / a)² · alphaZeroPhaseFactor(coefs)`
+   *  — the geometry-independent reflectance proxy folded with each
    *  planet's α=0 phase boost. Drives cullDistancePc. Saturn's ring
    *  c0 lifts its term above the globe-only reflectance; for every
-   *  other planet peakPhaseFactor = 1. */
+   *  other planet alphaZeroPhaseFactor = 1. */
   brightestReflectance: number;
   /** Cached cull distance for the current maxAppMag. */
   cullDistance: number;
@@ -133,39 +110,6 @@ type CrossHostCandidate = PickCandidate & {
   cameraDistancePc: number;
 };
 
-// Phase factor φ(α) for a planet given viewer→planet and viewer→host
-// vectors. Computes α = ∠(viewer–planet–host) and dispatches into
-// Mallama (when a polynomial exists for this body) or Lambertian (the
-// default fallback for Pluto + every exoplanet). Mirrors the
-// `if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg)` branch in
-// planet.vert.glsl exactly through the shared TS helpers.
-function phaseFactorFor(
-  dvx: number,
-  dvy: number,
-  dvz: number,
-  dhx: number,
-  dhy: number,
-  dhz: number,
-  coefs: PhaseCoefficients | undefined,
-): number {
-  // vphHat = planet → viewer (= −view-space planet direction). hphHat
-  // = planet → host. Both normalised; cos α is the dot product.
-  const lenV = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
-  const lenHp = Math.sqrt(
-    (dhx - dvx) ** 2 + (dhy - dvy) ** 2 + (dhz - dvz) ** 2,
-  );
-  if (lenV <= 0 || lenHp <= 0) return 1;
-  const vphX = -dvx / lenV;
-  const vphY = -dvy / lenV;
-  const vphZ = -dvz / lenV;
-  const hphX = (dhx - dvx) / lenHp;
-  const hphY = (dhy - dvy) / lenHp;
-  const hphZ = (dhz - dvz) / lenHp;
-  const cosA = Math.max(-1, Math.min(1, vphX * hphX + vphY * hphY + vphZ * hphZ));
-  const alpha = Math.acos(cosA);
-  return coefs ? mallamaPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
-}
-
 export class PlanetBodyField {
   readonly group: THREE.Group;
   private mono = false;
@@ -178,7 +122,7 @@ export class PlanetBodyField {
   // Shared uniform bundle — references, not copies. The picker reads
   // current values directly so it stays in lockstep with the shaders
   // and any debug-panel writes to the same `{ value }` slots.
-  private magShared: PlanetMaterialUniforms;
+  private magShared: PerceptualDiscUniforms;
   // Per-instance attribute buffers. Re-allocated on capacity grow.
   private bufLocalRel!: Float32Array;
   private bufHostLocalPos!: Float32Array;
@@ -209,7 +153,7 @@ export class PlanetBodyField {
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
 
-  constructor(magnitudeShared: PlanetMaterialUniforms) {
+  constructor(magnitudeShared: PerceptualDiscUniforms) {
     this.magShared = magnitudeShared;
     this.maxAppMag = magnitudeShared.uMaxAppMag.value;
     this.group = new THREE.Group();
@@ -260,9 +204,9 @@ export class PlanetBodyField {
       // Saturn's rings raise its α=0 brightness above globe-only
       // reflectance via the Mallama c0 term — fold it into the cull
       // proxy so the cull distance widens to match. Other planets
-      // have c0=0 ⇒ peak factor 1, leaving the formula unchanged.
-      const peakBrightness = peakPhaseFactor(planet.phaseCoefficients);
-      const refl = planet.albedo * RoverA * RoverA * peakBrightness;
+      // have c0=0 ⇒ α=0 factor 1, leaving the formula unchanged.
+      const phiZero = alphaZeroPhaseFactor(planet.phaseCoefficients);
+      const refl = planet.albedo * RoverA * RoverA * phiZero;
       if (refl > brightestReflectance) brightestReflectance = refl;
     }
 
@@ -288,7 +232,7 @@ export class PlanetBodyField {
     // has valid iLocalRel data.
     this.writeHostStaticAttributes(host);
     this.writeHostPositions(host, t);
-    this.flushAttributeRange(host.startInstance, host.count);
+    this.flushAllAttributes();
     this.geometry.instanceCount = this.liveCount;
     this.group.visible = !this.hidden && !this.mono;
   }
@@ -329,7 +273,7 @@ export class PlanetBodyField {
       host.hostLocalPos.copy(host.hostAbsPos).sub(this.worldOffset);
       this.writeHostLocalPos(host);
     }
-    this.flushAttributeRange(0, this.liveCount);
+    this.flushHostLocalPosAttributes();
   }
 
   /**
@@ -366,22 +310,29 @@ export class PlanetBodyField {
         touched = true;
       }
     }
-    if (touched) this.flushAttributeRange(0, this.liveCount);
+    if (touched) this.flushDynamicAttributes();
   }
 
   /**
-   * Read-only slice of the focused host's planet local-frame positions.
-   * Layout: 3 floats per planet, ordering matches PlanetSystem.planets.
-   * Returns null when the host isn't attached.
+   * Fresh-copy snapshot of the focused host's planet local-frame
+   * positions. Layout: 3 floats per planet, ordering matches
+   * PlanetSystem.planets. Returns null when the host isn't attached.
    *
    * The planet-labels overlay reads this so labels project to the same
    * positions the body shader renders at, without re-running the
    * Keplerian math itself.
+   *
+   * Returns a Float32Array `.slice()` (copy), not a `.subarray()`
+   * view — the copy survives attach-driven capacity grow and
+   * detach-driven tail-shift, so callers can hold a cached reference
+   * without silently reading stale data the next frame. The allocation
+   * cost is ~3·count·4 bytes per call (108 B at Sol scale), dwarfed by
+   * the projection math that follows.
    */
   getHostLocalPositions(hostStarIdx: number): Float32Array | null {
     const host = this.hosts.get(hostStarIdx);
     if (!host) return null;
-    return this.bufLocalRel.subarray(
+    return this.bufLocalRel.slice(
       host.startInstance * 3,
       (host.startInstance + host.count) * 3,
     );
@@ -683,25 +634,8 @@ export class PlanetBodyField {
     this.geometry = geom;
   }
 
-  private buildMaterials(sm: PlanetMaterialUniforms): void {
-    const sharedPlanetUniforms = {
-      uMaxAppMag: sm.uMaxAppMag,
-      uSizeMin: sm.uSizeMin,
-      uSizeMax: sm.uSizeMax,
-      uSizeSpan: sm.uSizeSpan,
-      uSizeKnee: sm.uSizeKnee,
-      uVisibleThreshold: sm.uVisibleThreshold,
-      uVisibleK: sm.uVisibleK,
-      uCoreThreshold: sm.uCoreThreshold,
-      uDiscardThreshold: sm.uDiscardThreshold,
-      uDistNMin: sm.uDistNMin,
-      uDistNMax: sm.uDistNMax,
-      uLumBiasMin: sm.uLumBiasMin,
-      uLumBiasMax: sm.uLumBiasMax,
-      uViewport: sm.uViewport,
-      uPixelRatio: sm.uPixelRatio,
-      uFovYRad: sm.uFovYRad,
-    };
+  private buildMaterials(sm: PerceptualDiscUniforms): void {
+    const sharedPlanetUniforms = pickPerceptualDiscUniforms(sm);
 
     const makeMat = (mode: number, params: THREE.ShaderMaterialParameters) =>
       new THREE.ShaderMaterial({
@@ -865,15 +799,31 @@ export class PlanetBodyField {
     }
   }
 
-  /** Mark all instance attributes dirty so three.js uploads them on
-   *  the next render. Called after any buffer mutation that affects
-   *  the visible region. */
-  private flushAttributeRange(_start: number, _count: number): void {
+  /** Per-frame: only iLocalRel changes in `update()` (the planet
+   *  positions tick; host position, radius, colour, phase coefficients
+   *  are static for the host's lifetime). At bk5 scale (hundreds of
+   *  hosts × thousands of planets) flagging only the one dirty buffer
+   *  matters — the others would re-upload static data every frame
+   *  otherwise. */
+  private flushDynamicAttributes(): void {
     if (!this.geometry) return;
-    // three.js doesn't currently support partial-range InstancedBuffer
-    // updates without `updateRanges`; full-buffer dirty is the
-    // pragmatic path. At Sol-only scale this is a 7-attr × 9-instance
-    // upload — fast. bk5 may need range-based updates.
+    (this.geometry.attributes.iLocalRel as THREE.InstancedBufferAttribute)
+      .needsUpdate = true;
+  }
+
+  /** Recenter path: only iHostLocalPos changes (each host's local
+   *  offset is recomputed against the new floating-origin). */
+  private flushHostLocalPosAttributes(): void {
+    if (!this.geometry) return;
+    (this.geometry.attributes.iHostLocalPos as THREE.InstancedBufferAttribute)
+      .needsUpdate = true;
+  }
+
+  /** Attach / detach / grow: every per-instance attribute could be
+   *  dirty (the host's slot was just written; or a tail-shift moved
+   *  every other host's data). */
+  private flushAllAttributes(): void {
+    if (!this.geometry) return;
     const attrs = this.geometry.attributes;
     (attrs.iLocalRel as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iHostLocalPos as THREE.InstancedBufferAttribute).needsUpdate = true;
@@ -884,10 +834,6 @@ export class PlanetBodyField {
     (attrs.iHostAbsmag as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iPhaseCoefsA as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iPhaseCoefsB as THREE.InstancedBufferAttribute).needsUpdate = true;
-  }
-
-  private flushAllAttributes(): void {
-    this.flushAttributeRange(0, this.liveCount);
   }
 
   /** Compact-down step used by detachHost(). Shifts a contiguous tail

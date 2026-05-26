@@ -55,6 +55,7 @@ import {
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
+import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
 import { R_SUN_PC } from './util/astronomy-constants';
 // Locally used subset; other warp-timing constants re-exported below
@@ -583,7 +584,7 @@ export class Stellata implements FrameAnchor {
       // (0, 0, -distCam, 1) to bypass the cancellation. -1 disables.
       // Updated each frame in animate() since pan can move target away.
       uPinFocusToCenter: { value: -1 },
-    };
+    } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 
     this.starPipeline = new StarPipeline({
       scene: this.scene,
@@ -821,9 +822,10 @@ export class Stellata implements FrameAnchor {
    *  (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean { return this.orbitRingsLayer.anyOrbitRingVisible(); }
   /** Local-frame positions of the focused host's planets (xyz triples,
-   *  length 3·N), or null if no system is attached. Reads from the
-   *  global PlanetBodyField — overlays must not mutate. Used by
-   *  planet-labels to project bodies to screen space. */
+   *  length 3·N), or null if no system is attached. Returns a fresh
+   *  Float32Array copy each call (see
+   *  `PlanetBodyField.getHostLocalPositions`) — safe to cache across
+   *  frames; the value semantics survive attach grow / detach shift. */
   getFocusedPlanetLocalPositions(): Float32Array | null {
     const ps = this.focus.getFocusedPlanetSystem();
     if (!ps) return null;
