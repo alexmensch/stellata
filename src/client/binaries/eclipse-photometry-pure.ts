@@ -4,6 +4,16 @@
 
 export interface Vec3Ro { readonly x: number; readonly y: number; readonly z: number; }
 
+/** Positive lower bound for the dim multiplier `eclipseDim` returns.
+ *  Mirrors the shader's `iEclipseDim > 0.0` sentinel gate so the
+ *  attribute value never aliases onto the unwritten-slot zero: a
+ *  full geometric eclipse dims the back component by
+ *  `-2.5·log10(DIM_FLOOR) ≈ 7.5` mag — dark enough to read as
+ *  invisible in the glow-pass additive composite, far enough from
+ *  zero that an uninitialised buffer slot stays distinguishable.
+ *  See `src/client/binaries/README.md` § Eclipse photometry. */
+export const DIM_FLOOR = 0.001;
+
 export interface EclipseResult {
   /** Multiplicative dim factor on the BACK star's flux. 1.0 = no
    *  occlusion (no overlap, or front coincides with back so the back
@@ -121,6 +131,6 @@ export function eclipseDim(inputs: EclipseInputs): EclipseResult {
   const alphaBack = front === 'primary' ? alphaSec : alphaPri;
   if (alphaBack <= 0) return { dim: 1, front };
   const backDiscArea = Math.PI * alphaBack * alphaBack;
-  const dim = clamp(1 - lensArea / backDiscArea, 0, 1);
+  const dim = clamp(1 - lensArea / backDiscArea, DIM_FLOOR, 1);
   return { dim, front };
 }

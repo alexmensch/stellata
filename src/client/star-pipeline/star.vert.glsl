@@ -316,10 +316,16 @@ void main() {
     // Geometric eclipse-occlusion dim, glow pass only. Resolved discs
     // in the disc pass (uRenderMode == 1) handle occlusion via the
     // depth buffer; applying iEclipseDim there would also dim the back
-    // disc's non-occluded fragments, which is wrong. The 1e-6 floor
-    // keeps log finite when the back is fully covered.
-    if (uRenderMode == 0 && iEclipseDim < 1.0) {
-        appMag += -2.5 * log(max(iEclipseDim, 1e-6)) / LOG10;
+    // disc's non-occluded fragments, which is wrong.
+    //
+    // iEclipseDim ∈ (0, 1] when written by EclipsePhotometryField; the
+    // pure helper clamps dim to a positive floor so the sentinel
+    // `iEclipseDim == 0` cleanly identifies an unwritten / uninitialised
+    // slot and short-circuits to "no dim". Without this gate, an
+    // uninitialised 0-filled buffer would add ~+15 mag to every star
+    // and cull the entire glow pass.
+    if (uRenderMode == 0 && iEclipseDim > 0.0 && iEclipseDim < 1.0) {
+        appMag += -2.5 * log(iEclipseDim) / LOG10;
     }
 
     // Visibility prefilter — dust-independent. Spectral mask and distance

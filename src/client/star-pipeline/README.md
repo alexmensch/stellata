@@ -108,7 +108,12 @@ component's flux when an orbital pair's discs overlap from the camera
 viewpoint. Written each frame by `EclipsePhotometryField` (see
 `../binaries/README.md` § Eclipse photometry). Folded into `appMag` in
 the **glow pass only** — the disc pass at close range handles
-occlusion geometrically via the depth buffer.
+occlusion geometrically via the depth buffer. **0 is reserved as
+an unwritten-slot sentinel**: the shader gates on
+`iEclipseDim > 0.0` so an untouched slot reads as "no dim"
+instead of `-2.5·log10(0)` blowing up appMag by ~+15 mag and
+culling every glow-pass star. The pure helper floors its return
+at `DIM_FLOOR = 0.001` to keep the sentinel clean.
 
 `iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude
 radial pulsation block. Built once per `attachBinaries` from

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   circleCircleLensArea,
   eclipseDim,
+  DIM_FLOOR,
 } from './eclipse-photometry-pure';
 
 describe('circleCircleLensArea', () => {
@@ -113,9 +114,13 @@ describe('eclipseDim — front/back determination', () => {
 });
 
 describe('eclipseDim — full and partial occlusion', () => {
-  it('small back fully hidden by larger front: dim = 0', () => {
+  it('small back fully hidden by larger front: dim clamps to DIM_FLOOR', () => {
     // Front disc much larger than back disc; collinear with camera.
-    // Back's full disc is hidden → dim = 0.
+    // Back's full disc is hidden — true dim would be 0, but the pure
+    // helper floors at DIM_FLOOR so the shader's
+    // `iEclipseDim == 0` sentinel stays reserved for unwritten slots.
+    // DIM_FLOOR = 0.001 dims by 7.5 mag, which reads as invisible in
+    // the glow-pass composite.
     const cam = { x: 0, y: 0, z: 0 };
     const primary = { x: 0, y: 0, z: 10 }; // back
     const secondary = { x: 0, y: 0, z: 5 }; // front (closer + much bigger)
@@ -124,7 +129,7 @@ describe('eclipseDim — full and partial occlusion', () => {
       radiusPrimaryPc: 5e-3, radiusSecondaryPc: 0.5,
     });
     expect(r.front).toBe('secondary');
-    expect(r.dim).toBeCloseTo(0, 6);
+    expect(r.dim).toBe(DIM_FLOOR);
   });
 
   it('small front on bigger back: dim = 1 − (alpha_front / alpha_back)²', () => {

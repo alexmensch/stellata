@@ -182,6 +182,19 @@ value is 1.0 (no dim); the field writes lower values onto the
 back component each frame and resets touched-last-frame slots so
 transient occlusions clear.
 
+The attribute uses **0 as an unwritten-slot sentinel** — the shader
+gates on `iEclipseDim > 0.0 && iEclipseDim < 1.0` so a slot the
+field hasn't touched yet (Float32Array's default zero fill, or an
+upload race during attribute initialisation) reads as "no dim"
+instead of "fully occluded → +15 mag → culled by the visibility
+prefilter". To keep the sentinel clean, `eclipse-photometry-pure`
+floors its return value at `DIM_FLOOR = 0.001` (≈ 7.5 mag of dim,
+dark enough to read as invisible in the additive glow composite,
+but never aliasing onto zero). Without that floor a full geometric
+eclipse would write exactly 0 and the shader would silently
+*un-*dim the back component — exactly inverting the intended
+photometry.
+
 ### Pulsation gate for eclipsing binaries
 
 `iSuppressPulsation` is a per-instance flag built once per

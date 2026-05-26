@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
@@ -68,6 +71,54 @@ describe('StarPipeline', () => {
     expect(pipe.discMaterial.uniforms.uRenderMode.value).toBe(1);
     expect(pipe.glowMaterial.uniforms.uRenderMode.value).toBe(0);
     expect(pipe.coreMaskMaterial.uniforms.uRenderMode.value).toBe(2);
+  });
+
+  it('binds caller-owned iEclipseDim buffer with no copy + preserves init values', () => {
+    // Regression for the "all stars invisible" failure mode: if
+    // iEclipseDim's backing buffer starts at 0 (Float32Array default)
+    // rather than 1.0, the vertex shader reads every slot as
+    // "fully occluded" and adds ~+15 mag to every appMag, culling
+    // the entire glow pass. Pin both: identity (same buffer reference,
+    // mutations propagate) AND initial values (caller-supplied 1.0
+    // survives to the bound attribute).
+    const opts = makeOpts(3);
+    opts.eclipseDim.set([1, 1, 1]);
+    const pipe = new StarPipeline(opts);
+    const attr = pipe.geometry.getAttribute('iEclipseDim') as THREE.InstancedBufferAttribute;
+    expect(attr).toBe(pipe.iEclipseDimAttr);
+    expect(attr.array).toBe(opts.eclipseDim);
+    expect(Array.from(attr.array)).toEqual([1, 1, 1]);
+    expect(attr.usage).toBe(THREE.DynamicDrawUsage);
+    // Mutating the caller's view propagates to the bound attribute —
+    // confirms no defensive copy occurred.
+    opts.eclipseDim[0] = 0.5;
+    expect(attr.array[0]).toBe(0.5);
+  });
+
+  it('binds caller-owned iSuppressPulsation buffer with no copy', () => {
+    const opts = makeOpts(3);
+    opts.suppressPulsation.set([0, 1, 0]);
+    const pipe = new StarPipeline(opts);
+    const attr = pipe.geometry.getAttribute('iSuppressPulsation') as THREE.InstancedBufferAttribute;
+    expect(attr).toBe(pipe.iSuppressPulsationAttr);
+    expect(attr.array).toBe(opts.suppressPulsation);
+    expect(Array.from(attr.array)).toEqual([0, 1, 0]);
+    expect(attr.usage).toBe(THREE.DynamicDrawUsage);
+  });
+
+  // The vertex shader folds `iEclipseDim` into appMag. If the attribute
+  // happens to read as 0 (Float32Array's default, or an unwritten slot
+  // before EclipsePhotometryField runs), the naive
+  // `if (iEclipseDim < 1.0)` gate adds ~+15 mag (-2.5·log10(1e-6)) to
+  // every star and the visibility prefilter culls the entire glow
+  // pass — observed manually when shipping the field. The shader
+  // therefore gates on `iEclipseDim > 0.0 && iEclipseDim < 1.0` so 0
+  // reads as "unwritten = no dim". Pin the source so a future tweak
+  // can't silently drop the gate.
+  it('vertex shader gates iEclipseDim on > 0 so unwritten 0 is treated as no-op', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
+    expect(src).toMatch(/iEclipseDim\s*>\s*0\.0\s*&&\s*iEclipseDim\s*<\s*1\.0/);
   });
 
   it('binds the caller-owned localPositions buffer to iPosition', () => {
