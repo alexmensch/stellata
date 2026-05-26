@@ -27,6 +27,17 @@ star catalog records.
   offset.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC` + `SUB_PIXEL_THRESHOLD_PX`
   named constants the field reads each frame and tests pin.
+- `eclipse-photometry-pure.ts` — pure math for camera-anywhere
+  geometric occlusion: image-plane angular projection, closed-form
+  circle-circle lens area, geometric dim factor on the back
+  component's flux. `eclipse-photometry-pure.test.ts` pins the
+  degenerate cases.
+- `eclipse-photometry.ts` — per-frame field that walks the same
+  has_orbit relations the orbit field does, reads the
+  post-perturbation `localPositions`, and writes per-instance
+  `iEclipseDim` for the back component when discs overlap. Runs
+  AFTER `BinaryOrbitField` in the per-frame loop (it consumes the
+  orbit field's outputs). See § Eclipse photometry.
 
 ## Format contract
 
@@ -142,3 +153,53 @@ regardless of outer phase. Without this branch the parent's
 perturbation on Aa1 would leak into the displacement as a
 parent-period oscillation of ~q_outer·a_outer in magnitude (~1 AU for
 Algol's Aa↔Ab; 18× the inner-pair semi-major).
+
+## Eclipse photometry
+
+`EclipsePhotometryField` runs after `BinaryOrbitField` each frame
+and writes a per-instance dim multiplier on the back component's
+flux whenever discs overlap from the camera's viewpoint. The math
+is camera-anywhere by construction — EA/EB/EW labels are Earth's-
+viewpoint facts; any system can eclipse from any viewpoint when its
+geometry aligns. The pure helper decomposes the 3D separation onto
+the camera→primary line of sight, computes each disc's angular
+radius, and runs the closed-form circle-circle lens area; the dim
+is `1 − occluded_area / back_disc_area`.
+
+Surface-brightness ratios stay implicit: each star is its own
+instance with its own absmag, and dimming the back's flux by the
+geometric area fraction gives the right composite when the two
+sum additively in the glow pass. Limb darkening is not modelled
+(uniform disc surface brightness).
+
+### Shader-side wiring
+
+`iEclipseDim` is folded into appMag in the **glow pass only**
+(`uRenderMode == 0`). The disc pass resolves geometric occlusion
+via the depth buffer at close range, so applying the dim there
+would also dim the back disc's non-occluded fragments. Default
+value is 1.0 (no dim); the field writes lower values onto the
+back component each frame and resets touched-last-frame slots so
+transient occlusions clear.
+
+### Pulsation gate for eclipsing binaries
+
+`iSuppressPulsation` is a per-instance flag built once per
+`attachBinaries` from `catalog.varType` × `binaries.has_orbit`:
+set 1.0 on every primary whose GCVS variability type is
+`VAR_TYPE_ECLIPSING` AND that is the primary of at least one
+has_orbit relation. The shader's pulsation block (radial
+modulation from GCVS amplitude) is gated off for those primaries
+— `EclipsePhotometryField`'s geometric signal supersedes the
+GCVS-amplitude surrogate.
+
+For an EA/EB/EW primary with NO orbital elements (no NSS or
+ORB6 entry), the geometric signal isn't available and the
+GCVS-amplitude pulsation stays as the fallback. The two layers
+together define the boundary: when the real signal exists, it
+wins; otherwise the surrogate carries on.
+
+`star-physics.ts`'s `renderedSizePx` reads the same suppress mask
+(via the optional `suppressPulsation` arg) so the SVG focus ring +
+disc mask + distance-vector tip track the rendered (un-modulated)
+disc on suppressed primaries.

@@ -74,7 +74,11 @@ Ballesteros(B–V) → Apsis-direct).
   - 34    `uint8`        constellation index (0–87 into `constellations.json`; 255=none)
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer, 4=is_binary_primary)
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
-  - 37    `uint8`        reserved (future: variability type)
+  - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
+                          1=pulsating, 2=eclipsing, 3=other). Runtime
+                          pulsation-suppress for eclipsing binaries
+                          with orbital elements reads this paired with
+                          `binaries.bin`'s has_orbit flag.
   - 38–39 `uint16`       **variability period** in 0.1 days (0 = not variable, max 6553.5 d)
   - 40–43 `uint32`       **HIP** (Hipparcos number; 0 = no HIP). Only ~37%
                           of the catalogue carries HIP — the rest are filled

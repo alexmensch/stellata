@@ -103,6 +103,19 @@ pair: the two near-coincident point sources sum brightness correctly
 under AdditiveBlending in the glow pass, and dropping the opaque disc
 + depth mask avoids z-fighting between the two overlapping cores.
 
+`iEclipseDim` (float, per-instance, default 1.0) multiplies the back
+component's flux when an orbital pair's discs overlap from the camera
+viewpoint. Written each frame by `EclipsePhotometryField` (see
+`../binaries/README.md` § Eclipse photometry). Folded into `appMag` in
+the **glow pass only** — the disc pass at close range handles
+occlusion geometrically via the depth buffer.
+
+`iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude
+radial pulsation block. Built once per `attachBinaries` from
+`catalog.varType` × `binaries.has_orbit` so the visual signal on
+eclipsing-binary primaries with orbital elements comes from
+`iEclipseDim` instead of the surrogate amplitude.
+
 `uPinFocusToCenter` (int, default `-1`) replaces the standard
 projection chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the
 matched instance, sidestepping float32 cancellation in the projection

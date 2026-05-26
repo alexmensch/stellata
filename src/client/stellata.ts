@@ -75,7 +75,12 @@ export {
 import { EventBus } from './util/event-bus';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import type { BinariesData } from './binaries/binaries-loader';
+import { EclipsePhotometryField } from './binaries/eclipse-photometry';
+import {
+  FLAG_HAS_ORBIT,
+  type BinariesData,
+} from './binaries/binaries-loader';
+import { VAR_TYPE_ECLIPSING } from '../../scripts/catalog/catalog-pure';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
 
@@ -289,10 +294,21 @@ export class Stellata implements FrameAnchor {
   // 1 = drop the disc + core depth-mask passes (additive glow still
   // runs). BinaryOrbitField writes per-frame for sub-pixel secondaries.
   private _compositeSuppress: Float32Array;
+  // Per-instance geometric-eclipse dim factor. 1 = no occlusion;
+  // EclipsePhotometryField writes per-frame for the back component of
+  // orbital pairs whose discs overlap from the camera viewpoint.
+  private _eclipseDim: Float32Array;
+  // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
+  // radial pulsation in the vertex shader for eclipsing-binary primaries
+  // whose photometric signal now comes from `_eclipseDim`. Rebuilt
+  // whenever attachBinaries fires (the relation list is what selects
+  // which stars get suppressed); zero-filled until then.
+  private _suppressPulsation: Float32Array;
   // Lazily attached when main.ts loads public/binaries.bin. Null until
   // then — the renderer functions identically with the static catalog
   // positions; binary orbital evolution simply doesn't fire.
   private binaryOrbitField: BinaryOrbitField | null = null;
+  private eclipsePhotometryField: EclipsePhotometryField | null = null;
 
   // Sorted-by-distance-from-Sol index for the core-mask query. Distance
   // from Sol is intrinsic (computed from absolute catalog positions) and
@@ -475,6 +491,8 @@ export class Stellata implements FrameAnchor {
     // in place.
     this._localPositions = new Float32Array(catalog.positions);
     this._compositeSuppress = new Float32Array(catalog.count);
+    this._eclipseDim = new Float32Array(catalog.count).fill(1);
+    this._suppressPulsation = new Float32Array(catalog.count);
     // Sort indices by distance from Sol (ascending). The sorted view lets
     // shouldEnableCoreMask() walk only stars whose Sol-distance falls
     // within `[camDistFromSol - dThresh, camDistFromSol + dThresh]` —
@@ -595,6 +613,8 @@ export class Stellata implements FrameAnchor {
       teffApsis,
       localPositions: this._localPositions,
       compositeSuppress: this._compositeSuppress,
+      eclipseDim: this._eclipseDim,
+      suppressPulsation: this._suppressPulsation,
       vertexShader,
       fragmentShader,
       sharedUniforms,
@@ -651,6 +671,7 @@ export class Stellata implements FrameAnchor {
         localPositions: this._localPositions,
         uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
         filter: this.filter,
+        suppressPulsation: this._suppressPulsation,
       }),
       fovYRadRef: this.starPipeline.discMaterial.uniforms.uFovYRad as { value: number },
       viewportRef: this.starPipeline.discMaterial.uniforms.uViewport as { value: THREE.Vector2 },
@@ -1144,8 +1165,11 @@ export class Stellata implements FrameAnchor {
    *  star-pipeline `iPosition` slots against `getT()`. */
   attachBinaries(binaries: BinariesData | null): void {
     this.binaryOrbitField?.dispose();
+    this.eclipsePhotometryField?.dispose();
     if (binaries === null) {
       this.binaryOrbitField = null;
+      this.eclipsePhotometryField = null;
+      this._suppressPulsation.fill(0);
       return;
     }
     this.binaryOrbitField = new BinaryOrbitField({
@@ -1158,6 +1182,29 @@ export class Stellata implements FrameAnchor {
       iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
     });
     this.binaryOrbitField.recenter(this.worldOffset);
+    this.eclipsePhotometryField = new EclipsePhotometryField({
+      binaries,
+      localPositions: this._localPositions,
+      absoluteMags: this.catalog.absmag,
+      physicalRadiusSolar: this.catalog.physicalRadius,
+      eclipseDimBuffer: this._eclipseDim,
+      iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
+    });
+    // Build the pulsation-suppress gate from the freshly-attached
+    // relation list. Set 1.0 on every primary whose catalog row is an
+    // eclipsing variable (varType == VAR_TYPE_ECLIPSING) AND is the
+    // primary of at least one has_orbit pair — the eclipse-photometry
+    // field's geometric signal supersedes the GCVS-amplitude pulsation
+    // surrogate there.
+    this._suppressPulsation.fill(0);
+    const varType = this.catalog.varType;
+    for (const r of binaries.relations) {
+      if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
+      if (varType[r.primaryIdx] === VAR_TYPE_ECLIPSING) {
+        this._suppressPulsation[r.primaryIdx] = 1;
+      }
+    }
+    this.starPipeline.iSuppressPulsationAttr.needsUpdate = true;
   }
 
   private updateBinaryOrbits(): void {
@@ -1172,6 +1219,13 @@ export class Stellata implements FrameAnchor {
       viewport.y,
       fovYRad,
       this.focus.getFocusedStar(),
+    );
+    // Eclipse photometry consumes BinaryOrbitField's OUTPUT — must run
+    // after the orbit walk so localPositions carries the per-frame
+    // perturbation. See src/client/binaries/README.md § Eclipse photometry.
+    this.eclipsePhotometryField?.update(
+      this.camera.position,
+      this.filter.maxAppMag,
     );
   }
 
@@ -1259,6 +1313,12 @@ export class Stellata implements FrameAnchor {
   // iPosition attribute. Overlays should project through this rather than
   // catalog.positions so their math runs in the same frame as the camera.
   get localPositions(): Float32Array { return this._localPositions; }
+
+  // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
+  // disc mask, distance vector tip) thread this through renderedSizePx so
+  // the SVG estimate tracks the rendered disc on eclipsing-binary
+  // primaries whose pulsation has been gated off.
+  get suppressPulsation(): Float32Array { return this._suppressPulsation; }
 
   // Read-only view of the star-shader uniforms, typed against the subsets
   // consumed by star-physics.ts. Overlays / chart / debug surfaces that

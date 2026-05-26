@@ -39,6 +39,11 @@ export interface Catalog {
   companion: Int32Array;         // length = count, -1 = no companion
   periodDays: Float32Array;      // length = count, 0 = not variable
   amplitudeMag: Float32Array;    // length = count, 0 = not variable
+  // Per-star GCVS variability class. 0=unknown/non-variable,
+  // 1=pulsating, 2=eclipsing, 3=other (cataclysmic, eruptive,
+  // rotating, …). Gates the runtime pulsation-suppress for eclipsing
+  // binaries with orbital elements.
+  varType: Uint8Array;           // length = count
   hip: Uint32Array;              // length = count, 0 = no HIP
   // Gaia DR3 source_id per record; 0n sentinel = no Gaia DR3 source_id.
   // Stored as BigUint64Array because IDs routinely exceed 2^53 and would
@@ -133,6 +138,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   const companion = new Int32Array(count);
   const periodDays = new Float32Array(count);
   const amplitudeMag = new Float32Array(count);
+  const varType = new Uint8Array(count);
   const hip = new Uint32Array(count);
   const gaiaSourceId = new BigUint64Array(count);
   const teffGspphot = new Float32Array(count);
@@ -161,6 +167,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     constellation[i] = view.getUint8(off + RECORD_LAYOUT.conIndex);
     flags[i] = view.getUint8(off + RECORD_LAYOUT.flags);
     amplitudeMag[i] = view.getUint8(off + RECORD_LAYOUT.ampUnits) * 0.05;
+    varType[i] = view.getUint8(off + RECORD_LAYOUT.varType);
     periodDays[i] = view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1;
     hip[i] = view.getUint32(off + RECORD_LAYOUT.hip, true);
     gaiaSourceId[i] = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
@@ -213,6 +220,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     companion,
     periodDays,
     amplitudeMag,
+    varType,
     hip,
     gaiaSourceId,
     teffGspphot,

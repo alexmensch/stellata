@@ -77,6 +77,7 @@ export function createDiscMask(stellata: Stellata) {
       localPositions: stellata.localPositions,
       uniforms: stellata.uniforms,
       filter: stellata.getFilter(),
+      suppressPulsation: stellata.suppressPulsation,
     });
     if (size <= DISC_THRESHOLD_PX) return false;
     const positions = stellata.localPositions;

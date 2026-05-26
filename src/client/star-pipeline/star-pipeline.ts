@@ -42,6 +42,19 @@ export interface StarPipelineOptions {
    *  Written by `BinaryOrbitField` for sub-pixel binary secondaries.
    *  Must outlive the pipeline. */
   compositeSuppress: Float32Array;
+  /** Buffer backing the dynamic `iEclipseDim` attribute. 1.0 = no
+   *  occlusion; < 1.0 dims the back component's contribution to the
+   *  glow pass so a sub-pixel binary pair shows a proper photometric
+   *  dip when one star transits the other from the camera viewpoint.
+   *  Written by `EclipsePhotometryField`. Must outlive the pipeline. */
+  eclipseDim: Float32Array;
+  /** Per-instance pulsation-suppress flag. 1.0 zeros the GCVS-amplitude
+   *  radial pulsation in the vertex shader; used for eclipsing-binary
+   *  systems whose photometric signal now comes from
+   *  `EclipsePhotometryField`'s geometric occlusion instead. Built
+   *  once at startup from `varType` × `binaries.has_orbit`; not
+   *  rewritten per-frame. */
+  suppressPulsation: Float32Array;
   vertexShader: string;
   fragmentShader: string;
   /** Shared uniforms map. Each pass spreads it with its own
@@ -78,6 +91,11 @@ export class StarPipeline {
   readonly iPositionAttr: THREE.InstancedBufferAttribute;
   /** Dynamic — rewritten by BinaryOrbitField each frame. */
   readonly iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
+  /** Dynamic — rewritten by EclipsePhotometryField each frame. */
+  readonly iEclipseDimAttr: THREE.InstancedBufferAttribute;
+  /** Built once per attachBinaries; the integration shell flips
+   *  `needsUpdate` after rewriting the backing buffer. */
+  readonly iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
   readonly discMaterial: THREE.ShaderMaterial;
   readonly glowMaterial: THREE.ShaderMaterial;
   readonly coreMaskMaterial: THREE.ShaderMaterial;
@@ -90,7 +108,8 @@ export class StarPipeline {
   constructor(opts: StarPipelineOptions) {
     const {
       scene, catalog, logRadii, lumClassF32, distSol, teffApsis,
-      localPositions, compositeSuppress, vertexShader, fragmentShader,
+      localPositions, compositeSuppress, eclipseDim, suppressPulsation,
+      vertexShader, fragmentShader,
       sharedUniforms, boundingSphereRadiusPc,
     } = opts;
     this.scene = scene;
@@ -115,6 +134,12 @@ export class StarPipeline {
     this.iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(compositeSuppress, 1);
     this.iCompositeSuppressAttr.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('iCompositeSuppress', this.iCompositeSuppressAttr);
+    this.iEclipseDimAttr = new THREE.InstancedBufferAttribute(eclipseDim, 1);
+    this.iEclipseDimAttr.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('iEclipseDim', this.iEclipseDimAttr);
+    this.iSuppressPulsationAttr = new THREE.InstancedBufferAttribute(suppressPulsation, 1);
+    this.iSuppressPulsationAttr.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('iSuppressPulsation', this.iSuppressPulsationAttr);
     this.geometry.setAttribute('iAbsmag', new THREE.InstancedBufferAttribute(catalog.absmag, 1));
     this.geometry.setAttribute('iCi', new THREE.InstancedBufferAttribute(catalog.ci, 1));
     this.geometry.setAttribute('iSpectClass', new THREE.InstancedBufferAttribute(catalog.spectClass, 1));

@@ -129,6 +129,22 @@ in float iTeffApsis;
 // glow pass still runs and sums the two near-coincident point sources
 // correctly). Used for the dimmer member of a sub-pixel binary pair.
 in float iCompositeSuppress;
+// Geometric eclipse-occlusion factor written by EclipsePhotometryField
+// each frame. 1.0 = no occlusion; values in (0, 1) mean the back
+// component of an orbital binary pair is partially hidden by the front
+// component along the camera line of sight. Folded into appMag in the
+// glow pass only (the disc pass at close range resolves the occlusion
+// geometrically via the depth buffer; double-applying here would dim
+// the back disc's non-occluded fragments too). See
+// src/client/binaries/README.md § Eclipse photometry.
+in float iEclipseDim;
+// Pulsation-suppress flag. 1.0 disables the GCVS-amplitude radial
+// pulsation block below — used for eclipsing-binary primaries (varType
+// 2) whose photometric signal now comes from `iEclipseDim` instead.
+// Built once at startup from `catalog.varType` × `binaries.has_orbit`,
+// not rewritten per frame. See src/client/binaries/README.md
+// § Eclipse photometry.
+in float iSuppressPulsation;
 
 out float vAppMag;
 out vec3 vColor;
@@ -275,7 +291,7 @@ void main() {
     float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
     float radiusFactor = 1.0;
     float magMod = 0.0;
-    if (iPeriodDays > 0.0 && iAmplitudeMag > 0.0) {
+    if (iPeriodDays > 0.0 && iAmplitudeMag > 0.0 && iSuppressPulsation < 0.5) {
         float periodSec = max(iPeriodDays * uSecondsPerDay, uMinPeriodSec);
         float phase = uTime / periodSec;
 
@@ -295,6 +311,15 @@ void main() {
         magMod = 0.5 * ampEff * sin(6.2831853 * phase);
         appMag += magMod;
         radiusFactor = pow(10.0, -magMod / 5.0);
+    }
+
+    // Geometric eclipse-occlusion dim, glow pass only. Resolved discs
+    // in the disc pass (uRenderMode == 1) handle occlusion via the
+    // depth buffer; applying iEclipseDim there would also dim the back
+    // disc's non-occluded fragments, which is wrong. The 1e-6 floor
+    // keeps log finite when the back is fully covered.
+    if (uRenderMode == 0 && iEclipseDim < 1.0) {
+        appMag += -2.5 * log(max(iEclipseDim, 1e-6)) / LOG10;
     }
 
     // Visibility prefilter — dust-independent. Spectral mask and distance

@@ -18,6 +18,8 @@ function makeOpts(count = 4) {
     teffApsis: new Float32Array(count),
     localPositions: new Float32Array(count * 3),
     compositeSuppress: new Float32Array(count),
+    eclipseDim: new Float32Array(count).fill(1),
+    suppressPulsation: new Float32Array(count),
     vertexShader: 'void main(){ gl_Position = vec4(0.0); }',
     fragmentShader: 'void main(){}',
     sharedUniforms,

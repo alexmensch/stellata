@@ -9,9 +9,9 @@ import {
 import { makeStar } from './star-fixture';
 
 const GCVS: Map<string, VarStarData> = new Map([
-  ['R And', { periodDays: 409.2, amplitudeMag: 9.4 }],
-  ['S Aql', { periodDays: 146.5, amplitudeMag: 3.6 }],
-  ['T Vul', { periodDays: 4.4, amplitudeMag: 0.5 }],
+  ['R And', { periodDays: 409.2, amplitudeMag: 9.4, varType: 1 }],
+  ['S Aql', { periodDays: 146.5, amplitudeMag: 3.6, varType: 1 }],
+  ['T Vul', { periodDays: 4.4, amplitudeMag: 0.5, varType: 1 }],
 ]);
 
 describe('gcvs-parse / bridgeGcvsByGaia', () => {

@@ -39,6 +39,7 @@ function makeStar(overrides: Partial<Star> = {}): Star {
     companionIdx: -1,
     periodDays: 0,
     amplitudeMag: 0,
+    varType: 0,
     athygDist: null,
     athygDistSrc: null,
     syntheticId: null,

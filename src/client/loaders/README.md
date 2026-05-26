@@ -10,7 +10,10 @@ catalog-loader.ts        public/catalog.bin + public/constellations.json →
                          Layout decoded from HEADER_LAYOUT / RECORD_LAYOUT
                          / MAGIC / BINARY_VERSION imported from
                          scripts/catalog/catalog-pure.ts — single source
-                         of truth shared with the writer.
+                         of truth shared with the writer. Exposes
+                         `varType: Uint8Array` for the runtime
+                         pulsation-suppress gate (see
+                         `../binaries/README.md` § Eclipse photometry).
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling.
 catalog-mock.ts          test-only Catalog factory. NaN-fills Apsis

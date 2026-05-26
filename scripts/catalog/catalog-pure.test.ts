@@ -12,6 +12,11 @@ import {
   physicalRadius,
   normalizeGcvsName,
   parseGcvsNumber,
+  classifyGcvsVarType,
+  VAR_TYPE_UNKNOWN,
+  VAR_TYPE_PULSATING,
+  VAR_TYPE_ECLIPSING,
+  VAR_TYPE_OTHER,
   inferBinaries,
   markPrimary,
   markPrimaryIfUnflagged,
@@ -598,6 +603,59 @@ describe('catalog-pure / parseGcvsNumber', () => {
   });
 });
 
+describe('catalog-pure / classifyGcvsVarType', () => {
+  it('classifies eclipsing prefixes: EA / EB / EW / ELL / EP / E', () => {
+    expect(classifyGcvsVarType('EA')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EB')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EW')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('ELL')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EP')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('E')).toBe(VAR_TYPE_ECLIPSING);
+  });
+
+  it('classifies composite eclipsing-+-rotational/RS as eclipsing', () => {
+    // Algol's "EA/RS" should keep the eclipsing tag — the geometric
+    // occlusion is the dominant photometric signal, and superimposing
+    // GCVS-amplitude pulsation would double-count the eclipse.
+    expect(classifyGcvsVarType('EA/RS')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EA+RS')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EB/DM')).toBe(VAR_TYPE_ECLIPSING);
+  });
+
+  it('classifies intrinsic pulsators: M / SR / DCEP / RRAB / RV / DSCT', () => {
+    expect(classifyGcvsVarType('M')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('SR')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('SRA')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('DCEP')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('CEP')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('RR')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('RRAB')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('RV')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('DSCT')).toBe(VAR_TYPE_PULSATING);
+  });
+
+  it('classifies cataclysmic / eruptive / rotating as OTHER', () => {
+    expect(classifyGcvsVarType('UGSU')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('ZAND')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('GCAS')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('ACV')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('BY')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('CST')).toBe(VAR_TYPE_OTHER);
+  });
+
+  it('returns UNKNOWN for blank, null, or whitespace input', () => {
+    expect(classifyGcvsVarType(null)).toBe(VAR_TYPE_UNKNOWN);
+    expect(classifyGcvsVarType(undefined)).toBe(VAR_TYPE_UNKNOWN);
+    expect(classifyGcvsVarType('')).toBe(VAR_TYPE_UNKNOWN);
+    expect(classifyGcvsVarType('   ')).toBe(VAR_TYPE_UNKNOWN);
+  });
+
+  it('is case-insensitive', () => {
+    expect(classifyGcvsVarType('ea')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('dcep')).toBe(VAR_TYPE_PULSATING);
+  });
+});
+
 describe('catalog-pure / inferBinaries', () => {
   function makeStar(opts: Partial<BinaryStar> & { x: number; y: number; z: number; absmag: number }): BinaryStar {
     return { flags: 0, companionIdx: -1, ...opts };
@@ -992,8 +1050,10 @@ describe('catalog-pure / binary-format constants', () => {
     expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
     expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(52); // gaiaSourceId end
     expect(RECORD_SIZE).toBe(80);
-    // Reserved byte 37 sits between ampUnits (36) and period (38).
-    expect(RECORD_LAYOUT.ampUnits + 1).toBe(37);
+    // varType uint8 sits between ampUnits (36) and period (38).
+    expect(RECORD_LAYOUT.ampUnits + 1).toBe(RECORD_LAYOUT.varType);
+    expect(RECORD_LAYOUT.varType).toBe(37);
+    expect(RECORD_LAYOUT.varType + 1).toBe(RECORD_LAYOUT.period);
     expect(RECORD_LAYOUT.period).toBe(38);
     // hip (uint32 at 40) immediately precedes gaiaSourceId.
     expect(RECORD_LAYOUT.hip + 4).toBe(RECORD_LAYOUT.gaiaSourceId);

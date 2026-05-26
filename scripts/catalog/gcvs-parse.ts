@@ -2,12 +2,21 @@
 // scripts/catalog/README.md § GCVS variability cross-match.
 import { readFileSync } from 'node:fs';
 
-import { normalizeGcvsName, parseGcvsNumber } from './catalog-pure';
+import {
+  classifyGcvsVarType,
+  normalizeGcvsName,
+  parseGcvsNumber,
+  VAR_TYPE_UNKNOWN,
+} from './catalog-pure';
 import type { Star } from './stars-parse';
 
 export interface VarStarData {
   periodDays: number;
   amplitudeMag: number;
+  /** Encoded VAR_TYPE_* from `classifyGcvsVarType`. Drives the runtime
+   *  pulsation-suppression gate on eclipsing binaries with orbital
+   *  elements; otherwise informational for hover tooltips. */
+  varType: number;
 }
 
 export interface VarStarXref {
@@ -19,6 +28,7 @@ export interface VarStarXref {
 // gcvs5.txt column indices (pipe-delimited, ~22 fields).
 const GCVS_MAIN_MIN_FIELDS = 12;
 const GCVS_MAIN_COL_NAME = 1;
+const GCVS_MAIN_COL_TYPE = 3;
 const GCVS_MAIN_COL_MAX_MAG = 4;
 const GCVS_MAIN_COL_MIN_MAG = 5;
 const GCVS_MAIN_COL_PERIOD = 10;
@@ -47,11 +57,12 @@ export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
     const maxMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MAX_MAG] ?? '');
     const minMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MIN_MAG] ?? '');
     const periodDays = parseGcvsNumber(fields[GCVS_MAIN_COL_PERIOD] ?? '');
+    const varType = classifyGcvsVarType(fields[GCVS_MAIN_COL_TYPE]);
     if (periodDays === null || periodDays <= 0) continue;
     if (maxMag === null || minMag === null) continue;
     const amp = minMag - maxMag; // min is dimmer (higher number) than max
     if (amp <= 0) continue;
-    out.set(name, { periodDays, amplitudeMag: amp });
+    out.set(name, { periodDays, amplitudeMag: amp, varType });
   }
   return out;
 }
@@ -143,6 +154,7 @@ export function applyVariability(
     if (!data) continue;
     s.periodDays = data.periodDays;
     s.amplitudeMag = data.amplitudeMag;
+    s.varType = data.varType ?? VAR_TYPE_UNKNOWN;
     if (source === 'gaia') matchedByGaia++;
     else if (source === 'hip') matchedByHip++;
     else matchedByHd++;
