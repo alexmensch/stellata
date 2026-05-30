@@ -55,3 +55,5 @@
 
 export.git-add: false
 no-git-ops: true
+
+sync.remote: "git+ssh://git@github.com/alexmensch/stellata.git"
