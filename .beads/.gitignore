@@ -15,8 +15,9 @@ daemon.*
 # Interactions log (runtime, not versioned)
 interactions.jsonl
 
-# Issue export (regenerated from Dolt; Dolt is the synced source of truth
-# via the refs/dolt/* remote, so the JSONL is not versioned in git)
+# Issue export — disabled (export.auto: false), so normally not written.
+# Kept ignored so a manual `bd export` never rides along in git; Dolt is
+# the synced source of truth via the refs/dolt/* remote.
 issues.jsonl
 
 # Push state (runtime, per-machine)
