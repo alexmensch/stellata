@@ -311,10 +311,11 @@ Every change goes through:
    "ready to merge when you are."
 
 bd state is not carried in git. bd writes persist to local Dolt
-immediately and sync to the `refs/dolt/*` remote via `bd dolt push`
-(part of session-close). `.beads/issues.jsonl` is gitignored — a local
-export of Dolt; never commit, stage, or revert it. `bd dolt push` is
-the only sync step, so don't open a bd-sync or memory-grooming PR.
+immediately and sync to the `refs/dolt/*` remote automatically — the
+pre-push git hook runs `bd dolt push` on every `git push`, so there's
+no manual sync step and no bd-sync or memory-grooming PR. JSONL export
+is off (`export.auto: false`); `.beads/issues.jsonl` is not written, and
+any stale copy is gitignored — never stage, commit, or revert it.
 
 ### PR body — `## Release notes` is required when version bumps
 
