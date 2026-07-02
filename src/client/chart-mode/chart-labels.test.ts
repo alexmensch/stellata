@@ -367,4 +367,20 @@ describe('chart-labels / starLabelOffsetPx', () => {
     const cornerDist = Math.hypot(cornerX, cornerY);
     expect(cornerDist).toBeGreaterThan(discPx / 2);
   });
+
+  it('keeps the tightest corner-clearance margin pinned at the floor/formula crossover', () => {
+    // Max-size clearance above has ~7 px of margin — comfortable. The
+    // tightest clearance the formula admits is where the
+    // STAR_LABEL_OFFSET_MIN_PX floor (9) meets discPx/2 + STAR_LABEL_GAP_PX
+    // (4): discPx/2 + 4 = 9 → discPx = 10. Pinned exactly so a future
+    // MIN_PX/GAP_PX tweak can't silently shrink this margin.
+    const FLOOR_FORMULA_CROSSOVER_PX = 10;
+    const off = starLabelOffsetPx(FLOOR_FORMULA_CROSSOVER_PX);
+    expect(off).toBe(9);
+    const cornerX = off;
+    const cornerY = -off + 7; // text-height/2 below the y-anchor
+    const cornerDist = Math.hypot(cornerX, cornerY);
+    expect(cornerDist).toBeCloseTo(9.219544457292887, 12);
+    expect(cornerDist - FLOOR_FORMULA_CROSSOVER_PX / 2).toBeCloseTo(4.219544457292887, 12);
+  });
 });
