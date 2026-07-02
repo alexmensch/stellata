@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -17,6 +17,8 @@
     "refresh:bailer-jones": "python3 scripts/refresh/refresh-bailer-jones.py",
     "refresh:gaia-apsis": "python3 scripts/refresh/refresh-gaia-apsis.py",
     "refresh:gaia-astrometry": "python3 scripts/refresh/refresh-gaia-astrometry.py",
+    "refresh:gaia-astrometry-catalog": "python3 scripts/refresh/refresh-gaia-astrometry-catalog.py",
+    "build:astrometry-request": "tsx scripts/catalog/export-astrometry-request.ts",
     "refresh:hip2": "python3 scripts/refresh/refresh-hipparcos2.py",
     "refresh:simbad": "python3 scripts/refresh/refresh-simbad-sample.py",
     "validate:simbad": "tsx scripts/catalog/validate-simbad-sample.ts",

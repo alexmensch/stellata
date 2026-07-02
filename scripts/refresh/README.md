@@ -39,6 +39,8 @@ venv binary) in the shell that runs them.
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tyco2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `npm run build:binaries`. |
+| `build:astrometry-request` | `scripts/catalog/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — every AT-HYG row resolved via `resolveGaiaSourceId` (native `gaia` → HIP cross-walk). Not a network pull; reads `data/athyg/` + `data/gaia/gaia_dr3_hip_xmatch.tsv`. Run AFTER a fresh `refresh:gaia-hip`. |
+| `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5-parameter astrometry for every catalog-resolvable source_id (~315k) — the direction-cascade input. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. |
 | `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id. |
 | `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007) reduction. |
@@ -56,6 +58,13 @@ SIMBAD-anchored pulls reuses the entire stack.
 atomic-rename plumbing every refresh script imports — handles retry,
 batching, schema validation, and partial-write protection so a
 mid-run failure never leaves a half-written TSV under `data/`.
+
+`scripts/refresh/gaia_astrometry_pull.py` is the shared 5p-astrometry
+pull (schema, ADQL, batching, coverage + spot-check gates, atomic
+write); `refresh-gaia-astrometry.py` (binaries scope) and
+`refresh-gaia-astrometry-catalog.py` (full-catalog scope) are thin
+wrappers that only define their request/output paths and pinned
+spot-check rows.
 
 See `RELEASING.md` § Catalogue refresh policy for the cadence
 (event-driven, not scheduled) and the version-bump policy for a
@@ -77,6 +86,10 @@ catalogue inconsistent. Order matters:
    `refresh-gaia-astrometry.py`, `refresh-gaia-nss.py`,
    `refresh-gaia-apsis.py`, `refresh-bailer-jones.py`.
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
+   Then regenerate the full-catalog astrometry (two stages, after
+   `refresh-gaia-hip-xmatch.py`): `npm run build:astrometry-request`
+   (resolves the source_id list from the new AT-HYG + HIP cross-walk),
+   then `npm run refresh:gaia-astrometry-catalog`.
 3. **Refresh HIP2 + SIMBAD if upstream republished** — these are
    keyed on HIP / SIMBAD `oid` respectively, so they don't change
    under a Gaia DR transition unless their own pipeline updated.

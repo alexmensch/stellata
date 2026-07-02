@@ -76,6 +76,47 @@ class RetryTests(unittest.TestCase):
             rl.retry(fn, sleep=lambda _: None)
         self.assertEqual(len(calls), 1)
 
+    def test_classifies_responseless_500_message_as_transient(self) -> None:
+        # astroquery raises HTTPError with no `response`; the status lives
+        # only in the message. Parsing it out is what keeps a long pull
+        # alive through the ESA result-storage race.
+        try:
+            import requests
+        except ImportError:
+            self.skipTest("requests not installed")
+        e500 = requests.HTTPError("Error 500:\nCannot find result for job X")
+        e400 = requests.HTTPError("Error 400: bad ADQL syntax")
+        self.assertIsNone(e500.response)
+        self.assertTrue(rl.is_transient_http_error(e500))
+        self.assertFalse(rl.is_transient_http_error(e400))
+
+    def test_votable_query_status_reads_error_info(self) -> None:
+        # Sync TAP flags query errors / overflow in a QUERY_STATUS INFO
+        # with HTTP 200, so the parser must inspect it, not just the code.
+        class _Info:
+            def __init__(self, name, value, content=""):
+                self.name, self.value, self.content = name, value, content
+
+        class _Res:
+            def __init__(self, infos):
+                self.infos = infos
+
+        class _VOTable:
+            def __init__(self, infos=(), resources=()):
+                self.infos, self.resources = list(infos), list(resources)
+
+        ok, _ = rl.votable_query_status(_VOTable(infos=[_Info("QUERY_STATUS", "OK")]))
+        self.assertTrue(ok)
+        bad, msg = rl.votable_query_status(
+            _VOTable(resources=[_Res([_Info("QUERY_STATUS", "ERROR", "boom")])])
+        )
+        self.assertFalse(bad)
+        self.assertIn("boom", msg)
+        overflow, _ = rl.votable_query_status(
+            _VOTable(infos=[_Info("QUERY_STATUS", "OVERFLOW")])
+        )
+        self.assertFalse(overflow)
+
     def test_exhausts_max_attempts(self) -> None:
         calls = []
         def fn() -> None:
