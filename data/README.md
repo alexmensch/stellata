@@ -69,7 +69,7 @@ only "now" layer in the scene. The two share a frame orientation
 
 | Layer | Epoch | How |
 |---|---|---|
-| Stars (`x0/y0/z0`) | J2000.0 (epoch + equinox) | AT-HYG's upstream README tags `ra`/`dec` as "epoch + equinox 2000.0". AT-HYG is a merge of Tycho-2, Hipparcos, and Gaia DR3 — Gaia DR3 is natively at J2016.0, so AT-HYG back-propagates Gaia rows to J2000.0 using their PM before tabulating. The catalog binary inherits whatever AT-HYG emitted. |
+| Stars (`x0/y0/z0`) | J2000.0 nominal (epoch + equinox) | AT-HYG's upstream README tags `ra`/`dec` as "epoch + equinox 2000.0", but the claim only holds approximately: HIP-sourced rows are empirically at J1991.25, and the stored xyz disagrees with the printed ra/dec by up to tens of arcsec on high-PM stars. See SCIENCE.md § Driver astrometry for the findings and the direct-sourcing decision. The catalog binary inherits whatever AT-HYG emitted. |
 | GCVS variables | n/a (period + amplitude only) | We never consume GCVS positions; the variable rides on its AT-HYG row via the HIP/HD cross-match, so position inherits J2000.0 transitively. |
 | Hipparcos CCDM | n/a (flag-only) | We consume `MultFlag` only, never position. |
 | Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever AT-HYG places the figure stars, so the line endpoints inherit J2000.0 transitively. |
