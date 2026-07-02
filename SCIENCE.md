@@ -427,6 +427,128 @@ binary schema in the `pack*` helpers); see `scripts/README.md` for
 the per-record byte layout and the GCVS / CCDM cross-match passes that
 run after the AT-HYG read.
 
+### Driver astrometry — AT-HYG precision findings and the direct-sourcing decision
+
+Research record (2026-07) answering: should per-star positions come
+from HIP2 + Gaia DR3 directly rather than AT-HYG's tabulated columns?
+Trigger: AT-HYG stores `x0`/`y0`/`z0` at ~3 decimal places (a 0.001 pc
+≈ 206 AU grid), which put Sirius A and B ~100 AU apart across two
+pipelines that had derived the same star from different columns.
+
+**Finding 1 — the truncation is upstream formatting of derived
+columns, and it is not the real problem.** The classic-IDs subset
+carries field values identical to the full AT-HYG (upstream
+`data/subsets/README.md`), so the truncation is AT-HYG's own
+tabulation, not our subsetting. The same rows print `ra`/`dec` at 8
+decimal places and `dist` at 4 (a 1e-4 pc ≈ 20.6 AU radial grid);
+1,901 of the 1,903 HIP-distanced rows reproduce `dist = 1000/plx`
+from the van Leeuwen HIP2 file we already commit, to the printed 4 dp
+exactly. Full-precision *columns* are therefore recoverable without
+any new data source. The real problem is provenance, below.
+
+**Finding 2 — AT-HYG's `x0/y0/z0` is internally inconsistent with its
+own printed `ra`/`dec`, tangentially, in proportion to proper
+motion.** Recomputing xyz from each row's printed (ra, dec, dist) and
+comparing against the stored xyz: ~6% of rows disagree beyond the
+combined column-rounding bound. The residual is almost purely
+tangential (radial medians sit below the dist-column quantum) and
+scales with the row's PM — the implied time offsets spread broadly
+(quartiles ≈ 11–31 yr), so this is a position-source mismatch, not a
+single epoch bug. Worst cases reach tens of arcsec: 40 Eridani (Keid,
+5 pc, PM 4.1″/yr) is ~20″ inconsistent *within its own row*. Direct
+comparison against Gaia DR3 5p positions (local
+`gaia_dr3_astrometry.tsv`, J2016 back-propagated to J2000) shows the
+stored xyz is ~1.5″ (median, high-PM rows) from Gaia truth as well —
+the xyz column matches no single (source, epoch) pair we tested. It
+is a merge artifact without recoverable provenance. Corroborating:
+the multiple-star pipeline independently found AT-HYG's printed
+ra/dec to be mixed-epoch (HIP-sourced rows empirically at J1991.25,
+Tycho/GJ rows near J2000 — `scripts/binaries/README.md` § Stage 2).
+
+**Finding 3 — the current build splits the catalogue into two
+position regimes, and the bright famous stars are in the worse one.**
+The Bailer-Jones override already recomputes xyz from printed ra/dec
+for the ~310.4k rows it fires on, so those carry Tycho-2-grade
+(~10–100 mas), mixed-epoch tangential positions at full column
+precision — including, for high-PM stars, silently *replacing* the
+stored xyz with a position up to arcsec-different. The 2,888 rows the
+override skips (`dist_src` HIP / GJ / G_R2-without-B-J) keep the raw
+~206 AU-grid xyz — and that set is exactly the Gaia-saturated bright
+population: 116 stars brighter than mag 3, including Sirius, α Cen,
+Vega, Capella, Procyon, Betelgeuse, and nearly every multi-star
+showcase system.
+
+**Precision floor.** Stated per viewing distance (closest realistic
+viewpoint, not Sol — a camera can sit inside any of these systems):
+
+- *Per-component multi-star placement* (camera at ~0.005 pc): the
+  binding requirement is **consistency** — every pipeline must derive
+  a star's position from the same source, epoch, and math, or
+  companions land ~100 AU from their primaries as Sirius did.
+  Absolute truth is bounded by measurement error anyway (HIP2's
+  σ_plx = 1.58 mas on Sirius is ±2,300 AU radially, 1σ); chasing
+  absolute AU-accuracy is not meaningful, matching representations is.
+- *Tangential accuracy* (pickbox alignment, OBSERVE-mode sky
+  positions, PM propagation base): Tycho-2-grade ~1.5″ typical /
+  tens-of-arcsec worst-case fails a sub-arcsec pickbox today; Gaia
+  5p (~0.02–0.05 mas) and HIP2 (~1 mas) pass with orders of margin.
+- *The float32 container is the hard floor.* `catalog.bin` stores
+  xyz as float32 parsecs, so absolute-position resolution degrades
+  with distance from Sol: ulp ≈ 0.05 AU at 2.6 pc, ~1.6 AU at
+  100 pc, ~13 AU at 1 kpc, ~800 AU at 50 kpc. Absolute coordinates
+  can never encode 1–100 AU binary geometry beyond ~100 pc, no
+  matter how good the source astrometry — per-component placement
+  must stay *relative* (sep+PA / orbital elements anchored on the
+  primary record, as companion promotion already does). Source
+  precision beyond ~1 mas buys nothing the container can keep.
+
+**Decision — re-source the direction, keep AT-HYG as the driver,
+keep the distance stack.** AT-HYG remains the membership, identifier,
+name, and magnitude driver (its curated classical-ID merge is the
+value; replacing it wholesale re-litigates membership for no gain —
+the deep-tier driver question is separate and stays with the far-
+catalog work). What changes is where each row's *sky direction* comes
+from. At build time, resolve per row through the same trust cascade
+the multiple-star pipeline already implements
+(`scripts/binaries/stage3_astrometry.py`):
+
+1. **Gaia DR3 5p** (ra, dec at J2016.0, PM-propagated to J2000.0)
+   for every row that resolves to a source_id with usable astrometry
+   — ~99% of the catalogue, mas-grade or better.
+2. **HIP2 van Leeuwen** (ra, dec at J1991.25, PM-propagated to
+   J2000.0) for the Gaia-saturated bright set — the ~1,900
+   HIP-distanced rows plus any Gaia row whose 5p solution is absent
+   or flagged (RUWE / NSS / HIP2-discrepancy gates as in Stage 3).
+3. **AT-HYG printed ra/dec as-is** for the residual (23 rows; ξ UMa
+   is the canonical case — no Gaia source, HIP 55203 excluded from
+   HIP2 as orbit-corrupted). Mirrors Stage 3's `athyg_position`.
+
+Distances are untouched: the Bailer-Jones → LMC-kinematic → cutoff
+stack above stays the radial source of truth, with HIP rows keeping
+their HIP2-parallax distances (now computed from the committed file
+at full precision rather than AT-HYG's 4 dp print — same values).
+Every row's xyz is then `direction × distance` computed in float64
+and written float32; the stored `x0/y0/z0` columns stop being
+consumed. Both build pipelines end up deriving every shared star
+from the same astrometry files, closing the consistency gap by
+construction. J2000.0 remains the scene epoch (`data/README.md`
+§ Reference epoch); the resolved (position, PM, RV, parallax) tuple
+per row is exactly what current-epoch propagation needs later, so
+that work composes on top of this cascade rather than replacing it.
+
+**Cost.** One new data pull: full-catalogue Gaia DR3 5p astrometry
+(~310k source_ids; the committed `gaia_dr3_astrometry.tsv` covers
+only the ~8k the binaries pipeline requests). Same shape as the
+existing `refresh-gaia-astrometry.py` batched pull, ~45 MB LFS.
+Build-side: a direction-resolution module (pure, testable) plus
+epoch-propagation math; snapshot refreshes (`build-counts`,
+distance-outliers unchanged in the radial direction). Highest-risk
+defect class is epoch/PM sign and cos δ convention errors, so the
+change must land with a high-PM regression corpus (Barnard's,
+Kapteyn's, Groombridge 1830, 61 Cyg, Keid) pinned against published
+J2000 positions. Gaia DR4 slots in as a source-file swap inside the
+same cascade (`scripts/refresh/README.md` § DR4 transition).
+
 ## Stellar physics
 
 **Physical radius.** Each star's `physicalRadius` (in solar radii) is
