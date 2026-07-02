@@ -17,10 +17,11 @@ star catalog records.
   Tier 1 path (`evaluateOrbitSkyAU` + `projectSkyToICRS`) and Tier 2
   galactic-plane fallback (`evaluateOrbitInPlaneAU` +
   `projectGalacticPlaneToICRS`). No state — `binary-orbit-field.ts`
-  owns the per-attach J2000 cache.
+  owns the per-attach baseline cache.
 - `binary-orbit-field.ts` — per-frame field. Constructor caches one
-  `RelationCache` per `has_orbit` relation (with `R(J2000)` baked in
-  per tier). `update(t, camera, …)` walks `BinariesData.relations` in
+  `RelationCache` per `has_orbit` relation (with the baseline
+  `R(sep_pa_epoch_jd)` baked in per tier). `update(t, camera, …)`
+  walks `BinariesData.relations` in
   topological order, applies the LOD cascade described below, and
   rewrites the active slots of `localPositions` plus
   `compositeSuppress`. `recenter(newOrigin)` updates the cached world
@@ -75,8 +76,12 @@ the per-pair flags):
 - **Tier 1** (`has_orbit & has_inclination`) — full Kepler +
   Thiele-Innes + sky→ICRS tangent-plane projection. The sky-plane
   separation `(north, east) AU` at time t projects through the system's
-  ICRS (α, δ) tangent basis to ICRS Δxyz. R(J2000) is cached per
-  relation so each frame is one Kepler solve + one subtract.
+  ICRS (α, δ) tangent basis to ICRS Δxyz. R at the stored sep+PA epoch
+  (`sep_pa_epoch_jd`; J2000 fallback when the record carries none) is
+  cached per relation so each frame is one Kepler solve + one subtract.
+  The stored catalog separation is the pair's configuration at that
+  epoch (Gaia J2016 / WDS `date_last`), so ΔR(t) cancels exactly there
+  and current-date sep/PA comes out right.
 - **Tier 2** (`has_orbit & !has_inclination`) — Kepler eval with the
   orbit normal forced to the galactic Z axis. The in-plane (x, y) AU
   position rides directly into the galactic XY basis, which

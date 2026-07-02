@@ -3,7 +3,7 @@
 // src/client/binaries/README.md § Tier mapping.
 
 import * as THREE from 'three';
-import { AU_PC, J2000_JD } from '../util/astronomy-constants';
+import { AU_PC } from '../util/astronomy-constants';
 import { solveKepler } from '../util/kepler-solver';
 import { GAL_TO_ICRS } from '../galactic/galactic-coords';
 
@@ -112,7 +112,7 @@ export function projectGalacticPlaneToICRS(
 
 /** Tier 1 full relative ICRS Δxyz (pc): R_B(t) − R_A(t) about the
  *  barycentre, expressed as a pc-valued ICRS offset. Caller supplies the
- *  cached J2000 reference `refSky` (single Kepler solve per call) and
+ *  cached baseline reference `refSky` (single Kepler solve per call) and
  *  applies the q : (1−q) barycentric split — or the focal-star rebase —
  *  outside. */
 export function evaluateOrbitDeltaPcTier1(
@@ -128,7 +128,7 @@ export function evaluateOrbitDeltaPcTier1(
 }
 
 /** Tier 2 full relative ICRS Δxyz (pc): galactic-plane fallback when
- *  inclination is unknown. Caller supplies the cached J2000 reference
+ *  inclination is unknown. Caller supplies the cached baseline reference
  *  `refInPlane`. No sign — caller splits. */
 export function evaluateOrbitDeltaPcTier2(
   elements: OrbitalElements,
@@ -142,19 +142,21 @@ export function evaluateOrbitDeltaPcTier2(
 }
 
 /** Tier 1 per-component ICRS Δxyz (pc) for `elements` at JDE `tJd`. The
- *  stored catalog xyz already encodes the J2000 offset baked-in via the
- *  ΔR(t) − R(J2000) baseline contract, split q : (1−q) between A and B.
+ *  stored catalog xyz encodes the pair configuration at `refJd` (the
+ *  sep+PA measurement epoch), so the offset is R(t) − R(refJd), split
+ *  q : (1−q) between A and B.
  *
- *  Two Kepler solves per call (now + J2000). For per-frame use the
- *  runtime field caches `R(J2000)` and calls `evaluateOrbitDeltaPcTier1`
+ *  Two Kepler solves per call (now + refJd). For per-frame use the
+ *  runtime field caches `R(refJd)` and calls `evaluateOrbitDeltaPcTier1`
  *  directly. */
 export function evaluateBinaryOffsetTier1(
   elements: OrbitalElements,
   tJd: number,
+  refJd: number,
   isSecondary: boolean,
   systemXyzPc: Vec3,
 ): Vec3 {
-  const ref = evaluateOrbitSkyAU(elements, J2000_JD);
+  const ref = evaluateOrbitSkyAU(elements, refJd);
   const delta = evaluateOrbitDeltaPcTier1(elements, ref, tJd, systemXyzPc);
   const sign = isSecondary ? (1 - elements.q) : -elements.q;
   return { x: delta.x * sign, y: delta.y * sign, z: delta.z * sign };
@@ -165,9 +167,10 @@ export function evaluateBinaryOffsetTier1(
 export function evaluateBinaryOffsetTier2(
   elements: OrbitalElements,
   tJd: number,
+  refJd: number,
   isSecondary: boolean,
 ): Vec3 {
-  const ref = evaluateOrbitInPlaneAU(elements, J2000_JD);
+  const ref = evaluateOrbitInPlaneAU(elements, refJd);
   const delta = evaluateOrbitDeltaPcTier2(elements, ref, tJd);
   const sign = isSecondary ? (1 - elements.q) : -elements.q;
   return { x: delta.x * sign, y: delta.y * sign, z: delta.z * sign };

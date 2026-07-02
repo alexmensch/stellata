@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { renderedSizePx } from '../camera/controls/star-physics';
-import { projectToScreen } from './overlay-project';
+import { projectToScreenInto } from './overlay-project';
 import { selectMaskCandidates } from './disc-mask-pure';
 import { setNumAttr } from './dirty-attr';
 
@@ -60,6 +60,7 @@ export function createDiscMask(stellata: Stellata) {
   };
 
   const v = new THREE.Vector3();
+  const outXY: [number, number] = [0, 0];
 
   const clearSlot = (s: Slot) => {
     s.lastCx = setNumAttr(s.el, 'cx', -100, s.lastCx);
@@ -83,10 +84,9 @@ export function createDiscMask(stellata: Stellata) {
     const positions = stellata.localPositions;
     const camera = stellata.camera;
     v.set(positions[idx * 3], positions[idx * 3 + 1], positions[idx * 3 + 2]);
-    const projected = projectToScreen(v, camera, window.innerWidth, window.innerHeight);
-    if (!projected) return false;
-    s.lastCx = setNumAttr(s.el, 'cx', projected[0], s.lastCx);
-    s.lastCy = setNumAttr(s.el, 'cy', projected[1], s.lastCy);
+    if (!projectToScreenInto(v, camera, window.innerWidth, window.innerHeight, outXY)) return false;
+    s.lastCx = setNumAttr(s.el, 'cx', outXY[0], s.lastCx);
+    s.lastCy = setNumAttr(s.el, 'cy', outXY[1], s.lastCy);
     s.lastR = setNumAttr(s.el, 'r', size * 0.5, s.lastR);
     return true;
   };

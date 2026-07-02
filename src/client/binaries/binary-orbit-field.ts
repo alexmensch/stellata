@@ -21,12 +21,13 @@ import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
 } from './binary-tuning';
+import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
 
 export interface BinaryOrbitFieldOptions {
   binaries: BinariesData;
   /** Catalog-wide absolute ICRS positions, length = catalog.count * 3.
    *  Read-only inside this field — the source of truth for each star's
-   *  J2000 baseline. */
+   *  catalog baseline (stored at the pair's sep+PA epoch). */
   absolutePositions: Float32Array;
   /** Catalog-wide absolute magnitudes, length = catalog.count. Drives
    *  the per-relation primary-visibility LOD. */
@@ -55,10 +56,12 @@ interface RelationCache {
   /** Orbital elements pulled from the relation, in the units the pure
    *  layer expects. */
   elements: OrbitalElements;
-  /** Tier-1 R(J2000) cached so per-frame eval is a single Kepler solve
-   *  (now) plus a subtract. {northAU, eastAU} for Tier 1. */
+  /** Tier-1 R(baseline) cached so per-frame eval is a single Kepler
+   *  solve (now) plus a subtract. Baseline epoch = sepPaEpochJd — the
+   *  epoch the stored catalog separation was measured at, NOT J2000 —
+   *  falling back to J2000 when the record carries none. */
   refSkyAU: { northAU: number; eastAU: number } | null;
-  /** Tier-2 R(J2000) cached. {xAU, yAU} in the orbit plane. */
+  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. */
   refInPlaneAU: { xAU: number; yAU: number } | null;
   /** Peak relative-separation envelope, AU. a · (1 + e). Used by the
    *  screen-separation LOD as the worst-case sub-pixel test. */
@@ -132,7 +135,7 @@ export class BinaryOrbitField {
       const pIdx = r.primaryIdx;
       const sIdx = r.secondaryIdx;
 
-      // Reset to J2000-minus-worldOffset and clear suppress so transient
+      // Reset to catalog-baseline-minus-worldOffset and clear suppress so transient
       // active→inactive transitions don't leave stale state behind. This
       // also restores the parent-perturbation baseline for hierarchical
       // walks — the inner-pair pass below ADDs onto the slot the outer
@@ -171,7 +174,7 @@ export class BinaryOrbitField {
       const dz = aPz - cameraPos.z;
       const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
       if (dCamPc > VISIBILITY_HORIZON_PC) continue;
-      const appMag = absMags[pIdx] + 5 * (Math.log10(Math.max(dCamPc, 1e-30)) - 1);
+      const appMag = apparentMagnitude(absMags[pIdx], dCamPc);
       if (appMag > maxAppMag + 0.5) continue;
 
       // Peak angular separation envelope. AU / pc converts to arcsec
@@ -199,7 +202,7 @@ export class BinaryOrbitField {
       // distance vector, hover) project to a point separated from the
       // rendered disc.
       if (focalIdx === sIdx) {
-        // Pin secondary at its J2000 baseline. For an inner pair sharing
+        // Pin secondary at its catalog baseline. For an inner pair sharing
         // its primary with a parent relation, aPx carries the parent's
         // accumulated perturbation; using baseline_pri (not aPx) as the
         // primary's anchor lets the focal-pin absorb the parent's
@@ -266,12 +269,15 @@ export class BinaryOrbitField {
       ) continue;
       const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
       const elements = relationToElements(r);
+      const baselineJd = Number.isFinite(r.sepPaEpochJd)
+        ? r.sepPaEpochJd
+        : J2000_JD;
       let refSkyAU: { northAU: number; eastAU: number } | null = null;
       let refInPlaneAU: { xAU: number; yAU: number } | null = null;
       if (tier === 1) {
-        refSkyAU = evaluateOrbitSkyAU(elements, J2000_JD);
+        refSkyAU = evaluateOrbitSkyAU(elements, baselineJd);
       } else {
-        refInPlaneAU = evaluateOrbitInPlaneAU(elements, J2000_JD);
+        refInPlaneAU = evaluateOrbitInPlaneAU(elements, baselineJd);
       }
       const peakSepAU = elements.a * (1 + elements.e);
       if (r.primaryIdx * 3 + 2 >= abs.length || r.secondaryIdx * 3 + 2 >= abs.length) continue;

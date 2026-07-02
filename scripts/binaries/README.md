@@ -297,12 +297,12 @@ so AT-HYG-HD-only rows still surface their absmag / spect / proper name.
 
 Picks the most-trustworthy set of orbital elements per pair, then
 converts to a canonical (P, T, e, a, i, ω, Ω, q, distance) tuple. Routes
-in `ORBIT_VIA_VALUES`:
+in `ORBIT_VIA_VALUES`, in priority order:
 
 | Route | When |
 | --- | --- |
-| `gaia_nss` | Any component has an `nss_two_body_orbit` row AND the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent semi-major axis `a < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
-| `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. |
+| `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit — the only kind the renderer can animate — so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below). |
+| `gaia_nss` | Any component has an `nss_two_body_orbit` row AND the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
 | `orb6_spectroscopic` | ORB6 grade ∈ {8, 9} — astrometric / interferometric without visual coverage (8) or spectroscopic (9). |
 | `none` | Visual-only pair with no orbital information on file. |
 
@@ -311,7 +311,24 @@ The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
 `AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell` (Heintz
 1978 / Halbwachs+ 2023 Appendix C). The ESA NSSTools package isn't a
 dependency — the closed form is ~10 lines and NSSTools has been
-unmaintained since 2022. Eclipsing solution types
+unmaintained since 2022.
+
+The TI constants describe the **photocentre's** orbit around the
+system barycentre, not the relative A–B orbit (Halbwachs+ 2023): the
+recovered semi-major axis is `a0 = |q − β|·a_rel`, where
+`q = M₂/(M₁+M₂)` is the secondary's mass fraction (the same q the
+pipeline stores per pair) and `β = F₂/(F₁+F₂)` its flux fraction — so
+a0 → 0 for near-equal-brightness pairs. Reconstructing `a_rel` needs a
+mass ratio AND a flux ratio we don't reliably have per pair, so `a_AU`
+is left `None` for TI-derived rows rather than invented. With no `a`,
+`build-runtime-binaries.py` never sets `has_orbit` and these pairs
+place statically at their WDS sep+PA (Tier 3). The plane angles `i` /
+`Ω` are shared between the photocentre and relative orbits and
+populate as-is; `ω` is the photocentre's, which sits π away from the
+secondary's relative-orbit ω whenever the primary carries most of the
+flux.
+
+Eclipsing solution types
 (`EclipsingBinary`, `EclipsingSpectro`) read inclination and
 arg_periastron directly from the catalogue columns; `a` and Ω are not
 recoverable from eclipse photometry alone and remain `None`.
@@ -372,8 +389,10 @@ empty). `sep_arcsec` and `pa_deg` feed companion-promotion's
 tangent-plane projection for the Tier-3 (no-orbit) path and the
 runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
 WDS observation year (`date_last`) converted to JD via
-`wds_year_to_jd` so a future runtime layer can propagate sep+PA
-forward in time. `dmag` is the published apparent Δmag
+`wds_year_to_jd`; the runtime `BinaryOrbitField` baselines orbital
+animation at this epoch (ΔR(t) = R(t) − R(sep_pa_epoch_jd)) so the
+stored placement is reproduced exactly at its measurement date.
+`dmag` is the published apparent Δmag
 (`mag_sec - mag_pri`) used to impute the companion's absmag when
 the secondary row inherits its parent's AT-HYG photometry.
 

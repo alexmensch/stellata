@@ -53,5 +53,12 @@
 # - github.org
 # - github.repo
 
+# No JSONL export: issues live in Dolt and sync over the refs/dolt/*
+# remote via `bd dolt push`, which the pre-push git hook runs on every
+# `git push`. .beads/issues.jsonl is never written; no-git-ops keeps bd
+# off the project's git tree entirely.
+export.auto: false
 export.git-add: false
 no-git-ops: true
+
+sync.remote: "git+ssh://git@github.com/alexmensch/stellata.git"

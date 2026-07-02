@@ -28,14 +28,15 @@ src/client/debug/
 The HUD is an opt-in dev tool, not a user feature. Activation paths:
 
 - **`debug.panel()`** in the dev console — opens the unified debug
-  panel; the Perf section is one of four
+  panel; the Perf section is one of seven
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
   `mark`/`measure`/`frame` functions to real implementations).
-  Calling again toggles the panel off; instrumentation stays installed
-  so ring buffers keep filling and the histogram has data on re-open.
-  Collapsing the Perf section gates per-tick DOM writes but not the
-  ring-buffer fills.
+  Calling again closes the panel, which disposes every section — the
+  Perf section's dispose re-arms the no-op `mark`/`measure`/`frame`
+  stubs and clears the ring buffers, so a re-open starts fresh with an
+  empty histogram. While the panel stays open, collapsing the Perf
+  section gates per-tick DOM writes but not the ring-buffer fills.
 
 There is **no URL param and no keyboard shortcut.** Both paths existed
 during the original profiling work and were removed deliberately —

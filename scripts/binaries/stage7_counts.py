@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 from parsers import WdsPair  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     RESOLVE_VIA_VALUES,
@@ -37,12 +38,13 @@ from stage6_multiples import (  # noqa: E402
     ASTROMETRY_VIA_SYSTEM_INHERITED, ORBIT_ROLE_STANDALONE,
     SPECT_VIA_VALUES, MultiplesRow,
 )
+from paths import REPO_ROOT  # noqa: E402
 
 # Stage 7 logs from inside ``assert_or_update_counts``; defining a
 # local ``log`` keeps the module standalone (no back-import from
 # build-binaries.py). ``ROOT`` is the repo root so log lines can show
 # the snapshot path relative to it.
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = REPO_ROOT
 
 
 def log(msg: str) -> None:

@@ -10,3 +10,10 @@ need the same thing — single-use helpers stay with their consumer.
   build scripts share with the client runtime. Keep value-by-value in
   sync with the TS canonical; the `astronomy_constants_sync.test.py`
   sibling test pins equality at CI time.
+- `paths.py` — `REPO_ROOT`, the repo-root `Path` every top-level
+  Python build/refresh script under `scripts/binaries/` and
+  `scripts/refresh/` imports instead of independently walking
+  `Path(__file__).resolve().parent...`.
+- `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
+  `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` for
+  build-idempotency checks against optional inputs.

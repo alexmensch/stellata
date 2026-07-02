@@ -1009,16 +1009,23 @@ astronomer-relevant summary:
    window of the orbit). Bright Gaia-saturated primaries with no
    Gaia source at all (Sirius, α Cen, Procyon, Algol) take HIP2 by
    construction.
-4. **Select orbital elements per system.** Gaia NSS wins inside Gaia's
+4. **Select orbital elements per system.** ORB6 visual orbits
+   (grades 1–5: definitive → indeterminate) win where present —
+   ORB6's semi-major axis is the genuine relative A–B orbit, the only
+   kind the renderer can animate. Gaia NSS covers the rest of its
    astrometric-detectability regime (period < ~3 yr OR apparent
-   semi-major axis < 1″) — covers 95.8% of DR3 NSS rows directly,
-   plus the sub-arcsec long-period tail through the TI algebra.
-   ORB6 visual orbits (grades 1–5: definitive → indeterminate) cover
-   wider pairs. ORB6 spectroscopic / interferometric-only orbits
-   (grades 8–9) come last. The Thiele-Innes → Campbell algebra
-   recovers (a, i, Ω, ω) from NSS's stored (A, B, F, G) quartet via
-   the Heintz 1978 / Halbwachs+ 2023 Appendix C closed form, inlined
-   rather than imported from ESA's unmaintained NSSTools package.
+   photocentre semi-major axis < 1″) — 95.8% of DR3 NSS rows pass the
+   period gate, plus the sub-arcsec long-period tail through the TI
+   algebra. The Thiele-Innes → Campbell algebra recovers
+   (a0, i, Ω, ω) from NSS's stored (A, B, F, G) quartet via the
+   Heintz 1978 / Halbwachs+ 2023 Appendix C closed form, inlined
+   rather than imported from ESA's unmaintained NSSTools package —
+   but the TI fit tracks the photocentre, so a0 = |q − β|·a_rel
+   underestimates the relative separation by the mass-vs-flux
+   fraction gap. The semi-major axis is withheld rather than guessed;
+   TI-derived NSS pairs place statically at their WDS sep+PA.
+   ORB6 spectroscopic / interferometric-only orbits (grades 8–9)
+   come last.
 5. **Classify each pair as physical or optical** via a 5-tier
    cascade — WDS Notes flag chars confirm or reject directly when
    set; both-components-Gaia parallax (3σ on combined error) and PM

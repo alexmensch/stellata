@@ -310,12 +310,12 @@ Every change goes through:
    a separate decision. After CI passes, stop and report
    "ready to merge when you are."
 
-`.beads/issues.jsonl` rides the next feature PR; never opens its own.
-bd writes persist to local Dolt immediately, the pre-commit hook
-regenerates JSONL on every commit, and feature commits bundle the
-JSONL diff alongside code — expected. Do NOT open a memory-grooming
-or JSONL-sync-only PR; exit the worktree without committing and let
-the JSONL ride the next feature commit.
+bd state is not carried in git. bd writes persist to local Dolt
+immediately and sync to the `refs/dolt/*` remote automatically — the
+pre-push git hook runs `bd dolt push` on every `git push`, so there's
+no manual sync step and no bd-sync or memory-grooming PR. JSONL export
+is off (`export.auto: false`); `.beads/issues.jsonl` is not written, and
+any stale copy is gitignored — never stage, commit, or revert it.
 
 ### PR body — `## Release notes` is required when version bumps
 

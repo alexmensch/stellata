@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { renderedSizePx } from '../camera/controls/star-physics';
-import { projectToScreen } from './overlay-project';
+import { projectToScreenInto } from './overlay-project';
 import { setNumAttr, setStyle } from './dirty-attr';
 
 // Canonical screen-pixel radius for the dashed focus ring. Exported so the
@@ -13,6 +13,7 @@ export const FOCUS_RING_RADIUS_PX = 24;
 export function createFocusRingOverlay(stellata: Stellata) {
   const ring = document.getElementById('focus-ring') as unknown as SVGCircleElement;
   const v = new THREE.Vector3();
+  const outXY: [number, number] = [0, 0];
 
   // Sentinel-init: NaN for numeric attrs (any real write differs by > 0.05)
   // and a poison string for display (any 'none' / '' write differs from the
@@ -99,15 +100,15 @@ export function createFocusRingOverlay(stellata: Stellata) {
     // the shrinking/growing ring still has a sensible centre.
     const positions = stellata.localPositions;
     v.set(positions[idx * 3], positions[idx * 3 + 1], positions[idx * 3 + 2]);
-    const projected = projectToScreen(v, camera, window.innerWidth, window.innerHeight);
+    const projected = projectToScreenInto(v, camera, window.innerWidth, window.innerHeight, outXY);
     let sx: number, sy: number;
     if (!projected) {
       if (!transition) { hide(); return; }
       sx = window.innerWidth * 0.5;
       sy = window.innerHeight * 0.5;
     } else {
-      sx = projected[0];
-      sy = projected[1];
+      sx = outXY[0];
+      sy = outXY[1];
     }
 
     show();

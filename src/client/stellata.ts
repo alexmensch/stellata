@@ -57,7 +57,8 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
-import { R_SUN_PC } from './util/astronomy-constants';
+import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
 import { DCAM_LOG_FLOOR_PC } from './camera/timing';
@@ -117,9 +118,7 @@ export interface FilterState {
   // OBSERVE-mode screen-centred ring. Future HUD widgets hang off this flag.
   showHud: boolean;
   // Milky Way analytic background. Default-on; chart mode switches to
-  // outline-only rendering on this same toggle. May be force-flipped
-  // off by the FPS probe on the first few frames if the device can't
-  // sustain ≥30 fps with it on.
+  // outline-only rendering on this same toggle.
   showMilkyway: boolean;
   // Star chart mode. Only meaningful while cameraMode==='observe';
   // chart-mode orchestrator (chart-mode.ts) ignores it otherwise. Drives
@@ -394,9 +393,7 @@ export class Stellata implements FrameAnchor {
 
   // Milky Way analytic background. Constructed eagerly so the
   // band is on during first paint. Dust is wired in once the volumetric
-  // texture attaches. The composite mesh lives in `this.scene` at
-  // renderOrder = -2 so it draws behind everything; the analytic raymarch
-  // pass renders into a private half-res RT each frame.
+  // texture attaches.
   private milkyway: MilkyWay;
 
   // Reference to the most recently attached DustField — kept solely so
@@ -475,7 +472,7 @@ export class Stellata implements FrameAnchor {
     const teffApsis = new Float32Array(catalog.count);
     let maxPhysicalRadius = 0;
     for (let i = 0; i < catalog.count; i++) {
-      const r = Math.max(catalog.physicalRadius[i], 1e-6);
+      const r = Math.max(catalog.physicalRadius[i], MIN_PHYSICAL_RADIUS_R_SUN);
       logRadii[i] = Math.log10(r);
       if (r > maxPhysicalRadius) maxPhysicalRadius = r;
       lumClassF32[i] = catalog.luminosityClass[i];
@@ -1681,7 +1678,7 @@ export class Stellata implements FrameAnchor {
       const dy = positions[i * 3 + 1] - t.y;
       const dz = positions[i * 3 + 2] - t.z;
       const dist = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-      const appMag = absmag[i] + 5 * (Math.log10(dist) - 1);
+      const appMag = apparentMagnitude(absmag[i], dist);
       scored.push({ idx: i, appMag });
     }
     scored.sort((a, b) => a.appMag - b.appMag);
@@ -1887,10 +1884,9 @@ export class Stellata implements FrameAnchor {
   // that scope and must not be retained across method calls.
   //
   //  - _tmpAnimateLocal: owned by animate() and the methods it calls
-  //    in sequence (updateGalacticLayers). Single writer in steady-state;
-  //    the warp tick claimed its share when WarpController extracted in
- //.5. Adding a new writer that retains the value across
-  //    another animate-stack method violates the contract.
+  //    in sequence (updateGalacticLayers). Single writer in steady-state.
+  //    Adding a new writer that retains the value across another
+  //    animate-stack method violates the contract.
   //  - _tmpRenderLocal: owned by per-call read methods invoked outside
   //    the animate stack (renderedCloudSizePx, etc.). Independent of
   //    _tmpAnimateLocal; never observed by code that holds a reference
