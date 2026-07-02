@@ -14,6 +14,7 @@ import {
   HELIOPAUSE_SAMPLE_POINTS_LOCAL,
 } from '../../solar-system/heliopause';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
+import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
@@ -263,7 +264,7 @@ export class Picker {
       const dy = y - camPos.y;
       const dz = z - camPos.z;
       const dCam = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-      const appMag = absmag[i] + 5 * (Math.log10(dCam) - 1);
+      const appMag = apparentMagnitude(absmag[i], dCam);
       // For variables, use the bright-extreme appMag so a star whose
       // disc is only visible at peak phase remains pickable across the
       // whole cycle. Without this, a variable with static appMag just

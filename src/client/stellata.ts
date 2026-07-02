@@ -58,6 +58,7 @@ import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
 import { DCAM_LOG_FLOOR_PC } from './camera/timing';
@@ -1611,7 +1612,7 @@ export class Stellata implements FrameAnchor {
       const dy = positions[i * 3 + 1] - t.y;
       const dz = positions[i * 3 + 2] - t.z;
       const dist = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-      const appMag = absmag[i] + 5 * (Math.log10(dist) - 1);
+      const appMag = apparentMagnitude(absmag[i], dist);
       scored.push({ idx: i, appMag });
     }
     scored.sort((a, b) => a.appMag - b.appMag);

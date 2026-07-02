@@ -14,6 +14,7 @@ import {
 import { parkDistance } from '../focus/focus-transition';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
+import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-
@@ -127,7 +128,7 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
   const dy = localPositions[idx * 3 + 1] - camPos.y;
   const dz = localPositions[idx * 3 + 2] - camPos.z;
   const dCam = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-  let appMag = absmag[idx] + 5 * (Math.log10(dCam) - 1);
+  let appMag = apparentMagnitude(absmag[idx], dCam);
 
   const fovYRad = u.uFovYRad.value;
   const viewport = u.uViewport.value;
