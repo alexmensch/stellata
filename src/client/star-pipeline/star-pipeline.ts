@@ -98,7 +98,7 @@ export class StarPipeline {
     // Instanced quads: one unit square per star, expanded in screen space in
     // the vertex shader. This replaces the earlier THREE.Points approach,
     // which was capped by the driver-defined gl_PointSize maximum (often
-    // 64-255 px) — too small for the angular-diameter rendering to reach the
+    // 64-511 px) — too small for the angular-diameter rendering to reach the
     // viewport-filling sizes we want for supergiants at close range.
     this.geometry = new THREE.InstancedBufferGeometry();
     this.geometry.setAttribute(

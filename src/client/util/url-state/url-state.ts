@@ -928,7 +928,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // setFocus call has already recentred worldOffset to that object's
   // absolute position, so cam/tgt are object-local. Without focus, the
   // origin rides along with whatever object was most recently anchored
- // (the unfocus path no longer recentres to Sol). The
+  // (the unfocus path no longer recentres to Sol). The
   // worldOffset field below carries the absolute anchor position so
   // the loader can re-establish the same frame on page-load. Old-style
   // URLs without worldOffset always had worldOffset=(0,0,0) at save
@@ -1065,7 +1065,7 @@ export function applyDecodedView(
 
   if (view.focus !== undefined) {
     if (view.focus === 'cleared') {
- // URL restore — bypass the close-zoom unfocus animation.
+      // URL restore — bypass the close-zoom unfocus animation.
       // cam/tgt below would overwrite camera.position mid-lerp, leaving
       // the transition state to silently drag the camera away from the
       // restored pose on the next frame.
