@@ -6,6 +6,7 @@ import { buildDeepFieldSection } from '../local-group/local-group-tuning';
 import { buildPerfSection } from './perf-hud';
 import { buildPinSection } from './pin-debug-hud';
 import { buildArrowSection } from './arrow-fade-debug-hud';
+import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
 import {
   type DecodedView,
@@ -75,6 +76,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       { title: 'Pin',        storageKey: 'pin',        build: () => buildPinSection(stellata) },
       { title: 'Arrows',     storageKey: 'arrows',     build: () => buildArrowSection(stellata) },
       { title: 'Warp',       storageKey: 'warp',       build: () => buildWarpSection(stellata) },
+      { title: 'Eclipse',    storageKey: 'eclipse',    build: () => buildEclipseSection(stellata) },
     ];
     for (const s of sections) {
       disposers.push(mountSection(built.body, s.title, s.storageKey, s.build()));

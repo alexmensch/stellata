@@ -73,6 +73,7 @@ export function createFocusRingOverlay(stellata: Stellata) {
         localPositions: stellata.localPositions,
         uniforms: stellata.uniforms,
         filter: stellata.getFilter(),
+        suppressPulsation: stellata.suppressPulsation,
       });
       if (sizePx > FOCUS_RING_RADIUS_PX * 2) {
         hide();

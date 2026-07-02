@@ -1,4 +1,5 @@
 precision highp float;
+precision highp int;
 
 #include <common>
 #include <logdepthbuf_pars_vertex>
@@ -99,6 +100,13 @@ uniform float uDustEnabled;         // 0 = no texture bound, 1 = bound
 uniform float uExtinctionStrength;  // user knob; multiplied onto uDustEnabled
 uniform vec3 uWorldOffset;          // absolute coord of renderer's local origin
 
+// Object/camera matrices. RawShaderMaterial doesn't auto-inject these
+// (ShaderMaterial would); declare what we use. Three.js's WebGLRenderer
+// still uploads modelViewMatrix per-object and projectionMatrix per-camera
+// regardless of material type, so declaration alone is enough.
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
 const int DUST_STEPS = 48;
 const float R_V = 3.1; // canonical interstellar reddening ratio: A_V / E(B-V)
 
@@ -129,6 +137,22 @@ in float iTeffApsis;
 // glow pass still runs and sums the two near-coincident point sources
 // correctly). Used for the dimmer member of a sub-pixel binary pair.
 in float iCompositeSuppress;
+// Geometric eclipse-occlusion factor written by EclipsePhotometryField
+// each frame. 1.0 = no occlusion; values in (0, 1) mean the back
+// component of an orbital binary pair is partially hidden by the front
+// component along the camera line of sight. Folded into appMag in the
+// glow pass only (the disc pass at close range resolves the occlusion
+// geometrically via the depth buffer; double-applying here would dim
+// the back disc's non-occluded fragments too). See
+// src/client/binaries/README.md § Eclipse photometry.
+in float iEclipseDim;
+// Pulsation-suppress flag. 1.0 disables the GCVS-amplitude radial
+// pulsation block below — used for eclipsing-binary primaries (varType
+// 2) whose photometric signal now comes from `iEclipseDim` instead.
+// Built once at startup from `catalog.varType` × `binaries.has_orbit`,
+// not rewritten per frame. See src/client/binaries/README.md
+// § Eclipse photometry.
+in float iSuppressPulsation;
 
 out float vAppMag;
 out vec3 vColor;
@@ -275,7 +299,7 @@ void main() {
     float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
     float radiusFactor = 1.0;
     float magMod = 0.0;
-    if (iPeriodDays > 0.0 && iAmplitudeMag > 0.0) {
+    if (iPeriodDays > 0.0 && iAmplitudeMag > 0.0 && iSuppressPulsation < 0.5) {
         float periodSec = max(iPeriodDays * uSecondsPerDay, uMinPeriodSec);
         float phase = uTime / periodSec;
 
@@ -295,6 +319,15 @@ void main() {
         magMod = 0.5 * ampEff * sin(6.2831853 * phase);
         appMag += magMod;
         radiusFactor = pow(10.0, -magMod / 5.0);
+    }
+
+    // Geometric eclipse-occlusion dim, glow pass only. Disc pass at
+    // close range resolves the occlusion via the depth buffer; double-
+    // applying here would dim the back disc's non-occluded fragments.
+    // Buffer defaults to 1.0 (no-dim); EclipsePhotometryField writes
+    // values in [DIM_FLOOR, 1) onto the back component per frame.
+    if (uRenderMode == 0 && iEclipseDim < 1.0) {
+        appMag += -2.5 * log(iEclipseDim) / LOG10;
     }
 
     // Visibility prefilter — dust-independent. Spectral mask and distance

@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
@@ -18,6 +21,8 @@ function makeOpts(count = 4) {
     teffApsis: new Float32Array(count),
     localPositions: new Float32Array(count * 3),
     compositeSuppress: new Float32Array(count),
+    eclipseDim: new Float32Array(count).fill(1),
+    suppressPulsation: new Float32Array(count),
     vertexShader: 'void main(){ gl_Position = vec4(0.0); }',
     fragmentShader: 'void main(){}',
     sharedUniforms,
@@ -66,6 +71,41 @@ describe('StarPipeline', () => {
     expect(pipe.discMaterial.uniforms.uRenderMode.value).toBe(1);
     expect(pipe.glowMaterial.uniforms.uRenderMode.value).toBe(0);
     expect(pipe.coreMaskMaterial.uniforms.uRenderMode.value).toBe(2);
+  });
+
+  // Integer-uniform precision must match between vert and frag. ShaderMaterial
+  // auto-injects `precision highp int;` into both stages; RawShaderMaterial
+  // doesn't, and the default int precision diverges per stage (vert: highp,
+  // frag: mediump on some platforms) — so any shared int uniform (uRenderMode,
+  // uSpectMask, uHideFocusIdx, uPinFocusToCenter) trips the linker's
+  // "Precisions of uniform ... differ between VERTEX and FRAGMENT shaders."
+  // check and the program won't link. Pin the explicit precision in both
+  // sources.
+  it('star.vert.glsl and star.frag.glsl both declare precision highp int', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const vert = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
+    const frag = readFileSync(join(here, 'star.frag.glsl'), 'utf8');
+    expect(vert).toMatch(/precision\s+highp\s+int\s*;/);
+    expect(frag).toMatch(/precision\s+highp\s+int\s*;/);
+  });
+
+  // Vertex-attribute budget. WebGL2 guarantees only MAX_VERTEX_ATTRIBS >= 16,
+  // and many real GPUs (Apple Silicon, Intel iGPUs) report exactly 16. Our
+  // star pipeline uses RawShaderMaterial precisely so three.js doesn't auto-
+  // inject `attribute vec3 position; attribute vec3 normal; attribute vec2
+  // uv;` into the vertex prefix — those three locations would otherwise be
+  // burned without being read by the shader. If a future change swaps the
+  // material back to ShaderMaterial, raise `INJECTED` to 3; if WebGL2's
+  // minimum spec gets bumped, raise `LIMIT`. Crossing either threshold
+  // silently is what culled every star in the eclipse-photometry land —
+  // this test makes the budget explicit.
+  it('star.vert.glsl in-declaration count fits inside the WebGL2 attribute budget', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
+    const declared = src.split('\n').filter(line => /^in\s/.test(line)).length;
+    const INJECTED = 0; // RawShaderMaterial; ShaderMaterial would be 3.
+    const LIMIT = 16;   // WebGL2 minimum MAX_VERTEX_ATTRIBS.
+    expect(declared + INJECTED).toBeLessThanOrEqual(LIMIT);
   });
 
   it('binds the caller-owned localPositions buffer to iPosition', () => {

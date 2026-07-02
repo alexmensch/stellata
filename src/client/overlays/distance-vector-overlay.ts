@@ -169,6 +169,7 @@ export function createDistanceVectorOverlay(
           localPositions: stellata.localPositions,
           uniforms: stellata.uniforms,
           filter: stellata.getFilter(),
+          suppressPulsation: stellata.suppressPulsation,
         }), 0)
       : Math.max(stellata.renderedCloudSizePx(toCloud as number), 0);
     const dxPx = pB[0] - pA[0];

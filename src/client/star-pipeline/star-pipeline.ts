@@ -42,6 +42,19 @@ export interface StarPipelineOptions {
    *  Written by `BinaryOrbitField` for sub-pixel binary secondaries.
    *  Must outlive the pipeline. */
   compositeSuppress: Float32Array;
+  /** Buffer backing the dynamic `iEclipseDim` attribute. 1.0 = no
+   *  occlusion; < 1.0 dims the back component's contribution to the
+   *  glow pass so a sub-pixel binary pair shows a proper photometric
+   *  dip when one star transits the other from the camera viewpoint.
+   *  Written by `EclipsePhotometryField`. Must outlive the pipeline. */
+  eclipseDim: Float32Array;
+  /** Per-instance pulsation-suppress flag. 1.0 zeros the GCVS-amplitude
+   *  radial pulsation in the vertex shader; used for eclipsing-binary
+   *  systems whose photometric signal now comes from
+   *  `EclipsePhotometryField`'s geometric occlusion instead. Built
+   *  once at startup from `varType` × `binaries.has_orbit`; not
+   *  rewritten per-frame. */
+  suppressPulsation: Float32Array;
   vertexShader: string;
   fragmentShader: string;
   /** Shared uniforms map. Each pass spreads it with its own
@@ -55,7 +68,7 @@ export interface StarPipelineOptions {
 }
 
 /**
- * Owns the InstancedBufferGeometry + the three ShaderMaterials + their
+ * Owns the InstancedBufferGeometry + the three RawShaderMaterials + their
  * meshes that make up the star render pipeline:
  *
  *   - core depth-mask (renderOrder -4, depth-only, gated each frame)
@@ -78,6 +91,11 @@ export class StarPipeline {
   readonly iPositionAttr: THREE.InstancedBufferAttribute;
   /** Dynamic — rewritten by BinaryOrbitField each frame. */
   readonly iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
+  /** Dynamic — rewritten by EclipsePhotometryField each frame. */
+  readonly iEclipseDimAttr: THREE.InstancedBufferAttribute;
+  /** Built once per attachBinaries; the integration shell flips
+   *  `needsUpdate` after rewriting the backing buffer. */
+  readonly iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
   readonly discMaterial: THREE.ShaderMaterial;
   readonly glowMaterial: THREE.ShaderMaterial;
   readonly coreMaskMaterial: THREE.ShaderMaterial;
@@ -90,7 +108,8 @@ export class StarPipeline {
   constructor(opts: StarPipelineOptions) {
     const {
       scene, catalog, logRadii, lumClassF32, distSol, teffApsis,
-      localPositions, compositeSuppress, vertexShader, fragmentShader,
+      localPositions, compositeSuppress, eclipseDim, suppressPulsation,
+      vertexShader, fragmentShader,
       sharedUniforms, boundingSphereRadiusPc,
     } = opts;
     this.scene = scene;
@@ -115,6 +134,12 @@ export class StarPipeline {
     this.iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(compositeSuppress, 1);
     this.iCompositeSuppressAttr.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('iCompositeSuppress', this.iCompositeSuppressAttr);
+    this.iEclipseDimAttr = new THREE.InstancedBufferAttribute(eclipseDim, 1);
+    this.iEclipseDimAttr.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('iEclipseDim', this.iEclipseDimAttr);
+    this.iSuppressPulsationAttr = new THREE.InstancedBufferAttribute(suppressPulsation, 1);
+    this.iSuppressPulsationAttr.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('iSuppressPulsation', this.iSuppressPulsationAttr);
     this.geometry.setAttribute('iAbsmag', new THREE.InstancedBufferAttribute(catalog.absmag, 1));
     this.geometry.setAttribute('iCi', new THREE.InstancedBufferAttribute(catalog.ci, 1));
     this.geometry.setAttribute('iSpectClass', new THREE.InstancedBufferAttribute(catalog.spectClass, 1));
@@ -127,11 +152,20 @@ export class StarPipeline {
     this.geometry.instanceCount = catalog.count;
     this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), boundingSphereRadiusPc);
 
+    // RawShaderMaterial (not ShaderMaterial) so three.js doesn't auto-inject
+    // `attribute vec3 position; attribute vec3 normal; attribute vec2 uv;`
+    // into the vertex prefix. Those three would burn three of the GPU's 16
+    // guaranteed vertex-attribute locations even though our shader doesn't
+    // reference them. The vert/frag pair declares `modelViewMatrix` and
+    // `projectionMatrix` explicitly; three.js still uploads them per draw
+    // regardless of material type, so the only cost is the two uniform lines
+    // in the shader.
+
     // Disc pass: per-channel max so overlapping discs/halos don't sum.
     // Shader writes premultiplied (C·α, α); MaxEquation gives
     // dst = max(src, dst) per channel. Depth write stays on so the
     // glow pass can depth-test against the disc silhouettes.
-    this.discMaterial = new THREE.ShaderMaterial({
+    this.discMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: { ...sharedUniforms, uRenderMode: { value: 1 } },
       vertexShader,
@@ -144,7 +178,7 @@ export class StarPipeline {
     // (catalog density preserved). No depth write so multiple glows at the
     // same pixel all contribute. Depth *test* is on so glows behind a disc
     // drawn in the disc pass are correctly occluded.
-    this.glowMaterial = new THREE.ShaderMaterial({
+    this.glowMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: { ...sharedUniforms, uRenderMode: { value: 0 } },
       vertexShader,
@@ -161,7 +195,7 @@ export class StarPipeline {
     // through. colorWrite off → cheaper than a colour pass and never paints
     // anything visible. Visibility gated each frame on focus / warp state by
     // the integration shell.
-    this.coreMaskMaterial = new THREE.ShaderMaterial({
+    this.coreMaskMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: { ...sharedUniforms, uRenderMode: { value: 2 } },
       vertexShader,

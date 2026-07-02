@@ -472,6 +472,7 @@ async function main() {
       view.setUint8(off + RECORD_LAYOUT.ampUnits, 0);
       view.setUint16(off + RECORD_LAYOUT.period, 0, true);
     }
+    view.setUint8(off + RECORD_LAYOUT.varType, (s.varType ?? 0) & 0xff);
     view.setUint32(off + RECORD_LAYOUT.hip, s.hip ?? 0, true);
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
     // AT-HYG column as BigInt to preserve every bit before writing.

@@ -23,6 +23,7 @@ export function makeEmptyCatalog(count: number): Catalog {
     companion: new Int32Array(count).fill(-1),
     periodDays: new Float32Array(count),
     amplitudeMag: new Float32Array(count),
+    varType: new Uint8Array(count),
     hip: new Uint32Array(count),
     gaiaSourceId: new BigUint64Array(count),
     teffGspphot: nanFloat32(count),

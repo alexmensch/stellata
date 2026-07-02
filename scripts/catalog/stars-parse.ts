@@ -50,6 +50,7 @@ export interface Star {
   companionIdx: number;     // assigned later in inferBinaries; -1 = none
   periodDays: number;       // 0 = not a variable known to GCVS
   amplitudeMag: number;     // 0 if not variable
+  varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
   // Build-time-only diagnostic fields. Captured from the AT-HYG row before
   // any override fires; consumed by the post-build distance-regression check
   // and NOT written to the binary.
@@ -266,6 +267,7 @@ export async function readStars(
       companionIdx: -1,
       periodDays: 0,
       amplitudeMag: 0,
+      varType: 0,
       athygDist,
       athygDistSrc,
       syntheticId: null,

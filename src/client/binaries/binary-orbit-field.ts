@@ -2,21 +2,14 @@
 // positions. See src/client/binaries/README.md § Tier mapping + LOD.
 
 import * as THREE from 'three';
-import { ARCSEC_TO_RAD, J2000_JD } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
+import { type BinariesData, type BinaryRelation } from './binaries-loader';
 import {
-  evaluateOrbitSkyAU,
-  evaluateOrbitInPlaneAU,
-  evaluateOrbitDeltaPcTier1,
-  evaluateOrbitDeltaPcTier2,
-  type OrbitalElements,
-} from './binary-orbit-pure';
-import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
-  type BinariesData,
-  type BinaryRelation,
-} from './binaries-loader';
+  buildOrbitRelationCaches,
+  evaluateOrbitRelationDeltaPc,
+  type OrbitRelationCache,
+} from './orbit-relation-cache';
 import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
@@ -46,45 +39,26 @@ export interface BinaryOrbitFieldOptions {
   iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
 }
 
-/** Per-relation cache populated at construction. Cheap to keep — at
- *  ~900 binary records the whole list is well under 100 KB. */
-interface RelationCache {
-  /** Index back into `BinariesData.relations`. */
-  relationIdx: number;
-  /** Tier (1 or 2). Tier 3 records aren't cached; they never animate. */
-  tier: 1 | 2;
-  /** Orbital elements pulled from the relation, in the units the pure
-   *  layer expects. */
-  elements: OrbitalElements;
-  /** Tier-1 R(baseline) cached so per-frame eval is a single Kepler
-   *  solve (now) plus a subtract. Baseline epoch = sepPaEpochJd — the
-   *  epoch the stored catalog separation was measured at, NOT J2000 —
-   *  falling back to J2000 when the record carries none. */
-  refSkyAU: { northAU: number; eastAU: number } | null;
-  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. */
-  refInPlaneAU: { xAU: number; yAU: number } | null;
-  /** Peak relative-separation envelope, AU. a · (1 + e). Used by the
-   *  screen-separation LOD as the worst-case sub-pixel test. */
-  peakSepAU: number;
-}
-
 const DELTA_OUT: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 const SYSTEM_XYZ: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 
 export class BinaryOrbitField {
   private opts: BinaryOrbitFieldOptions;
   private worldOffset = new THREE.Vector3();
-  private relations: RelationCache[] = [];
+  private relations: OrbitRelationCache[] = [];
 
   constructor(opts: BinaryOrbitFieldOptions) {
     this.opts = opts;
-    this.buildCache();
+    this.relations = buildOrbitRelationCaches(
+      opts.binaries,
+      opts.absolutePositions.length,
+    );
   }
 
   /** Read-only access to the cached relation list. Tests and the
    *  reflection sweep import this to iterate active orbital pairs
    *  without re-parsing binaries.bin. */
-  get cachedRelations(): readonly RelationCache[] {
+  get cachedRelations(): readonly OrbitRelationCache[] {
     return this.relations;
   }
 
@@ -248,84 +222,19 @@ export class BinaryOrbitField {
 
   // ── private ─────────────────────────────────────────────────────────
 
-  private buildCache(): void {
-    const relations = this.opts.binaries.relations;
-    const abs = this.opts.absolutePositions;
-    for (let i = 0; i < relations.length; i++) {
-      const r = relations[i];
-      if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
-      // binaries.bin invariant restated at the consumer: has_orbit=1
-      // implies all elements needed for ΔR(t) are finite (P, T, e, a,
-      // ω, q — i and Ω fall back to 0 in relationToElements). A record
-      // that violates that contract would drive evaluateDelta to NaN
-      // ΔR every frame and update() would write NaN into
-      // localPositions[primaryIdx], poisoning every downstream
-      // consumer of the primary's position. Skip the cache entry so
-      // the relation stays at its J2000 baseline.
-      if (
-        !Number.isFinite(r.q) || !Number.isFinite(r.aAU)
-        || !Number.isFinite(r.e) || !Number.isFinite(r.pDays)
-        || !Number.isFinite(r.tJd) || !Number.isFinite(r.omegaRad)
-      ) continue;
-      const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
-      const elements = relationToElements(r);
-      const baselineJd = Number.isFinite(r.sepPaEpochJd)
-        ? r.sepPaEpochJd
-        : J2000_JD;
-      let refSkyAU: { northAU: number; eastAU: number } | null = null;
-      let refInPlaneAU: { xAU: number; yAU: number } | null = null;
-      if (tier === 1) {
-        refSkyAU = evaluateOrbitSkyAU(elements, baselineJd);
-      } else {
-        refInPlaneAU = evaluateOrbitInPlaneAU(elements, baselineJd);
-      }
-      const peakSepAU = elements.a * (1 + elements.e);
-      if (r.primaryIdx * 3 + 2 >= abs.length || r.secondaryIdx * 3 + 2 >= abs.length) continue;
-      this.relations.push({
-        relationIdx: i,
-        tier,
-        elements,
-        refSkyAU,
-        refInPlaneAU,
-        peakSepAU,
-      });
-    }
-  }
-
   private evaluateDelta(
-    rc: RelationCache,
+    rc: OrbitRelationCache,
     r: BinaryRelation,
     tJd: number,
   ): void {
-    let v: { x: number; y: number; z: number };
-    if (rc.tier === 1) {
-      const abs = this.opts.absolutePositions;
-      const pBase = r.primaryIdx * 3;
-      SYSTEM_XYZ.x = abs[pBase + 0];
-      SYSTEM_XYZ.y = abs[pBase + 1];
-      SYSTEM_XYZ.z = abs[pBase + 2];
-      v = evaluateOrbitDeltaPcTier1(rc.elements, rc.refSkyAU!, tJd, SYSTEM_XYZ);
-    } else {
-      v = evaluateOrbitDeltaPcTier2(rc.elements, rc.refInPlaneAU!, tJd);
-    }
+    const abs = this.opts.absolutePositions;
+    const pBase = r.primaryIdx * 3;
+    SYSTEM_XYZ.x = abs[pBase + 0];
+    SYSTEM_XYZ.y = abs[pBase + 1];
+    SYSTEM_XYZ.z = abs[pBase + 2];
+    const v = evaluateOrbitRelationDeltaPc(rc, tJd, SYSTEM_XYZ);
     DELTA_OUT.x = v.x;
     DELTA_OUT.y = v.y;
     DELTA_OUT.z = v.z;
   }
-}
-
-function relationToElements(r: BinaryRelation): OrbitalElements {
-  // NaN-safe defaults for Tier 2 where Ω may be absent — the Tier 2
-  // path ignores Ω entirely, so a NaN would silently propagate into
-  // unused math but it's cleaner to zero it for log/debug clarity.
-  return {
-    P: r.pDays,
-    T: r.tJd,
-    e: r.e,
-    a: r.aAU,
-    i: Number.isFinite(r.iRad) ? r.iRad : 0,
-    omega: Number.isFinite(r.omegaRad) ? r.omegaRad : 0,
-    Omega: Number.isFinite(r.OmegaRad) ? r.OmegaRad : 0,
-    q: r.q,
-  };
 }

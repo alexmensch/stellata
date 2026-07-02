@@ -368,6 +368,98 @@ export function parseGcvsNumber(s: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
+// Per-star variability-type enum. Stored at RECORD_LAYOUT.varType (uint8
+// at byte 37); shaders + runtime gate pulsation off this. Tagged with
+// 0 = unknown so a build that predates the varType column reads as
+// "non-variable" by default without a magic-version bump.
+//
+// Eclipsing = 2 is the load-bearing value — paired with binaries.bin's
+// has_orbit flag, the runtime suppresses GCVS-amplitude pulsation for
+// EA/EB/EW stars whose photometric signal now comes from the geometric-
+// occlusion field instead.
+export const VAR_TYPE_UNKNOWN = 0;
+export const VAR_TYPE_PULSATING = 1;
+export const VAR_TYPE_ECLIPSING = 2;
+export const VAR_TYPE_OTHER = 3;
+
+/** Classify a GCVS variability-type column ("EA", "EA/RS", "M", "DCEP",
+ *  "RRAB", "SR", "ZAND", "UGSU", ...) into the runtime enum.
+ *
+ *  Composite types ("EA+RS", "EA/RS", "EA/DM") are classified as
+ *  eclipsing whenever the eclipsing-binary prefix appears anywhere in
+ *  the string — the geometric-occlusion signal is the real photometric
+ *  driver, and superimposing a synthetic intrinsic pulsation on top
+ *  would double-count the eclipse depth. */
+export function classifyGcvsVarType(rawType: string | null | undefined): number {
+  if (!rawType) return VAR_TYPE_UNKNOWN;
+  const t = rawType.trim().toUpperCase();
+  if (!t) return VAR_TYPE_UNKNOWN;
+  // Eclipsing-binary prefixes anywhere in the string. EA / EB / EW are
+  // GCVS's three canonical eclipsing classes; ELL is ellipsoidal (no
+  // primary minimum, but the modulation is geometric, same suppression
+  // logic applies). E* catches the bare "E" form GCVS uses on
+  // unclassified eclipsing systems. EP = eclipsing-by-planet (rare).
+  if (/\bE([ABW]|LL|P)?\b/.test(t)) return VAR_TYPE_ECLIPSING;
+  // Intrinsic pulsators. The pulsator family is identified by a
+  // letter-prefix at the start of the GCVS type string or after a
+  // separator (+ / | /); GCVS appends arbitrary subtype letters
+  // ("SRA", "RRAB", "DCEPS") so the prefix match is `startsWith` after
+  // the separator, not a word-boundary regex. Order matters: longer
+  // prefixes ("DCEP" before "CEP") and discriminating prefixes
+  // ("RR" before "RV"-style ambiguity) come first so the prior wins
+  // the match. The "M" prefix is intentionally LAST — it would
+  // otherwise swallow any "M…" type including the all-uppercase forms
+  // that follow other codes (e.g. "ELL" → none of the M-class rules
+  // ever match because we screened eclipsing above).
+  const pulsatorPrefixes = [
+    'DCEP', 'BCEP', 'CEP',
+    'DSCT', 'GDOR', 'SXPHE', 'PVTEL', 'ACYG', 'ROAP',
+    'WVIR', 'CW',
+    'RRAB', 'RRC', 'RR', 'RV',
+    'SPB',
+    'SRA', 'SRB', 'SRC', 'SRD', 'SRS', 'SR',
+    'ZZ',
+    'M', 'L',
+  ];
+  // Split on GCVS's composite separators and test each component's
+  // prefix. A "ZAND" (cataclysmic) starting with "Z" wouldn't match
+  // any pulsator prefix because we require an exact letter-prefix
+  // followed by either the end of the component or a digit/letter
+  // continuation that's part of a recognised subtype — the loop
+  // tests both shapes via `startsWith`.
+  for (const part of t.split(/[+/|]/)) {
+    const p = part.trim();
+    if (!p) continue;
+    for (const pre of pulsatorPrefixes) {
+      if (p === pre || p.startsWith(pre)) {
+        // Require the character immediately after the prefix to be a
+        // GCVS subtype continuation — digit, '(', or end-of-string —
+        // so "ZAND" (starts with "Z") cannot match "ZZ", "MEAN"
+        // cannot match "M", etc. Subtype letters that GCVS appends
+        // ('A','B','C','D','S' on SR; 'AB','C' on RR) are picked up
+        // by the longer prefixes above, so we only need to gate
+        // out cases where the matched prefix is followed by another
+        // class letter.
+        const tail = p.slice(pre.length);
+        if (tail === '' || /^[0-9()/.]/.test(tail)) return VAR_TYPE_PULSATING;
+        // Some pulsator types continue with a letter that's part of
+        // the same family (e.g. PVTEL has no documented further
+        // letters; SR has its A/B/C/D in the prefix list already).
+        // Anything else means we matched a coincidental prefix —
+        // fall through and try a longer / different prefix.
+      }
+    }
+  }
+  // Anything GCVS classifies that isn't eclipsing or a pulsator —
+  // cataclysmic (UG*, ZAND), eruptive (FU, GCAS, IN*), rotating
+  // (ACV, BY, RS, ELL, FKCOM), X-ray binaries (X*) — falls through
+  // here. The shader's pulsation gate doesn't fire on these (varType
+  // != ECLIPSING), so they keep their GCVS-amplitude modulation as
+  // before. The category exists primarily for hover-tooltip
+  // disambiguation and future per-type rendering.
+  return VAR_TYPE_OTHER;
+}
+
 // ---- Binary catalog format ----------------------------------------------
 
 // Single source of truth for the catalog.bin file layout, shared by the
@@ -440,7 +532,7 @@ export const RECORD_LAYOUT = {
   conIndex: 34,   // uint8 (NO_CONSTELLATION_INDEX = none)
   flags: 35,      // uint8 (FLAG_*)
   ampUnits: 36,   // uint8 (×0.05 mag)
-  // byte 37 reserved (variability type)
+  varType: 37,    // uint8 (VAR_TYPE_*; 0 = unknown / non-variable)
   period: 38,     // uint16 (×0.1 days)
   hip: 40,        // uint32 (0 = no HIP)
   gaiaSourceId: 44, // uint64 LE (0 = no Gaia DR3 source_id)
@@ -461,7 +553,7 @@ export const RECORD_FIELD_SIZES: Record<keyof typeof RECORD_LAYOUT, number> = {
   x: 4, y: 4, z: 4, absmag: 4, ci: 4, physRadius: 4,
   companion: 4, nameOffset: 4,
   spectClass: 1, lumClass: 1, conIndex: 1, flags: 1, ampUnits: 1,
-  period: 2, hip: 4, gaiaSourceId: 8,
+  varType: 1, period: 2, hip: 4, gaiaSourceId: 8,
   teffGspphot: 4, loggGspphot: 4, mhGspphot: 4, azeroGspphot: 4,
   teffGspspec: 4, loggGspspec: 4, mhGspspec: 4,
 };
