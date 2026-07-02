@@ -18,7 +18,7 @@ import {
   getPlanetSystem,
   hasPlanets,
 } from '../../solar-system/planet-system';
-import { R_SUN_PC } from '../../util/astronomy-constants';
+import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { chartPlateauDistancePc } from '../../chart-mode/chart-disc-pure';
 import * as starPhysics from '../controls/star-physics';
 import {
@@ -46,13 +46,6 @@ export const GLOBAL_MIN_DIST_PC = 5e-3;
  *  regardless of float32 cancellation. 1e-12 pc² ≈ (1e-6 pc)² ≈ 0.2 AU
  *  — under this, the geometric pin is the right answer. */
 export const PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12;
-
-/** Floor on a catalog `physicalRadius[idx]` (in solar radii) before
- *  converting to parsecs (`* R_SUN_PC`). Keeps R > 0 in geometric
- *  formulas. Six pre-existing sites floor the same quantity at 1e-9 or
- *  1e-6 inconsistently; migrate them off the literals
- *  as part of that bead, not here. */
-const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 
 /** Floating-origin primitive — stays on the integration shell so the
  *  star-pipeline buffer rewrite + `iPositionAttr.needsUpdate` happen

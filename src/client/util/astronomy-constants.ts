@@ -20,6 +20,11 @@ export const KM_PC = AU_PC / AU_KM;
 // Also uploaded to the star vertex shader as the `uRSunPc` uniform.
 export const R_SUN_PC = 2.2543e-8;
 
+// Floor on a catalog `physicalRadius[idx]` (in solar radii) before
+// converting to parsecs (`* R_SUN_PC`). Keeps R > 0 in geometric formulas
+// that divide by it or take its log.
+export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
+
 // Arcseconds → radians. π / (180 × 3600). Same magnitude as 1 / AU_PER_PC
 // (1 AU subtends 1 arcsec at 1 pc by definition) but written out here so
 // the unit conversion reads as the angular operation it is.

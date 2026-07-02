@@ -12,7 +12,7 @@ import {
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
 import { parkDistance } from '../focus/focus-transition';
-import { R_SUN_PC } from '../../util/astronomy-constants';
+import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
@@ -88,7 +88,7 @@ export interface ParkArgs {
 // than the static R hitting the floor and the peak overshooting the
 // viewport.
 export function minOrbitDistForStar(args: ParkArgs): number {
-  const R = Math.max(args.catalog.physicalRadius[args.idx], 1e-9) * R_SUN_PC;
+  const R = Math.max(args.catalog.physicalRadius[args.idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const Reff = R * peakAmplitudeFactor(args.catalog, args.idx);
   return distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
 }
@@ -99,7 +99,7 @@ export function minOrbitDistForStar(args: ParkArgs): number {
 // as dMinFloor. Result is "1 AU outside the surface, but never closer
 // than dMin."
 export function parkDistForStar(args: ParkArgs): number {
-  const R = Math.max(args.catalog.physicalRadius[args.idx], 1e-9) * R_SUN_PC;
+  const R = Math.max(args.catalog.physicalRadius[args.idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const Reff = R * peakAmplitudeFactor(args.catalog, args.idx);
   const dMinFloor = distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
   return parkDistance({ R_pc: Reff, dMinFloor });
@@ -131,7 +131,7 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
 
   const fovYRad = u.uFovYRad.value;
   const viewport = u.uViewport.value;
-  const R = Math.max(physicalRadius[idx], 1e-6) * R_SUN_PC;
+  const R = Math.max(physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const baseSize = physSizePx(R, dCam, viewport.y, fovYRad);
   const maxPhysSize = ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y);
 
@@ -184,7 +184,7 @@ export function renderedDiscPxAtPeak(args: PeakDiscArgs): number {
   const dz = localPositions[idx * 3 + 2] - camPos.z;
   const dCam = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
 
-  const R = Math.max(catalog.physicalRadius[idx], 1e-6) * R_SUN_PC;
+  const R = Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const viewport = u.uViewport.value;
   return physSizePx(R, dCam, viewport.y, u.uFovYRad.value, peakAmplitudeFactor(catalog, idx));
 }

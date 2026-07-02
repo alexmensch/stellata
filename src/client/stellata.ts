@@ -57,7 +57,7 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
-import { R_SUN_PC } from './util/astronomy-constants';
+import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
 import { DCAM_LOG_FLOOR_PC } from './camera/timing';
@@ -455,7 +455,7 @@ export class Stellata implements FrameAnchor {
     const teffApsis = new Float32Array(catalog.count);
     let maxPhysicalRadius = 0;
     for (let i = 0; i < catalog.count; i++) {
-      const r = Math.max(catalog.physicalRadius[i], 1e-6);
+      const r = Math.max(catalog.physicalRadius[i], MIN_PHYSICAL_RADIUS_R_SUN);
       logRadii[i] = Math.log10(r);
       if (r > maxPhysicalRadius) maxPhysicalRadius = r;
       lumClassF32[i] = catalog.luminosityClass[i];
