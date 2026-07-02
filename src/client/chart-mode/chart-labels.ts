@@ -7,6 +7,7 @@ import { projectToScreen } from '../overlays/overlay-project';
 import { setNumAttr } from '../overlays/dirty-attr';
 import { getChartDiscParams } from '../camera/controls/star-physics';
 import { chartDiscPxForAppMag } from './chart-disc-pure';
+import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
 
 // Chart-mode label engine. Per-frame, projects every candidate
 // label (proper-named star, Bayer-letter star, constellation Latin name,
@@ -361,6 +362,8 @@ function tick(
   // below (variable rings + binary wings sized off the same px formula
   // the GPU disc uses).
   const discParams = getChartDiscParams(stellata.uniforms);
+  const discPxFor = (mag: number): number =>
+    chartDiscPxForAppMag(mag, discParams, f.maxAppMag);
 
   const candidates: Candidate[] = [];
   const seen = new Set<number>(); // dedupe star idx across name+bayer
@@ -375,7 +378,7 @@ function tick(
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
     if (appMag > f.maxAppMag) continue;
-    const offset = starLabelOffsetPx(chartDiscPxForAppMag(appMag, discParams, f.maxAppMag));
+    const offset = starLabelOffsetPx(discPxFor(appMag));
     candidates.push({
       kind: 'name',
       text: name,
@@ -403,7 +406,7 @@ function tick(
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
     if (appMag > f.maxAppMag) continue;
-    const offset = starLabelOffsetPx(chartDiscPxForAppMag(appMag, discParams, f.maxAppMag));
+    const offset = starLabelOffsetPx(discPxFor(appMag));
     candidates.push({
       kind: 'bayer',
       text: `${info.greek}${info.suffix}`,
@@ -467,10 +470,7 @@ function tick(
         const px = positions[i * 3];
         const py = positions[i * 3 + 1];
         const pz = positions[i * 3 + 2];
-        const dCam = Math.sqrt(px * px + py * py + pz * pz);
-        const appMag = dCam > 0
-          ? cat.absmag[i] + 5 * (Math.log10(dCam) - 1)
-          : cat.absmag[i];
+        const appMag = computeAppMag(i, positions, cat.absmag);
         if (appMag < minAppMag) minAppMag = appMag;
         // Flux weight = 10^(-0.4 * appMag) — brighter (lower) appMag gives
         // exponentially more pull, matching how the eye reads a chart.
@@ -612,15 +612,7 @@ function tick(
   perfMark('chart.glyphs.var');
   if (variableEligible) {
     for (const idx of variableEligible) {
-      // Inlined appMag: spectral / distance-from-Sol gates already done
-      // by eligibility filtering, so just camera-relative magnitude.
-      const px = positions[idx * 3];
-      const py = positions[idx * 3 + 1];
-      const pz = positions[idx * 3 + 2];
-      const dCam = Math.sqrt(px * px + py * py + pz * pz);
-      const appMag = dCam > 0
-        ? absmag[idx] + 5 * (Math.log10(dCam) - 1)
-        : absmag[idx];
+      const appMag = computeAppMag(idx, positions, absmag);
       const amp = cat.amplitudeMag[idx];
       const ringMag = appMag - amp * 0.5;
       // Magnitude gate hoisted above the projection — projectStar's
@@ -633,7 +625,7 @@ function tick(
       // radius, guaranteeing a visible gap even for low-amplitude
       // variables where the disc would otherwise grow flush with the
       // ring. Adds 2× to the diameter (one gap on each side).
-      const peakDiscPx = chartDiscPxForAppMag(ringMag, discParams, f.maxAppMag);
+      const peakDiscPx = discPxFor(ringMag);
       const ringPx = peakDiscPx + 2 * VARIABLE_RING_MIN_GAP_PX;
       const ringR = ringPx * 0.5;
       let p = ringPool.get(idx);
@@ -670,16 +662,10 @@ function tick(
   perfMark('chart.glyphs.bin');
   if (binaryEligible) {
     for (const idx of binaryEligible) {
-      const px = positions[idx * 3];
-      const py = positions[idx * 3 + 1];
-      const pz = positions[idx * 3 + 2];
-      const dCam = Math.sqrt(px * px + py * py + pz * pz);
-      const appMag = dCam > 0
-        ? absmag[idx] + 5 * (Math.log10(dCam) - 1)
-        : absmag[idx];
+      const appMag = computeAppMag(idx, positions, absmag);
       // Magnitude gate before the projection — same reasoning as above.
       if (appMag > f.maxAppMag) continue;
-      const discPx = chartDiscPxForAppMag(appMag, discParams, f.maxAppMag);
+      const discPx = discPxFor(appMag);
       const ext = discPx * BINARY_WING_EXTENSION_RATIO;
       if (ext < BINARY_WING_MIN_EXTENSION_PX) continue;
       const xy = projectStar(idx, positions, camera, w, h);
@@ -759,7 +745,7 @@ export function computeAppMag(
   const z = positions[idx * 3 + 2];
   const d = Math.sqrt(x * x + y * y + z * z);
   if (d <= 0) return absmag[idx]; // Sol-on-Sol or origin: distance modulus → 0
-  return absmag[idx] + 5 * (Math.log10(d) - 1);
+  return apparentMagnitude(absmag[idx], d);
 }
 
 // Approximate label box on the first frame the candidate survives. SVG's

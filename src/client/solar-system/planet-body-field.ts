@@ -31,6 +31,7 @@ import {
   type PickCandidate,
 } from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
+import { projectToScreen } from '../overlays/overlay-project';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
@@ -506,11 +507,10 @@ export class PlanetBodyField {
         // pick what isn't drawn.
         if (appMag > maxAppMag + 0.5) continue;
 
-        v.set(planetX, planetY, planetZ).project(camera);
-        if (v.z < -1 || v.z > 1) continue;
-        const screenX = (v.x + 1) * 0.5 * viewportW;
-        const screenY = (1 - v.y) * 0.5 * viewportH;
-        const pxDist = Math.hypot(cursorX - screenX, cursorY - screenY);
+        v.set(planetX, planetY, planetZ);
+        const screen = projectToScreen(v, camera, viewportW, viewportH);
+        if (!screen) continue;
+        const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
         const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
         const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);

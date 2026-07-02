@@ -12,8 +12,10 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
+from paths import REPO_ROOT  # noqa: E402
 from wds_xids_cascade import (  # noqa: E402
     build_cascade_candidates,
     filter_cascade_hits,
@@ -21,7 +23,7 @@ from wds_xids_cascade import (  # noqa: E402
 )
 from wds_xids_overrides import load_overrides, validate_against_components  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = REPO_ROOT
 SCRIPT_DIR = Path(__file__).resolve().parent
 SRC_WDS_SUMM = ROOT / "data" / "wds" / "wds_summ.txt"
 SRC_OVERRIDES = ROOT / "data" / "simbad" / "wds_xids_overrides.tsv"
