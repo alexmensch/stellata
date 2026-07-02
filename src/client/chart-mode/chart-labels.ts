@@ -362,6 +362,8 @@ function tick(
   // below (variable rings + binary wings sized off the same px formula
   // the GPU disc uses).
   const discParams = getChartDiscParams(stellata.uniforms);
+  const discPxFor = (mag: number): number =>
+    chartDiscPxForAppMag(mag, discParams, f.maxAppMag);
 
   const candidates: Candidate[] = [];
   const seen = new Set<number>(); // dedupe star idx across name+bayer
@@ -376,7 +378,7 @@ function tick(
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
     if (appMag > f.maxAppMag) continue;
-    const offset = starLabelOffsetPx(chartDiscPxForAppMag(appMag, discParams, f.maxAppMag));
+    const offset = starLabelOffsetPx(discPxFor(appMag));
     candidates.push({
       kind: 'name',
       text: name,
@@ -404,7 +406,7 @@ function tick(
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
     if (appMag > f.maxAppMag) continue;
-    const offset = starLabelOffsetPx(chartDiscPxForAppMag(appMag, discParams, f.maxAppMag));
+    const offset = starLabelOffsetPx(discPxFor(appMag));
     candidates.push({
       kind: 'bayer',
       text: `${info.greek}${info.suffix}`,
@@ -623,7 +625,7 @@ function tick(
       // radius, guaranteeing a visible gap even for low-amplitude
       // variables where the disc would otherwise grow flush with the
       // ring. Adds 2× to the diameter (one gap on each side).
-      const peakDiscPx = chartDiscPxForAppMag(ringMag, discParams, f.maxAppMag);
+      const peakDiscPx = discPxFor(ringMag);
       const ringPx = peakDiscPx + 2 * VARIABLE_RING_MIN_GAP_PX;
       const ringR = ringPx * 0.5;
       let p = ringPool.get(idx);
@@ -663,7 +665,7 @@ function tick(
       const appMag = computeAppMag(idx, positions, absmag);
       // Magnitude gate before the projection — same reasoning as above.
       if (appMag > f.maxAppMag) continue;
-      const discPx = chartDiscPxForAppMag(appMag, discParams, f.maxAppMag);
+      const discPx = discPxFor(appMag);
       const ext = discPx * BINARY_WING_EXTENSION_RATIO;
       if (ext < BINARY_WING_MIN_EXTENSION_PX) continue;
       const xy = projectStar(idx, positions, camera, w, h);
