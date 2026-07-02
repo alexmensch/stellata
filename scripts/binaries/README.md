@@ -341,6 +341,24 @@ arcseconds (`a`) or milliarcseconds (`m`, with `M` accepted as a known
 typo). Unknown unit codes are skipped — Stage 4 prefers `None` over a
 guessed conversion that would silently land on the wrong scale.
 
+The periastron epoch `T0` needs the same care, with a twist. Per
+`orb6format.txt` its `T0_unit` code is `d` = truncated JD (the file
+stores JD − 2,400,000, **not** a full JD — Algol Aa1,Aa2 carries
+`41771.353` = HJD 2441771.353), `m` = MJD (JD − 2,400,000.5), or `y` =
+fractional Besselian year. The twist: ORB6 mislabels ~50 truncated-JD
+epochs with the `y` flag (e.g. WDS 04227+1503 Aa,Ab stores
+`59501.496 y` for a 4-day pair), and the year formula throws those out
+past JD 2e7. `_orb6_T0_jd` therefore validates a `y` conversion against
+a physically-possible epoch window (Besselian years ≈1700–2600) and
+retries the truncated-JD reading when it falls outside; unrecoverable
+rows (and the non-conforming `c` / blank flags) get a `None` epoch and
+place statically at the WDS observation epoch. `select_orbits_all`
+asserts every emitted `T_jd` stays inside the window. A wrong epoch
+isn't visible in a rendered orbit — baseline cancellation at
+`sep_pa_epoch_jd` hides it — but it shifts the pair's configuration at
+any *other* date, so conjunction / eclipse timing (Algol's minima
+included) would miss published ephemerides without this normalisation.
+
 The mass-ratio `q` rides through this stage when present. Gaia NSS
 `EclipsingSpectro` and SB2/SB2 / non-compact variants store
 spectroscopic `mass_ratio` directly; everything else gets `q = None`

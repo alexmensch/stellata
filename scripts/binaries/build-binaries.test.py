@@ -2806,19 +2806,21 @@ class Orb6ToCanonicalElementsTests(unittest.TestCase):
                                bb.J2000_REF_EPOCH_JD + (1875.66 - 2000.0) * 365.25)
         self.assertAlmostEqual(o.distance_pc or 0.0, 1000.0 / 755.0)
 
-    def test_days_mas_jd(self) -> None:
-        # Short-period close binary stored in days + mas + JD.
+    def test_days_mas_truncated_jd(self) -> None:
+        # Short-period close binary stored in days + mas + truncated JD.
+        # ORB6's 'd' code is JD − 2,400,000, not a full JD (Algol Aa1,Aa2
+        # carries 41771.353 = HJD 2441771.353).
         entry = _orb6_visual(
             P_val=10.0, P_unit="d",
             a_val=500.0, a_unit="m",
-            T0_val=2451545.0, T0_unit="d",
+            T0_val=51545.0, T0_unit="d",
         )
         o = bb.orb6_to_canonical_elements(entry, plx_mas=100.0)
         self.assertIsNotNone(o)
         assert o is not None
         self.assertAlmostEqual(o.P_days or 0.0, 10.0)
         self.assertAlmostEqual(o.a_AU or 0.0, 500.0 / 100.0)
-        self.assertAlmostEqual(o.T_jd or 0.0, 2451545.0)
+        self.assertAlmostEqual(o.T_jd or 0.0, 51545.0 + bb.TRUNCATED_JD_TO_JD_OFFSET)
 
     def test_mjd_t0_offset(self) -> None:
         entry = _orb6_visual(T0_val=51544.5, T0_unit="m")
@@ -2826,6 +2828,46 @@ class Orb6ToCanonicalElementsTests(unittest.TestCase):
         self.assertIsNotNone(o)
         assert o is not None
         self.assertAlmostEqual(o.T_jd or 0.0, 51544.5 + bb.MJD_TO_JD_OFFSET)
+
+    def test_year_flag_mislabelled_truncated_jd_is_recovered(self) -> None:
+        # ORB6 mislabels ~50 truncated-JD epochs with the 'y' flag (WDS
+        # 04227+1503 Aa,Ab: 59501.496 for a 4-day pair). The year formula
+        # would throw this past JD 2e7; the guard reinterprets it as a
+        # truncated JD.
+        entry = _orb6_visual(P_val=4.0, P_unit="d", T0_val=59501.496, T0_unit="y")
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=10.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(o.T_jd or 0.0, 59501.496 + bb.TRUNCATED_JD_TO_JD_OFFSET)
+
+    def test_year_flag_genuine_year_unchanged(self) -> None:
+        # A real Besselian-year epoch stays on the year formula.
+        entry = _orb6_visual(T0_val=1990.0, T0_unit="y")
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=10.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertAlmostEqual(
+            o.T_jd or 0.0, bb.J2000_REF_EPOCH_JD + (1990.0 - 2000.0) * 365.25)
+
+    def test_unrecognised_t0_flag_returns_none(self) -> None:
+        # Stray '1'/'5'/'7'/'c'/blank flags from fixed-column
+        # misalignment carry no usable epoch → T_jd None (renderer falls
+        # back to WDS-epoch placement); the rest of the orbit survives.
+        entry = _orb6_visual(T0_val=111111111111.0, T0_unit="1")
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=10.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertIsNone(o.T_jd)
+        self.assertIsNotNone(o.P_days)
+
+    def test_year_flag_out_of_range_both_readings_returns_none(self) -> None:
+        # A 'y' value implausible as both a year and a truncated JD drops
+        # to None rather than a synthesised epoch.
+        entry = _orb6_visual(T0_val=300000.0, T0_unit="y")
+        o = bb.orb6_to_canonical_elements(entry, plx_mas=10.0)
+        self.assertIsNotNone(o)
+        assert o is not None
+        self.assertIsNone(o.T_jd)
 
     def test_centuries_period(self) -> None:
         entry = _orb6_visual(P_val=15.0, P_unit="c")

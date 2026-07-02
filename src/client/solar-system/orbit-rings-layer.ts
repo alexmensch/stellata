@@ -14,13 +14,13 @@ const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
 /**
  * North ecliptic pole expressed in ICRS — the normal to Sol's orbital
- * plane. Per the solar-system contract: `(0, sinε, cosε)`. Consumers receive a
- * cloned vector (the exported one is shared) — never mutate this in
- * place.
+ * plane, at RA 18h / Dec +66.56° = `(0, −sinε, cosε)`. The y-component is
+ * negative: cos(66.56°)·sin(270°) = −sinε. Consumers receive a cloned
+ * vector (the exported one is shared) — never mutate this in place.
  */
 export const ECLIPTIC_NORTH_POLE_ICRS = new THREE.Vector3(
   0,
-  Math.sin(J2000_OBLIQUITY_RAD),
+  -Math.sin(J2000_OBLIQUITY_RAD),
   Math.cos(J2000_OBLIQUITY_RAD),
 );
 

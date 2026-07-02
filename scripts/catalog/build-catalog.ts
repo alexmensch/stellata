@@ -29,7 +29,7 @@ import {
   NAME_LENGTH_PREFIX_BYTES,
   type ApsisRow,
   type SearchEntry,
-  type SimbadSpectralRow,
+  type SimbadSpectralIndex,
 } from './catalog-pure';
 import {
   compareBuildCounts,
@@ -214,15 +214,16 @@ async function main() {
     console.log('Gaia DR3 Apsis file not found; skipping astrophysical-parameter surface.');
   }
 
-  // SIMBAD sp_type per Gaia DR3 source_id. First tier of the spectral
-  // resolver; the binary defaults to GSP-Spec + unknown sentinel without it.
-  let simbadSpectralMap = new Map<string, SimbadSpectralRow>();
+  // SIMBAD sp_type indexed by Gaia DR3 source_id and by HIP. First tier
+  // of the spectral resolver; the binary defaults to GSP-Spec + unknown
+  // sentinel without it.
+  let simbadSpectral: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() };
   if (existsSync(SRC_SIMBAD_SPTYPE)) {
     console.log('Parsing SIMBAD sp_type catalogue...');
     const tSimbad = Date.now();
-    simbadSpectralMap = parseSimbadSptypeTsv(readFileSync(SRC_SIMBAD_SPTYPE, 'utf8'));
-    console.log(`  ${simbadSpectralMap.size} entries in ${Date.now() - tSimbad}ms`);
-    counts.simbadSptypeEntries = simbadSpectralMap.size;
+    simbadSpectral = parseSimbadSptypeTsv(readFileSync(SRC_SIMBAD_SPTYPE, 'utf8'));
+    console.log(`  ${simbadSpectral.bySource.size} entries in ${Date.now() - tSimbad}ms`);
+    counts.simbadSptypeEntries = simbadSpectral.bySource.size;
   } else {
     console.warn(
       `WARNING: ${SRC_SIMBAD_SPTYPE} not found — spectral classification will\n` +
@@ -248,7 +249,7 @@ async function main() {
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
   const { stars, stats } = await readStars(
-    SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectralMap, apsisMap,
+    SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectral, apsisMap,
   );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
