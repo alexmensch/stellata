@@ -29,13 +29,20 @@ export interface OrbitalElements {
   q: number;
 }
 
-/** Sky-plane separation of B relative to A at JDE `tJd`, AU. North=+X,
- *  east=+Y. Thiele-Innes; single Kepler solve. Tier 1 only — requires
- *  a published inclination. */
+/** Separation of B relative to A at JDE `tJd`, AU. North=+X, east=+Y on
+ *  the sky tangent plane; `radialAU` is the line-of-sight component,
+ *  positive = receding from Sol (Z = r·sin(ν+ω)·sin i). Thiele-Innes;
+ *  single Kepler solve. Tier 1 only — requires a published inclination.
+ *
+ *  Pure-astrometric orbits (ORB6 visual pairs without radial-velocity
+ *  data) carry a ±180° ascending-node ambiguity, so `radialAU`'s SIGN is
+ *  convention-resolved, not observed — front/back at conjunction is the
+ *  published node's choice. The magnitude and the tangent components are
+ *  unaffected. */
 export function evaluateOrbitSkyAU(
   elements: OrbitalElements,
   tJd: number,
-): { northAU: number; eastAU: number } {
+): { northAU: number; eastAU: number; radialAU: number } {
   const { P, T, e, a, i, omega, Omega } = elements;
   const M = (2 * Math.PI * (tJd - T)) / P;
   const E = solveKepler(M, e);
@@ -51,6 +58,7 @@ export function evaluateOrbitSkyAU(
   return {
     northAU: a * (A * X + F * Y),
     eastAU: a * (B * X + G * Y),
+    radialAU: a * Math.sin(i) * (sinO * X + cosO * Y),
   };
 }
 
@@ -74,14 +82,16 @@ export function evaluateOrbitInPlaneAU(
   };
 }
 
-/** Convert a sky-plane separation (north, east) in pc at a system whose
- *  ICRS position is `systemXyzPc` into an ICRS Δxyz in pc. Tangent-plane
- *  projection; the d term cancels because the input is linear units (pc),
- *  not angular. */
+/** Convert a sky-frame separation (north, east, radial) in pc at a
+ *  system whose ICRS position is `systemXyzPc` into an ICRS Δxyz in pc.
+ *  Tangent-plane projection for the sky components; the radial component
+ *  rides along the Sol→system unit vector (positive = receding). The d
+ *  term cancels because the input is linear units (pc), not angular. */
 export function projectSkyToICRS(
   systemXyzPc: Vec3,
   northPc: number,
   eastPc: number,
+  radialPc = 0,
 ): Vec3 {
   const r = Math.hypot(systemXyzPc.x, systemXyzPc.y, systemXyzPc.z);
   if (r === 0) return { x: 0, y: 0, z: 0 };
@@ -90,9 +100,9 @@ export function projectSkyToICRS(
   const sinRa = Math.sin(ra), cosRa = Math.cos(ra);
   const sinDec = Math.sin(dec), cosDec = Math.cos(dec);
   return {
-    x: northPc * (-sinDec * cosRa) + eastPc * (-sinRa),
-    y: northPc * (-sinDec * sinRa) + eastPc * cosRa,
-    z: northPc * cosDec,
+    x: northPc * (-sinDec * cosRa) + eastPc * (-sinRa) + radialPc * (cosDec * cosRa),
+    y: northPc * (-sinDec * sinRa) + eastPc * cosRa + radialPc * (cosDec * sinRa),
+    z: northPc * cosDec + radialPc * sinDec,
   };
 }
 
@@ -117,14 +127,15 @@ export function projectGalacticPlaneToICRS(
  *  outside. */
 export function evaluateOrbitDeltaPcTier1(
   elements: OrbitalElements,
-  refSky: { northAU: number; eastAU: number },
+  refSky: { northAU: number; eastAU: number; radialAU: number },
   tJd: number,
   systemXyzPc: Vec3,
 ): Vec3 {
   const now = evaluateOrbitSkyAU(elements, tJd);
   const dnPc = (now.northAU - refSky.northAU) * AU_PC;
   const dePc = (now.eastAU - refSky.eastAU) * AU_PC;
-  return projectSkyToICRS(systemXyzPc, dnPc, dePc);
+  const drPc = (now.radialAU - refSky.radialAU) * AU_PC;
+  return projectSkyToICRS(systemXyzPc, dnPc, dePc, drPc);
 }
 
 /** Tier 2 full relative ICRS Δxyz (pc): galactic-plane fallback when

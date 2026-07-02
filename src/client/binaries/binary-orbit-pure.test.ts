@@ -75,6 +75,43 @@ describe('evaluateOrbitSkyAU — edge-on orbit', () => {
   });
 });
 
+describe('evaluateOrbitSkyAU — radial (line-of-sight) component', () => {
+  it('face-on orbit has zero radial component at all phases', () => {
+    const elements = elt({ e: 0.3, a: 2, i: 0, omega: 0.7, Omega: 1.2 });
+    for (let k = 0; k < 12; k++) {
+      const t = J2000_JD + (k / 12) * elements.P;
+      expect(evaluateOrbitSkyAU(elements, t).radialAU).toBeCloseTo(0, 15);
+    }
+  });
+
+  it('edge-on circular orbit: radial spans ±a and the 3D magnitude stays a', () => {
+    const elements = elt({ e: 0, a: 1, i: Math.PI / 2, omega: 0, Omega: 0 });
+    let rMin = Infinity, rMax = -Infinity;
+    for (let k = 0; k < 64; k++) {
+      const t = J2000_JD + (k / 64) * elements.P;
+      const { northAU, eastAU, radialAU } = evaluateOrbitSkyAU(elements, t);
+      rMin = Math.min(rMin, radialAU);
+      rMax = Math.max(rMax, radialAU);
+      expect(Math.hypot(northAU, eastAU, radialAU)).toBeCloseTo(1, 10);
+    }
+    expect(rMax).toBeCloseTo(1, 6);
+    expect(rMin).toBeCloseTo(-1, 6);
+  });
+
+  it('eccentric inclined orbit: 3D magnitude equals a(1−e) at periapsis and stays in bounds', () => {
+    const elements = elt({ e: 0.591, a: 19.77, P: 50.13 * 365.25, i: 1.1, omega: 0.7, Omega: 2.3 });
+    const p = evaluateOrbitSkyAU(elements, J2000_JD);
+    expect(Math.hypot(p.northAU, p.eastAU, p.radialAU)).toBeCloseTo(elements.a * (1 - elements.e), 6);
+    for (let k = 0; k < 32; k++) {
+      const t = J2000_JD + (k / 32) * elements.P;
+      const { northAU, eastAU, radialAU } = evaluateOrbitSkyAU(elements, t);
+      const r = Math.hypot(northAU, eastAU, radialAU);
+      expect(r).toBeGreaterThanOrEqual(elements.a * (1 - elements.e) - 1e-6);
+      expect(r).toBeLessThanOrEqual(elements.a * (1 + elements.e) + 1e-6);
+    }
+  });
+});
+
 describe('evaluateOrbitSkyAU — eccentric orbit', () => {
   const elements = elt({ e: 0.591, a: 19.77, P: 50.13 * 365.25 });
 
@@ -123,6 +160,25 @@ describe('evaluateOrbitInPlaneAU', () => {
       expect(r).toBeGreaterThanOrEqual(elements.a * (1 - elements.e) - 1e-6);
       expect(r).toBeLessThanOrEqual(elements.a * (1 + elements.e) + 1e-6);
     }
+  });
+});
+
+describe('projectSkyToICRS — radial component', () => {
+  it('radial input rides the Sol→system direction', () => {
+    const out = projectSkyToICRS({ x: 10, y: 0, z: 0 }, 0, 0, 3);
+    expect(out.x).toBeCloseTo(3, 12);
+    expect(out.y).toBeCloseTo(0, 12);
+    expect(out.z).toBeCloseTo(0, 12);
+  });
+
+  it('preserves the 3D magnitude and keeps radial ⊥ tangent for a generic system', () => {
+    const sys = { x: 3, y: -7, z: 5 };
+    const out = projectSkyToICRS(sys, 2, 3, 4);
+    expect(Math.hypot(out.x, out.y, out.z)).toBeCloseTo(Math.hypot(2, 3, 4), 10);
+    const tangent = projectSkyToICRS(sys, 2, 3, 0);
+    const radial = projectSkyToICRS(sys, 0, 0, 4);
+    const dot = tangent.x * radial.x + tangent.y * radial.y + tangent.z * radial.z;
+    expect(Math.abs(dot)).toBeLessThan(1e-10);
   });
 });
 
