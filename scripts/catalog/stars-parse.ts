@@ -19,7 +19,7 @@ import {
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   type ApsisRow,
-  type SimbadSpectralRow,
+  type SimbadSpectralIndex,
 } from './catalog-pure';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
@@ -111,7 +111,7 @@ export async function readStars(
   conIndexLookup: Map<string, number>,
   bjMap: Map<string, number>,
   hipToGaia: Map<number, string> | null = null,
-  simbadMap: Map<string, SimbadSpectralRow> = new Map(),
+  simbad: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() },
   apsisMap: Map<string, ApsisRow> = new Map(),
 ): Promise<{
   stars: Star[];
@@ -223,7 +223,7 @@ export async function readStars(
     }
     const ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
 
-    const spectral = resolveSpectralInfo(gaiaSourceId, simbadMap, apsisMap);
+    const spectral = resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
     const spectInfo = spectral.info;
     if (spectral.source === 'simbad') spectralBySimbad++;
     else if (spectral.source === 'gspspec') spectralByGspspec++;
