@@ -27,7 +27,7 @@ behavioural changes propagate automatically.
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
 | `?` | Open the keyboard-shortcuts help modal |
-| `Esc` | Exit fullscreen if active, else cascade: observe→navigate (animated exit) → clear destination → clear focus |
+| `Esc` | Priority chain below: modal close → exit fullscreen → cascade (observe→navigate → clear destination → clear focus) |
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -50,10 +50,15 @@ shortcut switch):
    focus. Closes both modals (idempotent) and `preventDefault`s.
 2. **Other foreground modals** (`.modal`) — return without action so
    their own document listener can close them.
-3. **Active warp** — return so `warp-button.ts` can run `skipWarp()`.
-4. **Editable target** — return so `search.ts` / typeahead can handle
+3. **Fullscreen exit** — checked only after both modal cases above,
+   so a modal opened while fullscreen is active closes on the first
+   Esc instead of that keystroke being swallowed by the fullscreen
+   exit. See § Fullscreen toggle for why the exit itself can't be
+   skipped even when a modal did claim the keystroke.
+4. **Active warp** — return so `warp-button.ts` can run `skipWarp()`.
+5. **Editable target** — return so `search.ts` / typeahead can handle
    their own ESC (clear dropdown + blur).
-5. Otherwise run the cascade.
+6. Otherwise run the cascade.
 
 ### Go / Constellation pickers — DOM relocation
 
@@ -267,10 +272,12 @@ keeps the panel/topbar/overlays visible by default. `bindFullscreenToggle()`
 wires the `#brand-fullscreen` link and swaps its label via the
 `fullscreenchange` event so it tracks exits triggered by the browser's
 own fullscreen UI, not just the in-app toggle. `keyboard-shortcuts.ts`
-checks `exitFullscreenIfActive()` before anything else in its Escape
-handling — the browser exits fullscreen on Escape regardless of app
-code, so the check exists to stop the observe→navigate cascade from
-also firing on the same keystroke, not to perform the exit itself.
+checks `exitFullscreenIfActive()` after the kb-modal/`.modal` checks but
+before the rest of its Escape handling — an open modal closes on Esc
+even while fullscreen is active, since the browser exits fullscreen on
+Escape regardless of app code either way. The check's real job is
+stopping the observe→navigate cascade from also firing on the same
+keystroke, not performing the exit itself.
 
 ## Hide-chrome toggle
 

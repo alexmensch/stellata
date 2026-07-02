@@ -70,17 +70,12 @@ export function bindKeyboardShortcuts(
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     if (e.key === 'Escape') {
-      // Fullscreen exit takes priority over everything else — the browser
-      // exits fullscreen on Escape regardless of what we do here, so we
-      // stop the cascade from also firing on the same keystroke.
-      if (exitFullscreenIfActive()) {
-        e.preventDefault();
-        return;
-      }
       // Highest priority: an open kb-modal (Go / Constellation) closes
       // even if its input has focus. The Typeahead class bails its own
       // ESC when the dropdown has no results (empty input), so we own
-      // ESC for the kb-modal regardless.
+      // ESC for the kb-modal regardless. Checked before fullscreen so a
+      // modal opened while fullscreen is active closes on the first Esc
+      // instead of the keystroke being swallowed by the fullscreen exit.
       const kbModal = document.getElementById('kb-modal');
       if (kbModal && !kbModal.hidden) {
         goModal.close();
@@ -92,6 +87,13 @@ export function bindKeyboardShortcuts(
       // its own ESC via its own document listener — stay out of the way
       // so the cascade doesn't run AFTER the modal closes itself.
       if (anyVisibleSelector('.modal')) return;
+      // Fullscreen exit takes priority over the rest of the cascade — the
+      // browser exits fullscreen on Escape regardless of what we do here, so
+      // we stop the cascade from also firing on the same keystroke.
+      if (exitFullscreenIfActive()) {
+        e.preventDefault();
+        return;
+      }
       // Warp owns ESC via warp-button.ts.
       if (stellata.getWarpActive()) return;
       // Search/typeahead inputs handle ESC themselves (clear dropdown +

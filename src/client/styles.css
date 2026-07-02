@@ -164,10 +164,8 @@ html, body {
  * meta on its own line. */
 .ui-bottom .meta { margin-left: auto; }
 
-/* Hide-chrome toggle — everything but the canvas and the scale bar. The
- * chrome elements are flat siblings under <body> (see src/client/README.md
- * § Full render stack), not a single wrapping container, so this is a
- * fixed list of selectors gated by one attribute rather than one selector. */
+/* Hide-chrome toggle — see src/client/ui/README.md § Hide-chrome toggle
+ * for why this is a fixed selector list rather than one wrapping selector. */
 body[data-chrome-hidden] #ui-top-left,
 body[data-chrome-hidden] #ui-top,
 body[data-chrome-hidden] #meta,
