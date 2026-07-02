@@ -204,7 +204,7 @@ describe('evaluateOrbitDeltaPcTier1 — relative motion (no sign)', () => {
     // (no-sign helper) equals the secondary's offset scaled up by 1/(1−q).
     const tHalf = J2000_JD + elements.P / 2;
     const delta = evaluateOrbitDeltaPcTier1(elements, refSky, tHalf, systemXyz);
-    const secondary = evaluateBinaryOffsetTier1(elements, tHalf, true, systemXyz);
+    const secondary = evaluateBinaryOffsetTier1(elements, tHalf, J2000_JD, true, systemXyz);
     const ratio = Math.hypot(delta.x, delta.y, delta.z)
       / Math.hypot(secondary.x, secondary.y, secondary.z);
     expect(ratio).toBeCloseTo(1 / (1 - elements.q), 10);
@@ -226,31 +226,39 @@ describe('evaluateOrbitDeltaPcTier2 — relative motion (no sign)', () => {
   it('matches |evaluateBinaryOffsetTier2| / (1−q) at the secondary side', () => {
     const tHalf = J2000_JD + elements.P / 2;
     const delta = evaluateOrbitDeltaPcTier2(elements, refInPlane, tHalf);
-    const secondary = evaluateBinaryOffsetTier2(elements, tHalf, true);
+    const secondary = evaluateBinaryOffsetTier2(elements, tHalf, J2000_JD, true);
     const ratio = Math.hypot(delta.x, delta.y, delta.z)
       / Math.hypot(secondary.x, secondary.y, secondary.z);
     expect(ratio).toBeCloseTo(1 / (1 - elements.q), 10);
   });
 });
 
-describe('evaluateBinaryOffsetTier1 — J2000 baseline', () => {
+describe('evaluateBinaryOffsetTier1 — baseline epoch', () => {
   const elements = elt({ e: 0.591, a: 19.77, P: 50.13 * 365.25, q: 0.33 });
   const systemXyz = { x: 2, y: -1, z: 0.5 };
 
   it('A-side offset is zero at t = J2000', () => {
-    const out = evaluateBinaryOffsetTier1(elements, J2000_JD, false, systemXyz);
+    const out = evaluateBinaryOffsetTier1(elements, J2000_JD, J2000_JD, false, systemXyz);
     expect(Math.hypot(out.x, out.y, out.z)).toBeLessThan(1e-15);
   });
 
   it('B-side offset is zero at t = J2000', () => {
-    const out = evaluateBinaryOffsetTier1(elements, J2000_JD, true, systemXyz);
+    const out = evaluateBinaryOffsetTier1(elements, J2000_JD, J2000_JD, true, systemXyz);
     expect(Math.hypot(out.x, out.y, out.z)).toBeLessThan(1e-15);
+  });
+
+  it('offset is zero at t = refJd for a non-J2000 baseline epoch', () => {
+    const refJd = J2000_JD + 23 * 365.25;
+    for (const isSecondary of [false, true]) {
+      const out = evaluateBinaryOffsetTier1(elements, refJd, refJd, isSecondary, systemXyz);
+      expect(Math.hypot(out.x, out.y, out.z)).toBeLessThan(1e-15);
+    }
   });
 
   it('returns to zero after one full orbital period', () => {
     const t = J2000_JD + elements.P;
-    const a = evaluateBinaryOffsetTier1(elements, t, false, systemXyz);
-    const b = evaluateBinaryOffsetTier1(elements, t, true, systemXyz);
+    const a = evaluateBinaryOffsetTier1(elements, t, J2000_JD, false, systemXyz);
+    const b = evaluateBinaryOffsetTier1(elements, t, J2000_JD, true, systemXyz);
     expect(Math.hypot(a.x, a.y, a.z)).toBeLessThan(1e-9);
     expect(Math.hypot(b.x, b.y, b.z)).toBeLessThan(1e-9);
   });
@@ -266,8 +274,8 @@ describe('evaluateBinaryOffsetTier1 — barycenter symmetry', () => {
   it('A and B offsets are anti-parallel at every sampled phase', () => {
     for (let k = 1; k < 16; k++) {
       const t = J2000_JD + (k / 16) * elements.P;
-      const a = evaluateBinaryOffsetTier1(elements, t, false, systemXyz);
-      const b = evaluateBinaryOffsetTier1(elements, t, true, systemXyz);
+      const a = evaluateBinaryOffsetTier1(elements, t, J2000_JD, false, systemXyz);
+      const b = evaluateBinaryOffsetTier1(elements, t, J2000_JD, true, systemXyz);
       const aMag = Math.hypot(a.x, a.y, a.z);
       const bMag = Math.hypot(b.x, b.y, b.z);
       const dot = (a.x * b.x + a.y * b.y + a.z * b.z) / (aMag * bMag);
@@ -279,8 +287,8 @@ describe('evaluateBinaryOffsetTier1 — barycenter symmetry', () => {
     const expected = elements.q / (1 - elements.q);
     for (let k = 1; k < 16; k++) {
       const t = J2000_JD + (k / 16) * elements.P;
-      const a = evaluateBinaryOffsetTier1(elements, t, false, systemXyz);
-      const b = evaluateBinaryOffsetTier1(elements, t, true, systemXyz);
+      const a = evaluateBinaryOffsetTier1(elements, t, J2000_JD, false, systemXyz);
+      const b = evaluateBinaryOffsetTier1(elements, t, J2000_JD, true, systemXyz);
       const ratio = Math.hypot(a.x, a.y, a.z) / Math.hypot(b.x, b.y, b.z);
       expect(ratio).toBeCloseTo(expected, 10);
     }
@@ -289,8 +297,8 @@ describe('evaluateBinaryOffsetTier1 — barycenter symmetry', () => {
   it('barycenter (1−q)·A + q·B is zero', () => {
     for (let k = 1; k < 16; k++) {
       const t = J2000_JD + (k / 16) * elements.P;
-      const a = evaluateBinaryOffsetTier1(elements, t, false, systemXyz);
-      const b = evaluateBinaryOffsetTier1(elements, t, true, systemXyz);
+      const a = evaluateBinaryOffsetTier1(elements, t, J2000_JD, false, systemXyz);
+      const b = evaluateBinaryOffsetTier1(elements, t, J2000_JD, true, systemXyz);
       const cx = (1 - elements.q) * a.x + elements.q * b.x;
       const cy = (1 - elements.q) * a.y + elements.q * b.y;
       const cz = (1 - elements.q) * a.z + elements.q * b.z;
@@ -313,7 +321,7 @@ describe('evaluateBinaryOffsetTier1 — Sirius-shaped orbit', () => {
     let maxOffset = 0;
     for (let k = 0; k < 32; k++) {
       const t = J2000_JD + (k / 32) * elements.P;
-      const b = evaluateBinaryOffsetTier1(elements, t, true, systemXyz);
+      const b = evaluateBinaryOffsetTier1(elements, t, J2000_JD, true, systemXyz);
       maxOffset = Math.max(maxOffset, Math.hypot(b.x, b.y, b.z));
     }
     const expectedScale = elements.a * (1 + elements.e) * (1 - elements.q) * AU_PC;
@@ -329,15 +337,15 @@ describe('evaluateBinaryOffsetTier2 — invariants', () => {
   });
 
   it('A-side offset is zero at t = J2000', () => {
-    const out = evaluateBinaryOffsetTier2(elements, J2000_JD, false);
+    const out = evaluateBinaryOffsetTier2(elements, J2000_JD, J2000_JD, false);
     expect(Math.hypot(out.x, out.y, out.z)).toBeLessThan(1e-15);
   });
 
   it('A and B offsets are anti-parallel at every sampled phase', () => {
     for (let k = 1; k < 12; k++) {
       const t = J2000_JD + (k / 12) * elements.P;
-      const a = evaluateBinaryOffsetTier2(elements, t, false);
-      const b = evaluateBinaryOffsetTier2(elements, t, true);
+      const a = evaluateBinaryOffsetTier2(elements, t, J2000_JD, false);
+      const b = evaluateBinaryOffsetTier2(elements, t, J2000_JD, true);
       const aMag = Math.hypot(a.x, a.y, a.z);
       const bMag = Math.hypot(b.x, b.y, b.z);
       const dot = (a.x * b.x + a.y * b.y + a.z * b.z) / (aMag * bMag);
@@ -348,7 +356,7 @@ describe('evaluateBinaryOffsetTier2 — invariants', () => {
   it('every offset lies in the galactic plane (perpendicular to NGP)', () => {
     for (let k = 1; k < 12; k++) {
       const t = J2000_JD + (k / 12) * elements.P;
-      const off = evaluateBinaryOffsetTier2(elements, t, true);
+      const off = evaluateBinaryOffsetTier2(elements, t, J2000_JD, true);
       const dot =
         off.x * GALACTIC_NORTH_POLE_ICRS.x +
         off.y * GALACTIC_NORTH_POLE_ICRS.y +
