@@ -14,6 +14,8 @@ import {
   HELIOPAUSE_SAMPLE_POINTS_LOCAL,
 } from '../../solar-system/heliopause';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
+import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { projectToScreen } from '../../overlays/overlay-project';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
@@ -263,7 +265,7 @@ export class Picker {
       const dy = y - camPos.y;
       const dz = z - camPos.z;
       const dCam = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-      const appMag = absmag[i] + 5 * (Math.log10(dCam) - 1);
+      const appMag = apparentMagnitude(absmag[i], dCam);
       // For variables, use the bright-extreme appMag so a star whose
       // disc is only visible at peak phase remains pickable across the
       // whole cycle. Without this, a variable with static appMag just
@@ -273,11 +275,10 @@ export class Picker {
       const filterMag = appMag - amp * 0.5;
       if (filterMag > f.maxAppMag) continue;
 
-      v.set(x, y, z).project(camera);
-      if (v.z < -1 || v.z > 1) continue;
-      const screenX = (v.x + 1) * 0.5 * viewportW;
-      const screenY = (1 - v.y) * 0.5 * viewportH;
-      const pxDist = Math.hypot(cursorX - screenX, cursorY - screenY);
+      v.set(x, y, z);
+      const screen = projectToScreen(v, camera, viewportW, viewportH);
+      if (!screen) continue;
+      const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
       const pxSize = this.deps.renderedSizePxFn(i);
       const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
       // Prune to candidates that could win in either tier; the reducer

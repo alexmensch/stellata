@@ -28,7 +28,12 @@ src/client/overlays/
                                   (sentinel-init pattern — see
                                   docs/authoring-patterns.md).
   overlay-project.ts (+ test)     Shared world → screen-space projector
-                                  with near-plane clipping.
+                                  with near-plane clipping. projectToScreen
+                                  allocates a fresh tuple per call;
+                                  projectToScreenInto writes into a
+                                  caller-owned tuple for per-frame hot
+                                  paths (disc-mask, focus ring,
+                                  constellation lines, HUD).
   arrow-fade.ts (+ test)          Shared shaft-fade curve for Sol/GC
                                   arrows + future arrow consumers.
   arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)

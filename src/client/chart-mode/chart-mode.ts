@@ -10,9 +10,8 @@ import { startChartLabels, stopChartLabels } from './chart-labels';
 // Chart mode is gated on observe so the camera is anchored at a focal star
 // — the chart's "you are here" — and the user has a stable, FPS-style
 // look-around to read labels by. Toggling out of observe (ESC, mode
-// button) auto-deactivates chart so the next navigate-mode session starts
-// clean. The user's chart preference persists in `filter.chart` so a
-// subsequent observe entry restores chart mode automatically.
+// button) clears `filter.chart` so the next observe session starts in
+// navigate rendering unless the user re-enables chart.
 //
 // Side-effects when chart engages:
 //   - body.chart class on document.body (selectors in styles.css can

@@ -4593,42 +4593,63 @@ class Stage6QFallbackTests(unittest.TestCase):
             distance_pc=1.3,
         )
 
+    def _make_pair_fixture(
+        self,
+        *,
+        primary_spect: str,
+        secondary_spect: str | None,
+        primary_absmag: float = 4.0,
+        secondary_absmag: float = 5.0,
+        wds_id: str = "00000+0000",
+        orbit: "tuple[bb.OrbitElements | None, str]" = (None, "none"),
+        has_secondary_athyg: bool = True,
+        optical_via: str = "orbit_kept",
+    ) -> "tuple[bb.WdsPair, list, list, list, list, bb.IdentifierIndices]":
+        athyg_rows = [
+            bb.AthygRow(
+                hip=None, tyc=None, gaia=1, hd=None,
+                ra_deg=0.0, dec_deg=0.0,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                dist_pc=10.0, v_mag=None, absmag=primary_absmag,
+                ci=None, spect=primary_spect, proper="",
+                pm_ra_masyr=None, pm_de_masyr=None,
+            ),
+        ]
+        if has_secondary_athyg:
+            athyg_rows.append(
+                bb.AthygRow(
+                    hip=None, tyc=None, gaia=2, hd=None,
+                    ra_deg=0.0, dec_deg=0.0,
+                    x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                    dist_pc=10.0, v_mag=None, absmag=secondary_absmag,
+                    ci=None, spect=secondary_spect, proper="",
+                    pm_ra_masyr=None, pm_de_masyr=None,
+                ),
+            )
+        pair = _wds_pair(wds_id=wds_id, components="AB")
+        components = [
+            _resolved(gaia=1, wds_id=wds_id, component="A", is_primary=True),
+            _resolved(gaia=2, wds_id=wds_id, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=100.0),
+            _component_astrometry(parallax_mas=100.0),
+        ]
+        orbits = [orbit]
+        classifications = [bb.OpticalClassification(True, optical_via)]
+        indices = _indices_with_astrometry(athyg=athyg_rows)
+        return pair, components, astrometry, orbits, classifications, indices
+
     def test_orb6_visual_fills_q_from_spectral_classes(self) -> None:
         # α Cen-shaped: ORB6 visual orbit, G2V primary + K1V secondary,
         # both with AT-HYG absmag. q is filled on both rows.
-        pair = _wds_pair(wds_id="14396-6050", components="AB")
-        athyg_rows = [
-            bb.AthygRow(
-                hip=71683, tyc=None, gaia=1, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=1.3, v_mag=None, absmag=4.379,
-                ci=None, spect="G2V", proper="alf Cen A",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-            bb.AthygRow(
-                hip=71681, tyc=None, gaia=2, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=1.3, v_mag=None, absmag=5.71,
-                ci=None, spect="K1V", proper="alf Cen B",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-        ]
-        components = [
-            _resolved(gaia=1, wds_id="14396-6050",
-                      component="A", is_primary=True),
-            _resolved(gaia=2, wds_id="14396-6050",
-                      component="B", is_primary=False),
-        ]
-        astrometry = [
-            _component_astrometry(parallax_mas=750.0),
-            _component_astrometry(parallax_mas=750.0),
-        ]
-        orbits = [(self._orbit_orb6(), "orb6")]
-        classifications = [bb.OpticalClassification(True, "orbit_kept")]
-        indices = _indices_with_astrometry(athyg=athyg_rows)
-
+        pair, components, astrometry, orbits, classifications, indices = (
+            self._make_pair_fixture(
+                primary_spect="G2V", secondary_spect="K1V",
+                primary_absmag=4.379, secondary_absmag=5.71,
+                wds_id="14396-6050", orbit=(self._orbit_orb6(), "orb6"),
+            )
+        )
         rows = bb.build_multiples_rows(
             pairs=[pair], components=components, astrometry=astrometry,
             orbits=orbits, classifications=classifications,
@@ -4646,7 +4667,6 @@ class Stage6QFallbackTests(unittest.TestCase):
     def test_nss_supplied_q_is_preserved(self) -> None:
         # Gaia NSS already supplied q=0.85. The spectral-class fallback
         # must NOT overwrite it even when both components have spect.
-        pair = _wds_pair(wds_id="22150+5703", components="AB")
         nss_orbit = bb.OrbitElements(
             P_days=1.0, T_jd=2451545.0, e=0.1,
             a_AU=0.1, i_rad=1.0,
@@ -4654,38 +4674,13 @@ class Stage6QFallbackTests(unittest.TestCase):
             q=0.85,
             distance_pc=26.2,
         )
-        athyg_rows = [
-            bb.AthygRow(
-                hip=109857, tyc=None, gaia=1, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=26.2, v_mag=None, absmag=2.088,
-                ci=None, spect="F0V", proper="eps Cep",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-            bb.AthygRow(
-                hip=None, tyc=None, gaia=2, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=26.2, v_mag=None, absmag=1.048,
-                ci=None, spect="A5V", proper="",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-        ]
-        components = [
-            _resolved(gaia=1, wds_id="22150+5703",
-                      component="A", is_primary=True),
-            _resolved(gaia=2, wds_id="22150+5703",
-                      component="B", is_primary=False),
-        ]
-        astrometry = [
-            _component_astrometry(parallax_mas=38.0),
-            _component_astrometry(parallax_mas=38.0),
-        ]
-        orbits = [(nss_orbit, "gaia_nss")]
-        classifications = [bb.OpticalClassification(True, "orbit_kept")]
-        indices = _indices_with_astrometry(athyg=athyg_rows)
-
+        pair, components, astrometry, orbits, classifications, indices = (
+            self._make_pair_fixture(
+                primary_spect="F0V", secondary_spect="A5V",
+                primary_absmag=2.088, secondary_absmag=1.048,
+                wds_id="22150+5703", orbit=(nss_orbit, "gaia_nss"),
+            )
+        )
         rows = bb.build_multiples_rows(
             pairs=[pair], components=components, astrometry=astrometry,
             orbits=orbits, classifications=classifications,
@@ -4699,31 +4694,13 @@ class Stage6QFallbackTests(unittest.TestCase):
         # ORB6 orbit emitted but the secondary has no spectral class
         # (no SIMBAD entry, no AT-HYG row). The fallback yields None and
         # both rows stay with q=None.
-        pair = _wds_pair(wds_id="00000+0001", components="AB")
-        athyg_rows = [
-            bb.AthygRow(
-                hip=1, tyc=None, gaia=1, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=10.0, v_mag=None, absmag=4.0,
-                ci=None, spect="G2V", proper="",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-        ]
-        components = [
-            _resolved(gaia=1, wds_id="00000+0001",
-                      component="A", is_primary=True),
-            _resolved(gaia=2, wds_id="00000+0001",
-                      component="B", is_primary=False),
-        ]
-        astrometry = [
-            _component_astrometry(parallax_mas=100.0),
-            _component_astrometry(parallax_mas=100.0),
-        ]
-        orbits = [(self._orbit_orb6(), "orb6")]
-        classifications = [bb.OpticalClassification(True, "orbit_kept")]
-        indices = _indices_with_astrometry(athyg=athyg_rows)
-
+        pair, components, astrometry, orbits, classifications, indices = (
+            self._make_pair_fixture(
+                primary_spect="G2V", secondary_spect=None,
+                wds_id="00000+0001", orbit=(self._orbit_orb6(), "orb6"),
+                has_secondary_athyg=False,
+            )
+        )
         rows = bb.build_multiples_rows(
             pairs=[pair], components=components, astrometry=astrometry,
             orbits=orbits, classifications=classifications,
@@ -4737,39 +4714,13 @@ class Stage6QFallbackTests(unittest.TestCase):
         # No orbit emitted at all → q is None on both rows even when
         # both have spect. Fallback only kicks in when orbital geometry
         # was resolved but q wasn't.
-        pair = _wds_pair(wds_id="00000+0002", components="AB")
-        athyg_rows = [
-            bb.AthygRow(
-                hip=1, tyc=None, gaia=1, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=10.0, v_mag=None, absmag=4.0,
-                ci=None, spect="G2V", proper="",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-            bb.AthygRow(
-                hip=None, tyc=None, gaia=2, hd=None,
-                ra_deg=0.0, dec_deg=0.0,
-                x_pc=0.0, y_pc=0.0, z_pc=0.0,
-                dist_pc=10.0, v_mag=None, absmag=5.0,
-                ci=None, spect="K0V", proper="",
-                pm_ra_masyr=None, pm_de_masyr=None,
-            ),
-        ]
-        components = [
-            _resolved(gaia=1, wds_id="00000+0002",
-                      component="A", is_primary=True),
-            _resolved(gaia=2, wds_id="00000+0002",
-                      component="B", is_primary=False),
-        ]
-        astrometry = [
-            _component_astrometry(parallax_mas=100.0),
-            _component_astrometry(parallax_mas=100.0),
-        ]
-        orbits = [(None, "none")]
-        classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
-        indices = _indices_with_astrometry(athyg=athyg_rows)
-
+        pair, components, astrometry, orbits, classifications, indices = (
+            self._make_pair_fixture(
+                primary_spect="G2V", secondary_spect="K0V",
+                wds_id="00000+0002", orbit=(None, "none"),
+                optical_via="wds_notes_kept",
+            )
+        )
         rows = bb.build_multiples_rows(
             pairs=[pair], components=components, astrometry=astrometry,
             orbits=orbits, classifications=classifications,

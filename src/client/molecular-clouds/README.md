@@ -1,12 +1,14 @@
 # Molecular cloud overlay
 
-> **Status:** Shelved. `FilterState.showMolecularClouds` defaults
-> to `false`, the user-facing toggle is removed from the panel, and the
-> URL flag bit 2 is reserved (no longer encoded). The render path,
-> shaders, and renderer code in this folder are all preserved so the
-> layer can be re-enabled with a default flip once the visual treatment
-> is refined. Chart-mode integration (`setCloudsIsobar`) is still wired
-> against the now-invisible group.
+> **Status:** Shelved. The `attachClouds(...)` call in `main.ts` is
+> commented out, so the layer is never constructed and renders nothing
+> (there is no `FilterState` field for it). The user-facing toggle is
+> removed from the panel, and URL flag bit 2 is reserved (no longer
+> encoded). The render path, shaders, and renderer code in this folder
+> are all preserved so the layer can be re-enabled by restoring that
+> call once the visual treatment is refined. Chart-mode integration
+> (`setCloudsIsobar`) is still wired but no-ops via optional chaining
+> while the layer is unattached.
 
 `molecular-clouds.ts` renders ~96 named local SF clouds as soft warm
 ellipsoids. Originally default-on with a toggle in the Galactic-overlays
@@ -109,8 +111,9 @@ where they should.
 
 Cloud focus and the cloud measurement vector ride in the shared `?v=`
 blob (mutually exclusive with star focus and the star measurement vector
-respectively). The MC overlay disable flag also lives there (flags-byte
-bit 2, default-omitted since the layer is default-on).
+respectively). The MC overlay disable flag formerly rode at flags-byte
+bit 2; with the layer shelved, that bit is reserved and no longer
+encoded (`url-state.ts` `FLAG_*` block).
 
 ## Dev-console levers
 

@@ -9,10 +9,12 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
+from paths import REPO_ROOT  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = REPO_ROOT
 OUT = ROOT / "data" / "hipparcos" / "hip2_van_leeuwen.tsv"
 
 # Bounds around HIP2's published row count (117,955). Slack accommodates

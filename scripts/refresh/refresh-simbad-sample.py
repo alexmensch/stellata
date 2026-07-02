@@ -13,10 +13,12 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
+from paths import REPO_ROOT  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = REPO_ROOT
 OUT = ROOT / "data" / "simbad" / "simbad_sample.tsv"
 
 # Reproducibility seed. Bumping this regenerates every row; treat it as a
