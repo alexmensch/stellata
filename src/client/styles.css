@@ -164,6 +164,41 @@ html, body {
  * meta on its own line. */
 .ui-bottom .meta { margin-left: auto; }
 
+/* Hide-chrome toggle — everything but the canvas and the scale bar. The
+ * chrome elements are flat siblings under <body> (see src/client/README.md
+ * § Full render stack), not a single wrapping container, so this is a
+ * fixed list of selectors gated by one attribute rather than one selector. */
+body[data-chrome-hidden] #ui-top-left,
+body[data-chrome-hidden] #ui-top,
+body[data-chrome-hidden] #meta,
+body[data-chrome-hidden] #tooltip,
+body[data-chrome-hidden] #warp-btn,
+body[data-chrome-hidden] #overlay {
+  display: none;
+}
+.chrome-restore-btn {
+  display: none;
+  position: fixed;
+  right: 14px;
+  bottom: 16px;
+  z-index: 12;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--fg-dim);
+  background: rgba(7, 9, 18, 0.85);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.chrome-restore-btn:hover {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+body[data-chrome-hidden] .chrome-restore-btn { display: block; }
+
 .topbar {
   display: flex;
   flex-direction: column;

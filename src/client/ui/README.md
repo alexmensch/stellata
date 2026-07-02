@@ -23,6 +23,7 @@ behavioural changes propagate automatically.
 | `H` | Toggle `showHud` |
 | `S` | Toggle `showGalacticGrid` |
 | `F` | Toggle browser fullscreen (`fullscreen.ts`) |
+| `U` | Toggle hide-chrome (`chrome-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
 | `?` | Open the keyboard-shortcuts help modal |
@@ -270,6 +271,20 @@ checks `exitFullscreenIfActive()` before anything else in its Escape
 handling — the browser exits fullscreen on Escape regardless of app
 code, so the check exists to stop the observe→navigate cascade from
 also firing on the same keystroke, not to perform the exit itself.
+
+## Hide-chrome toggle
+
+`chrome-hidden.ts` toggles `body[data-chrome-hidden]`. The chrome
+elements it targets (`#ui-top-left`, `#ui-top`, `#meta`, `#tooltip`,
+`#warp-btn`, `#overlay`) are flat siblings under `<body>`, not
+children of one wrapping container, so the CSS is a fixed list of
+selectors sharing that one attribute rather than a single ancestor
+selector. `#scene` (canvas) and `#scale-bar` are deliberately excluded
+so a hidden-chrome screenshot still shows the scene-scale readout.
+`#chrome-restore-btn` is a fixed corner button, `display: none` by
+default and shown only via `body[data-chrome-hidden] .chrome-restore-btn`
+— it's the only way back once the `#brand-hide-chrome` link (itself
+inside `#ui-top-left`) disappears with the rest of the chrome.
 
 ## `[hidden]` specificity and `.modal { display: grid }`
 

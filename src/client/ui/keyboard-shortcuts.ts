@@ -3,6 +3,7 @@ import { DEFAULT_FOV } from '../stellata';
 import { bindHelpModal } from '../modals/help-modal';
 import { pushTapAndCheckTriple } from './keyboard-shortcuts-pure';
 import { exitFullscreenIfActive, toggleFullscreen } from './fullscreen';
+import { toggleChromeHidden } from './chrome-hidden';
 
 // Single global keydown listener with a small dispatch table. Every
 // shortcut is a thin wrapper over an existing public API so future
@@ -157,6 +158,10 @@ export function bindKeyboardShortcuts(
         break;
       case 'f': case 'F':
         toggleFullscreen();
+        e.preventDefault();
+        break;
+      case 'u': case 'U':
+        toggleChromeHidden();
         e.preventDefault();
         break;
       case 'o': case 'O':
