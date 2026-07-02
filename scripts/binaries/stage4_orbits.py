@@ -29,19 +29,20 @@ from stage3_astrometry import ComponentAstrometry  # noqa: E402
 # log line and unit tests both read from this tuple so renaming a route
 # only edits one place.
 ORBIT_VIA_VALUES: tuple[str, ...] = (
-    "gaia_nss",
     "orb6",
+    "gaia_nss",
     "orb6_spectroscopic",
     "none",
 )
 
-# NSS-vs-ORB6 routing gate. NSS wins whenever (any component carries an
-# NSS row) AND (period < ~3 yr OR apparent angular semi-major axis <
-# 1″). The OR is non-exclusive: a long-period system Gaia detected with
-# a sub-arcsec photocentre orbit still routes to NSS. 95.8% of DR3 NSS
-# rows have P < 3 yr — the threshold is conservative against the bulk
-# of the catalog. The few longer-period rows (P up to ~27 yr) are
-# captured by the sub-arcsec gate when their TI algebra resolves a < 1″.
+# NSS detectability-regime gate. NSS claims a pair with no ORB6 visual
+# orbit whenever (any component carries an NSS row) AND (period < ~3 yr
+# OR apparent photocentre semi-major axis a0 < 1″). The OR is
+# non-exclusive: a long-period system Gaia detected with a sub-arcsec
+# photocentre orbit still routes to NSS. 95.8% of DR3 NSS rows have
+# P < 3 yr — the threshold is conservative against the bulk of the
+# catalog. The few longer-period rows (P up to ~27 yr) are captured by
+# the sub-arcsec gate when their TI algebra resolves a0 < 1″.
 NSS_PERIOD_THRESHOLD_DAYS = 3.0 * 365.25
 NSS_SEPARATION_THRESHOLD_MAS = 1000.0
 
@@ -56,10 +57,10 @@ J2000_REF_EPOCH_JD = 2451545.0
 # Modified Julian Date offset (ORB6 T0_unit='m').
 MJD_TO_JD_OFFSET = 2400000.5
 
-# NSS solution types whose Thiele-Innes constants encode the full
-# orbital geometry (A,B,F,G populated in 100% of DR3 rows). The TI →
-# Campbell algebra recovers a (mas), i (rad), Ω (rad), ω (rad); the
-# stored inclination / arg_periastron columns are null for these rows.
+# NSS solution types whose Thiele-Innes constants encode the
+# PHOTOCENTRE's orbit around the barycentre, not the relative A–B
+# orbit (A,B,F,G populated in 100% of DR3 rows; the stored
+# inclination / arg_periastron columns are null).
 NSS_TI_DERIVED_SOLUTION_TYPES: frozenset[str] = frozenset({
     "Orbital",
     "OrbitalAlternative",
@@ -218,10 +219,11 @@ def nss_to_canonical_elements(
 
     * TI-derived (``Orbital``, ``OrbitalAlternative*``,
       ``OrbitalTargetedSearch*``, ``AstroSpectroSB1``) — recover
-      a/i/Ω/ω from A,B,F,G via Heintz 1978 algebra. ``a`` requires a
-      system parallax to convert mas → AU; if ``plx_mas`` is ``None``
-      or non-positive, ``a_AU`` is left ``None`` but the angles still
-      populate.
+      i/Ω/ω from A,B,F,G via Heintz 1978 algebra. The TI semi-major
+      axis is the photocentre's a0, not the relative A–B orbit, so
+      ``a_AU`` is always left ``None`` (README.md § Stage 4); ω is
+      the photocentre's, π away from the secondary's relative-orbit
+      ω when the primary dominates the flux.
     * Eclipsing (``EclipsingBinary``, ``EclipsingSpectro``) — read
       inclination + arg_periastron from the stored columns; eclipse
       photometry doesn't constrain ``a`` or ``Ω``. ``EclipsingSpectro``
@@ -261,9 +263,7 @@ def nss_to_canonical_elements(
         if A is not None and B is not None and F is not None and G is not None:
             camp = _thiele_innes_to_campbell(A, B, F, G)
             if camp is not None:
-                a_mas, i_rad, Omega_rad, omega_rad = camp
-                if plx_mas is not None and plx_mas > 0.0:
-                    a_AU = a_mas / plx_mas
+                _a0_mas, i_rad, Omega_rad, omega_rad = camp
     elif soln in NSS_ECLIPSING_SOLUTION_TYPES:
         i_deg = safe_float(nss_row.get("inclination", ""))
         omega_deg = safe_float(nss_row.get("arg_periastron", ""))
@@ -282,10 +282,10 @@ def nss_to_canonical_elements(
     )
 
 
-def _nss_apparent_a_mas(nss_row: dict[str, str]) -> float | None:
-    """Apparent angular semi-major axis in mas for the regime gate. TI-
-    derived only — eclipsing / SB types don't constrain spatial scale
-    so they get gated on period alone.
+def _nss_apparent_a0_mas(nss_row: dict[str, str]) -> float | None:
+    """Apparent photocentre semi-major axis a0 in mas for the
+    detectability-regime gate. TI-derived only — eclipsing / SB types
+    don't constrain spatial scale so they get gated on period alone.
     """
     soln = (nss_row.get("nss_solution_type") or "").strip()
     if soln not in NSS_TI_DERIVED_SOLUTION_TYPES:
@@ -303,15 +303,16 @@ def _nss_apparent_a_mas(nss_row: dict[str, str]) -> float | None:
 
 
 def _nss_in_regime(nss_row: dict[str, str]) -> bool:
-    """``period < 3 yr`` OR ``a < 1″``. Either gate alone is sufficient.
-    If neither quantity is computable (P missing AND no TI), the row is
-    treated as out-of-regime — the caller falls through to ORB6.
+    """``period < 3 yr`` OR ``a0 < 1″``. Either gate alone is
+    sufficient. If neither quantity is computable (P missing AND no
+    TI), the row is treated as out-of-regime — the caller falls
+    through to ORB6 spectroscopic / none.
     """
     P_days = safe_float(nss_row.get("period", ""))
     if P_days is not None and P_days < NSS_PERIOD_THRESHOLD_DAYS:
         return True
-    a_mas = _nss_apparent_a_mas(nss_row)
-    if a_mas is not None and a_mas < NSS_SEPARATION_THRESHOLD_MAS:
+    a0_mas = _nss_apparent_a0_mas(nss_row)
+    if a0_mas is not None and a0_mas < NSS_SEPARATION_THRESHOLD_MAS:
         return True
     return False
 
@@ -446,23 +447,33 @@ def select_orbit(
 ) -> tuple[OrbitElements | None, str]:
     """Priority cascade per WDS pair:
 
-    1. ``gaia_nss`` — any component has an NSS two-body row AND the
+    1. ``orb6`` — ORB6 visual orbit (grade ∈ {1..5}). Grade tiebreak;
+       ref-year secondary tiebreak. The genuine relative A–B orbit —
+       outranks NSS, whose solution types never yield a relative
+       semi-major axis (the TI a is the photocentre's a0).
+    2. ``gaia_nss`` — any component has an NSS two-body row AND the
        solution falls inside Gaia's astrometric-detectability regime
-       (P < ~3 yr OR a < 1″). Primary's NSS row preferred when both
+       (P < ~3 yr OR a0 < 1″). Primary's NSS row preferred when both
        components have one (secondary is rarely the catalogued
        systemic source).
-    2. ``orb6`` — ORB6 visual orbit (grade ∈ {1..5}). Grade tiebreak;
-       ref-year secondary tiebreak.
     3. ``orb6_spectroscopic`` — ORB6 spectroscopic / astrometric-only
        (grade ∈ {8,9}). Same tiebreaks.
     4. ``none`` — visual-only pair with no orbital information on file.
 
     The two ``ComponentAstrometry`` arguments are required (not
-    optional) so the parallax-needed conversions (NSS a_mas → AU; ORB6
-    a_unit='a'/'m' → AU) always have a value to consult, even when only
-    one of the two components has 5p astrometry attached.
+    optional) so the parallax-needed conversion (ORB6 a_unit='a'/'m' →
+    AU) always has a value to consult, even when only one of the two
+    components has 5p astrometry attached.
     """
     plx_mas = _system_parallax_mas([primary_astrometry, secondary_astrometry])
+
+    # ORB6 visual branch.
+    visual = [e for e in orb6_for_pair if e.grade in ORB6_VISUAL_GRADES]
+    if visual:
+        best = _pick_best_orb6(visual)
+        orbit = orb6_to_canonical_elements(best, plx_mas)
+        if orbit is not None:
+            return orbit, "orb6"
 
     # NSS branch — primary then secondary.
     for comp in (primary, secondary):
@@ -476,14 +487,6 @@ def select_orbit(
         orbit = nss_to_canonical_elements(nss_row, plx_mas)
         if orbit is not None:
             return orbit, "gaia_nss"
-
-    # ORB6 visual branch.
-    visual = [e for e in orb6_for_pair if e.grade in ORB6_VISUAL_GRADES]
-    if visual:
-        best = _pick_best_orb6(visual)
-        orbit = orb6_to_canonical_elements(best, plx_mas)
-        if orbit is not None:
-            return orbit, "orb6"
 
     # ORB6 spectroscopic / astrometric-only branch.
     spec = [e for e in orb6_for_pair if e.grade in ORB6_SPECTROSCOPIC_GRADES]

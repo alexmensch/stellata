@@ -146,7 +146,7 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 06047-4505	HD 41742	28790	5567901976544151168	27.940	0.3	3.699	F5.5V	E:28764:5567900121118276736:4.182	221.19	SIMBAD HD 41742 sp_type=F5.5V. Companion E HIP 28764 (F8V) per multiples.tsv. Gaia NSS orbit P=221.19 d.
 10435+4612	HD 92787 / ψ UMa	52469	829776725129940480	36.916	0.4	2.344	F5III	B:52498:829777377964973952:4.458	5.62	SIMBAD HD 92787 sp_type=F5III. Companion B HIP 52498 (F9V) per multiples.tsv. Gaia NSS orbit P=5.62 d.
 01137+0735	ζ Piscium / Revati	5737	2577061092921353984	40.837	0.4	2.155	A7IV	B:5743:2577061260424130304:3.403	9.08	SIMBAD * zet Psc A sp_type=A7IV. Companion B HIP 5743 (F7V) per multiples.tsv. Gaia NSS orbit P=9.08 d.
-21582+8252	HD 209942	108456	2299477734539451392	40.081	0.4	3.905	F6IV-V	B:108461:2299477768899190400:4.444	1980.59	SIMBAD HD 209942 sp_type=F6IV-V. Companion B HIP 108461 (F5) per multiples.tsv. Gaia NSS orbit P=1980.59 d.
+21582+8252	HD 209942	108456	2299477734539451392	40.081	0.4	3.905	F6IV-V	B:108461:2299477768899190400:4.444	8944.97	SIMBAD HD 209942 sp_type=F6IV-V. Companion B HIP 108461 (F5) per multiples.tsv. ORB6 PkO2024 grade-3 visual orbit for Aa,Ab: P=24.49 yr (8944.97 d); the Gaia NSS Orbital P=1980.59 d exceeds the DR3 observing window and is superseded.
 07041+7514	HD 51067	34085	1115378031539193984	38.790	0.4	4.206	G0	B:34087:1115378031538627712:5.268	123.40	SIMBAD HD 51067 sp_type=G0 (bare class; no lumClass pin). Companion B HIP 34087 (G5) per multiples.tsv. Gaia NSS orbit P=123.40 d.
 # ---- Multi-star showcase systems ---------------------------------------
 # Castor (α Gem) is a 6-star multiple. Catalog.bin holds the primary
