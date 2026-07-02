@@ -109,13 +109,14 @@ under AdditiveBlending in the glow pass, and dropping the opaque disc
 
 `iEclipseDim` (float, per-instance, default 1.0) multiplies the back
 component's flux when an orbital pair's discs overlap from the camera
-viewpoint. Written each frame by `EclipsePhotometryField` (see
-`../binaries/README.md` § Eclipse photometry). Folded into `appMag` in
-the **glow pass only** — the disc pass at close range handles
-occlusion geometrically via the depth buffer. Integration shell
-initialises the buffer to 1.0 at allocation and on every re-attach,
-so the shader's `iEclipseDim < 1.0` gate fires only on slots the
-field has actively written this frame.
+viewpoint. Written by `EclipsePhotometryField` (see
+`../binaries/README.md` § Eclipse photometry) with real-time
+smoothing, and re-uploaded only on frames with active dims. Folded
+into `appMag` in the **glow pass only** — the disc pass at close range
+handles occlusion geometrically via the depth buffer. Integration
+shell initialises the buffer to 1.0 at allocation and on every
+re-attach, so the shader's `iEclipseDim < 1.0` gate fires only on
+slots the field holds below 1.
 
 `iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude
 radial pulsation block. Built once per `attachBinaries` from

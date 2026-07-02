@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   circleCircleLensArea,
-  eclipseDim,
+  eclipseDimFromOffsets,
+  orbitPlaneNormalICRS,
   DIM_FLOOR,
+  type EclipseResult,
 } from './eclipse-photometry-pure';
+import { type OrbitalElements } from './binary-orbit-pure';
 
 describe('circleCircleLensArea', () => {
   it('disjoint circles return zero', () => {
@@ -46,105 +49,95 @@ describe('circleCircleLensArea', () => {
   });
 });
 
-describe('eclipseDim — degenerate inputs', () => {
-  const cam = { x: 0, y: 0, z: 0 };
-  const primary = { x: 0, y: 0, z: 10 };
-  const secondary = { x: 0.001, y: 0, z: 10 };
+/** los = primary − camera; rel = secondary − primary. */
+function dimOf(
+  los: [number, number, number],
+  rel: [number, number, number],
+  rPriPc: number,
+  rSecPc: number,
+): EclipseResult {
+  return eclipseDimFromOffsets(
+    los[0], los[1], los[2],
+    rel[0], rel[1], rel[2],
+    rPriPc, rSecPc,
+  );
+}
 
+describe('eclipseDimFromOffsets — degenerate inputs', () => {
   it('zero radii produce no dim', () => {
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: 0, radiusSecondaryPc: 0,
-    });
+    const r = dimOf([0, 0, 10], [0.001, 0, 0], 0, 0);
     expect(r.dim).toBe(1);
   });
 
-  it('zero distance returns no dim (defensive)', () => {
-    const r = eclipseDim({
-      primary: cam, secondary, camera: cam,
-      radiusPrimaryPc: 1, radiusSecondaryPc: 1,
-    });
+  it('zero relative offset produces no dim', () => {
+    const r = dimOf([0, 0, 10], [0, 0, 0], 1e-3, 1e-3);
     expect(r.dim).toBe(1);
+  });
+
+  it('camera inside either disc produces no dim (resolved-disc regime)', () => {
+    expect(dimOf([0, 0, 1], [0.001, 0, 0], 1, 1e-3).dim).toBe(1);
+    expect(dimOf([0, 0, 1], [0, 0, 1], 1e-3, 1.5).dim).toBe(1);
   });
 });
 
-describe('eclipseDim — no overlap', () => {
+describe('eclipseDimFromOffsets — no overlap', () => {
   it('wide projected separation: dim = 1', () => {
-    // 1 R_sun ≈ 2.25e-8 pc; place pair 1 pc from camera with 1 pc lateral
+    // 1 R_sun ≈ 2.25e-8 pc; pair 1 pc from camera with 1 pc lateral
     // separation — angular separation ≫ both angular radii.
-    const cam = { x: 0, y: 0, z: 0 };
-    const primary = { x: 0, y: 0, z: 1 };
-    const secondary = { x: 1, y: 0, z: 1 };
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: 2.25e-8, radiusSecondaryPc: 2.25e-8,
-    });
+    const r = dimOf([0, 0, 1], [1, 0, 0], 2.25e-8, 2.25e-8);
+    expect(r.dim).toBe(1);
+  });
+
+  it('resolves sub-AU geometry against a float32-quantized line of sight', () => {
+    // The regression this module exists for: at 25 pc from the local
+    // origin the float32 position quantum (~0.6 AU) exceeds the pair
+    // separation, so ANY approach that differences two buffer positions
+    // reads garbage. Here los carries float32 quantization while rel is
+    // exact — a 0.08 AU lateral offset must still resolve as
+    // no-overlap (true angular separation ≈ 1.5e-8 rad, radii sum
+    // ≈ 4.9e-9 rad).
+    const AU = 4.84813681e-6;
+    const c = Math.fround(25 / Math.sqrt(3));
+    const rSun = 2.25461e-8;
+    const r = dimOf([c, c, c], [0.08 * AU, 0, 0], 2.8 * rSun, 2.6 * rSun);
     expect(r.dim).toBe(1);
   });
 });
 
-describe('eclipseDim — front/back determination', () => {
-  // Place a small dim secondary in front of a larger bright primary,
-  // collinear with the camera. The smaller front disc fully covers a
-  // patch of the larger back disc; the primary is the back component
-  // and carries the dim.
+describe('eclipseDimFromOffsets — front/back determination', () => {
   it('secondary closer to camera → primary is the back', () => {
-    const cam = { x: 0, y: 0, z: 0 };
-    const primary = { x: 0, y: 0, z: 10 };
-    const secondary = { x: 0, y: 0, z: 5 };
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: 5e-3, radiusSecondaryPc: 5e-3,
-    });
+    const r = dimOf([0, 0, 10], [0, 0, -5], 5e-3, 5e-3);
     expect(r.front).toBe('secondary');
     expect(r.dim).toBeLessThan(1);
   });
 
   it('primary closer to camera → secondary is the back', () => {
-    const cam = { x: 0, y: 0, z: 0 };
-    const primary = { x: 0, y: 0, z: 5 };
-    const secondary = { x: 0, y: 0, z: 10 };
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: 5e-3, radiusSecondaryPc: 5e-3,
-    });
+    const r = dimOf([0, 0, 5], [0, 0, 5], 5e-3, 5e-3);
     expect(r.front).toBe('primary');
     expect(r.dim).toBeLessThan(1);
   });
+
+  it('front/back stays stable when the LOS offset dwarfs the pair offset', () => {
+    // dSec − dPri ≈ 1e-9 pc — far below what differencing two ~25 pc
+    // distances resolves; the discriminant form must still pick it up.
+    const rel: [number, number, number] = [1e-9, 0, 0];
+    const r = dimOf([25, 0, 0], rel, 5e-9, 5e-9);
+    expect(r.front).toBe('primary');
+  });
 });
 
-describe('eclipseDim — full and partial occlusion', () => {
+describe('eclipseDimFromOffsets — full and partial occlusion', () => {
   it('small back fully hidden by larger front: dim clamps to DIM_FLOOR', () => {
-    // Front disc much larger than back disc; collinear with camera.
-    // Back's full disc is hidden — true dim would be 0, but the pure
-    // helper floors at DIM_FLOOR so the shader's
-    // `iEclipseDim == 0` sentinel stays reserved for unwritten slots.
-    // DIM_FLOOR = 0.001 dims by 7.5 mag, which reads as invisible in
-    // the glow-pass composite.
-    const cam = { x: 0, y: 0, z: 0 };
-    const primary = { x: 0, y: 0, z: 10 }; // back
-    const secondary = { x: 0, y: 0, z: 5 }; // front (closer + much bigger)
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: 5e-3, radiusSecondaryPc: 0.5,
-    });
+    // Front (secondary) closer and much bigger; back's full disc hidden.
+    const r = dimOf([0, 0, 10], [0, 0, -5], 5e-3, 0.5);
     expect(r.front).toBe('secondary');
     expect(r.dim).toBe(DIM_FLOOR);
   });
 
   it('small front on bigger back: dim = 1 − (alpha_front / alpha_back)²', () => {
-    // Front disc much smaller than back; collinear → front fully on
-    // top of back. Occluded area = π·alpha_front²; dim factor on back
-    // is 1 − alpha_front² / alpha_back².
-    const cam = { x: 0, y: 0, z: 0 };
-    const primary = { x: 0, y: 0, z: 10 }; // back (bigger angular)
-    const secondary = { x: 0, y: 0, z: 5 }; // front (smaller angular)
-    const rPriPc = 0.1;   // alpha_pri = 0.01
-    const rSecPc = 0.001; // alpha_sec = 2e-4
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: rPriPc, radiusSecondaryPc: rSecPc,
-    });
+    const rPriPc = 0.1;   // back at d=10 → alpha 0.01
+    const rSecPc = 0.001; // front at d=5 → alpha 2e-4
+    const r = dimOf([0, 0, 10], [0, 0, -5], rPriPc, rSecPc);
     expect(r.front).toBe('secondary');
     const alphaFront = rSecPc / 5;
     const alphaBack = rPriPc / 10;
@@ -153,25 +146,63 @@ describe('eclipseDim — full and partial occlusion', () => {
   });
 
   it('equal radii grazing transit: 0 < dim < 1', () => {
-    // Same angular radii; perpendicular separation halfway between 0
-    // and (alpha_pri + alpha_sec) → partial overlap, dim somewhere in
-    // the middle.
-    const cam = { x: 0, y: 0, z: 0 };
     const dPri = 5;
     const dSec = 10;
     const rPc = 0.05;
     const alphaPri = rPc / dPri;
     const alphaSec = rPc / dSec;
     const theta = 0.6 * (alphaPri + alphaSec);
-    const primary = { x: 0, y: 0, z: dPri };
-    // Place secondary offset by theta·d_sec in x, behind the primary.
-    const secondary = { x: theta * dSec, y: 0, z: dSec };
-    const r = eclipseDim({
-      primary, secondary, camera: cam,
-      radiusPrimaryPc: rPc, radiusSecondaryPc: rPc,
-    });
+    const r = dimOf([0, 0, dPri], [theta * dSec, 0, dSec - dPri], rPc, rPc);
     expect(r.front).toBe('primary');
     expect(r.dim).toBeGreaterThan(0);
     expect(r.dim).toBeLessThan(1);
+  });
+});
+
+describe('orbitPlaneNormalICRS', () => {
+  it('tier-1 edge-on orbit at (10,0,0): plane spans z (north) × x (radial) → normal ∥ y', () => {
+    const elements: OrbitalElements = {
+      P: 10, T: 0, e: 0, a: 1, i: Math.PI / 2, omega: 0, Omega: 0, q: 0.5,
+    };
+    const n = orbitPlaneNormalICRS(1, elements, { x: 10, y: 0, z: 0 });
+    expect(n).not.toBeNull();
+    expect(Math.abs(n!.y)).toBeCloseTo(1, 9);
+  });
+
+  it('tier-1 face-on orbit at (10,0,0): plane is the sky tangent → normal ∥ x (LOS)', () => {
+    const elements: OrbitalElements = {
+      P: 10, T: 0, e: 0, a: 1, i: 0, omega: 0, Omega: 0, q: 0.5,
+    };
+    const n = orbitPlaneNormalICRS(1, elements, { x: 10, y: 0, z: 0 });
+    expect(n).not.toBeNull();
+    expect(Math.abs(n!.x)).toBeCloseTo(1, 9);
+  });
+
+  it('tier-2 normal is the galactic pole in ICRS', () => {
+    const elements: OrbitalElements = {
+      P: 10, T: 0, e: 0, a: 1, i: 0, omega: 0, Omega: 0, q: 0.5,
+    };
+    const n = orbitPlaneNormalICRS(2, elements, { x: 10, y: 0, z: 0 });
+    expect(n).not.toBeNull();
+    // NGP in ICRS: RA 192.859°, Dec +27.128°.
+    const ra = (192.859 * Math.PI) / 180;
+    const dec = (27.128 * Math.PI) / 180;
+    const ngp = {
+      x: Math.cos(dec) * Math.cos(ra),
+      y: Math.cos(dec) * Math.sin(ra),
+      z: Math.sin(dec),
+    };
+    const dot = n!.x * ngp.x + n!.y * ngp.y + n!.z * ngp.z;
+    expect(Math.abs(dot)).toBeCloseTo(1, 3);
+  });
+
+  it('normal is unit length and orthogonal to sampled orbit vectors', () => {
+    const elements: OrbitalElements = {
+      P: 37, T: 12345, e: 0.4, a: 2, i: 1.1, omega: 0.7, Omega: 2.3, q: 0.3,
+    };
+    const sys = { x: 3, y: -7, z: 5 };
+    const n = orbitPlaneNormalICRS(1, elements, sys);
+    expect(n).not.toBeNull();
+    expect(Math.hypot(n!.x, n!.y, n!.z)).toBeCloseTo(1, 9);
   });
 });

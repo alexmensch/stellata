@@ -2,19 +2,24 @@
 // binary pairs with orbital elements. See
 // src/client/binaries/README.md § Eclipse photometry.
 
-export interface Vec3Ro { readonly x: number; readonly y: number; readonly z: number; }
+import {
+  evaluateOrbitSkyAU,
+  projectSkyToICRS,
+  projectGalacticPlaneToICRS,
+  type OrbitalElements,
+  type Vec3,
+} from './binary-orbit-pure';
 
-/** Positive lower bound for the dim multiplier `eclipseDim` returns.
- *  Keeps `-2.5·log10(dim)` finite at a full geometric eclipse; the
- *  resulting ~7.5 mag of dim reads as effectively invisible under
+/** Positive lower bound for the dim multiplier `eclipseDimFromOffsets`
+ *  returns. Keeps `-2.5·log10(dim)` finite at a full geometric eclipse;
+ *  the resulting ~7.5 mag of dim reads as effectively invisible under
  *  the glow pass's additive blend. See
  *  `src/client/binaries/README.md` § Eclipse photometry. */
 export const DIM_FLOOR = 0.001;
 
 export interface EclipseResult {
   /** Multiplicative dim factor on the BACK star's flux. 1.0 = no
-   *  occlusion (no overlap, or front coincides with back so the back
-   *  is fully visible). 0.0 = back fully occluded. The front star is
+   *  occlusion. `DIM_FLOOR` = back fully occluded. The front star is
    *  not dimmed. */
   dim: number;
   /** Which member of the pair is in front of the other from the
@@ -58,76 +63,113 @@ function clamp(x: number, lo: number, hi: number): number {
   return x < lo ? lo : x > hi ? hi : x;
 }
 
-export interface EclipseInputs {
-  /** Primary world position (any consistent frame — local or absolute,
-   *  both must match `secondary` and `camera`). */
-  primary: Vec3Ro;
-  /** Secondary world position. Already perturbed by BinaryOrbitField. */
-  secondary: Vec3Ro;
-  /** Camera position in the same frame. */
-  camera: Vec3Ro;
-  /** Primary stellar radius, pc (same unit basis as positions). */
-  radiusPrimaryPc: number;
-  /** Secondary stellar radius, pc. */
-  radiusSecondaryPc: number;
-}
+const NO_SIGNAL: EclipseResult = { dim: 1, front: 'primary' };
 
-/** Image-plane geometric occlusion for a binary pair. Decomposes the
- *  3D separation onto (line-of-sight, perpendicular) using the camera→
- *  primary direction, runs the closed-form lens area against each
- *  component's angular disc, and reports the dim multiplier on the
- *  back component's flux.
+/** Image-plane geometric occlusion for a binary pair, from the pair's
+ *  RELATIVE offset rather than two absolute positions. The relative
+ *  offset comes from the float64 orbital evaluation; absolute positions
+ *  live in a float32 buffer whose quantum (≈0.6 AU at 25 pc from the
+ *  local origin) exceeds typical pair separations, so a subtraction of
+ *  two buffer positions cannot resolve this geometry.
+ *
+ *  Inputs: `los*` is camera→primary in pc (float32-derived is fine — it
+ *  only sets the view direction and distance); `rel*` is secondary −
+ *  primary in pc (must carry float64 orbital precision); radii in pc.
  *
  *  The math is purely geometric (no Teff weighting) — each member of the
  *  pair is its own renderer instance with its own appMag, so dimming
  *  the back instance's flux by (1 − occluded_area / disc_area) gives
  *  the right composite when the two are additively summed at sub-pixel
  *  scale. Surface-brightness ratios are implicitly carried by each
- *  instance's absmag (which integrates Teff⁴ × R² already).
+ *  instance's absmag (which integrates Teff⁴ × R² already). Uniform
+ *  disc surface brightness (no limb darkening).
  *
  *  Returns `{ dim: 1, front: 'primary' }` for inputs that would produce
- *  no signal (no overlap, zero radii, degenerate distances). The `front`
- *  field is meaningful only when `dim < 1`. */
-export function eclipseDim(inputs: EclipseInputs): EclipseResult {
-  const { primary, secondary, camera, radiusPrimaryPc, radiusSecondaryPc } = inputs;
+ *  no signal (no overlap, zero radii or offsets, camera inside either
+ *  disc — the resolved disc pass owns that regime). The `front` field
+ *  is meaningful only when `dim < 1`. */
+export function eclipseDimFromOffsets(
+  losXPc: number, losYPc: number, losZPc: number,
+  relXPc: number, relYPc: number, relZPc: number,
+  radiusPrimaryPc: number,
+  radiusSecondaryPc: number,
+): EclipseResult {
+  const relLenSq = relXPc * relXPc + relYPc * relYPc + relZPc * relZPc;
+  if (relLenSq <= 0) return NO_SIGNAL;
 
-  const dPx = primary.x - camera.x;
-  const dPy = primary.y - camera.y;
-  const dPz = primary.z - camera.z;
-  const dPri = Math.sqrt(dPx * dPx + dPy * dPy + dPz * dPz);
+  const dPri = Math.sqrt(losXPc * losXPc + losYPc * losYPc + losZPc * losZPc);
+  const sX = losXPc + relXPc;
+  const sY = losYPc + relYPc;
+  const sZ = losZPc + relZPc;
+  const dSec = Math.sqrt(sX * sX + sY * sY + sZ * sZ);
+  if (dPri <= radiusPrimaryPc * 2 || dSec <= radiusSecondaryPc * 2) return NO_SIGNAL;
 
-  const dSx = secondary.x - camera.x;
-  const dSy = secondary.y - camera.y;
-  const dSz = secondary.z - camera.z;
-  const dSec = Math.sqrt(dSx * dSx + dSy * dSy + dSz * dSz);
-
-  if (dPri <= 0 || dSec <= 0) return { dim: 1, front: 'primary' };
-
-  // Angular radius of each disc as seen from the camera.
   const alphaPri = radiusPrimaryPc / dPri;
   const alphaSec = radiusSecondaryPc / dSec;
-  if (alphaPri <= 0 && alphaSec <= 0) return { dim: 1, front: 'primary' };
+  if (alphaPri <= 0 && alphaSec <= 0) return NO_SIGNAL;
 
-  // Angular separation. Compute via dot product of unit camera→star
-  // vectors — stable for both small and wide angles, no cancellation
-  // when the two stars are nearly co-aligned.
-  const uPx = dPx / dPri;
-  const uPy = dPy / dPri;
-  const uPz = dPz / dPri;
-  const uSx = dSx / dSec;
-  const uSy = dSy / dSec;
-  const uSz = dSz / dSec;
-  const dot = clamp(uPx * uSx + uPy * uSy + uPz * uSz, -1, 1);
-  const theta = Math.acos(dot);
+  // Angular separation via atan2(|cross|, dot) of the unit view vectors —
+  // exact at wide angles and, unlike acos, not precision-limited near 0.
+  // Both unit vectors derive from the SAME los vector, so its float32
+  // quantization cancels in the angle between them; the angle carries
+  // rel's float64 precision.
+  const uPx = losXPc / dPri, uPy = losYPc / dPri, uPz = losZPc / dPri;
+  const uSx = sX / dSec, uSy = sY / dSec, uSz = sZ / dSec;
+  const cX = uPy * uSz - uPz * uSy;
+  const cY = uPz * uSx - uPx * uSz;
+  const cZ = uPx * uSy - uPy * uSx;
+  const sinT = Math.sqrt(cX * cX + cY * cY + cZ * cZ);
+  const cosT = uPx * uSx + uPy * uSy + uPz * uSz;
+  const theta = Math.atan2(sinT, cosT);
 
   const lensArea = circleCircleLensArea(alphaPri, alphaSec, theta);
-  if (lensArea <= 0) return { dim: 1, front: 'primary' };
+  if (lensArea <= 0) return NO_SIGNAL;
 
   // Whichever star is farther is the BACK component; its flux drops.
-  const front: 'primary' | 'secondary' = dPri <= dSec ? 'primary' : 'secondary';
+  // sign(dSec − dPri) = sign(dSec² − dPri²) = sign(2·los·rel + |rel|²),
+  // formed from rel directly so the comparison keeps rel's precision
+  // instead of differencing two large near-equal distances.
+  const discr = 2 * (losXPc * relXPc + losYPc * relYPc + losZPc * relZPc) + relLenSq;
+  const front: 'primary' | 'secondary' = discr >= 0 ? 'primary' : 'secondary';
   const alphaBack = front === 'primary' ? alphaSec : alphaPri;
   if (alphaBack <= 0) return { dim: 1, front };
   const backDiscArea = Math.PI * alphaBack * alphaBack;
   const dim = clamp(1 - lensArea / backDiscArea, DIM_FLOOR, 1);
   return { dim, front };
+}
+
+/** Unit normal of a cached relation's orbit plane in ICRS. Convention-
+ *  proof: sampled from the same evaluation + projection path the
+ *  renderer uses, so it can't drift from the rendered orbit. Returns
+ *  null when the two samples are near-collinear (degenerate elements) —
+ *  callers must then treat every view direction as eclipse-capable. */
+export function orbitPlaneNormalICRS(
+  tier: 1 | 2,
+  elements: OrbitalElements,
+  systemXyzPc: Vec3,
+): Vec3 | null {
+  if (tier === 2) {
+    const v1 = projectGalacticPlaneToICRS(1, 0);
+    const v2 = projectGalacticPlaneToICRS(0, 1);
+    return unitCross(v1, v2);
+  }
+  const s1 = evaluateOrbitSkyAU(elements, elements.T);
+  const v1 = projectSkyToICRS(systemXyzPc, s1.northAU, s1.eastAU, s1.radialAU);
+  for (const phase of [0.25, 0.125, 0.375]) {
+    const s2 = evaluateOrbitSkyAU(elements, elements.T + elements.P * phase);
+    const v2 = projectSkyToICRS(systemXyzPc, s2.northAU, s2.eastAU, s2.radialAU);
+    const n = unitCross(v1, v2);
+    if (n !== null) return n;
+  }
+  return null;
+}
+
+function unitCross(a: Vec3, b: Vec3): Vec3 | null {
+  const x = a.y * b.z - a.z * b.y;
+  const y = a.z * b.x - a.x * b.z;
+  const z = a.x * b.y - a.y * b.x;
+  const len = Math.hypot(x, y, z);
+  const scale = Math.hypot(a.x, a.y, a.z) * Math.hypot(b.x, b.y, b.z);
+  if (!(len > scale * 1e-9)) return null;
+  return { x: x / len, y: y / len, z: z / len };
 }

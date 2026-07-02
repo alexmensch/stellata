@@ -1180,13 +1180,14 @@ export class Stellata implements FrameAnchor {
     });
     this.binaryOrbitField.recenter(this.worldOffset);
     // Re-attach scrubs the prior attach's residual per-instance state.
-    // EclipsePhotometryField only resets touched-last-frame slots, so
+    // EclipsePhotometryField only tracks its own active slots, so
     // values written under the previous binaries set would otherwise
     // persist on stars the new set doesn't touch.
     this._eclipseDim.fill(1);
     this.starPipeline.iEclipseDimAttr.needsUpdate = true;
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
+      absolutePositions: this.catalog.positions,
       localPositions: this._localPositions,
       absoluteMags: this.catalog.absmag,
       physicalRadiusSolar: this.catalog.physicalRadius,
@@ -1223,12 +1224,15 @@ export class Stellata implements FrameAnchor {
       fovYRad,
       this.focus.getFocusedStar(),
     );
-    // Eclipse photometry consumes BinaryOrbitField's OUTPUT — must run
-    // after the orbit walk so localPositions carries the per-frame
-    // perturbation. See src/client/binaries/README.md § Eclipse photometry.
+    // Runs after the orbit walk so the camera→primary line of sight
+    // reads post-perturbation positions; the pair-relative geometry is
+    // evaluated independently in float64. See
+    // src/client/binaries/README.md § Eclipse photometry.
     this.eclipsePhotometryField?.update(
+      this.getT(),
       this.camera.position,
       this.filter.maxAppMag,
+      performance.now(),
     );
   }
 

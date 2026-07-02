@@ -14,3 +14,10 @@ export const VISIBILITY_HORIZON_PC = 1000;
  *  output would land within one pixel of the static catalog position),
  *  so the relation costs nothing but the screen-projection check. */
 export const SUB_PIXEL_THRESHOLD_PX = 1.5;
+
+/** Real-time smoothing constant (seconds) for the eclipse dim factor.
+ *  Under heavy time-warp an eclipse can last less than a frame; without
+ *  smoothing the composite strobes at frame rate. The exponential blend
+ *  turns sub-frame events into a soft shimmer while leaving real-time
+ *  dips (hours long) visually untouched. */
+export const ECLIPSE_DIM_TAU_S = 0.12;

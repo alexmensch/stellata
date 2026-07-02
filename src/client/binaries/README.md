@@ -13,32 +13,36 @@ star catalog records.
   `pa_deg` for the static-placement fallback, plus index maps
   (`primaryIdxToRelations`, `secondaryIdxToRelation`) for runtime
   lookups. Round-trip + fail-mode coverage in `binaries-loader.test.ts`.
-- `binary-orbit-pure.ts` — Kepler / Thiele-Innes / tangent-plane math.
-  Tier 1 path (`evaluateOrbitSkyAU` + `projectSkyToICRS`) and Tier 2
-  galactic-plane fallback (`evaluateOrbitInPlaneAU` +
-  `projectGalacticPlaneToICRS`). No state — `binary-orbit-field.ts`
-  owns the per-attach baseline cache.
-- `binary-orbit-field.ts` — per-frame field. Constructor caches one
-  `RelationCache` per `has_orbit` relation (with the baseline
-  `R(sep_pa_epoch_jd)` baked in per tier). `update(t, camera, …)`
-  walks `BinariesData.relations` in
-  topological order, applies the LOD cascade described below, and
-  rewrites the active slots of `localPositions` plus
-  `compositeSuppress`. `recenter(newOrigin)` updates the cached world
-  offset.
-- `binary-tuning.ts` — `VISIBILITY_HORIZON_PC` + `SUB_PIXEL_THRESHOLD_PX`
-  named constants the field reads each frame and tests pin.
+- `binary-orbit-pure.ts` — Kepler / Thiele-Innes math. Tier 1 path
+  (`evaluateOrbitSkyAU` + `projectSkyToICRS`) produces the full 3D
+  offset — sky tangent (north, east) plus the line-of-sight radial
+  component `Z = r·sin(ν+ω)·sin i` — so orbits have real depth from
+  any camera vantage. Tier 2 galactic-plane fallback
+  (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`). No state.
+- `orbit-relation-cache.ts` — shared per-attach cache builder
+  (`buildOrbitRelationCaches`: has_orbit + finite-elements gates, tier,
+  elements, baseline `R(sep_pa_epoch_jd)`) and the per-frame
+  `evaluateOrbitRelationDeltaPc` dispatch. Both fields below consume it.
+- `binary-orbit-field.ts` — per-frame position field. `update(t,
+  camera, …)` walks `BinariesData.relations` in topological order,
+  applies the LOD cascade described below, and rewrites the active
+  slots of `localPositions` plus `compositeSuppress`.
+  `recenter(newOrigin)` updates the cached world offset.
+- `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
+  `ECLIPSE_DIM_TAU_S` named constants the fields read and tests pin.
 - `eclipse-photometry-pure.ts` — pure math for camera-anywhere
-  geometric occlusion: image-plane angular projection, closed-form
-  circle-circle lens area, geometric dim factor on the back
-  component's flux. `eclipse-photometry-pure.test.ts` pins the
-  degenerate cases.
-- `eclipse-photometry.ts` — per-frame field that walks the same
-  has_orbit relations the orbit field does, reads the
-  post-perturbation `localPositions`, and writes per-instance
-  `iEclipseDim` for the back component when discs overlap. Runs
-  AFTER `BinaryOrbitField` in the per-frame loop (it consumes the
-  orbit field's outputs). See § Eclipse photometry.
+  geometric occlusion: `eclipseDimFromOffsets` (angular separation via
+  atan2 of unit view vectors, closed-form circle-circle lens area,
+  geometric dim factor on the back component's flux) and
+  `orbitPlaneNormalICRS` (the view-direction prefilter's normal,
+  sampled from the same eval path the renderer uses).
+  `eclipse-photometry-pure.test.ts` pins the degenerate cases and the
+  float32-line-of-sight immunity.
+- `eclipse-photometry.ts` — per-frame field over the same relation
+  caches. Evaluates each pair's offset in float64 and writes
+  per-instance `iEclipseDim` for the back component when discs
+  overlap. Runs AFTER `BinaryOrbitField` in the per-frame loop. See
+  § Eclipse photometry.
 
 ## Format contract
 
@@ -74,14 +78,18 @@ The runtime layer reads this artifact under three tier rules (set by
 the per-pair flags):
 
 - **Tier 1** (`has_orbit & has_inclination`) — full Kepler +
-  Thiele-Innes + sky→ICRS tangent-plane projection. The sky-plane
-  separation `(north, east) AU` at time t projects through the system's
-  ICRS (α, δ) tangent basis to ICRS Δxyz. R at the stored sep+PA epoch
-  (`sep_pa_epoch_jd`; J2000 fallback when the record carries none) is
-  cached per relation so each frame is one Kepler solve + one subtract.
-  The stored catalog separation is the pair's configuration at that
-  epoch (Gaia J2016 / WDS `date_last`), so ΔR(t) cancels exactly there
-  and current-date sep/PA comes out right.
+  Thiele-Innes + sky→ICRS projection. The separation
+  `(north, east, radial) AU` at time t projects through the system's
+  ICRS (α, δ) tangent basis (radial along the Sol→system direction) to
+  ICRS Δxyz. R at the stored sep+PA epoch (`sep_pa_epoch_jd`; J2000
+  fallback when the record carries none) is cached per relation so each
+  frame is one Kepler solve + one subtract. The stored catalog
+  separation is the pair's configuration at that epoch (Gaia J2016 /
+  WDS `date_last`), so ΔR(t) cancels exactly there and current-date
+  sep/PA comes out right. Pure-visual ORB6 orbits carry a ±180°
+  ascending-node ambiguity — the radial component's SIGN (which member
+  is nearer at conjunction) follows the published node's convention,
+  not an observation.
 - **Tier 2** (`has_orbit & !has_inclination`) — Kepler eval with the
   orbit normal forced to the galactic Z axis. The in-plane (x, y) AU
   position rides directly into the galactic XY basis, which
@@ -166,10 +174,34 @@ and writes a per-instance dim multiplier on the back component's
 flux whenever discs overlap from the camera's viewpoint. The math
 is camera-anywhere by construction — EA/EB/EW labels are Earth's-
 viewpoint facts; any system can eclipse from any viewpoint when its
-geometry aligns. The pure helper decomposes the 3D separation onto
-the camera→primary line of sight, computes each disc's angular
-radius, and runs the closed-form circle-circle lens area; the dim
-is `1 − occluded_area / back_disc_area`.
+geometry aligns. Each pair's offset is evaluated per frame in
+**float64** as `baseDiff + ΔR(t)` (the baked catalog offset plus the
+orbital delta — exactly the offset the position walk renders, in
+every regime: barycentric split, focal rebase, hierarchical anchor
+all preserve `sCoeff − pCoeff = 1`). The pure helper decomposes that
+offset against the camera→primary line of sight, computes each
+disc's angular radius, and runs the closed-form circle-circle lens
+area; the dim is `1 − occluded_area / back_disc_area`.
+
+**Never derive pair geometry from `localPositions`** — the float32
+position quantum is `d_origin · 2⁻²³` (≈0.6 AU for a star 25 pc from
+the local origin), larger than most orbital separations, so a
+subtraction of two buffer positions reads pure grid noise where the
+eclipse test needs nano-radian resolution. The buffer is only read
+for the line of sight, whose float32 error cancels between the two
+unit view vectors.
+
+The Kepler eval here is deliberately NOT gated on the orbit walk's
+screen-pixel LOD: the photometric dip is exactly the signal that
+remains when the pair is sub-pixel. Instead each relation carries a
+**view-direction prefilter** — the rendered offset always lies in
+the orbit plane, so lines of sight steeper against that plane than
+`(r_pri + r_sec) / min_rendered_separation` can never eclipse and
+skip the Kepler solve (the vast majority of (camera, pair)
+combinations each frame). The min separation is sampled over one
+period at cache build because the rendered offset's minimum can sit
+far below periapsis when the baked baseline doesn't match
+R(baseline epoch).
 
 Surface-brightness ratios stay implicit: each star is its own
 instance with its own absmag, and dimming the back's flux by the
@@ -177,16 +209,26 @@ geometric area fraction gives the right composite when the two
 sum additively in the glow pass. Limb darkening is not modelled
 (uniform disc surface brightness).
 
+### Anti-strobe smoothing
+
+Under heavy time-warp an eclipse can last less than a frame; raw
+per-frame geometry would strobe the composite at frame rate. Written
+dims blend toward each frame's geometric target with time constant
+`ECLIPSE_DIM_TAU_S` (real seconds — a render filter, not sim time),
+so sub-frame events read as a soft shimmer while real-time dips
+(hours long) pass through visually untouched. Slots decay back to
+exactly 1.0 after occlusion ends and leave the field's active set;
+frames that write nothing skip the attribute re-upload entirely.
+
 ### Shader-side wiring
 
 `iEclipseDim` is folded into appMag in the **glow pass only**
 (`uRenderMode == 0`). The disc pass resolves geometric occlusion
-via the depth buffer at close range, so applying the dim there
+via the depth buffer at close range (real depth separation now that
+Tier-1 orbits carry the radial component), so applying the dim there
 would also dim the back disc's non-occluded fragments. The
 integration shell initialises the buffer to 1.0 at allocation
-and on every re-attach; the field writes lower values onto the
-back component each frame and resets touched-last-frame slots so
-transient occlusions clear.
+and on every re-attach.
 
 `eclipse-photometry-pure` floors its return value at
 `DIM_FLOOR = 0.001` rather than 0 so `-2.5·log10(dim)` stays
