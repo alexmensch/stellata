@@ -224,24 +224,35 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 ## Physical radius and spectral parsing
 
 `resolveSpectralInfo` in `catalog-pure.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a three-tier
-priority chain keyed on the Gaia DR3 `source_id`:
+`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a four-tier
+priority chain, keyed first on the Gaia DR3 `source_id` then on HIP:
 
-1. **SIMBAD `sp_type`** (`data/simbad/simbad_sptype.tsv` from
-   `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises sp_type
-   to Morgan-Keenan only — variability annotations live in `otype`, never
-   in sp_type — so the parser (`classifyFromSimbad`) is a strict MK walker
-   covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs (`DA`,
-   `DB2`, `DAH`), subdwarfs (`sdB5`), carbon / Wolf-Rayet (`C5,2e`, `WN5`),
-   and Am/Ap composites (`kA5hA8mF1(III)SiEuBa` → metallic-line type wins).
-2. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (the new column on
-   `data/gaia/gaia_dr3_apsis.tsv`). Letter-only enum; `classifyFromGspspec`
-   maps each letter to its `classIdx` with neutral subclass=5 / lumClass=255.
-3. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
-   `lumClass=255` for rows neither upstream covers.
+1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
+   from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
+   sp_type to Morgan-Keenan only — variability annotations live in `otype`,
+   never in sp_type — so the parser (`classifyFromSimbad`) is a strict MK
+   walker covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs
+   (`DA`, `DB2`, `DAH`), subdwarfs (`sdB5`), carbon / Wolf-Rayet (`C5,2e`,
+   `WN5`), and Am/Ap composites (`kA5hA8mF1(III)SiEuBa` → metallic-line
+   type wins).
+2. **SIMBAD `sp_type` by HIP** — the same TSV also carries the
+   Gaia-saturated bright stars (Algol, Alsephina, Betelgeuse, Rigel, Vega,
+   Arcturus, ~700 others) whose SIMBAD row has a valid MK type but **no
+   Gaia source_id**, so tier 1's source_id key misses them. `parseSimbadSptypeTsv`
+   indexes every row under whichever of source_id / HIP it carries; this
+   tier looks up the star's HIP. Without it the radius chain runs the cool
+   unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
+   12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
+   over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
+3. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
+   `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
+   `classifyFromGspspec` maps each letter to its `classIdx` with neutral
+   subclass=5 / lumClass=255.
+4. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
+   `lumClass=255` for rows no upstream covers.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts: ~88% SIMBAD / ~11% GSP-Spec / <1% fallback
+classification (build-counts: ~89% SIMBAD / ~11% GSP-Spec / ~0.4% fallback
 against the v3.3 classic-IDs subset); it is still used as a last-resort
 hover-display fallback when both upstream sources are blank.
 
@@ -664,9 +675,9 @@ Today's downstream consumers:
   Ballesteros(B-V) third, spectral-class T_TABLE fourth, WD Sion Teff
   fifth, solar fallback last.
 - **Spectral classification fall-through** (`resolveSpectralInfo` in
-  `catalog-pure.ts`) — when SIMBAD has no sp_type, GSP-Spec's
-  `spectraltype_esphs` enum is the second tier before
-  `SPECTRAL_UNKNOWN`.
+  `catalog-pure.ts`) — when SIMBAD has no sp_type under either the
+  source_id or HIP key, GSP-Spec's `spectraltype_esphs` enum is the
+  tier before `SPECTRAL_UNKNOWN`.
 - **Per-record handles** for future Phase 5 consumers (geometric
   occlusion photometry's limb-darkening Teff dependence; mass-ratio
   refinement using direct `logg_gspphot` for giant / subgiant

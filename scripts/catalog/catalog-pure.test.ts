@@ -43,6 +43,7 @@ import {
   parseGaiaApsisTsv,
   type ApsisRow,
   type SimbadSpectralRow,
+  type SimbadSpectralIndex,
   type SpectralInfo,
   type BinaryStar,
   type DoublesStar,
@@ -351,19 +352,22 @@ describe('catalog-pure / classifyFromGspspec', () => {
 
 describe('catalog-pure / resolveSpectralInfo — tier priority', () => {
   const GAIA_ID = '1234567890';
+  const HIP = 14576;
   const APSIS_NONE: ApsisRow = {
     teffGspphot: null, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
     teffGspspec: null, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: null,
   };
+  const idx = (
+    bySource: [string, SimbadSpectralRow][] = [],
+    byHip: [number, SimbadSpectralRow][] = [],
+  ): SimbadSpectralIndex => ({ bySource: new Map(bySource), byHip: new Map(byHip) });
 
-  it('tier 1: SIMBAD sp_type wins when present and parseable', () => {
-    const simbad = new Map<string, SimbadSpectralRow>([
-      [GAIA_ID, { spType: 'A6V', spQual: 'C', otype: 'PM*' }],
-    ]);
+  it('tier 1: SIMBAD-by-source_id wins when present and parseable', () => {
+    const simbad = idx([[GAIA_ID, { spType: 'A6V', spQual: 'C', otype: 'PM*' }]]);
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'G' }],
     ]);
-    const out = resolveSpectralInfo(GAIA_ID, simbad, apsis);
+    const out = resolveSpectralInfo(GAIA_ID, HIP, simbad, apsis);
     expect(out.source).toBe('simbad');
     expect(out.info.classIdx).toBe(2); // A
     expect(out.info.subclass).toBe(6);
@@ -371,41 +375,57 @@ describe('catalog-pure / resolveSpectralInfo — tier priority', () => {
     expect(out.spectDisplay).toBe('A6V');
   });
 
-  it('tier 2: GSP-Spec when SIMBAD is absent or unparseable', () => {
-    const simbad = new Map<string, SimbadSpectralRow>();
+  it('tier 2: SIMBAD-by-HIP rescues a Gaia-saturated star (no source_id)', () => {
+    const simbad = idx([], [[HIP, { spType: 'B8V', spQual: 'C', otype: 'SB*' }]]);
+    const out = resolveSpectralInfo(null, HIP, simbad, new Map());
+    expect(out.source).toBe('simbad');
+    expect(out.info.classIdx).toBe(1); // B
+    expect(out.info.subclass).toBe(8);
+    expect(out.info.lumClass).toBe(2); // V
+    expect(out.spectDisplay).toBe('B8V');
+  });
+
+  it('tier 2: SIMBAD-by-HIP beats GSP-Spec (full MK over letter-only enum)', () => {
+    const simbad = idx([], [[HIP, { spType: 'A2IV', spQual: 'C', otype: '**' }]]);
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
     ]);
-    const out = resolveSpectralInfo(GAIA_ID, simbad, apsis);
+    const out = resolveSpectralInfo(GAIA_ID, HIP, simbad, apsis);
+    expect(out.source).toBe('simbad');
+    expect(out.info.classIdx).toBe(2); // A, not K
+    expect(out.info.lumClass).toBe(3); // IV
+  });
+
+  it('tier 3: GSP-Spec when SIMBAD is absent or unparseable', () => {
+    const apsis = new Map<string, ApsisRow>([
+      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
+    ]);
+    const out = resolveSpectralInfo(GAIA_ID, HIP, idx(), apsis);
     expect(out.source).toBe('gspspec');
     expect(out.info.classIdx).toBe(5); // K
     expect(out.spectDisplay).toBe('K');
   });
 
-  it('tier 2 fires when SIMBAD sp_type is present but unparseable', () => {
-    const simbad = new Map<string, SimbadSpectralRow>([
-      [GAIA_ID, { spType: 'PEC', spQual: 'E', otype: 'V*' }],
-    ]);
+  it('tier 3 fires when SIMBAD sp_type is present but unparseable', () => {
+    const simbad = idx([[GAIA_ID, { spType: 'PEC', spQual: 'E', otype: 'V*' }]]);
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'F' }],
     ]);
-    const out = resolveSpectralInfo(GAIA_ID, simbad, apsis);
+    const out = resolveSpectralInfo(GAIA_ID, HIP, simbad, apsis);
     expect(out.source).toBe('gspspec');
     expect(out.info.classIdx).toBe(3); // F
   });
 
-  it('tier 3: SPECTRAL_UNKNOWN fallback when both upstream tiers miss', () => {
-    const out = resolveSpectralInfo(GAIA_ID, new Map(), new Map());
+  it('tier 4: SPECTRAL_UNKNOWN fallback when every upstream tier misses', () => {
+    const out = resolveSpectralInfo(GAIA_ID, HIP, idx(), new Map());
     expect(out.source).toBe('fallback');
     expect(out.info).toBe(SPECTRAL_UNKNOWN);
     expect(out.spectDisplay).toBeNull();
   });
 
-  it('tier 3: gaiaSourceId=null falls straight through to fallback', () => {
-    const simbad = new Map<string, SimbadSpectralRow>([
-      ['9999', { spType: 'A0V', spQual: 'C', otype: 'PM*' }],
-    ]);
-    const out = resolveSpectralInfo(null, simbad, new Map());
+  it('tier 4: no source_id and no HIP falls straight through to fallback', () => {
+    const simbad = idx([['9999', { spType: 'A0V', spQual: 'C', otype: 'PM*' }]]);
+    const out = resolveSpectralInfo(null, null, simbad, new Map());
     expect(out.source).toBe('fallback');
     expect(out.info).toBe(SPECTRAL_UNKNOWN);
   });
@@ -415,33 +435,52 @@ describe('catalog-pure / parseSimbadSptypeTsv', () => {
   const HDR =
     'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\n';
 
-  it('parses canonical rows keyed by source_id', () => {
+  it('parses canonical rows into bySource and byHip', () => {
     const tsv = HDR +
       '57848\t*  56 Cyg\tA6V\tC\t1995ApJS...99..135A\tPM*\t102843\t2067050940754838656\n' +
       '370513\tHD  47606\tkA6hA7mF1(III)\tD\t2020AJ....160...52M\t*\t32151\t1001011023904917760\n';
-    const map = parseSimbadSptypeTsv(tsv);
-    expect(map.size).toBe(2);
-    const a = map.get('2067050940754838656');
+    const { bySource, byHip } = parseSimbadSptypeTsv(tsv);
+    expect(bySource.size).toBe(2);
+    expect(byHip.size).toBe(2);
+    const a = bySource.get('2067050940754838656');
     expect(a?.spType).toBe('A6V');
     expect(a?.spQual).toBe('C');
     expect(a?.otype).toBe('PM*');
-    const b = map.get('1001011023904917760');
+    expect(byHip.get(102843)).toBe(a);
+    const b = bySource.get('1001011023904917760');
     expect(b?.spType).toBe('kA6hA7mF1(III)');
   });
 
-  it('skips rows with a blank source_id (WDS-only HIP→oid joins)', () => {
+  it('indexes a blank-source_id row by HIP (Gaia-saturated bright stars)', () => {
     const tsv = HDR +
-      '57848\t*  56 Cyg\tA6V\tC\t\tPM*\t102843\t\n' +
+      '51431\t* bet Per\tB8V\tC\t\tSB*\t14576\t\n' +
       '999\tBlank\t\t\t\t\t\t1234\n';
-    const map = parseSimbadSptypeTsv(tsv);
-    expect(map.size).toBe(1);
-    expect(map.has('1234')).toBe(true);
+    const { bySource, byHip } = parseSimbadSptypeTsv(tsv);
+    expect(bySource.size).toBe(1);
+    expect(bySource.has('1234')).toBe(true);
+    expect(byHip.size).toBe(1);
+    expect(byHip.get(14576)?.spType).toBe('B8V');
+  });
+
+  it('drops rows with neither source_id nor HIP', () => {
+    const tsv = HDR + '42\tNo keys\tG2V\t\t\t\t\t\n';
+    const { bySource, byHip } = parseSimbadSptypeTsv(tsv);
+    expect(bySource.size).toBe(0);
+    expect(byHip.size).toBe(0);
+  });
+
+  it('byHip is first-write-wins on duplicate HIP', () => {
+    const tsv = HDR +
+      '1\tFirst\tB8V\tC\t\t*\t14576\t\n' +
+      '2\tSecond\tK0III\tD\t\t*\t14576\t\n';
+    const { byHip } = parseSimbadSptypeTsv(tsv);
+    expect(byHip.get(14576)?.spType).toBe('B8V');
   });
 
   it('decodes blank sp_type / sp_qual / otype cells as null', () => {
     const tsv = HDR + '111\t*\t\t\t\t\t\t9876\n';
-    const map = parseSimbadSptypeTsv(tsv);
-    const r = map.get('9876');
+    const { bySource } = parseSimbadSptypeTsv(tsv);
+    const r = bySource.get('9876');
     expect(r?.spType).toBeNull();
     expect(r?.spQual).toBeNull();
     expect(r?.otype).toBeNull();
