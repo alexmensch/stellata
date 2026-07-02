@@ -128,6 +128,11 @@ export interface BuildCounts {
    *  in the same WDS root. The aggregate isn't a single star and would
    *  double-count its components if promoted. */
   companionDroppedCompoundComp: number;
+  /** Pair-row primaries dropped because no position was derivable —
+   *  neither own per-component astrometry nor a compound-sibling sep+PA
+   *  proxy — so collocating on the anchor would render a false
+   *  coincident star (Alsephina C). */
+  companionDroppedCollocatedPrimary: number;
 }
 
 export type CountDiff =

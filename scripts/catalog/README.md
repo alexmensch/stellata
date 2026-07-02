@@ -367,13 +367,18 @@ Per-row gates and resolution:
   for that reason before the fix).
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
-  of A), prefer projecting off a sibling cursor's compound sep+PA
-  whose compound contains this row's comp letter: 40 Eri B borrows
-  the A,BC group's 83.2″ / 108° A→BC sep+PA as the best available
-  A→B proxy. Falls back to collocating on the WDS-root system anchor
-  only when no compound sibling provides usable sep+PA. Collocation
-  alone leaves B buried inside A's disc when no AB orbital pair
-  exists to animate it at runtime.
+  of A), position resolves in preference order: (1) the row's own
+  per-component astrometry when Stage 3 supplied a real independent fit
+  (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
+  anchor's); (2) project off a sibling cursor's compound sep+PA whose
+  compound contains this row's comp letter — 40 Eri B borrows the A,BC
+  group's 83.2″ / 108° A→BC sep+PA as the best available A→B proxy.
+  Neither available → **drop** (`droppedCollocatedPrimary`). Collocating
+  on the anchor would bake a false coincident star inside the anchor's
+  disc (δ Vel C): the escape only fires for cursor primaries that never
+  appear as a secondary of the anchor, so no anchor→self orbital pair
+  exists for `BinaryOrbitField` to animate it away from centre at
+  runtime.
 - **Absmag.** Prefer Δmag-imputation when the row inherited its
   parent's AT-HYG photometry (Sirius B's row carried Sirius A's
   1.45 absmag, not the WD's 11.36); use `primary_absmag +
