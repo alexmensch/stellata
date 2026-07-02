@@ -164,6 +164,59 @@ html, body {
  * meta on its own line. */
 .ui-bottom .meta { margin-left: auto; }
 
+/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls toggle. */
+body[data-controls-hidden] #ui-top {
+  display: none;
+}
+.controls-restore-btn {
+  display: none;
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 12;
+  align-items: center;
+  padding: 6px 10px;
+  font-family: inherit;
+  color: var(--fg-dim);
+  background: rgba(7, 9, 18, 0.85);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+}
+body[data-controls-hidden] .controls-restore-btn { display: flex; }
+.controls-restore-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+.controls-restore-label {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition: grid-template-columns 0.28s ease-in-out, opacity 0.28s ease-in-out,
+    margin-left 0.28s ease-in-out;
+}
+.controls-restore-text {
+  /* Zeroes the grid-item min-size so the label's 0fr column can fully
+   * collapse — without it the 0fr→1fr width animation never closes. */
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.controls-restore-btn:hover .controls-restore-label,
+.controls-restore-btn:focus-visible .controls-restore-label {
+  grid-template-columns: 1fr;
+  opacity: 1;
+  margin-left: 8px;
+}
+.controls-restore-btn:hover,
+.controls-restore-btn:focus-visible {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+
 .topbar {
   display: flex;
   flex-direction: column;
@@ -1043,6 +1096,10 @@ body.monochrome .brand-box {
 }
 body.monochrome .brand-title { color: var(--fg); }
 body.monochrome .brand-links { color: var(--fg-dim); }
+body.monochrome .controls-restore-btn {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--border);
+}
 body.monochrome .con-typeahead input {
   background: rgba(255, 255, 255, 0.92);
   color: var(--fg);

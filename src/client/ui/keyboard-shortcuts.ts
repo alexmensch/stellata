@@ -2,6 +2,8 @@ import type { Stellata } from '../stellata';
 import { DEFAULT_FOV } from '../stellata';
 import { bindHelpModal } from '../modals/help-modal';
 import { pushTapAndCheckTriple } from './keyboard-shortcuts-pure';
+import { toggleFullscreen } from './fullscreen';
+import { toggleControlsHidden } from './controls-hidden';
 
 // Single global keydown listener with a small dispatch table. Every
 // shortcut is a thin wrapper over an existing public API so future
@@ -145,6 +147,14 @@ export function bindKeyboardShortcuts(
         stellata.setFilter({
           showGalacticGrid: !stellata.getFilter().showGalacticGrid,
         });
+        e.preventDefault();
+        break;
+      case 'f': case 'F':
+        toggleFullscreen();
+        e.preventDefault();
+        break;
+      case 'u': case 'U':
+        toggleControlsHidden();
         e.preventDefault();
         break;
       case 'o': case 'O':

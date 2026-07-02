@@ -109,6 +109,10 @@
           <dd>Toggle the head-up display (HUD)</dd>
           <dt><kbd>S</kbd></dt>
           <dd>Toggle the galactic-coordinate sphere</dd>
+          <dt><kbd>F</kbd></dt>
+          <dd>Toggle fullscreen</dd>
+          <dt><kbd>U</kbd></dt>
+          <dd>Show/hide the controls</dd>
           <dt><kbd>+</kbd> / <kbd>−</kbd></dt>
           <dd>Magnitude limit ± 0.5</dd>
           <dt><kbd>=</kbd></dt>
@@ -480,6 +484,11 @@
       <div id="scale-bar" class="scale-bar" hidden></div>
       <div class="meta" id="meta" hidden></div>
     </div>
+
+    <button id="controls-restore-btn" class="controls-restore-btn" type="button" aria-label="Show controls">
+      <span class="controls-restore-icon" aria-hidden="true">+</span>
+      <span class="controls-restore-label"><span class="controls-restore-text">Show controls</span></span>
+    </button>
 
     <script type="module" src="./main.ts"></script>
   </body>
