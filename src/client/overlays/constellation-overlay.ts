@@ -77,9 +77,6 @@ export function createConstellationOverlay(stellata: Stellata) {
       const lines = cons[conIdx].lines;
       if (!lines || lines.length === 0) continue;
       for (const polyline of lines) {
-        // Project each vertex into the pooled scratch; invalid (behind the
-        // near plane) slots are marked in projValid rather than returning
-        // null, so no per-vertex tuple allocates.
         ensureProjCapacity(polyline.length);
         for (let k = 0; k < polyline.length; k++) {
           const i = polyline[k];
