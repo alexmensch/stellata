@@ -22,10 +22,12 @@ behavioural changes propagate automatically.
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
 | `H` | Toggle `showHud` |
 | `S` | Toggle `showGalacticGrid` |
+| `F` | Toggle browser fullscreen (`fullscreen.ts`) |
+| `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
 | `?` | Open the keyboard-shortcuts help modal |
-| `Esc` | Cascade: observe→navigate (animated exit) → clear destination → clear focus |
+| `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus) |
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -52,6 +54,11 @@ shortcut switch):
 4. **Editable target** — return so `search.ts` / typeahead can handle
    their own ESC (clear dropdown + blur).
 5. Otherwise run the cascade.
+
+Fullscreen exit is not in this chain: the browser reserves Esc to
+leave fullscreen and the exit is not cancelable by page code, so the
+first Esc always leaves fullscreen (like any fullscreen web app). See
+§ Fullscreen toggle.
 
 ### Go / Constellation pickers — DOM relocation
 
@@ -255,6 +262,30 @@ clipped (the widget is non-interactive, so overflow is fine). The SVG
 height is computed for the worst-case (default-angle) z-axis projection
 regardless of actual angle or visibility, so the bar's screen position
 is steady across focus/unfocus and any line angle.
+
+## Fullscreen toggle
+
+`fullscreen.ts` calls `requestFullscreen()` on `document.documentElement`
+(the `<html>` element), not the canvas — every chrome container is a
+sibling of the canvas under `<body>`, so fullscreening the whole page
+keeps the panel/topbar/overlays visible. Bound to `F` only; there is no
+in-app affordance. Esc handling is left entirely to the browser: the
+Fullscreen API reserves Esc for the exit and the exit is not cancelable
+by page code, so any attempt to layer app behaviour under a
+fullscreen-active Esc is unreliable (some browsers don't even dispatch
+the keydown for the exiting keystroke).
+
+## Hide-controls toggle
+
+`controls-hidden.ts` toggles `body[data-controls-hidden]`, which hides
+only `#ui-top` (the Navigate topbar + settings panel). Everything else
+— brand box, meta readout, scale bar, tooltip, warp button, and the
+`#overlay` SVG (constellations, star names, focus ring) — stays
+visible. `#controls-restore-btn` is a fixed top-right box, `display:
+none` by default and shown via `body[data-controls-hidden]
+.controls-restore-btn`. It sits where the controls were, showing a `+`
+that expands (ease-in-out) to "Show controls" on hover/focus; clicking
+it, or pressing `U` again, restores the controls.
 
 ## `[hidden]` specificity and `.modal { display: grid }`
 
