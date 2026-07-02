@@ -372,8 +372,10 @@ empty). `sep_arcsec` and `pa_deg` feed companion-promotion's
 tangent-plane projection for the Tier-3 (no-orbit) path and the
 runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
 WDS observation year (`date_last`) converted to JD via
-`wds_year_to_jd` so a future runtime layer can propagate sep+PA
-forward in time. `dmag` is the published apparent Δmag
+`wds_year_to_jd`; the runtime `BinaryOrbitField` baselines orbital
+animation at this epoch (ΔR(t) = R(t) − R(sep_pa_epoch_jd)) so the
+stored placement is reproduced exactly at its measurement date.
+`dmag` is the published apparent Δmag
 (`mag_sec - mag_pri`) used to impute the companion's absmag when
 the secondary row inherits its parent's AT-HYG photometry.
 

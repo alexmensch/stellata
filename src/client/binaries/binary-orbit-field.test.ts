@@ -423,6 +423,64 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
   });
 });
 
+describe('BinaryOrbitField — stored-separation epoch baseline', () => {
+  // The stored catalog separation is the pair's configuration at
+  // sepPaEpochJd (Gaia J2016 / WDS date_last), so ΔR must cancel at
+  // THAT epoch. Baselining at J2000 instead displaces the whole
+  // rendered orbit by R(epoch) − R(J2000) — a constant offset
+  // comparable to the orbit size on famous binaries.
+  const EPOCH_JD = J2000_JD + 23 * 365.25; // ≈ 2023, a typical WDS date_last
+  const closeCamera = new THREE.Vector3(1.999, 0, 0);
+  const toUnix = (jd: number) => (jd - 2440587.5) * 86400;
+
+  function epochFixture(flags: number) {
+    const fx = makeFixture();
+    // Single top-level pair with a non-J2000 stored epoch; drop the
+    // inner relation so its perturbation can't mask the outer baseline.
+    fx.binaries.relations[1].flags &= ~FLAG_HAS_ORBIT;
+    fx.binaries.relations[0].flags = flags;
+    fx.binaries.relations[0].sepPaEpochJd = EPOCH_JD;
+    return fx;
+  }
+
+  it('Tier 1: positions match the catalog baseline at t = stored epoch, not at J2000', () => {
+    const fx = epochFixture(FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION);
+    const field = new BinaryOrbitField(fx);
+
+    field.update(toUnix(J2000_JD), closeCamera, 15, 1080, 0.8);
+    const offAtJ2000 = Math.hypot(
+      fx.localPositions[6] - fx.absolutePositions[6],
+      fx.localPositions[7] - fx.absolutePositions[7],
+      fx.localPositions[8] - fx.absolutePositions[8],
+    );
+    expect(offAtJ2000).toBeGreaterThan(1e-7);
+
+    field.update(toUnix(EPOCH_JD), closeCamera, 15, 1080, 0.8);
+    for (let i = 0; i < fx.localPositions.length; i++) {
+      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
+    }
+  });
+
+  it('Tier 2: positions match the catalog baseline at t = stored epoch', () => {
+    const fx = epochFixture(FLAG_HAS_ORBIT);
+    const field = new BinaryOrbitField(fx);
+    field.update(toUnix(EPOCH_JD), closeCamera, 15, 1080, 0.8);
+    for (let i = 0; i < fx.localPositions.length; i++) {
+      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
+    }
+  });
+
+  it('NaN sepPaEpochJd falls back to the J2000 baseline', () => {
+    const fx = epochFixture(FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION);
+    fx.binaries.relations[0].sepPaEpochJd = Number.NaN;
+    const field = new BinaryOrbitField(fx);
+    field.update(toUnix(J2000_JD), closeCamera, 15, 1080, 0.8);
+    for (let i = 0; i < fx.localPositions.length; i++) {
+      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
+    }
+  });
+});
+
 describe('BinaryOrbitField.recenter', () => {
   it('writes positions in the new local frame on next update', () => {
     const fx = makeFixture();
