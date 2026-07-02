@@ -39,6 +39,25 @@ visual-doubles flagging (`visual-doubles.ts`), and the 80-byte v6
 record write per star including the seven `float32` Apsis fields.
 See sections below.
 
+## Full-catalog astrometry request
+
+`export-astrometry-request.ts` (run `npm run build:astrometry-request`)
+emits `data/gaia/gaia_catalog_source_id_request.tsv` — the deduped,
+numerically-sorted Gaia DR3 source_id for every AT-HYG row, resolved
+through the SAME `resolveGaiaSourceId` precedence step 1 uses (native
+`gaia` column → HIP cross-walk). It reuses that function directly so
+the resolution logic stays defined once; the pure `sortSourceIdsNumeric`
+helper (`export-astrometry-request-pure.ts`) does the BigInt sort that
+matches the binaries request file's numeric ordering. ~315k source_ids
+from the v3.3 classic-IDs subset.
+
+The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py`,
+which pulls the 5p astrometry into
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` — the direction-cascade
+input (SCIENCE.md § Driver astrometry). This is a superset of the
+shipped catalog by the handful of rows dropped at the `MAX_DIST_PC`
+cutoff; over-pulling those is harmless.
+
 ## Binary catalog format (`public/catalog.bin`)
 
 Fixed-size records, sorted brightest-first by `absmag`. Current version is
