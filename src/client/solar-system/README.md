@@ -22,6 +22,10 @@ src/client/solar-system/
   time.ts                         Simulation time `t` (UTC seconds offset)
                                   + UTC ↔ Julian-day helpers. Single source
                                   of truth for the time scrubber.
+  sky-truth.test.ts               Regression corpus: the ephemeris →
+                                  ecliptic→ICRS chain vs JPL Horizons
+                                  RA/Dec frozen in data/horizons/, plus
+                                  solstice/equinox mirror detectors.
   time-readout.ts                 UTC readout display next to the time
                                   scrubber.
   planet-body-field.ts            Instanced planet-body renderer. Three-pass
@@ -321,6 +325,13 @@ so very-close planet inspection isn't culled. The strict-less-than
   consistently when composing the Sol-host quaternion. Do not reach
   for the time-varying obliquity term — Standish's accuracy budget
   doesn't need it and the apparent-position match is unaffected.
+- **Ecliptic-pole sign.** The north ecliptic pole in ICRS is
+  `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°; the y-component is
+  NEGATIVE (cos 66.56° · sin 270° = −sin ε). The mirrored `+sin ε`
+  pole once shipped, flipping every planet's declination by up to
+  ~47°. `sky-truth.test.ts` pins the sign against JPL Horizons and
+  solstice geometry — if it objects to your change, the change is
+  wrong.
 - **`t` vs `uTime`.** Variable-star pulsation is cosmetic — it must
   never depend on `t`. The two clocks are deliberately decoupled.
 - **Per-focus minDistance override.** When focus switches *away*
