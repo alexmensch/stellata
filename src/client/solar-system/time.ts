@@ -17,6 +17,11 @@ export function tToJDE(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
 }
 
+/** Julian Date → Unix-seconds. Inverse of `tToJDE`. */
+export function jdeToT(jde: number): number {
+  return (jde - UNIX_EPOCH_JD) * 86400;
+}
+
 /** True when `t` is within `toleranceSec` of the current wall-clock. */
 export function isLive(t: number, toleranceSec: number = LIVE_TOLERANCE_SEC): boolean {
   return Math.abs(t - Date.now() / 1000) < toleranceSec;
