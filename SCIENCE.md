@@ -754,8 +754,21 @@ from the **JPL Standish 1992 Keplerian-elements approximation**
 (https://ssd.jpl.nasa.gov/planets/approx_pos.html), with the cubic
 correction terms for Jupiter through Neptune that extend the validity
 window to 3000 BC – 3000 AD at sub-arcminute accuracy. Implementation
-in `src/client/ephemeris.ts` works directly from the published JPL
-Table 2a/2b values — no external library, no network fetch.
+in `src/client/solar-system/ephemeris.ts` works directly from the
+published JPL Table 2a/2b values — no external library, no network
+fetch.
+
+The full position chain (Standish ephemeris → ecliptic→ICRS rotation)
+is pinned against external sky truth: geocentric RA/Dec for all nine
+bodies plus the Sun at three fixed epochs, fetched once from the JPL
+Horizons API (ephemeris DE441, retrieved 2026-07-02) and frozen in
+`data/horizons/` (provenance + schema in that folder's README). The
+regression corpus (`src/client/solar-system/sky-truth.test.ts`) holds
+every body within 0.5° of Horizons — the empirical worst case is
+Saturn at 0.35°, a known Standish linear-elements residual near the
+Jupiter–Saturn great inequality — and the Sun within 0.1°, including
+solstice/equinox declination checks that would fail by ~47° on any
+mirror-image error in the ecliptic→ICRS rotation.
 
 VSOP87 was the originally-planned ephemeris model and would offer
 sub-arcsecond accuracy ±4000 years from J2000. We dropped it during
@@ -813,9 +826,12 @@ and aligning to the galactic plane gives the user a consistent visual
 cue that a focused star has planets without implying a measured
 orientation we don't have. The per-host-plane →
 ICRS rotation is composed once at attach and reused by the orbit-ring
-and planet-body renderers (`src/client/orbit-rings-layer.ts` for the
-focus-only ring layer; `src/client/planet-body-field.ts` for the
-global, focus-independent body field).
+and planet-body renderers (`src/client/solar-system/orbit-rings-layer.ts`
+for the focus-only ring layer;
+`src/client/solar-system/planet-body-field.ts` for the global,
+focus-independent body field). The rotation is anchored on the north
+ecliptic pole in ICRS, `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°;
+the y-component is negative.
 
 **Time `t`.** All planet positions are evaluated at a wall-clock `t`
 (Unix seconds, double). `t` is currently pinned to "now" with no scrubber
