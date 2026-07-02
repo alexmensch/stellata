@@ -2,8 +2,8 @@ import type { Stellata } from '../stellata';
 import { DEFAULT_FOV } from '../stellata';
 import { bindHelpModal } from '../modals/help-modal';
 import { pushTapAndCheckTriple } from './keyboard-shortcuts-pure';
-import { exitFullscreenIfActive, toggleFullscreen } from './fullscreen';
-import { toggleChromeHidden } from './chrome-hidden';
+import { toggleFullscreen } from './fullscreen';
+import { toggleControlsHidden } from './controls-hidden';
 
 // Single global keydown listener with a small dispatch table. Every
 // shortcut is a thin wrapper over an existing public API so future
@@ -73,9 +73,7 @@ export function bindKeyboardShortcuts(
       // Highest priority: an open kb-modal (Go / Constellation) closes
       // even if its input has focus. The Typeahead class bails its own
       // ESC when the dropdown has no results (empty input), so we own
-      // ESC for the kb-modal regardless. Checked before fullscreen so a
-      // modal opened while fullscreen is active closes on the first Esc
-      // instead of the keystroke being swallowed by the fullscreen exit.
+      // ESC for the kb-modal regardless.
       const kbModal = document.getElementById('kb-modal');
       if (kbModal && !kbModal.hidden) {
         goModal.close();
@@ -87,13 +85,6 @@ export function bindKeyboardShortcuts(
       // its own ESC via its own document listener — stay out of the way
       // so the cascade doesn't run AFTER the modal closes itself.
       if (anyVisibleSelector('.modal')) return;
-      // Fullscreen exit takes priority over the rest of the cascade — the
-      // browser exits fullscreen on Escape regardless of what we do here, so
-      // we stop the cascade from also firing on the same keystroke.
-      if (exitFullscreenIfActive()) {
-        e.preventDefault();
-        return;
-      }
       // Warp owns ESC via warp-button.ts.
       if (stellata.getWarpActive()) return;
       // Search/typeahead inputs handle ESC themselves (clear dropdown +
@@ -163,7 +154,7 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'u': case 'U':
-        toggleChromeHidden();
+        toggleControlsHidden();
         e.preventDefault();
         break;
       case 'o': case 'O':

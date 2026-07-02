@@ -6,16 +6,13 @@ ESC / backdrop / close-button binding is shared.
 ## Brand box, About/Credits modal, and Share
 
 `.ui-top-left` is a fixed top-left container holding the "Stellata"
-title plus a small `about · share ⧉ · fullscreen · hide UI` link row
-(always visible — no hover affordance, since touch devices have no
-hover state). The `.brand-box` flex column is `align-items: center`
-so the narrow title and the wider link row sit symmetrically around
-the centre axis. `fullscreen` and `hide UI` wire the toggles owned by
-`src/client/ui/fullscreen.ts` and `src/client/ui/chrome-hidden.ts` —
-see `src/client/ui/README.md` § Fullscreen toggle and § Hide-chrome
-toggle. `hide UI` disappears along with the rest of the chrome when
-toggled on; `#chrome-restore-btn` (a separate fixed corner button,
-outside `.ui-top-left`) is the way back.
+title plus a small `about · share ⧉` link row (always visible — no
+hover affordance, since touch devices have no hover state). The
+`.brand-box` flex column is `align-items: center` so the narrow title
+and the wider link row sit symmetrically around the centre axis.
+Fullscreen (`F`) and hide-controls (`U`) are keyboard-only — see
+`src/client/ui/README.md` § Fullscreen toggle and § Hide-controls
+toggle.
 
 `about` opens a single tabbed `<div class="modal">` card that
 combines what used to be two separate modals. The title row is a

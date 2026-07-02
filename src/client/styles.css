@@ -164,38 +164,53 @@ html, body {
  * meta on its own line. */
 .ui-bottom .meta { margin-left: auto; }
 
-/* Hide-chrome toggle — see src/client/ui/README.md § Hide-chrome toggle
- * for why this is a fixed selector list rather than one wrapping selector. */
-body[data-chrome-hidden] #ui-top-left,
-body[data-chrome-hidden] #ui-top,
-body[data-chrome-hidden] #meta,
-body[data-chrome-hidden] #tooltip,
-body[data-chrome-hidden] #warp-btn,
-body[data-chrome-hidden] #overlay {
+/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls toggle. */
+body[data-controls-hidden] #ui-top {
   display: none;
 }
-.chrome-restore-btn {
+.controls-restore-btn {
   display: none;
   position: fixed;
+  top: 10px;
   right: 14px;
-  bottom: 16px;
   z-index: 12;
-  padding: 6px 14px;
+  align-items: center;
+  padding: 6px 10px;
   font-family: inherit;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
   color: var(--fg-dim);
   background: rgba(7, 9, 18, 0.85);
   border: 1px solid var(--border);
   cursor: pointer;
   backdrop-filter: blur(6px);
+  overflow: hidden;
 }
-.chrome-restore-btn:hover {
+body[data-controls-hidden] .controls-restore-btn { display: flex; }
+.controls-restore-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+.controls-restore-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  transition: max-width 0.28s ease-in-out, opacity 0.28s ease-in-out,
+    margin-left 0.28s ease-in-out;
+}
+.controls-restore-btn:hover .controls-restore-label,
+.controls-restore-btn:focus-visible .controls-restore-label {
+  max-width: 14ch;
+  opacity: 1;
+  margin-left: 8px;
+}
+.controls-restore-btn:hover,
+.controls-restore-btn:focus-visible {
   color: var(--fg);
   border-color: var(--border-strong);
 }
-body[data-chrome-hidden] .chrome-restore-btn { display: block; }
 
 .topbar {
   display: flex;

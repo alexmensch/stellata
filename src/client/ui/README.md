@@ -23,11 +23,11 @@ behavioural changes propagate automatically.
 | `H` | Toggle `showHud` |
 | `S` | Toggle `showGalacticGrid` |
 | `F` | Toggle browser fullscreen (`fullscreen.ts`) |
-| `U` | Toggle hide-chrome (`chrome-hidden.ts`) |
+| `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
 | `?` | Open the keyboard-shortcuts help modal |
-| `Esc` | Priority chain below: modal close → exit fullscreen → cascade (observe→navigate → clear destination → clear focus) |
+| `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus) |
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -50,15 +50,15 @@ shortcut switch):
    focus. Closes both modals (idempotent) and `preventDefault`s.
 2. **Other foreground modals** (`.modal`) — return without action so
    their own document listener can close them.
-3. **Fullscreen exit** — checked only after both modal cases above,
-   so a modal opened while fullscreen is active closes on the first
-   Esc instead of that keystroke being swallowed by the fullscreen
-   exit. See § Fullscreen toggle for why the exit itself can't be
-   skipped even when a modal did claim the keystroke.
-4. **Active warp** — return so `warp-button.ts` can run `skipWarp()`.
-5. **Editable target** — return so `search.ts` / typeahead can handle
+3. **Active warp** — return so `warp-button.ts` can run `skipWarp()`.
+4. **Editable target** — return so `search.ts` / typeahead can handle
    their own ESC (clear dropdown + blur).
-6. Otherwise run the cascade.
+5. Otherwise run the cascade.
+
+Fullscreen exit is not in this chain: the browser reserves Esc to
+leave fullscreen and the exit is not cancelable by page code, so the
+first Esc always leaves fullscreen (like any fullscreen web app). See
+§ Fullscreen toggle.
 
 ### Go / Constellation pickers — DOM relocation
 
@@ -268,30 +268,24 @@ is steady across focus/unfocus and any line angle.
 `fullscreen.ts` calls `requestFullscreen()` on `document.documentElement`
 (the `<html>` element), not the canvas — every chrome container is a
 sibling of the canvas under `<body>`, so fullscreening the whole page
-keeps the panel/topbar/overlays visible by default. `bindFullscreenToggle()`
-wires the `#brand-fullscreen` link and swaps its label via the
-`fullscreenchange` event so it tracks exits triggered by the browser's
-own fullscreen UI, not just the in-app toggle. `keyboard-shortcuts.ts`
-checks `exitFullscreenIfActive()` after the kb-modal/`.modal` checks but
-before the rest of its Escape handling — an open modal closes on Esc
-even while fullscreen is active, since the browser exits fullscreen on
-Escape regardless of app code either way. The check's real job is
-stopping the observe→navigate cascade from also firing on the same
-keystroke, not performing the exit itself.
+keeps the panel/topbar/overlays visible. Bound to `F` only; there is no
+in-app affordance. Esc handling is left entirely to the browser: the
+Fullscreen API reserves Esc for the exit and the exit is not cancelable
+by page code, so any attempt to layer app behaviour under a
+fullscreen-active Esc is unreliable (some browsers don't even dispatch
+the keydown for the exiting keystroke).
 
-## Hide-chrome toggle
+## Hide-controls toggle
 
-`chrome-hidden.ts` toggles `body[data-chrome-hidden]`. The chrome
-elements it targets (`#ui-top-left`, `#ui-top`, `#meta`, `#tooltip`,
-`#warp-btn`, `#overlay`) are flat siblings under `<body>`, not
-children of one wrapping container, so the CSS is a fixed list of
-selectors sharing that one attribute rather than a single ancestor
-selector. `#scene` (canvas) and `#scale-bar` are deliberately excluded
-so a hidden-chrome screenshot still shows the scene-scale readout.
-`#chrome-restore-btn` is a fixed corner button, `display: none` by
-default and shown only via `body[data-chrome-hidden] .chrome-restore-btn`
-— it's the only way back once the `#brand-hide-chrome` link (itself
-inside `#ui-top-left`) disappears with the rest of the chrome.
+`controls-hidden.ts` toggles `body[data-controls-hidden]`, which hides
+only `#ui-top` (the Navigate topbar + settings panel). Everything else
+— brand box, meta readout, scale bar, tooltip, warp button, and the
+`#overlay` SVG (constellations, star names, focus ring) — stays
+visible. `#controls-restore-btn` is a fixed top-right box, `display:
+none` by default and shown via `body[data-controls-hidden]
+.controls-restore-btn`. It sits where the controls were, showing a `+`
+that expands (ease-in-out) to "Show controls" on hover/focus; clicking
+it, or pressing `U` again, restores the controls.
 
 ## `[hidden]` specificity and `.modal { display: grid }`
 

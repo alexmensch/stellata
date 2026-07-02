@@ -112,7 +112,7 @@
           <dt><kbd>F</kbd></dt>
           <dd>Toggle fullscreen</dd>
           <dt><kbd>U</kbd></dt>
-          <dd>Hide/show the UI chrome (for a clean screenshot)</dd>
+          <dd>Show/hide the controls</dd>
           <dt><kbd>+</kbd> / <kbd>−</kbd></dt>
           <dd>Magnitude limit ± 0.5</dd>
           <dt><kbd>=</kbd></dt>
@@ -120,7 +120,7 @@
           <dt><kbd>?</kbd></dt>
           <dd>Show this help</dd>
           <dt><kbd>Esc</kbd></dt>
-          <dd>Step back: exit fullscreen → exit observe → clear destination → clear focus</dd>
+          <dd>Step back: exit observe → clear destination → clear focus</dd>
         </dl>
       </div>
     </div>
@@ -289,10 +289,6 @@
           <button class="link-btn" id="brand-about" type="button">about</button>
           <span class="sep">·</span>
           <button class="link-btn share-link" id="brand-share" type="button">share <span class="share-glyph">⧉</span></button>
-          <span class="sep">·</span>
-          <button class="link-btn" id="brand-fullscreen" type="button">fullscreen</button>
-          <span class="sep">·</span>
-          <button class="link-btn" id="brand-hide-chrome" type="button">hide UI</button>
         </div>
       </div>
     </div>
@@ -489,7 +485,10 @@
       <div class="meta" id="meta" hidden></div>
     </div>
 
-    <button id="chrome-restore-btn" class="chrome-restore-btn" type="button">Show UI</button>
+    <button id="controls-restore-btn" class="controls-restore-btn" type="button" aria-label="Show controls">
+      <span class="controls-restore-icon" aria-hidden="true">+</span>
+      <span class="controls-restore-label">Show controls</span>
+    </button>
 
     <script type="module" src="./main.ts"></script>
   </body>
