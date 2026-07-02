@@ -247,6 +247,11 @@ export interface PromotionStats {
    *  single-letter components appear as sibling cursors in the same
    *  WDS root — not a single star. */
   droppedCompoundComp: number;
+  /** Pair-row primary dropped because no position was derivable —
+   *  neither own per-component astrometry nor a compound-sibling sep+PA
+   *  proxy. Collocating on the anchor would render a false coincident
+   *  star (Alsephina C). */
+  droppedCollocatedPrimary: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -260,6 +265,7 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
     droppedCompoundComp: 0,
+    droppedCollocatedPrimary: 0,
   };
 }
 
@@ -442,30 +448,27 @@ export interface ProjectionAnchor {
   z: number;
 }
 
-function resolvePosition(
+// A component's xyz is "independent" only when Stage 3 re-anchored it
+// per-component. gaia_5p with its own gaia_source_id, or
+// hip2_long_baseline with its own HIP, count. Every other route —
+// athyg_position, gaia_nss_systemic, system_inherited (and the
+// shared-identifier shape inside the routes above) — reproduces the
+// SYSTEM anchor under a different float path. Strict xyz equality
+// missed this because float residue ranges from µpc at nearby systems
+// (Algol Aa↔Ab) to tens of AU at hundreds of pc (Polaris Aa↔Ab); the
+// tag itself is the reliable signal. `primaryGaia` / `primaryHip` are
+// the anchor primary's identifiers — a component sharing them isn't a
+// per-component fit.
+function resolveIndependentAstrometry(
   row: MultiplesTsvRow,
-  primary: MultiplesTsvRow | null,
-  anchor: ProjectionAnchor | null,
+  primaryGaia: string | null,
+  primaryHip: number | null,
 ): CompanionPlacement | null {
   const ownAstrometry =
     row.astrometryVia !== 'system_inherited'
     && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
     && row.distPc !== null;
-
-  // A secondary's xyz is "independent" only when Stage 3 re-anchored it
-  // per-component. gaia_5p with its own gaia_source_id, or
-  // hip2_long_baseline with its own HIP, count. Every other route —
-  // athyg_position, gaia_nss_systemic, system_inherited (and the
-  // shared-identifier shape inside the routes above) — reproduces the
-  // SYSTEM anchor under a different float path. Strict xyz equality
-  // missed this because float residue ranges from µpc at nearby systems
-  // (Algol Aa↔Ab) to tens of AU at hundreds of pc (Polaris Aa↔Ab); the
-  // tag itself is the reliable signal. The catalog primary's xyz is the
-  // authoritative position, and sep+PA tangent projection from it keeps
-  // every component of one system rendered coherently.
-  const primaryGaia = primary?.gaiaSourceId ?? null;
-  const primaryHip = primary?.hip ?? null;
-  const independentAstrometry =
+  const independent =
     ownAstrometry
     && INDEPENDENT_FIT_ROUTES.has(row.astrometryVia)
     && ((row.astrometryVia === 'gaia_5p'
@@ -474,13 +477,26 @@ function resolvePosition(
       || (row.astrometryVia === 'hip2_long_baseline'
           && row.hip !== null && row.hip > 0
           && row.hip !== primaryHip));
+  if (!independent) return null;
+  return {
+    x: row.x_pc as number, y: row.y_pc as number, z: row.z_pc as number,
+    distPc: row.distPc as number,
+  };
+}
 
-  if (independentAstrometry) {
-    return {
-      x: row.x_pc as number, y: row.y_pc as number, z: row.z_pc as number,
-      distPc: row.distPc as number,
-    };
-  }
+function resolvePosition(
+  row: MultiplesTsvRow,
+  primary: MultiplesTsvRow | null,
+  anchor: ProjectionAnchor | null,
+): CompanionPlacement | null {
+  // The catalog primary's xyz is the authoritative position, and sep+PA
+  // tangent projection from it keeps every component of one system
+  // rendered coherently. Independent per-component astrometry wins over
+  // that projection when Stage 3 supplied it.
+  const independent = resolveIndependentAstrometry(
+    row, primary?.gaiaSourceId ?? null, primary?.hip ?? null,
+  );
+  if (independent !== null) return independent;
   // Tangent projection branch. Prefer the existing catalog anchor when
   // one was supplied (primary already in catalog.bin); otherwise fall
   // back to the multiples.tsv primary row's xyz.
@@ -1020,30 +1036,36 @@ function tryPromoteCursorPrimary(
   if (!anchor) return null;
   if (anchor.primaryRow === primary) return null;  // would self-promote
   // Position. Preference order:
-  //  1. Project from a sibling cursor's unresolved-compound sep+PA when
+  //  1. The row's own per-component astrometry when Stage 3 supplied a
+  //     real independent fit (own gaia_5p / hip2_long_baseline whose id
+  //     differs from the anchor's).
+  //  2. Project from a sibling cursor's unresolved-compound sep+PA when
   //     the compound contains this row's comp letter — 40 Eri B (in
   //     BC/BD/BE) borrows the A,BC group's anchor→BC sep+PA as an
   //     anchor→B proxy. Approximate (it's anchor→BC-barycentre, not
-  //     anchor→B), but vastly better than collocation when no AB
-  //     orbital pair animates B at runtime.
-  //  2. Collocate at the system anchor — last-resort fallback when no
-  //     compound sibling exists. BinaryOrbitField overlays orbital
-  //     motion when an animating pair is wired up.
-  let position: CompanionPlacement | null = null;
-  const proxy = findCompoundProxySepPa(
-    primary.comp, wdsRoot, groups, singleLettersByRoot,
+  //     anchor→B), but vastly better than collocation.
+  // Neither available → drop. Collocating at the anchor would bake a
+  // false coincident star inside the anchor's disc (Alsephina C): the
+  // escape only fires for cursor primaries that never appear as a
+  // secondary of the anchor, so no anchor→self orbital pair exists for
+  // BinaryOrbitField to animate it away from centre at runtime.
+  let position = resolveIndependentAstrometry(
+    primary, anchor.primaryRow.gaiaSourceId, anchor.primaryRow.hip,
   );
-  if (proxy !== null) {
-    position = projectFromSepPa(
-      anchor.star.x, anchor.star.y, anchor.star.z,
-      proxy.sepArcsec, proxy.paDeg,
+  if (position === null) {
+    const proxy = findCompoundProxySepPa(
+      primary.comp, wdsRoot, groups, singleLettersByRoot,
     );
+    if (proxy !== null) {
+      position = projectFromSepPa(
+        anchor.star.x, anchor.star.y, anchor.star.z,
+        proxy.sepArcsec, proxy.paDeg,
+      );
+    }
   }
   if (position === null) {
-    position = {
-      x: anchor.star.x, y: anchor.star.y, z: anchor.star.z,
-      distPc: Math.hypot(anchor.star.x, anchor.star.y, anchor.star.z),
-    };
+    stats.droppedCollocatedPrimary++;
+    return null;
   }
   return promoteRow(
     {
