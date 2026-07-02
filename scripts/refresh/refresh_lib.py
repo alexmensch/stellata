@@ -7,6 +7,7 @@ from __future__ import annotations
 import csv
 import os
 import random
+import re
 import time
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence, TypeVar
@@ -108,6 +109,9 @@ class TransientError(Exception):
     exception. The default classifier treats this as transient."""
 
 
+_HTTP_STATUS_IN_MESSAGE = re.compile(r"\b([45]\d\d)\b")
+
+
 def is_transient_http_error(exc: BaseException) -> bool:
     """Default classifier: True for 5xx HTTP responses, network-level
     errors, and `TransientError`. Imports `requests` and `pyvo` lazily so
@@ -119,8 +123,16 @@ def is_transient_http_error(exc: BaseException) -> bool:
         import requests
         if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
             return True
-        if isinstance(exc, requests.HTTPError) and exc.response is not None:
-            return 500 <= exc.response.status_code < 600
+        if isinstance(exc, requests.HTTPError):
+            # astroquery's TAP layer raises HTTPError with no `response`
+            # attached — the status is only in the message ("Error 500:
+            # Cannot find result ... for job ..."), a server-side result-
+            # storage race that clears on a re-launched job. Fall back to
+            # parsing the code out of the message when `response` is absent.
+            if exc.response is not None:
+                return 500 <= exc.response.status_code < 600
+            m = _HTTP_STATUS_IN_MESSAGE.search(str(exc))
+            return m is not None and 500 <= int(m.group(1)) < 600
     except ImportError:
         pass
     try:
@@ -310,6 +322,13 @@ class TapClient:
 CDS_TAP_URL = "https://tapvizier.u-strasbg.fr/TAPVizieR/tap"
 SIMBAD_TAP_URL = "https://simbad.cds.unistra.fr/simbad/sim-tap"
 
+# Synchronous Gaia DR3 TAP endpoints. The ESA archive's ASYNC path
+# (astroquery.gaia.launch_job_async) intermittently 500s on result
+# retrieval while its SYNC endpoint stays healthy; ARI Heidelberg hosts
+# the identical `gaiadr3.gaia_source` schema as a same-query fallback.
+GAIA_ESA_SYNC_TAP_URL = "https://gea.esac.esa.int/tap-server/tap"
+GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
+
 
 def _esa_run(query: str) -> Any:
     from astroquery.gaia import Gaia
@@ -348,6 +367,74 @@ def simbad_backend() -> TapBackend:
     ESA or CDS for these tables, so callers pass `backends=[simbad_backend()]`
     explicitly rather than relying on the default fallback list."""
     return TapBackend(name="SIMBAD", run=_simbad_run)
+
+
+def _iter_votable_infos(votable: Any) -> Iterable[Any]:
+    yield from getattr(votable, "infos", [])
+    for res in getattr(votable, "resources", []):
+        yield from getattr(res, "infos", [])
+
+
+def votable_query_status(votable: Any) -> tuple[bool, str]:
+    """Inspect a parsed VOTable's QUERY_STATUS INFO. Returns `(ok,
+    message)`. Sync TAP answers HTTP 200 even for a query-level error or
+    a row OVERFLOW, flagging it in an INFO element rather than the status
+    line — so a caller that only checks the HTTP code would silently
+    accept a truncated or failed result."""
+    for info in _iter_votable_infos(votable):
+        if getattr(info, "name", None) == "QUERY_STATUS":
+            val = getattr(info, "value", "") or ""
+            if val in ("OK", ""):
+                continue
+            detail = getattr(info, "content", "") or getattr(info, "value", "")
+            return False, f"{val}: {detail}"
+    return True, ""
+
+
+def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
+    """Run one synchronous ADQL query over HTTP POST and parse the VOTable
+    result into an astropy Table. Sync avoids astroquery's async
+    result-storage path; POST keeps a long IN-list out of the URL. MAXREC
+    is raised above the batch size so a full batch never trips the
+    overflow truncation. A query-level error in the VOTable is re-raised
+    as transient unless its text looks like a permanent ADQL fault."""
+    import io
+    import requests
+    from astropy.io.votable import parse as parse_votable
+
+    resp = requests.post(
+        base_url.rstrip("/") + "/sync",
+        data={
+            "REQUEST": "doQuery",
+            "LANG": "ADQL",
+            "FORMAT": "votable",
+            "MAXREC": str(maxrec),
+            "QUERY": query,
+        },
+        timeout=300,
+    )
+    resp.raise_for_status()
+    votable = parse_votable(io.BytesIO(resp.content))
+    ok, msg = votable_query_status(votable)
+    if not ok:
+        if re.search(r"unknown column|not found|syntax|invalid", msg, re.I):
+            raise RuntimeError(f"sync TAP query error: {msg}")
+        raise TransientError(f"sync TAP transient error: {msg}")
+    return votable.get_first_table().to_table(use_names_over_ids=True)
+
+
+def gaia_sync_backend(
+    name: str = "ESA-sync",
+    *,
+    base_url: str = GAIA_ESA_SYNC_TAP_URL,
+    maxrec: int = 20_000,
+) -> TapBackend:
+    """Synchronous Gaia DR3 TAP backend (POST `/sync`, VOTable). Serves
+    the same `gaiadr3.gaia_source` schema as the async ESA archive.
+    `base_url` selects the archive — the ESA default or the ARI Heidelberg
+    mirror (`GAIA_ARI_SYNC_TAP_URL`), a same-schema fallback for when ESA
+    is degraded. `maxrec` must exceed the per-query row count."""
+    return TapBackend(name=name, run=lambda q: _sync_tap_run(base_url, q, maxrec))
 
 
 def _default_backends() -> list[TapBackend]:
