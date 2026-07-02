@@ -57,6 +57,19 @@ J2000_REF_EPOCH_JD = 2451545.0
 # Modified Julian Date offset (ORB6 T0_unit='m').
 MJD_TO_JD_OFFSET = 2400000.5
 
+# Truncated Julian Date offset (ORB6 T0_unit='d': the file stores
+# JD − 2,400,000). Also the recovery reading for the ~50 truncated-JD
+# epochs the catalog mislabels with the 'y' flag (see _orb6_T0_jd).
+TRUNCATED_JD_TO_JD_OFFSET = 2400000.0
+
+# Physically-possible window for a fitted periastron epoch, in full JD
+# (Besselian years ≈1700–2600). A flag-driven conversion landing outside
+# it means the ORB6 unit flag is wrong for that row; _orb6_T0_jd retries
+# the truncated-JD reading and select_orbits_all asserts every emitted
+# epoch stays inside.
+T0_MIN_PLAUSIBLE_JD = J2000_REF_EPOCH_JD + (1700.0 - 2000.0) * 365.25
+T0_MAX_PLAUSIBLE_JD = J2000_REF_EPOCH_JD + (2600.0 - 2000.0) * 365.25
+
 # NSS solution types whose Thiele-Innes constants encode the
 # PHOTOCENTRE's orbit around the barycentre, not the relative A–B
 # orbit (A,B,F,G populated in 100% of DR3 rows; the stored
@@ -359,19 +372,40 @@ def _orb6_semimajor_au(
 
 
 def _orb6_T0_jd(entry: Orb6Entry) -> float | None:
-    """Normalise ORB6's ``T0_val`` + ``T0_unit`` to absolute JD. Unit
-    codes: ``y`` = Julian year (modern ORB6 convention; converts via
-    J2000 anchor + 365.25-d year), ``d`` = JD outright, ``m`` = MJD.
-    Other codes are rare and skipped (``None``)."""
+    """Normalise ORB6's ``T0_val`` + ``T0_unit`` to absolute JD.
+
+    Unit codes (orb6format.txt): ``d`` = truncated JD (the file stores
+    JD − 2,400,000), ``m`` = MJD (JD − 2,400,000.5), ``y`` = fractional
+    Besselian year (via the J2000 anchor + 365.25-day year, matching
+    ``wds_year_to_jd``). ``c`` and blank codes aren't reliably
+    interpretable — the documented ``c`` = year/100 form matches none of
+    the file's ``c`` rows — so they return ``None``.
+
+    ORB6 mislabels ~50 truncated-JD epochs with the ``y`` flag — e.g.
+    WDS 04227+1503 Aa,Ab stores ``59501.496 y`` (a JD − 2,400,000 value)
+    for a 4-day spectroscopic pair — and the year formula then throws the
+    epoch out past JD 2e7. A ``y`` conversion landing outside the
+    physically-possible epoch window is retried as a truncated JD, the
+    sole observed mislabel mode; if that too is implausible the row
+    returns ``None`` so the renderer falls back to the WDS-epoch static
+    placement.
+    """
     if entry.T0_val is None:
         return None
+    val = entry.T0_val
     unit = entry.T0_unit
-    if unit == "y":
-        return J2000_REF_EPOCH_JD + (entry.T0_val - 2000.0) * 365.25
     if unit == "d":
-        return entry.T0_val
+        return val + TRUNCATED_JD_TO_JD_OFFSET
     if unit == "m":
-        return entry.T0_val + MJD_TO_JD_OFFSET
+        return val + MJD_TO_JD_OFFSET
+    if unit == "y":
+        year_jd = J2000_REF_EPOCH_JD + (val - 2000.0) * 365.25
+        if T0_MIN_PLAUSIBLE_JD <= year_jd <= T0_MAX_PLAUSIBLE_JD:
+            return year_jd
+        truncated_jd = val + TRUNCATED_JD_TO_JD_OFFSET
+        if T0_MIN_PLAUSIBLE_JD <= truncated_jd <= T0_MAX_PLAUSIBLE_JD:
+            return truncated_jd
+        return None
     return None
 
 
@@ -565,6 +599,14 @@ def select_orbits_all(
             primary_astrometry=p_ast, secondary_astrometry=s_ast,
             orb6_for_pair=orb6_for_pair, indices=indices,
         )
+        if orbit is not None and orbit.P_days is not None and orbit.T_jd is not None:
+            if not (T0_MIN_PLAUSIBLE_JD <= orbit.T_jd <= T0_MAX_PLAUSIBLE_JD):
+                raise ValueError(
+                    f"Stage 4 periastron epoch out of range for "
+                    f"{pair.wds_id}/{pair.components} via {via}: "
+                    f"T_jd={orbit.T_jd} (expected "
+                    f"[{T0_MIN_PLAUSIBLE_JD}, {T0_MAX_PLAUSIBLE_JD}])"
+                )
         out.append((orbit, via))
     return out
 
