@@ -41,12 +41,60 @@ describe('AU_PC', () => {
 });
 
 describe('ECLIPTIC_NORTH_POLE_ICRS', () => {
-  it('is a unit vector with the J2000 obliquity tilt around +X', () => {
+  // Independent anchors only — never assert against (±sinε, cosε)
+  // expressions that share their derivation with the constant. A sign
+  // flip in the constant once shipped because the test pinned the same
+  // (wrong) formula.
+
+  it('matches the published NEP sky position RA 18h / Dec +66.5607°', () => {
+    const raRad = (270 * Math.PI) / 180; // 18h
+    const decRad = ((90 - 23.4392911) * Math.PI) / 180;
     expect(ECLIPTIC_NORTH_POLE_ICRS.length()).toBeCloseTo(1, 6);
-    expect(ECLIPTIC_NORTH_POLE_ICRS.x).toBeCloseTo(0, 12);
-    // sin(23.4392911°) ≈ 0.39777716 ; cos ≈ 0.91748206
-    expect(ECLIPTIC_NORTH_POLE_ICRS.y).toBeCloseTo(0.39777716, 6);
-    expect(ECLIPTIC_NORTH_POLE_ICRS.z).toBeCloseTo(0.91748206, 6);
+    expect(ECLIPTIC_NORTH_POLE_ICRS.x).toBeCloseTo(
+      Math.cos(decRad) * Math.cos(raRad), 6);
+    expect(ECLIPTIC_NORTH_POLE_ICRS.y).toBeCloseTo(
+      Math.cos(decRad) * Math.sin(raRad), 6);
+    expect(ECLIPTIC_NORTH_POLE_ICRS.z).toBeCloseTo(
+      Math.sin(decRad), 6);
+  });
+
+  it('round-trips to RA 18h / Dec +66.5607° from Cartesian', () => {
+    const raDeg =
+      ((Math.atan2(ECLIPTIC_NORTH_POLE_ICRS.y, ECLIPTIC_NORTH_POLE_ICRS.x)
+        * 180) / Math.PI + 360) % 360;
+    const decDeg = (Math.asin(ECLIPTIC_NORTH_POLE_ICRS.z) * 180) / Math.PI;
+    expect(raDeg).toBeCloseTo(270, 4);
+    expect(decDeg).toBeCloseTo(66.5607089, 4);
+  });
+
+  it('June-solstice Sun lands at Dec +23.44° through the production quaternion path', () => {
+    // The cheapest mirror detector: geocentric ecliptic (0, 1, 0) is the
+    // Sun's direction at the June solstice (ecliptic longitude 90°).
+    // Rotated ecliptic → ICRS it must sit at Dec +23.44° (northern
+    // summer), RA 6h. The mirrored pole puts it at −23.44°.
+    const q = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      ECLIPTIC_NORTH_POLE_ICRS.clone(),
+    );
+    const solsticeSun = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+    const decDeg = (Math.asin(solsticeSun.z) * 180) / Math.PI;
+    const raDeg =
+      ((Math.atan2(solsticeSun.y, solsticeSun.x) * 180) / Math.PI + 360) % 360;
+    expect(decDeg).toBeCloseTo(23.4392911, 6);
+    expect(raDeg).toBeCloseTo(90, 6);
+  });
+
+  it('the vernal equinox direction is invariant under the ecliptic→ICRS rotation', () => {
+    // Both frames share +x (First Point of Aries). If the quaternion
+    // moves it, the rotation axis is wrong.
+    const q = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      ECLIPTIC_NORTH_POLE_ICRS.clone(),
+    );
+    const aries = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    expect(aries.x).toBeCloseTo(1, 6);
+    expect(aries.y).toBeCloseTo(0, 6);
+    expect(aries.z).toBeCloseTo(0, 6);
   });
 });
 
