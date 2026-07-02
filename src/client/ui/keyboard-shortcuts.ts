@@ -2,6 +2,7 @@ import type { Stellata } from '../stellata';
 import { DEFAULT_FOV } from '../stellata';
 import { bindHelpModal } from '../modals/help-modal';
 import { pushTapAndCheckTriple } from './keyboard-shortcuts-pure';
+import { exitFullscreenIfActive, toggleFullscreen } from './fullscreen';
 
 // Single global keydown listener with a small dispatch table. Every
 // shortcut is a thin wrapper over an existing public API so future
@@ -68,6 +69,13 @@ export function bindKeyboardShortcuts(
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     if (e.key === 'Escape') {
+      // Fullscreen exit takes priority over everything else — the browser
+      // exits fullscreen on Escape regardless of what we do here, so we
+      // stop the cascade from also firing on the same keystroke.
+      if (exitFullscreenIfActive()) {
+        e.preventDefault();
+        return;
+      }
       // Highest priority: an open kb-modal (Go / Constellation) closes
       // even if its input has focus. The Typeahead class bails its own
       // ESC when the dropdown has no results (empty input), so we own
@@ -145,6 +153,10 @@ export function bindKeyboardShortcuts(
         stellata.setFilter({
           showGalacticGrid: !stellata.getFilter().showGalacticGrid,
         });
+        e.preventDefault();
+        break;
+      case 'f': case 'F':
+        toggleFullscreen();
         e.preventDefault();
         break;
       case 'o': case 'O':

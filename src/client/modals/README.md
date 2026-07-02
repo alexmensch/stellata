@@ -6,11 +6,13 @@ ESC / backdrop / close-button binding is shared.
 ## Brand box, About/Credits modal, and Share
 
 `.ui-top-left` is a fixed top-left container holding the "Stellata"
-title plus a small `about · share ⧉` link row (always visible — no
-hover affordance, since touch devices have no hover state). The
-`.brand-box` flex column is `align-items: center` so the narrow
-title and the wider link row sit symmetrically around the centre
-axis.
+title plus a small `about · share ⧉ · fullscreen` link row (always
+visible — no hover affordance, since touch devices have no hover
+state). The `.brand-box` flex column is `align-items: center` so the
+narrow title and the wider link row sit symmetrically around the
+centre axis. `fullscreen` wires the toggle owned by
+`src/client/ui/fullscreen.ts` — see `src/client/ui/README.md` §
+Fullscreen toggle.
 
 `about` opens a single tabbed `<div class="modal">` card that
 combines what used to be two separate modals. The title row is a

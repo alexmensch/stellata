@@ -25,6 +25,7 @@ import { bindModeToggle } from './camera/controls/mode-toggle';
 import { maybeShowInfoModal } from './modals/info-modal';
 import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
+import { bindFullscreenToggle } from './ui/fullscreen';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
@@ -271,6 +272,7 @@ async function main() {
       meta.hidden = false;
       bindPanelLayout();
       bindBrandModals();
+      bindFullscreenToggle();
       bindKeyboardShortcuts(stellata, { toggleDebugPanel: debugTools.panel });
       maybeShowInfoModal(catalog.count);
     }, 400);

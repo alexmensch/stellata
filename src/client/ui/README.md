@@ -22,10 +22,11 @@ behavioural changes propagate automatically.
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
 | `H` | Toggle `showHud` |
 | `S` | Toggle `showGalacticGrid` |
+| `F` | Toggle browser fullscreen (`fullscreen.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
 | `?` | Open the keyboard-shortcuts help modal |
-| `Esc` | Cascade: observe→navigate (animated exit) → clear destination → clear focus |
+| `Esc` | Exit fullscreen if active, else cascade: observe→navigate (animated exit) → clear destination → clear focus |
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -255,6 +256,20 @@ clipped (the widget is non-interactive, so overflow is fine). The SVG
 height is computed for the worst-case (default-angle) z-axis projection
 regardless of actual angle or visibility, so the bar's screen position
 is steady across focus/unfocus and any line angle.
+
+## Fullscreen toggle
+
+`fullscreen.ts` calls `requestFullscreen()` on `document.documentElement`
+(the `<html>` element), not the canvas — every chrome container is a
+sibling of the canvas under `<body>`, so fullscreening the whole page
+keeps the panel/topbar/overlays visible by default. `bindFullscreenToggle()`
+wires the `#brand-fullscreen` link and swaps its label via the
+`fullscreenchange` event so it tracks exits triggered by the browser's
+own fullscreen UI, not just the in-app toggle. `keyboard-shortcuts.ts`
+checks `exitFullscreenIfActive()` before anything else in its Escape
+handling — the browser exits fullscreen on Escape regardless of app
+code, so the check exists to stop the observe→navigate cascade from
+also firing on the same keystroke, not to perform the exit itself.
 
 ## `[hidden]` specificity and `.modal { display: grid }`
 
