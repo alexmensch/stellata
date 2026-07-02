@@ -76,7 +76,10 @@ export {
 import { EventBus } from './util/event-bus';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import { EclipsePhotometryField } from './binaries/eclipse-photometry';
+import {
+  EclipsePhotometryField,
+  type EclipseRelationDebugRow,
+} from './binaries/eclipse-photometry';
 import {
   FLAG_HAS_ORBIT,
   type BinariesData,
@@ -1234,6 +1237,22 @@ export class Stellata implements FrameAnchor {
       this.filter.maxAppMag,
       performance.now(),
     );
+  }
+
+  /** Debug-HUD view into the eclipse field's per-relation walk for the
+   *  current camera/filter/sim-time. Empty when no binaries attached. */
+  eclipseDebugRows(starIdx: number | null): EclipseRelationDebugRow[] {
+    return this.eclipsePhotometryField?.debugRows(
+      this.getT(),
+      this.camera.position,
+      this.filter.maxAppMag,
+      starIdx,
+    ) ?? [];
+  }
+
+  /** Active eclipse-dim slot count (occluding or decaying). */
+  get eclipseActiveDimCount(): number {
+    return this.eclipsePhotometryField?.activeDimCount ?? 0;
   }
 
   /** User-facing extinction multiplier. 0 disables; 1 = physical realism;

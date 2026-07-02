@@ -221,6 +221,39 @@ describe('EclipsePhotometryField.update — attribute upload gating', () => {
   });
 });
 
+describe('EclipsePhotometryField.debugRows', () => {
+  it('reports the plane gate with the failing dot product', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    const camOnNormal = new THREE.Vector3(10, 5, 0);
+    const rows = field.debugRows(tForJd(J2000_JD + 2.5), camOnNormal, 6, 0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].gate).toBe('plane');
+    expect(rows[0].planeDot!).toBeGreaterThan(rows[0].sinLimit);
+    expect(rows[0].result).toBeNull();
+  });
+
+  it('reports clear geometry with the rendered separation at conjunction', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    const rows = field.debugRows(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].gate).toBe('clear');
+    expect(rows[0].result!.dim).toBeLessThan(1);
+    expect(rows[0].result!.front).toBe('primary');
+    expect(rows[0].relPc).toBeCloseTo(AU_PC, 9);
+    expect(rows[0].discSumPc).toBeGreaterThan(0);
+  });
+
+  it('filters by star index and writes nothing to the dim buffer', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    expect(field.debugRows(tForJd(J2000_JD + 2.5), CAM, 6, 2)).toHaveLength(0);
+    field.debugRows(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(fx.eclipseDimBuffer[1]).toBe(1);
+  });
+});
+
 describe('EclipsePhotometryField.update — visibility prefilter', () => {
   it('skips relations whose primary is below the magnitude limit', () => {
     const fx = edgeOnFixture();

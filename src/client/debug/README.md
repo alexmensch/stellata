@@ -9,18 +9,21 @@ look first when something feels slow.
 src/client/debug/
   debug.ts                        Dev console handle (`window.debug`
                                   surface). Owns the panel-open path.
-  debug-panel.ts                  Unified debug panel — four collapsible
-                                  sections (Perf / Star tuning / Pin
-                                  debug / Arrow-fade debug).
+  debug-panel.ts                  Unified debug panel chrome (drag
+                                  handle, collapsible sections, slider /
+                                  readout helpers).
   perf-hud.ts                     Ring-buffer instrumentation +
                                   histogram + per-label table. Module-
                                   level mark/measure/frame swapped from
                                   no-op to real on panel open.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
+  eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
+                                  geometry readout (focused star, or all
+                                  active dims when unfocused).
   star-tuning.ts                  Live-tunable star exaggeration /
                                   magnitude / size knobs.
-  (+ tests for each.)
+  (+ tests for the pure helpers.)
 ```
 
 ## Running the perf HUD
@@ -28,7 +31,7 @@ src/client/debug/
 The HUD is an opt-in dev tool, not a user feature. Activation paths:
 
 - **`debug.panel()`** in the dev console — opens the unified debug
-  panel; the Perf section is one of seven
+  panel; the Perf section is one of eight
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
   `mark`/`measure`/`frame` functions to real implementations).
@@ -244,10 +247,14 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with seven sections: Star disc (`star-tuning.ts`),
+collapsible host with eight sections: Star disc (`star-tuning.ts`),
 Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
-(`arrow-fade-debug-hud.ts`), and Warp (`warp-tuning.ts`). Drag the
+(`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse
+(`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,
+rendered pair separation vs disc-radius sum, θ/Σα ratio, front/back,
+target and buffered dim; the fastest way to see WHY a pair is or
+isn't dimming from the current vantage). Drag the
 title bar to move it, click any section header to fold/unfold; both the
 position and per-section collapse state persist in `sessionStorage`
 (resets on reload, since calibration state shouldn't survive between

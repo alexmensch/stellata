@@ -62,6 +62,35 @@ interface EclipseRelationCache {
   sinLimit: number;
 }
 
+/** One relation's walk verdict for a single frame. `gate` names the
+ *  prefilter that stopped it, or 'clear' when the geometry ran. */
+export interface EclipseRelationDebugRow {
+  primaryIdx: number;
+  secondaryIdx: number;
+  tier: 1 | 2;
+  gate: 'horizon' | 'mag' | 'plane' | 'clear';
+  dCamPc: number;
+  /** |dot(camera→primary unit, orbit normal)| — compared to sinLimit. */
+  planeDot: number | null;
+  sinLimit: number;
+  /** Rendered pair separation, pc. NaN when gated before evaluation. */
+  relPc: number;
+  discSumPc: number;
+  result: EclipseResult | null;
+  bufPrimary: number;
+  bufSecondary: number;
+}
+
+interface RelationEval {
+  gate: 'horizon' | 'mag' | 'plane' | 'clear';
+  dCamPc: number;
+  planeDot: number | null;
+  relX: number;
+  relY: number;
+  relZ: number;
+  result: EclipseResult | null;
+}
+
 /** Samples per orbit when bounding the minimum rendered separation for
  *  the prefilter. */
 const MIN_SEP_SAMPLES = 32;
@@ -117,50 +146,15 @@ export class EclipsePhotometryField {
     }
     this.lastNowMs = nowMs;
 
-    const local = this.opts.localPositions;
-    const abs = this.opts.absolutePositions;
-    const absMags = this.opts.absoluteMags;
     const dimBuf = this.opts.eclipseDimBuffer;
     const targets = this.targets;
     targets.clear();
 
     for (let i = 0; i < this.relations.length; i++) {
       const rc = this.relations[i];
-      const pBase = rc.primaryIdx * 3;
-
-      const losX = local[pBase] - cameraPos.x;
-      const losY = local[pBase + 1] - cameraPos.y;
-      const losZ = local[pBase + 2] - cameraPos.z;
-      const dCamPc = Math.sqrt(losX * losX + losY * losY + losZ * losZ);
-      if (dCamPc <= 0 || dCamPc > VISIBILITY_HORIZON_PC) continue;
-      const appMag = apparentMagnitude(absMags[rc.primaryIdx], dCamPc);
-      if (appMag > maxAppMag + 0.5) continue;
-
-      // View-direction prefilter: the rendered pair offset always lies
-      // (near-)in the orbit plane, so a line of sight steeper against
-      // that plane than the discs' angular extent can never eclipse.
-      // Skips the Kepler eval for the vast majority of (camera, pair)
-      // combinations each frame.
-      if (rc.normal !== null && rc.sinLimit < 1) {
-        const dotN = (losX * rc.normal.x + losY * rc.normal.y + losZ * rc.normal.z) / dCamPc;
-        if (Math.abs(dotN) > rc.sinLimit) continue;
-      }
-
-      const aBase = rc.primaryIdx * 3;
-      SYSTEM_XYZ.x = abs[aBase];
-      SYSTEM_XYZ.y = abs[aBase + 1];
-      SYSTEM_XYZ.z = abs[aBase + 2];
-      const delta = evaluateOrbitRelationDeltaPc(rc.orbit, tJd, SYSTEM_XYZ);
-      const relX = rc.baseDiff.x + delta.x;
-      const relY = rc.baseDiff.y + delta.y;
-      const relZ = rc.baseDiff.z + delta.z;
-
-      const result: EclipseResult = eclipseDimFromOffsets(
-        losX, losY, losZ,
-        relX, relY, relZ,
-        rc.rPriPc, rc.rSecPc,
-      );
-      if (result.dim >= 1) continue;
+      const ev = this.evaluateRelation(rc, tJd, cameraPos, maxAppMag);
+      const result = ev.result;
+      if (result === null || result.dim >= 1) continue;
       const backIdx = result.front === 'primary' ? rc.secondaryIdx : rc.primaryIdx;
       // Take min when the same star is the back of multiple
       // contemporaneous overlaps (hierarchical pair where the inner
@@ -193,10 +187,107 @@ export class EclipsePhotometryField {
     if (wrote) this.opts.iEclipseDimAttr.needsUpdate = true;
   }
 
+  /** Count of slots currently held below 1.0 (occluding or decaying). */
+  get activeDimCount(): number {
+    return this.active.size;
+  }
+
+  /** Read-only re-walk for the debug HUD. `starIdx` filters to relations
+   *  containing that instance; null returns every relation that cleared
+   *  the gates or currently holds a dim. Runs the same gates + geometry
+   *  as update() but writes nothing. */
+  debugRows(
+    t: number,
+    cameraPos: Readonly<THREE.Vector3>,
+    maxAppMag: number,
+    starIdx: number | null,
+  ): EclipseRelationDebugRow[] {
+    const tJd = tToJDE(t);
+    const dimBuf = this.opts.eclipseDimBuffer;
+    const rows: EclipseRelationDebugRow[] = [];
+    for (const rc of this.relations) {
+      if (starIdx !== null
+        && rc.primaryIdx !== starIdx && rc.secondaryIdx !== starIdx) continue;
+      const ev = this.evaluateRelation(rc, tJd, cameraPos, maxAppMag);
+      const holdsDim = dimBuf[rc.primaryIdx] < 1 || dimBuf[rc.secondaryIdx] < 1;
+      if (starIdx === null && ev.gate !== 'clear' && !holdsDim) continue;
+      rows.push({
+        primaryIdx: rc.primaryIdx,
+        secondaryIdx: rc.secondaryIdx,
+        tier: rc.orbit.tier,
+        gate: ev.gate,
+        dCamPc: ev.dCamPc,
+        planeDot: ev.planeDot,
+        sinLimit: rc.sinLimit,
+        relPc: ev.result !== null
+          ? Math.hypot(ev.relX, ev.relY, ev.relZ)
+          : NaN,
+        discSumPc: rc.rPriPc + rc.rSecPc,
+        result: ev.result,
+        bufPrimary: dimBuf[rc.primaryIdx],
+        bufSecondary: dimBuf[rc.secondaryIdx],
+      });
+    }
+    return rows;
+  }
+
   dispose(): void {
     // Buffer + attribute carrier are owned by the integration shell. The
     // class holds only the relation cache, which the GC reclaims when
     // the instance drops out of scope.
+  }
+
+  private evaluateRelation(
+    rc: EclipseRelationCache,
+    tJd: number,
+    cameraPos: Readonly<THREE.Vector3>,
+    maxAppMag: number,
+  ): RelationEval {
+    const local = this.opts.localPositions;
+    const abs = this.opts.absolutePositions;
+    const pBase = rc.primaryIdx * 3;
+
+    const losX = local[pBase] - cameraPos.x;
+    const losY = local[pBase + 1] - cameraPos.y;
+    const losZ = local[pBase + 2] - cameraPos.z;
+    const dCamPc = Math.sqrt(losX * losX + losY * losY + losZ * losZ);
+    if (dCamPc <= 0 || dCamPc > VISIBILITY_HORIZON_PC) {
+      return { gate: 'horizon', dCamPc, planeDot: null, relX: 0, relY: 0, relZ: 0, result: null };
+    }
+    const appMag = apparentMagnitude(this.opts.absoluteMags[rc.primaryIdx], dCamPc);
+    if (appMag > maxAppMag + 0.5) {
+      return { gate: 'mag', dCamPc, planeDot: null, relX: 0, relY: 0, relZ: 0, result: null };
+    }
+
+    // View-direction prefilter: the rendered pair offset always lies
+    // (near-)in the orbit plane, so a line of sight steeper against
+    // that plane than the discs' angular extent can never eclipse.
+    // Skips the Kepler eval for the vast majority of (camera, pair)
+    // combinations each frame.
+    let planeDot: number | null = null;
+    if (rc.normal !== null) {
+      planeDot = Math.abs(
+        (losX * rc.normal.x + losY * rc.normal.y + losZ * rc.normal.z) / dCamPc,
+      );
+      if (rc.sinLimit < 1 && planeDot > rc.sinLimit) {
+        return { gate: 'plane', dCamPc, planeDot, relX: 0, relY: 0, relZ: 0, result: null };
+      }
+    }
+
+    SYSTEM_XYZ.x = abs[pBase];
+    SYSTEM_XYZ.y = abs[pBase + 1];
+    SYSTEM_XYZ.z = abs[pBase + 2];
+    const delta = evaluateOrbitRelationDeltaPc(rc.orbit, tJd, SYSTEM_XYZ);
+    const relX = rc.baseDiff.x + delta.x;
+    const relY = rc.baseDiff.y + delta.y;
+    const relZ = rc.baseDiff.z + delta.z;
+
+    const result = eclipseDimFromOffsets(
+      losX, losY, losZ,
+      relX, relY, relZ,
+      rc.rPriPc, rc.rSecPc,
+    );
+    return { gate: 'clear', dCamPc, planeDot, relX, relY, relZ, result };
   }
 
   private buildCache(): void {

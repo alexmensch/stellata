@@ -26,6 +26,10 @@ export interface EclipseResult {
    *  camera's viewpoint. 'primary' means d_primary < d_secondary;
    *  the secondary is the back star and carries the dim factor. */
   front: 'primary' | 'secondary';
+  /** Diagnostics for the debug HUD — 0 on the no-signal early-outs. */
+  thetaRad: number;
+  alphaPri: number;
+  alphaSec: number;
 }
 
 /** Closed-form intersection area of two circles of radii (r1, r2) whose
@@ -63,7 +67,9 @@ function clamp(x: number, lo: number, hi: number): number {
   return x < lo ? lo : x > hi ? hi : x;
 }
 
-const NO_SIGNAL: EclipseResult = { dim: 1, front: 'primary' };
+const NO_SIGNAL: EclipseResult = {
+  dim: 1, front: 'primary', thetaRad: 0, alphaPri: 0, alphaSec: 0,
+};
 
 /** Image-plane geometric occlusion for a binary pair, from the pair's
  *  RELATIVE offset rather than two absolute positions. The relative
@@ -123,7 +129,9 @@ export function eclipseDimFromOffsets(
   const theta = Math.atan2(sinT, cosT);
 
   const lensArea = circleCircleLensArea(alphaPri, alphaSec, theta);
-  if (lensArea <= 0) return NO_SIGNAL;
+  if (lensArea <= 0) {
+    return { dim: 1, front: 'primary', thetaRad: theta, alphaPri, alphaSec };
+  }
 
   // Whichever star is farther is the BACK component; its flux drops.
   // sign(dSec − dPri) = sign(dSec² − dPri²) = sign(2·los·rel + |rel|²),
@@ -132,10 +140,10 @@ export function eclipseDimFromOffsets(
   const discr = 2 * (losXPc * relXPc + losYPc * relYPc + losZPc * relZPc) + relLenSq;
   const front: 'primary' | 'secondary' = discr >= 0 ? 'primary' : 'secondary';
   const alphaBack = front === 'primary' ? alphaSec : alphaPri;
-  if (alphaBack <= 0) return { dim: 1, front };
+  if (alphaBack <= 0) return { dim: 1, front, thetaRad: theta, alphaPri, alphaSec };
   const backDiscArea = Math.PI * alphaBack * alphaBack;
   const dim = clamp(1 - lensArea / backDiscArea, DIM_FLOOR, 1);
-  return { dim, front };
+  return { dim, front, thetaRad: theta, alphaPri, alphaSec };
 }
 
 /** Unit normal of a cached relation's orbit plane in ICRS. Convention-
