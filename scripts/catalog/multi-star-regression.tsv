@@ -1,0 +1,107 @@
+# multi-star-regression.tsv — Tier-A multi-star geometry corpus.
+# One row per WDS pair; scripts/catalog/multi-star-regression.test.ts
+# drives per-row assertions against public/catalog.bin,
+# data/binaries/multiples.tsv, and public/binaries.bin. This is the
+# BINARY half of the sky-truth regression strategy: external-truth
+# pins (WDS sep+PA at the row's published epoch, ORB6 periods) frozen
+# at curation time, so any pipeline drift — projection bugs, epoch
+# baseline regressions, Kepler/Thiele-Innes drift, identifier
+# collisions — fails a named assertion. Complements known-stars.tsv
+# (per-record distance / absmag / spectral pins).
+#
+# ---- Columns -------------------------------------------------------------
+#
+# wds_id                WDS positional ID ("06451-1643").
+# pair                  WDS pair suffix as emitted in multiples.tsv
+#                       system_id ("AB", "Aa,Ab", "Aa1,2").
+# pair_name             Display name for test output.
+# primary_ref           How to resolve the primary's catalog.bin record:
+#                       "hip:<n>" | "gaia:<source_id>" | "name:<name>".
+# secondary_ref         Same, for the secondary. Promoted synth
+#                       companions resolve by name ("name:Algol Ab").
+# sep_arcsec            Published WDS separation at epoch_jd (WDS
+#                       summary date_last row, 0.1" quantum; 0.0 =
+#                       sub-quantum tight pair).
+# pa_deg                Published WDS position angle, deg E of N.
+# epoch_jd              Epoch of the sep+PA measurement, absolute JD
+#                       (WDS date_last year via wds_year_to_jd). Must
+#                       match the pair's multiples.tsv sep_pa_epoch_jd
+#                       and binaries.bin record — NEVER J2000 unless
+#                       the measurement really is from 2000.
+# xyz_sep_tol_au        Tolerance on catalog.bin tangential separation
+#                       vs sep_arcsec x primary distance. Empty = skip
+#                       the xyz pin (reason required in notes_source).
+# xyz_pa_tol_deg        Tolerance on catalog.bin tangential PA. Empty
+#                       with xyz_sep_tol_au empty.
+# orbit_p_days          Expected ORB6 orbital period (days). Presence
+#                       switches on the binaries.bin pins: Tier-1
+#                       flags, element period + periastron epoch,
+#                       stored sep/PA/epoch, and Kepler propagation
+#                       R(sep_pa_epoch_jd) -> sep+PA within the two
+#                       tolerances below. Empty = no orbit pins
+#                       (reason in notes_source).
+# orbit_t_jd            Expected periastron-passage epoch T as
+#                       absolute JD (ORB6 T0 normalised per its unit
+#                       flag: 'd' truncated-JD +2,400,000, 'm' MJD,
+#                       'y' fractional year). Required with
+#                       orbit_p_days — this is the element that
+#                       regressed when 'd'-flagged epochs shipped as
+#                       absolute JD, so it pins externally.
+# orbit_sep_tol_arcsec  Propagated-vs-stored separation tolerance.
+#                       Empty = skip the sep propagation pin.
+# orbit_pa_tol_deg      Propagated-vs-stored PA tolerance (circular).
+#                       Empty = skip the PA propagation pin — WDS
+#                       last-measures of sub-arcsec interferometric
+#                       pairs can carry a 180-deg quadrant ambiguity
+#                       against the ORB6 node convention (Algol,
+#                       Capella), and PA of a sub-quantum separation
+#                       is noise.
+# notes_source          Provenance + tolerance justification. Required.
+#
+# ---- Tolerance discipline ------------------------------------------------
+#
+# Tolerances are curated per row from the empirical residual at
+# authoring time (3-5x observed diff, floored at the float32 position
+# quantum for the system's distance) — tight enough to catch the
+# catastrophic class this corpus exists for (Sirius A-B rendered at
+# ~115 AU instead of 29; propagated PA 185 deg off from a mis-epoched
+# T), loose enough to survive benign rounding. Native-astrometry pairs
+# (both components placed from their own AT-HYG/Gaia astrometry at
+# J1991.25/J2016 epochs) carry wide xyz tolerances because the WDS pin
+# epoch is decades later on a moving orbit; tangent-projected promoted
+# companions pin tight. Never widen a tolerance to silence a failure —
+# a new residual is a real regression until proven otherwise.
+#
+# No NSS-routed pair appears with orbit pins: Gaia NSS Thiele-Innes
+# solutions describe the photocentre orbit (a0), the pipeline withholds
+# a_AU for them (0 of ~1600 gaia_nss rows carry one), so no NSS pair
+# ever sets has_orbit. If that routing decision changes, add an
+# NSS-routed row here in the same PR.
+#
+# Known exclusion pending a fix:
+# - GJ 570 AB (WDS 14575-2125, P=6489 yr): NO row at all. GJ 570 B
+#   currently exists twice in catalog.bin (AT-HYG record + promoted
+#   duplicate, stellata-9pn); every ref to it resolves ambiguously
+#   (catalog-lookup byHip is last-seen, main.ts hipToIndex first-seen)
+#   and the orbit relation is attached to the duplicate. Add the row —
+#   xyz pin ~15 AU / 15 deg, orbit pins ~0.5" / 2 deg (residuals 26.04"
+#   vs 26.20" / 0.1 deg at curation) — in the fixing PR.
+#
+wds_id	pair	pair_name	primary_ref	secondary_ref	sep_arcsec	pa_deg	epoch_jd	xyz_sep_tol_au	xyz_pa_tol_deg	orbit_p_days	orbit_t_jd	orbit_sep_tol_arcsec	orbit_pa_tol_deg	notes_source
+06451-1643	AB	Sirius AB	hip:32349	gaia:2947050466531873024	11.10	59.0	2460311.0	1.0	2	18309.3981	2449562.2404	0.4	3	WDS 06451-1643 date_last 2024: 11.1" @ 59 deg = 29.3 AU at 2.637 pc (the bead's 29 AU +/- 1 headline pin). ORB6 AGC 1 AB grade-2 P=50.1284 yr, T0=1994.5715y (BdH2017). Sirius B tangent-projected from the catalog primary; residual at curation 0.01 AU / 0.0 deg. Propagation residual 0.21" / 1.7 deg (ORB6 prediction vs WDS last measure).
+14396-6050	AB	Alpha Cen AB	hip:71683	hip:71681	8.10	5.0	2459945.75	 	 	29133.0705	2435314.7510	1.0	4	WDS 14396-6050 date_last 2023: 8.1" @ 5 deg. ORB6 P=79.76 yr, T0=1955.60y. NO xyz pin: AT-HYG's 3-4 sig-fig xyz truncation collocates A and B (identical stored positions, stellata-6iv / k35 direct-sourcing scope); pinning either the collocation or the WDS value would freeze a known-wrong baseline. Propagation residual 0.63" / 2.4 deg.
+07393+0514	AB	Procyon AB	hip:37279	name:Procyon B	3.80	286.0	2456658.5	1.0	2	14916.81	2439884.7590	0.4	10	WDS 07393+0514 date_last 2014: 3.8" @ 286 deg = 13.4 AU at 3.514 pc. ORB6 P=40.84 yr, T0=1968.13y. Procyon B (DQZ, no own gaia/hip) promoted via synth key, tangent-projected; residual 0.02 AU / 0.0 deg. Propagation residual 0.20" / 6.9 deg — grade-vs-measurement scatter, hence the 10 deg PA band.
+00491+5749	AB	Eta Cas AB (Achird)	hip:3821	gaia:425040000962497792	13.50	328.0	2459945.75	2.0	2	175053.3675	2411341.9325	0.3	2	WDS 00491+5749 date_last 2023: 13.5" @ 328 deg = 80.0 AU at 5.923 pc. ORB6 grade-2 P=479.3 yr, T0=1889.6y. Achird B promoted with own Gaia source, tangent-projected; residual 0.05 AU / 0.0 deg. Propagation residual 0.01" / 0.4 deg.
+21069+3845	AB	61 Cyg AB	hip:104214	hip:104217	32.10	154.0	2460676.25	25	25	242661.1425	2342105.1425	0.5	2	WDS 21069+3845 date_last 2025: 32.1" @ 154 deg = 112 AU at 3.487 pc. ORB6 P=664.4 yr, T0=1700.09y. WIDE xyz tolerances: both components are native AT-HYG rows placed at their own astrometry epochs (J1991.25 HIP / J2016 Gaia), ~34 yr of orbital motion before the WDS 2025 pin (residual at curation 12.3 AU / 15.5 deg) — the pin still catches the 4x/90-deg catastrophic class. Propagation residual 0.15" / 0.1 deg.
+18428+5938	AB	Struve 2398 AB	hip:91768	hip:91772	11.40	181.0	2458850.0	12	18	149022.0	2369363.75	0.6	3	WDS 18428+5938 date_last 2020: 11.4" @ 181 deg = 40.7 AU at 3.569 pc. ORB6 P=408 yr, T0=1774.71y. WIDE xyz tolerances: native-native placement epochs vs WDS 2020, residual at curation 4.8 AU / 9.5 deg. Propagation residual 0.30" / 1.0 deg.
+07346+3153	AC	Castor AC (YY Gem)	hip:36850	gaia:892348454394856064	69.60	164.0	2459945.75	12	2	 	 	 	 	WDS 07346+3153 AC date_last 2023: 69.6" @ 164 deg = 1085 AU at 15.596 pc. Castor C = YY Gem, promoted with own Gaia source, tangent-projected; residual 0.08 AU / 0.0 deg. Tier 3 (no AC orbit). The famous AB visual orbit (P=459.1 yr) is untestable here: A and B resolve to the same catalog record (Gaia lumps them; degenerate pair dropped by build-runtime-binaries, pending dch.72).
+13239+5456	AB	Mizar AB	hip:65378	gaia:1563590510627624064	14.40	153.0	2459580.5	4	2	 	 	 	 	WDS 13239+5456 AB date_last 2022: 14.4" @ 153 deg = 358 AU at 24.867 pc. Mizar B promoted with own Gaia source, tangent-projected; residual 0.05 AU / 0.0 deg. Tier 3 (no AB orbit on file; the Aa,Ab interferometric pair is degenerate-dropped, same-gaia).
+13239+5456	AC	Mizar-Alcor AC	hip:65378	hip:65477	715.50	73.0	2458850.0	300	4	 	 	 	 	WDS 13239+5456 AC date_last 2020: 715.5" @ 73 deg = 17793 AU at 24.867 pc — the widest pair in the corpus. Native-native placement; residual at curation 104 AU / 1.7 deg. Radial component (0.19 pc parallax offset between Mizar and Alcor) is real depth, deliberately unpinned — only the tangential geometry is WDS-comparable.
+03082+4057	Aa,Ab	Algol Aa,Ab	hip:14576	name:Algol Ab	0.10	304.0	2455197.5	1.0	5	680.168	2446927.22	0.05	 	WDS 03082+4057 Aa,Ab date_last 2010: 0.1" @ 304 deg = 2.76 AU at 27.571 pc. Ab promoted via synth key, tangent-projected; residual 0.06 AU / 0.2 deg. ORB6 LAB grade-1, T0=46927.22 'd'-flagged (truncated JD, normalised +2400000). NO PA propagation pin: propagated PA sits ~167 deg from the WDS 2010 measure — interferometric quadrant ambiguity between the WDS measure and the ORB6 node convention, not a pipeline error (sep agrees: 0.073" vs 0.1" quantised).
+03082+4057	Aa1,2	Algol Aa1,Aa2	hip:14576	name:Algol Aa2	0.00	43.0	2455197.5	 	 	2.867328	2441771.353	0.005	 	WDS 03082+4057 Aa1,2 (the eclipsing pair) date_last 2010: sub-quantum 0.0" — collocated placement pinned by known-stars.tsv max_sep_au, no xyz pin here. ORB6 CSI grade-1, T0=41771.353 'd'-flagged (normalised +2400000). Propagated sep pinned sub-quantum (0.001" at curation, catches an a-scale error); PA of a sub-mas separation is noise, unpinned.
+02318+8916	Aa,Ab	Polaris Aa,Ab	hip:11767	name:Polaris Ab	0.10	293.0	2459945.75	1.0	5	10744.194	2457692.5228	0.05	4	WDS 02318+8916 Aa,Ab date_last 2023: 0.1" @ 293 deg = 13.3 AU at 132.63 pc. Ab promoted via synth key, tangent-projected; residual 0.005 AU / 0.0 deg. ORB6 grade-2 P=29.4 yr, T0=2016.9y. Propagation residual 0.004" / 1.9 deg.
+02318+8916	AB	Polaris AB	hip:11767	gaia:576402619921510144	18.40	236.0	2457389.0	25	2	 	 	 	 	WDS 02318+8916 AB date_last 2016: 18.4" @ 236 deg = 2440 AU at 132.63 pc. Polaris B promoted with own Gaia source, tangent-projected; residual 0.01 AU / 0.0 deg. Tier 3. sep tol 25 AU = 1% (float32 quantum ~3 AU at 133 pc).
+05167+4600	Aa,Ab	Capella Aa,Ab	hip:24608	name:Capella Ab	0.00	271.0	2458850.0	 	 	104.02128	2448147.6	0.06	 	WDS 05167+4600 Aa,Ab date_last 2020: sub-quantum 0.0" — collocated placement pinned by known-stars.tsv max_sep_au, no xyz pin here. ORB6 grade-1, T0=48147.6 'd'-flagged (normalised +2400000). Propagated sep pinned near-quantum (0.046" at curation); PA unpinned — propagated-vs-WDS differs by 180.6 deg, the classic quadrant flip.
+05552+0724	Aa,Ab	Betelgeuse Aa,Ab	hip:27989	name:Betelgeuse Ab	0.10	273.0	2445335.75	2	8	 	 	 	 	WDS 05552+0724 Aa,Ab date_last 1983 (historic speckle detection): 0.1" @ 273 deg = 15.3 AU at 152.67 pc. Ab promoted via synth key, tangent-projected; residual 0.01 AU / 0.2 deg; tolerances floored at the float32 quantum (~1 AU tangential at this distance/orientation). Tier 3 — also pins that a pre-J2000 epoch survives the JD offset encoding.
+16120-1928	AC	Nu Sco AC	gaia:6245697981070158080	gaia:6245698187231874816	41.40	336.0	2459215.25	500	2	 	 	 	 	WDS 16120-1928 AC date_last 2021: 41.4" @ 336 deg = 5867 AU at 141.7 pc. Both components carry own Gaia astrometry (native placement); residual at curation 198 AU / 0.3 deg — the 4-pc parallax spread between A (141.7 pc) and C (137.7 pc) lands in the unpinned radial. Primary ref by Gaia: nu Sco Aa's catalog record.
+23300+5833	AC	AR Cas AC	hip:115990	gaia:2011151357277942400	75.00	269.0	2458119.5	1200	2	 	 	 	 	WDS 23300+5833 AC date_last 2018: 75.0" @ 269 deg = 15236 AU at 203.14 pc. C carries own Gaia astrometry (native placement, 8-pc parallax spread in the unpinned radial); tangential residual at curation 515 AU / 0.3 deg. Farthest system in the corpus — float32 quantum ~5 AU. The Aa,Ab eclipsing pair (P=6.07 d) is not yet in multiples.tsv (dch.72).

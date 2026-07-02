@@ -699,6 +699,19 @@ Three tiers, all snapshot-pinned:
   `scripts/catalog/known-stars.test.ts` loads `public/catalog.bin` via
   the runtime loader and asserts every row matches within tolerance.
   Adding a row → see § Adding to the known-stars corpus below.
+- **Tier A — multi-star geometry corpus.**
+  `scripts/catalog/multi-star-regression.tsv` +
+  `multi-star-regression.test.ts` pin per-PAIR geometry against
+  external truth (WDS sep+PA at the published epoch, ORB6 periods):
+  catalog.bin tangential separation + PA between the two component
+  records, the multiples.tsv geometry columns, the binaries.bin
+  Tier-1 record (flags, elements, stored sep/PA/epoch), and a Kepler
+  propagation to each record's own `sep_pa_epoch_jd` through the same
+  pure path the runtime baseline cache uses. Also sweeps identifier
+  integrity: corpus-wide HIP distinctness, URL star-ref round-trips
+  (first-seen `hipToIndex` semantics matching `main.ts`), and a
+  pinned-count ratchet on promoted-companion HIP collisions. Column
+  contract + per-row tolerance discipline live in the TSV header.
 - **Tier B — population statistics.**
   `scripts/catalog/build-counts.ts` (`compareBuildCounts`) + the two
   per-build snapshot JSONs gate every absolute count and rate the build
