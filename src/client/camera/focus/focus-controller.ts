@@ -493,9 +493,9 @@ export class FocusController implements FocusOps {
 
   /** Cloud-side analogue of focusStar — used by search-select and
    *  click-vector-tip. Routes through the same focus-park primitives
-   *) so the lerp-or-noop UX matches stars. `animate: false`
+   *  so the lerp-or-noop UX matches stars. `animate: false`
    *  (URL restore) snaps without a transition. setFocus(null) below
- * leaves worldOffset alone, so no frame-shift handling
+   *  leaves worldOffset alone, so no frame-shift handling
    *  is needed here — target is `cloud.centerAbs - worldOffset` in the
    *  current local frame both before and after the focus clear. */
   flyToCloud(idx: number, opts: { animate?: boolean } = {}): void {
@@ -600,19 +600,19 @@ export class FocusController implements FocusOps {
     // cameraMode='navigate' (so setFocus's observe-cleanup branch
     // skips), and builds the 'exit' transition; setFocus(null)
     // afterwards clamps controls.minDistance and emits 'focus' so the
-    // search box / overlays settle within the same frame. Since
- // setFocus(null) doesn't recentre, so the animation runs
-    // in the (former focal star's) local frame.
+    // search box / overlays settle within the same frame. setFocus(null)
+    // doesn't recentre, so the animation runs in the (former focal
+    // star's) local frame.
     if (animate && this.deps.getCameraMode() === 'observe' && this.focusedStar !== null) {
       this.deps.getObserve().startExit({ animate: true, clearFocusOnExit: false });
       this.setFocus(null);
       return;
     }
     // Navigate-mode close-zoom unfocus: animate the camera back to the
-    // former focal star's parking distance instead of teleporting
- //. Skip when the camera is already further out than
-    // parkDistForStar (the acceptance "no-op when at or beyond the
-    // floor" criterion), or when there's no focused star to anchor on.
+    // former focal star's parking distance instead of teleporting.
+    // Skip when the camera is already further out than parkDistForStar
+    // (the acceptance "no-op when at or beyond the floor" criterion),
+    // or when there's no focused star to anchor on.
     if (
       animate
       && this.deps.getCameraMode() === 'navigate'

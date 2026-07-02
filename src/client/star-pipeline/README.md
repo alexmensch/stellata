@@ -56,13 +56,17 @@ Rendering is **three passes over the same instanced geometry**:
   depth buffer before any background layer renders. Causes the Milky
   Way, molecular clouds, galactic disc, and galactic grid (all
   `depthTest: true`) to depth-fail behind close-range disc cores
-  rather than bleeding through. Mesh `visible` is gated CPU-side:
-  each frame, a tight `Float32Array` loop over `_localPositions`
-  returns `true` on the first star within
+  rather than bleeding through. Mesh `visible` is gated CPU-side each
+  frame by `shouldEnableCoreMask()` — a binary-search over the
+  Sol-distance-sorted index (built once at construction) that walks
+  only the `[camDistFromSol ± dThresh]` window (typically 50–500 of
+  313k candidates; triangle-inequality bounds it) and returns `true`
+  on the first star within
   `dThresh = maxPhysicalRadiusPc / tan(CORE_MASK_MIN_PX × fov_y / 2 / viewport.y)`
   (the camera distance at which the catalog's largest star subtends
   `CORE_MASK_MIN_PX` pixels). When no star is that close, the entire
-  draw call is skipped.
+  draw call is skipped. See `../debug/README.md`
+  § shouldEnableCoreMask for the window derivation.
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final
   `max(appSize, physSize)`. Per-channel `MaxEquation` blend

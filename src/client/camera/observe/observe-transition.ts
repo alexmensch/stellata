@@ -16,9 +16,8 @@ import { OBSERVE_TRANSITION_MS } from '../timing';
 import { warpArrivalEaseFn } from '../warp/warp-tuning';
 import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
-/** Cross-controller seam consumed by ObserveTransition. Stellata
- * implements this in 194.6; in 194.8 it migrates to FocusController and
- *  the controller's import seam updates in one line. */
+/** Cross-controller seam consumed by ObserveTransition; implemented by
+ *  FocusController (in ../focus/). */
 export interface ObserveFocusOps {
   getFocusedStar(): number | null;
   /** Full setFocus path — fires 'focus' / 'cloudFocus' / 'state'. Used
