@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { projectToScreen } from './overlay-project';
+import { projectToScreenInto } from './overlay-project';
 import { setStrAttr } from './dirty-attr';
 
 // Pixel radius left blank around every figure-star so lines don't obscure
@@ -12,6 +12,23 @@ export function createConstellationOverlay(stellata: Stellata) {
   const figure = document.getElementById('con-figure') as unknown as SVGPathElement;
 
   const v = new THREE.Vector3();
+
+  // Reused per-vertex projection scratch, grown on demand and never
+  // shrunk. A chart-mode tick walks every polyline vertex across all 88
+  // constellations, so pooling avoids a [number, number] tuple allocation
+  // per vertex per frame; slots are overwritten (not read) across
+  // polylines, so reuse across polylines within the same tick is safe.
+  const projX: number[] = [];
+  const projY: number[] = [];
+  const projValid: boolean[] = [];
+  const ensureProjCapacity = (n: number) => {
+    while (projX.length < n) {
+      projX.push(0);
+      projY.push(0);
+      projValid.push(false);
+    }
+  };
+  const projScratch: [number, number] = [0, 0];
 
   let current = -1;
   let chartActive = false;
@@ -60,17 +77,23 @@ export function createConstellationOverlay(stellata: Stellata) {
       const lines = cons[conIdx].lines;
       if (!lines || lines.length === 0) continue;
       for (const polyline of lines) {
-        // Project each vertex; null if behind the near plane.
-        const projected: Array<[number, number] | null> = polyline.map((i) => {
+        // Project each vertex into the pooled scratch; invalid (behind the
+        // near plane) slots are marked in projValid rather than returning
+        // null, so no per-vertex tuple allocates.
+        ensureProjCapacity(polyline.length);
+        for (let k = 0; k < polyline.length; k++) {
+          const i = polyline[k];
           v.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-          return projectToScreen(v, camera, w, h);
-        });
+          projValid[k] = projectToScreenInto(v, camera, w, h, projScratch);
+          if (projValid[k]) {
+            projX[k] = projScratch[0];
+            projY[k] = projScratch[1];
+          }
+        }
 
-        for (let j = 0; j < projected.length - 1; j++) {
-          const a = projected[j];
-          const b = projected[j + 1];
-          if (!a || !b) continue;
-          const seg = shortenedSegment(a, b);
+        for (let j = 0; j < polyline.length - 1; j++) {
+          if (!projValid[j] || !projValid[j + 1]) continue;
+          const seg = shortenedSegment(projX[j], projY[j], projX[j + 1], projY[j + 1]);
           if (seg) segments.push(seg);
         }
       }
@@ -90,18 +113,20 @@ export function createConstellationOverlay(stellata: Stellata) {
 // vertex stars sit in clean circular gaps (combined with stroke-linecap:
 // round on the path).
 function shortenedSegment(
-  a: [number, number],
-  b: [number, number],
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
 ): string | null {
-  const dx = b[0] - a[0];
-  const dy = b[1] - a[1];
+  const dx = bx - ax;
+  const dy = by - ay;
   const len = Math.hypot(dx, dy);
   if (len <= STAR_GAP_PX * 2) return null;
   const ux = dx / len;
   const uy = dy / len;
-  const sx = a[0] + ux * STAR_GAP_PX;
-  const sy = a[1] + uy * STAR_GAP_PX;
-  const ex = b[0] - ux * STAR_GAP_PX;
-  const ey = b[1] - uy * STAR_GAP_PX;
+  const sx = ax + ux * STAR_GAP_PX;
+  const sy = ay + uy * STAR_GAP_PX;
+  const ex = bx - ux * STAR_GAP_PX;
+  const ey = by - uy * STAR_GAP_PX;
   return `M${sx.toFixed(1)},${sy.toFixed(1)}L${ex.toFixed(1)},${ey.toFixed(1)}`;
 }

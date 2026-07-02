@@ -10,7 +10,7 @@ import {
   ARROW_PIXEL_LENGTH,
   RING_HALO_GAP_PX,
 } from './arrow-path';
-import { projectToScreen } from './overlay-project';
+import { projectToScreenInto } from './overlay-project';
 import { applyFade, setNumAttr, setStyle, setText } from './dirty-attr';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 import { focusedArrowFadeAlpha } from './arrow-fade';
@@ -152,6 +152,8 @@ export class HudOverlay {
   private tmpOrigin = new THREE.Vector3();
   private tmpSolLocal = new THREE.Vector3();
   private tmpGcLocal = new THREE.Vector3();
+  private tmpOriginScreen: [number, number] = [0, 0];
+  private tmpTargetScreen: [number, number] = [0, 0];
 
   // Dirty-track state for Sol/GC arrows + the OBSERVE ring. See
   // ArrowState comment above.
@@ -232,9 +234,9 @@ export class HudOverlay {
     // parked at the focal star). The fallback is also what the focal-star
     // projection naturally tends toward as the enter-transition completes,
     // so the post-transition switch is invisible.
-    const originScreen = projectToScreen(origin, camera, w, h);
-    const cx = originScreen ? originScreen[0] : w * 0.5;
-    const cy = originScreen ? originScreen[1] : h * 0.5;
+    const hasOriginScreen = projectToScreenInto(origin, camera, w, h, this.tmpOriginScreen);
+    const cx = hasOriginScreen ? this.tmpOriginScreen[0] : w * 0.5;
+    const cy = hasOriginScreen ? this.tmpOriginScreen[1] : h * 0.5;
 
     // Mode-aware shaft start radius. Drives both arrow shaft starts and
     // the ring's drawn radius. Anchored to the user's max-star-size knob
@@ -374,7 +376,8 @@ export class HudOverlay {
     }
     dir.multiplyScalar(1 / Math.sqrt(dirLenSq));
 
-    const targetScreen = projectToScreen(targetLocal, camera, w, h);
+    const hasTargetScreen = projectToScreenInto(targetLocal, camera, w, h, this.tmpTargetScreen);
+    const targetScreen = hasTargetScreen ? this.tmpTargetScreen : null;
     debug.behindCamera = !targetScreen;
 
     // Screen direction of the arrow via the shared two-tier cascade in
