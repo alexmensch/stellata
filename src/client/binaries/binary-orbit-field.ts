@@ -56,10 +56,9 @@ interface RelationCache {
    *  layer expects. */
   elements: OrbitalElements;
   /** Tier-1 R(baseline) cached so per-frame eval is a single Kepler
-   *  solve (now) plus a subtract. Baseline = the relation's
-   *  sepPaEpochJd (the epoch the stored catalog separation was
-   *  measured at), J2000 when the record carries no epoch.
-   *  {northAU, eastAU} for Tier 1. */
+   *  solve (now) plus a subtract. Baseline epoch = sepPaEpochJd — the
+   *  epoch the stored catalog separation was measured at, NOT J2000 —
+   *  falling back to J2000 when the record carries none. */
   refSkyAU: { northAU: number; eastAU: number } | null;
   /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. */
   refInPlaneAU: { xAU: number; yAU: number } | null;
@@ -269,9 +268,6 @@ export class BinaryOrbitField {
       ) continue;
       const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
       const elements = relationToElements(r);
-      // The stored catalog separation is at the record's sep+PA epoch
-      // (Gaia J2016 / WDS date_last), NOT J2000 — subtracting R(J2000)
-      // would displace the whole rendered orbit by R(epoch) − R(J2000).
       const baselineJd = Number.isFinite(r.sepPaEpochJd)
         ? r.sepPaEpochJd
         : J2000_JD;

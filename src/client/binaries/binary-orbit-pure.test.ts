@@ -248,10 +248,6 @@ describe('evaluateBinaryOffsetTier1 — baseline epoch', () => {
   });
 
   it('offset is zero at t = refJd for a non-J2000 baseline epoch', () => {
-    // Stored separations are at the sep+PA measurement epoch (Gaia
-    // J2016 / WDS date_last), so the offset must cancel at THAT epoch,
-    // not at J2000 — a J2000-baselined eval here would return
-    // R(refJd) − R(J2000), a constant displacement of the whole orbit.
     const refJd = J2000_JD + 23 * 365.25;
     for (const isSecondary of [false, true]) {
       const out = evaluateBinaryOffsetTier1(elements, refJd, refJd, isSecondary, systemXyz);

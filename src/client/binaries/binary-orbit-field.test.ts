@@ -424,19 +424,14 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
 });
 
 describe('BinaryOrbitField — stored-separation epoch baseline', () => {
-  // The stored catalog separation is the pair's configuration at
-  // sepPaEpochJd (Gaia J2016 / WDS date_last), so ΔR must cancel at
-  // THAT epoch. Baselining at J2000 instead displaces the whole
-  // rendered orbit by R(epoch) − R(J2000) — a constant offset
-  // comparable to the orbit size on famous binaries.
   const EPOCH_JD = J2000_JD + 23 * 365.25; // ≈ 2023, a typical WDS date_last
   const closeCamera = new THREE.Vector3(1.999, 0, 0);
   const toUnix = (jd: number) => (jd - 2440587.5) * 86400;
 
   function epochFixture(flags: number) {
     const fx = makeFixture();
-    // Single top-level pair with a non-J2000 stored epoch; drop the
-    // inner relation so its perturbation can't mask the outer baseline.
+    // Drop the inner relation — its J2000-epoch perturbation would
+    // otherwise mask the outer pair's baseline at t = EPOCH_JD.
     fx.binaries.relations[1].flags &= ~FLAG_HAS_ORBIT;
     fx.binaries.relations[0].flags = flags;
     fx.binaries.relations[0].sepPaEpochJd = EPOCH_JD;
