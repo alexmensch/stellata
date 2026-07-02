@@ -3,7 +3,7 @@
 // validate:simbad`. See scripts/catalog/README.md § Validation harness.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -18,10 +18,9 @@ import {
   parseSimbadSampleRows,
   type SimbadSampleRow,
 } from './distance-regression-check';
+import { REPO_ROOT } from '../util/paths';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const REPO_ROOT = resolve(__dirname, '..', '..');
 const DEFAULT_SAMPLE_PATH = resolve(REPO_ROOT, 'data/simbad/simbad_sample.tsv');
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
 

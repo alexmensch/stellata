@@ -3,8 +3,7 @@
 // catalog-pure.ts.
 
 import { readFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import {
   BINARY_VERSION,
   FLAG_HAS_NAME,
@@ -18,9 +17,7 @@ import {
   HEADER_SIZE,
   RECORD_SIZE,
 } from './catalog-pure';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..', '..');
+import { REPO_ROOT } from '../util/paths';
 
 export const DEFAULT_CATALOG_BIN = resolve(REPO_ROOT, 'public/catalog.bin');
 export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');

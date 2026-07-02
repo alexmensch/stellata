@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
-ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
 sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
@@ -22,7 +21,9 @@ sys.path.insert(0, str(SCRIPT.parent))
 
 from refresh_lib import is_up_to_date  # noqa: E402
 from astronomy_constants import J2000_JD  # noqa: E402
+from paths import REPO_ROOT  # noqa: E402
 
+ROOT = REPO_ROOT
 SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
 SRC_ROW_INDEX_MAP = ROOT / "public" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"

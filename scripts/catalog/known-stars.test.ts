@@ -19,9 +19,9 @@ import {
   lookupByName,
 } from './catalog-lookup';
 import { AU_PER_PC } from '../../src/client/util/astronomy-constants';
+import { REPO_ROOT } from '../util/paths';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..', '..');
 const KNOWN_STARS_TSV = resolve(__dirname, 'known-stars.tsv');
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 

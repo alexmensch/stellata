@@ -10,18 +10,22 @@ import sys
 from pathlib import Path
 from typing import Iterator
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-DATA = ROOT / "data"
 SCRIPT = Path(__file__).resolve()
 
-# Make this folder (so sibling stage modules find each other) and
-# scripts/refresh/ (so refresh_lib resolves) reachable from any caller —
-# direct invocation, ``npm run build:binaries``, or the test loader's
+# Make this folder (so sibling stage modules find each other),
+# scripts/refresh/ (so refresh_lib resolves), and scripts/util/ (so
+# paths resolves) reachable from any caller — direct invocation,
+# ``npm run build:binaries``, or the test loader's
 # spec_from_file_location.
 sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
+sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
 sys.path.insert(0, str(SCRIPT.parent))
 
 from refresh_lib import is_up_to_date  # noqa: E402
+from paths import REPO_ROOT  # noqa: E402
+
+ROOT = REPO_ROOT
+DATA = ROOT / "data"
 
 # Explicit per-stage re-exports. Two consumers load this file via
 # ``spec_from_file_location("build_binaries", …)`` and reach stage

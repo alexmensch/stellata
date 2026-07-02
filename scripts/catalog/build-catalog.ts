@@ -66,10 +66,10 @@ import {
 } from './gcvs-parse';
 import { readGaiaHipXmatch } from './gaia-xmatch';
 import { readStars, type Star } from './stars-parse';
+import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT = resolve(__dirname, '..', '..');
 
 const SRC_CSV = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 const SRC_STELLARIUM = resolve(ROOT, 'data/stellarium/stellarium-modern-skyculture.json');
@@ -94,20 +94,16 @@ function isUpToDate(): boolean {
   if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
   const binMtime = statSync(OUT_BIN).mtimeMs;
   const srcMtime = statSync(SRC_CSV).mtimeMs;
-  const stellariumMtime = existsSync(SRC_STELLARIUM)
-    ? statSync(SRC_STELLARIUM).mtimeMs
-    : 0;
-  const gcvsMtime = existsSync(SRC_GCVS) ? statSync(SRC_GCVS).mtimeMs : 0;
-  const xrefMtime = existsSync(SRC_GCVS_XREF) ? statSync(SRC_GCVS_XREF).mtimeMs : 0;
-  const hipCcdmMtime = existsSync(SRC_HIP_CCDM) ? statSync(SRC_HIP_CCDM).mtimeMs : 0;
-  const bjMtime = existsSync(SRC_BAILER_JONES) ? statSync(SRC_BAILER_JONES).mtimeMs : 0;
-  const gaiaHipXmatchMtime = existsSync(SRC_GAIA_HIP_XMATCH)
-    ? statSync(SRC_GAIA_HIP_XMATCH).mtimeMs
-    : 0;
-  const apsisMtime = existsSync(SRC_GAIA_APSIS) ? statSync(SRC_GAIA_APSIS).mtimeMs : 0;
-  const simbadMtime = existsSync(SRC_SIMBAD_SPTYPE) ? statSync(SRC_SIMBAD_SPTYPE).mtimeMs : 0;
-  const simbadSampleMtime = existsSync(SRC_SIMBAD_SAMPLE) ? statSync(SRC_SIMBAD_SAMPLE).mtimeMs : 0;
-  const multiplesMtime = existsSync(SRC_MULTIPLES) ? statSync(SRC_MULTIPLES).mtimeMs : 0;
+  const stellariumMtime = mtimeIfExists(SRC_STELLARIUM);
+  const gcvsMtime = mtimeIfExists(SRC_GCVS);
+  const xrefMtime = mtimeIfExists(SRC_GCVS_XREF);
+  const hipCcdmMtime = mtimeIfExists(SRC_HIP_CCDM);
+  const bjMtime = mtimeIfExists(SRC_BAILER_JONES);
+  const gaiaHipXmatchMtime = mtimeIfExists(SRC_GAIA_HIP_XMATCH);
+  const apsisMtime = mtimeIfExists(SRC_GAIA_APSIS);
+  const simbadMtime = mtimeIfExists(SRC_SIMBAD_SPTYPE);
+  const simbadSampleMtime = mtimeIfExists(SRC_SIMBAD_SAMPLE);
+  const multiplesMtime = mtimeIfExists(SRC_MULTIPLES);
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&

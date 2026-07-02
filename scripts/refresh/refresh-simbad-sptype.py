@@ -9,14 +9,16 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
+from paths import REPO_ROOT  # noqa: E402
 from simbad import inputs, query, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE, HIP, GAIA_DR3,
 )
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = REPO_ROOT
 ATHYG_CSV = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
 WDS_XIDS_TSV = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_sptype.tsv"
