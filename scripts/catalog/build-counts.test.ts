@@ -50,6 +50,15 @@ function baseCounts(): BuildCounts {
     companionDroppedNoAbsmag: 900,
     companionDroppedCompoundComp: 40,
     companionDroppedCollocatedPrimary: 6,
+    gaiaAstrometryEntries: 315000,
+    hip2Entries: 117000,
+    nssSourceIdEntries: 356000,
+    hipDistFullPrecision: 1900,
+    directionGaia5p: 300000,
+    directionGaiaNssSystemic: 10000,
+    directionHip2Saturated: 2500,
+    directionHip2PmDiscrepant: 146,
+    directionAthygPrinted: 30,
   };
 }
 

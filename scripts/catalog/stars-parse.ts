@@ -1,6 +1,6 @@
-// AT-HYG CSV reader applying per-row Bailer-Jones and LMC distance
-// overrides; produces the in-memory Star records every downstream
-// builder step consumes. See scripts/catalog/README.md.
+// AT-HYG CSV reader: per-row distance stack (Bailer-Jones / HIP2
+// parallax / LMC overrides) × direction cascade → in-memory Star
+// records for every downstream builder step. See scripts/catalog/README.md.
 import { createReadStream } from 'node:fs';
 import { parse } from 'csv-parse';
 
@@ -11,6 +11,7 @@ import {
   isBailerJonesEligible,
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
+  apparentToAbsoluteMagnitude,
   isInLmcCone,
   resolveGaiaSourceId,
   parseGaiaSourceIdStr,
@@ -21,6 +22,11 @@ import {
   type ApsisRow,
   type SimbadSpectralIndex,
 } from './catalog-pure';
+import {
+  resolveDirection,
+  type DirectionSources,
+  type DirectionVia,
+} from './direction-cascade';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
@@ -84,7 +90,6 @@ export function nonEmpty(s: string | undefined | null): string | null {
 // `cast: false` keeps every cell as a string; the parseFloat/parseInt
 // helpers below normalise them.
 export interface AthygRow {
-  x0: string; y0: string; z0: string;
   absmag: string;
   dist: string;
   dist_src: string;
@@ -106,6 +111,13 @@ export interface AthygRow {
   pm_dec: string;
 }
 
+const DIST_SRC_HIP = 'HIP';
+
+// A gap beyond 4-dp print rounding (≤ 5e-5 pc) means AT-HYG's HIP
+// distance is NOT this HIP2 parallax and the curated value wins —
+// see scripts/catalog/README.md § Per-row pipeline (HIP 57146).
+const HIP_DIST_MATCH_TOLERANCE_PC = 1e-3;
+
 export async function readStars(
   srcCsvPath: string,
   conIndexLookup: Map<string, number>,
@@ -113,6 +125,11 @@ export async function readStars(
   hipToGaia: Map<number, string> | null = null,
   simbad: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() },
   apsisMap: Map<string, ApsisRow> = new Map(),
+  directions: DirectionSources = {
+    gaiaAstrometry: new Map(),
+    hip2: new Map(),
+    nssSourceIds: new Set(),
+  },
 ): Promise<{
   stars: Star[];
   stats: {
@@ -120,9 +137,11 @@ export async function readStars(
     dropped: Record<string, number>;
     bjEligible: number;            // rows with a Gaia DR3 source_id
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
+    hipDistFullPrecision: number;  // dist_src=HIP rows re-derived from HIP2 parallax
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
+    directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
@@ -134,33 +153,47 @@ export async function readStars(
 
   const stars: Star[] = [];
   const dropped: Record<string, number> = {
-    noCoords: 0,
+    noRaDec: 0,
     noAbsmag: 0,
+    noDist: 0,
+    noDirection: 0,
     tooFar: 0,
     unknownCon: 0,
   };
   let total = 0;
   let bjEligible = 0;
   let bjOverridden = 0;
+  let hipDistFullPrecision = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
   let gaiaSourceIdBackfilled = 0;
+  const directionVia: Record<DirectionVia, number> = {
+    gaia_5p: 0,
+    gaia_nss_systemic: 0,
+    hip2_saturated: 0,
+    hip2_pm_discrepant: 0,
+    athyg_printed: 0,
+  };
   let spectralBySimbad = 0;
   let spectralByGspspec = 0;
   let spectralFallback = 0;
 
   for await (const row of parser) {
     total++;
-    let x = parseFloatOrNull(row.x0);
-    let y = parseFloatOrNull(row.y0);
-    let z = parseFloatOrNull(row.z0);
-    if (x === null || y === null || z === null) {
-      dropped.noCoords++;
+    const ra = parseFloatOrNull(row.ra);   // hours
+    const dec = parseFloatOrNull(row.dec); // degrees
+    if (ra === null || dec === null) {
+      dropped.noRaDec++;
       continue;
     }
     let absmag = parseFloatOrNull(row.absmag);
     if (absmag === null) {
       dropped.noAbsmag++;
+      continue;
+    }
+    const athygDist = parseFloatOrNull(row.dist);
+    if (athygDist === null) {
+      dropped.noDist++;
       continue;
     }
 
@@ -181,20 +214,28 @@ export async function readStars(
     // Bailer-Jones DR3 override.
     const athygDistSrc = nonEmpty(row.dist_src);
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, athygDistSrc);
-    const athygDist = parseFloatOrNull(row.dist);
     let dist = athygDist;
-    const ra = parseFloatOrNull(row.ra);
-    const dec = parseFloatOrNull(row.dec);
     const mag = parseFloatOrNull(row.mag);
     if (bjEligibleRow) bjEligible++;
-    if (bjEligibleRow && bjMap.size > 0) {
-      if (ra !== null && dec !== null && mag !== null) {
-        const ovr = applyBailerJonesOverride(ra, dec, mag, gaiaSourceId, bjMap);
-        if (ovr) {
-          x = ovr.x; y = ovr.y; z = ovr.z;
-          absmag = ovr.absmag;
-          dist = ovr.dist;
-          bjOverridden++;
+    if (bjEligibleRow && bjMap.size > 0 && mag !== null) {
+      const ovr = applyBailerJonesOverride(mag, gaiaSourceId, bjMap);
+      if (ovr) {
+        absmag = ovr.absmag;
+        dist = ovr.dist;
+        bjOverridden++;
+      }
+    }
+
+    // dist_src=HIP: re-derive the same catalogued distance as
+    // 1000/plx at full precision from the committed HIP2 file.
+    if (athygDistSrc === DIST_SRC_HIP && hip !== null) {
+      const hip2 = directions.hip2.get(hip);
+      if (hip2 !== undefined && hip2.plxMas !== null && hip2.plxMas > 0) {
+        const hip2Dist = 1000 / hip2.plxMas;
+        if (Math.abs(hip2Dist - athygDist) <= HIP_DIST_MATCH_TOLERANCE_PC) {
+          dist = hip2Dist;
+          if (mag !== null) absmag = apparentToAbsoluteMagnitude(mag, dist);
+          hipDistFullPrecision++;
         }
       }
     }
@@ -204,23 +245,36 @@ export async function readStars(
     // filter snaps the ~60 affected AT-HYG rows back to Pietrzyński 2019's
     // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
     // mis-anchored value on the same rows.
-    if (ra !== null && dec !== null && mag !== null && isInLmcCone(ra, dec)) {
+    if (mag !== null && isInLmcCone(ra, dec)) {
       lmcCandidates++;
       const pmRa = parseFloatOrNull(row.pm_ra);
       const pmDec = parseFloatOrNull(row.pm_dec);
-      const ovr = applyLmcKinematicOverride(ra, dec, mag, pmRa, pmDec);
+      const ovr = applyLmcKinematicOverride(mag, pmRa, pmDec);
       if (ovr) {
-        x = ovr.x; y = ovr.y; z = ovr.z;
         absmag = ovr.absmag;
         dist = ovr.dist;
         lmcOverridden++;
       }
     }
 
-    if (dist !== null && dist > MAX_DIST_PC) {
+    if (dist > MAX_DIST_PC) {
       dropped.tooFar++;
       continue;
     }
+
+    // Sky direction through the Gaia 5p → HIP2 → AT-HYG cascade;
+    // position is direction × distance, both float64 until the
+    // float32 pack at write time.
+    const dirRes = resolveDirection(gaiaSourceId, hip, ra, dec, directions);
+    if (dirRes === null) {
+      dropped.noDirection++;
+      continue;
+    }
+    directionVia[dirRes.via]++;
+    const x = dirRes.dir.x * dist;
+    const y = dirRes.dir.y * dist;
+    const z = dirRes.dir.z * dist;
+
     const ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
 
     const spectral = resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
@@ -281,9 +335,11 @@ export async function readStars(
       dropped,
       bjEligible,
       bjOverridden,
+      hipDistFullPrecision,
       lmcCandidates,
       lmcOverridden,
       gaiaSourceIdBackfilled,
+      directionVia,
       spectralBySimbad,
       spectralByGspspec,
       spectralFallback,

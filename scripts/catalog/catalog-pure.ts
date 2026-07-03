@@ -1111,24 +1111,6 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   return { bySource, byHip };
 }
 
-/** ICRS spherical → AT-HYG Cartesian (parsec). RA in hours, Dec in
- *  degrees, distance in pc. Mirrors AT-HYG's own (x0, y0, z0) basis so
- *  override outputs slot back into the same coordinate space. */
-export function icrsSphericalToCartesian(
-  raHours: number,
-  decDegrees: number,
-  distPc: number,
-): { x: number; y: number; z: number } {
-  const ra = raHours * (Math.PI / 12);
-  const dec = decDegrees * (Math.PI / 180);
-  const cosDec = Math.cos(dec);
-  return {
-    x: distPc * cosDec * Math.cos(ra),
-    y: distPc * cosDec * Math.sin(ra),
-    z: distPc * Math.sin(dec),
-  };
-}
-
 /** Apparent magnitude → absolute magnitude at given distance.
  *  M = m − 5·log₁₀(d / 10 pc). */
 export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number {
@@ -1139,29 +1121,19 @@ export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number
  *  LMC kinematic, and future SMC kinematic / structural-disc / OGLE
  *  Cepheid layers). Each `apply*Override` returns one of these or null.
  *  Recomputing absmag with the snapped distance is essential — without
- *  it, stars get placed at the new distance but lit for the old one. */
+ *  it, stars get placed at the new distance but lit for the old one.
+ *  xyz is NOT part of the shape: position is direction × distance, with
+ *  the direction resolved independently by the direction cascade. */
 export interface DistanceOverride {
   dist: number;
-  x: number;
-  y: number;
-  z: number;
   absmag: number;
 }
 
 /** Single source of truth for assembling a `DistanceOverride` from a
- *  snapped distance — applies `icrsSphericalToCartesian` and
- *  `apparentToAbsoluteMagnitude` consistently across all override
- *  layers. */
-export function buildDistanceOverride(
-  raHours: number,
-  decDegrees: number,
-  mag: number,
-  distPc: number,
-): DistanceOverride {
-  const { x, y, z } = icrsSphericalToCartesian(raHours, decDegrees, distPc);
+ *  snapped distance. */
+export function buildDistanceOverride(mag: number, distPc: number): DistanceOverride {
   return {
     dist: distPc,
-    x, y, z,
     absmag: apparentToAbsoluteMagnitude(mag, distPc),
   };
 }
@@ -1170,8 +1142,6 @@ export function buildDistanceOverride(
  *  for that star; otherwise null. The caller swaps the fields into the
  *  star record and tags `dist_src = "BJ"`. */
 export function applyBailerJonesOverride(
-  raHours: number,
-  decDegrees: number,
   mag: number,
   gaiaSourceId: string | null,
   bjMap: Map<string, number>,
@@ -1179,7 +1149,7 @@ export function applyBailerJonesOverride(
   if (!gaiaSourceId) return null;
   const dist = bjMap.get(gaiaSourceId);
   if (dist === undefined) return null;
-  return buildDistanceOverride(raHours, decDegrees, mag, dist);
+  return buildDistanceOverride(mag, dist);
 }
 
 // ---- LMC kinematic distance override -------------------------------------
@@ -1257,8 +1227,6 @@ export function isInLmcCone(raHours: number, decDegrees: number): boolean {
  *  1/π). The cone check is the caller's responsibility so the
  *  `lmcCandidates` counter and this gate share a single evaluation. */
 export function applyLmcKinematicOverride(
-  raHours: number,
-  decDegrees: number,
   mag: number,
   pmRa: number | null,
   pmDec: number | null,
@@ -1266,5 +1234,5 @@ export function applyLmcKinematicOverride(
   if (pmRa === null || pmDec === null) return null;
   if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return null;
   if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return null;
-  return buildDistanceOverride(raHours, decDegrees, mag, LMC_DISTANCE_PC);
+  return buildDistanceOverride(mag, LMC_DISTANCE_PC);
 }

@@ -133,6 +133,38 @@ export interface BuildCounts {
    *  proxy — so collocating on the anchor would render a false
    *  coincident star (Alsephina C). */
   companionDroppedCollocatedPrimary: number;
+  /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
+   *  (parsed map size) — direction-cascade tier 1 coverage. */
+  gaiaAstrometryEntries: number;
+  /** Total entries in the HIP2 van Leeuwen TSV (parsed map size) —
+   *  direction-cascade tier 2 coverage + dist_src=HIP full-precision
+   *  distances. */
+  hip2Entries: number;
+  /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
+   *  input to the gaia_nss_systemic routing tag. */
+  nssSourceIdEntries: number;
+  /** dist_src=HIP rows whose distance was re-derived as 1000/plx from
+   *  the committed HIP2 file (same value AT-HYG catalogued, freed of
+   *  its 4-dp print truncation). */
+  hipDistFullPrecision: number;
+  /** Direction cascade: rows whose sky direction came from a clean
+   *  Gaia DR3 5p solution (includes the handful of 2p position-only
+   *  fall-through rows with no HIP2 cover). */
+  directionGaia5p: number;
+  /** Direction cascade: Gaia rows with an NSS orbit AND an unreliable
+   *  5p fit — same Gaia values, tagged for provenance parity with
+   *  scripts/binaries/stage3_astrometry.py. */
+  directionGaiaNssSystemic: number;
+  /** Direction cascade: rows with no usable Gaia parallax (saturated
+   *  bright set / 2p solutions) whose direction came from HIP2. */
+  directionHip2Saturated: number;
+  /** Direction cascade: rows whose Gaia-vs-HIP2 PM disagreement
+   *  (> 50 mas/yr on either axis) routed the direction to HIP2. */
+  directionHip2PmDiscrepant: number;
+  /** Direction cascade: residual rows placed at AT-HYG's printed
+   *  ra/dec as-is (no Gaia astrometry row, no HIP2 row; ξ UMa
+   *  canonical, plus Sol). */
+  directionAthygPrinted: number;
 }
 
 export type CountDiff =
