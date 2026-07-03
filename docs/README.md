@@ -14,6 +14,12 @@ authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.
+molecular-clouds.md     Physics model + implementation design for the
+                        molecular-cloud epic (extinction calibration,
+                        density profiles, substructure noise, cavities,
+                        taxonomy, presence pass). Drives phases A.2–A.7;
+                        spans scripts/clouds, scripts/dust,
+                        star-pipeline, and molecular-clouds folders.
 ux-tweaks.md            Reference table of UX knobs (orbit feel,
                         chevron density, focus-ring size, panel
                         defaults, etc.) and where to find them. Look
