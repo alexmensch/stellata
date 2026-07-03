@@ -295,6 +295,35 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
     expect(fx.localPositions[7]).toBe(fx.absolutePositions[7]);
     expect(fx.localPositions[8]).toBe(fx.absolutePositions[8]);
   });
+
+  it('exempts a relation whose focal star is a pair member — no step-jump on zoom-out', () => {
+    // stellata-aim: focused on the secondary, the focal rebase puts the
+    // FULL relative motion on the primary. Hard-switching Kepler off
+    // when the pair crosses the sub-pixel threshold snapped the bright
+    // primary from its Kepler-evaluated position to the baked baseline
+    // (Algol Ab jump at ~75 AU camera distance, Capella Ab at ~800 AU).
+    const fx = makeFixture();
+    const field = new BinaryOrbitField(fx);
+    const camera = new THREE.Vector3(0, 0, -900);
+    const t = (J2000_JD - 2440587.5) * 86400 + 50 * 365.25 * 86400;
+
+    // Focused on the outer secondary (catalog idx 2): its relation must
+    // keep evaluating Kepler — no composite suppress, primary carries
+    // −ΔR — even though the pair is sub-pixel at this camera distance.
+    field.update(t, camera, 15, 1080, 0.8, 2);
+    expect(fx.compositeSuppress[2]).toBe(0);
+    const jumpMag = Math.hypot(
+      fx.localPositions[0] - fx.absolutePositions[0],
+      fx.localPositions[1] - fx.absolutePositions[1],
+      fx.localPositions[2] - fx.absolutePositions[2],
+    );
+    expect(jumpMag).toBeGreaterThan(0);
+
+    // Unfocused at the same camera: the gate applies as before.
+    field.update(t, camera, 15, 1080, 0.8, null);
+    expect(fx.compositeSuppress[2]).toBe(1);
+    expect(fx.localPositions[0]).toBe(fx.absolutePositions[0]);
+  });
 });
 
 describe('BinaryOrbitField.update — hierarchical walk', () => {

@@ -156,7 +156,14 @@ export class BinaryOrbitField {
       const peakArcsec = rc.peakSepAU / Math.max(dCamPc, 1e-30);
       const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
       activeCount++;
-      if (peakPx < SUB_PIXEL_THRESHOLD_PX) {
+      // Focal-member exemption: when the focal star is in this pair,
+      // the focal rebase puts the FULL relative motion on the visible
+      // partner, so ΔR drives an on-screen position, not a sub-pixel
+      // wiggle — hard-switching Kepler off at the threshold step-jumps
+      // the partner to the baked baseline on zoom-out. One relation's
+      // Kepler solve is cheap; keep it live while focused.
+      const focalInPair = focalIdx === pIdx || focalIdx === sIdx;
+      if (peakPx < SUB_PIXEL_THRESHOLD_PX && !focalInPair) {
         // Composite suppression: skip Kepler, mark the secondary so the
         // close-range + depth-mask passes drop its quad.
         suppress[sIdx] = 1;
