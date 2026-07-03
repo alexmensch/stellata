@@ -84,8 +84,10 @@ Gaia DR3 / HIP2 PMs are consumed at build time for the epoch
 propagation above, and AT-HYG's `pm_ra`/`pm_dec` for the LMC
 kinematic gate — but no PM survives into `catalog.bin`. Single-star
 positions are a static J2000.0 snapshot with no T-axis animation
-(see SCIENCE.md § Modelling decisions deliberately not made);
-current-epoch propagation is future work.
+today; runtime propagation to `t` is designed and tracked — see
+SCIENCE.md § Current-epoch star positions (velocity routes through
+the same cascade: Gaia DR3 / HIP2 PM primary, AT-HYG `pm_*`
+last-resort).
 
 ### Staleness consequence
 
