@@ -57,6 +57,7 @@ import {
   buildCatalogRowIndexMap,
   promoteCompanions,
   readMultiplesTsv,
+  stampComponentLetters,
 } from './companion-promotion';
 import {
   parseGcvsMain,
@@ -201,8 +202,10 @@ async function main() {
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
     companionAbsmagSpectralDerived: 0,
+    companionAbsmagAnchorCollocated: 0,
     companionAbsmagInheritedTwinOrbital: 0,
     companionRepositionedCollocatedDouble: 0,
+    componentLettersStamped: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     nssSourceIdEntries: 0,
@@ -393,10 +396,12 @@ async function main() {
   // whose identifier isn't already in AT-HYG. Promoted companions ride
   // catalog.bin with FLAG_BINARY_COMPANION_ONLY set; the renderer/picker
   // hover/focus stack picks them up with zero code change.
-  if (existsSync(SRC_MULTIPLES)) {
+  const multiplesRows = existsSync(SRC_MULTIPLES)
+    ? readMultiplesTsv(SRC_MULTIPLES)
+    : null;
+  if (multiplesRows !== null) {
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const multiplesRows = readMultiplesTsv(SRC_MULTIPLES);
     const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS);
     for (const ns of newStars) stars.push(ns);
     console.log(
@@ -423,8 +428,22 @@ async function main() {
     counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
+    counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
     counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
+
+    // Stamp component letters onto pairs AT-HYG left anonymous — both
+    // halves first-class but printing the same Bayer/Flamsteed label
+    // (61 Cyg A/B). Mutates proper/flags in place, so it must precede
+    // the name-table + search-index write below.
+    const stampStats = stampComponentLetters(multiplesRows, stars, CONSTELLATIONS);
+    if (stampStats.rowsStamped > 0) {
+      console.log(
+        `  stamped ${stampStats.rowsStamped} component names across ` +
+          `${stampStats.systemsStamped} anonymous-pair systems`,
+      );
+    }
+    counts.componentLettersStamped = stampStats.rowsStamped;
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');
   }

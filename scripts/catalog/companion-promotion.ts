@@ -289,6 +289,11 @@ export interface PromotionStats {
   /** Subset of `promoted` whose absmag came from the class→M_V
    *  spectral calibration (inherited/missing photometry, no Δmag). */
   absmagSpectralDerived: number;
+  /** Subset of `promoted` (pair-row-primary escapes) whose absmag fell
+   *  back to the anchor's collocated brightness because the row's Δmag
+   *  describes a sub-pair, not anchor→row, and no own/spectral
+   *  photometry existed (40 Eri B). Ratchet-down: curate WD absmags. */
+  absmagAnchorCollocated: number;
   /** Existing AT-HYG records repositioned in place because they ARE
    *  the companion (same composed name, bit-identical to the anchor —
    *  AT-HYG blend-coordinate double entries like ξ UMa B). Not counted
@@ -322,6 +327,7 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
     absmagSpectralDerived: 0,
+    absmagAnchorCollocated: 0,
     absmagInheritedTwinOrbital: 0,
     repositionedCollocatedDouble: 0,
     droppedCompoundComp: 0,
@@ -506,12 +512,15 @@ export function imputeCompanionCi(
  *  `inherited_twin` = the inherited primary absmag kept ONLY because
  *  the pair has a renderable orbit (dropping the record would also
  *  drop its orbit/eclipse from binaries.bin) and no honest brightness
- *  source exists yet. */
+ *  source exists yet; `anchor_collocated` = a pair-row-primary escape
+ *  (40 Eri B) whose Δmag describes a sub-pair rather than anchor→row,
+ *  falling back to the anchor's brightness. */
 export type CompanionAbsmagSource =
   | 'dmag_imputed'
   | 'own'
   | 'spectral'
-  | 'inherited_twin';
+  | 'inherited_twin'
+  | 'anchor_collocated';
 
 export interface CompanionAbsmag {
   absmag: number;
@@ -527,23 +536,32 @@ export interface CompanionAbsmag {
 // Betelgeuse Ab). Those rows return null (caller drops) unless the
 // pair carries a renderable orbit, where the record must survive for
 // binaries.bin's sake and the twin is kept, tagged, and counted.
+//
+// anchorDmagApplies is false for a pair-row-primary escape: that row's
+// Δmag describes the SUB-pair it heads (40 Eri B's Δmag is the B→C
+// delta), not the anchor→row separation, so adding it to the anchor's
+// absmag is meaningless. Both primary+Δmag paths are skipped, and when
+// no own / per-component-spectral brightness exists the record inherits
+// the anchor's collocated brightness rather than a corrupted A+Δmag.
 export function imputeCompanionAbsmag(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
   spectral: SpectralInfo,
+  anchorDmagApplies = true,
 ): CompanionAbsmag | null {
   const primaryAbsmag = primary?.absmag ?? null;
   const dmag = secondary.dmag;
   const inheritedPhotometry =
     secondary.photometryVia === PHOTOMETRY_VIA_SYSTEM_INHERITED;
 
-  if (inheritedPhotometry && primaryAbsmag !== null && dmag !== null) {
+  if (anchorDmagApplies && inheritedPhotometry
+      && primaryAbsmag !== null && dmag !== null) {
     return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
   }
   if (!inheritedPhotometry && secondary.absmag !== null) {
     return { absmag: secondary.absmag, source: 'own' };
   }
-  if (primaryAbsmag !== null && dmag !== null) {
+  if (anchorDmagApplies && primaryAbsmag !== null && dmag !== null) {
     return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
   }
   if (PER_COMPONENT_SPECT_VIA.has(secondary.spectVia)) {
@@ -553,6 +571,9 @@ export function imputeCompanionAbsmag(
   if (inheritedPhotometry && secondary.absmag !== null
       && hasRenderableOrbit(secondary)) {
     return { absmag: secondary.absmag, source: 'inherited_twin' };
+  }
+  if (!anchorDmagApplies && primaryAbsmag !== null) {
+    return { absmag: primaryAbsmag, source: 'anchor_collocated' };
   }
   return null;
 }
@@ -907,6 +928,11 @@ interface PromoteRowContext {
   /** Canonical comp letter for the row — drives both the synthetic ID
    *  and the display name. */
   canonicalComp: string;
+  /** True when this row is a pair-row-primary escape (the cursor primary
+   *  itself, promoted as a companion of the WDS-root anchor). Its Δmag
+   *  describes the sub-pair it heads, not the anchor→row separation, so
+   *  imputeCompanionAbsmag must not fold Δmag into the anchor's absmag. */
+  isPairRowPrimary: boolean;
 }
 
 interface PromotionState {
@@ -926,7 +952,7 @@ function promoteRow(
   stats: PromotionStats,
 ): number | null {
   const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx,
-          position, canonicalComp } = ctx;
+          position, canonicalComp, isPairRowPrimary } = ctx;
   const synthId = composeSyntheticId(row.systemId, canonicalComp);
   const rowHasOwnHip = row.hip !== null && row.hip > 0;
   if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
@@ -1002,13 +1028,16 @@ function promoteRow(
     return null;
   }
   const spectral = resolveCompanionSpectral(row);
-  const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral.info);
+  const imputed = imputeCompanionAbsmag(
+    row, anchorPrimaryRow, spectral.info, !isPairRowPrimary,
+  );
   if (imputed === null) {
     stats.droppedNoAbsmag++;
     return null;
   }
   const absmag = imputed.absmag;
   if (imputed.source === 'spectral') stats.absmagSpectralDerived++;
+  if (imputed.source === 'anchor_collocated') stats.absmagAnchorCollocated++;
   if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
   const ci = imputeCompanionCi(row, spectral.info);
   const properName = composeCompanionName(
@@ -1177,6 +1206,7 @@ export function promoteCompanions(
           anchorCatalogIdx: primaryCatalogIdx,
           position,
           canonicalComp,
+          isPairRowPrimary: false,
         },
         state, constellations, stats,
       );
@@ -1261,9 +1291,71 @@ function tryPromoteCursorPrimary(
       anchorCatalogIdx: anchor.catalogIdx,
       position,
       canonicalComp: primary.comp,
+      isPairRowPrimary: true,
     },
     state, constellations, stats,
   );
+}
+
+// ---- Component-letter stamping -----------------------------------------
+
+export interface ComponentStampStats {
+  /** Systems where ≥2 first-class AT-HYG records were stamped. */
+  systemsStamped: number;
+  /** Individual AT-HYG records given a composed component name. */
+  rowsStamped: number;
+}
+
+/** Post-promotion pass for pairs AT-HYG left anonymous. When BOTH halves
+ *  of a multiples.tsv pair already exist as first-class AT-HYG records
+ *  AND none carries a proper name, they render with identical
+ *  Bayer/Flamsteed labels and are individually unsearchable (61 Cyg A /
+ *  61 Cyg B both print "61 Cyg"). Stamp each such record's `proper` with
+ *  the shared name base + its comp letter, reusing composeCompanionName's
+ *  fallback chain. Skips systems where any resolved component already has
+ *  a proper (don't overwrite Sirius A → "Sirius A") or where the primary
+ *  yields no usable base. Mutates `stars` in place, so it must run before
+ *  the name-table / search-index write. */
+export function stampComponentLetters(
+  multiplesRows: MultiplesTsvRow[],
+  stars: Star[],
+  constellations: { code: string; name: string }[],
+): ComponentStampStats {
+  const stats: ComponentStampStats = { systemsStamped: 0, rowsStamped: 0 };
+  const existing = buildExistingIndexes(stars);
+  const groups = groupBySystem(multiplesRows);
+  for (const cursor of groups.values()) {
+    const primaryRow = cursor.primary;
+    if (primaryRow === null) continue;
+    const primaryIdx = findExistingPrimary(primaryRow, existing, stars);
+    if (primaryIdx === null) continue;
+    // Components resolving to a first-class (non-promoted) AT-HYG record.
+    // Promoted companions already carry composed names, so exclude them.
+    const resolved: { idx: number; comp: string }[] = [
+      { idx: primaryIdx, comp: primaryRow.comp },
+    ];
+    for (const sec of cursor.secondaries) {
+      if (sec.orbitRole !== 'secondary') continue;
+      const idx = findExisting(sec, existing);
+      if (idx === null) continue;
+      if ((stars[idx].flags & FLAG_BINARY_COMPANION_ONLY) !== 0) continue;
+      resolved.push({ idx, comp: canonicalCompLetter(primaryRow.comp, sec.comp) });
+    }
+    if (resolved.length < 2) continue;
+    if (resolved.some((r) => stars[r.idx].proper)) continue;
+    const base = resolveCompanionNameBase(
+      primaryRow, primaryRow, stars[primaryIdx], constellations,
+    );
+    if (base === null) continue;
+    for (const r of resolved) {
+      const s = stars[r.idx];
+      s.proper = r.comp ? `${base} ${r.comp}` : base;
+      s.flags |= FLAG_HAS_NAME;
+      stats.rowsStamped++;
+    }
+    stats.systemsStamped++;
+  }
+  return stats;
 }
 
 // ---- Catalog row-index map sidecar -------------------------------------
