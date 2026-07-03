@@ -225,6 +225,7 @@ async function main() {
         constellations: catalog.constellations,
         periodDays: catalog.periodDays,
         amplitudeMag: catalog.amplitudeMag,
+        binaries,
       },
     });
     const planetHoverProvider = createPlanetHoverProvider({ stellata });

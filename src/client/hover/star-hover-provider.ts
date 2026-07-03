@@ -2,12 +2,15 @@
 // `formatStarHover`. See ./README.md.
 
 import type { Stellata } from '../stellata';
+import { tToJDE } from '../solar-system/time';
 import { formatStarHover, type StarHoverFormatContext } from './formatters/star-hover-format';
 import type { HoverProvider } from './hover-types';
 
 export interface StarHoverProviderConfig {
   stellata: Stellata;
-  context: StarHoverFormatContext;
+  // Everything the formatter needs except the live sim time, which the
+  // provider samples per hover.
+  context: Omit<StarHoverFormatContext, 'nowJd'>;
 }
 
 export function createStarHoverProvider(
@@ -17,8 +20,10 @@ export function createStarHoverProvider(
   return {
     kind: 'star',
     pick: (x, y, pxThreshold) => stellata.picker.pickStarHit(x, y, pxThreshold),
-    // Stars are identified by catalog idx alone — sub-layer host
-    // identity (hit.hostStarIdx) is unused for this layer.
-    format: (hit) => formatStarHover(hit.idx, context),
+    // Stars are identified by catalog idx alone; the binary role is
+    // derived from `context.binaries` in the formatter. `nowJd` is
+    // sampled fresh so the Tier-1 live separation tracks the sim clock.
+    format: (hit) =>
+      formatStarHover(hit.idx, { ...context, nowJd: tToJDE(stellata.getT()) }),
   };
 }
