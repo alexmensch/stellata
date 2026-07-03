@@ -135,8 +135,12 @@ Ballesteros(B–V) → Apsis-direct).
   - 20–31 reserved
 - Record (80 bytes per star)
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
-  - 12–15 `float32`      absmag
-  - 16–19 `float32`      ci (B–V colour index, default 0.65 for missing)
+  - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
+                          subtracts the Sol→star Edenhofer A_V so the runtime
+                          raymarch re-adds it without double-counting (see
+                          § Build-time de-extinction).
+  - 16–19 `float32`      ci (intrinsic B–V colour index, de-reddened by the
+                          same integral; default 0.65 for missing)
   - 20–23 `float32`      physicalRadius in solar radii (computed at build time)
   - 24–27 `uint32`       companionIdx (record index of binary companion; `0xFFFFFFFF` = none)
   - 28–31 `uint32`       nameOffset (into name table, valid when flag bit 0 set; `0` = none)
@@ -344,6 +348,57 @@ Sirius≈1.81, Vega≈2.68, Rigel≈75, Betelgeuse≈700, all within ~10% of
 canonical values). Clamped to `[0.08, 2500]` so pathological catalog
 rows don't produce absurd sizes. White dwarfs are special-cased to
 0.013 R☉ (typical WD radius; absmag doesn't translate reliably for them).
+
+## Build-time de-extinction
+
+AT-HYG `absmag` is `mag − 5·log₁₀(d/10)` with no de-extinction, so it
+embeds the real Sol→star extinction A_V; the ~15% of stars without an
+Apsis Teff carry the observed (reddened) B−V in `ci` too. The runtime
+shader (`star.vert.glsl`) then raymarches the camera→star A_V and adds
+it on top — so with the camera at Sol a dusty-sightline star used to
+render ≈2·A_V too faint (and tier-3 colours double-reddened): extinction
+counted once in the data and once in the raymarch.
+
+The fix de-extincts at build time against **the same encoded dust the
+shader raymarches**: `absmag' = absmag − A_map(Sol→star)` and
+`ci' = ci − A_map/R_V`, where `A_map` is a converged Sol→star integral
+through the Edenhofer voxel grid. Because the source is the same model
+the runtime re-adds, at camera=Sol the build subtraction and the runtime
+addition cancel identically for every star — map calibration, cube
+truncation at 1.25 kpc, and the `avPerDensityPerPc` conversion all cancel
+by construction — so rendered `appMag` reproduces the AT-HYG observed
+magnitude (the only at-Sol residual is the shader's 48-step quadrature vs
+the build's converged integral). Camera-anywhere: from within the cube,
+vantages get physically consistent re-lighting.
+
+- `dust-deextinction-pure.ts` — the pure integral + trilinear sampler
+  mirroring the GPU decode (`sampleDensityAt`, `avSolToStar`) and the
+  shared `R_V`. `dust-deextinction.ts` — `loadDustGrid` assembles
+  `data/dust/` (manifest + 64 chunks) into one flat grid; decode
+  constants come from the manifest, never redefined.
+- Runs inside `readStars` after the distance overrides settle final xyz,
+  **before** `physicalRadius` (radii size off the de-extincted, brighter
+  absmag — hence the count re-pin) and before companion promotion.
+- Promoted companions de-extinct along their own sightline in
+  `companion-promotion.ts`, except where the value is already intrinsic:
+  a spectral-derived absmag (class→M_V) and a derived ci (Ballesteros /
+  solar fallback) are left untouched; observed-photometry absmag and the
+  row's own observed ci get the subtraction.
+- **Dust data absent at build → HARD FAIL** (`loadDustGrid` throws). The
+  Bailer-Jones soft-continue precedent does not apply: a soft-continue
+  would ship extincted absmags into a runtime that assumes de-extincted,
+  silently reintroducing the double-count.
+- Beyond the 1.25 kpc cube the runtime raymarch adds ≈0, so distant
+  dusty sightlines stay single-counted (extinction embedded in absmag,
+  still exact from Sol) until the raymarch stack is extended.
+
+**Invariant:** the build-time de-extinction integral and the runtime
+extinction stack must model the same dust (same maps + slab). Any
+runtime-stack change ships with the mirrored build-side integral
+extension + a catalog rebuild in the same release. Apsis `azero_gspphot`
+(offset 64–67) is a validation cross-check only, never the de-extinction
+source — a different estimator than the raymarch would leave a Sol
+residual.
 
 ## Geometric binary inference
 
