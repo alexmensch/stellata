@@ -55,11 +55,13 @@ interface FocusFixture {
   parkDistByIdx: Map<number, number>;
   setFocusedStar(idx: number | null): void;
   setBusy(busy: boolean): void;
+  setFocalLocalPos(v: THREE.Vector3): void;
 }
 
 function makeFocus(): FocusFixture {
   let focusedStar: number | null = null;
   let busy = false;
+  const focalLocalPos = new THREE.Vector3();
   const parkDistByIdx = new Map<number, number>();
   const calls = {
     setFocus: [] as Array<number | null>,
@@ -73,6 +75,11 @@ function makeFocus(): FocusFixture {
     setVectorToCloud: (idx) => { calls.setVectorToCloud.push(idx); },
     parkDistForStar: (idx) => parkDistByIdx.get(idx) ?? 1.0,
     isCameraBusy: () => busy,
+    focalLocalPositionInto: (out) => {
+      if (focusedStar === null) return false;
+      out.copy(focalLocalPos);
+      return true;
+    },
   };
   return {
     ops,
@@ -80,6 +87,7 @@ function makeFocus(): FocusFixture {
     parkDistByIdx,
     setFocusedStar: (idx) => { focusedStar = idx; },
     setBusy: (b) => { busy = b; },
+    setFocalLocalPos: (v) => { focalLocalPos.copy(v); },
   };
 }
 
@@ -222,6 +230,25 @@ describe('ObserveTransition.setMode — navigate → observe (animated)', () => 
     expect(h.observeControls.enable).toHaveBeenCalledTimes(1);
     expect(h.observe.isActive()).toBe(false);
     expect(h.busEvents).toEqual([{ name: 'state', payload: undefined }]);
+  });
+
+  it('parks the camera at the focal star LIVE position (baseline + perturbation), not the origin', () => {
+    const h = makeHarness({ mode: 'navigate' });
+    h.focus.setFocusedStar(3);
+    // Focal star sits at a perturbed local position (orbiting binary member).
+    const live = new THREE.Vector3(4e-5, -2e-5, 1e-5);
+    h.focus.setFocalLocalPos(live);
+    h.camera.position.set(10, 0, 0);
+    const startNow = 5000;
+    vi.spyOn(performance, 'now').mockReturnValue(startNow);
+    h.observe.setMode('observe', { animate: true });
+
+    vi.spyOn(performance, 'now').mockReturnValue(startNow + OBSERVE_TRANSITION_MS + 1);
+    h.observe.tick(startNow + OBSERVE_TRANSITION_MS + 1);
+
+    expect(h.camera.position.x).toBeCloseTo(live.x, 9);
+    expect(h.camera.position.y).toBeCloseTo(live.y, 9);
+    expect(h.camera.position.z).toBeCloseTo(live.z, 9);
   });
 });
 

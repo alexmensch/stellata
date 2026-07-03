@@ -125,9 +125,26 @@ interface FrameStub {
   catalog: Catalog;
   recenterCalls: THREE.Vector3[];
 }
-function makeFrameAnchor(catalog: Catalog): FrameStub {
+function makeFrameAnchor(
+  catalog: Catalog,
+  pert: { fn: (idx: number, out: THREE.Vector3) => boolean },
+): FrameStub {
   const worldOffset = new THREE.Vector3();
   const recenterCalls: THREE.Vector3[] = [];
+  const scratch = new THREE.Vector3();
+  // Mirror production: the star buffer holds baseline + orbital
+  // perturbation (the walk wrote it). Reads add the pert hook's output so
+  // starLocalPositionInto returns the LIVE local position.
+  const liveInto = (idx: number, out: THREE.Vector3): THREE.Vector3 => {
+    const p = catalog.positions;
+    out.set(
+      p[idx * 3] - worldOffset.x,
+      p[idx * 3 + 1] - worldOffset.y,
+      p[idx * 3 + 2] - worldOffset.z,
+    );
+    if (pert.fn(idx, scratch)) out.add(scratch);
+    return out;
+  };
   const anchor: FrameAnchor = {
     recenterOrigin: (newOrigin) => {
       const dx = newOrigin.x - worldOffset.x;
@@ -139,23 +156,8 @@ function makeFrameAnchor(catalog: Catalog): FrameStub {
       return new THREE.Vector3(dx, dy, dz);
     },
     getWorldOffset: () => worldOffset,
-    starLocalPosition: (idx) => {
-      const p = catalog.positions;
-      return new THREE.Vector3(
-        p[idx * 3] - worldOffset.x,
-        p[idx * 3 + 1] - worldOffset.y,
-        p[idx * 3 + 2] - worldOffset.z,
-      );
-    },
-    starLocalPositionInto: (idx, out) => {
-      const p = catalog.positions;
-      out.set(
-        p[idx * 3] - worldOffset.x,
-        p[idx * 3 + 1] - worldOffset.y,
-        p[idx * 3 + 2] - worldOffset.z,
-      );
-      return out;
-    },
+    starLocalPosition: (idx) => liveInto(idx, new THREE.Vector3()),
+    starLocalPositionInto: (idx, out) => liveInto(idx, out),
   };
   return { anchor, worldOffset, catalog, recenterCalls };
 }
@@ -177,6 +179,7 @@ interface Harness {
   vectorToCloud: Array<number | null>;
   setCameraMode: (m: CameraMode) => void;
   getCameraMode: () => CameraMode;
+  pert: { fn: (idx: number, out: THREE.Vector3) => boolean };
 }
 
 function makeHarness(opts: {
@@ -190,7 +193,13 @@ function makeHarness(opts: {
   const aim = makeAimStub();
   const warp = makeWarpStub();
   const observe = makeObserveStub();
-  const frame = makeFrameAnchor(catalog);
+  // Focal perturbation hook — default no-op (no binaries). Tests that
+  // exercise the ride / live-target snap override pert.fn. Shared with the
+  // frame anchor so the simulated star buffer carries the perturbation.
+  const pert: { fn: (idx: number, out: THREE.Vector3) => boolean } = {
+    fn: () => false,
+  };
+  const frame = makeFrameAnchor(catalog, pert);
   const uHide = { value: -1 };
   const bus = new EventBus<StellataEventMap>();
   let cameraMode: CameraMode = opts.mode ?? 'navigate';
@@ -221,6 +230,7 @@ function makeHarness(opts: {
     setVectorToCloud: (idx) => { vectorToCloud.push(idx); },
     getWarp: () => warp,
     getObserve: () => observe,
+    focalPerturbationInto: (idx, out) => pert.fn(idx, out),
   };
 
   return {
@@ -240,6 +250,7 @@ function makeHarness(opts: {
     vectorToCloud,
     setCameraMode: (m) => { cameraMode = m; },
     getCameraMode: () => cameraMode,
+    pert,
   };
 }
 
@@ -457,6 +468,67 @@ describe('FocusController.isPinEngaged', () => {
   it('getPinEngageThresholdSq returns the constant', () => {
     const h = makeHarness();
     expect(h.focus.getPinEngageThresholdSq()).toBe(PIN_ENGAGE_THRESHOLD_SQ_PC);
+  });
+});
+
+describe('FocusController — live focal position (binary members)', () => {
+  it('setFocus snaps controls.target onto baseline + perturbation, preserving the pose', () => {
+    const h = makeHarness();
+    const P = new THREE.Vector3(1e-4, 2e-4, -3e-5);
+    h.pert.fn = (idx, out) => {
+      if (idx === 1) { out.copy(P); return true; }
+      return false;
+    };
+    // Seed the pre-focus pose (focusStar's contract seeds target too).
+    h.camera.position.set(10, 0, 0.5);
+    h.controls.target.copy(h.frame.anchor.starLocalPosition(1));
+    const eyeBefore = h.camera.position.clone().sub(h.controls.target);
+
+    h.focus.setFocus(1);
+
+    // Target lands on the live local position (baseline 0 after recenter + P).
+    expect(h.controls.target.x).toBeCloseTo(P.x, 9);
+    expect(h.controls.target.y).toBeCloseTo(P.y, 9);
+    expect(h.controls.target.z).toBeCloseTo(P.z, 9);
+    // Camera-to-target vector preserved — the snap doesn't move the view.
+    const eyeAfter = h.camera.position.clone().sub(h.controls.target);
+    expect(eyeAfter.distanceTo(eyeBefore)).toBeLessThan(1e-9);
+  });
+
+  it('isPinEngaged engages at a non-origin target that rides the perturbation', () => {
+    const h = makeHarness();
+    // Perturbation well above the pin threshold (5e-5 pc ≫ 1e-6 pc): the
+    // old target.lengthSq() check would read this as disengaged.
+    const P = new THREE.Vector3(5e-5, 0, 0);
+    h.pert.fn = (idx, out) => {
+      if (idx === 1) { out.copy(P); return true; }
+      return false;
+    };
+    h.focus.setFocus(1);
+    expect(h.controls.target.x).toBeCloseTo(P.x, 9);
+    expect(h.focus.isPinEngaged()).toBe(true);
+    // Pan the target off the star past the engage threshold → disengage.
+    h.controls.target.x += 1e-3;
+    expect(h.focus.isPinEngaged()).toBe(false);
+  });
+
+  it('translateFocusFrame rides an in-flight focus-park lerp landing; idle is a no-op', () => {
+    const delta = new THREE.Vector3(0.01, -0.02, 0.03);
+    const land = (shift: boolean): THREE.Vector3 => {
+      const h = makeHarness();
+      h.camera.position.set(0, 0, 5);
+      h.focus.focusStar(1); // far → focus-park lerp starts
+      expect(h.focus.isFocusLerpActive()).toBe(true);
+      if (shift) h.focus.translateFocusFrame(delta);
+      h.focus.tick(performance.now() + FOCUS_LERP_MS + 1);
+      return h.camera.position.clone();
+    };
+    // Idle no-op: doesn't throw with no lerp running.
+    makeHarness().focus.translateFocusFrame(delta);
+    // Landing shifts by exactly delta when the frame is translated mid-lerp.
+    const noShift = land(false);
+    const shifted = land(true);
+    expect(shifted.clone().sub(noShift).distanceTo(delta)).toBeLessThan(1e-9);
   });
 });
 

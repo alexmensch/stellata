@@ -312,6 +312,19 @@ export class Stellata implements FrameAnchor {
   private binaryOrbitField: BinaryOrbitField | null = null;
   private eclipsePhotometryField: EclipsePhotometryField | null = null;
 
+  // Focal-frame ride state. The focal star (when a binary member) drifts
+  // along its orbit; the camera + orbit target track that drift so the
+  // pinned star stays at NDC centre and unfocus is a pure state change.
+  // `_lastAppliedPert` is the perturbation already baked into camera /
+  // target / pose caches; each frame the delta since last frame is
+  // applied and stored. `_rideFocalIdx` guards the re-seed on focus
+  // change (no translate on the frame the focal switches). float64
+  // throughout (THREE.Vector3 components are doubles).
+  private readonly _focalPert = new THREE.Vector3();
+  private readonly _lastAppliedPert = new THREE.Vector3();
+  private readonly _rideDelta = new THREE.Vector3();
+  private _rideFocalIdx: number | null = null;
+
   // Sorted-by-distance-from-Sol index for the core-mask query. Distance
   // from Sol is intrinsic (computed from absolute catalog positions) and
   // therefore stable across floating-origin recenters, so this index is
@@ -706,6 +719,8 @@ export class Stellata implements FrameAnchor {
       setVectorToCloud: (idx) => this.setVectorToCloud(idx),
       getWarp: () => this.warp,
       getObserve: () => this.observe,
+      focalPerturbationInto: (idx, out) =>
+        this.binaryOrbitField?.focalPerturbationInto(idx, this.getT(), out) ?? false,
     });
     this.warp = new WarpController({
       camera: this.camera,
@@ -1227,6 +1242,7 @@ export class Stellata implements FrameAnchor {
       fovYRad,
       this.focus.getFocusedStar(),
     );
+    this.applyFocalFrameRide();
     // Runs after the orbit walk so the camera→primary line of sight
     // reads post-perturbation positions; the pair-relative geometry is
     // evaluated independently in float64. See
@@ -1237,6 +1253,37 @@ export class Stellata implements FrameAnchor {
       this.filter.maxAppMag,
       performance.now(),
     );
+  }
+
+  // Focal-frame ride: translate the camera, orbit target, and any
+  // in-flight camera-transition pose caches by the focal star's per-frame
+  // orbital drift so the star stays glued under the camera. Runs right
+  // after the orbit walk (which wrote this frame's perturbation into the
+  // buffer). Skipped during warp — the warp owns the camera and its
+  // per-frame lookAt already tracks the live buffer; lastAppliedPert is
+  // kept synced so no jump accrues when the warp ends. Re-seeds without
+  // translating on the frame the focal star changes (setFocus already
+  // snapped target onto the star's live position).
+  private applyFocalFrameRide(): void {
+    const field = this.binaryOrbitField;
+    if (!field) return;
+    const focal = this.focus.getFocusedStar();
+    const hasPert = focal !== null
+      && field.focalPerturbationInto(focal, this.getT(), this._focalPert);
+    if (!hasPert) this._focalPert.set(0, 0, 0);
+
+    if (focal !== this._rideFocalIdx || this.warp.isActive()) {
+      this._lastAppliedPert.copy(this._focalPert);
+      this._rideFocalIdx = focal;
+      return;
+    }
+    this._rideDelta.subVectors(this._focalPert, this._lastAppliedPert);
+    if (this._rideDelta.lengthSq() === 0) return;
+    this.camera.position.add(this._rideDelta);
+    this.controls.target.add(this._rideDelta);
+    this.focus.translateFocusFrame(this._rideDelta);
+    this.observe.translateFocusFrame(this._rideDelta);
+    this._lastAppliedPert.copy(this._focalPert);
   }
 
   /** Debug-HUD view into the eclipse field's per-relation walk for the

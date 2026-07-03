@@ -167,6 +167,11 @@ function makeFocus(): FocusFixture {
       if (!row) throw new Error(`star ${idx} not seeded`);
       return row.abs.clone().sub(worldOffset);
     },
+    starLivePositionInto: (idx, out) => {
+      const row = stars.get(idx);
+      if (!row) throw new Error(`star ${idx} not seeded`);
+      return out.copy(row.abs).sub(worldOffset);
+    },
     recenterOrigin: (newOrigin) => {
       const dx = newOrigin.x - worldOffset.x;
       const dy = newOrigin.y - worldOffset.y;

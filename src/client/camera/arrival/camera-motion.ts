@@ -104,9 +104,10 @@ export function newArrival(opts: NewArrivalOpts): ArrivalState {
  *  the differences `pStart − target.center` and `pEnd − target.center`,
  *  both of which shift by the same amount. No recompute needed.
  *
- *  Sibling of `shiftWarpWaypoints` in `warp-pure.ts`: that helper owns
- *  the WarpState waypoint shift, this one owns the cached ArrivalState
- *  shift. Both are called together at any mid-flight recentre. */
+ *  Two callers: warp's mid-Fly recentre (alongside `shiftWarpWaypoints`
+ *  in `warp-pure.ts`, which owns the WarpState waypoint shift) and the
+ *  focal-frame ride, which passes the negated per-frame orbital-drift
+ *  delta to translate an in-flight lerp with the focal star. */
 export function shiftArrivalWaypoints(
   state: ArrivalState,
   dx: number,

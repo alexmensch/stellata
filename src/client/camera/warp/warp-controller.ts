@@ -499,28 +499,25 @@ export class WarpController {
         // emit; emitting via the FocusTarget keeps the contract clean.
         state.dest.emitFocusEvents();
         if (state.dest.kind === 'star') {
-          // Mid-Fly recentre put the destination at local (0,0,0) and
-          // shifted camera + target by the same delta — controls.target
-          // is already clean. Reassert the parked pose so subsequent
-          // TrackballControls.update() lands at the canonical orbit
-          // distance.
+          // Mid-Fly recentre put the destination's baseline at local
+          // (0,0,0); B (read from the star buffer) is its LIVE position
+          // (baseline + orbital perturbation). Park the target on the live
+          // position and the camera at the arrival orbit distance so the
+          // pin engages once the next walk perturbs the buffer to match.
           const forward = new THREE.Vector3().subVectors(B, state.pStart).normalize();
-          this.deps.controls.target.set(0, 0, 0);
-          this.deps.camera.position.copy(forward).multiplyScalar(-state.endOffset);
+          this.deps.controls.target.copy(B);
+          this.deps.camera.position.copy(B).addScaledVector(forward, -state.endOffset);
           this.deps.camera.lookAt(this.deps.controls.target);
         }
       } else if (state.dest.kind === 'star') {
         this.deps.focus.setFocus(state.dest.idx);
-        // Re-anchor camera and target in the clean dest-local frame after
-        // setFocus's recenterOrigin runs. The earlier writes used B from
-        // _localPositions (Float32) while recenterOrigin's dx is computed
-        // fresh in float64 — the difference leaves controls.target offset
-        // by a ~|AB|·1e-7 residual, which on long warps to small stars
-        // disengages the pin guard (lengthSq < 1e-12) and lands the dest
-        // visibly off-centre. Snapping to clean values here avoids that.
+        // setFocus recentred onto the destination and snapped
+        // controls.target onto its live local position (baseline +
+        // orbital perturbation) in float64 — no |AB|·1e-7 residual to
+        // clean up. Park the camera at the arrival orbit distance relative
+        // to that target; forward is a frame-invariant normalised delta.
         const forward = new THREE.Vector3().subVectors(B, state.pStart).normalize();
-        this.deps.controls.target.set(0, 0, 0);
-        this.deps.camera.position.copy(forward).multiplyScalar(-state.endOffset);
+        this.deps.camera.position.copy(this.deps.controls.target).addScaledVector(forward, -state.endOffset);
         this.deps.camera.lookAt(this.deps.controls.target);
       } else {
         this.deps.focus.setFocusedCloud(state.dest.idx);
@@ -544,10 +541,11 @@ export class WarpController {
       this.deps.focus.recenterFocusToStar(newIdx);
     }
     this.deps.uHideFocusIdxRef.value = newIdx;
-    // Park at the new anchor's local origin — observe invariant is
-    // camera at (0,0,0) under the floating origin. Quaternion preserved
-    // from the post-arrival slerp end state.
-    this.deps.camera.position.set(0, 0, 0);
+    // Park at the new anchor's LIVE local position (baseline + orbital
+    // perturbation) — observe stands the camera on the star, which sits
+    // at its perturbed position, not the local origin. Quaternion
+    // preserved from the post-arrival slerp end state.
+    this.deps.focus.starLivePositionInto(newIdx, this.deps.camera.position);
     this.deps.bus.emit('focus', newIdx);
     this.deps.bus.emit('state');
   }
