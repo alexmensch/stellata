@@ -27,6 +27,7 @@ import {
   type DirectionSources,
   type DirectionVia,
 } from './direction-cascade';
+import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
@@ -130,6 +131,7 @@ export async function readStars(
     hip2: new Map(),
     nssSourceIds: new Set(),
   },
+  dustGrid: DustGrid | null = null,
 ): Promise<{
   stars: Star[];
   stats: {
@@ -275,7 +277,17 @@ export async function readStars(
     const y = dirRes.dir.y * dist;
     const z = dirRes.dir.z * dist;
 
-    const ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
+    let ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
+
+    // Build-time de-extinction: absmag and ci are observed-convention
+    // (embed the real Sol→star A_V), so subtract the map integral to
+    // recover intrinsic values the runtime raymarch re-adds. Runs before
+    // physicalRadius so radii size off the de-extincted (brighter) absmag.
+    if (dustGrid) {
+      const av = avSolToStar(dustGrid, x, y, z);
+      absmag -= av;
+      ci -= av / R_V;
+    }
 
     const spectral = resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
     const spectInfo = spectral.info;
