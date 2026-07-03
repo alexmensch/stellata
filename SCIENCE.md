@@ -547,12 +547,13 @@ acceleration (≤0.15″ worst case) is deferred to current-epoch
 propagation, which consumes the same resolved (position, PM, RV,
 parallax) tuple and composes on top of this cascade.
 
-The high-PM regression corpus
+The sky-position regression corpus
 (`scripts/catalog/sky-position-corpus.tsv`) pins Barnard's,
-Kapteyn's, Groombridge 1830, 61 Cyg A/B, and Keid against published
-SIMBAD J2000 positions — all land within 0.01″ (float32 container
-level) — plus ξ UMa's tier-3 printed position at 0.4″. Gaia DR4
-slots in as a source-file swap inside the same cascade
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, and Keid (high-PM tier-1
+stress) plus Sirius and Vega (tier 2, HIP2-propagated) against
+published SIMBAD J2000 positions — all land within 0.01″ (float32
+container level) — plus ξ UMa's tier-3 printed position at 0.4″.
+Gaia DR4 slots in as a source-file swap inside the same cascade
 (`scripts/refresh/README.md` § DR4 transition).
 
 ## Stellar physics

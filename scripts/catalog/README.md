@@ -78,12 +78,13 @@ Missing source files degrade tiers gracefully (empty map → cascade
 falls through), and the per-route build-counts pins
 (`directionGaia5p` … `directionAthygPrinted`) flag the drift.
 
-The high-PM regression corpus (`sky-position-corpus.tsv` +
-`sky-position.test.ts`) pins seven canonical systems (Barnard's,
-Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid, ξ UMa) against
-published SIMBAD J2000 positions — the Gaia-tier rows land within
-0.01″; a PM sign / cos δ / Δt-direction defect shows up as tens of
-arcsec.
+The sky-position regression corpus (`sky-position-corpus.tsv` +
+`sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per
+non-Gaia tier (Sirius + Vega for hip2_saturated, ξ UMa for
+athyg_printed) against published SIMBAD J2000 positions — the
+Gaia/HIP2-tier rows land within 0.01″; a PM sign / cos δ /
+Δt-direction defect shows up as tens of arcsec.
 
 After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
 visual-doubles flagging (`visual-doubles.ts`), and the 80-byte v6

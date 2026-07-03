@@ -74,9 +74,10 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
     catalog = await loadCatalog();
   });
 
-  it('corpus covers the seven canonical high-PM systems', () => {
+  it('corpus covers the high-PM set plus one pin per non-Gaia tier', () => {
     expect(corpus.map((r) => r.hip ?? r.lookupName)).toEqual([
-      87937, 24186, 57939, 104214, 104217, 19849, 'Alula Australis',
+      87937, 24186, 57939, 104214, 104217, 19849,
+      32349, 91262, 'Alula Australis',
     ]);
   });
 
