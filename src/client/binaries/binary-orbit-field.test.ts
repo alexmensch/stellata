@@ -178,11 +178,56 @@ describe('BinaryOrbitField.update — Tier 1 perturbation', () => {
     field = new BinaryOrbitField(fx);
   });
 
-  it('t = J2000: ΔR = 0, positions match catalog baseline exactly', () => {
+  // Reading pair geometry back out of localPositions carries the
+  // float32 grid quantum (~1.2e-7 pc per axis at the fixture's 2 pc) —
+  // fine for asserting AU-scale orbit shape, so the sweeps below use a
+  // 0.05 AU tolerance. Production consumers needing better re-evaluate
+  // in float64 (see README § Eclipse photometry).
+  const F32_TOL_AU = 0.05;
+
+  it('t = J2000: ΔR = 0 for the measured-sep outer pair; collocated inner renders at R(t)', () => {
     const tJ2000Unix = (J2000_JD - 2440587.5) * 86400;
     field.update(tJ2000Unix, closeCamera, 15, 1080, 0.8);
-    for (let i = 0; i < fx.localPositions.length; i++) {
-      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
+    // Outer secondary (star 2, real baked separation measured at
+    // sepPaEpochJd = J2000) and the control (star 3) stay at baseline.
+    // Star 0 does NOT: it is also the collocated inner pair's primary
+    // and legitimately carries −q·ΔR_inner.
+    for (const idx of [2, 3]) {
+      for (let c = 0; c < 3; c++) {
+        expect(fx.localPositions[idx * 3 + c])
+          .toBeCloseTo(fx.absolutePositions[idx * 3 + c], 10);
+      }
+    }
+    // Collocated inner pair → zero baseline: relative offset is the
+    // full R(J2000), magnitude a (e=0), not the baked zero diff.
+    const off = Math.hypot(
+      fx.localPositions[3] - fx.localPositions[0],
+      fx.localPositions[4] - fx.localPositions[1],
+      fx.localPositions[5] - fx.localPositions[2],
+    ) / AU_PC;
+    expect(Math.abs(off - 1.0)).toBeLessThan(F32_TOL_AU);
+  });
+
+  it('collocated-bake orbit never displaces: |offset| stays within [a(1−e), a(1+e)] over a period sweep', () => {
+    // The 7cl.16 defect shape: a sep-0.000 baked pair whose baseline
+    // was R(epoch) rendered a Kepler ellipse displaced by −R(epoch),
+    // sweeping the companion THROUGH the primary once per period and
+    // exceeding apoapsis on the far side (Alsephina Ab at 0.562 AU >
+    // apoapsis 0.52 AU). With the zero baseline the offset magnitude
+    // is bounded by the orbit itself at every phase.
+    const inner = fx.binaries.relations[1];
+    const aAU = inner.aAU;
+    const periodS = inner.pDays * 86400;
+    const t0 = (J2000_JD - 2440587.5) * 86400;
+    for (let k = 0; k < 16; k++) {
+      field.update(t0 + (k / 16) * periodS, closeCamera, 15, 1080, 0.8);
+      const off = Math.hypot(
+        fx.localPositions[3] - fx.localPositions[0],
+        fx.localPositions[4] - fx.localPositions[1],
+        fx.localPositions[5] - fx.localPositions[2],
+      ) / AU_PC;
+      expect(off).toBeGreaterThan(aAU * (1 - inner.e) - F32_TOL_AU);
+      expect(off).toBeLessThan(aAU * (1 + inner.e) + F32_TOL_AU);
     }
   });
 

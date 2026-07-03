@@ -31,9 +31,11 @@ export interface OrbitRelationCache {
   /** Tier-1 R(baseline) cached so per-frame eval is a single Kepler
    *  solve (now) plus a subtract. Baseline epoch = sepPaEpochJd — the
    *  epoch the stored catalog separation was measured at, NOT J2000 —
-   *  falling back to J2000 when the record carries none. */
+   *  falling back to J2000 when the record carries none. Zero for
+   *  collocated-bake pairs (see buildOrbitRelationCaches). */
   refSkyAU: { northAU: number; eastAU: number; radialAU: number } | null;
-  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. */
+  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. Zero
+   *  for collocated-bake pairs. */
   refInPlaneAU: { xAU: number; yAU: number } | null;
   /** Peak relative-separation envelope, AU. a · (1 + e). Used by the
    *  screen-separation LOD as the worst-case sub-pixel test. */
@@ -56,14 +58,15 @@ export function relationToElements(r: BinaryRelation): OrbitalElements {
   };
 }
 
-/** Build one cache entry per Kepler-evaluable relation. `absLength` is
- *  the catalog position-buffer length; relations whose member indices
- *  fall outside it are skipped (defensive against a binaries.bin /
- *  catalog.bin generation mismatch). */
+/** Build one cache entry per Kepler-evaluable relation.
+ *  `absolutePositions` is the catalog-wide xyz buffer; relations whose
+ *  member indices fall outside it are skipped (defensive against a
+ *  binaries.bin / catalog.bin generation mismatch). */
 export function buildOrbitRelationCaches(
   binaries: BinariesData,
-  absLength: number,
+  absolutePositions: Float32Array,
 ): OrbitRelationCache[] {
+  const absLength = absolutePositions.length;
   const out: OrbitRelationCache[] = [];
   const relations = binaries.relations;
   for (let i = 0; i < relations.length; i++) {
@@ -86,12 +89,35 @@ export function buildOrbitRelationCaches(
     const baselineJd = Number.isFinite(r.sepPaEpochJd)
       ? r.sepPaEpochJd
       : J2000_JD;
+    // Collocated bake: companion promotion writes sub-resolution
+    // secondaries (WDS rho 0.000 / unmeasured) bit-identical onto the
+    // primary's xyz — there is no measured configuration to reproduce
+    // at any epoch, and the float32 position quantum (~0.2 AU at tens
+    // of pc) couldn't hold R(epoch) for a tight pair anyway. Zeroing
+    // the baseline reduces the rendered offset baseDiff + ΔR to R(t)
+    // around the primary; subtracting R(epoch) would displace the
+    // orbit's centre and sweep the companion through the primary once
+    // per period.
+    const pBase = r.primaryIdx * 3;
+    const sBase = r.secondaryIdx * 3;
+    const collocatedBake =
+      absolutePositions[pBase] === absolutePositions[sBase]
+      && absolutePositions[pBase + 1] === absolutePositions[sBase + 1]
+      && absolutePositions[pBase + 2] === absolutePositions[sBase + 2];
     out.push({
       relationIdx: i,
       tier,
       elements,
-      refSkyAU: tier === 1 ? evaluateOrbitSkyAU(elements, baselineJd) : null,
-      refInPlaneAU: tier === 2 ? evaluateOrbitInPlaneAU(elements, baselineJd) : null,
+      refSkyAU: tier === 1
+        ? (collocatedBake
+            ? { northAU: 0, eastAU: 0, radialAU: 0 }
+            : evaluateOrbitSkyAU(elements, baselineJd))
+        : null,
+      refInPlaneAU: tier === 2
+        ? (collocatedBake
+            ? { xAU: 0, yAU: 0 }
+            : evaluateOrbitInPlaneAU(elements, baselineJd))
+        : null,
       peakSepAU: elements.a * (1 + elements.e),
     });
   }

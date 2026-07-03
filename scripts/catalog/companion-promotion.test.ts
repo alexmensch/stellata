@@ -735,6 +735,48 @@ describe('promoteCompanions', () => {
     expect(stats.promoted).toBe(0);
   });
 
+  it('drops a sep-0.000 secondary with no renderable orbit (ξ UMa Bb class)', () => {
+    // Sub-resolution spectroscopic pair with NO orbital elements:
+    // nothing can ever separate the collocated record from its anchor,
+    // and its light is already in the anchor's blend photometry —
+    // promoting it renders a duplicate star inside the primary's disc.
+    const rows = siriusRows();
+    rows[1].astrometryVia = 'athyg_position';
+    rows[1].sepArcsec = 0.0;
+    rows[1].paDeg = 75.0;
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
+    expect(stats.droppedNoPosition).toBe(1);
+    expect(stats.promoted).toBe(0);
+  });
+
+  it('collocates a sep-0.000 ORBITAL secondary bit-identically on the anchor (zero-baseline bake)', () => {
+    const rows = siriusRows();
+    rows[1].astrometryVia = 'athyg_position';
+    rows[1].sepArcsec = 0.0;
+    rows[1].paDeg = 43.0;
+    Object.assign(rows[1], ORBIT_ELEMENTS);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
+    expect(stats.promoted).toBe(1);
+    expect(newStars[0].x).toBe(sirius_a_existing.x);
+    expect(newStars[0].y).toBe(sirius_a_existing.y);
+    expect(newStars[0].z).toBe(sirius_a_existing.z);
+  });
+
+  it('collocates an unmeasured-sep (WDS -1 sentinel) ORBITAL secondary instead of dropping it', () => {
+    // Spica-shape spectroscopic pairs with elements but no measured
+    // rho: previously droppedNoPosition; the zero-baseline bake lets
+    // the runtime place them via R(t).
+    const rows = siriusRows();
+    rows[1].astrometryVia = 'athyg_position';
+    rows[1].sepArcsec = -1.0;
+    rows[1].paDeg = -1.0;
+    Object.assign(rows[1], ORBIT_ELEMENTS);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
+    expect(stats.droppedNoPosition).toBe(0);
+    expect(stats.promoted).toBe(1);
+    expect(newStars[0].x).toBe(sirius_a_existing.x);
+  });
+
   it("falls back to primary Star's proper when both multiples name cells are blank", () => {
     // Stage 6's name cell can be blank on BOTH primary and secondary rows
     // even when the primary's AT-HYG record has a perfectly good proper.

@@ -51,7 +51,7 @@ export class BinaryOrbitField {
     this.opts = opts;
     this.relations = buildOrbitRelationCaches(
       opts.binaries,
-      opts.absolutePositions.length,
+      opts.absolutePositions,
     );
   }
 

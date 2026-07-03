@@ -607,7 +607,22 @@ function resolvePosition(
   // for no astrophysical reason.
   const sepArcsec = row.sepArcsec !== null && row.sepArcsec >= 0 ? row.sepArcsec : null;
   const paDeg = row.paDeg !== null && row.paDeg >= 0 ? row.paDeg : null;
-  if (sepArcsec === null || paDeg === null) return null;
+  // Sub-resolution (rho 0.000) or unmeasured pairs: there is no static
+  // placement to bake. When the runtime animates the pair, collocate
+  // the secondary bit-identically on the anchor — the zero baked diff
+  // IS the signal for the runtime's zero-baseline convention (rendered
+  // offset = R(t) around the primary; see src/client/binaries/
+  // orbit-relation-cache.ts collocated-bake). Without a renderable
+  // orbit nothing ever separates the two records and the collocated
+  // star double-counts the blend photometry (ξ UMa Bb inside A) — drop.
+  if (sepArcsec === null || sepArcsec === 0) {
+    if (!hasRenderableOrbit(row)) return null;
+    return {
+      x: anchorX, y: anchorY, z: anchorZ,
+      distPc: Math.sqrt(anchorX * anchorX + anchorY * anchorY + anchorZ * anchorZ),
+    };
+  }
+  if (paDeg === null) return null;
   return projectFromSepPa(anchorX, anchorY, anchorZ, sepArcsec, paDeg);
 }
 
