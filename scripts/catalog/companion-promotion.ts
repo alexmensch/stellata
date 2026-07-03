@@ -898,29 +898,39 @@ function promoteRow(
     stats.droppedNoIdentifier++;
     return null;
   }
+  // Gaia inheritance gate. Gaia resolves only the blended photocentre
+  // of sub-arcsec pairs, so Stage 2/3 bind the SAME source_id to both
+  // component rows (2090 tight pairs). Like the inherited HIP below,
+  // the companion must not adopt it — every gaia-keyed lookup would
+  // collapse onto the primary — so it strips to null and the
+  // identifier falls through to hip/synth.
+  const inheritedGaia = row.gaiaSourceId !== null
+    && anchorPrimaryRow.gaiaSourceId === row.gaiaSourceId;
+  const companionGaia = inheritedGaia ? null : row.gaiaSourceId;
   // Dedup against existing catalog + previously-promoted records.
-  // The inherited-HIP escape lets a no-gaia secondary match the anchor's
-  // record via HIP fall-through without being classified as alreadyInCatalog
-  // (Sirius A+B both list HIP 32349 — Hipparcos resolved them as one star).
+  // The inherited-HIP/Gaia escapes let a secondary match the ANCHOR's
+  // record without being classified as alreadyInCatalog (Sirius A+B
+  // both list HIP 32349; HD 209942 Aa+Ab share one Gaia source —
+  // the catalogue resolved them as one star).
   let existingIdx: number | null = null;
-  let inheritedHipCollision = false;
+  let inheritedIdCollision = false;
   if (row.gaiaSourceId !== null || rowHasOwnHip) {
     existingIdx = findExisting(row, state.existing);
-    inheritedHipCollision =
+    inheritedIdCollision =
       existingIdx !== null
-      && row.gaiaSourceId === null
+      && (row.gaiaSourceId === null || inheritedGaia)
       && anchorCatalogIdx !== null
       && existingIdx === anchorCatalogIdx;
-    if (existingIdx !== null && !inheritedHipCollision) {
+    if (existingIdx !== null && !inheritedIdCollision) {
       stats.alreadyInCatalog++;
       return null;
     }
   }
-  if (row.gaiaSourceId && state.promotedByGaia.has(row.gaiaSourceId)) {
+  if (companionGaia && state.promotedByGaia.has(companionGaia)) {
     stats.alreadyInCatalog++;
     return null;
   }
-  if (rowHasOwnHip && row.gaiaSourceId === null
+  if (rowHasOwnHip && companionGaia === null
       && state.promotedByHip.has(row.hip as number)) {
     stats.alreadyInCatalog++;
     return null;
@@ -937,7 +947,7 @@ function promoteRow(
   const inheritedHip = row.hip !== null && row.hip > 0
     && anchorPrimaryRow.hip === row.hip;
   const companionHip = inheritedHip ? null : row.hip;
-  const usesSynth = row.gaiaSourceId === null && companionHip === null;
+  const usesSynth = companionGaia === null && companionHip === null;
   if (usesSynth) {
     if (synthId === null) {
       stats.droppedNoIdentifier++;
@@ -984,7 +994,7 @@ function promoteRow(
     hr: null,
     flam: null,
     gl: null,
-    gaiaSourceId: row.gaiaSourceId,
+    gaiaSourceId: companionGaia,
     spectDisplay: spectral.display,
     companionIdx: -1,
     periodDays: 0,
@@ -1000,7 +1010,7 @@ function promoteRow(
     stats.promotedSynthetic++;
     state.promotedBySynth.set(synthId as string, newIdx);
   }
-  if (row.gaiaSourceId) state.promotedByGaia.set(row.gaiaSourceId, newIdx);
+  if (companionGaia) state.promotedByGaia.set(companionGaia, newIdx);
   if (companionHip !== null) state.promotedByHip.set(companionHip, newIdx);
   return newIdx;
 }

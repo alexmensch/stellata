@@ -533,6 +533,44 @@ describe('promoteCompanions', () => {
     expect(b.flags & FLAG_BINARY_COMPANION_SYNTHETIC).toBeTruthy();
   });
 
+  it('promotes a secondary sharing the PRIMARY\'s gaia (blended photocentre) via the inherited-Gaia escape', () => {
+    // 7cl.14 shape (HD 209942, HIP 12638, HIP 7869): Gaia fits one
+    // source to the blended sub-arcsec pair, so Stage 2/3 bind the
+    // SAME source_id to both rows. findExisting matches the primary's
+    // record by gaia — the escape must strip the inherited id, mint a
+    // synth record, and NOT classify the row as alreadyInCatalog.
+    const primaryWithGaia = makeStar({
+      x: -0.494, y: 2.477, z: -0.758,
+      absmag: 1.45, proper: 'Testar', hip: 32349,
+      gaiaSourceId: '555000111',
+    });
+    const rows = siriusRows();
+    rows[0].gaiaSourceId = '555000111';
+    rows[1].gaiaSourceId = '555000111';
+    rows[1].hip = null;
+    const { newStars, stats } = promoteCompanions(rows, [primaryWithGaia], CONSTELLATIONS);
+    expect(stats.alreadyInCatalog).toBe(0);
+    expect(stats.promoted).toBe(1);
+    expect(stats.promotedSynthetic).toBe(1);
+    const b = newStars[0];
+    expect(b.gaiaSourceId).toBeNull();
+    expect(b.hip).toBeNull();
+    expect(b.syntheticId).toBe('synth-06451-1643-B');
+    expect(b.flags & FLAG_BINARY_COMPANION_SYNTHETIC).toBeTruthy();
+  });
+
+  it('still reports alreadyInCatalog when the row\'s gaia matches a NON-primary record', () => {
+    // Discriminator for the inherited-Gaia escape: it only fires when
+    // the row's gaia IS the anchor primary's. A different record's
+    // gaia is a genuine already-in-catalog hit.
+    const otherStar: Star = makeStar({ gaiaSourceId: '777', absmag: 5.0 });
+    const rows = siriusRows();
+    rows[1].gaiaSourceId = '777';
+    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar], CONSTELLATIONS);
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.promoted).toBe(0);
+  });
+
   it('still reports alreadyInCatalog for a no-gaia row whose HIP matches a NON-primary AT-HYG record', () => {
     // Discriminator for the inherited-HIP escape: it only fires when the
     // matched catalog row IS the cursor primary. If the secondary's HIP

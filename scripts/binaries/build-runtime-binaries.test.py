@@ -361,6 +361,44 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(stats.pairs_emitted, 0)
         self.assertEqual(stats.pairs_dropped_degenerate_idx, 1)
 
+    def test_shared_gaia_secondary_retries_synth_before_degenerate(self) -> None:
+        # 7cl.14 shape: Gaia binds the blended photocentre's source_id
+        # to BOTH component rows; companion promotion strips the
+        # inherited id and mints a synth record. The resolver must land
+        # the secondary on that synth row instead of dropping the pair
+        # as degenerate.
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 100},
+            by_hip={},
+            by_synth={"synth-00000+0000-B": 555},
+        )
+        pairs = [_pair(primary_gaia="1", secondary_gaia="1")]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT], [0], row_map, out,
+            )
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_degenerate_idx, 0)
+
+    def test_shared_hip_secondary_retries_synth_before_degenerate(self) -> None:
+        row_map = brb.RowIndexMap(
+            by_gaia={},
+            by_hip={36850: 100},
+            by_synth={"synth-00000+0000-B": 556},
+        )
+        pairs = [_pair(
+            primary_gaia=None, primary_hip=36850,
+            secondary_gaia=None, secondary_hip=36850,
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT], [0], row_map, out,
+            )
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_degenerate_idx, 0)
+
     def test_parent_relation_remaps_from_input_to_output_index(self) -> None:
         # Three input pairs: idx 0 root, idx 1 child of 0, idx 2 child
         # of 1. All three resolve. Walk order is [0, 1, 2], output
