@@ -79,6 +79,12 @@ class IdentifierIndices:
     # classification — Sirius A as A0mA1Va vs an inherited string, 40 Eri
     # B as DA2.9 vs the K0V the AT-HYG row would propagate.
     simbad_wds_spectra: dict[tuple[str, str], str]
+    # Hand-curated per-component MK types from
+    # ``data/binaries/component_sptype_overrides.tsv``, keyed on the raw
+    # multiples.tsv comp form (Algol's Aa1,2 secondary keys as "2").
+    # Top tier of Stage 6's spectral cascade — covers components
+    # SIMBAD's WDS cross-IDs never enumerate.
+    component_sptype_overrides: dict[tuple[str, str], str]
 
 
 def build_indices(
@@ -90,6 +96,7 @@ def build_indices(
     src_to_astrometry: dict[int, GaiaAstrometryRow] | None = None,
     ccdm: list[CcdmRow] | None = None,
     simbad_wds_spectra: dict[tuple[str, str], str] | None = None,
+    component_sptype_overrides: dict[tuple[str, str], str] | None = None,
 ) -> IdentifierIndices:
     hip_to_athyg: dict[int, AthygRow] = {}
     tyc_to_athyg: dict[str, AthygRow] = {}
@@ -131,6 +138,7 @@ def build_indices(
         hip_to_ccdm=hip_to_ccdm,
         ccdm_to_hips=ccdm_to_hips,
         simbad_wds_spectra=simbad_wds_spectra or {},
+        component_sptype_overrides=component_sptype_overrides or {},
     )
 
 
