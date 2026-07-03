@@ -70,7 +70,7 @@ only "now" layer in the scene. The two share a frame orientation
 
 | Layer | Epoch | How |
 |---|---|---|
-| Stars (`x0/y0/z0`) | J2000.0 nominal (epoch + equinox) | AT-HYG's upstream README tags `ra`/`dec` as "epoch + equinox 2000.0", but the claim only holds approximately: HIP-sourced rows are empirically at J1991.25, and the stored xyz disagrees with the printed ra/dec by up to tens of arcsec on high-PM stars. See SCIENCE.md § Driver astrometry for the findings and the direct-sourcing decision. The catalog binary inherits whatever AT-HYG emitted. |
+| Stars (catalog.bin xyz) | J2000.0 by construction | Sky directions are resolved per row through the Gaia DR3 5p → HIP2 → AT-HYG cascade and PM-propagated from each source's native epoch (J2016.0 / J1991.25) to J2000.0 at build time (`scripts/catalog/direction-cascade.ts`). AT-HYG's stored `x0/y0/z0` — a mixed-epoch merge artifact, tens of arcsec off on high-PM stars — is no longer consumed. Only the ~30 tier-3 residual rows keep AT-HYG's printed ra/dec as-is. See SCIENCE.md § Driver astrometry. |
 | GCVS variables | n/a (period + amplitude only) | We never consume GCVS positions; the variable rides on its AT-HYG row via the HIP/HD cross-match, so position inherits J2000.0 transitively. |
 | Hipparcos CCDM | n/a (flag-only) | We consume `MultFlag` only, never position. |
 | Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever AT-HYG places the figure stars, so the line endpoints inherit J2000.0 transitively. |
@@ -78,15 +78,14 @@ only "now" layer in the scene. The two share a frame orientation
 | Edenhofer 2023 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
 | Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date — no committed positions; the planet renderer evaluates ephemerides per frame. |
 
-### `pm_*` columns are loaded into nothing
+### Proper motion is a build-time input, not a runtime axis
 
-The AT-HYG CSV carries `pm_ra`, `pm_dec`, and `pm_src` columns.
-`scripts/catalog/build-catalog.ts` and `scripts/catalog/catalog-pure.ts`
-never read them — `grep -n 'pm_ra\|pm_dec' scripts/` returns zero
-hits. The preprocessor reads only the precomputed Cartesian
-`x0/y0/z0` triple and ignores proper-motion data entirely. This is
-deliberate: no T-axis animation is currently supported (see
-SCIENCE.md § Modelling decisions deliberately not made).
+Gaia DR3 / HIP2 PMs are consumed at build time for the epoch
+propagation above, and AT-HYG's `pm_ra`/`pm_dec` for the LMC
+kinematic gate — but no PM survives into `catalog.bin`. Single-star
+positions are a static J2000.0 snapshot with no T-axis animation
+(see SCIENCE.md § Modelling decisions deliberately not made);
+current-epoch propagation is future work.
 
 ### Staleness consequence
 

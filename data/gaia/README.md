@@ -47,7 +47,10 @@ gaia_catalog_source_id_request.tsv     ~6.3 MB, LFS. Full-catalog deduped
 
 - `scripts/catalog/build-catalog.ts` — HIP→DR3 backfill for the
   `gaia_source_id` field; Apsis Teff/logg/[M/H]/A0 + GSP-Spec
-  `spectraltype_esphs` for the six-tier spectral resolver.
+  `spectraltype_esphs` for the six-tier spectral resolver;
+  `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
+  the NSS source_id set for the `gaia_nss_systemic` routing tag
+  (`scripts/catalog/README.md` § Direction resolution).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
 
