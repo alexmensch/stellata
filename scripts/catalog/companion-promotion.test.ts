@@ -3,6 +3,7 @@ import {
   buildCatalogRowIndexMap,
   canonicalCompLetter,
   composeSyntheticId,
+  hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
   parseMultiplesTsv,
@@ -62,6 +63,13 @@ function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow
     photometryVia: 'athyg_own',
     orbitRole: 'secondary',
     distPc: 100,
+    pDays: null,
+    tJd: null,
+    e: null,
+    aAU: null,
+    iRad: null,
+    omegaRad: null,
+    q: null,
     sepArcsec: null,
     paDeg: null,
     sepPaEpochJd: null,
@@ -69,6 +77,12 @@ function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow
     ...overrides,
   };
 }
+
+/** Complete Tier-1 element set — hasRenderableOrbit(row) === true. */
+const ORBIT_ELEMENTS = {
+  pDays: 680.168, tJd: 2446927.22, e: 0.227, aAU: 2.576,
+  iRad: 1.46, omegaRad: 5.41, q: 0.5,
+} as const;
 
 describe('parseMultiplesTsv', () => {
   it('parses a minimal header + one row', () => {
@@ -183,7 +197,9 @@ describe('imputeCompanionAbsmag', () => {
       comp: 'B', absmag: 1.45, dmag: 9.91,
       photometryVia: 'athyg_system_inherited',
     });
-    expect(imputeCompanionAbsmag(sec, primary)).toBeCloseTo(11.36, 4);
+    const r = imputeCompanionAbsmag(sec, primary, SPECTRAL_UNKNOWN);
+    expect(r?.absmag).toBeCloseTo(11.36, 4);
+    expect(r?.source).toBe('dmag_imputed');
   });
 
   it('uses the secondary own absmag when photometry is its own', () => {
@@ -191,7 +207,9 @@ describe('imputeCompanionAbsmag', () => {
       comp: 'B', absmag: 11.18, dmag: 9.7,
       photometryVia: 'athyg_own',
     });
-    expect(imputeCompanionAbsmag(sec, primary)).toBe(11.18);
+    const r = imputeCompanionAbsmag(sec, primary, SPECTRAL_UNKNOWN);
+    expect(r?.absmag).toBe(11.18);
+    expect(r?.source).toBe('own');
   });
 
   it('falls through to primary + Δmag when secondary absmag is null', () => {
@@ -199,7 +217,9 @@ describe('imputeCompanionAbsmag', () => {
       comp: 'B', absmag: null, dmag: 9.91,
       photometryVia: 'none',
     });
-    expect(imputeCompanionAbsmag(sec, primary)).toBeCloseTo(11.36, 4);
+    const r = imputeCompanionAbsmag(sec, primary, SPECTRAL_UNKNOWN);
+    expect(r?.absmag).toBeCloseTo(11.36, 4);
+    expect(r?.source).toBe('dmag_imputed');
   });
 
   it('returns null when no path can produce an absmag', () => {
@@ -207,7 +227,82 @@ describe('imputeCompanionAbsmag', () => {
       comp: 'B', absmag: null, dmag: null,
       photometryVia: 'none',
     });
-    expect(imputeCompanionAbsmag(sec, primary)).toBeNull();
+    expect(imputeCompanionAbsmag(sec, primary, SPECTRAL_UNKNOWN)).toBeNull();
+  });
+
+  it('derives M_V from a curated per-component type when photometry is inherited and Δmag missing (Algol Aa2)', () => {
+    const sec = multiplesRow({
+      comp: '2', absmag: -0.112, dmag: null,
+      photometryVia: 'athyg_system_inherited',
+      spectVia: 'curated', spect: 'K0IV',
+      ...ORBIT_ELEMENTS,
+    });
+    const info = classifyFromSimbad('K0IV')!;
+    const r = imputeCompanionAbsmag(sec, primary, info);
+    expect(r?.source).toBe('spectral');
+    // K0IV = midpoint of K0V (5.9) and K0III (0.7).
+    expect(r?.absmag).toBeCloseTo(3.3, 4);
+  });
+
+  it('never lets the inherited absmag win over the spectral branch', () => {
+    const sec = multiplesRow({
+      comp: 'B', absmag: -5.47, dmag: null,
+      photometryVia: 'athyg_system_inherited',
+      spectVia: 'simbad', spect: 'M3V',
+    });
+    const info = classifyFromSimbad('M3V')!;
+    const r = imputeCompanionAbsmag(sec, primary, info);
+    expect(r?.source).toBe('spectral');
+    expect(r!.absmag).toBeGreaterThan(9);
+  });
+
+  it('keeps the inherited twin ONLY for orbital pairs with no per-component type', () => {
+    const sec = multiplesRow({
+      comp: '2', absmag: -0.112, dmag: null,
+      photometryVia: 'athyg_system_inherited',
+      spectVia: 'athyg', spect: 'B8V',
+      ...ORBIT_ELEMENTS,
+    });
+    const r = imputeCompanionAbsmag(sec, primary, classifyFromSimbad('B8V')!);
+    expect(r?.source).toBe('inherited_twin');
+    expect(r?.absmag).toBe(-0.112);
+  });
+
+  it('drops the invented twin when the pair has no renderable orbit', () => {
+    const sec = multiplesRow({
+      comp: 'B', absmag: -5.47, dmag: null,
+      photometryVia: 'athyg_system_inherited',
+      spectVia: 'athyg', spect: 'M2Ia',
+    });
+    expect(
+      imputeCompanionAbsmag(sec, primary, classifyFromSimbad('M2Ia')!),
+    ).toBeNull();
+  });
+
+  it('inherited spect (athyg) never routes through the spectral branch', () => {
+    // The M2Ia string is the PRIMARY's class; deriving M_V from it
+    // would re-mint the twin through the calibration table.
+    const sec = multiplesRow({
+      comp: 'B', absmag: null, dmag: null,
+      photometryVia: 'none',
+      spectVia: 'athyg', spect: 'M2Ia',
+    });
+    expect(
+      imputeCompanionAbsmag(sec, primary, classifyFromSimbad('M2Ia')!),
+    ).toBeNull();
+  });
+});
+
+describe('hasRenderableOrbit', () => {
+  it('true only when P, T, e, a, ω, q are all present', () => {
+    expect(hasRenderableOrbit(multiplesRow(ORBIT_ELEMENTS))).toBe(true);
+    expect(hasRenderableOrbit(multiplesRow())).toBe(false);
+    expect(hasRenderableOrbit(multiplesRow({ ...ORBIT_ELEMENTS, aAU: null }))).toBe(false);
+    expect(hasRenderableOrbit(multiplesRow({ ...ORBIT_ELEMENTS, q: null }))).toBe(false);
+  });
+
+  it('i is optional (Tier-2 galactic-plane fallback)', () => {
+    expect(hasRenderableOrbit(multiplesRow({ ...ORBIT_ELEMENTS, iRad: null }))).toBe(true);
   });
 });
 
@@ -385,6 +480,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'athyg_position', spectVia: 'athyg',
         photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
         sepArcsec: 0.0, paDeg: 43.0, sepPaEpochJd: 2455197.5,
+        ...ORBIT_ELEMENTS,
       }),
     ];
     const algolPrimary = makeStar({

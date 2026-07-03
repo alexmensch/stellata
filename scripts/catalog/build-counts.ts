@@ -133,6 +133,15 @@ export interface BuildCounts {
    *  proxy — so collocating on the anchor would render a false
    *  coincident star (Alsephina C). */
   companionDroppedCollocatedPrimary: number;
+  /** Promoted secondaries whose absmag came from the class→M_V
+   *  spectral calibration (inherited/missing photometry, no WDS Δmag,
+   *  per-component spect_via=curated/simbad). */
+  companionAbsmagSpectralDerived: number;
+  /** Promoted secondaries still carrying the inherited primary absmag
+   *  (full-luminosity twin) — kept only because the pair has a
+   *  renderable orbit binaries.bin must keep addressing. Ratchet DOWN
+   *  by curating per-component types; an increase is a regression. */
+  companionAbsmagInheritedTwinOrbital: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;

@@ -50,6 +50,8 @@ function baseCounts(): BuildCounts {
     companionDroppedNoAbsmag: 900,
     companionDroppedCompoundComp: 40,
     companionDroppedCollocatedPrimary: 6,
+    companionAbsmagSpectralDerived: 30,
+    companionAbsmagInheritedTwinOrbital: 25,
     gaiaAstrometryEntries: 315000,
     hip2Entries: 117000,
     nssSourceIdEntries: 356000,

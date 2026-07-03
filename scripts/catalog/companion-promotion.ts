@@ -12,6 +12,7 @@ import {
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
   UNKNOWN_CLASS_IDX,
+  absmagFromSpectral,
   classifyFromSimbad,
   parseGaiaSourceIdStr,
   physicalRadius,
@@ -58,6 +59,16 @@ export interface MultiplesTsvRow {
   photometryVia: string;
   orbitRole: OrbitRole;
   distPc: number | null;
+  /** Stage 4 orbital elements. Promotion consults them only through
+   *  hasRenderableOrbit — placement and brightness rules fork on
+   *  whether the runtime BinaryOrbitField will animate the pair. */
+  pDays: number | null;
+  tJd: number | null;
+  e: number | null;
+  aAU: number | null;
+  iRad: number | null;
+  omegaRad: number | null;
+  q: number | null;
   sepArcsec: number | null;
   paDeg: number | null;
   sepPaEpochJd: number | null;
@@ -67,6 +78,24 @@ export interface MultiplesTsvRow {
 export const PHOTOMETRY_VIA_OWN = 'athyg_own';
 export const PHOTOMETRY_VIA_SYSTEM_INHERITED = 'athyg_system_inherited';
 export const PHOTOMETRY_VIA_NONE = 'none';
+
+/** spect_via values whose `spect` string genuinely describes THIS
+ *  component rather than the whole system: Stage 6's curated-override
+ *  tier and the SIMBAD per-component join. `athyg` is the system
+ *  primary's string inherited by every component. */
+export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
+  'curated',
+  'simbad',
+]);
+
+/** Mirrors the runtime has_orbit contract (binaries-loader FLAG_HAS_ORBIT
+ *  + orbit-relation-cache finite-elements gate): BinaryOrbitField
+ *  animates the pair only when P, T, e, a, ω, q are all present.
+ *  i and Ω are optional (Tier-2 galactic-plane fallback). */
+export function hasRenderableOrbit(row: MultiplesTsvRow): boolean {
+  return row.pDays !== null && row.tJd !== null && row.e !== null
+    && row.aAU !== null && row.omegaRad !== null && row.q !== null;
+}
 
 function nonEmpty(s: string | undefined): string | null {
   if (!s) return null;
@@ -120,6 +149,13 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     photometryVia: col('photometry_via'),
     orbitRole: col('orbit_role'),
     distPc: col('dist_pc'),
+    pDays: col('P_days'),
+    tJd: col('T_jd'),
+    e: col('e'),
+    aAU: col('a_AU'),
+    iRad: col('i_rad'),
+    omegaRad: col('omega_rad'),
+    q: col('q'),
     sepArcsec: col('sep_arcsec'),
     paDeg: col('pa_deg'),
     sepPaEpochJd: col('sep_pa_epoch_jd'),
@@ -150,6 +186,13 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       photometryVia: cells[idx.photometryVia] ?? '',
       orbitRole: role,
       distPc: parseFloatOrNull(cells[idx.distPc]),
+      pDays: parseFloatOrNull(cells[idx.pDays]),
+      tJd: parseFloatOrNull(cells[idx.tJd]),
+      e: parseFloatOrNull(cells[idx.e]),
+      aAU: parseFloatOrNull(cells[idx.aAU]),
+      iRad: parseFloatOrNull(cells[idx.iRad]),
+      omegaRad: parseFloatOrNull(cells[idx.omegaRad]),
+      q: parseFloatOrNull(cells[idx.q]),
       sepArcsec: parseFloatOrNull(cells[idx.sepArcsec]),
       paDeg: parseFloatOrNull(cells[idx.paDeg]),
       sepPaEpochJd: parseFloatOrNull(cells[idx.sepPaEpochJd]),
@@ -239,9 +282,18 @@ export interface PromotionStats {
   droppedNoPosition: number;
   /** Dropped because primary's catalog row wasn't found (orphaned pair). */
   droppedNoPrimary: number;
-  /** Dropped because the secondary's own absmag was missing AND Δmag
-   *  couldn't impute one. */
+  /** Dropped because no honest absmag path existed: own photometry
+   *  missing or inherited, no Δmag, no per-component spectral type,
+   *  and no renderable orbit forcing the record to survive. */
   droppedNoAbsmag: number;
+  /** Subset of `promoted` whose absmag came from the class→M_V
+   *  spectral calibration (inherited/missing photometry, no Δmag). */
+  absmagSpectralDerived: number;
+  /** Subset of `promoted` still carrying the inherited primary absmag
+   *  (full-luminosity twin) because the pair has a renderable orbit
+   *  and no per-component type is curated yet. Each is a known
+   *  residual of the twin-brightness bug. */
+  absmagInheritedTwinOrbital: number;
   /** Dropped because the secondary's comp letter is an unresolved
    *  compound aggregate (e.g. "BC" / "AB" / "ABC") whose constituent
    *  single-letter components appear as sibling cursors in the same
@@ -264,6 +316,8 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoPosition: 0,
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
+    absmagSpectralDerived: 0,
+    absmagInheritedTwinOrbital: 0,
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
   };
@@ -412,24 +466,60 @@ export function imputeCompanionCi(
 }
 
 
-// Companion absmag. When Stage 6 tags the row's photometry as
-// inherited from the system primary, impute as primary + WDS Δmag;
-// otherwise prefer the row's own absmag and fall back to primary +
-// Δmag. Returns null when no path produces a value — caller drops.
+/** Which path produced a companion's absmag. `dmag_imputed` = primary +
+ *  WDS Δmag; `own` = the row's own (non-inherited) photometry;
+ *  `spectral` = class→M_V from the row's per-component spectral type;
+ *  `inherited_twin` = the inherited primary absmag kept ONLY because
+ *  the pair has a renderable orbit (dropping the record would also
+ *  drop its orbit/eclipse from binaries.bin) and no honest brightness
+ *  source exists yet. */
+export type CompanionAbsmagSource =
+  | 'dmag_imputed'
+  | 'own'
+  | 'spectral'
+  | 'inherited_twin';
+
+export interface CompanionAbsmag {
+  absmag: number;
+  source: CompanionAbsmagSource;
+}
+
+// Companion absmag. Preference order: primary + WDS Δmag when the
+// row's photometry is inherited; the row's own absmag when it isn't;
+// primary + Δmag fallback; class→M_V from a per-component spectral
+// type. A row with inherited photometry, no Δmag, and no per-component
+// type has NO honest brightness source — returning the inherited
+// absmag would mint a full-luminosity twin of the primary (Algol Aa2,
+// Betelgeuse Ab). Those rows return null (caller drops) unless the
+// pair carries a renderable orbit, where the record must survive for
+// binaries.bin's sake and the twin is kept, tagged, and counted.
 export function imputeCompanionAbsmag(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
-): number | null {
+  spectral: SpectralInfo,
+): CompanionAbsmag | null {
   const primaryAbsmag = primary?.absmag ?? null;
   const dmag = secondary.dmag;
   const inheritedPhotometry =
     secondary.photometryVia === PHOTOMETRY_VIA_SYSTEM_INHERITED;
 
   if (inheritedPhotometry && primaryAbsmag !== null && dmag !== null) {
-    return primaryAbsmag + dmag;
+    return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
   }
-  if (secondary.absmag !== null) return secondary.absmag;
-  if (primaryAbsmag !== null && dmag !== null) return primaryAbsmag + dmag;
+  if (!inheritedPhotometry && secondary.absmag !== null) {
+    return { absmag: secondary.absmag, source: 'own' };
+  }
+  if (primaryAbsmag !== null && dmag !== null) {
+    return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
+  }
+  if (PER_COMPONENT_SPECT_VIA.has(secondary.spectVia)) {
+    const mv = absmagFromSpectral(spectral);
+    if (mv !== null) return { absmag: mv, source: 'spectral' };
+  }
+  if (inheritedPhotometry && secondary.absmag !== null
+      && hasRenderableOrbit(secondary)) {
+    return { absmag: secondary.absmag, source: 'inherited_twin' };
+  }
   return null;
 }
 
@@ -847,12 +937,15 @@ function promoteRow(
     stats.droppedNoPosition++;
     return null;
   }
-  const absmag = imputeCompanionAbsmag(row, anchorPrimaryRow);
-  if (absmag === null) {
+  const spectral = resolveCompanionSpectral(row);
+  const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral.info);
+  if (imputed === null) {
     stats.droppedNoAbsmag++;
     return null;
   }
-  const spectral = resolveCompanionSpectral(row);
+  const absmag = imputed.absmag;
+  if (imputed.source === 'spectral') stats.absmagSpectralDerived++;
+  if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
   const ci = imputeCompanionCi(row, spectral.info);
   const properName = composeCompanionName(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
