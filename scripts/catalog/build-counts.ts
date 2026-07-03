@@ -138,9 +138,8 @@ export interface BuildCounts {
    *  per-component spect_via=curated/simbad). */
   companionAbsmagSpectralDerived: number;
   /** Promoted pair-row-primary escapes whose absmag fell back to the
-   *  anchor's collocated brightness — the row's Δmag describes a
-   *  sub-pair, not anchor→row, and no own/spectral photometry existed
-   *  (40 Eri B). Ratchet DOWN by curating white-dwarf absmags. */
+   *  anchor's collocated brightness (imputeCompanionAbsmag). Ratchet DOWN
+   *  by curating white-dwarf absmags. */
   companionAbsmagAnchorCollocated: number;
   /** Promoted secondaries still carrying the inherited primary absmag
    *  (full-luminosity twin) — kept only because the pair has a

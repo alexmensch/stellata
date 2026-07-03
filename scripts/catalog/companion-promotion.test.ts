@@ -3,6 +3,7 @@ import {
   buildCatalogRowIndexMap,
   canonicalCompLetter,
   composeSyntheticId,
+  groupBySystem,
   hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
@@ -294,17 +295,13 @@ describe('imputeCompanionAbsmag', () => {
   });
 
   it('pair-row-primary escape falls back to the anchor absmag, not anchor + sub-pair Δmag (40 Eri B)', () => {
-    // Keid B heads the BC sub-pair; its Δmag is the B→C delta, not A→B.
-    // WD type gives no spectral M_V, so honest brightness = the anchor's.
     const keidB = multiplesRow({
       comp: 'B', absmag: null, dmag: 1.64,
       photometryVia: 'none', spectVia: 'simbad', spect: 'DA2.9',
     });
-    const anchorDmagApplies = false;
-    const r = imputeCompanionAbsmag(keidB, primary, classifyFromSimbad('DA2.9')!, anchorDmagApplies);
+    const r = imputeCompanionAbsmag(keidB, primary, classifyFromSimbad('DA2.9')!, false);
     expect(r?.source).toBe('anchor_collocated');
     expect(r?.absmag).toBe(1.45);
-    // Contrast: treated as a secondary, the invalid Δmag corrupts it.
     const asSecondary = imputeCompanionAbsmag(keidB, primary, classifyFromSimbad('DA2.9')!);
     expect(asSecondary?.source).toBe('dmag_imputed');
     expect(asSecondary?.absmag).toBeCloseTo(3.09, 4);
@@ -1166,9 +1163,6 @@ describe('promoteCompanions', () => {
     const b = newStars.find(s => s.proper === 'Keid B');
     expect(b).toBeDefined();
     if (!b) return;
-    // Δmag on B's row (1.64) is the B→C sub-pair delta, NOT anchor→B, so
-    // it must not fold into Keid A's 5.931 (that gave the wrong 7.571).
-    // A WD type yields no spectral M_V → collocated anchor brightness.
     expect(b.absmag).toBe(5.931);
     expect(stats.absmagAnchorCollocated).toBe(1);
     const dxAuFromKeid = Math.hypot(
@@ -1422,7 +1416,7 @@ describe('stampComponentLetters', () => {
       proper: null, bayer: null, flam: 61, conIndex: cygIndex, absmag: 8.332,
     });
     const stars = [a, b];
-    const stats = stampComponentLetters(cygRows(), stars, CONSTELLATIONS);
+    const stats = stampComponentLetters(groupBySystem(cygRows()), stars, CONSTELLATIONS);
     expect(stats.systemsStamped).toBe(1);
     expect(stats.rowsStamped).toBe(2);
     expect(a.proper).toBe('61 Cyg A');
@@ -1440,7 +1434,7 @@ describe('stampComponentLetters', () => {
       hip: 104217, gaiaSourceId: '1872046574983497216', proper: null,
     });
     const stars = [a, b];
-    const stats = stampComponentLetters(cygRows(), stars, CONSTELLATIONS);
+    const stats = stampComponentLetters(groupBySystem(cygRows()), stars, CONSTELLATIONS);
     expect(stats.rowsStamped).toBe(0);
     expect(a.proper).toBe('Sirius');
     expect(b.proper).toBeNull();
@@ -1455,7 +1449,7 @@ describe('stampComponentLetters', () => {
       hip: 104217, gaiaSourceId: '1872046574983497216', proper: null,
     });
     const stars = [a, b];
-    const stats = stampComponentLetters(cygRows(), stars, CONSTELLATIONS);
+    const stats = stampComponentLetters(groupBySystem(cygRows()), stars, CONSTELLATIONS);
     expect(stats.rowsStamped).toBe(0);
     expect(a.proper).toBeNull();
     expect(b.proper).toBeNull();
@@ -1473,8 +1467,35 @@ describe('stampComponentLetters', () => {
       proper: null, flags: FLAG_BINARY_COMPANION_ONLY,
     });
     const stars = [a, b];
-    const stats = stampComponentLetters(cygRows(), stars, CONSTELLATIONS);
+    const stats = stampComponentLetters(groupBySystem(cygRows()), stars, CONSTELLATIONS);
     expect(stats.rowsStamped).toBe(0);
     expect(a.proper).toBeNull();
+  });
+
+  it('does not stamp a blended single entry whose components share one identifier', () => {
+    // AT-HYG carries the pair as ONE record; both multiples rows resolve to
+    // it (B has no own gaia and shares A's HIP). It is one star, not two
+    // components — must not be renamed "51 Psc B" (its faint secondary).
+    const blend = makeStar({
+      hip: 104214, gaiaSourceId: '1872046609345556480',
+      proper: null, bayer: null, flam: 61, conIndex: cygIndex,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '21069+3845-AB', comp: 'A',
+        hip: 104214, gaiaSourceId: '1872046609345556480',
+        source: 'athyg', name: '', orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: '21069+3845-AB', comp: 'B',
+        hip: 104214, gaiaSourceId: null,
+        source: 'athyg', name: '', orbitRole: 'secondary',
+      }),
+    ];
+    const stars = [blend];
+    const stats = stampComponentLetters(groupBySystem(rows), stars, CONSTELLATIONS);
+    expect(stats.systemsStamped).toBe(0);
+    expect(stats.rowsStamped).toBe(0);
+    expect(blend.proper).toBeNull();
   });
 });

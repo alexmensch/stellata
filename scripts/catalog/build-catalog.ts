@@ -402,7 +402,7 @@ async function main() {
   if (multiplesRows !== null) {
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS);
+    const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS);
     for (const ns of newStars) stars.push(ns);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
@@ -436,7 +436,7 @@ async function main() {
     // halves first-class but printing the same Bayer/Flamsteed label
     // (61 Cyg A/B). Mutates proper/flags in place, so it must precede
     // the name-table + search-index write below.
-    const stampStats = stampComponentLetters(multiplesRows, stars, CONSTELLATIONS);
+    const stampStats = stampComponentLetters(groups, stars, CONSTELLATIONS);
     if (stampStats.rowsStamped > 0) {
       console.log(
         `  stamped ${stampStats.rowsStamped} component names across ` +

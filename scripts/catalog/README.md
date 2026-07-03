@@ -515,19 +515,23 @@ broader category.
 ### Component-letter stamping
 
 `stampComponentLetters` runs immediately after `promoteCompanions`
-(same `multiples.tsv` read), before the absmag sort and the
-name-table / search-index write. Promotion only ADDS records; when
-BOTH halves of a pair already exist as first-class AT-HYG rows AND
-neither carries a `proper` name, they render with identical
-Bayer/Flamsteed labels and are individually unsearchable (61 Cyg A
-and 61 Cyg B both print "61 Cyg"). For each system where ≥2
-components resolve to first-class (non-promoted) AT-HYG records and
-none is already named, the pass writes `<base> <comp>` into each
-record's `proper` (reusing `composeCompanionName`'s fallback chain)
-and sets `FLAG_HAS_NAME`. It **skips** any system where a component
-already carries a real `proper` (never rename Sirius A → "Sirius A")
-or where the primary yields no usable base. `componentLettersStamped`
-counts the records renamed.
+(over the same grouped `multiples.tsv` rows `promoteCompanions`
+returns), before the absmag sort and the name-table / search-index
+write. Promotion only ADDS records; when BOTH halves of a pair
+already exist as first-class AT-HYG rows AND neither carries a
+`proper` name, they render with identical Bayer/Flamsteed labels and
+are individually unsearchable (61 Cyg A and 61 Cyg B both print
+"61 Cyg"). For each system where ≥2 **distinct** first-class
+(non-promoted) AT-HYG records resolve and none is already named, the
+pass writes `<base> <comp>` into each record's `proper` (base via
+`resolveCompanionNameBase`) and sets `FLAG_HAS_NAME`. Components are
+deduped by record index: a blended single entry whose rows share one
+identifier (no own gaia + shared HIP) resolves to one record and is
+skipped — it is one star, not two components, and must not be
+mislabelled as its faint secondary. It also **skips** any system
+where a component already carries a real `proper` (never rename
+Sirius A → "Sirius A") or where the primary yields no usable base.
+`componentLettersStamped` counts the records renamed.
 
 ## GCVS variability cross-match
 

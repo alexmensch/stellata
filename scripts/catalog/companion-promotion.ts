@@ -290,9 +290,8 @@ export interface PromotionStats {
    *  spectral calibration (inherited/missing photometry, no Δmag). */
   absmagSpectralDerived: number;
   /** Subset of `promoted` (pair-row-primary escapes) whose absmag fell
-   *  back to the anchor's collocated brightness because the row's Δmag
-   *  describes a sub-pair, not anchor→row, and no own/spectral
-   *  photometry existed (40 Eri B). Ratchet-down: curate WD absmags. */
+   *  back to the anchor's collocated brightness (see imputeCompanionAbsmag).
+   *  Ratchet-down: curate WD absmags. */
   absmagAnchorCollocated: number;
   /** Existing AT-HYG records repositioned in place because they ARE
    *  the companion (same composed name, bit-identical to the anchor —
@@ -466,7 +465,7 @@ interface PairCursor {
 // can read the primary's resolved AT-HYG absmag for the Δmag imputation.
 // Standalone-role rows are emitted in their own bucket (one per row) since
 // they aren't sides of a WDS pair.
-function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
+export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
   const groups = new Map<string, PairCursor>();
   for (const r of rows) {
     let cursor = groups.get(r.systemId);
@@ -513,8 +512,7 @@ export function imputeCompanionCi(
  *  the pair has a renderable orbit (dropping the record would also
  *  drop its orbit/eclipse from binaries.bin) and no honest brightness
  *  source exists yet; `anchor_collocated` = a pair-row-primary escape
- *  (40 Eri B) whose Δmag describes a sub-pair rather than anchor→row,
- *  falling back to the anchor's brightness. */
+ *  falling back to the anchor's brightness (see imputeCompanionAbsmag). */
 export type CompanionAbsmagSource =
   | 'dmag_imputed'
   | 'own'
@@ -726,8 +724,12 @@ function composeCompanionName(
 ): string | null {
   const base = resolveCompanionNameBase(row, primary, primaryStar, constellations);
   if (!base) return null;
-  if (!canonicalComp) return base;
-  return `${base} ${canonicalComp}`;
+  return joinComponentName(base, canonicalComp);
+}
+
+/** "<base> <comp>", or just base when comp is empty. */
+function joinComponentName(base: string, comp: string): string {
+  return comp ? `${base} ${comp}` : base;
 }
 
 function resolveCompanionNameBase(
@@ -929,9 +931,8 @@ interface PromoteRowContext {
    *  and the display name. */
   canonicalComp: string;
   /** True when this row is a pair-row-primary escape (the cursor primary
-   *  itself, promoted as a companion of the WDS-root anchor). Its Δmag
-   *  describes the sub-pair it heads, not the anchor→row separation, so
-   *  imputeCompanionAbsmag must not fold Δmag into the anchor's absmag. */
+   *  itself, promoted as a companion of the WDS-root anchor); drives
+   *  anchorDmagApplies=false in imputeCompanionAbsmag. */
   isPairRowPrimary: boolean;
 }
 
@@ -1115,7 +1116,7 @@ export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
   constellations: { code: string; name: string }[],
-): { newStars: Star[]; stats: PromotionStats } {
+): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
@@ -1212,7 +1213,7 @@ export function promoteCompanions(
       );
     }
   }
-  return { newStars, stats };
+  return { newStars, stats, groups };
 }
 
 function lookupPromoted(
@@ -1311,35 +1312,45 @@ export interface ComponentStampStats {
  *  AND none carries a proper name, they render with identical
  *  Bayer/Flamsteed labels and are individually unsearchable (61 Cyg A /
  *  61 Cyg B both print "61 Cyg"). Stamp each such record's `proper` with
- *  the shared name base + its comp letter, reusing composeCompanionName's
- *  fallback chain. Skips systems where any resolved component already has
- *  a proper (don't overwrite Sirius A → "Sirius A") or where the primary
- *  yields no usable base. Mutates `stars` in place, so it must run before
- *  the name-table / search-index write. */
+ *  the shared name base (resolveCompanionNameBase) + its comp letter.
+ *  Skips systems where any resolved component already has a proper (don't
+ *  overwrite Sirius A → "Sirius A"), where the primary yields no usable
+ *  base, or where fewer than two DISTINCT first-class records resolve — a
+ *  blended single entry (both rows sharing one identifier) is one star,
+ *  not two components. Mutates `stars` in place, so it must run before the
+ *  name-table / search-index write. */
 export function stampComponentLetters(
-  multiplesRows: MultiplesTsvRow[],
+  groups: Map<string, PairCursor>,
   stars: Star[],
   constellations: { code: string; name: string }[],
 ): ComponentStampStats {
   const stats: ComponentStampStats = { systemsStamped: 0, rowsStamped: 0 };
   const existing = buildExistingIndexes(stars);
-  const groups = groupBySystem(multiplesRows);
   for (const cursor of groups.values()) {
     const primaryRow = cursor.primary;
     if (primaryRow === null) continue;
     const primaryIdx = findExistingPrimary(primaryRow, existing, stars);
     if (primaryIdx === null) continue;
-    // Components resolving to a first-class (non-promoted) AT-HYG record.
-    // Promoted companions already carry composed names, so exclude them.
-    const resolved: { idx: number; comp: string }[] = [
-      { idx: primaryIdx, comp: primaryRow.comp },
-    ];
+    // Distinct first-class (non-promoted) AT-HYG records, one per resolved
+    // component. A secondary that shares the primary's identifier resolves
+    // back to the primary's record (AT-HYG carries the pair as one blended
+    // entry); dedup by index so it collapses to one and the length gate
+    // below drops the system rather than stamping the blend as its faint
+    // secondary. Promoted companions already carry composed names — exclude.
+    const seen = new Set<number>();
+    const resolved: { idx: number; comp: string }[] = [];
+    const add = (idx: number, comp: string) => {
+      if (seen.has(idx)) return;
+      seen.add(idx);
+      resolved.push({ idx, comp });
+    };
+    add(primaryIdx, primaryRow.comp);
     for (const sec of cursor.secondaries) {
       if (sec.orbitRole !== 'secondary') continue;
       const idx = findExisting(sec, existing);
       if (idx === null) continue;
       if ((stars[idx].flags & FLAG_BINARY_COMPANION_ONLY) !== 0) continue;
-      resolved.push({ idx, comp: canonicalCompLetter(primaryRow.comp, sec.comp) });
+      add(idx, canonicalCompLetter(primaryRow.comp, sec.comp));
     }
     if (resolved.length < 2) continue;
     if (resolved.some((r) => stars[r.idx].proper)) continue;
@@ -1349,7 +1360,7 @@ export function stampComponentLetters(
     if (base === null) continue;
     for (const r of resolved) {
       const s = stars[r.idx];
-      s.proper = r.comp ? `${base} ${r.comp}` : base;
+      s.proper = joinComponentName(base, r.comp);
       s.flags |= FLAG_HAS_NAME;
       stats.rowsStamped++;
     }
