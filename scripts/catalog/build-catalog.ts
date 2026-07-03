@@ -202,6 +202,7 @@ async function main() {
     companionDroppedCollocatedPrimary: 0,
     companionAbsmagSpectralDerived: 0,
     companionAbsmagInheritedTwinOrbital: 0,
+    companionRepositionedCollocatedDouble: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     nssSourceIdEntries: 0,
@@ -408,7 +409,8 @@ async function main() {
         `compound-comp=${ps.droppedCompoundComp}, ` +
         `collocated-primary=${ps.droppedCollocatedPrimary}); ` +
         `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
-        `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital} ` +
+        `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
+        `repositioned-collocated-double=${ps.repositionedCollocatedDouble} ` +
         `in ${Date.now() - tProm}ms`,
     );
     counts.companionRowsScanned = ps.pairRowsScanned;
@@ -422,6 +424,7 @@ async function main() {
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
     counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
+    counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');
   }

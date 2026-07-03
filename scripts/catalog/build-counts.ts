@@ -142,6 +142,9 @@ export interface BuildCounts {
    *  renderable orbit binaries.bin must keep addressing. Ratchet DOWN
    *  by curating per-component types; an increase is a regression. */
   companionAbsmagInheritedTwinOrbital: number;
+  /** Existing AT-HYG blend-coordinate double entries repositioned in
+   *  place by companion promotion (ξ UMa B class). */
+  companionRepositionedCollocatedDouble: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;

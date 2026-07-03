@@ -289,6 +289,11 @@ export interface PromotionStats {
   /** Subset of `promoted` whose absmag came from the class→M_V
    *  spectral calibration (inherited/missing photometry, no Δmag). */
   absmagSpectralDerived: number;
+  /** Existing AT-HYG records repositioned in place because they ARE
+   *  the companion (same composed name, bit-identical to the anchor —
+   *  AT-HYG blend-coordinate double entries like ξ UMa B). Not counted
+   *  in `promoted`; no new record is minted. */
+  repositionedCollocatedDouble: number;
   /** Subset of `promoted` still carrying the inherited primary absmag
    *  (full-luminosity twin) because the pair has a renderable orbit
    *  and no per-component type is curated yet. Each is a known
@@ -318,6 +323,7 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoAbsmag: 0,
     absmagSpectralDerived: 0,
     absmagInheritedTwinOrbital: 0,
+    repositionedCollocatedDouble: 0,
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
   };
@@ -358,11 +364,15 @@ export function canonicalCompLetter(
 interface ExistingIndexes {
   byGaia: Map<string, number>;
   byHip: Map<number, number>;
+  /** Proper name → record index, first-wins. Drives the collocated
+   *  AT-HYG double-entry merge (see promoteRow). */
+  byProper: Map<string, number>;
 }
 
 function buildExistingIndexes(stars: Star[]): ExistingIndexes {
   const byGaia = new Map<string, number>();
   const byHip = new Map<number, number>();
+  const byProper = new Map<string, number>();
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     if (s.gaiaSourceId && !byGaia.has(s.gaiaSourceId)) {
@@ -371,8 +381,11 @@ function buildExistingIndexes(stars: Star[]): ExistingIndexes {
     if (s.hip !== null && s.hip > 0 && !byHip.has(s.hip)) {
       byHip.set(s.hip, i);
     }
+    if (s.proper && !byProper.has(s.proper)) {
+      byProper.set(s.proper, i);
+    }
   }
-  return { byGaia, byHip };
+  return { byGaia, byHip, byProper };
 }
 
 function findExisting(
@@ -395,6 +408,11 @@ function findExisting(
   return null;
 }
 
+// A proper-name anchor hit must also agree on position — names are
+// effectively unique in AT-HYG, but the guard keeps a hypothetical
+// collision from anchoring a system on an unrelated star.
+const NAME_ANCHOR_MAX_POS_DELTA_PC = 0.1;
+
 // Cursor-primary lookup. More permissive than findExisting: tries HIP
 // even when gaia is set, because AT-HYG sometimes carries only HIP for
 // the primary while multiples.tsv has the Gaia source_id from SIMBAD's
@@ -402,9 +420,13 @@ function findExisting(
 // row carries gaia=4468557611984384512 from simbad_xid). For primaries
 // the shared-HIP-with-secondary ambiguity doesn't apply — the cursor
 // primary IS the system anchor, not a sibling that might collide.
+// The proper-name tier is the last resort for GJ-only AT-HYG rows
+// carrying neither id (ξ UMa A) — without it the whole cursor runs
+// anchor-less and the collocated-double merge can never fire.
 function findExistingPrimary(
   row: MultiplesTsvRow,
   existing: ExistingIndexes,
+  existingStars: Star[],
 ): number | null {
   if (row.gaiaSourceId) {
     const hit = existing.byGaia.get(row.gaiaSourceId);
@@ -413,6 +435,18 @@ function findExistingPrimary(
   if (row.hip !== null && row.hip > 0) {
     const hit = existing.byHip.get(row.hip);
     if (hit !== undefined) return hit;
+  }
+  const name = row.name.trim();
+  if (name && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null) {
+    const hit = existing.byProper.get(name);
+    if (hit !== undefined) {
+      const s = existingStars[hit];
+      if (Math.abs(s.x - row.x_pc) < NAME_ANCHOR_MAX_POS_DELTA_PC
+          && Math.abs(s.y - row.y_pc) < NAME_ANCHOR_MAX_POS_DELTA_PC
+          && Math.abs(s.z - row.z_pc) < NAME_ANCHOR_MAX_POS_DELTA_PC) {
+        return hit;
+      }
+    }
   }
   return null;
 }
@@ -828,7 +862,7 @@ function buildWdsRootAnchors(
     if (cursor.primary === null) continue;
     const wdsRoot = wdsRootOf(cursor.primary.systemId);
     if (wdsRoot === null) continue;
-    const idx = findExistingPrimary(cursor.primary, existing);
+    const idx = findExistingPrimary(cursor.primary, existing, existingStars);
     if (idx === null) continue;
     const candidate: SystemAnchor = {
       star: existingStars[idx],
@@ -877,6 +911,7 @@ interface PromoteRowContext {
 
 interface PromotionState {
   existing: ExistingIndexes;
+  existingStars: Star[];
   existingStarsLength: number;
   newStars: Star[];
   promotedByGaia: Map<string, number>;
@@ -943,9 +978,13 @@ function promoteRow(
   // HIP-keyed lookup: url-state's refFromIndex encodes by HIP and
   // decodes first-wins, so a shared link or page reload collapses
   // both records onto the primary. Strip when the row's HIP equals
-  // the anchor row's HIP.
+  // the anchor row's HIP — or the anchor catalog STAR's: SIMBAD's
+  // cross-IDs can bind the system HIP to the secondary letter while
+  // the primary row's hip cell is empty, yet the blended AT-HYG
+  // record already owns that HIP in every byHip lookup.
   const inheritedHip = row.hip !== null && row.hip > 0
-    && anchorPrimaryRow.hip === row.hip;
+    && (anchorPrimaryRow.hip === row.hip
+      || (anchorStar !== null && anchorStar.hip === row.hip));
   const companionHip = inheritedHip ? null : row.hip;
   const usesSynth = companionGaia === null && companionHip === null;
   if (usesSynth) {
@@ -975,6 +1014,34 @@ function promoteRow(
   const properName = composeCompanionName(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
   );
+  // Collocated AT-HYG double-entry merge. AT-HYG occasionally carries
+  // BOTH members of a resolved pair at the same printed blend
+  // coordinates (ξ UMa: "Alula Australis" + "Alula Australis B" are
+  // bit-identical). The companion being promoted here IS that second
+  // record — same composed name, sitting exactly on the anchor — so
+  // minting a new star would render the pair twice: once collocated
+  // with the primary, once at the projected separation. Reposition
+  // the existing record instead, and backfill the row's Gaia id so
+  // the runtime binaries resolver can address it.
+  if (properName !== null && anchorStar !== null && anchorCatalogIdx !== null) {
+    const dupIdx = state.existing.byProper.get(properName);
+    if (dupIdx !== undefined && dupIdx !== anchorCatalogIdx) {
+      const dup = state.existingStars[dupIdx];
+      if (dup.x === anchorStar.x && dup.y === anchorStar.y
+          && dup.z === anchorStar.z) {
+        dup.x = position.x;
+        dup.y = position.y;
+        dup.z = position.z;
+        if (dup.gaiaSourceId === null && companionGaia !== null) {
+          dup.gaiaSourceId = companionGaia;
+        }
+        if (companionGaia) state.promotedByGaia.set(companionGaia, dupIdx);
+        if (companionHip !== null) state.promotedByHip.set(companionHip, dupIdx);
+        stats.repositionedCollocatedDouble++;
+        return dupIdx;
+      }
+    }
+  }
   let flags = FLAG_BINARY_COMPANION_ONLY;
   if (properName) flags |= FLAG_HAS_NAME;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
@@ -1035,6 +1102,7 @@ export function promoteCompanions(
   // as a parent in the BD/BE groups).
   const state: PromotionState = {
     existing,
+    existingStars,
     existingStarsLength: existingStars.length,
     newStars,
     promotedByGaia: new Map(),
@@ -1055,7 +1123,7 @@ export function promoteCompanions(
     // Resolve the cursor primary's catalog row. Check existing AT-HYG
     // first, then previously-promoted records (40 Eri B class — promoted
     // in BC, then reused as anchor for BD).
-    let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing);
+    let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing, existingStars);
     if (primaryCatalogIdx === null) {
       primaryCatalogIdx = lookupPromoted(cursor.primary, state);
     }

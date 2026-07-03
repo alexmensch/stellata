@@ -534,7 +534,7 @@ describe('promoteCompanions', () => {
   });
 
   it('promotes a secondary sharing the PRIMARY\'s gaia (blended photocentre) via the inherited-Gaia escape', () => {
-    // 7cl.14 shape (HD 209942, HIP 12638, HIP 7869): Gaia fits one
+    // Shared-photocentre shape (HD 209942, HIP 12638, HIP 7869): Gaia fits one
     // source to the blended sub-arcsec pair, so Stage 2/3 bind the
     // SAME source_id to both rows. findExisting matches the primary's
     // record by gaia — the escape must strip the inherited id, mint a
@@ -771,6 +771,39 @@ describe('promoteCompanions', () => {
     const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
+  });
+
+  it('repositions a collocated AT-HYG double entry instead of minting a duplicate (ξ UMa B class)', () => {
+    // AT-HYG carries BOTH members of the pair at the same printed
+    // blend coordinates: "Testar" and "Testar B" bit-identical. The
+    // promoted secondary composes the name "Testar B" — that record IS
+    // the companion; it must move to the projected position and adopt
+    // the row's gaia, and no new record may be created.
+    const primaryStar = makeStar({
+      x: -0.494, y: 2.477, z: -0.758,
+      absmag: 4.24, proper: 'Testar', hip: 55203,
+    });
+    const athygB = makeStar({
+      x: -0.494, y: 2.477, z: -0.758,
+      absmag: 4.71, proper: 'Testar B',
+    });
+    const rows = siriusRows();
+    rows[0].hip = 55203;
+    rows[0].name = 'Testar';
+    rows[1].hip = null;
+    rows[1].name = '';
+    const { newStars, stats } = promoteCompanions(
+      rows, [primaryStar, athygB], CONSTELLATIONS,
+    );
+    expect(stats.repositionedCollocatedDouble).toBe(1);
+    expect(stats.promoted).toBe(0);
+    expect(newStars).toHaveLength(0);
+    // Moved off the primary to the tangent-projected position…
+    expect(athygB.x).not.toBe(primaryStar.x);
+    // …keeping its own photometry, adopting the row's gaia for the
+    // runtime binaries resolver.
+    expect(athygB.absmag).toBe(4.71);
+    expect(athygB.gaiaSourceId).toBe('2947050466531873024');
   });
 
   it('drops a sep-0.000 secondary with no renderable orbit (ξ UMa Bb class)', () => {
