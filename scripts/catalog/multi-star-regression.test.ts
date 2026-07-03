@@ -62,12 +62,12 @@ const MULT_PA_TOL_DEG = 0.01;        // multiples.tsv pa vs curated
 const EPOCH_TOL_DAYS = 0.5;          // sep_pa_epoch_jd vs curated (f32 offset)
 const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 
-// Ratchet for the promoted-companion HIP round-trip sweep. 26 promoted
+// Ratchet for the promoted-companion HIP round-trip sweep. 20 promoted
 // records currently carry a HIP that first-seen hipToIndex resolves to
 // a DIFFERENT record, so a shared URL focused on them restores onto
 // the wrong star. Pinned exactly so new violations fail immediately;
 // the companion-promotion identifier fix drops this to 0.
-const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 26;
+const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 20;
 
 // ---- Corpus row types ----------------------------------------------------
 
