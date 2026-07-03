@@ -296,20 +296,19 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
     expect(fx.localPositions[8]).toBe(fx.absolutePositions[8]);
   });
 
-  it('exempts a relation whose focal star is a pair member — no step-jump on zoom-out', () => {
-    // Focused on the secondary, the focal rebase puts the
-    // FULL relative motion on the primary. Hard-switching Kepler off
-    // when the pair crosses the sub-pixel threshold snapped the bright
-    // primary from its Kepler-evaluated position to the baked baseline
-    // (Algol Ab jump at ~75 AU camera distance, Capella Ab at ~800 AU).
+  it('exempts a relation on the focal star slot-chain — no step-jump on zoom-out', () => {
+    // A relation on the focal's slot-chain skips the sub-pixel gate so the
+    // focal-frame ride reads a continuous perturbation; hard-switching
+    // Kepler off at the threshold would snap the focal to its baseline and
+    // jolt the camera (Algol Ab jump at ~75 AU, Capella Ab at ~800 AU).
     const fx = makeFixture();
     const field = new BinaryOrbitField(fx);
     const camera = new THREE.Vector3(0, 0, -900);
     const t = (J2000_JD - 2440587.5) * 86400 + 50 * 365.25 * 86400;
 
-    // Focused on the outer secondary (catalog idx 2): its relation must
-    // keep evaluating Kepler — no composite suppress, primary carries
-    // −ΔR — even though the pair is sub-pixel at this camera distance.
+    // Focused on the outer secondary (catalog idx 2): its relation keeps
+    // evaluating Kepler — no composite suppress, primary carries −q·ΔR —
+    // even though the pair is sub-pixel at this camera distance.
     field.update(t, camera, 15, 1080, 0.8, 2);
     expect(fx.compositeSuppress[2]).toBe(0);
     const jumpMag = Math.hypot(
@@ -461,39 +460,55 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
     expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
   });
 
-  it('inner-pair offset clean when focal=inner secondary (Aa2 pin absorbs outer shift)', () => {
-    const fx = makeAlgolFixture();
-    const field = new BinaryOrbitField(fx);
-    field.update(tQuarter, closeCamera, 15, 1080, 0.8, 1);
-    // Aa2 (idx 1) must stay pinned at its J2000 baseline.
-    expect(fx.localPositions[3]).toBeCloseTo(fx.absolutePositions[3], 10);
-    expect(fx.localPositions[4]).toBeCloseTo(fx.absolutePositions[4], 10);
-    expect(fx.localPositions[5]).toBeCloseTo(fx.absolutePositions[5], 10);
-    // Aa1's position should be at −ΔR_inner from Aa2 — outer perturbation
-    // absorbed by the focal-pin.
+  it('focusing an inner member is a no-op on the buffer (no rebase — barycentric always)', () => {
+    // The focal star no longer rebases: focus=Aa2, focus=Aa1, and unfocus
+    // all write byte-identical positions. Focus→unfocus is a pure state
+    // change; the camera rides the focal via focalPerturbationInto instead.
+    const fxF = makeAlgolFixture();
+    new BinaryOrbitField(fxF).update(tQuarter, closeCamera, 15, 1080, 0.8, 1);
+    const fxN = makeAlgolFixture();
+    new BinaryOrbitField(fxN).update(tQuarter, closeCamera, 15, 1080, 0.8, null);
+    for (let i = 0; i < fxF.localPositions.length; i++) {
+      expect(fxF.localPositions[i]).toBe(fxN.localPositions[i]);
+    }
+    // Inner-pair relative offset still stays ~ΔR_inner (parent barycentric
+    // shift doesn't leak into the inner-pair displacement).
     const innerSep = Math.hypot(
-      fx.localPositions[3] - fx.localPositions[0],
-      fx.localPositions[4] - fx.localPositions[1],
-      fx.localPositions[5] - fx.localPositions[2],
+      fxF.localPositions[3] - fxF.localPositions[0],
+      fxF.localPositions[4] - fxF.localPositions[1],
+      fxF.localPositions[5] - fxF.localPositions[2],
     );
     expect(innerSep).toBeLessThanOrEqual(INNER_DISPLACEMENT_PC * 1.05);
     expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
   });
 
-  it('inner-pair offset clean when focal=inner primary (Aa1 pin)', () => {
+  it('focalPerturbationInto(Aa2) includes the outer −q·ΔR term via the parent chain', () => {
+    const fx = makeAlgolFixture();
+    const field = new BinaryOrbitField(fx);
+    field.update(tQuarter, closeCamera, 15, 1080, 0.8, 1);
+    const pert = new THREE.Vector3();
+    expect(field.focalPerturbationInto(1, tQuarter, pert)).toBe(true);
+    // Equals the walk's written displacement within the float32 grid
+    // quantum at the fixture's 2.64 pc (≈1.6e-7 pc/axis).
+    const F32_TOL = 3e-7;
+    expect(Math.abs(pert.x - (fx.localPositions[3] - fx.absolutePositions[3]))).toBeLessThan(F32_TOL);
+    expect(Math.abs(pert.y - (fx.localPositions[4] - fx.absolutePositions[4]))).toBeLessThan(F32_TOL);
+    expect(Math.abs(pert.z - (fx.localPositions[5] - fx.absolutePositions[5]))).toBeLessThan(F32_TOL);
+    // Chain includes the outer relation: pert magnitude exceeds the
+    // inner-only envelope, so Aa2 rides the outer barycentre too.
+    expect(pert.length()).toBeGreaterThan(INNER_DISPLACEMENT_PC);
+  });
+
+  it('focalPerturbationInto(Aa1) matches the shared-primary displacement', () => {
     const fx = makeAlgolFixture();
     const field = new BinaryOrbitField(fx);
     field.update(tQuarter, closeCamera, 15, 1080, 0.8, 0);
-    // Aa1 (idx 0) stays pinned at baseline.
-    expect(fx.localPositions[0]).toBeCloseTo(fx.absolutePositions[0], 10);
-    expect(fx.localPositions[1]).toBeCloseTo(fx.absolutePositions[1], 10);
-    expect(fx.localPositions[2]).toBeCloseTo(fx.absolutePositions[2], 10);
-    const innerSep = Math.hypot(
-      fx.localPositions[3] - fx.localPositions[0],
-      fx.localPositions[4] - fx.localPositions[1],
-      fx.localPositions[5] - fx.localPositions[2],
-    );
-    expect(innerSep).toBeLessThanOrEqual(INNER_DISPLACEMENT_PC * 1.05);
+    const pert = new THREE.Vector3();
+    expect(field.focalPerturbationInto(0, tQuarter, pert)).toBe(true);
+    const F32_TOL = 3e-7;
+    expect(Math.abs(pert.x - (fx.localPositions[0] - fx.absolutePositions[0]))).toBeLessThan(F32_TOL);
+    expect(Math.abs(pert.y - (fx.localPositions[1] - fx.absolutePositions[1]))).toBeLessThan(F32_TOL);
+    expect(Math.abs(pert.z - (fx.localPositions[2] - fx.absolutePositions[2]))).toBeLessThan(F32_TOL);
   });
 });
 
@@ -639,12 +654,11 @@ describe('BinaryOrbitField — physical sanity (Sirius-shaped)', () => {
   });
 });
 
-describe('BinaryOrbitField.update — focal-star rebase', () => {
-  // When the focal star is a member of a binary pair, anchor it at the
-  // local origin (matching the disc shader's uPinFocusToCenter) and load
-  // the FULL relative motion onto the companion. Without this the focus
-  // ring / distance vector / hover pick all project to a perturbed point
-  // separated from where the GPU pins the disc.
+describe('BinaryOrbitField.update — no focal rebase (barycentric always)', () => {
+  // The focal star no longer rebases to the local origin. The walk writes
+  // the same barycentric split whether or not a pair member is focused, so
+  // focus→unfocus is a no-op on positions; the camera tracks the focal via
+  // focalPerturbationInto (the focal-frame ride in the integration shell).
 
   // One-relation fixture: avoids the makeFixture()'s nested inner pair
   // bleeding into the primary's slot and confusing the q-scaling ratio.
@@ -694,72 +708,57 @@ describe('BinaryOrbitField.update — focal-star rebase', () => {
 
   const closeCamera = new THREE.Vector3(1.999, 0, 0);
   const tNonZero = (J2000_JD - 2440587.5) * 86400 + 12 * 365.25 * 86400;
+  // float32 grid quantum at the fixture's ~2 pc: |pos|·2⁻²³ ≈ 2.4e-7 pc.
+  const F32_TOL_PC = 3e-7;
 
-  it('focal=primary: primary stays at baseline, companion takes full ΔR', () => {
-    const fxA = singleRelationFixture(0.4);
-    const fieldA = new BinaryOrbitField(fxA);
-    fieldA.update(tNonZero, closeCamera, 15, 1080, 0.8, 0);
+  it.each([0, 1, 99] as const)(
+    'focal=%d writes a byte-identical buffer to unfocused (barycentric always)',
+    (focal) => {
+      const fxF = singleRelationFixture(0.4);
+      new BinaryOrbitField(fxF).update(tNonZero, closeCamera, 15, 1080, 0.8, focal);
+      const fxN = singleRelationFixture(0.4);
+      new BinaryOrbitField(fxN).update(tNonZero, closeCamera, 15, 1080, 0.8, null);
+      for (let i = 0; i < fxF.localPositions.length; i++) {
+        expect(fxF.localPositions[i]).toBe(fxN.localPositions[i]);
+      }
+    },
+  );
 
-    const fxB = singleRelationFixture(0.4);
-    const fieldB = new BinaryOrbitField(fxB);
-    fieldB.update(tNonZero, closeCamera, 15, 1080, 0.8, null);
+  it('focalPerturbationInto: primary = −q·ΔR, secondary = (1−q)·ΔR, each matching the walk', () => {
+    const fx = singleRelationFixture(0.4);
+    const field = new BinaryOrbitField(fx);
+    field.update(tNonZero, closeCamera, 15, 1080, 0.8, 0);
 
-    expect(fxA.localPositions[0]).toBeCloseTo(fxA.absolutePositions[0], 10);
-    expect(fxA.localPositions[1]).toBeCloseTo(fxA.absolutePositions[1], 10);
-    expect(fxA.localPositions[2]).toBeCloseTo(fxA.absolutePositions[2], 10);
+    const pPert = new THREE.Vector3();
+    const sPert = new THREE.Vector3();
+    expect(field.focalPerturbationInto(0, tNonZero, pPert)).toBe(true);
+    expect(field.focalPerturbationInto(1, tNonZero, sPert)).toBe(true);
 
-    const sFull = Math.hypot(
-      fxA.localPositions[3] - fxA.absolutePositions[3],
-      fxA.localPositions[4] - fxA.absolutePositions[4],
-      fxA.localPositions[5] - fxA.absolutePositions[5],
-    );
-    const sBary = Math.hypot(
-      fxB.localPositions[3] - fxB.absolutePositions[3],
-      fxB.localPositions[4] - fxB.absolutePositions[4],
-      fxB.localPositions[5] - fxB.absolutePositions[5],
-    );
-    // q=0.4 ⇒ (1−q) = 0.6 ⇒ 1.0 / 0.6 ≈ 1.667.
-    expect(sFull / sBary).toBeCloseTo(1 / 0.6, 2);
+    // Each matches the walk's written displacement within the float32 quantum.
+    expect(Math.abs(pPert.x - (fx.localPositions[0] - fx.absolutePositions[0]))).toBeLessThan(F32_TOL_PC);
+    expect(Math.abs(sPert.x - (fx.localPositions[3] - fx.absolutePositions[3]))).toBeLessThan(F32_TOL_PC);
+
+    // Primary and secondary perturbations are anti-parallel with magnitude
+    // ratio q : (1−q). q=0.4 ⇒ |p|/|s| = 0.4/0.6 ≈ 0.667.
+    expect(pPert.length() / sPert.length()).toBeCloseTo(0.4 / 0.6, 3);
+    expect(pPert.clone().normalize().dot(sPert.clone().normalize())).toBeCloseTo(-1, 5);
   });
 
-  it('focal=secondary: secondary stays at baseline, primary takes full −ΔR', () => {
-    const fxA = singleRelationFixture(0.4);
-    const fieldA = new BinaryOrbitField(fxA);
-    fieldA.update(tNonZero, closeCamera, 15, 1080, 0.8, 1);
-
-    const fxB = singleRelationFixture(0.4);
-    const fieldB = new BinaryOrbitField(fxB);
-    fieldB.update(tNonZero, closeCamera, 15, 1080, 0.8, null);
-
-    expect(fxA.localPositions[3]).toBeCloseTo(fxA.absolutePositions[3], 10);
-    expect(fxA.localPositions[4]).toBeCloseTo(fxA.absolutePositions[4], 10);
-    expect(fxA.localPositions[5]).toBeCloseTo(fxA.absolutePositions[5], 10);
-
-    const pFull = Math.hypot(
-      fxA.localPositions[0] - fxA.absolutePositions[0],
-      fxA.localPositions[1] - fxA.absolutePositions[1],
-      fxA.localPositions[2] - fxA.absolutePositions[2],
-    );
-    const pBary = Math.hypot(
-      fxB.localPositions[0] - fxB.absolutePositions[0],
-      fxB.localPositions[1] - fxB.absolutePositions[1],
-      fxB.localPositions[2] - fxB.absolutePositions[2],
-    );
-    // q=0.4 ⇒ 1.0 / 0.4 = 2.5.
-    expect(pFull / pBary).toBeCloseTo(1 / 0.4, 2);
+  it('focalPerturbationInto is continuous across consecutive sim times', () => {
+    const fx = singleRelationFixture(0.4);
+    const field = new BinaryOrbitField(fx);
+    const a = new THREE.Vector3();
+    const b = new THREE.Vector3();
+    field.focalPerturbationInto(0, tNonZero, a);
+    field.focalPerturbationInto(0, tNonZero + 3600, b); // +1 hour on a 100-yr orbit
+    expect(b.distanceTo(a)).toBeLessThan(1e-8);
   });
 
-  it('focal=unrelated star: barycentric split preserved (no rebase)', () => {
-    const fxA = singleRelationFixture(0.4);
-    const fieldA = new BinaryOrbitField(fxA);
-    fieldA.update(tNonZero, closeCamera, 15, 1080, 0.8, 99);
-
-    const fxB = singleRelationFixture(0.4);
-    const fieldB = new BinaryOrbitField(fxB);
-    fieldB.update(tNonZero, closeCamera, 15, 1080, 0.8, null);
-
-    for (let i = 0; i < fxA.localPositions.length; i++) {
-      expect(fxA.localPositions[i]).toBeCloseTo(fxB.localPositions[i], 12);
-    }
+  it('focalPerturbationInto returns false + zeroed out for a star in no relation', () => {
+    const fx = singleRelationFixture(0.4);
+    const field = new BinaryOrbitField(fx);
+    const out = new THREE.Vector3(9, 9, 9);
+    expect(field.focalPerturbationInto(99, tNonZero, out)).toBe(false);
+    expect(out.equals(new THREE.Vector3(0, 0, 0))).toBe(true);
   });
 });
