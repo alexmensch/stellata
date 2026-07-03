@@ -67,7 +67,7 @@ const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 // a DIFFERENT record, so a shared URL focused on them restores onto
 // the wrong star. Pinned exactly so new violations fail immediately;
 // the companion-promotion identifier fix drops this to 0.
-const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 20;
+const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
 
 // ---- Corpus row types ----------------------------------------------------
 

@@ -40,8 +40,7 @@
 #                           regression-guard synth-promoted companions
 #                           whose tangent-projected position depends on
 #                           the route-detector in companion-promotion
-#                           (Algol Ab/Aa2, Polaris Ab, Capella Ab,
-#                           Betelgeuse Ab).
+#                           (Algol Ab/Aa2, Polaris Ab, Capella Ab).
 # orbital_period_days       Expected pipeline orbital period in days
 #                           (companion record .periodDays). Empty when
 #                           the system lacks a well-determined orbit or
@@ -101,7 +100,7 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 	Altair	97649		5.129	0.05	2.210	A7Vn			SIMBAD * alf Aql sp_type=A7Vn; HIP2 parallax. Bright star, no Gaia DR3 match.
 02318+8916	Polaris	11767		132.626	0.7	-3.643	F8Ib	Ab:::-1.643:20.0	10744.194	SIMBAD * alf UMi sp_type=F8Ib; Cepheid variable. HIP-anchored distance; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. ORB6 inner orbit Aa,Ab P=10744 d (29.4 yr); companion Ab promoted via synth-02318+8916-Ab (no own gaia/hip). max_sep_au=20.0 guards the dch.80 fix — Ab projects to 13.26 AU from Polaris via sep+PA (0.1″ × 132.626 pc); pre-fix it landed 128 AU off via the athyg_position float residue.
 	Procyon	37279		3.514	0.05	2.671	F5IV-V+DQZ			SIMBAD * alf CMi sp_type=F5IV-V+DQZ; HIP2 parallax. Bright primary, no Gaia DR3 match.
-05552+0724	Betelgeuse	27989		152.672	1.0	-5.469	M1-M2Ia-Iab	Ab:::-5.469:20.0		SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored. Companion Ab promoted via synth-05552+0724-Ab (no own gaia/hip); absmag inherited (dmag empty in multiples). max_sep_au=20.0 guards the dch.80 fix — Ab projects to 15.27 AU from Betelgeuse via sep+PA (0.1″ × 152.67 pc); pre-fix it landed at AT-HYG-precision residue offset from the catalog primary.
+05552+0724	Betelgeuse	27989		152.672	1.0	-5.469	M1-M2Ia-Iab			SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored. NO companion expected: the WDS Aa,Ab row carries no mags and no orbit, so the promoted Ab was a full-luminosity invented twin of Betelgeuse (absmag -5.47 at 0.1″) — the inherited-photometry drop now removes it. If Ab reappears here, the twin-brightness guard regressed.
 	Arcturus	69673		11.257	0.1	-0.307	K1.5IIIFe-0.5			SIMBAD * alf Boo sp_type=K1.5IIIFe-0.5. Bright nearby giant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
 	Aldebaran	21421		20.434	0.2	-0.682	K5+III			SIMBAD * alf Tau sp_type=K5+III. Bright giant, no Gaia DR3 match.
 	Rigel	24436		264.551	1.5	-6.933	B8Ia			SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
@@ -171,7 +170,7 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # synth-03082+4057-2 so companion-promotion surfaces them in catalog.bin
 # and build-runtime-binaries can address them through the row-index map.
 03082+4057	Algol	14576		27.571	0.05	-0.112	B8V	Ab:::2.368:5.0	680.168	SIMBAD * bet Per A sp_type=B8V; Gaia-saturated (no source_id), so spectral resolves via resolveSpectralInfo's SIMBAD HIP fallback tier (without it the radius chain inflated Algol to 12.47 R☉; now 3.2). ORB6 LAB outer orbit Aa,Ab P=680.168 d, e=0.227, i=83.66°. Companion Ab promoted via synthetic ID synth-03082+4057-Ab (no own gaia/hip). max_sep_au=5.0 guards the dch.80 route-based collocation fix — Ab projects to 2.76 AU from Algol via sep+PA (0.1″ × 27.571 pc); pre-fix it landed ~100 AU off.
-03082+4057	Algol (Aa1,Aa2 inner)	14576		27.571	0.05	-0.112	B8V	Aa2:::-0.112:0.5	2.867328	Inner spectroscopic / eclipsing pair Aa1,Aa2 (ORB6 CSI1, P=2.867 d, i=98.70°). multiples.tsv emits the secondary cell with comp set to the WDS prefix-truncation shorthand 2 (= Aa2); dch.77 mints synth-03082+4057-Aa2 from the canonical comp so the runtime resolves through the same key. Primary spectral B8V via the SIMBAD HIP fallback tier (Gaia-saturated, no source_id). max_sep_au=0.5 guards the dch.80 collocation fix — Aa2 projects to ~0 AU from Algol via sep+PA (0.0″ at 27.571 pc); BinaryOrbitField overlays the ~0.06 AU inner orbit at runtime.
+03082+4057	Algol (Aa1,Aa2 inner)	14576		27.571	0.05	-0.112	B8V	Aa2:::3.300:0.5	2.867328	Inner spectroscopic / eclipsing pair Aa1,Aa2 (ORB6 CSI1, P=2.867 d, i=98.70°). multiples.tsv emits the secondary cell with comp set to the WDS prefix-truncation shorthand 2 (= Aa2); the promotion mints synth-03082+4057-Aa2 from the canonical comp so the runtime resolves through the same key. Primary spectral B8V via the SIMBAD HIP fallback tier (Gaia-saturated, no source_id). Aa2 absmag 3.300 = class→M_V for its curated K0IV type (component_sptype_overrides; Kolbas et al. 2015 give M_V≈2.9) — pins the spectral-derived branch, NOT the primary's -0.112 twin value. max_sep_au=0.5 guards the collocation fix — Aa2 bakes collocated (0.0″); BinaryOrbitField overlays the ~0.06 AU inner orbit at runtime.
 # AR Cassiopeiae — bright multi-star system (HIP 115990 B3V). Catalog.bin
 # carries the primary; outer visual components AB / AC / AI / CD / CI /
 # FG / Ia,Ib are emitted as Tier-3 (no orbit) pair rows in multiples.tsv.
