@@ -382,13 +382,13 @@ export function tickArrival(
   camera: THREE.PerspectiveCamera,
 ): { done: boolean };
 
-/** Migrate an in-flight ArrivalState into a new floating-origin frame
- *  by shifting every cached position by `−delta`. Used by warp's
- *  mid-Fly recentre (stellata-2br.5) so the per-frame `tickArrival`
- *  math stays consistent after the floating origin moves onto the
- *  destination. `d0` / `dEnd` / `dir` are translation-invariant so
- *  no recompute is needed. Sibling to `shiftWarpWaypoints` in
- *  `warp-pure.ts`. */
+/** Shift every cached position of an in-flight ArrivalState by `−delta`.
+ *  Two callers: warp's mid-Fly recentre (migrate into the new
+ *  floating-origin frame) and the focal-frame ride (translate an
+ *  in-flight focus-park lerp / observe unfocus arrival by the focal
+ *  star's per-frame orbital drift, passing the negated ride delta).
+ *  `d0` / `dEnd` / `dir` are translation-invariant so no recompute is
+ *  needed. Sibling to `shiftWarpWaypoints` in `warp-pure.ts`. */
 export function shiftArrivalWaypoints(
   state: ArrivalState,
   dx: number, dy: number, dz: number,
