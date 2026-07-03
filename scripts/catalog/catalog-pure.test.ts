@@ -10,6 +10,7 @@ import {
   tempKelvin,
   boloCorr,
   physicalRadius,
+  absmagFromSpectral,
   normalizeGcvsName,
   parseGcvsNumber,
   classifyGcvsVarType,
@@ -588,6 +589,45 @@ describe('catalog-pure / boloCorr', () => {
 
   it('is strongly negative for cool M-class stars (IR-rich)', () => {
     expect(boloCorr(info(6, 9))).toBeLessThan(-3);
+  });
+});
+
+describe('catalog-pure / absmagFromSpectral', () => {
+  const mv = (spect: string) => absmagFromSpectral(classifyFromSimbad(spect)!);
+
+  it('pins main-sequence anchors (Pecaut & Mamajek 2013)', () => {
+    expect(mv('G2V')).toBeCloseTo(4.68, 2);
+    expect(mv('K0V')).toBeCloseTo(5.9, 2);
+    expect(mv('M1V')).toBeCloseTo(9.5, 2);
+    expect(mv('B8V')).toBeCloseTo(0.0, 2);
+  });
+
+  it('subgiants sit at the V/III midpoint — Algol Aa2 (K0IV) lands near +2.9 published', () => {
+    expect(mv('K0IV')).toBeCloseTo(3.3, 2);
+  });
+
+  it('giants read the III table', () => {
+    expect(mv('K0III')).toBeCloseTo(0.7, 2);
+    expect(mv('G5III')).toBeCloseTo(0.9, 2);
+  });
+
+  it('supergiants use per-luminosity-class constants', () => {
+    expect(mv('K2II')).toBeCloseTo(-2.3, 2);
+    expect(mv('B5Ib')).toBeCloseTo(-4.5, 2);
+    expect(mv('M2Iab')).toBeCloseTo(-6.0, 2);
+    expect(mv('A0Ia')).toBeCloseTo(-7.5, 2);
+  });
+
+  it('unknown luminosity class defaults to main sequence', () => {
+    expect(absmagFromSpectral(
+      { classIdx: 5, subclass: 0, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 },
+    )).toBeCloseTo(5.9, 2);
+  });
+
+  it('returns null where a single calibration would be fiction', () => {
+    expect(mv('DA1.9')).toBeNull();                      // white dwarf
+    expect(mv('C5,2e')).toBeNull();                      // carbon
+    expect(absmagFromSpectral(SPECTRAL_UNKNOWN)).toBeNull();
   });
 });
 

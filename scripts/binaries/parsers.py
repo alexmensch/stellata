@@ -644,6 +644,26 @@ def parse_simbad_wds_xids(path: Path) -> dict[tuple[str, str], SimbadWdsXid]:
     return out
 
 
+def parse_component_sptype_overrides(path: Path) -> dict[tuple[str, str], str]:
+    """Load ``data/binaries/component_sptype_overrides.tsv`` into a
+    ``(wds_id, component) -> sp_type`` map. The component key is the raw
+    multiples.tsv ``comp`` form (WDS-truncated: Algol's Aa1,2 secondary
+    is ``"2"``). ``#``-prefixed preamble lines are skipped."""
+    out: dict[tuple[str, str], str] = {}
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            (line for line in fh if not line.startswith("#")), delimiter="\t",
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            component = (r.get("component") or "").strip()
+            sp_type = (r.get("sp_type") or "").strip()
+            if not wds_id or not component or not sp_type:
+                continue
+            out[(wds_id, component)] = sp_type
+    return out
+
+
 def parse_simbad_wds_spectra(
     simbad_sptype_path: Path, simbad_wds_xids_path: Path,
 ) -> dict[tuple[str, str], str]:

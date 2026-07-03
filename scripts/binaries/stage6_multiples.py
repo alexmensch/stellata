@@ -82,11 +82,12 @@ def wds_year_to_jd(year: int | None) -> float | None:
 # Mirrors the per-section ``_VIA_VALUES`` pattern from the other stages
 # (resolve / astrometry / orbit / optical) so stage 7's count-snapshot
 # diff surfaces each tier independently.
+SPECT_VIA_CURATED = "curated"
 SPECT_VIA_SIMBAD = "simbad"
 SPECT_VIA_ATHYG = "athyg"
 SPECT_VIA_NONE = "none"
 SPECT_VIA_VALUES: tuple[str, ...] = (
-    SPECT_VIA_SIMBAD, SPECT_VIA_ATHYG, SPECT_VIA_NONE,
+    SPECT_VIA_CURATED, SPECT_VIA_SIMBAD, SPECT_VIA_ATHYG, SPECT_VIA_NONE,
 )
 
 
@@ -342,12 +343,17 @@ def _resolve_spect(
     wds_id: str, component: str,
     athyg: AthygRow | None, indices: IdentifierIndices,
 ) -> tuple[str, str]:
-    """Per-component spectral type with SIMBAD → AT-HYG → none fallback,
-    returned alongside the ``spect_via`` provenance tag. SIMBAD's
-    per-component sp_type wins because AT-HYG carries a single
-    per-system string that gets inherited by every component, even
-    when each has its own MK / WD class. Standalone rows pass
-    ``athyg=None``."""
+    """Per-component spectral type with curated → SIMBAD → AT-HYG →
+    none fallback, returned alongside the ``spect_via`` provenance tag.
+    The curated tier (``component_sptype_overrides``) carries literature
+    types for components SIMBAD's WDS cross-IDs never enumerate (Algol
+    Aa2's K0IV); SIMBAD's per-component sp_type wins over AT-HYG because
+    AT-HYG carries a single per-system string that gets inherited by
+    every component, even when each has its own MK / WD class.
+    Standalone rows pass ``athyg=None``."""
+    curated_spect = indices.component_sptype_overrides.get((wds_id, component))
+    if curated_spect:
+        return curated_spect, SPECT_VIA_CURATED
     simbad_spect = indices.simbad_wds_spectra.get((wds_id, component))
     if simbad_spect:
         return simbad_spect, SPECT_VIA_SIMBAD

@@ -178,11 +178,56 @@ describe('BinaryOrbitField.update — Tier 1 perturbation', () => {
     field = new BinaryOrbitField(fx);
   });
 
-  it('t = J2000: ΔR = 0, positions match catalog baseline exactly', () => {
+  // Reading pair geometry back out of localPositions carries the
+  // float32 grid quantum (~1.2e-7 pc per axis at the fixture's 2 pc) —
+  // fine for asserting AU-scale orbit shape, so the sweeps below use a
+  // 0.05 AU tolerance. Production consumers needing better re-evaluate
+  // in float64 (see README § Eclipse photometry).
+  const F32_TOL_AU = 0.05;
+
+  it('t = J2000: ΔR = 0 for the measured-sep outer pair; collocated inner renders at R(t)', () => {
     const tJ2000Unix = (J2000_JD - 2440587.5) * 86400;
     field.update(tJ2000Unix, closeCamera, 15, 1080, 0.8);
-    for (let i = 0; i < fx.localPositions.length; i++) {
-      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
+    // Outer secondary (star 2, real baked separation measured at
+    // sepPaEpochJd = J2000) and the control (star 3) stay at baseline.
+    // Star 0 does NOT: it is also the collocated inner pair's primary
+    // and legitimately carries −q·ΔR_inner.
+    for (const idx of [2, 3]) {
+      for (let c = 0; c < 3; c++) {
+        expect(fx.localPositions[idx * 3 + c])
+          .toBeCloseTo(fx.absolutePositions[idx * 3 + c], 10);
+      }
+    }
+    // Collocated inner pair → zero baseline: relative offset is the
+    // full R(J2000), magnitude a (e=0), not the baked zero diff.
+    const off = Math.hypot(
+      fx.localPositions[3] - fx.localPositions[0],
+      fx.localPositions[4] - fx.localPositions[1],
+      fx.localPositions[5] - fx.localPositions[2],
+    ) / AU_PC;
+    expect(Math.abs(off - 1.0)).toBeLessThan(F32_TOL_AU);
+  });
+
+  it('collocated-bake orbit never displaces: |offset| stays within [a(1−e), a(1+e)] over a period sweep', () => {
+    // The displaced-centre defect shape: a sep-0.000 baked pair whose baseline
+    // was R(epoch) rendered a Kepler ellipse displaced by −R(epoch),
+    // sweeping the companion THROUGH the primary once per period and
+    // exceeding apoapsis on the far side (Alsephina Ab at 0.562 AU >
+    // apoapsis 0.52 AU). With the zero baseline the offset magnitude
+    // is bounded by the orbit itself at every phase.
+    const inner = fx.binaries.relations[1];
+    const aAU = inner.aAU;
+    const periodS = inner.pDays * 86400;
+    const t0 = (J2000_JD - 2440587.5) * 86400;
+    for (let k = 0; k < 16; k++) {
+      field.update(t0 + (k / 16) * periodS, closeCamera, 15, 1080, 0.8);
+      const off = Math.hypot(
+        fx.localPositions[3] - fx.localPositions[0],
+        fx.localPositions[4] - fx.localPositions[1],
+        fx.localPositions[5] - fx.localPositions[2],
+      ) / AU_PC;
+      expect(off).toBeGreaterThan(aAU * (1 - inner.e) - F32_TOL_AU);
+      expect(off).toBeLessThan(aAU * (1 + inner.e) + F32_TOL_AU);
     }
   });
 
@@ -249,6 +294,35 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
     expect(fx.localPositions[6]).toBe(fx.absolutePositions[6]);
     expect(fx.localPositions[7]).toBe(fx.absolutePositions[7]);
     expect(fx.localPositions[8]).toBe(fx.absolutePositions[8]);
+  });
+
+  it('exempts a relation whose focal star is a pair member — no step-jump on zoom-out', () => {
+    // Focused on the secondary, the focal rebase puts the
+    // FULL relative motion on the primary. Hard-switching Kepler off
+    // when the pair crosses the sub-pixel threshold snapped the bright
+    // primary from its Kepler-evaluated position to the baked baseline
+    // (Algol Ab jump at ~75 AU camera distance, Capella Ab at ~800 AU).
+    const fx = makeFixture();
+    const field = new BinaryOrbitField(fx);
+    const camera = new THREE.Vector3(0, 0, -900);
+    const t = (J2000_JD - 2440587.5) * 86400 + 50 * 365.25 * 86400;
+
+    // Focused on the outer secondary (catalog idx 2): its relation must
+    // keep evaluating Kepler — no composite suppress, primary carries
+    // −ΔR — even though the pair is sub-pixel at this camera distance.
+    field.update(t, camera, 15, 1080, 0.8, 2);
+    expect(fx.compositeSuppress[2]).toBe(0);
+    const jumpMag = Math.hypot(
+      fx.localPositions[0] - fx.absolutePositions[0],
+      fx.localPositions[1] - fx.absolutePositions[1],
+      fx.localPositions[2] - fx.absolutePositions[2],
+    );
+    expect(jumpMag).toBeGreaterThan(0);
+
+    // Unfocused at the same camera: the gate applies as before.
+    field.update(t, camera, 15, 1080, 0.8, null);
+    expect(fx.compositeSuppress[2]).toBe(1);
+    expect(fx.localPositions[0]).toBe(fx.absolutePositions[0]);
   });
 });
 

@@ -12,6 +12,7 @@ import {
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
   UNKNOWN_CLASS_IDX,
+  absmagFromSpectral,
   classifyFromSimbad,
   parseGaiaSourceIdStr,
   physicalRadius,
@@ -58,6 +59,16 @@ export interface MultiplesTsvRow {
   photometryVia: string;
   orbitRole: OrbitRole;
   distPc: number | null;
+  /** Stage 4 orbital elements. Promotion consults them only through
+   *  hasRenderableOrbit — placement and brightness rules fork on
+   *  whether the runtime BinaryOrbitField will animate the pair. */
+  pDays: number | null;
+  tJd: number | null;
+  e: number | null;
+  aAU: number | null;
+  iRad: number | null;
+  omegaRad: number | null;
+  q: number | null;
   sepArcsec: number | null;
   paDeg: number | null;
   sepPaEpochJd: number | null;
@@ -67,6 +78,24 @@ export interface MultiplesTsvRow {
 export const PHOTOMETRY_VIA_OWN = 'athyg_own';
 export const PHOTOMETRY_VIA_SYSTEM_INHERITED = 'athyg_system_inherited';
 export const PHOTOMETRY_VIA_NONE = 'none';
+
+/** spect_via values whose `spect` string genuinely describes THIS
+ *  component rather than the whole system: Stage 6's curated-override
+ *  tier and the SIMBAD per-component join. `athyg` is the system
+ *  primary's string inherited by every component. */
+export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
+  'curated',
+  'simbad',
+]);
+
+/** Mirrors the runtime has_orbit contract (binaries-loader FLAG_HAS_ORBIT
+ *  + orbit-relation-cache finite-elements gate): BinaryOrbitField
+ *  animates the pair only when P, T, e, a, ω, q are all present.
+ *  i and Ω are optional (Tier-2 galactic-plane fallback). */
+export function hasRenderableOrbit(row: MultiplesTsvRow): boolean {
+  return row.pDays !== null && row.tJd !== null && row.e !== null
+    && row.aAU !== null && row.omegaRad !== null && row.q !== null;
+}
 
 function nonEmpty(s: string | undefined): string | null {
   if (!s) return null;
@@ -120,6 +149,13 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     photometryVia: col('photometry_via'),
     orbitRole: col('orbit_role'),
     distPc: col('dist_pc'),
+    pDays: col('P_days'),
+    tJd: col('T_jd'),
+    e: col('e'),
+    aAU: col('a_AU'),
+    iRad: col('i_rad'),
+    omegaRad: col('omega_rad'),
+    q: col('q'),
     sepArcsec: col('sep_arcsec'),
     paDeg: col('pa_deg'),
     sepPaEpochJd: col('sep_pa_epoch_jd'),
@@ -150,6 +186,13 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       photometryVia: cells[idx.photometryVia] ?? '',
       orbitRole: role,
       distPc: parseFloatOrNull(cells[idx.distPc]),
+      pDays: parseFloatOrNull(cells[idx.pDays]),
+      tJd: parseFloatOrNull(cells[idx.tJd]),
+      e: parseFloatOrNull(cells[idx.e]),
+      aAU: parseFloatOrNull(cells[idx.aAU]),
+      iRad: parseFloatOrNull(cells[idx.iRad]),
+      omegaRad: parseFloatOrNull(cells[idx.omegaRad]),
+      q: parseFloatOrNull(cells[idx.q]),
       sepArcsec: parseFloatOrNull(cells[idx.sepArcsec]),
       paDeg: parseFloatOrNull(cells[idx.paDeg]),
       sepPaEpochJd: parseFloatOrNull(cells[idx.sepPaEpochJd]),
@@ -239,9 +282,23 @@ export interface PromotionStats {
   droppedNoPosition: number;
   /** Dropped because primary's catalog row wasn't found (orphaned pair). */
   droppedNoPrimary: number;
-  /** Dropped because the secondary's own absmag was missing AND Δmag
-   *  couldn't impute one. */
+  /** Dropped because no honest absmag path existed: own photometry
+   *  missing or inherited, no Δmag, no per-component spectral type,
+   *  and no renderable orbit forcing the record to survive. */
   droppedNoAbsmag: number;
+  /** Subset of `promoted` whose absmag came from the class→M_V
+   *  spectral calibration (inherited/missing photometry, no Δmag). */
+  absmagSpectralDerived: number;
+  /** Existing AT-HYG records repositioned in place because they ARE
+   *  the companion (same composed name, bit-identical to the anchor —
+   *  AT-HYG blend-coordinate double entries like ξ UMa B). Not counted
+   *  in `promoted`; no new record is minted. */
+  repositionedCollocatedDouble: number;
+  /** Subset of `promoted` still carrying the inherited primary absmag
+   *  (full-luminosity twin) because the pair has a renderable orbit
+   *  and no per-component type is curated yet. Each is a known
+   *  residual of the twin-brightness bug. */
+  absmagInheritedTwinOrbital: number;
   /** Dropped because the secondary's comp letter is an unresolved
    *  compound aggregate (e.g. "BC" / "AB" / "ABC") whose constituent
    *  single-letter components appear as sibling cursors in the same
@@ -264,6 +321,9 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoPosition: 0,
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
+    absmagSpectralDerived: 0,
+    absmagInheritedTwinOrbital: 0,
+    repositionedCollocatedDouble: 0,
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
   };
@@ -304,11 +364,15 @@ export function canonicalCompLetter(
 interface ExistingIndexes {
   byGaia: Map<string, number>;
   byHip: Map<number, number>;
+  /** Proper name → record index, first-wins. Drives the collocated
+   *  AT-HYG double-entry merge (see promoteRow). */
+  byProper: Map<string, number>;
 }
 
 function buildExistingIndexes(stars: Star[]): ExistingIndexes {
   const byGaia = new Map<string, number>();
   const byHip = new Map<number, number>();
+  const byProper = new Map<string, number>();
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     if (s.gaiaSourceId && !byGaia.has(s.gaiaSourceId)) {
@@ -317,8 +381,11 @@ function buildExistingIndexes(stars: Star[]): ExistingIndexes {
     if (s.hip !== null && s.hip > 0 && !byHip.has(s.hip)) {
       byHip.set(s.hip, i);
     }
+    if (s.proper && !byProper.has(s.proper)) {
+      byProper.set(s.proper, i);
+    }
   }
-  return { byGaia, byHip };
+  return { byGaia, byHip, byProper };
 }
 
 function findExisting(
@@ -341,6 +408,11 @@ function findExisting(
   return null;
 }
 
+// A proper-name anchor hit must also agree on position — names are
+// effectively unique in AT-HYG, but the guard keeps a hypothetical
+// collision from anchoring a system on an unrelated star.
+const NAME_ANCHOR_MAX_POS_DELTA_PC = 0.1;
+
 // Cursor-primary lookup. More permissive than findExisting: tries HIP
 // even when gaia is set, because AT-HYG sometimes carries only HIP for
 // the primary while multiples.tsv has the Gaia source_id from SIMBAD's
@@ -348,9 +420,13 @@ function findExisting(
 // row carries gaia=4468557611984384512 from simbad_xid). For primaries
 // the shared-HIP-with-secondary ambiguity doesn't apply — the cursor
 // primary IS the system anchor, not a sibling that might collide.
+// The proper-name tier is the last resort for GJ-only AT-HYG rows
+// carrying neither id (ξ UMa A) — without it the whole cursor runs
+// anchor-less and the collocated-double merge can never fire.
 function findExistingPrimary(
   row: MultiplesTsvRow,
   existing: ExistingIndexes,
+  existingStars: Star[],
 ): number | null {
   if (row.gaiaSourceId) {
     const hit = existing.byGaia.get(row.gaiaSourceId);
@@ -359,6 +435,18 @@ function findExistingPrimary(
   if (row.hip !== null && row.hip > 0) {
     const hit = existing.byHip.get(row.hip);
     if (hit !== undefined) return hit;
+  }
+  const name = row.name.trim();
+  if (name && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null) {
+    const hit = existing.byProper.get(name);
+    if (hit !== undefined) {
+      const s = existingStars[hit];
+      if (Math.abs(s.x - row.x_pc) < NAME_ANCHOR_MAX_POS_DELTA_PC
+          && Math.abs(s.y - row.y_pc) < NAME_ANCHOR_MAX_POS_DELTA_PC
+          && Math.abs(s.z - row.z_pc) < NAME_ANCHOR_MAX_POS_DELTA_PC) {
+        return hit;
+      }
+    }
   }
   return null;
 }
@@ -412,24 +500,60 @@ export function imputeCompanionCi(
 }
 
 
-// Companion absmag. When Stage 6 tags the row's photometry as
-// inherited from the system primary, impute as primary + WDS Δmag;
-// otherwise prefer the row's own absmag and fall back to primary +
-// Δmag. Returns null when no path produces a value — caller drops.
+/** Which path produced a companion's absmag. `dmag_imputed` = primary +
+ *  WDS Δmag; `own` = the row's own (non-inherited) photometry;
+ *  `spectral` = class→M_V from the row's per-component spectral type;
+ *  `inherited_twin` = the inherited primary absmag kept ONLY because
+ *  the pair has a renderable orbit (dropping the record would also
+ *  drop its orbit/eclipse from binaries.bin) and no honest brightness
+ *  source exists yet. */
+export type CompanionAbsmagSource =
+  | 'dmag_imputed'
+  | 'own'
+  | 'spectral'
+  | 'inherited_twin';
+
+export interface CompanionAbsmag {
+  absmag: number;
+  source: CompanionAbsmagSource;
+}
+
+// Companion absmag. Preference order: primary + WDS Δmag when the
+// row's photometry is inherited; the row's own absmag when it isn't;
+// primary + Δmag fallback; class→M_V from a per-component spectral
+// type. A row with inherited photometry, no Δmag, and no per-component
+// type has NO honest brightness source — returning the inherited
+// absmag would mint a full-luminosity twin of the primary (Algol Aa2,
+// Betelgeuse Ab). Those rows return null (caller drops) unless the
+// pair carries a renderable orbit, where the record must survive for
+// binaries.bin's sake and the twin is kept, tagged, and counted.
 export function imputeCompanionAbsmag(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
-): number | null {
+  spectral: SpectralInfo,
+): CompanionAbsmag | null {
   const primaryAbsmag = primary?.absmag ?? null;
   const dmag = secondary.dmag;
   const inheritedPhotometry =
     secondary.photometryVia === PHOTOMETRY_VIA_SYSTEM_INHERITED;
 
   if (inheritedPhotometry && primaryAbsmag !== null && dmag !== null) {
-    return primaryAbsmag + dmag;
+    return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
   }
-  if (secondary.absmag !== null) return secondary.absmag;
-  if (primaryAbsmag !== null && dmag !== null) return primaryAbsmag + dmag;
+  if (!inheritedPhotometry && secondary.absmag !== null) {
+    return { absmag: secondary.absmag, source: 'own' };
+  }
+  if (primaryAbsmag !== null && dmag !== null) {
+    return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
+  }
+  if (PER_COMPONENT_SPECT_VIA.has(secondary.spectVia)) {
+    const mv = absmagFromSpectral(spectral);
+    if (mv !== null) return { absmag: mv, source: 'spectral' };
+  }
+  if (inheritedPhotometry && secondary.absmag !== null
+      && hasRenderableOrbit(secondary)) {
+    return { absmag: secondary.absmag, source: 'inherited_twin' };
+  }
   return null;
 }
 
@@ -517,7 +641,22 @@ function resolvePosition(
   // for no astrophysical reason.
   const sepArcsec = row.sepArcsec !== null && row.sepArcsec >= 0 ? row.sepArcsec : null;
   const paDeg = row.paDeg !== null && row.paDeg >= 0 ? row.paDeg : null;
-  if (sepArcsec === null || paDeg === null) return null;
+  // Sub-resolution (rho 0.000) or unmeasured pairs: there is no static
+  // placement to bake. When the runtime animates the pair, collocate
+  // the secondary bit-identically on the anchor — the zero baked diff
+  // IS the signal for the runtime's zero-baseline convention (rendered
+  // offset = R(t) around the primary; see src/client/binaries/
+  // orbit-relation-cache.ts collocated-bake). Without a renderable
+  // orbit nothing ever separates the two records and the collocated
+  // star double-counts the blend photometry (ξ UMa Bb inside A) — drop.
+  if (sepArcsec === null || sepArcsec === 0) {
+    if (!hasRenderableOrbit(row)) return null;
+    return {
+      x: anchorX, y: anchorY, z: anchorZ,
+      distPc: Math.sqrt(anchorX * anchorX + anchorY * anchorY + anchorZ * anchorZ),
+    };
+  }
+  if (paDeg === null) return null;
   return projectFromSepPa(anchorX, anchorY, anchorZ, sepArcsec, paDeg);
 }
 
@@ -723,7 +862,7 @@ function buildWdsRootAnchors(
     if (cursor.primary === null) continue;
     const wdsRoot = wdsRootOf(cursor.primary.systemId);
     if (wdsRoot === null) continue;
-    const idx = findExistingPrimary(cursor.primary, existing);
+    const idx = findExistingPrimary(cursor.primary, existing, existingStars);
     if (idx === null) continue;
     const candidate: SystemAnchor = {
       star: existingStars[idx],
@@ -772,6 +911,7 @@ interface PromoteRowContext {
 
 interface PromotionState {
   existing: ExistingIndexes;
+  existingStars: Star[];
   existingStarsLength: number;
   newStars: Star[];
   promotedByGaia: Map<string, number>;
@@ -793,29 +933,39 @@ function promoteRow(
     stats.droppedNoIdentifier++;
     return null;
   }
+  // Gaia inheritance gate. Gaia resolves only the blended photocentre
+  // of sub-arcsec pairs, so Stage 2/3 bind the SAME source_id to both
+  // component rows (2090 tight pairs). Like the inherited HIP below,
+  // the companion must not adopt it — every gaia-keyed lookup would
+  // collapse onto the primary — so it strips to null and the
+  // identifier falls through to hip/synth.
+  const inheritedGaia = row.gaiaSourceId !== null
+    && anchorPrimaryRow.gaiaSourceId === row.gaiaSourceId;
+  const companionGaia = inheritedGaia ? null : row.gaiaSourceId;
   // Dedup against existing catalog + previously-promoted records.
-  // The inherited-HIP escape lets a no-gaia secondary match the anchor's
-  // record via HIP fall-through without being classified as alreadyInCatalog
-  // (Sirius A+B both list HIP 32349 — Hipparcos resolved them as one star).
+  // The inherited-HIP/Gaia escapes let a secondary match the ANCHOR's
+  // record without being classified as alreadyInCatalog (Sirius A+B
+  // both list HIP 32349; HD 209942 Aa+Ab share one Gaia source —
+  // the catalogue resolved them as one star).
   let existingIdx: number | null = null;
-  let inheritedHipCollision = false;
+  let inheritedIdCollision = false;
   if (row.gaiaSourceId !== null || rowHasOwnHip) {
     existingIdx = findExisting(row, state.existing);
-    inheritedHipCollision =
+    inheritedIdCollision =
       existingIdx !== null
-      && row.gaiaSourceId === null
+      && (row.gaiaSourceId === null || inheritedGaia)
       && anchorCatalogIdx !== null
       && existingIdx === anchorCatalogIdx;
-    if (existingIdx !== null && !inheritedHipCollision) {
+    if (existingIdx !== null && !inheritedIdCollision) {
       stats.alreadyInCatalog++;
       return null;
     }
   }
-  if (row.gaiaSourceId && state.promotedByGaia.has(row.gaiaSourceId)) {
+  if (companionGaia && state.promotedByGaia.has(companionGaia)) {
     stats.alreadyInCatalog++;
     return null;
   }
-  if (rowHasOwnHip && row.gaiaSourceId === null
+  if (rowHasOwnHip && companionGaia === null
       && state.promotedByHip.has(row.hip as number)) {
     stats.alreadyInCatalog++;
     return null;
@@ -828,11 +978,15 @@ function promoteRow(
   // HIP-keyed lookup: url-state's refFromIndex encodes by HIP and
   // decodes first-wins, so a shared link or page reload collapses
   // both records onto the primary. Strip when the row's HIP equals
-  // the anchor row's HIP.
+  // the anchor row's HIP — or the anchor catalog STAR's: SIMBAD's
+  // cross-IDs can bind the system HIP to the secondary letter while
+  // the primary row's hip cell is empty, yet the blended AT-HYG
+  // record already owns that HIP in every byHip lookup.
   const inheritedHip = row.hip !== null && row.hip > 0
-    && anchorPrimaryRow.hip === row.hip;
+    && (anchorPrimaryRow.hip === row.hip
+      || (anchorStar !== null && anchorStar.hip === row.hip));
   const companionHip = inheritedHip ? null : row.hip;
-  const usesSynth = row.gaiaSourceId === null && companionHip === null;
+  const usesSynth = companionGaia === null && companionHip === null;
   if (usesSynth) {
     if (synthId === null) {
       stats.droppedNoIdentifier++;
@@ -847,16 +1001,47 @@ function promoteRow(
     stats.droppedNoPosition++;
     return null;
   }
-  const absmag = imputeCompanionAbsmag(row, anchorPrimaryRow);
-  if (absmag === null) {
+  const spectral = resolveCompanionSpectral(row);
+  const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral.info);
+  if (imputed === null) {
     stats.droppedNoAbsmag++;
     return null;
   }
-  const spectral = resolveCompanionSpectral(row);
+  const absmag = imputed.absmag;
+  if (imputed.source === 'spectral') stats.absmagSpectralDerived++;
+  if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
   const ci = imputeCompanionCi(row, spectral.info);
   const properName = composeCompanionName(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
   );
+  // Collocated AT-HYG double-entry merge. AT-HYG occasionally carries
+  // BOTH members of a resolved pair at the same printed blend
+  // coordinates (ξ UMa: "Alula Australis" + "Alula Australis B" are
+  // bit-identical). The companion being promoted here IS that second
+  // record — same composed name, sitting exactly on the anchor — so
+  // minting a new star would render the pair twice: once collocated
+  // with the primary, once at the projected separation. Reposition
+  // the existing record instead, and backfill the row's Gaia id so
+  // the runtime binaries resolver can address it.
+  if (properName !== null && anchorStar !== null && anchorCatalogIdx !== null) {
+    const dupIdx = state.existing.byProper.get(properName);
+    if (dupIdx !== undefined && dupIdx !== anchorCatalogIdx) {
+      const dup = state.existingStars[dupIdx];
+      if (dup.x === anchorStar.x && dup.y === anchorStar.y
+          && dup.z === anchorStar.z) {
+        dup.x = position.x;
+        dup.y = position.y;
+        dup.z = position.z;
+        if (dup.gaiaSourceId === null && companionGaia !== null) {
+          dup.gaiaSourceId = companionGaia;
+        }
+        if (companionGaia) state.promotedByGaia.set(companionGaia, dupIdx);
+        if (companionHip !== null) state.promotedByHip.set(companionHip, dupIdx);
+        stats.repositionedCollocatedDouble++;
+        return dupIdx;
+      }
+    }
+  }
   let flags = FLAG_BINARY_COMPANION_ONLY;
   if (properName) flags |= FLAG_HAS_NAME;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
@@ -876,7 +1061,7 @@ function promoteRow(
     hr: null,
     flam: null,
     gl: null,
-    gaiaSourceId: row.gaiaSourceId,
+    gaiaSourceId: companionGaia,
     spectDisplay: spectral.display,
     companionIdx: -1,
     periodDays: 0,
@@ -892,7 +1077,7 @@ function promoteRow(
     stats.promotedSynthetic++;
     state.promotedBySynth.set(synthId as string, newIdx);
   }
-  if (row.gaiaSourceId) state.promotedByGaia.set(row.gaiaSourceId, newIdx);
+  if (companionGaia) state.promotedByGaia.set(companionGaia, newIdx);
   if (companionHip !== null) state.promotedByHip.set(companionHip, newIdx);
   return newIdx;
 }
@@ -917,6 +1102,7 @@ export function promoteCompanions(
   // as a parent in the BD/BE groups).
   const state: PromotionState = {
     existing,
+    existingStars,
     existingStarsLength: existingStars.length,
     newStars,
     promotedByGaia: new Map(),
@@ -937,7 +1123,7 @@ export function promoteCompanions(
     // Resolve the cursor primary's catalog row. Check existing AT-HYG
     // first, then previously-promoted records (40 Eri B class — promoted
     // in BC, then reused as anchor for BD).
-    let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing);
+    let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing, existingStars);
     if (primaryCatalogIdx === null) {
       primaryCatalogIdx = lookupPromoted(cursor.primary, state);
     }

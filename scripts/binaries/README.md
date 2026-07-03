@@ -126,6 +126,10 @@ data/binaries/
                                   catalog.bin), build-runtime-binaries.py
                                   (emits public/binaries.bin), and the
                                   Tier A validation harness. (LFS)
+  component_sptype_overrides.tsv  Hand-curated per-component MK types —
+                                  Stage 6's top spectral tier
+                                  (spect_via=curated). See
+                                  data/binaries/README.md.
 ```
 
 ## Pipeline at a glance
@@ -175,9 +179,14 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    per physical pair carrying Kepler elements + sep+PA +
    hierarchical parent-relation index. The Python `resolve_idx`
    walks gaia → hip → synth in priority order; the synth key is
-   composed from the pair's raw `comp` cells (so WDS-truncated
-   forms like `Aa1,2` resolve through the same `synth-…-2` key
-   the catalog minted). Run via `npm run build:binaries-runtime`.
+   composed from the pair's expanded `comp` tokens (WDS-truncated
+   forms like `Aa1,2` resolve through the same `synth-…-Aa2` key
+   the catalog minted). When the secondary's id-first resolve
+   lands on the primary's own row (blended photocentre: both rows
+   carry the primary's gaia/hip), the writer retries the synth key
+   before declaring the pair degenerate — companion promotion
+   mints a synth record for exactly those rows.
+   Run via `npm run build:binaries-runtime`.
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
    per-frame by the BinaryOrbitField runtime layer.
 
@@ -441,12 +450,17 @@ Three system-level mechanisms run at emit time:
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.
 
-The `spect` column carries SIMBAD's per-component sp_type when
-available, falling back to AT-HYG's per-system string. SIMBAD wins
-because AT-HYG inherits the same system-level spectral string across
-all components (incorrect for mixed-class pairs like Sirius A0V + DA1.9
-where AT-HYG carries one type for both). Provenance lands in
-`spect_via`: `simbad`, `athyg`, or `none`.
+The `spect` column resolves through a three-tier cascade with
+provenance in `spect_via`: `curated` →
+`data/binaries/component_sptype_overrides.tsv`, hand-curated
+literature types for components no machine source carries (SIMBAD's
+WDS cross-IDs never enumerate Algol's Aa2, so its K0IV can only come
+from here); `simbad` → SIMBAD's per-component sp_type, which beats
+AT-HYG because AT-HYG inherits the same system-level spectral string
+across all components (incorrect for mixed-class pairs like Sirius
+A0V + DA1.9); `athyg` → the inherited per-system string; `none`.
+The mass-ratio q backfill reads the resolved `spect`, so a curated
+companion type also improves q for its pair.
 
 ## Stage 7 — Build-counts and rates snapshots
 

@@ -406,9 +406,26 @@ Per-row gates and resolution:
   (alreadyInCatalog). When the row carries no own gaia AND no
   own hip, mint `synth-<wds_id>-<comp>` and proceed —
   `FLAG_BINARY_COMPANION_SYNTHETIC` flags the result. Same path
-  fires when the inherited-HIP escape strips the row's hip to
-  null, since the final record has nothing else addressable.
-  Algol Aa,Ab + Aa1,2 are the canonical surfacing cases.
+  fires when the inherited-HIP or inherited-Gaia escapes strip
+  the row's ids to null, since the final record has nothing else
+  addressable. Algol Aa,Ab + Aa1,2 are the canonical surfacing
+  cases. The Gaia escape mirrors the HIP one: Gaia fits one
+  source to a blended sub-arcsec pair, so both component rows
+  carry the primary's source_id (2090 pairs) — the companion
+  strips it rather than colliding with the primary in every
+  gaia-keyed lookup, and build-runtime-binaries retries the
+  synth key when its id-first resolve degenerates.
+- **Cursor-primary anchor.** findExistingPrimary walks gaia →
+  hip → proper name (position-guarded, for GJ-only AT-HYG rows
+  carrying neither id — ξ UMa A). An unresolvable primary would
+  otherwise run its whole cursor anchor-less.
+- **Collocated AT-HYG double merge.** When the composed companion
+  name matches an existing record sitting bit-identical on the
+  anchor (AT-HYG carries both members of a resolved pair at the
+  same printed blend coordinates — ξ UMa's "Alula Australis" +
+  "Alula Australis B" is the only case in the catalog), that
+  record IS the companion: it is repositioned in place (gaia
+  backfilled from the row) instead of minting a duplicate.
 - **Position.** Prefer the row's own xyz when its astrometry is a
   real per-component fit AND its xyz differs from the primary row's
   xyz. Else apply a sky-tangent projection from the EXISTING catalog
@@ -416,7 +433,15 @@ Per-row gates and resolution:
   catalog primary (not the multiples.tsv primary row) avoids a
   pipeline-precision gap between AT-HYG's 3-4 sig figs and the
   binaries pipeline's 6 sig figs (Sirius A and B were ~100 AU apart
-  for that reason before the fix).
+  for that reason before the fix). Sub-resolution / unmeasured
+  pairs (WDS ρ 0.000 or the −1 sentinel) have no static placement
+  to bake: with a renderable orbit the secondary collocates
+  BIT-IDENTICALLY on the anchor — the zero baked diff is the
+  runtime's signal to render the offset as R(t) around the primary
+  (src/client/binaries/orbit-relation-cache.ts collocated-bake) —
+  and without one the row drops (droppedNoPosition): nothing would
+  ever separate the records and the collocated star double-counts
+  the blend photometry.
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
   of A), position resolves in preference order: (1) the row's own
@@ -431,11 +456,19 @@ Per-row gates and resolution:
   appear as a secondary of the anchor, so no anchor→self orbital pair
   exists for `BinaryOrbitField` to animate it away from centre at
   runtime.
-- **Absmag.** Prefer Δmag-imputation when the row inherited its
-  parent's AT-HYG photometry (Sirius B's row carried Sirius A's
-  1.45 absmag, not the WD's 11.36); use `primary_absmag +
-  WDS Δmag`. Else use the row's own absmag. Drop the row when
-  neither path produces a value.
+- **Absmag.** Preference order: `primary_absmag + WDS Δmag` when the
+  row inherited its parent's AT-HYG photometry (Sirius B's row
+  carried Sirius A's 1.45 absmag, not the WD's 11.36); the row's own
+  (non-inherited) absmag; primary + Δmag fallback; class→M_V from a
+  per-component spectral type (`absmagFromSpectral`, spect_via
+  curated/simbad — Algol Aa2's curated K0IV lands at 3.30 vs the
+  primary's −0.11). A row with inherited photometry, no Δmag, and
+  no per-component type has NO honest brightness source: returning
+  the inherited value minted full-luminosity twins (Betelgeuse Ab).
+  Those rows drop — unless the pair carries a renderable orbit
+  binaries.bin must keep addressing, where the twin is kept and
+  counted (`companionAbsmagInheritedTwinOrbital`, a ratchet-down
+  metric: curate types to shrink it).
 - **B-V (ci).** Same inheritance-detection trick: when the row's
   ci matches the primary's exactly, recompute from the spectral
   info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's DA1.9

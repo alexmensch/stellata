@@ -41,7 +41,8 @@ from parsers import (  # noqa: E402, F401
     parse_athyg, parse_ccdm, parse_gaia_astrometry,
     parse_gaia_hip_xmatch, parse_gaia_nss, parse_gaia_tyc_xmatch,
     parse_gcvs, parse_gcvs_crossid, parse_hip2,
-    parse_orb6, parse_simbad_wds_spectra, parse_simbad_wds_xids,
+    parse_component_sptype_overrides, parse_orb6,
+    parse_simbad_wds_spectra, parse_simbad_wds_xids,
     parse_wds_summ,
 )
 from indices import (  # noqa: E402, F401
@@ -104,6 +105,9 @@ SRC_GAIA_NSS = DATA / "gaia" / "gaia_dr3_nss_two_body.tsv"
 SRC_GAIA_ASTROMETRY = DATA / "gaia" / "gaia_dr3_astrometry.tsv"
 SRC_SIMBAD_WDS_XIDS = DATA / "simbad" / "simbad_wds_xids.tsv"
 SRC_SIMBAD_SPTYPE = DATA / "simbad" / "simbad_sptype.tsv"
+SRC_COMPONENT_SPTYPE_OVERRIDES = (
+    DATA / "binaries" / "component_sptype_overrides.tsv"
+)
 
 OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
@@ -137,6 +141,7 @@ def _iter_input_paths() -> Iterator[Path]:
     yield SRC_GAIA_ASTROMETRY
     yield SRC_SIMBAD_WDS_XIDS
     yield SRC_SIMBAD_SPTYPE
+    yield SRC_COMPONENT_SPTYPE_OVERRIDES
 
 
 def log(msg: str) -> None:
@@ -227,11 +232,20 @@ def run(force: bool) -> int:
         f"{len(simbad_wds_spectra):,} (wds_id, component) pairs"
     )
 
+    component_sptype_overrides = parse_component_sptype_overrides(
+        SRC_COMPONENT_SPTYPE_OVERRIDES,
+    )
+    log(
+        f"loaded curated per-component sp_type overrides for "
+        f"{len(component_sptype_overrides):,} (wds_id, component) pairs"
+    )
+
     indices = build_indices(
         athyg, hip2, hip_to_gaia, tyc_to_gaia, src_to_nss,
         src_to_astrometry=src_to_astrometry,
         ccdm=ccdm,
         simbad_wds_spectra=simbad_wds_spectra,
+        component_sptype_overrides=component_sptype_overrides,
     )
     log(
         f"built AT-HYG identifier views: "

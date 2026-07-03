@@ -643,6 +643,43 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         self.assertEqual(out, {("X", "A"): "F5V"})
 
 
+class ComponentSptypeOverridesTests(unittest.TestCase):
+    def test_parses_overrides_skipping_preamble(self) -> None:
+        content = (
+            "# preamble line\n"
+            "# another\n"
+            "wds_id\tcomponent\tsp_type\tsource\n"
+            "03082+4057\t2\tK0IV\tKolbas et al. 2015\n"
+            "08447-5443\tAb\tA4V\tMerand et al. 2011\n"
+            "X\tA\t\tblank sp_type is skipped\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "component_sptype_overrides.tsv", content)
+            out = bb.parse_component_sptype_overrides(p)
+        self.assertEqual(out, {
+            ("03082+4057", "2"): "K0IV",
+            ("08447-5443", "Ab"): "A4V",
+        })
+
+    def test_shipped_overrides_file_parses_and_covers_algol(self) -> None:
+        out = bb.parse_component_sptype_overrides(
+            bb.SRC_COMPONENT_SPTYPE_OVERRIDES,
+        )
+        self.assertEqual(out[("03082+4057", "2")], "K0IV")
+
+    def test_resolve_spect_curated_tier_wins(self) -> None:
+        import stage6_multiples as s6
+        indices = bb.build_indices(
+            [], [], {}, {}, {},
+            simbad_wds_spectra={("W", "B"): "G5V"},
+            component_sptype_overrides={("W", "B"): "K0IV"},
+        )
+        spect, via = s6._resolve_spect("W", "B", None, indices)
+        self.assertEqual((spect, via), ("K0IV", "curated"))
+        spect, via = s6._resolve_spect("W", "A", None, indices)
+        self.assertEqual((spect, via), ("", "none"))
+
+
 class SplitComponentsTests(unittest.TestCase):
     def test_two_letter_pair(self) -> None:
         self.assertEqual(bb.split_components("AB"), ("A", "B"))

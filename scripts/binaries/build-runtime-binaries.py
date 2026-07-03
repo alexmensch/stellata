@@ -412,12 +412,20 @@ def write_binary(
     for p in pairs:
         primary_synth = synthetic_id(p.wds_id, p.primary_comp)
         secondary_synth = synthetic_id(p.wds_id, p.secondary_comp)
-        resolved_primary.append(
-            resolve_idx(p.primary_gaia, p.primary_hip, primary_synth, row_map),
-        )
-        resolved_secondary.append(
-            resolve_idx(p.secondary_gaia, p.secondary_hip, secondary_synth, row_map),
-        )
+        pri = resolve_idx(p.primary_gaia, p.primary_hip, primary_synth, row_map)
+        sec = resolve_idx(p.secondary_gaia, p.secondary_hip, secondary_synth, row_map)
+        # Shared-identifier retry: sub-arcsec secondaries carry the
+        # PRIMARY's gaia/hip in multiples.tsv (blended photocentre), so
+        # the id-first resolve lands both ends on one catalog row.
+        # Companion promotion strips the inherited id and mints a synth
+        # record for exactly these rows — retry the synth key before
+        # declaring the pair degenerate.
+        if sec is not None and sec == pri and secondary_synth is not None:
+            synth_hit = row_map.by_synth.get(secondary_synth)
+            if synth_hit is not None:
+                sec = synth_hit
+        resolved_primary.append(pri)
+        resolved_secondary.append(sec)
 
     # Walk in topological order; for each emittable pair, record its
     # output index so parent_relation can be remapped from input-index

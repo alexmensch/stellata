@@ -295,7 +295,7 @@ export class EclipsePhotometryField {
     const radSolar = this.opts.physicalRadiusSolar;
     const orbitCaches = buildOrbitRelationCaches(
       this.opts.binaries,
-      abs.length,
+      abs,
     );
     for (const orbit of orbitCaches) {
       const r = this.opts.binaries.relations[orbit.relationIdx];

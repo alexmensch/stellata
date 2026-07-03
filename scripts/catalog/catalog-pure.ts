@@ -360,6 +360,66 @@ export function physicalRadius(absmag: number, info: SpectralInfo): number {
   return Math.max(0.08, Math.min(2500, R));
 }
 
+// Absolute visual magnitude M_V by spectral class + subclass, calibrated
+// per luminosity class (Cox 2000 §15.3, Pecaut & Mamajek 2013 — the same
+// tables mass_estimate.py reads for the mass-ratio backfill).
+const MV_MS_TABLE: Record<number, [number, number][]> = {
+  0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
+  1: [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V
+  2: [[0,  0.65], [5,  1.9], [9,  2.55]], // A V
+  3: [[0,  2.7], [5,  3.5], [9,  4.3]],   // F V
+  4: [[0,  4.4], [5,  5.1], [9,  5.8]],   // G V
+  5: [[0,  5.9], [5,  7.4], [9,  8.6]],   // K V
+  6: [[0,  8.8], [5, 12.3], [9, 16.0]],   // M V
+};
+
+const MV_GIANT_TABLE: Record<number, [number, number][]> = {
+  0: [[0, -6.3], [5, -5.9], [9, -5.2]],   // O III
+  1: [[0, -5.0], [5, -2.2], [9, -0.5]],   // B III
+  2: [[0, -0.3], [5,  0.6], [9,  1.0]],   // A III
+  3: [[0,  1.1], [5,  1.4], [9,  1.2]],   // F III
+  4: [[0,  1.0], [5,  0.9], [9,  0.8]],   // G III
+  5: [[0,  0.7], [5, -0.2], [9, -0.4]],   // K III
+  6: [[0, -0.4], [5, -0.8], [9, -1.0]],   // M III
+};
+
+// Supergiant M_V is roughly spectral-class-independent in V; one
+// constant per luminosity class is within the calibration scatter.
+const MV_BY_SUPERGIANT_LUMCLASS: Record<number, number> = {
+  5: -2.3,   // II
+  6: -4.5,   // Ib
+  7: -6.0,   // Iab
+  8: -7.5,   // Ia
+  9: -8.8,   // Ia+/0
+};
+
+const MV_SUBDWARF_OFFSET = 1.5;
+
+/** Absolute visual magnitude from a parsed MK type. Companion promotion
+ *  uses this when a promoted secondary's photometry is inherited from
+ *  the system primary and no WDS Δmag exists to impute from — the
+ *  per-component spectral type is then the only honest brightness
+ *  signal. Returns null for white dwarfs, carbon/WR stars, and the
+ *  unknown class, where a single M_V calibration would be fiction. */
+export function absmagFromSpectral(info: SpectralInfo): number | null {
+  if (info.isWhiteDwarf || info.classIdx === 7 || info.classIdx === UNKNOWN_CLASS_IDX) {
+    return null;
+  }
+  const ms = MV_MS_TABLE[info.classIdx];
+  const giant = MV_GIANT_TABLE[info.classIdx];
+  if (!ms || !giant) return null;
+  const mvMs = interpolate(ms, info.subclass);
+  switch (info.lumClass) {
+    case 0: return null;                                     // VII/D without WD flag
+    case 1: return mvMs + MV_SUBDWARF_OFFSET;                // VI/sd
+    case 3: return (mvMs + interpolate(giant, info.subclass)) / 2;  // IV
+    case 4: return interpolate(giant, info.subclass);        // III
+    case 5: case 6: case 7: case 8: case 9:
+      return MV_BY_SUPERGIANT_LUMCLASS[info.lumClass];
+    default: return mvMs;                                    // V or unknown → MS
+  }
+}
+
 // ---- GCVS variable-star catalogue parsing -------------------------------
 
 // GCVS designations in both files are space-padded fixed-width, e.g.

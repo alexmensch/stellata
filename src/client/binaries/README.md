@@ -90,6 +90,18 @@ the per-pair flags):
   ascending-node ambiguity — the radial component's SIGN (which member
   is nearer at conjunction) follows the published node's convention,
   not an observation.
+
+  **Collocated-bake zero baseline.** Sub-resolution pairs (WDS ρ
+  0.000 / unmeasured) are baked by companion promotion bit-identical
+  onto the primary's xyz — there is no measured configuration to
+  reproduce at any epoch, and the float32 position quantum (~0.2 AU
+  at tens of pc) couldn't hold R(epoch) for a tight pair anyway.
+  `buildOrbitRelationCaches` detects the bit-identical bake and
+  zeroes the cached baseline, so the rendered offset reduces to R(t)
+  around the primary exactly. Subtracting R(epoch) against a zero
+  baked diff was the displaced-centre bug: the companion swept
+  THROUGH the primary once per period and exceeded apoapsis on the
+  far side (Alsephina Ab at 0.562 AU vs apoapsis 0.52 AU).
 - **Tier 2** (`has_orbit & !has_inclination`) — Kepler eval with the
   orbit normal forced to the galactic Z axis. The in-plane (x, y) AU
   position rides directly into the galactic XY basis, which
@@ -142,6 +154,14 @@ Beyond that, the screen-separation gate fires before Kepler runs:
    depth-mask (mode 2) passes for that instance; the additive glow
    pass (mode 0) still runs so the two near-coincident point sources
    sum brightness correctly under AdditiveBlending.
+
+   Relations whose focal star is a pair member are EXEMPT from this
+   gate: the focal rebase puts the full relative motion on the visible
+   partner, so ΔR drives an on-screen position rather than a
+   sub-pixel wiggle — the hard switch step-jumped the partner to the
+   baked baseline at a per-system camera distance on zoom-out (the
+   threshold scales with peak separation: ~75 AU for Algol's tight
+   pair, ~800 AU for Capella's). One relation's Kepler solve is cheap.
 
 ## Hierarchical walk
 

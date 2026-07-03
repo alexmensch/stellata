@@ -1257,6 +1257,15 @@ freshness policy in `scripts/README.md` § Frozen external data:
   schema separates sp_type from object-type `otype`), so a
   mixed-class pair like Sirius A0V + DA1.9 surfaces both spectra
   rather than AT-HYG's single inherited "A0V+DA" string.
+- **Curated per-component spectral types** —
+  `data/binaries/component_sptype_overrides.tsv`. Literature MK
+  types for spectroscopic sub-components no machine source
+  enumerates (SIMBAD has no object for Algol Aa2): Algol Aa2 K0IV
+  (Kolbas et al. 2015, MNRAS 451, 4150), δ Vel Ab A4V (Mérand et
+  al. 2011, A&A 532, A50), σ Ori Ab B0.5V (Simón-Díaz et al. 2015,
+  ApJ 799, 169), Castor Ab/Bb late-K / early-M (Stelzer & Burwitz
+  2003, A&A 402, 719). Top tier of the Stage 6 spectral cascade;
+  each entry cites its source in the file.
 
 **Layer 2 — manual-run refresh scripts.** One per dataset, idempotent,
 **not** wired into `npm run build`. Per the freshness policy: external
