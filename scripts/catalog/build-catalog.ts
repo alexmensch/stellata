@@ -65,6 +65,12 @@ import {
   applyVariability,
 } from './gcvs-parse';
 import { readGaiaHipXmatch } from './gaia-xmatch';
+import {
+  parseGaiaAstrometryCatalogTsv,
+  parseHip2Tsv,
+  parseNssSourceIdSet,
+  type DirectionSources,
+} from './direction-cascade';
 import { readStars, type Star } from './stars-parse';
 import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
 
@@ -79,6 +85,9 @@ const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
+const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
+const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
+const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
@@ -101,6 +110,9 @@ function isUpToDate(): boolean {
   const bjMtime = mtimeIfExists(SRC_BAILER_JONES);
   const gaiaHipXmatchMtime = mtimeIfExists(SRC_GAIA_HIP_XMATCH);
   const apsisMtime = mtimeIfExists(SRC_GAIA_APSIS);
+  const gaiaAstrometryMtime = mtimeIfExists(SRC_GAIA_ASTROMETRY);
+  const gaiaNssMtime = mtimeIfExists(SRC_GAIA_NSS);
+  const hip2Mtime = mtimeIfExists(SRC_HIP2);
   const simbadMtime = mtimeIfExists(SRC_SIMBAD_SPTYPE);
   const simbadSampleMtime = mtimeIfExists(SRC_SIMBAD_SAMPLE);
   const multiplesMtime = mtimeIfExists(SRC_MULTIPLES);
@@ -115,6 +127,9 @@ function isUpToDate(): boolean {
     binMtime > bjMtime &&
     binMtime > gaiaHipXmatchMtime &&
     binMtime > apsisMtime &&
+    binMtime > gaiaAstrometryMtime &&
+    binMtime > gaiaNssMtime &&
+    binMtime > hip2Mtime &&
     binMtime > simbadMtime &&
     binMtime > simbadSampleMtime &&
     binMtime > multiplesMtime
@@ -185,6 +200,15 @@ async function main() {
     companionDroppedNoAbsmag: 0,
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
+    gaiaAstrometryEntries: 0,
+    hip2Entries: 0,
+    nssSourceIdEntries: 0,
+    hipDistFullPrecision: 0,
+    directionGaia5p: 0,
+    directionGaiaNssSystemic: 0,
+    directionHip2Saturated: 0,
+    directionHip2PmDiscrepant: 0,
+    directionAthygPrinted: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -247,10 +271,58 @@ async function main() {
     console.log('Gaia DR3 ↔ HIP cross-walk not found; backfill + GCVS bridge skipped.');
   }
 
+  // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen,
+  // and the NSS two-body source_id set. Each optional in CI / fresh-clone
+  // builds — a missing file degrades that tier and the cascade falls
+  // through (ultimately to AT-HYG's printed ra/dec), which the
+  // build-counts assertion then flags.
+  const directions: DirectionSources = {
+    gaiaAstrometry: new Map(),
+    hip2: new Map(),
+    nssSourceIds: new Set(),
+  };
+  if (existsSync(SRC_GAIA_ASTROMETRY)) {
+    console.log('Parsing Gaia DR3 5p astrometry (full catalog)...');
+    const tAstro = Date.now();
+    directions.gaiaAstrometry = parseGaiaAstrometryCatalogTsv(readFileSync(SRC_GAIA_ASTROMETRY, 'utf8'));
+    console.log(`  ${directions.gaiaAstrometry.size} entries in ${Date.now() - tAstro}ms`);
+    counts.gaiaAstrometryEntries = directions.gaiaAstrometry.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_GAIA_ASTROMETRY} not found — direction cascade tier 1\n` +
+      `         unavailable; sky directions fall back to HIP2 / AT-HYG printed\n` +
+      `         ra/dec. Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.`,
+    );
+  }
+  if (existsSync(SRC_HIP2)) {
+    console.log('Parsing HIP2 van Leeuwen astrometry...');
+    const tHip2 = Date.now();
+    directions.hip2 = parseHip2Tsv(readFileSync(SRC_HIP2, 'utf8'));
+    console.log(`  ${directions.hip2.size} entries in ${Date.now() - tHip2}ms`);
+    counts.hip2Entries = directions.hip2.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_HIP2} not found — direction cascade tier 2 unavailable\n` +
+      `         and dist_src=HIP rows keep AT-HYG's 4-dp distance print.`,
+    );
+  }
+  if (existsSync(SRC_GAIA_NSS)) {
+    console.log('Parsing Gaia DR3 NSS two-body source_ids...');
+    const tNss = Date.now();
+    directions.nssSourceIds = parseNssSourceIdSet(readFileSync(SRC_GAIA_NSS, 'utf8'));
+    console.log(`  ${directions.nssSourceIds.size} source_ids in ${Date.now() - tNss}ms`);
+    counts.nssSourceIdEntries = directions.nssSourceIds.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_GAIA_NSS} not found — NSS-systemic tagging disabled\n` +
+      `         (affects routing counts only; positions stay Gaia 5p).`,
+    );
+  }
+
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
   const { stars, stats } = await readStars(
-    SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectral, apsisMap,
+    SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
   );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
@@ -274,13 +346,32 @@ async function main() {
       `  gaia_source_id backfill: ${stats.gaiaSourceIdBackfilled} rows via HIP→Gaia cross-walk`,
     );
   }
+  const dv = stats.directionVia;
+  console.log(
+    `  direction cascade: gaia_5p ${dv.gaia_5p}, ` +
+      `gaia_nss_systemic ${dv.gaia_nss_systemic}, ` +
+      `hip2_saturated ${dv.hip2_saturated}, ` +
+      `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
+      `athyg_printed ${dv.athyg_printed}`,
+  );
+  if (stats.hipDistFullPrecision > 0) {
+    console.log(
+      `  HIP2 full-precision distances: ${stats.hipDistFullPrecision} dist_src=HIP rows`,
+    );
+  }
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
+  counts.hipDistFullPrecision = stats.hipDistFullPrecision;
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
   counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
+  counts.directionGaia5p = dv.gaia_5p;
+  counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
+  counts.directionHip2Saturated = dv.hip2_saturated;
+  counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
+  counts.directionAthygPrinted = dv.athyg_printed;
   counts.spectralBySimbad = stats.spectralBySimbad;
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;

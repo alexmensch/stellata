@@ -212,7 +212,7 @@ exposes the Tycho-dominated population.
 **What we keep at build time.** `scripts/catalog/build-catalog.ts` (`readStars`)
 applies three filters and nothing else:
 
-1. Drop rows missing `x0`/`y0`/`z0` (no usable 3D position).
+1. Drop rows missing `ra`/`dec` or `dist` (no usable 3D position).
 2. Drop rows missing `absmag` (can't size or shade them).
 3. Drop rows with `dist > 50,000 pc`. This is a **bounded-scope
    statement about which populations the model represents**, not a
@@ -291,10 +291,11 @@ collapses onto the prior (catastrophic outliers get pulled back to
 plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
 — i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
-rows we swap `dist`, `x0`, `y0`, `z0`, and `absmag` for the
-Bailer-Jones-derived values (photogeometric `r_med_photogeo`
-preferred, geometric `r_med_geo` as fallback when photogeo is
-absent). Recomputing `absmag` matters as much as the positional
+rows we swap `dist` and `absmag` for the Bailer-Jones-derived values
+(photogeometric `r_med_photogeo` preferred, geometric `r_med_geo` as
+fallback when photogeo is absent); position follows as the
+direction-cascade unit vector × the new distance (§ Driver
+astrometry). Recomputing `absmag` matters as much as the distance
 update — without it, stars get *placed* at the new distance but
 *lit* for the old one, breaking the disc/glow size chain.
 
@@ -354,7 +355,7 @@ DOI 10.1088/0004-637X/781/2/121: +1.85 mas/yr in RA, +0.20 mas/yr in
 Dec) has its `dist` snapped to the LMC's eclipsing-binary distance
 (49.594 kpc, Pietrzyński et al. 2019, *Nature* 567, 200,
 DOI 10.1038/s41586-019-0999-4; CDS J/other/Natur/567.200), with
-`x0`/`y0`/`z0`/`absmag` recomputed from the new distance. ~54 rows are
+`absmag` recomputed from the new distance. ~54 rows are
 flagged at LMC depth each build — close to the ~60 estimated from the
 AT-HYG/Gaia source data. SMC, Sgr dSph, and other Magellanic-system
 populations are too faint for AT-HYG's brightness cut today; the same
@@ -503,51 +504,57 @@ viewpoint, not Sol — a camera can sit inside any of these systems):
   precision beyond ~1 mas buys nothing the container can keep.
 
 **Decision — re-source the direction, keep AT-HYG as the driver,
-keep the distance stack.** AT-HYG remains the membership, identifier,
-name, and magnitude driver (its curated classical-ID merge is the
-value; replacing it wholesale re-litigates membership for no gain —
-the deep-tier driver question is separate and stays with the far-
-catalog work). What changes is where each row's *sky direction* comes
-from. At build time, resolve per row through the same trust cascade
-the multiple-star pipeline already implements
-(`scripts/binaries/stage3_astrometry.py`):
+keep the distance stack. Implemented in
+`scripts/catalog/direction-cascade.ts`.** AT-HYG remains the
+membership, identifier, name, and magnitude driver (its curated
+classical-ID merge is the value; replacing it wholesale re-litigates
+membership for no gain — the deep-tier driver question is separate
+and stays with the far-catalog work). Each row's *sky direction* is
+resolved at build time through the same trust cascade the
+multiple-star pipeline already implements
+(`scripts/binaries/stage3_astrometry.py`), sharing its thresholds:
 
 1. **Gaia DR3 5p** (ra, dec at J2016.0, PM-propagated to J2000.0)
    for every row that resolves to a source_id with usable astrometry
-   — ~99% of the catalogue, mas-grade or better.
+   — ~310.6k rows (~99.2%), mas-grade or better, including ~10k
+   NSS-flagged rows whose `gaia_source` astrometry is the
+   centre-of-mass refit.
 2. **HIP2 van Leeuwen** (ra, dec at J1991.25, PM-propagated to
-   J2000.0) for the Gaia-saturated bright set — the ~1,900
-   HIP-distanced rows plus any Gaia row whose 5p solution is absent
-   or flagged (RUWE / NSS / HIP2-discrepancy gates as in Stage 3).
-3. **AT-HYG printed ra/dec as-is** for the residual (23 rows; ξ UMa
-   is the canonical case — no Gaia source, HIP 55203 excluded from
-   HIP2 as orbit-corrupted). Mirrors Stage 3's `athyg_position`.
+   J2000.0) for the Gaia-saturated bright set — 2,509 rows with no
+   usable Gaia parallax, plus 138 whose Gaia-vs-HIP2 PM disagrees by
+   > 50 mas/yr on either axis (orbit-corrupted 5p PM).
+3. **AT-HYG printed ra/dec as-is** for the residual (30 rows,
+   including Sol; ξ UMa is the canonical case — no Gaia source,
+   HIP 55203 excluded from HIP2 as orbit-corrupted). Mirrors
+   Stage 3's `athyg_position`.
 
 Distances are untouched: the Bailer-Jones → LMC-kinematic → cutoff
 stack above stays the radial source of truth, with HIP rows keeping
-their HIP2-parallax distances (now computed from the committed file
-at full precision rather than AT-HYG's 4 dp print — same values).
-Every row's xyz is then `direction × distance` computed in float64
-and written float32; the stored `x0/y0/z0` columns stop being
-consumed. Both build pipelines end up deriving every shared star
+their HIP2-parallax distances (computed from the committed file at
+full precision rather than AT-HYG's 4 dp print — same values, gated
+on actually reproducing the printed value: HIP 57146's
+unresolved-binary HIP2 refit at 187 ± 37 mas / gof 99 is the one
+row where blind substitution would have moved a curated 59.9 pc
+star to 5.3 pc). Every row's xyz is `direction × distance` computed
+in float64 and written float32; the stored `x0/y0/z0` columns are
+no longer consumed. Both build pipelines derive every shared star
 from the same astrometry files, closing the consistency gap by
 construction. J2000.0 remains the scene epoch (`data/README.md`
-§ Reference epoch); the resolved (position, PM, RV, parallax) tuple
-per row is exactly what current-epoch propagation needs later, so
-that work composes on top of this cascade rather than replacing it.
+§ Reference epoch). Epoch propagation is the RV-free linear
+space-motion form (tangent-basis advance + renormalise): exact in
+cos δ, <0.001″ error at Barnard's-scale PM over 16 yr; perspective
+acceleration (≤0.15″ worst case) is deferred to current-epoch
+propagation, which consumes the same resolved (position, PM, RV,
+parallax) tuple and composes on top of this cascade.
 
-**Cost.** One new data pull: full-catalogue Gaia DR3 5p astrometry
-(~310k source_ids; the committed `gaia_dr3_astrometry.tsv` covers
-only the ~8k the binaries pipeline requests). Same shape as the
-existing `refresh-gaia-astrometry.py` batched pull, ~45 MB LFS.
-Build-side: a direction-resolution module (pure, testable) plus
-epoch-propagation math; snapshot refreshes (`build-counts`,
-distance-outliers unchanged in the radial direction). Highest-risk
-defect class is epoch/PM sign and cos δ convention errors, so the
-change must land with a high-PM regression corpus (Barnard's,
-Kapteyn's, Groombridge 1830, 61 Cyg, Keid) pinned against published
-J2000 positions. Gaia DR4 slots in as a source-file swap inside the
-same cascade (`scripts/refresh/README.md` § DR4 transition).
+The sky-position regression corpus
+(`scripts/catalog/sky-position-corpus.tsv`) pins Barnard's,
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, and Keid (high-PM tier-1
+stress) plus Sirius and Vega (tier 2, HIP2-propagated) against
+published SIMBAD J2000 positions — all land within 0.01″ (float32
+container level) — plus ξ UMa's tier-3 printed position at 0.4″.
+Gaia DR4 slots in as a source-file swap inside the same cascade
+(`scripts/refresh/README.md` § DR4 transition).
 
 ## Stellar physics
 

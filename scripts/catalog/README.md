@@ -9,8 +9,8 @@ Bailer-Jones + Gaia Apsis + SIMBAD sp_type + Stellarium →
 pipeline lives in `stars-parse.ts` (`readStars`). Per-pipeline algebra
 sits in `catalog-pure.ts` (the single source of truth for the v6
 binary layout + override math + spectral resolver) and the topic
-sub-modules (`gcvs-parse.ts`, `visual-doubles.ts`, `gaia-xmatch.ts`,
-`constellations.ts`).
+sub-modules (`direction-cascade.ts`, `gcvs-parse.ts`,
+`visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`).
 
 ## Per-row pipeline
 
@@ -20,19 +20,71 @@ Each AT-HYG row walks through, inside `readStars`:
    `catalog-pure.ts`). AT-HYG's native `gaia` column wins where
    present; otherwise the HIP cross-walk
    (`data/gaia/gaia_dr3_hip_xmatch.tsv`) supplies it. The HIP
-   cross-walk fall-through resolves the ~191 HIP-bearing AT-HYG rows
+   cross-walk fall-through resolves the ~64 HIP-bearing AT-HYG rows
    whose `gaia` column is blank.
 2. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
    in `catalog-pure.ts`). See § Multi-layer distance refinement.
-3. **LMC kinematic override** (`applyLmcKinematicOverride`). See
+3. **HIP2 full-precision distance** for `dist_src=HIP` rows: the same
+   value AT-HYG catalogued, re-derived as 1000/plx from
+   `data/hipparcos/hip2_van_leeuwen.tsv` so the 4-dp print truncation
+   drops out. Gated on HIP2 reproducing AT-HYG's printed distance
+   (±1e-3 pc) — HIP 57146's unresolved-binary HIP2 refit (187 mas,
+   gof 99, vs AT-HYG's sane 59.9 pc) is the case the gate exists for;
+   disagreeing rows keep the curated AT-HYG value. Fires on 1,901 of
+   1,903 dist_src=HIP rows.
+4. **LMC kinematic override** (`applyLmcKinematicOverride`). See
    § Multi-layer distance refinement.
-4. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
-   (`stars-parse.ts:34`). Drops rows still beyond LMC depth.
-5. **Spectral classification** (`resolveSpectralInfo`). See § Physical
+5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
+   (`stars-parse.ts`). Drops rows still beyond LMC depth.
+6. **Direction resolution** (`resolveDirection` in
+   `direction-cascade.ts`) and `xyz = direction × distance` in
+   float64. See § Direction resolution.
+7. **Spectral classification** (`resolveSpectralInfo`). See § Physical
    radius and spectral parsing.
-6. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+8. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved (Teff, BC). White dwarfs special-cased to 0.013
    R☉. Clamped to [0.08, 2500] R☉.
+
+AT-HYG's stored `x0/y0/z0` is never consumed: it is a mixed-epoch
+merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
+inconsistent with the same row's printed ra/dec by up to tens of
+arcsec on high-PM stars (SCIENCE.md § Driver astrometry).
+
+## Direction resolution
+
+`direction-cascade.ts` resolves every row's J2000.0 sky direction
+through the same trust cascade the binaries pipeline implements in
+`scripts/binaries/stage3_astrometry.py`, sharing its thresholds
+(RUWE > 1.4, ipd_frac_multi_peak > 0.02, |ΔPM| > 50 mas/yr):
+
+| Route | Gate | Rows |
+| --- | --- | --- |
+| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. Also the fall-through for 2p position-only rows with no HIP2 cover. | ~300.5k |
+| `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~10.0k |
+| `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~2.5k |
+| `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~138 |
+| `athyg_printed` | Residual: no Gaia astrometry row AND no HIP2 row. AT-HYG's printed ra/dec as-is, unpropagated. ξ UMa (HIP 55203 excluded from HIP2 as orbit-corrupted, Gaia-saturated) is canonical; Sol also lands here. | 30 |
+
+Epoch propagation (`directionAtEpoch`) advances the measured unit
+vector linearly along the local east/north tangent basis and
+renormalises — exact in cos δ, stable through the poles, <0.001″
+error at Barnard's-scale PM over the 16-yr Gaia→J2000 interval.
+Radial velocity (perspective acceleration, ≤0.15″ over 16 yr on the
+most extreme star) is deliberately omitted; the full tuple belongs
+to future current-epoch propagation. μ_α* inputs are the cos
+δ-applied rates straight from Gaia/HIP2 — never divide by cos δ.
+
+Missing source files degrade tiers gracefully (empty map → cascade
+falls through), and the per-route build-counts pins
+(`directionGaia5p` … `directionAthygPrinted`) flag the drift.
+
+The sky-position regression corpus (`sky-position-corpus.tsv` +
+`sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per
+non-Gaia tier (Sirius + Vega for hip2_saturated, ξ UMa for
+athyg_printed) against published SIMBAD J2000 positions — the
+Gaia/HIP2-tier rows land within 0.01″; a PM sign / cos δ /
+Δt-direction defect shows up as tens of arcsec.
 
 After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
 visual-doubles flagging (`visual-doubles.ts`), and the 80-byte v6
@@ -554,22 +606,28 @@ AT-HYG `dist` column  (whatever dist_src carries)
    │                                       AND gaia_source_id resolved
    │                                       AND bjMap has the source_id
    ▼
+[ HIP2 full-precision re-derivation  ]   only for dist_src = HIP, and only
+   │                                       when 1000/plx reproduces AT-HYG's
+   │                                       printed dist (± 1e-3 pc) — same
+   │                                       value, 4-dp truncation dropped
+   ▼
 [ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
    ▼
 [ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
    │
    ▼
-`public/catalog.bin` record
+dist × cascade direction (§ Direction resolution) → `public/catalog.bin` xyz
 ```
 
-Each override layer returns a `DistanceOverride` (`dist`, `x`, `y`,
-`z`, `absmag`) — the absmag recompute matters because skipping it
-places the star at the new distance but lights it at the old one,
-breaking the disc/glow size chain in the renderer. Both override
-helpers (`applyBailerJonesOverride`, `applyLmcKinematicOverride`)
-live in `catalog-pure.ts` so the algebra is testable in isolation
-(`catalog-pure.test.ts`).
+Each override layer returns a `DistanceOverride` (`dist`, `absmag`) —
+the absmag recompute matters because skipping it places the star at
+the new distance but lights it at the old one, breaking the disc/glow
+size chain in the renderer. Position is assembled afterwards as
+`direction × dist` (§ Direction resolution), so the overrides carry
+no xyz. Both override helpers (`applyBailerJonesOverride`,
+`applyLmcKinematicOverride`) live in `catalog-pure.ts` so the algebra
+is testable in isolation (`catalog-pure.test.ts`).
 
 ### Layer 1 — Bailer-Jones (DR3) override
 
@@ -591,9 +649,7 @@ al. 2021 (CDS I/352). The pipeline:
    deliberately (their distances are non-Gaia parallaxes B-J would
    silently regress onto its Galactic prior tail).
 3. On a hit, `applyBailerJonesOverride` returns
-   `{ dist, x, y, z, absmag }` with `x/y/z` recomputed via
-   `icrsSphericalToCartesian(ra, dec, bjDist)` (matches AT-HYG's
-   ICRS Cartesian basis) and `absmag = mag − 5·log₁₀(dist / 10)`.
+   `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. The override fires for ~99.5% of Gaia-DR3-bearing AT-HYG rows.
    The residual ~0.5% are source_ids absent from the Bailer-Jones
    publication and keep their AT-HYG values unchanged.
@@ -723,6 +779,9 @@ Three tiers, all snapshot-pinned:
   `scripts/catalog/known-stars.test.ts` loads `public/catalog.bin` via
   the runtime loader and asserts every row matches within tolerance.
   Adding a row → see § Adding to the known-stars corpus below.
+  The sky-position corpus (`sky-position-corpus.tsv` +
+  `sky-position.test.ts`, § Direction resolution) is the companion
+  Tier A harness for single-star angular placement.
 - **Tier A — multi-star geometry corpus.**
   `scripts/catalog/multi-star-regression.tsv` +
   `multi-star-regression.test.ts` pin per-PAIR geometry against

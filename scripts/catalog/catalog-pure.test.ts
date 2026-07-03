@@ -48,7 +48,6 @@ import {
   type BinaryStar,
   type DoublesStar,
   parseBailerJonesTsv,
-  icrsSphericalToCartesian,
   apparentToAbsoluteMagnitude,
   buildDistanceOverride,
   applyBailerJonesOverride,
@@ -1299,36 +1298,6 @@ describe('catalog-pure / NO_APSIS sentinel', () => {
   });
 });
 
-describe('catalog-pure / icrsSphericalToCartesian', () => {
-  it('maps the cardinal RA/Dec triples to expected axes', () => {
-    // ra=0h dec=0° → +X
-    const a = icrsSphericalToCartesian(0, 0, 100);
-    expect(a.x).toBeCloseTo(100, 10);
-    expect(a.y).toBeCloseTo(0, 10);
-    expect(a.z).toBeCloseTo(0, 10);
-    // ra=6h dec=0° → +Y
-    const b = icrsSphericalToCartesian(6, 0, 100);
-    expect(b.x).toBeCloseTo(0, 10);
-    expect(b.y).toBeCloseTo(100, 10);
-    expect(b.z).toBeCloseTo(0, 10);
-    // dec=+90° → +Z (RA irrelevant)
-    const c = icrsSphericalToCartesian(0, 90, 100);
-    expect(c.x).toBeCloseTo(0, 10);
-    expect(c.y).toBeCloseTo(0, 10);
-    expect(c.z).toBeCloseTo(100, 10);
-  });
-
-  it('matches AT-HYG x0/y0/z0 for a representative star (HIP 22365)', () => {
-    // AT-HYG row: ra=4.81481859 h, dec=43.27557981°, dist=9963.4514 pc,
-    // x0=2214.84, y0=6907.647, z0=6830.027.
-    const { x, y, z } = icrsSphericalToCartesian(4.81481859, 43.27557981, 9963.4514);
-    expect(x).toBeCloseTo(2214.84, 1);
-    expect(y).toBeCloseTo(6907.647, 1);
-    expect(z).toBeCloseTo(6830.027, 1);
-    expect(Math.sqrt(x * x + y * y + z * z)).toBeCloseTo(9963.4514, 3);
-  });
-});
-
 describe('catalog-pure / apparentToAbsoluteMagnitude', () => {
   it('is identity at 10 pc', () => {
     expect(apparentToAbsoluteMagnitude(5.0, 10)).toBe(5.0);
@@ -1343,24 +1312,12 @@ describe('catalog-pure / apparentToAbsoluteMagnitude', () => {
 });
 
 describe('catalog-pure / buildDistanceOverride', () => {
-  it('threads dist into the result and onto the position vector', () => {
-    const out = buildDistanceOverride(0, 0, 10, 250);
-    expect(out.dist).toBe(250);
-    expect(Math.sqrt(out.x ** 2 + out.y ** 2 + out.z ** 2)).toBeCloseTo(250, 10);
-  });
-
-  it('uses the same xyz mapping as icrsSphericalToCartesian', () => {
-    // The builder is just a packaging convenience — its xyz must equal
-    // a direct icrsSphericalToCartesian call at the same distance.
-    const direct = icrsSphericalToCartesian(4.81481859, 43.27557981, 6244.791);
-    const out = buildDistanceOverride(4.81481859, 43.27557981, 7.7, 6244.791);
-    expect(out.x).toBe(direct.x);
-    expect(out.y).toBe(direct.y);
-    expect(out.z).toBe(direct.z);
+  it('threads dist into the result', () => {
+    expect(buildDistanceOverride(10, 250).dist).toBe(250);
   });
 
   it('uses the same absmag formula as apparentToAbsoluteMagnitude', () => {
-    expect(buildDistanceOverride(0, 0, 12.029, LMC_DISTANCE_PC).absmag)
+    expect(buildDistanceOverride(12.029, LMC_DISTANCE_PC).absmag)
       .toBe(apparentToAbsoluteMagnitude(12.029, LMC_DISTANCE_PC));
   });
 });
@@ -1387,18 +1344,16 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
   const bjMap = new Map(FIVE_HIPS.map((f) => [f.sourceId, f.bjDist] as const));
 
   it('returns null when source_id is missing or absent from the map', () => {
-    expect(applyBailerJonesOverride(0, 0, 10, null, bjMap)).toBeNull();
-    expect(applyBailerJonesOverride(0, 0, 10, '', bjMap)).toBeNull();
-    expect(applyBailerJonesOverride(0, 0, 10, '0000', bjMap)).toBeNull();
+    expect(applyBailerJonesOverride(10, null, bjMap)).toBeNull();
+    expect(applyBailerJonesOverride(10, '', bjMap)).toBeNull();
+    expect(applyBailerJonesOverride(10, '0000', bjMap)).toBeNull();
   });
 
-  it('pins the BJ distance and recomputes x/y/z + absmag consistently', () => {
+  it('pins the BJ distance and recomputes absmag consistently', () => {
     for (const f of FIVE_HIPS) {
-      const out = applyBailerJonesOverride(f.ra, f.dec, f.mag, f.sourceId, bjMap);
+      const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap);
       expect(out, f.label).not.toBeNull();
       expect(out!.dist, f.label).toBe(f.bjDist);
-      // Position vector matches the new distance.
-      expect(Math.sqrt(out!.x ** 2 + out!.y ** 2 + out!.z ** 2)).toBeCloseTo(f.bjDist, 3);
       // Absolute magnitude follows m − 5·log₁₀(d/10).
       expect(out!.absmag).toBeCloseTo(f.mag - 5 * Math.log10(f.bjDist / 10), 10);
     }
@@ -1411,7 +1366,7 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     // and HIP 46144's pullback is asserted separately below.
     for (const label of ['HIP 22365', 'HIP 25733', 'HIP 38430']) {
       const f = FIVE_HIPS.find((x) => x.label === label)!;
-      const out = applyBailerJonesOverride(f.ra, f.dec, f.mag, f.sourceId, bjMap)!;
+      const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap)!;
       const drop = (f.athygDist - out.dist) / f.athygDist;
       expect(drop, `${label} drop ratio`).toBeGreaterThan(0.25);
     }
@@ -1419,7 +1374,7 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
 
   it('HIP 46144 pulls back ~18% (lower-S/N outlier)', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 46144')!;
-    const out = applyBailerJonesOverride(f.ra, f.dec, f.mag, f.sourceId, bjMap)!;
+    const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap)!;
     const drop = (f.athygDist - out.dist) / f.athygDist;
     expect(drop).toBeGreaterThan(0.15);
     expect(drop).toBeLessThan(0.20);
@@ -1427,7 +1382,7 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
 
   it('leaves the well-measured F-dwarf HIP 23785 within 5%', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 23785')!;
-    const out = applyBailerJonesOverride(f.ra, f.dec, f.mag, f.sourceId, bjMap)!;
+    const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap)!;
     expect(Math.abs(f.athygDist - out.dist) / f.athygDist).toBeLessThan(0.05);
   });
 
@@ -1630,11 +1585,9 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
 
   it('LMC-direction + LMC-PM star is snapped to 49.594 kpc', () => {
     for (const f of LMC_HITS) {
-      const out = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
+      const out = applyLmcKinematicOverride(f.mag, f.pmRa, f.pmDec);
       expect(out, f.label).not.toBeNull();
       expect(out!.dist, f.label).toBe(LMC_DISTANCE_PC);
-      // Position vector length matches the override distance.
-      expect(Math.sqrt(out!.x ** 2 + out!.y ** 2 + out!.z ** 2)).toBeCloseTo(LMC_DISTANCE_PC, 3);
       // Absolute magnitude recomputed at the new distance.
       expect(out!.absmag).toBeCloseTo(f.mag - 5 * Math.log10(LMC_DISTANCE_PC / 10), 10);
     }
@@ -1642,7 +1595,7 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
 
   it('LMC-direction + non-LMC-PM star is unchanged (null override)', () => {
     for (const f of LMC_PM_NON_HITS) {
-      const out = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
+      const out = applyLmcKinematicOverride(f.mag, f.pmRa, f.pmDec);
       expect(out, f.label).toBeNull();
     }
   });
@@ -1651,8 +1604,8 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     // A star in the LMC cone with null proper motion — should NOT be
     // overridden. AT-HYG carries blank pm_ra/pm_dec for pre-Hipparcos
     // entries; treat them as ineligible for the kinematic gate.
-    expect(applyLmcKinematicOverride(LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10, null, 0)).toBeNull();
-    expect(applyLmcKinematicOverride(LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10, 0, null)).toBeNull();
+    expect(applyLmcKinematicOverride(10, null, 0)).toBeNull();
+    expect(applyLmcKinematicOverride(10, 0, null)).toBeNull();
   });
 
   it('ordering: LMC_KIN wins over BJ for an LMC-cone star with both', () => {
@@ -1663,9 +1616,9 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     const f = LMC_HITS[0]; // HD 268749
     const sourceId = 'fake-lmc-source-id';
     const bjMap = new Map([[sourceId, 8000]]); // arbitrary B-J posterior ≠ LMC distance
-    const bj = applyBailerJonesOverride(f.ra, f.dec, f.mag, sourceId, bjMap);
+    const bj = applyBailerJonesOverride(f.mag, sourceId, bjMap);
     expect(bj!.dist).toBe(8000);
-    const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
+    const lmc = applyLmcKinematicOverride(f.mag, f.pmRa, f.pmDec);
     expect(lmc!.dist).toBe(LMC_DISTANCE_PC);
     // Final state mirrors what build-catalog.ts ends up with.
     expect(lmc!.dist).not.toBe(bj!.dist);
@@ -1676,18 +1629,15 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     // Both at the tolerance → still pass (per-component, not Euclidean).
     const eps = 1e-9;
     const passEdgeRa = applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
-      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
+      10, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
     );
     expect(passEdgeRa).not.toBeNull();
     const passBothEdges = applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
-      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE - LMC_PM_TOLERANCE + eps,
+      10, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE - LMC_PM_TOLERANCE + eps,
     );
     expect(passBothEdges).not.toBeNull();
     const failJustOver = applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10,
-      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
+      10, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
     );
     expect(failJustOver).toBeNull();
   });

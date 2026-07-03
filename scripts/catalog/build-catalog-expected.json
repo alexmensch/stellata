@@ -1,7 +1,7 @@
 {
   "recordCount": 321699,
-  "binaryPairs": 6013,
-  "binaryMutualPairs": 2825,
+  "binaryPairs": 6012,
+  "binaryMutualPairs": 2824,
   "gcvsEntries": 38881,
   "gcvsHipXrefs": 11316,
   "gcvsHdXrefs": 13926,
@@ -12,7 +12,7 @@
   "gcvsMatchedByHd": 889,
   "ccdmGroups": 12496,
   "ccdmResolved": 12393,
-  "ccdmFlagged": 11064,
+  "ccdmFlagged": 11073,
   "bjEntries": 310952,
   "bjEligible": 311015,
   "bjOverridden": 310368,
@@ -41,5 +41,14 @@
   "companionDroppedNoPosition": 124,
   "companionDroppedNoAbsmag": 1693,
   "companionDroppedCompoundComp": 167,
-  "companionDroppedCollocatedPrimary": 201
+  "companionDroppedCollocatedPrimary": 201,
+  "gaiaAstrometryEntries": 315050,
+  "hip2Entries": 117955,
+  "nssSourceIdEntries": 437275,
+  "hipDistFullPrecision": 1901,
+  "directionGaia5p": 300543,
+  "directionGaiaNssSystemic": 10037,
+  "directionHip2Saturated": 2509,
+  "directionHip2PmDiscrepant": 138,
+  "directionAthygPrinted": 30
 }
