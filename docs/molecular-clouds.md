@@ -450,6 +450,59 @@ alpha) fed by the new density integral. All intensity constants land
 as named uniforms with dev-console levers, mirroring the existing
 `stellata.cloudLayer.*` pattern.
 
+### 9.1 Sampling and anti-aliasing — banding is the known failure mode
+
+Precedent: the volumetric Milky Way deliberately does not sample the
+Edenhofer voxels because fixed-step marches alias into visible
+streaks (SCIENCE.md § Interstellar dust extinction; the standing
+spiral-arm non-goal exists for the same reason). The presence
+raymarch has the same shape — 12–16 steps give step lengths of
+1.5–5 pc across typical chords, far past Nyquist for the 0.3 pc
+finest octave — plus a second hazard the MW case didn't have: the
+noise field is heavy-tailed (log-normal, σ_s up to ~1.9, ridged
+fine octaves), so a few jittered samples of the full field have
+enormous estimator variance, amplified by the nonlinear
+`α = 1 − exp(−0.921 A_V)` output. Naive marching bands; naive
+jittered marching shimmers. Five rules, all mandatory in A.6:
+
+1. **Band-limited integral (the role split).** Only octaves with
+   wavelength ≥ 2 × step length may contribute *inside* the
+   integral — in practice the analytic envelope + the coarse
+   (≥ 10 pc) octaves, which are smooth at 16 steps by construction.
+   Octave amplitudes fade via `smoothstep` on λ/(2Δ), never a hard
+   cut. The column that drives absorption α and glow amplitude is
+   therefore always well-sampled.
+2. **Fine octaves as bounded texture, not density.** The sub-10 pc
+   octaves apply as a single post-integral multiplicative factor
+   (evaluated at the densest sample along the ray), clamped to
+   [0.6, 1.4]. They add filamentary texture without adding column
+   variance — consistent with their § 5.3 status as a look model.
+   Octaves below the world-space pixel footprint
+   (`d · uFovYRad / viewport.y`) fade out of the texture term too
+   (screen-space Nyquist; the detail-floor principle applied
+   per-pixel).
+3. **Static per-pixel ray jitter.** Offset each ray's start by one
+   step length scaled by interleaved gradient noise of
+   `gl_FragCoord.xy` — cheap, no texture. Do NOT reseed per frame:
+   with no temporal accumulation pass, animated jitter reads as
+   shimmer; static jitter is stable and camera motion decorrelates
+   it naturally.
+4. **Output dither.** The whisper glow at 0.05–0.15 intensity spans
+   only ~13–38 levels of an 8-bit framebuffer — quantisation
+   banding is guaranteed even with a perfect integral. Add
+   ±0.5-LSB gradient-noise dither to the final rgb and α.
+5. **Render-order contract for extinctable layers.** The alpha-over
+   dimming reaches only layers drawn *before* the presence mesh.
+   Every diffuse background the clouds should extinct — the MW
+   band, the galactic disc glow, any future HiPS / sky-imagery
+   layer — must render earlier in the background group; a layer
+   added after the mesh silently escapes extinction. Point sources
+   are exempt (per-star raymarch owns them). Record this constraint
+   in `src/client/molecular-clouds/README.md` when A.6 lands.
+
+Step count, jitter scale, and the texture-clamp bounds are
+dev-console levers; the structure above is not tunable away.
+
 ## 10. Inside-the-cloud experience (A.7)
 
 The mental model is confirmed physics: an observer at the centre of
@@ -477,7 +530,9 @@ floor so the inside of a dark cloud doesn't read as fog. Acceptance:
 Taurus fly-through shows progressive reddening → disappearance of
 background stars through the core direction while Sol-ward periphery
 stays populated; no hard mesh seams; presence glow ≤ the darkest MW
-band pixels.
+band pixels; no crawling bands or shimmer in the dimmed MW band
+during a slow orbit with the galactic-core gradient behind the cloud
+(the § 9.1 rules exist for exactly this shot).
 
 ## 11. Phase map and execution order
 
@@ -490,7 +545,7 @@ the shader framework A.4's fine noise and A.5's tints plug into).
 | A.3 | c7u.3 | Pin existing A_V + B−V-shift behaviour; density-dependent R_V two-accumulator upgrade (visual-gated) | Synthetic-cloud fixture pins; Taurus-core star visibly less over-red with R_V(ρ) if shipped |
 | A.4 | c7u.4 | Fine-octave ladder (10 → 0.3 pc) + ridged/anisotropic shaping in the presence shader; shares § 5 constants with the bake via one exported table | Bake and shader agree at 10 pc scale (fixture comparing baked voxel vs shader-evaluated coarse octaves) |
 | A.5 | c7u.5.x | Generic-reader cross-match; taxonomy + overrides; cavity list into `clouds.json` v2; rebake with cavities; HII/reflection tints (5.2) | λ Ori renders as a ring; Orion A carves around the Trapezium; Taurus stays `dark` with zero cavities |
-| A.6 | c7u.6 | Replace `cloud.frag.glsl` with absorption + whisper-glow model; `clouds.json` v2 loader; re-enable the layer | MW band visibly occluded behind Taurus; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
+| A.6 | c7u.6 | Replace `cloud.frag.glsl` with absorption + whisper-glow model; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 loader; re-enable the layer | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
 | A.7 | c7u.7 | Fly-through verification + tuning (§ 10) | § 10 acceptance list |
 
 Cross-phase invariant: § 5's noise constants (ladder, persistence,
