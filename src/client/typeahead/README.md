@@ -12,6 +12,16 @@ Bayer designation. Selecting an entry dispatches through
 `focusStar(idx)` for navigate or `warpTo(idx)` when the To slot is
 active.
 
+`buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
+exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
+The numeric-ID maps are 1:1 and echo the matched identifier in the
+dropdown ("Vega (HIP 91262)"). The Flamsteed map keys `<num> <con>` to
+**an array** of every component sharing that designation, so an exact
+"61 Cyg" returns each of 61 Cyg A/B/… with its own display name —
+never collapsed to one, never echoing the raw query. Anonymous
+Flamsteed stars (no proper name, no Bayer) display the canonical
+"<num> <Con>" designation.
+
 ## Constellation typeahead
 
 `constellation-typeahead.ts` replaces the old `<select id="con-select">`

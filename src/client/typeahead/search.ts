@@ -157,23 +157,40 @@ export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
   return out;
 }
 
-export function bindSearch(
-  stellata: Stellata,
-  catalog: Catalog,
+export interface SearchIndex {
+  fuzzyEntries: FuzzyEntry[];
+  hipMap: Map<number, number>;
+  hdMap: Map<number, number>;
+  hrMap: Map<number, number>;
+  glMap: Map<string, number>;
+  // Flamsteed keys map to every component sharing that number+constellation,
+  // so an exact "61 Cyg" query returns each of A/B/C… rather than collapsing
+  // to whichever star was indexed last.
+  flamMap: Map<string, FuzzyEntry[]>;
+}
+
+// Build the direct-lookup maps + the fuzzy-search corpus (star entries only;
+// callers append cloud entries). The display form is computed once per star
+// so every label for it shares the same presentation: "ProperName (α¹ Cen)"
+// when both exist, else whichever does. The Bayer portion preserves the
+// AT-HYG component suffix as a Unicode superscript to disambiguate A/B pairs
+// (even though the search labels drop it — see buildBayerLabels).
+export function buildSearchIndex(
   raw: SearchEntry[],
-  starLabels: Map<number, string>,
-  clouds: CloudCatalog | null,
-) {
-  // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
-  // dispatches here rather than through the fuzzy index.
+  constellations: { code: string; name: string }[],
+): SearchIndex {
   const hipMap = new Map<number, number>();
   const hdMap = new Map<number, number>();
   const hrMap = new Map<number, number>();
   const glMap = new Map<string, number>();
-  const flamMap = new Map<string, number>(); // key: `${flam} ${conCode}` lowercased
-
+  const flamMap = new Map<string, FuzzyEntry[]>();
   const fuzzyEntries: FuzzyEntry[] = [];
-  const conByIdx = catalog.constellations;
+
+  const addFlam = (key: string, e: FuzzyEntry) => {
+    const arr = flamMap.get(key);
+    if (arr) arr.push(e);
+    else flamMap.set(key, [e]);
+  };
 
   for (const entry of raw) {
     if (entry.hip !== undefined) hipMap.set(entry.hip, entry.i);
@@ -186,57 +203,63 @@ export function bindSearch(
     }
 
     const conIdx = entry.c ?? 255;
-    const con = conIdx !== 255 ? conByIdx[conIdx] : null;
+    const con = conIdx !== 255 ? constellations[conIdx] : null;
     const conCode = con?.code ?? '';
     const conName = con?.name ?? '';
 
-    if (entry.f !== undefined && conCode) {
-      // Flamsteed: the same number can recur across constellations, so key by
-      // both. Also add the 3-letter form since most users type that.
-      flamMap.set(`${entry.f} ${conCode.toLowerCase()}`, entry.i);
-      flamMap.set(`${entry.f} ${conName.toLowerCase()}`, entry.i);
-    }
-
-    // Build the display form once per star so every label for this star
-    // shares the same presentation. Format: "ProperName (α¹ Cen)" when
-    // both are available, else whichever exists. The Bayer portion in the
-    // display preserves the AT-HYG component suffix as a Unicode superscript
-    // to disambiguate A/B pairs in the dropdown (even though the search
-    // labels drop it — see buildBayerLabels).
     const properName = entry.p ?? null;
     const bayerDisplay = entry.b && conCode ? formatBayerDisplay(entry.b, conCode) : null;
-    let primary: string;
+    let primary: string | null;
     if (properName && bayerDisplay) primary = `${properName} (${bayerDisplay})`;
     else if (properName) primary = properName;
     else if (bayerDisplay) primary = bayerDisplay;
-    else continue; // no human-readable label and no Bayer — only findable via numeric ID
+    else primary = null;
     const displayCon = con?.name ?? '';
 
-    if (properName) {
-      fuzzyEntries.push({ kind: 'star', index: entry.i, label: properName, primary, displayCon });
-    }
-    if (entry.b && conCode) {
-      for (const label of buildBayerLabels(entry.b, conCode, conName)) {
-        fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary, displayCon });
+    if (primary !== null) {
+      if (properName) {
+        fuzzyEntries.push({ kind: 'star', index: entry.i, label: properName, primary, displayCon });
+      }
+      if (entry.b && conCode) {
+        for (const label of buildBayerLabels(entry.b, conCode, conName)) {
+          fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary, displayCon });
+        }
       }
     }
+
+    // Flamsteed is keyed by number+constellation (the same number recurs
+    // across constellations), under both the 3-letter code and full name.
+    // Anonymous Flamsteed stars (no proper, no Bayer) fall back to the
+    // canonical "<num> <Con>" designation as their display, so they stay
+    // findable without echoing the raw query.
     if (entry.f !== undefined && conCode) {
-      fuzzyEntries.push({
-        kind: 'star',
-        index: entry.i,
-        label: `${entry.f} ${conCode}`,
-        primary,
-        displayCon,
-      });
-      fuzzyEntries.push({
-        kind: 'star',
-        index: entry.i,
-        label: `${entry.f} ${conName}`,
-        primary,
-        displayCon,
-      });
+      const desig = `${entry.f} ${conCode}`;
+      const flamEntry: FuzzyEntry = {
+        kind: 'star', index: entry.i, label: desig, primary: primary ?? desig, displayCon,
+      };
+      addFlam(`${entry.f} ${conCode.toLowerCase()}`, flamEntry);
+      addFlam(`${entry.f} ${conName.toLowerCase()}`, flamEntry);
+      if (primary !== null) {
+        fuzzyEntries.push(flamEntry);
+        fuzzyEntries.push({ ...flamEntry, label: `${entry.f} ${conName}` });
+      }
     }
   }
+
+  return { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap };
+}
+
+export function bindSearch(
+  stellata: Stellata,
+  catalog: Catalog,
+  raw: SearchEntry[],
+  starLabels: Map<number, string>,
+  clouds: CloudCatalog | null,
+) {
+  // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
+  // dispatches here rather than through the fuzzy index.
+  const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
+    buildSearchIndex(raw, catalog.constellations);
 
   // Cloud entries — typed-name match plus a "cloud" badge in the dropdown
   // secondary line so users can distinguish Taurus (the cloud) from Tau
@@ -297,12 +320,13 @@ export function bindSearch(
       const idx = glMap.get(key);
       return idx !== undefined ? [directResult(idx, `Gl ${glMatch[1].toUpperCase()}`)] : [];
     }
-    // Flamsteed: "58 Ori"
+    // Flamsteed: "58 Ori". Returns every component sharing the number, each
+    // with its own display name — not the raw query echoed back.
     const flamMatch = trimmed.match(/^(\d+)\s+([A-Za-z]+)$/);
     if (flamMatch) {
       const key = `${flamMatch[1]} ${flamMatch[2].toLowerCase()}`;
-      const idx = flamMap.get(key);
-      if (idx !== undefined) return [directResult(idx, `${flamMatch[1]} ${flamMatch[2]}`)];
+      const hits = flamMap.get(key);
+      if (hits) return hits.slice(0, TYPEAHEAD_MAX_RESULTS);
       // Fall through to fuzzy — maybe "58 Ori" is a partial match on a label.
     }
 
