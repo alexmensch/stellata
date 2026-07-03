@@ -362,7 +362,7 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(stats.pairs_dropped_degenerate_idx, 1)
 
     def test_shared_gaia_secondary_retries_synth_before_degenerate(self) -> None:
-        # 7cl.14 shape: Gaia binds the blended photocentre's source_id
+        # Shared-photocentre shape: Gaia binds the blended source_id
         # to BOTH component rows; companion promotion strips the
         # inherited id and mints a synth record. The resolver must land
         # the secondary on that synth row instead of dropping the pair

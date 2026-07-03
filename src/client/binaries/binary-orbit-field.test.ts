@@ -209,7 +209,7 @@ describe('BinaryOrbitField.update — Tier 1 perturbation', () => {
   });
 
   it('collocated-bake orbit never displaces: |offset| stays within [a(1−e), a(1+e)] over a period sweep', () => {
-    // The 7cl.16 defect shape: a sep-0.000 baked pair whose baseline
+    // The displaced-centre defect shape: a sep-0.000 baked pair whose baseline
     // was R(epoch) rendered a Kepler ellipse displaced by −R(epoch),
     // sweeping the companion THROUGH the primary once per period and
     // exceeding apoapsis on the far side (Alsephina Ab at 0.562 AU >
@@ -297,7 +297,7 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
   });
 
   it('exempts a relation whose focal star is a pair member — no step-jump on zoom-out', () => {
-    // stellata-aim: focused on the secondary, the focal rebase puts the
+    // Focused on the secondary, the focal rebase puts the
     // FULL relative motion on the primary. Hard-switching Kepler off
     // when the pair crosses the sub-pixel threshold snapped the bright
     // primary from its Kepler-evaluated position to the baked baseline
