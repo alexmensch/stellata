@@ -137,6 +137,10 @@ export interface BuildCounts {
    *  spectral calibration (inherited/missing photometry, no WDS Δmag,
    *  per-component spect_via=curated/simbad). */
   companionAbsmagSpectralDerived: number;
+  /** Promoted pair-row-primary escapes whose absmag fell back to the
+   *  anchor's collocated brightness (imputeCompanionAbsmag). Ratchet DOWN
+   *  by curating white-dwarf absmags. */
+  companionAbsmagAnchorCollocated: number;
   /** Promoted secondaries still carrying the inherited primary absmag
    *  (full-luminosity twin) — kept only because the pair has a
    *  renderable orbit binaries.bin must keep addressing. Ratchet DOWN
@@ -145,6 +149,10 @@ export interface BuildCounts {
   /** Existing AT-HYG blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;
+  /** First-class AT-HYG records given a composed component name by the
+   *  stamp-component-letters pass — pairs AT-HYG left anonymous so both
+   *  halves printed the same Bayer/Flamsteed label (61 Cyg A/B class). */
+  componentLettersStamped: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;

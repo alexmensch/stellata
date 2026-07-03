@@ -6,6 +6,7 @@ import {
   buildBayerLabels,
   buildBayerMap,
   buildSpectralMap,
+  buildSearchIndex,
   type SearchEntry,
 } from './search';
 
@@ -214,5 +215,61 @@ describe('search / buildSpectralMap', () => {
   it('returns an empty map when no entries carry spectral info', () => {
     const raw: SearchEntry[] = [{ i: 0, p: 'A' }, { i: 1 }];
     expect(buildSpectralMap(raw).size).toBe(0);
+  });
+});
+
+describe('search / buildSearchIndex', () => {
+  const CONS = [
+    { code: 'Cyg', name: 'Cygni' },
+    { code: 'Ori', name: 'Orionis' },
+  ];
+
+  it('indexes every component of a Flamsteed multiple under one key', () => {
+    // 61 Cyg A + B share flam=61, con=Cyg. The map must hold both, so an
+    // exact "61 cyg" query returns each rather than collapsing to the last.
+    const raw: SearchEntry[] = [
+      { i: 10, p: '61 Cyg A', f: 61, c: 0 },
+      { i: 11, p: '61 Cyg B', f: 61, c: 0 },
+    ];
+    const { flamMap } = buildSearchIndex(raw, CONS);
+    const hits = flamMap.get('61 cyg');
+    expect(hits?.map((e) => e.index)).toEqual([10, 11]);
+    expect(hits?.map((e) => e.primary)).toEqual(['61 Cyg A', '61 Cyg B']);
+  });
+
+  it('keys Flamsteed under both the code and full constellation name', () => {
+    const raw: SearchEntry[] = [{ i: 10, p: '61 Cyg A', f: 61, c: 0 }];
+    const { flamMap } = buildSearchIndex(raw, CONS);
+    expect(flamMap.get('61 cyg')?.[0].index).toBe(10);
+    expect(flamMap.get('61 cygni')?.[0].index).toBe(10);
+  });
+
+  it('falls back to the canonical designation for anonymous Flamsteed stars', () => {
+    // No proper name, no Bayer — the display must be "58 Ori", never the
+    // raw typed query. Such stars are indexed for exact lookup only, not
+    // pushed into the fuzzy corpus.
+    const raw: SearchEntry[] = [{ i: 5, f: 58, c: 1 }];
+    const { flamMap, fuzzyEntries } = buildSearchIndex(raw, CONS);
+    expect(flamMap.get('58 ori')?.[0].primary).toBe('58 Ori');
+    expect(fuzzyEntries.some((e) => e.index === 5)).toBe(false);
+  });
+
+  it('shares one display form across a star\'s fuzzy labels', () => {
+    const raw: SearchEntry[] = [{ i: 3, p: 'Keid', b: 'Omi-2', f: 40, c: 1 }];
+    const { fuzzyEntries } = buildSearchIndex(raw, CONS);
+    const primaries = new Set(fuzzyEntries.filter((e) => e.index === 3).map((e) => e.primary));
+    expect([...primaries]).toEqual(['Keid (ο² Ori)']);
+  });
+
+  it('populates the numeric-ID direct-lookup maps', () => {
+    const raw: SearchEntry[] = [
+      { i: 0, hip: 91262, hd: 172167, hr: 7001 },
+      { i: 1, gl: 'Gl 559A' },
+    ];
+    const { hipMap, hdMap, hrMap, glMap } = buildSearchIndex(raw, CONS);
+    expect(hipMap.get(91262)).toBe(0);
+    expect(hdMap.get(172167)).toBe(0);
+    expect(hrMap.get(7001)).toBe(0);
+    expect(glMap.get('559a')).toBe(1);
   });
 });
