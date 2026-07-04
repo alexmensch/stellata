@@ -114,7 +114,7 @@ export function buildStarLabels(
     } else if (entry.hr !== undefined) {
       labels.set(entry.i, `HR ${entry.hr}`);
     } else if (entry.gl) {
-      labels.set(entry.i, `Gl ${entry.gl}`);
+      labels.set(entry.i, entry.gl);
     }
   }
   return labels;

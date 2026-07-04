@@ -7,8 +7,10 @@ import {
   buildBayerMap,
   buildSpectralMap,
   buildSearchIndex,
+  buildStarLabels,
   type SearchEntry,
 } from './search';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
 
 describe('search / splitBayer', () => {
   it('parses a Latin 3-letter Bayer with no suffix', () => {
@@ -271,5 +273,29 @@ describe('search / buildSearchIndex', () => {
     expect(hdMap.get(172167)).toBe(0);
     expect(hrMap.get(7001)).toBe(0);
     expect(glMap.get('559a')).toBe(1);
+  });
+});
+
+describe('search / buildStarLabels', () => {
+  it('prepends a prefix to the bare-numeric HIP/HD/HR identifiers', () => {
+    const raw: SearchEntry[] = [
+      { i: 0, hip: 91262 },
+      { i: 1, hd: 172167 },
+      { i: 2, hr: 7001 },
+    ];
+    const labels = buildStarLabels(makeEmptyCatalog(3), raw);
+    expect(labels.get(0)).toBe('HIP 91262');
+    expect(labels.get(1)).toBe('HD 172167');
+    expect(labels.get(2)).toBe('HR 7001');
+  });
+
+  it('uses the Gliese designation verbatim — the prefix is already in the field', () => {
+    const raw: SearchEntry[] = [
+      { i: 0, gl: 'Gl 195A' },
+      { i: 1, gl: 'GJ 9581' },
+    ];
+    const labels = buildStarLabels(makeEmptyCatalog(2), raw);
+    expect(labels.get(0)).toBe('Gl 195A');
+    expect(labels.get(1)).toBe('GJ 9581');
   });
 });
