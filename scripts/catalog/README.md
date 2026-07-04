@@ -442,7 +442,7 @@ per system on the canonical anchor.
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-in AT-HYG. ~8.6k companions promoted into the current build
+in AT-HYG. ~10.3k companions promoted into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 half via real Gaia/HIP keys, half via synthetic identifiers (see
 the identifier gate below).

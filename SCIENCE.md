@@ -1307,7 +1307,24 @@ astronomer-relevant summary:
    ~99% of decomposing WDS pairs resolve at least one component
    through this cascade; the residual unresolved fraction is
    dominated by Aitken-only Tycho doubles with no Gaia coverage at
-   all.
+   all. ρ = 0 sub-resolution pairs (spectroscopic / interferometric
+   companions WDS lists without a measured separation) follow the
+   blend convention: no instrument separates the photocentre, so a
+   secondary that bound nothing of its own inherits the primary's
+   identifiers — the same convention WDS itself exhibits when it
+   lists Castor's CIA 29 Aa,Ab with one HIP on both sides. Position
+   matching is skipped for these pairs: with ρ = 0 the predicted
+   secondary position degenerates onto the primary's own coordinate
+   and a nearest-neighbour pick can only coin-flip onto a sibling
+   component's identity.
+   The pipeline also **synthesizes sub-pairs WDS never enumerates**:
+   ORB6 carries ~30 orbit fits keyed to component pairs (64 Psc
+   Aa,Ab, Castor Ca,Cb = YY Gem via a curated component mapping)
+   with no WDS_SUMM row, and Gaia NSS carries ~500 two-body
+   solutions belonging to one component of a wider resolved pair.
+   Each gets a synthesized pair row so the orbit has a place to
+   live; the components inherit the carrier's identifiers per the
+   blend convention.
 3. **Attach the most-trustworthy astrometric measurement** per
    component. Priority: Gaia DR3 5-parameter where the fit is clean
    (`ruwe ≤ 1.4` AND `ipd_frac_multi_peak ≤ 2%`); Gaia NSS
@@ -1320,21 +1337,51 @@ astronomer-relevant summary:
    construction.
 4. **Select orbital elements per system.** ORB6 visual orbits
    (grades 1–5: definitive → indeterminate) win where present —
-   ORB6's semi-major axis is the genuine relative A–B orbit, the only
-   kind the renderer can animate. Gaia NSS covers the rest of its
-   astrometric-detectability regime (period < ~3 yr OR apparent
-   photocentre semi-major axis < 1″) — 95.8% of DR3 NSS rows pass the
-   period gate, plus the sub-arcsec long-period tail through the TI
-   algebra. The Thiele-Innes → Campbell algebra recovers
+   ORB6's semi-major axis is the genuine relative A–B orbit. Gaia
+   NSS covers the rest of its astrometric-detectability regime
+   (period < ~3 yr OR apparent photocentre semi-major axis < 1″) —
+   95.8% of DR3 NSS rows pass the period gate, plus the sub-arcsec
+   long-period tail through the TI algebra. An NSS orbit describes
+   the SOURCE's own two-body motion, so it only attaches to a pair
+   whose partner shares the blended source (or carries none):
+   when the partner is a different resolved star, the orbit belongs
+   to the carrying component's own unseen companion and attaches to
+   the synthesized inner pair instead — before this gate, a 4-day
+   SB1 period could be stamped onto a centuries-period visual pair.
+   The Thiele-Innes → Campbell algebra recovers
    (a0, i, Ω, ω) from NSS's stored (A, B, F, G) quartet via the
    Heintz 1978 / Halbwachs+ 2023 Appendix C closed form, inlined
    rather than imported from ESA's unmaintained NSSTools package —
    but the TI fit tracks the photocentre, so a0 = |q − β|·a_rel
    underestimates the relative separation by the mass-vs-flux
-   fraction gap. The semi-major axis is withheld rather than guessed;
-   TI-derived NSS pairs place statically at their WDS sep+PA.
-   ORB6 spectroscopic / interferometric-only orbits (grades 8–9)
-   come last.
+   fraction gap (and its ω is the photocentre's, π away from the
+   relative orbit's when the primary carries most of the flux).
+   ORB6 non-visual orbits (grade 8 interferometric-visibilities,
+   grade 9 astrometric / spectroscopic, and the undocumented grade 7
+   the catalog uses for photometric / eclipsing fits — YY Gem,
+   EQ Tau, BX And) come last.
+
+   **Estimated scale for spectroscopic orbits.** No NSS solution
+   type publishes a relative semi-major axis, and RV / eclipse
+   photometry cannot constrain one — so for the non-visual routes
+   the pipeline estimates it from Kepler's third law,
+   a = M_total^⅓ · P_yr^⅔ AU, with M_total = M₁/(1−q) from the
+   primary's spectral-class mass (Cox 2000 §15.2 / Pecaut & Mamajek
+   2013, the same tables the q backfill uses; 1 M☉ when the type is
+   unparseable). Where no mass ratio is derivable the companion is
+   assumed at half the primary's mass (q = ⅓, near the SB1
+   mass-ratio distribution's mode). Both estimates enter a ∝ M^⅓,
+   so even a factor-2 mass error moves the rendered orbit scale by
+   only ~26% — far better than not animating a measured period at
+   all, and tagged `a_via=kepler_mass_estimate` in multiples.tsv so
+   every estimated axis is auditable. Exactly-circular fits (e = 0)
+   that publish no ω — periastron is undefined on a circle — get
+   ω = π/2, which places conjunction (the eclipse, for edge-on
+   systems) at the fitted T₀, matching the minimum-epoch convention
+   eclipser ephemerides use. ORB6 *visual* orbits get none of these
+   estimates: their pairs carry real measured placements, and a
+   guessed mass ratio would move a rendered pair off its published
+   geometry.
 5. **Classify each pair as physical or optical** via a 5-tier
    cascade — WDS Notes flag chars confirm or reject directly when
    set; both-components-Gaia parallax (3σ on combined error) and PM
@@ -1405,6 +1452,20 @@ sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
   wider AC pair takes the ORB6 visual orbit. Stage 5 keeps both
   pairs through the orbit-on-file override despite the magnitude gap
   to the C component.
+- **Castor — the sextuple showcase.** WDS enumerates the AB visual
+  pair (grade-3 ORB6, P = 459 yr) and both spectroscopic sub-pairs
+  Aa,Ab (P = 9.21 d) and Ba,Bb (P = 2.93 d) as CIA 29 rows with
+  published interferometric semi-major axes. The third pair —
+  Castor C = YY Gem, the eclipsing M-dwarf twin pair at
+  P = 0.814 d — exists in ORB6 only under its variable-star name
+  with a blank components field, so a curated mapping
+  (`data/binaries/orb6_component_overrides.tsv`) keys it to Ca,Cb
+  and the pipeline synthesizes the pair row WDS lacks. ORB6's
+  eclipse fit gives P and i = 86.5° but no semi-major axis; the
+  Kepler estimate from two M0.5Ve table masses (Torres & Ribas
+  2002: 0.599 + 0.601 M☉) lands at 0.0171 AU vs the published
+  0.0182 AU. All six components render, three inner pairs animate,
+  and YY Gem's eclipses come from real orbital geometry.
 - **HIP 25733 — a Bailer-Jones refinement case.** AT-HYG's `dist_src`
   marks this row's catalogued 14.3 kpc as a Gaia DR3 inverse-parallax
   estimate (`G_R3`) with low S/N; Bailer-Jones's photogeometric

@@ -164,13 +164,13 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # CIA 29 Aa,Ab (P=9.21 d) and CIA 29 Ba,Bb (P=2.93 d).
 07346+3153	Castor	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+	C::892348454394856064:8.515	167686.275	SIMBAD * alf Gem A sp_type=A1.5IV+. Multi-star showcase: STF1110 AB visual orbit P=167686.275 d (459.1 yr, ORB6 historical-first orbit Savary 1828). Companion C is YY Gem (Castor C, M0.5VeFe-2 eclipsing pair, no HIP, Gaia 892348454394856064) — absmag from companion-promotion via Δmag imputation. HIP2 parallax 64.12 mas → 15.6 pc; Gaia could not fit a 5p solution for source 892348694913501952 (parallax=NULL in gaia_dr3_astrometry.tsv), so Stage 3 routes through hip2_long_baseline.
 # Castor inner spectroscopic orbits: CIA29 emitted Aa,Ab (P=9.21 d) and
-# Ba,Bb (P=2.93 d) into multiples.tsv. Each inner-pair row carries the
-# system primary's HIP/Gaia as Stage 6 system-anchor inheritance, so Ab
-# and Bb stay un-promoted today (inherited gaia matches primary →
-# companion-promotion drops as already-in-catalog); pending dch.72 those
-# inner pairs will surface as separate catalog rows.
-07346+3153	Castor (Aa,Ab inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		9.212749	Inner spectroscopic pair CIA29 Aa,Ab (P=9.21 d, ORB6 grade-1). Ab inherits the system anchor's IDs in multiples.tsv; companion promotion still drops Ab pending dch.72's inherited-gaia handling. Orbit assertion via multiples.tsv bestPeriodMatch.
-07346+3153	Castor (Ba,Bb inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		2.928350	Inner spectroscopic pair CIA29 Ba,Bb (P=2.93 d, ORB6 grade-3). Bb inherits the system anchor's IDs; companion promotion still drops Bb pending dch.72. Orbit assertion via multiples.tsv bestPeriodMatch.
+# Ba,Bb (P=2.93 d) into multiples.tsv; the eclipsing Ca,Cb (YY Gem,
+# P=0.814 d, ORB6 grade-7) rides the synthesized sub-pair path via the
+# orb6_component_overrides.tsv mapping. Inner-pair secondaries inherit
+# the blend identity (primary's HIP/Gaia) and promote as synthetic
+# catalog records (synth-07346+3153-Ab / -Bb / -Cb).
+07346+3153	Castor (Aa,Ab inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		9.212749	Inner spectroscopic pair CIA29 Aa,Ab (P=9.21 d, ORB6 grade-1). Ab carries the blend identity (primary's HIP/Gaia) in multiples.tsv and promotes as synth-07346+3153-Ab. Orbit assertion via multiples.tsv bestPeriodMatch.
+07346+3153	Castor (Ba,Bb inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		2.928350	Inner spectroscopic pair CIA29 Ba,Bb (P=2.93 d, ORB6 grade-3). Bb carries the blend identity and promotes as synth-07346+3153-Bb. Orbit assertion via multiples.tsv bestPeriodMatch.
 # Algol (β Per) — eclipsing-binary archetype. Outer pair LAB Aa,Ab (P=680.17 d,
 # ORB6 grade-1 with i=83.66°) and inner spectroscopic Aa1,Aa2 (P=2.867 d,
 # ORB6 CSI1, the famous eclipsing pair). Ab and Aa2 multiples.tsv rows
@@ -185,12 +185,13 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # The famous AR Cas Aa,Ab inner eclipsing pair (P=6.07 d, EA-type) is
 # not yet in multiples.tsv — requires the GCVS-eclipsing → inner-pair
 # ingestion path scoped to dch.72.
-23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.756	B3V			AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). Multi-star system with 9 visual components (A-I); inner Aa,Ab eclipsing pair (P=6.07 d) pending dch.72.
+23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.756	B3V			AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). Multi-star system with 9 visual components (A-I); inner Aa,Ab eclipsing pair (P=6.07 d) pending dch.78 — its orbit is absent from ORB6 and Gaia NSS, so subdivision needs an SB9-class ingest.
 # ν Scorpii (Jabbah) — multiple-star system with high-eccentricity inner
 # orbit. Outer ORB6 Aa,Ab pair (P=3674.78 d ≈ 10.06 yr, e=0.92, i=89.7°,
 # CHARA-resolved). Visual components B, C, D carry own Gaia IDs in
-# AT-HYG. Inner Aa1,Aa2 spectroscopic sub-pair (P=1.41 d) pending dch.72.
-16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-2.115	O		3674.78025	ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual). Inner Aa1,Aa2 (P=1.41 d, SB) pending dch.72.
+# AT-HYG. Inner Aa1,Aa2 spectroscopic sub-pair (P=1.41 d) pending
+# dch.78 — its orbit is absent from ORB6 and Gaia NSS (SB9-class ingest).
+16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-2.115	O		3674.78025	ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual). Inner Aa1,Aa2 (P=1.41 d, SB) pending dch.78 (orbit absent from ORB6/Gaia NSS).
 # ξ Ursae Majoris (Alula Australis, STF1523 AB) — Tier A pin pending
 # the catalog.bin identifier backfill (separate bead). AT-HYG carries
 # the system as HD-only (no HIP, no Gaia on either component row);

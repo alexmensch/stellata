@@ -47,6 +47,16 @@ scripts/binaries/
                                   HIP → HIP2 / CCDM, CCDM → HIP-list,
                                   etc.). Built once at Stage 1; every
                                   Stage 2-7 lookup is O(1).
+  component_tokens.py             WDS component-letter token helpers
+                                  (truncated-form expansion, parent /
+                                  child tokens) shared by subdivide.py
+                                  and build-runtime-binaries.py.
+  subdivide.py                    Synthesized sub-pair injection — ORB6
+                                  orphan pairs + curated component
+                                  overrides (pre-Stage-2), binding seeds
+                                  (post-Stage-2), Gaia-NSS inner pairs
+                                  (post-Stage-3). See § Sub-pair
+                                  synthesis.
   stage2_resolve.py               WDS-component → Gaia DR3 source_id
                                   cascade (orb6_hip → athyg_gaia_native →
                                   simbad_xid → ccdm_hip → AT-HYG
@@ -115,8 +125,9 @@ data/wds/
 
 data/binaries/
   multiples.tsv                   build-binaries.py output — two rows
-                                  per kept WDS pair, plus standalone rows
-                                  for SIMBAD-known components the pair
+                                  per kept WDS pair (incl. synthesized
+                                  sub-pairs), plus standalone rows for
+                                  SIMBAD-known components the pair
                                   walk didn't reach. Carries per-pair
                                   sep_arcsec, pa_deg, sep_pa_epoch_jd,
                                   dmag for the static-placement and
@@ -129,6 +140,11 @@ data/binaries/
   component_sptype_overrides.tsv  Hand-curated per-component MK types —
                                   Stage 6's top spectral tier
                                   (spect_via=curated). See
+                                  data/binaries/README.md.
+  orb6_component_overrides.tsv    Hand-curated WDS component letters for
+                                  ORB6 rows with a blank components
+                                  field (YY Gem → Ca,Cb). Applied before
+                                  orphan sub-pair synthesis. See
                                   data/binaries/README.md.
 ```
 
@@ -170,8 +186,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    the published WDS sep+PA. Absmag is imputed from primary + WDS
    Δmag when the row inherits its parent's AT-HYG photometry. The
    renderer / picker / hover / focus stack picks companions up
-   with zero code change. ~8.6k companions promoted into the
-   current build (half via real Gaia/HIP keys, half via synthetic).
+   with zero code change. ~10.3k companions promoted into the
+   current build (~40% via real Gaia/HIP keys, ~60% via synthetic).
 3. **Runtime side artifact** (`scripts/binaries/build-runtime-binaries.py`).
    Reads multiples.tsv + `public/catalog-row-index-map.json`
    (which now carries a `bySynth` section alongside `byGaia` and
@@ -253,6 +269,19 @@ inherits from a resolved sub-letter `Aa` because Gaia rarely separates
 the spectroscopic sub-components; the brighter `Aa` carries the system
 flux and is the single Gaia source the renderer ever sees.
 
+ρ = 0 sub-resolution pairs get two special rules. Every positional
+match (CCDM sibling pick, predicted-secondary AT-HYG match) is
+SKIPPED for them — the (ρ, θ) prediction degenerates onto the
+primary's own coordinate, so a nearest-neighbour pick can only
+coin-flip onto a sibling component's identity (4 Equ Ab once bound
+B's HIP 103569 and B's AT-HYG photometry this way). Instead,
+`propagate_blend_identity` gives a secondary that bound nothing of
+its own the primary's gaia / hip / AT-HYG row — the WDS blend
+convention (Castor CIA 29 lists HIP 36850 on both sides of Aa,Ab) —
+and `propagate_within_system` re-runs so the blend binding reaches
+the letter's other pair rows. Secondaries carrying ANY binding of
+their own are left untouched.
+
 **Worked examples** (per-letter resolve_via):
 
 - **Sirius A** → no Gaia source (saturated), HIP 32349 bound via
@@ -302,6 +331,57 @@ on `ResolvedComponent.athyg_row`; Stage 6's photometry / proper-name
 lookup consults that reference first, ahead of the gaia / HIP indexes,
 so AT-HYG-HD-only rows still surface their absmag / spect / proper name.
 
+## Sub-pair synthesis (`subdivide.py`)
+
+Some orbits have no WDS pair row to live on — every downstream stage
+walks WDS pairs, so those orbits were unreachable. Three passes at
+three points in the pipeline:
+
+- **ORB6 component overrides (Stage 1).**
+  `data/binaries/orb6_component_overrides.tsv` stamps curated WDS
+  component letters onto ORB6 rows whose fixed-width components field
+  is blank because the catalog names the pair only by its
+  variable-star designation (YY Gem = Castor Ca,Cb). Keyed on
+  `(wds_id, discoverer)`; curation wins over the parsed field.
+- **ORB6 orphan pairs (pre-Stage-2).** One synthesized `WdsPair` per
+  ORB6 `(wds_id, components)` key that names a clean sub-pair (both
+  sides single-component tokens after WDS truncated-form expansion —
+  the fixed-width misalignment garbage `"95"` / `"a,Ab"` is filtered)
+  with no WDS row — ~33 pairs, 64 Psc Aa,Ab and Castor Ca,Cb among
+  them. A blank-components WDS row under the same `(wds_id,
+  discoverer)` is the same physical pair and donates its ρ/θ/mags/
+  date/notes; otherwise the pair is sub-resolution (ρ = 0.0, no
+  photometry) and the precise coord falls back to ORB6's own
+  coordinate prefix. The synthesized components then ride the normal
+  Stage 2 cascade (orb6_hip fires for primaries — the ORB6 entry key
+  matches by construction), and
+  `seed_synthesized_component_bindings` backstops what the cascade
+  missed: an unresolved primary inherits the in-system parent-token
+  component's binding (Ca ← C), an unresolved secondary inherits the
+  pair primary's (the blend convention).
+- **Gaia-NSS inner pairs (post-Stage-3).** A component whose own
+  source has an `nss_two_body_orbit` row while its pair partner is a
+  DIFFERENT resolved source hosts an unresolved companion of its own
+  — the orbit is interior to that component, not the pair's (Stage
+  4's distinct-source gate stops the misattribution). One synthesized
+  inner pair per `(wds_id, source_id)`, named one hierarchy level
+  down from the deepest carrier token (`A` → `Aa,Ab`, `Aa` →
+  `Aa1,Aa2`) — ~521 pairs. Skipped when the carrier token has no
+  deeper WDS convention (compound / digit-bearing), the child tokens
+  already exist in the system, the NSS row is outside the
+  detectability regime, or the elements can never render (missing
+  P/T/e, or missing ω on a non-circular fit). Children inherit the
+  carrier's identifiers and astrometry; the pair is sub-resolution by
+  construction (ρ = 0.0, `discoverer=GNSS`).
+
+Synthesized pairs then flow through Stages 4-7 like any WDS pair:
+Stage 4 attaches the orbit through its normal routes, Stage 5 keeps
+them (both-Gaia tier for blended children, orbit-on-file otherwise),
+Stage 6 emits them with system-anchor positions, and
+`build-runtime-binaries.py` nests them under their outer pair via the
+component-letter hierarchy. Build counters:
+`synthesized_orb6_orphan_pairs`, `synthesized_nss_inner_pairs`.
+
 ## Stage 4 — Orbital element selection per pair
 
 Picks the most-trustworthy set of orbital elements per pair, then
@@ -310,9 +390,9 @@ in `ORBIT_VIA_VALUES`, in priority order:
 
 | Route | When |
 | --- | --- |
-| `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit — the only kind the renderer can animate — so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below). |
-| `gaia_nss` | Any component has an `nss_two_body_orbit` row AND the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
-| `orb6_spectroscopic` | ORB6 grade ∈ {8, 9} — astrometric / interferometric without visual coverage (8) or spectroscopic (9). |
+| `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
+| `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), AND the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
+| `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
 | `none` | Visual-only pair with no orbital information on file. |
 
 The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
@@ -329,9 +409,9 @@ recovered semi-major axis is `a0 = |q − β|·a_rel`, where
 pipeline stores per pair) and `β = F₂/(F₁+F₂)` its flux fraction — so
 a0 → 0 for near-equal-brightness pairs. Reconstructing `a_rel` needs a
 mass ratio AND a flux ratio we don't reliably have per pair, so `a_AU`
-is left `None` for TI-derived rows rather than invented. With no `a`,
-`build-runtime-binaries.py` never sets `has_orbit` and these pairs
-place statically at their WDS sep+PA (Tier 3). The plane angles `i` /
+is left `None` here; Stage 6's `finalize_renderable_elements`
+estimates it from Kepler's third law for the non-visual routes
+(§ Stage 6). The plane angles `i` /
 `Ω` are shared between the photocentre and relative orbits and
 populate as-is; `ω` is the photocentre's, which sits π away from the
 secondary's relative-orbit ω whenever the primary carries most of the
@@ -405,6 +485,7 @@ system_id, comp, hip, gaia_source_id,
 x_pc, y_pc, z_pc, absmag, ci, spect, name,
 source, regime,
 resolve_via, astrometry_via, orbit_via, spect_via,
+photometry_via, a_via,
 orbit_role,
 P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
 sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag
@@ -449,6 +530,26 @@ Three system-level mechanisms run at emit time:
   Mamajek 2013). White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.
+- **Renderable-element finalization.** After the q backfill,
+  `finalize_renderable_elements` backstops the quantities the runtime's
+  `has_orbit` contract requires, for the NON-VISUAL orbit routes only
+  (`ESTIMATED_ELEMENT_ORBIT_VIAS` = gaia_nss + orb6_spectroscopic —
+  those pairs are sub-resolution, so an estimate can only add motion,
+  never contradict a measured WDS placement; estimating for visual
+  pairs would widen the baked-vs-R(epoch) disagreement ratchet in
+  `multi-star-regression.test.ts`): `q` ←
+  `UNKNOWN_COMPANION_MASS_RATIO_Q` (⅓ — companion at half the
+  primary's mass) when no catalog value and no spectral estimate
+  exists; `ω` ← π/2 (`CIRCULAR_ORBIT_OMEGA_RAD`) when the fit is
+  exactly circular and publishes none — degenerate, not missing, and
+  π/2 puts conjunction at T₀ per the eclipser minimum-epoch
+  convention; `a_AU` ← Kepler `a³ = M_total·P²` with
+  `M_total = M₁/(1−q)` from the primary's spectral-table mass when the
+  orbit source published no relative semi-major axis (every NSS
+  solution type; ORB6 rows whose a″→AU conversion lacked a parallax).
+  The `a_via` column carries the provenance: `catalog` (orbit source
+  published it), `kepler_mass_estimate`, or `none`. SCIENCE.md
+  § Multiple-star pipeline carries the error analysis (a ∝ M^⅓).
 
 The `spect` column resolves through a three-tier cascade with
 provenance in `spect_via`: `curated` →
