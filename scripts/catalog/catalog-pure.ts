@@ -535,6 +535,19 @@ export function classifyGcvsVarType(rawType: string | null | undefined): number 
   return VAR_TYPE_OTHER;
 }
 
+/** True when GCVS "EP" (eclipsing-by-planet) is the star's SOLE
+ *  variability class. A transiting-planet host has no intrinsic
+ *  variability (the dip is extrinsic occlusion by a planet) and is not
+ *  a stellar multiple, so it earns neither a variable ring/pulse nor
+ *  multi-star wings — the cross-match drops it entirely. A superimposed
+ *  intrinsic pulsator ("EP+DSCT") classifies as that pulsator and keeps
+ *  its ring, so it returns false here. */
+export function isPlanetaryTransitOnly(rawType: string | null | undefined): boolean {
+  if (!rawType) return false;
+  if (!/\bEP\b/.test(rawType.trim().toUpperCase())) return false;
+  return classifyGcvsVarType(rawType) === VAR_TYPE_OTHER;
+}
+
 // ---- Binary catalog format ----------------------------------------------
 
 // Single source of truth for the catalog.bin file layout, shared by the

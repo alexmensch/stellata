@@ -616,9 +616,13 @@ Cepheids, etc.).
 
 Each row's `varType` comes from `classifyGcvsVarType` (`catalog-pure.ts`):
 GCVS EA/EB/EW/ELL/E → `VAR_TYPE_ECLIPSING`, the pulsator families →
-`VAR_TYPE_PULSATING`, everything else → `VAR_TYPE_OTHER`. EP
-(eclipsing-by-planet) is deliberately classified `VAR_TYPE_OTHER`, not
-eclipsing — a transiting-planet host is not a stellar multiple.
+`VAR_TYPE_PULSATING`, everything else → `VAR_TYPE_OTHER`. A bare
+transiting-planet host (GCVS EP with no superimposed intrinsic
+pulsator, `isPlanetaryTransitOnly`) is dropped from the cross-match
+entirely — its dip is extrinsic occlusion by a planet, not the star's
+own output, and it is not a stellar multiple, so it earns neither an
+intrinsic-variable ring/pulse nor multi-star wings and renders as an
+ordinary star. `EP+DSCT` and the like keep the pulsator's ring.
 Eclipsing binaries are extrinsically variable, so after the CCDM pass a
 final sweep ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
 every `VAR_TYPE_ECLIPSING` record not already flagged

@@ -14,6 +14,7 @@ import {
   normalizeGcvsName,
   parseGcvsNumber,
   classifyGcvsVarType,
+  isPlanetaryTransitOnly,
   VAR_TYPE_UNKNOWN,
   VAR_TYPE_PULSATING,
   VAR_TYPE_ECLIPSING,
@@ -694,6 +695,16 @@ describe('catalog-pure / classifyGcvsVarType', () => {
     // A transiting-planet host is not a stellar multiple: it must earn
     // no wings and no cosmetic-pulsation suppression as a "binary".
     expect(classifyGcvsVarType('EP')).toBe(VAR_TYPE_OTHER);
+  });
+
+  it('flags bare EP hosts as planetary-transit-only; keeps a superimposed pulsator', () => {
+    expect(isPlanetaryTransitOnly('EP')).toBe(true);
+    expect(isPlanetaryTransitOnly('EP:')).toBe(true);
+    // A real intrinsic pulsator superimposed keeps its ring/pulse.
+    expect(isPlanetaryTransitOnly('EP+DSCT')).toBe(false);
+    // Non-EP types are never dropped by this gate.
+    expect(isPlanetaryTransitOnly('EA')).toBe(false);
+    expect(isPlanetaryTransitOnly('M')).toBe(false);
   });
 
   it('classifies composite eclipsing-+-rotational/RS as eclipsing', () => {
