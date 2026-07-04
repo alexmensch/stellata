@@ -57,6 +57,7 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
+import { VirtualClock } from './solar-system/time';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
@@ -338,9 +339,7 @@ export class Stellata implements FrameAnchor {
   private observe!: ObserveTransition;
   private observeControls!: ObserveControls;
 
-  // null = "live" (Date.now() each call); a number = "pinned" by the
-  // time-scrubber. v1 never pins.
-  private pinnedT: number | null = null;
+  private clock = new VirtualClock();
 
   private focus!: FocusController;
   // Distance-vector destination — at most one of these is non-null at
@@ -877,19 +876,24 @@ export class Stellata implements FrameAnchor {
   getVectorTo(): number | null { return this.vectorTo; }
   getVectorToCloud(): number | null { return this.vectorToCloud; }
 
-  /** Wall-clock `t` (Unix-seconds) driving the solar-system layer.
-   *  Returns the pinned value if the time-scrubber epic has set one,
-   *  otherwise live `Date.now() / 1000`. Recomputed on every call —
-   *  callers that need a frame-stable value should snapshot at the
-   *  start of the frame. */
+  /** Virtual clock backing `getT()`; the debug time-scrubber drives it. */
+  get timeClock(): VirtualClock { return this.clock; }
+
+  /** Virtual-clock `t` (Unix-seconds) driving the solar-system layer.
+   *  Recomputed on every call — callers that need a frame-stable value
+   *  should snapshot at the start of the frame. */
   getT(): number {
-    return this.pinnedT ?? Date.now() / 1000;
+    return this.clock.getT();
   }
-  /** Pin `t` to a specific Unix-seconds value, or pass `null` to
-   *  return to live tracking. Wired for the time-scrubber epic
-   * ; v1 never calls this from the UI. */
+  /** Freeze `t` at a specific Unix-seconds value (URL-restore of a
+   *  scrubbed view), or pass `null` to return to live tracking. */
   setT(t: number | null): void {
-    this.pinnedT = t;
+    if (t === null) {
+      this.clock.reset();
+    } else {
+      this.clock.setRate(0);
+      this.clock.setTimeAbsolute(t);
+    }
     this.bus.emit('state');
   }
   getMonochrome(): boolean { return this.monochrome; }

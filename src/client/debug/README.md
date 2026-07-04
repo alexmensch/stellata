@@ -31,7 +31,7 @@ src/client/debug/
 The HUD is an opt-in dev tool, not a user feature. Activation paths:
 
 - **`debug.panel()`** in the dev console — opens the unified debug
-  panel; the Perf section is one of eight
+  panel; the Perf section is one of nine
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
   `mark`/`measure`/`frame` functions to real implementations).
@@ -247,7 +247,9 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with eight sections: Star disc (`star-tuning.ts`),
+collapsible host with nine sections: Time
+(`../solar-system/time-scrubber.ts` — virtual-clock transport controls),
+Star disc (`star-tuning.ts`),
 Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse

@@ -8,6 +8,7 @@ import { buildPinSection } from './pin-debug-hud';
 import { buildArrowSection } from './arrow-fade-debug-hud';
 import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
+import { buildTimeSection } from '../solar-system/time-scrubber';
 import {
   type DecodedView,
   type IdMaps,
@@ -69,6 +70,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     panel = built.element;
 
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
+      { title: 'Time',       storageKey: 'time',       build: () => buildTimeSection(stellata) },
       { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
       { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkywayLayer) },
       { title: 'Deep field', storageKey: 'deep-field', build: () => buildDeepFieldSection() },
