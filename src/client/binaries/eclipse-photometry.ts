@@ -13,15 +13,17 @@ import {
   evaluateOrbitRelationDeltaPc,
   type OrbitRelationCache,
 } from './orbit-relation-cache';
-import { R_SUN_PC } from '../util/astronomy-constants';
+import { AU_PC, R_SUN_PC } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
 import { VISIBILITY_HORIZON_PC, ECLIPSE_DIM_TAU_S } from './binary-tuning';
 import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
 
 export interface EclipsePhotometryFieldOptions {
   binaries: BinariesData;
-  /** Catalog-wide absolute ICRS positions. Source of each pair's baked
-   *  baseline offset and the Tier-1 tangent-basis anchor. */
+  /** Catalog-wide absolute ICRS positions. Read for the Tier-1
+   *  tangent-basis anchor (primary slot) only; the pair-relative offset
+   *  rides on `OrbitRelationCache.baseDiffPc` + ΔR(t), never a float32
+   *  slot subtraction. */
   absolutePositions: Float32Array;
   /** Per-instance local-frame star positions, read for the camera→
    *  primary line of sight only. The pair-RELATIVE geometry never
@@ -45,12 +47,6 @@ interface EclipseRelationCache {
   orbit: OrbitRelationCache;
   primaryIdx: number;
   secondaryIdx: number;
-  /** Baked catalog offset secondary − primary, pc. Float64 difference of
-   *  the float32 absolutes — small and exact; combined with ΔR(t) it
-   *  reproduces the RENDERED pair offset in every walk regime (barycentric
-   *  split, focal rebase, hierarchical anchor all preserve
-   *  sCoeff − pCoeff = 1). */
-  baseDiff: { x: number; y: number; z: number };
   rPriPc: number;
   rSecPc: number;
   /** Orbit-plane unit normal (ICRS), or null when degenerate. */
@@ -91,12 +87,6 @@ interface RelationEval {
   result: EclipseResult | null;
 }
 
-/** Samples per orbit when bounding the minimum rendered separation for
- *  the prefilter. */
-const MIN_SEP_SAMPLES = 32;
-/** Safety factor on the sampled minimum — the true minimum can fall
- *  between samples. */
-const MIN_SEP_SAFETY = 0.5;
 /** A slot whose dim has decayed above this snaps to exactly 1 and leaves
  *  the active set (the shader gate is `iEclipseDim < 1.0`). */
 const DIM_SETTLED = 0.999;
@@ -278,9 +268,9 @@ export class EclipsePhotometryField {
     SYSTEM_XYZ.y = abs[pBase + 1];
     SYSTEM_XYZ.z = abs[pBase + 2];
     const delta = evaluateOrbitRelationDeltaPc(rc.orbit, tJd, SYSTEM_XYZ);
-    const relX = rc.baseDiff.x + delta.x;
-    const relY = rc.baseDiff.y + delta.y;
-    const relZ = rc.baseDiff.z + delta.z;
+    const relX = rc.orbit.baseDiffPc.x + delta.x;
+    const relY = rc.orbit.baseDiffPc.y + delta.y;
+    const relZ = rc.orbit.baseDiffPc.z + delta.z;
 
     const result = eclipseDimFromOffsets(
       losX, losY, losZ,
@@ -300,12 +290,6 @@ export class EclipsePhotometryField {
     for (const orbit of orbitCaches) {
       const r = this.opts.binaries.relations[orbit.relationIdx];
       const pBase = r.primaryIdx * 3;
-      const sBase = r.secondaryIdx * 3;
-      const baseDiff = {
-        x: abs[sBase] - abs[pBase],
-        y: abs[sBase + 1] - abs[pBase + 1],
-        z: abs[sBase + 2] - abs[pBase + 2],
-      };
       const rPriPc = radSolar[r.primaryIdx] * R_SUN_PC;
       const rSecPc = radSolar[r.secondaryIdx] * R_SUN_PC;
       SYSTEM_XYZ.x = abs[pBase];
@@ -315,21 +299,10 @@ export class EclipsePhotometryField {
 
       // Minimum rendered pair separation over one orbit bounds the
       // prefilter: the widest LOS-vs-plane angle that can still eclipse
-      // is (rPri + rSec) / minSep. Sampled (not closed-form) because the
-      // rendered offset is baseDiff + ΔR(t), whose minimum can sit far
-      // below the orbit's periapsis when the baked baseline doesn't
-      // match R(baseline epoch).
-      let minSepSq = Infinity;
-      for (let k = 0; k < MIN_SEP_SAMPLES; k++) {
-        const tJd = orbit.elements.T + (orbit.elements.P * k) / MIN_SEP_SAMPLES;
-        const d = evaluateOrbitRelationDeltaPc(orbit, tJd, SYSTEM_XYZ);
-        const x = baseDiff.x + d.x;
-        const y = baseDiff.y + d.y;
-        const z = baseDiff.z + d.z;
-        const sq = x * x + y * y + z * z;
-        if (sq < minSepSq) minSepSq = sq;
-      }
-      const minSepPc = Math.sqrt(minSepSq) * MIN_SEP_SAFETY;
+      // is (rPri + rSec) / minSep. The rendered offset is baseDiffPc +
+      // ΔR(t) = R(t) exactly, so its minimum is closed-form periapsis
+      // a(1−e) — no sampling, no safety factor.
+      const minSepPc = orbit.elements.a * (1 - orbit.elements.e) * AU_PC;
       const discSumPc = rPriPc + rSecPc;
       const sinLimit = minSepPc > discSumPc
         ? Math.min(1, discSumPc / minSepPc)
@@ -339,7 +312,6 @@ export class EclipsePhotometryField {
         orbit,
         primaryIdx: r.primaryIdx,
         secondaryIdx: r.secondaryIdx,
-        baseDiff,
         rPriPc,
         rSecPc,
         normal,

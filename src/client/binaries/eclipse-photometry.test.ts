@@ -162,11 +162,12 @@ describe('EclipsePhotometryField.update — float32 position immunity', () => {
     });
     fx.physicalRadiusSolar.set([2.8, 2.6, 1]);
     const field = new EclipsePhotometryField(fx);
-    // k = 2..30: near k = 0 the collocated baking makes the rendered
-    // offset (R(t) − R(T)) genuinely smaller than the disc radii — a
-    // real overlap in the rendered model (the baked-baseline data bug,
-    // tracked separately), not float32 noise.
-    for (let k = 2; k <= 30; k++) {
+    // Full period: the rendered offset is baseDiffPc + ΔR = R(t), an
+    // 0.08 AU face-on circle in the sky-tangent plane at every phase —
+    // never displaced through the primary, so no phase overlaps the
+    // discs. (Pre-fix a zeroed collocated baseline let the offset dip
+    // toward zero near k = 0; that displaced-centre bug is gone.)
+    for (let k = 0; k <= 31; k++) {
       const jd = J2000_JD + (3.96 * k) / 32;
       const jitter = new THREE.Vector3(1e-5 * Math.sin(k), 1e-5 * Math.cos(k), 0);
       field.update(tForJd(jd), jitter, 6, k * 16);

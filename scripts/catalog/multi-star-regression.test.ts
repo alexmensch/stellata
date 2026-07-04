@@ -25,9 +25,15 @@ import {
   type BinariesData,
   type BinaryRelation,
 } from '../../src/client/binaries/binaries-loader';
-import { relationToElements } from '../../src/client/binaries/orbit-relation-cache';
+import * as THREE from 'three';
+import {
+  buildOrbitRelationCaches,
+  evaluateOrbitRelationDeltaPc,
+  relationToElements,
+} from '../../src/client/binaries/orbit-relation-cache';
 import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
-import { AU_PER_PC } from '../../src/client/util/astronomy-constants';
+import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
+import { AU_PC, AU_PER_PC } from '../../src/client/util/astronomy-constants';
 import { REPO_ROOT } from '../util/paths';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -68,6 +74,16 @@ const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 // the wrong star. Pinned exactly so new violations fail immediately;
 // the companion-promotion identifier fix drops this to 0.
 const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
+
+// Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
+// placement disagrees with the elements-alone R(epoch) by more than half
+// the semi-major axis. The runtime renders R(t) regardless of the baked
+// placement now, so this is a data-curation signal, not a render defect:
+// the tangent-only WDS bake can't carry R(epoch)'s radial term, so most
+// inclined pairs land here (plus quadrant-ambiguity cases like Algol).
+// Pinned so a NEW disagreement fails; the count ratchets DOWN as baked
+// placements are curated toward R(epoch).
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 541;
 
 // ---- Corpus row types ----------------------------------------------------
 
@@ -475,6 +491,129 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
       ).toBe(KNOWN_HIP_ROUNDTRIP_VIOLATIONS);
     });
   });
+
+  describe('runtime render geometry — elements-alone offset', () => {
+    it('every cached relation renders on its orbit: |baseDiffPc + ΔR(t)| ∈ [a(1−e), a(1+e)]·AU_PC', () => {
+      // The regression that would have caught the displaced-centre bug:
+      // sweep every relation the runtime caches from the shipped
+      // artifacts and confirm the rendered relative offset never leaves
+      // the orbit shell. baseDiffPc + ΔR = R(t) is an exact float64
+      // identity after the fix (projection is an isometry), so the bound
+      // holds to float64 epsilon regardless of the baked placement.
+      const abs = catalogAbsolutePositions(catalog);
+      const caches = buildOrbitRelationCaches(BINARIES!, abs);
+      expect(caches.length, 'expected cached Kepler relations from binaries.bin').toBeGreaterThan(0);
+      const PHASES = 48;
+      const REL_EPS = 1e-6;
+      const sys = { x: 0, y: 0, z: 0 };
+      let worst = 0;
+      let worstLabel = '';
+      for (const rc of caches) {
+        const r = BINARIES!.relations[rc.relationIdx];
+        const pBase = r.primaryIdx * 3;
+        sys.x = abs[pBase]; sys.y = abs[pBase + 1]; sys.z = abs[pBase + 2];
+        const lo = rc.elements.a * (1 - rc.elements.e) * AU_PC;
+        const hi = rc.elements.a * (1 + rc.elements.e) * AU_PC;
+        for (let k = 0; k < PHASES; k++) {
+          const tJd = rc.elements.T + (rc.elements.P * k) / PHASES;
+          const d = evaluateOrbitRelationDeltaPc(rc, tJd, sys);
+          const mag = Math.hypot(
+            rc.baseDiffPc.x + d.x, rc.baseDiffPc.y + d.y, rc.baseDiffPc.z + d.z,
+          );
+          const err = Math.max((lo - mag) / hi, (mag - hi) / hi);
+          if (err > worst) { worst = err; worstLabel = `secondaryIdx ${r.secondaryIdx}, phase ${k}`; }
+        }
+      }
+      expect(worst, `worst relative bound violation at ${worstLabel}`).toBeLessThan(REL_EPS);
+    });
+
+    it.each([{ label: 'focal = Aa (primary)', kind: 'primary' as const },
+             { label: 'focal = Ab (secondary)', kind: 'secondary' as const }])(
+      'Algol Aa,Ab walk stays on-orbit through a period ($label)',
+      ({ kind }) => {
+        // Full BinaryOrbitField walk against the real buffers with the
+        // floating origin parked on the primary (the focus regime — local
+        // slots sit near 0 so the pair offset reads at full float32
+        // precision). Focus exempts the LOD gates, so Kepler runs at every
+        // phase and the rendered separation must track the orbit.
+        const primary = lookupByHip(catalog, 14576);
+        const secondary = lookupByName(catalog, 'Algol Ab');
+        expect(primary, 'Algol Aa (HIP 14576) in catalog.bin').not.toBeNull();
+        expect(secondary, 'Algol Ab in catalog.bin').not.toBeNull();
+        if (!primary || !secondary) return;
+        const relation = findRelation(secondary.i);
+        expect(relation, 'Algol Aa,Ab relation in binaries.bin').not.toBeNull();
+        if (!relation) return;
+
+        const abs = catalogAbsolutePositions(catalog);
+        const local = new Float32Array(abs);
+        const suppress = new Float32Array(catalog.count);
+        const field = new BinaryOrbitField({
+          binaries: BINARIES!,
+          absolutePositions: abs,
+          absoluteMags: catalogAbsoluteMags(catalog),
+          localPositions: local,
+          compositeSuppress: suppress,
+          iPositionAttr: new THREE.InstancedBufferAttribute(local, 3),
+          iCompositeSuppressAttr: new THREE.InstancedBufferAttribute(suppress, 1),
+        });
+        field.recenter(new THREE.Vector3(primary.x, primary.y, primary.z));
+        const focalIdx = kind === 'primary' ? primary.i : secondary.i;
+        const camera = new THREE.Vector3(1e-4, 0, 0);
+        const pBase = relation.primaryIdx * 3;
+        const sBase = secondary.i * 3;
+        const lo = relation.aAU * (1 - relation.e);
+        const hi = relation.aAU * (1 + relation.e);
+        // float32 + the inner Aa1,Aa2 pair's ~0.03 AU wobble on the shared primary.
+        const TOL_AU = 0.05;
+        for (let k = 0; k < 48; k++) {
+          const tJd = relation.tJd + (relation.pDays * k) / 48;
+          field.update((tJd - 2440587.5) * 86400, camera, 15, 1080, 0.8, focalIdx);
+          const sepAu = Math.hypot(
+            local[sBase] - local[pBase],
+            local[sBase + 1] - local[pBase + 1],
+            local[sBase + 2] - local[pBase + 2],
+          ) / AU_PC;
+          expect(sepAu, `phase ${k}: rendered sep ${sepAu.toFixed(3)} AU outside [${lo.toFixed(3)}, ${hi.toFixed(3)}]`)
+            .toBeGreaterThanOrEqual(lo - TOL_AU);
+          expect(sepAu).toBeLessThanOrEqual(hi + TOL_AU);
+        }
+      },
+    );
+
+    it('WDS baked placement vs elements-alone R(epoch): disagreements stay at the known count (ratchet)', () => {
+      const abs = catalogAbsolutePositions(catalog);
+      const caches = buildOrbitRelationCaches(BINARIES!, abs);
+      const disagreeing = new Set<number>();
+      for (const rc of caches) {
+        if (rc.tier !== 1) continue;
+        const r = BINARIES!.relations[rc.relationIdx];
+        const pBase = r.primaryIdx * 3, sBase = r.secondaryIdx * 3;
+        const bx = abs[sBase] - abs[pBase];
+        const by = abs[sBase + 1] - abs[pBase + 1];
+        const bz = abs[sBase + 2] - abs[pBase + 2];
+        if (bx === 0 && by === 0 && bz === 0) continue; // collocated bake — no measured placement
+        const corr = Math.hypot(
+          rc.baseDiffPc.x - bx, rc.baseDiffPc.y - by, rc.baseDiffPc.z - bz,
+        );
+        if (corr > 0.5 * rc.elements.a * AU_PC) disagreeing.add(r.secondaryIdx);
+      }
+      // The two showcase pairs must surface: quadrant ambiguity (Algol Aa,Ab)
+      // and the tangent-only bake missing R(epoch)'s radial term (Eta Ori Aa,Ab).
+      const algolAb = lookupByName(catalog, 'Algol Ab');
+      const etaOriAb = lookupByName(catalog, 'Eta Ori Ab');
+      expect(algolAb, 'Algol Ab in catalog.bin').not.toBeNull();
+      expect(etaOriAb, 'Eta Ori Ab in catalog.bin').not.toBeNull();
+      expect(disagreeing.has((algolAb as CatalogRecord).i), 'Algol Aa,Ab expected in the disagreement set').toBe(true);
+      expect(disagreeing.has((etaOriAb as CatalogRecord).i), 'Eta Ori Aa,Ab expected in the disagreement set').toBe(true);
+      expect(
+        disagreeing.size,
+        `non-collocated Tier-1 pairs where |bakedDiff − R(epoch)| > 0.5·a. ` +
+        `Above the pin = a new disagreement (curate the baked placement or re-confirm the orbit); ` +
+        `below = placements curated toward R(epoch) — drop the pin to the new count.`,
+      ).toBe(KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS);
+    });
+  });
 });
 
 function buildFirstSeenHipIndex(): Map<number, number> {
@@ -483,4 +622,18 @@ function buildFirstSeenHipIndex(): Map<number, number> {
     if (r.hip !== null && !m.has(r.hip)) m.set(r.hip, r.i);
   }
   return m;
+}
+
+function catalogAbsolutePositions(cat: Catalog): Float32Array {
+  const abs = new Float32Array(cat.count * 3);
+  for (const r of cat.records()) {
+    abs[r.i * 3] = r.x; abs[r.i * 3 + 1] = r.y; abs[r.i * 3 + 2] = r.z;
+  }
+  return abs;
+}
+
+function catalogAbsoluteMags(cat: Catalog): Float32Array {
+  const mags = new Float32Array(cat.count);
+  for (const r of cat.records()) mags[r.i] = r.absmag;
+  return mags;
 }

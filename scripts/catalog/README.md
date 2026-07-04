@@ -491,12 +491,13 @@ Per-row gates and resolution:
   for that reason before the fix). Sub-resolution / unmeasured
   pairs (WDS ρ 0.000 or the −1 sentinel) have no static placement
   to bake: with a renderable orbit the secondary collocates
-  BIT-IDENTICALLY on the anchor — the zero baked diff is the
-  runtime's signal to render the offset as R(t) around the primary
-  (src/client/binaries/orbit-relation-cache.ts collocated-bake) —
-  and without one the row drops (droppedNoPosition): nothing would
-  ever separate the records and the collocated star double-counts
-  the blend photometry.
+  BIT-IDENTICALLY on the anchor — a placement choice for the LOD
+  fallback, not a runtime signal. The runtime renders the relative
+  offset as R(t) from the orbital elements alone regardless of the
+  baked placement (`src/client/binaries/orbit-relation-cache.ts`
+  `baseDiffPc`) — and without a placement the row drops
+  (droppedNoPosition): nothing would ever separate the records and
+  the collocated star double-counts the blend photometry.
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
   of A), position resolves in preference order: (1) the row's own
@@ -904,11 +905,18 @@ Three tiers, all snapshot-pinned:
   records, the multiples.tsv geometry columns, the binaries.bin
   Tier-1 record (flags, elements, stored sep/PA/epoch), and a Kepler
   propagation to each record's own `sep_pa_epoch_jd` through the same
-  pure path the runtime baseline cache uses. Also sweeps identifier
-  integrity: corpus-wide HIP distinctness, URL star-ref round-trips
-  (first-seen `hipToIndex` semantics matching `main.ts`), and a
-  pinned-count ratchet on promoted-companion HIP collisions. Column
-  contract + per-row tolerance discipline live in the TSV header.
+  pure path the runtime baseline cache uses. Also drives the runtime
+  render layer against the shipped artifacts: every cached relation's
+  offset `baseDiffPc + ΔR(t)` must stay on its orbit shell
+  `[a(1−e), a(1+e)]` (the headline sweep — would have caught the
+  displaced-centre bug), a full `BinaryOrbitField` walk of Algol Aa,Ab
+  in the focus regime, and a ratchet counting non-collocated Tier-1
+  pairs whose baked placement disagrees with elements-alone R(epoch)
+  by > 0.5·a (a data-curation signal, ratchets DOWN). Also sweeps
+  identifier integrity: corpus-wide HIP distinctness, URL star-ref
+  round-trips (first-seen `hipToIndex` semantics matching `main.ts`),
+  and a pinned-count ratchet on promoted-companion HIP collisions.
+  Column contract + per-row tolerance discipline live in the TSV header.
 - **Tier B — population statistics.**
   `scripts/catalog/build-counts.ts` (`compareBuildCounts`) + the two
   per-build snapshot JSONs gate every absolute count and rate the build

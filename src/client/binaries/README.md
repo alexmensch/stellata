@@ -82,26 +82,28 @@ the per-pair flags):
   `(north, east, radial) AU` at time t projects through the system's
   ICRS (α, δ) tangent basis (radial along the Sol→system direction) to
   ICRS Δxyz. R at the stored sep+PA epoch (`sep_pa_epoch_jd`; J2000
-  fallback when the record carries none) is cached per relation so each
-  frame is one Kepler solve + one subtract. The stored catalog
-  separation is the pair's configuration at that epoch (Gaia J2016 /
-  WDS `date_last`), so ΔR(t) cancels exactly there and current-date
-  sep/PA comes out right. Pure-visual ORB6 orbits carry a ±180°
-  ascending-node ambiguity — the radial component's SIGN (which member
-  is nearer at conjunction) follows the published node's convention,
-  not an observation.
+  fallback when the record carries none) is cached per relation both as
+  the ΔR baseline and — projected to a float64 ICRS pc vector — as
+  `baseDiffPc`, so each frame is one Kepler solve + one add. Pure-visual
+  ORB6 orbits carry a ±180° ascending-node ambiguity — the radial
+  component's SIGN (which member is nearer at conjunction) follows the
+  published node's convention, not an observation.
 
-  **Collocated-bake zero baseline.** Sub-resolution pairs (WDS ρ
-  0.000 / unmeasured) are baked by companion promotion bit-identical
-  onto the primary's xyz — there is no measured configuration to
-  reproduce at any epoch, and the float32 position quantum (~0.2 AU
-  at tens of pc) couldn't hold R(epoch) for a tight pair anyway.
-  `buildOrbitRelationCaches` detects the bit-identical bake and
-  zeroes the cached baseline, so the rendered offset reduces to R(t)
-  around the primary exactly. Subtracting R(epoch) against a zero
-  baked diff was the displaced-centre bug: the companion swept
-  THROUGH the primary once per period and exceeded apoapsis on the
-  far side (Alsephina Ab at 0.562 AU vs apoapsis 0.52 AU).
+  **Rendered relative offset = R(t), from the elements alone.** Both
+  consumers place the pair's relative offset at `baseDiffPc + ΔR(t)` =
+  `R(epoch) + (R(t) − R(epoch))` = `R(t)` exactly. It is never a
+  subtraction of two float32 catalog slots: that difference carries any
+  WDS/Kepler placement disagreement — interferometric quadrant
+  ambiguity, or the tangent-only WDS bake's missing radial term — into
+  the rendered orbit centre, and float32-quantises to grid noise for
+  tight pairs. That was the displaced-centre bug: the companion orbited
+  an empty point and could sweep through the primary once per period
+  (Alsephina Ab at 0.562 AU vs apoapsis 0.52 AU). The baked catalog
+  position is now purely a static record + the LOD fallback (§
+  Walk-active LOD). Sub-resolution pairs (WDS ρ 0.000 / unmeasured)
+  collocate bit-identically on the primary — a placement choice for the
+  fallback, not a runtime signal; they render R(t) around the primary
+  like every other pair, no special baseline path.
 - **Tier 2** (`has_orbit & !has_inclination`) — Kepler eval with the
   orbit normal forced to the galactic Z axis. The in-plane (x, y) AU
   position rides directly into the galactic XY basis, which
@@ -170,10 +172,12 @@ Beyond that, the screen-separation gate fires before Kepler runs:
    sum brightness correctly under AdditiveBlending.
 
    The gate still writes the secondary's slot — it collapses onto the
-   primary's CURRENT position plus the baked baseline offset
-   (`local[pBase] + (abs[sBase] − abs[pBase])`), i.e. the active
-   barycentric formula MINUS the sub-pixel `ΔR`. This matters for a
-   **hierarchical inner pair**: the shared primary slot already carries
+   primary's CURRENT position plus the **baked** static-fallback offset
+   (`local[pBase] + (abs[sBase] − abs[pBase])`), dropping the orbital
+   `ΔR`. (Unlike the active walk, which anchors on `baseDiffPc`; the two
+   differ by less than the pixel the gate just deemed sub-pixel.) This
+   matters for a **hierarchical inner pair**: the shared primary slot
+   already carries
    the parent pair's `−q_outer·ΔR_outer`, so the inner secondary must
    inherit it. Leaving the secondary at its raw reset baseline (as the
    gate once did) detached it from the parent-perturbed primary by
@@ -201,19 +205,24 @@ topological order. Each relation reads the primary's CURRENT
 `localPositions` slot as the anchor — for a hierarchical inner pair
 that anchor already carries the parent pair's `−q·ΔR_outer`
 perturbation. The secondary slot then takes
-`local[pBase] + (abs[sBase] − abs[pBase]) + ΔR` so the secondary
-inherits the SAME parent perturbation the primary carries; the inner
-pair's relative offset stays clean of the parent. (`sCoeff − pCoeff =
+`local[pBase] + baseDiffPc + ΔR` so the secondary inherits the SAME
+parent perturbation the primary carries; the inner pair's relative
+offset stays clean of the parent. (`sCoeff − pCoeff =
 1` — one formula, one regime — the barycentric split, with no focal
 special-case.)
 
 `focalPerturbationInto` reconstructs a hierarchical focal's float64
 displacement the same way: it walks the focal's chain (the writing
 relation plus its `parentRelation` ancestors) in topological order,
-accumulating `−q·ΔR` onto each primary slot and assigning `primary + ΔR`
-to each secondary. For Algol's Aa2 that yields
-`−q_outer·ΔR_outer + (1−q_inner)·ΔR_inner` — the same value the walk
-writes into the buffer, so the ride tracks the true perturbed position.
+accumulating `−q·ΔR` onto each primary slot and assigning
+`primary + ΔR + (baseDiffPc − bakedDiff)` to each secondary. The trailing
+`corr = baseDiffPc − bakedDiff` is the elements-alone anchor shifting the
+secondary off its baked placement — for Algol's collocated Aa2 that is
+the full `baseDiffPc_inner`. It is the same value the walk writes into
+the buffer (the walk anchors the secondary on `baseDiffPc` too), so the
+ride tracks the true perturbed position; without `corr` the ride would
+leave `controls.target` off a focused secondary of a mismatched pair by
+that constant, silently disengaging the pin (§ focus/README).
 
 ## Eclipse photometry
 
@@ -223,9 +232,9 @@ flux whenever discs overlap from the camera's viewpoint. The math
 is camera-anywhere by construction — EA/EB/EW labels are Earth's-
 viewpoint facts; any system can eclipse from any viewpoint when its
 geometry aligns. Each pair's offset is evaluated per frame in
-**float64** as `baseDiff + ΔR(t)` (the baked catalog offset plus the
-orbital delta — exactly the offset the position walk renders: the
-barycentric split and hierarchical anchor both preserve
+**float64** as `baseDiffPc + ΔR(t) = R(t)` (the elements-alone epoch
+baseline plus the orbital delta — exactly the offset the position walk
+renders: the barycentric split and hierarchical anchor both preserve
 `sCoeff − pCoeff = 1`). The pure helper decomposes that
 offset against the camera→primary line of sight, computes each
 disc's angular radius, and runs the closed-form circle-circle lens
@@ -246,10 +255,8 @@ remains when the pair is sub-pixel. Instead each relation carries a
 the orbit plane, so lines of sight steeper against that plane than
 `(r_pri + r_sec) / min_rendered_separation` can never eclipse and
 skip the Kepler solve (the vast majority of (camera, pair)
-combinations each frame). The min separation is sampled over one
-period at cache build because the rendered offset's minimum can sit
-far below periapsis when the baked baseline doesn't match
-R(baseline epoch).
+combinations each frame). The rendered offset is `R(t)` exactly, so its
+minimum over a period is closed-form periapsis `a(1−e)` — no sampling.
 
 Surface-brightness ratios stay implicit: each star is its own
 instance with its own absmag, and dimming the back's flux by the

@@ -2,12 +2,14 @@
 // (orbit perturbation + eclipse photometry). See
 // src/client/binaries/README.md § Tier mapping.
 
-import { J2000_JD } from '../util/astronomy-constants';
+import { AU_PC, J2000_JD } from '../util/astronomy-constants';
 import {
   evaluateOrbitSkyAU,
   evaluateOrbitInPlaneAU,
   evaluateOrbitDeltaPcTier1,
   evaluateOrbitDeltaPcTier2,
+  projectSkyToICRS,
+  projectGalacticPlaneToICRS,
   type OrbitalElements,
   type Vec3,
 } from './binary-orbit-pure';
@@ -31,12 +33,17 @@ export interface OrbitRelationCache {
   /** Tier-1 R(baseline) cached so per-frame eval is a single Kepler
    *  solve (now) plus a subtract. Baseline epoch = sepPaEpochJd — the
    *  epoch the stored catalog separation was measured at, NOT J2000 —
-   *  falling back to J2000 when the record carries none. Zero for
-   *  collocated-bake pairs (see buildOrbitRelationCaches). */
+   *  falling back to J2000 when the record carries none. */
   refSkyAU: { northAU: number; eastAU: number; radialAU: number } | null;
-  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. Zero
-   *  for collocated-bake pairs. */
+  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. */
   refInPlaneAU: { xAU: number; yAU: number } | null;
+  /** R(baseline) as a float64 ICRS pc vector — the epoch relative offset
+   *  the consumers add ΔR(t) to, giving rendered rel = R(t) exactly. This
+   *  is the elements-alone geometry seam: it replaces subtracting two
+   *  float32 catalog positions (which quantises to grid noise for tight
+   *  pairs and carries any WDS/Kepler placement disagreement into the
+   *  rendered orbit centre). */
+  baseDiffPc: Vec3;
   /** Peak relative-separation envelope, AU. a · (1 + e). Used by the
    *  screen-separation LOD as the worst-case sub-pixel test. */
   peakSepAU: number;
@@ -89,35 +96,34 @@ export function buildOrbitRelationCaches(
     const baselineJd = Number.isFinite(r.sepPaEpochJd)
       ? r.sepPaEpochJd
       : J2000_JD;
-    // Collocated bake: companion promotion writes sub-resolution
-    // secondaries (WDS rho 0.000 / unmeasured) bit-identical onto the
-    // primary's xyz — there is no measured configuration to reproduce
-    // at any epoch, and the float32 position quantum (~0.2 AU at tens
-    // of pc) couldn't hold R(epoch) for a tight pair anyway. Zeroing
-    // the baseline reduces the rendered offset baseDiff + ΔR to R(t)
-    // around the primary; subtracting R(epoch) would displace the
-    // orbit's centre and sweep the companion through the primary once
-    // per period.
     const pBase = r.primaryIdx * 3;
-    const sBase = r.secondaryIdx * 3;
-    const collocatedBake =
-      absolutePositions[pBase] === absolutePositions[sBase]
-      && absolutePositions[pBase + 1] === absolutePositions[sBase + 1]
-      && absolutePositions[pBase + 2] === absolutePositions[sBase + 2];
+    const refSkyAU = tier === 1 ? evaluateOrbitSkyAU(elements, baselineJd) : null;
+    const refInPlaneAU = tier === 2 ? evaluateOrbitInPlaneAU(elements, baselineJd) : null;
+    // R(baseline) as an ICRS pc vector. The primary's float32 catalog xyz
+    // is a tangent-basis anchor only (same anchor evaluateDelta uses per
+    // frame), so a float32 read here is fine; the RELATIVE geometry rides
+    // entirely on the elements. Adding ΔR(t) = R(t) − R(baseline) gives
+    // rendered rel = R(t) exactly for every pair — the sub-resolution
+    // collocated case included, no special path.
+    const baseDiffPc: Vec3 = tier === 1
+      ? projectSkyToICRS(
+          {
+            x: absolutePositions[pBase],
+            y: absolutePositions[pBase + 1],
+            z: absolutePositions[pBase + 2],
+          },
+          refSkyAU!.northAU * AU_PC,
+          refSkyAU!.eastAU * AU_PC,
+          refSkyAU!.radialAU * AU_PC,
+        )
+      : projectGalacticPlaneToICRS(refInPlaneAU!.xAU * AU_PC, refInPlaneAU!.yAU * AU_PC);
     out.push({
       relationIdx: i,
       tier,
       elements,
-      refSkyAU: tier === 1
-        ? (collocatedBake
-            ? { northAU: 0, eastAU: 0, radialAU: 0 }
-            : evaluateOrbitSkyAU(elements, baselineJd))
-        : null,
-      refInPlaneAU: tier === 2
-        ? (collocatedBake
-            ? { xAU: 0, yAU: 0 }
-            : evaluateOrbitInPlaneAU(elements, baselineJd))
-        : null,
+      refSkyAU,
+      refInPlaneAU,
+      baseDiffPc,
       peakSepAU: elements.a * (1 + elements.e),
     });
   }
