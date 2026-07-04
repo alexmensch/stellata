@@ -10,6 +10,7 @@ import type { ObserveControls } from './observe-controls';
 import {
   type ArrivalState,
   newArrival,
+  shiftArrivalWaypoints,
   tickArrival,
 } from '../arrival/camera-motion';
 import { OBSERVE_TRANSITION_MS } from '../timing';
@@ -33,6 +34,12 @@ export interface ObserveFocusOps {
    *  toPos (a backward pull-out along the camera's current forward
    *  direction, distance = parkDist). */
   parkDistForStar(idx: number): number;
+  /** Focal star's LIVE local position (catalog baseline + orbital
+   *  perturbation) written into `out`; false when no star is focused.
+   *  OBSERVE parks the camera here, not at the local origin, so an
+   *  orbiting focal star stays centred on entry and the pin re-engages
+   *  on exit. */
+  focalLocalPositionInto(out: THREE.Vector3): boolean;
   /** True while ANY camera-driving animation is in flight (warp, aim,
    *  focus-lerp, or this controller's own state via `isAnyActive()`).
    *  setMode bails on busy so the user can't re-trigger mid-transition. */
@@ -164,11 +171,18 @@ export class ObserveTransition {
       this.deps.focus.setVectorToCloud(null);
       this.deps.setCameraModeValue('observe');
       this.deps.controls.enabled = false;
+      // Park pose: the focal star's LIVE local position (baseline +
+      // orbital perturbation), not the local origin — an orbiting focal
+      // sits at its perturbed position, and standing at the origin would
+      // leave the camera off the star. Falls back to the origin when the
+      // star has no perturbation.
+      const parkPos = new THREE.Vector3();
+      this.deps.focus.focalLocalPositionInto(parkPos);
       if (opts.animate === false) {
         // Snap. Camera quaternion is preserved; only its position moves
-        // to the focal star's local origin. Hide the focal star here
-        // since there's no transition to defer to.
-        this.deps.camera.position.set(0, 0, 0);
+        // to the focal star. Hide the focal star here since there's no
+        // transition to defer to.
+        this.deps.camera.position.copy(parkPos);
         this.deps.uHideFocusIdxRef.value = focusedStar;
         this.deps.observeControls.enable();
       } else {
@@ -180,7 +194,7 @@ export class ObserveTransition {
           startTimeMs: performance.now(),
           durationMs: OBSERVE_TRANSITION_MS,
           fromPos: this.deps.camera.position.clone(),
-          toPos: new THREE.Vector3(0, 0, 0),
+          toPos: parkPos,
           kind: 'enter',
         };
       }
@@ -230,18 +244,22 @@ export class ObserveTransition {
       this.state = null;
       if (opts.clearFocusOnExit) this.deps.focus.setFocus(null);
     } else {
-      // Pull back along the camera's current view direction so whatever
-      // the user was just looking at stays roughly forward after exit.
-      // Distance = the focal star's effective minDistance, so orbit
-      // picks up exactly where it would on a fresh focus.
+      // Pull back from the parked pose along the camera's current view
+      // direction so whatever the user was just looking at stays forward
+      // after exit. Distance = the focal star's effective minDistance, so
+      // orbit picks up exactly where it would on a fresh focus. fromPos is
+      // the focal star's live position (the observe park pose), so
+      // toPos = fromPos − forward·minDist keeps the star at orbit distance
+      // and the exit finish's controls.target = fromPos re-engages the pin.
       const forward = new THREE.Vector3(0, 0, -1)
         .applyQuaternion(this.deps.camera.quaternion);
       const minDist = this.deps.focus.parkDistForStar(focusedStar);
+      const fromPos = this.deps.camera.position.clone();
       this.state = {
         startTimeMs: performance.now(),
         durationMs: OBSERVE_TRANSITION_MS,
-        fromPos: this.deps.camera.position.clone(),
-        toPos: forward.multiplyScalar(-minDist),
+        fromPos,
+        toPos: fromPos.clone().addScaledVector(forward, -minDist),
         kind: 'exit',
         clearFocusOnExit: opts.clearFocusOnExit,
       };
@@ -310,6 +328,20 @@ export class ObserveTransition {
     if (this.state?.kind === 'unfocus') {
       this.state = null;
     }
+  }
+
+  /** Ride the in-flight transition's cached waypoints with the focal
+   *  star's per-frame orbital drift (called by the integration shell's
+   *  focal-frame ride). No-op when no transition is active. Keeps an
+   *  enter/exit glide — and the unfocus arrival — locked to the star as
+   *  it moves; the drift over a ~1.8 s transition is sub-nano-AU at
+   *  real-time rates but the coupling stays correct under time-warp. */
+  translateFocusFrame(delta: Readonly<THREE.Vector3>): void {
+    const s = this.state;
+    if (!s) return;
+    s.fromPos.add(delta);
+    s.toPos.add(delta);
+    if (s.arrival) shiftArrivalWaypoints(s.arrival, -delta.x, -delta.y, -delta.z);
   }
 
   /** Unconditional slot clear. Used by Stellata.setFocus's

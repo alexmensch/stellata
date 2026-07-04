@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { type DebugSection, buildDiagnosticReadout } from './debug-panel';
 
@@ -33,6 +34,7 @@ function emptyLatch(): Latch {
 export function buildPinSection(stellata: Stellata): DebugSection {
   const latch = emptyLatch();
   let visible = true;
+  const engageScratch = new THREE.Vector3();
 
   const { root, body } = buildDiagnosticReadout({
     onResetLatches: () => { Object.assign(latch, emptyLatch()); },
@@ -50,6 +52,12 @@ export function buildPinSection(stellata: Stellata): DebugSection {
     const distCam = Math.hypot(c.x - t.x, c.y - t.y, c.z - t.z);
     const tLen = Math.hypot(t.x, t.y, t.z);
     const pinNow = stellata.isPinEngaged();
+    // Pin engages on target ≈ focal's LIVE local position (baseline +
+    // orbital perturbation), not target ≈ origin — a binary focal drifts.
+    const focal = stellata.getFocusedStar();
+    const engageDistSq = focal !== null
+      ? t.distanceToSquared(stellata.starLocalPositionInto(focal, engageScratch))
+      : t.lengthSq();
 
     // Latches keep updating regardless of visibility — the user's
     // interaction may have spanned a collapse and we still want the
@@ -82,7 +90,7 @@ export function buildPinSection(stellata: Stellata): DebugSection {
       `warp:${stellata.getWarpActive()}  aim:${stellata.isAimActive()}\n` +
       `pin: ${pinNow ? 'YES' : 'NO'}  flips:${latch.pinFlips}  off-frames:${latch.pinOffFrames}\n` +
       `\n` +
-      `target.lengthSq: ${fmt(t.lengthSq())} (engage <${stellata.getPinEngageThresholdSq()})\n` +
+      `target↔focal²: ${fmt(engageDistSq)} (engage <${stellata.getPinEngageThresholdSq()})\n` +
       `target.len now: ${fmt(tLen)}  max: ${fmt(latch.tgtLenMax)}\n` +
       `target.x now: ${fmt(t.x)}  range: [${fmt(latch.tgtMinX)}, ${fmt(latch.tgtMaxX)}]\n` +
       `target.y now: ${fmt(t.y)}  range: [${fmt(latch.tgtMinY)}, ${fmt(latch.tgtMaxY)}]\n` +

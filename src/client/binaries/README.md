@@ -117,21 +117,31 @@ and secondary about the system barycentre — primary moves by
 `−q·ΔR(t)`, secondary by `+(1−q)·ΔR(t)`, where q = M_s/(M_p + M_s) is
 the mass-fraction stored on each record.
 
-### Focal-star rebase
+### Focal-frame ride (no rebase)
 
-When the focal star is a member of the pair (primary or secondary),
-the split rebases so the focal stays at the local origin and the
-companion carries the FULL relative motion `ΔR(t)`. The disc shader's
-`uPinFocusToCenter` pins the focused instance to NDC (0,0)
-regardless of `iPosition`; without the rebase, `_localPositions[focal]`
-drifts to a non-zero perturbation while the GPU keeps the disc at
-screen centre, and every CPU consumer (focus ring, distance vector,
-HUD shafts, hover picker) projects to a point separated from where
-the disc actually renders. Coefficients applied in the walk loop:
+The walk applies the barycentric split in EVERY regime — there is no
+focal rebase. Focusing a pair member writes byte-identical positions to
+being unfocused, so focus→unfocus is a pure state change with no
+position discontinuity. Instead of rebasing the focal to the local
+origin to match the disc shader's `uPinFocusToCenter`, the **camera
+rides the focal star's perturbed position**: the integration shell
+(`stellata.ts`, `applyFocalFrameRide`) translates `camera.position` +
+`controls.target` (and any in-flight camera-transition pose caches) by
+the focal's per-frame orbital drift, so `controls.target` stays glued to
+the star and `lookAt(target) == star` keeps the pin substitution valid.
 
-- focal = primary: `pCoeff = 0`, `sCoeff = 1`.
-- focal = secondary: `pCoeff = -1`, `sCoeff = 0`.
-- focal not in pair: `pCoeff = -q`, `sCoeff = 1-q` (barycentric).
+`focalPerturbationInto(focalIdx, t, out)` supplies that drift in
+**float64**: it replays the focal's slot-chain (§ Walk-active LOD) in
+double precision and returns the focal's total displacement from its
+catalog baseline — matching the walk's float32-written slot within the
+position quantum, continuous in `t`. The shell reads it before the walk
+perturbs the buffer (e.g. at focus entry) to snap `controls.target` onto
+the star's live position; a per-frame delta then drives the ride. CPU
+consumers (focus ring, distance vector, HUD shafts, hover picker) read
+the perturbed `_localPositions` and project through the same
+`lookAt(target)` camera, so they land on the disc without any rebase.
+The ride is skipped during warp (the warp owns the camera and tracks the
+live buffer itself).
 
 ## Walk-active LOD
 
@@ -155,13 +165,30 @@ Beyond that, the screen-separation gate fires before Kepler runs:
    pass (mode 0) still runs so the two near-coincident point sources
    sum brightness correctly under AdditiveBlending.
 
-   Relations whose focal star is a pair member are EXEMPT from this
-   gate: the focal rebase puts the full relative motion on the visible
-   partner, so ΔR drives an on-screen position rather than a
-   sub-pixel wiggle — the hard switch step-jumped the partner to the
-   baked baseline at a per-system camera distance on zoom-out (the
-   threshold scales with peak separation: ~75 AU for Algol's tight
-   pair, ~800 AU for Capella's). One relation's Kepler solve is cheap.
+   The gate still writes the secondary's slot — it collapses onto the
+   primary's CURRENT position plus the baked baseline offset
+   (`local[pBase] + (abs[sBase] − abs[pBase])`), i.e. the active
+   barycentric formula MINUS the sub-pixel `ΔR`. This matters for a
+   **hierarchical inner pair**: the shared primary slot already carries
+   the parent pair's `−q_outer·ΔR_outer`, so the inner secondary must
+   inherit it. Leaving the secondary at its raw reset baseline (as the
+   gate once did) detached it from the parent-perturbed primary by
+   `q_outer·ΔR_outer` — an AU-scale, super-pixel snap when the tight
+   inner pair crossed the gate on zoom-out (Algol Aa2 at ~60-75 AU). A
+   top-level pair carries no parent perturbation, so the collapse
+   reproduces its reset baseline exactly (no behaviour change).
+
+   Relations on the **focal star's slot-chain** are EXEMPT from ALL
+   THREE gates (horizon, magnitude, sub-pixel). The chain is every
+   relation that writes the focal's slot — focal as primary or secondary
+   — plus their `parentRelation` ancestors (precomputed when `focalIdx`
+   changes). Their ΔR feeds the focal-frame ride, so it must stay
+   continuous in `t`: a gate firing mid-focus would snap the focal to its
+   baseline and jolt the camera (the old hard switch step-jumped the
+   partner at a per-system camera distance on zoom-out — ~75 AU for
+   Algol's tight pair, ~800 AU for Capella's). A ≤3-relation chain's
+   Kepler solves are cheap. Non-chain relations gate freely — they can't
+   touch the focal's slot.
 
 ## Hierarchical walk
 
@@ -173,19 +200,16 @@ perturbation. The secondary slot then takes
 `local[pBase] + (abs[sBase] − abs[pBase]) + ΔR` so the secondary
 inherits the SAME parent perturbation the primary carries; the inner
 pair's relative offset stays clean of the parent. (`sCoeff − pCoeff =
-1` in every regime — focal-pin or barycentric split — so a single
-formula covers both.)
+1` — one formula, one regime — the barycentric split, with no focal
+special-case.)
 
-When the focal star IS the inner-pair secondary (focal=sIdx), the
-walk uses the absolute baseline instead of the current local[pBase]
-so the focal-pin re-centres on the inner pair's orbital frame and
-absorbs the parent's barycentric shift. The inner pair physically
-moves rigidly under the outer barycentre, and pinning on the inner
-secondary reflects that: from Aa2's viewpoint, Aa1 sits at −ΔR_inner
-regardless of outer phase. Without this branch the parent's
-perturbation on Aa1 would leak into the displacement as a
-parent-period oscillation of ~q_outer·a_outer in magnitude (~1 AU for
-Algol's Aa↔Ab; 18× the inner-pair semi-major).
+`focalPerturbationInto` reconstructs a hierarchical focal's float64
+displacement the same way: it walks the focal's chain (the writing
+relation plus its `parentRelation` ancestors) in topological order,
+accumulating `−q·ΔR` onto each primary slot and assigning `primary + ΔR`
+to each secondary. For Algol's Aa2 that yields
+`−q_outer·ΔR_outer + (1−q_inner)·ΔR_inner` — the same value the walk
+writes into the buffer, so the ride tracks the true perturbed position.
 
 ## Eclipse photometry
 
@@ -196,9 +220,9 @@ is camera-anywhere by construction — EA/EB/EW labels are Earth's-
 viewpoint facts; any system can eclipse from any viewpoint when its
 geometry aligns. Each pair's offset is evaluated per frame in
 **float64** as `baseDiff + ΔR(t)` (the baked catalog offset plus the
-orbital delta — exactly the offset the position walk renders, in
-every regime: barycentric split, focal rebase, hierarchical anchor
-all preserve `sCoeff − pCoeff = 1`). The pure helper decomposes that
+orbital delta — exactly the offset the position walk renders: the
+barycentric split and hierarchical anchor both preserve
+`sCoeff − pCoeff = 1`). The pure helper decomposes that
 offset against the camera→primary line of sight, computes each
 disc's angular radius, and runs the closed-form circle-circle lens
 area; the dim is `1 − occluded_area / back_disc_area`.

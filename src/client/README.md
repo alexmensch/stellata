@@ -94,13 +94,23 @@ the currently focused star.
   `FocusController.recenterFocusToStar` (focus mutations) and
   `WarpController.tryMidFlyRecentre` (mid-flight pivot onto the
   destination).
-- `FocusController.setFocus(idx)` calls `recenterOrigin` on focus.
-  **Unfocus does *not* recenter** — `worldOffset` stays at the former
-  focal object so camera/target/iPosition all remain in their
-  float32-clean local frame. Recentering on unfocus used to cause a
-  visible jump (the `idx===null` branch shifted `target` by the focal
-  star's full world position, breaking the pin invariant below and
-  re-introducing cancellation in the projection chain).
+- `FocusController.setFocus(idx)` calls `recenterOrigin` on focus, then
+  snaps `controls.target` onto the focal star's **live** local position
+  (catalog baseline + orbital perturbation), not the bare local origin —
+  a binary member sits at its perturbed position. For a non-orbiting star
+  that live position IS the local origin. **Unfocus does *not* recenter**
+  — `worldOffset` stays at the former focal object so
+  camera/target/iPosition all remain in their float32-clean local frame.
+  Recentering on unfocus used to cause a visible jump (the `idx===null`
+  branch shifted `target` by the focal star's full world position,
+  breaking the pin invariant below and re-introducing cancellation in the
+  projection chain).
+- **Focal-frame ride.** A focused binary member drifts along its orbit
+  each frame; the shell translates `camera.position` + `controls.target`
+  (and in-flight camera-transition pose caches) by that per-frame drift
+  so the star stays under the camera and the pin stays engaged. Focus and
+  unfocus of a pair member therefore cause no position discontinuity —
+  see `binaries/README.md` § Focal-frame ride.
 - **Default-load** (a7d.2.8) auto-engages `setFocus(catalog.solIndex)`
   before the first frame so URL-less loads start with the pin engaged
   and the per-Sol orbit floor in effect, matching every other entry

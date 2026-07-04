@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
-import { type BinariesData, type BinaryRelation } from './binaries-loader';
+import { NO_PARENT, type BinariesData, type BinaryRelation } from './binaries-loader';
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
@@ -42,10 +42,23 @@ export interface BinaryOrbitFieldOptions {
 const DELTA_OUT: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 const SYSTEM_XYZ: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 
+interface SlotPert { x: number; y: number; z: number }
+
 export class BinaryOrbitField {
   private opts: BinaryOrbitFieldOptions;
   private worldOffset = new THREE.Vector3();
   private relations: OrbitRelationCache[] = [];
+
+  // Relations (by BinariesData.relations index) on the current focal
+  // star's slot-chain — every relation that writes the focal's slot
+  // (focal as primary or secondary) plus their parentRelation ancestors.
+  // Rebuilt only when the focal index changes. Members bypass all LOD
+  // gates so the focal-frame ride reads a continuous perturbation.
+  private focalChainRelIdx = new Set<number>();
+  private focalChainIdx: number | null = null;
+  // Per-slot float64 perturbation accumulators, reused by
+  // focalPerturbationInto across frames (cleared per call).
+  private slotPert = new Map<number, SlotPert>();
 
   constructor(opts: BinaryOrbitFieldOptions) {
     this.opts = opts;
@@ -93,6 +106,7 @@ export class BinaryOrbitField {
     focalIdx: number | null = null,
   ): number {
     const tJd = tToJDE(t);
+    this.ensureFocalChain(focalIdx);
     const pxPerRad = viewportPx / Math.max(fovYRad, 1e-9);
     const wox = this.worldOffset.x;
     const woy = this.worldOffset.y;
@@ -142,78 +156,64 @@ export class BinaryOrbitField {
       const aPy = local[pBase + 1];
       const aPz = local[pBase + 2];
 
-      // Primary's camera distance — magnitude + horizon filters share it.
-      const dx = aPx - cameraPos.x;
-      const dy = aPy - cameraPos.y;
-      const dz = aPz - cameraPos.z;
-      const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      if (dCamPc > VISIBILITY_HORIZON_PC) continue;
-      const appMag = apparentMagnitude(absMags[pIdx], dCamPc);
-      if (appMag > maxAppMag + 0.5) continue;
-
-      // Peak angular separation envelope. AU / pc converts to arcsec
-      // because 1 AU subtends 1″ at 1 pc by definition.
-      const peakArcsec = rc.peakSepAU / Math.max(dCamPc, 1e-30);
-      const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
-      activeCount++;
-      // Focal-member exemption: when the focal star is in this pair,
-      // the focal rebase puts the FULL relative motion on the visible
-      // partner, so ΔR drives an on-screen position, not a sub-pixel
-      // wiggle — hard-switching Kepler off at the threshold step-jumps
-      // the partner to the baked baseline on zoom-out. One relation's
-      // Kepler solve is cheap; keep it live while focused.
-      const focalInPair = focalIdx === pIdx || focalIdx === sIdx;
-      if (peakPx < SUB_PIXEL_THRESHOLD_PX && !focalInPair) {
-        // Composite suppression: skip Kepler, mark the secondary so the
-        // close-range + depth-mask passes drop its quad.
-        suppress[sIdx] = 1;
-        continue;
+      // Relations on the focal star's slot-chain bypass all three LOD
+      // gates (horizon, magnitude, sub-pixel). Their ΔR feeds the
+      // focal-frame ride, which the camera tracks per frame; a gate
+      // firing mid-focus would snap the focal to its baseline and jolt
+      // the camera. Non-chain relations gate freely — they cannot touch
+      // the focal's slot.
+      const onFocalChain = focalIdx !== null && this.focalChainRelIdx.has(rc.relationIdx);
+      if (!onFocalChain) {
+        // Primary's camera distance — magnitude + horizon filters share it.
+        const dx = aPx - cameraPos.x;
+        const dy = aPy - cameraPos.y;
+        const dz = aPz - cameraPos.z;
+        const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dCamPc > VISIBILITY_HORIZON_PC) continue;
+        const appMag = apparentMagnitude(absMags[pIdx], dCamPc);
+        if (appMag > maxAppMag + 0.5) continue;
+        activeCount++;
+        // Peak angular separation envelope. AU / pc converts to arcsec
+        // because 1 AU subtends 1″ at 1 pc by definition.
+        const peakArcsec = rc.peakSepAU / Math.max(dCamPc, 1e-30);
+        const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
+        if (peakPx < SUB_PIXEL_THRESHOLD_PX) {
+          // Composite suppression: skip Kepler, mark the secondary so the
+          // close-range + depth-mask passes drop its quad. Still collapse it
+          // onto the primary's CURRENT slot + baked baseline offset (drop
+          // only the sub-pixel ΔR) — a hierarchical inner secondary must
+          // inherit the parent perturbation its primary carries, which the
+          // reset-loop baseline does not. See README § Walk-active LOD.
+          suppress[sIdx] = 1;
+          local[sBase + 0] = aPx + (abs[sBase + 0] - abs[pBase + 0]);
+          local[sBase + 1] = aPy + (abs[sBase + 1] - abs[pBase + 1]);
+          local[sBase + 2] = aPz + (abs[sBase + 2] - abs[pBase + 2]);
+          continue;
+        }
+      } else {
+        activeCount++;
       }
 
-      // Evaluate ΔR(t) for this relation per tier and apply.
+      // Barycentric split about the system barycentre — the ONLY regime.
+      // Primary moves by −q·ΔR; the secondary tracks the primary's
+      // resulting position plus the baseline separation plus the full ΔR
+      // (sCoeff − pCoeff = 1). Hierarchical inner pairs propagate cleanly:
+      // aPx carries the parent's perturbation, so both inner members
+      // inherit it while the inner pair's relative offset stays clean.
+      // When the focal is a pair member the camera rides its perturbed
+      // position (see focalPerturbationInto + the ride in stellata.ts),
+      // so there is no rebase — unfocus is a pure state change.
       this.evaluateDelta(rc, r, tJd);
       const dxDelta = DELTA_OUT.x;
       const dyDelta = DELTA_OUT.y;
       const dzDelta = DELTA_OUT.z;
-      // Focus-aware rebase: when the focal star is a member of this pair,
-      // anchor it at (0,0,0) and put the FULL relative motion on the
-      // companion. The disc shader's uPinFocusToCenter pins the focused
-      // instance to NDC origin; without this rebase, _localPositions[focal]
-      // drifts to a non-zero perturbation and overlays (focus ring,
-      // distance vector, hover) project to a point separated from the
-      // rendered disc.
-      if (focalIdx === sIdx) {
-        // Pin secondary at its catalog baseline. For an inner pair sharing
-        // its primary with a parent relation, aPx carries the parent's
-        // accumulated perturbation; using baseline_pri (not aPx) as the
-        // primary's anchor lets the focal-pin absorb the parent's
-        // barycentric shift, which is the physical truth (the inner pair
-        // moves rigidly under the outer barycentre).
-        local[pBase + 0] = (abs[pBase + 0] - wox) - dxDelta;
-        local[pBase + 1] = (abs[pBase + 1] - woy) - dyDelta;
-        local[pBase + 2] = (abs[pBase + 2] - woz) - dzDelta;
-        local[sBase + 0] = abs[sBase + 0] - wox;
-        local[sBase + 1] = abs[sBase + 1] - woy;
-        local[sBase + 2] = abs[sBase + 2] - woz;
-      } else {
-        // pCoeff drives the primary's perturbation; the secondary then
-        // tracks the primary's resulting position plus the absolute
-        // baseline separation plus the full orbital ΔR. The barycentric
-        // split (sCoeff = 1 − q for non-focal) and focal-rebase (sCoeff = 1
-        // for focal=primary) both fall out of this formulation without
-        // a second coefficient: sCoeff − pCoeff = 1 in every regime.
-        // Hierarchical inner pairs propagate cleanly — aPx carries the
-        // parent's perturbation, so both the inner primary AND inner
-        // secondary inherit it, and the inner pair's relative offset
-        // stays clean of the outer perturbation.
-        const pCoeff = focalIdx === pIdx ? 0 : -rc.elements.q;
-        local[pBase + 0] = aPx + dxDelta * pCoeff;
-        local[pBase + 1] = aPy + dyDelta * pCoeff;
-        local[pBase + 2] = aPz + dzDelta * pCoeff;
-        local[sBase + 0] = local[pBase + 0] + (abs[sBase + 0] - abs[pBase + 0]) + dxDelta;
-        local[sBase + 1] = local[pBase + 1] + (abs[sBase + 1] - abs[pBase + 1]) + dyDelta;
-        local[sBase + 2] = local[pBase + 2] + (abs[sBase + 2] - abs[pBase + 2]) + dzDelta;
-      }
+      const pCoeff = -rc.elements.q;
+      local[pBase + 0] = aPx + dxDelta * pCoeff;
+      local[pBase + 1] = aPy + dyDelta * pCoeff;
+      local[pBase + 2] = aPz + dzDelta * pCoeff;
+      local[sBase + 0] = local[pBase + 0] + (abs[sBase + 0] - abs[pBase + 0]) + dxDelta;
+      local[sBase + 1] = local[pBase + 1] + (abs[sBase + 1] - abs[pBase + 1]) + dyDelta;
+      local[sBase + 2] = local[pBase + 2] + (abs[sBase + 2] - abs[pBase + 2]) + dzDelta;
     }
 
     this.opts.iPositionAttr.needsUpdate = true;
@@ -221,13 +221,88 @@ export class BinaryOrbitField {
     return activeCount;
   }
 
+  /** Total float64 perturbation of the focal star's slot from its catalog
+   *  baseline at time `t`, written into `out`. Returns false (and zeros
+   *  `out`) when the focal is in no orbit relation. Equals the walk's
+   *  written `localPositions[focal] − baselineLocal` within float32
+   *  quantization and is continuous in `t`.
+   *
+   *  Drives the focal-frame ride in the integration shell: the camera
+   *  tracks this displacement so the pinned star stays glued to NDC
+   *  centre without the walk rebasing its slot. Independent of `update()`
+   *  — replays the focal chain in float64 (chain length ≤ 3) so the ride
+   *  never accumulates float32 grid noise into the camera. */
+  focalPerturbationInto(focalIdx: number, t: number, out: THREE.Vector3): boolean {
+    this.ensureFocalChain(focalIdx);
+    out.set(0, 0, 0);
+    if (this.focalChainRelIdx.size === 0) return false;
+    const tJd = tToJDE(t);
+    this.slotPert.clear();
+    for (let i = 0; i < this.relations.length; i++) {
+      const rc = this.relations[i];
+      if (!this.focalChainRelIdx.has(rc.relationIdx)) continue;
+      const r = this.opts.binaries.relations[rc.relationIdx];
+      const pIdx = r.primaryIdx;
+      const sIdx = r.secondaryIdx;
+      this.evaluateDelta(rc, r, tJd);
+      // Primary accumulates −q·ΔR onto whatever a parent relation already
+      // wrote into its slot; the secondary is assigned primary + ΔR.
+      // Same formulas the float32 walk applies, in topological order.
+      const q = rc.elements.q;
+      const pPrev = this.slotPert.get(pIdx);
+      const px = (pPrev ? pPrev.x : 0) - DELTA_OUT.x * q;
+      const py = (pPrev ? pPrev.y : 0) - DELTA_OUT.y * q;
+      const pz = (pPrev ? pPrev.z : 0) - DELTA_OUT.z * q;
+      if (pPrev) { pPrev.x = px; pPrev.y = py; pPrev.z = pz; }
+      else this.slotPert.set(pIdx, { x: px, y: py, z: pz });
+      const sPrev = this.slotPert.get(sIdx);
+      const sx = px + DELTA_OUT.x;
+      const sy = py + DELTA_OUT.y;
+      const sz = pz + DELTA_OUT.z;
+      if (sPrev) { sPrev.x = sx; sPrev.y = sy; sPrev.z = sz; }
+      else this.slotPert.set(sIdx, { x: sx, y: sy, z: sz });
+    }
+    const fp = this.slotPert.get(focalIdx);
+    if (!fp) return false;
+    out.set(fp.x, fp.y, fp.z);
+    return true;
+  }
+
   dispose(): void {
     // No GPU/three.js resources held internally — the star pipeline
     // owns the attribute lifecycle. Method exists for parity with the
     // other field classes' lifecycle contract.
+    this.focalChainRelIdx.clear();
+    this.focalChainIdx = null;
+    this.slotPert.clear();
   }
 
   // ── private ─────────────────────────────────────────────────────────
+
+  /** Rebuild `focalChainRelIdx` when the focal index changes. The chain
+   *  is every relation writing the focal's slot (focal as primary or
+   *  secondary) plus their `parentRelation` ancestors, so the mini-walk
+   *  and the LOD-gate exemption both see every relation that contributes
+   *  to the focal's rendered position. */
+  private ensureFocalChain(focalIdx: number | null): void {
+    if (focalIdx === this.focalChainIdx) return;
+    this.focalChainIdx = focalIdx;
+    this.focalChainRelIdx.clear();
+    if (focalIdx === null) return;
+    const bin = this.opts.binaries;
+    const stack: number[] = [];
+    const primRels = bin.primaryIdxToRelations.get(focalIdx);
+    if (primRels) for (const ri of primRels) stack.push(ri);
+    const secRel = bin.secondaryIdxToRelation.get(focalIdx);
+    if (secRel !== undefined) stack.push(secRel);
+    while (stack.length > 0) {
+      const ri = stack.pop() as number;
+      if (this.focalChainRelIdx.has(ri)) continue;
+      this.focalChainRelIdx.add(ri);
+      const parent = bin.relations[ri].parentRelation;
+      if (parent !== NO_PARENT) stack.push(parent);
+    }
+  }
 
   private evaluateDelta(
     rc: OrbitRelationCache,

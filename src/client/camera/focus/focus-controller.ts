@@ -27,6 +27,7 @@ import {
   parkDistance,
   tickFocusLerp,
 } from './focus-transition';
+import { shiftArrivalWaypoints } from '../arrival/camera-motion';
 import { warpArrivalEaseFn } from '../warp/warp-tuning';
 import { FOCUS_LERP_MS } from '../timing';
 import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
@@ -74,6 +75,10 @@ export interface FocusOps {
   makeCloudFocusTarget(idx: number): FocusTarget | null;
   /** Star position in the renderer's local frame. */
   starLocalPosition(idx: number): THREE.Vector3;
+  /** Star's live local position (catalog baseline + orbital perturbation)
+   *  in float64, written into `out`. Correct even right after a recentre,
+   *  before the walk perturbs the buffer. */
+  starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
   /** Shift the floating origin to `newOrigin`, returning the applied
    *  delta. The returned Vector3 is shared scratch — copy if needed
    *  beyond the synchronous call. Returns null on no-op. */
@@ -119,6 +124,13 @@ export interface FocusControllerDeps {
    *  at request time. */
   getWarp: () => WarpController;
   getObserve: () => ObserveTransition;
+  /** Focal star's float64 orbital perturbation from its catalog baseline
+   *  at the current sim time, written into `out`; false when the star is
+   *  in no binary relation. Wired to BinaryOrbitField.focalPerturbationInto
+   *  through the integration shell. Read at focus-entry (before the walk
+   *  has perturbed the star's buffer slot) to snap the orbit target onto
+   *  the star's live position. */
+  focalPerturbationInto: (idx: number, out: THREE.Vector3) => boolean;
 }
 
 export class FocusController implements FocusOps {
@@ -131,6 +143,8 @@ export class FocusController implements FocusOps {
 
   // Scratch — only safe inside its single synchronous call site.
   private readonly tmpRecenter = new THREE.Vector3();
+  private readonly tmpLive = new THREE.Vector3();
+  private readonly tmpPert = new THREE.Vector3();
 
   constructor(deps: FocusControllerDeps) {
     this.deps = deps;
@@ -180,14 +194,21 @@ export class FocusController implements FocusOps {
    *  NDC origin before the slerp finishes turning into it. */
   isPinEngaged(): boolean {
     const warp = this.deps.getWarp();
-    return (
-      this.focusedStar !== null
-      && this.deps.getCameraMode() === 'navigate'
-      && (!warp.isActive() || warp.isRecenteredToDest())
-      && !this.deps.aim.isActive()
-      && !this.focusLerpState
-      && this.deps.controls.target.lengthSq() < PIN_ENGAGE_THRESHOLD_SQ_PC
-    );
+    const focal = this.focusedStar;
+    if (
+      focal === null
+      || this.deps.getCameraMode() !== 'navigate'
+      || (warp.isActive() && !warp.isRecenteredToDest())
+      || this.deps.aim.isActive()
+      || this.focusLerpState !== null
+    ) return false;
+    // Engage iff the orbit target coincides with the focal star's LIVE
+    // local position (catalog baseline + orbital perturbation, read from
+    // the star buffer). Panning moves target off the star → disengage.
+    // For a non-orbiting star the live position is its baseline (local
+    // origin under focus), so this reduces to target ≈ origin.
+    const live = this.deps.frameAnchor.starLocalPositionInto(focal, this.tmpLive);
+    return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
   }
 
   /** Auto-park target — pure star-physics helper applied with the
@@ -204,6 +225,28 @@ export class FocusController implements FocusOps {
 
   starLocalPosition(idx: number): THREE.Vector3 {
     return this.deps.frameAnchor.starLocalPosition(idx);
+  }
+  /** Star `idx`'s live local position in float64: its catalog baseline in
+   *  the current floating-origin frame PLUS its orbital perturbation.
+   *  Computed from the catalog + worldOffset (not the star buffer), so it
+   *  is correct even right after a recentre — before the walk has
+   *  perturbed the buffer slot — and never double-counts the perturbation.
+   *  The one place "where does the focal star actually sit" is answered. */
+  starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3 {
+    const wo = this.deps.frameAnchor.getWorldOffset();
+    const p = this.deps.catalog.positions;
+    out.set(p[idx * 3] - wo.x, p[idx * 3 + 1] - wo.y, p[idx * 3 + 2] - wo.z);
+    if (this.deps.focalPerturbationInto(idx, this.tmpPert)) out.add(this.tmpPert);
+    return out;
+  }
+
+  /** Focal star's live local position (baseline + orbital perturbation)
+   *  into `out`; false when unfocused. Consumed by ObserveTransition and
+   *  WarpController to park the camera on the star. */
+  focalLocalPositionInto(out: THREE.Vector3): boolean {
+    if (this.focusedStar === null) return false;
+    this.starLivePositionInto(this.focusedStar, out);
+    return true;
   }
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
     return this.deps.frameAnchor.recenterOrigin(newOrigin);
@@ -258,19 +301,21 @@ export class FocusController implements FocusOps {
     // transition.
     if (idx !== null) {
       this.recenterFocusToStar(idx);
-      // After recenterOrigin, the focused star is at local (0,0,0). Snap
-      // controls.target to (0,0,0) and shift camera by the same delta so
-      // the camera-to-target relationship is preserved — the user-visible
-      // pose doesn't change. Without this, target lands at -dx (where dx
-      // is whatever recenterOrigin shifted by) and the per-frame pin guard
-      // (target.lengthSq < 1e-12) silently disengages whenever Sol's
-      // catalog offset (5e-6 pc) or a long warp's |AB|·1e-7 Float32
-      // residual leaks through.
+      // Snap controls.target onto the focal star's LIVE local position
+      // (catalog baseline + current orbital perturbation) and shift the
+      // camera by the same delta so the camera-to-target relationship —
+      // and thus the user-visible pose — is preserved. The buffer hasn't
+      // been perturbed yet this frame, so the perturbation comes from the
+      // float64 accessor. For a non-orbiting star pert is zero and this
+      // lands target at (0,0,0), clearing the Sol-catalog-offset and
+      // long-warp Float32 residuals that would otherwise disengage the
+      // pin. The focal-frame ride keeps target glued to the star after.
+      const live = this.starLivePositionInto(idx, this.tmpLive);
       const t = this.deps.controls.target;
-      this.deps.camera.position.x -= t.x;
-      this.deps.camera.position.y -= t.y;
-      this.deps.camera.position.z -= t.z;
-      t.set(0, 0, 0);
+      this.deps.camera.position.x += live.x - t.x;
+      this.deps.camera.position.y += live.y - t.y;
+      this.deps.camera.position.z += live.z - t.z;
+      t.copy(live);
     } else {
       this.focusedStar = null;
       // Unfocus: clamp the new minDistance to ≤ current eye distance so
@@ -355,6 +400,15 @@ export class FocusController implements FocusOps {
     this.deps.getObserve().cancelUnfocusLerp();
   }
 
+  /** Ride the in-flight focus-park lerp's cached waypoints with the focal
+   *  star's per-frame orbital drift. No-op when no lerp is running. Called
+   *  by the integration shell's focal-frame ride so the lerp lands on the
+   *  star's live position rather than its position at lerp-start. */
+  translateFocusFrame(delta: Readonly<THREE.Vector3>): void {
+    if (this.focusLerpState === null) return;
+    shiftArrivalWaypoints(this.focusLerpState, -delta.x, -delta.y, -delta.z);
+  }
+
   /** Per-frame tick. Stellata's animate() dispatches here when
    *  `isFocusLerpActive()` is true. controls.enabled is left true
    *  throughout; the dispatcher routes here instead of controls.update(),
@@ -437,8 +491,8 @@ export class FocusController implements FocusOps {
     // From here on: the new star sits at local (0,0,0); camera.position
     // is already translated into the new frame.
 
-    const target = this.deps.controls.target; // (0,0,0) post-recentre
-    const eyeDist = this.deps.camera.position.length();
+    const target = this.deps.controls.target; // focal live pos post-recentre
+    const eyeDist = this.deps.camera.position.distanceTo(target);
 
     if (animate && eyeDist > parkDist) {
       this.startFocusLerp(newFocusLerpFrom(
@@ -467,7 +521,7 @@ export class FocusController implements FocusOps {
       // animate: false snap path — outside park: place at park along
       // current eye direction with an explicit lookAt so orientation
       // matches what TC would resolve.
-      const dir = this.deps.camera.position.clone().normalize();
+      const dir = this.deps.camera.position.clone().sub(target).normalize();
       if (dir.lengthSq() === 0) dir.set(0, 0, 1);
       this.deps.camera.position.copy(target).addScaledVector(dir, parkDist);
       this.deps.camera.lookAt(target);

@@ -190,7 +190,13 @@ JS-side per frame in `stellata.ts`: pin engages iff
 `focusedStar !== null && cameraMode === 'navigate'
 && (!warp.isActive() || warp.isRecenteredToDest())
 && !aim.isActive() && !focusLerpState
-&& controls.target.lengthSq() < 1e-12`.
+&& controls.target.distanceToSquared(focalLivePos) < 1e-12`,
+where `focalLivePos` is the focal star's LIVE local position read from
+`_localPositions` (catalog baseline + orbital perturbation). For a
+non-orbiting star that reduces to the local origin, so the check is the
+historic `target ≈ origin` test; for a binary member it tracks the
+star's perturbed position, which the focal-frame ride keeps
+`controls.target` glued to.
 
 The `warp.isRecenteredToDest()` clause relaxes the pin guard for the
 post-recentre window of warp Fly: after the mid-Fly recentre the
@@ -203,10 +209,10 @@ focus-park slerps the camera quaternion through an arc that's not
 continuously aimed at the focal star, so pinning would snap-jump it
 to NDC origin before the slerp finishes rotating into it.
 
-**Load-bearing invariant:** `controls.target` must be `(0,0,0)`
-*exactly* (length < 1e-6 pc). Any code path that engages focus while
-leaving target at a non-trivial residual silently disengages the
-pin. Three residual sources have bitten this:
+**Load-bearing invariant:** `controls.target` must equal the focal
+star's live local position *exactly* (within 1e-6 pc). Any code path
+that engages focus while leaving target at a residual off the star
+silently disengages the pin. Residual sources that have bitten this:
 
 1. **Sol's catalog offset.** Sol is at AT-HYG `(5e-6, 0, 0)` pc, not
    `(0,0,0)`. `recenterOrigin(solPos)` shifts target by `5e-6` →
@@ -217,15 +223,20 @@ pin. Three residual sources have bitten this:
    float64. The two representations of `|AB|` differ by Float32 ULP
    (~`|AB|·1e-7`); for Sol→Rigel (265 pc) that's `~5e-5 pc`,
    comparable to Rigel's arrival endOffset → 30 %-of-screen drift.
-3. **Unfocus from close approach.** Solved by removing the
-   `recenterOrigin(0,0,0)` from the `setFocus(null)` branch
-   (`worldOffset` stays put on unfocus).
+3. **Unfocus from close approach.** `setFocus(null)` leaves
+   `worldOffset` put (no `recenterOrigin(0,0,0)`).
+4. **Orbital drift of a binary focal.** The focal star moves along its
+   orbit each frame; a static target would fall off it. The focal-frame
+   ride (§ binaries/README) translates `controls.target` by the star's
+   per-frame perturbation so target stays on the star.
 
-**Fix for #1 and #2** lives at the choke point in
+**Fix for #1, #2, #4** lives at the choke point in
 `FocusController.setFocus`'s `idx !== null` branch: after
-`recenterOrigin`, subtract `target` from `camera.position`
-(preserving cam-to-target offset) and snap target to `(0,0,0)`.
-Eliminates both residuals for every caller of `setFocus`.
+`recenterOrigin`, snap target onto the focal's live local position
+(`starLivePositionInto` = catalog baseline in the current frame +
+float64 orbital perturbation) and shift `camera.position` by the same
+delta (preserving the cam-to-target offset). Eliminates the residuals
+for every caller of `setFocus`; the per-frame ride then maintains #4.
 
 Limitations: pan moves target away → pin disengages (intentional;
 post-pan the focused star isn't at view centre). Doesn't fire in

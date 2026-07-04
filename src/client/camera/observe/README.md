@@ -40,9 +40,11 @@ wired in `mode-toggle.ts`). The OBSERVE button is disabled until a star
 is focused — the underlying `setCameraMode('observe')` no-ops without
 an anchor, but disabling the button advertises the affordance up-front.
 
-**Camera state on enter:** position lerps to `(0, 0, 0)` local (the
-focused star's position under the floating origin) over
-`OBSERVE_TRANSITION_MS = 1800 ms`. The focal star stays visible across
+**Camera state on enter:** position lerps to the focused star's **live**
+local position (catalog baseline + orbital perturbation — the local
+origin for a non-orbiting star, its perturbed position for a binary
+member) over `OBSERVE_TRANSITION_MS = 1800 ms`. Parking at the bare
+origin would leave the camera off an orbiting focal. The focal star stays visible across
 the glide and is hidden via `uHideFocusIdx = focusedStar` only at
 `ObserveTransition`'s `enter` finish branch — once the camera is parked
 on top of it. Hiding it at transition start would feel like the star
@@ -185,20 +187,25 @@ invariant) keeps the animation aimed correctly even though
 mid-call.
 
 `ObserveTransition`'s `exit` finish branch then sets `controls.target` to the
-transition's `fromPos` (the observed star's location, in whichever
-frame is current). Two reasons:
+transition's `fromPos` (the observed star's live location — observe parks
+at it — in whichever frame is current). Three reasons:
 - The exit translates the camera backward along its forward direction
-  by `minDist`, so `fromPos` lies exactly along forward at that
-  distance — `TrackballControls.update()`'s built-in `lookAt(target)`
-  is therefore a no-op for orientation, and the user keeps facing
-  whatever they were observing.
-- Setting `target = (0,0,0)` instead would point at the local-frame
-  origin (where the focal star sat) and the lookAt would whip the
-  camera around to face it. Using `fromPos` works for both the
-  unfocus path and the focus-retained path because each captures
-  `fromPos` from the camera position right before the lerp begins —
-  whatever frame the camera is in, `fromPos` is along the forward
-  ray at minDist, which is what we want lookAt to be a no-op against.
+  by `minDist` (`toPos = fromPos − forward·minDist`), so `fromPos` lies
+  exactly along forward at that distance — `TrackballControls.update()`'s
+  built-in `lookAt(target)` is therefore a no-op for orientation, and the
+  user keeps facing whatever they were observing.
+- `fromPos` is the focal star's live position, so target lands on the
+  star and the navigate-mode pin re-engages (its guard compares target to
+  the star's live position). Setting `target = (0,0,0)` would point at
+  the local-frame origin — the star's *baseline*, not its perturbed
+  position — leaving the pin disengaged and the disc off-centre for a
+  binary member.
+- Using `fromPos` works for both the unfocus path and the focus-retained
+  path because each captures `fromPos` from the camera position right
+  before the lerp begins — whatever frame the camera is in, `fromPos` is
+  along the forward ray at minDist, which is what we want lookAt to be a
+  no-op against. The focal-frame ride translates `fromPos`/`toPos`
+  per frame so the pull-out stays locked to the drifting star.
 
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +
@@ -240,8 +247,11 @@ in observe mode (see §URL state), encoded HIP-only at bit 19.
 `observe-transition.ts` reuses one state slot for three kinds:
 
 - **`enter`** — animated navigate → observe entry. Lerps
-  `camera.position` to the focal-star local origin `(0,0,0)` over
-  `OBSERVE_TRANSITION_MS = 1800` with an inline time-smoothstep.
+  `camera.position` to the focal star's live local position (baseline +
+  perturbation, via `ObserveFocusOps.focalLocalPositionInto`) over
+  `OBSERVE_TRANSITION_MS = 1800` with an inline time-smoothstep. The
+  focal-frame ride translates the in-flight `fromPos`/`toPos` so the
+  glide stays locked to the star.
   `uHideFocusIdx` is held at -1 across the glide; the finish branch
   writes `uHideFocusIdx = focusedStar` and enables `ObserveControls`.
 - **`exit`** — animated observe → navigate exit. See § X button and
