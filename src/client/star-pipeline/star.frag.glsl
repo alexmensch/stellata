@@ -43,6 +43,10 @@ uniform float uMaxAppMag;
 //   uLumBiasMin / uLumBiasMax — multiplied onto n by luminosity-class
 //     softness (dwarf → hypergiant). Hypergiants stay fuzzier than
 //     dwarfs at equivalent distance.
+// Debug: 1 = flat-colour disc-pass cores by iDepthBias to reveal the
+// intra-pair depth ordering (back/biased core red, everything else green).
+uniform float uDebugDepthBias;
+
 uniform float uVisibleThreshold;
 uniform float uVisibleK;
 uniform float uCoreThreshold;
@@ -59,6 +63,7 @@ in float vPhysRatio; // 1 = physical-size-driven (render as solid disc),
                      // 0 = apparent-mag-driven (render as soft point glow)
 in float vSoftness;  // 0 = crisp (WD) … 1 = fuzzy (hypergiant)
 in float vAaWidth;   // chart-mode disc edge width in vUv units (1 CSS px)
+in float vDepthBias; // log-depth nudge on an overlapping pair's back disc
 
 out vec4 outColor;
 
@@ -77,6 +82,14 @@ void main() {
     // stays correct if logarithmicDepthBuffer is ever toggled off.
     gl_FragDepth = gl_FragCoord.z;
     #include <logdepthbuf_fragment>
+
+    // Deterministic intra-pair depth ordering. The opaque disc + core-mask
+    // passes add the back component's float64-decided bias so the front
+    // wins the z-test where the two discs overlap — the buffer can't
+    // resolve their sub-AU separation at close range. Glow pass (mode 0)
+    // has no depth write, so it's excluded. Halo fragments below overwrite
+    // gl_FragDepth = 1.0 regardless, so the bias only affects disc cores.
+    if (uRenderMode != 0) gl_FragDepth += vDepthBias;
 
     // Chart mode: flatten everything. Stars render as solid hard-edged
     // discs filling the inscribed circle of the calibrated quad, against
@@ -148,6 +161,15 @@ void main() {
         // Drop the imperceptible outer fringe entirely so it doesn't cost
         // a depth write or a no-op blend.
         if (glow < uDiscardThreshold) discard;
+        if (uDebugDepthBias > 0.5) {
+            // Cores only, flat-filled: the overlap pixel shows whichever
+            // instance survives the (bias-adjusted) depth test. Red = the
+            // biased back core; green = front/unbiased. gl_FragDepth already
+            // carries vDepthBias from the mode!=0 add above.
+            if (glow < uCoreThreshold) discard;
+            outColor = vec4(vDepthBias > 0.0 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0), 1.0);
+            return;
+        }
         // Halo fragments (glow below the core threshold) paint their dim
         // colour with low alpha but push depth to the far plane, so the
         // later glow pass's background stars pass the depth test and
