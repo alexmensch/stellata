@@ -33,6 +33,10 @@ export interface BuildCounts {
   /** New FLAG_BINARY_PRIMARY bits set by the CCDM pass (excludes ones
    *  already set by `inferBinaries`). */
   ccdmFlagged: number;
+  /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
+   *  varType == ECLIPSING records not already flagged by the geometric
+   *  or CCDM passes. */
+  eclipsingWinged: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
   /** AT-HYG rows the Bailer-Jones override is allowed to fire on:

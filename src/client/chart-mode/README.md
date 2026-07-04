@@ -163,12 +163,16 @@ camera-translation threshold + filter version. The cached centroid is
 still re-projected every frame; only the inner per-member loop is
 elided.
 
-**Variable rings** size to the bright-extreme magnitude
-(`appMag - amplitude/2`) plus a `VARIABLE_RING_MIN_GAP_PX = 1.0` radial
-gap, so the ring stays visibly outside the inner disc even at peak
-phase for low-amplitude variables. The gap means the ring no longer
-encodes "exact maximum brightness" — that's a deliberate trade for
-glyph legibility.
+**Variable rings** are **intrinsic-only** — the ring set gates on
+`periodDays > 0 && amplitudeMag > 0 && varType !== VAR_TYPE_ECLIPSING`.
+Eclipsing binaries are extrinsically variable (line-of-sight
+occlusion, not the star's own output), so they surface via the wings
+glyph instead and never draw a ring. Rings size to the bright-extreme
+magnitude (`appMag - amplitude/2`) plus a `VARIABLE_RING_MIN_GAP_PX = 1.0`
+radial gap, so the ring stays visibly outside the inner disc even at
+peak phase for low-amplitude variables. The gap means the ring no
+longer encodes "exact maximum brightness" — that's a deliberate trade
+for glyph legibility.
 
 **Binary wings** are screen-aligned horizontal `<line>`s extending
 `discPx * BINARY_WING_EXTENSION_RATIO` (0.25) past each disc edge.
@@ -238,7 +242,7 @@ variable case:
 
 ## Binary indication coverage
 
-Wings are driven by `flags` bit 4. Two build-time passes set that bit:
+Wings are driven by `flags` bit 4. Three build-time passes set that bit:
 
 - **Geometric inference** in `build-catalog.ts` — finds AT-HYG rows
   where both components of a pair survive the classic_ids cut
@@ -255,8 +259,13 @@ Wings are driven by `flags` bit 4. Two build-time passes set that bit:
   modelled as single stars (Polaris, ε¹ Lyr, 61 Cyg A/B). Surfaces
   Sirius, Mizar, Castor, α Cen, Albireo, γ And, ε Lyr, 70 Oph,
   Procyon, Algol, etc. without the optical-pair tail.
+- **Eclipsing binaries** — every `VAR_TYPE_ECLIPSING` record (GCVS
+  EA/EB/EW/ELL/E; EP eclipsing-by-planet excluded) that the two
+  passes above didn't already flag. An eclipser's variability is
+  the geometry of a stellar multiple, so it earns wings, not a
+  variable ring (see § Label engine — variable rings above).
 
-Both passes hit the same flag bit, so chart-mode rendering is
+All three passes hit the same flag bit, so chart-mode rendering is
 agnostic to which source flagged a given star. The build-time filter
 rationale + parser format are in the catalog build's CCDM cross-match
 section.

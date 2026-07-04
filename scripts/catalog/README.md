@@ -150,10 +150,14 @@ Ballesteros(B–V) → Apsis-direct).
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer, 4=is_binary_primary)
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
   - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
-                          1=pulsating, 2=eclipsing, 3=other). Runtime
-                          pulsation-suppress for eclipsing binaries
-                          with orbital elements reads this paired with
-                          `binaries.bin`'s has_orbit flag.
+                          1=pulsating, 2=eclipsing, 3=other). Every
+                          `VAR_TYPE_ECLIPSING` record also gets
+                          `FLAG_BINARY_PRIMARY` (chart-mode wings) and is
+                          suppressed from cosmetic runtime pulsation —
+                          eclipsers are extrinsically variable, so they
+                          surface as multi-star systems, never intrinsic
+                          variables (both gates read this byte alone, not
+                          `binaries.bin`).
   - 38–39 `uint16`       **variability period** in 0.1 days (0 = not variable, max 6553.5 d)
   - 40–43 `uint32`       **HIP** (Hipparcos number; 0 = no HIP). Only ~37%
                           of the catalogue carries HIP — the rest are filled
@@ -610,6 +614,22 @@ most catalog stars aren't variable, but the ones that are tend to be
 the astronomically interesting ones (Betelgeuse, Mira, Algol,
 Cepheids, etc.).
 
+Each row's `varType` comes from `classifyGcvsVarType` (`catalog-pure.ts`):
+GCVS EA/EB/EW/ELL/E → `VAR_TYPE_ECLIPSING`, the pulsator families →
+`VAR_TYPE_PULSATING`, everything else → `VAR_TYPE_OTHER`. A bare
+transiting-planet host (GCVS EP with no superimposed intrinsic
+pulsator, `isPlanetaryTransitOnly`) is dropped from the cross-match
+entirely — its dip is extrinsic occlusion by a planet, not the star's
+own output, and it is not a stellar multiple, so it earns neither an
+intrinsic-variable ring/pulse nor multi-star wings and renders as an
+ordinary star. `EP+DSCT` and the like keep the pulsator's ring.
+Eclipsing binaries are extrinsically variable, so after the CCDM pass a
+final sweep ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
+every `VAR_TYPE_ECLIPSING` record not already flagged
+(`eclipsingWinged` in build-counts); the runtime also suppresses their
+cosmetic pulsation by this byte alone. They surface as multi-star
+systems, never intrinsic-variable rings.
+
 Both GCVS files are tracked via Git LFS rather than downloaded at build
 time — they update rarely (yearly-ish). If bumping to a new GCVS
 version, re-download from http://www.sai.msu.su/gcvs/ and replace the
@@ -916,6 +936,9 @@ Three tiers, all snapshot-pinned:
   identifier integrity: corpus-wide HIP distinctness, URL star-ref
   round-trips (first-seen `hipToIndex` semantics matching `main.ts`),
   and a pinned-count ratchet on promoted-companion HIP collisions.
+  A catalog-wide variability-honesty sweep asserts every
+  `VAR_TYPE_ECLIPSING` record carries `FLAG_BINARY_PRIMARY` (eclipsers
+  earn wings, never a variable ring), with Algol as the named showcase.
   Column contract + per-row tolerance discipline live in the TSV header.
 - **Tier B — population statistics.**
   `scripts/catalog/build-counts.ts` (`compareBuildCounts`) + the two
