@@ -255,12 +255,11 @@ def nss_to_canonical_elements(
     * Eclipsing (``EclipsingBinary``, ``EclipsingSpectro``) — read
       inclination + arg_periastron from the stored columns; eclipse
       photometry doesn't constrain ``a`` or ``Ω``. ``EclipsingSpectro``
-      also carries spectroscopic ``mass_ratio``.
+      is the only NSS type that publishes ``mass_ratio``.
     * Spectroscopic-only (``SB1``, ``SB2``, ``SB1C``, ``SB2C``) — read
       arg_periastron when stored; inclination is unrecoverable from
-      RV alone. SB2 / SB2C variants carry ``mass_ratio`` (the SB2C set
-      is the "compact" variant — period/T/e only — and is intentionally
-      passed through without geometry).
+      RV alone. The SB2C set is the "compact" variant (period/T/e only)
+      and is intentionally passed through without geometry.
 
     Returns ``None`` for solution types we don't yet handle (none in
     DR3 today, but a forward guard against future NSS extensions); the
@@ -281,7 +280,14 @@ def nss_to_canonical_elements(
     i_rad: float | None = None
     Omega_rad: float | None = None
     omega_rad: float | None = None
-    q: float | None = safe_float(nss_row.get("mass_ratio", ""))
+    # Gaia NSS mass_ratio is M_S/M_P (a ratio, can exceed 1); q stores the
+    # M_2/(M_1+M_2) fraction every other stage assumes, so convert.
+    _mass_ratio = safe_float(nss_row.get("mass_ratio", ""))
+    q: float | None = (
+        _mass_ratio / (1.0 + _mass_ratio)
+        if _mass_ratio is not None and _mass_ratio > 0.0
+        else None
+    )
 
     if soln in NSS_TI_DERIVED_SOLUTION_TYPES:
         A = safe_float(nss_row.get("a_thiele_innes", ""))

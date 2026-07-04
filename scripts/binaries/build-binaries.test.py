@@ -2748,6 +2748,8 @@ class NssToCanonicalElementsTests(unittest.TestCase):
         self.assertIsNone(o.Omega_rad)
 
     def test_eclipsing_spectro_carries_mass_ratio(self) -> None:
+        # mass_ratio is Gaia's M_S/M_P ratio; q stores the M_2/(M_1+M_2)
+        # fraction, so 0.6 → 0.6/1.6 = 0.375.
         row = {
             "nss_solution_type": "EclipsingSpectro",
             "period": "2.0", "t_periastron": "1.0", "eccentricity": "0.0",
@@ -2757,7 +2759,7 @@ class NssToCanonicalElementsTests(unittest.TestCase):
         o = bb.nss_to_canonical_elements(row, 5.0)
         self.assertIsNotNone(o)
         assert o is not None
-        self.assertAlmostEqual(o.q or 0.0, 0.6)
+        self.assertAlmostEqual(o.q or 0.0, 0.6 / 1.6)
 
     def test_sb1_only_carries_omega(self) -> None:
         row = {
@@ -2773,16 +2775,19 @@ class NssToCanonicalElementsTests(unittest.TestCase):
         self.assertIsNone(o.Omega_rad)
         self.assertIsNone(o.a_AU)
 
-    def test_sb2_carries_mass_ratio(self) -> None:
+    def test_mass_ratio_above_one_converts_to_bounded_fraction(self) -> None:
+        # M_S/M_P can exceed 1 (heavier secondary); q must still land in
+        # [0,1) as the M_2/(M_1+M_2) fraction — 2.0 → 2/3.
         row = {
-            "nss_solution_type": "SB2",
+            "nss_solution_type": "EclipsingSpectro",
             "period": "50.0", "t_periastron": "5.0", "eccentricity": "0.1",
-            "arg_periastron": "30.0", "mass_ratio": "0.85",
+            "inclination": "80.0", "arg_periastron": "30.0",
+            "mass_ratio": "2.0",
         }
         o = bb.nss_to_canonical_elements(row, 8.0)
         self.assertIsNotNone(o)
         assert o is not None
-        self.assertAlmostEqual(o.q or 0.0, 0.85)
+        self.assertAlmostEqual(o.q or 0.0, 2.0 / 3.0)
 
     def test_sb1c_compact_has_no_geometry_beyond_pte(self) -> None:
         # "Compact" SB1C variant — only P/T/e stored. No omega.

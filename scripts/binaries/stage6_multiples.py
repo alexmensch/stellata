@@ -461,14 +461,9 @@ def finalize_renderable_elements(
     m_primary = mass_from_spectral_class(primary_row.spect, primary_row.absmag)
     if m_primary is None:
         m_primary = DEFAULT_PRIMARY_MASS_MSUN
-    # q here may be a raw Gaia NSS mass_ratio (M₂/M₁, can be ≥ 1), not
-    # the M₂/(M₁+M₂) fraction M_total = M₁/(1−q) needs — fall back to the
-    # default so 1−q stays positive rather than yielding a non-positive
-    # M_total (no axis, no animation).
-    q = primary_row.q
-    if not (0.0 <= q < 1.0):
-        q = UNKNOWN_COMPANION_MASS_RATIO_Q
-    a_au = kepler_semimajor_axis_au(orbit.P_days, m_primary / (1.0 - q))
+    a_au = kepler_semimajor_axis_au(
+        orbit.P_days, m_primary / (1.0 - primary_row.q),
+    )
     if a_au is None:
         return
     for row in (primary_row, secondary_row):

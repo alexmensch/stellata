@@ -462,11 +462,11 @@ isn't visible in a rendered orbit — baseline cancellation at
 any *other* date, so conjunction / eclipse timing (Algol's minima
 included) would miss published ephemerides without this normalisation.
 
-The mass-ratio `q` rides through this stage when present. Gaia NSS
-`EclipsingSpectro` and SB2/SB2 / non-compact variants store
-spectroscopic `mass_ratio` directly; everything else gets `q = None`
-here and falls through to Stage 6's spectral-class mass-ratio backfill
-below.
+The mass-ratio `q` rides through this stage when present. Only Gaia NSS
+`EclipsingSpectro` solutions publish `mass_ratio` (Gaia's M_S/M_P ratio,
+converted here to the `q = M₂/(M₁+M₂)` fraction the rest of the pipeline
+stores); everything else gets `q = None` here and falls through to Stage
+6's spectral-class mass-ratio backfill below.
 
 ## Stage 5 — Optical-pair filter cascade
 
