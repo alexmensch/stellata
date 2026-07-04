@@ -165,6 +165,19 @@ Beyond that, the screen-separation gate fires before Kepler runs:
    pass (mode 0) still runs so the two near-coincident point sources
    sum brightness correctly under AdditiveBlending.
 
+   The gate still writes the secondary's slot — it collapses onto the
+   primary's CURRENT position plus the baked baseline offset
+   (`local[pBase] + (abs[sBase] − abs[pBase])`), i.e. the active
+   barycentric formula MINUS the sub-pixel `ΔR`. This matters for a
+   **hierarchical inner pair**: the shared primary slot already carries
+   the parent pair's `−q_outer·ΔR_outer`, so the inner secondary must
+   inherit it. Leaving the secondary at its raw reset baseline (as the
+   gate once did) detached it from the parent-perturbed primary by
+   `q_outer·ΔR_outer` — an AU-scale, super-pixel snap when the tight
+   inner pair crossed the gate on zoom-out (Algol Aa2 at ~60-75 AU). A
+   top-level pair carries no parent perturbation, so the collapse
+   reproduces its reset baseline exactly (no behaviour change).
+
    Relations on the **focal star's slot-chain** are EXEMPT from ALL
    THREE gates (horizon, magnitude, sub-pixel). The chain is every
    relation that writes the focal's slot — focal as primary or secondary

@@ -460,6 +460,40 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
     expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
   });
 
+  it('inner pair gated (sub-pixel) while outer active: secondary stays glued to the primary, not detached by the parent perturbation', () => {
+    // Camera ~0.001 pc from the primary: the inner 0.06 AU pair falls below
+    // SUB_PIXEL_THRESHOLD_PX (peakPx ≈ 0.4) while the outer 2.8 AU pair
+    // stays super-pixel (peakPx ≈ 18) and keeps animating. This is the
+    // zoom-out regime where the old gate left the inner secondary at its
+    // raw baseline, detaching it from Aa1 by the outer q·ΔR (~1-2 AU).
+    const gatedCamera = new THREE.Vector3(2.639, 0, 0);
+    const fx = makeAlgolFixture();
+    const field = new BinaryOrbitField(fx);
+    field.update(tQuarter, gatedCamera, 15, 1080, 0.8);
+
+    // Inner secondary Kepler is skipped (composite-suppressed)...
+    expect(fx.compositeSuppress[1]).toBe(1);
+    // ...but the outer pair still animates: Aa1 (shared primary) carries the
+    // outer perturbation, well above the inner envelope.
+    const aa1Pert = Math.hypot(
+      fx.localPositions[0] - fx.absolutePositions[0],
+      fx.localPositions[1] - fx.absolutePositions[1],
+      fx.localPositions[2] - fx.absolutePositions[2],
+    );
+    expect(aa1Pert).toBeGreaterThan(INNER_DISPLACEMENT_PC);
+
+    // Aa2 rides WITH Aa1 (collocated → exactly coincident), NOT stranded at
+    // the catalog baseline where it would sit OUTER_PERTURB_PC off the
+    // parent-perturbed primary.
+    const innerSep = Math.hypot(
+      fx.localPositions[3] - fx.localPositions[0],
+      fx.localPositions[4] - fx.localPositions[1],
+      fx.localPositions[5] - fx.localPositions[2],
+    );
+    expect(innerSep).toBeLessThan(1e-9);
+    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.01);
+  });
+
   it('focusing an inner member is a no-op on the buffer (no rebase — barycentric always)', () => {
     // The focal star no longer rebases: focus=Aa2, focus=Aa1, and unfocus
     // all write byte-identical positions. Focus→unfocus is a pure state

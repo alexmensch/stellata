@@ -179,8 +179,15 @@ export class BinaryOrbitField {
         const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
         if (peakPx < SUB_PIXEL_THRESHOLD_PX) {
           // Composite suppression: skip Kepler, mark the secondary so the
-          // close-range + depth-mask passes drop its quad.
+          // close-range + depth-mask passes drop its quad. Still collapse it
+          // onto the primary's CURRENT slot + baked baseline offset (drop
+          // only the sub-pixel ΔR) — a hierarchical inner secondary must
+          // inherit the parent perturbation its primary carries, which the
+          // reset-loop baseline does not. See README § Walk-active LOD.
           suppress[sIdx] = 1;
+          local[sBase + 0] = aPx + (abs[sBase + 0] - abs[pBase + 0]);
+          local[sBase + 1] = aPy + (abs[sBase + 1] - abs[pBase + 1]);
+          local[sBase + 2] = aPz + (abs[sBase + 2] - abs[pBase + 2]);
           continue;
         }
       } else {
