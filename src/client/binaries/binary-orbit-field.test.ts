@@ -11,6 +11,38 @@ import {
 } from './binaries-loader';
 import { AU_PC, J2000_JD } from '../util/astronomy-constants';
 import { SUB_PIXEL_THRESHOLD_PX } from './binary-tuning';
+import {
+  evaluateOrbitSkyAU,
+  evaluateOrbitInPlaneAU,
+  projectSkyToICRS,
+  projectGalacticPlaneToICRS,
+} from './binary-orbit-pure';
+import { relationToElements } from './orbit-relation-cache';
+
+/** Bake the secondary's catalog xyz at primary + projected R(sepPaEpoch)
+ *  so the fixture is a realistic measured pair — its baked placement
+ *  agrees with the Kepler solution at the stored epoch, i.e. baseDiffPc
+ *  equals bakedDiff to within the float32 quantum. Mirrors
+ *  buildOrbitRelationCaches' J2000 epoch fallback when sepPaEpochJd is
+ *  non-finite. */
+function bakeSecondaryFromElements(positions: Float32Array, rel: BinaryRelation): void {
+  const pBase = rel.primaryIdx * 3;
+  const sBase = rel.secondaryIdx * 3;
+  const sys = { x: positions[pBase], y: positions[pBase + 1], z: positions[pBase + 2] };
+  const el = relationToElements(rel);
+  const epoch = Number.isFinite(rel.sepPaEpochJd) ? rel.sepPaEpochJd : J2000_JD;
+  let d: { x: number; y: number; z: number };
+  if ((rel.flags & FLAG_HAS_INCLINATION) !== 0) {
+    const ref = evaluateOrbitSkyAU(el, epoch);
+    d = projectSkyToICRS(sys, ref.northAU * AU_PC, ref.eastAU * AU_PC, ref.radialAU * AU_PC);
+  } else {
+    const ref = evaluateOrbitInPlaneAU(el, epoch);
+    d = projectGalacticPlaneToICRS(ref.xAU * AU_PC, ref.yAU * AU_PC);
+  }
+  positions[sBase] = sys.x + d.x;
+  positions[sBase + 1] = sys.y + d.y;
+  positions[sBase + 2] = sys.z + d.z;
+}
 
 // Catalog stand-in: 4 stars at various ICRS positions. The first two
 // form a Tier 1 outer pair; the last two are inactive controls.
@@ -25,13 +57,11 @@ function makeFixture(): {
 } {
   const positions = new Float32Array([
     2.0, 0.0, 0.0,   // 0: primary at 2 pc on +X (close enough to render)
-    2.0, 0.0, 0.0,   // 1: secondary (inner barycentre representation)
-    1.5, 0.5, 0.0,   // 2: outer-only secondary
+    2.0, 0.0, 0.0,   // 1: inner secondary (collocated — synth promotion)
+    0.0, 0.0, 0.0,   // 2: outer secondary — baked from the elements below
     50.0, 0.0, 0.0,  // 3: far star (control)
   ]);
   const mags = new Float32Array([2.0, 5.0, 4.0, 6.0]);
-  const local = new Float32Array(positions);
-  const suppress = new Float32Array(4);
 
   const outer: BinaryRelation = {
     primaryIdx: 0,
@@ -71,6 +101,11 @@ function makeFixture(): {
     paDeg: 0.0,
     sepPaEpochJd: J2000_JD,
   };
+  // Outer secondary baked at primary + R(epoch) — a realistic measured
+  // pair. The inner pair stays collocated (Algol-style synth promotion).
+  bakeSecondaryFromElements(positions, outer);
+  const local = new Float32Array(positions);
+  const suppress = new Float32Array(4);
   const binaries: BinariesData = {
     version: 1,
     relations: [outer, inner],
@@ -185,73 +220,81 @@ describe('BinaryOrbitField.update — Tier 1 perturbation', () => {
   // in float64 (see README § Eclipse photometry).
   const F32_TOL_AU = 0.05;
 
-  it('t = J2000: ΔR = 0 for the measured-sep outer pair; collocated inner renders at R(t)', () => {
+  // Rendered relative offset (secondary − primary) is the contract now:
+  // baseDiffPc + ΔR(t) = R(t). Reading it as a slot difference cancels
+  // any parent perturbation the shared primary carries.
+  const relOffset = (fx: ReturnType<typeof makeFixture>, sIdx: number, pIdx: number) => [
+    fx.localPositions[sIdx * 3 + 0] - fx.localPositions[pIdx * 3 + 0],
+    fx.localPositions[sIdx * 3 + 1] - fx.localPositions[pIdx * 3 + 1],
+    fx.localPositions[sIdx * 3 + 2] - fx.localPositions[pIdx * 3 + 2],
+  ];
+  // float32 readback quantum at the fixture's ~2 pc slots.
+  const REL_TOL_PC = 1e-6;
+
+  it('t = J2000: outer relative offset = R(epoch) = baseDiffPc; collocated inner renders at R(t)', () => {
     const tJ2000Unix = (J2000_JD - 2440587.5) * 86400;
     field.update(tJ2000Unix, closeCamera, 15, 1080, 0.8);
-    // Outer secondary (star 2, real baked separation measured at
-    // sepPaEpochJd = J2000) and the control (star 3) stay at baseline.
-    // Star 0 does NOT: it is also the collocated inner pair's primary
-    // and legitimately carries −q·ΔR_inner.
-    for (const idx of [2, 3]) {
-      for (let c = 0; c < 3; c++) {
-        expect(fx.localPositions[idx * 3 + c])
-          .toBeCloseTo(fx.absolutePositions[idx * 3 + c], 10);
-      }
+    // Control (star 3, in no relation) stays exactly at baseline.
+    for (let c = 0; c < 3; c++) {
+      expect(fx.localPositions[9 + c]).toBeCloseTo(fx.absolutePositions[9 + c], 10);
     }
-    // Collocated inner pair → zero baseline: relative offset is the
-    // full R(J2000), magnitude a (e=0), not the baked zero diff.
-    const off = Math.hypot(
-      fx.localPositions[3] - fx.localPositions[0],
-      fx.localPositions[4] - fx.localPositions[1],
-      fx.localPositions[5] - fx.localPositions[2],
-    ) / AU_PC;
+    // Outer pair: ΔR = 0 at the stored epoch (J2000), so the rendered
+    // relative offset equals baseDiffPc = R(J2000) exactly — the
+    // elements-alone baseline, independent of the baked placement.
+    const bd = field.cachedRelations[0].baseDiffPc;
+    const rel = relOffset(fx, 2, 0);
+    expect(Math.abs(rel[0] - bd.x)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rel[1] - bd.y)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rel[2] - bd.z)).toBeLessThan(REL_TOL_PC);
+    // Collocated inner pair renders the full R(J2000), magnitude a (e=0).
+    const off = Math.hypot(...relOffset(fx, 1, 0)) / AU_PC;
     expect(Math.abs(off - 1.0)).toBeLessThan(F32_TOL_AU);
   });
 
-  it('collocated-bake orbit never displaces: |offset| stays within [a(1−e), a(1+e)] over a period sweep', () => {
-    // The displaced-centre defect shape: a sep-0.000 baked pair whose baseline
-    // was R(epoch) rendered a Kepler ellipse displaced by −R(epoch),
-    // sweeping the companion THROUGH the primary once per period and
-    // exceeding apoapsis on the far side (Alsephina Ab at 0.562 AU >
-    // apoapsis 0.52 AU). With the zero baseline the offset magnitude
-    // is bounded by the orbit itself at every phase.
+  it('|rendered relative offset| stays within [a(1−e), a(1+e)] over a period sweep (no displaced centre)', () => {
+    // The displaced-centre defect: rendering a Kepler ellipse offset by
+    // (bakedDiff − R(epoch)) swept the companion THROUGH the primary once
+    // per period and past apoapsis on the far side (Alsephina Ab at
+    // 0.562 AU > apoapsis 0.52 AU). The elements-alone offset R(t) is
+    // bounded by the orbit itself at every phase — checked here on the
+    // collocated inner pair (bakedDiff = 0, the sharpest case).
     const inner = fx.binaries.relations[1];
     const aAU = inner.aAU;
     const periodS = inner.pDays * 86400;
     const t0 = (J2000_JD - 2440587.5) * 86400;
     for (let k = 0; k < 16; k++) {
       field.update(t0 + (k / 16) * periodS, closeCamera, 15, 1080, 0.8);
-      const off = Math.hypot(
-        fx.localPositions[3] - fx.localPositions[0],
-        fx.localPositions[4] - fx.localPositions[1],
-        fx.localPositions[5] - fx.localPositions[2],
-      ) / AU_PC;
+      const off = Math.hypot(...relOffset(fx, 1, 0)) / AU_PC;
       expect(off).toBeGreaterThan(aAU * (1 - inner.e) - F32_TOL_AU);
       expect(off).toBeLessThan(aAU * (1 + inner.e) + F32_TOL_AU);
     }
   });
 
-  it('t = J2000 + ¼ period: outer secondary moves off the baseline', () => {
+  it('t = J2000 + ¼ period: outer relative offset moves off baseDiffPc by an orbital ΔR', () => {
     const tQuarter = (J2000_JD - 2440587.5) * 86400 + 0.25 * 365.25 * 100 * 86400;
     field.update(tQuarter, closeCamera, 15, 1080, 0.8);
-    // Outer secondary is catalog idx 2; localPositions slice [6..9].
-    const sDelta = [
-      fx.localPositions[6] - fx.absolutePositions[6],
-      fx.localPositions[7] - fx.absolutePositions[7],
-      fx.localPositions[8] - fx.absolutePositions[8],
-    ];
-    const sMag = Math.hypot(...sDelta);
-    // Outer a=10 AU, q=0.4 ⇒ secondary peak ≈ 0.6·a = 6 AU = 2.9e-5 pc.
-    expect(sMag).toBeGreaterThan(1e-6);
-    expect(sMag).toBeLessThan(1e-3);
+    const bd = field.cachedRelations[0].baseDiffPc;
+    const rel = relOffset(fx, 2, 0);
+    const dR = Math.hypot(rel[0] - bd.x, rel[1] - bd.y, rel[2] - bd.z);
+    // Outer a=10 AU, ¼ of a 100-yr orbit ⇒ ΔR is several AU (4.8e-6 pc/AU).
+    expect(dR).toBeGreaterThan(1e-6);
+    expect(dR).toBeLessThan(1e-3);
   });
 
-  it('one full outer period later, secondary returns to baseline (within 1e-9 pc)', () => {
+  it('one full outer period later, relative offset returns to baseDiffPc (ΔR → 0)', () => {
+    // Isolate the outer pair: after one outer period ΔR_outer → 0, but the
+    // shared primary keeps wobbling from the inner pair (2.87 d period,
+    // off-phase at +100 yr), which would leak ~q_inner·a_inner into the
+    // outer relative offset read from the shared slot.
+    fx.binaries.relations[1].flags &= ~FLAG_HAS_ORBIT;
+    const solo = new BinaryOrbitField(fx);
     const tNext = (J2000_JD - 2440587.5) * 86400 + 365.25 * 100 * 86400;
-    field.update(tNext, closeCamera, 15, 1080, 0.8);
-    expect(fx.localPositions[6]).toBeCloseTo(fx.absolutePositions[6], 9);
-    expect(fx.localPositions[7]).toBeCloseTo(fx.absolutePositions[7], 9);
-    expect(fx.localPositions[8]).toBeCloseTo(fx.absolutePositions[8], 9);
+    solo.update(tNext, closeCamera, 15, 1080, 0.8);
+    const bd = solo.cachedRelations[0].baseDiffPc;
+    const rel = relOffset(fx, 2, 0);
+    expect(Math.abs(rel[0] - bd.x)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rel[1] - bd.y)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rel[2] - bd.z)).toBeLessThan(REL_TOL_PC);
   });
 
   it('flushes version on the dynamic position attribute', () => {
@@ -294,6 +337,64 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
     expect(fx.localPositions[6]).toBe(fx.absolutePositions[6]);
     expect(fx.localPositions[7]).toBe(fx.absolutePositions[7]);
     expect(fx.localPositions[8]).toBe(fx.absolutePositions[8]);
+  });
+
+  it('collapse of a MISMATCHED pair anchors on baseDiffPc, not the baked slot diff', () => {
+    // Secondary baked ~60 AU off its elements-alone R(epoch) — the
+    // displaced-centre population. When the pair goes sub-pixel the
+    // collapse must place it at primary + baseDiffPc (the active walk's
+    // anchor), so crossing the gate never steps it by corr = baseDiffPc −
+    // bakedDiff. Anchoring on the baked slot diff (the pre-fix behaviour)
+    // would reintroduce that corr-sized snap for exactly these pairs.
+    const positions = new Float32Array([
+      2.0, 0.0, 0.0,      // primary
+      2.0, 3e-4, 1e-4,    // secondary baked far off — mismatched
+    ]);
+    const mags = new Float32Array([2.0, 6.0]);
+    const local = new Float32Array(positions);
+    const suppress = new Float32Array(2);
+    const rel: BinaryRelation = {
+      primaryIdx: 0, secondaryIdx: 1,
+      flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION,
+      parentRelation: NO_PARENT,
+      pDays: 365.25 * 100, tJd: J2000_JD, e: 0.2, aAU: 10.0,
+      iRad: 0.5, omegaRad: 0.3, OmegaRad: 0.4, q: 0.4,
+      sepArcsec: 5.0, paDeg: 90.0, sepPaEpochJd: J2000_JD,
+    };
+    const binaries: BinariesData = {
+      version: 1,
+      relations: [rel],
+      primaryIdxToRelations: new Map([[0, [0]]]),
+      secondaryIdxToRelation: new Map([[1, 0]]),
+    };
+    const field = new BinaryOrbitField({
+      binaries, absolutePositions: positions, absoluteMags: mags,
+      localPositions: local, compositeSuppress: suppress,
+      iPositionAttr: new THREE.InstancedBufferAttribute(local, 3),
+      iCompositeSuppressAttr: new THREE.InstancedBufferAttribute(suppress, 1),
+    });
+    const bd = field.cachedRelations[0].baseDiffPc;
+    const bakedDiff = {
+      x: positions[3] - positions[0],
+      y: positions[4] - positions[1],
+      z: positions[5] - positions[2],
+    };
+    // The fixture is genuinely mismatched: bakedDiff is far from baseDiffPc.
+    expect(Math.hypot(bd.x - bakedDiff.x, bd.y - bakedDiff.y, bd.z - bakedDiff.z))
+      .toBeGreaterThan(1e-5);
+
+    const camera = new THREE.Vector3(0, 0, -900);
+    const t = (J2000_JD - 2440587.5) * 86400 + 50 * 365.25 * 86400;
+    field.update(t, camera, 15, 1080, 0.8);
+    expect(suppress[1]).toBe(1);
+    // Collapsed offset == baseDiffPc (active-walk anchor), NOT bakedDiff.
+    const off = [local[3] - local[0], local[4] - local[1], local[5] - local[2]];
+    const F32_TOL_PC = 5e-7;
+    expect(Math.abs(off[0] - bd.x)).toBeLessThan(F32_TOL_PC);
+    expect(Math.abs(off[1] - bd.y)).toBeLessThan(F32_TOL_PC);
+    expect(Math.abs(off[2] - bd.z)).toBeLessThan(F32_TOL_PC);
+    expect(Math.hypot(off[0] - bakedDiff.x, off[1] - bakedDiff.y, off[2] - bakedDiff.z))
+      .toBeGreaterThan(1e-5);
   });
 
   it('exempts a relation on the focal star slot-chain — no step-jump on zoom-out', () => {
@@ -482,16 +583,19 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
     );
     expect(aa1Pert).toBeGreaterThan(INNER_DISPLACEMENT_PC);
 
-    // Aa2 rides WITH Aa1 (collocated → exactly coincident), NOT stranded at
-    // the catalog baseline where it would sit OUTER_PERTURB_PC off the
-    // parent-perturbed primary.
+    // Aa2 rides WITH Aa1's parent perturbation, offset from it only by the
+    // inner epoch separation baseDiffPc (the SAME anchor the active walk
+    // uses — the gate drops only ΔR), NOT stranded at the catalog baseline
+    // where it would sit OUTER_PERTURB_PC off the parent-perturbed primary.
+    // The residual is baseDiffPc_inner (≤ a_inner, e=0) plus the ~3e-7 pc
+    // float32 readback quantum at 2.64 pc — orders below OUTER_PERTURB_PC.
     const innerSep = Math.hypot(
       fx.localPositions[3] - fx.localPositions[0],
       fx.localPositions[4] - fx.localPositions[1],
       fx.localPositions[5] - fx.localPositions[2],
     );
-    expect(innerSep).toBeLessThan(1e-9);
-    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.01);
+    expect(innerSep).toBeLessThan(INNER_DISPLACEMENT_PC + 3e-7);
+    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
   });
 
   it('focusing an inner member is a no-op on the buffer (no rebase — barycentric always)', () => {
@@ -561,41 +665,55 @@ describe('BinaryOrbitField — stored-separation epoch baseline', () => {
     return fx;
   }
 
-  it('Tier 1: positions match the catalog baseline at t = stored epoch, not at J2000', () => {
+  const relOuter = (fx: ReturnType<typeof epochFixture>) => [
+    fx.localPositions[6] - fx.localPositions[0],
+    fx.localPositions[7] - fx.localPositions[1],
+    fx.localPositions[8] - fx.localPositions[2],
+  ];
+  const REL_TOL_PC = 1e-6;
+
+  it('Tier 1: relative offset = baseDiffPc at the stored epoch, ΔR ≠ 0 at J2000', () => {
     const fx = epochFixture(FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION);
     const field = new BinaryOrbitField(fx);
+    const bd = field.cachedRelations[0].baseDiffPc;
 
+    // At J2000 (≠ stored epoch) the pair has moved off the baseline: the
+    // rendered offset R(J2000) differs from R(EPOCH_JD) = baseDiffPc.
     field.update(toUnix(J2000_JD), closeCamera, 15, 1080, 0.8);
-    const offAtJ2000 = Math.hypot(
-      fx.localPositions[6] - fx.absolutePositions[6],
-      fx.localPositions[7] - fx.absolutePositions[7],
-      fx.localPositions[8] - fx.absolutePositions[8],
-    );
-    expect(offAtJ2000).toBeGreaterThan(1e-7);
+    const rJ2000 = relOuter(fx);
+    expect(Math.hypot(rJ2000[0] - bd.x, rJ2000[1] - bd.y, rJ2000[2] - bd.z))
+      .toBeGreaterThan(1e-7);
 
+    // At the stored epoch ΔR = 0, so the rendered offset is baseDiffPc.
     field.update(toUnix(EPOCH_JD), closeCamera, 15, 1080, 0.8);
-    for (let i = 0; i < fx.localPositions.length; i++) {
-      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
-    }
+    const rEpoch = relOuter(fx);
+    expect(Math.abs(rEpoch[0] - bd.x)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rEpoch[1] - bd.y)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rEpoch[2] - bd.z)).toBeLessThan(REL_TOL_PC);
   });
 
-  it('Tier 2: positions match the catalog baseline at t = stored epoch', () => {
+  it('Tier 2: relative offset = baseDiffPc at the stored epoch', () => {
     const fx = epochFixture(FLAG_HAS_ORBIT);
     const field = new BinaryOrbitField(fx);
+    const bd = field.cachedRelations[0].baseDiffPc;
     field.update(toUnix(EPOCH_JD), closeCamera, 15, 1080, 0.8);
-    for (let i = 0; i < fx.localPositions.length; i++) {
-      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
-    }
+    const rEpoch = relOuter(fx);
+    expect(Math.abs(rEpoch[0] - bd.x)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rEpoch[1] - bd.y)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rEpoch[2] - bd.z)).toBeLessThan(REL_TOL_PC);
   });
 
   it('NaN sepPaEpochJd falls back to the J2000 baseline', () => {
     const fx = epochFixture(FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION);
     fx.binaries.relations[0].sepPaEpochJd = Number.NaN;
     const field = new BinaryOrbitField(fx);
+    const bd = field.cachedRelations[0].baseDiffPc;
+    // Baseline epoch falls back to J2000 → ΔR = 0 there → offset = baseDiffPc.
     field.update(toUnix(J2000_JD), closeCamera, 15, 1080, 0.8);
-    for (let i = 0; i < fx.localPositions.length; i++) {
-      expect(fx.localPositions[i]).toBeCloseTo(fx.absolutePositions[i], 10);
-    }
+    const rEpoch = relOuter(fx);
+    expect(Math.abs(rEpoch[0] - bd.x)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rEpoch[1] - bd.y)).toBeLessThan(REL_TOL_PC);
+    expect(Math.abs(rEpoch[2] - bd.z)).toBeLessThan(REL_TOL_PC);
   });
 });
 
@@ -632,7 +750,6 @@ describe('BinaryOrbitField — physical sanity (Sirius-shaped)', () => {
   it('produces a sub-mpc offset for Sirius-class binary over one period', () => {
     const positions = new Float32Array([2.64, 0, 0, 0, 0, 0]);
     const mags = new Float32Array([1.46, 8.44]);
-    const local = new Float32Array(positions);
     const suppress = new Float32Array(2);
     const r: BinaryRelation = {
       primaryIdx: 0,
@@ -651,6 +768,10 @@ describe('BinaryOrbitField — physical sanity (Sirius-shaped)', () => {
       paDeg: 60,
       sepPaEpochJd: J2000_JD,
     };
+    // Realistic bake: B sits at A + R(epoch), so its displacement from
+    // baseline over a period is the pure orbital (1−q)·ΔR.
+    bakeSecondaryFromElements(positions, r);
+    const local = new Float32Array(positions);
     const binaries: BinariesData = {
       version: 1,
       relations: [r],
@@ -772,10 +893,20 @@ describe('BinaryOrbitField.update — no focal rebase (barycentric always)', () 
     expect(Math.abs(pPert.x - (fx.localPositions[0] - fx.absolutePositions[0]))).toBeLessThan(F32_TOL_PC);
     expect(Math.abs(sPert.x - (fx.localPositions[3] - fx.absolutePositions[3]))).toBeLessThan(F32_TOL_PC);
 
-    // Primary and secondary perturbations are anti-parallel with magnitude
-    // ratio q : (1−q). q=0.4 ⇒ |p|/|s| = 0.4/0.6 ≈ 0.667.
-    expect(pPert.length() / sPert.length()).toBeCloseTo(0.4 / 0.6, 3);
-    expect(pPert.clone().normalize().dot(sPert.clone().normalize())).toBeCloseTo(-1, 5);
+    // Primary and secondary orbital motions are anti-parallel with
+    // magnitude ratio q : (1−q). The secondary's total displacement also
+    // carries the constant corr = baseDiffPc − bakedDiff (the elements-
+    // alone anchor); subtract it to isolate the (1−q)·ΔR orbital term.
+    // q=0.4 ⇒ |p|/|s_orbital| = 0.4/0.6 ≈ 0.667.
+    const bd = field.cachedRelations[0].baseDiffPc;
+    const corr = new THREE.Vector3(
+      bd.x - (fx.absolutePositions[3] - fx.absolutePositions[0]),
+      bd.y - (fx.absolutePositions[4] - fx.absolutePositions[1]),
+      bd.z - (fx.absolutePositions[5] - fx.absolutePositions[2]),
+    );
+    const sOrbital = sPert.clone().sub(corr);
+    expect(pPert.length() / sOrbital.length()).toBeCloseTo(0.4 / 0.6, 3);
+    expect(pPert.clone().normalize().dot(sOrbital.clone().normalize())).toBeCloseTo(-1, 5);
   });
 
   it('focalPerturbationInto is continuous across consecutive sim times', () => {

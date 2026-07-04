@@ -120,6 +120,27 @@ export function projectGalacticPlaneToICRS(
   return { x: gal4.x, y: gal4.y, z: gal4.z };
 }
 
+/** Full relative ICRS offset R(t) in pc — B relative to A at JDE `tJd`,
+ *  the rendered pair offset (elements-alone; no baked-catalog term). Tier 1
+ *  projects the sky separation through the system's tangent basis; Tier 2
+ *  rides the galactic plane. One Kepler solve. The runtime caches R(epoch)
+ *  from this and renders R(epoch) + ΔR(t) = R(t). */
+export function evaluateOrbitOffsetPc(
+  elements: OrbitalElements,
+  tier: 1 | 2,
+  tJd: number,
+  systemXyzPc: Vec3,
+): Vec3 {
+  if (tier === 1) {
+    const s = evaluateOrbitSkyAU(elements, tJd);
+    return projectSkyToICRS(
+      systemXyzPc, s.northAU * AU_PC, s.eastAU * AU_PC, s.radialAU * AU_PC,
+    );
+  }
+  const p = evaluateOrbitInPlaneAU(elements, tJd);
+  return projectGalacticPlaneToICRS(p.xAU * AU_PC, p.yAU * AU_PC);
+}
+
 /** Tier 1 full relative ICRS Δxyz (pc): R_B(t) − R_A(t) about the
  *  barycentre, expressed as a pc-valued ICRS offset. Caller supplies the
  *  cached baseline reference `refSky` (single Kepler solve per call) and

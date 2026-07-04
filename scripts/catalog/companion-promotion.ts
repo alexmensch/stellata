@@ -670,12 +670,13 @@ function resolvePosition(
   const paDeg = row.paDeg !== null && row.paDeg >= 0 ? row.paDeg : null;
   // Sub-resolution (rho 0.000) or unmeasured pairs: there is no static
   // placement to bake. When the runtime animates the pair, collocate
-  // the secondary bit-identically on the anchor — the zero baked diff
-  // IS the signal for the runtime's zero-baseline convention (rendered
-  // offset = R(t) around the primary; see src/client/binaries/
-  // orbit-relation-cache.ts collocated-bake). Without a renderable
-  // orbit nothing ever separates the two records and the collocated
-  // star double-counts the blend photometry (ξ UMa Bb inside A) — drop.
+  // the secondary bit-identically on the anchor — a placement choice
+  // for the LOD fallback only; the runtime renders the relative offset
+  // as R(t) from the orbital elements alone regardless of the baked
+  // placement (see src/client/binaries/orbit-relation-cache.ts
+  // baseDiffPc). Without a renderable orbit nothing ever separates the
+  // two records and the collocated star double-counts the blend
+  // photometry (ξ UMa Bb inside A) — drop.
   if (sepArcsec === null || sepArcsec === 0) {
     if (!hasRenderableOrbit(row)) return null;
     return {

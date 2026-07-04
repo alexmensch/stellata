@@ -19,8 +19,11 @@ import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
 export interface BinaryOrbitFieldOptions {
   binaries: BinariesData;
   /** Catalog-wide absolute ICRS positions, length = catalog.count * 3.
-   *  Read-only inside this field — the source of truth for each star's
-   *  catalog baseline (stored at the pair's sep+PA epoch). */
+   *  Read-only inside this field. The primary's slot is the per-star
+   *  catalog baseline + the Tier-1 tangent-basis anchor; the pair's
+   *  RELATIVE offset does NOT come from subtracting two slots (that
+   *  float32 diff carries WDS/Kepler placement disagreement) — it rides
+   *  on `OrbitRelationCache.baseDiffPc` + ΔR(t). */
   absolutePositions: Float32Array;
   /** Catalog-wide absolute magnitudes, length = catalog.count. Drives
    *  the per-relation primary-visibility LOD. */
@@ -179,30 +182,26 @@ export class BinaryOrbitField {
         const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
         if (peakPx < SUB_PIXEL_THRESHOLD_PX) {
           // Composite suppression: skip Kepler, mark the secondary so the
-          // close-range + depth-mask passes drop its quad. Still collapse it
-          // onto the primary's CURRENT slot + baked baseline offset (drop
-          // only the sub-pixel ΔR) — a hierarchical inner secondary must
-          // inherit the parent perturbation its primary carries, which the
-          // reset-loop baseline does not. See README § Walk-active LOD.
+          // close-range + depth-mask passes drop its quad. Collapse it onto
+          // the primary's CURRENT slot + baseDiffPc (drop only the sub-pixel
+          // ΔR) — same anchor as the active walk, so crossing the gate never
+          // steps the secondary by baseDiffPc − bakedDiff. aPx carries any
+          // parent perturbation, which the secondary inherits.
           suppress[sIdx] = 1;
-          local[sBase + 0] = aPx + (abs[sBase + 0] - abs[pBase + 0]);
-          local[sBase + 1] = aPy + (abs[sBase + 1] - abs[pBase + 1]);
-          local[sBase + 2] = aPz + (abs[sBase + 2] - abs[pBase + 2]);
+          local[sBase + 0] = aPx + rc.baseDiffPc.x;
+          local[sBase + 1] = aPy + rc.baseDiffPc.y;
+          local[sBase + 2] = aPz + rc.baseDiffPc.z;
           continue;
         }
       } else {
         activeCount++;
       }
 
-      // Barycentric split about the system barycentre — the ONLY regime.
-      // Primary moves by −q·ΔR; the secondary tracks the primary's
-      // resulting position plus the baseline separation plus the full ΔR
-      // (sCoeff − pCoeff = 1). Hierarchical inner pairs propagate cleanly:
-      // aPx carries the parent's perturbation, so both inner members
-      // inherit it while the inner pair's relative offset stays clean.
-      // When the focal is a pair member the camera rides its perturbed
-      // position (see focalPerturbationInto + the ride in stellata.ts),
-      // so there is no rebase — unfocus is a pure state change.
+      // Barycentric split (sCoeff − pCoeff = 1): primary += −q·ΔR, secondary
+      // tracks primary + baseDiffPc + ΔR. aPx carries any parent
+      // perturbation, so a hierarchical inner pair inherits it on both
+      // members while its relative offset stays clean. See README § Tier
+      // mapping + § Hierarchical walk.
       this.evaluateDelta(rc, r, tJd);
       const dxDelta = DELTA_OUT.x;
       const dyDelta = DELTA_OUT.y;
@@ -211,9 +210,9 @@ export class BinaryOrbitField {
       local[pBase + 0] = aPx + dxDelta * pCoeff;
       local[pBase + 1] = aPy + dyDelta * pCoeff;
       local[pBase + 2] = aPz + dzDelta * pCoeff;
-      local[sBase + 0] = local[pBase + 0] + (abs[sBase + 0] - abs[pBase + 0]) + dxDelta;
-      local[sBase + 1] = local[pBase + 1] + (abs[sBase + 1] - abs[pBase + 1]) + dyDelta;
-      local[sBase + 2] = local[pBase + 2] + (abs[sBase + 2] - abs[pBase + 2]) + dzDelta;
+      local[sBase + 0] = local[pBase + 0] + rc.baseDiffPc.x + dxDelta;
+      local[sBase + 1] = local[pBase + 1] + rc.baseDiffPc.y + dyDelta;
+      local[sBase + 2] = local[pBase + 2] + rc.baseDiffPc.z + dzDelta;
     }
 
     this.opts.iPositionAttr.needsUpdate = true;
@@ -237,6 +236,7 @@ export class BinaryOrbitField {
     out.set(0, 0, 0);
     if (this.focalChainRelIdx.size === 0) return false;
     const tJd = tToJDE(t);
+    const abs = this.opts.absolutePositions;
     this.slotPert.clear();
     for (let i = 0; i < this.relations.length; i++) {
       const rc = this.relations[i];
@@ -244,10 +244,17 @@ export class BinaryOrbitField {
       const r = this.opts.binaries.relations[rc.relationIdx];
       const pIdx = r.primaryIdx;
       const sIdx = r.secondaryIdx;
+      const pBase = pIdx * 3;
+      const sBase = sIdx * 3;
       this.evaluateDelta(rc, r, tJd);
       // Primary accumulates −q·ΔR onto whatever a parent relation already
-      // wrote into its slot; the secondary is assigned primary + ΔR.
-      // Same formulas the float32 walk applies, in topological order.
+      // wrote into its slot; the secondary tracks primary + baseDiffPc +
+      // ΔR. Same formulas the float32 walk applies, in topological order.
+      // The secondary's DISPLACEMENT from its baked baseline picks up
+      // corr = baseDiffPc − bakedDiff — the elements-alone anchor moving
+      // it off the (possibly disagreeing) baked WDS placement — so the
+      // ride keeps controls.target on the star even when the focal is a
+      // secondary of a mismatched pair.
       const q = rc.elements.q;
       const pPrev = this.slotPert.get(pIdx);
       const px = (pPrev ? pPrev.x : 0) - DELTA_OUT.x * q;
@@ -256,9 +263,9 @@ export class BinaryOrbitField {
       if (pPrev) { pPrev.x = px; pPrev.y = py; pPrev.z = pz; }
       else this.slotPert.set(pIdx, { x: px, y: py, z: pz });
       const sPrev = this.slotPert.get(sIdx);
-      const sx = px + DELTA_OUT.x;
-      const sy = py + DELTA_OUT.y;
-      const sz = pz + DELTA_OUT.z;
+      const sx = px + DELTA_OUT.x + (rc.baseDiffPc.x - (abs[sBase + 0] - abs[pBase + 0]));
+      const sy = py + DELTA_OUT.y + (rc.baseDiffPc.y - (abs[sBase + 1] - abs[pBase + 1]));
+      const sz = pz + DELTA_OUT.z + (rc.baseDiffPc.z - (abs[sBase + 2] - abs[pBase + 2]));
       if (sPrev) { sPrev.x = sx; sPrev.y = sy; sPrev.z = sz; }
       else this.slotPert.set(sIdx, { x: sx, y: sy, z: sz });
     }
