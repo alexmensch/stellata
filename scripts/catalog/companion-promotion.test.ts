@@ -7,6 +7,7 @@ import {
   hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
+  parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
   promoteCompanions,
@@ -1491,6 +1492,20 @@ describe('canonicalCompLetter', () => {
 
   it('passes through for single-character primary (no stem to extract)', () => {
     expect(canonicalCompLetter('A', '2')).toBe('2');
+  });
+});
+
+describe('parentComponentToken', () => {
+  // Fixtures mirror component_tokens.py:test_parent_component_token so
+  // the Python↔TS mirror can't silently drift.
+  it('drops the rightmost designator', () => {
+    expect(parentComponentToken('Aa1')).toBe('Aa');
+    expect(parentComponentToken('Ba')).toBe('B');
+    expect(parentComponentToken('Aa')).toBe('A');
+  });
+
+  it('returns null for a single-character (top-level) token', () => {
+    expect(parentComponentToken('A')).toBeNull();
   });
 });
 

@@ -20,7 +20,9 @@ from stage2_resolve import (  # noqa: E402
     split_components,
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
-from stage4_orbits import OrbitElements, kepler_semimajor_axis_au  # noqa: E402
+from stage4_orbits import (  # noqa: E402
+    OrbitElements, iter_decomposing_pairs, kepler_semimajor_axis_au,
+)
 from stage5_optical import OpticalClassification  # noqa: E402
 from mass_estimate import (  # noqa: E402
     DEFAULT_PRIMARY_MASS_MSUN,
@@ -278,25 +280,6 @@ def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, 
 SystemAnchor = tuple[float, float, float, float]
 
 
-def _iter_decomposing_pairs(
-    pairs: list[WdsPair],
-    components: list[ResolvedComponent],
-    astrometry: list[ComponentAstrometry],
-):
-    """Yield ``(pair, primary, secondary, p_ast, s_ast)`` for each
-    decomposing WDS pair, skipping the ones Stage 2 left as
-    system-level / ambiguous ``components`` strings. Shared by
-    ``compute_system_anchors`` and ``build_multiples_rows`` so both
-    paths agree on the cursor (any change to the skip condition lands
-    in exactly one place)."""
-    i = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
-            continue
-        yield pair, components[i], components[i + 1], astrometry[i], astrometry[i + 1]
-        i += 2
-
-
 def compute_system_anchors(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
@@ -314,7 +297,7 @@ def compute_system_anchors(
     tie the primary takes precedence over the secondary.
     """
     out: dict[str, SystemAnchor] = {}
-    for pair, primary, secondary, p_ast, s_ast in _iter_decomposing_pairs(
+    for pair, primary, secondary, p_ast, s_ast in iter_decomposing_pairs(
         pairs, components, astrometry,
     ):
         if pair.wds_id in out:
@@ -478,6 +461,10 @@ def finalize_renderable_elements(
     m_primary = mass_from_spectral_class(primary_row.spect, primary_row.absmag)
     if m_primary is None:
         m_primary = DEFAULT_PRIMARY_MASS_MSUN
+    # q here may be a raw Gaia NSS mass_ratio (M₂/M₁, can be ≥ 1), not
+    # the M₂/(M₁+M₂) fraction M_total = M₁/(1−q) needs — fall back to the
+    # default so 1−q stays positive rather than yielding a non-positive
+    # M_total (no axis, no animation).
     q = primary_row.q
     if not (0.0 <= q < 1.0):
         q = UNKNOWN_COMPANION_MASS_RATIO_Q
@@ -603,7 +590,7 @@ def build_multiples_rows(
     out: list[MultiplesRow] = []
     emitted_keys: set[tuple[str, str]] = set()
     for j, (pair, primary, secondary, p_ast, s_ast) in enumerate(
-        _iter_decomposing_pairs(pairs, components, astrometry),
+        iter_decomposing_pairs(pairs, components, astrometry),
     ):
         if not classifications[j].is_physical:
             continue

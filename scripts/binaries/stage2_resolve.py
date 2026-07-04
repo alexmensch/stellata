@@ -112,6 +112,52 @@ def split_components(comp_str: str) -> tuple[str, str] | None:
     return None
 
 
+def iter_decomposing_pair_cursor(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+) -> Iterator[tuple[WdsPair, int]]:
+    """Pair-walk primitive: yield ``(pair, i)`` for every pair that
+    decomposes into two components, where ``components[i]`` and
+    ``components[i + 1]`` are its primary and secondary. Non-decomposing
+    pairs (empty / ambiguous ``components`` field) are skipped, keeping
+    the two-per-pair cursor aligned; the wds_id sync a Stage 2/3 skew
+    would break is validated here so it raises rather than silently
+    mis-pairing components downstream. ``components`` must be the
+    untouched output of ``resolve_all_pairs``."""
+    i = 0
+    for pair in pairs:
+        if split_components(pair.components) is None:
+            continue
+        if i + 1 >= len(components):
+            raise RuntimeError(
+                "component cursor exhausted before pairs did — Stage 2 "
+                "output truncated"
+            )
+        if (
+            components[i].wds_id != pair.wds_id
+            or components[i + 1].wds_id != pair.wds_id
+        ):
+            raise RuntimeError(
+                f"component cursor desync at pair {pair.wds_id}/"
+                f"{pair.components}: got components {components[i].wds_id} "
+                f"+ {components[i + 1].wds_id}"
+            )
+        yield pair, i
+        i += 2
+
+
+def iter_decomposing_pair_components(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+) -> Iterator[tuple[WdsPair, ResolvedComponent, ResolvedComponent]]:
+    """``(pair, primary, secondary)`` per decomposing pair — the
+    astrometry-free walk for Stage 2 passes that run before astrometry
+    exists. Stage 4's ``iter_decomposing_pairs`` is the same walk
+    carrying the parallel astrometry list."""
+    for pair, i in iter_decomposing_pair_cursor(pairs, components):
+        yield pair, components[i], components[i + 1]
+
+
 def group_orb6_by_pair(
     orb6: list[Orb6Entry],
 ) -> dict[tuple[str, str], list[Orb6Entry]]:
@@ -884,12 +930,9 @@ def propagate_blend_identity(
     evidence beats the blend convention.
     """
     n = 0
-    i = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
-            continue
-        primary, secondary = components[i], components[i + 1]
-        i += 2
+    for pair, primary, secondary in iter_decomposing_pair_components(
+        pairs, components,
+    ):
         if pair.rho_last is None or pair.rho_last > 0.0:
             continue
         if (

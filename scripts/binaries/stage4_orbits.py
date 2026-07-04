@@ -17,7 +17,7 @@ from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
     group_orb6_by_pair,
-    split_components,
+    iter_decomposing_pair_cursor,
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
 
@@ -584,24 +584,8 @@ def iter_decomposing_pairs(
             "components / astrometry list lengths disagree — Stage 3 "
             "output contract violated"
         )
-    i = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
-            continue
-        if i + 1 >= len(components):
-            raise RuntimeError(
-                "Stage 4 cursor exhausted before pairs did — Stage 2 "
-                "output truncated"
-            )
-        c1 = components[i]
-        c2 = components[i + 1]
-        if c1.wds_id != pair.wds_id or c2.wds_id != pair.wds_id:
-            raise RuntimeError(
-                f"Stage 4 cursor desync at pair {pair.wds_id}/{pair.components}"
-                f": got components {c1.wds_id} + {c2.wds_id}"
-            )
-        yield pair, c1, c2, astrometry[i], astrometry[i + 1]
-        i += 2
+    for pair, i in iter_decomposing_pair_cursor(pairs, components):
+        yield pair, components[i], components[i + 1], astrometry[i], astrometry[i + 1]
 
 
 def select_orbits_all(

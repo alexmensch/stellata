@@ -3249,6 +3249,32 @@ class IterDecomposingPairsTests(unittest.TestCase):
             ))
 
 
+class IterDecomposingPairComponentsTests(unittest.TestCase):
+    """The astrometry-free walk (Stage 2 passes that run before
+    astrometry exists) shares the same skip + validation primitive as
+    ``iter_decomposing_pairs``."""
+
+    def test_yields_primary_secondary_skipping_nondecomposing(self) -> None:
+        p1 = _wds_pair(wds_id="W1", components="AB")
+        p2 = _wds_pair(wds_id="W2", components="ABC")  # ambiguous → skipped
+        comps = [
+            _resolved(gaia=1, wds_id="W1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="W1", component="B", is_primary=False),
+        ]
+        yielded = list(bb.iter_decomposing_pair_components([p1, p2], comps))
+        self.assertEqual([(y[1].component, y[2].component) for y in yielded],
+                         [("A", "B")])
+
+    def test_cursor_desync_raises(self) -> None:
+        p = _wds_pair(wds_id="W1", components="AB")
+        comps = [
+            _resolved(gaia=1, wds_id="W2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="W2", component="B", is_primary=False),
+        ]
+        with self.assertRaises(RuntimeError):
+            list(bb.iter_decomposing_pair_components([p], comps))
+
+
 class SelectOrbitsAllTests(unittest.TestCase):
     def test_per_pair_emission_order_matches_pairs(self) -> None:
         nss_row = _nss_orbital_row(period_days=200.0)

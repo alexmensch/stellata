@@ -65,6 +65,7 @@ from stage2_resolve import (  # noqa: E402, F401
     _athyg_position_at_epoch,
     build_athyg_position_grid, build_pair_by_wds_disc,
     find_nearest_athyg_at_position, group_orb6_by_pair,
+    iter_decomposing_pair_components,
     predict_secondary_position, propagate_blend_identity,
     propagate_within_system,
     resolution_counts, resolve_all_pairs, resolve_component,

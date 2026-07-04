@@ -26,6 +26,7 @@ from stage2_resolve import (  # noqa: E402
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import (  # noqa: E402
     _nss_in_regime,
+    iter_decomposing_pairs,
     nss_to_canonical_elements,
 )
 
@@ -268,23 +269,19 @@ def synthesize_nss_inner_pairs(
     carriers: dict[
         tuple[str, int], tuple[ResolvedComponent, ComponentAstrometry],
     ] = {}
-    i = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
-            continue
-        c1, c2 = components[i], components[i + 1]
-        a1, a2 = astrometry[i], astrometry[i + 1]
-        i += 2
-        for me, mine, other in ((c1, a1, c2), (c2, a2, c1)):
-            g = me.gaia_source_id
+    for _pair, c1, c2, a1, a2 in iter_decomposing_pairs(
+        pairs, components, astrometry,
+    ):
+        for comp, comp_ast, partner in ((c1, a1, c2), (c2, a2, c1)):
+            g = comp.gaia_source_id
             if g is None or g not in indices.src_to_nss:
                 continue
-            if other.gaia_source_id is None or other.gaia_source_id == g:
+            if partner.gaia_source_id is None or partner.gaia_source_id == g:
                 continue
-            key = (me.wds_id, g)
+            key = (comp.wds_id, g)
             cur = carriers.get(key)
-            if cur is None or len(me.component) > len(cur[0].component):
-                carriers[key] = (me, mine)
+            if cur is None or len(comp.component) > len(cur[0].component):
+                carriers[key] = (comp, comp_ast)
 
     stats = {
         "skipped_token_shape": 0,

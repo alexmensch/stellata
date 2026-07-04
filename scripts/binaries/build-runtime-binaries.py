@@ -280,19 +280,14 @@ def pair_has_orbit(p: MultiplesPair) -> bool:
 def _split_components(s: str) -> tuple[str, str] | None:
     """``"AB" → ("A", "B")``; ``"Aa,Ab" → ("Aa", "Ab")``; WDS-truncated
     ``"Aa1,2" → ("Aa1", "Aa2")`` (the ``2`` re-anchors to the primary's
-    stem since WDS truncates the shared prefix). Returns ``None`` for
+    stem via ``expand_wds_truncated_secondary``). Returns ``None`` for
     component strings the splitter doesn't recognise."""
     if "," in s:
         parts = s.split(",")
         if len(parts) != 2:
             return None
         primary, secondary = parts[0], parts[1]
-        # WDS prefix truncation: "Aa1,2" means ("Aa1", "Aa2"). The
-        # secondary inherits the primary's stem when it's a bare digit.
-        if secondary and secondary.isdigit() and len(primary) >= 2:
-            stem = primary[:-1]
-            secondary = stem + secondary
-        return primary, secondary
+        return primary, expand_wds_truncated_secondary(primary, secondary)
     if len(s) == 2 and s.isalpha():
         return s[0], s[1]
     return None

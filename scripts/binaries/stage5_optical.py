@@ -19,6 +19,7 @@ from parsers import (  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
+    iter_decomposing_pair_components,
     split_components,
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
@@ -287,22 +288,11 @@ def classify_all_pairs(
             "parallel to decomposing pairs"
         )
     out: list[OpticalClassification] = []
-    i = 0
-    j = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
-            continue
-        if i + 1 >= len(components):
-            raise RuntimeError(
-                "Stage 5 cursor exhausted before pairs did — Stage 2 "
-                "output truncated"
-            )
-        p = components[i]
-        s = components[i + 1]
+    for j, (pair, p, s) in enumerate(
+        iter_decomposing_pair_components(pairs, components)
+    ):
         _, orbit_via = orbits[j]
         out.append(classify_pair_optical(pair, p, s, orbit_via, indices))
-        i += 2
-        j += 1
     return out
 
 
