@@ -368,10 +368,24 @@ frame-by-frame.
 camera → star, and applies A_V to `appMag` (dimming) and
 E(B−V) = A_V/3.1 to the intrinsic LUT-input B–V (sourced via the
 six-tier Apsis-first routing in `star-color-routing-pure.ts`).
-Default strength = 1 (physical realism); user knob:
-`stellata.setExtinctionStrength(x)` from the dev console. Looking
-through dust dims and reddens stars behind it, which is what you'd
-actually see.
+Looking through dust dims and reddens stars behind it, which is what
+you'd actually see.
+
+Catalog `absmag` and `ci` are stored **intrinsic** (de-extincted at
+build against the same voxel grid — see
+`scripts/catalog/README.md` § Build-time de-extinction), so this
+raymarch *restores* the observer-relative extinction rather than
+double-applying it: at camera=Sol the build subtraction and this
+addition cancel, so a dusty-sightline star renders at its AT-HYG
+observed magnitude. **Invariant:** any change to this runtime stack
+(map, slab) must ship with the mirrored build-side integral + catalog
+rebuild, or the cancellation breaks.
+
+`stellata.setExtinctionStrength(x)` (dev console) scales the re-added
+A_V: default 1 = physical realism; **0 = a dust-free universe** (every
+star at its intrinsic brightness/colour everywhere, since nothing is
+re-added on top of the de-extincted catalog); >1 amplifies dust
+visually.
 
 The data plumbing (preprocessor, manifest, LFS, loader, mesh) is
 fully wired so revisit work is purely render-tuning, not

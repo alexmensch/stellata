@@ -73,6 +73,7 @@ import {
   type DirectionSources,
 } from './direction-cascade';
 import { readStars, type Star } from './stars-parse';
+import { loadDustGrid } from './dust-deextinction';
 import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,6 +93,8 @@ const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
+const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
+const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
@@ -117,6 +120,7 @@ function isUpToDate(): boolean {
   const simbadMtime = mtimeIfExists(SRC_SIMBAD_SPTYPE);
   const simbadSampleMtime = mtimeIfExists(SRC_SIMBAD_SAMPLE);
   const multiplesMtime = mtimeIfExists(SRC_MULTIPLES);
+  const dustMtime = mtimeIfExists(SRC_DUST_MANIFEST);
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -133,7 +137,8 @@ function isUpToDate(): boolean {
     binMtime > hip2Mtime &&
     binMtime > simbadMtime &&
     binMtime > simbadSampleMtime &&
-    binMtime > multiplesMtime
+    binMtime > multiplesMtime &&
+    binMtime > dustMtime
   );
 }
 
@@ -325,10 +330,22 @@ async function main() {
     );
   }
 
+  // Build-time de-extinction integral. Absent dust is a HARD FAIL (not
+  // the Bailer-Jones soft-continue): a soft-continue would carry
+  // extincted absmags into a runtime that assumes de-extincted, silently
+  // reintroducing the double-count the runtime raymarch fixes.
+  console.log('Loading dust grid for build-time de-extinction...');
+  const tDust = Date.now();
+  const dustGrid = loadDustGrid(SRC_DUST_DIR);
+  console.log(
+    `  loaded ${dustGrid.gridSize}³ voxel grid in ${Date.now() - tDust}ms`,
+  );
+
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
   const { stars, stats } = await readStars(
     SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
+    dustGrid,
   );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
@@ -402,7 +419,7 @@ async function main() {
   if (multiplesRows !== null) {
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS);
+    const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS, dustGrid);
     for (const ns of newStars) stars.push(ns);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +

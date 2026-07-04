@@ -21,6 +21,7 @@ import {
   type SpectralInfo,
 } from './catalog-pure';
 import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
+import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
 import type { Star } from './stars-parse';
 
@@ -484,13 +485,20 @@ export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> 
 // 0.009 white instead of its own DA1.9 blue), derive from spectral info
 // via tempKelvin → ballesterosBvFromTeff. SPECTRAL_UNKNOWN falls
 // through to SOLAR_BV_FALLBACK.
+/** True when the row's `ci` is its OWN observed B−V (dust-reddened), so
+ *  build-time de-extinction must de-redden it. False when imputeCompanionCi
+ *  derives an intrinsic B−V from spectral type or the solar fallback —
+ *  those are already extinction-free and must not be de-reddened. */
+export function companionCiIsObserved(secondary: MultiplesTsvRow): boolean {
+  return secondary.ci !== null
+    && secondary.photometryVia !== PHOTOMETRY_VIA_SYSTEM_INHERITED;
+}
+
 export function imputeCompanionCi(
   secondary: MultiplesTsvRow,
   spectralInfo: SpectralInfo,
 ): number {
-  const inherited = secondary.photometryVia === PHOTOMETRY_VIA_SYSTEM_INHERITED;
-  const needsDerivation = secondary.ci === null || inherited;
-  if (!needsDerivation) {
+  if (companionCiIsObserved(secondary)) {
     return secondary.ci as number;
   }
   // SPECTRAL_UNKNOWN's tempKelvin is the neutral 5000 K row — a yellow-
@@ -951,6 +959,7 @@ function promoteRow(
   state: PromotionState,
   constellations: { code: string; name: string }[],
   stats: PromotionStats,
+  dustGrid: DustGrid | null,
 ): number | null {
   const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx,
           position, canonicalComp, isPairRowPrimary } = ctx;
@@ -1036,11 +1045,22 @@ function promoteRow(
     stats.droppedNoAbsmag++;
     return null;
   }
-  const absmag = imputed.absmag;
+  let absmag = imputed.absmag;
   if (imputed.source === 'spectral') stats.absmagSpectralDerived++;
   if (imputed.source === 'anchor_collocated') stats.absmagAnchorCollocated++;
   if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
-  const ci = imputeCompanionCi(row, spectral.info);
+  let ci = imputeCompanionCi(row, spectral.info);
+  // Build-time de-extinction along the companion's sightline. A
+  // spectral-derived absmag (class→M_V) and a derived ci (Ballesteros /
+  // solar fallback) are already intrinsic, so leave them; observed-
+  // photometry absmag (dmag-imputed / own / inherited-twin) and the row's
+  // own observed ci embed A_V and get it subtracted so the runtime
+  // raymarch re-adds it without double-counting.
+  if (dustGrid) {
+    const av = avSolToStar(dustGrid, position.x, position.y, position.z);
+    if (imputed.source !== 'spectral') absmag -= av;
+    if (companionCiIsObserved(row)) ci -= av / R_V;
+  }
   const properName = composeCompanionName(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
   );
@@ -1116,6 +1136,7 @@ export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
   constellations: { code: string; name: string }[],
+  dustGrid: DustGrid | null = null,
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
@@ -1166,7 +1187,7 @@ export function promoteCompanions(
       // reached it).
       primaryCatalogIdx = tryPromoteCursorPrimary(
         cursor, wdsRootAnchors, groups, singleLettersByRoot,
-        state, constellations, stats,
+        state, constellations, stats, dustGrid,
       );
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
@@ -1209,7 +1230,7 @@ export function promoteCompanions(
           canonicalComp,
           isPairRowPrimary: false,
         },
-        state, constellations, stats,
+        state, constellations, stats, dustGrid,
       );
     }
   }
@@ -1239,6 +1260,7 @@ function tryPromoteCursorPrimary(
   state: PromotionState,
   constellations: { code: string; name: string }[],
   stats: PromotionStats,
+  dustGrid: DustGrid | null,
 ): number | null {
   const primary = cursor.primary;
   if (primary === null) return null;
@@ -1294,7 +1316,7 @@ function tryPromoteCursorPrimary(
       canonicalComp: primary.comp,
       isPairRowPrimary: true,
     },
-    state, constellations, stats,
+    state, constellations, stats, dustGrid,
   );
 }
 
