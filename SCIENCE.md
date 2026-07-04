@@ -1163,6 +1163,19 @@ voxel grid camera→star and applies:
 Default strength = 1 (physical realism). Source units are E_ZGR per
 parsec; the conversion `A_V / E_ZGR ≈ 2.742` at V band is baked in.
 
+Catalog `absmag` and `ci` are stored **intrinsic** — the build subtracts
+the Sol→star integral through this same voxel grid at write time (see
+`scripts/catalog/README.md` § Build-time de-extinction), so this
+raymarch *restores* the observer-relative extinction instead of adding
+it a second time. Because both sides integrate the same model, at
+camera=Sol the build subtraction and the runtime addition cancel and a
+dusty-sightline star renders at its AT-HYG observed magnitude. This is
+what makes the "no double-counting" statements below true across **all**
+tiers (previously the magnitude channel was double-counted in every tier
+and the colour channel in the ~15% tier-3 stars that read `iCi`
+directly). Invariant: any change to this runtime stack ships with the
+mirrored build-side integral + catalog rebuild in the same release.
+
 **Volumetric Milky Way dust.** Analytical-only, no voxel sampling.
 Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` —
 Drimmel & Spergel-style thin-disc dust. Per step, opacity converts to

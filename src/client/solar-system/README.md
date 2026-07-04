@@ -19,9 +19,14 @@ src/client/solar-system/
                                   approximation + cubic Jupiter–Neptune
                                   correction terms. Heliocentric ecliptic
                                   parsecs out.
-  time.ts                         Simulation time `t` (UTC seconds offset)
-                                  + UTC ↔ Julian-day helpers. Single source
-                                  of truth for the time scrubber.
+  time.ts                         Simulation time `t` + UTC ↔ Julian-day
+                                  helpers. Owns `VirtualClock`, the clock
+                                  behind `Stellata.getT()`, plus the
+                                  FF/RW rate transitions and rate label.
+                                  Single source of truth for the scrubber.
+  time-scrubber.ts                Debug-panel "Time" section — transport
+                                  controls (play/pause/FF/RW/reset/jump)
+                                  driving the VirtualClock.
   sky-truth.test.ts               Regression corpus: the ephemeris →
                                   ecliptic→ICRS chain vs JPL Horizons
                                   RA/Dec frozen in data/horizons/, plus
@@ -105,9 +110,28 @@ sub-second is straightforward — the cache key just bucketises finer.
 
 ## Time `t` and the readout
 
-`time.ts` defines `t` as a Unix-seconds double. It is currently pinned
-to "now" via `Stellata.getT()` returning `Date.now() / 1000`; the time
-scrubber (`stellata-nmu`) plugs in via `Stellata.setT()`.
+`time.ts` defines `t` as a Unix-seconds double. `Stellata.getT()` reads
+it from a `VirtualClock`: `t = simT0 + rate · (wallNow − wallT0)`, so at
+`rate = 1` in steady state it tracks `Date.now() / 1000` exactly (the
+parity every existing consumer relies on). This is the ONLY place
+wall-clock is sampled for the simulation `t`.
+
+The debug panel's **Time** section (`time-scrubber.ts`) drives the clock:
+play / pause / fast-forward / rewind / reset / jump-to-date. FF and RW
+step through **powers of two** (`±1, ±2, … ±2³⁰`) and cross zero directly
+— a step from `+1×` lands on `-1×` rather than passing through fractional
+slow-motion, since the binary orbits this scrubber verifies (α Cen 80 yr,
+61 Cyg 664 yr) are only ever watched *faster* than wall-clock. Rate flips
+snapshot the current virtual time so scrubbing never teleports. `|rate|`
+saturates at `2³⁰` (~1.07e9×). `Stellata.setT(n)` freezes the clock at a
+specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
+live. `stellata-nmu` layers the user-facing scrubber UI on this plumbing.
+
+Jump-to-date is a native `datetime-local` calendar picker whose value is
+read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
+in `time.ts`), even though the readout displays UTC — deliberate, so the
+picker matches the operator's wall clock. Reset (⟲) already snaps to
+live-now at 1×, so there is intentionally no separate "now" jump.
 
 `time-readout.ts` renders the live UTC timestamp the rendered positions
 correspond to in `.ui-bottom`'s `#time-readout`. **Always visible** —

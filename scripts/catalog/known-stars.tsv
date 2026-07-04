@@ -17,7 +17,15 @@
 #                           in parsecs.
 # primary_distance_pc_err   1-sigma uncertainty on primary_distance_pc.
 #                           Used in the tolerance gate (see below).
-# primary_absmag            Expected absolute magnitude of the primary.
+# primary_absmag            Expected absolute magnitude of the primary —
+#                           the INTRINSIC (de-extincted) value the build
+#                           writes, not observed mag − 5·log(d/10). The
+#                           build subtracts the Sol→star Edenhofer A_V so
+#                           the runtime raymarch re-adds it without
+#                           double-counting; luminous stars behind
+#                           measurable dust (Antares, ν Sco, the LMC
+#                           supergiants) therefore sit brighter here than
+#                           their reddened apparent photometry implies.
 # primary_spectral          Expected MK spectral type as a human-readable
 #                           string ("A0V", "M5.5Ve", "DA1.9"). The test
 #                           parses it via classifyFromSimbad and asserts
@@ -80,17 +88,17 @@
 wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primary_distance_pc_err	primary_absmag	primary_spectral	companions	orbital_period_days	notes_source
 # ---- Distance-refinement regression cases ------------------------------
 # B-J override re-anchored from catastrophic AT-HYG G_R3 distance:
-	HD 30353	22365	204531088580182016	6244.791	10	-6.278	A5Iap			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 30353 sp_type=A5Iap (sg*).
-	HD 35921	25733	183255985260080896	5466.246	10	-6.908	O9II			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 35921 sp_type=O9II.
-	HD 64315	38430	5602025904044961536	6215.232	10	-4.777	O5.5Vz+O7V			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 64315 sp_type=O5.5Vz+O7V (eclipsing binary).
-	HIP 46144	46144	1040043514891491968	7515.496	10	-4.240	A0			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HIP 46144 sp_type=A0 (bare; no lumClass pin).
+	HD 30353	22365	204531088580182016	6244.791	10	-7.033	A5Iap			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 30353 sp_type=A5Iap (sg*).
+	HD 35921	25733	183255985260080896	5466.246	10	-7.621	O9II			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 35921 sp_type=O9II.
+	HD 64315	38430	5602025904044961536	6215.232	10	-4.865	O5.5Vz+O7V			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 64315 sp_type=O5.5Vz+O7V (eclipsing binary).
+	HIP 46144	46144	1040043514891491968	7515.496	10	-4.335	A0			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HIP 46144 sp_type=A0 (bare; no lumClass pin).
 # B-J no-degradation guard — well-measured nearby F-dwarf, B-J must not perturb:
 	HD 33305	23785	4773096563064098432	92.871	0.5	3.551	F5V			B-J no-degradation guard: high-S/N nearby F-dwarf; Bailer-Jones posterior must not shift the AT-HYG value. SIMBAD HD 33305 sp_type=F5V.
 # LMC kinematic snaps — pinned to Pietrzyński 2019 49.594 kpc:
-	HD 269529		4658107884688023040	49593.999	1	-7.272	G0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare).
-	HD 271416		4660699674131931008	49593.998	1	-7.138	K0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
-	HD 268691		4661719299382753408	49593.999	1	-7.582	K7			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare).
-	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.527	M0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
+	HD 269529		4658107884688023040	49593.999	1	-7.426	G0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare).
+	HD 271416		4660699674131931008	49593.998	1	-7.262	K0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
+	HD 268691		4661719299382753408	49593.999	1	-7.703	K7			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare).
+	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.595	M0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
 # ---- Single stars ------------------------------------------------------
 # Bright stars saturated in Gaia DR3 have null gaia_source_id; the
 # pipeline's spectral resolver requires a Gaia source_id, so spectClass
@@ -103,10 +111,10 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 05552+0724	Betelgeuse	27989		152.672	1.0	-5.469	M1-M2Ia-Iab			SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored. NO companion expected: the WDS Aa,Ab row carries no mags and no orbit, so the promoted Ab was a full-luminosity invented twin of Betelgeuse (absmag -5.47 at 0.1″) — the inherited-photometry drop now removes it. If Ab reappears here, the twin-brightness guard regressed.
 	Arcturus	69673		11.257	0.1	-0.307	K1.5IIIFe-0.5			SIMBAD * alf Boo sp_type=K1.5IIIFe-0.5. Bright nearby giant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
 	Aldebaran	21421		20.434	0.2	-0.682	K5+III			SIMBAD * alf Tau sp_type=K5+III. Bright giant, no Gaia DR3 match.
-	Rigel	24436		264.551	1.5	-6.933	B8Ia			SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
-	Antares	80763		169.780	1.0	-5.089	M1.5Iab+B2Vn			SIMBAD * alf Sco sp_type=M1.5Iab+B2Vn. Bright red supergiant with B-star companion.
+	Rigel	24436		264.551	1.5	-6.993	B8Ia			SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
+	Antares	80763		169.780	1.0	-5.487	M1.5Iab+B2Vn			SIMBAD * alf Sco sp_type=M1.5Iab+B2Vn. Bright red supergiant with B-star companion.
 	Spica	65474		76.570	0.5	-3.440	B1V			SIMBAD * alf Vir sp_type=B1V. Bright early-B variable (β Cep), tight spectroscopic binary.
-	Deneb	102098		432.900	2.5	-6.932	A2Ia			SIMBAD * alf Cyg sp_type=A2Ia. Bright supergiant; AT-HYG distance from HIP2 with high uncertainty (true distance ~800 pc per Gaia DR2).
+	Deneb	102098		432.900	2.5	-7.063	A2Ia			SIMBAD * alf Cyg sp_type=A2Ia. Bright supergiant; AT-HYG distance from HIP2 with high uncertainty (true distance ~800 pc per Gaia DR2).
 05167+4600	Capella	24608		13.123	0.1	-0.510	G3III:	Ab:::-0.410:1.0	104.02128	SIMBAD * alf Aur sp_type=G3III:. Bright quad system (Aa+Ab giants); HIP-anchored. ORB6 inner orbit Aa,Ab P=104.02 d; companion Ab promoted via synth-05167+4600-Ab (no own gaia/hip). max_sep_au=1.0 guards the dch.80 fix — Ab projects to ~0 AU from Capella via sep+PA (0.0″ at 13.123 pc); BinaryOrbitField overlays the ~0.74 AU inner orbit at runtime.
 	Canopus	30438		94.787	0.5	-5.504	A9II			SIMBAD * alf Car sp_type=A9II. Bright supergiant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
 	Achernar	7588		42.754	0.3	-2.705	B6Vpe			SIMBAD * alf Eri sp_type=B6Vpe; emission-line Be star, rapid rotator.
@@ -177,12 +185,12 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # The famous AR Cas Aa,Ab inner eclipsing pair (P=6.07 d, EA-type) is
 # not yet in multiples.tsv — requires the GCVS-eclipsing → inner-pair
 # ingestion path scoped to dch.72.
-23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.649	B3V			AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). Multi-star system with 9 visual components (A-I); inner Aa,Ab eclipsing pair (P=6.07 d) pending dch.72.
+23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.756	B3V			AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). Multi-star system with 9 visual components (A-I); inner Aa,Ab eclipsing pair (P=6.07 d) pending dch.72.
 # ν Scorpii (Jabbah) — multiple-star system with high-eccentricity inner
 # orbit. Outer ORB6 Aa,Ab pair (P=3674.78 d ≈ 10.06 yr, e=0.92, i=89.7°,
 # CHARA-resolved). Visual components B, C, D carry own Gaia IDs in
 # AT-HYG. Inner Aa1,Aa2 spectroscopic sub-pair (P=1.41 d) pending dch.72.
-16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-1.760	O		3674.78025	ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual). Inner Aa1,Aa2 (P=1.41 d, SB) pending dch.72.
+16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-2.115	O		3674.78025	ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual). Inner Aa1,Aa2 (P=1.41 d, SB) pending dch.72.
 # ξ Ursae Majoris (Alula Australis, STF1523 AB) — Tier A pin pending
 # the catalog.bin identifier backfill (separate bead). AT-HYG carries
 # the system as HD-only (no HIP, no Gaia on either component row);

@@ -25,6 +25,9 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          lands. Manifest is the contract with
                          scripts/dust/build-dust.py — both derive
                          gridSize / chunkSize / bounds / encoding from it.
+                         Build-side counterpart: scripts/catalog/
+                         dust-deextinction.ts reads the same artifact to
+                         de-extinct absmag/ci (mirrored decode + integral).
 ```
 
 ## Where the other layer loaders live

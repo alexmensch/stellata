@@ -22,6 +22,7 @@ import {
   classifyFromSimbad,
 } from './catalog-pure';
 import { CONSTELLATIONS } from './constellations';
+import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 import type { Star } from './stars-parse';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
@@ -377,6 +378,64 @@ describe('imputeCompanionCi', () => {
     });
     const unknownButLumClass = { ...SPECTRAL_UNKNOWN, lumClass: 2 };
     expect(imputeCompanionCi(sec, unknownButLumClass)).toBe(SOLAR_BV_FALLBACK);
+  });
+});
+
+describe('promoteCompanions build-time de-extinction', () => {
+  // Uniform-density cube: A_V accrues along the sightline; avSolToStar
+  // gives the exact expected subtraction (no hard-coded magic).
+  const grid: DustGrid = {
+    gridSize: 4, boundsHalfPc: 100, densityMin: 1e-3,
+    logRatio: Math.log(100), avPerDensityPc: 2, voxelSizePc: 50,
+    data: new Uint8Array(4 * 4 * 4).fill(200),
+  };
+  const pos = { x: 40, y: 0, z: 0 };
+  const av = avSolToStar(grid, pos.x, pos.y, pos.z);
+
+  // Secondary re-anchored per-component (own gaia_5p) so resolvePosition
+  // uses its own xyz — the sightline the integral runs down.
+  function promoteAt(
+    grid: DustGrid | null,
+    rowOverrides: Partial<MultiplesTsvRow>,
+  ): Star {
+    const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
+    const primaryRow = multiplesRow({
+      comp: 'A', orbitRole: 'primary', gaiaSourceId: '111',
+      x_pc: 40, y_pc: 0, z_pc: 0, distPc: 40,
+    });
+    const secondary = multiplesRow({
+      gaiaSourceId: '222', astrometryVia: 'gaia_5p',
+      x_pc: pos.x, y_pc: pos.y, z_pc: pos.z, distPc: 40,
+      ...rowOverrides,
+    });
+    const { newStars } = promoteCompanions(
+      [primaryRow, secondary], [primaryStar], CONSTELLATIONS, grid,
+    );
+    expect(newStars).toHaveLength(1);
+    return newStars[0];
+  }
+
+  it('de-extincts observed absmag and de-reddens the row’s own ci', () => {
+    const observed: Partial<MultiplesTsvRow> = {
+      photometryVia: 'athyg_own', absmag: 3.0, ci: 0.5, spect: '', dmag: null,
+    };
+    const withGrid = promoteAt(grid, observed);
+    const noGrid = promoteAt(null, observed);
+    expect(noGrid.absmag - withGrid.absmag).toBeCloseTo(av, 6);
+    expect(noGrid.ci - withGrid.ci).toBeCloseTo(av / R_V, 6);
+  });
+
+  it('leaves intrinsic spectral-derived absmag and Ballesteros ci untouched', () => {
+    // Inherited photometry + per-component type → class→M_V absmag and
+    // Ballesteros ci: both already extinction-free, so no subtraction.
+    const intrinsic: Partial<MultiplesTsvRow> = {
+      photometryVia: 'athyg_system_inherited', spectVia: 'simbad',
+      spect: 'B8V', dmag: null,
+    };
+    const withGrid = promoteAt(grid, intrinsic);
+    const noGrid = promoteAt(null, intrinsic);
+    expect(withGrid.absmag).toBeCloseTo(noGrid.absmag, 6);
+    expect(withGrid.ci).toBeCloseTo(noGrid.ci, 6);
   });
 });
 
