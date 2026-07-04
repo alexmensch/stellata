@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -52,6 +52,7 @@
   "allowScripts": {
     "esbuild@0.28.1": true,
     "sharp@0.34.5": true,
-    "workerd@1.20260701.1": true
+    "workerd@1.20260701.1": true,
+    "fsevents@2.3.3": true
   }
 }

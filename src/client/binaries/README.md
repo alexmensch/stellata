@@ -134,14 +134,18 @@ the star and `lookAt(target) == star` keeps the pin substitution valid.
 **float64**: it replays the focal's slot-chain (§ Walk-active LOD) in
 double precision and returns the focal's total displacement from its
 catalog baseline — matching the walk's float32-written slot within the
-position quantum, continuous in `t`. The shell reads it before the walk
-perturbs the buffer (e.g. at focus entry) to snap `controls.target` onto
-the star's live position; a per-frame delta then drives the ride. CPU
-consumers (focus ring, distance vector, HUD shafts, hover picker) read
-the perturbed `_localPositions` and project through the same
-`lookAt(target)` camera, so they land on the disc without any rebase.
-The ride is skipped during warp (the warp owns the camera and tracks the
-live buffer itself).
+position quantum, continuous in `t`. `setFocus` reads it to snap
+`controls.target` onto the star's live position; a per-frame delta then
+drives the ride. On the frame the focal changes, the ride re-snaps
+`controls.target` onto the star's **live `_localPositions` slot** rather
+than trusting that focus-entry snap — under fast scrub sim-time advances
+between the focus event and the next frame, so the event-time sample goes
+stale and would leave the star a fixed offset off-centre. The pure step
+math is `focal-ride-pure.ts:focalRideStep`. CPU consumers (focus ring,
+distance vector, HUD shafts, hover picker) read the perturbed
+`_localPositions` and project through the same `lookAt(target)` camera,
+so they land on the disc without any rebase. The ride is skipped during
+warp (the warp owns the camera and tracks the live buffer itself).
 
 ## Walk-active LOD
 
