@@ -2,14 +2,9 @@
 // (orbit perturbation + eclipse photometry). See
 // src/client/binaries/README.md § Tier mapping.
 
-import { AU_PC, J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD } from '../util/astronomy-constants';
 import {
-  evaluateOrbitSkyAU,
-  evaluateOrbitInPlaneAU,
-  evaluateOrbitDeltaPcTier1,
-  evaluateOrbitDeltaPcTier2,
-  projectSkyToICRS,
-  projectGalacticPlaneToICRS,
+  evaluateOrbitOffsetPc,
   type OrbitalElements,
   type Vec3,
 } from './binary-orbit-pure';
@@ -30,19 +25,12 @@ export interface OrbitRelationCache {
   /** Orbital elements pulled from the relation, in the units the pure
    *  layer expects. */
   elements: OrbitalElements;
-  /** Tier-1 R(baseline) cached so per-frame eval is a single Kepler
-   *  solve (now) plus a subtract. Baseline epoch = sepPaEpochJd — the
-   *  epoch the stored catalog separation was measured at, NOT J2000 —
-   *  falling back to J2000 when the record carries none. */
-  refSkyAU: { northAU: number; eastAU: number; radialAU: number } | null;
-  /** Tier-2 R(baseline) cached. {xAU, yAU} in the orbit plane. */
-  refInPlaneAU: { xAU: number; yAU: number } | null;
-  /** R(baseline) as a float64 ICRS pc vector — the epoch relative offset
-   *  the consumers add ΔR(t) to, giving rendered rel = R(t) exactly. This
-   *  is the elements-alone geometry seam: it replaces subtracting two
-   *  float32 catalog positions (which quantises to grid noise for tight
-   *  pairs and carries any WDS/Kepler placement disagreement into the
-   *  rendered orbit centre). */
+  /** R(baseline) as a float64 ICRS pc vector — the sole cached epoch
+   *  geometry. The consumers add ΔR(t) to it, giving rendered rel = R(t)
+   *  exactly. Baseline epoch = sepPaEpochJd (the epoch the stored catalog
+   *  separation was measured at, NOT J2000), falling back to J2000 when
+   *  the record carries none. See README § Tier mapping for why this
+   *  replaces the float32 slot diff. */
   baseDiffPc: Vec3;
   /** Peak relative-separation envelope, AU. a · (1 + e). Used by the
    *  screen-separation LOD as the worst-case sub-pixel test. */
@@ -97,32 +85,21 @@ export function buildOrbitRelationCaches(
       ? r.sepPaEpochJd
       : J2000_JD;
     const pBase = r.primaryIdx * 3;
-    const refSkyAU = tier === 1 ? evaluateOrbitSkyAU(elements, baselineJd) : null;
-    const refInPlaneAU = tier === 2 ? evaluateOrbitInPlaneAU(elements, baselineJd) : null;
     // R(baseline) as an ICRS pc vector. The primary's float32 catalog xyz
-    // is a tangent-basis anchor only (same anchor evaluateDelta uses per
-    // frame), so a float32 read here is fine; the RELATIVE geometry rides
-    // entirely on the elements. Adding ΔR(t) = R(t) − R(baseline) gives
-    // rendered rel = R(t) exactly for every pair — the sub-resolution
-    // collocated case included, no special path.
-    const baseDiffPc: Vec3 = tier === 1
-      ? projectSkyToICRS(
-          {
-            x: absolutePositions[pBase],
-            y: absolutePositions[pBase + 1],
-            z: absolutePositions[pBase + 2],
-          },
-          refSkyAU!.northAU * AU_PC,
-          refSkyAU!.eastAU * AU_PC,
-          refSkyAU!.radialAU * AU_PC,
-        )
-      : projectGalacticPlaneToICRS(refInPlaneAU!.xAU * AU_PC, refInPlaneAU!.yAU * AU_PC);
+    // is a tangent-basis anchor only (same anchor the per-frame eval uses),
+    // so a float32 read here is fine; the RELATIVE geometry rides entirely
+    // on the elements. Adding ΔR(t) = R(t) − R(baseline) gives rendered
+    // rel = R(t) exactly for every pair — the sub-resolution collocated
+    // case included, no special path.
+    const baseDiffPc = evaluateOrbitOffsetPc(elements, tier, baselineJd, {
+      x: absolutePositions[pBase],
+      y: absolutePositions[pBase + 1],
+      z: absolutePositions[pBase + 2],
+    });
     out.push({
       relationIdx: i,
       tier,
       elements,
-      refSkyAU,
-      refInPlaneAU,
       baseDiffPc,
       peakSepAU: elements.a * (1 + elements.e),
     });
@@ -132,13 +109,17 @@ export function buildOrbitRelationCaches(
 
 /** Per-frame ΔR(t) = R(t) − R(baseline) in ICRS pc for a cached
  *  relation. `systemXyzPc` anchors the Tier-1 tangent basis (ignored
- *  for Tier 2). */
+ *  for Tier 2) — the same anchor `baseDiffPc` was built with, so the
+ *  R(baseline) terms cancel exactly. */
 export function evaluateOrbitRelationDeltaPc(
   rc: OrbitRelationCache,
   tJd: number,
   systemXyzPc: Vec3,
 ): Vec3 {
-  return rc.tier === 1
-    ? evaluateOrbitDeltaPcTier1(rc.elements, rc.refSkyAU!, tJd, systemXyzPc)
-    : evaluateOrbitDeltaPcTier2(rc.elements, rc.refInPlaneAU!, tJd);
+  const rt = evaluateOrbitOffsetPc(rc.elements, rc.tier, tJd, systemXyzPc);
+  return {
+    x: rt.x - rc.baseDiffPc.x,
+    y: rt.y - rc.baseDiffPc.y,
+    z: rt.z - rc.baseDiffPc.z,
+  };
 }

@@ -172,19 +172,20 @@ Beyond that, the screen-separation gate fires before Kepler runs:
    sum brightness correctly under AdditiveBlending.
 
    The gate still writes the secondary's slot — it collapses onto the
-   primary's CURRENT position plus the **baked** static-fallback offset
-   (`local[pBase] + (abs[sBase] − abs[pBase])`), dropping the orbital
-   `ΔR`. (Unlike the active walk, which anchors on `baseDiffPc`; the two
-   differ by less than the pixel the gate just deemed sub-pixel.) This
+   primary's CURRENT position plus `baseDiffPc`
+   (`local[pBase] + baseDiffPc`), dropping only the orbital `ΔR`. This is
+   the SAME anchor the active walk uses, so crossing the gate never steps
+   the secondary by `baseDiffPc − bakedDiff` — the drop is just `ΔR`,
+   itself sub-pixel by the gate's own test. Anchoring on the baked slot
+   diff instead would reintroduce a `baseDiffPc − bakedDiff` snap for the
+   pairs whose baked placement disagrees with `R(epoch)` (the very
+   population this layer renders elements-alone to avoid). This also
    matters for a **hierarchical inner pair**: the shared primary slot
-   already carries
-   the parent pair's `−q_outer·ΔR_outer`, so the inner secondary must
-   inherit it. Leaving the secondary at its raw reset baseline (as the
-   gate once did) detached it from the parent-perturbed primary by
-   `q_outer·ΔR_outer` — an AU-scale, super-pixel snap when the tight
-   inner pair crossed the gate on zoom-out (Algol Aa2 at ~60-75 AU). A
-   top-level pair carries no parent perturbation, so the collapse
-   reproduces its reset baseline exactly (no behaviour change).
+   already carries the parent pair's `−q_outer·ΔR_outer`, so the inner
+   secondary must inherit it. Leaving the secondary at its raw reset
+   baseline (as the gate once did) detached it from the parent-perturbed
+   primary by `q_outer·ΔR_outer` — an AU-scale, super-pixel snap when the
+   tight inner pair crossed the gate on zoom-out (Algol Aa2 at ~60-75 AU).
 
    Relations on the **focal star's slot-chain** are EXEMPT from ALL
    THREE gates (horizon, magnitude, sub-pixel). The chain is every

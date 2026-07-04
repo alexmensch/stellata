@@ -339,6 +339,64 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
     expect(fx.localPositions[8]).toBe(fx.absolutePositions[8]);
   });
 
+  it('collapse of a MISMATCHED pair anchors on baseDiffPc, not the baked slot diff', () => {
+    // Secondary baked ~60 AU off its elements-alone R(epoch) — the
+    // displaced-centre population. When the pair goes sub-pixel the
+    // collapse must place it at primary + baseDiffPc (the active walk's
+    // anchor), so crossing the gate never steps it by corr = baseDiffPc −
+    // bakedDiff. Anchoring on the baked slot diff (the pre-fix behaviour)
+    // would reintroduce that corr-sized snap for exactly these pairs.
+    const positions = new Float32Array([
+      2.0, 0.0, 0.0,      // primary
+      2.0, 3e-4, 1e-4,    // secondary baked far off — mismatched
+    ]);
+    const mags = new Float32Array([2.0, 6.0]);
+    const local = new Float32Array(positions);
+    const suppress = new Float32Array(2);
+    const rel: BinaryRelation = {
+      primaryIdx: 0, secondaryIdx: 1,
+      flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION,
+      parentRelation: NO_PARENT,
+      pDays: 365.25 * 100, tJd: J2000_JD, e: 0.2, aAU: 10.0,
+      iRad: 0.5, omegaRad: 0.3, OmegaRad: 0.4, q: 0.4,
+      sepArcsec: 5.0, paDeg: 90.0, sepPaEpochJd: J2000_JD,
+    };
+    const binaries: BinariesData = {
+      version: 1,
+      relations: [rel],
+      primaryIdxToRelations: new Map([[0, [0]]]),
+      secondaryIdxToRelation: new Map([[1, 0]]),
+    };
+    const field = new BinaryOrbitField({
+      binaries, absolutePositions: positions, absoluteMags: mags,
+      localPositions: local, compositeSuppress: suppress,
+      iPositionAttr: new THREE.InstancedBufferAttribute(local, 3),
+      iCompositeSuppressAttr: new THREE.InstancedBufferAttribute(suppress, 1),
+    });
+    const bd = field.cachedRelations[0].baseDiffPc;
+    const bakedDiff = {
+      x: positions[3] - positions[0],
+      y: positions[4] - positions[1],
+      z: positions[5] - positions[2],
+    };
+    // The fixture is genuinely mismatched: bakedDiff is far from baseDiffPc.
+    expect(Math.hypot(bd.x - bakedDiff.x, bd.y - bakedDiff.y, bd.z - bakedDiff.z))
+      .toBeGreaterThan(1e-5);
+
+    const camera = new THREE.Vector3(0, 0, -900);
+    const t = (J2000_JD - 2440587.5) * 86400 + 50 * 365.25 * 86400;
+    field.update(t, camera, 15, 1080, 0.8);
+    expect(suppress[1]).toBe(1);
+    // Collapsed offset == baseDiffPc (active-walk anchor), NOT bakedDiff.
+    const off = [local[3] - local[0], local[4] - local[1], local[5] - local[2]];
+    const F32_TOL_PC = 5e-7;
+    expect(Math.abs(off[0] - bd.x)).toBeLessThan(F32_TOL_PC);
+    expect(Math.abs(off[1] - bd.y)).toBeLessThan(F32_TOL_PC);
+    expect(Math.abs(off[2] - bd.z)).toBeLessThan(F32_TOL_PC);
+    expect(Math.hypot(off[0] - bakedDiff.x, off[1] - bakedDiff.y, off[2] - bakedDiff.z))
+      .toBeGreaterThan(1e-5);
+  });
+
   it('exempts a relation on the focal star slot-chain — no step-jump on zoom-out', () => {
     // A relation on the focal's slot-chain skips the sub-pixel gate so the
     // focal-frame ride reads a continuous perturbation; hard-switching
@@ -525,16 +583,19 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
     );
     expect(aa1Pert).toBeGreaterThan(INNER_DISPLACEMENT_PC);
 
-    // Aa2 rides WITH Aa1 (collocated → exactly coincident), NOT stranded at
-    // the catalog baseline where it would sit OUTER_PERTURB_PC off the
-    // parent-perturbed primary.
+    // Aa2 rides WITH Aa1's parent perturbation, offset from it only by the
+    // inner epoch separation baseDiffPc (the SAME anchor the active walk
+    // uses — the gate drops only ΔR), NOT stranded at the catalog baseline
+    // where it would sit OUTER_PERTURB_PC off the parent-perturbed primary.
+    // The residual is baseDiffPc_inner (≤ a_inner, e=0) plus the ~3e-7 pc
+    // float32 readback quantum at 2.64 pc — orders below OUTER_PERTURB_PC.
     const innerSep = Math.hypot(
       fx.localPositions[3] - fx.localPositions[0],
       fx.localPositions[4] - fx.localPositions[1],
       fx.localPositions[5] - fx.localPositions[2],
     );
-    expect(innerSep).toBeLessThan(1e-9);
-    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.01);
+    expect(innerSep).toBeLessThan(INNER_DISPLACEMENT_PC + 3e-7);
+    expect(innerSep).toBeLessThan(OUTER_PERTURB_PC * 0.1);
   });
 
   it('focusing an inner member is a no-op on the buffer (no rebase — barycentric always)', () => {

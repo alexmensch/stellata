@@ -182,33 +182,26 @@ export class BinaryOrbitField {
         const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
         if (peakPx < SUB_PIXEL_THRESHOLD_PX) {
           // Composite suppression: skip Kepler, mark the secondary so the
-          // close-range + depth-mask passes drop its quad. Still collapse it
-          // onto the primary's CURRENT slot + baked baseline offset (drop
-          // only the sub-pixel ΔR) — a hierarchical inner secondary must
-          // inherit the parent perturbation its primary carries, which the
-          // reset-loop baseline does not. See README § Walk-active LOD.
+          // close-range + depth-mask passes drop its quad. Collapse it onto
+          // the primary's CURRENT slot + baseDiffPc (drop only the sub-pixel
+          // ΔR) — same anchor as the active walk, so crossing the gate never
+          // steps the secondary by baseDiffPc − bakedDiff. aPx carries any
+          // parent perturbation, which the secondary inherits.
           suppress[sIdx] = 1;
-          local[sBase + 0] = aPx + (abs[sBase + 0] - abs[pBase + 0]);
-          local[sBase + 1] = aPy + (abs[sBase + 1] - abs[pBase + 1]);
-          local[sBase + 2] = aPz + (abs[sBase + 2] - abs[pBase + 2]);
+          local[sBase + 0] = aPx + rc.baseDiffPc.x;
+          local[sBase + 1] = aPy + rc.baseDiffPc.y;
+          local[sBase + 2] = aPz + rc.baseDiffPc.z;
           continue;
         }
       } else {
         activeCount++;
       }
 
-      // Barycentric split about the system barycentre — the ONLY regime.
-      // Primary moves by −q·ΔR; the secondary tracks the primary's
-      // resulting position plus the elements-alone baseline offset
-      // baseDiffPc plus the full ΔR (sCoeff − pCoeff = 1), so the rendered
-      // relative offset is baseDiffPc + ΔR = R(t) exactly — the companion
-      // orbits the primary, never a displaced empty point. Hierarchical
-      // inner pairs propagate cleanly: aPx carries the parent's
-      // perturbation, so both inner members inherit it while the inner
-      // pair's relative offset stays clean. When the focal is a pair
-      // member the camera rides its perturbed position (see
-      // focalPerturbationInto + the ride in stellata.ts), so there is no
-      // rebase — unfocus is a pure state change.
+      // Barycentric split (sCoeff − pCoeff = 1): primary += −q·ΔR, secondary
+      // tracks primary + baseDiffPc + ΔR. aPx carries any parent
+      // perturbation, so a hierarchical inner pair inherits it on both
+      // members while its relative offset stays clean. See README § Tier
+      // mapping + § Hierarchical walk.
       this.evaluateDelta(rc, r, tJd);
       const dxDelta = DELTA_OUT.x;
       const dyDelta = DELTA_OUT.y;
