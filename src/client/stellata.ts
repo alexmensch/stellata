@@ -52,6 +52,7 @@ import {
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
+import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
@@ -324,6 +325,7 @@ export class Stellata implements FrameAnchor {
   private readonly _focalPert = new THREE.Vector3();
   private readonly _lastAppliedPert = new THREE.Vector3();
   private readonly _rideDelta = new THREE.Vector3();
+  private readonly _rideLive = new THREE.Vector3();
   private _rideFocalIdx: number | null = null;
 
   // Sorted-by-distance-from-Sol index for the core-mask query. Distance
@@ -1265,9 +1267,11 @@ export class Stellata implements FrameAnchor {
   // after the orbit walk (which wrote this frame's perturbation into the
   // buffer). Skipped during warp — the warp owns the camera and its
   // per-frame lookAt already tracks the live buffer; lastAppliedPert is
-  // kept synced so no jump accrues when the warp ends. Re-seeds without
-  // translating on the frame the focal star changes (setFocus already
-  // snapped target onto the star's live position).
+  // kept synced so no jump accrues when the warp ends. On the frame the
+  // focal star changes, re-snaps target onto the star's LIVE buffer
+  // position: setFocus sampled the perturbation at focus-event time, but
+  // under fast scrub sim-time advances between that event and this frame,
+  // so the event-time snap goes stale and the star would land off-centre.
   private applyFocalFrameRide(): void {
     const field = this.binaryOrbitField;
     if (!field) return;
@@ -1276,18 +1280,26 @@ export class Stellata implements FrameAnchor {
       && field.focalPerturbationInto(focal, this.getT(), this._focalPert);
     if (!hasPert) this._focalPert.set(0, 0, 0);
 
-    if (focal !== this._rideFocalIdx || this.warp.isActive()) {
-      this._lastAppliedPert.copy(this._focalPert);
-      this._rideFocalIdx = focal;
-      return;
-    }
-    this._rideDelta.subVectors(this._focalPert, this._lastAppliedPert);
+    const live = focal !== null
+      ? this.starLocalPositionInto(focal, this._rideLive)
+      : this._rideLive.set(0, 0, 0);
+    const step = focalRideStep({
+      focal,
+      rideFocalIdx: this._rideFocalIdx,
+      warpActive: this.warp.isActive(),
+      focalPert: this._focalPert,
+      lastAppliedPert: this._lastAppliedPert,
+      liveLocal: live,
+      target: this.controls.target,
+    });
+    this._rideFocalIdx = step.rideFocalIdx;
+    this._lastAppliedPert.set(step.px, step.py, step.pz);
+    this._rideDelta.set(step.dx, step.dy, step.dz);
     if (this._rideDelta.lengthSq() === 0) return;
     this.camera.position.add(this._rideDelta);
     this.controls.target.add(this._rideDelta);
     this.focus.translateFocusFrame(this._rideDelta);
     this.observe.translateFocusFrame(this._rideDelta);
-    this._lastAppliedPert.copy(this._focalPert);
   }
 
   /** Debug-HUD view into the eclipse field's per-relation walk for the

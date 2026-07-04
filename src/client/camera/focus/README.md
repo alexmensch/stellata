@@ -150,11 +150,11 @@ handler. Same precedent as the unfocus lerp
 (`../observe/README.md`).
 
 The focus-star pin (`uPinFocusToCenter`) is suppressed while the
-lerp is in flight — `controls.target` is already `(0,0,0)` in the
-post-recentre frame, so the pin would otherwise snap the focal star
-to NDC origin while the camera is mid-rotation, making the star
-appear pasted at screen centre instead of following the rotation
-naturally.
+lerp is in flight — `controls.target` is already on the focal star's
+live position in the post-recentre frame, so the pin would otherwise
+snap the focal star to NDC origin while the camera is mid-rotation,
+making the star appear pasted at screen centre instead of following
+the rotation naturally.
 
 `#overlay` (HUD arrows + ring, focus ring, distance vector,
 constellation lines, POI labels, etc.) is hidden for the lerp's
