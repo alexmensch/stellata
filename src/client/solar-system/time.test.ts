@@ -6,7 +6,9 @@ import {
   isLive,
   nextFastForwardRate,
   nextRewindRate,
+  parseLocalDatetimeValue,
   tToJDE,
+  toLocalDatetimeValue,
 } from './time';
 
 describe('tToJDE', () => {
@@ -236,5 +238,26 @@ describe('VirtualClock', () => {
     const c = new VirtualClock(w.now);
     for (let i = 0; i < 40; i++) c.fastForward();
     expect(c.getRate()).toBe(MAX_RATE);
+  });
+});
+
+describe('datetime-local value round-trip', () => {
+  it('round-trips a whole-second instant through local encode/decode', () => {
+    // Any timezone: encode uses local getters, decode parses zoneless as
+    // local, so the round-trip is TZ-independent (down to whole seconds,
+    // which is all the datetime-local format carries).
+    const ms = Date.UTC(2030, 0, 1, 12, 34, 56);
+    expect(parseLocalDatetimeValue(toLocalDatetimeValue(ms))).toBe(ms);
+  });
+
+  it('encodes as a zoneless YYYY-MM-DDTHH:mm:ss string (no trailing Z)', () => {
+    expect(toLocalDatetimeValue(Date.UTC(2030, 0, 1, 0, 0, 0))).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+    );
+  });
+
+  it('yields NaN for an empty or garbage value', () => {
+    expect(Number.isNaN(parseLocalDatetimeValue(''))).toBe(true);
+    expect(Number.isNaN(parseLocalDatetimeValue('not-a-date'))).toBe(true);
   });
 });

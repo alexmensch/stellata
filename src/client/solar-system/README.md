@@ -127,6 +127,12 @@ saturates at `2³⁰` (~1.07e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
 live. `stellata-nmu` layers the user-facing scrubber UI on this plumbing.
 
+Jump-to-date is a native `datetime-local` calendar picker whose value is
+read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
+in `time.ts`), even though the readout displays UTC — deliberate, so the
+picker matches the operator's wall clock. Reset (⟲) already snaps to
+live-now at 1×, so there is intentionally no separate "now" jump.
+
 `time-readout.ts` renders the live UTC timestamp the rendered positions
 correspond to in `.ui-bottom`'s `#time-readout`. **Always visible** —
 binary orbital evolution ticks against `getT()` in every mode (free

@@ -1,6 +1,6 @@
 import type { Stellata } from '../stellata';
 import type { DebugSection } from '../debug/debug-panel';
-import { formatRate } from './time';
+import { formatRate, toLocalDatetimeValue, parseLocalDatetimeValue } from './time';
 
 // Debug-panel "Time" section: transport controls over the VirtualClock
 // behind Stellata.getT(). Lets a developer scrub binary orbits and planet
@@ -33,15 +33,19 @@ export function buildTimeSection(stellata: Stellata): DebugSection {
   const playBtn = makeButton('▶', 'Play — resume last forward rate', () => clock.play());
   const pauseBtn = makeButton('⏸', 'Pause', () => clock.pause());
   const ffBtn = makeButton('⏩', 'Fast-forward — double, or forward across 1×', () => clock.fastForward());
-  const resetBtn = makeButton('⟲', 'Reset to live now at 1×', () => { clock.reset(); error.textContent = ''; });
+  const resetBtn = makeButton('⟲', 'Reset to live now at 1×', () => { clock.reset(); syncPickerToClock(); error.textContent = ''; });
   row.append(rewindBtn, playBtn, pauseBtn, ffBtn, resetBtn);
 
   const jumpRow = document.createElement('div');
   jumpRow.style.cssText = 'display:flex; gap:4px; align-items:center;';
   const jumpInput = document.createElement('input');
-  jumpInput.type = 'text';
-  jumpInput.placeholder = '2030-01-01T00:00:00Z';
+  jumpInput.type = 'datetime-local';
+  jumpInput.step = '1';
   jumpInput.style.cssText = 'flex:1; min-width:0; font-family:monospace; font-size:11px; padding:3px;';
+  const syncPickerToClock = (): void => {
+    jumpInput.value = toLocalDatetimeValue(stellata.getT() * 1000);
+  };
+  syncPickerToClock();
   const jumpBtn = document.createElement('button');
   jumpBtn.type = 'button';
   jumpBtn.textContent = 'Jump';
@@ -52,8 +56,8 @@ export function buildTimeSection(stellata: Stellata): DebugSection {
   error.style.cssText = 'color:#c00; font-size:10px; min-height:13px; margin-top:2px;';
 
   const doJump = (): void => {
-    const ms = Date.parse(jumpInput.value.trim());
-    if (Number.isNaN(ms)) { error.textContent = 'Unparseable date — use ISO-8601'; return; }
+    const ms = parseLocalDatetimeValue(jumpInput.value);
+    if (Number.isNaN(ms)) { error.textContent = 'Pick a date first'; return; }
     error.textContent = '';
     clock.setTimeAbsolute(ms / 1000);
     refresh();
