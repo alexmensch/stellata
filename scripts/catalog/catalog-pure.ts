@@ -471,8 +471,10 @@ export function classifyGcvsVarType(rawType: string | null | undefined): number 
   // GCVS's three canonical eclipsing classes; ELL is ellipsoidal (no
   // primary minimum, but the modulation is geometric, same suppression
   // logic applies). E* catches the bare "E" form GCVS uses on
-  // unclassified eclipsing systems. EP = eclipsing-by-planet (rare).
-  if (/\bE([ABW]|LL|P)?\b/.test(t)) return VAR_TYPE_ECLIPSING;
+  // unclassified eclipsing systems. EP (eclipsing-by-planet) is
+  // deliberately NOT here — a transiting-planet host is not a stellar
+  // multiple, so it must earn no wings and fall through to VAR_TYPE_OTHER.
+  if (/\bE([ABW]|LL)?\b/.test(t)) return VAR_TYPE_ECLIPSING;
   // Intrinsic pulsators. The pulsator family is identified by a
   // letter-prefix at the start of the GCVS type string or after a
   // separator (+ / | /); GCVS appends arbitrary subtype letters

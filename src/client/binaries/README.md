@@ -294,20 +294,19 @@ floor is a numeric-domain guard, not a sentinel encoding.
 
 ### Pulsation gate for eclipsing binaries
 
-`iSuppressPulsation` is a per-instance flag built once per
-`attachBinaries` from `catalog.varType` × `binaries.has_orbit`:
-set 1.0 on every primary whose GCVS variability type is
-`VAR_TYPE_ECLIPSING` AND that is the primary of at least one
-has_orbit relation. The shader's pulsation block (radial
-modulation from GCVS amplitude) is gated off for those primaries
-— `EclipsePhotometryField`'s geometric signal supersedes the
-GCVS-amplitude surrogate.
+`iSuppressPulsation` is a per-instance flag built once at
+catalog-load time from `catalog.varType` alone: 1.0 on every
+record whose GCVS variability type is `VAR_TYPE_ECLIPSING`,
+independent of the binaries data. Eclipsers are extrinsically
+variable — the brightness dip is a line-of-sight occlusion, not
+the star's own output — so the GCVS-amplitude radial pulsation is
+always a fabrication and is gated off unconditionally.
 
-For an EA/EB/EW primary with NO orbital elements (no NSS or
-ORB6 entry), the geometric signal isn't available and the
-GCVS-amplitude pulsation stays as the fallback. The two layers
-together define the boundary: when the real signal exists, it
-wins; otherwise the surrogate carries on.
+For an EA/EB/EW primary WITH orbital elements, the honest signal
+comes from `EclipsePhotometryField`'s geometric dip. For one with
+NO elements (no NSS or ORB6 entry) there is no phase to animate, so
+the star simply renders static — we don't invent a pulsation cycle
+we can't derive.
 
 `star-physics.ts`'s `renderedSizePx` reads the same suppress mask
 (via the optional `suppressPulsation` arg) so the SVG focus ring +

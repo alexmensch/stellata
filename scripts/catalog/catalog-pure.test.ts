@@ -682,13 +682,18 @@ describe('catalog-pure / parseGcvsNumber', () => {
 });
 
 describe('catalog-pure / classifyGcvsVarType', () => {
-  it('classifies eclipsing prefixes: EA / EB / EW / ELL / EP / E', () => {
+  it('classifies eclipsing prefixes: EA / EB / EW / ELL / E', () => {
     expect(classifyGcvsVarType('EA')).toBe(VAR_TYPE_ECLIPSING);
     expect(classifyGcvsVarType('EB')).toBe(VAR_TYPE_ECLIPSING);
     expect(classifyGcvsVarType('EW')).toBe(VAR_TYPE_ECLIPSING);
     expect(classifyGcvsVarType('ELL')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('EP')).toBe(VAR_TYPE_ECLIPSING);
     expect(classifyGcvsVarType('E')).toBe(VAR_TYPE_ECLIPSING);
+  });
+
+  it('classifies EP (eclipsing-by-planet) as OTHER, not eclipsing', () => {
+    // A transiting-planet host is not a stellar multiple: it must earn
+    // no wings and no cosmetic-pulsation suppression as a "binary".
+    expect(classifyGcvsVarType('EP')).toBe(VAR_TYPE_OTHER);
   });
 
   it('classifies composite eclipsing-+-rotational/RS as eclipsing', () => {

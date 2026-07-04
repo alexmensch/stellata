@@ -21,6 +21,7 @@ function baseCounts(): BuildCounts {
     ccdmGroups: 4000,
     ccdmResolved: 3500,
     ccdmFlagged: 200,
+    eclipsingWinged: 300,
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,
