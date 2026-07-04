@@ -365,6 +365,11 @@ def resolve_via_ccdm(
 
     # Pass 2 — secondaries. Use the WDS (ρ, θ) prediction to pick the
     # right CCDM sibling, excluding whichever HIP the primary claimed.
+    # ρ = 0 sub-resolution pairs are skipped outright: the prediction
+    # lands on the primary's own coordinate, so a nearest-sibling pick
+    # is a coin flip that can bind another branch's HIP (4 Equ Ab
+    # taking B's 103569). ``propagate_blend_identity`` gives those
+    # secondaries the primary's identifiers instead.
     for c in components:
         if c.gaia_source_id is not None or c.is_primary:
             continue
@@ -375,6 +380,7 @@ def resolve_via_ccdm(
             or pair.precise_dec_deg is None
             or pair.rho_last is None
             or pair.theta_last is None
+            or pair.rho_last <= 0.0
             or pair.rho_last >= WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
         ):
             continue
@@ -708,7 +714,12 @@ def iter_pair_athyg_matches(
 
     # Pass 2 — secondaries. Predict position from primary + (ρ, θ),
     # exclude the primary's AT-HYG row. Optionally fall back to the
-    # primary's row when the secondary's own match misses.
+    # primary's row when the secondary's own match misses. Skipped for
+    # ρ = 0 sub-resolution pairs: the prediction lands on the primary's
+    # own coordinate, and with the primary's row excluded the nearest
+    # match can only be a DIFFERENT component's row (4 Equ Ab taking
+    # B's AT-HYG entry — wrong HIP, wrong photometry); the blend-inherit
+    # branch below is the correct outcome for those pairs.
     for i, c in enumerate(components):
         if skip_predicate(i, c) or c.is_primary:
             continue
@@ -722,7 +733,7 @@ def iter_pair_athyg_matches(
         if (
             pair.rho_last is not None
             and pair.theta_last is not None
-            and pair.rho_last < WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
+            and 0.0 < pair.rho_last < WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
         ):
             secondary_ra, secondary_dec = predict_secondary_position(
                 pair.precise_ra_deg, pair.precise_dec_deg,
@@ -820,6 +831,11 @@ def resolve_all_pairs(
        (and any HIP it carries) across every pair row that shares the
        same ``(wds_id, letter)``, plus an ``Aa → A`` hierarchy step
        for WDS subcomponents that share a Gaia source with the parent.
+    6. ``propagate_blend_identity`` gives the still-unbound secondary
+       of every ρ = 0 sub-resolution pair its primary's identifiers
+       (the WDS blend convention), then ``propagate_within_system``
+       re-runs so the blend binding reaches the letter's other pair
+       rows.
     """
     orb6_by_pair = group_orb6_by_pair(orb6)
     out: list[ResolvedComponent] = []
@@ -845,7 +861,52 @@ def resolve_all_pairs(
         tolerance_arcsec=position_tolerance_arcsec,
     )
     propagate_within_system(out)
+    if propagate_blend_identity(out, pairs) > 0:
+        propagate_within_system(out)
     return out
+
+
+def propagate_blend_identity(
+    components: list[ResolvedComponent],
+    pairs: list[WdsPair],
+) -> int:
+    """ρ = 0 sub-resolution pairs are a single photocentre: WDS
+    publishes the pair but no astrometric instrument separates the
+    components, so the secondary's identifiers ARE the primary's
+    (Castor CIA 29 Aa,Ab lists HIP 36850 on both sides). The
+    position-match passes all skip these pairs — the (ρ, θ) prediction
+    is degenerate at ρ = 0 — so a secondary that bound nothing of its
+    own would otherwise surface no identity and no photometry at all
+    (Capella Ab). Copies gaia / hip / AT-HYG row (and the primary's
+    ``resolve_via`` when the Gaia source transfers) onto every such
+    secondary; returns the number seeded. Secondaries carrying ANY
+    binding of their own are left untouched — real per-component
+    evidence beats the blend convention.
+    """
+    n = 0
+    i = 0
+    for pair in pairs:
+        if split_components(pair.components) is None:
+            continue
+        primary, secondary = components[i], components[i + 1]
+        i += 2
+        if pair.rho_last is None or pair.rho_last > 0.0:
+            continue
+        if (
+            secondary.gaia_source_id is not None
+            or secondary.hip is not None
+            or secondary.athyg_row is not None
+        ):
+            continue
+        if primary.gaia_source_id is None and primary.hip is None and primary.athyg_row is None:
+            continue
+        secondary.gaia_source_id = primary.gaia_source_id
+        secondary.hip = primary.hip
+        secondary.athyg_row = primary.athyg_row
+        if primary.gaia_source_id is not None:
+            secondary.resolve_via = primary.resolve_via
+        n += 1
+    return n
 
 
 _SUBCOMPONENT_LETTER_RE = re.compile(r"^([A-Z])[a-z]+$")
