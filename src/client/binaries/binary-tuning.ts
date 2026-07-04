@@ -33,3 +33,13 @@ export const ECLIPSE_DIM_TAU_S = 0.12;
  *  Sized well above the 24-bit quantum (2⁻²⁴ ≈ 6e-8) for margin, yet
  *  negligible (~AU-scale depth) against inter-object separations. */
 export const DISC_DEPTH_BIAS = 4e-6;
+
+/** Factor the eclipse view-direction prefilter inflates its physical
+ *  disc-sum by, so it can't cull a pair whose RENDERED discs overlap (and
+ *  z-fight) while the physical discs don't. In the disc pass
+ *  `vPhysRatio ≥ 0.5`, i.e. `pxSize ≤ 2·physSize`, so a rendered disc
+ *  radius is at most 2× the physical angular radius — the exact worst-case
+ *  inflation. (The z-fight the bias corrects is a disc-pass artifact; the
+ *  glow pass has no depth write.) Widening a perf prefilter only costs a
+ *  few extra Kepler evals near the plane edge — never a wrong cull. */
+export const RENDERED_DISC_SINLIMIT_MARGIN = 2;

@@ -24,7 +24,11 @@ export interface EclipseResult {
   dim: number;
   /** Which member of the pair is in front of the other from the
    *  camera's viewpoint. 'primary' means d_primary < d_secondary;
-   *  the secondary is the back star and carries the dim factor. */
+   *  the secondary is the back star and carries the dim factor.
+   *  Valid whenever `alphaPri > 0 && alphaSec > 0` (i.e. a real
+   *  evaluation, overlapping or not) — the disc-pass depth-bias trigger
+   *  reads it across the wider rendered-overlap annulus where `dim` is
+   *  still 1. Meaningless only on the no-signal early-outs. */
   front: 'primary' | 'secondary';
   /** Diagnostics for the debug HUD — 0 on the no-signal early-outs. */
   thetaRad: number;
@@ -128,17 +132,20 @@ export function eclipseDimFromOffsets(
   const cosT = uPx * uSx + uPy * uSy + uPz * uSz;
   const theta = Math.atan2(sinT, cosT);
 
-  const lensArea = circleCircleLensArea(alphaPri, alphaSec, theta);
-  if (lensArea <= 0) {
-    return { dim: 1, front: 'primary', thetaRad: theta, alphaPri, alphaSec };
-  }
-
   // Whichever star is farther is the BACK component; its flux drops.
   // sign(dSec − dPri) = sign(dSec² − dPri²) = sign(2·los·rel + |rel|²),
   // formed from rel directly so the comparison keeps rel's precision
-  // instead of differencing two large near-equal distances.
+  // instead of differencing two large near-equal distances. Computed
+  // before the overlap test so the depth-bias trigger has a valid
+  // front/back verdict across the rendered-overlap annulus (dim == 1).
   const discr = 2 * (losXPc * relXPc + losYPc * relYPc + losZPc * relZPc) + relLenSq;
   const front: 'primary' | 'secondary' = discr >= 0 ? 'primary' : 'secondary';
+
+  const lensArea = circleCircleLensArea(alphaPri, alphaSec, theta);
+  if (lensArea <= 0) {
+    return { dim: 1, front, thetaRad: theta, alphaPri, alphaSec };
+  }
+
   const alphaBack = front === 'primary' ? alphaSec : alphaPri;
   if (alphaBack <= 0) return { dim: 1, front, thetaRad: theta, alphaPri, alphaSec };
   const backDiscArea = Math.PI * alphaBack * alphaBack;

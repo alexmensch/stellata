@@ -43,6 +43,10 @@ uniform float uMaxAppMag;
 //   uLumBiasMin / uLumBiasMax — multiplied onto n by luminosity-class
 //     softness (dwarf → hypergiant). Hypergiants stay fuzzier than
 //     dwarfs at equivalent distance.
+// Debug: 1 = flat-colour disc-pass cores by iDepthBias to reveal the
+// intra-pair depth ordering (back/biased core red, everything else green).
+uniform float uDebugDepthBias;
+
 uniform float uVisibleThreshold;
 uniform float uVisibleK;
 uniform float uCoreThreshold;
@@ -157,6 +161,15 @@ void main() {
         // Drop the imperceptible outer fringe entirely so it doesn't cost
         // a depth write or a no-op blend.
         if (glow < uDiscardThreshold) discard;
+        if (uDebugDepthBias > 0.5) {
+            // Cores only, flat-filled: the overlap pixel shows whichever
+            // instance survives the (bias-adjusted) depth test. Red = the
+            // biased back core; green = front/unbiased. gl_FragDepth already
+            // carries vDepthBias from the mode!=0 add above.
+            if (glow < uCoreThreshold) discard;
+            outColor = vec4(vDepthBias > 0.0 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0), 1.0);
+            return;
+        }
         // Halo fragments (glow below the core threshold) paint their dim
         // colour with low alpha but push depth to the far plane, so the
         // later glow pass's background stars pass the depth test and

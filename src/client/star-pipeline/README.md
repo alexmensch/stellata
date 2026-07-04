@@ -125,10 +125,12 @@ A tight pair's line-of-sight separation is sub-AU; at close range the
 log-depth buffer can't resolve it (see § Depth encoding), so the raw
 z-order is float noise that flips frame-to-frame — the disc flicker.
 `EclipsePhotometryField` writes the bias onto the **back** component
-(the same float64 front/back verdict that drives `iEclipseDim`), taking
-intra-pair occlusion off the noisy buffer. Glow pass (no depth write)
-ignores it; halo fragments overwrite `gl_FragDepth = 1.0` regardless,
-so only disc cores carry the bias.
+(the float64 front/back verdict) whenever the two **rendered** discs
+overlap — a wider condition than the physical occlusion that drives
+`iEclipseDim`, since the brightness-driven disc extends past the true
+angular radius (see `../binaries/README.md` § Eclipse photometry). Glow
+pass (no depth write) ignores it; halo fragments overwrite
+`gl_FragDepth = 1.0` regardless, so only disc cores carry the bias.
 
 `iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude
 radial pulsation block. Built once per `attachBinaries` from

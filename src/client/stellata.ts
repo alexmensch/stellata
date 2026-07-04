@@ -622,6 +622,11 @@ export class Stellata implements FrameAnchor {
       // (0, 0, -distCam, 1) to bypass the cancellation. -1 disables.
       // Updated each frame in animate() since pan can move target away.
       uPinFocusToCenter: { value: -1 },
+      // Debug: flat-colour the disc-pass cores by iDepthBias so the
+      // intra-pair depth ordering is visible — biased (back) core red,
+      // everything else green. 0 = off. Toggled from the Eclipse debug
+      // section. See star.frag.glsl.
+      uDebugDepthBias: { value: 0 },
     } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 
     this.starPipeline = new StarPipeline({
@@ -685,15 +690,7 @@ export class Stellata implements FrameAnchor {
       getPlanetBodyField: () => this.planetBodyField,
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
-      renderedSizePxFn: (idx) => starPhysics.renderedSizePx({
-        catalog: this.catalog,
-        idx,
-        camPos: this.camera.position,
-        localPositions: this._localPositions,
-        uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
-        filter: this.filter,
-        suppressPulsation: this._suppressPulsation,
-      }),
+      renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
       fovYRadRef: this.starPipeline.discMaterial.uniforms.uFovYRad as { value: number },
       viewportRef: this.starPipeline.discMaterial.uniforms.uViewport as { value: THREE.Vector2 },
     });
@@ -1264,11 +1261,15 @@ export class Stellata implements FrameAnchor {
     // reads post-perturbation positions; the pair-relative geometry is
     // evaluated independently in float64. See
     // src/client/binaries/README.md § Eclipse photometry.
+    const ums = this.starPipeline.discMaterial.uniforms;
+    const radPerPx = (ums.uFovYRad.value as number)
+      / (ums.uViewport.value as THREE.Vector2).y;
     this.eclipsePhotometryField?.update(
       this.getT(),
       this.camera.position,
       this.filter.maxAppMag,
       performance.now(),
+      (idx) => this.renderedSizePxFor(idx) * 0.5 * radPerPx,
     );
   }
 
@@ -1327,6 +1328,28 @@ export class Stellata implements FrameAnchor {
   /** Active eclipse-dim slot count (occluding or decaying). */
   get eclipseActiveDimCount(): number {
     return this.eclipsePhotometryField?.activeDimCount ?? 0;
+  }
+
+  /** Debug: tint disc-pass cores by iDepthBias (biased/back core red, rest
+   *  green) to reveal which instance the depth buffer keeps in an overlap.
+   *  The uniform object is shared across all three star materials. */
+  setDebugDepthBias(on: boolean): void {
+    this.starPipeline.discMaterial.uniforms.uDebugDepthBias.value = on ? 1 : 0;
+  }
+
+  /** Rendered disc diameter (px) for one instance — the CPU mirror of the
+   *  shader's `max(appSize, physSize)` sizing (`star-physics.ts`). Shared
+   *  by the navigate-mode fade closure and the eclipse depth-bias trigger. */
+  private renderedSizePxFor(idx: number): number {
+    return starPhysics.renderedSizePx({
+      catalog: this.catalog,
+      idx,
+      camPos: this.camera.position,
+      localPositions: this._localPositions,
+      uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      filter: this.filter,
+      suppressPulsation: this._suppressPulsation,
+    });
   }
 
   /** User-facing extinction multiplier scaling the A_V re-added on top of
