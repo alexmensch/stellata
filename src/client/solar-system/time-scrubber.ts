@@ -33,7 +33,7 @@ export function buildTimeSection(stellata: Stellata): DebugSection {
   const playBtn = makeButton('▶', 'Play — resume last forward rate', () => clock.play());
   const pauseBtn = makeButton('⏸', 'Pause', () => clock.pause());
   const ffBtn = makeButton('⏩', 'Fast-forward — double, or forward across 1×', () => clock.fastForward());
-  const resetBtn = makeButton('⟲', 'Reset to live now at 1×', () => { clock.reset(); error.textContent = ''; });
+  const resetBtn = makeButton('⟲', 'Reset to live now at 1×', () => { clock.reset(); syncPickerToClock(); error.textContent = ''; });
   row.append(rewindBtn, playBtn, pauseBtn, ffBtn, resetBtn);
 
   const jumpRow = document.createElement('div');
@@ -41,8 +41,11 @@ export function buildTimeSection(stellata: Stellata): DebugSection {
   const jumpInput = document.createElement('input');
   jumpInput.type = 'datetime-local';
   jumpInput.step = '1';
-  jumpInput.value = toLocalDatetimeValue(stellata.getT() * 1000);
   jumpInput.style.cssText = 'flex:1; min-width:0; font-family:monospace; font-size:11px; padding:3px;';
+  const syncPickerToClock = (): void => {
+    jumpInput.value = toLocalDatetimeValue(stellata.getT() * 1000);
+  };
+  syncPickerToClock();
   const jumpBtn = document.createElement('button');
   jumpBtn.type = 'button';
   jumpBtn.textContent = 'Jump';
