@@ -147,11 +147,10 @@ in float iCompositeSuppress;
 // src/client/binaries/README.md § Eclipse photometry.
 in float iEclipseDim;
 // Pulsation-suppress flag. 1.0 disables the GCVS-amplitude radial
-// pulsation block below — used for eclipsing-binary primaries (varType
-// 2) whose photometric signal now comes from `iEclipseDim` instead.
-// Built once at startup from `catalog.varType` × `binaries.has_orbit`,
-// not rewritten per frame. See src/client/binaries/README.md
-// § Eclipse photometry.
+// pulsation block below. Built once at catalog-load from
+// `catalog.varType` alone (binary-independent), not rewritten per frame.
+// See src/client/binaries/README.md § Pulsation gate for eclipsing
+// binaries.
 in float iSuppressPulsation;
 
 out float vAppMag;

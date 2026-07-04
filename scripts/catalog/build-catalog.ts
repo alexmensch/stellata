@@ -543,14 +543,13 @@ async function main() {
     console.log('Hipparcos CCDM file not found; skipping double-star cross-match.');
   }
 
-  // Eclipsing binaries are extrinsically variable — the brightness dip is
-  // a line-of-sight geometric occlusion, not the star's own output — so
-  // they must surface as multi-star systems (chart-mode wings), never as
-  // intrinsic-variable rings. Reuse FLAG_BINARY_PRIMARY (the wings bit)
-  // for every varType == ECLIPSING record the geometric / CCDM passes
-  // didn't already flag. companionIdx stays unset where inference found no
-  // partner; the renderer's zoom-fit guards on companionIdx >= 0, so a
-  // flagged-but-companionless primary is safe.
+  // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
+  // ECLIPSING record the geometric / CCDM passes didn't already flag —
+  // eclipsers surface as multi-star systems, not intrinsic-variable rings
+  // (see scripts/catalog/README.md § GCVS variability cross-match).
+  // companionIdx stays unset where inference found no partner; the
+  // renderer guards on companionIdx >= 0, so a flagged-but-companionless
+  // primary is safe.
   let eclipsingWinged = 0;
   for (const s of stars) {
     if (s.varType === VAR_TYPE_ECLIPSING && (s.flags & FLAG_BINARY_PRIMARY) === 0) {

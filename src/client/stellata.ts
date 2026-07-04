@@ -83,7 +83,7 @@ import {
   type EclipseRelationDebugRow,
 } from './binaries/eclipse-photometry';
 import { type BinariesData } from './binaries/binaries-loader';
-import { VAR_TYPE_ECLIPSING } from '../../scripts/catalog/catalog-pure';
+import { buildPulsationSuppressMask } from './star-pipeline/pulsation-suppress-pure';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
 
@@ -301,10 +301,8 @@ export class Stellata implements FrameAnchor {
   private _eclipseDim: Float32Array;
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for every eclipsing binary
-  // (varType == ECLIPSING) — their variability is extrinsic, so the
-  // cosmetic pulse would be dishonest. Built once at catalog-load time
-  // (binary-independent); orbital pairs also get the geometric dip from
-  // `_eclipseDim`.
+  // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
+  // See src/client/binaries/README.md § Pulsation gate for eclipsing binaries.
   private _suppressPulsation: Float32Array;
   // Lazily attached when main.ts loads public/binaries.bin. Null until
   // then — the renderer functions identically with the static catalog
@@ -506,10 +504,7 @@ export class Stellata implements FrameAnchor {
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
     // Built here (not attachBinaries) because the gate is varType-driven
     // and binary-independent; see the field declaration for the rationale.
-    this._suppressPulsation = new Float32Array(catalog.count);
-    for (let i = 0; i < catalog.count; i++) {
-      if (catalog.varType[i] === VAR_TYPE_ECLIPSING) this._suppressPulsation[i] = 1;
-    }
+    this._suppressPulsation = buildPulsationSuppressMask(catalog.varType);
     // Sort indices by distance from Sol (ascending). The sorted view lets
     // shouldEnableCoreMask() walk only stars whose Sol-distance falls
     // within `[camDistFromSol - dThresh, camDistFromSol + dThresh]` —

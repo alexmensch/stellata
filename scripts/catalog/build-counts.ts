@@ -35,9 +35,7 @@ export interface BuildCounts {
   ccdmFlagged: number;
   /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
    *  varType == ECLIPSING records not already flagged by the geometric
-   *  or CCDM passes. Eclipsers are extrinsically variable, so they
-   *  surface as multi-star systems (wings), never as intrinsic
-   *  variables. */
+   *  or CCDM passes. */
   eclipsingWinged: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;

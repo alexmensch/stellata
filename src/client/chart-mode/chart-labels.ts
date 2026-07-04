@@ -169,9 +169,8 @@ export function startChartLabels(
     const ds = new Float32Array(cat.count);
     const pos = cat.positions;
     for (let i = 0; i < cat.count; i++) {
-      // Rings are intrinsic-only. Eclipsers are extrinsically variable —
-      // their dip is a line-of-sight occlusion, surfaced by the wings
-      // glyph (they carry FLAG_BINARY_PRIMARY), never a variable ring.
+      // Rings are intrinsic-only; eclipsers surface via the wings glyph,
+      // not a ring. See chart-mode/README.md § Label engine — variable rings.
       if (
         cat.periodDays[i] > 0 &&
         cat.amplitudeMag[i] > 0 &&
