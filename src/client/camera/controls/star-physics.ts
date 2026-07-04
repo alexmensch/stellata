@@ -116,8 +116,8 @@ export interface RenderedSizeArgs {
   /** Per-instance pulsation-suppress flag mirroring the shader's
    *  `iSuppressPulsation` attribute. When the corresponding slot is
    *  `1.0` the SVG overlay reads the static (un-modulated) disc size
-   *  so it tracks the rendered disc on eclipsing-binary primaries
-   *  whose pulsation has been gated off. Optional — call sites without
+   *  so it tracks the rendered disc on eclipsing binaries whose
+   *  pulsation has been gated off. Optional — call sites without
    *  access to the runtime suppress array fall through to the
    *  unsuppressed behaviour. */
   suppressPulsation?: Float32Array;
@@ -148,8 +148,8 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
   const period = periodDays[idx];
   const amp = amplitudeMag[idx];
   // Mirror the shader's `iSuppressPulsation` gate so the SVG focus
-  // ring + disc mask track the rendered disc on eclipsing-binary
-  // primaries whose pulsation has been gated off.
+  // ring + disc mask track the rendered disc on eclipsing binaries
+  // whose pulsation has been gated off.
   const suppressed = args.suppressPulsation
     ? args.suppressPulsation[idx] > 0.5
     : false;

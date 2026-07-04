@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 import {
   classifyGcvsVarType,
+  isPlanetaryTransitOnly,
   normalizeGcvsName,
   parseGcvsNumber,
   VAR_TYPE_UNKNOWN,
@@ -13,9 +14,10 @@ import type { Star } from './stars-parse';
 export interface VarStarData {
   periodDays: number;
   amplitudeMag: number;
-  /** Encoded VAR_TYPE_* from `classifyGcvsVarType`. Drives the runtime
-   *  pulsation-suppression gate on eclipsing binaries with orbital
-   *  elements; otherwise informational for hover tooltips. */
+  /** Encoded VAR_TYPE_* from `classifyGcvsVarType`. VAR_TYPE_ECLIPSING
+   *  drives the runtime pulsation-suppress gate and chart-mode ring
+   *  exclusion (eclipsers earn wings instead); otherwise informational
+   *  for hover tooltips. */
   varType: number;
 }
 
@@ -54,6 +56,9 @@ export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
     if (fields.length < GCVS_MAIN_MIN_FIELDS) continue;
     const name = normalizeGcvsName(fields[GCVS_MAIN_COL_NAME] ?? '');
     if (!name) continue;
+    // A bare transiting-planet host is neither an intrinsic variable nor
+    // a stellar multiple — drop it so it renders as an ordinary star.
+    if (isPlanetaryTransitOnly(fields[GCVS_MAIN_COL_TYPE])) continue;
     const maxMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MAX_MAG] ?? '');
     const minMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MIN_MAG] ?? '');
     const periodDays = parseGcvsNumber(fields[GCVS_MAIN_COL_PERIOD] ?? '');

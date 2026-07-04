@@ -17,7 +17,11 @@ import {
   lookupByGaiaSourceId,
   lookupByName,
 } from './catalog-lookup';
-import { FLAG_BINARY_COMPANION_ONLY } from './catalog-pure';
+import {
+  FLAG_BINARY_COMPANION_ONLY,
+  FLAG_BINARY_PRIMARY,
+  VAR_TYPE_ECLIPSING,
+} from './catalog-pure';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
@@ -613,6 +617,31 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
         `below = placements curated toward R(epoch) — drop the pin to the new count.`,
       ).toBe(KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS);
     });
+  });
+});
+
+describe.runIf(FIXTURES_READY)('eclipsing-binary variability honesty', () => {
+  it('every VAR_TYPE_ECLIPSING record carries FLAG_BINARY_PRIMARY (wings, not a ring)', () => {
+    let eclipsers = 0;
+    const missing: number[] = [];
+    for (const r of catalog.records()) {
+      if (r.varType !== VAR_TYPE_ECLIPSING) continue;
+      eclipsers++;
+      if ((r.flags & FLAG_BINARY_PRIMARY) === 0) missing.push(r.i);
+    }
+    expect(eclipsers, 'catalog carries eclipsing binaries').toBeGreaterThan(0);
+    expect(
+      missing,
+      `eclipsing records missing the wings bit (indices): ${missing.slice(0, 10).join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('Algol surfaces as an eclipsing multi-star (varType eclipsing + wings bit)', () => {
+    const algol = lookupByName(catalog, 'Algol');
+    expect(algol, 'Algol in catalog.bin').not.toBeNull();
+    const a = algol as CatalogRecord;
+    expect(a.varType).toBe(VAR_TYPE_ECLIPSING);
+    expect(a.flags & FLAG_BINARY_PRIMARY).not.toBe(0);
   });
 });
 

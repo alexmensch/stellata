@@ -82,11 +82,8 @@ import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
 } from './binaries/eclipse-photometry';
-import {
-  FLAG_HAS_ORBIT,
-  type BinariesData,
-} from './binaries/binaries-loader';
-import { VAR_TYPE_ECLIPSING } from '../../scripts/catalog/catalog-pure';
+import { type BinariesData } from './binaries/binaries-loader';
+import { buildPulsationSuppressMask } from './star-pipeline/pulsation-suppress-pure';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
 
@@ -308,10 +305,9 @@ export class Stellata implements FrameAnchor {
   // the sub-quantum depth separation at close range.
   private _depthBias: Float32Array;
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
-  // radial pulsation in the vertex shader for eclipsing-binary primaries
-  // whose photometric signal now comes from `_eclipseDim`. Rebuilt
-  // whenever attachBinaries fires (the relation list is what selects
-  // which stars get suppressed); zero-filled until then.
+  // radial pulsation in the vertex shader for every eclipsing binary
+  // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
+  // See src/client/binaries/README.md § Pulsation gate for eclipsing binaries.
   private _suppressPulsation: Float32Array;
   // Lazily attached when main.ts loads public/binaries.bin. Null until
   // then — the renderer functions identically with the static catalog
@@ -512,7 +508,9 @@ export class Stellata implements FrameAnchor {
     this._compositeSuppress = new Float32Array(catalog.count);
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
     this._depthBias = new Float32Array(catalog.count);
-    this._suppressPulsation = new Float32Array(catalog.count);
+    // Built here (not attachBinaries) because the gate is varType-driven
+    // and binary-independent; see the field declaration for the rationale.
+    this._suppressPulsation = buildPulsationSuppressMask(catalog.varType);
     // Sort indices by distance from Sol (ascending). The sorted view lets
     // shouldEnableCoreMask() walk only stars whose Sol-distance falls
     // within `[camDistFromSol - dThresh, camDistFromSol + dThresh]` —
@@ -1194,7 +1192,6 @@ export class Stellata implements FrameAnchor {
     if (binaries === null) {
       this.binaryOrbitField = null;
       this.eclipsePhotometryField = null;
-      this._suppressPulsation.fill(0);
       return;
     }
     this.binaryOrbitField = new BinaryOrbitField({
@@ -1226,21 +1223,6 @@ export class Stellata implements FrameAnchor {
       depthBiasBuffer: this._depthBias,
       iDepthBiasAttr: this.starPipeline.iDepthBiasAttr,
     });
-    // Build the pulsation-suppress gate from the freshly-attached
-    // relation list. Set 1.0 on every primary whose catalog row is an
-    // eclipsing variable (varType == VAR_TYPE_ECLIPSING) AND is the
-    // primary of at least one has_orbit pair — the eclipse-photometry
-    // field's geometric signal supersedes the GCVS-amplitude pulsation
-    // surrogate there.
-    this._suppressPulsation.fill(0);
-    const varType = this.catalog.varType;
-    for (const r of binaries.relations) {
-      if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
-      if (varType[r.primaryIdx] === VAR_TYPE_ECLIPSING) {
-        this._suppressPulsation[r.primaryIdx] = 1;
-      }
-    }
-    this.starPipeline.iSuppressPulsationAttr.needsUpdate = true;
   }
 
   private updateBinaryOrbits(): void {

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import type { ChartModeContext } from './chart-mode';
 import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
-import { FLAG_BINARY_PRIMARY } from '../../../scripts/catalog/catalog-pure';
+import { FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING } from '../../../scripts/catalog/catalog-pure';
 import { projectToScreen } from '../overlays/overlay-project';
 import { setNumAttr } from '../overlays/dirty-attr';
 import { getChartDiscParams } from '../camera/controls/star-physics';
@@ -169,7 +169,15 @@ export function startChartLabels(
     const ds = new Float32Array(cat.count);
     const pos = cat.positions;
     for (let i = 0; i < cat.count; i++) {
-      if (cat.periodDays[i] > 0 && cat.amplitudeMag[i] > 0) vs.push(i);
+      // Rings are intrinsic-only; eclipsers surface via the wings glyph,
+      // not a ring. See chart-mode/README.md § Label engine — variable rings.
+      if (
+        cat.periodDays[i] > 0 &&
+        cat.amplitudeMag[i] > 0 &&
+        cat.varType[i] !== VAR_TYPE_ECLIPSING
+      ) {
+        vs.push(i);
+      }
       // Primary-only set so each system gets one wings glyph anchored on
       // the brighter component.
       if ((cat.flags[i] & FLAG_BINARY_PRIMARY) !== 0) bs.push(i);

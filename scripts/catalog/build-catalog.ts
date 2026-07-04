@@ -16,6 +16,8 @@ import {
   DIST_SRC_BAILER_JONES,
   DIST_SRC_LMC_KIN,
   FLAG_IS_SOL,
+  FLAG_BINARY_PRIMARY,
+  VAR_TYPE_ECLIPSING,
   HEADER_LAYOUT,
   RECORD_LAYOUT,
   HEADER_SIZE,
@@ -177,6 +179,7 @@ async function main() {
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
+    eclipsingWinged: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -539,6 +542,23 @@ async function main() {
   } else {
     console.log('Hipparcos CCDM file not found; skipping double-star cross-match.');
   }
+
+  // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
+  // ECLIPSING record the geometric / CCDM passes didn't already flag —
+  // eclipsers surface as multi-star systems, not intrinsic-variable rings
+  // (see scripts/catalog/README.md § GCVS variability cross-match).
+  // companionIdx stays unset where inference found no partner; the
+  // renderer guards on companionIdx >= 0, so a flagged-but-companionless
+  // primary is safe.
+  let eclipsingWinged = 0;
+  for (const s of stars) {
+    if (s.varType === VAR_TYPE_ECLIPSING && (s.flags & FLAG_BINARY_PRIMARY) === 0) {
+      s.flags |= FLAG_BINARY_PRIMARY;
+      eclipsingWinged++;
+    }
+  }
+  counts.eclipsingWinged = eclipsingWinged;
+  console.log(`  ${eclipsingWinged} eclipsing binaries flagged as multi-star (wings)`);
 
   // Build name table — just proper names. Bayer/Flam/HIP/etc. go in
   // search-index.json so the main binary stays compact.

@@ -31,6 +31,7 @@ function makeRecord(over: Partial<CatalogRecord>): CatalogRecord {
     flags: 0,
     amplitudeMag: 0,
     periodDays: 0,
+    varType: 0,
     hip: null,
     gaiaSourceId: null,
     teffGspphot: null,

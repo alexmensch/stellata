@@ -35,6 +35,7 @@ export interface CatalogRecord {
   flags: number;
   amplitudeMag: number;
   periodDays: number;
+  varType: number;
   hip: number | null;
   gaiaSourceId: bigint | null;
   teffGspphot: number | null;
@@ -135,6 +136,7 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
       flags,
       amplitudeMag: view.getUint8(off + RECORD_LAYOUT.ampUnits) * 0.05,
       periodDays: view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1,
+      varType: view.getUint8(off + RECORD_LAYOUT.varType),
       hip: hip === 0 ? null : hip,
       gaiaSourceId: gaiaSourceId === 0n ? null : gaiaSourceId,
       teffGspphot: apsisCell(RECORD_LAYOUT.teffGspphot),
