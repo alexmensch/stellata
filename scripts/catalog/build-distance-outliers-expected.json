@@ -67,13 +67,6 @@
       "reason": "Yellow hypergiant ρ Cas. SIMBAD's distance is 1000/plx_value off the noisy Hipparcos parallax (~1.06 kpc); modern Gaia DR3 + Bailer-Jones posterior places ρ Cas at multi-kpc. Stellata's pipeline value (6.35 kpc) is the more physically correct one — the disagreement reflects SIMBAD lagging modern distance estimates for highly uncertain supergiant parallaxes, not a pipeline bug."
     },
     {
-      "id": "gaia:3937881515988370944",
-      "finalDist": 17.825,
-      "simbadDist": 562.588,
-      "simbadMainId": "UCAC2  38080308",
-      "logRatio": -1.499
-    },
-    {
       "id": "gaia:4468305823820330112",
       "finalDist": 117.053,
       "simbadDist": 2199.736,
