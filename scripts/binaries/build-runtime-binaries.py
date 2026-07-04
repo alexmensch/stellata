@@ -21,6 +21,10 @@ sys.path.insert(0, str(SCRIPT.parent))
 
 from refresh_lib import is_up_to_date  # noqa: E402
 from astronomy_constants import J2000_JD  # noqa: E402
+from component_tokens import (  # noqa: E402
+    expand_wds_truncated_secondary,
+    parent_component_token,
+)
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -137,10 +141,7 @@ def _canonical_comp_pair(
     Mirrors `canonicalCompLetter` in companion-promotion.ts so the
     synth keys composed on the catalog and runtime sides match."""
     pri = primary_comp.strip()
-    sec = secondary_comp.strip()
-    if sec and sec.isdigit() and len(pri) >= 2 and pri[-1].isdigit():
-        sec = pri[:-1] + sec
-    return pri, sec
+    return pri, expand_wds_truncated_secondary(pri, secondary_comp.strip())
 
 
 def load_pairs(path: Path) -> list[MultiplesPair]:
@@ -286,13 +287,9 @@ def _split_components(s: str) -> tuple[str, str] | None:
     return None
 
 
-def _parent_token(tok: str) -> str | None:
-    """``"Aa1" → "Aa"``; ``"Aa" → "A"``; ``"A" → None``. The parent is
-    one character shorter — the component string with its rightmost
-    designator dropped."""
-    if len(tok) <= 1:
-        return None
-    return tok[:-1]
+# Test surface kept under the historical name; the implementation is
+# shared with the pipeline's subdivision pass.
+_parent_token = parent_component_token
 
 
 def assign_parent_relations(pairs: list[MultiplesPair]) -> list[int]:
