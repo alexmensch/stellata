@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { EclipsePhotometryField } from './eclipse-photometry';
 import { DIM_FLOOR } from './eclipse-photometry-pure';
+import { DISC_DEPTH_BIAS } from './binary-tuning';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
@@ -30,6 +31,8 @@ function makeFixture(spec: FixtureSpec) {
   const localPositions = new Float32Array(spec.positions);
   const eclipseDimBuffer = new Float32Array(3).fill(1);
   const iEclipseDimAttr = new THREE.InstancedBufferAttribute(eclipseDimBuffer, 1);
+  const depthBiasBuffer = new Float32Array(3);
+  const iDepthBiasAttr = new THREE.InstancedBufferAttribute(depthBiasBuffer, 1);
 
   const rel: BinaryRelation = {
     primaryIdx: 0,
@@ -64,6 +67,8 @@ function makeFixture(spec: FixtureSpec) {
     physicalRadiusSolar,
     eclipseDimBuffer,
     iEclipseDimAttr,
+    depthBiasBuffer,
+    iDepthBiasAttr,
   };
 }
 
@@ -140,6 +145,38 @@ describe('EclipsePhotometryField.update — conjunction geometry', () => {
       expect(fx.eclipseDimBuffer[0]).toBe(1);
       expect(fx.eclipseDimBuffer[1]).toBe(1);
     }
+  });
+});
+
+describe('EclipsePhotometryField.update — disc depth bias', () => {
+  it('biases the back component so the front wins the overlap z-test', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    // Superior conjunction: secondary (idx 1) behind → it gets the bias.
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(fx.depthBiasBuffer[1]).toBe(Math.fround(DISC_DEPTH_BIAS));
+    expect(fx.depthBiasBuffer[0]).toBe(0);
+  });
+
+  it('moves the bias to the primary when the secondary is in front', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    // Inferior conjunction: secondary in front → primary (idx 0) is back.
+    field.update(tForJd(J2000_JD + 7.5), CAM, 6, 0);
+    expect(fx.depthBiasBuffer[0]).toBe(Math.fround(DISC_DEPTH_BIAS));
+    expect(fx.depthBiasBuffer[1]).toBe(0);
+  });
+
+  it('clears the bias immediately when the discs no longer overlap', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(fx.depthBiasBuffer[1]).toBe(Math.fround(DISC_DEPTH_BIAS));
+    // Away from conjunction: no overlap. Unlike the smoothed dim, the
+    // bias is a hard depth-order verdict and resets to 0 the same frame.
+    field.update(tForJd(J2000_JD), CAM, 6, 16);
+    expect(fx.depthBiasBuffer[0]).toBe(0);
+    expect(fx.depthBiasBuffer[1]).toBe(0);
   });
 });
 

@@ -302,6 +302,11 @@ export class Stellata implements FrameAnchor {
   // EclipsePhotometryField writes per-frame for the back component of
   // orbital pairs whose discs overlap from the camera viewpoint.
   private _eclipseDim: Float32Array;
+  // Per-instance disc-pass depth bias. 0 = none; EclipsePhotometryField
+  // writes a small bias onto the back component of an overlapping pair so
+  // the front wins the z-test deterministically instead of z-fighting on
+  // the sub-quantum depth separation at close range.
+  private _depthBias: Float32Array;
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for eclipsing-binary primaries
   // whose photometric signal now comes from `_eclipseDim`. Rebuilt
@@ -506,6 +511,7 @@ export class Stellata implements FrameAnchor {
     this._localPositions = new Float32Array(catalog.positions);
     this._compositeSuppress = new Float32Array(catalog.count);
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
+    this._depthBias = new Float32Array(catalog.count);
     this._suppressPulsation = new Float32Array(catalog.count);
     // Sort indices by distance from Sol (ascending). The sorted view lets
     // shouldEnableCoreMask() walk only stars whose Sol-distance falls
@@ -628,6 +634,7 @@ export class Stellata implements FrameAnchor {
       localPositions: this._localPositions,
       compositeSuppress: this._compositeSuppress,
       eclipseDim: this._eclipseDim,
+      depthBias: this._depthBias,
       suppressPulsation: this._suppressPulsation,
       vertexShader,
       fragmentShader,
@@ -1209,6 +1216,8 @@ export class Stellata implements FrameAnchor {
     // persist on stars the new set doesn't touch.
     this._eclipseDim.fill(1);
     this.starPipeline.iEclipseDimAttr.needsUpdate = true;
+    this._depthBias.fill(0);
+    this.starPipeline.iDepthBiasAttr.needsUpdate = true;
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
       absolutePositions: this.catalog.positions,
@@ -1217,6 +1226,8 @@ export class Stellata implements FrameAnchor {
       physicalRadiusSolar: this.catalog.physicalRadius,
       eclipseDimBuffer: this._eclipseDim,
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
+      depthBiasBuffer: this._depthBias,
+      iDepthBiasAttr: this.starPipeline.iDepthBiasAttr,
     });
     // Build the pulsation-suppress gate from the freshly-attached
     // relation list. Set 1.0 on every primary whose catalog row is an

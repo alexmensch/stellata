@@ -15,7 +15,7 @@ import {
 } from './orbit-relation-cache';
 import { AU_PC, R_SUN_PC } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
-import { VISIBILITY_HORIZON_PC, ECLIPSE_DIM_TAU_S } from './binary-tuning';
+import { VISIBILITY_HORIZON_PC, ECLIPSE_DIM_TAU_S, DISC_DEPTH_BIAS } from './binary-tuning';
 import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
 
 export interface EclipsePhotometryFieldOptions {
@@ -41,6 +41,16 @@ export interface EclipsePhotometryFieldOptions {
   eclipseDimBuffer: Float32Array;
   /** Three.js attribute carrier, flushed only on frames that write. */
   iEclipseDimAttr: THREE.InstancedBufferAttribute;
+  /** Per-instance disc-pass depth bias on the back component of an
+   *  overlapping pair. Length = catalog.count, initialised to 0. Written
+   *  in lockstep with the dim: whenever a pair's discs overlap, the back
+   *  component gets a bias so the front wins the z-test deterministically
+   *  (the buffer can't resolve their sub-AU depth separation at close
+   *  range). See README § Eclipse photometry. */
+  depthBiasBuffer: Float32Array;
+  /** Three.js attribute carrier for `depthBiasBuffer`, flushed with the
+   *  dim on frames that change the bias set. */
+  iDepthBiasAttr: THREE.InstancedBufferAttribute;
 }
 
 interface EclipseRelationCache {
@@ -102,6 +112,11 @@ export class EclipsePhotometryField {
   /** Per-frame dim targets, keyed by back-star instance index. Reused
    *  across frames to avoid per-frame allocation. */
   private targets = new Map<number, number>();
+  /** Instance indices this field wrote a depth bias onto last frame. The
+   *  field owns `depthBiasBuffer` exclusively, so it clears its own stale
+   *  entries each frame (unlike compositeSuppress, which BinaryOrbitField
+   *  resets). */
+  private biasedIdx = new Set<number>();
   private lastNowMs: number | null = null;
 
   constructor(opts: EclipsePhotometryFieldOptions) {
@@ -137,8 +152,16 @@ export class EclipsePhotometryField {
     this.lastNowMs = nowMs;
 
     const dimBuf = this.opts.eclipseDimBuffer;
+    const biasBuf = this.opts.depthBiasBuffer;
     const targets = this.targets;
     targets.clear();
+
+    // Clear last frame's depth biases before recomputing. Discs that no
+    // longer overlap must return to zero bias or they'd stay ordered.
+    let biasChanged = false;
+    for (const idx of this.biasedIdx) biasBuf[idx] = 0;
+    if (this.biasedIdx.size > 0) biasChanged = true;
+    this.biasedIdx.clear();
 
     for (let i = 0; i < this.relations.length; i++) {
       const rc = this.relations[i];
@@ -146,6 +169,14 @@ export class EclipsePhotometryField {
       const result = ev.result;
       if (result === null || result.dim >= 1) continue;
       const backIdx = result.front === 'primary' ? rc.secondaryIdx : rc.primaryIdx;
+      // Discs overlap (dim < 1) → bias the back's disc depth so the front
+      // wins the z-test where they share pixels, instead of z-fighting on
+      // the sub-quantum depth separation. Same overlap condition as the
+      // glow-pass dim: the disc and glow now both defer to the float64
+      // front/back verdict rather than the noisy depth buffer.
+      biasBuf[backIdx] = DISC_DEPTH_BIAS;
+      this.biasedIdx.add(backIdx);
+      biasChanged = true;
       // Take min when the same star is the back of multiple
       // contemporaneous overlaps (hierarchical pair where the inner
       // secondary is occluded by both the inner primary AND the outer
@@ -175,6 +206,7 @@ export class EclipsePhotometryField {
       wrote = true;
     }
     if (wrote) this.opts.iEclipseDimAttr.needsUpdate = true;
+    if (biasChanged) this.opts.iDepthBiasAttr.needsUpdate = true;
   }
 
   /** Count of slots currently held below 1.0 (occluding or decaying). */

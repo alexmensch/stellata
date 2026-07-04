@@ -29,7 +29,8 @@ star catalog records.
   slots of `localPositions` plus `compositeSuppress`.
   `recenter(newOrigin)` updates the cached world offset.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
-  `ECLIPSE_DIM_TAU_S` named constants the fields read and tests pin.
+  `ECLIPSE_DIM_TAU_S`, `DISC_DEPTH_BIAS` named constants the fields read
+  and tests pin.
 - `eclipse-photometry-pure.ts` — pure math for camera-anywhere
   geometric occlusion: `eclipseDimFromOffsets` (angular separation via
   atan2 of unit view vectors, closed-form circle-circle lens area,
@@ -279,12 +280,24 @@ frames that write nothing skip the attribute re-upload entirely.
 ### Shader-side wiring
 
 `iEclipseDim` is folded into appMag in the **glow pass only**
-(`uRenderMode == 0`). The disc pass resolves geometric occlusion
-via the depth buffer at close range (real depth separation now that
-Tier-1 orbits carry the radial component), so applying the dim there
-would also dim the back disc's non-occluded fragments. The
-integration shell initialises the buffer to 1.0 at allocation
-and on every re-attach.
+(`uRenderMode == 0`) — applying the dim in the disc pass would also
+dim the back disc's non-occluded fragments. The integration shell
+initialises the buffer to 1.0 at allocation and on every re-attach.
+
+The disc pass instead orders the two overlapping cores through the
+depth buffer — but at close range the log-depth buffer can't resolve a
+tight pair's sub-AU line-of-sight separation (`log2(z+1)` is
+near-linear when `z ≪ 1 pc`; see `star-pipeline/README.md`
+§ Depth encoding), so the raw z-order is float noise that flickers
+frame-to-frame. On every frame a pair's discs overlap (the same
+`dim < 1` condition), the field also writes `DISC_DEPTH_BIAS`
+(`binary-tuning.ts`) into the shared `iDepthBias` attribute on the
+**back** component — the float64 `front` verdict, not the buffer,
+decides the order. The bias is a hard per-frame verdict with no
+smoothing: it resets to 0 the frame the overlap ends (unlike the
+anti-strobe-smoothed dim). The field owns `iDepthBias` exclusively, so
+it clears its own prior-frame entries rather than relying on
+`BinaryOrbitField`'s reset (which only touches `compositeSuppress`).
 
 `eclipse-photometry-pure` floors its return value at
 `DIM_FLOOR = 0.001` rather than 0 so `-2.5·log10(dim)` stays

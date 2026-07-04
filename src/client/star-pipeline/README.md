@@ -112,11 +112,23 @@ component's flux when an orbital pair's discs overlap from the camera
 viewpoint. Written by `EclipsePhotometryField` (see
 `../binaries/README.md` § Eclipse photometry) with real-time
 smoothing, and re-uploaded only on frames with active dims. Folded
-into `appMag` in the **glow pass only** — the disc pass at close range
-handles occlusion geometrically via the depth buffer. Integration
-shell initialises the buffer to 1.0 at allocation and on every
-re-attach, so the shader's `iEclipseDim < 1.0` gate fires only on
+into `appMag` in the **glow pass only** — the disc pass resolves the
+overlap through the depth buffer, ordered by `iDepthBias` below.
+Integration shell initialises the buffer to 1.0 at allocation and on
+every re-attach, so the shader's `iEclipseDim < 1.0` gate fires only on
 slots the field holds below 1.
+
+`iDepthBias` (float, per-instance, default 0.0) is added to
+`gl_FragDepth` in the disc (mode 1) and core-mask (mode 2) passes so a
+close pair's front component deterministically wins the overlap z-test.
+A tight pair's line-of-sight separation is sub-AU; at close range the
+log-depth buffer can't resolve it (see § Depth encoding), so the raw
+z-order is float noise that flips frame-to-frame — the disc flicker.
+`EclipsePhotometryField` writes the bias onto the **back** component
+(the same float64 front/back verdict that drives `iEclipseDim`), taking
+intra-pair occlusion off the noisy buffer. Glow pass (no depth write)
+ignores it; halo fragments overwrite `gl_FragDepth = 1.0` regardless,
+so only disc cores carry the bias.
 
 `iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude
 radial pulsation block. Built once per `attachBinaries` from
@@ -176,6 +188,19 @@ Per-pass overrides on top of the chunk default:
   is the far plane in *any* depth encoding, so this works under
   log-depth without modification — distant stars in the later glow
   pass pass the depth test against haloed fragments and peek through.
+
+Log depth gives uniform precision across the multi-decade star ↔
+background range, but it **cannot** order two disc cores of a tight
+pair against each other. `log2(z+1)` with `z` in parsecs degrades to
+near-linear when `z ≪ 1 pc` (the `+1` swamps the term), so at a ~1 AU
+viewing distance a pair's sub-AU line-of-sight separation lands inside
+a single ~24-bit depth bucket. Their z-order is then float noise that
+flips frame-to-frame under camera micro-motion — a visible flicker in
+the overlap. Intra-pair occlusion is therefore taken off the buffer:
+`EclipsePhotometryField` decides front/back in float64 and writes
+`iDepthBias` (above) onto the back core so the front wins
+deterministically. The buffer still orders star ↔ background and
+star ↔ unrelated-star, where the depth ratios are large.
 
 ## Physical-size rendering
 

@@ -59,6 +59,7 @@ in float vPhysRatio; // 1 = physical-size-driven (render as solid disc),
                      // 0 = apparent-mag-driven (render as soft point glow)
 in float vSoftness;  // 0 = crisp (WD) … 1 = fuzzy (hypergiant)
 in float vAaWidth;   // chart-mode disc edge width in vUv units (1 CSS px)
+in float vDepthBias; // log-depth nudge on an overlapping pair's back disc
 
 out vec4 outColor;
 
@@ -77,6 +78,14 @@ void main() {
     // stays correct if logarithmicDepthBuffer is ever toggled off.
     gl_FragDepth = gl_FragCoord.z;
     #include <logdepthbuf_fragment>
+
+    // Deterministic intra-pair depth ordering. The opaque disc + core-mask
+    // passes add the back component's float64-decided bias so the front
+    // wins the z-test where the two discs overlap — the buffer can't
+    // resolve their sub-AU separation at close range. Glow pass (mode 0)
+    // has no depth write, so it's excluded. Halo fragments below overwrite
+    // gl_FragDepth = 1.0 regardless, so the bias only affects disc cores.
+    if (uRenderMode != 0) gl_FragDepth += vDepthBias;
 
     // Chart mode: flatten everything. Stars render as solid hard-edged
     // discs filling the inscribed circle of the calibrated quad, against

@@ -48,6 +48,12 @@ export interface StarPipelineOptions {
    *  dip when one star transits the other from the camera viewpoint.
    *  Written by `EclipsePhotometryField`. Must outlive the pipeline. */
   eclipseDim: Float32Array;
+  /** Buffer backing the dynamic `iDepthBias` attribute. 0.0 = no bias;
+   *  a small positive value on an overlapping pair's back component makes
+   *  the front win the disc-pass z-test deterministically instead of
+   *  z-fighting on the sub-quantum depth separation. Written by
+   *  `EclipsePhotometryField`. Must outlive the pipeline. */
+  depthBias: Float32Array;
   /** Per-instance pulsation-suppress flag. 1.0 zeros the GCVS-amplitude
    *  radial pulsation in the vertex shader; used for eclipsing-binary
    *  systems whose photometric signal now comes from
@@ -93,6 +99,8 @@ export class StarPipeline {
   readonly iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
   /** Dynamic — rewritten by EclipsePhotometryField each frame. */
   readonly iEclipseDimAttr: THREE.InstancedBufferAttribute;
+  /** Dynamic — rewritten by EclipsePhotometryField each frame. */
+  readonly iDepthBiasAttr: THREE.InstancedBufferAttribute;
   /** Built once per attachBinaries; the integration shell flips
    *  `needsUpdate` after rewriting the backing buffer. */
   readonly iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
@@ -108,7 +116,7 @@ export class StarPipeline {
   constructor(opts: StarPipelineOptions) {
     const {
       scene, catalog, logRadii, lumClassF32, distSol, teffApsis,
-      localPositions, compositeSuppress, eclipseDim, suppressPulsation,
+      localPositions, compositeSuppress, eclipseDim, depthBias, suppressPulsation,
       vertexShader, fragmentShader,
       sharedUniforms, boundingSphereRadiusPc,
     } = opts;
@@ -137,6 +145,9 @@ export class StarPipeline {
     this.iEclipseDimAttr = new THREE.InstancedBufferAttribute(eclipseDim, 1);
     this.iEclipseDimAttr.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('iEclipseDim', this.iEclipseDimAttr);
+    this.iDepthBiasAttr = new THREE.InstancedBufferAttribute(depthBias, 1);
+    this.iDepthBiasAttr.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('iDepthBias', this.iDepthBiasAttr);
     this.iSuppressPulsationAttr = new THREE.InstancedBufferAttribute(suppressPulsation, 1);
     this.iSuppressPulsationAttr.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('iSuppressPulsation', this.iSuppressPulsationAttr);
