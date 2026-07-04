@@ -314,6 +314,12 @@ export interface PromotionStats {
    *  proxy. Collocating on the anchor would render a false coincident
    *  star (Alsephina C). */
   droppedCollocatedPrimary: number;
+  /** Sub-resolution inner-pair secondaries re-collocated onto their true
+   *  parent component in the post-pass. Their cursor primary's blended
+   *  identifier baked them on a sibling (Castor Bb on A); this moves them
+   *  onto B so the catalog placement matches the binaries.bin pair anchor
+   *  (build-runtime-binaries.py's override_inner_primary_indices). */
+  repositionedInnerToParent: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -332,6 +338,7 @@ export function emptyPromotionStats(): PromotionStats {
     repositionedCollocatedDouble: 0,
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
+    repositionedInnerToParent: 0,
   };
 }
 
@@ -365,6 +372,14 @@ export function canonicalCompLetter(
     return pri.slice(0, -1) + sec;
   }
   return sec;
+}
+
+/** Parent component token: ``"Ba" → "B"``, ``"Aa1" → "Aa"``, ``"A" → null``.
+ *  Drops the rightmost designator; mirrors
+ *  `component_tokens.py:parent_component_token` on the Python side. */
+export function parentComponentToken(comp: string): string | null {
+  const c = comp.trim();
+  return c.length > 1 ? c.slice(0, -1) : null;
 }
 
 interface ExistingIndexes {
@@ -1166,6 +1181,15 @@ export function promoteCompanions(
       ? existingStars[idx]
       : newStars[idx - existingStars.length];
 
+  // (wds_root, canonical component) → catalog index, accumulated as pairs
+  // resolve. The post-pass reads it to find an inner pair's parent
+  // component when that parent is a distinctly-resolved star rather than a
+  // synth record (a sibling can share a HIP yet split under Gaia — the
+  // parent then has its own Gaia row, not a synth key).
+  const componentIndex = new Map<string, number>();
+  const compKey = (root: string | null, comp: string): string | null =>
+    root !== null && comp ? `${root} ${comp}` : null;
+
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
     // pair; their primary slot is empty. Skip — promoting them without
@@ -1202,6 +1226,15 @@ export function promoteCompanions(
       ? getStarAt(primaryCatalogIdx)
       : null;
 
+    const cursorRoot = wdsRootOf(cursor.primary.systemId);
+    const primaryKey = compKey(cursorRoot, cursor.primary.comp);
+    // Don't let a blended primary (its id resolves onto a sibling)
+    // overwrite a correct entry a prior pair recorded for this token.
+    if (primaryKey !== null && primaryCatalogIdx !== null
+        && !componentIndex.has(primaryKey)) {
+      componentIndex.set(primaryKey, primaryCatalogIdx);
+    }
+
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') continue;
       stats.pairRowsScanned++;
@@ -1221,7 +1254,7 @@ export function promoteCompanions(
         cursor.primary?.comp ?? '', row.comp,
       );
       const position = resolvePosition(row, cursor.primary, anchor);
-      promoteRow(
+      const promotedIdx = promoteRow(
         {
           row,
           anchorPrimaryRow: cursor.primary,
@@ -1233,6 +1266,60 @@ export function promoteCompanions(
         },
         state, constellations, stats, dustGrid,
       );
+      // A promoted secondary is authoritative for its token — it resolves
+      // through the inherited-id escape onto its own record, so it
+      // overwrites any blended-primary entry a sibling pair left behind.
+      const secKey = compKey(wdsRoot, canonicalComp);
+      if (secKey !== null && promotedIdx !== null) {
+        componentIndex.set(secKey, promotedIdx);
+      }
+    }
+  }
+
+  // Post-pass: re-place inner-pair secondaries relative to their TRUE
+  // parent component. A cursor primary that is a sub-component (Castor Ba)
+  // carries the system's blended identifier — a shared Gaia source or a
+  // shared HIP that Gaia later split — so it resolved onto a sibling
+  // (Castor A) and resolvePosition anchored the secondary there. Now every
+  // component is resolved; re-run the placement against the parent's slot
+  // so the catalog matches the binaries.bin pair anchor
+  // (build-runtime-binaries.py's override_inner_primary_indices) — both the
+  // ρ=0 collocation case and a measured sep+PA re-projection. Position
+  // only — dedup/naming already resolved, and A_V de-extinction across the
+  // sub-arcsec sibling offset is below the dust grid's resolution. Parent
+  // resolves synth-first (the blended component's own promoted record),
+  // then the per-system component map (a HIP-blended parent keeps its own
+  // Gaia row, not a synth key).
+  for (const cursor of groups.values()) {
+    if (cursor.primary === null) continue;
+    const parentTok = parentComponentToken(cursor.primary.comp);
+    if (parentTok === null) continue;
+    const parentSynth = composeSyntheticId(cursor.primary.systemId, parentTok);
+    const parentIdx = (parentSynth !== null
+      ? state.promotedBySynth.get(parentSynth)
+      : undefined)
+      ?? componentIndex.get(compKey(wdsRootOf(cursor.primary.systemId), parentTok) ?? '');
+    if (parentIdx === undefined) continue;
+    const parentStar = getStarAt(parentIdx);
+    const parentAnchor: ProjectionAnchor = {
+      x: parentStar.x, y: parentStar.y, z: parentStar.z,
+    };
+    for (const row of cursor.secondaries) {
+      if (row.orbitRole !== 'secondary') continue;
+      const secIdx = componentIndex.get(
+        compKey(wdsRootOf(row.systemId),
+          canonicalCompLetter(cursor.primary.comp, row.comp)) ?? '',
+      );
+      if (secIdx === undefined || secIdx === parentIdx) continue;
+      const placed = resolvePosition(row, cursor.primary, parentAnchor);
+      if (placed === null) continue;
+      const secStar = getStarAt(secIdx);
+      if (secStar.x === placed.x && secStar.y === placed.y
+          && secStar.z === placed.z) continue;
+      secStar.x = placed.x;
+      secStar.y = placed.y;
+      secStar.z = placed.z;
+      stats.repositionedInnerToParent++;
     }
   }
   return { newStars, stats, groups };

@@ -382,6 +382,20 @@ Stage 6 emits them with system-anchor positions, and
 component-letter hierarchy. Build counters:
 `synthesized_orb6_orphan_pairs`, `synthesized_nss_inner_pairs`.
 
+**Shared-slot re-homing (blended siblings).** An inner pair's primary
+must resolve to its parent component's catalog slot — the shared-slot
+invariant the runtime walk + focal-frame ride depend on (see
+`src/client/binaries/README.md` § Hierarchical walk). When a sibling
+shares its identifier with the system primary (Castor A & B blend to one
+Gaia source; A & B of 02398-4254 share a HIP Gaia later split), the inner
+pair's own id-first resolve lands on the wrong sibling. Two coupled
+corrections in `build-runtime-binaries.py`: `assign_parent_relations`
+picks the *bound* parent (has-orbit, then tightest sep) over a
+coincidental element-less wide pair, and `override_inner_primary_indices`
+re-homes each inner pair's primary onto that parent's member slot.
+`companion-promotion.ts`'s post-pass makes the baked catalog placement
+agree (see `scripts/catalog/README.md` § Companion promotion).
+
 ## Stage 4 — Orbital element selection per pair
 
 Picks the most-trustworthy set of orbital elements per pair, then

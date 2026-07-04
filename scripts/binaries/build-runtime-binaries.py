@@ -255,6 +255,17 @@ def resolve_idx(
     return None
 
 
+def pair_has_orbit(p: MultiplesPair) -> bool:
+    """True when every element BinaryOrbitField consumes (P, T, e, a, ω, q)
+    is present — the same gate `write_binary` stamps into FLAG_HAS_ORBIT.
+    Also the "is this pair bound?" signal parent selection ranks on."""
+    return (
+        p.P_days is not None and p.T_jd is not None
+        and p.e is not None and p.a_AU is not None
+        and p.omega_rad is not None and p.q is not None
+    )
+
+
 # ─── Hierarchical-chain detection ───────────────────────────────────
 
 
@@ -292,13 +303,25 @@ def _split_components(s: str) -> tuple[str, str] | None:
 _parent_token = parent_component_token
 
 
+def _parent_rank(p: MultiplesPair) -> tuple[int, float]:
+    """Rank a candidate parent pair: the one that actually perturbs the
+    shared component wins. Bound (has-orbit) pairs sort ahead of
+    element-less wide pairs; ties break to the tightest separation. A
+    component can list in several system pairs (Castor A is in AB, AC) —
+    the inner pair must nest under the pair whose orbit its shared slot
+    inherits (AB), not a coincidental wide pair (AC) that never moves it."""
+    sep = p.sep_arcsec if p.sep_arcsec is not None else float("inf")
+    return (0 if pair_has_orbit(p) else 1, sep)
+
+
 def assign_parent_relations(pairs: list[MultiplesPair]) -> list[int]:
     """For each pair, return the index of its parent pair (the outer
     pair whose primary or secondary letter equals the inner pair's
     parent token), or ``NO_PARENT`` when the pair is top-level."""
-    # Index pairs in the SAME wds_id system by (primary_token,
-    # secondary_token) so the inner-pair lookup is O(1).
-    by_system_tokens: dict[str, dict[str, int]] = {}
+    # Index pairs in the SAME wds_id system by component token. A token
+    # can appear in several pairs, so each maps to a candidate LIST;
+    # `_parent_rank` picks the bound one at lookup time.
+    by_system_tokens: dict[str, dict[str, list[int]]] = {}
     pair_tokens: list[tuple[str, str] | None] = []
     for i, p in enumerate(pairs):
         toks = _split_components(p.components)
@@ -306,8 +329,8 @@ def assign_parent_relations(pairs: list[MultiplesPair]) -> list[int]:
         if toks is None:
             continue
         bucket = by_system_tokens.setdefault(p.wds_id, {})
-        bucket[toks[0]] = i  # primary token → pair idx
-        bucket[toks[1]] = i  # secondary token → pair idx
+        bucket.setdefault(toks[0], []).append(i)  # primary token → pairs
+        bucket.setdefault(toks[1], []).append(i)  # secondary token → pairs
 
     out: list[int] = []
     for i, p in enumerate(pairs):
@@ -327,11 +350,11 @@ def assign_parent_relations(pairs: list[MultiplesPair]) -> list[int]:
         if bucket is None:
             out.append(NO_PARENT)
             continue
-        parent_idx = bucket.get(parent_tok)
-        if parent_idx is None or parent_idx == i:
+        candidates = [j for j in bucket.get(parent_tok, ()) if j != i]
+        if not candidates:
             out.append(NO_PARENT)
             continue
-        out.append(parent_idx)
+        out.append(min(candidates, key=lambda j: _parent_rank(pairs[j])))
     return out
 
 
@@ -363,6 +386,43 @@ def topological_walk_order(parents: list[int]) -> list[int]:
         if not visited[i]:
             visit(i)
     return order
+
+
+def override_inner_primary_indices(
+    pairs: list[MultiplesPair],
+    parents: list[int],
+    walk_order: list[int],
+    resolved_primary: list[int | None],
+    resolved_secondary: list[int | None],
+) -> None:
+    """Force each inner pair's primary onto its parent component's catalog
+    slot — the shared-slot invariant the runtime walk + focal-frame ride
+    both depend on (see src/client/binaries/README.md § Hierarchical walk).
+
+    An inner pair's own id-first resolve can miss this slot when the
+    parent component is Gaia-blended with the system primary: Castor Ba
+    carries A's shared source_id, so it resolves to A's row (98630)
+    instead of B's synth row (179304). The parent pair (AB) already
+    resolved B correctly via the secondary-collapse retry, so re-home the
+    inner primary onto that member. Applied in topological order so a
+    deeper nest inherits its parent's already-corrected slot. Mutates
+    ``resolved_primary`` in place."""
+    for i in walk_order:
+        parent_i = parents[i]
+        if parent_i == NO_PARENT:
+            continue
+        parent_tok = _parent_token(pairs[i].primary_comp)
+        if parent_tok is None:
+            continue
+        pp = pairs[parent_i]
+        if pp.primary_comp == parent_tok:
+            slot = resolved_primary[parent_i]
+        elif pp.secondary_comp == parent_tok:
+            slot = resolved_secondary[parent_i]
+        else:
+            continue
+        if slot is not None:
+            resolved_primary[i] = slot
 
 
 # ─── Binary writer ──────────────────────────────────────────────────
@@ -424,6 +484,10 @@ def write_binary(
         resolved_primary.append(pri)
         resolved_secondary.append(sec)
 
+    override_inner_primary_indices(
+        pairs, parents, walk_order, resolved_primary, resolved_secondary,
+    )
+
     # Walk in topological order; for each emittable pair, record its
     # output index so parent_relation can be remapped from input-index
     # to output-index.
@@ -473,16 +537,12 @@ def write_binary(
             assert primary_idx is not None and secondary_idx is not None
 
             # has_orbit gates per-frame Kepler eval in BinaryOrbitField:
-            # every element it consumes (P, T, e, a, ω, q) must be present,
-            # else ΔR(t) is NaN and the runtime writes NaN into
-            # localPositions[primaryIdx] every frame — poisoning the
-            # flux-weighted centroid in chart-labels and every other
-            # consumer of the primary's position.
-            has_orbit = (
-                p.P_days is not None and p.T_jd is not None
-                and p.e is not None and p.a_AU is not None
-                and p.omega_rad is not None and p.q is not None
-            )
+            # every element it consumes must be present, else ΔR(t) is NaN
+            # and the runtime writes NaN into localPositions[primaryIdx]
+            # every frame — poisoning the flux-weighted centroid in
+            # chart-labels and every other consumer of the primary's
+            # position.
+            has_orbit = pair_has_orbit(p)
             has_inclination = has_orbit and p.i_rad is not None
             parent_input = parents[input_i]
             parent_output = input_to_output.get(parent_input, NO_PARENT)
