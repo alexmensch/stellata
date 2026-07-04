@@ -1259,11 +1259,13 @@ export class Stellata implements FrameAnchor {
     return this.eclipsePhotometryField?.activeDimCount ?? 0;
   }
 
-  /** User-facing extinction multiplier. 0 disables; 1 = physical realism;
-   *  values above 1 amplify dust visually (useful for making weak features
-   *  obvious). Independent of attachDust — if no dust is loaded, this has
-   *  no effect. Also drives the Milky Way background so the dust-darkened
-   *  regions of the band track the same knob. */
+  /** User-facing extinction multiplier scaling the A_V re-added on top of
+   *  the intrinsic (build-time de-extincted) catalog. 0 = dust-free
+   *  universe (stars at intrinsic brightness/colour everywhere, not
+   *  "observed from Sol"); 1 = physical realism; values above 1 amplify
+   *  dust visually. Independent of attachDust — if no dust is loaded, this
+   *  has no effect. Also drives the Milky Way background so the
+   *  dust-darkened regions of the band track the same knob. */
   setExtinctionStrength(x: number) {
     this.starPipeline.discMaterial.uniforms.uExtinctionStrength.value = Math.max(0, x);
     this.milkyway.setExtinctionStrength(x);
