@@ -264,8 +264,13 @@ class Orb6Entry:
     e: float | None
     T0_val: float | None
     T0_unit: str
-    grade: int              # 1=definitive..5=indeterminate; 8/9 are spectroscopic/astrometric
+    grade: int              # 1=definitive..5=indeterminate; 7/8/9 non-visual (see README § Stage 4)
     ref: str
+    # ORB6's own J2000 coordinate prefix (cols 1-18, same HHMMSS.SS±DDMMSS.S
+    # layout as the WDS precise coord). Position anchor for synthesized
+    # sub-pairs whose wds_id has no WDS_SUMM row at all.
+    precise_ra_deg: float | None = None
+    precise_dec_deg: float | None = None
 
 
 def parse_orb6(path: Path) -> list[Orb6Entry]:
@@ -291,10 +296,13 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
             discoverer = line[30:37].strip()
             components = line[37:44].strip()
             grade_str = line[233:234].strip()
+            precise = _parse_wds_precise_coord(line[0:18])
             out.append(Orb6Entry(
                 wds_id=wds_id,
                 discoverer=discoverer,
                 components=components,
+                precise_ra_deg=precise[0] if precise else None,
+                precise_dec_deg=precise[1] if precise else None,
                 hd=safe_int(line[51:57]),
                 hip=safe_int(line[58:64]),
                 P_val=safe_float(line[81:92]),
@@ -661,6 +669,27 @@ def parse_component_sptype_overrides(path: Path) -> dict[tuple[str, str], str]:
             if not wds_id or not component or not sp_type:
                 continue
             out[(wds_id, component)] = sp_type
+    return out
+
+
+def parse_orb6_component_overrides(path: Path) -> dict[tuple[str, str], str]:
+    """Load ``data/binaries/orb6_component_overrides.tsv`` into a
+    ``(wds_id, discoverer) -> components`` map. Curates WDS component
+    letters onto ORB6 rows whose ``components`` field is blank (the
+    catalog names the pair only by its variable-star designation, e.g.
+    YY Gem = Castor Ca,Cb). ``#``-prefixed preamble lines are skipped."""
+    out: dict[tuple[str, str], str] = {}
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            (line for line in fh if not line.startswith("#")), delimiter="\t",
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            discoverer = (r.get("discoverer") or "").strip()
+            components = (r.get("components") or "").strip()
+            if not wds_id or not discoverer or not components:
+                continue
+            out[(wds_id, discoverer)] = components
     return out
 
 
