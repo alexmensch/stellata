@@ -86,8 +86,13 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
 // the tangent-only WDS bake can't carry R(epoch)'s radial term, so most
 // inclined pairs land here (plus quadrant-ambiguity cases like Algol).
 // Pinned so a NEW disagreement fails; the count ratchets DOWN as baked
-// placements are curated toward R(epoch).
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 541;
+// placements are curated toward R(epoch). The 541 → 702 step is the
+// gaia_nss population that gained a Kepler-estimated semi-major axis
+// (a_via=kepler_mass_estimate) and started animating: blended tight
+// pairs whose NSS ω is the photocentre's (π off the relative orbit's
+// when the primary dominates the flux), so R(epoch) routinely lands
+// opposite the measured WDS quadrant.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 702;
 
 // ---- Corpus row types ----------------------------------------------------
 
