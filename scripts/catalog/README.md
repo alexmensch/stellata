@@ -523,7 +523,12 @@ Per-row gates and resolution:
   Those rows drop — unless the pair carries a renderable orbit
   binaries.bin must keep addressing, where the twin is kept and
   counted (`companionAbsmagInheritedTwinOrbital`, a ratchet-down
-  metric: curate types to shrink it).
+  metric: curate types to shrink it). For a **pair-row-primary
+  escape** the row's Δmag describes the sub-pair it heads, not the
+  anchor→row separation (40 Eri B's Δmag is the B→C delta), so both
+  `primary + Δmag` paths are suppressed; absent own / per-component
+  photometry the record inherits the anchor's collocated brightness
+  (`companionAbsmagAnchorCollocated`) rather than a corrupted A+Δmag.
 - **B-V (ci).** Same inheritance-detection trick: when the row's
   ci matches the primary's exactly, recompute from the spectral
   info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's DA1.9
@@ -561,6 +566,27 @@ binaries pipeline become user-visible. The Tier A regression
 corpus in `known-stars.tsv` pins Sirius B's record specifically
 (addressed by gaia_source_id, no HIP) as a stand-in for the
 broader category.
+
+### Component-letter stamping
+
+`stampComponentLetters` runs immediately after `promoteCompanions`
+(over the same grouped `multiples.tsv` rows `promoteCompanions`
+returns), before the absmag sort and the name-table / search-index
+write. Promotion only ADDS records; when BOTH halves of a pair
+already exist as first-class AT-HYG rows AND neither carries a
+`proper` name, they render with identical Bayer/Flamsteed labels and
+are individually unsearchable (61 Cyg A and 61 Cyg B both print
+"61 Cyg"). For each system where ≥2 **distinct** first-class
+(non-promoted) AT-HYG records resolve and none is already named, the
+pass writes `<base> <comp>` into each record's `proper` (base via
+`resolveCompanionNameBase`) and sets `FLAG_HAS_NAME`. Components are
+deduped by record index: a blended single entry whose rows share one
+identifier (no own gaia + shared HIP) resolves to one record and is
+skipped — it is one star, not two components, and must not be
+mislabelled as its faint secondary. It also **skips** any system
+where a component already carries a real `proper` (never rename
+Sirius A → "Sirius A") or where the primary yields no usable base.
+`componentLettersStamped` counts the records renamed.
 
 ## GCVS variability cross-match
 
