@@ -53,6 +53,20 @@ export function formatRate(rate: number): string {
   return rate === 0 ? 'paused' : `${rate}×`;
 }
 
+/** Epoch-ms → a zoneless `datetime-local` input value in **local** time:
+ *  `2030-01-01T00:00:00`. Round-trips through `parseLocalDatetimeValue`. */
+export function toLocalDatetimeValue(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/** A `datetime-local` value (zoneless → **local** time) → epoch-ms, or NaN
+ *  if unparseable. Sibling of `toLocalDatetimeValue`. */
+export function parseLocalDatetimeValue(value: string): number {
+  return new Date(value).getTime();
+}
+
 /** Virtual clock behind `Stellata.getT()`. `getT() = simT0 + rate ·
  *  (wallNow − wallT0)`, so at `rate = 1` in steady state it tracks
  *  wall-clock exactly. Rate flips snapshot the current virtual time so
