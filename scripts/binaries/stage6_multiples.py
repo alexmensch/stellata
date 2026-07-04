@@ -5,6 +5,7 @@ Column order is ``MULTIPLES_TSV_COLUMNS``.
 
 from __future__ import annotations
 
+import math
 import sys
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -19,9 +20,14 @@ from stage2_resolve import (  # noqa: E402
     split_components,
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
-from stage4_orbits import OrbitElements  # noqa: E402
+from stage4_orbits import OrbitElements, kepler_semimajor_axis_au  # noqa: E402
 from stage5_optical import OpticalClassification  # noqa: E402
-from mass_estimate import mass_ratio_from_components  # noqa: E402
+from mass_estimate import (  # noqa: E402
+    DEFAULT_PRIMARY_MASS_MSUN,
+    UNKNOWN_COMPANION_MASS_RATIO_Q,
+    mass_from_spectral_class,
+    mass_ratio_from_components,
+)
 from astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR  # noqa: E402
 
 
@@ -41,7 +47,7 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "absmag", "ci", "spect", "name",
     "source", "regime",
     "resolve_via", "astrometry_via", "orbit_via", "spect_via",
-    "photometry_via",
+    "photometry_via", "a_via",
     "orbit_role",
     "P_days", "T_jd", "e", "a_AU",
     "i_rad", "omega_rad", "Omega_rad",
@@ -104,6 +110,20 @@ PHOTOMETRY_VIA_SYSTEM_INHERITED = "athyg_system_inherited"
 PHOTOMETRY_VIA_NONE = "none"
 PHOTOMETRY_VIA_VALUES: tuple[str, ...] = (
     PHOTOMETRY_VIA_OWN, PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_NONE,
+)
+
+
+# ``a_via`` provenance for the per-pair semi-major axis. ``catalog`` =
+# the orbit source published it (ORB6 a″/mas × parallax);
+# ``kepler_mass_estimate`` = derived at emit time from a³ = M_total·P²
+# with spectral-table masses (no NSS solution type publishes a relative
+# a, and ORB6 rows can lack the parallax the conversion needs);
+# ``none`` = no a on the row.
+A_VIA_CATALOG = "catalog"
+A_VIA_KEPLER_MASS_ESTIMATE = "kepler_mass_estimate"
+A_VIA_NONE = "none"
+A_VIA_VALUES: tuple[str, ...] = (
+    A_VIA_CATALOG, A_VIA_KEPLER_MASS_ESTIMATE, A_VIA_NONE,
 )
 
 
@@ -170,6 +190,7 @@ class MultiplesRow:
     orbit_via: str
     spect_via: str         # "simbad" / "athyg" / "none"
     photometry_via: str    # "athyg_own" / "athyg_system_inherited" / "none"
+    a_via: str             # "catalog" / "kepler_mass_estimate" / "none"
     orbit_role: str        # "primary" / "secondary"
     P_days: float | None
     T_jd: float | None
@@ -399,6 +420,75 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
     )
 
 
+# Circular-orbit ω convention. For e = 0 periastron is undefined, so a
+# fitted circular orbit legitimately publishes no ω (YY Gem's ORB6 row)
+# — but the runtime's has_orbit contract requires one. ω = π/2 puts
+# conjunction (the eclipse, for edge-on systems) at T₀, matching the
+# minimum-epoch convention eclipser ephemerides fit T₀ against.
+CIRCULAR_ORBIT_OMEGA_RAD = math.pi / 2.0
+
+
+# Orbit routes the estimated-element backstops apply to. Non-visual
+# orbits (spectroscopic / eclipsing / NSS) describe sub-resolution
+# pairs whose baked placement is collocation — an estimated q / a can
+# only add motion, never contradict a measured WDS placement. ORB6
+# visual orbits are excluded: their pairs carry real baked sep+PA
+# placements, and animating them on a guessed mass ratio widens the
+# baked-vs-R(epoch) disagreement set the multi-star regression corpus
+# ratchets (curate those per-pair instead).
+ESTIMATED_ELEMENT_ORBIT_VIAS: frozenset[str] = frozenset({
+    "gaia_nss", "orb6_spectroscopic",
+})
+
+
+def finalize_renderable_elements(
+    primary_row: MultiplesRow,
+    secondary_row: MultiplesRow,
+    orbit: OrbitElements | None,
+) -> None:
+    """Backstop the orbit quantities the runtime cannot animate
+    without, after the spectral q backfill has had its chance. Only
+    for ``ESTIMATED_ELEMENT_ORBIT_VIAS`` routes:
+
+    - ``q`` ← ``UNKNOWN_COMPANION_MASS_RATIO_Q`` when no catalog value
+      and no spectral estimate exists (unresolved companion with no
+      per-component type).
+    - ``omega_rad`` ← ``CIRCULAR_ORBIT_OMEGA_RAD`` when the published
+      orbit is exactly circular (e = 0) and carries no ω — degenerate,
+      not missing. Eccentric orbits missing ω stay ``None``.
+    - ``a_AU`` ← Kepler ``a³ = M_total·P²`` when the orbit source
+      published no relative semi-major axis. ``M_total = M₁/(1−q)``
+      from the primary's spectral-table mass; tagged
+      ``a_via=kepler_mass_estimate`` on both rows.
+
+    Mutates both rows in place; a no-op without an orbit or without P.
+    """
+    if orbit is None:
+        return
+    if primary_row.orbit_via not in ESTIMATED_ELEMENT_ORBIT_VIAS:
+        return
+    if primary_row.q is None:
+        primary_row.q = UNKNOWN_COMPANION_MASS_RATIO_Q
+        secondary_row.q = UNKNOWN_COMPANION_MASS_RATIO_Q
+    if primary_row.omega_rad is None and orbit.e == 0.0:
+        primary_row.omega_rad = CIRCULAR_ORBIT_OMEGA_RAD
+        secondary_row.omega_rad = CIRCULAR_ORBIT_OMEGA_RAD
+    if primary_row.a_AU is not None or orbit.P_days is None:
+        return
+    m_primary = mass_from_spectral_class(primary_row.spect, primary_row.absmag)
+    if m_primary is None:
+        m_primary = DEFAULT_PRIMARY_MASS_MSUN
+    q = primary_row.q
+    if not (0.0 <= q < 1.0):
+        q = UNKNOWN_COMPANION_MASS_RATIO_Q
+    a_au = kepler_semimajor_axis_au(orbit.P_days, m_primary / (1.0 - q))
+    if a_au is None:
+        return
+    for row in (primary_row, secondary_row):
+        row.a_AU = a_au
+        row.a_via = A_VIA_KEPLER_MASS_ESTIMATE
+
+
 def build_multiples_row(
     pair: WdsPair,
     component: ResolvedComponent,
@@ -455,6 +545,11 @@ def build_multiples_row(
         orbit_via=orbit_via,
         spect_via=spect_via,
         photometry_via=photometry_via,
+        a_via=(
+            A_VIA_CATALOG
+            if orbit is not None and orbit.a_AU is not None
+            else A_VIA_NONE
+        ),
         orbit_role=ORBIT_ROLE_PRIMARY if is_primary else ORBIT_ROLE_SECONDARY,
         P_days=orbit.P_days if orbit is not None else None,
         T_jd=orbit.T_jd if orbit is not None else None,
@@ -545,6 +640,7 @@ def build_multiples_rows(
             if estimated_q is not None:
                 primary_row.q = estimated_q
                 secondary_row.q = estimated_q
+        finalize_renderable_elements(primary_row, secondary_row, orbit)
         out.append(primary_row)
         out.append(secondary_row)
         emitted_keys.add((pair.wds_id, primary.component))
@@ -609,6 +705,7 @@ def build_standalone_rows(
             orbit_via="none",
             spect_via=spect_via,
             photometry_via=PHOTOMETRY_VIA_NONE,
+            a_via=A_VIA_NONE,
             orbit_role=ORBIT_ROLE_STANDALONE,
             P_days=None, T_jd=None, e=None, a_AU=None,
             i_rad=None, omega_rad=None, Omega_rad=None,
@@ -659,6 +756,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 r.orbit_via,
                 r.spect_via,
                 r.photometry_via,
+                r.a_via,
                 r.orbit_role,
                 _fmt_float(r.P_days, 6),
                 _fmt_float(r.T_jd, 4),

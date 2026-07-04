@@ -228,6 +228,19 @@ WD_MASS_DEFAULT = 0.6
 CARBON_WR_MASS_DEFAULT = 3.0
 
 
+# Stage 6 orbit-finalization fallbacks. A pair with fitted elements but
+# no per-component mass information still needs q (the runtime splits
+# pair motion q : (1−q) about the barycentre) and M_total (the Kepler
+# a³ = M·P² scale estimate). The companion of an unresolved
+# spectroscopic pair is assumed at half the primary's mass —
+# q = M₂/(M₁+M₂) = 1/3, near the SB1 mass-ratio distribution's mode —
+# and an unparseable primary defaults to one solar mass. Both feed a
+# ∝ M_total^(1/3), so even a factor-2 mass error moves the derived
+# scale by only ~26%.
+DEFAULT_PRIMARY_MASS_MSUN = 1.0
+UNKNOWN_COMPANION_MASS_RATIO_Q = 1.0 / 3.0
+
+
 def mass_from_spectral_class(spect_str: str | None, absmag: float | None) -> float | None:
     """Estimate stellar mass in solar masses from a SIMBAD/MK spectral
     string. Returns ``None`` when the string is unparseable or empty.
