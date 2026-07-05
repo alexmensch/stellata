@@ -1484,6 +1484,32 @@ class AthygPositionAtEpochTests(unittest.TestCase):
         self.assertLess(abs(dec - 0.0) * 3600.0, 0.5)
 
 
+class PropagatePositionTests(unittest.TestCase):
+    """``_propagate_position`` is the shared PM-propagation core behind
+    both the AT-HYG (J1991.25) and Gaia (J2016.0) branches of the
+    ORB6-HIP coordinate gate — each is brought to the WDS J2000 frame
+    before comparison.
+    """
+
+    def test_gaia_epoch_propagates_backward_to_j2000(self) -> None:
+        # J2016 → J2000 is a 16-yr BACKWARD step (dt < 0), so the
+        # position moves opposite the PM. 3600 mas/yr · -16 yr = -0.016°.
+        ra, dec = bb._propagate_position(
+            100.0, 0.0, 3600.0, 0.0,
+            ref_epoch=2016.0, target_epoch=bb.WDS_PRECISE_COORD_EPOCH,
+        )
+        self.assertAlmostEqual(ra, 99.984, places=6)
+        self.assertAlmostEqual(dec, 0.0, places=9)
+
+    def test_missing_pm_returns_position_unchanged(self) -> None:
+        ra, dec = bb._propagate_position(
+            100.0, 20.0, None, None,
+            ref_epoch=2016.0, target_epoch=2000.0,
+        )
+        self.assertEqual(ra, 100.0)
+        self.assertEqual(dec, 20.0)
+
+
 class PositionMatchPMPropagationTests(unittest.TestCase):
     """``resolve_via_position`` PM-propagates AT-HYG rows to
     ``WDS_PRECISE_COORD_EPOCH`` before the 2″ comparison so high-PM

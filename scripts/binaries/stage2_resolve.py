@@ -204,9 +204,11 @@ def _hip_sky_position(
     """Best-available ``(ra_deg, dec_deg)`` for a HIP, for the ORB6-HIP
     coordinate sanity gate. Prefers the AT-HYG row PM-propagated to the
     WDS precise-coord epoch (the machinery the CCDM / position tiers
-    use); falls back to the resolved Gaia source's astrometry. Returns
-    ``None`` when neither carries a position — the gate then can't
-    validate and trusts the ORB6 attribution."""
+    use); falls back to the resolved Gaia source's astrometry, likewise
+    PM-propagated from its Gaia DR3 epoch to the same J2000 frame so both
+    branches are compared to the WDS coord at one epoch. Returns ``None``
+    when neither carries a position — the gate then can't validate and
+    trusts the ORB6 attribution."""
     row = indices.hip_to_athyg.get(hip)
     if row is not None:
         return _athyg_position_at_epoch(row, WDS_PRECISE_COORD_EPOCH)
@@ -214,7 +216,11 @@ def _hip_sky_position(
     if gaia is not None:
         astro = indices.src_to_astrometry.get(gaia)
         if astro is not None:
-            return astro.ra_deg, astro.dec_deg
+            return _propagate_position(
+                astro.ra_deg, astro.dec_deg,
+                astro.pmra_masyr, astro.pmdec_masyr,
+                astro.ref_epoch, WDS_PRECISE_COORD_EPOCH,
+            )
     return None
 
 
@@ -543,15 +549,29 @@ def _bind_ccdm_hip(
 ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0
 
 
+def _propagate_position(
+    ra_deg: float, dec_deg: float,
+    pm_ra_masyr: float | None, pm_de_masyr: float | None,
+    ref_epoch: float, target_epoch: float,
+) -> tuple[float, float]:
+    """Linear PM propagation of an ICRS position from ``ref_epoch`` to
+    ``target_epoch`` (cos δ-applied μ_α*). Returns the position unchanged
+    when either PM component is missing — no signal to propagate with, so
+    the raw position is the best estimate."""
+    if pm_ra_masyr is None or pm_de_masyr is None:
+        return ra_deg, dec_deg
+    dt = target_epoch - ref_epoch
+    cos_dec = max(math.cos(math.radians(dec_deg)), 1e-3)
+    delta_ra_deg = (pm_ra_masyr * dt) / (3600.0 * 1000.0 * cos_dec)
+    delta_dec_deg = (pm_de_masyr * dt) / (3600.0 * 1000.0)
+    return (ra_deg + delta_ra_deg) % 360.0, dec_deg + delta_dec_deg
+
+
 def _athyg_position_at_epoch(
     row: AthygRow, target_epoch: float,
 ) -> tuple[float, float]:
     """Propagate ``row``'s ``(ra_deg, dec_deg)`` from ``ATHYG_REFERENCE_EPOCH``
-    to ``target_epoch`` using the row's own PM (cos δ-applied μ_α*).
-
-    Returns ``(row.ra_deg, row.dec_deg)`` unchanged when either PM
-    component is missing — Stage 2 has no signal to propagate with, so
-    the raw position is the best estimate.
+    to ``target_epoch`` using the row's own PM.
 
     AT-HYG's documented epoch is J2000 but HIP-sourced rows are
     empirically at J1991.25 (the HIP1 catalog's native epoch); the
@@ -559,13 +579,10 @@ def _athyg_position_at_epoch(
     inside the 2″ tolerance — so the same call works correctly for the
     rows that are genuinely at J2000 too.
     """
-    if row.pm_ra_masyr is None or row.pm_de_masyr is None:
-        return row.ra_deg, row.dec_deg
-    dt = target_epoch - ATHYG_REFERENCE_EPOCH
-    cos_dec = max(math.cos(math.radians(row.dec_deg)), 1e-3)
-    delta_ra_deg = (row.pm_ra_masyr * dt) / (3600.0 * 1000.0 * cos_dec)
-    delta_dec_deg = (row.pm_de_masyr * dt) / (3600.0 * 1000.0)
-    return (row.ra_deg + delta_ra_deg) % 360.0, row.dec_deg + delta_dec_deg
+    return _propagate_position(
+        row.ra_deg, row.dec_deg, row.pm_ra_masyr, row.pm_de_masyr,
+        ATHYG_REFERENCE_EPOCH, target_epoch,
+    )
 
 
 def _spherical_to_unit_vec(ra_deg: float, dec_deg: float) -> tuple[float, float, float]:

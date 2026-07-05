@@ -62,7 +62,7 @@ from subdivide import (  # noqa: E402, F401
 )
 from stage2_resolve import (  # noqa: E402, F401
     RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
-    _athyg_position_at_epoch,
+    _athyg_position_at_epoch, _propagate_position,
     build_athyg_position_grid, build_pair_by_wds_disc,
     find_nearest_athyg_at_position, group_orb6_by_pair,
     iter_decomposing_pair_components,
