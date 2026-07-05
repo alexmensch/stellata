@@ -72,12 +72,14 @@ const MULT_PA_TOL_DEG = 0.01;        // multiples.tsv pa vs curated
 const EPOCH_TOL_DAYS = 0.5;          // sep_pa_epoch_jd vs curated (f32 offset)
 const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 
-// Ratchet for the promoted-companion HIP round-trip sweep. 20 promoted
-// records currently carry a HIP that first-seen hipToIndex resolves to
-// a DIFFERENT record, so a shared URL focused on them restores onto
-// the wrong star. Pinned exactly so new violations fail immediately;
-// the companion-promotion identifier fix drops this to 0.
-const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
+// Ratchet for the promoted-companion HIP round-trip sweep. A handful of
+// promoted records carry a HIP that first-seen hipToIndex resolves to a
+// DIFFERENT record, so a shared URL focused on them restores onto the
+// wrong star. Pinned exactly so new violations fail immediately; the
+// companion-promotion identifier fix drops this to 0. Dropped 4 → 3 when
+// the separation-sanity gate retired a leaked NSS orbit, letting Stage 5
+// reclassify one colliding companion's wide pair as an optical double.
+const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 3;
 
 // Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
 // placement disagrees with the elements-alone R(epoch) by more than half
@@ -95,7 +97,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
 // bearing inner pairs that re-anchored onto their correct system star
 // once the Stage 2 ORB6-HIP coordinate gate rejected typo'd HIPs — the
 // same sub-resolution tangent-bake-vs-R(epoch) class, now placed right.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 705;
+// The 705 → 566 step is the Stage 4 separation-sanity gate: NSS orbits
+// that had leaked onto wide visual pairs of a blended primary lose their
+// elements, so those pairs no longer render an R(epoch) that disagrees
+// with the baked WDS placement.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 566;
 
 // ---- Corpus row types ----------------------------------------------------
 

@@ -9,7 +9,7 @@ import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator, TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from parsers import Orb6Entry, WdsPair, safe_float  # noqa: E402
@@ -45,6 +45,12 @@ ORBIT_VIA_VALUES: tuple[str, ...] = (
 # the sub-arcsec gate when their TI algebra resolves a0 < 1″.
 NSS_PERIOD_THRESHOLD_DAYS = 3.0 * 365.25
 NSS_SEPARATION_THRESHOLD_MAS = 1000.0
+
+# Separation-sanity gate bounds — mass ceiling and ρ/a_max ratio for
+# _nss_separation_consistent. See README.md § Stage 4 for the leak
+# mechanism and the apastron derivation.
+NSS_MAX_SYSTEM_MASS_MSUN = 150.0
+NSS_SEPARATION_SANITY_RATIO = 3.0
 
 # Gaia DR3 reference epoch J2016.0 as JD. NSS stores t_periastron in
 # days from this epoch — Stage 4 converts to absolute JD for parity
@@ -351,6 +357,33 @@ def _nss_in_regime(nss_row: dict[str, str]) -> bool:
     return False
 
 
+def _nss_separation_consistent(
+    nss_row: dict[str, str],
+    wds_rho_arcsec: float | None,
+    plx_mas: float | None,
+) -> bool:
+    """Reject attaching an NSS orbit to a pair whose WDS separation is far
+    too wide to be that orbit. Consistent (returns ``True``) whenever ρ
+    can't be evaluated — ρ missing / ≤ 0 (sub-resolution or the
+    subdivide.py-synthesized inner pair that IS the orbit's true home), or
+    no parallax / period — so the guard fires only when the separation is
+    measured and demonstrably too wide for the period at any plausible
+    mass. See NSS_SEPARATION_SANITY_RATIO.
+    """
+    if wds_rho_arcsec is None or wds_rho_arcsec <= 0.0:
+        return True
+    if plx_mas is None or plx_mas <= 0.0:
+        return True
+    P_days = safe_float(nss_row.get("period", ""))
+    if P_days is None:
+        return True
+    a_max_au = kepler_semimajor_axis_au(P_days, NSS_MAX_SYSTEM_MASS_MSUN)
+    if a_max_au is None:
+        return True
+    rho_au = wds_rho_arcsec * (1000.0 / plx_mas)
+    return rho_au <= NSS_SEPARATION_SANITY_RATIO * a_max_au
+
+
 def _orb6_period_days(entry: Orb6Entry) -> float | None:
     """Normalise ORB6's ``P_val`` to days. Returns ``None`` for unknown
     or garbage unit codes (rare; ~3 rows of 4,054 use stray digits from
@@ -487,8 +520,9 @@ def _system_parallax_mas(
     differentiate further here (gaia_5p, gaia_nss_systemic, and
     hip2_long_baseline all populate parallax_mas equivalently)."""
     for a in astrometry_for_pair:
-        if a.parallax_mas is not None and a.parallax_mas > 0.0:
-            return a.parallax_mas
+        plx = _component_parallax_mas(a)
+        if plx is not None:
+            return plx
     return None
 
 
@@ -499,6 +533,8 @@ def select_orbit(
     secondary_astrometry: ComponentAstrometry,
     orb6_for_pair: list[Orb6Entry],
     indices: IdentifierIndices,
+    wds_rho_arcsec: float | None = None,
+    system_parallax_mas: float | None = None,
 ) -> tuple[OrbitElements | None, str]:
     """Priority cascade per WDS pair:
 
@@ -510,9 +546,12 @@ def select_orbit(
        is not a different resolved source (distinct-source pairs host
        the orbit INSIDE the carrying component — see the branch
        comment), AND the solution falls inside Gaia's astrometric-
-       detectability regime (P < ~3 yr OR a0 < 1″). Primary's NSS row
-       preferred when both components have one (secondary is rarely
-       the catalogued systemic source).
+       detectability regime (P < ~3 yr OR a0 < 1″), AND the pair's WDS
+       separation isn't far too wide to be that orbit (interior orbits
+       leak onto wide companions of a blended primary — see
+       ``_nss_separation_consistent``). Primary's NSS row preferred when
+       both components have one (secondary is rarely the catalogued
+       systemic source).
     3. ``orb6_spectroscopic`` — ORB6 non-visual orbits
        (grade ∈ {7,8,9}). Same tiebreaks.
     4. ``none`` — visual-only pair with no orbital information on file.
@@ -551,6 +590,9 @@ def select_orbit(
         if nss_row is None:
             continue
         if not _nss_in_regime(nss_row):
+            continue
+        gate_plx = plx_mas if plx_mas is not None else system_parallax_mas
+        if not _nss_separation_consistent(nss_row, wds_rho_arcsec, gate_plx):
             continue
         orbit = nss_to_canonical_elements(nss_row, plx_mas)
         if orbit is not None:
@@ -594,6 +636,59 @@ def iter_decomposing_pairs(
         yield pair, components[i], components[i + 1], astrometry[i], astrometry[i + 1]
 
 
+_T = TypeVar("_T")
+
+
+def first_astrometry_field_per_system(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+    extract: Callable[[ComponentAstrometry], _T | None],
+) -> dict[str, _T]:
+    """First non-``None`` ``extract(component_astrometry)`` per ``wds_id``,
+    primary preferred then secondary, first system row wins. Shared by
+    Stage 4's separation-gate parallax lookup
+    (``compute_system_parallaxes``) and Stage 6's ``compute_system_anchors``
+    — the two differ only in what they pull off the anchoring component.
+    """
+    out: dict[str, _T] = {}
+    for pair, _primary, _secondary, p_ast, s_ast in iter_decomposing_pairs(
+        pairs, components, astrometry,
+    ):
+        if pair.wds_id in out:
+            continue
+        for ast in (p_ast, s_ast):
+            value = extract(ast)
+            if value is not None:
+                out[pair.wds_id] = value
+                break
+    return out
+
+
+def _component_parallax_mas(ast: ComponentAstrometry) -> float | None:
+    if ast.parallax_mas is not None and ast.parallax_mas > 0.0:
+        return ast.parallax_mas
+    return None
+
+
+def compute_system_parallaxes(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+) -> dict[str, float]:
+    """One parallax (mas) per ``wds_id`` from the first system component
+    with a usable Gaia/HIP2 value. Feeds the separation-sanity gate a
+    distance even when a pair's own two components both resolved to
+    ``unresolved`` — the same first-resolved-per-system anchor Stage 6's
+    ``compute_system_anchors`` places them at, so the gate rejects on
+    approximately the render distance. (Stage 6 additionally requires a
+    position, not just a parallax, so the two can pick different anchor
+    components; harmless, since a system's components share a distance.)"""
+    return first_astrometry_field_per_system(
+        pairs, components, astrometry, _component_parallax_mas,
+    )
+
+
 def select_orbits_all(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
@@ -607,6 +702,7 @@ def select_orbits_all(
     populate per-pair element columns.
     """
     orb6_by_pair = group_orb6_by_pair(orb6)
+    system_parallax = compute_system_parallaxes(pairs, components, astrometry)
     out: list[tuple[OrbitElements | None, str]] = []
     for pair, p, s, p_ast, s_ast in iter_decomposing_pairs(
         pairs, components, astrometry,
@@ -616,6 +712,8 @@ def select_orbits_all(
             primary=p, secondary=s,
             primary_astrometry=p_ast, secondary_astrometry=s_ast,
             orb6_for_pair=orb6_for_pair, indices=indices,
+            wds_rho_arcsec=pair.rho_last,
+            system_parallax_mas=system_parallax.get(pair.wds_id),
         )
         if orbit is not None and orbit.P_days is not None and orbit.T_jd is not None:
             if not (T0_MIN_PLAUSIBLE_JD <= orbit.T_jd <= T0_MAX_PLAUSIBLE_JD):

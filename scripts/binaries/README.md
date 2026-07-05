@@ -413,9 +413,23 @@ in `ORBIT_VIA_VALUES`, in priority order:
 | Route | When |
 | --- | --- |
 | `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
-| `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), AND the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
+| `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`), AND the pair's WDS separation isn't far too wide to be that orbit (`_nss_separation_consistent`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
 | `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
 | `none` | Visual-only pair with no orbital information on file. |
+
+An NSS orbit is keyed to a Gaia **source**, not a WDS pair, so it can
+leak onto the wrong pair when a saturated / blended primary shares its
+source across several visual companions. The distinct-source gate stops
+the leak only when the partner is a *different* resolved source; a
+partner that shares the blended source or resolved to nothing slips
+through. `_nss_separation_consistent` is the backstop: it projects the
+pair's WDS ρ to AU at the system distance and rejects the orbit when that
+exceeds `NSS_SEPARATION_SANITY_RATIO` × a Kepler upper-bound relative
+semi-major axis (at `NSS_MAX_SYSTEM_MASS_MSUN`) for the NSS period — a
+bound orbit's projected separation can't outrun its apastron. Sub-
+resolution / synthesized inner pairs carry ρ = 0 and are exempt (the
+orbit's true home). Canonical failure: υ⁴ Eri, where the 0.97-day inner
+orbit was attaching to the 5.5″ and 49″ visual companions.
 
 The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
 (`Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
