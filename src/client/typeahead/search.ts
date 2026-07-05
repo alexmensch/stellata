@@ -10,7 +10,7 @@ export type { SearchEntry };
 
 type EntryKind = 'star' | 'cloud';
 
-interface FuzzyEntry {
+export interface FuzzyEntry {
   kind: EntryKind;
   index: number;
   label: string;        // what Fuse matches on
@@ -249,13 +249,15 @@ export function buildSearchIndex(
   return { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap };
 }
 
-export function bindSearch(
-  stellata: Stellata,
+// Build the shared query runner over stars + clouds: direct-lookup maps for
+// numeric IDs, fuzzy fallback, within-kind dedup. Every search surface (the
+// topbar Focus/To boxes and the `F` find modal) runs the same corpus through
+// this, so ranking + ID dispatch never diverge between them.
+export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
-  starLabels: Map<number, string>,
   clouds: CloudCatalog | null,
-) {
+): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
@@ -287,11 +289,24 @@ export function bindSearch(
     includeScore: true,
   });
 
+  const directResult = (idx: number, label: string): FuzzyEntry => {
+    const conIdx = catalog.constellation[idx];
+    const con = conIdx !== 255 ? catalog.constellations[conIdx] : null;
+    const name = catalog.names.get(idx);
+    return {
+      kind: 'star',
+      index: idx,
+      label,
+      primary: name ? `${name} (${label})` : label,
+      displayCon: con?.name ?? '',
+    };
+  };
+
   // Run a query, dispatching to direct-lookup maps when the form matches,
   // otherwise falling back to fuzzy search. Deduplicates by star index so the
   // dropdown doesn't show "Alpha Cen", "Alpha Centaurus", "α Cen" for the
   // same star.
-  const runQuery = (q: string): FuzzyEntry[] => {
+  return (q: string): FuzzyEntry[] => {
     const trimmed = q.trim();
     // Fuse v7's `search('')` returns the entire corpus, not nothing — so
     // without this guard, focusing an empty input pops a dropdown with
@@ -346,19 +361,20 @@ export function bindSearch(
     }
     return out;
   };
+}
 
-  const directResult = (idx: number, label: string): FuzzyEntry => {
-    const conIdx = catalog.constellation[idx];
-    const con = conIdx !== 255 ? catalog.constellations[conIdx] : null;
-    const name = catalog.names.get(idx);
-    return {
-      kind: 'star',
-      index: idx,
-      label,
-      primary: name ? `${name} (${label})` : label,
-      displayCon: con?.name ?? '',
-    };
-  };
+// A dropdown row's primary/sub display. Empty constellation falls back to an
+// em-dash so the secondary column never collapses.
+const rowFor = (e: FuzzyEntry) => ({ primary: e.primary, sub: e.displayCon || '—' });
+
+export function bindSearch(
+  stellata: Stellata,
+  catalog: Catalog,
+  raw: SearchEntry[],
+  starLabels: Map<number, string>,
+  clouds: CloudCatalog | null,
+) {
+  const runQuery = createSearchRunner(catalog, raw, clouds);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -388,14 +404,6 @@ export function bindSearch(
   // the group's "active" slot keeps blur-defer from hiding the dropdown
   // when focus moves between focus + to.
   const group = new TypeaheadGroup();
-
-  // Empty constellation falls back to an em-dash so the secondary
-  // column never collapses (rows without a constellation still need a
-  // baseline).
-  const rowFor = (e: FuzzyEntry) => ({
-    primary: e.primary,
-    sub: e.displayCon || '—',
-  });
 
   // Anchor the floating dropdown under whichever search row triggered
   // it. Both the focus + to inputs share a single absolutely-positioned
@@ -496,4 +504,37 @@ export function bindSearch(
 
   syncFocusUI();
   syncVectorUI();
+}
+
+// The `F` find modal: same corpus as the topbar search, but picking an entry
+// only points the camera at it (aimAt) — no focus, warp, or travel, in both
+// navigate and observe modes. The widget lives hidden in the DOM and is
+// relocated into the shared kb-modal card by the keyboard-shortcut handler,
+// exactly like the Go / Constellation pickers.
+export function bindFindSearch(
+  stellata: Stellata,
+  catalog: Catalog,
+  raw: SearchEntry[],
+  clouds: CloudCatalog | null,
+): void {
+  const runQuery = createSearchRunner(catalog, raw, clouds);
+  const input = document.getElementById('find-input') as HTMLInputElement;
+  const resultsEl = document.getElementById('find-results') as HTMLUListElement;
+
+  new Typeahead<FuzzyEntry>({
+    input,
+    resultsEl,
+    runQuery,
+    rowFor,
+    onSelect: (entry) => {
+      const pos = entry.kind === 'cloud'
+        ? stellata.cloudLocalPosition(entry.index)
+        : stellata.starLocalPosition(entry.index);
+      if (pos) stellata.aimAt(pos);
+    },
+    positionResults: () => {
+      const row = input.closest('.search-row') as HTMLElement | null;
+      if (row) resultsEl.style.top = row.offsetTop + row.offsetHeight + 'px';
+    },
+  });
 }

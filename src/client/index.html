@@ -87,6 +87,25 @@
       <div class="kb-modal-card" id="kb-modal-card" role="dialog" aria-modal="true"></div>
     </div>
 
+    <!-- Home for the F find widget. The container is hidden so nothing shows
+         in the layout; the widget itself stays visible so it renders once the
+         shortcut relocates it into the kb-modal card. -->
+    <div id="find-home" hidden>
+      <div class="search-wrap" id="find-wrap">
+        <div class="search-row" id="find-row">
+          <span class="search-tag">Find</span>
+          <input
+            id="find-input"
+            type="search"
+            placeholder="Point camera at…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <ul id="find-results" class="search-results" hidden></ul>
+      </div>
+    </div>
+
     <div id="help-modal" class="modal" hidden>
       <div class="modal-backdrop" data-modal-dismiss></div>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="help-title">

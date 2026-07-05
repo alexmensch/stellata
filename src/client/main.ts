@@ -6,7 +6,7 @@ import { loadBinaries } from './binaries/binaries-loader';
 import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
-import { bindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
+import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
 import { createConstellationOverlay } from './overlays/constellation-overlay';
 import { createDiscMask } from './overlays/disc-mask';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
@@ -163,6 +163,7 @@ async function main() {
     // search shouldn't surface unreachable cloud entries. Pass
     // `cloudCatalog` directly when re-enabling.
     bindSearch(stellata, catalog, searchIndex, starLabels, null);
+    bindFindSearch(stellata, catalog, searchIndex, null);
     createDiscMask(stellata);
     createConstellationOverlay(stellata);
     createDistanceVectorOverlay(stellata, starLabels);

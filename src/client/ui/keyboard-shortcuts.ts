@@ -4,7 +4,6 @@ import { bindHelpModal } from '../modals/help-modal';
 import {
   pushTapAndCheckTriple,
   DOUBLE_TAP_MS,
-  DOUBLE_TAP_COUNT,
 } from './keyboard-shortcuts-pure';
 import { toggleFullscreen } from './fullscreen';
 import { toggleControlsHidden } from './controls-hidden';
@@ -52,19 +51,21 @@ export function bindKeyboardShortcuts(
     source: () => document.getElementById('con-picker'),
     focusTarget: () => document.getElementById('con-input') as HTMLInputElement | null,
   });
+  const findModal = bindRelocateModal({
+    source: () => document.getElementById('find-wrap'),
+    focusTarget: () => document.getElementById('find-input') as HTMLInputElement | null,
+  });
 
-  // Pending single-tap timer for the C shortcut — tracked across keydowns
-  // so a second C press inside the double-tap window can cancel it.
+  // Pending single-tap timers for the C and F shortcuts — tracked across
+  // keydowns so a second press inside the double-tap window can cancel the
+  // pending single-tap action.
   let cTapTimer: number | null = null;
+  let fTapTimer: number | null = null;
 
   // Rolling window of recent D-key tap timestamps. Three taps inside
   // D_TRIPLE_TAP_MS open the debug panel — hidden affordance, intentionally
   // undocumented.
   const dTapTimes: number[] = [];
-
-  // Rolling window of recent F-key tap timestamps — double-tap toggles
-  // fullscreen. Single F is reserved for the find-object shortcut.
-  const fTapTimes: number[] = [];
 
   // Capture phase so we observe foreground-modal state BEFORE bubble-phase
   // handlers (brand-modal / info-modal / help-modal) flip `hidden=true` on
@@ -85,6 +86,7 @@ export function bindKeyboardShortcuts(
       if (kbModal && !kbModal.hidden) {
         goModal.close();
         conModal.close();
+        findModal.close();
         e.preventDefault();
         return;
       }
@@ -157,14 +159,20 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'f': case 'F':
-        // Double-tap F-F toggles fullscreen (matching the C double-tap
-        // feel); single F is left free for the find-object shortcut.
-        e.preventDefault();
+        // Single tap opens the find picker; double tap F-F toggles
+        // fullscreen (matching the C single/double feel). Defer the picker
+        // open by the double-tap window so a second press can intercept it.
         if (e.repeat) break;
-        if (pushTapAndCheckTriple(
-          fTapTimes, performance.now(), DOUBLE_TAP_MS, DOUBLE_TAP_COUNT,
-        )) {
+        e.preventDefault();
+        if (fTapTimer !== null) {
+          clearTimeout(fTapTimer);
+          fTapTimer = null;
           toggleFullscreen();
+        } else {
+          fTapTimer = window.setTimeout(() => {
+            fTapTimer = null;
+            findModal.open();
+          }, DOUBLE_TAP_MS);
         }
         break;
       case 'u': case 'U':
