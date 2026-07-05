@@ -123,12 +123,12 @@ wall-clock is sampled for the simulation `t`.
 
 The scrubber widget (`time-scrubber-widget.ts`) drives the clock:
 play / pause / fast-forward / rewind / reset / jump-to-date. FF and RW
-step through **powers of two** (`±1, ±2, … ±2³⁰`) and cross zero directly
+step through **powers of two** (`±1, ±2, … ±2³²`) and cross zero directly
 — a step from `+1×` lands on `-1×` rather than passing through fractional
 slow-motion, since the binary orbits this scrubber verifies (α Cen 80 yr,
 61 Cyg 664 yr) are only ever watched *faster* than wall-clock. Rate flips
 snapshot the current virtual time so scrubbing never teleports. `|rate|`
-saturates at `2³⁰` (~1.07e9×). `Stellata.setT(n)` freezes the clock at a
+saturates at `2³²` (~4.29e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
 live.
 

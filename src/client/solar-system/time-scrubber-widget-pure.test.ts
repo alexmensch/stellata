@@ -35,8 +35,8 @@ describe('formatRatePerSecond', () => {
     expect(formatRatePerSecond(-86400)).toBe('−1 day / second');
   });
 
-  it('tops out in decades at the max rate (never centuries)', () => {
-    // 2^30 sim-seconds/sec ≈ 34 yr/s ≈ 3.4 decades/s.
-    expect(formatRatePerSecond(MAX_RATE)).toBe('3.4 decades / second');
+  it('reports centuries at the max rate', () => {
+    // 2^32 sim-seconds/sec ≈ 136 yr/s ≈ 1.4 centuries/s.
+    expect(formatRatePerSecond(MAX_RATE)).toBe('1.4 centuries / second');
   });
 });

@@ -27,10 +27,10 @@ export function isLive(t: number, toleranceSec: number = LIVE_TOLERANCE_SEC): bo
   return Math.abs(t - Date.now() / 1000) < toleranceSec;
 }
 
-// Rate magnitude ceiling: 2^30 (~1.07e9×). Covers Myr/sec of orbital
+// Rate magnitude ceiling: 2^32 (~4.29e9×). Covers Myr/sec of orbital
 // evolution without float-precision blowup in Kepler eval at typical
 // solver tolerances. FF/RW saturate here rather than overflowing.
-export const MAX_RATE = 2 ** 30;
+export const MAX_RATE = 2 ** 32;
 
 // FF/RW step through powers of two crossing zero directly: ±1 are the
 // closest-to-zero non-paused speeds, so a step from +1 lands on -1 (and
