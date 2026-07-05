@@ -1188,6 +1188,97 @@ describe('promoteCompanions', () => {
     expect(c.z).toBeCloseTo(0.0, 6);
   });
 
+  it('names a secondary off the WDS-root system primary when its sub-pair local primary is nameless and unpromoted (Alsephina D)', () => {
+    // δ Vel D is the secondary of the CD sub-pair. Its local primary C is
+    // nameless (source=wds, empty name) and can't promote (system_inherited,
+    // no compound proxy — see the Alsephina C test above), so the cursor
+    // anchor is null. D still promotes off C's inherited position, and its
+    // name must climb to the WDS-root system primary (A = "Alsephina") →
+    // "Alsephina D", not Unnamed.
+    const alsephina: Star = makeStar({
+      gaiaSourceId: null, hip: 42913,
+      absmag: -0.033, proper: 'Alsephina',
+      x: -9.394045, y: 10.739872, z: -20.158656,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '08447-5443-AB', comp: 'A',
+        gaiaSourceId: null, hip: 42913,
+        x_pc: -9.394045, y_pc: 10.739872, z_pc: -20.158656, distPc: 24.697,
+        absmag: -0.033, name: 'Alsephina', source: 'athyg',
+        astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: '08447-5443-CD', comp: 'C',
+        gaiaSourceId: '5317053587002655872', hip: null,
+        x_pc: -9.394045, y_pc: 10.739872, z_pc: -20.158656, distPc: 24.697,
+        absmag: 2.467, ci: 0.77, spect: 'G8', name: '',
+        photometryVia: 'none', astrometryVia: 'system_inherited',
+        orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: '08447-5443-CD', comp: 'D',
+        gaiaSourceId: '5317053587001807104', hip: null,
+        x_pc: -9.394045, y_pc: 10.739872, z_pc: -20.158656, distPc: 24.697,
+        absmag: 5.90, ci: 0.845, spect: 'K0', name: '',
+        photometryVia: 'none', astrometryVia: 'system_inherited',
+        orbitRole: 'secondary',
+        sepArcsec: 6.0, paDeg: 100.0, sepPaEpochJd: 2457023.75, dmag: 3.4,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [alsephina], CONSTELLATIONS);
+    expect(stats.droppedCollocatedPrimary).toBe(1);  // C still drops
+    const d = newStars.find(s => s.gaiaSourceId === '5317053587001807104');
+    expect(d, 'D promoted').toBeDefined();
+    expect(d?.proper).toBe('Alsephina D');
+  });
+
+  it('names a secondary off the WDS-root system primary when its local anchor is present but nameless (Eps Equ C)', () => {
+    // ε Equ's BC sub-pair: the local primary B resolves to an existing but
+    // nameless catalog record (HIP 103571 — no proper/Bayer/Flamsteed),
+    // while the system primary A is the named first-class "Eps Equ"
+    // (HIP 103569). C's name must climb past the nameless local anchor to
+    // the WDS-root system primary → "Eps Equ C", not Unnamed.
+    const epsEquA: Star = makeStar({
+      gaiaSourceId: null, hip: 103569,
+      absmag: 1.5, proper: 'Eps Equ',
+      x: 30.0, y: 40.0, z: 10.0,
+    });
+    const epsEquB: Star = makeStar({
+      gaiaSourceId: null, hip: 103571,   // nameless: no proper/bayer/flam
+      absmag: 5.0, x: 30.01, y: 40.01, z: 10.0,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '20591+0418-AB', comp: 'A',
+        gaiaSourceId: null, hip: 103569,
+        x_pc: 30.0, y_pc: 40.0, z_pc: 10.0, distPc: 54.08,
+        absmag: 1.5, name: 'Eps Equ', source: 'athyg',
+        astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: '20591+0418-BC', comp: 'B',
+        gaiaSourceId: null, hip: 103571,
+        x_pc: 30.01, y_pc: 40.01, z_pc: 10.0, distPc: 55.04,
+        absmag: 5.0, name: '', source: 'wds',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: '20591+0418-BC', comp: 'C',
+        gaiaSourceId: '1731592451377571712', hip: null,
+        x_pc: 30.01, y_pc: 40.01, z_pc: 10.0, distPc: 55.04,
+        absmag: 6.5, ci: 0.5, spect: 'F5', name: '',
+        photometryVia: 'none', astrometryVia: 'system_inherited',
+        orbitRole: 'secondary',
+        sepArcsec: 10.0, paDeg: 200.0, sepPaEpochJd: 2457023.75, dmag: 1.5,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [epsEquA, epsEquB], CONSTELLATIONS);
+    const c = newStars.find(s => s.gaiaSourceId === '1731592451377571712');
+    expect(c, 'C promoted').toBeDefined();
+    expect(c?.proper).toBe('Eps Equ C');
+  });
+
   it('drops the unresolved-compound secondary "BC" and projects pair-row "B" off the A,BC sep+PA', () => {
     // 40 Eri (canonical case). The A,BC group's secondary "BC" is the
     // WDS unresolved-compound; it must NOT promote (otherwise the
