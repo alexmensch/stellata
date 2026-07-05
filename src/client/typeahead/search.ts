@@ -507,10 +507,11 @@ export function bindSearch(
 }
 
 // The `F` find modal: same corpus as the topbar search, but picking an entry
-// only points the camera at it (aimAt) — no focus, warp, or travel, in both
-// navigate and observe modes. The widget lives hidden in the DOM and is
-// relocated into the shared kb-modal card by the keyboard-shortcut handler,
-// exactly like the Go / Constellation pickers.
+// only points the camera at it (aimAt) — no focus, warp, or travel. Reachable
+// in observe mode only (the shortcut gates it): from a navigate-mode focus,
+// aiming would just park the target behind the focused star. The widget lives
+// hidden in the DOM and is relocated into the shared kb-modal card by the
+// keyboard-shortcut handler, exactly like the Go / Constellation pickers.
 export function bindFindSearch(
   stellata: Stellata,
   catalog: Catalog,

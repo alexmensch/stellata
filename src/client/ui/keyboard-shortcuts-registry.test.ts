@@ -30,12 +30,12 @@ describe('helpModalShortcuts', () => {
 
 describe('hintBarShortcuts', () => {
   it('bare navigate shows the core loop minus state-gated entries', () => {
-    expect(keysOf(hintBarShortcuts(navigate))).toEqual(['G', 'F', '?']);
+    expect(keysOf(hintBarShortcuts(navigate))).toEqual(['G', '?']);
   });
 
-  it('reveals O only when a star is focused', () => {
+  it('reveals O only when a star is focused, and never F in navigate', () => {
     expect(keysOf(hintBarShortcuts({ ...navigate, hasFocus: true })))
-      .toEqual(['G', 'F', 'O', 'Esc', '?']);
+      .toEqual(['G', 'O', 'Esc', '?']);
   });
 
   it('reveals W only when a destination is set', () => {
@@ -43,8 +43,9 @@ describe('hintBarShortcuts', () => {
       .toContain('W');
   });
 
-  it('shows M and Esc in observe mode, never O or W', () => {
+  it('shows F, M and Esc in observe mode, never O or W', () => {
     const keys = keysOf(hintBarShortcuts({ ...navigate, cameraMode: 'observe' }));
+    expect(keys).toContain('F');
     expect(keys).toContain('M');
     expect(keys).toContain('Esc');
     expect(keys).not.toContain('O');

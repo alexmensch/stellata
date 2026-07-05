@@ -166,6 +166,9 @@ export function bindKeyboardShortcuts(
         // Single tap opens the find picker; double tap F-F toggles
         // fullscreen (matching the C single/double feel). Defer the picker
         // open by the double-tap window so a second press can intercept it.
+        // Find is observe-only — in navigate mode aiming at an object just
+        // parks it behind the focused star, so the single-tap open is gated
+        // while the F-F fullscreen path stays live in every mode.
         if (e.repeat) break;
         e.preventDefault();
         if (fTapTimer !== null) {
@@ -175,7 +178,7 @@ export function bindKeyboardShortcuts(
         } else {
           fTapTimer = window.setTimeout(() => {
             fTapTimer = null;
-            findModal.open();
+            if (stellata.getCameraMode() === 'observe') findModal.open();
           }, DOUBLE_TAP_MS);
         }
         break;

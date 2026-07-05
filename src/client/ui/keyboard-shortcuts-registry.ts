@@ -35,9 +35,9 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   },
   {
     keys: ['F'],
-    label: 'Find: point the camera at any object without travelling to it',
+    label: 'Find: point the camera at any object without travelling to it (observe mode)',
     hint: true,
-    active: (s) => !s.modalOpen,
+    active: (s) => s.cameraMode === 'observe',
   },
   {
     keys: ['O'],

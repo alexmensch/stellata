@@ -21,7 +21,7 @@ what to display and when.
 | Key | Action |
 | --- | --- |
 | `G` | Open the Go picker — focus a star, set a destination, or change observe location |
-| `F` | Open the Find picker — point the camera at any object without travelling to it (`aimAt`; navigate + observe) |
+| `F` | Open the Find picker — point the camera at any object without travelling to it (`aimAt`; observe mode only) |
 | `O` | Switch to observe mode (gated on `getFocusedStar() !== null`) |
 | `M` | Toggle chart mode (gated on `cameraMode === 'observe'`; auto-clears on observe→navigate) |
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
@@ -30,7 +30,7 @@ what to display and when.
 | `T` | Toggle the time scrubber (`../solar-system/time-scrubber-widget.ts`) |
 | `S` | Toggle `showGalacticGrid` |
 | `H` | Toggle `showHud` |
-| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`). Single `F` opens Find (both are deferred by the double-tap window, like `C`). |
+| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
@@ -130,8 +130,8 @@ registry and re-renders on every state change: `focus` / `cloudFocus` /
 on the modal `hidden` attributes (modals emit no event of their own).
 
 **The context-essential set** (registry `hint: true`, gated per state):
-`G` and `F` and `?` are always shown; `O` appears only with a focused
-star in navigate, `M` only in observe, `W` only with a destination set,
+`G` and `?` are always shown; `F` and `M` only in observe, `O` appears
+only with a focused star in navigate, `W` only with a destination set,
 `Esc` only when there's something to step back from. In any modal state
 the bar collapses to `Esc` alone. Everything else — `S`, `H`, `C`, `R`,
 `T`, `F`-`F`, `U`, `+`/`-`, `=` — is relegated to the `?` help modal
@@ -308,8 +308,8 @@ is steady across focus/unfocus and any line angle.
 (the `<html>` element), not the canvas — every chrome container is a
 sibling of the canvas under `<body>`, so fullscreening the whole page
 keeps the panel/topbar/overlays visible. Bound to a double-tap `F`-`F`
-(single `F` opens the Find picker); there is no
-in-app affordance. Esc handling is left entirely to the browser: the
+in every mode (single `F` opens the Find picker in observe mode only);
+there is no in-app affordance. Esc handling is left entirely to the browser: the
 Fullscreen API reserves Esc for the exit and the exit is not cancelable
 by page code, so any attempt to layer app behaviour under a
 fullscreen-active Esc is unreliable (some browsers don't even dispatch
