@@ -34,6 +34,11 @@ import {
 } from './warp-tuning';
 import { hybridUSeam } from '../arrival/arrival-curves';
 
+// Source→dest separations below this have no reliable travel direction —
+// AB/distPc is float32 noise (coincident catalog baselines / orbit
+// crossing). See README § OBSERVE mode and the warp state machine.
+const WARP_DEGENERATE_DIST_PC = 1e-9;
+
 export type WarpPhaseKind = 'reorient' | 'fly' | 'post-arrival';
 
 export interface WarpPhaseInfo {
@@ -134,9 +139,9 @@ export class WarpController {
   }
 
   /** Star-destination warp — flies from the currently focused thing
-   *  (star or cloud) to a star at `destIdx`. No-ops if there's no focus,
-   *  the destination equals the source, or the two are coincident in
-   *  catalog space. */
+   *  (star or cloud) to a star at `destIdx`. No-ops if there's no focus
+   *  or the destination equals the source. Collocated endpoints still
+   *  fly (near-zero leg) — see the WARP_DEGENERATE_DIST_PC fallback. */
   warpTo(destIdx: number): void {
     if (destIdx === this.deps.focus.getFocusedStar()) return;
     const source = this.deps.focus.currentFocusTarget();
@@ -271,21 +276,16 @@ export class WarpController {
     const endOffset = dest.parkRadius();
     const AB = new THREE.Vector3().subVectors(B, A);
     const distPc = AB.length();
-    if (distPc < 1e-6) {
-      // Source and destination share a world position — e.g. AT-HYG
-      // stores α Cen A (HIP 71683) and B (HIP 71681) at identical
-      // x0/y0/z0 because the ~17.6 AU separation is below catalog
-      // precision. The camera has nowhere to fly, but switching focus
-      // still gives feedback (search row, focus ring, scale bar, vector
-      // all retarget). Apply the destination's focus + emit immediately
-      // — equivalent to a degenerate warp that lands at u=0. Route
-      // through setFocus / setFocusedCloud so their own observe-cleanup
-      // branches fire (the FocusTarget contract doesn't model those).
-      if (dest.kind === 'star') focus.setFocus(dest.idx);
-      else focus.setFocusedCloud(dest.idx);
-      return;
-    }
-    const forward = AB.clone().divideScalar(distPc);
+    // Collocated source/dest (α Cen A/B at one catalog baseline, a ρ=0
+    // inner pair on its parent like Castor Bb→B, an orbit crossing) have
+    // no reliable A→B axis. Fall back to the current view direction so the
+    // reorient is minimal; the near-zero flight still runs and lands via
+    // the normal finishWarp re-anchor, which keeps OBSERVE engaged. A
+    // bespoke degenerate re-anchor bypasses finishWarp's target setup and
+    // desyncs the focal-frame ride.
+    const forward = distPc > WARP_DEGENERATE_DIST_PC
+      ? AB.divideScalar(distPc)
+      : this.deps.camera.getWorldDirection(AB);
 
     // Reorient-end direction (from A): opposite to travel, so after the
     // reorient A is in front of the camera and B is further along the

@@ -2748,6 +2748,8 @@ class NssToCanonicalElementsTests(unittest.TestCase):
         self.assertIsNone(o.Omega_rad)
 
     def test_eclipsing_spectro_carries_mass_ratio(self) -> None:
+        # mass_ratio is Gaia's M_S/M_P ratio; q stores the M_2/(M_1+M_2)
+        # fraction, so 0.6 → 0.6/1.6 = 0.375.
         row = {
             "nss_solution_type": "EclipsingSpectro",
             "period": "2.0", "t_periastron": "1.0", "eccentricity": "0.0",
@@ -2757,7 +2759,7 @@ class NssToCanonicalElementsTests(unittest.TestCase):
         o = bb.nss_to_canonical_elements(row, 5.0)
         self.assertIsNotNone(o)
         assert o is not None
-        self.assertAlmostEqual(o.q or 0.0, 0.6)
+        self.assertAlmostEqual(o.q or 0.0, 0.6 / 1.6)
 
     def test_sb1_only_carries_omega(self) -> None:
         row = {
@@ -2773,16 +2775,19 @@ class NssToCanonicalElementsTests(unittest.TestCase):
         self.assertIsNone(o.Omega_rad)
         self.assertIsNone(o.a_AU)
 
-    def test_sb2_carries_mass_ratio(self) -> None:
+    def test_mass_ratio_above_one_converts_to_bounded_fraction(self) -> None:
+        # M_S/M_P can exceed 1 (heavier secondary); q must still land in
+        # [0,1) as the M_2/(M_1+M_2) fraction — 2.0 → 2/3.
         row = {
-            "nss_solution_type": "SB2",
+            "nss_solution_type": "EclipsingSpectro",
             "period": "50.0", "t_periastron": "5.0", "eccentricity": "0.1",
-            "arg_periastron": "30.0", "mass_ratio": "0.85",
+            "inclination": "80.0", "arg_periastron": "30.0",
+            "mass_ratio": "2.0",
         }
         o = bb.nss_to_canonical_elements(row, 8.0)
         self.assertIsNotNone(o)
         assert o is not None
-        self.assertAlmostEqual(o.q or 0.0, 0.85)
+        self.assertAlmostEqual(o.q or 0.0, 2.0 / 3.0)
 
     def test_sb1c_compact_has_no_geometry_beyond_pte(self) -> None:
         # "Compact" SB1C variant — only P/T/e stored. No omega.
@@ -3084,7 +3089,24 @@ class SelectOrbitTests(unittest.TestCase):
         self.assertEqual(via, "gaia_nss")
         self.assertIsNotNone(orbit)
 
-    def test_secondary_nss_row_used_when_primary_has_none(self) -> None:
+    def test_secondary_nss_row_used_when_primary_unresolved(self) -> None:
+        nss_row = _nss_orbital_row(period_days=100.0)
+        idx = _indices_for_orbit(src_to_nss={99: nss_row})
+        prim = _resolved(gaia=None, component="A", is_primary=True)
+        sec = _resolved(gaia=99, component="B", is_primary=False)
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=[], indices=idx,
+        )
+        self.assertEqual(via, "gaia_nss")
+        self.assertIsNotNone(orbit)
+
+    def test_nss_skipped_when_partner_is_distinct_source(self) -> None:
+        # The NSS orbit describes source 99's own sub-companion; the
+        # AB pair's other side is a DIFFERENT resolved source, so
+        # attaching the orbit to AB would misattribute it (it belongs
+        # to a synthesized inner pair — see subdivide.py).
         nss_row = _nss_orbital_row(period_days=100.0)
         idx = _indices_for_orbit(src_to_nss={99: nss_row})
         prim = _resolved(gaia=42, component="A", is_primary=True)
@@ -3094,8 +3116,22 @@ class SelectOrbitTests(unittest.TestCase):
             primary_astrometry=_ast(), secondary_astrometry=_ast(),
             orb6_for_pair=[], indices=idx,
         )
+        self.assertEqual(via, "none")
+        self.assertIsNone(orbit)
+
+    def test_nss_attaches_when_pair_shares_blended_source(self) -> None:
+        # Castor CIA 29 shape: both sides carry the same blended
+        # source, so the NSS orbit IS the pair's own.
+        nss_row = _nss_orbital_row(period_days=100.0)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="Aa", is_primary=True)
+        sec = _resolved(gaia=42, component="Ab", is_primary=False)
+        _, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(), secondary_astrometry=_ast(),
+            orb6_for_pair=[], indices=idx,
+        )
         self.assertEqual(via, "gaia_nss")
-        self.assertIsNotNone(orbit)
 
     def test_orb6_grade_tiebreak_lowest_wins(self) -> None:
         idx = _indices_for_orbit()
@@ -3161,20 +3197,19 @@ class SelectOrbitTests(unittest.TestCase):
         self.assertEqual(via, "none")
         self.assertIsNone(orbit)
 
-    def test_grade_7_orb6_falls_through_both_gates(self) -> None:
-        # Grade 7 isn't in the visual set OR the spectroscopic set —
-        # rare/preliminary fits get no orbit_via (none) rather than a
-        # default that misleads downstream.
+    def test_grade_7_orb6_routes_spectroscopic(self) -> None:
+        # Grade 7 (photometric / eclipsing fits — YY Gem) rides the
+        # non-visual route alongside 8/9, never the visual one.
         idx = _indices_for_orbit()
         prim = _resolved(gaia=42, component="A", is_primary=True)
         sec = _resolved(gaia=None, component="B", is_primary=False)
-        orb = [_orb6_visual(grade=7, ref="Prelim2020")]
+        orb = [_orb6_visual(grade=7, ref="Sgr2000")]
         _, via = bb.select_orbit(
             primary=prim, secondary=sec,
             primary_astrometry=_ast(), secondary_astrometry=_ast(),
             orb6_for_pair=orb, indices=idx,
         )
-        self.assertEqual(via, "none")
+        self.assertEqual(via, "orb6_spectroscopic")
 
 
 class IterDecomposingPairsTests(unittest.TestCase):
@@ -3217,6 +3252,32 @@ class IterDecomposingPairsTests(unittest.TestCase):
                 [_resolved(gaia=1)],
                 [_ast(), _ast()],
             ))
+
+
+class IterDecomposingPairComponentsTests(unittest.TestCase):
+    """The astrometry-free walk (Stage 2 passes that run before
+    astrometry exists) shares the same skip + validation primitive as
+    ``iter_decomposing_pairs``."""
+
+    def test_yields_primary_secondary_skipping_nondecomposing(self) -> None:
+        p1 = _wds_pair(wds_id="W1", components="AB")
+        p2 = _wds_pair(wds_id="W2", components="ABC")  # ambiguous → skipped
+        comps = [
+            _resolved(gaia=1, wds_id="W1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="W1", component="B", is_primary=False),
+        ]
+        yielded = list(bb.iter_decomposing_pair_components([p1, p2], comps))
+        self.assertEqual([(y[1].component, y[2].component) for y in yielded],
+                         [("A", "B")])
+
+    def test_cursor_desync_raises(self) -> None:
+        p = _wds_pair(wds_id="W1", components="AB")
+        comps = [
+            _resolved(gaia=1, wds_id="W2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="W2", component="B", is_primary=False),
+        ]
+        with self.assertRaises(RuntimeError):
+            list(bb.iter_decomposing_pair_components([p], comps))
 
 
 class SelectOrbitsAllTests(unittest.TestCase):
@@ -4211,6 +4272,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             resolve_via="orb6_hip", astrometry_via="gaia_5p", orbit_via="orb6",
             spect_via="athyg",
             photometry_via="athyg_own",
+            a_via="catalog",
             orbit_role="primary",
             P_days=365.25, T_jd=2451545.0, e=0.1, a_AU=1.0,
             i_rad=0.5, omega_rad=0.6, Omega_rad=0.7,
@@ -4234,6 +4296,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
         self.assertEqual(cells[header.index("name")], "Sirius")
         self.assertEqual(cells[header.index("regime")], "2")
         self.assertEqual(cells[header.index("spect_via")], "athyg")
+        self.assertEqual(cells[header.index("a_via")], "catalog")
         self.assertEqual(cells[header.index("sep_arcsec")], "7.123")
         self.assertEqual(cells[header.index("pa_deg")], "265.45")
         self.assertEqual(cells[header.index("sep_pa_epoch_jd")], "2458850.0000")
@@ -4249,6 +4312,7 @@ class WriteMultiplesTsvTests(unittest.TestCase):
             resolve_via="unresolved", astrometry_via="unresolved", orbit_via="none",
             spect_via="none",
             photometry_via="none",
+            a_via="none",
             orbit_role="primary",
             P_days=None, T_jd=None, e=None, a_AU=None,
             i_rad=None, omega_rad=None, Omega_rad=None,
@@ -4769,10 +4833,11 @@ class Stage6QFallbackTests(unittest.TestCase):
         self.assertEqual(rows[0].q, 0.85)
         self.assertEqual(rows[1].q, 0.85)
 
-    def test_no_q_fill_when_one_component_lacks_spect(self) -> None:
-        # ORB6 orbit emitted but the secondary has no spectral class
-        # (no SIMBAD entry, no AT-HYG row). The fallback yields None and
-        # both rows stay with q=None.
+    def test_no_q_default_for_orb6_visual_when_spect_missing(self) -> None:
+        # ORB6 VISUAL orbit with an unclassifiable secondary: the
+        # spectral backfill yields None and the estimated-q backstop
+        # deliberately does not fire (visual pairs carry real baked
+        # placements — see ESTIMATED_ELEMENT_ORBIT_VIAS).
         pair, components, astrometry, orbits, classifications, indices = (
             self._make_pair_fixture(
                 primary_spect="G2V", secondary_spect=None,
@@ -4788,6 +4853,32 @@ class Stage6QFallbackTests(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertIsNone(rows[0].q)
         self.assertIsNone(rows[1].q)
+
+    def test_q_defaults_on_nss_route_when_spect_missing(self) -> None:
+        # Same missing-secondary-spect shape on the gaia_nss route:
+        # the unknown-companion default fires — a q-less pair would
+        # never clear the runtime's has_orbit gate.
+        nss_orbit = bb.OrbitElements(
+            P_days=12.5, T_jd=2451545.0, e=0.1,
+            a_AU=None, i_rad=None,
+            omega_rad=0.2, Omega_rad=None,
+            q=None, distance_pc=10.0,
+        )
+        pair, components, astrometry, orbits, classifications, indices = (
+            self._make_pair_fixture(
+                primary_spect="G2V", secondary_spect=None,
+                wds_id="00000+0003", orbit=(nss_orbit, "gaia_nss"),
+                has_secondary_athyg=False,
+            )
+        )
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(rows[0].q, me.UNKNOWN_COMPANION_MASS_RATIO_Q)
+        self.assertEqual(rows[1].q, me.UNKNOWN_COMPANION_MASS_RATIO_Q)
+        self.assertEqual(rows[0].a_via, bb.A_VIA_KEPLER_MASS_ESTIMATE)
 
     def test_no_q_fill_when_no_orbit(self) -> None:
         # No orbit emitted at all → q is None on both rows even when
@@ -4808,6 +4899,527 @@ class Stage6QFallbackTests(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertIsNone(rows[0].q)
         self.assertIsNone(rows[1].q)
+
+
+# ─── component_tokens (shared token helpers) ─────────────────────────
+
+
+import component_tokens as ct  # noqa: E402
+
+
+class ComponentTokensTests(unittest.TestCase):
+    def test_is_component_token(self) -> None:
+        for tok in ("A", "Aa", "Aa1", "B", "Cb"):
+            self.assertTrue(ct.is_component_token(tok), tok)
+        for tok in ("", "AB", "Aab", "a", "95", "Aa12", "r"):
+            self.assertFalse(ct.is_component_token(tok), tok)
+
+    def test_expand_wds_truncated_secondary(self) -> None:
+        self.assertEqual(ct.expand_wds_truncated_secondary("Aa1", "2"), "Aa2")
+        self.assertEqual(ct.expand_wds_truncated_secondary("Aa", "Ab"), "Ab")
+        # Primary not digit-terminated → bare-digit secondary is left
+        # alone (it isn't a truncation of the primary's stem).
+        self.assertEqual(ct.expand_wds_truncated_secondary("Aa", "2"), "2")
+
+    def test_parent_component_token(self) -> None:
+        self.assertEqual(ct.parent_component_token("Aa1"), "Aa")
+        self.assertEqual(ct.parent_component_token("Aa"), "A")
+        self.assertIsNone(ct.parent_component_token("A"))
+
+    def test_child_component_tokens(self) -> None:
+        self.assertEqual(ct.child_component_tokens("A"), ("Aa", "Ab"))
+        self.assertEqual(ct.child_component_tokens("Ca"), ("Ca1", "Ca2"))
+        self.assertIsNone(ct.child_component_tokens("Aa1"))
+        self.assertIsNone(ct.child_component_tokens("AB"))
+
+
+# ─── subdivide (synthesized sub-pair injection) ──────────────────────
+
+
+class ParseOrb6PreciseCoordTests(unittest.TestCase):
+    def test_coordinate_prefix_parsed(self) -> None:
+        line = "073435.86+315317.8 07346+3153 STF1110AB       6175  60178  36850   1.93   2.97    459.1     y   2.3        6.722  a  0.021   115.107    0.060   41.304     0.085   1959.59    y   0.021    0.3382   0.0023   251.84     0.38   2000 2021 3 n CIA2022d wds07346+3153r.png"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", "banner\n" + line + "\n")
+            rows = bb.parse_orb6(p)
+        e = rows[0]
+        self.assertIsNotNone(e.precise_ra_deg)
+        assert e.precise_ra_deg is not None and e.precise_dec_deg is not None
+        self.assertAlmostEqual(e.precise_ra_deg, 113.649417, places=5)
+        self.assertAlmostEqual(e.precise_dec_deg, 31.888278, places=5)
+
+
+class Orb6ComponentOverridesTests(unittest.TestCase):
+    def test_parse_and_apply(self) -> None:
+        body = (
+            "# preamble\n"
+            "wds_id\tdiscoverer\tcomponents\tsource\n"
+            "07346+3153\tYY Gem\tCa,Cb\tTorres & Ribas 2002\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "overrides.tsv", body)
+            overrides = bb.parse_orb6_component_overrides(p)
+        self.assertEqual(overrides[("07346+3153", "YY Gem")], "Ca,Cb")
+
+        target = _orb6_visual(grade=7)
+        target.wds_id = "07346+3153"
+        target.discoverer = "YY Gem"
+        target.components = ""
+        untouched = _orb6_visual(grade=3)
+        n = bb.apply_orb6_component_overrides([target, untouched], overrides)
+        self.assertEqual(n, 1)
+        self.assertEqual(target.components, "Ca,Cb")
+        self.assertEqual(untouched.components, "AB")
+
+
+def _orphan_orb6(
+    *, wds_id: str = "00490+1656", discoverer: str = "64 Psc",
+    components: str = "Aa,Ab", grade: int = 8,
+    precise_ra_deg: float | None = 12.25,
+    precise_dec_deg: float | None = 16.94,
+) -> "bb.Orb6Entry":
+    e = _orb6_visual(grade=grade)
+    e.wds_id = wds_id
+    e.discoverer = discoverer
+    e.components = components
+    e.precise_ra_deg = precise_ra_deg
+    e.precise_dec_deg = precise_dec_deg
+    return e
+
+
+class SynthesizeOrb6OrphanPairsTests(unittest.TestCase):
+    def test_synthesizes_missing_subpair(self) -> None:
+        wds = [_wds_pair(wds_id="00490+1656", components="AB")]
+        out = bb.synthesize_orb6_orphan_pairs(wds, [_orphan_orb6()])
+        self.assertEqual(len(out), 1)
+        p = out[0]
+        self.assertEqual((p.wds_id, p.components), ("00490+1656", "Aa,Ab"))
+        # Sub-resolution convention — no measured geometry exists.
+        self.assertEqual(p.rho_last, 0.0)
+        self.assertIsNone(p.mag_pri)
+        self.assertEqual(p.precise_ra_deg, 12.25)
+
+    def test_skips_existing_wds_key_and_garbage_components(self) -> None:
+        wds = [_wds_pair(wds_id="W1", components="Aa,Ab")]
+        entries = [
+            _orphan_orb6(wds_id="W1", components="Aa,Ab"),   # WDS has it
+            _orphan_orb6(wds_id="W1", components="95"),      # misalignment
+            _orphan_orb6(wds_id="W1", components="a,Ab"),    # misalignment
+            _orphan_orb6(wds_id="W1", components="A,BC"),    # compound side
+            _orphan_orb6(wds_id="W1", components=""),        # system-level
+        ]
+        self.assertEqual(bb.synthesize_orb6_orphan_pairs(wds, entries), [])
+
+    def test_dedups_multiple_fits_per_pair(self) -> None:
+        entries = [
+            _orphan_orb6(grade=9),
+            _orphan_orb6(grade=8),
+        ]
+        out = bb.synthesize_orb6_orphan_pairs([], entries)
+        self.assertEqual(len(out), 1)
+
+    def test_blank_components_discoverer_row_donates_geometry(self) -> None:
+        donor = _wds_pair(
+            wds_id="00335+4006", discoverer="HO    3", components="",
+            rho_last=0.3, theta_last=120.0, mag_pri=4.4, mag_sec=7.2,
+            date_last=2019, precise_ra_deg=8.4, precise_dec_deg=40.1,
+        )
+        entry = _orphan_orb6(
+            wds_id="00335+4006", discoverer="HO    3", components="Aa,Ab",
+            precise_ra_deg=None, precise_dec_deg=None,
+        )
+        out = bb.synthesize_orb6_orphan_pairs([donor], [entry])
+        self.assertEqual(len(out), 1)
+        p = out[0]
+        self.assertEqual(p.rho_last, 0.3)
+        self.assertEqual(p.mag_pri, 4.4)
+        self.assertEqual(p.date_last, 2019)
+        self.assertEqual(p.precise_ra_deg, 8.4)
+
+    def test_wds_truncated_secondary_form_accepted(self) -> None:
+        out = bb.synthesize_orb6_orphan_pairs(
+            [], [_orphan_orb6(components="Aa1,2")],
+        )
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0].components, "Aa1,2")
+
+
+class SeedSynthesizedComponentBindingsTests(unittest.TestCase):
+    def test_primary_inherits_parent_token_secondary_inherits_primary(self) -> None:
+        row = _athyg_row(gaia=777)
+        parent_c = _resolved(
+            gaia=777, wds_id="W1", component="C", is_primary=False,
+            via="simbad_xid", hip=101,
+        )
+        parent_c.athyg_row = row
+        synth = _wds_pair_full(
+            wds_id="W1", discoverer="YY Gem", components="Ca,Cb",
+        )
+        child_a = _resolved(
+            gaia=None, wds_id="W1", discoverer="YY Gem",
+            component="Ca", is_primary=True, via="unresolved",
+        )
+        child_b = _resolved(
+            gaia=None, wds_id="W1", discoverer="YY Gem",
+            component="Cb", is_primary=False, via="unresolved",
+        )
+        components = [parent_c, child_a, child_b]
+        n = bb.seed_synthesized_component_bindings(components, [synth])
+        self.assertEqual(n, 2)
+        for child in (child_a, child_b):
+            self.assertEqual(child.gaia_source_id, 777)
+            self.assertEqual(child.resolve_via, "simbad_xid")
+            self.assertEqual(child.hip, 101)
+            self.assertIs(child.athyg_row, row)
+
+    def test_own_resolution_wins_over_seed(self) -> None:
+        parent_a = _resolved(gaia=777, wds_id="W1", component="A")
+        child_a = _resolved(
+            gaia=555, wds_id="W1", discoverer="TST   1",
+            component="Aa", is_primary=True, via="orb6_hip",
+        )
+        child_b = _resolved(
+            gaia=None, wds_id="W1", discoverer="TST   1",
+            component="Ab", is_primary=False, via="unresolved",
+        )
+        synth = _wds_pair_full(
+            wds_id="W1", discoverer="TST   1", components="Aa,Ab",
+        )
+        bb.seed_synthesized_component_bindings(
+            [parent_a, child_a, child_b], [synth],
+        )
+        # Primary keeps its own ORB6-resolved source; the secondary
+        # inherits the PAIR primary's binding (blended-photocentre
+        # convention), not the parent token's.
+        self.assertEqual(child_a.gaia_source_id, 555)
+        self.assertEqual(child_b.gaia_source_id, 555)
+
+    def test_non_synthesized_components_untouched(self) -> None:
+        c = _resolved(gaia=None, wds_id="W1", component="B", is_primary=False)
+        bb.seed_synthesized_component_bindings(
+            [_resolved(gaia=1, wds_id="W1", component="A"), c], [],
+        )
+        self.assertIsNone(c.gaia_source_id)
+
+
+def _wds_pair_full(
+    *, wds_id: str, discoverer: str, components: str,
+) -> "bb.WdsPair":
+    return bb.WdsPair(
+        wds_id=wds_id, discoverer=discoverer, components=components,
+        date_last=None, rho_last=0.0, theta_last=0.0,
+        mag_pri=None, mag_sec=None, spectral="", notes="    ",
+        precise_ra_deg=None, precise_dec_deg=None,
+    )
+
+
+class SynthesizeNssInnerPairsTests(unittest.TestCase):
+    def _run(
+        self,
+        pairs: "list[bb.WdsPair]",
+        components: "list[bb.ResolvedComponent]",
+        astrometry: "list[bb.ComponentAstrometry]",
+        src_to_nss: dict[int, dict[str, str]],
+    ):
+        idx = _indices_with_astrometry(src_to_nss=src_to_nss)
+        return bb.synthesize_nss_inner_pairs(
+            pairs=pairs, components=components,
+            astrometry=astrometry, indices=idx,
+        )
+
+    def _ab_fixture(self, *, primary_gaia=42, secondary_gaia=99):
+        pairs = [_wds_pair(wds_id="W1", components="AB")]
+        components = [
+            _resolved(gaia=primary_gaia, wds_id="W1", component="A",
+                      is_primary=True, via="simbad_xid", hip=7),
+            _resolved(gaia=secondary_gaia, wds_id="W1", component="B",
+                      is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=50.0),
+            _component_astrometry(parallax_mas=50.0),
+        ]
+        return pairs, components, astrometry
+
+    def test_distinct_partner_source_spawns_inner_pair(self) -> None:
+        pairs, components, astrometry = self._ab_fixture()
+        new_pairs, new_comps, new_ast, stats = self._run(
+            pairs, components, astrometry,
+            {42: _nss_orbital_row(period_days=200.0)},
+        )
+        self.assertEqual(len(new_pairs), 1)
+        p = new_pairs[0]
+        self.assertEqual(p.components, "Aa,Ab")
+        self.assertEqual(p.discoverer, bb.SYNTH_NSS_DISCOVERER)
+        self.assertEqual(p.rho_last, 0.0)
+        self.assertEqual(len(new_comps), 2)
+        self.assertEqual(
+            [c.component for c in new_comps], ["Aa", "Ab"],
+        )
+        for c in new_comps:
+            self.assertEqual(c.gaia_source_id, 42)
+            self.assertEqual(c.resolve_via, "simbad_xid")
+            self.assertEqual(c.hip, 7)
+        self.assertIs(new_ast[0], astrometry[0])
+        self.assertIs(new_ast[1], astrometry[0])
+
+    def test_blended_partner_shares_source_no_synthesis(self) -> None:
+        pairs, components, astrometry = self._ab_fixture(secondary_gaia=42)
+        new_pairs, _, _, _ = self._run(
+            pairs, components, astrometry,
+            {42: _nss_orbital_row(period_days=200.0)},
+        )
+        self.assertEqual(new_pairs, [])
+
+    def test_deepest_carrier_component_wins(self) -> None:
+        # Source 42 rides both A (in AB) and Aa (in Aa,Ab, partner Ab
+        # distinct) — the deeper Aa wins and children go one level
+        # further down.
+        pairs = [
+            _wds_pair(wds_id="W1", components="AB"),
+            _wds_pair(wds_id="W1", components="Aa,Ab"),
+        ]
+        components = [
+            _resolved(gaia=42, wds_id="W1", component="A", is_primary=True),
+            _resolved(gaia=99, wds_id="W1", component="B", is_primary=False),
+            _resolved(gaia=42, wds_id="W1", component="Aa", is_primary=True),
+            _resolved(gaia=77, wds_id="W1", component="Ab", is_primary=False),
+        ]
+        astrometry = [_component_astrometry()] * 4
+        new_pairs, new_comps, _, _ = self._run(
+            pairs, components, astrometry,
+            {42: _nss_orbital_row(period_days=200.0)},
+        )
+        self.assertEqual(len(new_pairs), 1)
+        self.assertEqual(new_pairs[0].components, "Aa1,Aa2")
+
+    def test_existing_children_block_synthesis(self) -> None:
+        pairs = [
+            _wds_pair(wds_id="W1", components="AB"),
+            _wds_pair(wds_id="W1", components="Aa,Ab"),
+        ]
+        components = [
+            _resolved(gaia=42, wds_id="W1", component="A", is_primary=True),
+            _resolved(gaia=99, wds_id="W1", component="B", is_primary=False),
+            # Aa,Ab pair blended onto A's source — same physical star,
+            # so the subdivision already exists.
+            _resolved(gaia=42, wds_id="W1", component="Aa", is_primary=True),
+            _resolved(gaia=42, wds_id="W1", component="Ab", is_primary=False),
+        ]
+        astrometry = [_component_astrometry()] * 4
+        new_pairs, _, _, stats = self._run(
+            pairs, components, astrometry,
+            {42: _nss_orbital_row(period_days=200.0)},
+        )
+        self.assertEqual(new_pairs, [])
+        self.assertEqual(stats["skipped_children_exist"], 1)
+
+    def test_out_of_regime_skipped(self) -> None:
+        pairs, components, astrometry = self._ab_fixture()
+        new_pairs, _, _, stats = self._run(
+            pairs, components, astrometry,
+            {42: _nss_orbital_row(period_days=10 * 365.25, a_mas=5000.0)},
+        )
+        self.assertEqual(new_pairs, [])
+        self.assertEqual(stats["skipped_out_of_regime"], 1)
+
+    def test_incomplete_elements_skipped_circular_accepted(self) -> None:
+        pairs, components, astrometry = self._ab_fixture()
+        # SB1 with no eccentricity — never renderable, skip.
+        sb1_no_e = {
+            "nss_solution_type": "SB1",
+            "period": "12.5", "t_periastron": "100.0",
+            "eccentricity": "", "arg_periastron": "",
+        }
+        new_pairs, _, _, stats = self._run(
+            pairs, components, astrometry, {42: sb1_no_e},
+        )
+        self.assertEqual(new_pairs, [])
+        self.assertEqual(stats["skipped_incomplete_elements"], 1)
+        # Circular eclipser without ω IS renderable — Stage 6 backfills
+        # the degenerate angle.
+        circular = {
+            "nss_solution_type": "EclipsingBinary",
+            "period": "0.81", "t_periastron": "100.0",
+            "eccentricity": "0.0", "inclination": "86.5",
+            "arg_periastron": "",
+        }
+        new_pairs, _, _, _ = self._run(
+            pairs, components, astrometry, {42: circular},
+        )
+        self.assertEqual(len(new_pairs), 1)
+
+    def test_compound_carrier_token_skipped(self) -> None:
+        pairs = [_wds_pair(wds_id="W1", components="AB,C")]
+        components = [
+            _resolved(gaia=42, wds_id="W1", component="AB", is_primary=True),
+            _resolved(gaia=99, wds_id="W1", component="C", is_primary=False),
+        ]
+        astrometry = [_component_astrometry()] * 2
+        new_pairs, _, _, stats = self._run(
+            pairs, components, astrometry,
+            {42: _nss_orbital_row(period_days=200.0)},
+        )
+        self.assertEqual(new_pairs, [])
+        self.assertEqual(stats["skipped_token_shape"], 1)
+
+
+class PropagateBlendIdentityTests(unittest.TestCase):
+    def _fixture(self, *, rho: float | None, secondary_hip: int | None = None):
+        pair = _wds_pair(wds_id="W1", components="Aa,Ab", rho_last=rho)
+        row = _athyg_row(gaia=42, hip=7)
+        primary = _resolved(
+            gaia=42, wds_id="W1", component="Aa", is_primary=True,
+            via="orb6_hip", hip=7,
+        )
+        primary.athyg_row = row
+        secondary = _resolved(
+            gaia=None, wds_id="W1", component="Ab", is_primary=False,
+            via="unresolved", hip=secondary_hip,
+        )
+        return pair, primary, secondary
+
+    def test_rho_zero_secondary_inherits_primary_identity(self) -> None:
+        pair, primary, secondary = self._fixture(rho=0.0)
+        n = bb.propagate_blend_identity([primary, secondary], [pair])
+        self.assertEqual(n, 1)
+        self.assertEqual(secondary.gaia_source_id, 42)
+        self.assertEqual(secondary.hip, 7)
+        self.assertIs(secondary.athyg_row, primary.athyg_row)
+        self.assertEqual(secondary.resolve_via, "orb6_hip")
+
+    def test_resolved_pair_untouched(self) -> None:
+        pair, primary, secondary = self._fixture(rho=1.5)
+        n = bb.propagate_blend_identity([primary, secondary], [pair])
+        self.assertEqual(n, 0)
+        self.assertIsNone(secondary.gaia_source_id)
+
+    def test_secondary_with_own_binding_untouched(self) -> None:
+        # A SIMBAD-bound per-component HIP is real evidence — the blend
+        # convention must not overwrite or extend it.
+        pair, primary, secondary = self._fixture(rho=0.0, secondary_hip=99)
+        n = bb.propagate_blend_identity([primary, secondary], [pair])
+        self.assertEqual(n, 0)
+        self.assertIsNone(secondary.gaia_source_id)
+        self.assertEqual(secondary.hip, 99)
+
+
+# ─── Kepler a + renderable-element finalization ──────────────────────
+
+
+class KeplerSemimajorAxisTests(unittest.TestCase):
+    def test_earth_pin(self) -> None:
+        # P = 1 Julian year around 1 M_sun → exactly 1 AU.
+        self.assertAlmostEqual(
+            bb.kepler_semimajor_axis_au(365.25, 1.0) or 0.0, 1.0, places=12,
+        )
+
+    def test_yy_gem_scale(self) -> None:
+        # P = 0.814282 d, M_total = 1.0 M_sun (two M0.5Ve tables at
+        # 0.5 each) → 0.017066 AU; published YY Gem a ≈ 0.018 AU.
+        self.assertAlmostEqual(
+            bb.kepler_semimajor_axis_au(0.814282, 1.0) or 0.0,
+            0.017066, places=6,
+        )
+
+    def test_non_positive_inputs(self) -> None:
+        self.assertIsNone(bb.kepler_semimajor_axis_au(0.0, 1.0))
+        self.assertIsNone(bb.kepler_semimajor_axis_au(10.0, 0.0))
+
+
+class FinalizeRenderableElementsTests(unittest.TestCase):
+    def _rows(
+        self, orbit: "bb.OrbitElements",
+        *, spect: str = "G2V", q: float | None = None,
+    ) -> "tuple[bb.MultiplesRow, bb.MultiplesRow]":
+        def row(role: str) -> "bb.MultiplesRow":
+            return bb.MultiplesRow(
+                system_id="W1-AB", comp="A" if role == "primary" else "B",
+                hip=None, gaia_source_id=None,
+                x_pc=0.0, y_pc=0.0, z_pc=0.0,
+                absmag=4.5, ci=None, spect=spect, name="",
+                source="athyg", regime=2,
+                resolve_via="simbad_xid", astrometry_via="gaia_5p",
+                orbit_via="gaia_nss", spect_via="simbad",
+                photometry_via="athyg_own",
+                a_via=(
+                    bb.A_VIA_CATALOG if orbit.a_AU is not None
+                    else bb.A_VIA_NONE
+                ),
+                orbit_role=role,
+                P_days=orbit.P_days, T_jd=orbit.T_jd, e=orbit.e,
+                a_AU=orbit.a_AU, i_rad=orbit.i_rad,
+                omega_rad=orbit.omega_rad, Omega_rad=orbit.Omega_rad,
+                q=q, dist_pc=10.0,
+                sep_arcsec=0.0, pa_deg=0.0, sep_pa_epoch_jd=None,
+                dmag=None,
+            )
+        return row("primary"), row("secondary")
+
+    def _orbit(
+        self, *, P_days: float = 365.25, e: float = 0.1,
+        a_AU: float | None = None, omega_rad: float | None = 0.5,
+    ) -> "bb.OrbitElements":
+        return bb.OrbitElements(
+            P_days=P_days, T_jd=2451545.0, e=e, a_AU=a_AU,
+            i_rad=None, omega_rad=omega_rad, Omega_rad=None,
+            q=None, distance_pc=10.0,
+        )
+
+    def test_kepler_a_derived_with_default_q(self) -> None:
+        orbit = self._orbit()
+        pri, sec = self._rows(orbit)
+        bb.finalize_renderable_elements(pri, sec, orbit)
+        # G2V → 1.0 M_sun; q defaults to 1/3 → M_total = 1.5;
+        # a = 1.5^(1/3) = 1.144714.
+        self.assertEqual(pri.q, me.UNKNOWN_COMPANION_MASS_RATIO_Q)
+        self.assertAlmostEqual(pri.a_AU or 0.0, 1.5 ** (1.0 / 3.0), places=9)
+        self.assertEqual(pri.a_via, bb.A_VIA_KEPLER_MASS_ESTIMATE)
+        self.assertEqual(sec.a_AU, pri.a_AU)
+        self.assertEqual(sec.a_via, bb.A_VIA_KEPLER_MASS_ESTIMATE)
+
+    def test_catalog_a_left_alone(self) -> None:
+        orbit = self._orbit(a_AU=23.0)
+        pri, sec = self._rows(orbit, q=0.4)
+        bb.finalize_renderable_elements(pri, sec, orbit)
+        self.assertEqual(pri.a_AU, 23.0)
+        self.assertEqual(pri.a_via, bb.A_VIA_CATALOG)
+        self.assertEqual(pri.q, 0.4)
+
+    def test_circular_orbit_omega_backfilled(self) -> None:
+        orbit = self._orbit(e=0.0, omega_rad=None)
+        pri, sec = self._rows(orbit)
+        bb.finalize_renderable_elements(pri, sec, orbit)
+        self.assertEqual(pri.omega_rad, bb.CIRCULAR_ORBIT_OMEGA_RAD)
+        self.assertEqual(sec.omega_rad, bb.CIRCULAR_ORBIT_OMEGA_RAD)
+
+    def test_eccentric_orbit_missing_omega_stays_none(self) -> None:
+        orbit = self._orbit(e=0.3, omega_rad=None)
+        pri, sec = self._rows(orbit)
+        bb.finalize_renderable_elements(pri, sec, orbit)
+        self.assertIsNone(pri.omega_rad)
+
+    def test_unparseable_primary_spect_uses_default_mass(self) -> None:
+        orbit = self._orbit()
+        pri, sec = self._rows(orbit, spect="")
+        bb.finalize_renderable_elements(pri, sec, orbit)
+        # M₁ = 1.0 default, q = 1/3 → identical to the G2V pin.
+        self.assertAlmostEqual(pri.a_AU or 0.0, 1.5 ** (1.0 / 3.0), places=9)
+
+    def test_no_orbit_is_noop(self) -> None:
+        pri, sec = self._rows(self._orbit())
+        bb.finalize_renderable_elements(pri, sec, None)
+        self.assertIsNone(pri.q)
+        self.assertIsNone(pri.a_AU)
+
+    def test_orb6_visual_route_is_noop(self) -> None:
+        orbit = self._orbit(e=0.0, omega_rad=None)
+        pri, sec = self._rows(orbit)
+        pri.orbit_via = sec.orbit_via = "orb6"
+        bb.finalize_renderable_elements(pri, sec, orbit)
+        self.assertIsNone(pri.q)
+        self.assertIsNone(pri.a_AU)
+        self.assertIsNone(pri.omega_rad)
 
 
 if __name__ == "__main__":

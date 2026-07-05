@@ -17,7 +17,7 @@ from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
     group_orb6_by_pair,
-    split_components,
+    iter_decomposing_pair_cursor,
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
 
@@ -109,14 +109,15 @@ NSS_SUPPORTED_SOLUTION_TYPES: frozenset[str] = (
 )
 
 # ORB6 grade classification. 1-5 = visual orbits in decreasing quality
-# (definitive → indeterminate); 8 = interferometric / astrometric with
-# no visual coverage; 9 = spectroscopic. Visual grades own the
-# ``orb6`` route; 8/9 own ``orb6_spectroscopic``. Grade-7 entries
-# (rare; preliminary / problematic) fall through both gates and become
-# ``orbit_via=none`` rather than picking up a default that misleads
-# downstream consumers.
+# (definitive → indeterminate); 8 = interferometric-visibilities-only;
+# 9 = astrometric / spectroscopic. Grade 7 is undocumented in the ORB6
+# format text; the file's grade-7 rows are photometric / eclipsing
+# orbits (YY Gem, EQ Tau, BX And — variable-star discoverer names,
+# i ≈ 80-95°) with real fitted elements, so they route with the other
+# non-visual grades. Visual grades own the ``orb6`` route; 7/8/9 own
+# ``orb6_spectroscopic``.
 ORB6_VISUAL_GRADES: frozenset[int] = frozenset({1, 2, 3, 4, 5})
-ORB6_SPECTROSCOPIC_GRADES: frozenset[int] = frozenset({8, 9})
+ORB6_SPECTROSCOPIC_GRADES: frozenset[int] = frozenset({7, 8, 9})
 
 
 @dataclass
@@ -210,6 +211,20 @@ def _distance_pc(plx_mas: float | None) -> float | None:
     return 1000.0 / plx_mas
 
 
+def kepler_semimajor_axis_au(
+    P_days: float, m_total_msun: float,
+) -> float | None:
+    """Kepler's third law in solar units: a³ = M_total · P_yr². Returns
+    ``None`` for non-positive inputs. Stage 6 uses this to estimate the
+    relative semi-major axis for orbits whose catalog source never
+    publishes one (every Gaia NSS solution type; ORB6 rows missing the
+    parallax the a″→AU conversion needs)."""
+    if P_days <= 0.0 or m_total_msun <= 0.0:
+        return None
+    P_yr = P_days / 365.25
+    return (m_total_msun * P_yr * P_yr) ** (1.0 / 3.0)
+
+
 def _common_nss_period_T_e(
     nss_row: dict[str, str],
 ) -> tuple[float | None, float | None, float | None]:
@@ -240,12 +255,11 @@ def nss_to_canonical_elements(
     * Eclipsing (``EclipsingBinary``, ``EclipsingSpectro``) — read
       inclination + arg_periastron from the stored columns; eclipse
       photometry doesn't constrain ``a`` or ``Ω``. ``EclipsingSpectro``
-      also carries spectroscopic ``mass_ratio``.
+      is the only NSS type that publishes ``mass_ratio``.
     * Spectroscopic-only (``SB1``, ``SB2``, ``SB1C``, ``SB2C``) — read
       arg_periastron when stored; inclination is unrecoverable from
-      RV alone. SB2 / SB2C variants carry ``mass_ratio`` (the SB2C set
-      is the "compact" variant — period/T/e only — and is intentionally
-      passed through without geometry).
+      RV alone. The SB2C set is the "compact" variant (period/T/e only)
+      and is intentionally passed through without geometry.
 
     Returns ``None`` for solution types we don't yet handle (none in
     DR3 today, but a forward guard against future NSS extensions); the
@@ -266,7 +280,14 @@ def nss_to_canonical_elements(
     i_rad: float | None = None
     Omega_rad: float | None = None
     omega_rad: float | None = None
-    q: float | None = safe_float(nss_row.get("mass_ratio", ""))
+    # Gaia NSS mass_ratio is M_S/M_P (a ratio, can exceed 1); q stores the
+    # M_2/(M_1+M_2) fraction every other stage assumes, so convert.
+    _mass_ratio = safe_float(nss_row.get("mass_ratio", ""))
+    q: float | None = (
+        _mass_ratio / (1.0 + _mass_ratio)
+        if _mass_ratio is not None and _mass_ratio > 0.0
+        else None
+    )
 
     if soln in NSS_TI_DERIVED_SOLUTION_TYPES:
         A = safe_float(nss_row.get("a_thiele_innes", ""))
@@ -485,13 +506,15 @@ def select_orbit(
        ref-year secondary tiebreak. The genuine relative A–B orbit —
        outranks NSS, whose solution types never yield a relative
        semi-major axis (the TI a is the photocentre's a0).
-    2. ``gaia_nss`` — any component has an NSS two-body row AND the
-       solution falls inside Gaia's astrometric-detectability regime
-       (P < ~3 yr OR a0 < 1″). Primary's NSS row preferred when both
-       components have one (secondary is rarely the catalogued
-       systemic source).
-    3. ``orb6_spectroscopic`` — ORB6 spectroscopic / astrometric-only
-       (grade ∈ {8,9}). Same tiebreaks.
+    2. ``gaia_nss`` — a component has an NSS two-body row, its partner
+       is not a different resolved source (distinct-source pairs host
+       the orbit INSIDE the carrying component — see the branch
+       comment), AND the solution falls inside Gaia's astrometric-
+       detectability regime (P < ~3 yr OR a0 < 1″). Primary's NSS row
+       preferred when both components have one (secondary is rarely
+       the catalogued systemic source).
+    3. ``orb6_spectroscopic`` — ORB6 non-visual orbits
+       (grade ∈ {7,8,9}). Same tiebreaks.
     4. ``none`` — visual-only pair with no orbital information on file.
 
     The two ``ComponentAstrometry`` arguments are required (not
@@ -509,9 +532,20 @@ def select_orbit(
         if orbit is not None:
             return orbit, "orb6"
 
-    # NSS branch — primary then secondary.
-    for comp in (primary, secondary):
+    # NSS branch — primary then secondary. An NSS orbit describes the
+    # SOURCE's own two-body motion; when the partner is a different
+    # resolved source, that orbit is interior to the carrying component
+    # (its unseen sub-companion), not this pair's — subdivide.py
+    # re-homes it on a synthesized inner pair instead. Only a partner
+    # sharing the same blended source (or carrying none) can be the
+    # NSS orbit's other body.
+    for comp, other in ((primary, secondary), (secondary, primary)):
         if comp.gaia_source_id is None:
+            continue
+        if (
+            other.gaia_source_id is not None
+            and other.gaia_source_id != comp.gaia_source_id
+        ):
             continue
         nss_row = indices.src_to_nss.get(comp.gaia_source_id)
         if nss_row is None:
@@ -556,24 +590,8 @@ def iter_decomposing_pairs(
             "components / astrometry list lengths disagree — Stage 3 "
             "output contract violated"
         )
-    i = 0
-    for pair in pairs:
-        if split_components(pair.components) is None:
-            continue
-        if i + 1 >= len(components):
-            raise RuntimeError(
-                "Stage 4 cursor exhausted before pairs did — Stage 2 "
-                "output truncated"
-            )
-        c1 = components[i]
-        c2 = components[i + 1]
-        if c1.wds_id != pair.wds_id or c2.wds_id != pair.wds_id:
-            raise RuntimeError(
-                f"Stage 4 cursor desync at pair {pair.wds_id}/{pair.components}"
-                f": got components {c1.wds_id} + {c2.wds_id}"
-            )
-        yield pair, c1, c2, astrometry[i], astrometry[i + 1]
-        i += 2
+    for pair, i in iter_decomposing_pair_cursor(pairs, components):
+        yield pair, components[i], components[i + 1], astrometry[i], astrometry[i + 1]
 
 
 def select_orbits_all(

@@ -42,18 +42,32 @@ from parsers import (  # noqa: E402, F401
     parse_gaia_hip_xmatch, parse_gaia_nss, parse_gaia_tyc_xmatch,
     parse_gcvs, parse_gcvs_crossid, parse_hip2,
     parse_component_sptype_overrides, parse_orb6,
+    parse_orb6_component_overrides,
     parse_simbad_wds_spectra, parse_simbad_wds_xids,
     parse_wds_summ,
 )
 from indices import (  # noqa: E402, F401
     IdentifierIndices, WDS_PRECISE_COORD_EPOCH, build_indices,
 )
+from component_tokens import (  # noqa: E402, F401
+    child_component_tokens, expand_wds_truncated_secondary,
+    is_component_token, parent_component_token,
+)
+from subdivide import (  # noqa: E402, F401
+    SYNTH_NSS_DISCOVERER,
+    apply_orb6_component_overrides,
+    seed_synthesized_component_bindings,
+    synthesize_nss_inner_pairs,
+    synthesize_orb6_orphan_pairs,
+)
 from stage2_resolve import (  # noqa: E402, F401
     RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
     _athyg_position_at_epoch,
     build_athyg_position_grid, build_pair_by_wds_disc,
     find_nearest_athyg_at_position, group_orb6_by_pair,
-    predict_secondary_position, propagate_within_system,
+    iter_decomposing_pair_components,
+    predict_secondary_position, propagate_blend_identity,
+    propagate_within_system,
     resolution_counts, resolve_all_pairs, resolve_component,
     resolve_via_ccdm, resolve_via_position, resolve_via_simbad,
     split_components, write_astrometry_request,
@@ -68,7 +82,8 @@ from stage4_orbits import (  # noqa: E402, F401
     TRUNCATED_JD_TO_JD_OFFSET, T0_MIN_PLAUSIBLE_JD, T0_MAX_PLAUSIBLE_JD,
     ORBIT_VIA_VALUES, OrbitElements,
     _pick_best_orb6, _system_parallax_mas, _thiele_innes_to_campbell,
-    iter_decomposing_pairs, nss_to_canonical_elements,
+    iter_decomposing_pairs, kepler_semimajor_axis_au,
+    nss_to_canonical_elements,
     orb6_to_canonical_elements, orbit_counts,
     select_orbit, select_orbits_all,
 )
@@ -77,13 +92,16 @@ from stage5_optical import (  # noqa: E402, F401
     classify_all_pairs, classify_pair_optical, optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
-    ASTROMETRY_VIA_SYSTEM_INHERITED, MULTIPLES_TSV_COLUMNS,
+    ASTROMETRY_VIA_SYSTEM_INHERITED, CIRCULAR_ORBIT_OMEGA_RAD,
+    ESTIMATED_ELEMENT_ORBIT_VIAS, MULTIPLES_TSV_COLUMNS,
     ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
+    A_VIA_CATALOG, A_VIA_KEPLER_MASS_ESTIMATE, A_VIA_NONE, A_VIA_VALUES,
     PHOTOMETRY_VIA_NONE, PHOTOMETRY_VIA_OWN,
     PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_VALUES,
     MultiplesRow,
     build_multiples_rows, build_standalone_rows,
-    compute_system_anchors, wds_dmag, wds_year_to_jd, write_multiples_tsv,
+    compute_system_anchors, finalize_renderable_elements,
+    wds_dmag, wds_year_to_jd, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401
     DEFAULT_RATE_TOLERANCE, UPDATE_COUNTS_ENV_VAR,
@@ -107,6 +125,9 @@ SRC_SIMBAD_WDS_XIDS = DATA / "simbad" / "simbad_wds_xids.tsv"
 SRC_SIMBAD_SPTYPE = DATA / "simbad" / "simbad_sptype.tsv"
 SRC_COMPONENT_SPTYPE_OVERRIDES = (
     DATA / "binaries" / "component_sptype_overrides.tsv"
+)
+SRC_ORB6_COMPONENT_OVERRIDES = (
+    DATA / "binaries" / "orb6_component_overrides.tsv"
 )
 
 OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
@@ -142,6 +163,7 @@ def _iter_input_paths() -> Iterator[Path]:
     yield SRC_SIMBAD_WDS_XIDS
     yield SRC_SIMBAD_SPTYPE
     yield SRC_COMPONENT_SPTYPE_OVERRIDES
+    yield SRC_ORB6_COMPONENT_OVERRIDES
 
 
 def log(msg: str) -> None:
@@ -165,6 +187,24 @@ def run(force: bool) -> int:
 
     orb6 = parse_orb6(SRC_ORB6)
     log(f"loaded {len(orb6):,} ORB6 orbit rows")
+
+    orb6_component_overrides = parse_orb6_component_overrides(
+        SRC_ORB6_COMPONENT_OVERRIDES,
+    )
+    n_overridden = apply_orb6_component_overrides(
+        orb6, orb6_component_overrides,
+    )
+    log(
+        f"applied {n_overridden:,} curated ORB6 component overrides "
+        f"({len(orb6_component_overrides):,} on file)"
+    )
+
+    synthesized_orb6_pairs = synthesize_orb6_orphan_pairs(wds_pairs, orb6)
+    wds_pairs.extend(synthesized_orb6_pairs)
+    log(
+        f"synthesized {len(synthesized_orb6_pairs):,} sub-pairs for ORB6 "
+        f"orbits with no WDS pair row"
+    )
 
     athyg = parse_athyg(SRC_ATHYG)
     n_gaia = sum(1 for r in athyg if r.gaia is not None)
@@ -270,6 +310,10 @@ def run(force: bool) -> int:
         indices=indices, athyg=athyg,
         simbad_xids=simbad_wds_xids,
     )
+    n_seeded = seed_synthesized_component_bindings(
+        components, synthesized_orb6_pairs,
+    )
+    log(f"seeded {n_seeded:,} synthesized-pair component bindings")
     counts = resolution_counts(components)
     log(
         "Resolution: "
@@ -288,6 +332,22 @@ def run(force: bool) -> int:
         components=components, pairs=wds_pairs, indices=indices,
         athyg=athyg,
     )
+
+    nss_pairs, nss_components, nss_astrometry, nss_skips = (
+        synthesize_nss_inner_pairs(
+            pairs=wds_pairs, components=components,
+            astrometry=astrometry, indices=indices,
+        )
+    )
+    wds_pairs.extend(nss_pairs)
+    components.extend(nss_components)
+    astrometry.extend(nss_astrometry)
+    log(
+        f"synthesized {len(nss_pairs):,} NSS inner pairs "
+        f"(skipped: " + ", ".join(f"{k}={v:,}" for k, v in nss_skips.items())
+        + ")"
+    )
+
     a_counts = astrometry_counts(astrometry)
     log(
         "astrometry routing: "
@@ -352,6 +412,8 @@ def run(force: bool) -> int:
     counts = build_binaries_counts(
         pairs=wds_pairs, components=components, astrometry=astrometry,
         orbits=orbits, classifications=classifications, multiples_rows=rows,
+        synthesized_orb6_pairs=len(synthesized_orb6_pairs),
+        synthesized_nss_pairs=len(nss_pairs),
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
     rates = build_binaries_rates(counts)

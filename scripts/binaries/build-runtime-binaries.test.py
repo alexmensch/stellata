@@ -153,6 +153,88 @@ class AssignParentRelationsTests(unittest.TestCase):
         p = _pair(system_id="00000+0000-AB")
         self.assertEqual(brb.assign_parent_relations([p]), [brb.NO_PARENT])
 
+    def test_prefers_bound_parent_over_element_less_wide_pair(self) -> None:
+        # Castor shape: component A is a member of both the bound AB pair
+        # (has orbit) and the element-less wide AC pair. The inner Aa,Ab
+        # must nest under AB — the pair whose orbit its shared slot rides —
+        # not the wide AC that never perturbs it. Input order deliberately
+        # puts AC last so a last-write-wins bucket would pick it.
+        ab = _pair(
+            system_id="07346+3153-AB",
+            P_days=167686.0, T_jd=2436785.0, e=0.34, a_AU=104.8,
+            omega_rad=4.4, q=0.5, sep_arcsec=5.4,
+        )
+        aa_ab = _pair(
+            system_id="07346+3153-Aa,Ab",
+            P_days=9.21, T_jd=2455817.0, e=0.49, a_AU=0.125,
+            omega_rad=0.61, q=0.17, sep_arcsec=0.0,
+        )
+        ac = _pair(system_id="07346+3153-AC", sep_arcsec=69.6)  # no orbit
+        parents = brb.assign_parent_relations([ab, aa_ab, ac])
+        self.assertEqual(parents, [brb.NO_PARENT, 0, brb.NO_PARENT])
+
+
+class OverrideInnerPrimaryIndicesTests(unittest.TestCase):
+    """``override_inner_primary_indices`` re-homes an inner pair's primary
+    onto its parent component's catalog slot — the shared-slot invariant
+    the runtime hierarchical walk depends on."""
+
+    def test_gaia_blended_secondary_inner_primary_rehomed(self) -> None:
+        # Castor Ba,Bb: A and B share one (blended) Gaia source, so Ba's
+        # id-first resolve lands on A's row (98630) instead of B's synth
+        # row (179304). AB already resolved B correctly (secondary-collapse
+        # retry), so the inner primary re-homes onto AB's secondary slot.
+        ab = _pair(system_id="07346+3153-AB")           # A, B
+        ba_bb = _pair(system_id="07346+3153-Ba,Bb")     # Ba, Bb
+        parents = [brb.NO_PARENT, 0]
+        walk_order = [0, 1]
+        resolved_primary = [98630, 98630]     # Ba mis-resolved to A's slot
+        resolved_secondary = [179304, 321187]  # AB's B → synth; Bb → synth
+        brb.override_inner_primary_indices(
+            [ab, ba_bb], parents, walk_order,
+            resolved_primary, resolved_secondary,
+        )
+        self.assertEqual(resolved_primary, [98630, 179304])
+
+    def test_correctly_resolved_inner_primary_unchanged(self) -> None:
+        # Aa,Ab: Aa already shares A's slot (parent's PRIMARY member), so
+        # the override is a no-op — it reasserts the same slot.
+        ab = _pair(system_id="07346+3153-AB")
+        aa_ab = _pair(system_id="07346+3153-Aa,Ab")
+        resolved_primary = [98630, 98630]
+        resolved_secondary = [179304, 319645]
+        brb.override_inner_primary_indices(
+            [ab, aa_ab], [brb.NO_PARENT, 0], [0, 1],
+            resolved_primary, resolved_secondary,
+        )
+        self.assertEqual(resolved_primary, [98630, 98630])
+
+    def test_top_level_pairs_untouched(self) -> None:
+        ab = _pair(system_id="07346+3153-AB")
+        resolved_primary = [98630]
+        brb.override_inner_primary_indices(
+            [ab], [brb.NO_PARENT], [0], resolved_primary, [179304],
+        )
+        self.assertEqual(resolved_primary, [98630])
+
+    def test_deep_nest_inherits_parents_corrected_slot(self) -> None:
+        # 3-level: Ba1,Ba2 inside Ba,Bb inside AB. Topological order means
+        # Ba,Bb's primary is corrected to B's slot FIRST, then Ba1,Ba2
+        # inherits that corrected slot as its own primary.
+        ab = _pair(system_id="07346+3153-AB")            # A, B
+        ba_bb = _pair(system_id="07346+3153-Ba,Bb")      # Ba, Bb
+        ba1_ba2 = _pair(system_id="07346+3153-Ba1,Ba2")  # Ba1, Ba2
+        parents = [brb.NO_PARENT, 0, 1]
+        walk_order = [0, 1, 2]
+        resolved_primary = [98630, 98630, 98630]  # both inner mis-resolved to A
+        resolved_secondary = [179304, 321187, 400000]
+        brb.override_inner_primary_indices(
+            [ab, ba_bb, ba1_ba2], parents, walk_order,
+            resolved_primary, resolved_secondary,
+        )
+        # Ba,Bb → B's slot (179304); Ba1,Ba2 → Ba,Bb's now-primary (179304).
+        self.assertEqual(resolved_primary, [98630, 179304, 179304])
+
 
 class TopologicalWalkOrderTests(unittest.TestCase):
     """``topological_walk_order`` emits parents before children in a

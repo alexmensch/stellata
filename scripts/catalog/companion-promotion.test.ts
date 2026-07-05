@@ -7,6 +7,7 @@ import {
   hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
+  parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
   promoteCompanions,
@@ -505,6 +506,53 @@ describe('promoteCompanions', () => {
     // than inherited from Sirius A. T(DA1.9)=25200 K → Ballesteros⁻¹
     // ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
     expect(b.ci).toBeLessThan(-0.4);
+  });
+
+  it('re-homes a blended inner-pair secondary onto its true parent (Castor Ba,Bb → B, not A)', () => {
+    // A and B share one blended identifier (Gaia source + HIP), so the
+    // Ba,Bb cursor primary resolves onto A. B still gets its own synth
+    // record via the AB pair (measured sep → distinct position). The
+    // post-pass must land Bb on B, not on the A sibling it first anchored.
+    const GA = '900900900';
+    const a_existing: Star = makeStar({
+      x: 10, y: 0, z: 0, absmag: 2.0, ci: 0.0,
+      proper: 'Castor', hip: 500, gaiaSourceId: GA,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'TST-AB', comp: 'A', hip: 500, gaiaSourceId: GA,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Castor',
+        orbitRole: 'primary', sepArcsec: 5.0, paDeg: 90, sepPaEpochJd: 2451545,
+      }),
+      multiplesRow({
+        systemId: 'TST-AB', comp: 'B', hip: 500, gaiaSourceId: GA,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Castor',
+        photometryVia: 'athyg_system_inherited',
+        orbitRole: 'secondary', sepArcsec: 5.0, paDeg: 90, sepPaEpochJd: 2451545, dmag: 1.0,
+      }),
+      multiplesRow({
+        systemId: 'TST-Ba,Bb', comp: 'Ba', hip: 500, gaiaSourceId: GA,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Castor',
+        orbitRole: 'primary', sepArcsec: 0,
+        pDays: 2.9, tJd: 2451545, e: 0, aAU: 0.05, omegaRad: 3.14, q: 0.14,
+      }),
+      multiplesRow({
+        systemId: 'TST-Ba,Bb', comp: 'Bb', hip: 500, gaiaSourceId: GA,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Castor',
+        photometryVia: 'athyg_system_inherited',
+        orbitRole: 'secondary', sepArcsec: 0, dmag: 1.0,
+        pDays: 2.9, tJd: 2451545, e: 0, aAU: 0.05, omegaRad: 3.14, q: 0.14,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [a_existing], CONSTELLATIONS);
+    const b = newStars.find((s) => s.proper === 'Castor B');
+    const bb = newStars.find((s) => s.proper === 'Castor Bb');
+    expect(b, 'Castor B promoted').toBeDefined();
+    expect(bb, 'Castor Bb promoted').toBeDefined();
+    expect(stats.repositionedInnerToParent).toBeGreaterThanOrEqual(1);
+    // B is a distinct position from A (measured 5″ sep); Bb collocates on B.
+    expect([b!.x, b!.y, b!.z]).not.toEqual([a_existing.x, a_existing.y, a_existing.z]);
+    expect([bb!.x, bb!.y, bb!.z]).toEqual([b!.x, b!.y, b!.z]);
   });
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {
@@ -1444,6 +1492,20 @@ describe('canonicalCompLetter', () => {
 
   it('passes through for single-character primary (no stem to extract)', () => {
     expect(canonicalCompLetter('A', '2')).toBe('2');
+  });
+});
+
+describe('parentComponentToken', () => {
+  // Fixtures mirror component_tokens.py:test_parent_component_token so
+  // the Python↔TS mirror can't silently drift.
+  it('drops the rightmost designator', () => {
+    expect(parentComponentToken('Aa1')).toBe('Aa');
+    expect(parentComponentToken('Ba')).toBe('B');
+    expect(parentComponentToken('Aa')).toBe('A');
+  });
+
+  it('returns null for a single-character (top-level) token', () => {
+    expect(parentComponentToken('A')).toBeNull();
   });
 });
 

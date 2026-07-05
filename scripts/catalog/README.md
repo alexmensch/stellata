@@ -442,7 +442,7 @@ per system on the canonical anchor.
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-in AT-HYG. ~8.6k companions promoted into the current build
+in AT-HYG. ~10.3k companions promoted into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 half via real Gaia/HIP keys, half via synthetic identifiers (see
 the identifier gate below).
@@ -502,6 +502,19 @@ Per-row gates and resolution:
   `baseDiffPc`) — and without a placement the row drops
   (droppedNoPosition): nothing would ever separate the records and
   the collocated star double-counts the blend photometry.
+- **Inner-pair re-homing (post-pass).** An inner pair's cursor primary
+  (Castor Ba) can carry the system's blended identifier — a shared Gaia
+  source, or a shared HIP Gaia later split — so it resolves onto a
+  sibling (Castor A) and the secondary bakes there instead of on its true
+  parent component (B). A post-pass re-runs the placement against the
+  parent's resolved slot (synth record first, then a per-system
+  component→index map for a parent that kept its own Gaia row), covering
+  both the ρ=0 collocation and a measured sep+PA re-projection. This makes
+  the baked placement match the runtime pair anchor
+  (`build-runtime-binaries.py`'s `override_inner_primary_indices`);
+  counted by `repositionedInnerToParent`. Rendering is unaffected either
+  way (elements-alone R(t)), but a consistent bake keeps the
+  baked-vs-elements ratchet in `multi-star-regression.test.ts` honest.
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
   of A), position resolves in preference order: (1) the row's own

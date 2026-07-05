@@ -35,7 +35,7 @@ from stage5_optical import (  # noqa: E402
     optical_counts,
 )
 from stage6_multiples import (  # noqa: E402
-    ASTROMETRY_VIA_SYSTEM_INHERITED, ORBIT_ROLE_STANDALONE,
+    ASTROMETRY_VIA_SYSTEM_INHERITED, A_VIA_VALUES, ORBIT_ROLE_STANDALONE,
     SPECT_VIA_VALUES, MultiplesRow,
 )
 from paths import REPO_ROOT  # noqa: E402
@@ -69,6 +69,8 @@ def build_binaries_counts(
     orbits: list[tuple[OrbitElements | None, str]],
     classifications: list[OpticalClassification],
     multiples_rows: list[MultiplesRow],
+    synthesized_orb6_pairs: int = 0,
+    synthesized_nss_pairs: int = 0,
 ) -> dict[str, int]:
     """Collect every headline number the run emits into a flat
     ``{key: int}`` dict, suitable for JSON serialisation and per-key
@@ -119,10 +121,23 @@ def build_binaries_counts(
     )
     dmag_populated = sum(1 for r in multiples_rows if r.dmag is not None)
 
+    # Per-pair a provenance + q fill — both gate the runtime's
+    # has_orbit bit, so a silent drop here stops pairs animating
+    # without moving any orbit_via count.
+    a_via_counts: dict[str, int] = {tag: 0 for tag in A_VIA_VALUES}
+    for r in multiples_rows:
+        a_via_counts[r.a_via] = a_via_counts.get(r.a_via, 0) + 1
+    orbit_q_populated = sum(
+        1 for r in multiples_rows
+        if r.orbit_via != "none" and r.q is not None
+    )
+
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
         "decomposing_pairs": len(orbits),
         "components_total": len(components),
+        "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
+        "synthesized_nss_inner_pairs": synthesized_nss_pairs,
         "multiples_rows_emitted": len(multiples_rows),
         "multiples_astrometry_system_inherited": multiples_inherited,
         "multiples_standalone_emitted": standalone_emitted,
@@ -130,7 +145,10 @@ def build_binaries_counts(
         "multiples_pa_deg_populated": pa_deg_populated,
         "multiples_sep_pa_epoch_populated": sep_pa_epoch_populated,
         "multiples_dmag_populated": dmag_populated,
+        "multiples_orbit_q_populated": orbit_q_populated,
     }
+    for tag in A_VIA_VALUES:
+        out[f"a_via_{tag}"] = a_via_counts[tag]
     for tag in SPECT_VIA_VALUES:
         out[f"spect_{tag}"] = spect_counts[tag]
     for tag in RESOLVE_VIA_VALUES:

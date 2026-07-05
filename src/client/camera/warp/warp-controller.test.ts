@@ -377,16 +377,23 @@ describe('WarpController — lifecycle + idempotency', () => {
     expect(endNames).toContain('warp:false');
   });
 
-  it('coincident source/destination (distPc < 1e-6) bails into setFocus, no warp slot opened', () => {
+  it('coincident source/destination opens a warp with a finite trajectory (no NaN)', () => {
     const h = makeHarness();
-    // Source and dest co-located — distPc = 0.
+    // distPc = 0 — the view-direction fallback supplies the travel axis.
     seedStarStar(h, new THREE.Vector3(10, 0, 0), new THREE.Vector3(10, 0, 0));
     h.warp.warpTo(1);
+    expect(h.warp.isActive()).toBe(true);
+    h.warp.tick(performance.now() + 1);
+    expect(Number.isFinite(h.camera.position.x)).toBe(true);
+    expect(Number.isFinite(h.camera.position.y)).toBe(true);
+    expect(Number.isFinite(h.camera.position.z)).toBe(true);
+    // Lands via the normal navigate finishWarp path.
+    h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
-    expect(h.focus.calls.setFocus).toEqual([1]);
+    expect(h.focus.calls.setFocus).toContain(1);
   });
 
-  it('coincident source/destination for cloud destination routes to setFocusedCloud', () => {
+  it('coincident cloud destination flies and lands via setFocusedCloud', () => {
     const h = makeHarness();
     h.focus.stars.set(0, {
       abs: new THREE.Vector3(10, 0, 0),
@@ -399,8 +406,28 @@ describe('WarpController — lifecycle + idempotency', () => {
     });
     h.focus.setFocusedStar(0);
     h.warp.warpToCloud(5);
+    expect(h.warp.isActive()).toBe(true);
+    h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
     expect(h.focus.calls.setFocusedCloud).toEqual([5]);
+  });
+
+  it('coincident source/destination in OBSERVE flies and lands via swapObserveAnchor, stays in observe', () => {
+    const h = makeHarness({ mode: 'observe' });
+    // Collocated stars — the ρ=0 inner-pair-on-parent case (Castor Bb → B).
+    // No degenerate shortcut: it runs the full warp and re-anchors through
+    // finishWarp, so observe stays engaged.
+    seedStarStar(h, new THREE.Vector3(10, 0, 0), new THREE.Vector3(10, 0, 0));
+    h.warp.warpTo(1);
+    expect(h.warp.isActive()).toBe(true);
+    h.warp.skip();
+    expect(h.warp.isActive()).toBe(false);
+    // swapObserveAnchor re-anchors onto the destination without a
+    // setFocus navigate flip.
+    expect(h.focus.calls.recenterFocusToStar).toContain(1);
+    expect(h.focus.calls.setFocus).not.toContain(1);
+    expect(h.uHide.value).toBe(1);
+    expect(h.observeControls.enable).toHaveBeenCalled();
   });
 });
 
