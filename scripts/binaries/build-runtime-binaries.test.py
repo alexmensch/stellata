@@ -481,15 +481,86 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(stats.pairs_emitted, 1)
         self.assertEqual(stats.pairs_dropped_degenerate_idx, 0)
 
+    def test_blended_wide_pair_primary_rehomed_to_own_synth(self) -> None:
+        # Castor BC shape: the wide pair's PRIMARY (B) carries the system's
+        # blended Gaia source, so its id-first resolve lands on the anchor A
+        # (row 100). B has its own synth slot from promotion; the primary
+        # retry re-homes it there (row 179) so the pair emits B→C, not a
+        # second A→C.
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 100, "2": 320},
+            by_hip={},
+            by_synth={"synth-00000+0000-B": 179},
+        )
+        pairs = [_pair(
+            system_id="00000+0000-BC", primary_comp="B", secondary_comp="C",
+            primary_gaia="1", secondary_gaia="2",
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT], [0], row_map, out,
+            )
+            data = out.read_bytes()
+        self.assertEqual(stats.pairs_emitted, 1)
+        pri, sec = struct.unpack(
+            "<II", data[brb.HEADER_SIZE:brb.HEADER_SIZE + 8],
+        )
+        self.assertEqual(pri, 179)   # re-homed onto B's synth slot
+        self.assertEqual(sec, 320)
+
+    def test_no_rehome_when_synth_matches_id_first_resolve(self) -> None:
+        # A correctly-resolved primary (its gaia lands on its OWN row, which
+        # also happens to have a synth alias) must not be perturbed.
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 179, "2": 320},
+            by_hip={},
+            by_synth={"synth-00000+0000-B": 179},
+        )
+        pairs = [_pair(
+            system_id="00000+0000-BC", primary_comp="B", secondary_comp="C",
+            primary_gaia="1", secondary_gaia="2",
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            brb.write_binary(pairs, [brb.NO_PARENT], [0], row_map, out)
+            data = out.read_bytes()
+        pri, _ = struct.unpack("<II", data[brb.HEADER_SIZE:brb.HEADER_SIZE + 8])
+        self.assertEqual(pri, 179)
+
+    def test_duplicate_relation_dropped(self) -> None:
+        # Two pairs resolve to the same (primary, secondary) catalog rows —
+        # a blended primary the synth re-home could not reach (no synth slot)
+        # re-emits an existing anchor→C. The first wins; the exact duplicate
+        # is dropped so C is not listed twice on the anchor's card.
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 100, "2": 320}, by_hip={}, by_synth={},
+        )
+        pairs = [
+            _pair(system_id="00000+0000-AC", primary_comp="A",
+                  secondary_comp="C", primary_gaia="1", secondary_gaia="2"),
+            _pair(system_id="00000+0000-BC", primary_comp="B",
+                  secondary_comp="C", primary_gaia="1", secondary_gaia="2"),
+        ]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT, brb.NO_PARENT], [0, 1], row_map, out,
+            )
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_duplicate_relation, 1)
+
     def test_parent_relation_remaps_from_input_to_output_index(self) -> None:
         # Three input pairs: idx 0 root, idx 1 child of 0, idx 2 child
         # of 1. All three resolve. Walk order is [0, 1, 2], output
         # indices match the walk order, parent_relations get remapped
         # exactly.
+        # Distinct (primary, secondary) per pair so the duplicate-relation
+        # dedup leaves all three; this test exercises parent remapping only.
         pairs = [
             _pair(system_id="A-AB", primary_gaia="1", secondary_gaia="2"),
             _pair(system_id="A-CD", primary_gaia="3", secondary_gaia="4"),
-            _pair(system_id="A-EF", primary_gaia="3", secondary_gaia="4"),
+            _pair(system_id="A-EF", primary_gaia="4", secondary_gaia="3"),
         ]
         parents = [brb.NO_PARENT, 0, 1]
         walk = [0, 1, 2]

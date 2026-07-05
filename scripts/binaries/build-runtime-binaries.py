@@ -440,6 +440,7 @@ class WriteStats:
     pairs_dropped_primary_unresolved: int
     pairs_dropped_secondary_unresolved: int
     pairs_dropped_degenerate_idx: int
+    pairs_dropped_duplicate_relation: int
     pairs_with_orbit: int
     pairs_with_inclination: int
     pairs_inner_of_hierarchy: int
@@ -476,6 +477,22 @@ def write_binary(
             synth_hit = row_map.by_synth.get(secondary_synth)
             if synth_hit is not None:
                 sec = synth_hit
+        # Blended-primary retry (the mirror of the secondary retry, for the
+        # PRIMARY side). A WIDE pair's primary can itself be a blended
+        # non-anchor component: in Castor's BC pair, B carries the system's
+        # shared Gaia source, so B's id-first resolve lands on the system
+        # anchor A — emitting a second A→C alongside the real AC pair.
+        # Companion promotion minted a dedicated synth slot for exactly such
+        # components (their gaia/hip were inherited, so promotion stripped
+        # them); a synth slot therefore EXISTS only when the id-first resolve
+        # went through an inherited id onto the wrong (anchor) row, so
+        # preferring it is always the correct re-home. Inner-pair primaries
+        # are re-homed onto their parent slot afterward by
+        # override_inner_primary_indices, so this only decides wide pairs.
+        if pri is not None and primary_synth is not None:
+            synth_hit = row_map.by_synth.get(primary_synth)
+            if synth_hit is not None and synth_hit != pri:
+                pri = synth_hit
         resolved_primary.append(pri)
         resolved_secondary.append(sec)
 
@@ -488,12 +505,14 @@ def write_binary(
     # to output-index.
     emit_indices: list[int] = []
     input_to_output: dict[int, int] = {}
+    emitted_relations: set[tuple[int, int]] = set()
     stats = WriteStats(
         pairs_total=len(pairs),
         pairs_emitted=0,
         pairs_dropped_primary_unresolved=0,
         pairs_dropped_secondary_unresolved=0,
         pairs_dropped_degenerate_idx=0,
+        pairs_dropped_duplicate_relation=0,
         pairs_with_orbit=0,
         pairs_with_inclination=0,
         pairs_inner_of_hierarchy=0,
@@ -513,6 +532,20 @@ def write_binary(
             # self-referencing entry; drop them here.
             stats.pairs_dropped_degenerate_idx += 1
             continue
+        rel_key = (resolved_primary[i], resolved_secondary[i])
+        if rel_key in emitted_relations:
+            # Same (primary, secondary) catalog rows already emitted. A
+            # blended non-anchor primary that the synth re-home above could
+            # not reach (its component was dropped by promotion, or it is a
+            # compound/secondary-side collapse) resolves onto the system
+            # anchor, re-emitting an existing anchor→X pair — surfacing X
+            # twice on the anchor's hover card. The re-home is the real fix
+            # where a distinct slot exists; this drops the residual exact
+            # duplicates so no (primary, secondary) appears twice. First in
+            # walk order (outer-before-inner, input order within) wins.
+            stats.pairs_dropped_duplicate_relation += 1
+            continue
+        emitted_relations.add(rel_key)
         input_to_output[i] = len(emit_indices)
         emit_indices.append(i)
 
@@ -585,6 +618,7 @@ def stats_to_counts(stats: WriteStats) -> dict[str, int]:
         "pairs_dropped_primary_unresolved": stats.pairs_dropped_primary_unresolved,
         "pairs_dropped_secondary_unresolved": stats.pairs_dropped_secondary_unresolved,
         "pairs_dropped_degenerate_idx": stats.pairs_dropped_degenerate_idx,
+        "pairs_dropped_duplicate_relation": stats.pairs_dropped_duplicate_relation,
         "pairs_with_orbit": stats.pairs_with_orbit,
         "pairs_with_inclination": stats.pairs_with_inclination,
         "pairs_inner_of_hierarchy": stats.pairs_inner_of_hierarchy,
@@ -678,7 +712,8 @@ def run(force: bool) -> int:
     log(
         f"dropped: primary_unresolved={stats.pairs_dropped_primary_unresolved}, "
         f"secondary_unresolved={stats.pairs_dropped_secondary_unresolved}, "
-        f"degenerate_idx={stats.pairs_dropped_degenerate_idx}"
+        f"degenerate_idx={stats.pairs_dropped_degenerate_idx}, "
+        f"duplicate_relation={stats.pairs_dropped_duplicate_relation}"
     )
 
     if not assert_or_update_counts(stats_to_counts(stats), EXPECTED_COUNTS):
