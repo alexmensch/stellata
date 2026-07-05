@@ -121,12 +121,11 @@ export type TransportAction = 'rewind' | 'play' | 'pause' | 'fastForward' | 'res
  *  this and adds side-effects (readout refresh, picker sync). */
 export const TRANSPORT_BUTTONS: ReadonlyArray<{
   action: TransportAction;
-  glyph: string;
   title: string;
 }> = [
-  { action: 'rewind', glyph: '⏪', title: 'Rewind — halve, or reverse across 1×' },
-  { action: 'play', glyph: '▶', title: 'Play — resume last forward rate' },
-  { action: 'pause', glyph: '⏸', title: 'Pause' },
-  { action: 'fastForward', glyph: '⏩', title: 'Fast-forward — double, or forward across 1×' },
-  { action: 'reset', glyph: '⟲', title: 'Reset to live now at 1×' },
+  { action: 'rewind', title: 'Rewind — halve, or reverse across 1×' },
+  { action: 'play', title: 'Play — resume last forward rate' },
+  { action: 'pause', title: 'Pause' },
+  { action: 'fastForward', title: 'Fast-forward — double, or forward across 1×' },
+  { action: 'reset', title: 'Reset to live now at 1×' },
 ];

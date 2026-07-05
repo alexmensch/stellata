@@ -166,7 +166,10 @@ open/closed never changes the clock — only **Reset** returns to live-now
 at 1×.
 
 It drives the `VirtualClock`, building its transport row from `time.ts`'s
-`TRANSPORT_BUTTONS`. Rate shows as a human "time / second" phrase
+`TRANSPORT_BUTTONS`. The controls render as monochrome line-art SVG glyphs
+(`transportIcon`, `currentColor` stroke) — thin-line iconography matching
+the rest of the app rather than platform emoji, all one size so reset reads
+as prominently as play/pause. Rate shows as a human "time / second" phrase
 (`formatRatePerSecond`, pure + unit-tested). Colours ride the root CSS
 tokens so chart mode (`body.monochrome`) adapts; only the translucent
 panel background carries an explicit light-mode override in `styles.css`.

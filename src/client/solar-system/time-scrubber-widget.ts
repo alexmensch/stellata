@@ -4,8 +4,40 @@
 
 import type { Stellata } from '../stellata';
 import { createTimeReadout, formatTimeReadout } from './time-readout';
-import { TRANSPORT_BUTTONS, toLocalDatetimeValue, parseLocalDatetimeValue } from './time';
+import {
+  TRANSPORT_BUTTONS,
+  toLocalDatetimeValue,
+  parseLocalDatetimeValue,
+  type TransportAction,
+} from './time';
 import { formatRatePerSecond } from './time-scrubber-widget-pure';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// Monochrome line-art transport glyphs (currentColor stroke, styled in
+// styles.css § .transport-icon) matching the app's thin-line iconography.
+// viewBox 0 0 24 24; every glyph fills the box so reset reads at the same
+// weight and size as the triangle/chevron controls.
+const TRANSPORT_ICON_PATHS: Record<TransportAction, string[]> = {
+  rewind: ['M18 6 L12 12 L18 18', 'M11 6 L5 12 L11 18'],
+  play: ['M8 6 L18 12 L8 18 Z'],
+  pause: ['M9 6 L9 18', 'M15 6 L15 18'],
+  fastForward: ['M6 6 L12 12 L6 18', 'M13 6 L19 12 L13 18'],
+  reset: ['M3.51 15a9 9 0 1 0 2.13-9.36L1 10', 'M1 4 L1 10 L7 10'],
+};
+
+function transportIcon(action: TransportAction): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg') as SVGSVGElement;
+  svg.setAttribute('class', 'transport-icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const d of TRANSPORT_ICON_PATHS[action]) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  }
+  return svg;
+}
 
 export interface TimeScrubberWidgetDeps {
   meta: HTMLElement;
@@ -64,7 +96,7 @@ export function createTimeScrubberWidget(
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'scrubber-btn';
-    b.textContent = spec.glyph;
+    b.appendChild(transportIcon(spec.action));
     b.title = spec.title;
     b.addEventListener('click', () => {
       clock[spec.action]();

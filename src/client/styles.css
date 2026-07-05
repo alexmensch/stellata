@@ -433,15 +433,28 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
 .scrubber-controls { display: flex; gap: 4px; }
 .scrubber-btn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--fg-dim);
-  font: inherit;
-  font-size: 13px;
-  padding: 3px 0;
+  padding: 4px 0;
   cursor: pointer;
 }
 .scrubber-btn:hover { color: var(--fg); border-color: var(--border-strong); }
+/* Line-art transport glyphs (time-scrubber-widget.ts). currentColor stroke
+ * so hover / disabled fades ride the button's `color`; uniform size makes
+ * reset match the triangle/chevron controls. */
+.transport-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .scrubber-btn:disabled { opacity: 0.4; cursor: default; }
 .scrubber-btn:disabled:hover { color: var(--fg-dim); border-color: var(--border); }
 .scrubber-jump { display: flex; gap: 4px; align-items: center; }
