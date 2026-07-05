@@ -3295,6 +3295,28 @@ class SelectOrbitTests(unittest.TestCase):
         )
         self.assertEqual(via, "gaia_nss")
 
+    def test_nss_gate_uses_system_parallax_when_pair_unresolved(self) -> None:
+        # ε Cep shape: the pair's own two components both resolved to
+        # `unresolved` (no pair-local parallax), so the gate falls back to
+        # the system-anchor parallax compute_system_parallaxes supplies.
+        # A sub-day orbit vs a 5.5″ pair at ~54 pc is rejected on that
+        # anchor distance; with no anchor the gate can't evaluate ρ and
+        # the orbit attaches — so the fallback is what fires the reject.
+        nss_row = _nss_orbital_row(period_days=0.9702)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        kwargs = dict(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(None), secondary_astrometry=_ast(None),
+            orb6_for_pair=[], indices=idx,
+            wds_rho_arcsec=5.5,
+        )
+        _, via_no_anchor = bb.select_orbit(**kwargs)
+        self.assertEqual(via_no_anchor, "gaia_nss")
+        _, via_with_anchor = bb.select_orbit(**kwargs, system_parallax_mas=18.5)
+        self.assertEqual(via_with_anchor, "none")
+
     def test_orb6_grade_tiebreak_lowest_wins(self) -> None:
         idx = _indices_for_orbit()
         prim = _resolved(gaia=42, component="A", is_primary=True)
@@ -4001,6 +4023,79 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         self.assertEqual(
             {r.orbit_role for r in rows}, {"primary", "secondary"},
         )
+
+
+class ComputeSystemParallaxesTests(unittest.TestCase):
+    def test_picks_first_resolved_parallax_in_system(self) -> None:
+        # Primary unresolved, secondary resolves — the secondary's
+        # parallax becomes the system value.
+        pair = _wds_pair(wds_id="PX-1", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PX-1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PX-1", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=20.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        plx = bb.compute_system_parallaxes([pair], components, astrometry)
+        self.assertAlmostEqual(plx["PX-1"], 20.0, places=6)
+
+    def test_prefers_primary_when_both_resolved(self) -> None:
+        pair = _wds_pair(wds_id="PX-2", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PX-2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PX-2", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=20.0, ra_deg=0.0, dec_deg=0.0),
+        ]
+        plx = bb.compute_system_parallaxes([pair], components, astrometry)
+        self.assertAlmostEqual(plx["PX-2"], 10.0, places=6)
+
+    def test_first_pair_row_supplies_anchor_for_later_pair(self) -> None:
+        # A multiple system: the AB pair resolves, the AC pair's own two
+        # components are both unresolved. The one wds_id entry (from the
+        # first system row) is the anchor a later all-unresolved pair
+        # reads for the separation-sanity gate.
+        pairs = [
+            _wds_pair(wds_id="PX-3", components="AB"),
+            _wds_pair(wds_id="PX-3", components="AC"),
+        ]
+        components = [
+            _resolved(gaia=1, wds_id="PX-3", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PX-3", component="B", is_primary=False),
+            _resolved(gaia=3, wds_id="PX-3", component="A", is_primary=True),
+            _resolved(gaia=4, wds_id="PX-3", component="C", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=12.5, ra_deg=0.0, dec_deg=0.0),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+        ]
+        plx = bb.compute_system_parallaxes(pairs, components, astrometry)
+        self.assertAlmostEqual(plx["PX-3"], 12.5, places=6)
+
+    def test_no_entry_when_system_unresolved(self) -> None:
+        pair = _wds_pair(wds_id="PX-4", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PX-4", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PX-4", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+        ]
+        plx = bb.compute_system_parallaxes([pair], components, astrometry)
+        self.assertNotIn("PX-4", plx)
 
 
 class ComputeSystemAnchorsTests(unittest.TestCase):

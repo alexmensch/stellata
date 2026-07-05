@@ -46,18 +46,9 @@ ORBIT_VIA_VALUES: tuple[str, ...] = (
 NSS_PERIOD_THRESHOLD_DAYS = 3.0 * 365.25
 NSS_SEPARATION_THRESHOLD_MAS = 1000.0
 
-# Separation-sanity gate. An NSS orbit is keyed to a Gaia SOURCE, not a
-# WDS pair, so a saturated/blended primary can carry an interior orbit
-# that the distinct-source gate then leaks onto a wide visual companion
-# (υ⁴ Eri: the 0.97-day inner orbit leaking onto the 5.5″ and 49″
-# companions). The pair's measured WDS separation, projected to AU at the
-# system distance, must not exceed this multiple of a Kepler UPPER-BOUND
-# relative semi-major axis for the NSS period — a bound orbit's projected
-# separation stays below apastron a(1+e) < 2a, and the extra margin
-# absorbs parallax error / projection so only clearly-interior orbits
-# (ρ ≫ a) are rejected. The mass ceiling sits well above any real stellar
-# binary total so the reject only fires when the pair is impossible for
-# the period at ANY mass.
+# Separation-sanity gate bounds — mass ceiling and ρ/a_max ratio for
+# _nss_separation_consistent. See README.md § Stage 4 for the leak
+# mechanism and the apastron derivation.
 NSS_MAX_SYSTEM_MASS_MSUN = 150.0
 NSS_SEPARATION_SANITY_RATIO = 3.0
 
@@ -529,8 +520,9 @@ def _system_parallax_mas(
     differentiate further here (gaia_5p, gaia_nss_systemic, and
     hip2_long_baseline all populate parallax_mas equivalently)."""
     for a in astrometry_for_pair:
-        if a.parallax_mas is not None and a.parallax_mas > 0.0:
-            return a.parallax_mas
+        plx = _component_parallax_mas(a)
+        if plx is not None:
+            return plx
     return None
 
 
@@ -687,8 +679,11 @@ def compute_system_parallaxes(
     """One parallax (mas) per ``wds_id`` from the first system component
     with a usable Gaia/HIP2 value. Feeds the separation-sanity gate a
     distance even when a pair's own two components both resolved to
-    ``unresolved`` — the same system-anchor fallback Stage 6 uses to place
-    them, so the gate rejects on the distance the pair will render at."""
+    ``unresolved`` — the same first-resolved-per-system anchor Stage 6's
+    ``compute_system_anchors`` places them at, so the gate rejects on
+    approximately the render distance. (Stage 6 additionally requires a
+    position, not just a parallax, so the two can pick different anchor
+    components; harmless, since a system's components share a distance.)"""
     return first_astrometry_field_per_system(
         pairs, components, astrometry, _component_parallax_mas,
     )
