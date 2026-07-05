@@ -1,7 +1,11 @@
 import type { Stellata } from '../stellata';
 import { DEFAULT_FOV } from '../stellata';
 import { bindHelpModal } from '../modals/help-modal';
-import { pushTapAndCheckTriple } from './keyboard-shortcuts-pure';
+import {
+  pushTapAndCheckTriple,
+  DOUBLE_TAP_MS,
+  DOUBLE_TAP_COUNT,
+} from './keyboard-shortcuts-pure';
 import { toggleFullscreen } from './fullscreen';
 import { toggleControlsHidden } from './controls-hidden';
 
@@ -13,7 +17,6 @@ import { toggleControlsHidden } from './controls-hidden';
 const MAG_STEP = 0.5;
 const MAG_MIN = -2;
 const MAG_MAX = 15;
-const C_DOUBLE_TAP_MS = 200;
 
 export interface KeyboardShortcutsDeps {
   /** Reveal/dismiss the unified debug panel. Bound to the hidden
@@ -58,6 +61,10 @@ export function bindKeyboardShortcuts(
   // D_TRIPLE_TAP_MS open the debug panel — hidden affordance, intentionally
   // undocumented.
   const dTapTimes: number[] = [];
+
+  // Rolling window of recent F-key tap timestamps — double-tap toggles
+  // fullscreen. Single F is reserved for the find-object shortcut.
+  const fTapTimes: number[] = [];
 
   // Capture phase so we observe foreground-modal state BEFORE bubble-phase
   // handlers (brand-modal / info-modal / help-modal) flip `hidden=true` on
@@ -136,7 +143,7 @@ export function bindKeyboardShortcuts(
             if (stellata.getFilter().showConstellation) {
               conModal.open();
             }
-          }, C_DOUBLE_TAP_MS);
+          }, DOUBLE_TAP_MS);
         }
         break;
       case 'h': case 'H':
@@ -150,8 +157,15 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'f': case 'F':
-        toggleFullscreen();
+        // Double-tap F-F toggles fullscreen (matching the C double-tap
+        // feel); single F is left free for the find-object shortcut.
         e.preventDefault();
+        if (e.repeat) break;
+        if (pushTapAndCheckTriple(
+          fTapTimes, performance.now(), DOUBLE_TAP_MS, DOUBLE_TAP_COUNT,
+        )) {
+          toggleFullscreen();
+        }
         break;
       case 'u': case 'U':
         toggleControlsHidden();

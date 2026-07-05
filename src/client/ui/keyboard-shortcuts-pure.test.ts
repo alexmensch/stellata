@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   D_TRIPLE_TAP_COUNT,
   D_TRIPLE_TAP_MS,
+  DOUBLE_TAP_COUNT,
+  DOUBLE_TAP_MS,
   pushTapAndCheckTriple,
 } from './keyboard-shortcuts-pure';
 
@@ -78,5 +80,19 @@ describe('pushTapAndCheckTriple', () => {
   it('exports stable constants for the keyboard binding', () => {
     expect(D_TRIPLE_TAP_MS).toBe(500);
     expect(D_TRIPLE_TAP_COUNT).toBe(3);
+    expect(DOUBLE_TAP_MS).toBe(200);
+    expect(DOUBLE_TAP_COUNT).toBe(2);
+  });
+
+  it('fires the F double-tap on the second press inside the window', () => {
+    const taps: number[] = [];
+    expect(pushTapAndCheckTriple(taps, 0, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT)).toBe(false);
+    expect(pushTapAndCheckTriple(taps, DOUBLE_TAP_MS, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT)).toBe(true);
+  });
+
+  it('does not fire the F double-tap when the second press is too late', () => {
+    const taps: number[] = [];
+    pushTapAndCheckTriple(taps, 0, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT);
+    expect(pushTapAndCheckTriple(taps, DOUBLE_TAP_MS + 1, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT)).toBe(false);
   });
 });

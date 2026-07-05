@@ -10,7 +10,7 @@ title plus a small `about · share ⧉` link row (always visible — no
 hover affordance, since touch devices have no hover state). The
 `.brand-box` flex column is `align-items: center` so the narrow title
 and the wider link row sit symmetrically around the centre axis.
-Fullscreen (`F`) and hide-controls (`U`) are keyboard-only — see
+Fullscreen (double-tap `F`-`F`) and hide-controls (`U`) are keyboard-only — see
 `src/client/ui/README.md` § Fullscreen toggle and § Hide-controls
 toggle.
 
