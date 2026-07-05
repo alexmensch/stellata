@@ -273,7 +273,7 @@ flux and is the single Gaia source the renderer ever sees.
 match (CCDM sibling pick, predicted-secondary AT-HYG match) is
 SKIPPED for them — the (ρ, θ) prediction degenerates onto the
 primary's own coordinate, so a nearest-neighbour pick can only
-coin-flip onto a sibling component's identity (4 Equ Ab once bound
+coin-flip onto a sibling component's identity (1 Equ Ab once bound
 B's HIP 103569 and B's AT-HYG photometry this way). Instead,
 `propagate_blend_identity` gives a secondary that bound nothing of
 its own the primary's gaia / hip / AT-HYG row — the WDS blend
