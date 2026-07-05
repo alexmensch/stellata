@@ -12,6 +12,7 @@ import {
   projectFromSepPa,
   promoteCompanions,
   stampComponentLetters,
+  stripDoubledParentToken,
   type MultiplesTsvRow,
 } from './companion-promotion';
 import {
@@ -553,6 +554,72 @@ describe('promoteCompanions', () => {
     // B is a distinct position from A (measured 5″ sep); Bb collocates on B.
     expect([b!.x, b!.y, b!.z]).not.toEqual([a_existing.x, a_existing.y, a_existing.z]);
     expect([bb!.x, bb!.y, bb!.z]).toEqual([b!.x, b!.y, b!.z]);
+  });
+
+  it('names a subdivided inner-pair secondary off the system root, not the component-named local anchor (Castor Ca,Cb → "Castor Cb", not "Castor C Cb")', () => {
+    // YY Gem shape: the C component promotes from the AC pair as the
+    // component-named "Castor C". The Ca,Cb inner pair's primary Ca then
+    // resolves onto that "Castor C" record — so composing the Cb secondary
+    // off its local anchor doubled the parent letter ("Castor C" + "Cb" →
+    // "Castor C Cb"). The canonical comp "Cb" already encodes the full path
+    // from the root, so the base must be the bare system-root "Castor".
+    const GA_A = '900900900';
+    const GA_C = '800800800';
+    const castorA: Star = makeStar({
+      x: 10, y: 0, z: 0, absmag: 1.6, ci: 0.0,
+      proper: 'Castor', hip: 500, gaiaSourceId: GA_A,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'CAS-AC', comp: 'A', hip: 500, gaiaSourceId: GA_A,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Castor',
+        orbitRole: 'primary', sepArcsec: 70, paDeg: 160, sepPaEpochJd: 2451545,
+      }),
+      multiplesRow({
+        systemId: 'CAS-AC', comp: 'C', hip: null, gaiaSourceId: GA_C,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: '',
+        absmag: 9.0, ci: 1.4, spect: 'M0.5Ve', spectVia: 'simbad',
+        photometryVia: 'athyg_own', orbitRole: 'secondary',
+        sepArcsec: 70, paDeg: 160, sepPaEpochJd: 2451545, dmag: 7.4,
+      }),
+      multiplesRow({
+        systemId: 'CAS-Ca,Cb', comp: 'Ca', hip: null, gaiaSourceId: GA_C,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: '',
+        absmag: 9.0, orbitRole: 'primary', sepArcsec: 0,
+        pDays: 2.9, tJd: 2451545, e: 0, aAU: 0.05, omegaRad: 3.14, q: 0.5,
+      }),
+      multiplesRow({
+        systemId: 'CAS-Ca,Cb', comp: 'Cb', hip: null, gaiaSourceId: GA_C,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: '',
+        spect: 'M1Ve', spectVia: 'curated',
+        photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
+        sepArcsec: 0, dmag: 1.0,
+        pDays: 2.9, tJd: 2451545, e: 0, aAU: 0.05, omegaRad: 3.14, q: 0.5,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [castorA], CONSTELLATIONS);
+    const names = newStars.map((s) => s.proper);
+    expect(names).toContain('Castor C');
+    expect(names).toContain('Castor Cb');
+    expect(names).not.toContain('Castor C Cb');
+  });
+
+  describe('stripDoubledParentToken', () => {
+    it('strips the parent token only when the base ends in it', () => {
+      // Doubling cases: base carries the parent letter the canonical comp
+      // re-appends.
+      expect(stripDoubledParentToken('Castor C', 'Cb')).toBe('Castor');
+      expect(stripDoubledParentToken('Alkalurops B', 'Bb')).toBe('Alkalurops');
+      expect(stripDoubledParentToken('HIP 88424 C', 'Cb')).toBe('HIP 88424');
+      expect(stripDoubledParentToken('Algol Aa', 'Aa1')).toBe('Algol');
+    });
+    it('leaves a base whose tail is not the comp parent untouched', () => {
+      // "15 Mon" + "Ab" (parent "A") — base does not end in " A".
+      expect(stripDoubledParentToken('15 Mon', 'Ab')).toBe('15 Mon');
+      expect(stripDoubledParentToken('HIP 22812', 'Bb')).toBe('HIP 22812');
+      expect(stripDoubledParentToken('Castor', 'B')).toBe('Castor');   // no parent
+      expect(stripDoubledParentToken('Sirius', 'C')).toBe('Sirius');
+    });
   });
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {
@@ -1108,6 +1175,38 @@ describe('promoteCompanions', () => {
     const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
     expect(newStars).toHaveLength(1);
     expect(newStars[0].proper).toBeNull();
+  });
+
+  it('names a companion of a name-less HIP-only system by the primary HIP designation', () => {
+    // HIP 18734 AB shape: the whole system is name-less — the primary is a
+    // bare HIP record (no proper / Bayer / Flamsteed), so every earlier name
+    // tier is empty and the companion used to ship "Unnamed #idx". The HIP
+    // designation fallback (mirroring the runtime buildStarLabels tiers)
+    // composes "HIP 18734 B".
+    const primary = makeStar({
+      hip: 18734, gaiaSourceId: 'g_18734', proper: null, bayer: null,
+      flam: null, conIndex: 255, x: 0, y: 0, z: 40,
+    });
+    const rows = [
+      multiplesRow({
+        systemId: '04008+0505-AB', comp: 'A',
+        hip: 18734, gaiaSourceId: 'g_18734', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 40, distPc: 40,
+        absmag: 2.0, orbitRole: 'primary',
+        sepArcsec: 1.0, paDeg: 0.0, sepPaEpochJd: 2460000.0, dmag: 0.5,
+      }),
+      multiplesRow({
+        systemId: '04008+0505-AB', comp: 'B',
+        hip: null, gaiaSourceId: 'g_18734_b', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 40, distPc: 40,
+        absmag: 2.5, ci: 0.2, spect: 'A3V',
+        photometryVia: 'athyg_own', orbitRole: 'secondary',
+        sepArcsec: 1.0, paDeg: 0.0, sepPaEpochJd: 2460000.0, dmag: 0.5,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].proper).toBe('HIP 18734 B');
   });
 
   it('drops a pair-row primary with no compound proxy and no independent astrometry (Alsephina C class)', () => {
