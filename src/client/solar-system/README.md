@@ -22,16 +22,14 @@ src/client/solar-system/
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
-                                  FF/RW rate transitions and rate label.
+                                  FF/RW rate transitions, rate label, and
+                                  the TRANSPORT_BUTTONS action spec.
                                   Single source of truth for the scrubber.
-  time-scrubber.ts                Debug-panel "Time" section — transport
-                                  controls (play/pause/FF/RW/reset/jump)
-                                  driving the VirtualClock. Builds its
-                                  buttons from time.ts's TRANSPORT_BUTTONS.
   time-scrubber-widget.ts (+pure) First-class scrubber in the bottom-right
                                   meta slot (T key / click the readout).
-                                  Same VirtualClock + TRANSPORT_BUTTONS as
-                                  the debug section; app-styled, with a
+                                  Transport controls (play/pause/FF/RW/reset)
+                                  over the VirtualClock, built from
+                                  TRANSPORT_BUTTONS; app-styled, with a
                                   human "time / second" rate readout
                                   (formatRatePerSecond, pure + tested).
   sky-truth.test.ts               Regression corpus: the ephemeris →
@@ -123,7 +121,7 @@ it from a `VirtualClock`: `t = simT0 + rate · (wallNow − wallT0)`, so at
 parity every existing consumer relies on). This is the ONLY place
 wall-clock is sampled for the simulation `t`.
 
-The debug panel's **Time** section (`time-scrubber.ts`) drives the clock:
+The scrubber widget (`time-scrubber-widget.ts`) drives the clock:
 play / pause / fast-forward / rewind / reset / jump-to-date. FF and RW
 step through **powers of two** (`±1, ±2, … ±2³⁰`) and cross zero directly
 — a step from `+1×` lands on `-1×` rather than passing through fractional
@@ -132,7 +130,7 @@ slow-motion, since the binary orbits this scrubber verifies (α Cen 80 yr,
 snapshot the current virtual time so scrubbing never teleports. `|rate|`
 saturates at `2³⁰` (~1.07e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
-live. `stellata-nmu` layers the user-facing scrubber UI on this plumbing.
+live.
 
 Jump-to-date is a native `datetime-local` calendar picker whose value is
 read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
@@ -158,24 +156,22 @@ must never read from `t`.
 
 ## Time scrubber widget
 
-`time-scrubber-widget.ts` promotes the debug-panel scrubber to a
-first-class control living in the bottom-right `.meta` slot. Collapsed,
+`time-scrubber-widget.ts` is the scrubber — a first-class control living
+in the bottom-right `.meta` slot. Collapsed,
 `.meta` shows the star count + live UTC readout (the readout is a button
 that opens the scrubber); the `T` shortcut and clicking the readout both
 toggle it. Opened, it replaces that with a model-time readout + transport
 controls + a `datetime-local` jump, and an `×` collapses back. Toggling
 open/closed never changes the clock — only **Reset** returns to live-now
-at 1×, matching the debug section.
+at 1×.
 
-Both scrubbers drive the same `VirtualClock` and build their transport
-rows from `time.ts`'s `TRANSPORT_BUTTONS`, so the control set can't
-diverge. The widget shows rate as a human "time / second" phrase
-(`formatRatePerSecond`, pure + unit-tested) rather than the debug
-panel's raw `×N`. Colours ride the root CSS tokens so chart mode
-(`body.monochrome`) adapts; only the translucent panel background carries
-an explicit light-mode override in `styles.css`. Catalogue / proper-motion
-advance stays out — that's the deferred `stellata-nmu` epic; this widget
-is the clock-only slice.
+It drives the `VirtualClock`, building its transport row from `time.ts`'s
+`TRANSPORT_BUTTONS`. Rate shows as a human "time / second" phrase
+(`formatRatePerSecond`, pure + unit-tested). Colours ride the root CSS
+tokens so chart mode (`body.monochrome`) adapts; only the translucent
+panel background carries an explicit light-mode override in `styles.css`.
+Catalogue / proper-motion advance stays out — that's the deferred
+`stellata-nmu` epic; this widget is the clock-only slice.
 
 ## Planet rendering
 

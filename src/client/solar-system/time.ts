@@ -47,12 +47,6 @@ export function nextRewindRate(rate: number): number {
   return rate === 1 ? -1 : rate / 2;
 }
 
-/** Compact multiplier label for the scrubber readout: `paused`, `1×`,
- *  `-16×`, `1024×`. */
-export function formatRate(rate: number): string {
-  return rate === 0 ? 'paused' : `${rate}×`;
-}
-
 /** Epoch-ms → a zoneless `datetime-local` input value in **local** time:
  *  `2030-01-01T00:00:00`. Round-trips through `parseLocalDatetimeValue`. */
 export function toLocalDatetimeValue(ms: number): string {
@@ -122,10 +116,9 @@ export class VirtualClock {
 
 export type TransportAction = 'rewind' | 'play' | 'pause' | 'fastForward' | 'reset';
 
-/** Transport-row spec shared by the debug-panel scrubber and the first-class
- *  scrubber widget so the two never diverge on which clock method a control
- *  drives. Each surface builds its own (differently-styled) buttons from it;
- *  callers add per-surface side-effects (readout refresh, picker sync). */
+/** Transport-row spec for the scrubber widget: which clock method each
+ *  control drives, plus its tooltip. The widget builds its buttons from
+ *  this and adds side-effects (readout refresh, picker sync). */
 export const TRANSPORT_BUTTONS: ReadonlyArray<{
   action: TransportAction;
   glyph: string;
