@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fmtDist, fmtDistAuto, niceRound, setUnit, getUnit, LY_PER_PC, AU_SWITCH_PC } from './distance-util';
 import { AU_PER_PC } from '../util/astronomy-constants';
 
@@ -193,10 +193,12 @@ describe('distance-util / fmtDistAuto', () => {
 });
 
 describe('distance-util / unit state', () => {
-  it('defaults to pc on import', () => {
-    // Module load order: each test resets to pc in beforeEach, so we can
-    // observe the initial state semantics here.
-    expect(getUnit()).toBe('pc');
+  it('defaults to ly on import', async () => {
+    // The shared beforeEach pins the loaded module to pc, so observe the
+    // untouched import-time default through a fresh module instance.
+    vi.resetModules();
+    const fresh = await import('./distance-util');
+    expect(fresh.getUnit()).toBe('ly');
   });
 
   it('persists the unit across reads', () => {

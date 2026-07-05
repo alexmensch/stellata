@@ -41,6 +41,7 @@ import {
 } from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
+import { bindShiftPan } from './camera/controls/shift-pan';
 import {
   WarpController,
   type WarpInfo,
@@ -460,7 +461,6 @@ export class Stellata implements FrameAnchor {
     this.controls.rotateSpeed = 3.0;
     this.controls.zoomSpeed = 1.1;
     this.controls.panSpeed = 0.6;
-    this.controls.noPan = false;
     this.controls.staticMoving = false;
     this.controls.dynamicDampingFactor = 0.15;
     this.controls.minDistance = GLOBAL_MIN_DIST_PC;
@@ -1892,9 +1892,13 @@ export class Stellata implements FrameAnchor {
   private pointerDownAt: { x: number; y: number; t: number } | null = null;
   private twoFingerAngle: number | null = null;
   private gestureLastRotation = 0;
+  private shiftPanDispose: (() => void) | null = null;
 
   private attachEvents() {
     window.addEventListener('resize', this.onResize);
+    // Shift-drag panning: orbit on a plain drag, translate while Shift is
+    // held. See camera/controls/shift-pan.ts.
+    this.shiftPanDispose = bindShiftPan(this.controls);
     const canvas = this.renderer.domElement;
     canvas.addEventListener('pointerdown', this.onPointerDown);
     canvas.addEventListener('pointerup', this.onPointerUp);
@@ -2466,6 +2470,8 @@ export class Stellata implements FrameAnchor {
     canvas.removeEventListener('touchcancel', this.onTouchEnd);
     canvas.removeEventListener('gesturestart', this.onGestureStart as EventListener);
     canvas.removeEventListener('gesturechange', this.onGestureChange as EventListener);
+    this.shiftPanDispose?.();
+    this.shiftPanDispose = null;
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.
     this.observeControls.disable();

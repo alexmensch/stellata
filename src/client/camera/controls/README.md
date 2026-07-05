@@ -6,8 +6,11 @@ in both navigate and observe modes.
 
 ## Files
 
-- `controls.ts` — TrackballControls subclass; manual-zoom floor +
-  auto-park orbit distance hooks.
+- `controls.ts` — settings-panel bindings (distance / magnitude / size
+  sliders, spectral chips, overlay toggles) + the slider↔distance log
+  mapping (`sliderToDist` / `distToSlider`).
+- `shift-pan.ts` — orbit-first camera translation: pan only while a
+  Shift key is held (see § Shift-drag panning).
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
   stars / clouds / planets / Local Group / heliopause.
@@ -173,9 +176,29 @@ Current settings:
 - `dynamicDampingFactor = 0.15` (this is the damping knob; not
   `enableDamping`/`dampingFactor` like OrbitControls)
 - `staticMoving = false` (keeps damping on)
-- `noPan = false` (right-click pans; set `true` to disable)
+- `noPan` starts `true`; `shift-pan.ts` toggles it per-press (see
+  § Shift-drag panning). Right-drag no longer pans.
 - `minDistance = GLOBAL_MIN_DIST_PC = 5e-3` (when no star is focused;
   per-star `minOrbitDistForStar` overrides on focus). `maxDistance = 100_000`.
+
+## Shift-drag panning
+
+Camera translation is deliberately orbit-first: a plain drag orbits;
+you pan only while holding either Shift key and dragging. `shift-pan.ts`
+(bound in `stellata.ts`) drives this through TrackballControls' own
+key-pan mechanism rather than a parallel input path:
+
+- TrackballControls forces any active drag into a pan while
+  `keys[STATE.PAN]` (index 2 of the `keys` array) is the held key **and**
+  `noPan` is `false`. It reads both in its bubble-phase `keydown`.
+- We start `noPan = true` (so a plain drag orbits and the old implicit
+  right-drag pan is gone) and set `keys = ['', '', 'ShiftLeft']` — the
+  empty ROTATE/ZOOM slots also retire the default A/S/D drag-mode keys,
+  which otherwise collide with the `S` grid / `D` debug shortcuts.
+- A **capture-phase** window `keydown` (fires before TrackballControls'
+  bubble handler) retargets `keys[2]` to whichever Shift is down —
+  `ShiftLeft` or `ShiftRight` — and lifts `noPan`. `keyup` restores
+  `noPan = true`. Releasing Shift mid-drag hands the drag back to orbit.
 
 ## Two-finger roll gesture (platform-split)
 
