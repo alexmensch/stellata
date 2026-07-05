@@ -1,9 +1,6 @@
-// Display metadata for the keyboard shortcuts — the single source of
-// truth behind both the `?` help modal and the on-screen hint bar. The
-// live keydown dispatch stays in keyboard-shortcuts.ts; this module only
-// describes what each shortcut is and when it's worth surfacing. Pure
-// (no DOM) so it can be unit-tested. See src/client/ui/README.md
-// § Keyboard shortcuts.
+// Display metadata for keyboard shortcuts — the single source behind both
+// the `?` help modal and the on-screen hint bar. Pure (no DOM), unit-tested.
+// See src/client/ui/README.md § Keyboard shortcuts.
 
 /** App state the hint bar filters shortcuts against. */
 export interface ShortcutState {

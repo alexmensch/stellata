@@ -26,6 +26,7 @@ import { maybeShowInfoModal } from './modals/info-modal';
 import { maybeShowMobileAdvisory } from './modals/mobile-advisory';
 import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
+import { createHintBar } from './ui/hint-bar';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { applyFirstLoadView } from './solar-system/first-load';
@@ -271,6 +272,7 @@ async function main() {
         toggleDebugPanel: debugTools.panel,
         toggleTimeScrubber: timeScrubber.toggle,
       });
+      createHintBar(stellata);
       // On a bare touch device the mobile advisory takes the one splash
       // slot; otherwise the welcome modal shows as usual.
       if (!maybeShowMobileAdvisory()) {

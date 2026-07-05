@@ -1,9 +1,6 @@
-// First-class time-scrubber widget in the bottom-right meta slot. Collapsed,
-// it shows the star count + live UTC readout; opened (T key or clicking the
-// readout) it replaces that with app-styled transport controls over the same
-// VirtualClock the debug panel drives. Rate is shown in human "time / second"
-// units, not the raw ×N multiplier. See
-// src/client/solar-system/README.md § Time scrubber widget.
+// First-class time-scrubber widget in the bottom-right meta slot: collapsed
+// star-count + live-UTC readout ⇄ app-styled transport controls (T key /
+// click the readout). See src/client/solar-system/README.md § Time scrubber widget.
 
 import type { Stellata } from '../stellata';
 import { createTimeReadout, formatTimeReadout } from './time-readout';

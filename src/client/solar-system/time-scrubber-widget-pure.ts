@@ -1,8 +1,6 @@
-// Pure presentation helper for the first-class time-scrubber widget. Turns a
-// clock rate (simulated seconds per real second) into a human "time per
-// second" phrase — the widget's readout uses this instead of the raw "×2"
-// multiplier the debug panel shows. See src/client/solar-system/README.md
-// § Time scrubber widget.
+// Pure helper: format a clock rate (sim-seconds per real second) as a human
+// "time / second" phrase for the scrubber-widget readout.
+// See src/client/solar-system/README.md § Time scrubber widget.
 
 interface RateUnit {
   /** Seconds this unit spans. */

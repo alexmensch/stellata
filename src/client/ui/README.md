@@ -10,24 +10,36 @@ gotchas.
 to existing public APIs — every shortcut is a thin wrapper, so future
 behavioural changes propagate automatically.
 
-**Bindings** (also surfaced via the `?` help modal):
+**Display metadata is separate from dispatch.** `keyboard-shortcuts-registry.ts`
+holds the descriptor table (keys, label, `hint` eligibility, per-state
+`active` predicate, `debug` flag). It's the single source of truth for
+both the `?` help modal (`../modals/help-modal.ts` renders its `<dl>`
+from it) and the on-screen hint bar — so the two never drift. The keydown
+switch below stays the dispatch mechanism; the registry only describes
+what to display and when.
 
 | Key | Action |
 | --- | --- |
 | `G` | Open the Go picker — focus a star, set a destination, or change observe location |
+| `F` | Open the Find picker — point the camera at any object without travelling to it (`aimAt`; navigate + observe) |
 | `O` | Switch to observe mode (gated on `getFocusedStar() !== null`) |
 | `M` | Toggle chart mode (gated on `cameraMode === 'observe'`; auto-clears on observe→navigate) |
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
 | `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
-| `H` | Toggle `showHud` |
+| `T` | Toggle the time scrubber (`../solar-system/time-scrubber-widget.ts`) |
 | `S` | Toggle `showGalacticGrid` |
-| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`). Single `F` is reserved for the find-object shortcut. |
+| `H` | Toggle `showHud` |
+| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`). Single `F` opens Find (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
-| `?` | Open the keyboard-shortcuts help modal |
+| `?` | Open the keyboard-shortcuts help modal (the "reveal all" for the hint bar) |
 | `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus) |
+
+The Find picker reuses the shared search corpus via `createSearchRunner`
+(`../typeahead/search.ts`) and is relocated into the `#kb-modal` card
+like the Go / Constellation pickers — see § DOM relocation below.
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -107,6 +119,33 @@ same APIs that the per-row reset link buttons use:
 `setCameraFov(DEFAULT_FOV)`, `setStarExaggerationK(getStarExaggerationKDefault())`.
 Magnitude / focus / overlays / camera position are deliberately
 *not* touched — those are user choices, not "default view" state.
+
+## Keyboard-shortcut hint bar
+
+`hint-bar.ts` renders a thin row of transparent chips pinned bottom-centre
+(between the scale bar and meta), showing the context-essential shortcuts
+for the current app state. It reads `hintBarShortcuts(state)` from the
+registry and re-renders on every state change: `focus` / `cloudFocus` /
+`cameraMode` / `vector` / `vectorCloud` events, plus a `MutationObserver`
+on the modal `hidden` attributes (modals emit no event of their own).
+
+**The context-essential set** (registry `hint: true`, gated per state):
+`G` and `F` and `?` are always shown; `O` appears only with a focused
+star in navigate, `M` only in observe, `W` only with a destination set,
+`Esc` only when there's something to step back from. In any modal state
+the bar collapses to `Esc` alone. Everything else — `S`, `H`, `C`, `R`,
+`T`, `F`-`F`, `U`, `+`/`-`, `=` — is relegated to the `?` help modal
+(`hint: false`); the triple-tap-`D` debug affordance (`debug: true`)
+never appears anywhere. Adjust what shows by flipping a descriptor's
+`hint` flag / `active` predicate in the registry — the bar and the help
+modal both follow.
+
+The row is `pointer-events: none` (click-through); individual chips take
+pointer events only so their `title` tooltips work on hover. Enabled by
+default; the "Keyboard hints" checkbox in the Navigation group toggles it,
+persisted to `localStorage` under `stellata.hint-bar`. Chip colours ride
+the root CSS tokens, so chart mode (`body.monochrome`) adapts with no
+per-element override.
 
 ## Per-group collapse in the settings panel
 
@@ -269,7 +308,7 @@ is steady across focus/unfocus and any line angle.
 (the `<html>` element), not the canvas — every chrome container is a
 sibling of the canvas under `<body>`, so fullscreening the whole page
 keeps the panel/topbar/overlays visible. Bound to a double-tap `F`-`F`
-(single `F` is reserved for the find-object shortcut); there is no
+(single `F` opens the Find picker); there is no
 in-app affordance. Esc handling is left entirely to the browser: the
 Fullscreen API reserves Esc for the exit and the exit is not cancelable
 by page code, so any attempt to layer app behaviour under a

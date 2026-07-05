@@ -1,7 +1,6 @@
-// Keyboard-shortcut help modal (the `?` key target). Same dismissal
-// pattern as the about/credits modals in brand-modal.ts: ESC, backdrop
-// click, or × button. The shortcut list is rendered from the shared
-// registry so the modal and the on-screen hint bar never drift.
+// Keyboard-shortcut help modal (the `?` key target). Dismissal via
+// modal-dismiss.ts; the shortcut list renders from the shared registry.
+// See src/client/ui/README.md § Keyboard shortcuts.
 
 import { bindModalDismissal, type ModalHandle } from './modal-dismiss';
 import { helpModalShortcuts } from '../ui/keyboard-shortcuts-registry';

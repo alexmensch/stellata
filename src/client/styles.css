@@ -159,6 +159,37 @@ html, body {
   pointer-events: none;
 }
 .ui-bottom > * { pointer-events: auto; }
+
+/* On-screen keyboard-shortcut hint bar — thin transparent chips pinned
+ * bottom-centre, between the scale bar (left) and meta (right). The row
+ * itself is click-through; individual chips take pointer events only so
+ * their title tooltips work on hover. Chip colours ride the root tokens so
+ * chart mode adapts. */
+.hint-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+  max-width: 60vw;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hint-chip {
+  pointer-events: auto;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
 /* Split scale-bar (start) and meta (end) apart on wide viewports; on narrow
  * viewports flex-wrap stacks them and the auto-margin still right-aligns
  * meta on its own line. */
