@@ -155,14 +155,16 @@ star-only by design.
 **Picking a new location** routes through `warpTo(idx)` instead of
 `focusStar(idx)`. The warp animation flies between anchors and the
 post-arrival slerp leaves the camera pointing in the original celestial
-direction from the new vantage. When the new location is collocated with
-the current one (`distPc < 1e-6` — α Cen A/B, or a ρ=0 inner pair on its
-parent like Castor Bb→B), `startWarp`'s degenerate branch re-anchors via
-`setFocus(idx, { keepObserve: true })` — which runs setFocus's consistent
-recenter + target snap but skips the observe→navigate exit — so observe
-stays engaged with `controls.target` correctly on the new star (a plain
-`setFocus` would flip to navigate; re-anchoring without the target snap
-would leave the ride jolting the camera off the star).
+direction from the new vantage. Collocated locations (α Cen A/B at one
+catalog baseline, or a ρ=0 inner pair on its parent like Castor Bb→B) fly
+the same path — there is no degenerate shortcut. Their A→B separation is
+too small to give a reliable travel direction, so `startWarp` falls back
+to the camera's current view direction (`WARP_DEGENERATE_DIST_PC`); the
+near-zero flight then lands through the normal `finishWarp` →
+`swapObserveAnchor` re-anchor, keeping observe engaged with
+`controls.target` correctly on the new star. A bespoke in-place re-anchor
+was tried and reverted: it bypasses `finishWarp`'s `controls.target` setup
+and desyncs the focal-frame ride.
 
 **X button (clear focus from observe):** `unfocus()` detects observe +
 focused-star and immediately clears focus *before* starting the

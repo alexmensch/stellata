@@ -347,30 +347,6 @@ describe('FocusController.setFocus — star focus FSM', () => {
     expect(h.busEvents.map((e) => e.name)).toEqual(['cameraMode', 'focus', 'state']);
   });
 
-  it('setFocus(idx, {keepObserve}) re-anchors in observe without the navigate flip', () => {
-    const h = makeHarness({ mode: 'navigate' });
-    h.focus.setFocus(1);
-    h.setCameraMode('observe');
-    h.uHide.value = 1; // observe-mode invariant: current focal hidden
-    h.busEvents.length = 0;
-    h.observe.cancelTransition.mockClear();
-    h.aim.cancel.mockClear();
-    h.observeControls.disable.mockClear();
-
-    h.focus.setFocus(2, { keepObserve: true });
-    // Stays in observe — none of the navigate-exit cleanup runs.
-    expect(h.getCameraMode()).toBe('observe');
-    expect(h.observe.cancelTransition).not.toHaveBeenCalled();
-    expect(h.aim.cancel).not.toHaveBeenCalled();
-    expect(h.observeControls.disable).not.toHaveBeenCalled();
-    // New focal is now the hidden one; no cameraMode event.
-    expect(h.uHide.value).toBe(2);
-    expect(h.busEvents.map((e) => e.name)).toEqual(['focus', 'state']);
-    // The consistent snap still ran: target lands on the new focal's live
-    // position (origin post-recentre, no perturbation) so the ride is clean.
-    expect(h.controls.target.length()).toBeLessThan(1e-9);
-  });
-
   it('setFocus(null) clamps controls.minDistance to ≤ current eye distance', () => {
     const h = makeHarness();
     h.focus.setFocus(1);

@@ -239,6 +239,19 @@ the entire warp duration when launched from observe — the reorient
 phase starts with the camera *at* the source star, and unhiding it
 would briefly render the disc from inside.
 
+**Collocated endpoints have no special case.** α Cen A/B (one catalog
+baseline) and ρ=0 inner pairs on their parent (Castor Bb→B) fly the
+normal warp. Their `distPc` sits below `WARP_DEGENERATE_DIST_PC`, where
+`AB/distPc` is float32 noise, so `startWarp` takes the travel direction
+from `camera.getWorldDirection` instead; the reorient is minimal and the
+near-zero flight lands via `finishWarp` → `swapObserveAnchor` (observe)
+or `setFocus` (navigate). Mid-Fly recentre never fires (the camera stays
+farther from the destination than ¼·|AB| the whole flight), exactly as
+for any two very-close stars, so the arrival is identical to the proven
+close-pair path. Do **not** re-add a degenerate `setFocus`/`swapObserveAnchor`
+shortcut: changing focus outside `finishWarp` leaves `controls.target`
+stale and jolts the focal-frame ride.
+
 ## Distance-label-as-warp-trigger UI
 
 `index.html` wraps the distance label and a static `→ Warp` sibling

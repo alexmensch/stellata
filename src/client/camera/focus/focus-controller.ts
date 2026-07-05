@@ -87,10 +87,7 @@ export interface FocusOps {
    *  the focus-state book-keeping. No event emit; caller decides when
    *  to fan out 'focus' / 'state'. */
   recenterFocusToStar(idx: number): THREE.Vector3 | null;
-  /** `keepObserve` re-anchors a collocated-star warp in place without the
-   *  observe→navigate exit (WarpController's degenerate branch); ignored
-   *  outside observe or when `idx` is null. */
-  setFocus(idx: number | null, opts?: { keepObserve?: boolean }): void;
+  setFocus(idx: number | null): void;
   setFocusedCloud(idx: number | null): void;
   /** Distance-vector slots — cleared on warp arrival regardless of
    *  which kind the warp targeted. */
@@ -259,7 +256,7 @@ export class FocusController implements FocusOps {
 
   // ─── star/cloud focus FSM ──────────────────────────────────────────
 
-  setFocus(idx: number | null, opts: { keepObserve?: boolean } = {}): void {
+  setFocus(idx: number | null): void {
     // Star and cloud focus are mutually exclusive — selecting either one
     // clears the other. Both setters end up here for the cloud-clear leg
     // so the cloud-focus event always fires before the star-focus event,
@@ -278,32 +275,21 @@ export class FocusController implements FocusOps {
     // Snap rather than animate because a transition needs the original
     // anchor to mean anything.
     if (this.deps.getCameraMode() === 'observe') {
-      if (opts.keepObserve && idx !== null) {
-        // Re-anchor within observe onto a collocated star (the ρ=0
-        // inner-pair-on-parent warp, Castor Bb → B): keep the mode, just
-        // move which focal is hidden. The recenterFocusToStar + target snap
-        // below then land controls.target on the new star, so the
-        // focal-frame ride stays continuous — routing through the
-        // navigate-exit path instead would leave target stale and jolt the
-        // camera off the star.
-        this.deps.uHideFocusIdxRef.value = idx;
-      } else {
-        // Snap-exit observe BEFORE the focus mutation runs: an in-flight
-        // 'enter' / 'exit' transition references the OLD focal star via
-        // fromPos/toPos and must be dropped before the floating-origin
-        // recentre downstream. This path deliberately does NOT touch
-        // controls.target or call controls.update() — the camera is at
-        // local (0,0,0) right now and target is set by the
-        // recenterFocusToStar block below.
-        this.deps.getObserve().cancelTransition();
-        this.deps.aim.cancel();
-        this.deps.setCameraModeValue('navigate');
-        this.deps.uHideFocusIdxRef.value = -1;
-        this.deps.observeControls.disable();
-        alignCameraUpToQuaternion(this.deps.camera);
-        this.deps.controls.enabled = true;
-        this.deps.bus.emit('cameraMode', 'navigate');
-      }
+      // Snap-exit observe BEFORE the focus mutation runs: an in-flight
+      // 'enter' / 'exit' transition references the OLD focal star via
+      // fromPos/toPos and must be dropped before the floating-origin
+      // recentre downstream. This path deliberately does NOT touch
+      // controls.target or call controls.update() — the camera is at
+      // local (0,0,0) right now and target is set by the
+      // recenterFocusToStar block below.
+      this.deps.getObserve().cancelTransition();
+      this.deps.aim.cancel();
+      this.deps.setCameraModeValue('navigate');
+      this.deps.uHideFocusIdxRef.value = -1;
+      this.deps.observeControls.disable();
+      alignCameraUpToQuaternion(this.deps.camera);
+      this.deps.controls.enabled = true;
+      this.deps.bus.emit('cameraMode', 'navigate');
     }
     // Recenter the floating origin only when *focusing* a star. The new
     // origin snaps to the focal star's absolute position, so close-range
