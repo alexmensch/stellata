@@ -21,7 +21,8 @@ from stage2_resolve import (  # noqa: E402
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import (  # noqa: E402
-    OrbitElements, iter_decomposing_pairs, kepler_semimajor_axis_au,
+    OrbitElements, first_astrometry_field_per_system,
+    iter_decomposing_pairs, kepler_semimajor_axis_au,
 )
 from stage5_optical import OpticalClassification  # noqa: E402
 from mass_estimate import (  # noqa: E402
@@ -296,20 +297,9 @@ def compute_system_anchors(
     The first resolved component in a system wins the anchor slot; on a
     tie the primary takes precedence over the secondary.
     """
-    out: dict[str, SystemAnchor] = {}
-    for pair, primary, secondary, p_ast, s_ast in iter_decomposing_pairs(
-        pairs, components, astrometry,
-    ):
-        if pair.wds_id in out:
-            continue
-        pos = _position_pc(p_ast)
-        if pos is not None:
-            out[pair.wds_id] = pos
-            continue
-        pos = _position_pc(s_ast)
-        if pos is not None:
-            out[pair.wds_id] = pos
-    return out
+    return first_astrometry_field_per_system(
+        pairs, components, astrometry, _position_pc,
+    )
 
 
 def _resolve_position(

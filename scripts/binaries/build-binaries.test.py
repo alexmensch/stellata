@@ -3244,6 +3244,57 @@ class SelectOrbitTests(unittest.TestCase):
         )
         self.assertEqual(via, "gaia_nss")
 
+    def test_nss_rejected_when_wds_separation_far_exceeds_orbit(self) -> None:
+        # υ⁴ Eri shape: a 0.97-day inner NSS orbit on the blended
+        # primary, partner unresolved (passes the distinct-source gate),
+        # but the WDS pair is 5.5″ wide at ~54 pc (~297 AU) — orders of
+        # magnitude too wide for a sub-day orbit at any mass, so the
+        # separation-sanity gate rejects and the wide pair routes to none.
+        nss_row = _nss_orbital_row(period_days=0.9702)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        orbit, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(18.5), secondary_astrometry=_ast(18.5),
+            orb6_for_pair=[], indices=idx,
+            wds_rho_arcsec=5.5,
+        )
+        self.assertEqual(via, "none")
+        self.assertIsNone(orbit)
+
+    def test_nss_kept_when_pair_is_sub_resolution(self) -> None:
+        # The subdivide.py-synthesized inner pair (the orbit's true home)
+        # is sub-resolution: ρ = 0.0. The gate can't evaluate a zero
+        # separation, so it stays consistent and the orbit attaches.
+        nss_row = _nss_orbital_row(period_days=0.9702)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="Aa", is_primary=True)
+        sec = _resolved(gaia=42, component="Ab", is_primary=False)
+        _, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(18.5), secondary_astrometry=_ast(18.5),
+            orb6_for_pair=[], indices=idx,
+            wds_rho_arcsec=0.0,
+        )
+        self.assertEqual(via, "gaia_nss")
+
+    def test_nss_kept_when_wds_separation_consistent(self) -> None:
+        # A genuine resolved-scale NSS pair: 200-day orbit, ρ = 0.05″ at
+        # 100 pc (~5 AU) sits well inside the Kepler upper-bound envelope,
+        # so the orbit attaches.
+        nss_row = _nss_orbital_row(period_days=200.0)
+        idx = _indices_for_orbit(src_to_nss={42: nss_row})
+        prim = _resolved(gaia=42, component="A", is_primary=True)
+        sec = _resolved(gaia=None, component="B", is_primary=False)
+        _, via = bb.select_orbit(
+            primary=prim, secondary=sec,
+            primary_astrometry=_ast(10.0), secondary_astrometry=_ast(10.0),
+            orb6_for_pair=[], indices=idx,
+            wds_rho_arcsec=0.05,
+        )
+        self.assertEqual(via, "gaia_nss")
+
     def test_orb6_grade_tiebreak_lowest_wins(self) -> None:
         idx = _indices_for_orbit()
         prim = _resolved(gaia=42, component="A", is_primary=True)
@@ -3323,6 +3374,36 @@ class SelectOrbitTests(unittest.TestCase):
         self.assertEqual(via, "orb6_spectroscopic")
 
 
+class NssSeparationConsistentTests(unittest.TestCase):
+    def test_wide_separation_for_short_period_is_inconsistent(self) -> None:
+        row = _nss_orbital_row(period_days=0.9702)
+        self.assertFalse(
+            bb._nss_separation_consistent(row, wds_rho_arcsec=5.5, plx_mas=18.5)
+        )
+
+    def test_missing_or_zero_rho_is_consistent(self) -> None:
+        row = _nss_orbital_row(period_days=0.9702)
+        self.assertTrue(
+            bb._nss_separation_consistent(row, wds_rho_arcsec=None, plx_mas=18.5)
+        )
+        self.assertTrue(
+            bb._nss_separation_consistent(row, wds_rho_arcsec=0.0, plx_mas=18.5)
+        )
+
+    def test_missing_parallax_is_consistent(self) -> None:
+        row = _nss_orbital_row(period_days=0.9702)
+        self.assertTrue(
+            bb._nss_separation_consistent(row, wds_rho_arcsec=5.5, plx_mas=None)
+        )
+
+    def test_missing_period_is_consistent(self) -> None:
+        row = _nss_orbital_row(period_days=0.9702)
+        row["period"] = ""
+        self.assertTrue(
+            bb._nss_separation_consistent(row, wds_rho_arcsec=5.5, plx_mas=18.5)
+        )
+
+
 class IterDecomposingPairsTests(unittest.TestCase):
     def test_skips_non_decomposing_pair(self) -> None:
         # Pair "ABC" doesn't split (3-letter unbraced is ambiguous).
@@ -3394,7 +3475,7 @@ class IterDecomposingPairComponentsTests(unittest.TestCase):
 class SelectOrbitsAllTests(unittest.TestCase):
     def test_per_pair_emission_order_matches_pairs(self) -> None:
         nss_row = _nss_orbital_row(period_days=200.0)
-        p1 = _wds_pair(wds_id="W1", components="AB")
+        p1 = _wds_pair(wds_id="W1", components="AB", rho_last=0.0)
         p2 = _wds_pair(wds_id="W2", components="AB")
         comps = [
             _resolved(gaia=42, wds_id="W1", component="A", is_primary=True),
