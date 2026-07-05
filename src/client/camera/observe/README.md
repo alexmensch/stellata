@@ -155,7 +155,11 @@ star-only by design.
 **Picking a new location** routes through `warpTo(idx)` instead of
 `focusStar(idx)`. The warp animation flies between anchors and the
 post-arrival slerp leaves the camera pointing in the original celestial
-direction from the new vantage.
+direction from the new vantage. When the new location is collocated with
+the current one (`distPc < 1e-6` — α Cen A/B, or a ρ=0 inner pair on its
+parent like Castor Bb→B), `startWarp`'s degenerate branch re-anchors via
+`swapObserveAnchor` rather than `setFocus`, so observe stays engaged
+instead of dropping to navigate.
 
 **X button (clear focus from observe):** `unfocus()` detects observe +
 focused-star and immediately clears focus *before* starting the

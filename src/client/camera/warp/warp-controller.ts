@@ -272,17 +272,22 @@ export class WarpController {
     const AB = new THREE.Vector3().subVectors(B, A);
     const distPc = AB.length();
     if (distPc < 1e-6) {
-      // Source and destination share a world position — e.g. AT-HYG
-      // stores α Cen A (HIP 71683) and B (HIP 71681) at identical
-      // x0/y0/z0 because the ~17.6 AU separation is below catalog
-      // precision. The camera has nowhere to fly, but switching focus
-      // still gives feedback (search row, focus ring, scale bar, vector
-      // all retarget). Apply the destination's focus + emit immediately
-      // — equivalent to a degenerate warp that lands at u=0. Route
-      // through setFocus / setFocusedCloud so their own observe-cleanup
-      // branches fire (the FocusTarget contract doesn't model those).
-      if (dest.kind === 'star') focus.setFocus(dest.idx);
-      else focus.setFocusedCloud(dest.idx);
+      // Source and destination share a world position — α Cen A/B stored at
+      // identical AT-HYG x0/y0/z0 (~17.6 AU below catalog precision), or a
+      // ρ=0 synthesized inner pair collocated with its parent (Castor Bb on
+      // B). No camera flight; just re-anchor with immediate feedback.
+      // OBSERVE must NOT route through setFocus — its observe-cleanup branch
+      // flips cameraMode to navigate, dropping the user out of observe.
+      // swapObserveAnchor swaps the anchor in place and stays in observe;
+      // observeControls were disabled above so re-enable them.
+      if (returnToObserve) {
+        this.swapObserveAnchor(dest.idx);
+        this.deps.observeControls.enable();
+      } else if (dest.kind === 'star') {
+        focus.setFocus(dest.idx);
+      } else {
+        focus.setFocusedCloud(dest.idx);
+      }
       return;
     }
     const forward = AB.clone().divideScalar(distPc);

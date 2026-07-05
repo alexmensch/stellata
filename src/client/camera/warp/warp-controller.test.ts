@@ -402,6 +402,22 @@ describe('WarpController — lifecycle + idempotency', () => {
     expect(h.warp.isActive()).toBe(false);
     expect(h.focus.calls.setFocusedCloud).toEqual([5]);
   });
+
+  it('coincident source/destination in OBSERVE re-anchors via swapObserveAnchor, stays in observe (no setFocus)', () => {
+    const h = makeHarness({ mode: 'observe' });
+    // Collocated stars — the ρ=0 inner-pair-on-parent case (Castor Bb → B).
+    seedStarStar(h, new THREE.Vector3(10, 0, 0), new THREE.Vector3(10, 0, 0));
+    h.warp.warpTo(1);
+    expect(h.warp.isActive()).toBe(false);
+    // setFocus's observe-cleanup branch would flip cameraMode to navigate —
+    // the bug. Observe must route through the anchor swap instead.
+    expect(h.focus.calls.setFocus).toEqual([]);
+    expect(h.focus.calls.recenterFocusToStar).toEqual([1]);
+    expect(h.uHide.value).toBe(1);
+    expect(h.observeControls.enable).toHaveBeenCalled();
+    const focusEmits = h.busEvents.filter((e) => e.name === 'focus');
+    expect(focusEmits[focusEmits.length - 1].payload).toBe(1);
+  });
 });
 
 describe('WarpController — getWarpInfo / getWarpPhase', () => {
