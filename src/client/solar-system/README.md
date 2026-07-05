@@ -132,11 +132,14 @@ saturates at `2³⁰` (~1.07e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
 live.
 
-Jump-to-date is a native `datetime-local` calendar picker whose value is
+Jump-to-date is a native `datetime-local` input whose value is
 read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
-in `time.ts`), even though the readout displays UTC — deliberate, so the
-picker matches the operator's wall clock. Reset (⟲) already snaps to
-live-now at 1×, so there is intentionally no separate "now" jump.
+in `time.ts`), even though the readout displays UTC — deliberate, so it
+matches the operator's wall clock. The calendar-popup indicator is hidden
+in CSS (`.scrubber-jump input::-webkit-calendar-picker-indicator`): the
+segmented fields are typed by hand, avoiding both the out-of-place native
+picker and the format-error trap of a plain text box. Reset already snaps
+to live-now at 1×, so there is intentionally no separate "now" jump.
 
 `time-readout.ts` renders the live UTC timestamp the rendered positions
 correspond to in `.ui-bottom`'s `#time-readout`. **Always visible** —
