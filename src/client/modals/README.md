@@ -1,7 +1,8 @@
 # Modal overlays
 
-About / Credits, Share, Help. Modals are imperatively shown / hidden;
-ESC / backdrop / close-button binding is shared.
+About / Credits, Share, Help, the welcome splash, and the mobile
+advisory. Modals are imperatively shown / hidden; ESC / backdrop /
+close-button binding is shared via `modal-dismiss.ts`.
 
 ## Brand box, About/Credits modal, and Share
 
@@ -43,3 +44,23 @@ affect the brand.
 The `?` keyboard-shortcut surface. Same dismissal contract as About /
 Credits — `modal-dismiss.ts` binds ESC + backdrop + close-button on
 every `.modal` card; new modals get the same behaviour for free.
+
+## Mobile advisory
+
+`mobile-advisory.ts` shows a soft, dismiss-once warning that Stellata
+isn't optimised for small screens / touch and that a keyboard is
+effectively required. It is a soft warning, not a hard gate.
+
+`maybeShowMobileAdvisory()` is called from `main.ts` and returns
+whether it showed — when it does, the caller suppresses the welcome
+modal so only one splash competes for the screen. The show heuristic
+lives in `mobile-advisory-pure.ts` (`shouldAdviseMobile`): a narrow
+viewport (`< MOBILE_ADVISORY_MAX_WIDTH`) that also looks touch-only
+(`matchMedia('(pointer: coarse)')` and `navigator.maxTouchPoints > 0`),
+so an iPad-with-keyboard passes through; it falls back to
+viewport-width-only when the pointer/touch signals are unavailable.
+Dismissal writes `stellata.mobile-advisory-dismissed` unconditionally,
+so the splash appears at most once per browser.
+
+The broader minimum-viewport / WebGL2-capability gating decision
+(`stellata-qsg`) is out of scope here — this is only the advisory.

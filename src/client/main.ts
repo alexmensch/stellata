@@ -23,6 +23,7 @@ import { bindPanelLayout } from './ui/panel-layout';
 import { bindWarpButton } from './camera/warp/warp-button';
 import { bindModeToggle } from './camera/controls/mode-toggle';
 import { maybeShowInfoModal } from './modals/info-modal';
+import { maybeShowMobileAdvisory } from './modals/mobile-advisory';
 import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
@@ -274,7 +275,11 @@ async function main() {
       bindBrandModals();
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, { toggleDebugPanel: debugTools.panel });
-      maybeShowInfoModal(catalog.count);
+      // On a bare touch device the mobile advisory takes the one splash
+      // slot; otherwise the welcome modal shows as usual.
+      if (!maybeShowMobileAdvisory()) {
+        maybeShowInfoModal(catalog.count);
+      }
     }, 400);
 
   } catch (err) {
