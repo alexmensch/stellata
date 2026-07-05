@@ -751,7 +751,7 @@ function composeCompanionName(
     row, primary, primaryStar, constellations, systemPrimaryStar, true,
   );
   if (!base) return null;
-  return joinComponentName(base, canonicalComp);
+  return joinComponentName(stripDoubledParentToken(base, canonicalComp), canonicalComp);
 }
 
 /** "<base> <comp>", or just base when comp is empty. */
@@ -812,12 +812,33 @@ function resolveCompanionNameBase(
   const humanName = starNameBase(primaryStar, constellations)
     ?? starNameBase(systemPrimaryStar, constellations);
   if (humanName !== null) return humanName;
-  // Last resort for a wholly name-less system (dch.88): the primary's
-  // catalogue designation (HIP/HD/HR/Gl), local anchor then system primary,
-  // so the companion reads "HIP 22812 Bb" rather than "Unnamed #idx".
+  // Last resort for a wholly name-less system: the primary's catalogue
+  // designation (HIP/HD/HR/Gl), local anchor then system primary, so the
+  // companion reads "HIP 22812 Bb" rather than the "Unnamed #idx" sentinel.
   if (!allowDesignation) return null;
   return starNameBase(primaryStar, constellations, true)
     ?? starNameBase(systemPrimaryStar, constellations, true);
+}
+
+/** Strip a trailing parent-component token from a name base when the
+ *  component about to be appended would double it. A subdivided inner
+ *  pair's local anchor is the parent component's own record, whose name
+ *  already carries that letter (Castor's YY Gem primary Ca resolves onto
+ *  the "Castor C" record); joining the canonical comp "Cb" would yield
+ *  "Castor C Cb". The canonical comp already encodes the full path from
+ *  the root, so the parent letter belongs to the comp, not the base —
+ *  "Castor" + "Cb" = "Castor Cb". Only fires when the base ends in exactly
+ *  the comp's parent token (" C" for "Cb", " Aa" for "Aa1"); a base like
+ *  "15 Mon" or "HIP 22812" is untouched. */
+export function stripDoubledParentToken(
+  base: string,
+  canonicalComp: string,
+): string {
+  const parentTok = parentComponentToken(canonicalComp);
+  if (parentTok === null) return base;
+  const suffix = ` ${parentTok}`;
+  if (base.endsWith(suffix)) return base.slice(0, base.length - suffix.length);
+  return base;
 }
 
 function constellationCode(
