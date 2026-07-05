@@ -226,7 +226,7 @@ canonical tag set is `RESOLVE_VIA_VALUES`:
 
 | Tag | When it fires |
 | --- | --- |
-| `orb6_hip` | The pair has an ORB6 entry with a published HIP for the primary, and Gaia DR3's `hipparcos2_best_neighbour` cross-walk covers that HIP. Strongest tier — ORB6's HIP attribution is human-curated. |
+| `orb6_hip` | The pair has an ORB6 entry with a published HIP for the primary, and Gaia DR3's `hipparcos2_best_neighbour` cross-walk covers that HIP. Strongest tier — ORB6's HIP attribution is human-curated — but gated on a WDS-coordinate sanity check (`_orb6_hip_matches_pair_coord`): ORB6 occasionally carries a typo'd HIP that points at an unrelated star tens of degrees away (ε Equ STF2737 lists HIP 103579 for the true HIP 103569), so a HIP whose known position sits >5′ from the pair's WDS precise coord is dropped entirely and the component falls through to the coordinate-validated tiers below. |
 | `athyg_gaia_native` | HIP-mediated: ORB6's HIP, an AT-HYG row's HIP, or a CCDM sibling's HIP routes through AT-HYG's own `gaia` column when Gaia's published HIP→DR3 cross-walk misses (AT-HYG's source_id coverage is broader). Also reused for the position-match pass below, which lands on the same AT-HYG-native field by a different path. |
 | `simbad_xid` | The component is in `data/simbad/simbad_wds_xids.tsv` — SIMBAD's curated `(WDS-J id, component letter) → (Gaia DR3 source_id, HIP)` map. Reaches sub-arcsec components that ORB6 doesn't enumerate (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). |
 | `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord (PM-propagated from J1991.25). Routes that HIP through Gaia's HIP cross-walk and AT-HYG-native fall-through. |

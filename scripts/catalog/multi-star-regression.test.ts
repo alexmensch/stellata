@@ -91,8 +91,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
 // (a_via=kepler_mass_estimate) and started animating: blended tight
 // pairs whose NSS ω is the photocentre's (π off the relative orbit's
 // when the primary dominates the flux), so R(epoch) routinely lands
-// opposite the measured WDS quadrant.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 702;
+// opposite the measured WDS quadrant. The 702 → 705 step is orbit-
+// bearing inner pairs that re-anchored onto their correct system star
+// once the Stage 2 ORB6-HIP coordinate gate rejected typo'd HIPs — the
+// same sub-resolution tangent-bake-vs-R(epoch) class, now placed right.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 705;
 
 // ---- Corpus row types ----------------------------------------------------
 
