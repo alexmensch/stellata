@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setUnit } from '../../ui/distance-util';
+import { J2000_JD } from '../../util/astronomy-constants';
+import {
+  FLAG_HAS_ORBIT,
+  FLAG_HAS_INCLINATION,
+  NO_PARENT,
+  type BinariesData,
+  type BinaryRelation,
+} from '../../binaries/binaries-loader';
 import { formatStarHover, type StarHoverFormatContext } from './star-hover-format';
 
 // Tiny fixture builder. Three stars by default — idx 0 is the named
@@ -36,8 +44,63 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
     constellations,
     periodDays,
     amplitudeMag,
+    binaries: null,
+    nowJd: J2000_JD,
     ...overrides,
   };
+}
+
+// Binary-relation fixture builders. Defaults are NaN for every orbital
+// element so a test opts into exactly the fields its tier needs.
+function makeRelation(o: Partial<BinaryRelation>): BinaryRelation {
+  return {
+    primaryIdx: 0,
+    secondaryIdx: 1,
+    flags: 0,
+    parentRelation: NO_PARENT,
+    pDays: NaN,
+    tJd: NaN,
+    e: NaN,
+    aAU: NaN,
+    iRad: NaN,
+    omegaRad: NaN,
+    OmegaRad: NaN,
+    q: NaN,
+    sepArcsec: NaN,
+    paDeg: NaN,
+    sepPaEpochJd: J2000_JD,
+    ...o,
+  };
+}
+
+function makeBinaries(relations: BinaryRelation[]): BinariesData {
+  const primaryIdxToRelations = new Map<number, number[]>();
+  const secondaryIdxToRelation = new Map<number, number>();
+  relations.forEach((r, i) => {
+    const arr = primaryIdxToRelations.get(r.primaryIdx);
+    if (arr) arr.push(i);
+    else primaryIdxToRelations.set(r.primaryIdx, [i]);
+    if (!secondaryIdxToRelation.has(r.secondaryIdx)) {
+      secondaryIdxToRelation.set(r.secondaryIdx, i);
+    }
+  });
+  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelation };
+}
+
+// idx 0 = primary "Sirius A", idx 1 = secondary "Sirius B". Reuses
+// buildCtx's 3-slot position/constellation arrays.
+function binaryCtx(
+  relations: BinaryRelation[],
+  overrides: Partial<StarHoverFormatContext> = {},
+): StarHoverFormatContext {
+  return buildCtx({
+    starLabels: new Map<number, string>([
+      [0, 'Sirius A'],
+      [1, 'Sirius B'],
+    ]),
+    binaries: makeBinaries(relations),
+    ...overrides,
+  });
 }
 
 describe('formatStarHover', () => {
@@ -95,5 +158,100 @@ describe('formatStarHover', () => {
   it('falls back to "Unnamed #idx" when starLabels has no entry', () => {
     const ctx = buildCtx({ starLabels: new Map() });
     expect(formatStarHover(0, ctx).name).toBe('Unnamed #0');
+  });
+});
+
+describe('formatStarHover — binary companions', () => {
+  beforeEach(() => setUnit('pc'));
+
+  it('Tier 1: secondary card names the orbit, period, eccentricity, and live separation', () => {
+    // e=0.52, i=0, ω=Ω=0, T=nowJd=J2000 → M=0, E=0, X=0.48, Y=0 →
+    // (north, east, radial) = (a·0.48, 0, 0) = (4.8, 0, 0) AU → sep 4.8.
+    const ctx = binaryCtx([
+      makeRelation({
+        flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION,
+        pDays: 79.91 * 365.25,
+        tJd: J2000_JD,
+        e: 0.52,
+        aAU: 10,
+        iRad: 0,
+        omegaRad: 0,
+        OmegaRad: 0,
+        q: 0.3,
+      }),
+    ]);
+    const out = formatStarHover(1, ctx);
+    expect(out.name).toBe('Sirius B');
+    expect(out.lines).toContain('Orbits Sirius A · ρ = 4.8 AU');
+    expect(out.lines).toContain('P = 79.91 yr · e = 0.52');
+  });
+
+  it('Tier 2: secondary card flags the unknown orbit', () => {
+    const ctx = binaryCtx([
+      makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 * 365.25 }),
+    ]);
+    const out = formatStarHover(1, ctx);
+    expect(out.name).toBe('Sirius B');
+    expect(out.lines).toContain('Orbits Sirius A');
+    expect(out.lines).toContain('P = 9.21 yr (unknown orbit)');
+  });
+
+  it('Tier 3: secondary card quotes the static sep + PA at its epoch', () => {
+    const ctx = binaryCtx([
+      makeRelation({ flags: 0, sepArcsec: 5.3, paDeg: 132, sepPaEpochJd: J2000_JD }),
+    ]);
+    const out = formatStarHover(1, ctx);
+    expect(out.lines).toContain('Visual companion of Sirius A');
+    expect(out.lines).toContain('ρ = 5.3″ · PA 132° at J2000.0');
+  });
+
+  it('renders a sub-year period in days (spectroscopic pair)', () => {
+    const ctx = binaryCtx([
+      makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 }),
+    ]);
+    expect(formatStarHover(1, ctx).lines).toContain('P = 9.21 d (unknown orbit)');
+  });
+
+  it('primary card names the sole companion', () => {
+    const ctx = binaryCtx([
+      makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 * 365.25 }),
+    ]);
+    const out = formatStarHover(0, ctx);
+    expect(out.name).toBe('Sirius A');
+    expect(out.lines).toContain('1 known companion: Sirius B');
+  });
+
+  it('primary card lists every companion on its own line under a count heading', () => {
+    const ctx = binaryCtx(
+      [
+        makeRelation({ primaryIdx: 0, secondaryIdx: 1, flags: FLAG_HAS_ORBIT, pDays: 100 }),
+        makeRelation({ primaryIdx: 0, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, pDays: 200 }),
+      ],
+      {
+        starLabels: new Map<number, string>([
+          [0, 'Sirius A'],
+          [1, 'Sirius B'],
+          [2, 'Sirius C'],
+        ]),
+      },
+    );
+    const out = formatStarHover(0, ctx);
+    expect(out.lines).toContain('2 known companions:');
+    expect(out.lines).toContain('Sirius B');
+    expect(out.lines).toContain('Sirius C');
+  });
+
+  it('adds no companion line for a star in no relation', () => {
+    const ctx = binaryCtx([
+      makeRelation({ primaryIdx: 0, secondaryIdx: 1, flags: FLAG_HAS_ORBIT, pDays: 100 }),
+    ]);
+    // idx 2 is neither a primary nor a secondary here.
+    const out = formatStarHover(2, ctx);
+    expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
+  });
+
+  it('drops companion lines entirely when binaries.bin is absent', () => {
+    const out = formatStarHover(1, binaryCtx([], { binaries: null }));
+    expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
   });
 });
