@@ -31,14 +31,16 @@ export function bindKeyboardShortcuts(
 ) {
   const help = bindHelpModal();
 
-  // The "go" picker reuses the topbar's existing `.search-wrap` widget —
+  // The "go" picker reuses the topbar's existing `#topbar-search` widget —
   // whatever inputs `bindSearch` puts there (Focus / To / Location) are
-  // what the modal exposes. The "constellation" picker does the same
-  // with `#con-typeahead`. We move the live element into the modal card
-  // on open, restore it on close — so all wiring (Fuse search, OBSERVE
-  // mode handling, blur-pick race) keeps working unchanged.
+  // what the modal exposes. Selecting by id (not `.search-wrap`) matters:
+  // the hidden Find widget also carries `.search-wrap`, so a class query
+  // would grab it instead. The "constellation" picker does the same with
+  // `#con-typeahead`. We move the live element into the modal card on open,
+  // restore it on close — so all wiring (Fuse search, OBSERVE mode
+  // handling, blur-pick race) keeps working unchanged.
   const goModal = bindRelocateModal({
-    source: () => document.querySelector<HTMLElement>('.search-wrap'),
+    source: () => document.getElementById('topbar-search'),
     focusTarget: () => {
       const toRow = document.getElementById('search-to-row');
       const toInput = document.getElementById('search-to') as HTMLInputElement | null;
