@@ -119,3 +119,21 @@ export class VirtualClock {
   fastForward(): void { this.setRate(nextFastForwardRate(this.rate)); }
   rewind(): void { this.setRate(nextRewindRate(this.rate)); }
 }
+
+export type TransportAction = 'rewind' | 'play' | 'pause' | 'fastForward' | 'reset';
+
+/** Transport-row spec shared by the debug-panel scrubber and the first-class
+ *  scrubber widget so the two never diverge on which clock method a control
+ *  drives. Each surface builds its own (differently-styled) buttons from it;
+ *  callers add per-surface side-effects (readout refresh, picker sync). */
+export const TRANSPORT_BUTTONS: ReadonlyArray<{
+  action: TransportAction;
+  glyph: string;
+  title: string;
+}> = [
+  { action: 'rewind', glyph: '⏪', title: 'Rewind — halve, or reverse across 1×' },
+  { action: 'play', glyph: '▶', title: 'Play — resume last forward rate' },
+  { action: 'pause', glyph: '⏸', title: 'Pause' },
+  { action: 'fastForward', glyph: '⏩', title: 'Fast-forward — double, or forward across 1×' },
+  { action: 'reset', glyph: '⟲', title: 'Reset to live now at 1×' },
+];

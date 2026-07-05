@@ -26,7 +26,14 @@ src/client/solar-system/
                                   Single source of truth for the scrubber.
   time-scrubber.ts                Debug-panel "Time" section — transport
                                   controls (play/pause/FF/RW/reset/jump)
-                                  driving the VirtualClock.
+                                  driving the VirtualClock. Builds its
+                                  buttons from time.ts's TRANSPORT_BUTTONS.
+  time-scrubber-widget.ts (+pure) First-class scrubber in the bottom-right
+                                  meta slot (T key / click the readout).
+                                  Same VirtualClock + TRANSPORT_BUTTONS as
+                                  the debug section; app-styled, with a
+                                  human "time / second" rate readout
+                                  (formatRatePerSecond, pure + tested).
   sky-truth.test.ts               Regression corpus: the ephemeris →
                                   ecliptic→ICRS chain vs JPL Horizons
                                   RA/Dec frozen in data/horizons/, plus
@@ -148,6 +155,27 @@ across browsers.
 drives variable-star pulsation and keeps ticking at
 `uSecondsPerDay = 0.2` regardless of what `t` is. Variable-star phase
 must never read from `t`.
+
+## Time scrubber widget
+
+`time-scrubber-widget.ts` promotes the debug-panel scrubber to a
+first-class control living in the bottom-right `.meta` slot. Collapsed,
+`.meta` shows the star count + live UTC readout (the readout is a button
+that opens the scrubber); the `T` shortcut and clicking the readout both
+toggle it. Opened, it replaces that with a model-time readout + transport
+controls + a `datetime-local` jump, and an `×` collapses back. Toggling
+open/closed never changes the clock — only **Reset** returns to live-now
+at 1×, matching the debug section.
+
+Both scrubbers drive the same `VirtualClock` and build their transport
+rows from `time.ts`'s `TRANSPORT_BUTTONS`, so the control set can't
+diverge. The widget shows rate as a human "time / second" phrase
+(`formatRatePerSecond`, pure + unit-tested) rather than the debug
+panel's raw `×N`. Colours ride the root CSS tokens so chart mode
+(`body.monochrome`) adapts; only the translucent panel background carries
+an explicit light-mode override in `styles.css`. Catalogue / proper-motion
+advance stays out — that's the deferred `stellata-nmu` epic; this widget
+is the clock-only slice.
 
 ## Planet rendering
 

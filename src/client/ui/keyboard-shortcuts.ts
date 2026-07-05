@@ -21,6 +21,8 @@ export interface KeyboardShortcutsDeps {
   /** Reveal/dismiss the unified debug panel. Bound to the hidden
    *  triple-tap-D affordance. */
   toggleDebugPanel: () => void;
+  /** Open/close the first-class time scrubber. Bound to `T`. */
+  toggleTimeScrubber: () => void;
 }
 
 export function bindKeyboardShortcuts(
@@ -177,6 +179,10 @@ export function bindKeyboardShortcuts(
         break;
       case 'u': case 'U':
         toggleControlsHidden();
+        e.preventDefault();
+        break;
+      case 't': case 'T':
+        deps.toggleTimeScrubber();
         e.preventDefault();
         break;
       case 'o': case 'O':

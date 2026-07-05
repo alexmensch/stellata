@@ -347,6 +347,96 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Time-scrubber widget (promoted from the debug panel). Collapsed, the
+ * readout doubles as the open trigger; expanded, it's a small app-styled
+ * transport panel. Colours ride the root tokens so chart mode adapts; only
+ * the translucent panel background needs a light-mode override (like
+ * `.panel`). */
+.time-readout-btn {
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  cursor: pointer;
+  text-align: right;
+}
+.time-readout-btn:hover { color: var(--fg); }
+
+.scrubber {
+  text-align: left;
+  background: rgba(7, 9, 18, 0.85);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(6px);
+  padding: 8px 10px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.scrubber-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.scrubber-time {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.scrubber-close {
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.scrubber-close:hover { color: var(--fg); }
+.scrubber-rate {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.scrubber-controls { display: flex; gap: 4px; }
+.scrubber-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.scrubber-btn:hover { color: var(--fg); border-color: var(--border-strong); }
+.scrubber-btn:disabled { opacity: 0.4; cursor: default; }
+.scrubber-btn:disabled:hover { color: var(--fg-dim); border-color: var(--border); }
+.scrubber-jump { display: flex; gap: 4px; align-items: center; }
+.scrubber-jump input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(11, 16, 32, 0.7);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  padding: 3px;
+}
+.scrubber-jump-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.scrubber-jump-btn:hover { color: var(--fg); border-color: var(--border-strong); }
+body.monochrome .scrubber { background: rgba(255, 255, 255, 0.92); }
+body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
+
 .panel {
   overflow: hidden;
   background: rgba(7, 9, 18, 0.85);

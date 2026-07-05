@@ -1,6 +1,11 @@
 import type { Stellata } from '../stellata';
 import type { DebugSection } from '../debug/debug-panel';
-import { formatRate, toLocalDatetimeValue, parseLocalDatetimeValue } from './time';
+import {
+  formatRate,
+  toLocalDatetimeValue,
+  parseLocalDatetimeValue,
+  TRANSPORT_BUTTONS,
+} from './time';
 
 // Debug-panel "Time" section: transport controls over the VirtualClock
 // behind Stellata.getT(). Lets a developer scrub binary orbits and planet
@@ -29,12 +34,16 @@ export function buildTimeSection(stellata: Stellata): DebugSection {
     return b;
   };
 
-  const rewindBtn = makeButton('⏪', 'Rewind — halve, or reverse across 1×', () => clock.rewind());
-  const playBtn = makeButton('▶', 'Play — resume last forward rate', () => clock.play());
-  const pauseBtn = makeButton('⏸', 'Pause', () => clock.pause());
-  const ffBtn = makeButton('⏩', 'Fast-forward — double, or forward across 1×', () => clock.fastForward());
-  const resetBtn = makeButton('⟲', 'Reset to live now at 1×', () => { clock.reset(); syncPickerToClock(); error.textContent = ''; });
-  row.append(rewindBtn, playBtn, pauseBtn, ffBtn, resetBtn);
+  const buttons: Partial<Record<string, HTMLButtonElement>> = {};
+  for (const spec of TRANSPORT_BUTTONS) {
+    buttons[spec.action] = makeButton(spec.glyph, spec.title, () => {
+      clock[spec.action]();
+      if (spec.action === 'reset') { syncPickerToClock(); error.textContent = ''; }
+    });
+  }
+  const playBtn = buttons.play!;
+  const pauseBtn = buttons.pause!;
+  row.append(buttons.rewind!, playBtn, pauseBtn, buttons.fastForward!, buttons.reset!);
 
   const jumpRow = document.createElement('div');
   jumpRow.style.cssText = 'display:flex; gap:4px; align-items:center;';
