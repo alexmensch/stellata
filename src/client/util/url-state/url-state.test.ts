@@ -374,9 +374,14 @@ describe('url-state', () => {
       expect(view.showMilkyway).toBe(false);
     });
 
-    it('round-trips unit=ly', () => {
+    it('round-trips unit=pc (ly is the default, so only pc is encoded)', () => {
+      const { view } = roundtrip({ unit: 'pc' });
+      expect(view.unit).toBe('pc');
+    });
+
+    it('unit=ly is the default and is not encoded', () => {
       const { view } = roundtrip({ unit: 'ly' });
-      expect(view.unit).toBe('ly');
+      expect(view.unit).toBeUndefined();
     });
 
     it('round-trips mode=observe', () => {
@@ -400,12 +405,12 @@ describe('url-state', () => {
         showGalacticGrid: true,
         showHud: true,
         showConstellation: false,
-        unit: 'ly',
+        unit: 'pc',
       });
       expect(view.showGalacticGrid).toBe(true);
       expect(view.showHud).toBe(true);
       expect(view.showConstellation).toBe(false);
-      expect(view.unit).toBe('ly');
+      expect(view.unit).toBe('pc');
     });
 
     it('default flags are not encoded (no flags byte)', () => {
@@ -548,7 +553,7 @@ describe('url-state', () => {
         span: 8,
         showGalacticGrid: true,
         showConstellation: false,
-        unit: 'ly',
+        unit: 'pc',
         focus: { kind: 'hip', id: 32349 },
         mode: 'observe',
         chart: true,
@@ -571,7 +576,7 @@ describe('url-state', () => {
       expect(out.span).toBeCloseTo(8, 1);
       expect(out.showGalacticGrid).toBe(true);
       expect(out.showConstellation).toBe(false);
-      expect(out.unit).toBe('ly');
+      expect(out.unit).toBe('pc');
       expect(out.focus).toEqual(view.focus);
       expect(out.mode).toBe('observe');
       expect(out.chart).toBe(true);

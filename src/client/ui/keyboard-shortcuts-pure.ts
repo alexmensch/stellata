@@ -7,6 +7,11 @@ export const D_TRIPLE_TAP_MS = 500;
 /** Number of D taps that fire the hidden debug-panel affordance. */
 export const D_TRIPLE_TAP_COUNT = 3;
 
+/** Window inside which two presses count as a double-tap (C picker
+ *  toggle, F fullscreen). */
+export const DOUBLE_TAP_MS = 200;
+export const DOUBLE_TAP_COUNT = 2;
+
 /**
  * Push a tap timestamp into a mutable rolling window, drop expired
  * entries, and report whether the window now contains enough taps to

@@ -8,7 +8,7 @@ export const LY_PER_PC = 3.2615638;
 // outer-Oort scale. The switch is one-way: pc-or-ly above, AU below.
 export const AU_SWITCH_PC = 0.01;
 
-let currentUnit: DistanceUnit = 'pc';
+let currentUnit: DistanceUnit = 'ly';
 const handlers: Array<(u: DistanceUnit) => void> = [];
 
 export function getUnit(): DistanceUnit { return currentUnit; }

@@ -22,7 +22,7 @@ behavioural changes propagate automatically.
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
 | `H` | Toggle `showHud` |
 | `S` | Toggle `showGalacticGrid` |
-| `F` | Toggle browser fullscreen (`fullscreen.ts`) |
+| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`). Single `F` is reserved for the find-object shortcut. |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
@@ -268,7 +268,8 @@ is steady across focus/unfocus and any line angle.
 `fullscreen.ts` calls `requestFullscreen()` on `document.documentElement`
 (the `<html>` element), not the canvas — every chrome container is a
 sibling of the canvas under `<body>`, so fullscreening the whole page
-keeps the panel/topbar/overlays visible. Bound to `F` only; there is no
+keeps the panel/topbar/overlays visible. Bound to a double-tap `F`-`F`
+(single `F` is reserved for the find-object shortcut); there is no
 in-app affordance. Esc handling is left entirely to the browser: the
 Fullscreen API reserves Esc for the exit and the exit is not cancelable
 by page code, so any attempt to layer app behaviour under a

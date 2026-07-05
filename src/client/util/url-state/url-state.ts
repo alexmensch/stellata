@@ -81,13 +81,13 @@ const INDEX_TO_PRESET: MagPresetName[] = ['naked-eye', 'binoculars', 'all'];
 
 // Flags byte — packed booleans + small enums. Each bit is "non-default":
 //   0 = grid on, 1 = HUD on, 2 = MC disabled, 3 = MW disabled,
-//   4 = unit ly, 5 = mode observe, 6 = chart on (only set when also
+//   4 = unit pc, 5 = mode observe, 6 = chart on (only set when also
 //   mode=observe — chart is observe-gated), 7 = constellations disabled.
 const FLAG_GRID         = 1 << 0;
 const FLAG_HUD          = 1 << 1;
 // bit 2 reserved (formerly FLAG_MC_DISABLED — molecular clouds shelved)
 const FLAG_MW_DISABLED  = 1 << 3;
-const FLAG_UNIT_LY      = 1 << 4;
+const FLAG_UNIT_PC      = 1 << 4;
 const FLAG_MODE_OBSERVE = 1 << 5;
 const FLAG_CHART        = 1 << 6;
 const FLAG_CON_DISABLED = 1 << 7;
@@ -696,7 +696,7 @@ function packFlags(v: DecodedView): number {
   if (v.showHud) f |= FLAG_HUD;
   if (v.showConstellation === false) f |= FLAG_CON_DISABLED;
   if (v.showMilkyway === false) f |= FLAG_MW_DISABLED;
-  if (v.unit === 'ly') f |= FLAG_UNIT_LY;
+  if (v.unit === 'pc') f |= FLAG_UNIT_PC;
   if (v.mode === 'observe') f |= FLAG_MODE_OBSERVE;
   // Chart only persists when observe is also active — chart-mode is an
   // observe-only feature, so emitting chart=on without mode=observe would
@@ -710,7 +710,7 @@ function unpackFlags(v: DecodedView, f: number): void {
   if (f & FLAG_HUD) v.showHud = true;
   if (f & FLAG_CON_DISABLED) v.showConstellation = false;
   if (f & FLAG_MW_DISABLED) v.showMilkyway = false;
-  if (f & FLAG_UNIT_LY) v.unit = 'ly';
+  if (f & FLAG_UNIT_PC) v.unit = 'pc';
   if (f & FLAG_MODE_OBSERVE) v.mode = 'observe';
   if (f & FLAG_CHART) v.chart = true;
 }
@@ -866,7 +866,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   const fov = stellata.getCameraFov();
   if (!approx(fov, DEFAULT_FOV)) view.fov = fov;
 
-  if (getUnit() === 'ly') view.unit = 'ly';
+  if (getUnit() === 'pc') view.unit = 'pc';
 
   // Star focus and cloud focus are mutually exclusive in Stellata, so at
   // most one is non-null. Sol focus is the default, encoded by *omitting*

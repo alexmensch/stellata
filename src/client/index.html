@@ -109,8 +109,8 @@
           <dd>Toggle the head-up display (HUD)</dd>
           <dt><kbd>S</kbd></dt>
           <dd>Toggle the galactic-coordinate sphere</dd>
-          <dt><kbd>F</kbd></dt>
-          <dd>Toggle fullscreen</dd>
+          <dt><kbd>F</kbd> <kbd>F</kbd></dt>
+          <dd>Double-tap to toggle fullscreen</dd>
           <dt><kbd>U</kbd></dt>
           <dd>Show/hide the controls</dd>
           <dt><kbd>+</kbd> / <kbd>−</kbd></dt>
@@ -152,6 +152,24 @@
         <label class="modal-dismiss">
           <input type="checkbox" id="info-dontshow" /> Don't show this again
         </label>
+      </div>
+    </div>
+
+    <div id="mobile-advisory-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-modal-dismiss></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mobile-advisory-title">
+        <button class="modal-close" type="button" data-modal-dismiss aria-label="Close">×</button>
+        <h2 id="mobile-advisory-title">Best on a desktop</h2>
+        <p>
+          Stellata isn't optimised for small screens or touch input yet.
+          For the full experience — search, keyboard shortcuts, and precise
+          camera control — open it on a desktop browser with a keyboard.
+        </p>
+        <p>
+          You're welcome to look around, but some controls will be awkward
+          without a keyboard and pointer.
+        </p>
+        <button class="link-btn" type="button" data-modal-dismiss>Continue anyway</button>
       </div>
     </div>
 
@@ -341,8 +359,8 @@
           <div class="group-body">
             <label class="sub-label">Units</label>
             <div class="toggle-group" id="unit-toggle">
-              <button class="toggle-btn on" data-unit="pc" type="button">parsecs</button>
-              <button class="toggle-btn" data-unit="ly" type="button">lightyears</button>
+              <button class="toggle-btn" data-unit="pc" type="button">parsecs</button>
+              <button class="toggle-btn on" data-unit="ly" type="button">lightyears</button>
             </div>
             <label class="checkbox-row" style="margin-top: 10px;">
               <input id="show-hud" type="checkbox" />
