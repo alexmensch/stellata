@@ -413,7 +413,7 @@ def resolve_via_ccdm(
     # right CCDM sibling, excluding whichever HIP the primary claimed.
     # ρ = 0 sub-resolution pairs are skipped outright: the prediction
     # lands on the primary's own coordinate, so a nearest-sibling pick
-    # is a coin flip that can bind another branch's HIP (4 Equ Ab
+    # is a coin flip that can bind another branch's HIP (1 Equ Ab
     # taking B's 103569). ``propagate_blend_identity`` gives those
     # secondaries the primary's identifiers instead.
     for c in components:
@@ -763,7 +763,7 @@ def iter_pair_athyg_matches(
     # primary's row when the secondary's own match misses. Skipped for
     # ρ = 0 sub-resolution pairs: the prediction lands on the primary's
     # own coordinate, and with the primary's row excluded the nearest
-    # match can only be a DIFFERENT component's row (4 Equ Ab taking
+    # match can only be a DIFFERENT component's row (1 Equ Ab taking
     # B's AT-HYG entry — wrong HIP, wrong photometry); the blend-inherit
     # branch below is the correct outcome for those pairs.
     for i, c in enumerate(components):
