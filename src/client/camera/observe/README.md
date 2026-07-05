@@ -158,8 +158,11 @@ post-arrival slerp leaves the camera pointing in the original celestial
 direction from the new vantage. When the new location is collocated with
 the current one (`distPc < 1e-6` — α Cen A/B, or a ρ=0 inner pair on its
 parent like Castor Bb→B), `startWarp`'s degenerate branch re-anchors via
-`swapObserveAnchor` rather than `setFocus`, so observe stays engaged
-instead of dropping to navigate.
+`setFocus(idx, { keepObserve: true })` — which runs setFocus's consistent
+recenter + target snap but skips the observe→navigate exit — so observe
+stays engaged with `controls.target` correctly on the new star (a plain
+`setFocus` would flip to navigate; re-anchoring without the target snap
+would leave the ride jolting the camera off the star).
 
 **X button (clear focus from observe):** `unfocus()` detects observe +
 focused-star and immediately clears focus *before* starting the

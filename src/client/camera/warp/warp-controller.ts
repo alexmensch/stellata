@@ -276,12 +276,12 @@ export class WarpController {
       // identical AT-HYG x0/y0/z0 (~17.6 AU below catalog precision), or a
       // ρ=0 synthesized inner pair collocated with its parent (Castor Bb on
       // B). No camera flight; just re-anchor with immediate feedback.
-      // OBSERVE must NOT route through setFocus — its observe-cleanup branch
-      // flips cameraMode to navigate, dropping the user out of observe.
-      // swapObserveAnchor swaps the anchor in place and stays in observe;
-      // observeControls were disabled above so re-enable them.
+      // In OBSERVE, `keepObserve` makes setFocus re-anchor in place (its
+      // consistent recenter + target snap, minus the navigate-exit) so the
+      // user stays in observe; observeControls were disabled above, so
+      // re-enable them.
       if (returnToObserve) {
-        this.swapObserveAnchor(dest.idx);
+        focus.setFocus(dest.idx, { keepObserve: true });
         this.deps.observeControls.enable();
       } else if (dest.kind === 'star') {
         focus.setFocus(dest.idx);

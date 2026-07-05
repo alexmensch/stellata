@@ -82,6 +82,7 @@ interface FocusFixture {
     recenterOrigin: number;
     recenterFocusToStar: number[];
     setFocus: Array<number | null>;
+    setFocusOpts: Array<{ keepObserve?: boolean } | undefined>;
     setFocusedCloud: Array<number | null>;
     setVectorTo: Array<number | null>;
     setVectorToCloud: Array<number | null>;
@@ -102,6 +103,7 @@ function makeFocus(): FocusFixture {
     recenterOrigin: 0,
     recenterFocusToStar: [],
     setFocus: [],
+    setFocusOpts: [],
     setFocusedCloud: [],
     setVectorTo: [],
     setVectorToCloud: [],
@@ -190,9 +192,10 @@ function makeFocus(): FocusFixture {
       calls.recenterFocusToStar.push(idx);
       return delta;
     },
-    setFocus: (idx) => {
+    setFocus: (idx, opts) => {
       focusedStar = idx;
       calls.setFocus.push(idx);
+      calls.setFocusOpts.push(opts);
     },
     setFocusedCloud: (idx) => {
       focusedCloud = idx;
@@ -403,20 +406,17 @@ describe('WarpController — lifecycle + idempotency', () => {
     expect(h.focus.calls.setFocusedCloud).toEqual([5]);
   });
 
-  it('coincident source/destination in OBSERVE re-anchors via swapObserveAnchor, stays in observe (no setFocus)', () => {
+  it('coincident source/destination in OBSERVE re-anchors via keepObserve setFocus, stays in observe', () => {
     const h = makeHarness({ mode: 'observe' });
     // Collocated stars — the ρ=0 inner-pair-on-parent case (Castor Bb → B).
     seedStarStar(h, new THREE.Vector3(10, 0, 0), new THREE.Vector3(10, 0, 0));
     h.warp.warpTo(1);
     expect(h.warp.isActive()).toBe(false);
-    // setFocus's observe-cleanup branch would flip cameraMode to navigate —
-    // the bug. Observe must route through the anchor swap instead.
-    expect(h.focus.calls.setFocus).toEqual([]);
-    expect(h.focus.calls.recenterFocusToStar).toEqual([1]);
-    expect(h.uHide.value).toBe(1);
+    // Routes through setFocus with keepObserve so FocusController re-anchors
+    // in place (consistent target snap) instead of flipping to navigate.
+    expect(h.focus.calls.setFocus).toEqual([1]);
+    expect(h.focus.calls.setFocusOpts.at(-1)).toEqual({ keepObserve: true });
     expect(h.observeControls.enable).toHaveBeenCalled();
-    const focusEmits = h.busEvents.filter((e) => e.name === 'focus');
-    expect(focusEmits[focusEmits.length - 1].payload).toBe(1);
   });
 });
 
