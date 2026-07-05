@@ -550,6 +550,39 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(stats.pairs_emitted, 1)
         self.assertEqual(stats.pairs_dropped_duplicate_relation, 1)
 
+    def test_duplicate_relation_keeps_orbit_bearing_member(self) -> None:
+        # Two pairs collapse to the same (primary, secondary) rows: the wide
+        # AC pair (walk-first, element-less) and the BC pair carrying the real
+        # orbit (B blends onto anchor A). The dedup must keep the orbit-bearing
+        # member so the relation still animates, not the element-less first.
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 100, "2": 320}, by_hip={}, by_synth={},
+        )
+        orbit = dict(
+            P_days=4000.0, T_jd=2451545.0, e=0.1, a_AU=5.0,
+            omega_rad=1.0, q=0.5,
+        )
+        pairs = [
+            _pair(system_id="00000+0000-AC", primary_comp="A",
+                  secondary_comp="C", primary_gaia="1", secondary_gaia="2"),
+            _pair(system_id="00000+0000-BC", primary_comp="B",
+                  secondary_comp="C", primary_gaia="1", secondary_gaia="2",
+                  **orbit),
+        ]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT, brb.NO_PARENT], [0, 1], row_map, out,
+            )
+            data = out.read_bytes()
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_duplicate_relation, 1)
+        self.assertEqual(stats.pairs_with_orbit, 1)
+        flags = struct.unpack_from(
+            "<I", data, brb.HEADER_SIZE + brb.RECORD_LAYOUT["flags"],
+        )[0]
+        self.assertTrue(flags & brb.FLAG_HAS_ORBIT)
+
     def test_parent_relation_remaps_from_input_to_output_index(self) -> None:
         # Three input pairs: idx 0 root, idx 1 child of 0, idx 2 child
         # of 1. All three resolve. Walk order is [0, 1, 2], output

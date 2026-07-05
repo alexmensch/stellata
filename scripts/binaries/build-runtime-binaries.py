@@ -255,6 +255,22 @@ def resolve_idx(
     return None
 
 
+def synth_slot(
+    synth_key: str | None,
+    m: RowIndexMap,
+    exclude: int | None = None,
+) -> int | None:
+    """The catalog row a component's synth key addresses, or None when no
+    synth record exists or it aliases ``exclude``. Promotion mints a synth
+    record only for a component whose gaia/hip were inherited then stripped,
+    so a hit is the truer slot than an id-first resolve that blended onto the
+    system anchor."""
+    if synth_key is None:
+        return None
+    hit = m.by_synth.get(synth_key)
+    return None if hit is None or hit == exclude else hit
+
+
 def pair_has_orbit(p: MultiplesPair) -> bool:
     """True when every element BinaryOrbitField consumes (P, T, e, a, ω, q)
     is present — the same gate `write_binary` stamps into FLAG_HAS_ORBIT.
@@ -467,32 +483,23 @@ def write_binary(
         secondary_synth = synthetic_id(p.wds_id, p.secondary_comp)
         pri = resolve_idx(p.primary_gaia, p.primary_hip, primary_synth, row_map)
         sec = resolve_idx(p.secondary_gaia, p.secondary_hip, secondary_synth, row_map)
-        # Shared-identifier retry: sub-arcsec secondaries carry the
-        # PRIMARY's gaia/hip in multiples.tsv (blended photocentre), so
-        # the id-first resolve lands both ends on one catalog row.
-        # Companion promotion strips the inherited id and mints a synth
-        # record for exactly these rows — retry the synth key before
-        # declaring the pair degenerate.
-        if sec is not None and sec == pri and secondary_synth is not None:
-            synth_hit = row_map.by_synth.get(secondary_synth)
-            if synth_hit is not None:
-                sec = synth_hit
-        # Blended-primary retry (the mirror of the secondary retry, for the
-        # PRIMARY side). A WIDE pair's primary can itself be a blended
-        # non-anchor component: in Castor's BC pair, B carries the system's
-        # shared Gaia source, so B's id-first resolve lands on the system
-        # anchor A — emitting a second A→C alongside the real AC pair.
-        # Companion promotion minted a dedicated synth slot for exactly such
-        # components (their gaia/hip were inherited, so promotion stripped
-        # them); a synth slot therefore EXISTS only when the id-first resolve
-        # went through an inherited id onto the wrong (anchor) row, so
-        # preferring it is always the correct re-home. Inner-pair primaries
-        # are re-homed onto their parent slot afterward by
+        # Blended-sibling retry, both ends. A sub-arcsec component carries
+        # the system primary's gaia/hip (blended photocentre), so its
+        # id-first resolve lands on the anchor row; promotion's synth slot is
+        # the truer target. The secondary retries only when it collapsed onto
+        # the primary; the primary can itself be a blended non-anchor member
+        # (Castor BC's B lands on anchor A), so it retries whenever a distinct
+        # synth slot exists, excluding its own row. Inner-pair primaries are
+        # re-homed onto their parent slot afterward by
         # override_inner_primary_indices, so this only decides wide pairs.
-        if pri is not None and primary_synth is not None:
-            synth_hit = row_map.by_synth.get(primary_synth)
-            if synth_hit is not None and synth_hit != pri:
-                pri = synth_hit
+        if sec is not None and sec == pri:
+            hit = synth_slot(secondary_synth, row_map)
+            if hit is not None:
+                sec = hit
+        if pri is not None:
+            hit = synth_slot(primary_synth, row_map, exclude=pri)
+            if hit is not None:
+                pri = hit
         resolved_primary.append(pri)
         resolved_secondary.append(sec)
 
@@ -500,12 +507,25 @@ def write_binary(
         pairs, parents, walk_order, resolved_primary, resolved_secondary,
     )
 
-    # Walk in topological order; for each emittable pair, record its
-    # output index so parent_relation can be remapped from input-index
-    # to output-index.
+    # Pick one record per (primary, secondary) relation. A blended non-anchor
+    # primary can collapse a distinct pair onto an existing relation; keep the
+    # orbit-bearing member so live motion is not dropped in favour of an
+    # element-less wide pair. Ties keep the first in walk order.
+    relation_winner: dict[tuple[int, int], int] = {}
+    for i in walk_order:
+        if resolved_primary[i] is None or resolved_secondary[i] is None:
+            continue
+        if resolved_primary[i] == resolved_secondary[i]:
+            continue
+        rel_key = (resolved_primary[i], resolved_secondary[i])
+        incumbent = relation_winner.get(rel_key)
+        if incumbent is None or (
+            pair_has_orbit(pairs[i]) and not pair_has_orbit(pairs[incumbent])
+        ):
+            relation_winner[rel_key] = i
+
     emit_indices: list[int] = []
     input_to_output: dict[int, int] = {}
-    emitted_relations: set[tuple[int, int]] = set()
     stats = WriteStats(
         pairs_total=len(pairs),
         pairs_emitted=0,
@@ -517,6 +537,8 @@ def write_binary(
         pairs_with_inclination=0,
         pairs_inner_of_hierarchy=0,
     )
+    # Walk in topological order; for each emittable pair, record its output
+    # index so parent_relation can be remapped from input-index to output-index.
     for i in walk_order:
         if resolved_primary[i] is None:
             stats.pairs_dropped_primary_unresolved += 1
@@ -533,19 +555,15 @@ def write_binary(
             stats.pairs_dropped_degenerate_idx += 1
             continue
         rel_key = (resolved_primary[i], resolved_secondary[i])
-        if rel_key in emitted_relations:
-            # Same (primary, secondary) catalog rows already emitted. A
-            # blended non-anchor primary that the synth re-home above could
-            # not reach (its component was dropped by promotion, or it is a
-            # compound/secondary-side collapse) resolves onto the system
-            # anchor, re-emitting an existing anchor→X pair — surfacing X
-            # twice on the anchor's hover card. The re-home is the real fix
-            # where a distinct slot exists; this drops the residual exact
-            # duplicates so no (primary, secondary) appears twice. First in
-            # walk order (outer-before-inner, input order within) wins.
+        if relation_winner[rel_key] != i:
+            # Exact (primary, secondary) duplicate: a blended non-anchor
+            # primary the synth re-home could not reach re-resolves onto the
+            # system anchor, re-emitting an existing anchor→X relation and
+            # surfacing X twice on the anchor's hover card. Emit only the
+            # chosen winner (orbit-bearing preferred above) so no relation
+            # appears twice.
             stats.pairs_dropped_duplicate_relation += 1
             continue
-        emitted_relations.add(rel_key)
         input_to_output[i] = len(emit_indices)
         emit_indices.append(i)
 

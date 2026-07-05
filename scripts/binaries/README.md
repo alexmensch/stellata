@@ -396,6 +396,14 @@ re-homes each inner pair's primary onto that parent's member slot.
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
 agree (see `scripts/catalog/README.md` § Companion promotion).
 
+A blended primary the synth re-home can't reach (its component was dropped
+by promotion, or it's a compound / secondary-side collapse) still resolves
+onto the anchor, producing a duplicate `(primary, secondary)`. `write_binary`
+emits one record per relation, and when duplicates collide it keeps the
+orbit-bearing member (`pair_has_orbit`; ties keep first in walk order) so the
+system's live motion survives the dedup rather than an element-less wide
+pair winning by walk position. Counted `pairs_dropped_duplicate_relation`.
+
 ## Stage 4 — Orbital element selection per pair
 
 Picks the most-trustworthy set of orbital elements per pair, then

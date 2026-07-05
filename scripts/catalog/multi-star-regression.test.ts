@@ -95,12 +95,7 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 4;
 // bearing inner pairs that re-anchored onto their correct system star
 // once the Stage 2 ORB6-HIP coordinate gate rejected typo'd HIPs — the
 // same sub-resolution tangent-bake-vs-R(epoch) class, now placed right.
-// The 705 → 703 step is the runtime blended-wide-pair-primary re-home:
-// a wide pair whose primary carried the system's blended id was resolving
-// onto the system anchor, duplicating an anchor→X relation; re-homing it
-// onto its own component slot (and dropping the residual exact duplicates)
-// removed two such disagreements from the ratchet.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 703;
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 705;
 
 // ---- Corpus row types ----------------------------------------------------
 
