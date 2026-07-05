@@ -190,6 +190,61 @@ def _gaia_from_athyg_via_hip(
     return row.gaia
 
 
+# ORB6-HIP coordinate sanity tolerance. The primary sits at (essentially)
+# the pair's WDS precise coord, so its ORB6-published HIP must position
+# within a few arcmin of it. 5′ is a wide safety margin against PM/epoch
+# residuals yet an order of magnitude tighter than the smallest observed
+# mis-anchor (ε Equ STF2737's typo'd HIP lands ~40° away).
+ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC = 300.0
+
+
+def _hip_sky_position(
+    hip: int, indices: IdentifierIndices,
+) -> tuple[float, float] | None:
+    """Best-available ``(ra_deg, dec_deg)`` for a HIP, for the ORB6-HIP
+    coordinate sanity gate. Prefers the AT-HYG row PM-propagated to the
+    WDS precise-coord epoch (the machinery the CCDM / position tiers
+    use); falls back to the resolved Gaia source's astrometry, likewise
+    PM-propagated from its Gaia DR3 epoch to the same J2000 frame so both
+    branches are compared to the WDS coord at one epoch. Returns ``None``
+    when neither carries a position — the gate then can't validate and
+    trusts the ORB6 attribution."""
+    row = indices.hip_to_athyg.get(hip)
+    if row is not None:
+        return _athyg_position_at_epoch(row, WDS_PRECISE_COORD_EPOCH)
+    gaia = indices.hip_to_gaia.get(hip)
+    if gaia is not None:
+        astro = indices.src_to_astrometry.get(gaia)
+        if astro is not None:
+            return _propagate_position(
+                astro.ra_deg, astro.dec_deg,
+                astro.pmra_masyr, astro.pmdec_masyr,
+                astro.ref_epoch, WDS_PRECISE_COORD_EPOCH,
+            )
+    return None
+
+
+def _orb6_hip_matches_pair_coord(
+    hip: int, pair: WdsPair, indices: IdentifierIndices,
+) -> bool:
+    """Guard an ORB6-published HIP against the pair's WDS precise coord.
+    ORB6 occasionally carries a typo'd HIP (STF2737 lists HIP 103579 —
+    an unrelated Cygnus star ~40° away — for ε Equ's true HIP 103569);
+    without this the primary anchors onto the wrong star and mints a
+    phantom orbiting companion there. Returns ``True`` (trust) when the
+    pair has no precise coord or the HIP has no position to check; only a
+    positive position mismatch rejects."""
+    if pair.precise_ra_deg is None or pair.precise_dec_deg is None:
+        return True
+    pos = _hip_sky_position(hip, indices)
+    if pos is None:
+        return True
+    return _positions_within(
+        pos[0], pos[1], pair.precise_ra_deg, pair.precise_dec_deg,
+        ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC,
+    )
+
+
 def resolve_component(
     pair: WdsPair,
     component: str,
@@ -206,6 +261,12 @@ def resolve_component(
     Secondary components have no direct ORB6 signal (ORB6 publishes one
     HIP per orbit row, which by convention is the primary's), so
     ``orb6_hip`` only applies to primaries.
+
+    An ORB6 HIP whose position fails ``_orb6_hip_matches_pair_coord`` is
+    dropped entirely — not appended to ``candidate_hips`` — so a typo'd
+    HIP neither resolves Gaia here nor rides the HIP-mediated /
+    ``unresolved`` fallbacks; the component falls through to the
+    coordinate-validated SIMBAD / CCDM / position tiers instead.
     """
     def emit(gaia: int | None, via: str, hip: int | None) -> ResolvedComponent:
         return ResolvedComponent(
@@ -223,6 +284,8 @@ def resolve_component(
     if is_primary:
         for e in orb6_for_pair:
             if e.hip is None:
+                continue
+            if not _orb6_hip_matches_pair_coord(e.hip, pair, indices):
                 continue
             candidate_hips.append(e.hip)
             # ``orb6_hip``: Gaia-published HIP xwalk is the canonical source.
@@ -314,9 +377,7 @@ def _ccdm_candidate_hip_for_position(
     Returns ``None`` when no candidate has an AT-HYG row or none are
     within tolerance — Stage 2 then falls through to position-match.
     """
-    threshold_chord_sq = (
-        2.0 * math.sin(math.radians(tolerance_arcsec / 3600.0) / 2.0)
-    ) ** 2
+    threshold_chord_sq = _chord_sq_for_tolerance(tolerance_arcsec)
     qx, qy, qz = _spherical_to_unit_vec(ra_deg, dec_deg)
     best_hip: int | None = None
     best_chord_sq = float("inf")
@@ -488,15 +549,29 @@ def _bind_ccdm_hip(
 ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0
 
 
+def _propagate_position(
+    ra_deg: float, dec_deg: float,
+    pm_ra_masyr: float | None, pm_de_masyr: float | None,
+    ref_epoch: float, target_epoch: float,
+) -> tuple[float, float]:
+    """Linear PM propagation of an ICRS position from ``ref_epoch`` to
+    ``target_epoch`` (cos δ-applied μ_α*). Returns the position unchanged
+    when either PM component is missing — no signal to propagate with, so
+    the raw position is the best estimate."""
+    if pm_ra_masyr is None or pm_de_masyr is None:
+        return ra_deg, dec_deg
+    dt = target_epoch - ref_epoch
+    cos_dec = max(math.cos(math.radians(dec_deg)), 1e-3)
+    delta_ra_deg = (pm_ra_masyr * dt) / (3600.0 * 1000.0 * cos_dec)
+    delta_dec_deg = (pm_de_masyr * dt) / (3600.0 * 1000.0)
+    return (ra_deg + delta_ra_deg) % 360.0, dec_deg + delta_dec_deg
+
+
 def _athyg_position_at_epoch(
     row: AthygRow, target_epoch: float,
 ) -> tuple[float, float]:
     """Propagate ``row``'s ``(ra_deg, dec_deg)`` from ``ATHYG_REFERENCE_EPOCH``
-    to ``target_epoch`` using the row's own PM (cos δ-applied μ_α*).
-
-    Returns ``(row.ra_deg, row.dec_deg)`` unchanged when either PM
-    component is missing — Stage 2 has no signal to propagate with, so
-    the raw position is the best estimate.
+    to ``target_epoch`` using the row's own PM.
 
     AT-HYG's documented epoch is J2000 but HIP-sourced rows are
     empirically at J1991.25 (the HIP1 catalog's native epoch); the
@@ -504,13 +579,10 @@ def _athyg_position_at_epoch(
     inside the 2″ tolerance — so the same call works correctly for the
     rows that are genuinely at J2000 too.
     """
-    if row.pm_ra_masyr is None or row.pm_de_masyr is None:
-        return row.ra_deg, row.dec_deg
-    dt = target_epoch - ATHYG_REFERENCE_EPOCH
-    cos_dec = max(math.cos(math.radians(row.dec_deg)), 1e-3)
-    delta_ra_deg = (row.pm_ra_masyr * dt) / (3600.0 * 1000.0 * cos_dec)
-    delta_dec_deg = (row.pm_de_masyr * dt) / (3600.0 * 1000.0)
-    return (row.ra_deg + delta_ra_deg) % 360.0, row.dec_deg + delta_dec_deg
+    return _propagate_position(
+        row.ra_deg, row.dec_deg, row.pm_ra_masyr, row.pm_de_masyr,
+        ATHYG_REFERENCE_EPOCH, target_epoch,
+    )
 
 
 def _spherical_to_unit_vec(ra_deg: float, dec_deg: float) -> tuple[float, float, float]:
@@ -523,6 +595,25 @@ def _spherical_to_unit_vec(ra_deg: float, dec_deg: float) -> tuple[float, float,
     dec_rad = math.radians(dec_deg)
     c = math.cos(dec_rad)
     return c * math.cos(ra_rad), c * math.sin(ra_rad), math.sin(dec_rad)
+
+
+def _chord_sq_for_tolerance(tolerance_arcsec: float) -> float:
+    """Squared chord length on the unit sphere subtending ``tolerance_arcsec``.
+    Monotone with angular separation, so a squared-chord comparison decides
+    "within tolerance" without trig in the match hot loops."""
+    return (2.0 * math.sin(math.radians(tolerance_arcsec / 3600.0) / 2.0)) ** 2
+
+
+def _positions_within(
+    ra1_deg: float, dec1_deg: float,
+    ra2_deg: float, dec2_deg: float,
+    tolerance_arcsec: float,
+) -> bool:
+    """True when two ICRS positions lie within ``tolerance_arcsec``."""
+    ax, ay, az = _spherical_to_unit_vec(ra1_deg, dec1_deg)
+    bx, by, bz = _spherical_to_unit_vec(ra2_deg, dec2_deg)
+    dx, dy, dz = ax - bx, ay - by, az - bz
+    return dx * dx + dy * dy + dz * dz <= _chord_sq_for_tolerance(tolerance_arcsec)
 
 
 def build_athyg_position_grid(
@@ -581,7 +672,7 @@ def find_nearest_athyg_at_position(
     base_ra = int(ra_deg) % 360
     base_dec = int(dec_deg) + 90
     qx, qy, qz = _spherical_to_unit_vec(ra_deg, dec_deg)
-    threshold_chord_sq = (2.0 * math.sin(math.radians(tol_arcsec / 3600.0) / 2.0)) ** 2
+    threshold_chord_sq = _chord_sq_for_tolerance(tol_arcsec)
 
     best_idx: int | None = None
     best_chord_sq = float("inf")

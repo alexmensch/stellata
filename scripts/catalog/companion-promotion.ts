@@ -745,8 +745,11 @@ function composeCompanionName(
   canonicalComp: string,
   primaryStar: Star | null,
   constellations: { code: string; name: string }[],
+  systemPrimaryStar: Star | null = null,
 ): string | null {
-  const base = resolveCompanionNameBase(row, primary, primaryStar, constellations);
+  const base = resolveCompanionNameBase(
+    row, primary, primaryStar, constellations, systemPrimaryStar,
+  );
   if (!base) return null;
   return joinComponentName(base, canonicalComp);
 }
@@ -756,25 +759,39 @@ function joinComponentName(base: string, comp: string): string {
   return comp ? `${base} ${comp}` : base;
 }
 
+/** proper → "Bayer con" → "Flamsteed con" for a catalog Star. */
+function starNameBase(
+  star: Star | null,
+  constellations: { code: string; name: string }[],
+): string | null {
+  if (star === null) return null;
+  const proper = (star.proper ?? '').trim();
+  if (proper) return proper;
+  const conCode = constellationCode(star.conIndex, constellations);
+  if (conCode === null) return null;
+  const bayer = (star.bayer ?? '').trim();
+  if (bayer) return `${bayer} ${conCode}`;
+  if (star.flam !== null) return `${star.flam} ${conCode}`;
+  return null;
+}
+
 function resolveCompanionNameBase(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
   primaryStar: Star | null,
   constellations: { code: string; name: string }[],
+  systemPrimaryStar: Star | null = null,
 ): string | null {
   const ownBase = row.name.trim();
   if (ownBase) return ownBase;
   const primaryBase = (primary?.name ?? '').trim();
   if (primaryBase) return primaryBase;
-  if (primaryStar === null) return null;
-  const proper = (primaryStar.proper ?? '').trim();
-  if (proper) return proper;
-  const conCode = constellationCode(primaryStar.conIndex, constellations);
-  if (conCode === null) return null;
-  const bayer = (primaryStar.bayer ?? '').trim();
-  if (bayer) return `${bayer} ${conCode}`;
-  if (primaryStar.flam !== null) return `${primaryStar.flam} ${conCode}`;
-  return null;
+  // Local pair anchor first; then the WDS-root system primary — a
+  // sub-pair whose local primary is nameless/unpromotable (δ Vel CD's C)
+  // climbs to the system primary so the secondary is "Alsephina D", not
+  // Unnamed.
+  return starNameBase(primaryStar, constellations)
+    ?? starNameBase(systemPrimaryStar, constellations);
 }
 
 function constellationCode(
@@ -942,6 +959,11 @@ interface PromoteRowContext {
   /** Catalog Star of the anchor primary — drives composeCompanionName's
    *  Bayer/Flamsteed/constellation fallback and the inherited-HIP gate. */
   anchorStar: Star | null;
+  /** Catalog Star of the WDS-root system primary — the naming fallback
+   *  when the local anchor is nameless/unresolved (δ Vel CD's local
+   *  primary C never promotes, so D's name climbs to the system primary
+   *  A = "Alsephina" → "Alsephina D" rather than Unnamed). */
+  systemAnchorStar: Star | null;
   /** Catalog index of the anchor primary — used by the inherited-HIP
    *  collision escape so the row's HIP-match-against-anchor doesn't
    *  classify as alreadyInCatalog. */
@@ -977,7 +999,7 @@ function promoteRow(
   stats: PromotionStats,
   dustGrid: DustGrid | null,
 ): number | null {
-  const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx,
+  const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, anchorCatalogIdx,
           position, canonicalComp, isPairRowPrimary } = ctx;
   const synthId = composeSyntheticId(row.systemId, canonicalComp);
   const rowHasOwnHip = row.hip !== null && row.hip > 0;
@@ -1079,6 +1101,7 @@ function promoteRow(
   }
   const properName = composeCompanionName(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
+    systemAnchorStar,
   );
   // Collocated AT-HYG double-entry merge. AT-HYG occasionally carries
   // BOTH members of a resolved pair at the same printed blend
@@ -1259,6 +1282,9 @@ export function promoteCompanions(
           row,
           anchorPrimaryRow: cursor.primary,
           anchorStar,
+          systemAnchorStar: cursorRoot !== null
+            ? wdsRootAnchors.get(cursorRoot)?.star ?? null
+            : null,
           anchorCatalogIdx: primaryCatalogIdx,
           position,
           canonicalComp,
@@ -1399,6 +1425,7 @@ function tryPromoteCursorPrimary(
       row: primary,
       anchorPrimaryRow: anchor.primaryRow,
       anchorStar: anchor.star,
+      systemAnchorStar: anchor.star,
       anchorCatalogIdx: anchor.catalogIdx,
       position,
       canonicalComp: primary.comp,

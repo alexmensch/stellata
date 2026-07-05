@@ -709,10 +709,13 @@ def _wds_pair(*, wds_id: str = "00000+0000", components: str = "AB") -> "bb.WdsP
     )
 
 
-def _athyg_row(*, hip: int | None = None, gaia: int | None = None) -> "bb.AthygRow":
+def _athyg_row(
+    *, hip: int | None = None, gaia: int | None = None,
+    ra_deg: float = 0.0, dec_deg: float = 0.0,
+) -> "bb.AthygRow":
     return bb.AthygRow(
         hip=hip, tyc=None, gaia=gaia, hd=None,
-        ra_deg=0.0, dec_deg=0.0,
+        ra_deg=ra_deg, dec_deg=dec_deg,
         x_pc=0.0, y_pc=0.0, z_pc=0.0,
         dist_pc=1.0, v_mag=None, absmag=5.0,
         ci=None, spect="", proper="",
@@ -777,7 +780,9 @@ class ResolveComponentTests(unittest.TestCase):
         orb6 = [_orb6(wds_id=pair.wds_id, components="AB", hip=42)]
         idx = _indices(
             hip_to_gaia={},  # xwalk does not cover HIP 42
-            athyg=[_athyg_row(hip=42, gaia=12345)],
+            athyg=[_athyg_row(hip=42, gaia=12345,
+                              ra_deg=pair.precise_ra_deg,
+                              dec_deg=pair.precise_dec_deg)],
         )
         r = bb.resolve_component(
             pair, "A", is_primary=True,
@@ -796,6 +801,84 @@ class ResolveComponentTests(unittest.TestCase):
         self.assertEqual(r.resolve_via, "unresolved")
         self.assertIsNone(r.gaia_source_id)
 
+    def test_orb6_hip_rejected_when_position_far_from_pair_coord(self) -> None:
+        # ε Equ shape: ORB6 publishes a typo'd HIP that resolves to a
+        # real but unrelated star tens of degrees off the pair's WDS
+        # precise coord. The gate drops the HIP entirely — no orb6_hip
+        # resolution, and the bad HIP is not even carried forward for
+        # Stage 3's HIP2 fallback.
+        pair = _wds_pair(
+            wds_id="20591+0418", components="Aa,Ab",
+            precise_ra_deg=315.0, precise_dec_deg=4.3,
+        )
+        orb6 = [_orb6(wds_id=pair.wds_id, components="Aa,Ab", hip=103579)]
+        idx = _indices(
+            hip_to_gaia={103579: 2018523585846555648},
+            athyg=[_athyg_row(hip=103579, gaia=2018523585846555648,
+                              ra_deg=315.4, dec_deg=44.1)],
+        )
+        r = bb.resolve_component(
+            pair, "Aa", is_primary=True,
+            orb6_for_pair=orb6, indices=idx,
+        )
+        self.assertEqual(r.resolve_via, "unresolved")
+        self.assertIsNone(r.gaia_source_id)
+        self.assertIsNone(r.hip)
+
+    def test_orb6_hip_accepted_when_position_matches_pair_coord(self) -> None:
+        # Same tier, HIP positions on top of the pair's precise coord —
+        # the gate trusts it.
+        pair = _wds_pair(
+            wds_id="06451-1643", components="AB",
+            precise_ra_deg=101.3, precise_dec_deg=-16.7,
+        )
+        orb6 = [_orb6(wds_id=pair.wds_id, components="AB", hip=32349)]
+        idx = _indices(
+            hip_to_gaia={32349: 2947050466531873024},
+            athyg=[_athyg_row(hip=32349, gaia=2947050466531873024,
+                              ra_deg=101.3, dec_deg=-16.7)],
+        )
+        r = bb.resolve_component(
+            pair, "A", is_primary=True,
+            orb6_for_pair=orb6, indices=idx,
+        )
+        self.assertEqual(r.resolve_via, "orb6_hip")
+        self.assertEqual(r.gaia_source_id, 2947050466531873024)
+
+    def test_orb6_hip_trusted_when_pair_has_no_precise_coord(self) -> None:
+        # No WDS precise coord to validate against → trust the ORB6 HIP
+        # (the coord-less-pair path every pre-gate resolution took).
+        pair = _wds_pair(
+            wds_id="06451-1643", components="AB",
+            precise_ra_deg=None, precise_dec_deg=None,
+        )
+        orb6 = [_orb6(wds_id=pair.wds_id, components="AB", hip=32349)]
+        idx = _indices(
+            hip_to_gaia={32349: 2947050466531873024},
+            athyg=[_athyg_row(hip=32349, gaia=2947050466531873024,
+                              ra_deg=101.3, dec_deg=-16.7)],
+        )
+        r = bb.resolve_component(
+            pair, "A", is_primary=True,
+            orb6_for_pair=orb6, indices=idx,
+        )
+        self.assertEqual(r.resolve_via, "orb6_hip")
+
+    def test_orb6_hip_trusted_when_hip_position_unknown(self) -> None:
+        # HIP has no AT-HYG row and no Gaia astrometry — the gate cannot
+        # validate, so it trusts the attribution rather than reject blind.
+        pair = _wds_pair(
+            wds_id="06451-1643", components="AB",
+            precise_ra_deg=101.3, precise_dec_deg=-16.7,
+        )
+        orb6 = [_orb6(wds_id=pair.wds_id, components="AB", hip=32349)]
+        idx = _indices(hip_to_gaia={32349: 2947050466531873024})
+        r = bb.resolve_component(
+            pair, "A", is_primary=True,
+            orb6_for_pair=orb6, indices=idx,
+        )
+        self.assertEqual(r.resolve_via, "orb6_hip")
+
     def test_priority_xwalk_beats_athyg(self) -> None:
         # Both tier 1 and the HIP branch of tier 2 would succeed for
         # the same HIP — tier 1 wins because the Gaia HIP xwalk is
@@ -804,7 +887,9 @@ class ResolveComponentTests(unittest.TestCase):
         orb6 = [_orb6(wds_id=pair.wds_id, components="AB", hip=10)]
         idx = _indices(
             hip_to_gaia={10: 100},
-            athyg=[_athyg_row(hip=10, gaia=999)],   # disagreeing AT-HYG
+            athyg=[_athyg_row(hip=10, gaia=999,   # disagreeing AT-HYG
+                              ra_deg=pair.precise_ra_deg,
+                              dec_deg=pair.precise_dec_deg)],
         )
         r = bb.resolve_component(
             pair, "A", is_primary=True,
@@ -1397,6 +1482,32 @@ class AthygPositionAtEpochTests(unittest.TestCase):
         ra, dec = bb._athyg_position_at_epoch(row, target_epoch=2000.0)
         self.assertLess(abs(ra - 100.0) * 3600.0, 0.5)
         self.assertLess(abs(dec - 0.0) * 3600.0, 0.5)
+
+
+class PropagatePositionTests(unittest.TestCase):
+    """``_propagate_position`` is the shared PM-propagation core behind
+    both the AT-HYG (J1991.25) and Gaia (J2016.0) branches of the
+    ORB6-HIP coordinate gate — each is brought to the WDS J2000 frame
+    before comparison.
+    """
+
+    def test_gaia_epoch_propagates_backward_to_j2000(self) -> None:
+        # J2016 → J2000 is a 16-yr BACKWARD step (dt < 0), so the
+        # position moves opposite the PM. 3600 mas/yr · -16 yr = -0.016°.
+        ra, dec = bb._propagate_position(
+            100.0, 0.0, 3600.0, 0.0,
+            ref_epoch=2016.0, target_epoch=bb.WDS_PRECISE_COORD_EPOCH,
+        )
+        self.assertAlmostEqual(ra, 99.984, places=6)
+        self.assertAlmostEqual(dec, 0.0, places=9)
+
+    def test_missing_pm_returns_position_unchanged(self) -> None:
+        ra, dec = bb._propagate_position(
+            100.0, 20.0, None, None,
+            ref_epoch=2016.0, target_epoch=2000.0,
+        )
+        self.assertEqual(ra, 100.0)
+        self.assertEqual(dec, 20.0)
 
 
 class PositionMatchPMPropagationTests(unittest.TestCase):
