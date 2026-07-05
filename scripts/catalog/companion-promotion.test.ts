@@ -1110,6 +1110,38 @@ describe('promoteCompanions', () => {
     expect(newStars[0].proper).toBeNull();
   });
 
+  it('names a companion of a name-less HIP-only system by the primary HIP designation (dch.88)', () => {
+    // HIP 18734 AB shape: the whole system is name-less — the primary is a
+    // bare HIP record (no proper / Bayer / Flamsteed), so every earlier name
+    // tier is empty and the companion used to ship "Unnamed #idx". The HIP
+    // designation fallback (mirroring the runtime buildStarLabels tiers)
+    // composes "HIP 18734 B".
+    const primary = makeStar({
+      hip: 18734, gaiaSourceId: 'g_18734', proper: null, bayer: null,
+      flam: null, conIndex: 255, x: 0, y: 0, z: 40,
+    });
+    const rows = [
+      multiplesRow({
+        systemId: '04008+0505-AB', comp: 'A',
+        hip: 18734, gaiaSourceId: 'g_18734', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 40, distPc: 40,
+        absmag: 2.0, orbitRole: 'primary',
+        sepArcsec: 1.0, paDeg: 0.0, sepPaEpochJd: 2460000.0, dmag: 0.5,
+      }),
+      multiplesRow({
+        systemId: '04008+0505-AB', comp: 'B',
+        hip: null, gaiaSourceId: 'g_18734_b', name: '',
+        x_pc: 0, y_pc: 0, z_pc: 40, distPc: 40,
+        absmag: 2.5, ci: 0.2, spect: 'A3V',
+        photometryVia: 'athyg_own', orbitRole: 'secondary',
+        sepArcsec: 1.0, paDeg: 0.0, sepPaEpochJd: 2460000.0, dmag: 0.5,
+      }),
+    ];
+    const { newStars } = promoteCompanions(rows, [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].proper).toBe('HIP 18734 B');
+  });
+
   it('drops a pair-row primary with no compound proxy and no independent astrometry (Alsephina C class)', () => {
     // δ Vel C carries its own gaia_source_id but the binaries pipeline
     // only re-anchored it to the system position (system_inherited), and

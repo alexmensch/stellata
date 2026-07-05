@@ -748,7 +748,7 @@ function composeCompanionName(
   systemPrimaryStar: Star | null = null,
 ): string | null {
   const base = resolveCompanionNameBase(
-    row, primary, primaryStar, constellations, systemPrimaryStar,
+    row, primary, primaryStar, constellations, systemPrimaryStar, true,
   );
   if (!base) return null;
   return joinComponentName(base, canonicalComp);
@@ -759,19 +759,36 @@ function joinComponentName(base: string, comp: string): string {
   return comp ? `${base} ${comp}` : base;
 }
 
-/** proper → "Bayer con" → "Flamsteed con" for a catalog Star. */
+/** proper → "Bayer con" → "Flamsteed con" for a catalog Star, then —
+ *  only when `allowDesignation` — a "HIP n"/"HD n"/"HR n"/Gl catalogue
+ *  designation tail. The tail mirrors the runtime `buildStarLabels` tier
+ *  order (src/client/typeahead/search.ts) so a promoted companion of a
+ *  name-less system reads "HIP 22812 Bb" instead of the "Unnamed #idx"
+ *  sentinel; it deliberately has no Gaia tier, as buildStarLabels also
+ *  stops before Gaia (a Gaia-only system stays name-less on both sides).
+ *  The tail is a PRIMARY designation shared down onto the companion, so
+ *  it is gated off for stampComponentLetters — two distinct first-class
+ *  rows each own their HIP and must not both wear the primary's. */
 function starNameBase(
   star: Star | null,
   constellations: { code: string; name: string }[],
+  allowDesignation = false,
 ): string | null {
   if (star === null) return null;
   const proper = (star.proper ?? '').trim();
   if (proper) return proper;
   const conCode = constellationCode(star.conIndex, constellations);
-  if (conCode === null) return null;
-  const bayer = (star.bayer ?? '').trim();
-  if (bayer) return `${bayer} ${conCode}`;
-  if (star.flam !== null) return `${star.flam} ${conCode}`;
+  if (conCode !== null) {
+    const bayer = (star.bayer ?? '').trim();
+    if (bayer) return `${bayer} ${conCode}`;
+    if (star.flam !== null) return `${star.flam} ${conCode}`;
+  }
+  if (!allowDesignation) return null;
+  if (star.hip !== null && star.hip > 0) return `HIP ${star.hip}`;
+  if (star.hd !== null) return `HD ${star.hd}`;
+  if (star.hr !== null) return `HR ${star.hr}`;
+  const gl = (star.gl ?? '').trim();
+  if (gl) return gl;
   return null;
 }
 
@@ -781,17 +798,26 @@ function resolveCompanionNameBase(
   primaryStar: Star | null,
   constellations: { code: string; name: string }[],
   systemPrimaryStar: Star | null = null,
+  allowDesignation = false,
 ): string | null {
   const ownBase = row.name.trim();
   if (ownBase) return ownBase;
   const primaryBase = (primary?.name ?? '').trim();
   if (primaryBase) return primaryBase;
-  // Local pair anchor first; then the WDS-root system primary — a
-  // sub-pair whose local primary is nameless/unpromotable (δ Vel CD's C)
-  // climbs to the system primary so the secondary is "Alsephina D", not
-  // Unnamed.
-  return starNameBase(primaryStar, constellations)
+  // A human name (proper / Bayer / Flamsteed) anywhere in the system wins:
+  // local pair anchor first, then the WDS-root system primary — a sub-pair
+  // whose local primary is nameless/unpromotable climbs to the system
+  // primary (δ Vel CD's C → "Alsephina D"; ε Equ's C climbs past nameless
+  // B → "Eps Equ C").
+  const humanName = starNameBase(primaryStar, constellations)
     ?? starNameBase(systemPrimaryStar, constellations);
+  if (humanName !== null) return humanName;
+  // Last resort for a wholly name-less system (dch.88): the primary's
+  // catalogue designation (HIP/HD/HR/Gl), local anchor then system primary,
+  // so the companion reads "HIP 22812 Bb" rather than "Unnamed #idx".
+  if (!allowDesignation) return null;
+  return starNameBase(primaryStar, constellations, true)
+    ?? starNameBase(systemPrimaryStar, constellations, true);
 }
 
 function constellationCode(
