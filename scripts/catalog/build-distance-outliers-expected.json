@@ -65,42 +65,6 @@
       "simbadMainId": "* rho Cas",
       "logRatio": 0.779,
       "reason": "Yellow hypergiant ρ Cas. SIMBAD's distance is 1000/plx_value off the noisy Hipparcos parallax (~1.06 kpc); modern Gaia DR3 + Bailer-Jones posterior places ρ Cas at multi-kpc. Stellata's pipeline value (6.35 kpc) is the more physically correct one — the disagreement reflects SIMBAD lagging modern distance estimates for highly uncertain supergiant parallaxes, not a pipeline bug."
-    },
-    {
-      "id": "gaia:4468305823820330112",
-      "finalDist": 117.053,
-      "simbadDist": 2199.736,
-      "simbadMainId": "IRAS 18055+0213",
-      "logRatio": -1.274
-    },
-    {
-      "id": "gaia:496410365865308544",
-      "finalDist": 228.833,
-      "simbadDist": 1904.037,
-      "simbadMainId": "IRAS 04546+6953",
-      "logRatio": -0.92,
-      "reason": "Companion-promotion (WDS 05001+6958 AC). Stage 3 routes the companion's position through the system anchor at 228.8 pc; SIMBAD's 1.9 kpc is the companion's own parallax-derived distance. The system-anchor inheritance is the more useful rendering anchor for tight-pair companions; SIMBAD's individual distance is not adopted. Surfaced once broader companion promotion reached this row."
-    },
-    {
-      "id": "gaia:517650628413515264",
-      "finalDist": 45.248,
-      "simbadDist": 357.526,
-      "simbadMainId": "HD  15149",
-      "logRatio": -0.898
-    },
-    {
-      "id": "gaia:6260731122524961152",
-      "finalDist": 98.043,
-      "simbadDist": 1034.554,
-      "simbadMainId": "UCAC4 364-071058",
-      "logRatio": -1.023
-    },
-    {
-      "id": "gaia:6858313115237732224",
-      "finalDist": 19.056,
-      "simbadDist": 858.885,
-      "simbadMainId": "GSC 06339-00363",
-      "logRatio": -1.654
     }
   ]
 }
