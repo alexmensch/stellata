@@ -62,16 +62,20 @@ from subdivide import (  # noqa: E402, F401
     synthesize_orb6_orphan_pairs,
 )
 from stage2_resolve import (  # noqa: E402, F401
+    BINDING_INTEGRITY_COUNT_KEYS, BINDING_VERDICT_VALUES,
     RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
     _athyg_position_at_epoch, _propagate_position, _spherical_to_unit_vec,
+    audit_binding_integrity, binding_integrity_counts,
     build_athyg_position_grid, build_pair_by_wds_disc,
-    find_nearest_athyg_at_position, group_orb6_by_pair,
+    build_system_contexts, find_nearest_athyg_at_position,
+    group_orb6_by_pair, inherit_downward_parent_bindings,
     iter_decomposing_pair_components,
     predict_secondary_position, propagate_blend_identity,
     propagate_within_system,
     resolution_counts, resolve_all_pairs, resolve_component,
     resolve_via_ccdm, resolve_via_position, resolve_via_simbad,
     split_components, write_astrometry_request,
+    write_binding_verdicts_tsv,
 )
 from stage3_astrometry import (  # noqa: E402, F401
     ASTROMETRY_VIA_VALUES, ComponentAstrometry, SystemAnchor,
@@ -148,6 +152,11 @@ SRC_ASTROMETRY_EXCLUSIONS = DATA / "binaries" / "astrometry_exclusions.tsv"
 
 OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
+
+# Report-only binding-integrity audit artifact (gitignored, regenerated
+# each build) — the no-spot-check review surface for the Stage-2
+# contradiction detector.
+OUT_BINDING_VERDICTS = ROOT / "public" / "binding-integrity-verdicts.tsv"
 
 # Committed snapshot of per-strategy / per-tier counts emitted at the
 # end of every build. The Python comparator in stage7_counts.py mirrors
@@ -385,6 +394,22 @@ def run(force: bool) -> int:
         f"{n_requested:,} unique source_ids (input for the Gaia astrometry refresh)"
     )
 
+    binding_verdicts = audit_binding_integrity(
+        wds_pairs, components, indices, apply=False,
+    )
+    bi_counts = binding_integrity_counts(binding_verdicts)
+    n_verdicts = write_binding_verdicts_tsv(
+        binding_verdicts, OUT_BINDING_VERDICTS,
+    )
+    log(
+        "binding-integrity audit (report-only): "
+        + ", ".join(f"{k}={bi_counts[k]:,}" for k in BINDING_INTEGRITY_COUNT_KEYS)
+    )
+    log(
+        f"wrote {OUT_BINDING_VERDICTS.relative_to(ROOT)} with "
+        f"{n_verdicts:,} verdict rows"
+    )
+
     log("Stage 2 complete. Attaching per-component astrometry (Stage 3) …")
 
     astrometry = attach_astrometry_all(
@@ -482,6 +507,7 @@ def run(force: bool) -> int:
         orbits=orbits, classifications=classifications, multiples_rows=rows,
         synthesized_orb6_pairs=len(synthesized_orb6_pairs),
         synthesized_nss_pairs=len(nss_pairs),
+        binding_integrity=bi_counts,
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
     rates = build_binaries_rates(counts)
