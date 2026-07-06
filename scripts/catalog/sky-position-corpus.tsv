@@ -1,33 +1,34 @@
 # Sky-position regression corpus for the direction cascade: the
-# canonical high-PM set (tier-1 Gaia propagation stress) plus one
-# pin per non-Gaia tier — Sirius/Vega for tier 2 (hip2_saturated,
-# the Gaia-saturated bright set), xi UMa for tier 3 (athyg_printed).
-# Published ICRS J2000 positions from SIMBAD (fetched 2026-07-02):
-# Gaia-EDR3-propagated for the high-PM rows (coo_bibcode
-# 2020yCat.1350....0G), van-Leeuwen-2007-propagated for Sirius/Vega
-# (2007A&A...474..653V — the same HIP2 source tier 2 consumes), so a
-# mismatch beyond tol_arcsec means an epoch-propagation defect
-# (PM sign, cos delta convention, dt direction), not a source
-# discrepancy.
+# canonical high-PM set (tier-1 Gaia) plus one pin per non-Gaia tier —
+# Sirius/Vega for tier 2 (hip2_saturated, the Gaia-saturated bright
+# set), xi UMa for tier 3 (athyg_printed).
 #
-# tol_arcsec rationale: Gaia-tier rows use 0.5" — sign/convention
-# errors on these PMs produce tens-to-hundreds of arcsec, while the
-# honest error budget (perspective acceleration <= 0.15", float32
-# container ~0.02") stays well under. xi UMa is the athyg_printed
-# tier-3 canonical (no Gaia source, HIP 55203 excluded from HIP2);
-# its AT-HYG GJ-anchored position is only good to a couple of arcsec
-# against SIMBAD's UCAC4 coordinate, so it pins at 3.0".
+# Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH):
+# - Gaia tier: the raw Gaia DR3 catalog ra/dec, whose native epoch IS
+#   J2016.0 — so the cascade's propagation is a Δt=0 no-op here. These
+#   rows therefore pin source-id selection, tier routing, and xyz
+#   assembly (a wrong source or a sign flip shows up as tens of arcsec),
+#   NOT the propagation formula. That formula (PM sign / cos delta /
+#   Δt direction) is exercised by the 24.75-yr HIP2 tier below and
+#   pinned independently against SIMBAD J2000 in direction-cascade.test.ts.
+# - Sirius/Vega (tier 2): van-Leeuwen-2007 J1991.25 PM-propagated 24.75
+#   yr forward to J2016.0 — this DOES exercise the propagation.
+# - xi UMa (tier 3, athyg_printed): AT-HYG's printed ra/dec is used
+#   UNPROPAGATED (no Gaia source, HIP 55203 excluded from HIP2), so it
+#   sits at AT-HYG's native ~J2000 epoch regardless of the scene epoch;
+#   its GJ-anchored coord is good to a couple of arcsec against SIMBAD's
+#   UCAC4 coordinate, so it pins loose at 3.0".
 #
 # lookup: hip where the AT-HYG row carries one; xi UMa's row carries
 # neither HIP nor Gaia (that is precisely why it routes tier 3), so it
 # is addressed by proper name and its hip cell is blank.
-name	lookup_name	hip	ra_deg_j2000	dec_deg_j2000	tol_arcsec
-Barnard's Star		87937	269.4520769586187	4.693364966576667	0.5
-Kapteyn's Star		24186	77.91912433145708	-45.01843381524333	0.5
-Groombridge 1830		57939	178.2448639115646	37.718681698090286	0.5
-61 Cyg A		104214	316.7247482895925	38.74941731943694	0.5
-61 Cyg B		104217	316.7302660185276	38.74204403329556	0.5
-Keid		19849	63.817998412477074	-7.652869660838334	0.5
-Sirius		32349	101.28715533333335	-16.71611586111111	0.5
-Vega		91262	279.234734787025	38.783688956244	0.5
+name	lookup_name	hip	ra_deg_j2016	dec_deg_j2016	tol_arcsec
+Barnard's Star		87937	269.4485025250	4.739420051	0.5
+Kapteyn's Star		24186	77.9599373500	-45.043812699	0.5
+Groombridge 1830		57939	178.2673532080	37.692826947	0.5
+61 Cyg A		104214	316.7484792940	38.763862446	0.5
+61 Cyg B		104217	316.7536627530	38.756072772	0.5
+Keid		19849	63.8079530060	-7.668077815	0.5
+Sirius		32349	101.2846216628	-16.721551666	0.5
+Vega		91262	279.2358804374	38.784961091	0.5
 xi UMa	Alula Australis		169.54554950000002	31.529288899999997	3.0

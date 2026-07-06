@@ -4175,6 +4175,52 @@ class ComputeSystemAnchorsTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0].y_pc or 0.0, 0.0, places=6)
         self.assertAlmostEqual(rows[0].z_pc or 0.0, 0.0, places=6)
 
+    def test_position_pc_normalises_mixed_epoch_pair(self) -> None:
+        # A bound pair measured at DIFFERENT native epochs — HIP2 primary
+        # at J1991.25, Gaia secondary at J2016 — must bake xyz at ONE
+        # scene epoch, so the static relative separation is the pair's
+        # true J2016 configuration, not corrupted by (epoch gap × systemic
+        # PM) — the mixed-epoch static-position bug.
+        dist_pc = 100.0
+        plx = 1000.0 / dist_pc
+        pmra, pmdec = 3600.0, 0.0  # mas/yr systemic; 24.75 yr ≈ 89″ drift
+        ra_p, dec_p = 150.0, 10.0  # primary true J2016 direction
+        sep_true_arcsec = 5.0
+        cosd = math.cos(math.radians(dec_p))
+        # Secondary sits 5″ east of the primary at J2016.
+        ra_s = ra_p + sep_true_arcsec / (3600.0 * cosd)
+        # Primary is MEASURED at J1991.25 — its stored ra/dec is the J2016
+        # direction rolled back 24.75 yr along the systemic PM.
+        dt = bb.CATALOG_SCENE_EPOCH - 1991.25
+        ra_p_1991 = ra_p - pmra * dt / (3600.0 * 1000.0 * cosd)
+        dec_p_1991 = dec_p - pmdec * dt / (3600.0 * 1000.0)
+
+        primary = _component_astrometry(
+            ra_deg=ra_p_1991, dec_deg=dec_p_1991, parallax_mas=plx,
+            pmra_masyr=pmra, pmdec_masyr=pmdec,
+            astrometry_via="hip2_long_baseline", ref_epoch=1991.25,
+        )
+        secondary = _component_astrometry(
+            ra_deg=ra_s, dec_deg=dec_p, parallax_mas=plx,
+            pmra_masyr=pmra, pmdec_masyr=pmdec, ref_epoch=2016.0,
+        )
+        px, py, pz, _ = bb._position_pc(primary)
+        sx, sy, sz, _ = bb._position_pc(secondary)
+        au = 206264.806
+        sep_au = math.sqrt((sx - px) ** 2 + (sy - py) ** 2 + (sz - pz) ** 2) * au
+        # 5″ at 100 pc = 500 AU: the normalised pair reproduces it.
+        self.assertAlmostEqual(sep_au, sep_true_arcsec * dist_pc, delta=1.0)
+
+        # Without normalisation the primary sits at its J1991.25 direction,
+        # 24.75 yr × 3.6″/yr ≈ 89″ (~8900 AU) off — the mis-separation the
+        # fix removes.
+        ux, uy, uz = bb._spherical_to_unit_vec(ra_p_1991, dec_p_1991)
+        sep_au_stale = math.sqrt(
+            (sx - ux * dist_pc) ** 2 + (sy - uy * dist_pc) ** 2
+            + (sz - uz * dist_pc) ** 2
+        ) * au
+        self.assertGreater(sep_au_stale, 8000.0)
+
     def test_simbad_spectra_override_athyg_spect(self) -> None:
         # 40 Eri-shape: AT-HYG carries the primary's K0V across all
         # components (per-system inheritance). SIMBAD provides per-

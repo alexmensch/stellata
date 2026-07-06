@@ -101,7 +101,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 3;
 // that had leaked onto wide visual pairs of a blended primary lose their
 // elements, so those pairs no longer render an R(epoch) that disagrees
 // with the baked WDS placement.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 566;
+// The 566 → 568 step is the J2016.0 scene-epoch shift: primary positions
+// moved to J2016 (single stars) as did HIP2-fit secondaries (24.75 yr),
+// rotating a few tangent-projection anchors / repositioning baked
+// offsets enough for two borderline pairs to cross the half-a threshold.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 568;
 
 // ---- Corpus row types ----------------------------------------------------
 

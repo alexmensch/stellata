@@ -139,10 +139,14 @@ describe('direction-cascade / directionAtEpoch', () => {
 
   it("pins Barnard's Star: Gaia DR3 J2016.0 → J2000.0 vs SIMBAD", () => {
     // Gaia DR3 4472832130942575872 (data/gaia/gaia_dr3_astrometry_catalog.tsv)
-    // vs SIMBAD's J2000 ICRS position (itself Gaia-propagated).
+    // vs SIMBAD's J2000 ICRS position (itself Gaia-propagated). Pins the
+    // propagation formula against an independent J2000 reference, so the
+    // target epoch is a literal 2000 here — decoupled from
+    // CATALOG_SCENE_EPOCH (now J2016.0, where the Gaia tier is a Δt=0
+    // no-op and could not exercise the tangent/sign/cos δ math).
     const u = directionAtEpoch(
       269.448502525, 4.739420051, -801.5510, 10362.3942,
-      GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
+      GAIA_DR3_REF_EPOCH, 2000.0,
     );
     const simbad = unitVectorFromRaDec(269.4520769586187, 4.693364966576667);
     expect(angSepArcsec(u, simbad)).toBeLessThan(0.1);
@@ -152,10 +156,11 @@ describe('direction-cascade / directionAtEpoch', () => {
     // HIP 104214 from data/hipparcos/hip2_van_leeuwen.tsv. HIP2 vs
     // Gaia zero-point + 8.75 yr of PM error accumulate to ~0.1″; the
     // 0.25″ bound still catches any sign / cos δ convention error
-    // (those are ≥ 10″ at this PM).
+    // (those are ≥ 10″ at this PM). Target epoch is a literal 2000 —
+    // an independent-reference propagation pin, not the scene epoch.
     const u = directionAtEpoch(
       316.71181137, 38.74149513, 4168.31, 3269.2,
-      HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
+      HIP2_REF_EPOCH, 2000.0,
     );
     const simbad = unitVectorFromRaDec(316.7247482895925, 38.74941731943694);
     expect(angSepArcsec(u, simbad)).toBeLessThan(0.25);
@@ -230,7 +235,13 @@ describe('direction-cascade / resolveDirection routing', () => {
       h.raDeg, h.decDeg, h.pmRaMasyr, h.pmDeMasyr,
       HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(res!.dir, expected)).toBe(0);
+    // Identical inputs → identical direction. Compared component-wise:
+    // angSepArcsec's acos floors at ~0.004″ for a unit vector against
+    // itself (self-dot rounds to 1−1 ULP), which the larger 24.75 yr
+    // HIP2 Δt now surfaces.
+    expect(res!.dir.x).toBeCloseTo(expected.x, 12);
+    expect(res!.dir.y).toBeCloseTo(expected.y, 12);
+    expect(res!.dir.z).toBeCloseTo(expected.z, 12);
   });
 
   it('gaia_nss_systemic outranks hip2_pm_discrepant (stage3 priority order)', () => {
