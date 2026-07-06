@@ -9,6 +9,7 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
 } from './catalog-pure';
+import type { MultiplesTsvRow } from './companion-promotion';
 import type { Star } from './stars-parse';
 
 // Curated visual-double systems that the CCDM+MultFlag filter (see
@@ -160,6 +161,23 @@ export function parseHipCcdm(srcPath: string): Map<string, number[]> {
 export interface PhysicalPairKeys {
   hips: ReadonlySet<number>;
   gaia: ReadonlySet<string>;
+}
+
+// Collect the HIP / Gaia source_id keys of every kept physical-pair
+// component from multiples.tsv. Stage 6 drops optical pairs entirely, so a
+// non-standalone row is a bound-pair member; standalone rows are single
+// stars carrying no boundness evidence.
+export function collectPhysicalPairKeys(
+  rows: readonly MultiplesTsvRow[] | null,
+): PhysicalPairKeys {
+  const hips = new Set<number>();
+  const gaia = new Set<string>();
+  for (const r of rows ?? []) {
+    if (r.orbitRole === 'standalone') continue;
+    if (r.hip !== null) hips.add(r.hip);
+    if (r.gaiaSourceId !== null) gaia.add(r.gaiaSourceId);
+  }
+  return { hips, gaia };
 }
 
 // Build the union of CCDM groups (parsed from Hipparcos) and the curated

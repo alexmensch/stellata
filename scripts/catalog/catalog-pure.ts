@@ -761,6 +761,13 @@ export function markPrimary(
   return bestIdx;
 }
 
+// Vetoes a freshly-picked primary before its FLAG_BINARY_PRIMARY bit is
+// set — the CCDM optical-double gate (see isOpticalDoublePrimary).
+export type SuppressPredicate = (
+  primaryIdx: number,
+  memberIndices: number[],
+) => boolean;
+
 // Like markPrimary, but a no-op when any star in `indices` already carries
 // FLAG_BINARY_PRIMARY. Used by the CCDM pass: a star flagged by
 // inferBinaries' mutual-pair pick should not get re-picked here, since
@@ -780,7 +787,7 @@ export function markPrimary(
 export function markPrimaryIfUnflagged(
   stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
   indices: number[],
-  suppress?: (primaryIdx: number, memberIndices: number[]) => boolean,
+  suppress?: SuppressPredicate,
 ): number {
   if (indices.length === 0) return -1;
   for (const i of indices) {
@@ -840,7 +847,7 @@ export function applyDoublesFlag(
   stars: DoublesStar[],
   groups: Iterable<Iterable<number>>,
   hipToIndex: Map<number, number>,
-  suppress?: (primaryIdx: number, memberIndices: number[]) => boolean,
+  suppress?: SuppressPredicate,
 ): { systems: number; flagged: number; suppressed: number } {
   let systems = 0;
   let flagged = 0;
@@ -1056,9 +1063,7 @@ export function isBailerJonesEligible(
   gaiaSourceId: string | null,
   distSrc: string | null,
 ): boolean {
-  if (!gaiaSourceId) return false;
-  if (!distSrc) return false;
-  return BJ_ELIGIBLE_DIST_SRCS.has(distSrc);
+  return !!gaiaSourceId && isGaiaQualityDist(distSrc);
 }
 
 /** Parse a Gaia DR3 source_id cell into a decimal string suitable for

@@ -785,9 +785,10 @@ noisy parallax can never strip real wings:
 strings for file-driven entries, synthetic `OVERRIDE-N` keys for
 the `KNOWN_VISUAL_DOUBLES` list). `applyDoublesFlag` then walks
 each group, picks the **brightest** catalog member (lowest
-`absmag`), and ORs `0x10` onto only that one — so each Hipparcos-
-resolved system contributes exactly one chart-mode wings glyph,
-matching the geometric pass's mutual-primary semantics. Stars that
+`absmag`), and — unless the optical-double gate above vetoes it —
+ORs `0x10` onto only that one, so each Hipparcos-resolved system
+contributes exactly one chart-mode wings glyph, matching the
+geometric pass's mutual-primary semantics. Stars that
 are CCDM secondaries do not get the bit; they remain in the
 catalog with their other flags intact. No `companionIdx` write —
 the secondary often isn't in the AT-HYG classic_ids subset, and
