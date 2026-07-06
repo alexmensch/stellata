@@ -30,7 +30,7 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   },
   { keys: ['S'], label: 'Toggle the galactic-coordinate sphere' },
   { keys: ['H'], label: 'Toggle the head-up display (HUD)' },
-  { keys: ['R'], label: 'Reset all camera settings' },
+  { keys: ['R'], label: 'Reset camera size, range, FOV & exaggeration' },
   { keys: ['T'], label: 'Open the time scrubber' },
   { keys: ['←', '→'], label: 'Time scrubber (while open): rewind / fast-forward' },
   { keys: ['Space'], label: 'Time scrubber (while open): play / pause' },

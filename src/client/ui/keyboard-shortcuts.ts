@@ -4,7 +4,7 @@ import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import {
   pushTapAndCheckTriple,
-  DOUBLE_TAP_MS,
+  makeDoubleTapGate,
 } from './keyboard-shortcuts-pure';
 import { toggleFullscreen } from './fullscreen';
 import { toggleControlsHidden } from './controls-hidden';
@@ -17,6 +17,17 @@ import { toggleControlsHidden } from './controls-hidden';
 const MAG_STEP = 0.5;
 const MAG_MIN = -2;
 const MAG_MAX = 15;
+
+// Keys that drive the time scrubber while it's open → the widget method
+// each fires. Handled ahead of the main switch since they share one
+// open-gate (and Space defers to an active warp).
+type TransportMethod = 'stepForward' | 'stepBack' | 'togglePlay' | 'reset';
+const TRANSPORT_KEY_ACTIONS: Record<string, TransportMethod> = {
+  ArrowRight: 'stepForward',
+  ArrowLeft: 'stepBack',
+  ' ': 'togglePlay',
+  Backspace: 'reset',
+};
 
 export interface KeyboardShortcutsDeps {
   /** Reveal/dismiss the unified debug panel. Bound to the hidden
@@ -63,11 +74,20 @@ export function bindKeyboardShortcuts(
     focusTarget: () => document.getElementById('find-input') as HTMLInputElement | null,
   });
 
-  // Pending single-tap timers for the C and F shortcuts — tracked across
-  // keydowns so a second press inside the double-tap window can cancel the
-  // pending single-tap action.
-  let cTapTimer: number | null = null;
-  let fTapTimer: number | null = null;
+  // C: single tap opens the picker, double tap flips the master toggle.
+  const conGate = makeDoubleTapGate(
+    () => { if (stellata.getFilter().showConstellation) conModal.open(); },
+    () => stellata.setFilter({
+      showConstellation: !stellata.getFilter().showConstellation,
+    }),
+  );
+  // F: single tap opens Find (observe-only — in navigate, aiming just parks
+  // the target behind the focused star); double tap F-F toggles fullscreen
+  // in every mode.
+  const findGate = makeDoubleTapGate(
+    () => { if (stellata.getCameraMode() === 'observe') findModal.open(); },
+    toggleFullscreen,
+  );
 
   // Rolling window of recent D-key tap timestamps. Three taps inside
   // D_TRIPLE_TAP_MS open the debug panel — hidden affordance, intentionally
@@ -125,6 +145,23 @@ export function bindKeyboardShortcuts(
 
     if (anyVisibleSelector('.modal') || anyVisibleSelector('.kb-modal')) return;
 
+    // Time-scrubber transport keys, live only while the scrubber is open;
+    // otherwise they fall through untouched, keeping their default
+    // behaviour. Space is special: during a warp it belongs to
+    // warp-button.ts (skip-warp), so we bow out and let that bubble-phase
+    // handler take it — the scrubber only claims Space when no warp is
+    // running. The jump date-field is covered by the targetIsEditable guard
+    // above (arrows edit its segments when focused).
+    if (e.key === ' ' && stellata.getWarpActive()) return;
+    const transport = TRANSPORT_KEY_ACTIONS[e.key];
+    if (transport) {
+      if (deps.timeScrubber.isOpen()) {
+        deps.timeScrubber[transport]();
+        e.preventDefault();
+      }
+      return;
+    }
+
     switch (e.key) {
       case 'r': case 'R':
         resetCameraSection(stellata);
@@ -135,25 +172,9 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'c': case 'C':
-        // Single tap opens the picker; double tap toggles the master
-        // visibility. Defer the picker open by the double-tap window so a
-        // second press can intercept and switch to the toggle action.
         if (e.repeat) break;
         e.preventDefault();
-        if (cTapTimer !== null) {
-          clearTimeout(cTapTimer);
-          cTapTimer = null;
-          stellata.setFilter({
-            showConstellation: !stellata.getFilter().showConstellation,
-          });
-        } else {
-          cTapTimer = window.setTimeout(() => {
-            cTapTimer = null;
-            if (stellata.getFilter().showConstellation) {
-              conModal.open();
-            }
-          }, DOUBLE_TAP_MS);
-        }
+        conGate();
         break;
       case 'h': case 'H':
         stellata.setFilter({ showHud: !stellata.getFilter().showHud });
@@ -166,24 +187,9 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'f': case 'F':
-        // Single tap opens the find picker; double tap F-F toggles
-        // fullscreen (matching the C single/double feel). Defer the picker
-        // open by the double-tap window so a second press can intercept it.
-        // Find is observe-only — in navigate mode aiming at an object just
-        // parks it behind the focused star, so the single-tap open is gated
-        // while the F-F fullscreen path stays live in every mode.
         if (e.repeat) break;
         e.preventDefault();
-        if (fTapTimer !== null) {
-          clearTimeout(fTapTimer);
-          fTapTimer = null;
-          toggleFullscreen();
-        } else {
-          fTapTimer = window.setTimeout(() => {
-            fTapTimer = null;
-            if (stellata.getCameraMode() === 'observe') findModal.open();
-          }, DOUBLE_TAP_MS);
-        }
+        findGate();
         break;
       case 'u': case 'U':
         toggleControlsHidden();
@@ -192,34 +198,6 @@ export function bindKeyboardShortcuts(
       case 't': case 'T':
         deps.timeScrubber.toggle();
         e.preventDefault();
-        break;
-      // Transport shortcuts, live only while the scrubber is open. When it
-      // isn't, these fall through untouched (no preventDefault) so the keys
-      // keep their default behaviour. The jump date-field is covered by the
-      // targetIsEditable guard above — arrows edit its segments when focused.
-      case 'ArrowRight':
-        if (deps.timeScrubber.isOpen()) {
-          deps.timeScrubber.stepForward();
-          e.preventDefault();
-        }
-        break;
-      case 'ArrowLeft':
-        if (deps.timeScrubber.isOpen()) {
-          deps.timeScrubber.stepBack();
-          e.preventDefault();
-        }
-        break;
-      case ' ':
-        if (deps.timeScrubber.isOpen()) {
-          deps.timeScrubber.togglePlay();
-          e.preventDefault();
-        }
-        break;
-      case 'Backspace':
-        if (deps.timeScrubber.isOpen()) {
-          deps.timeScrubber.reset();
-          e.preventDefault();
-        }
         break;
       case 'o': case 'O':
         // Mirror the panel's observe-button enable rule: only valid when

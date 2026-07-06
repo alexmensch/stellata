@@ -30,12 +30,13 @@ export interface TimeReadoutDeps {
   stellata: Stellata;
 }
 
-/** Mount the readout into `el`. Always visible — orbital evolution
- *  ticks against `Stellata.getT()` in every mode (chart, warp, observe,
- *  free fly), so the user always benefits from knowing which moment
- *  the rendered positions correspond to. Ticks once per second to
- *  refresh the displayed value. Returns a teardown function for
- *  tests / HMR. */
+/** Mount a live UTC readout into `el`: unhide it and tick
+ *  `Stellata.getT()` once per second. Orbital evolution ticks against
+ *  `getT()` in every mode (chart, warp, observe, free fly), so the current
+ *  model time is worth showing throughout. Returns a teardown that stops
+ *  the tick — callers swap the readout in and out (the scrubber widget
+ *  stops this collapsed readout while it's expanded and shows its own),
+ *  and tests / HMR dispose it. */
 export function createTimeReadout({ el, stellata }: TimeReadoutDeps): () => void {
   const tick = () => {
     el.textContent = formatTimeReadout(stellata.getT());
