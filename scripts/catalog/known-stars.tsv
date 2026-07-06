@@ -53,6 +53,21 @@
 #                           (companion record .periodDays). Empty when
 #                           the system lacks a well-determined orbit or
 #                           the pipeline does not propagate one.
+# var_type                  Optional GCVS variability pin: "pulsating" /
+#                           "eclipsing" / "other" asserts record.varType
+#                           against the catalog-pure VAR_TYPE_* enum;
+#                           "none" asserts the record carries NO
+#                           variability (varType, period, amplitude all
+#                           zero). Empty = no varType assertion.
+# var_period_days           Optional GCVS published period in days,
+#                           UNQUANTISED. The test applies the build's
+#                           encoding (round(P × 10) into uint16, 0.1 d
+#                           quanta, 6553.5 d clamp) before comparing to
+#                           record.periodDays.
+# var_amp_mag               Optional GCVS amplitude (max − min, mag),
+#                           unquantised. Encoded as round(amp × 20)
+#                           into uint8 (0.05 mag quanta, 12.75 clamp)
+#                           before comparing to record.amplitudeMag.
 # notes_source              Provenance citation. Required on every row.
 #                           Format: "SIMBAD <permalink>" /
 #                           "ORB6 entry P=…" / "Gaia DR3 ADQL
@@ -70,6 +85,9 @@
 #   companion absmag          ±0.05
 #   companion hip / gaia_id   exact match
 #   orbital_period_days       ±5% (only checked when row has a value)
+#   var_type                  exact enum match ("none" = all three zero)
+#   var_period_days           exact after uint16 0.1 d quantisation
+#   var_amp_mag               exact after uint8 0.05 mag quantisation
 #
 # ---- Authoring discipline ----------------------------------------------
 #
@@ -77,7 +95,11 @@
 # citation. Distance + absmag verified against AT LEAST TWO independent
 # sources where possible (SIMBAD + Gaia DR3 ADQL; ORB6 + van Leeuwen
 # HIP2; etc.). Companion rows use multiples.tsv as one source;
-# SIMBAD per-oid as the second. The TSV is the contract — the
+# SIMBAD per-oid as the second. Variability pins quote the GCVS 5.1
+# published period + max/min magnitudes (the pipeline input is the
+# same frozen GCVS snapshot, so these pins are parse + cross-match +
+# encode regression guards; AAVSO / SIMBAD otype spot-checks noted in
+# notes_source where consulted). The TSV is the contract — the
 # vitest exercises every row, every column.
 #
 # ---- Format ----------------------------------------------------------
@@ -85,40 +107,55 @@
 # Tab-separated. Lines beginning with "#" are skipped by the parser.
 # Empty cells render as adjacent tabs.
 #
-wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primary_distance_pc_err	primary_absmag	primary_spectral	companions	orbital_period_days	notes_source
+wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primary_distance_pc_err	primary_absmag	primary_spectral	companions	orbital_period_days	var_type	var_period_days	var_amp_mag	notes_source
 # ---- Distance-refinement regression cases ------------------------------
 # B-J override re-anchored from catastrophic AT-HYG G_R3 distance:
-	HD 30353	22365	204531088580182016	6244.791	10	-7.033	A5Iap			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 30353 sp_type=A5Iap (sg*).
-	HD 35921	25733	183255985260080896	5466.246	10	-7.621	O9II			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 35921 sp_type=O9II.
-	HD 64315	38430	5602025904044961536	6215.232	10	-4.865	O5.5Vz+O7V			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 64315 sp_type=O5.5Vz+O7V (eclipsing binary).
-	HIP 46144	46144	1040043514891491968	7515.496	10	-4.335	A0			B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HIP 46144 sp_type=A0 (bare; no lumClass pin).
+	HD 30353	22365	204531088580182016	6244.791	10	-7.033	A5Iap						B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 30353 sp_type=A5Iap (sg*).
+	HD 35921	25733	183255985260080896	5466.246	10	-7.621	O9II						B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 35921 sp_type=O9II.
+	HD 64315	38430	5602025904044961536	6215.232	10	-4.865	O5.5Vz+O7V						B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HD 64315 sp_type=O5.5Vz+O7V (eclipsing binary).
+	HIP 46144	46144	1040043514891491968	7515.496	10	-4.335	A0						B-J override: Bailer-Jones 2021 DR3 posterior re-anchored from AT-HYG's G_R3 distance; SIMBAD HIP 46144 sp_type=A0 (bare; no lumClass pin).
 # B-J no-degradation guard — well-measured nearby F-dwarf, B-J must not perturb:
-	HD 33305	23785	4773096563064098432	92.871	0.5	3.551	F5V			B-J no-degradation guard: high-S/N nearby F-dwarf; Bailer-Jones posterior must not shift the AT-HYG value. SIMBAD HD 33305 sp_type=F5V.
+	HD 33305	23785	4773096563064098432	92.871	0.5	3.551	F5V						B-J no-degradation guard: high-S/N nearby F-dwarf; Bailer-Jones posterior must not shift the AT-HYG value. SIMBAD HD 33305 sp_type=F5V.
 # LMC kinematic snaps — pinned to Pietrzyński 2019 49.594 kpc:
-	HD 269529		4658107884688023040	49593.999	1	-7.426	G0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare).
-	HD 271416		4660699674131931008	49593.998	1	-7.262	K0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
-	HD 268691		4661719299382753408	49593.999	1	-7.703	K7			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare).
-	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.595	M0			LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
+	HD 269529		4658107884688023040	49593.999	1	-7.426	G0						LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare).
+	HD 271416		4660699674131931008	49593.998	1	-7.262	K0						LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
+	HD 268691		4661719299382753408	49593.999	1	-7.703	K7						LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare).
+	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.595	M0						LMC kinematic snap: Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
 # ---- Single stars ------------------------------------------------------
 # Bright stars saturated in Gaia DR3 have null gaia_source_id; the
 # pipeline's spectral resolver requires a Gaia source_id, so spectClass
 # falls back to 8 (unknown). The corpus pins spectClass=8 via empty
 # primary_spectral; SIMBAD's true sp_type is annotated in notes_source.
-	Vega	91262		7.679	0.05	0.604	A0V			SIMBAD * alf Lyr sp_type=A0V; HIP2 parallax 130.23 mas. Bright star saturated in Gaia DR3 (no source_id); spectral resolves via resolveSpectralInfo's SIMBAD HIP fallback tier.
-	Altair	97649		5.129	0.05	2.210	A7Vn			SIMBAD * alf Aql sp_type=A7Vn; HIP2 parallax. Bright star, no Gaia DR3 match.
-02318+8916	Polaris	11767		132.626	0.7	-3.643	F8Ib	Ab:::-1.643:20.0	10744.194	SIMBAD * alf UMi sp_type=F8Ib; Cepheid variable. HIP-anchored distance; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. ORB6 inner orbit Aa,Ab P=10744 d (29.4 yr); companion Ab promoted via synth-02318+8916-Ab (no own gaia/hip). max_sep_au=20.0 guards the dch.80 fix — Ab projects to 13.26 AU from Polaris via sep+PA (0.1″ × 132.626 pc); pre-fix it landed 128 AU off via the athyg_position float residue.
-	Procyon	37279		3.514	0.05	2.671	F5IV-V+DQZ			SIMBAD * alf CMi sp_type=F5IV-V+DQZ; HIP2 parallax. Bright primary, no Gaia DR3 match.
-05552+0724	Betelgeuse	27989		152.672	1.0	-5.469	M1-M2Ia-Iab			SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. HIP-anchored. NO companion expected: the WDS Aa,Ab row carries no mags and no orbit, so the promoted Ab was a full-luminosity invented twin of Betelgeuse (absmag -5.47 at 0.1″) — the inherited-photometry drop now removes it. If Ab reappears here, the twin-brightness guard regressed.
-	Arcturus	69673		11.257	0.1	-0.307	K1.5IIIFe-0.5			SIMBAD * alf Boo sp_type=K1.5IIIFe-0.5. Bright nearby giant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
-	Aldebaran	21421		20.434	0.2	-0.682	K5+III			SIMBAD * alf Tau sp_type=K5+III. Bright giant, no Gaia DR3 match.
-	Rigel	24436		264.551	1.5	-6.993	B8Ia			SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
-	Antares	80763		169.780	1.0	-5.487	M1.5Iab+B2Vn			SIMBAD * alf Sco sp_type=M1.5Iab+B2Vn. Bright red supergiant with B-star companion.
-	Spica	65474		76.570	0.5	-3.440	B1V			SIMBAD * alf Vir sp_type=B1V. Bright early-B variable (β Cep), tight spectroscopic binary.
-	Deneb	102098		432.900	2.5	-7.063	A2Ia			SIMBAD * alf Cyg sp_type=A2Ia. Bright supergiant; AT-HYG distance from HIP2 with high uncertainty (true distance ~800 pc per Gaia DR2).
-05167+4600	Capella	24608		13.123	0.1	-0.510	G3III:	Ab:::-0.410:1.0	104.02128	SIMBAD * alf Aur sp_type=G3III:. Bright quad system (Aa+Ab giants); HIP-anchored. ORB6 inner orbit Aa,Ab P=104.02 d; companion Ab promoted via synth-05167+4600-Ab (no own gaia/hip). max_sep_au=1.0 guards the dch.80 fix — Ab projects to ~0 AU from Capella via sep+PA (0.0″ at 13.123 pc); BinaryOrbitField overlays the ~0.74 AU inner orbit at runtime.
-	Canopus	30438		94.787	0.5	-5.504	A9II			SIMBAD * alf Car sp_type=A9II. Bright supergiant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
-	Achernar	7588		42.754	0.3	-2.705	B6Vpe			SIMBAD * alf Eri sp_type=B6Vpe; emission-line Be star, rapid rotator.
-	Fomalhaut	113368		7.704	0.05	1.737	A4V			SIMBAD * alf PsA sp_type=A4V. Nearby A-dwarf with debris disc.
+	Vega	91262		7.679	0.05	0.604	A0V				0.19	0.09	SIMBAD * alf Lyr sp_type=A0V; HIP2 parallax 130.23 mas. Bright star saturated in Gaia DR3 (no source_id); spectral resolves via resolveSpectralInfo's SIMBAD HIP fallback tier. GCVS alf Lyr: DSCTC P=0.19 d, amp V -0.02→0.07 (0.09). var_type deliberately unpinned — DSCTC misroutes to 'other' via the pulsator subtype-tail gate (stellata-dch.83.3); pin 'pulsating' when fixed.
+	Altair	97649		5.129	0.05	2.210	A7Vn						SIMBAD * alf Aql sp_type=A7Vn; HIP2 parallax. Bright star, no Gaia DR3 match.
+02318+8916	Polaris	11767		132.626	0.7	-3.643	F8Ib	Ab:::-1.643:20.0	10744.194		3.9696	0.27	SIMBAD * alf UMi sp_type=F8Ib; Cepheid variable. GCVS alf UMi: DCEPS P=3.9696 d, amp V 1.86→2.13 (0.27); var_type deliberately unpinned — DCEPS misroutes to 'other' via the pulsator subtype-tail gate (stellata-dch.83.3); pin 'pulsating' when fixed. HIP-anchored distance; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. ORB6 inner orbit Aa,Ab P=10744 d (29.4 yr); companion Ab promoted via synth-02318+8916-Ab (no own gaia/hip). max_sep_au=20.0 guards the dch.80 fix — Ab projects to 13.26 AU from Polaris via sep+PA (0.1″ × 132.626 pc); pre-fix it landed 128 AU off via the athyg_position float residue.
+	Procyon	37279		3.514	0.05	2.671	F5IV-V+DQZ						SIMBAD * alf CMi sp_type=F5IV-V+DQZ; HIP2 parallax. Bright primary, no Gaia DR3 match.
+05552+0724	Betelgeuse	27989		152.672	1.0	-5.469	M1-M2Ia-Iab			pulsating	2335	1.6	SIMBAD * alf Ori sp_type=M1-M2Ia-Iab; semi-regular variable. GCVS alf Ori: SRC P=2335 d, amp V 0.0→1.6. HIP-anchored. NO companion expected: the WDS Aa,Ab row carries no mags and no orbit, so the promoted Ab was a full-luminosity invented twin of Betelgeuse (absmag -5.47 at 0.1″) — the inherited-photometry drop now removes it. If Ab reappears here, the twin-brightness guard regressed.
+	Arcturus	69673		11.257	0.1	-0.307	K1.5IIIFe-0.5						SIMBAD * alf Boo sp_type=K1.5IIIFe-0.5. Bright nearby giant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
+	Aldebaran	21421		20.434	0.2	-0.682	K5+III						SIMBAD * alf Tau sp_type=K5+III. Bright giant, no Gaia DR3 match.
+	Rigel	24436		264.551	1.5	-6.993	B8Ia						SIMBAD * bet Ori sp_type=B8Ia. Bright supergiant.
+	Antares	80763		169.780	1.0	-5.487	M1.5Iab+B2Vn						SIMBAD * alf Sco sp_type=M1.5Iab+B2Vn. Bright red supergiant with B-star companion.
+	Spica	65474		76.570	0.5	-3.440	B1V						SIMBAD * alf Vir sp_type=B1V. Bright early-B variable (β Cep), tight spectroscopic binary.
+	Deneb	102098		432.900	2.5	-7.063	A2Ia						SIMBAD * alf Cyg sp_type=A2Ia. Bright supergiant; AT-HYG distance from HIP2 with high uncertainty (true distance ~800 pc per Gaia DR2).
+05167+4600	Capella	24608		13.123	0.1	-0.510	G3III:	Ab:::-0.410:1.0	104.02128				SIMBAD * alf Aur sp_type=G3III:. Bright quad system (Aa+Ab giants); HIP-anchored. ORB6 inner orbit Aa,Ab P=104.02 d; companion Ab promoted via synth-05167+4600-Ab (no own gaia/hip). max_sep_au=1.0 guards the dch.80 fix — Ab projects to ~0 AU from Capella via sep+PA (0.0″ at 13.123 pc); BinaryOrbitField overlays the ~0.74 AU inner orbit at runtime.
+	Canopus	30438		94.787	0.5	-5.504	A9II						SIMBAD * alf Car sp_type=A9II. Bright supergiant; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier.
+	Achernar	7588		42.754	0.3	-2.705	B6Vpe						SIMBAD * alf Eri sp_type=B6Vpe; emission-line Be star, rapid rotator.
+	Fomalhaut	113368		7.704	0.05	1.737	A4V			none			SIMBAD * alf PsA sp_type=A4V. Nearby A-dwarf with debris disc. var_type=none guards against a false-positive GCVS cross-match (not a GCVS variable; varType/period/amplitude must all stay zero).
+# ---- Population-coverage singles ----------------------------------------
+# One pin per population dimension the corpus previously lacked: nearest
+# M dwarf, halo subdwarf, solitary white dwarf, carbon star, Wolf-Rayet,
+# O supergiant with luminosity class, prototype variables of each GCVS
+# family the renderer animates, and a Tycho-only no-HIP record.
+	Barnard's Star	87937	4472832130942575872	1.828	0.05	13.230	M4V						SIMBAD NAME Barnard's star sp_type=M4V; plx 546.976±0.040 → 1.828 pc (B-J photogeo agrees); V=9.511 → M_V≈13.20. Nearest single star and highest-PM star in the catalogue (J2016 placement pinned in sky-position-corpus.tsv).
+	Kapteyn's Star	24186	4810594479418041856	3.934	0.05	10.886	M1VIp						SIMBAD HD 33793 sp_type=M1VIp (halo subdwarf — lumClass VI pin); plx 254.199±0.017 → 3.934 pc; V=8.853 → M_V≈10.88. Retrograde halo kinematics, second-highest PM. Covers the subdwarf luminosity class.
+	Van Maanen 2	3829	2552928187080872832	4.314	0.05	14.196	DZ7.5						SIMBAD Wolf 28 sp_type=DZ7.5; plx 231.780±0.018 → 4.314 pc; V=12.374 → M_V≈14.20. Nearest solitary white dwarf — covers the single-WD population (DZ parse → WD class byte + lumClass VII/D, 0.013 R☉ special case).
+	R Leporis	23203	2987082722815713792	446.331	10	-0.336	C7,6e			pulsating	427.07	6.2	SIMBAD V* R Lep sp_type=C7,6e (Hind's Crimson Star, carbon Mira); B-J photogeo 446.3 pc (SIMBAD plx 2.19±0.06 → 456±13, consistent). GCVS R Lep: M P=427.07 d, amp V 5.5→11.7 (6.2). Covers spectClass=7 (C/S/W) + the long-period pulsator encode path; absmag is the AT-HYG mean V at the B-J distance, de-extincted.
+	γ² Velorum	39953		342.466	1.5	-6.001	WC8+O7.5III-V						SIMBAD * gam02 Vel sp_type=WC8+O7.5III-V (WR 11, closest Wolf-Rayet); Gaia-saturated (no source_id), HIP2 long-baseline 342.5 pc (plx 2.92±0.30). V=1.83 → M_V≈-5.84 plus A_V≈0.16 de-extinction. Covers the WR population. physicalRadius currently inflates ~100× through the carbon-star temperature table (stellata-7cl.21) — deliberately unpinned here; add a radius pin when fixed.
+	ζ Puppis / Naos	39429	5534788672055388032	332.226	1.5	-5.447	O4I(n)fp						SIMBAD * zet Pup sp_type=O4I(n)fp; B-J photogeo 332.2 pc (SIMBAD plx 3.01±0.10 → 332±11). V=2.25 → M_V≈-5.36 plus de-extinction. Hottest naked-eye O star — covers spectClass=O WITH a luminosity-class pin (ν Sco's O is a bare GSP-Spec letter).
+	Mira	10826		91.659	0.5	1.659	M5-9IIIe+DA			pulsating	328.8	8.5	SIMBAD * omi Cet sp_type=M5-9IIIe+DA (the DA is the VZ Cet white-dwarf companion in the composite string the resolver consumed via the SIMBAD HIP fallback tier); Gaia-saturated (no source_id), HIP-anchored 91.66 pc (plx 10.91±1.22). GCVS omi Cet: M P=328.8 d, amp V 1.9→10.4 (8.5) — the prototype long-period variable, largest amplitude pinned.
+	δ Cephei	110991	2200153454733285248	279.795	1.5	-3.382	F5Iab:+B7-8			pulsating	5.366208	0.89	SIMBAD * del Cep sp_type=F5Iab:+B7-8; B-J photogeo 279.8 pc (plx 3.556±0.148 → 281±12; Benedict 2002 HST parallax gives 273±11). GCVS del Cep: DCEP P=5.366208 d, amp V 3.48→4.37 (0.89) — the classical-Cepheid prototype.
+	44 Boötis	73695		12.508	0.05	4.344	G0Vn			eclipsing	0.2678190	0.16	SIMBAD * i Boo sp_type=G0Vn; Gaia-saturated (no source_id), HIP-anchored 12.51 pc (plx 79.95±1.56). GCVS i Boo: EW P=0.2678190 d, amp V 4.70→4.86 (0.16) — W UMa contact eclipser; pins the sub-day period quantisation (0.268 d → 0.3 d at the 0.1 d quantum).
+	HD 200191		6457874175857073664	97.120	0.5	5.000	G0						SIMBAD HD 200191 sp_type=G0 (bare; no lumClass pin). Tycho-sourced AT-HYG row whose catalogue record carries NO HIP — pins the no-HIP population addressed by Gaia source_id alone. SIMBAD lists HIP 103995 for this star; the AT-HYG row omits it (identifier-backfill gap, dch.79 class). Distance 97.12 pc (AT-HYG G_R3 + B-J).
 # ---- Visual binaries with multiples.tsv-validated companions -----------
 # Systems where (a) primary has a catalog.bin record and (b) at least one
 # companion has a per-component multiples.tsv row with non-inherited HIP /
@@ -126,35 +163,36 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # or inherited from the primary (e.g. Sirius B at 1.454, Procyon B blank)
 # are deliberately excluded — pinning known-bad data would mislead future
 # regression detection.
-14396-6050	α Centauri	71683		1.325	0.05	4.379	G2V	B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437	29133.07	SIMBAD * alf Cen A sp_type=G2V; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima); bestPeriodMatch picks the AB orbit nearest the expected value. Companion data per multiples.tsv.
-21069+3845	61 Cygni	104214	1872046609345556480	3.496	0.05	7.482	K5V	B:104217:1872046574983497216:8.332		SIMBAD * 61 Cyg A sp_type=K5V; companion B sp_type=K7V (multiples.tsv). Common-proper-motion pair, no well-determined orbit.
-13239+5456	Mizar–Alcor	65378	1563590579347125632	24.867	0.2	0.252	A1.5Vas	C:65477::1.995		SIMBAD * zet01 UMa sp_type=A1.5Vas (primary Mizar Aa). Companion C is Alcor (HIP 65477, A5V), validated against multiples.tsv wds 13239+5456-AC. Wide visual pair (~0.2 pc separation).
+14396-6050	α Centauri	71683		1.325	0.05	4.379	G2V	B:71681:5877748442128924544:5.739;C:70890:5853498713190525696:15.437	29133.07				SIMBAD * alf Cen A sp_type=G2V; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. ORB6 P=29133.07 d (AB) + 199791750 d (AC/Proxima); bestPeriodMatch picks the AB orbit nearest the expected value. Companion data per multiples.tsv.
+21069+3845	61 Cygni	104214	1872046609345556480	3.496	0.05	7.482	K5V	B:104217:1872046574983497216:8.332					SIMBAD * 61 Cyg A sp_type=K5V; companion B sp_type=K7V (multiples.tsv). Common-proper-motion pair, no well-determined orbit.
+13239+5456	Mizar–Alcor	65378	1563590579347125632	24.867	0.2	0.252	A1.5Vas	C:65477::1.995					SIMBAD * zet01 UMa sp_type=A1.5Vas (primary Mizar Aa). Companion C is Alcor (HIP 65477, A5V), validated against multiples.tsv wds 13239+5456-AC. Wide visual pair (~0.2 pc separation).
 # ---- Nearby resolved binaries (≤30 pc, both components in multiples.tsv with non-inherited data) ----
-18428+5938	Σ 2398 / Gliese 725	91768	2154880616774131840	3.523	0.05	11.205	M3V	B:91772:2154880616774131712:11.965		SIMBAD HD 173739 sp_type=M3V; nearby M-dwarf binary at 3.5 pc. Companion B (HD 173740, M3.5V) from multiples.tsv.
-14575-2125	GJ 570 / 33 G. Librae	73184	6232511606838403968	5.886	0.05	6.871	K4V	B:73182:6232511675556408320:9.146	2369944.24	SIMBAD HD 131977 sp_type=K4V (primary GJ 570 A = 33 G. Lib; previously mislabelled ξ Boötis, which is HD 131156 / HIP 72659 / WDS 14514+1906). Companion B (M1.5V) per multiples.tsv. ORB6 P=2369944.24 d (~6489 yr).
-17153-2636	36 Ophiuchi / Guniibuu	84405	4109030160308320128	5.951	0.05	5.457	K1V	C:84478:4109034455276324608:7.456	171996.23	SIMBAD * 36 Oph sp_type=K1V. multiples.tsv carries primary gaia 4109030160308317312 but catalog.bin uses 4109030160308320128 from the HIP→Gaia cross-walk; corpus pins the catalog-side ID. Companion C (K5V) per multiples.tsv. ORB6 P=171996 d.
-22577-2937	Fomalhaut + Fomalhaut B	113368		7.704	0.05	1.737	A4V	B:113283:6604147121141267712:7.076		SIMBAD * alf PsA sp_type=A4V; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. Companion Fomalhaut B (TW PsA, K4Ve, common-proper-motion pair) per multiples.tsv.
-01026+6221	HD 6440 / AC+27 28217	4872	522863309964987520	9.856	0.05	9.591	M1.5V	B::522864272041351296:13.690		SIMBAD BD+61 195 sp_type=M1.5V. Companion B (HIP-less, Gaia DR3 source 522864272041351296) at absmag 13.69 — wide nearby pair from multiples.tsv.
-09144+5241	HD 79210 / HD 79211	45343	1022456139210632064	6.332	0.05	8.632	K7V	B:120005:1022456104850892928:8.692		SIMBAD HD 79210 sp_type=K7V. Companion HIP 120005 = HD 79211 M0V — common-proper-motion K+M pair at 6.3 pc.
-16555-0820	HD 152751	82817		6.196	0.05	10.060	M3.5Ve	C:82809:4339465360510320128:12.666	627.28	SIMBAD HD 152751 sp_type=M3.5Ve; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. Companion C HIP 82809 (M3.5V) per multiples.tsv. ORB6 P=627.28 d.
-20452-3120	HD 197481 / AU Mic system	102409	6794047652729201024	9.711	0.05	8.874	M1VeBa1	B:102141:6792436799475128960:10.124	53107.35	SIMBAD HD 197481 sp_type=M1VeBa1 (AU Mic, young M-dwarf with debris disc). Companion B HIP 102141 (M4.5Ve, AT Mic) per multiples.tsv. ORB6 P=53107 d.
-03480+6840	HD 23189	17749	493650660400463488	17.904	0.2	7.905	K2V	B:17750::8.004	16147.70	SIMBAD HD 23189 sp_type=K2V. Companion B HIP 17750 (M2V+K6V spectroscopic pair) per multiples.tsv. ORB6 P=16147.7 d.
-16579+4722	HD 153557 + HD 153525	83020	1408029509584967168	17.930	0.2	6.492	K3V	C:83006:1408029436569383296:6.660	113592.75	SIMBAD HD 153557 sp_type=K3V. Companion C HIP 83006 = HD 153525 (K3V) per multiples.tsv. ORB6 P=113592 d.
-03439+1640	BD+16 502 / HIP 17414+17405	17414	43335880716390784	17.220	0.2	8.810	K6V	B:17405:43335537119385216:9.648		SIMBAD BD+16 502 sp_type=K6V. Companion B HIP 17405 (M0V) per multiples.tsv.
-03182-6230	ζ¹ + ζ² Reticuli	15371	4722135642226902656	12.038	0.1	4.837	G1V	B:15330:4722111590409480064:5.126		SIMBAD * zet02 Ret sp_type=G1V (primary ζ² Ret). Companion B HIP 15330 = ζ¹ Ret (G2.5V) per multiples.tsv. Famous nearby solar-twin pair.
-17350+6153	26 Draconis	86036	1439121018358632832	14.434	0.1	4.433	G0IV-V	C:86087:1439069444391326208:9.202	27795.525	SIMBAD * 26 Dra sp_type=G0IV-V. Companion C HIP 86087 (M1V), wide 737″ CPM companion. Rendered orbit is the ORB6 visual A,B pair P=27795.5 d (~76 yr); the Gaia NSS 92 d inner wobble has no resolvable WDS pair to host.
-23328-1651	HD 221503	116215	2395031273585836288	14.541	0.1	7.777	K6V	B:116191::3.953	16173.27	SIMBAD HD 221503 sp_type=K6V. Companion B HIP 116191 per multiples.tsv (absmag 3.953 — likely optical pair given the >2 mag difference and lack of Gaia ID; pinning current state). ORB6 P=16173 d.
-14257+2338	BD+24 2733 / HIP 70529+70536	70529	1254695603704323712	16.321	0.2	8.706	M3V	B:70536:1254694882149817728:8.914		SIMBAD BD+24 2733 sp_type=M3V. Companion B HIP 70536 (M3V) per multiples.tsv. Wide M-dwarf pair.
+18428+5938	Σ 2398 / Gliese 725	91768	2154880616774131840	3.523	0.05	11.205	M3V	B:91772:2154880616774131712:11.965					SIMBAD HD 173739 sp_type=M3V; nearby M-dwarf binary at 3.5 pc. Companion B (HD 173740, M3.5V) from multiples.tsv.
+04153-0739	40 Eridani / Keid	19849	3195919528989223040	5.009	0.05	5.931	K0.5V	B::3195919254111315712:11.0818;C::3195919254111314816:12.8050	85176.3				SIMBAD * omi02 Eri sp_type=K0.5V. Physical triple: B = * omi02 Eri B DA2.9, the first-discovered white dwarf (own-Gaia gaia_photometry absmag 11.08; SIMBAD V=9.53 → M_V 11.03); C = * omi02 Eri C M4.5V flare star (absmag 12.805; SIMBAD V=11.17 → M_V 12.67). ORB6 B-C orbit P=85176.3 d (233 yr). Kept-pair set pinned in system-pair-topology.tsv (WDS D/E are background stars).
+14575-2125	GJ 570 / 33 G. Librae	73184	6232511606838403968	5.886	0.05	6.871	K4V	B:73182:6232511675556408320:9.146	2369944.24				SIMBAD HD 131977 sp_type=K4V (primary GJ 570 A = 33 G. Lib; previously mislabelled ξ Boötis, which is HD 131156 / HIP 72659 / WDS 14514+1906). Companion B (M1.5V) per multiples.tsv. ORB6 P=2369944.24 d (~6489 yr).
+17153-2636	36 Ophiuchi / Guniibuu	84405	4109030160308320128	5.951	0.05	5.457	K1V	C:84478:4109034455276324608:7.456	171996.23				SIMBAD * 36 Oph sp_type=K1V. multiples.tsv carries primary gaia 4109030160308317312 but catalog.bin uses 4109030160308320128 from the HIP→Gaia cross-walk; corpus pins the catalog-side ID. Companion C (K5V) per multiples.tsv. ORB6 P=171996 d.
+22577-2937	Fomalhaut + Fomalhaut B	113368		7.704	0.05	1.737	A4V	B:113283:6604147121141267712:7.076					SIMBAD * alf PsA sp_type=A4V; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. Companion Fomalhaut B (TW PsA, K4Ve, common-proper-motion pair) per multiples.tsv.
+01026+6221	HD 6440 / AC+27 28217	4872	522863309964987520	9.856	0.05	9.591	M1.5V	B::522864272041351296:13.690					SIMBAD BD+61 195 sp_type=M1.5V. Companion B (HIP-less, Gaia DR3 source 522864272041351296) at absmag 13.69 — wide nearby pair from multiples.tsv.
+09144+5241	HD 79210 / HD 79211	45343	1022456139210632064	6.332	0.05	8.632	K7V	B:120005:1022456104850892928:8.692					SIMBAD HD 79210 sp_type=K7V. Companion HIP 120005 = HD 79211 M0V — common-proper-motion K+M pair at 6.3 pc.
+16555-0820	HD 152751	82817		6.196	0.05	10.060	M3.5Ve	C:82809:4339465360510320128:12.666	627.28				SIMBAD HD 152751 sp_type=M3.5Ve; Gaia-saturated (no source_id), spectral resolves via the SIMBAD HIP fallback tier. Companion C HIP 82809 (M3.5V) per multiples.tsv. ORB6 P=627.28 d.
+20452-3120	HD 197481 / AU Mic system	102409	6794047652729201024	9.711	0.05	8.874	M1VeBa1	B:102141:6792436799475128960:10.124	53107.35				SIMBAD HD 197481 sp_type=M1VeBa1 (AU Mic, young M-dwarf with debris disc). Companion B HIP 102141 (M4.5Ve, AT Mic) per multiples.tsv. ORB6 P=53107 d.
+03480+6840	HD 23189	17749	493650660400463488	17.904	0.2	7.905	K2V	B:17750::8.004	16147.70				SIMBAD HD 23189 sp_type=K2V. Companion B HIP 17750 (M2V+K6V spectroscopic pair) per multiples.tsv. ORB6 P=16147.7 d.
+16579+4722	HD 153557 + HD 153525	83020	1408029509584967168	17.930	0.2	6.492	K3V	C:83006:1408029436569383296:6.660	113592.75				SIMBAD HD 153557 sp_type=K3V. Companion C HIP 83006 = HD 153525 (K3V) per multiples.tsv. ORB6 P=113592 d.
+03439+1640	BD+16 502 / HIP 17414+17405	17414	43335880716390784	17.220	0.2	8.810	K6V	B:17405:43335537119385216:9.648					SIMBAD BD+16 502 sp_type=K6V. Companion B HIP 17405 (M0V) per multiples.tsv.
+03182-6230	ζ¹ + ζ² Reticuli	15371	4722135642226902656	12.038	0.1	4.837	G1V	B:15330:4722111590409480064:5.126					SIMBAD * zet02 Ret sp_type=G1V (primary ζ² Ret). Companion B HIP 15330 = ζ¹ Ret (G2.5V) per multiples.tsv. Famous nearby solar-twin pair.
+17350+6153	26 Draconis	86036	1439121018358632832	14.434	0.1	4.433	G0IV-V	C:86087:1439069444391326208:9.202	27795.525				SIMBAD * 26 Dra sp_type=G0IV-V. Companion C HIP 86087 (M1V), wide 737″ CPM companion. Rendered orbit is the ORB6 visual A,B pair P=27795.5 d (~76 yr); the Gaia NSS 92 d inner wobble has no resolvable WDS pair to host.
+23328-1651	HD 221503	116215	2395031273585836288	14.541	0.1	7.777	K6V	B:116191::3.953	16173.27				SIMBAD HD 221503 sp_type=K6V. Companion B HIP 116191 per multiples.tsv (absmag 3.953 — likely optical pair given the >2 mag difference and lack of Gaia ID; pinning current state). ORB6 P=16173 d.
+14257+2338	BD+24 2733 / HIP 70529+70536	70529	1254695603704323712	16.321	0.2	8.706	M3V	B:70536:1254694882149817728:8.914					SIMBAD BD+24 2733 sp_type=M3V. Companion B HIP 70536 (M3V) per multiples.tsv. Wide M-dwarf pair.
 # ---- NSS-orbited binaries (Gaia DR3 NSS two-body orbits, orbit_via=gaia_nss) ----
-17419+7209	ψ¹ Draconis / Dziban	86614	1651268660203160448	22.725	0.2	2.787	F5IV-V	B:86620:1651268763282397312:4.030	421.83	SIMBAD * psi01 Dra A sp_type=F5IV-V. Companion B HIP 86620 (F8V) per multiples.tsv. Gaia NSS orbit P=421.83 d.
-02572-2458	HD 18455	13772	5076269164798851712	22.467	0.2	5.572	K2V	C:13769:5076269164798852864:5.903	546.41	SIMBAD HD 18455 sp_type=K2V (multiples.tsv has K1/K2V — SIMBAD-by-Gaia is the pipeline source). Companion C HIP 13769 (K2V) per multiples.tsv. Gaia NSS orbit P=546.41 d.
-13136+5643	HD 115043	64532	1566224665609504128	25.147	0.2	4.818	G1Va	B:64523:1566218721374765696:0.048	811.44	SIMBAD HD 115043 sp_type=G1Va. Companion B HIP 64523 per multiples.tsv (absmag 0.048 — likely optical or chance alignment given the brightness disparity; pinning current state). Gaia NSS orbit P=811.44 d.
-22150+5703	ε Cephei	109857	2198483880690116480	26.203	0.3	2.088	F0V(Sr)	B::2198530919170166656:1.048		SIMBAD * eps Cep sp_type=F0V(Sr). Companion B (HIP-less, Gaia 2198530919170166656), wide 118″ pair. Gaia NSS 1.007 d wobble has no resolvable WDS pair to host (all WDS components ≥0.3″); no orbit rendered.
-06047-4505	HD 41742	28790	5567901976544151168	27.940	0.3	3.699	F5.5V	E:28764:5567900121118276736:4.182	221.19	SIMBAD HD 41742 sp_type=F5.5V. Companion E HIP 28764 (F8V) per multiples.tsv. Gaia NSS orbit P=221.19 d.
-10435+4612	HD 92787 / ψ UMa	52469	829776725129940480	36.916	0.4	2.344	F5III	B:52498:829777377964973952:4.458	5.62	SIMBAD HD 92787 sp_type=F5III. Companion B HIP 52498 (F9V) per multiples.tsv. Gaia NSS orbit P=5.62 d.
-01137+0735	ζ Piscium / Revati	5737	2577061092921353984	40.837	0.4	2.155	A7IV	B:5743:2577061260424130304:3.403	9.08	SIMBAD * zet Psc A sp_type=A7IV. Companion B HIP 5743 (F7V) per multiples.tsv. Gaia NSS orbit P=9.08 d.
-21582+8252	HD 209942	108456	2299477734539451392	40.081	0.4	3.905	F6IV-V	B:108461:2299477768899190400:4.444	8944.97	SIMBAD HD 209942 sp_type=F6IV-V. Companion B HIP 108461 (F5) per multiples.tsv. ORB6 PkO2024 grade-3 visual orbit for Aa,Ab: P=24.49 yr (8944.97 d); the Gaia NSS Orbital P=1980.59 d exceeds the DR3 observing window and is superseded.
-07041+7514	HD 51067	34085	1115378031539193984	38.790	0.4	4.206	G0	B:34087:1115378031538627712:5.268	123.40	SIMBAD HD 51067 sp_type=G0 (bare class; no lumClass pin). Companion B HIP 34087 (G5) per multiples.tsv. Gaia NSS orbit P=123.40 d.
+17419+7209	ψ¹ Draconis / Dziban	86614	1651268660203160448	22.725	0.2	2.787	F5IV-V	B:86620:1651268763282397312:4.030	421.83				SIMBAD * psi01 Dra A sp_type=F5IV-V. Companion B HIP 86620 (F8V) per multiples.tsv. Gaia NSS orbit P=421.83 d.
+02572-2458	HD 18455	13772	5076269164798851712	22.467	0.2	5.572	K2V	C:13769:5076269164798852864:5.903	546.41				SIMBAD HD 18455 sp_type=K2V (multiples.tsv has K1/K2V — SIMBAD-by-Gaia is the pipeline source). Companion C HIP 13769 (K2V) per multiples.tsv. Gaia NSS orbit P=546.41 d.
+13136+5643	HD 115043	64532	1566224665609504128	25.147	0.2	4.818	G1Va	B:64523:1566218721374765696:0.048	811.44				SIMBAD HD 115043 sp_type=G1Va. Companion B HIP 64523 per multiples.tsv (absmag 0.048 — likely optical or chance alignment given the brightness disparity; pinning current state). Gaia NSS orbit P=811.44 d.
+22150+5703	ε Cephei	109857	2198483880690116480	26.203	0.3	2.088	F0V(Sr)	B::2198530919170166656:1.048					SIMBAD * eps Cep sp_type=F0V(Sr). Companion B (HIP-less, Gaia 2198530919170166656), wide 118″ pair. Gaia NSS 1.007 d wobble has no resolvable WDS pair to host (all WDS components ≥0.3″); no orbit rendered.
+06047-4505	HD 41742	28790	5567901976544151168	27.940	0.3	3.699	F5.5V	E:28764:5567900121118276736:4.182	221.19				SIMBAD HD 41742 sp_type=F5.5V. Companion E HIP 28764 (F8V) per multiples.tsv. Gaia NSS orbit P=221.19 d.
+10435+4612	HD 92787 / ψ UMa	52469	829776725129940480	36.916	0.4	2.344	F5III	B:52498:829777377964973952:4.458	5.62				SIMBAD HD 92787 sp_type=F5III. Companion B HIP 52498 (F9V) per multiples.tsv. Gaia NSS orbit P=5.62 d.
+01137+0735	ζ Piscium / Revati	5737	2577061092921353984	40.837	0.4	2.155	A7IV	B:5743:2577061260424130304:3.403	9.08				SIMBAD * zet Psc A sp_type=A7IV. Companion B HIP 5743 (F7V) per multiples.tsv. Gaia NSS orbit P=9.08 d.
+21582+8252	HD 209942	108456	2299477734539451392	40.081	0.4	3.905	F6IV-V	B:108461:2299477768899190400:4.444	8944.97				SIMBAD HD 209942 sp_type=F6IV-V. Companion B HIP 108461 (F5) per multiples.tsv. ORB6 PkO2024 grade-3 visual orbit for Aa,Ab: P=24.49 yr (8944.97 d); the Gaia NSS Orbital P=1980.59 d exceeds the DR3 observing window and is superseded.
+07041+7514	HD 51067	34085	1115378031539193984	38.790	0.4	4.206	G0	B:34087:1115378031538627712:5.268	123.40				SIMBAD HD 51067 sp_type=G0 (bare class; no lumClass pin). Companion B HIP 34087 (G5) per multiples.tsv. Gaia NSS orbit P=123.40 d.
 # ---- Multi-star showcase systems ---------------------------------------
 # Castor (α Gem) is a 6-star multiple. Catalog.bin holds the primary
 # anchor (HIP 36850 = Gaia 892348694913501952, shared by all A/B/Aa/Ab/
@@ -162,36 +200,41 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # companion (Castor C, Gaia 892348454394856064, no HIP). multiples.tsv
 # carries STF1110 AB (P=459.1 yr — the famous Savary 1828 visual orbit),
 # CIA 29 Aa,Ab (P=9.21 d) and CIA 29 Ba,Bb (P=2.93 d).
-07346+3153	Castor	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+	C::892348454394856064:8.105	167686.275	SIMBAD * alf Gem A sp_type=A1.5IV+. Multi-star showcase: STF1110 AB visual orbit P=167686.275 d (459.1 yr, ORB6 historical-first orbit Savary 1828). Companion C is YY Gem (Castor C, M0.5VeFe-2 eclipsing pair, no HIP, Gaia 892348454394856064). This absmag pins the multiples.tsv UPSTREAM value: Gaia fit one 5p source over the sub-arcsec Ca,Cb pair (G=8.296 + BP−RP=1.93 → combined M_V=8.105 via G→V + parallax 66.31 mas), matching YY Gem's two equal M1V stars at 15.1 pc. In catalog.bin that combined light is split evenly across the two rendered components (Ca/Cb → M_V=8.858 each, summing back to 8.105); the split is pinned in companion-promotion.test.ts. HIP2 parallax 64.12 mas → 15.6 pc; Gaia could not fit a 5p solution for source 892348694913501952 (Castor A blend, parallax=NULL in gaia_dr3_astrometry.tsv), so A routes through hip2_long_baseline.
+07346+3153	Castor	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+	C::892348454394856064:8.105	167686.275				SIMBAD * alf Gem A sp_type=A1.5IV+. Multi-star showcase: STF1110 AB visual orbit P=167686.275 d (459.1 yr, ORB6 historical-first orbit Savary 1828). Companion C is YY Gem (Castor C, M0.5VeFe-2 eclipsing pair, no HIP, Gaia 892348454394856064). This absmag pins the multiples.tsv UPSTREAM value: Gaia fit one 5p source over the sub-arcsec Ca,Cb pair (G=8.296 + BP−RP=1.93 → combined M_V=8.105 via G→V + parallax 66.31 mas), matching YY Gem's two equal M1V stars at 15.1 pc. In catalog.bin that combined light is split evenly across the two rendered components (Ca/Cb → M_V=8.858 each, summing back to 8.105); the split is pinned in companion-promotion.test.ts. HIP2 parallax 64.12 mas → 15.6 pc; Gaia could not fit a 5p solution for source 892348694913501952 (Castor A blend, parallax=NULL in gaia_dr3_astrometry.tsv), so A routes through hip2_long_baseline.
 # Castor inner spectroscopic orbits: CIA29 emitted Aa,Ab (P=9.21 d) and
 # Ba,Bb (P=2.93 d) into multiples.tsv; the eclipsing Ca,Cb (YY Gem,
 # P=0.814 d, ORB6 grade-7) rides the synthesized sub-pair path via the
 # orb6_component_overrides.tsv mapping. Inner-pair secondaries inherit
 # the blend identity (primary's HIP/Gaia) and promote as synthetic
 # catalog records (synth-07346+3153-Ab / -Bb / -Cb).
-07346+3153	Castor (Aa,Ab inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		9.212749	Inner spectroscopic pair CIA29 Aa,Ab (P=9.21 d, ORB6 grade-1). Ab carries the blend identity (primary's HIP/Gaia) in multiples.tsv and promotes as synth-07346+3153-Ab. Orbit assertion via multiples.tsv bestPeriodMatch.
-07346+3153	Castor (Ba,Bb inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		2.928350	Inner spectroscopic pair CIA29 Ba,Bb (P=2.93 d, ORB6 grade-3). Bb carries the blend identity and promotes as synth-07346+3153-Bb. Orbit assertion via multiples.tsv bestPeriodMatch.
+07346+3153	Castor (Aa,Ab inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		9.212749				Inner spectroscopic pair CIA29 Aa,Ab (P=9.21 d, ORB6 grade-1). Ab carries the blend identity (primary's HIP/Gaia) in multiples.tsv and promotes as synth-07346+3153-Ab. Orbit assertion via multiples.tsv bestPeriodMatch.
+07346+3153	Castor (Ba,Bb inner)	36850	892348694913501952	15.596	0.05	0.615	A1.5IV+		2.928350				Inner spectroscopic pair CIA29 Ba,Bb (P=2.93 d, ORB6 grade-3). Bb carries the blend identity and promotes as synth-07346+3153-Bb. Orbit assertion via multiples.tsv bestPeriodMatch.
 # Algol (β Per) — eclipsing-binary archetype. Outer pair LAB Aa,Ab (P=680.17 d,
 # ORB6 grade-1 with i=83.66°) and inner spectroscopic Aa1,Aa2 (P=2.867 d,
 # ORB6 CSI1, the famous eclipsing pair). Ab and Aa2 multiples.tsv rows
 # carry no own gaia/hip; dch.77 mints synth-03082+4057-Ab and
 # synth-03082+4057-2 so companion-promotion surfaces them in catalog.bin
 # and build-runtime-binaries can address them through the row-index map.
-03082+4057	Algol	14576		27.571	0.05	-0.112	B8V	Ab:::2.368:5.0	680.168	SIMBAD * bet Per A sp_type=B8V; Gaia-saturated (no source_id), so spectral resolves via resolveSpectralInfo's SIMBAD HIP fallback tier (without it the radius chain inflated Algol to 12.47 R☉; now 3.2). ORB6 LAB outer orbit Aa,Ab P=680.168 d, e=0.227, i=83.66°. Companion Ab promoted via synthetic ID synth-03082+4057-Ab (no own gaia/hip). max_sep_au=5.0 guards the dch.80 route-based collocation fix — Ab projects to 2.76 AU from Algol via sep+PA (0.1″ × 27.571 pc); pre-fix it landed ~100 AU off.
-03082+4057	Algol (Aa1,Aa2 inner)	14576		27.571	0.05	-0.112	B8V	Aa2:::3.300:0.5	2.867328	Inner spectroscopic / eclipsing pair Aa1,Aa2 (ORB6 CSI1, P=2.867 d, i=98.70°). multiples.tsv emits the secondary cell with comp set to the WDS prefix-truncation shorthand 2 (= Aa2); the promotion mints synth-03082+4057-Aa2 from the canonical comp so the runtime resolves through the same key. Primary spectral B8V via the SIMBAD HIP fallback tier (Gaia-saturated, no source_id). Aa2 absmag 3.300 = class→M_V for its curated K0IV type (component_sptype_overrides; Kolbas et al. 2015 give M_V≈2.9) — pins the spectral-derived branch, NOT the primary's -0.112 twin value. max_sep_au=0.5 guards the collocation fix — Aa2 bakes collocated (0.0″); BinaryOrbitField overlays the ~0.06 AU inner orbit at runtime.
+03082+4057	Algol	14576		27.571	0.05	-0.112	B8V	Ab:::2.368:5.0	680.168	eclipsing	2.8673043	1.27	GCVS bet Per: EA/SD P=2.8673043 d, amp V 2.12→3.39 (1.27) — the eclipsing archetype; VAR_TYPE_ECLIPSING also drives the wings flag + pulsation suppression. SIMBAD * bet Per A sp_type=B8V; Gaia-saturated (no source_id), so spectral resolves via resolveSpectralInfo's SIMBAD HIP fallback tier (without it the radius chain inflated Algol to 12.47 R☉; now 3.2). ORB6 LAB outer orbit Aa,Ab P=680.168 d, e=0.227, i=83.66°. Companion Ab promoted via synthetic ID synth-03082+4057-Ab (no own gaia/hip). max_sep_au=5.0 guards the dch.80 route-based collocation fix — Ab projects to 2.76 AU from Algol via sep+PA (0.1″ × 27.571 pc); pre-fix it landed ~100 AU off.
+03082+4057	Algol (Aa1,Aa2 inner)	14576		27.571	0.05	-0.112	B8V	Aa2:::3.300:0.5	2.867328				Inner spectroscopic / eclipsing pair Aa1,Aa2 (ORB6 CSI1, P=2.867 d, i=98.70°). multiples.tsv emits the secondary cell with comp set to the WDS prefix-truncation shorthand 2 (= Aa2); the promotion mints synth-03082+4057-Aa2 from the canonical comp so the runtime resolves through the same key. Primary spectral B8V via the SIMBAD HIP fallback tier (Gaia-saturated, no source_id). Aa2 absmag 3.300 = class→M_V for its curated K0IV type (component_sptype_overrides; Kolbas et al. 2015 give M_V≈2.9) — pins the spectral-derived branch, NOT the primary's -0.112 twin value. max_sep_au=0.5 guards the collocation fix — Aa2 bakes collocated (0.0″); BinaryOrbitField overlays the ~0.06 AU inner orbit at runtime.
 # AR Cassiopeiae — bright multi-star system (HIP 115990 B3V). Catalog.bin
 # carries the primary; outer visual components AB / AC / AI / CD / CI /
-# FG / Ia,Ib are emitted as Tier-3 (no orbit) pair rows in multiples.tsv.
-# The famous AR Cas Aa,Ab inner eclipsing pair (P=6.07 d, EA-type) is
-# not yet in multiples.tsv — requires the GCVS-eclipsing → inner-pair
-# ingestion path scoped to dch.72.
-23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.756	B3V			AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). Multi-star system with 9 visual components (A-I); inner Aa,Ab eclipsing pair (P=6.07 d) pending dch.78 — its orbit is absent from ORB6 and Gaia NSS, so subdivision needs an SB9-class ingest.
+# FG / Ia,Ib are emitted as Tier-3 (no orbit) pair rows in multiples.tsv
+# (exact kept-pair set pinned in system-pair-topology.tsv). Companions
+# with own Gaia photometry (C, D, F, G) are pinned below; E and H are
+# standalone _E/_H rows with no photometry (not promoted), Ia/Ib carry
+# no identifiers. The famous AR Cas Aa,Ab inner eclipsing pair (P=6.07 d,
+# EA-type) is not in multiples.tsv — its orbit is absent from ORB6 and
+# Gaia NSS, so subdivision needs an SB9-class ingest (dch.78); its GCVS
+# eclipse signal IS pinned via the var columns.
+23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.756	B3V	C::2011151357277942400:0.6060;D::2011151357284012416:2.5759;F::2011151391642324608:4.3921;G::2011151391642325120:4.4889		eclipsing	6.0663335	0.13	AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). GCVS AR Cas: EA P=6.0663335 d, amp V 4.89→5.02 (0.13). Companions per multiples.tsv (all own-Gaia, gaia_photometry absmags): C=HD 221237A A1V, D=HD 221237B, F=TYC 4011-779-1 A0, G=UCAC4 743-089698 B3. G currently renders as 'HIP 115990 F G' — chained pair-row naming bug (stellata-dch.83.2); the pin here addresses G by Gaia id so the rename won't disturb it.
 # ν Scorpii (Jabbah) — multiple-star system with high-eccentricity inner
 # orbit. Outer ORB6 Aa,Ab pair (P=3674.78 d ≈ 10.06 yr, e=0.92, i=89.7°,
-# CHARA-resolved). Visual components B, C, D carry own Gaia IDs in
-# AT-HYG. Inner Aa1,Aa2 spectroscopic sub-pair (P=1.41 d) pending
-# dch.78 — its orbit is absent from ORB6 and Gaia NSS (SB9-class ingest).
-16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-2.115	O		3674.78025	ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual). Inner Aa1,Aa2 (P=1.41 d, SB) pending dch.78 (orbit absent from ORB6/Gaia NSS).
+# CHARA-resolved). Visual components B, C, D carry own Gaia IDs and are
+# pinned as companions (kept-pair set in system-pair-topology.tsv).
+# Inner Aa1,Aa2 spectroscopic sub-pair (P=1.41 d) pending dch.78 — its
+# orbit is absent from ORB6 and Gaia NSS (SB9-class ingest).
+16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-2.115	O	B::6245697981073442176:-0.2939;C::6245698187231874816:0.8080;D::6245698565188996992:1.8528	3674.78025				ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual, the highest-eccentricity rendered orbit — Kepler-solver stress case). Companions per multiples.tsv gaia_photometry: B (SIMBAD * nu. Sco B, sp_type empty), C = * nu.02 Sco A B8V, D = * nu.02 Sco B B9V. Inner Aa1,Aa2 (P=1.41 d, SB) pending dch.78 (orbit absent from ORB6/Gaia NSS).
 # ξ Ursae Majoris (Alula Australis, STF1523 AB) — Tier A pin pending
 # the catalog.bin identifier backfill (separate bead). AT-HYG carries
 # the system as HD-only (no HIP, no Gaia on either component row);
@@ -206,8 +249,9 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # These rows pin companions promoted into catalog.bin by the build's
 # read-multiples-and-promote pass. Their primary is already an AT-HYG
 # row; the companion is a new record addressable by its OWN identifiers
-# (Gaia source_id; HIP may collide with the primary). Absmag is imputed
-# from the primary's AT-HYG absmag plus the WDS published Δmag, so the
-# tolerance here is the same ±0.05 mag the rest of the corpus uses.
-06451-1643	Sirius B		2947050466531873024	2.637	0.05	11.360	DA1.9			SIMBAD * alf CMa B sp_type=DA1.9 (white dwarf). Promoted companion: absmag imputed from Sirius A's 1.45 + WDS Δmag 9.91 = 11.36 (canonical 11.18; the modest gap is the WDS Δmag in the Hp band vs canonical V — within the tolerance the corpus uses elsewhere for companion absmag).
+# (Gaia source_id; HIP may collide with the primary). Each row names the
+# absmag imputation branch it pins (primary + WDS Δmag for Sirius B; own
+# Gaia photometry for Keid B); tolerance is the corpus-wide ±0.05 mag.
+06451-1643	Sirius B		2947050466531873024	2.637	0.05	11.360	DA1.9						SIMBAD * alf CMa B sp_type=DA1.9 (white dwarf). Promoted companion: absmag imputed from Sirius A's 1.45 + WDS Δmag 9.91 = 11.36 (canonical 11.18; the modest gap is the WDS Δmag in the Hp band vs canonical V — within the tolerance the corpus uses elsewhere for companion absmag).
+04153-0739	Keid B		3195919254111315712	5.008	0.05	11.082	DA2.9						SIMBAD * omi02 Eri B sp_type=DA2.9; plx 199.691±0.051 → 5.008 pc; V=9.53 → M_V=11.03. Promoted pair-row-primary escape record (cursor primary of the BC pair, never a secondary of A): position from its OWN Gaia 5p fit, absmag 11.08 from its own Gaia photometry — pins the own-photometry branch of the escape, complementing Sirius B's Δmag branch.
 

@@ -1,0 +1,35 @@
+# system-pair-topology.tsv — Tier-A kept-pair exact-set fixtures.
+# One row per WDS root; scripts/catalog/known-stars.test.ts asserts the
+# set of PAIR rows emitted into data/binaries/multiples.tsv for that
+# root equals allowed_pairs EXACTLY — a dropped physical pair and a
+# re-leaked optical pair both fail by name. This pins the Stage 5
+# optical-filter verdicts (the false-physical-pair class that motivated
+# the source-ID-anchored pipeline rewrite) and the sub-pair subdivision
+# topology of the multi-star showcase systems.
+#
+# Standalone member rows (system_id suffix starting with "_") are
+# exempt: they carry no pair relation, only per-component identity.
+#
+# ---- Columns ---------------------------------------------------------
+#
+# wds_id           WDS root ("06451-1643").
+# system_name      Display name for test output.
+# allowed_pairs    Semicolon-separated pair suffixes that must be the
+#                  exact set of pair rows for the root ("AB;Aa,Ac").
+# primary_ref      Optional catalog.bin ref (hip:<n> | gaia:<id> |
+#                  name:<name>) for the min_sep_pc assertion.
+# secondary_ref    Ditto. Set both refs + min_sep_pc together or not
+#                  at all.
+# min_sep_pc       Optional: the two refs' catalog.bin records must sit
+#                  at least this many pc apart in 3D — positive Gaia
+#                  evidence on record that a rejected pair is optical.
+# notes_source     Provenance / rationale. Required on every row.
+#
+wds_id	system_name	allowed_pairs	primary_ref	secondary_ref	min_sep_pc	notes_source
+06451-1643	Sirius	AB				WDS lists AC/AD/AE/AF field companions (rejected — the asymmetric-Gaia-gate class) and a Ba,Bb sentinel row with no measures (rho -1); only the physical AB pair (ORB6 P=50.14 yr) may emit.
+19307+2758	Albireo	Aa,Ab;Aa,Ac	hip:95947	hip:95951	1.0	The famous 34.2 arcsec AB pair is optical: Gaia DR3 places A at 111.9 pc and B at 121.3 pc — about 9.4 pc apart in 3D, far beyond the 1.0 pc Stage-5 boundness limit the min_sep pin mirrors. WDS AC through AL faint field companions likewise rejected. Physical pairs are the inner Aa,Ab (MCA 55) and Aa,Ac (ORB6 orbit).
+04153-0739	40 Eridani	A,BC;AC;BC				Physical triple (A + B/C pair at ~400 AU, ORB6 B-C P=233 yr). WDS D and E resolve to background stars at 356 pc and 633 pc vs the system's 5.01 pc and survive only as standalone _D/_E rows — no AD/AE pair may emit. A and the promoted Keid B/C records are pinned in known-stars.tsv.
+07346+3153	Castor	AB;AC;Aa,Ab;Ba,Bb;BC;Ca,Cb				Sextuple showcase topology: visual AB (ORB6 Savary-1828 orbit, 459.1 yr), AC/BC ties to YY Gem, and the three sub-arcsec spectroscopic pairs from the visual-component subdivision path (Aa,Ab 9.21 d; Ba,Bb 2.93 d; Ca,Cb 0.814 d). WDS D is a K0III background star — standalone _D only.
+23300+5833	AR Cassiopeiae	AB;AC;AI;CD;CI;FG;Ia,Ib				Sparse-cluster multi-star: kept pairs are the Tier-3 visual set. WDS AE/AF/AG/CH rejected — Gaia places E-H as neighbours several pc from A in 3D, beyond the 1 pc bound-pair limit (association members, not bound companions); E/H survive as standalone _E/_H rows.
+16120-1928	ν Scorpii	Aa,Ab;AB;AC;CD				Jabbah septuple's WDS-resolvable subset: Aa,Ab carries the CHARA e=0.92 orbit; AB/AC/CD are Tier-3 visual ties. Inner Aa1,Aa2 and Ba,Bb spectroscopic sub-pairs are absent from ORB6/Gaia NSS (SB9-class ingest pending dch.78) and must NOT appear until that ingest lands with real elements.
+14396-6050	α Centauri	AB;AC				Nearest system: AB bound orbit (ORB6 P=79.76 yr) plus AC = Proxima at ~13 kAU. No optical tail in WDS for this root; the exact set guards against a future ingest minting spurious pairs on the highest-profile system.

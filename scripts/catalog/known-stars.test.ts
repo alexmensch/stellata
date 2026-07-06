@@ -1,13 +1,23 @@
 // Tier-A regression harness driving per-row assertions over
-// known-stars.tsv against public/catalog.bin and
-// data/binaries/multiples.tsv.
+// known-stars.tsv + system-pair-topology.tsv against public/catalog.bin
+// and data/binaries/multiples.tsv.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
-import { classifyFromSimbad, SPECTRAL_UNKNOWN, type SpectralInfo } from './catalog-pure';
+import {
+  classifyFromSimbad,
+  encodeAmpUnits,
+  encodePeriodUnits,
+  SPECTRAL_UNKNOWN,
+  VAR_TYPE_ECLIPSING,
+  VAR_TYPE_OTHER,
+  VAR_TYPE_PULSATING,
+  VAR_TYPE_UNKNOWN,
+  type SpectralInfo,
+} from './catalog-pure';
 import {
   DEFAULT_CATALOG_BIN,
   type Catalog,
@@ -17,12 +27,21 @@ import {
   lookupByHip,
   lookupByGaiaSourceId,
   lookupByName,
+  lookupByRef,
 } from './catalog-lookup';
+import {
+  nonEmpty,
+  parseFloatOrNull,
+  parseIntOrNull,
+  parseOptionalRef,
+  type RecordRef,
+} from './corpus-tsv';
 import { AU_PER_PC } from '../../src/client/util/astronomy-constants';
 import { REPO_ROOT } from '../util/paths';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KNOWN_STARS_TSV = resolve(__dirname, 'known-stars.tsv');
+const TOPOLOGY_TSV = resolve(__dirname, 'system-pair-topology.tsv');
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 
 // The corpus needs public/catalog.bin and data/binaries/multiples.tsv —
@@ -80,6 +99,26 @@ interface CorpusRow {
   primarySpectral: string;
   companions: CorpusCompanion[];
   orbitalPeriodDays: number | null;
+  varType: keyof typeof VAR_TYPE_TOKENS | null;
+  varPeriodDays: number | null;
+  varAmpMag: number | null;
+  notesSource: string;
+}
+
+const VAR_TYPE_TOKENS = {
+  none: VAR_TYPE_UNKNOWN,
+  pulsating: VAR_TYPE_PULSATING,
+  eclipsing: VAR_TYPE_ECLIPSING,
+  other: VAR_TYPE_OTHER,
+} as const;
+
+interface TopologyRow {
+  wdsId: string;
+  systemName: string;
+  allowedPairs: string[];
+  primaryRef: RecordRef | null;
+  secondaryRef: RecordRef | null;
+  minSepPc: number | null;
   notesSource: string;
 }
 
@@ -95,25 +134,6 @@ interface MultiplesRow {
 }
 
 // ---- TSV loaders -------------------------------------------------------
-
-function nonEmpty(s: string): string | null {
-  const t = s.trim();
-  return t.length === 0 ? null : t;
-}
-
-function parseIntOrNull(s: string): number | null {
-  const t = nonEmpty(s);
-  if (t === null) return null;
-  const v = Number(t);
-  return Number.isFinite(v) ? Math.trunc(v) : null;
-}
-
-function parseFloatOrNull(s: string): number | null {
-  const t = nonEmpty(s);
-  if (t === null) return null;
-  const v = Number(t);
-  return Number.isFinite(v) ? v : null;
-}
 
 function parseCompanions(cell: string): CorpusCompanion[] {
   const trimmed = cell.trim();
@@ -165,17 +185,64 @@ function loadCorpusSync(): CorpusRow[] {
       }
       return v;
     };
+    const varTypeRaw = nonEmpty(row.var_type);
+    if (varTypeRaw !== null && !(varTypeRaw in VAR_TYPE_TOKENS)) {
+      throw new Error(
+        `row ${i + 1} (${name}): var_type "${varTypeRaw}" — expected one of ${Object.keys(VAR_TYPE_TOKENS).join(' / ')}`,
+      );
+    }
     return {
-      wdsId: nonEmpty(row.wds_id ?? ''),
+      wdsId: nonEmpty(row.wds_id),
       systemName: name,
-      primaryHip: parseIntOrNull(row.primary_hip ?? ''),
-      primaryGaiaSourceId: nonEmpty(row.primary_gaia_source_id ?? ''),
+      primaryHip: parseIntOrNull(row.primary_hip),
+      primaryGaiaSourceId: nonEmpty(row.primary_gaia_source_id),
       primaryDistancePc: required('primary_distance_pc'),
       primaryDistancePcErr: required('primary_distance_pc_err'),
       primaryAbsmag: required('primary_absmag'),
       primarySpectral: (row.primary_spectral ?? '').trim(),
       companions: parseCompanions(row.companions ?? ''),
-      orbitalPeriodDays: parseFloatOrNull(row.orbital_period_days ?? ''),
+      orbitalPeriodDays: parseFloatOrNull(row.orbital_period_days),
+      varType: varTypeRaw as CorpusRow['varType'],
+      varPeriodDays: parseFloatOrNull(row.var_period_days),
+      varAmpMag: parseFloatOrNull(row.var_amp_mag),
+      notesSource: (row.notes_source ?? '').trim(),
+    };
+  });
+}
+
+function loadTopologySync(): TopologyRow[] {
+  const text = readFileSync(TOPOLOGY_TSV, 'utf-8');
+  const rows = parse(text, {
+    delimiter: '\t',
+    columns: true,
+    skip_empty_lines: true,
+    comment: '#',
+    trim: false,
+  }) as Record<string, string>[];
+
+  return rows.map((row, i) => {
+    const name = (row.system_name ?? '').trim() || `row ${i + 1}`;
+    const allowedPairs = (row.allowed_pairs ?? '')
+      .split(';')
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+    if (allowedPairs.length === 0) {
+      throw new Error(`${name}: allowed_pairs must list at least one pair`);
+    }
+    const primaryRef = parseOptionalRef(row.primary_ref, name, 'primary_ref');
+    const secondaryRef = parseOptionalRef(row.secondary_ref, name, 'secondary_ref');
+    const minSepPc = parseFloatOrNull(row.min_sep_pc);
+    const sepPinParts = [primaryRef, secondaryRef, minSepPc].filter(p => p !== null).length;
+    if (sepPinParts !== 0 && sepPinParts !== 3) {
+      throw new Error(`${name}: primary_ref, secondary_ref, min_sep_pc must be set together or not at all`);
+    }
+    return {
+      wdsId: (row.wds_id ?? '').trim(),
+      systemName: name,
+      allowedPairs,
+      primaryRef,
+      secondaryRef,
+      minSepPc,
       notesSource: (row.notes_source ?? '').trim(),
     };
   });
@@ -248,6 +315,7 @@ function spectralStringIsBareClass(s: string): boolean {
 // because it's a 24 MB binary read.
 
 const CORPUS: CorpusRow[] = loadCorpusSync();
+const TOPOLOGY: TopologyRow[] = loadTopologySync();
 const MULTIPLES_BY_WDS: Map<string, MultiplesRow[]> = FIXTURES_READY
   ? loadMultiplesIndexSync()
   : new Map();
@@ -264,6 +332,9 @@ function isDistanceRefinementCase(row: CorpusRow): boolean {
 const SINGLES = CORPUS.filter(r => r.companions.length === 0 && !isDistanceRefinementCase(r));
 const BINARIES = CORPUS.filter(r => r.companions.length > 0);
 const ORBITED = CORPUS.filter(r => r.orbitalPeriodDays !== null);
+const VAR_PINNED = CORPUS.filter(
+  r => r.varType !== null || r.varPeriodDays !== null || r.varAmpMag !== null,
+);
 const BJ_OVERRIDES = CORPUS.filter(r => r.notesSource.startsWith('B-J override:'));
 const BJ_GUARDS = CORPUS.filter(r => r.notesSource.startsWith('B-J no-degradation guard:'));
 const LMC_SNAPS = CORPUS.filter(r => r.notesSource.startsWith('LMC kinematic snap:'));
@@ -533,5 +604,89 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
         `${row.systemName}: tagged as LMC kinematic snap but expected distance ${row.primaryDistancePc} pc is outside the LMC envelope`,
       ).toBeGreaterThan(48_000);
     });
+  });
+
+  describe('variability (GCVS pins)', () => {
+    it('corpus has ≥1 pin per animated class', () => {
+      const types = new Set(VAR_PINNED.map(r => r.varType));
+      expect(types.has('pulsating'), 'expected ≥1 pulsating pin').toBe(true);
+      expect(types.has('eclipsing'), 'expected ≥1 eclipsing pin').toBe(true);
+      expect(types.has('none'), 'expected ≥1 none guard').toBe(true);
+    });
+    it.each(VAR_PINNED)('$systemName', (row) => {
+      const record = lookupPrimary(row);
+      if (row.varType === 'none') {
+        expect(
+          [record.varType, record.periodDays, record.amplitudeMag],
+          `${row.systemName}: var_type=none demands varType/period/amplitude all zero, got ${record.varType}/${record.periodDays}/${record.amplitudeMag}`,
+        ).toEqual([VAR_TYPE_UNKNOWN, 0, 0]);
+        return;
+      }
+      if (row.varType !== null) {
+        expect(
+          record.varType,
+          `${row.systemName}: expected varType ${VAR_TYPE_TOKENS[row.varType]} (${row.varType}), got ${record.varType}`,
+        ).toBe(VAR_TYPE_TOKENS[row.varType]);
+      }
+      if (row.varPeriodDays !== null) {
+        const expected = encodePeriodUnits(row.varPeriodDays) * 0.1;
+        expect(
+          record.periodDays,
+          `${row.systemName}: expected GCVS period ${row.varPeriodDays} d → ${expected.toFixed(1)} d after uint16 0.1 d quantisation, got ${record.periodDays.toFixed(1)} d`,
+        ).toBeCloseTo(expected, 9);
+      }
+      if (row.varAmpMag !== null) {
+        const expected = encodeAmpUnits(row.varAmpMag) * 0.05;
+        expect(
+          record.amplitudeMag,
+          `${row.systemName}: expected GCVS amplitude ${row.varAmpMag} mag → ${expected.toFixed(2)} after uint8 0.05 mag quantisation, got ${record.amplitudeMag.toFixed(2)}`,
+        ).toBeCloseTo(expected, 9);
+      }
+    });
+  });
+
+  describe('system pair topology (kept-pair exact sets)', () => {
+    it('every fixture has a notes_source', () => {
+      const missing = TOPOLOGY.filter(r => !r.notesSource);
+      expect(
+        missing.map(r => r.systemName),
+        'topology rows missing notes_source',
+      ).toHaveLength(0);
+    });
+    it.each(TOPOLOGY)('$systemName — multiples.tsv emits exactly the allowed pairs', (row) => {
+      const bucket = MULTIPLES_BY_WDS.get(row.wdsId) ?? [];
+      expect(
+        bucket.length,
+        `${row.systemName}: no multiples.tsv rows for wds_id=${row.wdsId} — root missing from the build entirely`,
+      ).toBeGreaterThan(0);
+      const observed = [...new Set(
+        bucket
+          .map(m => m.systemId.slice(row.wdsId.length + 1))
+          .filter(suffix => !suffix.startsWith('_')),
+      )].sort();
+      expect(
+        observed,
+        `${row.systemName}: kept-pair set drifted for wds_id=${row.wdsId} — a missing entry is a dropped physical pair, an extra one is a re-leaked optical pair (see notes_source)`,
+      ).toEqual([...row.allowedPairs].sort());
+    });
+    it.each(TOPOLOGY.filter(r => r.minSepPc !== null))(
+      '$systemName — rejected-pair members stay ≥ min_sep_pc apart in 3D',
+      (row) => {
+        const primary = lookupByRef(catalog, row.primaryRef as RecordRef);
+        const secondary = lookupByRef(catalog, row.secondaryRef as RecordRef);
+        expect(primary, `${row.systemName}: primary_ref not found in catalog.bin`).not.toBeNull();
+        expect(secondary, `${row.systemName}: secondary_ref not found in catalog.bin`).not.toBeNull();
+        if (!primary || !secondary) return;
+        const sepPc = Math.hypot(
+          primary.x - secondary.x,
+          primary.y - secondary.y,
+          primary.z - secondary.z,
+        );
+        expect(
+          sepPc,
+          `${row.systemName}: catalog.bin 3D separation ${sepPc.toFixed(2)} pc < ${row.minSepPc} pc — the optical-pair evidence this fixture records has evaporated; re-verify before un-rejecting the pair`,
+        ).toBeGreaterThanOrEqual(row.minSepPc as number);
+      },
+    );
   });
 });
