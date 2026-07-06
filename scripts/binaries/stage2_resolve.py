@@ -17,7 +17,6 @@ from parsers import (  # noqa: E402
     AthygRow,
     Orb6Entry,
     SimbadWdsXid,
-    WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC,
     WdsPair,
 )
 from indices import (  # noqa: E402
@@ -488,7 +487,6 @@ def resolve_via_ccdm(
             or pair.rho_last is None
             or pair.theta_last is None
             or pair.rho_last <= 0.0
-            or pair.rho_last >= WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
         ):
             continue
         candidates = indices.ccdm_to_hips.get(pair.wds_id)
@@ -807,8 +805,9 @@ def iter_pair_athyg_matches(
     event per component whose match succeeds, in primary-then-secondary
     order. The secondary pass excludes the primary's matched row so a
     close-binary primary cannot claim its own secondary slot, and skips
-    the predicted-secondary path when ρ ≥ ``WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC``
-    (wide-pair (ρ, θ) is degenerate at the WDS overflow sentinel).
+    the predicted-secondary path when ρ is None — the WDS overflow
+    sentinel (999.9) is collapsed to None at parse, so ultra-wide pairs
+    whose (ρ, θ) is degenerate fall through to identifier binding.
 
     Shared between Stage 2's ``resolve_via_position`` (identifier
     binding) and Stage 3's ``attach_athyg_position_fallback`` (astrometry
@@ -870,7 +869,7 @@ def iter_pair_athyg_matches(
         if (
             pair.rho_last is not None
             and pair.theta_last is not None
-            and 0.0 < pair.rho_last < WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC
+            and pair.rho_last > 0.0
         ):
             secondary_ra, secondary_dec = predict_secondary_position(
                 pair.precise_ra_deg, pair.precise_dec_deg,
@@ -958,7 +957,7 @@ def resolve_all_pairs(
        tagged ``ccdm_hip``. Skipped when ``indices.ccdm_to_hips`` is
        empty (tests can pass ``ccdm=None`` to ``build_indices``).
     4. ``resolve_via_position`` runs the AT-HYG position-match pass
-       (PM-propagated, ρ ≥ 999.9 short-circuited) — tagged
+       (PM-propagated, null-ρ short-circuited) — tagged
        ``athyg_gaia_native`` (the same tag as branch 1's HIP-mediated
        AT-HYG read because both routes land on AT-HYG's natively-stored
        gaia field; the ``position_pm`` / ``position_nopm`` tags are

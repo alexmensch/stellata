@@ -571,13 +571,15 @@ relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 
 The last four columns carry WDS pair geometry — populated on both
 component rows of a decomposing pair (standalone rows leave them
-empty). `sep_arcsec` and `pa_deg` are empty at both WDS sentinels, which
-`parse_wds_sep_pa` translates to None at the parse boundary so neither
-reaches downstream consumers: -1 (no measurement — spectroscopic /
-interferometric inner pairs given only at the orbital-element level,
-Spica) and 999.9 (field-width overflow — ultra-wide pairs whose ρ
-can't localise the secondary; left unhandled, Alsephina F baked at
-999.9″ × 24.7 pc ≈ 24,695 AU). They feed
+empty). `parse_wds_sep_pa` translates two WDS sentinels to None at the
+parse boundary so neither reaches downstream consumers. -1 is the
+no-measurement sentinel (spectroscopic / interferometric inner pairs
+given only at the orbital-element level, Spica) written in both ρ and
+θ, so `sep_arcsec` and `pa_deg` both empty. 999.9 is the field-width
+overflow marker (ultra-wide pairs whose ρ can't localise the secondary);
+only the ρ field overflows, so `sep_arcsec` empties while `pa_deg` keeps
+its real angle. Left unhandled the 999.9 ρ baked Alsephina F at
+999.9″ × 24.7 pc ≈ 24,695 AU. They feed
 companion-promotion's tangent-plane projection for the Tier-3
 (no-orbit) path and the runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
 WDS observation year (`date_last`) converted to JD via

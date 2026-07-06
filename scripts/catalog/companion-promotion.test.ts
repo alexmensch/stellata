@@ -1046,6 +1046,60 @@ describe('promoteCompanions', () => {
     expect(stats.promoted).toBe(0);
   });
 
+  it('drops a tangent-projected secondary beyond the tidal limit (ρ·d > 1 pc)', () => {
+    // SHY 476 BC class: a far primary (1500 pc) with an unresolved
+    // secondary 300″ away projects to 300″ × 1500 pc ≈ 2.2 pc — past the
+    // Galactic tidal-disruption limit, so the fabricated companion can't
+    // be bound. Stage 5's parallax gate can't catch it (the secondary
+    // has no parallax); the promotion projected-separation gate does.
+    const farPrimary = makeStar({
+      x: 1500, y: 0, z: 0, absmag: 1.0, hip: 700700, gaiaSourceId: null,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '05359+3530-BC', comp: 'B', hip: 700700,
+        x_pc: 1500, y_pc: 0, z_pc: 0, distPc: 1500, absmag: 1.0,
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 300.0, paDeg: 90.0, dmag: 2.5,
+      }),
+      multiplesRow({
+        systemId: '05359+3530-BC', comp: 'C', hip: null,
+        x_pc: 1500, y_pc: 0, z_pc: 0, distPc: 1500, absmag: null,
+        source: 'wds', astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 300.0, paDeg: 90.0, dmag: 2.5,
+      }),
+    ];
+    const { stats, newStars } = promoteCompanions(rows, [farPrimary], CONSTELLATIONS);
+    expect(stats.droppedBeyondTidalLimit).toBe(1);
+    expect(stats.promoted).toBe(0);
+    expect(newStars).toHaveLength(0);
+  });
+
+  it('promotes the same wide secondary when the primary is nearby (ρ·d within limit)', () => {
+    // Identical 300″ separation at 2.637 pc projects to ~0.004 pc — the
+    // gate is distance-dependent physics, not a bare arcsec cutoff.
+    const nearPrimary = makeStar({
+      x: 0, y: 0, z: 2.637, absmag: 1.0, hip: 700701, gaiaSourceId: null,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'TEST-AB', comp: 'A', hip: 700701,
+        x_pc: 0, y_pc: 0, z_pc: 2.637, distPc: 2.637, absmag: 1.0,
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 300.0, paDeg: 90.0, dmag: 2.5,
+      }),
+      multiplesRow({
+        systemId: 'TEST-AB', comp: 'B', hip: null,
+        x_pc: 0, y_pc: 0, z_pc: 2.637, distPc: 2.637, absmag: null,
+        source: 'wds', astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 300.0, paDeg: 90.0, dmag: 2.5,
+      }),
+    ];
+    const { stats } = promoteCompanions(rows, [nearPrimary], CONSTELLATIONS);
+    expect(stats.droppedBeyondTidalLimit).toBe(0);
+    expect(stats.promoted).toBe(1);
+  });
+
   it('repositions a collocated AT-HYG double entry instead of minting a duplicate (ξ UMa B class)', () => {
     // AT-HYG carries BOTH members of the pair at the same printed
     // blend coordinates: "Testar" and "Testar B" bit-identical. The
