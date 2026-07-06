@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   D_TRIPLE_TAP_COUNT,
   D_TRIPLE_TAP_MS,
   DOUBLE_TAP_COUNT,
   DOUBLE_TAP_MS,
+  makeDoubleTapGate,
   pushTapAndCheckTriple,
 } from './keyboard-shortcuts-pure';
 
@@ -84,15 +85,64 @@ describe('pushTapAndCheckTriple', () => {
     expect(DOUBLE_TAP_COUNT).toBe(2);
   });
 
-  it('fires the F double-tap on the second press inside the window', () => {
+  it('fires on the second press with count=2 window params', () => {
     const taps: number[] = [];
     expect(pushTapAndCheckTriple(taps, 0, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT)).toBe(false);
     expect(pushTapAndCheckTriple(taps, DOUBLE_TAP_MS, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT)).toBe(true);
   });
 
-  it('does not fire the F double-tap when the second press is too late', () => {
+  it('does not fire with count=2 params when the second press is too late', () => {
     const taps: number[] = [];
     pushTapAndCheckTriple(taps, 0, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT);
     expect(pushTapAndCheckTriple(taps, DOUBLE_TAP_MS + 1, DOUBLE_TAP_MS, DOUBLE_TAP_COUNT)).toBe(false);
+  });
+});
+
+describe('makeDoubleTapGate', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('fires onSingle after the window when pressed once', () => {
+    const single = vi.fn();
+    const double = vi.fn();
+    const press = makeDoubleTapGate(single, double, 200);
+    press();
+    expect(single).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
+    expect(single).toHaveBeenCalledOnce();
+    expect(double).not.toHaveBeenCalled();
+  });
+
+  it('fires onDouble and cancels onSingle on a second press inside the window', () => {
+    const single = vi.fn();
+    const double = vi.fn();
+    const press = makeDoubleTapGate(single, double, 200);
+    press();
+    press();
+    expect(double).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(500);
+    expect(single).not.toHaveBeenCalled();
+  });
+
+  it('treats a press after the window as a fresh single tap', () => {
+    const single = vi.fn();
+    const double = vi.fn();
+    const press = makeDoubleTapGate(single, double, 200);
+    press();
+    vi.advanceTimersByTime(200);
+    press();
+    vi.advanceTimersByTime(200);
+    expect(single).toHaveBeenCalledTimes(2);
+    expect(double).not.toHaveBeenCalled();
+  });
+
+  it('defaults the window to DOUBLE_TAP_MS', () => {
+    const single = vi.fn();
+    const press = makeDoubleTapGate(single, vi.fn());
+    press();
+    vi.advanceTimersByTime(DOUBLE_TAP_MS - 1);
+    expect(single).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(single).toHaveBeenCalledOnce();
   });
 });

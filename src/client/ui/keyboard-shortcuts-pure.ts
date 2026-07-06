@@ -1,6 +1,6 @@
-// Pure-math helpers for keyboard-shortcuts.ts. Co-located with the
-// constants they read so the production binding and the vitest suite
-// share a single source of truth.
+// Tap-timing helpers for keyboard-shortcuts.ts — DOM- and Stellata-free
+// so the production binding and the vitest suite share a single source of
+// truth.
 
 /** Window inside which three D presses count as a triple-tap. */
 export const D_TRIPLE_TAP_MS = 500;
@@ -38,4 +38,31 @@ export function pushTapAndCheckTriple(
     return true;
   }
   return false;
+}
+
+/**
+ * Single-tap / double-tap gate. The returned `press` schedules `onSingle`
+ * after `windowMs`; a second `press` inside that window cancels it and
+ * fires `onDouble` instead. Shared by the C (picker / master-toggle) and F
+ * (find / fullscreen) shortcuts, which need identical deferral so a second
+ * press can intercept the first.
+ */
+export function makeDoubleTapGate(
+  onSingle: () => void,
+  onDouble: () => void,
+  windowMs: number = DOUBLE_TAP_MS,
+): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+      onDouble();
+    } else {
+      timer = setTimeout(() => {
+        timer = null;
+        onSingle();
+      }, windowMs);
+    }
+  };
 }
