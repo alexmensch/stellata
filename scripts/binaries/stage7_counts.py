@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 from parsers import WdsPair  # noqa: E402
 from stage2_resolve import (  # noqa: E402
+    BINDING_INTEGRITY_COUNT_KEYS,
     RESOLVE_VIA_VALUES,
     ResolvedComponent,
     resolution_counts,
@@ -71,6 +72,7 @@ def build_binaries_counts(
     multiples_rows: list[MultiplesRow],
     synthesized_orb6_pairs: int = 0,
     synthesized_nss_pairs: int = 0,
+    binding_integrity: dict[str, int] | None = None,
 ) -> dict[str, int]:
     """Collect every headline number the run emits into a flat
     ``{key: int}`` dict, suitable for JSON serialisation and per-key
@@ -159,6 +161,8 @@ def build_binaries_counts(
         out[f"orbit_{tag}"] = orb[tag]
     for tag in OPTICAL_VIA_VALUES:
         out[f"optical_{tag}"] = opt[tag]
+    for key in BINDING_INTEGRITY_COUNT_KEYS:
+        out[key] = (binding_integrity or {}).get(key, 0)
     return out
 
 

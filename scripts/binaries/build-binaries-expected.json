@@ -44,5 +44,10 @@
   "optical_asymm_kept": 45,
   "optical_asymm_rejected": 0,
   "optical_mag_heuristic_kept": 14589,
-  "optical_mag_heuristic_rejected": 5836
+  "optical_mag_heuristic_rejected": 5836,
+  "binding_conflicts_source_letters": 1033,
+  "binding_conflicts_letter_sources": 11,
+  "arbitrated_geometric": 416,
+  "arbitrated_unbound_ambiguous": 89,
+  "arbitration_skipped_no_reference": 539
 }

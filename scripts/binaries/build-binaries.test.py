@@ -6357,5 +6357,356 @@ class FinalizeRenderableElementsTests(unittest.TestCase):
         self.assertIsNone(pri.omega_rad)
 
 
+# ─── Stage-2 binding-integrity detector ──────────────────────────────
+
+import stage2_resolve as _s2  # noqa: E402
+
+
+def _bi_pair(
+    wds_id: str, comps: str, rho: float | None, theta: float | None,
+    date: int = 2016,
+) -> "bb.WdsPair":
+    return bb.WdsPair(
+        wds_id=wds_id, discoverer="X 1", components=comps,
+        date_last=date, rho_last=rho, theta_last=theta,
+        mag_pri=None, mag_sec=None, spectral="", notes="    ",
+        precise_ra_deg=None, precise_dec_deg=None,
+    )
+
+
+def _bi_comp(
+    wds_id: str, tok: str, is_primary: bool,
+    gaia: int | None, hip: int | None = None, via: str = "simbad_xid",
+) -> "bb.ResolvedComponent":
+    return bb.ResolvedComponent(
+        wds_id=wds_id, discoverer="X 1", component=tok,
+        is_primary=is_primary,
+        gaia_source_id=gaia, resolve_via=(via if gaia is not None else "unresolved"),
+        hip=hip,
+    )
+
+
+def _bi_astro(
+    sid: int, e_arcsec: float, n_arcsec: float,
+    *, pmra: float = 0.0, pmdec: float = 0.0, epoch: float = 2016.0,
+) -> "bb.GaiaAstrometryRow":
+    """A Gaia astrometry row placed at (E, N) arcsec from RA=180°, Dec=0°."""
+    dec = n_arcsec / 3600.0
+    ra = 180.0 + (e_arcsec / 3600.0)  # cos(0°) = 1
+    return bb.GaiaAstrometryRow(
+        source_id=sid, ra_deg=ra, dec_deg=dec,
+        parallax_mas=10.0, parallax_error_mas=0.1,
+        pmra_masyr=pmra, pmra_error_masyr=0.1,
+        pmdec_masyr=pmdec, pmdec_error_masyr=0.1,
+        ref_epoch=epoch, ruwe=1.0, ipd_frac_multi_peak=0.0,
+        g_mag=5.0, bp_mag=5.0, rp_mag=5.0,
+    )
+
+
+def _bi_indices(
+    src_to_astrometry: dict[int, "bb.GaiaAstrometryRow"],
+    hip_to_gaia: dict[int, int] | None = None,
+) -> "bb.IdentifierIndices":
+    return bb.build_indices(
+        athyg=[], hip2=[], hip_to_gaia=hip_to_gaia or {},
+        tyc_to_gaia={}, src_to_nss={},
+        src_to_astrometry=src_to_astrometry,
+    )
+
+
+def _bi_system(
+    rows: list[tuple[str, float | None, float | None,
+                     tuple[int | None, int | None],
+                     tuple[int | None, int | None]]],
+    wds_id: str = "10000+0000",
+) -> tuple[list["bb.WdsPair"], list["bb.ResolvedComponent"]]:
+    """(pairs, components) aligned in pair order (primary, secondary per
+    decomposing pair) for the binding-integrity audit. Each row is
+    (comps, rho, theta, (p_gaia, p_hip), (s_gaia, s_hip))."""
+    pairs: list[bb.WdsPair] = []
+    comps: list[bb.ResolvedComponent] = []
+    for comps_str, rho, theta, pb, sb in rows:
+        p_tok, s_tok = bb.split_components(comps_str)
+        pairs.append(_bi_pair(wds_id, comps_str, rho, theta))
+        comps.append(_bi_comp(wds_id, p_tok, True, pb[0], pb[1]))
+        comps.append(_bi_comp(wds_id, s_tok, False, sb[0], sb[1]))
+    return pairs, comps
+
+
+class BindingRelationTests(unittest.TestCase):
+    def test_ancestor_and_hierarchy(self) -> None:
+        self.assertTrue(_s2._is_hier_ancestor("A", "Aa"))
+        self.assertTrue(_s2._is_hier_ancestor("A", "Aa1"))
+        self.assertTrue(_s2._is_hier_ancestor("Aa", "Aa1"))
+        self.assertFalse(_s2._is_hier_ancestor("A", "B"))
+        self.assertFalse(_s2._is_hier_ancestor("A", "AB"))  # compound, not child
+
+    def test_compound_containment(self) -> None:
+        self.assertTrue(_s2._compound_contains("AB", "A"))
+        self.assertTrue(_s2._compound_contains("AB", "Aa"))
+        self.assertFalse(_s2._compound_contains("AB", "C"))
+        self.assertFalse(_s2._compound_contains("AB", "BC"))
+
+    def test_blend_pair_mates_transitive(self) -> None:
+        self.assertTrue(_s2._are_pair_mates("A", "B", [("A", "B")]))
+        # Transitive through ancestors: A roots Aa, B roots Bb.
+        self.assertTrue(_s2._are_pair_mates("A", "B", [("Aa", "Bb")]))
+        self.assertFalse(_s2._are_pair_mates("F", "G", [("C", "F"), ("C", "G")]))
+
+
+class BindingIntegrityDetectorTests(unittest.TestCase):
+    def _audit(self, rows, src_to_astrometry, hip_to_gaia=None):
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(src_to_astrometry, hip_to_gaia)
+        verdicts = bb.audit_binding_integrity(pairs, comps, idx, apply=False)
+        return verdicts, pairs, comps, idx
+
+    def test_source_two_secondaries_decisive(self) -> None:
+        # SX bound to B and C (disjoint secondaries); SX actually sits at
+        # B's WDS-measured position. Geometry keeps B, unbinds C.
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SX, None)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 3.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_GEOMETRIC)
+        self.assertEqual(v[0].winner.label, "B")
+        self.assertEqual(v[0].unbind, [("C", SX)])
+
+    def test_letter_two_sources_decisive(self) -> None:
+        # 04049-shape: letter B bound to A's source (blended, offset 0) on
+        # one row and its own source (at the WDS separation) on another.
+        SA, SB = 100, 200
+        rows = [
+            ("AB", 0.9, 0.0, (SA, None), (SB, None)),
+            ("AC", 5.0, 0.0, (SA, None), (300, None)),
+            ("BC", 4.1, 0.0, (SA, None), (300, None)),
+        ]
+        astro = {
+            SA: _bi_astro(SA, 0.0, 0.0), SB: _bi_astro(SB, 0.0, 0.9),
+            300: _bi_astro(300, 0.0, 5.0),
+        }
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_LETTER_SOURCES]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_GEOMETRIC)
+        self.assertEqual(v[0].winner.source_id, SB)
+        self.assertEqual(v[0].rebind_letter, "B")
+        self.assertEqual(v[0].rebind_source, SB)
+
+    def test_ancestor_exemption_no_conflict(self) -> None:
+        # SX bound to A and Aa (ancestor/descendant) is one physical star.
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, None)),   # ref A, B carries SX
+            ("Aa,Ab", 0.5, 0.0, (SX, None), (400, None)),  # Aa also SX
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 3.0),
+                 400: _bi_astro(400, 0.0, 3.5)}
+        verdicts, *_ = self._audit(rows, astro)
+        # SX bound to {B, Aa}: B is a leaf, Aa descends from A. B and Aa
+        # are disjoint, so this IS a conflict — assert instead the pure
+        # ancestor case via the cluster helper.
+        clusters = _s2._cluster_tokens({"A", "Aa", "Aa1"}, [])
+        self.assertEqual(len(clusters), 1)
+
+    def test_blend_pairmate_exemption(self) -> None:
+        # A and B share SX via a sub-resolution (ρ = 0) blend pair — the
+        # legitimate WDS convention. No conflict.
+        SX = 200
+        rows = [("AB", 0.0, 0.0, (SX, None), (SX, None))]
+        astro = {SX: _bi_astro(SX, 0.0, 0.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        self.assertEqual(verdicts, [])
+
+    def test_measured_pairmate_is_conflict(self) -> None:
+        # Same bindings but the AB pair has a MEASURED separation — two
+        # letters at ρ > 0 cannot be one source. Now a conflict.
+        SX, SC = 200, 300
+        rows = [
+            ("AB", 1.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, 0.0), SC: _bi_astro(SC, 0.0, 10.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+
+    def test_compound_containment_exemption(self) -> None:
+        # SX bound to AB (compound) and A — A is contained in AB.
+        clusters = _s2._cluster_tokens({"AB", "A"}, [])
+        self.assertEqual(len(clusters), 1)
+
+    def test_ambiguous_unbinds_all(self) -> None:
+        # SX sits BETWEEN B and C (no decisive winner) → unbind both.
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, None)),
+            ("AC", 5.0, 0.0, (SA, None), (SX, None)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 4.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_UNBOUND_AMBIGUOUS)
+        self.assertEqual(sorted(v[0].unbind), [("B", SX), ("C", SX)])
+
+    def test_refute_disconnected_graph_decisive(self) -> None:
+        # 03413-shape: SX bound to a blended A/B pair (disconnected from
+        # the reference) and to F, G in the C-subsystem. Geometry refutes
+        # F and G; A/B is unreachable but the only home left → decisive.
+        SX, SC, SB2 = 200, 300, 400
+        rows = [
+            ("AB", 0.0, 0.0, (SX, None), (SX, None)),   # blend: A,B one cluster
+            ("CF", 0.1, 0.0, (SC, None), (SX, None)),   # F mis-bound to SX
+            ("CG", 5.0, 90.0, (SC, None), (SX, None)),  # G mis-bound to SX
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, 20.0), SC: _bi_astro(SC, 0.0, 0.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_GEOMETRIC)
+        self.assertEqual(set(v[0].winner.tokens), {"A", "B"})
+        self.assertEqual(sorted(v[0].unbind), [("F", SX), ("G", SX)])
+
+    def test_skipped_no_reference(self) -> None:
+        # SX bound to two disjoint letters and NO uncontested astrometric
+        # anchor exists → skipped_no_reference.
+        SX = 200
+        rows = [
+            ("AB", 3.0, 0.0, (SX, None), (SX, None)),
+            ("CD", 3.0, 0.0, (SX, None), (SX, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, 0.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        self.assertTrue(verdicts)
+        self.assertTrue(all(
+            x.verdict == _s2.BINDING_VERDICT_SKIPPED_NO_REFERENCE
+            for x in verdicts
+        ))
+
+    def test_apply_unbinds_loser_and_maps_hip(self) -> None:
+        # Enforcement clears the loser's gaia; hip clears because it
+        # cross-walks to the contested source.
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, 55)),
+            ("AC", 10.0, 0.0, (SA, None), (SX, 55)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 3.0)}
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(astro, hip_to_gaia={55: SX})
+        bb.audit_binding_integrity(pairs, comps, idx, apply=True)
+        c_comp = next(c for c in comps if c.component == "C")
+        self.assertIsNone(c_comp.gaia_source_id)
+        self.assertIsNone(c_comp.hip)
+        self.assertEqual(c_comp.resolve_via, "unresolved")
+        b_comp = next(c for c in comps if c.component == "B")
+        self.assertEqual(b_comp.gaia_source_id, SX)
+
+    def test_apply_keeps_independently_distinct_hip(self) -> None:
+        # The loser's hip does NOT cross-walk to the contested source and
+        # differs from the winner's — it survives for Stage 3's HIP2 path.
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SX, 99)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 3.0)}
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(astro, hip_to_gaia={})
+        bb.audit_binding_integrity(pairs, comps, idx, apply=True)
+        c_comp = next(c for c in comps if c.component == "C")
+        self.assertIsNone(c_comp.gaia_source_id)
+        self.assertEqual(c_comp.hip, 99)
+
+    def test_downward_parent_inheritance(self) -> None:
+        # A bound to SA; Aa unbound → inherits A's binding.
+        SA = 100
+        pairs = [_bi_pair("10000+0000", "A,B", 5.0, 0.0)]
+        comps = [
+            _bi_comp("10000+0000", "A", True, SA),
+            _bi_comp("10000+0000", "B", False, 300),
+        ]
+        # Add an Aa,Ab pair whose Aa is unbound.
+        pairs.append(_bi_pair("10000+0000", "Aa,Ab", 0.0, 0.0))
+        comps.append(_bi_comp("10000+0000", "Aa", True, None))
+        comps.append(_bi_comp("10000+0000", "Ab", False, None))
+        n = bb.inherit_downward_parent_bindings(pairs, comps)
+        self.assertEqual(n, 2)  # Aa and Ab both inherit A's binding
+        aa = next(c for c in comps if c.component == "Aa")
+        ab = next(c for c in comps if c.component == "Ab")
+        self.assertEqual(aa.gaia_source_id, SA)
+        self.assertEqual(ab.gaia_source_id, SA)
+
+    def test_counts_aggregate(self) -> None:
+        v_geo = _s2.BindingVerdict(
+            "w", _s2.BINDING_SHAPE_SOURCE_LETTERS,
+            _s2.BINDING_VERDICT_GEOMETRIC, "c", None, None, None, [],
+        )
+        v_amb = _s2.BindingVerdict(
+            "w", _s2.BINDING_SHAPE_SOURCE_LETTERS,
+            _s2.BINDING_VERDICT_UNBOUND_AMBIGUOUS, "c", None, None, None, [],
+        )
+        v_skip = _s2.BindingVerdict(
+            "w", _s2.BINDING_SHAPE_LETTER_SOURCES,
+            _s2.BINDING_VERDICT_SKIPPED_NO_REFERENCE, "c", None, None, None, [],
+        )
+        counts = bb.binding_integrity_counts([v_geo, v_amb, v_skip])
+        self.assertEqual(counts["binding_conflicts_source_letters"], 2)
+        self.assertEqual(counts["binding_conflicts_letter_sources"], 1)
+        self.assertEqual(counts["arbitrated_geometric"], 1)
+        self.assertEqual(counts["arbitrated_unbound_ambiguous"], 1)
+        self.assertEqual(counts["arbitration_skipped_no_reference"], 1)
+
+    def test_report_only_does_not_mutate(self) -> None:
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SX, None)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 3.0)}
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(astro)
+        before = [(c.gaia_source_id, c.hip, c.resolve_via) for c in comps]
+        bb.audit_binding_integrity(pairs, comps, idx, apply=False)
+        after = [(c.gaia_source_id, c.hip, c.resolve_via) for c in comps]
+        self.assertEqual(before, after)
+
+    def test_bfs_composes_multi_hop(self) -> None:
+        adj = {
+            "A": {"B": (5.0, 0.0, 2016.0)},
+            "B": {"A": (-5.0, 0.0, 2016.0), "C": (5.0, 0.0, 2015.0)},
+            "C": {"B": (-5.0, 0.0, 2015.0)},
+        }
+        e, n, epoch = _s2._bfs_offset(adj, "A", "C")
+        self.assertAlmostEqual(e, 10.0)
+        self.assertAlmostEqual(n, 0.0)
+        self.assertEqual(epoch, 2015.0)
+        self.assertIsNone(_s2._bfs_offset({"A": {}}, "A", "Z"))
+
+    def test_tsv_write_shape(self) -> None:
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 3.0, 0.0, (SA, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SX, None)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 3.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "verdicts.tsv"
+            n = bb.write_binding_verdicts_tsv(verdicts, out)
+            lines = out.read_text().splitlines()
+        self.assertEqual(n, len(verdicts))
+        self.assertEqual(
+            lines[0].split("\t"), list(_s2.BINDING_VERDICT_TSV_COLUMNS),
+        )
+        self.assertEqual(len(lines), len(verdicts) + 1)
+
+
 if __name__ == "__main__":
     unittest.main()
