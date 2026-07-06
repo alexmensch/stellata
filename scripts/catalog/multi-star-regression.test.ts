@@ -105,7 +105,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 3;
 // moved to J2016 (single stars) as did HIP2-fit secondaries (24.75 yr),
 // rotating a few tangent-projection anchors / repositioning baked
 // offsets enough for two borderline pairs to cross the half-a threshold.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 568;
+// The 568 → 559 step is the Stage 5 physical-boundness optical gate +
+// Sirius B astrometry exclusion: line-of-sight optical doubles drop out
+// (no longer baked), and Sirius B's blended DR3 solution no longer bakes
+// a disagreeing placement.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 559;
 
 // ---- Corpus row types ----------------------------------------------------
 

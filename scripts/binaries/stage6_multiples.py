@@ -18,14 +18,21 @@ from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
     _propagate_position,
     _spherical_to_unit_vec,
+    iter_decomposing_pair_components,
     split_components,
 )
-from stage3_astrometry import ComponentAstrometry  # noqa: E402
+from stage3_astrometry import (  # noqa: E402
+    ComponentAstrometry,
+    SystemAnchor,
+)
 from stage4_orbits import (  # noqa: E402
     OrbitElements, first_astrometry_field_per_system,
     iter_decomposing_pairs, kepler_semimajor_axis_au,
 )
-from stage5_optical import OpticalClassification  # noqa: E402
+from stage5_optical import (  # noqa: E402
+    ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
+    OpticalClassification,
+)
 from mass_estimate import (  # noqa: E402
     DEFAULT_PRIMARY_MASS_MSUN,
     UNKNOWN_COMPANION_MASS_RATIO_Q,
@@ -269,7 +276,7 @@ def _athyg_row_for_component(
     return None
 
 
-def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, float] | None:
+def _position_pc(astrometry: ComponentAstrometry) -> SystemAnchor | None:
     """ICRS RA/Dec + parallax → (x_pc, y_pc, z_pc, dist_pc), with the
     direction PM-propagated from the measurement's native ``ref_epoch``
     to ``CATALOG_SCENE_EPOCH`` so every emitted position shares one epoch
@@ -298,9 +305,6 @@ def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, 
     return x * dist_pc, y * dist_pc, z * dist_pc, dist_pc
 
 
-SystemAnchor = tuple[float, float, float, float]
-
-
 def compute_system_anchors(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
@@ -320,6 +324,35 @@ def compute_system_anchors(
     return first_astrometry_field_per_system(
         pairs, components, astrometry, _position_pc,
     )
+
+
+def compute_pair_masses(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    indices: IdentifierIndices,
+) -> list[float]:
+    """Total system mass (M_sun) per decomposing WDS pair, in
+    ``resolve_all_pairs`` iteration order — parallel to Stage 5's
+    classification list. Each component's mass comes from its resolved
+    spectral type (``_resolve_spect`` → ``mass_from_spectral_class``); a
+    component with no parsable type contributes
+    ``ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN`` so the sum stays generous
+    (the escape-velocity gate is lenient by construction). Feeds Stage 5's
+    escape-velocity sub-gate, which reads only the total."""
+    out: list[float] = []
+    for pair, primary, secondary in iter_decomposing_pair_components(
+        pairs, components,
+    ):
+        total = 0.0
+        for comp in (primary, secondary):
+            spect, _ = _resolve_spect(
+                pair.wds_id, comp.component,
+                _athyg_row_for_component(comp, indices), indices,
+            )
+            mass = mass_from_spectral_class(spect, None)
+            total += mass if mass is not None else ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN
+        out.append(total)
+    return out
 
 
 def _resolve_position(
@@ -408,6 +441,7 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
         astrometry_via="gaia_5p",
         ra_deg=gaia.ra_deg, dec_deg=gaia.dec_deg,
         parallax_mas=gaia.parallax_mas,
+        parallax_error_mas=gaia.parallax_error_mas,
         pmra_masyr=gaia.pmra_masyr, pmdec_masyr=gaia.pmdec_masyr,
         ref_epoch=gaia.ref_epoch,
     )
@@ -568,6 +602,7 @@ def build_multiples_rows(
     classifications: list[OpticalClassification],
     indices: IdentifierIndices,
     simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
+    system_anchors: dict[str, SystemAnchor] | None = None,
 ) -> list[MultiplesRow]:
     """Walk the per-pair Stage 2/3/4/5 outputs in lockstep. Skips pairs
     Stage 5 classified as optical (their rows are absent from the TSV
@@ -583,6 +618,11 @@ def build_multiples_rows(
     represented in the pair output. Position falls back through
     component-native → system-anchor → ``None`` in the same order as
     the pair rows.
+
+    ``system_anchors`` is the precomputed per-``wds_id`` anchor map. The
+    caller shares one map between Stage 5's anchor-distance gate and this
+    emit so anchors are computed once; ``None`` recomputes them here (the
+    in-process tests).
     """
     n_pairs = sum(1 for p in pairs if split_components(p.components) is not None)
     if not (len(orbits) == n_pairs == len(classifications)):
@@ -591,7 +631,8 @@ def build_multiples_rows(
             "classifications must run parallel to decomposing pairs"
         )
 
-    system_anchors = compute_system_anchors(pairs, components, astrometry)
+    if system_anchors is None:
+        system_anchors = compute_system_anchors(pairs, components, astrometry)
 
     out: list[MultiplesRow] = []
     emitted_keys: set[tuple[str, str]] = set()

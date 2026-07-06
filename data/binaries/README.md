@@ -30,6 +30,15 @@ orb6_component_overrides.tsv    Hand-curated WDS component letters for
                                 orphan sub-pair synthesis; every entry
                                 cites its literature source. Regular
                                 git.
+astrometry_exclusions.tsv       Hand-curated Gaia DR3 source_ids whose
+                                5p astrometry is unusable — a companion
+                                blended with a Gaia-saturating primary
+                                (Sirius B). Dropped from the astrometry
+                                map at Stage 1, so the component falls
+                                back to a WDS/ORB6-projected position
+                                (epoch-clean). Identity preserved; only
+                                the position is suppressed. Every entry
+                                cites why. Regular git.
 ```
 
 ## Schema
