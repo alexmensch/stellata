@@ -181,6 +181,40 @@ class WdsSummTests(unittest.TestCase):
         self.assertAlmostEqual(pr.precise_dec_deg, 75.4833, places=2)
 
 
+class WdsSepPaSentinelTests(unittest.TestCase):
+    def test_negative_parses_to_none(self) -> None:
+        self.assertIsNone(_parsers_mod.parse_wds_sep_pa("-1.0"))
+        self.assertIsNone(_parsers_mod.parse_wds_sep_pa("  -1"))
+        self.assertIsNone(_parsers_mod.parse_wds_sep_pa(""))
+        self.assertEqual(_parsers_mod.parse_wds_sep_pa("  0.8"), 0.8)
+        self.assertEqual(_parsers_mod.parse_wds_sep_pa("246"), 246.0)
+
+    def test_wds_row_no_measurement_sentinel_yields_none(self) -> None:
+        base = (
+            "00000+7530A  1248      1904 1982    5 246 235   0.8   0.6 "
+            "10.27 11.5  A7IV      +034+005          +74 1056      "
+            "000006.64+752859.8"
+        ).ljust(130)
+        chars = list(base)
+        chars[42:45] = list("-1 ")     # theta_last column
+        chars[52:57] = list("-1.0 ")   # rho_last column
+        line = "".join(chars)
+        body = (
+            "<some HTML\n"
+            "Identifier             Frst Last      Fst Lst First  Last  "
+            "Pri   Sec  Type      RA\" DEC\" RA\" DEC\"                 "
+            "Coordinate      \n"
+            "\n"
+            f"{line}\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "wds.txt", body)
+            pairs = bb.parse_wds_summ(p)
+        self.assertEqual(len(pairs), 1)
+        self.assertIsNone(pairs[0].rho_last)
+        self.assertIsNone(pairs[0].theta_last)
+
+
 class Orb6Tests(unittest.TestCase):
     def test_parses_row_with_components(self) -> None:
         # Real-shape ORB6 line with an Aa,Ab component designator at the

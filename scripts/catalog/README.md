@@ -497,7 +497,8 @@ Per-row gates and resolution:
   pipeline-precision gap between AT-HYG's 3-4 sig figs and the
   binaries pipeline's 6 sig figs (Sirius A and B were ~100 AU apart
   for that reason before the fix). Sub-resolution / unmeasured
-  pairs (WDS ρ 0.000 or the −1 sentinel) have no static placement
+  pairs (WDS ρ 0.000, or a null sep/pa where WDS reported no
+  measurement) have no static placement
   to bake: with a renderable orbit the secondary collocates
   BIT-IDENTICALLY on the anchor — a placement choice for the LOD
   fallback, not a runtime signal. The runtime renders the relative

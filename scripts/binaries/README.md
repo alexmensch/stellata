@@ -570,9 +570,13 @@ relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 
 The last four columns carry WDS pair geometry — populated on both
 component rows of a decomposing pair (standalone rows leave them
-empty). `sep_arcsec` and `pa_deg` feed companion-promotion's
-tangent-plane projection for the Tier-3 (no-orbit) path and the
-runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
+empty). `sep_arcsec` and `pa_deg` are empty when WDS reported no
+measurement: WDS writes -1 for those (spectroscopic / interferometric
+inner pairs given only at the orbital-element level — Spica), and
+`parse_wds_sep_pa` translates the sentinel to None at the parse
+boundary, so -1 never reaches downstream consumers. They feed
+companion-promotion's tangent-plane projection for the Tier-3
+(no-orbit) path and the runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
 WDS observation year (`date_last`) converted to JD via
 `wds_year_to_jd`; the runtime `BinaryOrbitField` baselines orbital
 animation at this epoch (ΔR(t) = R(t) − R(sep_pa_epoch_jd)) so the

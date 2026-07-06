@@ -42,6 +42,17 @@ def safe_int(s: str) -> int | None:
         return None
 
 
+def parse_wds_sep_pa(s: str) -> float | None:
+    """Parse a WDS ρ (arcsec) or θ (deg) field. WDS writes -1 for a pair
+    with no measured separation (spectroscopic / interferometric inner
+    pairs reported only at the orbital-element level — Spica). ρ and θ are
+    physically non-negative, so any negative is that sentinel and parses to
+    None; the -1 never leaks past this boundary into Stage 3's system-
+    minimum-ρ HIP2 gate or Stage 6's emitted sep_arcsec/pa_deg."""
+    v = safe_float(s)
+    return None if v is not None and v < 0.0 else v
+
+
 # Per-parser non-null floors for headline fixed-width columns. A drop
 # below the floor signals that the source catalog's column offsets have
 # shifted (which has historically happened to WDS / ORB6), at which point
@@ -225,8 +236,8 @@ def parse_wds_summ(path: Path) -> list[WdsPair]:
                 discoverer=discoverer,
                 components=line[17:22].strip(),
                 date_last=safe_int(line[28:32]),
-                theta_last=safe_float(line[42:45]),
-                rho_last=safe_float(line[52:57]),
+                theta_last=parse_wds_sep_pa(line[42:45]),
+                rho_last=parse_wds_sep_pa(line[52:57]),
                 mag_pri=safe_float(line[58:63]),
                 mag_sec=safe_float(line[64:69]),
                 spectral=line[70:79].strip(),

@@ -734,6 +734,24 @@ describe('catalog-pure / classifyGcvsVarType', () => {
     expect(classifyGcvsVarType('DSCT')).toBe(VAR_TYPE_PULSATING);
   });
 
+  it('classifies pulsator subtypes with trailing letters (DCEPS/Polaris, CWA, RVA, LB, DSCTC)', () => {
+    // Subtype letters after the family prefix — the tail gate must accept
+    // them, not fall through to OTHER.
+    expect(classifyGcvsVarType('DCEPS')).toBe(VAR_TYPE_PULSATING);   // Polaris
+    expect(classifyGcvsVarType('DSCTC')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('CWA')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('CWB')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('RVA')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('RVB')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('LB')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('LC')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('ZZA')).toBe(VAR_TYPE_PULSATING);
+    // Uncertainty-flagged subtype (GCVS ':' after the subtype letter).
+    expect(classifyGcvsVarType('SRA:')).toBe(VAR_TYPE_PULSATING);
+    // Composite: rotating + pulsator → the pulsator component wins.
+    expect(classifyGcvsVarType('ACV+DSCTC')).toBe(VAR_TYPE_PULSATING);
+  });
+
   it('classifies cataclysmic / eruptive / rotating as OTHER', () => {
     expect(classifyGcvsVarType('UGSU')).toBe(VAR_TYPE_OTHER);
     expect(classifyGcvsVarType('ZAND')).toBe(VAR_TYPE_OTHER);
@@ -741,6 +759,12 @@ describe('catalog-pure / classifyGcvsVarType', () => {
     expect(classifyGcvsVarType('ACV')).toBe(VAR_TYPE_OTHER);
     expect(classifyGcvsVarType('BY')).toBe(VAR_TYPE_OTHER);
     expect(classifyGcvsVarType('CST')).toBe(VAR_TYPE_OTHER);
+    // Non-pulsators that share an initial with a pulsator family must not
+    // be promoted by the letter-tail gate (RCB≠RR/RV, RS≠RR, SDOR≠SR).
+    expect(classifyGcvsVarType('RCB')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('RS')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('SDOR')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('ACVO')).toBe(VAR_TYPE_OTHER);
   });
 
   it('returns UNKNOWN for blank, null, or whitespace input', () => {

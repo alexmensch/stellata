@@ -485,53 +485,38 @@ export function classifyGcvsVarType(rawType: string | null | undefined): number 
   // deliberately NOT here — a transiting-planet host is not a stellar
   // multiple, so it must earn no wings and fall through to VAR_TYPE_OTHER.
   if (/\bE([ABW]|LL)?\b/.test(t)) return VAR_TYPE_ECLIPSING;
-  // Intrinsic pulsators. The pulsator family is identified by a
-  // letter-prefix at the start of the GCVS type string or after a
-  // separator (+ / | /); GCVS appends arbitrary subtype letters
-  // ("SRA", "RRAB", "DCEPS") so the prefix match is `startsWith` after
-  // the separator, not a word-boundary regex. Order matters: longer
-  // prefixes ("DCEP" before "CEP") and discriminating prefixes
-  // ("RR" before "RV"-style ambiguity) come first so the prior wins
-  // the match. The "M" prefix is intentionally LAST — it would
-  // otherwise swallow any "M…" type including the all-uppercase forms
-  // that follow other codes (e.g. "ELL" → none of the M-class rules
-  // ever match because we screened eclipsing above).
+  // Intrinsic pulsators, identified by a family prefix at the start of a
+  // GCVS type component (split on the composite separators + / |). Only
+  // the base family is listed; GCVS's trailing subtype letters
+  // ("DCEP"→"DCEPS", "CW"→"CWA/CWB", "RV"→"RVA/RVB", "L"→"LB/LC") are
+  // accepted by the tail gate below, so the list never has to enumerate
+  // every subtype. Order matters: the longer of two nested families
+  // comes first so it wins the `startsWith` ("DCEP"/"BCEP" before "CEP").
+  // "M" and "L" are LAST — a bare single letter would otherwise shadow a
+  // longer family sharing that initial.
   const pulsatorPrefixes = [
     'DCEP', 'BCEP', 'CEP',
     'DSCT', 'GDOR', 'SXPHE', 'PVTEL', 'ACYG', 'ROAP',
     'WVIR', 'CW',
-    'RRAB', 'RRC', 'RR', 'RV',
+    'RR', 'RV',
     'SPB',
-    'SRA', 'SRB', 'SRC', 'SRD', 'SRS', 'SR',
+    'SR',
     'ZZ',
     'M', 'L',
   ];
-  // Split on GCVS's composite separators and test each component's
-  // prefix. A "ZAND" (cataclysmic) starting with "Z" wouldn't match
-  // any pulsator prefix because we require an exact letter-prefix
-  // followed by either the end of the component or a digit/letter
-  // continuation that's part of a recognised subtype — the loop
-  // tests both shapes via `startsWith`.
   for (const part of t.split(/[+/|]/)) {
     const p = part.trim();
     if (!p) continue;
     for (const pre of pulsatorPrefixes) {
-      if (p === pre || p.startsWith(pre)) {
-        // Require the character immediately after the prefix to be a
-        // GCVS subtype continuation — digit, '(', or end-of-string —
-        // so "ZAND" (starts with "Z") cannot match "ZZ", "MEAN"
-        // cannot match "M", etc. Subtype letters that GCVS appends
-        // ('A','B','C','D','S' on SR; 'AB','C' on RR) are picked up
-        // by the longer prefixes above, so we only need to gate
-        // out cases where the matched prefix is followed by another
-        // class letter.
+      if (p.startsWith(pre)) {
+        // The tail after the family prefix must be a GCVS subtype
+        // continuation: trailing subtype letters, a digit, a paren, or
+        // end-of-string. No non-pulsator GCVS code shares a pulsator
+        // family's prefix, so a letter tail is always a subtype — never
+        // a coincidental longer word. A non-matching tail falls through
+        // to the next prefix.
         const tail = p.slice(pre.length);
-        if (tail === '' || /^[0-9()/.]/.test(tail)) return VAR_TYPE_PULSATING;
-        // Some pulsator types continue with a letter that's part of
-        // the same family (e.g. PVTEL has no documented further
-        // letters; SR has its A/B/C/D in the prefix list already).
-        // Anything else means we matched a coincidental prefix —
-        // fall through and try a longer / different prefix.
+        if (tail === '' || /^[A-Z0-9()/.]/.test(tail)) return VAR_TYPE_PULSATING;
       }
     }
   }
