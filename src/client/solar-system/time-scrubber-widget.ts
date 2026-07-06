@@ -107,7 +107,11 @@ export function createTimeScrubberWidget(
     refresh();
   };
 
-  const buttons: Partial<Record<string, HTMLButtonElement>> = {};
+  // play / pause flip enabled state on every rate change; the rest are
+  // stateless. TRANSPORT_BUTTONS always carries both, so definite-assignment
+  // is safe.
+  let playBtn!: HTMLButtonElement;
+  let pauseBtn!: HTMLButtonElement;
   for (const spec of TRANSPORT_BUTTONS) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -116,7 +120,8 @@ export function createTimeScrubberWidget(
     b.title = spec.title;
     b.addEventListener('click', () => press(spec.action));
     controls.append(b);
-    buttons[spec.action] = b;
+    if (spec.action === 'play') playBtn = b;
+    else if (spec.action === 'pause') pauseBtn = b;
   }
 
   const jumpRow = document.createElement('div');
@@ -145,18 +150,17 @@ export function createTimeScrubberWidget(
   scrubber.append(header, rate, controls, jumpRow);
   meta.replaceChildren(collapsed, scrubber);
 
-  // The collapsed readout ticks live UTC on its own interval (harmless while
-  // the scrubber is open and the collapsed view is hidden).
-  createTimeReadout({ el: readout, stellata });
+  // Exactly one per-second tick runs at a time: the collapsed readout ticks
+  // while collapsed; open() stops it (the collapsed view is hidden then) and
+  // starts the expanded tick, and close() reverses it.
+  let stopCollapsedTick = createTimeReadout({ el: readout, stellata });
 
-  // While open, refresh the model-time readout each second; the rate readout
-  // and button-disabled states update on demand via refresh().
   let expandedTimer: number | null = null;
   const refresh = (): void => {
     const r = clock.getRate();
     rate.textContent = formatRatePerSecond(r);
-    buttons.play!.disabled = r > 0;
-    buttons.pause!.disabled = r === 0;
+    playBtn.disabled = r > 0;
+    pauseBtn.disabled = r === 0;
   };
   const tickExpanded = (): void => {
     clockReadout.textContent = formatTimeReadout(stellata.getT());
@@ -166,6 +170,7 @@ export function createTimeScrubberWidget(
     if (!scrubber.hidden) return;
     collapsed.hidden = true;
     scrubber.hidden = false;
+    stopCollapsedTick();
     syncJump();
     refresh();
     tickExpanded();
@@ -179,6 +184,7 @@ export function createTimeScrubberWidget(
       clearInterval(expandedTimer);
       expandedTimer = null;
     }
+    stopCollapsedTick = createTimeReadout({ el: readout, stellata });
   };
   const toggle = (): void => { if (scrubber.hidden) open(); else close(); };
 
