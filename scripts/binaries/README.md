@@ -245,8 +245,9 @@ J1991.25 (the HIP1 native epoch), while GJ / Tycho-sourced rows are
 closer to J2000. Stage 2 and Stage 3 share `iter_pair_athyg_matches`
 to walk the pair-iteration cascade (primary match against the WDS
 precise_coord, then predicted-secondary match with primary-row
-exclusion, with the wide-pair short-circuit when ρ ≥ the WDS overflow
-sentinel `999.9″`). The default matcher,
+exclusion, with the wide-pair short-circuit at the WDS overflow
+sentinel `999.9″` — `parse_wds_sep_pa` collapses that ρ to None, and
+the predicted-secondary match skips a None ρ). The default matcher,
 `match_athyg_position_either_epoch`, tries the row PM-propagated
 J1991.25→J2000 first, then the unpropagated stored coord — propagated
 wins on tie, the unpropagated retry covers high-PM GJ-anchored rows
@@ -601,11 +602,15 @@ relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 
 The last four columns carry WDS pair geometry — populated on both
 component rows of a decomposing pair (standalone rows leave them
-empty). `sep_arcsec` and `pa_deg` are empty when WDS reported no
-measurement: WDS writes -1 for those (spectroscopic / interferometric
-inner pairs given only at the orbital-element level — Spica), and
-`parse_wds_sep_pa` translates the sentinel to None at the parse
-boundary, so -1 never reaches downstream consumers. They feed
+empty). `parse_wds_sep_pa` translates two WDS sentinels to None at the
+parse boundary so neither reaches downstream consumers. -1 is the
+no-measurement sentinel (spectroscopic / interferometric inner pairs
+given only at the orbital-element level, Spica) written in both ρ and
+θ, so `sep_arcsec` and `pa_deg` both empty. 999.9 is the field-width
+overflow marker (ultra-wide pairs whose ρ can't localise the secondary);
+only the ρ field overflows, so `sep_arcsec` empties while `pa_deg` keeps
+its real angle. Left unhandled the 999.9 ρ baked Alsephina F at
+999.9″ × 24.7 pc ≈ 24,695 AU. They feed
 companion-promotion's tangent-plane projection for the Tier-3
 (no-orbit) path and the runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
 WDS observation year (`date_last`) converted to JD via

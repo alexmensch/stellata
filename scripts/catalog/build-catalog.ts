@@ -212,6 +212,7 @@ async function main() {
     companionAlreadyInCatalog: 0,
     companionDroppedNoIdentifier: 0,
     companionDroppedNoPosition: 0,
+    companionDroppedBeyondTidalLimit: 0,
     companionDroppedNoAbsmag: 0,
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
@@ -436,7 +437,9 @@ async function main() {
         `(${ps.promotedSynthetic} via synthetic ID); ` +
         `already-in-catalog ${ps.alreadyInCatalog}; ` +
         `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
-        `no-position=${ps.droppedNoPosition}, no-absmag=${ps.droppedNoAbsmag}, ` +
+        `no-position=${ps.droppedNoPosition}, ` +
+        `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
+        `no-absmag=${ps.droppedNoAbsmag}, ` +
         `no-primary=${ps.droppedNoPrimary}, ` +
         `compound-comp=${ps.droppedCompoundComp}, ` +
         `collocated-primary=${ps.droppedCollocatedPrimary}); ` +
@@ -452,6 +455,7 @@ async function main() {
     counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
     counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
     counts.companionDroppedNoPosition = ps.droppedNoPosition;
+    counts.companionDroppedBeyondTidalLimit = ps.droppedBeyondTidalLimit;
     counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
     counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;

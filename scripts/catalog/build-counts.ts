@@ -133,6 +133,11 @@ export interface BuildCounts {
    *  nor sep+PA tangent projection from the primary yielded a 3D
    *  position. */
   companionDroppedNoPosition: number;
+  /** Pair rows dropped because the tangent projection ρ·d exceeds the
+   *  bound-pair tidal limit — a fabricated companion that far can't be
+   *  gravitationally bound (a line-of-sight optical double with no
+   *  parallax for Stage 5 to catch). */
+  companionDroppedBeyondTidalLimit: number;
   /** Pair rows dropped because the secondary's absmag couldn't be
    *  imputed — no own absmag AND no primary+Δmag combo. */
   companionDroppedNoAbsmag: number;

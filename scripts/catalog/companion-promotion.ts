@@ -13,6 +13,7 @@ import {
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
   UNKNOWN_CLASS_IDX,
+  OPTICAL_DOUBLE_MIN_SEP_PC,
   absmagFromSpectral,
   classifyFromSimbad,
   parseGaiaSourceIdStr,
@@ -267,6 +268,25 @@ export function projectFromSepPa(
   };
 }
 
+// A tangent-projected companion is placed at the primary's distance, so
+// its projected physical separation ρ·d is a lower bound on the pair's
+// true 3D separation. Beyond OPTICAL_DOUBLE_MIN_SEP_PC (the Galactic
+// tidal-disruption limit) no pair can be bound — refuse to fabricate a
+// companion there. Only the projection branch consults this; a secondary
+// with its own resolved astrometry is already vetted by Stage 5's
+// parallax gate, which can't reach an unresolved (parallax-less) one.
+function projectionBeyondTidalLimit(
+  anchorX: number,
+  anchorY: number,
+  anchorZ: number,
+  sepArcsec: number,
+): boolean {
+  const distPc = Math.sqrt(
+    anchorX * anchorX + anchorY * anchorY + anchorZ * anchorZ,
+  );
+  return sepArcsec * ARCSEC_TO_RAD * distPc > OPTICAL_DOUBLE_MIN_SEP_PC;
+}
+
 // ---- Promotion --------------------------------------------------------
 
 export interface PromotionStats {
@@ -283,6 +303,13 @@ export interface PromotionStats {
   droppedNoIdentifier: number;
   /** Dropped because no anchor — neither own astrometry nor sep+PA. */
   droppedNoPosition: number;
+  /** Dropped because the tangent projection ρ·d exceeds the Galactic
+   *  tidal-disruption limit (OPTICAL_DOUBLE_MIN_SEP_PC): a fabricated
+   *  companion that far can't be gravitationally bound, so an unresolved
+   *  WDS secondary there is a line-of-sight optical double. The projected
+   *  separation is a lower bound on the true 3D separation, and Stage 5's
+   *  parallax gate can't reach it (the secondary has no parallax). */
+  droppedBeyondTidalLimit: number;
   /** Dropped because primary's catalog row wasn't found (orphaned pair). */
   droppedNoPrimary: number;
   /** Dropped because no honest absmag path existed: own photometry
@@ -339,6 +366,7 @@ export function emptyPromotionStats(): PromotionStats {
     promotedSynthetic: 0,
     droppedNoIdentifier: 0,
     droppedNoPosition: 0,
+    droppedBeyondTidalLimit: 0,
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
     absmagSpectralDerived: 0,
@@ -664,7 +692,7 @@ function resolvePosition(
   row: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
   anchor: ProjectionAnchor | null,
-): CompanionPlacement | null {
+): CompanionPlacement | 'beyond-tidal' | null {
   // The catalog primary's xyz is the authoritative position, and sep+PA
   // tangent projection from it keeps every component of one system
   // rendered coherently. Independent per-component astrometry wins over
@@ -704,6 +732,9 @@ function resolvePosition(
     };
   }
   if (paDeg === null) return null;
+  if (projectionBeyondTidalLimit(anchorX, anchorY, anchorZ, sepArcsec)) {
+    return 'beyond-tidal';
+  }
   return projectFromSepPa(anchorX, anchorY, anchorZ, sepArcsec, paDeg);
 }
 
@@ -1362,7 +1393,12 @@ export function promoteCompanions(
       const canonicalComp = canonicalCompLetter(
         cursor.primary?.comp ?? '', row.comp,
       );
-      const position = resolvePosition(row, cursor.primary, anchor);
+      const resolved = resolvePosition(row, cursor.primary, anchor);
+      if (resolved === 'beyond-tidal') {
+        stats.droppedBeyondTidalLimit++;
+        continue;
+      }
+      const position = resolved;
       const promotedIdx = promoteRow(
         {
           row,
@@ -1424,7 +1460,7 @@ export function promoteCompanions(
       );
       if (secIdx === undefined || secIdx === parentIdx) continue;
       const placed = resolvePosition(row, cursor.primary, parentAnchor);
-      if (placed === null) continue;
+      if (placed === null || placed === 'beyond-tidal') continue;
       const secStar = getStarAt(secIdx);
       if (secStar.x === placed.x && secStar.y === placed.y
           && secStar.z === placed.z) continue;
@@ -1516,6 +1552,12 @@ function tryPromoteCursorPrimary(
       primary.comp, wdsRoot, groups, singleLettersByRoot,
     );
     if (proxy !== null) {
+      if (projectionBeyondTidalLimit(
+        anchor.star.x, anchor.star.y, anchor.star.z, proxy.sepArcsec,
+      )) {
+        stats.droppedBeyondTidalLimit++;
+        return null;
+      }
       position = projectFromSepPa(
         anchor.star.x, anchor.star.y, anchor.star.z,
         proxy.sepArcsec, proxy.paDeg,

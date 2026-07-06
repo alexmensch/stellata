@@ -189,6 +189,11 @@ class WdsSepPaSentinelTests(unittest.TestCase):
         self.assertEqual(_parsers_mod.parse_wds_sep_pa("  0.8"), 0.8)
         self.assertEqual(_parsers_mod.parse_wds_sep_pa("246"), 246.0)
 
+    def test_overflow_sentinel_parses_to_none(self) -> None:
+        self.assertIsNone(_parsers_mod.parse_wds_sep_pa("999.9"))
+        self.assertEqual(_parsers_mod.parse_wds_sep_pa("999.8"), 999.8)
+        self.assertEqual(_parsers_mod.parse_wds_sep_pa("999.0"), 999.0)
+
     def test_wds_row_no_measurement_sentinel_yields_none(self) -> None:
         base = (
             "00000+7530A  1248      1904 1982    5 246 235   0.8   0.6 "
@@ -213,6 +218,29 @@ class WdsSepPaSentinelTests(unittest.TestCase):
         self.assertEqual(len(pairs), 1)
         self.assertIsNone(pairs[0].rho_last)
         self.assertIsNone(pairs[0].theta_last)
+
+    def test_wds_row_overflow_sentinel_yields_none(self) -> None:
+        base = (
+            "00000+7530A  1248      1904 1982    5 246 235   0.8   0.6 "
+            "10.27 11.5  A7IV      +034+005          +74 1056      "
+            "000006.64+752859.8"
+        ).ljust(130)
+        chars = list(base)
+        chars[52:57] = list("999.9")   # rho_last column
+        line = "".join(chars)
+        body = (
+            "<some HTML\n"
+            "Identifier             Frst Last      Fst Lst First  Last  "
+            "Pri   Sec  Type      RA\" DEC\" RA\" DEC\"                 "
+            "Coordinate      \n"
+            "\n"
+            f"{line}\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "wds.txt", body)
+            pairs = bb.parse_wds_summ(p)
+        self.assertEqual(len(pairs), 1)
+        self.assertIsNone(pairs[0].rho_last)
 
 
 class Orb6Tests(unittest.TestCase):
@@ -2688,20 +2716,19 @@ class AthygPositionFallbackTests(unittest.TestCase):
         self.assertAlmostEqual(out[0].dec_deg or 0.0, 31.5292)
 
     def test_wide_pair_skips_predicted_secondary_match(self) -> None:
-        # ρ ≥ WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC (999″ sentinel) — the
-        # (ρ, θ) prediction is degenerate at that level. Secondary's
-        # own predicted-position match is skipped; with primary still
-        # matched, blend-inheritance fires instead and the secondary
-        # inherits the primary's row.
+        # The WDS overflow sentinel (999.9) is nulled at parse, so an
+        # ultra-wide pair reaches Stage 3 with ρ = None and no usable
+        # (ρ, θ) prediction. The secondary's own predicted-position
+        # match is skipped; with the primary still matched,
+        # blend-inheritance fires and the secondary inherits its row.
         pair = _wds_pair_with_pos(
             wds_id="X", components="AB",
             precise_ra=100.0, precise_dec=20.0,
-            rho=999.9, theta=0.0,
+            rho=None, theta=None,
         )
-        # Two AT-HYG rows: one at the primary's coord, another well
-        # inside the synthetic 999.9″ predicted-secondary window. If the
-        # short-circuit fails, the secondary would match the second
-        # row; with the short-circuit working, it inherits the primary's.
+        # The second AT-HYG row sits where a real (ρ, θ) prediction would
+        # have placed a secondary; with ρ nulled no prediction is made,
+        # so the secondary must inherit the primary's row, not this decoy.
         athyg = [
             _athyg_row_at(ra=100.0, dec=20.0, gaia=None, hip=None),
             _athyg_row_at(ra=100.0, dec=20.0 + 999.0 / 3600.0,

@@ -21,15 +21,6 @@ from parsers import (  # noqa: E402
 # ─── Identifier indices ──────────────────────────────────────────────
 
 
-# WDS catalog's overflow sentinel for ρ (and θ): when the published
-# value exceeds the 5-char field width, WDS writes ``999.9`` rather
-# than truncating. For very wide pairs (e.g. α Cen A vs Proxima, LDS
-# 494 AC: ρ ≈ 9000″) the (ρ, θ) offset cannot be used to predict the
-# secondary's position — Stage 2 short-circuits the predicted-secondary
-# match when ρ ≥ this threshold and relies on per-component identifier
-# bindings (SIMBAD, CCDM) for ultra-wide companions.
-WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC = 999.0
-
 # AT-HYG's documented reference epoch is J2000.0, but for HIP-sourced
 # rows the stored ``ra``/``dec`` are empirically at HIP1's native
 # epoch J1991.25 (e.g. α Cen A is at 219.92041, which is HIP1's

@@ -507,6 +507,19 @@ Per-row gates and resolution:
   `baseDiffPc`) — and without a placement the row drops
   (droppedNoPosition): nothing would ever separate the records and
   the collocated star double-counts the blend photometry.
+- **Projected-separation tidal gate.** A tangent-projected secondary
+  sits at the primary's distance, so its projected physical separation
+  `ρ·d` is a lower bound on the pair's true 3D separation. When that
+  exceeds `OPTICAL_DOUBLE_MIN_SEP_PC = 1.0` pc (the Galactic
+  tidal-disruption limit, the same constant the CCDM optical-double
+  suppression and the binaries pipeline's Stage-5 `SEPARATION_LIMIT_PC`
+  use) no pair can be bound, so the projection is refused
+  (droppedBeyondTidalLimit) rather than fabricating a companion at a
+  bogus placement. This catches wide line-of-sight optical doubles whose
+  secondary has no parallax for Stage 5 to reject — e.g. SHY 476 BC
+  (05359+3530), a foreground star 999.5″ from a ~1470 pc primary. Only
+  the projection branch consults it; a secondary with its own resolved
+  astrometry is vetted upstream by Stage 5.
 - **Inner-pair re-homing (post-pass).** An inner pair's cursor primary
   (Castor Ba) can carry the system's blended identifier — a shared Gaia
   source, or a shared HIP Gaia later split — so it resolves onto a
@@ -614,10 +627,10 @@ wings bit) — geometric `inferBinaries`, the CCDM pass, the eclipsing
 sweep — are all keyed on evidence that is unaligned with the
 *presence of a rendered companion*. A physical pair wider than the
 `0.005 pc` geometric cell, not CCDM `C/G/O`, and not eclipsing
-(Canopus at 0.46 pc; 16 Cyg A, whose promoted placement exceeds the
-geometric cell) shows a companion or a live orbit with no wings on the
-anchor. `wingRenderablePrimaries` (run after those three passes, over
-the post-sort `buildCatalogRowIndexMap`) closes that gap:
+(16 Cyg A, whose promoted placement exceeds the geometric cell) shows a
+companion or a live orbit with no wings on the anchor.
+`wingRenderablePrimaries` (run after those three passes, over the
+post-sort `buildCatalogRowIndexMap`) closes that gap:
 
 - **Renders-a-companion gate.** For each non-standalone
   multiples.tsv pair, primary and secondary resolve to catalog records

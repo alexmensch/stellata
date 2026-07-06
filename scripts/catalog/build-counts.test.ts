@@ -50,6 +50,7 @@ function baseCounts(): BuildCounts {
     companionAlreadyInCatalog: 7000,
     companionDroppedNoIdentifier: 100,
     companionDroppedNoPosition: 500,
+    companionDroppedBeyondTidalLimit: 0,
     companionDroppedNoAbsmag: 900,
     companionDroppedCompoundComp: 40,
     companionDroppedCollocatedPrimary: 6,
