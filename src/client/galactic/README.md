@@ -87,26 +87,28 @@ meridians every 10°, radius 50 kpc.
   move including warp.
 
 **Grid orientation labels** (`galactic-grid-labels.ts`) — SVG `<text>`
-under `#gal-grid-labels`, pooled once and positioned + rotated each frame,
-gated by `filter.showGalacticGrid` alongside the 3D sphere (and hidden in
-warp by the shared `body.warping #overlay` rule). Each label anchors on a
-galactic direction (`galacticDirToIcrs`, the same l/b→ICRS formula the grid
-geometry uses) at `camera.position + dir × SPHERE_RADIUS_PC`, so labels
-track the camera exactly like the grid. A second direction a couple of
-degrees along the labelled line projects too; the screen-space delta is the
-tangent the text rotates onto (folded into (−90°, 90°] to stay upright) and
-the side it offsets to — always the screen-top side, with a 5° hysteresis
-band around vertical so a near-vertical line doesn't flip the side
-frame-to-frame. The tangent/flip/hysteresis math is the pure, tested
-`placeGridLabel`.
+under `#gal-grid-labels`, pooled once (one per line) and positioned +
+rotated each frame, gated by `filter.showGalacticGrid` alongside the 3D
+sphere (and hidden in warp by the shared `body.warping #overlay` rule).
+**One label per grid line** — every meridian (longitude l) and every
+latitude ring (b, incl. the equator; no ring at the ±90° poles). Each line's
+sample directions are precomputed once (`galacticDirToIcrs`, the same l/b→ICRS
+formula the grid geometry uses — fixed in absolute space); per frame they
+project through `camera.position + dir × SPHERE_RADIUS_PC` so labels track
+the camera exactly like the grid.
 
-Labels are a **readable subset** of the every-10° grid, not one per line:
-longitude every 30° riding the equator, latitude at b=±30°/±60° riding the
-rings at four anchor longitudes (0/90/180/270°) so a latitude ladder stays
-near screen-centre from any heading. The equator carries no separate b=0
-mark — the ring of longitude labels sits on it and identifies it. Text runs
-through `formatGalLon`/`formatGalLat` so the decimal↔DMS toggle reformats
-the live labels (see below).
+Rather than sit on the l/b node (where the text would cross the orthogonal
+line), each label **drops along its own line to where the line exits the
+viewport** — the bottom-most edge crossing wins ("drops downhill"), inset
+`ORTHO_PAD_PX` (10 px) inside the crossed edge and rotated onto the crossing
+segment's tangent (folded into (−90°, 90°] to stay upright). Crossings whose
+position lands within 10 px of on-screen chrome (settings panel, brand box,
+scale bar, meta — queried by id each frame, hidden elements ignored) are
+skipped so a label never overlaps them; the next-best crossing is used, or
+the label hides if none survives. The edge-crossing + bottom-most selection
+is the pure, tested `edgeLabelPlacement`. Text runs through
+`formatGalLon`/`formatGalLat` so the decimal↔DMS toggle reformats the live
+labels (see below).
 
 **Coordinate format toggle** (`ui/gal-coord-format.ts` + `ui/gal-coord-toggle.ts`)
 — a getter/setter/onChange singleton mirroring `ui/distance-util.ts` +

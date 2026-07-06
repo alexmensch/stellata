@@ -1025,12 +1025,12 @@ body.monochrome .hud-ring {
    matching the grid's own dark-to-mono swap in galactic-grid.ts. */
 .gal-grid-label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 14px;
   letter-spacing: 0.04em;
-  fill: rgba(102, 136, 170, 0.7);
+  fill: rgba(102, 136, 170, 0.75);
   paint-order: stroke;
-  stroke: rgba(7, 9, 18, 0.55);
-  stroke-width: 2px;
+  stroke: rgba(7, 9, 18, 0.6);
+  stroke-width: 2.5px;
   stroke-linejoin: round;
   pointer-events: none;
 }
