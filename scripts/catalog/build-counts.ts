@@ -33,6 +33,10 @@ export interface BuildCounts {
   /** New FLAG_BINARY_PRIMARY bits set by the CCDM pass (excludes ones
    *  already set by `inferBinaries`). */
   ccdmFlagged: number;
+  /** CCDM primaries the optical-double gate vetoed: nearest same-group
+   *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
+   *  pair / eclipsing / geometric evidence. See isOpticalDoublePrimary. */
+  ccdmSuppressedOptical: number;
   /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
    *  varType == ECLIPSING records not already flagged by the geometric
    *  or CCDM passes. */

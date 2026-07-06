@@ -667,6 +667,30 @@ describe.runIf(FIXTURES_READY)('eclipsing-binary variability honesty', () => {
   });
 });
 
+describe.runIf(FIXTURES_READY)('CCDM optical-double suppression', () => {
+  const winged = (hip: number) => {
+    const r = lookupByHip(catalog, hip);
+    expect(r, `HIP ${hip} in catalog.bin`).not.toBeNull();
+    return ((r as CatalogRecord).flags & FLAG_BINARY_PRIMARY) !== 0;
+  };
+
+  it('keeps wings on physical pairs whose CCDM group also holds a wide optical sibling', () => {
+    // η Cas (Achird A) and β¹ Cyg (Albireo) are the bead's regression
+    // guards: both are genuine close binaries in multiples.tsv, so the
+    // physical-evidence gate keeps their wings even though their CCDM
+    // groups contain a wide line-of-sight sibling.
+    expect(winged(3821), 'η Cas / Achird A').toBe(true);
+    expect(winged(95947), 'β¹ Cyg / Albireo').toBe(true);
+  });
+
+  it('suppresses wings on a genuinely optical CCDM double (ν¹ CMa)', () => {
+    // ν¹ CMa (HIP 31564, ~87 pc) shares a CCDM identifier with HIP 31560
+    // (~102 pc) — a line-of-sight optical pair from the ν CMa asterism,
+    // >1 pc apart at Gaia-quality distances with no bound companion.
+    expect(winged(31564), 'ν¹ CMa optical double').toBe(false);
+  });
+});
+
 function buildFirstSeenHipIndex(): Map<number, number> {
   const m = new Map<number, number>();
   for (const r of catalog.records()) {

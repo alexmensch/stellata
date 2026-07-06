@@ -179,6 +179,7 @@ async function main() {
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
+    ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
     bjEntries: 0,
     bjEligible: 0,
@@ -535,13 +536,28 @@ async function main() {
     console.log('Parsing Hipparcos CCDM double-star cross-reference...');
     const tCcdm = Date.now();
     const ccdmGroups = parseHipCcdm(SRC_HIP_CCDM);
-    const { systems, flagged } = applyDoublesFlag(stars, ccdmGroups, hipToIndex);
+    // PhysicalPairKeys for the optical-double gate: components of kept
+    // (non-standalone) multiples.tsv pairs. See applyDoublesFlag.
+    const physicalHips = new Set<number>();
+    const physicalGaia = new Set<string>();
+    for (const r of multiplesRows ?? []) {
+      if (r.orbitRole === 'standalone') continue;
+      if (r.hip !== null) physicalHips.add(r.hip);
+      if (r.gaiaSourceId !== null) physicalGaia.add(r.gaiaSourceId);
+    }
+    const { systems, flagged, suppressed } = applyDoublesFlag(
+      stars,
+      ccdmGroups,
+      hipToIndex,
+      { hips: physicalHips, gaia: physicalGaia },
+    );
     console.log(
-      `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged in ${Date.now() - tCcdm}ms`,
+      `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged, ${suppressed} suppressed as optical doubles in ${Date.now() - tCcdm}ms`,
     );
     counts.ccdmGroups = ccdmGroups.size;
     counts.ccdmResolved = systems;
     counts.ccdmFlagged = flagged;
+    counts.ccdmSuppressedOptical = suppressed;
   } else {
     console.log('Hipparcos CCDM file not found; skipping double-star cross-match.');
   }

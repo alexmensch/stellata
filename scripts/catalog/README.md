@@ -742,6 +742,45 @@ No separation gate at the per-row level (CCDM and Hipparcos's
 wings glyph is iconic rather than a depiction of resolved pair
 geometry, so even Sirius B at ΔV ≈ 10 earns wings on Sirius A.
 
+### Optical-double suppression
+
+CCDM+MultFlag=C/G/O still keeps a tail of wide line-of-sight
+optical pairs Gaia can now split in 3D — HIP pairs sharing one
+CCDM identifier that sit hundreds of pc apart along the sightline.
+Flagging their brightest member paints wings on a star with no
+bound companion. `isOpticalDoublePrimary` (`catalog-pure.ts`)
+vetoes that flag, but only on **positive** evidence the asserted
+pair is optical, never on mere absence of physical evidence — so a
+noisy parallax can never strip real wings:
+
+- **Physical-evidence keep.** The picked primary keeps its wings
+  when it is a component of a kept physical pair in
+  `data/binaries/multiples.tsv` (the binaries pipeline's Stage-5
+  optical filter already vetted it as bound — the `physicalHips` /
+  `physicalGaia` sets), when it is eclipsing (extrinsic wings
+  earned), or when the geometric mutual-pair pass already winged it
+  (honoured upstream by `markPrimaryIfUnflagged`'s already-flagged
+  short-circuit). The curated `KNOWN_VISUAL_DOUBLES` HIPs are folded
+  into `physicalHips` so they are never suppressed. This is the gate
+  that keeps η Cas (Achird A, its real A/B pair) and β¹ Cyg
+  (Albireo, its resolved Aa/Ac inner pair) winged even though each
+  CCDM group also holds a wide optical sibling.
+- **Optical suppress.** Otherwise the nearest same-group catalog
+  sibling with a Gaia-quality distance is measured in 3D; a
+  separation beyond `OPTICAL_DOUBLE_MIN_SEP_PC = 1.0` pc (the
+  Galactic tidal-disruption limit, mirroring the binaries
+  pipeline's Stage-5 `SEPARATION_LIMIT_PC`) marks it optical and
+  drops the wings. Both the primary and the sibling must carry a
+  Gaia-quality distance (`isGaiaQualityDist` — same dist_src set as
+  B-J eligibility, {G_R3, G_R2} → G_R3/BJ final) for the separation
+  to be trusted; absent that, the wings stand. Nearest-sibling means
+  a physically-close catalog member keeps the wings regardless of a
+  wide background star that merely shares the CCDM string — the
+  failure mode that made a naive "3D-separation over full CCDM
+  membership" test regress η Cas. Counted `ccdmSuppressedOptical`
+  (~487 of the ~11k flagged primaries; median suppressed separation
+  ~54 pc).
+
 `parseHipCcdm` returns systems grouped by `CCDM_ID` (real CCDM
 strings for file-driven entries, synthetic `OVERRIDE-N` keys for
 the `KNOWN_VISUAL_DOUBLES` list). `applyDoublesFlag` then walks
