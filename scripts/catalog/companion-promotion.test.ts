@@ -1005,14 +1005,14 @@ describe('promoteCompanions', () => {
     expect(sep).toBeLessThan(1e-3);
   });
 
-  it('drops a secondary when sep_arcsec is the WDS -1 sentinel (no measured separation)', () => {
-    // Spica-shape: WDS Summary emits rho=-1 / theta=-1 for pairs whose
-    // separation isn't measured. The sep+PA tangent branch must reject
-    // the sentinel rather than projecting -1″ as a real offset.
+  it('drops an athyg_position secondary when sep+PA are unmeasured (null)', () => {
+    // Spica-shape: an unmeasured pair carries null sep/pa (Stage 6 now
+    // emits None for WDS's -1 sentinel — parse-boundary translation). The
+    // sep+PA tangent branch has nothing to project, so the row drops.
     const rows = siriusRows();
     rows[1].astrometryVia = 'athyg_position';
-    rows[1].sepArcsec = -1.0;
-    rows[1].paDeg = -1.0;
+    rows[1].sepArcsec = null;
+    rows[1].paDeg = null;
     const { stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
@@ -1088,14 +1088,14 @@ describe('promoteCompanions', () => {
     expect(newStars[0].z).toBe(sirius_a_existing.z);
   });
 
-  it('collocates an unmeasured-sep (WDS -1 sentinel) ORBITAL secondary instead of dropping it', () => {
+  it('collocates an unmeasured-sep (null) ORBITAL secondary instead of dropping it', () => {
     // Spica-shape spectroscopic pairs with elements but no measured
-    // rho: previously droppedNoPosition; the zero-baseline bake lets
-    // the runtime place them via R(t).
+    // rho (null sep/pa): the zero-baseline bake lets the runtime place
+    // them via R(t) rather than dropping.
     const rows = siriusRows();
     rows[1].astrometryVia = 'athyg_position';
-    rows[1].sepArcsec = -1.0;
-    rows[1].paDeg = -1.0;
+    rows[1].sepArcsec = null;
+    rows[1].paDeg = null;
     Object.assign(rows[1], ORBIT_ELEMENTS);
     const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CONSTELLATIONS);
     expect(stats.droppedNoPosition).toBe(0);

@@ -685,14 +685,8 @@ function resolvePosition(
   } else {
     return null;
   }
-  // WDS Summary emits `rho=-1` / `theta=-1` for pairs with no measured
-  // separation (spectroscopic / interferometric inner pairs reported
-  // only at the orbital-element level). Normalise the sentinel to null
-  // here so the drop path fires honestly — projecting a negative
-  // arc-sec offset would place the secondary tens of AU off the anchor
-  // for no astrophysical reason.
-  const sepArcsec = row.sepArcsec !== null && row.sepArcsec >= 0 ? row.sepArcsec : null;
-  const paDeg = row.paDeg !== null && row.paDeg >= 0 ? row.paDeg : null;
+  const sepArcsec = row.sepArcsec;
+  const paDeg = row.paDeg;
   // Sub-resolution (rho 0.000) or unmeasured pairs: there is no static
   // placement to bake. When the runtime animates the pair, collocate
   // the secondary bit-identically on the anchor — a placement choice
@@ -941,7 +935,6 @@ function findCompoundProxySepPa(
       if (!sec.comp.includes(primaryComp)) continue;
       if (!isUnresolvedCompound(sec.comp, wdsRoot, singleLettersByRoot)) continue;
       if (sec.sepArcsec === null || sec.paDeg === null) continue;
-      if (sec.sepArcsec < 0 || sec.paDeg < 0) continue;
       return { sepArcsec: sec.sepArcsec, paDeg: sec.paDeg };
     }
   }
