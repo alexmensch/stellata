@@ -62,19 +62,25 @@ When adding a new external source:
 
 ## Reference epoch and proper motion
 
-Every stellar layer is a J2000.0 snapshot. The solar system is the
-only "now" layer in the scene. The two share a frame orientation
-(ICRS axes coincide with the J2000.0 equinox) but not a time.
+Every stellar layer is a **J2016.0** snapshot — Gaia DR3's native
+reference epoch, adopted catalogue-wide so the Gaia-dominant corpus
+needs no propagation and only the shrinking HIP2 / AT-HYG minority
+advances (see SCIENCE.md § Driver astrometry). The solar system is the
+only "now" layer in the scene. Epoch (position *time*) is distinct from
+frame *orientation*: all layers share ICRS axes (the J2000.0 equinox),
+which are time-independent — only the epoch at which positions are
+measured moved to J2016.0.
 
 ### Per-layer epoch
 
 | Layer | Epoch | How |
 |---|---|---|
-| Stars (catalog.bin xyz) | J2000.0 by construction | Sky directions are resolved per row through the Gaia DR3 5p → HIP2 → AT-HYG cascade and PM-propagated from each source's native epoch (J2016.0 / J1991.25) to J2000.0 at build time (`scripts/catalog/direction-cascade.ts`). AT-HYG's stored `x0/y0/z0` — a mixed-epoch merge artifact, tens of arcsec off on high-PM stars — is no longer consumed. Only the ~30 tier-3 residual rows keep AT-HYG's printed ra/dec as-is. See SCIENCE.md § Driver astrometry. |
-| GCVS variables | n/a (period + amplitude only) | We never consume GCVS positions; the variable rides on its AT-HYG row via the HIP/HD cross-match, so position inherits J2000.0 transitively. |
+| Stars (catalog.bin xyz) | J2016.0 by construction | Sky directions are resolved per row through the Gaia DR3 5p → HIP2 → AT-HYG cascade and PM-propagated from each source's native epoch to the J2016.0 scene epoch at build time (`scripts/catalog/direction-cascade.ts`, `CATALOG_SCENE_EPOCH`). Gaia routes (~99%) are native J2016.0 — a zero-Δt no-op; HIP2 (J1991.25) advances 24.75 yr. AT-HYG's stored `x0/y0/z0` — a mixed-epoch merge artifact, tens of arcsec off on high-PM stars — is no longer consumed. Only the ~30 tier-3 residual rows keep AT-HYG's printed ra/dec as-is. See SCIENCE.md § Driver astrometry. |
+| Binary companions (multiples.tsv → catalog.bin) | J2016.0 by construction | `scripts/binaries/stage6_multiples.py` `_position_pc` PM-propagates every component's position from its native epoch to `CATALOG_SCENE_EPOCH`, mirroring the single-star cascade, so a promoted secondary's baked xyz shares its primary's epoch and the static relative sep/PA is the pair's true J2016.0 geometry. |
+| GCVS variables | n/a (period + amplitude only) | We never consume GCVS positions; the variable rides on its AT-HYG row via the HIP/HD cross-match, so position inherits J2016.0 transitively. |
 | Hipparcos CCDM | n/a (flag-only) | We consume `MultFlag` only, never position. |
-| Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever AT-HYG places the figure stars, so the line endpoints inherit J2000.0 transitively. |
-| Local Group dwarfs | J2000.0 | Pace 2024 LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible. |
+| Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever the catalogue places the figure stars, so the line endpoints inherit J2016.0 transitively. |
+| Local Group dwarfs | J2000.0 | Pace 2024 LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible, so the 16 yr offset from the stellar scene epoch is immaterial. |
 | Edenhofer 2023 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
 | Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date — no committed positions; the planet renderer evaluates ephemerides per frame. |
 
@@ -83,27 +89,28 @@ only "now" layer in the scene. The two share a frame orientation
 Gaia DR3 / HIP2 PMs are consumed at build time for the epoch
 propagation above, and AT-HYG's `pm_ra`/`pm_dec` for the LMC
 kinematic gate — but no PM survives into `catalog.bin`. Single-star
-positions are a static J2000.0 snapshot with no T-axis animation
+positions are a static J2016.0 snapshot with no T-axis animation
 today; runtime propagation to `t` is designed and tracked — see
 SCIENCE.md § Current-epoch star positions (velocity routes through
 the same cascade: Gaia DR3 / HIP2 PM primary, AT-HYG `pm_*`
-last-resort).
+last-resort; the advance base is now J2016.0).
 
 ### Staleness consequence
 
-The J2000.0 snapshot is now ~26 years old. For the vast majority of
-stars (PM < ~100 mas/yr), the offset between catalog position and
-true present-day position is sub-arcsec to a few arcseconds —
-invisible at any reasonable FOV. A handful of high-PM neighbours
-have visibly drifted, however:
+The J2016.0 snapshot is ~10 years behind the present day. For the vast
+majority of stars (PM < ~100 mas/yr), the offset between catalog
+position and true present-day position is sub-arcsec to a couple of
+arcseconds — invisible at any reasonable FOV. A handful of high-PM
+neighbours have visibly drifted, however (offsets roughly 40% of the
+pre-J2016 values):
 
-| Star | PM (″/yr) | Offset at J2000 + 26.4 yr |
+| Star | PM (″/yr) | Offset at J2016 + 10.5 yr |
 |---|---|---|
-| Barnard's Star | ~10.36 | ~273 ″ ≈ 4.6 arcmin |
-| Kapteyn's Star | ~8.67 | ~229 ″ ≈ 3.8 arcmin |
-| Groombridge 1830 | ~7.05 | ~186 ″ ≈ 3.1 arcmin |
-| Lacaille 9352 | ~6.90 | ~182 ″ ≈ 3.0 arcmin |
-| 61 Cygni A | ~5.28 | ~139 ″ ≈ 2.3 arcmin |
+| Barnard's Star | ~10.36 | ~109 ″ ≈ 1.8 arcmin |
+| Kapteyn's Star | ~8.67 | ~91 ″ ≈ 1.5 arcmin |
+| Groombridge 1830 | ~7.05 | ~74 ″ ≈ 1.2 arcmin |
+| Lacaille 9352 | ~6.90 | ~72 ″ ≈ 1.2 arcmin |
+| 61 Cygni A | ~5.28 | ~55 ″ ≈ 0.9 arcmin |
 
 At constellation-scale FOV (10–30°) these are tiny but technically
 wrong; at close approach or in OBSERVE mode the highest-PM stars

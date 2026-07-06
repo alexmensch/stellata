@@ -1,10 +1,15 @@
 // Per-row sky-direction resolution for the catalog build: Gaia DR3 5p →
 // HIP2 → AT-HYG printed ra/dec, with proper-motion propagation to the
-// J2000.0 scene epoch. See scripts/catalog/README.md § Direction resolution.
+// J2016.0 scene epoch. See scripts/catalog/README.md § Direction resolution.
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
-export const CATALOG_SCENE_EPOCH = 2000.0;
+// Gaia DR3's native epoch: the catalogue-wide scene epoch every position
+// is normalised onto. The dominant Gaia set lands here with zero
+// propagation; only the HIP2 / AT-HYG minority advances. The binaries
+// pipeline mirrors this in scripts/binaries/stage6_multiples.py — keep
+// the two in sync (see data/README.md § Reference epoch and proper motion).
+export const CATALOG_SCENE_EPOCH = 2016.0;
 
 // Gaia 5p reliability + HIP2-preference thresholds, mirrored from
 // scripts/binaries/stage3_astrometry.py so both pipelines route a shared
@@ -153,7 +158,7 @@ export function hip2PmDisagrees(
   );
 }
 
-/** Resolve one AT-HYG row's J2000.0 sky direction through the trust
+/** Resolve one AT-HYG row's J2016.0 sky direction through the trust
  *  cascade. Route semantics + priority order in
  *  scripts/catalog/README.md § Direction resolution; thresholds mirror
  *  scripts/binaries/stage3_astrometry.py. Returns null only when the

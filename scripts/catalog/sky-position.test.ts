@@ -1,5 +1,5 @@
 // High-PM sky-position regression harness: catalog.bin directions vs
-// published SIMBAD J2000 positions in sky-position-corpus.tsv.
+// J2016.0 (scene-epoch) positions in sky-position-corpus.tsv.
 // See scripts/catalog/README.md § Direction resolution.
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -36,8 +36,8 @@ interface CorpusRow {
   name: string;
   lookupName: string | null;
   hip: number | null;
-  raDegJ2000: number;
-  decDegJ2000: number;
+  raDegJ2016: number;
+  decDegJ2016: number;
   tolArcsec: number;
 }
 
@@ -53,8 +53,8 @@ function loadCorpus(): CorpusRow[] {
     name: r.name,
     lookupName: r.lookup_name || null,
     hip: r.hip ? Number(r.hip) : null,
-    raDegJ2000: Number(r.ra_deg_j2000),
-    decDegJ2000: Number(r.dec_deg_j2000),
+    raDegJ2016: Number(r.ra_deg_j2016),
+    decDegJ2016: Number(r.dec_deg_j2016),
     tolArcsec: Number(r.tol_arcsec),
   }));
 }
@@ -82,7 +82,7 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
   });
 
   for (const row of corpus) {
-    it(`${row.name} sits within ${row.tolArcsec}″ of its published J2000 position`, () => {
+    it(`${row.name} sits within ${row.tolArcsec}″ of its J2016.0 position`, () => {
       const rec: CatalogRecord | null = row.hip !== null
         ? lookupByHip(catalog, row.hip)
         : lookupByName(catalog, row.lookupName!);
@@ -94,11 +94,11 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
         y: rec!.y / dist,
         z: rec!.z / dist,
       };
-      const published = unitVectorFromRaDec(row.raDegJ2000, row.decDegJ2000);
+      const published = unitVectorFromRaDec(row.raDegJ2016, row.decDegJ2016);
       const sep = angSepArcsec(dir, published);
       expect(
         sep,
-        `${row.name}: catalog direction is ${sep.toFixed(3)}″ from SIMBAD J2000`,
+        `${row.name}: catalog direction is ${sep.toFixed(3)}″ from its J2016.0 position`,
       ).toBeLessThan(row.tolArcsec);
     });
   }
