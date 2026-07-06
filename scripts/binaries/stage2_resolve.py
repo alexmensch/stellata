@@ -8,13 +8,15 @@ from __future__ import annotations
 import math
 import re
 import sys
+from collections import deque
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from parsers import (  # noqa: E402
     AthygRow,
+    GaiaAstrometryRow,
     Orb6Entry,
     SimbadWdsXid,
     WdsPair,
@@ -23,6 +25,11 @@ from indices import (  # noqa: E402
     ATHYG_REFERENCE_EPOCH,
     IdentifierIndices,
     WDS_PRECISE_COORD_EPOCH,
+)
+from component_tokens import (  # noqa: E402
+    expand_wds_truncated_secondary,
+    is_component_token,
+    parent_component_token,
 )
 
 
@@ -1180,5 +1187,683 @@ def write_astrometry_request(
         for sid in ids:
             fh.write(f"{sid}\n")
     return len(ids)
+
+
+# ─── Stage-2 binding-integrity audit + geometric arbitration ─────────
+# Detects the contradictions the cascade + propagation can leave (one
+# source on disjoint letters; one letter on disjoint sources) and
+# arbitrates them against WDS (ρ, θ) geometry. See
+# ``scripts/binaries/README.md`` § Binding-integrity audit.
+
+BINDING_SHAPE_SOURCE_LETTERS = "source_letters"
+BINDING_SHAPE_LETTER_SOURCES = "letter_sources"
+
+BINDING_VERDICT_GEOMETRIC = "geometric"
+BINDING_VERDICT_UNBOUND_AMBIGUOUS = "unbound_ambiguous"
+BINDING_VERDICT_SKIPPED_NO_REFERENCE = "skipped_no_reference"
+
+# Canonical outcome tags, in the order the Stage-7 counters report them.
+BINDING_VERDICT_VALUES: tuple[str, ...] = (
+    BINDING_VERDICT_GEOMETRIC,
+    BINDING_VERDICT_UNBOUND_AMBIGUOUS,
+    BINDING_VERDICT_SKIPPED_NO_REFERENCE,
+)
+
+# The five report-only headline counters, in snapshot order — two
+# conflict-shape totals then the three arbitration outcomes.
+# ``binding_integrity_counts`` fills these keys; Stage 7 pins them.
+BINDING_INTEGRITY_COUNT_KEYS: tuple[str, ...] = (
+    "binding_conflicts_source_letters",
+    "binding_conflicts_letter_sources",
+    "arbitrated_geometric",
+    "arbitrated_unbound_ambiguous",
+    "arbitration_skipped_no_reference",
+)
+
+# Decisiveness thresholds. A winning candidate's positional error must be
+# small in absolute terms (``max(2.0", 0.15·predicted_sep)`` — a floor
+# for tight pairs, a fraction for wide ones) AND clearly beat the
+# runner-up (``≤ 0.5·err_runnerup``). Failing either → ambiguous, and the
+# conservative response is to unbind every contested binding rather than
+# guess.
+ARBITRATION_ABS_TOLERANCE_ARCSEC = 2.0
+ARBITRATION_SEP_FRACTION = 0.15
+ARBITRATION_RUNNERUP_FACTOR = 0.5
+
+_UPPERCASE_LETTER_RE = re.compile(r"[A-Z]")
+
+
+def _token_letters(tok: str) -> frozenset[str]:
+    """Uppercase component letters in a token: ``"AB" → {A, B}``,
+    ``"Aa1" → {A}``. Used for the compound-containment relation."""
+    return frozenset(_UPPERCASE_LETTER_RE.findall(tok))
+
+
+def _is_hier_ancestor(a: str, b: str) -> bool:
+    """True when ``a`` is a strict ancestor of ``b`` in the WDS component
+    hierarchy (``A`` ← ``Aa`` ← ``Aa1``). Defined only for canonical
+    single-component tokens; compound tokens (``AB``) never enter the
+    chain — their overlap is expressed by compound-containment instead."""
+    if not is_component_token(a) or not is_component_token(b):
+        return False
+    cur = parent_component_token(b)
+    while cur is not None:
+        if cur == a:
+            return True
+        cur = parent_component_token(cur)
+    return False
+
+
+def _related_hier(a: str, b: str) -> bool:
+    """Equal, or one is an ancestor of the other."""
+    return a == b or _is_hier_ancestor(a, b) or _is_hier_ancestor(b, a)
+
+
+def _compound_contains(a: str, b: str) -> bool:
+    """One token is a multi-letter compound whose letters include the
+    other's (``"AB"`` contains ``"A"`` and ``"Aa"``)."""
+    la, lb = _token_letters(a), _token_letters(b)
+    if len(la) >= 2 and lb and lb <= la:
+        return True
+    if len(lb) >= 2 and la and la <= lb:
+        return True
+    return False
+
+
+def _are_pair_mates(
+    x: str, y: str, blend_pairs: list[tuple[str, str]],
+) -> bool:
+    """True when ``x`` and ``y`` are the two sides of a sub-resolution
+    blend pair — the legitimate WDS convention where one Gaia photocentre
+    is shared because the components are unresolved (ρ = 0). A pair with a
+    *measured* separation is NOT a blend: two letters at a measured ρ > 0
+    cannot be one source, so those rows are excluded here and left to
+    geometric arbitration. Matched transitively through ancestors —
+    ``A``/``B`` are blend-mates when a (Aa, Bx) sub-pair blends, since
+    ``A`` roots ``Aa`` and ``B`` roots ``Bx``."""
+    for p, s in blend_pairs:
+        if (_related_hier(x, p) and _related_hier(y, s)) or (
+            _related_hier(x, s) and _related_hier(y, p)
+        ):
+            return True
+    return False
+
+
+def _tokens_related(
+    x: str, y: str, blend_pairs: list[tuple[str, str]],
+) -> bool:
+    """Two tokens are NOT a contradiction when they are hierarchy-related,
+    compound-contained, or sub-resolution blend-mates. Everything else is
+    a disjoint pair that one source cannot occupy."""
+    return (
+        _related_hier(x, y)
+        or _compound_contains(x, y)
+        or _are_pair_mates(x, y, blend_pairs)
+    )
+
+
+@dataclass
+class _SystemContext:
+    """Per-WDS-system view assembled for the binding-integrity audit."""
+
+    wds_id: str
+    token_sources: dict[str, set[int]] = field(default_factory=dict)
+    token_mag: dict[str, float] = field(default_factory=dict)
+    # Two sides of every sub-resolution (ρ = 0) pair — the blend-mate
+    # exemption set. Measured-separation pairs are deliberately absent.
+    blend_pairs: list[tuple[str, str]] = field(default_factory=list)
+    # adj[a][b] = (E, N, epoch): tangent-plane offset arcsec of b from a.
+    adj: dict[str, dict[str, tuple[float, float, float | None]]] = field(
+        default_factory=dict,
+    )
+    instances: dict[str, list[ResolvedComponent]] = field(default_factory=dict)
+
+
+def _canonical_token(primary_tok: str, comp: ResolvedComponent) -> str:
+    """Canonical token for one component instance — expands a WDS
+    prefix-truncated secondary (``"2" → "Aa2"``) against its primary."""
+    if comp.is_primary:
+        return comp.component
+    return expand_wds_truncated_secondary(primary_tok, comp.component)
+
+
+def _add_edge(
+    ctx: _SystemContext, a: str, b: str,
+    e_arcsec: float, n_arcsec: float, epoch: float | None,
+) -> None:
+    """Register a bidirectional geometry edge, keeping the most-recent
+    measurement when the same token pair recurs across discoverers."""
+    for src, dst, ee, nn in ((a, b, e_arcsec, n_arcsec), (b, a, -e_arcsec, -n_arcsec)):
+        nbrs = ctx.adj.setdefault(src, {})
+        existing = nbrs.get(dst)
+        if existing is not None:
+            old_epoch = existing[2]
+            if not (epoch is not None and (old_epoch is None or epoch >= old_epoch)):
+                continue
+        nbrs[dst] = (ee, nn, epoch)
+
+
+def build_system_contexts(
+    pairs: list[WdsPair], components: list[ResolvedComponent],
+) -> dict[str, _SystemContext]:
+    """Group every decomposing pair's two resolved components by WDS
+    system, recording per-token source bindings, WDS (ρ, θ) geometry
+    edges (E = ρ·sin θ, N = ρ·cos θ), and the pair-mate token list the
+    contradiction relations consult."""
+    systems: dict[str, _SystemContext] = {}
+    for pair, primary, secondary in iter_decomposing_pair_components(
+        pairs, components,
+    ):
+        ctx = systems.setdefault(pair.wds_id, _SystemContext(pair.wds_id))
+        p_tok = primary.component
+        s_tok = _canonical_token(p_tok, secondary)
+        if pair.rho_last is None or pair.rho_last == 0.0:
+            ctx.blend_pairs.append((p_tok, s_tok))
+        for tok, comp, mag in (
+            (p_tok, primary, pair.mag_pri),
+            (s_tok, secondary, pair.mag_sec),
+        ):
+            ctx.instances.setdefault(tok, []).append(comp)
+            if comp.gaia_source_id is not None:
+                ctx.token_sources.setdefault(tok, set()).add(comp.gaia_source_id)
+            if mag is not None and mag < ctx.token_mag.get(tok, math.inf):
+                ctx.token_mag[tok] = mag
+        if (
+            pair.rho_last is not None
+            and pair.theta_last is not None
+            and pair.rho_last > 0.0
+        ):
+            theta_rad = math.radians(pair.theta_last)
+            e = pair.rho_last * math.sin(theta_rad)
+            n = pair.rho_last * math.cos(theta_rad)
+            epoch = float(pair.date_last) if pair.date_last is not None else None
+            _add_edge(ctx, p_tok, s_tok, e, n, epoch)
+    return systems
+
+
+def _bfs_offset(
+    adj: dict[str, dict[str, tuple[float, float, float | None]]],
+    start: str, goal: str,
+) -> tuple[float, float, float | None] | None:
+    """Compose tangent-plane offset vectors along the shortest-hop WDS
+    geometry chain from ``start`` to ``goal``. Returns ``(E, N, epoch)``
+    where ``epoch`` is the WDS measurement year of the final edge (the
+    one touching ``goal``), or ``None`` when no chain connects them."""
+    if start == goal:
+        return 0.0, 0.0, None
+    visited = {start}
+    queue: deque[tuple[str, float, float]] = deque([(start, 0.0, 0.0)])
+    while queue:
+        tok, e, n = queue.popleft()
+        for nbr, (de, dn, ep) in adj.get(tok, {}).items():
+            if nbr in visited:
+                continue
+            ne, nn = e + de, n + dn
+            if nbr == goal:
+                return ne, nn, ep
+            visited.add(nbr)
+            queue.append((nbr, ne, nn))
+    return None
+
+
+def _tangent_offset(
+    ra_deg: float, dec_deg: float, ra0_deg: float, dec0_deg: float,
+) -> tuple[float, float]:
+    """Small-angle tangent-plane offset (E, N) arcsec of ``(ra, dec)``
+    from the reference ``(ra0, dec0)``."""
+    dra = ((ra_deg - ra0_deg + 180.0) % 360.0) - 180.0
+    cos_d = math.cos(math.radians(dec0_deg))
+    return dra * cos_d * 3600.0, (dec_deg - dec0_deg) * 3600.0
+
+
+def _source_offset_at_epoch(
+    src: GaiaAstrometryRow, ref: GaiaAstrometryRow, target_epoch: float | None,
+) -> tuple[float, float]:
+    """Gaia offset (E, N) arcsec of ``src`` from ``ref``. When
+    ``target_epoch`` is set both positions are PM-propagated there first;
+    otherwise the native Gaia positions (both J2016.0) are used."""
+    if target_epoch is None:
+        return _tangent_offset(src.ra_deg, src.dec_deg, ref.ra_deg, ref.dec_deg)
+    s_ra, s_dec = _propagate_position(
+        src.ra_deg, src.dec_deg, src.pmra_masyr, src.pmdec_masyr,
+        src.ref_epoch, target_epoch,
+    )
+    r_ra, r_dec = _propagate_position(
+        ref.ra_deg, ref.dec_deg, ref.pmra_masyr, ref.pmdec_masyr,
+        ref.ref_epoch, target_epoch,
+    )
+    return _tangent_offset(s_ra, s_dec, r_ra, r_dec)
+
+
+def _arbitration_error(
+    src: GaiaAstrometryRow, ref: GaiaAstrometryRow,
+    predicted: tuple[float, float], edge_epoch: float | None,
+) -> float:
+    """Min positional error between the WDS-predicted offset and the
+    source's actual Gaia offset from the reference, evaluated at J2016.0
+    and (when the chain carries an epoch) PM-propagated to the WDS edge
+    epoch — whichever agrees better."""
+    pe, pn = predicted
+    ae, an = _source_offset_at_epoch(src, ref, None)
+    err = math.hypot(ae - pe, an - pn)
+    if edge_epoch is not None:
+        ae2, an2 = _source_offset_at_epoch(src, ref, edge_epoch)
+        err = min(err, math.hypot(ae2 - pe, an2 - pn))
+    return err
+
+
+@dataclass
+class BindingCandidate:
+    """One arbitration candidate. For a source→letters conflict it is a
+    blend cluster (``tokens``) tested against one contested ``source_id``;
+    for a letter→sources conflict it is one candidate ``source_id`` tested
+    against the single contested letter (``tokens`` holds just that
+    letter). ``err_arcsec`` is the best positional error over the cluster's
+    reachable tokens — ``inf`` when no token has a geometry chain to the
+    reference or the source has no Gaia astrometry."""
+
+    label: str
+    tokens: list[str]
+    source_id: int
+    err_arcsec: float
+    predicted_sep_arcsec: float
+
+
+@dataclass
+class BindingVerdict:
+    """Audit + arbitration outcome for one contradiction. In report-only
+    mode nothing is mutated; ``unbind`` / ``rebind_*`` record what
+    enforcement WOULD do so ``apply`` and the audit TSV agree."""
+
+    wds_id: str
+    shape: str
+    verdict: str
+    contested: str
+    reference_token: str | None
+    reference_source: int | None
+    winner: BindingCandidate | None
+    candidates: list[BindingCandidate]
+    # (canonical token, source) bindings enforcement removes.
+    unbind: list[tuple[str, int]] = field(default_factory=list)
+    # letter→sources decisive only: every row of ``rebind_letter`` rebinds
+    # to ``rebind_source``.
+    rebind_letter: str | None = None
+    rebind_source: int | None = None
+
+
+def _select_reference(
+    ctx: _SystemContext, exclude_tokens: set[str], exclude_sources: set[int],
+    indices: IdentifierIndices,
+) -> tuple[str, int, GaiaAstrometryRow] | None:
+    """A letter in the system whose single Gaia source has 5p astrometry —
+    the anchor every predicted offset chains from. Prefers the WDS primary
+    letter (``A``), then the brightest available. ``exclude_sources`` is
+    non-empty only for source→letters conflicts (the reference must be a
+    genuinely different source); for letter→sources conflicts the anchor
+    may itself be one of the competing sources (testing "is the letter
+    colocated with it?"). ``None`` when no such letter exists."""
+    best: tuple[tuple[int, float, str], str, int, GaiaAstrometryRow] | None = None
+    for tok, sources in ctx.token_sources.items():
+        if tok in exclude_tokens or len(sources) != 1:
+            continue
+        src = next(iter(sources))
+        if src in exclude_sources:
+            continue
+        astro = indices.src_to_astrometry.get(src)
+        if astro is None:
+            continue
+        rank = (0 if tok == "A" else 1, ctx.token_mag.get(tok, math.inf), tok)
+        if best is None or rank < best[0]:
+            best = (rank, tok, src, astro)
+    if best is None:
+        return None
+    return best[1], best[2], best[3]
+
+
+def _cluster_tokens(
+    tokens: set[str], blend_pairs: list[tuple[str, str]],
+) -> list[list[str]]:
+    """Partition tokens bound to one source into blend clusters —
+    mutually related tokens (hierarchy / compound / blend-mate) are one
+    physical star. Two or more clusters is a source→letters
+    contradiction."""
+    toks = sorted(tokens)
+    parent = {t: t for t in toks}
+
+    def find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for i in range(len(toks)):
+        for j in range(i + 1, len(toks)):
+            if _tokens_related(toks[i], toks[j], blend_pairs):
+                parent[find(toks[i])] = find(toks[j])
+    clusters: dict[str, list[str]] = {}
+    for t in toks:
+        clusters.setdefault(find(t), []).append(t)
+    return list(clusters.values())
+
+
+def _cluster_representative(cluster: list[str]) -> str:
+    """The ancestor / shortest token names a cluster (``{A, Aa} → A``)."""
+    return min(cluster, key=lambda t: (len(t), t))
+
+
+def _cluster_error(
+    ctx: _SystemContext, reference_token: str, reference_astro: GaiaAstrometryRow,
+    tokens: list[str], source: int, indices: IdentifierIndices,
+) -> tuple[float, float]:
+    """Best ``(err, predicted_sep)`` over a cluster's tokens — a cluster
+    is placed by whichever of its letters has a geometry chain to the
+    reference (a compound like ``BC`` often reaches the anchor when its
+    bare siblings don't). ``(inf, 0)`` when none is reachable or the
+    source lacks Gaia astrometry."""
+    src_astro = indices.src_to_astrometry.get(source)
+    if src_astro is None:
+        return math.inf, 0.0
+    best_err, best_sep = math.inf, 0.0
+    for tok in tokens:
+        pred = _bfs_offset(ctx.adj, reference_token, tok)
+        if pred is None:
+            continue
+        pe, pn, edge_epoch = pred
+        err = _arbitration_error(src_astro, reference_astro, (pe, pn), edge_epoch)
+        if err < best_err:
+            best_err, best_sep = err, math.hypot(pe, pn)
+    return best_err, best_sep
+
+
+def _refuted(candidate: BindingCandidate) -> bool:
+    """A reachable candidate whose measured position the source's Gaia
+    astrometry contradicts (error beyond the absolute tolerance)."""
+    if math.isinf(candidate.err_arcsec):
+        return False
+    tol = max(
+        ARBITRATION_ABS_TOLERANCE_ARCSEC,
+        ARBITRATION_SEP_FRACTION * candidate.predicted_sep_arcsec,
+    )
+    return candidate.err_arcsec > tol
+
+
+def _decide(candidates: list[BindingCandidate]) -> BindingCandidate | None:
+    """Elect a winner, or ``None`` when the field is ambiguous. Two paths:
+
+    1. Margin: the min-error candidate clears its absolute tolerance AND
+       beats the runner-up by ≥2× (the clean case — one letter sits where
+       the source is, the rest are far).
+    2. Refutation: when the geometry connects the reference only to the
+       *wrong* candidates (a disconnected system graph), every reachable
+       candidate is refuted and exactly one is unreachable — the source is
+       proven to be at none of the measured positions, so it belongs to
+       the one letter geometry couldn't reach. Winner = that candidate."""
+    if not candidates:
+        return None
+    ranked = sorted(candidates, key=lambda c: c.err_arcsec)
+    win = ranked[0]
+    if not math.isinf(win.err_arcsec):
+        runnerup = ranked[1].err_arcsec if len(ranked) > 1 else math.inf
+        abs_tol = max(
+            ARBITRATION_ABS_TOLERANCE_ARCSEC,
+            ARBITRATION_SEP_FRACTION * win.predicted_sep_arcsec,
+        )
+        if (
+            win.err_arcsec <= abs_tol
+            and win.err_arcsec <= ARBITRATION_RUNNERUP_FACTOR * runnerup
+        ):
+            return win
+    reachable = [c for c in candidates if not math.isinf(c.err_arcsec)]
+    unreachable = [c for c in candidates if math.isinf(c.err_arcsec)]
+    if reachable and len(unreachable) == 1 and all(_refuted(c) for c in reachable):
+        return unreachable[0]
+    return None
+
+
+def _audit_system(
+    ctx: _SystemContext, indices: IdentifierIndices,
+) -> list[BindingVerdict]:
+    """Detect and arbitrate every contradiction in one WDS system."""
+    verdicts: list[BindingVerdict] = []
+
+    # Shape (a) — one source bound to disjoint letters.
+    source_tokens: dict[int, set[str]] = {}
+    for tok, sources in ctx.token_sources.items():
+        for src in sources:
+            source_tokens.setdefault(src, set()).add(tok)
+    for src, tokens in sorted(source_tokens.items()):
+        clusters = _cluster_tokens(tokens, ctx.blend_pairs)
+        if len(clusters) < 2:
+            continue
+        reps = [_cluster_representative(c) for c in clusters]
+        contested = f"{src}:{'/'.join(sorted(reps))}"
+        ref = _select_reference(ctx, set(tokens), {src}, indices)
+        if ref is None:
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
+                BINDING_VERDICT_SKIPPED_NO_REFERENCE, contested,
+                None, None, None, [],
+            ))
+            continue
+        ref_tok, ref_src, ref_astro = ref
+        cands: list[BindingCandidate] = []
+        for cluster in clusters:
+            err, sep = _cluster_error(
+                ctx, ref_tok, ref_astro, cluster, src, indices,
+            )
+            cands.append(BindingCandidate(
+                _cluster_representative(cluster), cluster, src, err, sep,
+            ))
+        winner = _decide(cands)
+        if winner is not None:
+            unbind = [
+                (t, src) for c in cands if c is not winner for t in c.tokens
+            ]
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
+                BINDING_VERDICT_GEOMETRIC, contested,
+                ref_tok, ref_src, winner, cands, unbind,
+            ))
+        else:
+            unbind = [(t, src) for c in cands for t in c.tokens]
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
+                BINDING_VERDICT_UNBOUND_AMBIGUOUS, contested,
+                ref_tok, ref_src, None, cands, unbind,
+            ))
+
+    # Shape (b) — one letter bound to different sources across rows.
+    for tok, sources in sorted(ctx.token_sources.items()):
+        if len(sources) < 2:
+            continue
+        contested = f"{tok}:{'/'.join(str(s) for s in sorted(sources))}"
+        ref = _select_reference(ctx, {tok}, set(), indices)
+        if ref is None:
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_LETTER_SOURCES,
+                BINDING_VERDICT_SKIPPED_NO_REFERENCE, contested,
+                None, None, None, [],
+            ))
+            continue
+        ref_tok, ref_src, ref_astro = ref
+        cands = []
+        for s in sorted(sources):
+            err, sep = _cluster_error(ctx, ref_tok, ref_astro, [tok], s, indices)
+            cands.append(BindingCandidate(str(s), [tok], s, err, sep))
+        winner = _decide(cands)
+        if winner is not None:
+            unbind = [(tok, s) for s in sources if s != winner.source_id]
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_LETTER_SOURCES,
+                BINDING_VERDICT_GEOMETRIC, contested,
+                ref_tok, ref_src, winner, cands, unbind,
+                rebind_letter=tok, rebind_source=winner.source_id,
+            ))
+        else:
+            unbind = [(tok, s) for s in sources]
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_LETTER_SOURCES,
+                BINDING_VERDICT_UNBOUND_AMBIGUOUS, contested,
+                ref_tok, ref_src, None, cands, unbind,
+            ))
+
+    return verdicts
+
+
+def _unbind_component(
+    comp: ResolvedComponent, winner_hip: int | None, indices: IdentifierIndices,
+) -> None:
+    """Strip a losing binding. ``gaia`` always clears; ``hip`` clears only
+    when it cross-walks to the contested source or duplicates the winner's
+    HIP — an independently distinct HIP survives for Stage 3's HIP2
+    fallback. ``resolve_via`` reverts to ``unresolved``."""
+    contested = comp.gaia_source_id
+    if comp.hip is not None and (
+        indices.hip_to_gaia.get(comp.hip) == contested or comp.hip == winner_hip
+    ):
+        comp.hip = None
+    comp.gaia_source_id = None
+    comp.resolve_via = "unresolved"
+
+
+def _apply_system_verdicts(
+    verdicts: list[BindingVerdict], ctx: _SystemContext,
+    indices: IdentifierIndices,
+) -> None:
+    """Enforce one system's verdicts on its component instances. Shape (b)
+    decisive verdicts rebind every row of the letter to the winning
+    source; every other unbind strips the losing binding."""
+    for v in verdicts:
+        winner_hip = (
+            indices.src_to_hip.get(v.winner.source_id)
+            if v.winner is not None else None
+        )
+        if v.rebind_letter is not None and v.rebind_source is not None:
+            for comp in ctx.instances.get(v.rebind_letter, []):
+                comp.gaia_source_id = v.rebind_source
+            continue
+        for tok, src in v.unbind:
+            for comp in ctx.instances.get(tok, []):
+                if comp.gaia_source_id == src:
+                    _unbind_component(comp, winner_hip, indices)
+
+
+def inherit_downward_parent_bindings(
+    pairs: list[WdsPair], components: list[ResolvedComponent],
+) -> int:
+    """A sub-letter left unbound by enforcement inherits its parent
+    token's binding when the parent is bound — the WDS blend convention
+    read downward (20312's Aa/Ab must follow A, not sibling BC). Returns
+    the number of components seeded."""
+    bound: dict[tuple[str, str], tuple[int, str, int | None]] = {}
+    canon: list[tuple[str, ResolvedComponent]] = []
+    for pair, primary, secondary in iter_decomposing_pair_components(
+        pairs, components,
+    ):
+        for tok, comp in (
+            (primary.component, primary),
+            (_canonical_token(primary.component, secondary), secondary),
+        ):
+            canon.append((tok, comp))
+            if comp.gaia_source_id is not None:
+                bound.setdefault(
+                    (pair.wds_id, tok),
+                    (comp.gaia_source_id, comp.resolve_via, comp.hip),
+                )
+    n = 0
+    for tok, comp in canon:
+        if comp.gaia_source_id is not None:
+            continue
+        parent = parent_component_token(tok)
+        if parent is None:
+            continue
+        binding = bound.get((comp.wds_id, parent))
+        if binding is None:
+            continue
+        comp.gaia_source_id, comp.resolve_via, hip = binding
+        if comp.hip is None and hip is not None:
+            comp.hip = hip
+        n += 1
+    return n
+
+
+def audit_binding_integrity(
+    pairs: list[WdsPair], components: list[ResolvedComponent],
+    indices: IdentifierIndices, *, apply: bool = False,
+) -> list[BindingVerdict]:
+    """Group Stage-2 bindings per WDS system, detect the two
+    contradiction shapes, arbitrate geometrically, and — when
+    ``apply`` — unbind the losers, then re-run the propagation passes so
+    surviving bindings re-smear and orphaned sub-letters inherit their
+    parents. ``apply=False`` is report-only: verdicts computed and
+    returned, ``components`` untouched."""
+    systems = build_system_contexts(pairs, components)
+    verdicts: list[BindingVerdict] = []
+    for wds_id in sorted(systems):
+        ctx = systems[wds_id]
+        sys_verdicts = _audit_system(ctx, indices)
+        verdicts.extend(sys_verdicts)
+        if apply:
+            _apply_system_verdicts(sys_verdicts, ctx, indices)
+    if apply and verdicts:
+        propagate_within_system(components)
+        if propagate_blend_identity(components, pairs) > 0:
+            propagate_within_system(components)
+        if inherit_downward_parent_bindings(pairs, components) > 0:
+            propagate_within_system(components)
+    return verdicts
+
+
+def binding_integrity_counts(verdicts: list[BindingVerdict]) -> dict[str, int]:
+    """The five report-only headline counters — two conflict-shape totals
+    plus the three arbitration-outcome totals. Every key present so the
+    snapshot shape stays stable across runs."""
+    counts = {k: 0 for k in BINDING_INTEGRITY_COUNT_KEYS}
+    for v in verdicts:
+        if v.shape == BINDING_SHAPE_SOURCE_LETTERS:
+            counts["binding_conflicts_source_letters"] += 1
+        else:
+            counts["binding_conflicts_letter_sources"] += 1
+        if v.verdict == BINDING_VERDICT_GEOMETRIC:
+            counts["arbitrated_geometric"] += 1
+        elif v.verdict == BINDING_VERDICT_UNBOUND_AMBIGUOUS:
+            counts["arbitrated_unbound_ambiguous"] += 1
+        else:
+            counts["arbitration_skipped_no_reference"] += 1
+    return counts
+
+
+BINDING_VERDICT_TSV_COLUMNS: tuple[str, ...] = (
+    "wds_id", "shape", "verdict", "contested",
+    "reference_token", "reference_source", "winner", "candidates",
+)
+
+
+def _format_candidates(candidates: list[BindingCandidate]) -> str:
+    """``label=err″@sep″`` per candidate, error-ascending, ``;``-joined."""
+    parts = []
+    for c in sorted(candidates, key=lambda c: c.err_arcsec):
+        err = "inf" if math.isinf(c.err_arcsec) else f"{c.err_arcsec:.3f}"
+        parts.append(f"{c.label}={err}@{c.predicted_sep_arcsec:.1f}")
+    return ";".join(parts)
+
+
+def write_binding_verdicts_tsv(
+    verdicts: list[BindingVerdict], path: Path,
+) -> int:
+    """Emit the per-verdict audit artifact — the no-spot-check review
+    surface for the report-only detector. Returns the row count."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as fh:
+        fh.write("\t".join(BINDING_VERDICT_TSV_COLUMNS) + "\n")
+        for v in verdicts:
+            fh.write("\t".join((
+                v.wds_id, v.shape, v.verdict, v.contested,
+                v.reference_token or "",
+                str(v.reference_source) if v.reference_source is not None else "",
+                v.winner.label if v.winner is not None else "",
+                _format_candidates(v.candidates),
+            )) + "\n")
+    return len(verdicts)
 
 

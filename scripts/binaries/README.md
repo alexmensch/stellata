@@ -61,7 +61,10 @@ scripts/binaries/
                                   cascade (orb6_hip → athyg_gaia_native →
                                   simbad_xid → ccdm_hip → AT-HYG
                                   position-match), with same-letter +
-                                  Aa→A propagation.
+                                  Aa→A propagation. Also hosts the
+                                  report-only binding-integrity audit
+                                  (audit_binding_integrity) — see
+                                  § Binding-integrity audit.
   stage3_astrometry.py            Per-component astrometry routing
                                   (gaia_5p / gaia_nss_systemic /
                                   hip2_long_baseline / unresolved).
@@ -285,6 +288,34 @@ convention (Castor CIA 29 lists HIP 36850 on both sides of Aa,Ab) —
 and `propagate_within_system` re-runs so the blend binding reaches
 the letter's other pair rows. Secondaries carrying ANY binding of
 their own are left untouched.
+
+### Binding-integrity audit (report-only)
+
+After every binding pass, `audit_binding_integrity` groups bindings
+per WDS system and detects two contradiction shapes the cascade +
+propagation can leave behind: (a) one Gaia source bound to disjoint
+letters (not ancestor/descendant, not compound-contained, not
+sub-resolution blend-mates), and (b) one letter bound to different
+sources on different rows. A source cannot be two stars, and two
+letters at a measured ρ > 0 cannot be one source — so the blend-mate
+exemption applies only to ρ = 0 sub-resolution pairs, not to measured
+ones. Each contradiction is arbitrated geometrically: predicted
+tangent-plane offsets (E = ρ·sin θ, N = ρ·cos θ) composed over a BFS
+chain of pair rows from an uncontested astrometric reference letter,
+versus the contested source's actual Gaia offset (min error over
+J2016.0 and the PM-propagated WDS edge epoch). The winner is decisive
+when it clears `max(2″, 0.15·predicted_sep)` and beats the runner-up
+by ≥2×, or — for a disconnected system graph — when geometry refutes
+every reachable candidate and leaves exactly one unreachable home.
+Ambiguous conflicts unbind conservatively.
+
+The pass runs with `apply=False` today: verdicts are counted (Stage-7
+`binding_conflicts_*` / `arbitrated_*` / `arbitration_skipped_no_reference`)
+and written to `public/binding-integrity-verdicts.tsv` (gitignored
+audit surface), but bindings are untouched — zero behaviour change.
+Enforcement (`apply=True`, which unbinds losers, re-runs the
+propagation passes, and inherits sub-letters from their bound parent
+token) is wired but not yet enabled.
 
 **Worked examples** (per-letter resolve_via):
 
