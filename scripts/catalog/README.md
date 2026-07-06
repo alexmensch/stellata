@@ -536,7 +536,10 @@ Per-row gates and resolution:
 - **Absmag.** Preference order: `primary_absmag + WDS Δmag` when the
   row inherited its parent's AT-HYG photometry (Sirius B's row
   carried Sirius A's 1.45 absmag, not the WD's 11.36); the row's own
-  (non-inherited) absmag; primary + Δmag fallback; class→M_V from a
+  (non-inherited) absmag — including the Stage-6 Gaia-photometry value
+  (`photometry_via = gaia_photometry`) derived from an own-DR3
+  companion's G/BP/RP + parallax when no AT-HYG row backs it (SCIENCE.md
+  § Multiple-star pipeline); primary + Δmag fallback; class→M_V from a
   per-component spectral type (`absmagFromSpectral`, spect_via
   curated/simbad — Algol Aa2's curated K0IV lands at 3.30 vs the
   primary's −0.11). A row with inherited photometry, no Δmag, and

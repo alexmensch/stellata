@@ -1258,7 +1258,7 @@ export function promoteCompanions(
   // parent then has its own Gaia row, not a synth key).
   const componentIndex = new Map<string, number>();
   const compKey = (root: string | null, comp: string): string | null =>
-    root !== null && comp ? `${root} ${comp}` : null;
+    root !== null && comp ? `${root} ${comp}` : null;
 
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS

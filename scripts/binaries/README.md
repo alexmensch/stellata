@@ -640,6 +640,20 @@ A0V + DA1.9); `athyg` → the inherited per-system string; `none`.
 The mass-ratio q backfill reads the resolved `spect`, so a curated
 companion type also improves q for its pair.
 
+The `absmag` / `ci` columns resolve with provenance in `photometry_via`:
+`athyg_own` (the component's own AT-HYG row); `athyg_system_inherited`
+(the AT-HYG row is the system primary's, shared via a single HIP entry —
+promotion switches to Δmag imputation); `gaia_photometry` (no AT-HYG
+row, but the component's own Gaia 5p source carries G + BP/RP + parallax,
+so `gaia_photometry_absmag_ci` derives `M_V` from `M_G − (G−V)` and `ci`
+from `BP−RP → T_eff → B−V`); `none` (no photometry source). The
+`gaia_photometry` path is gated on `astrometry_via = gaia_5p` and reads
+the post-exclusion Gaia astrometry map, so a blended or inherited
+source's photometry is never turned into a component magnitude. It
+recovers the ~3.5k own-DR3 companions that would otherwise drop at
+promotion for a blank absmag; see SCIENCE.md § Multiple-star pipeline
+(companion promotion) for the transforms and source citations.
+
 ## Stage 7 — Build-counts and rates snapshots
 
 `scripts/binaries/stage7_counts.py` writes two snapshot JSONs the build

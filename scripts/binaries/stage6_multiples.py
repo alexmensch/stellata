@@ -12,7 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
-from parsers import AthygRow, SimbadWdsXid, WdsPair  # noqa: E402
+from parsers import (  # noqa: E402
+    AthygRow, GaiaAstrometryRow, SimbadWdsXid, WdsPair,
+)
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
@@ -121,14 +123,20 @@ SPECT_VIA_VALUES: tuple[str, ...] = (
 # the photometry; ``athyg_system_inherited`` means the AT-HYG row that
 # answered is shared with the system primary (Hipparcos resolved the
 # system as one star; both component rows return the same AT-HYG row
-# from _athyg_row_for_component). ``none`` means no AT-HYG row at all —
-# absmag and ci are empty. Companion promotion uses this tag instead
-# of a float-equality heuristic to detect the inherited-photometry case.
+# from _athyg_row_for_component). ``gaia_photometry`` means no AT-HYG
+# row backed the component but its own Gaia DR3 5p row supplied G + BP/RP
+# + parallax, from which absmag (G→V) and ci (BP−RP→Teff→B−V) were
+# derived (see gaia_photometry_absmag_ci). ``none`` means no photometry
+# source at all — absmag and ci are empty. Companion promotion keys off
+# this tag: any non-``athyg_system_inherited`` value routes through the
+# "own photometry" path (observed absmag/ci, de-extincted downstream).
 PHOTOMETRY_VIA_OWN = "athyg_own"
 PHOTOMETRY_VIA_SYSTEM_INHERITED = "athyg_system_inherited"
+PHOTOMETRY_VIA_GAIA = "gaia_photometry"
 PHOTOMETRY_VIA_NONE = "none"
 PHOTOMETRY_VIA_VALUES: tuple[str, ...] = (
-    PHOTOMETRY_VIA_OWN, PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_NONE,
+    PHOTOMETRY_VIA_OWN, PHOTOMETRY_VIA_SYSTEM_INHERITED,
+    PHOTOMETRY_VIA_GAIA, PHOTOMETRY_VIA_NONE,
 )
 
 
@@ -170,6 +178,12 @@ SOURCE_SIMBAD = "simbad"
 # here (not in stage3_astrometry.ASTROMETRY_VIA_VALUES) because Stage 3
 # itself never emits it; Stage 7 counts it directly off emitted rows.
 ASTROMETRY_VIA_SYSTEM_INHERITED = "system_inherited"
+
+# Mirrors stage3_astrometry.ASTROMETRY_VIA_VALUES's default route. The
+# Gaia-photometry absmag path fires only for rows tagged this — a genuine
+# own per-component 5p fit, so the G/BP/RP that back the derived absmag
+# belong to this component (not a blended or system-inherited source).
+ASTROMETRY_VIA_GAIA_5P = "gaia_5p"
 
 
 # orbit_via → numeric ``regime`` tag for parity with the legacy v5
@@ -438,13 +452,114 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
     can share ``_position_pc`` / ``_resolve_position`` /
     ``_astrometry_via`` with the pair walk."""
     return ComponentAstrometry(
-        astrometry_via="gaia_5p",
+        astrometry_via=ASTROMETRY_VIA_GAIA_5P,
         ra_deg=gaia.ra_deg, dec_deg=gaia.dec_deg,
         parallax_mas=gaia.parallax_mas,
         parallax_error_mas=gaia.parallax_error_mas,
         pmra_masyr=gaia.pmra_masyr, pmdec_masyr=gaia.pmdec_masyr,
         ref_epoch=gaia.ref_epoch,
     )
+
+
+# ---- Gaia-photometry absmag / ci derivation (own-DR3 companions) ------
+#
+# A WDS component with its own Gaia DR3 5p fit but no AT-HYG row carries
+# no absmag/ci and is otherwise dropped at companion promotion for want
+# of a brightness. Its Gaia row does carry G + BP + RP + parallax, from
+# which an honest absolute magnitude and colour are derivable. absmag is
+# Johnson V (the catalogue's absmag convention) and ci is Johnson B−V
+# (the colour-LUT convention), so both go through a Gaia→Johnson
+# transform rather than the raw Gaia bands. Provenance tag
+# PHOTOMETRY_VIA_GAIA. See SCIENCE.md § Multiple-star pipeline (companion
+# promotion) for the science framing and full source citations.
+
+# Gaia EDR3 → Johnson V: G − V as a cubic in (BP − RP). Riello et al.
+# 2021, A&A 649, A3, Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).
+GAIA_G_MINUS_V_COEFFS: tuple[float, ...] = (
+    -0.02704, 0.01424, -0.2156, 0.01426,
+)
+GAIA_G_MINUS_V_COLOR_RANGE: tuple[float, float] = (-0.5, 5.0)
+
+# Gaia (BP − RP) → effective temperature: fifth-order fit, Montalto et
+# al. 2021 (PLATO Input Catalogue), A&A 653, A98 (valid 0.5 < BP−RP <
+# 5.0). Feeds the catalogue's Ballesteros B−V↔Teff convention so the
+# recovered ci lands on the same colour manifold every other star uses
+# (ballesteros_bv_from_teff mirrors scripts/colour/blackbody-lut-pure.ts).
+GAIA_BPRP_TEFF_COEFFS: tuple[float, ...] = (
+    9453.14, -6859.40, 3542.16, -1053.09, 165.635, -10.5672,
+)
+GAIA_BPRP_TEFF_COLOR_RANGE: tuple[float, float] = (0.5, 5.0)
+
+# B−V clamp matching the blackbody LUT span (scripts/colour/
+# blackbody-lut-pure.ts BV_MIN / BV_MAX). Colours past either end
+# saturate at the endpoint, exactly as the runtime LUT sampler does.
+BALLESTEROS_BV_MIN = -0.4
+BALLESTEROS_BV_MAX = 2.0
+
+
+def _polyval_ascending(coeffs: tuple[float, ...], x: float) -> float:
+    """Horner evaluation of ``coeffs[0] + coeffs[1]·x + coeffs[2]·x² …``
+    (coefficients in ascending power order)."""
+    acc = 0.0
+    for c in reversed(coeffs):
+        acc = acc * x + c
+    return acc
+
+
+def ballesteros_bv_from_teff(teff: float) -> float:
+    """Analytic inverse of Ballesteros 2012 (Teff K → Johnson B−V).
+    Python mirror of ``ballesterosBvFromTeff`` in
+    scripts/colour/blackbody-lut-pure.ts — keep the two in sync (pinned
+    by the Stage-6 unit test against the solar value)."""
+    k = teff / 4600.0
+    disc = math.sqrt(4.0 + 1.1664 * k * k)
+    u = (2.0 - 2.32 * k + disc) / (2.0 * k)
+    return u / 0.92
+
+
+def gaia_photometry_absmag_ci(
+    gaia: GaiaAstrometryRow,
+) -> tuple[float, float | None] | None:
+    """Derive ``(absmag_V, ci_BV)`` for a component from its own Gaia DR3
+    photometry + parallax. Returns ``None`` when the row carries no G
+    magnitude or no positive parallax — nothing to anchor a magnitude on.
+
+    absmag: ``M_G = G + 5·log10(ϖ_mas) − 10``, then ``M_V = M_G − (G−V)``
+    with the Riello 2021 G−V(BP−RP) cubic. Raw ``M_G`` is the fallback
+    when BP or RP is absent (~0.3 mag redward bias vs the transform for
+    cool stars, but honest).
+
+    ci: BP−RP → Teff (Montalto 2021) → B−V via the catalogue's
+    Ballesteros inverse, so the stored colour round-trips to the
+    Gaia-implied temperature through the same relation the renderer
+    reads. ``None`` when BP/RP is absent or BP−RP falls outside the Teff
+    polynomial's validity range — companion promotion then falls back to
+    its spectral / solar ci path."""
+    if (
+        gaia.g_mag is None
+        or gaia.parallax_mas is None
+        or gaia.parallax_mas <= 0.0
+    ):
+        return None
+    abs_g = gaia.g_mag + 5.0 * math.log10(gaia.parallax_mas) - 10.0
+
+    if gaia.bp_mag is None or gaia.rp_mag is None:
+        return abs_g, None
+
+    bp_rp = gaia.bp_mag - gaia.rp_mag
+    gv_lo, gv_hi = GAIA_G_MINUS_V_COLOR_RANGE
+    g_minus_v = _polyval_ascending(
+        GAIA_G_MINUS_V_COEFFS, min(max(bp_rp, gv_lo), gv_hi),
+    )
+    absmag_v = abs_g - g_minus_v
+
+    teff_lo, teff_hi = GAIA_BPRP_TEFF_COLOR_RANGE
+    if bp_rp < teff_lo or bp_rp > teff_hi:
+        return absmag_v, None
+    teff = _polyval_ascending(GAIA_BPRP_TEFF_COEFFS, bp_rp)
+    ci = min(max(ballesteros_bv_from_teff(teff), BALLESTEROS_BV_MIN),
+             BALLESTEROS_BV_MAX)
+    return absmag_v, ci
 
 
 # Circular-orbit ω convention. For e = 0 periastron is undefined, so a
@@ -552,6 +667,28 @@ def build_multiples_row(
     )
     astrometry_via = _astrometry_via(astrometry, inherited)
     photometry_via = _photometry_via(athyg, primary_athyg, is_primary=is_primary)
+    absmag = athyg.absmag if athyg is not None else None
+    ci = athyg.ci if athyg is not None else None
+
+    # No AT-HYG row backs this component, but it earned its own Gaia 5p
+    # fit — derive absmag (and ci) from that same source's G/BP/RP +
+    # parallax so promotion's 'own' photometry path keeps it instead of
+    # dropping it for a blank absmag. Gated on astrometry_via=gaia_5p so
+    # the photometry is this component's own, not a blended / inherited
+    # source; excluded sources are already absent from src_to_astrometry.
+    if (
+        athyg is None
+        and astrometry_via == ASTROMETRY_VIA_GAIA_5P
+        and component.gaia_source_id is not None
+    ):
+        gaia_row = indices.src_to_astrometry.get(component.gaia_source_id)
+        derived = (
+            gaia_photometry_absmag_ci(gaia_row)
+            if gaia_row is not None else None
+        )
+        if derived is not None:
+            absmag, ci = derived
+            photometry_via = PHOTOMETRY_VIA_GAIA
 
     return MultiplesRow(
         system_id=_system_id_for_pair(pair),
@@ -561,8 +698,8 @@ def build_multiples_row(
         x_pc=position[0] if position is not None else None,
         y_pc=position[1] if position is not None else None,
         z_pc=position[2] if position is not None else None,
-        absmag=athyg.absmag if athyg is not None else None,
-        ci=athyg.ci if athyg is not None else None,
+        absmag=absmag,
+        ci=ci,
         spect=spect,
         name=athyg.proper if athyg is not None else "",
         source=SOURCE_ATHYG if athyg is not None else SOURCE_WDS,

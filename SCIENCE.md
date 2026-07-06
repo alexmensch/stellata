@@ -1542,6 +1542,61 @@ consume it in two complementary ways:
    set; the renderer / picker / hover / focus stack picks them up
    with zero code change.
 
+   **Gaia-photometry brightness for own-DR3 companions.** A companion
+   that earned its own Gaia DR3 5p fit (position + parallax) but has no
+   AT-HYG row carries no absmag through the AT-HYG path and — with no
+   Δmag or per-component spectral type either — was dropped at promotion
+   for want of a brightness. Its Gaia row does carry G + BP + RP, so
+   Stage 6 (`scripts/binaries/stage6_multiples.py`,
+   `gaia_photometry_absmag_ci`) derives an honest magnitude and colour
+   from the component's own photometry, tagged
+   `photometry_via = gaia_photometry`, which promotion's "own
+   photometry" path then consumes. This recovers ~3.5k companions
+   (`companionDroppedNoAbsmag` 6207 → 2553; the residual are
+   system-inherited blends of tight inner binaries — no own 5p fit — and
+   Gaia-NSS centre-of-mass sources whose G is the blended pair's, both
+   deliberately excluded). Derivation:
+
+   - **Absolute magnitude (Johnson V, the catalogue convention).**
+     `M_G = G + 5·log₁₀(ϖ_mas) − 10`, then `M_V = M_G − (G − V)` with the
+     Gaia EDR3 → Johnson `G − V` cubic in `(BP − RP)` (Riello et al.
+     2021, Table 5.7; σ ≈ 0.030 mag, valid −0.5 < BP−RP < 5.0). Raw
+     `M_G` is the fallback when BP or RP is missing (~0.3 mag redward
+     bias for cool stars, but honest).
+   - **Colour (Johnson B−V, the LUT convention).** `BP − RP → T_eff`
+     (Montalto et al. 2021 fifth-order polynomial, valid 0.5 < BP−RP <
+     5.0) → `B−V` via the catalogue's own Ballesteros (2012) inverse
+     (`ballesteros_bv_from_teff`, mirroring
+     `scripts/colour/blackbody-lut-pure.ts`). Routing colour through the
+     Ballesteros manifold — rather than a direct Gaia→(B−V) fit — keeps
+     the stored `ci` round-tripping to the Gaia-implied temperature
+     through the same relation the renderer reads (§ Star colour
+     calibration), so a photometry-recovered companion lands on the same
+     colour↔Teff locus as every other star. `ci` is left blank (→ the
+     spectral / solar fallback) when BP/RP is absent or BP−RP is outside
+     the T_eff polynomial's range.
+   - **Extinction.** Both quantities are observed (the Gaia bands are
+     reddened), so they carry `photometry_via = gaia_photometry` and are
+     de-extincted downstream in build-catalog exactly like any observed
+     absmag/ci — never treated as already-intrinsic.
+   - **Guard.** Sources in `data/binaries/astrometry_exclusions.tsv`
+     (blended photometry, e.g. Sirius B) are removed from the Gaia
+     astrometry map at Stage 1, so they never reach this path — their G
+     is blended too. The derivation is gated on
+     `astrometry_via = gaia_5p` (a genuine own per-component fit), so an
+     inherited or NSS-systemic source's blended G is never turned into a
+     component magnitude.
+
+   Sources for the Gaia→Johnson transforms (Ballesteros 2012 cited under
+   § Star colour calibration):
+
+   - Riello, M. et al. (2021). Gaia Early Data Release 3: Photometric
+     content and validation. *A&A* 649, A3, Table 5.7 (G−V(BP−RP)).
+     https://doi.org/10.1051/0004-6361/202039587
+   - Montalto, M. et al. (2021). The all-sky PLATO input catalogue.
+     *A&A* 653, A98 (BP−RP → T_eff fifth-order relation).
+     https://doi.org/10.1051/0004-6361/202140717
+
 2. **Runtime artifact.** `scripts/binaries/build-runtime-binaries.py`
    emits `public/binaries.bin` — one record per kept physical pair,
    carrying Kepler elements (when known) plus the sep+PA the
