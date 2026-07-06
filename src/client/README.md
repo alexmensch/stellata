@@ -193,6 +193,7 @@ mechanism.
 | Distance vector + bg                             | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Sol/GC arrows + bg                               | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
+| Galactic grid l/b labels                         | SVG     | source order (just above constellation figure)     |       | [galactic/](galactic/README.md) |
 | **Constellation stick-figure**                   | SVG     | first SVG child + `mask="url(#disc-occlude-mask)"` |       | [overlays/](overlays/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |

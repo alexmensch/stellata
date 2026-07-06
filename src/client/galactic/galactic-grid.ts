@@ -2,20 +2,28 @@ import * as THREE from 'three';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import { GAL_TO_ICRS } from './galactic-coords';
+import { galacticDirToIcrs } from './galactic-coords';
 
-const SPHERE_RADIUS_PC = 50_000;
+export const SPHERE_RADIUS_PC = 50_000;
 const EQUATOR_SEGMENTS = 256;
 const LATITUDE_SEGMENTS = 192;
 const MERIDIAN_SEGMENTS = 96;
-const MERIDIAN_COUNT = 36;          // every 10° of l
+export const MERIDIAN_COUNT = 36;   // every 10° of l
 // Latitudes every 10° (excluding 0° = equator, which is the fat Line2).
-const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
+export const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
 // Meridians whose longitude is a multiple of 20° run pole-to-pole; the
 // off-by-10° meridians stop at ±MERIDIAN_TRIM_LATITUDE_DEG so that the
 // every-20° set near the poles stays uncluttered while the in-between
 // lines fade out before they bunch up.
 const MERIDIAN_TRIM_LATITUDE_DEG = 80;
+
+/** Absolute latitude extent (degrees) a meridian is drawn to: even indices
+ *  reach the pole, odd ones stop at the trim so 36 lines ease to 18 near the
+ *  poles. Shared with galactic-grid-labels so labels never anchor past the
+ *  drawn line end. */
+export function meridianMaxAbsBDeg(index: number): number {
+  return index % 2 === 0 ? 90 : MERIDIAN_TRIM_LATITUDE_DEG;
+}
 
 // Equator gets the fat-line treatment (Line2 + LineMaterial) for genuine
 // screen-space width on every platform — `LineBasicMaterial.linewidth`
@@ -32,9 +40,10 @@ const DARK_LINE_OPACITY = 0.45;
 
 /**
  * Toggleable galactic coordinate sphere — a "sky from here" reference grid.
- * Equator + latitude circles at b=±30°/±60°, twelve meridians spaced every
- * 30° of l, and small cross markers at the NGP/SGP. All baked once in the
- * galactic frame and rotated into ICRS via GAL_TO_ICRS.
+ * Equator + 16 latitude rings every 10° (b=±10°…±80°) + 36 meridians every
+ * 10° of l, no pole markers. All baked once in the galactic frame and
+ * rotated into ICRS via galacticDirToIcrs. Orientation labels along the
+ * grid lines live in galactic-grid-labels.ts.
  *
  * Per frame the group's position tracks `camera.position` (in local frame)
  * so the sphere is always centred on the observer — the grid lines feel
@@ -87,14 +96,9 @@ export class GalacticGrid {
       ));
     }
 
-    const trimRad = (MERIDIAN_TRIM_LATITUDE_DEG * Math.PI) / 180;
     for (let i = 0; i < MERIDIAN_COUNT; i++) {
       const lRad = (i / MERIDIAN_COUNT) * Math.PI * 2;
-      // Every other meridian (multiples of 20° at MERIDIAN_COUNT=36) goes
-      // pole-to-pole; the in-between meridians stop short of the poles so
-      // the polar bunching of 36 lines eases to 18.
-      const polarConnected = i % 2 === 0;
-      const bMaxAbsRad = polarConnected ? Math.PI / 2 : trimRad;
+      const bMaxAbsRad = (meridianMaxAbsBDeg(i) * Math.PI) / 180;
       this.group.add(
         this.makeMeridian(lRad, MERIDIAN_SEGMENTS, this.lineMaterial, bMaxAbsRad),
       );
@@ -147,8 +151,7 @@ export class GalacticGrid {
     let firstX = 0, firstY = 0, firstZ = 0;
     for (let i = 0; i < n; i++) {
       const t = (i / n) * Math.PI * 2;
-      tmp.set(SPHERE_RADIUS_PC * Math.cos(t), SPHERE_RADIUS_PC * Math.sin(t), 0)
-        .applyMatrix4(GAL_TO_ICRS);
+      galacticDirToIcrs(t, 0, tmp).multiplyScalar(SPHERE_RADIUS_PC);
       positions[i * 3 + 0] = tmp.x;
       positions[i * 3 + 1] = tmp.y;
       positions[i * 3 + 2] = tmp.z;
@@ -172,15 +175,11 @@ export class GalacticGrid {
     segments: number,
     material: THREE.LineBasicMaterial,
   ): THREE.LineLoop {
-    const cosB = Math.cos(bRad);
-    const sinB = Math.sin(bRad);
-    const r = SPHERE_RADIUS_PC * cosB;
-    const z = SPHERE_RADIUS_PC * sinB;
     const v = new Float32Array(segments * 3);
     const tmp = new THREE.Vector3();
     for (let i = 0; i < segments; i++) {
       const t = (i / segments) * Math.PI * 2;
-      tmp.set(r * Math.cos(t), r * Math.sin(t), z).applyMatrix4(GAL_TO_ICRS);
+      galacticDirToIcrs(t, bRad, tmp).multiplyScalar(SPHERE_RADIUS_PC);
       v[i * 3 + 0] = tmp.x;
       v[i * 3 + 1] = tmp.y;
       v[i * 3 + 2] = tmp.z;
@@ -207,13 +206,7 @@ export class GalacticGrid {
     const tmp = new THREE.Vector3();
     for (let i = 0; i <= segments; i++) {
       const b = -bMaxAbsRad + (i / segments) * (2 * bMaxAbsRad);
-      const cosB = Math.cos(b);
-      const sinB = Math.sin(b);
-      tmp.set(
-        SPHERE_RADIUS_PC * cosB * Math.cos(lRad),
-        SPHERE_RADIUS_PC * cosB * Math.sin(lRad),
-        SPHERE_RADIUS_PC * sinB,
-      ).applyMatrix4(GAL_TO_ICRS);
+      galacticDirToIcrs(lRad, b, tmp).multiplyScalar(SPHERE_RADIUS_PC);
       v[i * 3 + 0] = tmp.x;
       v[i * 3 + 1] = tmp.y;
       v[i * 3 + 2] = tmp.z;

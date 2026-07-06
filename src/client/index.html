@@ -21,6 +21,11 @@
         </mask>
       </defs>
       <path id="con-figure" mask="url(#disc-occlude-mask)" />
+      <!-- Galactic coordinate sphere l/b labels. Pooled <text> positioned +
+           rotated each frame by galactic-grid-labels.ts. Drawn early so the
+           background orientation grid sits behind the HUD / POI / star-name
+           overlays. -->
+      <g id="gal-grid-labels"></g>
       <!-- HUD ring — translucent screen-centred guide visible in OBSERVE mode
            when the HUD is on. Sized and positioned each frame by
            hud-overlay.ts. Drawn before the Sol/GC arrows so the arrow strokes

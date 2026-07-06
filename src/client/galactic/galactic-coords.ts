@@ -62,3 +62,20 @@ export const GALACTIC_CENTRE_PC: THREE.Vector3 =
  * galactic plane" rule for the exoplanet orbit-rings layer.
  */
 export const GALACTIC_NORTH_POLE_ICRS: THREE.Vector3 = galZ.clone();
+
+/**
+ * ICRS unit direction for a galactic longitude/latitude pair (radians),
+ * written into `out`. The galactic-frame direction (cos b cos l, cos b sin l,
+ * sin b) rotated into ICRS via GAL_TO_ICRS. Shared by the grid sphere and
+ * its l/b labels so both derive line geometry from one formula.
+ */
+export function galacticDirToIcrs(
+  lRad: number,
+  bRad: number,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  const cosB = Math.cos(bRad);
+  return out
+    .set(cosB * Math.cos(lRad), cosB * Math.sin(lRad), Math.sin(bRad))
+    .applyMatrix4(GAL_TO_ICRS);
+}
