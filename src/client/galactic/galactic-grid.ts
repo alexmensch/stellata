@@ -8,14 +8,22 @@ export const SPHERE_RADIUS_PC = 50_000;
 const EQUATOR_SEGMENTS = 256;
 const LATITUDE_SEGMENTS = 192;
 const MERIDIAN_SEGMENTS = 96;
-const MERIDIAN_COUNT = 36;          // every 10° of l
+export const MERIDIAN_COUNT = 36;   // every 10° of l
 // Latitudes every 10° (excluding 0° = equator, which is the fat Line2).
-const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
+export const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
 // Meridians whose longitude is a multiple of 20° run pole-to-pole; the
 // off-by-10° meridians stop at ±MERIDIAN_TRIM_LATITUDE_DEG so that the
 // every-20° set near the poles stays uncluttered while the in-between
 // lines fade out before they bunch up.
 const MERIDIAN_TRIM_LATITUDE_DEG = 80;
+
+/** Absolute latitude extent (degrees) a meridian is drawn to: even indices
+ *  reach the pole, odd ones stop at the trim so 36 lines ease to 18 near the
+ *  poles. Shared with galactic-grid-labels so labels never anchor past the
+ *  drawn line end. */
+export function meridianMaxAbsBDeg(index: number): number {
+  return index % 2 === 0 ? 90 : MERIDIAN_TRIM_LATITUDE_DEG;
+}
 
 // Equator gets the fat-line treatment (Line2 + LineMaterial) for genuine
 // screen-space width on every platform — `LineBasicMaterial.linewidth`
@@ -88,14 +96,9 @@ export class GalacticGrid {
       ));
     }
 
-    const trimRad = (MERIDIAN_TRIM_LATITUDE_DEG * Math.PI) / 180;
     for (let i = 0; i < MERIDIAN_COUNT; i++) {
       const lRad = (i / MERIDIAN_COUNT) * Math.PI * 2;
-      // Every other meridian (multiples of 20° at MERIDIAN_COUNT=36) goes
-      // pole-to-pole; the in-between meridians stop short of the poles so
-      // the polar bunching of 36 lines eases to 18.
-      const polarConnected = i % 2 === 0;
-      const bMaxAbsRad = polarConnected ? Math.PI / 2 : trimRad;
+      const bMaxAbsRad = (meridianMaxAbsBDeg(i) * Math.PI) / 180;
       this.group.add(
         this.makeMeridian(lRad, MERIDIAN_SEGMENTS, this.lineMaterial, bMaxAbsRad),
       );

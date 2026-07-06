@@ -1,25 +1,20 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { galacticDirToIcrs } from './galactic-coords';
-import { SPHERE_RADIUS_PC } from './galactic-grid';
+import { SPHERE_RADIUS_PC, MERIDIAN_COUNT, LATITUDES_DEG, meridianMaxAbsBDeg } from './galactic-grid';
 import { projectToScreenInto } from '../overlays/overlay-project';
 import { setNumAttr, setStrAttr, setStyle, setText } from '../overlays/dirty-attr';
 
-// Orientation labels for the galactic coordinate sphere (galactic-grid.ts).
-// One whole-degree label per grid line — every meridian (galactic longitude
-// l) and every latitude ring (b, incl. the equator; the ±90° poles carry no
-// ring). Rather than sit on the l/b node (where the text would cross the
-// orthogonal line), each label slides along its own line to where the line
-// exits the viewport, settling at the bottom-most edge crossing, tilted onto
-// the line's slope. Its full rotated box is kept a standard pad inside the
-// frame and clear of on-screen chrome (settings panel, brand box, scale bar,
-// meta), and a deterministic repulsion pass spreads labels that would
-// otherwise pile up where many lines converge near an edge.
+// Whole-degree l/b orientation labels for the galactic coordinate sphere, one
+// per grid line, riding each line to its viewport-edge exit. See
+// galactic/README.md § "Grid orientation labels".
 
 const DEG = Math.PI / 180;
-const MERIDIAN_COUNT = 36;
-const LAT_RING_DEGS = [0, -80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
-const MERIDIAN_SAMPLES = 19; // over b ∈ [-84°, 84°]
+const LAT_RING_DEGS = [0, ...LATITUDES_DEG];
+const MERIDIAN_SAMPLES = 19;
+// Label sampling stops short of the pole (where all meridians converge) even
+// for pole-to-pole lines; per-meridian this is further capped at the drawn
+// trim via meridianMaxAbsBDeg so a label never anchors past the visible end.
 const MERIDIAN_MAX_B_DEG = 84;
 const RING_SAMPLES = 37; // over l ∈ [0°, 360°], last repeats the first to close
 
@@ -69,12 +64,14 @@ function boxesOverlap(
   return Math.abs(ax - bx) < ahx + bhx && Math.abs(ay - by) < ahy + bhy;
 }
 
+// Rect → centre (x, y) and half-extents (hx, hy).
+function rectCentreHalf(r: Rect): [number, number, number, number] {
+  return [(r.left + r.right) / 2, (r.top + r.bottom) / 2, (r.right - r.left) / 2, (r.bottom - r.top) / 2];
+}
+
 function overlapsAnyRect(x: number, y: number, hx: number, hy: number, rects: Rect[]): boolean {
   for (const r of rects) {
-    const rcx = (r.left + r.right) / 2;
-    const rcy = (r.top + r.bottom) / 2;
-    const rhx = (r.right - r.left) / 2;
-    const rhy = (r.bottom - r.top) / 2;
+    const [rcx, rcy, rhx, rhy] = rectCentreHalf(r);
     if (boxesOverlap(x, y, hx, hy, rcx, rcy, rhx, rhy)) return true;
   }
   return false;
@@ -186,10 +183,7 @@ export function separateLabels(
     for (let i = 0; i < n; i++) {
       const a = labels[i];
       for (const r of chrome) {
-        const rcx = (r.left + r.right) / 2;
-        const rcy = (r.top + r.bottom) / 2;
-        const rhx = (r.right - r.left) / 2;
-        const rhy = (r.bottom - r.top) / 2;
+        const [rcx, rcy, rhx, rhy] = rectCentreHalf(r);
         const dx = a.x - rcx;
         const dy = a.y - rcy;
         const ox = a.hx + rhx - Math.abs(dx);
@@ -205,7 +199,7 @@ export function separateLabels(
 }
 
 // Whole-degree label. Longitude wraps to [0, 360); latitude stays signed.
-function fmtDeg(deg: number, wrap360: boolean): string {
+export function fmtDeg(deg: number, wrap360: boolean): string {
   let d = Math.round(deg);
   if (wrap360) d = ((d % 360) + 360) % 360;
   return `${d}°`;
@@ -236,9 +230,10 @@ function buildEntries(): Array<Pick<Entry, 'kind' | 'valueDeg' | 'text' | 'halfW
 
   for (let i = 0; i < MERIDIAN_COUNT; i++) {
     const lonRad = ((i * 360) / MERIDIAN_COUNT) * DEG;
+    const maxBDeg = Math.min(MERIDIAN_MAX_B_DEG, meridianMaxAbsBDeg(i));
     const dirs: THREE.Vector3[] = [];
     for (let s = 0; s < MERIDIAN_SAMPLES; s++) {
-      const bDeg = -MERIDIAN_MAX_B_DEG + (s / (MERIDIAN_SAMPLES - 1)) * (2 * MERIDIAN_MAX_B_DEG);
+      const bDeg = -maxBDeg + (s / (MERIDIAN_SAMPLES - 1)) * (2 * maxBDeg);
       dirs.push(galacticDirToIcrs(lonRad, bDeg * DEG, new THREE.Vector3()));
     }
     push('lon', (i * 360) / MERIDIAN_COUNT, dirs);
