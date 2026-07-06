@@ -16,6 +16,7 @@ from parsers import AthygRow, SimbadWdsXid, WdsPair  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
+    _propagate_position,
     _spherical_to_unit_vec,
     split_components,
 )
@@ -35,6 +36,14 @@ from astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR  # noqa: E402
 
 
 # ─── Stage 6: multiples.tsv emit ─────────────────────────────────────
+
+
+# The one epoch every emitted position is normalised onto, so a
+# promoted secondary's baked xyz shares its primary's epoch and the
+# static relative geometry is correct. Mirror of
+# scripts/catalog/direction-cascade.ts CATALOG_SCENE_EPOCH — keep the
+# two in sync (see data/README.md § Reference epoch and proper motion).
+CATALOG_SCENE_EPOCH = 2016.0
 
 
 # multiples.tsv column order. Read by Phase 3 (binary format v6) and
@@ -261,11 +270,15 @@ def _athyg_row_for_component(
 
 
 def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, float] | None:
-    """ICRS RA/Dec + parallax → (x_pc, y_pc, z_pc, dist_pc). Returns
-    ``None`` when the astrometry row is unresolved or carries no
-    positive parallax — Phase 3 reads the empty columns as "no
-    position constraint" and falls back to the AT-HYG single-component
-    position if needed."""
+    """ICRS RA/Dec + parallax → (x_pc, y_pc, z_pc, dist_pc), with the
+    direction PM-propagated from the measurement's native ``ref_epoch``
+    to ``CATALOG_SCENE_EPOCH`` so every emitted position shares one epoch
+    with the single-star catalogue. Gaia routes (native J2016.0) are a
+    zero-Δt no-op; hip2_long_baseline (J1991.25) and athyg_position
+    advance forward. Returns ``None`` when the astrometry row is
+    unresolved or carries no positive parallax — Phase 3 reads the empty
+    columns as "no position constraint" and falls back to the AT-HYG
+    single-component position if needed."""
     if (
         astrometry.ra_deg is None
         or astrometry.dec_deg is None
@@ -273,8 +286,15 @@ def _position_pc(astrometry: ComponentAstrometry) -> tuple[float, float, float, 
         or astrometry.parallax_mas <= 0.0
     ):
         return None
+    ra_deg, dec_deg = astrometry.ra_deg, astrometry.dec_deg
+    if astrometry.ref_epoch is not None:
+        ra_deg, dec_deg = _propagate_position(
+            ra_deg, dec_deg,
+            astrometry.pmra_masyr, astrometry.pmdec_masyr,
+            astrometry.ref_epoch, CATALOG_SCENE_EPOCH,
+        )
     dist_pc = 1000.0 / astrometry.parallax_mas
-    x, y, z = _spherical_to_unit_vec(astrometry.ra_deg, astrometry.dec_deg)
+    x, y, z = _spherical_to_unit_vec(ra_deg, dec_deg)
     return x * dist_pc, y * dist_pc, z * dist_pc, dist_pc
 
 
@@ -473,9 +493,10 @@ def build_multiples_row(
     primary_athyg: AthygRow | None = None,
 ) -> MultiplesRow:
     """Project Stage 2-4 outputs for one component into one canonical
-    ``MultiplesRow`` keyed by ``_system_id_for_pair``. Position is
-    computed at the astrometry's native epoch; proper-motion-to-J2000
-    propagation is deferred to Phase 3 per the Stage 3 docstring.
+    ``MultiplesRow`` keyed by ``_system_id_for_pair``. ``_position_pc``
+    PM-propagates the position from its native epoch to
+    ``CATALOG_SCENE_EPOCH`` so both component rows of a pair — and the
+    single-star catalogue they render alongside — share one epoch.
 
     ``system_anchor`` is the inherited-position fallback — when the
     component's own astrometry resolved to ``"unresolved"`` (tight inner

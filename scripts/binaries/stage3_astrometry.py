@@ -71,9 +71,10 @@ class ComponentAstrometry:
     or its source_id was not covered by ``gaia_dr3_astrometry.tsv``).
 
     ``ref_epoch`` is the native catalog epoch — Gaia DR3 J2016.0 for
-    the Gaia routes, J1991.25 for hip2_long_baseline. Downstream
-    propagation to J2000 happens at multiples.tsv emit time so we
-    don't drop information here.
+    the Gaia routes, J1991.25 for hip2_long_baseline. Stage 6's
+    ``_position_pc`` PM-propagates the position to ``CATALOG_SCENE_EPOCH``
+    (J2016.0) at multiples.tsv emit time; the native epoch is carried
+    through here so no information is dropped before that propagation.
     """
 
     astrometry_via: str
@@ -86,7 +87,7 @@ class ComponentAstrometry:
 
 
 # Hipparcos-2 reference epoch (van Leeuwen 2007 reduction). Stored at
-# module scope so the HIP2 branch and downstream J2000 propagation
+# module scope so the HIP2 branch and Stage 6's epoch propagation
 # both pull from the same constant.
 HIP2_REF_EPOCH = 1991.25
 

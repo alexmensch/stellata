@@ -62,7 +62,7 @@ from subdivide import (  # noqa: E402, F401
 )
 from stage2_resolve import (  # noqa: E402, F401
     RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
-    _athyg_position_at_epoch, _propagate_position,
+    _athyg_position_at_epoch, _propagate_position, _spherical_to_unit_vec,
     build_athyg_position_grid, build_pair_by_wds_disc,
     find_nearest_athyg_at_position, group_orb6_by_pair,
     iter_decomposing_pair_components,
@@ -95,7 +95,8 @@ from stage5_optical import (  # noqa: E402, F401
     classify_all_pairs, classify_pair_optical, optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
-    ASTROMETRY_VIA_SYSTEM_INHERITED, CIRCULAR_ORBIT_OMEGA_RAD,
+    ASTROMETRY_VIA_SYSTEM_INHERITED, CATALOG_SCENE_EPOCH,
+    CIRCULAR_ORBIT_OMEGA_RAD, _position_pc,
     ESTIMATED_ELEMENT_ORBIT_VIAS, MULTIPLES_TSV_COLUMNS,
     ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
     A_VIA_CATALOG, A_VIA_KEPLER_MASS_ESTIMATE, A_VIA_NONE, A_VIA_VALUES,
