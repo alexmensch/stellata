@@ -606,6 +606,44 @@ corpus in `known-stars.tsv` pins Sirius B's record specifically
 (addressed by gaia_source_id, no HIP) as a stand-in for the
 broader category.
 
+### Renderable-companion wings
+
+The three passes below that set `FLAG_BINARY_PRIMARY` (the chart-mode
+wings bit) — geometric `inferBinaries`, the CCDM pass, the eclipsing
+sweep — are all keyed on evidence that is unaligned with the
+*presence of a rendered companion*. A physical pair wider than the
+`0.005 pc` geometric cell, not CCDM `C/G/O`, and not eclipsing
+(Canopus at 0.46 pc; 16 Cyg A, whose promoted placement exceeds the
+geometric cell) shows a companion or a live orbit with no wings on the
+anchor. `wingRenderablePrimaries` (run after those three passes, over
+the post-sort `buildCatalogRowIndexMap`) closes that gap:
+
+- **Renders-a-companion gate.** For each non-standalone
+  multiples.tsv pair, primary and secondary resolve to catalog records
+  through the same `gaia → hip → synth` priority
+  `build-runtime-binaries.py`'s `resolve_idx` uses — including the
+  blended-secondary synth retry (a secondary carrying the primary's
+  gaia/hip resolves onto the primary's own record; the synth slot
+  promotion minted is the true companion). A pair whose two sides
+  resolve to DISTINCT records renders a companion; the winged set
+  therefore tracks `binaries.bin`'s primaries.
+- **One glyph per WDS system.** Records participating in a rendered
+  pair are grouped by WDS root; the bit lands on the brightest
+  participant only (the mutual-primary / CCDM brightest-member
+  contract). A hierarchical system (Castor Ca,Cb inside the outer
+  pairs) gets one glyph on the system anchor, never one per inner
+  pair. A system any earlier pass already flagged is skipped, so it
+  keeps its single glyph.
+- **Additive only.** The pass never clears wings, so the
+  reverse-direction cases stay correct: eclipsing binaries (an
+  eclipsed star is a binary by convention even with a
+  spectroscopically-unresolved companion) and iconic CCDM / Hipparcos
+  doubles whose faint secondary isn't in the classic-IDs catalog
+  (ν³ CMa = HDS 915, the Sirius-B pattern) keep their wings whether or
+  not a second star renders.
+
+`renderableCompanionWinged` in build-counts pins the count.
+
 ### Component-letter stamping
 
 `stampComponentLetters` runs immediately after `promoteCompanions`
@@ -658,11 +696,13 @@ own output, and it is not a stellar multiple, so it earns neither an
 intrinsic-variable ring/pulse nor multi-star wings and renders as an
 ordinary star. `EP+DSCT` and the like keep the pulsator's ring.
 Eclipsing binaries are extrinsically variable, so after the CCDM pass a
-final sweep ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
+sweep ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
 every `VAR_TYPE_ECLIPSING` record not already flagged
 (`eclipsingWinged` in build-counts); the runtime also suppresses their
 cosmetic pulsation by this byte alone. They surface as multi-star
-systems, never intrinsic-variable rings.
+systems, never intrinsic-variable rings. (A fourth wings pass,
+`wingRenderablePrimaries`, then covers physical pairs none of these
+three reach — see § Companion promotion, Renderable-companion wings.)
 
 Both GCVS files are tracked via Git LFS rather than downloaded at build
 time — they update rarely (yearly-ish). If bumping to a new GCVS

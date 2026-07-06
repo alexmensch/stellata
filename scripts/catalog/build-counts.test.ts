@@ -23,6 +23,7 @@ function baseCounts(): BuildCounts {
     ccdmFlagged: 200,
     ccdmSuppressedOptical: 50,
     eclipsingWinged: 300,
+    renderableCompanionWinged: 400,
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,

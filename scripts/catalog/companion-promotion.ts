@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 
 import {
   FLAG_HAS_NAME,
+  FLAG_BINARY_PRIMARY,
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
   SOLAR_BV_FALLBACK,
@@ -1643,4 +1644,88 @@ export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
     }
   }
   return { byGaia, byHip, bySynth };
+}
+
+// ---- Wings for renderable-companion primaries --------------------------
+
+/** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every
+ *  physical system that renders a companion but which build-catalog's three
+ *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
+ *  A pair renders a companion when primary and secondary resolve to DISTINCT
+ *  catalog records under the gaia → hip → synth priority
+ *  build-runtime-binaries.py's `resolve_idx` uses, so the winged set tracks
+ *  binaries.bin's primaries. Invariants: one glyph per WDS system, on the
+ *  brightest participant (skips a system any earlier pass already flagged);
+ *  additive only, so eclipsing / iconic doubles with no rendered companion
+ *  keep their wings. Returns the count newly winged. See scripts/catalog/
+ *  README.md § Companion promotion. */
+export function wingRenderablePrimaries(
+  rows: MultiplesTsvRow[],
+  stars: Star[],
+  rowIndexMap: CatalogRowIndexMap,
+): number {
+  const resolveId = (gaia: string | null, hip: number | null): number | null => {
+    if (gaia) {
+      const hit = rowIndexMap.byGaia[gaia];
+      if (hit !== undefined) return hit;
+    }
+    if (hip !== null && hip > 0) {
+      const hit = rowIndexMap.byHip[`${hip}`];
+      if (hit !== undefined) return hit;
+    }
+    return null;
+  };
+  const synthSlot = (systemId: string, comp: string): number | null => {
+    const key = composeSyntheticId(systemId, comp);
+    if (key === null) return null;
+    const hit = rowIndexMap.bySynth[key];
+    return hit === undefined ? null : hit;
+  };
+
+  // Catalog indices participating in a rendered pair, grouped by WDS root.
+  const perSystem = new Map<string, Set<number>>();
+  for (const cursor of groupBySystem(rows).values()) {
+    const primary = cursor.primary;
+    if (primary === null) continue;
+    const root = wdsRootOf(primary.systemId);
+    if (root === null) continue;
+    const priIdx = resolveId(primary.gaiaSourceId, primary.hip)
+      ?? synthSlot(primary.systemId, primary.comp);
+    if (priIdx === null) continue;
+    for (const sec of cursor.secondaries) {
+      if (sec.orbitRole !== 'secondary') continue;
+      let secIdx = resolveId(sec.gaiaSourceId, sec.hip);
+      // A blended secondary carries the primary's gaia/hip, so its id-first
+      // resolve lands on the primary's own record; promotion minted a synth
+      // slot for exactly that case (build-runtime-binaries.py's writer runs
+      // the same retry before declaring the pair degenerate).
+      if (secIdx === null || secIdx === priIdx) {
+        const comp = canonicalCompLetter(primary.comp, sec.comp);
+        const synth = synthSlot(sec.systemId, comp);
+        if (synth !== null && synth !== priIdx) secIdx = synth;
+      }
+      if (secIdx === null || secIdx === priIdx) continue;
+      let set = perSystem.get(root);
+      if (!set) { set = new Set(); perSystem.set(root, set); }
+      set.add(priIdx);
+      set.add(secIdx);
+    }
+  }
+
+  let winged = 0;
+  for (const indices of perSystem.values()) {
+    let anchor = -1;
+    let alreadyWinged = false;
+    for (const idx of indices) {
+      if ((stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0) {
+        alreadyWinged = true;
+        break;
+      }
+      if (anchor < 0 || stars[idx].absmag < stars[anchor].absmag) anchor = idx;
+    }
+    if (alreadyWinged || anchor < 0) continue;
+    stars[anchor].flags |= FLAG_BINARY_PRIMARY;
+    winged++;
+  }
+  return winged;
 }

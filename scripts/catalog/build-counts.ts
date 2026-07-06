@@ -41,6 +41,12 @@ export interface BuildCounts {
    *  varType == ECLIPSING records not already flagged by the geometric
    *  or CCDM passes. */
   eclipsingWinged: number;
+  /** FLAG_BINARY_PRIMARY bits newly set by the renderable-companion pass:
+   *  physical systems whose primary/secondary resolve to distinct catalog
+   *  records (a promoted companion or a binaries.bin orbit) but which the
+   *  geometric, CCDM, and eclipsing passes all left unflagged. One per WDS
+   *  system anchor; excludes systems already flagged. Canopus, 16 Cyg A. */
+  renderableCompanionWinged: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
   /** AT-HYG rows the Bailer-Jones override is allowed to fire on:
