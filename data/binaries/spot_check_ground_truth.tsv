@@ -1,0 +1,94 @@
+category	name	wds_id	component	expected_resolve_via	expected_gaia_source_id	note
+naked_eye_double	Albireo A	19307+2758	A	simbad_xid	2026116260337482112	SIMBAD * bet01 Cyg
+naked_eye_double	Albireo B	19307+2758	B	simbad_xid	2026113339752723456	SIMBAD * bet02 Cyg; the classic optical-vs-physical showcase pair — Stage 2 rows exist regardless of the Stage 5 verdict
+naked_eye_double	Mizar A	13239+5456	A	simbad_xid	1563590579347125632	SIMBAD * zet01 UMa
+naked_eye_double	Mizar Aa	13239+5456	Aa	orb6_hip	1563590579347125632	sub-letter carries the letter-A source; ORB6 spectroscopic pair
+naked_eye_double	Mizar B	13239+5456	B	simbad_xid	1563590510627624064	SIMBAD * zet02 UMa
+naked_eye_double	Alcor	13239+5456	C	unresolved		SIMBAD * g UMa carries Gaia DR3 1565090003967879424 but stores no WDS J13239+5456C ident, and position tiers are unwired — expect this row to flip when position_pm lands
+naked_eye_double	ksi UMa A	11182+3132	A	simbad_xid	756853643638639104	SIMBAD * ksi UMa A; stellata-dch.74 cascade showcase
+naked_eye_double	ksi UMa B	11182+3132	B	simbad_xid	756853643637996160	SIMBAD * ksi UMa B
+naked_eye_double	gam Vir A	12417-0127	A	athyg_gaia_native	3683687763520080384	Porrima; SIMBAD * gam Vir
+naked_eye_double	gam Vir B	12417-0127	B	simbad_xid	3683687763520080256	SIMBAD * gam Vir B
+naked_eye_double	gam01 Leo	10200+1950	A	unresolved		Algieba; SIMBAD * gam01 Leo carries no DR3 (saturated giant)
+naked_eye_double	gam02 Leo	10200+1950	B	unresolved		SIMBAD * gam02 Leo carries no DR3
+naked_eye_double	gam01 And	02039+4220	A	unresolved		Almach; SIMBAD * gam01 And carries no DR3; bare HIP 9640 retained
+naked_eye_double	gam02 And	02039+4220	BC	simbad_xid	346231302441905920	aggregate BC token with its own SIMBAD object * gam02 And
+gaia_saturated_bright	Sirius A	06451-1643	A	unresolved		SIMBAD * alf CMa carries no DR3; bare HIP 32349 feeds Stage 3 hip2_long_baseline
+gaia_saturated_bright	Sirius B	06451-1643	B	simbad_xid	2947050466531873024	SIMBAD * alf CMa B (white dwarf); oid reached via wds_xids_overrides.tsv — SIMBAD stores no WDS J06451-1643B ident
+gaia_saturated_bright	Procyon A	07393+0514	A	unresolved		SIMBAD * alf CMi carries no DR3
+gaia_saturated_bright	Procyon B	07393+0514	B	unresolved		SIMBAD * alf CMi B (white dwarf) has an entry but no DR3
+gaia_saturated_bright	alf Cen A	14396-6050	A	unresolved		SIMBAD * alf Cen A carries no DR3 (saturation)
+gaia_saturated_bright	alf Cen B	14396-6050	B	ccdm_hip	5877748442128924544	known_bug:stellata-dch.101 — HIP 71681 xwalk delivers a G=20.9 parallax-less background source; SIMBAD: * alf Cen B has no DR3, so the true expectation is unresolved/blank
+gaia_saturated_bright	Capella Aa	05167+4600	Aa	unresolved		SIMBAD * alf Aur carries no DR3
+gaia_saturated_bright	Capella H	05167+4600	H	simbad_xid	211810233512673792	G 96-29A — Capella's distant M-dwarf companion pair
+gaia_saturated_bright	Capella L	05167+4600	L	simbad_xid	211810233512673920	G 96-29B
+gaia_saturated_bright	Castor A	07346+3153	A	orb6_hip	892348694913501952	known_bug:stellata-dch.101 — HIP 36850 xwalk delivers Castor B's source (G=2.92); SIMBAD: * alf Gem A has no DR3, so the true expectation is unresolved/blank
+gaia_saturated_bright	Castor B	07346+3153	B	simbad_xid	892348694913501952	SIMBAD attributes this source to * alf Gem B
+high_pm	Proxima Cen	14396-6050	C	simbad_xid	5853498713190525696	SIMBAD NAME Proxima Centauri
+high_pm	61 Cyg A	21069+3845	A	orb6_hip	1872046609345556480	SIMBAD * 61 Cyg A
+high_pm	61 Cyg B	21069+3845	B	simbad_xid	1872046574983497216	SIMBAD * 61 Cyg B
+high_pm	40 Eri A	04153-0739	A	simbad_xid	3195919528989223040	Keid; SIMBAD * omi02 Eri
+high_pm	40 Eri B	04153-0739	B	simbad_xid	3195919254111315712	white dwarf; SIMBAD * omi02 Eri B
+high_pm	40 Eri C	04153-0739	C	simbad_xid	3195919254111314816	M dwarf; SIMBAD * omi02 Eri C
+high_pm	eps Ind A	22034-5647	A	simbad_xid	6412595290592307840	SIMBAD * eps Ind
+high_pm	eps Ind B	22034-5647	B	simbad_xid	6412596012146801152	brown-dwarf pair aggregate; Ba/Bb sub-letters stay unresolved
+cluster_member	Alcyone	03475+2406	A	simbad_xid	66714384142368256	Pleiades; SIMBAD * eta Tau
+cluster_member	Atlas Aa1	03492+2403	Aa1	orb6_hip	66526127137440128	Aa1,2 token; ORB6 spectroscopic pair
+cluster_member	Electra	03449+2407	A	simbad_xid	65271996684817280	SIMBAD * 17 Tau
+cluster_member	Taygeta	03452+2428	A	simbad_xid	65296907494549120	SIMBAD * q Tau
+cluster_member	Maia	03458+2422	A	simbad_xid	65283232316451328	SIMBAD * 20 Tau
+cluster_member	Merope	03463+2357	A	simbad_xid	65205373152172032	SIMBAD * 23 Tau
+cluster_member	tet02 Tau	04287+1552	A	simbad_xid	3312744219988782720	Hyades; WDS letter A is tet02 (the brighter)
+cluster_member	tet01 Tau	04287+1552	B	simbad_xid	3312748824193704832	Hyades; WDS letter B is tet01 — Bayer/letter inversion trap
+cluster_member	tet01 Ori A	05353-0523	A	simbad_xid	3017364132050194688	Trapezium dense-field stress test
+cluster_member	tet01 Ori B	05353-0523	B	simbad_xid	3017364132049943680	SIMBAD * tet01 Ori B
+cluster_member	tet01 Ori C	05353-0523	C	simbad_xid	3017364063330718080	SIMBAD * tet01 Ori C
+cluster_member	tet01 Ori D	05353-0523	D	simbad_xid	3017364063330465152	SIMBAD * tet01 Ori D
+cluster_member	tet01 Ori E	05353-0523	E	simbad_xid	3017364127743288704	SIMBAD * tet01 Ori E
+distant_supergiant	Rigel A	05145-0812	A	unresolved		SIMBAD * bet Ori carries no DR3; bare HIP 24436 retained
+distant_supergiant	Rigel B	05145-0812	BC	simbad_xid	3206991473643150464	SIMBAD * bet Ori B under the WDS BC aggregate token
+distant_supergiant	Betelgeuse	05552+0724	Aa	unresolved		SIMBAD * alf Ori carries no DR3
+distant_supergiant	mu Cep	21435+5847	A	simbad_xid	2202630001603369856	red supergiant WITH a DR3 source — contrast case to the saturated set
+distant_supergiant	Alnitak A	05407-0157	A	unresolved		SIMBAD * zet Ori A carries no DR3; bare HIP 26727 retained
+distant_supergiant	Alnitak C	05407-0157	C	simbad_xid	3216549631300819072	SIMBAD * zet Ori C
+distant_supergiant	Antares A	16294-2626	A	absent		known_bug:stellata-dch.102 — blank WDS components field skips the pair before Stage 2; SIMBAD * alf Sco carries no DR3 either
+distant_supergiant	Antares B	16294-2626	B	absent		known_bug:stellata-dch.102; SIMBAD * alf Sco B carries no DR3
+distant_supergiant	Deneb	20414+4517	A	absent		known_bug:stellata-dch.102 — blank WDS components field; SIMBAD * alf Cyg carries no DR3
+variable	Algol	03082+4057	Aa1	unresolved		SIMBAD * bet Per carries no DR3; Aa1,2 spectroscopic token
+variable	Mira A	02193-0259	A	simbad_xid	2493390319631956352	SIMBAD * omi Cet; Mira prototype
+variable	Mira B	02193-0259	Ab	unresolved		VZ Cet = SIMBAD * omi Cet B has an entry but no DR3; sub-letter idents not stored by SIMBAD
+variable	del Cep A	22292+5825	A	simbad_xid	2200153454733285248	Cepheid prototype
+variable	del Cep B	22292+5825	B	simbad_xid	2200153420363770496	SIMBAD GCRV 73253
+variable	del Cep C	22292+5825	C	simbad_xid	2200153214212849024	SIMBAD main_id * del Cep B sits at WDS letter C — naming/letter trap
+variable	bet Lyr Aa1	18501+3322	Aa1	orb6_hip	2090687795056051328	Sheliak; semidetached eclipsing prototype; Aa1,2 token
+variable	bet Lyr B	18501+3322	B	simbad_xid	2090687726329643392	SIMBAD * bet Lyr B
+variable	AR Cas A	23300+5833	A	simbad_xid	2011150635728091648	eclipsing; anchor of the multi_component AR Cas set below
+multi_component	eta Cas A	00491+5749	A	athyg_gaia_native	425040000962559616	Achird; SIMBAD * eta Cas
+multi_component	eta Cas B	00491+5749	B	simbad_xid	425040000962497792	SIMBAD * eta Cas B
+multi_component	eta Cas H	00491+5749	H	simbad_xid	425066217440416128	unpaired standalone letter with its own HIP 3809; SIMBAD HD 236533
+multi_component	zet Cnc A	08122+1739	A	simbad_xid	657244586015485440	Tegmine; SIMBAD * zet01 Cnc A
+multi_component	zet Cnc B	08122+1739	B	simbad_xid	657244521593509376	SIMBAD * zet01 Cnc B
+multi_component	zet Cnc C	08122+1739	C	simbad_xid	657244521593508992	SIMBAD * zet02 Cnc
+multi_component	nu Sco Aa	16120-1928	Aa	orb6_hip	6245697981070158080	Jabbah; e=0.92 ORB6 inner pair (stellata-dch.73 showcase)
+multi_component	nu Sco B	16120-1928	B	simbad_xid	6245697981073442176	SIMBAD * nu. Sco B
+multi_component	nu Sco C	16120-1928	C	simbad_xid	6245698187231874816	SIMBAD * nu.02 Sco A
+multi_component	nu Sco D	16120-1928	D	simbad_xid	6245698565188996992	SIMBAD * nu.02 Sco B
+multi_component	AR Cas B	23300+5833	B	ccdm_hip	2011150635728091648	blend-inherit regime: B has no own DR3 and no SIMBAD entry; CCDM sibling HIP routes to A's source — id equals A's by design
+multi_component	AR Cas C	23300+5833	C	simbad_xid	2011151357277942400	SIMBAD HD 221237A
+multi_component	AR Cas H	23300+5833	H	simbad_xid	2011151357282588032	unpaired standalone letter; SIMBAD UCAC4 743-089674
+multi_component	eps Lyr A	18443+3940	A	orb6_hip	2098237660364079232	Double Double 2+2 quadruple; SIMBAD * eps01 Lyr A
+multi_component	eps Lyr B	18443+3940	B	simbad_xid	2098237656065233792	SIMBAD * eps01 Lyr B
+multi_component	eps Lyr C	18443+3940	C	orb6_hip	2098202128093842432	SIMBAD * eps02 Lyr A
+multi_component	eps Lyr D	18443+3940	D	simbad_xid	2098202128100428288	SIMBAD * eps02 Lyr B
+multi_component	sig Ori AB	05387-0236	AB	simbad_xid	3216486443742786048	aggregate token with its own SIMBAD object * sig Ori
+multi_component	sig Ori B	05387-0236	B	ccdm_hip	3216486443742786048	0.26-arcsec blend-inherit: no separate DR3 source; id equals the AB source by design
+multi_component	sig Ori E	05387-0236	E	simbad_xid	3216486478101981056	helium-strong variable; SIMBAD * sig Ori E
+multi_component	Castor C	07346+3153	C	simbad_xid	892348454394856064	YY Gem eclipsing M-dwarf pair
+obscure_resolved	66 Cet B	02128-0224	B	simbad_xid	2494066897240089984	stellata-dch.60 wds_notes_hip set (STF 231); SIMBAD * 66 Cet B
+obscure_resolved	66 Cet C	02128-0224	C	simbad_xid	2494068443428315136	SIMBAD GSC 04690-00914
+obscure_resolved	TOK 71 D	02167-6324	D	simbad_xid	4700838342513694208	stellata-dch.60 set; SIMBAD HD 14540
+obscure_resolved	STF 548 B	04289+3022	B	simbad_xid	171160494059654912	stellata-dch.60 set; SIMBAD HD 28271B
+obscure_resolved	HJ 3834 E	06047-4505	E	simbad_xid	5567900121118276736	stellata-dch.60 set; SIMBAD HD 41700
+obscure_resolved	DUN 116 B	11567-3216	B	simbad_xid	3466924200065405824	stellata-dch.60 set; SIMBAD HD 103743
+obscure_resolved	STF1931 B	15187+1026	B	simbad_xid	1168984617870183424	stellata-dch.60 set; SIMBAD HD 136160B
+obscure_resolved	STF1999 B	16044-1127	B	simbad_xid	4343064508746082304	stellata-dch.60 set; SIMBAD HD 144088
