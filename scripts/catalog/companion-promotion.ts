@@ -755,7 +755,10 @@ function composeCompanionName(
     row, primary, primaryStar, constellations, systemPrimaryStar, true,
   );
   if (!base) return null;
-  return joinComponentName(stripDoubledParentToken(base, canonicalComp), canonicalComp);
+  return joinComponentName(
+    stripDoubledParentToken(base, canonicalComp, primary?.comp ?? null),
+    canonicalComp,
+  );
 }
 
 /** "<base> <comp>", or just base when comp is empty. */
@@ -824,24 +827,29 @@ function resolveCompanionNameBase(
     ?? starNameBase(systemPrimaryStar, constellations, true);
 }
 
-/** Strip a trailing parent-component token from a name base when the
- *  component about to be appended would double it. A subdivided inner
- *  pair's local anchor is the parent component's own record, whose name
- *  already carries that letter (Castor's YY Gem primary Ca resolves onto
- *  the "Castor C" record); joining the canonical comp "Cb" would yield
- *  "Castor C Cb". The canonical comp already encodes the full path from
- *  the root, so the parent letter belongs to the comp, not the base —
- *  "Castor" + "Cb" = "Castor Cb". Only fires when the base ends in exactly
- *  the comp's parent token (" C" for "Cb", " Aa" for "Aa1"); a base like
- *  "15 Mon" or "HIP 22812" is untouched. */
+/** Strip a trailing component-letter token from a name base when the
+ *  canonical comp about to be appended would double it. Two shapes:
+ *   - The base ends in the comp's own PARENT token — a subdivided inner
+ *     pair whose local anchor is the parent component's record, already
+ *     carrying that letter (Castor's YY Gem primary Ca resolves onto the
+ *     "Castor C" record; "Castor C" + "Cb" → "Castor Cb").
+ *   - The base ends in the LOCAL PRIMARY's comp — a chained pair-row
+ *     promotion whose anchor is itself a promoted "<designation> <letter>"
+ *     record (AR Cas's F,G pair: "HIP 115990 F" + "G" → "HIP 115990 G").
+ *  The canonical comp already encodes the full path from the root, so the
+ *  intermediate letter belongs to the comp, not the base. Only a trailing
+ *  " <token>" that exactly matches one of those component letters is
+ *  stripped; a base like "15 Mon" or "HIP 22812" is untouched. */
 export function stripDoubledParentToken(
   base: string,
   canonicalComp: string,
+  primaryComp: string | null = null,
 ): string {
-  const parentTok = parentComponentToken(canonicalComp);
-  if (parentTok === null) return base;
-  const suffix = ` ${parentTok}`;
-  if (base.endsWith(suffix)) return base.slice(0, base.length - suffix.length);
+  for (const tok of [parentComponentToken(canonicalComp), primaryComp]) {
+    if (!tok) continue;
+    const suffix = ` ${tok}`;
+    if (base.endsWith(suffix)) return base.slice(0, base.length - suffix.length);
+  }
   return base;
 }
 

@@ -677,6 +677,16 @@ describe('promoteCompanions', () => {
       expect(stripDoubledParentToken('Castor', 'B')).toBe('Castor');   // no parent
       expect(stripDoubledParentToken('Sirius', 'C')).toBe('Sirius');
     });
+    it('strips the local primary comp on a chained pair-row promotion', () => {
+      // AR Cas F,G: the local anchor is the promoted "HIP 115990 F"
+      // record; appending "G" must replace F's letter, not double it.
+      expect(stripDoubledParentToken('HIP 115990 F', 'G', 'F')).toBe('HIP 115990');
+      // A real name ending in the primary comp letter is likewise replaced.
+      expect(stripDoubledParentToken('Achird A', 'B', 'A')).toBe('Achird');
+      // The primary comp does not match the tail → base untouched.
+      expect(stripDoubledParentToken('HIP 115990 F', 'G', 'A')).toBe('HIP 115990 F');
+      expect(stripDoubledParentToken('Sirius', 'B', 'A')).toBe('Sirius');
+    });
   });
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {
@@ -1610,12 +1620,11 @@ describe('promoteCompanions', () => {
       '3195919254111315712',  // B
       '3196027418567684992',  // D
     ].sort());
-    // D's name composes through Keid (via B→Keid chain... actually D's
-    // primary in BD is B, and B's proper is "Keid B", so composeCompanionName
-    // gets base="Keid B" → "Keid B D". Reasonable for now; sibling-pair
-    // bead can tighten if the form looks wrong in practice.
+    // D is a top-level system component; its BD-pair anchor is the promoted
+    // "Keid B" record, so composeCompanionName strips the intermediate B
+    // rather than doubling it — "Keid D", not "Keid B D".
     const d = newStars.find(s => s.gaiaSourceId === '3196027418567684992');
-    expect(d?.proper).toMatch(/^Keid B/);
+    expect(d?.proper).toBe('Keid D');
   });
 
   it('skips pair-row-primary promotion when the row has no own gaia AND no own hip', () => {
