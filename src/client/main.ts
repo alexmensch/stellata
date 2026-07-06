@@ -17,7 +17,6 @@ import { createHeliopauseLabel } from './solar-system/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time-scrubber-widget';
 import { bindUnitToggle } from './ui/unit-toggle';
-import { bindGalCoordFormatToggle } from './ui/gal-coord-toggle';
 import { createGalacticGridLabels } from './galactic/galactic-grid-labels';
 import { registerThemeStellata } from './ui/theme-toggle';
 import { bindChartMode } from './chart-mode/chart-mode';
@@ -157,7 +156,6 @@ async function main() {
     })();
 
     bindUnitToggle();
-    bindGalCoordFormatToggle();
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);

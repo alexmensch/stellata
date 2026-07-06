@@ -384,16 +384,6 @@ describe('url-state', () => {
       expect(view.unit).toBeUndefined();
     });
 
-    it('round-trips galFmt=dms (decimal is the default, so only dms is encoded)', () => {
-      const { view } = roundtrip({ galFmt: 'dms' });
-      expect(view.galFmt).toBe('dms');
-    });
-
-    it('galFmt=deg is the default and is not encoded', () => {
-      const { view } = roundtrip({ galFmt: 'deg' });
-      expect(view.galFmt).toBeUndefined();
-    });
-
     it('round-trips mode=observe', () => {
       const { view } = roundtrip({ mode: 'observe' });
       expect(view.mode).toBe('observe');

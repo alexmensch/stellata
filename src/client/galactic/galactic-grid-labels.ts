@@ -2,37 +2,38 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { galacticDirToIcrs } from './galactic-coords';
 import { SPHERE_RADIUS_PC } from './galactic-grid';
-import { formatGalLon, formatGalLat } from '../ui/gal-coord-format';
 import { projectToScreenInto } from '../overlays/overlay-project';
 import { setNumAttr, setStrAttr, setStyle, setText } from '../overlays/dirty-attr';
 
 // Orientation labels for the galactic coordinate sphere (galactic-grid.ts).
-// One label per grid line — every meridian (galactic longitude l) and every
-// latitude ring (b, including the equator; the poles carry no ring). Rather
-// than sitting on the l/b node (where the text would cross the orthogonal
-// line), each label slides along its own line to where the line exits the
-// viewport, settling at the bottom-most edge crossing, tilted onto the line's
-// slope and inset just inside the frame — and skipping the on-screen chrome
-// (settings panel, brand box, scale bar, meta) so it never lands on top of
-// them. Text runs through formatGalLon/formatGalLat so the decimal↔DMS toggle
-// reformats the live labels.
+// One whole-degree label per grid line — every meridian (galactic longitude
+// l) and every latitude ring (b, incl. the equator; the ±90° poles carry no
+// ring). Rather than sit on the l/b node (where the text would cross the
+// orthogonal line), each label slides along its own line to where the line
+// exits the viewport, settling at the bottom-most edge crossing, tilted onto
+// the line's slope. Its full rotated box is kept a standard pad inside the
+// frame and clear of on-screen chrome (settings panel, brand box, scale bar,
+// meta), and a deterministic repulsion pass spreads labels that would
+// otherwise pile up where many lines converge near an edge.
 
 const DEG = Math.PI / 180;
-// Meridians every 10° of l; latitude rings every 10° of b incl. the equator,
-// excluding the ±90° poles (no ring there — the meridians just converge).
 const MERIDIAN_COUNT = 36;
 const LAT_RING_DEGS = [0, -80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
-// Line-sampling resolution — coarse is fine, the edge crossing is found by
-// linear interpolation between samples.
 const MERIDIAN_SAMPLES = 19; // over b ∈ [-84°, 84°]
 const MERIDIAN_MAX_B_DEG = 84;
 const RING_SAMPLES = 37; // over l ∈ [0°, 360°], last repeats the first to close
-// Standard orthogonal padding: a label keeps this gap from both the viewport
+
+// Standard orthogonal padding kept between a label's box and both the viewport
 // edge it drops to and any chrome rect it avoids.
 const ORTHO_PAD_PX = 10;
-// Chrome to keep labels clear of; hidden elements report a zero-area rect and
-// are ignored.
 const EXCLUDE_SELECTORS = ['ui-top', 'ui-top-left', 'scale-bar', 'meta', 'controls-restore-btn'];
+
+// Text-box estimate for layout (avoids a per-frame getBBox). Slightly generous
+// so repulsion leaves a real visual gap. Track LABEL_FONT_PX to styles.css.
+const CHAR_W_PX = 6.5;
+const LABEL_HALF_H_PX = 6;
+// Deterministic overlap-resolution sweeps per frame.
+const SEPARATION_ITERS = 6;
 
 export interface Rect {
   left: number;
@@ -45,22 +46,47 @@ export interface EdgeLabel {
   x: number;
   y: number;
   rotDeg: number;
+  /** Axis-aligned half-extents of the rotated text box. */
+  hx: number;
+  hy: number;
 }
 
-function inAnyRect(x: number, y: number, rects: Rect[]): boolean {
+function clamp(v: number, lo: number, hi: number): number {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+// AABB half-extents of a text box (half-size halfW × halfH) rotated by rotRad.
+function rotatedHalfExtents(halfW: number, halfH: number, rotRad: number): [number, number] {
+  const c = Math.abs(Math.cos(rotRad));
+  const s = Math.abs(Math.sin(rotRad));
+  return [halfW * c + halfH * s, halfW * s + halfH * c];
+}
+
+function boxesOverlap(
+  ax: number, ay: number, ahx: number, ahy: number,
+  bx: number, by: number, bhx: number, bhy: number,
+): boolean {
+  return Math.abs(ax - bx) < ahx + bhx && Math.abs(ay - by) < ahy + bhy;
+}
+
+function overlapsAnyRect(x: number, y: number, hx: number, hy: number, rects: Rect[]): boolean {
   for (const r of rects) {
-    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+    const rcx = (r.left + r.right) / 2;
+    const rcy = (r.top + r.bottom) / 2;
+    const rhx = (r.right - r.left) / 2;
+    const rhy = (r.bottom - r.top) / 2;
+    if (boxesOverlap(x, y, hx, hy, rcx, rcy, rhx, rhy)) return true;
   }
   return false;
 }
 
 /**
  * Place a grid-line label at the bottom-most point where the projected line
- * (xs/ys, with NaN entries for samples behind the camera) exits the viewport.
- * The label is inset `insetPx` inside the crossed edge along its inward normal
+ * (xs/ys, NaN for samples behind the camera) exits the viewport. The full
+ * rotated text box (from halfW/halfH) is clamped a `pad` inside the viewport
  * and rotated onto the crossing segment's tangent (folded into (−90°, 90°] so
- * it stays upright). Crossings whose inset position lands inside an excluded
- * chrome rect are skipped. Returns null when the line makes no usable exit.
+ * it stays upright); crossings whose box would overlap an excluded chrome rect
+ * are skipped. Returns null when the line makes no usable exit.
  */
 export function edgeLabelPlacement(
   xs: number[],
@@ -68,33 +94,27 @@ export function edgeLabelPlacement(
   n: number,
   w: number,
   h: number,
-  insetPx: number,
+  halfW: number,
+  halfH: number,
+  pad: number,
   exclude: Rect[],
 ): EdgeLabel | null {
   let best: EdgeLabel | null = null;
   let bestY = -Infinity;
 
-  const consider = (
-    cx: number,
-    cy: number,
-    normX: number,
-    normY: number,
-    tx: number,
-    ty: number,
-  ) => {
-    let x = cx + normX * insetPx;
-    let y = cy + normY * insetPx;
-    x = Math.min(Math.max(x, ORTHO_PAD_PX), w - ORTHO_PAD_PX);
-    y = Math.min(Math.max(y, ORTHO_PAD_PX), h - ORTHO_PAD_PX);
-    if (inAnyRect(x, y, exclude)) return;
-    if (y <= bestY) return;
+  const consider = (cx: number, cy: number, tx: number, ty: number) => {
     const len = Math.hypot(tx, ty);
     if (len < 1e-6) return;
     let rotDeg = (Math.atan2(ty, tx) * 180) / Math.PI;
     if (rotDeg > 90) rotDeg -= 180;
     else if (rotDeg <= -90) rotDeg += 180;
+    const [hx, hy] = rotatedHalfExtents(halfW, halfH, rotDeg * DEG);
+    const x = clamp(cx, pad + hx, w - pad - hx);
+    const y = clamp(cy, pad + hy, h - pad - hy);
+    if (overlapsAnyRect(x, y, hx, hy, exclude)) return;
+    if (y <= bestY) return;
     bestY = y;
-    best = { x, y, rotDeg };
+    best = { x, y, rotDeg, hx, hy };
   };
 
   for (let i = 0; i + 1 < n; i++) {
@@ -106,41 +126,100 @@ export function edgeLabelPlacement(
     const dx = x2 - x1;
     const dy = y2 - y1;
 
-    // Bottom edge y=h, inward normal (0,-1).
     if ((y1 - h) * (y2 - h) < 0 && dy !== 0) {
-      const t = (h - y1) / dy;
-      const cx = x1 + t * dx;
-      if (cx >= 0 && cx <= w) consider(cx, h, 0, -1, dx, dy);
+      const cx = x1 + ((h - y1) / dy) * dx;
+      if (cx >= 0 && cx <= w) consider(cx, h, dx, dy);
     }
-    // Top edge y=0, inward normal (0,1).
     if (y1 * y2 < 0 && dy !== 0) {
-      const t = -y1 / dy;
-      const cx = x1 + t * dx;
-      if (cx >= 0 && cx <= w) consider(cx, 0, 0, 1, dx, dy);
+      const cx = x1 + (-y1 / dy) * dx;
+      if (cx >= 0 && cx <= w) consider(cx, 0, dx, dy);
     }
-    // Left edge x=0, inward normal (1,0).
     if (x1 * x2 < 0 && dx !== 0) {
-      const t = -x1 / dx;
-      const cy = y1 + t * dy;
-      if (cy >= 0 && cy <= h) consider(0, cy, 1, 0, dx, dy);
+      const cy = y1 + (-x1 / dx) * dy;
+      if (cy >= 0 && cy <= h) consider(0, cy, dx, dy);
     }
-    // Right edge x=w, inward normal (-1,0).
     if ((x1 - w) * (x2 - w) < 0 && dx !== 0) {
-      const t = (w - x1) / dx;
-      const cy = y1 + t * dy;
-      if (cy >= 0 && cy <= h) consider(w, cy, -1, 0, dx, dy);
+      const cy = y1 + ((w - x1) / dx) * dy;
+      if (cy >= 0 && cy <= h) consider(w, cy, dx, dy);
     }
   }
 
   return best;
 }
 
+/**
+ * Deterministically spread overlapping labels: repeated fixed-order sweeps
+ * push overlapping label pairs apart along their least-overlapping axis (each
+ * moves half), shove labels out of immovable chrome rects, then re-clamp every
+ * label inside the viewport. No randomness — identical inputs give identical
+ * output, so a static camera is stable frame-to-frame.
+ */
+export function separateLabels(
+  labels: EdgeLabel[],
+  chrome: Rect[],
+  w: number,
+  h: number,
+  pad: number,
+): void {
+  const n = labels.length;
+  for (let iter = 0; iter < SEPARATION_ITERS; iter++) {
+    for (let i = 0; i < n; i++) {
+      const a = labels[i];
+      for (let j = i + 1; j < n; j++) {
+        const b = labels[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const ox = a.hx + b.hx - Math.abs(dx);
+        const oy = a.hy + b.hy - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        if (ox < oy) {
+          const push = (dx >= 0 ? 1 : -1) * (ox / 2 + 0.5);
+          a.x -= push;
+          b.x += push;
+        } else {
+          const push = (dy >= 0 ? 1 : -1) * (oy / 2 + 0.5);
+          a.y -= push;
+          b.y += push;
+        }
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      const a = labels[i];
+      for (const r of chrome) {
+        const rcx = (r.left + r.right) / 2;
+        const rcy = (r.top + r.bottom) / 2;
+        const rhx = (r.right - r.left) / 2;
+        const rhy = (r.bottom - r.top) / 2;
+        const dx = a.x - rcx;
+        const dy = a.y - rcy;
+        const ox = a.hx + rhx - Math.abs(dx);
+        const oy = a.hy + rhy - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        if (ox < oy) a.x += (dx >= 0 ? 1 : -1) * (ox + 0.5);
+        else a.y += (dy >= 0 ? 1 : -1) * (oy + 0.5);
+      }
+      a.x = clamp(a.x, pad + a.hx, w - pad - a.hx);
+      a.y = clamp(a.y, pad + a.hy, h - pad - a.hy);
+    }
+  }
+}
+
+// Whole-degree label. Longitude wraps to [0, 360); latitude stays signed.
+function fmtDeg(deg: number, wrap360: boolean): string {
+  let d = Math.round(deg);
+  if (wrap360) d = ((d % 360) + 360) % 360;
+  return `${d}°`;
+}
+
 interface Entry {
   el: SVGTextElement;
   kind: 'lon' | 'lat';
   valueDeg: number;
+  text: string;
+  halfW: number;
   /** ICRS unit directions along the line (fixed in absolute space). */
   dirs: THREE.Vector3[];
+  placement: EdgeLabel | null;
   lastDisplay: string;
   lastText: string;
   lastX: number;
@@ -148,28 +227,30 @@ interface Entry {
   lastTransform: string;
 }
 
-function buildEntries(): Array<Omit<Entry, 'el' | 'lastDisplay' | 'lastText' | 'lastX' | 'lastY' | 'lastTransform'>> {
-  const out: Array<{ kind: 'lon' | 'lat'; valueDeg: number; dirs: THREE.Vector3[] }> = [];
+function buildEntries(): Array<Pick<Entry, 'kind' | 'valueDeg' | 'text' | 'halfW' | 'dirs'>> {
+  const out: Array<Pick<Entry, 'kind' | 'valueDeg' | 'text' | 'halfW' | 'dirs'>> = [];
+  const push = (kind: 'lon' | 'lat', valueDeg: number, dirs: THREE.Vector3[]) => {
+    const text = fmtDeg(valueDeg, kind === 'lon');
+    out.push({ kind, valueDeg, text, halfW: (text.length * CHAR_W_PX) / 2, dirs });
+  };
 
   for (let i = 0; i < MERIDIAN_COUNT; i++) {
-    const lonDeg = (i * 360) / MERIDIAN_COUNT;
-    const lonRad = lonDeg * DEG;
+    const lonRad = ((i * 360) / MERIDIAN_COUNT) * DEG;
     const dirs: THREE.Vector3[] = [];
     for (let s = 0; s < MERIDIAN_SAMPLES; s++) {
       const bDeg = -MERIDIAN_MAX_B_DEG + (s / (MERIDIAN_SAMPLES - 1)) * (2 * MERIDIAN_MAX_B_DEG);
       dirs.push(galacticDirToIcrs(lonRad, bDeg * DEG, new THREE.Vector3()));
     }
-    out.push({ kind: 'lon', valueDeg: lonDeg, dirs });
+    push('lon', (i * 360) / MERIDIAN_COUNT, dirs);
   }
 
   for (const bDeg of LAT_RING_DEGS) {
     const bRad = bDeg * DEG;
     const dirs: THREE.Vector3[] = [];
     for (let s = 0; s < RING_SAMPLES; s++) {
-      const lRad = (s / (RING_SAMPLES - 1)) * 2 * Math.PI;
-      dirs.push(galacticDirToIcrs(lRad, bRad, new THREE.Vector3()));
+      dirs.push(galacticDirToIcrs((s / (RING_SAMPLES - 1)) * 2 * Math.PI, bRad, new THREE.Vector3()));
     }
-    out.push({ kind: 'lat', valueDeg: bDeg, dirs });
+    push('lat', bDeg, dirs);
   }
 
   return out;
@@ -207,6 +288,7 @@ export function createGalacticGridLabels(stellata: Stellata): void {
     return {
       ...spec,
       el,
+      placement: null,
       lastDisplay: 'none',
       lastText: '\0',
       lastX: NaN,
@@ -228,10 +310,6 @@ export function createGalacticGridLabels(stellata: Stellata): void {
     groupVisible = on;
   };
 
-  const hide = (e: Entry) => {
-    e.lastDisplay = setStyle(e.el, 'display', 'none', e.lastDisplay);
-  };
-
   stellata.on('frame', () => {
     if (!stellata.getFilter().showGalacticGrid) {
       setGroupVisible(false);
@@ -245,6 +323,8 @@ export function createGalacticGridLabels(stellata: Stellata): void {
     const h = window.innerHeight;
     const exclude = gatherExcludeRects();
 
+    // Pass 1 — placement per line.
+    const visible: EdgeLabel[] = [];
     for (const e of pool) {
       const dirs = e.dirs;
       const n = dirs.length;
@@ -258,16 +338,22 @@ export function createGalacticGridLabels(stellata: Stellata): void {
           ys[s] = NaN;
         }
       }
+      e.placement = edgeLabelPlacement(xs, ys, n, w, h, e.halfW, LABEL_HALF_H_PX, ORTHO_PAD_PX, exclude);
+      if (e.placement) visible.push(e.placement);
+    }
 
-      const p = edgeLabelPlacement(xs, ys, n, w, h, ORTHO_PAD_PX, exclude);
+    // Pass 2 — deterministic de-overlap.
+    separateLabels(visible, exclude, w, h, ORTHO_PAD_PX);
+
+    // Pass 3 — write DOM.
+    for (const e of pool) {
+      const p = e.placement;
       if (!p) {
-        hide(e);
+        e.lastDisplay = setStyle(e.el, 'display', 'none', e.lastDisplay);
         continue;
       }
-
-      const text = e.kind === 'lon' ? formatGalLon(e.valueDeg) : formatGalLat(e.valueDeg);
       e.lastDisplay = setStyle(e.el, 'display', '', e.lastDisplay);
-      e.lastText = setText(e.el, text, e.lastText);
+      e.lastText = setText(e.el, e.text, e.lastText);
       e.lastX = setNumAttr(e.el, 'x', p.x, e.lastX);
       e.lastY = setNumAttr(e.el, 'y', p.y, e.lastY);
       const transform = `rotate(${p.rotDeg.toFixed(2)} ${p.x.toFixed(2)} ${p.y.toFixed(2)})`;

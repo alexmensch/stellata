@@ -24,9 +24,8 @@ src/client/galactic/
                                   galactic-disc + local-group so both
                                   layers reveal in lockstep.
   galactic-grid.ts                Toggleable b/l coordinate sphere.
-  galactic-grid-labels.ts (+ test) SVG l/b orientation labels riding the
-                                  grid lines. Format toggle in
-                                  src/client/ui/gal-coord-format.ts.
+  galactic-grid-labels.ts (+ test) SVG whole-degree l/b labels that drop
+                                  to the viewport edge of each grid line.
 
 src/client/overlays/                  (full overlay roster in src/client/overlays/README.md)
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
@@ -99,24 +98,19 @@ the camera exactly like the grid.
 
 Rather than sit on the l/b node (where the text would cross the orthogonal
 line), each label **drops along its own line to where the line exits the
-viewport** — the bottom-most edge crossing wins ("drops downhill"), inset
-`ORTHO_PAD_PX` (10 px) inside the crossed edge and rotated onto the crossing
-segment's tangent (folded into (−90°, 90°] to stay upright). Crossings whose
-position lands within 10 px of on-screen chrome (settings panel, brand box,
-scale bar, meta — queried by id each frame, hidden elements ignored) are
-skipped so a label never overlaps them; the next-best crossing is used, or
-the label hides if none survives. The edge-crossing + bottom-most selection
-is the pure, tested `edgeLabelPlacement`. Text runs through
-`formatGalLon`/`formatGalLat` so the decimal↔DMS toggle reformats the live
-labels (see below).
-
-**Coordinate format toggle** (`ui/gal-coord-format.ts` + `ui/gal-coord-toggle.ts`)
-— a getter/setter/onChange singleton mirroring `ui/distance-util.ts` +
-`ui/unit-toggle.ts`. Switches the l/b labels between decimal degrees and
-DMS (`123°24′00″`); the Navigation panel's `#gal-coord-toggle` drives it.
-Decimal is the default and persists in the `?v=` blob via FIELDS_V3 bit 22
-(a zero-byte sentinel — only DMS sets it), mirroring how the pc/ly unit
-flag round-trips.
+viewport** — the bottom-most edge crossing wins ("drops downhill"), with the
+whole rotated text box kept `ORTHO_PAD_PX` (10 px) inside the crossed edge and
+rotated onto the crossing segment's tangent (folded into (−90°, 90°] to stay
+upright). Crossings whose box would land within 10 px of on-screen chrome
+(settings panel, brand box, scale bar, meta — queried by id each frame,
+hidden elements ignored) are skipped so a label never overlaps them; the
+next-best crossing is used, or the label hides if none survives. Where many
+lines converge near an edge, a **deterministic repulsion pass**
+(`separateLabels`) spreads overlapping labels apart (fixed-order pairwise
+push + shove-out-of-chrome + re-clamp — no randomness, so a static camera is
+stable). Edge placement and repulsion are the pure, tested `edgeLabelPlacement`
+/ `separateLabels`. Values are whole degrees (`fmtDeg`) since every grid line
+is on an integer degree — longitude wraps to [0, 360), latitude stays signed.
 
 **Sol + Galactic Centre arrows** (part of the HUD — `hud-overlay.ts`,
 toggled by `filter.showHud`, separately from the sphere/grid). Rendered
