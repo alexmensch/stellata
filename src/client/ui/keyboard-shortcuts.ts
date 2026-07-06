@@ -1,5 +1,6 @@
 import type { Stellata } from '../stellata';
 import { DEFAULT_FOV } from '../stellata';
+import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import {
   pushTapAndCheckTriple,
@@ -21,8 +22,10 @@ export interface KeyboardShortcutsDeps {
   /** Reveal/dismiss the unified debug panel. Bound to the hidden
    *  triple-tap-D affordance. */
   toggleDebugPanel: () => void;
-  /** Open/close the first-class time scrubber. Bound to `T`. */
-  toggleTimeScrubber: () => void;
+  /** The first-class time scrubber. `T` toggles it; while it's open,
+   *  `←`/`→` step rewind/fast-forward, Space toggles play/pause, and
+   *  Backspace resets to live-now. */
+  timeScrubber: TimeScrubberWidget;
 }
 
 export function bindKeyboardShortcuts(
@@ -187,8 +190,36 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 't': case 'T':
-        deps.toggleTimeScrubber();
+        deps.timeScrubber.toggle();
         e.preventDefault();
+        break;
+      // Transport shortcuts, live only while the scrubber is open. When it
+      // isn't, these fall through untouched (no preventDefault) so the keys
+      // keep their default behaviour. The jump date-field is covered by the
+      // targetIsEditable guard above — arrows edit its segments when focused.
+      case 'ArrowRight':
+        if (deps.timeScrubber.isOpen()) {
+          deps.timeScrubber.stepForward();
+          e.preventDefault();
+        }
+        break;
+      case 'ArrowLeft':
+        if (deps.timeScrubber.isOpen()) {
+          deps.timeScrubber.stepBack();
+          e.preventDefault();
+        }
+        break;
+      case ' ':
+        if (deps.timeScrubber.isOpen()) {
+          deps.timeScrubber.togglePlay();
+          e.preventDefault();
+        }
+        break;
+      case 'Backspace':
+        if (deps.timeScrubber.isOpen()) {
+          deps.timeScrubber.reset();
+          e.preventDefault();
+        }
         break;
       case 'o': case 'O':
         // Mirror the panel's observe-button enable rule: only valid when

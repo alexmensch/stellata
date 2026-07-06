@@ -27,6 +27,9 @@ registry only describes what to display.
 | `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
 | `T` | Toggle the time scrubber (`../solar-system/time-scrubber-widget.ts`) |
+| `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
+| `Space` | Time scrubber (while open): play / pause (`togglePlay`) |
+| `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
 | `S` | Toggle `showGalacticGrid` |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |

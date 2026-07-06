@@ -168,6 +168,14 @@ controls + a `datetime-local` jump, and an `×` collapses back. Toggling
 open/closed never changes the clock — only **Reset** returns to live-now
 at 1×.
 
+While the scrubber is open, `←`/`→` rewind/fast-forward, `Space` toggles
+play/pause, and `Backspace` resets. These dispatch from the central
+`ui/keyboard-shortcuts.ts` (not a second keydown listener) through the
+widget's `stepBack` / `stepForward` / `togglePlay` / `reset` — the same
+`press(action)` path the buttons use. The dispatcher's `targetIsEditable`
+guard leaves the jump date-field's native arrow-key segment editing intact
+when it's focused.
+
 It drives the `VirtualClock`, building its transport row from `time.ts`'s
 `TRANSPORT_BUTTONS`. The controls render as monochrome line-art SVG glyphs
 (`transportIcon`, `currentColor` stroke) — thin-line iconography matching

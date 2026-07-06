@@ -49,6 +49,16 @@ export interface TimeScrubberWidget {
   open(): void;
   close(): void;
   toggle(): void;
+  /** True while the expanded scrubber is showing. */
+  isOpen(): boolean;
+  /** Same as the fast-forward / rewind buttons — for the `→` / `←`
+   *  shortcuts the keyboard dispatcher fires while the scrubber is open. */
+  stepForward(): void;
+  stepBack(): void;
+  /** Play when paused, pause otherwise — for the Space shortcut. */
+  togglePlay(): void;
+  /** Same as the reset button — for the Backspace shortcut. */
+  reset(): void;
 }
 
 export function createTimeScrubberWidget(
@@ -91,6 +101,12 @@ export function createTimeScrubberWidget(
 
   const controls = document.createElement('div');
   controls.className = 'scrubber-controls';
+  const press = (action: TransportAction): void => {
+    clock[action]();
+    if (action === 'reset') syncJump();
+    refresh();
+  };
+
   const buttons: Partial<Record<string, HTMLButtonElement>> = {};
   for (const spec of TRANSPORT_BUTTONS) {
     const b = document.createElement('button');
@@ -98,11 +114,7 @@ export function createTimeScrubberWidget(
     b.className = 'scrubber-btn';
     b.appendChild(transportIcon(spec.action));
     b.title = spec.title;
-    b.addEventListener('click', () => {
-      clock[spec.action]();
-      if (spec.action === 'reset') syncJump();
-      refresh();
-    });
+    b.addEventListener('click', () => press(spec.action));
     controls.append(b);
     buttons[spec.action] = b;
   }
@@ -173,5 +185,14 @@ export function createTimeScrubberWidget(
   readout.addEventListener('click', open);
   closeBtn.addEventListener('click', close);
 
-  return { open, close, toggle };
+  return {
+    open,
+    close,
+    toggle,
+    isOpen: () => !scrubber.hidden,
+    stepForward: () => press('fastForward'),
+    stepBack: () => press('rewind'),
+    togglePlay: () => press(clock.getRate() === 0 ? 'play' : 'pause'),
+    reset: () => press('reset'),
+  };
 }

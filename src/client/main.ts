@@ -269,7 +269,7 @@ async function main() {
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, {
         toggleDebugPanel: debugTools.panel,
-        toggleTimeScrubber: timeScrubber.toggle,
+        timeScrubber,
       });
       // On a bare touch device the mobile advisory takes the one splash
       // slot; otherwise the welcome modal shows as usual.
