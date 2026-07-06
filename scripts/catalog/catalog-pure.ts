@@ -455,6 +455,16 @@ export const VAR_TYPE_PULSATING = 1;
 export const VAR_TYPE_ECLIPSING = 2;
 export const VAR_TYPE_OTHER = 3;
 
+/** Amplitude byte: 0.05 mag quanta, saturating at 12.75 mag. */
+export function encodeAmpUnits(amplitudeMag: number): number {
+  return Math.min(255, Math.max(0, Math.round(amplitudeMag * 20)));
+}
+
+/** Period uint16: 0.1 d quanta, saturating at 6553.5 d. */
+export function encodePeriodUnits(periodDays: number): number {
+  return Math.min(65535, Math.max(0, Math.round(periodDays * 10)));
+}
+
 /** Classify a GCVS variability-type column ("EA", "EA/RS", "M", "DCEP",
  *  "RRAB", "SR", "ZAND", "UGSU", ...) into the runtime enum.
  *

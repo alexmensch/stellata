@@ -18,6 +18,7 @@ import {
   RECORD_SIZE,
 } from './catalog-pure';
 import { REPO_ROOT } from '../util/paths';
+import type { RecordRef } from './corpus-tsv';
 
 export const DEFAULT_CATALOG_BIN = resolve(REPO_ROOT, 'public/catalog.bin');
 export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');
@@ -203,6 +204,12 @@ export function lookupByGaiaSourceId(catalog: Catalog, sourceId: bigint | string
 export function lookupByName(catalog: Catalog, name: string): CatalogRecord | null {
   const i = getIndexes(catalog).byName.get(name);
   return i === undefined ? null : catalog.record(i);
+}
+
+export function lookupByRef(catalog: Catalog, ref: RecordRef): CatalogRecord | null {
+  return ref.kind === 'hip' ? lookupByHip(catalog, Number(ref.value))
+    : ref.kind === 'gaia' ? lookupByGaiaSourceId(catalog, ref.value)
+    : lookupByName(catalog, ref.value);
 }
 
 /** 3D Euclidean distance from Sol in parsecs. The catalogue stores

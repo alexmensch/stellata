@@ -982,15 +982,35 @@ framing.
 Three tiers, all snapshot-pinned:
 
 - **Tier A — known-stars corpus.** `scripts/catalog/known-stars.tsv`
-  carries ~50 hand-curated systems (single stars + multiples) with
+  carries ~70 hand-curated systems (single stars + multiples) with
   expected HIP, Gaia DR3 source_id, distance ± 1σ, absmag, spectral
-  type, and per-companion (HIP, source_id, absmag) tuples.
+  type, per-companion (HIP, source_id, absmag) tuples, and optional
+  GCVS variability pins (var_type / var_period_days / var_amp_mag —
+  published values quantised through `encodeAmpUnits` /
+  `encodePeriodUnits` before comparison; `var_type=none` asserts a
+  record is NOT variable). Coverage spans one pin per population
+  dimension: nearest M dwarf, halo subdwarf, white dwarfs (single +
+  promoted-companion), carbon star, Wolf-Rayet, O supergiant, each
+  animated GCVS family (M, DCEP, SRC, EA, EW), LMC members, B-J
+  regression cases, a Tycho-only no-HIP record, and the multi-star
+  showcase systems (Castor, Algol, AR Cas, ν Sco, 40 Eri).
   `scripts/catalog/known-stars.test.ts` loads `public/catalog.bin` via
   the runtime loader and asserts every row matches within tolerance.
   Adding a row → see § Adding to the known-stars corpus below.
   The sky-position corpus (`sky-position-corpus.tsv` +
   `sky-position.test.ts`, § Direction resolution) is the companion
   Tier A harness for single-star angular placement.
+- **Tier A — system pair topology.**
+  `scripts/catalog/system-pair-topology.tsv` (driven by the same
+  `known-stars.test.ts` harness) pins, per WDS root, the EXACT set of
+  pair rows multiples.tsv may emit — a dropped physical pair and a
+  re-leaked optical pair both fail by name. This is the regression
+  guard on Stage 5 optical-filter verdicts (Sirius AC-AF, Albireo AB,
+  40 Eri D/E) and on the showcase systems' sub-pair subdivision
+  topology. Rows can additionally pin a minimum 3D separation between
+  two catalog records as the on-record Gaia evidence that a rejected
+  pair is optical (Albireo A↔B at ~9.4 pc). Standalone `_X` member
+  rows are exempt from the exact-set check.
 - **Tier A — multi-star geometry corpus.**
   `scripts/catalog/multi-star-regression.tsv` +
   `multi-star-regression.test.ts` pin per-PAIR geometry against
@@ -1039,10 +1059,21 @@ preserved. To add a star or system:
 2. For multiples, list each companion's letter, HIP, source_id, and
    absmag in the `companions` column as
    `comp_letter:hip:gaia_id:absmag` tuples joined by semicolons.
-3. Append the row. Run `npm test -- known-stars` to confirm the row
+3. For GCVS variables, pin `var_type` (`pulsating` / `eclipsing` /
+   `other`) plus the PUBLISHED (unquantised) `var_period_days` and
+   `var_amp_mag` (max − min); the test applies the byte encoding
+   before comparing. `var_type=none` on a non-variable guards against
+   false-positive cross-matches. Use the spectral string the resolver
+   actually consumed (`data/simbad/simbad_sptype.tsv`) when SIMBAD's
+   live sp_type differs — the corpus pins pipeline behaviour, with the
+   live value noted in notes_source.
+4. Append the row. Run `npm test -- known-stars` to confirm the row
    passes against the current `public/catalog.bin`. The test parses the
    spectral string via `classifyFromSimbad` so the format must be
    SIMBAD-canonical MK.
-4. If the test fails on a row you expected to pass, the discrepancy is
+5. If the test fails on a row you expected to pass, the discrepancy is
    genuine — either the catalog has a bug or the expected values are
    wrong. Don't relax the tolerance to silence; investigate.
+6. When curating a multi-star system, also pin its kept-pair set in
+   `system-pair-topology.tsv` — the exact-set fixture is what catches
+   a later ingest silently adding or dropping a pair for that root.
