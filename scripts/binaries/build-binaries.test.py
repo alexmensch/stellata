@@ -3666,12 +3666,15 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertTrue(result.is_physical)
         self.assertEqual(result.optical_via, "gaia_kept")
 
-    def test_both_gaia_disagreeing_plx_rejects(self) -> None:
-        # 10.0 vs 10.05 mas with σ=0.001 each: past 3σ but only ~0.5 pc
-        # apart, so the separation gate stays silent and the both-Gaia
-        # parallax gate is the one that fires. (A larger, >1 pc split is
-        # caught earlier by the separation gate — see
-        # test_sep_limit_rejects_discordant_companion.)
+    def test_both_gaia_within_limit_disagreement_falls_to_velocity(self) -> None:
+        # 10.0 vs 10.05 mas with σ=0.001 each: 3σ-discordant but only
+        # ~0.5 pc apart. A within-limit parallax disagreement no longer
+        # rejects on its own (blend-corrupted close-pair parallaxes must
+        # not split a bound pair); it falls to the escape-velocity
+        # sub-gate, and with matching PM (Δv=0) the pair is kept. A larger
+        # >1 pc split rejects at the separation gate (tier 3); a beyond-
+        # limit both-Gaia split rejects in _both_gaia_consistent —
+        # see test_both_gaia_beyond_limit_disagreement_rejects.
         p = _gaia_astrometry_row(
             source_id=1, parallax_mas=10.0, parallax_error_mas=0.001,
         )
@@ -3682,8 +3685,25 @@ class ClassifyPairOpticalTests(unittest.TestCase):
             primary_gaia=1, secondary_gaia=2,
             src_to_astrometry={1: p, 2: s},
         )
-        self.assertFalse(result.is_physical)
-        self.assertEqual(result.optical_via, "gaia_rejected")
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_kept")
+
+    def test_both_gaia_beyond_limit_disagreement_rejects(self) -> None:
+        # The tier-4 parallax reject fires only beyond the bound-pair
+        # limit — the same guard tier 5 applies. Tested on the helper
+        # directly: via classify_pair_optical a beyond-limit well-measured
+        # pair rejects one tier earlier (tier 3), so this path is only
+        # reachable for a Gaia parallax below tier 3's poe floor.
+        # 10.0 vs 5.0 mas (100 vs 200 pc, ~100 pc apart), no ρ.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.001,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=5.0, parallax_error_mas=0.001,
+        )
+        self.assertIs(
+            bb._both_gaia_consistent(p, s, None, 6.0), False,
+        )
 
     def test_both_gaia_escape_velocity_rejects(self) -> None:
         # Parallax agrees, but the PM difference implies a transverse
@@ -3740,7 +3760,7 @@ class ClassifyPairOpticalTests(unittest.TestCase):
 
     def test_sep_limit_keeps_concordant_companion(self) -> None:
         # Own distance agrees with the anchor within the bound-pair limit
-        # → tier 2 silent, falls through to the mag-gap backstop (kept).
+        # → tier 3 silent, falls through to the mag-gap backstop (kept).
         s = _gaia_astrometry_row(
             source_id=2, ra_deg=100.0, dec_deg=0.0,
             parallax_mas=100.5, parallax_error_mas=0.05,  # ~9.95 pc
@@ -3809,10 +3829,10 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertEqual(result.optical_via, "orbit_kept")
 
     def test_orbit_overrides_within_bounds_gaia_disagreement(self) -> None:
-        # An orbit on file NOW overrides a both-Gaia σ-disagreement that
-        # stays within the physical bound-pair limit — the σ gate sits
-        # below the orbit tier. (Distances 100 vs ~99.5 pc: 3σ-discordant
-        # on tiny errors, but < 1 pc apart, so tier 2 is silent.)
+        # An orbit on file overrides a both-Gaia σ-disagreement: the
+        # orbit tier (tier 2) short-circuits above the separation (tier 3)
+        # and both-Gaia (tier 4) gates. (Distances 100 vs ~99.5 pc:
+        # 3σ-discordant on tiny errors, but < 1 pc apart.)
         p = _gaia_astrometry_row(
             source_id=1, parallax_mas=10.0, parallax_error_mas=0.001,
         )
@@ -3913,7 +3933,7 @@ class ClassifyPairOpticalTests(unittest.TestCase):
 
 
 class SeparationGeometryTests(unittest.TestCase):
-    """Tier-2/tier-5 separation helpers. Projected term from ρ at the
+    """Tier-3/tier-5 separation helpers. Projected term from ρ at the
     reference distance; radial term counted only when the parallax
     difference clears the combined-error significance threshold."""
 

@@ -194,7 +194,7 @@ def log_sep_limit_rejections(
     components: list,
     classifications: list,
 ) -> None:
-    """Audit line for Stage 5's tier-2 separation-limit gate: the WDS
+    """Audit line for Stage 5's tier-3 separation-limit gate: the WDS
     systems whose optical-double companions were dropped for sitting
     beyond the physical bound-pair limit from the system anchor. Dropped
     pairs never reach multiples.tsv, so the build log is their only

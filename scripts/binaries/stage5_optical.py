@@ -97,12 +97,15 @@ RADIAL_SEPARATION_SIGMA = 3.0
 # than dropped on a noisy distance.
 SEPARATION_POE_MIN = 5.0
 
-# Both-Gaia gate (tier 4). Parallax must agree within 3σ of the
-# combined-axis error; a 3σ parallax disagreement rejects outright.
-# When parallax agrees the escape-velocity sub-gate decides — it
-# replaces the historic 5 mas/yr per-axis PM cut, which mistook a
-# nearby bound pair's real orbital proper-motion split for optical
-# contamination.
+# Both-Gaia gate (tier 4). A 3σ parallax disagreement on the combined
+# error rejects — but, mirroring the tier-5 asymmetric gate, only when
+# the implied 3D separation also exceeds the physical bound-pair limit;
+# a close visual pair's blended Gaia parallaxes (routine, per the
+# orbit-tier note) must not split a within-limit pair on a parallax
+# nuance. A within-limit disagreement, and an agreement, both fall to
+# the escape-velocity sub-gate, which replaces the historic 5 mas/yr
+# per-axis PM cut that mistook a nearby bound pair's real orbital
+# proper-motion split for optical contamination.
 BOTH_GAIA_PLX_GATE_SIGMA = 3.0
 
 # Asymmetric-Gaia gate (tier 5). When only one component has a Gaia 5p
@@ -111,8 +114,11 @@ BOTH_GAIA_PLX_GATE_SIGMA = 3.0
 # combined Gaia + HIP2 parallax error; a 3σ disagreement rejects only
 # when the implied 3D separation also exceeds the physical bound-pair
 # limit, so a HIP2-vs-Gaia zero-point offset can't split a bound pair.
-# Sirius A-C/D/E/F is the motivating reject (A ~378 mas via HIP2; C/D/E/F
-# <1 mas via Gaia → a ~kpc real split).
+# This is a backstop for the Gaia side whose parallax is too noisy to
+# clear tier 3's poe floor: the well-measured Sirius A-C/D/E/F-shaped
+# splits (A ~378 mas via HIP2; C/D/E/F <1 mas via Gaia → a ~kpc split)
+# are already rejected upstream at tier 3, so this tier rejects nothing
+# in the current corpus — it fires only for a poe < 5 Gaia parallax.
 ASYMM_PLX_GATE_SIGMA = 3.0
 
 # Escape-velocity gate (inside the both-Gaia tier). A bound pair needs
@@ -253,8 +259,9 @@ def _separation_exceeds_limit(
     rho_arcsec: float | None,
 ) -> bool:
     """``True`` when the 3D separation exceeds the physical bound-pair
-    limit (``SEPARATION_LIMIT_PC``). Shared by the tier-2 separation gate
-    and the tier-5 asymmetric-Gaia physical-pc tolerance."""
+    limit (``SEPARATION_LIMIT_PC``). Shared by the tier-3 separation gate,
+    the tier-4 both-Gaia parallax reject, and the tier-5 asymmetric-Gaia
+    physical-pc tolerance."""
     sep_au = _separation_au(
         plx_ref_mas, e_ref_mas, plx_other_mas, e_other_mas, rho_arcsec,
     )
@@ -311,14 +318,17 @@ def _both_gaia_consistent(
 ) -> bool | None:
     """Tier-4 verdict. Returns ``True`` (physical), ``False`` (optical),
     or ``None`` (tier silent — fall through) when there is not enough
-    Gaia data to evaluate the parallax test.
+    Gaia data to evaluate the test.
 
-    Parallax first: a 3σ disagreement on the combined error rejects.
-    When parallax agrees, the escape-velocity sub-gate decides — reject
-    when the transverse velocity from the PM difference exceeds
-    ``ESCAPE_VELOCITY_SAFETY_FACTOR`` × the escape velocity for the pair's
-    mass and separation. Missing PM on either component leaves the pair
-    physical (parallax already agreed)."""
+    Parallax first, but a 3σ disagreement rejects only when the implied
+    3D separation also exceeds the physical bound-pair limit — the same
+    guard tier 5 applies, so blend-corrupted Gaia parallaxes on a close
+    visual pair can't split a within-limit pair on a parallax nuance. A
+    within-limit disagreement (and an agreement) falls through to the
+    escape-velocity sub-gate: reject when the transverse velocity from
+    the PM difference exceeds ``ESCAPE_VELOCITY_SAFETY_FACTOR`` × the
+    escape velocity for the pair's mass and separation. Missing PM on
+    either component leaves the pair physical."""
     if (
         p.parallax_mas is None or s.parallax_mas is None
         or p.parallax_error_mas is None or s.parallax_error_mas is None
@@ -326,7 +336,14 @@ def _both_gaia_consistent(
         return None
     sigma_combined = math.hypot(p.parallax_error_mas, s.parallax_error_mas)
     if abs(p.parallax_mas - s.parallax_mas) >= BOTH_GAIA_PLX_GATE_SIGMA * sigma_combined:
-        return False
+        if p.parallax_mas <= 0.0 or s.parallax_mas <= 0.0:
+            return False
+        if _separation_exceeds_limit(
+            p.parallax_mas, p.parallax_error_mas,
+            s.parallax_mas, s.parallax_error_mas,
+            rho_arcsec,
+        ):
+            return False
 
     if p.parallax_mas <= 0.0 or s.parallax_mas <= 0.0:
         return True
@@ -403,14 +420,17 @@ def classify_pair_optical(
        (each at its own parallax, or the system anchor when it has none).
        Catches wide line-of-sight optical doubles fabricated onto the
        system (Pollux F: own 297 pc vs partner's inherited 10.4 pc).
-    4. Both-components-Gaia — both carry a Gaia 5p row. Parallax at 3σ
-       (reject on disagreement); when parallax agrees, the
+    4. Both-components-Gaia — both carry a Gaia 5p row. A 3σ parallax
+       disagreement rejects only when the implied separation also exceeds
+       the physical limit (same guard as tier 5); otherwise the
        escape-velocity sub-gate rejects a transverse velocity too large
        to be bound. Passes physical.
     5. Asymmetric Gaia + HIP2 anchor — exactly one component has a Gaia 5p
        row, the other a HIP2 parallax anchor. Gaia parallax vs anchor at
        3σ, rejecting only when the implied separation also exceeds the
-       physical limit. Catches Sirius A-C/D/E/F.
+       physical limit. Backstop for a poe < 5 Gaia parallax; the
+       well-measured Sirius A-C/D/E/F-shaped splits reject upstream at
+       tier 3.
     6. Mag-gap backstop — |Δmag| ≤ 5 keep, otherwise reject. Used when no
        other tier fired. A pair with no usable mags is kept — absence of
        evidence is not evidence of optical contamination.
@@ -497,7 +517,7 @@ def classify_all_pairs(
     entry per pair) and feeds the orbit-on-file tier.
 
     ``system_parallax_anchors`` (per-``wds_id`` parallax + error) feeds the
-    tier-2 separation-limit gate; omitted → that tier is silent (the
+    tier-3 separation-limit gate; omitted → that tier is silent (the
     in-process tests that don't exercise it). ``pair_masses`` (parallel
     to the decomposing pairs) feeds the escape-velocity sub-gate; omitted
     → the gate uses ``ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN``."""
