@@ -1892,6 +1892,9 @@ def _gaia_astrometry_row(
     ref_epoch: float = 2016.0,
     ruwe: float | None = 1.0,
     ipd_frac_multi_peak: float | None = 0.0,
+    g_mag: float | None = None,
+    bp_mag: float | None = None,
+    rp_mag: float | None = None,
 ) -> "bb.GaiaAstrometryRow":
     return bb.GaiaAstrometryRow(
         source_id=source_id,
@@ -1902,7 +1905,7 @@ def _gaia_astrometry_row(
         pmdec_masyr=pmdec_masyr, pmdec_error_masyr=pmdec_error_masyr,
         ref_epoch=ref_epoch,
         ruwe=ruwe, ipd_frac_multi_peak=ipd_frac_multi_peak,
-        g_mag=None, bp_mag=None, rp_mag=None,
+        g_mag=g_mag, bp_mag=bp_mag, rp_mag=rp_mag,
     )
 
 
@@ -4930,6 +4933,195 @@ class PhotometryViaTests(unittest.TestCase):
             indices=_indices_with_astrometry(),
         )
         self.assertEqual(rows[0].photometry_via, bb.PHOTOMETRY_VIA_NONE)
+
+
+class GaiaPhotometryAbsmagTests(unittest.TestCase):
+    """Stage 6 recovers absmag (and ci) for a WDS component that has its
+    own Gaia DR3 5p fit but no AT-HYG row, from the component's own
+    G/BP/RP + parallax (``photometry_via=gaia_photometry``). Without it
+    the row lands with a blank absmag and companion promotion drops it
+    for lacking a brightness."""
+
+    def test_ballesteros_bv_from_teff_mirrors_ts(self) -> None:
+        # Python port pinned against the TS canonical
+        # (scripts/colour/blackbody-lut-pure.ts) across the range — one
+        # point drifts silently at the ends, where a mirror is likeliest
+        # to diverge. Hot blue → ~0, solar → 0.652, cool red → ~1.71.
+        self.assertAlmostEqual(bb.ballesteros_bv_from_teff(10000.0), 0.010, places=3)
+        self.assertAlmostEqual(bb.ballesteros_bv_from_teff(5772.0), 0.652, places=3)
+        self.assertAlmostEqual(bb.ballesteros_bv_from_teff(3500.0), 1.712, places=3)
+
+    def test_derive_absmag_ci_solar(self) -> None:
+        # G = 4.67 at 10 pc (ϖ = 100 mas) → M_G ≈ 4.67; BP−RP = 0.82
+        # (solar) → M_V ≈ 4.82 (Sun 4.83), ci ≈ 0.67 (Sun ~0.65).
+        absmag, ci = bb.gaia_photometry_absmag_ci(_gaia_astrometry_row(
+            parallax_mas=100.0, g_mag=4.67, bp_mag=5.05, rp_mag=4.23,
+        ))
+        self.assertAlmostEqual(absmag, 4.82, places=1)
+        self.assertAlmostEqual(ci, 0.67, places=1)
+
+    def test_derive_no_bp_rp_raw_m_g_null_ci(self) -> None:
+        # ϖ = 10 mas → 100 pc → M_G = G + 5·log10(10) − 10 = G − 5 = 5.0;
+        # no BP/RP → raw M_G (no G→V), ci None.
+        absmag, ci = bb.gaia_photometry_absmag_ci(
+            _gaia_astrometry_row(parallax_mas=10.0, g_mag=10.0),
+        )
+        self.assertAlmostEqual(absmag, 5.0, places=6)
+        self.assertIsNone(ci)
+
+    def test_derive_none_without_g_or_parallax(self) -> None:
+        self.assertIsNone(bb.gaia_photometry_absmag_ci(
+            _gaia_astrometry_row(parallax_mas=None, g_mag=10.0)))
+        self.assertIsNone(bb.gaia_photometry_absmag_ci(
+            _gaia_astrometry_row(parallax_mas=10.0, g_mag=None)))
+        self.assertIsNone(bb.gaia_photometry_absmag_ci(
+            _gaia_astrometry_row(parallax_mas=-1.0, g_mag=10.0)))
+
+    def test_bprp_outside_teff_range_null_ci_but_keeps_absmag(self) -> None:
+        # Hot blue star (BP−RP = 0.2, below the Teff polynomial's 0.5
+        # floor): absmag still derived via the wider-range G→V transform,
+        # ci left None → promotion's spectral/solar ci fallback.
+        absmag, ci = bb.gaia_photometry_absmag_ci(_gaia_astrometry_row(
+            parallax_mas=10.0, g_mag=6.0, bp_mag=6.1, rp_mag=5.9,
+        ))
+        self.assertIsNotNone(absmag)
+        self.assertIsNone(ci)
+
+    def test_secondary_own_gaia_no_athyg_tags_gaia_photometry(self) -> None:
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        # B has no AT-HYG row; its own Gaia 5p row carries the photometry.
+        gaia_b = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.0, g_mag=8.0, bp_mag=8.6, rp_mag=7.4,
+        )
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(
+                athyg=[_athyg_row(gaia=1)],  # only the primary
+                src_to_astrometry={2: gaia_b},
+            ),
+        )
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_GAIA)
+        self.assertIsNotNone(rows[1].absmag)
+        self.assertIsNotNone(rows[1].ci)
+
+    def test_excluded_source_absent_from_map_stays_none(self) -> None:
+        # astrometry_exclusions removes blended sources from
+        # src_to_astrometry at Stage 1 (build-binaries.py), so a component
+        # keyed on an excluded source finds no Gaia row here and gets no
+        # gaia-photometry absmag — its blended G is not turned into one.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(
+                athyg=[_athyg_row(gaia=1)],
+                src_to_astrometry={},  # source 2 excluded → absent
+            ),
+        )
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_NONE)
+        self.assertIsNone(rows[1].absmag)
+
+    def test_athyg_photometry_wins_over_gaia(self) -> None:
+        # A component WITH its own AT-HYG row keeps athyg_own even when a
+        # Gaia photometry row is also present — the gaia path only backs
+        # rows AT-HYG doesn't cover.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(
+                athyg=[_athyg_row(gaia=1), _athyg_row(gaia=2)],
+                src_to_astrometry={2: _gaia_astrometry_row(
+                    source_id=2, g_mag=8.0, bp_mag=8.6, rp_mag=7.4)},
+            ),
+        )
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_OWN)
+
+    def test_non_gaia5p_astrometry_does_not_derive(self) -> None:
+        # The gate is astrometry_via=gaia_5p: a component positioned by
+        # HIP2 (not its own clean Gaia 5p fit) does not borrow the Gaia
+        # row's photometry, since that parallax may be orbit-corrupted.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(
+                astrometry_via="hip2_long_baseline", parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(
+                athyg=[_athyg_row(gaia=1)],
+                src_to_astrometry={2: _gaia_astrometry_row(
+                    source_id=2, g_mag=8.0, bp_mag=8.6, rp_mag=7.4)},
+            ),
+        )
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_NONE)
+        self.assertIsNone(rows[1].absmag)
+
+    def test_blend_into_athyg_partner_does_not_derive(self) -> None:
+        # Stage 2's blend-identity propagation copies an AT-HYG-backed
+        # primary's Gaia source onto a secondary that resolved nothing of
+        # its own, so BOTH rows carry one source and the secondary tags
+        # gaia_5p — but that source's G is the blended pair's, and the
+        # primary already carries the system light through AT-HYG. Deriving
+        # here would mint a twin of the primary; the partner-share gate
+        # suppresses it. (A's AT-HYG row is keyed by HIP, not the shared
+        # Gaia source, so _athyg_row_for_component doesn't catch B for it.)
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, hip=100, component="A", is_primary=True),
+            _resolved(gaia=1, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(
+                athyg=[_athyg_row(hip=100)],  # A via HIP only, no gaia key
+                src_to_astrometry={1: _gaia_astrometry_row(
+                    source_id=1, g_mag=8.0, bp_mag=8.6, rp_mag=7.4)},
+            ),
+        )
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_NONE)
+        self.assertIsNone(rows[1].absmag)
 
 
 class WdsDmagTests(unittest.TestCase):

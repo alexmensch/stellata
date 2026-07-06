@@ -78,6 +78,7 @@ export interface MultiplesTsvRow {
 
 export const PHOTOMETRY_VIA_OWN = 'athyg_own';
 export const PHOTOMETRY_VIA_SYSTEM_INHERITED = 'athyg_system_inherited';
+export const PHOTOMETRY_VIA_GAIA = 'gaia_photometry';
 export const PHOTOMETRY_VIA_NONE = 'none';
 
 /** spect_via values whose `spect` string genuinely describes THIS
@@ -320,6 +321,13 @@ export interface PromotionStats {
    *  onto B so the catalog placement matches the binaries.bin pair anchor
    *  (build-runtime-binaries.py's override_inner_primary_indices). */
   repositionedInnerToParent: number;
+  /** Promoted gaia_photometry records whose absmag was reduced by the
+   *  blend-split post-pass: when N≥2 collocated records share one Gaia
+   *  source (an unresolved sub-arcsec pair Gaia fit as a single source,
+   *  e.g. YY Gem Ca/Cb), that source's G is the pair's COMBINED light, so
+   *  each component is fainter than the derived combined M by
+   *  2.5·log10(N). Counts every record so adjusted. */
+  blendSplitRecords: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -339,6 +347,7 @@ export function emptyPromotionStats(): PromotionStats {
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
     repositionedInnerToParent: 0,
+    blendSplitRecords: 0,
   };
 }
 
@@ -1037,6 +1046,17 @@ interface PromotionState {
   promotedByGaia: Map<string, number>;
   promotedByHip: Map<number, number>;
   promotedBySynth: Map<string, number>;
+  /** Records whose absmag came from a component's own Gaia photometry
+   *  (`gaia_photometry`), keyed by the BACKING source_id (`row.gaiaSourceId`
+   *  before any inherited-id strip). A source backing ≥2 of these is an
+   *  unresolved blend whose combined light the post-pass splits — see
+   *  `blendSplitRecords`. */
+  gaiaPhotometryByBackingSource: Map<string, BlendSplitCandidate[]>;
+}
+
+interface BlendSplitCandidate {
+  star: Star;
+  spectral: SpectralInfo;
 }
 
 function promoteRow(
@@ -1209,6 +1229,22 @@ function promoteRow(
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   stats.promoted++;
+  // A gaia_photometry absmag is the backing source's magnitude. When that
+  // source is an unresolved blend shared by ≥2 records, it's the pair's
+  // COMBINED light; register the record under the backing source so the
+  // post-pass can split it. Keyed on row.gaiaSourceId (pre-strip) so an
+  // inherited-Gaia secondary (companionGaia=null → synth) still groups
+  // with its blend partner.
+  if (imputed.source === 'own' && row.photometryVia === PHOTOMETRY_VIA_GAIA
+      && row.gaiaSourceId !== null) {
+    const bucket = state.gaiaPhotometryByBackingSource.get(row.gaiaSourceId);
+    const cand: BlendSplitCandidate = {
+      star: state.newStars[state.newStars.length - 1],
+      spectral: spectral.info,
+    };
+    if (bucket) bucket.push(cand);
+    else state.gaiaPhotometryByBackingSource.set(row.gaiaSourceId, [cand]);
+  }
   if (usesSynth) {
     stats.promotedSynthetic++;
     state.promotedBySynth.set(synthId as string, newIdx);
@@ -1245,6 +1281,7 @@ export function promoteCompanions(
     promotedByGaia: new Map(),
     promotedByHip: new Map(),
     promotedBySynth: new Map(),
+    gaiaPhotometryByBackingSource: new Map(),
   };
   const getStarAt = (idx: number): Star =>
     idx < existingStars.length
@@ -1258,7 +1295,7 @@ export function promoteCompanions(
   // parent then has its own Gaia row, not a synth key).
   const componentIndex = new Map<string, number>();
   const compKey = (root: string | null, comp: string): string | null =>
-    root !== null && comp ? `${root} ${comp}` : null;
+    root !== null && comp ? `${root} ${comp}` : null;
 
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
@@ -1393,6 +1430,26 @@ export function promoteCompanions(
       secStar.y = placed.y;
       secStar.z = placed.z;
       stats.repositionedInnerToParent++;
+    }
+  }
+
+  // Blend-split post-pass. A Gaia source Gaia fit as ONE 5p solution over
+  // a sub-arcsec pair (YY Gem Ca/Cb) surfaces as ≥2 collocated
+  // gaia_photometry records here — one per component — each carrying the
+  // source's COMBINED G→V magnitude, so the system renders ~2× too bright.
+  // Divide the combined light evenly: each of N components is
+  // 2.5·log10(N) fainter than the blend (equal split — the honest default
+  // for a pair Gaia couldn't resolve, and exact for the near-equal pairs
+  // that dominate; WDS Δmag is absent on these ρ=0 sub-pairs). ci is left
+  // as the combined colour (near-equal blend ⇒ shared class). Runs before
+  // build-catalog's absmag sort and re-derives radius off the split absmag.
+  for (const bucket of state.gaiaPhotometryByBackingSource.values()) {
+    if (bucket.length < 2) continue;
+    const splitMag = 2.5 * Math.log10(bucket.length);
+    for (const { star, spectral } of bucket) {
+      star.absmag += splitMag;
+      star.physicalRadius = physicalRadius(star.absmag, spectral);
+      stats.blendSplitRecords++;
     }
   }
   return { newStars, stats, groups };

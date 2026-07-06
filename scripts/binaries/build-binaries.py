@@ -110,11 +110,12 @@ from stage6_multiples import (  # noqa: E402, F401
     ESTIMATED_ELEMENT_ORBIT_VIAS, MULTIPLES_TSV_COLUMNS,
     ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
     A_VIA_CATALOG, A_VIA_KEPLER_MASS_ESTIMATE, A_VIA_NONE, A_VIA_VALUES,
-    PHOTOMETRY_VIA_NONE, PHOTOMETRY_VIA_OWN,
+    PHOTOMETRY_VIA_GAIA, PHOTOMETRY_VIA_NONE, PHOTOMETRY_VIA_OWN,
     PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_VALUES,
     MultiplesRow,
-    build_multiples_rows, build_standalone_rows,
+    ballesteros_bv_from_teff, build_multiples_rows, build_standalone_rows,
     compute_pair_masses, compute_system_anchors, finalize_renderable_elements,
+    gaia_photometry_absmag_ci,
     wds_dmag, wds_year_to_jd, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401

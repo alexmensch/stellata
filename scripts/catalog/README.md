@@ -536,7 +536,10 @@ Per-row gates and resolution:
 - **Absmag.** Preference order: `primary_absmag + WDS Δmag` when the
   row inherited its parent's AT-HYG photometry (Sirius B's row
   carried Sirius A's 1.45 absmag, not the WD's 11.36); the row's own
-  (non-inherited) absmag; primary + Δmag fallback; class→M_V from a
+  (non-inherited) absmag — including the Stage-6 Gaia-photometry value
+  (`photometry_via = gaia_photometry`) derived from an own-DR3
+  companion's G/BP/RP + parallax when no AT-HYG row backs it (SCIENCE.md
+  § Multiple-star pipeline); primary + Δmag fallback; class→M_V from a
   per-component spectral type (`absmagFromSpectral`, spect_via
   curated/simbad — Algol Aa2's curated K0IV lands at 3.30 vs the
   primary's −0.11). A row with inherited photometry, no Δmag, and
@@ -551,6 +554,20 @@ Per-row gates and resolution:
   `primary + Δmag` paths are suppressed; absent own / per-component
   photometry the record inherits the anchor's collocated brightness
   (`companionAbsmagAnchorCollocated`) rather than a corrupted A+Δmag.
+- **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
+  5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
+  surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair
+  row for the source and the inner pair's components — each carrying the
+  source's COMBINED `M_V`, so the system renders ~2× too bright. After
+  the cursor walk, records are grouped by their backing Gaia source
+  (`row.gaiaSourceId`, pre-inherited-id-strip, so an inherited-Gaia synth
+  secondary still groups with its blend partner); a source backing N≥2
+  gets each record dimmed by `2.5·log₁₀(N)` (0.753 mag for a pair) and
+  its radius re-derived. Equal split — a pair Gaia couldn't resolve is
+  near-equal by construction, exact for the M-dwarf eclipsing pairs that
+  dominate; total system light is preserved. `ci` stays the shared
+  colour. Counted `companionBlendSplit`; runs before the absmag sort.
+  See SCIENCE.md § Multiple-star pipeline (Blend split).
 - **B-V (ci).** Same inheritance-detection trick: when the row's
   ci matches the primary's exactly, recompute from the spectral
   info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's DA1.9

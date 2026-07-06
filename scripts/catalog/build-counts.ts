@@ -150,6 +150,11 @@ export interface BuildCounts {
    *  renderable orbit binaries.bin must keep addressing. Ratchet DOWN
    *  by curating per-component types; an increase is a regression. */
   companionAbsmagInheritedTwinOrbital: number;
+  /** Promoted gaia_photometry records whose absmag was reduced by the
+   *  blend-split post-pass — N≥2 collocated records sharing one Gaia
+   *  source (an unresolved sub-arcsec pair) each fainter than the derived
+   *  combined magnitude by 2.5·log10(N). YY Gem Ca/Cb is the showcase. */
+  companionBlendSplit: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;
