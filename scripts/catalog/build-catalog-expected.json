@@ -15,6 +15,7 @@
   "ccdmFlagged": 10595,
   "ccdmSuppressedOptical": 487,
   "eclipsingWinged": 1143,
+  "renderableCompanionWinged": 2209,
   "bjEntries": 310952,
   "bjEligible": 311015,
   "bjOverridden": 310368,

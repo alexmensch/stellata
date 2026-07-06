@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 
 import {
   FLAG_HAS_NAME,
+  FLAG_BINARY_PRIMARY,
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
   SOLAR_BV_FALLBACK,
@@ -1643,4 +1644,120 @@ export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
     }
   }
   return { byGaia, byHip, bySynth };
+}
+
+// ---- Wings for renderable-companion primaries --------------------------
+
+/** gaia → hip → synth catalog-row resolution — the TS twin of
+ *  build-runtime-binaries.py's `resolve_idx`. Kept faithful so the winged
+ *  set matches binaries.bin's rendered pairs; the invariant is pinned by
+ *  multi-star-regression.test.ts against the real artifacts. */
+function resolveMultiplesIdx(
+  gaia: string | null,
+  hip: number | null,
+  synthKey: string | null,
+  rowIndexMap: CatalogRowIndexMap,
+): number | null {
+  if (gaia) {
+    const hit = rowIndexMap.byGaia[gaia];
+    if (hit !== undefined) return hit;
+  }
+  if (hip !== null && hip > 0) {
+    const hit = rowIndexMap.byHip[`${hip}`];
+    if (hit !== undefined) return hit;
+  }
+  if (synthKey !== null) {
+    const hit = rowIndexMap.bySynth[synthKey];
+    if (hit !== undefined) return hit;
+  }
+  return null;
+}
+
+/** The catalog row a component's synth key addresses, or null when no synth
+ *  record exists or it aliases `exclude`. TS twin of the Python `synth_slot`;
+ *  a hit is the truer slot than an id-first resolve that blended onto a
+ *  system anchor. */
+function synthSlotIdx(
+  synthKey: string | null,
+  rowIndexMap: CatalogRowIndexMap,
+  exclude: number | null = null,
+): number | null {
+  if (synthKey === null) return null;
+  const hit = rowIndexMap.bySynth[synthKey];
+  return hit === undefined || hit === exclude ? null : hit;
+}
+
+/** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every
+ *  physical system that renders a companion but which build-catalog's three
+ *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
+ *  A pair renders a companion when its sides resolve to DISTINCT catalog
+ *  records under the same `resolve_idx` + blended-sibling synth retries
+ *  build-runtime-binaries.py runs to emit binaries.bin, so the winged set
+ *  tracks binaries.bin's primaries (both retries mirrored; the writer's
+ *  post-resolution override / relation dedup can't change the distinct-pair
+ *  boolean this pass keys on, only which index, which root-grouping and the
+ *  brightest-participant pick below already absorb). Invariants: one glyph
+ *  per WDS system, on the brightest participant (skips a system any earlier
+ *  pass already flagged); additive only, so eclipsing / iconic doubles with
+ *  no rendered companion keep their wings. Returns the count newly winged.
+ *  See scripts/catalog/README.md § Renderable-companion wings. */
+export function wingRenderablePrimaries(
+  rows: MultiplesTsvRow[],
+  stars: Star[],
+  rowIndexMap: CatalogRowIndexMap,
+): number {
+  // Catalog indices participating in a rendered pair, grouped by WDS root.
+  const perSystem = new Map<string, Set<number>>();
+  for (const cursor of groupBySystem(rows).values()) {
+    const primary = cursor.primary;
+    if (primary === null) continue;
+    const root = wdsRootOf(primary.systemId);
+    if (root === null) continue;
+
+    const primarySynth = composeSyntheticId(primary.systemId, primary.comp);
+    const priId = resolveMultiplesIdx(
+      primary.gaiaSourceId, primary.hip, primarySynth, rowIndexMap,
+    );
+    if (priId === null) continue;
+    // Primary synth re-home: a blended non-anchor primary (its id resolves
+    // onto the system anchor) has its own distinct synth slot; that slot is
+    // the truer companion end. Compared against priId, so the secondary
+    // retry below still keys on the pre-re-home resolve as the writer does.
+    const priIdx = synthSlotIdx(primarySynth, rowIndexMap, priId) ?? priId;
+
+    for (const sec of cursor.secondaries) {
+      if (sec.orbitRole !== 'secondary') continue;
+      const secondarySynth = composeSyntheticId(
+        sec.systemId, canonicalCompLetter(primary.comp, sec.comp),
+      );
+      let secIdx = resolveMultiplesIdx(
+        sec.gaiaSourceId, sec.hip, secondarySynth, rowIndexMap,
+      );
+      if (secIdx !== null && secIdx === priId) {
+        secIdx = synthSlotIdx(secondarySynth, rowIndexMap) ?? secIdx;
+      }
+      if (secIdx === null || secIdx === priIdx) continue;
+      let set = perSystem.get(root);
+      if (!set) { set = new Set(); perSystem.set(root, set); }
+      set.add(priIdx);
+      set.add(secIdx);
+    }
+  }
+
+  let winged = 0;
+  for (const indices of perSystem.values()) {
+    let anchor = -1;
+    let alreadyWinged = false;
+    for (const idx of indices) {
+      if ((stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0) {
+        alreadyWinged = true;
+        break;
+      }
+      if (anchor < 0 || stars[idx].absmag < stars[anchor].absmag) anchor = idx;
+    }
+    if (alreadyWinged || anchor < 0) continue;
+    stars[anchor].flags |= FLAG_BINARY_PRIMARY;
+    winged++;
+  }
+  return winged;
 }

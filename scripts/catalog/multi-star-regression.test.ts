@@ -13,6 +13,7 @@ import {
   type CatalogRecord,
   distancePc,
   loadCatalog,
+  lookupByGaiaSourceId,
   lookupByHip,
   lookupByName,
   lookupByRef,
@@ -39,18 +40,21 @@ import {
 import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
 import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC } from '../../src/client/util/astronomy-constants';
+import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
 import { REPO_ROOT } from '../util/paths';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
+const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
 // generated). CI's plain `npm test` job skips; the build-catalog job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
-  existsSync(DEFAULT_CATALOG_BIN) && existsSync(MULTIPLES_TSV) && existsSync(BINARIES_BIN);
+  existsSync(DEFAULT_CATALOG_BIN) && existsSync(MULTIPLES_TSV)
+  && existsSync(BINARIES_BIN) && existsSync(ROW_INDEX_MAP);
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
@@ -661,6 +665,94 @@ describe.runIf(FIXTURES_READY)('CCDM optical-double suppression', () => {
     // (~102 pc) — a line-of-sight optical pair from the ν CMa asterism,
     // >1 pc apart at Gaia-quality distances with no bound companion.
     expect(winged(31564), 'ν¹ CMa optical double').toBe(false);
+  });
+});
+
+describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
+  const winged = (hip: number) => {
+    const r = lookupByHip(catalog, hip);
+    expect(r, `HIP ${hip} in catalog.bin`).not.toBeNull();
+    return ((r as CatalogRecord).flags & FLAG_BINARY_PRIMARY) !== 0;
+  };
+
+  it('wings physical pairs the geometric/CCDM/eclipsing passes miss (Canopus, 16 Cyg A)', () => {
+    // The renderable-companion pass's headline recoveries: Canopus (0.46 pc,
+    // wider than the geometric cell, not CCDM, not eclipsing) and 16 Cyg A
+    // (promoted placement exceeds the geometric cell).
+    expect(winged(30438), 'Canopus / HIP 30438').toBe(true);
+    expect(winged(96895), '16 Cygni A / HIP 96895').toBe(true);
+  });
+
+  it('every system rendering a companion in binaries.bin carries the wings bit', () => {
+    // Ground truth for the TS wingRenderablePrimaries mirror: binaries.bin IS
+    // the set of rendered pairs, and the wings contract is one glyph per
+    // physical system on the brightest participant. A "system" is the union of
+    // (a) catalog rows sharing a WDS root — one glyph covers a root's disjoint
+    // top-level pairs — and (b) the two ends of every rendered pair, which ties
+    // in promoted companions whose synth key was minted under a sibling WDS
+    // designation. Assert every component that renders a pair carries the bit
+    // somewhere. A gap means a system renders a companion with no glyph — the
+    // failure mode the mirror's resolve_idx + synth retries exist to prevent —
+    // and catches drift in either the TS mirror or the Python resolver.
+    const parent = new Map<number, number>();
+    const add = (x: number) => { if (!parent.has(x)) parent.set(x, x); };
+    const find = (x: number): number => {
+      let r = x;
+      while (parent.get(r) !== r) r = parent.get(r)!;
+      for (let c = x; c !== r;) { const n = parent.get(c)!; parent.set(c, r); c = n; }
+      return r;
+    };
+    const union = (a: number, b: number) => { add(a); add(b); parent.set(find(a), find(b)); };
+
+    // (a) WDS-root co-membership. Id-bearing rows resolve through catalog.bin's
+    // own byGaia → byHip chain (a member's catalog gaia can differ from the
+    // WDS-listed one, leaving HIP the only hit); promoted companions carry no
+    // id (a blended secondary shares its primary's gaia) so they come from the
+    // build's own bySynth artifact, whose `synth-<wds_root>-<comp>` key names
+    // the root. Both are independent of the wings resolver under test.
+    const rootToIndices = new Map<string, number[]>();
+    const bindRoot = (root: string, idx: number) => {
+      const g = rootToIndices.get(root);
+      if (g) g.push(idx); else rootToIndices.set(root, [idx]);
+    };
+    for (const row of readMultiplesTsv(MULTIPLES_TSV)) {
+      const root = wdsRootOf(row.systemId);
+      if (root === null) continue;
+      let rec = row.gaiaSourceId ? lookupByGaiaSourceId(catalog, row.gaiaSourceId) : null;
+      if (rec === null && row.hip !== null && row.hip > 0) rec = lookupByHip(catalog, row.hip);
+      if (rec !== null) bindRoot(root, rec.i);
+    }
+    const bySynth = (JSON.parse(readFileSync(ROW_INDEX_MAP, 'utf-8')) as
+      { bySynth: Record<string, number> }).bySynth;
+    for (const [key, idx] of Object.entries(bySynth)) {
+      const body = key.slice('synth-'.length);
+      const dash = body.lastIndexOf('-');
+      if (dash > 0) bindRoot(body.slice(0, dash), idx);
+    }
+    for (const idxs of rootToIndices.values()) {
+      for (let i = 1; i < idxs.length; i++) union(idxs[0], idxs[i]);
+    }
+
+    // (b) rendered-pair connectivity. Roots are read AFTER every union so no
+    // component id goes stale under a later merge.
+    for (const rel of BINARIES!.relations) union(rel.primaryIdx, rel.secondaryIdx);
+    const renders = new Set<number>();
+    for (const rel of BINARIES!.relations) renders.add(find(rel.primaryIdx));
+
+    const wingedComponents = new Set<number>();
+    for (const idx of parent.keys()) {
+      if ((catalog.record(idx).flags & FLAG_BINARY_PRIMARY) !== 0) wingedComponents.add(find(idx));
+    }
+    const unwinged: number[][] = [];
+    for (const root of renders) {
+      if (wingedComponents.has(root)) continue;
+      unwinged.push([...parent.keys()].filter((i) => find(i) === root));
+    }
+    expect(
+      unwinged,
+      `systems that render a companion but carry no wings bit on any member ` +
+      `(catalog indices):\n${unwinged.slice(0, 10).map((s) => `{${s.join(', ')}}`).join('\n')}`,
+    ).toEqual([]);
   });
 });
 

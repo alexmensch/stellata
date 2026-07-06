@@ -13,11 +13,13 @@ import {
   promoteCompanions,
   stampComponentLetters,
   stripDoubledParentToken,
+  wingRenderablePrimaries,
   type MultiplesTsvRow,
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
+  FLAG_BINARY_PRIMARY,
   FLAG_HAS_NAME,
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
@@ -1863,5 +1865,114 @@ describe('stampComponentLetters', () => {
     expect(stats.systemsStamped).toBe(0);
     expect(stats.rowsStamped).toBe(0);
     expect(blend.proper).toBeNull();
+  });
+});
+
+describe('wingRenderablePrimaries', () => {
+  const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
+    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars));
+  const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
+
+  it('wings the brightest member of a physical pair with a distinct companion', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a, b])).toBe(1);
+    expect(isWinged(a)).toBe(true);
+    expect(isWinged(b)).toBe(false);
+  });
+
+  it('adds exactly one glyph per hierarchical system, on the system anchor', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
+    const c = makeStar({ hip: 300, absmag: 3.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W1-AC', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-AC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a, b, c])).toBe(1);
+    expect(isWinged(a)).toBe(true);
+    expect(isWinged(b)).toBe(false);
+    expect(isWinged(c)).toBe(false);
+  });
+
+  it('skips a system that a prior pass already flagged (no second glyph)', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const b = makeStar({ hip: 200, absmag: 4.0, flags: FLAG_BINARY_PRIMARY });
+    const rows = [
+      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a, b])).toBe(0);
+    expect(isWinged(a)).toBe(false);
+  });
+
+  it('resolves a blended secondary through its synth slot (id-first collides on the primary)', () => {
+    // Aa and Ab share the primary's Gaia source; promotion minted a synth
+    // record for Ab. id-first resolve lands on Aa, the synth retry recovers
+    // the distinct companion.
+    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
+    const ab = makeStar({ syntheticId: 'synth-W1-Ab', absmag: 12.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [aa, ab])).toBe(1);
+    expect(isWinged(aa)).toBe(true);
+    expect(isWinged(ab)).toBe(false);
+  });
+
+  it('canonicalises a WDS-truncated digit secondary to its synth slot', () => {
+    // Stage 6 emits comp="2" for the secondary side of an "Aa1,2" pair;
+    // the synth key is minted from the canonical "Aa2".
+    const aa1 = makeStar({ hip: 100, absmag: 1.0 });
+    const aa2 = makeStar({ syntheticId: 'synth-W1-Aa2', absmag: 8.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa1,2', comp: 'Aa1', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa1,2', comp: '2', hip: 100, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [aa1, aa2])).toBe(1);
+    expect(isWinged(aa1)).toBe(true);
+  });
+
+  it('re-homes a blended non-anchor primary through its synth slot (secondary stays on the anchor)', () => {
+    // Castor BC pattern: the pair's primary (Ca) carries the system anchor's
+    // gaia, so its id-first resolve lands on the anchor; its own synth slot is
+    // the true companion end. The secondary (Cb) blends onto the anchor too but
+    // was never promoted (no synth). Without the primary synth retry the pair
+    // reads pri == sec == anchor and the system is wrongly left unwinged.
+    const anchor = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
+    const caSynth = makeStar({ syntheticId: 'synth-W1-Ca', absmag: 5.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Ca,Cb', comp: 'Ca', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Ca,Cb', comp: 'Cb', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [anchor, caSynth])).toBe(1);
+    expect(isWinged(anchor)).toBe(true);
+    expect(isWinged(caSynth)).toBe(false);
+  });
+
+  it('leaves a degenerate pair (secondary collapses onto the primary, no synth slot) unwinged', () => {
+    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [aa])).toBe(0);
+    expect(isWinged(aa)).toBe(false);
+  });
+
+  it('ignores standalone rows (not a side of a rendered pair)', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-_A', comp: 'A', hip: 100, orbitRole: 'standalone' }),
+    ];
+    expect(wing(rows, [a])).toBe(0);
+    expect(isWinged(a)).toBe(false);
   });
 });

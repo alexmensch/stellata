@@ -63,6 +63,7 @@ import {
   promoteCompanions,
   readMultiplesTsv,
   stampComponentLetters,
+  wingRenderablePrimaries,
 } from './companion-promotion';
 import {
   parseGcvsMain,
@@ -184,6 +185,7 @@ async function main() {
     ccdmFlagged: 0,
     ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
+    renderableCompanionWinged: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -573,6 +575,22 @@ async function main() {
   counts.eclipsingWinged = eclipsingWinged;
   console.log(`  ${eclipsingWinged} eclipsing binaries flagged as multi-star (wings)`);
 
+  // Built here (not at the sidecar write below) so the wings pass resolves
+  // multiples.tsv rows exactly as the runtime binaries loader will.
+  const rowIndexMap = buildCatalogRowIndexMap(stars);
+
+  if (multiplesRows !== null) {
+    const renderableCompanionWinged = wingRenderablePrimaries(
+      multiplesRows,
+      stars,
+      rowIndexMap,
+    );
+    counts.renderableCompanionWinged = renderableCompanionWinged;
+    console.log(
+      `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
+    );
+  }
+
   // Build name table — just proper names. Bayer/Flam/HIP/etc. go in
   // search-index.json so the main binary stays compact.
   const encoder = new TextEncoder();
@@ -722,8 +740,7 @@ async function main() {
   // index without scanning every record at startup. Keyed by Gaia DR3
   // source_id (decimal string, since source_ids exceed 2^53), HIP, and
   // synthetic identifier (`synth-<wds_id>-<comp>` for promoted companions
-  // that carry no real ID — Algol Ab).
-  const rowIndexMap = buildCatalogRowIndexMap(stars);
+  // that carry no real ID — Algol Ab). Built once above, after the sort.
   await writeFile(OUT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
   console.log(
     `Wrote ${OUT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
