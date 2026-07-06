@@ -22,11 +22,16 @@ src/client/solar-system/
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
-                                  FF/RW rate transitions and rate label.
+                                  FF/RW rate transitions, rate label, and
+                                  the TRANSPORT_BUTTONS action spec.
                                   Single source of truth for the scrubber.
-  time-scrubber.ts                Debug-panel "Time" section — transport
-                                  controls (play/pause/FF/RW/reset/jump)
-                                  driving the VirtualClock.
+  time-scrubber-widget.ts (+pure) First-class scrubber in the bottom-right
+                                  meta slot (T key / click the readout).
+                                  Transport controls (play/pause/FF/RW/reset)
+                                  over the VirtualClock, built from
+                                  TRANSPORT_BUTTONS; app-styled, with a
+                                  human "time / second" rate readout
+                                  (formatRatePerSecond, pure + tested).
   sky-truth.test.ts               Regression corpus: the ephemeris →
                                   ecliptic→ICRS chain vs JPL Horizons
                                   RA/Dec frozen in data/horizons/, plus
@@ -116,22 +121,25 @@ it from a `VirtualClock`: `t = simT0 + rate · (wallNow − wallT0)`, so at
 parity every existing consumer relies on). This is the ONLY place
 wall-clock is sampled for the simulation `t`.
 
-The debug panel's **Time** section (`time-scrubber.ts`) drives the clock:
+The scrubber widget (`time-scrubber-widget.ts`) drives the clock:
 play / pause / fast-forward / rewind / reset / jump-to-date. FF and RW
-step through **powers of two** (`±1, ±2, … ±2³⁰`) and cross zero directly
+step through **powers of two** (`±1, ±2, … ±2³²`) and cross zero directly
 — a step from `+1×` lands on `-1×` rather than passing through fractional
 slow-motion, since the binary orbits this scrubber verifies (α Cen 80 yr,
 61 Cyg 664 yr) are only ever watched *faster* than wall-clock. Rate flips
 snapshot the current virtual time so scrubbing never teleports. `|rate|`
-saturates at `2³⁰` (~1.07e9×). `Stellata.setT(n)` freezes the clock at a
+saturates at `2³²` (~4.29e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
-live. `stellata-nmu` layers the user-facing scrubber UI on this plumbing.
+live.
 
-Jump-to-date is a native `datetime-local` calendar picker whose value is
+Jump-to-date is a native `datetime-local` input whose value is
 read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
-in `time.ts`), even though the readout displays UTC — deliberate, so the
-picker matches the operator's wall clock. Reset (⟲) already snaps to
-live-now at 1×, so there is intentionally no separate "now" jump.
+in `time.ts`), even though the readout displays UTC — deliberate, so it
+matches the operator's wall clock. The calendar-popup indicator is hidden
+in CSS (`.scrubber-jump input::-webkit-calendar-picker-indicator`): the
+segmented fields are typed by hand, avoiding both the out-of-place native
+picker and the format-error trap of a plain text box. Reset already snaps
+to live-now at 1×, so there is intentionally no separate "now" jump.
 
 `time-readout.ts` renders the live UTC timestamp the rendered positions
 correspond to in `.ui-bottom`'s `#time-readout`. **Always visible** —
@@ -148,6 +156,36 @@ across browsers.
 drives variable-star pulsation and keeps ticking at
 `uSecondsPerDay = 0.2` regardless of what `t` is. Variable-star phase
 must never read from `t`.
+
+## Time scrubber widget
+
+`time-scrubber-widget.ts` is the scrubber — a first-class control living
+in the bottom-right `.meta` slot. Collapsed,
+`.meta` shows the star count + live UTC readout (the readout is a button
+that opens the scrubber); the `T` shortcut and clicking the readout both
+toggle it. Opened, it replaces that with a model-time readout + transport
+controls + a `datetime-local` jump, and an `×` collapses back. Toggling
+open/closed never changes the clock — only **Reset** returns to live-now
+at 1×.
+
+While the scrubber is open, `←`/`→` rewind/fast-forward, `Space` toggles
+play/pause, and `Backspace` resets. These dispatch from the central
+`ui/keyboard-shortcuts.ts` (not a second keydown listener) through the
+widget's `stepBack` / `stepForward` / `togglePlay` / `reset` — the same
+`press(action)` path the buttons use. The dispatcher's `targetIsEditable`
+guard leaves the jump date-field's native arrow-key segment editing intact
+when it's focused.
+
+It drives the `VirtualClock`, building its transport row from `time.ts`'s
+`TRANSPORT_BUTTONS`. The controls render as monochrome line-art SVG glyphs
+(`transportIcon`, `currentColor` stroke) — thin-line iconography matching
+the rest of the app rather than platform emoji, all one size so reset reads
+as prominently as play/pause. Rate shows as a human "time / second" phrase
+(`formatRatePerSecond`, pure + unit-tested). Colours ride the root CSS
+tokens so chart mode (`body.monochrome`) adapts; only the translucent
+panel background carries an explicit light-mode override in `styles.css`.
+Catalogue / proper-motion advance stays out — that's the deferred
+`stellata-nmu` epic; this widget is the clock-only slice.
 
 ## Planet rendering
 

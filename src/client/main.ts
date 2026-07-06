@@ -6,7 +6,7 @@ import { loadBinaries } from './binaries/binaries-loader';
 import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
-import { bindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
+import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
 import { createConstellationOverlay } from './overlays/constellation-overlay';
 import { createDiscMask } from './overlays/disc-mask';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
@@ -15,7 +15,7 @@ import { createPoiOverlay } from './overlays/poi-overlay';
 import { createPlanetLabels } from './solar-system/planet-labels';
 import { createHeliopauseLabel } from './solar-system/heliopause';
 import { createScaleBar } from './ui/scale-bar';
-import { createTimeReadout } from './solar-system/time-readout';
+import { createTimeScrubberWidget } from './solar-system/time-scrubber-widget';
 import { bindUnitToggle } from './ui/unit-toggle';
 import { registerThemeStellata } from './ui/theme-toggle';
 import { bindChartMode } from './chart-mode/chart-mode';
@@ -30,7 +30,6 @@ import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
-import { escapeHtml } from './ui/dom-util';
 import { createHoverEngine } from './hover/hover-engine';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
@@ -163,6 +162,7 @@ async function main() {
     // search shouldn't surface unreachable cloud entries. Pass
     // `cloudCatalog` directly when re-enabling.
     bindSearch(stellata, catalog, searchIndex, starLabels, null);
+    bindFindSearch(stellata, catalog, searchIndex, null);
     createDiscMask(stellata);
     createConstellationOverlay(stellata);
     createDistanceVectorOverlay(stellata, starLabels);
@@ -203,15 +203,7 @@ async function main() {
     // focused-object name moved into the scale-bar widget's z-axis
     // indicator, where it sits alongside the camera-to-focus distance.
     const countLabel = `${catalog.count.toLocaleString()} stars`;
-    meta.innerHTML =
-      `<div class="meta-count">${escapeHtml(countLabel)}</div>` +
-      `<div id="time-readout" class="time-readout" hidden></div>`;
-    // After meta.innerHTML — createTimeReadout binds to the #time-readout
-    // child the line above just minted.
-    createTimeReadout({
-      el: document.getElementById('time-readout')!,
-      stellata,
-    });
+    const timeScrubber = createTimeScrubberWidget({ meta, stellata, countLabel });
 
     // Each hover provider mirrors the renderer's "is this drawn?"
     // predicate as its visibility gate — visibility ⇒ hoverable; no
@@ -275,7 +267,10 @@ async function main() {
       bindPanelLayout();
       bindBrandModals();
       bindControlsHideToggle();
-      bindKeyboardShortcuts(stellata, { toggleDebugPanel: debugTools.panel });
+      bindKeyboardShortcuts(stellata, {
+        toggleDebugPanel: debugTools.panel,
+        timeScrubber,
+      });
       // On a bare touch device the mobile advisory takes the one splash
       // slot; otherwise the welcome modal shows as usual.
       if (!maybeShowMobileAdvisory()) {

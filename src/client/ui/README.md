@@ -10,24 +10,38 @@ gotchas.
 to existing public APIs — every shortcut is a thin wrapper, so future
 behavioural changes propagate automatically.
 
-**Bindings** (also surfaced via the `?` help modal):
+**Display metadata is separate from dispatch.** `keyboard-shortcuts-registry.ts`
+holds the descriptor table (keys, label, `debug` flag). It's the single
+source of truth for the `?` help modal (`../modals/help-modal.ts` renders
+its `<dl>` from it), replacing the hand-authored list that used to live in
+`index.html`. The keydown switch below stays the dispatch mechanism; the
+registry only describes what to display.
 
 | Key | Action |
 | --- | --- |
 | `G` | Open the Go picker — focus a star, set a destination, or change observe location |
+| `F` | Open the Find picker — point the camera at any object without travelling to it (`aimAt`; observe mode only) |
 | `O` | Switch to observe mode (gated on `getFocusedStar() !== null`) |
 | `M` | Toggle chart mode (gated on `cameraMode === 'observe'`; auto-clears on observe→navigate) |
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
 | `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
-| `H` | Toggle `showHud` |
+| `T` | Toggle the time scrubber (`../solar-system/time-scrubber-widget.ts`) |
+| `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
+| `Space` | Time scrubber (while open): play / pause (`togglePlay`) |
+| `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
 | `S` | Toggle `showGalacticGrid` |
-| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`). Single `F` is reserved for the find-object shortcut. |
+| `H` | Toggle `showHud` |
+| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
-| `?` | Open the keyboard-shortcuts help modal |
+| `?` | Open the keyboard-shortcuts help modal (the full shortcut list) |
 | `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus) |
+
+The Find picker reuses the shared search corpus via `createSearchRunner`
+(`../typeahead/search.ts`) and is relocated into the `#kb-modal` card
+like the Go / Constellation pickers — see § DOM relocation below.
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -269,8 +283,8 @@ is steady across focus/unfocus and any line angle.
 (the `<html>` element), not the canvas — every chrome container is a
 sibling of the canvas under `<body>`, so fullscreening the whole page
 keeps the panel/topbar/overlays visible. Bound to a double-tap `F`-`F`
-(single `F` is reserved for the find-object shortcut); there is no
-in-app affordance. Esc handling is left entirely to the browser: the
+in every mode (single `F` opens the Find picker in observe mode only);
+there is no in-app affordance. Esc handling is left entirely to the browser: the
 Fullscreen API reserves Esc for the exit and the exit is not cancelable
 by page code, so any attempt to layer app behaviour under a
 fullscreen-active Esc is unreliable (some browsers don't even dispatch

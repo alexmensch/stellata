@@ -2,7 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   MAX_RATE,
   VirtualClock,
-  formatRate,
   isLive,
   nextFastForwardRate,
   nextRewindRate,
@@ -132,15 +131,6 @@ describe('nextRewindRate', () => {
   it('saturates at -MAX_RATE', () => {
     expect(nextRewindRate(-MAX_RATE)).toBe(-MAX_RATE);
     expect(nextRewindRate(-MAX_RATE / 2)).toBe(-MAX_RATE);
-  });
-});
-
-describe('formatRate', () => {
-  it('renders paused, forward, and reverse multipliers', () => {
-    expect(formatRate(0)).toBe('paused');
-    expect(formatRate(1)).toBe('1×');
-    expect(formatRate(1024)).toBe('1024×');
-    expect(formatRate(-16)).toBe('-16×');
   });
 });
 

@@ -27,10 +27,10 @@ export function isLive(t: number, toleranceSec: number = LIVE_TOLERANCE_SEC): bo
   return Math.abs(t - Date.now() / 1000) < toleranceSec;
 }
 
-// Rate magnitude ceiling: 2^30 (~1.07e9×). Covers Myr/sec of orbital
+// Rate magnitude ceiling: 2^32 (~4.29e9×). Covers Myr/sec of orbital
 // evolution without float-precision blowup in Kepler eval at typical
 // solver tolerances. FF/RW saturate here rather than overflowing.
-export const MAX_RATE = 2 ** 30;
+export const MAX_RATE = 2 ** 32;
 
 // FF/RW step through powers of two crossing zero directly: ±1 are the
 // closest-to-zero non-paused speeds, so a step from +1 lands on -1 (and
@@ -45,12 +45,6 @@ export function nextRewindRate(rate: number): number {
   if (rate === 0) return -1;
   if (rate < 0) return Math.max(rate * 2, -MAX_RATE);
   return rate === 1 ? -1 : rate / 2;
-}
-
-/** Compact multiplier label for the scrubber readout: `paused`, `1×`,
- *  `-16×`, `1024×`. */
-export function formatRate(rate: number): string {
-  return rate === 0 ? 'paused' : `${rate}×`;
 }
 
 /** Epoch-ms → a zoneless `datetime-local` input value in **local** time:
@@ -119,3 +113,19 @@ export class VirtualClock {
   fastForward(): void { this.setRate(nextFastForwardRate(this.rate)); }
   rewind(): void { this.setRate(nextRewindRate(this.rate)); }
 }
+
+export type TransportAction = 'rewind' | 'play' | 'pause' | 'fastForward' | 'reset';
+
+/** Transport-row spec for the scrubber widget: which clock method each
+ *  control drives, plus its tooltip. The widget builds its buttons from
+ *  this and adds side-effects (readout refresh, picker sync). */
+export const TRANSPORT_BUTTONS: ReadonlyArray<{
+  action: TransportAction;
+  title: string;
+}> = [
+  { action: 'rewind', title: 'Rewind — halve, or reverse across 1×' },
+  { action: 'play', title: 'Play — resume last forward rate' },
+  { action: 'pause', title: 'Pause' },
+  { action: 'fastForward', title: 'Fast-forward — double, or forward across 1×' },
+  { action: 'reset', title: 'Reset to live now at 1×' },
+];
