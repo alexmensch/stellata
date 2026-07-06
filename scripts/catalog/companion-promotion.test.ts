@@ -1940,6 +1940,23 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(aa1)).toBe(true);
   });
 
+  it('re-homes a blended non-anchor primary through its synth slot (secondary stays on the anchor)', () => {
+    // Castor BC pattern: the pair's primary (Ca) carries the system anchor's
+    // gaia, so its id-first resolve lands on the anchor; its own synth slot is
+    // the true companion end. The secondary (Cb) blends onto the anchor too but
+    // was never promoted (no synth). Without the primary synth retry the pair
+    // reads pri == sec == anchor and the system is wrongly left unwinged.
+    const anchor = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
+    const caSynth = makeStar({ syntheticId: 'synth-W1-Ca', absmag: 5.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Ca,Cb', comp: 'Ca', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Ca,Cb', comp: 'Cb', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [anchor, caSynth])).toBe(1);
+    expect(isWinged(anchor)).toBe(true);
+    expect(isWinged(caSynth)).toBe(false);
+  });
+
   it('leaves a degenerate pair (secondary collapses onto the primary, no synth slot) unwinged', () => {
     const aa = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
     const rows = [

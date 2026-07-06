@@ -621,12 +621,21 @@ the post-sort `buildCatalogRowIndexMap`) closes that gap:
 - **Renders-a-companion gate.** For each non-standalone
   multiples.tsv pair, primary and secondary resolve to catalog records
   through the same `gaia → hip → synth` priority
-  `build-runtime-binaries.py`'s `resolve_idx` uses — including the
-  blended-secondary synth retry (a secondary carrying the primary's
-  gaia/hip resolves onto the primary's own record; the synth slot
-  promotion minted is the true companion). A pair whose two sides
-  resolve to DISTINCT records renders a companion; the winged set
-  therefore tracks `binaries.bin`'s primaries.
+  `build-runtime-binaries.py`'s `resolve_idx` uses, plus both of that
+  writer's blended-sibling synth retries: a secondary carrying the
+  primary's gaia/hip resolves onto the primary's own record (its synth
+  slot is the true companion), and a blended non-anchor primary
+  re-homes onto its own distinct synth slot (Castor Ca inside the
+  outer pair). A pair whose two sides resolve to DISTINCT records
+  renders a companion, so the winged set tracks `binaries.bin`'s
+  primaries. The writer's post-resolution steps
+  (`override_inner_primary_indices`, the relation-winner dedup) are not
+  replicated: they change *which* index anchors a pair, never the
+  distinct-pair boolean this gate keys on, and root-grouping plus the
+  brightest-participant pick below absorb the difference. The
+  correspondence is pinned against the real `binaries.bin` by
+  `multi-star-regression.test.ts` (every rendered system carries the
+  wings bit), which catches drift on either side.
 - **One glyph per WDS system.** Records participating in a rendered
   pair are grouped by WDS root; the bit lands on the brightest
   participant only (the mutual-primary / CCDM brightest-member
