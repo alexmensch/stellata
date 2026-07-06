@@ -11,12 +11,11 @@ to existing public APIs — every shortcut is a thin wrapper, so future
 behavioural changes propagate automatically.
 
 **Display metadata is separate from dispatch.** `keyboard-shortcuts-registry.ts`
-holds the descriptor table (keys, label, `hint` eligibility, per-state
-`active` predicate, `debug` flag). It's the single source of truth for
-both the `?` help modal (`../modals/help-modal.ts` renders its `<dl>`
-from it) and the on-screen hint bar — so the two never drift. The keydown
-switch below stays the dispatch mechanism; the registry only describes
-what to display and when.
+holds the descriptor table (keys, label, `debug` flag). It's the single
+source of truth for the `?` help modal (`../modals/help-modal.ts` renders
+its `<dl>` from it), replacing the hand-authored list that used to live in
+`index.html`. The keydown switch below stays the dispatch mechanism; the
+registry only describes what to display.
 
 | Key | Action |
 | --- | --- |
@@ -34,7 +33,7 @@ what to display and when.
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
-| `?` | Open the keyboard-shortcuts help modal (the "reveal all" for the hint bar) |
+| `?` | Open the keyboard-shortcuts help modal (the full shortcut list) |
 | `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus) |
 
 The Find picker reuses the shared search corpus via `createSearchRunner`
@@ -119,33 +118,6 @@ same APIs that the per-row reset link buttons use:
 `setCameraFov(DEFAULT_FOV)`, `setStarExaggerationK(getStarExaggerationKDefault())`.
 Magnitude / focus / overlays / camera position are deliberately
 *not* touched — those are user choices, not "default view" state.
-
-## Keyboard-shortcut hint bar
-
-`hint-bar.ts` renders a thin row of transparent chips pinned bottom-centre
-(between the scale bar and meta), showing the context-essential shortcuts
-for the current app state. It reads `hintBarShortcuts(state)` from the
-registry and re-renders on every state change: `focus` / `cloudFocus` /
-`cameraMode` / `vector` / `vectorCloud` events, plus a `MutationObserver`
-on the modal `hidden` attributes (modals emit no event of their own).
-
-**The context-essential set** (registry `hint: true`, gated per state):
-`G` and `?` are always shown; `F` and `M` only in observe, `O` appears
-only with a focused star in navigate, `W` only with a destination set,
-`Esc` only when there's something to step back from. In any modal state
-the bar collapses to `Esc` alone. Everything else — `S`, `H`, `C`, `R`,
-`T`, `F`-`F`, `U`, `+`/`-`, `=` — is relegated to the `?` help modal
-(`hint: false`); the triple-tap-`D` debug affordance (`debug: true`)
-never appears anywhere. Adjust what shows by flipping a descriptor's
-`hint` flag / `active` predicate in the registry — the bar and the help
-modal both follow.
-
-The row is `pointer-events: none` (click-through); individual chips take
-pointer events only so their `title` tooltips work on hover. Enabled by
-default; the "Keyboard hints" checkbox in the Navigation group toggles it,
-persisted to `localStorage` under `stellata.hint-bar`. Chip colours ride
-the root CSS tokens, so chart mode (`body.monochrome`) adapts with no
-per-element override.
 
 ## Per-group collapse in the settings panel
 
