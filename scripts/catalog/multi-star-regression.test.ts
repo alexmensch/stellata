@@ -14,9 +14,10 @@ import {
   distancePc,
   loadCatalog,
   lookupByHip,
-  lookupByGaiaSourceId,
   lookupByName,
+  lookupByRef,
 } from './catalog-lookup';
+import { parseFloatOrNull, parseRef, type RecordRef } from './corpus-tsv';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
@@ -113,9 +114,6 @@ const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 559;
 
 // ---- Corpus row types ----------------------------------------------------
 
-type RefKind = 'hip' | 'gaia' | 'name';
-interface RecordRef { kind: RefKind; value: string }
-
 interface CorpusPair {
   wdsId: string;
   pair: string;
@@ -144,28 +142,6 @@ interface MultiplesGeomRow {
 }
 
 // ---- Loaders --------------------------------------------------------------
-
-function nonEmpty(s: string | undefined): string | null {
-  const t = (s ?? '').trim();
-  return t.length === 0 ? null : t;
-}
-
-function parseFloatOrNull(s: string | undefined): number | null {
-  const t = nonEmpty(s);
-  if (t === null) return null;
-  const v = Number(t);
-  return Number.isFinite(v) ? v : null;
-}
-
-function parseRef(cell: string, rowName: string, col: string): RecordRef {
-  const idx = cell.indexOf(':');
-  const kind = idx > 0 ? cell.slice(0, idx) : '';
-  const value = cell.slice(idx + 1).trim();
-  if ((kind !== 'hip' && kind !== 'gaia' && kind !== 'name') || !value) {
-    throw new Error(`${rowName}: malformed ${col} "${cell}" — expected hip:<n> | gaia:<id> | name:<name>`);
-  }
-  return { kind, value };
-}
 
 function loadCorpusSync(): CorpusPair[] {
   const rows = parse(readFileSync(CORPUS_TSV, 'utf-8'), {
@@ -302,10 +278,7 @@ beforeAll(async () => {
 });
 
 function resolveRef(ref: RecordRef, label: string): CatalogRecord {
-  const record =
-    ref.kind === 'hip' ? lookupByHip(catalog, Number(ref.value))
-    : ref.kind === 'gaia' ? lookupByGaiaSourceId(catalog, ref.value)
-    : lookupByName(catalog, ref.value);
+  const record = lookupByRef(catalog, ref);
   expect(record, `${label}: ${ref.kind}:${ref.value} not found in catalog.bin`).not.toBeNull();
   return record as CatalogRecord;
 }

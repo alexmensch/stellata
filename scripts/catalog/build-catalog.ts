@@ -18,6 +18,8 @@ import {
   FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
+  encodeAmpUnits,
+  encodePeriodUnits,
   HEADER_LAYOUT,
   RECORD_LAYOUT,
   HEADER_SIZE,
@@ -635,8 +637,8 @@ async function main() {
     // 6553 days (rare long-period symbiotics). Period = 0 is the shader's
     // "not variable" sentinel.
     if (s.periodDays > 0 && s.amplitudeMag > 0) {
-      const ampUnits = Math.min(255, Math.max(0, Math.round(s.amplitudeMag * 20)));
-      const periodUnits = Math.min(65535, Math.max(0, Math.round(s.periodDays * 10)));
+      const ampUnits = encodeAmpUnits(s.amplitudeMag);
+      const periodUnits = encodePeriodUnits(s.periodDays);
       view.setUint8(off + RECORD_LAYOUT.ampUnits, ampUnits);
       view.setUint16(off + RECORD_LAYOUT.period, periodUnits, true);
       if (ampUnits > 0 && periodUnits > 0) variableCount++;
