@@ -5,7 +5,11 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import {
   applyDoublesFlag as applyDoublesFlagPure,
+  isOpticalDoublePrimary,
+  OPTICAL_DOUBLE_MIN_SEP_PC,
+  type OpticalDoubleContext,
 } from './catalog-pure';
+import type { MultiplesTsvRow } from './companion-promotion';
 import type { Star } from './stars-parse';
 
 // Curated visual-double systems that the CCDM+MultFlag filter (see
@@ -150,19 +154,61 @@ export function parseHipCcdm(srcPath: string): Map<string, number[]> {
   return groups;
 }
 
+// Components of kept physical pairs in data/binaries/multiples.tsv — the
+// binaries pipeline's Stage-5 optical filter already classified these
+// bound. A CCDM primary matching either set has independent physical
+// evidence and keeps its wings past the optical-double gate.
+export interface PhysicalPairKeys {
+  hips: ReadonlySet<number>;
+  gaia: ReadonlySet<string>;
+}
+
+// Collect the HIP / Gaia source_id keys of every kept physical-pair
+// component from multiples.tsv. Stage 6 drops optical pairs entirely, so a
+// non-standalone row is a bound-pair member; standalone rows are single
+// stars carrying no boundness evidence.
+export function collectPhysicalPairKeys(
+  rows: readonly MultiplesTsvRow[] | null,
+): PhysicalPairKeys {
+  const hips = new Set<number>();
+  const gaia = new Set<string>();
+  for (const r of rows ?? []) {
+    if (r.orbitRole === 'standalone') continue;
+    if (r.hip !== null) hips.add(r.hip);
+    if (r.gaiaSourceId !== null) gaia.add(r.gaiaSourceId);
+  }
+  return { hips, gaia };
+}
+
 // Build the union of CCDM groups (parsed from Hipparcos) and the curated
 // KNOWN_VISUAL_DOUBLES overrides, then delegate to the pure
 // `applyDoublesFlag` helper. The pure helper handles the per-group
 // "brightest in-catalog component, idempotent with existing flags" logic
 // — see catalog-pure.ts for the contract.
+//
+// `physical` gates the optical-double suppression (isOpticalDoublePrimary):
+// CCDM keeps a tail of wide line-of-sight optical pairs whose brightest
+// member would otherwise get spurious chart-mode wings. The curated
+// KNOWN_VISUAL_DOUBLES are folded into the physical-evidence set so they
+// are never suppressed.
 export function applyDoublesFlag(
   stars: Star[],
   ccdmGroups: Map<string, number[]>,
   hipToIndex: Map<number, number>,
-): { systems: number; flagged: number } {
+  physical: PhysicalPairKeys,
+): { systems: number; flagged: number; suppressed: number } {
   const allGroups: Iterable<Iterable<number>> = (function* () {
     yield* ccdmGroups.values();
     for (const sys of KNOWN_VISUAL_DOUBLES) yield sys.components;
   })();
-  return applyDoublesFlagPure(stars, allGroups, hipToIndex);
+  const physicalHips = new Set<number>(physical.hips);
+  for (const h of KNOWN_VISUAL_DOUBLE_HIPS) physicalHips.add(h);
+  const ctx: OpticalDoubleContext = {
+    physicalHips,
+    physicalGaia: physical.gaia,
+    minSepPc: OPTICAL_DOUBLE_MIN_SEP_PC,
+  };
+  const suppress = (primaryIdx: number, memberIndices: number[]): boolean =>
+    isOpticalDoublePrimary(primaryIdx, memberIndices, stars, ctx);
+  return applyDoublesFlagPure(stars, allGroups, hipToIndex, suppress);
 }

@@ -53,7 +53,7 @@ function makeStar(overrides: Partial<Star> = {}): Star {
   };
 }
 
-function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {
+export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {
   return {
     systemId: 'WDS-1-AB',
     comp: 'B',

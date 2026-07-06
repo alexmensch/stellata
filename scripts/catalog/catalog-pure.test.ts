@@ -20,9 +20,15 @@ import {
   VAR_TYPE_ECLIPSING,
   VAR_TYPE_OTHER,
   inferBinaries,
+  pickBrightest,
   markPrimary,
   markPrimaryIfUnflagged,
   applyDoublesFlag,
+  isOpticalDoublePrimary,
+  isGaiaQualityDist,
+  OPTICAL_DOUBLE_MIN_SEP_PC,
+  type OpticalDoubleStar,
+  type OpticalDoubleContext,
   buildHipToIndex,
   BINARY_MAX_SEP_PC,
   FLAG_HAS_NAME,
@@ -1090,6 +1096,148 @@ describe('catalog-pure / applyDoublesFlag', () => {
     // Second pass sees the existing primary bit and bails — no
     // additional bits set.
     expect(stars.map((x) => x.flags)).toEqual(flagsBefore);
+  });
+
+  it('reports suppressed=0 when no suppress predicate is supplied', () => {
+    const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
+    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars));
+    expect(r.suppressed).toBe(0);
+  });
+
+  it('vetoes the fresh flag when the suppress predicate fires', () => {
+    // Group {100, 200}; 100 is brightest. A predicate that suppresses the
+    // picked primary leaves both stars unflagged and counts one suppression.
+    const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
+    const r = applyDoublesFlag(
+      stars,
+      [[100, 200]],
+      buildHipToIndex(stars),
+      (primaryIdx) => primaryIdx === 0,
+    );
+    expect(r.systems).toBe(1);
+    expect(r.flagged).toBe(0);
+    expect(r.suppressed).toBe(1);
+    expect(stars[0].flags).toBe(0);
+    expect(stars[1].flags).toBe(0);
+  });
+
+  it('never runs the suppress predicate on an already-flagged group', () => {
+    // 200 already winged by a prior pass; the group short-circuits to a
+    // no-op before the predicate would see the picked primary.
+    const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
+    let called = false;
+    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars), () => {
+      called = true;
+      return true;
+    });
+    expect(called).toBe(false);
+    expect(r.flagged).toBe(0);
+    expect(r.suppressed).toBe(0);
+    expect(stars[1].flags).toBe(FLAG_BINARY_PRIMARY);
+  });
+});
+
+describe('catalog-pure / pickBrightest', () => {
+  const s = (absmag: number) => ({ absmag });
+  it('returns the lowest-absmag index', () => {
+    expect(pickBrightest([s(4), s(2), s(6)], [0, 1, 2])).toBe(1);
+  });
+  it('returns -1 for an empty index list', () => {
+    expect(pickBrightest([s(4)], [])).toBe(-1);
+  });
+  it('does not mutate — markPrimary is the flag-setting wrapper', () => {
+    const stars = [{ absmag: 2, flags: 0 }];
+    pickBrightest(stars, [0]);
+    expect(stars[0].flags).toBe(0);
+  });
+});
+
+describe('catalog-pure / markPrimaryIfUnflagged suppress hook', () => {
+  const s = (absmag: number, flags = 0) => ({ absmag, flags });
+  it('returns -3 and sets no bit when suppress vetoes the pick', () => {
+    const stars = [s(2), s(5)];
+    expect(markPrimaryIfUnflagged(stars, [0, 1], (i) => i === 0)).toBe(-3);
+    expect(stars[0].flags).toBe(0);
+    expect(stars[1].flags).toBe(0);
+  });
+  it('flags normally when suppress returns false', () => {
+    const stars = [s(2), s(5)];
+    expect(markPrimaryIfUnflagged(stars, [0, 1], () => false)).toBe(0);
+    expect(stars[0].flags).toBe(FLAG_BINARY_PRIMARY);
+  });
+  it('short-circuits (-2) before consulting suppress on an already-flagged member', () => {
+    const stars = [s(2), s(5, FLAG_BINARY_PRIMARY)];
+    let called = false;
+    expect(markPrimaryIfUnflagged(stars, [0, 1], () => { called = true; return true; })).toBe(-2);
+    expect(called).toBe(false);
+  });
+});
+
+describe('catalog-pure / isGaiaQualityDist', () => {
+  it('accepts Gaia inverse-parallax dist_src (G_R3, G_R2)', () => {
+    expect(isGaiaQualityDist('G_R3')).toBe(true);
+    expect(isGaiaQualityDist('G_R2')).toBe(true);
+  });
+  it('rejects non-Gaia and null dist_src', () => {
+    expect(isGaiaQualityDist('HIP')).toBe(false);
+    expect(isGaiaQualityDist('GJ')).toBe(false);
+    expect(isGaiaQualityDist(null)).toBe(false);
+  });
+});
+
+describe('catalog-pure / isOpticalDoublePrimary', () => {
+  // Two components 3 pc apart on the x-axis, both Gaia-quality, no physical
+  // evidence — the canonical optical double.
+  function make(overrides: Partial<OpticalDoubleStar>[] = []): OpticalDoubleStar[] {
+    const base: OpticalDoubleStar = {
+      absmag: 0, x: 0, y: 0, z: 0, hip: null, gaiaSourceId: null,
+      athygDistSrc: 'G_R3', varType: VAR_TYPE_UNKNOWN,
+    };
+    const stars: OpticalDoubleStar[] = [
+      { ...base, hip: 100 },
+      { ...base, hip: 200, x: 3 },
+    ];
+    overrides.forEach((o, i) => Object.assign(stars[i], o));
+    return stars;
+  }
+  const ctx = (over: Partial<OpticalDoubleContext> = {}): OpticalDoubleContext => ({
+    physicalHips: new Set(), physicalGaia: new Set(),
+    minSepPc: OPTICAL_DOUBLE_MIN_SEP_PC, ...over,
+  });
+
+  it('suppresses when the nearest Gaia-quality sibling is beyond the limit', () => {
+    expect(isOpticalDoublePrimary(0, [0, 1], make(), ctx())).toBe(true);
+  });
+  it('keeps when the nearest sibling is within the limit', () => {
+    const stars = make([{}, { x: 0.5 }]); // 0.5 pc apart
+    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+  });
+  it('keeps when the primary is a component of a physical pair (by HIP)', () => {
+    expect(isOpticalDoublePrimary(0, [0, 1], make(), ctx({ physicalHips: new Set([100]) }))).toBe(false);
+  });
+  it('keeps when the primary is a physical-pair member by Gaia source_id', () => {
+    const stars = make([{ gaiaSourceId: 'g1' }]);
+    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx({ physicalGaia: new Set(['g1']) }))).toBe(false);
+  });
+  it('keeps eclipsing primaries (extrinsic wings earned)', () => {
+    const stars = make([{ varType: VAR_TYPE_ECLIPSING }]);
+    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+  });
+  it('keeps when the primary lacks a Gaia-quality distance', () => {
+    const stars = make([{ athygDistSrc: 'HIP' }]);
+    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+  });
+  it('keeps when no sibling has a Gaia-quality distance to measure against', () => {
+    const stars = make([{}, { x: 3, athygDistSrc: 'HIP' }]);
+    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+  });
+  it('measures the NEAREST sibling — a near Gaia-quality partner keeps the wings even beside a far one', () => {
+    const stars: OpticalDoubleStar[] = [
+      { absmag: 0, x: 0, y: 0, z: 0, hip: 100, gaiaSourceId: null, athygDistSrc: 'G_R3', varType: 0 },
+      { absmag: 1, x: 0.3, y: 0, z: 0, hip: 200, gaiaSourceId: null, athygDistSrc: 'G_R3', varType: 0 }, // bound
+      { absmag: 2, x: 900, y: 0, z: 0, hip: 300, gaiaSourceId: null, athygDistSrc: 'G_R3', varType: 0 }, // background
+    ];
+    expect(isOpticalDoublePrimary(0, [0, 1, 2], stars, ctx())).toBe(false);
   });
 });
 
