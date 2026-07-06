@@ -527,6 +527,15 @@ P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
 sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag
 ```
 
+`x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
+`_position_pc` PM-propagates each component's direction from its native
+epoch (`ComponentAstrometry.ref_epoch` — Gaia J2016.0, HIP2 J1991.25,
+AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH`, mirroring the single-star
+cascade in `scripts/catalog/direction-cascade.ts`. This keeps a promoted
+secondary's baked xyz on the same epoch as its primary so the static
+relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
+(epoch gap × systemic PM). See `data/README.md` § Reference epoch.
+
 The last four columns carry WDS pair geometry — populated on both
 component rows of a decomposing pair (standalone rows leave them
 empty). `sep_arcsec` and `pa_deg` feed companion-promotion's

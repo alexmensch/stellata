@@ -66,13 +66,14 @@ through the same trust cascade the binaries pipeline implements in
 | `athyg_printed` | Residual: no Gaia astrometry row AND no HIP2 row. AT-HYG's printed ra/dec as-is, unpropagated. ξ UMa (HIP 55203 excluded from HIP2 as orbit-corrupted, Gaia-saturated) is canonical; Sol also lands here. | 30 |
 
 Epoch propagation (`directionAtEpoch`) advances the measured unit
-vector linearly along the local east/north tangent basis and
-renormalises — exact in cos δ, stable through the poles, <0.001″
-error at Barnard's-scale PM over the 16-yr Gaia→J2000 interval.
-Radial velocity (perspective acceleration, ≤0.15″ over 16 yr on the
-most extreme star) is deliberately omitted; the full tuple belongs
-to future current-epoch propagation. μ_α* inputs are the cos
-δ-applied rates straight from Gaia/HIP2 — never divide by cos δ.
+vector to the `CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local
+east/north tangent basis and renormalises — exact in cos δ, stable
+through the poles, <0.002″ error at Barnard's-scale PM over the 24.75-yr
+HIP2 J1991.25→J2016 interval. Gaia rows are native J2016.0 → a zero-Δt
+no-op. Radial velocity (perspective acceleration) is deliberately
+omitted; the full tuple belongs to future current-epoch propagation.
+μ_α* inputs are the cos δ-applied rates straight from Gaia/HIP2 — never
+divide by cos δ.
 
 Missing source files degrade tiers gracefully (empty map → cascade
 falls through), and the per-route build-counts pins
@@ -82,9 +83,12 @@ The sky-position regression corpus (`sky-position-corpus.tsv` +
 `sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
 Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per
 non-Gaia tier (Sirius + Vega for hip2_saturated, ξ UMa for
-athyg_printed) against published SIMBAD J2000 positions — the
-Gaia/HIP2-tier rows land within 0.01″; a PM sign / cos δ /
-Δt-direction defect shows up as tens of arcsec.
+athyg_printed) against their **J2016.0** positions (the scene epoch).
+At J2016.0 the Gaia tier is a zero-Δt no-op, so those rows are a
+placement / tier-routing pin — a wrong source or xyz-assembly sign
+shows up as tens of arcsec. The propagation formula itself (PM sign /
+cos δ / Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
+independently against SIMBAD J2000 in `direction-cascade.test.ts`.
 
 After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
 visual-doubles flagging (`visual-doubles.ts`), and the 80-byte v6

@@ -514,13 +514,13 @@ resolved at build time through the same trust cascade the
 multiple-star pipeline already implements
 (`scripts/binaries/stage3_astrometry.py`), sharing its thresholds:
 
-1. **Gaia DR3 5p** (ra, dec at J2016.0, PM-propagated to J2000.0)
-   for every row that resolves to a source_id with usable astrometry
-   — ~310.6k rows (~99.2%), mas-grade or better, including ~10k
-   NSS-flagged rows whose `gaia_source` astrometry is the
+1. **Gaia DR3 5p** (ra, dec at J2016.0, the scene epoch — no
+   propagation) for every row that resolves to a source_id with usable
+   astrometry — ~310.6k rows (~99.2%), mas-grade or better, including
+   ~10k NSS-flagged rows whose `gaia_source` astrometry is the
    centre-of-mass refit.
-2. **HIP2 van Leeuwen** (ra, dec at J1991.25, PM-propagated to
-   J2000.0) for the Gaia-saturated bright set — 2,509 rows with no
+2. **HIP2 van Leeuwen** (ra, dec at J1991.25, PM-propagated forward to
+   J2016.0) for the Gaia-saturated bright set — 2,509 rows with no
    usable Gaia parallax, plus 138 whose Gaia-vs-HIP2 PM disagrees by
    > 50 mas/yr on either axis (orbit-corrupted 5p PM).
 3. **AT-HYG printed ra/dec as-is** for the residual (30 rows,
@@ -539,43 +539,51 @@ star to 5.3 pc). Every row's xyz is `direction × distance` computed
 in float64 and written float32; the stored `x0/y0/z0` columns are
 no longer consumed. Both build pipelines derive every shared star
 from the same astrometry files, closing the consistency gap by
-construction. J2000.0 remains the scene epoch (`data/README.md`
-§ Reference epoch). Epoch propagation is the RV-free linear
-space-motion form (tangent-basis advance + renormalise): exact in
-cos δ, <0.001″ error at Barnard's-scale PM over 16 yr; perspective
-acceleration (≤0.15″ worst case) is deferred to current-epoch
-propagation, which consumes the same resolved (position, PM, RV,
-parallax) tuple and composes on top of this cascade.
+construction. **J2016.0 is the scene epoch** — Gaia DR3's native epoch,
+adopted catalogue-wide (`data/README.md` § Reference epoch) so the
+Gaia-dominant corpus needs no propagation and only the shrinking HIP2 /
+AT-HYG minority advances; the binary pipeline mirrors the same
+`CATALOG_SCENE_EPOCH` in `scripts/binaries/stage6_multiples.py`. Epoch
+propagation is the RV-free linear space-motion form (tangent-basis
+advance + renormalise): exact in cos δ, <0.002″ error at Barnard's-scale
+PM over the 24.75 yr HIP2→J2016 interval (Gaia routes are a zero-Δt
+no-op); perspective acceleration (≤0.15″ worst case) is deferred to
+current-epoch propagation, which consumes the same resolved (position,
+PM, RV, parallax) tuple and composes on top of this cascade.
 
 The sky-position regression corpus
 (`scripts/catalog/sky-position-corpus.tsv`) pins Barnard's,
-Kapteyn's, Groombridge 1830, 61 Cyg A/B, and Keid (high-PM tier-1
-stress) plus Sirius and Vega (tier 2, HIP2-propagated) against
-published SIMBAD J2000 positions — all land within 0.01″ (float32
-container level) — plus ξ UMa's tier-3 printed position at 0.4″.
-Gaia DR4 slots in as a source-file swap inside the same cascade
-(`scripts/refresh/README.md` § DR4 transition).
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, and Keid (Gaia tier-1) plus
+Sirius and Vega (tier 2, HIP2-propagated 24.75 yr) against their
+J2016.0 positions, and ξ UMa's tier-3 printed position. At the J2016.0
+scene epoch the Gaia tier is a zero-Δt no-op, so it is a
+placement/tier-routing pin; the propagation formula (tangent / sign /
+cos δ) is exercised by the HIP2 tier and pinned independently against
+SIMBAD J2000 in `direction-cascade.test.ts`. Gaia DR4 slots in as a
+source-file swap inside the same cascade (`scripts/refresh/README.md`
+§ DR4 transition).
 
 ### Current-epoch star positions — space-motion propagation to `t`
 
 Design record (2026-07) answering: how do catalog stars leave the
-J2000.0 snapshot and track the scene's time base `t`, the way
+J2016.0 snapshot and track the scene's time base `t`, the way
 planets and binary orbits already do? The time readout claims the
 scene renders "the moment being rendered"; today that claim holds
 for the solar system and binary orbital motion but not for the
-~322k catalog star positions, which sit frozen ~26 years stale. The
+~322k catalog star positions, which sit frozen ~10 years stale. The
 error is concentrated exactly in the stars users recognise and
 focus on — the high-PM nearby neighbours (drift table:
 `data/README.md` § Reference epoch and proper motion; worst case
-Barnard's Star at ~4.6 arcmin).
+Barnard's Star at ~1.8 arcmin from the J2016.0 base).
 
 **Position baseline.** Post-direction-cascade (§ Driver astrometry
-above), every record's position is J2000.0 *by construction* —
-Gaia DR3 5p propagated J2016.0 → J2000.0, HIP2 propagated
-J1991.25 → J2000.0, or AT-HYG printed ra/dec as-is for the 30
+above), every record's position is J2016.0 *by construction* — Gaia
+DR3 5p at its native J2016.0 (no propagation), HIP2 propagated
+J1991.25 → J2016.0, or AT-HYG printed ra/dec as-is for the 30
 residual rows (including Sol). The old "AT-HYG says J2000 but HIP
 rows are empirically J1991.25" ambiguity is resolved upstream of
-this design; propagation starts from a clean epoch.
+this design; propagation starts from a clean epoch. This runtime
+advance therefore starts from J2016.0, not J2000.0.
 
 **Velocity sources.** Route per row through the same trust cascade
 the direction resolution uses, so position and velocity always come
@@ -590,7 +598,7 @@ from the same solution:
    `data/hipparcos/` van Leeuwen columns already committed.
 3. **AT-HYG `pm_ra`/`pm_dec`** (mas/yr, 98.9% coverage,
    merge-artifact provenance) for rows with neither, else **zero**.
-   Rows with no PM from any source stay at J2000.0 — that residual
+   Rows with no PM from any source stay at J2016.0 — that residual
    is a few hundred faint distant stars whose drift is
    sub-arcsecond per century, plus Sol, which carries no PM row and
    so correctly stays fixed at the origin; exact per-tier counts
@@ -611,7 +619,7 @@ Cartesian frame `catalog.bin` uses:
 
 ```
 v   = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)     [pc/yr]
-p(t) = p(J2000) + v·(t − 2000.0)                  [pc, t in Julian yr]
+p(t) = p(J2016) + v·(t − 2016.0)                  [pc, t in Julian yr]
 ```
 
 with `û` the unit direction, `ê`/`n̂` the local east/north tangent
@@ -624,8 +632,9 @@ standard epoch-transformation model (ESA SP-1200 Vol. 1 § 1.5.5;
 Butkevich & Lindegren 2014, A&A 570, A62 give the rigorous form).
 Deliberately omitted: perspective acceleration and light-time
 terms. The perspective term is the largest omission and grows
-quadratically — ~0.4″ at J2026 for Barnard's (the worst case),
-below the 1″ validation tolerance; ~10 arcmin at ±1 kyr. Linear
+quadratically — from the J2016.0 base it is ~0.07″ at J2026 for
+Barnard's (the worst case), far below the 1″ validation tolerance;
+~10 arcmin at ±1 kyr. Linear
 propagation is therefore faithful at arcsecond fidelity for
 decades and at arcminute fidelity for ~±1 kyr on the fastest
 stars (far longer for everything else); a future deep-time
@@ -641,7 +650,7 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
 
 - `catalog.bin` v7 appends per-record `vx/vy/vz` `float32` pc/yr
   (bytes 80–91, stride 80 → 92; +3.9 MB ≈ +15%). Positions stay
-  J2000.0 — the scene epoch convention and every existing
+  J2016.0 — the scene epoch convention and every existing
   regression corpus remain valid.
 - At startup, immediately after catalog load, one pure pass
   advances `catalog.positions` to `getT()` (float64 math, float32
@@ -1572,8 +1581,8 @@ science it relates to.
   included — boundaries would be a separate Stellarium dataset and
   carry no visual benefit at the camera scales the app operates in.
 - **Time-series proper motion — decision reversed, design accepted.**
-  Positions are still a J2000.0 snapshot today (~26 years stale;
-  the highest-PM neighbours are visibly off by 2–5 arcmin), but
+  Positions are still a static snapshot today (now J2016.0, ~10 years
+  stale; the highest-PM neighbours are visibly off by ~1–2 arcmin), but
   runtime propagation to `t` is now designed — see § Current-epoch
   star positions above; implementation is tracked work. Per-layer
   epoch table and the staleness audit live in `data/README.md`
