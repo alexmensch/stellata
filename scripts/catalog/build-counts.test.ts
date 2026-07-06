@@ -54,6 +54,7 @@ function baseCounts(): BuildCounts {
     companionAbsmagSpectralDerived: 30,
     companionAbsmagAnchorCollocated: 1,
     companionAbsmagInheritedTwinOrbital: 25,
+    companionBlendSplit: 0,
     companionRepositionedCollocatedDouble: 1,
     componentLettersStamped: 2,
     gaiaAstrometryEntries: 315000,

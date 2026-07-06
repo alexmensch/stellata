@@ -4944,10 +4944,12 @@ class GaiaPhotometryAbsmagTests(unittest.TestCase):
 
     def test_ballesteros_bv_from_teff_mirrors_ts(self) -> None:
         # Python port pinned against the TS canonical
-        # (scripts/colour/blackbody-lut-pure.ts): solar 5772 K → 0.65 B-V.
-        self.assertAlmostEqual(
-            bb.ballesteros_bv_from_teff(5772.0), 0.652, places=2,
-        )
+        # (scripts/colour/blackbody-lut-pure.ts) across the range — one
+        # point drifts silently at the ends, where a mirror is likeliest
+        # to diverge. Hot blue → ~0, solar → 0.652, cool red → ~1.71.
+        self.assertAlmostEqual(bb.ballesteros_bv_from_teff(10000.0), 0.010, places=3)
+        self.assertAlmostEqual(bb.ballesteros_bv_from_teff(5772.0), 0.652, places=3)
+        self.assertAlmostEqual(bb.ballesteros_bv_from_teff(3500.0), 1.712, places=3)
 
     def test_derive_absmag_ci_solar(self) -> None:
         # G = 4.67 at 10 pc (ϖ = 100 mas) → M_G ≈ 4.67; BP−RP = 0.82
@@ -5085,6 +5087,37 @@ class GaiaPhotometryAbsmagTests(unittest.TestCase):
                 athyg=[_athyg_row(gaia=1)],
                 src_to_astrometry={2: _gaia_astrometry_row(
                     source_id=2, g_mag=8.0, bp_mag=8.6, rp_mag=7.4)},
+            ),
+        )
+        self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_NONE)
+        self.assertIsNone(rows[1].absmag)
+
+    def test_blend_into_athyg_partner_does_not_derive(self) -> None:
+        # Stage 2's blend-identity propagation copies an AT-HYG-backed
+        # primary's Gaia source onto a secondary that resolved nothing of
+        # its own, so BOTH rows carry one source and the secondary tags
+        # gaia_5p — but that source's G is the blended pair's, and the
+        # primary already carries the system light through AT-HYG. Deriving
+        # here would mint a twin of the primary; the partner-share gate
+        # suppresses it. (A's AT-HYG row is keyed by HIP, not the shared
+        # Gaia source, so _athyg_row_for_component doesn't catch B for it.)
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, hip=100, component="A", is_primary=True),
+            _resolved(gaia=1, component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(
+                athyg=[_athyg_row(hip=100)],  # A via HIP only, no gaia key
+                src_to_astrometry={1: _gaia_astrometry_row(
+                    source_id=1, g_mag=8.0, bp_mag=8.6, rp_mag=7.4)},
             ),
         )
         self.assertEqual(rows[1].photometry_via, bb.PHOTOMETRY_VIA_NONE)

@@ -1582,10 +1582,30 @@ consume it in two complementary ways:
    - **Guard.** Sources in `data/binaries/astrometry_exclusions.tsv`
      (blended photometry, e.g. Sirius B) are removed from the Gaia
      astrometry map at Stage 1, so they never reach this path — their G
-     is blended too. The derivation is gated on
-     `astrometry_via = gaia_5p` (a genuine own per-component fit), so an
-     inherited or NSS-systemic source's blended G is never turned into a
-     component magnitude.
+     is blended too. The derivation is gated on `astrometry_via = gaia_5p`,
+     which excludes inherited-position and NSS centre-of-mass routes. But
+     `gaia_5p` alone is not proof of an *own* per-component fit: Stage 2's
+     blend-identity propagation copies a partner's source onto a component
+     that resolved nothing of its own, so both rows carry one source and
+     both tag `gaia_5p`. When that shared source is AT-HYG-backed (the
+     partner already carries the system light through the AT-HYG path),
+     the derivation is suppressed — otherwise it would mint a twin of the
+     partner.
+   - **Blend split (shared source, neither in AT-HYG).** When a sub-arcsec
+     pair Gaia fit as a *single* 5p source has neither component in AT-HYG
+     (YY Gem = Castor Ca,Cb; ~100 pairs), the derived magnitude is the
+     source's **combined** light and both components (plus any outer-pair
+     row for the same source) carry it — collocated, so the system would
+     render ~2× too bright. Companion promotion's blend-split post-pass
+     (`companion-promotion.ts`, `companionBlendSplit`) divides the combined
+     light evenly across the N collocated records the source backs: each is
+     `2.5·log₁₀(N)` fainter than the blend (0.753 mag for a pair). Equal
+     split is the honest default — a pair Gaia couldn't resolve is
+     near-equal by construction, and it's exact for the equal M-dwarf
+     eclipsing pairs that dominate; the mass-ratio `q` on these rows is the
+     ⅓ pipeline placeholder, not a measured flux ratio, so a q-weighted
+     split would fabricate skew. Total system light is preserved exactly;
+     `ci` stays the shared (combined) colour.
 
    Sources for the Gaia→Johnson transforms (Ballesteros 2012 cited under
    § Star colour calibration):

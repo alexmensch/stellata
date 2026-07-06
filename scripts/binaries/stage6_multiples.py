@@ -640,6 +640,8 @@ def build_multiples_row(
     indices: IdentifierIndices,
     system_anchor: SystemAnchor | None = None,
     primary_athyg: AthygRow | None = None,
+    partner_gaia_source_id: int | None = None,
+    partner_has_athyg: bool = False,
 ) -> MultiplesRow:
     """Project Stage 2-4 outputs for one component into one canonical
     ``MultiplesRow`` keyed by ``_system_id_for_pair``. ``_position_pc``
@@ -659,6 +661,17 @@ def build_multiples_row(
     ``athyg_system_inherited`` (the photometry actually belongs to the
     primary; companion promotion downstream uses Δmag imputation).
     Pass ``None`` for primary rows and standalone rows.
+
+    ``partner_gaia_source_id`` / ``partner_has_athyg`` describe the pair
+    partner, and gate the Gaia-photometry path against blend leakage:
+    astrometry_via=gaia_5p is NOT proof of an own per-component fit when
+    Stage 2's blend-identity propagation copied the partner's source onto
+    a component that resolved nothing of its own (both rows then carry one
+    source). When that shared source is AT-HYG-backed, the partner already
+    carries the system light through the AT-HYG path, so deriving here
+    would mint a twin of it — suppressed. The symmetric blend (neither in
+    AT-HYG) still derives the source's COMBINED magnitude; companion
+    promotion divides it across the collocated records it backs.
     """
     athyg = _athyg_row_for_component(component, indices)
     position, inherited = _resolve_position(astrometry, system_anchor)
@@ -673,13 +686,19 @@ def build_multiples_row(
     # No AT-HYG row backs this component, but it earned its own Gaia 5p
     # fit — derive absmag (and ci) from that same source's G/BP/RP +
     # parallax so promotion's 'own' photometry path keeps it instead of
-    # dropping it for a blank absmag. Gated on astrometry_via=gaia_5p so
-    # the photometry is this component's own, not a blended / inherited
-    # source; excluded sources are already absent from src_to_astrometry.
+    # dropping it for a blank absmag. Gated on astrometry_via=gaia_5p AND
+    # a not-blend-into-an-AT-HYG-partner check (see the partner_* args):
+    # excluded sources are already absent from src_to_astrometry.
+    shares_athyg_partner_source = (
+        partner_has_athyg
+        and partner_gaia_source_id is not None
+        and partner_gaia_source_id == component.gaia_source_id
+    )
     if (
         athyg is None
         and astrometry_via == ASTROMETRY_VIA_GAIA_5P
         and component.gaia_source_id is not None
+        and not shares_athyg_partner_source
     ):
         gaia_row = indices.src_to_astrometry.get(component.gaia_source_id)
         derived = (
@@ -787,16 +806,21 @@ def build_multiples_rows(
         ):
             continue
         primary_athyg = _athyg_row_for_component(primary, indices)
+        secondary_athyg = _athyg_row_for_component(secondary, indices)
         primary_row = build_multiples_row(
             pair, primary, p_ast, orbit, via,
             is_primary=True, indices=indices,
             system_anchor=anchor,
+            partner_gaia_source_id=secondary.gaia_source_id,
+            partner_has_athyg=secondary_athyg is not None,
         )
         secondary_row = build_multiples_row(
             pair, secondary, s_ast, orbit, via,
             is_primary=False, indices=indices,
             system_anchor=anchor,
             primary_athyg=primary_athyg,
+            partner_gaia_source_id=primary.gaia_source_id,
+            partner_has_athyg=primary_athyg is not None,
         )
         if (
             orbit is not None

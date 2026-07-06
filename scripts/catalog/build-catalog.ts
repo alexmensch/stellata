@@ -212,6 +212,7 @@ async function main() {
     companionAbsmagSpectralDerived: 0,
     companionAbsmagAnchorCollocated: 0,
     companionAbsmagInheritedTwinOrbital: 0,
+    companionBlendSplit: 0,
     companionRepositionedCollocatedDouble: 0,
     componentLettersStamped: 0,
     gaiaAstrometryEntries: 0,
@@ -435,6 +436,7 @@ async function main() {
         `collocated-primary=${ps.droppedCollocatedPrimary}); ` +
         `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
         `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
+        `blend-split=${ps.blendSplitRecords}, ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble} ` +
         `in ${Date.now() - tProm}ms`,
     );
@@ -450,6 +452,7 @@ async function main() {
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
     counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
     counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
+    counts.companionBlendSplit = ps.blendSplitRecords;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
 
     // Stamp component letters onto pairs AT-HYG left anonymous — both

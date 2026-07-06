@@ -604,6 +604,61 @@ describe('promoteCompanions', () => {
     expect(names).not.toContain('Castor C Cb');
   });
 
+  it('blend-splits the combined light of collocated gaia_photometry records sharing a source (YY Gem Ca/Cb each fainter than the blend)', () => {
+    // Gaia fit ONE 5p source over the sub-arcsec YY Gem pair, so both the
+    // outer "Castor C" (from the AC pair) and the inner Cb share source
+    // GA_C and each derived the source's COMBINED M_V (8.105). Rendering
+    // both at 8.105 makes the system ~2× too bright; the post-pass divides
+    // the light so the two components sum back to 8.105.
+    const GA_A = '900900900';
+    const GA_C = '800800800';
+    const COMBINED = 8.105;
+    const castorA: Star = makeStar({
+      x: 10, y: 0, z: 0, absmag: 1.6, ci: 0.0,
+      proper: 'Castor', hip: 500, gaiaSourceId: GA_A,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'CAS-AC', comp: 'A', hip: 500, gaiaSourceId: GA_A,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Castor',
+        orbitRole: 'primary', sepArcsec: 70, paDeg: 160, sepPaEpochJd: 2451545,
+      }),
+      multiplesRow({
+        systemId: 'CAS-AC', comp: 'C', hip: null, gaiaSourceId: GA_C,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: '',
+        absmag: COMBINED, ci: 1.4, spect: 'M0.5Ve', spectVia: 'simbad',
+        photometryVia: 'gaia_photometry', orbitRole: 'secondary',
+        sepArcsec: 70, paDeg: 160, sepPaEpochJd: 2451545, dmag: 7.4,
+      }),
+      multiplesRow({
+        systemId: 'CAS-Ca,Cb', comp: 'Ca', hip: null, gaiaSourceId: GA_C,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: '',
+        absmag: COMBINED, spect: 'M0.5Ve', spectVia: 'simbad',
+        photometryVia: 'gaia_photometry', orbitRole: 'primary', sepArcsec: 0,
+        pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
+      }),
+      multiplesRow({
+        systemId: 'CAS-Ca,Cb', comp: 'Cb', hip: null, gaiaSourceId: GA_C,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: '',
+        absmag: COMBINED, spect: 'M0.5Ve', spectVia: 'simbad',
+        photometryVia: 'gaia_photometry', orbitRole: 'secondary', sepArcsec: 0,
+        pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [castorA], CONSTELLATIONS);
+    const c = newStars.find((s) => s.proper === 'Castor C');
+    const cb = newStars.find((s) => s.proper === 'Castor Cb');
+    const split = COMBINED + 2.5 * Math.log10(2);
+    expect(c!.absmag).toBeCloseTo(split, 4);
+    expect(cb!.absmag).toBeCloseTo(split, 4);
+    // The two split components sum back to the measured combined light.
+    const combined = -2.5 * Math.log10(
+      10 ** (-0.4 * c!.absmag) + 10 ** (-0.4 * cb!.absmag),
+    );
+    expect(combined).toBeCloseTo(COMBINED, 4);
+    expect(stats.blendSplitRecords).toBe(2);
+  });
+
   describe('stripDoubledParentToken', () => {
     it('strips the parent token only when the base ends in it', () => {
       // Doubling cases: base carries the parent letter the canonical comp
