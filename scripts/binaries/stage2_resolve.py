@@ -17,13 +17,13 @@ from parsers import (  # noqa: E402
     AthygRow,
     Orb6Entry,
     SimbadWdsXid,
+    WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC,
     WdsPair,
 )
 from indices import (  # noqa: E402
     ATHYG_REFERENCE_EPOCH,
     IdentifierIndices,
     WDS_PRECISE_COORD_EPOCH,
-    WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC,
 )
 
 

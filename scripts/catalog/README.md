@@ -614,10 +614,10 @@ wings bit) — geometric `inferBinaries`, the CCDM pass, the eclipsing
 sweep — are all keyed on evidence that is unaligned with the
 *presence of a rendered companion*. A physical pair wider than the
 `0.005 pc` geometric cell, not CCDM `C/G/O`, and not eclipsing
-(Canopus at 0.46 pc; 16 Cyg A, whose promoted placement exceeds the
-geometric cell) shows a companion or a live orbit with no wings on the
-anchor. `wingRenderablePrimaries` (run after those three passes, over
-the post-sort `buildCatalogRowIndexMap`) closes that gap:
+(16 Cyg A, whose promoted placement exceeds the geometric cell) shows a
+companion or a live orbit with no wings on the anchor.
+`wingRenderablePrimaries` (run after those three passes, over the
+post-sort `buildCatalogRowIndexMap`) closes that gap:
 
 - **Renders-a-companion gate.** For each non-standalone
   multiples.tsv pair, primary and secondary resolve to catalog records

@@ -675,12 +675,15 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
     return ((r as CatalogRecord).flags & FLAG_BINARY_PRIMARY) !== 0;
   };
 
-  it('wings physical pairs the geometric/CCDM/eclipsing passes miss (Canopus, 16 Cyg A)', () => {
-    // The renderable-companion pass's headline recoveries: Canopus (0.46 pc,
-    // wider than the geometric cell, not CCDM, not eclipsing) and 16 Cyg A
-    // (promoted placement exceeds the geometric cell).
-    expect(winged(30438), 'Canopus / HIP 30438').toBe(true);
+  it('wings a wide physical pair the geometric/CCDM/eclipsing passes miss, not an optical double', () => {
+    // 16 Cyg A: promoted placement exceeds the 0.005 pc geometric cell,
+    // not CCDM C/G/O, not eclipsing — wingRenderablePrimaries recovers it.
     expect(winged(96895), '16 Cygni A / HIP 96895').toBe(true);
+    // Canopus's sole WDS companion is a 999.9-overflow optical double.
+    // With the overflow sentinel nulled at parse it no longer projects to
+    // a spurious 0.46 pc placement, so the companion drops at promotion —
+    // an optical pair must not earn a physical-companion glyph.
+    expect(winged(30438), 'Canopus / HIP 30438').toBe(false);
   });
 
   it('every system rendering a companion in binaries.bin carries the wings bit', () => {

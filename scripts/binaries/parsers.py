@@ -42,15 +42,31 @@ def safe_int(s: str) -> int | None:
         return None
 
 
+# WDS's field-overflow sentinel for ρ: when the published separation
+# exceeds the 5-char field width, WDS writes 999.9 rather than
+# truncating. For ultra-wide pairs (α Cen A vs Proxima, LDS 494 AC:
+# ρ ≈ 9000″) the (ρ, θ) offset can't localise the secondary anyway, so
+# Stage 2 short-circuits its predicted-secondary match on the resulting
+# None and relies on per-component identifier bindings (SIMBAD, CCDM).
+WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC = 999.0
+
+
 def parse_wds_sep_pa(s: str) -> float | None:
-    """Parse a WDS ρ (arcsec) or θ (deg) field. WDS writes -1 for a pair
-    with no measured separation (spectroscopic / interferometric inner
-    pairs reported only at the orbital-element level — Spica). ρ and θ are
-    physically non-negative, so any negative is that sentinel and parses to
-    None; the -1 never leaks past this boundary into Stage 3's system-
-    minimum-ρ HIP2 gate or Stage 6's emitted sep_arcsec/pa_deg."""
+    """Parse a WDS ρ (arcsec) or θ (deg) field to None at both WDS
+    sentinels. WDS writes -1 for a pair with no measured separation
+    (spectroscopic / interferometric inner pairs reported only at the
+    orbital-element level — Spica) and 999.9 when the value overflows the
+    field width (ultra-wide pairs whose (ρ, θ) can't localise the
+    secondary). ρ and θ are physically non-negative and bounded well
+    below the overflow marker, so any negative or ≥-threshold value is a
+    sentinel; collapsing both here stops either from leaking past this
+    boundary into Stage 2's predicted-secondary match, Stage 3's
+    system-minimum-ρ HIP2 gate, Stage 5's separation gate, or Stage 6's
+    emitted sep_arcsec/pa_deg."""
     v = safe_float(s)
-    return None if v is not None and v < 0.0 else v
+    if v is None or v < 0.0 or v >= WDS_RHO_OVERFLOW_THRESHOLD_ARCSEC:
+        return None
+    return v
 
 
 # Per-parser non-null floors for headline fixed-width columns. A drop
