@@ -72,10 +72,13 @@ scripts/binaries/
                                   none). Inline Heintz 1978 /
                                   Halbwachs+ 2023 Thiele-Innes → Campbell
                                   algebra.
-  stage5_optical.py               Five-tier physical-vs-optical
-                                  classification (WDS-notes → both-Gaia →
-                                  asymmetric-Gaia → orbit-on-file →
-                                  mag-gap).
+  stage5_optical.py               Six-tier physical-vs-optical
+                                  classification (WDS-notes → orbit-on-
+                                  file → separation-limit → both-Gaia
+                                  (+escape velocity) → asymmetric-Gaia →
+                                  mag-gap). Physical-boundness gates reuse
+                                  Stage 4's Kepler / parallax-anchor
+                                  helpers.
   stage6_multiples.py             Emit data/binaries/multiples.tsv with
                                   per-component provenance columns +
                                   per-pair WDS sep+PA+epoch+Δmag columns
@@ -499,16 +502,45 @@ optical and tags the decision with the tier that decided
 | Tier | Tag | Rule |
 | --- | --- | --- |
 | 1 | `wds_notes_kept` / `_rejected` | WDS Notes flag chars: `{T, V, Z}` keep, `{S, U, X, Y}` reject. Other chars silent — tier falls through. |
-| 2 | `gaia_kept` / `_rejected` | Both components carry a Gaia 5p row. Parallaxes must agree within 3σ on combined error (`BOTH_GAIA_PLX_GATE_SIGMA = 3.0`) AND per-axis PMs must each be within 5 mas/yr (`BOTH_GAIA_PM_GATE_DELTA_MASYR = 5.0`). |
-| 3 | `asymm_kept` / `_rejected` | Exactly one component has a Gaia 5p row; the other has a HIP2 parallax anchor (Gaia-saturated bright primary). Gaia parallax vs HIP2 anchor at 3σ combined error. Catches Sirius A-C/D/E/F directly: anchor 378 mas vs Gaia <1 mas → enormous excess, reject. |
-| 4 | `orbit_kept` | Stage 4 selected real orbital elements (gaia_nss, orb6, or orb6_spectroscopic). An empirical orbit fit is direct evidence of physical association and overrides the mag-gap heuristic — needed for cases like Sirius A-B where the white-dwarf companion creates a 9.9-mag gap. |
-| 5 | `mag_heuristic_kept` / `_rejected` | Backstop. `|Δmag| ≤ 5` keep, otherwise reject. Used only when no other tier fired (typically Tycho-only systems where neither component has Gaia astrometry). Pairs with no usable mags either are kept on the absence-of-evidence-is-not-evidence-of-optical principle. |
+| 2 | `orbit_kept` | Stage 4 selected real orbital elements (gaia_nss, orb6, or orb6_spectroscopic). An empirical orbit fit is the strongest evidence of physical association and wins over every gate below, including the separation limit — a close pair's Gaia parallaxes are routinely blend-corrupted, so a few-pc parallax split does not beat a tracked relative orbit, and NSS orbits that could leak onto a genuinely wide (unbound) companion are already blocked upstream by Stage 4's separation-sanity gate. Needed for Sirius A-B (grade-2 ORB6 orbit past a 9.9-mag WD gap) and the nearby CPM pairs (η Cas, 61 Cyg, Struve 2398) whose orbital PM split would otherwise trip the velocity gate. |
+| 3 | `sep_limit_rejected` | The pair's two components sit more than the physical bound-pair limit apart in 3D (`SEPARATION_LIMIT_PC = 1.0`) — a line-of-sight optical double. Each component's distance is its own parallax (Gaia or HIP2), or the system parallax anchor when it has none; the on-sky term is the WDS ρ at the reference distance, the radial term the parallax-derived depth gap counted only when significant (`RADIAL_SEPARATION_SIGMA = 3.0` of the combined error). Fires off a well-measured own parallax (`SEPARATION_POE_MIN = 5.0`). Pollux F: own ~297 pc vs its partner's inherited ~10.4 pc. |
+| 4 | `gaia_kept` / `_rejected` | Both components carry a Gaia 5p row. A 3σ parallax disagreement on combined error (`BOTH_GAIA_PLX_GATE_SIGMA = 3.0`) rejects only when the implied 3D separation also exceeds the physical limit — the same guard as tier 5, so a close visual pair's blend-corrupted Gaia parallaxes can't split a within-limit pair. A within-limit disagreement (and an agreement) falls to the escape-velocity sub-gate, which rejects a transverse velocity too large to be bound — `v_transverse > ESCAPE_VELOCITY_SAFETY_FACTOR (2.5) × sqrt(2·G·M/r)`. `v_transverse` is from the PM difference (a lower bound on v_rel, so the gate can only reject); `M` is the pair's spectral-table mass (`compute_pair_masses`, generous default when unknown); `r` is the same projected+radial separation. Replaces the old 5 mas/yr per-axis PM cut, which mistook a nearby bound pair's real orbital PM split for optical contamination. |
+| 5 | `asymm_kept` / `_rejected` | Exactly one component has a Gaia 5p row; the other has a HIP2 parallax anchor (Gaia-saturated bright primary). Gaia parallax vs HIP2 anchor at 3σ combined error (`ASYMM_PLX_GATE_SIGMA = 3.0`), rejecting only when the implied 3D separation also exceeds the physical limit — a HIP2-vs-Gaia zero-point offset can't split a bound pair. Backstop for a poe < 5 Gaia parallax; the well-measured Sirius A-C/D/E/F-shaped splits (anchor 378 mas vs Gaia <1 mas → a ~kpc split) reject upstream at tier 3, so this tier rejects nothing in the current corpus. |
+| 6 | `mag_heuristic_kept` / `_rejected` | Backstop. `|Δmag| ≤ 5` keep, otherwise reject. Used only when no other tier fired (typically Tycho-only systems where neither component has Gaia astrometry). Pairs with no usable mags either are kept on the absence-of-evidence-is-not-evidence-of-optical principle. |
+
+Two physical-boundness criteria underpin tiers 3–4, both mechanical:
+
+- **Separation limit (tier 3).** Bound stellar pairs can't exceed the
+  Galactic tidal-disruption limit for field binaries (~1 pc); a wider 3D
+  separation is a line-of-sight optical double. The gate compares the
+  pair's own two components against each other (not a cross-pair anchor),
+  so a real inner binary of an optically-projected member — both
+  components at the same true distance — is kept. Radial separation is
+  counted only when the parallax difference clears the combined-error
+  threshold, which keeps a HIP2-vs-Gaia systematic (AU Mic B/C's 0.89 pc
+  apparent gap) from splitting a bound pair.
+- **Escape velocity (tier 4/5).** A bound pair needs `v_rel < sqrt(2·G·M/r)`.
+  Only the transverse component is measurable (Δpm × distance), so the
+  gate is a lower bound and can only reject. Masses come from
+  `mass_estimate.py` spectral estimates (~2× uncertain ⇒ ~1.4× on
+  v_escape), so the 2.5× safety factor keeps genuine orbital motion
+  (v_transverse < v_escape) from tripping it — η Cas AB: v_transverse
+  ≈ 2.9 km/s vs v_escape ≈ 8 km/s, kept.
+
+The gates reuse Stage 4's Kepler / parallax-anchor helpers
+(`kepler_semimajor_axis_au`, `compute_system_parallax_anchors`,
+`first_astrometry_field_per_system`) so the boundness logic stays DRY
+with the NSS separation-sanity gate.
 
 The cascade short-circuits — once a tier produces a verdict the lower
 tiers don't run. Stage 6 drops pairs classified as optical entirely; the
 multiples.tsv emit never sees them. (The exception is the standalone
 augmentation pass, which can still emit a SIMBAD-known component whose
-parent pair was dropped — see Stage 6.)
+parent pair was dropped — see Stage 6.) The separation-limit and
+escape-velocity gates depend on the full Gaia DR3 astrometry pull being
+current — see [`data/gaia/README.md`](../../data/gaia/README.md) for the
+refresh ordering (`build:binaries` regenerates the request list, then
+`refresh:gaia-astrometry` re-pulls before the next build).
 
 ## Stage 6 — multiples.tsv emit
 

@@ -671,6 +671,19 @@ def _component_parallax_mas(ast: ComponentAstrometry) -> float | None:
     return None
 
 
+def _component_parallax_with_error(
+    ast: ComponentAstrometry,
+) -> tuple[float, float | None] | None:
+    """``(parallax_mas, e_parallax_mas)`` for the first usable value, or
+    ``None`` when no positive parallax. The error term may itself be
+    ``None`` (HIP2 rows the parser doesn't surface a σ for); Stage 5's
+    separation gate treats a missing σ as zero in the combined-error
+    quadrature."""
+    if ast.parallax_mas is not None and ast.parallax_mas > 0.0:
+        return ast.parallax_mas, ast.parallax_error_mas
+    return None
+
+
 def compute_system_parallaxes(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
@@ -686,6 +699,23 @@ def compute_system_parallaxes(
     components; harmless, since a system's components share a distance.)"""
     return first_astrometry_field_per_system(
         pairs, components, astrometry, _component_parallax_mas,
+    )
+
+
+def compute_system_parallax_anchors(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+) -> dict[str, tuple[float, float | None]]:
+    """One ``(parallax_mas, e_parallax_mas)`` anchor per ``wds_id`` from the
+    first system component with a usable parallax — the measurement Stage 5's
+    separation-limit gate compares a resolved companion's own distance
+    against. Same first-resolved-per-system anchor as
+    ``compute_system_anchors``, but carrying the parallax + its error rather
+    than the Cartesian position, so the gate can apply its combined-error
+    radial-significance test."""
+    return first_astrometry_field_per_system(
+        pairs, components, astrometry, _component_parallax_with_error,
     )
 
 

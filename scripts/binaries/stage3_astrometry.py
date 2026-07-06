@@ -29,6 +29,13 @@ from stage2_resolve import (  # noqa: E402
 )
 
 
+# (x_pc, y_pc, z_pc, dist_pc) — one component's heliocentric position,
+# the per-system anchor tuple Stage 6 inherits for a component whose own
+# astrometry resolved to ``unresolved``. Stage 6's ``_position_pc``
+# builds it (PM-propagated to CATALOG_SCENE_EPOCH).
+SystemAnchor = tuple[float, float, float, float]
+
+
 # ─── Stage 3: per-component astrometry attachment ────────────────────
 
 
@@ -81,6 +88,7 @@ class ComponentAstrometry:
     ra_deg: float | None
     dec_deg: float | None
     parallax_mas: float | None
+    parallax_error_mas: float | None
     pmra_masyr: float | None
     pmdec_masyr: float | None
     ref_epoch: float | None
@@ -98,6 +106,7 @@ def _from_gaia(row: GaiaAstrometryRow, via: str) -> ComponentAstrometry:
         ra_deg=row.ra_deg,
         dec_deg=row.dec_deg,
         parallax_mas=row.parallax_mas,
+        parallax_error_mas=row.parallax_error_mas,
         pmra_masyr=row.pmra_masyr,
         pmdec_masyr=row.pmdec_masyr,
         ref_epoch=row.ref_epoch,
@@ -109,6 +118,7 @@ def _unresolved_astrometry() -> ComponentAstrometry:
         astrometry_via="unresolved",
         ra_deg=None, dec_deg=None,
         parallax_mas=None,
+        parallax_error_mas=None,
         pmra_masyr=None, pmdec_masyr=None,
         ref_epoch=None,
     )
@@ -162,6 +172,7 @@ def _from_hip2(hip2: Hip2Row) -> ComponentAstrometry:
         ra_deg=hip2.ra_deg,
         dec_deg=hip2.dec_deg,
         parallax_mas=hip2.plx_mas,
+        parallax_error_mas=hip2.e_plx_mas,
         pmra_masyr=hip2.pm_ra_masyr,
         pmdec_masyr=hip2.pm_de_masyr,
         ref_epoch=HIP2_REF_EPOCH,
@@ -183,6 +194,7 @@ def _from_athyg_position(row: AthygRow) -> ComponentAstrometry | None:
         ra_deg=row.ra_deg,
         dec_deg=row.dec_deg,
         parallax_mas=parallax_mas,
+        parallax_error_mas=None,
         pmra_masyr=row.pm_ra_masyr,
         pmdec_masyr=row.pm_de_masyr,
         ref_epoch=ATHYG_REFERENCE_EPOCH,

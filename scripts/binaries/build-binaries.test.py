@@ -680,6 +680,25 @@ class ComponentSptypeOverridesTests(unittest.TestCase):
         self.assertEqual((spect, via), ("", "none"))
 
 
+class AstrometryExclusionsTests(unittest.TestCase):
+    def test_parses_source_ids_skipping_preamble(self) -> None:
+        content = (
+            "# preamble\n"
+            "gaia_source_id\tcomponent\twds_id\treason\n"
+            "2947050466531873024\tB\t06451-1643\tSirius B blended\n"
+            "\tA\tX\tblank source_id is skipped\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "astrometry_exclusions.tsv", content)
+            out = bb.parse_astrometry_exclusions(p)
+        self.assertEqual(set(out.keys()), {2947050466531873024})
+        self.assertIn("Sirius B", out[2947050466531873024])
+
+    def test_shipped_file_parses_and_covers_sirius_b(self) -> None:
+        out = bb.parse_astrometry_exclusions(bb.SRC_ASTROMETRY_EXCLUSIONS)
+        self.assertIn(2947050466531873024, out)
+
+
 class SplitComponentsTests(unittest.TestCase):
     def test_two_letter_pair(self) -> None:
         self.assertEqual(bb.split_components("AB"), ("A", "B"))
@@ -2413,11 +2432,13 @@ class AstrometryCountsTests(unittest.TestCase):
             bb.ComponentAstrometry(
                 astrometry_via="gaia_5p",
                 ra_deg=1.0, dec_deg=1.0, parallax_mas=1.0,
+                parallax_error_mas=0.05,
                 pmra_masyr=1.0, pmdec_masyr=1.0, ref_epoch=2016.0,
             ),
             bb.ComponentAstrometry(
                 astrometry_via="unresolved",
                 ra_deg=None, dec_deg=None, parallax_mas=None,
+                parallax_error_mas=None,
                 pmra_masyr=None, pmdec_masyr=None, ref_epoch=None,
             ),
         ]
@@ -3070,12 +3091,12 @@ class SystemParallaxMasTests(unittest.TestCase):
     def test_primary_preferred(self) -> None:
         p = bb.ComponentAstrometry(
             astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
-            parallax_mas=5.0, pmra_masyr=0.0, pmdec_masyr=0.0,
+            parallax_mas=5.0, parallax_error_mas=0.05, pmra_masyr=0.0, pmdec_masyr=0.0,
             ref_epoch=2016.0,
         )
         s = bb.ComponentAstrometry(
             astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
-            parallax_mas=4.5, pmra_masyr=0.0, pmdec_masyr=0.0,
+            parallax_mas=4.5, parallax_error_mas=0.05, pmra_masyr=0.0, pmdec_masyr=0.0,
             ref_epoch=2016.0,
         )
         self.assertEqual(bb._system_parallax_mas([p, s]), 5.0)
@@ -3083,12 +3104,12 @@ class SystemParallaxMasTests(unittest.TestCase):
     def test_secondary_fallback_when_primary_missing(self) -> None:
         p = bb.ComponentAstrometry(
             astrometry_via="unresolved", ra_deg=None, dec_deg=None,
-            parallax_mas=None, pmra_masyr=None, pmdec_masyr=None,
+            parallax_mas=None, parallax_error_mas=None, pmra_masyr=None, pmdec_masyr=None,
             ref_epoch=None,
         )
         s = bb.ComponentAstrometry(
             astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
-            parallax_mas=3.2, pmra_masyr=0.0, pmdec_masyr=0.0,
+            parallax_mas=3.2, parallax_error_mas=0.05, pmra_masyr=0.0, pmdec_masyr=0.0,
             ref_epoch=2016.0,
         )
         self.assertEqual(bb._system_parallax_mas([p, s]), 3.2)
@@ -3096,7 +3117,7 @@ class SystemParallaxMasTests(unittest.TestCase):
     def test_no_parallax_returns_none(self) -> None:
         a = bb.ComponentAstrometry(
             astrometry_via="unresolved", ra_deg=None, dec_deg=None,
-            parallax_mas=None, pmra_masyr=None, pmdec_masyr=None,
+            parallax_mas=None, parallax_error_mas=None, pmra_masyr=None, pmdec_masyr=None,
             ref_epoch=None,
         )
         self.assertIsNone(bb._system_parallax_mas([a, a]))
@@ -3107,22 +3128,26 @@ class SystemParallaxMasTests(unittest.TestCase):
         # to a negative distance otherwise.
         bad = bb.ComponentAstrometry(
             astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
-            parallax_mas=-1.0, pmra_masyr=0.0, pmdec_masyr=0.0,
+            parallax_mas=-1.0, parallax_error_mas=0.05, pmra_masyr=0.0, pmdec_masyr=0.0,
             ref_epoch=2016.0,
         )
         good = bb.ComponentAstrometry(
             astrometry_via="gaia_5p", ra_deg=0.0, dec_deg=0.0,
-            parallax_mas=2.5, pmra_masyr=0.0, pmdec_masyr=0.0,
+            parallax_mas=2.5, parallax_error_mas=0.05, pmra_masyr=0.0, pmdec_masyr=0.0,
             ref_epoch=2016.0,
         )
         self.assertEqual(bb._system_parallax_mas([bad, good]), 2.5)
 
 
-def _ast(parallax_mas: float | None = 10.0) -> "bb.ComponentAstrometry":
+def _ast(
+    parallax_mas: float | None = 10.0,
+    parallax_error_mas: float | None = 0.05,
+) -> "bb.ComponentAstrometry":
     return bb.ComponentAstrometry(
         astrometry_via="gaia_5p",
         ra_deg=0.0, dec_deg=0.0,
         parallax_mas=parallax_mas,
+        parallax_error_mas=parallax_error_mas,
         pmra_masyr=0.0, pmdec_masyr=0.0,
         ref_epoch=2016.0,
     )
@@ -3586,8 +3611,13 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         mag_pri: float | None = None,
         mag_sec: float | None = None,
         orbit_via: str = "none",
+        rho_last: float | None = 5.0,
+        system_parallax_anchor: "tuple[float, float | None] | None" = None,
+        total_mass_msun: float | None = None,
     ) -> "bb.OpticalClassification":
-        pair = _wds_pair(notes=notes, mag_pri=mag_pri, mag_sec=mag_sec)
+        pair = _wds_pair(
+            notes=notes, mag_pri=mag_pri, mag_sec=mag_sec, rho_last=rho_last,
+        )
         primary = _resolved(
             gaia=primary_gaia, hip=primary_hip,
             component="A", is_primary=True,
@@ -3602,22 +3632,20 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         )
         return bb.classify_pair_optical(
             pair, primary, secondary, orbit_via, indices,
+            system_parallax_anchor, total_mass_msun,
         )
 
     def test_wds_notes_physical_keeps(self) -> None:
-        # 'V' = visual physical pair (common proper motion confirmed).
         result = self._classify(notes="V   ")
         self.assertTrue(result.is_physical)
         self.assertEqual(result.optical_via, "wds_notes_kept")
 
     def test_wds_notes_optical_rejects(self) -> None:
-        # 'U' = catalog-flagged uncertain (treated as optical).
         result = self._classify(notes="U   ")
         self.assertFalse(result.is_physical)
         self.assertEqual(result.optical_via, "wds_notes_rejected")
 
     def test_wds_notes_optical_wins_over_physical_when_both_present(self) -> None:
-        # Conservative bias: any S/U/X/Y in the 4-char block rejects.
         result = self._classify(notes="VU  ")
         self.assertFalse(result.is_physical)
         self.assertEqual(result.optical_via, "wds_notes_rejected")
@@ -3638,30 +3666,56 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertTrue(result.is_physical)
         self.assertEqual(result.optical_via, "gaia_kept")
 
-    def test_both_gaia_disagreeing_plx_rejects(self) -> None:
-        # 10 mas vs 1 mas with σ=0.05 each: well past 3σ.
+    def test_both_gaia_within_limit_disagreement_falls_to_velocity(self) -> None:
+        # 10.0 vs 10.05 mas with σ=0.001 each: 3σ-discordant but only
+        # ~0.5 pc apart. A within-limit parallax disagreement no longer
+        # rejects on its own (blend-corrupted close-pair parallaxes must
+        # not split a bound pair); it falls to the escape-velocity
+        # sub-gate, and with matching PM (Δv=0) the pair is kept. A larger
+        # >1 pc split rejects at the separation gate (tier 3); a beyond-
+        # limit both-Gaia split rejects in _both_gaia_consistent —
+        # see test_both_gaia_beyond_limit_disagreement_rejects.
         p = _gaia_astrometry_row(
-            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.001,
         )
         s = _gaia_astrometry_row(
-            source_id=2, parallax_mas=1.0, parallax_error_mas=0.05,
+            source_id=2, parallax_mas=10.05, parallax_error_mas=0.001,
         )
         result = self._classify(
             primary_gaia=1, secondary_gaia=2,
             src_to_astrometry={1: p, 2: s},
         )
-        self.assertFalse(result.is_physical)
-        self.assertEqual(result.optical_via, "gaia_rejected")
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_kept")
 
-    def test_both_gaia_disagreeing_pm_rejects(self) -> None:
-        # Parallax agrees, PM disagrees by >5 mas/yr on RA axis.
+    def test_both_gaia_beyond_limit_disagreement_rejects(self) -> None:
+        # The tier-4 parallax reject fires only beyond the bound-pair
+        # limit — the same guard tier 5 applies. Tested on the helper
+        # directly: via classify_pair_optical a beyond-limit well-measured
+        # pair rejects one tier earlier (tier 3), so this path is only
+        # reachable for a Gaia parallax below tier 3's poe floor.
+        # 10.0 vs 5.0 mas (100 vs 200 pc, ~100 pc apart), no ρ.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.001,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=5.0, parallax_error_mas=0.001,
+        )
+        self.assertIs(
+            bb._both_gaia_consistent(p, s, None, 6.0), False,
+        )
+
+    def test_both_gaia_escape_velocity_rejects(self) -> None:
+        # Parallax agrees, but the PM difference implies a transverse
+        # velocity far above escape for the pair's mass/separation —
+        # unrelated space motion, an optical double at the same distance.
         p = _gaia_astrometry_row(
             source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
-            pmra_masyr=20.0, pmdec_masyr=0.0,
+            pmra_masyr=0.0, pmdec_masyr=0.0,
         )
         s = _gaia_astrometry_row(
             source_id=2, parallax_mas=10.0, parallax_error_mas=0.05,
-            pmra_masyr=0.0, pmdec_masyr=0.0,
+            pmra_masyr=200.0, pmdec_masyr=0.0,
         )
         result = self._classify(
             primary_gaia=1, secondary_gaia=2,
@@ -3670,17 +3724,159 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertFalse(result.is_physical)
         self.assertEqual(result.optical_via, "gaia_rejected")
 
+    def test_both_gaia_escape_velocity_keeps_orbital_motion(self) -> None:
+        # η Cas-shape: parallax agrees, a real orbital PM split that
+        # stays well inside escape velocity → kept (the old 5 mas/yr PM
+        # cut would have wrongly rejected this).
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
+            pmra_masyr=0.0, pmdec_masyr=0.0,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.0, parallax_error_mas=0.05,
+            pmra_masyr=10.0, pmdec_masyr=0.0,
+        )
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=2,
+            src_to_astrometry={1: p, 2: s},
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "gaia_kept")
+
+    def test_sep_limit_rejects_discordant_companion(self) -> None:
+        # Pollux F shape: the primary is Gaia-saturated (tiers 4/5 silent
+        # for it), the secondary carries a well-measured own Gaia distance
+        # (~297 pc) far beyond the system parallax anchor (~10.4 pc).
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=3.36, parallax_error_mas=0.31,  # ~297 pc, poe ~11
+        )
+        result = self._classify(
+            secondary_gaia=2, src_to_astrometry={2: s},
+            rho_last=57.3, system_parallax_anchor=(96.5, 0.3),  # ~10.4 pc
+        )
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "sep_limit_rejected")
+
+    def test_sep_limit_keeps_concordant_companion(self) -> None:
+        # Own distance agrees with the anchor within the bound-pair limit
+        # → tier 3 silent, falls through to the mag-gap backstop (kept).
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=100.5, parallax_error_mas=0.05,  # ~9.95 pc
+        )
+        result = self._classify(
+            secondary_gaia=2, src_to_astrometry={2: s},
+            mag_pri=4.0, mag_sec=6.0,
+            system_parallax_anchor=(100.0, 0.05),  # ~10 pc
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_sep_limit_silent_without_anchor(self) -> None:
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=3.36, parallax_error_mas=0.31,
+        )
+        result = self._classify(
+            secondary_gaia=2, src_to_astrometry={2: s},
+            mag_pri=4.0, mag_sec=6.0,
+            system_parallax_anchor=None,
+        )
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_sep_limit_low_poe_not_rejected(self) -> None:
+        # Far and discordant, but poorly measured (poe ~3.4 < floor) —
+        # the audit's UNCERTAIN bucket: leave it be.
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=3.36, parallax_error_mas=1.0,
+        )
+        result = self._classify(
+            secondary_gaia=2, src_to_astrometry={2: s},
+            mag_pri=4.0, mag_sec=6.0,
+            system_parallax_anchor=(100.0, 0.05),
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_mag_heuristic_keeps_close_pair(self) -> None:
+        result = self._classify(mag_pri=4.0, mag_sec=6.0)
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_mag_heuristic_rejects_wide_gap(self) -> None:
+        result = self._classify(mag_pri=2.0, mag_sec=10.0)
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_rejected")
+
+    def test_mag_heuristic_keeps_when_no_data(self) -> None:
+        result = self._classify()
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_orbit_on_file_overrides_mag_gap_sirius_ab(self) -> None:
+        # Sirius A-B archetype: 9.9-mag gap, but a grade-2 ORB6 visual
+        # orbit is on file → orbit_kept wins.
+        result = self._classify(
+            mag_pri=-1.47, mag_sec=8.44, orbit_via="orb6",
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "orbit_kept")
+
+    def test_orbit_on_file_overrides_no_data_case(self) -> None:
+        result = self._classify(orbit_via="gaia_nss")
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "orbit_kept")
+
+    def test_orbit_overrides_within_bounds_gaia_disagreement(self) -> None:
+        # An orbit on file overrides a both-Gaia σ-disagreement: the
+        # orbit tier (tier 2) short-circuits above the separation (tier 3)
+        # and both-Gaia (tier 4) gates. (Distances 100 vs ~99.5 pc:
+        # 3σ-discordant on tiny errors, but < 1 pc apart.)
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.001,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.05, parallax_error_mas=0.001,
+        )
+        result = self._classify(
+            primary_gaia=1, secondary_gaia=2,
+            src_to_astrometry={1: p, 2: s},
+            orbit_via="orb6",
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "orbit_kept")
+
+    def test_orbit_overrides_separation_limit(self) -> None:
+        # An orbit on file wins over the separation gate: a close visual
+        # pair's blended Gaia parallaxes (here a spurious ~kpc split) do
+        # not beat a tracked relative orbit. (NSS leaks onto genuinely
+        # wide companions are blocked upstream in Stage 4, so the pairs
+        # the separation gate must catch carry no orbit.)
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=3.36, parallax_error_mas=0.31,
+        )
+        result = self._classify(
+            secondary_gaia=2, src_to_astrometry={2: s},
+            orbit_via="orb6", rho_last=57.3,
+            system_parallax_anchor=(96.5, 0.3),
+        )
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "orbit_kept")
+
     def test_asymm_gaia_sirius_shaped_rejects(self) -> None:
         # Sirius A-C archetype: A at 378 mas (HIP2, ~2.64 pc), C at
-        # ~0.5 mas (Gaia, ~2 kpc). σ_combined dominated by HIP2's
-        # ~0.4 mas — the difference is ~1000σ.
+        # ~0.5 mas (Gaia, ~2 kpc). The Gaia parallax is poorly measured
+        # (poe ~3.3 < the separation gate's floor, so that gate stays
+        # silent), but the ~kpc split is 2500σ-discordant against the
+        # HIP2 anchor → the asymmetric tier rejects it. (A well-measured
+        # Gaia parallax at this distance routes through the separation
+        # gate instead — same reject, different tier.)
         s = _gaia_astrometry_row(
-            source_id=2, parallax_mas=0.5, parallax_error_mas=0.1,
+            source_id=2, parallax_mas=0.5, parallax_error_mas=0.15,
         )
         hip2 = _hip2_row(hip=32349, plx_mas=378.0)
-        # The HIP2 helper defaults to e_plx_mas=None — that's OK; the
-        # gate falls back to using Gaia σ alone, and 1000× excess
-        # still rejects.
         result = self._classify(
             primary_gaia=None, secondary_gaia=2,
             primary_hip=32349,
@@ -3691,8 +3887,6 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertEqual(result.optical_via, "asymm_rejected")
 
     def test_asymm_gaia_consistent_keeps(self) -> None:
-        # Asymm: B has Gaia 10.0 mas, A has HIP2 anchor 10.01 mas —
-        # within tolerance, physical.
         s = _gaia_astrometry_row(
             source_id=2, parallax_mas=10.0, parallax_error_mas=0.1,
         )
@@ -3707,7 +3901,6 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertEqual(result.optical_via, "asymm_kept")
 
     def test_asymm_symmetric_primary_gaia_secondary_hip2(self) -> None:
-        # Inverse asymmetry: A has Gaia, B has HIP2. Should match.
         p = _gaia_astrometry_row(
             source_id=1, parallax_mas=10.0, parallax_error_mas=0.1,
         )
@@ -3721,58 +3914,150 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertTrue(result.is_physical)
         self.assertEqual(result.optical_via, "asymm_kept")
 
-    def test_mag_heuristic_keeps_close_pair(self) -> None:
-        # No Gaia, no HIP2, |Δmag|=2 — under 5-mag threshold.
-        result = self._classify(mag_pri=4.0, mag_sec=6.0)
-        self.assertTrue(result.is_physical)
-        self.assertEqual(result.optical_via, "mag_heuristic_kept")
-
-    def test_mag_heuristic_rejects_wide_gap(self) -> None:
-        result = self._classify(mag_pri=2.0, mag_sec=10.0)
-        self.assertFalse(result.is_physical)
-        self.assertEqual(result.optical_via, "mag_heuristic_rejected")
-
-    def test_mag_heuristic_keeps_when_no_data(self) -> None:
-        # Truly empty: defaults to mag_heuristic_kept rather than
-        # silently dropping the pair.
-        result = self._classify()
-        self.assertTrue(result.is_physical)
-        self.assertEqual(result.optical_via, "mag_heuristic_kept")
-
-    def test_orbit_on_file_overrides_mag_gap_sirius_ab(self) -> None:
-        # Sirius A-B archetype: 9.9-mag gap (would normally reject as
-        # mag_heuristic_rejected) but a grade-2 ORB6 visual orbit is
-        # on file → orbit_kept wins.
-        result = self._classify(
-            mag_pri=-1.47, mag_sec=8.44, orbit_via="orb6",
-        )
-        self.assertTrue(result.is_physical)
-        self.assertEqual(result.optical_via, "orbit_kept")
-
-    def test_orbit_on_file_overrides_no_data_case(self) -> None:
-        # NSS orbit available, no mags at all → orbit_kept (not the
-        # default mag_heuristic_kept fallback).
-        result = self._classify(orbit_via="gaia_nss")
-        self.assertTrue(result.is_physical)
-        self.assertEqual(result.optical_via, "orbit_kept")
-
-    def test_orbit_on_file_does_not_override_gaia_disagreement(self) -> None:
-        # An ORB6 orbit on file does NOT rescue a pair Gaia already
-        # rejected — Gaia is empirical for the modern epoch and beats
-        # potentially-stale ORB6 fits.
-        p = _gaia_astrometry_row(
-            source_id=1, parallax_mas=10.0, parallax_error_mas=0.05,
-        )
+    def test_asymm_within_physical_tolerance_keeps(self) -> None:
+        # AU Mic-shape: Gaia (~9.7 pc) vs HIP2 anchor (~10.6 pc). The
+        # 3σ-significant parallax difference is a HIP2-vs-Gaia zero-point
+        # systematic worth < 1 pc — kept, not split.
         s = _gaia_astrometry_row(
-            source_id=2, parallax_mas=1.0, parallax_error_mas=0.05,
+            source_id=2, parallax_mas=103.1, parallax_error_mas=0.02,
         )
+        hip2 = _hip2_row(hip=5, plx_mas=94.3)
         result = self._classify(
-            primary_gaia=1, secondary_gaia=2,
-            src_to_astrometry={1: p, 2: s},
-            orbit_via="orb6",
+            primary_gaia=None, secondary_gaia=2,
+            primary_hip=5,
+            src_to_astrometry={2: s},
+            hip2=[hip2],
         )
-        self.assertFalse(result.is_physical)
-        self.assertEqual(result.optical_via, "gaia_rejected")
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "asymm_kept")
+
+
+class SeparationGeometryTests(unittest.TestCase):
+    """Tier-3/tier-5 separation helpers. Projected term from ρ at the
+    reference distance; radial term counted only when the parallax
+    difference clears the combined-error significance threshold."""
+
+    def test_projected_only_when_radial_insignificant(self) -> None:
+        # Same distance to within error: only the ρ-projected term counts.
+        sep = bb._separation_au(10.0, 0.05, 10.0, 0.05, rho_arcsec=5.0)
+        self.assertAlmostEqual(sep, 5.0 * 100.0, places=3)  # ρ × 100 pc
+
+    def test_radial_counted_when_significant(self) -> None:
+        # Pollux F: 96.5 vs 3.36 mas → ~287 pc radial gap dominates.
+        sep_pc = bb._separation_au(96.5, 0.3, 3.36, 0.31, 57.3) / bb.AU_PER_PC
+        self.assertGreater(sep_pc, 280.0)
+
+    def test_radial_suppressed_within_combined_error(self) -> None:
+        # A depth gap smaller than 3σ of the combined error is treated as
+        # noise — radial term drops, only ρ-projection remains.
+        sep = bb._separation_au(10.0, 5.0, 9.0, 5.0, rho_arcsec=1.0)
+        d_ref = 1000.0 / 10.0
+        self.assertAlmostEqual(sep, 1.0 * d_ref, places=3)
+
+    def test_exceeds_limit_true_for_optical_double(self) -> None:
+        self.assertTrue(
+            bb._separation_exceeds_limit(96.5, 0.3, 3.36, 0.31, 57.3),
+        )
+
+    def test_exceeds_limit_false_within_one_pc(self) -> None:
+        # 10.6 vs 9.7 pc ≈ 0.9 pc gap, under the 1 pc limit.
+        self.assertFalse(
+            bb._separation_exceeds_limit(94.3, None, 103.1, 0.02, 5.0),
+        )
+
+
+class PairBeyondSeparationLimitTests(unittest.TestCase):
+    """Separation-gate helper. Compares the pair's two components against
+    each other (own parallax, or the system anchor when a component has
+    none); rejects only off a well-measured own parallax (poe ≥ floor)
+    beyond the physical bound-pair limit."""
+
+    ANCHOR = (96.5, 0.3)  # Pollux, ~10.4 pc
+
+    def _pair(
+        self, *, primary_gaia=None, secondary_gaia=None,
+        src_to_astrometry=None,
+    ):
+        primary = _resolved(gaia=primary_gaia, component="A", is_primary=True)
+        secondary = _resolved(
+            gaia=secondary_gaia, component="B", is_primary=False,
+        )
+        indices = _indices_with_astrometry(
+            src_to_astrometry=src_to_astrometry or {},
+        )
+        return primary, secondary, indices
+
+    def test_pollux_f_shape_beyond_limit(self) -> None:
+        # Primary has no own parallax → falls back to the ~10.4 pc anchor;
+        # secondary (F) at ~297 pc → beyond limit.
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=3.36, parallax_error_mas=0.31,
+        )
+        p, sec, indices = self._pair(secondary_gaia=2, src_to_astrometry={2: s})
+        self.assertTrue(
+            bb._pair_beyond_separation_limit(p, sec, self.ANCHOR, 57.3, indices),
+        )
+
+    def test_inner_binary_same_source_kept(self) -> None:
+        # A synthesized inner binary: both components share one blended
+        # source at ~229 pc, far from a ~137 pc system anchor. Comparing
+        # the two components to each other → same distance → within limit,
+        # not split against the unrelated anchor.
+        row = _gaia_astrometry_row(
+            source_id=9, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=4.36, parallax_error_mas=0.02,
+        )
+        p, sec, indices = self._pair(
+            primary_gaia=9, secondary_gaia=9, src_to_astrometry={9: row},
+        )
+        self.assertFalse(
+            bb._pair_beyond_separation_limit(p, sec, (7.32, 0.02), 0.0, indices),
+        )
+
+    def test_concordant_within_limit(self) -> None:
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=100.5, parallax_error_mas=0.05,
+        )
+        p, sec, indices = self._pair(secondary_gaia=2, src_to_astrometry={2: s})
+        self.assertFalse(
+            bb._pair_beyond_separation_limit(p, sec, (100.0, 0.05), 5.0, indices),
+        )
+
+    def test_low_poe_not_rejected(self) -> None:
+        s = _gaia_astrometry_row(
+            source_id=2, ra_deg=100.0, dec_deg=0.0,
+            parallax_mas=3.36, parallax_error_mas=1.0,  # poe ~3.4 < 5
+        )
+        p, sec, indices = self._pair(secondary_gaia=2, src_to_astrometry={2: s})
+        self.assertFalse(
+            bb._pair_beyond_separation_limit(p, sec, self.ANCHOR, 57.3, indices),
+        )
+
+    def test_no_parallax_either_side_not_rejected(self) -> None:
+        p, sec, indices = self._pair()
+        self.assertFalse(
+            bb._pair_beyond_separation_limit(p, sec, self.ANCHOR, 57.3, indices),
+        )
+
+
+class EscapeVelocityTests(unittest.TestCase):
+    """Escape / transverse velocity helpers underpinning the both-Gaia
+    velocity sub-gate."""
+
+    def test_escape_velocity_matches_known_value(self) -> None:
+        # 1 M_sun at 1 AU: v_escape = √2 × 29.78 ≈ 42.1 km/s.
+        v = bb._escape_velocity_km_s(1.0, 1.0)
+        self.assertAlmostEqual(v, 42.12, places=1)
+
+    def test_escape_velocity_none_for_zero_separation(self) -> None:
+        self.assertIsNone(bb._escape_velocity_km_s(1.0, 0.0))
+
+    def test_transverse_velocity(self) -> None:
+        # 100 mas/yr at 5.95 pc ≈ 2.82 km/s (η Cas orbital split).
+        v = bb._transverse_velocity_km_s(100.0, 5.95)
+        self.assertAlmostEqual(v, 2.82, places=2)
 
 
 class OpticalCountsTests(unittest.TestCase):
@@ -3801,6 +4086,7 @@ def _component_astrometry(
     ra_deg: float | None = 100.0,
     dec_deg: float | None = 0.0,
     parallax_mas: float | None = 10.0,
+    parallax_error_mas: float | None = 0.05,
     pmra_masyr: float | None = 1.0,
     pmdec_masyr: float | None = -1.0,
     ref_epoch: float | None = 2016.0,
@@ -3809,6 +4095,7 @@ def _component_astrometry(
         astrometry_via=astrometry_via,
         ra_deg=ra_deg, dec_deg=dec_deg,
         parallax_mas=parallax_mas,
+        parallax_error_mas=parallax_error_mas,
         pmra_masyr=pmra_masyr, pmdec_masyr=pmdec_masyr,
         ref_epoch=ref_epoch,
     )
@@ -4096,6 +4383,95 @@ class ComputeSystemParallaxesTests(unittest.TestCase):
         ]
         plx = bb.compute_system_parallaxes([pair], components, astrometry)
         self.assertNotIn("PX-4", plx)
+
+
+class ComputeSystemParallaxAnchorsTests(unittest.TestCase):
+    def test_picks_first_resolved_parallax_and_error(self) -> None:
+        pair = _wds_pair(wds_id="PA-1", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PA-1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PA-1", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, parallax_error_mas=None,
+                                  ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=20.0, parallax_error_mas=0.4,
+                                  ra_deg=0.0, dec_deg=0.0),
+        ]
+        anchors = bb.compute_system_parallax_anchors(
+            [pair], components, astrometry,
+        )
+        self.assertEqual(anchors["PA-1"], (20.0, 0.4))
+
+    def test_carries_none_error_through(self) -> None:
+        # HIP2 rows the parser doesn't surface a σ for → error stays None.
+        pair = _wds_pair(wds_id="PA-2", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PA-2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PA-2", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=12.0, parallax_error_mas=None,
+                                  ra_deg=0.0, dec_deg=0.0,
+                                  astrometry_via="hip2_long_baseline"),
+            _component_astrometry(parallax_mas=11.0, parallax_error_mas=0.1,
+                                  ra_deg=0.0, dec_deg=0.0),
+        ]
+        anchors = bb.compute_system_parallax_anchors(
+            [pair], components, astrometry,
+        )
+        self.assertEqual(anchors["PA-2"], (12.0, None))
+
+    def test_no_entry_when_system_unresolved(self) -> None:
+        pair = _wds_pair(wds_id="PA-3", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PA-3", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PA-3", component="B", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=None, parallax_error_mas=None,
+                                  ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+            _component_astrometry(parallax_mas=None, parallax_error_mas=None,
+                                  ra_deg=None, dec_deg=None,
+                                  astrometry_via="unresolved"),
+        ]
+        anchors = bb.compute_system_parallax_anchors(
+            [pair], components, astrometry,
+        )
+        self.assertNotIn("PA-3", anchors)
+
+
+class ComputePairMassesTests(unittest.TestCase):
+    def test_sums_spectral_masses_per_pair(self) -> None:
+        pair = _wds_pair(wds_id="PM-1", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PM-1", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PM-1", component="B", is_primary=False),
+        ]
+        indices = _indices_with_astrometry(
+            simbad_wds_spectra={
+                ("PM-1", "A"): "G0V",   # ~1.05 M_sun
+                ("PM-1", "B"): "K7V",   # ~0.54 M_sun
+            },
+        )
+        masses = bb.compute_pair_masses([pair], components, indices)
+        self.assertEqual(len(masses), 1)
+        self.assertAlmostEqual(masses[0], 1.05 + 0.54, places=2)
+
+    def test_generous_default_when_type_unknown(self) -> None:
+        pair = _wds_pair(wds_id="PM-2", components="AB")
+        components = [
+            _resolved(gaia=1, wds_id="PM-2", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="PM-2", component="B", is_primary=False),
+        ]
+        indices = _indices_with_astrometry()
+        masses = bb.compute_pair_masses([pair], components, indices)
+        self.assertAlmostEqual(
+            masses[0], 2.0 * bb.ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
+            places=6,
+        )
 
 
 class ComputeSystemAnchorsTests(unittest.TestCase):

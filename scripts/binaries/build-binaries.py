@@ -38,6 +38,7 @@ DATA = ROOT / "data"
 from parsers import (  # noqa: E402, F401
     AthygRow, CcdmRow, GaiaAstrometryRow, Hip2Row, Orb6Entry,
     SimbadWdsXid, WdsPair,
+    parse_astrometry_exclusions,
     parse_athyg, parse_ccdm, parse_gaia_astrometry,
     parse_gaia_hip_xmatch, parse_gaia_nss, parse_gaia_tyc_xmatch,
     parse_gcvs, parse_gcvs_crossid, parse_hip2,
@@ -73,7 +74,7 @@ from stage2_resolve import (  # noqa: E402, F401
     split_components, write_astrometry_request,
 )
 from stage3_astrometry import (  # noqa: E402, F401
-    ASTROMETRY_VIA_VALUES, ComponentAstrometry,
+    ASTROMETRY_VIA_VALUES, ComponentAstrometry, SystemAnchor,
     astrometry_counts, attach_astrometry, attach_astrometry_all,
     compute_min_rho_per_source, gaia_5p_unreliable,
 )
@@ -83,7 +84,8 @@ from stage4_orbits import (  # noqa: E402, F401
     ORBIT_VIA_VALUES, OrbitElements,
     NSS_MAX_SYSTEM_MASS_MSUN, NSS_SEPARATION_SANITY_RATIO,
     _nss_separation_consistent,
-    compute_system_parallaxes, first_astrometry_field_per_system,
+    compute_system_parallaxes, compute_system_parallax_anchors,
+    first_astrometry_field_per_system,
     _pick_best_orb6, _system_parallax_mas, _thiele_innes_to_campbell,
     iter_decomposing_pairs, kepler_semimajor_axis_au,
     nss_to_canonical_elements,
@@ -91,7 +93,15 @@ from stage4_orbits import (  # noqa: E402, F401
     select_orbit, select_orbits_all,
 )
 from stage5_optical import (  # noqa: E402, F401
+    AU_PER_PC, SEPARATION_LIMIT_PC, SEPARATION_POE_MIN,
+    RADIAL_SEPARATION_SIGMA, BOTH_GAIA_PLX_GATE_SIGMA, ASYMM_PLX_GATE_SIGMA,
+    ESCAPE_VELOCITY_SAFETY_FACTOR, ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
+    ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN, KM_S_PER_AU_YR,
     OPTICAL_VIA_VALUES, OpticalClassification,
+    _asymm_gaia_consistent, _both_gaia_consistent,
+    _pair_beyond_separation_limit, _component_parallax_with_error,
+    _escape_velocity_km_s, _separation_au, _separation_exceeds_limit,
+    _transverse_velocity_km_s,
     classify_all_pairs, classify_pair_optical, optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
@@ -104,7 +114,7 @@ from stage6_multiples import (  # noqa: E402, F401
     PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_VALUES,
     MultiplesRow,
     build_multiples_rows, build_standalone_rows,
-    compute_system_anchors, finalize_renderable_elements,
+    compute_pair_masses, compute_system_anchors, finalize_renderable_elements,
     wds_dmag, wds_year_to_jd, write_multiples_tsv,
 )
 from stage7_counts import (  # noqa: E402, F401
@@ -133,6 +143,7 @@ SRC_COMPONENT_SPTYPE_OVERRIDES = (
 SRC_ORB6_COMPONENT_OVERRIDES = (
     DATA / "binaries" / "orb6_component_overrides.tsv"
 )
+SRC_ASTROMETRY_EXCLUSIONS = DATA / "binaries" / "astrometry_exclusions.tsv"
 
 OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
@@ -168,10 +179,42 @@ def _iter_input_paths() -> Iterator[Path]:
     yield SRC_SIMBAD_SPTYPE
     yield SRC_COMPONENT_SPTYPE_OVERRIDES
     yield SRC_ORB6_COMPONENT_OVERRIDES
+    yield SRC_ASTROMETRY_EXCLUSIONS
 
 
 def log(msg: str) -> None:
     print(f"[build-binaries] {msg}")
+
+
+SEP_LIMIT_REJECT_AUDIT_SAMPLE = 25
+
+
+def log_sep_limit_rejections(
+    pairs: list,
+    components: list,
+    classifications: list,
+) -> None:
+    """Audit line for Stage 5's tier-3 separation-limit gate: the WDS
+    systems whose optical-double companions were dropped for sitting
+    beyond the physical bound-pair limit from the system anchor. Dropped
+    pairs never reach multiples.tsv, so the build log is their only
+    record — list a capped sample so the suppressed set stays reviewable
+    against the literature."""
+    rejected = [
+        f"{pair.wds_id}{pair.components}"
+        for (pair, _p, _s), cls in zip(
+            iter_decomposing_pair_components(pairs, components), classifications,
+        )
+        if cls.optical_via == "sep_limit_rejected"
+    ]
+    if not rejected:
+        return
+    sample = ", ".join(rejected[:SEP_LIMIT_REJECT_AUDIT_SAMPLE])
+    suffix = ", …" if len(rejected) > SEP_LIMIT_REJECT_AUDIT_SAMPLE else ""
+    log(
+        f"separation-limit rejections: {len(rejected):,} optical doubles "
+        f"dropped (sample: {sample}{suffix})"
+    )
 
 
 def run(force: bool) -> int:
@@ -258,6 +301,17 @@ def run(force: bool) -> int:
     src_to_astrometry = parse_gaia_astrometry(SRC_GAIA_ASTROMETRY)
     log(
         f"loaded Gaia 5p astrometry for {len(src_to_astrometry):,} source_ids"
+    )
+
+    astrometry_exclusions = parse_astrometry_exclusions(SRC_ASTROMETRY_EXCLUSIONS)
+    n_excluded = sum(1 for s in astrometry_exclusions if s in src_to_astrometry)
+    src_to_astrometry = {
+        s: row for s, row in src_to_astrometry.items()
+        if s not in astrometry_exclusions
+    }
+    log(
+        f"dropped {n_excluded:,} curated-excluded source_ids from the "
+        f"astrometry map ({len(astrometry_exclusions):,} on file)"
     )
 
     simbad_wds_xids = parse_simbad_wds_xids(SRC_SIMBAD_WDS_XIDS)
@@ -372,9 +426,16 @@ def run(force: bool) -> int:
 
     log("Stage 4 complete. Classifying optical-vs-physical pairs (Stage 5) …")
 
+    system_anchors = compute_system_anchors(wds_pairs, components, astrometry)
+    system_parallax_anchors = compute_system_parallax_anchors(
+        wds_pairs, components, astrometry,
+    )
+    pair_masses = compute_pair_masses(wds_pairs, components, indices)
     classifications = classify_all_pairs(
         pairs=wds_pairs, components=components,
         orbits=orbits, indices=indices,
+        system_parallax_anchors=system_parallax_anchors,
+        pair_masses=pair_masses,
     )
     op_counts = optical_counts(classifications)
     log(
@@ -387,6 +448,7 @@ def run(force: bool) -> int:
     total = len(classifications)
     rejected_rate = rejected / total if total else 0.0
     log(f"optical rejected rate: {rejected_rate:.1%} ({rejected:,} / {total:,})")
+    log_sep_limit_rejections(wds_pairs, components, classifications)
 
     log("Stage 5 complete. Emitting multiples.tsv (Stage 6) …")
 
@@ -395,6 +457,7 @@ def run(force: bool) -> int:
         astrometry=astrometry, orbits=orbits,
         classifications=classifications, indices=indices,
         simbad_xids=simbad_wds_xids,
+        system_anchors=system_anchors,
     )
     n_emitted = write_multiples_tsv(rows, OUT_MULTIPLES)
     log(

@@ -672,6 +672,26 @@ def parse_component_sptype_overrides(path: Path) -> dict[tuple[str, str], str]:
     return out
 
 
+def parse_astrometry_exclusions(path: Path) -> dict[int, str]:
+    """Load ``data/binaries/astrometry_exclusions.tsv`` into a
+    ``gaia_source_id -> reason`` map. Listed source_ids carry an
+    unusable Gaia 5p solution (a companion blended with a Gaia-saturating
+    primary — Sirius B); the caller drops them from the astrometry map so
+    the component falls back to a projected position. ``#``-prefixed
+    preamble lines are skipped."""
+    out: dict[int, str] = {}
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            (line for line in fh if not line.startswith("#")), delimiter="\t",
+        )
+        for r in reader:
+            src = safe_int(r.get("gaia_source_id") or "")
+            if src is None:
+                continue
+            out[src] = (r.get("reason") or "").strip()
+    return out
+
+
 def parse_orb6_component_overrides(path: Path) -> dict[tuple[str, str], str]:
     """Load ``data/binaries/orb6_component_overrides.tsv`` into a
     ``(wds_id, discoverer) -> components`` map. Curates WDS component
