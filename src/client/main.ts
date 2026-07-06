@@ -17,6 +17,8 @@ import { createHeliopauseLabel } from './solar-system/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time-scrubber-widget';
 import { bindUnitToggle } from './ui/unit-toggle';
+import { bindGalCoordFormatToggle } from './ui/gal-coord-toggle';
+import { createGalacticGridLabels } from './galactic/galactic-grid-labels';
 import { registerThemeStellata } from './ui/theme-toggle';
 import { bindChartMode } from './chart-mode/chart-mode';
 import { bindPanelLayout } from './ui/panel-layout';
@@ -155,6 +157,7 @@ async function main() {
     })();
 
     bindUnitToggle();
+    bindGalCoordFormatToggle();
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
@@ -168,6 +171,7 @@ async function main() {
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
+    createGalacticGridLabels(stellata);
     createPlanetLabels(stellata);
     createHeliopauseLabel(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the

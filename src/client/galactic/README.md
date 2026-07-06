@@ -24,6 +24,9 @@ src/client/galactic/
                                   galactic-disc + local-group so both
                                   layers reveal in lockstep.
   galactic-grid.ts                Toggleable b/l coordinate sphere.
+  galactic-grid-labels.ts (+ test) SVG l/b orientation labels riding the
+                                  grid lines. Format toggle in
+                                  src/client/ui/gal-coord-format.ts.
 
 src/client/overlays/                  (full overlay roster in src/client/overlays/README.md)
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
@@ -82,6 +85,36 @@ meridians every 10°, radius 50 kpc.
   represents "the sky from here". Orientation is fixed in absolute
   galactic space so b=0 / l=0 stay correctly aimed through any camera
   move including warp.
+
+**Grid orientation labels** (`galactic-grid-labels.ts`) — SVG `<text>`
+under `#gal-grid-labels`, pooled once and positioned + rotated each frame,
+gated by `filter.showGalacticGrid` alongside the 3D sphere (and hidden in
+warp by the shared `body.warping #overlay` rule). Each label anchors on a
+galactic direction (`galacticDirToIcrs`, the same l/b→ICRS formula the grid
+geometry uses) at `camera.position + dir × SPHERE_RADIUS_PC`, so labels
+track the camera exactly like the grid. A second direction a couple of
+degrees along the labelled line projects too; the screen-space delta is the
+tangent the text rotates onto (folded into (−90°, 90°] to stay upright) and
+the side it offsets to — always the screen-top side, with a 5° hysteresis
+band around vertical so a near-vertical line doesn't flip the side
+frame-to-frame. The tangent/flip/hysteresis math is the pure, tested
+`placeGridLabel`.
+
+Labels are a **readable subset** of the every-10° grid, not one per line:
+longitude every 30° riding the equator, latitude at b=±30°/±60° riding the
+rings at four anchor longitudes (0/90/180/270°) so a latitude ladder stays
+near screen-centre from any heading. The equator carries no separate b=0
+mark — the ring of longitude labels sits on it and identifies it. Text runs
+through `formatGalLon`/`formatGalLat` so the decimal↔DMS toggle reformats
+the live labels (see below).
+
+**Coordinate format toggle** (`ui/gal-coord-format.ts` + `ui/gal-coord-toggle.ts`)
+— a getter/setter/onChange singleton mirroring `ui/distance-util.ts` +
+`ui/unit-toggle.ts`. Switches the l/b labels between decimal degrees and
+DMS (`123°24′00″`); the Navigation panel's `#gal-coord-toggle` drives it.
+Decimal is the default and persists in the `?v=` blob via FIELDS_V3 bit 22
+(a zero-byte sentinel — only DMS sets it), mirroring how the pc/ly unit
+flag round-trips.
 
 **Sol + Galactic Centre arrows** (part of the HUD — `hud-overlay.ts`,
 toggled by `filter.showHud`, separately from the sphere/grid). Rendered

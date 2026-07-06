@@ -8,6 +8,11 @@ import {
 } from '../../stellata';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
+import {
+  setGalCoordFormat,
+  getGalCoordFormat,
+  onGalCoordFormatChange,
+} from '../../ui/gal-coord-format';
 import { isLive } from '../../solar-system/time';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Three
@@ -124,6 +129,8 @@ export interface DecodedView {
   showConstellation?: boolean;
   showMilkyway?: boolean;
   unit?: 'pc' | 'ly';
+  /** Galactic-coordinate label format. Undefined = default (decimal deg). */
+  galFmt?: 'deg' | 'dms';
   mode?: 'navigate' | 'observe';
   /** Star focus. Undefined = default (Sol). 'cleared' = explicitly unfocused. */
   focus?: 'cleared' | StarRef;
@@ -655,6 +662,15 @@ function buildFields(vec3: Vec3Builder): FieldSpec[] {
       encode: (v, dv, o) => { dv.setFloat64(o, v.t!, true); return 8; },
       decode: (v, dv, o) => { v.t = dv.getFloat64(o, true); },
     },
+    {
+      // Zero-byte sentinel (like focusCleared): the presence bit IS the
+      // value. Decimal degrees is the default and is encoded by omitting the
+      // field; only DMS sets the bit. Append-only per the worldOffset/t note.
+      bit: 22, key: 'galFmt', ...fixed(0),
+      isPresent: v => v.galFmt === 'dms',
+      encode: () => 0,
+      decode: v => { v.galFmt = 'dms'; },
+    },
   ];
 }
 
@@ -867,6 +883,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (!approx(fov, DEFAULT_FOV)) view.fov = fov;
 
   if (getUnit() === 'pc') view.unit = 'pc';
+  if (getGalCoordFormat() === 'dms') view.galFmt = 'dms';
 
   // Star focus and cloud focus are mutually exclusive in Stellata, so at
   // most one is non-null. Sol focus is the default, encoded by *omitting*
@@ -1021,6 +1038,7 @@ export function applyDecodedView(
   idMaps: IdMaps,
 ): void {
   if (view.unit) setUnit(view.unit);
+  if (view.galFmt) setGalCoordFormat(view.galFmt);
 
   if (view.preset) stellata.applyMagnitudePreset(view.preset);
 
@@ -1229,6 +1247,7 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
 
   stellata.on('state', schedule);
   onUnitChange(schedule);
+  onGalCoordFormatChange(schedule);
 
   stellata.on('frame', () => {
     // Skip URL writes while any camera-position lerp is in flight

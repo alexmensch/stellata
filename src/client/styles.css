@@ -1019,6 +1019,25 @@ body.monochrome .hud-ring {
   stroke-linejoin: round;
   pointer-events: none;
 }
+/* Galactic coordinate sphere l/b labels — fill matches the grid-line stroke
+   (0x6688aa) a touch more opaque for legibility, with a faint dark halo. In
+   chart mode they flip to the grid's mono ink (0x3a3530) with a white halo,
+   matching the grid's own dark-to-mono swap in galactic-grid.ts. */
+.gal-grid-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  fill: rgba(102, 136, 170, 0.7);
+  paint-order: stroke;
+  stroke: rgba(7, 9, 18, 0.55);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+body.monochrome .gal-grid-label {
+  fill: rgba(58, 53, 48, 0.95);
+  stroke: rgba(255, 255, 255, 0.85);
+}
 /* Ring around each pinned POI star — same styling as the HUD ring so
    the POI assembly reads as a member of the same HUD widget family.
    Sized in poi-overlay.ts (fixed 24 px in screen pixels, matching the
