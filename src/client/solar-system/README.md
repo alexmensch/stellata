@@ -142,10 +142,12 @@ picker and the format-error trap of a plain text box. Reset already snaps
 to live-now at 1×, so there is intentionally no separate "now" jump.
 
 `time-readout.ts` renders the live UTC timestamp the rendered positions
-correspond to in `.ui-bottom`'s `#time-readout`. **Always visible** —
-binary orbital evolution ticks against `getT()` in every mode (free
-fly, chart, warp, observe), so the user always benefits from knowing
-which moment is being rendered.
+correspond to. It mounts the collapsed `.meta` readout (`#time-readout`, a
+button that opens the scrubber); while the scrubber is expanded, that
+readout is hidden and the scrubber's own readout takes over. Either way the
+current model time stays on screen in every mode (free fly, chart, warp,
+observe) — binary orbital evolution ticks against `getT()` throughout, so
+the user always benefits from knowing which moment is being rendered.
 
 Format is plain-English UTC: `D MMM YYYY, HH:MM:SS UTC`
 (e.g. `7 May 2026, 18:23:45 UTC`). Locale-independent — month
