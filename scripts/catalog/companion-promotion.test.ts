@@ -686,6 +686,14 @@ describe('promoteCompanions', () => {
       // The primary comp does not match the tail → base untouched.
       expect(stripDoubledParentToken('HIP 115990 F', 'G', 'A')).toBe('HIP 115990 F');
       expect(stripDoubledParentToken('Sirius', 'B', 'A')).toBe('Sirius');
+      // Only a whitespace-delimited trailing token is stripped: a comp
+      // letter fused to the base ("115990F") is not a token and stays.
+      expect(stripDoubledParentToken('HIP 115990F', 'G', 'F')).toBe('HIP 115990F');
+      // Empty primary comp is skipped, not matched as a bare-space suffix.
+      expect(stripDoubledParentToken('Sirius A', 'B', '')).toBe('Sirius A');
+      // A compound primary comp matches as a whole token; the shorter
+      // parent token of "Ab" (" A") must not shear "Aa" down to "A".
+      expect(stripDoubledParentToken('WDS J1234 Aa', 'Ab', 'Aa')).toBe('WDS J1234');
     });
   });
 
