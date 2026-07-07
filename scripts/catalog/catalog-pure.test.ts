@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   spectClassIndex,
   classifyFromSimbad,
@@ -11,6 +13,8 @@ import {
   boloCorr,
   physicalRadius,
   absmagFromSpectral,
+  spectralFromAbsmag,
+  GAIA_BINDING_G_MINUS_V_REJECT_MAG,
   normalizeGcvsName,
   parseGcvsNumber,
   classifyGcvsVarType,
@@ -1742,6 +1746,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     expect(resolveGaiaSourceId('999', 2, map)).toEqual({
       gaiaSourceId: '999',
       backfilled: false,
+      magRejected: false,
     });
   });
 
@@ -1749,6 +1754,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     expect(resolveGaiaSourceId(null, 2, map)).toEqual({
       gaiaSourceId: '2341871673090078592',
       backfilled: true,
+      magRejected: false,
     });
   });
 
@@ -1756,6 +1762,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     expect(resolveGaiaSourceId(null, null, map)).toEqual({
       gaiaSourceId: null,
       backfilled: false,
+      magRejected: false,
     });
   });
 
@@ -1765,6 +1772,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     expect(resolveGaiaSourceId(null, 32349, map)).toEqual({
       gaiaSourceId: null,
       backfilled: false,
+      magRejected: false,
     });
   });
 
@@ -1772,6 +1780,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     expect(resolveGaiaSourceId(null, 2, null)).toEqual({
       gaiaSourceId: null,
       backfilled: false,
+      magRejected: false,
     });
   });
 
@@ -1779,11 +1788,95 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     expect(resolveGaiaSourceId(null, 0, map)).toEqual({
       gaiaSourceId: null,
       backfilled: false,
+      magRejected: false,
     });
     expect(resolveGaiaSourceId(null, -1, map)).toEqual({
       gaiaSourceId: null,
       backfilled: false,
+      magRejected: false,
     });
+  });
+});
+
+describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
+  const gMags = new Map<string, number>([
+    ['5877748442128924544', 20.95], // Toliman's wrong background binding
+    ['777', 1.6],
+  ]);
+  const gMagOf = (id: string) => gMags.get(id) ?? null;
+
+  it('scrubs a native binding fainter in G than V beyond the gate (Toliman)', () => {
+    expect(
+      resolveGaiaSourceId('5877748442128924544', null, null, 1.33, gMagOf),
+    ).toEqual({ gaiaSourceId: null, backfilled: false, magRejected: true });
+  });
+
+  it('keeps a native binding consistent with V', () => {
+    expect(resolveGaiaSourceId('777', null, null, 1.58, gMagOf)).toEqual({
+      gaiaSourceId: '777', backfilled: false, magRejected: false,
+    });
+  });
+
+  it('scrubs a cross-walk hit that fails the gate', () => {
+    const xmap = new Map<number, string>([[71681, '5877748442128924544']]);
+    expect(resolveGaiaSourceId(null, 71681, xmap, 1.33, gMagOf)).toEqual({
+      gaiaSourceId: null, backfilled: false, magRejected: true,
+    });
+  });
+
+  it('falls through from a rejected native cell to a passing cross-walk hit', () => {
+    const xmap = new Map<number, string>([[1, '777']]);
+    expect(
+      resolveGaiaSourceId('5877748442128924544', 1, xmap, 1.58, gMagOf),
+    ).toEqual({ gaiaSourceId: '777', backfilled: true, magRejected: true });
+  });
+
+  it('passes ungated without a G magnitude or a V magnitude', () => {
+    expect(resolveGaiaSourceId('12345', null, null, 1.0, gMagOf)).toEqual({
+      gaiaSourceId: '12345', backfilled: false, magRejected: false,
+    });
+    expect(
+      resolveGaiaSourceId('5877748442128924544', null, null, null, gMagOf),
+    ).toEqual({
+      gaiaSourceId: '5877748442128924544', backfilled: false, magRejected: false,
+    });
+  });
+
+  it('matches the binaries pipeline threshold (scripts/binaries/indices.py)', () => {
+    const py = readFileSync(resolve(__dirname, '../binaries/indices.py'), 'utf8');
+    const m = py.match(/^GAIA_BINDING_G_MINUS_V_REJECT_MAG\s*=\s*([\d.]+)/m);
+    expect(m).not.toBeNull();
+    expect(parseFloat(m![1])).toBe(GAIA_BINDING_G_MINUS_V_REJECT_MAG);
+  });
+});
+
+describe('catalog-pure / spectralFromAbsmag', () => {
+  it('inverts the MS calibration at the table anchors', () => {
+    expect(spectralFromAbsmag(0.65)).toMatchObject({ classIdx: 2, lumClass: 2 });
+    expect(spectralFromAbsmag(0.65).subclass).toBeCloseTo(0, 5);   // A0
+    expect(spectralFromAbsmag(1.9).subclass).toBeCloseTo(5, 5);    // A5
+    const g5 = spectralFromAbsmag(5.1);
+    expect(g5.classIdx).toBe(4);
+    expect(g5.subclass).toBeCloseTo(5, 5);                          // G5
+  });
+
+  it('lands Algol Ab (own M_V ~2.2) in the A range, not the inherited B8', () => {
+    const info = spectralFromAbsmag(2.225);
+    expect(info.classIdx).toBe(2);
+    expect(info.subclass).toBeCloseTo(7, 0);
+  });
+
+  it('clamps outside the [O0, M9] span', () => {
+    expect(spectralFromAbsmag(-9)).toMatchObject({ classIdx: 0, subclass: 0 });
+    expect(spectralFromAbsmag(20)).toMatchObject({ classIdx: 6, subclass: 9 });
+  });
+
+  it('round-trips through absmagFromSpectral inside every class span', () => {
+    for (const mv of [-5.0, -2.0, 1.0, 3.1, 4.9, 6.6, 12.0]) {
+      const back = absmagFromSpectral(spectralFromAbsmag(mv));
+      expect(back).not.toBeNull();
+      expect(back!).toBeCloseTo(mv, 6);
+    }
   });
 });
 

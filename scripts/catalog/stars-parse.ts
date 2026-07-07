@@ -143,6 +143,7 @@ export async function readStars(
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
+    gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
@@ -169,6 +170,7 @@ export async function readStars(
   let lmcCandidates = 0;
   let lmcOverridden = 0;
   let gaiaSourceIdBackfilled = 0;
+  let gaiaBindingMagRejected = 0;
   const directionVia: Record<DirectionVia, number> = {
     gaia_5p: 0,
     gaia_nss_systemic: 0,
@@ -199,13 +201,19 @@ export async function readStars(
       continue;
     }
 
-    // Resolve the Gaia DR3 source_id: AT-HYG native > HIP cross-walk.
-    // See resolveGaiaSourceId for the precedence + Gaia-saturated
+    // Resolve the Gaia DR3 source_id: AT-HYG native > HIP cross-walk,
+    // both vetted against the G−V magnitude gate. See
+    // resolveGaiaSourceId for the precedence + Gaia-saturated
     // bright-binary handling.
     const hip = parseIntOrNull(row.hip);
-    const resolved = resolveGaiaSourceId(parseGaiaSourceIdStr(row.gaia), hip, hipToGaia);
+    const mag = parseFloatOrNull(row.mag);
+    const resolved = resolveGaiaSourceId(
+      parseGaiaSourceIdStr(row.gaia), hip, hipToGaia, mag,
+      (id) => directions.gaiaAstrometry.get(id)?.gMag ?? null,
+    );
     const gaiaSourceId = resolved.gaiaSourceId;
     if (resolved.backfilled) gaiaSourceIdBackfilled++;
+    if (resolved.magRejected) gaiaBindingMagRejected++;
 
     // Bailer-Jones (DR3) override fires when (a) the row resolves to a
     // Gaia source_id by either path above and (b) dist_src marks the
@@ -217,7 +225,6 @@ export async function readStars(
     const athygDistSrc = nonEmpty(row.dist_src);
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, athygDistSrc);
     let dist = athygDist;
-    const mag = parseFloatOrNull(row.mag);
     if (bjEligibleRow) bjEligible++;
     if (bjEligibleRow && bjMap.size > 0 && mag !== null) {
       const ovr = applyBailerJonesOverride(mag, gaiaSourceId, bjMap);
@@ -355,6 +362,7 @@ export async function readStars(
       lmcCandidates,
       lmcOverridden,
       gaiaSourceIdBackfilled,
+      gaiaBindingMagRejected,
       directionVia,
       spectralBySimbad,
       spectralByGspspec,

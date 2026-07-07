@@ -91,6 +91,13 @@ export interface BuildCounts {
    *  (Sirius, Vega, …) are excluded from both AT-HYG.gaia and the
    *  cross-walk, so they remain unresolved and are not counted here. */
   gaiaSourceIdBackfilled: number;
+  /** AT-HYG rows whose native `gaia` cell or HIP cross-walk hit was
+   *  scrubbed by the G−V magnitude gate
+   *  (GAIA_BINDING_G_MINUS_V_REJECT_MAG) — saturated bright stars
+   *  best-matched to a resolvable companion or background source
+   *  (Toliman, Castor). Mirrors the binaries pipeline's gate in
+   *  scripts/binaries/indices.py. */
+  gaiaBindingMagRejected: number;
   /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
   apsisEntries: number;
   /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
@@ -156,6 +163,12 @@ export interface BuildCounts {
    *  spectral calibration (inherited/missing photometry, no WDS Δmag,
    *  per-component spect_via=curated/simbad). */
   companionAbsmagSpectralDerived: number;
+  /** Promoted records whose spectral info was re-derived as a
+   *  main-sequence estimate from the component's own de-extincted
+   *  absmag (spect_via inherited/blank + an own-brightness absmag
+   *  source) — the hot-but-tiny inherited-type population (Algol Ab,
+   *  Acrab B, Acrux B). */
+  companionSpectMsFromOwnAbsmag: number;
   /** Promoted records whose absmag came from the row's own WDS
    *  apparent magnitude at the system distance (both Δmag paths
    *  unavailable, or an escape row whose "own" photometry is the

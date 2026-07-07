@@ -1,22 +1,6 @@
 {
   "selfConsistency": [
     {
-      "id": "gaia:1814070838667074560",
-      "distSrc": "G_R3",
-      "athygDist": 19.683,
-      "finalDist": 6270.931,
-      "logRatio": 2.503,
-      "reason": "Catastrophic Gaia DR3 inverse-parallax inversion (near-zero parallax mapped to ~20 pc); Bailer-Jones 2021 Bayesian posterior re-anchors to the Galactic-density-prior tail at multi-kpc."
-    },
-    {
-      "id": "gaia:434690036551517952",
-      "distSrc": "G_R3",
-      "athygDist": 17.205,
-      "finalDist": 3892.837,
-      "logRatio": 2.355,
-      "reason": "Catastrophic Gaia DR3 inverse-parallax inversion (near-zero parallax mapped to ~17 pc); Bailer-Jones 2021 Bayesian posterior re-anchors to the Galactic-density-prior tail at multi-kpc."
-    },
-    {
       "id": "gaia:4658107884688023040",
       "distSrc": "G_R3",
       "athygDist": 280.148,

@@ -20,8 +20,17 @@ Each AT-HYG row walks through, inside `readStars`:
    `catalog-pure.ts`). AT-HYG's native `gaia` column wins where
    present; otherwise the HIP cross-walk
    (`data/gaia/gaia_dr3_hip_xmatch.tsv`) supplies it. The HIP
-   cross-walk fall-through resolves the ~64 HIP-bearing AT-HYG rows
-   whose `gaia` column is blank.
+   cross-walk fall-through resolves the ~147 HIP-bearing AT-HYG rows
+   whose `gaia` column is blank. Both candidates are vetted against a
+   G−V magnitude gate (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`, mirroring
+   `scripts/binaries/indices.py` — a cross-reference unit test keeps
+   the two equal): a bound source >1 mag fainter in G than the row's V
+   is a resolvable companion or background star that Gaia's
+   best-neighbour match landed on because the bright star itself is
+   saturated (Toliman carried a G=20.95 background source, Castor
+   carried Castor B's). Rejected rows ship `gaia_source_id = 0` and
+   route direction through the HIP2 tiers; counted
+   `gaiaBindingMagRejected`.
 2. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
    in `catalog-pure.ts`). See § Multi-layer distance refinement.
 3. **HIP2 full-precision distance** for `dist_src=HIP` rows: the same
@@ -612,10 +621,21 @@ Per-row gates and resolution:
   honest brightness the record inherits the anchor's collocated
   brightness (`companionAbsmagAnchorCollocated`) rather than a
   corrupted A+Δmag.
-- **Anchor flux conservation (post-pass).** A synth member whose ids
-  were inherited-then-stripped from an `athyg_own` anchor has its
-  light embedded in that anchor's AT-HYG magnitude; minting it
-  without dimming the anchor double-counts the flux. Two shapes:
+- **Anchor flux conservation (post-pass).** A member whose light is
+  embedded in an `athyg_own` anchor's AT-HYG magnitude double-counts
+  the flux if minted without dimming the anchor. Blend membership is
+  structural for a synth member whose ids were inherited-then-stripped
+  from the anchor; a member carrying its own distinct identifier
+  (Castor B under its own Gaia source) qualifies only when the
+  anchor's observed apparent magnitude reads as the WDS pair's
+  combined mag_pri+mag_sec light rather than mag_pri alone
+  (`anchorMagIsPairBlend` — Hipparcos/Tycho blend close pairs, Castor's
+  1.58 = A+B, but resolve wide ones, Polaris' 1.98 = A alone).
+  Identifier-less synth members (Polaris Ab) are excluded from that
+  test: several can share one anchor whose magnitude blends only SOME
+  members, and the pairwise hypothesis test misattributes (36 Oph D
+  would claim A+B's blend); a system-level flux solve is future work.
+  Two shapes:
   a `dmag_imputed` member re-splits the blend JOINTLY by Δmag
   (`M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ))`, `M_B = M_A + Δ` —
   exact conservation for any Δ; a naive flux subtraction would gut a
@@ -639,15 +659,28 @@ Per-row gates and resolution:
   dominate; total system light is preserved. `ci` stays the shared
   colour. Counted `companionBlendSplit`; runs before the absmag sort.
   See SCIENCE.md § Multiple-star pipeline (Blend split).
-- **B-V (ci).** Same inheritance-detection trick: when the row's
-  ci matches the primary's exactly, recompute from the spectral
-  info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's DA1.9
-  stores ci = -0.443 (deep blue at the LUT) rather than the
+- **B-V (ci).** When Stage 6 tags the row's photometry as inherited
+  (`photometry_via = athyg_system_inherited`), recompute from the
+  spectral info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's
+  DA1.9 stores ci = -0.443 (deep blue at the LUT) rather than the
   inherited 0.009 white.
-- **Spectral / lum class.** From `classifyFromSimbad(row.spect)` —
-  the multiples.tsv row carries SIMBAD's per-component sp_type
-  when available (DA1.9 for Sirius B, K7Ve for Achird B). Falls
-  back to `SPECTRAL_UNKNOWN` if unparseable.
+- **Spectral / lum class.** From `classifyFromSimbad(row.spect)` when
+  the row's `spect_via` is per-component (curated / simbad — DA1.9 for
+  Sirius B, K7Ve for Achird B). When the string is the system
+  primary's inherited AT-HYG type (`spect_via=athyg`) or blank AND the
+  member's absmag came from an own-brightness source (dmag-imputed /
+  own / wds_mag), the type is instead a main-sequence estimate from
+  the member's own de-extincted M_V (`spectralFromAbsmag`, the inverse
+  of the class→M_V calibration; lumClass V). Wearing the primary's
+  type made a fainter companion hot-but-tiny — Stefan-Boltzmann turns
+  a hot inherited Teff on a faint absmag into a spuriously small
+  radius AND a blue colour (Algol Ab rendered as a tiny B8V; Acrab B
+  inherited B0.5V at 7.98 mag fainter). The MS estimate is wrong for
+  evolved companions but strictly less wrong than the primary's type;
+  curated overrides / SIMBAD per-component types take precedence, and
+  no `spectDisplay` is claimed for the estimate. Counted
+  `companionSpectMsFromOwnAbsmag` (~12.6k of 14.2k promoted). Rows
+  with neither fall back to `SPECTRAL_UNKNOWN`.
 - **HIP inheritance gate.** When the row's HIP equals the primary
   row's HIP, set `hip = null` on the promoted record. Hipparcos
   resolved the system as one star and the HIP belongs to the
