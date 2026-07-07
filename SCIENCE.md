@@ -1586,6 +1586,29 @@ consume it in two complementary ways:
    record sits at the anchor's distance — no better distance exists
    anywhere for a component with no parallax of its own.
 
+   **Blend light conservation.** A minted member's brightness comes
+   from the WDS pair row's own published magnitudes (`wds_mag`:
+   `M = m − 5·log₁₀(d_pc/10)` at the system distance) or from the
+   anchor's magnitude plus the WDS Δmag — and in either case its light
+   is already inside the anchor's AT-HYG magnitude when the catalogues
+   fit one photocentre over the pair. The anchor therefore dims so
+   total system light stays what was measured. For Δmag-imputed
+   members the pair is re-split jointly:
+   `M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4·Δm))`, `M_B = M_A + Δm` —
+   exact flux conservation for any Δm, reducing to "anchor barely
+   dims" for a faint companion (Sirius B shifts A by 10⁻⁴ mag) and to
+   an equal split at Δm = 0. This matters most for near-equal pairs:
+   the naive alternative (subtract the member's `M_blend + Δm` flux)
+   dumps the imputation bias onto the anchor and guts it (Capella
+   −0.51 → +2.1); the joint split instead lands both components on
+   their true values (Capella Aa → 0.19 vs canonical 0.14, Castor A →
+   0.97 vs 0.96 from V = 1.93, 36 Oph A → 6.21 vs 6.20 from V = 5.07 —
+   the AT-HYG magnitudes those records carried were blend photometry).
+   For `wds_mag` members the member's brightness is independent, so
+   its flux is subtracted directly (Acrux: A −4.21 blend →
+   A′ = −3.48 + B = −3.43), guarded against a member as bright as the
+   blend itself.
+
    **Gaia-photometry brightness for own-DR3 companions.** A companion
    that earned its own Gaia DR3 5p fit (position + parallax) but has no
    AT-HYG row carries no absmag through the AT-HYG path and — with no

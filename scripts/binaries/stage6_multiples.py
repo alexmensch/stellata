@@ -79,6 +79,7 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "q", "dist_pc",
     "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag",
     "anchor_sep_arcsec", "anchor_pa_deg",
+    "mag_pri", "mag_sec",
 )
 
 
@@ -257,6 +258,12 @@ class MultiplesRow:
     # reaches the component, or the component IS the anchor.
     anchor_sep_arcsec: float | None = None
     anchor_pa_deg: float | None = None
+    # The pair row's published WDS apparent magnitudes, populated on
+    # both component rows (a row's OWN mag is mag_pri when it is the
+    # pair primary, mag_sec when it is the secondary). Promotion's
+    # wds_mag absmag path reads them; standalone rows leave both empty.
+    mag_pri: float | None = None
+    mag_sec: float | None = None
 
 
 def _system_id_for_pair(pair: WdsPair) -> str:
@@ -889,6 +896,8 @@ def build_multiples_row(
         pa_deg=pair.theta_last,
         sep_pa_epoch_jd=wds_year_to_jd(pair.date_last),
         dmag=wds_dmag(pair.mag_pri, pair.mag_sec),
+        mag_pri=pair.mag_pri,
+        mag_sec=pair.mag_sec,
     )
 
 
@@ -1125,6 +1134,8 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 _fmt_float(r.dmag, 4),
                 _fmt_float(r.anchor_sep_arcsec, 3),
                 _fmt_float(r.anchor_pa_deg, 2),
+                _fmt_float(r.mag_pri, 2),
+                _fmt_float(r.mag_sec, 2),
             )) + "\n")
     return len(rows)
 

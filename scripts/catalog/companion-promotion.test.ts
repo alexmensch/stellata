@@ -84,6 +84,8 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     dmag: null,
     anchorSepArcsec: null,
     anchorPaDeg: null,
+    magPri: null,
+    magSec: null,
     ...overrides,
   };
 }
@@ -104,7 +106,7 @@ describe('parseMultiplesTsv', () => {
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
-      'anchor_sep_arcsec','anchor_pa_deg',
+      'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
     ].join('\t');
     const body = [
       'WDS-X-AB','A','12345','1234567890123456',
@@ -114,7 +116,7 @@ describe('parseMultiplesTsv', () => {
       '365.25','2451545.0','0.1','1.0','0.5','0.6','0.7',
       '0.5','10.0',
       '7.123','265.45','2458850.0','0.85',
-      '3.500','114.00',
+      '3.500','114.00','1.25','1.55',
     ].join('\t');
     const rows = parseMultiplesTsv(`${header}\n${body}\n`);
     expect(rows).toHaveLength(1);
@@ -133,6 +135,8 @@ describe('parseMultiplesTsv', () => {
     expect(r.dmag).toBe(0.85);
     expect(r.anchorSepArcsec).toBe(3.5);
     expect(r.anchorPaDeg).toBe(114.0);
+    expect(r.magPri).toBe(1.25);
+    expect(r.magSec).toBe(1.55);
   });
 
   it('treats blank cells as null', () => {
@@ -144,7 +148,7 @@ describe('parseMultiplesTsv', () => {
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
-      'anchor_sep_arcsec','anchor_pa_deg',
+      'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
     ].join('\t');
     const body = [
       'WDS-X-AB','B','','',
@@ -154,7 +158,7 @@ describe('parseMultiplesTsv', () => {
       '','','','','','','',
       '','',
       '','','','',
-      '','',
+      '','','','',
     ].join('\t');
     const rows = parseMultiplesTsv(`${header}\n${body}\n`);
     expect(rows[0].hip).toBeNull();
@@ -328,6 +332,122 @@ describe('imputeCompanionAbsmag', () => {
     const r = imputeCompanionAbsmag(sec, primary, SPECTRAL_UNKNOWN, false);
     expect(r?.source).toBe('own');
     expect(r?.absmag).toBe(8.0);
+  });
+});
+
+describe('imputeCompanionAbsmag wds_mag tier', () => {
+  it('derives M from the row own WDS mag at system distance when both dmag paths are unavailable', () => {
+    const sec = multiplesRow({
+      photometryVia: 'athyg_system_inherited', absmag: 1.45,
+      dmag: null, magPri: 1.25, magSec: 9.5, distPc: 10,
+    });
+    const pri = multiplesRow({ orbitRole: 'primary', absmag: 1.45, distPc: 10 });
+    const out = imputeCompanionAbsmag(sec, pri, SPECTRAL_UNKNOWN);
+    expect(out).toEqual({ absmag: 9.5, source: 'wds_mag' });
+  });
+
+  it('a pair-row primary reads mag_pri, not mag_sec', () => {
+    const row = multiplesRow({
+      orbitRole: 'primary', photometryVia: 'none', absmag: null,
+      magPri: 1.55, magSec: 4.8, distPc: 100,
+    });
+    const out = imputeCompanionAbsmag(row, null, SPECTRAL_UNKNOWN, false);
+    expect(out?.source).toBe('wds_mag');
+    expect(out?.absmag).toBeCloseTo(1.55 - 5, 6);
+  });
+
+  it('wds_mag beats the spectral calibration but loses to dmag imputation', () => {
+    const withDmag = multiplesRow({
+      photometryVia: 'athyg_system_inherited', absmag: 1.45,
+      dmag: 2.0, magSec: 9.5, distPc: 10,
+    });
+    const pri = multiplesRow({ orbitRole: 'primary', absmag: 1.0, distPc: 10 });
+    expect(imputeCompanionAbsmag(withDmag, pri, SPECTRAL_UNKNOWN)?.source)
+      .toBe('dmag_imputed');
+    const noDmag = multiplesRow({
+      photometryVia: 'athyg_system_inherited', absmag: 1.45,
+      dmag: null, magSec: 9.5, distPc: 10,
+      spectVia: 'simbad', spect: 'K0IV',
+    });
+    const spectral = classifyFromSimbad('K0IV')!;
+    expect(imputeCompanionAbsmag(noDmag, pri, spectral)?.source)
+      .toBe('wds_mag');
+  });
+
+  it('anchor-blend own photometry is skipped when flagged (escape with inherited ids)', () => {
+    const row = multiplesRow({
+      orbitRole: 'primary', photometryVia: 'athyg_own', absmag: -3.77,
+      magPri: 1.55, distPc: 100,
+    });
+    const out = imputeCompanionAbsmag(row, null, SPECTRAL_UNKNOWN, false, true);
+    expect(out?.source).toBe('wds_mag');
+    expect(out?.absmag).toBeCloseTo(-3.45, 6);
+    // Without the flag the blend absmag would (wrongly) win as 'own'.
+    expect(imputeCompanionAbsmag(row, null, SPECTRAL_UNKNOWN, false)?.source)
+      .toBe('own');
+  });
+});
+
+describe('anchor flux dimming', () => {
+  const dimRows = (dmag: number | null, magSec: number | null = null) => [
+    multiplesRow({
+      systemId: 'WDS-9-AB', comp: 'A', hip: 7777,
+      x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+      absmag: 1.0, name: 'Blendy', source: 'athyg',
+      photometryVia: 'athyg_own',
+      astrometryVia: 'gaia_5p', orbitRole: 'primary',
+      sepArcsec: 5.0, paDeg: 90.0, dmag, magPri: 1.0, magSec,
+    }),
+    multiplesRow({
+      systemId: 'WDS-9-AB', comp: 'B', hip: 7777,
+      x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+      absmag: 1.0,
+      photometryVia: 'athyg_system_inherited',
+      astrometryVia: 'system_inherited', orbitRole: 'secondary',
+      sepArcsec: 5.0, paDeg: 90.0, dmag, magPri: 1.0, magSec,
+    }),
+  ];
+
+  it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const { newStars, stats } = promoteCompanions(dimRows(2.0), [anchor], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    // M_A = M_bl + 2.5·log10(1 + 10^(−0.4·2)) ≈ 1.15973; M_B = M_A + 2.
+    expect(anchor.absmag).toBeCloseTo(1.15973, 4);
+    expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
+    const flux = (m: number) => Math.pow(10, -0.4 * m);
+    const total = -2.5 * Math.log10(flux(anchor.absmag) + flux(newStars[0].absmag));
+    expect(total).toBeCloseTo(1.0, 6);
+  });
+
+  it('a Δmag=0 twin splits the blend equally (Capella shape, never a gutted anchor)', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const { newStars, stats } = promoteCompanions(dimRows(0.0), [anchor], CONSTELLATIONS);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(stats.blendDimSkipped).toBe(0);
+    const half = 1.0 + 2.5 * Math.log10(2);
+    expect(anchor.absmag).toBeCloseTo(half, 6);
+    expect(newStars[0].absmag).toBeCloseTo(half, 6);
+  });
+
+  it('skips the wds_mag subtraction when the member is as bright as the blend (guard)', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
+    // the blend itself — subtracting it would zero the residual.
+    const { stats } = promoteCompanions(dimRows(null, 1.0), [anchor], CONSTELLATIONS);
+    expect(stats.blendDimSkipped).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(anchor.absmag).toBe(1.0);
+  });
+
+  it('does not dim when the member keeps its own distinct identifier', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = dimRows(2.0);
+    rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(anchor.absmag).toBe(1.0);
   });
 });
 
@@ -1740,6 +1860,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
         anchorSepArcsec: 3.5, anchorPaDeg: 114.0,
+        magPri: 1.55, magSec: 4.8,
       }),
       multiplesRow({
         systemId: '12266-6306-BC', comp: 'C',
@@ -1763,6 +1884,18 @@ describe('promoteCompanions', () => {
     expect(sepAu).toBeGreaterThan(300);
     expect(sepAu).toBeLessThan(400);
     expect(stats.droppedCollocatedPrimary).toBe(0);
+    // B's row claims athyg_own photometry, but that AT-HYG magnitude was
+    // reached through A's shared HIP — it is the pair's BLEND (−3.77).
+    // The escape takes B's own WDS V=1.55 at the 100 pc system distance
+    // instead: M = 1.55 − 5·log₁₀(10) = −3.45. And A dims by B's flux so
+    // total system light is conserved.
+    expect(b.absmag).toBeCloseTo(-3.45, 6);
+    expect(stats.absmagWdsMagDerived).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    const flux = (m: number) => Math.pow(10, -0.4 * m);
+    expect(
+      -2.5 * Math.log10(flux(acrux.absmag) + flux(b.absmag)),
+    ).toBeCloseTo(-3.77, 2);
     // C minted once (AC cursor); the BC duplicate dedups.
     expect(newStars.filter(s => s.proper === 'Acrux C')).toHaveLength(1);
   });

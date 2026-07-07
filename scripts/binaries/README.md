@@ -609,7 +609,7 @@ photometry_via, a_via,
 orbit_role,
 P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
 sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag,
-anchor_sep_arcsec, anchor_pa_deg
+anchor_sep_arcsec, anchor_pa_deg, mag_pri, mag_sec
 ```
 
 `x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
@@ -641,6 +641,11 @@ stored placement is reproduced exactly at its measurement date.
 `dmag` is the published apparent Δmag
 (`mag_sec - mag_pri`) used to impute the companion's absmag when
 the secondary row inherits its parent's AT-HYG photometry.
+`mag_pri` / `mag_sec` carry the pair row's WDS apparent magnitudes
+themselves (both rows; a row's OWN mag is `mag_pri` when it is the
+pair primary) — promotion's `wds_mag` absmag path anchors a minted
+member's brightness on its own WDS magnitude at the system distance
+when neither Δmag path applies.
 
 `anchor_sep_arcsec` / `anchor_pa_deg` carry each component's best WDS
 offset from the SYSTEM ANCHOR letter (the most canonical kept-pair
