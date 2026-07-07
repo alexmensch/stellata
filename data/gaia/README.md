@@ -22,6 +22,14 @@ gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
                                        source_id request list (build-binaries.py output).
 gaia_catalog_source_id_request.tsv     ~6.3 MB, LFS. Full-catalog deduped
                                        source_id request list (export-astrometry-request.ts output).
+gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
+                                       Gaia-only catalog stars (no HIP/HD/HR/GJ)
+                                       — the SID DR-churn risk set. Derivation
+                                       recipe: docs/sid.md § DR2→DR3 dry run.
+gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
+                                       candidates for that risk set. NOTE:
+                                       angular_distance is in mas, not the
+                                       arcsec the best_neighbour tables use.
 ```
 
 ## Provenance
@@ -42,6 +50,9 @@ gaia_catalog_source_id_request.tsv     ~6.3 MB, LFS. Full-catalog deduped
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
   - `gaia_dr3_apsis.tsv` ← `astrophysical_parameters` (gspphot ∪
     gspspec).
+  - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC
+    DR2→(E)DR3 cross-match, Torra et al. 2021; queried by
+    dr3_source_id).
 
 ## Consumed by
 
@@ -53,6 +64,9 @@ gaia_catalog_source_id_request.tsv     ~6.3 MB, LFS. Full-catalog deduped
   (`scripts/catalog/README.md` § Direction resolution).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
+- `docs/sid.md` § DR2→DR3 dry run — `gaia_dr2_neighbourhood.tsv` is
+  analysis input for the SID DR-reconciliation churn measurement (no
+  build script consumes it yet; the B1 registry substrate will).
 
 See [`scripts/catalog/README.md`](../../scripts/catalog/README.md)
 and [`scripts/binaries/README.md`](../../scripts/binaries/README.md)
@@ -61,7 +75,7 @@ science-side rationale.
 
 ## Refresh
 
-`npm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis}` →
+`npm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,dr2-neighbourhood}` →
 [`scripts/refresh/`](../../scripts/refresh/README.md). DR4 transition
 order is documented there. Both astrometry pulls read a source_id
 request file as input:
@@ -72,3 +86,8 @@ request file as input:
   `gaia_catalog_source_id_request.tsv`, so it must run **after**
   `npm run build:astrometry-request` (which itself needs a fresh
   `refresh:gaia-hip` for the HIP→Gaia backfill).
+- `refresh:gaia-dr2-neighbourhood` reads
+  `gaia_dr2_neighbourhood_request.tsv`, a frozen snapshot of the
+  Gaia-only risk set derived from a built `public/catalog.bin` +
+  `public/search-index.json` (recipe in docs/sid.md § DR2→DR3 dry
+  run).
