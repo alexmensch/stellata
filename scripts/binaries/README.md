@@ -192,8 +192,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    the published WDS sep+PA. Absmag is imputed from primary + WDS
    Δmag when the row inherits its parent's AT-HYG photometry. The
    renderer / picker / hover / focus stack picks companions up
-   with zero code change. ~10.3k companions promoted into the
-   current build (~40% via real Gaia/HIP keys, ~60% via synthetic).
+   with zero code change. ~14.2k companions promoted into the
+   current build (~36% via real Gaia/HIP keys, ~64% via synthetic).
 3. **Runtime side artifact** (`scripts/binaries/build-runtime-binaries.py`).
    Reads multiples.tsv + `public/catalog-row-index-map.json`
    (which now carries a `bySynth` section alongside `byGaia` and

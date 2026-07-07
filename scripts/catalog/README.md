@@ -468,10 +468,10 @@ per system on the canonical anchor.
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-in AT-HYG. ~10.3k companions promoted into the current build
+in AT-HYG. ~14.2k companions promoted into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
-half via real Gaia/HIP keys, half via synthetic identifiers (see
-the identifier gate below).
+a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
+(see the identifier gate below).
 
 Per-row gates and resolution:
 
@@ -762,7 +762,7 @@ files from `data/`:
 
 `applyVariability` then walks the post-sort catalog and for each star
 tries HIP first, HD fallback, to find a GCVS name, then looks up the
-period+amp. Typical match rate: ~3.7k out of 313k classic_ids stars —
+period+amp. Typical match rate: ~4.1k out of 313k classic_ids stars —
 most catalog stars aren't variable, but the ones that are tend to be
 the astronomically interesting ones (Betelgeuse, Mira, Algol,
 Cepheids, etc.).
