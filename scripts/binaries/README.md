@@ -608,7 +608,8 @@ resolve_via, astrometry_via, orbit_via, spect_via,
 photometry_via, a_via,
 orbit_role,
 P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
-sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag
+sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag,
+anchor_sep_arcsec, anchor_pa_deg
 ```
 
 `x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
@@ -640,6 +641,22 @@ stored placement is reproduced exactly at its measurement date.
 `dmag` is the published apparent Δmag
 (`mag_sec - mag_pri`) used to impute the companion's absmag when
 the secondary row inherits its parent's AT-HYG photometry.
+
+`anchor_sep_arcsec` / `anchor_pa_deg` carry each component's best WDS
+offset from the SYSTEM ANCHOR letter (the most canonical kept-pair
+primary token, matching the WDS-root anchor companion promotion
+resolves), composed by `compute_anchor_offsets` over a BFS of the
+system's pair geometry. A direct measured anchor→component edge
+(kept, then Stage-5-rejected) wins over any composed chain — a
+blended member sits within measurement error of the anchor, so a
+chain through a distant third star cancels to ~zero (Acrux: AC ∘ CB
+≡ 0 vs the honest rejected-AB 3.5″); chains then fill in tier order
+kept → +rejected → +compound-photocentre-proxy. Rejected rows
+contribute geometry only — the pair itself stays dropped; a sep+PA
+measurement is real astrometry regardless of boundness
+classification. Blank when no chain reaches the component. Consumed
+by companion promotion's pair-row-primary escape (see
+`scripts/catalog/README.md` § Companion promotion).
 
 Three system-level mechanisms run at emit time:
 

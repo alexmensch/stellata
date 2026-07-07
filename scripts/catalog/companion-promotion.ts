@@ -76,6 +76,12 @@ export interface MultiplesTsvRow {
   paDeg: number | null;
   sepPaEpochJd: number | null;
   dmag: number | null;
+  /** Stage 6's per-component offset from the system anchor letter (BFS
+   *  over kept → Stage-5-rejected → compound-proxy WDS geometry). Feeds
+   *  the pair-row-primary escape's projection off the WDS-root anchor;
+   *  null when no geometry chain reaches the component. */
+  anchorSepArcsec: number | null;
+  anchorPaDeg: number | null;
 }
 
 export const PHOTOMETRY_VIA_OWN = 'athyg_own';
@@ -164,6 +170,8 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     paDeg: col('pa_deg'),
     sepPaEpochJd: col('sep_pa_epoch_jd'),
     dmag: col('dmag'),
+    anchorSepArcsec: col('anchor_sep_arcsec'),
+    anchorPaDeg: col('anchor_pa_deg'),
   };
 
   const rows: MultiplesTsvRow[] = [];
@@ -201,6 +209,8 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       paDeg: parseFloatOrNull(cells[idx.paDeg]),
       sepPaEpochJd: parseFloatOrNull(cells[idx.sepPaEpochJd]),
       dmag: parseFloatOrNull(cells[idx.dmag]),
+      anchorSepArcsec: parseFloatOrNull(cells[idx.anchorSepArcsec]),
+      anchorPaDeg: parseFloatOrNull(cells[idx.anchorPaDeg]),
     });
   }
   return rows;
@@ -339,8 +349,8 @@ export interface PromotionStats {
    *  WDS root — not a single star. */
   droppedCompoundComp: number;
   /** Pair-row primary dropped because no position was derivable —
-   *  neither own per-component astrometry nor a compound-sibling sep+PA
-   *  proxy. Collocating on the anchor would render a false coincident
+   *  neither own per-component astrometry nor a Stage-6 anchor_sep/pa
+   *  offset. Collocating on the anchor would render a false coincident
    *  star (Alsephina C). */
   droppedCollocatedPrimary: number;
   /** Sub-resolution inner-pair secondaries re-collocated onto their true
@@ -953,31 +963,18 @@ export function isUnresolvedCompound(
   return true;
 }
 
-/** Find a sep+PA proxy for a single-letter pair-row primary by walking
- *  sibling cursors in the same WDS root for an unresolved-compound
- *  secondary whose letters include this primary's comp letter. 40 Eri's
- *  pair-row primary "B" (in BC/BD/BE groups) borrows the A,BC group's
- *  83.2″/~108° A→BC sep+PA as an A→B proxy — vastly better than
- *  collocating B at A's position when no AB orbital pair animates it at
- *  runtime. Returns null when no such sibling exists. */
-function findCompoundProxySepPa(
-  primaryComp: string,
-  wdsRoot: string,
-  groups: Map<string, PairCursor>,
-  singleLettersByRoot: Map<string, Set<string>>,
-): { sepArcsec: number; paDeg: number } | null {
-  if (primaryComp.length !== 1) return null;
-  for (const [sysId, cursor] of groups) {
-    if (wdsRootOf(sysId) !== wdsRoot) continue;
-    for (const sec of cursor.secondaries) {
-      if (sec.orbitRole !== 'secondary') continue;
-      if (!sec.comp.includes(primaryComp)) continue;
-      if (!isUnresolvedCompound(sec.comp, wdsRoot, singleLettersByRoot)) continue;
-      if (sec.sepArcsec === null || sec.paDeg === null) continue;
-      return { sepArcsec: sec.sepArcsec, paDeg: sec.paDeg };
-    }
-  }
-  return null;
+/** True when a single-letter cursor-primary comp is DISJOINT from the
+ *  anchor's comp token — not the same letter, not an ancestor/descendant,
+ *  not contained in a compound anchor token. A disjoint letter resolving
+ *  onto the anchor's record is a blended identifier, never a legitimate
+ *  photocentre for that letter. */
+export function isDisjointSingleLetter(
+  comp: string,
+  anchorComp: string,
+): boolean {
+  if (!/^[A-Z]$/.test(comp)) return false;
+  const anchorLetters: string[] = anchorComp.match(/[A-Z]/g) ?? [];
+  return !anchorLetters.includes(comp);
 }
 
 interface SystemAnchor {
@@ -1112,9 +1109,13 @@ function promoteRow(
   // component rows (2090 tight pairs). Like the inherited HIP below,
   // the companion must not adopt it — every gaia-keyed lookup would
   // collapse onto the primary — so it strips to null and the
-  // identifier falls through to hip/synth.
+  // identifier falls through to hip/synth. The anchor-STAR check
+  // mirrors the HIP gate's: propagation can bind the shared source to
+  // this row while the anchor's own row cell is empty (HIP-only), yet
+  // the anchor record already owns that source in every byGaia lookup.
   const inheritedGaia = row.gaiaSourceId !== null
-    && anchorPrimaryRow.gaiaSourceId === row.gaiaSourceId;
+    && (anchorPrimaryRow.gaiaSourceId === row.gaiaSourceId
+      || (anchorStar !== null && anchorStar.gaiaSourceId === row.gaiaSourceId));
   const companionGaia = inheritedGaia ? null : row.gaiaSourceId;
   // Dedup against existing catalog + previously-promoted records.
   // The inherited-HIP/Gaia escapes let a secondary match the ANCHOR's
@@ -1340,6 +1341,38 @@ export function promoteCompanions(
     // first, then previously-promoted records (40 Eri B class — promoted
     // in BC, then reused as anchor for BD).
     let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing, existingStars);
+    const rootAnchorEntry = wdsRootOf(cursor.primary.systemId) !== null
+      ? wdsRootAnchors.get(wdsRootOf(cursor.primary.systemId) as string)
+      : undefined;
+    if (
+      primaryCatalogIdx !== null && rootAnchorEntry !== undefined
+      && primaryCatalogIdx === rootAnchorEntry.catalogIdx
+      && cursor.primary !== rootAnchorEntry.primaryRow
+      && isDisjointSingleLetter(
+        cursor.primary.comp, rootAnchorEntry.primaryRow.comp,
+      )
+    ) {
+      // Blended-identifier escape: the id landed on the WDS-root anchor's
+      // record, but a disjoint top-level letter cannot BE the anchor
+      // (Acrux B carries A's shared HIP; omicron And B carries A's
+      // source). Its true slot is its own record — the one a sibling
+      // cursor already minted, or a fresh pair-row-primary promotion.
+      // When neither yields an honest placement, fall back to the anchor
+      // hit so the cursor still runs against the blend record as before.
+      // Sub-letter primaries (Castor Ca) are excluded: the inner-pair
+      // post-pass + writer parent override own that re-homing.
+      const synthKey = composeSyntheticId(
+        cursor.primary.systemId, cursor.primary.comp,
+      );
+      const escaped =
+        (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
+        ?? tryPromoteCursorPrimary(
+          cursor, wdsRootAnchors, state, constellations, stats, dustGrid,
+        );
+      if (escaped !== null && escaped !== undefined) {
+        primaryCatalogIdx = escaped;
+      }
+    }
     if (primaryCatalogIdx === null) {
       primaryCatalogIdx = lookupPromoted(cursor.primary, state);
     }
@@ -1351,8 +1384,7 @@ export function promoteCompanions(
       // secondary of A, so the existing secondary loop never
       // reached it).
       primaryCatalogIdx = tryPromoteCursorPrimary(
-        cursor, wdsRootAnchors, groups, singleLettersByRoot,
-        state, constellations, stats, dustGrid,
+        cursor, wdsRootAnchors, state, constellations, stats, dustGrid,
       );
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
@@ -1511,8 +1543,6 @@ function lookupPromoted(
 function tryPromoteCursorPrimary(
   cursor: PairCursor,
   wdsRootAnchors: Map<string, SystemAnchor>,
-  groups: Map<string, PairCursor>,
-  singleLettersByRoot: Map<string, Set<string>>,
   state: PromotionState,
   constellations: { code: string; name: string }[],
   stats: PromotionStats,
@@ -1521,7 +1551,8 @@ function tryPromoteCursorPrimary(
   const primary = cursor.primary;
   if (primary === null) return null;
   // Need own identifier (gaia or hip) to be addressable post-promotion.
-  // 40 Eri B has gaia=3195919254111315712 but no HIP.
+  // 40 Eri B has gaia=3195919254111315712 but no HIP. An inherited id
+  // qualifies too — promoteRow strips it and mints a synth slot.
   const hasOwnGaia = primary.gaiaSourceId !== null;
   const hasOwnHip = primary.hip !== null && primary.hip > 0;
   if (!hasOwnGaia && !hasOwnHip) return null;
@@ -1534,11 +1565,9 @@ function tryPromoteCursorPrimary(
   //  1. The row's own per-component astrometry when Stage 3 supplied a
   //     real independent fit (own gaia_5p / hip2_long_baseline whose id
   //     differs from the anchor's).
-  //  2. Project from a sibling cursor's unresolved-compound sep+PA when
-  //     the compound contains this row's comp letter — 40 Eri B (in
-  //     BC/BD/BE) borrows the A,BC group's anchor→BC sep+PA as an
-  //     anchor→B proxy. Approximate (it's anchor→BC-barycentre, not
-  //     anchor→B), but vastly better than collocation.
+  //  2. Project the row's Stage-6 anchor_sep/pa offset off the WDS-root
+  //     anchor star — Acrux B lands 3.5″/114° off A (the Stage-5-rejected
+  //     AB row's geometry); 40 Eri B lands at the A,BC compound proxy.
   // Neither available → drop. Collocating at the anchor would bake a
   // false coincident star inside the anchor's disc (Alsephina C): the
   // escape only fires for cursor primaries that never appear as a
@@ -1547,22 +1576,19 @@ function tryPromoteCursorPrimary(
   let position = resolveIndependentAstrometry(
     primary, anchor.primaryRow.gaiaSourceId, anchor.primaryRow.hip,
   );
-  if (position === null) {
-    const proxy = findCompoundProxySepPa(
-      primary.comp, wdsRoot, groups, singleLettersByRoot,
-    );
-    if (proxy !== null) {
-      if (projectionBeyondTidalLimit(
-        anchor.star.x, anchor.star.y, anchor.star.z, proxy.sepArcsec,
-      )) {
-        stats.droppedBeyondTidalLimit++;
-        return null;
-      }
-      position = projectFromSepPa(
-        anchor.star.x, anchor.star.y, anchor.star.z,
-        proxy.sepArcsec, proxy.paDeg,
-      );
+  if (position === null
+      && primary.anchorSepArcsec !== null && primary.anchorSepArcsec > 0
+      && primary.anchorPaDeg !== null) {
+    if (projectionBeyondTidalLimit(
+      anchor.star.x, anchor.star.y, anchor.star.z, primary.anchorSepArcsec,
+    )) {
+      stats.droppedBeyondTidalLimit++;
+      return null;
     }
+    position = projectFromSepPa(
+      anchor.star.x, anchor.star.y, anchor.star.z,
+      primary.anchorSepArcsec, primary.anchorPaDeg,
+    );
   }
   if (position === null) {
     stats.droppedCollocatedPrimary++;

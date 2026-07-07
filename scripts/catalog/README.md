@@ -538,15 +538,30 @@ Per-row gates and resolution:
   of A), position resolves in preference order: (1) the row's own
   per-component astrometry when Stage 3 supplied a real independent fit
   (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
-  anchor's); (2) project off a sibling cursor's compound sep+PA whose
-  compound contains this row's comp letter — 40 Eri B borrows the A,BC
-  group's 83.2″ / 108° A→BC sep+PA as the best available A→B proxy.
+  anchor's); (2) project the row's Stage-6 `anchor_sep_arcsec` /
+  `anchor_pa_deg` off the WDS-root anchor star — the per-component
+  offset BFS-composed over kept, Stage-5-rejected, and
+  compound-photocentre pair geometry (40 Eri B lands at the A,BC
+  compound proxy; Acrux B at the rejected AB row's 3.5″/114°).
   Neither available → **drop** (`droppedCollocatedPrimary`). Collocating
   on the anchor would bake a false coincident star inside the anchor's
   disc (δ Vel C): the escape only fires for cursor primaries that never
   appear as a secondary of the anchor, so no anchor→self orbital pair
   exists for `BinaryOrbitField` to animate it away from centre at
   runtime.
+- **Blended-identifier escape.** The pair-row-primary escape fires not
+  only when the cursor primary resolves to nothing, but also when it
+  resolves to the WDS-ROOT ANCHOR's record while its comp is a DISJOINT
+  top-level letter — Acrux B carries A's shared HIP, omicron And B
+  carries A's shared Gaia source, and a disjoint letter cannot BE the
+  anchor. The letter's true slot is its own synth record (a sibling
+  cursor's mint is reused); with no honest placement the cursor falls
+  back to the blended anchor hit, exactly the pre-escape behaviour.
+  Sub-letter primaries (Castor Ca) are excluded — the inner-pair
+  post-pass and the writer's parent override own that re-homing. The
+  Gaia inheritance gate mirrors the HIP gate's anchor-STAR check for
+  the same shape: propagation can bind the shared source to a row
+  whose anchor-row cell is empty.
 - **Absmag.** Preference order: `primary_absmag + WDS Δmag` when the
   row inherited its parent's AT-HYG photometry (Sirius B's row
   carried Sirius A's 1.45 absmag, not the WD's 11.36); the row's own

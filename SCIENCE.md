@@ -1571,6 +1571,21 @@ consume it in two complementary ways:
    set; the renderer / picker / hover / focus stack picks them up
    with zero code change.
 
+   **Blended-away members and rejected-pair geometry.** A component
+   whose only identifiers are a sibling's (Gaia/Hipparcos fit one
+   photocentre over the pair) has no catalog record of its own even
+   when it is a bright, physically distinct star — Acrux B (V ≈ 1.6)
+   shares HIP 60718 with A. Promotion mints a slot for it and places
+   it by its Stage-6 per-component offset from the system anchor,
+   composed over the system's WDS ρ/θ measurements. Placement may
+   consult geometry from Stage-5-REJECTED pair rows: a measured
+   sep + PA is real astrometry regardless of how the boundness
+   classifier judged the pair (Acrux AB's `U` note flag rejects the
+   *pair*, not the measurement), so the rejected row's geometry
+   places the member while the pair itself stays dropped. The minted
+   record sits at the anchor's distance — no better distance exists
+   anywhere for a component with no parallax of its own.
+
    **Gaia-photometry brightness for own-DR3 companions.** A companion
    that earned its own Gaia DR3 5p fit (position + parallax) but has no
    AT-HYG row carries no absmag through the AT-HYG path and — with no

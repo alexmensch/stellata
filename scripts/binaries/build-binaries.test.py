@@ -6811,5 +6811,149 @@ class BindingIntegrityDetectorTests(unittest.TestCase):
         self.assertEqual(len(lines), len(verdicts) + 1)
 
 
+class ComputeAnchorOffsetsTests(unittest.TestCase):
+    """Stage 6 per-component anchor offsets — tiered BFS over kept →
+    rejected → compound-proxy WDS geometry."""
+
+    def _pair_with_comps(
+        self,
+        components: str,
+        rho: float | None,
+        theta: float | None,
+        *,
+        wds_id: str = "WDS-1",
+    ) -> tuple["bb.WdsPair", list["bb.ResolvedComponent"]]:
+        pair = _wds_pair(
+            wds_id=wds_id, components=components,
+            rho_last=rho, theta_last=theta,
+        )
+        toks = bb.split_components(components)
+        assert toks is not None
+        return pair, [
+            _resolved(gaia=None, wds_id=wds_id, component=toks[0],
+                      is_primary=True),
+            _resolved(gaia=None, wds_id=wds_id, component=toks[1],
+                      is_primary=False),
+        ]
+
+    def _offsets(
+        self,
+        specs: list[tuple[str, float | None, float | None, bool]],
+    ) -> dict[tuple[str, str], tuple[float, float]]:
+        pairs, comps, classifications = [], [], []
+        for components, rho, theta, kept in specs:
+            p, c = self._pair_with_comps(components, rho, theta)
+            pairs.append(p)
+            comps.extend(c)
+            classifications.append(bb.OpticalClassification(
+                kept, "wds_notes_kept" if kept else "wds_notes_rejected",
+            ))
+        return bb.compute_anchor_offsets(pairs, comps, classifications)
+
+    def test_kept_pair_gives_direct_offset(self) -> None:
+        out = self._offsets([("AB", 5.0, 90.0, True)])
+        sep, pa = out[("WDS-1", "B")]
+        self.assertAlmostEqual(sep, 5.0)
+        self.assertAlmostEqual(pa, 90.0)
+        self.assertNotIn(("WDS-1", "A"), out)  # anchor itself is absent
+
+    def test_chain_composes_through_intermediate_letter(self) -> None:
+        out = self._offsets([
+            ("AB", 5.0, 90.0, True),
+            ("BC", 5.0, 90.0, True),
+        ])
+        sep, pa = out[("WDS-1", "C")]
+        self.assertAlmostEqual(sep, 10.0)
+        self.assertAlmostEqual(pa, 90.0)
+
+    def test_rejected_pair_reaches_component_kept_graph_missed(self) -> None:
+        # Acrux shape: the AB row is Stage-5 rejected (WDS U flag) and
+        # no kept edge reaches B, so B's offset comes from the rejected
+        # row's geometry — real astrometry regardless of boundness.
+        out = self._offsets([
+            ("AC", 90.0, 202.0, True),
+            ("AB", 3.5, 114.0, False),
+        ])
+        sep, pa = out[("WDS-1", "B")]
+        self.assertAlmostEqual(sep, 3.5)
+        self.assertAlmostEqual(pa, 114.0)
+
+    def test_direct_rejected_edge_beats_degenerate_kept_chain(self) -> None:
+        # Acrux: AC and BC carry identical last measurements (89″/203°),
+        # so the kept chain A→C→B cancels to zero. The direct (rejected)
+        # AB edge is the honest placement and must win.
+        out = self._offsets([
+            ("AC", 89.0, 203.0, True),
+            ("BC", 89.0, 203.0, True),
+            ("AB", 3.5, 111.0, False),
+        ])
+        sep, pa = out[("WDS-1", "B")]
+        self.assertAlmostEqual(sep, 3.5)
+        self.assertAlmostEqual(pa, 111.0)
+
+    def test_kept_geometry_wins_over_rejected_for_same_component(self) -> None:
+        out = self._offsets([
+            ("AB", 5.0, 90.0, True),
+            ("AB", 8.0, 45.0, False),
+        ])
+        sep, pa = out[("WDS-1", "B")]
+        self.assertAlmostEqual(sep, 5.0)
+        self.assertAlmostEqual(pa, 90.0)
+
+    def test_compound_proxy_places_constituent_letters(self) -> None:
+        # omicron And shape: the A,BC compound row lends its photocentre
+        # vector to B and C.
+        out = self._offsets([
+            ("A,BC", 0.5, 299.0, True),
+        ])
+        for tok in ("B", "C"):
+            sep, pa = out[("WDS-1", tok)]
+            self.assertAlmostEqual(sep, 0.5)
+            self.assertAlmostEqual(pa, 299.0)
+
+    def test_measured_edge_wins_over_compound_proxy(self) -> None:
+        out = self._offsets([
+            ("A,BC", 80.0, 100.0, True),
+            ("AB", 5.0, 90.0, True),
+        ])
+        sep, pa = out[("WDS-1", "B")]
+        self.assertAlmostEqual(sep, 5.0)
+        self.assertAlmostEqual(pa, 90.0)
+        sep_c, pa_c = out[("WDS-1", "C")]
+        self.assertAlmostEqual(sep_c, 80.0)
+        self.assertAlmostEqual(pa_c, 100.0)
+
+    def test_unreachable_component_absent(self) -> None:
+        out = self._offsets([
+            ("AB", 5.0, 90.0, True),
+            ("CD", 3.0, 10.0, True),  # disconnected island
+        ])
+        self.assertIn(("WDS-1", "B"), out)
+        self.assertNotIn(("WDS-1", "C"), out)
+        self.assertNotIn(("WDS-1", "D"), out)
+
+    def test_anchor_is_most_canonical_kept_primary(self) -> None:
+        # No 'A' primary: B (BC row) outranks C. Offsets chain from B.
+        out = self._offsets([
+            ("BC", 5.0, 90.0, True),
+            ("CD", 5.0, 90.0, True),
+        ])
+        self.assertNotIn(("WDS-1", "B"), out)
+        self.assertAlmostEqual(out[("WDS-1", "C")][0], 5.0)
+        self.assertAlmostEqual(out[("WDS-1", "D")][0], 10.0)
+
+    def test_sub_resolution_rows_contribute_no_edge(self) -> None:
+        out = self._offsets([
+            ("AB", 5.0, 90.0, True),
+            ("Ba,Bb", 0.0, None, True),
+        ])
+        self.assertNotIn(("WDS-1", "Ba"), out)
+        self.assertNotIn(("WDS-1", "Bb"), out)
+
+    def test_system_with_no_kept_pairs_emits_nothing(self) -> None:
+        out = self._offsets([("AB", 5.0, 90.0, False)])
+        self.assertEqual(out, {})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1350,13 +1350,14 @@ def _canonical_token(primary_tok: str, comp: ResolvedComponent) -> str:
 
 
 def _add_edge(
-    ctx: _SystemContext, a: str, b: str,
+    adj: dict[str, dict[str, tuple[float, float, float | None]]],
+    a: str, b: str,
     e_arcsec: float, n_arcsec: float, epoch: float | None,
 ) -> None:
     """Register a bidirectional geometry edge, keeping the most-recent
     measurement when the same token pair recurs across discoverers."""
     for src, dst, ee, nn in ((a, b, e_arcsec, n_arcsec), (b, a, -e_arcsec, -n_arcsec)):
-        nbrs = ctx.adj.setdefault(src, {})
+        nbrs = adj.setdefault(src, {})
         existing = nbrs.get(dst)
         if existing is not None:
             old_epoch = existing[2]
@@ -1404,7 +1405,7 @@ def build_system_contexts(
             e = pair.rho_last * math.sin(theta_rad)
             n = pair.rho_last * math.cos(theta_rad)
             epoch = float(pair.date_last) if pair.date_last is not None else None
-            _add_edge(ctx, p_tok, s_tok, e, n, epoch)
+            _add_edge(ctx.adj, p_tok, s_tok, e, n, epoch)
     return systems
 
 

@@ -118,7 +118,8 @@ from stage6_multiples import (  # noqa: E402, F401
     PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_VALUES,
     MultiplesRow,
     ballesteros_bv_from_teff, build_multiples_rows, build_standalone_rows,
-    compute_pair_masses, compute_system_anchors, finalize_renderable_elements,
+    compute_anchor_offsets, compute_pair_masses, compute_system_anchors,
+    finalize_renderable_elements,
     gaia_photometry_absmag_ci,
     wds_dmag, wds_year_to_jd, write_multiples_tsv,
 )

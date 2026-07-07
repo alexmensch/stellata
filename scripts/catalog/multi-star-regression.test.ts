@@ -120,7 +120,7 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 2;
 // The 559 → 555 step is Stage-2 binding-integrity enforcement: unbinding
 // geometry-refuted sibling bindings re-homes a handful of pairs off the
 // wrong anchor, so their baked placement no longer disagrees with R(epoch).
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 555;
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 564;
 
 // ---- Corpus row types ----------------------------------------------------
 
@@ -647,6 +647,30 @@ describe.runIf(FIXTURES_READY)('eclipsing-binary variability honesty', () => {
     const a = algol as CatalogRecord;
     expect(a.varType).toBe(VAR_TYPE_ECLIPSING);
     expect(a.flags & FLAG_BINARY_PRIMARY).not.toBe(0);
+  });
+});
+
+describe.runIf(FIXTURES_READY)('blended-sibling slot minting (Acrux B showcase)', () => {
+  it('mints Acrux B off the Stage-5-rejected AB geometry and anchors BC on it', () => {
+    const a = lookupByName(catalog, 'Acrux');
+    const b = lookupByName(catalog, 'Acrux B');
+    expect(a, 'Acrux in catalog.bin').not.toBeNull();
+    expect(b, 'Acrux B in catalog.bin').not.toBeNull();
+    if (a === null || b === null) return;
+    // 3.5″ off A at A's ~99 pc — a genuine V≈1.6 star, never collocated.
+    const sepAu = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) * AU_PER_PC;
+    const expectedAu = 3.5 * distancePc(a);
+    expect(sepAu).toBeGreaterThan(expectedAu * 0.95);
+    expect(sepAu).toBeLessThan(expectedAu * 1.05);
+    expect(b.flags & FLAG_BINARY_COMPANION_ONLY).not.toBe(0);
+    // Both wide pairs render, each from its own true primary: A→C and B→C.
+    const priIdx = new Set(
+      BINARIES!.relations.filter(
+        r => r.primaryIdx === a.i || r.primaryIdx === b.i,
+      ).map(r => r.primaryIdx),
+    );
+    expect(priIdx.has(a.i), 'A→C relation emits').toBe(true);
+    expect(priIdx.has(b.i), 'B→C relation emits (re-homed onto B)').toBe(true);
   });
 });
 
