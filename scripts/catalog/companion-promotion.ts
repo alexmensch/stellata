@@ -1259,6 +1259,21 @@ function promoteRow(
       stats.alreadyInCatalog++;
       return null;
     }
+    // A row whose own gaia missed the index can still BE an existing
+    // AT-HYG record: the G−V magnitude gate scrubs a source from the
+    // record while multiples.tsv keeps it on the component row
+    // (SIMBAD xid). When the row's HIP names an existing NON-anchor
+    // record, that record is this component — minting a twin would
+    // collide on the HIP (URL focus lands on the wrong star). A hit
+    // EQUAL to the anchor keeps the Sirius-B shape promoting: the
+    // shared system HIP belongs to the anchor, not the companion.
+    if (existingIdx === null && row.gaiaSourceId !== null && rowHasOwnHip) {
+      const hipHit = state.existing.byHip.get(row.hip as number);
+      if (hipHit !== undefined && hipHit !== anchorCatalogIdx) {
+        stats.alreadyInCatalog++;
+        return null;
+      }
+    }
   }
   if (companionGaia && state.promotedByGaia.has(companionGaia)) {
     stats.alreadyInCatalog++;
