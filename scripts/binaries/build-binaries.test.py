@@ -303,6 +303,32 @@ class Orb6Tests(unittest.TestCase):
         self.assertEqual(e.hd, 60178)
         self.assertEqual(e.grade, 3)
 
+    def test_period_overflowing_left_of_nominal_edge_parses_in_full(self) -> None:
+        # 36 And (00550+2338 AB): P = 61183. d right-justifies its
+        # leading digit one column left of the nominal field edge. The
+        # pre-widening slice read 1183. — a 167-yr orbit rendered as
+        # 3.2 yr.
+        line = "005458.02+233742.4 00550+2338 STF  73AB        755   5286   4288   6.12   6.54  61183.      d  69.         0.9837 a  0.0011   44.57     0.11   173.66      0.13   35543.      m  21.       0.30603  0.00078  358.62     0.21   2000 2008 2 n Mut2010b wds00550+2338b.png"
+        body = "banner\n" + line + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            rows = bb.parse_orb6(p)
+        self.assertEqual(len(rows), 1)
+        e = rows[0]
+        self.assertEqual(e.P_val, 61183.0)
+        self.assertEqual(e.P_unit, "d")
+
+    def test_omega_overflowing_left_of_nominal_edge_parses_in_full(self) -> None:
+        # 17563-1549 Aa1,2: ω = 252.3° overflows one column left the
+        # same way; the pre-widening slice read 52.3.
+        line = "175619.04-154844.5 17563-1549 WAI   1Aa1,2   10891 163336  87813   6.45k  7.50k    13.4191  d   0.0003     2.0    m  0.1     151.      17.     306.3       5.8    57900.0     d   0.2      0.36     0.02    252.3       4.7              3 n WAI2023  wds17563-1549b.png"
+        body = "banner\n" + line + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            rows = bb.parse_orb6(p)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].omega_deg, 252.3)
+
 
 # ─── Fixed-width parser sanity nets ──────────────────────────────────
 
@@ -3118,6 +3144,12 @@ class Orb6ToCanonicalElementsTests(unittest.TestCase):
         # ORB6 has a handful of stray '0'/'9'/'3'/'1' codes from
         # fixed-column misalignment — skip rather than guess.
         entry = _orb6_visual(P_unit="0")
+        self.assertIsNone(bb.orb6_to_canonical_elements(entry, plx_mas=10.0))
+
+    def test_zero_period_returns_none(self) -> None:
+        # A P_val of 0.0 must never mint elements: FLAG_HAS_ORBIT with
+        # P=0 makes the runtime's M = 2π(t−T)/P NaN every frame.
+        entry = _orb6_visual(P_val=0.0, P_unit="d")
         self.assertIsNone(bb.orb6_to_canonical_elements(entry, plx_mas=10.0))
 
     def test_missing_parallax_drops_a_au_but_keeps_angles(self) -> None:

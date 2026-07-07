@@ -332,13 +332,18 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
                 precise_dec_deg=precise[1] if precise else None,
                 hd=safe_int(line[51:57]),
                 hip=safe_int(line[58:64]),
-                P_val=safe_float(line[81:92]),
+                # P and ω are right-justified to a fixed decimal anchor,
+                # so large values overflow one column LEFT of the nominal
+                # format edge (P with ≥5 integer digits, ω ≥ 100°). Both
+                # slices start that column early; the preceding fields
+                # (mag_sec, e error) end ≥1 column before it.
+                P_val=safe_float(line[80:92]),
                 P_unit=line[92:93].strip(),
                 a_val=safe_float(line[105:114]),
                 a_unit=line[114:115].strip(),
                 i_deg=safe_float(line[125:133]),
                 Omega_deg=safe_float(line[143:151]),
-                omega_deg=safe_float(line[205:213]),
+                omega_deg=safe_float(line[204:213]),
                 e=safe_float(line[187:195]),
                 T0_val=safe_float(line[162:174]),
                 T0_unit=line[174:175].strip(),
