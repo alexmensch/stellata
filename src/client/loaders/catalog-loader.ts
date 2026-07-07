@@ -10,6 +10,9 @@ import {
   NO_COMPANION,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  catalogChunkFilename,
+  assembleCatalogChunks,
+  type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
 
 export interface Constellation {
@@ -70,49 +73,43 @@ export interface LoadProgress {
 }
 
 export async function loadCatalog(
-  binUrl: string,
+  manifestUrl: string,
   conUrl: string,
   onProgress?: (p: LoadProgress) => void,
 ): Promise<Catalog> {
   const [binBuf, constellations] = await Promise.all([
-    fetchBinary(binUrl, onProgress),
+    fetchCatalogChunks(manifestUrl, onProgress),
     fetch(conUrl).then((r) => r.json() as Promise<Constellation[]>),
   ]);
 
   return parseBinary(binBuf, constellations);
 }
 
-async function fetchBinary(
-  url: string,
+async function fetchCatalogChunks(
+  manifestUrl: string,
   onProgress?: (p: LoadProgress) => void,
 ): Promise<ArrayBuffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+  const mres = await fetch(manifestUrl);
+  if (!mres.ok) throw new Error(`Failed to load ${manifestUrl}: ${mres.status}`);
+  const manifest = (await mres.json()) as CatalogManifest;
 
-  const totalHeader = res.headers.get('Content-Length');
-  const total = totalHeader ? Number(totalHeader) : null;
+  // Chunk URLs are siblings of the manifest — same directory prefix, name
+  // from the shared `catalogChunkFilename` so client + writer agree.
+  const dirUrl = manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
+  let loaded = 0;
+  const chunks = await Promise.all(
+    manifest.chunkBytes.map(async (_, i) => {
+      const url = dirUrl + catalogChunkFilename(i);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      loaded += buf.byteLength;
+      onProgress?.({ bytes: loaded, total: manifest.totalBytes });
+      return buf;
+    }),
+  );
 
-  if (!res.body || !onProgress) {
-    return res.arrayBuffer();
-  }
-
-  const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let bytes = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    bytes += value.byteLength;
-    onProgress({ bytes, total });
-  }
-  const out = new Uint8Array(bytes);
-  let off = 0;
-  for (const c of chunks) {
-    out.set(c, off);
-    off += c.byteLength;
-  }
-  return out.buffer;
+  return assembleCatalogChunks(chunks, manifest);
 }
 
 export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): Catalog {

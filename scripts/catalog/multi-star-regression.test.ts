@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import {
-  DEFAULT_CATALOG_BIN,
+  DEFAULT_CATALOG_MANIFEST,
   type Catalog,
   type CatalogRecord,
   distancePc,
@@ -53,13 +53,13 @@ const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 // generated). CI's plain `npm test` job skips; the build-catalog job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
-  existsSync(DEFAULT_CATALOG_BIN) && existsSync(MULTIPLES_TSV)
+  existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)
   && existsSync(BINARIES_BIN) && existsSync(ROW_INDEX_MAP);
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
     `[multi-star-regression] skipping corpus assertions — ` +
-    `catalog.bin ${existsSync(DEFAULT_CATALOG_BIN) ? 'present' : 'MISSING'}, ` +
+    `catalog.bin ${existsSync(DEFAULT_CATALOG_MANIFEST) ? 'present' : 'MISSING'}, ` +
     `multiples.tsv ${existsSync(MULTIPLES_TSV) ? 'present' : 'MISSING'}, ` +
     `binaries.bin ${existsSync(BINARIES_BIN) ? 'present' : 'MISSING'}. ` +
     `Run \`npm run build:catalog\` + \`npm run build:binaries-runtime\` (with LFS pulled).`,

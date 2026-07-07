@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import {
-  DEFAULT_CATALOG_BIN,
+  DEFAULT_CATALOG_MANIFEST,
   type Catalog,
   type CatalogRecord,
   loadCatalog,
@@ -23,7 +23,7 @@ const CORPUS_TSV = resolve(__dirname, 'sky-position-corpus.tsv');
 // Same skip-with-hint contract as known-stars.test.ts: plain `npm test`
 // in CI has no catalog.bin; the build-catalog CI job runs the suite
 // against real data.
-const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_BIN);
+const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
 if (!CATALOG_BIN_PRESENT) {
   // eslint-disable-next-line no-console
   console.warn(

@@ -5,10 +5,16 @@ emits. One file per artefact; each loader is the JS-side counterpart
 of a builder under [`scripts/`](../../../scripts/README.md).
 
 ```
-catalog-loader.ts        public/catalog.bin + public/constellations.json →
-                         Catalog (typed-array views + name table).
-                         Layout decoded from HEADER_LAYOUT / RECORD_LAYOUT
-                         / MAGIC / BINARY_VERSION imported from
+catalog-loader.ts        public/catalog-manifest.json + its
+                         public/catalog.bin.<i> chunks +
+                         public/constellations.json → Catalog (typed-array
+                         views + name table). Fetches the manifest, then
+                         all chunks in parallel, and reassembles via the
+                         shared `assembleCatalogChunks` contract before
+                         decoding (byte-range chunking clears Cloudflare
+                         Workers' 25 MiB per-asset limit — see
+                         scripts/catalog/README.md § On-disk transport
+                         chunking). Layout + chunk helpers imported from
                          scripts/catalog/catalog-pure.ts — single source
                          of truth shared with the writer. Exposes
                          `varType: Uint8Array` for the runtime

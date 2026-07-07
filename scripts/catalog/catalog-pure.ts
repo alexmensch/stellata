@@ -581,6 +581,80 @@ export const NO_GAIA_SOURCE_ID = 0n;
 // Consumers test with `Number.isNaN(x)`.
 export const NO_APSIS = NaN;
 
+// ---- On-disk transport chunking --------------------------------------
+//
+// Cloudflare Workers rejects any single static asset > 25 MiB, so the
+// assembled buffer ships as sequential byte-range chunks named by
+// `catalogChunkFilename` plus a manifest, NOT as one file. The split is
+// transport-only: the v6 record layout above is untouched, and
+// `assembleCatalogChunks` reproduces the source buffer byte-for-byte.
+// Writer (build-catalog), client loader (catalog-loader), and Node reader
+// (catalog-lookup) all round-trip through the two helpers below so the
+// reassembly contract is defined once.
+
+export const CATALOG_MANIFEST_FILENAME = 'catalog-manifest.json';
+
+// 16 MiB keeps every chunk clear of the 25 MiB Workers ceiling with growth
+// headroom — do not raise toward 25 or a fuller catalog breaks deploy.
+export const CATALOG_CHUNK_TARGET_BYTES = 16 * 1024 * 1024;
+
+export interface CatalogManifest {
+  /** Byte length of each chunk in `catalog.bin.<i>` order. */
+  chunkBytes: number[];
+  /** Sum of chunkBytes — assembled length, for pre-alloc + integrity check. */
+  totalBytes: number;
+}
+
+export function catalogChunkFilename(index: number): string {
+  return `catalog.bin.${index}`;
+}
+
+/** Split a total byte length into sequential per-chunk lengths, each
+ *  ≤ targetBytes. A zero-length buffer yields one empty chunk so the
+ *  manifest always carries ≥1 entry. */
+export function planCatalogChunks(
+  totalBytes: number,
+  targetBytes: number = CATALOG_CHUNK_TARGET_BYTES,
+): number[] {
+  if (targetBytes <= 0) throw new Error(`Invalid chunk target: ${targetBytes}`);
+  if (totalBytes <= 0) return [0];
+  const chunkBytes: number[] = [];
+  for (let off = 0; off < totalBytes; off += targetBytes) {
+    chunkBytes.push(Math.min(targetBytes, totalBytes - off));
+  }
+  return chunkBytes;
+}
+
+/** Concatenate transport chunks back into the assembled buffer, validating
+ *  each length and the running total against the manifest. */
+export function assembleCatalogChunks(
+  chunks: Uint8Array[],
+  manifest: CatalogManifest,
+): ArrayBuffer {
+  if (chunks.length !== manifest.chunkBytes.length) {
+    throw new Error(
+      `Catalog chunk count mismatch: got ${chunks.length}, manifest expects ${manifest.chunkBytes.length}`,
+    );
+  }
+  const out = new Uint8Array(manifest.totalBytes);
+  let off = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    if (chunks[i].byteLength !== manifest.chunkBytes[i]) {
+      throw new Error(
+        `Catalog chunk ${i} length mismatch: got ${chunks[i].byteLength}, manifest expects ${manifest.chunkBytes[i]}`,
+      );
+    }
+    out.set(chunks[i], off);
+    off += chunks[i].byteLength;
+  }
+  if (off !== manifest.totalBytes) {
+    throw new Error(
+      `Catalog assembly size mismatch: assembled ${off}, manifest total ${manifest.totalBytes}`,
+    );
+  }
+  return out.buffer;
+}
+
 export const HEADER_LAYOUT = {
   magic: 0,            // 4 bytes ASCII
   version: 4,          // uint32

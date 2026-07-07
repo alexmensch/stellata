@@ -1,4 +1,5 @@
 import { loadCatalog } from './loaders/catalog-loader';
+import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadClouds } from './molecular-clouds/cloud-loader';
 import { loadLocalGroup } from './local-group/local-group-loader';
@@ -53,7 +54,7 @@ async function main() {
   try {
     const [catalog, searchIndex, cloudCatalog, lgCatalog, binaries] = await Promise.all([
       loadCatalog(
-        `${import.meta.env.BASE_URL}catalog.bin`,
+        `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
         ({ bytes, total }) => {
           if (total) {

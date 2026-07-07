@@ -11,6 +11,9 @@ import {
   RECORD_SIZE,
   MAGIC,
   BINARY_VERSION,
+  planCatalogChunks,
+  assembleCatalogChunks,
+  type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
 
 interface StarRecord {
@@ -355,6 +358,68 @@ describe('catalog-loader / parseBinary', () => {
       );
       expect(cat.names.get(0)).toBe('Étoile');
       expect(cat.names.get(1)).toBe('βCen');
+    });
+  });
+
+  describe('transport chunking (byte-identical reassembly)', () => {
+    function sliceByPlan(buf: Uint8Array, chunkBytes: number[]): Uint8Array[] {
+      const chunks: Uint8Array[] = [];
+      let off = 0;
+      for (const n of chunkBytes) {
+        chunks.push(buf.subarray(off, off + n));
+        off += n;
+      }
+      return chunks;
+    }
+
+    it('planCatalogChunks splits on the target with a short final chunk', () => {
+      expect(planCatalogChunks(350, 100)).toEqual([100, 100, 100, 50]);
+      expect(planCatalogChunks(200, 100)).toEqual([100, 100]);
+      expect(planCatalogChunks(50, 100)).toEqual([50]);
+      expect(planCatalogChunks(0, 100)).toEqual([0]);
+    });
+
+    it('assembles a real v6 catalog buffer byte-identically across chunks', () => {
+      const names = ['Sirius', 'Vega', 'Betelgeuse'];
+      const offsets = nameTableOffsets(names);
+      const records = names.map((_, i) => ({
+        ...baseStar,
+        pos: [i + 0.5, -i, i * 2] as [number, number, number],
+        absmag: i - 1.4,
+        flags: FLAG_HAS_NAME,
+        nameOffset: offsets[i],
+      }));
+      const source = new Uint8Array(
+        buildCatalog(records, names.map((n, i) => ({ offset: offsets[i], name: n }))),
+      );
+
+      const chunkBytes = planCatalogChunks(source.byteLength, 64);
+      expect(chunkBytes.length).toBeGreaterThan(1);
+      const manifest: CatalogManifest = { chunkBytes, totalBytes: source.byteLength };
+      const assembled = assembleCatalogChunks(sliceByPlan(source, chunkBytes), manifest);
+
+      expect(new Uint8Array(assembled)).toEqual(source);
+      const cat = parseBinary(assembled, blankConstellations);
+      expect(cat.count).toBe(3);
+      expect(cat.names.get(2)).toBe('Betelgeuse');
+      expect(cat.positions[3]).toBeCloseTo(1.5, 5);
+    });
+
+    it('throws on chunk-count mismatch', () => {
+      const manifest: CatalogManifest = { chunkBytes: [4, 4], totalBytes: 8 };
+      expect(() => assembleCatalogChunks([new Uint8Array(4)], manifest)).toThrow(/count mismatch/);
+    });
+
+    it('throws on chunk-length mismatch', () => {
+      const manifest: CatalogManifest = { chunkBytes: [4, 4], totalBytes: 8 };
+      expect(() =>
+        assembleCatalogChunks([new Uint8Array(4), new Uint8Array(3)], manifest),
+      ).toThrow(/chunk 1 length mismatch/);
+    });
+
+    it('throws on total-bytes mismatch', () => {
+      const manifest: CatalogManifest = { chunkBytes: [4], totalBytes: 8 };
+      expect(() => assembleCatalogChunks([new Uint8Array(4)], manifest)).toThrow(/size mismatch/);
     });
   });
 

@@ -19,7 +19,7 @@ import {
   type SpectralInfo,
 } from './catalog-pure';
 import {
-  DEFAULT_CATALOG_BIN,
+  DEFAULT_CATALOG_MANIFEST,
   type Catalog,
   type CatalogRecord,
   distancePc,
@@ -50,7 +50,7 @@ const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 // a console hint when either is missing. The .github/workflows/test.yml
 // `build-catalog` job runs the full suite after `npm run build:catalog`
 // + LFS pull, so the assertions execute against real data on every PR.
-const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_BIN);
+const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
 const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV);
 const FIXTURES_READY = CATALOG_BIN_PRESENT && MULTIPLES_PRESENT;
 if (!FIXTURES_READY) {

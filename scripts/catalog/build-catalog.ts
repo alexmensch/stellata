@@ -3,7 +3,7 @@
 // public/search-index.json. See scripts/catalog/README.md.
 
 import { statSync, existsSync, readFileSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,9 +31,13 @@ import {
   NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  CATALOG_MANIFEST_FILENAME,
+  catalogChunkFilename,
+  planCatalogChunks,
   type ApsisRow,
   type SearchEntry,
   type SimbadSpectralIndex,
+  type CatalogManifest,
 } from './catalog-pure';
 import {
   compareBuildCounts,
@@ -101,7 +105,8 @@ const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
 const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
-const OUT_BIN = resolve(ROOT, 'public/catalog.bin');
+const PUBLIC_DIR = resolve(ROOT, 'public');
+const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
 const OUT_ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
@@ -109,9 +114,10 @@ const EXPECTED_COUNTS = resolve(__dirname, 'build-catalog-expected.json');
 const EXPECTED_OUTLIERS = resolve(__dirname, 'build-distance-outliers-expected.json');
 
 function isUpToDate(): boolean {
-  if (!existsSync(OUT_BIN) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
+  if (!existsSync(OUT_MANIFEST) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
+  if (!existsSync(resolve(PUBLIC_DIR, catalogChunkFilename(0)))) return false;
   if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
-  const binMtime = statSync(OUT_BIN).mtimeMs;
+  const binMtime = statSync(OUT_MANIFEST).mtimeMs;
   const srcMtime = statSync(SRC_CSV).mtimeMs;
   const stellariumMtime = mtimeIfExists(SRC_STELLARIUM);
   const gcvsMtime = mtimeIfExists(SRC_GCVS);
@@ -146,6 +152,16 @@ function isUpToDate(): boolean {
     binMtime > multiplesMtime &&
     binMtime > dustMtime
   );
+}
+
+// Clear a prior build's monolith + chunk set so a shrunk chunk count
+// can't strand stale higher-index chunks the manifest no longer lists.
+async function removeStaleCatalogChunks(dir: string): Promise<void> {
+  for (const name of await readdir(dir)) {
+    if (name === 'catalog.bin' || /^catalog\.bin\.\d+$/.test(name)) {
+      await unlink(resolve(dir, name));
+    }
+  }
 }
 
 async function main() {
@@ -716,8 +732,19 @@ async function main() {
     throw new Error(`Size mismatch: wrote ${off}, expected ${totalLength}`);
   }
 
-  await mkdir(dirname(OUT_BIN), { recursive: true });
-  await writeFile(OUT_BIN, Buffer.from(out));
+  await mkdir(PUBLIC_DIR, { recursive: true });
+  await removeStaleCatalogChunks(PUBLIC_DIR);
+  const chunkBytes = planCatalogChunks(totalLength);
+  const manifest: CatalogManifest = { chunkBytes, totalBytes: totalLength };
+  let chunkOff = 0;
+  for (let i = 0; i < chunkBytes.length; i++) {
+    await writeFile(
+      resolve(PUBLIC_DIR, catalogChunkFilename(i)),
+      Buffer.from(out, chunkOff, chunkBytes[i]),
+    );
+    chunkOff += chunkBytes[i];
+  }
+  await writeFile(OUT_MANIFEST, JSON.stringify(manifest) + '\n');
 
   // Constellations JSON (unchanged from v1 format).
   const constellationsOut = CONSTELLATIONS.map((c, idx) => {
@@ -765,7 +792,10 @@ async function main() {
     0,
   );
   const mb = (totalLength / 1024 / 1024).toFixed(2);
-  console.log(`Wrote ${OUT_BIN} (${mb} MB, ${stars.length} records, v${BINARY_VERSION})`);
+  console.log(
+    `Wrote ${chunkBytes.length} catalog chunk(s) + ${OUT_MANIFEST} ` +
+      `(${mb} MB, ${stars.length} records, v${BINARY_VERSION})`,
+  );
   console.log(
     `Wrote ${OUT_CON} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
   );
