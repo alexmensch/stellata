@@ -457,7 +457,16 @@ onto the anchor, producing a duplicate `(primary, secondary)`. `write_binary`
 emits one record per relation, and when duplicates collide it keeps the
 orbit-bearing member (`pair_has_orbit`; ties keep first in walk order) so the
 system's live motion survives the dedup rather than an element-less wide
-pair winning by walk position. Counted `pairs_dropped_duplicate_relation`.
+pair winning by walk position. Each drop is classified
+(`same_relation_alias`): when on each side the two pairs' canonical comp
+tokens are equal, hierarchy-related, or compound-contained, the two rows
+name the SAME physical link at different granularity (18025+4414 `AB` vs
+`Aa,B`) — a correct, permanent dedup counted
+`pairs_dropped_same_relation_alias`. Disjoint letters on either side mean
+two DISTINCT stars collapsed onto one record; those are counted
+`pairs_dropped_duplicate_relation`, a ratchet toward zero — each is a
+missing minted slot (current floor: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
+Ba/Bb sub-letter blend the inner-pair hierarchy owns).
 
 ## Stage 4 — Orbital element selection per pair
 

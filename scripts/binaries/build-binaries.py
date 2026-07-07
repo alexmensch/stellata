@@ -51,8 +51,10 @@ from indices import (  # noqa: E402, F401
     IdentifierIndices, WDS_PRECISE_COORD_EPOCH, build_indices,
 )
 from component_tokens import (  # noqa: E402, F401
-    child_component_tokens, expand_wds_truncated_secondary,
-    is_component_token, parent_component_token,
+    child_component_tokens, compound_contains,
+    expand_wds_truncated_secondary,
+    is_component_token, is_hier_ancestor, parent_component_token,
+    related_hier, token_letters,
 )
 from subdivide import (  # noqa: E402, F401
     SYNTH_NSS_DISCOVERER,

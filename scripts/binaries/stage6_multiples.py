@@ -17,13 +17,15 @@ from parsers import (  # noqa: E402
     AthygRow, GaiaAstrometryRow, SimbadWdsXid, WdsPair,
 )
 from indices import IdentifierIndices  # noqa: E402
-from component_tokens import expand_wds_truncated_secondary  # noqa: E402
+from component_tokens import (  # noqa: E402
+    expand_wds_truncated_secondary,
+    token_letters,
+)
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
     _add_edge,
     _propagate_position,
     _spherical_to_unit_vec,
-    _token_letters,
     iter_decomposing_pair_components,
     split_components,
 )
@@ -370,7 +372,7 @@ def _anchor_token_rank(tok: str) -> tuple[int, int, str]:
 def _proxy_endpoints(tok: str) -> list[str]:
     """A compound token's constituent letters (``"BC" → [B, C]``), or the
     token itself for single-component forms."""
-    letters = _token_letters(tok)
+    letters = token_letters(tok)
     return sorted(letters) if len(letters) >= 2 else [tok]
 
 

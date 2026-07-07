@@ -22,8 +22,10 @@ sys.path.insert(0, str(SCRIPT.parent))
 from refresh_lib import is_up_to_date  # noqa: E402
 from astronomy_constants import J2000_JD  # noqa: E402
 from component_tokens import (  # noqa: E402
+    compound_contains,
     expand_wds_truncated_secondary,
     parent_component_token,
+    related_hier,
 )
 from paths import REPO_ROOT  # noqa: E402
 
@@ -449,6 +451,23 @@ def _f64(v: float | None) -> float:
     return float("nan") if v is None else float(v)
 
 
+def same_relation_alias(a: MultiplesPair, b: MultiplesPair) -> bool:
+    """True when two pairs colliding on one (primaryIdx, secondaryIdx)
+    relation are the SAME physical link named at different granularity —
+    on each side the two comp tokens are equal, hierarchy-related
+    (``A``/``Aa``), or compound-contained (``AB``/``A``). Dropping one is
+    a correct, permanent dedup (18025+4414 ``AB`` vs ``Aa,B``). Disjoint
+    letters on either side mean two DISTINCT stars collapsed onto one
+    record — a real collapse the ratchet tracks (θ¹ Ori ``Bb,Bc`` vs
+    ``Ba,Bc`` on the Ba/Bb blend)."""
+    def alias(x: str, y: str) -> bool:
+        return related_hier(x, y) or compound_contains(x, y)
+    return (
+        alias(a.primary_comp, b.primary_comp)
+        and alias(a.secondary_comp, b.secondary_comp)
+    )
+
+
 @dataclass
 class WriteStats:
     pairs_total: int
@@ -456,6 +475,7 @@ class WriteStats:
     pairs_dropped_primary_unresolved: int
     pairs_dropped_secondary_unresolved: int
     pairs_dropped_degenerate_idx: int
+    pairs_dropped_same_relation_alias: int
     pairs_dropped_duplicate_relation: int
     pairs_with_orbit: int
     pairs_with_inclination: int
@@ -533,6 +553,7 @@ def write_binary(
         pairs_dropped_primary_unresolved=0,
         pairs_dropped_secondary_unresolved=0,
         pairs_dropped_degenerate_idx=0,
+        pairs_dropped_same_relation_alias=0,
         pairs_dropped_duplicate_relation=0,
         pairs_with_orbit=0,
         pairs_with_inclination=0,
@@ -557,13 +578,16 @@ def write_binary(
             continue
         rel_key = (resolved_primary[i], resolved_secondary[i])
         if relation_winner[rel_key] != i:
-            # Exact (primary, secondary) duplicate: a blended non-anchor
-            # primary the synth re-home could not reach re-resolves onto the
-            # system anchor, re-emitting an existing anchor→X relation and
-            # surfacing X twice on the anchor's hover card. Emit only the
-            # chosen winner (orbit-bearing preferred above) so no relation
-            # appears twice.
-            stats.pairs_dropped_duplicate_relation += 1
+            # Exact (primary, secondary) duplicate. Emit only the chosen
+            # winner (orbit-bearing preferred above) so no relation appears
+            # twice on a hover card, and classify the drop: an ALIAS names
+            # the same physical link twice (accepted-permanent); disjoint
+            # comp letters are a real collapse of two distinct stars onto
+            # one record (ratchet — each is a missing minted slot).
+            if same_relation_alias(pairs[i], pairs[relation_winner[rel_key]]):
+                stats.pairs_dropped_same_relation_alias += 1
+            else:
+                stats.pairs_dropped_duplicate_relation += 1
             continue
         input_to_output[i] = len(emit_indices)
         emit_indices.append(i)
@@ -637,6 +661,7 @@ def stats_to_counts(stats: WriteStats) -> dict[str, int]:
         "pairs_dropped_primary_unresolved": stats.pairs_dropped_primary_unresolved,
         "pairs_dropped_secondary_unresolved": stats.pairs_dropped_secondary_unresolved,
         "pairs_dropped_degenerate_idx": stats.pairs_dropped_degenerate_idx,
+        "pairs_dropped_same_relation_alias": stats.pairs_dropped_same_relation_alias,
         "pairs_dropped_duplicate_relation": stats.pairs_dropped_duplicate_relation,
         "pairs_with_orbit": stats.pairs_with_orbit,
         "pairs_with_inclination": stats.pairs_with_inclination,
@@ -732,6 +757,7 @@ def run(force: bool) -> int:
         f"dropped: primary_unresolved={stats.pairs_dropped_primary_unresolved}, "
         f"secondary_unresolved={stats.pairs_dropped_secondary_unresolved}, "
         f"degenerate_idx={stats.pairs_dropped_degenerate_idx}, "
+        f"same_relation_alias={stats.pairs_dropped_same_relation_alias}, "
         f"duplicate_relation={stats.pairs_dropped_duplicate_relation}"
     )
 

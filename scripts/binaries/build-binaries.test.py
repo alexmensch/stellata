@@ -6462,17 +6462,17 @@ def _bi_system(
 
 class BindingRelationTests(unittest.TestCase):
     def test_ancestor_and_hierarchy(self) -> None:
-        self.assertTrue(_s2._is_hier_ancestor("A", "Aa"))
-        self.assertTrue(_s2._is_hier_ancestor("A", "Aa1"))
-        self.assertTrue(_s2._is_hier_ancestor("Aa", "Aa1"))
-        self.assertFalse(_s2._is_hier_ancestor("A", "B"))
-        self.assertFalse(_s2._is_hier_ancestor("A", "AB"))  # compound, not child
+        self.assertTrue(bb.is_hier_ancestor("A", "Aa"))
+        self.assertTrue(bb.is_hier_ancestor("A", "Aa1"))
+        self.assertTrue(bb.is_hier_ancestor("Aa", "Aa1"))
+        self.assertFalse(bb.is_hier_ancestor("A", "B"))
+        self.assertFalse(bb.is_hier_ancestor("A", "AB"))  # compound, not child
 
     def test_compound_containment(self) -> None:
-        self.assertTrue(_s2._compound_contains("AB", "A"))
-        self.assertTrue(_s2._compound_contains("AB", "Aa"))
-        self.assertFalse(_s2._compound_contains("AB", "C"))
-        self.assertFalse(_s2._compound_contains("AB", "BC"))
+        self.assertTrue(bb.compound_contains("AB", "A"))
+        self.assertTrue(bb.compound_contains("AB", "Aa"))
+        self.assertFalse(bb.compound_contains("AB", "C"))
+        self.assertFalse(bb.compound_contains("AB", "BC"))
 
     def test_blend_pair_mates_transitive(self) -> None:
         self.assertTrue(_s2._are_pair_mates("A", "B", [("A", "B")]))

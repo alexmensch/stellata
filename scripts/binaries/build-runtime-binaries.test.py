@@ -560,7 +560,8 @@ class WriteBinaryTests(unittest.TestCase):
         # Two pairs resolve to the same (primary, secondary) catalog rows —
         # a blended primary the synth re-home could not reach (no synth slot)
         # re-emits an existing anchor→C. The first wins; the exact duplicate
-        # is dropped so C is not listed twice on the anchor's card.
+        # is dropped so C is not listed twice on the anchor's card. A vs B
+        # are disjoint letters, so this is a REAL collapse, not an alias.
         row_map = brb.RowIndexMap(
             by_gaia={"1": 100, "2": 320}, by_hip={}, by_synth={},
         )
@@ -577,6 +578,29 @@ class WriteBinaryTests(unittest.TestCase):
             )
         self.assertEqual(stats.pairs_emitted, 1)
         self.assertEqual(stats.pairs_dropped_duplicate_relation, 1)
+        self.assertEqual(stats.pairs_dropped_same_relation_alias, 0)
+
+    def test_same_relation_alias_counted_separately(self) -> None:
+        # 18025+4414 shape: AB and Aa,B are the same physical link at two
+        # granularities (A is Aa's hierarchy ancestor; B == B). The drop is
+        # a correct permanent dedup, counted as an alias, never a collapse.
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 100, "2": 320}, by_hip={}, by_synth={},
+        )
+        pairs = [
+            _pair(system_id="00000+0000-AB", primary_comp="A",
+                  secondary_comp="B", primary_gaia="1", secondary_gaia="2"),
+            _pair(system_id="00000+0000-Aa,B", primary_comp="Aa",
+                  secondary_comp="B", primary_gaia="1", secondary_gaia="2"),
+        ]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT, brb.NO_PARENT], [0, 1], row_map, out,
+            )
+        self.assertEqual(stats.pairs_emitted, 1)
+        self.assertEqual(stats.pairs_dropped_same_relation_alias, 1)
+        self.assertEqual(stats.pairs_dropped_duplicate_relation, 0)
 
     def test_duplicate_relation_keeps_orbit_bearing_member(self) -> None:
         # Two pairs collapse to the same (primary, secondary) rows: the wide
@@ -832,6 +856,46 @@ class WriteBinaryTests(unittest.TestCase):
         # 8400.75 fits exactly in float32 (it's < 2^23 and a power-of-2
         # sub-bit of precision still available).
         self.assertAlmostEqual(wire, 8400.75, places=4)
+
+
+class SameRelationAliasTests(unittest.TestCase):
+    """``same_relation_alias`` — token relations on each side of a
+    colliding relation."""
+
+    def _pair_comps(self, pri: str, sec: str) -> "brb.MultiplesPair":
+        return _pair(primary_comp=pri, secondary_comp=sec)
+
+    def test_equal_tokens_alias(self) -> None:
+        self.assertTrue(brb.same_relation_alias(
+            self._pair_comps("A", "B"), self._pair_comps("A", "B"),
+        ))
+
+    def test_hierarchy_ancestor_alias(self) -> None:
+        # 18025+4414: AB vs Aa,B.
+        self.assertTrue(brb.same_relation_alias(
+            self._pair_comps("A", "B"), self._pair_comps("Aa", "B"),
+        ))
+
+    def test_compound_containment_alias(self) -> None:
+        # 08122+1739 Tegmine: AC vs AB,C — A is contained in AB.
+        self.assertTrue(brb.same_relation_alias(
+            self._pair_comps("A", "C"), self._pair_comps("AB", "C"),
+        ))
+        # 18443+3940: BC vs AB,CD — compound containment on both sides.
+        self.assertTrue(brb.same_relation_alias(
+            self._pair_comps("B", "C"), self._pair_comps("AB", "CD"),
+        ))
+
+    def test_disjoint_primary_is_real_collapse(self) -> None:
+        # θ¹ Ori: Bb,Bc vs Ba,Bc — Ba/Bb are disjoint siblings.
+        self.assertFalse(brb.same_relation_alias(
+            self._pair_comps("Bb", "Bc"), self._pair_comps("Ba", "Bc"),
+        ))
+
+    def test_disjoint_secondary_is_real_collapse(self) -> None:
+        self.assertFalse(brb.same_relation_alias(
+            self._pair_comps("A", "C"), self._pair_comps("A", "E"),
+        ))
 
 
 if __name__ == "__main__":

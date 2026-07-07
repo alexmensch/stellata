@@ -4,7 +4,8 @@
   "pairs_dropped_primary_unresolved": 5267,
   "pairs_dropped_secondary_unresolved": 654,
   "pairs_dropped_degenerate_idx": 382,
-  "pairs_dropped_duplicate_relation": 5,
+  "pairs_dropped_same_relation_alias": 3,
+  "pairs_dropped_duplicate_relation": 2,
   "pairs_with_orbit": 1275,
   "pairs_with_inclination": 1091,
   "pairs_inner_of_hierarchy": 1347
