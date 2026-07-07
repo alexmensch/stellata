@@ -16,6 +16,11 @@ export interface SpectralInfo {
   lumClass: number;     // 0-9 (see encoding below), 255 if unknown
   isWhiteDwarf: boolean;
   wdSubclass: number;   // only valid if isWhiteDwarf (the digit after D)
+  /** WN/WC Wolf-Rayet: shares classIdx 7 on the wire with carbon/S
+   *  stars but routes tempKelvin/boloCorr through the WR tables — the
+   *  carbon-star ~3 kK row misizes a ~40-140 kK WR photosphere by
+   *  ~(T ratio)² ≈ 1000×. */
+  isWolfRayet?: boolean;
 }
 
 /** Sentinel classIdx for "unparseable / unknown spectral class". Routes
@@ -178,6 +183,34 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): Spectr
   // SIMBAD writes carbon stars as "C5,2e" (subclass + abundance index) and
   // Wolf-Rayets as "WN5" / "WC4"; both lack a Roman luminosity class.
   if (classIdx === 7) {
+    if (firstChar === 'W') {
+      // WR+MK composites (γ² Vel "WC8+O7.5III-V"): the WR catalog
+      // convention lists the WR first regardless of optical brightness,
+      // but the MK companion dominates the V light the record's absmag
+      // measures — classify by it (the Antares M+B convention already
+      // classifies by the V-dominant first-listed component).
+      const plus = body.indexOf('+');
+      if (plus >= 0) {
+        const companion = classifyFromSimbad(body.substring(plus + 1));
+        if (
+          companion && !companion.isWhiteDwarf
+          && companion.classIdx !== 7
+          && companion.classIdx !== UNKNOWN_CLASS_IDX
+        ) {
+          return companion;
+        }
+      }
+      // The WR ionization subclass sits after the two-letter WN/WC/WO
+      // prefix ("WN5", "WC4"), which the generic position-1 digit parse
+      // above never reaches.
+      const wrSub = body.match(/^W[NCO]?(\d)(?:\.\d)?/);
+      return {
+        classIdx,
+        subclass: wrSub ? Number(wrSub[1]) : subclass,
+        lumClass: 255,
+        isWhiteDwarf: false, wdSubclass: 0, isWolfRayet: true,
+      };
+    }
     return { classIdx, subclass, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 };
   }
 
@@ -277,7 +310,7 @@ const T_TABLE: Record<number, [number, number][]> = {
   4: [[0,  5940], [5,  5560], [9,  5310]],             // G
   5: [[0,  5150], [5,  4410], [9,  3900]],             // K
   6: [[0,  3840], [5,  3170], [9,  2500]],             // M
-  7: [[0,  4000], [5,  3000], [9,  2500]],             // C/S/W/N/R (cool carbon) — rough
+  7: [[0,  4000], [5,  3000], [9,  2500]],             // C/S/N/R (cool carbon) — rough; WR routes via WR_T_TABLE
   8: [[0,  5000], [5,  5000], [9,  5000]],             // unknown — neutral default
 };
 
@@ -300,12 +333,21 @@ function interpolate(table: [number, number][], key: number): number {
   return last[1];
 }
 
+// Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp
+// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006; WC4 ~117 kK … WC9 ~44 kK,
+// Sander+ 2012), within the sizing scatter for display radii.
+const WR_T_TABLE: [number, number][] = [[0, 140000], [5, 75000], [9, 44000]];
+const WR_BC_TABLE: [number, number][] = [[0, -6.0], [5, -4.0], [9, -2.7]];
+
 export function tempKelvin(info: SpectralInfo): number {
   if (info.isWhiteDwarf) {
     // WD spectral number is T_eff / 50400 × 10 (inverted from Sion et al.);
     // so T_eff ≈ 50400 / N for N=1..9.
     const n = Math.max(1, info.wdSubclass);
     return 50400 / n;
+  }
+  if (info.isWolfRayet) {
+    return interpolate(WR_T_TABLE, info.subclass);
   }
   return interpolate(T_TABLE[info.classIdx] ?? T_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
 }
@@ -333,6 +375,9 @@ export function boloCorr(info: SpectralInfo): number {
     if (T > 15000) return -1.0;
     if (T > 8000) return -0.2;
     return 0.3;
+  }
+  if (info.isWolfRayet) {
+    return interpolate(WR_BC_TABLE, info.subclass);
   }
   return interpolate(BC_TABLE[info.classIdx] ?? BC_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
 }

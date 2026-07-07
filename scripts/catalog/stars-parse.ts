@@ -277,16 +277,20 @@ export async function readStars(
     const y = dirRes.dir.y * dist;
     const z = dirRes.dir.z * dist;
 
-    let ci = parseFloatOrNull(row.ci) ?? SOLAR_BV_FALLBACK;
+    const ciRaw = parseFloatOrNull(row.ci);
+    let ci = ciRaw ?? SOLAR_BV_FALLBACK;
 
-    // Build-time de-extinction: absmag and ci are observed-convention
-    // (embed the real Sol→star A_V), so subtract the map integral to
-    // recover intrinsic values the runtime raymarch re-adds. Runs before
-    // physicalRadius so radii size off the de-extincted (brighter) absmag.
+    // Build-time de-extinction: absmag and an observed ci are
+    // observed-convention (embed the real Sol→star A_V), so subtract
+    // the map integral to recover intrinsic values the runtime raymarch
+    // re-adds. Runs before physicalRadius so radii size off the
+    // de-extincted (brighter) absmag. The SOLAR_BV_FALLBACK ci is
+    // already intrinsic and must not be de-reddened (the same contract
+    // companion-promotion's companionCiIsObserved gates on).
     if (dustGrid) {
       const av = avSolToStar(dustGrid, x, y, z);
       absmag -= av;
-      ci -= av / R_V;
+      if (ciRaw !== null) ci -= av / R_V;
     }
 
     const spectral = resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);

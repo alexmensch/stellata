@@ -388,8 +388,9 @@ def _orb6_period_days(entry: Orb6Entry) -> float | None:
     """Normalise ORB6's ``P_val`` to days. Returns ``None`` for unknown
     or garbage unit codes (rare; ~3 rows of 4,054 use stray digits from
     fixed-format misalignment — those rows are skipped rather than
-    guessed)."""
-    if entry.P_val is None:
+    guessed) and for non-positive periods, which would otherwise mint
+    renderable elements whose Kepler eval divides by P."""
+    if entry.P_val is None or entry.P_val <= 0:
         return None
     unit = entry.P_unit
     if unit == "y":
@@ -467,7 +468,7 @@ def orb6_to_canonical_elements(
     entry: Orb6Entry, plx_mas: float | None,
 ) -> OrbitElements | None:
     """ORB6 row → canonical ``OrbitElements``. Returns ``None`` only
-    when the period unit is unparseable; an unparseable T0 or a
+    when the period is unparseable or non-positive; an unparseable T0 or a
     missing parallax leaves the affected fields ``None`` but the rest
     of the orbit still populates so downstream consumers can choose
     their own fallback.

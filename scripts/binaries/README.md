@@ -192,8 +192,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    the published WDS sep+PA. Absmag is imputed from primary + WDS
    Δmag when the row inherits its parent's AT-HYG photometry. The
    renderer / picker / hover / focus stack picks companions up
-   with zero code change. ~10.3k companions promoted into the
-   current build (~40% via real Gaia/HIP keys, ~60% via synthetic).
+   with zero code change. ~14.2k companions promoted into the
+   current build (~36% via real Gaia/HIP keys, ~64% via synthetic).
 3. **Runtime side artifact** (`scripts/binaries/build-runtime-binaries.py`).
    Reads multiples.tsv + `public/catalog-row-index-map.json`
    (which now carries a `bySynth` section alongside `byGaia` and
@@ -238,6 +238,23 @@ canonical tag set is `RESOLVE_VIA_VALUES`:
 | `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord (PM-propagated from J1991.25). Routes that HIP through Gaia's HIP cross-walk and AT-HYG-native fall-through. |
 | `position_pm` / `position_nopm` | Reserved placeholders in `RESOLVE_VIA_VALUES` for a future PM-propagated match against `data/gaia/gaia_dr3_astrometry.tsv`. Not yet wired. |
 | `unresolved` | All strategies missed. The component still binds a HIP whenever any tier surfaced one — Stage 3's HIP2 long-baseline fallback can attach astrometry to a Gaia-source-less Sirius A or α Cen B from the bare HIP. |
+
+Before any tier runs, Stage 1's `build_indices` applies a one-sided
+**magnitude-consistency gate** to every HIP-anchored Gaia binding —
+both Gaia's `hipparcos2_best_neighbour` xwalk rows and AT-HYG's own
+`gaia` cells (which ingest the same xwalk). The xwalk has no magnitude
+check, so a HIP too saturated for a DR3 source best-matches whatever
+source IS nearby: the resolvable companion (Castor A → B's source) or
+a faint background star (α Cen B → a G=20.9 source). A bound source
+with `G − V > 1.0` (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) cannot carry
+the light the HIP names — the physical ceiling is ~+0.1 for the bluest
+stars plus ~+0.75 of equal-blend headroom; red stars run G *brighter*
+so the gate never fires on them — and is unbound at the ingest
+boundary (AT-HYG cells scrubbed to `None`, xwalk rows dropped from
+`hip_to_gaia` / `src_to_hip`). The bare HIP survives for Stage 3's
+HIP2 fallback. Unverifiable bindings (no V, source outside the
+astrometry pull, no G) are trusted. Counted `xwalk_hip_mag_rejected` /
+`athyg_gaia_mag_rejected` in the Stage-7 snapshot.
 
 The position-match pass deserves its own note. AT-HYG's stored
 ra/dec is documented as J2000 but HIP-sourced rows are empirically at

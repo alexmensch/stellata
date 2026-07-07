@@ -303,6 +303,32 @@ class Orb6Tests(unittest.TestCase):
         self.assertEqual(e.hd, 60178)
         self.assertEqual(e.grade, 3)
 
+    def test_period_overflowing_left_of_nominal_edge_parses_in_full(self) -> None:
+        # 36 And (00550+2338 AB): P = 61183. d right-justifies its
+        # leading digit one column left of the nominal field edge. The
+        # pre-widening slice read 1183. — a 167-yr orbit rendered as
+        # 3.2 yr.
+        line = "005458.02+233742.4 00550+2338 STF  73AB        755   5286   4288   6.12   6.54  61183.      d  69.         0.9837 a  0.0011   44.57     0.11   173.66      0.13   35543.      m  21.       0.30603  0.00078  358.62     0.21   2000 2008 2 n Mut2010b wds00550+2338b.png"
+        body = "banner\n" + line + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            rows = bb.parse_orb6(p)
+        self.assertEqual(len(rows), 1)
+        e = rows[0]
+        self.assertEqual(e.P_val, 61183.0)
+        self.assertEqual(e.P_unit, "d")
+
+    def test_omega_overflowing_left_of_nominal_edge_parses_in_full(self) -> None:
+        # 17563-1549 Aa1,2: ω = 252.3° overflows one column left the
+        # same way; the pre-widening slice read 52.3.
+        line = "175619.04-154844.5 17563-1549 WAI   1Aa1,2   10891 163336  87813   6.45k  7.50k    13.4191  d   0.0003     2.0    m  0.1     151.      17.     306.3       5.8    57900.0     d   0.2      0.36     0.02    252.3       4.7              3 n WAI2023  wds17563-1549b.png"
+        body = "banner\n" + line + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "orb6.txt", body)
+            rows = bb.parse_orb6(p)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].omega_deg, 252.3)
+
 
 # ─── Fixed-width parser sanity nets ──────────────────────────────────
 
@@ -793,12 +819,13 @@ def _wds_pair(*, wds_id: str = "00000+0000", components: str = "AB") -> "bb.WdsP
 def _athyg_row(
     *, hip: int | None = None, gaia: int | None = None,
     ra_deg: float = 0.0, dec_deg: float = 0.0,
+    v_mag: float | None = None,
 ) -> "bb.AthygRow":
     return bb.AthygRow(
         hip=hip, tyc=None, gaia=gaia, hd=None,
         ra_deg=ra_deg, dec_deg=dec_deg,
         x_pc=0.0, y_pc=0.0, z_pc=0.0,
-        dist_pc=1.0, v_mag=None, absmag=5.0,
+        dist_pc=1.0, v_mag=v_mag, absmag=5.0,
         ci=None, spect="", proper="",
         pm_ra_masyr=None, pm_de_masyr=None,
     )
@@ -2024,6 +2051,75 @@ def _indices_with_astrometry(
     )
 
 
+class GaiaBindingMagnitudeGateTests(unittest.TestCase):
+    """build_indices' one-sided G-vs-V consistency gate on HIP-anchored
+    Gaia bindings (xwalk rows and AT-HYG gaia cells)."""
+
+    def test_xwalk_binding_fainter_than_v_is_rejected(self) -> None:
+        # Castor A shape: the V=1.58 star bound to the companion's
+        # G=2.92 source — past any physical G−V.
+        athyg = [_athyg_row(hip=36850, v_mag=1.58)]
+        astro = {892: _gaia_astrometry_row(source_id=892, g_mag=2.92)}
+        idx = _indices_with_astrometry(
+            athyg=athyg, hip_to_gaia={36850: 892}, src_to_astrometry=astro,
+        )
+        self.assertNotIn(36850, idx.hip_to_gaia)
+        self.assertNotIn(892, idx.src_to_hip)
+        self.assertEqual(idx.xwalk_mag_rejected, [(36850, 892)])
+
+    def test_xwalk_binding_within_blend_ceiling_is_kept(self) -> None:
+        # ζ Sgr shape: +0.65 — inside the equal-pair blend ceiling.
+        athyg = [_athyg_row(hip=93506, v_mag=2.60)]
+        astro = {77: _gaia_astrometry_row(source_id=77, g_mag=3.25)}
+        idx = _indices_with_astrometry(
+            athyg=athyg, hip_to_gaia={93506: 77}, src_to_astrometry=astro,
+        )
+        self.assertEqual(idx.hip_to_gaia.get(93506), 77)
+        self.assertEqual(idx.xwalk_mag_rejected, [])
+
+    def test_red_star_brighter_g_is_kept(self) -> None:
+        # G brighter than V is the normal red-star regime — the gate is
+        # one-sided and must never fire on it.
+        athyg = [_athyg_row(hip=1, v_mag=8.0)]
+        astro = {5: _gaia_astrometry_row(source_id=5, g_mag=6.0)}
+        idx = _indices_with_astrometry(
+            athyg=athyg, hip_to_gaia={1: 5}, src_to_astrometry=astro,
+        )
+        self.assertEqual(idx.hip_to_gaia.get(1), 5)
+
+    def test_unverifiable_bindings_are_trusted(self) -> None:
+        # Missing V, source absent from the astrometry pull, or missing
+        # G — nothing to compare, binding kept.
+        athyg = [
+            _athyg_row(hip=1, v_mag=None),
+            _athyg_row(hip=2, v_mag=5.0),
+            _athyg_row(hip=3, v_mag=5.0),
+        ]
+        astro = {30: _gaia_astrometry_row(source_id=30, g_mag=None)}
+        idx = _indices_with_astrometry(
+            athyg=athyg,
+            hip_to_gaia={1: 10, 2: 20, 3: 30},
+            src_to_astrometry=astro,
+        )
+        self.assertEqual(idx.hip_to_gaia, {1: 10, 2: 20, 3: 30})
+        self.assertEqual(idx.xwalk_mag_rejected, [])
+
+    def test_athyg_gaia_cell_is_scrubbed(self) -> None:
+        # α Cen B shape: the row's own gaia cell (ingested from the same
+        # cross-walk) points at a G=20.95 background source. The cell is
+        # cleared at the ingest boundary; the HIP survives for Stage 3's
+        # HIP2 fallback.
+        row = _athyg_row(hip=71681, gaia=587, v_mag=1.35)
+        astro = {587: _gaia_astrometry_row(source_id=587, g_mag=20.95)}
+        idx = _indices_with_astrometry(
+            athyg=[row], src_to_astrometry=astro,
+        )
+        self.assertIsNone(row.gaia)
+        self.assertNotIn(587, idx.src_to_athyg)
+        self.assertEqual(idx.athyg_gaia_mag_rejected, [(71681, 587)])
+        self.assertIn(71681, idx.hip_to_athyg)
+
+
 class ParseGaiaAstrometryTests(unittest.TestCase):
     def test_parses_row_with_all_fields(self) -> None:
         body = (
@@ -3118,6 +3214,12 @@ class Orb6ToCanonicalElementsTests(unittest.TestCase):
         # ORB6 has a handful of stray '0'/'9'/'3'/'1' codes from
         # fixed-column misalignment — skip rather than guess.
         entry = _orb6_visual(P_unit="0")
+        self.assertIsNone(bb.orb6_to_canonical_elements(entry, plx_mas=10.0))
+
+    def test_zero_period_returns_none(self) -> None:
+        # A P_val of 0.0 must never mint elements: FLAG_HAS_ORBIT with
+        # P=0 makes the runtime's M = 2π(t−T)/P NaN every frame.
+        entry = _orb6_visual(P_val=0.0, P_unit="d")
         self.assertIsNone(bb.orb6_to_canonical_elements(entry, plx_mas=10.0))
 
     def test_missing_parallax_drops_a_au_but_keeps_angles(self) -> None:

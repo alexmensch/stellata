@@ -275,10 +275,11 @@ def synth_slot(
 
 def pair_has_orbit(p: MultiplesPair) -> bool:
     """True when every element BinaryOrbitField consumes (P, T, e, a, ω, q)
-    is present — the same gate `write_binary` stamps into FLAG_HAS_ORBIT.
-    Also the "is this pair bound?" signal parent selection ranks on."""
+    is present and usable (P > 0 — Kepler eval divides by P) — the same
+    gate `write_binary` stamps into FLAG_HAS_ORBIT. Also the "is this
+    pair bound?" signal parent selection ranks on."""
     return (
-        p.P_days is not None and p.T_jd is not None
+        p.P_days is not None and p.P_days > 0 and p.T_jd is not None
         and p.e is not None and p.a_AU is not None
         and p.omega_rad is not None and p.q is not None
     )

@@ -197,6 +197,33 @@ describe('catalog-pure / classifyFromSimbad', () => {
     expect(classifyFromSimbad('WN5')!.classIdx).toBe(7);
   });
 
+  it('flags Wolf-Rayet types with the ionization subclass', () => {
+    const wn5 = classifyFromSimbad('WN5')!;
+    expect(wn5.isWolfRayet).toBe(true);
+    expect(wn5.subclass).toBe(5);
+    expect(classifyFromSimbad('WN2-w')!.subclass).toBe(2);
+    expect(classifyFromSimbad('WC4')!.subclass).toBe(4);
+    // Carbon / S stars share classIdx 7 but are NOT Wolf-Rayets.
+    expect(classifyFromSimbad('C5,2e')!.isWolfRayet).toBeUndefined();
+  });
+
+  it('classifies WR+MK composites by the V-dominant MK companion', () => {
+    // γ² Vel: the O7.5 giant carries the V light the record's absmag
+    // measures; the WR-first listing is catalog convention, not
+    // brightness order.
+    const gv = classifyFromSimbad('WC8+O7.5III-V')!;
+    expect(gv.classIdx).toBe(0);       // O
+    expect(gv.subclass).toBe(7);
+    expect(gv.lumClass).toBe(4);       // III
+    expect(gv.isWolfRayet).toBeUndefined();
+    // Unclassifiable companion → stays a WR single.
+    const wc4be = classifyFromSimbad('WC4+Be')!;
+    expect(wc4be.classIdx).toBe(1);    // Be parses as B
+    const wnwc = classifyFromSimbad('WN6/WC4')!;
+    expect(wnwc.classIdx).toBe(7);
+    expect(wnwc.isWolfRayet).toBe(true);
+  });
+
   it('handles Am/Ap composite tags by preferring the m-line (metallic) type', () => {
     // kA5hA8mF1(III)SiEuBa → metals dominate → F1 III.
     const info = classifyFromSimbad('kA5hA8mF1(III)SiEuBa');
@@ -535,6 +562,13 @@ describe('catalog-pure / tempKelvin', () => {
     // classIdx=999 → falls back to T_TABLE[8] (5000 K flat).
     expect(tempKelvin(info(999, 5))).toBe(5000);
   });
+
+  it('routes Wolf-Rayets through the WR table, not the carbon-star row', () => {
+    expect(tempKelvin(classifyFromSimbad('WN5')!)).toBe(75000);
+    expect(tempKelvin(classifyFromSimbad('WN2-w')!)).toBe(114000);
+    // Carbon stars keep the cool row.
+    expect(tempKelvin(classifyFromSimbad('C5,2e')!)).toBe(3000);
+  });
 });
 
 describe('catalog-pure / physicalRadius', () => {
@@ -580,6 +614,18 @@ describe('catalog-pure / physicalRadius', () => {
     // Lower clamp keeps red-dwarf-ish minimum so renderable.
     const R = physicalRadius(30, info(6, 9));
     expect(R).toBeGreaterThanOrEqual(0.08);
+  });
+
+  it('sizes γ² Vel at combined-light order, not the 2077 R☉ carbon artefact', () => {
+    // WC8+O7.5III-V at the corpus absmag −6.001 → the O giant's ~19 R☉
+    // (published: WC8 ~6 R☉ + O7.5 ~17 R☉).
+    const R = physicalRadius(-6.001, classifyFromSimbad('WC8+O7.5III-V')!);
+    expect(R).toBeCloseTo(19.15, 2);
+  });
+
+  it('sizes a single WN5 as a compact hot star', () => {
+    const R = physicalRadius(-4.0, classifyFromSimbad('WN5')!);
+    expect(R).toBeCloseTo(2.1, 1);
   });
 });
 

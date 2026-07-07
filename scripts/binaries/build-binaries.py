@@ -48,7 +48,8 @@ from parsers import (  # noqa: E402, F401
     parse_wds_summ,
 )
 from indices import (  # noqa: E402, F401
-    IdentifierIndices, WDS_PRECISE_COORD_EPOCH, build_indices,
+    GAIA_BINDING_G_MINUS_V_REJECT_MAG, IdentifierIndices,
+    WDS_PRECISE_COORD_EPOCH, build_indices,
 )
 from component_tokens import (  # noqa: E402, F401
     child_component_tokens, compound_contains,
@@ -359,6 +360,13 @@ def run(force: bool) -> int:
         component_sptype_overrides=component_sptype_overrides,
     )
     log(
+        f"rejected magnitude-inconsistent Gaia bindings "
+        f"(G - V > {GAIA_BINDING_G_MINUS_V_REJECT_MAG}): "
+        f"{len(indices.xwalk_mag_rejected):,} HIP-xwalk, "
+        f"{len(indices.athyg_gaia_mag_rejected):,} AT-HYG gaia cells "
+        f"(saturated-primary mis-matches; bare HIPs retained)"
+    )
+    log(
         f"built AT-HYG identifier views: "
         f"hip -> row {len(indices.hip_to_athyg):,}, "
         f"tyc -> row {len(indices.tyc_to_athyg):,}, "
@@ -511,6 +519,8 @@ def run(force: bool) -> int:
         synthesized_orb6_pairs=len(synthesized_orb6_pairs),
         synthesized_nss_pairs=len(nss_pairs),
         binding_integrity=bi_counts,
+        xwalk_mag_rejected=len(indices.xwalk_mag_rejected),
+        athyg_gaia_mag_rejected=len(indices.athyg_gaia_mag_rejected),
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
     rates = build_binaries_rates(counts)

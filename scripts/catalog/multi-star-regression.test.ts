@@ -120,7 +120,10 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 2;
 // The 559 → 555 step is Stage-2 binding-integrity enforcement: unbinding
 // geometry-refuted sibling bindings re-homes a handful of pairs off the
 // wrong anchor, so their baked placement no longer disagrees with R(epoch).
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 564;
+// The 564 → 563 step is the ORB6 slice widening + HIP-xwalk magnitude
+// gate: a corrected period/binding brings one pair's R(epoch) back into
+// agreement with its baked placement.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 563;
 
 // ---- Corpus row types ----------------------------------------------------
 
