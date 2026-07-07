@@ -233,7 +233,8 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           modals/, debug/, util/, loaders/, dust/, binaries/) —
           each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
-          folder: authoring-patterns.md, ux-tweaks.md. New docs default
+          folder: authoring-patterns.md, ux-tweaks.md,
+          extragalactic-roadmap.md. New docs default
           to "find the right folder and put a README.md there"; only
           add to docs/ if the topic truly spans the whole codebase.
 tests/    Repo-meta tests (CLAUDE.md size guard, etc.).

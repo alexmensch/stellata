@@ -14,6 +14,12 @@ authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.
+extragalactic-roadmap.md  Design gate for the extragalactic deep-field
+                        epic: per-tier data inventory (Local Volume →
+                        CMB), cosmology bake, manifest schema, naming
+                        policy, morphology palette, selection-bias
+                        handling. Spans scripts/, data/, and the
+                        future src/client/extragalactic/.
 molecular-clouds.md     Physics model + implementation design for the
                         molecular-cloud epic (extinction calibration,
                         density profiles, substructure noise, cavities,
