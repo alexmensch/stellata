@@ -62,7 +62,7 @@ scripts/binaries/
                                   simbad_xid → ccdm_hip → AT-HYG
                                   position-match), with same-letter +
                                   Aa→A propagation. Also hosts the
-                                  report-only binding-integrity audit
+                                  binding-integrity audit + enforcement
                                   (audit_binding_integrity) — see
                                   § Binding-integrity audit.
   stage3_astrometry.py            Per-component astrometry routing
@@ -289,7 +289,7 @@ and `propagate_within_system` re-runs so the blend binding reaches
 the letter's other pair rows. Secondaries carrying ANY binding of
 their own are left untouched.
 
-### Binding-integrity audit (report-only)
+### Binding-integrity audit (enforced)
 
 After every binding pass, `audit_binding_integrity` groups bindings
 per WDS system and detects two contradiction shapes the cascade +
@@ -304,18 +304,38 @@ tangent-plane offsets (E = ρ·sin θ, N = ρ·cos θ) composed over a BFS
 chain of pair rows from an uncontested astrometric reference letter,
 versus the contested source's actual Gaia offset (min error over
 J2016.0 and the PM-propagated WDS edge epoch). The winner is decisive
-when it clears `max(2″, 0.15·predicted_sep)` and beats the runner-up
-by ≥2×, or — for a disconnected system graph — when geometry refutes
-every reachable candidate and leaves exactly one unreachable home.
-Ambiguous conflicts unbind conservatively.
+when its error clears a flat `2″` floor (no separation-scaling — a
+wide pair's chain accumulates measurement error, so scaling the
+tolerance up with ρ would rubber-stamp a source sitting arcseconds
+off the winner) and beats the runner-up by ≥2×, or — for a
+disconnected system graph — when geometry refutes every reachable
+candidate and leaves exactly one unreachable home.
 
-The pass runs with `apply=False` today: verdicts are counted (Stage-7
-`binding_conflicts_*` / `arbitrated_*` / `arbitration_skipped_no_reference`)
+**Photocentre blends.** A source bound to *both sides of a measured
+(ρ > 0) pair* is a genuine Gaia blend — one photocentre for two
+components Gaia could not resolve (Castor A/B, saturated at ~5″).
+Enforcement unbinds a blend loser only when geometry lands the source
+essentially ON one component (winner error within a tight `1″` floor,
+i.e. a crosswalk error masquerading as a blend, e.g. σ CrB's C/E
+collapse); a larger error means the source is the blend centroid
+sitting *between* the components, so the conflict is `skipped` and the
+blended-away member is left for the downstream slot-minting machinery
+(the Acrux/Castor shape). A letter_sources conflict on a letter that
+is itself part of a skipped blend is skipped for the same reason. All
+other ambiguous conflicts unbind every contested binding conservatively.
+
+Enforcement (`apply=True`) is live: losers unbind (gaia → None; hip →
+None when it cross-walks to the contested source or is a HIP the
+winning component also carries — the shared blend-HIP), then the
+propagation passes re-run and sub-letters orphaned *within an enforced
+system* inherit their bound parent token (20312's Aa/Ab follow A, not
+sibling BC). Verdicts are counted (Stage-7 `binding_conflicts_*` /
+`arbitrated_geometric` / `arbitrated_unbound_ambiguous` /
+`arbitration_skipped_no_reference` / `arbitration_skipped_photocentre_blend`)
 and written to `public/binding-integrity-verdicts.tsv` (gitignored
-audit surface), but bindings are untouched — zero behaviour change.
-Enforcement (`apply=True`, which unbinds losers, re-runs the
-propagation passes, and inherits sub-letters from their bound parent
-token) is wired but not yet enabled.
+audit surface). This is what re-homes the ~7 duplicate-relation
+mis-associations the writer previously collapsed; a source cannot be
+two stars at measured different separations.
 
 **Worked examples** (per-letter resolve_via):
 

@@ -395,14 +395,14 @@ def run(force: bool) -> int:
     )
 
     binding_verdicts = audit_binding_integrity(
-        wds_pairs, components, indices, apply=False,
+        wds_pairs, components, indices, apply=True,
     )
     bi_counts = binding_integrity_counts(binding_verdicts)
     n_verdicts = write_binding_verdicts_tsv(
         binding_verdicts, OUT_BINDING_VERDICTS,
     )
     log(
-        "binding-integrity audit (report-only): "
+        "binding-integrity audit (enforced): "
         + ", ".join(f"{k}={bi_counts[k]:,}" for k in BINDING_INTEGRITY_COUNT_KEYS)
     )
     log(
