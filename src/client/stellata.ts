@@ -5,6 +5,7 @@ import type { DustField, DustParticleData } from './loaders/dust-loader';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
+import dustRaymarchChunk from './star-pipeline/dust-raymarch.glsl?raw';
 import { makeColorLutTexture } from './star-pipeline/blackbody-lut';
 import { bestApsisTeff } from './star-pipeline/star-color-routing-pure';
 import {
@@ -18,6 +19,8 @@ import {
 // module load — runs once before any material compiles.
 (THREE.ShaderChunk as Record<string, string>)['stellata_perceptual_disc'] =
   perceptualDiscChunk;
+(THREE.ShaderChunk as Record<string, string>)['stellata_dust_raymarch'] =
+  dustRaymarchChunk;
 import { GalacticDisc } from './galactic/galactic-disc';
 import { LocalGroupLayer } from './local-group/local-group';
 import type { LgCatalog } from './local-group/local-group-loader';
@@ -78,6 +81,10 @@ export {
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import { StarPipeline } from './star-pipeline/star-pipeline';
+import {
+  ExtinctionPrepass,
+  type ExtinctionPrepassUniforms,
+} from './star-pipeline/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import {
   EclipsePhotometryField,
@@ -420,6 +427,10 @@ export class Stellata implements FrameAnchor {
   // clears it.
   private dust: DustField | null = null;
 
+  // Per-star A_V cache. Constructed lazily on the first attachDust so a
+  // dust-less session pays nothing; null again after attachDust(null).
+  private extinctionPrepass: ExtinctionPrepass | null = null;
+
   // Pure target resolver; the click FSM in onPointerUp + the observe
   // single/double-click dispatchers stay here as composition-layer
   // orchestration.
@@ -602,6 +613,11 @@ export class Stellata implements FrameAnchor {
       uDustEnabled: { value: 0.0 },
       uExtinctionStrength: { value: 1.0 },
       uWorldOffset: { value: new THREE.Vector3() },
+      // Per-star A_V prepass consumers — owned by ExtinctionPrepass
+      // (constructed on attachDust); the vertex shader falls back to the
+      // in-vertex raymarch while uAvPrepassEnabled is 0.
+      uAvPrepassTex: { value: null as THREE.Texture | null },
+      uAvPrepassEnabled: { value: 0.0 },
       // OBSERVE-mode focal-star suppression. Set to the focused-star catalog
       // index when the camera is parked on it; -1 disables the gate. All
       // three star passes (disc, glow, core mask) share these uniforms so
@@ -1167,6 +1183,8 @@ export class Stellata implements FrameAnchor {
     if (dust === null) {
       u.uDustTexture.value = null;
       u.uDustEnabled.value = 0;
+      this.extinctionPrepass?.dispose();
+      this.extinctionPrepass = null;
       this.milkyway.attachDust(null);
       return;
     }
@@ -1176,6 +1194,18 @@ export class Stellata implements FrameAnchor {
     u.uDustLogRatio.value = dust.params.logRatio;
     u.uDustAvPerDensityPc.value = dust.params.avPerDensityPerPc;
     u.uDustEnabled.value = 1;
+    if (this.extinctionPrepass === null) {
+      this.extinctionPrepass = new ExtinctionPrepass({
+        renderer: this.renderer,
+        positions: this.catalog.positions,
+        count: this.catalog.count,
+        uniforms: u as unknown as ExtinctionPrepassUniforms,
+      });
+    }
+    this.extinctionPrepass.markDirty();
+    // Each streamed voxel chunk changes sightline integrals — refresh the
+    // cache as the texture densifies.
+    dust.onProgress(() => this.extinctionPrepass?.markDirty());
     // Share the same DustField with the Milky Way pass so the band's dust
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
@@ -1344,6 +1374,15 @@ export class Stellata implements FrameAnchor {
   setExtinctionStrength(x: number) {
     this.starPipeline.discMaterial.uniforms.uExtinctionStrength.value = Math.max(0, x);
     this.milkyway.setExtinctionStrength(x);
+  }
+
+  /** Dev-console A/B switch for the per-star A_V prepass. false parks the
+   *  star shader on the legacy in-vertex raymarch (the before/after
+   *  comparison path); true restores the cache. No-op until dust
+   *  attaches, and on WebGL2 contexts without EXT_color_buffer_float
+   *  (where the fallback is permanent). */
+  setExtinctionPrepassEnabled(on: boolean) {
+    this.extinctionPrepass?.setEnabled(on);
   }
 
   /** Direct access to the Milky Way layer for dev-console tuning
@@ -2328,6 +2367,17 @@ export class Stellata implements FrameAnchor {
     // Advance variability clock (seconds since start). Shared with glow
     // material via sharedUniforms so both passes see the same time.
     this.starPipeline.discMaterial.uniforms.uTime.value = (performance.now() - this.animateStartMs) / 1000;
+    if (this.extinctionPrepass !== null) {
+      // Absolute camera position in JS float64 — same frame convention as
+      // the shader-side iPosition + uWorldOffset reconstruction.
+      perfMark('extinction.prepass');
+      this.extinctionPrepass.update(
+        this.camera.position.x + this.worldOffset.x,
+        this.camera.position.y + this.worldOffset.y,
+        this.camera.position.z + this.worldOffset.z,
+      );
+      perfMeasure('extinction.prepass');
+    }
     perfMark('coreMask');
     this.starPipeline.coreMaskMesh.visible = this.shouldEnableCoreMask();
     perfMeasure('coreMask');
@@ -2482,6 +2532,8 @@ export class Stellata implements FrameAnchor {
     this.hudOverlay.dispose();
     this.controls.dispose();
     this.starPipeline.dispose();
+    this.extinctionPrepass?.dispose();
+    this.extinctionPrepass = null;
     this.dustParticles.dispose();
     this.clouds?.dispose();
     this.localGroupLayer?.dispose();

@@ -65,6 +65,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `frame.total`           | `stellata.ts` `animate()`       | Full frame body, the histogram source. |
 | `controls.update`       | `stellata.ts` `animate()`       | TrackballControls / observe-controls update branch. |
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
+| `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `gpu.render`            | `stellata.ts` `animate()`       | The `renderer.render()` call — three-pass star draw + overlays. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
