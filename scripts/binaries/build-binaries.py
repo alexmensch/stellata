@@ -393,18 +393,6 @@ def run(force: bool) -> int:
         components, synthesized_orb6_pairs,
     )
     log(f"seeded {n_seeded:,} synthesized-pair component bindings")
-    counts = resolution_counts(components)
-    log(
-        "Resolution: "
-        + ", ".join(f"{k}={counts[k]:,}" for k in RESOLVE_VIA_VALUES)
-    )
-
-    n_requested = write_astrometry_request(components, OUT_ASTROMETRY_REQUEST)
-    log(
-        f"wrote {OUT_ASTROMETRY_REQUEST.relative_to(ROOT)} with "
-        f"{n_requested:,} unique source_ids (input for the Gaia astrometry refresh)"
-    )
-
     binding_verdicts = audit_binding_integrity(
         wds_pairs, components, indices, apply=True,
     )
@@ -419,6 +407,12 @@ def run(force: bool) -> int:
     log(
         f"wrote {OUT_BINDING_VERDICTS.relative_to(ROOT)} with "
         f"{n_verdicts:,} verdict rows"
+    )
+
+    n_requested = write_astrometry_request(components, OUT_ASTROMETRY_REQUEST)
+    log(
+        f"wrote {OUT_ASTROMETRY_REQUEST.relative_to(ROOT)} with "
+        f"{n_requested:,} unique source_ids (input for the Gaia astrometry refresh)"
     )
 
     log("Stage 2 complete. Attaching per-component astrometry (Stage 3) …")
@@ -441,6 +435,12 @@ def run(force: bool) -> int:
         f"synthesized {len(nss_pairs):,} NSS inner pairs "
         f"(skipped: " + ", ".join(f"{k}={v:,}" for k, v in nss_skips.items())
         + ")"
+    )
+
+    counts = resolution_counts(components)
+    log(
+        "Resolution: "
+        + ", ".join(f"{k}={counts[k]:,}" for k in RESOLVE_VIA_VALUES)
     )
 
     a_counts = astrometry_counts(astrometry)
@@ -497,9 +497,11 @@ def run(force: bool) -> int:
         system_anchors=system_anchors,
     )
     n_emitted = write_multiples_tsv(rows, OUT_MULTIPLES)
+    n_standalone = sum(1 for r in rows if r.orbit_role == ORBIT_ROLE_STANDALONE)
     log(
         f"wrote {OUT_MULTIPLES.relative_to(ROOT)} with {n_emitted:,} "
-        f"component rows ({n_emitted // 2:,} physical pairs)"
+        f"component rows ({(n_emitted - n_standalone) // 2:,} physical pairs "
+        f"+ {n_standalone:,} standalone rows)"
     )
     spect_via_counts = {tag: 0 for tag in SPECT_VIA_VALUES}
     for r in rows:

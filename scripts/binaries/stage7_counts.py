@@ -284,9 +284,8 @@ GAIA_RESOLVE_TAGS: tuple[str, ...] = (
 # survives in any case (orbital evidence overrides the cascade), the
 # rate is over the union of cascade decisions, denominator =
 # ``decomposing_pairs``.
-OPTICAL_REJECT_TAGS: tuple[str, ...] = (
-    "wds_notes_rejected", "gaia_rejected",
-    "asymm_rejected", "mag_heuristic_rejected",
+OPTICAL_REJECT_TAGS: tuple[str, ...] = tuple(
+    tag for tag in OPTICAL_VIA_VALUES if tag.endswith("_rejected")
 )
 
 # Orbital-source tiers other than ``none`` — the population the
