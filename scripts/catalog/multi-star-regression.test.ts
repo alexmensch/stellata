@@ -84,7 +84,10 @@ const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 // companion-promotion identifier fix drops this to 0. Dropped 4 → 3 when
 // the separation-sanity gate retired a leaked NSS orbit, letting Stage 5
 // reclassify one colliding companion's wide pair as an optical double.
-const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 3;
+// The 3 → 2 step is Stage-2 binding-integrity enforcement: a contested
+// source geometry proved was bound to the wrong sibling letter is unbound,
+// so its HIP no longer round-trips onto a colliding record.
+const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 2;
 
 // Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
 // placement disagrees with the elements-alone R(epoch) by more than half
@@ -114,7 +117,10 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 3;
 // Sirius B astrometry exclusion: line-of-sight optical doubles drop out
 // (no longer baked), and Sirius B's blended DR3 solution no longer bakes
 // a disagreeing placement.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 559;
+// The 559 → 555 step is Stage-2 binding-integrity enforcement: unbinding
+// geometry-refuted sibling bindings re-homes a handful of pairs off the
+// wrong anchor, so their baked placement no longer disagrees with R(epoch).
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 555;
 
 // ---- Corpus row types ----------------------------------------------------
 

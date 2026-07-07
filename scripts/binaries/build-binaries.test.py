@@ -6582,6 +6582,76 @@ class BindingIntegrityDetectorTests(unittest.TestCase):
         self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_UNBOUND_AMBIGUOUS)
         self.assertEqual(sorted(v[0].unbind), [("B", SX), ("C", SX)])
 
+    def test_photocentre_blend_high_err_skipped(self) -> None:
+        # Castor shape: A,B are a MEASURED pair whose two components share
+        # one Gaia source (a blend). Geometry elects B, but the source sits
+        # 1.5" off B — a photocentre between A and B, not on either. Beyond
+        # the blend floor → skipped, bindings untouched (no unbind-all).
+        SX, SC = 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -6.5), SC: _bi_astro(SC, 0.0, 0.0)}
+        verdicts, _p, comps, _i = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(
+            v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+        )
+        self.assertEqual(v[0].unbind, [])
+
+    def test_photocentre_blend_low_err_unbinds(self) -> None:
+        # Same measured-blend shape (15268 / 20312), but geometry lands the
+        # source ON A (0.3" error, within the blend floor) — Gaia resolved
+        # which component, so the loser B is unbound and re-homes.
+        SX, SC = 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -9.7), SC: _bi_astro(SC, 0.0, 0.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_GEOMETRIC)
+        self.assertEqual(v[0].winner.label, "A")
+        self.assertEqual(v[0].unbind, [("B", SX)])
+
+    def test_photocentre_blend_ambiguous_skipped_not_unbound(self) -> None:
+        # A blend source with the photocentre exactly between A and B: no
+        # decisive winner. A non-blend ambiguous conflict unbinds all; a
+        # blend is skipped instead — stripping a real blended source is
+        # never right.
+        SX, SC = 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -7.5), SC: _bi_astro(SC, 0.0, 0.0)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(
+            v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+        )
+        self.assertEqual(v[0].unbind, [])
+
+    def test_wide_pair_no_longer_rubber_stamped(self) -> None:
+        # A non-blend source bound to two distant secondaries, sitting 2.5"
+        # off the nearer one. The old sep-scaled tolerance (0.15·sep) would
+        # have called this decisive on a wide pair; the flat floor refuses.
+        SA, SX = 100, 200
+        rows = [
+            ("AB", 60.0, 0.0, (SA, None), (SX, None)),
+            ("AC", 80.0, 0.0, (SA, None), (SX, None)),
+        ]
+        astro = {SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, 62.5)}
+        verdicts, *_ = self._audit(rows, astro)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_UNBOUND_AMBIGUOUS)
+
     def test_refute_disconnected_graph_decisive(self) -> None:
         # 03413-shape: SX bound to a blended A/B pair (disconnected from
         # the reference) and to F, G in the C-subsystem. Geometry refutes
@@ -6683,12 +6753,18 @@ class BindingIntegrityDetectorTests(unittest.TestCase):
             "w", _s2.BINDING_SHAPE_LETTER_SOURCES,
             _s2.BINDING_VERDICT_SKIPPED_NO_REFERENCE, "c", None, None, None, [],
         )
-        counts = bb.binding_integrity_counts([v_geo, v_amb, v_skip])
-        self.assertEqual(counts["binding_conflicts_source_letters"], 2)
+        v_blend = _s2.BindingVerdict(
+            "w", _s2.BINDING_SHAPE_SOURCE_LETTERS,
+            _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+            "c", None, None, None, [],
+        )
+        counts = bb.binding_integrity_counts([v_geo, v_amb, v_skip, v_blend])
+        self.assertEqual(counts["binding_conflicts_source_letters"], 3)
         self.assertEqual(counts["binding_conflicts_letter_sources"], 1)
         self.assertEqual(counts["arbitrated_geometric"], 1)
         self.assertEqual(counts["arbitrated_unbound_ambiguous"], 1)
         self.assertEqual(counts["arbitration_skipped_no_reference"], 1)
+        self.assertEqual(counts["arbitration_skipped_photocentre_blend"], 1)
 
     def test_report_only_does_not_mutate(self) -> None:
         SA, SX = 100, 200

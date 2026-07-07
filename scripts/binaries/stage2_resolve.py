@@ -1201,16 +1201,18 @@ BINDING_SHAPE_LETTER_SOURCES = "letter_sources"
 BINDING_VERDICT_GEOMETRIC = "geometric"
 BINDING_VERDICT_UNBOUND_AMBIGUOUS = "unbound_ambiguous"
 BINDING_VERDICT_SKIPPED_NO_REFERENCE = "skipped_no_reference"
+BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND = "skipped_photocentre_blend"
 
 # Canonical outcome tags, in the order the Stage-7 counters report them.
 BINDING_VERDICT_VALUES: tuple[str, ...] = (
     BINDING_VERDICT_GEOMETRIC,
     BINDING_VERDICT_UNBOUND_AMBIGUOUS,
     BINDING_VERDICT_SKIPPED_NO_REFERENCE,
+    BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
 )
 
-# The five report-only headline counters, in snapshot order — two
-# conflict-shape totals then the three arbitration outcomes.
+# The six headline counters, in snapshot order — two conflict-shape
+# totals then the four arbitration outcomes.
 # ``binding_integrity_counts`` fills these keys; Stage 7 pins them.
 BINDING_INTEGRITY_COUNT_KEYS: tuple[str, ...] = (
     "binding_conflicts_source_letters",
@@ -1218,17 +1220,31 @@ BINDING_INTEGRITY_COUNT_KEYS: tuple[str, ...] = (
     "arbitrated_geometric",
     "arbitrated_unbound_ambiguous",
     "arbitration_skipped_no_reference",
+    "arbitration_skipped_photocentre_blend",
 )
 
 # Decisiveness thresholds. A winning candidate's positional error must be
-# small in absolute terms (``max(2.0", 0.15·predicted_sep)`` — a floor
-# for tight pairs, a fraction for wide ones) AND clearly beat the
-# runner-up (``≤ 0.5·err_runnerup``). Failing either → ambiguous, and the
+# below an absolute floor AND clearly beat the runner-up
+# (``≤ 0.5·err_runnerup``). Failing either → ambiguous, and the
 # conservative response is to unbind every contested binding rather than
-# guess.
+# guess. The floor is flat (no separation-scaling): a wide pair's chain to
+# the reference accumulates measurement error, so scaling the tolerance up
+# with separation would rubber-stamp a source sitting arcseconds off the
+# winner as "decisive".
 ARBITRATION_ABS_TOLERANCE_ARCSEC = 2.0
-ARBITRATION_SEP_FRACTION = 0.15
 ARBITRATION_RUNNERUP_FACTOR = 0.5
+
+# Photocentre-blend floor. A source→letters conflict whose contested source
+# is bound to both sides of a *measured* pair is a Gaia blend — one
+# photocentre for two components it could not resolve. Enforcement unbinds a
+# blend loser only when geometry places the source essentially ON one
+# component (winner error within this floor); a larger error means the
+# source is the blend centroid sitting *between* the components, and
+# arbitration cannot honestly assign it to either — the conflict is skipped
+# and the blended-away component is re-homed later by the slot-minting
+# machinery (Acrux/Castor shape). Tighter than the general tolerance because
+# a genuine coincidence is sub-arcsecond, not merely "not far".
+ARBITRATION_BLEND_FLOOR_ARCSEC = 1.0
 
 _UPPERCASE_LETTER_RE = re.compile(r"[A-Z]")
 
@@ -1312,6 +1328,12 @@ class _SystemContext:
     # Two sides of every sub-resolution (ρ = 0) pair — the blend-mate
     # exemption set. Measured-separation pairs are deliberately absent.
     blend_pairs: list[tuple[str, str]] = field(default_factory=list)
+    # Sources bound to BOTH sides of a measured (ρ > 0) pair — Gaia blends
+    # (one photocentre for two components it could not resolve). A
+    # source→letters conflict on such a source is only enforced when
+    # geometry lands the source on one component (ARBITRATION_BLEND_FLOOR);
+    # otherwise it is skipped, not unbound. See ``_audit_system``.
+    blend_sources: set[int] = field(default_factory=set)
     # adj[a][b] = (E, N, epoch): tangent-plane offset arcsec of b from a.
     adj: dict[str, dict[str, tuple[float, float, float | None]]] = field(
         default_factory=dict,
@@ -1359,6 +1381,11 @@ def build_system_contexts(
         s_tok = _canonical_token(p_tok, secondary)
         if pair.rho_last is None or pair.rho_last == 0.0:
             ctx.blend_pairs.append((p_tok, s_tok))
+        elif (
+            primary.gaia_source_id is not None
+            and primary.gaia_source_id == secondary.gaia_source_id
+        ):
+            ctx.blend_sources.add(primary.gaia_source_id)
         for tok, comp, mag in (
             (p_tok, primary, pair.mag_pri),
             (s_tok, secondary, pair.mag_sec),
@@ -1580,11 +1607,7 @@ def _refuted(candidate: BindingCandidate) -> bool:
     astrometry contradicts (error beyond the absolute tolerance)."""
     if math.isinf(candidate.err_arcsec):
         return False
-    tol = max(
-        ARBITRATION_ABS_TOLERANCE_ARCSEC,
-        ARBITRATION_SEP_FRACTION * candidate.predicted_sep_arcsec,
-    )
-    return candidate.err_arcsec > tol
+    return candidate.err_arcsec > ARBITRATION_ABS_TOLERANCE_ARCSEC
 
 
 def _decide(candidates: list[BindingCandidate]) -> BindingCandidate | None:
@@ -1604,12 +1627,8 @@ def _decide(candidates: list[BindingCandidate]) -> BindingCandidate | None:
     win = ranked[0]
     if not math.isinf(win.err_arcsec):
         runnerup = ranked[1].err_arcsec if len(ranked) > 1 else math.inf
-        abs_tol = max(
-            ARBITRATION_ABS_TOLERANCE_ARCSEC,
-            ARBITRATION_SEP_FRACTION * win.predicted_sep_arcsec,
-        )
         if (
-            win.err_arcsec <= abs_tol
+            win.err_arcsec <= ARBITRATION_ABS_TOLERANCE_ARCSEC
             and win.err_arcsec <= ARBITRATION_RUNNERUP_FACTOR * runnerup
         ):
             return win
@@ -1625,6 +1644,9 @@ def _audit_system(
 ) -> list[BindingVerdict]:
     """Detect and arbitrate every contradiction in one WDS system."""
     verdicts: list[BindingVerdict] = []
+    # Letters found to be part of a photocentre blend by shape (a); shape
+    # (b) declines to arbitrate their source (see below).
+    blend_letters: set[str] = set()
 
     # Shape (a) — one source bound to disjoint letters.
     source_tokens: dict[int, set[str]] = {}
@@ -1655,7 +1677,15 @@ def _audit_system(
                 _cluster_representative(cluster), cluster, src, err, sep,
             ))
         winner = _decide(cands)
-        if winner is not None:
+        is_blend = src in ctx.blend_sources
+        decisive = winner is not None and (
+            not is_blend
+            or (
+                not math.isinf(winner.err_arcsec)
+                and winner.err_arcsec <= ARBITRATION_BLEND_FLOOR_ARCSEC
+            )
+        )
+        if decisive:
             unbind = [
                 (t, src) for c in cands if c is not winner for t in c.tokens
             ]
@@ -1663,6 +1693,13 @@ def _audit_system(
                 ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
                 BINDING_VERDICT_GEOMETRIC, contested,
                 ref_tok, ref_src, winner, cands, unbind,
+            ))
+        elif is_blend:
+            blend_letters.update(t for c in cands for t in c.tokens)
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
+                BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND, contested,
+                ref_tok, ref_src, winner, cands, [],
             ))
         else:
             unbind = [(t, src) for c in cands for t in c.tokens]
@@ -1677,6 +1714,18 @@ def _audit_system(
         if len(sources) < 2:
             continue
         contested = f"{tok}:{'/'.join(str(s) for s in sorted(sources))}"
+        if tok in blend_letters:
+            # The letter is one side of an unresolvable photocentre blend
+            # (shape a). Its extra source is blend contamination that
+            # dedups to the same catalog row as its blend-mate, so
+            # arbitrating it here only re-labels one degenerate binding as
+            # another; the true fix is a minted slot downstream. Skip.
+            verdicts.append(BindingVerdict(
+                ctx.wds_id, BINDING_SHAPE_LETTER_SOURCES,
+                BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND, contested,
+                None, None, None, [],
+            ))
+            continue
         ref = _select_reference(ctx, {tok}, set(), indices)
         if ref is None:
             verdicts.append(BindingVerdict(
@@ -1711,19 +1760,42 @@ def _audit_system(
 
 
 def _unbind_component(
-    comp: ResolvedComponent, winner_hip: int | None, indices: IdentifierIndices,
+    comp: ResolvedComponent, winner_hips: set[int], indices: IdentifierIndices,
 ) -> None:
     """Strip a losing binding. ``gaia`` always clears; ``hip`` clears only
-    when it cross-walks to the contested source or duplicates the winner's
-    HIP — an independently distinct HIP survives for Stage 3's HIP2
+    when it cross-walks to the contested source or is a HIP the winning
+    component also carries — the shared "blend HIP" belongs to the winner,
+    so a loser keeping it would re-resolve straight back onto the winner's
+    row. An independently distinct HIP survives for Stage 3's HIP2
     fallback. ``resolve_via`` reverts to ``unresolved``."""
     contested = comp.gaia_source_id
     if comp.hip is not None and (
-        indices.hip_to_gaia.get(comp.hip) == contested or comp.hip == winner_hip
+        indices.hip_to_gaia.get(comp.hip) == contested
+        or comp.hip in winner_hips
     ):
         comp.hip = None
     comp.gaia_source_id = None
     comp.resolve_via = "unresolved"
+
+
+def _winner_hips(
+    v: BindingVerdict, ctx: _SystemContext, indices: IdentifierIndices,
+) -> set[int]:
+    """Every HIP the winning cluster carries — its components' own HIPs plus
+    the winner source's Gaia cross-walk. The blended systems this pass
+    targets bind the shared HIP to the component but not through the
+    Gaia→HIP xmatch, so the component HIPs are the load-bearing signal."""
+    if v.winner is None:
+        return set()
+    hips: set[int] = set()
+    src_hip = indices.src_to_hip.get(v.winner.source_id)
+    if src_hip is not None:
+        hips.add(src_hip)
+    for tok in v.winner.tokens:
+        for comp in ctx.instances.get(tok, []):
+            if comp.hip is not None:
+                hips.add(comp.hip)
+    return hips
 
 
 def _apply_system_verdicts(
@@ -1734,32 +1806,39 @@ def _apply_system_verdicts(
     decisive verdicts rebind every row of the letter to the winning
     source; every other unbind strips the losing binding."""
     for v in verdicts:
-        winner_hip = (
-            indices.src_to_hip.get(v.winner.source_id)
-            if v.winner is not None else None
-        )
         if v.rebind_letter is not None and v.rebind_source is not None:
             for comp in ctx.instances.get(v.rebind_letter, []):
                 comp.gaia_source_id = v.rebind_source
             continue
+        winner_hips = _winner_hips(v, ctx, indices)
         for tok, src in v.unbind:
             for comp in ctx.instances.get(tok, []):
                 if comp.gaia_source_id == src:
-                    _unbind_component(comp, winner_hip, indices)
+                    _unbind_component(comp, winner_hips, indices)
 
 
 def inherit_downward_parent_bindings(
     pairs: list[WdsPair], components: list[ResolvedComponent],
+    only_wds_ids: set[str] | None = None,
 ) -> int:
     """A sub-letter left unbound by enforcement inherits its parent
     token's binding when the parent is bound — the WDS blend convention
-    read downward (20312's Aa/Ab must follow A, not sibling BC). Returns
-    the number of components seeded."""
+    read downward (20312's Aa/Ab must follow A, not sibling BC).
+
+    Restricted to ``only_wds_ids`` (the systems enforcement actually
+    touched) so it re-homes the components a verdict orphaned WITHOUT
+    seeding every unresolved sub-letter across untouched systems onto its
+    parent — the latter mints coincident siblings that collide in the
+    writer (a source cannot back two catalog rows). Passing ``None``
+    processes every system (used by the unit tests). Returns the number of
+    components seeded."""
     bound: dict[tuple[str, str], tuple[int, str, int | None]] = {}
     canon: list[tuple[str, ResolvedComponent]] = []
     for pair, primary, secondary in iter_decomposing_pair_components(
         pairs, components,
     ):
+        if only_wds_ids is not None and pair.wds_id not in only_wds_ids:
+            continue
         for tok, comp in (
             (primary.component, primary),
             (_canonical_token(primary.component, secondary), secondary),
@@ -1799,37 +1878,47 @@ def audit_binding_integrity(
     returned, ``components`` untouched."""
     systems = build_system_contexts(pairs, components)
     verdicts: list[BindingVerdict] = []
+    enforced_wds_ids: set[str] = set()
     for wds_id in sorted(systems):
         ctx = systems[wds_id]
         sys_verdicts = _audit_system(ctx, indices)
         verdicts.extend(sys_verdicts)
         if apply:
             _apply_system_verdicts(sys_verdicts, ctx, indices)
-    if apply and verdicts:
+            if any(v.unbind or v.rebind_letter for v in sys_verdicts):
+                enforced_wds_ids.add(wds_id)
+    if apply and enforced_wds_ids:
         propagate_within_system(components)
         if propagate_blend_identity(components, pairs) > 0:
             propagate_within_system(components)
-        if inherit_downward_parent_bindings(pairs, components) > 0:
+        if inherit_downward_parent_bindings(
+            pairs, components, enforced_wds_ids,
+        ) > 0:
             propagate_within_system(components)
     return verdicts
 
 
+_VERDICT_COUNT_KEY: dict[str, str] = {
+    BINDING_VERDICT_GEOMETRIC: "arbitrated_geometric",
+    BINDING_VERDICT_UNBOUND_AMBIGUOUS: "arbitrated_unbound_ambiguous",
+    BINDING_VERDICT_SKIPPED_NO_REFERENCE: "arbitration_skipped_no_reference",
+    BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND: (
+        "arbitration_skipped_photocentre_blend"
+    ),
+}
+
+
 def binding_integrity_counts(verdicts: list[BindingVerdict]) -> dict[str, int]:
-    """The five report-only headline counters — two conflict-shape totals
-    plus the three arbitration-outcome totals. Every key present so the
-    snapshot shape stays stable across runs."""
+    """The six headline counters — two conflict-shape totals plus the four
+    arbitration-outcome totals. Every key present so the snapshot shape
+    stays stable across runs."""
     counts = {k: 0 for k in BINDING_INTEGRITY_COUNT_KEYS}
     for v in verdicts:
         if v.shape == BINDING_SHAPE_SOURCE_LETTERS:
             counts["binding_conflicts_source_letters"] += 1
         else:
             counts["binding_conflicts_letter_sources"] += 1
-        if v.verdict == BINDING_VERDICT_GEOMETRIC:
-            counts["arbitrated_geometric"] += 1
-        elif v.verdict == BINDING_VERDICT_UNBOUND_AMBIGUOUS:
-            counts["arbitrated_unbound_ambiguous"] += 1
-        else:
-            counts["arbitration_skipped_no_reference"] += 1
+        counts[_VERDICT_COUNT_KEY[v.verdict]] += 1
     return counts
 
 

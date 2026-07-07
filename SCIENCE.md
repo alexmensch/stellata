@@ -1345,6 +1345,24 @@ astronomer-relevant summary:
    Each gets a synthesized pair row so the orbit has a place to
    live; the components inherit the carrier's identifiers per the
    blend convention.
+   Because the cascade fills gaps but never *reconciles* conflicts,
+   different tiers can bind one Gaia source to two component letters
+   that WDS geometry places at measured different separations — a
+   physical impossibility (a source cannot be two stars at two
+   separations). A **binding-integrity** pass audits every system for
+   this: it composes the predicted tangent-plane offset of each
+   contested letter from an uncontested reference letter along the
+   chain of WDS ρ/θ measurements, compares it against the source's
+   actual Gaia offset, and unbinds the letters geometry refutes,
+   keeping the one the source actually sits on. When the two letters
+   are the two sides of a *measured close pair* Gaia blended into one
+   photocentre (Castor A/B at ~5″, both saturated), the source
+   genuinely represents both and the arbitration abstains — the source
+   stays bound and the blended-away member is placed by the downstream
+   slot-minting machinery, exactly as for a spectroscopic blend. This
+   re-homes companion relations the writer would otherwise collapse
+   onto the wrong star (an ORB6 HIP mis-attributed to a sub-component
+   put σ CrB's C and 13401-6033's Ca,Cb on the wrong sibling).
 3. **Attach the most-trustworthy astrometric measurement** per
    component. Priority: Gaia DR3 5-parameter where the fit is clean
    (`ruwe ≤ 1.4` AND `ipd_frac_multi_peak ≤ 2%`); Gaia NSS
