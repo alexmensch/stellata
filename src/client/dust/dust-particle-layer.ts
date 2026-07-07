@@ -15,10 +15,8 @@ export interface DustParticleSharedUniforms {
   uDustLogRatio: { value: number };
 }
 
-// Currently shelved — see src/client/star-pipeline/README.md § "Dust extinction + the
-// shelved particle layer" for the open
-// questions. Default strength = 0 → mesh.visible = false → zero
-// per-frame cost.
+// Currently shelved — see ./README.md. Default strength = 0 →
+// mesh.visible = false → zero per-frame cost.
 export class DustParticleLayer {
   private mesh: THREE.Mesh | null = null;
   private material: THREE.ShaderMaterial | null = null;

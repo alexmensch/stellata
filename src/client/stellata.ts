@@ -1440,17 +1440,38 @@ export class Stellata implements FrameAnchor {
 
   private tmpVec3b = new THREE.Vector3();
 
-  /** Build the dust-particle mesh from loaded data. See bd issue
-   *  src/client/star-pipeline/README.md § "Dust extinction + the shelved
-   *  particle layer" for the open questions before re-enabling. */
+  /** Build the dust-particle mesh from loaded data. The layer is shelved
+   *  — see src/client/dust/README.md before re-enabling. */
   attachDustParticles(data: DustParticleData) {
     this.dustParticles.attach(data);
   }
 
+  /** Register a lazy fetch for particles.bin. Invoked (once) on the first
+   *  setParticleStrength(>0), so the shelved particle layer costs no wire
+   *  bytes on loads that never opt in. */
+  setDustParticleSource(source: () => Promise<DustParticleData | null>) {
+    this.dustParticleSource = source;
+  }
+
+  private dustParticleSource: (() => Promise<DustParticleData | null>) | null = null;
+  private lastParticleStrength = 0;
+
   /** User-facing dust-particle visibility (`stellata.setParticleStrength`
    *  console knob). 0 = hidden (default); higher = stronger additive
-   *  contribution. */
+   *  contribution. First call above 0 triggers the lazy particles.bin
+   *  fetch when a source is registered; the requested strength is
+   *  re-applied once the mesh attaches. */
   setParticleStrength(x: number) {
+    this.lastParticleStrength = Math.max(0, x);
+    if (x > 0 && this.dustParticleSource !== null) {
+      const source = this.dustParticleSource;
+      this.dustParticleSource = null;
+      void source().then((data) => {
+        if (data === null || this.disposed) return;
+        this.dustParticles.attach(data);
+        this.dustParticles.setStrength(this.lastParticleStrength);
+      });
+    }
     this.dustParticles.setStrength(x);
   }
 
