@@ -465,6 +465,44 @@ export function absmagFromSpectral(info: SpectralInfo): number | null {
   }
 }
 
+/** Piecewise-linear inverse of an anchor table: value → key. Assumes the
+ *  table's values are monotonically increasing (MV_MS_TABLE is, O0 → M9);
+ *  clamps to the end keys outside the span. */
+function inverseInterpolate(table: [number, number][], value: number): number {
+  if (value <= table[0][1]) return table[0][0];
+  for (let i = 1; i < table.length; i++) {
+    const [k0, v0] = table[i - 1];
+    const [k1, v1] = table[i];
+    if (value <= v1) return k0 + ((k1 - k0) * (value - v0)) / (v1 - v0);
+  }
+  return table[table.length - 1][0];
+}
+
+/** Main-sequence (classIdx, subclass) from an absolute visual magnitude —
+ *  the inverse of `absmagFromSpectral`'s MS branch. The input M_V must be
+ *  intrinsic (de-extincted): the MV_MS_TABLE calibration is. Clamped to
+ *  the table's [O0, M9] span; lumClass is always V (2). Wrong for evolved
+ *  companions, but strictly less wrong than the alternative it replaces
+ *  (wearing the system primary's type) — curated overrides and measured
+ *  per-component types take precedence upstream. */
+export function spectralFromAbsmag(mv: number): SpectralInfo {
+  let cls = 6;
+  for (let c = 0; c < 6; c++) {
+    const [, mvEnd] = MV_MS_TABLE[c][MV_MS_TABLE[c].length - 1];
+    if (mv <= mvEnd) {
+      cls = c;
+      break;
+    }
+  }
+  return {
+    classIdx: cls,
+    subclass: inverseInterpolate(MV_MS_TABLE[cls], mv),
+    lumClass: 2,
+    isWhiteDwarf: false,
+    wdSubclass: 0,
+  };
+}
+
 // ---- GCVS variable-star catalogue parsing -------------------------------
 
 // GCVS designations in both files are space-padded fixed-width, e.g.
@@ -1186,6 +1224,17 @@ export function parseGaiaSourceIdStr(s: string | undefined | null): string | nul
   return t;
 }
 
+/** Magnitude-consistency gate for Gaia source bindings, shared with the
+ *  binaries pipeline: keep equal to GAIA_BINDING_G_MINUS_V_REJECT_MAG in
+ *  scripts/binaries/indices.py (catalog-pure.test.ts cross-checks the
+ *  Python source text). A bound source more than this much fainter in G
+ *  than the star's V is not the star — Gaia's fit fails on saturated
+ *  bright stars, so both AT-HYG's `gaia` cell and the
+ *  hipparcos2_best_neighbour cross-walk can land on a resolvable
+ *  companion or background star instead (Toliman → a G=20.95 source,
+ *  Castor → Castor B's source). */
+export const GAIA_BINDING_G_MINUS_V_REJECT_MAG = 1.0;
+
 /** Resolve an AT-HYG row's Gaia DR3 source_id, falling back to a
  *  HIP→Gaia cross-walk when the AT-HYG `gaia` column is blank.
  *  Precedence: AT-HYG native > HIP cross-walk; returns null when
@@ -1195,19 +1244,38 @@ export function parseGaiaSourceIdStr(s: string | undefined | null): string | nul
  *  the same physical reason (Gaia's 5-parameter fit fails on
  *  saturated sources), and therefore remain null here. They are
  *  resolved instead through the build-binaries.py pipeline writing
- *  data/binaries/multiples.tsv. */
+ *  data/binaries/multiples.tsv.
+ *
+ *  When `vMag` and `gMagOf` are supplied, each candidate binding is
+ *  vetted against the magnitude gate above; a rejected native cell
+ *  still falls through to the cross-walk (itself vetted). `magRejected`
+ *  reports that at least one candidate was scrubbed. */
 export function resolveGaiaSourceId(
   gaiaSourceId: string | null,
   hip: number | null,
   hipToGaia: Map<number, string> | null,
-): { gaiaSourceId: string | null; backfilled: boolean } {
-  if (gaiaSourceId) return { gaiaSourceId, backfilled: false };
+  vMag: number | null = null,
+  gMagOf: ((sourceId: string) => number | null) | null = null,
+): { gaiaSourceId: string | null; backfilled: boolean; magRejected: boolean } {
+  const rejects = (id: string): boolean => {
+    if (vMag === null || gMagOf === null) return false;
+    const g = gMagOf(id);
+    return g !== null && g - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG;
+  };
+  let magRejected = false;
+  if (gaiaSourceId) {
+    if (!rejects(gaiaSourceId)) {
+      return { gaiaSourceId, backfilled: false, magRejected: false };
+    }
+    magRejected = true;
+  }
   if (hip === null || hip <= 0 || !hipToGaia) {
-    return { gaiaSourceId: null, backfilled: false };
+    return { gaiaSourceId: null, backfilled: false, magRejected };
   }
   const hit = hipToGaia.get(hip);
-  if (!hit) return { gaiaSourceId: null, backfilled: false };
-  return { gaiaSourceId: hit, backfilled: true };
+  if (!hit) return { gaiaSourceId: null, backfilled: false, magRejected };
+  if (rejects(hit)) return { gaiaSourceId: null, backfilled: false, magRejected: true };
+  return { gaiaSourceId: hit, backfilled: true, magRejected };
 }
 
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a

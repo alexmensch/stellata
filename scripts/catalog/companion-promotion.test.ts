@@ -640,6 +640,38 @@ describe('promoteCompanions', () => {
     expect(b.ci).toBeLessThan(-0.4);
   });
 
+  it('own-gaia miss + HIP naming a NON-anchor existing record is alreadyInCatalog, not a twin', () => {
+    // The G−V magnitude gate can scrub a component's source from its
+    // own AT-HYG record while multiples.tsv keeps it on the row
+    // (SIMBAD xid). The gaia lookup then misses, but the row's HIP
+    // still names that record — promoting would mint a duplicate whose
+    // HIP round-trips onto the existing record (06583-3525 C class).
+    const anchor = makeStar({
+      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Anchor', hip: 111,
+      gaiaSourceId: '1000',
+    });
+    const cExisting = makeStar({
+      x: 10.001, y: 0, z: 0, absmag: 4.0, hip: 222, gaiaSourceId: null,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'TST2-AC', comp: 'A', hip: 111, gaiaSourceId: '1000',
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Anchor',
+        orbitRole: 'primary', sepArcsec: 5.0, paDeg: 90, sepPaEpochJd: 2451545,
+      }),
+      multiplesRow({
+        systemId: 'TST2-AC', comp: 'C', hip: 222, gaiaSourceId: '2000',
+        x_pc: 10.001, y_pc: 0, z_pc: 0, distPc: 10,
+        absmag: 4.0, photometryVia: 'athyg_own',
+        orbitRole: 'secondary', sepArcsec: 5.0, paDeg: 90,
+        sepPaEpochJd: 2451545,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [anchor, cExisting], CONSTELLATIONS);
+    expect(newStars).toHaveLength(0);
+    expect(stats.alreadyInCatalog).toBe(1);
+  });
+
   it('re-homes a blended inner-pair secondary onto its true parent (Castor Ba,Bb → B, not A)', () => {
     // A and B share one blended identifier (Gaia source + HIP), so the
     // Ba,Bb cursor primary resolves onto A. B still gets its own synth

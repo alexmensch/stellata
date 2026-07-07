@@ -16,6 +16,7 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absmagFromSpectral,
   classifyFromSimbad,
+  spectralFromAbsmag,
   parseGaiaSourceIdStr,
   physicalRadius,
   resolveSpectDisplay,
@@ -338,6 +339,12 @@ export interface PromotionStats {
   /** Subset of `promoted` whose absmag came from the class→M_V
    *  spectral calibration (inherited/missing photometry, no Δmag). */
   absmagSpectralDerived: number;
+  /** Subset of `promoted` whose spectral info was re-derived as a
+   *  main-sequence estimate from the component's own de-extincted
+   *  absmag (`spectralFromAbsmag`) because the row's spect string is
+   *  the system primary's inherited type (or blank) — the population
+   *  that previously rendered hot-but-tiny (Algol Ab as B8V). */
+  spectMsFromOwnAbsmag: number;
   /** Subset of `promoted` whose absmag came from the row's own WDS
    *  apparent magnitude at the system distance (both Δmag paths
    *  unavailable, or an escape row whose "own" photometry is the
@@ -404,6 +411,7 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
     absmagSpectralDerived: 0,
+    spectMsFromOwnAbsmag: 0,
     absmagWdsMagDerived: 0,
     absmagAnchorCollocated: 0,
     absmagInheritedTwinOrbital: 0,
@@ -625,6 +633,43 @@ export type CompanionAbsmagSource =
 export interface CompanionAbsmag {
   absmag: number;
   source: CompanionAbsmagSource;
+}
+
+/** Absmag sources that measure THIS component's own light — the gate for
+ *  the MS-from-own-absmag spectral re-derivation. `inherited_twin` and
+ *  `anchor_collocated` reproduce the anchor's brightness, so deriving a
+ *  type from them would just re-mint the primary; `spectral` is itself
+ *  type-derived and would be circular. */
+export const OWN_BRIGHTNESS_ABSMAG_SOURCES: ReadonlySet<CompanionAbsmagSource> =
+  new Set(['dmag_imputed', 'own', 'wds_mag']);
+
+/** True when the anchor's AT-HYG magnitude is the PAIR's blended light
+ *  rather than the primary component alone — the flux-conservation dim
+ *  applies only then. Hipparcos/Tycho blend close pairs into one entry
+ *  (Castor's mag 1.58 is A+B combined) but resolve wide ones
+ *  per-component (Polaris' 1.98 is A alone); WDS mag_pri/mag_sec give
+ *  both hypotheses and the anchor's observed apparent magnitude picks
+ *  the closer. `av` re-adds the build-time de-extinction so the
+ *  comparison stays in the observed frame WDS mags live in. Skips
+ *  (false) when the hypotheses differ by <0.01 mag — the dim would be
+ *  a no-op there anyway, and near-degenerate cases (Sirius, Δmag≈10)
+ *  must not flip pinned values on float noise. */
+function anchorMagIsPairBlend(
+  anchor: Star,
+  row: MultiplesTsvRow,
+  av: number,
+): boolean {
+  const { magPri, magSec } = row;
+  const distPc = row.distPc;
+  if (magPri === null || magSec === null || distPc === null || distPc <= 0) {
+    return false;
+  }
+  const blend = -2.5 * Math.log10(
+    Math.pow(10, -0.4 * magPri) + Math.pow(10, -0.4 * magSec),
+  );
+  if (magPri - blend < 0.01) return false;
+  const appMag = anchor.absmag + av + 5 * Math.log10(distPc / 10);
+  return Math.abs(appMag - blend) < Math.abs(appMag - magPri);
 }
 
 // Companion absmag. Preference order: primary + WDS Δmag when the
@@ -1214,6 +1259,21 @@ function promoteRow(
       stats.alreadyInCatalog++;
       return null;
     }
+    // A row whose own gaia missed the index can still BE an existing
+    // AT-HYG record: the G−V magnitude gate scrubs a source from the
+    // record while multiples.tsv keeps it on the component row
+    // (SIMBAD xid). When the row's HIP names an existing NON-anchor
+    // record, that record is this component — minting a twin would
+    // collide on the HIP (URL focus lands on the wrong star). A hit
+    // EQUAL to the anchor keeps the Sirius-B shape promoting: the
+    // shared system HIP belongs to the anchor, not the companion.
+    if (existingIdx === null && row.gaiaSourceId !== null && rowHasOwnHip) {
+      const hipHit = state.existing.byHip.get(row.hip as number);
+      if (hipHit !== undefined && hipHit !== anchorCatalogIdx) {
+        stats.alreadyInCatalog++;
+        return null;
+      }
+    }
   }
   if (companionGaia && state.promotedByGaia.has(companionGaia)) {
     stats.alreadyInCatalog++;
@@ -1255,7 +1315,7 @@ function promoteRow(
     stats.droppedNoPosition++;
     return null;
   }
-  const spectral = resolveCompanionSpectral(row);
+  let spectral = resolveCompanionSpectral(row);
   const idsInheritedFromAnchor = usesSynth && (inheritedGaia || inheritedHip);
   const imputed = imputeCompanionAbsmag(
     row, anchorPrimaryRow, spectral.info, !isPairRowPrimary,
@@ -1270,18 +1330,24 @@ function promoteRow(
   if (imputed.source === 'wds_mag') stats.absmagWdsMagDerived++;
   if (imputed.source === 'anchor_collocated') stats.absmagAnchorCollocated++;
   if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
-  let ci = imputeCompanionCi(row, spectral.info);
   // Build-time de-extinction along the companion's sightline. A
-  // spectral-derived absmag (class→M_V) and a derived ci (Ballesteros /
-  // solar fallback) are already intrinsic, so leave them; observed-
-  // photometry absmag (dmag-imputed / own / inherited-twin) and the row's
-  // own observed ci embed A_V and get it subtracted so the runtime
-  // raymarch re-adds it without double-counting.
-  if (dustGrid) {
-    const av = avSolToStar(dustGrid, position.x, position.y, position.z);
-    if (imputed.source !== 'spectral') absmag -= av;
-    if (companionCiIsObserved(row)) ci -= av / R_V;
+  // spectral-derived absmag (class→M_V) is already intrinsic, so leave
+  // it; observed-photometry absmag (dmag-imputed / own / inherited-twin)
+  // embeds A_V and gets it subtracted so the runtime raymarch re-adds it
+  // without double-counting. Runs before the MS re-derivation below,
+  // whose MV_MS_TABLE calibration is intrinsic M_V.
+  const av = dustGrid
+    ? avSolToStar(dustGrid, position.x, position.y, position.z) : 0;
+  if (imputed.source !== 'spectral') absmag -= av;
+  if (!PER_COMPONENT_SPECT_VIA.has(row.spectVia)
+      && OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)) {
+    spectral = { info: spectralFromAbsmag(absmag), display: null };
+    stats.spectMsFromOwnAbsmag++;
   }
+  let ci = imputeCompanionCi(row, spectral.info);
+  // The row's own observed ci embeds A_V too; a derived ci (Ballesteros /
+  // solar fallback) is already intrinsic.
+  if (companionCiIsObserved(row)) ci -= av / R_V;
   const properName = composeCompanionName(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
     systemAnchorStar,
@@ -1345,20 +1411,27 @@ function promoteRow(
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   stats.promoted++;
-  // Flux conservation: this member's ids were inherited-then-stripped
-  // from an anchor whose athyg_own magnitude is the pair's BLEND, so
-  // the member's light is part of that magnitude and the system would
-  // double-count it. Deferred to a post-pass (an anchor can be dimmed
-  // by several members sequentially).
-  if (idsInheritedFromAnchor
+  // Flux conservation: a member whose light is embedded in the
+  // anchor's athyg_own BLEND magnitude must dim the anchor or the
+  // system double-counts it. Blend membership is structural for
+  // inherited-then-stripped ids; for a member with its own real
+  // identifier anchorMagIsPairBlend decides; identifier-less synth
+  // members never qualify here (multi-member blends misattribute
+  // pairwise — see README § Anchor flux conservation). Deferred to a
+  // post-pass (an anchor can be dimmed by several members
+  // sequentially).
+  const dimEligible = idsInheritedFromAnchor
+    ? imputed.source === 'wds_mag' || imputed.source === 'dmag_imputed'
+    : !usesSynth && imputed.source === 'dmag_imputed'
+      && anchorStar !== null && anchorMagIsPairBlend(anchorStar, row, av);
+  if (dimEligible
       && anchorPrimaryRow.photometryVia === PHOTOMETRY_VIA_OWN
-      && (imputed.source === 'wds_mag' || imputed.source === 'dmag_imputed')
       && anchorCatalogIdx !== null) {
     state.anchorDimCandidates.push({
       anchorIdx: anchorCatalogIdx,
       member: state.newStars[state.newStars.length - 1],
       memberSpectral: spectral.info,
-      source: imputed.source,
+      source: imputed.source as 'wds_mag' | 'dmag_imputed',
       dmag: row.dmag,
     });
   }

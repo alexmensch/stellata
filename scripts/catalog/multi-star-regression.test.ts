@@ -87,7 +87,10 @@ const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 // The 3 → 2 step is Stage-2 binding-integrity enforcement: a contested
 // source geometry proved was bound to the wrong sibling letter is unbound,
 // so its HIP no longer round-trips onto a colliding record.
-const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 2;
+// The 2 → 0 step is the own-gaia-miss HIP dedup in companion promotion:
+// a row whose gaia misses the existing index but whose HIP names a
+// non-anchor record IS that record, so no colliding twin is minted.
+const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 
 // Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
 // placement disagrees with the elements-alone R(epoch) by more than half

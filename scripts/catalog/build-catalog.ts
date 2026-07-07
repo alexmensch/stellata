@@ -215,6 +215,7 @@ async function main() {
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
     gaiaSourceIdBackfilled: 0,
+    gaiaBindingMagRejected: 0,
     apsisEntries: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
@@ -233,6 +234,7 @@ async function main() {
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
     companionAbsmagSpectralDerived: 0,
+    companionSpectMsFromOwnAbsmag: 0,
     companionAbsmagWdsMagDerived: 0,
     companionAbsmagAnchorCollocated: 0,
     companionAbsmagInheritedTwinOrbital: 0,
@@ -420,6 +422,7 @@ async function main() {
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
   counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
+  counts.gaiaBindingMagRejected = stats.gaiaBindingMagRejected;
   counts.directionGaia5p = dv.gaia_5p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
@@ -463,6 +466,7 @@ async function main() {
         `compound-comp=${ps.droppedCompoundComp}, ` +
         `collocated-primary=${ps.droppedCollocatedPrimary}); ` +
         `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
+        `spect ms-from-own-absmag=${ps.spectMsFromOwnAbsmag}, ` +
         `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
         `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
         `blend-split=${ps.blendSplitRecords}, ` +
@@ -481,6 +485,7 @@ async function main() {
     counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
+    counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;
     counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;
     counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
     counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;

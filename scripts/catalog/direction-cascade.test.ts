@@ -34,6 +34,7 @@ function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrome
     parallaxMas: 50,
     pmraMasyr: 10, pmdecMasyr: -10,
     ruwe: 1.0, ipdFracMultiPeak: 0,
+    gMag: null,
     ...overrides,
   };
 }
@@ -314,12 +315,14 @@ describe('direction-cascade / TSV parsers', () => {
       parallaxMas: 50.0,
       pmraMasyr: 10.5, pmdecMasyr: -3.5,
       ruwe: 1.2, ipdFracMultiPeak: 0,
+      gMag: 8.0,
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
       parallaxMas: null,
       pmraMasyr: null, pmdecMasyr: null,
       ruwe: null, ipdFracMultiPeak: null,
+      gMag: 9.0,
     });
   });
 
