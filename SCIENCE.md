@@ -159,6 +159,17 @@ enough to see it.
   regular git). Public access policy: SIMBAD is open via CDS's TAP
   service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite Wenger et
   al (2000), A&AS 143, 9.
+- **Gaia DR2↔(E)DR3 cross-match** (`gaiadr3.dr2_neighbourhood`):
+  Torra et al. 2021, *A&A* 649, A10,
+  DOI [10.1051/0004-6361/202039637](https://doi.org/10.1051/0004-6361/202039637)
+  — the DPAC-published mapping between DR2 and (E)DR3 source_ids with
+  per-pair angular distance (mas), magnitude difference, and a
+  PM-propagation flag. Queried by `dr3_source_id` for the Gaia-only
+  catalog stars (no HIP/HD/HR/GJ designation) and committed as
+  `data/gaia/gaia_dr2_neighbourhood.tsv` (+ the request-file snapshot
+  of that risk set). Retrieved 2026-07-07. Empirical input to the
+  Stellata-ID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3
+  dry run. Licence CC-BY-4.0 (Gaia data release policy).
 - **Stellarium modern sky culture** (constellation stick figures):
   https://github.com/Stellarium/stellarium/tree/master/skycultures/modern
   — MIT-licensed JSON, HIP-indexed polylines. Committed as
