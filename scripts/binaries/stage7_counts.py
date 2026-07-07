@@ -73,6 +73,8 @@ def build_binaries_counts(
     synthesized_orb6_pairs: int = 0,
     synthesized_nss_pairs: int = 0,
     binding_integrity: dict[str, int] | None = None,
+    xwalk_mag_rejected: int = 0,
+    athyg_gaia_mag_rejected: int = 0,
 ) -> dict[str, int]:
     """Collect every headline number the run emits into a flat
     ``{key: int}`` dict, suitable for JSON serialisation and per-key
@@ -140,6 +142,8 @@ def build_binaries_counts(
         "components_total": len(components),
         "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
         "synthesized_nss_inner_pairs": synthesized_nss_pairs,
+        "xwalk_hip_mag_rejected": xwalk_mag_rejected,
+        "athyg_gaia_mag_rejected": athyg_gaia_mag_rejected,
         "multiples_rows_emitted": len(multiples_rows),
         "multiples_astrometry_system_inherited": multiples_inherited,
         "multiples_standalone_emitted": standalone_emitted,
