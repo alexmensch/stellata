@@ -8,8 +8,10 @@ dist/
 *.log
 coverage/
 
-# Generated catalog artifacts (regenerated from source CSV)
-public/catalog.bin
+# Generated catalog artifacts (regenerated from source CSV). catalog.bin
+# ships as transport chunks (catalog.bin.<i>) + catalog-manifest.json.
+public/catalog.bin.*
+public/catalog-manifest.json
 public/catalog-row-index-map.json
 public/constellations.json
 public/search-index.json

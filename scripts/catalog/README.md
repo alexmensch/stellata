@@ -114,7 +114,7 @@ input (SCIENCE.md § Driver astrometry). This is a superset of the
 shipped catalog by the handful of rows dropped at the `MAX_DIST_PC`
 cutoff; over-pulling those is harmless.
 
-## Binary catalog format (`public/catalog.bin`)
+## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 
 Fixed-size records, sorted brightest-first by `absmag`. Current version is
 **v6** with an 80-byte stride. Magic and version step together
@@ -230,6 +230,28 @@ stripping output land here). Bits come from the
 `RESERVED_FLAG_BITS` pool — no `BINARY_VERSION` bump needed.
 Layout consistency is pinned by the `binary-format constants`
 block in `scripts/catalog/catalog-pure.test.ts`.
+
+### On-disk transport chunking
+
+Cloudflare Workers rejects any single static asset > 25 MiB, and the
+assembled v6 binary is ~26 MiB, so it is **not** written as one file.
+The build slices the assembled buffer into sequential byte-range chunks
+(`public/catalog.bin.0`, `.1`, …), each ≤ `CATALOG_CHUNK_TARGET_BYTES`
+(16 MiB, headroom under the limit), plus `public/catalog-manifest.json`
+carrying `{ chunkBytes[], totalBytes }`. The split is **transport-only**
+— the record layout above is untouched, and `assembleCatalogChunks`
+reconstructs the source buffer byte-for-byte.
+
+The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
+`catalogChunkFilename`, `assembleCatalogChunks`, `CatalogManifest`) live
+in `catalog-pure.ts` and are the single reassembly contract shared by
+all three consumers: the writer (`build-catalog.ts`), the runtime loader
+(`src/client/loaders/catalog-loader.ts`, fetch), and the Node test/verify
+reader (`catalog-lookup.ts` `readCatalogBuffer`, fs). The build removes a
+prior run's chunks first so a shrunk chunk count can't strand stale
+files, and `isUpToDate` / all Node consumers key off the manifest, not a
+monolithic `catalog.bin`. Byte-identical reassembly is pinned in
+`src/client/loaders/catalog-loader.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,

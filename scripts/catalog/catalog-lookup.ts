@@ -3,7 +3,7 @@
 // catalog-pure.ts.
 
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import {
   BINARY_VERSION,
   FLAG_HAS_NAME,
@@ -16,12 +16,34 @@ import {
   RECORD_LAYOUT,
   HEADER_SIZE,
   RECORD_SIZE,
+  CATALOG_MANIFEST_FILENAME,
+  catalogChunkFilename,
+  assembleCatalogChunks,
+  type CatalogManifest,
 } from './catalog-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RecordRef } from './corpus-tsv';
 
-export const DEFAULT_CATALOG_BIN = resolve(REPO_ROOT, 'public/catalog.bin');
+export const DEFAULT_CATALOG_MANIFEST = resolve(REPO_ROOT, 'public', CATALOG_MANIFEST_FILENAME);
 export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');
+
+/** Read + reassemble the transport-chunked catalog binary from a manifest
+ *  path. The client loader's Node-side twin — same `assembleCatalogChunks`
+ *  contract, fs instead of fetch. */
+export async function readCatalogBuffer(
+  manifestPath: string = DEFAULT_CATALOG_MANIFEST,
+): Promise<ArrayBuffer> {
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as CatalogManifest;
+  const dir = dirname(manifestPath);
+  const chunks = await Promise.all(
+    manifest.chunkBytes.map((_, i) =>
+      readFile(resolve(dir, catalogChunkFilename(i))).then(
+        (b) => new Uint8Array(b.buffer, b.byteOffset, b.byteLength),
+      ),
+    ),
+  );
+  return assembleCatalogChunks(chunks, manifest);
+}
 
 export interface CatalogRecord {
   i: number;
@@ -66,21 +88,20 @@ export interface Catalog {
 }
 
 export interface LoadCatalogOptions {
-  catalogBinPath?: string;
+  catalogManifestPath?: string;
   constellationsJsonPath?: string;
 }
 
 interface ConstellationEntry { code: string }
 
 export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalog> {
-  const binPath = opts.catalogBinPath ?? DEFAULT_CATALOG_BIN;
+  const manifestPath = opts.catalogManifestPath ?? DEFAULT_CATALOG_MANIFEST;
   const conPath = opts.constellationsJsonPath ?? DEFAULT_CONSTELLATIONS_JSON;
 
-  const [binBuf, conText] = await Promise.all([
-    readFile(binPath),
+  const [ab, conText] = await Promise.all([
+    readCatalogBuffer(manifestPath),
     readFile(conPath, 'utf-8'),
   ]);
-  const ab = binBuf.buffer.slice(binBuf.byteOffset, binBuf.byteOffset + binBuf.byteLength);
   const view = new DataView(ab);
 
   const magic = new TextDecoder().decode(new Uint8Array(ab, HEADER_LAYOUT.magic, 4));

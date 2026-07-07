@@ -5,10 +5,14 @@ cross-script policy and pointers.
 
 ## Subfolders
 
-- `catalog/` — single-star catalog build → `public/catalog.bin` (+
+- `catalog/` — single-star catalog build → `public/catalog.bin.<i>`
+  transport chunks + `public/catalog-manifest.json` (+
   `public/catalog-row-index-map.json`; companions promoted from
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
-  records with `FLAG_BINARY_COMPANION_ONLY` set).
+  records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
+  byte-range split of the v6 binary that keeps every deployed asset
+  under Cloudflare Workers' 25 MiB limit; see `catalog/README.md`
+  § Binary catalog format.
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for
@@ -22,8 +26,9 @@ cross-script policy and pointers.
 ## Preprocessor idempotency
 
 `scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if
-`catalog.bin`, `constellations.json`, `search-index.json`, **and**
-`catalog-row-index-map.json` are newer than all source inputs
+`catalog-manifest.json` (+ its first chunk), `constellations.json`,
+`search-index.json`, **and** `catalog-row-index-map.json` are newer
+than all source inputs
 (AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos CCDM TSV,
 `data/binaries/multiples.tsv`, and the script itself). If you change
 field mapping but not the script mtime (e.g. edit in a way that

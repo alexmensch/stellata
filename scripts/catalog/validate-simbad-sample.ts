@@ -360,7 +360,7 @@ function lookupRow(
 interface RunOptions {
   samplePath?: string;
   reportPath?: string;
-  catalogBinPath?: string;
+  catalogManifestPath?: string;
 }
 
 export async function runValidation(opts: RunOptions = {}): Promise<{
@@ -370,7 +370,7 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   const samplePath = opts.samplePath ?? DEFAULT_SAMPLE_PATH;
   const reportPath = opts.reportPath ?? DEFAULT_REPORT_PATH;
   const sample = parseSimbadSampleRows(readFileSync(samplePath, 'utf8'));
-  const catalog = await loadCatalog({ catalogBinPath: opts.catalogBinPath });
+  const catalog = await loadCatalog({ catalogManifestPath: opts.catalogManifestPath });
 
   const residuals: ResidualRow[] = [];
   let matchedByGaia = 0;

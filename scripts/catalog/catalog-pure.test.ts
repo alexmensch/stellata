@@ -48,6 +48,9 @@ import {
   NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  planCatalogChunks,
+  assembleCatalogChunks,
+  type CatalogManifest,
   parseGaiaApsisTsv,
   type ApsisRow,
   type SimbadSpectralRow,
@@ -1875,5 +1878,35 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     expect([
       'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', DIST_SRC_BAILER_JONES,
     ]).not.toContain(DIST_SRC_LMC_KIN);
+  });
+});
+
+describe('catalog-pure / transport chunking', () => {
+  it('planCatalogChunks splits on the target with a short final chunk', () => {
+    expect(planCatalogChunks(350, 100)).toEqual([100, 100, 100, 50]);
+    expect(planCatalogChunks(200, 100)).toEqual([100, 100]);
+    expect(planCatalogChunks(50, 100)).toEqual([50]);
+    expect(planCatalogChunks(0, 100)).toEqual([0]);
+  });
+
+  it('planCatalogChunks rejects a non-positive target', () => {
+    expect(() => planCatalogChunks(100, 0)).toThrow(/Invalid chunk target/);
+  });
+
+  it('assembleCatalogChunks throws on chunk-count mismatch', () => {
+    const manifest: CatalogManifest = { chunkBytes: [4, 4], totalBytes: 8 };
+    expect(() => assembleCatalogChunks([new Uint8Array(4)], manifest)).toThrow(/count mismatch/);
+  });
+
+  it('assembleCatalogChunks throws on chunk-length mismatch', () => {
+    const manifest: CatalogManifest = { chunkBytes: [4, 4], totalBytes: 8 };
+    expect(() =>
+      assembleCatalogChunks([new Uint8Array(4), new Uint8Array(3)], manifest),
+    ).toThrow(/chunk 1 length mismatch/);
+  });
+
+  it('assembleCatalogChunks throws on total-bytes mismatch', () => {
+    const manifest: CatalogManifest = { chunkBytes: [4], totalBytes: 8 };
+    expect(() => assembleCatalogChunks([new Uint8Array(4)], manifest)).toThrow(/size mismatch/);
   });
 });

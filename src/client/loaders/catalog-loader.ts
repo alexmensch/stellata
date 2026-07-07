@@ -10,6 +10,9 @@ import {
   NO_COMPANION,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  catalogChunkFilename,
+  assembleCatalogChunks,
+  type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
 
 export interface Constellation {
@@ -66,53 +69,75 @@ export interface Catalog {
 
 export interface LoadProgress {
   bytes: number;
-  total: number | null;
+  total: number;
 }
 
 export async function loadCatalog(
-  binUrl: string,
+  manifestUrl: string,
   conUrl: string,
   onProgress?: (p: LoadProgress) => void,
 ): Promise<Catalog> {
   const [binBuf, constellations] = await Promise.all([
-    fetchBinary(binUrl, onProgress),
+    fetchCatalogChunks(manifestUrl, onProgress),
     fetch(conUrl).then((r) => r.json() as Promise<Constellation[]>),
   ]);
 
   return parseBinary(binBuf, constellations);
 }
 
-async function fetchBinary(
-  url: string,
+async function fetchCatalogChunks(
+  manifestUrl: string,
   onProgress?: (p: LoadProgress) => void,
 ): Promise<ArrayBuffer> {
+  const mres = await fetch(manifestUrl);
+  if (!mres.ok) throw new Error(`Failed to load ${manifestUrl}: ${mres.status}`);
+  const manifest = (await mres.json()) as CatalogManifest;
+
+  // Chunk URLs are siblings of the manifest — same directory prefix, name
+  // from the shared `catalogChunkFilename` so client + writer agree.
+  const dirUrl = manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
+  let loaded = 0;
+  const report = onProgress
+    ? (delta: number) => {
+        loaded += delta;
+        onProgress({ bytes: loaded, total: manifest.totalBytes });
+      }
+    : undefined;
+  const chunks = await Promise.all(
+    manifest.chunkBytes.map((byteLength, i) =>
+      fetchCatalogChunk(dirUrl + catalogChunkFilename(i), byteLength, report),
+    ),
+  );
+
+  return assembleCatalogChunks(chunks, manifest);
+}
+
+async function fetchCatalogChunk(
+  url: string,
+  byteLength: number,
+  onBytes?: (delta: number) => void,
+): Promise<Uint8Array> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+  if (!res.body || !onBytes) return new Uint8Array(await res.arrayBuffer());
 
-  const totalHeader = res.headers.get('Content-Length');
-  const total = totalHeader ? Number(totalHeader) : null;
-
-  if (!res.body || !onProgress) {
-    return res.arrayBuffer();
-  }
-
+  // Stream so the loading bar advances mid-chunk, not once per finished file.
+  // out is pre-sized from the manifest, so a truncated response would silently
+  // zero-pad and pass assembly's length check — the short-read guard rejects it.
+  const out = new Uint8Array(byteLength);
   const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let bytes = 0;
-  while (true) {
+  let off = 0;
+  for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
-    bytes += value.byteLength;
-    onProgress({ bytes, total });
+    out.set(value, off);
+    off += value.byteLength;
+    onBytes(value.byteLength);
   }
-  const out = new Uint8Array(bytes);
-  let off = 0;
-  for (const c of chunks) {
-    out.set(c, off);
-    off += c.byteLength;
+  if (off !== byteLength) {
+    throw new Error(`Catalog chunk short read at ${url}: got ${off}, expected ${byteLength}`);
   }
-  return out.buffer;
+  return out;
 }
 
 export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): Catalog {
