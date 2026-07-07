@@ -144,13 +144,11 @@ async function main() {
       }
       const dust = new DustField(stellata.renderer, dustBase, manifest);
       stellata.attachDust(dust);
-      // Particles load in parallel with chunks — they're tiny (~800 KiB)
-      // and don't depend on the volumetric texture. The mesh stays
-      // hidden (strength 0) until the user opts in via the console.
+      // Particles are lazy — the shelved layer's ~800 KiB fetch fires
+      // only on the first console opt-in (setParticleStrength > 0).
       if (manifest.particles) {
-        loadDustParticles(dustBase, manifest.particles).then((particles) => {
-          if (particles) stellata.attachDustParticles(particles);
-        });
+        const particlesMeta = manifest.particles;
+        stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
       }
       await dust.startLoading();
     })();

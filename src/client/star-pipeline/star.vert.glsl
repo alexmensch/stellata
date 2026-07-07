@@ -78,24 +78,15 @@ uniform float uTime;
 uniform float uSecondsPerDay;
 uniform float uMinPeriodSec;
 
-// Interstellar-dust extinction. uDustTexture is a 3D scalar field of
-// log-encoded density in heliocentric ICRS Cartesian parsecs, spanning
-// [-uDustBoundsPc, +uDustBoundsPc] on each axis. uDustEnabled is a binary
-// "is the texture bound?" flag; uExtinctionStrength is a user-facing
-// multiplier (0 = off, 1 = realism, >1 = amplified for visibility).
-//
-// Raymarch runs in absolute space (iPosition + uWorldOffset, uCameraPos +
-// uWorldOffset) so the floating-origin recentering is transparent here.
-// Output is a V-band extinction magnitude added to appMag, with a matching
-// colour-index shift (E(B-V) = A_V / R_V) to redden the star's colour.
-uniform highp sampler3D uDustTexture;
-uniform float uDustBoundsPc;
-// Log-window decode: density = uDustDensityMin * exp(sample * uDustLogRatio),
-// where uDustLogRatio = ln(densityMax / densityMin). Inverts the Python
-// encoder's pure-log scaling over [densityMin, densityMax].
-uniform float uDustDensityMin;
-uniform float uDustLogRatio;
-uniform float uDustAvPerDensityPc;  // ZGR23 density × pc → A_V magnitude
+// Interstellar-dust extinction. Dust-field uniforms + the camera→star
+// raymarch live in the shared chunk; A_V is added to appMag with a
+// matching colour-index shift (E(B-V) = A_V / R_V) to redden the star.
+// The primary source is the per-star prepass texture (one march per
+// star per camera move — see extinction-prepass.ts); the in-vertex
+// march is the fallback when the prepass is unavailable or disabled.
+#include <stellata_dust_raymarch>
+uniform sampler2D uAvPrepassTex;    // star-indexed A_V, R channel
+uniform float uAvPrepassEnabled;    // 1 = texelFetch path, 0 = in-vertex march
 uniform float uDustEnabled;         // 0 = no texture bound, 1 = bound
 uniform float uExtinctionStrength;  // user knob; multiplied onto uDustEnabled
 uniform vec3 uWorldOffset;          // absolute coord of renderer's local origin
@@ -107,7 +98,6 @@ uniform vec3 uWorldOffset;          // absolute coord of renderer's local origin
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
-const int DUST_STEPS = 48;
 const float R_V = 3.1; // canonical interstellar reddening ratio: A_V / E(B-V)
 
 // Per-vertex: unit-square corner in [-0.5, +0.5] × [-0.5, +0.5], used to
@@ -201,45 +191,6 @@ float ballesterosBvFromTeff(float teff) {
 vec3 ciToColor(float bvVal) {
     float t = clamp((bvVal - BV_MIN) / (BV_MAX - BV_MIN), 0.0, 1.0);
     return texture(uColorLut, vec2(t, 0.5)).rgb;
-}
-
-// Raymarch from the camera to the star through the dust texture and
-// integrate V-band extinction. Returns A_V in magnitudes — how much the
-// star should be dimmed. Early-exits to zero when no dust is bound or the
-// user has turned extinction off.
-//
-// DUST_STEPS fixed samples over the ray is a pragmatic trapezoidal
-// integration: step size adapts to ray length automatically (short for
-// nearby stars, coarser for far ones). 48 samples is a good middle ground
-// — at 1.25 kpc that's 26 pc per step, about 5 voxels, which is fine
-// given the texture's native ~5 pc resolution. Bumping to 64 costs ~33%
-// more vertex-shader texture reads with marginal quality gain.
-float dustExtinctionAV(vec3 absStar, vec3 absCamera) {
-    float effective = uDustEnabled * uExtinctionStrength;
-    if (effective <= 0.0) return 0.0;
-
-    vec3 delta = absStar - absCamera;
-    float lenPc = length(delta);
-    if (lenPc < 0.001) return 0.0;
-    float stepPc = lenPc / float(DUST_STEPS);
-
-    float invRange = 0.5 / uDustBoundsPc; // maps [-bounds, +bounds] → [0, 1]
-    float accumDensity = 0.0;
-    for (int i = 0; i < DUST_STEPS; i++) {
-        float t = (float(i) + 0.5) / float(DUST_STEPS);
-        vec3 pAbs = absCamera + delta * t;
-        vec3 uvw = pAbs * invRange + 0.5;
-        // Cheap bbox test — sampling outside just clamps to the edge which
-        // is zero-padded at the volume boundary, so skipping is an
-        // optimisation not a correctness requirement.
-        if (any(lessThan(uvw, vec3(0.0))) || any(greaterThan(uvw, vec3(1.0)))) continue;
-        float encoded = texture(uDustTexture, uvw).r;
-        // Inverse of the Python side's pure-log encoding over
-        // [densityMin, densityMax]: decoded = densityMin * exp(sample * logRatio).
-        float density = uDustDensityMin * exp(encoded * uDustLogRatio);
-        accumDensity += density;
-    }
-    return accumDensity * stepPc * uDustAvPerDensityPc * effective;
 }
 
 void main() {
@@ -342,9 +293,9 @@ void main() {
     // band are absolute filters (not affected by extinction). The magnitude
     // band is monotonic in dust: A_V ≥ 0, so a star whose unextincted
     // appMag already sits above (uMaxAppMag + 0.5) cannot become visible
-    // after extinction. Skip the 48-tap dust raymarch for those stars —
-    // for the bulk of the catalog at typical magnitude limits this is the
-    // dominant per-frame vertex-shader saving (313k stars).
+    // after extinction. Skip the extinction read for those stars — a
+    // texelFetch on the prepass path, the full 48-tap raymarch on the
+    // fallback path (where this is the dominant vertex-shader saving).
     //
     // DUST_AV_HEADROOM is the worst-case A_V we keep in the raymarch
     // population on top of the +0.5 soft-taper window. 1.5 mag covers
@@ -377,12 +328,23 @@ void main() {
         return;
     }
 
-    // Survivors only: integrate dust extinction along the camera→star
-    // sightline. Local-frame positions → absolute for texture sampling
-    // (the dust grid is anchored to Sol, not the floating local origin).
-    // A_V is added to appMag so the brightness filter sees the dimmed
-    // value, and the colour is reddened by E(B-V) = A_V / R_V.
-    float absorbAV = dustExtinctionAV(worldPos + uWorldOffset, uCameraPos + uWorldOffset);
+    // Survivors only: per-star dust extinction. Fast path reads the
+    // prepass cache (one texelFetch); fallback marches camera→star in
+    // absolute space (the dust grid is anchored to Sol, not the floating
+    // local origin). A_V is added to appMag so the brightness filter sees
+    // the dimmed value, and the colour is reddened by E(B-V) = A_V / R_V.
+    float dustEffective = uDustEnabled * uExtinctionStrength;
+    float absorbAV = 0.0;
+    if (dustEffective > 0.0) {
+        if (uAvPrepassEnabled > 0.5) {
+            int w = textureSize(uAvPrepassTex, 0).x;
+            ivec2 avTexel = ivec2(gl_InstanceID % w, gl_InstanceID / w);
+            absorbAV = texelFetch(uAvPrepassTex, avTexel, 0).r * dustEffective;
+        } else {
+            absorbAV = dustRaymarchAV(uCameraPos + uWorldOffset, worldPos + uWorldOffset)
+                * dustEffective;
+        }
+    }
     appMag += absorbAV;
     // Intrinsic B-V from the Apsis-first routing priority. Tier 1/2
     // (Apsis gspphot ∪ gspspec) walks back through Ballesteros⁻¹; tier 3
