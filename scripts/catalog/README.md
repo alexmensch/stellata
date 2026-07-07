@@ -636,11 +636,12 @@ post-sort `buildCatalogRowIndexMap`) closes that gap:
   multiples.tsv pair, primary and secondary resolve to catalog records
   through the same `gaia → hip → synth` priority
   `build-runtime-binaries.py`'s `resolve_idx` uses, plus both of that
-  writer's blended-sibling synth retries: a secondary carrying the
-  primary's gaia/hip resolves onto the primary's own record (its synth
-  slot is the true companion), and a blended non-anchor primary
-  re-homes onto its own distinct synth slot (Castor Ca inside the
-  outer pair). A pair whose two sides resolve to DISTINCT records
+  writer's blended-sibling synth retries: each pair end re-homes onto
+  its own distinct synth slot whenever promotion minted one (a synth
+  slot exists only for rows whose ids were inherited then stripped,
+  so it is always the truer target — Castor Ca inside the outer pair,
+  04049-3527's pair-mate-inherited C). A pair whose two sides resolve
+  to DISTINCT records
   renders a companion, so the winged set tracks `binaries.bin`'s
   primaries. The writer's post-resolution steps
   (`override_inner_primary_indices`, the relation-winner dedup) are not

@@ -483,17 +483,18 @@ def write_binary(
         secondary_synth = synthetic_id(p.wds_id, p.secondary_comp)
         pri = resolve_idx(p.primary_gaia, p.primary_hip, primary_synth, row_map)
         sec = resolve_idx(p.secondary_gaia, p.secondary_hip, secondary_synth, row_map)
-        # Blended-sibling retry, both ends. A sub-arcsec component carries
-        # the system primary's gaia/hip (blended photocentre), so its
-        # id-first resolve lands on the anchor row; promotion's synth slot is
-        # the truer target. The secondary retries only when it collapsed onto
-        # the primary; the primary can itself be a blended non-anchor member
-        # (Castor BC's B lands on anchor A), so it retries whenever a distinct
-        # synth slot exists, excluding its own row. Inner-pair primaries are
-        # re-homed onto their parent slot afterward by
-        # override_inner_primary_indices, so this only decides wide pairs.
-        if sec is not None and sec == pri:
-            hit = synth_slot(secondary_synth, row_map)
+        # Blended-sibling retry, both ends. A blended component carries
+        # another member's gaia/hip (photocentre or pair-mate inheritance),
+        # so its id-first resolve lands on that member's row; promotion
+        # mints a synth slot only after judging the row's ids inherited and
+        # stripping them, so a distinct synth slot is ALWAYS the truer
+        # target. Both ends retry unconditionally, excluding their own
+        # id-first resolve (04049-3527 BC's C carries A's source as an AC
+        # pair-mate — not the primary's — and still re-homes onto synth-C).
+        # Inner-pair primaries are re-homed onto their parent slot afterward
+        # by override_inner_primary_indices, so this only decides wide pairs.
+        if sec is not None:
+            hit = synth_slot(secondary_synth, row_map, exclude=sec)
             if hit is not None:
                 sec = hit
         if pri is not None:

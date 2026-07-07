@@ -1762,10 +1762,10 @@ export function wingRenderablePrimaries(
       primary.gaiaSourceId, primary.hip, primarySynth, rowIndexMap,
     );
     if (priId === null) continue;
-    // Primary synth re-home: a blended non-anchor primary (its id resolves
-    // onto the system anchor) has its own distinct synth slot; that slot is
-    // the truer companion end. Compared against priId, so the secondary
-    // retry below still keys on the pre-re-home resolve as the writer does.
+    // Both-ends synth re-home, mirroring the writer: a blended component
+    // (its id resolves onto another member's row) has its own distinct
+    // synth slot minted by promotion, and that slot is the truer
+    // companion end.
     const priIdx = synthSlotIdx(primarySynth, rowIndexMap, priId) ?? priId;
 
     for (const sec of cursor.secondaries) {
@@ -1776,8 +1776,8 @@ export function wingRenderablePrimaries(
       let secIdx = resolveMultiplesIdx(
         sec.gaiaSourceId, sec.hip, secondarySynth, rowIndexMap,
       );
-      if (secIdx !== null && secIdx === priId) {
-        secIdx = synthSlotIdx(secondarySynth, rowIndexMap) ?? secIdx;
+      if (secIdx !== null) {
+        secIdx = synthSlotIdx(secondarySynth, rowIndexMap, secIdx) ?? secIdx;
       }
       if (secIdx === null || secIdx === priIdx) continue;
       let set = perSystem.get(root);

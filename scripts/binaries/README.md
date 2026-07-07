@@ -203,11 +203,11 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    walks gaia → hip → synth in priority order; the synth key is
    composed from the pair's expanded `comp` tokens (WDS-truncated
    forms like `Aa1,2` resolve through the same `synth-…-Aa2` key
-   the catalog minted). When the secondary's id-first resolve
-   lands on the primary's own row (blended photocentre: both rows
-   carry the primary's gaia/hip), the writer retries the synth key
-   before declaring the pair degenerate — companion promotion
-   mints a synth record for exactly those rows.
+   the catalog minted). Both pair ends then prefer a distinct synth
+   slot over their id-first resolve: promotion mints a synth record
+   only after judging a row's ids inherited and stripping them, so
+   when one exists it is always the truer target than the blended
+   member row the inherited id lands on.
    Run via `npm run build:binaries-runtime`.
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
    per-frame by the BinaryOrbitField runtime layer.

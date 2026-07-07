@@ -481,6 +481,34 @@ class WriteBinaryTests(unittest.TestCase):
         self.assertEqual(stats.pairs_emitted, 1)
         self.assertEqual(stats.pairs_dropped_degenerate_idx, 0)
 
+    def test_pair_mate_inherited_secondary_rehomed_to_own_synth(self) -> None:
+        # 04049-3527 BC shape: C carries A's source as an AC pair-mate, so
+        # its id-first resolve lands on A's row (100) — NOT on the pair's
+        # primary B (200). The secondary retry is unconditional: promotion
+        # minted synth-C after stripping the inherited id, so the pair must
+        # emit (B, synth-C), not (B, A-record).
+        row_map = brb.RowIndexMap(
+            by_gaia={"1": 100, "2": 200},
+            by_hip={},
+            by_synth={"synth-00000+0000-C": 340},
+        )
+        pairs = [_pair(
+            system_id="00000+0000-BC", primary_comp="B", secondary_comp="C",
+            primary_gaia="2", secondary_gaia="1",
+        )]
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "binaries.bin"
+            stats = brb.write_binary(
+                pairs, [brb.NO_PARENT], [0], row_map, out,
+            )
+            data = out.read_bytes()
+        self.assertEqual(stats.pairs_emitted, 1)
+        pri, sec = struct.unpack(
+            "<II", data[brb.HEADER_SIZE:brb.HEADER_SIZE + 8],
+        )
+        self.assertEqual(pri, 200)
+        self.assertEqual(sec, 340)
+
     def test_blended_wide_pair_primary_rehomed_to_own_synth(self) -> None:
         # Castor BC shape: the wide pair's PRIMARY (B) carries the system's
         # blended Gaia source, so its id-first resolve lands on the anchor A
