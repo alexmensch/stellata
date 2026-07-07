@@ -20,6 +20,13 @@ extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         policy, morphology palette, selection-bias
                         handling. Spans scripts/, data/, and the
                         future src/client/extragalactic/.
+sid.md                  Design gate for the Stellata ID epic:
+                        three-layer identity model, designation
+                        namespaces, append-only SID ledger + CI guard,
+                        Gaia DR-reconciliation procedure with measured
+                        DR2→DR3 churn, v4 URL wire + exact legacy
+                        migration table. Spans scripts/, data/sid/,
+                        url-state, and every object-carrying layer.
 molecular-clouds.md     Physics model + implementation design for the
                         molecular-cloud epic (extinction calibration,
                         density profiles, substructure noise, cavities,
