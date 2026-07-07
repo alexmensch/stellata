@@ -37,6 +37,46 @@ def parent_component_token(tok: str) -> str | None:
     return tok[:-1]
 
 
+_UPPERCASE_LETTER_RE = re.compile(r"[A-Z]")
+
+
+def token_letters(tok: str) -> frozenset[str]:
+    """Uppercase component letters in a token: ``"AB" → {A, B}``,
+    ``"Aa1" → {A}``. Used for the compound-containment relation."""
+    return frozenset(_UPPERCASE_LETTER_RE.findall(tok))
+
+
+def is_hier_ancestor(a: str, b: str) -> bool:
+    """True when ``a`` is a strict ancestor of ``b`` in the WDS component
+    hierarchy (``A`` ← ``Aa`` ← ``Aa1``). Defined only for canonical
+    single-component tokens; compound tokens (``AB``) never enter the
+    chain — their overlap is expressed by compound-containment instead."""
+    if not is_component_token(a) or not is_component_token(b):
+        return False
+    cur = parent_component_token(b)
+    while cur is not None:
+        if cur == a:
+            return True
+        cur = parent_component_token(cur)
+    return False
+
+
+def related_hier(a: str, b: str) -> bool:
+    """Equal, or one is an ancestor of the other."""
+    return a == b or is_hier_ancestor(a, b) or is_hier_ancestor(b, a)
+
+
+def compound_contains(a: str, b: str) -> bool:
+    """One token is a multi-letter compound whose letters include the
+    other's (``"AB"`` contains ``"A"`` and ``"Aa"``)."""
+    la, lb = token_letters(a), token_letters(b)
+    if len(la) >= 2 and lb and lb <= la:
+        return True
+    if len(lb) >= 2 and la and la <= lb:
+        return True
+    return False
+
+
 def child_component_tokens(tok: str) -> tuple[str, str] | None:
     """Sub-pair component names one level below ``tok``:
     ``"A" → ("Aa", "Ab")``; ``"Aa" → ("Aa1", "Aa2")``. Returns ``None``

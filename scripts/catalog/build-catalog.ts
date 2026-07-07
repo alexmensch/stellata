@@ -217,9 +217,12 @@ async function main() {
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
     companionAbsmagSpectralDerived: 0,
+    companionAbsmagWdsMagDerived: 0,
     companionAbsmagAnchorCollocated: 0,
     companionAbsmagInheritedTwinOrbital: 0,
     companionBlendSplit: 0,
+    companionBlendDimmedAnchors: 0,
+    companionBlendDimSkipped: 0,
     companionRepositionedCollocatedDouble: 0,
     componentLettersStamped: 0,
     gaiaAstrometryEntries: 0,
@@ -444,8 +447,10 @@ async function main() {
         `compound-comp=${ps.droppedCompoundComp}, ` +
         `collocated-primary=${ps.droppedCollocatedPrimary}); ` +
         `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
+        `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
         `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
         `blend-split=${ps.blendSplitRecords}, ` +
+        `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble} ` +
         `in ${Date.now() - tProm}ms`,
     );
@@ -460,9 +465,12 @@ async function main() {
     counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
+    counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;
     counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
     counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
     counts.companionBlendSplit = ps.blendSplitRecords;
+    counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
+    counts.companionBlendDimSkipped = ps.blendDimSkipped;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
 
     // Stamp component letters onto pairs AT-HYG left anonymous — both

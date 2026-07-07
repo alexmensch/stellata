@@ -538,36 +538,71 @@ Per-row gates and resolution:
   of A), position resolves in preference order: (1) the row's own
   per-component astrometry when Stage 3 supplied a real independent fit
   (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
-  anchor's); (2) project off a sibling cursor's compound sep+PA whose
-  compound contains this row's comp letter — 40 Eri B borrows the A,BC
-  group's 83.2″ / 108° A→BC sep+PA as the best available A→B proxy.
+  anchor's); (2) project the row's Stage-6 `anchor_sep_arcsec` /
+  `anchor_pa_deg` off the WDS-root anchor star — the per-component
+  offset BFS-composed over kept, Stage-5-rejected, and
+  compound-photocentre pair geometry (40 Eri B lands at the A,BC
+  compound proxy; Acrux B at the rejected AB row's 3.5″/114°).
   Neither available → **drop** (`droppedCollocatedPrimary`). Collocating
   on the anchor would bake a false coincident star inside the anchor's
   disc (δ Vel C): the escape only fires for cursor primaries that never
   appear as a secondary of the anchor, so no anchor→self orbital pair
   exists for `BinaryOrbitField` to animate it away from centre at
   runtime.
+- **Blended-identifier escape.** The pair-row-primary escape fires not
+  only when the cursor primary resolves to nothing, but also when it
+  resolves to the WDS-ROOT ANCHOR's record while its comp is a DISJOINT
+  top-level letter — Acrux B carries A's shared HIP, omicron And B
+  carries A's shared Gaia source, and a disjoint letter cannot BE the
+  anchor. The letter's true slot is its own synth record (a sibling
+  cursor's mint is reused); with no honest placement the cursor falls
+  back to the blended anchor hit, exactly the pre-escape behaviour.
+  Sub-letter primaries (Castor Ca) are excluded — the inner-pair
+  post-pass and the writer's parent override own that re-homing. The
+  Gaia inheritance gate mirrors the HIP gate's anchor-STAR check for
+  the same shape: propagation can bind the shared source to a row
+  whose anchor-row cell is empty.
 - **Absmag.** Preference order: `primary_absmag + WDS Δmag` when the
   row inherited its parent's AT-HYG photometry (Sirius B's row
   carried Sirius A's 1.45 absmag, not the WD's 11.36); the row's own
   (non-inherited) absmag — including the Stage-6 Gaia-photometry value
   (`photometry_via = gaia_photometry`) derived from an own-DR3
   companion's G/BP/RP + parallax when no AT-HYG row backs it (SCIENCE.md
-  § Multiple-star pipeline); primary + Δmag fallback; class→M_V from a
-  per-component spectral type (`absmagFromSpectral`, spect_via
-  curated/simbad — Algol Aa2's curated K0IV lands at 3.30 vs the
-  primary's −0.11). A row with inherited photometry, no Δmag, and
-  no per-component type has NO honest brightness source: returning
-  the inherited value minted full-luminosity twins (Betelgeuse Ab).
-  Those rows drop — unless the pair carries a renderable orbit
-  binaries.bin must keep addressing, where the twin is kept and
-  counted (`companionAbsmagInheritedTwinOrbital`, a ratchet-down
+  § Multiple-star pipeline); primary + Δmag fallback; the row's own WDS
+  apparent magnitude at the system distance (`wds_mag`, M = m −
+  5·log₁₀(d/10) — fires when both Δmag paths are unavailable and
+  rescues rows that previously dropped for want of a brightness);
+  class→M_V from a per-component spectral type (`absmagFromSpectral`,
+  spect_via curated/simbad — Algol Aa2's curated K0IV lands at 3.30 vs
+  the primary's −0.11). A row with none of those has NO honest
+  brightness source: returning the inherited value minted
+  full-luminosity twins (Betelgeuse Ab). Those rows drop — unless the
+  pair carries a renderable orbit binaries.bin must keep addressing,
+  where the twin is kept and counted
+  (`companionAbsmagInheritedTwinOrbital`, a ratchet-down
   metric: curate types to shrink it). For a **pair-row-primary
   escape** the row's Δmag describes the sub-pair it heads, not the
   anchor→row separation (40 Eri B's Δmag is the B→C delta), so both
-  `primary + Δmag` paths are suppressed; absent own / per-component
-  photometry the record inherits the anchor's collocated brightness
-  (`companionAbsmagAnchorCollocated`) rather than a corrupted A+Δmag.
+  `primary + Δmag` paths are suppressed; and when the escape row's
+  only ids were inherited from the anchor its "own" AT-HYG photometry
+  is the anchor's BLEND magnitude, so the own path is skipped too
+  (Acrux B takes its WDS V=1.55, not the −4.2 blend). Absent any
+  honest brightness the record inherits the anchor's collocated
+  brightness (`companionAbsmagAnchorCollocated`) rather than a
+  corrupted A+Δmag.
+- **Anchor flux conservation (post-pass).** A synth member whose ids
+  were inherited-then-stripped from an `athyg_own` anchor has its
+  light embedded in that anchor's AT-HYG magnitude; minting it
+  without dimming the anchor double-counts the flux. Two shapes:
+  a `dmag_imputed` member re-splits the blend JOINTLY by Δmag
+  (`M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ))`, `M_B = M_A + Δ` —
+  exact conservation for any Δ; a naive flux subtraction would gut a
+  near-equal anchor, Capella −0.51 → +2.1, because `M_blend + Δ`
+  overstates the member); a `wds_mag` member's independent brightness
+  is subtracted directly, guarded against a member as bright as the
+  blend itself (`blendDimSkipped`). Sequential per anchor; counted
+  `blendDimmedAnchors`. The equal-split gaia_photometry blend pass
+  above stays for the N-way no-WDS-mag case.
 - **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
   5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
   surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair
@@ -636,11 +671,12 @@ post-sort `buildCatalogRowIndexMap`) closes that gap:
   multiples.tsv pair, primary and secondary resolve to catalog records
   through the same `gaia → hip → synth` priority
   `build-runtime-binaries.py`'s `resolve_idx` uses, plus both of that
-  writer's blended-sibling synth retries: a secondary carrying the
-  primary's gaia/hip resolves onto the primary's own record (its synth
-  slot is the true companion), and a blended non-anchor primary
-  re-homes onto its own distinct synth slot (Castor Ca inside the
-  outer pair). A pair whose two sides resolve to DISTINCT records
+  writer's blended-sibling synth retries: each pair end re-homes onto
+  its own distinct synth slot whenever promotion minted one (a synth
+  slot exists only for rows whose ids were inherited then stripped,
+  so it is always the truer target — Castor Ca inside the outer pair,
+  04049-3527's pair-mate-inherited C). A pair whose two sides resolve
+  to DISTINCT records
   renders a companion, so the winged set tracks `binaries.bin`'s
   primaries. The writer's post-resolution steps
   (`override_inner_primary_indices`, the relation-winner dedup) are not

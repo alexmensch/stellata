@@ -27,9 +27,13 @@ from indices import (  # noqa: E402
     WDS_PRECISE_COORD_EPOCH,
 )
 from component_tokens import (  # noqa: E402
+    compound_contains,
     expand_wds_truncated_secondary,
     is_component_token,
+    is_hier_ancestor,
     parent_component_token,
+    related_hier,
+    token_letters,
 )
 
 
@@ -1246,44 +1250,6 @@ ARBITRATION_RUNNERUP_FACTOR = 0.5
 # a genuine coincidence is sub-arcsecond, not merely "not far".
 ARBITRATION_BLEND_FLOOR_ARCSEC = 1.0
 
-_UPPERCASE_LETTER_RE = re.compile(r"[A-Z]")
-
-
-def _token_letters(tok: str) -> frozenset[str]:
-    """Uppercase component letters in a token: ``"AB" → {A, B}``,
-    ``"Aa1" → {A}``. Used for the compound-containment relation."""
-    return frozenset(_UPPERCASE_LETTER_RE.findall(tok))
-
-
-def _is_hier_ancestor(a: str, b: str) -> bool:
-    """True when ``a`` is a strict ancestor of ``b`` in the WDS component
-    hierarchy (``A`` ← ``Aa`` ← ``Aa1``). Defined only for canonical
-    single-component tokens; compound tokens (``AB``) never enter the
-    chain — their overlap is expressed by compound-containment instead."""
-    if not is_component_token(a) or not is_component_token(b):
-        return False
-    cur = parent_component_token(b)
-    while cur is not None:
-        if cur == a:
-            return True
-        cur = parent_component_token(cur)
-    return False
-
-
-def _related_hier(a: str, b: str) -> bool:
-    """Equal, or one is an ancestor of the other."""
-    return a == b or _is_hier_ancestor(a, b) or _is_hier_ancestor(b, a)
-
-
-def _compound_contains(a: str, b: str) -> bool:
-    """One token is a multi-letter compound whose letters include the
-    other's (``"AB"`` contains ``"A"`` and ``"Aa"``)."""
-    la, lb = _token_letters(a), _token_letters(b)
-    if len(la) >= 2 and lb and lb <= la:
-        return True
-    if len(lb) >= 2 and la and la <= lb:
-        return True
-    return False
 
 
 def _are_pair_mates(
@@ -1298,8 +1264,8 @@ def _are_pair_mates(
     ``A``/``B`` are blend-mates when a (Aa, Bx) sub-pair blends, since
     ``A`` roots ``Aa`` and ``B`` roots ``Bx``."""
     for p, s in blend_pairs:
-        if (_related_hier(x, p) and _related_hier(y, s)) or (
-            _related_hier(x, s) and _related_hier(y, p)
+        if (related_hier(x, p) and related_hier(y, s)) or (
+            related_hier(x, s) and related_hier(y, p)
         ):
             return True
     return False
@@ -1312,8 +1278,8 @@ def _tokens_related(
     compound-contained, or sub-resolution blend-mates. Everything else is
     a disjoint pair that one source cannot occupy."""
     return (
-        _related_hier(x, y)
-        or _compound_contains(x, y)
+        related_hier(x, y)
+        or compound_contains(x, y)
         or _are_pair_mates(x, y, blend_pairs)
     )
 
@@ -1350,13 +1316,14 @@ def _canonical_token(primary_tok: str, comp: ResolvedComponent) -> str:
 
 
 def _add_edge(
-    ctx: _SystemContext, a: str, b: str,
+    adj: dict[str, dict[str, tuple[float, float, float | None]]],
+    a: str, b: str,
     e_arcsec: float, n_arcsec: float, epoch: float | None,
 ) -> None:
     """Register a bidirectional geometry edge, keeping the most-recent
     measurement when the same token pair recurs across discoverers."""
     for src, dst, ee, nn in ((a, b, e_arcsec, n_arcsec), (b, a, -e_arcsec, -n_arcsec)):
-        nbrs = ctx.adj.setdefault(src, {})
+        nbrs = adj.setdefault(src, {})
         existing = nbrs.get(dst)
         if existing is not None:
             old_epoch = existing[2]
@@ -1404,7 +1371,7 @@ def build_system_contexts(
             e = pair.rho_last * math.sin(theta_rad)
             n = pair.rho_last * math.cos(theta_rad)
             epoch = float(pair.date_last) if pair.date_last is not None else None
-            _add_edge(ctx, p_tok, s_tok, e, n, epoch)
+            _add_edge(ctx.adj, p_tok, s_tok, e, n, epoch)
     return systems
 
 

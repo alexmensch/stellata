@@ -156,6 +156,11 @@ export interface BuildCounts {
    *  spectral calibration (inherited/missing photometry, no WDS Δmag,
    *  per-component spect_via=curated/simbad). */
   companionAbsmagSpectralDerived: number;
+  /** Promoted records whose absmag came from the row's own WDS
+   *  apparent magnitude at the system distance (both Δmag paths
+   *  unavailable, or an escape row whose "own" photometry is the
+   *  anchor's blend — Acrux B). */
+  companionAbsmagWdsMagDerived: number;
   /** Promoted pair-row-primary escapes whose absmag fell back to the
    *  anchor's collocated brightness (imputeCompanionAbsmag). Ratchet DOWN
    *  by curating white-dwarf absmags. */
@@ -170,6 +175,13 @@ export interface BuildCounts {
    *  source (an unresolved sub-arcsec pair) each fainter than the derived
    *  combined magnitude by 2.5·log10(N). YY Gem Ca/Cb is the showcase. */
   companionBlendSplit: number;
+  /** Anchor records dimmed by the flux-conservation post-pass: a synth
+   *  member with anchor-inherited-then-stripped ids took a wds_mag/dmag
+   *  absmag, so its flux is subtracted from the anchor's athyg_own blend
+   *  magnitude and total system light is conserved. */
+  companionBlendDimmedAnchors: number;
+  /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
+  companionBlendDimSkipped: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;

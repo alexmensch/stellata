@@ -203,11 +203,11 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    walks gaia → hip → synth in priority order; the synth key is
    composed from the pair's expanded `comp` tokens (WDS-truncated
    forms like `Aa1,2` resolve through the same `synth-…-Aa2` key
-   the catalog minted). When the secondary's id-first resolve
-   lands on the primary's own row (blended photocentre: both rows
-   carry the primary's gaia/hip), the writer retries the synth key
-   before declaring the pair degenerate — companion promotion
-   mints a synth record for exactly those rows.
+   the catalog minted). Both pair ends then prefer a distinct synth
+   slot over their id-first resolve: promotion mints a synth record
+   only after judging a row's ids inherited and stripping them, so
+   when one exists it is always the truer target than the blended
+   member row the inherited id lands on.
    Run via `npm run build:binaries-runtime`.
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
    per-frame by the BinaryOrbitField runtime layer.
@@ -457,7 +457,16 @@ onto the anchor, producing a duplicate `(primary, secondary)`. `write_binary`
 emits one record per relation, and when duplicates collide it keeps the
 orbit-bearing member (`pair_has_orbit`; ties keep first in walk order) so the
 system's live motion survives the dedup rather than an element-less wide
-pair winning by walk position. Counted `pairs_dropped_duplicate_relation`.
+pair winning by walk position. Each drop is classified
+(`same_relation_alias`): when on each side the two pairs' canonical comp
+tokens are equal, hierarchy-related, or compound-contained, the two rows
+name the SAME physical link at different granularity (18025+4414 `AB` vs
+`Aa,B`) — a correct, permanent dedup counted
+`pairs_dropped_same_relation_alias`. Disjoint letters on either side mean
+two DISTINCT stars collapsed onto one record; those are counted
+`pairs_dropped_duplicate_relation`, a ratchet toward zero — each is a
+missing minted slot (current floor: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
+Ba/Bb sub-letter blend the inner-pair hierarchy owns).
 
 ## Stage 4 — Orbital element selection per pair
 
@@ -608,7 +617,8 @@ resolve_via, astrometry_via, orbit_via, spect_via,
 photometry_via, a_via,
 orbit_role,
 P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
-sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag
+sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag,
+anchor_sep_arcsec, anchor_pa_deg, mag_pri, mag_sec
 ```
 
 `x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
@@ -640,6 +650,27 @@ stored placement is reproduced exactly at its measurement date.
 `dmag` is the published apparent Δmag
 (`mag_sec - mag_pri`) used to impute the companion's absmag when
 the secondary row inherits its parent's AT-HYG photometry.
+`mag_pri` / `mag_sec` carry the pair row's WDS apparent magnitudes
+themselves (both rows; a row's OWN mag is `mag_pri` when it is the
+pair primary) — promotion's `wds_mag` absmag path anchors a minted
+member's brightness on its own WDS magnitude at the system distance
+when neither Δmag path applies.
+
+`anchor_sep_arcsec` / `anchor_pa_deg` carry each component's best WDS
+offset from the SYSTEM ANCHOR letter (the most canonical kept-pair
+primary token, matching the WDS-root anchor companion promotion
+resolves), composed by `compute_anchor_offsets` over a BFS of the
+system's pair geometry. A direct measured anchor→component edge
+(kept, then Stage-5-rejected) wins over any composed chain — a
+blended member sits within measurement error of the anchor, so a
+chain through a distant third star cancels to ~zero (Acrux: AC ∘ CB
+≡ 0 vs the honest rejected-AB 3.5″); chains then fill in tier order
+kept → +rejected → +compound-photocentre-proxy. Rejected rows
+contribute geometry only — the pair itself stays dropped; a sep+PA
+measurement is real astrometry regardless of boundness
+classification. Blank when no chain reaches the component. Consumed
+by companion promotion's pair-row-primary escape (see
+`scripts/catalog/README.md` § Companion promotion).
 
 Three system-level mechanisms run at emit time:
 

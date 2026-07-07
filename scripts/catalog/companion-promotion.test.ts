@@ -7,6 +7,7 @@ import {
   hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
+  isDisjointSingleLetter,
   parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
@@ -81,6 +82,10 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     paDeg: null,
     sepPaEpochJd: null,
     dmag: null,
+    anchorSepArcsec: null,
+    anchorPaDeg: null,
+    magPri: null,
+    magSec: null,
     ...overrides,
   };
 }
@@ -101,6 +106,7 @@ describe('parseMultiplesTsv', () => {
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
+      'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
     ].join('\t');
     const body = [
       'WDS-X-AB','A','12345','1234567890123456',
@@ -110,6 +116,7 @@ describe('parseMultiplesTsv', () => {
       '365.25','2451545.0','0.1','1.0','0.5','0.6','0.7',
       '0.5','10.0',
       '7.123','265.45','2458850.0','0.85',
+      '3.500','114.00','1.25','1.55',
     ].join('\t');
     const rows = parseMultiplesTsv(`${header}\n${body}\n`);
     expect(rows).toHaveLength(1);
@@ -126,6 +133,10 @@ describe('parseMultiplesTsv', () => {
     expect(r.sepArcsec).toBe(7.123);
     expect(r.paDeg).toBe(265.45);
     expect(r.dmag).toBe(0.85);
+    expect(r.anchorSepArcsec).toBe(3.5);
+    expect(r.anchorPaDeg).toBe(114.0);
+    expect(r.magPri).toBe(1.25);
+    expect(r.magSec).toBe(1.55);
   });
 
   it('treats blank cells as null', () => {
@@ -137,6 +148,7 @@ describe('parseMultiplesTsv', () => {
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
+      'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
     ].join('\t');
     const body = [
       'WDS-X-AB','B','','',
@@ -145,6 +157,7 @@ describe('parseMultiplesTsv', () => {
       'none','none','secondary',
       '','','','','','','',
       '','',
+      '','','','',
       '','','','',
     ].join('\t');
     const rows = parseMultiplesTsv(`${header}\n${body}\n`);
@@ -319,6 +332,122 @@ describe('imputeCompanionAbsmag', () => {
     const r = imputeCompanionAbsmag(sec, primary, SPECTRAL_UNKNOWN, false);
     expect(r?.source).toBe('own');
     expect(r?.absmag).toBe(8.0);
+  });
+});
+
+describe('imputeCompanionAbsmag wds_mag tier', () => {
+  it('derives M from the row own WDS mag at system distance when both dmag paths are unavailable', () => {
+    const sec = multiplesRow({
+      photometryVia: 'athyg_system_inherited', absmag: 1.45,
+      dmag: null, magPri: 1.25, magSec: 9.5, distPc: 10,
+    });
+    const pri = multiplesRow({ orbitRole: 'primary', absmag: 1.45, distPc: 10 });
+    const out = imputeCompanionAbsmag(sec, pri, SPECTRAL_UNKNOWN);
+    expect(out).toEqual({ absmag: 9.5, source: 'wds_mag' });
+  });
+
+  it('a pair-row primary reads mag_pri, not mag_sec', () => {
+    const row = multiplesRow({
+      orbitRole: 'primary', photometryVia: 'none', absmag: null,
+      magPri: 1.55, magSec: 4.8, distPc: 100,
+    });
+    const out = imputeCompanionAbsmag(row, null, SPECTRAL_UNKNOWN, false);
+    expect(out?.source).toBe('wds_mag');
+    expect(out?.absmag).toBeCloseTo(1.55 - 5, 6);
+  });
+
+  it('wds_mag beats the spectral calibration but loses to dmag imputation', () => {
+    const withDmag = multiplesRow({
+      photometryVia: 'athyg_system_inherited', absmag: 1.45,
+      dmag: 2.0, magSec: 9.5, distPc: 10,
+    });
+    const pri = multiplesRow({ orbitRole: 'primary', absmag: 1.0, distPc: 10 });
+    expect(imputeCompanionAbsmag(withDmag, pri, SPECTRAL_UNKNOWN)?.source)
+      .toBe('dmag_imputed');
+    const noDmag = multiplesRow({
+      photometryVia: 'athyg_system_inherited', absmag: 1.45,
+      dmag: null, magSec: 9.5, distPc: 10,
+      spectVia: 'simbad', spect: 'K0IV',
+    });
+    const spectral = classifyFromSimbad('K0IV')!;
+    expect(imputeCompanionAbsmag(noDmag, pri, spectral)?.source)
+      .toBe('wds_mag');
+  });
+
+  it('anchor-blend own photometry is skipped when flagged (escape with inherited ids)', () => {
+    const row = multiplesRow({
+      orbitRole: 'primary', photometryVia: 'athyg_own', absmag: -3.77,
+      magPri: 1.55, distPc: 100,
+    });
+    const out = imputeCompanionAbsmag(row, null, SPECTRAL_UNKNOWN, false, true);
+    expect(out?.source).toBe('wds_mag');
+    expect(out?.absmag).toBeCloseTo(-3.45, 6);
+    // Without the flag the blend absmag would (wrongly) win as 'own'.
+    expect(imputeCompanionAbsmag(row, null, SPECTRAL_UNKNOWN, false)?.source)
+      .toBe('own');
+  });
+});
+
+describe('anchor flux dimming', () => {
+  const dimRows = (dmag: number | null, magSec: number | null = null) => [
+    multiplesRow({
+      systemId: 'WDS-9-AB', comp: 'A', hip: 7777,
+      x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+      absmag: 1.0, name: 'Blendy', source: 'athyg',
+      photometryVia: 'athyg_own',
+      astrometryVia: 'gaia_5p', orbitRole: 'primary',
+      sepArcsec: 5.0, paDeg: 90.0, dmag, magPri: 1.0, magSec,
+    }),
+    multiplesRow({
+      systemId: 'WDS-9-AB', comp: 'B', hip: 7777,
+      x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+      absmag: 1.0,
+      photometryVia: 'athyg_system_inherited',
+      astrometryVia: 'system_inherited', orbitRole: 'secondary',
+      sepArcsec: 5.0, paDeg: 90.0, dmag, magPri: 1.0, magSec,
+    }),
+  ];
+
+  it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const { newStars, stats } = promoteCompanions(dimRows(2.0), [anchor], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    // M_A = M_bl + 2.5·log10(1 + 10^(−0.4·2)) ≈ 1.15973; M_B = M_A + 2.
+    expect(anchor.absmag).toBeCloseTo(1.15973, 4);
+    expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
+    const flux = (m: number) => Math.pow(10, -0.4 * m);
+    const total = -2.5 * Math.log10(flux(anchor.absmag) + flux(newStars[0].absmag));
+    expect(total).toBeCloseTo(1.0, 6);
+  });
+
+  it('a Δmag=0 twin splits the blend equally (Capella shape, never a gutted anchor)', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const { newStars, stats } = promoteCompanions(dimRows(0.0), [anchor], CONSTELLATIONS);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(stats.blendDimSkipped).toBe(0);
+    const half = 1.0 + 2.5 * Math.log10(2);
+    expect(anchor.absmag).toBeCloseTo(half, 6);
+    expect(newStars[0].absmag).toBeCloseTo(half, 6);
+  });
+
+  it('skips the wds_mag subtraction when the member is as bright as the blend (guard)', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
+    // the blend itself — subtracting it would zero the residual.
+    const { stats } = promoteCompanions(dimRows(null, 1.0), [anchor], CONSTELLATIONS);
+    expect(stats.blendDimSkipped).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(anchor.absmag).toBe(1.0);
+  });
+
+  it('does not dim when the member keeps its own distinct identifier', () => {
+    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = dimRows(2.0);
+    rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(anchor.absmag).toBe(1.0);
   });
 });
 
@@ -699,8 +828,12 @@ describe('promoteCompanions', () => {
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {
     const rows = siriusRows();
+    // The already-in-catalog Sirius B record carries its own gaia and no
+    // HIP (the shared 32349 belongs to A's record — giving it to B would
+    // make B the byHip anchor and reclassify the match as an inherited
+    // blend instead of a distinct existing record).
     const existing = makeStar({
-      gaiaSourceId: '2947050466531873024', hip: 32349, absmag: 11.18,
+      gaiaSourceId: '2947050466531873024', absmag: 11.18,
     });
     const { newStars, stats } = promoteCompanions(rows, [existing, sirius_a_existing], CONSTELLATIONS);
     expect(stats.promoted).toBe(0);
@@ -1507,16 +1640,16 @@ describe('promoteCompanions', () => {
     expect(c?.proper).toBe('Eps Equ C');
   });
 
-  it('drops the unresolved-compound secondary "BC" and projects pair-row "B" off the A,BC sep+PA', () => {
+  it('drops the unresolved-compound secondary "BC" and projects pair-row "B" off its Stage-6 anchor offset', () => {
     // 40 Eri (canonical case). The A,BC group's secondary "BC" is the
     // WDS unresolved-compound; it must NOT promote (otherwise the
     // catalog gets a ghost "Keid BC" record at ~416 AU from A, alongside
     // the resolved "Keid B" and "Keid C" — double-counting the BC
     // aggregate). And the pair-row primary "B" — appearing in BC, BD,
     // BE groups but never as a secondary of A — must NOT collocate at
-    // A; it should land at the A,BC group's projected sep+PA (the only
-    // available proxy for A→B since no AB orbital pair animates B at
-    // runtime).
+    // A; it should land at its Stage-6 anchor_sep/pa offset projected
+    // off the anchor (here the A,BC compound proxy geometry, since no
+    // AB orbital pair animates B at runtime).
     const keid: Star = makeStar({
       gaiaSourceId: '3195919528989223040', hip: 19849,
       absmag: 5.931, proper: 'Keid',
@@ -1565,6 +1698,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'none', spectVia: 'simbad', name: '',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+        anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
       }),
       multiplesRow({
         systemId: '04153-0739-BC', comp: 'C',
@@ -1583,9 +1717,9 @@ describe('promoteCompanions', () => {
     const properNames = newStars.map(s => s.proper).sort();
     expect(properNames).toEqual(['Keid B', 'Keid C']);
     expect(newStars.find(s => s.proper === 'Keid BC')).toBeUndefined();
-    // B's xyz comes from projecting A,BC's 83.2″ / 108° off the anchor —
-    // NOT collocated on Keid (collocation would put B inside A's disc
-    // when no AB orbital pair animates it at runtime).
+    // B's xyz comes from projecting its 83.2″ / 108° anchor offset off
+    // the anchor — NOT collocated on Keid (collocation would put B inside
+    // A's disc when no AB orbital pair animates it at runtime).
     const b = newStars.find(s => s.proper === 'Keid B');
     expect(b).toBeDefined();
     if (!b) return;
@@ -1601,7 +1735,7 @@ describe('promoteCompanions', () => {
 
   it('reuses a freshly-promoted pair-row primary as the anchor for later sub-pair groups', () => {
     // 40 Eri's BD group has B as primary again. By the time we reach
-    // BD, B was promoted in BC (projected off the A,BC compound proxy).
+    // BD, B was promoted in BC (projected off its Stage-6 anchor offset).
     // The BD secondary D must find B via the promoted-record lookup
     // (otherwise D would also need the pair-row-primary escape, which
     // doesn't apply to D since D never appears as a primary).
@@ -1644,6 +1778,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'athyg_own', name: '',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
+        anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
       }),
       multiplesRow({
         systemId: '04153-0739-BC', comp: 'C',
@@ -1662,6 +1797,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'athyg_own', name: '',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
+        anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
       }),
       multiplesRow({
         systemId: '04153-0739-BD', comp: 'D',
@@ -1687,6 +1823,131 @@ describe('promoteCompanions', () => {
     // rather than doubling it — "Keid D", not "Keid B D".
     const d = newStars.find(s => s.gaiaSourceId === '3196027418567684992');
     expect(d?.proper).toBe('Keid D');
+  });
+
+  it('escapes a blended disjoint pair-row primary onto its own synth slot (Acrux B class)', () => {
+    // Acrux: A and B share HIP 60718 (both Gaia-saturated), so the BC
+    // cursor's primary B resolves onto A's record. B is a disjoint
+    // top-level letter — it cannot BE the anchor — and its Stage-6
+    // anchor offset (from the Stage-5-rejected AB row) gives an honest
+    // placement, so it mints as "Acrux B" and the BC pair anchors there.
+    const acrux: Star = makeStar({
+      hip: 60718, absmag: -3.77, proper: 'Acrux',
+      x: 100, y: 0, z: 0,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '12266-6306-AC', comp: 'A', hip: 60718,
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: -3.77, name: 'Acrux', source: 'athyg',
+        astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
+        sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
+      }),
+      multiplesRow({
+        systemId: '12266-6306-AC', comp: 'C',
+        gaiaSourceId: '6053767428923528064',
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: 1.1, ci: 0.1, spect: 'B4V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
+      }),
+      multiplesRow({
+        systemId: '12266-6306-BC', comp: 'B', hip: 60718,
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: -3.77, ci: -0.2, spect: 'B1V',
+        photometryVia: 'athyg_own', spectVia: 'simbad',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
+        anchorSepArcsec: 3.5, anchorPaDeg: 114.0,
+        magPri: 1.55, magSec: 4.8,
+      }),
+      multiplesRow({
+        systemId: '12266-6306-BC', comp: 'C',
+        gaiaSourceId: '6053767428923528064',
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: 1.1, ci: 0.1, spect: 'B4V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [acrux], CONSTELLATIONS);
+    const b = newStars.find(s => s.proper === 'Acrux B');
+    expect(b).toBeDefined();
+    if (!b) return;
+    expect(b.syntheticId).toBe('synth-12266-6306-B');
+    expect(b.hip).toBeNull();  // inherited blend HIP stripped
+    // Placed 3.5″ off A at A's 100 pc — ~350 AU, never collocated.
+    const sepAu = Math.hypot(b.x - acrux.x, b.y - acrux.y, b.z - acrux.z)
+      * 206264.806;
+    expect(sepAu).toBeGreaterThan(300);
+    expect(sepAu).toBeLessThan(400);
+    expect(stats.droppedCollocatedPrimary).toBe(0);
+    // B's row claims athyg_own photometry, but that AT-HYG magnitude was
+    // reached through A's shared HIP — it is the pair's BLEND (−3.77).
+    // The escape takes B's own WDS V=1.55 at the 100 pc system distance
+    // instead: M = 1.55 − 5·log₁₀(10) = −3.45. And A dims by B's flux so
+    // total system light is conserved.
+    expect(b.absmag).toBeCloseTo(-3.45, 6);
+    expect(stats.absmagWdsMagDerived).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    const flux = (m: number) => Math.pow(10, -0.4 * m);
+    expect(
+      -2.5 * Math.log10(flux(acrux.absmag) + flux(b.absmag)),
+    ).toBeCloseTo(-3.77, 2);
+    // C minted once (AC cursor); the BC duplicate dedups.
+    expect(newStars.filter(s => s.proper === 'Acrux C')).toHaveLength(1);
+  });
+
+  it('keeps the blended anchor hit when the disjoint primary has no honest placement', () => {
+    // Same shape, but no Stage-6 anchor offset reaches B: the escape
+    // attempt drops (droppedCollocatedPrimary) and the cursor falls back
+    // to the anchor record, exactly the pre-escape behaviour.
+    const anchor: Star = makeStar({
+      hip: 60718, absmag: -3.77, proper: 'Acrux', x: 100, y: 0, z: 0,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: '12266-6306-AC', comp: 'A', hip: 60718,
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: -3.77, name: 'Acrux', source: 'athyg',
+        astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
+        sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
+      }),
+      multiplesRow({
+        systemId: '12266-6306-BC', comp: 'B', hip: 60718,
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: -3.77, photometryVia: 'athyg_own',
+        astrometryVia: 'system_inherited', orbitRole: 'primary',
+        sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
+      }),
+      multiplesRow({
+        systemId: '12266-6306-BC', comp: 'C',
+        gaiaSourceId: '6053767428923528064',
+        x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+        absmag: 1.1, ci: 0.1, spect: 'B4V',
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
+      }),
+    ];
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(stats.droppedCollocatedPrimary).toBe(1);
+    expect(newStars.find(s => s.proper === 'Acrux B')).toBeUndefined();
+    // C still promotes, anchored on the blend record as before.
+    expect(newStars.find(s => s.proper === 'Acrux C')).toBeDefined();
+  });
+
+  describe('isDisjointSingleLetter', () => {
+    it('true for a sibling letter, false for related tokens', () => {
+      expect(isDisjointSingleLetter('B', 'A')).toBe(true);
+      expect(isDisjointSingleLetter('B', 'Aa')).toBe(true);
+      expect(isDisjointSingleLetter('A', 'A')).toBe(false);
+      expect(isDisjointSingleLetter('B', 'AB')).toBe(false);   // compound-contained
+      expect(isDisjointSingleLetter('Ca', 'A')).toBe(false);   // sub-letter: inner-pair machinery owns it
+      expect(isDisjointSingleLetter('BC', 'A')).toBe(false);   // compound comp never escapes
+    });
   });
 
   it('skips pair-row-primary promotion when the row has no own gaia AND no own hip', () => {
