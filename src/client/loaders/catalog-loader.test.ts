@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { parseBinary, type Constellation } from './catalog-loader';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { loadCatalog, parseBinary, type Constellation } from './catalog-loader';
 import {
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -11,6 +11,7 @@ import {
   RECORD_SIZE,
   MAGIC,
   BINARY_VERSION,
+  catalogChunkFilename,
   planCatalogChunks,
   assembleCatalogChunks,
   type CatalogManifest,
@@ -117,6 +118,31 @@ function nameTableOffsets(names: string[]): number[] {
 }
 
 const blankConstellations: Constellation[] = [];
+
+function sliceByPlan(buf: Uint8Array, chunkBytes: number[]): Uint8Array[] {
+  const chunks: Uint8Array[] = [];
+  let off = 0;
+  for (const n of chunkBytes) {
+    chunks.push(buf.subarray(off, off + n));
+    off += n;
+  }
+  return chunks;
+}
+
+// A Response whose body streams `data` in `reads` slices, so the loader's
+// per-read progress callback fires more than once per chunk.
+function streamedResponse(data: Uint8Array, reads: number): Response {
+  const step = Math.max(1, Math.ceil(data.byteLength / reads));
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (let o = 0; o < data.byteLength; o += step) {
+        controller.enqueue(data.subarray(o, Math.min(o + step, data.byteLength)));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream);
+}
 
 const baseStar: StarRecord = {
   pos: [0, 0, 0],
@@ -362,23 +388,6 @@ describe('catalog-loader / parseBinary', () => {
   });
 
   describe('transport chunking (byte-identical reassembly)', () => {
-    function sliceByPlan(buf: Uint8Array, chunkBytes: number[]): Uint8Array[] {
-      const chunks: Uint8Array[] = [];
-      let off = 0;
-      for (const n of chunkBytes) {
-        chunks.push(buf.subarray(off, off + n));
-        off += n;
-      }
-      return chunks;
-    }
-
-    it('planCatalogChunks splits on the target with a short final chunk', () => {
-      expect(planCatalogChunks(350, 100)).toEqual([100, 100, 100, 50]);
-      expect(planCatalogChunks(200, 100)).toEqual([100, 100]);
-      expect(planCatalogChunks(50, 100)).toEqual([50]);
-      expect(planCatalogChunks(0, 100)).toEqual([0]);
-    });
-
     it('assembles a real v6 catalog buffer byte-identically across chunks', () => {
       const names = ['Sirius', 'Vega', 'Betelgeuse'];
       const offsets = nameTableOffsets(names);
@@ -404,22 +413,101 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.names.get(2)).toBe('Betelgeuse');
       expect(cat.positions[3]).toBeCloseTo(1.5, 5);
     });
+  });
 
-    it('throws on chunk-count mismatch', () => {
-      const manifest: CatalogManifest = { chunkBytes: [4, 4], totalBytes: 8 };
-      expect(() => assembleCatalogChunks([new Uint8Array(4)], manifest)).toThrow(/count mismatch/);
+  describe('loadCatalog (manifest → chunks → assemble over fetch)', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    const MANIFEST_URL = '/assets/catalog-manifest.json';
+    const CON_URL = '/assets/constellations.json';
+
+    function stubFetch(routes: Record<string, () => Response>): void {
+      vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+        const make = routes[url];
+        if (!make) throw new Error(`unexpected fetch: ${url}`);
+        return make();
+      }));
+    }
+
+    function catalogFixture(): { source: Uint8Array; manifest: CatalogManifest } {
+      const names = ['Sirius', 'Vega', 'Betelgeuse'];
+      const offsets = nameTableOffsets(names);
+      const records = names.map((_, i) => ({
+        ...baseStar,
+        pos: [i + 0.5, -i, i * 2] as [number, number, number],
+        flags: FLAG_HAS_NAME,
+        nameOffset: offsets[i],
+      }));
+      const source = new Uint8Array(
+        buildCatalog(records, names.map((n, i) => ({ offset: offsets[i], name: n }))),
+      );
+      const chunkBytes = planCatalogChunks(source.byteLength, 48);
+      return { source, manifest: { chunkBytes, totalBytes: source.byteLength } };
+    }
+
+    function chunkRoutes(source: Uint8Array, manifest: CatalogManifest, reads: number) {
+      const slices = sliceByPlan(source, manifest.chunkBytes);
+      const routes: Record<string, () => Response> = {
+        [MANIFEST_URL]: () => new Response(JSON.stringify(manifest)),
+        [CON_URL]: () => new Response(JSON.stringify(blankConstellations)),
+      };
+      slices.forEach((slice, i) => {
+        routes[`/assets/${catalogChunkFilename(i)}`] = () => streamedResponse(slice, reads);
+      });
+      return routes;
+    }
+
+    it('fetches sibling chunks by manifest and parses the reassembled catalog', async () => {
+      const { source, manifest } = catalogFixture();
+      expect(manifest.chunkBytes.length).toBeGreaterThan(1);
+      stubFetch(chunkRoutes(source, manifest, 1));
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      expect(cat.count).toBe(3);
+      expect(cat.names.get(2)).toBe('Betelgeuse');
     });
 
-    it('throws on chunk-length mismatch', () => {
-      const manifest: CatalogManifest = { chunkBytes: [4, 4], totalBytes: 8 };
-      expect(() =>
-        assembleCatalogChunks([new Uint8Array(4), new Uint8Array(3)], manifest),
-      ).toThrow(/chunk 1 length mismatch/);
+    it('reports monotonic progress across chunks up to the manifest total', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 3));
+
+      const seen: number[] = [];
+      await loadCatalog(MANIFEST_URL, CON_URL, ({ bytes, total }) => {
+        expect(total).toBe(manifest.totalBytes);
+        seen.push(bytes);
+      });
+
+      // > chunk count proves mid-chunk reporting, not one jump per file.
+      expect(seen.length).toBeGreaterThan(manifest.chunkBytes.length);
+      for (let i = 1; i < seen.length; i++) expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
+      expect(seen[seen.length - 1]).toBe(manifest.totalBytes);
     });
 
-    it('throws on total-bytes mismatch', () => {
-      const manifest: CatalogManifest = { chunkBytes: [4], totalBytes: 8 };
-      expect(() => assembleCatalogChunks([new Uint8Array(4)], manifest)).toThrow(/size mismatch/);
+    it('rejects when the manifest fetch fails', async () => {
+      stubFetch({
+        [MANIFEST_URL]: () => new Response(null, { status: 404 }),
+        [CON_URL]: () => new Response(JSON.stringify(blankConstellations)),
+      });
+      await expect(loadCatalog(MANIFEST_URL, CON_URL)).rejects.toThrow(/manifest\.json: 404/);
+    });
+
+    it('rejects when a chunk fetch fails', async () => {
+      const { source, manifest } = catalogFixture();
+      const routes = chunkRoutes(source, manifest, 1);
+      routes[`/assets/${catalogChunkFilename(0)}`] = () => new Response(null, { status: 500 });
+      stubFetch(routes);
+      await expect(loadCatalog(MANIFEST_URL, CON_URL)).rejects.toThrow(/500/);
+    });
+
+    it('rejects a truncated chunk instead of zero-padding it', async () => {
+      const { source, manifest } = catalogFixture();
+      const routes = chunkRoutes(source, manifest, 1);
+      const short = source.subarray(0, manifest.chunkBytes[0] - 1);
+      routes[`/assets/${catalogChunkFilename(0)}`] = () => streamedResponse(short, 1);
+      stubFetch(routes);
+      await expect(
+        loadCatalog(MANIFEST_URL, CON_URL, () => {}),
+      ).rejects.toThrow(/short read/);
     });
   });
 

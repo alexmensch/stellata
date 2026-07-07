@@ -154,11 +154,11 @@ function isUpToDate(): boolean {
   );
 }
 
-// Clear a prior build's monolith + chunk set so a shrunk chunk count
-// can't strand stale higher-index chunks the manifest no longer lists.
+// Clear a prior build's chunk set so a shrunk chunk count can't strand stale
+// higher-index chunks the manifest no longer lists.
 async function removeStaleCatalogChunks(dir: string): Promise<void> {
   for (const name of await readdir(dir)) {
-    if (name === 'catalog.bin' || /^catalog\.bin\.\d+$/.test(name)) {
+    if (/^catalog\.bin\.\d+$/.test(name)) {
       await unlink(resolve(dir, name));
     }
   }

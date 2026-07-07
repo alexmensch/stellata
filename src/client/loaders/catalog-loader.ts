@@ -69,7 +69,7 @@ export interface Catalog {
 
 export interface LoadProgress {
   bytes: number;
-  total: number | null;
+  total: number;
 }
 
 export async function loadCatalog(
@@ -97,19 +97,47 @@ async function fetchCatalogChunks(
   // from the shared `catalogChunkFilename` so client + writer agree.
   const dirUrl = manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
   let loaded = 0;
+  const report = onProgress
+    ? (delta: number) => {
+        loaded += delta;
+        onProgress({ bytes: loaded, total: manifest.totalBytes });
+      }
+    : undefined;
   const chunks = await Promise.all(
-    manifest.chunkBytes.map(async (_, i) => {
-      const url = dirUrl + catalogChunkFilename(i);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
-      const buf = new Uint8Array(await res.arrayBuffer());
-      loaded += buf.byteLength;
-      onProgress?.({ bytes: loaded, total: manifest.totalBytes });
-      return buf;
-    }),
+    manifest.chunkBytes.map((byteLength, i) =>
+      fetchCatalogChunk(dirUrl + catalogChunkFilename(i), byteLength, report),
+    ),
   );
 
   return assembleCatalogChunks(chunks, manifest);
+}
+
+async function fetchCatalogChunk(
+  url: string,
+  byteLength: number,
+  onBytes?: (delta: number) => void,
+): Promise<Uint8Array> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+  if (!res.body || !onBytes) return new Uint8Array(await res.arrayBuffer());
+
+  // Stream so the loading bar advances mid-chunk, not once per finished file.
+  // out is pre-sized from the manifest, so a truncated response would silently
+  // zero-pad and pass assembly's length check — the short-read guard rejects it.
+  const out = new Uint8Array(byteLength);
+  const reader = res.body.getReader();
+  let off = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    out.set(value, off);
+    off += value.byteLength;
+    onBytes(value.byteLength);
+  }
+  if (off !== byteLength) {
+    throw new Error(`Catalog chunk short read at ${url}: got ${off}, expected ${byteLength}`);
+  }
+  return out;
 }
 
 export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): Catalog {

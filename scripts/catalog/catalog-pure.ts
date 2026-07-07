@@ -581,16 +581,9 @@ export const NO_GAIA_SOURCE_ID = 0n;
 // Consumers test with `Number.isNaN(x)`.
 export const NO_APSIS = NaN;
 
-// ---- On-disk transport chunking --------------------------------------
-//
-// Cloudflare Workers rejects any single static asset > 25 MiB, so the
-// assembled buffer ships as sequential byte-range chunks named by
-// `catalogChunkFilename` plus a manifest, NOT as one file. The split is
-// transport-only: the v6 record layout above is untouched, and
-// `assembleCatalogChunks` reproduces the source buffer byte-for-byte.
-// Writer (build-catalog), client loader (catalog-loader), and Node reader
-// (catalog-lookup) all round-trip through the two helpers below so the
-// reassembly contract is defined once.
+// On-disk transport chunking — the single reassembly contract shared by the
+// writer, client loader, and Node reader. See scripts/catalog/README.md
+// § On-disk transport chunking.
 
 export const CATALOG_MANIFEST_FILENAME = 'catalog-manifest.json';
 
