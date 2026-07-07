@@ -1,8 +1,13 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, it, expect } from 'vitest';
 
 import {
   applyVariability,
   bridgeGcvsByGaia,
+  parseGcvsMain,
   type VarStarData,
   type VarStarXref,
 } from './gcvs-parse';
@@ -13,6 +18,48 @@ const GCVS: Map<string, VarStarData> = new Map([
   ['S Aql', { periodDays: 146.5, amplitudeMag: 3.6, varType: 1 }],
   ['T Vul', { periodDays: 4.4, amplitudeMag: 0.5, varType: 1 }],
 ]);
+
+function writeGcvsMain(lines: string[]): string {
+  const dir = mkdtempSync(join(tmpdir(), 'gcvs-'));
+  const path = join(dir, 'gcvs5.txt');
+  writeFileSync(path, lines.join('\n') + '\n');
+  return path;
+}
+
+describe('gcvs-parse / parseGcvsMain amplitude notation', () => {
+  it('reads a parenthesised min-mag cell as the full amplitude', () => {
+    // β Cen shape: "( 0.045 )" means amplitude 0.045, min unknown —
+    // NOT a minimum magnitude of 0.045.
+    const path = writeGcvsMain([
+      '199002 |bet   Cen *|140349.40 -602222.9 |BCEP      |  0.61   |(  0.045   )|            |V |            |     |     0.300          |     |B1III',
+    ]);
+    const out = parseGcvsMain(path);
+    expect(out.get('bet Cen')).toEqual({
+      periodDays: 0.3,
+      amplitudeMag: 0.045,
+      varType: 1,
+    });
+  });
+
+  it('keeps computing amp = min - max for normal min-mag rows', () => {
+    const path = writeGcvsMain([
+      '860001 |R     Vir *|123829.94 +065919.0 |M         |  6.1    |  12.1      |            |V |45872.      |     |   145.63           |50   |M3.5IIIe-M8.5e',
+    ]);
+    const out = parseGcvsMain(path);
+    expect(out.get('R Vir')).toEqual({
+      periodDays: 145.63,
+      amplitudeMag: 6.0,
+      varType: 1,
+    });
+  });
+
+  it('still drops a parenthesised row without a period', () => {
+    const path = writeGcvsMain([
+      '059001 |alf   Aql *|195047.00 +085206.0 |DSCTC     |  0.77   |(  0.004 * )|            |V |            |     |                    |     |',
+    ]);
+    expect(parseGcvsMain(path).size).toBe(0);
+  });
+});
 
 describe('gcvs-parse / bridgeGcvsByGaia', () => {
   it('promotes every byHip xref onto gaia_source_id when the walk knows the HIP', () => {

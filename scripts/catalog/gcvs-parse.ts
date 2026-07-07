@@ -59,14 +59,22 @@ export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
     // A bare transiting-planet host is neither an intrinsic variable nor
     // a stellar multiple — drop it so it renders as an ordinary star.
     if (isPlanetaryTransitOnly(fields[GCVS_MAIN_COL_TYPE])) continue;
+    const minMagRaw = (fields[GCVS_MAIN_COL_MIN_MAG] ?? '').trim();
     const maxMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MAX_MAG] ?? '');
-    const minMag = parseGcvsNumber(fields[GCVS_MAIN_COL_MIN_MAG] ?? '');
+    const minMag = parseGcvsNumber(minMagRaw);
     const periodDays = parseGcvsNumber(fields[GCVS_MAIN_COL_PERIOD] ?? '');
     const varType = classifyGcvsVarType(fields[GCVS_MAIN_COL_TYPE]);
     if (periodDays === null || periodDays <= 0) continue;
-    if (maxMag === null || minMag === null) continue;
-    const amp = minMag - maxMag; // min is dimmer (higher number) than max
-    if (amp <= 0) continue;
+    // A parenthesised min-mag cell is GCVS amplitude notation: the
+    // bracketed value IS the full amplitude (minimum unknown), not a
+    // minimum magnitude — subtracting max would go negative and drop
+    // the row (β Cen: 0.045 − 0.61).
+    const amp = minMagRaw.startsWith('(')
+      ? minMag
+      : maxMag !== null && minMag !== null
+        ? minMag - maxMag // min is dimmer (higher number) than max
+        : null;
+    if (amp === null || amp <= 0) continue;
     out.set(name, { periodDays, amplitudeMag: amp, varType });
   }
   return out;
