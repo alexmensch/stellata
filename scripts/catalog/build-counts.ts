@@ -26,6 +26,10 @@ export interface BuildCounts {
   gcvsMatchedByHip: number;
   /** gcvsMatched component resolved via xref.byHd (HD fallback). */
   gcvsMatchedByHd: number;
+  /** Stars given a searchable GCVS designation (`gcvsName`) — superset of
+   *  gcvsMatched: aperiodic variables (flare/RCB/irregular/nova) are named
+   *  for search but carry no renderable period. */
+  gcvsNamed: number;
   /** Total CCDM systems in the source TSV. */
   ccdmGroups: number;
   /** CCDM systems resolved against catalog records. */

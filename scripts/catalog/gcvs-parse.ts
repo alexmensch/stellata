@@ -132,6 +132,11 @@ export interface ApplyVariabilityResult {
   matchedByGaia: number;
   matchedByHip: number;
   matchedByHd: number;
+  /** Stars that resolved a GCVS designation (attached as `gcvsName` for
+   *  search), a superset of `matched`: a variable with no renderable
+   *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
+   *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
+  named: number;
 }
 
 // Cross-match each star against GCVS via gaia_source_id (first; bridged
@@ -139,6 +144,11 @@ export interface ApplyVariabilityResult {
 // gaia-first priority lets AT-HYG rows that carry a gaia_source_id
 // but have an empty HIP cell still resolve through xref.byGaia, where
 // the HIP-only path would miss them.
+//
+// The resolved designation is attached as `gcvsName` (search) whenever a
+// name resolves; period / amplitude / varType (rendering) apply only when
+// the GCVS main table also gave that name a period — the two gates are
+// independent, so aperiodic variables stay findable by name.
 export function applyVariability(
   stars: Star[],
   gcvsData: Map<string, VarStarData>,
@@ -147,6 +157,7 @@ export function applyVariability(
   let matchedByGaia = 0;
   let matchedByHip = 0;
   let matchedByHd = 0;
+  let named = 0;
   for (const s of stars) {
     let gcvsName: string | undefined;
     let source: 'gaia' | 'hip' | 'hd' | null = null;
@@ -163,6 +174,8 @@ export function applyVariability(
       if (gcvsName) source = 'hd';
     }
     if (!gcvsName || !source) continue;
+    s.gcvsName = gcvsName;
+    named++;
     const data = gcvsData.get(gcvsName);
     if (!data) continue;
     s.periodDays = data.periodDays;
@@ -177,5 +190,6 @@ export function applyVariability(
     matchedByGaia,
     matchedByHip,
     matchedByHd,
+    named,
   };
 }

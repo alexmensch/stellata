@@ -27,6 +27,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     periodDays: 0,
     amplitudeMag: 0,
     varType: 0,
+    gcvsName: null,
     athygDist: null,
     athygDistSrc: null,
     syntheticId: null,

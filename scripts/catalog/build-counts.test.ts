@@ -18,6 +18,7 @@ function baseCounts(): BuildCounts {
     gcvsMatchedByGaia: 3500,
     gcvsMatchedByHip: 100,
     gcvsMatchedByHd: 77,
+    gcvsNamed: 12000,
     ccdmGroups: 4000,
     ccdmResolved: 3500,
     ccdmFlagged: 200,

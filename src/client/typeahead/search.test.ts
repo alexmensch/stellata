@@ -8,6 +8,8 @@ import {
   buildSpectralMap,
   buildSearchIndex,
   buildStarLabels,
+  formatGcvsDesignation,
+  buildGcvsLabels,
   type SearchEntry,
 } from './search';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
@@ -220,11 +222,64 @@ describe('search / buildSpectralMap', () => {
   });
 });
 
+describe('search / formatGcvsDesignation', () => {
+  it('strips the V-number zero-padding GCVS stores', () => {
+    expect(formatGcvsDesignation('V0645 Cen')).toBe('V645 Cen');
+    expect(formatGcvsDesignation('V1500 Cyg')).toBe('V1500 Cyg');
+    expect(formatGcvsDesignation('V0404 Cyg')).toBe('V404 Cyg');
+  });
+
+  it('leaves letter-sequence names untouched', () => {
+    expect(formatGcvsDesignation('R CrB')).toBe('R CrB');
+    expect(formatGcvsDesignation('VY CMa')).toBe('VY CMa');
+    expect(formatGcvsDesignation('RR Lyr')).toBe('RR Lyr');
+  });
+});
+
+describe('search / buildGcvsLabels', () => {
+  it('emits the abbreviated form plus a con-name-expanded variant', () => {
+    expect(buildGcvsLabels('V0645 Cen', 'Centauri')).toEqual([
+      'V645 Cen',
+      'V645 Centauri',
+    ]);
+    expect(buildGcvsLabels('VY CMa', 'Canis Majoris')).toEqual([
+      'VY CMa',
+      'VY Canis Majoris',
+    ]);
+  });
+
+  it('emits only the abbreviated form when no constellation name is known', () => {
+    expect(buildGcvsLabels('R CrB', '')).toEqual(['R CrB']);
+  });
+});
+
 describe('search / buildSearchIndex', () => {
   const CONS = [
     { code: 'Cyg', name: 'Cygni' },
     { code: 'Ori', name: 'Orionis' },
+    { code: 'CMa', name: 'Canis Majoris' },
   ];
+
+  it('emits fuzzy GCVS labels, taking the designation as primary when unnamed', () => {
+    // VY CMa carries no proper/Bayer/Flamsteed — its display + fuzzy labels
+    // come from the GCVS designation alone.
+    const raw: SearchEntry[] = [{ i: 7, g: 'VY CMa', c: 2 }];
+    const { fuzzyEntries } = buildSearchIndex(raw, CONS);
+    const entries = fuzzyEntries.filter((e) => e.index === 7);
+    expect(entries.map((e) => e.label).sort()).toEqual([
+      'VY CMa',
+      'VY Canis Majoris',
+    ]);
+    expect(new Set(entries.map((e) => e.primary))).toEqual(new Set(['VY CMa']));
+  });
+
+  it('keeps the proper-name primary when a GCVS variable is also named', () => {
+    const raw: SearchEntry[] = [{ i: 8, p: 'Betelgeuse', g: 'alf Ori', c: 1 }];
+    const { fuzzyEntries } = buildSearchIndex(raw, CONS);
+    const gcvs = fuzzyEntries.filter((e) => e.index === 8 && e.label.startsWith('alf'));
+    expect(gcvs.length).toBeGreaterThan(0);
+    expect(new Set(gcvs.map((e) => e.primary))).toEqual(new Set(['Betelgeuse']));
+  });
 
   it('indexes every component of a Flamsteed multiple under one key', () => {
     // 61 Cyg A + B share flam=61, con=Cyg. The map must hold both, so an
@@ -274,6 +329,20 @@ describe('search / buildSearchIndex', () => {
     expect(hrMap.get(7001)).toBe(0);
     expect(glMap.get('559a')).toBe(1);
   });
+
+  it('normalizes any Gl/GJ/Gliese prefix to the same lookup key', () => {
+    // AT-HYG stores "Gl 551", but "GJ 551" / "Gliese 551" must resolve the
+    // same star — the prefix is stripped so all three land on key "551".
+    const raw: SearchEntry[] = [
+      { i: 0, gl: 'Gl 551' },
+      { i: 1, gl: 'GJ 9581' },
+      { i: 2, gl: 'Gliese 411' },
+    ];
+    const { glMap } = buildSearchIndex(raw, CONS);
+    expect(glMap.get('551')).toBe(0);
+    expect(glMap.get('9581')).toBe(1);
+    expect(glMap.get('411')).toBe(2);
+  });
 });
 
 describe('search / buildStarLabels', () => {
@@ -297,5 +366,13 @@ describe('search / buildStarLabels', () => {
     const labels = buildStarLabels(makeEmptyCatalog(2), raw);
     expect(labels.get(0)).toBe('Gl 195A');
     expect(labels.get(1)).toBe('GJ 9581');
+  });
+
+  it('labels an otherwise-anonymous variable by its GCVS designation, ranked below HIP', () => {
+    // VY CMa has only HIP/HD in AT-HYG; without the GCVS tier it would read
+    // "HIP 35793". The designation is the recognisable name, so it wins.
+    const raw: SearchEntry[] = [{ i: 0, g: 'V0645 Cen', hip: 70890 }];
+    const labels = buildStarLabels(makeEmptyCatalog(1), raw);
+    expect(labels.get(0)).toBe('V645 Cen');
   });
 });

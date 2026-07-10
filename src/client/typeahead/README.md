@@ -21,6 +21,13 @@ ranking never diverges between them. The find picker differs only in its
 and its widget is relocated into the shared `#kb-modal` card by the
 keyboard-shortcut handler (see `../ui/README.md` § Keyboard shortcuts).
 
+GCVS variable-star designations (`g` field: `R CrB`, `VY CMa`, `V645 Cen`)
+are Fuse-fuzzy like Bayer/proper names — `buildGcvsLabels` emits both the
+abbreviated and con-name-expanded forms, and `formatGcvsDesignation`
+strips the V-number zero-padding GCVS stores (`V0645` → `V645`). A
+variable with no proper/Bayer/Flamsteed name (VY CMa, RR Lyr) takes its
+GCVS designation as its display label via `buildStarLabels`.
+
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
 The numeric-ID maps are 1:1 and echo the matched identifier in the
