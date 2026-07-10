@@ -111,10 +111,6 @@ export interface BuildCounts {
    *  population the downstream Tier 2 colour-LUT re-routing can use as
    *  Apsis-direct Teff. Pinned against the 84.8% probe figure. */
   apsisTeffEither: number;
-  /** Records resolving to a nonzero frozen Stellata ID from the committed
-   *  ledger (docs/sid.md § 7). Equals the record count on a clean build —
-   *  any shortfall hard-fails with instructions to run sid:allocate. */
-  sidResolved: number;
   /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
   simbadSptypeEntries: number;
   /** Records classified via the curated HIP→sp_type override tier

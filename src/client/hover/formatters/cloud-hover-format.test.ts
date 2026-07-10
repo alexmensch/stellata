@@ -21,6 +21,7 @@ function cloud(
   return {
     name,
     id: name.toLowerCase().replace(/\s+/g, '-'),
+    sid: 1,
     centerAbs: new THREE.Vector3(0, 0, 0),
     axes,
     quat: new THREE.Quaternion(0, 0, 0, 1),

@@ -199,8 +199,9 @@ chart ink so the HUD reads as a separate navigational layer, ~7:1
 contrast against the beige paper background. See `.poi-arrow`,
 `.poi-label`, `.poi-arrow-label`, and `.poi-ring` in `styles.css`.
 
-POIs survive page reloads via the `?v=` blob (HIP-only encoding,
-observe-only emission). Cleared automatically on every observe→navigate
+POIs survive page reloads via the `?v=` blob (encoded as frozen
+Stellata IDs, observe-only emission — see
+`../util/url-state/README.md`). Cleared automatically on every observe→navigate
 transition; no UI element exposes "clear all" because Esc already
 exits observe and clears them as a side-effect.
 

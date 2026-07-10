@@ -625,29 +625,34 @@ export function allocate(input: AllocateInput): AllocateResult {
 }
 
 export interface SidResolution {
-  /** Per input object, its resolved ledger sid (0 = unresolved). */
+  /** Per input object, its resolved ledger sid — 0 (NO_SID) whenever the
+   *  object is unresolved (keyless, would-mint, or a merge/kind conflict). */
   objectSids: number[];
   /** Non-empty iff any object is unallocated / keyless / conflicting. The
    *  caller must run `npm run sid:allocate` to reconcile before shipping. */
   errors: string[];
 }
 
+/** resolveSids resolves against the frozen ledger without minting, so it
+ *  needs everything allocate does except the mint date. */
+export type ResolveInput = Omit<AllocateInput, 'today'>;
+
 /** Read-only allocation: resolve every object to its EXISTING ledger sid,
  *  treating any object that would mint a new row (or is keyless / conflicts)
- *  as an error. This is the resolver the artifact emitters use — the build
- *  never mints; `sid:allocate` is the sole ledger writer (docs/sid.md
- *  § 4.4). */
-export function resolveSids(input: AllocateInput): SidResolution {
-  const result = allocate(input);
+ *  as an error and leaving its sid at 0 (NO_SID). This is the resolver the
+ *  artifact emitters use — the build never mints; `sid:allocate` is the sole
+ *  ledger writer (docs/sid.md § 4.4). */
+export function resolveSids(input: ResolveInput): SidResolution {
+  const result = allocate({ ...input, today: '' });
   const mintedSids = new Set(result.minted.map((r) => r.sid));
   const errors = [...result.errors];
   for (const i of result.keyless) {
     errors.push(`${input.objects[i].label}: no usable designation (keyless)`);
   }
   input.objects.forEach((obj, i) => {
-    const sid = result.objectSids[i];
-    if (sid !== 0 && mintedSids.has(sid)) {
+    if (mintedSids.has(result.objectSids[i])) {
       errors.push(`${obj.label}: unallocated (${obj.designations.join(', ')})`);
+      result.objectSids[i] = 0;
     }
   });
   return { objectSids: result.objectSids, errors };

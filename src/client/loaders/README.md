@@ -22,9 +22,14 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          `../binaries/README.md` § Eclipse photometry).
                          Exposes `velocities: Float32Array` (count×3,
                          pc/yr) alongside `positions`; the epoch-advance
-                         pass below consumes it.
+                         pass below consumes it. Exposes `sid: Uint32Array`
+                         (frozen Stellata IDs, docs/sid.md § 7) — the star
+                         domain of the SID resolver
+                         (`../util/sid-resolver/README.md`) and the v4 URL
+                         wire both key off it.
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
-                         source_id handling + the v8 velocity columns.
+                         source_id handling + the v8 velocity columns +
+                         the v7 sid column.
 epoch-advance-pure.ts    load-time space-motion propagation:
                          `advancePositionsToEpoch(positions, velocities,
                          epochJyr)` rewrites catalog.positions in place to

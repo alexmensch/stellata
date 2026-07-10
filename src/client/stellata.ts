@@ -230,6 +230,11 @@ export let MAG_PRESETS: Record<MagPresetName, MagPreset> = computeMagPresets();
 // reset button snaps back to this value.
 export const DEFAULT_FOV = 50;
 
+// OBSERVE-mode POI cap. Bounds both the in-app pin list (togglePoi /
+// setPois) and the `?v=` blob's POI payload — one constant so the two
+// can't drift apart.
+export const POI_MAX_COUNT = 16;
+
 export type CameraMode = 'navigate' | 'observe';
 
 type Target = { kind: 'star'; idx: number } | { kind: 'cloud'; idx: number };
@@ -380,10 +385,10 @@ export class Stellata implements FrameAnchor {
 
   // OBSERVE-mode "points of interest". Single-click on a star pins it.
   // Cleared on every observe → navigate transition (registered in the
-  // constructor). Hard-capped at POI_HARD_CAP — adding past the cap is
-  // a no-op so the cap also bounds the URL blob (poi serialisation in
-  // url-state.ts is HIP-only). Insertion-ordered (Array, not Set) so
-  // round-trips through URL state preserve the user's pin order.
+  // constructor). Hard-capped at POI_MAX_COUNT — adding past the cap is
+  // a no-op so the cap also bounds the URL blob. Insertion-ordered
+  // (Array, not Set) so round-trips through URL state preserve the
+  // user's pin order.
   private pois: number[] = [];
   // Pending single-click in OBSERVE mode. Held for OBSERVE_DBL_CLICK_MS
   // so we can disambiguate single (pin a star) from double (slerp the
@@ -392,7 +397,6 @@ export class Stellata implements FrameAnchor {
   private observePendingClick: { x: number; y: number; timer: number } | null = null;
   private static OBSERVE_DBL_CLICK_MS = 280;
   private static OBSERVE_DBL_CLICK_DIST_PX_SQ = 8 * 8;
-  private static POI_HARD_CAP = 16;
 
   // Galactic reference layers. Disc fades in by camera-distance
   // from Sol and is always-on. Grid is gated by `filter.showGalacticGrid`.
@@ -1035,10 +1039,11 @@ export class Stellata implements FrameAnchor {
   /**
    * Toggle a POI for the given catalog index.
    *   - Sol is rejected (already represented by the dedicated #sol-arrow).
-   *   - Stars without a Hipparcos ID are rejected (URL state is HIP-only,
-   *     so they couldn't survive a reload anyway).
-   *   - Adding past POI_HARD_CAP is a no-op (caps the URL blob; user can
-   *     unpin first).
+   *   - Stars without a SID are rejected (URL state persists POIs by
+   *     SID, so they couldn't survive a reload; never occurs on a
+   *     shipped catalog — every record carries one).
+   *   - Adding past POI_MAX_COUNT is a no-op (caps the URL blob; user
+   *     can unpin first).
    */
   togglePoi(idx: number) {
     if (idx < 0 || idx >= this.catalog.count) return;
@@ -1046,8 +1051,8 @@ export class Stellata implements FrameAnchor {
       console.info('[POI] Sol is excluded (already shown via #sol-arrow).');
       return;
     }
-    if (this.catalog.hip[idx] === 0) {
-      console.info('[POI] cannot pin a star without a Hipparcos ID.');
+    if (this.catalog.sid[idx] === 0) {
+      console.info('[POI] cannot pin a star without a SID.');
       return;
     }
     const existing = this.pois.indexOf(idx);
@@ -1057,8 +1062,8 @@ export class Stellata implements FrameAnchor {
       this.bus.emit('state');
       return;
     }
-    if (this.pois.length >= Stellata.POI_HARD_CAP) {
-      console.info(`[POI] cap reached (${Stellata.POI_HARD_CAP}); unpin one first.`);
+    if (this.pois.length >= POI_MAX_COUNT) {
+      console.info(`[POI] cap reached (${POI_MAX_COUNT}); unpin one first.`);
       return;
     }
     this.pois.push(idx);
@@ -1068,15 +1073,15 @@ export class Stellata implements FrameAnchor {
 
   /**
    * Replace the current POI list. Used by URL state restore — the
-   * incoming list is already validated (HIPs that resolved in idMaps).
+   * incoming list is already validated (SIDs the resolver claimed).
    */
   setPois(idxs: readonly number[]) {
     const next: number[] = [];
     for (const idx of idxs) {
-      if (next.length >= Stellata.POI_HARD_CAP) break;
+      if (next.length >= POI_MAX_COUNT) break;
       if (idx < 0 || idx >= this.catalog.count) continue;
       if (idx === this.catalog.solIndex) continue;
-      if (this.catalog.hip[idx] === 0) continue;
+      if (this.catalog.sid[idx] === 0) continue;
       if (next.indexOf(idx) >= 0) continue;
       next.push(idx);
     }

@@ -397,11 +397,15 @@ In-record, not a runtime sidecar:
 
 One global resolver built at boot from whatever artifacts attach:
 
-- A **domain** is `{ kind, resolve(sid) → localIndex | null }`,
-  registered when its artifact attaches: stars at catalog load,
-  planets from `SOL_OBJECT_SIDS` at boot, Local Group when its async
-  fetch lands, clouds inside `attachClouds` (currently shelved — may
-  never attach).
+- A **domain** is `{ kind, localIndexOf(sid) → localIndex | null }`
+  (plus a reverse `sidOf` for the encoder), declared in a fixed roster
+  at resolver construction and then either **attached** when its
+  artifact lands or **concluded** absent when it never will: stars
+  over `catalog.sid` at catalog load, planets from `SOL_OBJECT_SIDS`
+  at boot, Local Group when its fetch resolves (concluded when the
+  artifact is missing), clouds concluded at boot while the layer is
+  shelved — re-enabling `attachClouds` must attach the domain
+  (`src/client/util/sid-resolver/README.md`).
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
   registered-but-unattached domain remains, or `unknown` once all
   attached domains have disclaimed it.
@@ -453,12 +457,13 @@ decoder).
 
 ### 9.3 Freeze before change
 
-`FIELDS_V2` and `FIELDS_V3` are currently both derived from the
-shared `buildFields` factory. B5 step 1 — before any v4 edit —
-snapshots both into standalone frozen literal arrays and commits a
-golden-blob corpus (real v1/v2/v3 `?v=` blobs with their expected
-decoded fields) to `url-state.test.ts`, so v4 work provably cannot
-alter legacy decoding.
+`FIELDS_V2` and `FIELDS_V3` were both derived from a shared
+`buildFields` factory, so a ref-shape edit for v4 would have silently
+corrupted both legacy decoders. B5 step 1 — landed before any v4
+edit — snapshotted every legacy table into standalone frozen literal
+arrays and committed a golden-blob corpus (real v1/v2/v3 `?v=` blobs
+with their expected decoded fields) to `url-state.test.ts`, so v4
+work provably cannot alter legacy decoding.
 
 ### 9.4 Migration semantics — exact table
 

@@ -32,6 +32,7 @@ interface StarRecord {
   amplitudeRaw: number;    // uint8 (×0.05 to get magnitudes)
   periodRaw: number;       // uint16 (×0.1 to get days)
   hip: number;             // 0 = none
+  sid: number;             // 0 = NO_SID (unallocated)
 }
 
 // Build a synthetic catalog buffer matching the v4 format. Tests construct
@@ -86,6 +87,7 @@ function buildCatalog(
     dv.setUint8(off + RECORD_LAYOUT.ampUnits, r.amplitudeRaw);
     dv.setUint16(off + RECORD_LAYOUT.period, r.periodRaw, true);
     dv.setUint32(off + RECORD_LAYOUT.hip, r.hip, true);
+    dv.setUint32(off + RECORD_LAYOUT.sid, r.sid, true);
   });
 
   // Name table (after records)
@@ -163,6 +165,7 @@ const baseStar: StarRecord = {
   amplitudeRaw: 0,
   periodRaw: 0,
   hip: 0,
+  sid: 0,
 };
 
 describe('catalog-loader / parseBinary', () => {
@@ -247,6 +250,18 @@ describe('catalog-loader / parseBinary', () => {
     it('parses HIP=0 as no-HIP star', () => {
       const cat = parseBinary(buildCatalog([{ ...baseStar, hip: 0 }]), blankConstellations);
       expect(cat.hip[0]).toBe(0);
+    });
+
+    it('parses the v7 sid column', () => {
+      const cat = parseBinary(
+        buildCatalog([
+          { ...baseStar, sid: 306055 },
+          { ...baseStar, sid: 1 },
+        ]),
+        blankConstellations,
+      );
+      expect(cat.sid[0]).toBe(306055);
+      expect(cat.sid[1]).toBe(1);
     });
   });
 
@@ -553,6 +568,7 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.periodDays.length).toBe(7);
       expect(cat.amplitudeMag.length).toBe(7);
       expect(cat.hip.length).toBe(7);
+      expect(cat.sid.length).toBe(7);
     });
   });
 });

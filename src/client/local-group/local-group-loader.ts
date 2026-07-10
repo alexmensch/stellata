@@ -1,11 +1,15 @@
 import * as THREE from 'three';
 
+import { sidColumnError } from '../util/sid-resolver';
+
 export type LgKind = 'disc' | 'ellipsoid';
 export type LgSource = 'LVDB' | 'OVERRIDE';
 
 export interface LgObject {
   name: string;
   id: string;
+  /** Frozen Stellata ID (docs/sid.md § 7), stamped by the build. */
+  sid: number;
   /** Absolute ICRS heliocentric position, parsecs. */
   centerAbs: THREE.Vector3;
   kind: LgKind;
@@ -40,6 +44,7 @@ export function minSemiAxisPc(obj: Pick<LgObject, 'axes'>): number {
 interface RawObject {
   name: string;
   id: string;
+  sid: number;
   center: [number, number, number];
   kind: LgKind;
   axes: [number, number, number];
@@ -74,9 +79,15 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
     console.warn(`local-group.json version ${raw.version} unsupported`);
     return null;
   }
+  const sidErr = sidColumnError(raw.objects.map((o) => o.sid));
+  if (sidErr) {
+    console.warn(`local-group.json ${sidErr} — rebuild with \`npm run build:local-group\``);
+    return null;
+  }
   const objects: LgObject[] = raw.objects.map((o) => ({
     name: o.name,
     id: o.id,
+    sid: o.sid,
     centerAbs: new THREE.Vector3(o.center[0], o.center[1], o.center[2]),
     kind: o.kind,
     axes: [o.axes[0], o.axes[1], o.axes[2]],

@@ -6,62 +6,35 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { resolveSids, type SidKind, type SidObject } from './sid-pure';
+import { resolveSids } from './sid-pure';
 import { loadRegistry } from './registry-io';
+import {
+  SIBLING_ARTIFACTS,
+  siblingArtifactObjects,
+  type SiblingArtifactSpec,
+  type SiblingItem,
+} from './sibling-artifacts';
 
-interface ArtifactSpec {
-  /** public/ filename. */
-  file: string;
-  /** Top-level array property holding the objects. */
-  arrayKey: string;
-  /** Designation namespace the ledger keys these objects on (docs/sid.md § 3). */
-  ns: string;
-  kind: SidKind;
-  buildHint: string;
-}
-
-const ARTIFACTS: Record<string, ArtifactSpec> = {
-  clouds: {
-    file: 'clouds.json',
-    arrayKey: 'clouds',
-    ns: 'cloud',
-    kind: 'cloud',
-    buildHint: 'npm run build:clouds',
-  },
-  'local-group': {
-    file: 'local-group.json',
-    arrayKey: 'objects',
-    ns: 'lg',
-    kind: 'galaxy',
-    buildHint: 'npm run build:local-group',
-  },
-};
-
-function stamp(spec: ArtifactSpec): void {
+function stamp(spec: SiblingArtifactSpec): void {
   const path = resolve(ROOT, 'public', spec.file);
   if (!existsSync(path)) {
     console.error(`sid:stamp: missing ${path}\n  run ${spec.buildHint} first`);
     process.exit(1);
   }
   const payload = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>;
-  const items = payload[spec.arrayKey] as { id: string; name?: string }[] | undefined;
+  const items = payload[spec.arrayKey] as SiblingItem[] | undefined;
   if (!Array.isArray(items)) {
     console.error(`sid:stamp: ${spec.file} has no "${spec.arrayKey}" array`);
     process.exit(1);
   }
 
   const { ledger, retirements, storedEdges } = loadRegistry();
-  const objects: SidObject[] = items.map((o) => ({
-    designations: [`${spec.ns}:${o.id}`],
-    kind: spec.kind,
-    label: `${spec.ns} ${o.name ?? o.id}`,
-  }));
+  const objects = siblingArtifactObjects(spec, items);
   const { objectSids, errors } = resolveSids({
     objects,
     storedEdges,
     ledger,
     retirements,
-    today: '',
   });
   if (errors.length > 0) {
     console.error(
@@ -82,15 +55,17 @@ function stamp(spec: ArtifactSpec): void {
 
 const targets = process.argv.slice(2);
 if (targets.length === 0) {
-  console.error(`usage: stamp-sibling-sids.ts <${Object.keys(ARTIFACTS).join('|')}|all> ...`);
+  console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
   process.exit(1);
 }
 const specs = targets.includes('all')
-  ? Object.values(ARTIFACTS)
+  ? Object.values(SIBLING_ARTIFACTS)
   : targets.map((t) => {
-      const spec = ARTIFACTS[t];
+      const spec = SIBLING_ARTIFACTS[t];
       if (!spec) {
-        console.error(`sid:stamp: unknown target "${t}" (expected ${Object.keys(ARTIFACTS).join(', ')})`);
+        console.error(
+          `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
+        );
         process.exit(1);
       }
       return spec;

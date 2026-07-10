@@ -3,6 +3,7 @@ import {
   encodeBlob,
   decodeBlob,
   currentStateOf,
+  applyDecodedView,
   writeVarint,
   readVarint,
   varintLen,
@@ -13,6 +14,7 @@ import {
 } from './url-state';
 import { DEFAULT_FILTER, DEFAULT_FOV, type Stellata } from '../../stellata';
 import { AU_PC } from '../astronomy-constants';
+import { SidResolver, arrayDomain } from '../sid-resolver';
 
 // Round-trips the view through the wire format and returns the decoded
 // view + version. Anything the encoder omits (e.g. default values) reads
@@ -20,6 +22,14 @@ import { AU_PC } from '../astronomy-constants';
 function roundtrip(view: DecodedView) {
   const blob = encodeBlob(view);
   return decodeBlob(blob);
+}
+
+// Fully-settled resolver over a tiny star domain — enough for the
+// currentStateOf tests, which never look sids up.
+function makeResolver(starSids: number[] = []): SidResolver {
+  const r = new SidResolver(['star']);
+  r.attach('star', arrayDomain(starSids));
+  return r;
 }
 
 // Decode a base64url blob to its underlying byte count. Used in byte-
@@ -74,7 +84,7 @@ describe('url-state', () => {
     it('decodes empty blob to empty view at current version', () => {
       const { view, version } = roundtrip({});
       expect(view).toEqual({});
-      expect(version).toBe(3);
+      expect(version).toBe(4);
     });
   });
 
@@ -207,7 +217,7 @@ describe('url-state', () => {
       // mode=observe shifts cam's z-default from 30 to 0. cam=[0,0,30]
       // is *off-default* in observe → sub=4 (z bit), z=30 on the wire.
       const { view, version } = roundtrip({ cam: [0, 0, 30], mode: 'observe' });
-      expect(version).toBe(3);
+      expect(version).toBe(4);
       expect(view.cam).toEqual([0, 0, 30]);
       expect(view.mode).toBe('observe');
     });
@@ -421,43 +431,45 @@ describe('url-state', () => {
     });
   });
 
-  describe('star refs (focus, to)', () => {
-    it('round-trips HIP-tagged focus', () => {
-      const focus: StarRef = { kind: 'hip', id: 32349 }; // Sirius
-      const { view } = roundtrip({ focus });
-      expect(view.focus).toEqual(focus);
+  describe('object refs (focus, to) — v4 LEB128 SID refs', () => {
+    // One universal encoding for every object kind; the wire carries no
+    // type tag (kind comes from the runtime resolver at apply time).
+    // Boundary sids exercise each LEB128 width step.
+    const LEB128_BOUNDARY_SIDS = [
+      1, 127,                 // 1 byte
+      128, 16383,             // 2 bytes
+      16384, 2097151,         // 3 bytes (PGC-scale headroom)
+      2097152, 268435455,     // 4 bytes
+      268435456, 4294967295,  // 5 bytes (u32 max)
+    ];
+
+    it('round-trips focus sids across every LEB128 width', () => {
+      for (const id of LEB128_BOUNDARY_SIDS) {
+        const { view, version } = roundtrip({ focus: { kind: 'sid', id } });
+        expect(version).toBe(4);
+        expect(view.focus).toEqual({ kind: 'sid', id });
+      }
     });
 
-    it('round-trips index-tagged focus', () => {
-      const focus: StarRef = { kind: 'index', id: 12345 };
-      const { view } = roundtrip({ focus });
-      expect(view.focus).toEqual(focus);
+    it('round-trips vector-to (to) sids', () => {
+      const { view } = roundtrip({ to: { kind: 'sid', id: 306055 } });
+      expect(view.to).toEqual({ kind: 'sid', id: 306055 });
     });
 
-    it('round-trips id=0 with HIP tag', () => {
-      // id=0 is unusual but the tag bit must still be honoured
-      const focus: StarRef = { kind: 'hip', id: 0 };
-      const { view } = roundtrip({ focus });
-      expect(view.focus).toEqual(focus);
+    it('round-trips focus and to together', () => {
+      const { view } = roundtrip({
+        focus: { kind: 'sid', id: 42 },
+        to: { kind: 'sid', id: 327680 },
+      });
+      expect(view.focus).toEqual({ kind: 'sid', id: 42 });
+      expect(view.to).toEqual({ kind: 'sid', id: 327680 });
     });
 
-    it('round-trips id=0 with index tag', () => {
-      const focus: StarRef = { kind: 'index', id: 0 };
-      const { view } = roundtrip({ focus });
-      expect(view.focus).toEqual(focus);
-    });
-
-    it('round-trips id at 23-bit boundary in v2', () => {
-      const maxId = 0x7fffff; // 8,388,607 — top of v2's 23-bit id space
-      const focus: StarRef = { kind: 'index', id: maxId };
-      const { view } = roundtrip({ focus });
-      expect(view.focus).toEqual(focus);
-    });
-
-    it('round-trips HIP id at 23-bit boundary in v2', () => {
-      const focus: StarRef = { kind: 'hip', id: 0x7fffff };
-      const { view } = roundtrip({ focus });
-      expect(view.focus).toEqual(focus);
+    it('pins the wire cost of a sid focus', () => {
+      // 1 version + 3 LEB128 mask bytes (bit 14 = 0x4000 spans three
+      // 7-bit groups) + LEB128 sid: 1 byte for sid 42, 3 for 306055.
+      expect(blobBytes(encodeBlob({ focus: { kind: 'sid', id: 42 } }))).toBe(5);
+      expect(blobBytes(encodeBlob({ focus: { kind: 'sid', id: 306055 } }))).toBe(7);
     });
 
     it("'cleared' focus uses zero-byte sentinel and round-trips", () => {
@@ -465,76 +477,62 @@ describe('url-state', () => {
       expect(view.focus).toBe('cleared');
     });
 
-    it("'cleared' is mutually exclusive with a star ref in encode", () => {
-      // Encoding a star ref takes priority over 'cleared' when both are
-      // somehow set — actually they aren't set together because focus is
-      // a discriminated union. But the focusCleared bit only fires when
-      // focus === 'cleared'.
-      const ref: StarRef = { kind: 'hip', id: 100 };
-      const { view } = roundtrip({ focus: ref });
-      expect(view.focus).toEqual(ref);
+    it('drops legacy hip/index refs instead of mis-encoding them', () => {
+      // v4 has no hip/index wire form; a legacy StarRef that somehow
+      // reaches the encoder must be omitted, never coerced into a sid.
+      const hipRef: StarRef = { kind: 'hip', id: 32349 };
+      const idxRef: StarRef = { kind: 'index', id: 12345 };
+      expect(roundtrip({ focus: hipRef }).view.focus).toBeUndefined();
+      expect(roundtrip({ to: idxRef }).view.to).toBeUndefined();
     });
 
-    it('round-trips vector-to (to)', () => {
-      const to: StarRef = { kind: 'hip', id: 32349 };
-      const { view } = roundtrip({ to });
-      expect(view.to).toEqual(to);
-    });
-  });
-
-  describe('cloud refs', () => {
-    it('round-trips cloud index', () => {
-      const { view } = roundtrip({ cloud: 42 });
-      expect(view.cloud).toBe(42);
-    });
-
-    it('round-trips toc (vector-to-cloud)', () => {
-      const { view } = roundtrip({ toc: 7 });
-      expect(view.toc).toBe(7);
-    });
-
-    it('round-trips u8 cloud boundary (255)', () => {
-      const { view } = roundtrip({ cloud: 255 });
-      expect(view.cloud).toBe(255);
+    it('drops legacy cloud/toc indices (bits 16/17 retired in v4)', () => {
+      // Cloud focus rides the universal `focus` sid in v4; the legacy
+      // 1-byte fields decode from old blobs (golden corpus) but never
+      // encode. The retired bits stay unclaimed for deploy overlap.
+      const { view } = roundtrip({ cloud: 42, toc: 7 });
+      expect(view.cloud).toBeUndefined();
+      expect(view.toc).toBeUndefined();
     });
   });
 
-  describe('POIs (variable-length)', () => {
-    it('round-trips a single POI', () => {
-      const { view } = roundtrip({ pois: [32349] });
-      expect(view.pois).toEqual([32349]);
+  describe('POI sids (variable-length, v4)', () => {
+    it('round-trips a single POI sid', () => {
+      const { view } = roundtrip({ poiSids: [306055] });
+      expect(view.poiSids).toEqual([306055]);
     });
 
-    it('round-trips multiple POIs in order', () => {
-      const pois = [100, 200, 300, 400, 500];
-      const { view } = roundtrip({ pois });
-      expect(view.pois).toEqual(pois);
+    it('round-trips multiple POI sids in order, mixed LEB128 widths', () => {
+      const poiSids = [5, 200, 16384, 327680, 100];
+      const { view } = roundtrip({ poiSids });
+      expect(view.poiSids).toEqual(poiSids);
     });
 
-    it('truncates POIs above the 16-entry cap', () => {
-      const pois = Array.from({ length: 25 }, (_, i) => 1000 + i);
-      const { view } = roundtrip({ pois });
-      expect(view.pois).toHaveLength(16);
-      expect(view.pois![0]).toBe(1000);
-      expect(view.pois![15]).toBe(1015);
+    it('truncates POI sids above the 16-entry cap', () => {
+      const poiSids = Array.from({ length: 25 }, (_, i) => 1000 + i);
+      const { view } = roundtrip({ poiSids });
+      expect(view.poiSids).toHaveLength(16);
+      expect(view.poiSids![0]).toBe(1000);
+      expect(view.poiSids![15]).toBe(1015);
     });
 
-    it('round-trips exactly 16 POIs (the cap)', () => {
-      const pois = Array.from({ length: 16 }, (_, i) => 2000 + i);
-      const { view } = roundtrip({ pois });
-      expect(view.pois).toEqual(pois);
-    });
-
-    it('round-trips POI with HIP at v2 24-bit boundary', () => {
-      const { view } = roundtrip({ pois: [0x7fffff] });
-      expect(view.pois).toEqual([0x7fffff]);
+    it('round-trips exactly 16 POI sids (the cap)', () => {
+      const poiSids = Array.from({ length: 16 }, (_, i) => 2000 + i);
+      const { view } = roundtrip({ poiSids });
+      expect(view.poiSids).toEqual(poiSids);
     });
 
     it('empty POI array is not encoded as present', () => {
-      // pois: [] → isPresent returns false → not in blob
+      // poiSids: [] → isPresent returns false → not in blob
       const empty = encodeBlob({});
-      const emptyPois = encodeBlob({ pois: [] });
+      const emptyPois = encodeBlob({ poiSids: [] });
       expect(emptyPois.length).toBe(empty.length);
+    });
+
+    it('legacy HIP pois never encode in v4', () => {
+      const { view } = roundtrip({ pois: [32349] });
+      expect(view.pois).toBeUndefined();
+      expect(view.poiSids).toBeUndefined();
     });
   });
 
@@ -554,13 +552,13 @@ describe('url-state', () => {
         showGalacticGrid: true,
         showConstellation: false,
         unit: 'pc',
-        focus: { kind: 'hip', id: 32349 },
+        focus: { kind: 'sid', id: 101 },
         mode: 'observe',
         chart: true,
-        pois: [100, 200, 300],
+        poiSids: [100, 200, 300],
       };
       const { view: out, version } = roundtrip(view);
-      expect(version).toBe(3);
+      expect(version).toBe(4);
       expect(out.cam).toEqual(view.cam);
       // tgt=[0,0,0] matches the per-key default in v3 → elided. Same
       // contract as up=[0,1,0] and worldOffset=[0,0,0]. Receiver
@@ -580,7 +578,7 @@ describe('url-state', () => {
       expect(out.focus).toEqual(view.focus);
       expect(out.mode).toBe('observe');
       expect(out.chart).toBe(true);
-      expect(out.pois).toEqual(view.pois);
+      expect(out.poiSids).toEqual(view.poiSids);
     });
   });
 
@@ -784,6 +782,7 @@ describe('url-state', () => {
       indexToHip: new Uint32Array(1),
       starCount: 1,
       solIndex: 0,
+      sidResolver: makeResolver(),
     };
 
     it('omits cam when observe-mode camera is parked at the focal-star origin', () => {
@@ -975,7 +974,7 @@ describe('url-state', () => {
     it('round-trips a float64 t through encodeBlob/decodeBlob', () => {
       const t = 1234567890.123456;
       const { view, version } = roundtrip({ t });
-      expect(version).toBe(3);
+      expect(version).toBe(4);
       expect(view.t).toBe(t);
     });
 
@@ -999,7 +998,7 @@ describe('url-state', () => {
       const t = 9876543210.5;
       const view: DecodedView = { cam: [0, 0, 3.7], t };
       const { view: out, version } = roundtrip(view);
-      expect(version).toBe(3);
+      expect(version).toBe(4);
       expect(out.cam![2]).toBeCloseTo(3.7, 5);
       expect(out.t).toBe(t);
     });
@@ -1078,78 +1077,303 @@ describe('url-state', () => {
     });
   });
 
-  describe('v2 → v3 auto-upgrade rewrite', () => {
+  describe('golden-blob corpus — frozen v1/v2/v3 decoders', () => {
+    // Real `?v=` blobs captured from the shipped coders (v3 via the
+    // production encoder, v1/v2 hand-encoded and validated through the
+    // production decoder at capture time), paired with their exact
+    // decoded views. These pin the FROZEN per-version FIELDS arrays
+    // byte-for-byte: any change that alters how a legacy blob decodes
+    // — a helper edit, a field-shape change leaking across versions —
+    // fails here. Float components are the post-float32 values the
+    // decoder actually produces. NEVER regenerate these entries to
+    // make a failure pass; a failure means legacy decoding broke.
+    const GOLDEN_CORPUS: { version: number; label: string; blob: string; view: DecodedView }[] = [
+      {
+        version: 3,
+        label: 'realistic share: cam + fov + mag + HIP focus + grid',
+        blob: 'A5nAAQcAAEhCAACgwQAAyEIjVQFdfoA',
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, showGalacticGrid: true, focus: { kind: 'hip', id: 32349 } },
+      },
+      {
+        version: 3,
+        label: 'observe + chart + POIs + tilted up',
+        blob: 'A4TAIQOBBDU_gQQ1P2B-ZIEDXX4AfmQBVW0A',
+        view: { up: [0.707099974155426, 0.707099974155426, 0], mode: 'observe', chart: true, focus: { kind: 'hip', id: 91262 }, pois: [32349, 91262, 27989] },
+      },
+      {
+        version: 3,
+        label: 'index focus + HIP to-vector',
+        blob: 'A4CAA0DiAcL_gA',
+        view: { focus: { kind: 'index', id: 123456 }, to: { kind: 'hip', id: 65474 } },
+      },
+      {
+        version: 3,
+        label: 'cloud focus + cloud to-vector',
+        blob: 'A4GADATNzGxADAM',
+        view: { cam: [0, 0, 3.700000047683716], cloud: 12, toc: 3 },
+      },
+      {
+        version: 3,
+        label: 'cleared focus + worldOffset anchor + local cam/tgt',
+        blob: 'A4OAUAeETfg1dScvts2sJTgBAACgQAdmZk5CAICAQ83MFsI',
+        view: { cam: [0.0000018499999896448571, -0.000002609999910418992, 0.00003949999882024713], tgt: [5, 0, 0], focus: 'cleared', worldOffset: [51.599998474121094, 257, -37.70000076293945] },
+      },
+      {
+        version: 3,
+        label: 'pinned t + cam',
+        blob: 'A4GAgAEEzcxsQAAAIMD7GtpB',
+        view: { cam: [0, 0, 3.700000047683716], t: 1751904000.5 },
+      },
+      {
+        version: 3,
+        label: 'kitchen sink scalars + flags',
+        blob: 'A-h_NGQAIAP-AQEpDyAMmg',
+        view: { fov: 62, dmin: 100, dmax: 800, spect: 510, preset: 'binoculars', con: 41, smin: 2.5, smax: 18, span: 8, showHud: true, showConstellation: false, showMilkyway: false, unit: 'pc' },
+      },
+      {
+        version: 2,
+        label: 'v2: cam + fov + mag + HIP focus',
+        blob: 'AhlAAAAASEIAAKDBAADIQiNVXX6A',
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, focus: { kind: 'hip', id: 32349 } },
+      },
+      {
+        version: 2,
+        label: 'v2: observe + index focus + POIs',
+        blob: 'AgBgCCBA4gEDXX4AfmQBVW0A',
+        view: { mode: 'observe', focus: { kind: 'index', id: 123456 }, pois: [32349, 91262, 27989] },
+      },
+      {
+        version: 2,
+        label: 'v2: cloud focus + toc + worldOffset',
+        blob: 'AgAAEwwDZmZOQgCAgEPNzBbC',
+        view: { cloud: 12, toc: 3, worldOffset: [51.599998474121094, 257, -37.70000076293945] },
+      },
+      {
+        version: 2,
+        label: 'v2: cleared focus + pinned t',
+        blob: 'AgAAJAAAIMD7GtpB',
+        view: { focus: 'cleared', t: 1751904000.5 },
+      },
+      {
+        version: 1,
+        label: 'v1: cam + fov + mag + HIP focus',
+        blob: 'ARlAAAAAAEhCAACgwQAAyEIAADRCAADQQF1-AIA',
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, focus: { kind: 'hip', id: 32349 } },
+      },
+      {
+        version: 1,
+        label: 'v1: observe + index focus + cloud + POIs',
+        blob: 'AQBgCQAgQOIBAAcAAmQAAADIAAAA',
+        view: { mode: 'observe', focus: { kind: 'index', id: 123456 }, cloud: 7, pois: [100, 200] },
+      },
+    ];
+
+    for (const entry of GOLDEN_CORPUS) {
+      it(`decodes byte-identically: ${entry.label}`, () => {
+        const { view, version } = decodeBlob(entry.blob);
+        expect(version).toBe(entry.version);
+        expect(view).toEqual(entry.view);
+      });
+    }
+  });
+
+  describe('legacy → v4 migration (decode → apply → re-encode)', () => {
     // applyFromUrl detects `decoded.version !== SCHEMA_VERSION` and
-    // schedules a debounced writeUrl to silently upgrade the URL to
-    // v3 — central to the PR's "no bookmarks break, address bar
-    // shrinks" claim. The applyFromUrl path itself depends on
-    // location/setTimeout side effects, but the upgrade contract
-    // (decode legacy, re-encode as v3, decode round-trips) is pure
-    // and worth pinning here.
+    // schedules a debounced writeUrl that re-encodes the *live state*
+    // as v4 — that apply-then-re-encode pair IS the docs/sid.md § 9.4
+    // migration table. These tests drive it end-to-end over a stateful
+    // mock Stellata: decode a legacy blob, applyDecodedView, then
+    // currentStateOf → encodeBlob and assert the v4 wire.
 
-    it('decodes v2 cam blob and re-encodes the same view as v3', () => {
-      // Build v2 blob: bit 0 (cam), payload [0,0,3.7] as flat 3×f32.
-      const v2Payload = new Uint8Array(12);
-      const v2Dv = new DataView(v2Payload.buffer);
-      v2Dv.setFloat32(0, 0, true);
-      v2Dv.setFloat32(4, 0, true);
-      v2Dv.setFloat32(8, 3.7, true);
-      const v2Blob = buildV2Blob(1 << 0, v2Payload);
-
-      const { view: v2View, version: v2Version } = decodeBlob(v2Blob);
-      expect(v2Version).toBe(2);
-
-      // Re-encode the same view; assert version byte = 3.
-      const v3Blob = encodeBlob(v2View);
-      const { view: v3View, version: v3Version } = decodeBlob(v3Blob);
-      expect(v3Version).toBe(3);
-      expect(v3View.cam![0]).toBe(0);
-      expect(v3View.cam![1]).toBe(0);
-      expect(v3View.cam![2]).toBeCloseTo(3.7, 5);
-
-      // The headline saving: the rewritten v3 blob is shorter than
-      // the original v2 (per-component sub-mask elision drops two
-      // zero-valued floats).
-      expect(v3Blob.length).toBeLessThan(v2Blob.length);
-    });
-
-    it('decodes v1 fov blob and re-encodes the same view as v3', () => {
-      // Build v1 blob: bit 3 (fov) at f32. v3 emits fov as quantised
-      // u8, so the upgrade also shrinks by 3 bytes for this case.
-      const v1Payload = new Uint8Array(4);
-      new DataView(v1Payload.buffer).setFloat32(0, 60, true);
-      const v1Blob = buildV1Blob(1 << 3, v1Payload);
-
-      const { view: v1View, version: v1Version } = decodeBlob(v1Blob);
-      expect(v1Version).toBe(1);
-
-      const v3Blob = encodeBlob(v1View);
-      const { view: v3View, version: v3Version } = decodeBlob(v3Blob);
-      expect(v3Version).toBe(3);
-      expect(v3View.fov).toBe(60);
-    });
-
-    it('preserves a typical multi-field v2 view through the upgrade', () => {
-      // Encode a realistic shared-URL view, decode it, re-encode as
-      // v3 — every field round-trips at the v3 quantisation grid,
-      // matching what applyFromUrl-then-debounced-writeUrl produces.
-      const original: DecodedView = {
-        cam: [50, -20, 100],
-        fov: 45,
-        mag: 6.5,
-        focus: { kind: 'hip', id: 32349 },
-        showGalacticGrid: true,
+    function migrationVec3(x = 0, y = 0, z = 0) {
+      return {
+        x, y, z,
+        set(nx: number, ny: number, nz: number) {
+          this.x = nx; this.y = ny; this.z = nz;
+          return this;
+        },
+        normalize() { return this; },
       };
-      // Sanity: encode once via the production v3 path, simulating
-      // currentStateOf's output that applyFromUrl would feed back.
-      const v3Blob = encodeBlob(original);
-      const { view: out, version } = decodeBlob(v3Blob);
-      expect(version).toBe(3);
-      expect(out.cam).toEqual([50, -20, 100]);
-      expect(out.fov).toBe(45);
-      expect(out.mag).toBeCloseTo(6.5, 1);
-      expect(out.focus).toEqual({ kind: 'hip', id: 32349 });
-      expect(out.showGalacticGrid).toBe(true);
+    }
+
+    // Fixture catalog: idx 0 = Sol (sid 100); idx 1 = HIP 32349 / sid
+    // 101; idx 2 = no-HIP / sid 102; idx 3 = HIP 91262 / sid 103. Two
+    // clouds with sids 201/202.
+    const STAR_SIDS = [100, 101, 102, 103];
+    const CLOUD_SIDS = [201, 202];
+
+    function makeMigrationIdMaps(): IdMaps {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      return {
+        hipToIndex: new Map([[32349, 1], [91262, 3]]),
+        indexToHip: new Uint32Array([0, 32349, 0, 91262]),
+        starCount: STAR_SIDS.length,
+        solIndex: 0,
+        sidResolver,
+      };
+    }
+
+    function makeStatefulStellata() {
+      const state = {
+        focusedStar: 0 as number | null, // Sol default focus
+        focusedCloud: null as number | null,
+        vectorTo: null as number | null,
+        vectorToCloud: null as number | null,
+        pois: [] as number[],
+        mode: 'navigate' as 'navigate' | 'observe',
+      };
+      const stub: Partial<Stellata> = {
+        getFilter: () => ({ ...DEFAULT_FILTER }),
+        setFilter: () => {},
+        applyMagnitudePreset: () => {},
+        getCameraFov: () => DEFAULT_FOV,
+        setCameraFov: () => {},
+        getT: () => Date.now() / 1000,
+        setT: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getWorldOffset: () => migrationVec3() as any,
+        setWorldOffset: () => {},
+        getFocusedStar: () => state.focusedStar,
+        getFocusedCloud: () => state.focusedCloud,
+        getVectorTo: () => state.vectorTo,
+        getVectorToCloud: () => state.vectorToCloud,
+        getPois: () => state.pois,
+        getCameraMode: () => state.mode,
+        setCameraMode: (m) => { state.mode = m; },
+        focusStar: (idx) => { state.focusedStar = idx; state.focusedCloud = null; },
+        setOrbitTarget: (idx) => { state.focusedStar = idx; state.focusedCloud = null; },
+        unfocus: () => { state.focusedStar = null; },
+        setFocusedCloud: (i) => { state.focusedCloud = i; state.focusedStar = null; },
+        flyToCloud: (i) => { state.focusedCloud = i; state.focusedStar = null; },
+        setVectorTo: (i) => { state.vectorTo = i; },
+        setVectorToCloud: (i) => { state.vectorToCloud = i; },
+        setPois: (l) => { state.pois = [...l]; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        camera: { position: migrationVec3(0, 0, 30), up: migrationVec3(0, 1, 0) } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        controls: { target: migrationVec3(), update() {} } as any,
+      };
+      return { stellata: stub as Stellata, state };
+    }
+
+    // Decode a legacy blob, apply it, re-encode the resulting live
+    // state — the applyFromUrl upgrade path minus the debounce.
+    function migrate(blob: string, idMaps = makeMigrationIdMaps()) {
+      const { stellata, state } = makeStatefulStellata();
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      const re = decodeBlob(encodeBlob(currentStateOf(stellata, idMaps)));
+      return { state, re };
+    }
+
+    function u24(val: number): number[] {
+      return [val & 0xff, (val >>> 8) & 0xff, (val >>> 16) & 0xff];
+    }
+
+    it('HIP focus migrates exactly: hip → index → sid', () => {
+      const blob = buildV2Blob(1 << 14, new Uint8Array(u24((32349 | 0x800000) >>> 0)));
+      const { state, re } = migrate(blob);
+      expect(state.focusedStar).toBe(1);
+      expect(re.version).toBe(4);
+      expect(re.view.focus).toEqual({ kind: 'sid', id: 101 });
+    });
+
+    it('unknown HIP focus drops to the default (Sol, omitted)', () => {
+      const blob = buildV2Blob(1 << 14, new Uint8Array(u24((555 | 0x800000) >>> 0)));
+      const { state, re } = migrate(blob);
+      expect(state.focusedStar).toBe(0);
+      expect(re.view.focus).toBeUndefined();
+    });
+
+    it('index focus freezes best-effort to the current-build sid', () => {
+      const blob = buildV2Blob(1 << 14, new Uint8Array(u24(2)));
+      const { state, re } = migrate(blob);
+      expect(state.focusedStar).toBe(2);
+      expect(re.view.focus).toEqual({ kind: 'sid', id: 102 });
+    });
+
+    it('out-of-range index focus drops to the default', () => {
+      const blob = buildV2Blob(1 << 14, new Uint8Array(u24(50)));
+      const { re } = migrate(blob);
+      expect(re.view.focus).toBeUndefined();
+    });
+
+    it('legacy cloud focus + toc fold into universal sid refs', () => {
+      const blob = buildV2Blob((1 << 16) | (1 << 17), new Uint8Array([1, 0]));
+      const { state, re } = migrate(blob);
+      expect(state.focusedCloud).toBe(1);
+      expect(state.vectorToCloud).toBe(0);
+      expect(re.view.focus).toEqual({ kind: 'sid', id: 202 });
+      expect(re.view.to).toEqual({ kind: 'sid', id: 201 });
+      expect(re.view.cloud).toBeUndefined();
+      expect(re.view.toc).toBeUndefined();
+    });
+
+    it('HIP to-vector migrates to a star sid', () => {
+      const blob = buildV2Blob(1 << 15, new Uint8Array(u24((91262 | 0x800000) >>> 0)));
+      const { state, re } = migrate(blob);
+      expect(state.vectorTo).toBe(3);
+      expect(re.view.to).toEqual({ kind: 'sid', id: 103 });
+    });
+
+    it('legacy HIP POIs migrate per entry; unresolvable HIPs drop', () => {
+      // observe flag (bit 5 of the flags byte) + POIs [32349, 91262,
+      // 555]; 555 resolves to nothing in this catalog and drops.
+      const payload = new Uint8Array([
+        1 << 5,
+        3, ...u24(32349), ...u24(91262), ...u24(555),
+      ]);
+      const blob = buildV2Blob((1 << 13) | (1 << 19), payload);
+      const { state, re } = migrate(blob);
+      expect(state.mode).toBe('observe');
+      expect(state.pois).toEqual([1, 3]);
+      expect(re.view.poiSids).toEqual([101, 103]);
+      expect(re.view.pois).toBeUndefined();
+    });
+
+    it('v1 blobs migrate through the same path', () => {
+      const payload = new Uint8Array(4);
+      new DataView(payload.buffer).setUint32(0, (32349 | 0x80000000) >>> 0, true);
+      const blob = buildV1Blob(1 << 14, payload);
+      const { state, re } = migrate(blob);
+      expect(state.focusedStar).toBe(1);
+      expect(re.view.focus).toEqual({ kind: 'sid', id: 101 });
+    });
+
+    it('a v4 sid focus applies and re-encodes stably', () => {
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 103 } });
+      const { state, re } = migrate(blob);
+      expect(state.focusedStar).toBe(3);
+      expect(re.view.focus).toEqual({ kind: 'sid', id: 103 });
+    });
+
+    it('an unknown v4 sid expires silently, leaving the rest applied', () => {
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 999 }, fov: 62 });
+      const { state, re } = migrate(blob);
+      expect(state.focusedStar).toBe(0); // untouched default
+      expect(re.view.focus).toBeUndefined();
+    });
+
+    it('a pending sid applies as a deferred intent when its domain attaches', () => {
+      // Cloud domain registered but not attached at apply time — the
+      // docs/sid.md § 8 late-artifact contract. The focus intent must
+      // fire on the attach, not throw or drop.
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps: IdMaps = {
+        hipToIndex: new Map(),
+        indexToHip: new Uint32Array(STAR_SIDS.length),
+        starCount: STAR_SIDS.length,
+        solIndex: 0,
+        sidResolver,
+      };
+      const { stellata, state } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 202 } });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      expect(state.focusedCloud).toBeNull();
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      expect(state.focusedCloud).toBe(1);
     });
   });
 
