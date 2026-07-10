@@ -154,10 +154,13 @@ Format is plain-English UTC: `D MMM YYYY, HH:MM:SS UTC`
 abbreviations are hard-coded en-US to avoid DD/MM vs MM/DD ambiguity
 across browsers.
 
-`t` is **independent of `uTime`**. `uTime` is the cosmetic clock that
-drives variable-star pulsation and keeps ticking at
-`uSecondsPerDay = 0.2` regardless of what `t` is. Variable-star phase
-must never read from `t`.
+**Variable-star pulsation runs on `t`.** It was once driven by a separate
+cosmetic `uTime` real-seconds clock, deliberately decoupled from `t`; that
+decision is now reversed. Pulsation phase reads the model clock through
+`uModelDays` (= days since J2000 from `getT()`) at real GCVS periods, so it
+responds to the time-warp exactly like binary orbital motion — see
+`star-pipeline/README.md` § Variable star rendering. The old `uTime` /
+`uSecondsPerDay` uniforms are gone.
 
 ## Time scrubber widget
 
@@ -396,8 +399,10 @@ so very-close planet inspection isn't culled. The strict-less-than
   ~47°. `sky-truth.test.ts` pins the sign against JPL Horizons and
   solstice geometry — if it objects to your change, the change is
   wrong.
-- **`t` vs `uTime`.** Variable-star pulsation is cosmetic — it must
-  never depend on `t`. The two clocks are deliberately decoupled.
+- **Variable-star pulsation is on `t`.** Pulsation phase reads the model
+  clock (`uModelDays` from `getT()`) at real GCVS periods — no separate
+  cosmetic clock. New render code that needs the pulsation phase reads
+  `uModelDays` / `uModelDaysPerRealSec`, never wall-clock.
 - **Per-focus minDistance override.** When focus switches *away*
   from Sol, the floor must snap back to `0.005 pc` *before* the new
   focus's recenter pulls the camera in. `setFocus` is the right hook

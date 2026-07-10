@@ -52,16 +52,18 @@ function makeUniforms(overrides: Partial<{
   uFovYRad: number;
   uViewportX: number;
   uViewportY: number;
-  uTime: number;
-  uSecondsPerDay: number;
+  uModelDays: number;
+  uModelDaysPerRealSec: number;
   uMinPeriodSec: number;
 }> = {}) {
   return {
     uFovYRad: { value: overrides.uFovYRad ?? Math.PI / 3 },           // 60°
     uViewport: { value: new THREE.Vector2(overrides.uViewportX ?? 1920, overrides.uViewportY ?? 1080) },
-    uTime: { value: overrides.uTime ?? 0 },
-    uSecondsPerDay: { value: overrides.uSecondsPerDay ?? 86400 },
-    uMinPeriodSec: { value: overrides.uMinPeriodSec ?? 60 },
+    uModelDays: { value: overrides.uModelDays ?? 0 },
+    // 1× (live) rate by default: model advances 1 day per 86400 real s,
+    // so the anti-strobe floor is negligible and every real period rules.
+    uModelDaysPerRealSec: { value: overrides.uModelDaysPerRealSec ?? 1 / 86400 },
+    uMinPeriodSec: { value: overrides.uMinPeriodSec ?? 4 },
   };
 }
 
@@ -243,8 +245,10 @@ describe('star-physics / renderedSizePx', () => {
     expect(got).toBe(expectedPhys);
   });
 
-  it('respects variable-star modulation at phase = ¼ (peak)', () => {
-    // Algol-ish: 2.87 d, 1.27 mag amp. At time = period/4 the sin term hits 1.
+  it('modulates on the model clock: φ = 0 (max light) is largest, φ = ½ (min) smallest', () => {
+    // Algol-ish: 2.87 d, 1.27 mag amp (period suppression aside — this row
+    // isn't flagged eclipsing here, so it pulsates). Model phase = φ →
+    // uModelDays = φ · period (the 1× anti-strobe floor is negligible).
     const cat = makeCatalog(1, c => {
       c.physicalRadius[0] = 2.9;
       c.absmag[0] = -0.15;
@@ -253,23 +257,49 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(28, 0, 0);
     const localPositions = cat.positions;
-    const periodSec = 2.87 * 86400;
-    // Phase = 1/4 → sin(2π·¼) = 1 → magMod = +0.5*ampEff (dimmer at trough
-    // here — the sign convention is that positive sin makes magMod positive,
-    // which raises appMag = dimmer).
-    const uniforms = makeUniforms({ uTime: periodSec / 4 });
     const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8, maxAppMag: 6 });
-    const got = renderedSizePx({ catalog: cat, idx: 0, camPos, localPositions, uniforms, filter });
-    // The expectation isn't a single number — at this phase the rendered
-    // size is the brightness-curve `appSize` modulated downward by 0.635
-    // mag (half-amplitude at peak phase). Pinning the qualitative behaviour
-    // — at phase ¼ the value is LESS than at phase 0 — guards the sign
-    // convention without re-deriving the full formula in the test body.
-    const stillUniforms = makeUniforms({ uTime: 0 });
-    const stillGot = renderedSizePx({
-      catalog: cat, idx: 0, camPos, localPositions, uniforms: stillUniforms, filter,
+    const at = (phase: number) => renderedSizePx({
+      catalog: cat, idx: 0, camPos, localPositions,
+      uniforms: makeUniforms({ uModelDays: phase * 2.87 }), filter,
     });
-    expect(got).toBeLessThan(stillGot);
+    // φ=0 = maximum light → brightest + largest; φ=½ = minimum → smallest;
+    // φ=¼ = mean → in between. The cos convention (φ=0=max) is what the
+    // GCVS M0-anchoring folds onto.
+    const maxLight = at(0);
+    const mean = at(0.25);
+    const minLight = at(0.5);
+    expect(maxLight).toBeGreaterThan(mean);
+    expect(mean).toBeGreaterThan(minLight);
+  });
+
+  it('anti-strobe floor caps the effective period under heavy time-warp', () => {
+    const cat = makeCatalog(1, c => {
+      c.physicalRadius[0] = 2.9;
+      c.absmag[0] = -0.15;
+      c.amplitudeMag[0] = 1.27;
+      c.periodDays[0] = 0.5; // RR-Lyrae-ish short period
+    });
+    const camPos = new THREE.Vector3(28, 0, 0);
+    const localPositions = cat.positions;
+    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8, maxAppMag: 6 });
+    // Heavy warp: 1e6× → uModelDaysPerRealSec = 1e6/86400 ≈ 11.57; floor =
+    // 11.57 × 4 s ≈ 46.3 model-days ≫ the 0.5 d period, so the effective
+    // period is the floor. At uModelDays = floor/2 the star is at φ=½ (min);
+    // without the floor it would be at φ = (floor/2)/0.5 = many cycles.
+    const rate = 1e6 / 86400;
+    const floorDays = rate * 4;
+    const min = renderedSizePx({
+      catalog: cat, idx: 0, camPos, localPositions,
+      uniforms: makeUniforms({ uModelDays: floorDays / 2, uModelDaysPerRealSec: rate }),
+      filter,
+    });
+    const max = renderedSizePx({
+      catalog: cat, idx: 0, camPos, localPositions,
+      uniforms: makeUniforms({ uModelDays: floorDays, uModelDaysPerRealSec: rate }),
+      filter,
+    });
+    // With the floor engaged, φ=1 (== φ=0, max) is larger than φ=½ (min).
+    expect(max).toBeGreaterThan(min);
   });
 });
 

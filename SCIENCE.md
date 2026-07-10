@@ -1045,11 +1045,15 @@ focus-independent body field). The rotation is anchored on the north
 ecliptic pole in ICRS, `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°;
 the y-component is negative.
 
-**Time `t`.** All planet positions are evaluated at a wall-clock `t`
-(Unix seconds, double). `t` is currently pinned to "now" with no scrubber
-UI; the bottom-right time readout displays the live UTC timestamp the
-positions correspond to. `t` is independent of the cosmetic `uTime`
-clock that drives variable-star pulsation — they don't share a value.
+**Time `t`.** All planet positions are evaluated at the model clock `t`
+(Unix seconds, double) via `Stellata.getT()`, driven by the time-scrubber
+widget; the bottom-right time readout displays the UTC timestamp the
+positions correspond to. Every time-varying visual now shares this one
+clock: planet ephemerides, binary orbital motion, the load-time
+proper-motion advance (§ Current-epoch star positions), AND variable-star
+pulsation — the latter formerly rode a separate cosmetic `uTime`
+real-seconds clock, now reversed so pulsation runs at real GCVS periods on
+`t` and responds to the same time-warp.
 
 Per-`t` cache granularity is 60 seconds: at billboarded-disc pixel
 scale, sub-minute planet motion is invisible (Mercury moves ~3e-5 rad

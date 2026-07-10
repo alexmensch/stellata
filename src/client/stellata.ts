@@ -588,14 +588,15 @@ export class Stellata implements FrameAnchor {
       // renderedSizePx mirror compute the same effective amplitude.
       uMaxPhysFrac: { value: ZOOM_FLOOR_FRACTION },
       uVarTroughFrac: { value: VAR_TROUGH_FLOOR_FRACTION },
-      // Variability time. uTime advances in real seconds; uSecondsPerDay is
-      // the compression factor — lower values make catalog periods cycle
-      // faster on-screen. uMinPeriodSec clamps the shortest cycle so sub-day
-      // variables (RR Lyrae, Algol) don't pulse too rapidly to read. 4 s is
-      // a comfortable floor — Algol's 0.57 s natural cycle becomes 4 s,
-      // clearly visible but not jarring.
-      uTime: { value: 0 },
-      uSecondsPerDay: { value: 0.2 },
+      // Variability clock. Pulsation runs on the model clock (getT()) at
+      // real GCVS periods, so it responds to time-warp like binary orbits.
+      // uModelDays is model time in days since J2000; uModelDaysPerRealSec
+      // is the warp rate (model days per real second), which floors the
+      // effective period via uMinPeriodSec so short-period variables can't
+      // strobe under heavy warp. Updated per frame from getT() + the clock
+      // rate.
+      uModelDays: { value: 0 },
+      uModelDaysPerRealSec: { value: 1 / 86400 },
       uMinPeriodSec: { value: 4.0 },
 
       // Star-disc rendering knobs (debug-panel tunable). See star.frag.glsl
@@ -2363,7 +2364,6 @@ export class Stellata implements FrameAnchor {
     return false;
   }
 
-  private animateStartMs = performance.now();
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
@@ -2404,9 +2404,12 @@ export class Stellata implements FrameAnchor {
     // we want it to render at its actual projected position again.
     const pinTarget = this.focus.isPinEngaged() ? this.focus.getFocusedStar() : -1;
     this.starPipeline.discMaterial.uniforms.uPinFocusToCenter.value = pinTarget ?? -1;
-    // Advance variability clock (seconds since start). Shared with glow
-    // material via sharedUniforms so both passes see the same time.
-    this.starPipeline.discMaterial.uniforms.uTime.value = (performance.now() - this.animateStartMs) / 1000;
+    // Advance the variability clock on the model time base (shared with the
+    // glow material via sharedUniforms). Days since J2000 from getT(), plus
+    // the warp rate in model-days/real-second for the anti-strobe floor.
+    const varUniforms = this.starPipeline.discMaterial.uniforms;
+    varUniforms.uModelDays.value = tToJDE(this.getT()) - 2451545.0;
+    varUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
     if (this.extinctionPrepass !== null) {
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.

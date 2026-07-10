@@ -68,14 +68,18 @@ uniform vec2 uViewport;   // viewport size in CSS pixels (for quad expansion)
 uniform float uMaxPhysFrac;     // peak disc fraction of min(viewport) (= ZOOM_FLOOR_FRACTION)
 uniform float uVarTroughFrac;   // trough floor fraction relative to baseSize
 
-// Variability. uTime is real elapsed seconds. Per-star period is in days
-// (0 = not a variable), per-star amplitude is in magnitudes. uSecondsPerDay
-// scales simulated time (how many real seconds pass per catalog day); lower
-// values = faster-appearing cycles. uMinPeriodSec clamps the effective
-// cycle period so even short-period variables (RR Lyrae, ~half a day) don't
-// strobe faster than that threshold.
-uniform float uTime;
-uniform float uSecondsPerDay;
+// Variability. Pulsation runs on the MODEL clock (getT()), at real GCVS
+// periods — like binary orbital motion, and responding to the same
+// time-warp. uModelDays is the model time in days since J2000; per-star
+// period is in days (0 = not a variable), per-star amplitude in magnitudes.
+// At 1× every real period is far longer than a frame, so long-period
+// variables (Miras, hundreds of days) are imperceptible until time-warp
+// engages — deliberate, matching binary orbits. uMinPeriodSec survives
+// ONLY as an anti-strobe guard: uModelDaysPerRealSec (the warp rate in
+// model-days per real second) floors the effective period so no cycle
+// completes faster than uMinPeriodSec in real time under heavy warp.
+uniform float uModelDays;
+uniform float uModelDaysPerRealSec;
 uniform float uMinPeriodSec;
 
 // Interstellar-dust extinction. Dust-field uniforms + the camera→star
@@ -259,8 +263,21 @@ void main() {
     float radiusFactor = 1.0;
     float magMod = 0.0;
     if (iPeriodDays > 0.0 && iAmplitudeMag > 0.0 && iSuppressPulsation < 0.5) {
-        float periodSec = max(iPeriodDays * uSecondsPerDay, uMinPeriodSec);
-        float phase = uTime / periodSec;
+        // Anti-strobe: floor the effective period (in model days) so a cycle
+        // never completes faster than uMinPeriodSec in real time. At 1× the
+        // floor (uModelDaysPerRealSec ≈ 1/86400 × uMinPeriodSec) is a few
+        // seconds of model time — below every real period — so it bites only
+        // under heavy time-warp on short-period variables.
+        float minModelDays = uModelDaysPerRealSec * uMinPeriodSec;
+        float periodDaysEff = max(iPeriodDays, minModelDays);
+        // Phase 0 at J2000, wrapped to [0,1) so the cos() argument stays
+        // small — float32 loses precision in cos() of a large angle, which
+        // would jitter short-period variables. Absolute-phase anchoring
+        // (φ = 0 at the GCVS epoch of maximum light) folds in as
+        // fract((uModelDays − iEpochDays) / period) once that per-star
+        // attribute lands; the φ = 0 = max-light convention below is already
+        // set up for it.
+        float phase = fract(uModelDays / periodDaysEff);
 
         // Precompute base (un-modulated) physSize to size the headroom.
         float baseSize0 = 2.0 * atan(R_pc / dPc) * angularToPx;
@@ -275,7 +292,9 @@ void main() {
         float ampLimitMag = 10.0 * min(maxUpLog10, maxDownLog10);
         float ampEff = min(iAmplitudeMag, max(0.0, ampLimitMag));
 
-        magMod = 0.5 * ampEff * sin(6.2831853 * phase);
+        // φ = 0 = maximum light (cos): brightest (most-negative magMod) and
+        // largest disc at phase 0.
+        magMod = -0.5 * ampEff * cos(6.2831853 * phase);
         appMag += magMod;
         radiusFactor = pow(10.0, -magMod / 5.0);
     }

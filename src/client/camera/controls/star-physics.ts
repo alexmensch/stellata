@@ -38,8 +38,8 @@ export const VAR_TROUGH_FLOOR_FRACTION = 0.2;
 export interface StarPhysicsUniforms {
   uFovYRad: { value: number };
   uViewport: { value: THREE.Vector2 };
-  uTime: { value: number };
-  uSecondsPerDay: { value: number };
+  uModelDays: { value: number };
+  uModelDaysPerRealSec: { value: number };
   uMinPeriodSec: { value: number };
 }
 
@@ -154,14 +154,18 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
     ? args.suppressPulsation[idx] > 0.5
     : false;
   if (period > 0 && amp > 0 && !suppressed) {
-    const periodSec = Math.max(
-      period * u.uSecondsPerDay.value,
-      u.uMinPeriodSec.value,
+    // Mirror star.vert.glsl: model-clock phase (days since J2000) with the
+    // uMinPeriodSec anti-strobe floor, φ = 0 = maximum light (cos).
+    const periodDaysEff = Math.max(
+      period,
+      u.uModelDaysPerRealSec.value * u.uMinPeriodSec.value,
     );
-    const phase = u.uTime.value / periodSec;
+    const phaseRaw = u.uModelDays.value / periodDaysEff;
+    const phase = phaseRaw - Math.floor(phaseRaw); // fract, mirroring the shader
+
     const ampEff = varEffectiveAmplitude(amp, baseSize, maxPhysSize, VAR_TROUGH_FLOOR_FRACTION);
 
-    const magMod = 0.5 * ampEff * Math.sin(2 * Math.PI * phase);
+    const magMod = -0.5 * ampEff * Math.cos(2 * Math.PI * phase);
     appMag += magMod;
     radiusFactor = Math.pow(10, -magMod / 5);
   }
