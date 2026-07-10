@@ -25,7 +25,10 @@ try {
 const suite = registry ? describe : describe.skip;
 
 suite('SOL_OBJECT_SIDS pins against the ledger', () => {
-  const bySid = new Map(registry!.ledger.map((r) => [r.sid, r]));
+  // Null-safe at collection time: describe.skip still runs this factory, so
+  // it must tolerate a stub ledger (registry === null). The it() bodies only
+  // run when the suite is live, where registry is guaranteed non-null.
+  const bySid = new Map((registry?.ledger ?? []).map((r) => [r.sid, r]));
 
   it('every entry resolves to the ledger row keyed sol:<body>', () => {
     for (const [key, sid] of Object.entries(SOL_OBJECT_SIDS)) {
