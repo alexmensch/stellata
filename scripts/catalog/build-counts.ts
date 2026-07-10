@@ -214,6 +214,10 @@ export interface BuildCounts {
    *  stamp-component-letters pass — pairs AT-HYG left anonymous so both
    *  halves printed the same Bayer/Flamsteed label (61 Cyg A/B class). */
   componentLettersStamped: number;
+  /** Catalog records carrying a multiples.tsv component designation
+   *  (`cl`/`cp` on their SearchEntry) — the base for "<system> <letter>"
+   *  search aliases (Alpha Centauri A/B/C). */
+  componentDesignations: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;

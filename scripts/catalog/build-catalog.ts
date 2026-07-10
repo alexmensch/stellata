@@ -64,11 +64,13 @@ import {
 } from './visual-doubles';
 import {
   buildCatalogRowIndexMap,
+  buildComponentDesignations,
   backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
   stampComponentLetters,
   wingRenderablePrimaries,
+  type ComponentDesignation,
 } from './companion-promotion';
 import {
   parseGcvsMain,
@@ -204,6 +206,7 @@ async function main() {
     ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
     renderableCompanionWinged: 0,
+    componentDesignations: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -658,6 +661,7 @@ async function main() {
   // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars);
 
+  let componentDesignations = new Map<number, ComponentDesignation>();
   if (multiplesRows !== null) {
     const renderableCompanionWinged = wingRenderablePrimaries(
       multiplesRows,
@@ -667,6 +671,12 @@ async function main() {
     counts.renderableCompanionWinged = renderableCompanionWinged;
     console.log(
       `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
+    );
+
+    componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
+    counts.componentDesignations = componentDesignations.size;
+    console.log(
+      `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
     );
   }
 
@@ -825,6 +835,11 @@ async function main() {
     if (s.gcvsName) entry.g = s.gcvsName;
     if (s.conIndex !== 255) entry.c = s.conIndex;
     if (s.spectDisplay) entry.s = s.spectDisplay;
+    const cd = componentDesignations.get(i);
+    if (cd) {
+      entry.cl = cd.comp;
+      entry.cp = cd.primaryIdx;
+    }
     searchEntries.push(entry);
   }
   await writeFile(OUT_SEARCH, JSON.stringify(searchEntries) + '\n');
