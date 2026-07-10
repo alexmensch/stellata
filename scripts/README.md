@@ -21,6 +21,9 @@ cross-script policy and pointers.
 - `refresh/` — Layer 2 external-catalogue refresh (manual,
   infrequent).
 - `colour/` — blackbody → sRGB LUT generator.
+- `sid/` — SID registry tools: `sid:allocate` (the only writer of
+  `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation
+  classifier. See `docs/sid.md`.
 - `clouds/`, `dust/`, `local-group/` — per-layer build helpers.
 
 ## Preprocessor idempotency
