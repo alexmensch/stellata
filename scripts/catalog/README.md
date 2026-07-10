@@ -280,7 +280,7 @@ the pure comparator + formatter and has its own vitest coverage.
 Separate from `catalog.bin` so the main binary stays rendering-focused.
 One JSON array entry per star that has at least one searchable identifier
 (proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
-Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/s`) to keep wire size down — file is
+Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/s/cl/cp`) to keep wire size down — file is
 ~15 MB raw, ~4 MB gzipped. Loaded in parallel with `catalog.bin` in
 `main.ts`. The `s` field carries the raw spectral designation from the
 AT-HYG source ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip

@@ -847,8 +847,8 @@ export const NAME_LENGTH_PREFIX_BYTES = 2;
 // ---- search-index.json wire contract ------------------------------------
 
 // One entry per searchable star written by build-catalog.ts and consumed
-// by src/client/search.ts. Keys are short (i/p/b/f/c/s/g/hip/hd/hr/gl) for
-// wire size — the index is ~13 MB raw with hundreds of thousands of
+// by src/client/search.ts. Keys are short (i/p/b/f/c/s/g/hip/hd/hr/gl/cl/cp)
+// for wire size — the index is ~15 MB raw with hundreds of thousands of
 // entries. Sharing the interface across writer + reader is the contract:
 // drift here ships a broken index.
 export interface SearchEntry {
