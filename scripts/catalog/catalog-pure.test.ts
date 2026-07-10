@@ -50,6 +50,8 @@ import {
   RECORD_FIELD_SIZES,
   HEADER_SIZE,
   RECORD_SIZE,
+  MAGIC,
+  BINARY_VERSION,
   NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
@@ -1416,10 +1418,15 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
-  it('record fields cover the v6 byte plan (Apsis 7×float32 at 52..79)', () => {
+  it('magic + version identify the v7 (SID) format', () => {
+    expect(MAGIC).toBe('HYG7');
+    expect(BINARY_VERSION).toBe(7);
+  });
+
+  it('record fields cover the v7 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80)', () => {
     expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
     expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(52); // gaiaSourceId end
-    expect(RECORD_SIZE).toBe(80);
+    expect(RECORD_SIZE).toBe(84);
     // varType uint8 sits between ampUnits (36) and period (38).
     expect(RECORD_LAYOUT.ampUnits + 1).toBe(RECORD_LAYOUT.varType);
     expect(RECORD_LAYOUT.varType).toBe(37);
@@ -1437,7 +1444,10 @@ describe('catalog-pure / binary-format constants', () => {
     expect(RECORD_LAYOUT.teffGspspec).toBe(68);
     expect(RECORD_LAYOUT.loggGspspec).toBe(72);
     expect(RECORD_LAYOUT.mhGspspec).toBe(76);
-    expect(RECORD_LAYOUT.mhGspspec + 4).toBe(RECORD_SIZE);
+    // sid uint32 closes the record immediately after the Apsis bank.
+    expect(RECORD_LAYOUT.mhGspspec + 4).toBe(RECORD_LAYOUT.sid);
+    expect(RECORD_LAYOUT.sid).toBe(80);
+    expect(RECORD_LAYOUT.sid + 4).toBe(RECORD_SIZE);
   });
 
   it('FLAGS registry entries are distinct single-bit values', () => {

@@ -23,6 +23,14 @@ within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
 `LgObject` type in `build-local-group-pure.ts`; the client loader at
 `src/client/local-group-loader.ts` mirrors it 1:1.
 
+Each object also carries a `sid` (frozen Stellata ID, docs/sid.md § 7),
+stamped after this script by `scripts/sid/stamp-sibling-sids.ts` (the tail
+of `npm run build:local-group`) — it resolves each `lg:<id>` slug against
+the committed ledger; this build never touches the ledger. A new slug
+hard-fails the stamp until `npm run sid:allocate` mints it; a rename needs
+a `data/sid/sameas-overrides.tsv` bridge. See `scripts/sid/README.md`
+§ Sibling-artifact stamping.
+
 Idempotent — exits early if `public/local-group.json` is newer than
 the script and both source files. Run via
 `npm run build:local-group`. No live fetches at build time; refresh

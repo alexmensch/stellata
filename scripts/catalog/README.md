@@ -2,12 +2,12 @@
 
 Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type + Stellarium →
-`public/catalog.bin` (v6 binary) + `public/constellations.json` +
+`public/catalog.bin` (v7 binary) + `public/constellations.json` +
 `public/search-index.json`. Run via `npm run build:catalog`.
 
 `scripts/catalog/build-catalog.ts` is the orchestrator; the per-row
 pipeline lives in `stars-parse.ts` (`readStars`). Per-pipeline algebra
-sits in `catalog-pure.ts` (the single source of truth for the v6
+sits in `catalog-pure.ts` (the single source of truth for the v7
 binary layout + override math + spectral resolver) and the topic
 sub-modules (`direction-cascade.ts`, `gcvs-parse.ts`,
 `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`).
@@ -130,8 +130,9 @@ cutoff; over-pulling those is harmless.
 ## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 
 Fixed-size records, sorted brightest-first by `absmag`. Current version is
-**v6** with an 80-byte stride. Magic and version step together
-(v3=`HYG3`, v4=`HYG4`, v5=`HYG5`, v6=`HYG6`). v5 appended a `uint64` Gaia
+**v7** with an 84-byte stride. Magic and version step together
+(v3=`HYG3`, v4=`HYG4`, v5=`HYG5`, v6=`HYG6`, v7=`HYG7`). v7 appended a
+`uint32` `sid` (Stellata ID) at byte 80 — see § SID allocation. v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
 pipeline uses everywhere else; ~99.6% of records carry one (the residual
@@ -209,6 +210,11 @@ Ballesteros(B–V) → Apsis-direct).
                           gspspec as fallback. NaN = absent.
   - 72–75 `float32`      **logg_gspspec** (log cgs); NaN = absent.
   - 76–79 `float32`      **mh_gspspec** ([M/H] dex); NaN = absent.
+  - 80–83 `uint32`       **sid** — Stellata ID (docs/sid.md § 7), the frozen
+                          per-object wire identity. `0` (`NO_SID`) only in the
+                          unallocated-bootstrap path (§ SID allocation) before
+                          the build hard-fails. Every shipped record is
+                          nonzero.
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
   **Offset 0 is reserved** as the "no name" sentinel (2 zero bytes of
   padding); real names start at offset ≥ 2.
@@ -274,6 +280,35 @@ deliberate change refreshes the manifest with
 `UPDATE_BUILD_COUNTS=1 npm run build:catalog`; an unintended drift
 exits non-zero with a per-key diff. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage.
+`UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
+when the sources are unchanged, so an up-to-date tree can still refresh a
+snapshot.
+
+## SID allocation
+
+Each record's `sid` (byte 80) is its frozen Stellata ID resolved from the
+committed ledger (`data/sid/`, docs/sid.md). The build is a pure
+**consumer**: `starDesignations` (in `scripts/sid/sid-pure.ts` — the same
+extractor `sid:allocate` uses, so both derive an identical class per record)
+builds each record's designation set, and `resolveSids` maps it to the
+existing ledger sid. The build **never mints** — `sid:allocate` is the sole
+ledger writer (docs/sid.md § 4.4).
+
+Bootstrap when the record set changes (new AT-HYG rows, new companions):
+
+1. `npm run build:catalog` resolves every record. Any object absent from the
+   ledger is written with `NO_SID` (0) so the artifact still lands, then the
+   build **hard-fails** listing the unallocated records.
+2. `npm run sid:allocate` reads that catalog.bin + search-index +
+   row-index-map, mints the missing sids (an explicit, reviewable
+   `ledger.tsv` diff), and rewrites `ledger-head.json`.
+3. `npm run build:catalog` again — now every record resolves and the build
+   succeeds. `sidResolved` in the build-counts snapshot equals the record
+   count on a clean build.
+
+The runtime reader (`catalog-loader.ts`) and Node reader
+(`catalog-lookup.ts`) inherit the field automatically off `RECORD_LAYOUT`;
+neither decodes `sid` until the B4 resolver (`stellata-efju.5`).
 
 ## Search index (`public/search-index.json`)
 
