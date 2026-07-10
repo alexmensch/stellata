@@ -90,6 +90,8 @@ import {
 import { readStars, type Star } from './stars-parse';
 import { loadDustGrid } from './dust-deextinction';
 import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
+import { resolveSids, starDesignations, type SidObject } from '../sid/sid-pure';
+import { loadRegistry } from '../sid/registry-io';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -179,7 +181,12 @@ async function main() {
     process.exit(1);
   }
 
-  if (isUpToDate()) {
+  // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
+  // of a full build, so they must force one even when the sources are
+  // unchanged (the snapshot assert/refresh is unreachable otherwise).
+  const forceRebuild =
+    process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
+  if (!forceRebuild && isUpToDate()) {
     console.log('catalog.bin is up to date with source CSV; skipping rebuild.');
     return;
   }
@@ -191,6 +198,7 @@ async function main() {
   // field undefined.
   const counts: BuildCounts = {
     recordCount: 0,
+    sidResolved: 0,
     binaryPairs: 0,
     binaryMutualPairs: 0,
     gcvsEntries: 0,
@@ -682,6 +690,34 @@ async function main() {
     );
   }
 
+  // Resolve every record to its frozen Stellata ID from the committed
+  // ledger. The build never mints — sid:allocate is the sole writer
+  // (docs/sid.md § 4.4). Unallocated records get NO_SID and hard-fail the
+  // build after the artifact lands, so sid:allocate can still consume it
+  // (scripts/catalog/README.md § SID allocation).
+  const registry = loadRegistry();
+  const sidObjects: SidObject[] = stars.map((s, i) => ({
+    designations: starDesignations({
+      isSol: (s.flags & FLAG_IS_SOL) !== 0,
+      hip: s.hip,
+      hd: s.hd,
+      hr: s.hr,
+      gl: s.gl,
+      gaiaSourceId: s.gaiaSourceId,
+      syntheticId: s.syntheticId,
+    }),
+    kind: 'star',
+    label: `record ${i}${s.proper ? ` (${s.proper})` : ''}`,
+  }));
+  const sidResolution = resolveSids({
+    objects: sidObjects,
+    storedEdges: registry.storedEdges,
+    ledger: registry.ledger,
+    retirements: registry.retirements,
+    today: '',
+  });
+  const recordSids = sidResolution.objectSids;
+
   // Build name table — just proper names. Bayer/Flam/HIP/etc. go in
   // search-index.json so the main binary stays compact.
   const encoder = new TextEncoder();
@@ -783,6 +819,8 @@ async function main() {
     if (apsis && (apsis.teffGspphot !== null || apsis.teffGspspec !== null)) {
       apsisTeffEither++;
     }
+
+    view.setUint32(off + RECORD_LAYOUT.sid, recordSids[i], true);
 
     if (s.flags & FLAG_IS_SOL) solIndex = i;
     off += RECORD_SIZE;
@@ -897,6 +935,22 @@ async function main() {
       `Gaia DR3 Apsis: ${apsisMatched} / ${stars.length} records matched (${matchedPct}%), ` +
         `Teff (gspphot OR gspspec) on ${apsisTeffEither} (${teffPct}%)`,
     );
+  }
+
+  counts.sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
+  console.log(`SID: ${counts.sidResolved} / ${stars.length} records resolved to a ledger SID`);
+  if (sidResolution.errors.length > 0) {
+    const preview = sidResolution.errors.slice(0, 10);
+    console.error(
+      `\nSID resolution failed for ${sidResolution.errors.length} record(s):\n  ` +
+        preview.join('\n  ') +
+        (sidResolution.errors.length > preview.length
+          ? `\n  … and ${sidResolution.errors.length - preview.length} more`
+          : '') +
+        `\ncatalog.bin was written with NO_SID placeholders so the ledger can be ` +
+        `updated.\nRun \`npm run sid:allocate\` to mint the missing SIDs, then rebuild.`,
+    );
+    process.exit(1);
   }
 
   await assertOrUpdateBuildCounts(counts);

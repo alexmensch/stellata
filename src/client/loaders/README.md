@@ -24,7 +24,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          pc/yr) alongside `positions`; the epoch-advance
                          pass below consumes it.
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
-                         source_id handling + the v7 velocity columns.
+                         source_id handling + the v8 velocity columns.
 epoch-advance-pure.ts    load-time space-motion propagation:
                          `advancePositionsToEpoch(positions, velocities,
                          epochJyr)` rewrites catalog.positions in place to

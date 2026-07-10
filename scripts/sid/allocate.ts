@@ -2,7 +2,7 @@
 // the built artifacts, resolves every object against the frozen ledger,
 // appends newly minted rows, and rewrites ledger-head.json. docs/sid.md § 4.
 
-import { existsSync, readFileSync, readdirSync, writeFileSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { loadCatalog } from '../catalog/catalog-lookup';
@@ -16,26 +16,17 @@ import {
   parseDesignation,
   parseLedgerTsv,
   parseRetirementsTsv,
-  parseSameasTsv,
   parseSolObjectsTsv,
   serializeLedgerRow,
+  starDesignations,
   validateLedger,
   validateRetirements,
-  type SameasEdge,
   type SidObject,
 } from './sid-pure';
+import { HEAD_PATH, LEDGER_PATH, RETIREMENTS_PATH, SOL_OBJECTS_PATH, loadStoredEdges } from './registry-io';
 
 const PUBLIC_DIR = resolve(ROOT, 'public');
-const SID_DIR = resolve(ROOT, 'data/sid');
-const LEDGER_PATH = resolve(SID_DIR, 'ledger.tsv');
-const RETIREMENTS_PATH = resolve(SID_DIR, 'retirements.tsv');
-const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
-const OVERRIDES_PATH = resolve(SID_DIR, 'sameas-overrides.tsv');
-const SOL_OBJECTS_PATH = resolve(SID_DIR, 'sol-objects.tsv');
-const BRIDGES_DIR = resolve(SID_DIR, 'bridges');
 const MULTIPLES_PATH = resolve(ROOT, 'data/binaries/multiples.tsv');
-
-const SYNTH_RUNTIME_PREFIX = 'synth-';
 
 function requireFile(path: string, hint: string): string {
   if (!existsSync(path)) {
@@ -43,10 +34,6 @@ function requireFile(path: string, hint: string): string {
     process.exit(1);
   }
   return readFileSync(path, 'utf-8');
-}
-
-function glDesignation(cell: string): string {
-  return `gl:${cell.trim().replace(/\s+/g, '_')}`;
 }
 
 async function collectObjects(): Promise<{ objects: SidObject[]; starCount: number }> {
@@ -58,38 +45,31 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
     requireFile(resolve(PUBLIC_DIR, 'catalog-row-index-map.json'), 'run npm run build:catalog'),
   ) as { bySynth: Record<string, number> };
 
-  const extra = new Map<number, string[]>();
-  const push = (i: number, d: string) => {
-    const list = extra.get(i);
-    if (list) list.push(d);
-    else extra.set(i, [d]);
-  };
+  const hd = new Map<number, number>();
+  const hr = new Map<number, number>();
+  const gl = new Map<number, string>();
   for (const e of searchIndex) {
-    if (e.hd !== undefined) push(e.i, `hd:${e.hd}`);
-    if (e.hr !== undefined) push(e.i, `hr:${e.hr}`);
-    if (e.gl !== undefined) push(e.i, glDesignation(e.gl));
+    if (e.hd !== undefined) hd.set(e.i, e.hd);
+    if (e.hr !== undefined) hr.set(e.i, e.hr);
+    if (e.gl !== undefined) gl.set(e.i, e.gl);
   }
-  for (const [key, i] of Object.entries(rowIndexMap.bySynth)) {
-    if (!key.startsWith(SYNTH_RUNTIME_PREFIX)) {
-      console.error(`sid:allocate: bySynth key "${key}" lacks the ${SYNTH_RUNTIME_PREFIX} prefix`);
-      process.exit(1);
-    }
-    push(i, `synth:${key.slice(SYNTH_RUNTIME_PREFIX.length)}`);
-  }
+  const synthByIndex = new Map<number, string>();
+  for (const [key, i] of Object.entries(rowIndexMap.bySynth)) synthByIndex.set(i, key);
 
   const objects: SidObject[] = [];
   let solRecords = 0;
   for (const r of catalog.records()) {
-    const designations: string[] = [];
-    if (r.flags & FLAG_IS_SOL) {
-      designations.push('sol:sun');
-      solRecords++;
-    }
-    if (r.hip !== null) designations.push(`hip:${r.hip}`);
-    designations.push(...(extra.get(r.i) ?? []));
-    if (r.gaiaSourceId !== null) designations.push(`gaia_dr3:${r.gaiaSourceId}`);
+    if (r.flags & FLAG_IS_SOL) solRecords++;
     objects.push({
-      designations,
+      designations: starDesignations({
+        isSol: (r.flags & FLAG_IS_SOL) !== 0,
+        hip: r.hip,
+        hd: hd.get(r.i) ?? null,
+        hr: hr.get(r.i) ?? null,
+        gl: gl.get(r.i) ?? null,
+        gaiaSourceId: r.gaiaSourceId !== null ? r.gaiaSourceId.toString() : null,
+        syntheticId: synthByIndex.get(r.i) ?? null,
+      }),
       kind: 'star',
       label: `record ${r.i}${r.name ? ` (${r.name})` : ''}`,
     });
@@ -128,22 +108,6 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
   }
 
   return { objects, starCount };
-}
-
-function loadStoredEdges(): SameasEdge[] {
-  const edges = parseSameasTsv(
-    requireFile(OVERRIDES_PATH, 'committed under data/sid/'),
-    'sameas-overrides.tsv',
-  );
-  if (existsSync(BRIDGES_DIR)) {
-    for (const name of readdirSync(BRIDGES_DIR).sort()) {
-      if (!name.endsWith('.tsv')) continue;
-      edges.push(
-        ...parseSameasTsv(readFileSync(resolve(BRIDGES_DIR, name), 'utf-8'), `bridges/${name}`),
-      );
-    }
-  }
-  return edges;
 }
 
 function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): string {

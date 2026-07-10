@@ -240,11 +240,11 @@ applies three filters and nothing else:
    catastrophic 1/π estimate keeps its corrected distance whenever
    that distance falls inside scope.
 
-There is no source-aware filtering. The 80-byte v6 binary record
+There is no source-aware filtering. The 96-byte v8 binary record
 preserves none of the `*_src` columns either, so the renderer can't
 distinguish a Tycho-positioned, Gaia-distanced row from a "pure"
 Hipparcos one — every star is shaded by the same physical model
-(§Stellar physics, §Stellar perception model). v6 does carry each
+(§Stellar physics, §Stellar perception model). v8 does carry each
 star's Gaia DR3 `source_id` (when AT-HYG has it) plus Apsis
 astrophysical parameters (Teff/logg/[M/H]/A0 from gspphot ∪ gspspec)
 keyed by it — the source-ID anchor downstream consumers (cross-match
@@ -400,7 +400,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
-writes them per record into the v6 binary at offsets 52–79 (see
+writes them per record into the v8 binary at offsets 52–79 (see
 `scripts/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
@@ -672,8 +672,9 @@ build-time epoch bump.** A build-time advance to a fixed epoch
 to stay current), still contradicts the time readout, and cannot
 compose with the planned time scrubber (`stellata-nmu`). Instead:
 
-- `catalog.bin` v7 appends per-record `vx/vy/vz` `float32` pc/yr
-  (bytes 80–91, stride 80 → 92; +3.9 MB ≈ +15%). Positions stay
+- `catalog.bin` v8 appends per-record `vx/vy/vz` `float32` pc/yr
+  (bytes 84–95, stride 84 → 96 after the v7 `sid`; +3.9 MB ≈ +15%).
+  Positions stay
   J2016.0 — the scene epoch convention and every existing
   regression corpus remain valid.
 - At startup, immediately after catalog load, one pure pass
@@ -689,7 +690,7 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   `|t − t_advanced|` exceeds a sub-pixel drift threshold
   (bucketised, same idea as the ephemeris 60 s cache); a per-frame
   GPU path (per-instance velocity attribute) stays available as an
-  escalation and reads the same v7 columns, but is not needed for
+  escalation and reads the same v8 columns, but is not needed for
   v1.
 
 **Time base.** `Stellata.getT()` → Julian epoch years via
@@ -1505,7 +1506,7 @@ Tier C cross-checker (`validate-simbad-sample.ts` + the
 **Layer 5 — documentation.** This file (astronomer audience —
 sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 — functions, thresholds, provenance fields); `scripts/README.md`
-(formats — v6 byte plan, name table, search index).
+(formats — v8 byte plan, name table, search index).
 
 ### Worked examples
 

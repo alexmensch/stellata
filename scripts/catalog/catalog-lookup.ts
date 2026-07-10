@@ -1,4 +1,4 @@
-// AoS reader + per-key indexes for the v6 binary catalogue, used by
+// AoS reader + per-key indexes for the v8 binary catalogue, used by
 // test-time corpus iteration. Shares LAYOUT constants with
 // catalog-pure.ts.
 

@@ -10,7 +10,7 @@ cross-script policy and pointers.
   `public/catalog-row-index-map.json`; companions promoted from
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
-  byte-range split of the v6 binary that keeps every deployed asset
+  byte-range split of the v8 binary that keeps every deployed asset
   under Cloudflare Workers' 25 MiB limit; see `catalog/README.md`
   § Binary catalog format.
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
@@ -23,7 +23,9 @@ cross-script policy and pointers.
 - `colour/` — blackbody → sRGB LUT generator.
 - `sid/` — SID registry tools: `sid:allocate` (the only writer of
   `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation
-  classifier. See `docs/sid.md`.
+  classifier, and `sid:stamp` (stamps sids onto clouds.json /
+  local-group.json). The catalog build resolves stellar sids in-record
+  from the ledger. See `docs/sid.md`.
 - `clouds/`, `dust/`, `local-group/` — per-layer build helpers.
 
 ## Preprocessor idempotency

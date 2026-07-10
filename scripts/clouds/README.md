@@ -26,6 +26,14 @@ One entry per cloud in `public/clouds.json`:
 | `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |
 | `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
 | `distance` | Heliocentric distance to centroid (pc). |
+| `sid`      | Frozen Stellata ID (docs/sid.md § 7). |
+
+`sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
+(the tail of `npm run build:clouds`), resolving each `cloud:<id>` slug against
+the committed ledger — this Python build never touches the ledger. A new cloud
+slug hard-fails the stamp until `npm run sid:allocate` mints it; a rename needs
+a `data/sid/sameas-overrides.tsv` bridge. See `scripts/sid/README.md`
+§ Sibling-artifact stamping.
 
 ## Merge logic
 

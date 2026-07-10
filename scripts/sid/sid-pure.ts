@@ -34,6 +34,45 @@ export function isValidDesignation(d: string): boolean {
   }
 }
 
+// ---- Star designation extraction (docs/sid.md § 3, scripts/sid/README.md) -
+
+/** Runtime synthetic-companion key prefix (`Star.syntheticId`,
+ *  `catalog-row-index-map.json` `bySynth`); stripped to the `synth:` key. */
+export const SYNTH_RUNTIME_PREFIX = 'synth-';
+
+export interface StarDesignationFields {
+  isSol: boolean;
+  hip: number | null;
+  hd: number | null;
+  hr: number | null;
+  /** Raw AT-HYG Gliese/GJ cell; whitespace collapses to `_` per § 3. */
+  gl: string | null;
+  gaiaSourceId: string | null;
+  /** Synthetic key WITH its `synth-` prefix, or null. */
+  syntheticId: string | null;
+}
+
+/** External designations for one catalog star. The single extractor shared
+ *  by `sid:allocate` (over the built artifacts) and `build-catalog`'s
+ *  in-record resolution (over its in-memory records) so both derive an
+ *  identical class from the same record. */
+export function starDesignations(f: StarDesignationFields): string[] {
+  const d: string[] = [];
+  if (f.isSol) d.push('sol:sun');
+  if (f.hip !== null && f.hip > 0) d.push(`hip:${f.hip}`);
+  if (f.hd !== null) d.push(`hd:${f.hd}`);
+  if (f.hr !== null) d.push(`hr:${f.hr}`);
+  if (f.gl) d.push(`gl:${f.gl.trim().replace(/\s+/g, '_')}`);
+  if (f.syntheticId) {
+    if (!f.syntheticId.startsWith(SYNTH_RUNTIME_PREFIX)) {
+      throw new Error(`synthetic id "${f.syntheticId}" lacks the ${SYNTH_RUNTIME_PREFIX} prefix`);
+    }
+    d.push(`synth:${f.syntheticId.slice(SYNTH_RUNTIME_PREFIX.length)}`);
+  }
+  if (f.gaiaSourceId !== null) d.push(`gaia_dr3:${f.gaiaSourceId}`);
+  return d;
+}
+
 // ---- Canonical-key ladder (docs/sid.md § 4.2) ----------------------------
 
 const LADDER_BEFORE_GAIA = ['sol', 'hip', 'hd', 'hr', 'gl'] as const;
@@ -583,4 +622,33 @@ export function allocate(input: AllocateInput): AllocateResult {
     ambiguous,
     mergedClasses,
   };
+}
+
+export interface SidResolution {
+  /** Per input object, its resolved ledger sid (0 = unresolved). */
+  objectSids: number[];
+  /** Non-empty iff any object is unallocated / keyless / conflicting. The
+   *  caller must run `npm run sid:allocate` to reconcile before shipping. */
+  errors: string[];
+}
+
+/** Read-only allocation: resolve every object to its EXISTING ledger sid,
+ *  treating any object that would mint a new row (or is keyless / conflicts)
+ *  as an error. This is the resolver the artifact emitters use — the build
+ *  never mints; `sid:allocate` is the sole ledger writer (docs/sid.md
+ *  § 4.4). */
+export function resolveSids(input: AllocateInput): SidResolution {
+  const result = allocate(input);
+  const mintedSids = new Set(result.minted.map((r) => r.sid));
+  const errors = [...result.errors];
+  for (const i of result.keyless) {
+    errors.push(`${input.objects[i].label}: no usable designation (keyless)`);
+  }
+  input.objects.forEach((obj, i) => {
+    const sid = result.objectSids[i];
+    if (sid !== 0 && mintedSids.has(sid)) {
+      errors.push(`${obj.label}: unallocated (${obj.designations.join(', ')})`);
+    }
+  });
+  return { objectSids: result.objectSids, errors };
 }

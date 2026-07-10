@@ -18,8 +18,10 @@ import {
   parseRetirementsTsv,
   parseSameasTsv,
   parseSolObjectsTsv,
+  resolveSids,
   serializeLedgerRow,
   splitTsv,
+  starDesignations,
   validateLedger,
   validateRetirements,
   type LedgerRow,
@@ -445,5 +447,96 @@ describe('allocation', () => {
     expect(r.minted[0].canonicalKey).toBe('hip:1');
     expect(r.mergedClasses).toEqual([{ sid: 1, objects: [0, 1] }]);
     expect(r.objectSids).toEqual([1, 1]);
+  });
+});
+
+describe('starDesignations', () => {
+  it('emits the full class in ladder order, gl whitespace collapsed', () => {
+    expect(
+      starDesignations({
+        isSol: false,
+        hip: 32349,
+        hd: 48915,
+        hr: 2491,
+        gl: 'Gl 244 A',
+        gaiaSourceId: '2947050466531873024',
+        syntheticId: null,
+      }),
+    ).toEqual([
+      'hip:32349',
+      'hd:48915',
+      'hr:2491',
+      'gl:Gl_244_A',
+      'gaia_dr3:2947050466531873024',
+    ]);
+  });
+
+  it('prepends sol:sun for the Sol record and strips the synth- prefix', () => {
+    expect(
+      starDesignations({
+        isSol: true,
+        hip: 0,
+        hd: null,
+        hr: null,
+        gl: null,
+        gaiaSourceId: null,
+        syntheticId: 'synth-01234+5678-Ab',
+      }),
+    ).toEqual(['sol:sun', 'synth:01234+5678-Ab']);
+  });
+
+  it('throws when a synthetic id lacks the runtime prefix', () => {
+    expect(() =>
+      starDesignations({
+        isSol: false, hip: null, hd: null, hr: null, gl: null,
+        gaiaSourceId: null, syntheticId: '01234+5678-Ab',
+      }),
+    ).toThrow(/synth-/);
+  });
+});
+
+describe('resolveSids', () => {
+  const ledger: LedgerRow[] = [
+    { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-01-01' },
+    { sid: 2, canonicalKey: 'cloud:orion-a', kind: 'cloud', firstSeen: '2026-01-01' },
+  ];
+
+  it('resolves existing objects and never mints', () => {
+    const r = resolveSids({
+      objects: [
+        { designations: ['hip:1', 'gaia_dr3:9'], kind: 'star', label: 'star' },
+        { designations: ['cloud:orion-a'], kind: 'cloud', label: 'orion' },
+      ],
+      storedEdges: [],
+      ledger,
+      retirements: [],
+      today: '',
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.objectSids).toEqual([1, 2]);
+  });
+
+  it('flags an unallocated object (one that would mint) as an error', () => {
+    const r = resolveSids({
+      objects: [{ designations: ['hip:99'], kind: 'star', label: 'record 42' }],
+      storedEdges: [],
+      ledger,
+      retirements: [],
+      today: '',
+    });
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/record 42: unallocated/);
+  });
+
+  it('resolves via a stored slug-rename bridge to the frozen canonical key', () => {
+    const r = resolveSids({
+      objects: [{ designations: ['cloud:orion-molecular'], kind: 'cloud', label: 'renamed' }],
+      storedEdges: [{ a: 'cloud:orion-a', b: 'cloud:orion-molecular' }],
+      ledger,
+      retirements: [],
+      today: '',
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.objectSids).toEqual([2]);
   });
 });

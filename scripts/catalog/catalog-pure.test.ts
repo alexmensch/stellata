@@ -50,6 +50,8 @@ import {
   RECORD_FIELD_SIZES,
   HEADER_SIZE,
   RECORD_SIZE,
+  MAGIC,
+  BINARY_VERSION,
   NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
@@ -1416,10 +1418,15 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
-  it('record fields cover the v7 byte plan (Apsis 7×float32 at 52..79, velocity 3×float32 at 80..91)', () => {
+  it('magic + version identify the v8 format', () => {
+    expect(MAGIC).toBe('HYG8');
+    expect(BINARY_VERSION).toBe(8);
+  });
+
+  it('record fields cover the v8 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80, velocity 3×float32 at 84..95)', () => {
     expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
     expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(52); // gaiaSourceId end
-    expect(RECORD_SIZE).toBe(92);
+    expect(RECORD_SIZE).toBe(96);
     // varType uint8 sits between ampUnits (36) and period (38).
     expect(RECORD_LAYOUT.ampUnits + 1).toBe(RECORD_LAYOUT.varType);
     expect(RECORD_LAYOUT.varType).toBe(37);
@@ -1437,12 +1444,15 @@ describe('catalog-pure / binary-format constants', () => {
     expect(RECORD_LAYOUT.teffGspspec).toBe(68);
     expect(RECORD_LAYOUT.loggGspspec).toBe(72);
     expect(RECORD_LAYOUT.mhGspspec).toBe(76);
-    expect(RECORD_LAYOUT.mhGspspec + 4).toBe(80);
-    // v7 velocity bank: 3 float32 pc/yr appended after the Apsis fields,
-    // filling the record to RECORD_SIZE.
-    expect(RECORD_LAYOUT.vx).toBe(80);
-    expect(RECORD_LAYOUT.vy).toBe(84);
-    expect(RECORD_LAYOUT.vz).toBe(88);
+    // sid uint32 immediately after the Apsis bank, then the velocity bank.
+    expect(RECORD_LAYOUT.mhGspspec + 4).toBe(RECORD_LAYOUT.sid);
+    expect(RECORD_LAYOUT.sid).toBe(80);
+    // v8 velocity bank: 3 float32 pc/yr appended after sid, filling the
+    // record to RECORD_SIZE.
+    expect(RECORD_LAYOUT.sid + 4).toBe(RECORD_LAYOUT.vx);
+    expect(RECORD_LAYOUT.vx).toBe(84);
+    expect(RECORD_LAYOUT.vy).toBe(88);
+    expect(RECORD_LAYOUT.vz).toBe(92);
     expect(RECORD_LAYOUT.vz + 4).toBe(RECORD_SIZE);
   });
 

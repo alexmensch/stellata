@@ -212,7 +212,7 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.physicalRadius[0]).toBeCloseTo(1.0, 5);
     });
 
-    it('parses the v7 space-motion velocity columns', () => {
+    it('parses the v8 space-motion velocity columns', () => {
       const star: StarRecord = {
         ...baseStar,
         pos: [1, 2, 3],

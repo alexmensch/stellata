@@ -46,7 +46,7 @@ const MAX_DIST_PC = 50_000;
 export interface Star {
   x: number; y: number; z: number;
   /** Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
-   *  Written to catalog.bin v7; the runtime epoch-advance pass reads it
+   *  Written to catalog.bin v8; the runtime epoch-advance pass reads it
    *  once at load to propagate positions off the J2016.0 baseline. Pair
    *  members share one systemic velocity so the advance never shears a
    *  pair (see companion-promotion's systemic-velocity pass). */
