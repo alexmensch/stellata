@@ -510,22 +510,24 @@ describe('resolveSids', () => {
       storedEdges: [],
       ledger,
       retirements: [],
-      today: '',
     });
     expect(r.errors).toEqual([]);
     expect(r.objectSids).toEqual([1, 2]);
   });
 
-  it('flags an unallocated object (one that would mint) as an error', () => {
+  it('flags an unallocated object (one that would mint) as an error and leaves its sid at NO_SID', () => {
     const r = resolveSids({
-      objects: [{ designations: ['hip:99'], kind: 'star', label: 'record 42' }],
+      objects: [
+        { designations: ['hip:1'], kind: 'star', label: 'existing' },
+        { designations: ['hip:99'], kind: 'star', label: 'record 42' },
+      ],
       storedEdges: [],
       ledger,
       retirements: [],
-      today: '',
     });
     expect(r.errors).toHaveLength(1);
     expect(r.errors[0]).toMatch(/record 42: unallocated/);
+    expect(r.objectSids).toEqual([1, 0]);
   });
 
   it('resolves via a stored slug-rename bridge to the frozen canonical key', () => {
@@ -534,7 +536,6 @@ describe('resolveSids', () => {
       storedEdges: [{ a: 'cloud:orion-a', b: 'cloud:orion-molecular' }],
       ledger,
       retirements: [],
-      today: '',
     });
     expect(r.errors).toEqual([]);
     expect(r.objectSids).toEqual([2]);

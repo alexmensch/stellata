@@ -714,7 +714,6 @@ async function main() {
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
     retirements: registry.retirements,
-    today: '',
   });
   const recordSids = sidResolution.objectSids;
 

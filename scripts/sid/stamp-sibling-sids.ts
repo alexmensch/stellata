@@ -61,7 +61,6 @@ function stamp(spec: ArtifactSpec): void {
     storedEdges,
     ledger,
     retirements,
-    today: '',
   });
   if (errors.length > 0) {
     console.error(
