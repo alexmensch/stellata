@@ -64,6 +64,7 @@ import {
 } from './visual-doubles';
 import {
   buildCatalogRowIndexMap,
+  backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
   stampComponentLetters,
@@ -220,9 +221,11 @@ async function main() {
     apsisMatched: 0,
     apsisTeffEither: 0,
     simbadSptypeEntries: 0,
+    spectralByCurated: 0,
     spectralBySimbad: 0,
     spectralByGspspec: 0,
     spectralFallback: 0,
+    multiplesIdentifierBackfill: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -428,6 +431,7 @@ async function main() {
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
   counts.directionAthygPrinted = dv.athyg_printed;
+  counts.spectralByCurated = stats.spectralByCurated;
   counts.spectralBySimbad = stats.spectralBySimbad;
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
@@ -436,7 +440,8 @@ async function main() {
   const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
   const fallbackPct = ((stats.spectralFallback / stars.length) * 100).toFixed(1);
   console.log(
-    `  spectral classification: SIMBAD ${stats.spectralBySimbad} (${simbadPct}%), ` +
+    `  spectral classification: curated ${stats.spectralByCurated}, ` +
+      `SIMBAD ${stats.spectralBySimbad} (${simbadPct}%), ` +
       `GSP-Spec ${stats.spectralByGspspec} (${gspspecPct}%), ` +
       `unknown ${stats.spectralFallback} (${fallbackPct}%)`,
   );
@@ -450,6 +455,16 @@ async function main() {
     ? readMultiplesTsv(SRC_MULTIPLES)
     : null;
   if (multiplesRows !== null) {
+    // Identifier backfill BEFORE promotion: HD-only AT-HYG primaries
+    // (ξ UMa) gain the HIP + Gaia source_id the binaries pipeline
+    // resolved, so promotion's cursor-primary anchor and every
+    // downstream HIP/Gaia lookup address the record.
+    counts.multiplesIdentifierBackfill =
+      backfillPrimaryIdentifiers(multiplesRows, stars);
+    console.log(
+      `  backfilled identifiers onto ${counts.multiplesIdentifierBackfill} ` +
+        `HD-only primaries from multiples.tsv`,
+    );
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
     const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS, dustGrid);

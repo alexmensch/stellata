@@ -11,6 +11,7 @@ import {
   parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
+  backfillPrimaryIdentifiers,
   promoteCompanions,
   stampComponentLetters,
   stripDoubledParentToken,
@@ -62,6 +63,7 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     comp: 'B',
     hip: null,
     gaiaSourceId: null,
+    hd: null,
     x_pc: 100, y_pc: 0, z_pc: 0,
     absmag: 5.0, ci: 0.6, spect: '',
     name: '',
@@ -99,7 +101,7 @@ const ORBIT_ELEMENTS = {
 describe('parseMultiplesTsv', () => {
   it('parses a minimal header + one row', () => {
     const header = [
-      'system_id','comp','hip','gaia_source_id',
+      'system_id','comp','hip','gaia_source_id','hd',
       'x_pc','y_pc','z_pc','absmag','ci','spect','name',
       'source','regime','resolve_via','astrometry_via','orbit_via',
       'spect_via','photometry_via','orbit_role',
@@ -109,7 +111,7 @@ describe('parseMultiplesTsv', () => {
       'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
     ].join('\t');
     const body = [
-      'WDS-X-AB','A','12345','1234567890123456',
+      'WDS-X-AB','A','12345','1234567890123456','48915',
       '1.0','2.0','3.0','5.50','0.45','G2V','Sirius',
       'athyg','2','orb6_hip','gaia_5p','orb6',
       'simbad','athyg_own','primary',
@@ -125,6 +127,7 @@ describe('parseMultiplesTsv', () => {
     expect(r.comp).toBe('A');
     expect(r.hip).toBe(12345);
     expect(r.gaiaSourceId).toBe('1234567890123456');
+    expect(r.hd).toBe(48915);
     expect(r.x_pc).toBe(1.0);
     expect(r.absmag).toBe(5.5);
     expect(r.spect).toBe('G2V');
@@ -141,7 +144,7 @@ describe('parseMultiplesTsv', () => {
 
   it('treats blank cells as null', () => {
     const header = [
-      'system_id','comp','hip','gaia_source_id',
+      'system_id','comp','hip','gaia_source_id','hd',
       'x_pc','y_pc','z_pc','absmag','ci','spect','name',
       'source','regime','resolve_via','astrometry_via','orbit_via',
       'spect_via','photometry_via','orbit_role',
@@ -151,7 +154,7 @@ describe('parseMultiplesTsv', () => {
       'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
     ].join('\t');
     const body = [
-      'WDS-X-AB','B','','',
+      'WDS-X-AB','B','','','',
       '','','','','','','',
       'wds','0','unresolved','unresolved','none',
       'none','none','secondary',
@@ -171,6 +174,52 @@ describe('parseMultiplesTsv', () => {
   it('throws when a required column is missing from the header', () => {
     const header = 'system_id\tcomp';
     expect(() => parseMultiplesTsv(header)).toThrowError(/missing required column/);
+  });
+});
+
+describe('backfillPrimaryIdentifiers', () => {
+  const XU_ROW = {
+    systemId: '11182+3132-AB', comp: 'A', orbitRole: 'primary' as const,
+    hip: 55203, gaiaSourceId: '756853643638639104', hd: 98231,
+  };
+
+  it('backfills HIP + Gaia onto the identifier-less HD match (ξ UMa)', () => {
+    const stars = [
+      makeStar({ hd: 98231 }),
+      makeStar({ hd: 98230, gaiaSourceId: '756853643637996160' }),
+    ];
+    const n = backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], stars);
+    expect(n).toBe(1);
+    expect(stars[0].hip).toBe(55203);
+    expect(stars[0].gaiaSourceId).toBe('756853643638639104');
+    // The collocated sibling (ξ UMa B) is untouched — the HD join is
+    // what makes this safe where nearest-position stamps A's ids onto B.
+    expect(stars[1].hip).toBeNull();
+    expect(stars[1].gaiaSourceId).toBe('756853643637996160');
+  });
+
+  it('never overwrites a record that already carries an identifier', () => {
+    const stars = [makeStar({ hd: 98231, gaiaSourceId: '999' })];
+    expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], stars)).toBe(0);
+    expect(stars[0].gaiaSourceId).toBe('999');
+    expect(stars[0].hip).toBeNull();
+  });
+
+  it('skips ambiguous HDs, non-primary rows, and ids already in the catalog', () => {
+    const twins = [makeStar({ hd: 98231 }), makeStar({ hd: 98231 })];
+    expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], twins)).toBe(0);
+
+    const stars = [makeStar({ hd: 98231 })];
+    const secondary = multiplesRow({ ...XU_ROW, orbitRole: 'secondary' });
+    expect(backfillPrimaryIdentifiers([secondary], stars)).toBe(0);
+
+    const taken = [
+      makeStar({ hd: 98231 }),
+      makeStar({ hip: 55203, gaiaSourceId: '756853643638639104' }),
+    ];
+    expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], taken)).toBe(0);
+    expect(taken[0].hip).toBeNull();
+    expect(taken[0].gaiaSourceId).toBeNull();
   });
 });
 

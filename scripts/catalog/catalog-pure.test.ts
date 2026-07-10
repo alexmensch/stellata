@@ -12,6 +12,7 @@ import {
   tempKelvin,
   boloCorr,
   physicalRadius,
+  resolveApsisTeff,
   absmagFromSpectral,
   spectralFromAbsmag,
   GAIA_BINDING_G_MINUS_V_REJECT_MAG,
@@ -403,6 +404,18 @@ describe('catalog-pure / resolveSpectralInfo — tier priority', () => {
     byHip: [number, SimbadSpectralRow][] = [],
   ): SimbadSpectralIndex => ({ bySource: new Map(bySource), byHip: new Map(byHip) });
 
+  it('tier 0: curated HIP override outranks every machine tier (Castor)', () => {
+    // HIP 36850 (Castor A) — SIMBAD '* alf Gem A' carries neither hip
+    // nor source_id, so without the curated tier the record is
+    // spectral-unknown and the radius chain inflates ~3×.
+    const simbad = idx([], [[36850, { spType: 'K0III', spQual: 'C', otype: '**' }]]);
+    const out = resolveSpectralInfo(null, 36850, simbad, new Map());
+    expect(out.source).toBe('curated');
+    expect(out.info.classIdx).toBe(2); // A
+    expect(out.info.lumClass).toBe(3); // IV
+    expect(out.spectDisplay).toBe('A1.5IV');
+  });
+
   it('tier 1: SIMBAD-by-source_id wins when present and parseable', () => {
     const simbad = idx([[GAIA_ID, { spType: 'A6V', spQual: 'C', otype: 'PM*' }]]);
     const apsis = new Map<string, ApsisRow>([
@@ -630,6 +643,44 @@ describe('catalog-pure / physicalRadius', () => {
   it('sizes a single WN5 as a compact hot star', () => {
     const R = physicalRadius(-4.0, classifyFromSimbad('WN5')!);
     expect(R).toBeCloseTo(2.1, 1);
+  });
+
+  it('sizes off a measured Apsis Teff when supplied (GSP-Spec-tier shape)', () => {
+    // A real K0 star classified letter-only lands on subclass 5
+    // (T_TABLE 4410 K); its measured Teff 5150 K must win. R ∝ T⁻² so
+    // the ratio is exact for a fixed absmag + BC.
+    const gspspecK = info(5, 5, 255);
+    const tableR = physicalRadius(5.9, gspspecK);
+    const apsisR = physicalRadius(5.9, gspspecK, 5150);
+    expect(apsisR).toBeCloseTo(tableR * (4410 / 5150) ** 2, 6);
+  });
+
+  it('ignores the Teff override for white dwarfs and Wolf-Rayets', () => {
+    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
+    expect(physicalRadius(11, wd, 5000)).toBeCloseTo(0.013, 5);
+    const wr = classifyFromSimbad('WN5')!;
+    expect(physicalRadius(-4.0, wr, 5000)).toBeCloseTo(physicalRadius(-4.0, wr), 9);
+  });
+});
+
+describe('catalog-pure / resolveApsisTeff', () => {
+  const APSIS_NONE: ApsisRow = {
+    teffGspphot: null, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
+    teffGspspec: null, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: null,
+  };
+
+  it('prefers gspphot, falls back to gspspec', () => {
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 5150, teffGspspec: 4900 })).toBe(5150);
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspspec: 4900 })).toBe(4900);
+  });
+
+  it('rejects out-of-window values per solution, absent rows, and null', () => {
+    // gspphot outside the window falls through to a valid gspspec.
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 1500, teffGspspec: 3400 })).toBe(3400);
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 70000 })).toBeNull();
+    expect(resolveApsisTeff(APSIS_NONE)).toBeNull();
+    expect(resolveApsisTeff(null)).toBeNull();
+    expect(resolveApsisTeff(undefined)).toBeNull();
   });
 });
 

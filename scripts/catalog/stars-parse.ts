@@ -5,8 +5,10 @@ import { createReadStream } from 'node:fs';
 import { parse } from 'csv-parse';
 
 import {
+  classifyFromSimbad,
   resolveSpectralInfo,
   resolveSpectDisplay,
+  resolveApsisTeff,
   physicalRadius,
   isBailerJonesEligible,
   applyBailerJonesOverride,
@@ -145,6 +147,7 @@ export async function readStars(
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
     gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
+    spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
@@ -178,6 +181,7 @@ export async function readStars(
     hip2_pm_discrepant: 0,
     athyg_printed: 0,
   };
+  let spectralByCurated = 0;
   let spectralBySimbad = 0;
   let spectralByGspspec = 0;
   let spectralFallback = 0;
@@ -300,12 +304,22 @@ export async function readStars(
       if (ciRaw !== null) ci -= av / R_V;
     }
 
-    const spectral = resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
+    const proper = nonEmpty(row.proper);
+    // Sol carries no HIP, no Gaia source_id, and no SIMBAD row, so every
+    // machine tier misses and the unknown-class 5000 K row misizes it
+    // (R 1.27 instead of ~1.03) — the one record addressable only by name.
+    const spectral = proper === 'Sol'
+      ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
+      : resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
     const spectInfo = spectral.info;
-    if (spectral.source === 'simbad') spectralBySimbad++;
+    if (spectral.source === 'curated') spectralByCurated++;
+    else if (spectral.source === 'simbad') spectralBySimbad++;
     else if (spectral.source === 'gspspec') spectralByGspspec++;
     else spectralFallback++;
-    const physRadius = physicalRadius(absmag, spectInfo);
+    const apsisTeff = resolveApsisTeff(
+      gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
+    );
+    const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
 
     const conCode: string = (row.con ?? '').trim();
     let conIndex = 255;
@@ -318,7 +332,6 @@ export async function readStars(
       }
     }
 
-    const proper = nonEmpty(row.proper);
     const bayer = nonEmpty(row.bayer);
     const flam = parseIntOrNull(row.flam);
     const hd = parseIntOrNull(row.hd);
@@ -364,6 +377,7 @@ export async function readStars(
       gaiaSourceIdBackfilled,
       gaiaBindingMagRejected,
       directionVia,
+      spectralByCurated,
       spectralBySimbad,
       spectralByGspspec,
       spectralFallback,
