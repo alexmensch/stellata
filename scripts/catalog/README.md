@@ -280,7 +280,7 @@ the pure comparator + formatter and has its own vitest coverage.
 Separate from `catalog.bin` so the main binary stays rendering-focused.
 One JSON array entry per star that has at least one searchable identifier
 (proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
-Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/s`) to keep wire size down — file is
+Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/s/cl/cp`) to keep wire size down — file is
 ~15 MB raw, ~4 MB gzipped. Loaded in parallel with `catalog.bin` in
 `main.ts`. The `s` field carries the raw spectral designation from the
 AT-HYG source ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip
@@ -293,6 +293,18 @@ familiar variable name rather than only HIP/HD. ~14.1k stars are named
 (`gcvsMatched`), because a designation is attached on name-resolution
 alone — aperiodic variables (Proxima = V0645 Cen, R CrB, T Tau, novae) are
 searchable but never pulsate.
+
+Multiple-star components additionally carry `cl` (canonical WDS component
+letter) + `cp` (the system primary's record index), emitted by
+`buildComponentDesignations` (`companion-promotion.ts`) after the
+row-index map is built — resolving each `multiples.tsv` component through
+the same `gaia → hip → synth` priority `build-runtime-binaries.py` uses.
+These drive the runtime "<system> <letter>" aliases ("Alpha Centauri C" /
+"α Cen C" → Proxima) — see `src/client/typeahead/README.md` § Star
+search. The base designation expands from the PRIMARY (`cp`), not the
+component's own name: Proxima has no Bayer, and "Rigil Kentaurus C" (the
+primary's proper) would be wrong. Coverage is bounded by what decomposes
+in `multiples.tsv` (`componentDesignations` in build-counts pins the total).
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
