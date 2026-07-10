@@ -279,11 +279,20 @@ the pure comparator + formatter and has its own vitest coverage.
 
 Separate from `catalog.bin` so the main binary stays rendering-focused.
 One JSON array entry per star that has at least one searchable identifier
-(proper name, Bayer, Flamsteed, HIP, HD, HR, or Gliese). Short keys
-(`i/p/b/f/hip/hd/hr/gl/c/s`) to keep wire size down — file is ~13 MB raw,
-~2 MB gzipped. Loaded in parallel with `catalog.bin` in `main.ts`. The
-`s` field carries the raw spectral designation from the AT-HYG source
-("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display.
+(proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
+Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/s`) to keep wire size down — file is
+~15 MB raw, ~4 MB gzipped. Loaded in parallel with `catalog.bin` in
+`main.ts`. The `s` field carries the raw spectral designation from the
+AT-HYG source ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip
+display. The `g` field carries the GCVS variable-star designation
+(`R CrB`, `VY CMa`, `V0645 Cen`) attached during the GCVS cross-match
+(§ GCVS variability cross-match) — the lookup key the cross-match already
+computes, now also emitted so variables become searchable by their
+familiar variable name rather than only HIP/HD. ~14.1k stars are named
+(`gcvsNamed`); this is a superset of the ~4.1k with a renderable period
+(`gcvsMatched`), because a designation is attached on name-resolution
+alone — aperiodic variables (Proxima = V0645 Cen, R CrB, T Tau, novae) are
+searchable but never pulsate.
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
@@ -293,10 +302,14 @@ Identifier dispatch in `search.ts`:
 - Regex-prefix forms (`HIP 27989`, `HD 39801`, `HR 2061`, `Gl 559A`) go
   through `Map<number, number>` direct lookups — no fuzzy scoring.
 - Flamsteed (`58 Ori`) also uses a direct `"${num} ${con}"` map.
-- Everything else (proper name, Bayer forms) is Fuse-fuzzy.
+- Everything else (proper name, Bayer forms, GCVS designations) is
+  Fuse-fuzzy.
 - For each Bayer'd star, multiple index entries are emitted so any of
   `α Cen` / `Alpha Cen` / `Alp Cen` / `Alf Cen` / `Alpha Centaurus` find
   the star. "Alf" is added only for α (most-commonly alternate-spelled).
+- GCVS designations (`g` field) emit an abbreviated + con-name-expanded
+  label pair (`V645 Cen` / `V645 Centaurus`); the V-number zero-padding
+  GCVS stores (`V0645`) is stripped to the common form (`V645`).
 
 The dropdown deduplicates by star index so a star with multiple matching
 Bayer variants shows up once.
@@ -821,11 +834,20 @@ files from `data/`:
   carries those.
 
 `applyVariability` then walks the post-sort catalog and for each star
-tries HIP first, HD fallback, to find a GCVS name, then looks up the
-period+amp. Typical match rate: ~4.1k out of 313k classic_ids stars —
-most catalog stars aren't variable, but the ones that are tend to be
-the astronomically interesting ones (Betelgeuse, Mira, Algol,
-Cepheids, etc.).
+resolves a GCVS name (gaia_source_id first, then HIP, then HD), then
+looks up the period+amp. Two independent gates:
+
+- **Naming** (search) — the resolved designation is attached as
+  `gcvsName` whenever a name resolves (~14.1k stars, `gcvsNamed`). This
+  is the `search-index.json` `g` field.
+- **Rendering** (pulsation) — period / amplitude / varType apply only
+  when the GCVS main table gave that name a parseable period+amplitude
+  (~4.1k, `gcvsMatched`). Aperiodic variables — flare stars
+  (Proxima = V0645 Cen), RCB (R CrB), irregular (T Tau), novae
+  (V1500 Cyg) — are named for search but never pulsate.
+
+Most catalog stars aren't variable, but the ones that are tend to be the
+astronomically interesting ones (Betelgeuse, Mira, Algol, Cepheids, etc.).
 
 Each row's `varType` comes from `classifyGcvsVarType` (`catalog-pure.ts`):
 GCVS EA/EB/EW/ELL/E → `VAR_TYPE_ECLIPSING`, the pulsator families →

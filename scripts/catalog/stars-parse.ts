@@ -60,6 +60,7 @@ export interface Star {
   periodDays: number;       // 0 = not a variable known to GCVS
   amplitudeMag: number;     // 0 if not variable
   varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
+  gcvsName: string | null;  // GCVS designation attached by applyVariability (R CrB, VY CMa, V0645 Cen); null when not cross-matched
   // Build-time-only diagnostic fields. Captured from the AT-HYG row before
   // any override fires; consumed by the post-build distance-regression check
   // and NOT written to the binary.
@@ -358,6 +359,7 @@ export async function readStars(
       periodDays: 0,
       amplitudeMag: 0,
       varType: 0,
+      gcvsName: null,
       athygDist,
       athygDistSrc,
       syntheticId: null,

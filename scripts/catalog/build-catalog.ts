@@ -197,6 +197,7 @@ async function main() {
     gcvsMatchedByGaia: 0,
     gcvsMatchedByHip: 0,
     gcvsMatchedByHd: 0,
+    gcvsNamed: 0,
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
@@ -565,8 +566,8 @@ async function main() {
     console.log(
       `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ` +
         `${xref.byHd.size} HD + ${xref.byGaia.size} Gaia xrefs, ` +
-        `${m.matched} catalog stars matched ` +
-        `(via gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
+        `${m.named} named for search (${m.matched} with a renderable period: ` +
+        `gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
         `in ${Date.now() - tGcvs}ms`,
     );
     counts.gcvsEntries = gcvsData.size;
@@ -577,6 +578,7 @@ async function main() {
     counts.gcvsMatchedByGaia = m.matchedByGaia;
     counts.gcvsMatchedByHip = m.matchedByHip;
     counts.gcvsMatchedByHd = m.matchedByHd;
+    counts.gcvsNamed = m.named;
   } else {
     console.log('GCVS files not found; skipping variability cross-match.');
   }
@@ -779,7 +781,7 @@ async function main() {
   const searchEntries: SearchEntry[] = [];
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    if (!s.proper && !s.bayer && s.hip === null && s.hd === null && s.hr === null && s.flam === null && !s.gl) continue;
+    if (!s.proper && !s.bayer && s.hip === null && s.hd === null && s.hr === null && s.flam === null && !s.gl && !s.gcvsName) continue;
     const entry: SearchEntry = { i };
     if (s.proper) entry.p = s.proper;
     if (s.bayer) entry.b = s.bayer;
@@ -788,6 +790,7 @@ async function main() {
     if (s.hd !== null) entry.hd = s.hd;
     if (s.hr !== null) entry.hr = s.hr;
     if (s.gl) entry.gl = s.gl;
+    if (s.gcvsName) entry.g = s.gcvsName;
     if (s.conIndex !== 255) entry.c = s.conIndex;
     if (s.spectDisplay) entry.s = s.spectDisplay;
     searchEntries.push(entry);

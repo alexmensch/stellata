@@ -58,6 +58,15 @@ export function superscript(digit: string): string {
   return digit.split('').map((d) => map[d] ?? d).join('');
 }
 
+// Canonical Gliese lookup key: strip a leading Gl/GJ/Gliese prefix and all
+// whitespace, lowercase. "Gliese" precedes "Gl" in the alternation so it
+// isn't clipped to a stray "iese". Shared by the index builder (keys the
+// map from the stored `gl` field) and the query dispatcher (keys the typed
+// query) so "Gl 551" / "GJ 551" / "Gliese 551" all resolve one star.
+export function normalizeGlKey(raw: string): string {
+  return raw.replace(/^\s*(?:Gliese|GJ|Gl)\s*/i, '').replace(/\s+/g, '').toLowerCase();
+}
+
 // Each Bayer'd star gets several fuzzy-index entries so the user can type any
 // of "Alpha Cen", "Alp Cen", "α Cen", or "Alpha Centaurus" and find it. The
 // "-1/-2" superscript from AT-HYG (which distinguishes the A/B components of
@@ -87,10 +96,30 @@ export function buildBayerLabels(
   return [...labels];
 }
 
+// GCVS stores V-number designations zero-padded to four digits
+// ("V0645 Cen"); common usage drops the padding ("V645 Cen"), which is
+// also what users type. Letter-sequence names (R CrB, VY CMa, RR Lyr)
+// carry no numeric run and pass through unchanged.
+export function formatGcvsDesignation(raw: string): string {
+  return raw.replace(/^V0*(\d)/, 'V$1');
+}
+
+// Fuzzy-search labels for a GCVS designation: the designation itself
+// (V-number padding stripped) plus a constellation-name-expanded variant
+// (trailing IAU abbreviation → full name), mirroring buildBayerLabels so
+// "V645 Cen" and "V645 Centaurus" both resolve. Empty conName → just the
+// abbreviated form.
+export function buildGcvsLabels(designation: string, conName: string): string[] {
+  const desig = formatGcvsDesignation(designation);
+  const labels = new Set<string>([desig]);
+  if (conName) labels.add(desig.replace(/\s+\S+$/, ` ${conName}`));
+  return [...labels];
+}
+
 // Best human-readable label for a star, falling back through identifier
-// tiers: proper name → Bayer designation → Flamsteed → HIP → HD → HR → Gl.
-// For use in the focus display, meta bar, tooltip, and the search-box
-// value when a star is picked.
+// tiers: proper name → Bayer → Flamsteed → GCVS designation → HIP → HD →
+// HR → Gl. For use in the focus display, meta bar, tooltip, and the
+// search-box value when a star is picked.
 export function buildStarLabels(
   catalog: Catalog,
   raw: SearchEntry[],
@@ -107,6 +136,8 @@ export function buildStarLabels(
       labels.set(entry.i, formatBayerDisplay(entry.b, conCode));
     } else if (entry.f !== undefined && conCode) {
       labels.set(entry.i, `${entry.f} ${conCode}`);
+    } else if (entry.g) {
+      labels.set(entry.i, formatGcvsDesignation(entry.g));
     } else if (entry.hip !== undefined) {
       labels.set(entry.i, `HIP ${entry.hip}`);
     } else if (entry.hd !== undefined) {
@@ -197,8 +228,7 @@ export function buildSearchIndex(
     if (entry.hd !== undefined) hdMap.set(entry.hd, entry.i);
     if (entry.hr !== undefined) hrMap.set(entry.hr, entry.i);
     if (entry.gl !== undefined) {
-      // Normalize "Gl 559A" / "GJ 559" / "Gliese 559A" all to "559a".
-      const norm = entry.gl.replace(/^(GJ|Gl|Gliese)\s*/i, '').toLowerCase();
+      const norm = normalizeGlKey(entry.gl);
       if (norm) glMap.set(norm, entry.i);
     }
 
@@ -224,6 +254,17 @@ export function buildSearchIndex(
         for (const label of buildBayerLabels(entry.b, conCode, conName)) {
           fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary, displayCon });
         }
+      }
+    }
+
+    // GCVS variable-star designations (R CrB, VY CMa, V645 Cen). Emitted for
+    // the ~3.7k cross-matched variables — many (VY CMa, RR Lyr) carry no
+    // proper/Bayer/Flamsteed name and are otherwise findable only by HIP/HD.
+    // The primary line falls back to the designation for those.
+    if (entry.g) {
+      const gcvsPrimary = primary ?? formatGcvsDesignation(entry.g);
+      for (const label of buildGcvsLabels(entry.g, conName)) {
+        fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon });
       }
     }
 
@@ -329,10 +370,9 @@ export function createSearchRunner(
       }
     }
     // Gliese: "Gl 559A", "GJ 581", "Gliese 411"
-    const glMatch = trimmed.match(/^(?:gl|gj|gliese)\s*(\d+\s*[a-z]?)$/i);
+    const glMatch = trimmed.match(/^(?:gliese|gj|gl)\s*(\d+\s*[a-z]?)$/i);
     if (glMatch) {
-      const key = glMatch[1].replace(/\s+/g, '').toLowerCase();
-      const idx = glMap.get(key);
+      const idx = glMap.get(normalizeGlKey(glMatch[1]));
       return idx !== undefined ? [directResult(idx, `Gl ${glMatch[1].toUpperCase()}`)] : [];
     }
     // Flamsteed: "58 Ori". Returns every component sharing the number, each

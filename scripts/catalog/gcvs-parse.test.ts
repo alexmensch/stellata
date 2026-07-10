@@ -181,6 +181,37 @@ describe('gcvs-parse / applyVariability priority', () => {
     expect(star.amplitudeMag).toBe(0);
   });
 
+  it('attaches the resolved GCVS designation for the search index', () => {
+    const matched = makeStar({ hip: 99 });
+    const unmatched = makeStar({ hip: 1 });
+    const xref: VarStarXref = {
+      byHip: new Map([[99, 'R And']]),
+      byHd: new Map(),
+      byGaia: new Map(),
+    };
+    applyVariability([matched, unmatched], GCVS, xref);
+    expect(matched.gcvsName).toBe('R And');
+    // No cross-match → the field stays null so nothing is emitted for it.
+    expect(unmatched.gcvsName).toBeNull();
+  });
+
+  it('names aperiodic variables for search without giving them a period', () => {
+    // "V0645 Cen" (Proxima) resolves a designation but has no GCVS period
+    // entry — searchable by name, never rendered as a pulsator.
+    const aperiodic = makeStar({ hip: 42 });
+    const xref: VarStarXref = {
+      byHip: new Map([[42, 'V0645 Cen']]),
+      byHd: new Map(),
+      byGaia: new Map(),
+    };
+    const r = applyVariability([aperiodic], GCVS, xref);
+    expect(aperiodic.gcvsName).toBe('V0645 Cen');
+    expect(aperiodic.periodDays).toBe(0);
+    expect(aperiodic.varType).toBe(0);
+    expect(r.named).toBe(1);
+    expect(r.matched).toBe(0);
+  });
+
   it('returns disjoint per-source counts that sum to total matched', () => {
     const stars = [
       makeStar({ gaiaSourceId: '11111111' }),  // gaia

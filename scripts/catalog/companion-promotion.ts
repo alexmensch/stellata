@@ -1410,6 +1410,7 @@ function promoteRow(
     periodDays: 0,
     amplitudeMag: 0,
     varType: 0,
+    gcvsName: null,
     athygDist: null,
     athygDistSrc: null,
     syntheticId: usesSynth ? synthId : null,
