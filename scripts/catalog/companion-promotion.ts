@@ -1805,8 +1805,8 @@ export function promoteCompanions(
   // freezes at v=0 while its primary drifts. FULL coherence for
   // binaries.bin's authoritative runtime pairing (which re-homes a handful
   // of inner pairs via override_inner_primary_indices, and owns Tier-3
-  // static pairs the catalog build doesn't group) is stellata-zau1 —
-  // deferred, and harmless for v1 since Tier-1/2 offsets are elements-owned.
+  // static pairs the catalog build doesn't group) is deferred — and
+  // harmless for v1 since Tier-1/2 offsets are elements-owned.
   for (const g of systemicGroups.values()) {
     if (g.pairs.length === 1) {
       const { pIdx, sIdx, q } = g.pairs[0];
