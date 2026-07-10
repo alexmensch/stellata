@@ -9,3 +9,4 @@ data/simbad/wds_xids_overrides.tsv !filter !diff !merge text=auto
 data/binaries/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/binaries/spot_check_ground_truth.tsv !filter !diff !merge text=auto
 data/dust/*.bin filter=lfs diff=lfs merge=lfs -text
+data/sid/ledger.tsv filter=lfs diff=lfs merge=lfs -text

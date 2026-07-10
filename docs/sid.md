@@ -5,10 +5,13 @@ binding on the implementation beads B1–B5; each bead's acceptance
 criteria trace to a section here (§ 11). Companion README:
 [`data/sid/README.md`](../data/sid/README.md) (registry file roster).
 
-Measured numbers in this doc are from the 2026-07-06 build of
-`public/catalog.bin` (**325,792 records**, app 2.16.4) and the
-2026-07-07 `dr2_neighbourhood` pull. They supersede the epic
-description's earlier 323,603-record measurement.
+Measured numbers: § 4.2's bucket table is from the ledger's mint build
+of 2026-07-10 (**327,452 records**, app 2.17.4); § 6.2's dry run is
+frozen at the 2026-07-07 `dr2_neighbourhood` pull against the
+2026-07-06 build's 5,085-id risk set (the committed request +
+neighbourhood snapshots stay that pair so the classification is
+replayable). Both supersede the epic description's earlier
+323,603-record measurement.
 
 ## 1. Problem
 
@@ -60,7 +63,7 @@ Current namespaces:
 | `hip` | Hipparcos number | catalog.bin HIP field | frozen catalogue |
 | `hd` | Henry Draper number | AT-HYG / search index | frozen catalogue |
 | `hr` | Harvard Revised number | AT-HYG / search index | frozen catalogue |
-| `gl` | Gliese/GJ designation, verbatim-trimmed AT-HYG cell | AT-HYG / search index | frozen catalogue |
+| `gl` | Gliese/GJ designation, trimmed AT-HYG cell with whitespace collapsed to `_` (`gl:Gl_804`) | AT-HYG / search index | frozen catalogue |
 | `gaia_dr3` | Gaia DR3 source_id | catalog.bin gaia field | release-scoped; cross-release identity via § 6 |
 | `synth` | `<wds_id>-<comp>` (the runtime synth key minus its `synth-` prefix) | companion promotion | synthetic; churns under WDS re-pairing (§ 5) |
 | `cloud` | `clouds.json` `id` slug | clouds pipeline | slug — rename requires a bridge (§ 4.1) |
@@ -102,6 +105,12 @@ Rule of thumb: **if an edge is derivable from committed `data/`
 inputs at build time it is never stored; if it encodes a decision it
 is always stored.**
 
+A designation carried by more than one catalog record (an HD/HR/GL
+number covering both members of an AT-HYG component pair) names a
+catalogue granularity, not one object: it joins no class and can key
+no ledger row. Policy detail in `scripts/sid/README.md` § Ambiguous
+designations.
+
 ### 4.2 Canonical key — stability-first
 
 Each equivalence class is keyed in the ledger by its **canonical
@@ -113,21 +122,21 @@ re-key a row):
 sol > hip > hd > hr > gl > gaia_dr3 (then gaia_dr4, …) > synth > cloud > lg
 ```
 
-Measured bucket sizes (2026-07-06 build):
+Measured bucket sizes (2026-07-10 mint build):
 
 | Bucket | Records | % |
 | --- | --- | --- |
-| hip | 117,680 | 36.12 |
-| hd | 194,631 | 59.74 |
+| hip | 117,671 | 35.94 |
+| hd | 194,628 | 59.44 |
 | hr | 0 | 0.00 |
-| gl | 976 | 0.30 |
-| gaia_dr3 | 5,085 | 1.56 |
-| synth | 7,419 | 2.28 |
+| gl | 975 | 0.30 |
+| gaia_dr3 | 5,161 | 1.58 |
+| synth | 9,016 | 2.75 |
 | sol | 1 | — |
 | *keyless* | **0** | — |
 
 Zero truly-keyless objects: the only Gaia-and-HIP-less non-synthetic
-records are 22 stars, all carrying HD/HR/GJ. **No positional
+records are 53 stars, all carrying HD/HR/GJ. **No positional
 fingerprint code** — every object is keyed by a real designation or a
 synthetic one.
 
@@ -137,7 +146,7 @@ all designations, and a `gaia_dr3:` string remains a valid designation
 forever. The difference is operational: with stability-first, the set
 of ledger rows exposed to Gaia data-release churn is *exactly* the
 rows whose canonical key starts with `gaia_` — greppable from the
-committed file (5,085 rows today) — and the "zero churn for
+committed file (5,161 rows today) — and the "zero churn for
 stable-designation holders" claim (§ 6) is a visible property of the
 key column. Objects added later that carry only Gaia ids still get
 `gaia_drN:` keys, so a future bulk expansion (~2M Gaia-only stars)
@@ -231,8 +240,9 @@ snapshot gate but deliberately stricter:
    regular git, so no LFS smudge is needed — then assert the working
    ledger's first `base.rows` lines hash to `base.sha256`
    (prefix-frozen ⇒ no row was edited, deleted, or reordered) and
-   every appended row has `sid > base.max_sid`. Same check for
-   retirements.
+   every appended ledger row has `sid > base.max_sid`. Retirements get
+   the same prefix-frozen check but no sid-monotonicity — a new
+   retirement may legitimately retire an old sid.
 3. There is **no `UPDATE_*` escape hatch** for the frozen prefix.
    Appends need no override (always legal); a prefix rewrite is a
    never-event that requires editing the guard test itself in the
@@ -240,8 +250,10 @@ snapshot gate but deliberately stricter:
    than `UPDATE_BUILD_COUNTS=1` — build counts describe a build,
    the ledger IS the identity contract.
 
-CI already checks out with `lfs: true` (`.github/workflows/test.yml`),
-so the guard can read the full ledger content.
+Only the `build-catalog` CI job checks out with `lfs: true` and full
+history (`.github/workflows/test.yml`), so that job runs the guard
+against real ledger content; in the bare `test` job the guard sees an
+LFS pointer stub and self-skips.
 
 ## 5. Synthetic-key churn (WDS re-subdivision)
 
