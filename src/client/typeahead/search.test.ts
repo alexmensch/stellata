@@ -434,7 +434,7 @@ describe('search / buildStarLabels', () => {
     expect(labels.get(1)).toBe('GJ 9581');
   });
 
-  it('labels an otherwise-anonymous variable by its GCVS designation, ranked below HIP', () => {
+  it('labels an otherwise-anonymous variable by its GCVS designation, in preference to HIP', () => {
     // VY CMa has only HIP/HD in AT-HYG; without the GCVS tier it would read
     // "HIP 35793". The designation is the recognisable name, so it wins.
     const raw: SearchEntry[] = [{ i: 0, g: 'V0645 Cen', hip: 70890 }];

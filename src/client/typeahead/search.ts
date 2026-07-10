@@ -289,9 +289,10 @@ export function buildSearchIndex(
     }
 
     // GCVS variable-star designations (R CrB, VY CMa, V645 Cen). Emitted for
-    // the ~3.7k cross-matched variables — many (VY CMa, RR Lyr) carry no
-    // proper/Bayer/Flamsteed name and are otherwise findable only by HIP/HD.
-    // The primary line falls back to the designation for those.
+    // every named variable (~14.1k, a superset of the period-matched set) —
+    // many (VY CMa, RR Lyr) carry no proper/Bayer/Flamsteed name and are
+    // otherwise findable only by HIP/HD, so the primary line falls back to the
+    // designation for those.
     if (entry.g) {
       const gcvsPrimary = primary ?? formatGcvsDesignation(entry.g);
       for (const label of buildGcvsLabels(entry.g, conName)) {
