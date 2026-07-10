@@ -22,13 +22,22 @@
 # lookup: hip where the AT-HYG row carries one; xi UMa's row carries
 # neither HIP nor Gaia (that is precisely why it routes tier 3), so it
 # is addressed by proper name and its hip cell is blank.
-name	lookup_name	hip	ra_deg_j2016	dec_deg_j2016	tol_arcsec
-Barnard's Star		87937	269.4485025250	4.739420051	0.5
-Kapteyn's Star		24186	77.9599373500	-45.043812699	0.5
-Groombridge 1830		57939	178.2673532080	37.692826947	0.5
-61 Cyg A		104214	316.7484792940	38.763862446	0.5
-61 Cyg B		104217	316.7536627530	38.756072772	0.5
-Keid		19849	63.8079530060	-7.668077815	0.5
-Sirius		32349	101.2846216628	-16.721551666	0.5
-Vega		91262	279.2358804374	38.784961091	0.5
+#
+# total_pm_masyr is the published total proper motion (mas/yr). The
+# current-epoch velocity test advances the star's BAKED J2016 position +
+# BAKED vx/vy/vz through the same epoch-advance-pure function the runtime
+# uses and checks the on-sky angular displacement equals total_pm × Δt —
+# validating end-to-end that catalog.bin's space-motion velocity reproduces
+# the star's real proper motion (a wrong tier / distance-scale / unit / sign
+# would miss badly at a 34 yr baseline). Blank = skip (velocity magnitude
+# not pinned for that row).
+name	lookup_name	hip	ra_deg_j2016	dec_deg_j2016	tol_arcsec	total_pm_masyr
+Barnard's Star		87937	269.4485025250	4.739420051	0.5	10392.8
+Kapteyn's Star		24186	77.9599373500	-45.043812699	0.5	8670.5
+Groombridge 1830		57939	178.2673532080	37.692826947	0.5	7058.4
+61 Cyg A		104214	316.7484792940	38.763862446	0.5	5281.0
+61 Cyg B		104217	316.7536627530	38.756072772	0.5	5172.0
+Keid		19849	63.8079530060	-7.668077815	0.5	4088.0
+Sirius		32349	101.2846216628	-16.721551666	0.5	1339.4
+Vega		91262	279.2358804374	38.784961091	0.5	350.8
 xi UMa	Alula Australis		169.54554950000002	31.529288899999997	3.0

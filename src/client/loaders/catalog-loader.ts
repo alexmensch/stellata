@@ -27,6 +27,11 @@ export interface Constellation {
 export interface Catalog {
   count: number;
   positions: Float32Array;       // length = count * 3
+  // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
+  // length = count * 3. Consumed once at load by the epoch-advance pass
+  // (epoch-advance-pure.ts) to propagate `positions` off the fixed J2016.0
+  // baseline to getT(); positions ship at J2016.0 on the wire.
+  velocities: Float32Array;      // length = count * 3
   absmag: Float32Array;          // length = count
   ci: Float32Array;              // length = count
   spectClass: Float32Array;      // length = count (as float for vertex attrib)
@@ -153,6 +158,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   const nameTableLength = view.getUint32(HEADER_LAYOUT.nameTableLength, true);
 
   const positions = new Float32Array(count * 3);
+  const velocities = new Float32Array(count * 3);
   const absmag = new Float32Array(count);
   const ci = new Float32Array(count);
   const physicalRadius = new Float32Array(count);
@@ -181,6 +187,9 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     positions[i * 3 + 0] = view.getFloat32(off + RECORD_LAYOUT.x, true);
     positions[i * 3 + 1] = view.getFloat32(off + RECORD_LAYOUT.y, true);
     positions[i * 3 + 2] = view.getFloat32(off + RECORD_LAYOUT.z, true);
+    velocities[i * 3 + 0] = view.getFloat32(off + RECORD_LAYOUT.vx, true);
+    velocities[i * 3 + 1] = view.getFloat32(off + RECORD_LAYOUT.vy, true);
+    velocities[i * 3 + 2] = view.getFloat32(off + RECORD_LAYOUT.vz, true);
     absmag[i] = view.getFloat32(off + RECORD_LAYOUT.absmag, true);
     ci[i] = view.getFloat32(off + RECORD_LAYOUT.ci, true);
     physicalRadius[i] = view.getFloat32(off + RECORD_LAYOUT.physRadius, true);
@@ -235,6 +244,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   return {
     count,
     positions,
+    velocities,
     absmag,
     ci,
     spectClass,

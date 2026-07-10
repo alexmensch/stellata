@@ -62,7 +62,11 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
-import { VirtualClock } from './solar-system/time';
+import { VirtualClock, tToJDE } from './solar-system/time';
+import {
+  advancePositionsToEpoch,
+  jdeToJulianEpochYear,
+} from './loaders/epoch-advance-pure';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
@@ -438,6 +442,21 @@ export class Stellata implements FrameAnchor {
 
   constructor({ canvas, catalog }: StellataOptions) {
     this.catalog = catalog;
+
+    // Space-motion propagation: advance catalog.positions off the fixed
+    // J2016.0 baseline to the model clock (getT() — live-now on a bare load;
+    // the clock field is initialised before the body runs), ONCE, before any
+    // consumer reads a position. _localPositions, iDistSol, hover/focus/warp
+    // targets, constellation lines, binaries baselines, and eclipse
+    // photometry all inherit current-epoch positions by construction, with
+    // zero per-frame cost. Within-session drift is invisible (~0.001″/h);
+    // scrubber-time re-advance is deferred. See SCIENCE.md
+    // § Current-epoch star positions.
+    advancePositionsToEpoch(
+      catalog.positions,
+      catalog.velocities,
+      jdeToJulianEpochYear(tToJDE(this.getT())),
+    );
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,

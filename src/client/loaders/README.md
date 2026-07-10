@@ -20,8 +20,26 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
                          `../binaries/README.md` § Eclipse photometry).
+                         Exposes `velocities: Float32Array` (count×3,
+                         pc/yr) alongside `positions`; the epoch-advance
+                         pass below consumes it.
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
-                         source_id handling.
+                         source_id handling + the v7 velocity columns.
+epoch-advance-pure.ts    load-time space-motion propagation:
+                         `advancePositionsToEpoch(positions, velocities,
+                         epochJyr)` rewrites catalog.positions in place to
+                         `p(J2016) + v·(t − 2016)` (float64 math, float32
+                         write-back). Called ONCE from the Stellata
+                         constructor before `_localPositions` is derived,
+                         so every downstream consumer inherits current-epoch
+                         positions by construction — zero per-frame cost, no
+                         shader change. `jdeToJulianEpochYear` converts the
+                         model clock's JD to the propagation's Julian-year
+                         base. No re-advance in v1 (drift ~0.001″/h);
+                         scrubber-time re-advance is stellata-nmu.5. Pure +
+                         vitest-pinned; the sky-position corpus drives the
+                         SAME function end-to-end. See SCIENCE.md
+                         § Current-epoch star positions.
 catalog-mock.ts          test-only Catalog factory. NaN-fills Apsis
                          fields, -1 companion, lumClass=255.
 dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →

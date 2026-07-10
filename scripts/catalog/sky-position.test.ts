@@ -16,6 +16,10 @@ import {
   lookupByName,
 } from './catalog-lookup';
 import { unitVectorFromRaDec, type UnitVector } from './direction-cascade';
+import {
+  CATALOG_SCENE_EPOCH_JYR,
+  advancePositionsToEpoch,
+} from '../../src/client/loaders/epoch-advance-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'sky-position-corpus.tsv');
@@ -39,6 +43,7 @@ interface CorpusRow {
   raDegJ2016: number;
   decDegJ2016: number;
   tolArcsec: number;
+  totalPmMasyr: number | null;
 }
 
 function loadCorpus(): CorpusRow[] {
@@ -47,6 +52,8 @@ function loadCorpus(): CorpusRow[] {
     delimiter: '\t',
     comment: '#',
     skip_empty_lines: true,
+    // The tier-3 row (xi UMa) omits the trailing total_pm_masyr column.
+    relax_column_count_less: true,
     cast: false,
   }) as Record<string, string>[];
   return rows.map((r) => ({
@@ -56,6 +63,7 @@ function loadCorpus(): CorpusRow[] {
     raDegJ2016: Number(r.ra_deg_j2016),
     decDegJ2016: Number(r.dec_deg_j2016),
     tolArcsec: Number(r.tol_arcsec),
+    totalPmMasyr: r.total_pm_masyr ? Number(r.total_pm_masyr) : null,
   }));
 }
 
@@ -102,4 +110,39 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
       ).toBeLessThan(row.tolArcsec);
     });
   }
+
+  // End-to-end current-epoch propagation: drive the baked J2016 position +
+  // baked velocity through the SAME epoch-advance the runtime calls, then
+  // check the on-sky angular displacement matches published total PM × Δt.
+  // A wrong tier, distance scale, unit, or sign misses by ≫ tolerance at a
+  // 34 yr baseline (Barnard's alone moves ~350″).
+  const ADVANCE_EPOCH_JYR = CATALOG_SCENE_EPOCH_JYR + 34; // J2050.0
+  const dt = ADVANCE_EPOCH_JYR - CATALOG_SCENE_EPOCH_JYR;
+  for (const row of corpus) {
+    if (row.totalPmMasyr === null) continue;
+    it(`${row.name} advances by its published proper motion (${row.totalPmMasyr} mas/yr) over ${dt} yr`, () => {
+      const rec = row.hip !== null
+        ? lookupByHip(catalog, row.hip)
+        : lookupByName(catalog, row.lookupName!);
+      expect(rec, `${row.name} missing from catalog.bin`).not.toBeNull();
+      const pos = new Float32Array([rec!.x, rec!.y, rec!.z]);
+      const vel = new Float32Array([rec!.vx, rec!.vy, rec!.vz]);
+      const j2016Dir: UnitVector = normalize(rec!.x, rec!.y, rec!.z);
+      advancePositionsToEpoch(pos, vel, ADVANCE_EPOCH_JYR);
+      const advancedDir = normalize(pos[0], pos[1], pos[2]);
+      const displacementArcsec = angSepArcsec(j2016Dir, advancedDir);
+      const expectedArcsec = (row.totalPmMasyr! / 1000) * dt;
+      const relErr = Math.abs(displacementArcsec - expectedArcsec) / expectedArcsec;
+      expect(
+        relErr,
+        `${row.name}: advanced ${displacementArcsec.toFixed(1)}″ over ${dt} yr, ` +
+        `expected ~${expectedArcsec.toFixed(1)}″ from published μ (rel err ${(relErr * 100).toFixed(1)}%)`,
+      ).toBeLessThan(0.04);
+    });
+  }
 });
+
+function normalize(x: number, y: number, z: number): UnitVector {
+  const d = Math.hypot(x, y, z);
+  return { x: x / d, y: y / d, z: z / d };
+}
