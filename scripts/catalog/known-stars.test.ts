@@ -72,6 +72,8 @@ if (!FIXTURES_READY) {
 const DISTANCE_FLOOR_PC = 0.01;        // distance tolerance, hard floor
 const ABSMAG_TOLERANCE = 0.05;          // absmag tolerance, both primary + companion
 const PERIOD_REL_TOLERANCE = 0.05;      // orbital period, ±5%
+const CI_TOLERANCE = 0.03;              // primary_ci — float32 + Ballesteros round-trip headroom
+const RADIUS_REL_TOLERANCE = 0.10;      // primary_radius_rsun default, per SCIENCE.md § Physical radius
 
 // ---- TSV row types -----------------------------------------------------
 
@@ -97,6 +99,9 @@ interface CorpusRow {
   primaryDistancePcErr: number;
   primaryAbsmag: number;
   primarySpectral: string;
+  primaryCi: number | null;
+  primaryRadiusRsun: number | null;
+  radiusRelTol: number | null;
   companions: CorpusCompanion[];
   orbitalPeriodDays: number | null;
   varType: keyof typeof VAR_TYPE_TOKENS | null;
@@ -200,6 +205,9 @@ function loadCorpusSync(): CorpusRow[] {
       primaryDistancePcErr: required('primary_distance_pc_err'),
       primaryAbsmag: required('primary_absmag'),
       primarySpectral: (row.primary_spectral ?? '').trim(),
+      primaryCi: parseFloatOrNull(row.primary_ci),
+      primaryRadiusRsun: parseFloatOrNull(row.primary_radius_rsun),
+      radiusRelTol: parseFloatOrNull(row.radius_rel_tol),
       companions: parseCompanions(row.companions ?? ''),
       orbitalPeriodDays: parseFloatOrNull(row.orbital_period_days),
       varType: varTypeRaw as CorpusRow['varType'],
@@ -374,6 +382,22 @@ function assertPrimary(row: CorpusRow, record: CatalogRecord): void {
       `${row.systemName}: expected lumClass ${expectedSpec.lumClass} (from "${row.primarySpectral}"), got ${record.lumClass}`,
     ).toBe(expectedSpec.lumClass);
   }
+
+  if (row.primaryCi !== null) {
+    const ciDiff = Math.abs(record.ci - row.primaryCi);
+    expect(
+      ciDiff,
+      `${row.systemName}: expected ci ${row.primaryCi}, got ${record.ci.toFixed(3)} (diff ${ciDiff.toFixed(3)} > tolerance ${CI_TOLERANCE})`,
+    ).toBeLessThanOrEqual(CI_TOLERANCE);
+  }
+  if (row.primaryRadiusRsun !== null) {
+    const relTol = row.radiusRelTol ?? RADIUS_REL_TOLERANCE;
+    const rel = Math.abs(record.physicalRadius - row.primaryRadiusRsun) / row.primaryRadiusRsun;
+    expect(
+      rel,
+      `${row.systemName}: expected physicalRadius ${row.primaryRadiusRsun} R☉, got ${record.physicalRadius.toFixed(3)} (relative diff ${(rel * 100).toFixed(1)}% > ${(relTol * 100).toFixed(0)}%)`,
+    ).toBeLessThanOrEqual(relTol);
+  }
 }
 
 function findCompanionInMultiples(
@@ -478,6 +502,16 @@ function assertSynthPromotedCompanion(
 }
 
 function lookupPrimary(row: CorpusRow): CatalogRecord {
+  // Sol carries no HIP and no Gaia source_id — the one record
+  // addressable only by proper name.
+  if (row.primaryHip === null && row.primaryGaiaSourceId === null) {
+    const byName = lookupByName(catalog, row.systemName);
+    expect(
+      byName,
+      `${row.systemName}: identifier-less row and lookupByName("${row.systemName}") returned null`,
+    ).not.toBeNull();
+    return byName as CatalogRecord;
+  }
   let viaHip: CatalogRecord | null = null;
   let viaGaia: CatalogRecord | null = null;
   if (row.primaryHip !== null) viaHip = lookupByHip(catalog, row.primaryHip);
@@ -524,8 +558,11 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
     ).toHaveLength(0);
   });
 
-  it('every row sets at least one primary identifier (HIP or Gaia)', () => {
-    const orphans = CORPUS.filter(r => r.primaryHip === null && r.primaryGaiaSourceId === null);
+  it('every row sets a primary identifier (HIP or Gaia) unless name-addressed (Sol)', () => {
+    const orphans = CORPUS.filter(
+      r => r.primaryHip === null && r.primaryGaiaSourceId === null
+        && r.systemName !== 'Sol',
+    );
     expect(
       orphans,
       `rows with no HIP and no Gaia source_id: ${orphans.map(r => r.systemName).join(', ')}`,
