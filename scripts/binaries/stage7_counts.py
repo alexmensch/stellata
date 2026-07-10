@@ -75,6 +75,8 @@ def build_binaries_counts(
     binding_integrity: dict[str, int] | None = None,
     xwalk_mag_rejected: int = 0,
     athyg_gaia_mag_rejected: int = 0,
+    wds_duplicate_pair_rows_dropped: int = 0,
+    multiples_pairs_dropped_no_position: int = 0,
 ) -> dict[str, int]:
     """Collect every headline number the run emits into a flat
     ``{key: int}`` dict, suitable for JSON serialisation and per-key
@@ -124,6 +126,7 @@ def build_binaries_counts(
         1 for r in multiples_rows if r.sep_pa_epoch_jd is not None
     )
     dmag_populated = sum(1 for r in multiples_rows if r.dmag is not None)
+    hd_populated = sum(1 for r in multiples_rows if r.hd is not None)
 
     # Per-pair a provenance + q fill — both gate the runtime's
     # has_orbit bit, so a silent drop here stops pairs animating
@@ -138,6 +141,7 @@ def build_binaries_counts(
 
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
+        "wds_duplicate_pair_rows_dropped": wds_duplicate_pair_rows_dropped,
         "decomposing_pairs": len(orbits),
         "components_total": len(components),
         "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
@@ -145,8 +149,10 @@ def build_binaries_counts(
         "xwalk_hip_mag_rejected": xwalk_mag_rejected,
         "athyg_gaia_mag_rejected": athyg_gaia_mag_rejected,
         "multiples_rows_emitted": len(multiples_rows),
+        "multiples_pairs_dropped_no_position": multiples_pairs_dropped_no_position,
         "multiples_astrometry_system_inherited": multiples_inherited,
         "multiples_standalone_emitted": standalone_emitted,
+        "multiples_hd_populated": hd_populated,
         "multiples_sep_arcsec_populated": sep_arcsec_populated,
         "multiples_pa_deg_populated": pa_deg_populated,
         "multiples_sep_pa_epoch_populated": sep_pa_epoch_populated,

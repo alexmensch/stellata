@@ -70,6 +70,7 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "comp",
     "hip",
     "gaia_source_id",
+    "hd",
     "x_pc", "y_pc", "z_pc",
     "absmag", "ci", "spect", "name",
     "source", "regime",
@@ -266,6 +267,11 @@ class MultiplesRow:
     # wds_mag absmag path reads them; standalone rows leave both empty.
     mag_pri: float | None = None
     mag_sec: float | None = None
+    # HD number from the component's AT-HYG row. The join key for
+    # catalog-side identifier backfill on HD-only AT-HYG systems
+    # (ξ UMa = HD 98231 carries neither hip nor gaia in AT-HYG, so HD
+    # is the only non-position key that can match the catalog record).
+    hd: int | None = None
 
 
 def _system_id_for_pair(pair: WdsPair) -> str:
@@ -865,6 +871,8 @@ def build_multiples_row(
         comp=component.component,
         hip=component.hip,
         gaia_source_id=component.gaia_source_id,
+        hd=athyg.hd if athyg is not None and athyg.hd is not None
+        else component.hd,
         x_pc=position[0] if position is not None else None,
         y_pc=position[1] if position is not None else None,
         z_pc=position[2] if position is not None else None,
@@ -912,6 +920,7 @@ def build_multiples_rows(
     indices: IdentifierIndices,
     simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
     system_anchors: dict[str, SystemAnchor] | None = None,
+    dropped_no_position: list[str] | None = None,
 ) -> list[MultiplesRow]:
     """Walk the per-pair Stage 2/3/4/5 outputs in lockstep. Skips pairs
     Stage 5 classified as optical (their rows are absent from the TSV
@@ -932,6 +941,11 @@ def build_multiples_rows(
     caller shares one map between Stage 5's anchor-distance gate and this
     emit so anchors are computed once; ``None`` recomputes them here (the
     in-process tests).
+
+    ``dropped_no_position`` (opt-in) collects a ``wds_id + components``
+    label for every Stage-5-kept pair the position gate above drops —
+    those pairs never reach the TSV, so the caller's build log + count
+    snapshot are their only record.
     """
     n_pairs = sum(1 for p in pairs if split_components(p.components) is not None)
     if not (len(orbits) == n_pairs == len(classifications)):
@@ -958,6 +972,8 @@ def build_multiples_rows(
             and _position_pc(p_ast) is None
             and _position_pc(s_ast) is None
         ):
+            if dropped_no_position is not None:
+                dropped_no_position.append(f"{pair.wds_id}{pair.components}")
             continue
         primary_athyg = _athyg_row_for_component(primary, indices)
         secondary_athyg = _athyg_row_for_component(secondary, indices)
@@ -1105,6 +1121,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 r.comp,
                 _fmt_int(r.hip),
                 _fmt_int(r.gaia_source_id),
+                _fmt_int(r.hd),
                 _fmt_float(r.x_pc, 6),
                 _fmt_float(r.y_pc, 6),
                 _fmt_float(r.z_pc, 6),

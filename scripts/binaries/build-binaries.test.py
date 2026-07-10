@@ -181,6 +181,47 @@ class WdsSummTests(unittest.TestCase):
         self.assertAlmostEqual(pr.precise_dec_deg, 75.4833, places=2)
 
 
+class WdsDedupTests(unittest.TestCase):
+    """dedup_wds_pair_rows — the WDS file carries duplicate
+    (wds_id, discoverer, components) rows with contradictory geometry
+    (Pismis 24 CD); exactly one must survive."""
+
+    @staticmethod
+    def _pair(n_obs: int | None, rho: float | None = 1.0) -> "bb.WdsPair":
+        return bb.WdsPair(
+            wds_id="17247-3412", discoverer="WSI  62", components="CD",
+            date_last=2016, rho_last=rho, theta_last=205.0,
+            mag_pri=10.0, mag_sec=10.5, spectral="", notes="    ",
+            precise_ra_deg=None, precise_dec_deg=None, n_obs=n_obs,
+        )
+
+    def test_keeps_most_observed_duplicate(self) -> None:
+        low = self._pair(n_obs=3, rho=1.5)
+        high = self._pair(n_obs=7, rho=3.5)
+        deduped, dropped = bb.dedup_wds_pair_rows([low, high])
+        self.assertEqual(dropped, 1)
+        self.assertEqual(deduped, [high])
+
+    def test_tie_keeps_first_in_file_order(self) -> None:
+        first = self._pair(n_obs=3, rho=3.5)
+        second = self._pair(n_obs=3, rho=1.5)
+        deduped, dropped = bb.dedup_wds_pair_rows([first, second])
+        self.assertEqual(dropped, 1)
+        self.assertEqual(deduped, [first])
+
+    def test_distinct_keys_pass_through_in_order(self) -> None:
+        cd = self._pair(n_obs=3)
+        ab = bb.WdsPair(
+            wds_id="17247-3412", discoverer="WSI  62", components="AB",
+            date_last=2016, rho_last=1.0, theta_last=100.0,
+            mag_pri=9.0, mag_sec=9.5, spectral="", notes="    ",
+            precise_ra_deg=None, precise_dec_deg=None, n_obs=2,
+        )
+        deduped, dropped = bb.dedup_wds_pair_rows([cd, ab])
+        self.assertEqual(dropped, 0)
+        self.assertEqual(deduped, [cd, ab])
+
+
 class WdsSepPaSentinelTests(unittest.TestCase):
     def test_negative_parses_to_none(self) -> None:
         self.assertIsNone(_parsers_mod.parse_wds_sep_pa("-1.0"))
@@ -819,10 +860,10 @@ def _wds_pair(*, wds_id: str = "00000+0000", components: str = "AB") -> "bb.WdsP
 def _athyg_row(
     *, hip: int | None = None, gaia: int | None = None,
     ra_deg: float = 0.0, dec_deg: float = 0.0,
-    v_mag: float | None = None,
+    v_mag: float | None = None, hd: int | None = None,
 ) -> "bb.AthygRow":
     return bb.AthygRow(
-        hip=hip, tyc=None, gaia=gaia, hd=None,
+        hip=hip, tyc=None, gaia=gaia, hd=hd,
         ra_deg=ra_deg, dec_deg=dec_deg,
         x_pc=0.0, y_pc=0.0, z_pc=0.0,
         dist_pc=1.0, v_mag=v_mag, absmag=5.0,
@@ -2023,12 +2064,13 @@ def _resolved(
     component: str = "A", is_primary: bool = True,
     via: str = "orb6_hip",
     hip: int | None = None,
+    hd: int | None = None,
 ) -> "bb.ResolvedComponent":
     return bb.ResolvedComponent(
         wds_id=wds_id, discoverer=discoverer,
         component=component, is_primary=is_primary,
         gaia_source_id=gaia, resolve_via=via,
-        hip=hip,
+        hip=hip, hd=hd,
     )
 
 
@@ -4332,12 +4374,57 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         classifications = [bb.OpticalClassification(True, "wds_notes_kept")]
         indices = _indices_with_astrometry()
 
+        dropped_no_position: list[str] = []
         rows = bb.build_multiples_rows(
             pairs=[pair], components=components, astrometry=astrometry,
             orbits=orbits, classifications=classifications,
             indices=indices,
+            dropped_no_position=dropped_no_position,
         )
         self.assertEqual(rows, [])
+        self.assertEqual(dropped_no_position, ["WDS-1AB"])
+
+    def test_hd_surfaces_from_component_athyg_row(self) -> None:
+        # ξ UMa shape: the AT-HYG row carries HD; the emitted row must
+        # surface it so the catalog-side identifier backfill can join
+        # HD-only catalog records by HD instead of position.
+        pair = _wds_pair(components="AB")
+        athyg = [
+            _athyg_row(gaia=1, hd=98231),
+            _athyg_row(gaia=2),
+        ]
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [_component_astrometry(), _component_astrometry()]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(athyg=athyg),
+        )
+        self.assertEqual(rows[0].hd, 98231)
+        self.assertIsNone(rows[1].hd)
+
+    def test_hd_falls_back_to_orb6_component_hd(self) -> None:
+        # ξ UMa's actual shape: the AT-HYG row binds to a different
+        # component, so the pair primary's HD comes from the
+        # coord-validated ORB6 entry Stage 2 stashed on the component.
+        pair = _wds_pair(components="AB")
+        components = [
+            _resolved(gaia=1, component="A", is_primary=True,
+                      hip=55203, hd=98231),
+            _resolved(gaia=2, component="B", is_primary=False),
+        ]
+        astrometry = [_component_astrometry(), _component_astrometry()]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "wds_notes_kept")],
+            indices=_indices_with_astrometry(),
+        )
+        self.assertEqual(rows[0].hd, 98231)
 
     def test_inherits_system_anchor_when_pair_lacks_position(self) -> None:
         # 40 Eri BC shape — the AB pair anchors the system with A's

@@ -205,9 +205,31 @@ class WdsPair:
     notes: str            # 4-char flag block (cols 107-110)
     precise_ra_deg: float | None
     precise_dec_deg: float | None
+    n_obs: int | None = None
 
 
 _WDS_HEADER_RE = re.compile(r"^[A-Za-z<]")
+
+
+def dedup_wds_pair_rows(pairs: list[WdsPair]) -> tuple[list[WdsPair], int]:
+    """Collapse duplicate (wds_id, discoverer, components) summary rows —
+    the WDS file itself occasionally carries two rows for one physical
+    pair with contradictory geometry (17247-3412 WSI 62 CD). No later
+    stage keys pairs uniquely, so both rows would classify and emit,
+    double-counting the pair and leaving the rendered separation an
+    accident of file order. Keeps the row with the most observations;
+    ties keep the first in file order. Returns (deduped rows in original
+    order, dropped-row count)."""
+    best: dict[tuple[str, str, str], int] = {}
+    for i, p in enumerate(pairs):
+        key = (p.wds_id, p.discoverer, p.components)
+        j = best.get(key)
+        if j is None or (p.n_obs or 0) > (pairs[j].n_obs or 0):
+            best[key] = i
+    keep = set(best.values())
+    if len(keep) == len(pairs):
+        return pairs, 0
+    return [p for i, p in enumerate(pairs) if i in keep], len(pairs) - len(keep)
 
 
 def _parse_wds_precise_coord(s: str) -> tuple[float, float] | None:
@@ -260,6 +282,7 @@ def parse_wds_summ(path: Path) -> list[WdsPair]:
                 notes=line[107:111],
                 precise_ra_deg=precise[0] if precise else None,
                 precise_dec_deg=precise[1] if precise else None,
+                n_obs=safe_int(line[33:37]),
             ))
     _assert_field_coverage(
         pairs, "parse_wds_summ", "precise_ra_deg",

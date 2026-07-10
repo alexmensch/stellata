@@ -91,6 +91,12 @@ class ResolvedComponent:
     resolve_via: str
     hip: int | None = None
     athyg_row: AthygRow | None = None
+    # HD from the same coord-validated ORB6 entry that donated ``hip``
+    # (primaries only — ORB6 publishes one identifier set per orbit row).
+    # Stage 6 emits it when the component's AT-HYG row carries no HD of
+    # its own, giving HD-only AT-HYG systems (ξ UMa) a non-position
+    # catalog join key.
+    hd: int | None = None
 
 
 def split_components(comp_str: str) -> tuple[str, str] | None:
@@ -278,7 +284,10 @@ def resolve_component(
     ``unresolved`` fallbacks; the component falls through to the
     coordinate-validated SIMBAD / CCDM / position tiers instead.
     """
-    def emit(gaia: int | None, via: str, hip: int | None) -> ResolvedComponent:
+    def emit(
+        gaia: int | None, via: str, hip: int | None,
+        hd: int | None = None,
+    ) -> ResolvedComponent:
         return ResolvedComponent(
             wds_id=pair.wds_id,
             discoverer=pair.discoverer,
@@ -287,9 +296,11 @@ def resolve_component(
             gaia_source_id=gaia,
             resolve_via=via,
             hip=hip,
+            hd=hd,
         )
 
     candidate_hips: list[int] = []
+    hd_by_hip: dict[int, int | None] = {}
 
     if is_primary:
         for e in orb6_for_pair:
@@ -298,21 +309,24 @@ def resolve_component(
             if not _orb6_hip_matches_pair_coord(e.hip, pair, indices):
                 continue
             candidate_hips.append(e.hip)
+            hd_by_hip.setdefault(e.hip, e.hd)
             # ``orb6_hip``: Gaia-published HIP xwalk is the canonical source.
             gaia = indices.hip_to_gaia.get(e.hip)
             if gaia is not None:
-                return emit(gaia, "orb6_hip", e.hip)
+                return emit(gaia, "orb6_hip", e.hip, hd_by_hip[e.hip])
 
     for hip in candidate_hips:
         gaia = _gaia_from_athyg_via_hip(hip, indices)
         if gaia is not None:
-            return emit(gaia, "athyg_gaia_native", hip)
+            return emit(gaia, "athyg_gaia_native", hip, hd_by_hip[hip])
 
     # HIP-anchored prefix missed. Keep the first ORB6-published HIP (if
     # any) so Stage 3's HIP2 fallback can still attach astrometry for
     # stars Gaia couldn't observe — Sirius / α Cen-shaped saturated
     # primaries.
-    return emit(None, "unresolved", candidate_hips[0] if candidate_hips else None)
+    if candidate_hips:
+        return emit(None, "unresolved", candidate_hips[0], hd_by_hip[candidate_hips[0]])
+    return emit(None, "unresolved", None)
 
 
 # ─── SIMBAD-backed cross-ID path ─────────────────────────────────────
