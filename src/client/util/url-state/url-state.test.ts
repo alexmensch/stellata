@@ -13,6 +13,7 @@ import {
 } from './url-state';
 import { DEFAULT_FILTER, DEFAULT_FOV, type Stellata } from '../../stellata';
 import { AU_PC } from '../astronomy-constants';
+import { SidResolver, arrayDomain } from '../sid-resolver';
 
 // Round-trips the view through the wire format and returns the decoded
 // view + version. Anything the encoder omits (e.g. default values) reads
@@ -20,6 +21,14 @@ import { AU_PC } from '../astronomy-constants';
 function roundtrip(view: DecodedView) {
   const blob = encodeBlob(view);
   return decodeBlob(blob);
+}
+
+// Fully-settled resolver over a tiny star domain — enough for the
+// currentStateOf tests, which never look sids up.
+function makeResolver(starSids: number[] = []): SidResolver {
+  const r = new SidResolver(['star']);
+  r.attach('star', arrayDomain(starSids));
+  return r;
 }
 
 // Decode a base64url blob to its underlying byte count. Used in byte-
@@ -784,6 +793,7 @@ describe('url-state', () => {
       indexToHip: new Uint32Array(1),
       starCount: 1,
       solIndex: 0,
+      sidResolver: makeResolver(),
     };
 
     it('omits cam when observe-mode camera is parked at the focal-star origin', () => {

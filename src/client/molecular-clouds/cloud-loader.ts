@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 
+import { sidColumnError } from '../util/sid-resolver';
+
 export type CloudSource = 'Z2021T1' | 'Z2020';
 
 export interface Cloud {
   name: string;
   id: string;
+  /** Frozen Stellata ID (docs/sid.md § 7), stamped by the build. */
+  sid: number;
   /** Absolute ICRS heliocentric position in parsecs. */
   centerAbs: THREE.Vector3;
   /** Semi-axes in parsecs along the cloud's local x, y, z. Equal for sphere clouds. */
@@ -24,6 +28,7 @@ export interface CloudCatalog {
 interface RawCloud {
   name: string;
   id: string;
+  sid: number;
   center: [number, number, number];
   axes: [number, number, number];
   quat: [number, number, number, number];
@@ -56,9 +61,15 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     console.warn(`clouds.json version ${raw.version} unsupported`);
     return null;
   }
+  const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
+  if (sidErr) {
+    console.warn(`clouds.json ${sidErr} — rebuild with \`npm run build:clouds\``);
+    return null;
+  }
   const clouds: Cloud[] = raw.clouds.map((c) => ({
     name: c.name,
     id: c.id,
+    sid: c.sid,
     centerAbs: new THREE.Vector3(c.center[0], c.center[1], c.center[2]),
     axes: [c.axes[0], c.axes[1], c.axes[2]],
     quat: new THREE.Quaternion(c.quat[0], c.quat[1], c.quat[2], c.quat[3]),

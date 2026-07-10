@@ -17,6 +17,12 @@ Stays visible during warp by design (flying past Taurus is a feature,
 not noise) — relevant once re-enabled.
 
 The runtime renderer fetches `public/clouds.json` via `cloud-loader.ts`.
+Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
+loader rejects the artifact (warn + null, same as a version mismatch)
+when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
+`npm run build:clouds`. While the layer is shelved the resolver's
+`cloud` SID domain is concluded-unattached in `main.ts`; re-enabling
+must attach it (see `../util/sid-resolver/README.md`).
 
 ## Render
 

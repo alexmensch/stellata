@@ -9,6 +9,7 @@ import {
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
+import type { SidResolver } from '../sid-resolver';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Three
 // wire formats coexist (v1/v2/v3); old shared URLs auto-upgrade to v3
@@ -101,6 +102,9 @@ export interface IdMaps {
   starCount: number;
   /** Sol's row index, or -1 if missing. */
   solIndex: number;
+  /** Global SID resolver over every object-carrying artifact —
+   *  see src/client/util/sid-resolver/README.md for the wiring map. */
+  sidResolver: SidResolver;
 }
 
 export type StarRef = { kind: 'hip' | 'index'; id: number };

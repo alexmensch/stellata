@@ -9,6 +9,7 @@ function makeCatalog(): CloudCatalog {
   const cloud = (id: string): Cloud => ({
     name: id,
     id,
+    sid: id.charCodeAt(0),
     centerAbs: new THREE.Vector3(0, 0, 0),
     axes: [10, 10, 10],
     quat: new THREE.Quaternion(),
@@ -23,6 +24,7 @@ function makeCloud(axes: [number, number, number]): Cloud {
   return {
     name: 'test',
     id: 'test',
+    sid: 1,
     centerAbs: new THREE.Vector3(),
     axes,
     quat: new THREE.Quaternion(),

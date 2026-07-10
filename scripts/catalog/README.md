@@ -376,9 +376,11 @@ Bootstrap when the record set changes (new AT-HYG rows, new companions):
    succeeds (it logs `SID: <n> / <n> records resolved`; any shortfall is a
    hard fail, never a shipped artifact).
 
-The runtime reader (`catalog-loader.ts`) and Node reader
-(`catalog-lookup.ts`) inherit the field automatically off `RECORD_LAYOUT`;
-neither decodes `sid` until the B4 resolver (`stellata-efju.5`).
+The runtime reader (`catalog-loader.ts`) decodes the column into
+`Catalog.sid`, the star domain of the runtime SID resolver
+(`src/client/util/sid-resolver/README.md`); the Node reader
+(`catalog-lookup.ts`) inherits the field off `RECORD_LAYOUT` without
+decoding it.
 
 ## Search index (`public/search-index.json`)
 

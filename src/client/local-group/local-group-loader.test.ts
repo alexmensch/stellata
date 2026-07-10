@@ -7,6 +7,7 @@ interface Raw {
   objects: Array<{
     name: string;
     id: string;
+    sid?: number;
     center: [number, number, number];
     kind: 'disc' | 'ellipsoid';
     axes: [number, number, number];
@@ -68,6 +69,7 @@ describe('loadLocalGroup', () => {
       objects: [{
         name: 'LMC',
         id: 'lmc',
+        sid: 327500,
         center: [15000, 5000, -42000],
         kind: 'disc',
         axes: [4500, 4500, 1000],
@@ -89,5 +91,52 @@ describe('loadLocalGroup', () => {
     expect(o.centerAbs.z).toBe(-42000);
     expect(o.quat.length()).toBeCloseTo(1, 6);
     expect(o.distanceFromSol).toBe(49590);
+    expect(o.sid).toBe(327500);
+  });
+
+  it('returns null when any object is missing its sid (pre-stamp artifact)', async () => {
+    const raw: Raw = {
+      version: 1,
+      count: 1,
+      objects: [{
+        name: 'LMC',
+        id: 'lmc',
+        center: [0, 0, 0],
+        kind: 'disc',
+        axes: [1, 1, 1],
+        quat: [0, 0, 0, 1],
+        source: 'LVDB',
+        distance: 1,
+      }],
+    };
+    mockFetch(() => ({ ok: true, json: () => raw }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = await loadLocalGroup('/local-group.json');
+    expect(out).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/local-group\.json record 0 has a missing or invalid sid/),
+    );
+    warn.mockRestore();
+  });
+
+  it('returns null on a duplicate sid', async () => {
+    const obj = {
+      name: 'X',
+      id: 'x',
+      sid: 5,
+      center: [0, 0, 0] as [number, number, number],
+      kind: 'disc' as const,
+      axes: [1, 1, 1] as [number, number, number],
+      quat: [0, 0, 0, 1] as [number, number, number, number],
+      source: 'LVDB' as const,
+      distance: 1,
+    };
+    const raw: Raw = { version: 1, count: 2, objects: [obj, { ...obj, id: 'y' }] };
+    mockFetch(() => ({ ok: true, json: () => raw }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = await loadLocalGroup('/local-group.json');
+    expect(out).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/duplicate sid 5/));
+    warn.mockRestore();
   });
 });

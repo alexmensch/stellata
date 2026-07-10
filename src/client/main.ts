@@ -30,6 +30,9 @@ import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
+import { SidResolver, arrayDomain } from './util/sid-resolver';
+import { SOL_OBJECT_SIDS } from './solar-system/sol-object-sids';
+import { SOL_PLANETS } from './solar-system/planet-system';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
@@ -96,7 +99,8 @@ async function main() {
     // Cloud layer is currently shelved (CLAUDE.md). The fetch and parsing
     // stay so the machinery is verified; the attach is suppressed so the
     // layer doesn't enter the scene. Re-enable by uncommenting the line
-    // below.
+    // below AND attaching the 'cloud' SID domain in place of the
+    // conclude('cloud') call further down.
     // if (cloudCatalog) stellata.attachClouds(cloudCatalog);
     void cloudCatalog;
 
@@ -118,11 +122,27 @@ async function main() {
       const h = catalog.hip[i];
       if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
     }
+    // Global SID resolver (docs/sid.md § 8). Every domain this client can
+    // attach settles here at boot; `pending` is only reachable for a
+    // future genuinely-async domain. `sun` is not in the planet domain —
+    // Sol's catalog record carries the same sid, so the star domain
+    // claims it (see util/sid-resolver/README.md).
+    const sidResolver = new SidResolver(['star', 'planet', 'cloud', 'lg']);
+    sidResolver.attach('star', arrayDomain(catalog.sid));
+    sidResolver.attach(
+      'planet',
+      arrayDomain(SOL_PLANETS.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
+    );
+    sidResolver.conclude('cloud');
+    if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
+    else sidResolver.conclude('lg');
+
     const idMaps: IdMaps = {
       hipToIndex,
       indexToHip: catalog.hip,
       starCount: catalog.count,
       solIndex: catalog.solIndex,
+      sidResolver,
     };
 
     const debugTools = setupDebug(stellata, idMaps);

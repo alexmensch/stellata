@@ -53,6 +53,10 @@ export interface Catalog {
   // binaries with orbital elements.
   varType: Uint8Array;           // length = count
   hip: Uint32Array;              // length = count, 0 = no HIP
+  // Frozen Stellata ID per record (docs/sid.md § 7). 0 = NO_SID, which
+  // never ships (the build hard-fails on unallocated records) but is
+  // still guarded at consumers so a hand-built artifact degrades.
+  sid: Uint32Array;              // length = count
   // Gaia DR3 source_id per record; 0n sentinel = no Gaia DR3 source_id.
   // Stored as BigUint64Array because IDs routinely exceed 2^53 and would
   // truncate as plain Numbers. Convert with `String(arr[i])` at query time.
@@ -171,6 +175,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   const amplitudeMag = new Float32Array(count);
   const varType = new Uint8Array(count);
   const hip = new Uint32Array(count);
+  const sid = new Uint32Array(count);
   const gaiaSourceId = new BigUint64Array(count);
   const teffGspphot = new Float32Array(count);
   const loggGspphot = new Float32Array(count);
@@ -204,6 +209,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     varType[i] = view.getUint8(off + RECORD_LAYOUT.varType);
     periodDays[i] = view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1;
     hip[i] = view.getUint32(off + RECORD_LAYOUT.hip, true);
+    sid[i] = view.getUint32(off + RECORD_LAYOUT.sid, true);
     gaiaSourceId[i] = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
     teffGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.teffGspphot, true);
     loggGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.loggGspphot, true);
@@ -257,6 +263,7 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     amplitudeMag,
     varType,
     hip,
+    sid,
     gaiaSourceId,
     teffGspphot,
     loggGspphot,
