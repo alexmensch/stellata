@@ -45,7 +45,7 @@ from parsers import (  # noqa: E402, F401
     parse_component_sptype_overrides, parse_orb6,
     parse_orb6_component_overrides,
     parse_simbad_wds_spectra, parse_simbad_wds_xids,
-    parse_wds_summ,
+    dedup_wds_pair_rows, parse_wds_summ,
 )
 from indices import (  # noqa: E402, F401
     GAIA_BINDING_G_MINUS_V_REJECT_MAG, IdentifierIndices,
@@ -200,7 +200,19 @@ def log(msg: str) -> None:
     print(f"[build-binaries] {msg}")
 
 
-SEP_LIMIT_REJECT_AUDIT_SAMPLE = 25
+DROPPED_PAIR_AUDIT_SAMPLE = 25
+
+
+def log_dropped_pair_sample(reason: str, dropped: list[str]) -> None:
+    """Audit line for a gate that drops pairs before the multiples.tsv
+    emit. Dropped pairs never reach the TSV, so the build log is their
+    only record — list a capped sample so the suppressed set stays
+    reviewable against the literature."""
+    if not dropped:
+        return
+    sample = ", ".join(dropped[:DROPPED_PAIR_AUDIT_SAMPLE])
+    suffix = ", …" if len(dropped) > DROPPED_PAIR_AUDIT_SAMPLE else ""
+    log(f"{reason}: {len(dropped):,} pairs (sample: {sample}{suffix})")
 
 
 def log_sep_limit_rejections(
@@ -208,12 +220,9 @@ def log_sep_limit_rejections(
     components: list,
     classifications: list,
 ) -> None:
-    """Audit line for Stage 5's tier-3 separation-limit gate: the WDS
-    systems whose optical-double companions were dropped for sitting
-    beyond the physical bound-pair limit from the system anchor. Dropped
-    pairs never reach multiples.tsv, so the build log is their only
-    record — list a capped sample so the suppressed set stays reviewable
-    against the literature."""
+    """Stage 5's tier-3 separation-limit gate: the WDS systems whose
+    optical-double companions were dropped for sitting beyond the
+    physical bound-pair limit from the system anchor."""
     rejected = [
         f"{pair.wds_id}{pair.components}"
         for (pair, _p, _s), cls in zip(
@@ -221,13 +230,8 @@ def log_sep_limit_rejections(
         )
         if cls.optical_via == "sep_limit_rejected"
     ]
-    if not rejected:
-        return
-    sample = ", ".join(rejected[:SEP_LIMIT_REJECT_AUDIT_SAMPLE])
-    suffix = ", …" if len(rejected) > SEP_LIMIT_REJECT_AUDIT_SAMPLE else ""
-    log(
-        f"separation-limit rejections: {len(rejected):,} optical doubles "
-        f"dropped (sample: {sample}{suffix})"
+    log_dropped_pair_sample(
+        "separation-limit rejections: optical doubles dropped", rejected,
     )
 
 
@@ -243,8 +247,15 @@ def run(force: bool) -> int:
 
     log("loading reference catalogs (Stage 1) …")
 
-    wds_pairs = parse_wds_summ(SRC_WDS_SUMM)
+    wds_pairs, n_wds_dup_dropped = dedup_wds_pair_rows(
+        parse_wds_summ(SRC_WDS_SUMM),
+    )
     log(f"loaded {len(wds_pairs):,} WDS pair rows")
+    if n_wds_dup_dropped:
+        log(
+            f"dropped {n_wds_dup_dropped:,} duplicate WDS pair rows "
+            "(same wds_id + discoverer + components; kept most-observed)"
+        )
 
     orb6 = parse_orb6(SRC_ORB6)
     log(f"loaded {len(orb6):,} ORB6 orbit rows")
@@ -489,12 +500,19 @@ def run(force: bool) -> int:
 
     log("Stage 5 complete. Emitting multiples.tsv (Stage 6) …")
 
+    dropped_no_position: list[str] = []
     rows = build_multiples_rows(
         pairs=wds_pairs, components=components,
         astrometry=astrometry, orbits=orbits,
         classifications=classifications, indices=indices,
         simbad_xids=simbad_wds_xids,
         system_anchors=system_anchors,
+        dropped_no_position=dropped_no_position,
+    )
+    log_dropped_pair_sample(
+        "position-less pair drops: kept pairs with no astrometry and no "
+        "system anchor never reach multiples.tsv",
+        dropped_no_position,
     )
     n_emitted = write_multiples_tsv(rows, OUT_MULTIPLES)
     n_standalone = sum(1 for r in rows if r.orbit_role == ORBIT_ROLE_STANDALONE)
@@ -523,6 +541,8 @@ def run(force: bool) -> int:
         binding_integrity=bi_counts,
         xwalk_mag_rejected=len(indices.xwalk_mag_rejected),
         athyg_gaia_mag_rejected=len(indices.athyg_gaia_mag_rejected),
+        wds_duplicate_pair_rows_dropped=n_wds_dup_dropped,
+        multiples_pairs_dropped_no_position=len(dropped_no_position),
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
     rates = build_binaries_rates(counts)

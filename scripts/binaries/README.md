@@ -627,7 +627,7 @@ into per-component rows. Canonical column order is
 `MULTIPLES_TSV_COLUMNS`:
 
 ```
-system_id, comp, hip, gaia_source_id,
+system_id, comp, hip, gaia_source_id, hd,
 x_pc, y_pc, z_pc, absmag, ci, spect, name,
 source, regime,
 resolve_via, astrometry_via, orbit_via, spect_via,
@@ -646,6 +646,22 @@ cascade in `scripts/catalog/direction-cascade.ts`. This keeps a promoted
 secondary's baked xyz on the same epoch as its primary so the static
 relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 (epoch gap × systemic PM). See `data/README.md` § Reference epoch.
+
+`hd` carries the HD number from the component's AT-HYG row, with the
+pair primary falling back to the coord-validated ORB6 entry's HD
+(stashed on the Stage-2 `ResolvedComponent`). It is the join key for
+`build-catalog.ts`'s identifier backfill on HD-only AT-HYG systems
+(ξ UMa — see `scripts/catalog/README.md` § Companion promotion);
+counted `multiples_hd_populated`. Two other Stage-6 accounting
+mechanisms guard silent drops: WDS summary rows duplicated on
+(wds_id, discoverer, components) are collapsed at the parse boundary
+(`dedup_wds_pair_rows`, most-observed row wins — Pismis 24 CD carried
+two contradictory geometries; counted
+`wds_duplicate_pair_rows_dropped`), and Stage-5-kept pairs with no
+astrometry and no system anchor — which never reach the TSV — are
+counted `multiples_pairs_dropped_no_position` with a capped
+`log_dropped_pair_sample` build-log sample, mirroring the Stage-5
+separation-limit audit line.
 
 The last four columns carry WDS pair geometry — populated on both
 component rows of a decomposing pair (standalone rows leave them

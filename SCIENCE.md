@@ -326,6 +326,19 @@ Bailer-Jones publication and keep their AT-HYG values. The override
 also rescues ~15 stars previously dropped at filter (3): catastrophic
 parallax inversions whose Bayesian distance is < 50 kpc.
 
+**The override is at its DR3 ceiling — don't re-probe.** A 2026-05
+audit walked every identifier chain for the residual: of the AT-HYG
+rows with a source_id but no B-J posterior (~1.6k), the HIP-consistent
+subset are genuine DR3 sources that Bailer-Jones simply didn't publish
+(2-parameter position-only solutions, or excluded by their quality
+filter), and none of the alternative source_ids recoverable through
+the HIP or Tycho-2 cross-walks appear in B-J either. The empty-`gaia`
+AT-HYG rows recover ~190 source_ids via the HIP cross-walk (now wired
+into `resolveGaiaSourceId` — the `gaiaSourceIdBackfilled` build count)
+— worth having for cross-match keying, but zero of those unlock a B-J
+posterior. Coverage next improves with Gaia DR4 and a B-J-successor
+republication, not with more cross-walk work.
+
 Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (~310k rows,
 refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
@@ -722,28 +735,46 @@ remains the documented escalation.)
 
 **Physical radius.** Each star's `physicalRadius` (in solar radii) is
 computed at build time via Stefan–Boltzmann, given the absolute
-magnitude and parsed spectral class:
+magnitude and an effective temperature:
 
 ```
-T       = interp(T_TABLE[classIdx], subclass)
+T       = Apsis Teff (gspphot → gspspec) when measured,
+          else interp(T_TABLE[classIdx], subclass)
 BC      = interp(BC_TABLE[classIdx], subclass)
 Mbol    = absmag + BC
 L/L☉    = 10^((4.74 − Mbol) / 2.5)
 R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 ```
 
-T and BC tables are main-sequence values — cooler for giants/supergiants
-in reality — but the Mbol side of the equation absorbs the
-luminosity-class difference, so the end result lands close to published
-radii (Sol≈1.03, Sirius≈1.81, Vega≈2.68, Rigel≈75, Betelgeuse≈700, all
-within ~10% of canonical values). Clamped to `[0.08, 2500]` so
-pathological catalog rows don't produce absurd sizes. White dwarfs are
-special-cased to 0.013 R☉ (typical WD radius; absmag doesn't translate
-reliably for them).
+The measured Gaia DR3 Apsis Teff (see § Astrophysical parameters from
+Gaia DR3 Apsis) is preferred wherever a solution exists inside the
+2 000–60 000 K sanity window — R ∝ T⁻², so a GSP-Spec-tier star whose
+letter-only class defaulted to subclass 5 (a real K0 sized as K5) was
+otherwise misized by ~36%, and an unknown-class star riding the
+neutral 5 000 K row by up to ~2×. BC stays class-table: class-table BC
+against a measured T is still strictly better than class-table both.
+The class-table T and BC are main-sequence values — cooler for
+giants/supergiants in reality — but the Mbol side of the equation
+absorbs the luminosity-class difference, so the end result lands close
+to published radii (Sol 1.03 vs canonical 1.0, Vega 2.69 vs ~2.7,
+Rigel 77 vs ~74, all within ~10%; Sirius runs 1.92 vs interferometric
+1.71 — the class-table BC for its Am composite overshoots ~12% — and
+the extreme supergiants land low where the de-extincted AT-HYG mean
+magnitude sits under the literature mean, Betelgeuse 577 vs 764⁺¹¹⁶).
+The bright Gaia-saturated set has no Apsis row, so these ride the
+class table. Clamped to `[0.08, 2500]` so pathological catalog rows
+don't produce absurd sizes. White dwarfs are special-cased to 0.013 R☉ (absmag
+doesn't translate reliably for them) and Wolf-Rayets to their own
+Teff/BC ramps — gspphot models neither atmosphere, so a published
+Apsis value there is the companion's light or a misfit and is ignored.
+The famous-star radius and colour claims are pinned end-to-end against
+`public/catalog.bin` by `scripts/catalog/known-stars.test.ts`
+(`primary_radius_rsun` / `primary_ci` corpus columns).
 
-Implementation: `scripts/catalog/build-catalog.ts`, see
-`scripts/README.md` §Physical radius and spectral parsing for the
-spectral-string parser and the surrounding pipeline.
+Implementation: `physicalRadius` / `resolveApsisTeff` in
+`scripts/catalog/catalog-pure.ts`, wired in `stars-parse.ts`; see
+`scripts/catalog/README.md` § Physical radius and spectral parsing for
+the spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model
 

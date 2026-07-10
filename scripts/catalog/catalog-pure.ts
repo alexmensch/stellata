@@ -250,25 +250,45 @@ function matchSimbadRow(
   return info ? { info, source: 'simbad', spectDisplay: row.spType } : null;
 }
 
-/** Four-tier spectral resolver — SIMBAD `sp_type` by Gaia source_id
- *  first, then SIMBAD `sp_type` by HIP, then Gaia DR3 GSP-Spec
- *  `spectraltype_esphs`, then SPECTRAL_UNKNOWN. The HIP tier rescues
- *  Gaia-saturated bright stars (Algol, Alsephina) whose SIMBAD row
- *  carries a valid MK type but no source_id, so the source_id key
- *  misses them and the radius chain would otherwise run the cool
- *  unknown-Teff fallback against a bright absmag and inflate ~4×.
+/** Curated HIP → MK type for saturated stars whose SIMBAD entry is a
+ *  component-lettered main_id ("* alf Gem A") carrying neither hip nor
+ *  source_id, so both machine tiers miss and the record would fall to
+ *  the 5000 K unknown class (inflating physicalRadius ~3×). Mirrors the
+ *  binaries pipeline's component_sptype_overrides.tsv curated tier;
+ *  literature citation per entry. */
+export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
+  // Castor A (α Gem) — SIMBAD * alf Gem A sp_type=A1.5IV+ (Gray+ 2003).
+  [36850, 'A1.5IV'],
+]);
+
+/** Five-tier spectral resolver — curated HIP override first, then
+ *  SIMBAD `sp_type` by Gaia source_id, then SIMBAD `sp_type` by HIP,
+ *  then Gaia DR3 GSP-Spec `spectraltype_esphs`, then SPECTRAL_UNKNOWN.
+ *  The HIP tier rescues Gaia-saturated bright stars (Algol, Alsephina)
+ *  whose SIMBAD row carries a valid MK type but no source_id, so the
+ *  source_id key misses them and the radius chain would otherwise run
+ *  the cool unknown-Teff fallback against a bright absmag and inflate
+ *  ~4×; the curated tier covers the residue whose SIMBAD entry carries
+ *  neither key (Castor).
  *  SIMBAD and GSP-Spec each separate Morgan-Keenan classification from
  *  variability-type annotation at the schema level (sp_type vs otype
  *  for SIMBAD; the dedicated enum column for GSP-Spec), so neither
  *  upstream needs the string-disambiguation defences that AT-HYG's
  *  conflated `spect` column required. */
-export type SpectralSource = 'simbad' | 'gspspec' | 'fallback';
+export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';
 export function resolveSpectralInfo(
   gaiaSourceId: string | null,
   hip: number | null,
   simbad: SimbadSpectralIndex,
   apsisMap: Map<string, ApsisRow>,
 ): { info: SpectralInfo; source: SpectralSource; spectDisplay: string | null } {
+  if (hip !== null && hip > 0) {
+    const curated = CURATED_SPTYPE_BY_HIP.get(hip);
+    const info = curated ? classifyFromSimbad(curated) : null;
+    if (curated && info) {
+      return { info, source: 'curated', spectDisplay: curated };
+    }
+  }
   const bySource = gaiaSourceId ? matchSimbadRow(simbad.bySource.get(gaiaSourceId)) : null;
   if (bySource) return bySource;
   const byHip = hip !== null && hip > 0 ? matchSimbadRow(simbad.byHip.get(hip)) : null;
@@ -385,16 +405,43 @@ export function boloCorr(info: SpectralInfo): number {
 const T_SUN = 5778;
 const MBOL_SUN = 4.74;
 
+// Sanity window for a measured Apsis Teff feeding the radius chain —
+// values outside it are pipeline artifacts (gspphot non-convergence),
+// not stars, and fall through to the class table.
+export const APSIS_TEFF_MIN_K = 2000;
+export const APSIS_TEFF_MAX_K = 60000;
+
+/** Pick the measured Gaia DR3 Apsis Teff for the radius chain:
+ *  gspphot first, gspspec fallback (the same preference the runtime
+ *  colour routing uses), gated to the physical sanity window. Returns
+ *  null when neither solution carries a usable value. */
+export function resolveApsisTeff(apsis: ApsisRow | null | undefined): number | null {
+  if (!apsis) return null;
+  for (const t of [apsis.teffGspphot, apsis.teffGspspec]) {
+    if (t !== null && t > APSIS_TEFF_MIN_K && t < APSIS_TEFF_MAX_K) return t;
+  }
+  return null;
+}
+
 // Compute physical radius in solar radii from absolute magnitude + spectral
 // info via Stefan-Boltzmann. Clamped to sane bounds so odd catalog entries
-// don't produce absurd values.
-export function physicalRadius(absmag: number, info: SpectralInfo): number {
+// don't produce absurd values. `teffOverride` (a measured Apsis Teff via
+// resolveApsisTeff) replaces the class-table Teff when present; BC stays
+// class-table (class-table BC against a measured T still beats class-table
+// both). White dwarfs and Wolf-Rayets keep their dedicated treatments —
+// gspphot doesn't model either atmosphere, so a published value there is
+// the companion's or a misfit.
+export function physicalRadius(
+  absmag: number, info: SpectralInfo, teffOverride: number | null = null,
+): number {
   if (info.isWhiteDwarf) {
     // White dwarfs cluster tightly around 0.01 R☉; absmag doesn't translate
     // reliably into a radius for them.
     return 0.013;
   }
-  const T = tempKelvin(info);
+  const T = teffOverride !== null && !info.isWolfRayet
+    ? teffOverride
+    : tempKelvin(info);
   const BC = boloCorr(info);
   const Mbol = absmag + BC;
   const L = Math.pow(10, (MBOL_SUN - Mbol) / 2.5); // L/L☉

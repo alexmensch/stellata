@@ -48,11 +48,15 @@ Each AT-HYG row walks through, inside `readStars`:
 6. **Direction resolution** (`resolveDirection` in
    `direction-cascade.ts`) and `xyz = direction × distance` in
    float64. See § Direction resolution.
-7. **Spectral classification** (`resolveSpectralInfo`). See § Physical
-   radius and spectral parsing.
+7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
+   to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
+   it). See § Physical radius and spectral parsing.
 8. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
-   and the resolved (Teff, BC). White dwarfs special-cased to 0.013
-   R☉. Clamped to [0.08, 2500] R☉.
+   and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
+   via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
+   the class-table value; BC always class-table. White dwarfs
+   special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
+   models neither). Clamped to [0.08, 2500] R☉.
 
 AT-HYG's stored `x0/y0/z0` is never consumed: it is a mixed-epoch
 merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
@@ -338,9 +342,15 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 ## Physical radius and spectral parsing
 
 `resolveSpectralInfo` in `catalog-pure.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a four-tier
-priority chain, keyed first on the Gaia DR3 `source_id` then on HIP:
+`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a five-tier
+priority chain:
 
+0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
+   saturated stars whose SIMBAD entry is a component-lettered main_id
+   carrying neither hip nor source_id, so both machine tiers below miss
+   (Castor: '* alf Gem A' A1.5IV). Mirrors the binaries pipeline's
+   `component_sptype_overrides.tsv` curated tier. Sol takes the same
+   curated route via a proper-name special case in `stars-parse.ts`.
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
    from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
    sp_type to Morgan-Keenan only — variability annotations live in `otype`,
@@ -373,20 +383,27 @@ hover-display fallback when both upstream sources are blank.
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
 
 ```
-T       = interp(T_TABLE[classIdx], subclass)
+T       = Apsis Teff (gspphot → gspspec) when measured, else
+          interp(T_TABLE[classIdx], subclass)
 BC      = interp(BC_TABLE[classIdx], subclass)
 Mbol    = absmag + BC
 L/L☉    = 10^((4.74 − Mbol) / 2.5)
 R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 ```
 
-Tables are main-sequence values — cooler for giants/supergiants in reality
-— but the Mbol side of the equation absorbs the luminosity-class
-difference, so the end result lands close to published radii (Sol≈1.03,
-Sirius≈1.81, Vega≈2.68, Rigel≈75, Betelgeuse≈700, all within ~10% of
-canonical values). Clamped to `[0.08, 2500]` so pathological catalog
-rows don't produce absurd sizes. White dwarfs are special-cased to
-0.013 R☉ (typical WD radius; absmag doesn't translate reliably for them).
+`resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
+R ∝ T⁻², so the class-table fallback misized GSP-Spec-tier stars
+(letter-only, subclass defaulted to 5) by up to ~36% and unknown-class
+stars by up to ~2×. Tables are main-sequence values — cooler for
+giants/supergiants in reality — but the Mbol side of the equation
+absorbs the luminosity-class difference, so the end result lands close
+to published radii (SCIENCE.md § Physical radius carries the current
+per-star numbers; `known-stars.test.ts` pins them end-to-end via the
+corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
+`[0.08, 2500]` so pathological catalog rows don't produce absurd
+sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
+absmag doesn't translate reliably for them); Wolf-Rayets ride their
+own Teff/BC ramps and ignore Apsis.
 
 ## Build-time de-extinction
 
@@ -473,6 +490,16 @@ someone else, and ensures the chart-mode wings glyph appears once
 per system on the canonical anchor.
 
 ## Companion promotion from `data/binaries/multiples.tsv`
+
+Before promotion runs, `backfillPrimaryIdentifiers` (same module)
+sweeps the pair-primary rows and backfills HIP + Gaia source_id onto
+identifier-less catalog records, joined by the TSV's `hd` column —
+never by position: the nearest-position record to ξ UMa A is ξ UMa
+B's, so a position join would stamp A's identifiers onto B. This is
+what makes HD-only AT-HYG systems addressable by `lookupByHip` /
+URL refs. Guards: unique HD in the catalog, target record carries no
+id of its own, no id duplicated from another record. Counted
+`multiplesIdentifierBackfill`.
 
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
@@ -1136,9 +1163,12 @@ framing.
 Three tiers, all snapshot-pinned:
 
 - **Tier A — known-stars corpus.** `scripts/catalog/known-stars.tsv`
-  carries ~70 hand-curated systems (single stars + multiples) with
+  carries ~80 hand-curated systems (single stars + multiples) with
   expected HIP, Gaia DR3 source_id, distance ± 1σ, absmag, spectral
-  type, per-companion (HIP, source_id, absmag) tuples, and optional
+  type, optional intrinsic-colour + physical-radius pins (primary_ci
+  ±0.03 / primary_radius_rsun ±10% or per-row radius_rel_tol — the
+  end-to-end guard on the two most user-visible per-star properties),
+  per-companion (HIP, source_id, absmag) tuples, and optional
   GCVS variability pins (var_type / var_period_days / var_amp_mag —
   published values quantised through `encodeAmpUnits` /
   `encodePeriodUnits` before comparison; `var_type=none` asserts a

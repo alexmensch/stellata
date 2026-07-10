@@ -126,7 +126,12 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // The 564 → 563 step is the ORB6 slice widening + HIP-xwalk magnitude
 // gate: a corrected period/binding brings one pair's R(epoch) back into
 // agreement with its baked placement.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 563;
+// The 563 → 566 step is the HD-keyed identifier backfill: three HD-only
+// AT-HYG primaries (ξ UMa, ξ Sco, HD 75632) became addressable, so their
+// long-period ORB6 visual pairs render for the first time and enter the
+// sweep with athyg-print baked placements — new coverage, not placement
+// regressions.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 566;
 
 // ---- Corpus row types ----------------------------------------------------
 

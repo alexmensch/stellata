@@ -109,6 +109,10 @@ export interface BuildCounts {
   apsisTeffEither: number;
   /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
   simbadSptypeEntries: number;
+  /** Records classified via the curated HIP→sp_type override tier
+   *  (CURATED_SPTYPE_BY_HIP) — saturated stars whose SIMBAD entry
+   *  carries neither hip nor source_id (Castor). */
+  spectralByCurated: number;
   /** Records whose spectral classification (classIdx + subclass + lumClass)
    *  came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
   spectralBySimbad: number;
@@ -118,6 +122,10 @@ export interface BuildCounts {
   /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
    *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
   spectralFallback: number;
+  /** Identifier-less catalog primaries that gained HIP / Gaia source_id
+   *  from a multiples.tsv pair-primary row, joined by HD
+   *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */
+  multiplesIdentifierBackfill: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;

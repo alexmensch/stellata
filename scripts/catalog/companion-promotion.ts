@@ -46,6 +46,9 @@ export interface MultiplesTsvRow {
   comp: string;
   hip: number | null;
   gaiaSourceId: string | null;
+  /** HD number (AT-HYG row's, ORB6 fallback for pair primaries) — the
+   *  join key for the HD-only identifier backfill in build-catalog. */
+  hd: number | null;
   x_pc: number | null;
   y_pc: number | null;
   z_pc: number | null;
@@ -152,6 +155,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     comp: col('comp'),
     hip: col('hip'),
     gaiaSourceId: col('gaia_source_id'),
+    hd: col('hd'),
     x_pc: col('x_pc'),
     y_pc: col('y_pc'),
     z_pc: col('z_pc'),
@@ -193,6 +197,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       comp: cells[idx.comp],
       hip: parseIntOrNull(cells[idx.hip]),
       gaiaSourceId: parseGaiaSourceIdStr(cells[idx.gaiaSourceId]),
+      hd: parseIntOrNull(cells[idx.hd]),
       x_pc: parseFloatOrNull(cells[idx.x_pc]),
       y_pc: parseFloatOrNull(cells[idx.y_pc]),
       z_pc: parseFloatOrNull(cells[idx.z_pc]),
@@ -1458,6 +1463,59 @@ function promoteRow(
   if (companionGaia) state.promotedByGaia.set(companionGaia, newIdx);
   if (companionHip !== null) state.promotedByHip.set(companionHip, newIdx);
   return newIdx;
+}
+
+/** Backfill HIP + Gaia source_id onto identifier-less catalog primaries
+ *  from multiples.tsv pair-primary rows, joined by HD — never by
+ *  position (the nearest-position record to ξ UMa A is ξ UMa B's, so a
+ *  position join stamps A's identifiers onto B). AT-HYG rows for some
+ *  WDS systems carry only HD; Stage 2 resolves their HIP (ORB6) and
+ *  Gaia source_id (SIMBAD xids) into multiples.tsv, and this pass is
+ *  what surfaces those onto the catalog record so HIP / Gaia lookups
+ *  (URL refs, Tier A) can address it. Guards: the HD must resolve to
+ *  exactly one catalog record, that record must carry no identifier of
+ *  its own, and an id already present on another record is never
+ *  duplicated. Returns the number of records backfilled. */
+export function backfillPrimaryIdentifiers(
+  multiplesRows: MultiplesTsvRow[],
+  stars: Star[],
+): number {
+  const byHd = new Map<number, number[]>();
+  const hipsInCatalog = new Set<number>();
+  const gaiaInCatalog = new Set<string>();
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    if (s.hd !== null) {
+      const bucket = byHd.get(s.hd);
+      if (bucket) bucket.push(i);
+      else byHd.set(s.hd, [i]);
+    }
+    if (s.hip !== null) hipsInCatalog.add(s.hip);
+    if (s.gaiaSourceId !== null) gaiaInCatalog.add(s.gaiaSourceId);
+  }
+
+  let backfilled = 0;
+  for (const row of multiplesRows) {
+    if (row.orbitRole !== 'primary' || row.hd === null) continue;
+    if (row.hip === null && row.gaiaSourceId === null) continue;
+    const candidates = byHd.get(row.hd);
+    if (candidates === undefined || candidates.length !== 1) continue;
+    const star = stars[candidates[0]];
+    if (star.hip !== null || star.gaiaSourceId !== null) continue;
+    let wrote = false;
+    if (row.hip !== null && !hipsInCatalog.has(row.hip)) {
+      star.hip = row.hip;
+      hipsInCatalog.add(row.hip);
+      wrote = true;
+    }
+    if (row.gaiaSourceId !== null && !gaiaInCatalog.has(row.gaiaSourceId)) {
+      star.gaiaSourceId = row.gaiaSourceId;
+      gaiaInCatalog.add(row.gaiaSourceId);
+      wrote = true;
+    }
+    if (wrote) backfilled++;
+  }
+  return backfilled;
 }
 
 export function promoteCompanions(
