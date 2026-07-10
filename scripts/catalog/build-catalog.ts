@@ -256,6 +256,13 @@ async function main() {
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
     directionAthygPrinted: 0,
+    velocityGaiaPm: 0,
+    velocityHip2Pm: 0,
+    velocityAthygPm: 0,
+    velocityZero: 0,
+    velocityClamped: 0,
+    velocityAboveEscape: 0,
+    velocityRvApplied: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -413,6 +420,21 @@ async function main() {
       `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
       `athyg_printed ${dv.athyg_printed}`,
   );
+  const vv = stats.velocityVia;
+  console.log(
+    `  velocity cascade: gaia_pm ${vv.gaia_pm}, hip2_pm ${vv.hip2_pm}, ` +
+      `athyg_pm ${vv.athyg_pm}, zero ${vv.zero} (clamped ${stats.velocityClamped}); ` +
+      `rv applied ${stats.rvApplied}`,
+  );
+  if (stats.velocityClampedSample.length > 0) {
+    console.log(`  velocity clamped (>${1500} km/s, zeroed as artifacts):`);
+    for (const s of stats.velocityClampedSample) console.log(`    ${s}`);
+  }
+  console.log(
+    `  velocity above escape (>550 km/s, kept + tracked): ${stats.velocityAboveEscape} ` +
+      `— sample (first ${stats.velocityAboveEscapeSample.length}):`,
+  );
+  for (const s of stats.velocityAboveEscapeSample) console.log(`    ${s}`);
   if (stats.hipDistFullPrecision > 0) {
     console.log(
       `  HIP2 full-precision distances: ${stats.hipDistFullPrecision} dist_src=HIP rows`,
@@ -432,6 +454,13 @@ async function main() {
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
   counts.directionAthygPrinted = dv.athyg_printed;
+  counts.velocityGaiaPm = vv.gaia_pm;
+  counts.velocityHip2Pm = vv.hip2_pm;
+  counts.velocityAthygPm = vv.athyg_pm;
+  counts.velocityZero = vv.zero;
+  counts.velocityClamped = stats.velocityClamped;
+  counts.velocityAboveEscape = stats.velocityAboveEscape;
+  counts.velocityRvApplied = stats.rvApplied;
   counts.spectralByCurated = stats.spectralByCurated;
   counts.spectralBySimbad = stats.spectralBySimbad;
   counts.spectralByGspspec = stats.spectralByGspspec;
@@ -692,6 +721,9 @@ async function main() {
     view.setFloat32(off + RECORD_LAYOUT.x, s.x, true);
     view.setFloat32(off + RECORD_LAYOUT.y, s.y, true);
     view.setFloat32(off + RECORD_LAYOUT.z, s.z, true);
+    view.setFloat32(off + RECORD_LAYOUT.vx, s.vx, true);
+    view.setFloat32(off + RECORD_LAYOUT.vy, s.vy, true);
+    view.setFloat32(off + RECORD_LAYOUT.vz, s.vz, true);
     view.setFloat32(off + RECORD_LAYOUT.absmag, s.absmag, true);
     view.setFloat32(off + RECORD_LAYOUT.ci, s.ci, true);
     view.setFloat32(off + RECORD_LAYOUT.physRadius, s.physicalRadius, true);

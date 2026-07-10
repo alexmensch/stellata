@@ -455,6 +455,31 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
     });
   });
 
+  describe('space-motion velocity — no artifact survives into binaries.bin members', () => {
+    // Full systemic-velocity coherence for binaries.bin's authoritative
+    // pairing (incl. Tier-3 static) is stellata-zau1 (deferred — it must run
+    // in the binaries pipeline where the pairing is known). What the catalog
+    // build DOES guarantee and this pins: every pair member's baked velocity
+    // is physically sane (the sanity clamp caught every PM×distance
+    // artifact), so no member streaks under the epoch-advance.
+    it('every pair member is below the velocity sanity ceiling', () => {
+      const ceilingPcYr = 1500 * 1.0227121651e-6;
+      let checked = 0;
+      for (const rel of BINARIES!.relations) {
+        for (const idx of [rel.primaryIdx, rel.secondaryIdx]) {
+          const r = catalog.record(idx);
+          checked++;
+          const speed = Math.hypot(r.vx, r.vy, r.vz);
+          expect(
+            speed,
+            `pair member #${idx} (${r.name ?? r.i}) velocity ${(speed / 1.0227121651e-6).toFixed(0)} km/s exceeds the sanity ceiling`,
+          ).toBeLessThanOrEqual(ceilingPcYr);
+        }
+      }
+      expect(checked, 'expected pair members in binaries.bin').toBeGreaterThan(0);
+    });
+  });
+
   describe('identifier integrity across corpus components', () => {
     it('no two distinct corpus records share a HIP', () => {
       const hipToRecord = new Map<number, { i: number; name: string }>();

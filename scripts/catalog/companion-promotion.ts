@@ -1357,6 +1357,16 @@ function promoteRow(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
     systemAnchorStar,
   );
+  // Space-motion velocity: inherit the anchor primary's. A promoted
+  // companion carries no own PM (multiples.tsv has no PM columns), and a
+  // Tier-3 static companion is baked into catalog.bin and SKIPPED by the
+  // runtime BinaryOrbitField — only a shared velocity keeps it glued to
+  // the primary through the epoch-advance pass instead of shearing away.
+  // The systemic-velocity pass below reconciles the anchor's own velocity
+  // for renderable-orbit pairs. Anchor-less escapes fall back to zero.
+  const anchorVel = anchorStar
+    ? { x: anchorStar.vx, y: anchorStar.vy, z: anchorStar.vz }
+    : { x: 0, y: 0, z: 0 };
   // Collocated AT-HYG double-entry merge. AT-HYG occasionally carries
   // BOTH members of a resolved pair at the same printed blend
   // coordinates (ξ UMa: "Alula Australis" + "Alula Australis B" are
@@ -1375,6 +1385,9 @@ function promoteRow(
         dup.x = position.x;
         dup.y = position.y;
         dup.z = position.z;
+        dup.vx = anchorVel.x;
+        dup.vy = anchorVel.y;
+        dup.vz = anchorVel.z;
         if (dup.gaiaSourceId === null && companionGaia !== null) {
           dup.gaiaSourceId = companionGaia;
         }
@@ -1391,6 +1404,7 @@ function promoteRow(
 
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
+    vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
     absmag, ci,
     spectClass: spectral.info.classIdx,
     lumClass: spectral.info.lumClass,
@@ -1563,6 +1577,30 @@ export function promoteCompanions(
   const compKey = (root: string | null, comp: string): string | null =>
     root !== null && comp ? `${root} ${comp}` : null;
 
+  // Renderable-orbit (Tier 1/2) pairs grouped by WDS root, for the
+  // systemic-velocity reconciliation post-pass. Members of a bound system
+  // share one systemic velocity so the runtime epoch-advance never shears
+  // a pair; orbital motion stays owned by BinaryOrbitField's elements-alone
+  // walk. See SCIENCE.md § Current-epoch star positions (Composition with
+  // binary orbital motion).
+  interface SystemicGroup {
+    anchorIdx: number | null;
+    pairs: { pIdx: number; sIdx: number; q: number | null }[];
+  }
+  const systemicGroups = new Map<string, SystemicGroup>();
+  const recordOrbitPair = (
+    root: string, anchorIdx: number | null,
+    pIdx: number, sIdx: number, q: number | null,
+  ): void => {
+    let g = systemicGroups.get(root);
+    if (g === undefined) {
+      g = { anchorIdx, pairs: [] };
+      systemicGroups.set(root, g);
+    }
+    if (g.anchorIdx === null) g.anchorIdx = anchorIdx;
+    g.pairs.push({ pIdx, sIdx, q });
+  };
+
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
     // pair; their primary slot is empty. Skip — promoting them without
@@ -1685,6 +1723,25 @@ export function promoteCompanions(
       if (secKey !== null && promotedIdx !== null) {
         componentIndex.set(secKey, promotedIdx);
       }
+      // Record renderable-orbit pairs for systemic-velocity reconciliation.
+      // The secondary's catalog record is its freshly-promoted index, or —
+      // when it was already a first-class AT-HYG row (alreadyInCatalog: α Cen
+      // B, 61 Cyg B) — its own-identifier existing index. Its own id keys
+      // findExisting cleanly here (the shared-primary-id collision only
+      // arises for inherited ids, which route to promotion, not this
+      // branch).
+      if (hasRenderableOrbit(row) && primaryCatalogIdx !== null) {
+        const secIdx = promotedIdx
+          ?? (row.gaiaSourceId !== null || (row.hip !== null && row.hip > 0)
+            ? findExisting(row, existing) : null);
+        if (secIdx !== null && secIdx !== primaryCatalogIdx) {
+          const root = wdsRoot ?? row.systemId;
+          const anchorIdx = (root !== null
+            ? wdsRootAnchors.get(root)?.catalogIdx ?? null : null)
+            ?? primaryCatalogIdx;
+          recordOrbitPair(root, anchorIdx, primaryCatalogIdx, secIdx, row.q);
+        }
+      }
     }
   }
 
@@ -1731,7 +1788,46 @@ export function promoteCompanions(
       secStar.x = placed.x;
       secStar.y = placed.y;
       secStar.z = placed.z;
+      secStar.vx = parentStar.vx;
+      secStar.vy = parentStar.vy;
+      secStar.vz = parentStar.vz;
       stats.repositionedInnerToParent++;
+    }
+  }
+
+  // Systemic-velocity reconciliation over the pairs THIS build resolves.
+  // A bound pair's members share one systemic velocity; a lone pair takes
+  // the barycentric blend v_sys = (1−q)·v_p + q·v_s (cancelling orbital
+  // contamination in the per-member PMs to first order), and a WDS root with
+  // ≥2 orbit pairs (a hierarchy sharing components across pairs) takes the
+  // root anchor's velocity for every member. This plus the mint-time
+  // inheritance above is the load-bearing guarantee: no promoted companion
+  // freezes at v=0 while its primary drifts. FULL coherence for
+  // binaries.bin's authoritative runtime pairing (which re-homes a handful
+  // of inner pairs via override_inner_primary_indices, and owns Tier-3
+  // static pairs the catalog build doesn't group) is stellata-zau1 —
+  // deferred, and harmless for v1 since Tier-1/2 offsets are elements-owned.
+  for (const g of systemicGroups.values()) {
+    if (g.pairs.length === 1) {
+      const { pIdx, sIdx, q } = g.pairs[0];
+      const p = getStarAt(pIdx);
+      const s = getStarAt(sIdx);
+      const w = Math.max(0, Math.min(1, q ?? 0.5));
+      const vx = (1 - w) * p.vx + w * s.vx;
+      const vy = (1 - w) * p.vy + w * s.vy;
+      const vz = (1 - w) * p.vz + w * s.vz;
+      p.vx = vx; p.vy = vy; p.vz = vz;
+      s.vx = vx; s.vy = vy; s.vz = vz;
+    } else {
+      const anchorIdx = g.anchorIdx ?? g.pairs[0].pIdx;
+      const a = getStarAt(anchorIdx);
+      const av = { x: a.vx, y: a.vy, z: a.vz };
+      for (const { pIdx, sIdx } of g.pairs) {
+        for (const idx of [pIdx, sIdx]) {
+          const star = getStarAt(idx);
+          star.vx = av.x; star.vy = av.y; star.vz = av.z;
+        }
+      }
     }
   }
 

@@ -1,8 +1,9 @@
-// Diagnostic CLI over the v6 binary catalogue — header dump,
+// Diagnostic CLI over the binary catalogue — header dump,
 // brightest/dimmest rows, named-star sanity checks, Apsis coverage,
-// variable-star samples.
+// variable-star samples, space-motion velocity coverage.
 
 import { HEADER_SIZE, RECORD_SIZE } from './catalog-pure';
+import { KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_KM_S } from './direction-cascade';
 import {
   type CatalogRecord,
   distancePc,
@@ -50,6 +51,37 @@ console.log('\nGaia DR3 Apsis coverage:');
   console.log(`  Teff gspphot:    ${teffGspphot} / ${count} (${pct(teffGspphot)}%)`);
   console.log(`  Teff gspspec:    ${teffGspspec} / ${count} (${pct(teffGspspec)}%)`);
   console.log(`  Teff either:     ${teffEither} / ${count} (${pct(teffEither)}%)`);
+}
+
+console.log('\nSpace-motion velocity coverage:');
+{
+  let moving = 0;
+  let fastest: CatalogRecord | null = null;
+  let fastestSpeed = 0;
+  for (const r of catalog.records()) {
+    const speed = Math.hypot(r.vx, r.vy, r.vz); // pc/yr
+    if (speed > 0) moving++;
+    if (speed > fastestSpeed) {
+      fastestSpeed = speed;
+      fastest = r;
+    }
+  }
+  const pct = ((moving / count) * 100).toFixed(1);
+  console.log(`  non-zero velocity: ${moving} / ${count} (${pct}%)`);
+  if (fastest) {
+    console.log(
+      `  fastest: ${fastest.name ?? `#${fastest.i}`} at ` +
+      `${(fastestSpeed / KM_S_TO_PC_YR).toFixed(1)} km/s (${fastestSpeed.toExponential(3)} pc/yr)`,
+    );
+    // The build zeroes any velocity past the sanity ceiling, so a survivor
+    // above it means the clamp regressed.
+    if (fastestSpeed > VELOCITY_SANITY_CEILING_KM_S * KM_S_TO_PC_YR) {
+      console.warn(
+        `  WARNING: fastest velocity exceeds the ${VELOCITY_SANITY_CEILING_KM_S} km/s ` +
+        `sanity ceiling — the build-time clamp did not apply`,
+      );
+    }
+  }
 }
 
 console.log('\nVariable star count and 5 examples:');

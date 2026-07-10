@@ -26,8 +26,13 @@ import {
 } from './catalog-pure';
 import {
   resolveDirection,
+  velocityPcPerYr,
+  KM_S_TO_PC_YR,
+  VELOCITY_SANITY_CEILING_PC_YR,
+  GALACTIC_ESCAPE_VELOCITY_PC_YR,
   type DirectionSources,
   type DirectionVia,
+  type VelocityVia,
 } from './direction-cascade';
 import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 
@@ -40,6 +45,12 @@ const MAX_DIST_PC = 50_000;
 
 export interface Star {
   x: number; y: number; z: number;
+  /** Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
+   *  Written to catalog.bin v7; the runtime epoch-advance pass reads it
+   *  once at load to propagate positions off the J2016.0 baseline. Pair
+   *  members share one systemic velocity so the advance never shears a
+   *  pair (see companion-promotion's systemic-velocity pass). */
+  vx: number; vy: number; vz: number;
   absmag: number;
   ci: number;
   spectClass: number;
@@ -113,6 +124,7 @@ export interface AthygRow {
   gaia: string;
   pm_ra: string;
   pm_dec: string;
+  rv: string;
 }
 
 const DIST_SRC_HIP = 'HIP';
@@ -148,6 +160,12 @@ export async function readStars(
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
     gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
+    velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
+    velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
+    velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
+    velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
+    velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
+    rvApplied: number;             // rows whose velocity carries a non-zero AT-HYG radial velocity
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
@@ -182,6 +200,17 @@ export async function readStars(
     hip2_pm_discrepant: 0,
     athyg_printed: 0,
   };
+  const velocityVia: Record<VelocityVia, number> = {
+    gaia_pm: 0,
+    hip2_pm: 0,
+    athyg_pm: 0,
+    zero: 0,
+  };
+  let rvApplied = 0;
+  let velocityClamped = 0;
+  const velocityClampedSample: string[] = [];
+  let velocityAboveEscape = 0;
+  const velocityAboveEscapeSample: string[] = [];
   let spectralByCurated = 0;
   let spectralBySimbad = 0;
   let spectralByGspspec = 0;
@@ -212,6 +241,13 @@ export async function readStars(
     // bright-binary handling.
     const hip = parseIntOrNull(row.hip);
     const mag = parseFloatOrNull(row.mag);
+    // AT-HYG proper motion (mas/yr, cos δ-applied) + radial velocity
+    // (km/s). Feed the LMC PM gate, the athyg_printed velocity tier, and
+    // the space-motion velocity's radial term. rv is Gaia RVS on 258k
+    // rows (rv_src=G_R3); used directly, zero when blank.
+    const athygPmRa = parseFloatOrNull(row.pm_ra);
+    const athygPmDec = parseFloatOrNull(row.pm_dec);
+    const rvKmS = parseFloatOrNull(row.rv);
     const resolved = resolveGaiaSourceId(
       parseGaiaSourceIdStr(row.gaia), hip, hipToGaia, mag,
       (id) => directions.gaiaAstrometry.get(id)?.gMag ?? null,
@@ -261,9 +297,7 @@ export async function readStars(
     // mis-anchored value on the same rows.
     if (mag !== null && isInLmcCone(ra, dec)) {
       lmcCandidates++;
-      const pmRa = parseFloatOrNull(row.pm_ra);
-      const pmDec = parseFloatOrNull(row.pm_dec);
-      const ovr = applyLmcKinematicOverride(mag, pmRa, pmDec);
+      const ovr = applyLmcKinematicOverride(mag, athygPmRa, athygPmDec);
       if (ovr) {
         absmag = ovr.absmag;
         dist = ovr.dist;
@@ -279,7 +313,9 @@ export async function readStars(
     // Sky direction through the Gaia 5p → HIP2 → AT-HYG cascade;
     // position is direction × distance, both float64 until the
     // float32 pack at write time.
-    const dirRes = resolveDirection(gaiaSourceId, hip, ra, dec, directions);
+    const dirRes = resolveDirection(
+      gaiaSourceId, hip, ra, dec, directions, athygPmRa, athygPmDec,
+    );
     if (dirRes === null) {
       dropped.noDirection++;
       continue;
@@ -288,6 +324,45 @@ export async function readStars(
     const x = dirRes.dir.x * dist;
     const y = dirRes.dir.y * dist;
     const z = dirRes.dir.z * dist;
+
+    // Space-motion velocity from the SAME tier's solution + the final
+    // stack distance + AT-HYG RV. Sol carries no PM row and sits at the
+    // origin — force it to exactly zero so the advance pass leaves the
+    // world origin fixed (the isSol special-case below also gates it).
+    const isSolRow = nonEmpty(row.proper) === 'Sol';
+    let vel = isSolRow
+      ? { x: 0, y: 0, z: 0 }
+      : velocityPcPerYr(
+          dirRes.srcRaDeg, dirRes.srcDecDeg,
+          dirRes.srcPmraMasyr, dirRes.srcPmdecMasyr, dist, rvKmS,
+        );
+    // Physical sanity: a space velocity past the ceiling is a PM×distance
+    // artifact (spurious PM on a faint distant star). Drop to zero — kept
+    // at J2016.0, the same fall-through as no-PM rows — so it doesn't
+    // streak under the epoch-advance. Sol is already zero.
+    let velClamped = false;
+    const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
+    const idLabel = (): string => nonEmpty(row.proper)
+      ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
+    if (speedPcYr > VELOCITY_SANITY_CEILING_PC_YR) {
+      velocityClampedSample.push(
+        `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`,
+      );
+      vel = { x: 0, y: 0, z: 0 };
+      velClamped = true;
+    } else if (!isSolRow && speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR) {
+      // Kept (a proven escaper must survive) but tracked — this band is
+      // almost all PM×distance / bad-RV artifacts.
+      velocityAboveEscape++;
+      if (velocityAboveEscapeSample.length < 25) {
+        velocityAboveEscapeSample.push(
+          `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`,
+        );
+      }
+    }
+    velocityVia[isSolRow || velClamped ? 'zero' : dirRes.velVia]++;
+    if (velClamped) velocityClamped++;
+    if (!isSolRow && !velClamped && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
     const ciRaw = parseFloatOrNull(row.ci);
     let ci = ciRaw ?? SOLAR_BV_FALLBACK;
@@ -347,7 +422,9 @@ export async function readStars(
     if (bayer) flags |= FLAG_HAS_BAYER;
 
     stars.push({
-      x, y, z, absmag, ci,
+      x, y, z,
+      vx: vel.x, vy: vel.y, vz: vel.z,
+      absmag, ci,
       spectClass: spectInfo.classIdx,
       lumClass: spectInfo.lumClass,
       physicalRadius: physRadius,
@@ -379,6 +456,12 @@ export async function readStars(
       gaiaSourceIdBackfilled,
       gaiaBindingMagRejected,
       directionVia,
+      velocityVia,
+      velocityClamped,
+      velocityClampedSample,
+      velocityAboveEscape,
+      velocityAboveEscapeSample,
+      rvApplied,
       spectralByCurated,
       spectralBySimbad,
       spectralByGspspec,

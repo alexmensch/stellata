@@ -68,5 +68,12 @@
   "directionGaiaNssSystemic": 10036,
   "directionHip2Saturated": 2623,
   "directionHip2PmDiscrepant": 125,
-  "directionAthygPrinted": 65
+  "directionAthygPrinted": 65,
+  "velocityGaiaPm": 310173,
+  "velocityHip2Pm": 2740,
+  "velocityAthygPm": 64,
+  "velocityZero": 280,
+  "velocityClamped": 8,
+  "velocityAboveEscape": 45,
+  "velocityRvApplied": 267058
 }

@@ -34,6 +34,7 @@ import type { Star } from './stars-parse';
 function makeStar(overrides: Partial<Star> = {}): Star {
   return {
     x: 0, y: 0, z: 0,
+    vx: 0, vy: 0, vz: 0,
     absmag: 5.0,
     ci: 0.65,
     spectClass: 4,
@@ -688,6 +689,62 @@ describe('promoteCompanions', () => {
     // than inherited from Sirius A. T(DA1.9)=25200 K → Ballesteros⁻¹
     // ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
     expect(b.ci).toBeLessThan(-0.4);
+  });
+
+  it('promoted companion inherits the anchor primary velocity (no-PM synth companion never freezes at v=0)', () => {
+    // The load-bearing systemic-velocity guarantee: a promoted companion
+    // carries no own PM, so without inheritance it would sit at v=0 and
+    // shear from a drifting primary under the epoch-advance.
+    const primary = makeStar({
+      x: -0.494, y: 2.477, z: -0.758, absmag: 1.45, ci: 0.01,
+      spectClass: 2, lumClass: 2, proper: 'Sirius', hip: 32349,
+      gaiaSourceId: null,
+      vx: 1.1e-5, vy: -2.3e-5, vz: 3.7e-6,
+    });
+    const { newStars } = promoteCompanions(siriusRows(), [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect([newStars[0].vx, newStars[0].vy, newStars[0].vz])
+      .toEqual([primary.vx, primary.vy, primary.vz]);
+  });
+
+  it('renderable-orbit lone pair takes the barycentric systemic blend on both members', () => {
+    // Both members already in AT-HYG with their own PM velocities; the pair
+    // carries Kepler elements + q, so the systemic pass blends
+    // v_sys = (1−q)·v_p + q·v_s and assigns it to both, exactly.
+    const q = 0.4;
+    const vA = { x: 1e-5, y: 2e-5, z: -3e-5 };
+    const vB = { x: 4e-5, y: -1e-5, z: 5e-5 };
+    const a = makeStar({
+      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'PairA', gaiaSourceId: 'A',
+      vx: vA.x, vy: vA.y, vz: vA.z,
+    });
+    const b = makeStar({
+      x: 10.0005, y: 0, z: 0, absmag: 5.0, gaiaSourceId: 'B',
+      vx: vB.x, vy: vB.y, vz: vB.z,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'PAIR-AB', comp: 'A', gaiaSourceId: 'A',
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'PairA',
+        orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: 'PAIR-AB', comp: 'B', gaiaSourceId: 'B',
+        x_pc: 10.0005, y_pc: 0, z_pc: 0, distPc: 10,
+        absmag: 5.0, orbitRole: 'secondary',
+        pDays: 3000, tJd: 2451545, e: 0.5, aAU: 20, omegaRad: 1.0, q,
+        sepArcsec: 5.0, paDeg: 90, sepPaEpochJd: 2451545,
+      }),
+    ];
+    const { stats } = promoteCompanions(rows, [a, b], CONSTELLATIONS);
+    expect(stats.alreadyInCatalog).toBe(1); // B already in catalog, not promoted
+    const expected = {
+      x: (1 - q) * vA.x + q * vB.x,
+      y: (1 - q) * vA.y + q * vB.y,
+      z: (1 - q) * vA.z + q * vB.z,
+    };
+    expect([a.vx, a.vy, a.vz]).toEqual([expected.x, expected.y, expected.z]);
+    expect([b.vx, b.vy, b.vz]).toEqual([a.vx, a.vy, a.vz]);
   });
 
   it('own-gaia miss + HIP naming a NON-anchor existing record is alreadyInCatalog, not a twin', () => {

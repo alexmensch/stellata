@@ -702,16 +702,28 @@ one shared *systemic* velocity: the barycentric blend
 `v_sys = (1−q)·v_primary + q·v_secondary` when both members carry
 their own PM (this cancels the orbital contamination in
 per-member Gaia PMs to first order — the barycentre is what moves
-linearly), else whichever member has one. Promoted companions
-inherit `v_sys` in `companion-promotion.ts`. Because both members
-advance identically, `BinaryOrbitField`'s relative walk
-(`abs[s] − abs[p]`), its per-relation baseline caches, and eclipse
-photometry's `baseDiff` are all invariant under the advance pass —
-orbital motion stays owned by the Kepler layer with no
-double-counting and no field-code change. (This resolves the
-anchor-seam question tracked as `stellata-nmu.4`: v1 is the
-CPU-baseline scheme at load granularity; the GPU-attribute scheme
-remains the documented escalation.)
+linearly), else whichever member has one. Because
+`BinaryOrbitField` places a Tier-1/2 secondary at
+`primary + baseDiffPc + ΔR(t)` from the Kepler *elements alone*
+(never `abs[s] − abs[p]`; `src/client/binaries/README.md` § Tier
+mapping), the rendered relative offset — its baseline caches and
+eclipse photometry's `baseDiff` — is invariant under the advance
+*regardless* of the members' baked velocities; orbital motion stays
+owned by the Kepler layer with no double-counting and no field-code
+change. The velocity coherence therefore matters only for **Tier-3
+static** companions (which the field skips): a promoted companion
+with no own PM must ride its primary or it freezes at `v=0` and
+shears. v1 delivers that (mint-time inheritance in
+`companion-promotion.ts`) plus the blend for renderable-orbit pairs
+the *catalog build* resolves. **Full** systemic coherence for
+`binaries.bin`'s authoritative pairing — which re-homes some inner
+pairs and owns the Tier-3 static pairs the catalog build doesn't
+group — is deferred to `stellata-zau1` (the pairing is only known in
+the binaries pipeline; residual shear is sub-arcsec/decade over the
+v1 load-time advance). (This resolves the anchor-seam question
+tracked as `stellata-nmu.4`: v1 is the CPU-baseline scheme at load
+granularity; the GPU-attribute scheme remains the documented
+escalation.)
 
 **Validation.**
 
