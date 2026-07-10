@@ -11,6 +11,15 @@ claude-md-size.test.ts   Size guard for CLAUDE.md. Holds the file at
                          explains the wiki convention and the
                          CLAUDE.md → folder-README → docs/ decision
                          flow.
+sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
+                         § 4.5): structural validity, head-snapshot
+                         integrity, frozen-prefix check vs the git
+                         merge-base. No UPDATE_* escape hatch — a prefix
+                         rewrite means editing the guard itself with
+                         explicit user sign-off. Self-skips where
+                         ledger.tsv is an LFS pointer stub (the bare CI
+                         test job); runs for real in the build-catalog
+                         job and locally.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`

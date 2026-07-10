@@ -24,8 +24,12 @@ gaia_catalog_source_id_request.tsv     ~6.3 MB, LFS. Full-catalog deduped
                                        source_id request list (export-astrometry-request.ts output).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
-                                       — the SID DR-churn risk set. Derivation
-                                       recipe: docs/sid.md § DR2→DR3 dry run.
+                                       — the SID DR-churn risk set, frozen at
+                                       the 2026-07-06 build so the pull below
+                                       stays consistent with it. Regenerate
+                                       from the ledger with `npm run
+                                       sid:risk-set` (docs/sid.md § 6.1) only
+                                       alongside a fresh neighbourhood pull.
 gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
                                        candidates for that risk set. NOTE:
                                        angular_distance is in mas, not the
@@ -64,9 +68,10 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   (`scripts/catalog/README.md` § Direction resolution).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
-- `docs/sid.md` § DR2→DR3 dry run — `gaia_dr2_neighbourhood.tsv` is
-  analysis input for the SID DR-reconciliation churn measurement (no
-  build script consumes it yet; the B1 registry substrate will).
+- `scripts/sid/dr-reconcile.ts` (`npm run sid:dr-reconcile`) — replays
+  the request + neighbourhood pair as the docs/sid.md § 6.2 dry run;
+  `scripts/sid/dr-reconcile-pure.test.ts` pins that classification
+  end-to-end.
 
 See [`scripts/catalog/README.md`](../../scripts/catalog/README.md)
 and [`scripts/binaries/README.md`](../../scripts/binaries/README.md)

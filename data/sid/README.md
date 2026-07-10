@@ -13,7 +13,7 @@ append only (`npm run sid:allocate`, the sole writer) and its frozen
 prefix is CI-guarded — see docs/sid.md § 4.5 for what the guard
 enforces and why there is no `UPDATE_*` escape hatch.
 
-## Files (as of B0 the folder holds only this README; B1 creates the rest)
+## Files
 
 ```
 ledger.tsv              sid → canonical_key → kind → first_seen.
@@ -24,14 +24,24 @@ ledger-head.json        { rows, max_sid, sha256 } snapshot of both
                         files' frozen state; regular git so the CI
                         guard can read the merge-base version without
                         LFS. Rewritten mechanically by sid:allocate.
-sameas-overrides.tsv    Curated same-as edges: cross-catalogue merges,
-                        synth re-subdivision bridges (docs/sid.md § 5),
-                        slug-rename bridges. Regular git, hand-edited.
-sol-objects.tsv         The sol: namespace mint list (sun + eight
-                        majors + Pluto).
+                        The sha256 covers the data lines only (each
+                        LF-terminated); the header line is pinned
+                        structurally by the guard instead.
+sameas-overrides.tsv    Curated same-as edges (a → b → note):
+                        cross-catalogue merges, synth re-subdivision
+                        bridges (docs/sid.md § 5), slug-rename bridges.
+                        Regular git, hand-edited.
+sol-objects.tsv         The sol: namespace mint list (key → kind):
+                        sun + eight majors + Pluto.
 bridges/<from>_<to>.tsv Machine-generated cross-release Gaia bridges
                         (docs/sid.md § 6), human-reviewed per DR bump.
+                        Directory appears with the first bridge.
 ```
+
+Tooling (allocation, risk-set export, DR reconciliation) lives in
+[`scripts/sid/`](../../scripts/sid/README.md) — including the
+ambiguous-designation drop policy that decides which designations may
+key a ledger row.
 
 Derived-edge inputs (gaia↔hip cross-walks, AT-HYG co-designations,
 `multiples.tsv` synth keys, `simbad_wds_xids.tsv`) live in their own
