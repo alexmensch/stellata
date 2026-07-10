@@ -15,6 +15,9 @@ src/client/solar-system/
   planet-system.ts                Planet / PlanetSystem contract.
                                   hasPlanets + getPlanetSystem; SOL_PLANETS
                                   table (eight majors + Pluto).
+  sol-object-sids.ts              SOL_OBJECT_SIDS — hand-written body →
+                                  frozen Stellata ID pins (Sun + planets).
+                                  See § Sol-system SID pins.
   ephemeris.ts                    JPL Standish 1992 Keplerian-elements
                                   approximation + cubic Jupiter–Neptune
                                   correction terms. Heliocentric ecliptic
@@ -87,6 +90,20 @@ per-host JSON shards without changing the call sites.
 sourced from NASA Planetary Fact Sheets (radii) and JPL DE440 (mean
 elements at J2000). Pluto comes from New Horizons 2015 reconnaissance.
 See `SCIENCE.md` §Solar system for the citation rationale.
+
+## Sol-system SID pins
+
+`sol-object-sids.ts` maps each Sol body (`sun`, `mercury` … `pluto`) to
+its frozen Stellata ID (docs/sid.md § 7). Planets and the Sun carry no
+catalog record or artifact of their own, so this hand-written table is
+their runtime SID source — the B4 resolver (`stellata-efju.5`) will
+register a `planet` domain over it. The values are frozen ledger sids
+minted from `data/sid/sol-objects.tsv`; `sol-object-sids.test.ts` imports
+the ledger and asserts each entry matches (tests import, never redefine),
+covers exactly the mint list, and pins a sid for every `SOL_PLANETS`
+body. `sol:sun` rides the Sol **catalog** record via a same-as edge, so
+that record's in-record sid and `SOL_OBJECT_SIDS.sun` are the same integer
+by construction.
 
 ## Ephemerides
 

@@ -240,11 +240,11 @@ applies three filters and nothing else:
    catastrophic 1/π estimate keeps its corrected distance whenever
    that distance falls inside scope.
 
-There is no source-aware filtering. The 80-byte v6 binary record
+There is no source-aware filtering. The 84-byte v7 binary record
 preserves none of the `*_src` columns either, so the renderer can't
 distinguish a Tycho-positioned, Gaia-distanced row from a "pure"
 Hipparcos one — every star is shaded by the same physical model
-(§Stellar physics, §Stellar perception model). v6 does carry each
+(§Stellar physics, §Stellar perception model). v7 does carry each
 star's Gaia DR3 `source_id` (when AT-HYG has it) plus Apsis
 astrophysical parameters (Teff/logg/[M/H]/A0 from gspphot ∪ gspspec)
 keyed by it — the source-ID anchor downstream consumers (cross-match
@@ -400,7 +400,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
-writes them per record into the v6 binary at offsets 52–79 (see
+writes them per record into the v7 binary at offsets 52–79 (see
 `scripts/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
@@ -1489,7 +1489,7 @@ Tier C cross-checker (`validate-simbad-sample.ts` + the
 **Layer 5 — documentation.** This file (astronomer audience —
 sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 — functions, thresholds, provenance fields); `scripts/README.md`
-(formats — v6 byte plan, name table, search index).
+(formats — v7 byte plan, name table, search index).
 
 ### Worked examples
 

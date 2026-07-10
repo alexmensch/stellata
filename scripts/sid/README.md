@@ -10,10 +10,17 @@ model, canonical-key ladder, allocation, CI guard, DR procedure — is
 ```
 sid-pure.ts               Pure algebra: designation grammar (§ 3),
                           canonical-key ladder (§ 4.2), same-as classes +
-                          allocation (§§ 4.1, 4.4), ledger/retirements
-                          codecs, head snapshot + append-only checks
-                          (§§ 4.3, 4.5). Tests import its constants —
-                          never redefine them.
+                          allocation (§§ 4.1, 4.4), per-record designation
+                          extraction (starDesignations) + read-only
+                          resolution (resolveSids, mint = error),
+                          ledger/retirements codecs, head snapshot +
+                          append-only checks (§§ 4.3, 4.5). Tests import
+                          its constants — never redefine them.
+registry-io.ts            Filesystem access to the committed registry:
+                          canonical data/sid/ paths, loadStoredEdges, and
+                          loadRegistry (validated read; throws
+                          LedgerUnavailableError on an LFS-stub ledger).
+                          Shared by allocate, build-catalog, and the stamp.
 allocate.ts               npm run sid:allocate — the ONLY writer of
                           ledger.tsv (+ retirements bootstrap +
                           ledger-head.json). Reads the BUILT artifacts:
@@ -34,6 +41,11 @@ dr-reconcile.ts           npm run sid:dr-reconcile — churn report for a
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
+stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
+                          local-group.json after their emitters run — the
+                          tail of build:clouds / build:local-group (also
+                          npm run sid:stamp). See § Sibling-artifact
+                          stamping.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:
@@ -75,3 +87,18 @@ from the current build, printing sibling candidates (comp/sep/PA from
 `data/sid/sameas-overrides.tsv` or a retirement. Missing `cloud:`/`lg:`
 slugs only warn — but a slug RENAME still needs a bridge, or the old
 sid parks and the new slug mints a fresh identity.
+
+## Sibling-artifact stamping
+
+`clouds.json` and `local-group.json` carry an in-record `sid` (docs/sid.md
+§ 7). Because `build-clouds.py` is Python, resolution is NOT duplicated into
+either emitter — `stamp-sibling-sids.ts` post-processes the built artifact,
+resolving each object's `cloud:<id>` / `lg:<id>` through the shared
+`resolveSids` and writing the frozen sid in. It runs as the tail of
+`npm run build:clouds` and `npm run build:local-group` (and `npm run
+sid:stamp` does both). Like the catalog build it is a pure consumer: an
+unallocated slug hard-fails with instructions to run `sid:allocate` (new
+object) or add a `sameas-overrides.tsv` bridge (renamed slug). The catalog's
+stellar sids are written in-record at build time instead
+(`scripts/catalog/README.md` § SID allocation); the Sol system's are pinned
+client-side in `src/client/solar-system/sol-object-sids.ts`.

@@ -691,11 +691,16 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 // MAGIC, extend the LAYOUT + SIZES pair with the new offset and kind, and
 // the writer + reader + tests pick the change up automatically.
 
-export const MAGIC = 'HYG6';
-export const BINARY_VERSION = 6;
+export const MAGIC = 'HYG7';
+export const BINARY_VERSION = 7;
 export const HEADER_SIZE = 32;
-export const RECORD_SIZE = 80;
+export const RECORD_SIZE = 84;
 export const NO_COMPANION = 0xffffffff;
+// Reserved none/invalid SID sentinel (docs/sid.md § 2); allocation starts
+// at 1, so 0 in RECORD_LAYOUT.sid means the record resolved to no ledger
+// row — a state build-catalog.ts writes only in its unallocated-bootstrap
+// path before hard-failing (scripts/catalog/README.md § SID allocation).
+export const NO_SID = 0;
 // Sentinel uint8 stored at RECORD_LAYOUT.conIndex when the star has no
 // constellation assignment. Valid IAU constellation indexes are
 // 0..87 (88 modern constellations); 255 is unambiguous.
@@ -824,6 +829,7 @@ export const RECORD_LAYOUT = {
   teffGspspec: 68,  // float32 (K)
   loggGspspec: 72,  // float32 (log cgs)
   mhGspspec: 76,    // float32 ([M/H] dex)
+  sid: 80,          // uint32 Stellata ID (0 = NO_SID; docs/sid.md § 7)
 } as const;
 
 /** Per-field byte width keyed by RECORD_LAYOUT name. As with
@@ -835,7 +841,7 @@ export const RECORD_FIELD_SIZES: Record<keyof typeof RECORD_LAYOUT, number> = {
   spectClass: 1, lumClass: 1, conIndex: 1, flags: 1, ampUnits: 1,
   varType: 1, period: 2, hip: 4, gaiaSourceId: 8,
   teffGspphot: 4, loggGspphot: 4, mhGspphot: 4, azeroGspphot: 4,
-  teffGspspec: 4, loggGspspec: 4, mhGspspec: 4,
+  teffGspspec: 4, loggGspspec: 4, mhGspspec: 4, sid: 4,
 };
 
 // Name table layout: two zero bytes of padding so name offset 0 reads as

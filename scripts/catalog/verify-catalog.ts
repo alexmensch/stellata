@@ -1,4 +1,4 @@
-// Diagnostic CLI over the v6 binary catalogue — header dump,
+// Diagnostic CLI over the v7 binary catalogue — header dump,
 // brightest/dimmest rows, named-star sanity checks, Apsis coverage,
 // variable-star samples.
 
