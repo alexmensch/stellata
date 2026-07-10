@@ -21,6 +21,7 @@ function makeRecord(over: Partial<CatalogRecord>): CatalogRecord {
   return {
     i: 0,
     x: 10, y: 0, z: 0,
+    vx: 0, vy: 0, vz: 0,
     absmag: 4.0,
     ci: 0,
     physicalRadius: 1,

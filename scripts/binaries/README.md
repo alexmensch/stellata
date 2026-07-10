@@ -571,6 +571,18 @@ converted here to the `q = M₂/(M₁+M₂)` fraction the rest of the pipeline
 stores); everything else gets `q = None` here and falls through to Stage
 6's spectral-class mass-ratio backfill below.
 
+The same `q` also feeds **systemic-velocity composition** for
+proper-motion propagation. catalog.bin v8 bakes a per-star space-motion
+velocity (SCIENCE.md § Current-epoch star positions); a bound pair's
+members must share one systemic velocity or the runtime epoch-advance
+shears a static (Tier-3) pair. `scripts/catalog/companion-promotion.ts`
+uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
+lone renderable-orbit pair, and a promoted companion with no own PM
+inherits its primary's velocity. **Full** systemic coherence for every
+`binaries.bin` pair — keyed on `build-runtime-binaries.py`'s authoritative
+resolved pairing (which the catalog build can't replicate) — is
+`stellata-zau1`; v1 ships the promoted-companion + lone-pair subset.
+
 ## Stage 5 — Optical-pair filter cascade
 
 `scripts/binaries/stage5_optical.py` classifies each pair as physical or

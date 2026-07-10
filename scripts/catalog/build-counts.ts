@@ -254,6 +254,32 @@ export interface BuildCounts {
    *  ra/dec as-is (no Gaia astrometry row, no HIP2 row; ξ UMa
    *  canonical, plus Sol). */
   directionAthygPrinted: number;
+  /** Space-motion velocity: rows whose tangential velocity came from
+   *  Gaia DR3 5p PM (the dominant set; tracks directionGaia5p +
+   *  directionGaiaNssSystemic minus PM-less 2p rows). */
+  velocityGaiaPm: number;
+  /** Space-motion velocity: rows whose PM came from HIP2 (the
+   *  hip2_saturated + hip2_pm_discrepant tiers with a usable HIP2 PM). */
+  velocityHip2Pm: number;
+  /** Space-motion velocity: athyg_printed-tier rows whose PM came from
+   *  AT-HYG's own pm_ra/pm_dec cells. */
+  velocityAthygPm: number;
+  /** Space-motion velocity: rows with no usable PM from any source —
+   *  zero tangential velocity (2p Gaia rows, PM-less athyg_printed rows,
+   *  Sol, and the artifact rows the sanity ceiling zeroed). */
+  velocityZero: number;
+  /** Rows whose computed space velocity exceeded VELOCITY_SANITY_CEILING
+   *  (PM×distance artifact) and was zeroed — a subset of velocityZero. */
+  velocityClamped: number;
+  /** Kept rows above the Galactic escape velocity (~550 km/s). Unbound
+   *  stars are genuinely exceptional, so this band is almost all PM×distance
+   *  / bad-RV artifacts — tracked as a ratchet (not clamped) so a proven
+   *  hypervelocity star survives and the artifact tail stays visible for
+   *  finer filtering. */
+  velocityAboveEscape: number;
+  /** Rows whose velocity carries a non-zero AT-HYG radial velocity
+   *  (rv cell present and non-zero; rv_src is Gaia RVS on the bulk). */
+  velocityRvApplied: number;
 }
 
 export type CountDiff =

@@ -376,15 +376,26 @@ setter.
 ## Variable star rendering
 
 Per-instance `iPeriodDays` + `iAmplitudeMag` (0 = not variable).
-`uTime` advances in real seconds; `uSecondsPerDay = 0.2` compresses
-catalog time (5 days/sec). `uMinPeriodSec = 4` clamps the shortest
-effective cycle so sub-day variables (RR Lyrae, Algol) don't strobe.
+Pulsation runs on the **model clock** (`getT()`), at real GCVS periods —
+like binary orbital motion, and responding to the same time-warp.
+`uModelDays` is model time in days since J2000; `phase = uModelDays /
+periodDaysEff`. The consequence is deliberate: at 1× a real period is far
+longer than a frame, so long-period variables (Miras, hundreds of days)
+are imperceptible until the time-scrubber engages — exactly how binary
+orbits behave. `uMinPeriodSec` survives ONLY as an anti-strobe guard:
+`periodDaysEff = max(iPeriodDays, uModelDaysPerRealSec × uMinPeriodSec)`
+floors the effective period so no cycle completes faster than
+`uMinPeriodSec` in real time under heavy warp (at 1× the floor is a few
+seconds of model time, below every real period, so it never bites).
+`uSecondsPerDay` and the old real-seconds `uTime` clock are gone.
 
-Shader applies a **sinusoidal magnitude modulation** plus a **matching
+Shader applies a **cosinusoidal magnitude modulation** plus a **matching
 radius factor** to the physical-size term:
 
-- `magMod = 0.5 × ampEff × sin(2π × t / period)` adjusts `appMag`,
-  affecting point-glow size for distant stars.
+- `magMod = −0.5 × ampEff × cos(2π × phase)` adjusts `appMag`, affecting
+  point-glow size for distant stars. **φ = 0 = maximum light** (brightest,
+  largest) — the convention the GCVS M0 absolute-phase anchoring folds
+  onto later as `phase = (uModelDays − iEpochDays) / periodDaysEff`.
 - `radiusFactor = 10^(-magMod / 5)` applies to `physSize`, affecting
   resolved-disc radius for close stars. This is Stefan–Boltzmann-derived:
   `R ∝ √L` at constant T, which is the defensible single-model

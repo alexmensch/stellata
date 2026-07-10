@@ -62,7 +62,11 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
-import { VirtualClock } from './solar-system/time';
+import { VirtualClock, tToJDE } from './solar-system/time';
+import {
+  advancePositionsToEpoch,
+  jdeToJulianEpochYear,
+} from './loaders/epoch-advance-pure';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
@@ -439,6 +443,21 @@ export class Stellata implements FrameAnchor {
   constructor({ canvas, catalog }: StellataOptions) {
     this.catalog = catalog;
 
+    // Space-motion propagation: advance catalog.positions off the fixed
+    // J2016.0 baseline to the model clock (getT() — live-now on a bare load;
+    // the clock field is initialised before the body runs), ONCE, before any
+    // consumer reads a position. _localPositions, iDistSol, hover/focus/warp
+    // targets, constellation lines, binaries baselines, and eclipse
+    // photometry all inherit current-epoch positions by construction, with
+    // zero per-frame cost. Within-session drift is invisible (~0.001″/h);
+    // scrubber-time re-advance is deferred. See SCIENCE.md
+    // § Current-epoch star positions.
+    advancePositionsToEpoch(
+      catalog.positions,
+      catalog.velocities,
+      jdeToJulianEpochYear(tToJDE(this.getT())),
+    );
+
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
@@ -569,14 +588,15 @@ export class Stellata implements FrameAnchor {
       // renderedSizePx mirror compute the same effective amplitude.
       uMaxPhysFrac: { value: ZOOM_FLOOR_FRACTION },
       uVarTroughFrac: { value: VAR_TROUGH_FLOOR_FRACTION },
-      // Variability time. uTime advances in real seconds; uSecondsPerDay is
-      // the compression factor — lower values make catalog periods cycle
-      // faster on-screen. uMinPeriodSec clamps the shortest cycle so sub-day
-      // variables (RR Lyrae, Algol) don't pulse too rapidly to read. 4 s is
-      // a comfortable floor — Algol's 0.57 s natural cycle becomes 4 s,
-      // clearly visible but not jarring.
-      uTime: { value: 0 },
-      uSecondsPerDay: { value: 0.2 },
+      // Variability clock. Pulsation runs on the model clock (getT()) at
+      // real GCVS periods, so it responds to time-warp like binary orbits.
+      // uModelDays is model time in days since J2000; uModelDaysPerRealSec
+      // is the warp rate (model days per real second), which floors the
+      // effective period via uMinPeriodSec so short-period variables can't
+      // strobe under heavy warp. Updated per frame from getT() + the clock
+      // rate.
+      uModelDays: { value: 0 },
+      uModelDaysPerRealSec: { value: 1 / 86400 },
       uMinPeriodSec: { value: 4.0 },
 
       // Star-disc rendering knobs (debug-panel tunable). See star.frag.glsl
@@ -2344,7 +2364,6 @@ export class Stellata implements FrameAnchor {
     return false;
   }
 
-  private animateStartMs = performance.now();
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
@@ -2385,9 +2404,12 @@ export class Stellata implements FrameAnchor {
     // we want it to render at its actual projected position again.
     const pinTarget = this.focus.isPinEngaged() ? this.focus.getFocusedStar() : -1;
     this.starPipeline.discMaterial.uniforms.uPinFocusToCenter.value = pinTarget ?? -1;
-    // Advance variability clock (seconds since start). Shared with glow
-    // material via sharedUniforms so both passes see the same time.
-    this.starPipeline.discMaterial.uniforms.uTime.value = (performance.now() - this.animateStartMs) / 1000;
+    // Advance the variability clock on the model time base (shared with the
+    // glow material via sharedUniforms). Days since J2000 from getT(), plus
+    // the warp rate in model-days/real-second for the anti-strobe floor.
+    const varUniforms = this.starPipeline.discMaterial.uniforms;
+    varUniforms.uModelDays.value = tToJDE(this.getT()) - 2451545.0;
+    varUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
     if (this.extinctionPrepass !== null) {
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.

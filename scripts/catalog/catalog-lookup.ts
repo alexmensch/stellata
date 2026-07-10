@@ -1,4 +1,4 @@
-// AoS reader + per-key indexes for the v7 binary catalogue, used by
+// AoS reader + per-key indexes for the v8 binary catalogue, used by
 // test-time corpus iteration. Shares LAYOUT constants with
 // catalog-pure.ts.
 
@@ -48,6 +48,7 @@ export async function readCatalogBuffer(
 export interface CatalogRecord {
   i: number;
   x: number; y: number; z: number;
+  vx: number; vy: number; vz: number;  // space-motion velocity, pc/yr
   absmag: number;
   ci: number;
   physicalRadius: number;
@@ -148,6 +149,9 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
       x: view.getFloat32(off + RECORD_LAYOUT.x, true),
       y: view.getFloat32(off + RECORD_LAYOUT.y, true),
       z: view.getFloat32(off + RECORD_LAYOUT.z, true),
+      vx: view.getFloat32(off + RECORD_LAYOUT.vx, true),
+      vy: view.getFloat32(off + RECORD_LAYOUT.vy, true),
+      vz: view.getFloat32(off + RECORD_LAYOUT.vz, true),
       absmag: view.getFloat32(off + RECORD_LAYOUT.absmag, true),
       ci: view.getFloat32(off + RECORD_LAYOUT.ci, true),
       physicalRadius: view.getFloat32(off + RECORD_LAYOUT.physRadius, true),

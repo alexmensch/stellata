@@ -7,7 +7,9 @@ import {
   GAIA_RUWE_UNRELIABLE_THRESHOLD,
   HIP2_PM_DELTA_THRESHOLD_MASYR,
   HIP2_REF_EPOCH,
+  KM_S_TO_PC_YR,
   directionAtEpoch,
+  equatorialTangentBasis,
   gaia5pUnreliable,
   hip2PmDisagrees,
   parseGaiaAstrometryCatalogTsv,
@@ -15,6 +17,7 @@ import {
   parseNssSourceIdSet,
   resolveDirection,
   unitVectorFromRaDec,
+  velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
   type Hip2AstrometryRow,
@@ -356,5 +359,131 @@ describe('direction-cascade / TSV parsers', () => {
     expect(set.size).toBe(2);
     expect(set.has('111')).toBe(true);
     expect(set.has('222')).toBe(true);
+  });
+});
+
+const MAS_TO_RAD = Math.PI / (180 * 3600 * 1000);
+
+function dot(a: UnitVector, b: UnitVector): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+function norm(a: UnitVector): number {
+  return Math.hypot(a.x, a.y, a.z);
+}
+
+describe('equatorialTangentBasis', () => {
+  it('is orthonormal away from and adjacent to the pole and on RA-wrap', () => {
+    for (const [ra, dec] of [[0, 0], [123.4, -45.6], [359.999, 89.9], [0, -89.9]]) {
+      const { u, east, north } = equatorialTangentBasis(ra, dec);
+      expect(norm(u)).toBeCloseTo(1, 12);
+      expect(norm(east)).toBeCloseTo(1, 12);
+      expect(norm(north)).toBeCloseTo(1, 12);
+      expect(dot(u, east)).toBeCloseTo(0, 12);
+      expect(dot(u, north)).toBeCloseTo(0, 12);
+      expect(dot(east, north)).toBeCloseTo(0, 12);
+    }
+  });
+
+  it('pins the canonical (0,0) basis and is RA-wrap invariant', () => {
+    const b = equatorialTangentBasis(0, 0);
+    expect(b.u).toEqual({ x: 1, y: 0, z: 0 });
+    expect(b.east.x).toBeCloseTo(0, 12);
+    expect(b.east.y).toBeCloseTo(1, 12);
+    expect(b.north.z).toBeCloseTo(1, 12);
+    const wrap = equatorialTangentBasis(360, 0);
+    expect(wrap.east.y).toBeCloseTo(b.east.y, 12);
+    expect(wrap.north.z).toBeCloseTo(b.north.z, 12);
+  });
+});
+
+describe('velocityPcPerYr', () => {
+  it('pins the km/s → pc/yr conversion', () => {
+    // 1 Julian yr (3.15576e7 s) / 1 pc (3.0856775814913673e13 km).
+    expect(KM_S_TO_PC_YR).toBeCloseTo(1.0227121650e-6, 15);
+  });
+
+  it('pure radial velocity lands along û with no tangential term', () => {
+    const v = velocityPcPerYr(0, 0, null, null, 5, 100);
+    expect(v.x).toBeCloseTo(100 * KM_S_TO_PC_YR, 18);
+    expect(v.y).toBeCloseTo(0, 18);
+    expect(v.z).toBeCloseTo(0, 18);
+  });
+
+  it('pure east/north PM scale with distance and never divide by cos δ', () => {
+    // At (0,0): east = +y, north = +z. μ_α* is already cos δ-applied.
+    const east = velocityPcPerYr(0, 0, 1000, 0, 3, 0);
+    expect(east.x).toBeCloseTo(0, 18);
+    expect(east.y).toBeCloseTo(3 * MAS_TO_RAD * 1000, 18);
+    expect(east.z).toBeCloseTo(0, 18);
+    const north = velocityPcPerYr(0, 0, 0, 1000, 3, 0);
+    expect(north.z).toBeCloseTo(3 * MAS_TO_RAD * 1000, 18);
+    // A high-declination star: μ_α* still maps straight onto east, so the
+    // tangential speed is distance × μ, independent of dec (the cos δ is
+    // already folded into μ_α*). The ecliptic-pole sign-flip bug class
+    // would corrupt this.
+    const hi = velocityPcPerYr(45, 80, 500, 0, 3, 0);
+    const speedMasyr = norm(hi) / (3 * MAS_TO_RAD);
+    expect(speedMasyr).toBeCloseTo(500, 6);
+  });
+
+  it("reproduces Barnard's Star space velocity (~142 km/s) from published μ+ϖ+RV", () => {
+    // Gaia DR3: μ_α* = −798.71, μ_δ = +10337.77 mas/yr; ϖ = 546.98 mas
+    // (d = 1.8282 pc); RV = −110.51 km/s. Tangential v_t = 4.74047·μ″·d.
+    const d = 1000 / 546.98;
+    const v = velocityPcPerYr(269.448, 4.693, -798.71, 10337.77, d, -110.51);
+    const speedKmS = norm(v) / KM_S_TO_PC_YR;
+    expect(speedKmS).toBeCloseTo(142.4, 0);
+    // Radial component along û equals RV exactly.
+    const u = equatorialTangentBasis(269.448, 4.693).u;
+    const radialKmS = dot(v, u) / KM_S_TO_PC_YR;
+    expect(radialKmS).toBeCloseTo(-110.51, 3);
+    // Tangential matches the textbook 4.74·μ·d formula.
+    const muArcsec = Math.hypot(798.71, 10337.77) / 1000;
+    const tangentialKmS = Math.sqrt(speedKmS ** 2 - radialKmS ** 2);
+    expect(tangentialKmS).toBeCloseTo(4.740470 * muArcsec * d, 1);
+  });
+});
+
+describe('resolveDirection velocity solution', () => {
+  const gaiaRow: GaiaAstrometryCatalogRow = {
+    raDeg: 10, decDeg: 20, parallaxMas: 50,
+    pmraMasyr: 100, pmdecMasyr: -40, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,
+  };
+
+  it('carries the Gaia solution + gaia_pm velVia on the gaia_5p tier', () => {
+    const sources: DirectionSources = {
+      gaiaAstrometry: new Map([['1', gaiaRow]]),
+      hip2: new Map(), nssSourceIds: new Set(),
+    };
+    const r = resolveDirection('1', null, 0.5, 20, sources)!;
+    expect(r.via).toBe('gaia_5p');
+    expect(r.srcRaDeg).toBe(10);
+    expect(r.srcPmraMasyr).toBe(100);
+    expect(r.velVia).toBe('gaia_pm');
+  });
+
+  it('a 2p Gaia row (null PM) routes velocity to zero', () => {
+    const twoP: GaiaAstrometryCatalogRow = {
+      ...gaiaRow, pmraMasyr: null, pmdecMasyr: null,
+    };
+    const sources: DirectionSources = {
+      gaiaAstrometry: new Map([['1', twoP]]),
+      hip2: new Map(), nssSourceIds: new Set(),
+    };
+    const r = resolveDirection('1', null, 0.5, 20, sources)!;
+    expect(r.velVia).toBe('zero');
+  });
+
+  it('athyg_printed tier carries AT-HYG PM + athyg_pm velVia', () => {
+    const sources: DirectionSources = {
+      gaiaAstrometry: new Map(), hip2: new Map(), nssSourceIds: new Set(),
+    };
+    const r = resolveDirection(null, null, 6.0, -30, sources, 12, -8)!;
+    expect(r.via).toBe('athyg_printed');
+    expect(r.srcRaDeg).toBe(90);       // 6.0 h × 15
+    expect(r.srcPmraMasyr).toBe(12);
+    expect(r.velVia).toBe('athyg_pm');
+    const bare = resolveDirection(null, null, 6.0, -30, sources)!;
+    expect(bare.velVia).toBe('zero');  // no AT-HYG PM passed
   });
 });

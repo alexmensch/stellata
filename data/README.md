@@ -85,27 +85,28 @@ measured moved to J2016.0.
 | Edenhofer 2023 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
 | Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date — no committed positions; the planet renderer evaluates ephemerides per frame. |
 
-### Proper motion is a build-time input, not a runtime axis
+### J2016.0 is the wire epoch; the runtime advances to `t`
 
-Gaia DR3 / HIP2 PMs are consumed at build time for the epoch
-propagation above, and AT-HYG's `pm_ra`/`pm_dec` for the LMC
-kinematic gate — but no PM survives into `catalog.bin`. Single-star
-positions are a static J2016.0 snapshot with no T-axis animation
-today; runtime propagation to `t` is designed and tracked — see
-SCIENCE.md § Current-epoch star positions (velocity routes through
-the same cascade: Gaia DR3 / HIP2 PM primary, AT-HYG `pm_*`
-last-resort; the advance base is now J2016.0).
+`catalog.bin` v8 ships positions at the fixed J2016.0 scene epoch AND a
+per-star space-motion velocity (`vx/vy/vz`, pc/yr) resolved through the
+same trust cascade as direction (Gaia DR3 / HIP2 PM primary, AT-HYG
+`pm_*` last-resort, plus AT-HYG `rv`). At load the runtime advances every
+position to the model clock — `p(t) = p(J2016) + v·(t − 2016)`,
+`src/client/loaders/epoch-advance-pure.ts`, run once before the scene
+builds so hover / focus / constellation lines / binaries all inherit
+current-epoch positions (SCIENCE.md § Current-epoch star positions). The
+wire stays J2016.0 (stable regression corpus, no rebuild to stay
+current); the epoch a viewer sees is `getT()`.
 
-### Staleness consequence
+### The staleness the advance corrects
 
-The J2016.0 snapshot is ~10 years behind the present day. For the vast
-majority of stars (PM < ~100 mas/yr), the offset between catalog
-position and true present-day position is sub-arcsec to a couple of
-arcseconds — invisible at any reasonable FOV. A handful of high-PM
-neighbours have visibly drifted, however (offsets roughly 40% of the
-pre-J2016 values):
+The J2016.0 wire baseline is ~10 years behind now; the load-time advance
+closes that gap. For most stars (PM < ~100 mas/yr) the correction is
+sub-arcsec — invisible — but the high-PM neighbours below were visibly
+mis-located before the advance and now track the current epoch (offsets
+are the drift the advance removes, roughly 40% of the pre-J2016 values):
 
-| Star | PM (″/yr) | Offset at J2016 + 10.5 yr |
+| Star | PM (″/yr) | Drift corrected at J2016 + 10.5 yr |
 |---|---|---|
 | Barnard's Star | ~10.36 | ~109 ″ ≈ 1.8 arcmin |
 | Kapteyn's Star | ~8.67 | ~91 ″ ≈ 1.5 arcmin |
@@ -113,6 +114,6 @@ pre-J2016 values):
 | Lacaille 9352 | ~6.90 | ~72 ″ ≈ 1.2 arcmin |
 | 61 Cygni A | ~5.28 | ~55 ″ ≈ 0.9 arcmin |
 
-At constellation-scale FOV (10–30°) these are tiny but technically
-wrong; at close approach or in OBSERVE mode the highest-PM stars
-are visibly mis-located.
+Within-session drift after the load-time advance is invisible
+(~0.001″/h); scrubber-time re-advance for deep-time scrubbing is
+`stellata-nmu.5`.

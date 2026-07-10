@@ -20,6 +20,10 @@ import {
 } from './catalog-lookup';
 import { parseFloatOrNull, parseRef, type RecordRef } from './corpus-tsv';
 import {
+  KM_S_TO_PC_YR,
+  VELOCITY_SANITY_CEILING_PC_YR,
+} from './direction-cascade';
+import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
@@ -452,6 +456,30 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
           `(diff ${paDiff.toFixed(1)}° > tol ${row.orbitPaTolDeg}°)`,
         ).toBeLessThanOrEqual(row.orbitPaTolDeg);
       }
+    });
+  });
+
+  describe('space-motion velocity — no artifact survives into binaries.bin members', () => {
+    // Full systemic-velocity coherence for binaries.bin's authoritative
+    // pairing (incl. Tier-3 static) is stellata-zau1 (deferred — it must run
+    // in the binaries pipeline where the pairing is known). What the catalog
+    // build DOES guarantee and this pins: every pair member's baked velocity
+    // is physically sane (the sanity clamp caught every PM×distance
+    // artifact), so no member streaks under the epoch-advance.
+    it('every pair member is below the velocity sanity ceiling', () => {
+      let checked = 0;
+      for (const rel of BINARIES!.relations) {
+        for (const idx of [rel.primaryIdx, rel.secondaryIdx]) {
+          const r = catalog.record(idx);
+          checked++;
+          const speed = Math.hypot(r.vx, r.vy, r.vz);
+          expect(
+            speed,
+            `pair member #${idx} (${r.name ?? r.i}) velocity ${(speed / KM_S_TO_PC_YR).toFixed(0)} km/s exceeds the sanity ceiling`,
+          ).toBeLessThanOrEqual(VELOCITY_SANITY_CEILING_PC_YR);
+        }
+      }
+      expect(checked, 'expected pair members in binaries.bin').toBeGreaterThan(0);
     });
   });
 

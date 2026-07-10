@@ -120,6 +120,26 @@ and secondary about the system barycentre — primary moves by
 `−q·ΔR(t)`, secondary by `+(1−q)·ΔR(t)`, where q = M_s/(M_p + M_s) is
 the mass-fraction stored on each record.
 
+### Composition with proper-motion propagation
+
+The load-time epoch-advance (`loaders/epoch-advance-pure.ts`) shifts
+`catalog.positions` by each star's baked space-motion velocity *before*
+`BinaryOrbitField` runs, so the pair's systemic drift is already in the
+primary slot this field reads. Because the walk places a Tier-1/2 secondary
+at `primary + baseDiffPc + ΔR(t)` from the **elements alone** (never
+`abs[s] − abs[p]`), the rendered relative offset is invariant under the
+advance regardless of the members' baked velocities — orbital motion stays
+owned by this Kepler layer with no double-counting. The velocity coherence
+therefore matters only for **Tier-3 static** companions (skipped here): they
+ride their baked velocity directly, so a promoted companion with no own PM
+inherits its primary's systemic velocity at build time
+(`scripts/catalog/companion-promotion.ts`) or it would freeze at `v=0` and
+shear from a drifting primary. This resolves the anchor-seam question
+(`stellata-nmu.4`): v1 is the CPU-baseline scheme at load granularity. Full
+systemic coherence for *every* binaries.bin pair — keyed on this file's
+authoritative resolved pairing, which the catalog build can't replicate — is
+`stellata-zau1`.
+
 ### Focal-frame ride (no rebase)
 
 The walk applies the barycentric split in EVERY regime — there is no

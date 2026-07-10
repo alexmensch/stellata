@@ -10,7 +10,7 @@ cross-script policy and pointers.
   `public/catalog-row-index-map.json`; companions promoted from
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
-  byte-range split of the v7 binary that keeps every deployed asset
+  byte-range split of the v8 binary that keeps every deployed asset
   under Cloudflare Workers' 25 MiB limit; see `catalog/README.md`
   § Binary catalog format.
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`

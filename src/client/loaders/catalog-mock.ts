@@ -13,6 +13,7 @@ export function makeEmptyCatalog(count: number): Catalog {
   return {
     count,
     positions: new Float32Array(count * 3),
+    velocities: new Float32Array(count * 3),
     absmag: new Float32Array(count),
     ci: new Float32Array(count),
     spectClass: new Float32Array(count),

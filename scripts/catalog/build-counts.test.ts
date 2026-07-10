@@ -79,6 +79,13 @@ function baseCounts(): BuildCounts {
     directionHip2Saturated: 2500,
     directionHip2PmDiscrepant: 146,
     directionAthygPrinted: 30,
+    velocityGaiaPm: 308000,
+    velocityHip2Pm: 2600,
+    velocityAthygPm: 25,
+    velocityZero: 2617,
+    velocityClamped: 40,
+    velocityAboveEscape: 50,
+    velocityRvApplied: 267000,
   };
 }
 

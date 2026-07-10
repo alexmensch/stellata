@@ -240,11 +240,11 @@ applies three filters and nothing else:
    catastrophic 1/π estimate keeps its corrected distance whenever
    that distance falls inside scope.
 
-There is no source-aware filtering. The 84-byte v7 binary record
+There is no source-aware filtering. The 96-byte v8 binary record
 preserves none of the `*_src` columns either, so the renderer can't
 distinguish a Tycho-positioned, Gaia-distanced row from a "pure"
 Hipparcos one — every star is shaded by the same physical model
-(§Stellar physics, §Stellar perception model). v7 does carry each
+(§Stellar physics, §Stellar perception model). v8 does carry each
 star's Gaia DR3 `source_id` (when AT-HYG has it) plus Apsis
 astrophysical parameters (Teff/logg/[M/H]/A0 from gspphot ∪ gspspec)
 keyed by it — the source-ID anchor downstream consumers (cross-match
@@ -400,7 +400,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
-writes them per record into the v7 binary at offsets 52–79 (see
+writes them per record into the v8 binary at offsets 52–79 (see
 `scripts/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
@@ -672,8 +672,9 @@ build-time epoch bump.** A build-time advance to a fixed epoch
 to stay current), still contradicts the time readout, and cannot
 compose with the planned time scrubber (`stellata-nmu`). Instead:
 
-- `catalog.bin` v7 appends per-record `vx/vy/vz` `float32` pc/yr
-  (bytes 80–91, stride 80 → 92; +3.9 MB ≈ +15%). Positions stay
+- `catalog.bin` v8 appends per-record `vx/vy/vz` `float32` pc/yr
+  (bytes 84–95, stride 84 → 96 after the v7 `sid`; +3.9 MB ≈ +15%).
+  Positions stay
   J2016.0 — the scene epoch convention and every existing
   regression corpus remain valid.
 - At startup, immediately after catalog load, one pure pass
@@ -689,7 +690,7 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   `|t − t_advanced|` exceeds a sub-pixel drift threshold
   (bucketised, same idea as the ephemeris 60 s cache); a per-frame
   GPU path (per-instance velocity attribute) stays available as an
-  escalation and reads the same v7 columns, but is not needed for
+  escalation and reads the same v8 columns, but is not needed for
   v1.
 
 **Time base.** `Stellata.getT()` → Julian epoch years via
@@ -702,16 +703,28 @@ one shared *systemic* velocity: the barycentric blend
 `v_sys = (1−q)·v_primary + q·v_secondary` when both members carry
 their own PM (this cancels the orbital contamination in
 per-member Gaia PMs to first order — the barycentre is what moves
-linearly), else whichever member has one. Promoted companions
-inherit `v_sys` in `companion-promotion.ts`. Because both members
-advance identically, `BinaryOrbitField`'s relative walk
-(`abs[s] − abs[p]`), its per-relation baseline caches, and eclipse
-photometry's `baseDiff` are all invariant under the advance pass —
-orbital motion stays owned by the Kepler layer with no
-double-counting and no field-code change. (This resolves the
-anchor-seam question tracked as `stellata-nmu.4`: v1 is the
-CPU-baseline scheme at load granularity; the GPU-attribute scheme
-remains the documented escalation.)
+linearly), else whichever member has one. Because
+`BinaryOrbitField` places a Tier-1/2 secondary at
+`primary + baseDiffPc + ΔR(t)` from the Kepler *elements alone*
+(never `abs[s] − abs[p]`; `src/client/binaries/README.md` § Tier
+mapping), the rendered relative offset — its baseline caches and
+eclipse photometry's `baseDiff` — is invariant under the advance
+*regardless* of the members' baked velocities; orbital motion stays
+owned by the Kepler layer with no double-counting and no field-code
+change. The velocity coherence therefore matters only for **Tier-3
+static** companions (which the field skips): a promoted companion
+with no own PM must ride its primary or it freezes at `v=0` and
+shears. v1 delivers that (mint-time inheritance in
+`companion-promotion.ts`) plus the blend for renderable-orbit pairs
+the *catalog build* resolves. **Full** systemic coherence for
+`binaries.bin`'s authoritative pairing — which re-homes some inner
+pairs and owns the Tier-3 static pairs the catalog build doesn't
+group — is deferred to `stellata-zau1` (the pairing is only known in
+the binaries pipeline; residual shear is sub-arcsec/decade over the
+v1 load-time advance). (This resolves the anchor-seam question
+tracked as `stellata-nmu.4`: v1 is the CPU-baseline scheme at load
+granularity; the GPU-attribute scheme remains the documented
+escalation.)
 
 **Validation.**
 
@@ -1033,11 +1046,15 @@ focus-independent body field). The rotation is anchored on the north
 ecliptic pole in ICRS, `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°;
 the y-component is negative.
 
-**Time `t`.** All planet positions are evaluated at a wall-clock `t`
-(Unix seconds, double). `t` is currently pinned to "now" with no scrubber
-UI; the bottom-right time readout displays the live UTC timestamp the
-positions correspond to. `t` is independent of the cosmetic `uTime`
-clock that drives variable-star pulsation — they don't share a value.
+**Time `t`.** All planet positions are evaluated at the model clock `t`
+(Unix seconds, double) via `Stellata.getT()`, driven by the time-scrubber
+widget; the bottom-right time readout displays the UTC timestamp the
+positions correspond to. Every time-varying visual now shares this one
+clock: planet ephemerides, binary orbital motion, the load-time
+proper-motion advance (§ Current-epoch star positions), AND variable-star
+pulsation — the latter formerly rode a separate cosmetic `uTime`
+real-seconds clock, now reversed so pulsation runs at real GCVS periods on
+`t` and responds to the same time-warp.
 
 Per-`t` cache granularity is 60 seconds: at billboarded-disc pixel
 scale, sub-minute planet motion is invisible (Mercury moves ~3e-5 rad
@@ -1489,7 +1506,7 @@ Tier C cross-checker (`validate-simbad-sample.ts` + the
 **Layer 5 — documentation.** This file (astronomer audience —
 sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 — functions, thresholds, provenance fields); `scripts/README.md`
-(formats — v7 byte plan, name table, search index).
+(formats — v8 byte plan, name table, search index).
 
 ### Worked examples
 

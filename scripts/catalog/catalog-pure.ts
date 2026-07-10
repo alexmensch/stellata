@@ -691,10 +691,10 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 // MAGIC, extend the LAYOUT + SIZES pair with the new offset and kind, and
 // the writer + reader + tests pick the change up automatically.
 
-export const MAGIC = 'HYG7';
-export const BINARY_VERSION = 7;
+export const MAGIC = 'HYG8';
+export const BINARY_VERSION = 8;
 export const HEADER_SIZE = 32;
-export const RECORD_SIZE = 84;
+export const RECORD_SIZE = 96;
 export const NO_COMPANION = 0xffffffff;
 // Reserved none/invalid SID sentinel (docs/sid.md § 2); allocation starts
 // at 1, so 0 in RECORD_LAYOUT.sid means the record resolved to no ledger
@@ -830,6 +830,13 @@ export const RECORD_LAYOUT = {
   loggGspspec: 72,  // float32 (log cgs)
   mhGspspec: 76,    // float32 ([M/H] dex)
   sid: 80,          // uint32 Stellata ID (0 = NO_SID; docs/sid.md § 7)
+  // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
+  // Consumed once at load by the epoch-advance pass; positions stay at
+  // the fixed J2016.0 scene epoch on disk. See scripts/catalog/README.md
+  // § Space-motion velocity and SCIENCE.md § Current-epoch star positions.
+  vx: 84,           // float32 (pc/yr)
+  vy: 88,           // float32 (pc/yr)
+  vz: 92,           // float32 (pc/yr)
 } as const;
 
 /** Per-field byte width keyed by RECORD_LAYOUT name. As with
@@ -842,6 +849,7 @@ export const RECORD_FIELD_SIZES: Record<keyof typeof RECORD_LAYOUT, number> = {
   varType: 1, period: 2, hip: 4, gaiaSourceId: 8,
   teffGspphot: 4, loggGspphot: 4, mhGspphot: 4, azeroGspphot: 4,
   teffGspspec: 4, loggGspspec: 4, mhGspspec: 4, sid: 4,
+  vx: 4, vy: 4, vz: 4,
 };
 
 // Name table layout: two zero bytes of padding so name offset 0 reads as

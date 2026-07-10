@@ -19,6 +19,7 @@ import {
 
 interface StarRecord {
   pos: [number, number, number];
+  vel: [number, number, number];  // space-motion velocity, pc/yr
   absmag: number;
   ci: number;
   physicalRadius: number;
@@ -70,6 +71,9 @@ function buildCatalog(
     dv.setFloat32(off + RECORD_LAYOUT.x, r.pos[0], true);
     dv.setFloat32(off + RECORD_LAYOUT.y, r.pos[1], true);
     dv.setFloat32(off + RECORD_LAYOUT.z, r.pos[2], true);
+    dv.setFloat32(off + RECORD_LAYOUT.vx, r.vel[0], true);
+    dv.setFloat32(off + RECORD_LAYOUT.vy, r.vel[1], true);
+    dv.setFloat32(off + RECORD_LAYOUT.vz, r.vel[2], true);
     dv.setFloat32(off + RECORD_LAYOUT.absmag, r.absmag, true);
     dv.setFloat32(off + RECORD_LAYOUT.ci, r.ci, true);
     dv.setFloat32(off + RECORD_LAYOUT.physRadius, r.physicalRadius, true);
@@ -146,6 +150,7 @@ function streamedResponse(data: Uint8Array, reads: number): Response {
 
 const baseStar: StarRecord = {
   pos: [0, 0, 0],
+  vel: [0, 0, 0],
   absmag: 0,
   ci: 0,
   physicalRadius: 1,
@@ -205,6 +210,19 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.absmag[0]).toBeCloseTo(4.83, 5);
       expect(cat.ci[0]).toBeCloseTo(0.65, 5);
       expect(cat.physicalRadius[0]).toBeCloseTo(1.0, 5);
+    });
+
+    it('parses the v8 space-motion velocity columns', () => {
+      const star: StarRecord = {
+        ...baseStar,
+        pos: [1, 2, 3],
+        vel: [1.5e-5, -2.5e-5, 3.5e-6],
+      };
+      const cat = parseBinary(buildCatalog([star]), blankConstellations);
+      expect(cat.velocities).toHaveLength(3);
+      expect(cat.velocities[0]).toBeCloseTo(1.5e-5, 10);
+      expect(cat.velocities[1]).toBeCloseTo(-2.5e-5, 10);
+      expect(cat.velocities[2]).toBeCloseTo(3.5e-6, 10);
     });
 
     it('parses spectClass / luminosityClass / constellation as small ints', () => {

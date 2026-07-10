@@ -65,6 +65,20 @@ export const DIRECTION_VIA_VALUES = [
 
 export type DirectionVia = (typeof DIRECTION_VIA_VALUES)[number];
 
+// Which source supplied the space-motion PM for this row's velocity. Maps
+// off the direction tier (Gaia tiers → Gaia PM, HIP2 tiers → HIP2 PM,
+// athyg_printed → AT-HYG PM), degrading to `zero` when that source carries
+// no usable PM (2p Gaia rows, AT-HYG rows with blank pm cells). Pinned
+// per-tier in build-counts.
+export const VELOCITY_VIA_VALUES = [
+  'gaia_pm',
+  'hip2_pm',
+  'athyg_pm',
+  'zero',
+] as const;
+
+export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
+
 export interface UnitVector {
   x: number;
   y: number;
@@ -74,6 +88,15 @@ export interface UnitVector {
 export interface DirectionResolution {
   via: DirectionVia;
   dir: UnitVector;
+  /** The astrometric solution the tier selected — position (deg) and PM
+   *  (mas/yr, cos δ-applied) at its native epoch. Fed to `velocityPcPerYr`
+   *  alongside the final stack distance + RV so position and velocity come
+   *  from one solution. `athyg_printed` carries AT-HYG's own pm cells. */
+  srcRaDeg: number;
+  srcDecDeg: number;
+  srcPmraMasyr: number | null;
+  srcPmdecMasyr: number | null;
+  velVia: VelocityVia;
 }
 
 /** ICRS (ra, dec) in degrees → unit vector in the equatorial Cartesian
@@ -87,6 +110,28 @@ export function unitVectorFromRaDec(raDeg: number, decDeg: number): UnitVector {
     x: cosDec * Math.cos(ra),
     y: cosDec * Math.sin(ra),
     z: Math.sin(dec),
+  };
+}
+
+/** Radial unit vector `u` plus the local east/north tangent unit vectors
+ *  at (ra, dec): east = ∂u/∂α / cos δ, north = ∂u/∂δ. The two directions
+ *  μ_α* and μ_δ act along — the same basis PM propagation and space-motion
+ *  velocity assembly both need. Stable through the poles (east never
+ *  divides by cos δ). */
+export function equatorialTangentBasis(
+  raDeg: number,
+  decDeg: number,
+): { u: UnitVector; east: UnitVector; north: UnitVector } {
+  const ra = raDeg * DEG_TO_RAD;
+  const dec = decDeg * DEG_TO_RAD;
+  const sinRa = Math.sin(ra);
+  const cosRa = Math.cos(ra);
+  const sinDec = Math.sin(dec);
+  const cosDec = Math.cos(dec);
+  return {
+    u: { x: cosDec * cosRa, y: cosDec * sinRa, z: sinDec },
+    east: { x: -sinRa, y: cosRa, z: 0 },
+    north: { x: -sinDec * cosRa, y: -sinDec * sinRa, z: cosDec },
   };
 }
 
@@ -107,29 +152,72 @@ export function directionAtEpoch(
   fromEpoch: number,
   toEpoch: number,
 ): UnitVector {
-  const u = unitVectorFromRaDec(raDeg, decDeg);
+  const { u, east, north } = equatorialTangentBasis(raDeg, decDeg);
   if (pmraMasyr === null || pmdecMasyr === null) return u;
-  const ra = raDeg * DEG_TO_RAD;
-  const dec = decDeg * DEG_TO_RAD;
-  const sinRa = Math.sin(ra);
-  const cosRa = Math.cos(ra);
-  const sinDec = Math.sin(dec);
-  const cosDec = Math.cos(dec);
-  // Local tangent basis: east = ∂u/∂α / cos δ, north = ∂u/∂δ.
-  const eastX = -sinRa;
-  const eastY = cosRa;
-  const eastZ = 0;
-  const northX = -sinDec * cosRa;
-  const northY = -sinDec * sinRa;
-  const northZ = cosDec;
   const dt = toEpoch - fromEpoch;
   const dEast = pmraMasyr * MAS_TO_RAD * dt;
   const dNorth = pmdecMasyr * MAS_TO_RAD * dt;
-  const x = u.x + dEast * eastX + dNorth * northX;
-  const y = u.y + dEast * eastY + dNorth * northY;
-  const z = u.z + dEast * eastZ + dNorth * northZ;
+  const x = u.x + dEast * east.x + dNorth * north.x;
+  const y = u.y + dEast * east.y + dNorth * north.y;
+  const z = u.z + dEast * east.z + dNorth * north.z;
   const norm = Math.hypot(x, y, z);
   return { x: x / norm, y: y / norm, z: z / norm };
+}
+
+// 1 km/s in pc/yr: (1 km/s)·(1 Julian yr in s) / (1 pc in km)
+//   = 3.15576e7 s / 3.0856775814913673e13 km ≈ 1.0227121651e-6.
+export const KM_S_TO_PC_YR = 3.15576e7 / 3.0856775814913673e13;
+
+// Space-velocity sanity ceiling. The Galactic escape velocity near Sol is
+// ~550 km/s; the fastest known hypervelocity stars reach ~1700 km/s but are
+// absent from this bright classic-IDs subset, so a ceiling at 1500 (~3×
+// escape) clamps no real star here. A computed speed past it is a
+// PM×distance artifact — noisy proper motion on a faint distant star, where
+// v = d·μ blows a spurious sub-arcsec/yr μ up to thousands of km/s. Such
+// rows drop to zero velocity (kept at J2016.0, the same fall-through as
+// no-PM rows) rather than streaking across the sky under the epoch-advance.
+// Finer per-row PM-S/N filtering is future work.
+export const VELOCITY_SANITY_CEILING_KM_S = 1500;
+export const VELOCITY_SANITY_CEILING_PC_YR =
+  VELOCITY_SANITY_CEILING_KM_S * KM_S_TO_PC_YR;
+
+// Local Galactic escape velocity (~550 km/s, Piffl et al. 2014). A star
+// faster than this is unbound — genuinely exceptional (a handful of proven
+// hypervelocity stars Galaxy-wide), so a large above-escape population is
+// almost entirely PM×distance / bad-RV artifacts. These rows are NOT
+// clamped (a proven escaper must survive); they are counted + logged as a
+// tracked ratchet (build-counts `velocityAboveEscape`) so the artifact tail
+// is visible and can drive finer per-row PM-S/N + RV-sanity filtering.
+export const GALACTIC_ESCAPE_VELOCITY_KM_S = 550;
+export const GALACTIC_ESCAPE_VELOCITY_PC_YR =
+  GALACTIC_ESCAPE_VELOCITY_KM_S * KM_S_TO_PC_YR;
+
+/** Space-motion velocity in the equatorial Cartesian frame `catalog.bin`
+ *  uses, in pc/yr:
+ *
+ *      v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)
+ *
+ *  `pmraMasyr` is μ_α* (cos δ-applied); do NOT divide by cos δ. `distancePc`
+ *  is the final distance-stack output. Missing PM → tangential term zero;
+ *  missing RV → radial term zero. See SCIENCE.md § Current-epoch star
+ *  positions. */
+export function velocityPcPerYr(
+  raDeg: number,
+  decDeg: number,
+  pmraMasyr: number | null,
+  pmdecMasyr: number | null,
+  distancePc: number,
+  rvKmS: number | null,
+): UnitVector {
+  const { u, east, north } = equatorialTangentBasis(raDeg, decDeg);
+  const vr = rvKmS === null ? 0 : rvKmS * KM_S_TO_PC_YR;
+  const kEast = pmraMasyr === null ? 0 : pmraMasyr * MAS_TO_RAD * distancePc;
+  const kNorth = pmdecMasyr === null ? 0 : pmdecMasyr * MAS_TO_RAD * distancePc;
+  return {
+    x: vr * u.x + kEast * east.x + kNorth * north.x,
+    y: vr * u.y + kEast * east.y + kNorth * north.y,
+    z: vr * u.z + kEast * east.z + kNorth * north.z,
+  };
 }
 
 /** RUWE / ipd_frac_multi_peak orbit-corruption indicators on the 5p fit.
@@ -171,11 +259,19 @@ export function resolveDirection(
   athygRaHours: number | null,
   athygDecDeg: number | null,
   sources: DirectionSources,
+  athygPmRaMasyr: number | null = null,
+  athygPmDecMasyr: number | null = null,
 ): DirectionResolution | null {
   const gaia = gaiaSourceId !== null
     ? sources.gaiaAstrometry.get(gaiaSourceId)
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
+
+  const gaiaVelVia = (): VelocityVia =>
+    gaia !== undefined && gaia.pmraMasyr !== null && gaia.pmdecMasyr !== null
+      ? 'gaia_pm' : 'zero';
+  const hip2VelVia = (h: Hip2AstrometryRow): VelocityVia =>
+    h.pmRaMasyr !== null && h.pmDeMasyr !== null ? 'hip2_pm' : 'zero';
 
   if (gaia !== undefined && gaia.parallaxMas !== null) {
     const fromGaia = (via: DirectionVia): DirectionResolution => ({
@@ -184,6 +280,9 @@ export function resolveDirection(
         gaia.raDeg, gaia.decDeg, gaia.pmraMasyr, gaia.pmdecMasyr,
         GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
       ),
+      srcRaDeg: gaia.raDeg, srcDecDeg: gaia.decDeg,
+      srcPmraMasyr: gaia.pmraMasyr, srcPmdecMasyr: gaia.pmdecMasyr,
+      velVia: gaiaVelVia(),
     });
     if (
       gaiaSourceId !== null
@@ -199,6 +298,9 @@ export function resolveDirection(
           hip2.raDeg, hip2.decDeg, hip2.pmRaMasyr, hip2.pmDeMasyr,
           HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
         ),
+        srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
+        srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
+        velVia: hip2VelVia(hip2),
       };
     }
     return fromGaia('gaia_5p');
@@ -211,6 +313,9 @@ export function resolveDirection(
         hip2.raDeg, hip2.decDeg, hip2.pmRaMasyr, hip2.pmDeMasyr,
         HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
       ),
+      srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
+      srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
+      velVia: hip2VelVia(hip2),
     };
   }
 
@@ -224,13 +329,21 @@ export function resolveDirection(
         gaia.raDeg, gaia.decDeg, gaia.pmraMasyr, gaia.pmdecMasyr,
         GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
       ),
+      srcRaDeg: gaia.raDeg, srcDecDeg: gaia.decDeg,
+      srcPmraMasyr: gaia.pmraMasyr, srcPmdecMasyr: gaia.pmdecMasyr,
+      velVia: gaiaVelVia(),
     };
   }
 
   if (athygRaHours === null || athygDecDeg === null) return null;
+  const athygRaDeg = athygRaHours * 15;
   return {
     via: 'athyg_printed',
-    dir: unitVectorFromRaDec(athygRaHours * 15, athygDecDeg),
+    dir: unitVectorFromRaDec(athygRaDeg, athygDecDeg),
+    srcRaDeg: athygRaDeg, srcDecDeg: athygDecDeg,
+    srcPmraMasyr: athygPmRaMasyr, srcPmdecMasyr: athygPmDecMasyr,
+    velVia: athygPmRaMasyr !== null && athygPmDecMasyr !== null
+      ? 'athyg_pm' : 'zero',
   };
 }
 
