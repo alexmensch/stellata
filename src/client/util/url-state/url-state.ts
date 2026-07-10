@@ -5,15 +5,17 @@ import {
   MAG_PRESETS,
   DEFAULT_FOV,
   ALL_SPECT_MASK,
+  POI_MAX_COUNT,
 } from '../../stellata';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
 
-// URL state lives in a single opaque `?v=<base64url>` param. Three
-// wire formats coexist (v1/v2/v3); old shared URLs auto-upgrade to v3
-// on load. See src/client/util/url-state/README.md for the wire format and the
+// URL state lives in a single opaque `?v=<base64url>` param. Four wire
+// formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
+// per the migration table in docs/sid.md § 9.4. See
+// src/client/util/url-state/README.md for the wire format and the
 // "adding a field" recipe.
 //
 // Buffer order (FIELDS bit-index order) is independent of the dispatch
@@ -23,7 +25,8 @@ import type { SidResolver } from '../sid-resolver';
 const DEBOUNCE_MS = 300;
 const SCHEMA_VERSION_V1 = 1;
 const SCHEMA_VERSION_V2 = 2;
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION_V3 = 3;
+const SCHEMA_VERSION = 4;
 const PARAM_NAME = 'v';
 const EPS = 1e-3;
 // Per-frame URL-write change detector: 1% of vector magnitude, capped
@@ -107,7 +110,12 @@ export interface IdMaps {
   sidResolver: SidResolver;
 }
 
+/** Legacy v1–v3 star ref — decode-only since v4. */
 export type StarRef = { kind: 'hip' | 'index'; id: number };
+/** v4 universal object ref: a frozen Stellata ID of any kind (star,
+ *  cloud, planet, …) — the runtime resolver supplies the kind. */
+export type SidRef = { kind: 'sid'; id: number };
+export type ObjectRef = StarRef | SidRef;
 
 export interface DecodedView {
   cam?: [number, number, number];
@@ -129,21 +137,29 @@ export interface DecodedView {
   showMilkyway?: boolean;
   unit?: 'pc' | 'ly';
   mode?: 'navigate' | 'observe';
-  /** Star focus. Undefined = default (Sol). 'cleared' = explicitly unfocused. */
-  focus?: 'cleared' | StarRef;
-  /** Vector-to star (the chevron measurement line). */
-  to?: StarRef;
-  /** Cloud focus (mutually exclusive with star focus in Stellata). */
+  /** Object focus. Undefined = default (Sol). 'cleared' = explicitly
+   *  unfocused. v4 encodes a SidRef (any kind — a cloud focus is just a
+   *  cloud-kind SID); hip/index StarRefs are legacy decode output. */
+  focus?: 'cleared' | ObjectRef;
+  /** Vector-to object (the chevron measurement line). Same ref
+   *  semantics as `focus`. */
+  to?: ObjectRef;
+  /** Legacy v1–v3 cloud focus index — decode-only; v4 folds cloud
+   *  focus into `focus` as a cloud-kind SID. */
   cloud?: number;
-  /** Vector-to cloud (mutually exclusive with `to`). */
+  /** Legacy v1–v3 vector-to-cloud index — decode-only, folded into
+   *  `to` in v4. */
   toc?: number;
   /** Chart mode (observe-only). Only encoded when `mode === 'observe'`. */
   chart?: boolean;
-  /** Pinned points-of-interest as HIP IDs. Observe-only — encoded only
-   *  when `mode === 'observe'`, since POIs clear on observe→navigate
-   *  exit anyway. HIP-only (no catalog-index fallback) so URLs survive
-   *  catalog rebuilds. Hard-capped at POI_MAX_COUNT to bound the blob. */
+  /** Legacy v1–v3 pinned points-of-interest as HIP IDs — decode-only;
+   *  v4 persists POIs in `poiSids`. */
   pois?: number[];
+  /** Pinned points-of-interest as SIDs (v4). Observe-only — encoded
+   *  only when `mode === 'observe'`, since POIs clear on
+   *  observe→navigate exit anyway. SIDs survive catalog rebuilds by
+   *  construction. Hard-capped at POI_MAX_COUNT to bound the blob. */
+  poiSids?: number[];
   /** Absolute-space position anchoring the floating origin. Emitted
    *  only when no focus is active and the anchor isn't Sol — i.e.
    *  after a close-orbit unfocus left the origin parked at the former
@@ -168,8 +184,6 @@ export interface DecodedView {
    *  introducing pinned-`t` state. */
   t?: number;
 }
-
-const POI_MAX_COUNT = 16;
 
 type Vec3Key = 'cam' | 'tgt' | 'up' | 'worldOffset';
 type ComponentDefaults = (v: DecodedView) => readonly [number, number, number];
@@ -231,7 +245,7 @@ function vec3Field(bit: number, key: Vec3Key): FieldSpec {
 // "real" default is mode-dependent (DEFAULT_CAM in navigate, [0,0,0]
 // in observe) but the decoder uses the static navigate value here and
 // fixes up missing components in cam's postDecode hook once view.mode
-// is known — flags decodes after cam in FIELDS_V3 bit order.
+// is known — flags decodes after cam in FIELDS bit order.
 const VEC3_DEFAULTS: Record<Vec3Key, readonly [number, number, number]> = {
   cam: DEFAULT_CAM,
   tgt: DEFAULT_TGT,
@@ -575,6 +589,65 @@ function tField(bit: number): FieldSpec {
   };
 }
 
+// v4 universal object ref — an unsigned LEB128 SID (docs/sid.md § 9.1).
+// No type tag on the wire; kind comes from the runtime resolver at
+// apply time. isPresent claims the bit only for sid-kind refs, so a
+// legacy hip/index ref that somehow survives into an encode is dropped
+// rather than mis-encoded.
+function sidRefField(bit: number, key: 'focus' | 'to'): FieldSpec {
+  const sidOf = (v: DecodedView): number | null => {
+    const ref = v[key];
+    return typeof ref === 'object' && ref !== null && ref.kind === 'sid' ? ref.id : null;
+  };
+  return {
+    bit, key,
+    encodeBytes: v => varintLen(sidOf(v)!),
+    decodeBytes: (dv, off) => readVarint(dv, off, dv.byteLength).bytes,
+    isPresent: v => sidOf(v) !== null,
+    encode: (v, dv, o) => writeVarint(dv, o, sidOf(v)!),
+    decode: (v, dv, o) => {
+      v[key] = { kind: 'sid', id: readVarint(dv, o, dv.byteLength).val };
+    },
+  };
+}
+
+// v4 POI list: 1-byte count + one LEB128 SID per entry. Same
+// POI_MAX_COUNT cap discipline as the legacy HIP list.
+function poiSidsField(bit: number): FieldSpec {
+  return {
+    bit, key: 'poiSids',
+    encodeBytes: v => {
+      const list = (v.poiSids ?? []).slice(0, POI_MAX_COUNT);
+      return 1 + list.reduce((n, sid) => n + varintLen(sid), 0);
+    },
+    decodeBytes: (dv, off) => {
+      const n = Math.min(dv.getUint8(off), POI_MAX_COUNT);
+      let p = off + 1;
+      for (let i = 0; i < n; i++) p += readVarint(dv, p, dv.byteLength).bytes;
+      return p - off;
+    },
+    isPresent: v => Array.isArray(v.poiSids) && v.poiSids.length > 0,
+    encode: (v, dv, o) => {
+      const list = (v.poiSids ?? []).slice(0, POI_MAX_COUNT);
+      dv.setUint8(o, list.length);
+      let p = o + 1;
+      for (const sid of list) p += writeVarint(dv, p, sid);
+      return p - o;
+    },
+    decode: (v, dv, o) => {
+      const n = Math.min(dv.getUint8(o), POI_MAX_COUNT);
+      const out: number[] = [];
+      let p = o + 1;
+      for (let i = 0; i < n; i++) {
+        const { val, bytes } = readVarint(dv, p, dv.byteLength);
+        out.push(val);
+        p += bytes;
+      }
+      v.poiSids = out;
+    },
+  };
+}
+
 // cam's per-component default depends on mode (set by flags at bit 13,
 // which decodes after cam), so cam carries a postDecode that swaps z=0
 // in observe mode when the sub-mask leaves z unset. Shared by every
@@ -679,6 +752,37 @@ const FIELDS_V3: FieldSpec[] = [
   tField(21),
 ];
 
+// ── FIELDS_V4 — the live schema ──────────────────────────────────────
+// v4 (docs/sid.md § 9.2): the three parallel object-ref encodings
+// collapse into one universal LEB128 SID ref. focus/to carry a SID of
+// any kind (a cloud focus is just a cloud-kind SID); POIs persist by
+// SID. Bits 16/17 (legacy 1-byte cloud refs) are RETIRED — leave them
+// unclaimed for ~6 months of deploy overlap before any reuse.
+// Everything else is byte-identical to v3. Append-only bit policy
+// continues: unknown high mask bits are ignored by the decoder.
+const FIELDS_V4: FieldSpec[] = [
+  vec3FieldV3(0, 'cam', camDefault, camObservePostDecode),
+  vec3FieldV3(1, 'tgt', () => DEFAULT_TGT),
+  vec3FieldV3(2, 'up', () => DEFAULT_UP),
+  u8Field(3,  'fov',  { min: 10, max: 120, step: 1   }),
+  u8Field(4,  'mag',  { min: -2, max: 15,  step: 0.1 }),
+  u16Field(5, 'dmin'),
+  u16Field(6, 'dmax'),
+  u16Field(7, 'spect'),
+  presetField(8),
+  conField(9),
+  u8Field(10, 'smin', { min: 1, max: 6,  step: 0.1 }),
+  u8Field(11, 'smax', { min: 2, max: 32, step: 0.5 }),
+  u8Field(12, 'span', { min: 2, max: 20, step: 0.5 }),
+  flagsField(13),
+  sidRefField(14, 'focus'),
+  sidRefField(15, 'to'),
+  focusClearedField(18),
+  poiSidsField(19),
+  vec3FieldV3(20, 'worldOffset', () => VEC3_DEFAULTS.worldOffset),
+  tField(21),
+];
+
 function packFlags(v: DecodedView): number {
   let f = 0;
   if (v.showGalacticGrid) f |= FLAG_GRID;
@@ -706,7 +810,7 @@ function unpackFlags(v: DecodedView, f: number): void {
 
 function computePresence(view: DecodedView): number {
   let mask = 0;
-  for (const f of FIELDS_V3) {
+  for (const f of FIELDS_V4) {
     if (f.isPresent(view)) mask |= (1 << f.bit);
   }
   return mask;
@@ -719,14 +823,14 @@ function computePresence(view: DecodedView): number {
 // mask handy.
 function encodeBlobWithMask(view: DecodedView, mask: number): string {
   let total = 1 + varintLen(mask); // 1 version + LEB128 presence (1–4 bytes)
-  for (const f of FIELDS_V3) {
+  for (const f of FIELDS_V4) {
     if (mask & (1 << f.bit)) total += f.encodeBytes(view);
   }
   const ab = new ArrayBuffer(total);
   const dv = new DataView(ab);
   dv.setUint8(0, SCHEMA_VERSION);
   let off = 1 + writeVarint(dv, 1, mask);
-  for (const f of FIELDS_V3) {
+  for (const f of FIELDS_V4) {
     if (mask & (1 << f.bit)) {
       // encode returns its own byte count, so this loop avoids a second
       // encodeBytes call (which would recompute vec3 sub-masks and pois
@@ -755,7 +859,8 @@ export function decodeBlob(blob: string): DecodedBlob {
   const version = dv.getUint8(0);
   if (version === SCHEMA_VERSION_V1) return { view: decodeV1(dv), version };
   if (version === SCHEMA_VERSION_V2) return { view: decodeV2(dv), version };
-  if (version === SCHEMA_VERSION)    return { view: decodeV3(dv), version };
+  if (version === SCHEMA_VERSION_V3) return { view: decodeVarintMasked(dv, FIELDS_V3, 'v3'), version };
+  if (version === SCHEMA_VERSION)    return { view: decodeVarintMasked(dv, FIELDS_V4, 'v4'), version };
   throw new Error(`Unsupported view version: ${version}`);
 }
 
@@ -787,22 +892,24 @@ function decodeV2(dv: DataView): DecodedView {
   return view;
 }
 
-function decodeV3(dv: DataView): DecodedView {
-  if (dv.byteLength < 2) throw new Error(`v3 blob too short: ${dv.byteLength} bytes`);
+// Shared LEB128-mask envelope walker (v3 onward). All per-version byte
+// behaviour lives in the FIELDS table; unknown mask bits are ignored
+// (append-only forward tolerance). The post-decode pass invokes
+// postDecode hooks on fields whose mask bit was present this round —
+// used by cam to swap z=0 in observe mode, since cam decodes at bit 0
+// but mode is set by flags at bit 13.
+function decodeVarintMasked(dv: DataView, fields: FieldSpec[], label: string): DecodedView {
+  if (dv.byteLength < 2) throw new Error(`${label} blob too short: ${dv.byteLength} bytes`);
   const { val: mask, bytes: maskBytes } = readVarint(dv, 1, dv.byteLength);
   const view: DecodedView = {};
   let off = 1 + maskBytes;
-  for (const f of FIELDS_V3) {
+  for (const f of fields) {
     if (mask & (1 << f.bit)) {
       f.decode(view, dv, off);
       off += f.decodeBytes(dv, off);
     }
   }
-  // Post-decode pass: invokes postDecode hooks on fields whose mask
-  // bit was present this round. Currently used by cam to swap z=0 in
-  // observe mode — cam decodes at bit 0, mode is set by flags at bit
-  // 13, so the fix-up has to wait until view.mode is populated.
-  for (const f of FIELDS_V3) {
+  for (const f of fields) {
     if ((mask & (1 << f.bit)) && f.postDecode) f.postDecode(view);
   }
   return view;
@@ -858,24 +965,27 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (getUnit() === 'pc') view.unit = 'pc';
 
   // Star focus and cloud focus are mutually exclusive in Stellata, so at
-  // most one is non-null. Sol focus is the default, encoded by *omitting*
-  // both — so a fully-default state has no `?v=` at all.
+  // most one is non-null; both emit into the one universal `focus` SID
+  // ref. Sol focus is the default, encoded by *omitting* the field — so
+  // a fully-default state has no `?v=` at all. An object without a SID
+  // (never on a shipped catalog) omits the field rather than falling
+  // back to a build-volatile index.
   const star = stellata.getFocusedStar();
   const cloud = stellata.getFocusedCloud();
   if (cloud !== null) {
-    view.cloud = cloud;
+    view.focus = sidRefOf(idMaps, 'cloud', cloud);
   } else if (star === null) {
     view.focus = 'cleared';
   } else if (star !== idMaps.solIndex) {
-    view.focus = refFromIndex(star, idMaps);
+    view.focus = sidRefOf(idMaps, 'star', star);
   }
 
   const to = stellata.getVectorTo();
   const toCloud = stellata.getVectorToCloud();
   if (to !== null) {
-    view.to = refFromIndex(to, idMaps);
+    view.to = sidRefOf(idMaps, 'star', to);
   } else if (toCloud !== null) {
-    view.toc = toCloud;
+    view.to = sidRefOf(idMaps, 'cloud', toCloud);
   }
 
   const mode = stellata.getCameraMode();
@@ -885,20 +995,20 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (f.chart) view.chart = true;
 
   // POIs are observe-only and clear on observe→navigate exit, so we only
-  // emit them when the camera is in observe mode. Encoded as HIP IDs (not
-  // catalog indices) so a future catalog rebuild doesn't break old URLs;
-  // stars without HIP can't be pinned in the first place. Capped at
+  // emit them when the camera is in observe mode. Encoded as SIDs (not
+  // catalog indices) so a catalog rebuild can't re-point old URLs;
+  // stars without a SID can't be pinned in the first place. Capped at
   // POI_MAX_COUNT defensively.
   if (mode === 'observe') {
     const pois = stellata.getPois();
     if (pois.length > 0) {
-      const hipsOut: number[] = [];
+      const sidsOut: number[] = [];
       for (const idx of pois) {
-        if (hipsOut.length >= POI_MAX_COUNT) break;
-        const hip = idMaps.indexToHip[idx];
-        if (hip > 0) hipsOut.push(hip);
+        if (sidsOut.length >= POI_MAX_COUNT) break;
+        const sid = idMaps.sidResolver.sidOf('star', idx);
+        if (sid !== null) sidsOut.push(sid);
       }
-      if (hipsOut.length > 0) view.pois = hipsOut;
+      if (sidsOut.length > 0) view.poiSids = sidsOut;
     }
   }
 
@@ -972,9 +1082,9 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   return view;
 }
 
-function refFromIndex(idx: number, idMaps: IdMaps): StarRef {
-  const hip = idMaps.indexToHip[idx];
-  return hip > 0 ? { kind: 'hip', id: hip } : { kind: 'index', id: idx };
+function sidRefOf(idMaps: IdMaps, kind: 'star' | 'cloud', localIndex: number): SidRef | undefined {
+  const sid = idMaps.sidResolver.sidOf(kind, localIndex);
+  return sid === null ? undefined : { kind: 'sid', id: sid };
 }
 
 function resolveStarRef(ref: StarRef, idMaps: IdMaps, fallback: number): number {
@@ -1059,6 +1169,22 @@ export function applyDecodedView(
       // the transition state to silently drag the camera away from the
       // restored pose on the next frame.
       stellata.unfocus({ animate: false });
+    } else if (view.focus.kind === 'sid') {
+      // v4 universal ref. Deferred-resolution contract (docs/sid.md
+      // § 8): a sid whose domain hasn't attached yet applies on that
+      // attach; a sid no attached domain claims expires silently and
+      // the rest of the decoded state stands. Planet / LG kinds have
+      // no focus semantics yet (hover-only) and fall through.
+      const snap = hasCam || hasTgt;
+      idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
+        if (kind === 'star') {
+          if (snap) stellata.setOrbitTarget(localIndex);
+          else stellata.focusStar(localIndex, { animate: false });
+        } else if (kind === 'cloud') {
+          if (snap) stellata.setFocusedCloud(localIndex);
+          else stellata.flyToCloud(localIndex, { animate: false });
+        }
+      });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {
@@ -1067,17 +1193,24 @@ export function applyDecodedView(
       }
     }
   }
-  // Cloud focus is mutually exclusive with star focus, but encoder never
-  // emits both — apply after `focus` so cloud wins on the off chance both
-  // are present in a hand-crafted blob.
+  // Legacy cloud focus is mutually exclusive with star focus, but the
+  // encoder never emitted both — apply after `focus` so cloud wins on
+  // the off chance both are present in a hand-crafted blob.
   if (view.cloud !== undefined && view.cloud >= 0) {
     if (hasCam || hasTgt) stellata.setFocusedCloud(view.cloud);
     else stellata.flyToCloud(view.cloud, { animate: false });
   }
   if (view.toc !== undefined && view.toc >= 0) stellata.setVectorToCloud(view.toc);
   if (view.to) {
-    const idx = resolveStarRef(view.to, idMaps, -1);
-    if (idx >= 0 && idx < idMaps.starCount) stellata.setVectorTo(idx);
+    if (view.to.kind === 'sid') {
+      idMaps.sidResolver.whenResolved(view.to.id, (kind, localIndex) => {
+        if (kind === 'star') stellata.setVectorTo(localIndex);
+        else if (kind === 'cloud') stellata.setVectorToCloud(localIndex);
+      });
+    } else {
+      const idx = resolveStarRef(view.to, idMaps, -1);
+      if (idx >= 0 && idx < idMaps.starCount) stellata.setVectorTo(idx);
+    }
   }
 
   // Apply worldOffset *before* cam/tgt so the local frame is established
@@ -1133,14 +1266,26 @@ export function applyDecodedView(
   }
 
   // POIs are observe-only — only restore them when the camera is parked
-  // in observe (the encoder also gates emission on this). Resolve each
-  // HIP through idMaps; HIPs that don't resolve in the current catalog
-  // are silently dropped (graceful partial restore on a catalog rebuild).
-  if (Array.isArray(view.pois) && view.pois.length > 0 && stellata.getCameraMode() === 'observe') {
+  // in observe (the encoder also gates emission on this). Legacy HIP
+  // lists resolve through idMaps; v4 SID lists through the resolver.
+  // Entries that don't resolve are silently dropped (graceful partial
+  // restore). SID POIs resolve synchronously rather than via deferred
+  // intents: only star-kind objects are pinnable today and the star
+  // domain attaches at catalog load, strictly before applyFromUrl — a
+  // pending POI sid is therefore as dead as an unknown one.
+  if (stellata.getCameraMode() === 'observe') {
     const resolved: number[] = [];
-    for (const hip of view.pois) {
-      const idx = idMaps.hipToIndex.get(hip);
-      if (idx !== undefined) resolved.push(idx);
+    if (Array.isArray(view.pois)) {
+      for (const hip of view.pois) {
+        const idx = idMaps.hipToIndex.get(hip);
+        if (idx !== undefined) resolved.push(idx);
+      }
+    }
+    if (Array.isArray(view.poiSids)) {
+      for (const sid of view.poiSids) {
+        const r = idMaps.sidResolver.resolve(sid);
+        if (r.status === 'resolved' && r.kind === 'star') resolved.push(r.localIndex);
+      }
     }
     if (resolved.length > 0) stellata.setPois(resolved);
   }
@@ -1150,7 +1295,7 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   const view = currentStateOf(stellata, idMaps);
   // Single computePresence pass — the mask gates the `?v=` param itself
   // and is also passed to encodeBlobWithMask so the encoder doesn't
-  // re-walk FIELDS_V3.
+  // re-walk FIELDS_V4.
   const mask = computePresence(view);
   const qs = mask === 0 ? '' : `${PARAM_NAME}=${encodeBlobWithMask(view, mask)}`;
   const url = location.pathname + (qs ? '?' + qs : '');
@@ -1177,10 +1322,12 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
   }
   applyDecodedView(stellata, decoded.view, idMaps);
   // Auto-upgrade legacy URLs: after the same debounce we already use for
-  // routine URL writes, re-encode the current state as the latest schema
-  // so the address bar ends up with the smaller v3 form. Defers past
-  // any state-change events triggered by the apply itself, which would
-  // otherwise schedule their own write on top.
+  // routine URL writes, re-encode the current state as the latest
+  // schema, implementing the docs/sid.md § 9.4 migration table: HIP
+  // refs land exactly (hip → index → sid), index/cloud refs freeze to
+  // whatever they resolve to in the current build, unresolvable refs
+  // drop. Defers past any state-change events triggered by the apply
+  // itself, which would otherwise schedule their own write on top.
   if (decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }

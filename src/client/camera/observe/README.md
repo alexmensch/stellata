@@ -236,8 +236,9 @@ when the timer elapses.
 
 - *Single-click:* `picker.pickStar()` resolves the click; if a star is hit,
   `togglePoi()` pins or unpins it. Sol is rejected (the dedicated
-  `#sol-arrow` already covers it); stars without HIP are rejected
-  (URL state is HIP-only); the cap is 16 (adding past the cap is a
+  `#sol-arrow` already covers it); stars without a SID are rejected
+  (URL state persists POIs by SID — never occurs on a shipped
+  catalog); the cap is `POI_MAX_COUNT` (16; adding past it is a
   no-op). The POI overlay renders the resulting label + arrow.
 - *Double-click:* unprojects the click into a world-space ray, builds
   a far point along it, and feeds that to `aimAt()` — the existing
@@ -249,7 +250,7 @@ POIs clear automatically on every observe → navigate transition (the
 clear is wired via the `'cameraMode'` event inside the constructor, so
 all three exit paths — mode toggle, focus change, search-X clear —
 get the same cleanup). They round-trip through the `?v=` blob *only*
-in observe mode (see §URL state), encoded HIP-only at bit 19.
+in observe mode (see §URL state), encoded as SIDs at bit 19.
 
 ## ObserveTransition kinds
 
