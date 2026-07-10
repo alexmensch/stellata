@@ -8,7 +8,6 @@ import {
 function baseCounts(): BuildCounts {
   return {
     recordCount: 313242,
-    sidResolved: 313242,
     binaryPairs: 100,
     binaryMutualPairs: 50,
     gcvsEntries: 60000,

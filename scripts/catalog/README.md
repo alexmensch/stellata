@@ -373,8 +373,8 @@ Bootstrap when the record set changes (new AT-HYG rows, new companions):
    row-index-map, mints the missing sids (an explicit, reviewable
    `ledger.tsv` diff), and rewrites `ledger-head.json`.
 3. `npm run build:catalog` again — now every record resolves and the build
-   succeeds. `sidResolved` in the build-counts snapshot equals the record
-   count on a clean build.
+   succeeds (it logs `SID: <n> / <n> records resolved`; any shortfall is a
+   hard fail, never a shipped artifact).
 
 The runtime reader (`catalog-loader.ts`) and Node reader
 (`catalog-lookup.ts`) inherit the field automatically off `RECORD_LAYOUT`;

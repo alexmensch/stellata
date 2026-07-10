@@ -198,7 +198,6 @@ async function main() {
   // field undefined.
   const counts: BuildCounts = {
     recordCount: 0,
-    sidResolved: 0,
     binaryPairs: 0,
     binaryMutualPairs: 0,
     gcvsEntries: 0,
@@ -936,8 +935,8 @@ async function main() {
     );
   }
 
-  counts.sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
-  console.log(`SID: ${counts.sidResolved} / ${stars.length} records resolved to a ledger SID`);
+  const sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
+  console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
   if (sidResolution.errors.length > 0) {
     const preview = sidResolution.errors.slice(0, 10);
     console.error(
