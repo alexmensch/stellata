@@ -1088,6 +1088,106 @@ describe('url-state', () => {
     });
   });
 
+  describe('golden-blob corpus — frozen v1/v2/v3 decoders', () => {
+    // Real `?v=` blobs captured from the shipped coders (v3 via the
+    // production encoder, v1/v2 hand-encoded and validated through the
+    // production decoder at capture time), paired with their exact
+    // decoded views. These pin the FROZEN per-version FIELDS arrays
+    // byte-for-byte: any change that alters how a legacy blob decodes
+    // — a helper edit, a field-shape change leaking across versions —
+    // fails here. Float components are the post-float32 values the
+    // decoder actually produces. NEVER regenerate these entries to
+    // make a failure pass; a failure means legacy decoding broke.
+    const GOLDEN_CORPUS: { version: number; label: string; blob: string; view: DecodedView }[] = [
+      {
+        version: 3,
+        label: 'realistic share: cam + fov + mag + HIP focus + grid',
+        blob: 'A5nAAQcAAEhCAACgwQAAyEIjVQFdfoA',
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, showGalacticGrid: true, focus: { kind: 'hip', id: 32349 } },
+      },
+      {
+        version: 3,
+        label: 'observe + chart + POIs + tilted up',
+        blob: 'A4TAIQOBBDU_gQQ1P2B-ZIEDXX4AfmQBVW0A',
+        view: { up: [0.707099974155426, 0.707099974155426, 0], mode: 'observe', chart: true, focus: { kind: 'hip', id: 91262 }, pois: [32349, 91262, 27989] },
+      },
+      {
+        version: 3,
+        label: 'index focus + HIP to-vector',
+        blob: 'A4CAA0DiAcL_gA',
+        view: { focus: { kind: 'index', id: 123456 }, to: { kind: 'hip', id: 65474 } },
+      },
+      {
+        version: 3,
+        label: 'cloud focus + cloud to-vector',
+        blob: 'A4GADATNzGxADAM',
+        view: { cam: [0, 0, 3.700000047683716], cloud: 12, toc: 3 },
+      },
+      {
+        version: 3,
+        label: 'cleared focus + worldOffset anchor + local cam/tgt',
+        blob: 'A4OAUAeETfg1dScvts2sJTgBAACgQAdmZk5CAICAQ83MFsI',
+        view: { cam: [0.0000018499999896448571, -0.000002609999910418992, 0.00003949999882024713], tgt: [5, 0, 0], focus: 'cleared', worldOffset: [51.599998474121094, 257, -37.70000076293945] },
+      },
+      {
+        version: 3,
+        label: 'pinned t + cam',
+        blob: 'A4GAgAEEzcxsQAAAIMD7GtpB',
+        view: { cam: [0, 0, 3.700000047683716], t: 1751904000.5 },
+      },
+      {
+        version: 3,
+        label: 'kitchen sink scalars + flags',
+        blob: 'A-h_NGQAIAP-AQEpDyAMmg',
+        view: { fov: 62, dmin: 100, dmax: 800, spect: 510, preset: 'binoculars', con: 41, smin: 2.5, smax: 18, span: 8, showHud: true, showConstellation: false, showMilkyway: false, unit: 'pc' },
+      },
+      {
+        version: 2,
+        label: 'v2: cam + fov + mag + HIP focus',
+        blob: 'AhlAAAAASEIAAKDBAADIQiNVXX6A',
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, focus: { kind: 'hip', id: 32349 } },
+      },
+      {
+        version: 2,
+        label: 'v2: observe + index focus + POIs',
+        blob: 'AgBgCCBA4gEDXX4AfmQBVW0A',
+        view: { mode: 'observe', focus: { kind: 'index', id: 123456 }, pois: [32349, 91262, 27989] },
+      },
+      {
+        version: 2,
+        label: 'v2: cloud focus + toc + worldOffset',
+        blob: 'AgAAEwwDZmZOQgCAgEPNzBbC',
+        view: { cloud: 12, toc: 3, worldOffset: [51.599998474121094, 257, -37.70000076293945] },
+      },
+      {
+        version: 2,
+        label: 'v2: cleared focus + pinned t',
+        blob: 'AgAAJAAAIMD7GtpB',
+        view: { focus: 'cleared', t: 1751904000.5 },
+      },
+      {
+        version: 1,
+        label: 'v1: cam + fov + mag + HIP focus',
+        blob: 'ARlAAAAAAEhCAACgwQAAyEIAADRCAADQQF1-AIA',
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, focus: { kind: 'hip', id: 32349 } },
+      },
+      {
+        version: 1,
+        label: 'v1: observe + index focus + cloud + POIs',
+        blob: 'AQBgCQAgQOIBAAcAAmQAAADIAAAA',
+        view: { mode: 'observe', focus: { kind: 'index', id: 123456 }, cloud: 7, pois: [100, 200] },
+      },
+    ];
+
+    for (const entry of GOLDEN_CORPUS) {
+      it(`decodes byte-identically: ${entry.label}`, () => {
+        const { view, version } = decodeBlob(entry.blob);
+        expect(version).toBe(entry.version);
+        expect(view).toEqual(entry.view);
+      });
+    }
+  });
+
   describe('v2 → v3 auto-upgrade rewrite', () => {
     // applyFromUrl detects `decoded.version !== SCHEMA_VERSION` and
     // schedules a debounced writeUrl to silently upgrade the URL to
