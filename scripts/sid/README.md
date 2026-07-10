@@ -46,6 +46,10 @@ stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           tail of build:clouds / build:local-group (also
                           npm run sid:stamp). See § Sibling-artifact
                           stamping.
+sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
+                          kind per sibling) + siblingArtifactObjects, shared
+                          by allocate (minting) and the stamp (resolving) so
+                          the namespace→kind mapping is defined once.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:

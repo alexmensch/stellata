@@ -24,6 +24,7 @@ import {
   type SidObject,
 } from './sid-pure';
 import { HEAD_PATH, LEDGER_PATH, RETIREMENTS_PATH, SOL_OBJECTS_PATH, loadStoredEdges } from './registry-io';
+import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const MULTIPLES_PATH = resolve(ROOT, 'data/binaries/multiples.tsv');
@@ -80,18 +81,11 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
   }
   const starCount = objects.length;
 
-  const clouds = JSON.parse(
-    requireFile(resolve(PUBLIC_DIR, 'clouds.json'), 'run npm run build:clouds'),
-  ) as { clouds: { id: string; name: string }[] };
-  for (const c of clouds.clouds) {
-    objects.push({ designations: [`cloud:${c.id}`], kind: 'cloud', label: `cloud ${c.name}` });
-  }
-
-  const localGroup = JSON.parse(
-    requireFile(resolve(PUBLIC_DIR, 'local-group.json'), 'run npm run build:local-group'),
-  ) as { objects: { id: string; name: string }[] };
-  for (const g of localGroup.objects) {
-    objects.push({ designations: [`lg:${g.id}`], kind: 'galaxy', label: `local-group ${g.name}` });
+  for (const spec of Object.values(SIBLING_ARTIFACTS)) {
+    const payload = JSON.parse(
+      requireFile(resolve(PUBLIC_DIR, spec.file), `run ${spec.buildHint}`),
+    ) as Record<string, SiblingItem[]>;
+    objects.push(...siblingArtifactObjects(spec, payload[spec.arrayKey]));
   }
 
   const solRows = parseSolObjectsTsv(requireFile(SOL_OBJECTS_PATH, 'committed under data/sid/'));
