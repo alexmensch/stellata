@@ -863,6 +863,8 @@ export interface SearchEntry {
   hd?: number;   // Henry Draper number
   hr?: number;   // Harvard Revised / Yale BSC number
   gl?: string;   // Gliese / GJ designation
+  cl?: string;   // multiple-star component letter (A/B/C/Ab…) — see search.ts
+  cp?: number;   // system primary's record index; base for "<designation> <cl>"
 }
 
 // ---- Catalog flag bits --------------------------------------------------

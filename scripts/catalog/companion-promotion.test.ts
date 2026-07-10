@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildCatalogRowIndexMap,
+  buildComponentDesignations,
   canonicalCompLetter,
   composeSyntheticId,
   groupBySystem,
@@ -2388,5 +2389,62 @@ describe('wingRenderablePrimaries', () => {
     ];
     expect(wing(rows, [a])).toBe(0);
     expect(isWinged(a)).toBe(false);
+  });
+});
+
+describe('buildComponentDesignations', () => {
+  const designate = (rows: MultiplesTsvRow[], stars: Star[]) =>
+    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars));
+
+  it('maps every component (including the primary) to the primary as base', () => {
+    // α Cen shape: A (the Bayer-bearing primary) + B resolve by HIP, C by
+    // Gaia; A recurs across the AB and AC rows and dedups to one designation.
+    const a = makeStar({ hip: 71683 });
+    const b = makeStar({ hip: 71681 });
+    const c = makeStar({ hip: 70890, gaiaSourceId: '5853498713190525696' });
+    const rows = [
+      multiplesRow({ systemId: 'W-AB', comp: 'A', hip: 71683, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W-AB', comp: 'B', hip: 71681, orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W-AC', comp: 'A', hip: 71683, orbitRole: 'primary' }),
+      multiplesRow({
+        systemId: 'W-AC', comp: 'C', hip: 70890,
+        gaiaSourceId: '5853498713190525696', orbitRole: 'secondary',
+      }),
+    ];
+    const m = designate(rows, [a, b, c]);
+    expect(m.get(0)).toEqual({ comp: 'A', primaryIdx: 0 });
+    expect(m.get(1)).toEqual({ comp: 'B', primaryIdx: 0 });
+    expect(m.get(2)).toEqual({ comp: 'C', primaryIdx: 0 });
+  });
+
+  it('resolves a blended secondary through its synth slot', () => {
+    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5' });
+    const ab = makeStar({ syntheticId: 'synth-W1-Ab' });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    const m = designate(rows, [aa, ab]);
+    expect(m.get(1)).toEqual({ comp: 'Ab', primaryIdx: 0 });
+  });
+
+  it('omits a secondary that collapses onto the primary (no distinct record)', () => {
+    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5' });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    const m = designate(rows, [aa]);
+    expect(m.get(0)).toEqual({ comp: 'Aa', primaryIdx: 0 });
+    expect(m.size).toBe(1);
+  });
+
+  it('skips a system whose primary does not resolve', () => {
+    const b = makeStar({ hip: 200 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
+    ];
+    expect(designate(rows, [b]).size).toBe(0);
   });
 });

@@ -2034,6 +2034,56 @@ function synthSlotIdx(
   return hit === undefined || hit === exclude ? null : hit;
 }
 
+interface ResolvedComponent {
+  idx: number;
+  /** Canonical WDS component letter (`canonicalCompLetter` applied). */
+  comp: string;
+}
+
+interface ResolvedSystem {
+  systemId: string;
+  primaryIdx: number;
+  /** The primary (its own comp letter) followed by every secondary that
+   *  resolves to a record distinct from the primary. */
+  components: ResolvedComponent[];
+}
+
+/** Resolve a pair cursor's primary + secondaries to catalog record indices
+ *  through the gaia → hip → synth priority + both-ends synth re-home that
+ *  build-runtime-binaries.py's `resolve_idx` uses, so both consumers below
+ *  (wings, component designations) track binaries.bin's rendered pairs. A
+ *  blended component (its id resolves onto another member's row) has its own
+ *  distinct synth slot minted by promotion, and that slot is the truer end.
+ *  Null when the primary itself doesn't resolve. */
+function resolvePairComponents(
+  cursor: PairCursor,
+  rowIndexMap: CatalogRowIndexMap,
+): ResolvedSystem | null {
+  const primary = cursor.primary;
+  if (primary === null) return null;
+  const primarySynth = composeSyntheticId(primary.systemId, primary.comp);
+  const priId = resolveMultiplesIdx(
+    primary.gaiaSourceId, primary.hip, primarySynth, rowIndexMap,
+  );
+  if (priId === null) return null;
+  const primaryIdx = synthSlotIdx(primarySynth, rowIndexMap, priId) ?? priId;
+  const components: ResolvedComponent[] = [{ idx: primaryIdx, comp: primary.comp }];
+  for (const sec of cursor.secondaries) {
+    if (sec.orbitRole !== 'secondary') continue;
+    const comp = canonicalCompLetter(primary.comp, sec.comp);
+    const secondarySynth = composeSyntheticId(sec.systemId, comp);
+    let secIdx = resolveMultiplesIdx(
+      sec.gaiaSourceId, sec.hip, secondarySynth, rowIndexMap,
+    );
+    if (secIdx !== null) {
+      secIdx = synthSlotIdx(secondarySynth, rowIndexMap, secIdx) ?? secIdx;
+    }
+    if (secIdx === null || secIdx === primaryIdx) continue;
+    components.push({ idx: secIdx, comp });
+  }
+  return { systemId: primary.systemId, primaryIdx, components };
+}
+
 /** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every
  *  physical system that renders a companion but which build-catalog's three
  *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
@@ -2056,39 +2106,18 @@ export function wingRenderablePrimaries(
   // Catalog indices participating in a rendered pair, grouped by WDS root.
   const perSystem = new Map<string, Set<number>>();
   for (const cursor of groupBySystem(rows).values()) {
-    const primary = cursor.primary;
-    if (primary === null) continue;
-    const root = wdsRootOf(primary.systemId);
+    const resolved = resolvePairComponents(cursor, rowIndexMap);
+    if (resolved === null) continue;
+    const root = wdsRootOf(resolved.systemId);
     if (root === null) continue;
-
-    const primarySynth = composeSyntheticId(primary.systemId, primary.comp);
-    const priId = resolveMultiplesIdx(
-      primary.gaiaSourceId, primary.hip, primarySynth, rowIndexMap,
-    );
-    if (priId === null) continue;
-    // Both-ends synth re-home, mirroring the writer: a blended component
-    // (its id resolves onto another member's row) has its own distinct
-    // synth slot minted by promotion, and that slot is the truer
-    // companion end.
-    const priIdx = synthSlotIdx(primarySynth, rowIndexMap, priId) ?? priId;
-
-    for (const sec of cursor.secondaries) {
-      if (sec.orbitRole !== 'secondary') continue;
-      const secondarySynth = composeSyntheticId(
-        sec.systemId, canonicalCompLetter(primary.comp, sec.comp),
-      );
-      let secIdx = resolveMultiplesIdx(
-        sec.gaiaSourceId, sec.hip, secondarySynth, rowIndexMap,
-      );
-      if (secIdx !== null) {
-        secIdx = synthSlotIdx(secondarySynth, rowIndexMap, secIdx) ?? secIdx;
-      }
-      if (secIdx === null || secIdx === priIdx) continue;
-      let set = perSystem.get(root);
-      if (!set) { set = new Set(); perSystem.set(root, set); }
-      set.add(priIdx);
-      set.add(secIdx);
-    }
+    const secIdxs = resolved.components
+      .filter((c) => c.idx !== resolved.primaryIdx)
+      .map((c) => c.idx);
+    if (secIdxs.length === 0) continue;
+    let set = perSystem.get(root);
+    if (!set) { set = new Set(); perSystem.set(root, set); }
+    set.add(resolved.primaryIdx);
+    for (const idx of secIdxs) set.add(idx);
   }
 
   let winged = 0;
@@ -2107,4 +2136,39 @@ export function wingRenderablePrimaries(
     winged++;
   }
   return winged;
+}
+
+// ---- Component-letter search designations ------------------------------
+
+export interface ComponentDesignation {
+  /** Canonical WDS component letter, e.g. "A", "B", "C", "Ab". */
+  comp: string;
+  /** Catalog record index of the system primary. The runtime search index
+   *  expands "<primary designation> <comp>" (Bayer / Flamsteed forms) from
+   *  this record so "Alpha Centauri C" / "α Cen C" focus Proxima. */
+  primaryIdx: number;
+}
+
+/** Map each multiples.tsv component to a system-relative designation so the
+ *  runtime can offer "<base> <letter>" search aliases (Alpha Centauri A/B/C).
+ *  Base comes from the SYSTEM PRIMARY's own designation, not the component's:
+ *  Proxima carries no Bayer, yet "α Cen C" must resolve to it. The primary is
+ *  included with its own comp letter (so "α Cen A" focuses it). Resolution
+ *  mirrors binaries.bin (`resolvePairComponents`); coverage is bounded by what
+ *  decomposes in multiples.tsv. First-write-wins on a record shared across
+ *  pairs (α Cen A appears in both the AB and AC rows). */
+export function buildComponentDesignations(
+  rows: MultiplesTsvRow[],
+  rowIndexMap: CatalogRowIndexMap,
+): Map<number, ComponentDesignation> {
+  const out = new Map<number, ComponentDesignation>();
+  for (const cursor of groupBySystem(rows).values()) {
+    const resolved = resolvePairComponents(cursor, rowIndexMap);
+    if (resolved === null) continue;
+    for (const c of resolved.components) {
+      if (out.has(c.idx)) continue;
+      out.set(c.idx, { comp: c.comp, primaryIdx: resolved.primaryIdx });
+    }
+  }
+  return out;
 }

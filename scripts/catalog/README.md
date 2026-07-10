@@ -294,6 +294,18 @@ familiar variable name rather than only HIP/HD. ~14.1k stars are named
 alone — aperiodic variables (Proxima = V0645 Cen, R CrB, T Tau, novae) are
 searchable but never pulsate.
 
+Multiple-star components additionally carry `cl` (canonical WDS component
+letter) + `cp` (the system primary's record index), emitted by
+`buildComponentDesignations` (`companion-promotion.ts`) after the
+row-index map is built — resolving each `multiples.tsv` component through
+the same `gaia → hip → synth` priority `build-runtime-binaries.py` uses.
+These drive the runtime "<system> <letter>" aliases ("Alpha Centauri C" /
+"α Cen C" → Proxima) — see `src/client/typeahead/README.md` § Star
+search. The base designation expands from the PRIMARY (`cp`), not the
+component's own name: Proxima has no Bayer, and "Rigil Kentaurus C" (the
+primary's proper) would be wrong. Coverage is bounded by what decomposes
+in `multiples.tsv` (`componentDesignations` in build-counts pins the total).
+
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
 (`src/client/search.ts`) both import it; drift = compile error.

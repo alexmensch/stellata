@@ -28,6 +28,18 @@ strips the V-number zero-padding GCVS stores (`V0645` → `V645`). A
 variable with no proper/Bayer/Flamsteed name (VY CMa, RR Lyr) takes its
 GCVS designation as its display label via `buildStarLabels`.
 
+**Multiple-star component aliases.** A component whose SearchEntry carries
+`cl` (WDS letter) + `cp` (system-primary record index) gets extra fuzzy
+labels "<system designation> <letter>" — "α Cen C" / "Alpha Centaurus C" /
+"Alf Cen C" all focus Proxima, and "Alpha Cen A"/"B" the right members.
+`buildComponentLabels` expands them by running the PRIMARY's Bayer through
+`buildBayerLabels` (shared Greek/Alf expansion) plus its Flamsteed form,
+then appending the letter. Base comes from the primary because a component
+often has no Bayer of its own (Proxima); proper names are excluded on
+purpose — the primary's proper (Rigil Kentaurus) names component A, not the
+system. `cl`/`cp` are emitted at build time (see `scripts/catalog/README.md`
+§ Search index); coverage is whatever decomposes in `multiples.tsv`.
+
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
 The numeric-ID maps are 1:1 and echo the matched identifier in the

@@ -116,6 +116,32 @@ export function buildGcvsLabels(designation: string, conName: string): string[] 
   return [...labels];
 }
 
+// Search labels for a multiple-star component: "<system designation> <letter>"
+// across every Bayer variant of the SYSTEM PRIMARY ("α Cen C", "Alpha Cen C",
+// "Alf Cen C", …) plus the Flamsteed form, so "Alpha Centauri C" focuses
+// Proxima. The base is the primary's designation because a component often
+// carries none of its own (Proxima has no Bayer). Proper names are excluded
+// on purpose: the primary's proper (Rigil Kentaurus) names component A, not
+// the system, so "Rigil Kentaurus C" would be wrong.
+export function buildComponentLabels(
+  primary: SearchEntry,
+  conCode: string,
+  conName: string,
+  comp: string,
+): string[] {
+  const labels = new Set<string>();
+  if (primary.b && conCode) {
+    for (const base of buildBayerLabels(primary.b, conCode, conName)) {
+      labels.add(`${base} ${comp}`);
+    }
+  }
+  if (primary.f !== undefined && conCode) {
+    labels.add(`${primary.f} ${conCode} ${comp}`);
+    labels.add(`${primary.f} ${conName} ${comp}`);
+  }
+  return [...labels];
+}
+
 // Best human-readable label for a star, falling back through identifier
 // tiers: proper name → Bayer → Flamsteed → GCVS designation → HIP → HD →
 // HR → Gl. For use in the focus display, meta bar, tooltip, and the
@@ -217,6 +243,11 @@ export function buildSearchIndex(
   const flamMap = new Map<string, FuzzyEntry[]>();
   const fuzzyEntries: FuzzyEntry[] = [];
 
+  // Component aliases (below) read the system primary's designation by its
+  // record index (SearchEntry.cp), so index the corpus up front.
+  const byIndex = new Map<number, SearchEntry>();
+  for (const entry of raw) byIndex.set(entry.i, entry);
+
   const addFlam = (key: string, e: FuzzyEntry) => {
     const arr = flamMap.get(key);
     if (arr) arr.push(e);
@@ -265,6 +296,23 @@ export function buildSearchIndex(
       const gcvsPrimary = primary ?? formatGcvsDesignation(entry.g);
       for (const label of buildGcvsLabels(entry.g, conName)) {
         fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon });
+      }
+    }
+
+    // Multiple-star component aliases: "<system> <letter>" → this component.
+    // Base designation comes from the system primary (entry.cp); the labels
+    // fall through to the component's own display, or the first alias when it
+    // is otherwise anonymous.
+    if (entry.cl && entry.cp !== undefined) {
+      const primaryEntry = byIndex.get(entry.cp);
+      if (primaryEntry) {
+        const labels = buildComponentLabels(primaryEntry, conCode, conName, entry.cl);
+        if (labels.length > 0) {
+          const compDisplay = primary ?? labels[0];
+          for (const label of labels) {
+            fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: compDisplay, displayCon });
+          }
+        }
       }
     }
 

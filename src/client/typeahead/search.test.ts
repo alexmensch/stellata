@@ -4,12 +4,14 @@ import {
   formatBayerDisplay,
   superscript,
   buildBayerLabels,
+  buildComponentLabels,
   buildBayerMap,
   buildSpectralMap,
   buildSearchIndex,
   buildStarLabels,
   formatGcvsDesignation,
   buildGcvsLabels,
+  createSearchRunner,
   type SearchEntry,
 } from './search';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
@@ -144,6 +146,70 @@ describe('search / buildBayerLabels', () => {
     // Unparseable Bayer strings still produce one label so the star isn't
     // unfindable, even though we can't generate the variants.
     expect(buildBayerLabels('Xxx', 'Cen', 'Centauri')).toEqual(['Xxx Cen']);
+  });
+});
+
+describe('search / buildComponentLabels', () => {
+  it('expands "<system> <letter>" across every Bayer + Flamsteed form', () => {
+    const primary: SearchEntry = { i: 0, b: 'Alp-1', f: 21, c: 0 };
+    const labels = buildComponentLabels(primary, 'Cen', 'Centauri', 'C');
+    expect(labels).toContain('Alpha Cen C');
+    expect(labels).toContain('Alpha Centauri C');
+    expect(labels).toContain('α Cen C');
+    expect(labels).toContain('Alf Cen C');
+    expect(labels).toContain('21 Cen C');
+    expect(labels).toContain('21 Centauri C');
+  });
+
+  it('drops the primary component suffix — the base is the system, not α¹', () => {
+    const primary: SearchEntry = { i: 0, b: 'Alp-1', c: 0 };
+    const labels = buildComponentLabels(primary, 'Cen', 'Centauri', 'B');
+    expect(labels).not.toContain('α¹ Cen B');
+    expect(labels).toContain('α Cen B');
+  });
+
+  it('returns nothing when the primary has no Bayer or Flamsteed', () => {
+    // A proper-name-only primary yields no base: "Rigil Kentaurus C" would be
+    // wrong (the proper names component A, not the system).
+    expect(buildComponentLabels({ i: 0, p: 'Sol', c: 0 }, 'Cen', 'Centauri', 'B')).toEqual([]);
+  });
+});
+
+describe('search / component-letter aliases', () => {
+  const CONS = [{ code: 'Cen', name: 'Centaurus' }];
+  // α Cen: Rigil (A) carries the Bayer; Toliman (B) and Proxima (C) reference
+  // it via cp. Proxima has no Bayer of its own — its aliases come from α Cen.
+  const raw: SearchEntry[] = [
+    { i: 0, p: 'Rigil Kentaurus', b: 'Alp-1', c: 0, cl: 'A', cp: 0 },
+    { i: 1, p: 'Toliman', b: 'Alp-2', c: 0, cl: 'B', cp: 0 },
+    { i: 2, p: 'Proxima Centauri', c: 0, cl: 'C', cp: 0 },
+  ];
+
+  it('indexes "<system> <letter>" aliases against the component record', () => {
+    const { fuzzyEntries } = buildSearchIndex(raw, CONS);
+    const cLabels = fuzzyEntries.filter((e) => e.index === 2).map((e) => e.label);
+    expect(cLabels).toContain('α Cen C');
+    expect(cLabels).toContain('Alpha Centaurus C');
+    expect(cLabels).toContain('Alf Cen C');
+    // The dropdown display falls through to the component's own name.
+    expect(fuzzyEntries.find((e) => e.index === 2 && e.label === 'α Cen C')?.primary)
+      .toBe('Proxima Centauri');
+  });
+
+  it('resolves the acceptance queries to the correct components end-to-end', () => {
+    const catalog = {
+      ...makeEmptyCatalog(3),
+      constellations: CONS,
+      constellation: Float32Array.from([0, 0, 0]),
+      names: new Map([[0, 'Rigil Kentaurus'], [1, 'Toliman'], [2, 'Proxima Centauri']]),
+    };
+    const run = createSearchRunner(catalog, raw, null);
+    const top = (q: string) => run(q)[0]?.index;
+    expect(top('Alpha Centauri C')).toBe(2);
+    expect(top('α Cen C')).toBe(2);
+    expect(top('Alf Cen C')).toBe(2);
+    expect(top('Alpha Cen A')).toBe(0);
+    expect(top('Alpha Cen B')).toBe(1);
   });
 });
 
