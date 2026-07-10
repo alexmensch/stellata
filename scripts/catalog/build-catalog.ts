@@ -83,6 +83,8 @@ import {
   parseGaiaAstrometryCatalogTsv,
   parseHip2Tsv,
   parseNssSourceIdSet,
+  VELOCITY_SANITY_CEILING_KM_S,
+  GALACTIC_ESCAPE_VELOCITY_KM_S,
   type DirectionSources,
 } from './direction-cascade';
 import { readStars, type Star } from './stars-parse';
@@ -430,11 +432,11 @@ async function main() {
       `rv applied ${stats.rvApplied}`,
   );
   if (stats.velocityClampedSample.length > 0) {
-    console.log(`  velocity clamped (>${1500} km/s, zeroed as artifacts):`);
+    console.log(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`);
     for (const s of stats.velocityClampedSample) console.log(`    ${s}`);
   }
   console.log(
-    `  velocity above escape (>550 km/s, kept + tracked): ${stats.velocityAboveEscape} ` +
+    `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked): ${stats.velocityAboveEscape} ` +
       `— sample (first ${stats.velocityAboveEscapeSample.length}):`,
   );
   for (const s of stats.velocityAboveEscapeSample) console.log(`    ${s}`);

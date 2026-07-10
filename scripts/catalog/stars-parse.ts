@@ -325,12 +325,14 @@ export async function readStars(
     const y = dirRes.dir.y * dist;
     const z = dirRes.dir.z * dist;
 
+    const proper = nonEmpty(row.proper);
+    const isSol = proper === 'Sol';
+
     // Space-motion velocity from the SAME tier's solution + the final
     // stack distance + AT-HYG RV. Sol carries no PM row and sits at the
     // origin — force it to exactly zero so the advance pass leaves the
-    // world origin fixed (the isSol special-case below also gates it).
-    const isSolRow = nonEmpty(row.proper) === 'Sol';
-    let vel = isSolRow
+    // world origin fixed.
+    let vel = isSol
       ? { x: 0, y: 0, z: 0 }
       : velocityPcPerYr(
           dirRes.srcRaDeg, dirRes.srcDecDeg,
@@ -342,7 +344,7 @@ export async function readStars(
     // streak under the epoch-advance. Sol is already zero.
     let velClamped = false;
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
-    const idLabel = (): string => nonEmpty(row.proper)
+    const idLabel = (): string => proper
       ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
     if (speedPcYr > VELOCITY_SANITY_CEILING_PC_YR) {
       velocityClampedSample.push(
@@ -350,7 +352,7 @@ export async function readStars(
       );
       vel = { x: 0, y: 0, z: 0 };
       velClamped = true;
-    } else if (!isSolRow && speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR) {
+    } else if (!isSol && speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR) {
       // Kept (a proven escaper must survive) but tracked — this band is
       // almost all PM×distance / bad-RV artifacts.
       velocityAboveEscape++;
@@ -360,9 +362,9 @@ export async function readStars(
         );
       }
     }
-    velocityVia[isSolRow || velClamped ? 'zero' : dirRes.velVia]++;
+    velocityVia[isSol || velClamped ? 'zero' : dirRes.velVia]++;
     if (velClamped) velocityClamped++;
-    if (!isSolRow && !velClamped && rvKmS !== null && rvKmS !== 0) rvApplied++;
+    if (!isSol && !velClamped && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
     const ciRaw = parseFloatOrNull(row.ci);
     let ci = ciRaw ?? SOLAR_BV_FALLBACK;
@@ -380,11 +382,10 @@ export async function readStars(
       if (ciRaw !== null) ci -= av / R_V;
     }
 
-    const proper = nonEmpty(row.proper);
     // Sol carries no HIP, no Gaia source_id, and no SIMBAD row, so every
     // machine tier misses and the unknown-class 5000 K row misizes it
     // (R 1.27 instead of ~1.03) — the one record addressable only by name.
-    const spectral = proper === 'Sol'
+    const spectral = isSol
       ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
       : resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
     const spectInfo = spectral.info;
@@ -415,7 +416,6 @@ export async function readStars(
     const gl = nonEmpty(row.gl);
     const spectDisplay = resolveSpectDisplay(spectral.spectDisplay, row.spect ?? '');
 
-    const isSol = proper === 'Sol';
     let flags = 0;
     if (proper) flags |= FLAG_HAS_NAME;
     if (isSol) flags |= FLAG_IS_SOL;

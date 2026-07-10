@@ -20,6 +20,10 @@ import {
 } from './catalog-lookup';
 import { parseFloatOrNull, parseRef, type RecordRef } from './corpus-tsv';
 import {
+  KM_S_TO_PC_YR,
+  VELOCITY_SANITY_CEILING_PC_YR,
+} from './direction-cascade';
+import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
@@ -463,7 +467,6 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
     // is physically sane (the sanity clamp caught every PM×distance
     // artifact), so no member streaks under the epoch-advance.
     it('every pair member is below the velocity sanity ceiling', () => {
-      const ceilingPcYr = 1500 * 1.0227121651e-6;
       let checked = 0;
       for (const rel of BINARIES!.relations) {
         for (const idx of [rel.primaryIdx, rel.secondaryIdx]) {
@@ -472,8 +475,8 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
           const speed = Math.hypot(r.vx, r.vy, r.vz);
           expect(
             speed,
-            `pair member #${idx} (${r.name ?? r.i}) velocity ${(speed / 1.0227121651e-6).toFixed(0)} km/s exceeds the sanity ceiling`,
-          ).toBeLessThanOrEqual(ceilingPcYr);
+            `pair member #${idx} (${r.name ?? r.i}) velocity ${(speed / KM_S_TO_PC_YR).toFixed(0)} km/s exceeds the sanity ceiling`,
+          ).toBeLessThanOrEqual(VELOCITY_SANITY_CEILING_PC_YR);
         }
       }
       expect(checked, 'expected pair members in binaries.bin').toBeGreaterThan(0);

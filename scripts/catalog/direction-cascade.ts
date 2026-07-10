@@ -169,13 +169,14 @@ export function directionAtEpoch(
 export const KM_S_TO_PC_YR = 3.15576e7 / 3.0856775814913673e13;
 
 // Space-velocity sanity ceiling. The Galactic escape velocity near Sol is
-// ~550 km/s; genuine hypervelocity stars top out near ~1700 km/s and are
-// vanishingly rare in a bright classic-IDs subset. A computed speed past
-// this is a PM×distance artifact — noisy proper motion on a faint distant
-// star, where v = d·μ blows a spurious sub-arcsec/yr μ up to thousands of
-// km/s. Such rows drop to zero velocity (kept at J2016.0, the same
-// fall-through as no-PM rows) rather than streaking across the sky under
-// the epoch-advance. Finer per-row PM-S/N filtering is future work.
+// ~550 km/s; the fastest known hypervelocity stars reach ~1700 km/s but are
+// absent from this bright classic-IDs subset, so a ceiling at 1500 (~3×
+// escape) clamps no real star here. A computed speed past it is a
+// PM×distance artifact — noisy proper motion on a faint distant star, where
+// v = d·μ blows a spurious sub-arcsec/yr μ up to thousands of km/s. Such
+// rows drop to zero velocity (kept at J2016.0, the same fall-through as
+// no-PM rows) rather than streaking across the sky under the epoch-advance.
+// Finer per-row PM-S/N filtering is future work.
 export const VELOCITY_SANITY_CEILING_KM_S = 1500;
 export const VELOCITY_SANITY_CEILING_PC_YR =
   VELOCITY_SANITY_CEILING_KM_S * KM_S_TO_PC_YR;
