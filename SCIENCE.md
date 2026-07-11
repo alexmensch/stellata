@@ -1151,9 +1151,11 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   kpc, scale height 1 kpc.
 - **SMC (62.81 kpc)**: triaxial 1 : 1.33 : 1.61 with the longest axis
   along line of sight (Subramanian & Subramaniam 2012, *ApJ* 744, 128,
-  DOI 10.1088/0004-637X/744/2/128; distance Graczyk et al. 2020,
-  *ApJ* 904, 13, DOI 10.3847/1538-4357/abbb2b). Resulting semi-axes
-  3.73 / 4.96 / 6.0 kpc.
+  DOI 10.1088/0004-637X/744/2/128; distance from LVDB's SMC row,
+  µ = 18.99 ± 0.1 — Cioni et al. 2000, *A&A* 359, 601, DENIS TRGB.
+  Graczyk et al. 2020's eclipsing-binary result is 62.44 kpc,
+  µ = 18.977; LVDB pins Cioni and the two agree well within its
+  ±0.1 mag uncertainty). Resulting semi-axes 3.73 / 4.96 / 6.0 kpc.
 - **Sagittarius dSph (26.3 kpc)**: 3D axis allocation — LVDB's
   projected ellipticity captures the sky-plane shape but not the
   line-of-sight extent (Ibata et al. 1995, *AJ* 110, 632,
