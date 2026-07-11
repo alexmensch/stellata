@@ -323,7 +323,7 @@ function resolveRef(ref: RecordRef, label: string): CatalogRecord {
 }
 
 function findRelation(secondaryIdx: number): BinaryRelation | null {
-  const i = BINARIES!.secondaryIdxToRelation.get(secondaryIdx);
+  const i = BINARIES!.secondaryIdxToRelations.get(secondaryIdx)?.[0];
   return i === undefined ? null : BINARIES!.relations[i];
 }
 

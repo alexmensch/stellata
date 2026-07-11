@@ -300,8 +300,8 @@ export class BinaryOrbitField {
     const stack: number[] = [];
     const primRels = bin.primaryIdxToRelations.get(focalIdx);
     if (primRels) for (const ri of primRels) stack.push(ri);
-    const secRel = bin.secondaryIdxToRelation.get(focalIdx);
-    if (secRel !== undefined) stack.push(secRel);
+    const secRels = bin.secondaryIdxToRelations.get(focalIdx);
+    if (secRels) for (const ri of secRels) stack.push(ri);
     while (stack.length > 0) {
       const ri = stack.pop() as number;
       if (this.focalChainRelIdx.has(ri)) continue;

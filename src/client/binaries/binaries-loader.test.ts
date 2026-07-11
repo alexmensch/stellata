@@ -201,13 +201,13 @@ describe('parseBinaries', () => {
     expect(data.primaryIdxToRelations.has(101)).toBe(false);
   });
 
-  it('builds a secondary index → relation map keeping the first occurrence on collision', () => {
+  it('builds a secondary index → relations map listing every primary in file order', () => {
     const buf = encodeFixture([
       record({ primaryIdx: 100, secondaryIdx: 101 }),
-      record({ primaryIdx: 200, secondaryIdx: 101 }),  // collision
+      record({ primaryIdx: 200, secondaryIdx: 101 }),  // second anchor, same secondary
     ]);
     const data = parseBinaries(buf);
-    expect(data.secondaryIdxToRelation.get(101)).toBe(0);
+    expect(data.secondaryIdxToRelations.get(101)).toEqual([0, 1]);
   });
 
   it('preserves parent-relation indices on a 2-level hierarchy', () => {

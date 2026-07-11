@@ -110,7 +110,7 @@ function makeFixture(): {
     version: 1,
     relations: [outer, inner],
     primaryIdxToRelations: new Map([[0, [0, 1]]]),
-    secondaryIdxToRelation: new Map([[1, 1], [2, 0]]),
+    secondaryIdxToRelations: new Map([[1, [1]], [2, [0]]]),
   };
 
   // Three.js attributes need only be carriers for the field's
@@ -365,7 +365,7 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
       version: 1,
       relations: [rel],
       primaryIdxToRelations: new Map([[0, [0]]]),
-      secondaryIdxToRelation: new Map([[1, 0]]),
+      secondaryIdxToRelations: new Map([[1, [0]]]),
     };
     const field = new BinaryOrbitField({
       binaries, absolutePositions: positions, absoluteMags: mags,
@@ -514,7 +514,7 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
       version: 1,
       relations: [outer, inner],
       primaryIdxToRelations: new Map([[0, [0, 1]]]),
-      secondaryIdxToRelation: new Map([[1, 1], [2, 0]]),
+      secondaryIdxToRelations: new Map([[1, [1]], [2, [0]]]),
     };
     const iPositionAttr = new THREE.InstancedBufferAttribute(local, 3);
     const iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(suppress, 1);
@@ -776,7 +776,7 @@ describe('BinaryOrbitField — physical sanity (Sirius-shaped)', () => {
       version: 1,
       relations: [r],
       primaryIdxToRelations: new Map([[0, [0]]]),
-      secondaryIdxToRelation: new Map([[1, 0]]),
+      secondaryIdxToRelations: new Map([[1, [0]]]),
     };
     const iPositionAttr = new THREE.InstancedBufferAttribute(local, 3);
     const iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(suppress, 1);
@@ -846,7 +846,7 @@ describe('BinaryOrbitField.update — no focal rebase (barycentric always)', () 
       version: 1,
       relations: [relation],
       primaryIdxToRelations: new Map([[0, [0]]]),
-      secondaryIdxToRelation: new Map([[1, 0]]),
+      secondaryIdxToRelations: new Map([[1, [0]]]),
     };
     const iPositionAttr = new THREE.InstancedBufferAttribute(local, 3);
     const iCompositeSuppressAttr = new THREE.InstancedBufferAttribute(suppress, 1);

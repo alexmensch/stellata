@@ -25,17 +25,20 @@ export function resolveStarName(starLabels: Map<number, string>, idx: number): s
   return starLabels.get(idx) ?? `Unnamed #${idx}`;
 }
 
-// Lines describing the star's binary role: a two-line block when it is a
-// secondary (heading + orbital detail) and/or a companion count + named
-// list when it is itself a primary. A hierarchical member can be both.
+// Lines describing the star's binary role: a two-line block per relation
+// where it is a secondary (heading + orbital detail) and/or a companion
+// count + named list when it is itself a primary. A hierarchical member
+// can be both.
 export function companionLines(idx: number, ctx: CompanionFormatContext): string[] {
   const binaries = ctx.binaries;
   if (!binaries) return [];
   const out: string[] = [];
 
-  const secRelIdx = binaries.secondaryIdxToRelation.get(idx);
-  if (secRelIdx !== undefined) {
-    out.push(...companionOfLines(binaries.relations[secRelIdx], ctx));
+  const secRelIdxs = binaries.secondaryIdxToRelations.get(idx);
+  if (secRelIdxs) {
+    out.push(
+      ...companionOfAllLines(secRelIdxs.map((i) => binaries.relations[i]), ctx),
+    );
   }
 
   const primRelIdxs = binaries.primaryIdxToRelations.get(idx);
@@ -46,29 +49,67 @@ export function companionLines(idx: number, ctx: CompanionFormatContext): string
   return out;
 }
 
-// The star is the secondary of `rel`. A heading line names the primary;
-// the detail line is per-tier, keyed on the relation flags (see
-// ../binaries/README.md § Tier mapping).
-function companionOfLines(
+// One block per companion-of relation, except that tier-3 relations
+// quoting the IDENTICAL measurement collapse into one heading naming
+// every primary — a secondary anchored off two members of the same
+// system (HD 108250 off Acrux A and B) would otherwise repeat the same
+// ρ/PA block per primary.
+function companionOfAllLines(
+  rels: BinaryRelation[],
+  ctx: CompanionFormatContext,
+): string[] {
+  const out: string[] = [];
+  const consumed = new Set<number>();
+  for (let i = 0; i < rels.length; i++) {
+    if (consumed.has(i)) continue;
+    const rel = rels[i];
+    if ((rel.flags & FLAG_HAS_ORBIT) !== 0) {
+      out.push(...orbitCompanionOfLines(rel, ctx));
+      continue;
+    }
+    const detail = tier3DetailLine(rel);
+    const names = [resolveStarName(ctx.starLabels, rel.primaryIdx)];
+    for (let j = i + 1; j < rels.length; j++) {
+      if (consumed.has(j)) continue;
+      const other = rels[j];
+      if ((other.flags & FLAG_HAS_ORBIT) === 0 && tier3DetailLine(other) === detail) {
+        consumed.add(j);
+        names.push(resolveStarName(ctx.starLabels, other.primaryIdx));
+      }
+    }
+    out.push(`Visual companion of ${joinNames(names)}`);
+    if (detail) out.push(detail);
+  }
+  return out;
+}
+
+// Tier-3 static measurement line: "ρ = 3.5″ · PA 111° at J2015.5", or
+// null when the record carries neither field.
+function tier3DetailLine(rel: BinaryRelation): string | null {
+  const measured: string[] = [];
+  if (Number.isFinite(rel.sepArcsec) && rel.sepArcsec > 0) {
+    measured.push(`ρ = ${rel.sepArcsec.toFixed(1)}″`);
+  }
+  if (Number.isFinite(rel.paDeg)) {
+    measured.push(`PA ${Math.round(rel.paDeg)}°`);
+  }
+  if (measured.length === 0) return null;
+  return `${measured.join(' · ')} at ${formatEpoch(rel.sepPaEpochJd)}`;
+}
+
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+// The star is the secondary of an orbit-bearing (tier 1/2) relation.
+// A heading line names the primary; the detail line is per-tier, keyed
+// on the relation flags (see ../binaries/README.md § Tier mapping).
+function orbitCompanionOfLines(
   rel: BinaryRelation,
   ctx: CompanionFormatContext,
 ): string[] {
   const primaryName = resolveStarName(ctx.starLabels, rel.primaryIdx);
-
-  if ((rel.flags & FLAG_HAS_ORBIT) === 0) {
-    // Tier 3 — no orbit: quote the static WDS sep + PA at its epoch.
-    const head = `Visual companion of ${primaryName}`;
-    const measured: string[] = [];
-    if (Number.isFinite(rel.sepArcsec) && rel.sepArcsec > 0) {
-      measured.push(`ρ = ${rel.sepArcsec.toFixed(1)}″`);
-    }
-    if (Number.isFinite(rel.paDeg)) {
-      measured.push(`PA ${Math.round(rel.paDeg)}°`);
-    }
-    if (measured.length === 0) return [head];
-    return [head, `${measured.join(' · ')} at ${formatEpoch(rel.sepPaEpochJd)}`];
-  }
-
   const period = formatOrbitalPeriod(rel.pDays);
   const head = `Orbits ${primaryName}`;
   if ((rel.flags & FLAG_HAS_INCLINATION) === 0) {

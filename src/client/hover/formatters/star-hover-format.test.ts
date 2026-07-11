@@ -72,16 +72,16 @@ function makeRelation(o: Partial<BinaryRelation>): BinaryRelation {
 
 function makeBinaries(relations: BinaryRelation[]): BinariesData {
   const primaryIdxToRelations = new Map<number, number[]>();
-  const secondaryIdxToRelation = new Map<number, number>();
+  const secondaryIdxToRelations = new Map<number, number[]>();
   relations.forEach((r, i) => {
     const arr = primaryIdxToRelations.get(r.primaryIdx);
     if (arr) arr.push(i);
     else primaryIdxToRelations.set(r.primaryIdx, [i]);
-    if (!secondaryIdxToRelation.has(r.secondaryIdx)) {
-      secondaryIdxToRelation.set(r.secondaryIdx, i);
-    }
+    const sArr = secondaryIdxToRelations.get(r.secondaryIdx);
+    if (sArr) sArr.push(i);
+    else secondaryIdxToRelations.set(r.secondaryIdx, [i]);
   });
-  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelation };
+  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelations };
 }
 
 // idx 0 = primary "Sirius A", idx 1 = secondary "Sirius B". Reuses
@@ -254,6 +254,58 @@ describe('formatStarHover — binary companions', () => {
     expect(out.lines).toContain('2 known companions:');
     expect(out.lines).toContain('Sirius B');
     expect(out.lines).toContain('Sirius C');
+  });
+
+  it('merges tier-3 relations quoting the identical measurement into one heading', () => {
+    // HD-108250 shape: one secondary anchored off two members of the
+    // same system, both rows carrying the same wide measurement.
+    const ctx = binaryCtx(
+      [
+        makeRelation({ primaryIdx: 0, secondaryIdx: 2, flags: 0, sepArcsec: 88.4, paDeg: 202, sepPaEpochJd: J2000_JD }),
+        makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: 0, sepArcsec: 88.4, paDeg: 202, sepPaEpochJd: J2000_JD }),
+      ],
+      {
+        starLabels: new Map<number, string>([
+          [0, 'Acrux'],
+          [1, 'Acrux B'],
+          [2, 'HD 108250'],
+        ]),
+      },
+    );
+    const out = formatStarHover(2, D_CAM, ctx);
+    expect(out.lines).toContain('Visual companion of Acrux and Acrux B');
+    expect(out.lines).toContain('ρ = 88.4″ · PA 202° at J2000.0');
+    // Exactly one heading + one detail line — no per-primary repeat.
+    expect(out.lines.filter((l) => l.startsWith('Visual companion'))).toHaveLength(1);
+  });
+
+  it('keeps separate blocks when the measurements differ', () => {
+    const ctx = binaryCtx(
+      [
+        makeRelation({ primaryIdx: 0, secondaryIdx: 2, flags: 0, sepArcsec: 88.4, paDeg: 202, sepPaEpochJd: J2000_JD }),
+        makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: 0, sepArcsec: 90.1, paDeg: 204, sepPaEpochJd: J2000_JD }),
+      ],
+      {
+        starLabels: new Map<number, string>([
+          [0, 'Acrux'],
+          [1, 'Acrux B'],
+          [2, 'HD 108250'],
+        ]),
+      },
+    );
+    const out = formatStarHover(2, D_CAM, ctx);
+    expect(out.lines).toContain('Visual companion of Acrux');
+    expect(out.lines).toContain('Visual companion of Acrux B');
+  });
+
+  it('single-relation secondaries render exactly as before', () => {
+    const ctx = binaryCtx([
+      makeRelation({ flags: 0, sepArcsec: 5.3, paDeg: 132, sepPaEpochJd: J2000_JD }),
+    ]);
+    const out = formatStarHover(1, D_CAM, ctx);
+    expect(out.lines.filter((l) => l.startsWith('Visual companion'))).toEqual([
+      'Visual companion of Sirius A',
+    ]);
   });
 
   it('adds no companion line for a star in no relation', () => {
