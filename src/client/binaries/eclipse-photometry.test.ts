@@ -56,7 +56,7 @@ function makeFixture(spec: FixtureSpec) {
     version: 1,
     relations: [rel],
     primaryIdxToRelations: new Map([[0, [0]]]),
-    secondaryIdxToRelation: new Map([[1, 0]]),
+    secondaryIdxToRelations: new Map([[1, [0]]]),
   };
 
   return {

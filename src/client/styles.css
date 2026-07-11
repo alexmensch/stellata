@@ -86,7 +86,7 @@ html, body {
   position: fixed;
   top: 10px;
   right: 14px;
-  bottom: 56px;
+  bottom: 16px;
   width: 280px;
   max-width: calc(100vw - 28px);
   display: flex;
@@ -96,6 +96,22 @@ html, body {
   pointer-events: none;
 }
 .ui-top > * { pointer-events: auto; }
+/* Bottom group of the right-hand column: focus card + meta (star count /
+ * time scrubber). One margin-top: auto pins the whole group to the
+ * column's floor; the column gap separates its members — no fixed
+ * clearances, so an expanding scrubber pushes the focus card up
+ * naturally. */
+.ui-top-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  /* Later rule beats `.ui-top > *`'s auto — clicks in the gap between
+   * the card and the meta readout fall through to the canvas. */
+  pointer-events: none;
+}
+.ui-top-bottom > * { pointer-events: auto; }
 
 /* Top-left brand box — independent of `.ui-top` so the right-side stack's
  * width/wrap behaviour is unaffected. Same blurred-card aesthetic as the
@@ -160,13 +176,13 @@ html, body {
 }
 .ui-bottom > * { pointer-events: auto; }
 
-/* Split scale-bar (start) and meta (end) apart on wide viewports; on narrow
- * viewports flex-wrap stacks them and the auto-margin still right-aligns
- * meta on its own line. */
-.ui-bottom .meta { margin-left: auto; }
-
-/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls toggle. */
-body[data-controls-hidden] #ui-top {
+/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls
+ * toggle. Hides the interactive controls in the right-hand column; the
+ * meta readout (star count / time scrubber) stays visible, pinned to
+ * the column floor by its .ui-top-bottom wrapper. */
+body[data-controls-hidden] #topbar,
+body[data-controls-hidden] #panel,
+body[data-controls-hidden] #focus-card {
   display: none;
 }
 .controls-restore-btn {
@@ -503,6 +519,38 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   overflow-y: auto;
   flex: 1 1 auto;
 }
+
+/* Focus card — the tier-2 object-info panel in the right column's
+ * bottom group (.ui-top-bottom), directly above the meta readout.
+ * Shares the .panel card chrome; the header carries the object's display
+ * name, so the uppercase transform is dropped (Greek Bayer forms must
+ * not uppercase). */
+.focus-card .panel-header {
+  text-transform: none;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+}
+.focus-card-inner {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.focus-identity { color: var(--fg-dim); }
+.focus-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.focus-row-label {
+  color: var(--fg-dim);
+  flex: 0 0 auto;
+}
+.focus-row-value {
+  text-align: right;
+  white-space: pre-line;
+}
+.focus-line { white-space: pre-line; }
 
 .group {
   padding: 4px 0;
@@ -1065,11 +1113,8 @@ body.monochrome .poi-label {
   stroke: rgba(255, 255, 255, 0.9);
 }
 
-/* The scale-bar widget is a single SVG with two parts: a horizontal scene-
- * scale bar at the bottom (always visible in navigate; degrees-FOV in
- * observe), and a perspective z-axis line rising up-and-right from the
- * bar's left end (only visible when focused on a star or cloud, hidden
- * in observe). Both parts are drawn in scale-bar.ts in pixel coords. */
+/* The scale-bar widget: a horizontal scene-scale bar (navigate) /
+ * degrees-of-sky bar (observe), drawn in scale-bar.ts in pixel coords. */
 .scale-bar {
   color: var(--fg);
   font-size: 10.5px;
@@ -1081,40 +1126,26 @@ body.monochrome .poi-label {
 }
 .scale-bar-svg .h-line,
 .scale-bar-svg .h-endcap,
-.scale-bar-svg .h-tick,
-.scale-bar-svg .z-line,
-.scale-bar-svg .z-endcap {
+.scale-bar-svg .h-tick {
   stroke: var(--fg);
   fill: none;
   shape-rendering: crispEdges;
 }
-.scale-bar-svg .h-line,
-.scale-bar-svg .z-line {
+.scale-bar-svg .h-line {
   stroke-width: 1;
 }
-.scale-bar-svg .h-endcap,
-.scale-bar-svg .z-endcap {
+.scale-bar-svg .h-endcap {
   stroke-width: 1.25;
 }
 .scale-bar-svg .h-tick {
   stroke-width: 1;
   opacity: 0.55;
 }
-.scale-bar-svg .z-arrow {
-  fill: var(--fg);
-  stroke: none;
-}
-.scale-bar-svg .h-label,
-.scale-bar-svg .z-name,
-.scale-bar-svg .z-dist {
+.scale-bar-svg .h-label {
   fill: var(--fg-dim);
   font-size: 10.5px;
   letter-spacing: 0.08em;
   font-family: inherit;
-}
-.scale-bar-svg .z-name {
-  fill: var(--fg);
-  letter-spacing: 0.05em;
 }
 
 .tooltip {

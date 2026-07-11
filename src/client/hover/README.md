@@ -71,20 +71,19 @@ The planet hover card layout:
 <name>
 <distance> · Vmag <m>
 Period <years> yr
-Radius <km> km
+Radius <R⊕> (<km> km)
 ```
 
-Reasoning: the distance line pairs naturally with apparent magnitude
-(both are observer-relative quantities that change as the camera moves).
-Period sits on its own line directly under the distance because orbital
-period is the user's first "is this a fast inner planet or a slow outer
-one?" tell, and reading it just below the AU distance keeps the
-cause-and-effect (closer orbits ⇒ shorter periods) on adjacent lines.
-Radius sits on the bottom as the physical-body fact that doesn't change
-with viewpoint.
+Reasoning: the distance line pairs naturally with apparent magnitude —
+both are camera-relative quantities that change as the camera moves
+(every tier-1/2 distance is from the CAMERA, per the lo5 frame
+principle; Sol-centred values are tier-3 territory). Period sits on its
+own line as the user's first "is this a fast inner planet or a slow
+outer one?" tell. Radius sits on the bottom as the physical-body fact
+that doesn't change with viewpoint.
 
 Layout shape (distance+mag line, then per-quantity stack lines)
-generalises to other layers: observer-relative quantities on the first
+generalises to other layers: camera-relative quantities on the first
 sub-line; intrinsic per-object quantities on their own lines below.
 
 ### Rule 2 — Visibility ⇒ hoverable. No focus-gate on hover.

@@ -1,7 +1,8 @@
-// Planet hover formatter — name, host→planet distance · Vmag, period,
+// Planet hover formatter — name, camera distance · Vmag, period,
 // radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
+import { formatEarthRadii } from '../../format/physical-format';
 import type { Planet } from '../../solar-system/planet-system';
 import type { HoverPayload } from '../hover-types';
 
@@ -9,29 +10,25 @@ export interface PlanetHoverFormatContext {
   // Planet roster for the focused host. `planetIdx` indexes into this
   // array. Read-only — the formatter never mutates.
   planets: readonly Planet[];
-  // Live host→planet distance in pc, or null when the planet system
-  // isn't attached at format time (degenerate; shouldn't happen because
-  // the provider gates on `getFocusedPlanetSystem`).
-  distanceFromHostPc(planetIdx: number): number | null;
-  // Live apparent V mag at the viewer's current position, or null in
-  // the same degenerate case as above.
+  // Live apparent V mag at the viewer's current position, or null when
+  // the planet system isn't attached at format time (degenerate;
+  // shouldn't happen because the provider gates on the attached system).
   appMagFor(planetIdx: number): number | null;
 }
 
 export function formatPlanetHover(
   planetIdx: number,
+  cameraDistancePc: number,
   ctx: PlanetHoverFormatContext,
 ): HoverPayload {
   const planet = ctx.planets[planetIdx];
   if (!planet) return { name: '', lines: [] };
 
   const lines: string[] = [];
-  const dist = ctx.distanceFromHostPc(planetIdx);
   const appMag = ctx.appMagFor(planetIdx);
-  const distStr = dist !== null ? fmtDistAuto(dist) : '';
   const magStr = appMag !== null ? `Vmag ${formatAppMag(appMag)}` : '';
-  const headLine = [distStr, magStr].filter(Boolean).join(' · ');
-  if (headLine) lines.push(headLine);
+  const headLine = [fmtDistAuto(cameraDistancePc), magStr].filter(Boolean).join(' · ');
+  lines.push(headLine);
 
   // Period above Radius — orbital period is the user's first "is this
   // a fast inner planet or a slow outer one?" tell, and the AU
@@ -42,7 +39,7 @@ export function formatPlanetHover(
   // is Sol-mass so the simple form is exact.
   const yearsPeriod = Math.pow(planet.semiMajorAxisAu, 1.5);
   lines.push(`Period ${formatPeriodYears(yearsPeriod)} yr`);
-  lines.push(`Radius ${formatKm(planet.radiusKm)} km`);
+  lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);
 
   return { name: planet.name, lines };
 }
@@ -55,14 +52,6 @@ function formatAppMag(m: number): string {
   if (m >= 0) return `+${m.toFixed(1)}`;
   // toFixed(1) already prints the leading minus.
   return m.toFixed(1);
-}
-
-// Thousands-separated integer kilometres. Deterministic across locales
-// (the locale-aware `Number.prototype.toLocaleString()` varies between
-// environments and breaks golden tests on a German vitest runner that
-// would render Jupiter as "69.911 km"). One-shot regex insert.
-function formatKm(km: number): string {
-  return Math.round(km).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 // Orbital period readout. Sub-decade values keep two decimals (Mercury

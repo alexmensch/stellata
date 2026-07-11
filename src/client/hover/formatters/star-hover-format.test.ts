@@ -14,14 +14,6 @@ import { formatStarHover, type StarHoverFormatContext } from './star-hover-forma
 // non-variable, idx 1 is the variable, idx 2 is the unnamed-but-HIP
 // fallback. Tests pick the slot they want.
 function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFormatContext {
-  const positions = new Float32Array([
-    // idx 0 — Vega-like distance (~7.7 pc)
-    5, 4, 3,
-    // idx 1 — Mira-like distance (~92 pc)
-    60, 50, 40,
-    // idx 2 — far unnamed (~150 pc)
-    100, 80, 60,
-  ]);
   const constellation = new Float32Array([0, 1, 255]);
   const constellations = [{ name: 'Lyra' }, { name: 'Cetus' }];
   const periodDays = new Float32Array([0, 332, 0]);
@@ -36,10 +28,17 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
     [1, 'M5-9e'],
     // idx 2: no spectral entry — exercise the no-spectral path
   ]);
+  // idx 0 A-class dwarf, idx 1 M-class with unknown luminosity, idx 2
+  // fully unknown (class 8 / lum 255).
+  const spectClass = new Float32Array([2, 6, 8]);
+  const luminosityClass = new Uint8Array([2, 255, 255]);
+  const flags = new Uint8Array(3);
   return {
     starLabels,
     spectralMap,
-    positions,
+    spectClass,
+    luminosityClass,
+    flags,
     constellation,
     constellations,
     periodDays,
@@ -75,20 +74,20 @@ function makeRelation(o: Partial<BinaryRelation>): BinaryRelation {
 
 function makeBinaries(relations: BinaryRelation[]): BinariesData {
   const primaryIdxToRelations = new Map<number, number[]>();
-  const secondaryIdxToRelation = new Map<number, number>();
+  const secondaryIdxToRelations = new Map<number, number[]>();
   relations.forEach((r, i) => {
     const arr = primaryIdxToRelations.get(r.primaryIdx);
     if (arr) arr.push(i);
     else primaryIdxToRelations.set(r.primaryIdx, [i]);
-    if (!secondaryIdxToRelation.has(r.secondaryIdx)) {
-      secondaryIdxToRelation.set(r.secondaryIdx, i);
-    }
+    const sArr = secondaryIdxToRelations.get(r.secondaryIdx);
+    if (sArr) sArr.push(i);
+    else secondaryIdxToRelations.set(r.secondaryIdx, [i]);
   });
-  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelation };
+  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelations };
 }
 
 // idx 0 = primary "Sirius A", idx 1 = secondary "Sirius B". Reuses
-// buildCtx's 3-slot position/constellation arrays.
+// buildCtx's 3-slot fixture arrays.
 function binaryCtx(
   relations: BinaryRelation[],
   overrides: Partial<StarHoverFormatContext> = {},
@@ -103,29 +102,37 @@ function binaryCtx(
   });
 }
 
+// Camera distance used where a test doesn't care about the value.
+const D_CAM = 7.07;
+
 describe('formatStarHover', () => {
   beforeEach(() => {
-    // fmtDist reads module-level state. Pin to 'pc' so the golden
+    // fmtDistAuto reads module-level state. Pin to 'pc' so the golden
     // distance strings below stay stable regardless of test order.
     setUnit('pc');
   });
 
   it('formats a named non-variable star (Vega-like)', () => {
-    const out = formatStarHover(0, buildCtx());
+    const out = formatStarHover(0, 7.07, buildCtx());
     expect(out.name).toBe('Vega');
-    // Distance = sqrt(5² + 4² + 3²) = sqrt(50) ≈ 7.07 pc → '7.1 pc'
-    // via fmtDist's <100 pc tier (one decimal).
+    // Camera distance 7.07 pc → '7.1 pc' via fmtDist's <100 pc tier
+    // (one decimal). Spectral is the cleaned label + descriptor.
     expect(out.lines).toEqual([
       'Lyra · 7.1 pc',
-      'A0V',
+      'A0 V · white main-sequence star',
     ]);
   });
 
+  it('switches the distance to AU when the camera is close', () => {
+    // 0.001 pc ≈ 206.3 AU — inside fmtDistAuto's AU regime.
+    const out = formatStarHover(0, 0.001, buildCtx());
+    expect(out.lines[0]).toBe('Lyra · 206 AU');
+  });
+
   it('formats a variable star with period + Δmag (Mira-like)', () => {
-    const out = formatStarHover(1, buildCtx());
+    const out = formatStarHover(1, 87.74, buildCtx());
     expect(out.name).toBe('Mira');
-    // Distance = sqrt(60² + 50² + 40²) = sqrt(7700) ≈ 87.75 pc → '87.7 pc'
-    // (fmtDist <100 pc tier uses toFixed(1) which truncates the 5).
+    // Unknown luminosity class → raw-style label only, no descriptor.
     expect(out.lines).toEqual([
       'Cetus · 87.7 pc',
       'M5-9e',
@@ -133,13 +140,23 @@ describe('formatStarHover', () => {
     ]);
   });
 
+  it('keeps only the primary component of a composite spectral', () => {
+    const ctx = buildCtx({
+      spectralMap: new Map([[0, 'K0III+K7V']]),
+      spectClass: new Float32Array([5, 6, 8]),
+      luminosityClass: new Uint8Array([4, 255, 255]),
+    });
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.lines).toContain('K0 III · orange giant');
+    expect(out.lines.some((l) => l.includes('K7'))).toBe(false);
+  });
+
   it('formats an unnamed catalog star with the HIP fallback in the name line', () => {
     // idx 2 has constellation = 255 (no constellation) and no spectral
     // entry — distance is the only sub-line.
-    const out = formatStarHover(2, buildCtx());
+    const out = formatStarHover(2, 141.42, buildCtx());
     expect(out.name).toBe('HIP 99999');
-    // sqrt(100² + 80² + 60²) = sqrt(20000) ≈ 141.42 pc → '141 pc'
-    // (fmtDist 100–10k tier uses Math.round).
+    // fmtDist 100–10k tier uses Math.round.
     expect(out.lines).toEqual([
       '141 pc',
     ]);
@@ -151,13 +168,29 @@ describe('formatStarHover', () => {
       periodDays: new Float32Array([0.567, 0, 0]),
       amplitudeMag: new Float32Array([1.0, 0, 0]),
     });
-    const out = formatStarHover(0, ctx);
+    const out = formatStarHover(0, D_CAM, ctx);
     expect(out.lines).toContain('Variable · Period 0.57d · Δmag 1.0');
   });
 
   it('falls back to "Unnamed #idx" when starLabels has no entry', () => {
     const ctx = buildCtx({ starLabels: new Map() });
-    expect(formatStarHover(0, ctx).name).toBe('Unnamed #0');
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Unnamed #0');
+  });
+
+  it('marks a synthetic companion\'s brightness-derived class as estimated', () => {
+    // Promoted WDS companion: class bytes from spectralFromAbsmag, no
+    // raw spectral string, synthetic flag (0x20) set.
+    const ctx = buildCtx({
+      spectralMap: new Map(),
+      flags: new Uint8Array([0x20, 0, 0]),
+    });
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.lines).toContain('white main-sequence star (estimated)');
+  });
+
+  it('a real classification is never marked estimated', () => {
+    const out = formatStarHover(0, D_CAM, buildCtx());
+    expect(out.lines).toContain('A0 V · white main-sequence star');
   });
 });
 
@@ -180,7 +213,7 @@ describe('formatStarHover — binary companions', () => {
         q: 0.3,
       }),
     ]);
-    const out = formatStarHover(1, ctx);
+    const out = formatStarHover(1, D_CAM, ctx);
     expect(out.name).toBe('Sirius B');
     expect(out.lines).toContain('Orbits Sirius A · ρ = 4.8 AU');
     expect(out.lines).toContain('P = 79.91 yr · e = 0.52');
@@ -190,7 +223,7 @@ describe('formatStarHover — binary companions', () => {
     const ctx = binaryCtx([
       makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 * 365.25 }),
     ]);
-    const out = formatStarHover(1, ctx);
+    const out = formatStarHover(1, D_CAM, ctx);
     expect(out.name).toBe('Sirius B');
     expect(out.lines).toContain('Orbits Sirius A');
     expect(out.lines).toContain('P = 9.21 yr (unknown orbit)');
@@ -200,7 +233,7 @@ describe('formatStarHover — binary companions', () => {
     const ctx = binaryCtx([
       makeRelation({ flags: 0, sepArcsec: 5.3, paDeg: 132, sepPaEpochJd: J2000_JD }),
     ]);
-    const out = formatStarHover(1, ctx);
+    const out = formatStarHover(1, D_CAM, ctx);
     expect(out.lines).toContain('Visual companion of Sirius A');
     expect(out.lines).toContain('ρ = 5.3″ · PA 132° at J2000.0');
   });
@@ -209,19 +242,20 @@ describe('formatStarHover — binary companions', () => {
     const ctx = binaryCtx([
       makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 }),
     ]);
-    expect(formatStarHover(1, ctx).lines).toContain('P = 9.21 d (unknown orbit)');
+    expect(formatStarHover(1, D_CAM, ctx).lines).toContain('P = 9.21 d (unknown orbit)');
   });
 
-  it('primary card names the sole companion', () => {
+  it('primary card lists the sole companion under the shared heading', () => {
     const ctx = binaryCtx([
       makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 * 365.25 }),
     ]);
-    const out = formatStarHover(0, ctx);
+    const out = formatStarHover(0, D_CAM, ctx);
     expect(out.name).toBe('Sirius A');
-    expect(out.lines).toContain('1 known companion: Sirius B');
+    expect(out.lines).toContain('Known companions:');
+    expect(out.lines).toContain('Sirius B');
   });
 
-  it('primary card lists every companion on its own line under a count heading', () => {
+  it('primary card lists every companion on its own line under the heading', () => {
     const ctx = binaryCtx(
       [
         makeRelation({ primaryIdx: 0, secondaryIdx: 1, flags: FLAG_HAS_ORBIT, pDays: 100 }),
@@ -235,10 +269,62 @@ describe('formatStarHover — binary companions', () => {
         ]),
       },
     );
-    const out = formatStarHover(0, ctx);
-    expect(out.lines).toContain('2 known companions:');
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.lines).toContain('Known companions:');
     expect(out.lines).toContain('Sirius B');
     expect(out.lines).toContain('Sirius C');
+  });
+
+  it('merges tier-3 relations quoting the identical measurement into one heading', () => {
+    // HD-108250 shape: one secondary anchored off two members of the
+    // same system, both rows carrying the same wide measurement.
+    const ctx = binaryCtx(
+      [
+        makeRelation({ primaryIdx: 0, secondaryIdx: 2, flags: 0, sepArcsec: 88.4, paDeg: 202, sepPaEpochJd: J2000_JD }),
+        makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: 0, sepArcsec: 88.4, paDeg: 202, sepPaEpochJd: J2000_JD }),
+      ],
+      {
+        starLabels: new Map<number, string>([
+          [0, 'Acrux'],
+          [1, 'Acrux B'],
+          [2, 'HD 108250'],
+        ]),
+      },
+    );
+    const out = formatStarHover(2, D_CAM, ctx);
+    expect(out.lines).toContain('Visual companion of Acrux and Acrux B');
+    expect(out.lines).toContain('ρ = 88.4″ · PA 202° at J2000.0');
+    // Exactly one heading + one detail line — no per-primary repeat.
+    expect(out.lines.filter((l) => l.startsWith('Visual companion'))).toHaveLength(1);
+  });
+
+  it('keeps separate blocks when the measurements differ', () => {
+    const ctx = binaryCtx(
+      [
+        makeRelation({ primaryIdx: 0, secondaryIdx: 2, flags: 0, sepArcsec: 88.4, paDeg: 202, sepPaEpochJd: J2000_JD }),
+        makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: 0, sepArcsec: 90.1, paDeg: 204, sepPaEpochJd: J2000_JD }),
+      ],
+      {
+        starLabels: new Map<number, string>([
+          [0, 'Acrux'],
+          [1, 'Acrux B'],
+          [2, 'HD 108250'],
+        ]),
+      },
+    );
+    const out = formatStarHover(2, D_CAM, ctx);
+    expect(out.lines).toContain('Visual companion of Acrux');
+    expect(out.lines).toContain('Visual companion of Acrux B');
+  });
+
+  it('single-relation secondaries render exactly as before', () => {
+    const ctx = binaryCtx([
+      makeRelation({ flags: 0, sepArcsec: 5.3, paDeg: 132, sepPaEpochJd: J2000_JD }),
+    ]);
+    const out = formatStarHover(1, D_CAM, ctx);
+    expect(out.lines.filter((l) => l.startsWith('Visual companion'))).toEqual([
+      'Visual companion of Sirius A',
+    ]);
   });
 
   it('adds no companion line for a star in no relation', () => {
@@ -246,12 +332,12 @@ describe('formatStarHover — binary companions', () => {
       makeRelation({ primaryIdx: 0, secondaryIdx: 1, flags: FLAG_HAS_ORBIT, pDays: 100 }),
     ]);
     // idx 2 is neither a primary nor a secondary here.
-    const out = formatStarHover(2, ctx);
+    const out = formatStarHover(2, D_CAM, ctx);
     expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
   });
 
   it('drops companion lines entirely when binaries.bin is absent', () => {
-    const out = formatStarHover(1, binaryCtx([], { binaries: null }));
+    const out = formatStarHover(1, D_CAM, binaryCtx([], { binaries: null }));
     expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
   });
 });

@@ -1950,16 +1950,6 @@ export class Stellata implements FrameAnchor {
     return this.planetBodyField.getAttachedPlanetSystem(hostStarIdx);
   }
 
-  /** Live host→planet distance in pc for `(hostStarIdx, planetIdx)`,
-   *  using the latest cached `iLocalRel`. Returns null when the host
-   *  isn't attached or the index is out of range. The hover formatter
-   *  calls this so the "distance from host" line tracks the ephemeris
-   *  through the orbit rather than freezing at the mean semi-major
-   *  axis. Decoupled from focus state per the lo5 visibility-only
-   *  hover rule. */
-  planetHostDistancePc(hostStarIdx: number, planetIdx: number): number | null {
-    return this.planetBodyField.planetHostDistancePc(hostStarIdx, planetIdx);
-  }
 
   /** Live apparent V mag for `(hostStarIdx, planetIdx)`, matching the
    *  planet shader's reflected-light formula at the current camera

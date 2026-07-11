@@ -48,6 +48,14 @@ export const GAL_TO_ICRS: THREE.Matrix4 =
   new THREE.Matrix4().makeBasis(gcDir, galY, galZ);
 
 /**
+ * ICRS Cartesian → galactic-frame Cartesian rotation (the inverse of
+ * `GAL_TO_ICRS`, as a Matrix3). Apply to an ICRS vector to read its
+ * galactic-frame components (x toward GC, z toward NGP).
+ */
+export const ICRS_TO_GAL_M3: THREE.Matrix3 =
+  new THREE.Matrix3().setFromMatrix4(GAL_TO_ICRS).transpose();
+
+/**
  * Absolute ICRS position of the galactic centre, in parsecs. Sol sits at the
  * origin in our absolute frame, so this is simply gcDir × R₀. Use this as the
  * translation offset when placing galactic-frame geometry into the world.

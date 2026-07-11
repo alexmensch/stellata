@@ -85,10 +85,11 @@ export interface BinariesData {
    *  row is the primary side of a pair. A primary can host several
    *  relations (Castor / α Cen multi-pair systems). */
   primaryIdxToRelations: Map<number, number[]>;
-  /** Secondary catalog row index → index into `relations` where that
-   *  row is the secondary side. A secondary belongs to at most one
-   *  pair, so this is single-valued. */
-  secondaryIdxToRelation: Map<number, number>;
+  /** Secondary catalog row index → indices into `relations` where that
+   *  row is the secondary side. Usually one, but a star can be the
+   *  measured secondary of several primaries (HD 108250 = α Cru C is
+   *  secondary of both the A→C and B→C WDS pairs). */
+  secondaryIdxToRelations: Map<number, number[]>;
 }
 
 export interface BinariesLoadError {
@@ -163,21 +164,18 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
   }
 
   const primaryIdxToRelations = new Map<number, number[]>();
-  const secondaryIdxToRelation = new Map<number, number>();
+  const secondaryIdxToRelations = new Map<number, number[]>();
   for (let i = 0; i < relations.length; i++) {
     const r = relations[i];
     const arr = primaryIdxToRelations.get(r.primaryIdx);
     if (arr) arr.push(i);
     else primaryIdxToRelations.set(r.primaryIdx, [i]);
-    // Secondaries belong to at most one pair (WDS schema guarantee).
-    // If a duplicate appears (data drift), keep the first to make the
-    // contract honest at the type level.
-    if (!secondaryIdxToRelation.has(r.secondaryIdx)) {
-      secondaryIdxToRelation.set(r.secondaryIdx, i);
-    }
+    const sArr = secondaryIdxToRelations.get(r.secondaryIdx);
+    if (sArr) sArr.push(i);
+    else secondaryIdxToRelations.set(r.secondaryIdx, [i]);
   }
 
-  return { version, relations, primaryIdxToRelations, secondaryIdxToRelation };
+  return { version, relations, primaryIdxToRelations, secondaryIdxToRelations };
 }
 
 /**

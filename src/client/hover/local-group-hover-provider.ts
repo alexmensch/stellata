@@ -22,6 +22,6 @@ export function createLocalGroupHoverProvider(
     pick: (x, y, pxThreshold) => stellata.picker.pickLocalGroupHit(x, y, pxThreshold),
     // LG objects are identified by catalog idx alone — sub-layer host
     // identity (hit.hostStarIdx) is unused for this layer.
-    format: (hit) => formatLocalGroupHover(hit.idx, context),
+    format: (hit) => formatLocalGroupHover(hit.idx, hit.cameraDistancePc, context),
   };
 }

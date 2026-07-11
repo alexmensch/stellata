@@ -1,10 +1,10 @@
-// Molecular cloud hover formatter — name, distance, major × minor
-// axis pair. See ./README.md.
+// Molecular cloud hover formatter — name, camera-frame distance,
+// major × minor axis pair. See ./README.md.
 
 import type { Cloud } from '../../molecular-clouds/cloud-loader';
 import { fmtDistAuto } from '../../ui/distance-util';
 import type { HoverPayload } from '../hover-types';
-import { formatAxisPair } from './format-util';
+import { formatAxisPair } from '../../format/physical-format';
 
 export interface CloudHoverFormatContext {
   clouds: readonly Cloud[];
@@ -12,6 +12,7 @@ export interface CloudHoverFormatContext {
 
 export function formatCloudHover(
   idx: number,
+  cameraDistancePc: number,
   ctx: CloudHoverFormatContext,
 ): HoverPayload {
   const cloud = ctx.clouds[idx];
@@ -20,9 +21,8 @@ export function formatCloudHover(
   const major = Math.max(ax, ay, az);
   const minor = Math.min(ax, ay, az);
   const lines: string[] = [
-    fmtDistAuto(cloud.distanceFromSol),
+    fmtDistAuto(cameraDistancePc),
     `Size ${formatAxisPair(major, minor)}`,
   ];
   return { name: cloud.name, lines };
 }
-

@@ -18,6 +18,9 @@ export interface Cloud {
   source: CloudSource;
   /** Heliocentric distance to the centroid in pc — precomputed for hover labels. */
   distanceFromSol: number;
+  /** Cloud mass in solar masses (Zucker 2021 Table 3, NICEST extinction
+   *  map). Null for Z2020 clouds, which carry no mass estimate. */
+  massMsun: number | null;
 }
 
 export interface CloudCatalog {
@@ -34,6 +37,7 @@ interface RawCloud {
   quat: [number, number, number, number];
   source: CloudSource;
   distance: number;
+  mass?: number;
 }
 
 interface RawCatalog {
@@ -75,6 +79,7 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     quat: new THREE.Quaternion(c.quat[0], c.quat[1], c.quat[2], c.quat[3]),
     source: c.source,
     distanceFromSol: c.distance,
+    massMsun: c.mass ?? null,
   }));
   return { count: raw.count, clouds };
 }

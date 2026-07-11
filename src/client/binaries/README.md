@@ -11,8 +11,10 @@ star catalog records.
 - `binaries-loader.ts` — parses the v1 `BIN1` binary format into a
   `BinariesData` struct: per-pair Kepler elements + `sep_arcsec` /
   `pa_deg` for the static-placement fallback, plus index maps
-  (`primaryIdxToRelations`, `secondaryIdxToRelation`) for runtime
-  lookups. Round-trip + fail-mode coverage in `binaries-loader.test.ts`.
+  (`primaryIdxToRelations`, `secondaryIdxToRelations` — both
+  one-to-many; a star can be the measured secondary of several
+  primaries, e.g. α Cru C off both A and B) for runtime lookups.
+  Round-trip + fail-mode coverage in `binaries-loader.test.ts`.
 - `binary-orbit-pure.ts` — Kepler / Thiele-Innes math. Tier 1 path
   (`evaluateOrbitSkyAU` + `projectSkyToICRS`) produces the full 3D
   offset — sky tangent (north, east) plus the line-of-sight radial

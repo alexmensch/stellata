@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 SRC_2020 = ROOT / 'data' / 'molecular-clouds' / 'zucker2020-tablea1.tsv'
 SRC_2021 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
+SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 OUT = ROOT / 'public' / 'clouds.json'
 
 # Default sphere radius for Zucker-2020 clouds with only a single sightline.
@@ -229,7 +230,26 @@ def parse_z2021(path: Path) -> list[dict]:
     return out
 
 
-def build_z2021_clouds(entries: list[dict]) -> list[dict]:
+def parse_z2021_masses(path: Path) -> dict[str, float]:
+    """Parse Zucker 2021 Table 3 → {raw cloud name: mass in Msun}.
+    mass_nicest (2D NICEST extinction-map mass) over mass_leike: the
+    Leike-2020 3D map saturates in dense gas and underestimates by up to
+    ~14x (Orionlam), so the extinction-based value is the one comparable
+    to literature cloud masses.
+    """
+    out: dict[str, float] = {}
+    with path.open() as fh:
+        header = fh.readline().split()
+        col = {name: i for i, name in enumerate(header)}
+        for line in fh:
+            parts = line.split()
+            if not parts:
+                continue
+            out[parts[col['cloud']]] = float(parts[col['mass_nicest']])
+    return out
+
+
+def build_z2021_clouds(entries: list[dict], masses: dict[str, float]) -> list[dict]:
     """Z2021 → ellipsoid clouds in ICRS frame.
     Bounding box is axis-aligned in galactic Cartesian; rotate the *centre*
     to ICRS, and emit the GAL_TO_ICRS rotation as the orientation quaternion
@@ -253,7 +273,7 @@ def build_z2021_clouds(entries: list[dict]) -> list[dict]:
         center_icrs = matvec(GAL_TO_ICRS, (cx, cy, cz))
         name = display_name(e['cloud'])
         d = math.sqrt(center_icrs[0] ** 2 + center_icrs[1] ** 2 + center_icrs[2] ** 2)
-        out.append({
+        cloud = {
             'name': name,
             'id': slugify(name),
             'center': [round(center_icrs[0], 2), round(center_icrs[1], 2), round(center_icrs[2], 2)],
@@ -261,7 +281,10 @@ def build_z2021_clouds(entries: list[dict]) -> list[dict]:
             'quat': [round(q, 6) for q in quat_gal_to_icrs],
             'source': 'Z2021T1',
             'distance': round(d, 1),
-        })
+        }
+        if e['cloud'] in masses:
+            cloud['mass'] = masses[e['cloud']]
+        out.append(cloud)
     return out
 
 
@@ -311,7 +334,7 @@ def is_up_to_date() -> bool:
     if not OUT.exists():
         return False
     out_mtime = OUT.stat().st_mtime
-    for src in (SRC_2020, SRC_2021, Path(__file__)):
+    for src in (SRC_2020, SRC_2021, SRC_2021_T3, Path(__file__)):
         if src.stat().st_mtime > out_mtime:
             return False
     return True
@@ -328,12 +351,16 @@ def main() -> None:
     if not SRC_2021.exists():
         print(f'error: missing {SRC_2021}', file=sys.stderr)
         sys.exit(1)
+    if not SRC_2021_T3.exists():
+        print(f'error: missing {SRC_2021_T3}', file=sys.stderr)
+        sys.exit(1)
 
     z2020 = parse_z2020(SRC_2020)
     z2021 = parse_z2021(SRC_2021)
+    masses = parse_z2021_masses(SRC_2021_T3)
     suppress = {z20 for raw, z20 in Z2021_TO_Z2020_SUPPRESS.items()
                 if any(raw == e['cloud'] for e in z2021)}
-    ellipsoids = build_z2021_clouds(z2021)
+    ellipsoids = build_z2021_clouds(z2021, masses)
     spheres = build_z2020_clouds(z2020, suppress)
 
     # Dedup by id — Z2021 wins when ids collide (defensive; the suppress

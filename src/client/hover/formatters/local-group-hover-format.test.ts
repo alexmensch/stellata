@@ -8,8 +8,9 @@ import {
 } from './local-group-hover-format';
 
 // Build a synthetic LgObject fixture. Only the fields the formatter
-// reads (name, kind, axes, distanceFromSol) matter; centerAbs and quat
-// are placeholders. The fixture names match the displayName() output
+// reads (name, kind, axes) matter; centerAbs, quat, and distanceFromSol
+// are placeholders — the hover distance is the camera distance passed
+// per pick. The fixture names match the displayName() output
 // of build-local-group-pure for each object — that resolution is the
 // build script's responsibility, not the formatter's.
 function lg(
@@ -43,13 +44,13 @@ describe('formatLocalGroupHover', () => {
   });
 
   it('formats M31 (catalog designation, disc kind, Mpc-tier distance)', () => {
-    // M31 ≈ 776 kpc, stellar-disc semi-axes ~ 25 × 8 kpc with thickness.
+    // Camera parked at M31's Sol distance ≈ 776 kpc, stellar-disc semi-axes ~ 25 × 8 kpc with thickness.
     // The displayName() rule treats "M31" as a catalog designation and
     // emits it verbatim — no "Galaxy" suffix. The major axis sits in
     // fmtDist's "k" tier (≥ 10,000 pc) while the semi-thickness drops
     // into the integer-pc tier; both formatters carry their natural
     // suffix so the magnitude gap reads clearly.
-    const out = formatLocalGroupHover(0, buildCtx([
+    const out = formatLocalGroupHover(0, 776_000, buildCtx([
       lg('M31', 'disc', [25_000, 25_000, 8_000], 776_000),
     ]));
     expect(out.name).toBe('M31');
@@ -65,7 +66,7 @@ describe('formatLocalGroupHover', () => {
     // semi-thickness. displayName('LMC') → "Large Magellanic Cloud" via
     // the override map. Both semi-axes sit in fmtDist's integer-pc tier
     // (< 10,000 pc), no "k" suffix.
-    const out = formatLocalGroupHover(0, buildCtx([
+    const out = formatLocalGroupHover(0, 50_000, buildCtx([
       lg('Large Magellanic Cloud', 'disc', [5000, 5000, 1500], 50_000),
     ]));
     expect(out.name).toBe('Large Magellanic Cloud');
@@ -81,7 +82,7 @@ describe('formatLocalGroupHover', () => {
     // displayName for the LVDB key "Sagittarius" applies the default
     // "Dwarf Spheroidal" suffix (no override entry for "Sagittarius"
     // alone, and the LVDB key is not a catalog designation).
-    const out = formatLocalGroupHover(0, buildCtx([
+    const out = formatLocalGroupHover(0, 20_000, buildCtx([
       lg('Sagittarius Dwarf Spheroidal', 'ellipsoid', [1500, 800, 800], 20_000),
     ]));
     expect(out.name).toBe('Sagittarius Dwarf Spheroidal');
@@ -99,7 +100,7 @@ describe('formatLocalGroupHover', () => {
     // one-decimal format ("55.0 pc"); the trailing ".0" is canonical
     // across stellata's distance readouts (scale bar, focused-distance
     // HUD), so the hover label inherits it for consistency.
-    const out = formatLocalGroupHover(0, buildCtx([
+    const out = formatLocalGroupHover(0, 30_000, buildCtx([
       lg('Reticulum II Dwarf Spheroidal', 'ellipsoid', [55, 45, 45], 30_000),
     ]));
     expect(out.name).toBe('Reticulum II Dwarf Spheroidal');
@@ -111,7 +112,7 @@ describe('formatLocalGroupHover', () => {
   });
 
   it('returns empty payload for out-of-range index', () => {
-    const out = formatLocalGroupHover(99, buildCtx([]));
+    const out = formatLocalGroupHover(99, 100, buildCtx([]));
     expect(out).toEqual({ name: '', lines: [] });
   });
 });

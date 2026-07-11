@@ -15,6 +15,7 @@ function makeCatalog(): CloudCatalog {
     quat: new THREE.Quaternion(),
     source: 'Z2020',
     distanceFromSol: 100,
+    massMsun: null,
   });
   const clouds = [cloud('A'), cloud('B')];
   return { count: clouds.length, clouds };
@@ -30,6 +31,7 @@ function makeCloud(axes: [number, number, number]): Cloud {
     quat: new THREE.Quaternion(),
     source: 'Z2021T1',
     distanceFromSol: 0,
+    massMsun: null,
   };
 }
 

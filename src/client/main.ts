@@ -17,6 +17,7 @@ import { createPlanetLabels } from './solar-system/planet-labels';
 import { createHeliopauseLabel } from './solar-system/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time-scrubber-widget';
+import { tToJDE } from './solar-system/time';
 import { bindUnitToggle } from './ui/unit-toggle';
 import { createGalacticGridLabels } from './galactic/galactic-grid-labels';
 import { registerThemeStellata } from './ui/theme-toggle';
@@ -36,6 +37,9 @@ import { SOL_PLANETS } from './solar-system/planet-system';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
+import { createFocusCard } from './focus-card/focus-card';
+import { createStarFocusProvider } from './focus-card/star-focus-provider';
+import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
@@ -102,7 +106,6 @@ async function main() {
     // below AND attaching the 'cloud' SID domain in place of the
     // conclude('cloud') call further down.
     // if (cloudCatalog) stellata.attachClouds(cloudCatalog);
-    void cloudCatalog;
 
     // Local Group wireframes. Always-on when the artifact is present —
     // same model as the MW disc, no toggle / URL flag.
@@ -195,7 +198,7 @@ async function main() {
     // #lg-labels for each catalog object that carries a labelThresholdPc;
     // no-op when the layer didn't attach (missing artifact).
     if (stellata.localGroup) createLocalGroupLabels(stellata, stellata.localGroup);
-    createScaleBar(stellata, starLabels);
+    createScaleBar(stellata);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
@@ -217,8 +220,7 @@ async function main() {
 
     // Bottom-right meta: catalog count + (when focused on a planet host)
     // the live UTC timestamp the planet positions correspond to. The
-    // focused-object name moved into the scale-bar widget's z-axis
-    // indicator, where it sits alongside the camera-to-focus distance.
+    // focused-object identity lives in the focus card.
     const countLabel = `${catalog.count.toLocaleString()} stars`;
     const timeScrubber = createTimeScrubberWidget({ meta, stellata, countLabel });
 
@@ -230,7 +232,9 @@ async function main() {
       context: {
         starLabels,
         spectralMap,
-        positions: catalog.positions,
+        spectClass: catalog.spectClass,
+        luminosityClass: catalog.luminosityClass,
+        flags: catalog.flags,
         constellation: catalog.constellation,
         constellations: catalog.constellations,
         periodDays: catalog.periodDays,
@@ -270,6 +274,42 @@ async function main() {
       canvas,
       tooltip,
       initialProviders: hoverProviders,
+    });
+
+    // Tier-2 focus card. Both distance functions read the local frame
+    // (camera and object share it), so the values match what hover's
+    // pick paths report.
+    const searchEntries = new Map(searchIndex.map((e) => [e.i, e]));
+    createFocusCard({
+      stellata,
+      providers: {
+        star: createStarFocusProvider({
+          catalog,
+          starLabels,
+          spectralMap,
+          searchEntries,
+          binaries,
+          cameraDistancePc: (idx) => {
+            const lp = stellata.localPositions;
+            const c = stellata.camera.position;
+            return Math.hypot(lp[idx * 3] - c.x, lp[idx * 3 + 1] - c.y, lp[idx * 3 + 2] - c.z);
+          },
+          nowJd: () => tToJDE(stellata.getT()),
+        }),
+        cloud: createCloudFocusProvider({
+          clouds: cloudCatalog?.clouds ?? null,
+          cameraDistancePc: (idx) => {
+            const cloud = cloudCatalog!.clouds[idx];
+            const w = stellata.getWorldOffset();
+            const c = stellata.camera.position;
+            return Math.hypot(
+              cloud.centerAbs.x - w.x - c.x,
+              cloud.centerAbs.y - w.y - c.y,
+              cloud.centerAbs.z - w.z - c.z,
+            );
+          },
+        }),
+      },
     });
 
     await new Promise((r) => requestAnimationFrame(r));

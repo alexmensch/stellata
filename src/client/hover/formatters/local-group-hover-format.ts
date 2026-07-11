@@ -1,5 +1,5 @@
-// Local Group hover formatter — display name, distance, kind
-// ("Disc" | "Ellipsoid"), major × minor axis pair. See ./README.md.
+// Local Group hover formatter — display name, camera-frame distance,
+// kind ("Disc" | "Ellipsoid"), major × minor axis pair. See ./README.md.
 
 import { fmtDistAuto } from '../../ui/distance-util';
 import {
@@ -8,7 +8,7 @@ import {
   type LgObject,
 } from '../../local-group/local-group-loader';
 import type { HoverPayload } from '../hover-types';
-import { formatAxisPair } from './format-util';
+import { formatAxisPair } from '../../format/physical-format';
 
 export interface LocalGroupHoverFormatContext {
   objects: readonly LgObject[];
@@ -16,12 +16,13 @@ export interface LocalGroupHoverFormatContext {
 
 export function formatLocalGroupHover(
   idx: number,
+  cameraDistancePc: number,
   ctx: LocalGroupHoverFormatContext,
 ): HoverPayload {
   const obj = ctx.objects[idx];
   if (!obj) return { name: '', lines: [] };
   const lines: string[] = [
-    fmtDistAuto(obj.distanceFromSol),
+    fmtDistAuto(cameraDistancePc),
     obj.kind === 'disc' ? 'Disc' : 'Ellipsoid',
     `Size ${formatAxisPair(maxSemiAxisPc(obj), minSemiAxisPc(obj))}`,
   ];

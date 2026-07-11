@@ -339,28 +339,6 @@ export class PlanetBodyField {
     );
   }
 
-  /**
-   * Host→planet distance in pc for the host's planet at `planetIdx`,
-   * using the latest cached `iLocalRel` write. iLocalRel lives in the
-   * host's plane frame post-orientation, so its length is the
-   * frame-independent radial separation. Returns null if the host
-   * isn't attached or planetIdx is out of range.
-   *
-   * The hover formatter uses this for the "distance from host" line so
-   * users see the live ephemeris radius (Mercury 0.31–0.47 AU across
-   * its orbit) rather than the mean semi-major axis from
-   * `PlanetSystem.planets[i].semiMajorAxisAu`.
-   */
-  planetHostDistancePc(hostStarIdx: number, planetIdx: number): number | null {
-    const host = this.hosts.get(hostStarIdx);
-    if (!host) return null;
-    if (planetIdx < 0 || planetIdx >= host.count) return null;
-    const base = (host.startInstance + planetIdx) * 3;
-    const x = this.bufLocalRel[base + 0];
-    const y = this.bufLocalRel[base + 1];
-    const z = this.bufLocalRel[base + 2];
-    return Math.sqrt(x * x + y * y + z * z);
-  }
 
   /**
    * Per-instance apparent V mag for one of the host's planets, evaluated
