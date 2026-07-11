@@ -504,6 +504,35 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 1 1 auto;
 }
 
+/* Focus card — the tier-2 object-info panel pinned to the bottom of the
+ * #ui-top flex column (margin-top: auto), directly above .ui-bottom.
+ * Shares the .panel card chrome; the header carries the object's display
+ * name, so the uppercase transform is dropped (Greek Bayer forms must
+ * not uppercase). */
+.focus-card { margin-top: auto; }
+.focus-card .panel-header {
+  text-transform: none;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+}
+.focus-card-inner {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.focus-identity { color: var(--fg-dim); }
+.focus-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.focus-row-label {
+  color: var(--fg-dim);
+  flex: 0 0 auto;
+}
+.focus-row-value { text-align: right; }
+
 .group {
   padding: 4px 0;
   border-bottom: 1px solid var(--border);

@@ -128,7 +128,10 @@ Two layers of collapse: the panel as a whole (top-level, key
 `stellata.panel-collapsed`) and each `<section class="group"
 data-group="...">` independently (key
 `stellata.group-collapsed.<name>`). Both default to expanded;
-both persist to `localStorage`. Wired in `panel-layout.ts`. The
+both persist to `localStorage`. Wired in `panel-layout.ts`, whose
+exported `bindCollapse` helper carries the header-click + persistence
+pattern — the focus card (`../focus-card/README.md`) is the third
+consumer. The
 group header is the click target — `<header class="group-header">`
 with an `<h3>` title and a chevron `<button class="group-toggle">`.
 `.row-actions` (reset / all / none) live inside `.group-body`, not
