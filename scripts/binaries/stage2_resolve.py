@@ -1313,6 +1313,7 @@ BINDING_SHAPE_SOURCE_LETTERS = "source_letters"
 BINDING_SHAPE_LETTER_SOURCES = "letter_sources"
 
 BINDING_VERDICT_GEOMETRIC = "geometric"
+BINDING_VERDICT_IDENTITY_REFUTED = "identity_refuted"
 BINDING_VERDICT_UNBOUND_AMBIGUOUS = "unbound_ambiguous"
 BINDING_VERDICT_SKIPPED_NO_REFERENCE = "skipped_no_reference"
 BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND = "skipped_photocentre_blend"
@@ -1320,18 +1321,20 @@ BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND = "skipped_photocentre_blend"
 # Canonical outcome tags, in the order the Stage-7 counters report them.
 BINDING_VERDICT_VALUES: tuple[str, ...] = (
     BINDING_VERDICT_GEOMETRIC,
+    BINDING_VERDICT_IDENTITY_REFUTED,
     BINDING_VERDICT_UNBOUND_AMBIGUOUS,
     BINDING_VERDICT_SKIPPED_NO_REFERENCE,
     BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
 )
 
-# The six headline counters, in snapshot order — two conflict-shape
-# totals then the four arbitration outcomes.
+# The headline counters, in snapshot order — two conflict-shape
+# totals then the arbitration outcomes.
 # ``binding_integrity_counts`` fills these keys; Stage 7 pins them.
 BINDING_INTEGRITY_COUNT_KEYS: tuple[str, ...] = (
     "binding_conflicts_source_letters",
     "binding_conflicts_letter_sources",
     "arbitrated_geometric",
+    "arbitrated_identity_refuted",
     "arbitrated_unbound_ambiguous",
     "arbitration_skipped_no_reference",
     "arbitration_skipped_photocentre_blend",
@@ -1716,14 +1719,82 @@ def _decide(candidates: list[BindingCandidate]) -> BindingCandidate | None:
     return None
 
 
+def _xid_own_source(
+    wds_id: str, token: str,
+    indices: IdentifierIndices,
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None,
+) -> int | None:
+    """The component's independently curated Gaia source: SIMBAD's
+    (wds_id, component) cross-ID, directly or through its HIP. ``None``
+    when SIMBAD doesn't enumerate the component or carries no route to a
+    DR3 source."""
+    if simbad_xids is None:
+        return None
+    xid = simbad_xids.get((wds_id, token))
+    if xid is None:
+        return None
+    if xid.gaia_source_id is not None:
+        return xid.gaia_source_id
+    if xid.hip is not None:
+        src = indices.hip_to_gaia.get(xid.hip)
+        if src is not None:
+            return src
+        row = indices.hip_to_athyg.get(xid.hip)
+        if row is not None and row.gaia is not None:
+            return row.gaia
+    return None
+
+
+def _refute_photocentre_blend(
+    ctx: _SystemContext,
+    cands: list[BindingCandidate],
+    src: int,
+    indices: IdentifierIndices,
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None,
+) -> tuple[BindingCandidate, str, int] | None:
+    """Identity-based refutation of a photocentre-blend hypothesis. A
+    source bound to both sides of a measured pair is only a genuine blend
+    when neither side has its own resolved identity; when SIMBAD's curated
+    cross-IDs give exactly one side ownership of the contested source and
+    the other side a DIFFERENT source of its own, the "blend" is a
+    crosswalk mis-match — a component with its own catalog identity is not
+    inside the photocentre. Returns ``(owner, loser_token, loser_source)``,
+    or ``None`` when the identities don't fully resolve the conflict
+    (either side unidentified, both claiming the source, or a >2-cluster /
+    multi-token shape this deliberately doesn't guess about)."""
+    if len(cands) != 2:
+        return None
+    own: list[int | None] = []
+    for c in cands:
+        if len(c.tokens) != 1:
+            return None
+        own.append(_xid_own_source(ctx.wds_id, c.tokens[0], indices, simbad_xids))
+    if None in own:
+        return None
+    owners = [c for c, o in zip(cands, own) if o == src]
+    if len(owners) != 1:
+        return None
+    owner = owners[0]
+    loser, loser_src = next(
+        (c, o) for c, o in zip(cands, own) if c is not owner
+    )
+    if loser_src == src:
+        return None
+    return owner, loser.tokens[0], loser_src
+
+
 def _audit_system(
     ctx: _SystemContext, indices: IdentifierIndices,
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
 ) -> list[BindingVerdict]:
     """Detect and arbitrate every contradiction in one WDS system."""
     verdicts: list[BindingVerdict] = []
     # Letters found to be part of a photocentre blend by shape (a); shape
     # (b) declines to arbitrate their source (see below).
     blend_letters: set[str] = set()
+    # Letters an identity refutation rebound to their own source; shape (b)
+    # skips them — the shape (a) verdict already resolves every row.
+    identity_rebound: set[str] = set()
 
     # Shape (a) — one source bound to disjoint letters.
     source_tokens: dict[int, set[str]] = {}
@@ -1772,12 +1843,26 @@ def _audit_system(
                 ref_tok, ref_src, winner, cands, unbind,
             ))
         elif is_blend:
-            blend_letters.update(t for c in cands for t in c.tokens)
-            verdicts.append(BindingVerdict(
-                ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
-                BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND, contested,
-                ref_tok, ref_src, winner, cands, [],
-            ))
+            refutation = _refute_photocentre_blend(
+                ctx, cands, src, indices, simbad_xids,
+            )
+            if refutation is not None:
+                owner, loser_tok, loser_src = refutation
+                identity_rebound.add(loser_tok)
+                verdicts.append(BindingVerdict(
+                    ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
+                    BINDING_VERDICT_IDENTITY_REFUTED, contested,
+                    ref_tok, ref_src, owner, cands,
+                    [(loser_tok, src)],
+                    rebind_letter=loser_tok, rebind_source=loser_src,
+                ))
+            else:
+                blend_letters.update(t for c in cands for t in c.tokens)
+                verdicts.append(BindingVerdict(
+                    ctx.wds_id, BINDING_SHAPE_SOURCE_LETTERS,
+                    BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND, contested,
+                    ref_tok, ref_src, winner, cands, [],
+                ))
         else:
             unbind = [(t, src) for c in cands for t in c.tokens]
             verdicts.append(BindingVerdict(
@@ -1791,6 +1876,8 @@ def _audit_system(
         if len(sources) < 2:
             continue
         contested = f"{tok}:{'/'.join(str(s) for s in sorted(sources))}"
+        if tok in identity_rebound:
+            continue
         if tok in blend_letters:
             # The letter is one side of an unresolvable photocentre blend
             # (shape a). Its extra source is blend contamination that
@@ -1946,6 +2033,7 @@ def inherit_downward_parent_bindings(
 def audit_binding_integrity(
     pairs: list[WdsPair], components: list[ResolvedComponent],
     indices: IdentifierIndices, *, apply: bool = False,
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
 ) -> list[BindingVerdict]:
     """Group Stage-2 bindings per WDS system, detect the two
     contradiction shapes, arbitrate geometrically, and — when
@@ -1958,7 +2046,7 @@ def audit_binding_integrity(
     enforced_wds_ids: set[str] = set()
     for wds_id in sorted(systems):
         ctx = systems[wds_id]
-        sys_verdicts = _audit_system(ctx, indices)
+        sys_verdicts = _audit_system(ctx, indices, simbad_xids)
         verdicts.extend(sys_verdicts)
         if apply:
             _apply_system_verdicts(sys_verdicts, ctx, indices)
@@ -1977,6 +2065,7 @@ def audit_binding_integrity(
 
 _VERDICT_COUNT_KEY: dict[str, str] = {
     BINDING_VERDICT_GEOMETRIC: "arbitrated_geometric",
+    BINDING_VERDICT_IDENTITY_REFUTED: "arbitrated_identity_refuted",
     BINDING_VERDICT_UNBOUND_AMBIGUOUS: "arbitrated_unbound_ambiguous",
     BINDING_VERDICT_SKIPPED_NO_REFERENCE: "arbitration_skipped_no_reference",
     BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND: (

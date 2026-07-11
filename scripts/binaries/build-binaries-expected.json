@@ -34,8 +34,8 @@
   "resolution_position_nopm": 0,
   "resolution_unresolved": 45628,
   "astrometry_gaia_nss_systemic": 1774,
-  "astrometry_hip2_long_baseline": 5109,
-  "astrometry_gaia_5p": 38805,
+  "astrometry_hip2_long_baseline": 5108,
+  "astrometry_gaia_5p": 38806,
   "astrometry_athyg_position": 1784,
   "astrometry_unresolved": 42768,
   "orbit_orb6": 3270,
@@ -55,9 +55,10 @@
   "optical_mag_heuristic_kept": 14467,
   "optical_mag_heuristic_rejected": 5726,
   "binding_conflicts_source_letters": 2227,
-  "binding_conflicts_letter_sources": 8,
+  "binding_conflicts_letter_sources": 5,
   "arbitrated_geometric": 392,
+  "arbitrated_identity_refuted": 3,
   "arbitrated_unbound_ambiguous": 4,
   "arbitration_skipped_no_reference": 1744,
-  "arbitration_skipped_photocentre_blend": 95
+  "arbitration_skipped_photocentre_blend": 89
 }

@@ -420,6 +420,7 @@ def run(force: bool) -> int:
     log(f"seeded {n_seeded:,} synthesized-pair component bindings")
     binding_verdicts = audit_binding_integrity(
         wds_pairs, components, indices, apply=True,
+        simbad_xids=simbad_wds_xids,
     )
     bi_counts = binding_integrity_counts(binding_verdicts)
     n_verdicts = write_binding_verdicts_tsv(

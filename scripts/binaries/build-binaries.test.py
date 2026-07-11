@@ -7102,6 +7102,119 @@ class BindingIntegrityDetectorTests(unittest.TestCase):
         )
         self.assertEqual(v[0].unbind, [])
 
+    @staticmethod
+    def _xid(gaia: int | None, hip: int | None = None) -> "bb.SimbadWdsXid":
+        return bb.SimbadWdsXid(
+            simbad_oid=1, simbad_main_id="* tst", gaia_source_id=gaia, hip=hip,
+        )
+
+    def _audit_with_xids(self, rows, src_to_astrometry, simbad_xids):
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(src_to_astrometry)
+        return bb.audit_binding_integrity(
+            pairs, comps, idx, apply=True, simbad_xids=simbad_xids,
+        ), comps
+
+    def test_photocentre_blend_identity_refuted(self) -> None:
+        # 36 Oph shape: SIMBAD's cross-IDs give A its own source and B
+        # ownership of the contested one — the "blend" is a crosswalk
+        # mis-match, not a photocentre. A (the loser) rebinds to its own
+        # source; B keeps the contested source; no shape-(b) verdict for
+        # the rebound letter.
+        SA, SX, SC = 100, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SC, None)),
+        ]
+        astro = {
+            SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, -6.5),
+            SC: _bi_astro(SC, 0.0, 0.0),
+        }
+        xids = {
+            ("10000+0000", "A"): self._xid(SA),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts, comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_IDENTITY_REFUTED)
+        self.assertEqual(v[0].winner.label, "B")
+        self.assertEqual(v[0].rebind_letter, "A")
+        self.assertEqual(v[0].rebind_source, SA)
+        self.assertEqual(
+            [x for x in verdicts
+             if x.shape == _s2.BINDING_SHAPE_LETTER_SOURCES], [],
+        )
+        by_tok = {(c.component, c.is_primary): c for c in comps}
+        self.assertEqual(by_tok[("A", True)].gaia_source_id, SA)
+        self.assertEqual(by_tok[("B", False)].gaia_source_id, SX)
+
+    def test_blend_unidentified_side_stays_skipped(self) -> None:
+        # Castor shape: the primary is Gaia-saturated so SIMBAD carries no
+        # DR3 source for it — identity can't refute, the blend skip holds.
+        SX, SC = 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -6.5), SC: _bi_astro(SC, 0.0, 0.0)}
+        xids = {
+            ("10000+0000", "A"): self._xid(None),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts, _comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(
+            v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+        )
+
+    def test_blend_no_owner_stays_skipped(self) -> None:
+        # Both sides identified but NEITHER owns the contested source —
+        # identities don't explain the binding, so no guess: skip holds.
+        SA, SB, SX, SC = 100, 150, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -6.5), SC: _bi_astro(SC, 0.0, 0.0)}
+        xids = {
+            ("10000+0000", "A"): self._xid(SA),
+            ("10000+0000", "B"): self._xid(SB),
+        }
+        verdicts, _comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(
+            v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+        )
+
+    def test_refutation_via_xid_hip_route(self) -> None:
+        # The loser's SIMBAD cross-ID carries only a HIP; the hip→gaia
+        # crosswalk supplies its own source. Same refutation.
+        SA, SX, SC = 100, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SC, None)),
+        ]
+        astro = {
+            SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, -6.5),
+            SC: _bi_astro(SC, 0.0, 0.0),
+        }
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(astro, hip_to_gaia={77: SA})
+        xids = {
+            ("10000+0000", "A"): self._xid(None, hip=77),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts = bb.audit_binding_integrity(
+            pairs, comps, idx, apply=False, simbad_xids=xids,
+        )
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_IDENTITY_REFUTED)
+        self.assertEqual(v[0].rebind_source, SA)
+
     def test_wide_pair_no_longer_rubber_stamped(self) -> None:
         # A non-blend source bound to two distant secondaries, sitting 2.5"
         # off the nearer one. The old sep-scaled tolerance (0.15·sep) would

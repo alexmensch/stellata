@@ -338,9 +338,21 @@ i.e. a crosswalk error masquerading as a blend, e.g. σ CrB's C/E
 collapse); a larger error means the source is the blend centroid
 sitting *between* the components, so the conflict is `skipped` and the
 blended-away member is left for the downstream slot-minting machinery
-(the Acrux/Castor shape). A letter_sources conflict on a letter that
-is itself part of a skipped blend is skipped for the same reason. All
-other ambiguous conflicts unbind every contested binding conservatively.
+(the Acrux/Castor shape). Before skipping, an **identity refutation**
+gets one shot: when SIMBAD's per-component cross-IDs give exactly one
+side ownership of the contested source and the other side a different
+source of its own (directly, or through its HIP), the "blend" is a
+crosswalk mis-match — a component with its own resolved identity is
+not inside a photocentre — so the loser rebinds to its own source and
+the owner keeps the contested one (`identity_refuted`; 36 Oph, μ Dra,
+HD 70492: Gaia's HIP best-neighbour put the primary on the secondary's
+source while SIMBAD carries both components distinctly). Chain
+geometry through a wide reference is too noisy for the 1″ floor in
+exactly these systems, which is why identity gets to overrule it. A
+letter_sources conflict on a letter that is itself part of a skipped
+blend is skipped for the same reason; one an identity refutation
+rebound is fully resolved and emits no second verdict. All other
+ambiguous conflicts unbind every contested binding conservatively.
 
 Enforcement (`apply=True`) is live: losers unbind (gaia → None; hip →
 None when it cross-walks to the contested source or is a HIP the
