@@ -188,7 +188,10 @@ enough to see it.
 > the visual treatment is being refined. The build script
 > (`scripts/clouds/build-clouds.py`) and source files
 > (`data/molecular-clouds/`) remain in the repository for the future
-> re-enable.
+> re-enable. Cloud masses come from Zucker 2021 Table 3's NICEST
+> extinction-map column (`mass_nicest`); the Leike-map alternative
+> saturates in dense gas and underestimates by up to ~14× (the paper's
+> own `mass_ratio` column), so it is not used.
 
 ## Stellar catalog ingestion
 
