@@ -1223,7 +1223,9 @@ interface AnchorDimCandidate {
   anchorIdx: number;
   member: Star;
   memberSpectral: SpectralInfo;
-  source: 'wds_mag' | 'dmag_imputed';
+  /** 'dmag_imputed' re-splits the blend jointly; 'wds_mag' and 'own'
+   *  carry independent member brightness and subtract its flux. */
+  source: 'wds_mag' | 'dmag_imputed' | 'own';
   dmag: number | null;
 }
 
@@ -1456,7 +1458,8 @@ function promoteRow(
   // sequentially).
   const dimEligible = idsInheritedFromAnchor
     ? imputed.source === 'wds_mag' || imputed.source === 'dmag_imputed'
-    : !usesSynth && imputed.source === 'dmag_imputed'
+    : !usesSynth
+      && (imputed.source === 'dmag_imputed' || imputed.source === 'own')
       && anchorStar !== null && anchorMagIsPairBlend(anchorStar, row, av);
   if (dimEligible
       && anchorPrimaryRow.photometryVia === PHOTOMETRY_VIA_OWN
@@ -1465,7 +1468,7 @@ function promoteRow(
       anchorIdx: anchorCatalogIdx,
       member: state.newStars[state.newStars.length - 1],
       memberSpectral: spectral.info,
-      source: imputed.source as 'wds_mag' | 'dmag_imputed',
+      source: imputed.source as 'wds_mag' | 'dmag_imputed' | 'own',
       dmag: row.dmag,
     });
   }
@@ -1878,10 +1881,11 @@ export function promoteCompanions(
   //   for Δ = 0. A naive flux subtraction here would gut a near-equal
   //   anchor (Capella: −0.51 → +2.1) because the member's error lands
   //   entirely on the anchor.
-  // - wds_mag: the member's brightness is independent astrometry, so
+  // - wds_mag / own: the member's brightness is independent of the blend
+  //   (its own WDS magnitude, or its own Gaia photometry — 36 Oph B), so
   //   subtract its flux: M′ = −2.5·log₁₀(10^(−0.4·M_blend) −
   //   10^(−0.4·M_member)). The guard skips a member as bright as the
-  //   blend itself (WDS mag inconsistent with the AT-HYG magnitude);
+  //   blend itself (member mag inconsistent with the AT-HYG magnitude);
   //   those keep the anchor untouched and are counted for the ratchet.
   //
   // Sequential when several members share one anchor — each step
