@@ -92,6 +92,17 @@ from the current build, printing sibling candidates (comp/sep/PA from
 slugs only warn — but a slug RENAME still needs a bridge, or the old
 sid parks and the new slug mints a fresh identity.
 
+A Stage-5 filter change that mass-drops optical pairs orphans every
+synth key those pairs minted; the reported "candidates" are then
+surviving siblings with *different letters* — different physical
+stars, never bridge targets. Resolve as successor-less retirements:
+map each orphan key to its sid through `ledger.tsv`, append
+`sid<TAB>date<TAB>reason<TAB>` rows to `retirements.tsv` (script the
+mapping; one shared reason string per cause), re-run `sid:allocate`,
+then `npm run build:catalog`. Before writing, verify attribution: the
+Stage-7 count diff must conserve the donor tier's population into the
+new verdicts, or some orphans belong to a different change.
+
 ## Sibling-artifact stamping
 
 `clouds.json` and `local-group.json` carry an in-record `sid` (docs/sid.md
