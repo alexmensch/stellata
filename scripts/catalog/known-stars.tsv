@@ -249,18 +249,18 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # (exact kept-pair set pinned in system-pair-topology.tsv). Companions
 # with own Gaia photometry (C, D, F, G) are pinned below; E and H are
 # standalone _E/_H rows with no photometry (not promoted), Ia/Ib carry
-# no identifiers. The famous AR Cas Aa,Ab inner eclipsing pair (P=6.07 d,
-# EA-type) is not in multiples.tsv — its orbit is absent from ORB6 and
-# Gaia NSS, so subdivision needs an SB9-class ingest; its GCVS
-# eclipse signal IS pinned via the var columns.
+# no identifiers. The famous AR Cas Aa,Ab inner eclipsing pair (P=6.066 d,
+# EA-type) is synthesized from the Pulkovo MSC orbit (absent from ORB6
+# and Gaia NSS) with per-side MSC types B3IV + A6; its GCVS eclipse
+# signal is pinned via the var columns.
 23300+5833	AR Cassiopeiae	115990	2011150635728091648	203.136	0.5	-1.756	B3V				C::2011151357277942400:0.6060;D::2011151357284012416:2.5759;F::2011151391642324608:4.3921;G::2011151391642325120:4.4889		eclipsing	6.0663335	0.13	AR Cas A; Gaia DR3 source 2011150635728091648 resolves with SIMBAD sp_type=B3V → catalog (spectClass=1 B, lumClass=2 V). Build-catalog distance ~203.14 pc (Bailer-Jones override over the binaries pipeline's 204.68 pc HIP2 anchor). GCVS AR Cas: EA P=6.0663335 d, amp V 4.89→5.02 (0.13). Companions per multiples.tsv (all own-Gaia, gaia_photometry absmags): C=HD 221237A A1V, D=HD 221237B, F=TYC 4011-779-1 A0, G=UCAC4 743-089698 B3. G renders as 'HIP 115990 G' (its FG-pair anchor F is the promoted 'HIP 115990 F' record — composeCompanionName strips the intermediate F rather than doubling it to 'HIP 115990 F G'). Pinned by Gaia id here.
 # ν Scorpii (Jabbah) — multiple-star system with high-eccentricity inner
 # orbit. Outer ORB6 Aa,Ab pair (P=3674.78 d ≈ 10.06 yr, e=0.92, i=89.7°,
 # CHARA-resolved). Visual components B, C, D carry own Gaia IDs and are
 # pinned as companions (kept-pair set in system-pair-topology.tsv).
-# Inner Aa1,Aa2 spectroscopic sub-pair (P=1.41 d) not yet subdivided — its
-# orbit is absent from ORB6 and Gaia NSS (SB9-class ingest).
-16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-1.636	O				B::6245697981073442176:-0.2939;C::6245698187231874816:0.8080;D::6245698565188996992:1.8528	3674.78025				ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual, the highest-eccentricity rendered orbit — Kepler-solver stress case). Companions per multiples.tsv gaia_photometry: B (SIMBAD * nu. Sco B, sp_type empty), C = * nu.02 Sco A B8V, D = * nu.02 Sco B B9V. Inner Aa1,Aa2 (P=1.41 d, SB) pending an SB9-class ingest (orbit absent from ORB6/Gaia NSS). Anchor dimmed twice (flux conservation): by its dmag-split synth companion Ab, and by promoted B's own gaia_photometry flux (M_V -0.29; AT-HYG's mag is the A+B blend) — the residual -1.636 matches A-alone V≈4.35 at 141.9 pc.
+# Inner Aa1,Aa2 spectroscopic sub-pair (SB9_889, P=5.5521 d) subdivided
+# from the Pulkovo MSC orbit (absent from ORB6 and Gaia NSS).
+16120-1928	ν Scorpii	79374	6245697981070158080	141.912	0.5	-1.636	O				B::6245697981073442176:-0.2939;C::6245698187231874816:0.8080;D::6245698565188996992:1.8528	3674.78025				ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual, the highest-eccentricity rendered orbit — Kepler-solver stress case). Companions per multiples.tsv gaia_photometry: B (SIMBAD * nu. Sco B, sp_type empty), C = * nu.02 Sco A B8V, D = * nu.02 Sco B B9V. Inner Aa1,Aa2 (SB9_889, P=5.5521 d — the 1.41 d figure earlier notes carried is not in SB9/MSC) rendered via the Pulkovo MSC orbit. Anchor dimmed twice (flux conservation): by its dmag-split synth companion Ab, and by promoted B's own gaia_photometry flux (M_V -0.29; AT-HYG's mag is the A+B blend) — the residual -1.636 matches A-alone V≈4.35 at 141.9 pc.
 # ξ Ursae Majoris (Alula Australis, STF1523 AB) — AT-HYG carries the
 # system HD-only (no HIP, no Gaia); the record's identifiers come from
 # the multiples.tsv HD-keyed backfill (backfillPrimaryIdentifiers), so
