@@ -77,6 +77,8 @@ def build_binaries_counts(
     athyg_gaia_mag_rejected: int = 0,
     wds_duplicate_pair_rows_dropped: int = 0,
     multiples_pairs_dropped_no_position: int = 0,
+    blank_components_rescued: int = 0,
+    blank_components_deferred: int = 0,
 ) -> dict[str, int]:
     """Collect every headline number the run emits into a flat
     ``{key: int}`` dict, suitable for JSON serialisation and per-key
@@ -142,6 +144,8 @@ def build_binaries_counts(
     out: dict[str, int] = {
         "wds_pairs_total": len(pairs),
         "wds_duplicate_pair_rows_dropped": wds_duplicate_pair_rows_dropped,
+        "blank_components_rescued": blank_components_rescued,
+        "blank_components_deferred": blank_components_deferred,
         "decomposing_pairs": len(orbits),
         "components_total": len(components),
         "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,

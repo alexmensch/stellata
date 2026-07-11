@@ -195,7 +195,7 @@ def parse_athyg(path: Path) -> list[AthygRow]:
 class WdsPair:
     wds_id: str           # "HHMMm±DDMM" 10-char positional anchor
     discoverer: str       # e.g. "STF  202", "BU  860"
-    components: str       # e.g. "AB", "AC", "Aa,Ab"; "" for the system-level row
+    components: str       # e.g. "AB", "AC", "Aa,Ab"; "" = blank, WDS's implied single A,B pair
     date_last: int | None
     rho_last: float | None       # arcsec
     theta_last: float | None     # degrees east of north

@@ -74,7 +74,7 @@ from stage2_resolve import (  # noqa: E402, F401
     group_orb6_by_pair, inherit_downward_parent_bindings,
     iter_decomposing_pair_components,
     predict_secondary_position, propagate_blend_identity,
-    propagate_within_system,
+    propagate_within_system, rescue_blank_components_pairs,
     resolution_counts, resolve_all_pairs, resolve_component,
     resolve_via_ccdm, resolve_via_position, resolve_via_simbad,
     split_components, write_astrometry_request,
@@ -393,6 +393,17 @@ def run(force: bool) -> int:
         f"gaia_source_id -> hip of cardinality {len(indices.src_to_hip):,}"
     )
 
+    n_rescued, n_deferred = rescue_blank_components_pairs(
+        pairs=wds_pairs, orb6=orb6,
+        simbad_xids=simbad_wds_xids,
+        synthesized_orb6_pairs=synthesized_orb6_pairs,
+    )
+    log(
+        f"rescued {n_rescued:,} blank-components WDS pairs as implied A,B "
+        f"(ORB6-orbit / SIMBAD-xid anchored); {n_deferred:,} position-only "
+        f"or unanchored, deferred to the full blank→AB ingest"
+    )
+
     log("Stage 1 complete. Resolving WDS components (Stage 2) …")
 
     components = resolve_all_pairs(
@@ -543,6 +554,8 @@ def run(force: bool) -> int:
         athyg_gaia_mag_rejected=len(indices.athyg_gaia_mag_rejected),
         wds_duplicate_pair_rows_dropped=n_wds_dup_dropped,
         multiples_pairs_dropped_no_position=len(dropped_no_position),
+        blank_components_rescued=n_rescued,
+        blank_components_deferred=n_deferred,
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
     rates = build_binaries_rates(counts)

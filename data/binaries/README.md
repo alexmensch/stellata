@@ -95,8 +95,11 @@ Assertion semantics (the contract the harness implements):
   it.
 - `expected_resolve_via` is one of `RESOLVE_VIA_VALUES`
   (`scripts/binaries/stage2_resolve.py`) **plus `absent`**: Stage 2
-  emits no component at all for that `(wds_id, component)` (today:
-  blank-components WDS rows, stellata-dch.102).
+  emits no component at all for that `(wds_id, component)`. The
+  stellata-dch.102 rescue tier decomposes blank-components WDS rows
+  anchored by an ORB6 orbit or SIMBAD xid (Antares), so only the
+  position-only / unanchored blank rows stay `absent`, deferred to the
+  full blank→AB ingest (stellata-dch.83.9 — Deneb).
 - Blank `expected_gaia_source_id` with `expected_resolve_via=unresolved`
   asserts the component resolves to no source (Sirius-A class). Blank
   is impossible with any other tier — every non-`unresolved` row

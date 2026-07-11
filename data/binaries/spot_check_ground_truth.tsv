@@ -51,9 +51,9 @@ distant_supergiant	Betelgeuse	05552+0724	Aa	unresolved		SIMBAD * alf Ori carries
 distant_supergiant	mu Cep	21435+5847	A	simbad_xid	2202630001603369856	red supergiant WITH a DR3 source — contrast case to the saturated set
 distant_supergiant	Alnitak A	05407-0157	A	unresolved		SIMBAD * zet Ori A carries no DR3; bare HIP 26727 retained
 distant_supergiant	Alnitak C	05407-0157	C	simbad_xid	3216549631300819072	SIMBAD * zet Ori C
-distant_supergiant	Antares A	16294-2626	A	absent		known_bug:stellata-dch.102 — blank WDS components field skips the pair before Stage 2; SIMBAD * alf Sco carries no DR3 either
-distant_supergiant	Antares B	16294-2626	B	absent		known_bug:stellata-dch.102; SIMBAD * alf Sco B carries no DR3
-distant_supergiant	Deneb	20414+4517	A	absent		known_bug:stellata-dch.102 — blank WDS components field; SIMBAD * alf Cyg carries no DR3
+distant_supergiant	Antares A	16294-2626	A	unresolved		blank WDS components rescued to A,B via the ORB6 orbit (orbit_via=orb6); SIMBAD * alf Sco carries no DR3, HIP2 long-baseline astrometry
+distant_supergiant	Antares B	16294-2626	B	unresolved		rescued secondary; system-inherited astrometry, orbit_via=orb6
+distant_supergiant	Deneb	20414+4517	A	absent		position-only blank (no ORB6 orbit, no SIMBAD xid) — deferred to the full blank→AB ingest stellata-dch.83.9; SIMBAD * alf Cyg carries no DR3
 variable	Algol	03082+4057	Aa1	unresolved		SIMBAD * bet Per carries no DR3; Aa1,2 spectroscopic token
 variable	Mira A	02193-0259	A	simbad_xid	2493390319631956352	SIMBAD * omi Cet; Mira prototype
 variable	Mira B	02193-0259	Ab	unresolved		VZ Cet = SIMBAD * omi Cet B has an entry but no DR3; sub-letter idents not stored by SIMBAD
