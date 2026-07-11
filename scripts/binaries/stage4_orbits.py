@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Stage 4 — orbital-element selection per WDS pair.
-Picks between ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Pulkovo
-MSC orbits.
+"""Stage 4 — orbital-element selection per WDS pair. Picks between
+ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Pulkovo MSC orbits.
 """
 
 from __future__ import annotations

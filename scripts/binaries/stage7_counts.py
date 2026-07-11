@@ -307,7 +307,7 @@ OPTICAL_REJECT_TAGS: tuple[str, ...] = tuple(
 # Orbital-source tiers other than ``none`` — the population the
 # NSS-vs-ORB6 routing applies to.
 ORBIT_RESOLVED_TAGS: tuple[str, ...] = (
-    "gaia_nss", "orb6", "orb6_spectroscopic",
+    "gaia_nss", "orb6", "orb6_spectroscopic", "msc",
 )
 
 
