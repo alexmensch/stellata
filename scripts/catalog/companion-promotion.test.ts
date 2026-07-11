@@ -15,6 +15,7 @@ import {
   backfillPrimaryIdentifiers,
   promoteCompanions,
   stampComponentLetters,
+  stripBlendedSiblingLetter,
   stripDoubledParentToken,
   wingRenderablePrimaries,
   type MultiplesTsvRow,
@@ -963,6 +964,28 @@ describe('promoteCompanions', () => {
       // A compound primary comp matches as a whole token; the shorter
       // parent token of "Ab" (" A") must not shear "Aa" down to "A".
       expect(stripDoubledParentToken('WDS J1234 Aa', 'Ab', 'Aa')).toBe('WDS J1234');
+    });
+  });
+
+  describe('stripBlendedSiblingLetter', () => {
+    it('strips a sibling-inherited letter off the system base (Acrab E)', () => {
+      // WDS E shares β² Sco's (C's) Gaia source, so its row name is
+      // "Acrab B"; the top-level canonical letter E composes flat off the
+      // system base A = "Acrab" → "Acrab" (then joins to "Acrab E").
+      expect(stripBlendedSiblingLetter('Acrab B', 'E', 'Acrab')).toBe('Acrab');
+    });
+    it('leaves the base when the prefix is not the system base', () => {
+      // A real proper name ending in a capital-letter word never equals
+      // the system base.
+      expect(stripBlendedSiblingLetter('Alula Australis', 'C', 'Alula')).toBe('Alula Australis');
+      expect(stripBlendedSiblingLetter('Acrab B', 'E', 'Sirius')).toBe('Acrab B');
+    });
+    it('only fires for a top-level canonical letter', () => {
+      // A sub-letter (Cb) routes through stripDoubledParentToken instead.
+      expect(stripBlendedSiblingLetter('Acrab B', 'Cb', 'Acrab')).toBe('Acrab B');
+    });
+    it('is a no-op without a resolved system base', () => {
+      expect(stripBlendedSiblingLetter('Acrab B', 'E', null)).toBe('Acrab B');
     });
   });
 

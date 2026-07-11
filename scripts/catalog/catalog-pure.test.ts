@@ -9,6 +9,8 @@ import {
   resolveSpectDisplay,
   parseSimbadSptypeTsv,
   SPECTRAL_UNKNOWN,
+  SOLAR_BV_FALLBACK,
+  spectralClassCi,
   tempKelvin,
   boloCorr,
   physicalRadius,
@@ -113,6 +115,30 @@ describe('catalog-pure / spectClassIndex', () => {
     expect(spectClassIndex('X')).toBe(8);
     expect(spectClassIndex('')).toBe(8);
     expect(spectClassIndex('?')).toBe(8);
+  });
+});
+
+describe('catalog-pure / spectralClassCi', () => {
+  it('derives a hot-blue B−V for an early-type class (tier 4)', () => {
+    const ci = spectralClassCi(classifyFromSimbad('B2V')!);
+    expect(ci).toBeLessThan(0); // blue
+    expect(ci).not.toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('derives a cool-red B−V for a late-type class (tier 4)', () => {
+    const ci = spectralClassCi(classifyFromSimbad('M2V')!);
+    expect(ci).toBeGreaterThan(1); // red
+  });
+
+  it('routes a white dwarf through its Sion Teff (tier 5)', () => {
+    const ci = spectralClassCi(classifyFromSimbad('DA2')!);
+    // 50400/2 = 25200 K → deep blue, distinct from the solar fallback.
+    expect(ci).toBeLessThan(0);
+    expect(ci).not.toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('falls back to solar for an unparseable / unknown class (tier 6)', () => {
+    expect(spectralClassCi(SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
   });
 });
 

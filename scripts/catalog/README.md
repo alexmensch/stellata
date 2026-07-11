@@ -850,7 +850,15 @@ Per-row gates and resolution:
   "Sirius B", "Achird B", "Porrima B". The secondary's own `name`
   cell wins when populated (source=athyg); the primary row's name
   is the fallback when the secondary's row is source=wds with no
-  AT-HYG entry of its own.
+  AT-HYG entry of its own. Two doubling guards strip an already-present
+  component letter so the canonical comp isn't appended twice:
+  `stripDoubledParentToken` for a base ending in the comp's parent /
+  local-primary letter (Castor "C" + "Cb" → "Castor Cb"; AR Cas
+  "HIP 115990 F" + "G" → "HIP 115990 G"), and `stripBlendedSiblingLetter`
+  when a blended top-level component inherited a SIBLING's composed name
+  — Acrab's WDS E shares β² Sco's (WDS C) Gaia source, so E's row name is
+  "Acrab B"; a top-level letter composes flat off the system base, so
+  "Acrab B" + "E" strips to "Acrab E", not "Acrab B E".
 
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
@@ -1281,10 +1289,14 @@ The seven floats are surfaced directly to the runtime via
 `mhGspspec`). Consumers test absence with `Number.isNaN(arr[i])`.
 Today's downstream consumers:
 
-- **Per-star intrinsic Teff routing** (`src/client/star-pipeline/star-color-routing-pure.ts`)
-  — six-tier `pickTeffSource` ramps gspphot first, gspspec second,
-  Ballesteros(B-V) third, spectral-class T_TABLE fourth, WD Sion Teff
-  fifth, solar fallback last.
+- **Per-star colour routing.** The shader is two-tier —
+  `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so `bestApsisTeff`
+  (`star-color-routing-pure.ts`) writes the best Apsis Teff to the
+  `iTeffApsis` attribute, and the lower tiers are baked into `iCi` at
+  build: an observed AT-HYG B−V, or the intrinsic spectral-class colour
+  `spectralClassCi` (`catalog-pure.ts`) derives when a no-Apsis star has
+  no B−V but a parseable class (`ciSpectralDerived` in build-counts),
+  else the solar fallback.
 - **Spectral classification fall-through** (`resolveSpectralInfo` in
   `catalog-pure.ts`) — when SIMBAD has no sp_type under either the
   source_id or HIP key, GSP-Spec's `spectraltype_esphs` enum is the

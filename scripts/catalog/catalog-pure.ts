@@ -2,6 +2,8 @@
 // build-catalog.ts and its tests — binary layout constants, spectral
 // parsing, Stefan-Boltzmann radius, GCVS field extraction.
 
+import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
+
 /** Solar-type B-V used as a fallback when no chromaticity input is
  *  available. ~0.65 yields a yellow disc rather than a hot blue or
  *  cold red default. Consumed by stars-parse's AT-HYG read (blank ci
@@ -370,6 +372,24 @@ export function tempKelvin(info: SpectralInfo): number {
     return interpolate(WR_T_TABLE, info.subclass);
   }
   return interpolate(T_TABLE[info.classIdx] ?? T_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
+}
+
+/** Intrinsic (extinction-free) B−V from a parsed spectral class — the
+ *  build-side tier-4/5/6 colour bake. White dwarfs / class stars route
+ *  their `tempKelvin` through Ballesteros; an unparseable class falls to
+ *  `SOLAR_BV_FALLBACK` rather than `tempKelvin`'s neutral 5000 K row (a
+ *  yellow-white default that would misrepresent an unknown star as solar).
+ *  Shared by the main-catalog read (`stars-parse.ts`) and companion
+ *  promotion (`imputeCompanionCi`): the shipped shader routing is
+ *  two-tier (`iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi`), so a
+ *  no-Apsis star's class colour has to be baked into `ci` here. The
+ *  result is intrinsic and must NOT be de-reddened. */
+export function spectralClassCi(info: SpectralInfo): number {
+  if (info === SPECTRAL_UNKNOWN
+      || (info.classIdx === UNKNOWN_CLASS_IDX && !info.isWhiteDwarf)) {
+    return SOLAR_BV_FALLBACK;
+  }
+  return ballesterosBvFromTeff(tempKelvin(info));
 }
 
 // Bolometric correction by spectral class + subclass. Mostly negligible for

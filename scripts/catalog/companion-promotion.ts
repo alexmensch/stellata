@@ -9,21 +9,18 @@ import {
   FLAG_BINARY_PRIMARY,
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
-  SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
-  UNKNOWN_CLASS_IDX,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absmagFromSpectral,
   classifyFromSimbad,
+  spectralClassCi,
   spectralFromAbsmag,
   parseGaiaSourceIdStr,
   physicalRadius,
   resolveSpectDisplay,
-  tempKelvin,
   type SpectralInfo,
 } from './catalog-pure';
-import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
 import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
 import type { Star } from './stars-parse';
@@ -585,9 +582,8 @@ export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> 
 
 // Companion B-V (ci). When Stage 6 tags the row's photometry as
 // inherited from the system primary (Sirius B's row carrying Sirius A's
-// 0.009 white instead of its own DA1.9 blue), derive from spectral info
-// via tempKelvin → ballesterosBvFromTeff. SPECTRAL_UNKNOWN falls
-// through to SOLAR_BV_FALLBACK.
+// 0.009 white instead of its own DA1.9 blue), derive an intrinsic colour
+// from the spectral class via the shared spectralClassCi.
 /** True when the row's `ci` is its OWN observed B−V (dust-reddened), so
  *  build-time de-extinction must de-redden it. False when imputeCompanionCi
  *  derives an intrinsic B−V from spectral type or the solar fallback —
@@ -604,15 +600,7 @@ export function imputeCompanionCi(
   if (companionCiIsObserved(secondary)) {
     return secondary.ci as number;
   }
-  // SPECTRAL_UNKNOWN's tempKelvin is the neutral 5000 K row — a yellow-
-  // white default. Detect that explicitly so the fallback routes through
-  // SOLAR_BV_FALLBACK instead, mirroring stars-parse's handling for
-  // AT-HYG rows with blank ci AND unparseable spect.
-  if (spectralInfo === SPECTRAL_UNKNOWN
-      || (spectralInfo.classIdx === UNKNOWN_CLASS_IDX && !spectralInfo.isWhiteDwarf)) {
-    return SOLAR_BV_FALLBACK;
-  }
-  return ballesterosBvFromTeff(tempKelvin(spectralInfo));
+  return spectralClassCi(spectralInfo);
 }
 
 
@@ -914,10 +902,36 @@ function composeCompanionName(
     row, primary, primaryStar, constellations, systemPrimaryStar, true,
   );
   if (!base) return null;
+  const systemBase = starNameBase(systemPrimaryStar, constellations)
+    ?? starNameBase(primaryStar, constellations);
   return joinComponentName(
-    stripDoubledParentToken(base, canonicalComp, primary?.comp ?? null),
+    stripDoubledParentToken(
+      stripBlendedSiblingLetter(base, canonicalComp, systemBase),
+      canonicalComp, primary?.comp ?? null,
+    ),
     canonicalComp,
   );
+}
+
+/** Strip a trailing single-letter component token when a blended
+ *  top-level component inherited a SIBLING's composed name. Acrab's WDS
+ *  E shares β² Sco's (WDS C) Gaia source, so Stage 6 stamps E's row name
+ *  as "Acrab B" (β² Sco's own name); appending the canonical top-level
+ *  letter would read "Acrab B E". A top-level letter composes flat off
+ *  the system base, so strip the trailing " <letter>" when the prefix is
+ *  exactly the system's resolved base name — "Acrab B" → "Acrab" →
+ *  "Acrab E". A real proper name ending in a capital-letter word never
+ *  equals the system base, so it survives; and only a top-level canonical
+ *  letter triggers it (sub-letters route through stripDoubledParentToken). */
+export function stripBlendedSiblingLetter(
+  base: string,
+  canonicalComp: string,
+  systemBase: string | null,
+): string {
+  if (systemBase === null || !/^[A-Z]$/.test(canonicalComp)) return base;
+  const m = /^(.+) [A-Z]$/.exec(base);
+  if (m && m[1] === systemBase) return m[1];
+  return base;
 }
 
 /** "<base> <comp>", or just base when comp is empty. */

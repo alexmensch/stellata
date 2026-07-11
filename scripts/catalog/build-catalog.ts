@@ -238,6 +238,7 @@ async function main() {
     spectralBySimbad: 0,
     spectralByGspspec: 0,
     spectralFallback: 0,
+    ciSpectralDerived: 0,
     multiplesIdentifierBackfill: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
@@ -477,6 +478,7 @@ async function main() {
   counts.spectralBySimbad = stats.spectralBySimbad;
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
+  counts.ciSpectralDerived = stats.ciSpectralDerived;
 
   const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
   const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);

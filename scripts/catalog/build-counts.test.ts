@@ -48,6 +48,7 @@ function baseCounts(): BuildCounts {
     spectralBySimbad: 280000,
     spectralByGspspec: 25000,
     spectralFallback: 8000,
+    ciSpectralDerived: 1200,
     multiplesIdentifierBackfill: 30,
     companionRowsScanned: 13000,
     companionPromoted: 4500,
