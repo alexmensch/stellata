@@ -337,6 +337,7 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
     the ORB6 file format.
     """
     out: list[Orb6Entry] = []
+    n_fallback_grade = 0
     with path.open(errors="replace") as fh:
         for raw in fh:
             line = raw.rstrip("\r\n")
@@ -352,6 +353,8 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
             discoverer = line[30:37].strip()
             components = line[37:44].strip()
             grade_str = line[233:234].strip()
+            if not grade_str.isdigit():
+                n_fallback_grade += 1
             precise = _parse_wds_precise_coord(line[0:18])
             out.append(Orb6Entry(
                 wds_id=wds_id,
@@ -379,6 +382,12 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
                 grade=int(grade_str) if grade_str.isdigit() else 5,
                 ref=line[237:245].strip(),
             ))
+    if n_fallback_grade:
+        print(
+            f"[parsers] ORB6: {n_fallback_grade:,} rows carry a non-numeric "
+            f"grade cell — coerced to 5 (indeterminate); check the file "
+            f"format if this is nonzero after a refresh",
+        )
     _assert_field_coverage(
         out, "parse_orb6", "P_val", ORB6_PERIOD_COVERAGE_FLOOR,
     )
@@ -463,25 +472,24 @@ class CcdmRow:
     mult_flag: str      # blank / "O" / etc. — see Hipparcos doc
 
 
+# Full Hipparcos main-catalogue slice (117,955 HIPs + VizieR quirks);
+# asserted by the build call site so a VizieR reformat that blanks or
+# truncates the parse fails loudly instead of silently degrading the
+# CCDM tier.
+CCDM_ROW_COUNT_BOUNDS = (100_000, 140_000)
+
+
 def parse_ccdm(path: Path) -> list[CcdmRow]:
-    """``hip_ccdm.tsv`` (VizieR): TSV with `#` comment lines, then a three-
-    line header (column names, separator spec, dashes) before the data."""
+    """``hip_ccdm.tsv`` (VizieR): a data row is any non-comment line whose
+    first tab-separated field parses as an integer HIP. The header rows
+    (column names, unit spec, dash separator) all fail that test, so the
+    parse doesn't depend on VizieR's separator-row format."""
     rows: list[CcdmRow] = []
     with path.open() as fh:
-        in_data = False
         for line in fh:
             if not line or line.startswith("#"):
                 continue
-            stripped = line.rstrip("\n")
-            if not in_data:
-                # Sentinel: the first row that starts with ``------`` is the
-                # dash separator immediately preceding the data.
-                if stripped.startswith("------"):
-                    in_data = True
-                continue
-            parts = stripped.split("\t")
-            if len(parts) < 1:
-                continue
+            parts = line.rstrip("\n").split("\t")
             hip = safe_int(parts[0])
             if hip is None:
                 continue

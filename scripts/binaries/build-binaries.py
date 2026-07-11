@@ -37,7 +37,7 @@ DATA = ROOT / "data"
 # consumes these names directly.
 
 from parsers import (  # noqa: E402, F401
-    AthygRow, CcdmRow, GaiaAstrometryRow, Hip2Row,
+    AthygRow, CCDM_ROW_COUNT_BOUNDS, CcdmRow, GaiaAstrometryRow, Hip2Row,
     MscComponentRow, MscOrbitRow, MscSystemRow, Orb6Entry,
     SimbadWdsXid, WdsPair,
     parse_astrometry_exclusions,
@@ -333,6 +333,13 @@ def resolve_through_stage2() -> Stage2Resolution:
     )
 
     ccdm = parse_ccdm(SRC_CCDM)
+    lo_ccdm, hi_ccdm = CCDM_ROW_COUNT_BOUNDS
+    if not (lo_ccdm <= len(ccdm) <= hi_ccdm):
+        raise SystemExit(
+            f"CCDM parse returned {len(ccdm):,} rows, outside "
+            f"[{lo_ccdm:,}, {hi_ccdm:,}] — check the VizieR file format "
+            f"of {SRC_CCDM}"
+        )
     log(f"loaded {len(ccdm):,} CCDM rows")
 
     hip2 = parse_hip2(SRC_HIP2)

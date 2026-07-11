@@ -544,6 +544,23 @@ class CcdmTests(unittest.TestCase):
         self.assertEqual(rows[1].hip, 18)
         self.assertEqual(rows[1].mult_flag, "O")
 
+    def test_survives_reformatted_separator_row(self) -> None:
+        # Data detection keys on the first field parsing as a HIP, not
+        # on the dash separator — a VizieR reformat (=====, or no
+        # separator at all) must not blank the parse.
+        body = (
+            "#   VizieR header\n"
+            "HIP\tCCDM\tMultFlag\n"
+            "======\t==========\t=\n"
+            "     3\t00000+3852\t\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "ccdm.tsv", body)
+            rows = bb.parse_ccdm(p)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].hip, 3)
+        self.assertEqual(rows[0].ccdm, "00000+3852")
+
 
 class Hip2Tests(unittest.TestCase):
     def test_parses_astrometry_row(self) -> None:
