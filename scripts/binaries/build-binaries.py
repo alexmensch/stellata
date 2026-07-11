@@ -192,8 +192,18 @@ EXPECTED_RATES = SCRIPT.parent / "build-binaries-rates-expected.json"
 ATHYG_GAIA_COVERAGE_BOUNDS = (0.90, 1.00)
 
 
+def _iter_code_paths() -> Iterator[Path]:
+    # The orchestrator is an import shell — the pipeline logic lives in
+    # the sibling stage modules and scripts/util, so any of them must
+    # invalidate the artifact, not just this file.
+    for folder in (SCRIPT.parent, SCRIPT.parent.parent / "util"):
+        for mod in sorted(folder.glob("*.py")):
+            if not mod.name.endswith(".test.py"):
+                yield mod
+
+
 def _iter_input_paths() -> Iterator[Path]:
-    yield SCRIPT
+    yield from _iter_code_paths()
     yield SRC_WDS_SUMM
     yield SRC_ORB6
     yield SRC_ATHYG

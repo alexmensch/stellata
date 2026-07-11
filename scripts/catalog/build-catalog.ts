@@ -2,7 +2,7 @@
 // public/catalog.bin, public/constellations.json, and
 // public/search-index.json. See scripts/catalog/README.md.
 
-import { statSync, existsSync, readFileSync } from 'node:fs';
+import { statSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -158,7 +158,16 @@ function isUpToDate(): boolean {
   const ledgerMtime = mtimeIfExists(LEDGER_PATH);
   const ledgerHeadMtime = mtimeIfExists(HEAD_PATH);
   const sidOverridesMtime = mtimeIfExists(OVERRIDES_PATH);
-  const scriptMtime = statSync(__filename).mtimeMs;
+  // This file is an orchestration shell — the build logic lives in the
+  // sibling scripts/catalog modules plus scripts/util and scripts/sid,
+  // so any of them must invalidate the artifact.
+  let scriptMtime = 0;
+  for (const dir of [__dirname, resolve(__dirname, '../util'), resolve(__dirname, '../sid')]) {
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.ts') || name.endsWith('.test.ts')) continue;
+      scriptMtime = Math.max(scriptMtime, statSync(resolve(dir, name)).mtimeMs);
+    }
+  }
   return (
     binMtime > srcMtime &&
     binMtime > scriptMtime &&
