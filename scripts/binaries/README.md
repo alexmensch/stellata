@@ -3,7 +3,8 @@
 Developer walk-through of `scripts/binaries/build-binaries.py` — how
 WDS pairs cross-match against ORB6 + AT-HYG + GCVS + CCDM + HIP2 +
 Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD
-per-component spectra to produce `data/binaries/multiples.tsv`. The
+per-component spectra + the Pulkovo MSC to produce
+`data/binaries/multiples.tsv`. The
 science of *why* the choices below are made (Gaia DR3 parallax bias,
 NSS detectability regimes, HIP2 long-baseline corrections) is in
 `SCIENCE.md`; this file is the engineering side — layered strategies,
@@ -36,7 +37,7 @@ scripts/binaries/
   build-binaries.py               WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
                                   + Gaia (HIP/Tyc xwalks, NSS, 5p
                                   astrometry) + SIMBAD WDS xids + SIMBAD
-                                  per-component sp_type →
+                                  per-component sp_type + Pulkovo MSC →
                                   data/binaries/multiples.tsv.
                                   Orchestration shell; per-stage logic in
                                   stage{2..7}_*.py.
@@ -51,12 +52,19 @@ scripts/binaries/
                                   (truncated-form expansion, parent /
                                   child tokens) shared by subdivide.py
                                   and build-runtime-binaries.py.
+  msc_map.py                      Pulkovo MSC hierarchy-label → WDS
+                                  component-token mapping + the
+                                  MscLookup tables (orbits by pair,
+                                  pair mags, per-component sp_type)
+                                  Stages 2/4/6 consume. Label
+                                  convention: data/msc/README.md.
   subdivide.py                    Synthesized sub-pair injection — ORB6
                                   orphan pairs + curated component
-                                  overrides (pre-Stage-2), binding seeds
-                                  (post-Stage-2), Gaia-NSS inner pairs
-                                  (post-Stage-3). See § Sub-pair
-                                  synthesis.
+                                  overrides (pre-Stage-2), MSC inner
+                                  pairs (pre-Stage-2, post-rescue),
+                                  binding seeds (post-Stage-2),
+                                  Gaia-NSS inner pairs (post-Stage-3).
+                                  See § Sub-pair synthesis.
   stage2_resolve.py               WDS-component → Gaia DR3 source_id
                                   cascade (orb6_hip → athyg_gaia_native →
                                   simbad_xid → ccdm_hip → AT-HYG
@@ -115,6 +123,13 @@ scripts/binaries/
                                   § Spot-check ground truth). Its own CI
                                   check; also run locally before merging
                                   any Stage 2-7 change (~20 s).
+  probe-blank-components-tail.py  Read-only instrumentation for the
+                                  full blank→AB ingest decision
+                                  (stellata-tracked): runs the Stage-2
+                                  cascade over the
+                                  blank_components_deferred tail and
+                                  reports per-end resolution yield.
+                                  Touches nothing.
   build-binaries.test.py          stdlib unittest pins for Stages 1-7.
   build-runtime-binaries.test.py  stdlib unittest pins for the pure
                                   helpers (_split_components,
@@ -138,6 +153,14 @@ data/wds/
   wds_refs.txt                    WDS reference list (LFS).
   orb6_orbits.txt                 ORB6 sixth catalog of visual binary
                                   orbits (LFS).
+
+data/msc/
+  msc_systems.tsv                 Pulkovo MSC (Tokovinin, VizieR
+  msc_orbits.tsv                  J/ApJS/235/6) hierarchy / orbit /
+  msc_components.tsv              per-component tables. Column detail,
+                                  label convention, provenance:
+                                  data/msc/README.md. Refresh:
+                                  scripts/refresh/refresh-msc.py.
 
 data/binaries/
   multiples.tsv                   build-binaries.py output — two rows
@@ -172,7 +195,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
 1. **Binary-system pipeline** (`scripts/binaries/build-binaries.py`).
    Reads WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS,
    5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD per-component
-   spectra. Emits `data/binaries/multiples.tsv` — two rows per kept
+   spectra + the Pulkovo MSC (`data/msc/`, mapped through
+   `msc_map.py`). Emits `data/binaries/multiples.tsv` — two rows per kept
    physical pair, plus standalone rows for SIMBAD-known WDS components
    the pair walk didn't reach. Run via `npm run build:binaries`. Seven
    stages, one module per stage under `scripts/binaries/`.
@@ -452,8 +476,8 @@ so AT-HYG-HD-only rows still surface their absmag / spect / proper name.
 ## Sub-pair synthesis (`subdivide.py`)
 
 Some orbits have no WDS pair row to live on — every downstream stage
-walks WDS pairs, so those orbits were unreachable. Three passes at
-three points in the pipeline:
+walks WDS pairs, so those orbits were unreachable. Four passes at
+four points in the pipeline:
 
 - **ORB6 component overrides (Stage 1).**
   `data/binaries/orb6_component_overrides.tsv` stamps curated WDS
@@ -477,6 +501,19 @@ three points in the pipeline:
   missed: an unresolved primary inherits the in-system parent-token
   component's binding (Ca ← C), an unresolved secondary inherits the
   pair primary's (the blend convention).
+- **MSC inner pairs (pre-Stage-2, after the blank-components
+  rescue).** One synthesized `WdsPair` per WDS-token-mapped MSC orbit
+  whose pair WDS never enumerates — the spectroscopic subsystems ORB6
+  and Gaia NSS both miss (AR Cas Aa,Ab; ν Sco Aa1,Aa2). Gates mirror
+  the NSS pass: both sides clean single-component tokens, at least one
+  renderable-element orbit row, the token pair absent from the
+  system's existing pairs, and the pair anchored to the existing
+  system (each token's parent present) — unanchored MSC-only systems
+  are skipped rather than minting unreachable orphans. Synthesized
+  pairs are sub-resolution (ρ = 0, `discoverer=MSC`) and ride the
+  normal Stage 2 cascade + synthesized-binding seeds. Counted
+  `synthesized_msc_inner_pairs` with per-gate skip counts in the
+  build log.
 - **Gaia-NSS inner pairs (post-Stage-3).** A component whose own
   source has an `nss_two_body_orbit` row while its pair partner is a
   DIFFERENT resolved source hosts an unresolved companion of its own
@@ -542,6 +579,7 @@ in `ORBIT_VIA_VALUES`, in priority order:
 | `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
 | `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`), AND the pair's WDS separation isn't far too wide to be that orbit (`_nss_separation_consistent`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
 | `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
+| `msc` | Pulkovo MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year OR a truncated JD with no unit flag — `msc_T0_jd` disambiguates by magnitude, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
 | `none` | Visual-only pair with no orbital information on file. |
 
 An NSS orbit is keyed to a Gaia **source**, not a WDS pair, so it can
@@ -811,7 +849,7 @@ Three system-level mechanisms run at emit time:
   published it), `kepler_mass_estimate`, or `none`. SCIENCE.md
   § Multiple-star pipeline carries the error analysis (a ∝ M^⅓).
 
-The `spect` column resolves through a three-tier cascade with
+The `spect` column resolves through a four-tier cascade with
 provenance in `spect_via`: `curated` →
 `data/binaries/component_sptype_overrides.tsv`, hand-curated
 literature types for components no machine source carries (SIMBAD's
@@ -819,9 +857,16 @@ WDS cross-IDs never enumerate Algol's Aa2, so its K0IV can only come
 from here); `simbad` → SIMBAD's per-component sp_type, which beats
 AT-HYG because AT-HYG inherits the same system-level spectral string
 across all components (incorrect for mixed-class pairs like Sirius
-A0V + DA1.9); `athyg` → the inherited per-system string; `none`.
-The mass-ratio q backfill reads the resolved `spect`, so a curated
-companion type also improves q for its pair.
+A0V + DA1.9); `msc` → the Pulkovo MSC's pair-side types, covering the
+spectroscopic subsystem members neither SIMBAD nor AT-HYG enumerate
+(AR Cas Ab's A6); `athyg` → the inherited per-system string; `none`.
+The mass-ratio q backfill reads the resolved `spect`, so a curated or
+MSC companion type also improves q for its pair.
+
+`mag_pri` / `mag_sec` (and the derived `dmag`) fall back to the MSC's
+pair-side V magnitudes when the WDS row carries none — the
+sub-resolution pairs WDS publishes without photometry. Filled pairs
+are listed in the build log; counted `msc_pair_mags_filled`.
 
 The `absmag` / `ci` columns resolve with provenance in `photometry_via`:
 `athyg_own` (the component's own AT-HYG row); `athyg_system_inherited`

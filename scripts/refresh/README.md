@@ -48,12 +48,14 @@ venv binary) in the shell that runs them.
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
 | `validate:simbad` | `scripts/catalog/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
-`refresh-simbad-sptype.py` and `refresh-simbad-wds-xids.py` don't yet
-have dedicated npm targets — invoke directly with `python3
-scripts/refresh/refresh-simbad-sptype.py` /
-`refresh-simbad-wds-xids.py`. Both share `scripts/refresh/simbad/`
-plumbing (`specs.py`, `inputs.py`, `query.py`, `tsv.py`) so adding new
-SIMBAD-anchored pulls reuses the entire stack.
+`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
+`refresh-msc.py` don't yet have dedicated npm targets — invoke
+directly with `python3 scripts/refresh/<script>.py`. The two SIMBAD
+scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
+`inputs.py`, `query.py`, `tsv.py`) so adding new SIMBAD-anchored pulls
+reuses the entire stack. `refresh-msc.py` pulls the three Pulkovo MSC
+tables (VizieR `J/ApJS/235/6`) into `data/msc/` with per-table schema
+validation and row bounds — source detail in `data/msc/README.md`.
 
 `scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
 atomic-rename plumbing every refresh script imports — handles retry,

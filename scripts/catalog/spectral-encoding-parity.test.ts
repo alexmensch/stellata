@@ -1,7 +1,6 @@
-// Cross-language parity: scripts/binaries/mass_estimate.py mirrors this
-// module's spectral-class + luminosity-class encoding with no shared
-// source of truth. This corpus fails when either side renumbers a class,
-// extends the luminosity codes, or drifts on the shared parse surface.
+// Cross-language parity: mass_estimate.py mirrors catalog-pure.ts's
+// spectral encoding with no shared source of truth — this corpus fails
+// when either side renumbers a class or drifts on the parse surface.
 
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';

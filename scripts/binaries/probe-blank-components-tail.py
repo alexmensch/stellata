@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Instrumentation probe for the full blank→AB ingest (stellata-dch.83.9):
-runs the Stage-2 cascade over the blank_components_deferred WDS tail and
-reports how many implied A,B pairs would resolve. Read-only — nothing is
-written; the main build is untouched."""
+"""Instrumentation probe for the full blank→AB ingest decision: runs the
+Stage-2 cascade over the blank_components_deferred WDS tail and reports
+how many implied A,B pairs would resolve. Read-only."""
 
 from __future__ import annotations
 
