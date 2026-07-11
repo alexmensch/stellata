@@ -29,6 +29,7 @@ export interface GaiaAstrometryCatalogRow {
   raDeg: number;
   decDeg: number;
   parallaxMas: number | null;
+  parallaxErrorMas: number | null;
   pmraMasyr: number | null;
   pmdecMasyr: number | null;
   ruwe: number | null;
@@ -42,6 +43,7 @@ export interface Hip2AstrometryRow {
   raDeg: number;
   decDeg: number;
   plxMas: number | null;
+  plxErrorMas: number | null;
   pmRaMasyr: number | null;
   pmDeMasyr: number | null;
 }
@@ -389,7 +391,7 @@ export function parseGaiaAstrometryCatalogTsv(
   if (lines.length === 0) return out;
   const idx = headerIndex(
     lines[0],
-    ['source_id', 'ra', 'dec', 'parallax', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag'],
+    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag'],
     'Gaia astrometry catalog TSV',
     'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
   );
@@ -406,6 +408,7 @@ export function parseGaiaAstrometryCatalogTsv(
       raDeg,
       decDeg,
       parallaxMas: floatCell(cells, idx.parallax),
+      parallaxErrorMas: floatCell(cells, idx.parallax_error),
       pmraMasyr: floatCell(cells, idx.pmra),
       pmdecMasyr: floatCell(cells, idx.pmdec),
       ruwe: floatCell(cells, idx.ruwe),
@@ -424,7 +427,7 @@ export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {
   if (lines.length === 0) return out;
   const idx = headerIndex(
     lines[0],
-    ['hip', 'ra_icrs', 'de_icrs', 'plx', 'pm_ra', 'pm_de'],
+    ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'],
     'HIP2 van Leeuwen TSV',
     'Restore data/hipparcos/hip2_van_leeuwen.tsv from LFS.',
   );
@@ -441,6 +444,7 @@ export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {
       raDeg,
       decDeg,
       plxMas: floatCell(cells, idx.plx),
+      plxErrorMas: floatCell(cells, idx.e_plx),
       pmRaMasyr: floatCell(cells, idx.pm_ra),
       pmDeMasyr: floatCell(cells, idx.pm_de),
     });

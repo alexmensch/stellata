@@ -8,6 +8,11 @@ import {
 function baseCounts(): BuildCounts {
   return {
     recordCount: 313242,
+    systemCoherenceSystems: 0,
+    systemCoherenceRepositioned: 0,
+    systemCoherenceMemberAnchorWins: 0,
+    systemCoherenceSignificantDepthKept: 0,
+    systemCoherenceAnchorInconsistent: 0,
     binaryPairs: 100,
     binaryMutualPairs: 50,
     gcvsEntries: 60000,

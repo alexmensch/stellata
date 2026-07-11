@@ -1331,6 +1331,62 @@ via `mergeReasonsFromSnapshot`. A new outlier fails the build until
 the snapshot is refreshed and a rationale is filled in; a removed or
 changed outlier likewise.
 
+## System distance coherence
+
+`system-coherence.ts` (`applySystemDistanceCoherence`) runs after the
+HD identifier backfill and **before companion promotion**, over the
+kept-physical pair rows of `multiples.tsv`. Two members of a bound WDS
+system carry independently-measured catalog distances whose noise
+scatter (a fraction of a parsec at ~50 pc) dwarfs the pair's true
+physical size (hundreds of AU), so without this pass the pair renders
+visibly split along the sightline from any nearby vantage — the
+camera-anywhere failure the single-star distance stack can't see.
+
+Per WDS root with ≥2 resolved own-record members:
+
+- **Anchor pick — purpose-aware, not recency-aware.** Best tier wins:
+  clean unsaturated Gaia 5p (parallax > 0, RUWE ≤ 1.4,
+  ipd_frac_multi_peak ≤ 2 **percent** — the column is 0–100 here,
+  unlike direction-cascade's fraction-scale threshold — and
+  G ≥ 3.0), then HIP2 coverage, then Bailer-Jones membership, then
+  inherited. HIP2's long baseline beats Gaia exactly where Gaia is
+  saturated or binarity-corrupted (Acrux). A member hosting its own
+  sub-pair (Acrux C = Ca,Cb) never takes the clean-Gaia tier —
+  photocentre wobble on periods beyond Gaia's baseline corrupts the 5p
+  parallax without tripping RUWE. Ties break pair-primary first, then
+  the WDS-canonical letter.
+- **Anchor placement-consistency gate.** A picked anchor whose rendered
+  catalog distance contradicts its own best parallax — by >3σ AND >20%
+  of the anchor distance — poisons the whole system, so the system is
+  skipped and members keep their own distances. μ¹ Sco is the case: its
+  RUWE-corrupted Gaia parallax (1.87 ± 0.74 mas) gets a Bailer-Jones
+  placement at 1685.7 pc while HIP2 measures ~154 pc; without this gate
+  the corrupted parallax's huge σ made μ² Sco's honest 176.6 pc read as
+  a <3σ gap and dragged it out to 1.7 kpc. Counted
+  `systemCoherenceAnchorInconsistent`. (The μ¹ Sco record's own B-J
+  placement is a separate open defect.)
+- **Radial snap with a significance gate.** Every other member moves
+  radially to the anchor's distance (direction preserved — it is
+  mas-accurate regardless of parallax quality) UNLESS its own parallax
+  gap from the anchor is significant at ≥3σ of the combined parallax
+  error (`COHERENCE_RADIAL_SIGMA`, mirroring Stage 5's
+  `RADIAL_SEPARATION_SIGMA`) — genuinely measured depth
+  (α Cen–Proxima, 61 Cyg A/B) survives. Members with no error model
+  snap only across gaps within 20% of the anchor distance (1 pc floor
+  for nearby systems); a wider gap is a genuine catalog disagreement
+  and the member keeps its own distance.
+- **Brightness invariance.** A repositioned member's absmag shifts by
+  `5·log₁₀(d_old/d_new)` and its Stefan-Boltzmann radius follows
+  (R ∝ √L at fixed Teff), so apparent brightness doesn't change.
+
+Running before promotion means minted companions tangent-project off
+already-coherent anchors, and the baked pair geometry in catalog.bin
+matches what `binaries.bin` renders. Pinned in build-counts as
+`systemCoherenceSystems` / `systemCoherenceRepositioned` /
+`systemCoherenceMemberAnchorWins` /
+`systemCoherenceSignificantDepthKept`. SCIENCE.md § Multiple-star
+pipeline carries the science framing.
+
 ## Gaia DR3 Apsis surfacing
 
 `scripts/catalog/build-catalog.ts` loads

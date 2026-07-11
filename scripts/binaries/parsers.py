@@ -337,6 +337,7 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
     the ORB6 file format.
     """
     out: list[Orb6Entry] = []
+    n_fallback_grade = 0
     with path.open(errors="replace") as fh:
         for raw in fh:
             line = raw.rstrip("\r\n")
@@ -352,6 +353,8 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
             discoverer = line[30:37].strip()
             components = line[37:44].strip()
             grade_str = line[233:234].strip()
+            if not grade_str.isdigit():
+                n_fallback_grade += 1
             precise = _parse_wds_precise_coord(line[0:18])
             out.append(Orb6Entry(
                 wds_id=wds_id,
@@ -379,6 +382,12 @@ def parse_orb6(path: Path) -> list[Orb6Entry]:
                 grade=int(grade_str) if grade_str.isdigit() else 5,
                 ref=line[237:245].strip(),
             ))
+    if n_fallback_grade:
+        print(
+            f"[parsers] ORB6: {n_fallback_grade:,} rows carry a non-numeric "
+            f"grade cell — coerced to 5 (indeterminate); check the file "
+            f"format if this is nonzero after a refresh",
+        )
     _assert_field_coverage(
         out, "parse_orb6", "P_val", ORB6_PERIOD_COVERAGE_FLOOR,
     )
@@ -463,25 +472,24 @@ class CcdmRow:
     mult_flag: str      # blank / "O" / etc. — see Hipparcos doc
 
 
+# Full Hipparcos main-catalogue slice (117,955 HIPs + VizieR quirks);
+# asserted by the build call site so a VizieR reformat that blanks or
+# truncates the parse fails loudly instead of silently degrading the
+# CCDM tier.
+CCDM_ROW_COUNT_BOUNDS = (100_000, 140_000)
+
+
 def parse_ccdm(path: Path) -> list[CcdmRow]:
-    """``hip_ccdm.tsv`` (VizieR): TSV with `#` comment lines, then a three-
-    line header (column names, separator spec, dashes) before the data."""
+    """``hip_ccdm.tsv`` (VizieR): a data row is any non-comment line whose
+    first tab-separated field parses as an integer HIP. The header rows
+    (column names, unit spec, dash separator) all fail that test, so the
+    parse doesn't depend on VizieR's separator-row format."""
     rows: list[CcdmRow] = []
     with path.open() as fh:
-        in_data = False
         for line in fh:
             if not line or line.startswith("#"):
                 continue
-            stripped = line.rstrip("\n")
-            if not in_data:
-                # Sentinel: the first row that starts with ``------`` is the
-                # dash separator immediately preceding the data.
-                if stripped.startswith("------"):
-                    in_data = True
-                continue
-            parts = stripped.split("\t")
-            if len(parts) < 1:
-                continue
+            parts = line.rstrip("\n").split("\t")
             hip = safe_int(parts[0])
             if hip is None:
                 continue
@@ -802,3 +810,126 @@ def parse_simbad_wds_spectra(
     return out
 
 
+
+@dataclass
+class MscSystemRow:
+    """One pair of an MSC hierarchy (``data/msc/msc_systems.tsv``).
+    ``prim``/``sec``/``parent`` are Tokovinin labels, not WDS tokens —
+    map through ``msc_map.map_msc_labels`` before joining."""
+
+    wds_id: str
+    prim: str
+    sec: str
+    parent: str
+    obs_type: str
+    vmag1: float | None
+    spt1: str
+    vmag2: float | None
+    spt2: str
+
+
+def parse_msc_systems(path: Path) -> list[MscSystemRow]:
+    # QUOTE_NONE on all three MSC parsers: MSC stores a literal `"`
+    # (arcsec) in unit cells, which default csv quoting treats as an
+    # opening quote and silently merges rows across.
+    out: list[MscSystemRow] = []
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            fh, delimiter="\t", quoting=csv.QUOTE_NONE,
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            prim = (r.get("prim") or "").strip()
+            sec = (r.get("sec") or "").strip()
+            if not wds_id or not prim or not sec:
+                continue
+            out.append(MscSystemRow(
+                wds_id=wds_id,
+                prim=prim,
+                sec=sec,
+                parent=(r.get("parent") or "").strip(),
+                obs_type=(r.get("obs_type") or "").strip(),
+                vmag1=safe_float(r.get("vmag1") or ""),
+                spt1=(r.get("spt1") or "").strip(),
+                vmag2=safe_float(r.get("vmag2") or ""),
+                spt2=(r.get("spt2") or "").strip(),
+            ))
+    return out
+
+
+@dataclass
+class MscOrbitRow:
+    """One MSC orbit (``data/msc/msc_orbits.tsv``). ``syst`` is the
+    Tokovinin pair label (``"Aa,Ab"``). ``t0`` is a Besselian year OR a
+    truncated JD with no unit flag — ``stage4_orbits.msc_T0_jd``
+    disambiguates by magnitude + plausibility window."""
+
+    wds_id: str
+    syst: str
+    per: float | None
+    per_unit: str
+    t0: float | None
+    e: float | None
+    a_arcsec: float | None
+    node_deg: float | None
+    longp_deg: float | None
+    incl_deg: float | None
+    note: str
+
+
+def parse_msc_orbits(path: Path) -> list[MscOrbitRow]:
+    out: list[MscOrbitRow] = []
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            fh, delimiter="\t", quoting=csv.QUOTE_NONE,
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            syst = (r.get("syst") or "").strip()
+            if not wds_id or not syst:
+                continue
+            out.append(MscOrbitRow(
+                wds_id=wds_id,
+                syst=syst,
+                per=safe_float(r.get("per") or ""),
+                per_unit=(r.get("per_unit") or "").strip(),
+                t0=safe_float(r.get("t0") or ""),
+                e=safe_float(r.get("e") or ""),
+                a_arcsec=safe_float(r.get("a_arcsec") or ""),
+                node_deg=safe_float(r.get("node_deg") or ""),
+                longp_deg=safe_float(r.get("longp_deg") or ""),
+                incl_deg=safe_float(r.get("incl_deg") or ""),
+                note=(r.get("note") or "").strip(),
+            ))
+    return out
+
+
+@dataclass
+class MscComponentRow:
+    """One MSC per-component row (``data/msc/msc_components.tsv``).
+    ``comp`` labels are top-level letters/compounds, WDS-consistent."""
+
+    wds_id: str
+    comp: str
+    spt: str
+    vmag: float | None
+
+
+def parse_msc_components(path: Path) -> list[MscComponentRow]:
+    out: list[MscComponentRow] = []
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            fh, delimiter="\t", quoting=csv.QUOTE_NONE,
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            comp = (r.get("comp") or "").strip()
+            if not wds_id or not comp:
+                continue
+            out.append(MscComponentRow(
+                wds_id=wds_id,
+                comp=comp,
+                spt=(r.get("spt") or "").strip(),
+                vmag=safe_float(r.get("vmag") or ""),
+            ))
+    return out

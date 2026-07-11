@@ -144,6 +144,23 @@ enough to see it.
   the ORB6 ReadMe; consulted by `scripts/binaries/build-binaries.py`
   but not committed. Retrieved 2026-05-11. Public-domain
   (U.S. Government work).
+- **Pulkovo Multiple Star Catalog (MSC)**: Tokovinin (2018),
+  *ApJS* 235, 6,
+  DOI [10.3847/1538-4365/aaa1a5](https://doi.org/10.3847/1538-4365/aaa1a5)
+  — author-maintained curated hierarchies of ≥3-component systems,
+  VizieR `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables).
+  Supplies what WDS/ORB6/Gaia-NSS miss: hierarchy-resolved
+  spectroscopic subsystems with compiled orbital elements
+  (AR Cas Aa,Ab; ν Sco Aa1,Aa2), per-component spectral types, and
+  pair-side V magnitudes for sub-resolution pairs WDS publishes
+  without photometry. Committed as three TSVs under `data/msc/`
+  (label convention + column detail in `data/msc/README.md`);
+  refresh via `scripts/refresh/refresh-msc.py`. Because MSC compiles
+  from the same primary literature the other orbit sources curate, its
+  orbit route ranks below ORB6 and Gaia NSS and fires for
+  sub-resolution pairs only (`scripts/binaries/README.md` § Stage 4).
+  Retrieved 2026-07-11. CDS/VizieR standard academic use; cite
+  Tokovinin 2018.
 - **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).
   Curated per-component cross-IDs between WDS pair identifiers
   (`WDS J<id><comp>`) and Gaia DR3 source_ids, drawn from SIMBAD's
@@ -1369,6 +1386,12 @@ freshness policy in `scripts/README.md` § Frozen external data:
   schema separates sp_type from object-type `otype`), so a
   mixed-class pair like Sirius A0V + DA1.9 surfaces both spectra
   rather than AT-HYG's single inherited "A0V+DA" string.
+- **Pulkovo MSC** — Tokovinin 2018, *ApJS* 235, 6 (author-updated
+  VizieR copy, `J/ApJS/235/6`), committed as `data/msc/`. Curated
+  ≥3-component hierarchies: compiled orbits for spectroscopic
+  subsystems ORB6 and Gaia NSS never cover (AR Cas Aa,Ab; ν Sco
+  Aa1,Aa2), per-component spectral types, and pair-side V magnitudes
+  for sub-resolution pairs. Full source entry in § Data sources.
 - **Curated per-component spectral types** —
   `data/binaries/component_sptype_overrides.tsv`. Literature MK
   types for spectroscopic sub-components no machine source
@@ -1476,7 +1499,11 @@ astronomer-relevant summary:
    ORB6 non-visual orbits (grade 8 interferometric-visibilities,
    grade 9 astrometric / spectroscopic, and the undocumented grade 7
    the catalog uses for photometric / eclipsing fits — YY Gem,
-   EQ Tau, BX And) come last.
+   EQ Tau, BX And) come next; Pulkovo MSC compiled orbits come last
+   and attach to sub-resolution pairs only — MSC compiles from the
+   same primary literature the routes above curate, so it never
+   overrides them, and a pair with a measured WDS placement never
+   acquires a compiled orbit it wasn't fit to.
 
    **Estimated scale for spectroscopic orbits.** No NSS solution
    type publishes a relative semi-major axis, and RV / eclipse
@@ -1516,8 +1543,8 @@ astronomer-relevant summary:
    physical pair (+ standalone rows for SIMBAD-known components the
    pair walk didn't reach), with explicit per-component provenance
    columns recording which tier of each cascade above decided.
-   Spectral type is SIMBAD per-component-preferred / AT-HYG
-   per-system inherited as fallback; mass ratio `q` rides through
+   Spectral type resolves curated → SIMBAD per-component → MSC
+   pair-side → AT-HYG per-system inherited; mass ratio `q` rides through
    from Gaia NSS / SB2 spectroscopy where present, with per-class
    mass-table backfill from Cox 2000 §15.2 / Pecaut & Mamajek 2013
    for visual orbits without spectroscopy.
@@ -1780,6 +1807,38 @@ pipeline (engineer walk-through in `scripts/binaries/README.md`);
 `companion-promotion.ts` for the catalog-side passes (see
 `scripts/README.md` § Geometric binary inference and § TDSC double-
 star cross-match for per-pass detail).
+
+### Intra-system distance coherence
+
+Two bound components measured independently carry parallax noise
+larger than their true physical separation: at 50 pc a 2% parallax
+error is a full parsec of radial scatter, five orders of magnitude
+above a 100 AU pair's real depth. Rendering each member at its own
+noisy distance splits the pair along the sightline — invisible from
+Sol, but the entire visible geometry once the camera flies near the
+system (the camera-anywhere principle in § Scope principles).
+
+The catalog build therefore snaps the members of every kept-physical
+WDS system to a per-system distance anchor
+(`scripts/catalog/system-coherence.ts`). The anchor pick is
+**purpose-aware parallax tiering**, not recency: a clean unsaturated
+Gaia 5p parallax (RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2%, G ≥ 3) beats
+HIP2 everywhere except where Gaia is saturated or binarity-corrupted —
+and a member hosting its own unresolved sub-pair never anchors on its
+Gaia parallax, because photocentre wobble on periods beyond Gaia's
+baseline corrupts the fit without tripping RUWE. Members move
+radially only when their parallax gap from the anchor is **not
+significant at 3σ** of the combined parallax error — genuinely
+measured hierarchy depth (α Cen–Proxima's 0.06 pc; 61 Cyg A/B)
+survives; noise collapses. An anchor whose own rendered distance
+contradicts its parallax evidence (μ¹ Sco: Bailer-Jones places the
+RUWE-corrupted source at 1.7 kpc against HIP2's ~154 pc) disqualifies
+the whole system — members keep their own distances rather than
+following a bogus anchor. Direction is untouched (mas-accurate
+regardless of parallax quality), and absmag + Stefan-Boltzmann radius
+follow the distance change so apparent brightness is invariant.
+Engineering detail: `scripts/catalog/README.md` § System distance
+coherence.
 
 ## Constellation stick figures
 

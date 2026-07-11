@@ -2,7 +2,7 @@
 // public/catalog.bin, public/constellations.json, and
 // public/search-index.json. See scripts/catalog/README.md.
 
-import { statSync, existsSync, readFileSync } from 'node:fs';
+import { statSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -80,6 +80,7 @@ import {
   wingRenderablePrimaries,
   type ComponentDesignation,
 } from './companion-promotion';
+import { applySystemDistanceCoherence } from './system-coherence';
 import {
   parseGcvsMain,
   parseGcvsCrossref,
@@ -157,7 +158,16 @@ function isUpToDate(): boolean {
   const ledgerMtime = mtimeIfExists(LEDGER_PATH);
   const ledgerHeadMtime = mtimeIfExists(HEAD_PATH);
   const sidOverridesMtime = mtimeIfExists(OVERRIDES_PATH);
-  const scriptMtime = statSync(__filename).mtimeMs;
+  // This file is an orchestration shell — the build logic lives in the
+  // sibling scripts/catalog modules plus scripts/util and scripts/sid,
+  // so any of them must invalidate the artifact.
+  let scriptMtime = 0;
+  for (const dir of [__dirname, resolve(__dirname, '../util'), resolve(__dirname, '../sid')]) {
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.ts') || name.endsWith('.test.ts')) continue;
+      scriptMtime = Math.max(scriptMtime, statSync(resolve(dir, name)).mtimeMs);
+    }
+  }
   return (
     binMtime > srcMtime &&
     binMtime > scriptMtime &&
@@ -263,6 +273,11 @@ async function main() {
     spectralFallback: 0,
     ciSpectralDerived: 0,
     multiplesIdentifierBackfill: 0,
+    systemCoherenceSystems: 0,
+    systemCoherenceRepositioned: 0,
+    systemCoherenceMemberAnchorWins: 0,
+    systemCoherenceSignificantDepthKept: 0,
+    systemCoherenceAnchorInconsistent: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -567,6 +582,26 @@ async function main() {
       `  backfilled identifiers onto ${counts.multiplesIdentifierBackfill} ` +
         `HD-only primaries from multiples.tsv`,
     );
+    // Intra-system radial coherence BEFORE promotion, so minted members
+    // project off already-coherent anchor positions.
+    const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
+      gaiaAstrometry: directions.gaiaAstrometry,
+      hip2: directions.hip2,
+      bjMap,
+    });
+    console.log(
+      `  system distance coherence: ${coherence.membersRepositioned} ` +
+        `members repositioned across ${coherence.systemsProcessed} systems ` +
+        `(${coherence.memberAnchorWins} member-anchor wins, ` +
+        `${coherence.significantDepthKept} significant depths kept)`,
+    );
+    counts.systemCoherenceRepositioned = coherence.membersRepositioned;
+    counts.systemCoherenceSystems = coherence.systemsProcessed;
+    counts.systemCoherenceMemberAnchorWins = coherence.memberAnchorWins;
+    counts.systemCoherenceSignificantDepthKept =
+      coherence.significantDepthKept;
+    counts.systemCoherenceAnchorInconsistent =
+      coherence.anchorPlacementInconsistent;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
     const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS, dustGrid);

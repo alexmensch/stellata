@@ -39,6 +39,14 @@
       "finalDist": 6655.979,
       "logRatio": 1.656,
       "reason": "Noisy Gaia DR2 inverse-parallax (G_R2 input, 147 pc); Bailer-Jones 2021 DR3 posterior re-anchors to multi-kpc — the same override shape as the G_R3 cases above, just on a DR2-sourced input."
+    },
+    {
+      "id": "hip:116191",
+      "distSrc": "HIP",
+      "athygDist": 193.798,
+      "finalDist": 14.541,
+      "logRatio": -1.125,
+      "reason": "FL Aqr — HIP2 parallax is unusable (5.16 ± 34.71 mas), so AT-HYG's 193.8 pc is noise. Intra-system coherence snaps it to its CPM companion FK Aqr's clean Gaia anchor (14.55 pc), matching FL Aqr's accepted ~14.4 pc. Legitimate correction, not a regression."
     }
   ],
   "simbad": [

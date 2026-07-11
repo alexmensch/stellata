@@ -34,7 +34,7 @@ function angSepArcsec(a: UnitVector, b: UnitVector): number {
 function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrometryCatalogRow {
   return {
     raDeg: 100, decDeg: 20,
-    parallaxMas: 50,
+    parallaxMas: 50, parallaxErrorMas: null,
     pmraMasyr: 10, pmdecMasyr: -10,
     ruwe: 1.0, ipdFracMultiPeak: 0,
     gMag: null,
@@ -45,7 +45,7 @@ function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrome
 function hip2Row(overrides: Partial<Hip2AstrometryRow> = {}): Hip2AstrometryRow {
   return {
     raDeg: 100.001, decDeg: 20.001,
-    plxMas: 50,
+    plxMas: 50, plxErrorMas: null,
     pmRaMasyr: 10, pmDeMasyr: -10,
     ...overrides,
   };
@@ -315,14 +315,14 @@ describe('direction-cascade / TSV parsers', () => {
     expect(map.size).toBe(2);
     expect(map.get('123')).toEqual({
       raDeg: 100.5, decDeg: -20.25,
-      parallaxMas: 50.0,
+      parallaxMas: 50.0, parallaxErrorMas: 0.1,
       pmraMasyr: 10.5, pmdecMasyr: -3.5,
       ruwe: 1.2, ipdFracMultiPeak: 0,
       gMag: 8.0,
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
-      parallaxMas: null,
+      parallaxMas: null, parallaxErrorMas: null,
       pmraMasyr: null, pmdecMasyr: null,
       ruwe: null, ipdFracMultiPeak: null,
       gMag: 9.0,
@@ -343,7 +343,7 @@ describe('direction-cascade / TSV parsers', () => {
     expect(map.size).toBe(1);
     expect(map.get(32349)).toEqual({
       raDeg: 101.28854105, decDeg: -16.71314306,
-      plxMas: 379.21,
+      plxMas: 379.21, plxErrorMas: 1.58,
       pmRaMasyr: -546.01, pmDeMasyr: -1223.07,
     });
   });
@@ -446,7 +446,7 @@ describe('velocityPcPerYr', () => {
 
 describe('resolveDirection velocity solution', () => {
   const gaiaRow: GaiaAstrometryCatalogRow = {
-    raDeg: 10, decDeg: 20, parallaxMas: 50,
+    raDeg: 10, decDeg: 20, parallaxMas: 50, parallaxErrorMas: null,
     pmraMasyr: 100, pmdecMasyr: -40, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,
   };
 

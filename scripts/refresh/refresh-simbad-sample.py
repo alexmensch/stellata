@@ -47,6 +47,10 @@ class Bin:
     target: int
     mod_K: int
 
+    def __post_init__(self) -> None:
+        # mod_K = 0 would divide-by-zero inside the server-side ADQL MOD().
+        assert self.mod_K >= 1, f"Bin mod_K must be >= 1, got {self.mod_K}"
+
 
 BINS: tuple[Bin, ...] = (
     Bin(v_min=None, v_max=6.0,  target= 5000, mod_K=1),

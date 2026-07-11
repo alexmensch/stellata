@@ -37,7 +37,8 @@ DATA = ROOT / "data"
 # consumes these names directly.
 
 from parsers import (  # noqa: E402, F401
-    AthygRow, CcdmRow, GaiaAstrometryRow, Hip2Row, Orb6Entry,
+    AthygRow, CCDM_ROW_COUNT_BOUNDS, CcdmRow, GaiaAstrometryRow, Hip2Row,
+    MscComponentRow, MscOrbitRow, MscSystemRow, Orb6Entry,
     SimbadWdsXid, WdsPair,
     parse_astrometry_exclusions,
     parse_athyg, parse_ccdm, parse_gaia_astrometry,
@@ -45,8 +46,12 @@ from parsers import (  # noqa: E402, F401
     parse_gcvs, parse_gcvs_crossid, parse_hip2,
     parse_component_sptype_overrides, parse_orb6,
     parse_orb6_component_overrides,
+    parse_msc_components, parse_msc_orbits, parse_msc_systems,
     parse_simbad_wds_spectra, parse_simbad_wds_xids,
     dedup_wds_pair_rows, parse_wds_summ,
+)
+from msc_map import (  # noqa: E402, F401
+    MscLookup, build_msc_lookup, map_msc_labels,
 )
 from indices import (  # noqa: E402, F401
     GAIA_BINDING_G_MINUS_V_REJECT_MAG, IdentifierIndices,
@@ -59,9 +64,10 @@ from component_tokens import (  # noqa: E402, F401
     related_hier, token_letters,
 )
 from subdivide import (  # noqa: E402, F401
-    SYNTH_NSS_DISCOVERER,
+    SYNTH_MSC_DISCOVERER, SYNTH_NSS_DISCOVERER,
     apply_orb6_component_overrides,
     seed_synthesized_component_bindings,
+    synthesize_msc_inner_pairs,
     synthesize_nss_inner_pairs,
     synthesize_orb6_orphan_pairs,
 )
@@ -94,10 +100,13 @@ from stage4_orbits import (  # noqa: E402, F401
     _nss_separation_consistent,
     compute_system_parallaxes, compute_system_parallax_anchors,
     first_astrometry_field_per_system,
+    _msc_period_days, _pick_best_msc,
     _pick_best_orb6, _system_parallax_mas, _thiele_innes_to_campbell,
     iter_decomposing_pairs, kepler_semimajor_axis_au,
+    msc_T0_jd, msc_renderable, msc_to_canonical_elements,
     nss_to_canonical_elements,
     orb6_to_canonical_elements, orbit_counts,
+    pair_component_tokens,
     select_orbit, select_orbits_all,
 )
 from stage5_optical import (  # noqa: E402, F401
@@ -157,6 +166,9 @@ SRC_ORB6_COMPONENT_OVERRIDES = (
     DATA / "binaries" / "orb6_component_overrides.tsv"
 )
 SRC_ASTROMETRY_EXCLUSIONS = DATA / "binaries" / "astrometry_exclusions.tsv"
+SRC_MSC_SYSTEMS = DATA / "msc" / "msc_systems.tsv"
+SRC_MSC_ORBITS = DATA / "msc" / "msc_orbits.tsv"
+SRC_MSC_COMPONENTS = DATA / "msc" / "msc_components.tsv"
 
 OUT_MULTIPLES = DATA / "binaries" / "multiples.tsv"
 OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
@@ -180,8 +192,18 @@ EXPECTED_RATES = SCRIPT.parent / "build-binaries-rates-expected.json"
 ATHYG_GAIA_COVERAGE_BOUNDS = (0.90, 1.00)
 
 
+def _iter_code_paths() -> Iterator[Path]:
+    # The orchestrator is an import shell — the pipeline logic lives in
+    # the sibling stage modules and scripts/util, so any of them must
+    # invalidate the artifact, not just this file.
+    for folder in (SCRIPT.parent, SCRIPT.parent.parent / "util"):
+        for mod in sorted(folder.glob("*.py")):
+            if not mod.name.endswith(".test.py"):
+                yield mod
+
+
 def _iter_input_paths() -> Iterator[Path]:
-    yield SCRIPT
+    yield from _iter_code_paths()
     yield SRC_WDS_SUMM
     yield SRC_ORB6
     yield SRC_ATHYG
@@ -198,6 +220,9 @@ def _iter_input_paths() -> Iterator[Path]:
     yield SRC_COMPONENT_SPTYPE_OVERRIDES
     yield SRC_ORB6_COMPONENT_OVERRIDES
     yield SRC_ASTROMETRY_EXCLUSIONS
+    yield SRC_MSC_SYSTEMS
+    yield SRC_MSC_ORBITS
+    yield SRC_MSC_COMPONENTS
 
 
 def log(msg: str) -> None:
@@ -250,6 +275,7 @@ class Stage2Resolution:
     n_wds_dup_dropped: int
     orb6: list[Orb6Entry]
     synthesized_orb6_pairs: list[WdsPair]
+    synthesized_msc_pairs: list[WdsPair]
     athyg: list[AthygRow]
     indices: IdentifierIndices
     simbad_wds_xids: dict[tuple[str, str], SimbadWdsXid]
@@ -317,6 +343,13 @@ def resolve_through_stage2() -> Stage2Resolution:
     )
 
     ccdm = parse_ccdm(SRC_CCDM)
+    lo_ccdm, hi_ccdm = CCDM_ROW_COUNT_BOUNDS
+    if not (lo_ccdm <= len(ccdm) <= hi_ccdm):
+        raise SystemExit(
+            f"CCDM parse returned {len(ccdm):,} rows, outside "
+            f"[{lo_ccdm:,}, {hi_ccdm:,}] — check the VizieR file format "
+            f"of {SRC_CCDM}"
+        )
     log(f"loaded {len(ccdm):,} CCDM rows")
 
     hip2 = parse_hip2(SRC_HIP2)
@@ -380,12 +413,25 @@ def resolve_through_stage2() -> Stage2Resolution:
         f"{len(component_sptype_overrides):,} (wds_id, component) pairs"
     )
 
+    msc = build_msc_lookup(
+        systems=parse_msc_systems(SRC_MSC_SYSTEMS),
+        orbits=parse_msc_orbits(SRC_MSC_ORBITS),
+        components=parse_msc_components(SRC_MSC_COMPONENTS),
+    )
+    log(
+        f"loaded Pulkovo MSC: {len(msc.orbits_by_pair):,} WDS-mapped orbit "
+        f"pairs ({msc.n_orbits_unmapped:,} unmappable), "
+        f"{len(msc.pair_mags):,} pair-mag entries, "
+        f"{len(msc.spect_by_comp):,} per-component spectral types"
+    )
+
     indices = build_indices(
         athyg, hip2, hip_to_gaia, tyc_to_gaia, src_to_nss,
         src_to_astrometry=src_to_astrometry,
         ccdm=ccdm,
         simbad_wds_spectra=simbad_wds_spectra,
         component_sptype_overrides=component_sptype_overrides,
+        msc=msc,
     )
     log(
         f"rejected magnitude-inconsistent Gaia bindings "
@@ -421,6 +467,16 @@ def resolve_through_stage2() -> Stage2Resolution:
         f"or unanchored, deferred to the full blank→AB ingest"
     )
 
+    synthesized_msc_pairs, msc_skips = synthesize_msc_inner_pairs(
+        wds_pairs, msc,
+    )
+    wds_pairs.extend(synthesized_msc_pairs)
+    log(
+        f"synthesized {len(synthesized_msc_pairs):,} MSC inner pairs "
+        f"(skipped: " + ", ".join(f"{k}={v:,}" for k, v in msc_skips.items())
+        + ")"
+    )
+
     log("Stage 1 complete. Resolving WDS components (Stage 2) …")
 
     components = resolve_all_pairs(
@@ -429,7 +485,7 @@ def resolve_through_stage2() -> Stage2Resolution:
         simbad_xids=simbad_wds_xids,
     )
     n_seeded = seed_synthesized_component_bindings(
-        components, synthesized_orb6_pairs,
+        components, synthesized_orb6_pairs + synthesized_msc_pairs,
     )
     log(f"seeded {n_seeded:,} synthesized-pair component bindings")
     binding_verdicts = audit_binding_integrity(
@@ -439,6 +495,7 @@ def resolve_through_stage2() -> Stage2Resolution:
     return Stage2Resolution(
         wds_pairs=wds_pairs, n_wds_dup_dropped=n_wds_dup_dropped,
         orb6=orb6, synthesized_orb6_pairs=synthesized_orb6_pairs,
+        synthesized_msc_pairs=synthesized_msc_pairs,
         athyg=athyg, indices=indices, simbad_wds_xids=simbad_wds_xids,
         n_rescued=n_rescued, n_deferred=n_deferred,
         components=components, binding_verdicts=binding_verdicts,
@@ -567,6 +624,7 @@ def run(force: bool) -> int:
     log("Stage 5 complete. Emitting multiples.tsv (Stage 6) …")
 
     dropped_no_position: list[str] = []
+    msc_mag_fills: list[str] = []
     rows = build_multiples_rows(
         pairs=wds_pairs, components=components,
         astrometry=astrometry, orbits=orbits,
@@ -574,6 +632,11 @@ def run(force: bool) -> int:
         simbad_xids=simbad_wds_xids,
         system_anchors=system_anchors,
         dropped_no_position=dropped_no_position,
+        msc_mag_fills=msc_mag_fills,
+    )
+    log(
+        f"filled pair mags from MSC pair-side V magnitudes on "
+        f"{len(msc_mag_fills):,} pairs"
     )
     log_dropped_pair_sample(
         "position-less pair drops: kept pairs with no astrometry and no "
@@ -604,6 +667,9 @@ def run(force: bool) -> int:
         orbits=orbits, classifications=classifications, multiples_rows=rows,
         synthesized_orb6_pairs=len(synthesized_orb6_pairs),
         synthesized_nss_pairs=len(nss_pairs),
+        synthesized_msc_pairs=len(s2.synthesized_msc_pairs),
+        msc_pair_mags_filled=len(msc_mag_fills),
+        msc_orbits_unmapped=indices.msc.n_orbits_unmapped if indices.msc else 0,
         binding_integrity=bi_counts,
         xwalk_mag_rejected=len(indices.xwalk_mag_rejected),
         athyg_gaia_mag_rejected=len(indices.athyg_gaia_mag_rejected),

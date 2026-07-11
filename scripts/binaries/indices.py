@@ -16,6 +16,7 @@ from parsers import (  # noqa: E402
     GaiaAstrometryRow,
     Hip2Row,
 )
+from msc_map import MscLookup  # noqa: E402
 
 
 # ─── Identifier indices ──────────────────────────────────────────────
@@ -114,6 +115,10 @@ class IdentifierIndices:
     # respectively. Audit surface for the build log + Stage 7 counters.
     xwalk_mag_rejected: list[tuple[int, int]]
     athyg_gaia_mag_rejected: list[tuple[int | None, int]]
+    # Pulkovo MSC lookup tables (WDS-token-keyed orbits, pair mags,
+    # per-component spectral types) — see msc_map.build_msc_lookup.
+    # ``None`` in contexts that load no MSC data (unit-test fixtures).
+    msc: MscLookup | None = None
 
 
 def build_indices(
@@ -126,6 +131,7 @@ def build_indices(
     ccdm: list[CcdmRow] | None = None,
     simbad_wds_spectra: dict[tuple[str, str], str] | None = None,
     component_sptype_overrides: dict[tuple[str, str], str] | None = None,
+    msc: MscLookup | None = None,
 ) -> IdentifierIndices:
     astro_map = src_to_astrometry or {}
     # Magnitude-consistency scrub of AT-HYG's ``gaia`` cells, at the
@@ -199,6 +205,7 @@ def build_indices(
         component_sptype_overrides=component_sptype_overrides or {},
         xwalk_mag_rejected=xwalk_mag_rejected,
         athyg_gaia_mag_rejected=athyg_gaia_mag_rejected,
+        msc=msc,
     )
 
 

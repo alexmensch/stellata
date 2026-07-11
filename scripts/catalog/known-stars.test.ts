@@ -470,11 +470,14 @@ function assertSynthPromotedCompanion(
   primary: CatalogRecord,
 ): void {
   // composeCompanionName in scripts/catalog/companion-promotion.ts emits
-  // `${primary_name_cell} ${canonicalComp}` — reconstruct the same shape
-  // from the primary's catalog name + corpus comp letter so a naming
-  // drift on either side surfaces here as a missing-lookup failure.
-  const companionName = primary.name !== null
-    ? `${primary.name} ${companion.letter}`
+  // `${base} ${canonicalComp}` where base is the primary's name cell or
+  // resolveCompanionNameBase's `HIP <n>` fallback for name-less primaries
+  // (AR Cas) — reconstruct the same shape so a naming drift on either
+  // side surfaces here as a missing-lookup failure.
+  const base = primary.name
+    ?? (row.primaryHip !== null ? `HIP ${row.primaryHip}` : null);
+  const companionName = base !== null
+    ? `${base} ${companion.letter}`
     : null;
   const companionRecord = companionName !== null
     ? lookupByName(catalog, companionName)

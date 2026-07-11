@@ -191,13 +191,20 @@ _III_MASS: tuple[tuple[float, ...], ...] = (
 )
 
 
-# Subgiant (IV) is structurally between MS and III on the HRD; we
-# interpolate per-class with a small bias toward III since subgiants
-# are post-MS and slightly more evolved.
+# Subgiant (IV) interpolation between the MS and III rows. The giant
+# bias reflects Cox 2000 §15.7 evolutionary tracks (a subgiant is
+# post-MS, closer to III than to V on the HRD); the F5IV output is
+# pinned against Procyon A's measured mass in
+# MassFromSpectralClassTests.
+IV_GIANT_WEIGHT = 0.55
+IV_MS_WEIGHT = 1.0 - IV_GIANT_WEIGHT
+
+
 def _iv_mass(class_idx: int, sub: int) -> float:
-    a = _MS_MASS[class_idx][sub]
-    b = _III_MASS[class_idx][sub]
-    return 0.55 * b + 0.45 * a
+    return (
+        IV_GIANT_WEIGHT * _III_MASS[class_idx][sub]
+        + IV_MS_WEIGHT * _MS_MASS[class_idx][sub]
+    )
 
 
 # Supergiant (I, Ia, Iab, Ib) — Cox 2000 Table 15.7. Masses are much
@@ -241,17 +248,10 @@ DEFAULT_PRIMARY_MASS_MSUN = 1.0
 UNKNOWN_COMPANION_MASS_RATIO_Q = 1.0 / 3.0
 
 
-def mass_from_spectral_class(spect_str: str | None, absmag: float | None) -> float | None:
+def mass_from_spectral_class(spect_str: str | None) -> float | None:
     """Estimate stellar mass in solar masses from a SIMBAD/MK spectral
     string. Returns ``None`` when the string is unparseable or empty.
-
-    ``absmag`` is accepted for forward-compatibility (mass-luminosity
-    relations needing it can land later) but the current table is
-    spectral-class-only — the WD branch ignores ``absmag`` deliberately
-    (cooling-track mass refinement deferred). The argument is therefore
-    optional and unused today; callers may pass ``None``.
     """
-    _ = absmag  # reserved; see docstring
     parsed = parse_spectral_type(spect_str)
     if parsed is None:
         return None
@@ -276,17 +276,14 @@ def mass_from_spectral_class(spect_str: str | None, absmag: float | None) -> flo
 
 def mass_ratio_from_components(
     primary_spect: str | None,
-    primary_absmag: float | None,
     secondary_spect: str | None,
-    secondary_absmag: float | None,
 ) -> float | None:
     """q = M_secondary / (M_primary + M_secondary). Returns ``None`` if
     either component's spectral string is unparseable (or yields class
-    index 8 / no mass). Both components are passed through the same
-    helper so a future ``absmag``-aware refinement applies symmetrically.
+    index 8 / no mass).
     """
-    m_a = mass_from_spectral_class(primary_spect, primary_absmag)
-    m_b = mass_from_spectral_class(secondary_spect, secondary_absmag)
+    m_a = mass_from_spectral_class(primary_spect)
+    m_b = mass_from_spectral_class(secondary_spect)
     if m_a is None or m_b is None or (m_a + m_b) <= 0.0:
         return None
     return m_b / (m_a + m_b)

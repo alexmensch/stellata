@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Stage 4 — orbital-element selection per WDS pair.
-Picks between Gaia NSS, ORB6 visual, and ORB6 spectroscopic orbits.
+"""Stage 4 — orbital-element selection per WDS pair. Picks between
+ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Pulkovo MSC orbits.
 """
 
 from __future__ import annotations
@@ -12,12 +12,14 @@ from pathlib import Path
 from typing import Callable, Iterator, TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import Orb6Entry, WdsPair, safe_float  # noqa: E402
+from parsers import MscOrbitRow, Orb6Entry, WdsPair, safe_float  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
+from component_tokens import expand_wds_truncated_secondary  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
     group_orb6_by_pair,
     iter_decomposing_pair_cursor,
+    split_components,
 )
 from stage3_astrometry import ComponentAstrometry  # noqa: E402
 
@@ -32,6 +34,7 @@ ORBIT_VIA_VALUES: tuple[str, ...] = (
     "orb6",
     "gaia_nss",
     "orb6_spectroscopic",
+    "msc",
     "none",
 )
 
@@ -496,6 +499,119 @@ def orb6_to_canonical_elements(
     )
 
 
+def _msc_period_days(row: MscOrbitRow) -> float | None:
+    """Normalise MSC's ``per`` + ``per_unit`` (``d``/``y``; ~16 rows
+    blank) to days. Unknown units and non-positive periods return
+    ``None`` — prefer no orbit over one at the wrong time scale."""
+    if row.per is None or row.per <= 0.0:
+        return None
+    if row.per_unit == "d":
+        return row.per
+    if row.per_unit == "y":
+        return row.per * 365.25
+    return None
+
+
+# MSC's T column has no unit flag: values are fractional Besselian
+# years for visual orbits and truncated JDs (JD − 2,400,000) for the
+# spectroscopic subsystems. Every plausible year reading is ≤ this
+# bound; larger values can only be truncated JDs.
+MSC_T0_YEAR_MAX = 3000.0
+
+
+def msc_T0_jd(t0: float | None) -> float | None:
+    """MSC periastron epoch → absolute JD. Values that read as a
+    plausible year convert via the J2000 anchor (matching
+    ``_orb6_T0_jd``'s ``y`` code); everything else is retried as a
+    truncated JD. A value plausible under neither reading returns
+    ``None`` and the pair places statically at the WDS epoch."""
+    if t0 is None:
+        return None
+    if t0 <= MSC_T0_YEAR_MAX:
+        year_jd = J2000_REF_EPOCH_JD + (t0 - 2000.0) * 365.25
+        if T0_MIN_PLAUSIBLE_JD <= year_jd <= T0_MAX_PLAUSIBLE_JD:
+            return year_jd
+    truncated_jd = t0 + TRUNCATED_JD_TO_JD_OFFSET
+    if T0_MIN_PLAUSIBLE_JD <= truncated_jd <= T0_MAX_PLAUSIBLE_JD:
+        return truncated_jd
+    return None
+
+
+def msc_to_canonical_elements(
+    row: MscOrbitRow, plx_mas: float | None,
+) -> OrbitElements | None:
+    """MSC orbit row → canonical ``OrbitElements``. Visual orbits carry
+    the full element set (``a`` arcsec → AU via the system parallax);
+    spectroscopic subsystems carry P/T/e/ω only — i, Ω, and a stay
+    ``None`` (the runtime's separate has-inclination flag and Stage 6's
+    Kepler a-estimate cover them). ω is the published orbit's
+    longitude of periastron as-is, the same photocentre-vs-relative
+    approximation the ``gaia_nss`` SB route accepts."""
+    P_days = _msc_period_days(row)
+    if P_days is None:
+        return None
+    a_AU: float | None = None
+    if row.a_arcsec is not None and plx_mas is not None and plx_mas > 0.0:
+        a_AU = row.a_arcsec * 1000.0 / plx_mas
+    return OrbitElements(
+        P_days=P_days,
+        T_jd=msc_T0_jd(row.t0),
+        e=row.e,
+        a_AU=a_AU,
+        i_rad=math.radians(row.incl_deg) if row.incl_deg is not None else None,
+        omega_rad=(
+            math.radians(row.longp_deg) if row.longp_deg is not None else None
+        ),
+        Omega_rad=(
+            math.radians(row.node_deg) if row.node_deg is not None else None
+        ),
+        q=None,
+        distance_pc=_distance_pc(plx_mas),
+    )
+
+
+def msc_renderable(row: MscOrbitRow) -> bool:
+    """The same completeness precheck the NSS inner-pair synthesis
+    applies: P, T, e present, and ω present unless the fit is exactly
+    circular (Stage 6 backfills the degenerate angle)."""
+    elements = msc_to_canonical_elements(row, None)
+    return (
+        elements is not None
+        and elements.P_days is not None and elements.T_jd is not None
+        and elements.e is not None
+        and (elements.omega_rad is not None or elements.e == 0.0)
+    )
+
+
+def _pick_best_msc(rows: list[MscOrbitRow]) -> MscOrbitRow:
+    """Most-complete element set wins; ties keep the LAST row — the
+    author-updated MSC appends later editions after the original
+    compilation (ν Sco Aab,Ac carries a VB6 row then a Tok 2023 row)."""
+    def completeness(r: MscOrbitRow) -> int:
+        return sum(
+            v is not None
+            for v in (r.per, r.t0, r.e, r.a_arcsec,
+                      r.node_deg, r.longp_deg, r.incl_deg)
+        )
+
+    best = rows[0]
+    for r in rows[1:]:
+        if completeness(r) >= completeness(best):
+            best = r
+    return best
+
+
+def pair_component_tokens(pair: WdsPair) -> tuple[str, str] | None:
+    """The pair's ordered ``(primary, secondary)`` component tokens
+    after WDS truncated-form expansion, or ``None`` when the components
+    string doesn't decompose. The join key for MSC pair lookups."""
+    sp = split_components(pair.components)
+    if sp is None:
+        return None
+    primary, secondary = sp
+    return primary, expand_wds_truncated_secondary(primary, secondary)
+
+
 def _pick_best_orb6(entries: list[Orb6Entry]) -> Orb6Entry:
     """Grade tiebreak (lowest numeric grade = best); ref-year secondary
     tiebreak (most recent wins). ``entries`` is already filtered to a
@@ -536,6 +652,7 @@ def select_orbit(
     indices: IdentifierIndices,
     wds_rho_arcsec: float | None = None,
     system_parallax_mas: float | None = None,
+    msc_for_pair: list[MscOrbitRow] | None = None,
 ) -> tuple[OrbitElements | None, str]:
     """Priority cascade per WDS pair:
 
@@ -555,7 +672,17 @@ def select_orbit(
        systemic source).
     3. ``orb6_spectroscopic`` — ORB6 non-visual orbits
        (grade ∈ {7,8,9}). Same tiebreaks.
-    4. ``none`` — visual-only pair with no orbital information on file.
+    4. ``msc`` — Pulkovo MSC compiled orbit, SUB-RESOLUTION PAIRS ONLY
+       (ρ = 0 or unmeasured). MSC compiles from the same primary
+       sources the routes above curate, so it ranks below all of them;
+       the sub-resolution gate keeps measured WDS placements from
+       acquiring a compiled orbit that widens the baked-vs-R(epoch)
+       disagreement ratchet, and makes the route safe for Stage 6's
+       Kepler a-estimation (an estimate can only add motion). The
+       spectroscopic-subsystem rows this route exists for (AR Cas
+       Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs,
+       ρ = 0 by construction.
+    5. ``none`` — visual-only pair with no orbital information on file.
 
     The two ``ComponentAstrometry`` arguments are required (not
     optional) so the parallax-needed conversion (ORB6 a_unit='a'/'m' →
@@ -606,6 +733,12 @@ def select_orbit(
         orbit = orb6_to_canonical_elements(best, plx_mas)
         if orbit is not None:
             return orbit, "orb6_spectroscopic"
+
+    # MSC branch — sub-resolution pairs only (see the docstring).
+    if msc_for_pair and (wds_rho_arcsec is None or wds_rho_arcsec <= 0.0):
+        orbit = msc_to_canonical_elements(_pick_best_msc(msc_for_pair), plx_mas)
+        if orbit is not None:
+            return orbit, "msc"
 
     return None, "none"
 
@@ -739,12 +872,20 @@ def select_orbits_all(
         pairs, components, astrometry,
     ):
         orb6_for_pair = orb6_by_pair.get((pair.wds_id, pair.components), [])
+        msc_for_pair: list[MscOrbitRow] | None = None
+        if indices.msc is not None:
+            tokens = pair_component_tokens(pair)
+            if tokens is not None:
+                msc_for_pair = indices.msc.orbits_by_pair.get(
+                    (pair.wds_id, tokens),
+                )
         orbit, via = select_orbit(
             primary=p, secondary=s,
             primary_astrometry=p_ast, secondary_astrometry=s_ast,
             orb6_for_pair=orb6_for_pair, indices=indices,
             wds_rho_arcsec=pair.rho_last,
             system_parallax_mas=system_parallax.get(pair.wds_id),
+            msc_for_pair=msc_for_pair,
         )
         if orbit is not None and orbit.P_days is not None and orbit.T_jd is not None:
             if not (T0_MIN_PLAUSIBLE_JD <= orbit.T_jd <= T0_MAX_PLAUSIBLE_JD):

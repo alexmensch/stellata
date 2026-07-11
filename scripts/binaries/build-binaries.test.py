@@ -544,6 +544,23 @@ class CcdmTests(unittest.TestCase):
         self.assertEqual(rows[1].hip, 18)
         self.assertEqual(rows[1].mult_flag, "O")
 
+    def test_survives_reformatted_separator_row(self) -> None:
+        # Data detection keys on the first field parsing as a HIP, not
+        # on the dash separator — a VizieR reformat (=====, or no
+        # separator at all) must not blank the parse.
+        body = (
+            "#   VizieR header\n"
+            "HIP\tCCDM\tMultFlag\n"
+            "======\t==========\t=\n"
+            "     3\t00000+3852\t\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "ccdm.tsv", body)
+            rows = bb.parse_ccdm(p)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].hip, 3)
+        self.assertEqual(rows[0].ccdm, "00000+3852")
+
 
 class Hip2Tests(unittest.TestCase):
     def test_parses_astrometry_row(self) -> None:
@@ -6071,7 +6088,7 @@ class ParseSpectralTypeTests(unittest.TestCase):
 
 class MassFromSpectralClassTests(unittest.TestCase):
     def test_solar_analog_g2v_near_one_solar_mass(self) -> None:
-        m = me.mass_from_spectral_class("G2V", None)
+        m = me.mass_from_spectral_class("G2V")
         assert m is not None
         self.assertAlmostEqual(m, 1.0, places=2)
 
@@ -6079,50 +6096,60 @@ class MassFromSpectralClassTests(unittest.TestCase):
         # Sirius A: A1V. Per the MS table A1V → 2.6 M_sun (Pecaut/Mamajek
         # zero-age values; true Sirius A = 2.06 M_sun, but the table is
         # a generic A1V anchor not a Sirius-specific calibration).
-        m = me.mass_from_spectral_class("A1V", None)
+        m = me.mass_from_spectral_class("A1V")
         assert m is not None
         self.assertAlmostEqual(m, 2.6, places=2)
 
     def test_white_dwarf_default_mass(self) -> None:
-        m = me.mass_from_spectral_class("DA1.9", None)
+        m = me.mass_from_spectral_class("DA1.9")
         self.assertEqual(m, me.WD_MASS_DEFAULT)
 
     def test_white_dwarf_dqz_default_mass(self) -> None:
         # Procyon B is DQZ — composite-subtype WD; still gets the
         # default 0.6 M_sun.
-        m = me.mass_from_spectral_class("DQZ", None)
+        m = me.mass_from_spectral_class("DQZ")
         self.assertEqual(m, me.WD_MASS_DEFAULT)
 
     def test_k1v_companion_mass(self) -> None:
-        m = me.mass_from_spectral_class("K1V", None)
+        m = me.mass_from_spectral_class("K1V")
         assert m is not None
         self.assertAlmostEqual(m, 0.76, places=2)
 
     def test_giant_k0iii(self) -> None:
-        m = me.mass_from_spectral_class("K0III", None)
+        m = me.mass_from_spectral_class("K0III")
         assert m is not None
         # Cox 2000: K III ≈ 1.5 M_sun.
         self.assertAlmostEqual(m, 1.5, places=2)
 
     def test_supergiant_b0ia(self) -> None:
-        m = me.mass_from_spectral_class("B0Ia", None)
+        m = me.mass_from_spectral_class("B0Ia")
         assert m is not None
         # Supergiant table B0Ia is at the high end; mass ~25 M_sun.
         self.assertAlmostEqual(m, 25.0, places=1)
 
     def test_unparseable_returns_none(self) -> None:
-        self.assertIsNone(me.mass_from_spectral_class("", None))
-        self.assertIsNone(me.mass_from_spectral_class(None, None))
-        self.assertIsNone(me.mass_from_spectral_class("???", None))
+        self.assertIsNone(me.mass_from_spectral_class(""))
+        self.assertIsNone(me.mass_from_spectral_class(None))
+        self.assertIsNone(me.mass_from_spectral_class("???"))
 
     def test_subgiant_interpolates_between_ms_and_giant(self) -> None:
         # G2IV should land between G2V (~1.0) and G2III (~2.1).
-        m_ms = me.mass_from_spectral_class("G2V", None)
-        m_iv = me.mass_from_spectral_class("G2IV", None)
-        m_iii = me.mass_from_spectral_class("G2III", None)
+        m_ms = me.mass_from_spectral_class("G2V")
+        m_iv = me.mass_from_spectral_class("G2IV")
+        m_iii = me.mass_from_spectral_class("G2III")
         assert m_ms is not None and m_iv is not None and m_iii is not None
         self.assertGreater(m_iv, m_ms)
         self.assertLess(m_iv, m_iii)
+
+    def test_subgiant_f5iv_matches_procyon_a_published_mass(self) -> None:
+        # External anchor for the IV interpolation weights: Procyon A
+        # (F5IV) has a dynamically measured 1.478 ± 0.05 M_sun (Bond et
+        # al. 2015, astrometric orbit). The generic F5IV table value
+        # (0.55·1.8 + 0.45·1.4 = 1.62) must stay within 10% of it.
+        m_iv = me.mass_from_spectral_class("F5IV")
+        assert m_iv is not None
+        self.assertAlmostEqual(m_iv, 1.62, places=4)
+        self.assertAlmostEqual(m_iv, 1.478, delta=0.148)
 
 
 class MassRatioFromComponentsTests(unittest.TestCase):
@@ -6132,33 +6159,32 @@ class MassRatioFromComponentsTests(unittest.TestCase):
         # (M_B=1.0, off-track from the WD default); model improves on
         # the q=None baseline but cannot recover Sirius B's anomalously
         # high mass from sp_type alone.
-        q = me.mass_ratio_from_components("A1V", 1.42, "DA1.9", 11.36)
+        q = me.mass_ratio_from_components("A1V", "DA1.9")
         assert q is not None
         self.assertAlmostEqual(q, 0.1875, places=3)
 
     def test_procyon_like_subgiant_primary_wd(self) -> None:
         # Procyon A (F5IV-V) + Procyon B (DQZ WD). Model: M_A is the
-        # IV interpolation between F5V (1.4) and F5III (1.8) → ~1.62,
-        # M_B = 0.6 → q ≈ 0.27.
-        q = me.mass_ratio_from_components("F5IV-V", 2.671, "DQZ", 13.04)
+        # IV interpolation between F5V (1.4) and F5III (1.8) → 1.62,
+        # M_B = 0.6 → q = 0.6 / 2.22.
+        q = me.mass_ratio_from_components("F5IV-V", "DQZ")
         assert q is not None
-        self.assertGreater(q, 0.20)
-        self.assertLess(q, 0.35)
+        self.assertAlmostEqual(q, 0.2703, places=4)
 
     def test_alpha_cen_like_g2v_plus_k1v(self) -> None:
         # α Cen A (G2V) + α Cen B (K1V). Model: M_A=1.0, M_B=0.76 →
         # q ≈ 0.43. External truth (Pourbaix 2016): q=0.453. The MS+MS
         # case lands within ~5% of the external value because there is
         # no WD mass-recovery uncertainty.
-        q = me.mass_ratio_from_components("G2V", 4.379, "K1V", 5.71)
+        q = me.mass_ratio_from_components("G2V", "K1V")
         assert q is not None
-        self.assertAlmostEqual(q, 0.432, places=2)
+        self.assertAlmostEqual(q, 0.4318, places=4)
 
     def test_returns_none_when_primary_spect_unparseable(self) -> None:
-        self.assertIsNone(me.mass_ratio_from_components("", 4.0, "K1V", 5.0))
+        self.assertIsNone(me.mass_ratio_from_components("", "K1V"))
 
     def test_returns_none_when_secondary_spect_unparseable(self) -> None:
-        self.assertIsNone(me.mass_ratio_from_components("G2V", 4.0, "", 5.0))
+        self.assertIsNone(me.mass_ratio_from_components("G2V", ""))
 
 
 class Stage6QFallbackTests(unittest.TestCase):
@@ -7160,6 +7186,36 @@ class BindingIntegrityDetectorTests(unittest.TestCase):
         self.assertEqual(by_tok[("A", True)].gaia_source_id, SA)
         self.assertEqual(by_tok[("B", False)].gaia_source_id, SX)
 
+    def test_identity_refutes_with_multi_token_owner_cluster(self) -> None:
+        # μ Dra shape once the MSC Ba,Bb sub-pair joins the pre-audit
+        # graph: the contested source's owner side is the hierarchy
+        # cluster {B, Ba, Bb}, identified by its representative B. The
+        # loser (A, single token) still rebinds to its own source.
+        SA, SX, SC = 100, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SC, None)),
+            ("Ba,Bb", 0.0, 0.0, (SX, None), (SX, None)),
+        ]
+        astro = {
+            SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, -6.5),
+            SC: _bi_astro(SC, 0.0, 0.0),
+        }
+        xids = {
+            ("10000+0000", "A"): self._xid(SA),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts, comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_IDENTITY_REFUTED)
+        self.assertEqual(v[0].winner.label, "B")
+        self.assertEqual(sorted(v[0].winner.tokens), ["B", "Ba", "Bb"])
+        self.assertEqual(v[0].rebind_letter, "A")
+        by_tok = {(c.component, c.is_primary): c for c in comps}
+        self.assertEqual(by_tok[("A", True)].gaia_source_id, SA)
+        self.assertEqual(by_tok[("Ba", True)].gaia_source_id, SX)
+
     def test_blend_unidentified_side_stays_skipped(self) -> None:
         # Castor shape: the primary is Gaia-saturated so SIMBAD carries no
         # DR3 source for it — identity can't refute, the blend skip holds.
@@ -7542,6 +7598,382 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
     def test_system_with_no_kept_pairs_emits_nothing(self) -> None:
         out = self._offsets([("AB", 5.0, 90.0, False)])
         self.assertEqual(out, {})
+
+
+
+
+# ─── Pulkovo MSC ingest ──────────────────────────────────────────────
+
+
+def _msc_system(
+    wds_id: str = "10000+0000", prim: str = "A", sec: str = "B",
+    parent: str = "*", vmag1: float | None = None, spt1: str = "",
+    vmag2: float | None = None, spt2: str = "",
+) -> "bb.MscSystemRow":
+    return bb.MscSystemRow(
+        wds_id=wds_id, prim=prim, sec=sec, parent=parent, obs_type="",
+        vmag1=vmag1, spt1=spt1, vmag2=vmag2, spt2=spt2,
+    )
+
+
+def _msc_orbit(
+    wds_id: str = "10000+0000", syst: str = "Aa,Ab",
+    per: float | None = 6.0663, per_unit: str = "d",
+    t0: float | None = 40087.19, e: float | None = 0.25,
+    a_arcsec: float | None = None, node_deg: float | None = None,
+    longp_deg: float | None = 31.4, incl_deg: float | None = None,
+    note: str = "",
+) -> "bb.MscOrbitRow":
+    return bb.MscOrbitRow(
+        wds_id=wds_id, syst=syst, per=per, per_unit=per_unit, t0=t0, e=e,
+        a_arcsec=a_arcsec, node_deg=node_deg, longp_deg=longp_deg,
+        incl_deg=incl_deg, note=note,
+    )
+
+
+class MscParserTests(unittest.TestCase):
+    def test_systems_parse_survives_arcsec_quote_cells(self) -> None:
+        # MSC's sep_unit cell is a literal `"` — default csv quoting
+        # treats it as an opening quote and merges rows.
+        body = (
+            "wds_id\tprim\tsec\tparent\tobs_type\tper\tper_unit\tsep\t"
+            "sep_unit\tpa_deg\tvmag1\tspt1\tvmag2\tspt2\tmass1_msun\t"
+            "mass2_msun\n"
+            "00003-4417\tAB\tC\t*\tCmp\t107.0695\tk\t40.443\t\"\t318.2\t"
+            "17.68\t\t19.89\t\t3.15\t0.13\n"
+            "00003-4417\tA\tB\tAB\tV\t119.1\ty\t0.424\t\"\t327.0\t6.8\t"
+            "G3IV\t7.56\t\t1.7\t1.45\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "msc_systems.tsv", body)
+            rows = bb.parse_msc_systems(p)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(
+            (rows[1].prim, rows[1].sec, rows[1].parent, rows[1].spt1,
+             rows[1].vmag2),
+            ("A", "B", "AB", "G3IV", 7.56),
+        )
+
+    def test_orbits_parse(self) -> None:
+        body = (
+            "wds_id\tsyst\tper\tper_unit\tt0\te\ta_arcsec\tnode_deg\t"
+            "longp_deg\tincl_deg\tk1_kms\tk2_kms\tv0_kms\tnode_flag\tnote\n"
+            "23300+5833\tAa,Ab\t6.0663\td\t40087.1914\t0.25\t\t\t31.4\t\t"
+            "56.7\t\t-13.4\tB\tSB9_1445\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "msc_orbits.tsv", body)
+            rows = bb.parse_msc_orbits(p)
+        self.assertEqual(len(rows), 1)
+        r = rows[0]
+        self.assertEqual((r.syst, r.per, r.per_unit), ("Aa,Ab", 6.0663, "d"))
+        self.assertIsNone(r.a_arcsec)
+        self.assertEqual(r.longp_deg, 31.4)
+
+    def test_shipped_msc_files_parse_and_cover_showcases(self) -> None:
+        systems = bb.parse_msc_systems(bb.SRC_MSC_SYSTEMS)
+        orbits = bb.parse_msc_orbits(bb.SRC_MSC_ORBITS)
+        self.assertGreater(len(systems), 13_000)
+        self.assertGreater(len(orbits), 4_000)
+        ar_cas = [
+            o for o in orbits
+            if o.wds_id == "23300+5833" and o.syst == "Aa,Ab"
+        ]
+        self.assertEqual(len(ar_cas), 1)
+        self.assertEqual(ar_cas[0].per, 6.0663)
+
+
+class MscMapTests(unittest.TestCase):
+    def test_top_level_and_convention_children_map_identity(self) -> None:
+        # AR Cas shape: root ties ('t'), compound constituents, and a
+        # WDS-convention sub-pair all map onto themselves.
+        rows = [
+            _msc_system(prim="AB", sec="FG", parent="t"),
+            _msc_system(prim="F", sec="G", parent="FG"),
+            _msc_system(prim="A", sec="B", parent="AB"),
+            _msc_system(prim="Aa", sec="Ab", parent="A"),
+        ]
+        mapping = bb.map_msc_labels(rows)
+        self.assertEqual(mapping, {
+            "AB": "AB", "FG": "FG", "F": "F", "G": "G",
+            "A": "A", "B": "B", "Aa": "Aa", "Ab": "Ab",
+        })
+
+    def test_union_label_relabels_one_level_down(self) -> None:
+        # ν Sco shape: MSC's (Aab,Ac) under A is WDS (Aa,Ab), so MSC's
+        # (Aa,Ab) under Aab re-homes to (Aa1,Aa2).
+        rows = [
+            _msc_system(prim="AB", sec="CD", parent="*"),
+            _msc_system(prim="A", sec="B", parent="AB"),
+            _msc_system(prim="Aab", sec="Ac", parent="A"),
+            _msc_system(prim="Aa", sec="Ab", parent="Aab"),
+        ]
+        mapping = bb.map_msc_labels(rows)
+        self.assertEqual(mapping["Aab"], "Aa")
+        self.assertEqual(mapping["Ac"], "Ab")
+        self.assertEqual(mapping["Aa"], "Aa1")
+        self.assertEqual(mapping["Ab"], "Aa2")
+
+    def test_unmappable_union_at_root_drops_subtree(self) -> None:
+        rows = [
+            _msc_system(prim="Aab", sec="C", parent="X"),
+            _msc_system(prim="Aa", sec="Ab", parent="Aab"),
+        ]
+        mapping = bb.map_msc_labels(rows)
+        self.assertNotIn("Aab", mapping)
+        self.assertNotIn("Aa", mapping)
+        self.assertEqual(mapping.get("C"), "C")
+
+
+class MscLookupTests(unittest.TestCase):
+    def test_orbit_keys_on_mapped_tokens(self) -> None:
+        systems = [
+            _msc_system(prim="A", sec="B", parent="*"),
+            _msc_system(prim="Aab", sec="Ac", parent="A"),
+            _msc_system(prim="Aa", sec="Ab", parent="Aab",
+                        vmag1=4.37, spt1="B3V", vmag2=6.9),
+        ]
+        orbits = [
+            _msc_orbit(syst="Aa,Ab"),
+            _msc_orbit(syst="A"),  # bare label: unmappable
+        ]
+        lk = bb.build_msc_lookup(systems, orbits, [])
+        self.assertIn(("10000+0000", ("Aa1", "Aa2")), lk.orbits_by_pair)
+        self.assertEqual(lk.n_orbits_unmapped, 1)
+        self.assertEqual(
+            lk.pair_mags[("10000+0000", ("Aa1", "Aa2"))], (4.37, 6.9),
+        )
+        self.assertEqual(lk.spect_by_comp[("10000+0000", "Aa1")], "B3V")
+        self.assertNotIn(("10000+0000", "Aa2"), lk.spect_by_comp)
+
+    def test_components_table_type_beats_pair_side(self) -> None:
+        systems = [_msc_system(spt1="B3IV")]
+        components = [bb.MscComponentRow(
+            wds_id="10000+0000", comp="A", spt="B3V", vmag=None,
+        )]
+        lk = bb.build_msc_lookup(systems, [], components)
+        self.assertEqual(lk.spect_by_comp[("10000+0000", "A")], "B3V")
+
+    def test_compound_sides_never_enter_spect(self) -> None:
+        systems = [_msc_system(prim="AB", sec="C", spt1="F7IV", spt2="A1V")]
+        lk = bb.build_msc_lookup(systems, [], [])
+        self.assertNotIn(("10000+0000", "AB"), lk.spect_by_comp)
+        self.assertEqual(lk.spect_by_comp[("10000+0000", "C")], "A1V")
+
+
+class MscOrbitElementTests(unittest.TestCase):
+    def test_period_units(self) -> None:
+        self.assertEqual(bb._msc_period_days(_msc_orbit(per=6.0, per_unit="d")), 6.0)
+        self.assertEqual(
+            bb._msc_period_days(_msc_orbit(per=2.0, per_unit="y")), 730.5,
+        )
+        self.assertIsNone(bb._msc_period_days(_msc_orbit(per=2.0, per_unit="")))
+        self.assertIsNone(bb._msc_period_days(_msc_orbit(per=0.0, per_unit="d")))
+
+    def test_t0_disambiguation(self) -> None:
+        # Besselian-year reading (AR Cas A,B-style visual epochs).
+        self.assertAlmostEqual(
+            bb.msc_T0_jd(1948.33),
+            bb.J2000_REF_EPOCH_JD + (1948.33 - 2000.0) * 365.25,
+        )
+        # Truncated-JD reading (SB subsystems: JD − 2,400,000).
+        self.assertAlmostEqual(bb.msc_T0_jd(40087.1914), 2440087.1914)
+        self.assertIsNone(bb.msc_T0_jd(None))
+        # Implausible under both readings.
+        self.assertIsNone(bb.msc_T0_jd(9.9e7))
+
+    def test_sb_row_converts_without_geometry(self) -> None:
+        orbit = bb.msc_to_canonical_elements(_msc_orbit(), None)
+        self.assertIsNotNone(orbit)
+        self.assertEqual(orbit.P_days, 6.0663)
+        self.assertAlmostEqual(orbit.T_jd, 2440087.19)
+        self.assertEqual(orbit.e, 0.25)
+        self.assertAlmostEqual(orbit.omega_rad, math.radians(31.4))
+        self.assertIsNone(orbit.i_rad)
+        self.assertIsNone(orbit.Omega_rad)
+        self.assertIsNone(orbit.a_AU)
+
+    def test_visual_row_converts_a_with_parallax(self) -> None:
+        row = _msc_orbit(
+            per=500.0, per_unit="y", t0=1672.0, e=0.5,
+            a_arcsec=1.126, node_deg=0.9, longp_deg=125.0, incl_deg=91.2,
+        )
+        orbit = bb.msc_to_canonical_elements(row, 10.0)
+        self.assertAlmostEqual(orbit.a_AU, 112.6)
+        self.assertAlmostEqual(orbit.i_rad, math.radians(91.2))
+        self.assertAlmostEqual(orbit.Omega_rad, math.radians(0.9))
+        # No parallax → a stays None, orbit still returned.
+        self.assertIsNone(bb.msc_to_canonical_elements(row, None).a_AU)
+
+    def test_renderable_gates(self) -> None:
+        self.assertTrue(bb.msc_renderable(_msc_orbit()))
+        self.assertFalse(bb.msc_renderable(_msc_orbit(t0=None)))
+        self.assertFalse(bb.msc_renderable(_msc_orbit(e=None)))
+        # Eccentric with no ω can't render; circular with no ω can
+        # (Stage 6 backfills the degenerate angle).
+        self.assertFalse(bb.msc_renderable(_msc_orbit(longp_deg=None)))
+        self.assertTrue(bb.msc_renderable(_msc_orbit(e=0.0, longp_deg=None)))
+
+    def test_pick_best_msc_completeness_then_last(self) -> None:
+        sparse = _msc_orbit(a_arcsec=None, incl_deg=None)
+        full_old = _msc_orbit(a_arcsec=0.07, node_deg=346.4, incl_deg=89.7)
+        full_new = _msc_orbit(a_arcsec=0.10, node_deg=344.9, incl_deg=90.1)
+        self.assertIs(bb._pick_best_msc([sparse, full_old]), full_old)
+        # Equal completeness → later edition wins (author updates append).
+        self.assertIs(bb._pick_best_msc([full_old, full_new]), full_new)
+        self.assertIs(bb._pick_best_msc([full_new, sparse]), full_new)
+
+
+class SelectOrbitMscTests(unittest.TestCase):
+    def _select(self, *, rho, msc_rows, orb6_rows=()):
+        primary = _resolved(gaia=None, component="Aa", is_primary=True)
+        secondary = _resolved(gaia=None, component="Ab", is_primary=False)
+        ast = _component_astrometry(parallax_mas=10.0)
+        indices = _indices_with_astrometry()
+        return bb.select_orbit(
+            primary=primary, secondary=secondary,
+            primary_astrometry=ast, secondary_astrometry=ast,
+            orb6_for_pair=list(orb6_rows), indices=indices,
+            wds_rho_arcsec=rho,
+            msc_for_pair=list(msc_rows),
+        )
+
+    def test_attaches_on_sub_resolution_pair(self) -> None:
+        orbit, via = self._select(rho=0.0, msc_rows=[_msc_orbit()])
+        self.assertEqual(via, "msc")
+        self.assertEqual(orbit.P_days, 6.0663)
+
+    def test_measured_pair_never_takes_msc(self) -> None:
+        orbit, via = self._select(rho=1.4, msc_rows=[_msc_orbit()])
+        self.assertEqual((orbit, via), (None, "none"))
+
+    def test_orb6_outranks_msc(self) -> None:
+        for grade, expected_via in ((2, "orb6"), (9, "orb6_spectroscopic")):
+            orb6 = _orphan_orb6(
+                wds_id="10000+0000", components="Aa,Ab", grade=grade,
+            )
+            _orbit, via = self._select(
+                rho=0.0, msc_rows=[_msc_orbit()], orb6_rows=[orb6],
+            )
+            self.assertEqual(via, expected_via)
+
+
+class SynthesizeMscInnerPairsTests(unittest.TestCase):
+    def _lookup(self, wds_id="10000+0000", tokens=("Aa", "Ab"), rows=None):
+        lk = bb.MscLookup()
+        lk.orbits_by_pair[(wds_id, tokens)] = (
+            rows if rows is not None else [_msc_orbit()]
+        )
+        return lk
+
+    def test_synthesizes_anchored_missing_subpair(self) -> None:
+        wds = [_wds_pair(wds_id="10000+0000", components="AB")]
+        out, stats = bb.synthesize_msc_inner_pairs(wds, self._lookup())
+        self.assertEqual(len(out), 1)
+        p = out[0]
+        self.assertEqual((p.wds_id, p.components), ("10000+0000", "Aa,Ab"))
+        self.assertEqual(p.discoverer, bb.SYNTH_MSC_DISCOVERER)
+        self.assertEqual(p.rho_last, 0.0)
+        self.assertEqual(p.precise_ra_deg, 100.0)  # coord donor
+
+    def test_skips(self) -> None:
+        wds = [_wds_pair(wds_id="10000+0000", components="AB")]
+        cases = [
+            (self._lookup(wds_id="99999+9999"), "skipped_unknown_system"),
+            (self._lookup(tokens=("A", "BC")), "skipped_token_shape"),
+            (
+                self._lookup(rows=[_msc_orbit(t0=None)]),
+                "skipped_incomplete_elements",
+            ),
+            (self._lookup(tokens=("A", "B")), "skipped_pair_exists"),
+            (self._lookup(tokens=("Ca", "Cb")), "skipped_unanchored"),
+        ]
+        for lk, reason in cases:
+            out, stats = bb.synthesize_msc_inner_pairs(wds, lk)
+            self.assertEqual(out, [], reason)
+            self.assertEqual(stats[reason], 1, reason)
+
+    def test_skips_when_child_token_already_exists(self) -> None:
+        wds = [
+            _wds_pair(wds_id="10000+0000", components="AB"),
+            _wds_pair(wds_id="10000+0000", components="Aa,B"),
+        ]
+        out, stats = bb.synthesize_msc_inner_pairs(wds, self._lookup())
+        self.assertEqual(out, [])
+        self.assertEqual(stats["skipped_children_exist"], 1)
+
+
+class MscStage6Tests(unittest.TestCase):
+    def _indices_with_msc(self, lk):
+        return bb.build_indices([], [], {}, {}, {}, msc=lk)
+
+    def test_resolve_spect_msc_between_simbad_and_athyg(self) -> None:
+        import stage6_multiples as s6
+        lk = bb.MscLookup()
+        lk.spect_by_comp[("W", "Ab")] = "A6"
+        lk.spect_by_comp[("W", "B")] = "K1V"
+        indices = bb.build_indices(
+            [], [], {}, {}, {},
+            simbad_wds_spectra={("W", "B"): "G5V"},
+            msc=lk,
+        )
+        athyg = _athyg_row(gaia=1)
+        athyg.spect = "B3V"
+        self.assertEqual(
+            s6._resolve_spect("W", "Ab", athyg, indices), ("A6", "msc"),
+        )
+        self.assertEqual(
+            s6._resolve_spect("W", "B", athyg, indices), ("G5V", "simbad"),
+        )
+        self.assertEqual(
+            s6._resolve_spect("W", "C", athyg, indices), ("B3V", "athyg"),
+        )
+
+    def test_pair_mags_fill_from_msc_when_wds_has_none(self) -> None:
+        pair = _wds_pair(components="Aa,Ab", mag_pri=None, mag_sec=None)
+        lk = bb.MscLookup()
+        lk.pair_mags[("WDS-1", ("Aa", "Ab"))] = (5.02, 7.42)
+        components = [
+            _resolved(gaia=1, component="Aa", is_primary=True),
+            _resolved(gaia=1, component="Ab", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        msc_mag_fills: list[str] = []
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "orbit_kept")],
+            indices=self._indices_with_msc(lk),
+            msc_mag_fills=msc_mag_fills,
+        )
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            self.assertEqual((row.mag_pri, row.mag_sec), (5.02, 7.42))
+            self.assertAlmostEqual(row.dmag, 2.4)
+        self.assertEqual(msc_mag_fills, ["WDS-1Aa,Ab"])
+
+    def test_wds_mags_never_overwritten(self) -> None:
+        pair = _wds_pair(components="Aa,Ab", mag_pri=4.0, mag_sec=6.0)
+        lk = bb.MscLookup()
+        lk.pair_mags[("WDS-1", ("Aa", "Ab"))] = (5.02, 7.42)
+        components = [
+            _resolved(gaia=1, component="Aa", is_primary=True),
+            _resolved(gaia=1, component="Ab", is_primary=False),
+        ]
+        astrometry = [
+            _component_astrometry(parallax_mas=10.0),
+            _component_astrometry(parallax_mas=10.0),
+        ]
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=[(None, "none")],
+            classifications=[bb.OpticalClassification(True, "orbit_kept")],
+            indices=self._indices_with_msc(lk),
+        )
+        self.assertEqual((rows[0].mag_pri, rows[0].mag_sec), (4.0, 6.0))
 
 
 if __name__ == "__main__":

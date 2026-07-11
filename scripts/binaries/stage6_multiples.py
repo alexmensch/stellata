@@ -120,10 +120,12 @@ def wds_year_to_jd(year: int | None) -> float | None:
 # diff surfaces each tier independently.
 SPECT_VIA_CURATED = "curated"
 SPECT_VIA_SIMBAD = "simbad"
+SPECT_VIA_MSC = "msc"
 SPECT_VIA_ATHYG = "athyg"
 SPECT_VIA_NONE = "none"
 SPECT_VIA_VALUES: tuple[str, ...] = (
-    SPECT_VIA_CURATED, SPECT_VIA_SIMBAD, SPECT_VIA_ATHYG, SPECT_VIA_NONE,
+    SPECT_VIA_CURATED, SPECT_VIA_SIMBAD, SPECT_VIA_MSC,
+    SPECT_VIA_ATHYG, SPECT_VIA_NONE,
 )
 
 
@@ -204,6 +206,7 @@ ORBIT_VIA_TO_REGIME: dict[str, int] = {
     "gaia_nss": 2,
     "orb6": 2,
     "orb6_spectroscopic": 3,
+    "msc": 3,
     "none": 0,
 }
 
@@ -520,7 +523,7 @@ def compute_pair_masses(
                 pair.wds_id, comp.component,
                 _athyg_row_for_component(comp, indices), indices,
             )
-            mass = mass_from_spectral_class(spect, None)
+            mass = mass_from_spectral_class(spect)
             total += mass if mass is not None else ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN
         out.append(total)
     return out
@@ -561,20 +564,26 @@ def _resolve_spect(
     wds_id: str, component: str,
     athyg: AthygRow | None, indices: IdentifierIndices,
 ) -> tuple[str, str]:
-    """Per-component spectral type with curated → SIMBAD → AT-HYG →
-    none fallback, returned alongside the ``spect_via`` provenance tag.
-    The curated tier (``component_sptype_overrides``) carries literature
-    types for components SIMBAD's WDS cross-IDs never enumerate (Algol
-    Aa2's K0IV); SIMBAD's per-component sp_type wins over AT-HYG because
-    AT-HYG carries a single per-system string that gets inherited by
-    every component, even when each has its own MK / WD class.
-    Standalone rows pass ``athyg=None``."""
+    """Per-component spectral type with curated → SIMBAD → MSC →
+    AT-HYG → none fallback, returned alongside the ``spect_via``
+    provenance tag. The curated tier (``component_sptype_overrides``)
+    carries literature types for components SIMBAD's WDS cross-IDs
+    never enumerate (Algol Aa2's K0IV); SIMBAD's per-component sp_type
+    wins over AT-HYG because AT-HYG carries a single per-system string
+    that gets inherited by every component, even when each has its own
+    MK / WD class. MSC's pair-side types cover the spectroscopic
+    subsystem members neither SIMBAD nor AT-HYG enumerate (AR Cas Ab's
+    A6). Standalone rows pass ``athyg=None``."""
     curated_spect = indices.component_sptype_overrides.get((wds_id, component))
     if curated_spect:
         return curated_spect, SPECT_VIA_CURATED
     simbad_spect = indices.simbad_wds_spectra.get((wds_id, component))
     if simbad_spect:
         return simbad_spect, SPECT_VIA_SIMBAD
+    if indices.msc is not None:
+        msc_spect = indices.msc.spect_by_comp.get((wds_id, component))
+        if msc_spect:
+            return msc_spect, SPECT_VIA_MSC
     athyg_spect = athyg.spect if athyg is not None else ""
     if athyg_spect:
         return athyg_spect, SPECT_VIA_ATHYG
@@ -736,7 +745,7 @@ CIRCULAR_ORBIT_OMEGA_RAD = math.pi / 2.0
 # baked-vs-R(epoch) disagreement set the multi-star regression corpus
 # ratchets (curate those per-pair instead).
 ESTIMATED_ELEMENT_ORBIT_VIAS: frozenset[str] = frozenset({
-    "gaia_nss", "orb6_spectroscopic",
+    "gaia_nss", "orb6_spectroscopic", "msc",
 })
 
 
@@ -774,7 +783,7 @@ def finalize_renderable_elements(
         secondary_row.omega_rad = CIRCULAR_ORBIT_OMEGA_RAD
     if primary_row.a_AU is not None or orbit.P_days is None:
         return
-    m_primary = mass_from_spectral_class(primary_row.spect, primary_row.absmag)
+    m_primary = mass_from_spectral_class(primary_row.spect)
     if m_primary is None:
         m_primary = DEFAULT_PRIMARY_MASS_MSUN
     a_au = kepler_semimajor_axis_au(
@@ -921,6 +930,7 @@ def build_multiples_rows(
     simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
     system_anchors: dict[str, SystemAnchor] | None = None,
     dropped_no_position: list[str] | None = None,
+    msc_mag_fills: list[str] | None = None,
 ) -> list[MultiplesRow]:
     """Walk the per-pair Stage 2/3/4/5 outputs in lockstep. Skips pairs
     Stage 5 classified as optical (their rows are absent from the TSV
@@ -946,6 +956,12 @@ def build_multiples_rows(
     label for every Stage-5-kept pair the position gate above drops —
     those pairs never reach the TSV, so the caller's build log + count
     snapshot are their only record.
+
+    ``msc_mag_fills`` (opt-in) collects the same label for every pair
+    whose ``mag_pri``/``mag_sec``/``dmag`` were filled from the MSC
+    pair-side V magnitudes because the WDS row carries none — the
+    synthesized spectroscopic sub-pairs, chiefly. The fill feeds
+    companion promotion's Δmag-imputation and ``wds_mag`` absmag paths.
     """
     n_pairs = sum(1 for p in pairs if split_components(p.components) is not None)
     if not (len(orbits) == n_pairs == len(classifications)):
@@ -999,16 +1015,30 @@ def build_multiples_rows(
             and secondary_row.q is None
         ):
             estimated_q = mass_ratio_from_components(
-                primary_row.spect, primary_row.absmag,
-                secondary_row.spect, secondary_row.absmag,
+                primary_row.spect, secondary_row.spect,
             )
             if estimated_q is not None:
                 primary_row.q = estimated_q
                 secondary_row.q = estimated_q
-        finalize_renderable_elements(primary_row, secondary_row, orbit)
         s_tok = expand_wds_truncated_secondary(
             primary.component, secondary.component,
         )
+        if (
+            indices.msc is not None
+            and pair.mag_pri is None and pair.mag_sec is None
+        ):
+            msc_mags = indices.msc.pair_mags.get(
+                (pair.wds_id, (primary.component, s_tok)),
+            )
+            if msc_mags is not None:
+                vmag_pri, vmag_sec = msc_mags
+                for row in (primary_row, secondary_row):
+                    row.mag_pri = vmag_pri
+                    row.mag_sec = vmag_sec
+                    row.dmag = wds_dmag(vmag_pri, vmag_sec)
+                if msc_mag_fills is not None:
+                    msc_mag_fills.append(f"{pair.wds_id}{pair.components}")
+        finalize_renderable_elements(primary_row, secondary_row, orbit)
         for row, tok in (
             (primary_row, primary.component), (secondary_row, s_tok),
         ):

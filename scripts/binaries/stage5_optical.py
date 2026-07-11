@@ -60,7 +60,7 @@ OPTICAL_VIA_VALUES: tuple[str, ...] = (
 # / 61 Cyg AB: orbits whose orbital proper-motion split would otherwise
 # trip the velocity gate.)
 ORBIT_VIA_ON_FILE: frozenset[str] = frozenset({
-    "gaia_nss", "orb6", "orb6_spectroscopic",
+    "gaia_nss", "orb6", "orb6_spectroscopic", "msc",
 })
 
 # WDS Notes flag-char semantics (cols 107-110 of WDS_SUMM). The "kept"

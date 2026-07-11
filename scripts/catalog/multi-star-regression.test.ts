@@ -149,7 +149,14 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // 1499 → 1482: the 2026-07 SIMBAD/Gaia re-pulls (astrometry backlog
 // fill + live xids/sp_type drift) moved a net 17 pairs out of the
 // disagreeing set.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1482;
+// 1482 → 1489: net of the MSC ingest + intra-system radial coherence.
+// 12 in — MSC per-component spectral types let Stage 6's mass-table q
+// backfill fire on ORB6 visual pairs whose q was blank, so they newly
+// satisfy the has_orbit contract and enter the sweep (new coverage,
+// the same tangent-bake-vs-R(epoch) class as the rescue tier). 5 out —
+// the radial coherence snap removes sub-3σ baked radial gaps on wide
+// long-period pairs, bringing them back under 0.5·a.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1489;
 
 // ---- Corpus row types ----------------------------------------------------
 

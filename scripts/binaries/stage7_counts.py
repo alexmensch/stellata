@@ -72,6 +72,9 @@ def build_binaries_counts(
     multiples_rows: list[MultiplesRow],
     synthesized_orb6_pairs: int = 0,
     synthesized_nss_pairs: int = 0,
+    synthesized_msc_pairs: int = 0,
+    msc_pair_mags_filled: int = 0,
+    msc_orbits_unmapped: int = 0,
     binding_integrity: dict[str, int] | None = None,
     xwalk_mag_rejected: int = 0,
     athyg_gaia_mag_rejected: int = 0,
@@ -150,6 +153,9 @@ def build_binaries_counts(
         "components_total": len(components),
         "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
         "synthesized_nss_inner_pairs": synthesized_nss_pairs,
+        "synthesized_msc_inner_pairs": synthesized_msc_pairs,
+        "msc_pair_mags_filled": msc_pair_mags_filled,
+        "msc_orbits_unmapped": msc_orbits_unmapped,
         "xwalk_hip_mag_rejected": xwalk_mag_rejected,
         "athyg_gaia_mag_rejected": athyg_gaia_mag_rejected,
         "multiples_rows_emitted": len(multiples_rows),
@@ -301,7 +307,7 @@ OPTICAL_REJECT_TAGS: tuple[str, ...] = tuple(
 # Orbital-source tiers other than ``none`` — the population the
 # NSS-vs-ORB6 routing applies to.
 ORBIT_RESOLVED_TAGS: tuple[str, ...] = (
-    "gaia_nss", "orb6", "orb6_spectroscopic",
+    "gaia_nss", "orb6", "orb6_spectroscopic", "msc",
 )
 
 

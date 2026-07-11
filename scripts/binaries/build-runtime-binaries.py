@@ -704,7 +704,12 @@ def log(msg: str) -> None:
 
 
 def _iter_input_paths() -> Iterator[Path]:
-    yield SCRIPT
+    # Writer logic spans the sibling modules (component_tokens et al.)
+    # and scripts/util, not just this file.
+    for folder in (SCRIPT.parent, SCRIPT.parent.parent / "util"):
+        for mod in sorted(folder.glob("*.py")):
+            if not mod.name.endswith(".test.py"):
+                yield mod
     yield SRC_MULTIPLES
     yield SRC_ROW_INDEX_MAP
 

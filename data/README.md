@@ -15,6 +15,7 @@ this file carries only the cross-folder policies.
 | [`hipparcos/`](hipparcos/README.md) | Hipparcos CCDM cross-reference + HIP2 reduction. |
 | [`gcvs/`](gcvs/README.md) | GCVS 5.1 variable-star catalogue + cross-IDs. |
 | [`wds/`](wds/README.md) | Washington Double Star + ORB6 visual binary orbits. |
+| [`msc/`](msc/README.md) | Pulkovo MSC (Tokovinin) multiple-star hierarchies, orbits, per-component data. |
 | [`simbad/`](simbad/README.md) | SIMBAD sample, per-source sp_type, WDS↔Gaia cross-IDs. |
 | [`binaries/`](binaries/README.md) | Pipeline-derived `multiples.tsv` (output of `build-binaries.py`). |
 | [`distance-validation/`](distance-validation/README.md) | Vaidman 2025 BA-supergiant Bayesian distance reference set. |
