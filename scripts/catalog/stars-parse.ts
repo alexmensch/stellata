@@ -42,8 +42,10 @@ import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
 // distant outliers) that the renderer's float32 origin can't keep
 // stable; the LMC override snaps those back inside the cutoff before
-// it fires.
-const MAX_DIST_PC = 50_000;
+// it fires. Every kinematic-override target distance must stay below
+// this cut or its population is silently dropped here —
+// catalog-pure.test.ts pins LMC_DISTANCE_PC < MAX_DIST_PC.
+export const MAX_DIST_PC = 50_000;
 
 export interface Star {
   x: number; y: number; z: number;
