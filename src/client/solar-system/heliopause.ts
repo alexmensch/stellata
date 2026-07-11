@@ -4,19 +4,32 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { AU_PC } from '../util/astronomy-constants';
+import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
 import { LABEL_OFFSET_PX } from './planet-labels';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import heliopauseVert from './heliopause.vert.glsl?raw';
 import heliopauseFrag from './heliopause.frag.glsl?raw';
 
-// Solar apex (upwind) direction in ICRS Cartesian. Pure unit vector.
-const APEX_RA_RAD = (17 + 53 / 60) * 15 * Math.PI / 180; // 268.25°
-const APEX_DEC_RAD = 27.4 * Math.PI / 180;
+// Nose (upwind apex) direction: the interstellar He inflow measured by
+// IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
+// 2015 (ApJS 220, 22). NOT the solar apex of motion vs nearby stars
+// (RA 17h53m, Dec +27.4°), which sits ~47° away and once shipped here —
+// the heliosphere is shaped by motion relative to the Local Interstellar
+// Cloud, not relative to the stellar neighbourhood.
+const NOSE_ECL_LON_RAD = 255.7 * Math.PI / 180;
+const NOSE_ECL_LAT_RAD = 5.1 * Math.PI / 180;
+
+const ECL_TO_ICRS = new THREE.Quaternion().setFromUnitVectors(
+  new THREE.Vector3(0, 0, 1),
+  ECLIPTIC_NORTH_POLE_ICRS.clone(),
+);
+
+// ICRS ≈ RA 17h00m (255.04°), Dec −17.60°. Pure unit vector.
 const APEX_DIR_ICRS = new THREE.Vector3(
-  Math.cos(APEX_DEC_RAD) * Math.cos(APEX_RA_RAD),
-  Math.cos(APEX_DEC_RAD) * Math.sin(APEX_RA_RAD),
-  Math.sin(APEX_DEC_RAD),
-).normalize();
+  Math.cos(NOSE_ECL_LAT_RAD) * Math.cos(NOSE_ECL_LON_RAD),
+  Math.cos(NOSE_ECL_LAT_RAD) * Math.sin(NOSE_ECL_LON_RAD),
+  Math.sin(NOSE_ECL_LAT_RAD),
+).applyQuaternion(ECL_TO_ICRS).normalize();
 
 // Ellipsoid geometry (AU). 115 / 115 / 161 with the centre offset
 // 39 AU toward antiapex lands the upwind boundary at 122 AU and the

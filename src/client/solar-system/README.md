@@ -337,17 +337,22 @@ emitted by `positionsAt`.
 ## Heliopause boundary
 
 `heliopause.ts` and the matching shaders. Asymmetric ellipsoid centred
-on Sol, aligned to the solar apex of motion through the local
-interstellar medium. Geometry is fixed (no `t` dependence on human
-timescales):
+on Sol, aligned to the interstellar-medium inflow — the direction the
+heliosphere's nose points. Geometry is fixed (no `t` dependence on
+human timescales):
 
 - Upwind boundary at **122 AU** — Voyager 1 heliopause crossing,
   2012-08-25.
 - Flank inferred at **~115 AU** from Voyager 2 heliopause crossing
   2018-11-05, combined with the apex-aligned ellipsoid model.
 - Heliotail at **200 AU** — IBEX / Cassini ENA estimate.
-- Apex direction: ICRS RA 17h53m, Dec +27.4°, after Frisch & Slavin
-  2013.
+- Nose (upwind apex) direction: the IBEX/Ulysses interstellar He
+  inflow, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA 17h00m,
+  Dec −17.6° (McComas et al. 2015, ApJS 220, 22). NOT the solar apex
+  of motion vs nearby stars (RA 17h53m, Dec +27.4°), which sits ~47°
+  away and once shipped here — the heliosphere is shaped by motion
+  relative to the Local Interstellar Cloud. `sky-truth.test.ts` pins
+  the direction and the ~30° Voyager 1 off-nose sanity check.
 
 Construction: unit sphere → scale to (115, 115, 161) AU → translate
 the centre 39 AU toward antiapex → rotate so +Z lands on the antiapex.

@@ -14,6 +14,7 @@ import {
   type Vec3,
 } from './ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
+import { HELIOPAUSE_APEX_LOCAL_PC } from './heliopause';
 import { jdeToT } from './time';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -140,5 +141,45 @@ describe('sky-truth: Sun declination at solstices and equinoxes', () => {
     const after = sunDecDeg(J2000_JD + 9576);
     expect(before).toBeLessThan(0);
     expect(after).toBeGreaterThan(0);
+  });
+});
+
+describe('sky-truth: heliopause nose vs the IBEX ISM inflow', () => {
+  // McComas et al. 2015 (ApJS 220, 22): interstellar He inflow from
+  // J2000 ecliptic (λ, β) = (255.7°, 5.1°) — the upwind/nose direction.
+  // The solar apex of motion vs nearby stars (RA 17h53m, Dec +27.4°)
+  // sits ~47° away and once shipped as the nose anchor.
+  const noseLon = 255.7 * Math.PI / 180;
+  const noseLat = 5.1 * Math.PI / 180;
+  const noseIcrs = new THREE.Vector3(
+    Math.cos(noseLat) * Math.cos(noseLon),
+    Math.cos(noseLat) * Math.sin(noseLon),
+    Math.sin(noseLat),
+  ).applyQuaternion(ECL_TO_ICRS);
+
+  it('production upwind apex matches the published inflow within 0.01°', () => {
+    const apex = new THREE.Vector3()
+      .copy(HELIOPAUSE_APEX_LOCAL_PC)
+      .normalize();
+    expect(separationDeg(apex, noseIcrs)).toBeLessThan(0.01);
+  });
+
+  it('solar apex of motion is NOT the nose — ~47° away', () => {
+    const solarApex = raDecToDir(268.25, 27.4);
+    expect(separationDeg(noseIcrs, solarApex)).toBeGreaterThan(45);
+  });
+
+  it('Voyager 1 heliopause-crossing direction sits ~30° off-nose', () => {
+    // V1 outbound at roughly RA 258°, Dec +12° — crossed the heliopause
+    // at 122 AU, consistent with a flank ~30° from a Dec −17.6° nose
+    // and impossible for a Dec +27.4° nose (V1 would be near-nose yet
+    // crossed at the nose distance).
+    const apex = new THREE.Vector3()
+      .copy(HELIOPAUSE_APEX_LOCAL_PC)
+      .normalize();
+    const v1 = raDecToDir(258, 12);
+    const sep = separationDeg(apex, v1);
+    expect(sep).toBeGreaterThan(25);
+    expect(sep).toBeLessThan(35);
   });
 });

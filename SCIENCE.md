@@ -1080,16 +1080,23 @@ zoom). A future time-scrubber UI would plug in by overriding
 `Stellata.setT()`.
 
 **Heliopause boundary.** Modelled as an asymmetric ellipsoid centred
-on Sol, aligned to the solar apex of motion through the local
-interstellar medium. The cited measurements:
+on Sol, aligned to the interstellar-medium inflow direction — the
+heliosphere's shape is set by the Sun's motion relative to the Local
+Interstellar Cloud, not by the solar apex of motion relative to
+nearby stars. The cited measurements:
 
 - Upwind boundary at **122 AU** — Voyager 1 heliopause crossing,
   2012-08-25.
 - Flank inferred at **~115 AU** from Voyager 2 heliopause crossing
   2018-11-05, combined with the apex-aligned ellipsoid model.
 - Heliotail at **200 AU** — IBEX / Cassini ENA observations.
-- Apex direction: ICRS RA 17h53m, Dec +27.4°, after Frisch &
-  Slavin 2013.
+- Nose (upwind apex) direction: the IBEX/Ulysses interstellar He
+  inflow, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA 17h00m,
+  Dec −17.6° — McComas et al. 2015, *ApJS* 220, 22,
+  DOI 10.1088/0067-0049/220/2/22. (An earlier revision anchored the
+  nose at the solar apex, RA 17h53m Dec +27.4° — ~47° off; Voyager 1's
+  outbound direction sits ~30° from the corrected nose, consistent
+  with its 122 AU crossing.)
 
 The heliopause is **static on human timescales**. Solar-cycle
 variations in the upwind distance are at the few-AU level across the
@@ -1099,7 +1106,7 @@ the boundary.
 Construction details (sphere scale, offset, rotation), rendering, and
 label anchoring: see `src/client/solar-system/README.md` § Heliopause boundary.
 
-Implementation: `src/client/heliopause.ts` and
+Implementation: `src/client/solar-system/heliopause.ts` and
 `src/client/solar-system/heliopause.{vert,frag}.glsl`.
 
 ## Local Group wireframes
