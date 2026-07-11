@@ -146,7 +146,10 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // relative placement is now two independent 5p positions instead of a
 // WDS-projected synth offset — new own-astrometry coverage whose ORB6
 // orbit disagrees at >0.5·a, the same curation class as above.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1499;
+// 1499 → 1482: the 2026-07 SIMBAD/Gaia re-pulls (astrometry backlog
+// fill + live xids/sp_type drift) moved a net 17 pairs out of the
+// disagreeing set.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1482;
 
 // ---- Corpus row types ----------------------------------------------------
 
