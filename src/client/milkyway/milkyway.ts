@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
-import { GAL_TO_ICRS, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
+import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import type { DustField } from '../loaders/dust-loader';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
@@ -92,7 +92,6 @@ const DEFAULT_EXTINCTION_STRENGTH = 0.45;
 
 // --- Frame transform constants ----------------------------------------
 
-const ICRS_TO_GAL_M3 = new THREE.Matrix3().setFromMatrix4(GAL_TO_ICRS).transpose();
 const GAL_QUAT = new THREE.Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
 
 /** Uniforms shared with the star shader. The MilkyWay layer references

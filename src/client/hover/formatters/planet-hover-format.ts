@@ -2,6 +2,7 @@
 // radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
+import { formatKm } from '../../format/physical-format';
 import type { Planet } from '../../solar-system/planet-system';
 import type { HoverPayload } from '../hover-types';
 
@@ -55,14 +56,6 @@ function formatAppMag(m: number): string {
   if (m >= 0) return `+${m.toFixed(1)}`;
   // toFixed(1) already prints the leading minus.
   return m.toFixed(1);
-}
-
-// Thousands-separated integer kilometres. Deterministic across locales
-// (the locale-aware `Number.prototype.toLocaleString()` varies between
-// environments and breaks golden tests on a German vitest runner that
-// would render Jupiter as "69.911 km"). One-shot regex insert.
-function formatKm(km: number): string {
-  return Math.round(km).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 // Orbital period readout. Sub-decade values keep two decimals (Mercury
