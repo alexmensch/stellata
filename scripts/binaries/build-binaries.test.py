@@ -6071,7 +6071,7 @@ class ParseSpectralTypeTests(unittest.TestCase):
 
 class MassFromSpectralClassTests(unittest.TestCase):
     def test_solar_analog_g2v_near_one_solar_mass(self) -> None:
-        m = me.mass_from_spectral_class("G2V", None)
+        m = me.mass_from_spectral_class("G2V")
         assert m is not None
         self.assertAlmostEqual(m, 1.0, places=2)
 
@@ -6079,50 +6079,60 @@ class MassFromSpectralClassTests(unittest.TestCase):
         # Sirius A: A1V. Per the MS table A1V → 2.6 M_sun (Pecaut/Mamajek
         # zero-age values; true Sirius A = 2.06 M_sun, but the table is
         # a generic A1V anchor not a Sirius-specific calibration).
-        m = me.mass_from_spectral_class("A1V", None)
+        m = me.mass_from_spectral_class("A1V")
         assert m is not None
         self.assertAlmostEqual(m, 2.6, places=2)
 
     def test_white_dwarf_default_mass(self) -> None:
-        m = me.mass_from_spectral_class("DA1.9", None)
+        m = me.mass_from_spectral_class("DA1.9")
         self.assertEqual(m, me.WD_MASS_DEFAULT)
 
     def test_white_dwarf_dqz_default_mass(self) -> None:
         # Procyon B is DQZ — composite-subtype WD; still gets the
         # default 0.6 M_sun.
-        m = me.mass_from_spectral_class("DQZ", None)
+        m = me.mass_from_spectral_class("DQZ")
         self.assertEqual(m, me.WD_MASS_DEFAULT)
 
     def test_k1v_companion_mass(self) -> None:
-        m = me.mass_from_spectral_class("K1V", None)
+        m = me.mass_from_spectral_class("K1V")
         assert m is not None
         self.assertAlmostEqual(m, 0.76, places=2)
 
     def test_giant_k0iii(self) -> None:
-        m = me.mass_from_spectral_class("K0III", None)
+        m = me.mass_from_spectral_class("K0III")
         assert m is not None
         # Cox 2000: K III ≈ 1.5 M_sun.
         self.assertAlmostEqual(m, 1.5, places=2)
 
     def test_supergiant_b0ia(self) -> None:
-        m = me.mass_from_spectral_class("B0Ia", None)
+        m = me.mass_from_spectral_class("B0Ia")
         assert m is not None
         # Supergiant table B0Ia is at the high end; mass ~25 M_sun.
         self.assertAlmostEqual(m, 25.0, places=1)
 
     def test_unparseable_returns_none(self) -> None:
-        self.assertIsNone(me.mass_from_spectral_class("", None))
-        self.assertIsNone(me.mass_from_spectral_class(None, None))
-        self.assertIsNone(me.mass_from_spectral_class("???", None))
+        self.assertIsNone(me.mass_from_spectral_class(""))
+        self.assertIsNone(me.mass_from_spectral_class(None))
+        self.assertIsNone(me.mass_from_spectral_class("???"))
 
     def test_subgiant_interpolates_between_ms_and_giant(self) -> None:
         # G2IV should land between G2V (~1.0) and G2III (~2.1).
-        m_ms = me.mass_from_spectral_class("G2V", None)
-        m_iv = me.mass_from_spectral_class("G2IV", None)
-        m_iii = me.mass_from_spectral_class("G2III", None)
+        m_ms = me.mass_from_spectral_class("G2V")
+        m_iv = me.mass_from_spectral_class("G2IV")
+        m_iii = me.mass_from_spectral_class("G2III")
         assert m_ms is not None and m_iv is not None and m_iii is not None
         self.assertGreater(m_iv, m_ms)
         self.assertLess(m_iv, m_iii)
+
+    def test_subgiant_f5iv_matches_procyon_a_published_mass(self) -> None:
+        # External anchor for the IV interpolation weights: Procyon A
+        # (F5IV) has a dynamically measured 1.478 ± 0.05 M_sun (Bond et
+        # al. 2015, astrometric orbit). The generic F5IV table value
+        # (0.55·1.8 + 0.45·1.4 = 1.62) must stay within 10% of it.
+        m_iv = me.mass_from_spectral_class("F5IV")
+        assert m_iv is not None
+        self.assertAlmostEqual(m_iv, 1.62, places=4)
+        self.assertAlmostEqual(m_iv, 1.478, delta=0.148)
 
 
 class MassRatioFromComponentsTests(unittest.TestCase):
@@ -6132,33 +6142,32 @@ class MassRatioFromComponentsTests(unittest.TestCase):
         # (M_B=1.0, off-track from the WD default); model improves on
         # the q=None baseline but cannot recover Sirius B's anomalously
         # high mass from sp_type alone.
-        q = me.mass_ratio_from_components("A1V", 1.42, "DA1.9", 11.36)
+        q = me.mass_ratio_from_components("A1V", "DA1.9")
         assert q is not None
         self.assertAlmostEqual(q, 0.1875, places=3)
 
     def test_procyon_like_subgiant_primary_wd(self) -> None:
         # Procyon A (F5IV-V) + Procyon B (DQZ WD). Model: M_A is the
-        # IV interpolation between F5V (1.4) and F5III (1.8) → ~1.62,
-        # M_B = 0.6 → q ≈ 0.27.
-        q = me.mass_ratio_from_components("F5IV-V", 2.671, "DQZ", 13.04)
+        # IV interpolation between F5V (1.4) and F5III (1.8) → 1.62,
+        # M_B = 0.6 → q = 0.6 / 2.22.
+        q = me.mass_ratio_from_components("F5IV-V", "DQZ")
         assert q is not None
-        self.assertGreater(q, 0.20)
-        self.assertLess(q, 0.35)
+        self.assertAlmostEqual(q, 0.2703, places=4)
 
     def test_alpha_cen_like_g2v_plus_k1v(self) -> None:
         # α Cen A (G2V) + α Cen B (K1V). Model: M_A=1.0, M_B=0.76 →
         # q ≈ 0.43. External truth (Pourbaix 2016): q=0.453. The MS+MS
         # case lands within ~5% of the external value because there is
         # no WD mass-recovery uncertainty.
-        q = me.mass_ratio_from_components("G2V", 4.379, "K1V", 5.71)
+        q = me.mass_ratio_from_components("G2V", "K1V")
         assert q is not None
-        self.assertAlmostEqual(q, 0.432, places=2)
+        self.assertAlmostEqual(q, 0.4318, places=4)
 
     def test_returns_none_when_primary_spect_unparseable(self) -> None:
-        self.assertIsNone(me.mass_ratio_from_components("", 4.0, "K1V", 5.0))
+        self.assertIsNone(me.mass_ratio_from_components("", "K1V"))
 
     def test_returns_none_when_secondary_spect_unparseable(self) -> None:
-        self.assertIsNone(me.mass_ratio_from_components("G2V", 4.0, "", 5.0))
+        self.assertIsNone(me.mass_ratio_from_components("G2V", ""))
 
 
 class Stage6QFallbackTests(unittest.TestCase):

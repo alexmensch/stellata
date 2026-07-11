@@ -523,7 +523,7 @@ def compute_pair_masses(
                 pair.wds_id, comp.component,
                 _athyg_row_for_component(comp, indices), indices,
             )
-            mass = mass_from_spectral_class(spect, None)
+            mass = mass_from_spectral_class(spect)
             total += mass if mass is not None else ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN
         out.append(total)
     return out
@@ -783,7 +783,7 @@ def finalize_renderable_elements(
         secondary_row.omega_rad = CIRCULAR_ORBIT_OMEGA_RAD
     if primary_row.a_AU is not None or orbit.P_days is None:
         return
-    m_primary = mass_from_spectral_class(primary_row.spect, primary_row.absmag)
+    m_primary = mass_from_spectral_class(primary_row.spect)
     if m_primary is None:
         m_primary = DEFAULT_PRIMARY_MASS_MSUN
     a_au = kepler_semimajor_axis_au(
@@ -1015,8 +1015,7 @@ def build_multiples_rows(
             and secondary_row.q is None
         ):
             estimated_q = mass_ratio_from_components(
-                primary_row.spect, primary_row.absmag,
-                secondary_row.spect, secondary_row.absmag,
+                primary_row.spect, secondary_row.spect,
             )
             if estimated_q is not None:
                 primary_row.q = estimated_q
