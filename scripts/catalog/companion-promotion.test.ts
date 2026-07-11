@@ -25,6 +25,7 @@ import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   FLAG_BINARY_PRIMARY,
   FLAG_HAS_NAME,
+  NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,
@@ -1731,19 +1732,12 @@ describe('promoteCompanions', () => {
     expect(c.z).toBeCloseTo(0.0, 6);
   });
 
-  it('names a secondary off the WDS-root system primary when its sub-pair local primary is nameless and unpromoted (Alsephina D)', () => {
-    // δ Vel D is the secondary of the CD sub-pair. Its local primary C is
-    // nameless (source=wds, empty name) and can't promote (system_inherited,
-    // no compound proxy — see the Alsephina C test above), so the cursor
-    // anchor is null. D still promotes off C's inherited position, and its
-    // name must climb to the WDS-root system primary (A = "Alsephina") →
-    // "Alsephina D", not Unnamed.
-    const alsephina: Star = makeStar({
-      gaiaSourceId: null, hip: 42913,
-      absmag: -0.033, proper: 'Alsephina',
-      x: -9.394045, y: 10.739872, z: -20.158656,
-    });
-    const rows: MultiplesTsvRow[] = [
+  // δ Vel CD sub-pair: local primary C is nameless (source=wds) and can't
+  // promote (system_inherited, no compound proxy), so D's cursor anchor is
+  // null and every system-level property must climb to the WDS-root system
+  // primary A ("Alsephina", HIP 42913).
+  function alsephinaCDRows(): MultiplesTsvRow[] {
+    return [
       multiplesRow({
         systemId: '08447-5443-AB', comp: 'A',
         gaiaSourceId: null, hip: 42913,
@@ -1769,11 +1763,58 @@ describe('promoteCompanions', () => {
         sepArcsec: 6.0, paDeg: 100.0, sepPaEpochJd: 2457023.75, dmag: 3.4,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [alsephina], CONSTELLATIONS);
+  }
+
+  it('names a secondary off the WDS-root system primary when its sub-pair local primary is nameless and unpromoted (Alsephina D)', () => {
+    // D still promotes off C's inherited position, and its name must climb
+    // to the WDS-root system primary (A = "Alsephina") → "Alsephina D".
+    const alsephina: Star = makeStar({
+      gaiaSourceId: null, hip: 42913,
+      absmag: -0.033, proper: 'Alsephina',
+      x: -9.394045, y: 10.739872, z: -20.158656,
+    });
+    const { newStars, stats } = promoteCompanions(
+      alsephinaCDRows(), [alsephina], CONSTELLATIONS);
     expect(stats.droppedCollocatedPrimary).toBe(1);  // C still drops
     const d = newStars.find(s => s.gaiaSourceId === '5317053587001807104');
     expect(d, 'D promoted').toBeDefined();
     expect(d?.proper).toBe('Alsephina D');
+  });
+
+  it('inherits constellation + velocity from the WDS-root system primary when the local anchor is uncatalogued (Alsephina D)', () => {
+    // anchorStar is null (C never promotes), so both system-level inherited
+    // fields fall back to systemAnchorStar = A. Without the fallback D ships
+    // conIndex 255 (blank search chip) and zero velocity — shearing off the
+    // system under the epoch-advance pass.
+    const vel = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'vel');
+    expect(vel).toBeGreaterThanOrEqual(0);
+    const alsephina: Star = makeStar({
+      gaiaSourceId: null, hip: 42913,
+      absmag: -0.033, proper: 'Alsephina',
+      x: -9.394045, y: 10.739872, z: -20.158656,
+      conIndex: vel, vx: 0.011, vy: -0.022, vz: 0.033,
+    });
+    const { newStars, stats } = promoteCompanions(
+      alsephinaCDRows(), [alsephina], CONSTELLATIONS);
+    const d = newStars.find((s) => s.gaiaSourceId === '5317053587001807104');
+    expect(d, 'D promoted').toBeDefined();
+    expect(d?.conIndex).toBe(vel);
+    expect([d?.vx, d?.vy, d?.vz])
+      .toEqual([alsephina.vx, alsephina.vy, alsephina.vz]);
+    expect(stats.constellationInherited).toBe(1);
+  });
+
+  it('keeps NO_CONSTELLATION_INDEX and zero velocity when no anchor is catalogued (fully-synthetic tail)', () => {
+    // No AT-HYG star anywhere in the system: both anchorStar and
+    // systemAnchorStar resolve null, so there is nothing to inherit and the
+    // row is not counted as constellation-inherited.
+    const { newStars, stats } = promoteCompanions(
+      alsephinaCDRows(), [], CONSTELLATIONS);
+    const d = newStars.find((s) => s.gaiaSourceId === '5317053587001807104');
+    expect(d, 'D promoted').toBeDefined();
+    expect(d?.conIndex).toBe(NO_CONSTELLATION_INDEX);
+    expect([d?.vx, d?.vy, d?.vz]).toEqual([0, 0, 0]);
+    expect(stats.constellationInherited).toBe(0);
   });
 
   it('names a secondary off the WDS-root system primary when its local anchor is present but nameless (Eps Equ C)', () => {

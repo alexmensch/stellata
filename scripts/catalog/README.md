@@ -886,10 +886,15 @@ from the anchor primary (system-level property), **system-derived**
 unset** (filled later or never). The derivation prose above is
 per-field detail; this is the whole-record contract.
 
+"Anchor" here means the local anchor primary, or the WDS-root system
+primary when the local anchor never made it into the catalog (δ Vel CD
+class). Both inherited fields below resolve that same anchor, so a
+companion never gets one without the other.
+
 | Field(s) | Origin | Source |
 | --- | --- | --- |
-| `conIndex` | inherited | anchor's index — constellations ship no boundary polygons, so a position can't be classified. Anchor-less escapes keep `NO_CONSTELLATION_INDEX`. Counted `companionConstellationInherited`. |
-| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (§ Space-motion velocity, Pair coherence). |
+| `conIndex` | inherited | anchor's index — constellations ship no boundary polygons, so a position can't be classified. Rows whose anchor is absent or itself unclassified keep `NO_CONSTELLATION_INDEX`. Counted `companionConstellationInherited`. |
+| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (§ Space-motion velocity, Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
 | `proper` | system-derived | `<primary_proper> <comp>` (own `name` cell wins when present). |
 | `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
