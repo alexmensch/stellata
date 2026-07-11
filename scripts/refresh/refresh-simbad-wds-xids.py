@@ -21,6 +21,7 @@ from wds_xids_cascade import (  # noqa: E402
     build_cascade_candidates,
     filter_cascade_hits,
     parse_hd_or_hip_from_ident,
+    resolve_hip_from_aliases,
 )
 from wds_xids_overrides import load_overrides, validate_against_components  # noqa: E402
 
@@ -125,10 +126,9 @@ def pull_primary_aliases(
     number. Oids without a HD or HIP alias are simply absent from the
     respective map.
 
-    Per-component aliases (`HD 48915B`, `HIP 32349B`) parse to the
-    BASE integer — the component letter is what we want to LOOK UP, not
-    what we already have. parse_hd_or_hip_from_ident's trailing-suffix
-    strip handles both bare and per-component forms uniformly.
+    Per-component aliases (`HD 48915B`, `HIP 32349B`) contribute their
+    BASE integer — the component letter is what the cascade looks UP,
+    not what we already have — so the parsed suffix is ignored here.
     """
     hd_by_oid: dict[int, int] = {}
     hip_by_oid: dict[int, int] = {}
@@ -150,7 +150,7 @@ def pull_primary_aliases(
             )
             if parsed is None:
                 continue
-            kind, num = parsed
+            kind, num, _suffix = parsed
             if kind == "HD":
                 hd_by_oid.setdefault(oid, num)
             else:
@@ -161,10 +161,17 @@ def pull_primary_aliases(
 def query_xrefs_batch(
     client: rl.TapClient,
     oids: list[int],
+    components_by_oid: dict[int, set[str]],
 ) -> dict[int, dict[str, Any]]:
     """Phase B. For the given oids, pull main_id (from basic) and any HIP
     / Gaia DR3 identifiers (from ident). Returns
     ``{oid: {'main_id': str, 'hip': int|None, 'gaia': int|None}}``.
+
+    HIP aliases resolve through ``resolve_hip_from_aliases``: the bare
+    integer form wins, and a per-component suffixed form (``HIP 55203A``)
+    binds when its suffix matches a component letter the oid resolved as
+    in ``components_by_oid`` — so ξ UMa A/B-shaped secondaries keep their
+    per-component HIP instead of losing it as "ambiguous".
 
     Uses a single JOIN query for oids that have at least one matching
     HIP / Gaia row, then a small follow-up basic-only query for any oids
@@ -191,6 +198,7 @@ def query_xrefs_batch(
         "ORDER BY oid, id"
     )
     out: dict[int, dict[str, Any]] = {}
+    hip_aliases: dict[int, list[tuple[int, str]]] = {}
     for row in table:
         oid = int(row["oid"])
         rec = out.setdefault(oid, {
@@ -200,18 +208,19 @@ def query_xrefs_batch(
         })
         id_str = str(rl.coerce_masked(row["id"]) or "")
         if id_str.startswith(HIP.prefix):
-            try:
-                rec["hip"] = int(id_str[HIP.prefix_len:])
-            except ValueError:
-                # Rare HIP aliases like "HIP 12345 A" — skip; the canonical
-                # integer-only entry appears in the same result set with no
-                # suffix.
-                pass
+            parsed = parse_hd_or_hip_from_ident(id_str)
+            if parsed is not None:
+                _kind, hip, suffix = parsed
+                hip_aliases.setdefault(oid, []).append((hip, suffix))
         elif id_str.startswith(GAIA_DR3.prefix):
             try:
                 rec["gaia"] = int(id_str[GAIA_DR3.prefix_len:])
             except ValueError:
                 pass
+    for oid, aliases in hip_aliases.items():
+        out[oid]["hip"] = resolve_hip_from_aliases(
+            aliases, components_by_oid.get(oid, set())
+        )
     missing = sorted(o for o in oids if o not in out)
     if missing:
         miss_inlist = ",".join(str(o) for o in missing)
@@ -380,7 +389,14 @@ def main() -> None:
     for (wds_id, component), oid in overrides.items():
         ident_to_oid[wds_ident(wds_id, component)] = oid
 
-    # Phase B: cross-IDs for the matched oids.
+    # Phase B: cross-IDs for the matched oids. components_by_oid carries
+    # every component letter each oid resolved as (Phase A + cascade +
+    # overrides) — the suffix-match key for per-component HIP aliases.
+    components_by_oid: dict[int, set[str]] = {}
+    for wds_id, component in components:
+        oid = ident_to_oid.get(wds_ident(wds_id, component))
+        if oid is not None:
+            components_by_oid.setdefault(oid, set()).add(component)
     unique_oids = sorted(set(ident_to_oid.values()))
     print(f"resolving cross-IDs for {len(unique_oids):,} unique SIMBAD oids…")
     n_oid_batches = (len(unique_oids) + IDENT_BATCH - 1) // IDENT_BATCH
@@ -388,7 +404,7 @@ def main() -> None:
     for batch_idx, offset in enumerate(range(0, len(unique_oids), IDENT_BATCH), start=1):
         batch = unique_oids[offset : offset + IDENT_BATCH]
         t0 = time.time()
-        batch_xrefs = query_xrefs_batch(client, batch)
+        batch_xrefs = query_xrefs_batch(client, batch, components_by_oid)
         oid_xrefs.update(batch_xrefs)
         elapsed = time.time() - t0
         print(

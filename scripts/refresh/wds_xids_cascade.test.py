@@ -14,33 +14,33 @@ from wds_xids_cascade import (  # noqa: E402
     build_cascade_candidates,
     filter_cascade_hits,
     parse_hd_or_hip_from_ident,
+    resolve_hip_from_aliases,
 )
 
 
 class ParseHdOrHipTests(unittest.TestCase):
 
     def test_hd_basic(self):
-        self.assertEqual(parse_hd_or_hip_from_ident("HD  48915"), ("HD", 48915))
+        self.assertEqual(parse_hd_or_hip_from_ident("HD  48915"), ("HD", 48915, ""))
 
     def test_hd_with_component_letter(self):
-        # Per-component HD form: parser must drop the trailing letter.
-        self.assertEqual(parse_hd_or_hip_from_ident("HD  48915B"), ("HD", 48915))
+        self.assertEqual(parse_hd_or_hip_from_ident("HD  48915B"), ("HD", 48915, "B"))
 
     def test_hd_short_number(self):
         # 3-digit HD pads to width 7 ("HD    113").
-        self.assertEqual(parse_hd_or_hip_from_ident("HD    113"), ("HD", 113))
+        self.assertEqual(parse_hd_or_hip_from_ident("HD    113"), ("HD", 113, ""))
 
     def test_hd_six_digit(self):
-        self.assertEqual(parse_hd_or_hip_from_ident("HD 225220"), ("HD", 225220))
+        self.assertEqual(parse_hd_or_hip_from_ident("HD 225220"), ("HD", 225220, ""))
 
     def test_hip_basic(self):
-        self.assertEqual(parse_hd_or_hip_from_ident("HIP 32349"), ("HIP", 32349))
+        self.assertEqual(parse_hd_or_hip_from_ident("HIP 32349"), ("HIP", 32349, ""))
 
     def test_hip_with_component(self):
-        self.assertEqual(parse_hd_or_hip_from_ident("HIP 32349B"), ("HIP", 32349))
+        self.assertEqual(parse_hd_or_hip_from_ident("HIP 32349B"), ("HIP", 32349, "B"))
 
     def test_hip_with_space_before_component(self):
-        self.assertEqual(parse_hd_or_hip_from_ident("HIP 32349 B"), ("HIP", 32349))
+        self.assertEqual(parse_hd_or_hip_from_ident("HIP 32349 B"), ("HIP", 32349, "B"))
 
     def test_unrelated_prefix(self):
         self.assertIsNone(parse_hd_or_hip_from_ident("Gaia DR3 12345"))
@@ -49,6 +49,35 @@ class ParseHdOrHipTests(unittest.TestCase):
     def test_hd_without_digits(self):
         # Defensive — "HD" with no following number can't parse.
         self.assertIsNone(parse_hd_or_hip_from_ident("HD foo"))
+
+
+class ResolveHipFromAliasesTests(unittest.TestCase):
+
+    def test_bare_wins_over_suffixed(self):
+        self.assertEqual(
+            resolve_hip_from_aliases([(55203, "A"), (55203, "")], {"A"}), 55203
+        )
+
+    def test_suffix_matching_component_binds(self):
+        # ξ UMa A: SIMBAD stores only "HIP 55203A"; the suffix matches the
+        # oid's resolved component letter.
+        self.assertEqual(resolve_hip_from_aliases([(55203, "A")], {"A"}), 55203)
+
+    def test_suffix_not_matching_component_drops(self):
+        self.assertIsNone(resolve_hip_from_aliases([(55203, "B")], {"A"}))
+
+    def test_conflicting_matched_suffixes_drop(self):
+        self.assertIsNone(
+            resolve_hip_from_aliases([(111, "A"), (222, "B")], {"A", "B"})
+        )
+
+    def test_same_hip_under_two_matching_suffixes_binds(self):
+        self.assertEqual(
+            resolve_hip_from_aliases([(111, "A"), (111, "B")], {"A", "B"}), 111
+        )
+
+    def test_no_component_letters_drops_suffixed(self):
+        self.assertIsNone(resolve_hip_from_aliases([(55203, "A")], set()))
 
 
 class BuildCascadeCandidatesTests(unittest.TestCase):

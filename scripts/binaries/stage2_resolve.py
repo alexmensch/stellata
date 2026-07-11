@@ -363,11 +363,6 @@ def resolve_via_simbad(
       ``resolve_via`` ``unresolved`` so Stage 3's HIP2 long-baseline
       fallback can route on the freshly-bound HIP.
     * SIMBAD doesn't have the component → leave it alone.
-
-    Suffixed-HIP forms in SIMBAD (``HIP 55203A``) are filtered out by
-    the refresh script (see ``refresh-simbad-wds-xids.py``); only
-    plain-integer HIPs reach this map, so no ambiguity-handling is
-    needed here.
     """
     for c in components:
         if c.gaia_source_id is not None:
