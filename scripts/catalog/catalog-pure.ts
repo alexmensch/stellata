@@ -1667,10 +1667,15 @@ export const DIST_SRC_LMC_KIN = 'LMC_KIN';
 // LMC kinematic parameters. References:
 //   - Pietrzyński et al. 2019 (Nature 567, 200): eclipsing-binary distance
 //     49.594 ± 0.55 kpc.
-//   - van der Marel & Kallivayalil 2014 (ApJ 781, 121): LMC centre of mass
-//     bulk proper motion μ_α* cos δ ≈ +1.91 ± 0.02, μ_δ ≈ +0.23 ± 0.05 mas/yr.
-//   - LMC photometric centre: (RA, Dec) ≈ (05h 23m 34s, −69° 45′) = (78.76°,
-//     −69.19°). The 15° cone is wide enough to admit the visible disc and
+//   - van der Marel & Kallivayalil 2014 (ApJ 781, 121): PM dynamical centre
+//     (RA, Dec) = (78.76°, −69.19°) = (05h 15m 02s, −69° 11′ 24″) — their
+//     PM-field fit, not the NED/SIMBAD photometric centre (05h 23m 34s,
+//     −69° 45′). Same paper's centre-of-mass bulk PM: μ_α* = +1.910 ± 0.020,
+//     μ_δ = +0.229 ± 0.047 mas/yr. The gate centre below (1.85, 0.20) is a
+//     rounded working value toward the field-mean (centroid) PM — the
+//     COM−gate difference (≤ 0.07 mas/yr) and the disc's internal-rotation
+//     spread (±0.3 mas/yr) both sit well inside the ±0.5 tolerance.
+//   - The 15° cone is wide enough to admit the visible disc and
 //     30 Doradus while keeping confusion with Galactic foreground low.
 // Tolerances chosen so AT-HYG halo / runaway stars in the same sky region
 // (which have very different PMs) fail the test — see catalog-pure.test.ts.

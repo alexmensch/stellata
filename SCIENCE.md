@@ -372,11 +372,13 @@ intermediate (5–20 kpc) instead of the LMC's true ~50 kpc. Without a
 second layer this regresses today's behaviour: a "line of stars
 between MW and LMC in the intergalactic void". After the B-J override
 fires we run a population-specific second pass: any row inside a 15°
-cone of the LMC photometric centre (RA 78.76°, Dec −69.19°) whose
-proper motion lies within ±0.5 mas/yr of the LMC bulk centre-of-mass
-PM (van der Marel & Kallivayalil 2014, *ApJ* 781, 121,
-DOI 10.1088/0004-637X/781/2/121: +1.85 mas/yr in RA, +0.20 mas/yr in
-Dec) has its `dist` snapped to the LMC's eclipsing-binary distance
+cone of the LMC's PM dynamical centre (RA 78.76°, Dec −69.19°; van
+der Marel & Kallivayalil 2014, *ApJ* 781, 121,
+DOI 10.1088/0004-637X/781/2/121) whose proper motion lies within
+±0.5 mas/yr of the gate centre (+1.85 mas/yr in RA, +0.20 mas/yr in
+Dec — a rounded working value near the same paper's centre-of-mass
+PM of μ_α* = 1.910 ± 0.020, μ_δ = 0.229 ± 0.047 mas/yr, well inside
+the tolerance) has its `dist` snapped to the LMC's eclipsing-binary distance
 (49.594 kpc, Pietrzyński et al. 2019, *Nature* 567, 200,
 DOI 10.1038/s41586-019-0999-4; CDS J/other/Natur/567.200), with
 `absmag` recomputed from the new distance. ~54 rows are
