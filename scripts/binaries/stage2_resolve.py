@@ -1766,15 +1766,18 @@ def _refute_photocentre_blend(
     crosswalk mis-match — a component with its own catalog identity is not
     inside the photocentre. Returns ``(owner, loser_token, loser_source)``,
     or ``None`` when the identities don't fully resolve the conflict
-    (either side unidentified, both claiming the source, or a >2-cluster /
-    multi-token shape this deliberately doesn't guess about)."""
+    (either side unidentified, both claiming the source, a >2-cluster
+    shape, or a multi-token LOSER — rebinding re-homes exactly one
+    letter, so the loser side must be a single token; the owner side may
+    be a whole hierarchy cluster, identified by its representative
+    (μ Dra's {B, Ba, Bb} once the MSC sub-pair joins the pre-audit
+    graph))."""
     if len(cands) != 2:
         return None
-    own: list[int | None] = []
-    for c in cands:
-        if len(c.tokens) != 1:
-            return None
-        own.append(_xid_own_source(ctx.wds_id, c.tokens[0], indices, simbad_xids))
+    own: list[int | None] = [
+        _xid_own_source(ctx.wds_id, c.label, indices, simbad_xids)
+        for c in cands
+    ]
     if None in own:
         return None
     owners = [c for c, o in zip(cands, own) if o == src]
@@ -1784,7 +1787,7 @@ def _refute_photocentre_blend(
     loser, loser_src = next(
         (c, o) for c, o in zip(cands, own) if c is not owner
     )
-    if loser_src == src:
+    if loser_src == src or len(loser.tokens) != 1:
         return None
     return owner, loser.tokens[0], loser_src
 

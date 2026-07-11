@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Synthesized sub-pair injection — inner pairs whose orbit exists in
-ORB6 / Gaia NSS but which WDS never enumerates as a pair row.
-See ``scripts/binaries/README.md`` § Sub-pair synthesis."""
+ORB6 / Gaia NSS / Pulkovo MSC but which WDS never enumerates as a pair
+row. See ``scripts/binaries/README.md`` § Sub-pair synthesis."""
 
 from __future__ import annotations
 
@@ -16,7 +16,9 @@ from component_tokens import (  # noqa: E402
     expand_wds_truncated_secondary,
     is_component_token,
     parent_component_token,
+    token_letters,
 )
+from msc_map import MscLookup  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
     build_pair_by_wds_disc,
@@ -27,14 +29,16 @@ from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import (  # noqa: E402
     _nss_in_regime,
     iter_decomposing_pairs,
+    msc_renderable,
     nss_to_canonical_elements,
 )
 
 
-# Discoverer tag stamped on NSS-synthesized inner pairs. Never collides
+# Discoverer tags stamped on synthesized inner pairs. Never collide
 # with a real WDS discoverer code (WDS discoverer strings carry a
 # trailing catalog number).
 SYNTH_NSS_DISCOVERER = "GNSS"
+SYNTH_MSC_DISCOVERER = "MSC"
 
 # Synthesized sub-pairs are below WDS's resolution by construction —
 # the same ρ = 0.0 convention WDS itself publishes for measured-but-
@@ -145,6 +149,111 @@ def synthesize_orb6_orphan_pairs(
             precise_dec_deg=precise[1],
         ))
     return out
+
+
+def synthesize_msc_inner_pairs(
+    wds_pairs: list[WdsPair],
+    msc: MscLookup,
+) -> tuple[list[WdsPair], dict[str, int]]:
+    """One synthesized ``WdsPair`` per WDS-token-mapped MSC orbit whose
+    pair WDS never enumerates — the spectroscopic subsystems ORB6 and
+    Gaia NSS both miss (AR Cas Aa,Ab, ν Sco Aa1,Aa2). Runs pre-Stage-2
+    (after the blank-components rescue, so a rescued implied A,B pair
+    counts as existing); the synthesized components ride the normal
+    cascade and ``seed_synthesized_component_bindings`` backstops them
+    like the ORB6 orphans.
+
+    Gates, mirroring the NSS inner-pair pass: both tokens clean
+    single-component tokens; at least one renderable-element orbit row;
+    the token pair absent from the system's existing pairs (either
+    order); neither token already present; and the pair anchored to the
+    existing system — each token's parent token present (top-level
+    letters: present in some side's letter set). Unanchored MSC-only
+    systems are skipped rather than minting unreachable orphans.
+    """
+    pair_tokens_by_wds: dict[str, set[frozenset[str]]] = {}
+    tokens_by_wds: dict[str, set[str]] = {}
+    letters_by_wds: dict[str, set[str]] = {}
+    coord_by_wds: dict[str, WdsPair] = {}
+    for p in wds_pairs:
+        sp = split_components(p.components)
+        letters_by_wds.setdefault(p.wds_id, set()).update(
+            token_letters(p.components)
+        )
+        if p.precise_ra_deg is not None:
+            coord_by_wds.setdefault(p.wds_id, p)
+        if sp is None:
+            continue
+        primary, secondary = sp
+        secondary = expand_wds_truncated_secondary(primary, secondary)
+        pair_tokens_by_wds.setdefault(p.wds_id, set()).add(
+            frozenset((primary, secondary))
+        )
+        tokens_by_wds.setdefault(p.wds_id, set()).update((primary, secondary))
+
+    stats = {
+        "skipped_unknown_system": 0,
+        "skipped_token_shape": 0,
+        "skipped_incomplete_elements": 0,
+        "skipped_pair_exists": 0,
+        "skipped_children_exist": 0,
+        "skipped_unanchored": 0,
+    }
+
+    def anchored(tok: str, wds_id: str) -> bool:
+        parent = parent_component_token(tok)
+        if parent is not None:
+            return parent in tokens_by_wds.get(wds_id, set())
+        return tok in letters_by_wds.get(wds_id, set())
+
+    out: list[WdsPair] = []
+    for (wds_id, (tok_a, tok_b)), rows in sorted(msc.orbits_by_pair.items()):
+        if wds_id not in letters_by_wds:
+            stats["skipped_unknown_system"] += 1
+            continue
+        if not (
+            is_component_token(tok_a) and is_component_token(tok_b)
+            and tok_a != tok_b
+        ):
+            stats["skipped_token_shape"] += 1
+            continue
+        if not any(msc_renderable(r) for r in rows):
+            stats["skipped_incomplete_elements"] += 1
+            continue
+        if frozenset((tok_a, tok_b)) in pair_tokens_by_wds.get(wds_id, set()):
+            stats["skipped_pair_exists"] += 1
+            continue
+        existing = tokens_by_wds.get(wds_id, set())
+        if tok_a in existing or tok_b in existing:
+            stats["skipped_children_exist"] += 1
+            continue
+        if not (anchored(tok_a, wds_id) and anchored(tok_b, wds_id)):
+            stats["skipped_unanchored"] += 1
+            continue
+        coord_donor = coord_by_wds.get(wds_id)
+        out.append(WdsPair(
+            wds_id=wds_id,
+            discoverer=SYNTH_MSC_DISCOVERER,
+            components=f"{tok_a},{tok_b}",
+            date_last=None,
+            rho_last=SYNTH_SUB_RESOLUTION_RHO_ARCSEC,
+            theta_last=SYNTH_SUB_RESOLUTION_THETA_DEG,
+            mag_pri=None,
+            mag_sec=None,
+            spectral="",
+            notes="",
+            precise_ra_deg=(
+                coord_donor.precise_ra_deg if coord_donor is not None else None
+            ),
+            precise_dec_deg=(
+                coord_donor.precise_dec_deg if coord_donor is not None else None
+            ),
+        ))
+        pair_tokens_by_wds.setdefault(wds_id, set()).add(
+            frozenset((tok_a, tok_b))
+        )
+        tokens_by_wds.setdefault(wds_id, set()).update((tok_a, tok_b))
+    return out, stats
 
 
 def seed_synthesized_component_bindings(

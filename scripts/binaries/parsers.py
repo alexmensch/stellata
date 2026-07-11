@@ -802,3 +802,126 @@ def parse_simbad_wds_spectra(
     return out
 
 
+
+@dataclass
+class MscSystemRow:
+    """One pair of an MSC hierarchy (``data/msc/msc_systems.tsv``).
+    ``prim``/``sec``/``parent`` are Tokovinin labels, not WDS tokens —
+    map through ``msc_map.map_msc_labels`` before joining."""
+
+    wds_id: str
+    prim: str
+    sec: str
+    parent: str
+    obs_type: str
+    vmag1: float | None
+    spt1: str
+    vmag2: float | None
+    spt2: str
+
+
+def parse_msc_systems(path: Path) -> list[MscSystemRow]:
+    # QUOTE_NONE on all three MSC parsers: MSC stores a literal `"`
+    # (arcsec) in unit cells, which default csv quoting treats as an
+    # opening quote and silently merges rows across.
+    out: list[MscSystemRow] = []
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            fh, delimiter="\t", quoting=csv.QUOTE_NONE,
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            prim = (r.get("prim") or "").strip()
+            sec = (r.get("sec") or "").strip()
+            if not wds_id or not prim or not sec:
+                continue
+            out.append(MscSystemRow(
+                wds_id=wds_id,
+                prim=prim,
+                sec=sec,
+                parent=(r.get("parent") or "").strip(),
+                obs_type=(r.get("obs_type") or "").strip(),
+                vmag1=safe_float(r.get("vmag1") or ""),
+                spt1=(r.get("spt1") or "").strip(),
+                vmag2=safe_float(r.get("vmag2") or ""),
+                spt2=(r.get("spt2") or "").strip(),
+            ))
+    return out
+
+
+@dataclass
+class MscOrbitRow:
+    """One MSC orbit (``data/msc/msc_orbits.tsv``). ``syst`` is the
+    Tokovinin pair label (``"Aa,Ab"``). ``t0`` is a Besselian year OR a
+    truncated JD with no unit flag — ``stage4_orbits.msc_T0_jd``
+    disambiguates by magnitude + plausibility window."""
+
+    wds_id: str
+    syst: str
+    per: float | None
+    per_unit: str
+    t0: float | None
+    e: float | None
+    a_arcsec: float | None
+    node_deg: float | None
+    longp_deg: float | None
+    incl_deg: float | None
+    note: str
+
+
+def parse_msc_orbits(path: Path) -> list[MscOrbitRow]:
+    out: list[MscOrbitRow] = []
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            fh, delimiter="\t", quoting=csv.QUOTE_NONE,
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            syst = (r.get("syst") or "").strip()
+            if not wds_id or not syst:
+                continue
+            out.append(MscOrbitRow(
+                wds_id=wds_id,
+                syst=syst,
+                per=safe_float(r.get("per") or ""),
+                per_unit=(r.get("per_unit") or "").strip(),
+                t0=safe_float(r.get("t0") or ""),
+                e=safe_float(r.get("e") or ""),
+                a_arcsec=safe_float(r.get("a_arcsec") or ""),
+                node_deg=safe_float(r.get("node_deg") or ""),
+                longp_deg=safe_float(r.get("longp_deg") or ""),
+                incl_deg=safe_float(r.get("incl_deg") or ""),
+                note=(r.get("note") or "").strip(),
+            ))
+    return out
+
+
+@dataclass
+class MscComponentRow:
+    """One MSC per-component row (``data/msc/msc_components.tsv``).
+    ``comp`` labels are top-level letters/compounds, WDS-consistent."""
+
+    wds_id: str
+    comp: str
+    spt: str
+    vmag: float | None
+
+
+def parse_msc_components(path: Path) -> list[MscComponentRow]:
+    out: list[MscComponentRow] = []
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(
+            fh, delimiter="\t", quoting=csv.QUOTE_NONE,
+        )
+        for r in reader:
+            wds_id = (r.get("wds_id") or "").strip()
+            comp = (r.get("comp") or "").strip()
+            if not wds_id or not comp:
+                continue
+            out.append(MscComponentRow(
+                wds_id=wds_id,
+                comp=comp,
+                spt=(r.get("spt") or "").strip(),
+                vmag=safe_float(r.get("vmag") or ""),
+            ))
+    return out
