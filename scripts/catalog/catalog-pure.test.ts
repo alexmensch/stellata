@@ -37,6 +37,7 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleStar,
   type OpticalDoubleContext,
+  type SearchEntry,
   buildHipToIndex,
   BINARY_MAX_SEP_PC,
   FLAG_HAS_NAME,
@@ -1560,6 +1561,35 @@ describe('catalog-pure / binary-format constants', () => {
     }
     expect(recovered.map((r) => r.name)).toEqual(names);
     expect(recovered.map((r) => r.offset)).toEqual(expectedOffsets);
+  });
+});
+
+describe('catalog-pure / search-index wire contract', () => {
+  // search-index.json is written by build-catalog.ts and read by
+  // src/client/search.ts — two separate consumers of the JSON, not one
+  // typed value — so a key renamed on only one side sails past tsc and
+  // silently breaks every search. Pin the wire key set here, mirroring the
+  // binary record-layout pin above.
+  const SEARCH_ENTRY_KEYS = [
+    'i', 'p', 'b', 'f', 'c', 's', 'g', 'hip', 'hd', 'hr', 'gl', 'cl', 'cp',
+  ];
+
+  it('SearchEntry exposes exactly the documented wire keys', () => {
+    // Excess-property checking makes a renamed or dropped interface key a
+    // compile error on this literal; the runtime assertion pins the names.
+    const full: Required<SearchEntry> = {
+      i: 0, p: 'Sirius', b: 'Alp', f: 9, c: 34, s: 'A1V', g: 'R CrB',
+      hip: 32349, hd: 48915, hr: 2491, gl: 'GJ 244', cl: 'B', cp: 5,
+    };
+    expect(Object.keys(full).sort()).toEqual([...SEARCH_ENTRY_KEYS].sort());
+  });
+
+  it('omitting optional fields leaves no undefined keys on the wire', () => {
+    // build-catalog.ts assigns each optional field only when present, so
+    // JSON.stringify never emits an explicit `null`/`undefined` key.
+    const minimal: SearchEntry = { i: 7 };
+    expect(JSON.parse(JSON.stringify(minimal))).toEqual({ i: 7 });
+    expect(Object.keys(minimal)).toEqual(['i']);
   });
 });
 
