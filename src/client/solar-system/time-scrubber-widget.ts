@@ -170,10 +170,6 @@ export function createTimeScrubberWidget(
     if (!scrubber.hidden) return;
     collapsed.hidden = true;
     scrubber.hidden = false;
-    // The expanded scrubber rises above #ui-top's bottom bound; the
-    // body attribute lets CSS lift the bottom-pinned focus card clear
-    // of it (see styles.css .ui-top).
-    document.body.setAttribute('data-scrubber-open', '');
     stopCollapsedTick();
     syncJump();
     refresh();
@@ -184,7 +180,6 @@ export function createTimeScrubberWidget(
     if (scrubber.hidden) return;
     scrubber.hidden = true;
     collapsed.hidden = false;
-    document.body.removeAttribute('data-scrubber-open');
     if (expandedTimer !== null) {
       clearInterval(expandedTimer);
       expandedTimer = null;

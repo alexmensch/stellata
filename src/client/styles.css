@@ -86,7 +86,7 @@ html, body {
   position: fixed;
   top: 10px;
   right: 14px;
-  bottom: 56px;
+  bottom: 16px;
   width: 280px;
   max-width: calc(100vw - 28px);
   display: flex;
@@ -96,10 +96,22 @@ html, body {
   pointer-events: none;
 }
 .ui-top > * { pointer-events: auto; }
-/* The expanded time scrubber (bottom-right, ~150px tall) rises past the
- * 56px bottom bound; lift the column's floor so the bottom-pinned focus
- * card clears it instead of painting over it. */
-body[data-scrubber-open] .ui-top { bottom: 190px; }
+/* Bottom group of the right-hand column: focus card + meta (star count /
+ * time scrubber). One margin-top: auto pins the whole group to the
+ * column's floor; the column gap separates its members — no fixed
+ * clearances, so an expanding scrubber pushes the focus card up
+ * naturally. */
+.ui-top-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  /* Later rule beats `.ui-top > *`'s auto — clicks in the gap between
+   * the card and the meta readout fall through to the canvas. */
+  pointer-events: none;
+}
+.ui-top-bottom > * { pointer-events: auto; }
 
 /* Top-left brand box — independent of `.ui-top` so the right-side stack's
  * width/wrap behaviour is unaffected. Same blurred-card aesthetic as the
@@ -164,13 +176,13 @@ body[data-scrubber-open] .ui-top { bottom: 190px; }
 }
 .ui-bottom > * { pointer-events: auto; }
 
-/* Split scale-bar (start) and meta (end) apart on wide viewports; on narrow
- * viewports flex-wrap stacks them and the auto-margin still right-aligns
- * meta on its own line. */
-.ui-bottom .meta { margin-left: auto; }
-
-/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls toggle. */
-body[data-controls-hidden] #ui-top {
+/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls
+ * toggle. Hides the interactive controls in the right-hand column; the
+ * meta readout (star count / time scrubber) stays visible, pinned to
+ * the column floor by its .ui-top-bottom wrapper. */
+body[data-controls-hidden] #topbar,
+body[data-controls-hidden] #panel,
+body[data-controls-hidden] #focus-card {
   display: none;
 }
 .controls-restore-btn {
@@ -508,12 +520,11 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 1 1 auto;
 }
 
-/* Focus card — the tier-2 object-info panel pinned to the bottom of the
- * #ui-top flex column (margin-top: auto), directly above .ui-bottom.
+/* Focus card — the tier-2 object-info panel in the right column's
+ * bottom group (.ui-top-bottom), directly above the meta readout.
  * Shares the .panel card chrome; the header carries the object's display
  * name, so the uppercase transform is dropped (Greek Bayer forms must
  * not uppercase). */
-.focus-card { margin-top: auto; }
 .focus-card .panel-header {
   text-transform: none;
   letter-spacing: 0.08em;

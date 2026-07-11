@@ -207,23 +207,20 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
 - `.ui-top-left` — fixed top-left, holds the brand box. Independent of
   `.ui-top` so the right-side stack's width / wrap behaviour stays
   untouched.
-- `.ui-top` — fixed top-right, `flex-direction: column`, bottom-bounded.
-  Children in DOM order: topbar ("Navigate" heading + Focus/To search),
-  then panel (Settings), then the focus card (bottom-pinned via
-  `margin-top: auto` — see `../focus-card/README.md`). Because panel is
-  a flex child below the topbar, it can never overlap it — no
-  measurement needed. While the time scrubber is expanded it rises past
-  the column's 56px bottom bound, so `body[data-scrubber-open]` (set by
-  the scrubber widget) lifts `.ui-top`'s floor to clear it — still
-  pure CSS, no JS layout.
-- `.ui-bottom` — fixed full-width along the bottom, `flex-wrap: wrap`,
-  `align-items: flex-end`. Children: scale-bar widget (left, see
-  §Bottom-left widget below), meta (right, with `margin-left: auto`
-  for pull-apart). When the row doesn't fit, wrap puts them on
-  separate rows naturally.
-- `.meta` is just the catalog count (`.meta-count`, e.g. "313,242
-  stars"). Focused-object identity + camera distance live in the
-  focus card (`../focus-card/README.md`).
+- `.ui-top` — fixed top-right, `flex-direction: column`, bottom-bounded
+  at the same 16px page margin as `.ui-bottom`. Children in DOM order:
+  topbar ("Navigate" heading + Focus/To search), panel (Settings), then
+  the `.ui-top-bottom` group — focus card + meta (star count / time
+  scrubber) — pinned to the column floor by a single
+  `margin-top: auto`. Because panel is a flex child below the topbar,
+  it can never overlap it, and an expanding scrubber pushes the focus
+  card up through normal flex layout — no fixed clearances, no
+  measurement.
+- `.ui-bottom` — fixed full-width along the bottom, holding the
+  scale-bar widget (left; see § Bottom-left widget below).
+- `.meta` is the catalog count (`.meta-count`, e.g. "313,242 stars") +
+  the time readout / scrubber. Focused-object identity + camera
+  distance live in the focus card (`../focus-card/README.md`).
 - Both containers set `pointer-events: none` on themselves and `auto` on
   direct children, so clicks fall through empty regions to the canvas.
 
@@ -274,10 +271,11 @@ the keydown for the exiting keystroke).
 ## Hide-controls toggle
 
 `controls-hidden.ts` toggles `body[data-controls-hidden]`, which hides
-only `#ui-top` (the Navigate topbar + settings panel). Everything else
-— brand box, meta readout, scale bar, tooltip, warp button, and the
-`#overlay` SVG (constellations, star names, focus ring) — stays
-visible. `#controls-restore-btn` is a fixed top-right box, `display:
+the right-hand column's interactive controls (`#topbar`, `#panel`,
+`#focus-card`). Everything else — brand box, meta readout / time
+scrubber (also in the column, kept visible), scale bar, tooltip, warp
+button, and the `#overlay` SVG (constellations, star names, focus
+ring) — stays visible. `#controls-restore-btn` is a fixed top-right box, `display:
 none` by default and shown via `body[data-controls-hidden]
 .controls-restore-btn`. It sits where the controls were, showing a `+`
 that expands (ease-in-out) to "Show controls" on hover/focus; clicking

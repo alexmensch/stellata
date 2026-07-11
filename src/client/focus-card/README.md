@@ -52,12 +52,14 @@ an Earth-vantage catalog tag kept for familiarity.
 
 ## Placement
 
-`#focus-card` is the LAST child of `#ui-top` with `margin-top: auto`,
-pinning it to the bottom of the flex column directly above the
-`.ui-bottom` row. Living inside `#ui-top` means the `U` hide-controls
-shortcut covers it for free. The card header carries the object's
-display name (text-transform none — Greek-letter Bayer forms must not
-uppercase) so a collapsed card still says what it describes.
+`#focus-card` lives in `#ui-top`'s `.ui-top-bottom` group (with the
+meta readout / time scrubber below it), pinned to the column floor by
+the group's `margin-top: auto` — the scrubber expanding pushes the
+card up through normal flex layout. Living inside `#ui-top` means the
+`U` hide-controls shortcut covers it for free. The card header carries
+the object's display name (text-transform none — Greek-letter Bayer
+forms must not uppercase) so a collapsed card still says what it
+describes.
 
 ## Planet focus (future)
 
