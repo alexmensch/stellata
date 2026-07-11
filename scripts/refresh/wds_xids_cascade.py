@@ -1,7 +1,6 @@
 """Pure helpers for refresh-simbad-wds-xids.py: build HD/CCDM/HIP cascade
-candidates from resolved-primary aliases, filter the batched ident-table
-query result back into (wds_id, component) → oid, and resolve an oid's
-HIP alias set (bare + per-component suffixed forms) to one HIP."""
+candidates, filter the batched ident query back into (wds_id, component)
+→ oid, and resolve an oid's HIP alias set (bare + suffixed) to one HIP."""
 
 from __future__ import annotations
 

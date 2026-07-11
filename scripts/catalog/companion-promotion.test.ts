@@ -210,6 +210,18 @@ describe('backfillPrimaryIdentifiers', () => {
     expect(stars[0].hip).toBeNull();
   });
 
+  it('invokes reclassify exactly for backfilled records', () => {
+    // readStars classified these records before they carried any key, so
+    // the caller must get a chance to re-resolve with the stamped ids.
+    const stars = [
+      makeStar({ hd: 98231 }),
+      makeStar({ hd: 12345, gaiaSourceId: '999' }),
+    ];
+    const seen: (number | null)[] = [];
+    backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], stars, (s) => seen.push(s.hip));
+    expect(seen).toEqual([55203]);
+  });
+
   it('skips ambiguous HDs, non-primary rows, and ids already in the catalog', () => {
     const twins = [makeStar({ hd: 98231 }), makeStar({ hd: 98231 })];
     expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], twins)).toBe(0);

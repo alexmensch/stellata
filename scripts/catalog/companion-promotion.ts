@@ -1529,10 +1529,17 @@ function promoteRow(
  *  (URL refs, Tier A) can address it. Guards: the HD must resolve to
  *  exactly one catalog record, that record must carry no identifier of
  *  its own, and an id already present on another record is never
- *  duplicated. Returns the number of records backfilled. */
+ *  duplicated. Returns the number of records backfilled.
+ *
+ *  `reclassify` runs once per backfilled record: spectral
+ *  classification happened in readStars BEFORE this pass, keyed on the
+ *  ids the record didn't yet carry, so the caller re-resolves it with
+ *  the freshly stamped keys (ξ UMa classified unknown despite SIMBAD
+ *  F8.5:V without this). */
 export function backfillPrimaryIdentifiers(
   multiplesRows: MultiplesTsvRow[],
   stars: Star[],
+  reclassify?: (star: Star) => void,
 ): number {
   const byHd = new Map<number, number[]>();
   const hipsInCatalog = new Set<number>();
@@ -1567,7 +1574,10 @@ export function backfillPrimaryIdentifiers(
       gaiaInCatalog.add(row.gaiaSourceId);
       wrote = true;
     }
-    if (wrote) backfilled++;
+    if (wrote) {
+      backfilled++;
+      if (reclassify) reclassify(star);
+    }
   }
   return backfilled;
 }
