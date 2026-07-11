@@ -102,6 +102,14 @@ export interface BuildCounts {
    *  (Toliman, Castor). Mirrors the binaries pipeline's gate in
    *  scripts/binaries/indices.py. */
   gaiaBindingMagRejected: number;
+  /** AT-HYG rows whose binding was scrubbed by the sibling-letter
+   *  attribution gate (isSiblingLetterAttribution) — SIMBAD's WDS
+   *  cross-IDs give a sibling component sole ownership of the bound
+   *  source (μ Dra A carrying B's source). The catalog-boundary mirror
+   *  of the binaries pipeline's identity refutation. */
+  gaiaBindingSiblingRejected: number;
+  /** Sources indexed from the SIMBAD WDS cross-IDs TSV (bySource size). */
+  simbadWdsXidsEntries: number;
   /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
   apsisEntries: number;
   /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —

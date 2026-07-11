@@ -1,6 +1,6 @@
-"""Pure helpers for the HD/CCDM/HIP alias cascade in refresh-simbad-wds-xids.py:
-build cascade candidates from resolved-primary HD/HIP aliases, filter the
-batched ident-table query result back into (wds_id, component) → oid."""
+"""Pure helpers for refresh-simbad-wds-xids.py: build HD/CCDM/HIP cascade
+candidates, filter the batched ident query back into (wds_id, component)
+→ oid, and resolve an oid's HIP alias set (bare + suffixed) to one HIP."""
 
 from __future__ import annotations
 
@@ -105,13 +105,13 @@ def filter_cascade_hits(
     return recoveries, counts
 
 
-def parse_hd_or_hip_from_ident(ident: str) -> tuple[str, int] | None:
-    """Pure parser for an `HD<pad><num>` or `HIP <num>` ident string.
+def parse_hd_or_hip_from_ident(ident: str) -> tuple[str, int, str] | None:
+    """Pure parser for an `HD<pad><num>[comp]` or `HIP <num>[comp]` ident.
 
-    Returns (`"HD"` | `"HIP"`, integer) or None on parse failure.
-    Per-component suffixes (`HD 48915B`, `HIP 32349B`) parse to the
-    BASE integer — the component letter is what the cascade looks UP,
-    not what we already have.
+    Returns (`"HD"` | `"HIP"`, integer, component-suffix) or None on
+    parse failure. The suffix is `""` for the bare canonical form;
+    SIMBAD stores per-component aliases both fused (`HIP 55203A`) and
+    space-separated (`HIP 32349 B`).
     """
     if ident.startswith("HD "):
         prefix = "HD"
@@ -121,13 +121,32 @@ def parse_hd_or_hip_from_ident(ident: str) -> tuple[str, int] | None:
         body = ident[4:].strip()
     else:
         return None
-    # Strip any non-digit trailing characters (component letter, etc.).
     end = 0
     while end < len(body) and body[end].isdigit():
         end += 1
     if end == 0:
         return None
-    try:
-        return prefix, int(body[:end])
-    except ValueError:
-        return None
+    return prefix, int(body[:end]), body[end:].strip()
+
+
+def resolve_hip_from_aliases(
+    candidates: Sequence[tuple[int, str]],
+    component_letters: set[str],
+) -> int | None:
+    """Pick one HIP from an oid's HIP alias rows.
+
+    `candidates` is (hip, suffix) per alias row, in result order. A
+    bare-integer alias is SIMBAD's canonical form and wins. Otherwise a
+    suffixed alias binds only when its suffix matches a component letter
+    this oid resolved as (`HIP 55203A` on ξ UMa A — ORB6 attributes HIPs
+    to primaries only, so without this the secondary never gets one);
+    distinct HIPs whose suffixes both match are ambiguous and drop the
+    binding entirely.
+    """
+    for hip, suffix in candidates:
+        if not suffix:
+            return hip
+    matched = {hip for hip, suffix in candidates if suffix in component_letters}
+    if len(matched) == 1:
+        return matched.pop()
+    return None

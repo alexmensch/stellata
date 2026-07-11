@@ -11,6 +11,13 @@ import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
   parseSimbadSptypeTsv,
+  resolveSpectralInfo,
+  resolveApsisTeff,
+  resolveSpectDisplay,
+  physicalRadius,
+  UNKNOWN_CLASS_IDX,
+  parseSimbadWdsXidsTsv,
+  type SimbadWdsXidIndex,
   buildHipToIndex,
   inferBinaries,
   DIST_SRC_BAILER_JONES,
@@ -109,6 +116,7 @@ const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog
 const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
 const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
+const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
@@ -138,6 +146,7 @@ function isUpToDate(): boolean {
   const gaiaNssMtime = mtimeIfExists(SRC_GAIA_NSS);
   const hip2Mtime = mtimeIfExists(SRC_HIP2);
   const simbadMtime = mtimeIfExists(SRC_SIMBAD_SPTYPE);
+  const simbadWdsXidsMtime = mtimeIfExists(SRC_SIMBAD_WDS_XIDS);
   const simbadSampleMtime = mtimeIfExists(SRC_SIMBAD_SAMPLE);
   const multiplesMtime = mtimeIfExists(SRC_MULTIPLES);
   const dustMtime = mtimeIfExists(SRC_DUST_MANIFEST);
@@ -163,6 +172,7 @@ function isUpToDate(): boolean {
     binMtime > gaiaNssMtime &&
     binMtime > hip2Mtime &&
     binMtime > simbadMtime &&
+    binMtime > simbadWdsXidsMtime &&
     binMtime > simbadSampleMtime &&
     binMtime > multiplesMtime &&
     binMtime > dustMtime &&
@@ -241,6 +251,8 @@ async function main() {
     gaiaSourceIdResolved: 0,
     gaiaSourceIdBackfilled: 0,
     gaiaBindingMagRejected: 0,
+    gaiaBindingSiblingRejected: 0,
+    simbadWdsXidsEntries: 0,
     apsisEntries: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
@@ -337,6 +349,24 @@ async function main() {
     );
   }
 
+  // SIMBAD WDS cross-IDs — the sibling-letter gate's attribution source.
+  // Optional: without it the gate never fires and a mis-keyed blend row
+  // keeps its cross-walk source (pre-gate behaviour).
+  let wdsXids: SimbadWdsXidIndex | null = null;
+  if (existsSync(SRC_SIMBAD_WDS_XIDS)) {
+    console.log('Parsing SIMBAD WDS cross-IDs...');
+    const tXids = Date.now();
+    wdsXids = parseSimbadWdsXidsTsv(readFileSync(SRC_SIMBAD_WDS_XIDS, 'utf8'));
+    console.log(`  ${wdsXids.bySource.size} sources in ${Date.now() - tXids}ms`);
+    counts.simbadWdsXidsEntries = wdsXids.bySource.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_SIMBAD_WDS_XIDS} not found — the sibling-letter\n` +
+      `         attribution gate is disabled. Re-run\n` +
+      `         scripts/refresh/refresh-simbad-wds-xids.py to restore it.`,
+    );
+  }
+
   // HIP → Gaia DR3 source_id cross-walk: loaded once and shared between
   // the AT-HYG single-star backfill in readStars and the GCVS byGaia
   // bridge below.
@@ -413,7 +443,7 @@ async function main() {
   const t0 = Date.now();
   const { stars, stats } = await readStars(
     SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
-    dustGrid,
+    dustGrid, wdsXids,
   );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
@@ -474,6 +504,7 @@ async function main() {
   counts.lmcOverridden = stats.lmcOverridden;
   counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
   counts.gaiaBindingMagRejected = stats.gaiaBindingMagRejected;
+  counts.gaiaBindingSiblingRejected = stats.gaiaBindingSiblingRejected;
   counts.directionGaia5p = dv.gaia_5p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
@@ -516,7 +547,22 @@ async function main() {
     // resolved, so promotion's cursor-primary anchor and every
     // downstream HIP/Gaia lookup address the record.
     counts.multiplesIdentifierBackfill =
-      backfillPrimaryIdentifiers(multiplesRows, stars);
+      backfillPrimaryIdentifiers(multiplesRows, stars, (star) => {
+        if (star.spectClass !== UNKNOWN_CLASS_IDX) return;
+        const spectral = resolveSpectralInfo(
+          star.gaiaSourceId, star.hip, simbadSpectral, apsisMap,
+        );
+        if (spectral.info.classIdx === UNKNOWN_CLASS_IDX) return;
+        const apsisTeff = resolveApsisTeff(
+          star.gaiaSourceId ? apsisMap.get(star.gaiaSourceId) : null,
+        );
+        star.spectClass = spectral.info.classIdx;
+        star.lumClass = spectral.info.lumClass;
+        star.spectDisplay = resolveSpectDisplay(
+          spectral.spectDisplay, star.spectDisplay ?? '',
+        );
+        star.physicalRadius = physicalRadius(star.absmag, spectral.info, apsisTeff);
+      });
     console.log(
       `  backfilled identifiers onto ${counts.multiplesIdentifierBackfill} ` +
         `HD-only primaries from multiples.tsv`,

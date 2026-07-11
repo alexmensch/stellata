@@ -2013,6 +2013,17 @@ class AstrometryRequestTests(unittest.TestCase):
         # Header + sorted unique ids; unresolved row contributes nothing.
         self.assertEqual(body, ["gaia_source_id", "111", "222"])
 
+        # Magnitude-gate-rejected candidates stay in the request: the
+        # gate can only keep rejecting a binding whose G is in the pull.
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "request.tsv"
+            n = bb.write_astrometry_request(
+                comps, p, rejected_source_ids=[333, 111],
+            )
+            body = p.read_text().splitlines()
+        self.assertEqual(n, 3)
+        self.assertEqual(body, ["gaia_source_id", "111", "222", "333"])
+
 
 class BuildIndicesTests(unittest.TestCase):
     def _row(

@@ -40,6 +40,8 @@ function baseCounts(): BuildCounts {
     gaiaSourceIdResolved: 307000,
     gaiaSourceIdBackfilled: 191,
     gaiaBindingMagRejected: 70,
+    gaiaBindingSiblingRejected: 2,
+    simbadWdsXidsEntries: 20403,
     apsisEntries: 270000,
     apsisMatched: 260000,
     apsisTeffEither: 255000,

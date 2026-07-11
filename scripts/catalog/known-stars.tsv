@@ -264,11 +264,10 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # ξ Ursae Majoris (Alula Australis, STF1523 AB) — AT-HYG carries the
 # system HD-only (no HIP, no Gaia); the record's identifiers come from
 # the multiples.tsv HD-keyed backfill (backfillPrimaryIdentifiers), so
-# this row is the end-to-end pin on that pass. Spectral is unknown:
-# the SIMBAD sp_type pull predates the backfilled identifiers, so no
-# tier reaches the record (SIMBAD lists F8.5:V; re-keying is a
-# refresh-time follow-up).
-11182+3132	ξ Ursae Majoris	55203	756853643638639104	10.417	0.1	4.241						21874.93				SIMBAD * ksi UMa; AT-HYG GJ-anchored 10.42 pc, athyg_position astrometry route. HIP 55203 via ORB6, Gaia 756853643638639104 via SIMBAD xids, both surfaced onto the catalog record by the HD 98231 backfill. ORB6 grade-1 visual orbit AB P=59.89 yr = 21874.93 d. Empty primary_spectral pins spectClass=8 (SIMBAD F8.5:V not reachable — sp_type pull keyed before the backfill).
+# this row is the end-to-end pin on that pass, plus on the sp_type
+# refresh reaching backfilled identifiers (the pull unions the WDS-xids
+# oids, so the record classifies F8.5:V by its Gaia source key).
+11182+3132	ξ Ursae Majoris	55203	756853643638639104	10.417	0.1	4.241	F8.5:V					21874.93				SIMBAD * ksi UMa F8.5:V; AT-HYG GJ-anchored 10.42 pc, athyg_position astrometry route. HIP 55203 via ORB6, Gaia 756853643638639104 via SIMBAD xids, both surfaced onto the catalog record by the HD 98231 backfill. ORB6 grade-1 visual orbit AB P=59.89 yr = 21874.93 d.
 # ---- Promoted companions (newly minted catalog records) ----------------
 # These rows pin companions promoted into catalog.bin by the build's
 # read-multiples-and-promote pass. Their primary is already an AT-HYG

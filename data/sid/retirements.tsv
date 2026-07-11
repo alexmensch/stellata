@@ -192,3 +192,17 @@ sid	retired	reason	successor_sid
 329139	2026-07-11	optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)	
 329234	2026-07-11	optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)	
 329388	2026-07-11	optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)	
+181115	2026-07-11	merged: gaia-keyed twin of hip:50520 (HD 89715 A) — AT-HYG cell held sibling B's source until the sibling-letter gate scrubbed it, splitting one star across two records	134604
+222083	2026-07-11	merged: gaia-keyed twin of hip:72907 (HD 131860 A) — same sibling-letter crosswalk error	187130
+265005	2026-07-11	merged: gaia-keyed twin of hip:48639 (HD 85458 A) — same sibling-letter crosswalk error	228532
+263342	2026-07-11	merged: gaia-keyed twin of hip:43920 (HD 76635 A) — same sibling-letter crosswalk error	232306
+308729	2026-07-11	merged: gaia-keyed twin of hip:100183 (HD 192759 A) — same sibling-letter crosswalk error	297316
+317067	2026-07-11	merged: gaia-keyed twin of hip:90189 (HD 168713 A) — same sibling-letter crosswalk error	317039
+241607	2026-07-11	dissolved: C no longer independently promoted (identifier-less CD pair-row primary dropped by promotion gates after the 2026-07 re-pulls)	
+288628	2026-07-11	dissolved: C subsumed into an unresolved BC standalone aggregate that itself is not promoted	
+316154	2026-07-11	dissolved: WDS re-paired AB as Aa,Ab; the blend-id Ab record is not promoted, leaving no successor key	
+326865	2026-07-11	dissolved: system 01145-0503 no longer emitted by the pipeline	
+5300	2026-07-11	parked: B's record absent from the current build (standalone row not promoted); own source gaia_dr3:458034214602238464 per SIMBAD xids	
+83545	2026-07-11	parked: B's record absent from the current build; own source gaia_dr3:5336155814877448064 per SIMBAD xids	
+310599	2026-07-11	parked: Cb's record absent from the current build; own source gaia_dr3:966952723521920512 per SIMBAD xids	
+316133	2026-07-11	parked: B's record absent from the current build; own source gaia_dr3:3924604024024751616 per SIMBAD xids	
