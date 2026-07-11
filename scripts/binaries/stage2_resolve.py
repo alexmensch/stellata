@@ -9,7 +9,7 @@ import math
 import re
 import sys
 from collections import deque
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -1281,16 +1281,27 @@ def resolution_counts(
 
 def write_astrometry_request(
     components: list[ResolvedComponent], path: Path,
+    rejected_source_ids: Iterable[int] = (),
 ) -> int:
     """Emit the deduped union of every Gaia source_id Stage 2 resolved,
-    across every tier in ``RESOLVE_VIA_VALUES``.
+    across every tier in ``RESOLVE_VIA_VALUES``, plus
+    ``rejected_source_ids`` — the magnitude-gate-rejected binding
+    candidates (``indices.xwalk_mag_rejected`` /
+    ``athyg_gaia_mag_rejected``).
 
     ``scripts/refresh/refresh-gaia-astrometry.py`` reads this file to
-    drive its ADQL ``WHERE source_id IN (...)`` query — so Stage 3
-    onward has 5-parameter Gaia astrometry for exactly the sources we
-    resolved here.
+    drive its ADQL ``WHERE source_id IN (...)`` query. Rejected
+    candidates MUST stay in the request: the gate can only reject a
+    binding whose G is in the pull, so a request built from
+    post-rejection resolutions alone starves the next pull of exactly
+    the rows the gate needs and the bad binding silently returns on the
+    following build (α Cen B oscillated onto its G=20.9 background
+    source this way).
     """
-    ids = sorted({c.gaia_source_id for c in components if c.gaia_source_id is not None})
+    ids = sorted(
+        {c.gaia_source_id for c in components if c.gaia_source_id is not None}
+        | set(rejected_source_ids)
+    )
     with path.open("w") as fh:
         fh.write("gaia_source_id\n")
         for sid in ids:
