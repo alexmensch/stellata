@@ -35,6 +35,7 @@
     "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },

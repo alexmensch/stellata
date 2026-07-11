@@ -106,6 +106,14 @@ scripts/binaries/
                                   topological outer-before-inner
                                   order. Run via
                                   npm run build:binaries-runtime.
+  build-binaries-spotcheck.py     npm run test:spotcheck — runs Stage 1+2
+                                  (resolve_through_stage2) and asserts the
+                                  strongest-priority resolution per
+                                  (wds_id, component) against the curated
+                                  data/binaries/spot_check_ground_truth.tsv
+                                  (contract in data/binaries/README.md
+                                  § Spot-check ground truth). Run before
+                                  merging any Stage 2-7 change; ~20 s.
   build-binaries.test.py          stdlib unittest pins for Stages 1-7.
   build-runtime-binaries.test.py  stdlib unittest pins for the pure
                                   helpers (_split_components,
