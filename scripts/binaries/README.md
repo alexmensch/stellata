@@ -389,8 +389,12 @@ reaches the rescued pair. The far larger position-anchored population
 (primary merely position-matches a catalog star — mostly wide optical
 doubles surviving only on the Stage 5 mag-gap backstop) is deferred to
 the full blank→AB ingest (`stellata-dch.83.9`). Rows already consumed as
-ORB6-orphan donors, or already enumerated by a non-blank `AB` row, are
-skipped so nothing double-emits. Counted `blank_components_rescued` /
+ORB6-orphan donors are skipped; and because the implied `AB` pair is
+identified by `wds_id` alone (`dedup_wds_pair_rows` keys on discoverer
+and runs upstream, so it can't collapse two of them), at most one `AB`
+row is promoted per system — a system any discoverer already enumerates
+as `AB`, or that the pass already rescued, is skipped so nothing
+double-emits. Counted `blank_components_rescued` /
 `blank_components_deferred` in the Stage-7 snapshot.
 
 ## Stage 3 — Per-component astrometry routing

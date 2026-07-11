@@ -943,6 +943,30 @@ class RescueBlankComponentsTests(unittest.TestCase):
         self.assertEqual((rescued, deferred), (0, 0))
         self.assertEqual(blank.components, "")
 
+    def test_multiple_blank_rows_same_system_rescued_once(self) -> None:
+        # Two blank rows for one wds_id under different discoverers both
+        # name the implied A,B pair; only one is promoted so the pair
+        # doesn't double-emit (dedup_wds_pair_rows keys on discoverer and
+        # runs upstream, so it can't collapse them itself).
+        p1 = _blank_pair(wds_id="16294-2626", discoverer="STF   1")
+        p2 = _blank_pair(wds_id="16294-2626", discoverer="BU    2")
+        orb6 = [_orb6(wds_id="16294-2626", components="", hip=80763)]
+        rescued, deferred = self._rescue(pairs=[p1, p2], orb6=orb6)
+        self.assertEqual((rescued, deferred), (1, 0))
+        self.assertEqual([p.components for p in (p1, p2)].count("AB"), 1)
+
+    def test_existing_ab_other_discoverer_excludes_blank(self) -> None:
+        # The implied AB pair is identified by wds_id alone, so a blank
+        # row under a DIFFERENT discoverer than an explicit AB row is the
+        # same physical pair and is not promoted — a second AB row would
+        # double-emit.
+        blank = _blank_pair(wds_id="16294-2626", discoverer="BU    2")
+        explicit = _wds_pair(wds_id="16294-2626", components="AB")
+        orb6 = [_orb6(wds_id="16294-2626", components="AB", hip=80763)]
+        rescued, deferred = self._rescue(pairs=[blank, explicit], orb6=orb6)
+        self.assertEqual((rescued, deferred), (0, 0))
+        self.assertEqual(blank.components, "")
+
 
 def _wds_pair(*, wds_id: str = "00000+0000", components: str = "AB") -> "bb.WdsPair":
     return bb.WdsPair(

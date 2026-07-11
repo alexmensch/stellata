@@ -998,18 +998,21 @@ def rescue_blank_components_pairs(
     element selection) reaches the rescued pair.
 
     Excludes blank rows already consumed as ORB6-orphan donors (their
-    physical pair is represented by the synthesized sub-pair) and rows a
-    non-blank ``AB`` row already enumerates, so no pair double-emits.
+    physical pair is represented by the synthesized sub-pair). The
+    implied ``AB`` pair is identified by ``wds_id`` alone — an ``AB`` row
+    names the same physical pair whichever discoverer cataloged it, and
+    no later stage keys pairs uniquely (``dedup_wds_pair_rows`` already
+    ran) — so a system any discoverer already enumerates as ``AB``, or
+    that this pass has already rescued once, is skipped: exactly one
+    ``AB`` row per system, or the pair double-emits.
     Returns ``(rescued, deferred)`` over the blank rows this tier
     considers (excluding donors / already-enumerated).
     """
     donor_keys = {(p.wds_id, p.discoverer) for p in synthesized_orb6_pairs}
     orb6_wds_ids = {e.wds_id for e in orb6}
     simbad_wds_ids = {wds_id for wds_id, _comp in simbad_xids}
-    existing_ab_keys = {
-        (p.wds_id, p.discoverer)
-        for p in pairs
-        if p.components.strip() == IMPLIED_AB_COMPONENTS
+    existing_ab_wds_ids = {
+        p.wds_id for p in pairs if p.components.strip() == IMPLIED_AB_COMPONENTS
     }
 
     rescued_wds_ids: set[str] = set()
@@ -1019,7 +1022,7 @@ def rescue_blank_components_pairs(
             continue
         if (p.wds_id, p.discoverer) in donor_keys:
             continue
-        if (p.wds_id, p.discoverer) in existing_ab_keys:
+        if p.wds_id in existing_ab_wds_ids or p.wds_id in rescued_wds_ids:
             continue
         qualifies = (
             p.wds_id in orb6_wds_ids
@@ -1031,6 +1034,15 @@ def rescue_blank_components_pairs(
             rescued += 1
         else:
             deferred += 1
+
+    assert rescued == len(rescued_wds_ids), (
+        "rescue rewrote a wds_id to AB more than once — would double-emit "
+        "the pair (no later stage keys pairs uniquely)"
+    )
+    assert rescued_wds_ids.isdisjoint(existing_ab_wds_ids), (
+        "rescue promoted a wds_id another discoverer already enumerates "
+        "as AB — would double-emit the pair"
+    )
 
     for e in orb6:
         if not e.components.strip() and e.wds_id in rescued_wds_ids:
