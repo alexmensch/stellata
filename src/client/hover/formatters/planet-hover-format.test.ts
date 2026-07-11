@@ -44,7 +44,7 @@ describe('formatPlanetHover', () => {
     expect(out.lines).toEqual([
       '0.310 AU · Vmag -2.5',
       'Period 0.24 yr',
-      'Radius 2,440 km',
+      'Radius 0.38 R⊕ (2,440 km)',
     ]);
   });
 
@@ -62,7 +62,7 @@ describe('formatPlanetHover', () => {
     expect(out.lines).toEqual([
       '1.0 AU · Vmag -4.0',
       'Period 1.00 yr',
-      'Radius 6,371 km',
+      'Radius 1.00 R⊕ (6,371 km)',
     ]);
   });
 
@@ -77,7 +77,7 @@ describe('formatPlanetHover', () => {
     expect(out.lines).toEqual([
       '5.2 AU · Vmag -2.7',
       'Period 12 yr',
-      'Radius 69,911 km',
+      'Radius 11.0 R⊕ (69,911 km)',
     ]);
   });
 
@@ -100,7 +100,7 @@ describe('formatPlanetHover', () => {
     expect(out.name).toBe('Earth');
     expect(out.lines).toEqual([
       'Period 1.00 yr',
-      'Radius 6,371 km',
+      'Radius 1.00 R⊕ (6,371 km)',
     ]);
   });
 

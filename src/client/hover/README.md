@@ -71,7 +71,7 @@ The planet hover card layout:
 <name>
 <distance> · Vmag <m>
 Period <years> yr
-Radius <km> km
+Radius <R⊕> (<km> km)
 ```
 
 Reasoning: the distance line pairs naturally with apparent magnitude

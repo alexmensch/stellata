@@ -132,9 +132,11 @@ Implications for code that reads positions:
   mask, focus ring, distance vector, constellation overlay, and all
   `Picker.pickStar` / `renderedSizePx` / `aimAtConstellation` paths
   do this.
-- **Distance-from-Sol** (the distSol filter, hover-tooltip distances,
-  the Sol locator-arrow label) must use `catalog.positions` *or* must
-  compute `||localPosition + worldOffset||` in JS float64. The shader's
+- **Distance-from-Sol** (the distSol filter, the Sol locator-arrow
+  label) must use `catalog.positions` *or* must compute
+  `||localPosition + worldOffset||` in JS float64. (Hover-card and
+  focus-card distances are camera-relative by design — they read the
+  local frame directly.) The shader's
   distSol filter consumes a precomputed per-instance `iDistSol`
   attribute instead of `length(iPosition)`, because the latter is now
   a local-frame value. The Sol arrow uses the float64 sum approach so

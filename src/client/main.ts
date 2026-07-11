@@ -230,7 +230,8 @@ async function main() {
       context: {
         starLabels,
         spectralMap,
-        positions: catalog.positions,
+        spectClass: catalog.spectClass,
+        luminosityClass: catalog.luminosityClass,
         constellation: catalog.constellation,
         constellations: catalog.constellations,
         periodDays: catalog.periodDays,

@@ -1,8 +1,9 @@
 // Star hover formatter — name (tier-ordered fallback), constellation +
-// distance, spectral class, variability, and binary-companion lines.
-// See ./README.md.
+// camera-frame distance, cleaned spectral class, variability, and
+// binary-companion lines. See ./README.md.
 
-import { fmtDist } from '../../ui/distance-util';
+import { fmtDistAuto } from '../../ui/distance-util';
+import { formatSpectral, spectralLine } from '../../format/spectral-format';
 import {
   companionLines,
   resolveStarName,
@@ -12,7 +13,8 @@ import type { HoverPayload } from '../hover-types';
 
 export interface StarHoverFormatContext extends CompanionFormatContext {
   spectralMap: Map<number, string>;
-  positions: Float32Array;
+  spectClass: Float32Array;
+  luminosityClass: Uint8Array;
   // `constellation` is a Float32Array in the catalog (carried as a
   // vertex attribute); 255 marks "no constellation".
   constellation: Float32Array;
@@ -23,12 +25,14 @@ export interface StarHoverFormatContext extends CompanionFormatContext {
 
 export function formatStarHover(
   idx: number,
+  cameraDistancePc: number,
   ctx: StarHoverFormatContext,
 ): HoverPayload {
   const {
     starLabels,
     spectralMap,
-    positions,
+    spectClass,
+    luminosityClass,
     constellation,
     constellations,
     periodDays,
@@ -38,15 +42,12 @@ export function formatStarHover(
   const name = resolveStarName(starLabels, idx);
   const conIdx = constellation[idx];
   const con = conIdx !== 255 ? constellations[conIdx].name : '';
-  const dist = Math.sqrt(
-    positions[idx * 3] ** 2 +
-      positions[idx * 3 + 1] ** 2 +
-      positions[idx * 3 + 2] ** 2,
-  );
   const lines: string[] = [];
-  const ctxLine = [con, fmtDist(dist)].filter(Boolean).join(' · ');
+  const ctxLine = [con, fmtDistAuto(cameraDistancePc)].filter(Boolean).join(' · ');
   if (ctxLine) lines.push(ctxLine);
-  const spect = spectralMap.get(idx);
+  const spect = spectralLine(
+    formatSpectral(spectralMap.get(idx), spectClass[idx], luminosityClass[idx]),
+  );
   if (spect) lines.push(spect);
   const period = periodDays[idx];
   const amp = amplitudeMag[idx];

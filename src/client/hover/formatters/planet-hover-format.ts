@@ -2,7 +2,7 @@
 // radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
-import { formatKm } from '../../format/physical-format';
+import { formatEarthRadii } from '../../format/physical-format';
 import type { Planet } from '../../solar-system/planet-system';
 import type { HoverPayload } from '../hover-types';
 
@@ -43,7 +43,7 @@ export function formatPlanetHover(
   // is Sol-mass so the simple form is exact.
   const yearsPeriod = Math.pow(planet.semiMajorAxisAu, 1.5);
   lines.push(`Period ${formatPeriodYears(yearsPeriod)} yr`);
-  lines.push(`Radius ${formatKm(planet.radiusKm)} km`);
+  lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);
 
   return { name: planet.name, lines };
 }

@@ -7,20 +7,21 @@ and the format conventions (units spelled out in full, two-decimal
 distances, etc.) are easy to drift.
 
 ```
-star-hover-format.ts             Star — name + constellation · distance,
-                                 spectral class, variability, and binary
-                                 companion lines. Tier-ordered name
-                                 fallback (proper → Bayer → Flamsteed →
-                                 HIP/HD/HR/Gl → "Unnamed #idx"). A secondary's
-                                 card gets a two-line "Orbits <A>" block whose
-                                 detail is per-tier (ρ live sep on the heading +
-                                 P · e / P + "unknown orbit" / static ρ · PA at
-                                 epoch), read from binaries.bin via the format
-                                 context; a primary's card gets the converse
-                                 "N known companions:" heading with each
-                                 companion named on its own line.
+star-hover-format.ts             Star — name + constellation · distance
+                                 FROM THE CAMERA (fmtDistAuto, so close
+                                 approach reads in AU), cleaned spectral
+                                 (formatSpectral: primary component +
+                                 plain-language descriptor), variability,
+                                 and binary companion lines. Tier-ordered
+                                 name fallback (proper → Bayer → Flamsteed →
+                                 HIP/HD/HR/Gl → "Unnamed #idx"). The
+                                 companion blocks (secondary "Orbits <A>"
+                                 per-tier detail + primary "N known
+                                 companions:" list) live in
+                                 ../../format/star-companion-format.ts,
+                                 shared with the focus card.
 planet-hover-format.ts           Planet — host→planet distance · apparent
-                                 V mag, period (years), radius (km).
+                                 V mag, period (years), radius (R⊕ + km).
 cloud-hover-format.ts            Cloud — distance + major × minor span.
                                  Z2020 spheres collapse to "<r> × <r>".
 local-group-hover-format.ts      Local Group object — display name,

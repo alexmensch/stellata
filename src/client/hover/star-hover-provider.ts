@@ -24,6 +24,9 @@ export function createStarHoverProvider(
     // derived from `context.binaries` in the formatter. `nowJd` is
     // sampled fresh so the Tier-1 live separation tracks the sim clock.
     format: (hit) =>
-      formatStarHover(hit.idx, { ...context, nowJd: tToJDE(stellata.getT()) }),
+      formatStarHover(hit.idx, hit.cameraDistancePc, {
+        ...context,
+        nowJd: tToJDE(stellata.getT()),
+      }),
   };
 }
