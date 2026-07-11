@@ -13,6 +13,7 @@ interface Raw {
     quat: [number, number, number, number];
     source: 'Z2021T1' | 'Z2020';
     distance: number;
+    mass?: number;
   }>;
 }
 
@@ -49,8 +50,12 @@ describe('loadClouds', () => {
     warn.mockRestore();
   });
 
-  it('parses a v1 catalog including the sid column', async () => {
-    mockFetch({ version: 1, count: 1, clouds: [baseCloud] } satisfies Raw);
+  it('parses a v1 catalog including the sid and mass columns', async () => {
+    mockFetch({
+      version: 1,
+      count: 1,
+      clouds: [{ ...baseCloud, mass: 32122 }],
+    } satisfies Raw);
     const out = await loadClouds('/clouds.json');
     expect(out).not.toBeNull();
     const c = out!.clouds[0];
@@ -58,6 +63,13 @@ describe('loadClouds', () => {
     expect(c.sid).toBe(327400);
     expect(c.centerAbs.x).toBe(100);
     expect(c.distanceFromSol).toBe(230);
+    expect(c.massMsun).toBe(32122);
+  });
+
+  it('maps a missing mass to null (Z2020 clouds carry none)', async () => {
+    mockFetch({ version: 1, count: 1, clouds: [baseCloud] } satisfies Raw);
+    const out = await loadClouds('/clouds.json');
+    expect(out!.clouds[0].massMsun).toBeNull();
   });
 
   it('returns null when any cloud is missing its sid (pre-stamp artifact)', async () => {

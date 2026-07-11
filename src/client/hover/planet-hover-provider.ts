@@ -25,15 +25,13 @@ export function createPlanetHoverProvider(
       const ps = stellata.getAttachedPlanetSystem(hostStarIdx);
       if (!ps) return { name: '', lines: [] };
       // The cached PlanetSystem is the source of truth for `planets`;
-      // live distance and apparent V mag come from the renderer's
-      // PlanetBodyField via Stellata accessors so they track the
-      // current camera + ephemeris.
+      // apparent V mag comes from the renderer's PlanetBodyField via a
+      // Stellata accessor so it tracks the current camera + ephemeris.
       const ctx: PlanetHoverFormatContext = {
         planets: ps.planets,
-        distanceFromHostPc: (i) => stellata.planetHostDistancePc(hostStarIdx, i),
         appMagFor: (i) => stellata.planetApparentMag(hostStarIdx, i),
       };
-      return formatPlanetHover(hit.idx, ctx);
+      return formatPlanetHover(hit.idx, hit.cameraDistancePc, ctx);
     },
   };
 }

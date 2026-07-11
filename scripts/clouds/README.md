@@ -9,6 +9,8 @@ Sources under `data/molecular-clouds/`:
 - `zucker2020-tablea1.tsv` — 326 sightlines, ~96 unique cloud names.
 - `zucker2021-table1.dat` — 12 famous local SF clouds with 3D bounding
   boxes.
+- `zucker2021-table3.dat` — masses for the same 12 clouds (joined on
+  the raw cloud name).
 
 Idempotent — exits early if `public/clouds.json` is newer than the
 script and both source files. Run via `npm run build:clouds`.
@@ -26,6 +28,7 @@ One entry per cloud in `public/clouds.json`:
 | `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |
 | `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
 | `distance` | Heliocentric distance to centroid (pc). |
+| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the Leike-map `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
 | `sid`      | Frozen Stellata ID (docs/sid.md § 7). |
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`

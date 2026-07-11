@@ -1,4 +1,4 @@
-// Planet hover formatter — name, host→planet distance · Vmag, period,
+// Planet hover formatter — name, camera distance · Vmag, period,
 // radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
@@ -10,29 +10,25 @@ export interface PlanetHoverFormatContext {
   // Planet roster for the focused host. `planetIdx` indexes into this
   // array. Read-only — the formatter never mutates.
   planets: readonly Planet[];
-  // Live host→planet distance in pc, or null when the planet system
-  // isn't attached at format time (degenerate; shouldn't happen because
-  // the provider gates on `getFocusedPlanetSystem`).
-  distanceFromHostPc(planetIdx: number): number | null;
-  // Live apparent V mag at the viewer's current position, or null in
-  // the same degenerate case as above.
+  // Live apparent V mag at the viewer's current position, or null when
+  // the planet system isn't attached at format time (degenerate;
+  // shouldn't happen because the provider gates on the attached system).
   appMagFor(planetIdx: number): number | null;
 }
 
 export function formatPlanetHover(
   planetIdx: number,
+  cameraDistancePc: number,
   ctx: PlanetHoverFormatContext,
 ): HoverPayload {
   const planet = ctx.planets[planetIdx];
   if (!planet) return { name: '', lines: [] };
 
   const lines: string[] = [];
-  const dist = ctx.distanceFromHostPc(planetIdx);
   const appMag = ctx.appMagFor(planetIdx);
-  const distStr = dist !== null ? fmtDistAuto(dist) : '';
   const magStr = appMag !== null ? `Vmag ${formatAppMag(appMag)}` : '';
-  const headLine = [distStr, magStr].filter(Boolean).join(' · ');
-  if (headLine) lines.push(headLine);
+  const headLine = [fmtDistAuto(cameraDistancePc), magStr].filter(Boolean).join(' · ');
+  lines.push(headLine);
 
   // Period above Radius — orbital period is the user's first "is this
   // a fast inner planet or a slow outer one?" tell, and the AU

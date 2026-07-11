@@ -1,5 +1,7 @@
 // Physical-quantity display formatting shared by the hover and focus
-// cards — radii, magnitudes, coarse provenance. See ./README.md.
+// cards — radii, extents, magnitudes, coarse provenance. See ./README.md.
+
+import { fmtDist } from '../ui/distance-util';
 
 /** Mean Earth radius, km (IUGG). Planet radii display in Earth radii. */
 export const EARTH_RADIUS_KM = 6371;
@@ -39,6 +41,21 @@ export function formatEarthRadii(radiusKm: number): string {
   const re = radiusKm / EARTH_RADIUS_KM;
   const v = re >= 10 ? re.toFixed(1) : re.toFixed(2);
   return `${v} R⊕ (${formatKm(radiusKm)} km)`;
+}
+
+/**
+ * Render a major × minor axis pair as "<major> × <minor> <unit>". Both
+ * values run through `fmtDist` so the user-selected pc/ly unit and the
+ * decade-tier prefix (k, M) apply; the major's trailing " pc" / " ly"
+ * is stripped so the unit suffix appears once at the end. Local Group
+ * semi-axes (~50 pc — ~30 kpc) and cloud semi-axes (~5 pc — ~90 pc)
+ * both land in the same `fmtDist` decade tier in practice, so the
+ * single suffix reads consistently.
+ */
+export function formatAxisPair(majorPc: number, minorPc: number): string {
+  const minor = fmtDist(minorPc);
+  const major = fmtDist(majorPc).replace(/\s+(pc|ly)$/, '');
+  return `${major} × ${minor}`;
 }
 
 /** Apparent V magnitude at the camera's vantage: absmag + 5·log10(d) − 5. */

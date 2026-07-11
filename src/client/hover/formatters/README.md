@@ -20,17 +20,16 @@ star-hover-format.ts             Star — name + constellation · distance
                                  companions:" list) live in
                                  ../../format/star-companion-format.ts,
                                  shared with the focus card.
-planet-hover-format.ts           Planet — host→planet distance · apparent
+planet-hover-format.ts           Planet — camera distance · apparent
                                  V mag, period (years), radius (R⊕ + km).
-cloud-hover-format.ts            Cloud — distance + major × minor span.
-                                 Z2020 spheres collapse to "<r> × <r>".
+cloud-hover-format.ts            Cloud — camera distance + major × minor
+                                 span. Z2020 spheres collapse to
+                                 "<r> × <r>".
 local-group-hover-format.ts      Local Group object — display name,
-                                 distance, "Disc"/"Ellipsoid", axis pair.
+                                 camera distance, "Disc"/"Ellipsoid",
+                                 axis pair.
 heliopause-hover-format.ts       Static — upwind + lateral + downwind
                                  extents. Geometry is fixed.
-format-util.ts                   Shared helpers (axis-pair stringifier,
-                                 unit-aware distance). Used by Local
-                                 Group + cloud formatters.
 *.test.ts                        vitest pin per formatter. Tests pin
                                  the unit via setUnit('pc') for
                                  stable golden strings.

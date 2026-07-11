@@ -8,8 +8,9 @@ import {
 } from './cloud-hover-format';
 
 // Build a synthetic Cloud fixture. Only the fields the formatter reads
-// (name, axes, distanceFromSol) matter; centerAbs and quat are
-// placeholders. The fixture values match real entries in the v1
+// (name, axes) matter; centerAbs, quat, and distanceFromSol are
+// placeholders — the hover distance is the camera distance passed per
+// pick. The fixture values match real entries in the v1
 // public/clouds.json catalog so the goldens reflect the actual hover
 // strings a user would see.
 function cloud(
@@ -27,6 +28,7 @@ function cloud(
     quat: new THREE.Quaternion(0, 0, 0, 1),
     source,
     distanceFromSol: distancePc,
+    massMsun: null,
   };
 }
 
@@ -42,10 +44,11 @@ describe('formatCloudHover', () => {
   });
 
   it('formats Taurus (Z2021T1 ellipsoid, near-by molecular cloud)', () => {
-    // Taurus from public/clouds.json: distance 150.4 pc, axes
+    // Taurus from public/clouds.json: camera parked at its Sol distance
+    // of 150.4 pc, axes
     // [22.0, 19.0, 9.5] pc. major=22, minor=9.5, both in fmtDist's
     // one-decimal tier (≥ 1 pc, < 100 pc).
-    const out = formatCloudHover(0, buildCtx([
+    const out = formatCloudHover(0, 150.4, buildCtx([
       cloud('Taurus', [22.0, 19.0, 9.5], 150.4),
     ]));
     expect(out.name).toBe('Taurus');
@@ -60,7 +63,7 @@ describe('formatCloudHover', () => {
     // [17.0, 32.0, 15.5] pc. major=32, minor=15.5; the longest axis is
     // the second of the three, exercising the Math.max/min path
     // (vs Taurus where axes[0] is the longest).
-    const out = formatCloudHover(0, buildCtx([
+    const out = formatCloudHover(0, 414.4, buildCtx([
       cloud('Orion A', [17.0, 32.0, 15.5], 414.4),
     ]));
     expect(out.name).toBe('Orion A');
@@ -75,7 +78,7 @@ describe('formatCloudHover', () => {
     // [75.73, 75.73, 75.73] pc (sphere — Z2020 source has no orientation
     // fit). major=minor=75.73 → "75.7 × 75.7 pc" after one-decimal
     // rounding; the size line still reads naturally.
-    const out = formatCloudHover(0, buildCtx([
+    const out = formatCloudHover(0, 236.2, buildCtx([
       cloud('Aquila Rift', [75.73, 75.73, 75.73], 236.2, 'Z2020'),
     ]));
     expect(out.name).toBe('Aquila Rift');
@@ -86,7 +89,7 @@ describe('formatCloudHover', () => {
   });
 
   it('returns empty payload for out-of-range index', () => {
-    const out = formatCloudHover(99, buildCtx([]));
+    const out = formatCloudHover(99, 100, buildCtx([]));
     expect(out).toEqual({ name: '', lines: [] });
   });
 });
