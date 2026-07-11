@@ -399,6 +399,11 @@ export interface PromotionStats {
    *  a member as bright as (or brighter than) its anchor's blend would
    *  zero or invert the residual flux. */
   blendDimSkipped: number;
+  /** Promoted companions that inherited a classified constellation index
+   *  from their anchor. The residual (promoted − this) is the rows whose
+   *  resolved anchor is absent or itself unclassified, keeping
+   *  NO_CONSTELLATION_INDEX. */
+  constellationInherited: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -424,6 +429,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendSplitRecords: 0,
     blendDimmedAnchors: 0,
     blendDimSkipped: 0,
+    constellationInherited: 0,
   };
 }
 
@@ -1373,15 +1379,22 @@ function promoteRow(
     row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
     systemAnchorStar,
   );
-  // Space-motion velocity: inherit the anchor primary's. A promoted
-  // companion carries no own PM (multiples.tsv has no PM columns), and a
-  // Tier-3 static companion is baked into catalog.bin and SKIPPED by the
-  // runtime BinaryOrbitField — only a shared velocity keeps it glued to
-  // the primary through the epoch-advance pass instead of shearing away.
-  // The systemic-velocity pass below reconciles the anchor's own velocity
-  // for renderable-orbit pairs. Anchor-less escapes fall back to zero.
-  const anchorVel = anchorStar
-    ? { x: anchorStar.vx, y: anchorStar.vy, z: anchorStar.vz }
+  // System-level inheritance source: the local anchor primary, falling
+  // back to the WDS-root system primary when the local anchor never made
+  // it into the catalog (δ Vel CD class — local primary C never promotes).
+  // Velocity and constellation are both whole-system properties and must
+  // resolve the same anchor, else a companion inherits one but not the
+  // other and desynchronises from its system.
+  const inheritAnchor = anchorStar ?? systemAnchorStar;
+  // Space-motion velocity: inherit the anchor's. A promoted companion
+  // carries no own PM (multiples.tsv has no PM columns), and a Tier-3
+  // static companion is baked into catalog.bin and SKIPPED by the runtime
+  // BinaryOrbitField — only a shared velocity keeps it glued to the
+  // primary through the epoch-advance pass instead of shearing away. The
+  // systemic-velocity pass below reconciles the anchor's own velocity for
+  // renderable-orbit pairs. Anchor-less escapes fall back to zero.
+  const anchorVel = inheritAnchor
+    ? { x: inheritAnchor.vx, y: inheritAnchor.vy, z: inheritAnchor.vz }
     : { x: 0, y: 0, z: 0 };
   // Collocated AT-HYG double-entry merge. AT-HYG occasionally carries
   // BOTH members of a resolved pair at the same printed blend
@@ -1418,6 +1431,15 @@ function promoteRow(
   if (properName) flags |= FLAG_HAS_NAME;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
+  // Constellation: inherit from the same anchor. The companion sits
+  // sub-arcsec off it, and a position can't be classified directly —
+  // constellations ship no boundary polygons. Anchor-less escapes keep
+  // NO_CONSTELLATION_INDEX.
+  const conIndex = inheritAnchor !== null
+    ? inheritAnchor.conIndex
+    : NO_CONSTELLATION_INDEX;
+  if (conIndex !== NO_CONSTELLATION_INDEX) stats.constellationInherited++;
+
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
@@ -1425,7 +1447,7 @@ function promoteRow(
     spectClass: spectral.info.classIdx,
     lumClass: spectral.info.lumClass,
     physicalRadius: physicalRadius(absmag, spectral.info),
-    conIndex: NO_CONSTELLATION_INDEX,
+    conIndex,
     flags,
     proper: properName,
     bayer: null,

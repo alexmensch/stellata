@@ -214,6 +214,10 @@ export interface BuildCounts {
   /** Existing AT-HYG blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;
+  /** Promoted companions that inherited a classified constellation index
+   *  from their anchor (all but the rows whose anchor is absent or itself
+   *  unclassified). */
+  companionConstellationInherited: number;
   /** First-class AT-HYG records given a composed component name by the
    *  stamp-component-letters pass — pairs AT-HYG left anonymous so both
    *  halves printed the same Bayer/Flamsteed label (61 Cyg A/B class). */

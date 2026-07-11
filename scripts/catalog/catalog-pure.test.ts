@@ -37,6 +37,10 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleStar,
   type OpticalDoubleContext,
+  type SearchEntry,
+  type SearchEntrySource,
+  buildSearchEntry,
+  NO_CONSTELLATION_INDEX,
   buildHipToIndex,
   BINARY_MAX_SEP_PC,
   FLAG_HAS_NAME,
@@ -1560,6 +1564,68 @@ describe('catalog-pure / binary-format constants', () => {
     }
     expect(recovered.map((r) => r.name)).toEqual(names);
     expect(recovered.map((r) => r.offset)).toEqual(expectedOffsets);
+  });
+});
+
+describe('catalog-pure / search-index wire contract', () => {
+  // The SearchEntry field names ARE the on-disk keys of search-index.json.
+  // buildSearchEntry (writer) and src/client/typeahead/search.ts (reader)
+  // share the type, so tsc keeps their field access in lockstep — but
+  // main.ts ingests the file through an unchecked `as SearchEntry[]` cast,
+  // so a rename silently reshapes the persisted wire format (breaking any
+  // cached index / external consumer) with no red test. Pin the literal
+  // key strings so a rename trips here, mirroring the binary
+  // record-layout pin above.
+  const SEARCH_ENTRY_KEYS = [
+    'i', 'p', 'b', 'f', 'c', 's', 'g', 'hip', 'hd', 'hr', 'gl', 'cl', 'cp',
+  ];
+
+  it('SearchEntry exposes exactly the documented wire keys', () => {
+    // Excess-property checking makes a renamed or dropped interface key a
+    // compile error on this literal; the runtime assertion pins the names.
+    const full: Required<SearchEntry> = {
+      i: 0, p: 'Sirius', b: 'Alp', f: 9, c: 34, s: 'A1V', g: 'R CrB',
+      hip: 32349, hd: 48915, hr: 2491, gl: 'GJ 244', cl: 'B', cp: 5,
+    };
+    expect(Object.keys(full).sort()).toEqual([...SEARCH_ENTRY_KEYS].sort());
+  });
+
+  const source = (over: Partial<SearchEntrySource>): SearchEntrySource => ({
+    proper: null, bayer: null, flam: null, hip: null, hd: null, hr: null,
+    gl: null, gcvsName: null, conIndex: NO_CONSTELLATION_INDEX,
+    spectDisplay: null, ...over,
+  });
+
+  it('buildSearchEntry emits every populated wire key', () => {
+    const entry = buildSearchEntry(
+      source({
+        proper: 'Sirius', bayer: 'Alp', flam: 9, hip: 32349, hd: 48915,
+        hr: 2491, gl: 'GJ 244', gcvsName: 'R CrB', conIndex: 34,
+        spectDisplay: 'A1V',
+      }),
+      0,
+      { comp: 'B', primaryIdx: 5 },
+    );
+    expect(entry).not.toBeNull();
+    expect(Object.keys(entry as SearchEntry).sort())
+      .toEqual([...SEARCH_ENTRY_KEYS].sort());
+  });
+
+  it('buildSearchEntry omits absent fields — no null/undefined on the wire', () => {
+    const entry = buildSearchEntry(source({ hip: 7 }), 3, undefined);
+    expect(JSON.parse(JSON.stringify(entry))).toEqual({ i: 3, hip: 7 });
+    expect(Object.keys(entry as SearchEntry)).toEqual(['i', 'hip']);
+  });
+
+  it('buildSearchEntry drops the unclassified constellation sentinel', () => {
+    const entry = buildSearchEntry(
+      source({ hip: 7, conIndex: NO_CONSTELLATION_INDEX }), 0, undefined,
+    );
+    expect(entry).not.toHaveProperty('c');
+  });
+
+  it('buildSearchEntry returns null for a star with no typable identifier', () => {
+    expect(buildSearchEntry(source({ conIndex: 34 }), 0, undefined)).toBeNull();
   });
 });
 

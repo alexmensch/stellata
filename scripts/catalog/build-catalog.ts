@@ -34,6 +34,7 @@ import {
   CATALOG_MANIFEST_FILENAME,
   catalogChunkFilename,
   planCatalogChunks,
+  buildSearchEntry,
   type ApsisRow,
   type SearchEntry,
   type SimbadSpectralIndex,
@@ -269,6 +270,7 @@ async function main() {
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
     companionRepositionedCollocatedDouble: 0,
+    companionConstellationInherited: 0,
     componentLettersStamped: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
@@ -562,6 +564,7 @@ async function main() {
     counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
     counts.companionBlendDimSkipped = ps.blendDimSkipped;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
+    counts.companionConstellationInherited = ps.constellationInherited;
 
     // Stamp component letters onto pairs AT-HYG left anonymous — both
     // halves first-class but printing the same Bayer/Flamsteed label
@@ -867,30 +870,12 @@ async function main() {
   });
   await writeFile(OUT_CON, JSON.stringify(constellationsOut) + '\n');
 
-  // Search index — one entry per star with at least one identifier the user
-  // might type. SearchEntry is the shared writer↔reader contract (see
-  // catalog-pure.ts); keep field names there in sync.
+  // Search index — one entry per star with at least one identifier the
+  // user might type. buildSearchEntry owns the wire shape (catalog-pure.ts).
   const searchEntries: SearchEntry[] = [];
   for (let i = 0; i < stars.length; i++) {
-    const s = stars[i];
-    if (!s.proper && !s.bayer && s.hip === null && s.hd === null && s.hr === null && s.flam === null && !s.gl && !s.gcvsName) continue;
-    const entry: SearchEntry = { i };
-    if (s.proper) entry.p = s.proper;
-    if (s.bayer) entry.b = s.bayer;
-    if (s.flam !== null) entry.f = s.flam;
-    if (s.hip !== null) entry.hip = s.hip;
-    if (s.hd !== null) entry.hd = s.hd;
-    if (s.hr !== null) entry.hr = s.hr;
-    if (s.gl) entry.gl = s.gl;
-    if (s.gcvsName) entry.g = s.gcvsName;
-    if (s.conIndex !== 255) entry.c = s.conIndex;
-    if (s.spectDisplay) entry.s = s.spectDisplay;
-    const cd = componentDesignations.get(i);
-    if (cd) {
-      entry.cl = cd.comp;
-      entry.cp = cd.primaryIdx;
-    }
-    searchEntries.push(entry);
+    const entry = buildSearchEntry(stars[i], i, componentDesignations.get(i));
+    if (entry) searchEntries.push(entry);
   }
   await writeFile(OUT_SEARCH, JSON.stringify(searchEntries) + '\n');
 

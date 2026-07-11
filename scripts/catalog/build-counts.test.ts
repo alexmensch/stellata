@@ -69,6 +69,7 @@ function baseCounts(): BuildCounts {
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
     companionRepositionedCollocatedDouble: 1,
+    companionConstellationInherited: 0,
     componentLettersStamped: 2,
     gaiaAstrometryEntries: 315000,
     hip2Entries: 117000,
