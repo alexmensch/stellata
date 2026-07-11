@@ -104,12 +104,15 @@ from stage5_optical import (  # noqa: E402, F401
     RADIAL_SEPARATION_SIGMA, BOTH_GAIA_PLX_GATE_SIGMA, ASYMM_PLX_GATE_SIGMA,
     ESCAPE_VELOCITY_SAFETY_FACTOR, ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
     ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN, KM_S_PER_AU_YR,
+    CPM_SLIP_MIN_ARCSEC, CPM_DRIFT_REJECT_FRACTION,
+    CPM_DRIFT_KEEP_FLOOR_ARCSEC, INHERITED_SECONDARY_ASTROMETRY_VIAS,
     OPTICAL_VIA_VALUES, OpticalClassification,
     _asymm_gaia_consistent, _both_gaia_consistent,
     _pair_beyond_separation_limit, _component_parallax_with_error,
     _escape_velocity_km_s, _separation_au, _separation_exceeds_limit,
     _transverse_velocity_km_s,
-    classify_all_pairs, classify_pair_optical, optical_counts,
+    classify_all_pairs, classify_pair_optical, cpm_baseline_verdict,
+    optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
     ASTROMETRY_VIA_SYSTEM_INHERITED, CATALOG_SCENE_EPOCH,
@@ -495,6 +498,7 @@ def run(force: bool) -> int:
         orbits=orbits, indices=indices,
         system_parallax_anchors=system_parallax_anchors,
         pair_masses=pair_masses,
+        astrometry=astrometry,
     )
     op_counts = optical_counts(classifications)
     log(

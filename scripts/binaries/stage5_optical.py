@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stage 5 — classify each WDS pair as physical or optical.
-Six-tier cascade; each verdict carries the deciding tier as provenance.
-"""
+Tiered cascade (notes → orbit → separation → Gaia → CPM → mag-gap);
+each verdict carries the deciding tier as provenance."""
 
 from __future__ import annotations
 
@@ -18,9 +18,10 @@ from parsers import (  # noqa: E402
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
-    iter_decomposing_pair_components,
+    iter_decomposing_pair_cursor,
     split_components,
 )
+from stage3_astrometry import ComponentAstrometry  # noqa: E402
 from stage4_orbits import OrbitElements  # noqa: E402
 
 
@@ -39,6 +40,8 @@ OPTICAL_VIA_VALUES: tuple[str, ...] = (
     "gaia_rejected",
     "asymm_kept",
     "asymm_rejected",
+    "cpm_baseline_kept",
+    "cpm_baseline_rejected",
     "mag_heuristic_kept",
     "mag_heuristic_rejected",
 )
@@ -150,12 +153,80 @@ KM_S_PER_AU_YR = 4.740470446
 # v_escape = √2 × v_circular ⇒ v_escape(M, r) = this × √(2·M / r_AU).
 _CIRCULAR_KM_S_1AU_1MSUN = 2.0 * math.pi * KM_S_PER_AU_YR
 
+# WDS epoch-baseline common-proper-motion test (tier 6a, ahead of the
+# mag heuristic). A bound companion shares the primary's space motion,
+# so its relative sep/PA is near-stable across the WDS baseline; a
+# background star is sky-static while the primary's PM slides it away.
+# Only engages with real discriminating power (predicted slip ≥ 10″),
+# so low-PM primaries fall through unchanged and the ~10k legitimate
+# faint wide companions with inherited/synthesized distances keep.
+CPM_SLIP_MIN_ARCSEC = 10.0
+# observed_drift ≥ this fraction of the predicted slip ⇒ optical.
+CPM_DRIFT_REJECT_FRACTION = 0.5
+# observed_drift ≤ this ⇒ CPM-confirmed keep. The arbitration floor —
+# WDS sep/PA measurement noise across a century-scale baseline.
+CPM_DRIFT_KEEP_FLOOR_ARCSEC = 2.0
+# Secondary astrometry routes with no independent parallax that tiers
+# 3-5 could cross-check in 3D. At Stage 5 an eventual system-anchor
+# inheritance still reads ``unresolved`` (Stage 6 promotes it to
+# ``system_inherited``); ``athyg_position`` is the position-synthesized
+# distance. These are exactly the tier-6 false-positive population.
+INHERITED_SECONDARY_ASTROMETRY_VIAS: frozenset[str] = frozenset({
+    "unresolved", "athyg_position",
+})
+
 # Mag-gap backstop (tier 6). Used only when every stronger tier is
 # silent (faint Tycho-only systems where neither component has a Gaia 5p
 # row, plus the rare AT-HYG-only / position-tier residual). Physical
 # WDS pairs are usually within ~5 mag — wider gaps shade into chance
 # projection. Coarse gate; the strong filtering is in the Gaia tiers.
 MAG_GAP_HEURISTIC_THRESHOLD = 5.0
+
+
+def _polar_to_tangent(rho_arcsec: float, theta_deg: float) -> tuple[float, float]:
+    """WDS (ρ, θ) → tangent-plane (E, N) offset in arcsec."""
+    th = math.radians(theta_deg)
+    return rho_arcsec * math.sin(th), rho_arcsec * math.cos(th)
+
+
+def cpm_baseline_verdict(
+    pair: WdsPair,
+    primary_pm_ra_masyr: float | None,
+    primary_pm_de_masyr: float | None,
+) -> bool | None:
+    """WDS epoch-baseline CPM test. Returns ``True`` (optical → reject),
+    ``False`` (CPM-confirmed → keep), or ``None`` (inconclusive or
+    insufficient data → fall through to the mag heuristic).
+
+    predicted_slip = |PM_primary| × (date_last − date_first); a real
+    companion drifts ≪ that (shared space motion), a background star
+    drifts ≈ that. Gated below ``CPM_SLIP_MIN_ARCSEC`` of predicted slip
+    so it only fires where the primary's motion resolves the ambiguity.
+    """
+    if (
+        pair.date_first is None or pair.date_last is None
+        or pair.rho_first is None or pair.rho_last is None
+        or pair.theta_first is None or pair.theta_last is None
+        or primary_pm_ra_masyr is None or primary_pm_de_masyr is None
+    ):
+        return None
+    dt_yr = pair.date_last - pair.date_first
+    if dt_yr <= 0:
+        return None
+    pm_total_arcsec_yr = math.hypot(
+        primary_pm_ra_masyr, primary_pm_de_masyr,
+    ) / 1000.0
+    predicted_slip = pm_total_arcsec_yr * dt_yr
+    if predicted_slip < CPM_SLIP_MIN_ARCSEC:
+        return None
+    e0, n0 = _polar_to_tangent(pair.rho_first, pair.theta_first)
+    e1, n1 = _polar_to_tangent(pair.rho_last, pair.theta_last)
+    observed_drift = math.hypot(e1 - e0, n1 - n0)
+    if observed_drift >= CPM_DRIFT_REJECT_FRACTION * predicted_slip:
+        return True
+    if observed_drift <= CPM_DRIFT_KEEP_FLOOR_ARCSEC:
+        return False
+    return None
 
 
 @dataclass
@@ -404,8 +475,10 @@ def classify_pair_optical(
     indices: IdentifierIndices,
     system_parallax_anchor: tuple[float, float | None] | None = None,
     total_mass_msun: float | None = None,
+    primary_astrometry: ComponentAstrometry | None = None,
+    secondary_astrometry: ComponentAstrometry | None = None,
 ) -> OpticalClassification:
-    """6-tier cascade per WDS pair:
+    """Tiered cascade per WDS pair:
 
     1. WDS Notes flag chars — T/V/Z keep (physical), S/U/X/Y reject
        (optical), other chars silent.
@@ -431,6 +504,12 @@ def classify_pair_optical(
        physical limit. Backstop for a poe < 5 Gaia parallax; the
        well-measured Sirius A-C/D/E/F-shaped splits reject upstream at
        tier 3.
+    6a. WDS epoch-baseline CPM test — only for pairs whose secondary has
+       no independent parallax (``INHERITED_SECONDARY_ASTROMETRY_VIAS``).
+       Reject when the observed relative sep/PA drift across the baseline
+       tracks the primary's PM slip (background star); keep when it stays
+       within the measurement floor (co-moving). Silent for low-PM
+       primaries and when the WDS first-epoch fields are absent.
     6. Mag-gap backstop — |Δmag| ≤ 5 keep, otherwise reject. Used when no
        other tier fired. A pair with no usable mags is kept — absence of
        evidence is not evidence of optical contamination.
@@ -492,6 +571,30 @@ def classify_pair_optical(
             if verdict is False:
                 return OpticalClassification(False, "asymm_rejected")
 
+    # Tier 6a — WDS epoch-baseline CPM test. Only for would-be tier-6
+    # pairs whose secondary carries no independent parallax (inherited
+    # from the system anchor or synthesized from an AT-HYG position
+    # match) — tiers 3-5 never cross-checked the two in 3D, and the mag
+    # gap can't tell a faint companion from a background star the
+    # primary's proper motion slid past. Low-PM primaries (predicted
+    # slip < CPM_SLIP_MIN_ARCSEC) fall through, protecting the wide-
+    # companion coverage the athyg_position route was added to render.
+    if (
+        secondary_astrometry is not None
+        and secondary_astrometry.astrometry_via
+        in INHERITED_SECONDARY_ASTROMETRY_VIAS
+        and primary_astrometry is not None
+    ):
+        cpm = cpm_baseline_verdict(
+            pair,
+            primary_astrometry.pmra_masyr,
+            primary_astrometry.pmdec_masyr,
+        )
+        if cpm is True:
+            return OpticalClassification(False, "cpm_baseline_rejected")
+        if cpm is False:
+            return OpticalClassification(True, "cpm_baseline_kept")
+
     # Tier 6 — mag-gap backstop. Default policy when no other tier
     # fired is to keep the pair (so e.g. naked-WDS rows without any
     # photometric data ride through).
@@ -508,6 +611,7 @@ def classify_all_pairs(
     indices: IdentifierIndices,
     system_parallax_anchors: dict[str, tuple[float, float | None]] | None = None,
     pair_masses: list[float] | None = None,
+    astrometry: list[ComponentAstrometry] | None = None,
 ) -> list[OpticalClassification]:
     """One ``OpticalClassification`` per decomposing WDS pair, in
     ``resolve_all_pairs`` iteration order. Stage 6 zips this list back
@@ -520,7 +624,9 @@ def classify_all_pairs(
     tier-3 separation-limit gate; omitted → that tier is silent (the
     in-process tests that don't exercise it). ``pair_masses`` (parallel
     to the decomposing pairs) feeds the escape-velocity sub-gate; omitted
-    → the gate uses ``ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN``."""
+    → the gate uses ``ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN``. ``astrometry``
+    runs parallel to ``components`` (as Stage 3 built it) and feeds the
+    tier-6a CPM baseline test; omitted → that tier is silent."""
     n_pairs = sum(
         1 for p in pairs if split_components(p.components) is not None
     )
@@ -534,16 +640,25 @@ def classify_all_pairs(
             "Stage 5 input cardinality disagreement — pair_masses must "
             "run parallel to decomposing pairs"
         )
+    if astrometry is not None and len(astrometry) != len(components):
+        raise ValueError(
+            "Stage 5 input cardinality disagreement — astrometry must run "
+            "parallel to components"
+        )
     anchors = system_parallax_anchors or {}
     out: list[OpticalClassification] = []
-    for j, (pair, p, s) in enumerate(
-        iter_decomposing_pair_components(pairs, components)
+    for j, (pair, i) in enumerate(
+        iter_decomposing_pair_cursor(pairs, components)
     ):
         _, orbit_via = orbits[j]
         out.append(classify_pair_optical(
-            pair, p, s, orbit_via, indices,
+            pair, components[i], components[i + 1], orbit_via, indices,
             anchors.get(pair.wds_id),
             pair_masses[j] if pair_masses is not None else None,
+            primary_astrometry=astrometry[i] if astrometry is not None else None,
+            secondary_astrometry=(
+                astrometry[i + 1] if astrometry is not None else None
+            ),
         ))
     return out
 
