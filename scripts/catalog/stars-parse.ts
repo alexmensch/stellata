@@ -18,6 +18,7 @@ import {
   resolveGaiaSourceId,
   parseGaiaSourceIdStr,
   spectralClassCi,
+  spectralClassColorIsDerivable,
   SOLAR_BV_FALLBACK,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -398,7 +399,7 @@ export async function readStars(
       ci = ciRaw;
     } else if (apsisTeff === null) {
       ci = spectralClassCi(spectInfo);
-      if (ci !== SOLAR_BV_FALLBACK) ciSpectralDerived++;
+      if (spectralClassColorIsDerivable(spectInfo)) ciSpectralDerived++;
     } else {
       ci = SOLAR_BV_FALLBACK;
     }

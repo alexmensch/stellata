@@ -11,6 +11,7 @@ import {
   SPECTRAL_UNKNOWN,
   SOLAR_BV_FALLBACK,
   spectralClassCi,
+  spectralClassColorIsDerivable,
   tempKelvin,
   boloCorr,
   physicalRadius,
@@ -139,6 +140,15 @@ describe('catalog-pure / spectralClassCi', () => {
 
   it('falls back to solar for an unparseable / unknown class (tier 6)', () => {
     expect(spectralClassCi(SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('spectralClassColorIsDerivable gates the tier-4/5 bake from the fallback', () => {
+    // The ciSpectralDerived counter reads this, not `ci !== 0.65` — a
+    // parseable class landing exactly on the fallback value must still
+    // count as derived.
+    expect(spectralClassColorIsDerivable(classifyFromSimbad('G2V')!)).toBe(true);
+    expect(spectralClassColorIsDerivable(classifyFromSimbad('DA2')!)).toBe(true);
+    expect(spectralClassColorIsDerivable(SPECTRAL_UNKNOWN)).toBe(false);
   });
 });
 

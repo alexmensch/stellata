@@ -385,11 +385,18 @@ export function tempKelvin(info: SpectralInfo): number {
  *  no-Apsis star's class colour has to be baked into `ci` here. The
  *  result is intrinsic and must NOT be de-reddened. */
 export function spectralClassCi(info: SpectralInfo): number {
-  if (info === SPECTRAL_UNKNOWN
-      || (info.classIdx === UNKNOWN_CLASS_IDX && !info.isWhiteDwarf)) {
-    return SOLAR_BV_FALLBACK;
-  }
+  if (!spectralClassColorIsDerivable(info)) return SOLAR_BV_FALLBACK;
   return ballesterosBvFromTeff(tempKelvin(info));
+}
+
+/** True when `spectralClassCi` derives a real class colour rather than
+ *  returning `SOLAR_BV_FALLBACK` — a parseable non-WD class, or any white
+ *  dwarf. Callers counting the tier-4/5 bake (`ciSpectralDerived`) gate on
+ *  this instead of comparing the returned B−V to the fallback value, which
+ *  a class landing exactly on 0.65 would miscount. */
+export function spectralClassColorIsDerivable(info: SpectralInfo): boolean {
+  return !(info === SPECTRAL_UNKNOWN
+    || (info.classIdx === UNKNOWN_CLASS_IDX && !info.isWhiteDwarf));
 }
 
 // Bolometric correction by spectral class + subclass. Mostly negligible for
