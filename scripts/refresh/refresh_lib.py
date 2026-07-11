@@ -137,7 +137,12 @@ def is_transient_http_error(exc: BaseException) -> bool:
         pass
     try:
         import pyvo
-        if isinstance(exc, pyvo.dal.DALServiceError):
+        # DALAccessError covers DALServiceError (service unreachable) AND
+        # DALQueryError — which pyvo also raises for a connection dropped
+        # mid-response (CDS TAP under peak load), not just bad ADQL. Our
+        # ADQL is fixed, so a genuine query fault exhausts the retries
+        # rather than being silently accepted.
+        if isinstance(exc, pyvo.dal.DALAccessError):
             return True
     except ImportError:
         pass

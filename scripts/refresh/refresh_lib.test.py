@@ -90,6 +90,28 @@ class RetryTests(unittest.TestCase):
         self.assertTrue(rl.is_transient_http_error(e500))
         self.assertFalse(rl.is_transient_http_error(e400))
 
+    def test_retries_dal_query_error(self) -> None:
+        # A connection dropped mid-response surfaces as DALQueryError, not
+        # DALServiceError — the retry loop must treat it as transient or a
+        # multi-batch pull dies on batch 1.
+        try:
+            import pyvo
+        except ImportError:
+            self.skipTest("pyvo not installed")
+        self.assertTrue(
+            rl.is_transient_http_error(
+                pyvo.dal.DALQueryError("This connection has been closed")
+            )
+        )
+        attempts = {"n": 0}
+        def fn() -> str:
+            attempts["n"] += 1
+            if attempts["n"] < 2:
+                raise pyvo.dal.DALQueryError("This connection has been closed")
+            return "ok"
+        self.assertEqual(rl.retry(fn, sleep=lambda _: None), "ok")
+        self.assertEqual(attempts["n"], 2)
+
     def test_votable_query_status_reads_error_info(self) -> None:
         # Sync TAP flags query errors / overflow in a QUERY_STATUS INFO
         # with HTTP 200, so the parser must inspect it, not just the code.
