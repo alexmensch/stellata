@@ -38,6 +38,9 @@ import {
   type OpticalDoubleStar,
   type OpticalDoubleContext,
   type SearchEntry,
+  type SearchEntrySource,
+  buildSearchEntry,
+  NO_CONSTELLATION_INDEX,
   buildHipToIndex,
   BINARY_MAX_SEP_PC,
   FLAG_HAS_NAME,
@@ -1565,11 +1568,14 @@ describe('catalog-pure / binary-format constants', () => {
 });
 
 describe('catalog-pure / search-index wire contract', () => {
-  // search-index.json is written by build-catalog.ts and read by
-  // src/client/search.ts — two separate consumers of the JSON, not one
-  // typed value — so a key renamed on only one side sails past tsc and
-  // silently breaks every search. Pin the wire key set here, mirroring the
-  // binary record-layout pin above.
+  // The SearchEntry field names ARE the on-disk keys of search-index.json.
+  // buildSearchEntry (writer) and src/client/typeahead/search.ts (reader)
+  // share the type, so tsc keeps their field access in lockstep — but
+  // main.ts ingests the file through an unchecked `as SearchEntry[]` cast,
+  // so a rename silently reshapes the persisted wire format (breaking any
+  // cached index / external consumer) with no red test. Pin the literal
+  // key strings so a rename trips here, mirroring the binary
+  // record-layout pin above.
   const SEARCH_ENTRY_KEYS = [
     'i', 'p', 'b', 'f', 'c', 's', 'g', 'hip', 'hd', 'hr', 'gl', 'cl', 'cp',
   ];
@@ -1584,12 +1590,42 @@ describe('catalog-pure / search-index wire contract', () => {
     expect(Object.keys(full).sort()).toEqual([...SEARCH_ENTRY_KEYS].sort());
   });
 
-  it('omitting optional fields leaves no undefined keys on the wire', () => {
-    // build-catalog.ts assigns each optional field only when present, so
-    // JSON.stringify never emits an explicit `null`/`undefined` key.
-    const minimal: SearchEntry = { i: 7 };
-    expect(JSON.parse(JSON.stringify(minimal))).toEqual({ i: 7 });
-    expect(Object.keys(minimal)).toEqual(['i']);
+  const source = (over: Partial<SearchEntrySource>): SearchEntrySource => ({
+    proper: null, bayer: null, flam: null, hip: null, hd: null, hr: null,
+    gl: null, gcvsName: null, conIndex: NO_CONSTELLATION_INDEX,
+    spectDisplay: null, ...over,
+  });
+
+  it('buildSearchEntry emits every populated wire key', () => {
+    const entry = buildSearchEntry(
+      source({
+        proper: 'Sirius', bayer: 'Alp', flam: 9, hip: 32349, hd: 48915,
+        hr: 2491, gl: 'GJ 244', gcvsName: 'R CrB', conIndex: 34,
+        spectDisplay: 'A1V',
+      }),
+      0,
+      { comp: 'B', primaryIdx: 5 },
+    );
+    expect(entry).not.toBeNull();
+    expect(Object.keys(entry as SearchEntry).sort())
+      .toEqual([...SEARCH_ENTRY_KEYS].sort());
+  });
+
+  it('buildSearchEntry omits absent fields — no null/undefined on the wire', () => {
+    const entry = buildSearchEntry(source({ hip: 7 }), 3, undefined);
+    expect(JSON.parse(JSON.stringify(entry))).toEqual({ i: 3, hip: 7 });
+    expect(Object.keys(entry as SearchEntry)).toEqual(['i', 'hip']);
+  });
+
+  it('buildSearchEntry drops the unclassified constellation sentinel', () => {
+    const entry = buildSearchEntry(
+      source({ hip: 7, conIndex: NO_CONSTELLATION_INDEX }), 0, undefined,
+    );
+    expect(entry).not.toHaveProperty('c');
+  });
+
+  it('buildSearchEntry returns null for a star with no typable identifier', () => {
+    expect(buildSearchEntry(source({ conIndex: 34 }), 0, undefined)).toBeNull();
   });
 });
 

@@ -908,6 +908,53 @@ export interface SearchEntry {
   cp?: number;   // system primary's record index; base for "<designation> <cl>"
 }
 
+// Structural subset of Star the search index draws from. Local so this
+// module stays free of the stars-parse import (which depends on it).
+export interface SearchEntrySource {
+  proper: string | null;
+  bayer: string | null;
+  flam: number | null;
+  hip: number | null;
+  hd: number | null;
+  hr: number | null;
+  gl: string | null;
+  gcvsName: string | null;
+  conIndex: number;
+  spectDisplay: string | null;
+}
+
+// Sole writer of the SearchEntry wire shape (build-catalog.ts calls it);
+// src/client/typeahead/search.ts is the reader. Returns null for a star
+// with no identifier a user could type. Each optional field is set only
+// when present, so JSON.stringify never emits an explicit null/undefined
+// key — the reader treats a missing key and an absent value alike.
+export function buildSearchEntry(
+  s: SearchEntrySource,
+  i: number,
+  component: { comp: string; primaryIdx: number } | undefined,
+): SearchEntry | null {
+  if (!s.proper && !s.bayer && s.hip === null && s.hd === null
+      && s.hr === null && s.flam === null && !s.gl && !s.gcvsName) {
+    return null;
+  }
+  const entry: SearchEntry = { i };
+  if (s.proper) entry.p = s.proper;
+  if (s.bayer) entry.b = s.bayer;
+  if (s.flam !== null) entry.f = s.flam;
+  if (s.hip !== null) entry.hip = s.hip;
+  if (s.hd !== null) entry.hd = s.hd;
+  if (s.hr !== null) entry.hr = s.hr;
+  if (s.gl) entry.gl = s.gl;
+  if (s.gcvsName) entry.g = s.gcvsName;
+  if (s.conIndex !== NO_CONSTELLATION_INDEX) entry.c = s.conIndex;
+  if (s.spectDisplay) entry.s = s.spectDisplay;
+  if (component) {
+    entry.cl = component.comp;
+    entry.cp = component.primaryIdx;
+  }
+  return entry;
+}
+
 // ---- Catalog flag bits --------------------------------------------------
 
 // Per-star bitfield stored at RECORD_LAYOUT.flags. Single source of truth
