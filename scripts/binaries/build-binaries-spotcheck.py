@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Spot-check harness — asserts Stage 2 resolution against the curated
-ground truth in ``data/binaries/spot_check_ground_truth.tsv``.
-Run via ``npm run test:spotcheck`` before merging any Stage 2-7 change."""
+"""Spot-check harness (npm run test:spotcheck) — asserts Stage 2
+resolution against data/binaries/spot_check_ground_truth.tsv."""
 
 from __future__ import annotations
 
