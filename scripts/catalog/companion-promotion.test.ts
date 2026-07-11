@@ -709,6 +709,25 @@ describe('promoteCompanions', () => {
       .toEqual([primary.vx, primary.vy, primary.vz]);
   });
 
+  it('promoted companion inherits the anchor primary constellation (search typeahead shows the parent chip)', () => {
+    // Constellation is a system-level property: a promoted companion sits
+    // sub-arcsec off the anchor, so it shares the anchor's sky patch. There
+    // is no boundary polygon to classify a position, so inheritance is the
+    // only route; without it the companion ships conIndex 255 and its
+    // search-index entry drops the `c` field (blank constellation chip).
+    const cma = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'cma');
+    expect(cma).toBeGreaterThanOrEqual(0);
+    const primary = makeStar({
+      x: -0.494, y: 2.477, z: -0.758, absmag: 1.45, ci: 0.01,
+      spectClass: 2, lumClass: 2, proper: 'Sirius', hip: 32349,
+      gaiaSourceId: null, conIndex: cma,
+    });
+    const { newStars, stats } = promoteCompanions(siriusRows(), [primary], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].conIndex).toBe(cma);
+    expect(stats.constellationInherited).toBe(1);
+  });
+
   it('renderable-orbit lone pair takes the barycentric systemic blend on both members', () => {
     // Both members already in AT-HYG with their own PM velocities; the pair
     // carries Kepler elements + q, so the systemic pass blends

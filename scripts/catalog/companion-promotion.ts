@@ -399,6 +399,10 @@ export interface PromotionStats {
    *  a member as bright as (or brighter than) its anchor's blend would
    *  zero or invert the residual flux. */
   blendDimSkipped: number;
+  /** Promoted companions that inherited a constellation index from their
+   *  anchor primary. The residual (promoted − this) is the anchor-less
+   *  tail that keeps NO_CONSTELLATION_INDEX. */
+  constellationInherited: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -424,6 +428,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendSplitRecords: 0,
     blendDimmedAnchors: 0,
     blendDimSkipped: 0,
+    constellationInherited: 0,
   };
 }
 
@@ -1418,6 +1423,17 @@ function promoteRow(
   if (properName) flags |= FLAG_HAS_NAME;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
+  // Constellation is a system-level property shared by every member (the
+  // companion sits sub-arcsec off the anchor's sky position), inherited
+  // from the anchor primary. A position can't be classified directly —
+  // constellations ship no boundary polygons. Anchor-less escapes have no
+  // source and keep NO_CONSTELLATION_INDEX.
+  const anchorConStar = anchorStar ?? systemAnchorStar;
+  const conIndex = anchorConStar !== null
+    ? anchorConStar.conIndex
+    : NO_CONSTELLATION_INDEX;
+  if (conIndex !== NO_CONSTELLATION_INDEX) stats.constellationInherited++;
+
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
@@ -1425,7 +1441,7 @@ function promoteRow(
     spectClass: spectral.info.classIdx,
     lumClass: spectral.info.lumClass,
     physicalRadius: physicalRadius(absmag, spectral.info),
-    conIndex: NO_CONSTELLATION_INDEX,
+    conIndex,
     flags,
     proper: properName,
     bayer: null,

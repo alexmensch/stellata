@@ -877,6 +877,39 @@ corpus in `known-stars.tsv` pins Sirius B's record specifically
 (addressed by gaia_source_id, no HIP) as a stand-in for the
 broader category.
 
+#### Promoted-companion field inheritance
+
+Every field of a minted companion record is one of: **inherited**
+from the anchor primary (system-level property), **system-derived**
+(computed from the anchor plus the WDS geometry), **per-component**
+(the measurement that justified promoting the row), or **post-pass /
+unset** (filled later or never). The derivation prose above is
+per-field detail; this is the whole-record contract.
+
+| Field(s) | Origin | Source |
+| --- | --- | --- |
+| `conIndex` | inherited | anchor's index — constellations ship no boundary polygons, so a position can't be classified. Anchor-less escapes keep `NO_CONSTELLATION_INDEX`. Counted `companionConstellationInherited`. |
+| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (§ Space-motion velocity, Pair coherence). |
+| `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
+| `proper` | system-derived | `<primary_proper> <comp>` (own `name` cell wins when present). |
+| `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
+| `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |
+| `ci` | per-component | own observed B–V, else Ballesteros from the resolved spectral type. |
+| `spectClass`, `lumClass`, `spectDisplay` | per-component | SIMBAD/curated type, else a main-sequence estimate from the own M_V. |
+| `physicalRadius` | per-component | Stefan-Boltzmann from the per-component absmag + Teff. |
+| `flags` | per-component | `FLAG_BINARY_COMPANION_ONLY` (+ `_SYNTHETIC`). |
+| `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |
+| `companionIdx` | post-pass | set by geometric binary inference (§ Geometric binary inference). |
+| `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
+| `hd`, `hr`, `flam`, `bayer`, `gl` | unset | not carried on multiples.tsv rows. |
+
+Position and constellation both flow from the anchor because a
+promoted companion sits sub-arcsec off it — well below the catalog's
+positional precision — so the pair shares one sky patch. The
+per-component fields are precisely the ones the promotion exists to
+surface: the companion is a distinct row because its brightness,
+colour, and type differ from the blended primary.
+
 ### Renderable-companion wings
 
 The three passes below that set `FLAG_BINARY_PRIMARY` (the chart-mode

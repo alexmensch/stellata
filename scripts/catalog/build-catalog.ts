@@ -269,6 +269,7 @@ async function main() {
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
     companionRepositionedCollocatedDouble: 0,
+    companionConstellationInherited: 0,
     componentLettersStamped: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
@@ -562,6 +563,7 @@ async function main() {
     counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
     counts.companionBlendDimSkipped = ps.blendDimSkipped;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
+    counts.companionConstellationInherited = ps.constellationInherited;
 
     // Stamp component letters onto pairs AT-HYG left anonymous — both
     // halves first-class but printing the same Bayer/Flamsteed label
