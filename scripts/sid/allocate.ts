@@ -1,13 +1,6 @@
-// `npm run sid:allocate` — the only writer of data/sid/ledger.tsv. Walks
-// the built artifacts, resolves every object against the frozen ledger,
-// appends newly minted rows, and rewrites ledger-head.json. docs/sid.md § 4.
-//
-// `npm run sid:check` (--check) is the read-only CI mode: same walk, same
-// resolution, zero writes — and objects that WOULD mint are a failure, not
-// an append. Together with the always-fatal orphaned-synth detection this
-// makes "committed ledger ⟷ committed pipeline output" a per-PR invariant,
-// so an object-set change can never land without its allocation /
-// retirement / bridge riding the same PR.
+// `npm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves
+// every built-artifact object against the frozen ledger and appends mints.
+// `npm run sid:check` (--check): read-only CI mode — docs/sid.md § 4.5.
 
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
