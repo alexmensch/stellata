@@ -206,6 +206,9 @@ class WdsPair:
     precise_ra_deg: float | None
     precise_dec_deg: float | None
     n_obs: int | None = None
+    date_first: int | None = None
+    theta_first: float | None = None
+    rho_first: float | None = None
 
 
 _WDS_HEADER_RE = re.compile(r"^[A-Za-z<]")
@@ -283,6 +286,9 @@ def parse_wds_summ(path: Path) -> list[WdsPair]:
                 precise_ra_deg=precise[0] if precise else None,
                 precise_dec_deg=precise[1] if precise else None,
                 n_obs=safe_int(line[33:37]),
+                date_first=safe_int(line[23:27]),
+                theta_first=parse_wds_sep_pa(line[38:41]),
+                rho_first=parse_wds_sep_pa(line[46:51]),
             ))
     _assert_field_coverage(
         pairs, "parse_wds_summ", "precise_ra_deg",

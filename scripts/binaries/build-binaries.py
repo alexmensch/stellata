@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
@@ -65,7 +66,7 @@ from subdivide import (  # noqa: E402, F401
     synthesize_orb6_orphan_pairs,
 )
 from stage2_resolve import (  # noqa: E402, F401
-    BINDING_INTEGRITY_COUNT_KEYS, BINDING_VERDICT_VALUES,
+    BINDING_INTEGRITY_COUNT_KEYS, BINDING_VERDICT_VALUES, BindingVerdict,
     RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
     _athyg_position_at_epoch, _propagate_position, _spherical_to_unit_vec,
     audit_binding_integrity, binding_integrity_counts,
@@ -104,12 +105,15 @@ from stage5_optical import (  # noqa: E402, F401
     RADIAL_SEPARATION_SIGMA, BOTH_GAIA_PLX_GATE_SIGMA, ASYMM_PLX_GATE_SIGMA,
     ESCAPE_VELOCITY_SAFETY_FACTOR, ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
     ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN, KM_S_PER_AU_YR,
+    CPM_SLIP_MIN_ARCSEC, CPM_DRIFT_REJECT_FRACTION,
+    CPM_DRIFT_KEEP_FLOOR_ARCSEC, INHERITED_SECONDARY_ASTROMETRY_VIAS,
     OPTICAL_VIA_VALUES, OpticalClassification,
     _asymm_gaia_consistent, _both_gaia_consistent,
     _pair_beyond_separation_limit, _component_parallax_with_error,
     _escape_velocity_km_s, _separation_au, _separation_exceeds_limit,
     _transverse_velocity_km_s,
-    classify_all_pairs, classify_pair_optical, optical_counts,
+    classify_all_pairs, classify_pair_optical, cpm_baseline_verdict,
+    optical_counts,
 )
 from stage6_multiples import (  # noqa: E402, F401
     ASTROMETRY_VIA_SYSTEM_INHERITED, CATALOG_SCENE_EPOCH,
@@ -235,16 +239,29 @@ def log_sep_limit_rejections(
     )
 
 
-def run(force: bool) -> int:
-    if not force and OUT_MULTIPLES.exists() and is_up_to_date(
-        OUT_MULTIPLES, _iter_input_paths(),
-    ):
-        log(
-            f"{OUT_MULTIPLES.relative_to(ROOT)} up to date — skipping "
-            "(use --force to rebuild)"
-        )
-        return 0
+@dataclass
+class Stage2Resolution:
+    """Stage 1 inputs + Stage 2 post-enforcement bindings — the shared
+    front half of the pipeline, consumed by ``run`` (Stages 3-7 follow)
+    and by ``build-binaries-spotcheck.py`` (asserts the bindings against
+    the curated ground truth)."""
 
+    wds_pairs: list[WdsPair]
+    n_wds_dup_dropped: int
+    orb6: list[Orb6Entry]
+    synthesized_orb6_pairs: list[WdsPair]
+    athyg: list[AthygRow]
+    indices: IdentifierIndices
+    simbad_wds_xids: dict[tuple[str, str], SimbadWdsXid]
+    n_rescued: int
+    n_deferred: int
+    components: list[ResolvedComponent]
+    binding_verdicts: list[BindingVerdict]
+
+
+def resolve_through_stage2() -> Stage2Resolution:
+    """Load every Stage 1 reference catalog, resolve all WDS components
+    (Stage 2), and enforce the binding-integrity audit."""
     log("loading reference catalogs (Stage 1) …")
 
     wds_pairs, n_wds_dup_dropped = dedup_wds_pair_rows(
@@ -417,7 +434,38 @@ def run(force: bool) -> int:
     log(f"seeded {n_seeded:,} synthesized-pair component bindings")
     binding_verdicts = audit_binding_integrity(
         wds_pairs, components, indices, apply=True,
+        simbad_xids=simbad_wds_xids,
     )
+    return Stage2Resolution(
+        wds_pairs=wds_pairs, n_wds_dup_dropped=n_wds_dup_dropped,
+        orb6=orb6, synthesized_orb6_pairs=synthesized_orb6_pairs,
+        athyg=athyg, indices=indices, simbad_wds_xids=simbad_wds_xids,
+        n_rescued=n_rescued, n_deferred=n_deferred,
+        components=components, binding_verdicts=binding_verdicts,
+    )
+
+
+def run(force: bool) -> int:
+    if not force and OUT_MULTIPLES.exists() and is_up_to_date(
+        OUT_MULTIPLES, _iter_input_paths(),
+    ):
+        log(
+            f"{OUT_MULTIPLES.relative_to(ROOT)} up to date — skipping "
+            "(use --force to rebuild)"
+        )
+        return 0
+
+    s2 = resolve_through_stage2()
+    wds_pairs = s2.wds_pairs
+    orb6 = s2.orb6
+    athyg = s2.athyg
+    indices = s2.indices
+    simbad_wds_xids = s2.simbad_wds_xids
+    components = s2.components
+    binding_verdicts = s2.binding_verdicts
+    synthesized_orb6_pairs = s2.synthesized_orb6_pairs
+    n_wds_dup_dropped = s2.n_wds_dup_dropped
+    n_rescued, n_deferred = s2.n_rescued, s2.n_deferred
     bi_counts = binding_integrity_counts(binding_verdicts)
     n_verdicts = write_binding_verdicts_tsv(
         binding_verdicts, OUT_BINDING_VERDICTS,
@@ -495,6 +543,7 @@ def run(force: bool) -> int:
         orbits=orbits, indices=indices,
         system_parallax_anchors=system_parallax_anchors,
         pair_masses=pair_masses,
+        astrometry=astrometry,
     )
     op_counts = optical_counts(classifications)
     log(

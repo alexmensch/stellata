@@ -1,6 +1,6 @@
-// `npm run sid:allocate` — the only writer of data/sid/ledger.tsv. Walks
-// the built artifacts, resolves every object against the frozen ledger,
-// appends newly minted rows, and rewrites ledger-head.json. docs/sid.md § 4.
+// `npm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves
+// every built-artifact object against the frozen ledger and appends mints.
+// `npm run sid:check` (--check): read-only CI mode — docs/sid.md § 4.5.
 
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -148,6 +148,7 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
 }
 
 async function main(): Promise<void> {
+  const checkOnly = process.argv.includes('--check');
   const { objects, starCount } = await collectObjects();
   const storedEdges = loadStoredEdges();
 
@@ -201,6 +202,22 @@ async function main(): Promise<void> {
     console.error(`sid:allocate: ${result.errors.length} error(s):`);
     for (const e of result.errors) console.error(`  ${e}`);
   }
+  if (checkOnly && result.minted.length > 0) {
+    fatal = true;
+    console.error(
+      `sid:check: ${result.minted.length} object(s) are not in the committed ` +
+        `ledger (would mint):`,
+    );
+    for (const r of result.minted.slice(0, 20)) {
+      console.error(`  ${r.canonicalKey}`);
+    }
+    if (result.minted.length > 20) {
+      console.error(`  … and ${result.minted.length - 20} more`);
+    }
+    console.error(
+      '  Run `npm run sid:allocate` and commit the ledger diff in this PR.',
+    );
+  }
   if (fatal) process.exit(1);
 
   for (const ns of ['cloud', 'lg']) {
@@ -235,6 +252,14 @@ async function main(): Promise<void> {
     `objects: ${objects.length} (${starCount} records + ${objects.length - starCount} ` +
       `cloud/lg/sol) → resolved ${result.resolvedExisting} existing, minted ${result.minted.length}`,
   );
+
+  if (checkOnly) {
+    console.log(
+      `sid:check OK — ${result.resolvedExisting} objects resolve to the ` +
+        `committed ledger, nothing to mint, no orphaned synth keys`,
+    );
+    return;
+  }
 
   if (result.minted.length > 0) {
     const appended = result.minted.map((r) => `${serializeLedgerRow(r)}\n`).join('');

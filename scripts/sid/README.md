@@ -29,6 +29,12 @@ allocate.ts               npm run sid:allocate — the ONLY writer of
                           local-group.json, data/sid/sol-objects.tsv.
                           Run build:catalog / build:clouds /
                           build:local-group first.
+                          npm run sid:check (--check) — read-only CI
+                          mode: same walk, zero writes; would-mint
+                          objects and orphaned synth keys both fail.
+                          Runs as its own CI check against the built
+                          artifacts, making ledger ⟷ build consistency
+                          a per-PR invariant.
 export-dr-risk-set.ts     npm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the neighbourhood-pull request TSV (§ 6.1
@@ -91,6 +97,20 @@ from the current build, printing sibling candidates (comp/sep/PA from
 `data/sid/sameas-overrides.tsv` or a retirement. Missing `cloud:`/`lg:`
 slugs only warn — but a slug RENAME still needs a bridge, or the old
 sid parks and the new slug mints a fresh identity.
+
+A Stage-5 filter change that mass-drops optical pairs orphans every
+synth key those pairs minted; the reported "candidates" are then
+surviving siblings with *different letters* — different physical
+stars, never bridge targets. Resolve as successor-less retirements:
+map each orphan key to its sid through `ledger.tsv`, append
+`sid<TAB>date<TAB>reason<TAB>` rows to `retirements.tsv` (script the
+mapping; one shared reason string per cause), re-run `sid:allocate`,
+then `npm run build:catalog`. Before writing, verify attribution: the
+Stage-7 count diff must conserve the donor tier's population into the
+new verdicts, or some orphans belong to a different change. CI's
+`sid:check` keeps main permanently consistent, so on an up-to-date
+branch every orphan/mint is attributable to the current change —
+the count-diff check then just confirms it.
 
 ## Sibling-artifact stamping
 

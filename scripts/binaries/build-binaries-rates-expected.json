@@ -4,7 +4,7 @@
     "tolerance": 0.2
   },
   "optical_rejected_rate": {
-    "value": 0.38043,
+    "value": 0.384552,
     "tolerance": 0.2
   },
   "nss_orbit_rate": {
@@ -12,7 +12,7 @@
     "tolerance": 0.2
   },
   "hip2_fallback_rate": {
-    "value": 0.056616,
+    "value": 0.056605,
     "tolerance": 0.2
   }
 }

@@ -1485,16 +1485,19 @@ astronomer-relevant summary:
    estimates: their pairs carry real measured placements, and a
    guessed mass ratio would move a rendered pair off its published
    geometry.
-5. **Classify each pair as physical or optical** via a 5-tier
+5. **Classify each pair as physical or optical** via a tiered
    cascade — WDS Notes flag chars confirm or reject directly when
-   set; both-components-Gaia parallax (3σ on combined error) and PM
-   (≤5 mas/yr per axis) checks are next; the asymmetric-Gaia gate
-   handles Sirius A-C/D/E/F shaped cases where only the secondaries
-   carry Gaia and the primary's HIP2 parallax is the anchor; the
-   orbit-on-file override keeps pairs Stage 4 produced real orbital
-   elements for (Sirius A-B, Procyon A-B with their white-dwarf
-   companions); the mag-gap heuristic backstops the residual
-   Tycho-only systems.
+   set; the orbit-on-file override keeps pairs Stage 4 produced real
+   orbital elements for (Sirius A-B, Procyon A-B with their
+   white-dwarf companions); the separation limit rejects pairs more
+   than ~1 pc apart in 3D; both-components-Gaia parallax (3σ on
+   combined error) and escape-velocity checks are next; the
+   asymmetric-Gaia gate handles Sirius A-C/D/E/F shaped cases where
+   only the secondaries carry Gaia and the primary's HIP2 parallax is
+   the anchor; the WDS epoch-baseline CPM test rejects background
+   stars a high-proper-motion primary slid past (61 Cyg AH) when the
+   secondary's distance is inherited; the mag-gap heuristic backstops
+   the residual Tycho-only systems.
 6. **Emit `data/binaries/multiples.tsv`** — two rows per kept
    physical pair (+ standalone rows for SIMBAD-known components the
    pair walk didn't reach), with explicit per-component provenance

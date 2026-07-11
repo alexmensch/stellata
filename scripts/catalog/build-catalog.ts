@@ -91,7 +91,7 @@ import { readStars, type Star } from './stars-parse';
 import { loadDustGrid } from './dust-deextinction';
 import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
 import { resolveSids, starDesignations, type SidObject } from '../sid/sid-pure';
-import { loadRegistry } from '../sid/registry-io';
+import { HEAD_PATH, LEDGER_PATH, OVERRIDES_PATH, loadRegistry } from '../sid/registry-io';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -140,6 +140,13 @@ function isUpToDate(): boolean {
   const simbadSampleMtime = mtimeIfExists(SRC_SIMBAD_SAMPLE);
   const multiplesMtime = mtimeIfExists(SRC_MULTIPLES);
   const dustMtime = mtimeIfExists(SRC_DUST_MANIFEST);
+  // The SID registry is a build input: a fresh sid:allocate mint (or an
+  // overrides edit) must invalidate a catalog.bin written with NO_SID
+  // placeholders, or the documented build → allocate → rebuild bootstrap
+  // silently skips its final step.
+  const ledgerMtime = mtimeIfExists(LEDGER_PATH);
+  const ledgerHeadMtime = mtimeIfExists(HEAD_PATH);
+  const sidOverridesMtime = mtimeIfExists(OVERRIDES_PATH);
   const scriptMtime = statSync(__filename).mtimeMs;
   return (
     binMtime > srcMtime &&
@@ -157,7 +164,10 @@ function isUpToDate(): boolean {
     binMtime > simbadMtime &&
     binMtime > simbadSampleMtime &&
     binMtime > multiplesMtime &&
-    binMtime > dustMtime
+    binMtime > dustMtime &&
+    binMtime > ledgerMtime &&
+    binMtime > ledgerHeadMtime &&
+    binMtime > sidOverridesMtime
   );
 }
 

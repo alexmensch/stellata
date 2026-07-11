@@ -54,7 +54,7 @@ const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
-// generated). CI's plain `npm test` job skips; the build-catalog job
+// generated). CI's plain `npm test` job skips; the Tier-A corpus job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
   existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)
@@ -141,7 +141,12 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // placement disagrees with the orbit-derived R(epoch) by >0.5·a — new
 // coverage entering the sweep, not a regression on existing pairs.
 // Curating these baked placements toward R(epoch) is follow-up work.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1498;
+// The 1498 → 1499 step is 36 Oph AB: the binding-integrity identity
+// refutation gives B its own Gaia astrometry, so the pair's baked
+// relative placement is now two independent 5p positions instead of a
+// WDS-projected synth offset — new own-astrometry coverage whose ORB6
+// orbit disagrees at >0.5·a, the same curation class as above.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1499;
 
 // ---- Corpus row types ----------------------------------------------------
 

@@ -75,11 +75,12 @@ scripts/binaries/
                                   none). Inline Heintz 1978 /
                                   Halbwachs+ 2023 Thiele-Innes → Campbell
                                   algebra.
-  stage5_optical.py               Six-tier physical-vs-optical
+  stage5_optical.py               Tiered physical-vs-optical
                                   classification (WDS-notes → orbit-on-
                                   file → separation-limit → both-Gaia
                                   (+escape velocity) → asymmetric-Gaia →
-                                  mag-gap). Physical-boundness gates reuse
+                                  CPM epoch-baseline → mag-gap).
+                                  Physical-boundness gates reuse
                                   Stage 4's Kepler / parallax-anchor
                                   helpers.
   stage6_multiples.py             Emit data/binaries/multiples.tsv with
@@ -105,6 +106,15 @@ scripts/binaries/
                                   topological outer-before-inner
                                   order. Run via
                                   npm run build:binaries-runtime.
+  build-binaries-spotcheck.py     npm run test:spotcheck — runs Stage 1+2
+                                  (resolve_through_stage2) and asserts the
+                                  strongest-priority resolution per
+                                  (wds_id, component) against the curated
+                                  data/binaries/spot_check_ground_truth.tsv
+                                  (contract in data/binaries/README.md
+                                  § Spot-check ground truth). Its own CI
+                                  check; also run locally before merging
+                                  any Stage 2-7 change (~20 s).
   build-binaries.test.py          stdlib unittest pins for Stages 1-7.
   build-runtime-binaries.test.py  stdlib unittest pins for the pure
                                   helpers (_split_components,
@@ -337,9 +347,21 @@ i.e. a crosswalk error masquerading as a blend, e.g. σ CrB's C/E
 collapse); a larger error means the source is the blend centroid
 sitting *between* the components, so the conflict is `skipped` and the
 blended-away member is left for the downstream slot-minting machinery
-(the Acrux/Castor shape). A letter_sources conflict on a letter that
-is itself part of a skipped blend is skipped for the same reason. All
-other ambiguous conflicts unbind every contested binding conservatively.
+(the Acrux/Castor shape). Before skipping, an **identity refutation**
+gets one shot: when SIMBAD's per-component cross-IDs give exactly one
+side ownership of the contested source and the other side a different
+source of its own (directly, or through its HIP), the "blend" is a
+crosswalk mis-match — a component with its own resolved identity is
+not inside a photocentre — so the loser rebinds to its own source and
+the owner keeps the contested one (`identity_refuted`; 36 Oph, μ Dra,
+HD 70492: Gaia's HIP best-neighbour put the primary on the secondary's
+source while SIMBAD carries both components distinctly). Chain
+geometry through a wide reference is too noisy for the 1″ floor in
+exactly these systems, which is why identity gets to overrule it. A
+letter_sources conflict on a letter that is itself part of a skipped
+blend is skipped for the same reason; one an identity refutation
+rebound is fully resolved and emits no second verdict. All other
+ambiguous conflicts unbind every contested binding conservatively.
 
 Enforcement (`apply=True`) is live: losers unbind (gaia → None; hip →
 None when it cross-walks to the contested source or is a HIP the
@@ -620,6 +642,7 @@ optical and tags the decision with the tier that decided
 | 3 | `sep_limit_rejected` | The pair's two components sit more than the physical bound-pair limit apart in 3D (`SEPARATION_LIMIT_PC = 1.0`) — a line-of-sight optical double. Each component's distance is its own parallax (Gaia or HIP2), or the system parallax anchor when it has none; the on-sky term is the WDS ρ at the reference distance, the radial term the parallax-derived depth gap counted only when significant (`RADIAL_SEPARATION_SIGMA = 3.0` of the combined error). Fires off a well-measured own parallax (`SEPARATION_POE_MIN = 5.0`). Pollux F: own ~297 pc vs its partner's inherited ~10.4 pc. |
 | 4 | `gaia_kept` / `_rejected` | Both components carry a Gaia 5p row. A 3σ parallax disagreement on combined error (`BOTH_GAIA_PLX_GATE_SIGMA = 3.0`) rejects only when the implied 3D separation also exceeds the physical limit — the same guard as tier 5, so a close visual pair's blend-corrupted Gaia parallaxes can't split a within-limit pair. A within-limit disagreement (and an agreement) falls to the escape-velocity sub-gate, which rejects a transverse velocity too large to be bound — `v_transverse > ESCAPE_VELOCITY_SAFETY_FACTOR (2.5) × sqrt(2·G·M/r)`. `v_transverse` is from the PM difference (a lower bound on v_rel, so the gate can only reject); `M` is the pair's spectral-table mass (`compute_pair_masses`, generous default when unknown); `r` is the same projected+radial separation. Replaces the old 5 mas/yr per-axis PM cut, which mistook a nearby bound pair's real orbital PM split for optical contamination. |
 | 5 | `asymm_kept` / `_rejected` | Exactly one component has a Gaia 5p row; the other has a HIP2 parallax anchor (Gaia-saturated bright primary). Gaia parallax vs HIP2 anchor at 3σ combined error (`ASYMM_PLX_GATE_SIGMA = 3.0`), rejecting only when the implied 3D separation also exceeds the physical limit — a HIP2-vs-Gaia zero-point offset can't split a bound pair. Backstop for a poe < 5 Gaia parallax; the well-measured Sirius A-C/D/E/F-shaped splits (anchor 378 mas vs Gaia <1 mas → a ~kpc split) reject upstream at tier 3, so this tier rejects nothing in the current corpus. |
+| 6a | `cpm_baseline_kept` / `_rejected` | WDS epoch-baseline common-proper-motion test, only for pairs whose secondary carries no independent parallax (`astrometry_via` ∈ {`unresolved`, `athyg_position`} at Stage 5) — the population tiers 3–5 never cross-checked in 3D. A bound companion shares the primary's space motion, so its relative sep/PA is near-stable from `date_first` to `date_last`; a background star is sky-static and drifts by ≈ \|PM_primary\| × Δt. Rejects when the observed tangent-plane drift ≥ `CPM_DRIFT_REJECT_FRACTION (0.5)` × predicted slip; keeps when within the `CPM_DRIFT_KEEP_FLOOR_ARCSEC (2.0)` measurement floor; in between falls through. Gated on predicted slip ≥ `CPM_SLIP_MIN_ARCSEC (10.0)` so low-PM primaries — and the ~10k legitimate faint wide companions the `athyg_position` route exists to render — fall through unchanged. Canonical reject: 61 Cyg AH, a historical background star the system's 5.2″/yr PM slid past. |
 | 6 | `mag_heuristic_kept` / `_rejected` | Backstop. `|Δmag| ≤ 5` keep, otherwise reject. Used only when no other tier fired (typically Tycho-only systems where neither component has Gaia astrometry). Pairs with no usable mags either are kept on the absence-of-evidence-is-not-evidence-of-optical principle. |
 
 Two physical-boundness criteria underpin tiers 3–4, both mechanical:

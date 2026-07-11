@@ -18,11 +18,11 @@ gaia_saturated_bright	Sirius B	06451-1643	B	simbad_xid	2947050466531873024	SIMBA
 gaia_saturated_bright	Procyon A	07393+0514	A	unresolved		SIMBAD * alf CMi carries no DR3
 gaia_saturated_bright	Procyon B	07393+0514	B	unresolved		SIMBAD * alf CMi B (white dwarf) has an entry but no DR3
 gaia_saturated_bright	alf Cen A	14396-6050	A	unresolved		SIMBAD * alf Cen A carries no DR3 (saturation)
-gaia_saturated_bright	alf Cen B	14396-6050	B	ccdm_hip	5877748442128924544	known_bug:stellata-dch.101 — HIP 71681 xwalk delivers a G=20.9 parallax-less background source; SIMBAD: * alf Cen B has no DR3, so the true expectation is unresolved/blank
+gaia_saturated_bright	alf Cen B	14396-6050	B	unresolved		SIMBAD * alf Cen B has no DR3 (saturated); the HIP 71681 xwalk once delivered a G=20.9 background source, scrubbed by the G-V magnitude gate — bare HIP retained for the HIP2 fallback
 gaia_saturated_bright	Capella Aa	05167+4600	Aa	unresolved		SIMBAD * alf Aur carries no DR3
 gaia_saturated_bright	Capella H	05167+4600	H	simbad_xid	211810233512673792	G 96-29A — Capella's distant M-dwarf companion pair
 gaia_saturated_bright	Capella L	05167+4600	L	simbad_xid	211810233512673920	G 96-29B
-gaia_saturated_bright	Castor A	07346+3153	A	orb6_hip	892348694913501952	known_bug:stellata-dch.101 — HIP 36850 xwalk delivers Castor B's source (G=2.92); SIMBAD: * alf Gem A has no DR3, so the true expectation is unresolved/blank
+gaia_saturated_bright	Castor A	07346+3153	A	unresolved		SIMBAD * alf Gem A has no DR3 (saturated); the HIP 36850 xwalk once delivered Castor B's source, scrubbed by the G-V magnitude gate — bare HIP retained for the HIP2 fallback
 gaia_saturated_bright	Castor B	07346+3153	B	simbad_xid	892348694913501952	SIMBAD attributes this source to * alf Gem B
 high_pm	Proxima Cen	14396-6050	C	simbad_xid	5853498713190525696	SIMBAD NAME Proxima Centauri
 high_pm	61 Cyg A	21069+3845	A	orb6_hip	1872046609345556480	SIMBAD * 61 Cyg A

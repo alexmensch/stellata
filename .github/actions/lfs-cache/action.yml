@@ -1,0 +1,19 @@
+# Restores LFS objects from the shared Actions cache instead of pulling
+# from GitHub's LFS store in every job (data/ is ~600 MB; 6 jobs × every
+# push would burn the LFS bandwidth quota). The `lfs-data` job warms the
+# cache once per LFS-content change; downstream jobs restore and smudge
+# locally. `git lfs pull` after a restore verifies objects and downloads
+# nothing; on a cache miss (eviction race) it falls back to a real pull.
+name: lfs-cache
+description: Smudge LFS files from the shared Actions object cache
+runs:
+  using: composite
+  steps:
+    - run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+      shell: bash
+    - uses: actions/cache@v4
+      with:
+        path: .git/lfs
+        key: lfs-${{ hashFiles('.lfs-assets-id') }}
+    - run: git lfs pull && rm .lfs-assets-id
+      shell: bash

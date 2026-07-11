@@ -250,10 +250,21 @@ snapshot gate but deliberately stricter:
    than `UPDATE_BUILD_COUNTS=1` — build counts describe a build,
    the ledger IS the identity contract.
 
-Only the `build-catalog` CI job checks out with `lfs: true` and full
-history (`.github/workflows/test.yml`), so that job runs the guard
-against real ledger content; in the bare `test` job the guard sees an
-LFS pointer stub and self-skips.
+The guard runs as its own CI check with real LFS content and full
+history (`.github/workflows/test.yml`; LFS objects come from the shared
+Actions cache, `.github/actions/lfs-cache`); in the bare `test` job it
+sees an LFS pointer stub and self-skips.
+
+The guard protects the ledger *file*; `npm run sid:check` (its own CI
+check, against the built artifacts) protects its *consistency with the build*: a
+read-only allocation walk that fails on any would-mint object or
+orphaned synth key. The § 4.4 build hard-fail already blocks
+unallocated objects from shipping; the check closes the other
+direction — an object-set change (a Stage-5 filter dropping pairs, a
+WDS re-lettering) cannot land without its allocation, retirement, or
+bridge in the same PR, so main's ledger ⟷ artifact state is always
+clean and any churn a working branch surfaces is attributable to that
+branch alone.
 
 ## 5. Synthetic-key churn (WDS re-subdivision)
 

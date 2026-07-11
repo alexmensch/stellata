@@ -3911,6 +3911,9 @@ def _wds_pair(
     precise_dec_deg: float | None = 0.0,
     date_last: int | None = 2020,
     spectral: str = "",
+    date_first: int | None = None,
+    theta_first: float | None = None,
+    rho_first: float | None = None,
 ) -> "bb.WdsPair":
     return bb.WdsPair(
         wds_id=wds_id, discoverer=discoverer, components=components,
@@ -3918,6 +3921,8 @@ def _wds_pair(
         mag_pri=mag_pri, mag_sec=mag_sec, spectral=spectral,
         notes=notes,
         precise_ra_deg=precise_ra_deg, precise_dec_deg=precise_dec_deg,
+        date_first=date_first, theta_first=theta_first,
+        rho_first=rho_first,
     )
 
 
@@ -4292,6 +4297,157 @@ class SeparationGeometryTests(unittest.TestCase):
         self.assertFalse(
             bb._separation_exceeds_limit(94.3, None, 103.1, 0.02, 5.0),
         )
+
+
+def _cpm_pair(
+    *,
+    date_first: int | None = 1900,
+    theta_first: float | None = 90.0,
+    rho_first: float | None = 5.0,
+    date_last: int | None = 2000,
+    theta_last: float | None = 90.0,
+    rho_last: float | None = 5.0,
+) -> "bb.WdsPair":
+    """A 100-yr-baseline pair; defaults hold the relative geometry
+    static (the CPM-confirmed shape)."""
+    return _wds_pair(
+        date_first=date_first, theta_first=theta_first,
+        rho_first=rho_first, date_last=date_last,
+        theta_last=theta_last, rho_last=rho_last,
+        mag_pri=4.0, mag_sec=6.0,
+    )
+
+
+class CpmBaselineVerdictTests(unittest.TestCase):
+    """cpm_baseline_verdict — the 61 Cyg shape: PM 5.2″/yr over a
+    century predicts ~520″ of slip for a background star."""
+
+    PM_HIGH = (4100.0, -3200.0)   # |PM| = 5.2 arcsec/yr
+
+    def test_static_geometry_keeps(self) -> None:
+        # Relative sep/PA unchanged across the baseline → co-moving.
+        self.assertIs(
+            bb.cpm_baseline_verdict(_cpm_pair(), *self.PM_HIGH), False,
+        )
+
+    def test_drift_tracking_slip_rejects(self) -> None:
+        # 295″ of drift ≥ 0.5 × 520″ predicted slip → background star.
+        pair = _cpm_pair(rho_last=300.0)
+        self.assertIs(bb.cpm_baseline_verdict(pair, *self.PM_HIGH), True)
+
+    def test_pa_only_drift_rejects(self) -> None:
+        # Same ρ, PA swings 90° → tangent-plane drift ρ·√2 ≈ 283″.
+        pair = _cpm_pair(rho_first=200.0, rho_last=200.0, theta_last=180.0)
+        self.assertIs(bb.cpm_baseline_verdict(pair, *self.PM_HIGH), True)
+
+    def test_intermediate_drift_inconclusive(self) -> None:
+        # 100″ drift: above the keep floor, below half the slip → None.
+        pair = _cpm_pair(rho_last=105.0)
+        self.assertIsNone(bb.cpm_baseline_verdict(pair, *self.PM_HIGH))
+
+    def test_low_pm_primary_silent(self) -> None:
+        # 50 mas/yr × 100 yr = 5″ predicted slip < CPM_SLIP_MIN_ARCSEC —
+        # no discriminating power even for drifting geometry.
+        pair = _cpm_pair(rho_last=300.0)
+        self.assertIsNone(bb.cpm_baseline_verdict(pair, 50.0, 0.0))
+
+    def test_missing_first_epoch_silent(self) -> None:
+        pair = _cpm_pair(rho_first=None)
+        self.assertIsNone(bb.cpm_baseline_verdict(pair, *self.PM_HIGH))
+
+    def test_missing_pm_silent(self) -> None:
+        self.assertIsNone(bb.cpm_baseline_verdict(_cpm_pair(), None, -3200.0))
+
+    def test_zero_baseline_silent(self) -> None:
+        pair = _cpm_pair(date_first=2000, date_last=2000, rho_last=300.0)
+        self.assertIsNone(bb.cpm_baseline_verdict(pair, *self.PM_HIGH))
+
+
+class CpmTierIntegrationTests(unittest.TestCase):
+    """Tier 6a routing inside classify_pair_optical: engages only for an
+    inherited/synthesized secondary distance with primary PM on file;
+    silent otherwise so tier 6 keeps deciding."""
+
+    def _classify(
+        self,
+        pair: "bb.WdsPair",
+        *,
+        secondary_via: str = "unresolved",
+        primary_astro: "bb.ComponentAstrometry | None" = None,
+        secondary_astro: "bb.ComponentAstrometry | None" = None,
+    ) -> "bb.OpticalClassification":
+        primary = _resolved(gaia=None, component="A", is_primary=True)
+        secondary = _resolved(
+            gaia=None, component="B", is_primary=False, via="unresolved",
+        )
+        if primary_astro is None:
+            primary_astro = _component_astrometry(
+                astrometry_via="gaia_5p",
+                pmra_masyr=4100.0, pmdec_masyr=-3200.0,
+            )
+        if secondary_astro is None:
+            secondary_astro = _component_astrometry(
+                astrometry_via=secondary_via,
+                parallax_mas=None, parallax_error_mas=None,
+                pmra_masyr=None, pmdec_masyr=None,
+            )
+        indices = _indices_with_astrometry()
+        return bb.classify_pair_optical(
+            pair, primary, secondary, "none", indices,
+            primary_astrometry=primary_astro,
+            secondary_astrometry=secondary_astro,
+        )
+
+    def test_inherited_secondary_drift_rejects(self) -> None:
+        result = self._classify(_cpm_pair(rho_last=300.0))
+        self.assertFalse(result.is_physical)
+        self.assertEqual(result.optical_via, "cpm_baseline_rejected")
+
+    def test_inherited_secondary_static_keeps(self) -> None:
+        result = self._classify(_cpm_pair())
+        self.assertTrue(result.is_physical)
+        self.assertEqual(result.optical_via, "cpm_baseline_kept")
+
+    def test_athyg_position_secondary_engages(self) -> None:
+        result = self._classify(
+            _cpm_pair(rho_last=300.0), secondary_via="athyg_position",
+        )
+        self.assertEqual(result.optical_via, "cpm_baseline_rejected")
+
+    def test_own_parallax_secondary_falls_through(self) -> None:
+        # A gaia_5p secondary was already 3D-cross-checked upstream —
+        # tier 6a stays silent and the mag gap decides.
+        result = self._classify(
+            _cpm_pair(rho_last=300.0), secondary_via="gaia_5p",
+        )
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_no_astrometry_falls_through(self) -> None:
+        pair = _cpm_pair(rho_last=300.0)
+        primary = _resolved(gaia=None, component="A", is_primary=True)
+        secondary = _resolved(
+            gaia=None, component="B", is_primary=False, via="unresolved",
+        )
+        result = bb.classify_pair_optical(
+            pair, primary, secondary, "none", _indices_with_astrometry(),
+        )
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_classify_all_pairs_astrometry_cardinality(self) -> None:
+        pair = _cpm_pair()
+        components = [
+            _resolved(gaia=None, component="A", is_primary=True),
+            _resolved(
+                gaia=None, component="B", is_primary=False,
+                via="unresolved",
+            ),
+        ]
+        with self.assertRaises(ValueError):
+            bb.classify_all_pairs(
+                [pair], components, [(None, "none")],
+                _indices_with_astrometry(),
+                astrometry=[_component_astrometry()],
+            )
 
 
 class PairBeyondSeparationLimitTests(unittest.TestCase):
@@ -6945,6 +7101,119 @@ class BindingIntegrityDetectorTests(unittest.TestCase):
             v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
         )
         self.assertEqual(v[0].unbind, [])
+
+    @staticmethod
+    def _xid(gaia: int | None, hip: int | None = None) -> "bb.SimbadWdsXid":
+        return bb.SimbadWdsXid(
+            simbad_oid=1, simbad_main_id="* tst", gaia_source_id=gaia, hip=hip,
+        )
+
+    def _audit_with_xids(self, rows, src_to_astrometry, simbad_xids):
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(src_to_astrometry)
+        return bb.audit_binding_integrity(
+            pairs, comps, idx, apply=True, simbad_xids=simbad_xids,
+        ), comps
+
+    def test_photocentre_blend_identity_refuted(self) -> None:
+        # 36 Oph shape: SIMBAD's cross-IDs give A its own source and B
+        # ownership of the contested one — the "blend" is a crosswalk
+        # mis-match, not a photocentre. A (the loser) rebinds to its own
+        # source; B keeps the contested source; no shape-(b) verdict for
+        # the rebound letter.
+        SA, SX, SC = 100, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SC, None)),
+        ]
+        astro = {
+            SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, -6.5),
+            SC: _bi_astro(SC, 0.0, 0.0),
+        }
+        xids = {
+            ("10000+0000", "A"): self._xid(SA),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts, comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_IDENTITY_REFUTED)
+        self.assertEqual(v[0].winner.label, "B")
+        self.assertEqual(v[0].rebind_letter, "A")
+        self.assertEqual(v[0].rebind_source, SA)
+        self.assertEqual(
+            [x for x in verdicts
+             if x.shape == _s2.BINDING_SHAPE_LETTER_SOURCES], [],
+        )
+        by_tok = {(c.component, c.is_primary): c for c in comps}
+        self.assertEqual(by_tok[("A", True)].gaia_source_id, SA)
+        self.assertEqual(by_tok[("B", False)].gaia_source_id, SX)
+
+    def test_blend_unidentified_side_stays_skipped(self) -> None:
+        # Castor shape: the primary is Gaia-saturated so SIMBAD carries no
+        # DR3 source for it — identity can't refute, the blend skip holds.
+        SX, SC = 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -6.5), SC: _bi_astro(SC, 0.0, 0.0)}
+        xids = {
+            ("10000+0000", "A"): self._xid(None),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts, _comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(
+            v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+        )
+
+    def test_blend_no_owner_stays_skipped(self) -> None:
+        # Both sides identified but NEITHER owns the contested source —
+        # identities don't explain the binding, so no guess: skip holds.
+        SA, SB, SX, SC = 100, 150, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SX, None), (SC, None)),
+        ]
+        astro = {SX: _bi_astro(SX, 0.0, -6.5), SC: _bi_astro(SC, 0.0, 0.0)}
+        xids = {
+            ("10000+0000", "A"): self._xid(SA),
+            ("10000+0000", "B"): self._xid(SB),
+        }
+        verdicts, _comps = self._audit_with_xids(rows, astro, xids)
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(
+            v[0].verdict, _s2.BINDING_VERDICT_SKIPPED_PHOTOCENTRE_BLEND,
+        )
+
+    def test_refutation_via_xid_hip_route(self) -> None:
+        # The loser's SIMBAD cross-ID carries only a HIP; the hip→gaia
+        # crosswalk supplies its own source. Same refutation.
+        SA, SX, SC = 100, 200, 300
+        rows = [
+            ("AB", 5.0, 0.0, (SX, None), (SX, None)),
+            ("AC", 10.0, 0.0, (SA, None), (SC, None)),
+        ]
+        astro = {
+            SA: _bi_astro(SA, 0.0, 0.0), SX: _bi_astro(SX, 0.0, -6.5),
+            SC: _bi_astro(SC, 0.0, 0.0),
+        }
+        pairs, comps = _bi_system(rows)
+        idx = _bi_indices(astro, hip_to_gaia={77: SA})
+        xids = {
+            ("10000+0000", "A"): self._xid(None, hip=77),
+            ("10000+0000", "B"): self._xid(SX),
+        }
+        verdicts = bb.audit_binding_integrity(
+            pairs, comps, idx, apply=False, simbad_xids=xids,
+        )
+        v = [x for x in verdicts if x.shape == _s2.BINDING_SHAPE_SOURCE_LETTERS]
+        self.assertEqual(len(v), 1)
+        self.assertEqual(v[0].verdict, _s2.BINDING_VERDICT_IDENTITY_REFUTED)
+        self.assertEqual(v[0].rebind_source, SA)
 
     def test_wide_pair_no_longer_rubber_stamped(self) -> None:
         # A non-blend source bound to two distant secondaries, sitting 2.5"

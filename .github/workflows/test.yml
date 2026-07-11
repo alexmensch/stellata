@@ -10,7 +10,18 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  # Warms the shared LFS object cache (see .github/actions/lfs-cache)
+  # so the data-consuming jobs below restore ~600 MB from the Actions
+  # cache instead of each pulling it from the LFS store.
+  lfs-data:
+    name: Data cache (LFS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/lfs-cache
+
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,29 +31,134 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
 
-  build-catalog:
+  # Full vitest without LFS content — the data-dependent suites see
+  # pointer stubs and self-skip; they run for real in the jobs below.
+  test:
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
-          # Full history so the SID ledger guard can resolve the
-          # merge-base against origin/main for its append-only check.
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
       - run: npm ci
+      - run: npm test
+
+  # Reproducibility: the committed multiples.tsv (and the astrometry
+  # request list) must be exactly what the committed pipeline code
+  # produces — a stage change can't land with a stale artifact. The
+  # build also asserts the Stage-7 count/rate snapshots.
+  build-binaries:
+    name: Multi-star pipeline rebuild
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/lfs-cache
+      - run: python3 scripts/binaries/build-binaries.py --force
+      - run: |
+          git diff --exit-code -- data/binaries/multiples.tsv \
+            data/gaia/gaia_astrometry_source_id_request.tsv || {
+            echo "::error::committed pipeline outputs are stale — run" \
+              "'npm run build:binaries' and commit the regenerated files";
+            exit 1;
+          }
+
+  # Stage 2 resolution asserted against the curated 93-system ground
+  # truth (data/binaries/spot_check_ground_truth.tsv).
+  spotcheck:
+    name: Resolution spot-check corpus
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/lfs-cache
+      - run: python3 scripts/binaries/build-binaries-spotcheck.py
+
+  build-catalog:
+    name: Catalogue, clouds & Local Group build
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      # Hard-fails on any record the SID ledger doesn't cover (the mint
+      # side of ledger consistency; the drop side is the job below).
       - run: npm run build:catalog
-      # The known-stars corpus harness needs the catalog chunks + manifest
-      # (built in the step above) and the LFS-tracked data/binaries/multiples.tsv.
-      # The bare `test` job already runs the rest of vitest and self-skips
-      # this suite; run just the corpus file here so we don't re-execute
-      # the full ~1250-test suite.
-      - run: npx vitest run scripts/catalog/known-stars.test.ts
-      # These two self-skip in the bare `test` job (LFS pointer stubs);
-      # this job has real LFS content, so they bite here.
+      - run: npm run build:clouds
+      - run: npm run build:local-group
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-artifacts
+          path: public/
+          retention-days: 1
+
+  # Ledger ↔ artifact consistency, drop side (docs/sid.md § 4.5):
+  # read-only allocation walk over the built artifacts; fails on any
+  # would-mint object or orphaned synth key, so an object-set change
+  # can't land without its allocation / retirement / bridge.
+  sid-consistency:
+    name: SID ledger–artifact consistency
+    runs-on: ubuntu-latest
+    needs: build-catalog
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-artifacts
+          path: public/
+      - run: npm run sid:check
+
+  # Tier-A validation against the built artifacts: the known-stars
+  # corpus plus the multi-star render-geometry regression (which needs
+  # public/binaries.bin, built here from the committed multiples.tsv).
+  tier-a-corpus:
+    name: Tier-A star corpus
+    runs-on: ubuntu-latest
+    needs: build-catalog
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-artifacts
+          path: public/
+      - run: npm run build:binaries-runtime
+      - run: npx vitest run scripts/catalog/known-stars.test.ts scripts/catalog/multi-star-regression.test.ts scripts/catalog/sky-position.test.ts
+
+  # Append-only ledger guard (needs full history for the merge-base
+  # read) + the DR-reconciliation classifier against its committed
+  # dry-run snapshots. Both self-skip in the bare `test` job.
+  sid-ledger-guard:
+    name: SID ledger append-only guard
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
       - run: npx vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts
