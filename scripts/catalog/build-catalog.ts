@@ -277,6 +277,7 @@ async function main() {
     systemCoherenceRepositioned: 0,
     systemCoherenceMemberAnchorWins: 0,
     systemCoherenceSignificantDepthKept: 0,
+    systemCoherenceAnchorInconsistent: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -599,6 +600,8 @@ async function main() {
     counts.systemCoherenceMemberAnchorWins = coherence.memberAnchorWins;
     counts.systemCoherenceSignificantDepthKept =
       coherence.significantDepthKept;
+    counts.systemCoherenceAnchorInconsistent =
+      coherence.anchorPlacementInconsistent;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
     const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS, dustGrid);

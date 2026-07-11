@@ -12,6 +12,7 @@ function baseCounts(): BuildCounts {
     systemCoherenceRepositioned: 0,
     systemCoherenceMemberAnchorWins: 0,
     systemCoherenceSignificantDepthKept: 0,
+    systemCoherenceAnchorInconsistent: 0,
     binaryPairs: 100,
     binaryMutualPairs: 50,
     gcvsEntries: 60000,

@@ -235,6 +235,35 @@ describe('applySystemDistanceCoherence', () => {
     expect(COHERENCE_RADIAL_SIGMA).toBe(3.0);
   });
 
+  it('skips a system whose anchor placement contradicts its own parallax (μ¹/μ² Sco)', () => {
+    // μ¹ Sco: RUWE-corrupted Gaia parallax (1.87 ± 0.74 mas → 534 pc,
+    // σ_pc ≈ 210) but a B-J catalog placement at 1685.7 pc. The huge σ
+    // makes μ² Sco's honest 176.6 pc read as a <3σ gap — but the
+    // anchor's own placement is >3σ AND >20% off its parallax, so the
+    // whole system is skipped and μ² keeps its distance.
+    const primary = star({ hip: 82514, gaiaSourceId: '100', x: 1685.7 });
+    const member = star({ gaiaSourceId: '200', x: 176.6 });
+    const rows = [
+      pairRow({ systemId: '16519-3803-AH', comp: 'A', hip: 82514, gaiaSourceId: '100' }),
+      pairRow({
+        systemId: '16519-3803-AH', comp: 'H', gaiaSourceId: '200',
+        orbitRole: 'secondary',
+      }),
+    ];
+    const src = sources({
+      hip2: new Map([[82514, hip2Row({ plxMas: 6.51, plxErrorMas: 0.91 })]]),
+      gaiaAstrometry: new Map([
+        ['100', gaiaRow({ parallaxMas: 1.8732, parallaxErrorMas: 0.7355, ruwe: 2.09 })],
+        ['200', gaiaRow({ parallaxMas: 5.6632, parallaxErrorMas: 0.275, ruwe: 2.16 })],
+      ]),
+    });
+    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    expect(stats.anchorPlacementInconsistent).toBe(1);
+    expect(stats.membersRepositioned).toBe(0);
+    expect(member.x).toBeCloseTo(176.6, 6);
+    expect(primary.x).toBeCloseTo(1685.7, 6);
+  });
+
   it('a wide gap with no error model keeps the member distance (μ² Sco)', () => {
     const primary = star({ hip: 100, x: 1686 });
     const member = star({ hip: 200, x: 176.6 });

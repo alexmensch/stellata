@@ -1830,7 +1830,11 @@ baseline corrupts the fit without tripping RUWE. Members move
 radially only when their parallax gap from the anchor is **not
 significant at 3σ** of the combined parallax error — genuinely
 measured hierarchy depth (α Cen–Proxima's 0.06 pc; 61 Cyg A/B)
-survives; noise collapses. Direction is untouched (mas-accurate
+survives; noise collapses. An anchor whose own rendered distance
+contradicts its parallax evidence (μ¹ Sco: Bailer-Jones places the
+RUWE-corrupted source at 1.7 kpc against HIP2's ~154 pc) disqualifies
+the whole system — members keep their own distances rather than
+following a bogus anchor. Direction is untouched (mas-accurate
 regardless of parallax quality), and absmag + Stefan-Boltzmann radius
 follow the distance change so apparent brightness is invariant.
 Engineering detail: `scripts/catalog/README.md` § System distance

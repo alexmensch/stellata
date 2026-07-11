@@ -1355,6 +1355,16 @@ Per WDS root with ≥2 resolved own-record members:
   photocentre wobble on periods beyond Gaia's baseline corrupts the 5p
   parallax without tripping RUWE. Ties break pair-primary first, then
   the WDS-canonical letter.
+- **Anchor placement-consistency gate.** A picked anchor whose rendered
+  catalog distance contradicts its own best parallax — by >3σ AND >20%
+  of the anchor distance — poisons the whole system, so the system is
+  skipped and members keep their own distances. μ¹ Sco is the case: its
+  RUWE-corrupted Gaia parallax (1.87 ± 0.74 mas) gets a Bailer-Jones
+  placement at 1685.7 pc while HIP2 measures ~154 pc; without this gate
+  the corrupted parallax's huge σ made μ² Sco's honest 176.6 pc read as
+  a <3σ gap and dragged it out to 1.7 kpc. Counted
+  `systemCoherenceAnchorInconsistent`. (The μ¹ Sco record's own B-J
+  placement is a separate open defect.)
 - **Radial snap with a significance gate.** Every other member moves
   radially to the anchor's distance (direction preserved — it is
   mas-accurate regardless of parallax quality) UNLESS its own parallax

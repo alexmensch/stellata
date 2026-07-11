@@ -154,6 +154,10 @@ export interface BuildCounts {
   /** Members whose radial gap IS a ≥3σ measurement — genuinely measured
    *  depth kept (α Cen–Proxima, 61 Cyg A/B). */
   systemCoherenceSignificantDepthKept: number;
+  /** Systems skipped because the anchor's rendered catalog distance
+   *  contradicts its own parallax evidence (μ¹ Sco's B-J placement of
+   *  a RUWE-corrupted source at 1.7 kpc) — members keep their own. */
+  systemCoherenceAnchorInconsistent: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;

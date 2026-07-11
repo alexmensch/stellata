@@ -33,8 +33,10 @@ export const COHERENCE_RADIAL_SIGMA = 3.0;
  *  claim (AT-HYG HIP / SIMBAD-era values); without a σ to test against,
  *  a snap is only trusted across a gap within this fraction of the
  *  anchor distance (or 1 pc for nearby systems). Wider gaps mean the
- *  two catalog distances genuinely disagree (μ² Sco at 176 pc against
- *  a 1.7 kpc anchor) and the member keeps its own. */
+ *  two catalog distances genuinely disagree and the member keeps its
+ *  own. The same relative bound gates the anchor's own rendered
+ *  distance against its parallax evidence (see the placement-
+ *  consistency gate in applySystemDistanceCoherence). */
 export const COHERENCE_NO_SIGMA_MAX_RELATIVE_GAP = 0.2;
 export const COHERENCE_NO_SIGMA_MIN_GAP_PC = 1.0;
 
@@ -52,6 +54,7 @@ export interface SystemCoherenceStats {
   membersRepositioned: number;
   memberAnchorWins: number;
   significantDepthKept: number;
+  anchorPlacementInconsistent: number;
 }
 
 export interface CoherenceSources {
@@ -168,6 +171,7 @@ export function applySystemDistanceCoherence(
     membersRepositioned: 0,
     memberAnchorWins: 0,
     significantDepthKept: 0,
+    anchorPlacementInconsistent: 0,
   };
 
   const byGaia = new Map<string, number>();
@@ -264,6 +268,21 @@ export function applySystemDistanceCoherence(
     if (!(anchorDist > 0) || !Number.isFinite(anchorDist)) continue;
     if (anchorRank !== null && anchorRank[1] === 1) stats.memberAnchorWins++;
     const anchorPlx = parallaxDistanceWithError(anchorStar, sources);
+    // An anchor whose rendered catalog distance contradicts its own
+    // parallax evidence would drag every member onto a bogus placement
+    // (μ¹ Sco: B-J puts the RUWE-corrupted source at 1.7 kpc while its
+    // parallaxes measure ~150-530 pc; μ² Sco's honest 176 pc must not
+    // follow it). Members keep their own distances instead.
+    if (anchorPlx !== null) {
+      const placementGap = Math.abs(anchorDist - anchorPlx.distPc);
+      if (
+        placementGap > COHERENCE_RADIAL_SIGMA * anchorPlx.sigmaPc
+        && placementGap > COHERENCE_NO_SIGMA_MAX_RELATIVE_GAP * anchorDist
+      ) {
+        stats.anchorPlacementInconsistent++;
+        continue;
+      }
+    }
 
     for (const idx of members.keys()) {
       if (idx === anchorIdx || processed.has(idx)) continue;
