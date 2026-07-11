@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
+from simbad.specs import GAIA_DR3, HIP  # noqa: E402
 from wds_xids_cascade import (  # noqa: E402
     build_cascade_candidates,
     filter_cascade_hits,
@@ -56,14 +57,6 @@ TSV_COLUMNS = [
     "gaia_source_id",
     "hip",
 ]
-
-# Identifier prefixes — paired LIKE pattern + integer-extraction offset
-# so a SIMBAD rename only edits the canonical pair once each. Same shape
-# as refresh-simbad-sample.py.
-HIP_LIKE = "HIP %"
-HIP_PREFIX_LEN = len("HIP ")
-GAIA_LIKE = "Gaia DR3 %"
-GAIA_PREFIX_LEN = len("Gaia DR3 ")
 
 # Phase A: WDS-ident → oidref schema. Live probe 2026-05-20 returned
 # id as an object column, oidref as int64.
@@ -147,7 +140,7 @@ def pull_primary_aliases(
         table = client.run(
             "SELECT oidref, id FROM ident "
             f"WHERE oidref IN ({inlist}) "
-            f"AND (id LIKE '{HIP_LIKE}' OR id LIKE 'HD %') "
+            f"AND (id LIKE '{HIP.like_pattern}' OR id LIKE 'HD %') "
             "ORDER BY oidref, id"
         )
         for row in table:
@@ -194,7 +187,7 @@ def query_xrefs_batch(
         "FROM basic AS b "
         "JOIN ident AS i ON i.oidref = b.oid "
         f"WHERE b.oid IN ({inlist}) "
-        f"AND (i.id LIKE '{HIP_LIKE}' OR i.id LIKE '{GAIA_LIKE}') "
+        f"AND (i.id LIKE '{HIP.like_pattern}' OR i.id LIKE '{GAIA_DR3.like_pattern}') "
         "ORDER BY oid, id"
     )
     out: dict[int, dict[str, Any]] = {}
@@ -206,17 +199,17 @@ def query_xrefs_batch(
             "gaia": None,
         })
         id_str = str(rl.coerce_masked(row["id"]) or "")
-        if id_str.startswith("HIP "):
+        if id_str.startswith(HIP.prefix):
             try:
-                rec["hip"] = int(id_str[HIP_PREFIX_LEN:])
+                rec["hip"] = int(id_str[HIP.prefix_len:])
             except ValueError:
                 # Rare HIP aliases like "HIP 12345 A" — skip; the canonical
                 # integer-only entry appears in the same result set with no
                 # suffix.
                 pass
-        elif id_str.startswith("Gaia DR3 "):
+        elif id_str.startswith(GAIA_DR3.prefix):
             try:
-                rec["gaia"] = int(id_str[GAIA_PREFIX_LEN:])
+                rec["gaia"] = int(id_str[GAIA_DR3.prefix_len:])
             except ValueError:
                 pass
     missing = sorted(o for o in oids if o not in out)
