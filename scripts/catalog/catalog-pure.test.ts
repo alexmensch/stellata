@@ -79,6 +79,8 @@ import {
   isBailerJonesEligible,
   resolveGaiaSourceId,
   parseGaiaSourceIdStr,
+  parseSimbadWdsXidsTsv,
+  isSiblingLetterAttribution,
   BJ_ELIGIBLE_DIST_SRCS,
   DIST_SRC_BAILER_JONES,
   applyLmcKinematicOverride,
@@ -1917,6 +1919,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
       gaiaSourceId: '999',
       backfilled: false,
       magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -1925,6 +1928,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
       gaiaSourceId: '2341871673090078592',
       backfilled: true,
       magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -1933,6 +1937,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
       gaiaSourceId: null,
       backfilled: false,
       magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -1943,6 +1948,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
       gaiaSourceId: null,
       backfilled: false,
       magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -1951,6 +1957,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
       gaiaSourceId: null,
       backfilled: false,
       magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -1959,11 +1966,13 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
       gaiaSourceId: null,
       backfilled: false,
       magRejected: false,
+      siblingRejected: false,
     });
     expect(resolveGaiaSourceId(null, -1, map)).toEqual({
       gaiaSourceId: null,
       backfilled: false,
       magRejected: false,
+      siblingRejected: false,
     });
   });
 });
@@ -1978,12 +1987,13 @@ describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
   it('scrubs a native binding fainter in G than V beyond the gate (Toliman)', () => {
     expect(
       resolveGaiaSourceId('5877748442128924544', null, null, 1.33, gMagOf),
-    ).toEqual({ gaiaSourceId: null, backfilled: false, magRejected: true });
+    ).toEqual({ gaiaSourceId: null, backfilled: false, magRejected: true, siblingRejected: false });
   });
 
   it('keeps a native binding consistent with V', () => {
     expect(resolveGaiaSourceId('777', null, null, 1.58, gMagOf)).toEqual({
       gaiaSourceId: '777', backfilled: false, magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -1991,6 +2001,7 @@ describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
     const xmap = new Map<number, string>([[71681, '5877748442128924544']]);
     expect(resolveGaiaSourceId(null, 71681, xmap, 1.33, gMagOf)).toEqual({
       gaiaSourceId: null, backfilled: false, magRejected: true,
+      siblingRejected: false,
     });
   });
 
@@ -1998,17 +2009,19 @@ describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
     const xmap = new Map<number, string>([[1, '777']]);
     expect(
       resolveGaiaSourceId('5877748442128924544', 1, xmap, 1.58, gMagOf),
-    ).toEqual({ gaiaSourceId: '777', backfilled: true, magRejected: true });
+    ).toEqual({ gaiaSourceId: '777', backfilled: true, magRejected: true, siblingRejected: false });
   });
 
   it('passes ungated without a G magnitude or a V magnitude', () => {
     expect(resolveGaiaSourceId('12345', null, null, 1.0, gMagOf)).toEqual({
       gaiaSourceId: '12345', backfilled: false, magRejected: false,
+      siblingRejected: false,
     });
     expect(
       resolveGaiaSourceId('5877748442128924544', null, null, null, gMagOf),
     ).toEqual({
       gaiaSourceId: '5877748442128924544', backfilled: false, magRejected: false,
+      siblingRejected: false,
     });
   });
 
@@ -2017,6 +2030,106 @@ describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
     const m = py.match(/^GAIA_BINDING_G_MINUS_V_REJECT_MAG\s*=\s*([\d.]+)/m);
     expect(m).not.toBeNull();
     expect(parseFloat(m![1])).toBe(GAIA_BINDING_G_MINUS_V_REJECT_MAG);
+  });
+});
+
+describe('catalog-pure / sibling-letter attribution gate', () => {
+  // Live SIMBAD shapes as of the 2026-07 re-pull: μ Dra carries
+  // blend-suffixed HIPs (83608A + 83608B); HD 70492's bare HIP 41098
+  // lives on a system-level SIMBAD object absent from the per-component
+  // xids, so neither component row carries it.
+  const XIDS_TSV = [
+    'wds_id\tcomponent\tsimbad_oid\tsimbad_main_id\tgaia_source_id\thip',
+    '17053+5428\tA\t373388\t* mu. Dra A\t1420101696287738368\t83608',
+    '17053+5428\tB\t373389\t* mu. Dra B\t1420101696285626624\t83608',
+    '17053+5428\tC\t373439\t* mu. Dra C\t1420101696286312448\t',
+    '08231+2001\tA\t18621022\tHD  70492A\t663434291021197568\t',
+    '08231+2001\tB\t18621023\tHD  70492B\t663434291018997248\t',
+    '99990+9990\tA\t2\town-hip A\t556\t',
+    '99990+9990\tB\t1\town-hip B\t555\t104217',
+    '06451-1643\tA\t3\tsaturated A\t\t32349',
+    '06451-1643\tB\t4\tsaturated B\t777\t',
+    '11111+1111\tA\t5\tblend A\t888\t',
+    '11111+1111\tB\t6\tblend B\t888\t',
+    '22222+2222\tA\t7\tlineage A\t\t100',
+    '22222+2222\tAa\t8\tlineage Aa\t999\t',
+  ].join('\n');
+  const xids = parseSimbadWdsXidsTsv(XIDS_TSV);
+
+  it('parses source / HIP attributions and the primary source letter', () => {
+    expect(xids.bySource.get('1420101696285626624')).toEqual([
+      { wdsId: '17053+5428', component: 'B' },
+    ]);
+    expect(xids.byHip.get(83608)).toEqual([
+      { wdsId: '17053+5428', component: 'A' },
+      { wdsId: '17053+5428', component: 'B' },
+    ]);
+    expect(xids.primarySourceLetterByWds.get('17053+5428')).toBe('A');
+    expect(xids.primarySourceLetterByWds.get('06451-1643')).toBe('B');
+  });
+
+  it('rejects required-column drift', () => {
+    expect(() => parseSimbadWdsXidsTsv('wds_id\tcomponent\n')).toThrow(
+      /missing required columns/,
+    );
+  });
+
+  it('scrubs a blend-suffixed-HIP row keyed on the sibling source (μ Dra)', () => {
+    expect(
+      isSiblingLetterAttribution('1420101696285626624', 83608, xids),
+    ).toBe(true);
+  });
+
+  it('scrubs a system-level-HIP row keyed on the sibling source (HD 70492)', () => {
+    expect(
+      isSiblingLetterAttribution('663434291018997248', 41098, xids),
+    ).toBe(true);
+  });
+
+  it('keeps the primary letter source on the same rows', () => {
+    expect(
+      isSiblingLetterAttribution('1420101696287738368', 83608, xids),
+    ).toBe(false);
+    expect(
+      isSiblingLetterAttribution('663434291021197568', 41098, xids),
+    ).toBe(false);
+  });
+
+  it('keeps a secondary row whose own HIP is attributed to its letter', () => {
+    expect(isSiblingLetterAttribution('555', 104217, xids)).toBe(false);
+  });
+
+  it('scrubs on directly-disjoint HIP letters even when the primary carries no source', () => {
+    expect(isSiblingLetterAttribution('777', 32349, xids)).toBe(true);
+  });
+
+  it('never scrubs a photocentre blend (source attributed to two letters)', () => {
+    expect(isSiblingLetterAttribution('888', 12345, xids)).toBe(false);
+  });
+
+  it('treats sub-letters as the parent lineage, not siblings', () => {
+    expect(isSiblingLetterAttribution('999', 100, xids)).toBe(false);
+  });
+
+  it('is inert without a HIP or without the xids index', () => {
+    expect(isSiblingLetterAttribution('1420101696285626624', null, xids)).toBe(false);
+    expect(isSiblingLetterAttribution('1420101696285626624', 83608, null)).toBe(false);
+  });
+
+  it('resolveGaiaSourceId scrubs the native cell AND the cross-walk candidate', () => {
+    const xmap = new Map<number, string>([[83608, '1420101696285626624']]);
+    expect(
+      resolveGaiaSourceId('1420101696285626624', 83608, xmap, null, null, xids),
+    ).toEqual({
+      gaiaSourceId: null, backfilled: false, magRejected: false,
+      siblingRejected: true,
+    });
+    expect(
+      resolveGaiaSourceId('663434291018997248', 41098, null, null, null, xids),
+    ).toEqual({
+      gaiaSourceId: null, backfilled: false, magRejected: false,
+      siblingRejected: true,
+    });
   });
 });
 

@@ -25,6 +25,7 @@ import {
   FLAG_HAS_BAYER,
   type ApsisRow,
   type SimbadSpectralIndex,
+  type SimbadWdsXidIndex,
 } from './catalog-pure';
 import {
   resolveDirection,
@@ -151,6 +152,7 @@ export async function readStars(
     nssSourceIds: new Set(),
   },
   dustGrid: DustGrid | null = null,
+  wdsXids: SimbadWdsXidIndex | null = null,
 ): Promise<{
   stars: Star[];
   stats: {
@@ -163,6 +165,7 @@ export async function readStars(
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
     gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
+    gaiaBindingSiblingRejected: number; // rows whose binding SIMBAD attributes to a sibling WDS letter
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
     velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
@@ -198,6 +201,7 @@ export async function readStars(
   let lmcOverridden = 0;
   let gaiaSourceIdBackfilled = 0;
   let gaiaBindingMagRejected = 0;
+  let gaiaBindingSiblingRejected = 0;
   const directionVia: Record<DirectionVia, number> = {
     gaia_5p: 0,
     gaia_nss_systemic: 0,
@@ -257,10 +261,12 @@ export async function readStars(
     const resolved = resolveGaiaSourceId(
       parseGaiaSourceIdStr(row.gaia), hip, hipToGaia, mag,
       (id) => directions.gaiaAstrometry.get(id)?.gMag ?? null,
+      wdsXids,
     );
     const gaiaSourceId = resolved.gaiaSourceId;
     if (resolved.backfilled) gaiaSourceIdBackfilled++;
     if (resolved.magRejected) gaiaBindingMagRejected++;
+    if (resolved.siblingRejected) gaiaBindingSiblingRejected++;
 
     // Bailer-Jones (DR3) override fires when (a) the row resolves to a
     // Gaia source_id by either path above and (b) dist_src marks the
@@ -478,6 +484,7 @@ export async function readStars(
       lmcOverridden,
       gaiaSourceIdBackfilled,
       gaiaBindingMagRejected,
+      gaiaBindingSiblingRejected,
       directionVia,
       velocityVia,
       velocityClamped,

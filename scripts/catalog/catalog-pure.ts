@@ -1373,6 +1373,135 @@ export function parseGaiaSourceIdStr(s: string | undefined | null): string | nul
  *  Castor → Castor B's source). */
 export const GAIA_BINDING_G_MINUS_V_REJECT_MAG = 1.0;
 
+/** One (wds_id, component) attribution parsed from
+ *  data/simbad/simbad_wds_xids.tsv. */
+export interface WdsComponentAttribution {
+  wdsId: string;
+  component: string;
+}
+
+/** SIMBAD WDS cross-IDs indexed for the sibling-letter gate below.
+ *  One source or HIP can carry several attributions (blended sources,
+ *  blend-suffixed HIPs, multi-system membership), so values are arrays.
+ *  `primarySourceLetterByWds` is each system's lexicographically-first
+ *  component letter among those carrying their own Gaia source — the
+ *  letter a system-level (blend-HIP) AT-HYG row should key on. */
+export interface SimbadWdsXidIndex {
+  bySource: Map<string, WdsComponentAttribution[]>;
+  byHip: Map<number, WdsComponentAttribution[]>;
+  primarySourceLetterByWds: Map<string, string>;
+}
+
+/** Parse data/simbad/simbad_wds_xids.tsv (refresh-simbad-wds-xids.py)
+ *  into per-source and per-HIP WDS-component attribution maps. Source
+ *  ids stay strings — they exceed Number.MAX_SAFE_INTEGER. */
+export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
+  const bySource = new Map<string, WdsComponentAttribution[]>();
+  const byHip = new Map<number, WdsComponentAttribution[]>();
+  const primarySourceLetterByWds = new Map<string, string>();
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return { bySource, byHip, primarySourceLetterByWds };
+  const header = lines[0].split('\t').map((h) => h.trim());
+  const wdsIdx = header.indexOf('wds_id');
+  const compIdx = header.indexOf('component');
+  const gaiaIdx = header.indexOf('gaia_source_id');
+  const hipIdx = header.indexOf('hip');
+  const missing: string[] = [];
+  if (wdsIdx < 0) missing.push('wds_id');
+  if (compIdx < 0) missing.push('component');
+  if (gaiaIdx < 0) missing.push('gaia_source_id');
+  if (hipIdx < 0) missing.push('hip');
+  if (missing.length) {
+    throw new Error(
+      `SIMBAD WDS xids TSV is missing required columns: ${missing.join(', ')}. ` +
+        `Re-run scripts/refresh/refresh-simbad-wds-xids.py.`,
+    );
+  }
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const cells = line.split('\t');
+    const wdsId = (cells[wdsIdx] ?? '').trim();
+    const component = (cells[compIdx] ?? '').trim();
+    if (!wdsId || !component) continue;
+    const attr: WdsComponentAttribution = { wdsId, component };
+    const src = parseGaiaSourceIdStr(cells[gaiaIdx]);
+    if (src) {
+      const list = bySource.get(src);
+      if (list) list.push(attr);
+      else bySource.set(src, [attr]);
+      const p = primarySourceLetterByWds.get(wdsId);
+      if (p === undefined || component < p) {
+        primarySourceLetterByWds.set(wdsId, component);
+      }
+    }
+    const hip = parseInt((cells[hipIdx] ?? '').trim(), 10);
+    if (Number.isFinite(hip) && hip > 0) {
+      const list = byHip.get(hip);
+      if (list) list.push(attr);
+      else byHip.set(hip, [attr]);
+    }
+  }
+  return { bySource, byHip, primarySourceLetterByWds };
+}
+
+/** 'A' vs 'B' are disjoint siblings; 'A' vs 'Aa' are one lineage (the
+ *  sub-letter carries the parent's light), so only a non-prefix-related
+ *  pair counts as a different star. */
+function wdsComponentsDisjoint(a: string, b: string): boolean {
+  return !a.startsWith(b) && !b.startsWith(a);
+}
+
+/** Sibling-letter attribution gate — the catalog-boundary mirror of the
+ *  binaries pipeline's identity refutation (stage2_resolve.py): true
+ *  when SIMBAD's WDS cross-IDs give one component letter sole ownership
+ *  of `sourceId` while the row's own identity points at a different
+ *  letter of the same system. Gaia's HIP best-neighbour cross-walk (and
+ *  AT-HYG's `gaia` cell, which ingests it) lands a saturated primary's
+ *  HIP on the resolvable sibling's source when both are similar
+ *  brightness, so the G−V gate misses it (HIP 83608 = μ Dra A carries
+ *  μ Dra B's source; HIP 41098 carries HD 70492 B's).
+ *
+ *  Per system where `sourceId` is attributed to exactly one letter X:
+ *  - the row's HIP attributed only to letters compatible with X (same
+ *    lineage) → the row IS X; cleared.
+ *  - attributed only to letters disjoint from X → the row is a
+ *    different star; scrubbed.
+ *  - attributed to both (blend-suffixed `HIP nA`/`HIP nB`), or absent
+ *    from the system's per-component xids (Hipparcos blend entries live
+ *    on SIMBAD system-level objects) → the AT-HYG row is the system
+ *    record and must key on the primary lineage: scrubbed when the
+ *    system's source-bearing primary letter is disjoint from X. */
+export function isSiblingLetterAttribution(
+  sourceId: string,
+  hip: number | null,
+  xids: SimbadWdsXidIndex | null,
+): boolean {
+  if (hip === null || xids === null) return false;
+  const srcAttrs = xids.bySource.get(sourceId);
+  if (!srcAttrs) return false;
+  const hipAttrs = xids.byHip.get(hip) ?? [];
+  for (const wdsId of new Set(srcAttrs.map((a) => a.wdsId))) {
+    const sLetters = new Set(
+      srcAttrs.filter((a) => a.wdsId === wdsId).map((a) => a.component),
+    );
+    if (sLetters.size !== 1) continue; // photocentre blend — no sole owner
+    const x = [...sLetters][0];
+    const hLetters = hipAttrs
+      .filter((a) => a.wdsId === wdsId)
+      .map((a) => a.component);
+    if (hLetters.length > 0) {
+      const anyRelated = hLetters.some((l) => !wdsComponentsDisjoint(l, x));
+      const anyDisjoint = hLetters.some((l) => wdsComponentsDisjoint(l, x));
+      if (anyRelated && !anyDisjoint) continue;
+      if (anyDisjoint && !anyRelated) return true;
+    }
+    const p = xids.primarySourceLetterByWds.get(wdsId);
+    if (p !== undefined && wdsComponentsDisjoint(p, x)) return true;
+  }
+  return false;
+}
+
 /** Resolve an AT-HYG row's Gaia DR3 source_id, falling back to a
  *  HIP→Gaia cross-walk when the AT-HYG `gaia` column is blank.
  *  Precedence: AT-HYG native > HIP cross-walk; returns null when
@@ -1385,35 +1514,51 @@ export const GAIA_BINDING_G_MINUS_V_REJECT_MAG = 1.0;
  *  data/binaries/multiples.tsv.
  *
  *  When `vMag` and `gMagOf` are supplied, each candidate binding is
- *  vetted against the magnitude gate above; a rejected native cell
- *  still falls through to the cross-walk (itself vetted). `magRejected`
- *  reports that at least one candidate was scrubbed. */
+ *  vetted against the magnitude gate above; when `wdsXids` is supplied,
+ *  each is also vetted against the sibling-letter gate. A rejected
+ *  native cell still falls through to the cross-walk (itself vetted).
+ *  `magRejected` / `siblingRejected` report that at least one candidate
+ *  was scrubbed by the respective gate. */
 export function resolveGaiaSourceId(
   gaiaSourceId: string | null,
   hip: number | null,
   hipToGaia: Map<number, string> | null,
   vMag: number | null = null,
   gMagOf: ((sourceId: string) => number | null) | null = null,
-): { gaiaSourceId: string | null; backfilled: boolean; magRejected: boolean } {
-  const rejects = (id: string): boolean => {
-    if (vMag === null || gMagOf === null) return false;
-    const g = gMagOf(id);
-    return g !== null && g - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG;
-  };
+  wdsXids: SimbadWdsXidIndex | null = null,
+): {
+  gaiaSourceId: string | null;
+  backfilled: boolean;
+  magRejected: boolean;
+  siblingRejected: boolean;
+} {
   let magRejected = false;
-  if (gaiaSourceId) {
-    if (!rejects(gaiaSourceId)) {
-      return { gaiaSourceId, backfilled: false, magRejected: false };
+  let siblingRejected = false;
+  const passes = (id: string): boolean => {
+    if (vMag !== null && gMagOf !== null) {
+      const g = gMagOf(id);
+      if (g !== null && g - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG) {
+        magRejected = true;
+        return false;
+      }
     }
-    magRejected = true;
+    if (isSiblingLetterAttribution(id, hip, wdsXids)) {
+      siblingRejected = true;
+      return false;
+    }
+    return true;
+  };
+  if (gaiaSourceId && passes(gaiaSourceId)) {
+    return { gaiaSourceId, backfilled: false, magRejected, siblingRejected };
   }
   if (hip === null || hip <= 0 || !hipToGaia) {
-    return { gaiaSourceId: null, backfilled: false, magRejected };
+    return { gaiaSourceId: null, backfilled: false, magRejected, siblingRejected };
   }
   const hit = hipToGaia.get(hip);
-  if (!hit) return { gaiaSourceId: null, backfilled: false, magRejected };
-  if (rejects(hit)) return { gaiaSourceId: null, backfilled: false, magRejected: true };
-  return { gaiaSourceId: hit, backfilled: true, magRejected };
+  if (hit && passes(hit)) {
+    return { gaiaSourceId: hit, backfilled: true, magRejected, siblingRejected };
+  }
+  return { gaiaSourceId: null, backfilled: false, magRejected, siblingRejected };
 }
 
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
