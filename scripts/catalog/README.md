@@ -1,7 +1,8 @@
 # Catalog build
 
 Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
-Bailer-Jones + Gaia Apsis + SIMBAD sp_type + Stellarium →
+Bailer-Jones + Gaia Apsis + SIMBAD sp_type + SIMBAD WDS cross-IDs +
+Stellarium →
 `public/catalog.bin` (v8 binary) + `public/constellations.json` +
 `public/search-index.json`. Run via `npm run build:catalog`.
 
@@ -31,6 +32,23 @@ Each AT-HYG row walks through, inside `readStars`:
    carried Castor B's). Rejected rows ship `gaia_source_id = 0` and
    route direction through the HIP2 tiers; counted
    `gaiaBindingMagRejected`.
+
+   Both candidates also pass a **sibling-letter attribution gate**
+   (`isSiblingLetterAttribution`, fed by
+   `data/simbad/simbad_wds_xids.tsv`) — the catalog-boundary mirror
+   of the binaries pipeline's identity refutation. A similar-brightness
+   sibling slips the G−V gate: HIP 83608's cell holds μ Dra B's source,
+   HIP 41098's holds HD 70492 B's, so the primary's record keys on the
+   member's source and promotion mints a synth twin. A candidate is
+   scrubbed when SIMBAD gives one component letter sole ownership of
+   the source while the row's identity points at a disjoint sibling —
+   via the row's own per-component HIP letters when they are decisive,
+   else (blend-suffixed `HIP nA`/`HIP nB`, or a Hipparcos blend HIP
+   stored only on a SIMBAD system-level object) via the system's
+   source-bearing primary letter. Sub-letters count as their parent's
+   lineage, and a source SIMBAD attributes to two letters of one
+   system (photocentre blend) is never scrubbed. Counted
+   `gaiaBindingSiblingRejected`.
 2. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
    in `catalog-pure.ts`). See § Multi-layer distance refinement.
 3. **HIP2 full-precision distance** for `dist_src=HIP` rows: the same

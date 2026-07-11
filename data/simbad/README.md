@@ -46,7 +46,9 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
   (per-component sp_type, beats AT-HYG's system-inherited string).
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
-  cascade).
+  cascade) + `scripts/catalog/build-catalog.ts` (sibling-letter
+  attribution gate on AT-HYG gaia bindings — see
+  `scripts/catalog/README.md` § Per-row pipeline).
 
 ## Refresh
 
