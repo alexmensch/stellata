@@ -45,6 +45,15 @@ export function createFocusCard(config: FocusCardConfig): () => void {
       el.textContent = line;
       inner.appendChild(el);
     }
+    const bindValue = (el: HTMLElement, value: string | (() => string)) => {
+      if (typeof value === 'function') {
+        const text = value();
+        el.textContent = text;
+        liveRows.push({ el, value, last: text });
+      } else {
+        el.textContent = value;
+      }
+    };
     for (const row of content.rows) {
       const rowEl = document.createElement('div');
       rowEl.className = 'focus-row';
@@ -55,13 +64,13 @@ export function createFocusCard(config: FocusCardConfig): () => void {
       value.className = 'focus-row-value';
       rowEl.append(label, value);
       inner.appendChild(rowEl);
-      if (typeof row.value === 'function') {
-        const text = row.value();
-        value.textContent = text;
-        liveRows.push({ el: value, value: row.value, last: text });
-      } else {
-        value.textContent = row.value;
-      }
+      bindValue(value, row.value);
+    }
+    for (const line of content.lines) {
+      const el = document.createElement('div');
+      el.className = 'focus-line';
+      inner.appendChild(el);
+      bindValue(el, line);
     }
     card.hidden = false;
   };

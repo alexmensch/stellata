@@ -5,7 +5,7 @@ import type {
   FocusCardProviders,
 } from './focus-card-types';
 
-const content: FocusCardContent = { name: 'x', identityLines: [], rows: [] };
+const content: FocusCardContent = { name: 'x', identityLines: [], rows: [], lines: [] };
 
 const starProvider: FocusCardProvider<'star'> = {
   kind: 'star',

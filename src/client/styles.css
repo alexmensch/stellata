@@ -532,6 +532,7 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 0 0 auto;
 }
 .focus-row-value { text-align: right; }
+.focus-line { white-space: pre-line; }
 
 .group {
   padding: 4px 0;

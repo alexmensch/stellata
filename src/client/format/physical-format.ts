@@ -9,11 +9,20 @@ export const EARTH_RADIUS_KM = 6371;
  *  the absolute magnitude on the card. */
 export const APP_MAG_GATE = 0.1;
 
-/** Thousands-separated integer kilometres. Deterministic across locales
+/** Thousands-separated integer. Deterministic across locales
  *  (`toLocaleString` varies between environments and breaks golden tests
  *  on a German vitest runner that would render Jupiter as "69.911 km"). */
+export function formatThousands(n: number): string {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 export function formatKm(km: number): string {
-  return Math.round(km).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return formatThousands(km);
+}
+
+/** Effective temperature: "9,602 K". */
+export function formatKelvin(teff: number): string {
+  return `${formatThousands(teff)} K`;
 }
 
 /** Stellar radius in solar radii — catalog `physicalRadius` is already

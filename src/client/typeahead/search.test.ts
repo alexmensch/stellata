@@ -12,6 +12,7 @@ import {
   formatGcvsDesignation,
   buildGcvsLabels,
   createSearchRunner,
+  starDesignations,
   type SearchEntry,
 } from './search';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
@@ -440,5 +441,30 @@ describe('search / buildStarLabels', () => {
     const raw: SearchEntry[] = [{ i: 0, g: 'V0645 Cen', hip: 70890 }];
     const labels = buildStarLabels(makeEmptyCatalog(1), raw);
     expect(labels.get(0)).toBe('V645 Cen');
+  });
+});
+
+describe('search / starDesignations', () => {
+  const constellations = [{ code: 'Lyr' }];
+
+  it('lists every designation tier in order, Gaia last', () => {
+    const entry: SearchEntry = {
+      i: 0, p: 'Vega', b: 'Alp', f: 3, c: 0, g: 'V0473 Lyr',
+      hr: 7001, hd: 172167, hip: 91262, gl: 'Gl 721',
+    };
+    expect(starDesignations(entry, constellations, 123n)).toEqual([
+      'Vega', 'α Lyr', '3 Lyr', 'V473 Lyr',
+      'HR 7001', 'HD 172167', 'HIP 91262', 'Gl 721', 'Gaia DR3 123',
+    ]);
+  });
+
+  it('skips absent fields and the Gaia sentinel', () => {
+    const entry: SearchEntry = { i: 0, hd: 1 };
+    expect(starDesignations(entry, constellations, 0n)).toEqual(['HD 1']);
+  });
+
+  it('drops Bayer/Flamsteed forms when the constellation is unknown', () => {
+    const entry: SearchEntry = { i: 0, b: 'Alp', f: 3, hip: 5 };
+    expect(starDesignations(entry, constellations, 0n)).toEqual(['HIP 5']);
   });
 });

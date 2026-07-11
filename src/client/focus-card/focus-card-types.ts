@@ -21,6 +21,10 @@ export interface FocusCardContent {
    *  descriptor. Rendered dimmed, no label column. */
   identityLines: string[];
   rows: FocusCardRow[];
+  /** Full-width lines after the rows (companion blocks). A function
+   *  entry is LIVE like a function-valued row; embedded newlines render
+   *  as line breaks. */
+  lines: Array<string | (() => string)>;
 }
 
 export interface FocusCardProvider<K extends FocusKind = FocusKind> {
