@@ -32,9 +32,9 @@ allocate.ts               npm run sid:allocate — the ONLY writer of
                           npm run sid:check (--check) — read-only CI
                           mode: same walk, zero writes; would-mint
                           objects and orphaned synth keys both fail.
-                          Runs in the build-catalog CI job after the
-                          artifact builds, making ledger ⟷ build
-                          consistency a per-PR invariant.
+                          Runs as its own CI check against the built
+                          artifacts, making ledger ⟷ build consistency
+                          a per-PR invariant.
 export-dr-risk-set.ts     npm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the neighbourhood-pull request TSV (§ 6.1

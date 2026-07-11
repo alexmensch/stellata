@@ -112,8 +112,9 @@ scripts/binaries/
                                   (wds_id, component) against the curated
                                   data/binaries/spot_check_ground_truth.tsv
                                   (contract in data/binaries/README.md
-                                  § Spot-check ground truth). Run before
-                                  merging any Stage 2-7 change; ~20 s.
+                                  § Spot-check ground truth). Its own CI
+                                  check; also run locally before merging
+                                  any Stage 2-7 change (~20 s).
   build-binaries.test.py          stdlib unittest pins for Stages 1-7.
   build-runtime-binaries.test.py  stdlib unittest pins for the pure
                                   helpers (_split_components,

@@ -54,7 +54,7 @@ const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
-// generated). CI's plain `npm test` job skips; the build-catalog job
+// generated). CI's plain `npm test` job skips; the Tier-A corpus job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
   existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)

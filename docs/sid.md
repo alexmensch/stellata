@@ -250,13 +250,13 @@ snapshot gate but deliberately stricter:
    than `UPDATE_BUILD_COUNTS=1` — build counts describe a build,
    the ledger IS the identity contract.
 
-Only the `build-catalog` CI job checks out with `lfs: true` and full
-history (`.github/workflows/test.yml`), so that job runs the guard
-against real ledger content; in the bare `test` job the guard sees an
-LFS pointer stub and self-skips.
+The guard runs as its own CI check with real LFS content and full
+history (`.github/workflows/test.yml`; LFS objects come from the shared
+Actions cache, `.github/actions/lfs-cache`); in the bare `test` job it
+sees an LFS pointer stub and self-skips.
 
-The guard protects the ledger *file*; `npm run sid:check` (same CI job,
-after the artifact builds) protects its *consistency with the build*: a
+The guard protects the ledger *file*; `npm run sid:check` (its own CI
+check, against the built artifacts) protects its *consistency with the build*: a
 read-only allocation walk that fails on any would-mint object or
 orphaned synth key. The § 4.4 build hard-fail already blocks
 unallocated objects from shipping; the check closes the other

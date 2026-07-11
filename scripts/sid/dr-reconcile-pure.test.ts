@@ -66,7 +66,7 @@ describe('classifyDrTransition', () => {
 // End-to-end pin of the DR2→DR3 dry run (docs/sid.md § 6.2) against the
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
-// build-catalog job and locally.
+// SID-ledger-guard job and locally.
 const REQUEST = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
 const NEIGHBOURHOOD = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood.tsv');
 const available =
