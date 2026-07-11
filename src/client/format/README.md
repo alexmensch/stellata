@@ -19,23 +19,30 @@ spectral-format.ts        formatSpectral(raw, spectClass, lumClass) →
                           BUILD-only.
 physical-format.ts        Radii (stars "X R☉" — catalog physicalRadius
                           is already solar radii; planets "X R⊕ (km)"),
-                          apparent-mag-from-camera + the "—" display
-                          gate (value shown only when it differs from
-                          absMag by > APP_MAG_GATE), signed magnitude,
-                          coarse provenance ("Gaia DR3 · Hipparcos ·
-                          HD" from populated id fields), formatKm.
+                          axis pairs, apparent-mag-from-camera (always
+                          shown; "—" only for degenerate distances),
+                          signed magnitude, variability line, coarse
+                          provenance ("Gaia DR3 · Hipparcos · HD ·
+                          Gliese" from populated id fields; a synthetic
+                          promoted companion reads "WDS" — its record
+                          was minted from a WDS measurement; a row with
+                          no ids at all reads "Tycho-2"), formatKm.
 velocity-format.ts        spaceVelocity(vx, vy, vz) → { kms, lDeg,
                           bDeg }: km/s magnitude of the catalog's
                           pc/yr heliocentric space motion + galactic
                           ℓ/b of the velocity VECTOR (its instantaneous
                           heading, via ICRS_TO_GAL_M3 from
-                          ../galactic/galactic-coords.ts).
-star-companion-format.ts  Binary-role card lines (secondary "Orbits <A>"
-                          block with per-tier detail; primary "N known
-                          companions:" list), read from binaries.bin.
-                          Hover shows these verbatim; the focus card
-                          calls the same function so the visual-vs-orbit
-                          tiering never forks.
+                          ../galactic/galactic-coords.ts). The
+                          formatter puts the heading on its own line
+                          (consumers use white-space: pre-line).
+star-companion-format.ts  Binary-role card lines, read from
+                          binaries.bin: companionOfLines (secondary
+                          "Orbits <A>" blocks with per-tier detail),
+                          companionNames (primary side — both cards
+                          render them under a "Known companions"
+                          label), and the hover-composed companionLines.
+                          Hover and focus card call the same functions
+                          so the visual-vs-orbit tiering never forks.
 *.test.ts                 vitest pin per module.
 ```
 

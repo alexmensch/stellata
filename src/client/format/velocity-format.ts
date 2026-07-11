@@ -41,9 +41,11 @@ export function spaceVelocity(
   return { kms: mag * KMS_PER_PC_YR, lDeg, bDeg };
 }
 
-/** "24 km/s · ℓ 87° · b -12°" — whole-degree heading, signed latitude. */
+/** "24 km/s" over "ℓ 87° · b -12°" — the heading always takes its own
+ *  line (whole degrees, signed latitude); consumers render the newline
+ *  via `white-space: pre-line`. */
 export function formatSpaceVelocity(v: SpaceVelocity): string {
   const b = Math.round(v.bDeg);
   const bStr = b >= 0 ? `+${b}` : `${b}`;
-  return `${Math.round(v.kms)} km/s · ℓ ${Math.round(v.lDeg)}° · b ${bStr}°`;
+  return `${Math.round(v.kms)} km/s\nℓ ${Math.round(v.lDeg)}° · b ${bStr}°`;
 }

@@ -7,6 +7,7 @@ import {
   formatKm,
   formatMagnitude,
   formatSolarRadii,
+  formatVariability,
 } from './physical-format';
 
 describe('formatSolarRadii', () => {
@@ -44,19 +45,31 @@ describe('apparentMagFromCamera', () => {
 });
 
 describe('appMagCameraDisplay', () => {
-  it('renders "—" inside the ±0.1 band around absMag (near the 10 pc shell)', () => {
-    expect(appMagCameraDisplay(0.58, 10)).toBe('—');
-    expect(appMagCameraDisplay(0.58, 10.4)).toBe('—');
-  });
-
-  it('renders the signed value outside the band', () => {
+  it('renders the signed value at any distance (equals absMag at 10 pc)', () => {
+    expect(appMagCameraDisplay(0.58, 10)).toBe('+0.6');
     expect(appMagCameraDisplay(0.58, 1)).toBe('-4.4');
     expect(appMagCameraDisplay(0.58, 100)).toBe('+5.6');
+  });
+
+  it('the Sun from 1 AU reads -26.7 (the real solar apparent magnitude)', () => {
+    expect(appMagCameraDisplay(4.83, 1 / 206264.80624709636)).toBe('-26.7');
   });
 
   it('renders "—" for degenerate distances', () => {
     expect(appMagCameraDisplay(0.58, 0)).toBe('—');
     expect(appMagCameraDisplay(0.58, NaN)).toBe('—');
+  });
+});
+
+describe('formatVariability', () => {
+  it('formats period + amplitude, day precision widening below 10d', () => {
+    expect(formatVariability(332, 7.6)).toBe('Period 332d · Δmag 7.6');
+    expect(formatVariability(0.567, 1.0)).toBe('Period 0.57d · Δmag 1.0');
+  });
+
+  it('returns null for non-variables', () => {
+    expect(formatVariability(0, 0)).toBeNull();
+    expect(formatVariability(332, 0)).toBeNull();
   });
 });
 
@@ -71,12 +84,18 @@ describe('formatMagnitude', () => {
 describe('coarseProvenance', () => {
   it('lists each populated id source in fixed order', () => {
     expect(
-      coarseProvenance({ gaiaSourceId: 123n, hip: 91262, hd: 172167 }),
-    ).toEqual(['Gaia DR3', 'Hipparcos', 'HD']);
+      coarseProvenance({ gaiaSourceId: 123n, hip: 91262, hd: 172167, gl: 'Gl 721' }),
+    ).toEqual(['Gaia DR3', 'Hipparcos', 'HD', 'Gliese']);
+    expect(coarseProvenance({ hd: 1 })).toEqual(['HD']);
   });
 
-  it('skips absent and sentinel ids', () => {
-    expect(coarseProvenance({ gaiaSourceId: 0n, hip: 0 })).toEqual([]);
-    expect(coarseProvenance({ hd: 1 })).toEqual(['HD']);
+  it('a synthetic promoted companion is known from WDS alone', () => {
+    expect(
+      coarseProvenance({ gaiaSourceId: 0n, syntheticCompanion: true }),
+    ).toEqual(['WDS']);
+  });
+
+  it('no ids at all → Tycho-2 (the AT-HYG rows with no other identifiers)', () => {
+    expect(coarseProvenance({ gaiaSourceId: 0n, hip: 0 })).toEqual(['Tycho-2']);
   });
 });

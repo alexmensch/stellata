@@ -192,7 +192,10 @@ export function buildSpectralMap(raw: SearchEntry[]): Map<number, string> {
 // Flamsteed → GCVS → HR → HD → HIP → Gliese → Gaia DR3. The focus card's
 // identity line renders this set (minus the display label, which already
 // heads the card). Gaia rides in from the catalog because search-index
-// entries don't carry the source_id.
+// entries don't carry the source_id. A GCVS designation in Bayer form
+// ("bet Per" for Algol) is skipped — the real Bayer display ("β Per")
+// already covers it, and the Latinised abbreviation is a search alias,
+// not a display name.
 export function starDesignations(
   entry: SearchEntry,
   constellations: { code: string }[],
@@ -204,7 +207,12 @@ export function starDesignations(
   if (entry.p) out.push(entry.p);
   if (entry.b && conCode) out.push(formatBayerDisplay(entry.b, conCode));
   if (entry.f !== undefined && conCode) out.push(`${entry.f} ${conCode}`);
-  if (entry.g) out.push(formatGcvsDesignation(entry.g));
+  const gcvsFirst = entry.g?.split(/\s+/)[0] ?? '';
+  // Lowercase-start guard: GCVS letter-sequence designations (R, VY, MU)
+  // are uppercase; only the lowercase Greek forms are Bayer duplicates.
+  if (entry.g && !(/^[a-z]/.test(gcvsFirst) && splitBayer(gcvsFirst))) {
+    out.push(formatGcvsDesignation(entry.g));
+  }
   if (entry.hr !== undefined) out.push(`HR ${entry.hr}`);
   if (entry.hd !== undefined) out.push(`HD ${entry.hd}`);
   if (entry.hip !== undefined) out.push(`HIP ${entry.hip}`);

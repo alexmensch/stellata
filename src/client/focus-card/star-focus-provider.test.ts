@@ -70,24 +70,40 @@ describe('createStarFocusProvider', () => {
     const provider = createStarFocusProvider(buildConfig({ cameraDistancePc: () => d }));
     const out = provider.format(0);
     expect(rowValue(out.rows, 'Distance')).toBe('7.7 pc');
-    // App mag at 7.68 pc: 0.58 + 5·log10(7.68) − 5 ≈ +0.01, which is
-    // 0.57 mag from absMag — outside the ±0.1 gate, so the value shows.
+    // App mag at 7.68 pc: 0.58 + 5·log10(7.68) − 5 ≈ +0.01.
     expect(rowValue(out.rows, 'App mag')).toBe('+0.0');
     d = 100;
     expect(rowValue(out.rows, 'Distance')).toBe('100 pc');
     expect(rowValue(out.rows, 'App mag')).toBe('+5.6');
     d = 10;
-    // At 10 pc appMag === absMag — the gate collapses the value.
-    expect(rowValue(out.rows, 'App mag')).toBe('—');
+    // At 10 pc appMag equals absMag by definition — still shown.
+    expect(rowValue(out.rows, 'App mag')).toBe('+0.6');
   });
 
-  it('omits temperature when both Gaia solutions are absent, falls back to gspspec', () => {
+  it('temperature: measured gspphot/gspspec first, else derived from the spectral class', () => {
     const config = buildConfig();
-    const outNone = createStarFocusProvider(config).format(2);
-    expect(rowValue(outNone.rows, 'Temperature')).toBeUndefined();
+    // idx 2: no Gaia teff, no spectral string → no row.
+    expect(rowValue(createStarFocusProvider(config).format(2).rows, 'Temperature')).toBeUndefined();
+    // gspspec fallback when gspphot is absent.
     config.catalog.teffGspspec[2] = 5772;
-    const outSpec = createStarFocusProvider(config).format(2);
-    expect(rowValue(outSpec.rows, 'Temperature')).toBe('5,772 K');
+    expect(rowValue(createStarFocusProvider(config).format(2).rows, 'Temperature')).toBe('5,772 K');
+    // Derived (marked ~) from the raw classification when no Gaia teff.
+    config.catalog.teffGspspec[2] = NaN;
+    config.spectralMap.set(2, 'K0III');
+    expect(rowValue(createStarFocusProvider(config).format(2).rows, 'Temperature')).toBe('~5,150 K');
+    // Vega without its measured value would derive from A0V.
+    config.catalog.teffGspphot[0] = NaN;
+    expect(rowValue(createStarFocusProvider(config).format(0).rows, 'Temperature')).toBe('~9,790 K');
+  });
+
+  it('adds a Variable row for GCVS-matched variables', () => {
+    const config = buildConfig();
+    expect(rowValue(createStarFocusProvider(config).format(0).rows, 'Variable')).toBeUndefined();
+    config.catalog.periodDays[0] = 332;
+    config.catalog.amplitudeMag[0] = 7.6;
+    expect(rowValue(createStarFocusProvider(config).format(0).rows, 'Variable')).toBe(
+      'Period 332d · Δmag 7.6',
+    );
   });
 
   it('renders velocity from the catalog space motion', () => {
@@ -98,10 +114,10 @@ describe('createStarFocusProvider', () => {
     galacticDirToIcrs(0, 0, dir).multiplyScalar(14 / KMS_PER_PC_YR);
     config.catalog.velocities.set([dir.x, dir.y, dir.z], 0);
     const out = createStarFocusProvider(config).format(0);
-    expect(rowValue(out.rows, 'Velocity')).toBe('14 km/s · ℓ 0° · b +0°');
+    expect(rowValue(out.rows, 'Velocity')).toBe('14 km/s\nℓ 0° · b +0°');
   });
 
-  it('coarse provenance reflects populated id fields', () => {
+  it('coarse provenance reflects populated id fields, Tycho-2 when none, WDS for synths', () => {
     const config = buildConfig();
     expect(rowValue(createStarFocusProvider(config).format(0).rows, 'Known from')).toBe(
       'Hipparcos · HD',
@@ -109,7 +125,48 @@ describe('createStarFocusProvider', () => {
     expect(rowValue(createStarFocusProvider(config).format(1).rows, 'Known from')).toBe(
       'Gaia DR3',
     );
+    // No ids at all: an AT-HYG Tycho-2-only star.
+    expect(rowValue(createStarFocusProvider(config).format(2).rows, 'Known from')).toBe('Tycho-2');
+    // Synthetic promoted companion: minted from a WDS measurement.
+    config.catalog.flags[2] = 0x20;
+    expect(rowValue(createStarFocusProvider(config).format(2).rows, 'Known from')).toBe('WDS');
+  });
+
+  it('omits the provenance row for Sol', () => {
+    const config = buildConfig();
+    config.catalog.solIndex = 2;
     expect(rowValue(createStarFocusProvider(config).format(2).rows, 'Known from')).toBeUndefined();
+  });
+
+  it('lists companions in a Known-companions row, one name per line', () => {
+    const rel: BinaryRelation = {
+      primaryIdx: 0,
+      secondaryIdx: 1,
+      flags: 0,
+      parentRelation: NO_PARENT,
+      pDays: NaN,
+      tJd: NaN,
+      e: NaN,
+      aAU: NaN,
+      iRad: NaN,
+      omegaRad: NaN,
+      OmegaRad: NaN,
+      q: NaN,
+      sepArcsec: 5.3,
+      paDeg: 132,
+      sepPaEpochJd: J2000_JD,
+    };
+    const rel2: BinaryRelation = { ...rel, secondaryIdx: 2 };
+    const binaries: BinariesData = {
+      version: 1,
+      relations: [rel, rel2],
+      primaryIdxToRelations: new Map([[0, [0, 1]]]),
+      secondaryIdxToRelations: new Map([[1, [0]], [2, [1]]]),
+    };
+    const out = createStarFocusProvider(buildConfig({ binaries })).format(0);
+    expect(rowValue(out.rows, 'Known companions')).toBe('Star B\nStar C');
+    // Primary side renders as a row, not a full-width line block.
+    expect(out.lines).toHaveLength(0);
   });
 
   it('appends a live companion block when binaries carry the star', () => {

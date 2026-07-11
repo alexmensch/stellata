@@ -26,34 +26,42 @@ export function resolveStarName(starLabels: Map<number, string>, idx: number): s
 }
 
 // Lines describing the star's binary role: a two-line block per relation
-// where it is a secondary (heading + orbital detail) and/or a companion
-// count + named list when it is itself a primary. A hierarchical member
-// can be both.
+// where it is a secondary (heading + orbital detail), then a
+// "Known companions:" heading + one name per line when it is itself a
+// primary. A hierarchical member can be both.
 export function companionLines(idx: number, ctx: CompanionFormatContext): string[] {
-  const binaries = ctx.binaries;
-  if (!binaries) return [];
-  const out: string[] = [];
-
-  const secRelIdxs = binaries.secondaryIdxToRelations.get(idx);
-  if (secRelIdxs) {
-    out.push(
-      ...companionOfAllLines(secRelIdxs.map((i) => binaries.relations[i]), ctx),
-    );
-  }
-
-  const primRelIdxs = binaries.primaryIdxToRelations.get(idx);
-  if (primRelIdxs && primRelIdxs.length > 0) {
-    out.push(...hasCompanionsLines(primRelIdxs, binaries, ctx.starLabels));
-  }
-
+  const out = companionOfLines(idx, ctx);
+  const names = companionNames(idx, ctx);
+  if (names.length > 0) out.push('Known companions:', ...names);
   return out;
 }
 
-// One block per companion-of relation, except that tier-3 relations
-// quoting the IDENTICAL measurement collapse into one heading naming
-// every primary — a secondary anchored off two members of the same
-// system (HD 108250 off Acrux A and B) would otherwise repeat the same
-// ρ/PA block per primary.
+/** Blocks for every relation where the star is the SECONDARY. One block
+ *  per relation, except that tier-3 relations quoting the IDENTICAL
+ *  measurement collapse into one heading naming every primary — a
+ *  secondary anchored off two members of the same system (HD 108250 off
+ *  Acrux A and B) would otherwise repeat the same ρ/PA block per
+ *  primary. */
+export function companionOfLines(idx: number, ctx: CompanionFormatContext): string[] {
+  const binaries = ctx.binaries;
+  if (!binaries) return [];
+  const secRelIdxs = binaries.secondaryIdxToRelations.get(idx);
+  if (!secRelIdxs) return [];
+  return companionOfAllLines(secRelIdxs.map((i) => binaries.relations[i]), ctx);
+}
+
+/** Names of every companion for which the star is the PRIMARY, in
+ *  relation order. */
+export function companionNames(idx: number, ctx: CompanionFormatContext): string[] {
+  const binaries = ctx.binaries;
+  if (!binaries) return [];
+  const relIdxs = binaries.primaryIdxToRelations.get(idx);
+  if (!relIdxs) return [];
+  return relIdxs.map((i) =>
+    resolveStarName(ctx.starLabels, binaries.relations[i].secondaryIdx),
+  );
+}
+
 function companionOfAllLines(
   rels: BinaryRelation[],
   ctx: CompanionFormatContext,
@@ -125,21 +133,6 @@ function orbitCompanionOfLines(
     `${head} · ρ = ${sepAU.toFixed(1)} AU`,
     `P = ${period} · e = ${rel.e.toFixed(2)}`,
   ];
-}
-
-// The star is the primary of one or more pairs — the converse card
-// block. One inline line names a sole companion; multiple companions
-// get a count heading followed by each name on its own line.
-function hasCompanionsLines(
-  relIdxs: number[],
-  binaries: BinariesData,
-  starLabels: Map<number, string>,
-): string[] {
-  const names = relIdxs.map((i) =>
-    resolveStarName(starLabels, binaries.relations[i].secondaryIdx),
-  );
-  if (names.length === 1) return [`1 known companion: ${names[0]}`];
-  return [`${names.length} known companions:`, ...names];
 }
 
 // Orbital period in days below one year, years above — spectroscopic

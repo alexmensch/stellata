@@ -198,7 +198,7 @@ async function main() {
     // #lg-labels for each catalog object that carries a labelThresholdPc;
     // no-op when the layer didn't attach (missing artifact).
     if (stellata.localGroup) createLocalGroupLabels(stellata, stellata.localGroup);
-    createScaleBar(stellata, starLabels);
+    createScaleBar(stellata);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
@@ -220,8 +220,7 @@ async function main() {
 
     // Bottom-right meta: catalog count + (when focused on a planet host)
     // the live UTC timestamp the planet positions correspond to. The
-    // focused-object name moved into the scale-bar widget's z-axis
-    // indicator, where it sits alongside the camera-to-focus distance.
+    // focused-object identity lives in the focus card.
     const countLabel = `${catalog.count.toLocaleString()} stars`;
     const timeScrubber = createTimeScrubberWidget({ meta, stellata, countLabel });
 
@@ -235,6 +234,7 @@ async function main() {
         spectralMap,
         spectClass: catalog.spectClass,
         luminosityClass: catalog.luminosityClass,
+        flags: catalog.flags,
         constellation: catalog.constellation,
         constellations: catalog.constellations,
         periodDays: catalog.periodDays,

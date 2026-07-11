@@ -16,8 +16,8 @@ star-hover-format.ts             Star — name + constellation · distance
                                  name fallback (proper → Bayer → Flamsteed →
                                  HIP/HD/HR/Gl → "Unnamed #idx"). The
                                  companion blocks (secondary "Orbits <A>"
-                                 per-tier detail + primary "N known
-                                 companions:" list) live in
+                                 per-tier detail + primary "Known
+                                 companions:" name list) live in
                                  ../../format/star-companion-format.ts,
                                  shared with the focus card.
 planet-hover-format.ts           Planet — camera distance · apparent

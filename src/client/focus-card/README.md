@@ -38,9 +38,13 @@ an Earth-vantage catalog tag kept for familiarity.
   (`../ui/panel-layout.ts`), persisted at
   `stellata.focus-card-collapsed`.
 - `star-focus-provider.ts` — tier-2 star rows (designations, cleaned
-  spectral, radius, live camera distance, temperature, abs mag, live
-  camera apparent mag with the "—" gate, space velocity, companions,
-  coarse provenance, constellation).
+  spectral — "(estimated)" for a synthetic companion's
+  brightness-derived class, radius, live camera distance, temperature
+  — Gaia teff or "~" spectral-class-derived, abs mag, live camera
+  apparent mag, variability, space velocity, "Known companions" names,
+  coarse provenance — omitted for Sol, constellation). Companion-of
+  blocks ("Orbits <A> · ρ …") render as full-width live lines below
+  the rows.
 - `cloud-focus-provider.ts` — tier-2 cloud rows. Clouds are not a
   wired focus target while the layer is shelved
   (`../molecular-clouds/README.md`); the provider exists to satisfy

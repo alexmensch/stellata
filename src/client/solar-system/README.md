@@ -198,6 +198,11 @@ widget's `stepBack` / `stepForward` / `togglePlay` / `reset` — the same
 guard leaves the jump date-field's native arrow-key segment editing intact
 when it's focused.
 
+While expanded, the widget sets `body[data-scrubber-open]` so the
+right-hand control column lifts its bottom bound clear of the scrubber
+(the focus card is bottom-pinned there — see `../ui/README.md`
+§ Layout containers).
+
 It drives the `VirtualClock`, building its transport row from `time.ts`'s
 `TRANSPORT_BUTTONS`. The controls render as monochrome line-art SVG glyphs
 (`transportIcon`, `currentColor` stroke) — thin-line iconography matching

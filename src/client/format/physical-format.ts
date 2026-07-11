@@ -6,11 +6,6 @@ import { fmtDist } from '../ui/distance-util';
 /** Mean Earth radius, km (IUGG). Planet radii display in Earth radii. */
 export const EARTH_RADIUS_KM = 6371;
 
-/** Camera distances closer than the |appMag − absMag| ≤ this band render
- *  the apparent-magnitude value as "—" — the value would only duplicate
- *  the absolute magnitude on the card. */
-export const APP_MAG_GATE = 0.1;
-
 /** Thousands-separated integer. Deterministic across locales
  *  (`toLocaleString` varies between environments and breaks golden tests
  *  on a German vitest runner that would render Jupiter as "69.911 km"). */
@@ -69,27 +64,42 @@ export function formatMagnitude(m: number): string {
   return m >= 0 ? `+${m.toFixed(1)}` : m.toFixed(1);
 }
 
-/** Display value for the camera-frame apparent-magnitude row. "—" when
- *  the value is within APP_MAG_GATE of the absolute magnitude (it would
- *  only restate the Abs mag row) or when the distance is degenerate. */
+/** Display value for the camera-frame apparent-magnitude row. "—" only
+ *  when the distance is degenerate (zero / non-finite). */
 export function appMagCameraDisplay(absmag: number, dCameraPc: number): string {
   if (!Number.isFinite(dCameraPc) || dCameraPc <= 0) return '—';
   const appMag = apparentMagFromCamera(absmag, dCameraPc);
-  if (!Number.isFinite(appMag) || Math.abs(appMag - absmag) <= APP_MAG_GATE) return '—';
+  if (!Number.isFinite(appMag)) return '—';
   return formatMagnitude(appMag);
 }
 
+/** "Period 332d · Δmag 7.6" for a GCVS-matched variable; null when the
+ *  record carries no period/amplitude (not variable). */
+export function formatVariability(periodDays: number, amplitudeMag: number): string | null {
+  if (!(periodDays > 0) || !(amplitudeMag > 0)) return null;
+  const periodStr =
+    periodDays >= 10 ? `${periodDays.toFixed(0)}d` : `${periodDays.toFixed(2)}d`;
+  return `Period ${periodStr} · Δmag ${amplitudeMag.toFixed(1)}`;
+}
+
 /** Coarse source-catalog provenance inferred from which identity fields
- *  are populated — "Known from: Gaia DR3 · Hipparcos · HD". Rich
+ *  are populated — "Known from: Gaia DR3 · Hipparcos · HD". A synthetic
+ *  promoted companion carries no ids by construction — its record was
+ *  minted from a WDS measurement, so that IS its provenance. A real
+ *  catalog row with no ids at all is an AT-HYG Tycho-2-only star. Rich
  *  per-field provenance is a tier-3 concern. */
 export function coarseProvenance(ids: {
   gaiaSourceId?: bigint;
   hip?: number;
   hd?: number;
+  gl?: string;
+  syntheticCompanion?: boolean;
 }): string[] {
+  if (ids.syntheticCompanion) return ['WDS'];
   const out: string[] = [];
   if (ids.gaiaSourceId !== undefined && ids.gaiaSourceId !== 0n) out.push('Gaia DR3');
   if (ids.hip !== undefined && ids.hip > 0) out.push('Hipparcos');
   if (ids.hd !== undefined) out.push('HD');
-  return out;
+  if (ids.gl) out.push('Gliese');
+  return out.length > 0 ? out : ['Tycho-2'];
 }

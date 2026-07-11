@@ -39,12 +39,12 @@ describe('spaceVelocity', () => {
 });
 
 describe('formatSpaceVelocity', () => {
-  it('rounds to whole degrees with a signed latitude', () => {
+  it('rounds to whole degrees with a signed latitude, heading on its own line', () => {
     expect(
       formatSpaceVelocity({ kms: 24.3, lDeg: 87.2, bDeg: -11.8 }),
-    ).toBe('24 km/s · ℓ 87° · b -12°');
+    ).toBe('24 km/s\nℓ 87° · b -12°');
     expect(
       formatSpaceVelocity({ kms: 13.9, lDeg: 56.6, bDeg: 8.9 }),
-    ).toBe('14 km/s · ℓ 57° · b +9°');
+    ).toBe('14 km/s\nℓ 57° · b +9°');
   });
 });

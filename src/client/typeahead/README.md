@@ -40,6 +40,12 @@ purpose — the primary's proper (Rigil Kentaurus) names component A, not the
 system. `cl`/`cp` are emitted at build time (see `scripts/catalog/README.md`
 § Search index); coverage is whatever decomposes in `multiples.tsv`.
 
+`starDesignations` (pure, tested) renders a star's full tier-ordered
+designation list (proper → Bayer → Flamsteed → GCVS → HR → HD → HIP →
+Gliese → Gaia DR3) for the focus card's identity line. Bayer-form GCVS
+designations ("bet Per") are skipped — they duplicate the real Bayer
+display and are search aliases, not display names.
+
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
 The numeric-ID maps are 1:1 and echo the matched identifier in the

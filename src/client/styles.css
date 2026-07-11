@@ -96,6 +96,10 @@ html, body {
   pointer-events: none;
 }
 .ui-top > * { pointer-events: auto; }
+/* The expanded time scrubber (bottom-right, ~150px tall) rises past the
+ * 56px bottom bound; lift the column's floor so the bottom-pinned focus
+ * card clears it instead of painting over it. */
+body[data-scrubber-open] .ui-top { bottom: 190px; }
 
 /* Top-left brand box — independent of `.ui-top` so the right-side stack's
  * width/wrap behaviour is unaffected. Same blurred-card aesthetic as the
@@ -531,7 +535,10 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   color: var(--fg-dim);
   flex: 0 0 auto;
 }
-.focus-row-value { text-align: right; }
+.focus-row-value {
+  text-align: right;
+  white-space: pre-line;
+}
 .focus-line { white-space: pre-line; }
 
 .group {
@@ -1095,11 +1102,8 @@ body.monochrome .poi-label {
   stroke: rgba(255, 255, 255, 0.9);
 }
 
-/* The scale-bar widget is a single SVG with two parts: a horizontal scene-
- * scale bar at the bottom (always visible in navigate; degrees-FOV in
- * observe), and a perspective z-axis line rising up-and-right from the
- * bar's left end (only visible when focused on a star or cloud, hidden
- * in observe). Both parts are drawn in scale-bar.ts in pixel coords. */
+/* The scale-bar widget: a horizontal scene-scale bar (navigate) /
+ * degrees-of-sky bar (observe), drawn in scale-bar.ts in pixel coords. */
 .scale-bar {
   color: var(--fg);
   font-size: 10.5px;
@@ -1111,40 +1115,26 @@ body.monochrome .poi-label {
 }
 .scale-bar-svg .h-line,
 .scale-bar-svg .h-endcap,
-.scale-bar-svg .h-tick,
-.scale-bar-svg .z-line,
-.scale-bar-svg .z-endcap {
+.scale-bar-svg .h-tick {
   stroke: var(--fg);
   fill: none;
   shape-rendering: crispEdges;
 }
-.scale-bar-svg .h-line,
-.scale-bar-svg .z-line {
+.scale-bar-svg .h-line {
   stroke-width: 1;
 }
-.scale-bar-svg .h-endcap,
-.scale-bar-svg .z-endcap {
+.scale-bar-svg .h-endcap {
   stroke-width: 1.25;
 }
 .scale-bar-svg .h-tick {
   stroke-width: 1;
   opacity: 0.55;
 }
-.scale-bar-svg .z-arrow {
-  fill: var(--fg);
-  stroke: none;
-}
-.scale-bar-svg .h-label,
-.scale-bar-svg .z-name,
-.scale-bar-svg .z-dist {
+.scale-bar-svg .h-label {
   fill: var(--fg-dim);
   font-size: 10.5px;
   letter-spacing: 0.08em;
   font-family: inherit;
-}
-.scale-bar-svg .z-name {
-  fill: var(--fg);
-  letter-spacing: 0.05em;
 }
 
 .tooltip {

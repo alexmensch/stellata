@@ -32,11 +32,13 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
   // fully unknown (class 8 / lum 255).
   const spectClass = new Float32Array([2, 6, 8]);
   const luminosityClass = new Uint8Array([2, 255, 255]);
+  const flags = new Uint8Array(3);
   return {
     starLabels,
     spectralMap,
     spectClass,
     luminosityClass,
+    flags,
     constellation,
     constellations,
     periodDays,
@@ -174,6 +176,22 @@ describe('formatStarHover', () => {
     const ctx = buildCtx({ starLabels: new Map() });
     expect(formatStarHover(0, D_CAM, ctx).name).toBe('Unnamed #0');
   });
+
+  it('marks a synthetic companion\'s brightness-derived class as estimated', () => {
+    // Promoted WDS companion: class bytes from spectralFromAbsmag, no
+    // raw spectral string, synthetic flag (0x20) set.
+    const ctx = buildCtx({
+      spectralMap: new Map(),
+      flags: new Uint8Array([0x20, 0, 0]),
+    });
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.lines).toContain('white main-sequence star (estimated)');
+  });
+
+  it('a real classification is never marked estimated', () => {
+    const out = formatStarHover(0, D_CAM, buildCtx());
+    expect(out.lines).toContain('A0 V · white main-sequence star');
+  });
 });
 
 describe('formatStarHover — binary companions', () => {
@@ -227,16 +245,17 @@ describe('formatStarHover — binary companions', () => {
     expect(formatStarHover(1, D_CAM, ctx).lines).toContain('P = 9.21 d (unknown orbit)');
   });
 
-  it('primary card names the sole companion', () => {
+  it('primary card lists the sole companion under the shared heading', () => {
     const ctx = binaryCtx([
       makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 * 365.25 }),
     ]);
     const out = formatStarHover(0, D_CAM, ctx);
     expect(out.name).toBe('Sirius A');
-    expect(out.lines).toContain('1 known companion: Sirius B');
+    expect(out.lines).toContain('Known companions:');
+    expect(out.lines).toContain('Sirius B');
   });
 
-  it('primary card lists every companion on its own line under a count heading', () => {
+  it('primary card lists every companion on its own line under the heading', () => {
     const ctx = binaryCtx(
       [
         makeRelation({ primaryIdx: 0, secondaryIdx: 1, flags: FLAG_HAS_ORBIT, pDays: 100 }),
@@ -251,7 +270,7 @@ describe('formatStarHover — binary companions', () => {
       },
     );
     const out = formatStarHover(0, D_CAM, ctx);
-    expect(out.lines).toContain('2 known companions:');
+    expect(out.lines).toContain('Known companions:');
     expect(out.lines).toContain('Sirius B');
     expect(out.lines).toContain('Sirius C');
   });

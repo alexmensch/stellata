@@ -463,6 +463,20 @@ describe('search / starDesignations', () => {
     expect(starDesignations(entry, constellations, 0n)).toEqual(['HD 1']);
   });
 
+  it('skips a Bayer-form GCVS designation (already covered by the real Bayer)', () => {
+    const entry: SearchEntry = { i: 0, p: 'Algol', b: 'Bet', c: 0, g: 'bet Lyr', hip: 14576 };
+    // Fixture constellation is Lyr; the point is the lowercase Greek
+    // first token, which duplicates the β display form.
+    expect(starDesignations(entry, constellations, 0n)).toEqual([
+      'Algol', 'β Lyr', 'HIP 14576',
+    ]);
+  });
+
+  it('keeps uppercase GCVS letter-sequence designations (not Bayer forms)', () => {
+    const entry: SearchEntry = { i: 0, g: 'MU Lyr' };
+    expect(starDesignations(entry, constellations, 0n)).toEqual(['MU Lyr']);
+  });
+
   it('drops Bayer/Flamsteed forms when the constellation is unknown', () => {
     const entry: SearchEntry = { i: 0, b: 'Alp', f: 3, hip: 5 };
     expect(starDesignations(entry, constellations, 0n)).toEqual(['HIP 5']);

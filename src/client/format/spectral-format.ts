@@ -51,18 +51,22 @@ const LUM_SPACING_RE =
  * ("K0III+K7V" → "K0 III") so a companion's class never leaks onto the
  * primary's card; the descriptor is composed entirely from the numeric
  * spectClass / luminosityClass bytes, so it stays valid even when the raw
- * string is absent or unparseable.
+ * string is absent or unparseable. `estimated` marks class bytes that
+ * were derived from brightness rather than a spectral observation
+ * (synthetic promoted companions) — the descriptor gains "(estimated)".
  */
 export function formatSpectral(
   rawDisplay: string | undefined,
   spectClass: number,
   luminosityClass: number,
+  estimated = false,
 ): SpectralDisplay {
   const primary = rawDisplay ? rawDisplay.split(/[+/]/)[0].trim() : '';
   const label = primary.replace(LUM_SPACING_RE, '$1 $2');
+  const descriptor = descriptorFor(primary, spectClass, luminosityClass);
   return {
     label,
-    descriptor: descriptorFor(primary, spectClass, luminosityClass),
+    descriptor: descriptor && estimated ? `${descriptor} (estimated)` : descriptor,
   };
 }
 

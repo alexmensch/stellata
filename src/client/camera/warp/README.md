@@ -193,15 +193,6 @@ the camera-target depth) already reflects distance-to-destination —
 this avoids a jarring scale-bar snap when the target would otherwise
 switch from A to B at arrival.
 
-The bottom-left widget's separate **focus z-axis indicator** (the
-perspective recession line above the scale bar; see
-`../../ui/README.md` § Bottom-left widget) follows a different rule:
-during warp it shows the source star/cloud while the camera is on
-the source side of the A→B axis, and flips to the destination once
-`(camera − A) · (B − A) > 0`. Trajectory-relative test, not camera-
-attitude — stays stable under future curved-warp paths. Implemented
-via `Stellata.getWarpInfo()`.
-
 ## Side effects during warp
 
 - `controls.enabled = false` (no orbit).
