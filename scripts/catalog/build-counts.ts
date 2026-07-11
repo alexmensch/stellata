@@ -126,6 +126,10 @@ export interface BuildCounts {
   /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
    *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
   spectralFallback: number;
+  /** No-Apsis-Teff ∩ no-observed-B−V records whose `ci` is baked from the
+   *  parsed spectral class (tier 4/5) instead of the solar fallback — the
+   *  population that would otherwise render solar-yellow. */
+  ciSpectralDerived: number;
   /** Identifier-less catalog primaries that gained HIP / Gaia source_id
    *  from a multiples.tsv pair-primary row, joined by HD
    *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */

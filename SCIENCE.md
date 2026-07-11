@@ -873,27 +873,44 @@ folds three physically-grounded steps:
 
 ### Per-star intrinsic Teff routing
 
-For each star, the LUT-input intrinsic B-V is sourced via a six-tier
-priority chain (`pickTeffSource` in
-`src/client/star-pipeline/star-color-routing-pure.ts`). First match wins:
+The six logical tiers below split across two stages: the shader resolves
+the top Apsis tier at runtime, and the lower four are **baked into the
+catalog `ci` field at build time**. The shipped shader routing
+(`star.vert.glsl`) is two-tier:
+
+    iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi
+
+where `iTeffApsis` is the best Apsis Teff (`bestApsisTeff`, gspphot over
+gspspec) and `iCi` is the build-time-baked intrinsic B−V. Full priority,
+first match wins:
 
 1. **Gaia DR3 Apsis `teff_gspphot`** — primary, ~62% of catalog records.
+   Shader tier (via `iTeffApsis`).
 2. **Gaia DR3 Apsis `teff_gspspec`** — covers some gspphot gaps;
    combined Apsis coverage (gspphot ∪ gspspec) ≈ 84.6% of records.
-3. **Ballesteros(B-V)** — Tier 1 fallback when no Apsis solution exists
-   but AT-HYG carries a B-V.
-4. **Spectral-class T_TABLE** — fallback when neither B-V nor Apsis is
-   available but the spectral class is parseable.
-5. **White-dwarf Sion Teff** — `50400 / wd_subclass` for parsed WD types.
-6. **Solar fallback** — `Ballesteros(0.65)` ≈ 5778 K when nothing
-   else resolves.
+   Shader tier (via `iTeffApsis`).
+3. **Observed AT-HYG B-V** — the row's own `ci` cell (de-reddened at
+   build), baked into `iCi`.
+4. **Spectral-class T_TABLE** — when a no-Apsis star has no B-V but a
+   parseable class, `spectralClassCi` (`scripts/catalog/catalog-pure.ts`)
+   bakes `Ballesteros(tempKelvin(class))` into `iCi` — the intrinsic
+   class colour, so a class star renders its true hue rather than
+   solar-yellow. Counted `ciSpectralDerived`.
+5. **White-dwarf Sion Teff** — `50400 / wd_subclass`, baked into `iCi`
+   through the same `spectralClassCi` path.
+6. **Solar fallback** — `SOLAR_BV_FALLBACK` (0.65 ≈ 5778 K) baked into
+   `iCi` when nothing else resolves.
 
-Where Apsis Teff is used, the LUT-input B-V is recovered via the
-analytic Ballesteros inverse so the LUT (which is keyed on B-V) samples
-the chromaticity expected for that Teff. Apsis Teff is the **intrinsic**
-parameter (Apsis fits include line-of-sight extinction `A0` explicitly),
-so the camera-position-dependent dust reddening composes downstream of
-this Apsis-derived intrinsic B-V without double-counting extinction.
+Tiers 3–6 are shared by the main-catalog read (`stars-parse.ts`) and
+companion promotion (`imputeCompanionCi`) through `spectralClassCi`.
+Where Apsis Teff is used (tiers 1–2), the shader recovers the LUT-input
+B-V via the analytic Ballesteros inverse so the LUT (keyed on B-V)
+samples the chromaticity expected for that Teff. Apsis Teff is the
+**intrinsic** parameter (Apsis fits include line-of-sight extinction
+`A0` explicitly), so the camera-position-dependent dust reddening
+composes downstream without double-counting extinction. The baked `iCi`
+tiers are likewise intrinsic — the spectral-class / solar colours are
+never de-reddened at build, only observed B-V is.
 
 Dust reddening composes upstream of the LUT: the shader integrates A_V
 along the camera-to-star sightline via the Edenhofer 3D dust map and

@@ -135,7 +135,13 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // long-period ORB6 visual pairs render for the first time and enter the
 // sweep with athyg-print baked placements — new coverage, not placement
 // regressions.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 566;
+// The 566 → 1498 step is the blank-components rescue tier: ~1.7k
+// previously-dropped WDS pairs (Antares and other studied binaries with
+// an ORB6 orbit or SIMBAD xid) now decompose, and their WDS static
+// placement disagrees with the orbit-derived R(epoch) by >0.5·a — new
+// coverage entering the sweep, not a regression on existing pairs.
+// Curating these baked placements toward R(epoch) is follow-up work.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1498;
 
 // ---- Corpus row types ----------------------------------------------------
 

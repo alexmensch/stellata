@@ -29,9 +29,13 @@ read.
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
   `pickPerceptualDiscUniforms`. Single source of truth so the two
   pipelines can't drift at the chunk's interface.
-- `star-color-routing-pure.ts` — pure six-tier `pickTeffSource`:
-  `teff_gspphot` → `teff_gspspec` → Ballesteros(B–V) → spectral-class
-  `T_TABLE` → WD Sion Teff → solar fallback. Vitest-pinned.
+- `star-color-routing-pure.ts` — `bestApsisTeff`: the shader-side bridge
+  that picks gspphot over gspspec for the per-instance `iTeffApsis`
+  attribute. Runtime colour routing is **two-tier** —
+  `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` in `star.vert.glsl` —
+  where `iCi` is the build-time-baked intrinsic B–V (observed AT-HYG
+  cell, or the spectral-class colour `spectralClassCi` bakes in
+  `scripts/catalog/catalog-pure.ts`). Vitest-pinned.
 - `pulsation-suppress-pure.ts` — `buildPulsationSuppressMask(varType)`:
   the per-instance `iSuppressPulsation` mask (1 on every eclipsing
   binary). Vitest-pinned.
@@ -419,10 +423,11 @@ frame-by-frame.
 
 Each star is dimmed by the V-band extinction A_V integrated through
 the Edenhofer 3D dust texture along the camera→star sightline, and
-reddened by E(B−V) = A_V/3.1 on the intrinsic LUT-input B–V (sourced
-via the six-tier Apsis-first routing in `star-color-routing-pure.ts`).
-Looking through dust dims and reddens stars behind it, which is what
-you'd actually see.
+reddened by E(B−V) = A_V/3.1 on the intrinsic LUT-input B–V. That input
+is the shader's two-tier routing: `Ballesteros(iTeffApsis)` when an
+Apsis Teff is present, else the baked intrinsic `iCi` (observed AT-HYG
+B–V or the spectral-class colour baked at build). Looking through dust
+dims and reddens stars behind it, which is what you'd actually see.
 
 **Where A_V comes from — the prepass cache.** `ExtinctionPrepass`
 (`extinction-prepass.ts`) renders one raymarch per *star* into a

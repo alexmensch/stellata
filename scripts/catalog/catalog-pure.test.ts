@@ -9,6 +9,9 @@ import {
   resolveSpectDisplay,
   parseSimbadSptypeTsv,
   SPECTRAL_UNKNOWN,
+  SOLAR_BV_FALLBACK,
+  spectralClassCi,
+  spectralClassColorIsDerivable,
   tempKelvin,
   boloCorr,
   physicalRadius,
@@ -113,6 +116,39 @@ describe('catalog-pure / spectClassIndex', () => {
     expect(spectClassIndex('X')).toBe(8);
     expect(spectClassIndex('')).toBe(8);
     expect(spectClassIndex('?')).toBe(8);
+  });
+});
+
+describe('catalog-pure / spectralClassCi', () => {
+  it('derives a hot-blue B−V for an early-type class (tier 4)', () => {
+    const ci = spectralClassCi(classifyFromSimbad('B2V')!);
+    expect(ci).toBeLessThan(0); // blue
+    expect(ci).not.toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('derives a cool-red B−V for a late-type class (tier 4)', () => {
+    const ci = spectralClassCi(classifyFromSimbad('M2V')!);
+    expect(ci).toBeGreaterThan(1); // red
+  });
+
+  it('routes a white dwarf through its Sion Teff (tier 5)', () => {
+    const ci = spectralClassCi(classifyFromSimbad('DA2')!);
+    // 50400/2 = 25200 K → deep blue, distinct from the solar fallback.
+    expect(ci).toBeLessThan(0);
+    expect(ci).not.toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('falls back to solar for an unparseable / unknown class (tier 6)', () => {
+    expect(spectralClassCi(SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
+  });
+
+  it('spectralClassColorIsDerivable gates the tier-4/5 bake from the fallback', () => {
+    // The ciSpectralDerived counter reads this, not `ci !== 0.65` — a
+    // parseable class landing exactly on the fallback value must still
+    // count as derived.
+    expect(spectralClassColorIsDerivable(classifyFromSimbad('G2V')!)).toBe(true);
+    expect(spectralClassColorIsDerivable(classifyFromSimbad('DA2')!)).toBe(true);
+    expect(spectralClassColorIsDerivable(SPECTRAL_UNKNOWN)).toBe(false);
   });
 });
 

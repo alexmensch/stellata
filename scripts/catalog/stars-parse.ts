@@ -17,6 +17,8 @@ import {
   isInLmcCone,
   resolveGaiaSourceId,
   parseGaiaSourceIdStr,
+  spectralClassCi,
+  spectralClassColorIsDerivable,
   SOLAR_BV_FALLBACK,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -170,6 +172,7 @@ export async function readStars(
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
+    ciSpectralDerived: number;     // no-Apsis-Teff ∩ no-observed-B−V rows whose ci is baked from the spectral class (tier 4/5) instead of the solar fallback
   };
 }> {
   const parser = createReadStream(srcCsvPath).pipe(
@@ -215,6 +218,7 @@ export async function readStars(
   let spectralBySimbad = 0;
   let spectralByGspspec = 0;
   let spectralFallback = 0;
+  let ciSpectralDerived = 0;
 
   for await (const row of parser) {
     total++;
@@ -366,22 +370,6 @@ export async function readStars(
     if (velClamped) velocityClamped++;
     if (!isSol && !velClamped && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
-    const ciRaw = parseFloatOrNull(row.ci);
-    let ci = ciRaw ?? SOLAR_BV_FALLBACK;
-
-    // Build-time de-extinction: absmag and an observed ci are
-    // observed-convention (embed the real Sol→star A_V), so subtract
-    // the map integral to recover intrinsic values the runtime raymarch
-    // re-adds. Runs before physicalRadius so radii size off the
-    // de-extincted (brighter) absmag. The SOLAR_BV_FALLBACK ci is
-    // already intrinsic and must not be de-reddened (the same contract
-    // companion-promotion's companionCiIsObserved gates on).
-    if (dustGrid) {
-      const av = avSolToStar(dustGrid, x, y, z);
-      absmag -= av;
-      if (ciRaw !== null) ci -= av / R_V;
-    }
-
     // Sol carries no HIP, no Gaia source_id, and no SIMBAD row, so every
     // machine tier misses and the unknown-class 5000 K row misizes it
     // (R 1.27 instead of ~1.03) — the one record addressable only by name.
@@ -396,6 +384,39 @@ export async function readStars(
     const apsisTeff = resolveApsisTeff(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
+
+    // ci routing mirrors the shipped shader's two-tier read
+    // (`iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi`): an Apsis-Teff
+    // star ignores iCi, so the baked ci only drives colour for no-Apsis
+    // stars. An observed B−V wins; otherwise a no-Apsis star bakes its
+    // intrinsic spectral-class colour (tier 4/5) here rather than
+    // rendering solar-yellow. spectralClassCi routes an unparseable
+    // class back to the solar fallback.
+    const ciRaw = parseFloatOrNull(row.ci);
+    const ciIsObserved = ciRaw !== null;
+    let ci: number;
+    if (ciIsObserved) {
+      ci = ciRaw;
+    } else if (apsisTeff === null) {
+      ci = spectralClassCi(spectInfo);
+      if (spectralClassColorIsDerivable(spectInfo)) ciSpectralDerived++;
+    } else {
+      ci = SOLAR_BV_FALLBACK;
+    }
+
+    // Build-time de-extinction: absmag and an observed ci are
+    // observed-convention (embed the real Sol→star A_V), so subtract
+    // the map integral to recover intrinsic values the runtime raymarch
+    // re-adds. Runs before physicalRadius so radii size off the
+    // de-extincted (brighter) absmag. A spectral-derived or solar-fallback
+    // ci is already intrinsic and must not be de-reddened (the same
+    // contract companion-promotion's companionCiIsObserved gates on).
+    if (dustGrid) {
+      const av = avSolToStar(dustGrid, x, y, z);
+      absmag -= av;
+      if (ciIsObserved) ci -= av / R_V;
+    }
+
     const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
 
     const conCode: string = (row.con ?? '').trim();
@@ -466,6 +487,7 @@ export async function readStars(
       spectralBySimbad,
       spectralByGspspec,
       spectralFallback,
+      ciSpectralDerived,
     },
   };
 }

@@ -99,12 +99,22 @@ class ResolvedComponent:
     hd: int | None = None
 
 
+# WDS leaves the ``components`` field blank when the system holds exactly
+# one pair — the implied ``A,B``. The rescue tier
+# (``rescue_blank_components_pairs``) rewrites qualifying blank rows to
+# this token before Stage 2 decomposes them.
+IMPLIED_AB_COMPONENTS = "AB"
+
+
 def split_components(comp_str: str) -> tuple[str, str] | None:
     """Decompose a WDS ``components`` field into (primary, secondary).
 
-    Returns ``None`` for system-level rows (empty field) and for rows we
-    cannot confidently split. Stage 2 treats ``None`` as "skip this pair"
-    rather than guessing.
+    Returns ``None`` for a blank field and for rows we cannot confidently
+    split. A blank field is NOT a system-level duplicate — it is WDS's
+    convention for a system with exactly one pair (implied ``A,B``); the
+    rescue tier promotes the qualifying ones to ``AB`` upstream, and the
+    rest are genuinely unplaceable, so Stage 2 skips them rather than
+    guessing.
 
     The WDS convention is:
 
@@ -180,11 +190,12 @@ def group_orb6_by_pair(
     """Index ORB6 entries by ``(wds_id, components)`` so Stage 2 can fetch
     every fit for a given WDS pair in O(1).
 
-    Components-string match is strict: ``"AB"`` and ``""`` (system-level)
-    are different keys. Stage 2 only consults the entry whose components
-    string exactly matches the pair it is resolving — using a system-level
-    ORB6 HIP for an ``"AC"`` pair would attribute the primary's gaia
-    source to the wrong component when multiple orbit fits coexist.
+    Components-string match is strict: ``"AB"`` and ``""`` (blank /
+    implied-AB) are different keys. Stage 2 only consults the entry whose
+    components string exactly matches the pair it is resolving — using a
+    blank-field ORB6 HIP for an ``"AC"`` pair would attribute the
+    primary's gaia source to the wrong component when multiple orbit fits
+    coexist.
     """
     out: dict[tuple[str, str], list[Orb6Entry]] = {}
     for e in orb6:
@@ -955,6 +966,91 @@ def resolve_via_position(
             c.resolve_via = "athyg_gaia_native"
 
 
+def rescue_blank_components_pairs(
+    *,
+    pairs: list[WdsPair],
+    orb6: list[Orb6Entry],
+    simbad_xids: dict[tuple[str, str], SimbadWdsXid],
+    synthesized_orb6_pairs: list[WdsPair],
+) -> tuple[int, int]:
+    """High-confidence rescue tier for blank-components WDS rows (the
+    implied single ``A,B`` pair — 73% of WDS_SUMM). ``split_components('')``
+    returns ``None`` so these never decompose in Stage 2. This tier
+    promotes only the rows a strong external source confirms name a real
+    physical pair, by rewriting ``components`` to ``IMPLIED_AB_COMPONENTS``
+    in place, before Stage 2 sees them.
+
+    Qualifying gate (either):
+
+    1. An ORB6 orbit row exists for the same ``wds_id`` — the system is a
+       studied physical binary with a fitted orbit (Antares GNT 1).
+    2. The system carries a SIMBAD WDS cross-ID.
+
+    The far larger position-anchored population (blank rows whose primary
+    merely position-matches a catalog star, ~24k, mostly wide optical
+    doubles that survive only on the Stage 5 mag-gap backstop) is
+    deferred to the full blank→AB ingest so this tier stays physically
+    conservative.
+
+    ORB6 key alignment: a matching ORB6 row whose own components field is
+    blank is rewritten to ``AB`` under the same rule, so the strict
+    ``(wds_id, components)`` orbit lookup (Stage 2 ``orb6_hip`` + Stage 4
+    element selection) reaches the rescued pair.
+
+    Excludes blank rows already consumed as ORB6-orphan donors (their
+    physical pair is represented by the synthesized sub-pair). The
+    implied ``AB`` pair is identified by ``wds_id`` alone — an ``AB`` row
+    names the same physical pair whichever discoverer cataloged it, and
+    no later stage keys pairs uniquely (``dedup_wds_pair_rows`` already
+    ran) — so a system any discoverer already enumerates as ``AB``, or
+    that this pass has already rescued once, is skipped: exactly one
+    ``AB`` row per system, or the pair double-emits.
+    Returns ``(rescued, deferred)`` over the blank rows this tier
+    considers (excluding donors / already-enumerated).
+    """
+    donor_keys = {(p.wds_id, p.discoverer) for p in synthesized_orb6_pairs}
+    orb6_wds_ids = {e.wds_id for e in orb6}
+    simbad_wds_ids = {wds_id for wds_id, _comp in simbad_xids}
+    existing_ab_wds_ids = {
+        p.wds_id for p in pairs if p.components.strip() == IMPLIED_AB_COMPONENTS
+    }
+
+    rescued_wds_ids: set[str] = set()
+    rescued = deferred = 0
+    for p in pairs:
+        if p.components.strip():
+            continue
+        if (p.wds_id, p.discoverer) in donor_keys:
+            continue
+        if p.wds_id in existing_ab_wds_ids or p.wds_id in rescued_wds_ids:
+            continue
+        qualifies = (
+            p.wds_id in orb6_wds_ids
+            or p.wds_id in simbad_wds_ids
+        )
+        if qualifies:
+            p.components = IMPLIED_AB_COMPONENTS
+            rescued_wds_ids.add(p.wds_id)
+            rescued += 1
+        else:
+            deferred += 1
+
+    assert rescued == len(rescued_wds_ids), (
+        "rescue rewrote a wds_id to AB more than once — would double-emit "
+        "the pair (no later stage keys pairs uniquely)"
+    )
+    assert rescued_wds_ids.isdisjoint(existing_ab_wds_ids), (
+        "rescue promoted a wds_id another discoverer already enumerates "
+        "as AB — would double-emit the pair"
+    )
+
+    for e in orb6:
+        if not e.components.strip() and e.wds_id in rescued_wds_ids:
+            e.components = IMPLIED_AB_COMPONENTS
+
+    return rescued, deferred
+
+
 def resolve_all_pairs(
     pairs: list[WdsPair],
     orb6: list[Orb6Entry],
@@ -964,8 +1060,8 @@ def resolve_all_pairs(
     position_tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
 ) -> list[ResolvedComponent]:
     """Run Stage 2's full resolution chain over every WDS pair that
-    decomposes into two components. System-level rows (empty
-    ``components``) and rows we cannot split are skipped. Cascade
+    decomposes into two components. Blank-components rows the rescue tier
+    did not promote, and rows we cannot split, are skipped. Cascade
     strategies and order are canonicalised in ``RESOLVE_VIA_VALUES``.
 
     1. ``resolve_component`` runs the HIP-anchored prefix:

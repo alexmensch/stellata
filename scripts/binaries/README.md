@@ -373,6 +373,30 @@ two stars at measured different separations.
   astrometry is blended; Stage 6's system-anchor inheritance
   backstops them (see below).
 
+### Blank-components rescue (Stage 1/2 boundary)
+
+73% of WDS_SUMM rows leave the `components` field blank — WDS's
+convention for a system with exactly one pair (implied `A,B`), NOT a
+system-level duplicate. `split_components('')` returns `None`, so these
+never decompose and were dropped end-to-end (Antares, with an ORB6
+orbit, and Deneb both vanished). `rescue_blank_components_pairs`
+(`stage2_resolve.py`, run just before `resolve_all_pairs`) rewrites the
+`components` field to `AB` in place for the high-confidence subset — a
+blank row anchored by an ORB6 orbit for the same `wds_id` (Antares) or a
+SIMBAD WDS xid for the system — and aligns a matching blank-components
+ORB6 row to `AB` so the strict `(wds_id, components)` orbit lookup
+reaches the rescued pair. The far larger position-anchored population
+(primary merely position-matches a catalog star — mostly wide optical
+doubles surviving only on the Stage 5 mag-gap backstop) is deferred to
+the full blank→AB ingest (`stellata-dch.83.9`). Rows already consumed as
+ORB6-orphan donors are skipped; and because the implied `AB` pair is
+identified by `wds_id` alone (`dedup_wds_pair_rows` keys on discoverer
+and runs upstream, so it can't collapse two of them), at most one `AB`
+row is promoted per system — a system any discoverer already enumerates
+as `AB`, or that the pass already rescued, is skipped so nothing
+double-emits. Counted `blank_components_rescued` /
+`blank_components_deferred` in the Stage-7 snapshot.
+
 ## Stage 3 — Per-component astrometry routing
 
 Once a component has a Gaia source_id (or a bare HIP), Stage 3

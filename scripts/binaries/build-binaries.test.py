@@ -836,7 +836,7 @@ class SplitComponentsTests(unittest.TestCase):
         self.assertEqual(bb.split_components("Aa,Ab"), ("Aa", "Ab"))
         self.assertEqual(bb.split_components("BC,D"), ("BC", "D"))
 
-    def test_skips_system_level_row(self) -> None:
+    def test_skips_blank_field(self) -> None:
         self.assertIsNone(bb.split_components(""))
         self.assertIsNone(bb.split_components("   "))
 
@@ -846,6 +846,126 @@ class SplitComponentsTests(unittest.TestCase):
 
     def test_skips_single_letter(self) -> None:
         self.assertIsNone(bb.split_components("A"))
+
+
+def _blank_pair(
+    *, wds_id: str, discoverer: str = "TST   1",
+    precise_ra: float | None = None, precise_dec: float | None = None,
+) -> "bb.WdsPair":
+    return bb.WdsPair(
+        wds_id=wds_id, discoverer=discoverer, components="",
+        date_last=None, rho_last=None, theta_last=None,
+        mag_pri=None, mag_sec=None, spectral="", notes="    ",
+        precise_ra_deg=precise_ra, precise_dec_deg=precise_dec,
+    )
+
+
+class RescueBlankComponentsTests(unittest.TestCase):
+    def _rescue(self, **kw: object) -> tuple[int, int]:
+        kw.setdefault("orb6", [])
+        kw.setdefault("simbad_xids", {})
+        kw.setdefault("synthesized_orb6_pairs", [])
+        return bb.rescue_blank_components_pairs(**kw)  # type: ignore[arg-type]
+
+    def test_gate1_orb6_orbit_rescues_and_aligns_orb6_key(self) -> None:
+        # Antares shape: blank WDS row + blank ORB6 row for the same
+        # wds_id. Both rewrite to "AB" so the strict orbit lookup lands.
+        pair = _blank_pair(wds_id="16294-2626")
+        orb6 = [_orb6(wds_id="16294-2626", components="", hip=80763)]
+        rescued, deferred = self._rescue(pairs=[pair], orb6=orb6)
+        self.assertEqual((rescued, deferred), (1, 0))
+        self.assertEqual(pair.components, "AB")
+        self.assertEqual(orb6[0].components, "AB")
+
+    def test_gate1_leaves_nonblank_orb6_row_untouched(self) -> None:
+        # An ORB6 sub-pair row for the same system still triggers gate 1,
+        # but its own (non-blank) components field is not rewritten.
+        pair = _blank_pair(wds_id="16294-2626")
+        orb6 = [_orb6(wds_id="16294-2626", components="Aa,Ab", hip=80763)]
+        rescued, _ = self._rescue(pairs=[pair], orb6=orb6)
+        self.assertEqual(rescued, 1)
+        self.assertEqual(pair.components, "AB")
+        self.assertEqual(orb6[0].components, "Aa,Ab")
+
+    def test_gate2_simbad_xid_rescues(self) -> None:
+        pair = _blank_pair(wds_id="20414+4517")
+        xids = {
+            ("20414+4517", "A"): bb.SimbadWdsXid(
+                simbad_oid=1, simbad_main_id="* alf Cyg",
+                gaia_source_id=None, hip=102098,
+            ),
+        }
+        rescued, deferred = self._rescue(pairs=[pair], simbad_xids=xids)
+        self.assertEqual((rescued, deferred), (1, 0))
+        self.assertEqual(pair.components, "AB")
+
+    def test_position_only_blank_row_deferred(self) -> None:
+        # Deneb shape: primary is a catalog star but the system has no
+        # ORB6 orbit and no SIMBAD xid. Position-only anchoring is
+        # deferred to the full blank→AB ingest — not rescued here.
+        pair = _blank_pair(
+            wds_id="20414+4517", precise_ra=310.0, precise_dec=45.0,
+        )
+        rescued, deferred = self._rescue(pairs=[pair])
+        self.assertEqual((rescued, deferred), (0, 1))
+        self.assertEqual(pair.components, "")
+
+    def test_unanchored_blank_row_deferred(self) -> None:
+        pair = _blank_pair(wds_id="99999+9999")
+        rescued, deferred = self._rescue(pairs=[pair])
+        self.assertEqual((rescued, deferred), (0, 1))
+        self.assertEqual(pair.components, "")
+
+    def test_orb6_orphan_donor_row_excluded(self) -> None:
+        # A blank row already donated to a synthesized orphan sub-pair is
+        # represented by that pair — rescuing it would double-emit.
+        pair = _blank_pair(wds_id="14296-6241", discoverer="RHD   1")
+        orb6 = [_orb6(wds_id="14296-6241", components="Ca,Cb", hip=71681)]
+        synth = [_wds_pair_with_pos(
+            wds_id="14296-6241", components="Ca,Cb",
+        )]
+        synth[0].discoverer = "RHD   1"
+        rescued, deferred = self._rescue(
+            pairs=[pair], orb6=orb6, synthesized_orb6_pairs=synth,
+        )
+        self.assertEqual((rescued, deferred), (0, 0))
+        self.assertEqual(pair.components, "")
+
+    def test_existing_ab_row_excluded(self) -> None:
+        # A non-blank "AB" row already enumerates the pair; the blank row
+        # under the same (wds_id, discoverer) is not double-minted.
+        blank = _blank_pair(wds_id="16294-2626")
+        explicit = _wds_pair(wds_id="16294-2626", components="AB")
+        orb6 = [_orb6(wds_id="16294-2626", components="AB", hip=80763)]
+        rescued, deferred = self._rescue(
+            pairs=[blank, explicit], orb6=orb6,
+        )
+        self.assertEqual((rescued, deferred), (0, 0))
+        self.assertEqual(blank.components, "")
+
+    def test_multiple_blank_rows_same_system_rescued_once(self) -> None:
+        # Two blank rows for one wds_id under different discoverers both
+        # name the implied A,B pair; only one is promoted so the pair
+        # doesn't double-emit (dedup_wds_pair_rows keys on discoverer and
+        # runs upstream, so it can't collapse them itself).
+        p1 = _blank_pair(wds_id="16294-2626", discoverer="STF   1")
+        p2 = _blank_pair(wds_id="16294-2626", discoverer="BU    2")
+        orb6 = [_orb6(wds_id="16294-2626", components="", hip=80763)]
+        rescued, deferred = self._rescue(pairs=[p1, p2], orb6=orb6)
+        self.assertEqual((rescued, deferred), (1, 0))
+        self.assertEqual([p.components for p in (p1, p2)].count("AB"), 1)
+
+    def test_existing_ab_other_discoverer_excludes_blank(self) -> None:
+        # The implied AB pair is identified by wds_id alone, so a blank
+        # row under a DIFFERENT discoverer than an explicit AB row is the
+        # same physical pair and is not promoted — a second AB row would
+        # double-emit.
+        blank = _blank_pair(wds_id="16294-2626", discoverer="BU    2")
+        explicit = _wds_pair(wds_id="16294-2626", components="AB")
+        orb6 = [_orb6(wds_id="16294-2626", components="AB", hip=80763)]
+        rescued, deferred = self._rescue(pairs=[blank, explicit], orb6=orb6)
+        self.assertEqual((rescued, deferred), (0, 0))
+        self.assertEqual(blank.components, "")
 
 
 def _wds_pair(*, wds_id: str = "00000+0000", components: str = "AB") -> "bb.WdsPair":
