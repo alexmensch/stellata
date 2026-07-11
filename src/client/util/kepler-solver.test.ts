@@ -27,6 +27,26 @@ describe('solveKepler — residual', () => {
   }
 });
 
+describe('solveKepler — high-eccentricity near-periastron', () => {
+  // Newton from E₀ = M + e·sinM is weakest at high e near periastron
+  // (M → 0 / 2π), where f′(E) = 1 − e·cosE → 1 − e. Empirically ≤ 9
+  // iterations at e = 0.99; this sweep pins convergence so a solver
+  // change (or an ORB6 orbit above the current e ≈ 0.95 population
+  // ceiling) can't silently oscillate past maxIter and return garbage.
+  const nearPeriastron = [1e-6, 1e-4, 1e-3, 1e-2, 0.05, -1e-6, -1e-3, -1e-2];
+  for (const e of [0.9, 0.95, 0.99]) {
+    it(`residual < 1e-10 at e=${e} for M near periastron (0 and 2π)`, () => {
+      for (const M0 of nearPeriastron) {
+        for (const M of [M0, M0 + 2 * Math.PI]) {
+          const E = solveKepler(M, e);
+          const residual = E - e * Math.sin(E) - wrapAngle(M);
+          expect(Math.abs(residual)).toBeLessThan(1e-10);
+        }
+      }
+    });
+  }
+});
+
 describe('solveKepler — known fixtures', () => {
   it('circular orbit: E = M', () => {
     for (const M of [-2, -1, 0, 1, 2]) {

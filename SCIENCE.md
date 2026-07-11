@@ -372,11 +372,13 @@ intermediate (5–20 kpc) instead of the LMC's true ~50 kpc. Without a
 second layer this regresses today's behaviour: a "line of stars
 between MW and LMC in the intergalactic void". After the B-J override
 fires we run a population-specific second pass: any row inside a 15°
-cone of the LMC photometric centre (RA 78.76°, Dec −69.19°) whose
-proper motion lies within ±0.5 mas/yr of the LMC bulk centre-of-mass
-PM (van der Marel & Kallivayalil 2014, *ApJ* 781, 121,
-DOI 10.1088/0004-637X/781/2/121: +1.85 mas/yr in RA, +0.20 mas/yr in
-Dec) has its `dist` snapped to the LMC's eclipsing-binary distance
+cone of the LMC's PM dynamical centre (RA 78.76°, Dec −69.19°; van
+der Marel & Kallivayalil 2014, *ApJ* 781, 121,
+DOI 10.1088/0004-637X/781/2/121) whose proper motion lies within
+±0.5 mas/yr of the gate centre (+1.85 mas/yr in RA, +0.20 mas/yr in
+Dec — a rounded working value near the same paper's centre-of-mass
+PM of μ_α* = 1.910 ± 0.020, μ_δ = 0.229 ± 0.047 mas/yr, well inside
+the tolerance) has its `dist` snapped to the LMC's eclipsing-binary distance
 (49.594 kpc, Pietrzyński et al. 2019, *Nature* 567, 200,
 DOI 10.1038/s41586-019-0999-4; CDS J/other/Natur/567.200), with
 `absmag` recomputed from the new distance. ~54 rows are
@@ -1080,16 +1082,23 @@ zoom). A future time-scrubber UI would plug in by overriding
 `Stellata.setT()`.
 
 **Heliopause boundary.** Modelled as an asymmetric ellipsoid centred
-on Sol, aligned to the solar apex of motion through the local
-interstellar medium. The cited measurements:
+on Sol, aligned to the interstellar-medium inflow direction — the
+heliosphere's shape is set by the Sun's motion relative to the Local
+Interstellar Cloud, not by the solar apex of motion relative to
+nearby stars. The cited measurements:
 
 - Upwind boundary at **122 AU** — Voyager 1 heliopause crossing,
   2012-08-25.
 - Flank inferred at **~115 AU** from Voyager 2 heliopause crossing
   2018-11-05, combined with the apex-aligned ellipsoid model.
 - Heliotail at **200 AU** — IBEX / Cassini ENA observations.
-- Apex direction: ICRS RA 17h53m, Dec +27.4°, after Frisch &
-  Slavin 2013.
+- Nose (upwind apex) direction: the IBEX/Ulysses interstellar He
+  inflow, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA 17h00m,
+  Dec −17.6° — McComas et al. 2015, *ApJS* 220, 22,
+  DOI 10.1088/0067-0049/220/2/22. (An earlier revision anchored the
+  nose at the solar apex, RA 17h53m Dec +27.4° — ~47° off; Voyager 1's
+  outbound direction sits ~30° from the corrected nose, consistent
+  with its 122 AU crossing.)
 
 The heliopause is **static on human timescales**. Solar-cycle
 variations in the upwind distance are at the few-AU level across the
@@ -1099,7 +1108,7 @@ the boundary.
 Construction details (sphere scale, offset, rotation), rendering, and
 label anchoring: see `src/client/solar-system/README.md` § Heliopause boundary.
 
-Implementation: `src/client/heliopause.ts` and
+Implementation: `src/client/solar-system/heliopause.ts` and
 `src/client/solar-system/heliopause.{vert,frag}.glsl`.
 
 ## Local Group wireframes
@@ -1144,9 +1153,11 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   kpc, scale height 1 kpc.
 - **SMC (62.81 kpc)**: triaxial 1 : 1.33 : 1.61 with the longest axis
   along line of sight (Subramanian & Subramaniam 2012, *ApJ* 744, 128,
-  DOI 10.1088/0004-637X/744/2/128; distance Graczyk et al. 2020,
-  *ApJ* 904, 13, DOI 10.3847/1538-4357/abbb2b). Resulting semi-axes
-  3.73 / 4.96 / 6.0 kpc.
+  DOI 10.1088/0004-637X/744/2/128; distance from LVDB's SMC row,
+  µ = 18.99 ± 0.1 — Cioni et al. 2000, *A&A* 359, 601, DENIS TRGB.
+  Graczyk et al. 2020's eclipsing-binary result is 62.44 kpc,
+  µ = 18.977; LVDB pins Cioni and the two agree well within its
+  ±0.1 mag uncertainty). Resulting semi-axes 3.73 / 4.96 / 6.0 kpc.
 - **Sagittarius dSph (26.3 kpc)**: 3D axis allocation — LVDB's
   projected ellipticity captures the sky-plane shape but not the
   line-of-sight extent (Ibata et al. 1995, *AJ* 110, 632,

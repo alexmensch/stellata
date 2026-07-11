@@ -1252,12 +1252,12 @@ Constants in `catalog-pure.ts`:
 | Constant | Value | Meaning |
 |---|---|---|
 | `LMC_DISTANCE_PC` | 49,594 | Pietrzyński 2019 LMC centre-of-mass distance. |
-| `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC photometric centre RA. |
-| `LMC_CENTRE_DEC_DEG` | −69.19 | LMC photometric centre Dec. |
+| `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC PM dynamical centre RA (vdM&K 2014). |
+| `LMC_CENTRE_DEC_DEG` | −69.19 | LMC PM dynamical centre Dec (vdM&K 2014). |
 | `LMC_CONE_HALF_ANGLE_DEG` | 15 | Sky-cone half-angle. |
-| `LMC_PM_RA_CENTRE` | 1.85 mas/yr | van der Marel & Kallivayalil 2014 LMC bulk μ_α*. |
-| `LMC_PM_DEC_CENTRE` | 0.20 mas/yr | Same paper, μ_δ. |
-| `LMC_PM_TOLERANCE` | 0.5 mas/yr | Per-axis tolerance around the bulk PM. |
+| `LMC_PM_RA_CENTRE` | 1.85 mas/yr | PM gate centre μ_α* (≈ vdM&K 2014 COM 1.910). |
+| `LMC_PM_DEC_CENTRE` | 0.20 mas/yr | PM gate centre μ_δ (≈ vdM&K 2014 COM 0.229). |
+| `LMC_PM_TOLERANCE` | 0.5 mas/yr | Per-axis tolerance around the gate centre. |
 
 `isInLmcCone(raHours, decDegrees)` evaluates the cone independently
 of the PM gate so `readStars` can count cone-membership candidates
@@ -1277,7 +1277,7 @@ constants and the override math.
 
 ### Layer 3 — MAX_DIST_PC bounded-scope cutoff
 
-`MAX_DIST_PC = 50_000` (defined at `stars-parse.ts:34`) drops any row
+`MAX_DIST_PC = 50_000` (exported from `stars-parse.ts`) drops any row
 whose final distance still exceeds 50 kpc after Layers 1 and 2. This
 is **not** a noise filter — it's a statement about which populations
 the model currently represents (Sol out to and including the LMC).
@@ -1285,6 +1285,12 @@ The cutoff bumps in sync with each new modelled population the
 renderer takes responsibility for (future SMC, Sgr dSph, M31
 supergiant layers would extend it). See SCIENCE.md § Stellar catalog
 ingestion for the framing rationale.
+
+Every kinematic-override target distance must satisfy
+`dist < MAX_DIST_PC` or its entire population is silently dropped at
+this cut; `catalog-pure.test.ts` pins `LMC_DISTANCE_PC < MAX_DIST_PC`
+(406 pc of margin today). A future SMC layer (~62 kpc) must raise the
+cutoff in the same change.
 
 ### Post-build distance-regression check
 

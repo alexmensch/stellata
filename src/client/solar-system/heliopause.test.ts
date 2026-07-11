@@ -13,13 +13,19 @@ describe('HELIOPAUSE_APEX_LOCAL_PC', () => {
     expect(r).toBeCloseTo(122 * AU_PC, 12);
   });
 
-  it('points toward the solar apex (RA 17h53m, Dec +27.4°)', () => {
-    // Apex direction: cos(Dec)cos(RA), cos(Dec)sin(RA), sin(Dec).
-    const ra = (17 + 53 / 60) * 15 * Math.PI / 180;
-    const dec = 27.4 * Math.PI / 180;
-    const expectedX = Math.cos(dec) * Math.cos(ra);
-    const expectedY = Math.cos(dec) * Math.sin(ra);
-    const expectedZ = Math.sin(dec);
+  it('points toward the ISM inflow nose (McComas+ 2015: ecliptic λ 255.7°, β 5.1°)', () => {
+    // Independent expected value: explicit Rx(ε) rotation of the
+    // published ecliptic inflow direction — not the quaternion path
+    // the production code uses.
+    const eps = 23.4392911 * Math.PI / 180;
+    const lon = 255.7 * Math.PI / 180;
+    const lat = 5.1 * Math.PI / 180;
+    const xe = Math.cos(lat) * Math.cos(lon);
+    const ye = Math.cos(lat) * Math.sin(lon);
+    const ze = Math.sin(lat);
+    const expectedX = xe;
+    const expectedY = ye * Math.cos(eps) - ze * Math.sin(eps);
+    const expectedZ = ye * Math.sin(eps) + ze * Math.cos(eps);
 
     const r = Math.hypot(
       HELIOPAUSE_APEX_LOCAL_PC.x,
@@ -29,6 +35,18 @@ describe('HELIOPAUSE_APEX_LOCAL_PC', () => {
     expect(HELIOPAUSE_APEX_LOCAL_PC.x / r).toBeCloseTo(expectedX, 12);
     expect(HELIOPAUSE_APEX_LOCAL_PC.y / r).toBeCloseTo(expectedY, 12);
     expect(HELIOPAUSE_APEX_LOCAL_PC.z / r).toBeCloseTo(expectedZ, 12);
+  });
+
+  it('nose lands at RA ≈ 17h00m, Dec ≈ −17.6° — not the solar apex 47° away', () => {
+    const r = Math.hypot(
+      HELIOPAUSE_APEX_LOCAL_PC.x,
+      HELIOPAUSE_APEX_LOCAL_PC.y,
+      HELIOPAUSE_APEX_LOCAL_PC.z,
+    );
+    const raDeg = (Math.atan2(HELIOPAUSE_APEX_LOCAL_PC.y, HELIOPAUSE_APEX_LOCAL_PC.x) * 180 / Math.PI + 360) % 360;
+    const decDeg = Math.asin(HELIOPAUSE_APEX_LOCAL_PC.z / r) * 180 / Math.PI;
+    expect(raDeg).toBeCloseTo(255.04, 2);
+    expect(decDeg).toBeCloseTo(-17.6, 2);
   });
 });
 

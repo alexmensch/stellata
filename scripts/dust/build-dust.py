@@ -44,10 +44,13 @@ PARTICLE_DENSITY_THRESHOLD = 1e-6
 
 # Zhang-Green-Rix 2023 "E" unit → V-band extinction. Edenhofer outputs
 # density in units of E_ZGR per parsec, so path-integral × this factor
-# yields A_V magnitudes. Reference: Zhang, Green & Rix 2023 (Zenodo
-# 10.5281/zenodo.6674521) — A_V / E_ZGR ≈ 2.742 at V (551 nm). Applied at
-# runtime in the shader, NOT baked into the stored density, so we can
-# retune without re-encoding.
+# yields A_V magnitudes. The published ZGR23 extinction curve
+# (extinction_curve.txt in the data release, Zenodo 10.5281/zenodo.7811871)
+# gives A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm, 2.67 at 551 nm;
+# 2.742 corresponds to λ ≈ 544 nm, inside the V-band effective-wavelength
+# convention spread (Edenhofer 2024 round the same conversion to 2.8).
+# Applied at runtime in the shader, NOT baked into the stored density, so
+# we can retune without re-encoding.
 ZGR_TO_AV = 2.742   # mag A_V per E_ZGR (dimensionless)
 
 # Sanity check: Aquila Rift at ~200 pc, peak density ~0.05 E_ZGR/pc,

@@ -93,6 +93,7 @@ import {
   LMC_PM_DEC_CENTRE,
   LMC_PM_TOLERANCE,
 } from './catalog-pure';
+import { MAX_DIST_PC } from './stars-parse';
 
 describe('catalog-pure / spectClassIndex', () => {
   it('maps the seven main MK classes to indices 0..6', () => {
@@ -2096,6 +2097,60 @@ describe('catalog-pure / isInLmcCone', () => {
     const outDec = LMC_CENTRE_DEC_DEG + (LMC_CONE_HALF_ANGLE_DEG + epsilon);
     expect(isInLmcCone(LMC_CENTRE_RA_HOURS, inDec)).toBe(true);
     expect(isInLmcCone(LMC_CENTRE_RA_HOURS, outDec)).toBe(false);
+  });
+
+  /** Great-circle destination from the LMC centre: walk `sepDeg` along
+   *  initial position angle `paDeg` (east of north), return [raHours, decDeg].
+   *  Standard navigation formulas — independent of angularSeparationDeg's
+   *  vector implementation. */
+  function offsetFromLmcCentre(sepDeg: number, paDeg: number): [number, number] {
+    const d1 = (LMC_CENTRE_DEC_DEG * Math.PI) / 180;
+    const s = (sepDeg * Math.PI) / 180;
+    const pa = (paDeg * Math.PI) / 180;
+    const d2 = Math.asin(Math.sin(d1) * Math.cos(s) + Math.cos(d1) * Math.sin(s) * Math.cos(pa));
+    const dRa = Math.atan2(
+      Math.sin(pa) * Math.sin(s) * Math.cos(d1),
+      Math.cos(s) - Math.sin(d1) * Math.sin(d2),
+    );
+    return [
+      LMC_CENTRE_RA_HOURS + (dRa * 180 / Math.PI) / 15,
+      (d2 * 180) / Math.PI,
+    ];
+  }
+
+  it('boundary: just inside the cone passes on the RA axis (cos(Dec) weighting)', () => {
+    // At Dec −69.19° (cos Dec ≈ 0.355) a 15° great-circle arc due east
+    // swings RA by 37.02°, not 15° — pin the stretch so a "simplified"
+    // separation that drops the cos(Dec) weighting fails here.
+    const epsilon = 0.01;
+    const [raEdge] = offsetFromLmcCentre(LMC_CONE_HALF_ANGLE_DEG, 90);
+    expect((raEdge - LMC_CENTRE_RA_HOURS) * 15).toBeCloseTo(37.0241, 3);
+    const [raIn, decIn] = offsetFromLmcCentre(LMC_CONE_HALF_ANGLE_DEG - epsilon, 90);
+    const [raOut, decOut] = offsetFromLmcCentre(LMC_CONE_HALF_ANGLE_DEG + epsilon, 90);
+    expect(isInLmcCone(raIn, decIn)).toBe(true);
+    expect(isInLmcCone(raOut, decOut)).toBe(false);
+  });
+
+  it('boundary: diagonal RA+Dec offset at cone edge', () => {
+    // PA 45° — both axes move, so the gate must be great-circle
+    // distance, not a per-axis (Manhattan/box) test.
+    const epsilon = 0.01;
+    const [raIn, decIn] = offsetFromLmcCentre(LMC_CONE_HALF_ANGLE_DEG - epsilon, 45);
+    const [raOut, decOut] = offsetFromLmcCentre(LMC_CONE_HALF_ANGLE_DEG + epsilon, 45);
+    expect(isInLmcCone(raIn, decIn)).toBe(true);
+    expect(isInLmcCone(raOut, decOut)).toBe(false);
+  });
+});
+
+describe('catalog-pure / LMC distance vs MAX_DIST_PC invariant', () => {
+  it('LMC_DISTANCE_PC sits inside the bounded-scope cutoff', () => {
+    // The kinematic override snaps ~54 supergiants to LMC_DISTANCE_PC,
+    // then every row passes the dist > MAX_DIST_PC drop. If either
+    // constant drifts across the other, the whole LMC population is
+    // silently dropped with no counter to surface it. Any future
+    // kinematic-override target (SMC ≈ 62 kpc) must either satisfy
+    // this or raise MAX_DIST_PC.
+    expect(LMC_DISTANCE_PC).toBeLessThan(MAX_DIST_PC);
   });
 });
 
