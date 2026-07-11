@@ -80,6 +80,7 @@ import {
   wingRenderablePrimaries,
   type ComponentDesignation,
 } from './companion-promotion';
+import { applySystemDistanceCoherence } from './system-coherence';
 import {
   parseGcvsMain,
   parseGcvsCrossref,
@@ -263,6 +264,10 @@ async function main() {
     spectralFallback: 0,
     ciSpectralDerived: 0,
     multiplesIdentifierBackfill: 0,
+    systemCoherenceSystems: 0,
+    systemCoherenceRepositioned: 0,
+    systemCoherenceMemberAnchorWins: 0,
+    systemCoherenceSignificantDepthKept: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -567,6 +572,24 @@ async function main() {
       `  backfilled identifiers onto ${counts.multiplesIdentifierBackfill} ` +
         `HD-only primaries from multiples.tsv`,
     );
+    // Intra-system radial coherence BEFORE promotion, so minted members
+    // project off already-coherent anchor positions.
+    const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
+      gaiaAstrometry: directions.gaiaAstrometry,
+      hip2: directions.hip2,
+      bjMap,
+    });
+    console.log(
+      `  system distance coherence: ${coherence.membersRepositioned} ` +
+        `members repositioned across ${coherence.systemsProcessed} systems ` +
+        `(${coherence.memberAnchorWins} member-anchor wins, ` +
+        `${coherence.significantDepthKept} significant depths kept)`,
+    );
+    counts.systemCoherenceRepositioned = coherence.membersRepositioned;
+    counts.systemCoherenceSystems = coherence.systemsProcessed;
+    counts.systemCoherenceMemberAnchorWins = coherence.memberAnchorWins;
+    counts.systemCoherenceSignificantDepthKept =
+      coherence.significantDepthKept;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
     const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS, dustGrid);

@@ -142,6 +142,18 @@ export interface BuildCounts {
    *  from a multiples.tsv pair-primary row, joined by HD
    *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */
   multiplesIdentifierBackfill: number;
+  /** WDS systems with ≥2 distinct own-record members walked by the
+   *  intra-system radial-coherence pass (system-coherence.ts). */
+  systemCoherenceSystems: number;
+  /** Own-record members moved to their system's anchor distance along
+   *  their own direction (radial gap not a ≥3σ measurement). */
+  systemCoherenceRepositioned: number;
+  /** Systems whose distance anchor was a non-primary member (a clean
+   *  unsaturated Gaia 5p member outranking a saturated primary). */
+  systemCoherenceMemberAnchorWins: number;
+  /** Members whose radial gap IS a ≥3σ measurement — genuinely measured
+   *  depth kept (α Cen–Proxima, 61 Cyg A/B). */
+  systemCoherenceSignificantDepthKept: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
