@@ -29,6 +29,12 @@ allocate.ts               npm run sid:allocate — the ONLY writer of
                           local-group.json, data/sid/sol-objects.tsv.
                           Run build:catalog / build:clouds /
                           build:local-group first.
+                          npm run sid:check (--check) — read-only CI
+                          mode: same walk, zero writes; would-mint
+                          objects and orphaned synth keys both fail.
+                          Runs in the build-catalog CI job after the
+                          artifact builds, making ledger ⟷ build
+                          consistency a per-PR invariant.
 export-dr-risk-set.ts     npm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the neighbourhood-pull request TSV (§ 6.1
@@ -101,7 +107,10 @@ map each orphan key to its sid through `ledger.tsv`, append
 mapping; one shared reason string per cause), re-run `sid:allocate`,
 then `npm run build:catalog`. Before writing, verify attribution: the
 Stage-7 count diff must conserve the donor tier's population into the
-new verdicts, or some orphans belong to a different change.
+new verdicts, or some orphans belong to a different change. CI's
+`sid:check` keeps main permanently consistent, so on an up-to-date
+branch every orphan/mint is attributable to the current change —
+the count-diff check then just confirms it.
 
 ## Sibling-artifact stamping
 

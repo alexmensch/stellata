@@ -255,6 +255,17 @@ history (`.github/workflows/test.yml`), so that job runs the guard
 against real ledger content; in the bare `test` job the guard sees an
 LFS pointer stub and self-skips.
 
+The guard protects the ledger *file*; `npm run sid:check` (same CI job,
+after the artifact builds) protects its *consistency with the build*: a
+read-only allocation walk that fails on any would-mint object or
+orphaned synth key. The § 4.4 build hard-fail already blocks
+unallocated objects from shipping; the check closes the other
+direction — an object-set change (a Stage-5 filter dropping pairs, a
+WDS re-lettering) cannot land without its allocation, retirement, or
+bridge in the same PR, so main's ledger ⟷ artifact state is always
+clean and any churn a working branch surfaces is attributable to that
+branch alone.
+
 ## 5. Synthetic-key churn (WDS re-subdivision)
 
 WDS re-pairing renames components (`Aa,Ab` → `Aa1,2` and similar), so

@@ -37,6 +37,16 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build:catalog
+      # Ledger ↔ artifact consistency (docs/sid.md § 4.4/§ 5). build:catalog
+      # above already hard-fails on an unallocated record (the mint side);
+      # sid:check additionally fails on orphaned synth keys (the drop side)
+      # and on unallocated sibling-artifact objects, so a pipeline change
+      # that shifts the object set can't land without its allocation /
+      # retirement / bridge in the same PR. Clouds + local-group build
+      # first — sid:check reads their artifacts.
+      - run: npm run build:clouds
+      - run: npm run build:local-group
+      - run: npm run sid:check
       # The known-stars corpus harness needs the catalog chunks + manifest
       # (built in the step above) and the LFS-tracked data/binaries/multiples.tsv.
       # The bare `test` job already runs the rest of vitest and self-skips
