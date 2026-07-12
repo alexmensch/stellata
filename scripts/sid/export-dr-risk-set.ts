@@ -7,10 +7,18 @@ import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from '../catalog/export-astrometry-request-pure';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { parseDesignation, parseLedgerTsv, parseRetirementsTsv } from './sid-pure';
+import {
+  REINSTATEMENTS_HEADER,
+  effectiveRetirements,
+  parseDesignation,
+  parseLedgerTsv,
+  parseReinstatementsTsv,
+  parseRetirementsTsv,
+} from './sid-pure';
 
 const LEDGER_PATH = resolve(ROOT, 'data/sid/ledger.tsv');
 const RETIREMENTS_PATH = resolve(ROOT, 'data/sid/retirements.tsv');
+const REINSTATEMENTS_PATH = resolve(ROOT, 'data/sid/reinstatements.tsv');
 const DEFAULT_OUT = resolve(ROOT, 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
 
 function main(): void {
@@ -21,8 +29,12 @@ function main(): void {
     process.exit(1);
   }
   const ledger = parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8'));
-  const retired = new Set(
-    parseRetirementsTsv(readFileSync(RETIREMENTS_PATH, 'utf-8')).map((r) => r.sid),
+  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
+    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
+    : `${REINSTATEMENTS_HEADER}\n`;
+  const retired = effectiveRetirements(
+    parseRetirementsTsv(readFileSync(RETIREMENTS_PATH, 'utf-8')),
+    parseReinstatementsTsv(reinstatementsText),
   );
   const ids = new Set<string>();
   for (const row of ledger) {
