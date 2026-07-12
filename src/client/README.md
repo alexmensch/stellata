@@ -76,7 +76,9 @@ Navigate single-click on a star (`applyStarClick`):
 | clicked = other star, pinned, not vector destination | set vector focus → clicked |
 | clicked = other star, pinned + vector destination | clear vector AND unpin |
 
-The ladder decision table is `poi/click-ladder-pure.ts`. Navigate
+The ladder decision table is `poi/click-ladder-pure.ts`; the pin
+rungs require the HUD (`showHud`) to be on — pins are HUD widgets, so
+with the HUD hidden clicks step only the vector rungs. Navigate
 **double-click** on any star travels to it (`focusStar` — the
 focus-park teleport that clicking the vector tip used to trigger;
 lerps over `FOCUS_LERP_MS` or no-ops when already inside park);

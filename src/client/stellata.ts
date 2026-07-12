@@ -2154,9 +2154,14 @@ export class Stellata implements FrameAnchor {
       return;
     }
 
+    // Pins are HUD widgets — with the HUD hidden a pin would be an
+    // invisible state change, so the ladder sees HUD-off stars as
+    // unpinnable/unpinned and steps only its vector rungs (existing
+    // pins are left untouched). Mirrors the observe-branch gate above.
+    const hudOn = this.filter.showHud;
     const action = starLadderAction({
-      pinnable: this.poiStore.pinnable(idx),
-      pinned: this.poiStore.has(idx),
+      pinnable: hudOn && this.poiStore.pinnable(idx),
+      pinned: hudOn && this.poiStore.has(idx),
       atCap: this.poiStore.atCap(),
       isVectorDest: this.vectorTo === idx,
     });

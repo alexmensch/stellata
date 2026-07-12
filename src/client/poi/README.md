@@ -24,8 +24,11 @@ ladder:
 3. pinned + vector destination → clear the vector AND unpin
 
 Stars that can't take the pin rung right now (Sol, cap reached) fall
-through to the vector rung so measuring to them stays possible.
-Observe mode is a plain pin/unpin toggle instead. Both canvas clicks
+through to the vector rung so measuring to them stays possible. Pins
+are HUD widgets, so with the HUD hidden (`showHud` off — the default)
+the ladder steps only its vector rungs and existing pins are left
+untouched; observe-mode clicks are similarly HUD-gated. Observe mode
+is a plain pin/unpin toggle instead of the ladder. Both canvas clicks
 and the POI overlay's on-screen labels route through
 `Stellata.applyStarClick`, so the star and its label can't drift
 apart.
