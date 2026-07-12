@@ -2583,7 +2583,8 @@ class Gaia5pUnreliableTests(unittest.TestCase):
         self.assertFalse(bb.gaia_5p_unreliable(row))
 
     def test_high_ipd_trips(self) -> None:
-        row = _gaia_astrometry_row(ruwe=1.0, ipd_frac_multi_peak=0.05)
+        # ipd_frac_multi_peak is percent-valued (0-100); 5 = 5% > the 2% gate.
+        row = _gaia_astrometry_row(ruwe=1.0, ipd_frac_multi_peak=5.0)
         self.assertTrue(bb.gaia_5p_unreliable(row))
 
     def test_missing_values_do_not_trip(self) -> None:
@@ -2701,7 +2702,7 @@ class AttachAstrometryTests(unittest.TestCase):
 
     def test_nss_systemic_when_ipd_high(self) -> None:
         gaia = _gaia_astrometry_row(
-            source_id=7, ruwe=1.0, ipd_frac_multi_peak=0.05,
+            source_id=7, ruwe=1.0, ipd_frac_multi_peak=5.0,
         )
         idx = _indices_with_astrometry(
             src_to_astrometry={7: gaia},
