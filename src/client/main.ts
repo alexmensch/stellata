@@ -41,6 +41,7 @@ import { createHoverEngine } from './hover/hover-engine';
 import { createFocusCard } from './focus-card/focus-card';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
+import { createPoiCardStack } from './poi/poi-card-stack';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
@@ -278,26 +279,27 @@ async function main() {
       initialProviders: hoverProviders,
     });
 
-    // Tier-2 focus card. Both distance functions read the local frame
-    // (camera and object share it), so the values match what hover's
-    // pick paths report.
+    // Tier-2 focus card + per-POI cards. Both distance functions read
+    // the local frame (camera and object share it), so the values match
+    // what hover's pick paths report.
     const searchEntries = new Map(searchIndex.map((e) => [e.i, e]));
+    const starFocusProvider = createStarFocusProvider({
+      catalog,
+      starLabels,
+      spectralMap,
+      searchEntries,
+      binaries,
+      cameraDistancePc: (idx) => {
+        const lp = stellata.localPositions;
+        const c = stellata.camera.position;
+        return Math.hypot(lp[idx * 3] - c.x, lp[idx * 3 + 1] - c.y, lp[idx * 3 + 2] - c.z);
+      },
+      nowJd: () => tToJDE(stellata.getT()),
+    });
     createFocusCard({
       stellata,
       providers: {
-        star: createStarFocusProvider({
-          catalog,
-          starLabels,
-          spectralMap,
-          searchEntries,
-          binaries,
-          cameraDistancePc: (idx) => {
-            const lp = stellata.localPositions;
-            const c = stellata.camera.position;
-            return Math.hypot(lp[idx * 3] - c.x, lp[idx * 3 + 1] - c.y, lp[idx * 3 + 2] - c.z);
-          },
-          nowJd: () => tToJDE(stellata.getT()),
-        }),
+        star: starFocusProvider,
         cloud: createCloudFocusProvider({
           clouds: cloudCatalog?.clouds ?? null,
           cameraDistancePc: (idx) => {
@@ -313,6 +315,7 @@ async function main() {
         }),
       },
     });
+    createPoiCardStack({ stellata, starProvider: starFocusProvider });
 
     await new Promise((r) => requestAnimationFrame(r));
     loading.style.transition = 'opacity 0.4s ease';

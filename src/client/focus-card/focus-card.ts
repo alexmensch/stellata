@@ -4,6 +4,7 @@
 
 import type { Stellata } from '../stellata';
 import { bindCollapse } from '../ui/panel-layout';
+import { createCardBody } from './card-body';
 import type { FocusCardContent, FocusCardProviders } from './focus-card-types';
 
 const COLLAPSED_KEY = 'stellata.focus-card-collapsed';
@@ -13,17 +14,10 @@ export interface FocusCardConfig {
   providers: FocusCardProviders;
 }
 
-interface LiveRow {
-  el: HTMLElement;
-  value: () => string;
-  last: string;
-}
-
 export function createFocusCard(config: FocusCardConfig): () => void {
   const { stellata, providers } = config;
   const card = document.getElementById('focus-card')!;
-  const title = document.getElementById('focus-card-title')!;
-  const inner = document.getElementById('focus-card-inner')!;
+  const close = document.getElementById('focus-card-close') as HTMLButtonElement;
 
   bindCollapse({
     container: card,
@@ -33,51 +27,26 @@ export function createFocusCard(config: FocusCardConfig): () => void {
     ariaSubject: 'object info',
   });
 
-  let liveRows: LiveRow[] = [];
+  const onClose = (e: MouseEvent) => {
+    e.stopPropagation();
+    stellata.unfocus();
+  };
+  close.addEventListener('click', onClose);
+
+  const body = createCardBody({
+    card,
+    title: document.getElementById('focus-card-title')!,
+    inner: document.getElementById('focus-card-inner')!,
+  });
 
   const render = (content: FocusCardContent) => {
-    title.textContent = content.name;
-    inner.textContent = '';
-    liveRows = [];
-    for (const line of content.identityLines) {
-      const el = document.createElement('div');
-      el.className = 'focus-identity';
-      el.textContent = line;
-      inner.appendChild(el);
-    }
-    const bindValue = (el: HTMLElement, value: string | (() => string)) => {
-      if (typeof value === 'function') {
-        const text = value();
-        el.textContent = text;
-        liveRows.push({ el, value, last: text });
-      } else {
-        el.textContent = value;
-      }
-    };
-    for (const row of content.rows) {
-      const rowEl = document.createElement('div');
-      rowEl.className = 'focus-row';
-      const label = document.createElement('span');
-      label.className = 'focus-row-label';
-      label.textContent = row.label;
-      const value = document.createElement('span');
-      value.className = 'focus-row-value';
-      rowEl.append(label, value);
-      inner.appendChild(rowEl);
-      bindValue(value, row.value);
-    }
-    for (const line of content.lines) {
-      const el = document.createElement('div');
-      el.className = 'focus-line';
-      inner.appendChild(el);
-      bindValue(el, line);
-    }
+    body.render(content);
     card.hidden = false;
   };
 
   const hide = () => {
     card.hidden = true;
-    liveRows = [];
+    body.clear();
   };
 
   // Star and cloud focus are mutually exclusive; recompute from current
@@ -91,27 +60,17 @@ export function createFocusCard(config: FocusCardConfig): () => void {
     hide();
   };
 
-  const tick = () => {
-    if (card.hidden || card.classList.contains('collapsed')) return;
-    for (const row of liveRows) {
-      const text = row.value();
-      if (text !== row.last) {
-        row.last = text;
-        row.el.textContent = text;
-      }
-    }
-  };
-
   const unsubs = [
     stellata.on('focus', recompute),
     stellata.on('cloudFocus', recompute),
     stellata.on('cameraMode', recompute),
-    stellata.on('frame', tick),
+    stellata.on('frame', () => body.tick()),
   ];
   recompute();
 
   return () => {
     for (const u of unsubs) u();
+    close.removeEventListener('click', onClose);
     hide();
   };
 }
