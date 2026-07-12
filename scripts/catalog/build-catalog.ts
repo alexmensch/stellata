@@ -809,6 +809,7 @@ async function main() {
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
     retirements: registry.retirements,
+    reinstatements: registry.reinstatements,
   });
   const recordSids = sidResolution.objectSids;
 
