@@ -57,7 +57,10 @@ ASTROMETRY_VIA_VALUES: tuple[str, ...] = (
 # only when the 5p solution shows orbit-corrupted fit indicators, so a
 # clean 5p with an NSS row alongside still uses the 5p directly.
 GAIA_RUWE_UNRELIABLE_THRESHOLD = 1.4
-GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 0.02
+# ipd_frac_multi_peak is a PERCENTAGE (0-100) in Gaia DR3; the gate
+# fires above 2%, matching ANCHOR_IPD_MAX_PERCENT in
+# scripts/catalog/system-coherence.ts.
+GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0
 
 # HIP2 long-baseline fallback thresholds. The separation gate is
 # checked against the *minimum* WDS ρ across all pair rows the source
@@ -225,7 +228,7 @@ def attach_astrometry(
 
     1. ``gaia_nss_systemic`` — Gaia astrometry exists, source has an
        NSS row, AND the 5p solution is flagged unreliable (``ruwe >
-       1.4`` OR ``ipd_frac_multi_peak > 0.02``). Gaia DR3 refits
+       1.4`` OR ``ipd_frac_multi_peak > 2%``). Gaia DR3 refits
        ``gaia_source`` to the centre-of-mass for NSS-modeled sources,
        so the same row's values surface here with the NSS tag
        distinguishing provenance for Stage 4 (which prefers NSS
