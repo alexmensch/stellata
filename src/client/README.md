@@ -56,7 +56,8 @@ Emission pairing: each fine-grained mutation event (`'focus'`,
 from the same mutation site, so a `'state'` subscriber observes every
 mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
-`'frame'`, `'focusLerp'`, and the warp-end edge emit alone.
+`'frame'`, `'focusLerp'`, `'canvasClick'` (transient feedback, not a
+state mutation), and the warp-end edge emit alone.
 
 ## Click-state machine (`stellata.ts`)
 
