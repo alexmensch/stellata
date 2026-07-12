@@ -26,10 +26,14 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          (frozen Stellata IDs, docs/sid.md § 7) — the star
                          domain of the SID resolver
                          (`../util/sid-resolver/README.md`) and the v4 URL
-                         wire both key off it.
+                         wire both key off it. Exposes
+                         `multiplicityStatus: Uint8Array` (v9:
+                         single/resolved/unresolved — see
+                         scripts/catalog/README.md § Multiplicity status).
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
-                         the v7 sid column.
+                         the v7 sid column + a full-record writer→reader
+                         round-trip through the shared writeStarRecord.
 epoch-advance-pure.ts    load-time space-motion propagation:
                          `advancePositionsToEpoch(positions, velocities,
                          epochJyr)` rewrites catalog.positions in place to

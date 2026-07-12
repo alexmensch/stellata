@@ -42,8 +42,10 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
   (Tier-C build-time subset) + `scripts/catalog/validate-simbad-sample.ts`
   (Tier-C manual full run, `npm run validate:simbad`).
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1
-  spectral classifier) + `scripts/binaries/build-binaries.py` Stage 6
-  (per-component sp_type, beats AT-HYG's system-inherited string).
+  spectral classifier + the `otype = '**'` unresolved-multiplicity
+  flag, scripts/catalog/README.md § Multiplicity status) +
+  `scripts/binaries/build-binaries.py` Stage 6 (per-component sp_type,
+  beats AT-HYG's system-inherited string).
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/build-catalog.ts` (sibling-letter

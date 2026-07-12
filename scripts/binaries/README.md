@@ -667,7 +667,7 @@ stores); everything else gets `q = None` here and falls through to Stage
 6's spectral-class mass-ratio backfill below.
 
 The same `q` also feeds **systemic-velocity composition** for
-proper-motion propagation. catalog.bin v8 bakes a per-star space-motion
+proper-motion propagation. catalog.bin bakes a per-star space-motion
 velocity (SCIENCE.md § Current-epoch star positions); a bound pair's
 members must share one systemic velocity or the runtime epoch-advance
 shears a static (Tier-3) pair. `scripts/catalog/companion-promotion.ts`

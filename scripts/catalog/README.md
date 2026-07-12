@@ -3,12 +3,12 @@
 Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type + SIMBAD WDS cross-IDs +
 Stellarium →
-`public/catalog.bin` (v8 binary) + `public/constellations.json` +
+`public/catalog.bin` (v9 binary) + `public/constellations.json` +
 `public/search-index.json`. Run via `npm run build:catalog`.
 
 `scripts/catalog/build-catalog.ts` is the orchestrator; the per-row
 pipeline lives in `stars-parse.ts` (`readStars`). Per-pipeline algebra
-sits in `catalog-pure.ts` (the single source of truth for the v8
+sits in `catalog-pure.ts` (the single source of truth for the v9
 binary layout + override math + spectral resolver) and the topic
 sub-modules (`direction-cascade.ts`, `gcvs-parse.ts`,
 `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`).
@@ -185,9 +185,10 @@ known in the binaries pipeline, and the residual shear is sub-arcsec/decade
 over the v1 load-time advance).
 
 After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
-visual-doubles flagging (`visual-doubles.ts`), and the 96-byte v8
+visual-doubles flagging (`visual-doubles.ts`), and the 100-byte v9
 record write per star including the seven `float32` Apsis fields, the
-`uint32` `sid`, plus the three `float32` velocity components. See sections
+`uint32` `sid`, the three `float32` velocity components, plus the
+`uint8` multiplicity status. See sections
 below.
 
 ## Full-catalog astrometry request
@@ -212,10 +213,12 @@ cutoff; over-pulling those is harmless.
 ## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 
 Fixed-size records, sorted brightest-first by `absmag`. Current version is
-**v8** with a 96-byte stride. Magic and version step together
-(v3=`HYG3`, v4=`HYG4`, v5=`HYG5`, v6=`HYG6`, v7=`HYG7`, v8=`HYG8`). v8 appended
-three `float32` space-motion velocity components (`vx/vy/vz`, pc/yr) at bytes
-84–95 — see § Space-motion velocity. v7 appended a `uint32` `sid` (Stellata ID)
+**v9** with a 100-byte stride. Magic and version step together
+(v3=`HYG3` … v8=`HYG8`, v9=`HYG9`). v9 appended a `uint8`
+`multiplicity_status` at byte 96 (bytes 97–99 reserved, zero-filled, so
+the stride stays a multiple of 4) — see § Multiplicity status. v8
+appended three `float32` space-motion velocity components (`vx/vy/vz`,
+pc/yr) at bytes 84–95 — see § Space-motion velocity. v7 appended a `uint32` `sid` (Stellata ID)
 at byte 80 — see § SID allocation. v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
@@ -229,13 +232,13 @@ population the runtime colour-LUT path can re-key from
 Ballesteros(B–V) → Apsis-direct).
 
 - Header (32 bytes)
-  - 0–3   ASCII `HYG8`
-  - 4–7   `uint32` version (currently 8)
+  - 0–3   ASCII `HYG9`
+  - 4–7   `uint32` version (currently 9)
   - 8–11  `uint32` count
   - 12–15 `uint32` nameTableOffset
   - 16–19 `uint32` nameTableLength
   - 20–31 reserved
-- Record (96 bytes per star)
+- Record (100 bytes per star)
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
   - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
                           subtracts the Sol→star Edenhofer A_V so the runtime
@@ -303,6 +306,13 @@ Ballesteros(B–V) → Apsis-direct).
                           Cartesian, Sol at origin). See § Space-motion velocity.
   - 88–91 `float32`      **vy** — space-motion velocity y (pc/yr).
   - 92–95 `float32`      **vz** — space-motion velocity z (pc/yr).
+  - 96    `uint8`        **multiplicity_status** (`MULTIPLICITY_*`:
+                          0=single, 1=resolved — a multiples.tsv member
+                          row backs the record, 2=unresolved — SIMBAD
+                          otype `**` with nothing resolved). See
+                          § Multiplicity status.
+  - 97–99 reserved (zero-filled; `RECORD_RESERVED_TAIL_BYTES` — a field
+                          taking a reserved byte still bumps the version).
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
   **Offset 0 is reserved** as the "no name" sentinel (2 zero bytes of
   padding); real names start at offset ≥ 2.
@@ -399,6 +409,31 @@ The runtime reader (`catalog-loader.ts`) decodes the column into
 (`src/client/util/sid-resolver/README.md`); the Node reader
 (`catalog-lookup.ts`) inherits the field off `RECORD_LAYOUT` without
 decoding it.
+
+## Multiplicity status
+
+Each record's `multiplicity_status` byte (offset 96) classifies its
+known multiplicity so the hover/info surface can say "this is a
+binary" even when no companion renders:
+
+- **`MULTIPLICITY_RESOLVED` (1)** — a resolved multiples.tsv member
+  row backs the record. The set comes from the same
+  `resolvePairComponents` walk the wings pass runs
+  (`wingRenderablePrimaries` returns it), so it tracks the records the
+  binaries pipeline actually addresses — primaries AND promoted
+  companions alike (~20.9k records).
+- **`MULTIPLICITY_UNRESOLVED` (2)** — SIMBAD flags the star as a
+  multiple (`otype = '**'` in `data/simbad/simbad_sptype.tsv`, keyed by
+  Gaia source_id) but nothing resolves: the spectroscopic-binary
+  population invisible to WDS/CCDM/NSS. 64 Vir (HIP 65241, classical
+  Am star — the class is ~75% short-period SBs) is the canonical pin
+  (~4.4k records).
+- **`MULTIPLICITY_SINGLE` (0)** — neither signal; the default.
+
+Counted `multiplicityResolved` / `multiplicityUnresolved` in
+build-counts; pinned per-star in `known-stars.test.ts`. The runtime
+loader exposes `Catalog.multiplicityStatus` (Uint8Array); the hover
+surface consuming it is tracked separately (stellata-lo5.10).
 
 ## Search index (`public/search-index.json`)
 

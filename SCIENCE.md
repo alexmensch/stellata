@@ -260,11 +260,11 @@ applies three filters and nothing else:
    catastrophic 1/π estimate keeps its corrected distance whenever
    that distance falls inside scope.
 
-There is no source-aware filtering. The 96-byte v8 binary record
+There is no source-aware filtering. The 100-byte v9 binary record
 preserves none of the `*_src` columns either, so the renderer can't
 distinguish a Tycho-positioned, Gaia-distanced row from a "pure"
 Hipparcos one — every star is shaded by the same physical model
-(§Stellar physics, §Stellar perception model). v8 does carry each
+(§Stellar physics, §Stellar perception model). The record does carry each
 star's Gaia DR3 `source_id` (when AT-HYG has it) plus Apsis
 astrophysical parameters (Teff/logg/[M/H]/A0 from gspphot ∪ gspspec)
 keyed by it — the source-ID anchor downstream consumers (cross-match
@@ -422,7 +422,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
-writes them per record into the v8 binary at offsets 52–79 (see
+writes them per record into the binary at offsets 52–79 (see
 `scripts/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
@@ -694,7 +694,7 @@ build-time epoch bump.** A build-time advance to a fixed epoch
 to stay current), still contradicts the time readout, and cannot
 compose with the planned time scrubber (`stellata-nmu`). Instead:
 
-- `catalog.bin` v8 appends per-record `vx/vy/vz` `float32` pc/yr
+- `catalog.bin` v8 appended per-record `vx/vy/vz` `float32` pc/yr
   (bytes 84–95, stride 84 → 96 after the v7 `sid`; +3.9 MB ≈ +15%).
   Positions stay
   J2016.0 — the scene epoch convention and every existing
@@ -712,7 +712,7 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   `|t − t_advanced|` exceeds a sub-pixel drift threshold
   (bucketised, same idea as the ephemeris 60 s cache); a per-frame
   GPU path (per-instance velocity attribute) stays available as an
-  escalation and reads the same v8 columns, but is not needed for
+  escalation and reads the same velocity columns, but is not needed for
   v1.
 
 **Time base.** `Stellata.getT()` → Julian epoch years via
@@ -1567,7 +1567,29 @@ Tier C cross-checker (`validate-simbad-sample.ts` + the
 **Layer 5 — documentation.** This file (astronomer audience —
 sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 — functions, thresholds, provenance fields); `scripts/README.md`
-(formats — v8 byte plan, name table, search index).
+(formats — v9 byte plan, name table, search index).
+
+### Blank-components tail — full ingest deliberately cut
+
+73% of WDS rows (114,933) leave the `components` field blank (an
+implied single A,B pair). The rescue tier ingests the high-confidence
+subset (an ORB6 orbit or a SIMBAD xid anchors the system —
+`scripts/binaries/README.md` § Blank-components rescue); the remaining
+~112.8k-row tail was instrumented before deciding whether to ingest it
+wholesale (`scripts/binaries/probe-blank-components-tail.py`):
+
+- 22.0% of the tail resolves ≥1 component through the Stage-2 cascade,
+  but overwhelmingly primary-only (21.7%) via position/CCDM matches —
+  the population deferred as mostly wide optical doubles that would
+  survive only on the Stage-5 mag-gap backstop.
+- Only 1,269 pairs (1.1%) resolve distinct Gaia sources on BOTH ends —
+  the subset Stage 5 can honestly 3D-vet.
+
+Full ingest is cut: ~88k rows resolve nothing and would ride Stages
+2–7 as dead weight, and the anchored-but-one-sided majority would
+inflate the catalogue with unvettable pairs at ~3.7× the decomposing
+volume. The narrow distinct-Gaia-both-ends second rescue tier (~1.3k
+pairs) is tracked as its own follow-up.
 
 ### Worked examples
 
