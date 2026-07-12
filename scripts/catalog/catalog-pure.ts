@@ -907,6 +907,77 @@ export const APSIS_FIELDS = [
 ] as const;
 export type ApsisField = (typeof APSIS_FIELDS)[number];
 
+// Wire-ready values for one catalog record: sentinels applied, variability
+// pre-encoded (encodeAmpUnits / encodePeriodUnits), Apsis gaps as NO_APSIS.
+export interface WireStarRecord {
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  absmag: number;
+  ci: number;
+  physRadius: number;
+  companionIdx: number;   // NO_COMPANION = none
+  nameOffset: number;     // 0 = unnamed
+  spectClass: number;
+  lumClass: number;
+  conIndex: number;
+  flags: number;
+  ampUnits: number;       // ×0.05 mag
+  periodUnits: number;    // ×0.1 days
+  varType: number;
+  hip: number;            // 0 = none
+  gaiaSourceId: bigint;   // 0n = none
+  apsis: Record<ApsisField, number>; // NO_APSIS (NaN) = absent
+  sid: number;
+}
+
+/** Encode one record at byte `off` — the writer side of the layout
+ *  contract, shared by build-catalog.ts and the loader round-trip tests
+ *  so a writer-only encoding bug can't ship untested. */
+export function writeStarRecord(view: DataView, off: number, r: WireStarRecord): void {
+  view.setFloat32(off + RECORD_LAYOUT.x, r.x, true);
+  view.setFloat32(off + RECORD_LAYOUT.y, r.y, true);
+  view.setFloat32(off + RECORD_LAYOUT.z, r.z, true);
+  view.setFloat32(off + RECORD_LAYOUT.vx, r.vx, true);
+  view.setFloat32(off + RECORD_LAYOUT.vy, r.vy, true);
+  view.setFloat32(off + RECORD_LAYOUT.vz, r.vz, true);
+  view.setFloat32(off + RECORD_LAYOUT.absmag, r.absmag, true);
+  view.setFloat32(off + RECORD_LAYOUT.ci, r.ci, true);
+  view.setFloat32(off + RECORD_LAYOUT.physRadius, r.physRadius, true);
+  view.setUint32(off + RECORD_LAYOUT.companion, r.companionIdx >>> 0, true);
+  view.setUint32(off + RECORD_LAYOUT.nameOffset, r.nameOffset >>> 0, true);
+  view.setUint8(off + RECORD_LAYOUT.spectClass, r.spectClass);
+  view.setUint8(off + RECORD_LAYOUT.lumClass, r.lumClass);
+  view.setUint8(off + RECORD_LAYOUT.conIndex, r.conIndex);
+  view.setUint8(off + RECORD_LAYOUT.flags, r.flags);
+  view.setUint8(off + RECORD_LAYOUT.ampUnits, r.ampUnits);
+  view.setUint16(off + RECORD_LAYOUT.period, r.periodUnits, true);
+  view.setUint8(off + RECORD_LAYOUT.varType, r.varType & 0xff);
+  view.setUint32(off + RECORD_LAYOUT.hip, r.hip, true);
+  view.setBigUint64(off + RECORD_LAYOUT.gaiaSourceId, r.gaiaSourceId, true);
+  for (const name of APSIS_FIELDS) {
+    view.setFloat32(off + RECORD_LAYOUT[name], r.apsis[name], true);
+  }
+  view.setUint32(off + RECORD_LAYOUT.sid, r.sid, true);
+}
+
+/** Encode the fixed-size header — the writer side shared with the loader
+ *  round-trip tests. Reserved bytes (20..31) stay zero. */
+export function writeCatalogHeader(
+  view: DataView,
+  fields: { count: number; nameTableOffset: number; nameTableLength: number },
+): void {
+  const bytes = new Uint8Array(view.buffer, view.byteOffset);
+  for (let i = 0; i < MAGIC.length; i++) bytes[HEADER_LAYOUT.magic + i] = MAGIC.charCodeAt(i);
+  view.setUint32(HEADER_LAYOUT.version, BINARY_VERSION, true);
+  view.setUint32(HEADER_LAYOUT.count, fields.count, true);
+  view.setUint32(HEADER_LAYOUT.nameTableOffset, fields.nameTableOffset, true);
+  view.setUint32(HEADER_LAYOUT.nameTableLength, fields.nameTableLength, true);
+}
+
 // Name table layout: two zero bytes of padding so name offset 0 reads as
 // the "no name" sentinel, followed by length-prefixed UTF-8 strings:
 // uint16 byteLen, then byteLen bytes.

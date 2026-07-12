@@ -25,16 +25,16 @@ import {
   VAR_TYPE_ECLIPSING,
   encodeAmpUnits,
   encodePeriodUnits,
-  HEADER_LAYOUT,
-  RECORD_LAYOUT,
   HEADER_SIZE,
   RECORD_SIZE,
   BINARY_VERSION,
-  MAGIC,
   NO_COMPANION,
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
   APSIS_FIELDS,
+  type ApsisField,
+  writeStarRecord,
+  writeCatalogHeader,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
   CATALOG_MANIFEST_FILENAME,
@@ -844,12 +844,11 @@ async function main() {
   const bytes = new Uint8Array(out);
 
   // Header.
-  const magicBytes = encoder.encode(MAGIC);
-  bytes.set(magicBytes, HEADER_LAYOUT.magic);
-  view.setUint32(HEADER_LAYOUT.version, BINARY_VERSION, true);
-  view.setUint32(HEADER_LAYOUT.count, stars.length, true);
-  view.setUint32(HEADER_LAYOUT.nameTableOffset, HEADER_SIZE + recordsLength, true);
-  view.setUint32(HEADER_LAYOUT.nameTableLength, nameTableLength, true);
+  writeCatalogHeader(view, {
+    count: stars.length,
+    nameTableOffset: HEADER_SIZE + recordsLength,
+    nameTableLength,
+  });
 
   // Records.
   let off = HEADER_SIZE;
@@ -860,57 +859,49 @@ async function main() {
   let apsisTeffEither = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    view.setFloat32(off + RECORD_LAYOUT.x, s.x, true);
-    view.setFloat32(off + RECORD_LAYOUT.y, s.y, true);
-    view.setFloat32(off + RECORD_LAYOUT.z, s.z, true);
-    view.setFloat32(off + RECORD_LAYOUT.vx, s.vx, true);
-    view.setFloat32(off + RECORD_LAYOUT.vy, s.vy, true);
-    view.setFloat32(off + RECORD_LAYOUT.vz, s.vz, true);
-    view.setFloat32(off + RECORD_LAYOUT.absmag, s.absmag, true);
-    view.setFloat32(off + RECORD_LAYOUT.ci, s.ci, true);
-    view.setFloat32(off + RECORD_LAYOUT.physRadius, s.physicalRadius, true);
-    view.setUint32(off + RECORD_LAYOUT.companion, s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION, true);
-    view.setUint32(off + RECORD_LAYOUT.nameOffset, s.proper ? nameOffsets[i] : 0, true);
-    view.setUint8(off + RECORD_LAYOUT.spectClass, s.spectClass);
-    view.setUint8(off + RECORD_LAYOUT.lumClass, s.lumClass);
-    view.setUint8(off + RECORD_LAYOUT.conIndex, s.conIndex);
-    view.setUint8(off + RECORD_LAYOUT.flags, s.flags);
     // Variability: amplitude clamps at 12.75 mag (extreme Miras), period at
     // 6553 days (rare long-period symbiotics). Period = 0 is the shader's
     // "not variable" sentinel.
-    if (s.periodDays > 0 && s.amplitudeMag > 0) {
-      const ampUnits = encodeAmpUnits(s.amplitudeMag);
-      const periodUnits = encodePeriodUnits(s.periodDays);
-      view.setUint8(off + RECORD_LAYOUT.ampUnits, ampUnits);
-      view.setUint16(off + RECORD_LAYOUT.period, periodUnits, true);
-      if (ampUnits > 0 && periodUnits > 0) variableCount++;
-    } else {
-      view.setUint8(off + RECORD_LAYOUT.ampUnits, 0);
-      view.setUint16(off + RECORD_LAYOUT.period, 0, true);
-    }
-    view.setUint8(off + RECORD_LAYOUT.varType, (s.varType ?? 0) & 0xff);
-    view.setUint32(off + RECORD_LAYOUT.hip, s.hip ?? 0, true);
+    const isVariable = s.periodDays > 0 && s.amplitudeMag > 0;
+    const ampUnits = isVariable ? encodeAmpUnits(s.amplitudeMag) : 0;
+    const periodUnits = isVariable ? encodePeriodUnits(s.periodDays) : 0;
+    if (ampUnits > 0 && periodUnits > 0) variableCount++;
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
     // AT-HYG column as BigInt to preserve every bit before writing.
     const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
-    view.setBigUint64(off + RECORD_LAYOUT.gaiaSourceId, gaiaSourceId, true);
     if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
 
     // Apsis lookup keyed by gaia_source_id string (BigInt key would
     // require a parallel string map). NO_APSIS (NaN) fills every cell
     // when the source_id is absent from the TSV or the row's cell is blank.
-    const apsis = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
-    const f = (v: number | null | undefined): number =>
-      v === null || v === undefined ? NO_APSIS : v;
-    for (const name of APSIS_FIELDS) {
-      view.setFloat32(off + RECORD_LAYOUT[name], f(apsis?.[name]), true);
-    }
-    if (apsis) apsisMatched++;
-    if (apsis && (apsis.teffGspphot !== null || apsis.teffGspspec !== null)) {
+    const apsisRow = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
+    const apsis = {} as Record<ApsisField, number>;
+    for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
+    if (apsisRow) apsisMatched++;
+    if (apsisRow && (apsisRow.teffGspphot !== null || apsisRow.teffGspspec !== null)) {
       apsisTeffEither++;
     }
 
-    view.setUint32(off + RECORD_LAYOUT.sid, recordSids[i], true);
+    writeStarRecord(view, off, {
+      x: s.x, y: s.y, z: s.z,
+      vx: s.vx, vy: s.vy, vz: s.vz,
+      absmag: s.absmag,
+      ci: s.ci,
+      physRadius: s.physicalRadius,
+      companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
+      nameOffset: s.proper ? nameOffsets[i] : 0,
+      spectClass: s.spectClass,
+      lumClass: s.lumClass,
+      conIndex: s.conIndex,
+      flags: s.flags,
+      ampUnits,
+      periodUnits,
+      varType: s.varType ?? 0,
+      hip: s.hip ?? 0,
+      gaiaSourceId,
+      apsis,
+      sid: recordSids[i],
+    });
 
     if (s.flags & FLAG_IS_SOL) solIndex = i;
     off += RECORD_SIZE;
