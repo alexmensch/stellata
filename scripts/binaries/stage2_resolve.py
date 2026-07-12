@@ -390,6 +390,131 @@ def resolve_via_simbad(
 # separations for ``AB``/``AC``/``BC`` pairs.
 CCDM_POSITION_MATCH_TOLERANCE_ARCSEC = 10.0
 
+# A candidate sibling HIP is refuted when another, hierarchy-disjoint
+# letter of the same system sits this many times closer to the HIP's
+# known position than the letter being resolved — the HIP is that
+# letter's identity, not ours. 2× mirrors the binding-integrity
+# audit's runner-up decisiveness ratio, so a near-tie (both letters
+# within measurement noise of the candidate) never rejects.
+CCDM_SIBLING_OWNERSHIP_DECISIVENESS = 2.0
+
+
+def build_system_letter_positions(
+    pairs: list[WdsPair],
+) -> dict[str, dict[str, tuple[float, float]]]:
+    """Best-known sky position per ``(wds_id, letter)`` from WDS pair
+    geometry: a letter's primary-slot precise coord (measured) wins over
+    a (ρ, θ)-predicted secondary offset. ρ = 0 sub-resolution pairs
+    contribute no secondary prediction (it would degenerate onto the
+    primary's own coordinate)."""
+    out: dict[str, dict[str, tuple[float, float]]] = {}
+    predicted: set[tuple[str, str]] = set()
+    for pair in pairs:
+        if pair.precise_ra_deg is None or pair.precise_dec_deg is None:
+            continue
+        split = split_components(pair.components)
+        if split is None:
+            continue
+        primary, secondary = split
+        secondary = expand_wds_truncated_secondary(primary, secondary)
+        letters = out.setdefault(pair.wds_id, {})
+        if primary not in letters or (pair.wds_id, primary) in predicted:
+            letters[primary] = (pair.precise_ra_deg, pair.precise_dec_deg)
+            predicted.discard((pair.wds_id, primary))
+        if (
+            secondary not in letters
+            and pair.rho_last is not None
+            and pair.theta_last is not None
+            and pair.rho_last > 0.0
+        ):
+            letters[secondary] = predict_secondary_position(
+                pair.precise_ra_deg, pair.precise_dec_deg,
+                pair.rho_last, pair.theta_last,
+            )
+            predicted.add((pair.wds_id, secondary))
+    return out
+
+
+def _tokens_share_identity(a: str, b: str) -> bool:
+    """Two letter tokens may legitimately carry one identity when they
+    are equal, hierarchy-related, or compound-contained."""
+    return related_hier(a, b) or compound_contains(a, b)
+
+
+def _sibling_letter_owns_candidate(
+    *, cand_ra_deg: float, cand_dec_deg: float,
+    query_chord_sq: float,
+    component_token: str,
+    partner_token: str | None,
+    system_letter_positions: dict[str, tuple[float, float]],
+) -> bool:
+    """True when a hierarchy-disjoint, non-partner letter of the same
+    system sits decisively closer to the candidate HIP's position than
+    the query letter does — the HIP is that letter's identity, not
+    ours. The pair partner is exempt: an unresolved pair's two sides
+    legitimately share one identity (the WDS blend convention that
+    lets σ Ori B carry A's HIP at 0.26″)."""
+    cx, cy, cz = _spherical_to_unit_vec(cand_ra_deg, cand_dec_deg)
+    decisiveness_sq = (
+        CCDM_SIBLING_OWNERSHIP_DECISIVENESS
+        * CCDM_SIBLING_OWNERSHIP_DECISIVENESS
+    )
+    for letter, (ra_l, dec_l) in system_letter_positions.items():
+        if _tokens_share_identity(letter, component_token):
+            continue
+        if partner_token is not None and _tokens_share_identity(
+            letter, partner_token,
+        ):
+            continue
+        lx, ly, lz = _spherical_to_unit_vec(ra_l, dec_l)
+        dx = lx - cx
+        dy = ly - cy
+        dz = lz - cz
+        d_sq = dx * dx + dy * dy + dz * dz
+        if d_sq * decisiveness_sq < query_chord_sq:
+            return True
+    return False
+
+
+def build_system_hip_claims(
+    components: list[ResolvedComponent],
+) -> dict[str, dict[int, set[str]]]:
+    """``wds_id → HIP → letter tokens currently bound to it``. Tokens
+    with no uppercase letter (WDS prefix-truncated digit forms) carry
+    no lineage information and are skipped."""
+    out: dict[str, dict[int, set[str]]] = {}
+    for c in components:
+        if c.hip is None or not token_letters(c.component):
+            continue
+        out.setdefault(c.wds_id, {}).setdefault(c.hip, set()).add(c.component)
+    return out
+
+
+def _hip_claimed_by_disjoint_letter(
+    *, hip: int, wds_id: str,
+    component_token: str, partner_token: str | None,
+    hip_claims: dict[str, dict[int, set[str]]],
+) -> bool:
+    """True when the HIP is already bound to letters of this system
+    that are ALL hierarchy-disjoint from both the letter being resolved
+    and its pair partner. Partner sharing is the WDS blend convention;
+    a non-partner letter's HIP is another star's identity. This is the
+    gate positional evidence can't provide when WDS stamps a pair row
+    with the SYSTEM coordinate: Rigel's BC row carries A's coord, so
+    B position-matches HIP 24436 = A at ~0″ and wears A's photometry
+    without this check."""
+    claimants = hip_claims.get(wds_id, {}).get(hip)
+    if not claimants:
+        return False
+    for tok in claimants:
+        if _tokens_share_identity(tok, component_token):
+            return False
+        if partner_token is not None and _tokens_share_identity(
+            tok, partner_token,
+        ):
+            return False
+    return True
+
 
 def _ccdm_candidate_hip_for_position(
     *, ra_deg: float, dec_deg: float,
@@ -397,9 +522,19 @@ def _ccdm_candidate_hip_for_position(
     indices: IdentifierIndices,
     tolerance_arcsec: float,
     target_epoch: float = WDS_PRECISE_COORD_EPOCH,
+    wds_id: str | None = None,
+    component_token: str | None = None,
+    partner_token: str | None = None,
+    system_letter_positions: dict[str, tuple[float, float]] | None = None,
+    hip_claims: dict[str, dict[int, set[str]]] | None = None,
+    stats: dict[str, int] | None = None,
 ) -> int | None:
     """Pick the CCDM-sibling HIP whose AT-HYG row sits nearest to the
-    given target position (within ``tolerance_arcsec``).
+    given target position (within ``tolerance_arcsec``), skipping any
+    candidate another hierarchy-disjoint, non-partner letter of the
+    system owns — either decisively by geometry
+    (``_sibling_letter_owns_candidate``) or by an existing binding
+    (``_hip_claimed_by_disjoint_letter``).
 
     Each candidate's AT-HYG position is PM-propagated to ``target_epoch``
     before comparison so HIP-sourced rows (effectively at J1991.25) are
@@ -421,11 +556,38 @@ def _ccdm_candidate_hip_for_position(
         dy = ry - qy
         dz = rz - qz
         d_sq = dx * dx + dy * dy + dz * dz
+        if d_sq > threshold_chord_sq:
+            continue
+        sibling_owned = (
+            component_token is not None
+            and system_letter_positions is not None
+            and _sibling_letter_owns_candidate(
+                cand_ra_deg=ra_cand, cand_dec_deg=dec_cand,
+                query_chord_sq=d_sq,
+                component_token=component_token,
+                partner_token=partner_token,
+                system_letter_positions=system_letter_positions,
+            )
+        ) or (
+            component_token is not None
+            and wds_id is not None
+            and hip_claims is not None
+            and _hip_claimed_by_disjoint_letter(
+                hip=hip, wds_id=wds_id,
+                component_token=component_token,
+                partner_token=partner_token,
+                hip_claims=hip_claims,
+            )
+        )
+        if sibling_owned:
+            if stats is not None:
+                stats["ccdm_sibling_owned_rejected"] = (
+                    stats.get("ccdm_sibling_owned_rejected", 0) + 1
+                )
+            continue
         if d_sq < best_chord_sq:
             best_chord_sq = d_sq
             best_hip = hip
-    if best_hip is None or best_chord_sq > threshold_chord_sq:
-        return None
     return best_hip
 
 
@@ -434,6 +596,7 @@ def resolve_via_ccdm(
     pairs: list[WdsPair],
     indices: IdentifierIndices,
     tolerance_arcsec: float = CCDM_POSITION_MATCH_TOLERANCE_ARCSEC,
+    stats: dict[str, int] | None = None,
 ) -> None:
     """Cascade pass following ``resolve_via_simbad`` and preceding
     ``resolve_via_position``. Resolves WDS components by anchoring on
@@ -450,7 +613,13 @@ def resolve_via_ccdm(
     2. Exclude HIPs already claimed by the pair's primary (so the
        secondary slot can't reuse the primary's HIP).
     3. Primary: pick the candidate HIP whose PM-propagated AT-HYG
-       position sits nearest the WDS precise_coord.
+       position sits nearest the WDS precise_coord. A candidate whose
+       position another hierarchy-disjoint letter of the system sits
+       decisively closer to is skipped — that HIP is the other
+       letter's identity (Rigel's BC pair sits 9.4″ from HIP 24436 =
+       Rigel A, inside the 10″ tolerance; binding it dressed B in A's
+       photometry). Counted ``ccdm_sibling_owned_rejected`` in
+       ``stats``.
     4. Secondary: same, but against the (ρ, θ)-predicted secondary
        position. Skipped when ρ exceeds the WDS overflow sentinel — the
        prediction is meaningless at that separation and the CCDM
@@ -467,6 +636,14 @@ def resolve_via_ccdm(
         return
 
     pair_by_wds_disc = build_pair_by_wds_disc(pairs)
+    letter_positions_by_system = build_system_letter_positions(pairs)
+    hip_claims = build_system_hip_claims(components)
+
+    def claim(c: ResolvedComponent, hip: int) -> None:
+        if token_letters(c.component):
+            hip_claims.setdefault(c.wds_id, {}).setdefault(
+                hip, set(),
+            ).add(c.component)
 
     # Pass 1 — primaries. Cache the HIP each primary claims so the
     # secondary pass can exclude it (CCDM systems with two HIPs would
@@ -490,15 +667,23 @@ def resolve_via_ccdm(
             primary_hip_by_pair[(c.wds_id, c.discoverer, pair.components)] = c.hip
             _bind_ccdm_hip(c, c.hip, indices)
             continue
+        pair_split = split_components(pair.components)
         match_hip = _ccdm_candidate_hip_for_position(
             ra_deg=pair.precise_ra_deg, dec_deg=pair.precise_dec_deg,
             candidate_hips=candidates,
             indices=indices, tolerance_arcsec=tolerance_arcsec,
+            wds_id=c.wds_id,
+            component_token=c.component,
+            partner_token=expand_wds_truncated_secondary(*pair_split),
+            system_letter_positions=letter_positions_by_system.get(c.wds_id),
+            hip_claims=hip_claims,
+            stats=stats,
         )
         if match_hip is None:
             continue
         primary_hip_by_pair[(c.wds_id, c.discoverer, pair.components)] = match_hip
         _bind_ccdm_hip(c, match_hip, indices)
+        claim(c, match_hip)
 
     # Pass 2 — secondaries. Use the WDS (ρ, θ) prediction to pick the
     # right CCDM sibling, excluding whichever HIP the primary claimed.
@@ -542,10 +727,19 @@ def resolve_via_ccdm(
             ra_deg=secondary_ra, dec_deg=secondary_dec,
             candidate_hips=narrowed,
             indices=indices, tolerance_arcsec=tolerance_arcsec,
+            wds_id=c.wds_id,
+            component_token=expand_wds_truncated_secondary(
+                split_components(pair.components)[0], c.component,
+            ),
+            partner_token=split_components(pair.components)[0],
+            system_letter_positions=letter_positions_by_system.get(c.wds_id),
+            hip_claims=hip_claims,
+            stats=stats,
         )
         if match_hip is None:
             continue
         _bind_ccdm_hip(c, match_hip, indices)
+        claim(c, match_hip)
 
 
 def _bind_ccdm_hip(
@@ -831,6 +1025,7 @@ def iter_pair_athyg_matches(
     match_fn: Callable[..., int | None] = match_athyg_position_either_epoch,
     allow_blend_inherit: bool,
     tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+    stats: dict[str, int] | None = None,
 ) -> Iterator[PairAthygMatchEvent]:
     """Walk the WDS-pair → AT-HYG position-match cascade and yield one
     event per component whose match succeeds, in primary-then-secondary
@@ -839,6 +1034,15 @@ def iter_pair_athyg_matches(
     the predicted-secondary path when ρ is None — the WDS overflow
     sentinel (999.9) is collapsed to None at parse, so ultra-wide pairs
     whose (ρ, θ) is degenerate fall through to identifier binding.
+
+    A matched row whose HIP is already bound to a hierarchy-disjoint,
+    non-partner letter of the same system is dropped
+    (``_hip_claimed_by_disjoint_letter``, counted
+    ``athyg_match_sibling_claimed_rejected`` in ``stats``) — WDS stamps
+    some pair rows with the SYSTEM coordinate (Rigel's BC row carries
+    A's coord), so the nearest AT-HYG row can be another letter's
+    identity. The blend-inherit branch is exempt by construction: it
+    shares the pair partner's row, the WDS blend convention.
 
     Shared between Stage 2's ``resolve_via_position`` (identifier
     binding) and Stage 3's ``attach_athyg_position_fallback`` (astrometry
@@ -857,7 +1061,26 @@ def iter_pair_athyg_matches(
     """
     grid = build_athyg_position_grid(athyg)
     pair_by_wds_disc = build_pair_by_wds_disc(pairs)
+    hip_claims = build_system_hip_claims(components)
     primary_idx_by_pair: dict[tuple[str, str, str], int] = {}
+
+    def match_is_sibling_claimed(
+        match_idx: int, c: ResolvedComponent,
+        component_token: str, partner_token: str,
+    ) -> bool:
+        row_hip = athyg[match_idx].hip
+        if row_hip is None:
+            return False
+        blocked = _hip_claimed_by_disjoint_letter(
+            hip=row_hip, wds_id=c.wds_id,
+            component_token=component_token, partner_token=partner_token,
+            hip_claims=hip_claims,
+        )
+        if blocked and stats is not None:
+            stats["athyg_match_sibling_claimed_rejected"] = (
+                stats.get("athyg_match_sibling_claimed_rejected", 0) + 1
+            )
+        return blocked
 
     # Pass 1 — primaries. Cache the matched AT-HYG row per pair so the
     # secondary pass can exclude it.
@@ -873,6 +1096,12 @@ def iter_pair_athyg_matches(
             exclude_idx=None,
         )
         if match_idx is None:
+            continue
+        pair_split = split_components(pair.components)
+        if match_is_sibling_claimed(
+            match_idx, c, c.component,
+            expand_wds_truncated_secondary(*pair_split),
+        ):
             continue
         primary_idx_by_pair[(c.wds_id, c.discoverer, pair.components)] = match_idx
         yield PairAthygMatchEvent(
@@ -912,11 +1141,19 @@ def iter_pair_athyg_matches(
                 exclude_idx=primary_idx,
             )
         if secondary_match is not None:
-            yield PairAthygMatchEvent(
-                component_idx=i, athyg_match_idx=secondary_match,
-                is_blend_inherit=False,
-            )
-            continue
+            primary_token = split_components(pair.components)[0]
+            if match_is_sibling_claimed(
+                secondary_match, c,
+                expand_wds_truncated_secondary(primary_token, c.component),
+                primary_token,
+            ):
+                secondary_match = None
+            else:
+                yield PairAthygMatchEvent(
+                    component_idx=i, athyg_match_idx=secondary_match,
+                    is_blend_inherit=False,
+                )
+                continue
         if allow_blend_inherit and primary_idx is not None:
             yield PairAthygMatchEvent(
                 component_idx=i, athyg_match_idx=primary_idx,
@@ -929,6 +1166,7 @@ def resolve_via_position(
     pairs: list[WdsPair],
     athyg: list[AthygRow],
     tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+    stats: dict[str, int] | None = None,
 ) -> None:
     """Cascade pass following ``resolve_via_simbad``. For components
     still unresolved after the HIP-anchored prefix and the SIMBAD-backed
@@ -949,6 +1187,7 @@ def resolve_via_position(
         skip_predicate=lambda _i, c: c.gaia_source_id is not None,
         allow_blend_inherit=False,
         tolerance_arcsec=tolerance_arcsec,
+        stats=stats,
     ):
         c = components[event.component_idx]
         row = athyg[event.athyg_match_idx]
@@ -1053,6 +1292,7 @@ def resolve_all_pairs(
     athyg: list[AthygRow],
     simbad_xids: dict[tuple[str, str], SimbadWdsXid] | None = None,
     position_tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+    stats: dict[str, int] | None = None,
 ) -> list[ResolvedComponent]:
     """Run Stage 2's full resolution chain over every WDS pair that
     decomposes into two components. Blank-components rows the rescue tier
@@ -1107,10 +1347,11 @@ def resolve_all_pairs(
         ))
     if simbad_xids:
         resolve_via_simbad(components=out, simbad_xids=simbad_xids)
-    resolve_via_ccdm(components=out, pairs=pairs, indices=indices)
+    resolve_via_ccdm(components=out, pairs=pairs, indices=indices, stats=stats)
     resolve_via_position(
         components=out, pairs=pairs, athyg=athyg,
         tolerance_arcsec=position_tolerance_arcsec,
+        stats=stats,
     )
     propagate_within_system(out)
     if propagate_blend_identity(out, pairs) > 0:
