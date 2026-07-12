@@ -565,6 +565,8 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 1 1 auto;
   min-width: 0;
 }
+/* Bold sets the focus card apart from the visually identical POI cards. */
+#focus-card .card-title { font-weight: 700; }
 .focus-card-inner {
   font-size: 12px;
   display: flex;
