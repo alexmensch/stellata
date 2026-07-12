@@ -34,6 +34,7 @@ import {
   NO_COMPANION,
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
+  APSIS_FIELDS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
   CATALOG_MANIFEST_FILENAME,
@@ -901,13 +902,9 @@ async function main() {
     const apsis = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
     const f = (v: number | null | undefined): number =>
       v === null || v === undefined ? NO_APSIS : v;
-    view.setFloat32(off + RECORD_LAYOUT.teffGspphot, f(apsis?.teffGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.loggGspphot, f(apsis?.loggGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.mhGspphot, f(apsis?.mhGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.azeroGspphot, f(apsis?.azeroGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.teffGspspec, f(apsis?.teffGspspec), true);
-    view.setFloat32(off + RECORD_LAYOUT.loggGspspec, f(apsis?.loggGspspec), true);
-    view.setFloat32(off + RECORD_LAYOUT.mhGspspec, f(apsis?.mhGspspec), true);
+    for (const name of APSIS_FIELDS) {
+      view.setFloat32(off + RECORD_LAYOUT[name], f(apsis?.[name]), true);
+    }
     if (apsis) apsisMatched++;
     if (apsis && (apsis.teffGspphot !== null || apsis.teffGspspec !== null)) {
       apsisTeffEither++;

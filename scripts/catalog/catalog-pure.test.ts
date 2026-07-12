@@ -1459,6 +1459,17 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
+  it('record fields tile the record contiguously (kind-derived sizes sum to RECORD_SIZE)', () => {
+    const fields = (Object.entries(RECORD_LAYOUT) as [keyof typeof RECORD_LAYOUT, number][])
+      .sort((a, b) => a[1] - b[1]);
+    let expected = 0;
+    for (const [name, off] of fields) {
+      expect(off, `${name} leaves a gap or overlaps`).toBe(expected);
+      expected = off + RECORD_FIELD_SIZES[name];
+    }
+    expect(expected).toBe(RECORD_SIZE);
+  });
+
   it('magic + version identify the v8 format', () => {
     expect(MAGIC).toBe('HYG8');
     expect(BINARY_VERSION).toBe(8);

@@ -713,10 +713,11 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 //   [HEADER_SIZE + count*RECORD_SIZE,                       end)        name table
 //
 // HEADER_LAYOUT / RECORD_LAYOUT below carry the per-field byte offsets;
-// HEADER_FIELD_SIZES / RECORD_FIELD_SIZES carry the matching byte widths
-// and field kinds. Adding/changing a field means: bump BINARY_VERSION +
-// MAGIC, extend the LAYOUT + SIZES pair with the new offset and kind, and
-// the writer + reader + tests pick the change up automatically.
+// HEADER_FIELD_KINDS / RECORD_FIELD_KINDS carry the matching wire types
+// (byte widths derive from the kind). Adding/changing a field means: bump
+// BINARY_VERSION + MAGIC, extend the LAYOUT + KINDS pair with the new
+// offset and kind, and the writer + reader + tests pick the change up
+// automatically.
 
 export const MAGIC = 'HYG8';
 export const BINARY_VERSION = 8;
@@ -810,74 +811,101 @@ export function assembleCatalogChunks(
   return out.buffer;
 }
 
+// Wire type of a layout field. Widths derive from the kind via
+// FIELD_KIND_BYTES, so a field's type and size can never disagree.
+export type FieldKind = 'u8' | 'u16' | 'u32' | 'u64' | 'f32' | 'ascii4';
+
+export const FIELD_KIND_BYTES: Record<FieldKind, number> = {
+  u8: 1, u16: 2, u32: 4, u64: 8, f32: 4, ascii4: 4,
+};
+
+function fieldSizes<K extends string>(kinds: Record<K, FieldKind>): Record<K, number> {
+  const out = {} as Record<K, number>;
+  for (const name of Object.keys(kinds) as K[]) out[name] = FIELD_KIND_BYTES[kinds[name]];
+  return out;
+}
+
 export const HEADER_LAYOUT = {
-  magic: 0,            // 4 bytes ASCII
-  version: 4,          // uint32
-  count: 8,            // uint32
-  nameTableOffset: 12, // uint32
-  nameTableLength: 16, // uint32
+  magic: 0,
+  version: 4,
+  count: 8,
+  nameTableOffset: 12,
+  nameTableLength: 16,
   // bytes 20..31 reserved
 } as const;
 
-/** Per-field byte width keyed by HEADER_LAYOUT name. Single source of
- *  truth shared with the layout regression tests so size assertions
- *  can't drift from the actual encoding. */
-export const HEADER_FIELD_SIZES: Record<keyof typeof HEADER_LAYOUT, number> = {
-  magic: 4,
-  version: 4,
-  count: 4,
-  nameTableOffset: 4,
-  nameTableLength: 4,
+/** Wire type per HEADER_LAYOUT field. Single source of truth shared with
+ *  the layout regression tests so size assertions can't drift from the
+ *  actual encoding. */
+export const HEADER_FIELD_KINDS: Record<keyof typeof HEADER_LAYOUT, FieldKind> = {
+  magic: 'ascii4',
+  version: 'u32',
+  count: 'u32',
+  nameTableOffset: 'u32',
+  nameTableLength: 'u32',
 };
 
+export const HEADER_FIELD_SIZES = fieldSizes(HEADER_FIELD_KINDS);
+
 export const RECORD_LAYOUT = {
-  x: 0,           // float32
-  y: 4,           // float32
-  z: 8,           // float32
-  absmag: 12,     // float32
-  ci: 16,         // float32
-  physRadius: 20, // float32
-  companion: 24,  // uint32 (NO_COMPANION = none)
-  nameOffset: 28, // uint32 (0 = unnamed)
-  spectClass: 32, // uint8
-  lumClass: 33,   // uint8
-  conIndex: 34,   // uint8 (NO_CONSTELLATION_INDEX = none)
-  flags: 35,      // uint8 (FLAG_*)
-  ampUnits: 36,   // uint8 (×0.05 mag)
-  varType: 37,    // uint8 (VAR_TYPE_*; 0 = unknown / non-variable)
-  period: 38,     // uint16 (×0.1 days)
-  hip: 40,        // uint32 (0 = no HIP)
-  gaiaSourceId: 44, // uint64 LE (0 = no Gaia DR3 source_id)
+  x: 0,
+  y: 4,
+  z: 8,
+  absmag: 12,
+  ci: 16,
+  physRadius: 20,
+  companion: 24,  // NO_COMPANION = none
+  nameOffset: 28, // 0 = unnamed
+  spectClass: 32,
+  lumClass: 33,
+  conIndex: 34,   // NO_CONSTELLATION_INDEX = none
+  flags: 35,      // FLAG_*
+  ampUnits: 36,   // ×0.05 mag
+  varType: 37,    // VAR_TYPE_*; 0 = unknown / non-variable
+  period: 38,     // ×0.1 days
+  hip: 40,        // 0 = no HIP
+  gaiaSourceId: 44, // 0 = no Gaia DR3 source_id
   // Gaia DR3 Apsis (gspphot ∪ gspspec). NO_APSIS (NaN) for the ~15% gap.
-  teffGspphot: 52,  // float32 (K)
-  loggGspphot: 56,  // float32 (log cgs)
-  mhGspphot: 60,    // float32 ([M/H] dex)
-  azeroGspphot: 64, // float32 (mag, line-of-sight extinction)
-  teffGspspec: 68,  // float32 (K)
-  loggGspspec: 72,  // float32 (log cgs)
-  mhGspspec: 76,    // float32 ([M/H] dex)
-  sid: 80,          // uint32 Stellata ID (0 = NO_SID; docs/sid.md § 7)
+  teffGspphot: 52,  // K
+  loggGspphot: 56,  // log cgs
+  mhGspphot: 60,    // [M/H] dex
+  azeroGspphot: 64, // mag, line-of-sight extinction
+  teffGspspec: 68,  // K
+  loggGspspec: 72,  // log cgs
+  mhGspspec: 76,    // [M/H] dex
+  sid: 80,          // Stellata ID (0 = NO_SID; docs/sid.md § 7)
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
   // Consumed once at load by the epoch-advance pass; positions stay at
   // the fixed J2016.0 scene epoch on disk. See scripts/catalog/README.md
   // § Space-motion velocity and SCIENCE.md § Current-epoch star positions.
-  vx: 84,           // float32 (pc/yr)
-  vy: 88,           // float32 (pc/yr)
-  vz: 92,           // float32 (pc/yr)
+  vx: 84,
+  vy: 88,
+  vz: 92,
 } as const;
 
-/** Per-field byte width keyed by RECORD_LAYOUT name. As with
- *  HEADER_FIELD_SIZES the test suite derives non-overlap + bound checks
- *  from this map so any new field gets coverage by extending one place. */
-export const RECORD_FIELD_SIZES: Record<keyof typeof RECORD_LAYOUT, number> = {
-  x: 4, y: 4, z: 4, absmag: 4, ci: 4, physRadius: 4,
-  companion: 4, nameOffset: 4,
-  spectClass: 1, lumClass: 1, conIndex: 1, flags: 1, ampUnits: 1,
-  varType: 1, period: 2, hip: 4, gaiaSourceId: 8,
-  teffGspphot: 4, loggGspphot: 4, mhGspphot: 4, azeroGspphot: 4,
-  teffGspspec: 4, loggGspspec: 4, mhGspspec: 4, sid: 4,
-  vx: 4, vy: 4, vz: 4,
+/** Wire type per RECORD_LAYOUT field. As with HEADER_FIELD_KINDS the test
+ *  suite derives non-overlap + bound checks from this map so any new field
+ *  gets coverage by extending one place. */
+export const RECORD_FIELD_KINDS: Record<keyof typeof RECORD_LAYOUT, FieldKind> = {
+  x: 'f32', y: 'f32', z: 'f32', absmag: 'f32', ci: 'f32', physRadius: 'f32',
+  companion: 'u32', nameOffset: 'u32',
+  spectClass: 'u8', lumClass: 'u8', conIndex: 'u8', flags: 'u8', ampUnits: 'u8',
+  varType: 'u8', period: 'u16', hip: 'u32', gaiaSourceId: 'u64',
+  teffGspphot: 'f32', loggGspphot: 'f32', mhGspphot: 'f32', azeroGspphot: 'f32',
+  teffGspspec: 'f32', loggGspspec: 'f32', mhGspspec: 'f32', sid: 'u32',
+  vx: 'f32', vy: 'f32', vz: 'f32',
 };
+
+export const RECORD_FIELD_SIZES = fieldSizes(RECORD_FIELD_KINDS);
+
+/** The seven Gaia DR3 Apsis float32 columns in record-layout order — the
+ *  writer, runtime loader, Node reader, and test mock all loop over this
+ *  tuple, so a v-next Apsis-shaped field is a one-entry extension here. */
+export const APSIS_FIELDS = [
+  'teffGspphot', 'loggGspphot', 'mhGspphot', 'azeroGspphot',
+  'teffGspspec', 'loggGspspec', 'mhGspspec',
+] as const;
+export type ApsisField = (typeof APSIS_FIELDS)[number];
 
 // Name table layout: two zero bytes of padding so name offset 0 reads as
 // the "no name" sentinel, followed by length-prefixed UTF-8 strings:
