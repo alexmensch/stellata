@@ -12,6 +12,9 @@ build scripts, tests, and shader uniforms.
 - `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
+- `pending-click.ts` — single/double-click disambiguator (hold a
+  click for the double window, fire single on expiry). Drives canvas
+  clicks in both camera modes.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts (docs/sid.md § 8).

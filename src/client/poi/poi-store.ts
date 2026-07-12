@@ -33,6 +33,10 @@ export class PoiStore {
     return this.pois.indexOf(idx) >= 0;
   }
 
+  atCap(): boolean {
+    return this.pois.length >= POI_MAX_COUNT;
+  }
+
   /** Whether `idx` may be pinned at all (independent of the cap). */
   pinnable(idx: number): boolean {
     return (

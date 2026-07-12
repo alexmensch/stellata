@@ -55,28 +55,45 @@ mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
 `'frame'`, `'focusLerp'`, and the warp-end edge emit alone.
 
-## Click-state machine (`stellata.ts onPointerUp`)
+## Click-state machine (`stellata.ts`)
+
+Canvas clicks in BOTH modes are held for `DBL_CLICK_MS` (280 ms) by a
+shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
+and double clicks disambiguate; the deferred handlers re-check the
+warp / aim / transition guards at fire time.
+
+Navigate single-click on a star (`applyStarClick`):
 
 | condition | action |
 | --- | --- |
-| no focus | focus on clicked |
+| no focus | focus on clicked star |
 | clicked = focused, no vector | unfocus |
-| clicked = focused, vector drawn | clear vector (stay focused) |
-| clicked = vector tip | `focusStar(tip)` — focus-park lerp (or no-op when already inside park), clear vector |
-| clicked = other | draw/replace vector from focus → clicked |
+| clicked = focused, vector drawn | clear vector (stay focused; the destination stays pinned) |
+| clicked = other star, unpinned | pin as POI (ladder rung 1 — Sol / at-cap fall through to rung 2) |
+| clicked = other star, pinned, not vector destination | set vector focus → clicked |
+| clicked = other star, pinned + vector destination | clear vector AND unpin |
 
-This is the UX the user settled on. No double-click, no modifier keys.
+The ladder decision table is `poi/click-ladder-pure.ts`. Navigate
+**double-click** on any star travels to it (`focusStar` — the
+focus-park teleport that clicking the vector tip used to trigger;
+lerps over `FOCUS_LERP_MS` or no-ops when already inside park);
+double-click on a cloud runs `flyToCloud`. The POI overlay's
+on-screen labels route through the same `applyStarClick` semantics.
 
-Clouds are full participants in this state machine alongside stars — see
-`src/client/molecular-clouds/README.md` for how cloud picks dispatch through
-`onPointerUp`.
+Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
+on first pick from no focus, vector destination on pick from a focus,
+click-destination-to-travel) — unreachable while the MC layer is
+shelved (`src/client/molecular-clouds/README.md`); revisit the ladder
+fit at un-shelve.
 
-In OBSERVE mode the click-state machine no-ops on the canvas — `onPointerUp`
-short-circuits while `cameraMode === 'observe'`. Clicks land on the
-custom look-around controller (direct-manipulation drag + wheel-FOV)
-instead. The SVG-layer Sol/GC arrow labels remain clickable; they route
-through `aimAt(localPoint)`, which has its own observe-mode branch that
-slerps the camera quaternion in place.
+In OBSERVE mode single-click is the pin/unpin toggle
+(`applyStarClick`'s observe branch, gated on `showHud`) and
+double-click slerps the camera so the clicked direction lands at view
+centre; drags land on the custom look-around controller
+(direct-manipulation drag + wheel-FOV). The SVG-layer Sol/GC arrow
+labels remain clickable; they route through `aimAt(localPoint)`,
+which has its own observe-mode branch that slerps the camera
+quaternion in place.
 
 ## Floating origin (large-world precision)
 

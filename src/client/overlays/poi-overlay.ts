@@ -196,15 +196,15 @@ export function createPoiOverlay(
     onScreenLabel.setAttribute('dominant-baseline', 'central');
     labelsGroup!.appendChild(onScreenLabel);
 
-    // Click affordances. On-screen label deselects the POI (the ring is
-    // visible so "remove this pin" is the natural action). Off-screen
-    // arrow label slerps the camera toward the POI (it isn't visible so
-    // "show me where it is" is the natural action). The ring itself
-    // stays click-through — the star underneath is already a click
-    // target for togglePoi via Stellata.observeSingleClick, and putting
-    // pointer-events on the ring would shadow that.
+    // Click affordances. On-screen label applies the mode's star-click
+    // semantics — one behaviour whether the user hits the star or its
+    // label. Off-screen arrow label slerps the camera toward the POI (it
+    // isn't visible so "show me where it is" is the natural action). The
+    // ring itself stays click-through — the star underneath is already a
+    // canvas click target, and putting pointer-events on the ring would
+    // shadow that.
     onScreenLabel.addEventListener('click', () => {
-      stellata.togglePoi(idx);
+      stellata.applyStarClick(idx);
     });
     arrowLabel.addEventListener('click', () => {
       const lp = stellata.localPositions;

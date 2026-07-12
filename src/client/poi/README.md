@@ -11,6 +11,24 @@ alongside the store.
   rules. `Stellata` composes one instance and exposes thin shims
   (`getPois` / `togglePoi` / `setPois` / `clearPois`); every consumer
   (overlay, URL state, click dispatch) goes through those.
+- `click-ladder-pure.ts` (+ test) — decision table for the
+  navigate-mode click ladder below.
+
+## Click ladder (navigate mode)
+
+A navigate-mode click on a non-focused star steps a state-based
+ladder:
+
+1. unpinned → pin
+2. pinned but not the vector destination → set the distance vector
+3. pinned + vector destination → clear the vector AND unpin
+
+Stars that can't take the pin rung right now (Sol, cap reached) fall
+through to the vector rung so measuring to them stays possible.
+Observe mode is a plain pin/unpin toggle instead. Both canvas clicks
+and the POI overlay's on-screen labels route through
+`Stellata.applyStarClick`, so the star and its label can't drift
+apart.
 
 ## Pin semantics
 
