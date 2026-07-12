@@ -67,7 +67,9 @@ import {
   advancePositionsToEpoch,
   jdeToJulianEpochYear,
 } from './loaders/epoch-advance-pure';
-import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import {
+  R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN, NAKED_EYE_LIMIT_MAG,
+} from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
@@ -203,7 +205,7 @@ interface MagPreset {
 const PRESET_BASE: Record<MagPresetName, { maxAppMag: number; sizeSpan: number }> = {
   // Magnitudes: naked eye 6.5 (Bortle-1 dark sky); binoculars 10.5 (typical
   // 7×50 dark sky); all 15 (matches the catalog/UI slider ceiling).
-  'naked-eye':  { maxAppMag: 6.5,  sizeSpan: 8 },
+  'naked-eye':  { maxAppMag: NAKED_EYE_LIMIT_MAG,  sizeSpan: 8 },
   'binoculars': { maxAppMag: 10.5, sizeSpan: 12 },
   'all':        { maxAppMag: 15,   sizeSpan: 17 },
 };

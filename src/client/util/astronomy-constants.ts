@@ -36,3 +36,8 @@ export const J2000_JD = 2451545.0;
 
 // Days in a Julian year (used by WDS year-of-observation → JD conversion).
 export const DAYS_PER_JULIAN_YEAR = 365.25;
+
+// Naked-eye limiting apparent magnitude (Bortle-1 dark sky). Drives the
+// runtime 'naked-eye' magnitude preset and companion promotion's
+// must-not-vanish floor for identifier-less bright components.
+export const NAKED_EYE_LIMIT_MAG = 6.5;
