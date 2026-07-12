@@ -22,9 +22,7 @@ import {
   type SpectralInfo,
 } from './catalog-pure';
 import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
-import {
-  ARCSEC_TO_RAD, NAKED_EYE_LIMIT_MAG,
-} from '../../src/client/util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
 import type { Star } from './stars-parse';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
@@ -1058,33 +1056,6 @@ export function wdsRootOf(systemId: string): string | null {
  *  Both primary and secondary slots contribute. Used by
  *  isUnresolvedCompound to confirm a candidate compound's constituent
  *  letters actually appear as resolved components. */
-const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
-
-/** Per WDS root, every parent token implied by a deeper component row
- *  ("Ba" ⇒ parent "B"; "Aa1" ⇒ parent "Aa") — the letters whose catalog
- *  slot the runtime hierarchy walk needs as an inner-pair anchor. */
-function buildWdsRootParentTokens(
-  groups: Map<string, PairCursor>,
-): Map<string, Set<string>> {
-  const m = new Map<string, Set<string>>();
-  const add = (root: string, comp: string): void => {
-    if (comp.length < 2 || !COMPONENT_TOKEN_RE.test(comp)) return;
-    let set = m.get(root);
-    if (!set) {
-      set = new Set<string>();
-      m.set(root, set);
-    }
-    set.add(comp.slice(0, -1));
-  };
-  for (const [sysId, cursor] of groups) {
-    const root = wdsRootOf(sysId);
-    if (root === null) continue;
-    if (cursor.primary !== null) add(root, cursor.primary.comp);
-    for (const sec of cursor.secondaries) add(root, sec.comp);
-  }
-  return m;
-}
-
 function buildWdsRootSingleLetters(
   groups: Map<string, PairCursor>,
 ): Map<string, Set<string>> {
@@ -1622,7 +1593,6 @@ export function promoteCompanions(
   const groups = groupBySystem(multiplesRows);
   const wdsRootAnchors = buildWdsRootAnchors(groups, existing, existingStars);
   const singleLettersByRoot = buildWdsRootSingleLetters(groups);
-  const parentTokensByRoot = buildWdsRootParentTokens(groups);
   const newStars: Star[] = [];
   // Track promotions by gaia + hip + synth so two pair rows in the same
   // system that reference the same record (Sirius A appears as primary
@@ -1716,8 +1686,7 @@ export function promoteCompanions(
       const escaped =
         (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
         ?? tryPromoteCursorPrimary(
-          cursor, wdsRootAnchors, parentTokensByRoot, state, constellations,
-          stats, dustGrid,
+          cursor, wdsRootAnchors, state, constellations, stats, dustGrid,
         );
       if (escaped !== null && escaped !== undefined) {
         primaryCatalogIdx = escaped;
@@ -1734,8 +1703,7 @@ export function promoteCompanions(
       // secondary of A, so the existing secondary loop never
       // reached it).
       primaryCatalogIdx = tryPromoteCursorPrimary(
-        cursor, wdsRootAnchors, parentTokensByRoot, state, constellations,
-        stats, dustGrid,
+        cursor, wdsRootAnchors, state, constellations, stats, dustGrid,
       );
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
@@ -1999,7 +1967,6 @@ function lookupPromoted(
 function tryPromoteCursorPrimary(
   cursor: PairCursor,
   wdsRootAnchors: Map<string, SystemAnchor>,
-  parentTokensByRoot: Map<string, Set<string>>,
   state: PromotionState,
   constellations: { code: string; name: string }[],
   stats: PromotionStats,
@@ -2007,28 +1974,14 @@ function tryPromoteCursorPrimary(
 ): number | null {
   const primary = cursor.primary;
   if (primary === null) return null;
+  // No own-identifier requirement: an id-less row (Rigel B or Acrux B
+  // after the Stage-2 sibling-identity claims gate strips a stolen HIP)
+  // mints a synth-<wds>-<comp> slot exactly like an identifier-less
+  // secondary, and that key is fully addressable post-promotion. The
+  // position and absmag requirements below still gate honesty; a
+  // reappearing previously-retired component is reconciled in the SID
+  // ledger via data/sid/reinstatements.tsv, never by dropping the star.
   const wdsRoot = wdsRootOf(primary.systemId);
-  // Own identifier (gaia or hip; inherited qualifies — promoteRow
-  // strips it and mints a synth slot) — with two id-less exceptions,
-  // both fully addressable through the minted synth-<wds>-<comp> key:
-  //  - the letter anchors deeper components (Rigel B heads Ba,Bb): the
-  //    runtime hierarchy walk needs the parent's catalog slot;
-  //  - the letter carries an own WDS magnitude at naked-eye brightness
-  //    (Acrux B, V=1.55 off the Stage-5-rejected AB row): a
-  //    first-magnitude star must not vanish for want of a catalogue id.
-  // Faint id-less letters without children stay dropped — re-promoting
-  // them would resurrect retired SIDs for a population below the
-  // model's visibility floor.
-  const hasOwnGaia = primary.gaiaSourceId !== null;
-  const hasOwnHip = primary.hip !== null && primary.hip > 0;
-  const ownWdsMag = primary.orbitRole === 'primary'
-    ? primary.magPri : primary.magSec;
-  if (
-    !hasOwnGaia && !hasOwnHip
-    && !(wdsRoot !== null
-      && parentTokensByRoot.get(wdsRoot)?.has(primary.comp))
-    && !(ownWdsMag !== null && ownWdsMag <= NAKED_EYE_LIMIT_MAG)
-  ) return null;
   if (wdsRoot === null) return null;
   const anchor = wdsRootAnchors.get(wdsRoot);
   if (!anchor) return null;

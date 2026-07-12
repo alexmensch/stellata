@@ -743,15 +743,14 @@ Per-row gates and resolution:
   baked-vs-elements ratchet in `multi-star-regression.test.ts` honest.
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
-  of A), it needs an own identifier (gaia or hip; inherited qualifies,
-  the escape strips it) — except when the letter anchors deeper
-  components (Rigel B heads Ba,Bb; the runtime hierarchy walk needs
-  the parent's slot) or carries an own WDS magnitude at naked-eye
-  brightness (`NAKED_EYE_LIMIT_MAG`; Acrux B, V=1.55, arrives id-less
-  since the Stage-2 sibling-identity claims gate). Both exceptions
-  mint an addressable `synth-<wds_id>-<comp>` key; fainter id-less
-  letters stay dropped (re-promoting them would resurrect retired
-  SIDs). Position then resolves in preference order: (1) the row's own
+  of A), no identifier is required: an id-less row (Rigel B, Acrux B —
+  the Stage-2 sibling-identity claims gate strips stolen HIPs) mints an
+  addressable `synth-<wds_id>-<comp>` key exactly like an
+  identifier-less secondary. The honesty gates are position and
+  brightness, not identity; a reappearing previously-retired component
+  is reconciled in the SID ledger via `data/sid/reinstatements.tsv`
+  (docs/sid.md § 4.3), never by dropping the star. Position resolves
+  in preference order: (1) the row's own
   per-component astrometry when Stage 3 supplied a real independent fit
   (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
   anchor's); (2) project the row's Stage-6 `anchor_sep_arcsec` /

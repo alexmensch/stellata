@@ -7,9 +7,8 @@ build scripts, tests, and shader uniforms.
 
 - `astronomy-constants.ts` — `AU_PER_PC` / `AU_PC` / `AU_KM` / `KM_PC` /
   `R_SUN_PC` / `MIN_PHYSICAL_RADIUS_R_SUN` / `ARCSEC_TO_RAD` / `J2000_JD` /
-  `DAYS_PER_JULIAN_YEAR` / `NAKED_EYE_LIMIT_MAG`. Import from here rather
-  than re-derive — drift between sites is the failure mode this module is
-  designed to prevent.
+  `DAYS_PER_JULIAN_YEAR`. Import from here rather than re-derive — drift
+  between sites is the failure mode this module is designed to prevent.
 - `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
