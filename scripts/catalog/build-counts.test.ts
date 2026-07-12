@@ -30,6 +30,8 @@ function baseCounts(): BuildCounts {
     ccdmSuppressedOptical: 50,
     eclipsingWinged: 300,
     renderableCompanionWinged: 400,
+    multiplicityResolved: 20000,
+    multiplicityUnresolved: 5000,
     componentDesignations: 16000,
     bjEntries: 310000,
     bjEligible: 305000,

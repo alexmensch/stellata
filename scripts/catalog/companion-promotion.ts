@@ -2243,18 +2243,24 @@ function resolvePairComponents(
  *  brightest-participant pick below already absorb). Invariants: one glyph
  *  per WDS system, on the brightest participant (skips a system any earlier
  *  pass already flagged); additive only, so eclipsing / iconic doubles with
- *  no rendered companion keep their wings. Returns the count newly winged.
- *  See scripts/catalog/README.md § Renderable-companion wings. */
+ *  no rendered companion keep their wings. Returns the count newly winged
+ *  plus every resolved multiples.tsv member index — the record set the
+ *  MULTIPLICITY_RESOLVED status covers (a blended primary whose members all
+ *  collapse onto it counts: the row exists for it even with nothing
+ *  rendered apart). See scripts/catalog/README.md § Renderable-companion
+ *  wings. */
 export function wingRenderablePrimaries(
   rows: MultiplesTsvRow[],
   stars: Star[],
   rowIndexMap: CatalogRowIndexMap,
-): number {
+): { winged: number; memberIndices: Set<number> } {
+  const memberIndices = new Set<number>();
   // Catalog indices participating in a rendered pair, grouped by WDS root.
   const perSystem = new Map<string, Set<number>>();
   for (const cursor of groupBySystem(rows).values()) {
     const resolved = resolvePairComponents(cursor, rowIndexMap);
     if (resolved === null) continue;
+    for (const c of resolved.components) memberIndices.add(c.idx);
     const root = wdsRootOf(resolved.systemId);
     if (root === null) continue;
     const secIdxs = resolved.components
@@ -2282,7 +2288,7 @@ export function wingRenderablePrimaries(
     stars[anchor].flags |= FLAG_BINARY_PRIMARY;
     winged++;
   }
-  return winged;
+  return { winged, memberIndices };
 }
 
 // ---- Component-letter search designations ------------------------------

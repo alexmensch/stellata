@@ -64,6 +64,7 @@ export interface CatalogRecord {
   varType: number;
   hip: number | null;
   gaiaSourceId: bigint | null;
+  multiplicityStatus: number; // MULTIPLICITY_*
   teffGspphot: number | null;
   loggGspphot: number | null;
   mhGspphot: number | null;
@@ -168,6 +169,7 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
       varType: view.getUint8(off + RECORD_LAYOUT.varType),
       hip: hip === 0 ? null : hip,
       gaiaSourceId: gaiaSourceId === 0n ? null : gaiaSourceId,
+      multiplicityStatus: view.getUint8(off + RECORD_LAYOUT.multiplicityStatus),
       ...apsis,
       name,
       conCode: conIdx === NO_CONSTELLATION_INDEX ? null : constellations[conIdx]?.code ?? null,

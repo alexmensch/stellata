@@ -612,6 +612,19 @@ export const VAR_TYPE_PULSATING = 1;
 export const VAR_TYPE_ECLIPSING = 2;
 export const VAR_TYPE_OTHER = 3;
 
+// Multiplicity status stored at RECORD_LAYOUT.multiplicityStatus.
+// `resolved` = the record participates in a multiples.tsv system (a
+// companion is resolved in the model); `unresolved` = SIMBAD flags the
+// star as a multiple (otype '**') but no companion resolves — the
+// spectroscopic-binary population invisible to WDS/CCDM/NSS (64 Vir).
+export const MULTIPLICITY_SINGLE = 0;
+export const MULTIPLICITY_RESOLVED = 1;
+export const MULTIPLICITY_UNRESOLVED = 2;
+
+// SIMBAD's object-type code for a confirmed double/multiple star — the
+// otype value that marks a record `unresolved` when nothing resolves.
+export const SIMBAD_OTYPE_MULTIPLE = '**';
+
 /** Amplitude byte: 0.05 mag quanta, saturating at 12.75 mag. */
 export function encodeAmpUnits(amplitudeMag: number): number {
   return Math.min(255, Math.max(0, Math.round(amplitudeMag * 20)));
@@ -719,10 +732,15 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 // offset and kind, and the writer + reader + tests pick the change up
 // automatically.
 
-export const MAGIC = 'HYG8';
-export const BINARY_VERSION = 8;
+export const MAGIC = 'HYG9';
+export const BINARY_VERSION = 9;
 export const HEADER_SIZE = 32;
-export const RECORD_SIZE = 96;
+export const RECORD_SIZE = 100;
+// Bytes 97..99 are reserved (zero-filled): the v9 multiplicityStatus uint8
+// lands at 96 and the stride stays a multiple of 4. A future field taking a
+// reserved byte still needs a BINARY_VERSION bump — readers must know the
+// byte is populated.
+export const RECORD_RESERVED_TAIL_BYTES = 3;
 export const NO_COMPANION = 0xffffffff;
 // Reserved none/invalid SID sentinel (docs/sid.md § 2); allocation starts
 // at 1, so 0 in RECORD_LAYOUT.sid means the record resolved to no ledger
@@ -881,6 +899,7 @@ export const RECORD_LAYOUT = {
   vx: 84,
   vy: 88,
   vz: 92,
+  multiplicityStatus: 96, // MULTIPLICITY_*
 } as const;
 
 /** Wire type per RECORD_LAYOUT field. As with HEADER_FIELD_KINDS the test
@@ -894,6 +913,7 @@ export const RECORD_FIELD_KINDS: Record<keyof typeof RECORD_LAYOUT, FieldKind> =
   teffGspphot: 'f32', loggGspphot: 'f32', mhGspphot: 'f32', azeroGspphot: 'f32',
   teffGspspec: 'f32', loggGspspec: 'f32', mhGspspec: 'f32', sid: 'u32',
   vx: 'f32', vy: 'f32', vz: 'f32',
+  multiplicityStatus: 'u8',
 };
 
 export const RECORD_FIELD_SIZES = fieldSizes(RECORD_FIELD_KINDS);
@@ -932,6 +952,7 @@ export interface WireStarRecord {
   gaiaSourceId: bigint;   // 0n = none
   apsis: Record<ApsisField, number>; // NO_APSIS (NaN) = absent
   sid: number;
+  multiplicityStatus: number; // MULTIPLICITY_*
 }
 
 /** Encode one record at byte `off` — the writer side of the layout
@@ -962,6 +983,7 @@ export function writeStarRecord(view: DataView, off: number, r: WireStarRecord):
     view.setFloat32(off + RECORD_LAYOUT[name], r.apsis[name], true);
   }
   view.setUint32(off + RECORD_LAYOUT.sid, r.sid, true);
+  view.setUint8(off + RECORD_LAYOUT.multiplicityStatus, r.multiplicityStatus);
 }
 
 /** Encode the fixed-size header — the writer side shared with the loader

@@ -84,6 +84,20 @@ console.log('\nSpace-motion velocity coverage:');
   }
 }
 
+console.log('\nMultiplicity status coverage:');
+{
+  let resolved = 0;
+  let unresolved = 0;
+  for (const r of catalog.records()) {
+    if (r.multiplicityStatus === 1) resolved++;
+    else if (r.multiplicityStatus === 2) unresolved++;
+  }
+  const pct = (n: number) => ((n / count) * 100).toFixed(1);
+  console.log(`  resolved:   ${resolved} / ${count} (${pct(resolved)}%)`);
+  console.log(`  unresolved: ${unresolved} / ${count} (${pct(unresolved)}%)`);
+  console.log(`  single:     ${count - resolved - unresolved} / ${count}`);
+}
+
 console.log('\nVariable star count and 5 examples:');
 let varCount = 0;
 const varSamples: CatalogRecord[] = [];

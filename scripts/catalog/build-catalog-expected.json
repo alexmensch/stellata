@@ -17,6 +17,8 @@
   "ccdmSuppressedOptical": 488,
   "eclipsingWinged": 1169,
   "renderableCompanionWinged": 2178,
+  "multiplicityResolved": 20919,
+  "multiplicityUnresolved": 4355,
   "componentDesignations": 20919,
   "bjEntries": 310952,
   "bjEligible": 310849,

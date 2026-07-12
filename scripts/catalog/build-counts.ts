@@ -51,6 +51,13 @@ export interface BuildCounts {
    *  geometric, CCDM, and eclipsing passes all left unflagged. One per WDS
    *  system anchor; excludes systems already flagged. Canopus, 16 Cyg A. */
   renderableCompanionWinged: number;
+  /** Records backed by a resolved multiples.tsv member row —
+   *  multiplicityStatus = MULTIPLICITY_RESOLVED. */
+  multiplicityResolved: number;
+  /** Records SIMBAD flags as multiple (otype '**') with no resolved
+   *  multiples.tsv member row — multiplicityStatus =
+   *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
+  multiplicityUnresolved: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
   /** AT-HYG rows the Bailer-Jones override is allowed to fire on:

@@ -31,6 +31,7 @@ export function makeEmptyCatalog(count: number): Catalog {
     hip: new Uint32Array(count),
     sid: new Uint32Array(count),
     gaiaSourceId: new BigUint64Array(count),
+    multiplicityStatus: new Uint8Array(count),
     ...apsis,
     names: new Map(),
     solIndex: -1,

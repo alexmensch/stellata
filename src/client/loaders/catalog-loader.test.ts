@@ -139,6 +139,7 @@ const baseStar: StarRecord = {
   gaiaSourceId: 0n,
   apsis: nanApsis(),
   sid: 0,
+  multiplicityStatus: 0,
 };
 
 describe('catalog-loader / parseBinary', () => {
@@ -250,6 +251,7 @@ describe('catalog-loader / parseBinary', () => {
           teffGspspec: 5750, loggGspspec: 4.4, mhGspspec: -0.02,
         },
         sid: 306055,
+        multiplicityStatus: 2,
       };
       const cat = parseBinary(buildCatalog([{ ...baseStar }, star]), blankConstellations);
       expect(cat.positions[3]).toBeCloseTo(1.25, 5);
@@ -279,8 +281,10 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.loggGspspec[1]).toBeCloseTo(4.4, 4);
       expect(cat.mhGspspec[1]).toBeCloseTo(-0.02, 4);
       expect(cat.sid[1]).toBe(306055);
+      expect(cat.multiplicityStatus[1]).toBe(2);
       // The all-defaults record keeps its sentinels.
       expect(cat.gaiaSourceId[0]).toBe(0n);
+      expect(cat.multiplicityStatus[0]).toBe(0);
       for (const name of APSIS_FIELDS) expect(Number.isNaN(cat[name][0])).toBe(true);
     });
 

@@ -31,6 +31,10 @@ import {
   NO_COMPANION,
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
+  MULTIPLICITY_SINGLE,
+  MULTIPLICITY_RESOLVED,
+  MULTIPLICITY_UNRESOLVED,
+  SIMBAD_OTYPE_MULTIPLE,
   APSIS_FIELDS,
   type ApsisField,
   writeStarRecord,
@@ -245,6 +249,8 @@ async function main() {
     ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
     renderableCompanionWinged: 0,
+    multiplicityResolved: 0,
+    multiplicityUnresolved: 0,
     componentDesignations: 0,
     bjEntries: 0,
     bjEligible: 0,
@@ -766,12 +772,14 @@ async function main() {
   const rowIndexMap = buildCatalogRowIndexMap(stars);
 
   let componentDesignations = new Map<number, ComponentDesignation>();
+  let multiplesMemberIndices = new Set<number>();
   if (multiplesRows !== null) {
-    const renderableCompanionWinged = wingRenderablePrimaries(
+    const { winged: renderableCompanionWinged, memberIndices } = wingRenderablePrimaries(
       multiplesRows,
       stars,
       rowIndexMap,
     );
+    multiplesMemberIndices = memberIndices;
     counts.renderableCompanionWinged = renderableCompanionWinged;
     console.log(
       `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
@@ -783,6 +791,29 @@ async function main() {
       `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
     );
   }
+
+  // Per-record multiplicity status (v9): resolved = a multiples.tsv member
+  // row backs the record; unresolved = SIMBAD otype '**' by Gaia source_id
+  // with no resolved member row (spectroscopic binaries invisible to
+  // WDS/CCDM/NSS — 64 Vir).
+  const multiplicityStatus = new Uint8Array(stars.length);
+  for (const idx of multiplesMemberIndices) multiplicityStatus[idx] = MULTIPLICITY_RESOLVED;
+  for (let i = 0; i < stars.length; i++) {
+    if (multiplicityStatus[i] !== MULTIPLICITY_SINGLE) continue;
+    const srcId = stars[i].gaiaSourceId;
+    if (!srcId) continue;
+    if (simbadSpectral.bySource.get(srcId)?.otype === SIMBAD_OTYPE_MULTIPLE) {
+      multiplicityStatus[i] = MULTIPLICITY_UNRESOLVED;
+    }
+  }
+  counts.multiplicityResolved = multiplesMemberIndices.size;
+  counts.multiplicityUnresolved = multiplicityStatus.reduce(
+    (n, v) => n + (v === MULTIPLICITY_UNRESOLVED ? 1 : 0), 0,
+  );
+  console.log(
+    `  multiplicity: ${counts.multiplicityResolved} resolved, ` +
+      `${counts.multiplicityUnresolved} unresolved (SIMBAD '**', nothing resolved)`,
+  );
 
   // Resolve every record to its frozen Stellata ID from the committed
   // ledger. The build never mints — sid:allocate is the sole writer
@@ -901,6 +932,7 @@ async function main() {
       gaiaSourceId,
       apsis,
       sid: recordSids[i],
+      multiplicityStatus: multiplicityStatus[i],
     });
 
     if (s.flags & FLAG_IS_SOL) solIndex = i;

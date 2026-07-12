@@ -2437,7 +2437,7 @@ describe('stampComponentLetters', () => {
 
 describe('wingRenderablePrimaries', () => {
   const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars));
+    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars)).winged;
   const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {

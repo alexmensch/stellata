@@ -55,6 +55,10 @@ import {
   RECORD_LAYOUT,
   HEADER_FIELD_SIZES,
   RECORD_FIELD_SIZES,
+  RECORD_RESERVED_TAIL_BYTES,
+  MULTIPLICITY_SINGLE,
+  MULTIPLICITY_RESOLVED,
+  MULTIPLICITY_UNRESOLVED,
   HEADER_SIZE,
   RECORD_SIZE,
   MAGIC,
@@ -1459,7 +1463,7 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
-  it('record fields tile the record contiguously (kind-derived sizes sum to RECORD_SIZE)', () => {
+  it('record fields tile the record contiguously (kind-derived sizes + reserved tail sum to RECORD_SIZE)', () => {
     const fields = (Object.entries(RECORD_LAYOUT) as [keyof typeof RECORD_LAYOUT, number][])
       .sort((a, b) => a[1] - b[1]);
     let expected = 0;
@@ -1467,18 +1471,18 @@ describe('catalog-pure / binary-format constants', () => {
       expect(off, `${name} leaves a gap or overlaps`).toBe(expected);
       expected = off + RECORD_FIELD_SIZES[name];
     }
-    expect(expected).toBe(RECORD_SIZE);
+    expect(expected + RECORD_RESERVED_TAIL_BYTES).toBe(RECORD_SIZE);
   });
 
-  it('magic + version identify the v8 format', () => {
-    expect(MAGIC).toBe('HYG8');
-    expect(BINARY_VERSION).toBe(8);
+  it('magic + version identify the v9 format', () => {
+    expect(MAGIC).toBe('HYG9');
+    expect(BINARY_VERSION).toBe(9);
   });
 
-  it('record fields cover the v8 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80, velocity 3×float32 at 84..95)', () => {
+  it('record fields cover the v9 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80, velocity 3×float32 at 84..95, multiplicity uint8 at 96)', () => {
     expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
     expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(52); // gaiaSourceId end
-    expect(RECORD_SIZE).toBe(96);
+    expect(RECORD_SIZE).toBe(100);
     // varType uint8 sits between ampUnits (36) and period (38).
     expect(RECORD_LAYOUT.ampUnits + 1).toBe(RECORD_LAYOUT.varType);
     expect(RECORD_LAYOUT.varType).toBe(37);
@@ -1499,13 +1503,27 @@ describe('catalog-pure / binary-format constants', () => {
     // sid uint32 immediately after the Apsis bank, then the velocity bank.
     expect(RECORD_LAYOUT.mhGspspec + 4).toBe(RECORD_LAYOUT.sid);
     expect(RECORD_LAYOUT.sid).toBe(80);
-    // v8 velocity bank: 3 float32 pc/yr appended after sid, filling the
-    // record to RECORD_SIZE.
+    // v8 velocity bank: 3 float32 pc/yr appended after sid.
     expect(RECORD_LAYOUT.sid + 4).toBe(RECORD_LAYOUT.vx);
     expect(RECORD_LAYOUT.vx).toBe(84);
     expect(RECORD_LAYOUT.vy).toBe(88);
     expect(RECORD_LAYOUT.vz).toBe(92);
-    expect(RECORD_LAYOUT.vz + 4).toBe(RECORD_SIZE);
+    // v9 multiplicity uint8 after the velocity bank; the reserved tail pads
+    // the stride back to a multiple of 4.
+    expect(RECORD_LAYOUT.vz + 4).toBe(RECORD_LAYOUT.multiplicityStatus);
+    expect(RECORD_LAYOUT.multiplicityStatus).toBe(96);
+    expect(RECORD_LAYOUT.multiplicityStatus + 1 + RECORD_RESERVED_TAIL_BYTES).toBe(RECORD_SIZE);
+    expect(RECORD_SIZE % 4).toBe(0);
+  });
+
+  it('multiplicity enum values are distinct and fit the uint8 field', () => {
+    const values = [MULTIPLICITY_SINGLE, MULTIPLICITY_RESOLVED, MULTIPLICITY_UNRESOLVED];
+    expect(new Set(values).size).toBe(values.length);
+    for (const v of values) {
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(0xff);
+    }
+    expect(MULTIPLICITY_SINGLE).toBe(0); // zero-fill default = single
   });
 
   it('FLAGS registry entries are distinct single-bit values', () => {
