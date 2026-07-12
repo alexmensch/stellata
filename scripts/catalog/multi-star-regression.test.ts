@@ -156,7 +156,10 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // the same tangent-bake-vs-R(epoch) class as the rescue tier). 5 out —
 // the radial coherence snap removes sub-3σ baked radial gaps on wide
 // long-period pairs, bringing them back under 0.5·a.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1489;
+// 1489 → 1485: the Stage-2 sibling-identity claims gate — pairs whose
+// members had been placed off a stolen sibling identity leave the
+// sweep (their pairs re-anchor honestly or drop with the identity).
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1485;
 
 // ---- Corpus row types ----------------------------------------------------
 
