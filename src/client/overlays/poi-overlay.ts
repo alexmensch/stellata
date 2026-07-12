@@ -331,6 +331,14 @@ export function createPoiOverlay(
       if (!e) continue;
       e.drawnArrowLen = 0;
 
+      // The focused star's own pin is suppressed — a POI ring/label on
+      // the object the camera is parked at (or orbiting) is noise. The
+      // pin itself survives; the chrome returns on unfocus/refocus.
+      if (idx === focusedStar) {
+        hideEntry(e);
+        continue;
+      }
+
       tmpStarLocal.set(
         localPositions[idx * 3],
         localPositions[idx * 3 + 1],
