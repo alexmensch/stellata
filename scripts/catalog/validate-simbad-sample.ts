@@ -48,6 +48,9 @@ export const PER_STAR_OUTLIER = {
 
 export const OUTLIER_TOP_N = 50;
 
+export const HISTOGRAM_BINS = 40;
+export const HISTOGRAM_RANGE: readonly [number, number] = [-1, 1];
+
 // ─── Pure helpers (tested in validate-simbad-sample.test.ts) ─────────
 
 export interface ResidualRow {
@@ -229,8 +232,8 @@ export function buildReport(
     absmagStats: summarise(absmagVals),
     distanceLogRatioStats: summarise(logRatioVals),
     plxSigmaStats: summarise(plxSigmaVals),
-    absmagHistogram: histogram(absmagVals, 40, [-1, 1]),
-    distanceLogRatioHistogram: histogram(logRatioVals, 40, [-1, 1]),
+    absmagHistogram: histogram(absmagVals, HISTOGRAM_BINS, HISTOGRAM_RANGE),
+    distanceLogRatioHistogram: histogram(logRatioVals, HISTOGRAM_BINS, HISTOGRAM_RANGE),
     topOutliers,
     outlierCount: outliers.length,
   };
@@ -293,12 +296,17 @@ function formatStatsSection(
   stats: PercentileStats,
   hist: { counts: number[]; edges: number[] },
 ): string {
+  // toPrecision strips the floating-point noise tail of the edge
+  // subtraction (0.050000000000000044 → 0.05) for the headline.
+  const binWidth =
+    hist.edges.length > 1 ? Number((hist.edges[1] - hist.edges[0]).toPrecision(6)) : 0;
+  const [lo, hi] = HISTOGRAM_RANGE;
   return [
     `## ${title}`,
     '',
     formatStatsTable(stats),
     '',
-    'Histogram (bin = 0.05, range [-1, +1]; out-of-range collects at boundary):',
+    `Histogram (bin = ${binWidth}, range [${lo}, +${hi}]; out-of-range collects at boundary):`,
     '',
     '```',
     renderHistogram(hist.counts, hist.edges),
