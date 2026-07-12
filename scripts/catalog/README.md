@@ -807,27 +807,36 @@ Per-row gates and resolution:
   corrupted A+Δmag.
 - **Anchor flux conservation (post-pass).** A member whose light is
   embedded in an `athyg_own` anchor's AT-HYG magnitude double-counts
-  the flux if minted without dimming the anchor. Blend membership is
-  structural for a synth member whose ids were inherited-then-stripped
-  from the anchor; a member carrying its own distinct identifier
-  (Castor B under its own Gaia source) qualifies only when the
-  anchor's observed apparent magnitude reads as the WDS pair's
-  combined mag_pri+mag_sec light rather than mag_pri alone
-  (`anchorMagIsPairBlend` — Hipparcos/Tycho blend close pairs, Castor's
-  1.58 = A+B, but resolve wide ones, Polaris' 1.98 = A alone).
-  Identifier-less synth members (Polaris Ab) are excluded from that
-  test: several can share one anchor whose magnitude blends only SOME
-  members, and the pairwise hypothesis test misattributes (36 Oph D
-  would claim A+B's blend); a system-level flux solve is future work.
-  Two shapes:
-  a `dmag_imputed` member re-splits the blend JOINTLY by Δmag
-  (`M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ))`, `M_B = M_A + Δ` —
-  exact conservation for any Δ; a naive flux subtraction would gut a
-  near-equal anchor, Capella −0.51 → +2.1, because `M_blend + Δ`
-  overstates the member); a `wds_mag` member's independent brightness
-  is subtracted directly, guarded against a member as bright as the
-  blend itself (`blendDimSkipped`). Sequential per anchor; counted
-  `blendDimmedAnchors`. The equal-split gaia_photometry blend pass
+  the flux if minted without dimming the anchor. Membership is decided
+  per anchor by a **joint subset solve** over every own-brightness
+  member (`dmag_imputed` / `own` / `wds_mag` — identifier-carrying and
+  identifier-less synth alike): the hypothesis
+  `m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i)` over observed-frame WDS
+  magnitudes that lands closest to the anchor's observed apparent
+  magnitude wins, decisive only when it beats "anchor alone" by
+  ≥0.01 mag (hypotheses within 0.01 mag of the best are an equivalence
+  class — the smallest subset in it wins, so a negligible-flux member
+  never flips the outcome, and Sirius' Δmag≈10 float-noise shape never
+  dims). A synth member whose ids were inherited-then-stripped from
+  the anchor is structurally in the blend and skips the fit. The joint
+  fit is what a pairwise test couldn't do: 36 Oph D cannot claim
+  A+B's blend (any subset containing D fits worse than {A,B}), while
+  Polaris Ab (inside the 1.98 blend, Δmag 2.0) dims its anchor
+  ~0.16 mag. Apply, once per anchor with exact conservation: members
+  with independent brightness (`own` / `wds_mag`) subtract their
+  actual flux, guarded against a member as bright as the blend itself
+  (`blendDimSkipped`); blend-relative members (`dmag_imputed`)
+  re-split the residual by Δmag —
+  `F_A · (1 + Σ 10^(−0.4Δᵢ)) = F_blend − Σ F_own`, the N-member
+  generalisation of `M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ))`
+  (exact for any Δ; a naive subtraction would gut a near-equal
+  anchor, Capella −0.51 → +2.1). Counted `blendDimmedAnchors` (per
+  anchor); members the fit leaves outside the blend are
+  `blendDimMembersOutside`, members with no usable WDS magnitudes are
+  `blendDimMembersUnfit`. Caveat: WDS pair magnitudes are taken at
+  face value, and speckle-band (non-V) pairs overstate a member's V
+  share (Achernar's Δm 1.4 is H-band) — a data-curation tail, visible
+  in the known-stars notes. The equal-split gaia_photometry blend pass
   above stays for the N-way no-WDS-mag case.
 - **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
   5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)

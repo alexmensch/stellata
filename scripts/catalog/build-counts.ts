@@ -240,6 +240,13 @@ export interface BuildCounts {
    *  absmag, so its flux is subtracted from the anchor's athyg_own blend
    *  magnitude and total system light is conserved. */
   companionBlendDimmedAnchors: number;
+  /** Non-structural dim candidates the subset solve could not fit (no
+   *  observed WDS mags / distance) — left un-dimmed. */
+  companionBlendDimUnfit: number;
+  /** Non-structural dim candidates the winning subset left out, or whose
+   *  fit was indecisive within 0.01 mag — their light is not in the
+   *  anchor's blend. */
+  companionBlendDimOutside: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in

@@ -389,16 +389,23 @@ export interface PromotionStats {
    *  each component is fainter than the derived combined M by
    *  2.5·log10(N). Counts every record so adjusted. */
   blendSplitRecords: number;
-  /** Anchor records dimmed by the flux-conservation post-pass: a synth
-   *  member whose ids were inherited-then-stripped from an athyg_own
-   *  anchor got a wds_mag / dmag absmag, so its flux is part of the
-   *  anchor's AT-HYG blend magnitude and is subtracted back out
-   *  (M′ = −2.5·log₁₀(10^(−0.4·M_blend) − 10^(−0.4·M_member))). */
+  /** Anchor records dimmed by the flux-conservation post-pass — the
+   *  per-anchor joint subset solve judged ≥1 member's light embedded in
+   *  the anchor's AT-HYG blend magnitude and re-split it. Counted once
+   *  per anchor. */
   blendDimmedAnchors: number;
-  /** Dim candidates skipped by the guard M_member > M_blend + 0.05 —
+  /** Dim members skipped by the guard M_member > M_blend + 0.05 —
    *  a member as bright as (or brighter than) its anchor's blend would
    *  zero or invert the residual flux. */
   blendDimSkipped: number;
+  /** Non-structural dim candidates the subset solve could not fit — no
+   *  observed WDS magnitude for the member or the anchor, no system
+   *  distance, or a pathologically large fit group. Left un-dimmed. */
+  blendDimMembersUnfit: number;
+  /** Non-structural dim candidates the winning subset left OUT (or the
+   *  whole fit was indecisive within 0.01 mag): their light is not in
+   *  the anchor's blend, so no dim. 36 Oph D vs A+B's blend. */
+  blendDimMembersOutside: number;
   /** Promoted companions that inherited a classified constellation index
    *  from their anchor. The residual (promoted − this) is the rows whose
    *  resolved anchor is absent or itself unclassified, keeping
@@ -429,6 +436,8 @@ export function emptyPromotionStats(): PromotionStats {
     blendSplitRecords: 0,
     blendDimmedAnchors: 0,
     blendDimSkipped: 0,
+    blendDimMembersUnfit: 0,
+    blendDimMembersOutside: 0,
     constellationInherited: 0,
   };
 }
@@ -642,35 +651,6 @@ export interface CompanionAbsmag {
 export const OWN_BRIGHTNESS_ABSMAG_SOURCES: ReadonlySet<CompanionAbsmagSource> =
   new Set(['dmag_imputed', 'own', 'wds_mag']);
 
-/** True when the anchor's AT-HYG magnitude is the PAIR's blended light
- *  rather than the primary component alone — the flux-conservation dim
- *  applies only then. Hipparcos/Tycho blend close pairs into one entry
- *  (Castor's mag 1.58 is A+B combined) but resolve wide ones
- *  per-component (Polaris' 1.98 is A alone); WDS mag_pri/mag_sec give
- *  both hypotheses and the anchor's observed apparent magnitude picks
- *  the closer. `av` re-adds the build-time de-extinction so the
- *  comparison stays in the observed frame WDS mags live in. Skips
- *  (false) when the hypotheses differ by <0.01 mag — the dim would be
- *  a no-op there anyway, and near-degenerate cases (Sirius, Δmag≈10)
- *  must not flip pinned values on float noise. */
-function anchorMagIsPairBlend(
-  anchor: Star,
-  row: MultiplesTsvRow,
-  av: number,
-): boolean {
-  const { magPri, magSec } = row;
-  const distPc = row.distPc;
-  if (magPri === null || magSec === null || distPc === null || distPc <= 0) {
-    return false;
-  }
-  const blend = -2.5 * Math.log10(
-    Math.pow(10, -0.4 * magPri) + Math.pow(10, -0.4 * magSec),
-  );
-  if (magPri - blend < 0.01) return false;
-  const appMag = anchor.absmag + av + 5 * Math.log10(distPc / 10);
-  return Math.abs(appMag - blend) < Math.abs(appMag - magPri);
-}
-
 // Companion absmag. Preference order: primary + WDS Δmag when the
 // row's photometry is inherited; the row's own absmag when it isn't;
 // primary + Δmag fallback; the row's own WDS apparent mag at the
@@ -844,6 +824,16 @@ function resolvePosition(
 // A member at M_blend + 0.05 carries ~95% of the blend's flux; anything
 // brighter leaves no residual for the anchor to keep.
 const ANCHOR_DIM_MIN_DELTA_MAG = 0.05;
+
+// The subset solve dims only when the winning membership hypothesis beats
+// both "anchor alone" and the runner-up subset by this margin —
+// near-degenerate cases (Sirius, Δmag≈10: hypotheses differ by ~10⁻⁴ mag)
+// must not flip pinned values on float noise.
+const ANCHOR_DIM_DECISIVE_MAG = 0.01;
+
+// 2^N subset enumeration cap. Real anchors carry ≤ ~6 fitted members; a
+// larger group is pathological input, not a solvable attribution.
+const ANCHOR_DIM_MAX_FIT_MEMBERS = 16;
 
 /** SpectralInfo for an existing catalog record, for re-deriving its
  *  radius after a brightness change. Re-parses the display string when
@@ -1229,10 +1219,23 @@ interface AnchorDimCandidate {
   anchorIdx: number;
   member: Star;
   memberSpectral: SpectralInfo;
-  /** 'dmag_imputed' re-splits the blend jointly; 'wds_mag' and 'own'
-   *  carry independent member brightness and subtract its flux. */
+  /** 'dmag_imputed' brightness is blend-relative (re-split by Δmag);
+   *  'wds_mag' and 'own' carry independent member brightness (flux
+   *  subtraction). */
   source: 'wds_mag' | 'dmag_imputed' | 'own';
   dmag: number | null;
+  /** ids inherited-then-stripped from the anchor: blend membership is
+   *  structural, so the member skips the subset fit and is always in. */
+  structural: boolean;
+  /** Member's own observed-frame WDS magnitude (mag_sec; mag_pri for a
+   *  pair-row primary escape). */
+  memberWdsMag: number | null;
+  /** The anchor component's own observed WDS magnitude — the row's
+   *  mag_pri when the member is its direct secondary; null on an escape
+   *  row (its mag_pri is the member's own light). */
+  anchorWdsMag: number | null;
+  distPc: number | null;
+  av: number;
 }
 
 interface BlendSplitCandidate {
@@ -1472,26 +1475,26 @@ function promoteRow(
   // Flux conservation: a member whose light is embedded in the
   // anchor's athyg_own BLEND magnitude must dim the anchor or the
   // system double-counts it. Blend membership is structural for
-  // inherited-then-stripped ids; for a member with its own real
-  // identifier anchorMagIsPairBlend decides; identifier-less synth
-  // members never qualify here (multi-member blends misattribute
-  // pairwise — see README § Anchor flux conservation). Deferred to a
-  // post-pass (an anchor can be dimmed by several members
-  // sequentially).
-  const dimEligible = idsInheritedFromAnchor
-    ? imputed.source === 'wds_mag' || imputed.source === 'dmag_imputed'
-    : !usesSynth
-      && (imputed.source === 'dmag_imputed' || imputed.source === 'own')
-      && anchorStar !== null && anchorMagIsPairBlend(anchorStar, row, av);
-  if (dimEligible
+  // inherited-then-stripped ids; every other own-brightness member
+  // (identifier-carrying AND identifier-less synth alike) is a
+  // candidate whose membership the post-pass subset solve decides —
+  // see README § Anchor flux conservation. Deferred to a post-pass so
+  // each anchor's members are judged jointly.
+  if (OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)
       && anchorPrimaryRow.photometryVia === PHOTOMETRY_VIA_OWN
       && anchorCatalogIdx !== null) {
+    const isPairRowPrimary = row.orbitRole === 'primary';
     state.anchorDimCandidates.push({
       anchorIdx: anchorCatalogIdx,
       member: state.newStars[state.newStars.length - 1],
       memberSpectral: spectral.info,
       source: imputed.source as 'wds_mag' | 'dmag_imputed' | 'own',
       dmag: row.dmag,
+      structural: idsInheritedFromAnchor,
+      memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
+      anchorWdsMag: isPairRowPrimary ? null : row.magPri,
+      distPc: row.distPc,
+      av,
     });
   }
   // A gaia_photometry absmag is the backing source's magnitude. When that
@@ -1900,46 +1903,142 @@ export function promoteCompanions(
     }
   }
 
-  // Anchor-dimming post-pass (flux conservation). Each candidate member's
-  // light is embedded in its anchor's athyg_own blend magnitude; total
-  // system flux must stay what AT-HYG measured. Two shapes:
+  // Anchor-dimming post-pass (flux conservation) — a per-anchor joint
+  // subset solve. Each candidate member's light MAY be embedded in its
+  // anchor's athyg_own blend magnitude; total system flux must stay what
+  // AT-HYG measured. Membership: structural members (ids inherited-then-
+  // stripped from the anchor) are always in; every other member is judged
+  // by the best-fit subset — the hypothesis m(S) = −2.5·log₁₀(F_anchor +
+  // Σ_{i∈S} F_i) over observed-frame WDS magnitudes that lands closest to
+  // the anchor's observed apparent magnitude, decisive only when it beats
+  // "anchor alone" AND the runner-up by ≥0.01 mag. This is what keeps a
+  // multi-member anchor honest: 36 Oph D cannot claim A+B's blend (any
+  // subset containing D fits worse than {A,B}), while Polaris Ab (inside
+  // the 1.98 blend) dims its anchor ~0.16 mag.
   //
-  // - dmag_imputed: the member's brightness came from the blend itself
-  //   (M_blend + Δ — overbright, since Δ is relative to the PRIMARY, not
-  //   the blend), so the pair is re-split jointly by Δmag:
-  //   M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ)), M_B = M_A + Δ. Exact
-  //   flux conservation for any Δ; reduces to "anchor barely dims" for a
-  //   faint companion (Sirius B shifts 10⁻⁴ mag) and to the equal split
-  //   for Δ = 0. A naive flux subtraction here would gut a near-equal
-  //   anchor (Capella: −0.51 → +2.1) because the member's error lands
-  //   entirely on the anchor.
-  // - wds_mag / own: the member's brightness is independent of the blend
-  //   (its own WDS magnitude, or its own Gaia photometry — 36 Oph B), so
-  //   subtract its flux: M′ = −2.5·log₁₀(10^(−0.4·M_blend) −
-  //   10^(−0.4·M_member)). The guard skips a member as bright as the
-  //   blend itself (member mag inconsistent with the AT-HYG magnitude);
-  //   those keep the anchor untouched and are counted for the ratchet.
-  //
-  // Sequential when several members share one anchor — each step
-  // conserves the running total.
+  // Apply (once per anchor, exact conservation): members with independent
+  // brightness ('own' / 'wds_mag') subtract their actual flux; blend-
+  // relative members ('dmag_imputed') re-split the residual by Δmag —
+  //   F_A · (1 + Σ 10^(−0.4·Δ_i)) = F_blend − Σ F_own
+  // generalising the pairwise M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ)).
+  // The relative split reduces to "anchor barely dims" for a faint
+  // companion (Sirius B would shift 10⁻⁴ mag — blocked by the decisive
+  // margin anyway) and to the equal split for Δ = 0 (Capella: a naive
+  // subtraction would gut a near-equal anchor). The too-bright guard
+  // skips an independent member whose light would zero or invert the
+  // residual (counted blendDimSkipped, a ratchet).
+  const dimByAnchor = new Map<number, AnchorDimCandidate[]>();
   for (const cand of state.anchorDimCandidates) {
-    const anchor = getStarAt(cand.anchorIdx);
-    if (cand.source === 'dmag_imputed' && cand.dmag !== null) {
-      const lift = 2.5 * Math.log10(1 + Math.pow(10, -0.4 * cand.dmag));
-      cand.member.absmag = anchor.absmag + cand.dmag + lift;
-      cand.member.physicalRadius = physicalRadius(
-        cand.member.absmag, cand.memberSpectral,
-      );
-      anchor.absmag += lift;
-    } else {
-      if (!(cand.member.absmag > anchor.absmag + ANCHOR_DIM_MIN_DELTA_MAG)) {
+    const bucket = dimByAnchor.get(cand.anchorIdx);
+    if (bucket) bucket.push(cand);
+    else dimByAnchor.set(cand.anchorIdx, [cand]);
+  }
+  for (const cands of dimByAnchor.values()) {
+    const anchor = getStarAt(cands[0].anchorIdx);
+    if (process.env.DIM_DEBUG && new RegExp(process.env.DIM_DEBUG).test(anchor.proper ?? '')) {
+      console.log('[DIM_DEBUG]', anchor.proper, 'absmag', anchor.absmag.toFixed(3),
+        JSON.stringify(cands.map((c) => ({
+          src: c.source, structural: c.structural, mMag: c.memberWdsMag,
+          aMag: c.anchorWdsMag, dmag: c.dmag, dist: c.distPc, av: +c.av.toFixed(3),
+          memberAbs: +c.member.absmag.toFixed(3), name: c.member.proper,
+        }))));
+    }
+    const anchorWdsMag = cands.find((c) => c.anchorWdsMag !== null)?.anchorWdsMag ?? null;
+    const distPc = cands.find((c) => c.distPc !== null && c.distPc > 0)?.distPc ?? null;
+    // Members sit sub-arcsec off the anchor, so any candidate's sightline
+    // de-extinction re-adds the same observed frame.
+    const av = cands[0].av;
+    const obsMag = (c: AnchorDimCandidate): number | null =>
+      c.memberWdsMag !== null ? c.memberWdsMag
+        : anchorWdsMag !== null && c.dmag !== null ? anchorWdsMag + c.dmag
+          : null;
+
+    const structural = cands.filter((c) => c.structural);
+    const fitted = cands.filter((c) => !c.structural);
+    let chosen: AnchorDimCandidate[] = [];
+    if (fitted.length > 0) {
+      const participants = fitted.filter((c) => obsMag(c) !== null);
+      stats.blendDimMembersUnfit += fitted.length - participants.length;
+      if (anchorWdsMag === null || distPc === null || participants.length === 0
+          || participants.length > ANCHOR_DIM_MAX_FIT_MEMBERS) {
+        stats.blendDimMembersUnfit += participants.length;
+      } else {
+        const mObs = anchor.absmag + av + 5 * Math.log10(distPc / 10);
+        const baseFlux = Math.pow(10, -0.4 * anchorWdsMag)
+          + structural.reduce((f, c) => {
+            const m = obsMag(c);
+            return m !== null ? f + Math.pow(10, -0.4 * m) : f;
+          }, 0);
+        const fluxes = participants.map((c) => Math.pow(10, -0.4 * (obsMag(c) as number)));
+        const errs = new Array<number>(1 << participants.length);
+        for (let mask = 0; mask < errs.length; mask++) {
+          let f = baseFlux;
+          for (let i = 0; i < participants.length; i++) {
+            if (mask & (1 << i)) f += fluxes[i];
+          }
+          errs[mask] = Math.abs(mObs - (-2.5 * Math.log10(f)));
+        }
+        // Hypotheses within the decisive margin of the best are an
+        // equivalence class (a negligible-flux member toggles between two
+        // subsets without moving the blend); pick the SMALLEST subset in
+        // the class — conservative attribution, and float noise never
+        // flips a pinned value. No dim when "anchor alone" is in the
+        // class (the Sirius Δmag≈10 shape).
+        const bestErr = Math.min(...errs);
+        if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
+          stats.blendDimMembersOutside += participants.length;
+        } else {
+          let bestMask = 0;
+          let bestBits = Infinity;
+          for (let mask = 0; mask < errs.length; mask++) {
+            if (errs[mask] - bestErr >= ANCHOR_DIM_DECISIVE_MAG) continue;
+            let bits = 0;
+            for (let i = 0; i < participants.length; i++) {
+              if (mask & (1 << i)) bits++;
+            }
+            if (bits < bestBits || (bits === bestBits && errs[mask] < errs[bestMask])) {
+              bestMask = mask;
+              bestBits = bits;
+            }
+          }
+          chosen = participants.filter((_, i) => (bestMask & (1 << i)) !== 0);
+          stats.blendDimMembersOutside += participants.length - chosen.length;
+        }
+      }
+    }
+
+    const applied = [...structural, ...chosen];
+    if (applied.length === 0) continue;
+    let ownFlux = 0;
+    let appliedIndependents = 0;
+    const relatives: Array<{ cand: AnchorDimCandidate; delta: number }> = [];
+    for (const c of applied) {
+      if (c.source === 'dmag_imputed') {
+        const m = obsMag(c);
+        const delta = anchorWdsMag !== null && m !== null ? m - anchorWdsMag : c.dmag;
+        if (delta !== null) relatives.push({ cand: c, delta });
+        continue;
+      }
+      if (!(c.member.absmag > anchor.absmag + ANCHOR_DIM_MIN_DELTA_MAG)) {
         stats.blendDimSkipped++;
         continue;
       }
-      const residualFlux =
-        Math.pow(10, -0.4 * anchor.absmag)
-        - Math.pow(10, -0.4 * cand.member.absmag);
-      anchor.absmag = -2.5 * Math.log10(residualFlux);
+      ownFlux += Math.pow(10, -0.4 * c.member.absmag);
+      appliedIndependents++;
+    }
+    if (relatives.length === 0 && appliedIndependents === 0) continue;
+    const residualFlux = Math.pow(10, -0.4 * anchor.absmag) - ownFlux;
+    if (!(residualFlux > 0)) {
+      stats.blendDimSkipped += appliedIndependents;
+      continue;
+    }
+    const relSum = relatives.reduce((s, r) => s + Math.pow(10, -0.4 * r.delta), 0);
+    anchor.absmag = -2.5 * Math.log10(residualFlux / (1 + relSum));
+    for (const { cand, delta } of relatives) {
+      cand.member.absmag = anchor.absmag + delta;
+      cand.member.physicalRadius = physicalRadius(
+        cand.member.absmag, cand.memberSpectral,
+      );
     }
     anchor.physicalRadius = physicalRadius(
       anchor.absmag, anchorSpectralInfo(anchor),

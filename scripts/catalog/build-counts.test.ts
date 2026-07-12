@@ -77,6 +77,8 @@ function baseCounts(): BuildCounts {
     companionBlendSplit: 0,
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
+    companionBlendDimUnfit: 0,
+    companionBlendDimOutside: 0,
     companionRepositionedCollocatedDouble: 1,
     companionConstellationInherited: 0,
     componentLettersStamped: 2,
