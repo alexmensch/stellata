@@ -44,6 +44,9 @@ affect the brand.
 The `?` keyboard-shortcut surface. Same dismissal contract as About /
 Credits — `modal-dismiss.ts` binds ESC + backdrop + close-button on
 every `.modal` card; new modals get the same behaviour for free.
+ESC dismisses only the top-most open modal (last-opened wins), and
+dismiss triggers are click-delegated on the modal root, so
+`[data-modal-dismiss]` buttons injected after bind time work too.
 
 ## Mobile advisory
 
