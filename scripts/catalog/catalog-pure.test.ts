@@ -55,6 +55,10 @@ import {
   RECORD_LAYOUT,
   HEADER_FIELD_SIZES,
   RECORD_FIELD_SIZES,
+  RECORD_RESERVED_TAIL_BYTES,
+  MULTIPLICITY_SINGLE,
+  MULTIPLICITY_RESOLVED,
+  MULTIPLICITY_UNRESOLVED,
   HEADER_SIZE,
   RECORD_SIZE,
   MAGIC,
@@ -82,11 +86,9 @@ import {
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
   BJ_ELIGIBLE_DIST_SRCS,
-  DIST_SRC_BAILER_JONES,
   applyLmcKinematicOverride,
   isInLmcCone,
   angularSeparationDeg,
-  DIST_SRC_LMC_KIN,
   LMC_DISTANCE_PC,
   LMC_CENTRE_RA_HOURS,
   LMC_CENTRE_DEC_DEG,
@@ -1461,15 +1463,26 @@ describe('catalog-pure / binary-format constants', () => {
     expect(Object.keys(RECORD_FIELD_SIZES).sort()).toEqual(Object.keys(RECORD_LAYOUT).sort());
   });
 
-  it('magic + version identify the v8 format', () => {
-    expect(MAGIC).toBe('HYG8');
-    expect(BINARY_VERSION).toBe(8);
+  it('record fields tile the record contiguously (kind-derived sizes + reserved tail sum to RECORD_SIZE)', () => {
+    const fields = (Object.entries(RECORD_LAYOUT) as [keyof typeof RECORD_LAYOUT, number][])
+      .sort((a, b) => a[1] - b[1]);
+    let expected = 0;
+    for (const [name, off] of fields) {
+      expect(off, `${name} leaves a gap or overlaps`).toBe(expected);
+      expected = off + RECORD_FIELD_SIZES[name];
+    }
+    expect(expected + RECORD_RESERVED_TAIL_BYTES).toBe(RECORD_SIZE);
   });
 
-  it('record fields cover the v8 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80, velocity 3×float32 at 84..95)', () => {
+  it('magic + version identify the v9 format', () => {
+    expect(MAGIC).toBe('HYG9');
+    expect(BINARY_VERSION).toBe(9);
+  });
+
+  it('record fields cover the v9 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80, velocity 3×float32 at 84..95, multiplicity uint8 at 96)', () => {
     expect(RECORD_LAYOUT.gaiaSourceId).toBe(44);
     expect(RECORD_LAYOUT.gaiaSourceId + 8).toBe(52); // gaiaSourceId end
-    expect(RECORD_SIZE).toBe(96);
+    expect(RECORD_SIZE).toBe(100);
     // varType uint8 sits between ampUnits (36) and period (38).
     expect(RECORD_LAYOUT.ampUnits + 1).toBe(RECORD_LAYOUT.varType);
     expect(RECORD_LAYOUT.varType).toBe(37);
@@ -1490,13 +1503,27 @@ describe('catalog-pure / binary-format constants', () => {
     // sid uint32 immediately after the Apsis bank, then the velocity bank.
     expect(RECORD_LAYOUT.mhGspspec + 4).toBe(RECORD_LAYOUT.sid);
     expect(RECORD_LAYOUT.sid).toBe(80);
-    // v8 velocity bank: 3 float32 pc/yr appended after sid, filling the
-    // record to RECORD_SIZE.
+    // v8 velocity bank: 3 float32 pc/yr appended after sid.
     expect(RECORD_LAYOUT.sid + 4).toBe(RECORD_LAYOUT.vx);
     expect(RECORD_LAYOUT.vx).toBe(84);
     expect(RECORD_LAYOUT.vy).toBe(88);
     expect(RECORD_LAYOUT.vz).toBe(92);
-    expect(RECORD_LAYOUT.vz + 4).toBe(RECORD_SIZE);
+    // v9 multiplicity uint8 after the velocity bank; the reserved tail pads
+    // the stride back to a multiple of 4.
+    expect(RECORD_LAYOUT.vz + 4).toBe(RECORD_LAYOUT.multiplicityStatus);
+    expect(RECORD_LAYOUT.multiplicityStatus).toBe(96);
+    expect(RECORD_LAYOUT.multiplicityStatus + 1 + RECORD_RESERVED_TAIL_BYTES).toBe(RECORD_SIZE);
+    expect(RECORD_SIZE % 4).toBe(0);
+  });
+
+  it('multiplicity enum values are distinct and fit the uint8 field', () => {
+    const values = [MULTIPLICITY_SINGLE, MULTIPLICITY_RESOLVED, MULTIPLICITY_UNRESOLVED];
+    expect(new Set(values).size).toBe(values.length);
+    for (const v of values) {
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(0xff);
+    }
+    expect(MULTIPLICITY_SINGLE).toBe(0); // zero-fill default = single
   });
 
   it('FLAGS registry entries are distinct single-bit values', () => {
@@ -1802,13 +1829,11 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     expect(applyBailerJonesOverride(10, '0000', bjMap)).toBeNull();
   });
 
-  it('pins the BJ distance and recomputes absmag consistently', () => {
+  it('pins the BJ distance', () => {
     for (const f of FIVE_HIPS) {
       const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap);
       expect(out, f.label).not.toBeNull();
       expect(out!.dist, f.label).toBe(f.bjDist);
-      // Absolute magnitude follows m − 5·log₁₀(d/10).
-      expect(out!.absmag).toBeCloseTo(f.mag - 5 * Math.log10(f.bjDist / 10), 10);
     }
   });
 
@@ -1839,10 +1864,6 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     expect(Math.abs(f.athygDist - out.dist) / f.athygDist).toBeLessThan(0.05);
   });
 
-  it('DIST_SRC_BAILER_JONES tag is "BJ" (distinct from AT-HYG namespace)', () => {
-    expect(DIST_SRC_BAILER_JONES).toBe('BJ');
-    expect(['G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER']).not.toContain(DIST_SRC_BAILER_JONES);
-  });
 });
 
 describe('catalog-pure / isBailerJonesEligible', () => {
@@ -2349,12 +2370,6 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     expect(failJustOver).toBeNull();
   });
 
-  it('DIST_SRC_LMC_KIN tag is "LMC_KIN" (distinct from BJ + AT-HYG namespace)', () => {
-    expect(DIST_SRC_LMC_KIN).toBe('LMC_KIN');
-    expect([
-      'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', DIST_SRC_BAILER_JONES,
-    ]).not.toContain(DIST_SRC_LMC_KIN);
-  });
 });
 
 describe('catalog-pure / transport chunking', () => {

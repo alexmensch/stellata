@@ -6,38 +6,35 @@ import {
   FLAG_HAS_BAYER,
   FLAG_BINARY_PRIMARY,
   HEADER_LAYOUT,
-  RECORD_LAYOUT,
   HEADER_SIZE,
   RECORD_SIZE,
-  MAGIC,
-  BINARY_VERSION,
+  NO_APSIS,
+  APSIS_FIELDS,
+  type ApsisField,
+  type WireStarRecord,
+  writeStarRecord,
+  writeCatalogHeader,
   catalogChunkFilename,
   planCatalogChunks,
   assembleCatalogChunks,
   type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
 
-interface StarRecord {
-  pos: [number, number, number];
-  vel: [number, number, number];  // space-motion velocity, pc/yr
-  absmag: number;
-  ci: number;
-  physicalRadius: number;
-  companion: number;       // 0xffffffff = none
-  nameOffset: number;      // 0 = none (sentinel)
-  spectClass: number;      // 0..255
-  luminosityClass: number; // 0..255 (255 = unknown)
-  constellation: number;   // 0..87
-  flags: number;           // bit 0 has_name, 1 is_sol, 2 has_bayer, 4 binary primary
-  amplitudeRaw: number;    // uint8 (×0.05 to get magnitudes)
-  periodRaw: number;       // uint16 (×0.1 to get days)
-  hip: number;             // 0 = none
-  sid: number;             // 0 = NO_SID (unallocated)
+// Test-side view of one record: WireStarRecord with the wide/rarely-set
+// fields defaulted so fixtures stay terse. Encoded through the REAL
+// writer (writeStarRecord), so every parse below is a writer→reader
+// round-trip of the shipped layout.
+type StarRecord = Omit<WireStarRecord, 'apsis'> & { apsis: Record<ApsisField, number> };
+
+function nanApsis(): Record<ApsisField, number> {
+  const out = {} as Record<ApsisField, number>;
+  for (const name of APSIS_FIELDS) out[name] = NO_APSIS;
+  return out;
 }
 
-// Build a synthetic catalog buffer matching the v4 format. Tests construct
-// the smallest reasonable catalogs (a few stars + optional name table) so
-// the parser sees realistic input without needing the real ~13 MB
+// Build a synthetic catalog buffer through the shared writer. Tests
+// construct the smallest reasonable catalogs (a few stars + optional name
+// table) so the parser sees realistic input without needing the real
 // catalog.bin on disk.
 function buildCatalog(
   records: StarRecord[],
@@ -56,50 +53,23 @@ function buildCatalog(
   const dv = new DataView(ab);
   const u8 = new Uint8Array(ab);
 
-  // Header
-  for (let i = 0; i < 4; i++) u8[HEADER_LAYOUT.magic + i] = MAGIC.charCodeAt(i);
-  dv.setUint32(HEADER_LAYOUT.version, BINARY_VERSION, true);
-  dv.setUint32(HEADER_LAYOUT.count, records.length, true);
   const nameTableOffset = encodedNames.length > 0
     ? HEADER_SIZE + records.length * RECORD_SIZE
     : 0;
-  dv.setUint32(HEADER_LAYOUT.nameTableOffset, nameTableOffset, true);
-  dv.setUint32(HEADER_LAYOUT.nameTableLength, encodedNames.length > 0 ? nameTableLength : 0, true);
-
-  // Records
-  records.forEach((r, i) => {
-    const off = HEADER_SIZE + i * RECORD_SIZE;
-    dv.setFloat32(off + RECORD_LAYOUT.x, r.pos[0], true);
-    dv.setFloat32(off + RECORD_LAYOUT.y, r.pos[1], true);
-    dv.setFloat32(off + RECORD_LAYOUT.z, r.pos[2], true);
-    dv.setFloat32(off + RECORD_LAYOUT.vx, r.vel[0], true);
-    dv.setFloat32(off + RECORD_LAYOUT.vy, r.vel[1], true);
-    dv.setFloat32(off + RECORD_LAYOUT.vz, r.vel[2], true);
-    dv.setFloat32(off + RECORD_LAYOUT.absmag, r.absmag, true);
-    dv.setFloat32(off + RECORD_LAYOUT.ci, r.ci, true);
-    dv.setFloat32(off + RECORD_LAYOUT.physRadius, r.physicalRadius, true);
-    dv.setUint32(off + RECORD_LAYOUT.companion, r.companion >>> 0, true);
-    dv.setUint32(off + RECORD_LAYOUT.nameOffset, r.nameOffset >>> 0, true);
-    dv.setUint8(off + RECORD_LAYOUT.spectClass, r.spectClass);
-    dv.setUint8(off + RECORD_LAYOUT.lumClass, r.luminosityClass);
-    dv.setUint8(off + RECORD_LAYOUT.conIndex, r.constellation);
-    dv.setUint8(off + RECORD_LAYOUT.flags, r.flags);
-    dv.setUint8(off + RECORD_LAYOUT.ampUnits, r.amplitudeRaw);
-    dv.setUint16(off + RECORD_LAYOUT.period, r.periodRaw, true);
-    dv.setUint32(off + RECORD_LAYOUT.hip, r.hip, true);
-    dv.setUint32(off + RECORD_LAYOUT.sid, r.sid, true);
+  writeCatalogHeader(dv, {
+    count: records.length,
+    nameTableOffset,
+    nameTableLength: encodedNames.length > 0 ? nameTableLength : 0,
   });
 
-  // Name table (after records)
+  records.forEach((r, i) => writeStarRecord(dv, HEADER_SIZE + i * RECORD_SIZE, r));
+
+  // Name table (after records). parseBinary stores each entry under the
+  // offset of its length prefix relative to the name-table start; tests
+  // pass that same value through StarRecord.nameOffset.
   if (encodedNames.length > 0) {
     let p = nameTableOffset + 2; // skip 2-byte zero-sentinel padding
     for (const n of encodedNames) {
-      // The record's nameOffset must equal `p` (the offset of the length
-      // prefix relative to the name-table start, which is what parseBinary
-      // expects since it indexes into ntView)
-      // Wait — re-read parseBinary: it stores p (nameOffset) before
-      // advancing past the length prefix. Tests pass that same value
-      // through StarRecord.nameOffset.
       dv.setUint16(p, n.bytes.length, true);
       u8.set(n.bytes, p + 2);
       p += 2 + n.bytes.length;
@@ -151,21 +121,25 @@ function streamedResponse(data: Uint8Array, reads: number): Response {
 }
 
 const baseStar: StarRecord = {
-  pos: [0, 0, 0],
-  vel: [0, 0, 0],
+  x: 0, y: 0, z: 0,
+  vx: 0, vy: 0, vz: 0,
   absmag: 0,
   ci: 0,
-  physicalRadius: 1,
-  companion: 0xffffffff,
+  physRadius: 1,
+  companionIdx: 0xffffffff,
   nameOffset: 0,
   spectClass: 0,
-  luminosityClass: 255,
-  constellation: 0,
+  lumClass: 255,
+  conIndex: 0,
   flags: 0,
-  amplitudeRaw: 0,
-  periodRaw: 0,
+  ampUnits: 0,
+  periodUnits: 0,
+  varType: 0,
   hip: 0,
+  gaiaSourceId: 0n,
+  apsis: nanApsis(),
   sid: 0,
+  multiplicityStatus: 0,
 };
 
 describe('catalog-loader / parseBinary', () => {
@@ -200,10 +174,10 @@ describe('catalog-loader / parseBinary', () => {
     it('parses positions, absmag, ci, physicalRadius', () => {
       const star: StarRecord = {
         ...baseStar,
-        pos: [1.5, -2.5, 3.5],
+        x: 1.5, y: -2.5, z: 3.5,
         absmag: 4.83,
         ci: 0.65,
-        physicalRadius: 1.0,
+        physRadius: 1.0,
       };
       const cat = parseBinary(buildCatalog([star]), blankConstellations);
       expect(cat.count).toBe(1);
@@ -218,8 +192,8 @@ describe('catalog-loader / parseBinary', () => {
     it('parses the v8 space-motion velocity columns', () => {
       const star: StarRecord = {
         ...baseStar,
-        pos: [1, 2, 3],
-        vel: [1.5e-5, -2.5e-5, 3.5e-6],
+        x: 1, y: 2, z: 3,
+        vx: 1.5e-5, vy: -2.5e-5, vz: 3.5e-6,
       };
       const cat = parseBinary(buildCatalog([star]), blankConstellations);
       expect(cat.velocities).toHaveLength(3);
@@ -232,8 +206,8 @@ describe('catalog-loader / parseBinary', () => {
       const star: StarRecord = {
         ...baseStar,
         spectClass: 5,
-        luminosityClass: 3,
-        constellation: 42,
+        lumClass: 3,
+        conIndex: 42,
       };
       const cat = parseBinary(buildCatalog([star]), blankConstellations);
       expect(cat.spectClass[0]).toBe(5);
@@ -252,6 +226,68 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.hip[0]).toBe(0);
     });
 
+    it('round-trips every record field with distinct values through the shared writer', () => {
+      // Distinct value per field so any swapped assignment (writer OR
+      // reader) fails on the exact field name, not by coincidence.
+      const star: StarRecord = {
+        x: 1.25, y: -2.5, z: 3.75,
+        vx: 1e-5, vy: -2e-5, vz: 3e-6,
+        absmag: 4.83,
+        ci: 0.65,
+        physRadius: 2.25,
+        companionIdx: 7,
+        nameOffset: 0,
+        spectClass: 4,
+        lumClass: 2,
+        conIndex: 41,
+        flags: FLAG_HAS_BAYER | FLAG_BINARY_PRIMARY,
+        ampUnits: 9,
+        periodUnits: 1234,
+        varType: 2,
+        hip: 65241,
+        gaiaSourceId: 3716436373755666432n, // > 2^53: must survive BigUint64
+        apsis: {
+          teffGspphot: 5777, loggGspphot: 4.44, mhGspphot: 0.01, azeroGspphot: 0.12,
+          teffGspspec: 5750, loggGspspec: 4.4, mhGspspec: -0.02,
+        },
+        sid: 306055,
+        multiplicityStatus: 2,
+      };
+      const cat = parseBinary(buildCatalog([{ ...baseStar }, star]), blankConstellations);
+      expect(cat.positions[3]).toBeCloseTo(1.25, 5);
+      expect(cat.positions[4]).toBeCloseTo(-2.5, 5);
+      expect(cat.positions[5]).toBeCloseTo(3.75, 5);
+      expect(cat.velocities[3]).toBeCloseTo(1e-5, 10);
+      expect(cat.velocities[4]).toBeCloseTo(-2e-5, 10);
+      expect(cat.velocities[5]).toBeCloseTo(3e-6, 10);
+      expect(cat.absmag[1]).toBeCloseTo(4.83, 5);
+      expect(cat.ci[1]).toBeCloseTo(0.65, 5);
+      expect(cat.physicalRadius[1]).toBeCloseTo(2.25, 5);
+      expect(cat.companion[1]).toBe(7);
+      expect(cat.spectClass[1]).toBe(4);
+      expect(cat.luminosityClass[1]).toBe(2);
+      expect(cat.constellation[1]).toBe(41);
+      expect(cat.flags[1]).toBe(FLAG_HAS_BAYER | FLAG_BINARY_PRIMARY);
+      expect(cat.amplitudeMag[1]).toBeCloseTo(0.45, 5);
+      expect(cat.periodDays[1]).toBeCloseTo(123.4, 4);
+      expect(cat.varType[1]).toBe(2);
+      expect(cat.hip[1]).toBe(65241);
+      expect(cat.gaiaSourceId[1]).toBe(3716436373755666432n);
+      expect(cat.teffGspphot[1]).toBeCloseTo(5777, 1);
+      expect(cat.loggGspphot[1]).toBeCloseTo(4.44, 4);
+      expect(cat.mhGspphot[1]).toBeCloseTo(0.01, 4);
+      expect(cat.azeroGspphot[1]).toBeCloseTo(0.12, 4);
+      expect(cat.teffGspspec[1]).toBeCloseTo(5750, 1);
+      expect(cat.loggGspspec[1]).toBeCloseTo(4.4, 4);
+      expect(cat.mhGspspec[1]).toBeCloseTo(-0.02, 4);
+      expect(cat.sid[1]).toBe(306055);
+      expect(cat.multiplicityStatus[1]).toBe(2);
+      // The all-defaults record keeps its sentinels.
+      expect(cat.gaiaSourceId[0]).toBe(0n);
+      expect(cat.multiplicityStatus[0]).toBe(0);
+      for (const name of APSIS_FIELDS) expect(Number.isNaN(cat[name][0])).toBe(true);
+    });
+
     it('parses the v7 sid column', () => {
       const cat = parseBinary(
         buildCatalog([
@@ -268,7 +304,7 @@ describe('catalog-loader / parseBinary', () => {
   describe('companion sentinel', () => {
     it('decodes 0xffffffff companion as -1', () => {
       const cat = parseBinary(
-        buildCatalog([{ ...baseStar, companion: 0xffffffff }]),
+        buildCatalog([{ ...baseStar, companionIdx: 0xffffffff }]),
         blankConstellations,
       );
       expect(cat.companion[0]).toBe(-1);
@@ -278,7 +314,7 @@ describe('catalog-loader / parseBinary', () => {
       const cat = parseBinary(
         buildCatalog([
           { ...baseStar },
-          { ...baseStar, companion: 0 },
+          { ...baseStar, companionIdx: 0 },
         ]),
         blankConstellations,
       );
@@ -321,18 +357,18 @@ describe('catalog-loader / parseBinary', () => {
 
   describe('variability (amplitude / period)', () => {
     it('decodes amplitude at 0.05 mag units', () => {
-      // amplitudeRaw=20 → 1.0 mag
+      // ampUnits=20 → 1.0 mag
       const cat = parseBinary(
-        buildCatalog([{ ...baseStar, amplitudeRaw: 20 }]),
+        buildCatalog([{ ...baseStar, ampUnits: 20 }]),
         blankConstellations,
       );
       expect(cat.amplitudeMag[0]).toBeCloseTo(1.0, 5);
     });
 
     it('decodes period at 0.1 day units', () => {
-      // periodRaw=3320 → 332.0 days
+      // periodUnits=3320 → 332.0 days
       const cat = parseBinary(
-        buildCatalog([{ ...baseStar, periodRaw: 3320 }]),
+        buildCatalog([{ ...baseStar, periodUnits: 3320 }]),
         blankConstellations,
       );
       expect(cat.periodDays[0]).toBeCloseTo(332.0, 5);
@@ -346,7 +382,7 @@ describe('catalog-loader / parseBinary', () => {
 
     it('decodes max-range amplitude (255 → 12.75 mag) and period (65535 → 6553.5 days)', () => {
       const cat = parseBinary(
-        buildCatalog([{ ...baseStar, amplitudeRaw: 255, periodRaw: 65535 }]),
+        buildCatalog([{ ...baseStar, ampUnits: 255, periodUnits: 65535 }]),
         blankConstellations,
       );
       expect(cat.amplitudeMag[0]).toBeCloseTo(12.75, 4);
@@ -426,7 +462,7 @@ describe('catalog-loader / parseBinary', () => {
       const offsets = nameTableOffsets(names);
       const records = names.map((_, i) => ({
         ...baseStar,
-        pos: [i + 0.5, -i, i * 2] as [number, number, number],
+        x: i + 0.5, y: -i, z: i * 2,
         absmag: i - 1.4,
         flags: FLAG_HAS_NAME,
         nameOffset: offsets[i],
@@ -467,7 +503,7 @@ describe('catalog-loader / parseBinary', () => {
       const offsets = nameTableOffsets(names);
       const records = names.map((_, i) => ({
         ...baseStar,
-        pos: [i + 0.5, -i, i * 2] as [number, number, number],
+        x: i + 0.5, y: -i, z: i * 2,
         flags: FLAG_HAS_NAME,
         nameOffset: offsets[i],
       }));

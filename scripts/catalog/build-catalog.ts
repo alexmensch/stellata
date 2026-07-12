@@ -20,22 +20,25 @@ import {
   type SimbadWdsXidIndex,
   buildHipToIndex,
   inferBinaries,
-  DIST_SRC_BAILER_JONES,
-  DIST_SRC_LMC_KIN,
   FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
   encodeAmpUnits,
   encodePeriodUnits,
-  HEADER_LAYOUT,
-  RECORD_LAYOUT,
   HEADER_SIZE,
   RECORD_SIZE,
   BINARY_VERSION,
-  MAGIC,
   NO_COMPANION,
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
+  MULTIPLICITY_SINGLE,
+  MULTIPLICITY_RESOLVED,
+  MULTIPLICITY_UNRESOLVED,
+  SIMBAD_OTYPE_MULTIPLE,
+  APSIS_FIELDS,
+  type ApsisField,
+  writeStarRecord,
+  writeCatalogHeader,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
   CATALOG_MANIFEST_FILENAME,
@@ -246,6 +249,8 @@ async function main() {
     ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
     renderableCompanionWinged: 0,
+    multiplicityResolved: 0,
+    multiplicityUnresolved: 0,
     componentDesignations: 0,
     bjEntries: 0,
     bjEligible: 0,
@@ -296,6 +301,8 @@ async function main() {
     companionBlendSplit: 0,
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
+    companionBlendDimUnfit: 0,
+    companionBlendDimOutside: 0,
     companionRepositionedCollocatedDouble: 0,
     companionConstellationInherited: 0,
     componentLettersStamped: 0,
@@ -467,14 +474,14 @@ async function main() {
     const pct = ((stats.bjOverridden / stats.bjEligible) * 100).toFixed(1);
     console.log(
       `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
-        `Gaia-inverse-distance stars (${pct}%) → dist_src='${DIST_SRC_BAILER_JONES}'`,
+        `Gaia-inverse-distance stars (${pct}%)`,
     );
   }
   if (stats.lmcCandidates > 0) {
     const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
     console.log(
       `  LMC kinematic override: ${stats.lmcOverridden} / ${stats.lmcCandidates} ` +
-        `LMC-cone stars (${pct}%) → dist_src='${DIST_SRC_LMC_KIN}'`,
+        `LMC-cone stars (${pct}%)`,
     );
   }
   if (stats.gaiaSourceIdBackfilled > 0) {
@@ -622,7 +629,8 @@ async function main() {
         `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
         `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
         `blend-split=${ps.blendSplitRecords}, ` +
-        `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}), ` +
+        `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
+        `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble} ` +
         `in ${Date.now() - tProm}ms`,
     );
@@ -644,6 +652,8 @@ async function main() {
     counts.companionBlendSplit = ps.blendSplitRecords;
     counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
     counts.companionBlendDimSkipped = ps.blendDimSkipped;
+    counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
+    counts.companionBlendDimOutside = ps.blendDimMembersOutside;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationInherited = ps.constellationInherited;
 
@@ -767,12 +777,14 @@ async function main() {
   const rowIndexMap = buildCatalogRowIndexMap(stars);
 
   let componentDesignations = new Map<number, ComponentDesignation>();
+  let multiplesMemberIndices = new Set<number>();
   if (multiplesRows !== null) {
-    const renderableCompanionWinged = wingRenderablePrimaries(
+    const { winged: renderableCompanionWinged, memberIndices } = wingRenderablePrimaries(
       multiplesRows,
       stars,
       rowIndexMap,
     );
+    multiplesMemberIndices = memberIndices;
     counts.renderableCompanionWinged = renderableCompanionWinged;
     console.log(
       `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
@@ -784,6 +796,29 @@ async function main() {
       `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
     );
   }
+
+  // Per-record multiplicity status (v9): resolved = a multiples.tsv member
+  // row backs the record; unresolved = SIMBAD otype '**' by Gaia source_id
+  // with no resolved member row (spectroscopic binaries invisible to
+  // WDS/CCDM/NSS — 64 Vir).
+  const multiplicityStatus = new Uint8Array(stars.length);
+  for (const idx of multiplesMemberIndices) multiplicityStatus[idx] = MULTIPLICITY_RESOLVED;
+  for (let i = 0; i < stars.length; i++) {
+    if (multiplicityStatus[i] !== MULTIPLICITY_SINGLE) continue;
+    const srcId = stars[i].gaiaSourceId;
+    if (!srcId) continue;
+    if (simbadSpectral.bySource.get(srcId)?.otype === SIMBAD_OTYPE_MULTIPLE) {
+      multiplicityStatus[i] = MULTIPLICITY_UNRESOLVED;
+    }
+  }
+  counts.multiplicityResolved = multiplesMemberIndices.size;
+  counts.multiplicityUnresolved = multiplicityStatus.reduce(
+    (n, v) => n + (v === MULTIPLICITY_UNRESOLVED ? 1 : 0), 0,
+  );
+  console.log(
+    `  multiplicity: ${counts.multiplicityResolved} resolved, ` +
+      `${counts.multiplicityUnresolved} unresolved (SIMBAD '**', nothing resolved)`,
+  );
 
   // Resolve every record to its frozen Stellata ID from the committed
   // ledger. The build never mints — sid:allocate is the sole writer
@@ -845,12 +880,11 @@ async function main() {
   const bytes = new Uint8Array(out);
 
   // Header.
-  const magicBytes = encoder.encode(MAGIC);
-  bytes.set(magicBytes, HEADER_LAYOUT.magic);
-  view.setUint32(HEADER_LAYOUT.version, BINARY_VERSION, true);
-  view.setUint32(HEADER_LAYOUT.count, stars.length, true);
-  view.setUint32(HEADER_LAYOUT.nameTableOffset, HEADER_SIZE + recordsLength, true);
-  view.setUint32(HEADER_LAYOUT.nameTableLength, nameTableLength, true);
+  writeCatalogHeader(view, {
+    count: stars.length,
+    nameTableOffset: HEADER_SIZE + recordsLength,
+    nameTableLength,
+  });
 
   // Records.
   let off = HEADER_SIZE;
@@ -861,61 +895,50 @@ async function main() {
   let apsisTeffEither = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    view.setFloat32(off + RECORD_LAYOUT.x, s.x, true);
-    view.setFloat32(off + RECORD_LAYOUT.y, s.y, true);
-    view.setFloat32(off + RECORD_LAYOUT.z, s.z, true);
-    view.setFloat32(off + RECORD_LAYOUT.vx, s.vx, true);
-    view.setFloat32(off + RECORD_LAYOUT.vy, s.vy, true);
-    view.setFloat32(off + RECORD_LAYOUT.vz, s.vz, true);
-    view.setFloat32(off + RECORD_LAYOUT.absmag, s.absmag, true);
-    view.setFloat32(off + RECORD_LAYOUT.ci, s.ci, true);
-    view.setFloat32(off + RECORD_LAYOUT.physRadius, s.physicalRadius, true);
-    view.setUint32(off + RECORD_LAYOUT.companion, s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION, true);
-    view.setUint32(off + RECORD_LAYOUT.nameOffset, s.proper ? nameOffsets[i] : 0, true);
-    view.setUint8(off + RECORD_LAYOUT.spectClass, s.spectClass);
-    view.setUint8(off + RECORD_LAYOUT.lumClass, s.lumClass);
-    view.setUint8(off + RECORD_LAYOUT.conIndex, s.conIndex);
-    view.setUint8(off + RECORD_LAYOUT.flags, s.flags);
     // Variability: amplitude clamps at 12.75 mag (extreme Miras), period at
     // 6553 days (rare long-period symbiotics). Period = 0 is the shader's
     // "not variable" sentinel.
-    if (s.periodDays > 0 && s.amplitudeMag > 0) {
-      const ampUnits = encodeAmpUnits(s.amplitudeMag);
-      const periodUnits = encodePeriodUnits(s.periodDays);
-      view.setUint8(off + RECORD_LAYOUT.ampUnits, ampUnits);
-      view.setUint16(off + RECORD_LAYOUT.period, periodUnits, true);
-      if (ampUnits > 0 && periodUnits > 0) variableCount++;
-    } else {
-      view.setUint8(off + RECORD_LAYOUT.ampUnits, 0);
-      view.setUint16(off + RECORD_LAYOUT.period, 0, true);
-    }
-    view.setUint8(off + RECORD_LAYOUT.varType, (s.varType ?? 0) & 0xff);
-    view.setUint32(off + RECORD_LAYOUT.hip, s.hip ?? 0, true);
+    const isVariable = s.periodDays > 0 && s.amplitudeMag > 0;
+    const ampUnits = isVariable ? encodeAmpUnits(s.amplitudeMag) : 0;
+    const periodUnits = isVariable ? encodePeriodUnits(s.periodDays) : 0;
+    if (ampUnits > 0 && periodUnits > 0) variableCount++;
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
     // AT-HYG column as BigInt to preserve every bit before writing.
     const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
-    view.setBigUint64(off + RECORD_LAYOUT.gaiaSourceId, gaiaSourceId, true);
     if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
 
     // Apsis lookup keyed by gaia_source_id string (BigInt key would
     // require a parallel string map). NO_APSIS (NaN) fills every cell
     // when the source_id is absent from the TSV or the row's cell is blank.
-    const apsis = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
-    const f = (v: number | null | undefined): number =>
-      v === null || v === undefined ? NO_APSIS : v;
-    view.setFloat32(off + RECORD_LAYOUT.teffGspphot, f(apsis?.teffGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.loggGspphot, f(apsis?.loggGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.mhGspphot, f(apsis?.mhGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.azeroGspphot, f(apsis?.azeroGspphot), true);
-    view.setFloat32(off + RECORD_LAYOUT.teffGspspec, f(apsis?.teffGspspec), true);
-    view.setFloat32(off + RECORD_LAYOUT.loggGspspec, f(apsis?.loggGspspec), true);
-    view.setFloat32(off + RECORD_LAYOUT.mhGspspec, f(apsis?.mhGspspec), true);
-    if (apsis) apsisMatched++;
-    if (apsis && (apsis.teffGspphot !== null || apsis.teffGspspec !== null)) {
+    const apsisRow = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
+    const apsis = {} as Record<ApsisField, number>;
+    for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
+    if (apsisRow) apsisMatched++;
+    if (apsisRow && (apsisRow.teffGspphot !== null || apsisRow.teffGspspec !== null)) {
       apsisTeffEither++;
     }
 
-    view.setUint32(off + RECORD_LAYOUT.sid, recordSids[i], true);
+    writeStarRecord(view, off, {
+      x: s.x, y: s.y, z: s.z,
+      vx: s.vx, vy: s.vy, vz: s.vz,
+      absmag: s.absmag,
+      ci: s.ci,
+      physRadius: s.physicalRadius,
+      companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
+      nameOffset: s.proper ? nameOffsets[i] : 0,
+      spectClass: s.spectClass,
+      lumClass: s.lumClass,
+      conIndex: s.conIndex,
+      flags: s.flags,
+      ampUnits,
+      periodUnits,
+      varType: s.varType ?? 0,
+      hip: s.hip ?? 0,
+      gaiaSourceId,
+      apsis,
+      sid: recordSids[i],
+      multiplicityStatus: multiplicityStatus[i],
+    });
 
     if (s.flags & FLAG_IS_SOL) solIndex = i;
     off += RECORD_SIZE;

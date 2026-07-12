@@ -5,6 +5,8 @@
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import {
+  APSIS_FIELDS,
+  type ApsisField,
   BINARY_VERSION,
   FLAG_HAS_NAME,
   HEADER_LAYOUT,
@@ -62,6 +64,7 @@ export interface CatalogRecord {
   varType: number;
   hip: number | null;
   gaiaSourceId: bigint | null;
+  multiplicityStatus: number; // MULTIPLICITY_*
   teffGspphot: number | null;
   loggGspphot: number | null;
   mhGspphot: number | null;
@@ -140,10 +143,11 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
     const conIdx = view.getUint8(off + RECORD_LAYOUT.conIndex);
     const hip = view.getUint32(off + RECORD_LAYOUT.hip, true);
     const gaiaSourceId = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
-    const apsisCell = (offsetField: number): number | null => {
-      const v = view.getFloat32(off + offsetField, true);
-      return Number.isNaN(v) ? null : v;
-    };
+    const apsis = {} as Record<ApsisField, number | null>;
+    for (const name of APSIS_FIELDS) {
+      const v = view.getFloat32(off + RECORD_LAYOUT[name], true);
+      apsis[name] = Number.isNaN(v) ? null : v;
+    }
     return {
       i,
       x: view.getFloat32(off + RECORD_LAYOUT.x, true),
@@ -165,13 +169,8 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
       varType: view.getUint8(off + RECORD_LAYOUT.varType),
       hip: hip === 0 ? null : hip,
       gaiaSourceId: gaiaSourceId === 0n ? null : gaiaSourceId,
-      teffGspphot: apsisCell(RECORD_LAYOUT.teffGspphot),
-      loggGspphot: apsisCell(RECORD_LAYOUT.loggGspphot),
-      mhGspphot: apsisCell(RECORD_LAYOUT.mhGspphot),
-      azeroGspphot: apsisCell(RECORD_LAYOUT.azeroGspphot),
-      teffGspspec: apsisCell(RECORD_LAYOUT.teffGspspec),
-      loggGspspec: apsisCell(RECORD_LAYOUT.loggGspspec),
-      mhGspspec: apsisCell(RECORD_LAYOUT.mhGspspec),
+      multiplicityStatus: view.getUint8(off + RECORD_LAYOUT.multiplicityStatus),
+      ...apsis,
       name,
       conCode: conIdx === NO_CONSTELLATION_INDEX ? null : constellations[conIdx]?.code ?? null,
     };

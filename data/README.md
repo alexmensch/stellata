@@ -88,7 +88,7 @@ measured moved to J2016.0.
 
 ### J2016.0 is the wire epoch; the runtime advances to `t`
 
-`catalog.bin` v8 ships positions at the fixed J2016.0 scene epoch AND a
+`catalog.bin` ships positions at the fixed J2016.0 scene epoch AND a
 per-star space-motion velocity (`vx/vy/vz`, pc/yr) resolved through the
 same trust cascade as direction (Gaia DR3 / HIP2 PM primary, AT-HYG
 `pm_*` last-resort, plus AT-HYG `rv`). At load the runtime advances every

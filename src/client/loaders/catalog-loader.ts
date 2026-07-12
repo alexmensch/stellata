@@ -1,4 +1,6 @@
 import {
+  APSIS_FIELDS,
+  type ApsisField,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   HEADER_LAYOUT,
@@ -61,6 +63,10 @@ export interface Catalog {
   // Stored as BigUint64Array because IDs routinely exceed 2^53 and would
   // truncate as plain Numbers. Convert with `String(arr[i])` at query time.
   gaiaSourceId: BigUint64Array;  // length = count
+  // Per-record multiplicity: 0 = single, 1 = resolved (a multiples.tsv
+  // member row backs the record), 2 = unresolved (SIMBAD otype '**',
+  // nothing resolved — spectroscopic binaries). MULTIPLICITY_* constants.
+  multiplicityStatus: Uint8Array; // length = count
   // Gaia DR3 Apsis astrophysical parameters per record. NaN (NO_APSIS) =
   // absent; consumers test with `Number.isNaN(arr[i])`. gspphot and
   // gspspec are independent Gaia solutions, either or both may be absent.
@@ -177,13 +183,12 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
   const hip = new Uint32Array(count);
   const sid = new Uint32Array(count);
   const gaiaSourceId = new BigUint64Array(count);
-  const teffGspphot = new Float32Array(count);
-  const loggGspphot = new Float32Array(count);
-  const mhGspphot = new Float32Array(count);
-  const azeroGspphot = new Float32Array(count);
-  const teffGspspec = new Float32Array(count);
-  const loggGspspec = new Float32Array(count);
-  const mhGspspec = new Float32Array(count);
+  const multiplicityStatus = new Uint8Array(count);
+  const apsis = {} as Record<ApsisField, Float32Array>;
+  for (const name of APSIS_FIELDS) apsis[name] = new Float32Array(count);
+  // Hoisted (array, offset) pairs keep the 313k-record decode loop free of
+  // per-iteration RECORD_LAYOUT property lookups.
+  const apsisCols = APSIS_FIELDS.map((name) => ({ arr: apsis[name], fieldOff: RECORD_LAYOUT[name] }));
   const nameOffsetArr = new Uint32Array(count);
 
   let solIndex = -1;
@@ -211,13 +216,8 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     hip[i] = view.getUint32(off + RECORD_LAYOUT.hip, true);
     sid[i] = view.getUint32(off + RECORD_LAYOUT.sid, true);
     gaiaSourceId[i] = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
-    teffGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.teffGspphot, true);
-    loggGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.loggGspphot, true);
-    mhGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.mhGspphot, true);
-    azeroGspphot[i] = view.getFloat32(off + RECORD_LAYOUT.azeroGspphot, true);
-    teffGspspec[i] = view.getFloat32(off + RECORD_LAYOUT.teffGspspec, true);
-    loggGspspec[i] = view.getFloat32(off + RECORD_LAYOUT.loggGspspec, true);
-    mhGspspec[i] = view.getFloat32(off + RECORD_LAYOUT.mhGspspec, true);
+    multiplicityStatus[i] = view.getUint8(off + RECORD_LAYOUT.multiplicityStatus);
+    for (const c of apsisCols) c.arr[i] = view.getFloat32(off + c.fieldOff, true);
     if (flags[i] & FLAG_IS_SOL) solIndex = i;
   }
 
@@ -265,13 +265,8 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     hip,
     sid,
     gaiaSourceId,
-    teffGspphot,
-    loggGspphot,
-    mhGspphot,
-    azeroGspphot,
-    teffGspspec,
-    loggGspspec,
-    mhGspspec,
+    multiplicityStatus,
+    ...apsis,
     names,
     solIndex,
     constellations,

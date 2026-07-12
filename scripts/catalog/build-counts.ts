@@ -51,6 +51,13 @@ export interface BuildCounts {
    *  geometric, CCDM, and eclipsing passes all left unflagged. One per WDS
    *  system anchor; excludes systems already flagged. Canopus, 16 Cyg A. */
   renderableCompanionWinged: number;
+  /** Records backed by a resolved multiples.tsv member row —
+   *  multiplicityStatus = MULTIPLICITY_RESOLVED. */
+  multiplicityResolved: number;
+  /** Records SIMBAD flags as multiple (otype '**') with no resolved
+   *  multiples.tsv member row — multiplicityStatus =
+   *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
+  multiplicityUnresolved: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
   /** AT-HYG rows the Bailer-Jones override is allowed to fire on:
@@ -233,6 +240,13 @@ export interface BuildCounts {
    *  absmag, so its flux is subtracted from the anchor's athyg_own blend
    *  magnitude and total system light is conserved. */
   companionBlendDimmedAnchors: number;
+  /** Non-structural dim candidates the subset solve could not fit (no
+   *  observed WDS mags / distance) — left un-dimmed. */
+  companionBlendDimUnfit: number;
+  /** Non-structural dim candidates the winning subset left out, or whose
+   *  fit was indecisive within 0.01 mag — their light is not in the
+   *  anchor's blend. */
+  companionBlendDimOutside: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in

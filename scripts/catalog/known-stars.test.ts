@@ -11,6 +11,9 @@ import {
   classifyFromSimbad,
   encodeAmpUnits,
   encodePeriodUnits,
+  MULTIPLICITY_RESOLVED,
+  MULTIPLICITY_SINGLE,
+  MULTIPLICITY_UNRESOLVED,
   SPECTRAL_UNKNOWN,
   VAR_TYPE_ECLIPSING,
   VAR_TYPE_OTHER,
@@ -608,6 +611,34 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
         rel,
         `${row.systemName}: expected orbital period ${expected} d, multiples.tsv has ${observed} d (relative diff ${(rel * 100).toFixed(2)}% > ${(PERIOD_REL_TOLERANCE * 100).toFixed(0)}%)`,
       ).toBeLessThanOrEqual(PERIOD_REL_TOLERANCE);
+    });
+  });
+
+  describe('multiplicity status (v9 field)', () => {
+    it('64 Vir (HIP 65241) pins unresolved — SIMBAD otype ** with nothing in WDS/CCDM/NSS', () => {
+      const r = lookupByHip(catalog, 65241);
+      expect(r).not.toBeNull();
+      expect(r!.multiplicityStatus).toBe(MULTIPLICITY_UNRESOLVED);
+    });
+
+    it('Almach (HIP 9640, γ And multiple) pins resolved', () => {
+      const r = lookupByHip(catalog, 9640);
+      expect(r).not.toBeNull();
+      expect(r!.multiplicityStatus).toBe(MULTIPLICITY_RESOLVED);
+    });
+
+    it("Barnard's Star (HIP 87937) pins single", () => {
+      const r = lookupByHip(catalog, 87937);
+      expect(r).not.toBeNull();
+      expect(r!.multiplicityStatus).toBe(MULTIPLICITY_SINGLE);
+    });
+
+    it('unresolved population clears the spectroscopic-binary floor', () => {
+      let unresolved = 0;
+      for (const r of catalog.records()) {
+        if (r.multiplicityStatus === MULTIPLICITY_UNRESOLVED) unresolved++;
+      }
+      expect(unresolved).toBeGreaterThan(500);
     });
   });
 

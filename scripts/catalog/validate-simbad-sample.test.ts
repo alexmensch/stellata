@@ -35,6 +35,7 @@ function makeRecord(over: Partial<CatalogRecord>): CatalogRecord {
     varType: 0,
     hip: null,
     gaiaSourceId: null,
+    multiplicityStatus: 0,
     teffGspphot: null,
     loggGspphot: null,
     mhGspphot: null,

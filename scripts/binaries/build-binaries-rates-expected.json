@@ -4,7 +4,7 @@
     "tolerance": 0.2
   },
   "optical_rejected_rate": {
-    "value": 0.381857,
+    "value": 0.381637,
     "tolerance": 0.2
   },
   "nss_orbit_rate": {

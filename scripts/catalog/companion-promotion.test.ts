@@ -513,7 +513,123 @@ describe('anchor flux dimming', () => {
     rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
     const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
     expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(1);
     expect(anchor.absmag).toBe(1.0);
+  });
+
+  // Subset-solve fixtures: the anchor's AT-HYG magnitude is set to the
+  // WDS pair blend (or the primary alone), distPc=10 so distance modulus
+  // and de-extinction both vanish and observed = absolute magnitudes.
+  const blendMag = (...mags: number[]) =>
+    -2.5 * Math.log10(mags.reduce((f, m) => f + Math.pow(10, -0.4 * m), 0));
+
+  const solveRows = (over1: Partial<MultiplesTsvRow>, over2?: Partial<MultiplesTsvRow>) => {
+    const rows = [
+      multiplesRow({
+        systemId: 'WDS-9-AB', comp: 'A', hip: 7777,
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+        absmag: 1.0, name: 'Blendy', source: 'athyg',
+        photometryVia: 'athyg_own',
+        astrometryVia: 'gaia_5p', orbitRole: 'primary',
+        sepArcsec: 5.0, paDeg: 90.0,
+      }),
+      multiplesRow({
+        systemId: 'WDS-9-AB', comp: 'B',
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+        photometryVia: 'athyg_system_inherited',
+        astrometryVia: 'system_inherited', orbitRole: 'secondary',
+        sepArcsec: 5.0, paDeg: 90.0,
+        ...over1,
+      }),
+    ];
+    if (over2) {
+      rows.push(
+        multiplesRow({
+          systemId: 'WDS-9-AD', comp: 'A', hip: 7777,
+          x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+          absmag: 1.0, name: 'Blendy', source: 'athyg',
+          photometryVia: 'athyg_own',
+          astrometryVia: 'gaia_5p', orbitRole: 'primary',
+          sepArcsec: 9.0, paDeg: 45.0,
+        }),
+        multiplesRow({
+          systemId: 'WDS-9-AD', comp: 'D',
+          x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10,
+          photometryVia: 'athyg_system_inherited',
+          astrometryVia: 'system_inherited', orbitRole: 'secondary',
+          sepArcsec: 9.0, paDeg: 45.0,
+          ...over2,
+        }),
+      );
+    }
+    return rows;
+  };
+
+  it('subset solve dims via an identifier-less synth member when the anchor mag reads as the blend (Polaris Ab shape)', () => {
+    const blend = blendMag(2.1, 4.1);
+    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+    rows[0].absmag = blend;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].syntheticId).not.toBeNull();
+    expect(stats.blendDimmedAnchors).toBe(1);
+    // Anchor re-splits to its own component light: M_blend + 2.5·log₁₀(1 + 10^(−0.8)) ≈ magPri.
+    expect(anchor.absmag).toBeCloseTo(2.1, 3);
+    expect(newStars[0].absmag).toBeCloseTo(4.1, 3);
+  });
+
+  it('subset solve attributes the blend to the fitting member only (36 Oph D shape)', () => {
+    const blend = blendMag(2.0, 3.0); // anchor blends A+B; D is NOT inside
+    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = solveRows(
+      // B: own gaia + own photometry — independent brightness.
+      {
+        gaiaSourceId: '999900001111', photometryVia: 'athyg_own',
+        absmag: 3.0, dmag: 1.0, magPri: 2.0, magSec: 3.0,
+      },
+      // D: identifier-less synth, blend-relative brightness.
+      { dmag: 4.0, magPri: 2.0, magSec: 6.0 },
+    );
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(newStars).toHaveLength(2);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(stats.blendDimMembersOutside).toBe(1); // D left outside the winning subset
+    // B's flux subtracts out; the anchor lands on its own component light.
+    expect(anchor.absmag).toBeCloseTo(2.0, 3);
+  });
+
+  it('no dim when the blend hypothesis is degenerate with anchor-alone (Sirius Δmag≈10 shape)', () => {
+    const blend = blendMag(2.0, 12.0); // differs from magPri by ~1e-4 mag
+    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = solveRows({
+      gaiaSourceId: '999900001111', photometryVia: 'athyg_own',
+      absmag: 12.0, dmag: 10.0, magPri: 2.0, magSec: 12.0,
+    });
+    rows[0].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBe(blend);
+  });
+
+  it('joint N-member split conserves total flux across two blend-relative members', () => {
+    const blend = blendMag(2.0, 3.0, 4.0);
+    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = solveRows(
+      { dmag: 1.0, magPri: 2.0, magSec: 3.0 },
+      { dmag: 2.0, magPri: 2.0, magSec: 4.0 },
+    );
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS);
+    expect(newStars).toHaveLength(2);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.0, 3);
+    const total = blendMag(anchor.absmag, newStars[0].absmag, newStars[1].absmag);
+    expect(total).toBeCloseTo(blend, 6);
   });
 });
 
@@ -2437,7 +2553,7 @@ describe('stampComponentLetters', () => {
 
 describe('wingRenderablePrimaries', () => {
   const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars));
+    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars)).winged;
   const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {

@@ -1,6 +1,7 @@
 // Test-only Catalog factory. Defaults: physicalRadius=1 Rsol,
 // companion=-1, lumClass=255 (unknown), Apsis fields=NaN (NO_APSIS).
 
+import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/catalog-pure';
 import type { Catalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {
@@ -10,6 +11,8 @@ function nanFloat32(count: number): Float32Array {
 }
 
 export function makeEmptyCatalog(count: number): Catalog {
+  const apsis = {} as Record<ApsisField, Float32Array>;
+  for (const name of APSIS_FIELDS) apsis[name] = nanFloat32(count);
   return {
     count,
     positions: new Float32Array(count * 3),
@@ -28,13 +31,8 @@ export function makeEmptyCatalog(count: number): Catalog {
     hip: new Uint32Array(count),
     sid: new Uint32Array(count),
     gaiaSourceId: new BigUint64Array(count),
-    teffGspphot: nanFloat32(count),
-    loggGspphot: nanFloat32(count),
-    mhGspphot: nanFloat32(count),
-    azeroGspphot: nanFloat32(count),
-    teffGspspec: nanFloat32(count),
-    loggGspspec: nanFloat32(count),
-    mhGspspec: nanFloat32(count),
+    multiplicityStatus: new Uint8Array(count),
+    ...apsis,
     names: new Map(),
     solIndex: -1,
     constellations: [],
