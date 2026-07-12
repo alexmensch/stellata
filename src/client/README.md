@@ -47,6 +47,14 @@ The payload map is `StellataEventMap` in `stellata.ts`.
   `'frame'` handler for camera changes — the URL sync has its own
   frame hook with hash comparison for that.
 
+Emission pairing: each fine-grained mutation event (`'focus'`,
+`'cloudFocus'`, `'vector'` / `'vectorCloud'`, `'filter'`,
+`'cameraMode'`, `'pois'`, warp start) is followed by a `'state'` emit
+from the same mutation site, so a `'state'` subscriber observes every
+mutation without enumerating the fine-grained names. `'planetSystem'`
+(derived from a focus change that already paired with `'state'`),
+`'frame'`, `'focusLerp'`, and the warp-end edge emit alone.
+
 ## Click-state machine (`stellata.ts onPointerUp`)
 
 | condition | action |

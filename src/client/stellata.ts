@@ -269,6 +269,15 @@ export const DEFAULT_FILTER: FilterState = {
 // Event-bus payload map. Subscribers register via `Stellata.on(name, fn)`
 // and the compiler enforces the payload type per event. `state` and
 // `frame` are no-payload events.
+//
+// Emission pairing contract: every discrete state mutation emits its
+// fine-grained event and THEN `state` (the URL-sync trigger) from the
+// same mutation site — subscribing to `state` alone observes every
+// mutation. The exceptions emit alone: `planetSystem` (derived from a
+// focus change that already paired with `state`), `frame` (render-tick
+// fanout), and the `focusLerp` / warp-end animation edges (transient,
+// not URL-encoded state). Per-event list: src/client/README.md
+// § Event bus.
 export type StellataEventMap = {
   focus: number | null;
   cloudFocus: number | null;
