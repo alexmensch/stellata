@@ -40,6 +40,9 @@ The payload map is `StellataEventMap` in `stellata.ts`.
 - `'warp'` (`boolean`) — warp animation start/finish.
 - `'pois'` (`readonly number[]`) — pinned-star list changed (shared
   across camera modes — see `poi/README.md`).
+- `'canvasClick'` (`{ x, y }`) — a canvas click passed the drag/time
+  guards, whatever it goes on to do. Drives the click-ripple feedback
+  overlay.
 - `'frame'` (no payload) — called after each render, used by all SVG
   overlays.
 - `'state'` (no payload) — fires on any discrete state mutation. This
@@ -210,6 +213,7 @@ mechanism.
 | Layer                                            | Surface | Mechanism                                          | Order | Owner |
 | ------------------------------------------------ | ------- | -------------------------------------------------- | :---: | ----- |
 | Focus ring                                       | SVG     | source order (last child)                          | front | [overlays/](overlays/README.md) |
+| Click ripple                                     | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Heliopause label                                 | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
 | Planet labels                                    | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |

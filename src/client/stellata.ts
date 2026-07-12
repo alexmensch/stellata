@@ -281,6 +281,7 @@ export type StellataEventMap = {
   warp: boolean;
   focusLerp: boolean;
   pois: readonly number[];
+  canvasClick: { x: number; y: number };
   state: void;
   frame: void;
 };
@@ -2043,6 +2044,10 @@ export class Stellata implements FrameAnchor {
     const dy = e.clientY - down.y;
     if (dx * dx + dy * dy > 25) return;
     if (performance.now() - down.t > 500) return;
+
+    // Universal click feedback (overlays/click-ripple.ts) fires for
+    // every accepted canvas click, whatever it goes on to do.
+    this.bus.emit('canvasClick', { x: e.clientX, y: e.clientY });
 
     // Both modes hold the click for DBL_CLICK_MS via the shared
     // dispatcher; the deferred handlers re-check the volatile guards

@@ -51,10 +51,10 @@
       <text id="gc-arrow-label" class="gal-arrow-label gc" text-anchor="start" dominant-baseline="central"></text>
       <!-- Point-of-interest arrows (off-screen), on-screen rings, and
            on-screen labels. Pooled <path> + <circle> + <text> children
-           created at runtime by poi-overlay.ts. Visibility tracks
-           cameraMode==='observe' AND the HUD checkbox; POIs are part of
-           the HUD layer. Rings render under labels so the label paints
-           on top of the ring stroke when they overlap. -->
+           created at runtime by poi-overlay.ts. Visibility tracks the
+           HUD checkbox in both camera modes; POIs are part of the HUD
+           layer. Rings render under labels so the label paints on top
+           of the ring stroke when they overlap. -->
       <g id="poi-arrows"></g>
       <g id="poi-rings"></g>
       <g id="poi-labels"></g>
@@ -79,6 +79,9 @@
            from the loaded local-group.json — one per labelled object
            (those with a non-null labelThresholdPc). -->
       <g id="lg-labels"></g>
+      <!-- Transient click-feedback ripples. Pooled <circle> children
+           created at runtime by click-ripple.ts on every canvas click. -->
+      <g id="click-ripples"></g>
       <circle id="focus-ring" class="focus-ring" />
     </svg>
 

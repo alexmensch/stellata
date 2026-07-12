@@ -13,6 +13,7 @@ import { createDiscMask } from './overlays/disc-mask';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
+import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planet-labels';
 import { createHeliopauseLabel } from './solar-system/heliopause';
 import { createScaleBar } from './ui/scale-bar';
@@ -187,6 +188,7 @@ async function main() {
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
+    createClickRipple(stellata);
     createGalacticGridLabels(stellata);
     createPlanetLabels(stellata);
     createHeliopauseLabel(stellata);

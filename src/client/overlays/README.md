@@ -25,6 +25,13 @@ src/client/overlays/
                                   src/client/galactic/README.md.
   poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows
                                   (both camera modes).
+  click-ripple.ts (+ test)        Universal click feedback: a ring
+                                  ripples out from every canvas click
+                                  to the POI-ring radius and collapses
+                                  back — the "nothing stuck" signal
+                                  for clicks that persisted no state
+                                  (empty sky, Sol, POI cap). Driven by
+                                  the 'canvasClick' bus event.
   dirty-attr.ts (+ test)          Dirty-tracked SVG attribute writer
                                   (sentinel-init pattern — see
                                   docs/authoring-patterns.md).
