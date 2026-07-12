@@ -5,8 +5,8 @@ import {
   MAG_PRESETS,
   DEFAULT_FOV,
   ALL_SPECT_MASK,
-  POI_MAX_COUNT,
 } from '../../stellata';
+import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';

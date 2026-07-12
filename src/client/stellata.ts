@@ -51,6 +51,7 @@ import {
   type WarpPhaseInfo,
 } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
+import { PoiStore } from './poi/poi-store';
 import {
   FocusController,
   type FrameAnchor,
@@ -230,11 +231,6 @@ export let MAG_PRESETS: Record<MagPresetName, MagPreset> = computeMagPresets();
 // reset button snaps back to this value.
 export const DEFAULT_FOV = 50;
 
-// OBSERVE-mode POI cap. Bounds both the in-app pin list (togglePoi /
-// setPois) and the `?v=` blob's POI payload — one constant so the two
-// can't drift apart.
-export const POI_MAX_COUNT = 16;
-
 export type CameraMode = 'navigate' | 'observe';
 
 type Target = { kind: 'star'; idx: number } | { kind: 'cloud'; idx: number };
@@ -392,13 +388,7 @@ export class Stellata implements FrameAnchor {
   private warp!: WarpController;
   private aim!: AimController;
 
-  // OBSERVE-mode "points of interest". Single-click on a star pins it.
-  // Cleared on every observe → navigate transition (registered in the
-  // constructor). Hard-capped at POI_MAX_COUNT — adding past the cap is
-  // a no-op so the cap also bounds the URL blob. Insertion-ordered
-  // (Array, not Set) so round-trips through URL state preserve the
-  // user's pin order.
-  private pois: number[] = [];
+  private poiStore!: PoiStore;
   // Pending single-click in OBSERVE mode. Held for OBSERVE_DBL_CLICK_MS
   // so we can disambiguate single (pin a star) from double (slerp the
   // camera to the clicked direction). Navigate-mode clicks do not enter
@@ -875,6 +865,16 @@ export class Stellata implements FrameAnchor {
     // replaces them with the right numbers before the first frame.
     this.recomputePresetPxSizes();
 
+    this.poiStore = new PoiStore({
+      count: catalog.count,
+      solIndex: catalog.solIndex,
+      sid: catalog.sid,
+      onChange: (pois) => {
+        this.bus.emit('pois', pois);
+        this.bus.emit('state');
+      },
+    });
+
     // Clear pinned POIs on any exit out of observe. Subscribed here
     // rather than wired into each cameraMode-flip site because all three
     // exit paths (mode toggle, focus change, search-X clear) emit the
@@ -1043,72 +1043,10 @@ export class Stellata implements FrameAnchor {
   // star, and a HUD-ring arrow when it goes off-screen. Cleared automatically
   // on any observe→navigate transition.
 
-  getPois(): readonly number[] { return this.pois; }
-
-  /**
-   * Toggle a POI for the given catalog index.
-   *   - Sol is rejected (already represented by the dedicated #sol-arrow).
-   *   - Stars without a SID are rejected (URL state persists POIs by
-   *     SID, so they couldn't survive a reload; never occurs on a
-   *     shipped catalog — every record carries one).
-   *   - Adding past POI_MAX_COUNT is a no-op (caps the URL blob; user
-   *     can unpin first).
-   */
-  togglePoi(idx: number) {
-    if (idx < 0 || idx >= this.catalog.count) return;
-    if (idx === this.catalog.solIndex) {
-      console.info('[POI] Sol is excluded (already shown via #sol-arrow).');
-      return;
-    }
-    if (this.catalog.sid[idx] === 0) {
-      console.info('[POI] cannot pin a star without a SID.');
-      return;
-    }
-    const existing = this.pois.indexOf(idx);
-    if (existing >= 0) {
-      this.pois.splice(existing, 1);
-      this.bus.emit('pois', this.pois);
-      this.bus.emit('state');
-      return;
-    }
-    if (this.pois.length >= POI_MAX_COUNT) {
-      console.info(`[POI] cap reached (${POI_MAX_COUNT}); unpin one first.`);
-      return;
-    }
-    this.pois.push(idx);
-    this.bus.emit('pois', this.pois);
-    this.bus.emit('state');
-  }
-
-  /**
-   * Replace the current POI list. Used by URL state restore — the
-   * incoming list is already validated (SIDs the resolver claimed).
-   */
-  setPois(idxs: readonly number[]) {
-    const next: number[] = [];
-    for (const idx of idxs) {
-      if (next.length >= POI_MAX_COUNT) break;
-      if (idx < 0 || idx >= this.catalog.count) continue;
-      if (idx === this.catalog.solIndex) continue;
-      if (this.catalog.sid[idx] === 0) continue;
-      if (next.indexOf(idx) >= 0) continue;
-      next.push(idx);
-    }
-    if (
-      next.length === this.pois.length &&
-      next.every((v, i) => v === this.pois[i])
-    ) return;
-    this.pois = next;
-    this.bus.emit('pois', this.pois);
-    this.bus.emit('state');
-  }
-
-  clearPois() {
-    if (this.pois.length === 0) return;
-    this.pois = [];
-    this.bus.emit('pois', this.pois);
-    this.bus.emit('state');
-  }
+  getPois(): readonly number[] { return this.poiStore.get(); }
+  togglePoi(idx: number) { this.poiStore.toggle(idx); }
+  setPois(idxs: readonly number[]) { this.poiStore.set(idxs); }
+  clearPois() { this.poiStore.clear(); }
 
   // Mode-switch entry point. Forwards to the ObserveTransition
   // controller; see camera/observe-transition.ts for the full FSM
