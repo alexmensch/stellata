@@ -51,6 +51,9 @@ import {
   type WarpPhaseInfo,
 } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
+import { PoiStore } from './poi/poi-store';
+import { starLadderAction } from './poi/click-ladder-pure';
+import { PendingClickDispatcher } from './util/pending-click';
 import {
   FocusController,
   type FrameAnchor,
@@ -230,18 +233,7 @@ export let MAG_PRESETS: Record<MagPresetName, MagPreset> = computeMagPresets();
 // reset button snaps back to this value.
 export const DEFAULT_FOV = 50;
 
-// OBSERVE-mode POI cap. Bounds both the in-app pin list (togglePoi /
-// setPois) and the `?v=` blob's POI payload — one constant so the two
-// can't drift apart.
-export const POI_MAX_COUNT = 16;
-
 export type CameraMode = 'navigate' | 'observe';
-
-type Target = { kind: 'star'; idx: number } | { kind: 'cloud'; idx: number };
-function sameTarget(a: Target | null, b: Target | null): boolean {
-  if (a === null || b === null) return a === b;
-  return a.kind === b.kind && a.idx === b.idx;
-}
 
 export const DEFAULT_FILTER: FilterState = {
   minDistSol: 0,
@@ -289,6 +281,7 @@ export type StellataEventMap = {
   warp: boolean;
   focusLerp: boolean;
   pois: readonly number[];
+  noopClick: { x: number; y: number };
   state: void;
   frame: void;
 };
@@ -392,20 +385,18 @@ export class Stellata implements FrameAnchor {
   private warp!: WarpController;
   private aim!: AimController;
 
-  // OBSERVE-mode "points of interest". Single-click on a star pins it.
-  // Cleared on every observe → navigate transition (registered in the
-  // constructor). Hard-capped at POI_MAX_COUNT — adding past the cap is
-  // a no-op so the cap also bounds the URL blob. Insertion-ordered
-  // (Array, not Set) so round-trips through URL state preserve the
-  // user's pin order.
-  private pois: number[] = [];
-  // Pending single-click in OBSERVE mode. Held for OBSERVE_DBL_CLICK_MS
-  // so we can disambiguate single (pin a star) from double (slerp the
-  // camera to the clicked direction). Navigate-mode clicks do not enter
-  // this state — they dispatch immediately.
-  private observePendingClick: { x: number; y: number; timer: number } | null = null;
-  private static OBSERVE_DBL_CLICK_MS = 280;
-  private static OBSERVE_DBL_CLICK_DIST_PX_SQ = 8 * 8;
+  private poiStore!: PoiStore;
+  // Canvas clicks in BOTH modes are held for DBL_CLICK_MS so single
+  // (per-mode click semantics) and double (aim-at in observe, travel in
+  // navigate) can be disambiguated.
+  private static DBL_CLICK_MS = 280;
+  private static DBL_CLICK_DIST_PX_SQ = 8 * 8;
+  private clickDispatcher = new PendingClickDispatcher(
+    Stellata.DBL_CLICK_MS,
+    Stellata.DBL_CLICK_DIST_PX_SQ,
+    (x, y) => this.dispatchSingleClick(x, y),
+    (x, y) => this.dispatchDoubleClick(x, y),
+  );
 
   // Galactic reference layers. Disc fades in by camera-distance
   // from Sol and is always-on. Grid is gated by `filter.showGalacticGrid`.
@@ -875,13 +866,14 @@ export class Stellata implements FrameAnchor {
     // replaces them with the right numbers before the first frame.
     this.recomputePresetPxSizes();
 
-    // Clear pinned POIs on any exit out of observe. Subscribed here
-    // rather than wired into each cameraMode-flip site because all three
-    // exit paths (mode toggle, focus change, search-X clear) emit the
-    // 'cameraMode' event; one listener catches them all and fires
-    // before the URL writer's debounced flush.
-    this.on('cameraMode', (mode) => {
-      if (mode !== 'observe') this.clearPois();
+    this.poiStore = new PoiStore({
+      count: catalog.count,
+      solIndex: catalog.solIndex,
+      sid: catalog.sid,
+      onChange: (pois) => {
+        this.bus.emit('pois', pois);
+        this.bus.emit('state');
+      },
     });
 
     this.attachEvents();
@@ -1036,79 +1028,12 @@ export class Stellata implements FrameAnchor {
     return this.observe.getProgress();
   }
 
-  // ──────────────────── OBSERVE-mode points of interest ────────────────────
-  //
-  // Single-click on a star in OBSERVE pins it; click again to unpin. The
-  // POI overlay (poi-overlay.ts) renders an on-screen label following the
-  // star, and a HUD-ring arrow when it goes off-screen. Cleared automatically
-  // on any observe→navigate transition.
+  // Points of interest — thin shims over PoiStore (poi/README.md).
 
-  getPois(): readonly number[] { return this.pois; }
-
-  /**
-   * Toggle a POI for the given catalog index.
-   *   - Sol is rejected (already represented by the dedicated #sol-arrow).
-   *   - Stars without a SID are rejected (URL state persists POIs by
-   *     SID, so they couldn't survive a reload; never occurs on a
-   *     shipped catalog — every record carries one).
-   *   - Adding past POI_MAX_COUNT is a no-op (caps the URL blob; user
-   *     can unpin first).
-   */
-  togglePoi(idx: number) {
-    if (idx < 0 || idx >= this.catalog.count) return;
-    if (idx === this.catalog.solIndex) {
-      console.info('[POI] Sol is excluded (already shown via #sol-arrow).');
-      return;
-    }
-    if (this.catalog.sid[idx] === 0) {
-      console.info('[POI] cannot pin a star without a SID.');
-      return;
-    }
-    const existing = this.pois.indexOf(idx);
-    if (existing >= 0) {
-      this.pois.splice(existing, 1);
-      this.bus.emit('pois', this.pois);
-      this.bus.emit('state');
-      return;
-    }
-    if (this.pois.length >= POI_MAX_COUNT) {
-      console.info(`[POI] cap reached (${POI_MAX_COUNT}); unpin one first.`);
-      return;
-    }
-    this.pois.push(idx);
-    this.bus.emit('pois', this.pois);
-    this.bus.emit('state');
-  }
-
-  /**
-   * Replace the current POI list. Used by URL state restore — the
-   * incoming list is already validated (SIDs the resolver claimed).
-   */
-  setPois(idxs: readonly number[]) {
-    const next: number[] = [];
-    for (const idx of idxs) {
-      if (next.length >= POI_MAX_COUNT) break;
-      if (idx < 0 || idx >= this.catalog.count) continue;
-      if (idx === this.catalog.solIndex) continue;
-      if (this.catalog.sid[idx] === 0) continue;
-      if (next.indexOf(idx) >= 0) continue;
-      next.push(idx);
-    }
-    if (
-      next.length === this.pois.length &&
-      next.every((v, i) => v === this.pois[i])
-    ) return;
-    this.pois = next;
-    this.bus.emit('pois', this.pois);
-    this.bus.emit('state');
-  }
-
-  clearPois() {
-    if (this.pois.length === 0) return;
-    this.pois = [];
-    this.bus.emit('pois', this.pois);
-    this.bus.emit('state');
-  }
+  getPois(): readonly number[] { return this.poiStore.get(); }
+  togglePoi(idx: number): boolean { return this.poiStore.toggle(idx); }
+  setPois(idxs: readonly number[]) { this.poiStore.set(idxs); }
+  clearPois() { this.poiStore.clear(); }
 
   // Mode-switch entry point. Forwards to the ObserveTransition
   // controller; see camera/observe-transition.ts for the full FSM
@@ -2115,118 +2040,143 @@ export class Stellata implements FrameAnchor {
     if (dx * dx + dy * dy > 25) return;
     if (performance.now() - down.t > 500) return;
 
-    // OBSERVE has its own single/double-click dispatcher: single-click
-    // pins the star under the cursor as a POI, double-click slerps the
-    // camera so the clicked direction lands at view centre. Single-click
-    // is held for OBSERVE_DBL_CLICK_MS to give the second click a window
-    // to arrive.
+    // Both modes hold the click for DBL_CLICK_MS via the shared
+    // dispatcher; the deferred handlers re-check the volatile guards
+    // (warp / aim / transition) at fire time.
+    this.clickDispatcher.click(e.clientX, e.clientY);
+  };
+
+  private dispatchSingleClick(x: number, y: number) {
+    if (this.warp.isActive() || this.aim.isActive() || this.isObserveTransitionActive()) return;
+    const did = this.cameraMode === 'observe'
+      ? this.observeSingleClick(x, y)
+      : this.navigateSingleClick(x, y);
+    // Only clicks that changed nothing ripple (overlays/click-ripple.ts)
+    // — a click that did something has its own lasting feedback (ring,
+    // vector, focus, aim) and doesn't need a second affordance.
+    if (!did) this.bus.emit('noopClick', { x, y });
+  }
+
+  private dispatchDoubleClick(x: number, y: number) {
+    if (this.warp.isActive() || this.aim.isActive() || this.isObserveTransitionActive()) return;
     if (this.cameraMode === 'observe') {
-      this.handleObserveClick(e.clientX, e.clientY);
+      this.observeDoubleClick(x, y);
       return;
     }
+    // Navigate double-click = travel: the focus-park teleport that
+    // click-the-vector-tip used to trigger, now on any star or cloud.
+    const starIdx = this.picker.pickStar(x, y);
+    if (starIdx >= 0) {
+      this.focusStar(starIdx);
+      return;
+    }
+    const cloudIdx = this.picker.pickCloud(x, y);
+    if (cloudIdx !== null) {
+      this.flyToCloud(cloudIdx);
+      return;
+    }
+    this.bus.emit('noopClick', { x, y });
+  }
 
+  private navigateSingleClick(x: number, y: number): boolean {
     // Pick a star first — they're the primary interaction target. Fall
     // back to clouds when no star is hit.
-    const starIdx = this.picker.pickStar(e.clientX, e.clientY);
-    const cloudIdx = starIdx >= 0 ? null : this.picker.pickCloud(e.clientX, e.clientY);
-    if (starIdx < 0 && cloudIdx === null) return;
+    const starIdx = this.picker.pickStar(x, y);
+    if (starIdx >= 0) {
+      return this.applyStarClick(starIdx);
+    }
+    const cloudIdx = this.picker.pickCloud(x, y);
+    if (cloudIdx === null) return false;
 
-    // Unified click-state machine — clouds participate the same way as
-    // stars (orbit-target on first pick, vector destination on second
-    // pick from a focus, click-tip-to-travel on third pick). The two
-    // special cases the user called out are: (a) focus ring stays a
-    // star-only overlay (skipped naturally — no focus ring code touches
-    // focusedCloud), and (b) viewing distance for clouds is
-    // cloudViewingDistancePc rather than parkDistForStar.
+    // Clouds keep the pre-ladder vector-first semantics — unreachable
+    // while the MC layer is shelved; revisit at un-shelve. Viewing
+    // distance for clouds is cloudViewingDistancePc, not parkDistForStar.
     const focusedStar = this.focus.getFocusedStar();
     const focusedCloud = this.focus.getFocusedCloud();
-    const focusedThing =
-      focusedStar !== null
-        ? { kind: 'star' as const, idx: focusedStar }
-        : focusedCloud !== null
-          ? { kind: 'cloud' as const, idx: focusedCloud }
-          : null;
-    const clickedThing =
-      starIdx >= 0
-        ? { kind: 'star' as const, idx: starIdx }
-        : { kind: 'cloud' as const, idx: cloudIdx as number };
-    const vectorThing =
-      this.vectorTo !== null
-        ? { kind: 'star' as const, idx: this.vectorTo }
-        : this.vectorToCloud !== null
-          ? { kind: 'cloud' as const, idx: this.vectorToCloud }
-          : null;
-
-    // No focus → click parks the camera at the clicked thing, matching
-    // search-select and URL-restore. For stars that's parkDistForStar (10%
-    // disc fill); clouds keep their orbit-target-only behaviour for now
-    // (cloud focus UX is shelved — see CLAUDE.md).
-    if (!focusedThing) {
-      if (clickedThing.kind === 'star') this.focusStar(clickedThing.idx);
-      else this.setOrbitTargetCloud(clickedThing.idx);
-      return;
+    if (focusedStar === null && focusedCloud === null) {
+      this.setOrbitTargetCloud(cloudIdx);
+      return true;
     }
-
-    // Click on the focused thing → clear vector if present, else unfocus.
-    if (sameTarget(clickedThing, focusedThing)) {
-      if (vectorThing) {
+    if (focusedCloud === cloudIdx) {
+      if (this.vectorTo !== null || this.vectorToCloud !== null) {
         this.setVectorTo(null);
         this.setVectorToCloud(null);
       } else {
         this.unfocus();
       }
-      return;
+      return true;
     }
-
-    // Click on the current vector destination → travel to it.
-    // For stars, focusStar matches the search-select teleport
-    // (parks at parkDistForStar(idx)). For clouds, flyToCloud is the
-    // search-select analogue (cloudViewingDistancePc).
-    if (vectorThing && sameTarget(clickedThing, vectorThing)) {
-      if (clickedThing.kind === 'star') this.focusStar(clickedThing.idx);
-      else this.flyToCloud(clickedThing.idx);
-      return;
+    if (this.vectorToCloud === cloudIdx) {
+      this.flyToCloud(cloudIdx);
+      return true;
     }
-
-    // Otherwise, click sets the vector destination.
-    if (clickedThing.kind === 'star') this.setVectorTo(clickedThing.idx);
-    else this.setVectorToCloud(clickedThing.idx);
-  };
-
-  private handleObserveClick(x: number, y: number) {
-    const pending = this.observePendingClick;
-    if (pending) {
-      const dx = x - pending.x;
-      const dy = y - pending.y;
-      if (dx * dx + dy * dy <= Stellata.OBSERVE_DBL_CLICK_DIST_PX_SQ) {
-        // Second click close in time + space → double-click. Cancel the
-        // pending single-click and slerp the camera instead.
-        window.clearTimeout(pending.timer);
-        this.observePendingClick = null;
-        this.observeDoubleClick(x, y);
-        return;
-      }
-      // Far apart → treat as a fresh first click. Fire the original
-      // pending single-click immediately (so the user's first pin doesn't
-      // get swallowed) and start a new pending timer for this one.
-      window.clearTimeout(pending.timer);
-      this.observePendingClick = null;
-      this.observeSingleClick(pending.x, pending.y);
-    }
-    const timer = window.setTimeout(() => {
-      this.observePendingClick = null;
-      this.observeSingleClick(x, y);
-    }, Stellata.OBSERVE_DBL_CLICK_MS);
-    this.observePendingClick = { x, y, timer };
+    this.setVectorToCloud(cloudIdx);
+    return true;
   }
 
-  private observeSingleClick(x: number, y: number) {
-    // Mirror the POI overlay visibility gate — toggling without a visible
-    // ring/arrow would change state with no feedback.
-    if (!this.filter.showHud || this.isObserveTransitionActive()) return;
+  /**
+   * Canonical per-mode star-click semantics — deferred canvas clicks and
+   * the POI overlay's on-screen labels both route here. Observe toggles
+   * the pin; navigate handles focus / unfocus, then runs the click
+   * ladder (pin → vector → clear both) for any other star. Returns
+   * whether the click changed anything (false → noop-click ripple).
+   */
+  applyStarClick(idx: number): boolean {
+    if (this.cameraMode === 'observe') {
+      // Mirror the POI overlay visibility gate — toggling without a
+      // visible ring/arrow would change state with no feedback.
+      if (!this.filter.showHud) return false;
+      return this.togglePoi(idx);
+    }
+
+    const focusedStar = this.focus.getFocusedStar();
+    const focusedCloud = this.focus.getFocusedCloud();
+
+    // No focus → click parks the camera at the clicked star, matching
+    // search-select and URL-restore (parkDistForStar, 10% disc fill).
+    if (focusedStar === null && focusedCloud === null) {
+      this.focusStar(idx);
+      return true;
+    }
+
+    // Click on the focused star → clear vector if present (the
+    // destination stays pinned), else unfocus.
+    if (focusedStar === idx) {
+      if (this.vectorTo !== null || this.vectorToCloud !== null) {
+        this.setVectorTo(null);
+        this.setVectorToCloud(null);
+      } else {
+        this.unfocus();
+      }
+      return true;
+    }
+
+    // Pins are HUD widgets — with the HUD hidden a pin would be an
+    // invisible state change, so the ladder sees HUD-off stars as
+    // unpinnable/unpinned and steps only its vector rungs (existing
+    // pins are left untouched). Mirrors the observe-branch gate above.
+    const hudOn = this.filter.showHud;
+    const action = starLadderAction({
+      pinnable: hudOn && this.poiStore.pinnable(idx),
+      pinned: hudOn && this.poiStore.has(idx),
+      atCap: this.poiStore.atCap(),
+      isVectorDest: this.vectorTo === idx,
+    });
+    switch (action) {
+      case 'pin': return this.togglePoi(idx);
+      case 'vector': this.setVectorTo(idx); return true;
+      case 'clearVector': this.setVectorTo(null); return true;
+      case 'clearBoth':
+        this.setVectorTo(null);
+        this.togglePoi(idx);
+        return true;
+    }
+  }
+
+  private observeSingleClick(x: number, y: number): boolean {
     const idx = this.picker.pickStar(x, y);
-    if (idx < 0) return;
-    this.togglePoi(idx);
+    if (idx < 0) return false;
+    return this.applyStarClick(idx);
   }
 
   // Reusable scratch for the double-click ray unproject. Allocated once.
@@ -2560,6 +2510,7 @@ export class Stellata implements FrameAnchor {
     const canvas = this.renderer.domElement;
     canvas.removeEventListener('pointerdown', this.onPointerDown);
     canvas.removeEventListener('pointerup', this.onPointerUp);
+    this.clickDispatcher.dispose();
     canvas.removeEventListener('pointercancel', this.onPointerCancel);
     canvas.removeEventListener('touchstart', this.onTouchStart);
     canvas.removeEventListener('touchmove', this.onTouchMove);

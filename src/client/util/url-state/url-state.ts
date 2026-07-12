@@ -5,8 +5,8 @@ import {
   MAG_PRESETS,
   DEFAULT_FOV,
   ALL_SPECT_MASK,
-  POI_MAX_COUNT,
 } from '../../stellata';
+import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
@@ -155,10 +155,9 @@ export interface DecodedView {
   /** Legacy v1–v3 pinned points-of-interest as HIP IDs — decode-only;
    *  v4 persists POIs in `poiSids`. */
   pois?: number[];
-  /** Pinned points-of-interest as SIDs (v4). Observe-only — encoded
-   *  only when `mode === 'observe'`, since POIs clear on
-   *  observe→navigate exit anyway. SIDs survive catalog rebuilds by
-   *  construction. Hard-capped at POI_MAX_COUNT to bound the blob. */
+  /** Pinned points-of-interest as SIDs (v4), any camera mode. SIDs
+   *  survive catalog rebuilds by construction. Hard-capped at
+   *  POI_MAX_COUNT to bound the blob. */
   poiSids?: number[];
   /** Absolute-space position anchoring the floating origin. Emitted
    *  only when no focus is active and the anchor isn't Sol — i.e.
@@ -994,12 +993,10 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // Chart on/off rides FLAG_CHART, gated to observe-only at pack time.
   if (f.chart) view.chart = true;
 
-  // POIs are observe-only and clear on observe→navigate exit, so we only
-  // emit them when the camera is in observe mode. Encoded as SIDs (not
-  // catalog indices) so a catalog rebuild can't re-point old URLs;
-  // stars without a SID can't be pinned in the first place. Capped at
-  // POI_MAX_COUNT defensively.
-  if (mode === 'observe') {
+  // POIs are encoded as SIDs (not catalog indices) so a catalog rebuild
+  // can't re-point old URLs; stars without a SID can't be pinned in the
+  // first place. Capped at POI_MAX_COUNT defensively.
+  {
     const pois = stellata.getPois();
     if (pois.length > 0) {
       const sidsOut: number[] = [];
@@ -1265,15 +1262,14 @@ export function applyDecodedView(
     stellata.setFilter({ chart: true });
   }
 
-  // POIs are observe-only — only restore them when the camera is parked
-  // in observe (the encoder also gates emission on this). Legacy HIP
-  // lists resolve through idMaps; v4 SID lists through the resolver.
-  // Entries that don't resolve are silently dropped (graceful partial
-  // restore). SID POIs resolve synchronously rather than via deferred
-  // intents: only star-kind objects are pinnable today and the star
-  // domain attaches at catalog load, strictly before applyFromUrl — a
-  // pending POI sid is therefore as dead as an unknown one.
-  if (stellata.getCameraMode() === 'observe') {
+  // Legacy HIP POI lists resolve through idMaps; v4 SID lists through
+  // the resolver. Entries that don't resolve are silently dropped
+  // (graceful partial restore). SID POIs resolve synchronously rather
+  // than via deferred intents: only star-kind objects are pinnable today
+  // and the star domain attaches at catalog load, strictly before
+  // applyFromUrl — a pending POI sid is therefore as dead as an unknown
+  // one.
+  {
     const resolved: number[] = [];
     if (Array.isArray(view.pois)) {
       for (const hip of view.pois) {

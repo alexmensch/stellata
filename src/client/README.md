@@ -38,8 +38,12 @@ The payload map is `StellataEventMap` in `stellata.ts`.
   Used by the mode toggle, search-row label swap, and scale-bar
   (which switches to angular degrees in observe).
 - `'warp'` (`boolean`) — warp animation start/finish.
-- `'pois'` (`readonly number[]`) — observe-mode pinned-star list
-  changed.
+- `'pois'` (`readonly number[]`) — pinned-star list changed (shared
+  across camera modes — see `poi/README.md`).
+- `'noopClick'` (`{ x, y }`) — a canvas click ran its per-mode
+  dispatch and changed nothing (empty sky, rejected pin). Drives the
+  click-ripple feedback overlay; clicks that did something don't emit
+  it.
 - `'frame'` (no payload) — called after each render, used by all SVG
   overlays.
 - `'state'` (no payload) — fires on any discrete state mutation. This
@@ -53,30 +57,50 @@ Emission pairing: each fine-grained mutation event (`'focus'`,
 from the same mutation site, so a `'state'` subscriber observes every
 mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
-`'frame'`, `'focusLerp'`, and the warp-end edge emit alone.
+`'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
+state mutation), and the warp-end edge emit alone.
 
-## Click-state machine (`stellata.ts onPointerUp`)
+## Click-state machine (`stellata.ts`)
+
+Canvas clicks in BOTH modes are held for `DBL_CLICK_MS` (280 ms) by a
+shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
+and double clicks disambiguate; the deferred handlers re-check the
+warp / aim / transition guards at fire time.
+
+Navigate single-click on a star (`applyStarClick`):
 
 | condition | action |
 | --- | --- |
-| no focus | focus on clicked |
+| no focus | focus on clicked star |
 | clicked = focused, no vector | unfocus |
-| clicked = focused, vector drawn | clear vector (stay focused) |
-| clicked = vector tip | `focusStar(tip)` — focus-park lerp (or no-op when already inside park), clear vector |
-| clicked = other | draw/replace vector from focus → clicked |
+| clicked = focused, vector drawn | clear vector (stay focused; the destination stays pinned) |
+| clicked = other star, unpinned | pin as POI (ladder rung 1 — Sol / at-cap fall through to rung 2) |
+| clicked = other star, pinned, not vector destination | set vector focus → clicked |
+| clicked = other star, pinned + vector destination | clear vector AND unpin |
 
-This is the UX the user settled on. No double-click, no modifier keys.
+The ladder decision table is `poi/click-ladder-pure.ts`; the pin
+rungs require the HUD (`showHud`) to be on — pins are HUD widgets, so
+with the HUD hidden clicks step only the vector rungs. Navigate
+**double-click** on any star travels to it (`focusStar` — the
+focus-park teleport that clicking the vector tip used to trigger;
+lerps over `FOCUS_LERP_MS` or no-ops when already inside park);
+double-click on a cloud runs `flyToCloud`. The POI overlay's
+on-screen labels route through the same `applyStarClick` semantics.
 
-Clouds are full participants in this state machine alongside stars — see
-`src/client/molecular-clouds/README.md` for how cloud picks dispatch through
-`onPointerUp`.
+Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
+on first pick from no focus, vector destination on pick from a focus,
+click-destination-to-travel) — unreachable while the MC layer is
+shelved (`src/client/molecular-clouds/README.md`); revisit the ladder
+fit at un-shelve.
 
-In OBSERVE mode the click-state machine no-ops on the canvas — `onPointerUp`
-short-circuits while `cameraMode === 'observe'`. Clicks land on the
-custom look-around controller (direct-manipulation drag + wheel-FOV)
-instead. The SVG-layer Sol/GC arrow labels remain clickable; they route
-through `aimAt(localPoint)`, which has its own observe-mode branch that
-slerps the camera quaternion in place.
+In OBSERVE mode single-click is the pin/unpin toggle
+(`applyStarClick`'s observe branch, gated on `showHud`) and
+double-click slerps the camera so the clicked direction lands at view
+centre; drags land on the custom look-around controller
+(direct-manipulation drag + wheel-FOV). The SVG-layer Sol/GC arrow
+labels remain clickable; they route through `aimAt(localPoint)`,
+which has its own observe-mode branch that slerps the camera
+quaternion in place.
 
 ## Floating origin (large-world precision)
 
@@ -193,6 +217,7 @@ mechanism.
 | Layer                                            | Surface | Mechanism                                          | Order | Owner |
 | ------------------------------------------------ | ------- | -------------------------------------------------- | :---: | ----- |
 | Focus ring                                       | SVG     | source order (last child)                          | front | [overlays/](overlays/README.md) |
+| Click ripple                                     | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Heliopause label                                 | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
 | Planet labels                                    | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |

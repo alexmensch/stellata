@@ -1,17 +1,14 @@
 import type { Stellata } from '../../stellata';
 
-// Warp UI wiring. When a distance vector is drawn, the SVG distance label
-// itself doubles as the warp affordance — hovering reveals a "→ Warp"
-// suffix. The floating top-center pill only shows up during an in-flight
-// warp to offer "Skip", and it uses a muted ghost style so it doesn't fight
-// the rest of the chrome. Also toggles a body class while a warp is in
-// flight so overlays can hide themselves via CSS.
+// Warp UI wiring. The W key triggers a warp to the current vector
+// destination (clicking the distance label aims the camera instead —
+// see overlays/distance-vector-overlay.ts). The floating top-center
+// pill only shows up during an in-flight warp to offer "Skip", and it
+// uses a muted ghost style so it doesn't fight the rest of the chrome.
+// Also toggles a body class while a warp is in flight so overlays can
+// hide themselves via CSS.
 export function bindWarpButton(stellata: Stellata) {
   const btn = document.getElementById('warp-btn') as HTMLButtonElement;
-  // Element is enough: only addEventListener is called on it. The earlier
-  // `as unknown as SVGGElement` cast was a type lie — the SVG group is
-  // typed by the DOM as Element, and addEventListener lives on Element.
-  const distUi = document.getElementById('dist-ui')!;
 
   const render = () => {
     if (stellata.getWarpActive()) {
@@ -36,11 +33,6 @@ export function bindWarpButton(stellata: Stellata) {
     const cloud = stellata.getVectorToCloud();
     if (cloud !== null) stellata.warpToCloud(cloud);
   };
-
-  distUi.addEventListener('click', () => {
-    if (stellata.getWarpActive()) return;
-    triggerWarp();
-  });
 
   window.addEventListener('keydown', (e) => {
     // Ignore keys typed in search inputs so "w" doesn't trigger warp while

@@ -226,31 +226,26 @@ don't get serialised. URL apply for `focus: 'cleared'` calls
 `unfocus({ animate: false })` so a state restore doesn't fight a
 following `view.cam` write.
 
-**Click dispatch in OBSERVE.** Canvas clicks have their own dispatcher
-distinct from navigate's click-state machine. `onPointerUp` defers
-single-clicks for `OBSERVE_DBL_CLICK_MS = 280`; if a second click
-arrives within that window AND within `OBSERVE_DBL_CLICK_DIST_PX_SQ`
-(8 px²) of the first, the pending single-click is cancelled and a
-**double-click** fires instead. Otherwise the **single-click** runs
-when the timer elapses.
+**Click dispatch in OBSERVE.** Canvas clicks in both modes route
+through the shared `PendingClickDispatcher`
+(`src/client/util/pending-click.ts`): singles are held for
+`DBL_CLICK_MS = 280`; a second click within that window AND within
+`DBL_CLICK_DIST_PX_SQ` (8 px²) of the first cancels the pending
+single and fires a **double-click** instead.
 
-- *Single-click:* `picker.pickStar()` resolves the click; if a star is hit,
-  `togglePoi()` pins or unpins it. Sol is rejected (the dedicated
-  `#sol-arrow` already covers it); stars without a SID are rejected
-  (URL state persists POIs by SID — never occurs on a shipped
-  catalog); the cap is `POI_MAX_COUNT` (16; adding past it is a
-  no-op). The POI overlay renders the resulting label + arrow.
+- *Single-click:* `picker.pickStar()` resolves the click; if a star is
+  hit, `applyStarClick()` toggles its pin (`togglePoi`). Pin
+  eligibility + cap semantics live in `src/client/poi/README.md`. The
+  POI overlay renders the resulting label + arrow.
 - *Double-click:* unprojects the click into a world-space ray, builds
   a far point along it, and feeds that to `aimAt()` — the existing
   observe-aim path slerps the camera so the clicked direction lands
   at view centre. Works on stars, on empty sky, and on chart-mode
   background alike.
 
-POIs clear automatically on every observe → navigate transition (the
-clear is wired via the `'cameraMode'` event inside the constructor, so
-all three exit paths — mode toggle, focus change, search-X clear —
-get the same cleanup). They round-trip through the `?v=` blob *only*
-in observe mode (see §URL state), encoded as SIDs at bit 19.
+POIs persist across observe ↔ navigate transitions — one shared list
+for both modes (`src/client/poi/README.md`) — and round-trip through
+the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
 
 ## ObserveTransition kinds
 

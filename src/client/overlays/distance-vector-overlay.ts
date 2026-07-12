@@ -54,12 +54,28 @@ export function createDistanceVectorOverlay(
   const lineBg = document.getElementById('dist-line-bg') as unknown as SVGPathElement;
   const label = document.getElementById('dist-label') as unknown as SVGTextElement;
   const distUi = document.getElementById('dist-ui') as unknown as SVGGElement;
-  const warpText = document.getElementById('dist-warp-text') as unknown as SVGTextElement;
-  const WARP_GAP_PX = 10;
 
   const tmpA = new THREE.Vector3();
   const tmpB = new THREE.Vector3();
+  const tmpClickAim = new THREE.Vector3();
   const projScratch = makeProjectScratch();
+
+  // Clicking the distance label aims the camera at the destination —
+  // the same affordance as the Sol/GC arrow labels. Warping there is
+  // deliberately NOT on the label; it stays on the W key only.
+  distUi.addEventListener('click', () => {
+    const toStar = stellata.getVectorTo();
+    if (toStar !== null) {
+      const lp = stellata.localPositions;
+      tmpClickAim.set(lp[toStar * 3], lp[toStar * 3 + 1], lp[toStar * 3 + 2]);
+      stellata.aimAt(tmpClickAim);
+      return;
+    }
+    const toCloud = stellata.getVectorToCloud();
+    if (toCloud !== null && stellata.cloudLocalPositionInto(toCloud, tmpClickAim)) {
+      stellata.aimAt(tmpClickAim);
+    }
+  });
 
   // Idempotent hide: skip the SVG attribute writes and style mutation when
   // the vector is already hidden. The per-frame handler short-circuits to
@@ -76,8 +92,6 @@ export function createDistanceVectorOverlay(
   let lastLabelText = '\0';
   let lastLabelX = NaN;
   let lastLabelY = NaN;
-  let lastWarpX = NaN;
-  let lastWarpY = NaN;
   // Fade state (opacity + pointer-events). Shares the applyFade /
   // dirty-track / pointer-policy contract with hud-overlay's Sol/GC
   // arrows but computes its OWN alpha against its OWN drawn shaft
@@ -102,9 +116,6 @@ export function createDistanceVectorOverlay(
     if (!visible) return;
     lastLineD = setStrAttr(line, 'd', '', lastLineD);
     lastLineBgD = setStrAttr(lineBg, 'd', '', lastLineBgD);
-    // Hide the whole UI group so both label and warp suffix disappear at
-    // once. Using display rather than clearing textContent keeps the static
-    // warp element in the DOM so its :hover styling keeps working on show.
     lastDistUiDisplay = setStyle(distUi, 'display', 'none', lastDistUiDisplay);
     visible = false;
   };
@@ -226,11 +237,6 @@ export function createDistanceVectorOverlay(
     lastLabelX = setNumAttr(label, 'x', mx, lastLabelX);
     lastLabelY = setNumAttr(label, 'y', my, lastLabelY);
 
-    // Position the warp affordance to the right of the distance label.
-    const warpX = mx + labelWidth + WARP_GAP_PX;
-    lastWarpX = setNumAttr(warpText, 'x', warpX, lastWarpX);
-    lastWarpY = setNumAttr(warpText, 'y', my, lastWarpY);
-
     // Per-arrow disc-coverage fade — drops opacity to 0 as the focused
     // star's disc grows past THIS arrow's drawn shaft length. The
     // distance-vector is typically longer than the nominal Sol/GC
@@ -265,8 +271,8 @@ export function createDistanceVectorOverlay(
       SOURCE_OFFSET_PX,
     );
     // Pointer-events on the ui group go through the same helper
-    // (suppressed below half-alpha so the barely-visible label + warp
-    // affordance don't accept stray clicks).
+    // (suppressed below half-alpha so the barely-visible label doesn't
+    // accept stray aim clicks).
     applyFade([line, lineBg, distUi], distUi, arrowAlpha, fadeState);
   });
 }
@@ -332,8 +338,8 @@ export function projectWithNearClip(
  * text alone; on a webfont load (FOUT/FOIT) the *same* text reflows to a
  * different pixel width, so the cache must be invalidated when the
  * webfonts settle — see attachFontsReadyInvalidation. Without that, the
- * right-edge clamp + warp affordance stay pinned to the fallback-font
- * measurement for the lifetime of the page (this bug).
+ * right-edge clamp stays pinned to the fallback-font measurement for
+ * the lifetime of the page (this bug).
  */
 export interface LabelWidthCache {
   text: string;

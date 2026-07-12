@@ -97,11 +97,12 @@ export function emptyFadeState(): FadeState {
  * precision floor — half-step matches `setNumAttr`'s default-decimals=3
  * derivation), and toggle `clickableEl`'s inline `pointerEvents` at the
  * 0.5 alpha boundary so labels that fade past half-opacity stop accepting
- * clicks. Shared between hud-overlay (Sol/GC arrows) and distance-vector
- * (vector + warp affordance) so all three reference arrows go through the
- * same dirty-track / pointer-policy contract — though each consumer feeds
- * its own alpha (Sol/GC share one, distance-vector computes its own per
- * the ml8 fix). Mutates `state`.
+ * clicks. Shared between hud-overlay (Sol/GC arrows), distance-vector
+ * (vector + aim label), and poi-overlay (off-screen arrows) so every
+ * reference arrow goes through the same dirty-track / pointer-policy
+ * contract — though each consumer feeds its own alpha (Sol/GC share
+ * one, POI arrows share one, distance-vector computes its own per the
+ * ml8 fix). Mutates `state`.
  */
 export function applyFade(
   opacityEls: { style: CSSStyleDeclaration }[],
