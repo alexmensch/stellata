@@ -38,8 +38,8 @@ The payload map is `StellataEventMap` in `stellata.ts`.
   Used by the mode toggle, search-row label swap, and scale-bar
   (which switches to angular degrees in observe).
 - `'warp'` (`boolean`) — warp animation start/finish.
-- `'pois'` (`readonly number[]`) — observe-mode pinned-star list
-  changed.
+- `'pois'` (`readonly number[]`) — pinned-star list changed (shared
+  across camera modes — see `poi/README.md`).
 - `'frame'` (no payload) — called after each render, used by all SVG
   overlays.
 - `'state'` (no payload) — fires on any discrete state mutation. This

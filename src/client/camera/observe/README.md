@@ -246,11 +246,9 @@ when the timer elapses.
   at view centre. Works on stars, on empty sky, and on chart-mode
   background alike.
 
-POIs clear automatically on every observe → navigate transition (the
-clear is wired via the `'cameraMode'` event inside the constructor, so
-all three exit paths — mode toggle, focus change, search-X clear —
-get the same cleanup). They round-trip through the `?v=` blob *only*
-in observe mode (see §URL state), encoded as SIDs at bit 19.
+POIs persist across observe ↔ navigate transitions — one shared list
+for both modes (`src/client/poi/README.md`) — and round-trip through
+the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
 
 ## ObserveTransition kinds
 

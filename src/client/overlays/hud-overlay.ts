@@ -228,15 +228,9 @@ export class HudOverlay {
     // arrows project from and what distance labels measure to.
     const origin = this.tmpOrigin.copy(focusedLocal ?? target);
 
-    // 2D anchor for the ring + arrow shaft starts. Try projecting origin;
-    // fall back to screen-centre when the projection is degenerate (camera
-    // at/behind origin — the OBSERVE steady state, where the camera is
-    // parked at the focal star). The fallback is also what the focal-star
-    // projection naturally tends toward as the enter-transition completes,
-    // so the post-transition switch is invisible.
-    const hasOriginScreen = projectToScreenInto(origin, camera, w, h, this.tmpOriginScreen);
-    const cx = hasOriginScreen ? this.tmpOriginScreen[0] : w * 0.5;
-    const cy = hasOriginScreen ? this.tmpOriginScreen[1] : h * 0.5;
+    hudAnchorInto(origin, camera, w, h, this.tmpOriginScreen);
+    const cx = this.tmpOriginScreen[0];
+    const cy = this.tmpOriginScreen[1];
 
     // Mode-aware shaft start radius. Drives both arrow shaft starts and
     // the ring's drawn radius. Anchored to the user's max-star-size knob
@@ -548,12 +542,33 @@ function activeRingRadius(
   return cameraMode === 'observe' ? R : FOCUS_RING_RADIUS_PX;
 }
 
-function computeShaftStartRadius(
+export function computeShaftStartRadius(
   cameraMode: 'navigate' | 'observe',
   transition: { f: number; kind: 'enter' | 'exit' } | null,
   R: number,
 ): number {
   return activeRingRadius(cameraMode, transition, R) + RING_HALO_GAP_PX;
+}
+
+/**
+ * 2D anchor for HUD-attached chrome (ring centre, arrow shaft starts).
+ * Projects `origin`; falls back to screen-centre when the projection is
+ * degenerate (camera at/behind origin — the OBSERVE steady state, where
+ * the camera is parked at the focal star). The fallback is also what the
+ * focal-star projection naturally tends toward as the enter-transition
+ * completes, so the post-transition switch is invisible.
+ */
+export function hudAnchorInto(
+  origin: THREE.Vector3,
+  camera: THREE.PerspectiveCamera,
+  w: number,
+  h: number,
+  out: [number, number],
+): void {
+  if (!projectToScreenInto(origin, camera, w, h, out)) {
+    out[0] = w * 0.5;
+    out[1] = h * 0.5;
+  }
 }
 
 // HUD ring's drawn radius (the focus ring is rendered separately by

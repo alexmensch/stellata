@@ -22,8 +22,8 @@ src/client/overlays/
   focus-ring-overlay.ts           SVG ring around the focused star.
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
                                   src/client/galactic/README.md.
-  poi-overlay.ts                  Pinned-POI labels + rings + arrows
-                                  (OBSERVE mode).
+  poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows
+                                  (both camera modes).
   dirty-attr.ts (+ test)          Dirty-tracked SVG attribute writer
                                   (sentinel-init pattern — see
                                   docs/authoring-patterns.md).
@@ -159,16 +159,21 @@ its ring or wings offscreen with it. The magnitude-driven sizing
 formula + flux-weighted constellation centroid math live in chart
 mode's renderer.
 
-## Points of interest (OBSERVE-only)
+## Points of interest
 
-`poi-overlay.ts` renders user-pinned stars (single-click on a star in
-OBSERVE mode). Three SVG groups under `#overlay`:
+`poi-overlay.ts` renders the user-pinned star list (state + pin
+semantics in `../poi/README.md`) in BOTH camera modes. Three SVG
+groups under `#overlay`:
 
 - `<g id="poi-arrows">` — pooled `<path>` + `<text>` per POI for
-  off-screen arrows on the HUD ring rim. Arrow geometry comes from
-  `buildArrowSvgPath()` (shared with Sol/GC arrows in `hud-overlay.ts`).
-  Shaft start radius reuses `ringRadiusPx()` so POI arrows attach to
-  the same ring as Sol/GC. Label text is the POI's best name only.
+  off-screen arrows. Arrow geometry comes from `buildArrowSvgPath()`
+  (shared with Sol/GC arrows in `hud-overlay.ts`); anchor + shaft
+  start reuse `hudAnchorInto()` / `computeShaftStartRadius()` so POI
+  arrows attach to the same active ring as Sol/GC (focus ring in
+  navigate, HUD ring in observe). The arrow set shares one
+  disc-coverage fade alpha keyed on its longest drawn shaft
+  (`arrow-fade.ts`), mirroring the Sol/GC pair. Label text is the
+  POI's best name only.
 - `<g id="poi-rings">` — pooled `<circle class="poi-ring">` per POI,
   shown when the POI projects on-screen. Fixed 24 px radius (matches
   `focus-ring-overlay.ts`) so the ring + label sit at a constant pixel
@@ -176,22 +181,24 @@ OBSERVE mode). Three SVG groups under `#overlay`:
   the rendered disc grows/shrinks with FOV, but the ring doesn't.
 - `<g id="poi-labels">` — pooled `<text>` per POI for on-screen labels
   anchored just outside the ring rim along a 45° diagonal. Format:
-  `name · constellation-code · distance-from-observer`.
+  `name · constellation-code · distance-from-camera` (live camera, per
+  the tier-1/2 frame principle — in observe the camera is parked at
+  the focal star, so it reads as distance from the observed star).
 
 Click affordances (both label classes set `pointer-events: auto`):
-- **On-screen label** → `Stellata.togglePoi(idx)` deselects the POI.
-  The star itself stays clickable via `observeSingleClick` for the
-  same effect; the label is a second, larger click target.
+- **On-screen label** → `Stellata.applyStarClick(idx)` — the same
+  per-mode semantics as clicking the star itself (unpin toggle in
+  observe, click ladder in navigate); the label is a second, larger
+  click target.
 - **Off-screen arrow label** → `Stellata.aimAt(localPositions[idx])`
   slerps the camera so the POI lands at view centre. Mirrors the
   Sol/GC label affordance in `hud-overlay.ts`.
 - **Ring** stays `pointer-events: none` so the star underneath remains
-  the primary click target for `togglePoi`.
+  the primary click target.
 
 Visibility is gated as a single HUD layer: the whole stack hides when
-`cameraMode !== 'observe'`, when `filter.showHud` is off, during warp
-(via `body.warping #overlay` CSS), and during the navigate↔observe
-transition. Chart-mode (`body.monochrome`) styling flips every HUD
+`filter.showHud` is off, during warp (via `body.warping #overlay`
+CSS), and during the navigate↔observe transition. Chart-mode (`body.monochrome`) styling flips every HUD
 stroke (gal-arrows, HUD ring, POI ring + arrow + labels) to a deep
 saturated blue (`rgba(30, 64, 175, 0.85)`, the existing `--accent`
 token) with a thin white halo on labels — distinct from pure-black
@@ -200,10 +207,9 @@ contrast against the beige paper background. See `.poi-arrow`,
 `.poi-label`, `.poi-arrow-label`, and `.poi-ring` in `styles.css`.
 
 POIs survive page reloads via the `?v=` blob (encoded as frozen
-Stellata IDs, observe-only emission — see
-`../util/url-state/README.md`). Cleared automatically on every observe→navigate
-transition; no UI element exposes "clear all" because Esc already
-exits observe and clears them as a side-effect.
+Stellata IDs in any camera mode — see `../util/url-state/README.md`)
+and persist across observe↔navigate switches; unpinning is always an
+explicit per-POI action.
 
 ## Dirty-track strategies: signature vs per-attribute
 

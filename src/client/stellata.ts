@@ -875,15 +875,6 @@ export class Stellata implements FrameAnchor {
       },
     });
 
-    // Clear pinned POIs on any exit out of observe. Subscribed here
-    // rather than wired into each cameraMode-flip site because all three
-    // exit paths (mode toggle, focus change, search-X clear) emit the
-    // 'cameraMode' event; one listener catches them all and fires
-    // before the URL writer's debounced flush.
-    this.on('cameraMode', (mode) => {
-      if (mode !== 'observe') this.clearPois();
-    });
-
     this.attachEvents();
     this.animate();
   }
