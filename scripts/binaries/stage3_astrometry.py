@@ -323,6 +323,7 @@ def attach_astrometry_all(
     indices: IdentifierIndices,
     athyg: list[AthygRow] | None = None,
     athyg_position_tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+    stats: dict[str, int] | None = None,
 ) -> list[ComponentAstrometry]:
     """Route astrometry for every component. The returned list is
     parallel to ``components`` (same order, same length) so Stage 4-7
@@ -353,6 +354,7 @@ def attach_astrometry_all(
             pairs=pairs,
             athyg=athyg,
             tolerance_arcsec=athyg_position_tolerance_arcsec,
+            stats=stats,
         )
     return astrometry
 
@@ -363,6 +365,7 @@ def attach_athyg_position_fallback(
     pairs: list[WdsPair],
     athyg: list[AthygRow],
     tolerance_arcsec: float = ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
+    stats: dict[str, int] | None = None,
 ) -> None:
     """Post-pass after the Gaia / HIP2 cascade. For every component
     still tagged ``unresolved``, position-match the WDS precise_coord
@@ -381,6 +384,7 @@ def attach_athyg_position_fallback(
         skip_predicate=lambda i, _c: astrometry[i].astrometry_via != "unresolved",
         allow_blend_inherit=True,
         tolerance_arcsec=tolerance_arcsec,
+        stats=stats,
     ):
         c = components[event.component_idx]
         synth = _from_athyg_position(athyg[event.athyg_match_idx])

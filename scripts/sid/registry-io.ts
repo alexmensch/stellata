@@ -8,14 +8,18 @@ import { resolve } from 'node:path';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
   LEDGER_HEADER,
+  REINSTATEMENTS_HEADER,
   RETIREMENTS_HEADER,
   isLfsPointer,
   parseLedgerTsv,
+  parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSameasTsv,
   validateLedger,
+  validateReinstatements,
   validateRetirements,
   type LedgerRow,
+  type ReinstatementRow,
   type RetirementRow,
   type SameasEdge,
 } from './sid-pure';
@@ -23,6 +27,7 @@ import {
 export const SID_DIR = resolve(ROOT, 'data/sid');
 export const LEDGER_PATH = resolve(SID_DIR, 'ledger.tsv');
 export const RETIREMENTS_PATH = resolve(SID_DIR, 'retirements.tsv');
+export const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 export const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
 export const OVERRIDES_PATH = resolve(SID_DIR, 'sameas-overrides.tsv');
 export const SOL_OBJECTS_PATH = resolve(SID_DIR, 'sol-objects.tsv');
@@ -46,6 +51,7 @@ export function loadStoredEdges(): SameasEdge[] {
 export interface Registry {
   ledger: LedgerRow[];
   retirements: RetirementRow[];
+  reinstatements: ReinstatementRow[];
   storedEdges: SameasEdge[];
 }
 
@@ -68,11 +74,19 @@ export function loadRegistry(): Registry {
   const retirementsText = existsSync(RETIREMENTS_PATH)
     ? readFileSync(RETIREMENTS_PATH, 'utf-8')
     : `${RETIREMENTS_HEADER}\n`;
+  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
+    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
+    : `${REINSTATEMENTS_HEADER}\n`;
   const ledger = parseLedgerTsv(ledgerText);
   const retirements = parseRetirementsTsv(retirementsText);
-  const errors = [...validateLedger(ledger), ...validateRetirements(retirements, ledger)];
+  const reinstatements = parseReinstatementsTsv(reinstatementsText);
+  const errors = [
+    ...validateLedger(ledger),
+    ...validateRetirements(retirements, ledger, reinstatements),
+    ...validateReinstatements(reinstatements, ledger, retirements),
+  ];
   if (errors.length > 0) {
     throw new Error(`SID registry is structurally invalid:\n  ${errors.join('\n  ')}`);
   }
-  return { ledger, retirements, storedEdges: loadStoredEdges() };
+  return { ledger, retirements, reinstatements, storedEdges: loadStoredEdges() };
 }

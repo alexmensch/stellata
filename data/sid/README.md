@@ -20,10 +20,15 @@ ledger.tsv              sid → canonical_key → kind → first_seen.
                         Append-only, sorted by sid, LFS.
 retirements.tsv         sid → retired → reason → successor_sid.
                         Append-only; retired sids are never reused.
-ledger-head.json        { rows, max_sid, sha256 } snapshot of both
-                        files' frozen state; regular git so the CI
-                        guard can read the merge-base version without
-                        LFS. Rewritten mechanically by sid:allocate.
+reinstatements.tsv      sid → reinstated → reason. Append-only; each
+                        row cancels one retirement of that sid
+                        (docs/sid.md § 4.3 counting semantics), so a
+                        reappeared object resumes its original sid.
+ledger-head.json        { rows, max_sid, sha256 } snapshot of the
+                        ledger / retirements / reinstatements frozen
+                        state; regular git so the CI guard can read
+                        the merge-base version without LFS. Rewritten
+                        mechanically by sid:allocate.
                         The sha256 covers the data lines only (each
                         LF-terminated); the header line is pinned
                         structurally by the guard instead.

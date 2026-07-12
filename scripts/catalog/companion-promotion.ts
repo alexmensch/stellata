@@ -1974,12 +1974,13 @@ function tryPromoteCursorPrimary(
 ): number | null {
   const primary = cursor.primary;
   if (primary === null) return null;
-  // Need own identifier (gaia or hip) to be addressable post-promotion.
-  // 40 Eri B has gaia=3195919254111315712 but no HIP. An inherited id
-  // qualifies too — promoteRow strips it and mints a synth slot.
-  const hasOwnGaia = primary.gaiaSourceId !== null;
-  const hasOwnHip = primary.hip !== null && primary.hip > 0;
-  if (!hasOwnGaia && !hasOwnHip) return null;
+  // No own-identifier requirement: an id-less row (Rigel B or Acrux B
+  // after the Stage-2 sibling-identity claims gate strips a stolen HIP)
+  // mints a synth-<wds>-<comp> slot exactly like an identifier-less
+  // secondary, and that key is fully addressable post-promotion. The
+  // position and absmag requirements below still gate honesty; a
+  // reappearing previously-retired component is reconciled in the SID
+  // ledger via data/sid/reinstatements.tsv, never by dropping the star.
   const wdsRoot = wdsRootOf(primary.systemId);
   if (wdsRoot === null) return null;
   const anchor = wdsRootAnchors.get(wdsRoot);

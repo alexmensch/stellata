@@ -208,3 +208,55 @@ sid	retired	reason	successor_sid
 316133	2026-07-11	parked: B's record absent from the current build; own source gaia_dr3:3924604024024751616 per SIMBAD xids	
 111548	2026-07-11	sigma Ori I: AB,I projection (524.7 arcsec) exceeds the 1 pc tidal limit once system distance coherence anchors the cluster at ~400 pc (clean-Gaia member anchor; was ~388 pc) — line-of-sight cluster member, not a bound companion	
 323830	2026-07-11	22039-2451 C: AC pair reclassified optical by the Stage-5 escape-velocity gate once MSC per-component types replaced the generous default masses (v_t 2.5 km/s vs v_esc ~0.7 at 5.8 kAU); C is parallax-concordant CPM so the reject is likely the primary's own Aa,Ab/AB orbital PM — follow-up bead tracks an orbital-PM budget for the gate	
+280179	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	257103
+329658	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	155334
+329688	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	183468
+329709	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	280787
+329723	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	315093
+329792	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	317549
+329877	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	317111
+329966	2026-07-12	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)	309217
+96209	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+184014	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+189239	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+257426	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+258856	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+293009	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+297645	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+300472	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+301323	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+309030	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+309345	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+313077	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+316432	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+318203	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+320958	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+321859	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+322162	2026-07-12	dissolved: the Stage-2 sibling-identity claims gate stripped the letter's stolen identity and no honest position source remains (no own astrometry, no anchor-offset chain)	
+323305	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+323393	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+323960	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+324748	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+324772	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+325111	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+326092	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+327246	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+327297	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+327346	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+327407	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+327408	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+327439	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+329724	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329756	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329787	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329834	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329860	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329876	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329898	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329899	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329932	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329970	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+329975	2026-07-12	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source	
+330054	2026-07-12	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair	
+306767	2026-07-12	merged: SIMBAD xid attributes WDS 19463+1037 D to gam Aql itself — the synth D record was a duplicate of the first-class star (bridge in sameas-overrides.tsv)	2343
+323225	2026-07-12	merged: ORB6 curated HIP 66676 identifies 13401-6033 Ca as the first-class catalog star — the synth Ca record was a duplicate (bridge in sameas-overrides.tsv)	298914

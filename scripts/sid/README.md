@@ -13,9 +13,10 @@ sid-pure.ts               Pure algebra: designation grammar (§ 3),
                           allocation (§§ 4.1, 4.4), per-record designation
                           extraction (starDesignations) + read-only
                           resolution (resolveSids, mint = error),
-                          ledger/retirements codecs, head snapshot +
-                          append-only checks (§§ 4.3, 4.5). Tests import
-                          its constants — never redefine them.
+                          ledger/retirements/reinstatements codecs, head
+                          snapshot + append-only checks (§§ 4.3, 4.5).
+                          Tests import its constants — never redefine
+                          them.
 registry-io.ts            Filesystem access to the committed registry:
                           canonical data/sid/ paths, loadStoredEdges, and
                           loadRegistry (validated read; throws
@@ -101,7 +102,10 @@ sid parks and the new slug mints a fresh identity.
 A Stage-5 filter change that mass-drops optical pairs orphans every
 synth key those pairs minted; the reported "candidates" are then
 surviving siblings with *different letters* — different physical
-stars, never bridge targets. Resolve as successor-less retirements:
+stars, never bridge targets. (The reverse — a pipeline refinement
+re-promotes a component whose sid was retired — is a reinstatement
+row in `data/sid/reinstatements.tsv`, docs/sid.md § 4.3.) Resolve as
+successor-less retirements:
 map each orphan key to its sid through `ledger.tsv`, append
 `sid<TAB>date<TAB>reason<TAB>` rows to `retirements.tsv` (script the
 mapping; one shared reason string per cause), re-run `sid:allocate`,

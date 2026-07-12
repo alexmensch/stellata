@@ -477,6 +477,7 @@ def classify_pair_optical(
     total_mass_msun: float | None = None,
     primary_astrometry: ComponentAstrometry | None = None,
     secondary_astrometry: ComponentAstrometry | None = None,
+    system_pm_anchor: tuple[float, float] | None = None,
 ) -> OpticalClassification:
     """Tiered cascade per WDS pair:
 
@@ -579,17 +580,21 @@ def classify_pair_optical(
     # primary's proper motion slid past. Low-PM primaries (predicted
     # slip < CPM_SLIP_MIN_ARCSEC) fall through, protecting the wide-
     # companion coverage the athyg_position route was added to render.
+    # A primary with no PM of its own (identity-less letters riding the
+    # Stage-6 system anchor) borrows the system PM anchor: the pair's
+    # membership claim places it at the anchor, so the anchor's motion
+    # is the slip a background secondary would show.
     if (
         secondary_astrometry is not None
         and secondary_astrometry.astrometry_via
         in INHERITED_SECONDARY_ASTROMETRY_VIAS
         and primary_astrometry is not None
     ):
-        cpm = cpm_baseline_verdict(
-            pair,
-            primary_astrometry.pmra_masyr,
-            primary_astrometry.pmdec_masyr,
-        )
+        pm_ra = primary_astrometry.pmra_masyr
+        pm_de = primary_astrometry.pmdec_masyr
+        if pm_ra is None and pm_de is None and system_pm_anchor is not None:
+            pm_ra, pm_de = system_pm_anchor
+        cpm = cpm_baseline_verdict(pair, pm_ra, pm_de)
         if cpm is True:
             return OpticalClassification(False, "cpm_baseline_rejected")
         if cpm is False:
@@ -612,6 +617,7 @@ def classify_all_pairs(
     system_parallax_anchors: dict[str, tuple[float, float | None]] | None = None,
     pair_masses: list[float] | None = None,
     astrometry: list[ComponentAstrometry] | None = None,
+    system_pm_anchors: dict[str, tuple[float, float]] | None = None,
 ) -> list[OpticalClassification]:
     """One ``OpticalClassification`` per decomposing WDS pair, in
     ``resolve_all_pairs`` iteration order. Stage 6 zips this list back
@@ -626,7 +632,9 @@ def classify_all_pairs(
     to the decomposing pairs) feeds the escape-velocity sub-gate; omitted
     → the gate uses ``ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN``. ``astrometry``
     runs parallel to ``components`` (as Stage 3 built it) and feeds the
-    tier-6a CPM baseline test; omitted → that tier is silent."""
+    tier-6a CPM baseline test; omitted → that tier is silent.
+    ``system_pm_anchors`` (per-``wds_id`` PM) backstops that test for
+    pairs whose primary carries no own PM."""
     n_pairs = sum(
         1 for p in pairs if split_components(p.components) is not None
     )
@@ -646,6 +654,7 @@ def classify_all_pairs(
             "parallel to components"
         )
     anchors = system_parallax_anchors or {}
+    pm_anchors = system_pm_anchors or {}
     out: list[OpticalClassification] = []
     for j, (pair, i) in enumerate(
         iter_decomposing_pair_cursor(pairs, components)
@@ -659,6 +668,7 @@ def classify_all_pairs(
             secondary_astrometry=(
                 astrometry[i + 1] if astrometry is not None else None
             ),
+            system_pm_anchor=pm_anchors.get(pair.wds_id),
         ))
     return out
 

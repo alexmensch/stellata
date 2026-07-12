@@ -47,6 +47,7 @@ cluster_member	tet01 Ori D	05353-0523	D	simbad_xid	3017364063330465152	SIMBAD * 
 cluster_member	tet01 Ori E	05353-0523	E	simbad_xid	3017364127743288704	SIMBAD * tet01 Ori E
 distant_supergiant	Rigel A	05145-0812	A	unresolved		SIMBAD * bet Ori carries no DR3; bare HIP 24436 retained
 distant_supergiant	Rigel B	05145-0812	BC	simbad_xid	3206991473643150464	SIMBAD * bet Ori B under the WDS BC aggregate token
+distant_supergiant	Rigel B (BC-pair letter)	05145-0812	B	unresolved		bare letter binds nothing: the BC row's WDS precise coord is the system (A) coordinate, and the sibling-identity claims gate refuses HIP 24436 = Rigel A; SIMBAD carries * bet Ori B only under the BC aggregate
 distant_supergiant	Betelgeuse	05552+0724	Aa	unresolved		SIMBAD * alf Ori carries no DR3
 distant_supergiant	mu Cep	21435+5847	A	simbad_xid	2202630001603369856	red supergiant WITH a DR3 source — contrast case to the saturated set
 distant_supergiant	Alnitak A	05407-0157	A	unresolved		SIMBAD * zet Ori A carries no DR3; bare HIP 26727 retained

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LEDGER_HEADER,
+  REINSTATEMENTS_HEADER,
   RETIREMENTS_HEADER,
   SAMEAS_HEADER,
   allocate,
@@ -14,7 +15,9 @@ import {
   isValidDesignation,
   namespaceRank,
   parseDesignation,
+  effectiveRetirements,
   parseLedgerTsv,
+  parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSameasTsv,
   parseSolObjectsTsv,
@@ -23,6 +26,7 @@ import {
   splitTsv,
   starDesignations,
   validateLedger,
+  validateReinstatements,
   validateRetirements,
   type LedgerRow,
   type RetirementRow,
@@ -180,6 +184,31 @@ describe('structural validation', () => {
     expect(validateRetirements([{ ...ret(1, null), reason: ' ' }], ledger)[0]).toMatch(
       /empty reason/,
     );
+    // A second retirement is legal once a reinstatement cancelled the first.
+    expect(
+      validateRetirements([ret(1, null), ret(1, 2)], ledger, [
+        { sid: 1, reinstated: '2026-07-11', reason: 'came back' },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('validates reinstatements against the ledger and retirements', () => {
+    const ledger = [row(1, 'hip:1'), row(2, 'hd:2')];
+    const retirements: RetirementRow[] = [
+      { sid: 1, retired: '2026-07-10', reason: 'parked', successorSid: null },
+    ];
+    const rein = (sid: number) => ({ sid, reinstated: '2026-07-12', reason: 'came back' });
+    expect(validateReinstatements([rein(1)], ledger, retirements)).toEqual([]);
+    expect(validateReinstatements([rein(3)], ledger, retirements)[0]).toMatch(/not in ledger/);
+    expect(validateReinstatements([rein(2)], ledger, retirements)[0]).toMatch(
+      /nothing to reinstate/,
+    );
+    expect(validateReinstatements([rein(1), rein(1)], ledger, retirements)[0]).toMatch(
+      /nothing to reinstate/,
+    );
+    expect(
+      validateReinstatements([{ ...rein(1), reason: '' }], ledger, retirements)[0],
+    ).toMatch(/empty reason/);
   });
 });
 
@@ -187,7 +216,7 @@ describe('head snapshot + append-only', () => {
   const ledgerText = `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n2\thd:2\tstar\t2026-07-10\n`;
   const emptyRetirements = `${RETIREMENTS_HEADER}\n`;
 
-  it('computes the head triple for both files', () => {
+  it('computes the head triple for all three files', () => {
     const head = computeLedgerHead(ledgerText, emptyRetirements);
     expect(head.ledger.rows).toBe(2);
     expect(head.ledger.max_sid).toBe(2);
@@ -196,6 +225,20 @@ describe('head snapshot + append-only', () => {
       max_sid: 0,
       sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     });
+    expect(head.reinstatements).toEqual(head.retirements);
+    const withRein = computeLedgerHead(
+      ledgerText, emptyRetirements,
+      `${REINSTATEMENTS_HEADER}\n1\t2026-07-12\tcame back\n`,
+    );
+    expect(withRein.reinstatements!.rows).toBe(1);
+    expect(withRein.reinstatements!.max_sid).toBe(1);
+  });
+
+  it('parses reinstatement rows', () => {
+    const rows = parseReinstatementsTsv(
+      `${REINSTATEMENTS_HEADER}\n5\t2026-07-12\tobject reappeared\n`,
+    );
+    expect(rows).toEqual([{ sid: 5, reinstated: '2026-07-12', reason: 'object reappeared' }]);
   });
 
   it('accepts pure appends with ascending sids', () => {
@@ -416,6 +459,33 @@ describe('allocation', () => {
       today,
     });
     expect(r.errors[0]).toMatch(/retired object reappeared/);
+  });
+
+  it('a reinstated sid resolves the reappeared object to its original sid', () => {
+    const ledger: LedgerRow[] = [
+      { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-07-01' },
+    ];
+    const r = allocate({
+      objects: [{ designations: ['hip:1'], kind: 'star', label: 'record 0' }],
+      storedEdges: [],
+      ledger,
+      retirements: [{ sid: 1, retired: '2026-07-09', reason: 'parked', successorSid: null }],
+      reinstatements: [{ sid: 1, reinstated: '2026-07-12', reason: 'object reappeared' }],
+      today,
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.objectSids).toEqual([1]);
+    expect(r.minted).toEqual([]);
+  });
+
+  it('a re-retired sid (retire, reinstate, retire) reads as retired', () => {
+    const retirements = [
+      { sid: 1, retired: '2026-07-09', reason: 'parked', successorSid: null },
+      { sid: 1, retired: '2026-07-13', reason: 're-parked', successorSid: null },
+    ];
+    const reinstatements = [{ sid: 1, reinstated: '2026-07-12', reason: 'came back' }];
+    expect(effectiveRetirements(retirements, reinstatements).get(1)?.reason).toBe('re-parked');
+    expect(effectiveRetirements(retirements.slice(0, 1), reinstatements).size).toBe(0);
   });
 
   it('errors on a kind conflict with the frozen ledger row', () => {

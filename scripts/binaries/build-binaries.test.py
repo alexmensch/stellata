@@ -1422,6 +1422,63 @@ class ResolveViaPositionTests(unittest.TestCase):
         self.assertEqual(c.resolve_via, "unresolved")
         self.assertIsNone(c.gaia_source_id)
 
+    def test_skips_row_whose_hip_a_disjoint_letter_binds(self) -> None:
+        # Rigel-shaped: the BC pair row carries the SYSTEM coordinate,
+        # so B's primary match lands on A's AT-HYG row — but A already
+        # binds that row's HIP, and A is neither B's lineage nor B's
+        # pair partner. Without the claims gate B wears A's identity
+        # and photometry.
+        pair_bc = _wds_pair_with_pos(
+            wds_id="05145-0812", components="BC",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=0.1, theta=30.0,
+        )
+        athyg = [_athyg_row_at(ra=100.0, dec=0.0, gaia=555, hip=24436)]
+        a_comp = bb.ResolvedComponent(
+            wds_id="05145-0812", discoverer=pair_bc.discoverer,
+            component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved", hip=24436,
+        )
+        b_comp = bb.ResolvedComponent(
+            wds_id="05145-0812", discoverer=pair_bc.discoverer,
+            component="B", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        stats: dict[str, int] = {}
+        bb.resolve_via_position(
+            components=[a_comp, b_comp], pairs=[pair_bc], athyg=athyg,
+            stats=stats,
+        )
+        self.assertIsNone(b_comp.hip)
+        self.assertIsNone(b_comp.gaia_source_id)
+        self.assertEqual(b_comp.resolve_via, "unresolved")
+        self.assertEqual(stats["athyg_match_sibling_claimed_rejected"], 1)
+
+    def test_own_claimed_row_still_matches(self) -> None:
+        # The matched row's HIP is one the component itself already
+        # binds — the claims gate must not block a letter from its own
+        # identity.
+        pair = _wds_pair_with_pos(
+            wds_id="00000+0000", components="AB",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=0.5, theta=0.0,
+        )
+        athyg = [_athyg_row_at(ra=100.0, dec=0.0, gaia=555, hip=42)]
+        a_comp = bb.ResolvedComponent(
+            wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved", hip=42,
+        )
+        stats: dict[str, int] = {}
+        bb.resolve_via_position(
+            components=[a_comp], pairs=[pair], athyg=athyg, stats=stats,
+        )
+        self.assertEqual(a_comp.gaia_source_id, 555)
+        self.assertEqual(a_comp.resolve_via, "athyg_gaia_native")
+        self.assertEqual(
+            stats.get("athyg_match_sibling_claimed_rejected", 0), 0,
+        )
+
 
 class ResolveViaSimbadTests(unittest.TestCase):
     def test_binds_gaia_and_hip_when_both_present(self) -> None:
@@ -1643,6 +1700,169 @@ class ResolveViaCcdmTests(unittest.TestCase):
         # No binding: 999.9 sentinel short-circuits the prediction.
         self.assertIsNone(secondary.gaia_source_id)
         self.assertIsNone(secondary.hip)
+
+    def test_sibling_owned_candidate_rejected_for_disjoint_letter(self) -> None:
+        # Rigel-shaped: the BC pair's precise coord sits 9.4″ from
+        # HIP 24436 (= A), inside the 10″ tolerance, but A's own letter
+        # position is essentially ON the HIP's AT-HYG row — the
+        # candidate is A's identity and must bind to neither B nor C.
+        pair_ab = _wds_pair_with_pos(
+            wds_id="05145-0812", components="AB",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=9.4, theta=180.0,
+        )
+        pair_bc = _wds_pair_with_pos(
+            wds_id="05145-0812", components="BC",
+            precise_ra=100.0, precise_dec=-9.4 / 3600.0,
+            rho=0.1, theta=30.0,
+        )
+        athyg = [_athyg_row_at(ra=100.0, dec=0.0, gaia=None, hip=24436)]
+        ccdm_rows = [bb.CcdmRow(hip=24436, ccdm="05145-0812", mult_flag="")]
+        indices = self._indices_with_ccdm(
+            ccdm_rows=ccdm_rows, athyg=athyg,
+            hip_to_gaia={24436: 7777},
+        )
+        b_primary = bb.ResolvedComponent(
+            wds_id=pair_bc.wds_id, discoverer=pair_bc.discoverer,
+            component="B", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        c_secondary = bb.ResolvedComponent(
+            wds_id=pair_bc.wds_id, discoverer=pair_bc.discoverer,
+            component="C", is_primary=False,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        stats: dict[str, int] = {}
+        bb.resolve_via_ccdm(
+            components=[b_primary, c_secondary],
+            pairs=[pair_ab, pair_bc], indices=indices, stats=stats,
+        )
+        self.assertIsNone(b_primary.hip)
+        self.assertIsNone(b_primary.gaia_source_id)
+        self.assertEqual(b_primary.resolve_via, "unresolved")
+        self.assertIsNone(c_secondary.hip)
+        self.assertIsNone(c_secondary.gaia_source_id)
+        self.assertEqual(stats["ccdm_sibling_owned_rejected"], 2)
+
+    def test_partner_letter_never_rejects(self) -> None:
+        # σ Ori-shaped blend convention: the candidate sits nearer the
+        # PAIR PARTNER's position (A, 1.2″) than the secondary being
+        # resolved (B, 0.8″). Partner sharing is the WDS blend
+        # convention, so the binding stands.
+        pair = _wds_pair_with_pos(
+            wds_id="00000+0000", components="AB",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=2.0, theta=180.0,
+        )
+        athyg = [_athyg_row_at(
+            ra=100.0, dec=-1.2 / 3600.0, gaia=None, hip=99,
+        )]
+        ccdm_rows = [bb.CcdmRow(hip=99, ccdm="00000+0000", mult_flag="")]
+        indices = self._indices_with_ccdm(ccdm_rows=ccdm_rows, athyg=athyg)
+        secondary = bb.ResolvedComponent(
+            wds_id=pair.wds_id, discoverer=pair.discoverer,
+            component="B", is_primary=False,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        stats: dict[str, int] = {}
+        bb.resolve_via_ccdm(
+            components=[secondary], pairs=[pair], indices=indices,
+            stats=stats,
+        )
+        self.assertEqual(secondary.hip, 99)
+        self.assertEqual(stats.get("ccdm_sibling_owned_rejected", 0), 0)
+
+    def test_near_tie_non_partner_sibling_does_not_reject(self) -> None:
+        # The candidate sits at comparable distances from the query
+        # letter C (0.2″) and the non-partner letter B (0.2″) — inside
+        # the 2× decisiveness ratio, so ownership is ambiguous and the
+        # nearest-candidate binding stands.
+        pair_ab = _wds_pair_with_pos(
+            wds_id="00000+0000", components="AB",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=2.0, theta=180.0,
+        )
+        pair_ac = _wds_pair_with_pos(
+            wds_id="00000+0000", components="AC",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=2.4, theta=180.0,
+        )
+        athyg = [_athyg_row_at(
+            ra=100.0, dec=-2.2 / 3600.0, gaia=None, hip=99,
+        )]
+        ccdm_rows = [bb.CcdmRow(hip=99, ccdm="00000+0000", mult_flag="")]
+        indices = self._indices_with_ccdm(ccdm_rows=ccdm_rows, athyg=athyg)
+        secondary = bb.ResolvedComponent(
+            wds_id=pair_ac.wds_id, discoverer=pair_ac.discoverer,
+            component="C", is_primary=False,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        stats: dict[str, int] = {}
+        bb.resolve_via_ccdm(
+            components=[secondary], pairs=[pair_ab, pair_ac],
+            indices=indices, stats=stats,
+        )
+        self.assertEqual(secondary.hip, 99)
+        self.assertEqual(stats.get("ccdm_sibling_owned_rejected", 0), 0)
+
+    def test_claimed_hip_rejected_even_at_system_coordinate(self) -> None:
+        # The real Rigel shape: WDS stamps the BC pair row with the
+        # SYSTEM coordinate, so geometry places the candidate ON the
+        # query letter — but A already binds the HIP (SIMBAD xid), and
+        # a non-partner letter's HIP is another star's identity.
+        pair_a_bc = _wds_pair_with_pos(
+            wds_id="05145-0812", components="A,BC",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=9.4, theta=204.0,
+        )
+        pair_bc = _wds_pair_with_pos(
+            wds_id="05145-0812", components="BC",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=0.1, theta=30.0,
+        )
+        athyg = [_athyg_row_at(ra=100.0, dec=0.0, gaia=None, hip=24436)]
+        ccdm_rows = [bb.CcdmRow(hip=24436, ccdm="05145-0812", mult_flag="")]
+        indices = self._indices_with_ccdm(
+            ccdm_rows=ccdm_rows, athyg=athyg,
+            hip_to_gaia={24436: 7777},
+        )
+        a_primary = bb.ResolvedComponent(
+            wds_id=pair_a_bc.wds_id, discoverer=pair_a_bc.discoverer,
+            component="A", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved", hip=24436,
+        )
+        b_primary = bb.ResolvedComponent(
+            wds_id=pair_bc.wds_id, discoverer=pair_bc.discoverer,
+            component="B", is_primary=True,
+            gaia_source_id=None, resolve_via="unresolved",
+        )
+        stats: dict[str, int] = {}
+        bb.resolve_via_ccdm(
+            components=[a_primary, b_primary],
+            pairs=[pair_a_bc, pair_bc], indices=indices, stats=stats,
+        )
+        self.assertIsNone(b_primary.hip)
+        self.assertIsNone(b_primary.gaia_source_id)
+        self.assertEqual(stats["ccdm_sibling_owned_rejected"], 1)
+
+    def test_letter_positions_prefer_primary_slot_over_predicted(self) -> None:
+        pair_ab = _wds_pair_with_pos(
+            wds_id="05145-0812", components="AB",
+            precise_ra=100.0, precise_dec=0.0,
+            rho=9.4, theta=180.0,
+        )
+        pair_bc = _wds_pair_with_pos(
+            wds_id="05145-0812", components="BC",
+            precise_ra=100.0, precise_dec=-9.5 / 3600.0,
+            rho=0.1, theta=30.0,
+        )
+        positions = bb.build_system_letter_positions([pair_ab, pair_bc])
+        letters = positions["05145-0812"]
+        # B was first recorded from AB's (ρ, θ) prediction, then
+        # upgraded to BC's measured primary-slot coord.
+        self.assertEqual(letters["B"], (100.0, -9.5 / 3600.0))
+        self.assertEqual(letters["A"], (100.0, 0.0))
+        self.assertIn("C", letters)
 
     def test_skips_systems_with_no_ccdm_candidates(self) -> None:
         pair = _wds_pair_with_pos(
@@ -4460,6 +4680,40 @@ class CpmTierIntegrationTests(unittest.TestCase):
             pair, primary, secondary, "none", _indices_with_astrometry(),
         )
         self.assertEqual(result.optical_via, "mag_heuristic_kept")
+
+    def test_pm_less_primary_borrows_system_pm_anchor(self) -> None:
+        # An identity-less pair primary (no own PM, rides the Stage-6
+        # system anchor) borrows the system PM anchor — the drift
+        # verdict survives stripping a stolen identity's PM.
+        result = self._classify(
+            _cpm_pair(rho_last=300.0),
+            primary_astro=_component_astrometry(
+                astrometry_via="unresolved",
+                parallax_mas=None, parallax_error_mas=None,
+                pmra_masyr=None, pmdec_masyr=None,
+            ),
+        )
+        self.assertEqual(result.optical_via, "mag_heuristic_kept")
+        pair = _cpm_pair(rho_last=300.0)
+        primary = _resolved(gaia=None, component="B", is_primary=True)
+        secondary = _resolved(
+            gaia=None, component="C", is_primary=False, via="unresolved",
+        )
+        result = bb.classify_pair_optical(
+            pair, primary, secondary, "none", _indices_with_astrometry(),
+            primary_astrometry=_component_astrometry(
+                astrometry_via="unresolved",
+                parallax_mas=None, parallax_error_mas=None,
+                pmra_masyr=None, pmdec_masyr=None,
+            ),
+            secondary_astrometry=_component_astrometry(
+                astrometry_via="unresolved",
+                parallax_mas=None, parallax_error_mas=None,
+                pmra_masyr=None, pmdec_masyr=None,
+            ),
+            system_pm_anchor=(4100.0, -3200.0),
+        )
+        self.assertEqual(result.optical_via, "cpm_baseline_rejected")
 
     def test_classify_all_pairs_astrometry_cardinality(self) -> None:
         pair = _cpm_pair()

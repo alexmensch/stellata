@@ -188,10 +188,31 @@ on the wire can still resolve; empty for objects that genuinely left
 the model (a parked SID resolves to nothing and wire consumers skip
 it gracefully).
 
+`data/sid/reinstatements.tsv` (append-only, same guard) is the
+reverse operation for a retired object that reappears — a pipeline
+refinement restores an honestly-derived record for a component an
+earlier gate had dropped, or a retirement proves to have been a
+presence fluctuation misfiled as an identity event:
+
+```
+sid	reinstated	reason
+```
+
+A sid's effective state is decided by **counting**: retired iff it
+has strictly more retirement rows than reinstatement rows. Counting
+is order-independent across the two append-only files, so
+retire → reinstate → re-retire cycles need no cross-file ordering;
+structural validation enforces `#reinstate ≤ #retire` and
+`#retire ≤ #reinstate + 1` per sid. A reinstated object resumes its
+**original sid** — old wire refs resolve again — which is the whole
+point of reinstating rather than minting: identity is continuous
+across a presence gap. Never reinstate a sid whose object came back
+under a *different* identity; that is a bridge/merge (§ 5, § 6.1).
+
 `data/sid/ledger-head.json` (regular git, tiny) pins the frozen
 state: `{ "rows": N, "max_sid": M, "sha256": "…" }` for the ledger
-and the same triple for retirements. It is rewritten mechanically by
-the allocation tool on every append.
+and the same triple for retirements and reinstatements. It is
+rewritten mechanically by the allocation tool on every append.
 
 ### 4.4 Allocation
 
@@ -222,7 +243,10 @@ An object that disappears from a build (catalogue cut, WDS row
 dropped) keeps its ledger row — the sid is simply absent from the
 artifacts. If it returns later it resolves to the same SID. Explicit
 retirement (§ 4.3) is reserved for identity-level events (merges,
-dissolved synthetic components), not presence fluctuations.
+dissolved synthetic components), not presence fluctuations. A sid
+retired in error — or whose object a later pipeline refinement
+honestly restores — is reinstated (§ 4.3), never re-minted: the
+allocation hard-error on a reappeared retired class is the prompt.
 
 ### 4.5 CI guard
 

@@ -10,20 +10,26 @@ import { FLAG_IS_SOL, type SearchEntry } from '../catalog/catalog-pure';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
   LEDGER_HEADER,
+  REINSTATEMENTS_HEADER,
   RETIREMENTS_HEADER,
   allocate,
   computeLedgerHead,
   parseDesignation,
   parseLedgerTsv,
+  parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSolObjectsTsv,
   serializeLedgerRow,
   starDesignations,
   validateLedger,
+  validateReinstatements,
   validateRetirements,
   type SidObject,
 } from './sid-pure';
-import { HEAD_PATH, LEDGER_PATH, RETIREMENTS_PATH, SOL_OBJECTS_PATH, loadStoredEdges } from './registry-io';
+import {
+  HEAD_PATH, LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
+  SOL_OBJECTS_PATH, loadStoredEdges,
+} from './registry-io';
 import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
 const PUBLIC_DIR = resolve(ROOT, 'public');
@@ -142,7 +148,8 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
   lines.push(
     '  Resolve each by hand (docs/sid.md § 5): a bridge line in',
     '  data/sid/sameas-overrides.tsv for a re-lettered component, or a',
-    '  retirements.tsv row for a component that genuinely dissolved.',
+    '  retirements.tsv row for a component that genuinely dissolved',
+    '  (reinstatements.tsv resumes the sid if it later reappears).',
   );
   return lines.join('\n');
 }
@@ -158,16 +165,24 @@ async function main(): Promise<void> {
   const retirementsText = existsSync(RETIREMENTS_PATH)
     ? readFileSync(RETIREMENTS_PATH, 'utf-8')
     : `${RETIREMENTS_HEADER}\n`;
+  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
+    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
+    : `${REINSTATEMENTS_HEADER}\n`;
   const ledger = parseLedgerTsv(ledgerText);
   const retirements = parseRetirementsTsv(retirementsText);
-  const structural = [...validateLedger(ledger), ...validateRetirements(retirements, ledger)];
+  const reinstatements = parseReinstatementsTsv(reinstatementsText);
+  const structural = [
+    ...validateLedger(ledger),
+    ...validateRetirements(retirements, ledger, reinstatements),
+    ...validateReinstatements(reinstatements, ledger, retirements),
+  ];
   if (structural.length > 0) {
     console.error(`sid:allocate: committed registry is invalid:\n  ${structural.join('\n  ')}`);
     process.exit(1);
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const result = allocate({ objects, storedEdges, ledger, retirements, today });
+  const result = allocate({ objects, storedEdges, ledger, retirements, reinstatements, today });
 
   for (const { designation, objects: idxs } of result.ambiguous) {
     console.log(
@@ -267,8 +282,11 @@ async function main(): Promise<void> {
     else writeFileSync(LEDGER_PATH, `${LEDGER_HEADER}\n${appended}`);
   }
   if (!existsSync(RETIREMENTS_PATH)) writeFileSync(RETIREMENTS_PATH, retirementsText);
+  if (!existsSync(REINSTATEMENTS_PATH)) writeFileSync(REINSTATEMENTS_PATH, reinstatementsText);
 
-  const head = computeLedgerHead(readFileSync(LEDGER_PATH, 'utf-8'), retirementsText);
+  const head = computeLedgerHead(
+    readFileSync(LEDGER_PATH, 'utf-8'), retirementsText, reinstatementsText,
+  );
   const headJson = `${JSON.stringify(head, null, 2)}\n`;
   if (!existsSync(HEAD_PATH) || readFileSync(HEAD_PATH, 'utf-8') !== headJson) {
     writeFileSync(HEAD_PATH, headJson);

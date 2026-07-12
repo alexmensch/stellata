@@ -77,7 +77,9 @@ from stage2_resolve import (  # noqa: E402, F401
     _athyg_position_at_epoch, _propagate_position, _spherical_to_unit_vec,
     audit_binding_integrity, binding_integrity_counts,
     build_athyg_position_grid, build_pair_by_wds_disc,
-    build_system_contexts, find_nearest_athyg_at_position,
+    build_system_contexts, build_system_hip_claims,
+    build_system_letter_positions,
+    find_nearest_athyg_at_position,
     group_orb6_by_pair, inherit_downward_parent_bindings,
     iter_decomposing_pair_components,
     predict_secondary_position, propagate_blend_identity,
@@ -99,6 +101,7 @@ from stage4_orbits import (  # noqa: E402, F401
     NSS_MAX_SYSTEM_MASS_MSUN, NSS_SEPARATION_SANITY_RATIO,
     _nss_separation_consistent,
     compute_system_parallaxes, compute_system_parallax_anchors,
+    compute_system_pm_anchors,
     first_astrometry_field_per_system,
     _msc_period_days, _pick_best_msc,
     _pick_best_orb6, _system_parallax_mas, _thiele_innes_to_campbell,
@@ -281,6 +284,7 @@ class Stage2Resolution:
     simbad_wds_xids: dict[tuple[str, str], SimbadWdsXid]
     n_rescued: int
     n_deferred: int
+    resolve_stats: dict[str, int]
     components: list[ResolvedComponent]
     binding_verdicts: list[BindingVerdict]
 
@@ -479,10 +483,19 @@ def resolve_through_stage2() -> Stage2Resolution:
 
     log("Stage 1 complete. Resolving WDS components (Stage 2) …")
 
+    resolve_stats: dict[str, int] = {}
     components = resolve_all_pairs(
         pairs=wds_pairs, orb6=orb6,
         indices=indices, athyg=athyg,
         simbad_xids=simbad_wds_xids,
+        stats=resolve_stats,
+    )
+    log(
+        f"sibling-identity rejections: "
+        f"{resolve_stats.get('ccdm_sibling_owned_rejected', 0):,} CCDM "
+        f"candidates owned by another letter, "
+        f"{resolve_stats.get('athyg_match_sibling_claimed_rejected', 0):,} "
+        f"AT-HYG position matches onto a row another letter already binds"
     )
     n_seeded = seed_synthesized_component_bindings(
         components, synthesized_orb6_pairs + synthesized_msc_pairs,
@@ -498,6 +511,7 @@ def resolve_through_stage2() -> Stage2Resolution:
         synthesized_msc_pairs=synthesized_msc_pairs,
         athyg=athyg, indices=indices, simbad_wds_xids=simbad_wds_xids,
         n_rescued=n_rescued, n_deferred=n_deferred,
+        resolve_stats=resolve_stats,
         components=components, binding_verdicts=binding_verdicts,
     )
 
@@ -553,6 +567,7 @@ def run(force: bool) -> int:
     astrometry = attach_astrometry_all(
         components=components, pairs=wds_pairs, indices=indices,
         athyg=athyg,
+        stats=s2.resolve_stats,
     )
 
     nss_pairs, nss_components, nss_astrometry, nss_skips = (
@@ -607,6 +622,9 @@ def run(force: bool) -> int:
         system_parallax_anchors=system_parallax_anchors,
         pair_masses=pair_masses,
         astrometry=astrometry,
+        system_pm_anchors=compute_system_pm_anchors(
+            wds_pairs, components, astrometry,
+        ),
     )
     op_counts = optical_counts(classifications)
     log(
@@ -677,6 +695,12 @@ def run(force: bool) -> int:
         multiples_pairs_dropped_no_position=len(dropped_no_position),
         blank_components_rescued=n_rescued,
         blank_components_deferred=n_deferred,
+        ccdm_sibling_owned_rejected=s2.resolve_stats.get(
+            "ccdm_sibling_owned_rejected", 0,
+        ),
+        athyg_match_sibling_claimed_rejected=s2.resolve_stats.get(
+            "athyg_match_sibling_claimed_rejected", 0,
+        ),
     )
     counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
     rates = build_binaries_rates(counts)

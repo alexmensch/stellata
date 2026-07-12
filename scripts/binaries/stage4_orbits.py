@@ -836,6 +836,30 @@ def compute_system_parallaxes(
     )
 
 
+def _component_pm_masyr(
+    ast: ComponentAstrometry,
+) -> tuple[float, float] | None:
+    if ast.pmra_masyr is not None and ast.pmdec_masyr is not None:
+        return ast.pmra_masyr, ast.pmdec_masyr
+    return None
+
+
+def compute_system_pm_anchors(
+    pairs: list[WdsPair],
+    components: list[ResolvedComponent],
+    astrometry: list[ComponentAstrometry],
+) -> dict[str, tuple[float, float]]:
+    """One ``(pmra, pmdec)`` mas/yr anchor per ``wds_id`` from the first
+    system component with a measured PM. Feeds Stage 5's CPM
+    epoch-baseline test when the pair's own primary carries no
+    astrometry — a member claimed by the system rides at the system
+    anchor's position (Stage 6), so the anchor's PM is the slip its
+    relative sep/PA would show against a sky-static background star."""
+    return first_astrometry_field_per_system(
+        pairs, components, astrometry, _component_pm_masyr,
+    )
+
+
 def compute_system_parallax_anchors(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],

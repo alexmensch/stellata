@@ -11,17 +11,21 @@ import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../scripts/util/paths';
 import {
+  EMPTY_HEAD_TRIPLE,
   LEDGER_HEADER,
+  REINSTATEMENTS_HEADER,
   RETIREMENTS_HEADER,
   checkAppendOnly,
   computeLedgerHead,
   isLfsPointer,
   parseLedgerTsv,
+  parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSameasTsv,
   parseSolObjectsTsv,
   splitTsv,
   validateLedger,
+  validateReinstatements,
   validateRetirements,
   type LedgerHead,
 } from '../scripts/sid/sid-pure';
@@ -29,6 +33,7 @@ import {
 const SID_DIR = resolve(REPO_ROOT, 'data/sid');
 const LEDGER_PATH = resolve(SID_DIR, 'ledger.tsv');
 const RETIREMENTS_PATH = resolve(SID_DIR, 'retirements.tsv');
+const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
 
 const ledgerText = existsSync(LEDGER_PATH) ? readFileSync(LEDGER_PATH, 'utf-8') : null;
@@ -56,12 +61,18 @@ function baseHead(): LedgerHead | null {
 
 describe.skipIf(!available)('sid ledger guard', () => {
   const retirementsText = readFileSync(RETIREMENTS_PATH, 'utf-8');
+  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
+    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
+    : `${REINSTATEMENTS_HEADER}\n`;
   const ledger = () => parseLedgerTsv(ledgerText!);
 
-  it('ledger and retirements are structurally valid', () => {
+  it('ledger, retirements, and reinstatements are structurally valid', () => {
     const rows = ledger();
+    const retirements = parseRetirementsTsv(retirementsText);
+    const reinstatements = parseReinstatementsTsv(reinstatementsText);
     expect(validateLedger(rows)).toEqual([]);
-    expect(validateRetirements(parseRetirementsTsv(retirementsText), rows)).toEqual([]);
+    expect(validateRetirements(retirements, rows, reinstatements)).toEqual([]);
+    expect(validateReinstatements(reinstatements, rows, retirements)).toEqual([]);
   });
 
   it('stored same-as edges and the sol mint list parse under the § 3 grammar', () => {
@@ -74,7 +85,9 @@ describe.skipIf(!available)('sid ledger guard', () => {
 
   it('ledger-head.json exactly matches a recomputation over the working files', () => {
     const head = JSON.parse(readFileSync(HEAD_PATH, 'utf-8')) as LedgerHead;
-    expect(head).toEqual(computeLedgerHead(ledgerText!, retirementsText));
+    expect(head).toEqual(
+      computeLedgerHead(ledgerText!, retirementsText, reinstatementsText),
+    );
   });
 
   it('the frozen prefix is append-only against the merge-base head', () => {
@@ -99,6 +112,20 @@ describe.skipIf(!available)('sid ledger guard', () => {
       checkAppendOnly(base.retirements, retirementLines, 'retirements.tsv', {
         newSidsPastBaseMax: false,
       }),
+    ).toEqual([]);
+    const reinstatementLines = splitTsv(
+      reinstatementsText,
+      REINSTATEMENTS_HEADER,
+      'reinstatements.tsv',
+    ).dataLines;
+    // Heads written before reinstatements.tsv existed freeze zero rows.
+    expect(
+      checkAppendOnly(
+        base.reinstatements ?? EMPTY_HEAD_TRIPLE,
+        reinstatementLines,
+        'reinstatements.tsv',
+        { newSidsPastBaseMax: false },
+      ),
     ).toEqual([]);
   });
 });

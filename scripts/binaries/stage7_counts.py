@@ -82,6 +82,8 @@ def build_binaries_counts(
     multiples_pairs_dropped_no_position: int = 0,
     blank_components_rescued: int = 0,
     blank_components_deferred: int = 0,
+    ccdm_sibling_owned_rejected: int = 0,
+    athyg_match_sibling_claimed_rejected: int = 0,
 ) -> dict[str, int]:
     """Collect every headline number the run emits into a flat
     ``{key: int}`` dict, suitable for JSON serialisation and per-key
@@ -149,6 +151,8 @@ def build_binaries_counts(
         "wds_duplicate_pair_rows_dropped": wds_duplicate_pair_rows_dropped,
         "blank_components_rescued": blank_components_rescued,
         "blank_components_deferred": blank_components_deferred,
+        "ccdm_sibling_owned_rejected": ccdm_sibling_owned_rejected,
+        "athyg_match_sibling_claimed_rejected": athyg_match_sibling_claimed_rejected,
         "decomposing_pairs": len(orbits),
         "components_total": len(components),
         "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
