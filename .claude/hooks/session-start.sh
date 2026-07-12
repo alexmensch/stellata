@@ -1,60 +1,72 @@
 #!/bin/bash
-# Provisions a Stellata dev environment for Claude Code on the web:
-# Git LFS catalog inputs, pnpm deps, and beads (bd) pinned to the schema
-# the remote Dolt database expects. Idempotent; logs to stderr so it can
-# run alongside the `bd prime` SessionStart hook without polluting its
-# JSON stdout. Web sessions only — local machines are already set up.
+# Provisions a Stellata dev environment for Claude Code on the web so builds,
+# tests, and beads work out of the box. Idempotent: every step is guarded to
+# be a fast no-op once the artifact is present, so it is cheap to re-run.
+#
+# Two entry points call this same script (see .claude/README.md):
+#   - the environment Setup script (runs once, result cached in the snapshot —
+#     this is where the ~630 MB LFS pull and bd compile actually happen)
+#   - the SessionStart hook registered in .claude/settings.json (runs every
+#     session as a guarded no-op, plus re-wires git hooks)
+#
+# Logs go to stderr so stdout stays clean for the sibling `bd prime` hook.
+# Web sessions only — local machines are already set up.
 set -uo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
-# bd MUST match the version that owns the remote Dolt schema. A newer bd
-# refuses to auto-migrate a remote-backed clone (it would fork the schema
-# and break `bd dolt pull`/push). Bump this only in lockstep with a
-# deliberate, pushed schema migration on every other machine.
-BD_VERSION="v1.0.5"
-
-REPO="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-cd "$REPO" || exit 0
+cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")" || exit 0
 # Node 22 first: /usr/local/bin/node is an older v20 that pnpm rejects.
 export PATH="/opt/node22/bin:/usr/local/bin:/usr/local/go/bin:$PATH"
 
-log() { echo "[session-start] $*" >&2; }
+# bd MUST match the version that owns the remote Dolt schema. A newer bd
+# refuses to auto-migrate a remote-backed clone (it would fork the schema and
+# break `bd dolt pull`/push). Bump only in lockstep with a deliberate, pushed
+# schema migration on every other machine.
+BD_VERSION="v1.0.5"
 
-# --- 1. Git LFS: fill in the pointer stubs the build pipeline reads ---
+log() { echo "[session-start] $*" >&2; }
+lfs_is_stub() { head -c 40 data/athyg/athyg_33_classic_ids.csv 2>/dev/null | grep -q "git-lfs"; }
+have_bd() { command -v bd >/dev/null 2>&1 && bd version 2>/dev/null | grep -q "${BD_VERSION#v}"; }
+
+# --- git-lfs binary (quick) ---
 if ! command -v git-lfs >/dev/null 2>&1; then
   log "installing git-lfs"
   apt-get install -y git-lfs >/dev/null 2>&1 || sudo apt-get install -y git-lfs >/dev/null 2>&1 || log "git-lfs install failed"
 fi
-if command -v git-lfs >/dev/null 2>&1; then
-  git lfs install --local >/dev/null 2>&1 || true
-  # Pull only when a known input is still a pointer stub (fast no-op when warm).
-  if head -c 40 data/athyg/athyg_33_classic_ids.csv 2>/dev/null | grep -q "git-lfs"; then
-    log "pulling LFS data (~630 MB, one-time)"
-    git lfs pull || log "git lfs pull failed — build:catalog will not work"
-  fi
-fi
+command -v git-lfs >/dev/null 2>&1 && git lfs install --local >/dev/null 2>&1 || true
 
-# --- 2. Node deps ---
+# --- heavy installs in parallel (each guarded; skipped when already present) ---
+# Run under the environment Setup script this is a one-time cost baked into the
+# snapshot; under the SessionStart hook these are all no-ops on a warm cache.
+pids=""
+if command -v git-lfs >/dev/null 2>&1 && lfs_is_stub; then
+  log "pulling LFS catalog inputs (~630 MB, cached in the environment snapshot)"
+  git lfs pull >&2 & pids="$pids $!"
+fi
 if command -v pnpm >/dev/null 2>&1; then
-  log "pnpm install"
-  pnpm install --prefer-offline >&2 || log "pnpm install failed"
+  pnpm install --prefer-offline >&2 & pids="$pids $!"
 fi
-
-# --- 3. beads (bd) ---
-if ! { command -v bd >/dev/null 2>&1 && bd version 2>/dev/null | grep -q "${BD_VERSION#v}"; }; then
+if ! have_bd; then
   log "installing bd ${BD_VERSION} (go build, one-time)"
   CGO_ENABLED=1 GOBIN=/usr/local/bin GOFLAGS="-tags=gms_pure_go" \
-    go install "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}" >&2 \
-    || log "bd install failed"
+    go install "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}" >&2 & pids="$pids $!"
 fi
-# Hydrate the local Dolt working copy from the remote when absent.
-# Read-only clone; never migrates or pushes, so the remote data is untouched.
-if command -v bd >/dev/null 2>&1 && [ ! -d "$REPO/.beads/embeddeddolt" ]; then
-  log "hydrating beads database (bd bootstrap)"
-  BD_NON_INTERACTIVE=1 bd bootstrap --yes >&2 || log "bd bootstrap failed"
+for p in $pids; do wait "$p" || log "an install step failed — see output above"; done
+
+# --- beads DB + git hooks (need bd on PATH) ---
+if command -v bd >/dev/null 2>&1; then
+  # Hydrate the local Dolt working copy from the remote when absent.
+  # Read-only clone; never migrates or pushes, so the remote data is untouched.
+  if [ ! -d .beads/embeddeddolt ]; then
+    log "hydrating beads database (bd bootstrap)"
+    BD_NON_INTERACTIVE=1 bd bootstrap --yes >&2 || log "bd bootstrap failed"
+  fi
+  # Wire beads git hooks into .git/hooks, chaining the git-lfs hooks. This is
+  # what makes `git push` run `bd dolt push` so bead changes sync back.
+  bd hooks install --chain >&2 || log "bd hooks install failed"
 fi
 
 exit 0
