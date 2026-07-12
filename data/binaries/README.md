@@ -132,7 +132,7 @@ Adding a star later = one appended line verified the same way.
 ## Produced by
 
 `scripts/binaries/build-binaries.py` (Stage 6 emits;
-`npm run build:binaries`). See
+`pnpm run build:binaries`). See
 [`scripts/binaries/README.md`](../../scripts/binaries/README.md) for
 the seven-stage pipeline + per-stage modules.
 

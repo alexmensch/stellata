@@ -4,7 +4,7 @@ Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type + SIMBAD WDS cross-IDs +
 Stellarium →
 `public/catalog.bin` (v9 binary) + `public/constellations.json` +
-`public/search-index.json`. Run via `npm run build:catalog`.
+`public/search-index.json`. Run via `pnpm run build:catalog`.
 
 `scripts/catalog/build-catalog.ts` is the orchestrator; the per-row
 pipeline lives in `stars-parse.ts` (`readStars`). Per-pipeline algebra
@@ -193,7 +193,7 @@ below.
 
 ## Full-catalog astrometry request
 
-`export-astrometry-request.ts` (run `npm run build:astrometry-request`)
+`export-astrometry-request.ts` (run `pnpm run build:astrometry-request`)
 emits `data/gaia/gaia_catalog_source_id_request.tsv` — the deduped,
 numerically-sorted Gaia DR3 source_id for every AT-HYG row, resolved
 through the SAME `resolveGaiaSourceId` precedence step 1 uses (native
@@ -375,7 +375,7 @@ xrefs, binary inference output, CCDM doubles, name-table entries,
 search-index entries, etc.) against
 `scripts/catalog/build-catalog-expected.json` at the end of each run. A
 deliberate change refreshes the manifest with
-`UPDATE_BUILD_COUNTS=1 npm run build:catalog`; an unintended drift
+`UPDATE_BUILD_COUNTS=1 pnpm run build:catalog`; an unintended drift
 exits non-zero with a per-key diff. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
@@ -394,13 +394,13 @@ ledger writer (docs/sid.md § 4.4).
 
 Bootstrap when the record set changes (new AT-HYG rows, new companions):
 
-1. `npm run build:catalog` resolves every record. Any object absent from the
+1. `pnpm run build:catalog` resolves every record. Any object absent from the
    ledger is written with `NO_SID` (0) so the artifact still lands, then the
    build **hard-fails** listing the unallocated records.
-2. `npm run sid:allocate` reads that catalog.bin + search-index +
+2. `pnpm run sid:allocate` reads that catalog.bin + search-index +
    row-index-map, mints the missing sids (an explicit, reviewable
    `ledger.tsv` diff), and rewrites `ledger-head.json`.
-3. `npm run build:catalog` again — now every record resolves and the build
+3. `pnpm run build:catalog` again — now every record resolves and the build
    succeeds (it logs `SID: <n> / <n> records resolved`; any shortfall is a
    hard fail, never a shipped artifact).
 
@@ -1305,7 +1305,7 @@ al. 2021 (CDS I/352). The pipeline:
 
 If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone
 without LFS pulled), the build logs and continues — every star keeps
-its naive AT-HYG distance. Data refresh: `npm run refresh:bailer-jones`.
+its naive AT-HYG distance. Data refresh: `pnpm run refresh:bailer-jones`.
 
 ### Layer 2 — LMC kinematic override
 
@@ -1476,7 +1476,7 @@ Today's downstream consumers:
   classification) — already loaded; no rebuild needed when those
   consumers come online.
 
-Data refresh: `npm run refresh:gaia-apsis`. See SCIENCE.md
+Data refresh: `pnpm run refresh:gaia-apsis`. See SCIENCE.md
 § Astrophysical parameters from Gaia DR3 Apsis for the science
 framing.
 
@@ -1573,7 +1573,7 @@ preserved. To add a star or system:
    actually consumed (`data/simbad/simbad_sptype.tsv`) when SIMBAD's
    live sp_type differs — the corpus pins pipeline behaviour, with the
    live value noted in notes_source.
-4. Append the row. Run `npm test -- known-stars` to confirm the row
+4. Append the row. Run `pnpm test -- known-stars` to confirm the row
    passes against the current `public/catalog.bin`. The test parses the
    spectral string via `classifyFromSimbad` so the format must be
    SIMBAD-canonical MK.

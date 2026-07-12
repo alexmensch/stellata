@@ -27,7 +27,7 @@ gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        — the SID DR-churn risk set, frozen at
                                        the 2026-07-06 build so the pull below
                                        stays consistent with it. Regenerate
-                                       from the ledger with `npm run
+                                       from the ledger with `pnpm run
                                        sid:risk-set` (docs/sid.md § 6.1) only
                                        alongside a fresh neighbourhood pull.
 gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
@@ -68,7 +68,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   (`scripts/catalog/README.md` § Direction resolution).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
-- `scripts/sid/dr-reconcile.ts` (`npm run sid:dr-reconcile`) — replays
+- `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays
   the request + neighbourhood pair as the docs/sid.md § 6.2 dry run;
   `scripts/sid/dr-reconcile-pure.test.ts` pins that classification
   end-to-end.
@@ -80,16 +80,16 @@ science-side rationale.
 
 ## Refresh
 
-`npm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,dr2-neighbourhood}` →
+`pnpm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,dr2-neighbourhood}` →
 [`scripts/refresh/`](../../scripts/refresh/README.md). DR4 transition
 order is documented there. Both astrometry pulls read a source_id
 request file as input:
 
 - `refresh:gaia-astrometry` reads `gaia_astrometry_source_id_request.tsv`,
-  so it must run **after** a fresh `npm run build:binaries`.
+  so it must run **after** a fresh `pnpm run build:binaries`.
 - `refresh:gaia-astrometry-catalog` reads
   `gaia_catalog_source_id_request.tsv`, so it must run **after**
-  `npm run build:astrometry-request` (which itself needs a fresh
+  `pnpm run build:astrometry-request` (which itself needs a fresh
   `refresh:gaia-hip` for the HIP→Gaia backfill).
 - `refresh:gaia-dr2-neighbourhood` reads
   `gaia_dr2_neighbourhood_request.tsv`, a frozen snapshot of the

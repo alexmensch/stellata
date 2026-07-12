@@ -9,7 +9,7 @@ allocation, CI guard, Gaia DR reconciliation, v4 wire — in
 
 Unlike every sibling `data/` folder, this is **not** frozen external
 data: the ledger is Stellata's own identity contract. It grows by
-append only (`npm run sid:allocate`, the sole writer) and its frozen
+append only (`pnpm run sid:allocate`, the sole writer) and its frozen
 prefix is CI-guarded — see docs/sid.md § 4.5 for what the guard
 enforces and why there is no `UPDATE_*` escape hatch.
 

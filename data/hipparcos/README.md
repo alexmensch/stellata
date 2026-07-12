@@ -58,7 +58,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 
 ## Refresh
 
-`npm run refresh:hip2` →
+`pnpm run refresh:hip2` →
 [`scripts/refresh/refresh-hipparcos2.py`](../../scripts/refresh/README.md).
 The CCDM slice updates rarely; refetch from VizieR by hand when
 needed.

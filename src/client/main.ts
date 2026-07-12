@@ -74,16 +74,16 @@ async function main() {
       ),
       // Molecular clouds. Fetched in parallel with the catalog —
       // a few hundred KB; null if the artifact is missing (fresh checkout
-      // without `npm run build:clouds`).
+      // without `pnpm run build:clouds`).
       loadClouds(`${import.meta.env.BASE_URL}clouds.json`),
       // Local Group wireframes. ~20 KB JSON; null if
       // the artifact is missing (fresh checkout without
-      // `npm run build:local-group`). No-op layer in that case —
+      // `pnpm run build:local-group`). No-op layer in that case —
       // outlines simply don't render.
       loadLocalGroup(`${import.meta.env.BASE_URL}local-group.json`),
       // Binary / multiple-star orbital elements. ~64 KB; null when the
       // artifact is missing (fresh checkout without
-      // `npm run build:binaries`). The renderer renders identically
+      // `pnpm run build:binaries`). The renderer renders identically
       // without the field; orbital evolution simply doesn't fire.
       loadBinaries(`${import.meta.env.BASE_URL}binaries.bin`),
     ]);
@@ -250,7 +250,7 @@ async function main() {
       heliopauseHoverProvider,
     ];
     // LG provider only registers when the build artifact loaded — fresh
-    // checkouts without `npm run build:local-group` leave stellata.localGroup
+    // checkouts without `pnpm run build:local-group` leave stellata.localGroup
     // null and the wireframes don't render; no provider in that case.
     if (lgCatalog) {
       hoverProviders.push(createLocalGroupHoverProvider({

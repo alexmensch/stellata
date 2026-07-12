@@ -250,17 +250,17 @@ with the user before expanding.
 ## Local commands
 
 ```bash
-npm run build:catalog   # regenerate public/catalog.bin (idempotent)
-npm run build:binaries  # regenerate data/binaries/multiples.tsv
-npm run dev             # preprocess + Vite dev server
-npm run build           # full production build
-npm run typecheck       # tsc --noEmit over src/ and scripts/
-npm test                # vitest (regression-prevention suite)
-npm run deploy          # wrangler deploy (requires auth)
+pnpm run build:catalog   # regenerate public/catalog.bin (idempotent)
+pnpm run build:binaries  # regenerate data/binaries/multiples.tsv
+pnpm run dev             # preprocess + Vite dev server
+pnpm run build           # full production build
+pnpm run typecheck       # tsc --noEmit over src/ and scripts/
+pnpm test                # vitest (regression-prevention suite)
+pnpm run deploy          # wrangler deploy (requires auth)
 ```
 
-Watch / coverage variants of `npm test`, the catalogue verify script,
-and the manual `npm run refresh:*` / `npm run validate:simbad` chain
+Watch / coverage variants of `pnpm test`, the catalogue verify script,
+and the manual `pnpm run refresh:*` / `pnpm run validate:simbad` chain
 are documented in `scripts/refresh/README.md` and `RELEASING.md`
 § Catalogue refresh policy.
 

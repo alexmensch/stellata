@@ -1,4 +1,4 @@
-// `npm run sid:dr-reconcile` — classify a Gaia DR transition's cross-match
+// `pnpm run sid:dr-reconcile` — classify a Gaia DR transition's cross-match
 // pull per docs/sid.md § 6.1 and emit the churn report; --bridges-out writes
 // the carried-1:1 bridge edges for review. See scripts/sid/README.md.
 

@@ -1,5 +1,5 @@
 // Manual-run Tier-C validator cross-checking catalog.bin absmag and
-// distance against SIMBAD's published values. Run: `npm run
+// distance against SIMBAD's published values. Run: `pnpm run
 // validate:simbad`. See scripts/catalog/README.md § Validation harness.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -250,7 +250,7 @@ export function formatReport(report: ResidualReport): string {
   lines.push('');
   lines.push(
     `Generated ${report.generatedAt} by `
-    + '`npm run validate:simbad`. Compares Stellata\'s `catalog.bin` '
+    + '`pnpm run validate:simbad`. Compares Stellata\'s `catalog.bin` '
     + 'absmag and distance against SIMBAD published values for the '
     + 'sample in `data/simbad/simbad_sample.tsv`.',
   );

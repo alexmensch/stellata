@@ -12,7 +12,7 @@ export interface SiblingArtifactSpec {
   /** Designation namespace the ledger keys these objects on (docs/sid.md § 3). */
   ns: string;
   kind: SidKind;
-  /** npm script that emits `file`. */
+  /** pnpm script that emits `file`. */
   buildHint: string;
 }
 
@@ -22,14 +22,14 @@ export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
     arrayKey: 'clouds',
     ns: 'cloud',
     kind: 'cloud',
-    buildHint: 'npm run build:clouds',
+    buildHint: 'pnpm run build:clouds',
   },
   'local-group': {
     file: 'local-group.json',
     arrayKey: 'objects',
     ns: 'lg',
     kind: 'galaxy',
-    buildHint: 'npm run build:local-group',
+    buildHint: 'pnpm run build:local-group',
   },
 };
 

@@ -49,9 +49,9 @@ const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 
 // The corpus needs public/catalog.bin and data/binaries/multiples.tsv —
 // the first is generated (gitignored, ~24 MB), the second is LFS-tracked.
-// CI's plain `npm test` job pulls neither, so the suite skips itself with
+// CI's plain `pnpm test` job pulls neither, so the suite skips itself with
 // a console hint when either is missing. The .github/workflows/test.yml
-// `build-catalog` job runs the full suite after `npm run build:catalog`
+// `build-catalog` job runs the full suite after `pnpm run build:catalog`
 // + LFS pull, so the assertions execute against real data on every PR.
 const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
 const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV);
@@ -62,7 +62,7 @@ if (!FIXTURES_READY) {
     `[known-stars] skipping corpus assertions — ` +
     `catalog.bin ${CATALOG_BIN_PRESENT ? 'present' : 'MISSING'}, ` +
     `multiples.tsv ${MULTIPLES_PRESENT ? 'present' : 'MISSING'}. ` +
-    `Run \`npm run build:catalog\` (with LFS pulled) to exercise this suite.`,
+    `Run \`pnpm run build:catalog\` (with LFS pulled) to exercise this suite.`,
   );
 }
 

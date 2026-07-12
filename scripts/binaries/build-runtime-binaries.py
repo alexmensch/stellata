@@ -716,12 +716,12 @@ def _iter_input_paths() -> Iterator[Path]:
 
 def run(force: bool) -> int:
     if not SRC_MULTIPLES.exists():
-        log(f"missing {SRC_MULTIPLES.relative_to(ROOT)} — run npm run build:binaries first")
+        log(f"missing {SRC_MULTIPLES.relative_to(ROOT)} — run pnpm run build:binaries first")
         return 1
     if not SRC_ROW_INDEX_MAP.exists():
         log(
             f"missing {SRC_ROW_INDEX_MAP.relative_to(ROOT)} — run "
-            "npm run build:catalog first",
+            "pnpm run build:catalog first",
         )
         return 1
     if not force and OUT_BIN.exists() and is_up_to_date(OUT_BIN, _iter_input_paths()):
@@ -770,7 +770,7 @@ def run(force: bool) -> int:
     if not assert_or_update_counts(stats_to_counts(stats), EXPECTED_COUNTS):
         log(
             f"counts assertion failed. If intentional, refresh with: "
-            f"{UPDATE_COUNTS_ENV_VAR}=1 npm run build:binaries-runtime"
+            f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime"
         )
         return 1
     return 0

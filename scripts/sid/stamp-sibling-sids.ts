@@ -42,7 +42,7 @@ function stamp(spec: SiblingArtifactSpec): void {
       `sid:stamp: ${errors.length} ${spec.ns} object(s) failed resolution:\n  ` +
         errors.join('\n  ') +
         `\nA renamed slug needs a bridge in data/sid/sameas-overrides.tsv; a new ` +
-        `object needs \`npm run sid:allocate\`.`,
+        `object needs \`pnpm run sid:allocate\`.`,
     );
     process.exit(1);
   }

@@ -45,6 +45,6 @@ runtime A_V is `density · avPerDensityPerPc · path_length_pc` with
 ## Refresh
 
 Re-run `scripts/dust/build-dust.py` against an updated upstream
-release — no npm target, see
+release — no pnpm target, see
 [`scripts/dust/README.md`](../../scripts/dust/README.md). The build
 does NOT hit the network at run time.

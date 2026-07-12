@@ -36,5 +36,5 @@ distance refinement.
 
 ## Refresh
 
-`npm run refresh:bailer-jones` →
+`pnpm run refresh:bailer-jones` →
 [`scripts/refresh/refresh-bailer-jones.py`](../../scripts/refresh/README.md).

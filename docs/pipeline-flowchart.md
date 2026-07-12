@@ -31,14 +31,14 @@ flowchart TD
     ZUCKER["Zucker 2020/2021 clouds<br/>data/molecular-clouds/"]
   end
 
-  RF["Layer 2 refresh — scripts/refresh/*.py<br/>manual · infrequent · atomic writes<br/>never wired into npm run build"]
+  RF["Layer 2 refresh — scripts/refresh/*.py<br/>manual · infrequent · atomic writes<br/>never wired into pnpm run build"]
   RF -.-> GAIA
   RF -.-> BJ
   RF -.-> HIP2
   RF -.-> SIMBAD
   RF -.-> MSC
 
-  subgraph BIN["STAGE 1 — scripts/binaries/build-binaries.py (npm run build:binaries)"]
+  subgraph BIN["STAGE 1 — scripts/binaries/build-binaries.py (pnpm run build:binaries)"]
     BIN1["Stage 1 — parse & index<br/>WDS summ/notes/refs, ORB6, MSC, SIMBAD xIDs"]
     BIN2["Stage 2 — resolve identity<br/>WDS component to Gaia source_id:<br/>orb6_hip &gt; athyg_gaia_native &gt; simbad_xid<br/>&gt; ccdm_hip &gt; position_match &gt; unresolved<br/>+ G-V mag-consistency gate<br/>+ binding-integrity audit (geometric arbitration)"]
     BIN3["Stage 3 — astrometry per component<br/>gaia_nss_systemic &gt; hip2_saturated<br/>&gt; hip2_pm_discrepant &gt; gaia_5p &gt; athyg_printed"]
@@ -65,7 +65,7 @@ flowchart TD
   MULT[("data/binaries/multiples.tsv")]
   BIN7 --> MULT
 
-  subgraph CAT["STAGE 2 — scripts/catalog/build-catalog.ts (npm run build:catalog)"]
+  subgraph CAT["STAGE 2 — scripts/catalog/build-catalog.ts (pnpm run build:catalog)"]
     CAT1["Ingest AT-HYG rows<br/>drop: missing ra/dec/dist, missing absmag<br/>carries pos_src/dist_src/mag_src/pm_src provenance"]
     CAT2["Distance refinement cascade (order-dependent)<br/>AT-HYG dist<br/>then Bailer-Jones override (Gaia-sourced rows only)<br/>then HIP2 full-precision redistance (HIP-sourced rows)<br/>then LMC kinematic override (15deg cone + dPM under 0.5 mas/yr, snaps to 49.594 kpc)<br/>then MAX_DIST_PC 50,000 pc cutoff<br/>(recomputes absmag at every layer)"]
     CAT3["Direction cascade — shared with binaries Stage 3<br/>gaia_5p &gt; gaia_nss_systemic &gt; hip2_saturated<br/>&gt; hip2_pm_discrepant &gt; athyg_printed<br/>(AT-HYG's own x0/y0/z0 never consumed)"]
@@ -102,7 +102,7 @@ flowchart TD
   CAT10 --> SEARCHOUT
   CAT10 --> RIMOUT
 
-  subgraph RTB["STAGE 3 — build-runtime-binaries.py (npm run build:binaries-runtime)"]
+  subgraph RTB["STAGE 3 — build-runtime-binaries.py (pnpm run build:binaries-runtime)"]
     RTB1["Join multiples.tsv with row-index-map<br/>emit Kepler elements per pair"]
   end
   MULT --> RTB1
@@ -135,7 +135,7 @@ flowchart TD
   BJ --> VAL1
   MULT --> VAL2
 
-  subgraph CLIENT["Client — npm run build:client (vite build)"]
+  subgraph CLIENT["Client — pnpm run build:client (vite build)"]
     CLI1["loaders/* — read catalog.bin, binaries.bin,<br/>clouds.json, local-group.json, dust chunks"]
     CLI2["epoch-advance-pure.ts<br/>J2016.0 to model clock t (baked per-star velocity)"]
     CLI3["BinaryOrbitField / EclipsePhotometryField<br/>per-frame Kepler walk"]

@@ -27,7 +27,7 @@ turns off cleanly until that lands.
 carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the loader
 rejects the artifact (warn + null) when any sid is missing or
 duplicated — a pre-stamp `local-group.json` needs
-`npm run build:local-group`. When the artifact loads, `main.ts`
+`pnpm run build:local-group`. When the artifact loads, `main.ts`
 attaches the `lg` SID domain over it
 (see `../util/sid-resolver/README.md`).
 

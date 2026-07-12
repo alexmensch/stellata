@@ -54,7 +54,7 @@ const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
-// generated). CI's plain `npm test` job skips; the Tier-A corpus job
+// generated). CI's plain `pnpm test` job skips; the Tier-A corpus job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
   existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)
@@ -66,7 +66,7 @@ if (!FIXTURES_READY) {
     `catalog.bin ${existsSync(DEFAULT_CATALOG_MANIFEST) ? 'present' : 'MISSING'}, ` +
     `multiples.tsv ${existsSync(MULTIPLES_TSV) ? 'present' : 'MISSING'}, ` +
     `binaries.bin ${existsSync(BINARIES_BIN) ? 'present' : 'MISSING'}. ` +
-    `Run \`npm run build:catalog\` + \`npm run build:binaries-runtime\` (with LFS pulled).`,
+    `Run \`pnpm run build:catalog\` + \`pnpm run build:binaries-runtime\` (with LFS pulled).`,
   );
 }
 

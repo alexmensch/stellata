@@ -216,7 +216,7 @@ rewritten mechanically by the allocation tool on every append.
 
 ### 4.4 Allocation
 
-`npm run sid:allocate` (B1, `scripts/sid/`) is the **only** writer of
+`pnpm run sid:allocate` (B1, `scripts/sid/`) is the **only** writer of
 ledger rows:
 
 1. Build the same-as graph (recomputed edges + stored edges) over all
@@ -236,7 +236,7 @@ The catalogue build itself **never mints**: `build-catalog.ts` (B2)
 resolves each record to its SID via the ledger and **hard-fails** on
 any unallocated object, with instructions to run `sid:allocate`.
 Same for the clouds / local-group / sol emitters (B3). This keeps
-`npm run build` deterministic and network-free, and makes every
+`pnpm run build` deterministic and network-free, and makes every
 allocation an explicit, reviewable diff.
 
 An object that disappears from a build (catalogue cut, WDS row
@@ -279,7 +279,7 @@ history (`.github/workflows/test.yml`; LFS objects come from the shared
 Actions cache, `.github/actions/lfs-cache`); in the bare `test` job it
 sees an LFS pointer stub and self-skips.
 
-The guard protects the ledger *file*; `npm run sid:check` (its own CI
+The guard protects the ledger *file*; `pnpm run sid:check` (its own CI
 check, against the built artifacts) protects its *consistency with the build*: a
 read-only allocation walk that fails on any would-mint object or
 orphaned synth key. The § 4.4 build hard-fail already blocks
@@ -368,7 +368,7 @@ Methodology: the risk set was derived from the built artifacts —
 records with a Gaia source_id, no HIP (`catalog.bin`), no HD/HR/GJ
 (`search-index.json`), excluding synthetic companions and Sol —
 snapshotted to `data/gaia/gaia_dr2_neighbourhood_request.tsv`
-(5,085 ids; B1 formalises the exporter). `npm run
+(5,085 ids; B1 formalises the exporter). `pnpm run
 refresh:gaia-dr2-neighbourhood` pulled all `dr2_neighbourhood` rows
 for those DR3 ids (5,912 rows; `angular_distance` is in **mas**),
 committed as `data/gaia/gaia_dr2_neighbourhood.tsv`. Classification
@@ -536,7 +536,7 @@ migration**.
    the source's cross-ID columns where possible (recomputed), curated
    lines in `sameas-overrides.tsv` where not.
 3. **Extend the allocation tool's input walk** to the new artifact
-   and run `npm run sid:allocate` — new classes append to the ledger;
+   and run `pnpm run sid:allocate` — new classes append to the ledger;
    the CI guard enforces append-only automatically.
 4. **Carry `sid` in the artifact** (in-record field, like
    clouds/LG/catalog) and register a resolver domain on attach

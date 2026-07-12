@@ -45,7 +45,7 @@ read.
 - `blackbody-lut-data.ts` — **AUTO-GENERATED** by
   `scripts/colour/blackbody-lut.ts`. Do not edit by hand. 256-entry
   blackbody → sRGB lookup indexed by B–V over [-0.4, 2]. Regenerate
-  via `npm run build:lut`.
+  via `pnpm run build:lut`.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.

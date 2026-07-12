@@ -1203,7 +1203,7 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
 
 Per the build's data-freshness policy (`scripts/README.md`
 § Frozen external data), refreshing the LVDB snapshot is an explicit
-manual step (curl + `npm run build:local-group --force`) — `npm run
+manual step (curl + `pnpm run build:local-group --force`) — `pnpm run
 build` never touches the network.
 
 Per the data-fidelity principle above (§ Scope principles), hand-curated overrides are
@@ -1403,7 +1403,7 @@ freshness policy in `scripts/README.md` § Frozen external data:
   each entry cites its source in the file.
 
 **Layer 2 — manual-run refresh scripts.** One per dataset, idempotent,
-**not** wired into `npm run build`. Per the freshness policy: external
+**not** wired into `pnpm run build`. Per the freshness policy: external
 catalogues update on their own clock (Gaia DR3 → DR4 transition window;
 WDS rolling daily; HIP2 frozen; SIMBAD rolling continuously), and
 freezing the inputs at commit time keeps the build reproducible long-

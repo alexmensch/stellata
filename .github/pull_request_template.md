@@ -11,10 +11,10 @@ detail lives below.
 
 <!-- Bulleted checklist of what you ran / what should be smoke-tested. -->
 
-- [ ] `npm run typecheck`
-- [ ] `npm test`
+- [ ] `pnpm run typecheck`
+- [ ] `pnpm test`
 - [ ] Manual smoke in browser
-- [ ] If you touched `scripts/build-catalog.ts` / `scripts/catalog-pure.ts`: `rm -f public/catalog-manifest.json && npm run build:catalog` — the count assertion against `scripts/build-catalog-expected.json` either passes (no change to the manifest) or fails with a diff. Drift the manifest deliberately with `UPDATE_BUILD_COUNTS=1 npm run build:catalog`.
+- [ ] If you touched `scripts/build-catalog.ts` / `scripts/catalog-pure.ts`: `rm -f public/catalog-manifest.json && pnpm run build:catalog` — the count assertion against `scripts/build-catalog-expected.json` either passes (no change to the manifest) or fails with a diff. Drift the manifest deliberately with `UPDATE_BUILD_COUNTS=1 pnpm run build:catalog`.
 
 ## Release notes
 

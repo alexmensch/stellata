@@ -94,8 +94,8 @@ touches scripts / data files unused by the deployed bundle → skip.
 
 External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +
 NSS + Apsis, Bailer-Jones DR3, Hipparcos-2 van Leeuwen, SIMBAD pulls)
-are refreshed by manual `npm run refresh:*` invocations, **not** by
-`npm run build` or the deploy workflow. The build reads the committed
+are refreshed by manual `pnpm run refresh:*` invocations, **not** by
+`pnpm run build` or the deploy workflow. The build reads the committed
 files under `data/<source>/` and never hits the network — see
 `scripts/README.md` § Frozen external data for the rationale.
 
@@ -138,10 +138,10 @@ On every push to `main`, `deploy.yml`:
 
 1. Compares `HEAD:package.json#version` against `HEAD~1:package.json#version`.
    No change → exits silently.
-2. Checks out with LFS, sets up Node 20 + Python 3, runs `npm ci`
-   and `npm run build` (binaries + catalog + binaries-runtime +
+2. Checks out with LFS, sets up Node 24 + Python 3, runs `pnpm install --frozen-lockfile`
+   and `pnpm run build` (binaries + catalog + binaries-runtime +
    clouds + local-group + dust-sync + client).
-3. Deploys to Cloudflare via `cloudflare/wrangler-action@v3`.
+3. Deploys to Cloudflare via `cloudflare/wrangler-action@v4`.
 4. Tags `v<version>` and pushes the tag.
 5. Extracts the `## Release notes` section from the merging PR's
    body and creates the GitHub release with `--notes-file`. Falls
@@ -174,5 +174,5 @@ git push origin "v$VERSION"
 # Use --notes-file with the PR's release-notes section, or
 # --generate-notes as a quick fallback.
 gh release create "v$VERSION" --title "v$VERSION" --generate-notes
-npm run deploy
+pnpm run deploy
 ```

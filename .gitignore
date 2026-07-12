@@ -24,7 +24,7 @@ public/binding-integrity-verdicts.tsv
 # scripts/dust/build-dust.py copies chunks here so Vite's publicDir serves them.
 public/dust/
 
-# Manual-run validation report emitted by `npm run validate:simbad`.
+# Manual-run validation report emitted by `pnpm run validate:simbad`.
 # Local-only — re-run when investigating drift.
 docs/validation-residuals.md
 

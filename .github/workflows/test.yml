@@ -25,12 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run typecheck
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
 
   # Full vitest without LFS content — the data-dependent suites see
   # pointer stubs and self-skip; they run for real in the jobs below.
@@ -39,12 +40,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm test
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
   # Reproducibility: the committed multiples.tsv (and the astrometry
   # request list) must be exactly what the committed pipeline code
@@ -62,7 +64,7 @@ jobs:
           git diff --exit-code -- data/binaries/multiples.tsv \
             data/gaia/gaia_astrometry_source_id_request.tsv || {
             echo "::error::committed pipeline outputs are stale — run" \
-              "'npm run build:binaries' and commit the regenerated files";
+              "'pnpm run build:binaries' and commit the regenerated files";
             exit 1;
           }
 
@@ -84,16 +86,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/lfs-cache
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-      - run: npm ci
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
       # Hard-fails on any record the SID ledger doesn't cover (the mint
       # side of ledger consistency; the drop side is the job below).
-      - run: npm run build:catalog
-      - run: npm run build:clouds
-      - run: npm run build:local-group
+      - run: pnpm run build:catalog
+      - run: pnpm run build:clouds
+      - run: pnpm run build:local-group
       - uses: actions/upload-artifact@v4
         with:
           name: public-artifacts
@@ -111,16 +114,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/lfs-cache
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-      - run: npm ci
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
           name: public-artifacts
           path: public/
-      - run: npm run sid:check
+      - run: pnpm run sid:check
 
   # Tier-A validation against the built artifacts: the known-stars
   # corpus plus the multi-star render-geometry regression (which needs
@@ -132,17 +136,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/lfs-cache
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-      - run: npm ci
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
           name: public-artifacts
           path: public/
-      - run: npm run build:binaries-runtime
-      - run: npx vitest run scripts/catalog/known-stars.test.ts scripts/catalog/multi-star-regression.test.ts scripts/catalog/sky-position.test.ts
+      - run: pnpm run build:binaries-runtime
+      - run: pnpm exec vitest run scripts/catalog/known-stars.test.ts scripts/catalog/multi-star-regression.test.ts scripts/catalog/sky-position.test.ts
 
   # Append-only ledger guard (needs full history for the merge-base
   # read) + the DR-reconciliation classifier against its committed
@@ -156,9 +161,10 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/lfs-cache
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts

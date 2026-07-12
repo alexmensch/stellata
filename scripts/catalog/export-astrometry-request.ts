@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   } else {
     console.warn(
       `WARNING: ${SRC_GAIA_HIP_XMATCH} not found — HIP-backfilled source_ids\n` +
-        `         will be omitted. Run npm run refresh:gaia-hip first.`,
+        `         will be omitted. Run pnpm run refresh:gaia-hip first.`,
     );
   }
 

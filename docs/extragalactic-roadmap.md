@@ -12,7 +12,7 @@ this doc carries the *decisions*.
 All source URLs verified live 2026-07-06 (retrieval flags in § Access
 flags). Frozen-data policy applies throughout: every catalogue is
 fetched once by a one-off `scripts/refresh-*` script excluded from
-`npm run build`, committed under `data/extragalactic/` (LFS above
+`pnpm run build`, committed under `data/extragalactic/` (LFS above
 ~1 MB), and the build never touches the network.
 
 ## Tier map

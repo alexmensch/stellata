@@ -20,7 +20,7 @@ reaches the network (frozen-data policy in `data/README.md`):
 curl -sSL \
   https://raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv \
   -o data/local-group/lvdb-snapshot.csv
-npm run build:local-group -- --force
+pnpm run build:local-group -- --force
 ```
 
 ## Override schema

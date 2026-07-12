@@ -749,7 +749,7 @@ export interface SidResolution {
    *  object is unresolved (keyless, would-mint, or a merge/kind conflict). */
   objectSids: number[];
   /** Non-empty iff any object is unallocated / keyless / conflicting. The
-   *  caller must run `npm run sid:allocate` to reconcile before shipping. */
+   *  caller must run `pnpm run sid:allocate` to reconcile before shipping. */
   errors: string[];
 }
 

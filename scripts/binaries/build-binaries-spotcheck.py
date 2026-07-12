@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Spot-check harness (npm run test:spotcheck) — asserts Stage 2
+"""Spot-check harness (pnpm run test:spotcheck) — asserts Stage 2
 resolution against data/binaries/spot_check_ground_truth.tsv."""
 
 from __future__ import annotations
