@@ -514,6 +514,11 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
 }
 .panel.collapsed .panel-header { border-bottom: none; }
 .panel.collapsed .panel-inner { display: none; }
+/* A collapsed panel is header-only; without this the column's flex
+ * shrink (min-height: 0 above) squashes the box below header height
+ * and overflow: hidden clips the header away — seen when a tall
+ * settings panel shared the column with the collapsed focus card. */
+.panel.collapsed { flex-shrink: 0; }
 .panel-inner {
   padding: 12px 14px;
   overflow-y: auto;
