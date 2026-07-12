@@ -31,6 +31,33 @@ log() { echo "[session-start] $*" >&2; }
 lfs_is_stub() { head -c 40 data/athyg/athyg_33_classic_ids.csv 2>/dev/null | grep -q "git-lfs"; }
 have_bd() { command -v bd >/dev/null 2>&1 && bd version 2>/dev/null | grep -q "${BD_VERSION#v}"; }
 
+# Install the pinned bd. Primary path is the prebuilt release binary (fast,
+# no toolchain) — this assumes the environment has open web access to GitHub
+# releases. Falls back to a from-source go build if the download fails.
+install_bd() {
+  local arch tmp tarball url bin
+  case "$(uname -m)" in
+    x86_64|amd64) arch=amd64 ;;
+    aarch64|arm64) arch=arm64 ;;
+    *) arch="" ;;
+  esac
+  if [ -n "$arch" ]; then
+    tarball="beads_${BD_VERSION#v}_$(uname -s | tr '[:upper:]' '[:lower:]')_${arch}.tar.gz"
+    url="https://github.com/gastownhall/beads/releases/download/${BD_VERSION}/${tarball}"
+    tmp="$(mktemp -d)"
+    if curl -fsSL "$url" -o "$tmp/$tarball" && tar -xzf "$tmp/$tarball" -C "$tmp"; then
+      bin="$(find "$tmp" -type f -name bd | head -1)"
+      if [ -n "$bin" ] && install -m 0755 "$bin" /usr/local/bin/bd; then
+        rm -rf "$tmp"; return 0
+      fi
+    fi
+    rm -rf "$tmp"
+  fi
+  log "release binary unavailable — falling back to go build"
+  CGO_ENABLED=1 GOBIN=/usr/local/bin GOFLAGS="-tags=gms_pure_go" \
+    go install "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}"
+}
+
 # --- git-lfs binary (quick) ---
 if ! command -v git-lfs >/dev/null 2>&1; then
   log "installing git-lfs"
@@ -50,9 +77,8 @@ if command -v pnpm >/dev/null 2>&1; then
   pnpm install --prefer-offline >&2 & pids="$pids $!"
 fi
 if ! have_bd; then
-  log "installing bd ${BD_VERSION} (go build, one-time)"
-  CGO_ENABLED=1 GOBIN=/usr/local/bin GOFLAGS="-tags=gms_pure_go" \
-    go install "github.com/steveyegge/beads/cmd/bd@${BD_VERSION}" >&2 & pids="$pids $!"
+  log "installing bd ${BD_VERSION}"
+  install_bd >&2 & pids="$pids $!"
 fi
 for p in $pids; do wait "$p" || log "an install step failed — see output above"; done
 

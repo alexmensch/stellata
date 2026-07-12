@@ -20,7 +20,7 @@ Cloud sessions have two provisioning surfaces with different caching
 | **SessionStart hook** (`hooks/session-start.sh`) | every session, after launch | No |
 
 The heavy, bandwidth-costly work (the ~630 MB `git lfs pull`, the `bd`
-compile, the Dolt clone) must run in the **Setup script** so it lands in
+install, the Dolt clone) must run in the **Setup script** so it lands in
 the cached snapshot and is **not** re-downloaded every session. GitHub LFS
 bandwidth is billed to the repo owner, so per-session pulls are expensive;
 per-cache-build pulls (~weekly) are not.
@@ -47,3 +47,8 @@ database expects. A newer `bd` refuses to auto-migrate a remote-backed
 clone (it forks the schema and breaks `bd dolt pull`/push). Bump the pin
 only in lockstep with a deliberate, pushed schema migration on every other
 machine.
+
+bd installs from the prebuilt release binary for `BD_VERSION`, which needs
+web access to GitHub releases — fine under the environment's **permissive**
+network setting. If that download fails it falls back to a from-source
+`go install` (Go is pre-installed).
