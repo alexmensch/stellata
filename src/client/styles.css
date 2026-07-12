@@ -204,6 +204,10 @@ body[data-controls-hidden] #poi-cards,
 body[data-controls-hidden] #focus-card {
   display: none;
 }
+/* #poi-cards normally carries the column's floor-pinning margin-top:
+ * auto; with it display: none'd the bottom group takes over, so the
+ * meta readout / time scrubber stay at the column floor. */
+body[data-controls-hidden] .ui-top-bottom { margin-top: auto; }
 .controls-restore-btn {
   display: none;
   position: fixed;
