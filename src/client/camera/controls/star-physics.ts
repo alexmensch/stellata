@@ -14,7 +14,11 @@ import {
 import { parkDistance } from '../focus/focus-transition';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
-import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import {
+  apparentMagnitude,
+  perceptualAppSizePx,
+  perceptualDmEff,
+} from '../../solar-system/perceptual-magnitude';
 import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-
@@ -41,6 +45,7 @@ export interface StarPhysicsUniforms {
   uModelDays: { value: number };
   uModelDaysPerRealSec: { value: number };
   uMinPeriodSec: { value: number };
+  uSizeKnee: { value: number };
 }
 
 // Subset consumed by getChartDiscParams.
@@ -170,14 +175,12 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
     radiusFactor = Math.pow(10, -magMod / 5);
   }
 
-  // √Δm curve — must match star.vert.glsl line "appSize = mix(...sqrt(brightness))"
-  // exactly, otherwise the SVG focus ring + disc mask drift from the
-  // rendered star edges.
-  const brightness = Math.max(
-    0,
-    Math.min(1, (filter.maxAppMag - appMag) / Math.max(filter.sizeSpan, 0.001)),
-  );
-  const appSize = filter.sizeMin + Math.sqrt(brightness) * (filter.sizeMax - filter.sizeMin);
+  // Same perceptualDmEff soft-knee + √Δm curve as star.vert.glsl — the
+  // shared CPU mirrors in solar-system/perceptual-magnitude.ts. A local
+  // reimplementation here previously hard-clamped brightness at sizeMax
+  // and undersized the focus ring / pick radius on the brightest stars.
+  const dMEff = perceptualDmEff(appMag, filter.maxAppMag, filter.sizeSpan, u.uSizeKnee.value);
+  const appSize = perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, filter.sizeSpan);
 
   return Math.max(appSize, physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor));
 }

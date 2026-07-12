@@ -21,6 +21,12 @@ import type { StellataEventMap } from './stellata';
 //
 // The regex matches both `this.bus.emit('foo',` (stellata.ts) and
 // `this.deps.bus.emit('foo',` (controllers wiring the bus through deps).
+// It keys on the receiver being named exactly `bus`: renaming the field
+// or aliasing emit through another identifier (`const b = this.bus`)
+// empties the match set and fails every has-emit-site case below with
+// no obvious cause — update the regex in lockstep with any such rename.
+// tsc still type-checks each emit against StellataEventMap regardless;
+// this scan only guards that every declared event has a live emitter.
 
 const EVENT_NAMES_MAP: Record<keyof StellataEventMap, true> = {
   focus: true,

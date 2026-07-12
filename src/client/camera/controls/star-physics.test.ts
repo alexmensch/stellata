@@ -55,6 +55,7 @@ function makeUniforms(overrides: Partial<{
   uModelDays: number;
   uModelDaysPerRealSec: number;
   uMinPeriodSec: number;
+  uSizeKnee: number;
 }> = {}) {
   return {
     uFovYRad: { value: overrides.uFovYRad ?? Math.PI / 3 },           // 60°
@@ -64,6 +65,7 @@ function makeUniforms(overrides: Partial<{
     // so the anti-strobe floor is negligible and every real period rules.
     uModelDaysPerRealSec: { value: overrides.uModelDaysPerRealSec ?? 1 / 86400 },
     uMinPeriodSec: { value: overrides.uMinPeriodSec ?? 4 },
+    uSizeKnee: { value: overrides.uSizeKnee ?? 16 },
   };
 }
 
@@ -227,6 +229,44 @@ describe('star-physics / renderedSizePx', () => {
     const brightness = Math.max(0, Math.min(1, (6 - appMag) / 8));
     const appSize = 1.5 + Math.sqrt(brightness) * (6 - 1.5);
     expect(got).toBe(appSize);
+  });
+
+  it('grows past sizeMax through the soft knee when Δm exceeds sizeSpan', () => {
+    // Bright supergiant-like row: Δm = maxAppMag − appMag lands well past
+    // sizeSpan, where the shader's Michaelis–Menten knee keeps the disc
+    // growing. The old CPU mirror hard-clamped at sizeMax here.
+    const cat = makeCatalog(1, c => {
+      c.physicalRadius[0] = 1;
+      c.absmag[0] = -5;
+    });
+    const camPos = new THREE.Vector3(5, 0, 0);
+    const uniforms = makeUniforms();
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8, maxAppMag: 6 });
+    const got = renderedSizePx({
+      catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
+    });
+    const appMag = cat.absmag[0] + 5 * (Math.log10(5) - 1);
+    const dM = 6 - appMag;
+    const over = dM - 8;
+    const dMEff = 8 + (16 * over) / Math.max(16 + over, 1e-6);
+    const expected = 1.5 + Math.sqrt(dMEff / 8) * (6 - 1.5);
+    expect(dM).toBeGreaterThan(8);
+    expect(got).toBe(expected);
+    expect(got).toBeGreaterThan(filter.sizeMax);
+  });
+
+  it('recovers the hard clamp at sizeMax when uSizeKnee = 0', () => {
+    const cat = makeCatalog(1, c => {
+      c.physicalRadius[0] = 1;
+      c.absmag[0] = -5;
+    });
+    const camPos = new THREE.Vector3(5, 0, 0);
+    const uniforms = makeUniforms({ uSizeKnee: 0 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8, maxAppMag: 6 });
+    const got = renderedSizePx({
+      catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
+    });
+    expect(got).toBe(filter.sizeMax);
   });
 
   it('returns the physSize when the camera is close enough that R/d dominates', () => {

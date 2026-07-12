@@ -269,7 +269,16 @@ def build_output_row(
     formats every float to its stable decimal width so write_tsv produces
     byte-identical output across re-runs."""
     plx_value = rl.coerce_masked(row["plx_value"])
-    v_mag = float(rl.coerce_masked(row["v_mag"]))
+    v_mag_raw = rl.coerce_masked(row["v_mag"])
+    if v_mag_raw is None:
+        # The query's 'f."V" IS NOT NULL' WHERE clause should make this
+        # unreachable; a TAP planner quirk or upstream change would
+        # otherwise surface as an opaque float(None) TypeError mid-write.
+        raise ValueError(
+            f"NULL v_mag for SIMBAD oid {int(row['oid'])} — a row passed "
+            "the 'V IS NOT NULL' filter without a V magnitude"
+        )
+    v_mag = float(v_mag_raw)
     # Negative or zero parallaxes are unphysical for stellar distances; treat
     # them as "no distance" rather than emitting a negative pc. SIMBAD does
     # publish negative plx values for low-S/N sources.
