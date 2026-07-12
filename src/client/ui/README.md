@@ -129,9 +129,10 @@ Two layers of collapse: the panel as a whole (top-level, key
 data-group="...">` independently (key
 `stellata.group-collapsed.<name>`). Both default to expanded;
 both persist to `localStorage`. Wired in `panel-layout.ts`, whose
-exported `bindCollapse` helper carries the header-click + persistence
-pattern — the focus card (`../focus-card/README.md`) is the third
-consumer. The
+exported `bindCollapse` helper carries the header-click pattern with
+optional persistence — the focus card (`../focus-card/README.md`) and
+the POI cards (persistence-free, created collapsed) are the other
+consumers. The
 group header is the click target — `<header class="group-header">`
 with an `<h3>` title and a chevron `<button class="group-toggle">`.
 `.row-actions` (reset / all / none) live inside `.group-body`, not
@@ -209,13 +210,17 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   untouched.
 - `.ui-top` — fixed top-right, `flex-direction: column`, bottom-bounded
   at the same 16px page margin as `.ui-bottom`. Children in DOM order:
-  topbar ("Navigate" heading + Focus/To search), panel (Settings), then
-  the `.ui-top-bottom` group — focus card + meta (star count / time
-  scrubber) — pinned to the column floor by a single
-  `margin-top: auto`. Because panel is a flex child below the topbar,
-  it can never overlap it, and an expanding scrubber pushes the focus
-  card up through normal flex layout — no fixed clearances, no
-  measurement.
+  topbar ("Navigate" heading + Focus/To search), panel (Settings), the
+  `#poi-cards` stack (`../poi/README.md` § POI cards), then the
+  `.ui-top-bottom` group — focus card + meta (star count / time
+  scrubber). A single `margin-top: auto` on the POI stack pins stack +
+  bottom group to the column floor; the stack grows upward into the
+  free space and, on overflow, scrolls alone — its `flex-shrink` is
+  orders of magnitude above the panel's, so a tall stack can never
+  compress the settings panel or the bottom group. Because panel is a
+  flex child below the topbar, it can never overlap it, and an
+  expanding scrubber pushes the focus card up through normal flex
+  layout — no fixed clearances, no measurement.
 - `.ui-bottom` — fixed full-width along the bottom, holding the
   scale-bar widget (left; see § Bottom-left widget below).
 - `.meta` is the catalog count (`.meta-count`, e.g. "313,242 stars") +
@@ -272,7 +277,7 @@ the keydown for the exiting keystroke).
 
 `controls-hidden.ts` toggles `body[data-controls-hidden]`, which hides
 the right-hand column's interactive controls (`#topbar`, `#panel`,
-`#focus-card`). Everything else — brand box, meta readout / time
+`#poi-cards`, `#focus-card`). Everything else — brand box, meta readout / time
 scrubber (also in the column, kept visible), scale bar, tooltip, warp
 button, and the `#overlay` SVG (constellations, star names, focus
 ring) — stays visible. `#controls-restore-btn` is a fixed top-right box, `display:

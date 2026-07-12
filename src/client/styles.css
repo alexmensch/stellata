@@ -96,13 +96,31 @@ html, body {
   pointer-events: none;
 }
 .ui-top > * { pointer-events: auto; }
-/* Bottom group of the right-hand column: focus card + meta (star count /
- * time scrubber). One margin-top: auto pins the whole group to the
- * column's floor; the column gap separates its members — no fixed
- * clearances, so an expanding scrubber pushes the focus card up
- * naturally. */
-.ui-top-bottom {
+/* POI card stack — sits directly above the bottom group and carries the
+ * column's margin-top: auto, so the stack + bottom group stay pinned to
+ * the floor and the stack grows upward into the free space. */
+.poi-cards {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  /* Shrink factor ≫ the panel's 1: column overflow from a tall stack is
+   * absorbed here (the stack scrolls) instead of compressing the
+   * settings panel or the bottom group. Empty stack = zero basis = no
+   * shrink share, so the no-POI layout is unchanged. */
+  flex: 0 10000 auto;
+  overflow-y: auto;
+  pointer-events: none;
+}
+/* flex-shrink: 0 so cards overflow (and scroll) rather than squash. */
+.poi-cards > * { pointer-events: auto; flex-shrink: 0; }
+
+/* Bottom group of the right-hand column: focus card + meta (star count /
+ * time scrubber). Floor-pinned via .poi-cards' margin-top: auto above;
+ * the column gap separates its members — no fixed clearances, so an
+ * expanding scrubber pushes the focus card up naturally. */
+.ui-top-bottom {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -182,9 +200,14 @@ html, body {
  * the column floor by its .ui-top-bottom wrapper. */
 body[data-controls-hidden] #topbar,
 body[data-controls-hidden] #panel,
+body[data-controls-hidden] #poi-cards,
 body[data-controls-hidden] #focus-card {
   display: none;
 }
+/* #poi-cards normally carries the column's floor-pinning margin-top:
+ * auto; with it display: none'd the bottom group takes over, so the
+ * meta readout / time scrubber stay at the column floor. */
+body[data-controls-hidden] .ui-top-bottom { margin-top: auto; }
 .controls-restore-btn {
   display: none;
   position: fixed;
@@ -496,7 +519,8 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   color: var(--fg);
   flex: 0 0 auto;
 }
-.panel-toggle {
+.panel-toggle,
+.panel-close {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--fg-dim);
@@ -507,8 +531,10 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   font-size: 14px;
   cursor: pointer;
   padding: 0;
+  flex: 0 0 auto;
 }
-.panel-toggle:hover {
+.panel-toggle:hover,
+.panel-close:hover {
   color: var(--fg);
   border-color: var(--border-strong);
 }
@@ -534,6 +560,10 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   text-transform: none;
   letter-spacing: 0.08em;
   font-size: 13px;
+}
+.card-title {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .focus-card-inner {
   font-size: 12px;
