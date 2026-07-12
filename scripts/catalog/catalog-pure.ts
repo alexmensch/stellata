@@ -579,6 +579,17 @@ export function spectralFromAbsmag(mv: number): SpectralInfo {
 
 // ---- GCVS variable-star catalogue parsing -------------------------------
 
+// Split pipe-delimited catalogue text into per-line trimmed-cell arrays.
+// Blank / whitespace-only lines are skipped; CRLF and LF both accepted.
+export function splitPipeDelimited(text: string): string[][] {
+  const out: string[][] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    out.push(line.split('|').map((f) => f.trim()));
+  }
+  return out;
+}
+
 // GCVS designations in both files are space-padded fixed-width, e.g.
 // "R     And *" or "Z     Peg". Trailing asterisk is an indicator we
 // don't need; collapse internal whitespace to a single space.

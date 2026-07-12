@@ -7,6 +7,7 @@ import {
   isPlanetaryTransitOnly,
   normalizeGcvsName,
   parseGcvsNumber,
+  splitPipeDelimited,
   VAR_TYPE_UNKNOWN,
 } from './catalog-pure';
 import type { Star } from './stars-parse';
@@ -40,14 +41,10 @@ const GCVS_CROSSID_COL_LEFT = 0;   // "<CATALOG> <NUM>"
 const GCVS_CROSSID_COL_RIGHT = 1;  // "= <GCVS_NAME>"
 
 // Both GCVS files (gcvs5.txt and crossid.txt) are pipe-delimited with
-// trailing whitespace inside each cell. Yields per-line trimmed-field
-// arrays. Callers are expected to gate on file existence before calling.
-function* readPipeDelimited(path: string): Iterable<string[]> {
-  const text = readFileSync(path, 'utf8');
-  for (const line of text.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    yield line.split('|').map((f) => f.trim());
-  }
+// trailing whitespace inside each cell. Callers are expected to gate on
+// file existence before calling.
+function readPipeDelimited(path: string): string[][] {
+  return splitPipeDelimited(readFileSync(path, 'utf8'));
 }
 
 export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
@@ -112,19 +109,16 @@ export function parseGcvsCrossref(srcPath: string): VarStarXref {
 
 // Bridge the HIP-keyed half of the crossref onto gaia_source_id via the
 // canonical Gaia DR3 ↔ HIP cross-walk. Mutates xref.byGaia in place.
-// Returns the bridged byGaia map (size = how many HIP xrefs found a
-// gaia_source_id in the walk).
 export function bridgeGcvsByGaia(
   xref: VarStarXref,
   hipToGaia: Map<number, string>,
-): Map<string, string> {
+): void {
   xref.byGaia.clear();
   for (const [hip, gcvsName] of xref.byHip) {
     const gaia = hipToGaia.get(hip);
     if (!gaia) continue;
     xref.byGaia.set(gaia, gcvsName);
   }
-  return xref.byGaia;
 }
 
 export interface ApplyVariabilityResult {

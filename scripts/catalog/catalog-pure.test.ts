@@ -21,6 +21,7 @@ import {
   GAIA_BINDING_G_MINUS_V_REJECT_MAG,
   normalizeGcvsName,
   parseGcvsNumber,
+  splitPipeDelimited,
   classifyGcvsVarType,
   isPlanetaryTransitOnly,
   VAR_TYPE_UNKNOWN,
@@ -786,6 +787,34 @@ describe('catalog-pure / absmagFromSpectral', () => {
     expect(mv('DA1.9')).toBeNull();                      // white dwarf
     expect(mv('C5,2e')).toBeNull();                      // carbon
     expect(absmagFromSpectral(SPECTRAL_UNKNOWN)).toBeNull();
+  });
+});
+
+describe('catalog-pure / splitPipeDelimited', () => {
+  it('splits lines on | and trims each cell', () => {
+    expect(splitPipeDelimited('R     And  |M   | 5.8 ')).toEqual([['R     And', 'M', '5.8']]);
+  });
+
+  it('skips blank and whitespace-only lines', () => {
+    expect(splitPipeDelimited('a|b\n\n   \nc|d')).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
+  });
+
+  it('accepts CRLF line endings', () => {
+    expect(splitPipeDelimited('a|b\r\nc|d\r\n')).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
+  });
+
+  it('returns empty for empty input', () => {
+    expect(splitPipeDelimited('')).toEqual([]);
+  });
+
+  it('keeps empty interior cells', () => {
+    expect(splitPipeDelimited('a| |b||')).toEqual([['a', '', 'b', '', '']]);
   });
 });
 
