@@ -494,17 +494,19 @@
         </div>
       </aside>
 
-      <div class="poi-cards" id="poi-cards"></div>
-
       <div class="ui-top-bottom">
-        <aside class="panel focus-card" id="focus-card" hidden>
-          <div class="panel-header" id="focus-card-header">
-            <button class="panel-close" id="focus-card-close" type="button" aria-label="Unfocus">×</button>
-            <span id="focus-card-title" class="card-title"></span>
-            <button class="panel-toggle" id="focus-card-toggle" type="button" aria-label="Collapse object info" aria-expanded="true">−</button>
-          </div>
-          <div class="panel-inner focus-card-inner" id="focus-card-inner"></div>
-        </aside>
+        <div class="card-stack" id="card-stack" hidden>
+          <div class="card-strips" id="card-strips"></div>
+          <aside class="panel focus-card" id="front-card">
+            <div class="panel-header" id="front-card-header">
+              <button class="panel-close" id="front-card-close" type="button" aria-label="Unfocus">×</button>
+              <span id="front-card-title" class="card-title"></span>
+              <span id="front-card-badge" class="card-badge"></span>
+              <button class="panel-toggle" id="front-card-toggle" type="button" aria-label="Collapse object info" aria-expanded="true">−</button>
+            </div>
+            <div class="panel-inner focus-card-inner" id="front-card-inner"></div>
+          </aside>
+        </div>
         <div class="meta" id="meta" hidden></div>
       </div>
     </div>

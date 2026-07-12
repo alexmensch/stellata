@@ -1,21 +1,18 @@
 # Points of interest (POIs)
 
-User-pinned stars. This folder owns the pin **state** and the per-POI
-info cards; the SVG rendering (rings, labels, off-screen arrows) lives
-in `../overlays/poi-overlay.ts`.
+User-pinned stars. This folder owns the pin **state**; the SVG
+rendering (rings, labels, off-screen arrows) lives in
+`../overlays/poi-overlay.ts`, and the per-POI info cards are members of
+the card rolodex (`../focus-card/README.md` § Rolodex behaviour).
 
 ## Files
 
 - `poi-store.ts` (+ test) — the pinned-star list and its mutation
   rules. `Stellata` composes one instance and exposes thin shims
   (`getPois` / `togglePoi` / `setPois` / `clearPois`); every consumer
-  (overlay, URL state, click dispatch) goes through those.
+  (overlay, URL state, click dispatch, rolodex) goes through those.
 - `click-ladder-pure.ts` (+ test) — decision table for the
   navigate-mode click ladder below.
-- `poi-card-stack.ts` — one info card per pin, stacked above the focus
-  card (§ POI cards below).
-- `poi-card-stack-pure.ts` (+ test) — the stack's reconcile plan
-  (create / remove / newest-first order).
 
 ## Click ladder (navigate mode)
 
@@ -57,23 +54,11 @@ not the store's.
 
 ## POI cards
 
-One card per pin, rendered through the shared focus-card machinery
-(`../focus-card/card-body.ts` + the star provider), in the `#poi-cards`
-stack directly above the `.ui-top-bottom` group (layout in
-`../ui/README.md` § Layout containers). Cards render in BOTH camera
-modes — unlike the focus card, which observe mode hides.
-
-- Newest pin on top. Content renders once at pin time; LIVE rows
-  (camera distance, apparent mag) re-evaluate per `'frame'` only while
-  the card is expanded and visible — same gating as the focus card.
-- Always created minimized; collapse state is per-instance and NOT
-  persisted (`bindCollapse` without a storageKey).
-- Header × on the LEFT unpins (`togglePoi`). `#focus-card` carries the
-  matching left-side × (= unfocus) so the headers align.
-- The focused star's card is `hidden` while focused — pin retained,
-  card returns on unfocus. Mirrors the overlay suppressing the focused
-  star's ring/label/arrow.
-- No camera actions from cards: expand/collapse and × only.
-- Overflow scrolls the stack alone — the settings panel and
-  meta/time-scrubber are never compressed (flex mechanics in
-  `styles.css` `.poi-cards`).
+One card per pin, a member of the card rolodex — a single card-sized
+stack shared with the focus card, one visible front card and the rest
+as promotable header strips. Behaviour (promote, auto-front,
+focused-star suppression, strip compression, collapse) is documented
+in `../focus-card/README.md` § Rolodex behaviour; layout in
+`../ui/README.md` § Layout containers. POI cards render in BOTH camera
+modes — unlike the focus card, which observe mode hides. No camera
+actions from cards: promote, collapse, and × (unpin) only.
