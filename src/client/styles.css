@@ -893,7 +893,7 @@ input[type="range"]::-moz-range-thumb {
   stroke-width: 1.4;
   pointer-events: none;
 }
-.dist-label, .dist-warp-text {
+.dist-label {
   fill: rgba(249, 168, 212, 0.7);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -906,13 +906,6 @@ input[type="range"]::-moz-range-thumb {
 #dist-ui {
   pointer-events: auto;
   cursor: pointer;
-}
-.dist-warp-text {
-  opacity: 0;
-  transition: opacity 0.14s ease;
-}
-#dist-ui:hover .dist-warp-text {
-  opacity: 1;
 }
 
 /* Galactic locator arrows (Sol / GC). Translucent solid strokes — no dark
@@ -1233,8 +1226,7 @@ body.monochrome #dist-line {
 body.monochrome .focus-ring {
   stroke: rgba(31, 35, 48, 0.6);
 }
-body.monochrome .dist-label,
-body.monochrome .dist-warp-text {
+body.monochrome .dist-label {
   fill: rgba(31, 35, 48, 0.9);
   stroke: rgba(255, 255, 255, 0.9);
 }

@@ -18,7 +18,8 @@ src/client/overlays/
                                   vertex discs.
   distance-vector-overlay.ts      Yellow distance line A → B with
                                   near-plane clipping; chevrons +
-                                  warp-trigger label.
+                                  distance label (click = aim at the
+                                  destination; warp stays on W).
   focus-ring-overlay.ts           SVG ring around the focused star.
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
                                   src/client/galactic/README.md.

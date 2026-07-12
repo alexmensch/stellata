@@ -280,9 +280,9 @@ chain of repeated chevrons. Symmetric 28 px insets from each
 star (was asymmetric 28/14). Label format unified to
 `<destination name> · <distance>` (matches Sol/GC's `<target> ·
 <distance>` form), and the label is anchored at the chevron tip with
-the same offset as the Sol/GC labels rather than at the vector midpoint.
-The warp suffix follows by full label width (label switched from
-`text-anchor="middle"` to `start`).
+the same offset as the Sol/GC labels rather than at the vector
+midpoint. Clicking it aims the camera at the destination, matching
+the Sol/GC label affordance (warp stays on the `W` key).
 
 **State + UI:** two independent FilterState booleans:
 

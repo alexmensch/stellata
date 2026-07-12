@@ -26,18 +26,20 @@ The warp consumes focusable objects through the `FocusTarget` contract
   sibling `shiftArrivalWaypoints` lives in `../arrival/camera-motion.ts`.
 - `warp-tuning.ts` — tuning section in the debug panel; resolves the
   `warpArrivalEaseFn(ctx)` curve at warp-start.
-- `warp-button.ts` — yellow distance-label → warp trigger click
-  handler + "→ Warp" hover suffix.
+- `warp-button.ts` — W-key warp trigger, the in-flight "Skip" pill,
+  and the `body.warping` CSS class.
 
 ## Warp animation
 
-Trigger: click the yellow distance label on the SVG overlay (hovering
-reveals a "→ Warp" suffix), or press `W`. Skip: the muted ghost pill
-at top-centre (shown only while warping), or `Esc` / `Space`. Click-
-tip-to-travel routes through `focusStar(idx)` for consistency with
-search-select (parks at `parkDistForStar(idx)` — same auto-park every
-landing uses; lerps over `FOCUS_LERP_MS` or stays put when already
-inside park; see `../focus/README.md` § Focus-park lerp).
+Trigger: press `W` while a distance vector is drawn. (Clicking the
+distance label aims the camera at the destination — the Sol/GC-label
+affordance — it does NOT warp.) Skip: the muted ghost pill at
+top-centre (shown only while warping), or `Esc` / `Space`.
+Double-click-to-travel routes through `focusStar(idx)` for
+consistency with search-select (parks at `parkDistForStar(idx)` —
+same auto-park every landing uses; lerps over `FOCUS_LERP_MS` or
+stays put when already inside park; see `../focus/README.md`
+§ Focus-park lerp).
 
 Two- or three-phase animation in `WarpController.updateWarp` (called
 per frame via `WarpController.tick(nowMs)`), depending on whether the
@@ -242,17 +244,6 @@ for any two very-close stars, so the arrival is identical to the proven
 close-pair path. Do **not** re-add a degenerate `setFocus`/`swapObserveAnchor`
 shortcut: changing focus outside `finishWarp` leaves `controls.target`
 stale and jolts the focal-frame ride.
-
-## Distance-label-as-warp-trigger UI
-
-`index.html` wraps the distance label and a static `→ Warp` sibling
-`<text>` in a `<g id="dist-ui">`. The group has `pointer-events: auto`
-and `:hover` reveals the warp suffix via CSS opacity transition. The
-label itself is still `text-anchor="middle"` and positioned dead-
-centre on the measurement vector; the warp suffix is computed each
-frame as `mx + label.getComputedTextLength()/2 + WARP_GAP_PX` so the
-distance stays visually anchored while the suffix extends to the
-right.
 
 ## Public surface
 
