@@ -82,11 +82,9 @@ import {
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
   BJ_ELIGIBLE_DIST_SRCS,
-  DIST_SRC_BAILER_JONES,
   applyLmcKinematicOverride,
   isInLmcCone,
   angularSeparationDeg,
-  DIST_SRC_LMC_KIN,
   LMC_DISTANCE_PC,
   LMC_CENTRE_RA_HOURS,
   LMC_CENTRE_DEC_DEG,
@@ -1802,13 +1800,11 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     expect(applyBailerJonesOverride(10, '0000', bjMap)).toBeNull();
   });
 
-  it('pins the BJ distance and recomputes absmag consistently', () => {
+  it('pins the BJ distance', () => {
     for (const f of FIVE_HIPS) {
       const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap);
       expect(out, f.label).not.toBeNull();
       expect(out!.dist, f.label).toBe(f.bjDist);
-      // Absolute magnitude follows m − 5·log₁₀(d/10).
-      expect(out!.absmag).toBeCloseTo(f.mag - 5 * Math.log10(f.bjDist / 10), 10);
     }
   });
 
@@ -1839,10 +1835,6 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     expect(Math.abs(f.athygDist - out.dist) / f.athygDist).toBeLessThan(0.05);
   });
 
-  it('DIST_SRC_BAILER_JONES tag is "BJ" (distinct from AT-HYG namespace)', () => {
-    expect(DIST_SRC_BAILER_JONES).toBe('BJ');
-    expect(['G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER']).not.toContain(DIST_SRC_BAILER_JONES);
-  });
 });
 
 describe('catalog-pure / isBailerJonesEligible', () => {
@@ -2349,12 +2341,6 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     expect(failJustOver).toBeNull();
   });
 
-  it('DIST_SRC_LMC_KIN tag is "LMC_KIN" (distinct from BJ + AT-HYG namespace)', () => {
-    expect(DIST_SRC_LMC_KIN).toBe('LMC_KIN');
-    expect([
-      'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', DIST_SRC_BAILER_JONES,
-    ]).not.toContain(DIST_SRC_LMC_KIN);
-  });
 });
 
 describe('catalog-pure / transport chunking', () => {

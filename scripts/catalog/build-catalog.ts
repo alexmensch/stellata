@@ -20,8 +20,6 @@ import {
   type SimbadWdsXidIndex,
   buildHipToIndex,
   inferBinaries,
-  DIST_SRC_BAILER_JONES,
-  DIST_SRC_LMC_KIN,
   FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
@@ -467,14 +465,14 @@ async function main() {
     const pct = ((stats.bjOverridden / stats.bjEligible) * 100).toFixed(1);
     console.log(
       `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
-        `Gaia-inverse-distance stars (${pct}%) → dist_src='${DIST_SRC_BAILER_JONES}'`,
+        `Gaia-inverse-distance stars (${pct}%)`,
     );
   }
   if (stats.lmcCandidates > 0) {
     const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
     console.log(
       `  LMC kinematic override: ${stats.lmcOverridden} / ${stats.lmcCandidates} ` +
-        `LMC-cone stars (${pct}%) → dist_src='${DIST_SRC_LMC_KIN}'`,
+        `LMC-cone stars (${pct}%)`,
     );
   }
   if (stats.gaiaSourceIdBackfilled > 0) {

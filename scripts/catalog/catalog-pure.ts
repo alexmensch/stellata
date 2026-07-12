@@ -1324,11 +1324,6 @@ export function inferBinaries(
 
 // ---- Bailer-Jones (DR3) distance override -------------------------------
 
-// dist_src tag emitted when a star's distance was supplanted by the
-// Bailer-Jones 2021 (DR3) photogeometric / geometric posterior. Joins
-// AT-HYG's existing namespace (G_R3, G_R2, HIP, GJ, N, OTHER).
-export const DIST_SRC_BAILER_JONES = 'BJ';
-
 // AT-HYG `dist_src` values whose underlying distance is a Gaia
 // inverse-parallax estimate. Only these rows are eligible for the
 // Bailer-Jones override — for low-S/N Gaia parallaxes the inverse is
@@ -1573,7 +1568,6 @@ export function resolveGaiaSourceId(
 export function parseBailerJonesTsv(text: string): Map<string, number> {
   const out = new Map<string, number>();
   const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return out;
   const header = lines[0].split('\t').map((h) => h.trim());
   const idIdx = header.indexOf('source_id');
   const geoIdx = header.indexOf('r_med_geo');
@@ -1786,8 +1780,7 @@ export function buildDistanceOverride(mag: number, distPc: number): DistanceOver
 }
 
 /** When `gaiaSourceId` has a Bailer-Jones entry, returns the override
- *  for that star; otherwise null. The caller swaps the fields into the
- *  star record and tags `dist_src = "BJ"`. */
+ *  for that star; otherwise null. */
 export function applyBailerJonesOverride(
   mag: number,
   gaiaSourceId: string | null,
@@ -1800,14 +1793,6 @@ export function applyBailerJonesOverride(
 }
 
 // ---- LMC kinematic distance override -------------------------------------
-
-// dist_src tag for stars whose distance was set by the LMC kinematic
-// filter (sky cone + bulk proper motion). Runs AFTER the Bailer-Jones
-// override so it wins on stars that also have a Gaia source_id — without
-// this layer, B-J's smooth Galactic prior smears LMC supergiants to
-// ~5-20 kpc (B-J's prior has no LMC), regressing today's behaviour for
-// ~60 AT-HYG entries in the LMC field.
-export const DIST_SRC_LMC_KIN = 'LMC_KIN';
 
 // LMC kinematic parameters. References:
 //   - Pietrzyński et al. 2019 (Nature 567, 200): eclipsing-binary distance
