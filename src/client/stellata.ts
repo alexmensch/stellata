@@ -281,7 +281,7 @@ export type StellataEventMap = {
   warp: boolean;
   focusLerp: boolean;
   pois: readonly number[];
-  canvasClick: { x: number; y: number };
+  noopClick: { x: number; y: number };
   state: void;
   frame: void;
 };
@@ -1028,15 +1028,10 @@ export class Stellata implements FrameAnchor {
     return this.observe.getProgress();
   }
 
-  // ──────────────────── OBSERVE-mode points of interest ────────────────────
-  //
-  // Single-click on a star in OBSERVE pins it; click again to unpin. The
-  // POI overlay (poi-overlay.ts) renders an on-screen label following the
-  // star, and a HUD-ring arrow when it goes off-screen. Cleared automatically
-  // on any observe→navigate transition.
+  // Points of interest — thin shims over PoiStore (poi/README.md).
 
   getPois(): readonly number[] { return this.poiStore.get(); }
-  togglePoi(idx: number) { this.poiStore.toggle(idx); }
+  togglePoi(idx: number): boolean { return this.poiStore.toggle(idx); }
   setPois(idxs: readonly number[]) { this.poiStore.set(idxs); }
   clearPois() { this.poiStore.clear(); }
 
@@ -2045,10 +2040,6 @@ export class Stellata implements FrameAnchor {
     if (dx * dx + dy * dy > 25) return;
     if (performance.now() - down.t > 500) return;
 
-    // Universal click feedback (overlays/click-ripple.ts) fires for
-    // every accepted canvas click, whatever it goes on to do.
-    this.bus.emit('canvasClick', { x: e.clientX, y: e.clientY });
-
     // Both modes hold the click for DBL_CLICK_MS via the shared
     // dispatcher; the deferred handlers re-check the volatile guards
     // (warp / aim / transition) at fire time.
@@ -2057,11 +2048,13 @@ export class Stellata implements FrameAnchor {
 
   private dispatchSingleClick(x: number, y: number) {
     if (this.warp.isActive() || this.aim.isActive() || this.isObserveTransitionActive()) return;
-    if (this.cameraMode === 'observe') {
-      this.observeSingleClick(x, y);
-      return;
-    }
-    this.navigateSingleClick(x, y);
+    const did = this.cameraMode === 'observe'
+      ? this.observeSingleClick(x, y)
+      : this.navigateSingleClick(x, y);
+    // Only clicks that changed nothing ripple (overlays/click-ripple.ts)
+    // — a click that did something has its own lasting feedback (ring,
+    // vector, focus, aim) and doesn't need a second affordance.
+    if (!did) this.bus.emit('noopClick', { x, y });
   }
 
   private dispatchDoubleClick(x: number, y: number) {
@@ -2078,19 +2071,22 @@ export class Stellata implements FrameAnchor {
       return;
     }
     const cloudIdx = this.picker.pickCloud(x, y);
-    if (cloudIdx !== null) this.flyToCloud(cloudIdx);
+    if (cloudIdx !== null) {
+      this.flyToCloud(cloudIdx);
+      return;
+    }
+    this.bus.emit('noopClick', { x, y });
   }
 
-  private navigateSingleClick(x: number, y: number) {
+  private navigateSingleClick(x: number, y: number): boolean {
     // Pick a star first — they're the primary interaction target. Fall
     // back to clouds when no star is hit.
     const starIdx = this.picker.pickStar(x, y);
     if (starIdx >= 0) {
-      this.applyStarClick(starIdx);
-      return;
+      return this.applyStarClick(starIdx);
     }
     const cloudIdx = this.picker.pickCloud(x, y);
-    if (cloudIdx === null) return;
+    if (cloudIdx === null) return false;
 
     // Clouds keep the pre-ladder vector-first semantics — unreachable
     // while the MC layer is shelved; revisit at un-shelve. Viewing
@@ -2099,7 +2095,7 @@ export class Stellata implements FrameAnchor {
     const focusedCloud = this.focus.getFocusedCloud();
     if (focusedStar === null && focusedCloud === null) {
       this.setOrbitTargetCloud(cloudIdx);
-      return;
+      return true;
     }
     if (focusedCloud === cloudIdx) {
       if (this.vectorTo !== null || this.vectorToCloud !== null) {
@@ -2108,28 +2104,29 @@ export class Stellata implements FrameAnchor {
       } else {
         this.unfocus();
       }
-      return;
+      return true;
     }
     if (this.vectorToCloud === cloudIdx) {
       this.flyToCloud(cloudIdx);
-      return;
+      return true;
     }
     this.setVectorToCloud(cloudIdx);
+    return true;
   }
 
   /**
    * Canonical per-mode star-click semantics — deferred canvas clicks and
    * the POI overlay's on-screen labels both route here. Observe toggles
    * the pin; navigate handles focus / unfocus, then runs the click
-   * ladder (pin → vector → clear both) for any other star.
+   * ladder (pin → vector → clear both) for any other star. Returns
+   * whether the click changed anything (false → noop-click ripple).
    */
-  applyStarClick(idx: number) {
+  applyStarClick(idx: number): boolean {
     if (this.cameraMode === 'observe') {
       // Mirror the POI overlay visibility gate — toggling without a
       // visible ring/arrow would change state with no feedback.
-      if (!this.filter.showHud) return;
-      this.togglePoi(idx);
-      return;
+      if (!this.filter.showHud) return false;
+      return this.togglePoi(idx);
     }
 
     const focusedStar = this.focus.getFocusedStar();
@@ -2139,7 +2136,7 @@ export class Stellata implements FrameAnchor {
     // search-select and URL-restore (parkDistForStar, 10% disc fill).
     if (focusedStar === null && focusedCloud === null) {
       this.focusStar(idx);
-      return;
+      return true;
     }
 
     // Click on the focused star → clear vector if present (the
@@ -2151,7 +2148,7 @@ export class Stellata implements FrameAnchor {
       } else {
         this.unfocus();
       }
-      return;
+      return true;
     }
 
     // Pins are HUD widgets — with the HUD hidden a pin would be an
@@ -2166,20 +2163,20 @@ export class Stellata implements FrameAnchor {
       isVectorDest: this.vectorTo === idx,
     });
     switch (action) {
-      case 'pin': this.togglePoi(idx); break;
-      case 'vector': this.setVectorTo(idx); break;
-      case 'clearVector': this.setVectorTo(null); break;
+      case 'pin': return this.togglePoi(idx);
+      case 'vector': this.setVectorTo(idx); return true;
+      case 'clearVector': this.setVectorTo(null); return true;
       case 'clearBoth':
         this.setVectorTo(null);
         this.togglePoi(idx);
-        break;
+        return true;
     }
   }
 
-  private observeSingleClick(x: number, y: number) {
+  private observeSingleClick(x: number, y: number): boolean {
     const idx = this.picker.pickStar(x, y);
-    if (idx < 0) return;
-    this.applyStarClick(idx);
+    if (idx < 0) return false;
+    return this.applyStarClick(idx);
   }
 
   // Reusable scratch for the double-click ray unproject. Allocated once.

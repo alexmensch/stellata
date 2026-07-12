@@ -1,12 +1,12 @@
 import type { Stellata } from '../stellata';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 
-// Universal click feedback: every canvas click ripples a ring out from
-// the click point to the standard POI-ring radius, then collapses it
-// back while fading. A click that persisted something gets its own
-// lasting feedback (POI ring, vector, focus); a click that didn't
-// (empty sky, Sol, POI cap) leaves nothing behind — the collapse IS the
-// "nothing stuck" signal. Replaces toast-style reject messaging.
+// Noop-click feedback: a canvas click that changed nothing (empty sky,
+// Sol, POI cap, HUD-off pin attempt) ripples a ring out from the click
+// point to the standard POI-ring radius, then collapses it back while
+// fading — "your click landed, nothing stuck". Clicks that DO something
+// rely on their own lasting feedback (ring, vector, focus, aim); they
+// don't ripple. Replaces toast-style reject messaging.
 
 export const RIPPLE_EXPAND_MS = 160;
 export const RIPPLE_COLLAPSE_MS = 220;
@@ -47,7 +47,7 @@ export function createClickRipple(stellata: Stellata): void {
   const free: SVGCircleElement[] = [];
   const active: ActiveRipple[] = [];
 
-  stellata.on('canvasClick', ({ x, y }) => {
+  stellata.on('noopClick', ({ x, y }) => {
     let el = free.pop();
     if (!el) {
       el = document.createElementNS('http://www.w3.org/2000/svg', 'circle') as SVGCircleElement;

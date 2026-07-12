@@ -40,9 +40,10 @@ The payload map is `StellataEventMap` in `stellata.ts`.
 - `'warp'` (`boolean`) — warp animation start/finish.
 - `'pois'` (`readonly number[]`) — pinned-star list changed (shared
   across camera modes — see `poi/README.md`).
-- `'canvasClick'` (`{ x, y }`) — a canvas click passed the drag/time
-  guards, whatever it goes on to do. Drives the click-ripple feedback
-  overlay.
+- `'noopClick'` (`{ x, y }`) — a canvas click ran its per-mode
+  dispatch and changed nothing (empty sky, rejected pin). Drives the
+  click-ripple feedback overlay; clicks that did something don't emit
+  it.
 - `'frame'` (no payload) — called after each render, used by all SVG
   overlays.
 - `'state'` (no payload) — fires on any discrete state mutation. This
@@ -56,7 +57,7 @@ Emission pairing: each fine-grained mutation event (`'focus'`,
 from the same mutation site, so a `'state'` subscriber observes every
 mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
-`'frame'`, `'focusLerp'`, `'canvasClick'` (transient feedback, not a
+`'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
 state mutation), and the warp-end edge emit alone.
 
 ## Click-state machine (`stellata.ts`)

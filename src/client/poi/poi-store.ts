@@ -49,29 +49,30 @@ export class PoiStore {
 
   /** Pin `idx`, or unpin it when already pinned. Rejects (with a console
    *  breadcrumb, no state change) unpinnable indices and, when adding,
-   *  a list already at POI_MAX_COUNT. */
-  toggle(idx: number): void {
-    if (idx < 0 || idx >= this.deps.count) return;
+   *  a list already at POI_MAX_COUNT. Returns whether the list changed. */
+  toggle(idx: number): boolean {
+    if (idx < 0 || idx >= this.deps.count) return false;
     if (idx === this.deps.solIndex) {
       console.info('[POI] Sol is excluded (already shown via #sol-arrow).');
-      return;
+      return false;
     }
     if (this.deps.sid[idx] === 0) {
       console.info('[POI] cannot pin a star without a SID.');
-      return;
+      return false;
     }
     const existing = this.pois.indexOf(idx);
     if (existing >= 0) {
       this.pois.splice(existing, 1);
       this.deps.onChange(this.pois);
-      return;
+      return true;
     }
     if (this.pois.length >= POI_MAX_COUNT) {
       console.info(`[POI] cap reached (${POI_MAX_COUNT}); unpin one first.`);
-      return;
+      return false;
     }
     this.pois.push(idx);
     this.deps.onChange(this.pois);
+    return true;
   }
 
   /** Replace the whole list (URL-state restore). Unpinnable entries and

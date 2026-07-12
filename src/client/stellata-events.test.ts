@@ -39,7 +39,7 @@ const EVENT_NAMES_MAP: Record<keyof StellataEventMap, true> = {
   warp: true,
   focusLerp: true,
   pois: true,
-  canvasClick: true,
+  noopClick: true,
   state: true,
   frame: true,
 };

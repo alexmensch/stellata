@@ -79,8 +79,8 @@
            from the loaded local-group.json — one per labelled object
            (those with a non-null labelThresholdPc). -->
       <g id="lg-labels"></g>
-      <!-- Transient click-feedback ripples. Pooled <circle> children
-           created at runtime by click-ripple.ts on every canvas click. -->
+      <!-- Transient noop-click ripples. Pooled <circle> children created
+           at runtime by click-ripple.ts for clicks that changed nothing. -->
       <g id="click-ripples"></g>
       <circle id="focus-ring" class="focus-ring" />
     </svg>

@@ -25,13 +25,14 @@ src/client/overlays/
                                   src/client/galactic/README.md.
   poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows
                                   (both camera modes).
-  click-ripple.ts (+ test)        Universal click feedback: a ring
-                                  ripples out from every canvas click
-                                  to the POI-ring radius and collapses
-                                  back — the "nothing stuck" signal
-                                  for clicks that persisted no state
-                                  (empty sky, Sol, POI cap). Driven by
-                                  the 'canvasClick' bus event.
+  click-ripple.ts (+ test)        Noop-click feedback: a ring ripples
+                                  out from the click point to the
+                                  POI-ring radius and collapses back —
+                                  fires ONLY for clicks that changed
+                                  nothing (empty sky, Sol, POI cap);
+                                  successful actions carry their own
+                                  feedback. Driven by the 'noopClick'
+                                  bus event.
   dirty-attr.ts (+ test)          Dirty-tracked SVG attribute writer
                                   (sentinel-init pattern — see
                                   docs/authoring-patterns.md).
@@ -206,7 +207,11 @@ Click affordances (both label classes set `pointer-events: auto`):
 
 Visibility is gated as a single HUD layer: the whole stack hides when
 `filter.showHud` is off, during warp (via `body.warping #overlay`
-CSS), and during the navigate↔observe transition. Chart-mode (`body.monochrome`) styling flips every HUD
+CSS), and during the navigate↔observe transition. The FOCUSED star's
+own pin is chrome-suppressed per frame (ring/label/arrow hidden; the
+pin itself survives and its chrome returns on unfocus or refocus
+elsewhere) — a POI badge on the object the camera is parked at is
+noise. Chart-mode (`body.monochrome`) styling flips every HUD
 stroke (gal-arrows, HUD ring, POI ring + arrow + labels) to a deep
 saturated blue (`rgba(30, 64, 175, 0.85)`, the existing `--accent`
 token) with a thin white halo on labels — distinct from pure-black
