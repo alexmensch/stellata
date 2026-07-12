@@ -8,14 +8,19 @@ export interface CollapseOptions {
   container: HTMLElement;
   header: HTMLElement;
   toggle: HTMLButtonElement;
-  storageKey: string;
+  /** localStorage key for the collapse state. Omit for cards whose
+   *  state is per-instance and session-only (POI cards). */
+  storageKey?: string;
+  /** Initial state when nothing is stored (or no storageKey). */
+  initialCollapsed?: boolean;
   /** aria-label subject ("settings" → "Collapse settings"). Omit to keep
    *  the toggle's static aria-label. */
   ariaSubject?: string;
 }
 
-/** Header-click collapse with localStorage persistence — the shared
- *  affordance behind the settings panel, its groups, and the focus card. */
+/** Header-click collapse with optional localStorage persistence — the
+ *  shared affordance behind the settings panel, its groups, the focus
+ *  card, and the POI cards. */
 export function bindCollapse(o: CollapseOptions) {
   const apply = (c: boolean) => {
     o.container.classList.toggle('collapsed', c);
@@ -29,11 +34,12 @@ export function bindCollapse(o: CollapseOptions) {
     }
   };
 
-  apply(localStorage.getItem(o.storageKey) === '1');
+  const stored = o.storageKey ? localStorage.getItem(o.storageKey) : null;
+  apply(stored !== null ? stored === '1' : (o.initialCollapsed ?? false));
   o.header.addEventListener('click', () => {
     const next = !o.container.classList.contains('collapsed');
     apply(next);
-    localStorage.setItem(o.storageKey, next ? '1' : '0');
+    if (o.storageKey) localStorage.setItem(o.storageKey, next ? '1' : '0');
   });
 }
 
