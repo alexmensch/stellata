@@ -1,12 +1,12 @@
 {
-  "pairs_total": 18658,
-  "pairs_emitted": 12504,
-  "pairs_dropped_primary_unresolved": 5113,
+  "pairs_total": 18668,
+  "pairs_emitted": 12518,
+  "pairs_dropped_primary_unresolved": 5109,
   "pairs_dropped_secondary_unresolved": 696,
   "pairs_dropped_degenerate_idx": 340,
   "pairs_dropped_same_relation_alias": 3,
   "pairs_dropped_duplicate_relation": 2,
   "pairs_with_orbit": 3360,
   "pairs_with_inclination": 2901,
-  "pairs_inner_of_hierarchy": 1665
+  "pairs_inner_of_hierarchy": 1670
 }

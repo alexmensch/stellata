@@ -4324,6 +4324,151 @@ class ClassifyPairOpticalTests(unittest.TestCase):
         self.assertTrue(result.is_physical)
         self.assertEqual(result.optical_via, "gaia_kept")
 
+    def test_escape_gate_orbital_pm_budget_raises_reject_threshold(self) -> None:
+        # 22039-2451 AC shape: parallax-concordant CPM pair whose Δpm
+        # carries the host component's orbital motion. v_t ≈ 14.2 km/s at
+        # 100 pc vs 2.5·v_esc ≈ 11.5 km/s → rejected with no budget, kept
+        # once the sub-pair's ~5 km/s orbital-PM budget raises the bar.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=10.0, parallax_error_mas=0.01,
+            pmra_masyr=0.0, pmdec_masyr=0.0,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=10.0, parallax_error_mas=0.01,
+            pmra_masyr=30.0, pmdec_masyr=0.0,
+        )
+        pair = _wds_pair(rho_last=5.0)
+        primary = _resolved(gaia=1, component="A", is_primary=True)
+        secondary = _resolved(gaia=2, component="C", is_primary=False)
+        indices = _indices_with_astrometry(src_to_astrometry={1: p, 2: s})
+        rejected = bb.classify_pair_optical(
+            pair, primary, secondary, "none", indices,
+        )
+        self.assertEqual(rejected.optical_via, "gaia_rejected")
+        kept = bb.classify_pair_optical(
+            pair, primary, secondary, "none", indices,
+            orbital_pm_budget_km_s=5.0,
+        )
+        self.assertEqual(kept.optical_via, "gaia_kept")
+
+    def test_escape_gate_budget_needs_positive_collocation(self) -> None:
+        # AR Cas AF/AG shape: distant pair whose parallax errors leave a
+        # ~pc-scale depth uncertainty — the pair is not POSITIVELY inside
+        # the tidal limit, so the orbital-PM budget is withheld and the
+        # unbound-association rejection stands.
+        p = _gaia_astrometry_row(
+            source_id=1, parallax_mas=4.9, parallax_error_mas=0.03,
+            pmra_masyr=0.0, pmdec_masyr=0.0,
+        )
+        s = _gaia_astrometry_row(
+            source_id=2, parallax_mas=4.9, parallax_error_mas=0.03,
+            pmra_masyr=3.6, pmdec_masyr=0.0,
+        )
+        pair = _wds_pair(rho_last=67.0)
+        primary = _resolved(gaia=1, component="A", is_primary=True)
+        secondary = _resolved(gaia=2, component="F", is_primary=False)
+        indices = _indices_with_astrometry(src_to_astrometry={1: p, 2: s})
+        result = bb.classify_pair_optical(
+            pair, primary, secondary, "none", indices,
+            total_mass_msun=9.9,
+            orbital_pm_budget_km_s=10.0,
+        )
+        self.assertEqual(result.optical_via, "gaia_rejected")
+
+    def test_orbital_pm_budget_from_tighter_hosted_subpairs(self) -> None:
+        # System: AC under test (ρ 28″) + AB at 3.4″ (measured, no
+        # elements) + Aa,Ab spectroscopic (P = 6 d — averaged out of the
+        # Gaia PM fit) + an unrelated-side BC-wider pair. Budget = v_circ
+        # of AB only.
+        ac = _wds_pair(wds_id="22039-2451", components="AC", rho_last=28.0)
+        ab = _wds_pair(wds_id="22039-2451", components="AB", rho_last=3.4)
+        aa_ab = _wds_pair(
+            wds_id="22039-2451", components="Aa,Ab", rho_last=0.0,
+        )
+        pairs = [ac, ab, aa_ab]
+        orbits: list[tuple] = [
+            (None, "none"),
+            (None, "none"),
+            (bb.OrbitElements(
+                P_days=6.066, T_jd=None, e=None, a_AU=0.08,
+                i_rad=None, omega_rad=None, Omega_rad=None,
+                q=None, distance_pc=None,
+            ), "msc"),
+        ]
+        masses = [1.2, 1.6, 1.5]
+        anchor_plx = 21.2  # d ≈ 47.17 pc
+        budget = bb._orbital_pm_budget_km_s(
+            0, ("A", "C"), ac.rho_last, [0, 1, 2], pairs, orbits, masses,
+            anchor_plx,
+        )
+        r_ab_au = 3.4 * (1000.0 / anchor_plx)
+        expected = 2.0 * math.pi * bb.KM_S_PER_AU_YR * math.sqrt(1.6 / r_ab_au)
+        self.assertAlmostEqual(budget, expected, places=6)
+        # The pair's own row contributes nothing to itself; a pair under
+        # test with no measured ρ gets no budget at all.
+        self.assertEqual(
+            bb._orbital_pm_budget_km_s(
+                2, ("Aa", "Ab"), aa_ab.rho_last, [0, 1, 2], pairs, orbits,
+                masses, anchor_plx,
+            ),
+            0.0,
+        )
+
+    def test_orbital_pm_budget_ignores_unrelated_and_wider_pairs(self) -> None:
+        # BD's components don't move with A or C; DE is wider than the
+        # pair under test. Neither contributes.
+        ac = _wds_pair(wds_id="W-1", components="AC", rho_last=28.0)
+        bd = _wds_pair(wds_id="W-1", components="BD", rho_last=3.0)
+        de = _wds_pair(wds_id="W-1", components="DE", rho_last=90.0)
+        pairs = [ac, bd, de]
+        orbits: list[tuple] = [(None, "none")] * 3
+        budget = bb._orbital_pm_budget_km_s(
+            0, ("A", "C"), ac.rho_last, [0, 1, 2], pairs, orbits, None, 21.2,
+        )
+        self.assertEqual(budget, 0.0)
+
+    def test_classify_all_pairs_applies_orbital_pm_budget(self) -> None:
+        # End-to-end: the AC verdict flips to kept because the same
+        # system's AB pair budgets A's orbital PM. Δpm 22.4 mas/yr at
+        # ~47 pc → v_t ≈ 5.0 km/s vs 2.5·v_esc ≈ 3.2 km/s alone,
+        # ≤ 3.2 + 3.0 with AB's budget.
+        rows = {
+            1: _gaia_astrometry_row(
+                source_id=1, parallax_mas=21.29, parallax_error_mas=0.05,
+                pmra_masyr=0.0, pmdec_masyr=0.0,
+            ),
+            2: _gaia_astrometry_row(
+                source_id=2, parallax_mas=21.19, parallax_error_mas=0.05,
+                pmra_masyr=22.4, pmdec_masyr=0.0,
+            ),
+            3: _gaia_astrometry_row(
+                source_id=3, parallax_mas=21.25, parallax_error_mas=0.05,
+                pmra_masyr=1.0, pmdec_masyr=0.0,
+            ),
+        }
+        indices = _indices_with_astrometry(src_to_astrometry=rows)
+        ac = _wds_pair(wds_id="22039-2451", components="AC", rho_last=28.0)
+        ab = _wds_pair(wds_id="22039-2451", components="AB", rho_last=3.4)
+        components = [
+            _resolved(gaia=1, wds_id="22039-2451", component="A", is_primary=True),
+            _resolved(gaia=2, wds_id="22039-2451", component="C", is_primary=False),
+            _resolved(gaia=1, wds_id="22039-2451", component="A", is_primary=True),
+            _resolved(gaia=3, wds_id="22039-2451", component="B", is_primary=False),
+        ]
+        anchors = {"22039-2451": (21.2, 0.1)}
+        out = bb.classify_all_pairs(
+            [ac, ab], components, [(None, "none"), (None, "none")],
+            indices, system_parallax_anchors=anchors,
+            pair_masses=[1.2, 1.6],
+        )
+        self.assertEqual(out[0].optical_via, "gaia_kept")
+        # Without the sibling pair the same Δpm rejects.
+        alone = bb.classify_all_pairs(
+            [ac], components[:2], [(None, "none")],
+            indices, system_parallax_anchors=anchors, pair_masses=[1.2],
+        )
+        self.assertEqual(alone[0].optical_via, "gaia_rejected")
+
     def test_sep_limit_rejects_discordant_companion(self) -> None:
         # Pollux F shape: the primary is Gaia-saturated (tiers 4/5 silent
         # for it), the secondary carries a well-measured own Gaia distance

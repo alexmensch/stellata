@@ -1935,14 +1935,6 @@ export function promoteCompanions(
   }
   for (const cands of dimByAnchor.values()) {
     const anchor = getStarAt(cands[0].anchorIdx);
-    if (process.env.DIM_DEBUG && new RegExp(process.env.DIM_DEBUG).test(anchor.proper ?? '')) {
-      console.log('[DIM_DEBUG]', anchor.proper, 'absmag', anchor.absmag.toFixed(3),
-        JSON.stringify(cands.map((c) => ({
-          src: c.source, structural: c.structural, mMag: c.memberWdsMag,
-          aMag: c.anchorWdsMag, dmag: c.dmag, dist: c.distPc, av: +c.av.toFixed(3),
-          memberAbs: +c.member.absmag.toFixed(3), name: c.member.proper,
-        }))));
-    }
     const anchorWdsMag = cands.find((c) => c.anchorWdsMag !== null)?.anchorWdsMag ?? null;
     const distPc = cands.find((c) => c.distPc !== null && c.distPc > 0)?.distPc ?? null;
     // Members sit sub-arcsec off the anchor, so any candidate's sightline

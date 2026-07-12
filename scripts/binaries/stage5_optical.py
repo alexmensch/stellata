@@ -15,6 +15,11 @@ from parsers import (  # noqa: E402
     GaiaAstrometryRow,
     WdsPair,
 )
+from component_tokens import (  # noqa: E402
+    compound_contains,
+    expand_wds_truncated_secondary,
+    related_hier,
+)
 from indices import IdentifierIndices  # noqa: E402
 from stage2_resolve import (  # noqa: E402
     ResolvedComponent,
@@ -145,6 +150,34 @@ ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN = 3.0
 ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN = (
     2.0 * ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN
 )
+
+# Orbital-PM budget (inside the escape-velocity sub-gate). A component
+# hosting its own resolved subsystem carries km/s-scale orbital motion
+# in its catalog PM, so Δpm is NOT the pair's systemic velocity
+# difference — 22039-2451 AC: A's orbit in the 3.4″ AB pair put ~3 km/s
+# into Δpm against C and tripped the gate on a parallax-concordant CPM
+# pair. The reject threshold is raised by v_circ(M_sub, r_sub) for every
+# TIGHTER pair either component participates in. Bounded — unlike the
+# reverted skip-when-hosting exemption — so unbound association members
+# (AR Cas AF/AG) still reject.
+#
+# A sub-pair whose orbital period is short against Gaia DR3's ~34-month
+# observation baseline contributes ~nothing: the 5p PM fit averages the
+# wobble (it inflates RUWE instead of biasing PM). Contributions are
+# dropped when the sub-pair's known period sits under ~2× the baseline.
+ESCAPE_GATE_PM_AVERAGING_PERIOD_DAYS = 2.0 * 1034.0
+# Separation floor for a sub-pair with no semi-major axis and no
+# measured ρ — caps its budget contribution (v_circ → ∞ as r → 0) at
+# v_circ(M, 10 AU) ≈ 13 km/s for 2 M☉.
+ESCAPE_GATE_SUBSYSTEM_FLOOR_SEP_AU = 10.0
+
+# The budget extends PM leniency ONLY to pairs whose 3D collocation is
+# POSITIVELY established — Δd + 2σ inside the tidal limit — not merely
+# "parallaxes don't split them". 22039-2451 AC at 47 pc resolves its
+# depth to ±~0.2 pc and qualifies; AR Cas AF/AG at 203 pc have ~pc-scale
+# depth uncertainty, so no orbital-PM excuse is available and their
+# (correct) unbound-association rejections stand.
+ESCAPE_GATE_BUDGET_COLLOCATION_SIGMA = 2.0
 
 # 1 AU/yr expressed in km/s. Converts a tangential angular speed
 # (Δμ[arcsec/yr] × d[pc], in AU/yr) to km/s.
@@ -381,11 +414,83 @@ def _pair_beyond_separation_limit(
     return False
 
 
+def _pair_tokens(pair: WdsPair) -> tuple[str, str] | None:
+    toks = split_components(pair.components)
+    if toks is None:
+        return None
+    return toks[0], expand_wds_truncated_secondary(toks[0], toks[1])
+
+
+def _component_participates(x: str, u: str, v: str) -> bool:
+    """True when component ``x`` moves with sub-pair (u, v): it is a
+    side of it, hierarchically related to a side (A ← Aa,Ab; Aa ← A,B),
+    or contained in a compound side (A in AB,C)."""
+    return any(
+        related_hier(x, t) or compound_contains(x, t) for t in (u, v)
+    )
+
+
+def _orbital_pm_budget_km_s(
+    j: int,
+    tokens: tuple[str, str],
+    rho_arcsec: float | None,
+    system_pair_js: list[int],
+    decomposing_pairs: list[WdsPair],
+    orbits: list[tuple[OrbitElements | None, str]],
+    pair_masses: list[float] | None,
+    anchor_plx_mas: float | None,
+) -> float:
+    """Plausible orbital-PM pollution (km/s) on pair ``j``'s Δpm from
+    tighter sub-pairs its components participate in. See the
+    ``ESCAPE_GATE_PM_AVERAGING_PERIOD_DAYS`` block for the physics."""
+    rho_p = rho_arcsec or 0.0
+    if rho_p <= 0.0:
+        return 0.0
+    d_pc = 1000.0 / anchor_plx_mas if anchor_plx_mas else None
+    budget = 0.0
+    for k in system_pair_js:
+        if k == j:
+            continue
+        q = decomposing_pairs[k]
+        rho_q = q.rho_last or 0.0
+        if rho_q >= rho_p:
+            continue
+        q_toks = _pair_tokens(q)
+        if q_toks is None:
+            continue
+        if not any(
+            _component_participates(x, q_toks[0], q_toks[1]) for x in tokens
+        ):
+            continue
+        elements = orbits[k][0]
+        if (
+            elements is not None and elements.P_days is not None
+            and elements.P_days < ESCAPE_GATE_PM_AVERAGING_PERIOD_DAYS
+        ):
+            continue
+        r_au: float | None = None
+        if elements is not None and elements.a_AU is not None and elements.a_AU > 0.0:
+            r_au = elements.a_AU
+        elif rho_q > 0.0 and d_pc is not None:
+            r_au = rho_q * d_pc
+        r_eff = (
+            max(r_au, ESCAPE_GATE_SUBSYSTEM_FLOOR_SEP_AU)
+            if r_au is not None else ESCAPE_GATE_SUBSYSTEM_FLOOR_SEP_AU
+        )
+        m_q = (
+            pair_masses[k] if pair_masses is not None
+            else ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN
+        )
+        budget += _CIRCULAR_KM_S_1AU_1MSUN * math.sqrt(m_q / r_eff)
+    return budget
+
+
 def _both_gaia_consistent(
     p: GaiaAstrometryRow,
     s: GaiaAstrometryRow,
     rho_arcsec: float | None,
     total_mass_msun: float,
+    orbital_pm_budget_km_s: float = 0.0,
 ) -> bool | None:
     """Tier-4 verdict. Returns ``True`` (physical), ``False`` (optical),
     or ``None`` (tier silent — fall through) when there is not enough
@@ -434,9 +539,29 @@ def _both_gaia_consistent(
     if v_escape is None:
         return True
     v_transverse = _transverse_velocity_km_s(dpm, d_pc)
-    if v_transverse > ESCAPE_VELOCITY_SAFETY_FACTOR * v_escape:
+    budget = orbital_pm_budget_km_s
+    if budget > 0.0 and not _positively_collocated(p, s):
+        budget = 0.0
+    threshold = ESCAPE_VELOCITY_SAFETY_FACTOR * v_escape + budget
+    if v_transverse > threshold:
         return False
     return True
+
+
+def _positively_collocated(p: GaiaAstrometryRow, s: GaiaAstrometryRow) -> bool:
+    """True when the two parallaxes establish the pair's radial depth
+    inside the tidal limit at ``ESCAPE_GATE_BUDGET_COLLOCATION_SIGMA``
+    confidence. Callers have already checked both parallaxes positive."""
+    d_p = 1000.0 / p.parallax_mas
+    d_s = 1000.0 / s.parallax_mas
+    sigma_p = 1000.0 * (p.parallax_error_mas or 0.0) / p.parallax_mas ** 2
+    sigma_s = 1000.0 * (s.parallax_error_mas or 0.0) / s.parallax_mas ** 2
+    depth = abs(d_p - d_s)
+    sigma = math.hypot(sigma_p, sigma_s)
+    return (
+        depth + ESCAPE_GATE_BUDGET_COLLOCATION_SIGMA * sigma
+        < SEPARATION_LIMIT_PC
+    )
 
 
 def _asymm_gaia_consistent(
@@ -478,6 +603,7 @@ def classify_pair_optical(
     primary_astrometry: ComponentAstrometry | None = None,
     secondary_astrometry: ComponentAstrometry | None = None,
     system_pm_anchor: tuple[float, float] | None = None,
+    orbital_pm_budget_km_s: float = 0.0,
 ) -> OpticalClassification:
     """Tiered cascade per WDS pair:
 
@@ -498,7 +624,9 @@ def classify_pair_optical(
        disagreement rejects only when the implied separation also exceeds
        the physical limit (same guard as tier 5); otherwise the
        escape-velocity sub-gate rejects a transverse velocity too large
-       to be bound. Passes physical.
+       to be bound — after raising the threshold by
+       ``orbital_pm_budget_km_s``, the plausible orbital-PM pollution
+       from tighter sub-pairs the components host. Passes physical.
     5. Asymmetric Gaia + HIP2 anchor — exactly one component has a Gaia 5p
        row, the other a HIP2 parallax anchor. Gaia parallax vs anchor at
        3σ, rejecting only when the implied separation also exceeds the
@@ -544,7 +672,9 @@ def classify_pair_optical(
     p_gaia = _gaia_for_component(primary, indices)
     s_gaia = _gaia_for_component(secondary, indices)
     if p_gaia is not None and s_gaia is not None:
-        verdict = _both_gaia_consistent(p_gaia, s_gaia, pair.rho_last, mass)
+        verdict = _both_gaia_consistent(
+            p_gaia, s_gaia, pair.rho_last, mass, orbital_pm_budget_km_s,
+        )
         if verdict is True:
             return OpticalClassification(True, "gaia_kept")
         if verdict is False:
@@ -655,20 +785,32 @@ def classify_all_pairs(
         )
     anchors = system_parallax_anchors or {}
     pm_anchors = system_pm_anchors or {}
+    decomposing = list(iter_decomposing_pair_cursor(pairs, components))
+    decomposing_pairs = [pair for pair, _ in decomposing]
+    pair_js_by_system: dict[str, list[int]] = {}
+    for j, pair in enumerate(decomposing_pairs):
+        pair_js_by_system.setdefault(pair.wds_id, []).append(j)
     out: list[OpticalClassification] = []
-    for j, (pair, i) in enumerate(
-        iter_decomposing_pair_cursor(pairs, components)
-    ):
+    for j, (pair, i) in enumerate(decomposing):
         _, orbit_via = orbits[j]
+        anchor = anchors.get(pair.wds_id)
+        tokens = _pair_tokens(pair)
+        budget = _orbital_pm_budget_km_s(
+            j, tokens, pair.rho_last,
+            pair_js_by_system[pair.wds_id], decomposing_pairs,
+            orbits, pair_masses,
+            anchor[0] if anchor is not None else None,
+        ) if tokens is not None else 0.0
         out.append(classify_pair_optical(
             pair, components[i], components[i + 1], orbit_via, indices,
-            anchors.get(pair.wds_id),
+            anchor,
             pair_masses[j] if pair_masses is not None else None,
             primary_astrometry=astrometry[i] if astrometry is not None else None,
             secondary_astrometry=(
                 astrometry[i + 1] if astrometry is not None else None
             ),
             system_pm_anchor=pm_anchors.get(pair.wds_id),
+            orbital_pm_budget_km_s=budget,
         ))
     return out
 

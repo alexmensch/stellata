@@ -1,8 +1,8 @@
 {
   "ledger": {
-    "rows": 330236,
-    "max_sid": 330236,
-    "sha256": "fe60d12d2cd7caa6ab74bd9615ea4b970abab260f996558404397e72977f35c9"
+    "rows": 330238,
+    "max_sid": 330238,
+    "sha256": "ef0e2430e2508787acfa25372adc815a8bb12be7363822a3bbd5febb0787d192"
   },
   "retirements": {
     "rows": 261,
@@ -10,8 +10,8 @@
     "sha256": "3804adaa79b8bec125dd307483907a276910aa3be008336f55e7ebe57d12ec04"
   },
   "reinstatements": {
-    "rows": 9,
+    "rows": 10,
     "max_sid": 326792,
-    "sha256": "e8c7cad3243f5d822d06ea424b00a0ba04d0dbc8ad19af082126f7c28b875c22"
+    "sha256": "84e3d69774fa1cc1d78fc86af30672bf16c97bad09faa773472e8849d9214fc3"
   }
 }
