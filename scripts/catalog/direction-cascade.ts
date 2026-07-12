@@ -15,7 +15,9 @@ export const CATALOG_SCENE_EPOCH = 2016.0;
 // scripts/binaries/stage3_astrometry.py so both pipelines route a shared
 // star identically.
 export const GAIA_RUWE_UNRELIABLE_THRESHOLD = 1.4;
-export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 0.02;
+// ipd_frac_multi_peak is a PERCENTAGE (0-100) in Gaia DR3; the gate
+// fires above 2%, matching system-coherence.ts ANCHOR_IPD_MAX_PERCENT.
+export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0;
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 const MAS_TO_RAD = Math.PI / (180 * 3600 * 1000);

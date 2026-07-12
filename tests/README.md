@@ -5,6 +5,18 @@ subsystem. Picked up by the top-level `vitest` run alongside every
 in-tree `*.test.ts`.
 
 ```
+artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
+                         when public/catalog-manifest.json exists but
+                         public/binaries.bin is missing or older than
+                         multiples.tsv / the row-index map — the state
+                         where the binaries-dependent suites would
+                         silently self-skip and "npm test green" means
+                         less than it reads. Self-skips on fresh clones
+                         and LFS pointer stubs.
+bundle-content.test.ts   Deployed-bundle guard: no source-tree file
+                         types (.md/.txt/.py/.ts) under public/; dust
+                         assets restricted to the sync allowlist.
+                         Self-skips when public/ is unbuilt.
 claude-md-size.test.ts   Size guard for CLAUDE.md. Holds the file at
                          380 lines / 18 KB so it stays load-once-per-
                          session affordable; the failure message

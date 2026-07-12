@@ -237,7 +237,7 @@ in the vertex shader:
   detection). Above the window the size used to hard-clamp at
   `uSizeMax`, but that broke ratios in the close-approach regime —
   Sol and Barnard's Star at 5e-3 pc both pinned to the cap despite a
-  2300× flux ratio. **Soft-knee saturation** (`uSizeKnee`, default 4
+  2300× flux ratio. **Soft-knee saturation** (`uSizeKnee`, default 16
   mag, debug-tunable) replaces the clamp with a Michaelis–Menten
   asymptote: `dMEff = uSizeSpan + uSizeKnee · over / (uSizeKnee + over)`
   where `over = Δm − uSizeSpan`. Identity below `uSizeSpan`, smoothly

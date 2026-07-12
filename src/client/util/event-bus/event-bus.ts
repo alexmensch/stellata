@@ -20,7 +20,10 @@ export class EventBus<M extends Record<string, unknown>> {
 
   // Conditional rest tuple omits the payload arg entirely for `void` events,
   // so `bus.emit('frame')` and `bus.emit('focus', idx)` both type-check
-  // against the same signature.
+  // against the same signature. Consequence for the map: a payload type
+  // must never include `void` in a union — `void | T` matches the
+  // no-payload branch and the compiler then refuses the payload arg.
+  // Model an optional payload as `T | undefined` instead.
   emit<K extends keyof M>(
     name: K,
     ...rest: M[K] extends void ? [] : [M[K]]

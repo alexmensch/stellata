@@ -2,9 +2,11 @@
 // (gitignored) so Vite + the Cloudflare static-asset build serve the
 // voxel chunks. Missing data/dust/ is not an error — dust is optional.
 
-import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { isDustPublicAsset } from './sync-dust-pure';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,10 +24,10 @@ function main() {
   let copied = 0;
   let skipped = 0;
   for (const name of readdirSync(SRC)) {
-    // Skip dotfiles. build-dust.py emits .voxels.npy as a 512 MiB
-    // intermediate that lives alongside the chunks; it has no business
-    // in public/ (Cloudflare Workers caps assets at 25 MiB).
-    if (name.startsWith('.')) continue;
+    // Allowlist, not denylist: data/dust/ also holds README.md and
+    // build-dust.py's .voxels.npy intermediate (512 MiB — Cloudflare
+    // Workers caps assets at 25 MiB); neither may reach public/.
+    if (!isDustPublicAsset(name)) continue;
     const srcPath = resolve(SRC, name);
     const dstPath = resolve(DST, name);
     const srcStat = statSync(srcPath);
@@ -40,7 +42,17 @@ function main() {
     copyFileSync(srcPath, dstPath);
     copied++;
   }
-  console.log(`dust sync: ${copied} copied, ${skipped} up-to-date`);
+
+  // Purge disallowed strays a previous (pre-allowlist) sync mirrored in;
+  // Vite copies public/ wholesale, so anything left here ships.
+  let purged = 0;
+  for (const name of readdirSync(DST)) {
+    if (isDustPublicAsset(name)) continue;
+    rmSync(resolve(DST, name), { recursive: true });
+    purged++;
+  }
+  const purgedNote = purged > 0 ? `, ${purged} stray file(s) purged` : '';
+  console.log(`dust sync: ${copied} copied, ${skipped} up-to-date${purgedNote}`);
 }
 
 main();

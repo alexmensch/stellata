@@ -86,7 +86,7 @@ arcsec on high-PM stars (SCIENCE.md § Driver astrometry).
 `direction-cascade.ts` resolves every row's J2000.0 sky direction
 through the same trust cascade the binaries pipeline implements in
 `scripts/binaries/stage3_astrometry.py`, sharing its thresholds
-(RUWE > 1.4, ipd_frac_multi_peak > 0.02, |ΔPM| > 50 mas/yr):
+(RUWE > 1.4, ipd_frac_multi_peak > 2%, |ΔPM| > 50 mas/yr):
 
 | Route | Gate | Rows |
 | --- | --- | --- |

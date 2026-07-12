@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  HISTOGRAM_RANGE,
   PER_STAR_OUTLIER,
   RESIDUAL_THRESHOLDS,
   buildReport,
@@ -239,6 +240,18 @@ describe('formatReport', () => {
     expect(md).toMatch(/SIMBAD validation residuals/);
     expect(md).toMatch(/V\* HOTONE/);
     expect(md).toMatch(/Top-50 outliers/);
+  });
+
+  it('derives the histogram bin width from the edges, not a hard-coded literal', () => {
+    const report = buildReport([mkResidual({})], emptyStats(1), 'now');
+    expect(formatReport(report)).toMatch(/bin = 0\.05, range \[-1, \+1\]/);
+
+    const rebinned = {
+      ...report,
+      absmagHistogram: histogram([0], 80, HISTOGRAM_RANGE),
+      distanceLogRatioHistogram: histogram([0], 80, HISTOGRAM_RANGE),
+    };
+    expect(formatReport(rebinned)).toMatch(/bin = 0\.025, range \[-1, \+1\]/);
   });
 });
 

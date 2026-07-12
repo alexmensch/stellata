@@ -3,7 +3,11 @@
 `build-dust.py` — Edenhofer 2024 dust posteriors → resampled voxel
 chunks + importance-sampled particle field. Outputs to `data/dust/`
 (LFS-committed). `sync-dust.ts` mirrors `data/dust/` → `public/dust/`
-on dev/build.
+on dev/build — allowlisted runtime assets only (`manifest.json`,
+`particles.bin`, `chunk_*.bin`; predicate in `sync-dust-pure.ts`), so
+folder docs and build intermediates never ship, and strays already in
+`public/dust/` are purged. `tests/bundle-content.test.ts` guards the
+built tree.
 
 Python deps in `requirements-dust.txt`.
 
