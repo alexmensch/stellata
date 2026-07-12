@@ -292,7 +292,7 @@ how to run it locally.
 git lfs install        # one-time, if you haven't already
 git clone <this-repo>
 cd stellata
-npm install
+pnpm install
 ```
 
 All catalogue source files are included in the repo, no manual
@@ -302,7 +302,7 @@ catalogue ride on Git LFS.
 ### Running
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Runs the preprocessor (regenerating `public/catalog.bin` if the
@@ -313,16 +313,16 @@ source CSV has changed) and starts Vite on
 
 | Command                          | What it does                                                                              |
 | -------------------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run build:binaries`         | Regenerate `data/binaries/multiples.tsv` from WDS / ORB6 / Gaia NSS / SIMBAD              |
-| `npm run build:catalog`          | Regenerate `public/catalog.bin` + `search-index.json` + `catalog-row-index-map.json`      |
-| `npm run build:binaries-runtime` | Regenerate `public/binaries.bin` (runtime artifact for `BinaryOrbitField`)                |
-| `npm run build:clouds`           | Regenerate `public/clouds.json` from the Zucker tables                                    |
-| `npm run build:dust-sync`        | Mirror `data/dust/` voxel chunks to `public/dust/`                                        |
-| `npm run build`                  | Full production build into `dist/` (runs every step above in order)                       |
-| `npm run typecheck`       | `tsc --noEmit` over everything                         |
-| `npm test`                | Run the vitest regression suite                        |
-| `npm run test:coverage`   | Vitest run with v8 coverage report                     |
-| `npm run deploy`          | `wrangler deploy` (requires Cloudflare auth)           |
+| `pnpm run build:binaries`         | Regenerate `data/binaries/multiples.tsv` from WDS / ORB6 / Gaia NSS / SIMBAD              |
+| `pnpm run build:catalog`          | Regenerate `public/catalog.bin` + `search-index.json` + `catalog-row-index-map.json`      |
+| `pnpm run build:binaries-runtime` | Regenerate `public/binaries.bin` (runtime artifact for `BinaryOrbitField`)                |
+| `pnpm run build:clouds`           | Regenerate `public/clouds.json` from the Zucker tables                                    |
+| `pnpm run build:dust-sync`        | Mirror `data/dust/` voxel chunks to `public/dust/`                                        |
+| `pnpm run build`                  | Full production build into `dist/` (runs every step above in order)                       |
+| `pnpm run typecheck`       | `tsc --noEmit` over everything                         |
+| `pnpm test`                | Run the vitest regression suite                        |
+| `pnpm run test:coverage`   | Vitest run with v8 coverage report                     |
+| `pnpm run deploy`          | `wrangler deploy` (requires Cloudflare auth)           |
 
 ### Project documentation
 

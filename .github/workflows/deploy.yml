@@ -67,18 +67,20 @@ jobs:
           lfs: true
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
-      - run: npm run build
+      - run: pnpm run build
 
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v4

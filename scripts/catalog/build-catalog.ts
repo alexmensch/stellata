@@ -1048,7 +1048,7 @@ async function main() {
           ? `\n  … and ${sidResolution.errors.length - preview.length} more`
           : '') +
         `\ncatalog.bin was written with NO_SID placeholders so the ledger can be ` +
-        `updated.\nRun \`npm run sid:allocate\` to mint the missing SIDs, then rebuild.`,
+        `updated.\nRun \`pnpm run sid:allocate\` to mint the missing SIDs, then rebuild.`,
     );
     process.exit(1);
   }
@@ -1104,7 +1104,7 @@ async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
       };
     },
     failureLabel: 'build-catalog count',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 npm run build:catalog',
+    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:catalog',
   });
 }
 
@@ -1139,7 +1139,7 @@ async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<v
       };
     },
     failureLabel: 'distance-regression',
-    refreshCommand: 'UPDATE_DISTANCE_OUTLIERS=1 npm run build:catalog',
+    refreshCommand: 'UPDATE_DISTANCE_OUTLIERS=1 pnpm run build:catalog',
   });
 }
 

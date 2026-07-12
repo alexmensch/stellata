@@ -140,7 +140,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     if (idx < 0) {
       throw new Error(
         `multiples.tsv is missing required column "${name}". ` +
-          `Re-run npm run build:binaries.`,
+          `Re-run pnpm run build:binaries.`,
       );
     }
     return idx;

@@ -1,4 +1,4 @@
-// `npm run sid:risk-set` — export the DR-churn risk set: source_ids of the
+// `pnpm run sid:risk-set` — export the DR-churn risk set: source_ids of the
 // non-retired ledger rows whose canonical key is gaia_*-namespaced, as the
 // request TSV a refresh:gaia-*-neighbourhood pull reads. docs/sid.md § 6.1.
 
@@ -25,7 +25,7 @@ function main(): void {
   const outArg = process.argv.find((a) => a.startsWith('--out='));
   const out = outArg ? resolve(outArg.slice('--out='.length)) : DEFAULT_OUT;
   if (!existsSync(LEDGER_PATH)) {
-    console.error(`sid:risk-set: ${LEDGER_PATH} missing — run npm run sid:allocate first`);
+    console.error(`sid:risk-set: ${LEDGER_PATH} missing — run pnpm run sid:allocate first`);
     process.exit(1);
   }
   const ledger = parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8'));

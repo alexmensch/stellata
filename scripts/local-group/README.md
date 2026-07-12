@@ -25,15 +25,15 @@ within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
 
 Each object also carries a `sid` (frozen Stellata ID, docs/sid.md § 7),
 stamped after this script by `scripts/sid/stamp-sibling-sids.ts` (the tail
-of `npm run build:local-group`) — it resolves each `lg:<id>` slug against
+of `pnpm run build:local-group`) — it resolves each `lg:<id>` slug against
 the committed ledger; this build never touches the ledger. A new slug
-hard-fails the stamp until `npm run sid:allocate` mints it; a rename needs
+hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
 a `data/sid/sameas-overrides.tsv` bridge. See `scripts/sid/README.md`
 § Sibling-artifact stamping.
 
 Idempotent — exits early if `public/local-group.json` is newer than
 the script and both source files. Run via
-`npm run build:local-group`. No live fetches at build time; refresh
+`pnpm run build:local-group`. No live fetches at build time; refresh
 of the LVDB snapshot is a manual `curl` of
 `raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv`
 → `data/local-group/lvdb-snapshot.csv`.

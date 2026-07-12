@@ -30,6 +30,6 @@ inconsistently with the PR's contents — pure-docs PRs need
 
 ## `test.yml`
 
-Standard CI test run on every PR: `npm run typecheck` + `npm test` +
-`npm run build:catalog` (sanity check that the catalog pipeline still
+Standard CI test run on every PR: `pnpm run typecheck` + `pnpm test` +
+`pnpm run build:catalog` (sanity check that the catalog pipeline still
 parses). Required for merge.

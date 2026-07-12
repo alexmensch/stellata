@@ -13,7 +13,7 @@ Sources under `data/molecular-clouds/`:
   the raw cloud name).
 
 Idempotent — exits early if `public/clouds.json` is newer than the
-script and both source files. Run via `npm run build:clouds`.
+script and both source files. Run via `pnpm run build:clouds`.
 
 ## Output schema
 
@@ -32,9 +32,9 @@ One entry per cloud in `public/clouds.json`:
 | `sid`      | Frozen Stellata ID (docs/sid.md § 7). |
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
-(the tail of `npm run build:clouds`), resolving each `cloud:<id>` slug against
+(the tail of `pnpm run build:clouds`), resolving each `cloud:<id>` slug against
 the committed ledger — this Python build never touches the ledger. A new cloud
-slug hard-fails the stamp until `npm run sid:allocate` mints it; a rename needs
+slug hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
 a `data/sid/sameas-overrides.tsv` bridge. See `scripts/sid/README.md`
 § Sibling-artifact stamping.
 

@@ -1,6 +1,6 @@
-// `npm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves
+// `pnpm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves
 // every built-artifact object against the frozen ledger and appends mints.
-// `npm run sid:check` (--check): read-only CI mode — docs/sid.md § 4.5.
+// `pnpm run sid:check` (--check): read-only CI mode — docs/sid.md § 4.5.
 
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -46,10 +46,10 @@ function requireFile(path: string, hint: string): string {
 async function collectObjects(): Promise<{ objects: SidObject[]; starCount: number }> {
   const catalog = await loadCatalog();
   const searchIndex = JSON.parse(
-    requireFile(resolve(PUBLIC_DIR, 'search-index.json'), 'run npm run build:catalog'),
+    requireFile(resolve(PUBLIC_DIR, 'search-index.json'), 'run pnpm run build:catalog'),
   ) as SearchEntry[];
   const rowIndexMap = JSON.parse(
-    requireFile(resolve(PUBLIC_DIR, 'catalog-row-index-map.json'), 'run npm run build:catalog'),
+    requireFile(resolve(PUBLIC_DIR, 'catalog-row-index-map.json'), 'run pnpm run build:catalog'),
   ) as { bySynth: Record<string, number> };
 
   const hd = new Map<number, number>();
@@ -230,7 +230,7 @@ async function main(): Promise<void> {
       console.error(`  … and ${result.minted.length - 20} more`);
     }
     console.error(
-      '  Run `npm run sid:allocate` and commit the ledger diff in this PR.',
+      '  Run `pnpm run sid:allocate` and commit the ledger diff in this PR.',
     );
   }
   if (fatal) process.exit(1);

@@ -32,7 +32,7 @@ External scientific catalogues in Stellata's pipeline (stellar, ISM,
 nebular, exoplanetary, …) are committed under `data/` and read from
 disk at build time. The build does NOT fetch from the network — no
 `requests.get`, `urllib`, `astroquery`, or `fetch` calls participate
-in `npm run build` or the Python preprocessors.
+in `pnpm run build` or the Python preprocessors.
 
 Why: the build keeps working long-term even when external sources go
 offline, change schemas, or move URLs. Refresh from upstream is an
@@ -59,7 +59,7 @@ When adding a new external source:
    the network.
 5. If you write a fetch helper, name it explicitly (e.g.
    `scripts/refresh/refresh-<source>.py`) and gate it from
-   `npm run build` — refresh is a separate command, not a build
+   `pnpm run build` — refresh is a separate command, not a build
    step.
 
 ## Reference epoch and proper motion

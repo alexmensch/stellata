@@ -113,8 +113,8 @@ scripts/binaries/
                                   matching, writes records in
                                   topological outer-before-inner
                                   order. Run via
-                                  npm run build:binaries-runtime.
-  build-binaries-spotcheck.py     npm run test:spotcheck — runs Stage 1+2
+                                  pnpm run build:binaries-runtime.
+  build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2
                                   (resolve_through_stage2) and asserts the
                                   strongest-priority resolution per
                                   (wds_id, component) against the curated
@@ -198,7 +198,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    spectra + the Pulkovo MSC (`data/msc/`, mapped through
    `msc_map.py`). Emits `data/binaries/multiples.tsv` — two rows per kept
    physical pair, plus standalone rows for SIMBAD-known WDS components
-   the pair walk didn't reach. Run via `npm run build:binaries`. Seven
+   the pair walk didn't reach. Run via `pnpm run build:binaries`. Seven
    stages, one module per stage under `scripts/binaries/`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
    Reads AT-HYG + multiples.tsv (companion promotion) + the SIMBAD
@@ -207,7 +207,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    `public/catalog.bin` (v6, 80-byte records), `public/constellations.json`,
    `public/search-index.json`, `public/catalog-row-index-map.json`.
    Run via
-   `npm run build:catalog`. Per-stage logic lives in sibling modules
+   `pnpm run build:catalog`. Per-stage logic lives in sibling modules
    (`stars-parse.ts`, `catalog-pure.ts`, `gcvs-parse.ts`,
    `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`,
    `companion-promotion.ts`).
@@ -242,7 +242,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    only after judging a row's ids inherited and stripping them, so
    when one exists it is always the truer target than the blended
    member row the inherited id lands on.
-   Run via `npm run build:binaries-runtime`.
+   Run via `pnpm run build:binaries-runtime`.
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
    per-frame by the BinaryOrbitField runtime layer.
 
@@ -913,4 +913,4 @@ asserts against on every run:
   HIP2 fallback share, …). Catches a regression that shifts the
   population mix without shifting absolute count totals.
 
-Refresh both via `UPDATE_BUILD_COUNTS=1 npm run build:binaries`.
+Refresh both via `UPDATE_BUILD_COUNTS=1 pnpm run build:binaries`.

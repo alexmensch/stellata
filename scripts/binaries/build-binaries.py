@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Orchestration shell for the WDS → Gaia binary-system pipeline.
-Wires the per-stage modules into ``npm run build:binaries``.
+Wires the per-stage modules into ``pnpm run build:binaries``.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ SCRIPT = Path(__file__).resolve()
 # Make this folder (so sibling stage modules find each other),
 # scripts/refresh/ (so refresh_lib resolves), and scripts/util/ (so
 # paths resolves) reachable from any caller — direct invocation,
-# ``npm run build:binaries``, or the test loader's
+# ``pnpm run build:binaries``, or the test loader's
 # spec_from_file_location.
 sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
 sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
@@ -711,7 +711,7 @@ def run(force: bool) -> int:
         log(
             f"build-binaries assertion failed. If the change is "
             f"intentional, refresh with: "
-            f"{UPDATE_COUNTS_ENV_VAR}=1 npm run build:binaries"
+            f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries"
         )
         return 1
 

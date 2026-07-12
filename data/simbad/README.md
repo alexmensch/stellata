@@ -40,7 +40,7 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
 
 - `simbad_sample.tsv` → `scripts/catalog/distance-regression-check.ts`
   (Tier-C build-time subset) + `scripts/catalog/validate-simbad-sample.ts`
-  (Tier-C manual full run, `npm run validate:simbad`).
+  (Tier-C manual full run, `pnpm run validate:simbad`).
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1
   spectral classifier + the `otype = '**'` unresolved-multiplicity
   flag, scripts/catalog/README.md § Multiplicity status) +
@@ -54,8 +54,8 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
 
 ## Refresh
 
-- `npm run refresh:simbad` →
+- `pnpm run refresh:simbad` →
   [`scripts/refresh/refresh-simbad-sample.py`](../../scripts/refresh/README.md).
 - `refresh-simbad-sptype.py` and `refresh-simbad-wds-xids.py` have
-  no npm targets; invoke directly. Both share the
+  no pnpm targets; invoke directly. Both share the
   `scripts/refresh/simbad/` plumbing.

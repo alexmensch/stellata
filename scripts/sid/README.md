@@ -22,7 +22,7 @@ registry-io.ts            Filesystem access to the committed registry:
                           loadRegistry (validated read; throws
                           LedgerUnavailableError on an LFS-stub ledger).
                           Shared by allocate, build-catalog, and the stamp.
-allocate.ts               npm run sid:allocate — the ONLY writer of
+allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger.tsv (+ retirements bootstrap +
                           ledger-head.json). Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
@@ -30,17 +30,17 @@ allocate.ts               npm run sid:allocate — the ONLY writer of
                           local-group.json, data/sid/sol-objects.tsv.
                           Run build:catalog / build:clouds /
                           build:local-group first.
-                          npm run sid:check (--check) — read-only CI
+                          pnpm run sid:check (--check) — read-only CI
                           mode: same walk, zero writes; would-mint
                           objects and orphaned synth keys both fail.
                           Runs as its own CI check against the built
                           artifacts, making ledger ⟷ build consistency
                           a per-PR invariant.
-export-dr-risk-set.ts     npm run sid:risk-set — source_ids of the
+export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the neighbourhood-pull request TSV (§ 6.1
                           step 1). --out=<path> to write elsewhere.
-dr-reconcile.ts           npm run sid:dr-reconcile — churn report for a
+dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (§ 6.1 classes); --bridges-out
                           writes carried-1:1 same-as edges for human
                           review. Defaults replay the committed DR2→DR3
@@ -51,7 +51,7 @@ dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
-                          npm run sid:stamp). See § Sibling-artifact
+                          pnpm run sid:stamp). See § Sibling-artifact
                           stamping.
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
@@ -109,7 +109,7 @@ successor-less retirements:
 map each orphan key to its sid through `ledger.tsv`, append
 `sid<TAB>date<TAB>reason<TAB>` rows to `retirements.tsv` (script the
 mapping; one shared reason string per cause), re-run `sid:allocate`,
-then `npm run build:catalog`. Before writing, verify attribution: the
+then `pnpm run build:catalog`. Before writing, verify attribution: the
 Stage-7 count diff must conserve the donor tier's population into the
 new verdicts, or some orphans belong to a different change. CI's
 `sid:check` keeps main permanently consistent, so on an up-to-date
@@ -123,7 +123,7 @@ the count-diff check then just confirms it.
 either emitter — `stamp-sibling-sids.ts` post-processes the built artifact,
 resolving each object's `cloud:<id>` / `lg:<id>` through the shared
 `resolveSids` and writing the frozen sid in. It runs as the tail of
-`npm run build:clouds` and `npm run build:local-group` (and `npm run
+`pnpm run build:clouds` and `pnpm run build:local-group` (and `pnpm run
 sid:stamp` does both). Like the catalog build it is a pure consumer: an
 unallocated slug hard-fails with instructions to run `sid:allocate` (new
 object) or add a `sameas-overrides.tsv` bridge (renamed slug). The catalog's

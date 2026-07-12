@@ -48,7 +48,7 @@ interface RawCatalog {
 
 /**
  * Fetch the molecular cloud catalog. Returns null if the file is missing
- * (fresh checkout without `npm run build:clouds`, or a deploy that didn't
+ * (fresh checkout without `pnpm run build:clouds`, or a deploy that didn't
  * include the artifact). Callers must treat null as "no clouds layer", not
  * an error.
  */
@@ -67,7 +67,7 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
   if (sidErr) {
-    console.warn(`clouds.json ${sidErr} — rebuild with \`npm run build:clouds\``);
+    console.warn(`clouds.json ${sidErr} — rebuild with \`pnpm run build:clouds\``);
     return null;
   }
   const clouds: Cloud[] = raw.clouds.map((c) => ({

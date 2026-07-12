@@ -2,14 +2,14 @@
 
 **Layer 2** of the build/data split — manual, infrequent refresh of
 the frozen external catalogues under `data/`. Never wired into
-`npm run build`. The freshness policy is in `data/README.md`
+`pnpm run build`. The freshness policy is in `data/README.md`
 § Frozen external data; the per-source table is in `data/README.md`
 § Layer 1 — committed reference data.
 
 ## Layer 2 — refresh scripts
 
 Every refresh script is **manually invoked**, never wired into
-`npm run build`. The freshness policy (above) drives the split: build
+`pnpm run build`. The freshness policy (above) drives the split: build
 reads committed files, refresh writes them. Each script lives under
 `scripts/refresh/`, takes no required arguments (the deduped source_id
 request file is the one exception — `refresh-gaia-astrometry.py` reads
@@ -27,18 +27,18 @@ python3 -m venv .venv
 ```
 
 After that, prefix every `python3` invocation with `.venv/bin/`, or
-shell-activate via `source .venv/bin/activate`. The npm targets below
+shell-activate via `source .venv/bin/activate`. The pnpm targets below
 call bare `python3` — activate the venv (or alias `python3` to the
 venv binary) in the shell that runs them.
 
 ### Per-script targets
 
-| npm target | Script | Output | What it pulls |
+| pnpm target | Script | Output | What it pulls |
 |---|---|---|---|
 | `refresh:gaia-hip` | `refresh-gaia-hip-xmatch.py` | `data/gaia/gaia_dr3_hip_xmatch.tsv` | HIP → Gaia DR3 source_id cross-walk from `hipparcos2_best_neighbour`. |
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tyco2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
-| `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `npm run build:binaries`. |
+| `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
 | `build:astrometry-request` | `scripts/catalog/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — every AT-HYG row resolved via `resolveGaiaSourceId` (native `gaia` → HIP cross-walk). Not a network pull; reads `data/athyg/` + `data/gaia/gaia_dr3_hip_xmatch.tsv`. Run AFTER a fresh `refresh:gaia-hip`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5-parameter astrometry for every catalog-resolvable source_id (~315k) — the direction-cascade input. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. |
@@ -49,7 +49,7 @@ venv binary) in the shell that runs them.
 | `validate:simbad` | `scripts/catalog/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
-`refresh-msc.py` don't yet have dedicated npm targets — invoke
+`refresh-msc.py` don't yet have dedicated pnpm targets — invoke
 directly with `python3 scripts/refresh/<script>.py`. The two SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
 `inputs.py`, `query.py`, `tsv.py`) so adding new SIMBAD-anchored pulls
@@ -80,7 +80,7 @@ because the source_id space changes; partial refreshes leave the
 catalogue inconsistent. Order matters:
 
 1. **Swap AT-HYG.** Drop the new `athyg_3X_classic_ids.csv` into
-   `data/athyg/`. Re-run `npm run build:catalog` to confirm parse + drift
+   `data/athyg/`. Re-run `pnpm run build:catalog` to confirm parse + drift
    against the expected snapshot. (The build will fail loudly because
    the side-files are still keyed to DR3.)
 2. **Refresh the Gaia DR4-keyed side-files** in any order — they're
@@ -90,13 +90,13 @@ catalogue inconsistent. Order matters:
    `refresh-gaia-apsis.py`, `refresh-bailer-jones.py`.
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
    Then regenerate the full-catalog astrometry (two stages, after
-   `refresh-gaia-hip-xmatch.py`): `npm run build:astrometry-request`
+   `refresh-gaia-hip-xmatch.py`): `pnpm run build:astrometry-request`
    (resolves the source_id list from the new AT-HYG + HIP cross-walk),
-   then `npm run refresh:gaia-astrometry-catalog`.
+   then `pnpm run refresh:gaia-astrometry-catalog`.
 3. **Refresh HIP2 + SIMBAD if upstream republished** — these are
    keyed on HIP / SIMBAD `oid` respectively, so they don't change
    under a Gaia DR transition unless their own pipeline updated.
-4. **Re-run `npm run build:binaries`** then **`npm run build:catalog`**.
+4. **Re-run `pnpm run build:binaries`** then **`pnpm run build:catalog`**.
    Both build steps reassert against their snapshots; the count diffs
    are the first place to look for regressions.
 5. **`UPDATE_BUILD_COUNTS=1` then `UPDATE_DISTANCE_OUTLIERS=1`** to

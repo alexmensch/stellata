@@ -24,7 +24,7 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'sky-position-corpus.tsv');
 
-// Same skip-with-hint contract as known-stars.test.ts: plain `npm test`
+// Same skip-with-hint contract as known-stars.test.ts: plain `pnpm test`
 // in CI has no catalog.bin; the Tier-A corpus CI job runs the suite
 // against real artifacts.
 const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
@@ -32,7 +32,7 @@ if (!CATALOG_BIN_PRESENT) {
   // eslint-disable-next-line no-console
   console.warn(
     `[sky-position] skipping corpus assertions — catalog.bin MISSING. ` +
-    `Run \`npm run build:catalog\` (with LFS pulled) to exercise this suite.`,
+    `Run \`pnpm run build:catalog\` (with LFS pulled) to exercise this suite.`,
   );
 }
 

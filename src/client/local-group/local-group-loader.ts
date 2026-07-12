@@ -61,7 +61,7 @@ interface RawCatalog {
 
 /**
  * Fetch the Local Group catalog. Returns null if the file is missing
- * (fresh checkout without `npm run build:local-group`, or a deploy
+ * (fresh checkout without `pnpm run build:local-group`, or a deploy
  * that didn't include the artifact). Callers must treat null as
  * "no Local Group layer", not an error — same contract loadClouds
  * uses.
@@ -81,7 +81,7 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
   }
   const sidErr = sidColumnError(raw.objects.map((o) => o.sid));
   if (sidErr) {
-    console.warn(`local-group.json ${sidErr} — rebuild with \`npm run build:local-group\``);
+    console.warn(`local-group.json ${sidErr} — rebuild with \`pnpm run build:local-group\``);
     return null;
   }
   const objects: LgObject[] = raw.objects.map((o) => ({

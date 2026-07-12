@@ -3,6 +3,7 @@
   "version": "2.24.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.9.0",
   "license": "AGPL-3.0-only",
   "author": "Alex Marshall",
   "scripts": {
@@ -31,9 +32,9 @@
     "build:local-group": "tsx scripts/local-group/build-local-group.ts && tsx scripts/sid/stamp-sibling-sids.ts local-group",
     "build:dust-sync": "tsx scripts/dust/sync-dust.ts",
     "build:client": "vite build",
-    "build": "npm run build:binaries && npm run build:catalog && npm run build:binaries-runtime && npm run build:clouds && npm run build:local-group && npm run build:dust-sync && npm run build:client",
-    "dev": "npm run build:binaries && npm run build:catalog && npm run build:binaries-runtime && npm run build:clouds && npm run build:local-group && npm run build:dust-sync && vite",
-    "deploy": "npm run build && wrangler deploy",
+    "build": "pnpm run build:binaries && pnpm run build:catalog && pnpm run build:binaries-runtime && pnpm run build:clouds && pnpm run build:local-group && pnpm run build:dust-sync && pnpm run build:client",
+    "dev": "pnpm run build:binaries && pnpm run build:catalog && pnpm run build:binaries-runtime && pnpm run build:clouds && pnpm run build:local-group && pnpm run build:dust-sync && vite",
+    "deploy": "pnpm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
@@ -55,11 +56,5 @@
     "vite": "^8.0.10",
     "vitest": "^4.1.5",
     "wrangler": "^4.84.1"
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "sharp@0.34.5": true,
-    "workerd@1.20260701.1": true,
-    "fsevents@2.3.3": true
   }
 }
