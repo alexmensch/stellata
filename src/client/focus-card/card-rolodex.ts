@@ -27,7 +27,8 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   const stack = document.getElementById('card-stack')!;
   const stripsEl = document.getElementById('card-strips')!;
   const front = document.getElementById('front-card')!;
-  const badge = document.getElementById('front-card-badge')!;
+  const title = document.getElementById('front-card-title')!;
+  const header = document.getElementById('front-card-header')!;
   const close = document.getElementById('front-card-close') as HTMLButtonElement;
 
   let desiredFront: CardKey | null = null;
@@ -36,7 +37,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   bindCollapse({
     container: stack,
-    header: document.getElementById('front-card-header')!,
+    header,
     toggle: document.getElementById('front-card-toggle') as HTMLButtonElement,
     storageKey: COLLAPSED_KEY,
     ariaSubject: 'object info',
@@ -44,7 +45,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   const body = createCardBody({
     card: stack,
-    title: document.getElementById('front-card-title')!,
+    title,
     inner: document.getElementById('front-card-inner')!,
   });
 
@@ -95,8 +96,8 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
       focusVisible: focus !== null,
       desiredFront,
     });
-    frontKey = plan.front;
     if (plan.front === null) {
+      frontKey = null;
       stack.hidden = true;
       body.clear();
       stripsEl.textContent = '';
@@ -104,11 +105,23 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     }
     const contentFor = (key: CardKey): FocusCardContent =>
       key === FOCUS_KEY ? focus! : providers.star.format(poiIdxOf(key)!);
+    // Minimized shows the focused object regardless of which card is
+    // fronted for the expanded body; the × still dismisses whatever's
+    // on display, so it tracks the same key.
+    const collapsed = stack.classList.contains('collapsed');
+    const displayKey = collapsed ? plan.minimizedFront! : plan.front;
+    frontKey = displayKey;
     stack.hidden = false;
-    front.classList.toggle('is-focus', plan.front === FOCUS_KEY);
-    close.setAttribute('aria-label', plan.front === FOCUS_KEY ? 'Unfocus' : 'Unpin');
-    body.render(contentFor(plan.front));
-    badge.textContent = plan.strips.length > 0 ? `· ${plan.strips.length}` : '';
+    front.classList.toggle('is-focus', displayKey === FOCUS_KEY);
+    close.setAttribute('aria-label', displayKey === FOCUS_KEY ? 'Unfocus' : 'Unpin');
+    const frontContent = contentFor(plan.front);
+    body.render(frontContent);
+    const displayName =
+      displayKey === plan.front ? frontContent.name : contentFor(displayKey).name;
+    title.textContent =
+      collapsed && plan.strips.length > 0
+        ? `${displayName} · ${plan.strips.length} POI`
+        : displayName;
     stripsEl.textContent = '';
     stripsEl.style.setProperty('--strip-h', `${stripHeightPx(plan.strips.length)}px`);
     for (const key of plan.strips) {
@@ -121,6 +134,10 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     if (frontKey !== null) dismiss(frontKey);
   };
   close.addEventListener('click', onClose);
+  // bindCollapse's own listener (registered above) toggles the
+  // `.collapsed` class first; this one runs after and re-derives the
+  // minimized display from the new state.
+  header.addEventListener('click', reconcile);
 
   const unsubs = [
     stellata.on('focus', () => {
@@ -146,6 +163,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   return () => {
     for (const u of unsubs) u();
     close.removeEventListener('click', onClose);
+    header.removeEventListener('click', reconcile);
     stack.hidden = true;
     body.clear();
     stripsEl.textContent = '';

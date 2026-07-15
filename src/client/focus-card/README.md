@@ -39,10 +39,15 @@ so the whole unit stays card-sized regardless of pin count.
   a newly pinned star's card jumps to front on pin. A manual promote
   holds until the next such event. With no focus card in the stack the
   newest pin is front; with no cards at all the stack is hidden.
-- **Minimized** — the front card's header row alone, with a
-  behind-card count badge ("· 5"); strips reappear on expand. The one
-  collapse state covers the whole stack and persists at
-  `stellata.focus-card-collapsed`; front-card choice does not persist.
+- **Minimized** — the front card's header row alone, with the
+  behind-card count appended to the name ("Sol · 9 POI"); strips
+  reappear on expand. The name shown is the focused object's, not
+  whatever card happens to be fronted — a manually promoted POI card
+  still minimizes to the focus, since that's what "· N POI" is counting
+  against. With no focus visible, minimizing falls back to the front
+  card's own name (unchanged from expanded). The one collapse state
+  covers the whole stack and persists at `stellata.focus-card-collapsed`;
+  front-card choice does not persist.
 - **Observe mode** hides the focus card (the camera sits on the focal
   object, so the camera-frame rows are degenerate there); POI cards
   render in BOTH camera modes. The focused star's POI card is

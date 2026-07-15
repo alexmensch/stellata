@@ -31,6 +31,10 @@ export interface RolodexPlan {
   front: CardKey | null;
   /** Header strips top to bottom: focus card, then pins newest-first. */
   strips: CardKey[];
+  /** Card to name/count when minimized: the focused object if one is
+   *  visible, else `front` (matches `front` whenever there's no focus
+   *  to prefer). Null only alongside `front === null`. */
+  minimizedFront: CardKey | null;
 }
 
 export function planRolodex(o: RolodexInputs): RolodexPlan {
@@ -43,7 +47,8 @@ export function planRolodex(o: RolodexInputs): RolodexPlan {
     o.desiredFront !== null && cards.includes(o.desiredFront)
       ? o.desiredFront
       : (cards[0] ?? null);
-  return { front, strips: cards.filter((key) => key !== front) };
+  const minimizedFront = o.focusVisible ? FOCUS_KEY : front;
+  return { front, strips: cards.filter((key) => key !== front), minimizedFront };
 }
 
 export const STRIP_HEIGHT_MAX_PX = 26;

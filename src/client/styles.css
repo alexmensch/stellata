@@ -595,14 +595,6 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
 /* Bold sets the focus card apart from the visually identical POI cards —
  * wherever it currently sits (front card or strip). */
 .is-focus .card-title { font-weight: 700; }
-/* Behind-card count, shown only while the stack is minimized. */
-.card-badge {
-  display: none;
-  flex: 0 0 auto;
-  color: var(--fg-dim);
-  font-size: 12px;
-}
-.card-stack.collapsed .card-badge { display: inline; }
 /* Minimized stack = the front card's header row alone. The collapse
  * class lands on .card-stack (not .panel), so the .panel.collapsed
  * rules above don't cover these — including the header-only shrink

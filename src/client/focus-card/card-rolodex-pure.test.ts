@@ -19,6 +19,7 @@ describe('focus-card/planRolodex', () => {
     });
     expect(plan.front).toBe(FOCUS_KEY);
     expect(plan.strips).toEqual([poiKey(11), poiKey(7), poiKey(3)]);
+    expect(plan.minimizedFront).toBe(FOCUS_KEY);
   });
 
   it('fronts the newest pin when no focus card is visible', () => {
@@ -30,6 +31,7 @@ describe('focus-card/planRolodex', () => {
     });
     expect(plan.front).toBe(poiKey(11));
     expect(plan.strips).toEqual([poiKey(7), poiKey(3)]);
+    expect(plan.minimizedFront).toBe(poiKey(11));
   });
 
   it('honours a promoted card, keeping the focus strip on top', () => {
@@ -41,6 +43,16 @@ describe('focus-card/planRolodex', () => {
     });
     expect(plan.front).toBe(poiKey(7));
     expect(plan.strips).toEqual([FOCUS_KEY, poiKey(11), poiKey(3)]);
+  });
+
+  it('minimizes to the focused object even when a pin is promoted to front', () => {
+    const plan = planRolodex({
+      pois: [3, 7, 11],
+      focusedStar: 42,
+      focusVisible: true,
+      desiredFront: poiKey(7),
+    });
+    expect(plan.minimizedFront).toBe(FOCUS_KEY);
   });
 
   it('falls back to the default front when the desired card is gone', () => {
