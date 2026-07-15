@@ -4,6 +4,18 @@
 
 import * as THREE from 'three';
 
+/** Focusable-object kind tag. New kinds extend this union. */
+export type TargetKind = 'star' | 'cloud' | 'lg';
+
+/** A (kind, index) reference to one focusable object. The focus and
+ *  distance-vector slots on FocusController each hold one of these —
+ *  mutual exclusion between kinds is structural, not enforced by
+ *  pairwise clears. */
+export interface Target {
+  readonly kind: TargetKind;
+  readonly idx: number;
+}
+
 /** A focusable object — star, cloud, Local Group object, future
  *  planet/probe/nebula/etc. */
 export interface FocusTarget {
@@ -11,7 +23,7 @@ export interface FocusTarget {
    *  in higher-level code (URL state, focus-vector match-up). New kinds
    *  add a value to this union. The warp / lerp internals do not switch
    *  on `kind`. */
-  readonly kind: 'star' | 'cloud' | 'lg';
+  readonly kind: TargetKind;
 
   /** Catalog index within this kind. Carries the same value the legacy
    *  `focusedStar` / `focusedCloud` integer fields hold. Event payloads

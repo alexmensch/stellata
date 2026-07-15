@@ -8,17 +8,20 @@ close-approach focused star sitting at exactly NDC origin.
 
 ## Files
 
-- `focus-controller.ts` (+ test) — the FSM. Owns `focusedStar`,
-  `focusedCloud`, `focusedPlanetSystem`, the focus-park lerp state,
-  pin-engage geometry, and the `makeStarFocusTarget` /
-  `makeCloudFocusTarget` / `currentFocusTarget` factories. Canonical
-  home for `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
+- `focus-controller.ts` (+ test) — the FSM. Owns the focused object
+  and the distance-vector destination (one `Target` slot each — see
+  § Focus state), `cameraMode`, `focusedPlanetSystem`, the focus-park
+  lerp state, pin-engage geometry, and the `makeStarFocusTarget` /
+  `makeCloudFocusTarget` / `makeLgFocusTarget` / `currentFocusTarget`
+  factories. Canonical home for `GLOBAL_MIN_DIST_PC` +
+  `PIN_ENGAGE_THRESHOLD_SQ_PC`.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
-- `focus-target.ts` — the `FocusTarget` contract. Per-kind factories
-  return objects closing over the current focus state + controller
-  deps so warp / overlays / arrival math can read positions and
-  emit events without knowing the kind.
+- `focus-target.ts` — the `Target` sum type (`{kind, idx}`,
+  kind = `'star' | 'cloud' | 'lg'`) and the `FocusTarget` contract.
+  Per-kind factories return objects closing over the current focus
+  state + controller deps so warp / overlays / arrival math can read
+  positions and emit events without knowing the kind.
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The
@@ -30,15 +33,25 @@ stays on `stellata.ts` — those primitives rewrite the star-pipeline
 
 ## Focus state
 
-- `focusedStar`, `focusedCloud`, `focusedPlanetSystem`,
-  `planetSystemToken`. **Mutually exclusive** (star ↔ cloud); the
-  second setter clears the first via the standard `setFocus(null)` /
-  `setFocusedCloud(null)` paths so a single event ordering rule
-  (`'cloudFocus'` before `'focus'`) covers every swap.
+- `focused: Target | null` and `vector: Target | null` — one sum-type
+  slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG)
+  is structural rather than enforced by pairwise clears. The setters'
+  remaining job is emitting the clearing event for a displaced kind
+  before the new kind's event (`'cloudFocus'`/`'lgFocus'` null before
+  `'focus'` idx, and the mirror orderings). The per-kind event names
+  (`'focus'`/`'cloudFocus'`/`'lgFocus'`, `'vector'`/`'vectorCloud'`/
+  `'vectorLg'`) are a compatibility façade over the single slot;
+  subscribers are unchanged.
+- `cameraMode` lives here too — `getCameraMode()` is the single read
+  path; `setCameraModeValue()` is the raw no-emit write used by
+  ObserveTransition and the observe-cleanup branch of `setFocus`.
+- `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
+  state.
 - Click/select-driven entry points: `focusStar`, `setOrbitTarget`,
-  `flyToCloud`, `setOrbitTargetCloud`, `unfocus`. Each gates on
-  `getWarp().isActive()` and cancels any in-flight focus-park /
-  unfocus lerp before claiming the camera.
+  `flyToCloud`, `flyToLg`, `setOrbitTargetCloud`, `setOrbitTargetLg`,
+  `unfocus` (including the vector-only wipe when nothing is focused).
+  Each gates on `getWarp().isActive()` and cancels any in-flight
+  focus-park / unfocus lerp before claiming the camera.
 
 Construction cycle: `WarpController` and `ObserveTransition` both take
 `focus: FocusOps` from `FocusController`, but `FocusController`'s

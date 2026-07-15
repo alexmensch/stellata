@@ -232,20 +232,15 @@ export class Stellata implements FrameAnchor {
   private disposed = false;
   private bus = new EventBus<StellataEventMap>();
 
-  private cameraMode: CameraMode = 'navigate';
-  // Stellata owns the cameraMode field (read by ~20 sites) and writes
-  // it through the controller's setCameraModeValue dep callback.
   private observe!: ObserveTransition;
   private observeControls!: ObserveControls;
 
   private clock = new VirtualClock();
 
+  // Focus, distance-vector destination, and cameraMode all live on
+  // FocusController (camera/focus/README.md) as Target sum types; the
+  // shell keeps thin public shims.
   private focus!: FocusController;
-  // Distance-vector destination — at most one of these is non-null at
-  // a time. Mutual exclusion enforced by setVectorTo / setVectorToCloud.
-  private vectorTo: number | null = null;
-  private vectorToCloud: number | null = null;
-  private vectorToLg: number | null = null;
   private monochrome = false;
   private warp!: WarpController;
   private aim!: AimController;
@@ -606,7 +601,7 @@ export class Stellata implements FrameAnchor {
       camera: this.camera,
       controls: this.controls,
       observeControls: this.observeControls,
-      getCameraMode: () => this.cameraMode,
+      getCameraMode: () => this.focus.getCameraMode(),
     });
     // FocusController implements the FocusOps / ObserveFocusOps
     // surfaces consumed by WarpController + ObserveTransition.
@@ -622,13 +617,8 @@ export class Stellata implements FrameAnchor {
       frameAnchor: this,
       aim: this.aim,
       uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
-      getCameraMode: () => this.cameraMode,
-      setCameraModeValue: (mode) => { this.cameraMode = mode; },
       getClouds: () => this.clouds,
       getLocalGroup: () => this.localGroupLayer,
-      setVectorTo: (idx) => this.setVectorTo(idx),
-      setVectorToCloud: (idx) => this.setVectorToCloud(idx),
-      setVectorToLg: (idx) => this.setVectorToLg(idx),
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       focalPerturbationInto: (idx, out) =>
@@ -640,7 +630,7 @@ export class Stellata implements FrameAnchor {
       observeControls: this.observeControls,
       uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
       bus: this.bus,
-      getCameraMode: () => this.cameraMode,
+      getCameraMode: () => this.focus.getCameraMode(),
       isChartMode: () => this.filter.chart,
       getChartMagBright: () =>
         this.starPipeline.discMaterial.uniforms.uChartMagBright.value as number,
@@ -654,8 +644,8 @@ export class Stellata implements FrameAnchor {
       uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
       bus: this.bus,
       focus: this.focus,
-      getCameraMode: () => this.cameraMode,
-      setCameraModeValue: (mode) => { this.cameraMode = mode; },
+      getCameraMode: () => this.focus.getCameraMode(),
+      setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     // Orbit rings + heliopause are representational layers gated on
     // host-focus. Planet bodies live in PlanetBodyField and render
@@ -818,9 +808,9 @@ export class Stellata implements FrameAnchor {
   setWorldOffset(absX: number, absY: number, absZ: number): void {
     this.recenterOrigin(this.tmpRecenter.set(absX, absY, absZ));
   }
-  getVectorTo(): number | null { return this.vectorTo; }
-  getVectorToCloud(): number | null { return this.vectorToCloud; }
-  getVectorToLg(): number | null { return this.vectorToLg; }
+  getVectorTo(): number | null { return this.focus.getVectorTo(); }
+  getVectorToCloud(): number | null { return this.focus.getVectorToCloud(); }
+  getVectorToLg(): number | null { return this.focus.getVectorToLg(); }
 
   /** Virtual clock backing `getT()`; the debug time-scrubber drives it. */
   get timeClock(): VirtualClock { return this.clock; }
@@ -860,7 +850,7 @@ export class Stellata implements FrameAnchor {
    *  B across frames. Thin shim over WarpController.getWarpInfo. */
   getWarpInfo(): WarpInfo | null { return this.warp.getWarpInfo(); }
 
-  getCameraMode(): CameraMode { return this.cameraMode; }
+  getCameraMode(): CameraMode { return this.focus.getCameraMode(); }
   // True when an observe-mode transition (enter or exit) is in flight.
   // The 'unfocus' kind is excluded — it reuses the controller's state slot
   // for a navigate-mode lerp and shouldn't surface to UI/overlay code
@@ -1392,79 +1382,17 @@ export class Stellata implements FrameAnchor {
       starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms;
   }
 
-  setVectorTo(idx: number | null) {
-    // OBSERVE doesn't draw vectors. Defensive: search "To" or URL state
-    // could try to write one — drop the value rather than fight an invalid
-    // overlay state.
-    if (idx !== null && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
-    // The three vector slots are mutually exclusive; setting a star
-    // vector clears any cloud / LG destination.
-    if (idx !== null && this.vectorToCloud !== null) {
-      this.vectorToCloud = null;
-      this.bus.emit('vectorCloud', null);
-    }
-    if (idx !== null && this.vectorToLg !== null) {
-      this.vectorToLg = null;
-      this.bus.emit('vectorLg', null);
-    }
-    if (this.vectorTo === idx) return;
-    this.vectorTo = idx;
-    this.bus.emit('vector', idx);
-    this.bus.emit('state');
-  }
+  // Distance-vector destination — one Target slot on FocusController;
+  // these shims preserve the per-kind public surface for search,
+  // URL state, and the overlays.
+  setVectorTo(idx: number | null) { this.focus.setVectorTo(idx); }
+  setVectorToCloud(idx: number | null) { this.focus.setVectorToCloud(idx); }
+  setVectorToLg(idx: number | null) { this.focus.setVectorToLg(idx); }
 
-  setVectorToCloud(idx: number | null) {
-    if (idx !== null && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
-    if (idx !== null && this.vectorTo !== null) {
-      this.vectorTo = null;
-      this.bus.emit('vector', null);
-    }
-    if (idx !== null && this.vectorToLg !== null) {
-      this.vectorToLg = null;
-      this.bus.emit('vectorLg', null);
-    }
-    if (this.vectorToCloud === idx) return;
-    this.vectorToCloud = idx;
-    this.bus.emit('vectorCloud', idx);
-    this.bus.emit('state');
-  }
-
-  setVectorToLg(idx: number | null) {
-    if (idx !== null && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
-    if (idx !== null && this.vectorTo !== null) {
-      this.vectorTo = null;
-      this.bus.emit('vector', null);
-    }
-    if (idx !== null && this.vectorToCloud !== null) {
-      this.vectorToCloud = null;
-      this.bus.emit('vectorCloud', null);
-    }
-    if (this.vectorToLg === idx) return;
-    this.vectorToLg = idx;
-    this.bus.emit('vectorLg', idx);
-    this.bus.emit('state');
-  }
-
-  /** Click-handler entry point for "clear whatever's focused". The
-   *  vector-only short-circuit lives here (vector slots are still on
-   *  Stellata); everything else delegates to FocusController.unfocus. */
-  unfocus(opts: { animate?: boolean } = {}) {
-    if (this.warp.isActive()) return;
-    const hasFocus =
-      this.focus.getFocusedStar() !== null
-      || this.focus.getFocusedCloud() !== null
-      || this.focus.getFocusedLg() !== null;
-    if (!hasFocus && this.vectorTo === null && this.vectorToCloud === null && this.vectorToLg === null) return;
-    // Vector-only: FocusController.unfocus is a no-op without a focused
-    // object, so wipe the measurement vector here directly.
-    if (!hasFocus) {
-      this.setVectorTo(null);
-      this.setVectorToCloud(null);
-      this.setVectorToLg(null);
-      return;
-    }
-    this.focus.unfocus(opts);
-  }
+  /** Click-handler entry point for "clear whatever's focused" —
+   *  including the vector-only case (nothing focused, measurement
+   *  vector drawn). See FocusController.unfocus. */
+  unfocus(opts: { animate?: boolean } = {}) { this.focus.unfocus(opts); }
 
   // Filter / preset / FOV / render-knob mutations — thin shims over
   // FilterController (filters/README.md) preserving the public surface
@@ -1630,7 +1558,7 @@ export class Stellata implements FrameAnchor {
     }
     c.divideScalar(top.length);
 
-    if (this.cameraMode === 'observe') {
+    if (this.focus.getCameraMode() === 'observe') {
       // Camera is parked at the focal star — just rotate the view to face
       // the centroid through the shared observe-mode aim slerp. Distance
       // doesn't matter; only the direction from camera to `c` is used.
@@ -1722,12 +1650,12 @@ export class Stellata implements FrameAnchor {
       picker: this.picker,
       bus: this.bus,
       poiStore: this.poiStore,
-      getCameraMode: () => this.cameraMode,
+      getCameraMode: () => this.focus.getCameraMode(),
       getFilter: () => this.filter,
       getFocusedStar: () => this.focus.getFocusedStar(),
       getFocusedCloud: () => this.focus.getFocusedCloud(),
-      getVectorTo: () => this.vectorTo,
-      getVectorToCloud: () => this.vectorToCloud,
+      getVectorTo: () => this.focus.getVectorTo(),
+      getVectorToCloud: () => this.focus.getVectorToCloud(),
       setVectorTo: (idx) => this.setVectorTo(idx),
       setVectorToCloud: (idx) => this.setVectorToCloud(idx),
       isWarpActive: () => this.warp.isActive(),
@@ -1904,7 +1832,7 @@ export class Stellata implements FrameAnchor {
       this.observeUpdateTarget();
     } else if (this.observe.isAnyActive()) {
       this.observe.tick(performance.now());
-    } else if (this.cameraMode === 'observe') {
+    } else if (this.focus.getCameraMode() === 'observe') {
       // Look-around input (yaw/pitch/roll/FOV) mutates the camera directly
       // via observeControls + the existing two-finger handlers. update()
       // here advances any post-release momentum from a flick. Per-frame
@@ -2043,7 +1971,7 @@ export class Stellata implements FrameAnchor {
       focusedLocal,
       hideSolArrow: isSolFocus,
       sizeMaxPx: this.filter.sizeMax,
-      cameraMode: this.cameraMode,
+      cameraMode: this.focus.getCameraMode(),
       transition: this.getObserveTransitionProgress(),
       focusedDiscRadiusPx: focusedStar !== null
         ? starPhysics.renderedDiscPxAtPeak({
