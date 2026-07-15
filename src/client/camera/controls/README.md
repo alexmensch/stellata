@@ -9,6 +9,10 @@ in both navigate and observe modes.
 - `controls.ts` — settings-panel bindings (distance / magnitude / size
   sliders, spectral chips, overlay toggles) + the slider↔distance log
   mapping (`sliderToDist` / `distToSlider`).
+- `input-controller.ts` (+ test) — canvas pointer input: the click FSM
+  (single/double dispatch in both modes, the star click ladder, cloud
+  click semantics), two-finger / Safari-gesture roll, and the
+  shift-pan binding lifecycle (see § Input controller).
 - `shift-pan.ts` — orbit-first camera translation: pan only while a
   Shift key is held (see § Shift-drag panning).
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
@@ -30,6 +34,26 @@ in both navigate and observe modes.
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).
 - `star-physics.ts` — catalog-indexed wrappers around those formulae.
 - `stellata.ts` — wires per-frame uniforms and dispatches.
+
+## Input controller
+
+`InputController` owns every canvas pointer listener: pointerdown /
+pointerup / pointercancel (the click FSM), touch + WebKit gesture
+events (two-finger roll), and the shift-pan key binding. Clicks in
+both modes are held for `DBL_CLICK_MS` (280 ms) by a shared
+`PendingClickDispatcher` (`../../util/pending-click.ts`) so single and
+double clicks disambiguate; the deferred handlers re-check the
+warp / aim / transition guards at fire time. The full per-mode click
+decision table lives in `src/client/README.md` § Click-state machine;
+the star ladder's pure decision function is
+`../../poi/click-ladder-pure.ts`.
+
+The controller sees the rest of the app only through its deps
+closures (busy gates, focus reads, vector slots, focusStar /
+flyToCloud / unfocus / togglePoi / aimAt) — it owns dispatch order
+and gesture math, never focus or camera-transition state. Roll math
+uses controller-owned scratch `Vector3`/`Quaternion` instances; the
+per-gesture-event path allocates nothing.
 
 ## Camera near plane vs controls minDistance
 

@@ -62,7 +62,7 @@ mutation without enumerating the fine-grained names. `'planetSystem'`
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
 state mutation), and the warp-end edge emit alone.
 
-## Click-state machine (`stellata.ts`)
+## Click-state machine (`camera/controls/input-controller.ts`)
 
 Canvas clicks in BOTH modes are held for `DBL_CLICK_MS` (280 ms) by a
 shared `PendingClickDispatcher` (`util/pending-click.ts`) so single

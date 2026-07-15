@@ -46,7 +46,6 @@ import {
 } from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
-import { bindShiftPan } from './camera/controls/shift-pan';
 import {
   WarpController,
   type WarpInfo,
@@ -54,8 +53,7 @@ import {
 } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
 import { PoiStore } from './poi/poi-store';
-import { starLadderAction } from './poi/click-ladder-pure';
-import { PendingClickDispatcher } from './util/pending-click';
+import { InputController } from './camera/controls/input-controller';
 import {
   FocusController,
   type FrameAnchor,
@@ -253,17 +251,10 @@ export class Stellata implements FrameAnchor {
   private aim!: AimController;
 
   private poiStore!: PoiStore;
-  // Canvas clicks in BOTH modes are held for DBL_CLICK_MS so single
-  // (per-mode click semantics) and double (aim-at in observe, travel in
-  // navigate) can be disambiguated.
-  private static DBL_CLICK_MS = 280;
-  private static DBL_CLICK_DIST_PX_SQ = 8 * 8;
-  private clickDispatcher = new PendingClickDispatcher(
-    Stellata.DBL_CLICK_MS,
-    Stellata.DBL_CLICK_DIST_PX_SQ,
-    (x, y) => this.dispatchSingleClick(x, y),
-    (x, y) => this.dispatchDoubleClick(x, y),
-  );
+  // Canvas pointer input — click FSM (single/double, both modes),
+  // two-finger / gesture roll, shift-pan binding. See
+  // camera/controls/README.md § Input controller.
+  private input!: InputController;
 
   // Galactic reference layers. Disc fades in by camera-distance
   // from Sol and is always-on. Grid is gated by `filter.showGalacticGrid`.
@@ -1722,34 +1713,35 @@ export class Stellata implements FrameAnchor {
     );
   }
 
-  private pointerDownAt: { x: number; y: number; t: number } | null = null;
-  private twoFingerAngle: number | null = null;
-  private gestureLastRotation = 0;
-  private shiftPanDispose: (() => void) | null = null;
-
   private attachEvents() {
     window.addEventListener('resize', this.onResize);
-    // Shift-drag panning: orbit on a plain drag, translate while Shift is
-    // held. See camera/controls/shift-pan.ts.
-    this.shiftPanDispose = bindShiftPan(this.controls);
-    const canvas = this.renderer.domElement;
-    canvas.addEventListener('pointerdown', this.onPointerDown);
-    canvas.addEventListener('pointerup', this.onPointerUp);
-    // pointercancel partner for pointerdown/pointerup. Without it an
-    // OS-cancelled touch (phone-call interrupt, system gesture preempt)
-    // leaves pointerDownAt set, and the next genuine pointerup may satisfy
-    // the click gates against a stale 'down' from a different gesture and
-    // fire a phantom click.
-    canvas.addEventListener('pointercancel', this.onPointerCancel);
-    // Two-finger roll. Touch events for mobile; gesture* events for Safari
-    // desktop trackpad. Chrome/Firefox desktop don't expose a rotate gesture,
-    // so roll is unavailable there by design.
-    canvas.addEventListener('touchstart', this.onTouchStart);
-    canvas.addEventListener('touchmove', this.onTouchMove);
-    canvas.addEventListener('touchend', this.onTouchEnd);
-    canvas.addEventListener('touchcancel', this.onTouchEnd);
-    canvas.addEventListener('gesturestart', this.onGestureStart as EventListener);
-    canvas.addEventListener('gesturechange', this.onGestureChange as EventListener);
+    this.input = new InputController({
+      canvas: this.renderer.domElement,
+      camera: this.camera,
+      controls: this.controls,
+      picker: this.picker,
+      bus: this.bus,
+      poiStore: this.poiStore,
+      getCameraMode: () => this.cameraMode,
+      getFilter: () => this.filter,
+      getFocusedStar: () => this.focus.getFocusedStar(),
+      getFocusedCloud: () => this.focus.getFocusedCloud(),
+      getVectorTo: () => this.vectorTo,
+      getVectorToCloud: () => this.vectorToCloud,
+      setVectorTo: (idx) => this.setVectorTo(idx),
+      setVectorToCloud: (idx) => this.setVectorToCloud(idx),
+      isWarpActive: () => this.warp.isActive(),
+      isAimActive: () => this.aim.isActive(),
+      isObserveTransitionActive: () => this.isObserveTransitionActive(),
+      cancelUnfocusLerp: () => this.cancelUnfocusLerp(),
+      cancelFocusLerp: () => this.cancelFocusLerp(),
+      focusStar: (idx) => this.focusStar(idx),
+      flyToCloud: (idx) => this.flyToCloud(idx),
+      setOrbitTargetCloud: (idx) => this.setOrbitTargetCloud(idx),
+      unfocus: () => this.unfocus(),
+      togglePoi: (idx) => this.togglePoi(idx),
+      aimAt: (p) => this.aimAt(p),
+    });
   }
 
   private onResize = () => {
@@ -1834,251 +1826,10 @@ export class Stellata implements FrameAnchor {
  // parkDistForStar moved to FocusController — used by
   // ObserveTransition's ObserveFocusOps seam and the focus-park lerp.
 
-  private onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0) return;
-    this.pointerDownAt = { x: e.clientX, y: e.clientY, t: performance.now() };
-  };
-
-  private onPointerCancel = () => {
-    this.pointerDownAt = null;
-  };
-
-  private onPointerUp = (e: PointerEvent) => {
-    if (e.button !== 0) return;
-    const down = this.pointerDownAt;
-    this.pointerDownAt = null;
-    if (!down) return;
-    if (this.warp.isActive() || this.aim.isActive()) return;
-    this.cancelUnfocusLerp();
-    this.cancelFocusLerp();
-    if (this.isObserveTransitionActive()) return;
-    const dx = e.clientX - down.x;
-    const dy = e.clientY - down.y;
-    if (dx * dx + dy * dy > 25) return;
-    if (performance.now() - down.t > 500) return;
-
-    // Both modes hold the click for DBL_CLICK_MS via the shared
-    // dispatcher; the deferred handlers re-check the volatile guards
-    // (warp / aim / transition) at fire time.
-    this.clickDispatcher.click(e.clientX, e.clientY);
-  };
-
-  private dispatchSingleClick(x: number, y: number) {
-    if (this.warp.isActive() || this.aim.isActive() || this.isObserveTransitionActive()) return;
-    const did = this.cameraMode === 'observe'
-      ? this.observeSingleClick(x, y)
-      : this.navigateSingleClick(x, y);
-    // Only clicks that changed nothing ripple (overlays/click-ripple.ts)
-    // — a click that did something has its own lasting feedback (ring,
-    // vector, focus, aim) and doesn't need a second affordance.
-    if (!did) this.bus.emit('noopClick', { x, y });
-  }
-
-  private dispatchDoubleClick(x: number, y: number) {
-    if (this.warp.isActive() || this.aim.isActive() || this.isObserveTransitionActive()) return;
-    if (this.cameraMode === 'observe') {
-      this.observeDoubleClick(x, y);
-      return;
-    }
-    // Navigate double-click = travel: the focus-park teleport that
-    // click-the-vector-tip used to trigger, now on any star or cloud.
-    const starIdx = this.picker.pickStar(x, y);
-    if (starIdx >= 0) {
-      this.focusStar(starIdx);
-      return;
-    }
-    const cloudIdx = this.picker.pickCloud(x, y);
-    if (cloudIdx !== null) {
-      this.flyToCloud(cloudIdx);
-      return;
-    }
-    this.bus.emit('noopClick', { x, y });
-  }
-
-  private navigateSingleClick(x: number, y: number): boolean {
-    // Pick a star first — they're the primary interaction target. Fall
-    // back to clouds when no star is hit.
-    const starIdx = this.picker.pickStar(x, y);
-    if (starIdx >= 0) {
-      return this.applyStarClick(starIdx);
-    }
-    const cloudIdx = this.picker.pickCloud(x, y);
-    if (cloudIdx === null) return false;
-
-    // Clouds keep the pre-ladder vector-first semantics — unreachable
-    // while the MC layer is shelved; revisit at un-shelve. Viewing
-    // distance for clouds is cloudViewingDistancePc, not parkDistForStar.
-    const focusedStar = this.focus.getFocusedStar();
-    const focusedCloud = this.focus.getFocusedCloud();
-    if (focusedStar === null && focusedCloud === null) {
-      this.setOrbitTargetCloud(cloudIdx);
-      return true;
-    }
-    if (focusedCloud === cloudIdx) {
-      if (this.vectorTo !== null || this.vectorToCloud !== null) {
-        this.setVectorTo(null);
-        this.setVectorToCloud(null);
-      } else {
-        this.unfocus();
-      }
-      return true;
-    }
-    if (this.vectorToCloud === cloudIdx) {
-      this.flyToCloud(cloudIdx);
-      return true;
-    }
-    this.setVectorToCloud(cloudIdx);
-    return true;
-  }
-
-  /**
-   * Canonical per-mode star-click semantics — deferred canvas clicks and
-   * the POI overlay's on-screen labels both route here. Observe toggles
-   * the pin; navigate handles focus / unfocus, then runs the click
-   * ladder (pin → vector → clear both) for any other star. Returns
-   * whether the click changed anything (false → noop-click ripple).
-   */
-  applyStarClick(idx: number): boolean {
-    if (this.cameraMode === 'observe') {
-      // Mirror the POI overlay visibility gate — toggling without a
-      // visible ring/arrow would change state with no feedback.
-      if (!this.filter.showHud) return false;
-      return this.togglePoi(idx);
-    }
-
-    const focusedStar = this.focus.getFocusedStar();
-    const focusedCloud = this.focus.getFocusedCloud();
-
-    // No focus → click parks the camera at the clicked star, matching
-    // search-select and URL-restore (parkDistForStar, 10% disc fill).
-    if (focusedStar === null && focusedCloud === null) {
-      this.focusStar(idx);
-      return true;
-    }
-
-    // Click on the focused star → clear vector if present (the
-    // destination stays pinned), else unfocus.
-    if (focusedStar === idx) {
-      if (this.vectorTo !== null || this.vectorToCloud !== null) {
-        this.setVectorTo(null);
-        this.setVectorToCloud(null);
-      } else {
-        this.unfocus();
-      }
-      return true;
-    }
-
-    // Pins are HUD widgets — with the HUD hidden a pin would be an
-    // invisible state change, so the ladder sees HUD-off stars as
-    // unpinnable/unpinned and steps only its vector rungs (existing
-    // pins are left untouched). Mirrors the observe-branch gate above.
-    const hudOn = this.filter.showHud;
-    const action = starLadderAction({
-      pinnable: hudOn && this.poiStore.pinnable(idx),
-      pinned: hudOn && this.poiStore.has(idx),
-      atCap: this.poiStore.atCap(),
-      isVectorDest: this.vectorTo === idx,
-    });
-    switch (action) {
-      case 'pin': return this.togglePoi(idx);
-      case 'vector': this.setVectorTo(idx); return true;
-      case 'clearVector': this.setVectorTo(null); return true;
-      case 'clearBoth':
-        this.setVectorTo(null);
-        this.togglePoi(idx);
-        return true;
-    }
-  }
-
-  private observeSingleClick(x: number, y: number): boolean {
-    const idx = this.picker.pickStar(x, y);
-    if (idx < 0) return false;
-    return this.applyStarClick(idx);
-  }
-
-  // Reusable scratch for the double-click ray unproject. Allocated once.
-  private dblClickRay = new THREE.Vector3();
-  private dblClickAimPoint = new THREE.Vector3();
-
-  private observeDoubleClick(x: number, y: number) {
-    // Convert (clientX, clientY) → NDC → unproject → world ray direction.
-    // Build a far point along the ray and feed it to aimAt — that path
-    // already handles the quaternion slerp, the duration ramp, and
-    // disabling observeControls for the duration.
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.dblClickRay.set((x / w) * 2 - 1, -(y / h) * 2 + 1, 0.5);
-    this.dblClickRay.unproject(this.camera);
-    this.dblClickRay.sub(this.camera.position).normalize();
-    this.dblClickAimPoint.copy(this.camera.position).addScaledVector(this.dblClickRay, 1e6);
-    this.aimAt(this.dblClickAimPoint);
-  }
-
-  private onTouchStart = (e: TouchEvent) => {
-    if (e.touches.length === 2) {
-      this.twoFingerAngle = this.touchAngle(e.touches);
-    } else {
-      this.twoFingerAngle = null;
-    }
-  };
-
-  private onTouchMove = (e: TouchEvent) => {
-    if (e.touches.length !== 2 || this.twoFingerAngle === null) return;
-    const a = this.touchAngle(e.touches);
-    let d = a - this.twoFingerAngle;
-    if (d > Math.PI) d -= 2 * Math.PI;
-    else if (d < -Math.PI) d += 2 * Math.PI;
-    this.twoFingerAngle = a;
-    this.rollCamera(-d);
-  };
-
-  private onTouchEnd = (e: TouchEvent) => {
-    if (e.touches.length !== 2) this.twoFingerAngle = null;
-  };
-
-  private touchAngle(t: TouchList): number {
-    return Math.atan2(
-      t[1].clientY - t[0].clientY,
-      t[1].clientX - t[0].clientX,
-    );
-  }
-
-  private onGestureStart = (e: Event) => {
-    e.preventDefault();
-    this.gestureLastRotation = 0;
-  };
-
-  private onGestureChange = (e: Event) => {
-    e.preventDefault();
-    const rot = (e as Event & { rotation: number }).rotation;
-    const delta = ((rot - this.gestureLastRotation) * Math.PI) / 180;
-    this.gestureLastRotation = rot;
-    this.rollCamera(-delta);
-  };
-
-  // Rotate the camera around the view direction.
-  //
-  // NAVIGATE: mutate camera.up — TrackballControls reads it every update()
-  // and the orbit math needs the rolled vertical to persist through
-  // subsequent orbit/zoom.
-  //
-  // OBSERVE: rotate camera.quaternion to actually roll the rendered image.
-  // Also rotate camera.up by the same angle even though observe-controls.ts
-  // doesn't read it: the URL state encodes camera.up, so leaving it stale
-  // would lose the roll on round-trip (observe entry rebuilds the
-  // quaternion from cam/tgt/up, dropping any roll baked into the
-  // quaternion alone).
-  private rollCamera(angle: number) {
-    const forward = new THREE.Vector3()
-      .subVectors(this.controls.target, this.camera.position);
-    if (forward.lengthSq() === 0) return;
-    forward.normalize();
-    this.camera.up.applyAxisAngle(forward, angle).normalize();
-    if (this.cameraMode === 'observe') {
-      const q = new THREE.Quaternion().setFromAxisAngle(forward, angle);
-      this.camera.quaternion.premultiply(q).normalize();
-    }
-  }
+  /** Canonical per-mode star-click semantics — the POI overlay's
+   *  on-screen labels route here alongside deferred canvas clicks. See
+   *  InputController.applyStarClick. */
+  applyStarClick(idx: number): boolean { return this.input.applyStarClick(idx); }
 
   // Pixel size below which a disc-pass core's bleed-through is small enough
   // that we don't bother enabling the depth mask. Conservative — at this
@@ -2325,19 +2076,7 @@ export class Stellata implements FrameAnchor {
   dispose() {
     this.disposed = true;
     window.removeEventListener('resize', this.onResize);
-    const canvas = this.renderer.domElement;
-    canvas.removeEventListener('pointerdown', this.onPointerDown);
-    canvas.removeEventListener('pointerup', this.onPointerUp);
-    this.clickDispatcher.dispose();
-    canvas.removeEventListener('pointercancel', this.onPointerCancel);
-    canvas.removeEventListener('touchstart', this.onTouchStart);
-    canvas.removeEventListener('touchmove', this.onTouchMove);
-    canvas.removeEventListener('touchend', this.onTouchEnd);
-    canvas.removeEventListener('touchcancel', this.onTouchEnd);
-    canvas.removeEventListener('gesturestart', this.onGestureStart as EventListener);
-    canvas.removeEventListener('gesturechange', this.onGestureChange as EventListener);
-    this.shiftPanDispose?.();
-    this.shiftPanDispose = null;
+    this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.
     this.observeControls.disable();
