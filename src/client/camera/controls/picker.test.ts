@@ -126,6 +126,7 @@ function defaultFilter(overrides: Partial<FilterState> = {}): FilterState {
     showGalacticGrid: false,
     showHud: false,
     showMilkyway: true,
+    showLgEmission: true,
     chart: false,
     ...overrides,
   };
