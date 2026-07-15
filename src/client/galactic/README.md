@@ -313,11 +313,12 @@ catalog itself was missing, and is hidden in chart mode anyway.
   per-frame palette logic; `setMonochrome(on)` on `HudOverlay` is
   intentionally empty since the SVG class routing handles it.
 
-**Warp visibility:** `updateGalacticLayers` hides the 3D disc + grid
-groups while `warpState !== null`; SVG arrow paths and labels are
+**Warp visibility:** each layer's registry entry
+(`src/client/scene/README.md`) hides the 3D disc + grid groups while
+`ctx.warpActive`; SVG arrow paths and labels are
 hidden via the existing `body.warping #overlay { display: none }` rule.
 
-**Camera matrix freshness:** `updateGalacticLayers` calls
+**Camera matrix freshness:** the HUD's registry entry calls
 `camera.updateMatrixWorld()` before any SVG projection. `controls.update()`
 mutates `camera.position`/`quaternion` but doesn't propagate to
 `matrixWorld`/`matrixWorldInverse` — the renderer would do that for us,

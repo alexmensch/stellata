@@ -96,6 +96,7 @@ import {
   type StarRenderParams,
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
+import { SceneLayerRegistry } from './scene/scene-layer';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import {
   ExtinctionPrepass,
@@ -231,6 +232,19 @@ export class Stellata implements FrameAnchor {
 
   private disposed = false;
   private bus = new EventBus<StellataEventMap>();
+
+  // Scene layers register once (registerSceneLayers) and the registry
+  // fans out per-frame update / setMonochrome / recenter / dispose —
+  // see scene/README.md. frameCtx is the shared per-frame input struct,
+  // mutated in place each frame to avoid a per-frame allocation.
+  private readonly layers = new SceneLayerRegistry();
+  private frameCtx!: {
+    camera: THREE.PerspectiveCamera;
+    worldOffset: THREE.Vector3;
+    distFromSol: number;
+    t: number;
+    warpActive: boolean;
+  };
 
   private observe!: ObserveTransition;
   private observeControls!: ObserveControls;
@@ -750,8 +764,111 @@ export class Stellata implements FrameAnchor {
       },
     });
 
+    this.frameCtx = {
+      camera: this.camera,
+      worldOffset: this.worldOffset,
+      distFromSol: 0,
+      t: 0,
+      warpActive: false,
+    };
+    this.registerSceneLayers();
     this.attachEvents();
     this.animate();
+  }
+
+  // One adapter entry per scene layer; registration order is per-frame
+  // update order. Lazily-attached layers are read through closures so
+  // attach/replace cycles need no re-registration. Warp gating is
+  // per-entry: reference layers hide during warp, physical/light layers
+  // keep ticking (clouds stay visible during warp by design — flying
+  // past Taurus is a feature). See scene/README.md.
+  private registerSceneLayers(): void {
+    this.layers.register({
+      update: (ctx) => this.orbitRingsLayer.update(ctx.camera, window.innerHeight),
+      setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
+      dispose: () => this.orbitRingsLayer.dispose(),
+    });
+    this.layers.register({
+      update: (ctx) => this.planetBodyField.update(ctx.camera, ctx.t),
+      setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
+      recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),
+      dispose: () => this.planetBodyField.dispose(),
+    });
+    this.layers.register({
+      update: () => this.updateBinaryOrbits(),
+      recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
+      dispose: () => {
+        this.binaryOrbitField?.dispose();
+        this.eclipsePhotometryField?.dispose();
+      },
+    });
+    this.layers.register({
+      update: (ctx) => {
+        if (ctx.warpActive) {
+          this.galacticDisc.group.visible = false;
+          return;
+        }
+        this.galacticDisc.update(ctx.worldOffset, ctx.distFromSol);
+      },
+      setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
+      dispose: () => this.galacticDisc.dispose(),
+    });
+    this.layers.register({
+      update: (ctx) => {
+        const lg = this.localGroupLayer;
+        if (!lg) return;
+        if (ctx.warpActive) {
+          lg.group.visible = false;
+          return;
+        }
+        lg.update(ctx.worldOffset, ctx.distFromSol);
+      },
+      setMonochrome: (on) => this.localGroupLayer?.setMonochrome(on),
+      dispose: () => this.localGroupLayer?.dispose(),
+    });
+    this.layers.register({
+      update: (ctx) => {
+        if (!ctx.warpActive && this.filter.showGalacticGrid) {
+          this.galacticGrid.group.visible = true;
+          this.galacticGrid.update(ctx.camera.position);
+        } else {
+          this.galacticGrid.group.visible = false;
+        }
+      },
+      setMonochrome: (on) => this.galacticGrid.setMonochrome(on),
+      dispose: () => this.galacticGrid.dispose(),
+    });
+    this.layers.register({
+      update: (ctx) => this.updateHud(ctx.warpActive),
+      setMonochrome: (on) => this.hudOverlay.setMonochrome(on),
+      dispose: () => this.hudOverlay.dispose(),
+    });
+    this.layers.register({
+      // Layer shelved (CLAUDE.md): visible=false. Flip to true (or
+      // restore a FilterState flag) when re-enabling.
+      update: (ctx) => this.clouds?.update(ctx.worldOffset, false),
+      setMonochrome: (on) => this.clouds?.setMonochrome(on),
+      dispose: () => this.clouds?.dispose(),
+    });
+    this.layers.register({
+      // Re-anchors the skybox mesh to camera.position and refreshes the
+      // absolute-camera uniform for the raymarch. Visible during warp.
+      update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
+      dispose: () => this.milkyway.dispose(),
+    });
+    this.layers.register({
+      update: (ctx) => this.lgEmission?.update(ctx.worldOffset),
+      setMonochrome: (on) => this.lgEmission?.setChartHidden(on),
+      dispose: () => this.lgEmission?.dispose(),
+    });
+    this.layers.register({
+      // Visibility is event-driven (host focus), no per-frame update.
+      setMonochrome: (on) => this.heliopause.setMonochrome(on),
+      dispose: () => this.heliopause.dispose(),
+    });
+    this.layers.register({
+      dispose: () => this.dustParticles.dispose(),
+    });
   }
 
   /** Subscribe to any event in `StellataEventMap`. Returns an unsubscribe
@@ -772,7 +889,7 @@ export class Stellata implements FrameAnchor {
    *  the 'planetSystem' event to react to focus swaps. */
   getFocusedPlanetSystem(): PlanetSystem | null { return this.focus.getFocusedPlanetSystem(); }
   /** True when the orbit-rings layer is currently rendering at least one
-   *  ring. Frame-coherent — `updateGalacticLayers()` runs before
+   *  ring. Frame-coherent — the scene-layer update fan-out runs before
    *  `'frame'` event handlers, so overlays driven by the frame loop
    *  (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean { return this.orbitRingsLayer.anyOrbitRingVisible(); }
@@ -990,10 +1107,9 @@ export class Stellata implements FrameAnchor {
     // Shader needs the world offset to reconstruct absolute positions for
     // dust-texture sampling (local-frame iPosition + uWorldOffset).
     (this.starPipeline.discMaterial.uniforms.uWorldOffset.value as THREE.Vector3).copy(newOrigin);
-    // Each attached host's iHostLocalPos = hostAbs - worldOffset; refresh
-    // them so the planet shader sees correct local-frame host positions.
-    this.planetBodyField.recenter(newOrigin);
-    this.binaryOrbitField?.recenter(newOrigin);
+    // Layers holding local-frame positions (planet hosts, binary
+    // baselines) re-derive them through the registry's recenter hooks.
+    this.layers.recenterAll(newOrigin);
     return this._recenterDelta.set(dx, dy, dz);
   }
 
@@ -1425,20 +1541,12 @@ export class Stellata implements FrameAnchor {
     this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
-    this.galacticDisc.setMonochrome(on);
-    this.localGroupLayer?.setMonochrome(on);
-    this.lgEmission?.setChartHidden(on);
-    this.galacticGrid.setMonochrome(on);
-    this.hudOverlay.setMonochrome(on);
-    this.clouds?.setMonochrome(on);
-    this.orbitRingsLayer.setMonochrome(on);
-    this.planetBodyField.setMonochrome(on);
-    this.heliopause.setMonochrome(on);
-    // The milky-way layer used to fully hide in chart mode, but chart
-    // mode re-purposes it to render an isobar contour. Visibility/contour
-    // are now driven by the chart-mode orchestrator via
-    // `setMilkywayIsobar` and `setCloudsIsobar` below — call them
+    // Per-layer palette swaps fan out through the registry. The
+    // milky-way layer has no monochrome hook: chart mode re-purposes it
+    // as an isobar contour, driven by the chart-mode orchestrator via
+    // `setMilkywayIsobar` / `setCloudsIsobar` below — call them
     // alongside setMonochrome.
+    this.layers.setMonochromeAll(on);
     this.bus.emit('state');
   }
 
@@ -1738,7 +1846,8 @@ export class Stellata implements FrameAnchor {
   // that scope and must not be retained across method calls.
   //
   //  - _tmpAnimateLocal: owned by animate() and the methods it calls
-  //    in sequence (updateGalacticLayers). Single writer in steady-state.
+  //    in sequence (the scene-layer update fan-out). Single writer in
+  //    steady-state.
   //    Adding a new writer that retains the value across another
   //    animate-stack method violates the contract.
   //  - _tmpRenderLocal: owned by per-call read methods invoked outside
@@ -1874,13 +1983,18 @@ export class Stellata implements FrameAnchor {
     perfMark('coreMask');
     this.starPipeline.coreMaskMesh.visible = this.shouldEnableCoreMask();
     perfMeasure('coreMask');
-    this.updateGalacticLayers();
-    // Milky Way analytic background. The skybox mesh is already in the
-    // main scene at renderOrder = -3; this call re-anchors it to
-    // camera.position and refreshes the absolute-camera-position uniform
-    // for the shader's raymarch.
-    this.milkyway.update(this.camera, this.worldOffset);
-    this.lgEmission?.update(this.worldOffset);
+    // Per-frame layer fan-out through the registry. distFromSol is the
+    // camera's absolute ICRS distance, summed in JS float64 so it stays
+    // exact with kpc-scale worldOffset values (the disc-fade smoothstep
+    // consuming it spans a small range, so precision matters).
+    const cam = this.camera.position;
+    const ax = cam.x + this.worldOffset.x;
+    const ay = cam.y + this.worldOffset.y;
+    const az = cam.z + this.worldOffset.z;
+    this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
+    this.frameCtx.t = this.getT();
+    this.frameCtx.warpActive = this.warp.isActive();
+    this.layers.updateAll(this.frameCtx);
     perfMeasure('pre-render');
     perfMark('gpu.render');
     this.renderer.render(this.scene, this.camera);
@@ -1893,64 +2007,20 @@ export class Stellata implements FrameAnchor {
     requestAnimationFrame(this.animate);
   };
 
-  // Three layers tick every frame regardless of warp state: orbit
-  // rings, planet bodies, and binary orbit perturbations. All three
-  // read wall-clock t (or per-frame camera state) and need a fresh
-  // update on the warp path too — the warp branch in
-  // updateGalacticLayers calls into this once, the non-warp branch
-  // once, so the trio stays in lockstep with no per-call drift.
-  private updateContinuouslyTickingLayers() {
-    this.orbitRingsLayer.update(this.camera, window.innerHeight);
-    this.planetBodyField.update(this.camera, this.getT());
-    this.updateBinaryOrbits();
-  }
-
-  // Drive the disc fade, grid attachment, and arrow projection each frame.
-  // All three galactic layers are hidden during a warp — the camera is in
-  // motion and their reference function is exactly the kind of context warp
-  // deliberately suppresses. Molecular clouds stay visible during warp by
-  // design — flying past Taurus or Orion is a feature, not a distraction.
-  private updateGalacticLayers() {
-    if (this.warp.isActive()) {
-      this.galacticDisc.group.visible = false;
-      if (this.localGroupLayer) this.localGroupLayer.group.visible = false;
-      this.galacticGrid.group.visible = false;
+  // HUD projection — hidden during warp (the camera is in motion and
+  // its reference function is exactly the context warp suppresses,
+  // same as the disc / grid / LG wireframe entries in the registry).
+  private updateHud(warpActive: boolean) {
+    if (warpActive) {
       this.hudOverlay.setVisible(false);
-      // Orbit rings are focus-only — no warp-destination ring preview.
-      // Planet bodies belong to the global PlanetBodyField; they fade
-      // in naturally as the camera nears each host's cull distance.
-      this.updateContinuouslyTickingLayers();
-      // Cloud layer is currently shelved (CLAUDE.md): visible=false. Flip
-      // to true (or restore a FilterState flag) when re-enabling.
-      this.clouds?.update(this.worldOffset, false);
       return;
     }
-    this.updateContinuouslyTickingLayers();
-
     // Refresh camera matrices before any SVG projection — controls.update()
     // mutates camera.position/quaternion but doesn't propagate to
     // matrixWorld/matrixWorldInverse. The renderer would do this for us, but
     // we project arrow tips into screen space *before* renderer.render() runs,
     // so without this call the labels lag by one frame during fast moves.
     this.camera.updateMatrixWorld();
-
-    // Camera distance from Sol in absolute ICRS pc. Computed in JS float64 so
-    // the sum stays exact even with kpc-scale worldOffset values; the disc
-    // fade smoothstep that consumes it is a small range so precision matters.
-    const cam = this.camera.position;
-    const ax = cam.x + this.worldOffset.x;
-    const ay = cam.y + this.worldOffset.y;
-    const az = cam.z + this.worldOffset.z;
-    const distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
-    this.galacticDisc.update(this.worldOffset, distFromSol);
-    this.localGroupLayer?.update(this.worldOffset, distFromSol);
-
-    if (this.filter.showGalacticGrid) {
-      this.galacticGrid.group.visible = true;
-      this.galacticGrid.update(this.camera.position);
-    } else {
-      this.galacticGrid.group.visible = false;
-    }
 
     const focusedStar = this.focus.getFocusedStar();
     const focusedLocal =
@@ -1985,10 +2055,6 @@ export class Stellata implements FrameAnchor {
       w: window.innerWidth,
       h: window.innerHeight,
     });
-
-    // Cloud layer is currently shelved (CLAUDE.md): visible=false. Flip
-    // to true (or restore a FilterState flag) when re-enabling.
-    this.clouds?.update(this.worldOffset, false);
   }
 
   private observeTmpFwd = new THREE.Vector3();
@@ -2012,22 +2078,13 @@ export class Stellata implements FrameAnchor {
     this.warp.dispose();
     this.observe.dispose();
     this.focus.dispose();
-    this.hudOverlay.dispose();
     this.controls.dispose();
     this.starPipeline.dispose();
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
-    this.dustParticles.dispose();
-    this.clouds?.dispose();
-    this.localGroupLayer?.dispose();
-    this.galacticDisc.dispose();
-    this.galacticGrid.dispose();
-    this.orbitRingsLayer.dispose();
-    this.planetBodyField.dispose();
-    this.binaryOrbitField?.dispose();
-    this.heliopause.dispose();
-    this.milkyway.dispose();
-    this.lgEmission?.dispose();
+    // Every scene layer (eager or lazily attached) disposes through the
+    // registry — a registered layer can't be missing here.
+    this.layers.disposeAll();
     this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but

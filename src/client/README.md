@@ -12,8 +12,12 @@ themselves.
   — bootstrap + integration shell.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `util/` — project-agnostic plumbing (event bus, URL state).
-- `camera/` — camera controllers split across `controls/`, `warp/`,
-  `observe/`, `arrival/`.
+- `filters/` — `FilterState` + magnitude presets + render knobs and
+  the `FilterController` that owns every mutation.
+- `scene/` — the `SceneLayer` contract + registry driving the
+  per-layer update / monochrome / recenter / dispose fan-outs.
+- `camera/` — camera controllers split across `controls/`, `focus/`,
+  `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
   `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/` — render
   layers.
