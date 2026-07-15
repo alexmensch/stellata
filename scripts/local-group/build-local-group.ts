@@ -13,9 +13,12 @@ import {
   filterForRendering,
   mergeRowAndOverride,
   roundN,
+  roundSig,
+  type LgEmission,
   type LgObject,
   type LvdbRow,
   type OverrideRow,
+  type SersicParams,
 } from './build-local-group-pure';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,38 +59,45 @@ export function parseLvdb(csv: string): LvdbRow[] {
     rhalfPhysicalPc: num(r.rhalf_physical),
     ellipticity: num(r.ellipticity),
     positionAngle: num(r.position_angle),
+    apparentMagV: num(r.apparent_magnitude_v),
+    nSersic: num(r.n_sersic),
   }));
 }
 
 /** Parse overrides.tsv (header line + tab-separated rows; lines starting
  *  with # are comments).
  *
- *  Schema (6 required columns; 3 optional standalone-position columns):
+ *  Schema (6 required columns; optional columns follow, looked up by
+ *  header name):
  *
  *    name<TAB>a_pc<TAB>b_pc<TAB>c_pc<TAB>orient<TAB>ref_doi
  *      [<TAB>ra_deg<TAB>dec_deg<TAB>distance_kpc]
+ *      [<TAB>m_v<TAB>profile<TAB>n_sersic<TAB>r_d_pc
+ *       <TAB>bulge_to_total<TAB>bulge_re_pc<TAB>bulge_n
+ *       <TAB>ref_doi_profile<TAB>color]
  *
- *  The optional trailing columns are populated only for objects that
+ *  ra_deg/dec_deg/distance_kpc are populated only for objects that
  *  aren't in LVDB at all (M31, M33). When present, the row is fully
  *  self-contained — buildStandaloneOverride synthesises an LgObject
  *  without an LVDB merge. When absent, the row supplements an LVDB row
- *  whose position drives the merge.
+ *  whose position drives the merge. The emission columns feed
+ *  buildEmission; see data/local-group/README.md for per-column
+ *  semantics.
  *
  *  Label visibility is governed at runtime (apparent-size ranking)
  *  rather than per-row, so no threshold column. */
 export function parseOverrides(tsv: string): OverrideRow[] {
   const out: OverrideRow[] = [];
   const lines = tsv.split(/\r?\n/);
-  let headerSeen = false;
+  let colIndex: Map<string, number> | null = null;
   for (const raw of lines) {
     if (!raw || raw.startsWith('#')) continue;
     const fields = raw.split('\t');
-    if (!headerSeen) {
+    if (!colIndex) {
       // First non-comment line is the header. Sanity-check that the
       // required leading columns are present in the expected order so a
-      // schema drift surfaces loudly at build time. Optional columns
-      // (ra_deg, dec_deg, distance_kpc) may follow without a check —
-      // the per-row parsing decides whether to read them.
+      // schema drift surfaces loudly at build time; optional columns are
+      // resolved by name from the header so their order can evolve.
       const required = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'ref_doi'];
       if (fields.length < required.length) {
         throw new Error(`overrides.tsv: malformed header (got ${fields.length} fields, expected ≥ ${required.length})`);
@@ -97,36 +107,83 @@ export function parseOverrides(tsv: string): OverrideRow[] {
           throw new Error(`overrides.tsv: header column ${i} is '${fields[i]}', expected '${required[i]}'`);
         }
       }
-      headerSeen = true;
+      colIndex = new Map(fields.map((f, i) => [f.trim(), i]));
       continue;
     }
     if (fields.length < 6) continue;
+    const opt = (col: string): string | undefined => {
+      const i = colIndex!.get(col);
+      if (i === undefined || i >= fields.length) return undefined;
+      const v = fields[i].trim();
+      return v === '' ? undefined : v;
+    };
+    const optNum = (col: string): number | undefined => {
+      const v = opt(col);
+      if (v === undefined) return undefined;
+      const parsed = Number(v);
+      if (!Number.isFinite(parsed)) {
+        throw new Error(`overrides.tsv: '${fields[0].trim()}' has non-numeric ${col} '${v}'`);
+      }
+      return parsed;
+    };
     const row: OverrideRow = {
       name: fields[0].trim(),
       axes: [parseFloat(fields[1]), parseFloat(fields[2]), parseFloat(fields[3])],
       orient: fields[4].trim(),
       refDoi: fields[5].trim(),
     };
-    // Optional standalone position columns. All three must be present
-    // and non-empty for the row to stand alone — partial population is
-    // a config error worth surfacing.
-    if (fields.length >= 9) {
-      const raStr = fields[6].trim();
-      const decStr = fields[7].trim();
-      const distStr = fields[8].trim();
-      const anyPresent = raStr || decStr || distStr;
-      const allPresent = raStr && decStr && distStr;
-      if (anyPresent && !allPresent) {
+    // Standalone position columns: all three must be present and
+    // non-empty for the row to stand alone — partial population is a
+    // config error worth surfacing.
+    {
+      const ra = optNum('ra_deg');
+      const dec = optNum('dec_deg');
+      const dist = optNum('distance_kpc');
+      const present = [ra, dec, dist].filter((v) => v !== undefined).length;
+      if (present > 0 && present < 3) {
         throw new Error(
           `overrides.tsv: '${row.name}' partially populates standalone position (ra/dec/distance) — all three must be set together or all empty`,
         );
       }
-      if (allPresent) {
-        row.raDeg = parseFloat(raStr);
-        row.decDeg = parseFloat(decStr);
-        row.distanceKpc = parseFloat(distStr);
+      if (present === 3) {
+        row.raDeg = ra;
+        row.decDeg = dec;
+        row.distanceKpc = dist;
       }
     }
+    const mV = optNum('m_v');
+    if (mV !== undefined) row.mV = mV;
+    const profile = opt('profile');
+    if (profile !== undefined) {
+      if (profile !== 'disc' && profile !== 'sersic') {
+        throw new Error(`overrides.tsv: '${row.name}' has unrecognised profile '${profile}'`);
+      }
+      row.profile = profile;
+    }
+    const nSersic = optNum('n_sersic');
+    if (nSersic !== undefined) row.nSersic = nSersic;
+    const rdPc = optNum('r_d_pc');
+    if (rdPc !== undefined) row.rdPc = rdPc;
+    {
+      const bt = optNum('bulge_to_total');
+      const re = optNum('bulge_re_pc');
+      const bn = optNum('bulge_n');
+      const present = [bt, re, bn].filter((v) => v !== undefined).length;
+      if (present > 0 && present < 3) {
+        throw new Error(
+          `overrides.tsv: '${row.name}' partially populates the bulge (bulge_to_total/bulge_re_pc/bulge_n) — all three must be set together or all empty`,
+        );
+      }
+      if (present === 3) {
+        row.bulgeToTotal = bt;
+        row.bulgeRePc = re;
+        row.bulgeN = bn;
+      }
+    }
+    const refDoiProfile = opt('ref_doi_profile');
+    if (refDoiProfile !== undefined) row.refDoiProfile = refDoiProfile;
+    const color = opt('color');
+    if (color !== undefined) row.color = color;
     out.push(row);
   }
   return out;
@@ -134,6 +191,39 @@ export function parseOverrides(tsv: string): OverrideRow[] {
 
 /** Convert merged LgObject(s) to the on-disk JSON shape. Trims numeric
  *  precision so repeat builds produce stable diffs. */
+function sersicParamsToJson(p: SersicParams) {
+  return {
+    reffAxesPc: p.reffAxesPc.map((v) => roundN(v, 2)),
+    n: roundN(p.n, 4),
+    bn: roundN(p.bn, 6),
+    pn: roundN(p.pn, 6),
+    uMax: roundN(p.uMax, 4),
+    density0: roundSig(p.density0, 8),
+  };
+}
+
+function emissionToJson(e: LgEmission) {
+  if (e.family === 'sersic') {
+    return {
+      family: e.family,
+      mV: roundN(e.mV, 2),
+      ...(e.color ? { color: e.color } : {}),
+      ...sersicParamsToJson(e),
+    };
+  }
+  return {
+    family: e.family,
+    mV: roundN(e.mV, 2),
+    ...(e.color ? { color: e.color } : {}),
+    rdPc: roundN(e.rdPc, 2),
+    zdPc: roundN(e.zdPc, 2),
+    rEnvPc: roundN(e.rEnvPc, 2),
+    zEnvPc: roundN(e.zEnvPc, 2),
+    density0: roundSig(e.density0, 8),
+    ...(e.bulge ? { bulge: sersicParamsToJson(e.bulge) } : {}),
+  };
+}
+
 function toJsonObject(o: LgObject) {
   return {
     name: o.name,
@@ -144,6 +234,7 @@ function toJsonObject(o: LgObject) {
     quat: o.quat.map((v) => roundN(v, 6)),
     source: o.source,
     distance: roundN(o.distance, 1),
+    emission: emissionToJson(o.emission),
   };
 }
 
@@ -221,7 +312,7 @@ async function main(): Promise<void> {
 
   await mkdir(dirname(OUT), { recursive: true });
   const payload = {
-    version: 1,
+    version: 2,
     count: objects.length,
     objects: objects.map(toJsonObject),
   };

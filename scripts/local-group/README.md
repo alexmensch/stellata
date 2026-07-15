@@ -4,10 +4,12 @@
 overrides → `public/local-group.json`. `build-local-group-pure.ts`
 holds the pure helpers (RA/Dec→ICRS, orient → quaternion, override
 merge, standalone-row builder, display-name + catalog-designation
-rules, distance filter); vitest-pinned in `*.test.ts`.
+rules, distance filter, emission assembly);
+`emission-solver-pure.ts` holds the DENSITY0 solver maths. All
+vitest-pinned in `*.test.ts`.
 
 The TSV parser handles both LVDB-merge and standalone-position
-override rows.
+override rows; optional emission columns are resolved by header name.
 
 ## Inputs and output
 
@@ -55,6 +57,44 @@ through three branches:
    names ("Sculptor", "Draco") and Roman-numeral satellites
    ("Andromeda I", "Bootes II") where the suffix disambiguates from
    the constellation and matches catalogue-paper convention.
+
+## Emission solver — per-object DENSITY0
+
+Physics and calibration rationale in SCIENCE.md § Local Group
+luminosity model; this section carries the implementation contract.
+
+Every rendered object gets an `emission` block (JSON format version 2):
+`family: "sersic"` carries `{ mV, reffAxesPc, n, bn, pn, uMax,
+density0 }`; `family: "disc"` carries `{ mV, rdPc, zdPc, rEnvPc,
+zEnvPc, density0 }` plus an optional `bulge` sub-block shaped like the
+sersic params (M31 only). Everything is precomputed — the shader
+consumes raw numbers and never re-derives photometry.
+
+- `buildEmission` (build-local-group-pure.ts) owns the family routing
+  and geometry rules: family from the override `profile` column (empty
+  → Sérsic); default-path R_e ellipsoid = the wireframe axes;
+  override-path R_e = shell axes rescaled so the sky-projected
+  semi-major equals LVDB `rhalf_physical`; z_d = wireframe c / 3;
+  disc envelope max(4·R_d, wireframe a) × max(4·z_d, wireframe c);
+  spheroid envelope u_max = max(u₉₉(n), shell/R_e).
+- `emission-solver-pure.ts` solves ρ₀ = d₀² · 10^(−0.4·m_V) / G with
+  G integrated **over the actual truncated mesh volume** through one
+  numeric quadrature path (`integrateOverEllipsoid`, Gauss–Legendre in
+  unit-ball coordinates) for every profile; the analytic
+  incomplete-gamma closed forms exist only as vitest cross-pins.
+- **M31 bulge contract:** the bulge density0 is solved over the disc
+  proxy volume with the profile cut at u ≤ uMax. The emission shader
+  must apply the same cut, or the bulge flux drifts from the solved
+  calibration.
+- Missing photometry, a disc row without `r_d_pc`, or a spheroid
+  structure override without LVDB `rhalf_physical` fail the build
+  loudly — an uncalibratable object must not ship silently dark.
+
+`build-local-group.test.ts` pins the solved density0 for LMC / SMC /
+M31 (disc + bulge) / Fornax against the committed data, plus the
+⟨μ⟩_e ↔ `surface_brightness_rhalf` definitional consistency sweep. A
+catalogue refresh that shifts photometry moves those pins —
+re-derive, don't loosen.
 
 ## MAX_DISTANCE_PC
 

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 
+import type { LgEmission } from '../../../scripts/local-group/build-local-group-pure';
 import { sidColumnError } from '../util/sid-resolver';
 
 export type LgKind = 'disc' | 'ellipsoid';
 export type LgSource = 'LVDB' | 'OVERRIDE';
+export type { LgEmission, SersicParams } from '../../../scripts/local-group/build-local-group-pure';
 
 export interface LgObject {
   name: string;
@@ -20,6 +22,9 @@ export interface LgObject {
   source: LgSource;
   /** Heliocentric distance to the centroid in parsecs. */
   distanceFromSol: number;
+  /** Solved luminosity model (SCIENCE.md § Local Group luminosity
+   *  model) — consumed by the emission renderer. */
+  emission: LgEmission;
 }
 
 export interface LgCatalog {
@@ -51,6 +56,7 @@ interface RawObject {
   quat: [number, number, number, number];
   source: LgSource;
   distance: number;
+  emission: LgEmission;
 }
 
 interface RawCatalog {
@@ -75,7 +81,7 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
   }
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
-  if (raw.version !== 1) {
+  if (raw.version !== 2) {
     console.warn(`local-group.json version ${raw.version} unsupported`);
     return null;
   }
@@ -94,6 +100,7 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
     quat: new THREE.Quaternion(o.quat[0], o.quat[1], o.quat[2], o.quat[3]),
     source: o.source,
     distanceFromSol: o.distance,
+    emission: o.emission,
   }));
   return { count: raw.count, objects };
 }

@@ -27,6 +27,16 @@ function makeObject(o: Partial<LgObject>): LgObject {
     quat: o.quat ?? new THREE.Quaternion(),
     source: o.source ?? 'LVDB',
     distanceFromSol: o.distanceFromSol ?? 10000,
+    emission: o.emission ?? {
+      family: 'sersic',
+      mV: 10,
+      reffAxesPc: [100, 80, 80],
+      n: 1,
+      bn: 1.6765432098765434,
+      pn: 0.44493,
+      uMax: 4.55698214967272,
+      density0: 1,
+    },
   };
 }
 

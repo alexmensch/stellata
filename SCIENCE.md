@@ -1221,6 +1221,98 @@ Implementation: `src/client/local-group.ts`,
 `scripts/local-group/build-local-group-pure.ts`. Rendering walkthrough in
 `src/client/local-group/README.md`.
 
+## Local Group luminosity model
+
+Each Local Group object carries an analytically-modelled luminous
+volume calibrated so the integrated apparent V magnitude observed from
+the camera matches the catalogue measurement from **any** camera
+position, inside or outside the Local Group. The build pipeline solves
+a per-object density normalisation (`density0`) offline and emits it in
+`public/local-group.json`'s `emission` block; the renderer raymarches
+the profile and never re-derives photometry.
+
+**Profile families.** Two, assigned per object:
+
+- **Sérsic spheroid** (120 objects: the LVDB dwarfs + SMC, Sagittarius
+  dSph, M 32, NGC 205). The 3D density is the Prugniel–Simien
+  deprojection ν(u) = ρ₀ · u^(−pₙ) · exp(−bₙ · u^(1/n)), with u the
+  ellipsoidal radius in units of the R_e ellipsoid,
+  pₙ = 1 − 0.6097/n + 0.05463/n², and bₙ = 2n − 1/3 + 4/(405n)
+  (Ciotti & Bertin 1999). This projects to the observed 2D Sérsic law
+  to ~1%; raymarching the 2D law as if it were 3D density is a
+  deprojection error, visibly too shallow in the centre for n > 1.
+  n comes from LVDB `n_sersic` where measured (43 objects, median
+  0.83), else n = 1 — inside the observed population and the
+  literature default for dSphs. A King-profile second family was
+  rejected: only 9 further objects have King fits, and total flux is
+  exact by solver construction regardless of profile shape.
+- **Exponential thin disc, optional Sérsic bulge** (LMC, M31, M33):
+  ρ(R, z) = ρ₀ · exp(−R/R_d) · exp(−|z|/z_d) in the disc frame the
+  wireframe quaternion already defines. LMC R_d = 1.5 kpc (van der
+  Marel & Cioni 2001, *AJ* 122, 1807, DOI 10.1086/323099), pure disc —
+  bar and arms are below this detail tier. M31 R_d = 5.3 kpc with a
+  spherical Sérsic bulge (R_e = 1.0 kpc, n = 2.2, B/T = 0.31; Courteau
+  et al. 2011, *ApJ* 739, 20, DOI 10.1088/0004-637X/739/1/20). M33
+  R_d = 1.8 kpc (Corbelli et al. 2014, *A&A* 572, A23,
+  DOI 10.1051/0004-6361/201424033), pure disc — B/T ≲ 0.04 and the
+  "bulge" is a nuclear cluster far below render scale, costing
+  < 0.05 mag on the total. z_d = c_wireframe / 3 (the wireframe shell
+  sits at 3 scale heights ≈ 95% of the vertical light). SMC stays a
+  spheroid: no coherent disc; the line-of-sight elongation IS the
+  structure.
+
+**Geometry anchoring.** Default-path dwarfs use the wireframe
+ellipsoid as the R_e ellipsoid directly — silhouette and glow share
+one geometry source. Objects with structural overrides keep the
+override's axis *ratios* but rescale so the sky-projected semi-major
+half-light radius equals LVDB `rhalf_physical` — structure papers keep
+the shape, LVDB photometry keeps the scale (SMC → R_e axes 813 / 1081
+/ 1307 pc from the 3730 / 4960 / 6000 pc shell).
+
+**Calibration.** Magnitudes map to zero-point-free flux numbers
+F = 10^(−0.4·m). A raymarched column ∫ρ ds is surface brightness;
+integrating over the object's solid angle gives total rendered flux
+Φ = ∫ ρ(x)/s(x)² dV (s = camera→element distance), so 1/r² and
+camera-anywhere behaviour are automatic by construction, with
+far-field limit Φ = L/d². The solver requires the far-field flux at
+the catalogue distance d₀ to reproduce the catalogue magnitude:
+
+    ρ₀ = d₀² · 10^(−0.4·m_V) / G
+
+where G is the geometry integral of the unit-ρ₀ profile over the
+**actual truncated proxy-mesh volume**. Truncation compensation is
+mandatory — an uncompensated 4·R_d disc envelope loses ~13% ≈ 0.15 mag,
+beyond the ±0.1 mag render tolerance. Mesh envelopes: spheroids extend
+to u_max = max(u₉₉(n), shell/R_e) (u₉₉ ≈ 4.6 at n = 1 — the radius
+enclosing 99% of the light — and the mesh never sits inside the
+wireframe silhouette); discs extend to max(4·R_d, wireframe a) in
+plane and max(4·z_d, wireframe c) vertically, physical given observed
+disc truncations at 4–5 R_d. M31's bulge and disc are solved
+separately against B/T · F and (1 − B/T) · F. The solver
+(`scripts/local-group/emission-solver-pure.ts`) uses one numeric
+quadrature path for all profiles; the analytic incomplete-gamma closed
+forms are vitest cross-pins. The ±0.1 mag render tolerance sits inside
+the catalogue's own ±0.2 mag median photometric uncertainty.
+
+**Photometry.** LVDB `apparent_magnitude_v` is 100% complete over the
+121 dwarfs; M31 (m_V = 3.44) and M33 (m_V = 5.72) carry RC3 integrated
+V (de Vaucouleurs et al. 1991) in `overrides.tsv`. A definitional
+consistency test pins ⟨μ⟩_e = m_V + 0.753 + 2.5·log₁₀(π·a·b) against
+LVDB's `surface_brightness_rhalf` across the catalogue (median
+deviation 0.008 mag).
+
+**No dust.** LG objects sit far outside the MW dust slab; their
+internal dust is below the photometric tolerance at this detail tier.
+Catalogue m_V is as-observed (MW foreground extinction included), so
+calibrating to it with no in-shader dust makes the Sol-region view
+exact by construction. From extragalactic viewpoints the model keeps
+as-observed brightness where the real object would shed its MW
+foreground — a known, bounded bias (~0.1–0.2 mag for LMC/SMC/M31,
+worst ~0.4 mag for Sgr behind the bulge), mostly inside catalogue
+uncertainty. Dereddening and integrating MW dust per instance along
+every ray would reintroduce exactly the machinery this decision
+avoids, for an effect invisible at these surface brightnesses.
+
 ## Galactic coordinate system
 
 The shared module `src/client/galactic-coords.ts` exports two constants

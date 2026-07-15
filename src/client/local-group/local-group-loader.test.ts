@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadLocalGroup } from './local-group-loader';
+import { loadLocalGroup, type LgEmission } from './local-group-loader';
 
 interface Raw {
   version: number;
@@ -14,8 +14,19 @@ interface Raw {
     quat: [number, number, number, number];
     source: 'LVDB' | 'OVERRIDE';
     distance: number;
+    emission: LgEmission;
   }>;
 }
+
+const DISC_EMISSION: LgEmission = {
+  family: 'disc',
+  mV: 0.4,
+  rdPc: 1500,
+  zdPc: 333.33,
+  rEnvPc: 6000,
+  zEnvPc: 1333.33,
+  density0: 0.20821438,
+};
 
 const savedFetch = (globalThis as { fetch?: unknown }).fetch;
 
@@ -52,19 +63,19 @@ describe('loadLocalGroup', () => {
     expect(out).toBeNull();
   });
 
-  it('returns null on unsupported version (forward-compat guard)', async () => {
-    const raw: Raw = { version: 2, count: 0, objects: [] };
+  it('returns null on unsupported version (pre-emission v1 artifact)', async () => {
+    const raw: Raw = { version: 1, count: 0, objects: [] };
     mockFetch(() => ({ ok: true, json: () => raw }));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const out = await loadLocalGroup('/local-group.json');
     expect(out).toBeNull();
-    expect(warn).toHaveBeenCalledWith('local-group.json version 2 unsupported');
+    expect(warn).toHaveBeenCalledWith('local-group.json version 1 unsupported');
     warn.mockRestore();
   });
 
-  it('parses a v1 catalog into typed Vector3 / Quaternion objects', async () => {
+  it('parses a v2 catalog into typed Vector3 / Quaternion objects', async () => {
     const raw: Raw = {
-      version: 1,
+      version: 2,
       count: 1,
       objects: [{
         name: 'LMC',
@@ -77,6 +88,7 @@ describe('loadLocalGroup', () => {
         quat: [0.1, 0.2, 0.3, Math.sqrt(1 - 0.01 - 0.04 - 0.09)],
         source: 'OVERRIDE',
         distance: 49590,
+        emission: DISC_EMISSION,
       }],
     };
     mockFetch(() => ({ ok: true, json: () => raw }));
@@ -92,11 +104,12 @@ describe('loadLocalGroup', () => {
     expect(o.quat.length()).toBeCloseTo(1, 6);
     expect(o.distanceFromSol).toBe(49590);
     expect(o.sid).toBe(327500);
+    expect(o.emission).toEqual(DISC_EMISSION);
   });
 
   it('returns null when any object is missing its sid (pre-stamp artifact)', async () => {
     const raw: Raw = {
-      version: 1,
+      version: 2,
       count: 1,
       objects: [{
         name: 'LMC',
@@ -107,6 +120,7 @@ describe('loadLocalGroup', () => {
         quat: [0, 0, 0, 1],
         source: 'LVDB',
         distance: 1,
+        emission: DISC_EMISSION,
       }],
     };
     mockFetch(() => ({ ok: true, json: () => raw }));
@@ -130,8 +144,9 @@ describe('loadLocalGroup', () => {
       quat: [0, 0, 0, 1] as [number, number, number, number],
       source: 'LVDB' as const,
       distance: 1,
+      emission: DISC_EMISSION,
     };
-    const raw: Raw = { version: 1, count: 2, objects: [obj, { ...obj, id: 'y' }] };
+    const raw: Raw = { version: 2, count: 2, objects: [obj, { ...obj, id: 'y' }] };
     mockFetch(() => ({ ok: true, json: () => raw }));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const out = await loadLocalGroup('/local-group.json');

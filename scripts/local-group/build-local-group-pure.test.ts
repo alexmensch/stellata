@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   basisToQuaternion,
+  buildEmission,
   buildLvdbDefault,
   buildOrientationQuat,
   buildStandaloneOverride,
@@ -9,14 +10,20 @@ import {
   isCatalogDesignation,
   mergeRowAndOverride,
   parseOrient,
+  projectedSemiMajorPc,
   raDecDistanceToIcrs,
+  roundSig,
   skyBasis,
   slugify,
+  DISC_ENV_SCALE_LENGTHS,
+  DISC_ZD_SHELL_DIVISOR,
   DISPLAY_NAME_OVERRIDES,
   MAX_DISTANCE_PC,
+  SERSIC_N_FALLBACK,
   type LvdbRow,
   type OverrideRow,
 } from './build-local-group-pure';
+import { fluxNumber, u99 } from './emission-solver-pure';
 
 const SOL_AXIS_X: [number, number, number] = [1, 0, 0];
 
@@ -54,6 +61,8 @@ function makeRow(o: Partial<LvdbRow>): LvdbRow {
     rhalfPhysicalPc: o.rhalfPhysicalPc ?? null,
     ellipticity: o.ellipticity ?? null,
     positionAngle: o.positionAngle ?? null,
+    apparentMagV: o.apparentMagV ?? 10,
+    nSersic: o.nSersic ?? null,
   };
 }
 
@@ -297,6 +306,8 @@ describe('mergeRowAndOverride — override-vs-LVDB precedence', () => {
       axes: [4500, 4500, 1000],
       orient: 'disc:i=32,pa=135',
       refDoi: '10.1088/0004-637X/781/2/121',
+      profile: 'disc',
+      rdPc: 1500,
     };
     const out = mergeRowAndOverride(row, lmcOverride)!;
     expect(out.kind).toBe('disc');
@@ -366,12 +377,15 @@ describe('displayName overrides + default type suffix', () => {
       ra: 78.76, dec: -69.19, distanceKpc: 49.59,
       confirmedReal: 1, confirmedGalaxy: 1,
       rhalfPhysicalPc: null, ellipticity: null, positionAngle: null,
+      apparentMagV: 0.4, nSersic: null,
     };
     const override: OverrideRow = {
       name: 'LMC',
       axes: [4500, 4500, 1000],
       orient: 'disc:i=32,pa=135',
       refDoi: '10.1088/0004-637X/781/2/121',
+      profile: 'disc',
+      rdPc: 1500,
     };
     const out = mergeRowAndOverride(row, override)!;
     expect(out.name).toBe('Large Magellanic Cloud');
@@ -383,6 +397,7 @@ describe('displayName overrides + default type suffix', () => {
       ra: 15, dec: -33, distanceKpc: 84,
       confirmedReal: 1, confirmedGalaxy: 1,
       rhalfPhysicalPc: 270, ellipticity: 0.3, positionAngle: 99,
+      apparentMagV: 8.6, nSersic: null,
     };
     const out = mergeRowAndOverride(row, undefined)!;
     expect(out.name).toBe('Sculptor Dwarf Spheroidal');
@@ -427,6 +442,12 @@ describe('buildStandaloneOverride', () => {
     raDeg: 10.6847,
     decDeg: 41.2687,
     distanceKpc: 776,
+    mV: 3.44,
+    profile: 'disc',
+    rdPc: 5300,
+    bulgeToTotal: 0.31,
+    bulgeRePc: 1000,
+    bulgeN: 2.2,
   };
   it('synthesises a full LgObject from override-only fields', () => {
     const out = buildStandaloneOverride(m31)!;
@@ -459,6 +480,189 @@ describe('buildStandaloneOverride', () => {
       refDoi: 'x',
     };
     expect(() => buildStandaloneOverride(noPos)).toThrow(/no LVDB match/);
+  });
+});
+
+describe('buildEmission', () => {
+  const dwarf = makeRow({
+    name: 'Sculptor',
+    distanceKpc: 84,
+    rhalfPhysicalPc: 270,
+    ellipticity: 0.3,
+    positionAngle: 99,
+    apparentMagV: 8.6,
+  });
+  const dwarfGeom = buildLvdbDefault(dwarf)!;
+
+  it('default path: the wireframe ellipsoid IS the R_e ellipsoid, n falls back to 1', () => {
+    const e = buildEmission({
+      row: dwarf,
+      override: undefined,
+      wireframeAxes: dwarfGeom.axes,
+      orient: dwarfGeom.orient,
+      distancePc: 84_000,
+      name: dwarf.name,
+    });
+    if (e.family !== 'sersic') throw new Error('expected sersic');
+    expect(e.reffAxesPc).toEqual(dwarfGeom.axes);
+    expect(e.n).toBe(SERSIC_N_FALLBACK);
+    expect(e.uMax).toBe(u99(SERSIC_N_FALLBACK));
+    expect(e.mV).toBe(8.6);
+  });
+
+  it('measured LVDB Sérsic index wins over the fallback; an override wins over both', () => {
+    const measured = makeRow({ ...dwarf, nSersic: 0.83 } as Partial<LvdbRow>);
+    const base = {
+      row: measured,
+      override: undefined as OverrideRow | undefined,
+      wireframeAxes: dwarfGeom.axes,
+      orient: dwarfGeom.orient,
+      distancePc: 84_000,
+      name: 'X',
+    };
+    const e1 = buildEmission(base);
+    if (e1.family !== 'sersic') throw new Error('expected sersic');
+    expect(e1.n).toBe(0.83);
+    const e2 = buildEmission({
+      ...base,
+      override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', refDoi: 'x', nSersic: 1.5 },
+    });
+    if (e2.family !== 'sersic') throw new Error('expected sersic');
+    expect(e2.n).toBe(1.5);
+  });
+
+  it('override path rescales the shell to the LVDB half-light scale (SMC pins)', () => {
+    const smc = makeRow({
+      name: 'SMC',
+      distanceKpc: 62.44,
+      rhalfPhysicalPc: 1080.85,
+      apparentMagV: 2.2,
+    });
+    const override: OverrideRow = {
+      name: 'SMC',
+      axes: [3730, 4960, 6000],
+      orient: 'los',
+      refDoi: 'x',
+    };
+    const e = buildEmission({
+      row: smc,
+      override,
+      wireframeAxes: override.axes,
+      orient: parseOrient(override.orient),
+      distancePc: 62_440,
+      name: 'SMC',
+    });
+    if (e.family !== 'sersic') throw new Error('expected sersic');
+    // s = rhalf / projected semi-major = 1080.85 / 4960; shape kept,
+    // scale anchored to the half-light radius.
+    expect(e.reffAxesPc.map((v) => roundSig(v, 6))).toEqual([812.817, 1080.85, 1307.48]);
+    // Envelope reaches the wireframe silhouette: uMax = 1/s > u99(1).
+    expect(e.uMax).toBeCloseTo(4960 / 1080.85, 10);
+  });
+
+  it('disc family: z_d / envelope rules and the truncation-compensated solve (LMC pins)', () => {
+    const lmc = makeRow({ name: 'LMC', distanceKpc: 49.59, apparentMagV: 0.4 });
+    const e = buildEmission({
+      row: lmc,
+      override: { name: 'LMC', axes: [4500, 4500, 1000], orient: 'disc:i=32,pa=135', refDoi: 'x', profile: 'disc', rdPc: 1500 },
+      wireframeAxes: [4500, 4500, 1000],
+      orient: parseOrient('disc:i=32,pa=135'),
+      distancePc: 49_590,
+      name: 'LMC',
+    });
+    if (e.family !== 'disc') throw new Error('expected disc');
+    expect(e.zdPc).toBe(1000 / DISC_ZD_SHELL_DIVISOR);
+    expect(e.rEnvPc).toBe(DISC_ENV_SCALE_LENGTHS * 1500);   // 4·R_d > wireframe a
+    expect(e.zEnvPc).toBe(DISC_ENV_SCALE_LENGTHS * (1000 / 3)); // 4·z_d > wireframe c
+    expect(e.density0).toBe(0.20821438024760253);
+    expect(e.bulge).toBeUndefined();
+  });
+
+  it('disc + bulge composite splits the flux by B/T (M31 pins)', () => {
+    const e = buildEmission({
+      row: null,
+      override: {
+        name: 'M31', axes: [15000, 15000, 500], orient: 'disc:i=77,pa=37', refDoi: 'x',
+        mV: 3.44, profile: 'disc', rdPc: 5300, bulgeToTotal: 0.31, bulgeRePc: 1000, bulgeN: 2.2,
+      },
+      wireframeAxes: [15000, 15000, 500],
+      orient: parseOrient('disc:i=77,pa=37'),
+      distancePc: 776_000,
+      name: 'M31',
+    });
+    if (e.family !== 'disc') throw new Error('expected disc');
+    expect(e.rEnvPc).toBe(21_200);                            // 4·R_d > wireframe a
+    expect(e.zEnvPc).toBe(DISC_ENV_SCALE_LENGTHS * (500 / 3)); // 4·z_d > wireframe c
+    expect(e.density0).toBe(0.34273291272719336);
+    expect(e.bulge).toBeDefined();
+    expect(e.bulge!.uMax).toBe(u99(2.2));
+    expect(e.bulge!.density0).toBe(24.056799890963106);
+    // Component far-field fluxes recombine to the catalog total.
+    const discFlux = (1 - 0.31) * fluxNumber(3.44);
+    const bulgeFlux = 0.31 * fluxNumber(3.44);
+    expect(discFlux + bulgeFlux).toBeCloseTo(fluxNumber(3.44), 12);
+  });
+
+  it('throws without photometry — an uncalibratable object must fail the build', () => {
+    const noMag = makeRow({ rhalfPhysicalPc: 100 });
+    noMag.apparentMagV = null;
+    expect(() =>
+      buildEmission({
+        row: noMag,
+        override: undefined,
+        wireframeAxes: [100, 100, 100],
+        orient: { kind: 'pa', pa: 0 },
+        distancePc: 100_000,
+        name: 'NoMag',
+      }),
+    ).toThrow(/no apparent V magnitude/);
+  });
+
+  it('throws on a disc profile without r_d_pc', () => {
+    expect(() =>
+      buildEmission({
+        row: makeRow({}),
+        override: { name: 'X', axes: [1, 1, 1], orient: 'disc:i=0,pa=0', refDoi: 'x', profile: 'disc' },
+        wireframeAxes: [1, 1, 1],
+        orient: parseOrient('disc:i=0,pa=0'),
+        distancePc: 1000,
+        name: 'X',
+      }),
+    ).toThrow(/requires r_d_pc/);
+  });
+
+  it('throws on a spheroid structure override without LVDB rhalf_physical', () => {
+    expect(() =>
+      buildEmission({
+        row: makeRow({ rhalfPhysicalPc: null }),
+        override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', refDoi: 'x' },
+        wireframeAxes: [300, 200, 200],
+        orient: parseOrient('pa:0'),
+        distancePc: 1000,
+        name: 'X',
+      }),
+    ).toThrow(/without LVDB rhalf_physical/);
+  });
+});
+
+describe('projectedSemiMajorPc', () => {
+  it('takes the larger sky-plane axis for pa and los orients', () => {
+    expect(projectedSemiMajorPc([2616, 942, 1000], { kind: 'pa', pa: 102 })).toBe(2616);
+    expect(projectedSemiMajorPc([3730, 4960, 6000], { kind: 'los' })).toBe(4960);
+  });
+  it('rejects disc orients — those take the disc emission family', () => {
+    expect(() =>
+      projectedSemiMajorPc([1, 1, 1], { kind: 'disc', inclination: 0, pa: 0 }),
+    ).toThrow(/disc emission family/);
+  });
+});
+
+describe('roundSig', () => {
+  it('rounds to significant digits across magnitudes', () => {
+    expect(roundSig(0.20821438024760253, 8)).toBe(0.20821438);
+    expect(roundSig(259.06500827, 8)).toBe(259.06501);
+    expect(roundSig(0.0022375381146703534, 8)).toBe(0.0022375381);
+    expect(roundSig(0, 8)).toBe(0);
   });
 });
 

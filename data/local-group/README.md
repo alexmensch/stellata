@@ -39,6 +39,13 @@ the major spirals).
 | `ra_deg`            | *Optional standalone position.* Populated for objects not in LVDB; leave empty for LVDB-merge rows. |
 | `dec_deg`           | *Optional standalone position.* Same — all three must be set together or all three empty. |
 | `distance_kpc`      | *Optional standalone position.* Same. |
+| `m_v`               | *Optional.* Integrated apparent V magnitude — standalone rows only (M31 / M33, RC3); LVDB-merge rows take photometry from LVDB. |
+| `profile`           | *Optional.* Emission family `disc` \| `sersic`; empty falls to the family rule (Sérsic spheroid). Set `disc` for LMC / M31 / M33. |
+| `n_sersic`          | *Optional.* Hand-curated Sérsic index (M 32 → 1.5, Graham 2002). |
+| `r_d_pc`            | *Optional.* Exponential-disc scale length; required on `disc` rows. |
+| `bulge_to_total` / `bulge_re_pc` / `bulge_n` | *Optional.* Sérsic-bulge composite (M31 only) — all three set together or all empty. |
+| `ref_doi_profile`   | *Optional.* Profile-parameter source, separate from the structural `ref_doi`. |
+| `color`             | *Optional.* Population tint (hex); empty → the renderer's per-family default. |
 
 For LVDB-merge rows, the override **replaces** the structural detail
 an LVDB row would otherwise produce; **position (RA/Dec/distance)
@@ -46,4 +53,5 @@ still comes from LVDB.** For standalone rows (M31, M33), the override
 provides the position directly — no LVDB merge happens. Other
 LVDB-only dwarfs render as sky-plane oblate ellipsoids from
 `rhalf_physical` + `ellipticity` + `position_angle` — no override row
-needed.
+needed, and their luminosity model solves entirely from LVDB
+photometry (SCIENCE.md § Local Group luminosity model).

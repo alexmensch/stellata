@@ -1,6 +1,17 @@
 // Pure helpers for build-local-group.ts: distance filter, override
-// merge, orientation quaternion construction, display-name routing.
-// Kept off the I/O path so vitest can exercise them directly.
+// merge, orientation quaternions, display-name routing, and per-object
+// emission assembly over emission-solver-pure.ts. Off the I/O path.
+
+import {
+  bnCoeff,
+  bulgeInDiscGeometryIntegral,
+  discGeometryIntegral,
+  fluxNumber,
+  pnCoeff,
+  sersicGeometryIntegral,
+  solveDensity0,
+  u99,
+} from './emission-solver-pure';
 
 /** Max heliocentric distance (parsecs) we render. 2 Mpc covers the
  *  canonical Local Group: M31 + M33 + their satellite subgroup, plus
@@ -21,6 +32,8 @@ export const CAMERA_FAR_PC = MAX_DISTANCE_PC + 1_000_000;
 
 export type LgKind = 'disc' | 'ellipsoid';
 
+export type EmissionFamily = 'sersic' | 'disc';
+
 export interface OverrideRow {
   name: string;
   axes: [number, number, number];
@@ -37,6 +50,25 @@ export interface OverrideRow {
   raDeg?: number;
   decDeg?: number;
   distanceKpc?: number;
+  /** Integrated apparent V magnitude — standalone rows only (M31, M33);
+   *  LVDB-merge rows take photometry from LVDB. */
+  mV?: number;
+  /** Emission profile family; empty falls to the family rule (Sérsic
+   *  spheroid). Set "disc" for LMC, M31, M33. */
+  profile?: EmissionFamily;
+  /** Hand-curated Sérsic index override (M32 → 1.5). */
+  nSersic?: number;
+  /** Exponential-disc scale length, parsecs — disc-family rows. */
+  rdPc?: number;
+  /** Sérsic-bulge composite (M31). All three set together or none. */
+  bulgeToTotal?: number;
+  bulgeRePc?: number;
+  bulgeN?: number;
+  /** Profile-parameter source, separate from the structural refDoi. */
+  refDoiProfile?: string;
+  /** Optional population tint (hex, e.g. "#ffd9b0"); empty → the
+   *  renderer's per-family default. */
+  color?: string;
 }
 
 export interface LvdbRow {
@@ -61,7 +93,37 @@ export interface LvdbRow {
   /** Position angle of the projected major axis, degrees east of north
    *  on the sky plane, or null. */
   positionAngle: number | null;
+  /** Integrated apparent V magnitude (as-observed), or null. */
+  apparentMagV: number | null;
+  /** Measured Sérsic index, or null (n = 1 fallback applies). */
+  nSersic: number | null;
 }
+
+/** Solved Sérsic component — shared by the spheroid family and the
+ *  M31 bulge (DRY at schema level). Axes in parsecs; density0 in the
+ *  zero-point-free flux-number units of emission-solver-pure.ts. */
+export interface SersicParams {
+  reffAxesPc: [number, number, number];
+  n: number;
+  bn: number;
+  pn: number;
+  uMax: number;
+  density0: number;
+}
+
+export type LgEmission =
+  | ({ family: 'sersic'; mV: number; color?: string } & SersicParams)
+  | {
+      family: 'disc';
+      mV: number;
+      color?: string;
+      rdPc: number;
+      zdPc: number;
+      rEnvPc: number;
+      zEnvPc: number;
+      density0: number;
+      bulge?: SersicParams;
+    };
 
 export interface LgObject {
   name: string;
@@ -77,6 +139,7 @@ export interface LgObject {
   /** Heliocentric distance to the centroid in parsecs — precomputed for
    *  ready-to-display readouts on the runtime side. */
   distance: number;
+  emission: LgEmission;
 }
 
 /** Convert (RA, Dec, d) → ICRS heliocentric Cartesian [x, y, z]. RA/Dec
@@ -378,6 +441,142 @@ export function buildLvdbDefault(row: LvdbRow): {
   };
 }
 
+/** Sérsic index when LVDB has no measured fit and no override — inside
+ *  the observed dwarf population (median 0.83) and the literature
+ *  default for dSphs. */
+export const SERSIC_N_FALLBACK = 1;
+
+/** Disc vertical scale height convention: z_d = c_wireframe / 3 — the
+ *  shell sits at 3 scale heights ≈ 95% of the vertical light. */
+export const DISC_ZD_SHELL_DIVISOR = 3;
+
+/** Disc envelope rule: proxy extends to 4 scale lengths in plane and 4
+ *  scale heights vertically (≥ the wireframe on both), matching the
+ *  observed ~4–5 R_d disc truncations. The solver compensates whatever
+ *  the envelope clips, so totals stay exact. */
+export const DISC_ENV_SCALE_LENGTHS = 4;
+
+/** Sky-projected semi-major axis of an override shell — the scale
+ *  anchor matching the shell's shape to LVDB's projected half-light
+ *  radius. Defined for the sky-aligned orients only; disc-orient
+ *  objects take the disc emission family, never this path. */
+export function projectedSemiMajorPc(
+  axes: [number, number, number],
+  orient: Orientation,
+): number {
+  if (orient.kind === 'disc') {
+    throw new Error('projectedSemiMajorPc: disc-orient shells take the disc emission family');
+  }
+  return Math.max(axes[0], axes[1]);
+}
+
+/** Assemble the per-object emission block: family routing, R_e / disc
+ *  geometry rules, envelope rules, and the DENSITY0 solve. Throws on
+ *  unsatisfiable inputs (no photometry, disc without r_d_pc) — the
+ *  build must fail loud rather than ship an uncalibratable object. */
+export function buildEmission(opts: {
+  row: LvdbRow | null;
+  override: OverrideRow | undefined;
+  /** Resolved wireframe semi-axes — the silhouette the emission must
+   *  never sit inside. */
+  wireframeAxes: [number, number, number];
+  orient: Orientation;
+  distancePc: number;
+  name: string;
+}): LgEmission {
+  const { row, override, wireframeAxes, orient, distancePc, name } = opts;
+  const mV = override?.mV ?? row?.apparentMagV ?? null;
+  if (mV === null) {
+    throw new Error(`${name}: no apparent V magnitude in LVDB or overrides — cannot calibrate emission`);
+  }
+  const color = override?.color;
+  const family: EmissionFamily = override?.profile ?? 'sersic';
+
+  if (family === 'disc') {
+    const rdPc = override?.rdPc;
+    if (rdPc === undefined) {
+      throw new Error(`${name}: disc profile requires r_d_pc in overrides.tsv`);
+    }
+    const zdPc = wireframeAxes[2] / DISC_ZD_SHELL_DIVISOR;
+    const rEnvPc = Math.max(DISC_ENV_SCALE_LENGTHS * rdPc, wireframeAxes[0]);
+    const zEnvPc = Math.max(DISC_ENV_SCALE_LENGTHS * zdPc, wireframeAxes[2]);
+    const bt = override?.bulgeToTotal ?? 0;
+    const flux = fluxNumber(mV);
+    const density0 = solveDensity0(
+      distancePc,
+      (1 - bt) * flux,
+      discGeometryIntegral(rdPc, zdPc, rEnvPc, zEnvPc),
+    );
+    let bulge: SersicParams | undefined;
+    if (bt > 0) {
+      const rePc = override?.bulgeRePc;
+      const n = override?.bulgeN;
+      if (rePc === undefined || n === undefined) {
+        throw new Error(`${name}: bulge_to_total requires bulge_re_pc and bulge_n`);
+      }
+      const uMax = u99(n);
+      bulge = {
+        reffAxesPc: [rePc, rePc, rePc],
+        n,
+        bn: bnCoeff(n),
+        pn: pnCoeff(n),
+        uMax,
+        density0: solveDensity0(
+          distancePc,
+          bt * flux,
+          bulgeInDiscGeometryIntegral(rePc, n, uMax, rEnvPc, zEnvPc),
+        ),
+      };
+    }
+    return {
+      family: 'disc',
+      mV,
+      ...(color ? { color } : {}),
+      rdPc,
+      zdPc,
+      rEnvPc,
+      zEnvPc,
+      density0,
+      ...(bulge ? { bulge } : {}),
+    };
+  }
+
+  const n = override?.nSersic ?? row?.nSersic ?? SERSIC_N_FALLBACK;
+  let reffAxesPc: [number, number, number];
+  if (override) {
+    // Structure papers keep the SHAPE; LVDB photometry keeps the
+    // half-light SCALE: rescale the shell so its sky-projected
+    // semi-major equals rhalf_physical.
+    const rhalf = row?.rhalfPhysicalPc;
+    if (rhalf === null || rhalf === undefined || rhalf <= 0) {
+      throw new Error(`${name}: spheroid structure override without LVDB rhalf_physical — cannot scale the R_e ellipsoid`);
+    }
+    const s = rhalf / projectedSemiMajorPc(override.axes, orient);
+    reffAxesPc = [override.axes[0] * s, override.axes[1] * s, override.axes[2] * s];
+  } else {
+    // Default path: the wireframe ellipsoid IS the R_e ellipsoid —
+    // silhouette and glow share one geometry source.
+    reffAxesPc = wireframeAxes;
+  }
+  const uMax = Math.max(u99(n), wireframeAxes[0] / reffAxesPc[0]);
+  const density0 = solveDensity0(
+    distancePc,
+    fluxNumber(mV),
+    sersicGeometryIntegral(reffAxesPc, n, uMax),
+  );
+  return {
+    family: 'sersic',
+    mV,
+    ...(color ? { color } : {}),
+    reffAxesPc,
+    n,
+    bn: bnCoeff(n),
+    pn: pnCoeff(n),
+    uMax,
+    density0,
+  };
+}
+
 /** Assemble an LgObject from already-resolved fields. Both call sites
  *  (`mergeRowAndOverride` and `buildStandaloneOverride`) arrive at the
  *  same shape after they decide where axes/orient/position come from;
@@ -393,6 +592,7 @@ function buildLgObjectFromOrient(
   axes: [number, number, number],
   orient: Orientation,
   source: 'LVDB' | 'OVERRIDE',
+  emission: LgEmission,
 ): LgObject {
   const kind: LgKind = orient.kind === 'disc' ? 'disc' : 'ellipsoid';
   const center = raDecDistanceToIcrs(raDeg, decDeg, distancePc);
@@ -406,6 +606,7 @@ function buildLgObjectFromOrient(
     quat,
     source,
     distance: distancePc,
+    emission,
   };
 }
 
@@ -433,15 +634,25 @@ export function mergeRowAndOverride(
     orient = lvdb.orient;
     source = 'LVDB';
   }
+  const distancePc = row.distanceKpc * 1000;
+  const emission = buildEmission({
+    row,
+    override,
+    wireframeAxes: axes,
+    orient,
+    distancePc,
+    name: row.name,
+  });
   return buildLgObjectFromOrient(
     row.name,
     row.key,
     row.ra,
     row.dec,
-    row.distanceKpc * 1000,
+    distancePc,
     axes,
     orient,
     source,
+    emission,
   );
 }
 
@@ -460,6 +671,15 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObject | null {
   const distancePc = ov.distanceKpc * 1000;
   if (!Number.isFinite(distancePc) || distancePc <= 0) return null;
   if (distancePc > MAX_DISTANCE_PC) return null;
+  const orient = parseOrient(ov.orient);
+  const emission = buildEmission({
+    row: null,
+    override: ov,
+    wireframeAxes: ov.axes,
+    orient,
+    distancePc,
+    name: ov.name,
+  });
   return buildLgObjectFromOrient(
     ov.name,
     ov.name,
@@ -467,8 +687,9 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObject | null {
     ov.decDeg,
     distancePc,
     ov.axes,
-    parseOrient(ov.orient),
+    orient,
     'OVERRIDE',
+    emission,
   );
 }
 
@@ -478,4 +699,12 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObject | null {
 export function roundN(x: number, decimals: number): number {
   const f = Math.pow(10, decimals);
   return Math.round(x * f) / f;
+}
+
+/** Round to N significant digits — for quantities whose magnitude
+ *  spans decades across the catalog (density0). */
+export function roundSig(x: number, sig: number): number {
+  if (x === 0) return 0;
+  const mag = Math.ceil(Math.log10(Math.abs(x)));
+  return roundN(x, sig - mag);
 }
