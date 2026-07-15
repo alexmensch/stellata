@@ -158,7 +158,7 @@ external data ingest. **Independent of `stellata-dch`.**
   bucket — current shader is already close).
 
 **Scope**: single PR. No schema bump (no new per-star fields). One
-shader change + one LUT helper + tests + SCIENCE.md citation.
+shader change + one LUT helper + tests + docs/science-stellar-modelling.md citation.
 
 ### Tier 2 — Ingest Gaia DR3 Apsis (rides `stellata-dch` Phase 1)
 

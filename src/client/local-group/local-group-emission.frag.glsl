@@ -8,7 +8,7 @@ precision highp float;
 // camera-inside clamp, log-distributed steps, magnitude gate folded
 // into the tone-map exponent) minus dust, with profile parameters on
 // flat varyings instead of uniforms. density0 values come solved from
-// the build (SCIENCE.md § Local Group luminosity model) — do NOT scale
+// the build (docs/science-local-group.md § Local Group luminosity model) — do NOT scale
 // them per-object here; per-object flux ratios are physical.
 // CPU mirror: local-group-emission-pure.ts — keep the raymarch scheme
 // and density functions in lockstep or the calibration test lies.

@@ -45,5 +45,6 @@ orb6_orbits.txt    ~1.1 MB, LFS. Sixth catalog of visual binary
   Stage 4 (`orb6` / `orb6_spectroscopic` orbital-element selection).
 
 See [`scripts/binaries/README.md`](../../scripts/binaries/README.md)
-for the seven-stage cross-match pipeline and SCIENCE.md § Multiple-
-star pipeline for the science rationale.
+for the seven-stage cross-match pipeline and
+`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline for
+the science rationale.

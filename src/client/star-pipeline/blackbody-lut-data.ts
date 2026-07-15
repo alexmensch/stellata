@@ -5,8 +5,8 @@
 // Each entry's Teff is derived via Ballesteros 2012; chromaticity is the
 // Planck spectrum at that Teff through CIE 1931 2° (Wyman 2013 multi-
 // Gaussian fits) and the sRGB D65 transform, peak-normalised then gamma-
-// encoded. See scripts/colour/blackbody-lut.ts and SCIENCE.md § "Star
-// colour calibration".
+// encoded. See scripts/colour/blackbody-lut.ts and
+// docs/science-stellar-modelling.md § "Star colour calibration".
 
 export const LUT_SIZE = 256;
 export const BV_MIN = -0.4;

@@ -1,5 +1,5 @@
 // Heliopause hover formatter — static layout (upwind + lateral on one
-// line, downwind tail on the next). See SCIENCE.md § Heliopause.
+// line, downwind tail on the next). See docs/science-solar-system.md § Heliopause boundary.
 
 import { HELIOPAUSE_UPWIND_APEX_AU } from '../../solar-system/heliopause';
 import type { HoverPayload } from '../hover-types';

@@ -385,6 +385,8 @@ Data sources retain their own licences:
   [10.3847/1538-4357/ab9d24](https://doi.org/10.3847/1538-4357/ab9d24)
   and [10.3847/1538-4357/ac1f96](https://doi.org/10.3847/1538-4357/ac1f96).
 
-See [SCIENCE.md](./SCIENCE.md) for citation details and the
-peer-reviewed papers underpinning hand-curated Local Group
-overrides (LMC, SMC, M31, M33, Sgr dSph, M 32, NGC 205).
+See [SCIENCE.md](./SCIENCE.md) and
+[docs/science-local-group.md](./docs/science-local-group.md) for
+citation details and the peer-reviewed papers underpinning
+hand-curated Local Group overrides (LMC, SMC, M31, M33, Sgr dSph,
+M 32, NGC 205).

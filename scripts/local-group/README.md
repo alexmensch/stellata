@@ -63,8 +63,9 @@ through three branches:
 
 ## Emission solver — per-object DENSITY0
 
-Physics and calibration rationale in SCIENCE.md § Local Group
-luminosity model; this section carries the implementation contract.
+Physics and calibration rationale in `docs/science-local-group.md`
+§ Local Group luminosity model; this section carries the implementation
+contract.
 
 Every rendered object gets an `emission` block (JSON format version 2):
 `family: "sersic"` carries `{ mV, reffAxesPc, n, bn, pn, uMax,

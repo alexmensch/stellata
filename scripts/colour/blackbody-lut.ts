@@ -8,7 +8,7 @@
 // pinned by vitest so any change here forces a deliberate update on both
 // sides.
 //
-// See SCIENCE.md § "Star colour calibration" and
+// See docs/science-stellar-modelling.md § "Star colour calibration" and
 // research/star-spectral-rendition/README.md § Tier 1.
 
 import { writeFile } from 'node:fs/promises';
@@ -204,8 +204,8 @@ function renderModule(bytes: Uint8Array): string {
 // Each entry's Teff is derived via Ballesteros 2012; chromaticity is the
 // Planck spectrum at that Teff through CIE 1931 2° (Wyman 2013 multi-
 // Gaussian fits) and the sRGB D65 transform, peak-normalised then gamma-
-// encoded. See scripts/colour/blackbody-lut.ts and SCIENCE.md § "Star
-// colour calibration".
+// encoded. See scripts/colour/blackbody-lut.ts and
+// docs/science-stellar-modelling.md § "Star colour calibration".
 
 export const LUT_SIZE = ${LUT_SIZE};
 export const BV_MIN = ${BV_MIN};

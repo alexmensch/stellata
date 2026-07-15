@@ -35,8 +35,9 @@ When the artifact loads, `main.ts` attaches the `lg` SID domain over
 it (see `../util/sid-resolver/README.md`).
 
 Each object also carries an `emission` block — the solved luminosity
-model (per-family profile params + density0; SCIENCE.md § Local Group
-luminosity model, solver contract in `scripts/local-group/README.md`).
+model (per-family profile params + density0; `docs/science-local-group.md`
+§ Local Group luminosity model, solver contract in
+`scripts/local-group/README.md`).
 The wireframe layer ignores it; it feeds the volumetric emission
 renderer. `type` (morphological string) and optional `aliases`
 (catalog cross-IDs + common names from `data/local-group/aliases.tsv`)
@@ -67,7 +68,8 @@ opacity write hits one slot.
 ## Emission layer
 
 `local-group-emission.ts` renders every object's solved luminosity
-model (`emission` block, SCIENCE.md § Local Group luminosity model) as
+model (`emission` block, `docs/science-local-group.md` § Local Group
+luminosity model) as
 raymarched proxy volumes — the Milky Way's volumetric scheme
 (`../milkyway/README.md`) generalised to N instances. Two instanced
 unit-sphere passes, one per profile family, compiled from ONE shader

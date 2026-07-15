@@ -156,7 +156,7 @@ export interface StellataOptions {
 
 const ALL_SPECT_MASK = 0b111111111;
 
-// Star size physics — see SCIENCE.md § Stellar perception model.
+// Star size physics — see docs/science-stellar-modelling.md § Stellar perception model.
 // STAR_PHYSICS_FACTOR = 2·ln(10)/2.5. Per-preset starExaggerationK
 // is tunable via Stellata.setStarExaggerationK (debug panel).
 const STAR_PSF_ARCSEC = 30;
@@ -469,8 +469,8 @@ export class Stellata implements FrameAnchor {
     // targets, constellation lines, binaries baselines, and eclipse
     // photometry all inherit current-epoch positions by construction, with
     // zero per-frame cost. Within-session drift is invisible (~0.001″/h);
-    // scrubber-time re-advance is deferred. See SCIENCE.md
-    // § Current-epoch star positions.
+    // scrubber-time re-advance is deferred. See
+    // docs/science-catalog-ingestion.md § Current-epoch star positions.
     advancePositionsToEpoch(
       catalog.positions,
       catalog.velocities,
@@ -663,7 +663,7 @@ export class Stellata implements FrameAnchor {
       // the suppression fires uniformly.
       uHideFocusIdx: { value: -1 },
       // Blackbody → sRGB lookup for the star vertex shader's ciToColor.
-      // See SCIENCE.md § "Star colour calibration".
+      // See docs/science-stellar-modelling.md § "Star colour calibration".
       uColorLut: { value: makeColorLutTexture() },
       // Force-center the focused star at NDC (0,0). At the close-approach
       // orbit floor (~5×10⁻⁸ pc for Sol-class stars), float32 cancellation

@@ -1,6 +1,6 @@
 // Per-planet phase functions φ(α) for reflected-light apparent magnitude
 // — Lambertian default + Mallama 2018 polynomials where published. See
-// SCIENCE.md § Planet phase functions.
+// docs/science-solar-system.md § Planet phase functions.
 
 /** Mallama 2018 ΔV(α°) = c0 + c1·α + … + c6·α⁶. c0 = 0 for every
  *  planet except Saturn, which absorbs a static ring-tilt brightness

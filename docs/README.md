@@ -43,6 +43,27 @@ ux-tweaks.md            Reference table of UX knobs (orbit feel,
                         chevron density, focus-ring size, panel
                         defaults, etc.) and where to find them. Look
                         here when the user asks for a tweak.
+science-catalog-ingestion.md   Split out of SCIENCE.md: AT-HYG/Gaia/
+                        Hipparcos merge, Bailer-Jones + LMC-kinematic
+                        distance overrides, driver astrometry,
+                        current-epoch space-motion propagation.
+science-stellar-modelling.md   Split out of SCIENCE.md: physical
+                        radius, brightness/size perception model,
+                        colour temperature routing + Teff calibration,
+                        variable-star pulsation.
+science-solar-system.md        Split out of SCIENCE.md: planet
+                        rendering, phase functions, heliopause
+                        boundary.
+science-local-group.md         Split out of SCIENCE.md: wireframe
+                        layer + per-object luminosity/density model
+                        for the volumetric emission raymarch.
+science-galactic-structure.md  Split out of SCIENCE.md: galactic
+                        coordinate frame, Milky Way density profiles,
+                        interstellar dust extinction, constellation
+                        stick figures.
+science-multiple-star-pipeline.md  Split out of SCIENCE.md:
+                        binary/multiple detection philosophy,
+                        blend-split math, worked examples.
 screenshots/            Marketing + README hero images.
 ```
 

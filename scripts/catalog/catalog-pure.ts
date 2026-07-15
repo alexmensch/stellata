@@ -906,7 +906,8 @@ export const RECORD_LAYOUT = {
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
   // Consumed once at load by the epoch-advance pass; positions stay at
   // the fixed J2016.0 scene epoch on disk. See scripts/catalog/README.md
-  // § Space-motion velocity and SCIENCE.md § Current-epoch star positions.
+  // § Space-motion velocity and docs/science-catalog-ingestion.md
+  // § Current-epoch star positions.
   vx: 84,
   vy: 88,
   vz: 92,

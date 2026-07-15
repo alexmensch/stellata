@@ -31,8 +31,8 @@ bailer-jones-dr3.tsv   ~23 MB, LFS. Keyed by Gaia DR3 source_id.
 [`scripts/catalog/catalog-pure.ts`](../../scripts/catalog/). Fires
 only when AT-HYG's `dist_src ∈ {G_R3, G_R2}` AND the row's
 `gaia_source_id` resolves AND the B-J map covers it (~99.5 % of
-Gaia-DR3-bearing AT-HYG rows). See SCIENCE.md § Multi-layer
-distance refinement.
+Gaia-DR3-bearing AT-HYG rows). See `docs/science-catalog-ingestion.md`
+§ Multi-layer distance refinement.
 
 ## Refresh
 

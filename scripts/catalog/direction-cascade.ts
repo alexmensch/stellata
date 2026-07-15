@@ -203,8 +203,8 @@ export const GALACTIC_ESCAPE_VELOCITY_PC_YR =
  *
  *  `pmraMasyr` is μ_α* (cos δ-applied); do NOT divide by cos δ. `distancePc`
  *  is the final distance-stack output. Missing PM → tangential term zero;
- *  missing RV → radial term zero. See SCIENCE.md § Current-epoch star
- *  positions. */
+ *  missing RV → radial term zero. See docs/science-catalog-ingestion.md
+ *  § Current-epoch star positions. */
 export function velocityPcPerYr(
   raDeg: number,
   decDeg: number,

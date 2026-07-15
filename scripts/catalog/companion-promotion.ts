@@ -1633,8 +1633,8 @@ export function promoteCompanions(
   // systemic-velocity reconciliation post-pass. Members of a bound system
   // share one systemic velocity so the runtime epoch-advance never shears
   // a pair; orbital motion stays owned by BinaryOrbitField's elements-alone
-  // walk. See SCIENCE.md § Current-epoch star positions (Composition with
-  // binary orbital motion).
+  // walk. See docs/science-catalog-ingestion.md § Current-epoch star
+  // positions (Composition with binary orbital motion).
   interface SystemicGroup {
     anchorIdx: number | null;
     pairs: { pIdx: number; sIdx: number; q: number | null }[];

@@ -1,6 +1,6 @@
 // Load-time space-motion propagation of catalog positions off their fixed
-// J2016.0 baseline to the scene's time base. See SCIENCE.md § Current-epoch
-// star positions and scripts/catalog/README.md § Space-motion velocity.
+// J2016.0 baseline to the scene's time base. See
+// docs/science-catalog-ingestion.md § Current-epoch star positions.
 
 // catalog.bin positions ship at this fixed scene epoch (Julian year);
 // velocities are pc/yr, so the advance is p(t) = p(J2016) + v·(t − 2016).

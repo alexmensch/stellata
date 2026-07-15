@@ -27,8 +27,8 @@ export interface LgObject {
   source: LgSource;
   /** Heliocentric distance to the centroid in parsecs. */
   distanceFromSol: number;
-  /** Solved luminosity model (SCIENCE.md § Local Group luminosity
-   *  model) — consumed by the emission renderer. */
+  /** Solved luminosity model (docs/science-local-group.md § Local Group
+   *  luminosity model) — consumed by the emission renderer. */
   emission: LgEmission;
 }
 
