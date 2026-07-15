@@ -4,11 +4,12 @@ precision highp float;
 #include <logdepthbuf_pars_vertex>
 
 // Instanced volumetric proxies for Local Group emission. Each instance
-// is a unit sphere scaled to the object's emission envelope (parsecs)
-// and rotated into ICRS by its quaternion; the camera is transformed
-// into each instance's unit-ball frame here and handed to the fragment
-// raymarch as a flat varying. Compiled twice: the disc-family material
-// defines FAMILY_DISC, the Sérsic-spheroid material doesn't.
+// is a unit sphere scaled to the component's emission envelope
+// (parsecs) and rotated into ICRS by its quaternion; the camera is
+// transformed into each instance's unit-ball frame here and handed to
+// the fragment raymarch as a flat varying. Compiled twice: the
+// disc-family material defines FAMILY_DISC, the Sérsic-spheroid
+// material doesn't.
 
 uniform vec3 uWorldOffset;
 
@@ -18,8 +19,6 @@ in vec3 aAxes;
 in vec3 aColor;
 #ifdef FAMILY_DISC
 in vec3 aDisc;      // (density0, 1/R_d, 1/z_d)
-in vec4 aBulge;     // (density0, 1/n, bn, pn); density0 == 0 → no bulge
-in vec2 aBulgeExt;  // (1/R_e, uMax)
 #else
 in vec4 aSersic;    // (density0, 1/n, bn, pn)
 in float aUMax;     // mesh radius in units of R_e
@@ -32,8 +31,6 @@ flat out vec3 vAxes;
 flat out vec3 vColor;
 #ifdef FAMILY_DISC
 flat out vec3 vDisc;
-flat out vec4 vBulge;
-flat out vec2 vBulgeExt;
 #else
 flat out vec4 vSersic;
 flat out float vUMax;
@@ -55,8 +52,6 @@ void main() {
   vColor = aColor;
 #ifdef FAMILY_DISC
   vDisc = aDisc;
-  vBulge = aBulge;
-  vBulgeExt = aBulgeExt;
 #else
   vSersic = aSersic;
   vUMax = aUMax;

@@ -16,9 +16,10 @@ import {
 } from '../../../scripts/local-group/build-local-group-pure';
 import {
   cpuRaymarchColumn,
-  emissionMeshAxes,
+  emissionComponents,
   magFromIntensity,
   quatUnrotate,
+  type EmissionComponent,
 } from './local-group-emission-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
@@ -62,15 +63,16 @@ function norm(a: Vec3): number {
   return Math.hypot(a[0], a[1], a[2]);
 }
 
-/** Column intensity for one world-space ray against one object.
- *  Returns 0 when the ray misses the proxy ellipsoid. */
-function rayColumn(
+/** Column intensity for one world-space ray against one component.
+ *  Returns 0 when the ray misses the component's proxy ellipsoid. */
+function componentRayColumn(
   camAbs: Vec3,
   dirWorld: Vec3,
   obj: BuildLgObject,
-  steps: number,
+  comp: EmissionComponent,
+  steps: number | undefined,
 ): number {
-  const axes = emissionMeshAxes(obj.emission);
+  const axes = comp.axesPc;
   const rel = sub(camAbs, obj.center as Vec3);
   const oRaw = quatUnrotate(obj.quat, rel);
   const dRaw = quatUnrotate(obj.quat, dirWorld);
@@ -85,7 +87,30 @@ function rayColumn(
   if (tExit <= 0) return 0;
   const frag: Vec3 = [o[0] + tExit * d[0], o[1] + tExit * d[1], o[2] + tExit * d[2]];
   // dirWorld is unit length, so tExit IS worldPerT in parsecs.
-  return cpuRaymarchColumn(o, frag, tExit, obj.emission, steps);
+  return cpuRaymarchColumn(o, frag, tExit, comp, steps);
+}
+
+/** Additive-blend sum over the object's components — a disc+bulge
+ *  object contributes both volumes to every ray, exactly as the two
+ *  GPU passes composite. `steps` undefined → per-family defaults. */
+function rayColumn(
+  camAbs: Vec3,
+  dirWorld: Vec3,
+  obj: BuildLgObject,
+  steps?: number,
+): number {
+  let col = 0;
+  for (const comp of emissionComponents(obj.emission)) {
+    col += componentRayColumn(camAbs, dirWorld, obj, comp, steps);
+  }
+  return col;
+}
+
+function objectMeshAxes(obj: BuildLgObject): Vec3 {
+  const comps = emissionComponents(obj.emission);
+  return [0, 1, 2].map((i) =>
+    Math.max(...comps.map((c) => c.axesPc[i])),
+  ) as Vec3;
 }
 
 /** Orthonormal basis perpendicular to a unit vector. */
@@ -109,8 +134,8 @@ function basisFor(dir: Vec3): { e1: Vec3; e2: Vec3 } {
 /** Total flux number Φ = ∫ I dΩ from an OUTSIDE camera: pinhole grid
  *  over the object's bounding cone, per-pixel solid angle
  *  dx·dy / (1 + x² + y²)^{3/2}. */
-function fluxOutside(camAbs: Vec3, obj: BuildLgObject, rays: number, steps: number): number {
-  const axes = emissionMeshAxes(obj.emission);
+function fluxOutside(camAbs: Vec3, obj: BuildLgObject, rays: number, steps?: number): number {
+  const axes = objectMeshAxes(obj);
   const toC = sub(obj.center as Vec3, camAbs);
   const dist = norm(toC);
   const cdir: Vec3 = [toC[0] / dist, toC[1] / dist, toC[2] / dist];
@@ -144,7 +169,7 @@ function fluxInside(
   obj: BuildLgObject,
   nTheta: number,
   nPhi: number,
-  steps: number,
+  steps?: number,
 ): number {
   let flux = 0;
   const dTheta = Math.PI / nTheta;
@@ -165,10 +190,15 @@ function fluxInside(
 }
 
 function cameraInside(camAbs: Vec3, obj: BuildLgObject): boolean {
-  const axes = emissionMeshAxes(obj.emission);
   const rel = quatUnrotate(obj.quat, sub(camAbs, obj.center as Vec3));
-  const u = Math.hypot(rel[0] / axes[0], rel[1] / axes[1], rel[2] / axes[2]);
-  return u <= 1;
+  return emissionComponents(obj.emission).some((comp) => {
+    const u = Math.hypot(
+      rel[0] / comp.axesPc[0],
+      rel[1] / comp.axesPc[1],
+      rel[2] / comp.axesPc[2],
+    );
+    return u <= 1;
+  });
 }
 
 const VIEWPOINTS: Record<string, Vec3> = {
@@ -212,11 +242,11 @@ describe('LG emission calibration — rendered flux vs physical prediction', () 
         for (const [objName, obj] of Object.entries(OBJECTS)) {
           const inside = cameraInside(cam, obj);
           const dist = norm(sub(obj.center as Vec3, cam));
-          const meshRadius = Math.max(...emissionMeshAxes(obj.emission));
+          const meshRadius = Math.max(...objectMeshAxes(obj));
 
           const flux = inside
-            ? fluxInside(cam, obj, INSIDE_RAYS_THETA, INSIDE_RAYS_PHI, 32)
-            : fluxOutside(cam, obj, OUTSIDE_RAYS, 32);
+            ? fluxInside(cam, obj, INSIDE_RAYS_THETA, INSIDE_RAYS_PHI)
+            : fluxOutside(cam, obj, OUTSIDE_RAYS);
           const mRendered = magFromIntensity(flux, 0);
 
           let mExpected: number;
@@ -260,4 +290,4 @@ describe('LG emission calibration — rendered flux vs physical prediction', () 
   );
 });
 
-const WORST_DEVIATION_PIN = 'beyondM33→m31:0.011';
+const WORST_DEVIATION_PIN = 'nearLmc→m31:0.017';
