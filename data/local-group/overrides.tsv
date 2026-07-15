@@ -30,6 +30,21 @@
 #   distance_kpc          when this row names an object not in LVDB
 #                         (M31, M33); leave empty for LVDB-merge rows.
 #                         All three must be set together or all empty.
+#   m_v                — integrated apparent V magnitude; standalone rows
+#                         only (M31/M33 via RC3). LVDB-merge rows take
+#                         photometry from LVDB apparent_magnitude_v.
+#   profile            — emission family: "disc" | "sersic"; empty falls
+#                         to the family rule (Sérsic spheroid).
+#   n_sersic           — hand-curated Sérsic index override (M32: Graham
+#                         2002 outer-profile fit).
+#   r_d_pc             — exponential-disc scale length; disc rows only.
+#   bulge_to_total,    — Sérsic-bulge composite (M31 only). All three
+#   bulge_re_pc,          set together or all empty.
+#   bulge_n
+#   ref_doi_profile    — profile-parameter source, separate from the
+#                         structural ref_doi.
+#   color              — optional population tint (hex); empty → the
+#                         renderer's per-family default.
 #
 # Per stellata-data-fidelity-principle: hand-curated overrides are
 # acceptable only for truly singular edge cases where no canonical source
@@ -44,11 +59,11 @@
 # (local-group.ts → computeVisibleLabels) — no per-object threshold
 # column. The MW-inside guard is the only exception, and it applies
 # globally rather than per-object.
-name	a_pc	b_pc	c_pc	orient	ref_doi	ra_deg	dec_deg	distance_kpc
-LMC	4500	4500	1000	disc:i=32,pa=135	10.1088/0004-637X/781/2/121
+name	a_pc	b_pc	c_pc	orient	ref_doi	ra_deg	dec_deg	distance_kpc	m_v	profile	n_sersic	r_d_pc	bulge_to_total	bulge_re_pc	bulge_n	ref_doi_profile	color
+LMC	4500	4500	1000	disc:i=32,pa=135	10.1088/0004-637X/781/2/121					disc		1500				10.1086/323099
 SMC	3730	4960	6000	los	10.1088/0004-637X/744/2/128
 Sagittarius	2616	942	1000	pa:102	10.1086/192237
-M 32	1600	1200	1200	pa:159	10.1088/0004-6256/144/1/4
+M 32	1600	1200	1200	pa:159	10.1088/0004-6256/144/1/4						1.5					10.1086/340274
 NGC 205	2700	1500	1500	pa:170	10.1088/0004-6256/144/1/4
-M31	15000	15000	500	disc:i=77,pa=37	10.3847/1538-4357/aae8e7	10.6847	41.2687	776
-M33	8500	8500	400	disc:i=54,pa=22	10.1086/508140	23.4625	30.6602	840
+M31	15000	15000	500	disc:i=77,pa=37	10.3847/1538-4357/aae8e7	10.6847	41.2687	776	3.44	disc		5300	0.31	1000	2.2	10.1088/0004-637X/739/1/20
+M33	8500	8500	400	disc:i=54,pa=22	10.1086/508140	23.4625	30.6602	840	5.72	disc		1800				10.1051/0004-6361/201424033
