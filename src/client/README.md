@@ -29,10 +29,12 @@ The payload map is `StellataEventMap` in `stellata.ts`.
 
 - `'focus'` (`number | null`) — focused star changed (from any source).
 - `'cloudFocus'` (`number | null`) — focused molecular cloud changed.
+- `'lgFocus'` (`number | null`) — focused Local Group object changed.
 - `'planetSystem'` (`PlanetSystem | null`) — focused star's planet
   system loaded, cleared, or swapped.
-- `'vector'` / `'vectorCloud'` (`number | null`) — distance-vector
-  destination changed (mutually exclusive star vs cloud destinations).
+- `'vector'` / `'vectorCloud'` / `'vectorLg'` (`number | null`) —
+  distance-vector destination changed (the three destination kinds are
+  mutually exclusive).
 - `'filter'` (`Readonly<FilterState>`) — any filter patch applied.
 - `'cameraMode'` (`'navigate' | 'observe'`) — camera mode flipped.
   Used by the mode toggle, search-row label swap, and scale-bar
