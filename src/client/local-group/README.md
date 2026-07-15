@@ -38,7 +38,16 @@ Each object also carries an `emission` block — the solved luminosity
 model (per-family profile params + density0; SCIENCE.md § Local Group
 luminosity model, solver contract in `scripts/local-group/README.md`).
 The wireframe layer ignores it; it feeds the volumetric emission
-renderer.
+renderer. `type` (morphological string) and optional `aliases`
+(catalog cross-IDs + common names from `data/local-group/aliases.tsv`)
+feed the destination-search rows and the focus card.
+
+LG objects are focusable and warpable: they carry the `'lg'`
+`FocusKind` (`lgFocus` / `vectorLg` bus events, `flyToLg` /
+`setOrbitTargetLg` / `warpToLg` entry points mirroring the cloud
+pattern), park at `lgViewingDistancePc` (2.4 × max semi-axis, the
+shared `viewingDistanceForExtent` rule), and ride the URL's universal
+any-kind focus/to SID refs unchanged.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 

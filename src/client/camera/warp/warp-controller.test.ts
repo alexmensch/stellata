@@ -162,6 +162,7 @@ function makeFocus(): FocusFixture {
     },
     makeStarFocusTarget: makeStarTarget,
     makeCloudFocusTarget: makeCloudTarget,
+    makeLgFocusTarget: () => null,
     starLocalPosition: (idx) => {
       const row = stars.get(idx);
       if (!row) throw new Error(`star ${idx} not seeded`);
@@ -198,10 +199,13 @@ function makeFocus(): FocusFixture {
       focusedCloud = idx;
       calls.setFocusedCloud.push(idx);
     },
+    setFocusedLg: () => {},
     setVectorTo: (idx) => { calls.setVectorTo.push(idx); },
     setVectorToCloud: (idx) => { calls.setVectorToCloud.push(idx); },
+    setVectorToLg: () => {},
     getFocusedStar: () => focusedStar,
     getFocusedCloud: () => focusedCloud,
+    getFocusedLg: () => null,
     isObserveTransitionActive: () => false,
     cancelFocusLerp: () => { calls.cancelFocusLerp++; },
     cancelUnfocusLerp: () => { calls.cancelUnfocusLerp++; },

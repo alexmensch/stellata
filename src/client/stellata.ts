@@ -23,6 +23,7 @@ import {
   dustRaymarchChunk;
 import { GalacticDisc } from './galactic/galactic-disc';
 import { LocalGroupLayer } from './local-group/local-group';
+import { maxSemiAxisPc } from './local-group/local-group-loader';
 import { LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
@@ -278,10 +279,12 @@ export const DEFAULT_FILTER: FilterState = {
 export type StellataEventMap = {
   focus: number | null;
   cloudFocus: number | null;
+  lgFocus: number | null;
   planetSystem: PlanetSystem | null;
   filter: Readonly<FilterState>;
   vector: number | null;
   vectorCloud: number | null;
+  vectorLg: number | null;
   cameraMode: CameraMode;
   warp: boolean;
   focusLerp: boolean;
@@ -386,6 +389,7 @@ export class Stellata implements FrameAnchor {
   // a time. Mutual exclusion enforced by setVectorTo / setVectorToCloud.
   private vectorTo: number | null = null;
   private vectorToCloud: number | null = null;
+  private vectorToLg: number | null = null;
   private monochrome = false;
   private warp!: WarpController;
   private aim!: AimController;
@@ -769,8 +773,10 @@ export class Stellata implements FrameAnchor {
       getCameraMode: () => this.cameraMode,
       setCameraModeValue: (mode) => { this.cameraMode = mode; },
       getClouds: () => this.clouds,
+      getLocalGroup: () => this.localGroupLayer,
       setVectorTo: (idx) => this.setVectorTo(idx),
       setVectorToCloud: (idx) => this.setVectorToCloud(idx),
+      setVectorToLg: (idx) => this.setVectorToLg(idx),
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       focalPerturbationInto: (idx, out) =>
@@ -902,6 +908,7 @@ export class Stellata implements FrameAnchor {
   }
   getFocusedStar(): number | null { return this.focus.getFocusedStar(); }
   getFocusedCloud(): number | null { return this.focus.getFocusedCloud(); }
+  getFocusedLg(): number | null { return this.focus.getFocusedLg(); }
   /** Planet system for the currently focused star, or null if the focus
    *  has none (or has not finished loading). The solar-system rendering
    *  layer gates on this — renderers also subscribe to
@@ -946,6 +953,7 @@ export class Stellata implements FrameAnchor {
   }
   getVectorTo(): number | null { return this.vectorTo; }
   getVectorToCloud(): number | null { return this.vectorToCloud; }
+  getVectorToLg(): number | null { return this.vectorToLg; }
 
   /** Virtual clock backing `getT()`; the debug time-scrubber drives it. */
   get timeClock(): VirtualClock { return this.clock; }
@@ -1425,6 +1433,39 @@ export class Stellata implements FrameAnchor {
     this.focus.flyToCloud(idx, opts);
   }
 
+  /** LG analogue of focusStar — see FocusController.flyToLg. */
+  flyToLg(idx: number, opts: { animate?: boolean } = {}) {
+    this.focus.flyToLg(idx, opts);
+  }
+
+  /** LG object's centroid in the renderer's local frame, or null when
+   *  the layer hasn't loaded. */
+  lgLocalPosition(idx: number): THREE.Vector3 | null {
+    const obj = this.localGroupLayer?.objects[idx];
+    if (!obj) return null;
+    return obj.centerAbs.clone().sub(this.worldOffset);
+  }
+
+  /** Non-allocating sibling of `lgLocalPosition` — same contract as
+   *  `cloudLocalPositionInto`. */
+  lgLocalPositionInto(idx: number, out: THREE.Vector3): boolean {
+    const obj = this.localGroupLayer?.objects[idx];
+    if (!obj) return false;
+    out.copy(obj.centerAbs).sub(this.worldOffset);
+    return true;
+  }
+
+  /** Projected silhouette diameter of an LG object in pixels — the
+   *  orientation-independent maxAxis bound the hover pickbox uses. */
+  renderedLgSizePx(idx: number): number {
+    const obj = this.localGroupLayer?.objects[idx];
+    if (!obj) return 0;
+    const local = this._tmpRenderLocal;
+    if (!this.lgLocalPositionInto(idx, local)) return 0;
+    const dCam = Math.max(local.distanceTo(this.camera.position), 1);
+    return 2 * Math.atan(maxSemiAxisPc(obj) / dCam) * this.angularToPx();
+  }
+
   private tmpVec3b = new THREE.Vector3();
 
   /** Build the dust-particle mesh from loaded data. The layer is shelved
@@ -1489,11 +1530,15 @@ export class Stellata implements FrameAnchor {
     // could try to write one — drop the value rather than fight an invalid
     // overlay state.
     if (idx !== null && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
-    // Mutually exclusive with vectorToCloud; setting a star vector clears
-    // any cloud destination.
+    // The three vector slots are mutually exclusive; setting a star
+    // vector clears any cloud / LG destination.
     if (idx !== null && this.vectorToCloud !== null) {
       this.vectorToCloud = null;
       this.bus.emit('vectorCloud', null);
+    }
+    if (idx !== null && this.vectorToLg !== null) {
+      this.vectorToLg = null;
+      this.bus.emit('vectorLg', null);
     }
     if (this.vectorTo === idx) return;
     this.vectorTo = idx;
@@ -1503,15 +1548,33 @@ export class Stellata implements FrameAnchor {
 
   setVectorToCloud(idx: number | null) {
     if (idx !== null && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
-    // Mutually exclusive with vectorTo; setting a cloud vector clears
-    // any star destination.
     if (idx !== null && this.vectorTo !== null) {
       this.vectorTo = null;
       this.bus.emit('vector', null);
     }
+    if (idx !== null && this.vectorToLg !== null) {
+      this.vectorToLg = null;
+      this.bus.emit('vectorLg', null);
+    }
     if (this.vectorToCloud === idx) return;
     this.vectorToCloud = idx;
     this.bus.emit('vectorCloud', idx);
+    this.bus.emit('state');
+  }
+
+  setVectorToLg(idx: number | null) {
+    if (idx !== null && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
+    if (idx !== null && this.vectorTo !== null) {
+      this.vectorTo = null;
+      this.bus.emit('vector', null);
+    }
+    if (idx !== null && this.vectorToCloud !== null) {
+      this.vectorToCloud = null;
+      this.bus.emit('vectorCloud', null);
+    }
+    if (this.vectorToLg === idx) return;
+    this.vectorToLg = idx;
+    this.bus.emit('vectorLg', idx);
     this.bus.emit('state');
   }
 
@@ -1522,13 +1585,15 @@ export class Stellata implements FrameAnchor {
     if (this.warp.isActive()) return;
     const hasFocus =
       this.focus.getFocusedStar() !== null
-      || this.focus.getFocusedCloud() !== null;
-    if (!hasFocus && this.vectorTo === null && this.vectorToCloud === null) return;
+      || this.focus.getFocusedCloud() !== null
+      || this.focus.getFocusedLg() !== null;
+    if (!hasFocus && this.vectorTo === null && this.vectorToCloud === null && this.vectorToLg === null) return;
     // Vector-only: FocusController.unfocus is a no-op without a focused
-    // star or cloud, so wipe the measurement vector here directly.
+    // object, so wipe the measurement vector here directly.
     if (!hasFocus) {
       this.setVectorTo(null);
       this.setVectorToCloud(null);
+      this.setVectorToLg(null);
       return;
     }
     this.focus.unfocus(opts);
@@ -1763,6 +1828,9 @@ export class Stellata implements FrameAnchor {
    *  stays where it is. See FocusController.setOrbitTargetCloud. */
   setOrbitTargetCloud(cloudIdx: number) { this.focus.setOrbitTargetCloud(cloudIdx); }
 
+  /** LG analogue — orbit pivot to the galaxy centroid, camera stays. */
+  setOrbitTargetLg(idx: number) { this.focus.setOrbitTargetLg(idx); }
+
   // makeStarFocusTarget / makeCloudFocusTarget / currentFocusTarget
  // moved to FocusController — they close over the focus
   // state (focusedStar / focusedCloud / focusedPlanetSystem) so they
@@ -1779,6 +1847,11 @@ export class Stellata implements FrameAnchor {
    *  to a cloud's centroid. Thin shim over WarpController. */
   warpToCloud(destIdx: number) {
     this.warp.warpToCloud(destIdx);
+  }
+
+  /** LG-destination warp — see WarpController.warpToLg. */
+  warpToLg(destIdx: number) {
+    this.warp.warpToLg(destIdx);
   }
 
   /** Local-frame position of a cloud's centroid. Returns null if the

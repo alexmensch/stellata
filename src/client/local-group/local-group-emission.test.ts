@@ -57,6 +57,7 @@ function lgObject(name: string, emission: LgEmission, center: [number, number, n
   return {
     name,
     id: name.toLowerCase(),
+    type: 'Dwarf spheroidal',
     sid: 1,
     centerAbs: new THREE.Vector3(...center),
     kind: emission.family === 'disc' ? 'disc' : 'ellipsoid',
