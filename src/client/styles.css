@@ -592,6 +592,9 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 1 1 auto;
   min-width: 0;
 }
+/* Renders the minimized front card's "<name>\n<n> POI" as two lines —
+ * a plain textContent newline collapses to a space without this. */
+#front-card-title { white-space: pre-line; }
 /* Bold sets the focus card apart from the visually identical POI cards —
  * wherever it currently sits (front card or strip). */
 .is-focus .card-title { font-weight: 700; }

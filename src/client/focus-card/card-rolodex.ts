@@ -120,7 +120,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
       displayKey === plan.front ? frontContent.name : contentFor(displayKey).name;
     title.textContent =
       collapsed && plan.strips.length > 0
-        ? `${displayName} · ${plan.strips.length} POI`
+        ? `${displayName}\n${plan.strips.length} POI`
         : displayName;
     stripsEl.textContent = '';
     stripsEl.style.setProperty('--strip-h', `${stripHeightPx(plan.strips.length)}px`);
