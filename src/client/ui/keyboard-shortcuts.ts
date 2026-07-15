@@ -265,15 +265,18 @@ function escCascade(stellata: Stellata) {
   }
   if (
     stellata.getVectorTo() !== null ||
-    stellata.getVectorToCloud() !== null
+    stellata.getVectorToCloud() !== null ||
+    stellata.getVectorToLg() !== null
   ) {
     stellata.setVectorTo(null);
     stellata.setVectorToCloud(null);
+    stellata.setVectorToLg(null);
     return;
   }
   if (
     stellata.getFocusedStar() !== null ||
-    stellata.getFocusedCloud() !== null
+    stellata.getFocusedCloud() !== null ||
+    stellata.getFocusedLg() !== null
   ) {
     stellata.unfocus();
   }

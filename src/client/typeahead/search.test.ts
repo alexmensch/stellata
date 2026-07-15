@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import {
   splitBayer,
   formatBayerDisplay,
@@ -12,6 +13,7 @@ import {
   formatGcvsDesignation,
   buildGcvsLabels,
   createSearchRunner,
+  formatLgSearchDistance,
   starDesignations,
   type SearchEntry,
 } from './search';
@@ -480,5 +482,60 @@ describe('search / starDesignations', () => {
   it('drops Bayer/Flamsteed forms when the constellation is unknown', () => {
     const entry: SearchEntry = { i: 0, b: 'Alp', f: 3, hip: 5 };
     expect(starDesignations(entry, constellations, 0n)).toEqual(['HIP 5']);
+  });
+});
+
+describe('search / Local Group entries', () => {
+  const lgObject = (name: string, type: string, distanceFromSol: number, aliases?: string[]) => ({
+    name,
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    type,
+    ...(aliases ? { aliases } : {}),
+    sid: 1,
+    centerAbs: new THREE.Vector3(distanceFromSol, 0, 0),
+    kind: 'disc' as const,
+    axes: [1000, 1000, 500] as [number, number, number],
+    quat: new THREE.Quaternion(),
+    source: 'OVERRIDE' as const,
+    distanceFromSol,
+    emission: {
+      family: 'disc' as const,
+      mV: 3.44, rdPc: 5300, zdPc: 167, rEnvPc: 21200, zEnvPc: 667, density0: 0.34,
+    },
+  });
+  const lg = {
+    count: 2,
+    objects: [
+      lgObject('M31', 'Spiral galaxy', 776_000, ['Andromeda Galaxy', 'NGC 224', 'Messier 31']),
+      lgObject('Sculptor Dwarf Spheroidal', 'Dwarf spheroidal', 84_000),
+    ],
+  };
+  const catalog = { ...makeEmptyCatalog(0), constellations: [], names: new Map() };
+
+  it('formatLgSearchDistance switches kpc → Mpc at 1 Mpc', () => {
+    expect(formatLgSearchDistance(84_000)).toBe('84 kpc');
+    expect(formatLgSearchDistance(776_000)).toBe('776 kpc');
+    expect(formatLgSearchDistance(1_200_000)).toBe('1.20 Mpc');
+  });
+
+  it('resolves aliases and display names to the same object with type + distance rows', () => {
+    const run = createSearchRunner(catalog, [], null, lg);
+    for (const q of ['Andromeda Galaxy', 'NGC 224', 'Messier 31', 'M31']) {
+      const hit = run(q)[0];
+      expect(hit?.kind).toBe('lg');
+      expect(hit?.index).toBe(0);
+      expect(hit?.primary).toBe('M31');
+      expect(hit?.displayCon).toBe('Spiral galaxy · 776 kpc');
+    }
+    const dwarf = run('Sculptor')[0];
+    expect(dwarf?.kind).toBe('lg');
+    expect(dwarf?.index).toBe(1);
+    expect(dwarf?.displayCon).toBe('Dwarf spheroidal · 84 kpc');
+  });
+
+  it('dedupes multiple alias matches of one object to a single dropdown row', () => {
+    const run = createSearchRunner(catalog, [], null, lg);
+    const rows = run('andromeda');
+    expect(rows.filter((e) => e.kind === 'lg' && e.index === 0)).toHaveLength(1);
   });
 });

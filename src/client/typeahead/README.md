@@ -13,7 +13,13 @@ Bayer designation. Selecting an entry dispatches through
 active.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
-within-kind dedup over stars + clouds). Both the topbar boxes
+within-kind dedup over stars + clouds + Local Group objects). LG
+entries index the display name plus every build-emitted alias
+("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
+line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
+disambiguates the dSph from star rows. Focus-box select dispatches to
+`flyToLg`, the To box to `setVectorToLg`; observe mode filters LG out
+of the location picker like clouds. Both the topbar boxes
 (`bindSearch`) and the `F` find picker (`bindFindSearch`) run it, so
 ranking never diverges between them. The find picker differs only in its
 `onSelect`: it resolves the pick to a local position and calls

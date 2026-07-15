@@ -2,13 +2,22 @@ import Fuse from 'fuse.js';
 import type { Stellata } from '../stellata';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
+import type { LgCatalog } from '../local-group/local-group-loader';
 import { TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
 
 export type { SearchEntry };
 
-type EntryKind = 'star' | 'cloud';
+type EntryKind = 'star' | 'cloud' | 'lg';
+
+/** Static dropdown-row distance for a Local Group entry. Fixed units by
+ *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
+ *  built once and galaxy distances read naturally in kpc either way. */
+export function formatLgSearchDistance(pc: number): string {
+  if (pc >= 1_000_000) return `${(pc / 1_000_000).toFixed(2)} Mpc`;
+  return `${Math.round(pc / 1000)} kpc`;
+}
 
 export interface FuzzyEntry {
   kind: EntryKind;
@@ -380,6 +389,7 @@ export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
   clouds: CloudCatalog | null,
+  lg: LgCatalog | null = null,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
@@ -399,6 +409,21 @@ export function createSearchRunner(
         primary: c.name,
         displayCon: 'Molecular cloud',
       });
+    }
+  }
+
+  // Local Group entries — display name plus every catalog cross-ID /
+  // common-name alias the build emitted ("Andromeda Galaxy", "NGC 224",
+  // "M 110", …), each resolving to the same object. The secondary line
+  // carries type + distance so "Sagittarius" disambiguates the 26 kpc
+  // dSph from any star row at a glance.
+  if (lg) {
+    for (let i = 0; i < lg.objects.length; i++) {
+      const o = lg.objects[i];
+      const displayCon = `${o.type} · ${formatLgSearchDistance(o.distanceFromSol)}`;
+      for (const label of [o.name, ...(o.aliases ?? [])]) {
+        fuzzyEntries.push({ kind: 'lg', index: i, label, primary: o.name, displayCon });
+      }
     }
   }
 
@@ -495,8 +520,9 @@ export function bindSearch(
   raw: SearchEntry[],
   starLabels: Map<number, string>,
   clouds: CloudCatalog | null,
+  lg: LgCatalog | null = null,
 ) {
-  const runQuery = createSearchRunner(catalog, raw, clouds);
+  const runQuery = createSearchRunner(catalog, raw, clouds, lg);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -546,6 +572,8 @@ export function bindSearch(
     onSelect: (entry) => {
       if (entry.kind === 'cloud') {
         stellata.flyToCloud(entry.index);
+      } else if (entry.kind === 'lg') {
+        stellata.flyToLg(entry.index);
       } else if (stellata.getCameraMode() === 'observe') {
         // Re-route through warp so the camera flies from the current
         // observation anchor to the new one and re-enters observe on
@@ -572,11 +600,13 @@ export function bindSearch(
     rowFor,
     onSelect: (entry) => {
       if (entry.kind === 'cloud') stellata.setVectorToCloud(entry.index);
+      else if (entry.kind === 'lg') stellata.setVectorToLg(entry.index);
       else stellata.setVectorTo(entry.index);
     },
     onClear: () => {
       stellata.setVectorTo(null);
       stellata.setVectorToCloud(null);
+      stellata.setVectorToLg(null);
     },
     positionResults: positionUnder(toInput),
     group,
@@ -593,6 +623,7 @@ export function bindSearch(
   const syncFocusUI = () => {
     const starIdx = stellata.getFocusedStar();
     const cloudIdx = stellata.getFocusedCloud();
+    const lgIdx = stellata.getFocusedLg();
     const observe = stellata.getCameraMode() === 'observe';
     // OBSERVE makes the focus row read as "where you are observing from"
     // rather than "what you have selected", which is what FOCUS implies in
@@ -604,6 +635,9 @@ export function bindSearch(
     } else if (cloudIdx !== null && clouds) {
       focusBox.setName(clouds.clouds[cloudIdx].name);
       toRow.hidden = observe;
+    } else if (lgIdx !== null && lg) {
+      focusBox.setName(lg.objects[lgIdx].name);
+      toRow.hidden = observe;
     } else {
       focusBox.setName('');
       toRow.hidden = true;
@@ -613,16 +647,20 @@ export function bindSearch(
   const syncVectorUI = () => {
     const star = stellata.getVectorTo();
     const cloudVec = stellata.getVectorToCloud();
+    const lgVec = stellata.getVectorToLg();
     if (star !== null) toBox.setName(describe(star));
     else if (cloudVec !== null && clouds) toBox.setName(clouds.clouds[cloudVec].name);
+    else if (lgVec !== null && lg) toBox.setName(lg.objects[lgVec].name);
     else toBox.setName('');
   };
 
   stellata.on('focus', syncFocusUI);
   stellata.on('cloudFocus', syncFocusUI);
+  stellata.on('lgFocus', syncFocusUI);
   stellata.on('cameraMode', syncFocusUI);
   stellata.on('vector', syncVectorUI);
   stellata.on('vectorCloud', syncVectorUI);
+  stellata.on('vectorLg', syncVectorUI);
 
   syncFocusUI();
   syncVectorUI();
@@ -639,8 +677,9 @@ export function bindFindSearch(
   catalog: Catalog,
   raw: SearchEntry[],
   clouds: CloudCatalog | null,
+  lg: LgCatalog | null = null,
 ): void {
-  const runQuery = createSearchRunner(catalog, raw, clouds);
+  const runQuery = createSearchRunner(catalog, raw, clouds, lg);
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;
 
@@ -652,7 +691,9 @@ export function bindFindSearch(
     onSelect: (entry) => {
       const pos = entry.kind === 'cloud'
         ? stellata.cloudLocalPosition(entry.index)
-        : stellata.starLocalPosition(entry.index);
+        : entry.kind === 'lg'
+          ? stellata.lgLocalPosition(entry.index)
+          : stellata.starLocalPosition(entry.index);
       if (pos) stellata.aimAt(pos);
     },
     positionResults: () => {
