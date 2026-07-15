@@ -23,13 +23,19 @@ turns off cleanly until that lands.
 
 ## Runtime layer
 
-`local-group-loader.ts` fetches `public/local-group.json`. Each object
-carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the loader
-rejects the artifact (warn + null) when any sid is missing or
-duplicated — a pre-stamp `local-group.json` needs
-`pnpm run build:local-group`. When the artifact loads, `main.ts`
-attaches the `lg` SID domain over it
-(see `../util/sid-resolver/README.md`).
+`local-group-loader.ts` fetches `public/local-group.json` (format
+version 2). Each object carries a frozen Stellata ID (`sid`,
+docs/sid.md § 7); the loader rejects the artifact (warn + null) when
+the version mismatches or any sid is missing or duplicated — a stale
+or pre-stamp `local-group.json` needs `pnpm run build:local-group`.
+When the artifact loads, `main.ts` attaches the `lg` SID domain over
+it (see `../util/sid-resolver/README.md`).
+
+Each object also carries an `emission` block — the solved luminosity
+model (per-family profile params + density0; SCIENCE.md § Local Group
+luminosity model, solver contract in `scripts/local-group/README.md`).
+The wireframe layer ignores it; it feeds the volumetric emission
+renderer.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 

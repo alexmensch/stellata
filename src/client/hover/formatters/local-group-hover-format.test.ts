@@ -29,6 +29,16 @@ function lg(
     quat: new THREE.Quaternion(0, 0, 0, 1),
     source: 'LVDB',
     distanceFromSol: distancePc,
+    emission: {
+      family: 'sersic',
+      mV: 10,
+      reffAxesPc: axes,
+      n: 1,
+      bn: 1.6765432098765434,
+      pn: 0.44493,
+      uMax: 4.55698214967272,
+      density0: 1,
+    },
   };
 }
 
