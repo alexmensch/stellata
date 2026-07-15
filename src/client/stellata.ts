@@ -23,6 +23,7 @@ import {
   dustRaymarchChunk;
 import { GalacticDisc } from './galactic/galactic-disc';
 import { LocalGroupLayer } from './local-group/local-group';
+import { LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { GalacticGrid } from './galactic/galactic-grid';
@@ -137,6 +138,9 @@ export interface FilterState {
   // Milky Way analytic background. Default-on; chart mode switches to
   // outline-only rendering on this same toggle.
   showMilkyway: boolean;
+  // Local Group volumetric emission. Default-on; chart mode hides the
+  // layer independently of this toggle.
+  showLgEmission: boolean;
   // Star chart mode. Only meaningful while cameraMode==='observe';
   // chart-mode orchestrator (chart-mode.ts) ignores it otherwise. Drives
   // the paper-aesthetic palette, label rendering, isobar outlines on
@@ -255,6 +259,7 @@ export const DEFAULT_FILTER: FilterState = {
   showGalacticGrid: false,
   showHud: false,
   showMilkyway: true,
+  showLgEmission: true,
   chart: false,
 };
 
@@ -419,6 +424,12 @@ export class Stellata implements FrameAnchor {
   // everywhere. Shares the MW disc's FADE_INNER_PC / FADE_OUTER_PC
   // reveal curve.
   private localGroupLayer: LocalGroupLayer | null = null;
+
+  // Volumetric LG emission — the wireframe's luminous sibling, built
+  // from the same catalog. No Sol-distance fade and visible during
+  // warp (it's light, not reference chrome); only chart mode and its
+  // own toggle hide it.
+  private lgEmission: LocalGroupEmission | null = null;
 
   // Molecular cloud overlay. null until attachClouds() runs;
   // the layer loads asynchronously after the catalog and search index so
@@ -1359,15 +1370,32 @@ export class Stellata implements FrameAnchor {
       this.localGroupLayer.dispose();
       this.localGroupLayer = null;
     }
+    if (this.lgEmission) {
+      this.scene.remove(this.lgEmission.group);
+      this.lgEmission.dispose();
+      this.lgEmission = null;
+    }
     if (catalog === null || catalog.objects.length === 0) return;
     this.localGroupLayer = new LocalGroupLayer(catalog);
     this.localGroupLayer.setMonochrome(this.monochrome);
     this.scene.add(this.localGroupLayer.group);
+    const u = this.starPipeline.discMaterial.uniforms;
+    this.lgEmission = new LocalGroupEmission(catalog.objects, {
+      uMaxAppMag: u.uMaxAppMag as { value: number },
+      uSizeSpan: u.uSizeSpan as { value: number },
+    });
+    this.lgEmission.setChartHidden(this.monochrome);
+    this.lgEmission.setEnabled(this.filter.showLgEmission);
+    this.scene.add(this.lgEmission.group);
   }
 
   /** Direct access to the Local Group layer for dev-console / label
    *  wiring in main.ts. null until attachLocalGroup runs. */
   get localGroup(): LocalGroupLayer | null { return this.localGroupLayer; }
+
+  /** Dev-console access to the LG emission layer (brightness /
+   *  glow-mag-offset levers). null until attachLocalGroup runs. */
+  get localGroupEmission(): LocalGroupEmission | null { return this.lgEmission; }
 
   attachClouds(catalog: CloudCatalog | null) {
     if (this.clouds) {
@@ -1521,6 +1549,7 @@ export class Stellata implements FrameAnchor {
     // slider moves so distant hosts stay culled at the new threshold.
     this.planetBodyField.setMaxAppMag(this.filter.maxAppMag);
     this.milkyway.setEnabled(this.filter.showMilkyway);
+    this.lgEmission?.setEnabled(this.filter.showLgEmission);
     this.bus.emit('filter', this.filter);
     this.bus.emit('state');
   }
@@ -1693,6 +1722,7 @@ export class Stellata implements FrameAnchor {
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
     this.galacticDisc.setMonochrome(on);
     this.localGroupLayer?.setMonochrome(on);
+    this.lgEmission?.setChartHidden(on);
     this.galacticGrid.setMonochrome(on);
     this.hudOverlay.setMonochrome(on);
     this.clouds?.setMonochrome(on);
@@ -2384,6 +2414,7 @@ export class Stellata implements FrameAnchor {
     // camera.position and refreshes the absolute-camera-position uniform
     // for the shader's raymarch.
     this.milkyway.update(this.camera, this.worldOffset);
+    this.lgEmission?.update(this.worldOffset);
     perfMeasure('pre-render');
     perfMark('gpu.render');
     this.renderer.render(this.scene, this.camera);
@@ -2542,6 +2573,8 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField?.dispose();
     this.heliopause.dispose();
     this.milkyway.dispose();
+    this.lgEmission?.dispose();
+    this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
     // doesn't own it.
