@@ -1,12 +1,15 @@
-# Local Group wireframe layer
+# Local Group layers — wireframes + volumetric emission
 
-Always-on reference overlay rendering LineLoop outlines for the
-Magellanic Clouds, Sagittarius dSph, classical dSphs and ultra-faints
-within 250 kpc, plus M31, M33, the M31 satellite subgroup, and the
-outer-band dwarfs (NGC 6822, IC 10, IC 1613, Leo A, WLM, Sextans A/B,
-…) out to the canonical 2 Mpc Local Group boundary — plus the Milky
-Way label (the disc itself lives in `../galactic/`; only the SVG
-label lives here).
+Two sibling renderers over one catalog: an always-on reference overlay
+rendering LineLoop outlines for the Magellanic Clouds, Sagittarius
+dSph, classical dSphs and ultra-faints within 250 kpc, plus M31, M33,
+the M31 satellite subgroup, and the outer-band dwarfs (NGC 6822,
+IC 10, IC 1613, Leo A, WLM, Sextans A/B, …) out to the canonical 2 Mpc
+Local Group boundary — and a volumetric emission layer that makes each
+object glow at its physically correct apparent V magnitude from any
+camera position (§ Emission layer below). Also the Milky Way label
+(the disc itself lives in `../galactic/`; only the SVG label lives
+here).
 
 ## Visibility model — no toggle, no URL flag
 
@@ -51,6 +54,65 @@ in absolute ICRS pc. The layer's group is rebased to `-worldOffset`
 each frame so the floating origin doesn't drift the outlines. One
 shared `LineBasicMaterial` across the whole catalog — per-frame
 opacity write hits one slot.
+
+## Emission layer
+
+`local-group-emission.ts` renders every object's solved luminosity
+model (`emission` block, SCIENCE.md § Local Group luminosity model) as
+raymarched proxy volumes — the Milky Way's volumetric scheme
+(`../milkyway/README.md`) generalised to N instances. Two instanced
+unit-sphere passes, one per profile family, compiled from ONE shader
+pair (`local-group-emission.{vert,frag}.glsl`; the disc material
+defines `FAMILY_DISC`):
+
+- **Sérsic pass** (120 spheroids) — mesh axes are `uMax × R_e`, so the
+  ellipsoidal profile radius is just `uMax × |pLocal|`; per-instance
+  `(density0, 1/n, bn, pn)` + `uMax` ride instanced attributes into
+  flat varyings.
+- **Disc pass** (LMC, M31, M33) — mesh is the `(rEnv, rEnv, zEnv)`
+  envelope; density `ρ₀·exp(−R/R_d − |z|/z_d)` plus M31's spherical
+  Sérsic bulge, cut at u ≤ uMax per the solver contract
+  (`scripts/local-group/README.md` § Emission solver — the solve and
+  the shader must share the cut).
+
+The camera transforms into each instance's unit-ball frame in the
+vertex shader (quaternion conjugate + axis divide); the fragment
+shader runs milkyway's exact entry/exit logic — front-face root
+clamped ≥ 0 handles camera-inside, BackSide keeps fragments alive from
+inside, 32 log-distributed steps to the back-face fragment. Emission
+converts to an effective apparent magnitude via the shared
+`uGlowMagOffset − 2.5·log10(column)` gate with `uMaxAppMag` /
+`uSizeSpan` referenced from the star pipeline, folded un-clamped into
+the `1 − exp(−x)` tone map — the slider lifts stars and LG glow
+together. **Do not scale density0 per object**: per-object flux ratios
+are physical, solved by the build; `setBrightness` / `setGlowMagOffset`
+(debug panel § Deep field, `stellata.localGroupEmission.*`) are the
+only global levers.
+
+Instance centres are absolute ICRS in float32 attributes; the vertex
+shader subtracts the per-frame `uWorldOffset` (≤ ~0.25 pc cancellation
+error at 2 Mpc — invisible at galaxy scale). renderOrder −3 beside the
+MW volume; additive, no depth write, `frustumCulled = false` (unit-ball
+bounding sphere vs 2 Mpc instance spread).
+
+Visibility: default-on; `?v=` blob bit 22 (`showLgEmission=false`,
+zero-byte presence field) disables; chart mode hides the layer
+entirely (wireframes carry the chart aesthetic); **stays visible
+during warp** — unlike the wireframe overlay, the glow is light, not
+reference chrome. No Sol-distance fade for the same reason. Hover /
+pick is untouched — the wireframe's visibility-gated pick remains the
+only pick path.
+
+`local-group-emission-pure.ts` packs the instance buffers and carries
+a CPU mirror of the GLSL raymarch (same steps, same density
+functions — keep in lockstep).
+`local-group-emission-calibration.test.ts` is the epic's acceptance
+test: flux integrated over solid angle from mirrored per-ray columns
+(CI has no GPU, so no framebuffer read-back — same integral, same
+discretization) matches the physical prediction to ±0.1 mag across 6
+camera positions × 5 objects, far-field pairs against the catalog
+1/d² law and near/inside pairs against a converged dense march; the
+worst deviation is pinned (0.011 mag).
 
 ## Label engine
 
