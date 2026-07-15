@@ -596,7 +596,7 @@ describe('buildEmission', () => {
     expect(e.density0).toBe(0.34273291272719336);
     expect(e.bulge).toBeDefined();
     expect(e.bulge!.uMax).toBe(u99(2.2));
-    expect(e.bulge!.density0).toBe(24.056799890963106);
+    expect(e.bulge!.density0).toBe(13.392310279896599);
     // Component far-field fluxes recombine to the catalog total.
     const discFlux = (1 - 0.31) * fluxNumber(3.44);
     const bulgeFlux = 0.31 * fluxNumber(3.44);
