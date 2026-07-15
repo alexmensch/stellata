@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   bnCoeff,
-  bulgeInDiscGeometryIntegral,
   discGeometryIntegral,
   fluxNumber,
   integrateOverEllipsoid,
@@ -79,15 +78,11 @@ describe('numeric geometry integral vs analytic closed forms', () => {
     const gInf = 4 * Math.PI * 1500 * 1500 * (1000 / 3);
     expect(g / gInf).toBe(0.866974589138657);
   });
-  it('bulge-in-disc-envelope integral is cut by both the mesh and uMax', () => {
+  it('spheroid quadrature matches the incomplete-gamma form (n = 2.2, M31 bulge geometry)', () => {
     const uMax = u99(2.2);
-    const inDisc = bulgeInDiscGeometryIntegral(1000, 2.2, uMax, 21200, 2000 / 3);
-    // A near-spherical envelope enclosing the full uMax ball recovers
-    // (almost) the untruncated spheroid integral — the disc envelope
-    // must therefore be a strict subset.
-    const full = sersicGeometryIntegralAnalytic([1000, 1000, 1000], 2.2, uMax);
-    expect(inDisc).toBeLessThan(full);
-    expect(inDisc).toBe(326473008.00574315);
+    const num = sersicGeometryIntegral([1000, 1000, 1000], 2.2, uMax);
+    const ana = sersicGeometryIntegralAnalytic([1000, 1000, 1000], 2.2, uMax);
+    expect(Math.abs(num - ana) / ana).toBeLessThan(1e-6);
   });
 });
 

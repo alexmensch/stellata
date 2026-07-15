@@ -76,29 +76,50 @@ unit-sphere passes, one per profile family, compiled from ONE shader
 pair (`local-group-emission.{vert,frag}.glsl`; the disc material
 defines `FAMILY_DISC`):
 
-- **Sérsic pass** (120 spheroids) — mesh axes are `uMax × R_e`, so the
-  ellipsoidal profile radius is just `uMax × |pLocal|`; per-instance
-  `(density0, 1/n, bn, pn)` + `uMax` ride instanced attributes into
-  flat varyings.
+Each object decomposes into one or two **components**
+(`emissionComponents` in `local-group-emission-pure.ts`): a Sérsic
+block is one spheroid; a disc block is a disc plus, for M31, a
+separate spheroidal bulge instance in the Sérsic pass (own u ≤ uMax
+sphere, spheroid population tint — the two volumes overlap and
+additive blending sums them, preserving the solved B/T flux split
+while the bulge reads as a bulge from edge-on viewpoints).
+
+- **Sérsic pass** (spheroids + disc bulges) — mesh axes are
+  `uMax × R_e`, so the ellipsoidal profile radius is just
+  `uMax × |pLocal|`; per-instance `(density0, 1/n, bn, pn)` + `uMax`
+  ride instanced attributes into flat varyings.
 - **Disc pass** (LMC, M31, M33) — mesh is the `(rEnv, rEnv, zEnv)`
-  envelope; density `ρ₀·exp(−R/R_d − |z|/z_d)` plus M31's spherical
-  Sérsic bulge, cut at u ≤ uMax per the solver contract
-  (`scripts/local-group/README.md` § Emission solver — the solve and
-  the shader must share the cut).
+  envelope; density `ρ₀·exp(−R/R_d − |z|/z_d)`.
 
 The camera transforms into each instance's unit-ball frame in the
 vertex shader (quaternion conjugate + axis divide); the fragment
 shader runs milkyway's exact entry/exit logic — front-face root
 clamped ≥ 0 handles camera-inside, BackSide keeps fragments alive from
-inside, 32 log-distributed steps to the back-face fragment. Emission
-converts to an effective apparent magnitude via the shared
-`uGlowMagOffset − 2.5·log10(column)` gate with `uMaxAppMag` /
-`uSizeSpan` referenced from the star pipeline, folded un-clamped into
-the `1 − exp(−x)` tone map — the slider lifts stars and LG glow
-together. **Do not scale density0 per object**: per-object flux ratios
-are physical, solved by the build; `setBrightness` / `setGlowMagOffset`
-(debug panel § Deep field, `stellata.localGroupEmission.*`) are the
-only global levers.
+inside, log-distributed steps to the back-face fragment (32 for
+spheroids, 64 for discs — grazing disc rays run tens of kpc against a
+~10² pc vertical scale height). Each pixel's in-step sample position
+is jittered by a screen-space hash: coherent midpoint sampling of the
+thin-disc profile bands on grazing rays, and the jitter trades the
+bands for fine noise while preserving the expected column (the CPU
+mirror keeps deterministic midpoints).
+
+**Tone map is magnitude-domain, deliberately diverging from
+milkyway.frag.** Each column converts to a per-pixel
+surface-brightness magnitude via `uGlowMagOffset − 2.5·log10(column)`
+and gates against the star pipeline's shared `uMaxAppMag` /
+`uSizeSpan`; displayed intensity is `1 − exp(−color · brightness ·
+gate)` — the gate alone, never linear column flux, drives the pixel.
+The bulge-to-disc-edge column range spans ~7 mag ≈ 1000× linear; a
+linear tone map (the MW volume's convention, fine for the narrow
+in-galaxy column range) renders that as a blown core on a black disc
+from every external viewpoint. docs/science-local-group.md § Local Group luminosity
+model carries the display-transform rationale. **Do not scale
+density0 per object**: per-object flux ratios are physical, solved by
+the build; `setBrightness` (gain, seed 3.0) / `setGlowMagOffset`
+(which slider position reveals which isophote, seed 11.0 — naked-eye
+preset shows LMC/SMC + the M31 core like the real sky, "all" reveals
+the M31 disc to its envelope) via debug panel § Deep field or
+`stellata.localGroupEmission.*` are the only global levers.
 
 Instance centres are absolute ICRS in float32 attributes; the vertex
 shader subtracts the per-frame `uWorldOffset` (≤ ~0.25 pc cancellation
@@ -114,16 +135,18 @@ reference chrome. No Sol-distance fade for the same reason. Hover /
 pick is untouched — the wireframe's visibility-gated pick remains the
 only pick path.
 
-`local-group-emission-pure.ts` packs the instance buffers and carries
-a CPU mirror of the GLSL raymarch (same steps, same density
-functions — keep in lockstep).
+`local-group-emission-pure.ts` decomposes emission blocks into
+components, packs the instance buffers, and carries a CPU mirror of
+the GLSL raymarch (same per-family steps, same density functions —
+keep in lockstep; the mirror samples midpoints where the shader
+jitters, same expectation).
 `local-group-emission-calibration.test.ts` is the epic's acceptance
 test: flux integrated over solid angle from mirrored per-ray columns
-(CI has no GPU, so no framebuffer read-back — same integral, same
-discretization) matches the physical prediction to ±0.1 mag across 6
-camera positions × 5 objects, far-field pairs against the catalog
-1/d² law and near/inside pairs against a converged dense march; the
-worst deviation is pinned (0.011 mag).
+summed over components (CI has no GPU, so no framebuffer read-back —
+same integral, same discretization) matches the physical prediction
+to ±0.1 mag across 6 camera positions × 5 objects, far-field pairs
+against the catalog 1/d² law and near/inside pairs against a
+converged dense march; the worst deviation is pinned (0.017 mag).
 
 ## Label engine
 
