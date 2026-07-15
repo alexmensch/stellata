@@ -38,10 +38,9 @@ import { SOL_PLANETS } from './solar-system/planet-system';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
-import { createFocusCard } from './focus-card/focus-card';
+import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
-import { createPoiCardStack } from './poi/poi-card-stack';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
@@ -279,9 +278,9 @@ async function main() {
       initialProviders: hoverProviders,
     });
 
-    // Tier-2 focus card + per-POI cards. Both distance functions read
-    // the local frame (camera and object share it), so the values match
-    // what hover's pick paths report.
+    // Tier-2 card rolodex (focus card + per-POI cards). Both distance
+    // functions read the local frame (camera and object share it), so
+    // the values match what hover's pick paths report.
     const searchEntries = new Map(searchIndex.map((e) => [e.i, e]));
     const starFocusProvider = createStarFocusProvider({
       catalog,
@@ -296,7 +295,7 @@ async function main() {
       },
       nowJd: () => tToJDE(stellata.getT()),
     });
-    createFocusCard({
+    createCardRolodex({
       stellata,
       providers: {
         star: starFocusProvider,
@@ -315,7 +314,6 @@ async function main() {
         }),
       },
     });
-    createPoiCardStack({ stellata, starProvider: starFocusProvider });
 
     await new Promise((r) => requestAnimationFrame(r));
     loading.style.transition = 'opacity 0.4s ease';

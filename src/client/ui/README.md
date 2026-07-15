@@ -210,22 +210,21 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   untouched.
 - `.ui-top` — fixed top-right, `flex-direction: column`, bottom-bounded
   at the same 16px page margin as `.ui-bottom`. Children in DOM order:
-  topbar ("Navigate" heading + Focus/To search), panel (Settings), the
-  `#poi-cards` stack (`../poi/README.md` § POI cards), then the
-  `.ui-top-bottom` group — focus card + meta (star count / time
-  scrubber). A single `margin-top: auto` on the POI stack pins stack +
-  bottom group to the column floor; the stack grows upward into the
-  free space and, on overflow, scrolls alone — its `flex-shrink` is
-  orders of magnitude above the panel's, so a tall stack can never
-  compress the settings panel or the bottom group. Because panel is a
-  flex child below the topbar, it can never overlap it, and an
-  expanding scrubber pushes the focus card up through normal flex
+  topbar ("Navigate" heading + Focus/To search), panel (Settings), then
+  the `.ui-top-bottom` group — the card rolodex (`#card-stack`,
+  `../focus-card/README.md` § Rolodex behaviour) + meta (star count /
+  time scrubber). A single `margin-top: auto` on the group pins it to
+  the column floor. The rolodex is one card-sized unit at any pin count
+  (strips compress instead of the stack growing), so the column never
+  overflows from pins and needs no scroll/shrink machinery. Because
+  panel is a flex child below the topbar, it can never overlap it, and
+  an expanding scrubber pushes the card stack up through normal flex
   layout — no fixed clearances, no measurement.
 - `.ui-bottom` — fixed full-width along the bottom, holding the
   scale-bar widget (left; see § Bottom-left widget below).
 - `.meta` is the catalog count (`.meta-count`, e.g. "313,242 stars") +
   the time readout / scrubber. Focused-object identity + camera
-  distance live in the focus card (`../focus-card/README.md`).
+  distance live in the card rolodex (`../focus-card/README.md`).
 - Both containers set `pointer-events: none` on themselves and `auto` on
   direct children, so clicks fall through empty regions to the canvas.
 
@@ -277,7 +276,7 @@ the keydown for the exiting keystroke).
 
 `controls-hidden.ts` toggles `body[data-controls-hidden]`, which hides
 the right-hand column's interactive controls (`#topbar`, `#panel`,
-`#poi-cards`, `#focus-card`). Everything else — brand box, meta readout / time
+`#card-stack`). Everything else — brand box, meta readout / time
 scrubber (also in the column, kept visible), scale bar, tooltip, warp
 button, and the `#overlay` SVG (constellations, star names, focus
 ring) — stays visible. `#controls-restore-btn` is a fixed top-right box, `display:

@@ -96,31 +96,13 @@ html, body {
   pointer-events: none;
 }
 .ui-top > * { pointer-events: auto; }
-/* POI card stack — sits directly above the bottom group and carries the
- * column's margin-top: auto, so the stack + bottom group stay pinned to
- * the floor and the stack grows upward into the free space. */
-.poi-cards {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-  /* Shrink factor ≫ the panel's 1: column overflow from a tall stack is
-   * absorbed here (the stack scrolls) instead of compressing the
-   * settings panel or the bottom group. Empty stack = zero basis = no
-   * shrink share, so the no-POI layout is unchanged. */
-  flex: 0 10000 auto;
-  overflow-y: auto;
-  pointer-events: none;
-}
-/* flex-shrink: 0 so cards overflow (and scroll) rather than squash. */
-.poi-cards > * { pointer-events: auto; flex-shrink: 0; }
-
-/* Bottom group of the right-hand column: focus card + meta (star count /
- * time scrubber). Floor-pinned via .poi-cards' margin-top: auto above;
- * the column gap separates its members — no fixed clearances, so an
- * expanding scrubber pushes the focus card up naturally. */
+/* Bottom group of the right-hand column: card rolodex + meta (star count /
+ * time scrubber). Carries the column's margin-top: auto so it stays pinned
+ * to the floor; the column gap separates its members — no fixed
+ * clearances, so an expanding scrubber pushes the card stack up
+ * naturally. */
 .ui-top-bottom {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -200,14 +182,9 @@ html, body {
  * the column floor by its .ui-top-bottom wrapper. */
 body[data-controls-hidden] #topbar,
 body[data-controls-hidden] #panel,
-body[data-controls-hidden] #poi-cards,
-body[data-controls-hidden] #focus-card {
+body[data-controls-hidden] #card-stack {
   display: none;
 }
-/* #poi-cards normally carries the column's floor-pinning margin-top:
- * auto; with it display: none'd the bottom group takes over, so the
- * meta readout / time scrubber stay at the column floor. */
-body[data-controls-hidden] .ui-top-bottom { margin-top: auto; }
 .controls-restore-btn {
   display: none;
   position: fixed;
@@ -551,11 +528,61 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 1 1 auto;
 }
 
-/* Focus card — the tier-2 object-info panel in the right column's
- * bottom group (.ui-top-bottom), directly above the meta readout.
- * Shares the .panel card chrome; the header carries the object's display
- * name, so the uppercase transform is dropped (Greek Bayer forms must
- * not uppercase). */
+/* Card rolodex — the tier-2 object-info stack in the right column's
+ * bottom group, directly above the meta readout: one visible front card
+ * with the other cards' header strips stacked above it
+ * (focus-card/card-rolodex.ts). The front card shares the .panel card
+ * chrome; the header carries the object's display name, so the uppercase
+ * transform is dropped (Greek Bayer forms must not uppercase). */
+/* min-height: 0 + the front card's .panel flex let a short viewport
+ * compress the front card (its .panel-inner scrolls) while the strip
+ * band, bounded by the height budget, never shrinks. */
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.card-strips {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  background: rgba(7, 9, 18, 0.85);
+  backdrop-filter: blur(6px);
+}
+/* Strip height is driven by --strip-h (set per pin count so the full
+ * stack always fits without scrolling); border-bottom is omitted — the
+ * next strip's top border / the front card's border is the divider. */
+.card-strip {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--strip-h, 26px);
+  padding: 0 10px 0 14px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+}
+.card-strip:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+.card-strip .strip-close {
+  border: none;
+  width: 16px;
+  height: 100%;
+  font-size: 12px;
+}
+.card-strip .card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .focus-card .panel-header {
   text-transform: none;
   letter-spacing: 0.08em;
@@ -565,8 +592,20 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   flex: 1 1 auto;
   min-width: 0;
 }
-/* Bold sets the focus card apart from the visually identical POI cards. */
-#focus-card .card-title { font-weight: 700; }
+/* Renders the minimized front card's "<name>\n<n> POI" as two lines —
+ * a plain textContent newline collapses to a space without this. */
+#front-card-title { white-space: pre-line; }
+/* Bold sets the focus card apart from the visually identical POI cards —
+ * wherever it currently sits (front card or strip). */
+.is-focus .card-title { font-weight: 700; }
+/* Minimized stack = the front card's header row alone. The collapse
+ * class lands on .card-stack (not .panel), so the .panel.collapsed
+ * rules above don't cover these — including the header-only shrink
+ * guard (see the .panel.collapsed comment). */
+.card-stack.collapsed .card-strips,
+.card-stack.collapsed .focus-card-inner { display: none; }
+.card-stack.collapsed .panel-header { border-bottom: none; }
+.card-stack.collapsed { flex-shrink: 0; }
 .focus-card-inner {
   font-size: 12px;
   display: flex;
