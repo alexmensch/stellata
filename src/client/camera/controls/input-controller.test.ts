@@ -33,6 +33,10 @@ interface Harness {
   };
   emitted: string[];
   camera: THREE.PerspectiveCamera;
+  canvas: {
+    addEventListener: ReturnType<typeof vi.fn>;
+    removeEventListener: ReturnType<typeof vi.fn>;
+  };
 }
 
 function makeHarness(): Harness {
@@ -48,10 +52,11 @@ function makeHarness(): Harness {
     pickCloudResult: null as number | null,
   };
   const emitted: string[] = [];
-  const canvas = {
+  const canvasMock = {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-  } as unknown as HTMLCanvasElement;
+  };
+  const canvas = canvasMock as unknown as HTMLCanvasElement;
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
   const controls = {
     target: new THREE.Vector3(0, 0, -1),
@@ -104,7 +109,7 @@ function makeHarness(): Harness {
     togglePoi: deps.togglePoi,
     aimAt: deps.aimAt,
   } satisfies InputControllerDeps);
-  return { input, deps, state, emitted, camera };
+  return { input, deps, state, emitted, camera, canvas: canvasMock };
 }
 
 type WithPrivates = {
@@ -228,5 +233,31 @@ describe('InputController.rollCamera', () => {
     (input as unknown as WithPrivates).rollCamera(Math.PI / 2);
     expect(camera.up.length()).toBeCloseTo(1, 12);
     expect(Math.abs(camera.up.angleTo(upBefore))).toBeCloseTo(Math.PI / 2, 6);
+  });
+
+  it('also rolls the camera quaternion in observe mode (rendered-image roll)', () => {
+    const { input, camera, state } = makeHarness();
+    state.cameraMode = 'observe';
+    const upBefore = camera.up.clone();
+    const quatBefore = camera.quaternion.clone();
+    (input as unknown as WithPrivates).rollCamera(Math.PI / 2);
+    expect(camera.quaternion.length()).toBeCloseTo(1, 12);
+    expect(camera.quaternion.angleTo(quatBefore)).toBeCloseTo(Math.PI / 2, 6);
+    // up rolls in both modes — URL state encodes it, so observe can't skip it.
+    expect(Math.abs(camera.up.angleTo(upBefore))).toBeCloseTo(Math.PI / 2, 6);
+  });
+});
+
+describe('InputController.dispose', () => {
+  it('removes every canvas listener it added', () => {
+    const { input, canvas } = makeHarness();
+    const added = canvas.addEventListener.mock.calls;
+    expect(added.length).toBeGreaterThan(0);
+    input.dispose();
+    const removed = canvas.removeEventListener.mock.calls;
+    expect(removed.length).toBe(added.length);
+    for (const [type, handler] of added) {
+      expect(removed).toContainEqual([type, handler]);
+    }
   });
 });
