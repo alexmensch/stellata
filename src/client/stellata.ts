@@ -89,6 +89,15 @@ export {
   WARP_T_MIN_MS,
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
+import {
+  DEFAULT_FILTER,
+  DEFAULT_FOV,
+  type FilterState,
+  type MagPresetName,
+  STAR_RENDER_DEFAULTS,
+  type StarRenderParams,
+} from './filters/filter-state';
+import { FilterController } from './filters/filter-controller';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import {
   ExtinctionPrepass,
@@ -102,167 +111,12 @@ import {
 import { type BinariesData } from './binaries/binaries-loader';
 import { buildPulsationSuppressMask } from './star-pipeline/pulsation-suppress-pure';
 
-export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
-
-export interface FilterState {
-  minDistSol: number;
-  maxDistSol: number;
-  maxAppMag: number;
-  spectMask: number;
-  highlightCon: number; // -1 = none; consumed by overlay, not shader
-  sizeMin: number;      // CSS pixels — set from the active preset's angular
-  sizeMax: number;      // size at the current viewport, or by manual slider.
-  sizeSpan: number;
-  // Active magnitude preset. Drives preset-defaults behaviour when the
-  // viewport resizes — non-overridden size fields recompute against this
-  // preset's angular targets so stars stay proportional to the scene
-  // (especially the Milky Way disc) regardless of screen size.
-  activePreset: MagPresetName;
-  // Manual-override flags for the size sliders. Set by slider input,
-  // cleared by the corresponding reset button (which also re-applies the
-  // active preset's value). When false, the preset writes its computed
-  // pixel value into the field on each preset switch and viewport resize.
-  sizeMinOverridden: boolean;
-  sizeMaxOverridden: boolean;
-  sizeSpanOverridden: boolean;
-  // Master visibility for constellation stick figures. When false the
-  // overlay draws nothing regardless of `highlightCon` (which is preserved
-  // so re-enabling restores the prior selection); the picker UI is also
-  // disabled and the C shortcut is suppressed by their own gates.
-  showConstellation: boolean;
-  // Galactic coordinate sphere (grid lines on a 50 kpc sphere). Disc is
-  // always-on (fades by zoom) so it isn't gated here.
-  showGalacticGrid: boolean;
-  // HUD: Sol/GC locator arrows in both navigate + observe modes, plus the
-  // OBSERVE-mode screen-centred ring. Future HUD widgets hang off this flag.
-  showHud: boolean;
-  // Milky Way analytic background. Default-on; chart mode switches to
-  // outline-only rendering on this same toggle.
-  showMilkyway: boolean;
-  // Local Group volumetric emission. Default-on; chart mode hides the
-  // layer independently of this toggle.
-  showLgEmission: boolean;
-  // Star chart mode. Only meaningful while cameraMode==='observe';
-  // chart-mode orchestrator (chart-mode.ts) ignores it otherwise. Drives
-  // the paper-aesthetic palette, label rendering, isobar outlines on
-  // cloud / milkyway, and flat-disc star rendering.
-  chart: boolean;
-}
-
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
   catalog: Catalog;
 }
 
-const ALL_SPECT_MASK = 0b111111111;
-
-// Star size physics — see docs/science-stellar-modelling.md § Stellar perception model.
-// STAR_PHYSICS_FACTOR = 2·ln(10)/2.5. Per-preset starExaggerationK
-// is tunable via Stellata.setStarExaggerationK (debug panel).
-const STAR_PSF_ARCSEC = 30;
-const STAR_PHYSICS_FACTOR = 1.84;
-const STAR_EXAGGERATION_K_DEFAULTS: Record<MagPresetName, number> = {
-  'naked-eye':  12,
-  'binoculars': 9,
-  'all':        5,
-};
-let starExaggerationK: Record<MagPresetName, number> = { ...STAR_EXAGGERATION_K_DEFAULTS };
-
-// Star-disc rendering knobs. Defaults shipped to production; debug panel
-// can sweep each one independently for visual calibration. See
-// star.frag.glsl for the meaning of each value — the doc lives there
-// alongside the math that consumes it.
-export interface StarRenderParams {
-  visibleThreshold: number;
-  coreThreshold: number;
-  discardThreshold: number;
-  distNMin: number;
-  distNMax: number;
-  lumBiasMin: number;
-  lumBiasMax: number;
-  // Soft-knee saturation extent (magnitudes) for the Gaussian-PSF disc
-  // size formula. See uSizeKnee comment in star.vert.glsl. 0 = hard cap
-  // (legacy behaviour); larger values let bright stars keep growing
-  // before saturating. 16 lands ~43% size advantage for Sol over Sirius
-  // when standing at the unfocused floor inside the solar system.
-  sizeKnee: number;
-}
-export const STAR_RENDER_DEFAULTS: StarRenderParams = {
-  visibleThreshold: 0.2,
-  coreThreshold: 0.4,
-  discardThreshold: 0.02,
-  distNMin: 2.2,
-  distNMax: 10.0,
-  lumBiasMin: 1.0,
-  lumBiasMax: 0.6,
-  sizeKnee: 16,
-};
-
-interface MagPreset {
-  maxAppMag: number;
-  sizeSpan: number;
-  sizeMinArcsec: number;
-  sizeMaxArcsec: number;
-}
-
-// Static portion of each preset — the magnitude limit and dynamic range
-// don't depend on the exaggeration constant. sizeMinArcsec / sizeMaxArcsec
-// are recomputed from the current K via computeMagPresets().
-const PRESET_BASE: Record<MagPresetName, { maxAppMag: number; sizeSpan: number }> = {
-  // Magnitudes: naked eye 6.5 (Bortle-1 dark sky); binoculars 10.5 (typical
-  // 7×50 dark sky); all 15 (matches the catalog/UI slider ceiling).
-  'naked-eye':  { maxAppMag: 6.5,  sizeSpan: 8 },
-  'binoculars': { maxAppMag: 10.5, sizeSpan: 12 },
-  'all':        { maxAppMag: 15,   sizeSpan: 17 },
-};
-
-function computeMagPresets(): Record<MagPresetName, MagPreset> {
-  const result = {} as Record<MagPresetName, MagPreset>;
-  for (const name of Object.keys(PRESET_BASE) as MagPresetName[]) {
-    const base = PRESET_BASE[name];
-    const sizeMinArcsec = STAR_PSF_ARCSEC * starExaggerationK[name];
-    result[name] = {
-      ...base,
-      sizeMinArcsec,
-      sizeMaxArcsec: sizeMinArcsec * Math.sqrt(STAR_PHYSICS_FACTOR * base.sizeSpan),
-    };
-  }
-  return result;
-}
-
-// Live binding — re-bound by setStarExaggerationK so consumers reading
-// MAG_PRESETS see the latest values after a K tweak.
-export let MAG_PRESETS: Record<MagPresetName, MagPreset> = computeMagPresets();
-
-// Default vertical FOV (degrees). User-tunable via the FOV slider; the
-// reset button snaps back to this value.
-export const DEFAULT_FOV = 50;
-
 export type CameraMode = 'navigate' | 'observe';
-
-export const DEFAULT_FILTER: FilterState = {
-  minDistSol: 0,
-  maxDistSol: 50_000,
-  maxAppMag: MAG_PRESETS['naked-eye'].maxAppMag,
-  spectMask: ALL_SPECT_MASK,
-  highlightCon: -1,
-  // sizeMin/Max placeholders — applyMagnitudePreset is called from the
-  // constructor with the actual viewport to fill in real values, and again
-  // on every viewport resize.
-  sizeMin: 1.8,
-  sizeMax: 7.0,
-  sizeSpan: MAG_PRESETS['naked-eye'].sizeSpan,
-  activePreset: 'naked-eye',
-  sizeMinOverridden: false,
-  sizeMaxOverridden: false,
-  sizeSpanOverridden: false,
-  showConstellation: true,
-  showGalacticGrid: false,
-  showHud: false,
-  showMilkyway: true,
-  showLgEmission: true,
-  chart: false,
-};
 
 // Event-bus payload map. Subscribers register via `Stellata.on(name, fn)`
 // and the compiler enforces the payload type per event. `state` and
@@ -371,7 +225,11 @@ export class Stellata implements FrameAnchor {
   // approach is the worst case.
   private maxPhysicalRadiusPc!: number;
 
-  private filter: FilterState = { ...DEFAULT_FILTER };
+  // Filter / preset / render-knob state + mutations live in
+  // FilterController (filters/README.md); the shell reads the live
+  // state through this getter for per-frame gates and dep closures.
+  private filters!: FilterController;
+  private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
 
   private disposed = false;
   private bus = new EventBus<StellataEventMap>();
@@ -577,14 +435,17 @@ export class Stellata implements FrameAnchor {
     // divergent uniform; StarPipeline binds it per material.
     const sharedUniforms = {
       uCameraPos: { value: new THREE.Vector3() },
-      uMaxAppMag: { value: this.filter.maxAppMag },
-      uMinDistSol: { value: this.filter.minDistSol },
-      uMaxDistSol: { value: this.filter.maxDistSol },
-      uSpectMask: { value: this.filter.spectMask },
+      // Seeded from DEFAULT_FILTER; FilterController owns every later
+      // write (constructed below, after the layers its side-effect hook
+      // touches exist).
+      uMaxAppMag: { value: DEFAULT_FILTER.maxAppMag },
+      uMinDistSol: { value: DEFAULT_FILTER.minDistSol },
+      uMaxDistSol: { value: DEFAULT_FILTER.maxDistSol },
+      uSpectMask: { value: DEFAULT_FILTER.spectMask },
       uPixelRatio: { value: this.renderer.getPixelRatio() },
-      uSizeMin: { value: this.filter.sizeMin },
-      uSizeMax: { value: this.filter.sizeMax },
-      uSizeSpan: { value: this.filter.sizeSpan },
+      uSizeMin: { value: DEFAULT_FILTER.sizeMin },
+      uSizeMax: { value: DEFAULT_FILTER.sizeMax },
+      uSizeSpan: { value: DEFAULT_FILTER.sizeSpan },
       uMonochrome: { value: 0 },
       // Chart-mode disc sizing. Pixel range + bright-end
       // magnitude reference; vertex shader uses these only when
@@ -861,6 +722,21 @@ export class Stellata implements FrameAnchor {
     });
     this.scene.add(this.milkyway.group);
 
+    this.filters = new FilterController({
+      camera: this.camera,
+      uniforms: sharedUniforms,
+      bus: this.bus,
+      onFilterApplied: (f) => {
+        // Per-host distance cull on the planet body field is closed-form
+        // in maxAppMag — refresh the cached cullDistancePc whenever the
+        // slider moves so distant hosts stay culled at the new threshold.
+        this.planetBodyField.setMaxAppMag(f.maxAppMag);
+        this.milkyway.setEnabled(f.showMilkyway);
+        this.lgEmission?.setEnabled(f.showLgEmission);
+      },
+      refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
+    });
+
     // Engage focus on Sol if it exists so measurement and per-star zoom
     // work from the start. setFocus (rather than raw field assignment)
     // wires up controls.minDistance to the per-star orbit floor and
@@ -881,7 +757,7 @@ export class Stellata implements FrameAnchor {
     // Compute initial pixel sizes for the active preset against the real
     // viewport. DEFAULT_FILTER carries placeholder pixel values; this call
     // replaces them with the right numbers before the first frame.
-    this.recomputePresetPxSizes();
+    this.filters.recomputePresetPxSizes();
 
     this.poiStore = new PoiStore({
       count: catalog.count,
@@ -1599,184 +1475,29 @@ export class Stellata implements FrameAnchor {
     this.focus.unfocus(opts);
   }
 
-  setFilter(patch: Partial<FilterState>) {
-    Object.assign(this.filter, patch);
-    const u = this.starPipeline.discMaterial.uniforms;
-    u.uMaxAppMag.value = this.filter.maxAppMag;
-    u.uMinDistSol.value = this.filter.minDistSol;
-    u.uMaxDistSol.value = this.filter.maxDistSol;
-    u.uSpectMask.value = this.filter.spectMask;
-    u.uSizeMin.value = this.filter.sizeMin;
-    u.uSizeMax.value = this.filter.sizeMax;
-    u.uSizeSpan.value = this.filter.sizeSpan;
-    // Per-host distance cull on the planet body field is closed-form
-    // in maxAppMag — refresh the cached cullDistancePc whenever the
-    // slider moves so distant hosts stay culled at the new threshold.
-    this.planetBodyField.setMaxAppMag(this.filter.maxAppMag);
-    this.milkyway.setEnabled(this.filter.showMilkyway);
-    this.lgEmission?.setEnabled(this.filter.showLgEmission);
-    this.bus.emit('filter', this.filter);
-    this.bus.emit('state');
-  }
-
-  getFilter(): Readonly<FilterState> { return this.filter; }
-
-  // Apply a magnitude preset (preset-button click). Always sets
-  // activePreset + maxAppMag + sizeSpan; sizeMin/Max only if their override
-  // flags are false. Use this for explicit user-driven preset changes.
-  applyMagnitudePreset(name: MagPresetName) {
-    const p = MAG_PRESETS[name];
-    const patch: Partial<FilterState> = {
-      activePreset: name,
-      maxAppMag: p.maxAppMag,
-    };
-    if (!this.filter.sizeSpanOverridden) patch.sizeSpan = p.sizeSpan;
-    const sizes = this.computePresetPxSizes(name);
-    if (!this.filter.sizeMinOverridden) patch.sizeMin = sizes.sizeMinPx;
-    if (!this.filter.sizeMaxOverridden) patch.sizeMax = sizes.sizeMaxPx;
-    this.setFilter(patch);
-  }
-
-  // Recompute non-overridden pixel sizes from the active preset's angular
-  // targets. Called on viewport resize and from the constructor — only
-  // touches sizeMin/Max (the viewport-dependent fields), not maxAppMag or
-  // sizeSpan, so a user's manual magnitude-slider value is preserved
-  // through resize.
-  private recomputePresetPxSizes() {
-    const sizes = this.computePresetPxSizes(this.filter.activePreset);
-    const patch: Partial<FilterState> = {};
-    if (!this.filter.sizeMinOverridden) patch.sizeMin = sizes.sizeMinPx;
-    if (!this.filter.sizeMaxOverridden) patch.sizeMax = sizes.sizeMaxPx;
-    // Post-patch consistency: the effective max must stay >= effective min.
-    // Both fields can be user-overridden independently; at low exaggeration K
-    // a recomputed max can fall below a user's min override, which would
-    // otherwise leave the filter in an inverted state.
-    const newMin = patch.sizeMin ?? this.filter.sizeMin;
-    const newMax = patch.sizeMax ?? this.filter.sizeMax;
-    if (newMax < newMin) patch.sizeMax = newMin;
-    if (Object.keys(patch).length > 0) this.setFilter(patch);
-  }
-
-  // Convert a preset's angular size targets to CSS pixels for the current
-  // camera FOV + viewport. We use the *larger* viewport dimension as the
-  // calibration reference — Three.js's camera.fov is the vertical FOV, but
-  // tying calibration to height alone makes stars vanish on landscape
-  // mobile (height = 390 px) while feeling right on desktops (height =
-  // 1080 px). Scaling by max(w, h) gives a consistent absolute pixel size
-  // regardless of orientation, at the cost of strict angular fidelity in
-  // the secondary axis. 1-px floor on sizeMin since a sub-pixel disc
-  // renders as nothing — and the same floor on sizeMax so it never falls
-  // below sizeMin. (At low exaggeration K both raw values can be
-  // sub-pixel; without the symmetric floor the saturation disc would
-  // invert below the threshold disc.)
-  private computePresetPxSizes(name: MagPresetName) {
-    const p = MAG_PRESETS[name];
-    const refDim = Math.max(window.innerWidth, window.innerHeight);
-    const arcsecPerPx = (this.camera.fov * 3600) / refDim;
-    const minPx = Math.max(1.0, p.sizeMinArcsec / arcsecPerPx);
-    return {
-      sizeMinPx: minPx,
-      sizeMaxPx: Math.max(minPx, p.sizeMaxArcsec / arcsecPerPx),
-    };
-  }
-
-  // Camera FOV setter. Updates the projection matrix, mirrors the new FOV
-  // into uFovYRad (drives the angular-diameter shader formula), recomputes
-  // the focused star's orbit floor (which depends on FOV), rebases
-  // non-overridden pixel sizes (arcsec/px depends on FOV), and fires a
-  // state change so URL sync picks up the new value.
-  setCameraFov(fov: number) {
-    if (this.camera.fov === fov) return;
-    this.camera.fov = fov;
-    this.camera.updateProjectionMatrix();
-    this.starPipeline.discMaterial.uniforms.uFovYRad.value = (fov * Math.PI) / 180;
-    const focusedStar = this.focus.getFocusedStar();
-    if (focusedStar !== null) {
-      this.controls.minDistance = starPhysics.minOrbitDistForStar({
-        catalog: this.catalog,
-        idx: focusedStar,
-        fovMinorRad: starPhysics.fovMinorRad(this.camera),
-      });
-    }
-    this.recomputePresetPxSizes();
-    this.bus.emit('filter', this.filter);
-    this.bus.emit('state');
-  }
-  getCameraFov(): number { return this.camera.fov; }
-
-  // Star exaggeration K setter for the debug panel. Patches the K for one
-  // preset (defaulting to the active preset), recomputes MAG_PRESETS (their
-  // size targets scale with K) and writes new pixel sizes into any
-  // non-overridden fields so the change shows live.
+  // Filter / preset / FOV / render-knob mutations — thin shims over
+  // FilterController (filters/README.md) preserving the public surface
+  // for controls.ts, url-state, keyboard shortcuts, and the debug panel.
+  setFilter(patch: Partial<FilterState>) { this.filters.setFilter(patch); }
+  getFilter(): Readonly<FilterState> { return this.filters.getFilter(); }
+  applyMagnitudePreset(name: MagPresetName) { this.filters.applyMagnitudePreset(name); }
+  setCameraFov(fov: number) { this.filters.setCameraFov(fov); }
+  getCameraFov(): number { return this.filters.getCameraFov(); }
   setStarExaggerationK(k: number, preset?: MagPresetName) {
-    const name = preset ?? this.filter.activePreset;
-    starExaggerationK[name] = k;
-    MAG_PRESETS = computeMagPresets();
-    this.recomputePresetPxSizes();
-    // Fire even when recompute patched nothing (e.g. sizes overridden) so
-    // the debug readout reflects the new K.
-    this.bus.emit('filter', this.filter);
-    this.bus.emit('state');
+    this.filters.setStarExaggerationK(k, preset);
   }
   getStarExaggerationK(preset?: MagPresetName): number {
-    return starExaggerationK[preset ?? this.filter.activePreset];
+    return this.filters.getStarExaggerationK(preset);
   }
   getStarExaggerationKDefault(preset?: MagPresetName): number {
-    return STAR_EXAGGERATION_K_DEFAULTS[preset ?? this.filter.activePreset];
+    return this.filters.getStarExaggerationKDefault(preset);
   }
-
-  // Star-disc rendering knobs (debug panel). Patch any subset; uVisibleK
-  // is recomputed whenever uVisibleThreshold changes. Both materials share
-  // the same uniforms object so a single write hits the disc + glow passes.
   setStarRenderParams(patch: Partial<StarRenderParams>) {
-    const u = this.starPipeline.discMaterial.uniforms;
-    if (patch.visibleThreshold !== undefined) {
-      u.uVisibleThreshold.value = patch.visibleThreshold;
-      u.uVisibleK.value = -Math.log(patch.visibleThreshold);
-    }
-    if (patch.coreThreshold !== undefined) u.uCoreThreshold.value = patch.coreThreshold;
-    if (patch.discardThreshold !== undefined) u.uDiscardThreshold.value = patch.discardThreshold;
-    if (patch.distNMin !== undefined) u.uDistNMin.value = patch.distNMin;
-    if (patch.distNMax !== undefined) u.uDistNMax.value = patch.distNMax;
-    if (patch.lumBiasMin !== undefined) u.uLumBiasMin.value = patch.lumBiasMin;
-    if (patch.lumBiasMax !== undefined) u.uLumBiasMax.value = patch.lumBiasMax;
-    if (patch.sizeKnee !== undefined) u.uSizeKnee.value = patch.sizeKnee;
+    this.filters.setStarRenderParams(patch);
   }
-  getStarRenderParams(): StarRenderParams {
-    const u = this.starPipeline.discMaterial.uniforms;
-    return {
-      visibleThreshold: u.uVisibleThreshold.value,
-      coreThreshold: u.uCoreThreshold.value,
-      discardThreshold: u.uDiscardThreshold.value,
-      distNMin: u.uDistNMin.value,
-      distNMax: u.uDistNMax.value,
-      lumBiasMin: u.uLumBiasMin.value,
-      lumBiasMax: u.uLumBiasMax.value,
-      sizeKnee: u.uSizeKnee.value,
-    };
-  }
-
-  // Clear override flags for the named fields and write the active
-  // preset's value into them. Used by the size and span reset buttons.
-  // Only touches the named fields — a manual maxAppMag-slider tweak
-  // survives intact.
+  getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
-    const p = MAG_PRESETS[this.filter.activePreset];
-    const sizes = this.computePresetPxSizes(this.filter.activePreset);
-    const patch: Partial<FilterState> = {};
-    for (const f of fields) {
-      if (f === 'sizeMin') {
-        patch.sizeMinOverridden = false;
-        patch.sizeMin = sizes.sizeMinPx;
-      } else if (f === 'sizeMax') {
-        patch.sizeMaxOverridden = false;
-        patch.sizeMax = sizes.sizeMaxPx;
-      } else if (f === 'sizeSpan') {
-        patch.sizeSpanOverridden = false;
-        patch.sizeSpan = p.sizeSpan;
-      }
-    }
-    this.setFilter(patch);
+    this.filters.clearSizeOverrides(fields);
   }
 
   setMonochrome(on: boolean) {
@@ -2042,14 +1763,7 @@ export class Stellata implements FrameAnchor {
     // Aspect change → fov_minor moves → orbit floor needs a refresh while
     // a star is focused. (FOV-only changes go through setCameraFov, which
     // does its own recompute.)
-    const focusedStar = this.focus.getFocusedStar();
-    if (focusedStar !== null) {
-      this.controls.minDistance = starPhysics.minOrbitDistForStar({
-        catalog: this.catalog,
-        idx: focusedStar,
-        fovMinorRad: starPhysics.fovMinorRad(this.camera),
-      });
-    }
+    this.focus.refreshOrbitFloor();
     // Line2 needs the canvas resolution for its screen-space line width.
     this.galacticGrid.setResolution(w, h);
     // The Milky Way layer renders at native resolution via the main scene
@@ -2059,7 +1773,7 @@ export class Stellata implements FrameAnchor {
     // orientation changes. maxAppMag/sizeSpan don't depend on viewport
     // and are deliberately untouched here so a user's manual magnitude
     // slider value survives a window resize.
-    this.recomputePresetPxSizes();
+    this.filters.recomputePresetPxSizes();
   };
 
   // Pixel-per-radian conversion for the active viewport / FOV. Shared
@@ -2657,5 +2371,3 @@ export class Stellata implements FrameAnchor {
     this.bus.clear();
   }
 }
-
-export { ALL_SPECT_MASK };

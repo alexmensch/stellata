@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { DEFAULT_FOV } from '../stellata';
+import { DEFAULT_FOV } from '../filters/filter-state';
 import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import {

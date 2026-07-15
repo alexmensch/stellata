@@ -1,11 +1,11 @@
+import type { Stellata } from '../../stellata';
 import {
   type FilterState,
-  type Stellata,
   type MagPresetName,
   MAG_PRESETS,
   DEFAULT_FOV,
   ALL_SPECT_MASK,
-} from '../../stellata';
+} from '../../filters/filter-state';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';

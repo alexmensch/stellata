@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
-import type { FilterState } from '../../stellata';
+import type { FilterState } from '../../filters/filter-state';
 import {
   fovMinorRad,
   peakAmplitudeFactor,

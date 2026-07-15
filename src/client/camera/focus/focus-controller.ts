@@ -223,6 +223,19 @@ export class FocusController implements FocusOps {
     return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
   }
 
+  /** Re-solve the focused star's manual-zoom floor against the current
+   *  camera FOV / aspect. No-op when nothing is focused. Called on FOV
+   *  change (FilterController.setCameraFov) and viewport resize — both
+   *  move `fov_minor`, which the floor solve depends on. */
+  refreshOrbitFloor(): void {
+    if (this.focusedStar === null) return;
+    this.deps.controls.minDistance = starPhysics.minOrbitDistForStar({
+      catalog: this.deps.catalog,
+      idx: this.focusedStar,
+      fovMinorRad: starPhysics.fovMinorRad(this.deps.camera),
+    });
+  }
+
   /** Auto-park target — pure star-physics helper applied with the
    *  current camera. Exposed for the ObserveFocusOps seam. */
   parkDistForStar(idx: number): number {

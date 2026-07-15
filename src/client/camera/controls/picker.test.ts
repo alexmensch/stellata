@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Picker, type PickerDeps } from './picker';
-import { ALL_SPECT_MASK, type FilterState } from '../../stellata';
+import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
