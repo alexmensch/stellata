@@ -96,7 +96,7 @@ import {
   type StarRenderParams,
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
-import { SceneLayerRegistry } from './scene/scene-layer';
+import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import {
   ExtinctionPrepass,
@@ -238,13 +238,7 @@ export class Stellata implements FrameAnchor {
   // see scene/README.md. frameCtx is the shared per-frame input struct,
   // mutated in place each frame to avoid a per-frame allocation.
   private readonly layers = new SceneLayerRegistry();
-  private frameCtx!: {
-    camera: THREE.PerspectiveCamera;
-    worldOffset: THREE.Vector3;
-    distFromSol: number;
-    t: number;
-    warpActive: boolean;
-  };
+  private frameCtx!: { -readonly [K in keyof FrameCtx]: FrameCtx[K] };
 
   private observe!: ObserveTransition;
   private observeControls!: ObserveControls;
@@ -776,6 +770,24 @@ export class Stellata implements FrameAnchor {
     this.animate();
   }
 
+  // Reference layers (galactic disc, LG wireframe): hidden during warp,
+  // else distance-faded. Shared update body; null layer → no-op so a
+  // lazily-attached layer registers unconditionally.
+  private updateWarpGatedRefLayer(
+    layer: {
+      group: { visible: boolean };
+      update: (worldOffset: THREE.Vector3, distFromSol: number) => void;
+    } | null,
+    ctx: FrameCtx,
+  ): void {
+    if (!layer) return;
+    if (ctx.warpActive) {
+      layer.group.visible = false;
+      return;
+    }
+    layer.update(ctx.worldOffset, ctx.distFromSol);
+  }
+
   // One adapter entry per scene layer; registration order is per-frame
   // update order. Lazily-attached layers are read through closures so
   // attach/replace cycles need no re-registration. Warp gating is
@@ -803,26 +815,12 @@ export class Stellata implements FrameAnchor {
       },
     });
     this.layers.register({
-      update: (ctx) => {
-        if (ctx.warpActive) {
-          this.galacticDisc.group.visible = false;
-          return;
-        }
-        this.galacticDisc.update(ctx.worldOffset, ctx.distFromSol);
-      },
+      update: (ctx) => this.updateWarpGatedRefLayer(this.galacticDisc, ctx),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
       dispose: () => this.galacticDisc.dispose(),
     });
     this.layers.register({
-      update: (ctx) => {
-        const lg = this.localGroupLayer;
-        if (!lg) return;
-        if (ctx.warpActive) {
-          lg.group.visible = false;
-          return;
-        }
-        lg.update(ctx.worldOffset, ctx.distFromSol);
-      },
+      update: (ctx) => this.updateWarpGatedRefLayer(this.localGroupLayer, ctx),
       setMonochrome: (on) => this.localGroupLayer?.setMonochrome(on),
       dispose: () => this.localGroupLayer?.dispose(),
     });
