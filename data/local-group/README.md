@@ -11,6 +11,12 @@ overrides.tsv       hand-curated structural detail for LMC, SMC,
                     Sagittarius dSph, M 32, NGC 205, plus full
                     standalone rows for M31 and M33 (omitted from
                     LVDB's dwarf_all table — they're major spirals).
+aliases.tsv         search crosswalk + morphological type for notable
+                    objects: name → type + |-separated alias
+                    designations (Messier/NGC/IC cross-IDs, common
+                    names). Objects without a row default their type
+                    from the display-name suffix; an alias row naming
+                    no rendered object fails the build.
 ```
 
 Refresh of `lvdb-snapshot.csv` is a manual step — the build never

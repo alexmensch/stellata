@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, expect, it } from 'vitest';
-import { parseLvdb, parseOverrides } from './build-local-group';
+import { parseAliases, parseLvdb, parseOverrides } from './build-local-group';
 import {
   buildStandaloneOverride,
   DISPLAY_NAME_OVERRIDES,
@@ -313,5 +313,34 @@ describe('emission over the committed catalog', () => {
     expect(roundN(devs[Math.floor(devs.length / 2)], 4)).toBe(0.0078);
     expect(roundN(worstDev, 4)).toBe(0.2504);
     expect(worstName).toBe('Andromeda XX');
+  });
+});
+
+describe('parseAliases + type/alias plumbing', () => {
+  it('parses rows, splitting the |-separated alias list', () => {
+    const tsv = 'name\ttype\taliases\nM31\tSpiral galaxy\tAndromeda Galaxy|NGC 224\nFornax\tDwarf spheroidal\t\n';
+    expect(parseAliases(tsv)).toEqual([
+      { name: 'M31', type: 'Spiral galaxy', aliases: ['Andromeda Galaxy', 'NGC 224'] },
+      { name: 'Fornax', type: 'Dwarf spheroidal', aliases: [] },
+    ]);
+  });
+  it('throws on a malformed header or empty type', () => {
+    expect(() => parseAliases('name\twrong\taliases\nX\tY\t\n')).toThrow(/malformed header/);
+    expect(() => parseAliases('name\ttype\taliases\nX\t\t\n')).toThrow(/empty type/);
+  });
+  it('curated rows all match rendered objects (no orphans in the committed TSV)', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const aliasRows = parseAliases(
+      readFileSync(join(here, '..', '..', 'data', 'local-group', 'aliases.tsv'), 'utf8'),
+    );
+    const csvPath = join(here, '..', '..', 'data', 'local-group', 'lvdb-snapshot.csv');
+    const names = new Set(
+      filterForRendering(parseLvdb(readFileSync(csvPath, 'utf8'))).map((r) => r.name),
+    );
+    names.add('M31');
+    names.add('M33');
+    const orphans = aliasRows.filter((a) => !names.has(a.name));
+    expect(orphans).toEqual([]);
+    expect(aliasRows.length).toBe(27);
   });
 });
