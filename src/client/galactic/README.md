@@ -118,10 +118,15 @@ as **SVG** paths inside `#overlay`, not 3D meshes. Geometry is computed
 entirely in screen space:
 
 1. Project the origin (focused star's local position when focused, else
-   `controls.target`) into screen pixels. If the projection is degenerate
-   — the OBSERVE steady state, where the camera sits at the focal star —
-   fall back to screen centre. Same fallback applies for the rare frames
-   near a transition endpoint where the focal-star projection collapses.
+   `controls.target`) into screen pixels. In the OBSERVE steady state the
+   anchor is **forced** to screen centre by mode rather than detected: the
+   camera is parked at the focal star only within the float32 position
+   quantum, and that residual (which grows as the focal-frame ride /
+   epoch re-advance translate the camera in float64 against a
+   float32-written slot) projects from ~zero distance to an arbitrary
+   point — the wandering HUD under time scrubbing. Degenerate projections
+   (origin at/behind the camera) still fall back to centre in every other
+   state, covering the rare frames near a transition endpoint.
 2. Derive the projected arrow direction in 2D. Two paths, picked by which
    one is well-defined this frame: (a) when the target projects in front
    of the camera, take the screen-space vector from the anchor to the
@@ -249,11 +254,10 @@ dominant. The eased progress is exposed by
 
 So the arrow shaft sits 4 px outside whichever circle is currently
 visible — same halo gap in both steady states, smooth lerp through the
-transition. In the OBSERVE steady
-state the focal-star projection is degenerate (camera sits at the focal
-star), so the anchor falls back to screen centre — and the post-
-transition switch is invisible because the projection has already drifted
-to centre by `f = 1`. Distance labels measure from `origin` (the focal
+transition. In the OBSERVE steady state the anchor is forced to screen
+centre (see step 1 above) — the post-transition switch is invisible
+because the focal-star projection has already drifted to centre by
+`f = 1`. Distance labels measure from `origin` (the focal
 star or `controls.target`) so the displayed distance reflects "from the
 focal star", which is meaningful in both modes.
 

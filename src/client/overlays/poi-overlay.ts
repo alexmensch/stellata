@@ -316,7 +316,7 @@ export function createPoiOverlay(
     } else {
       tmpOrigin.copy(stellata.controls.target);
     }
-    hudAnchorInto(tmpOrigin, camera, w, h, tmpAnchor);
+    hudAnchorInto(tmpOrigin, camera, w, h, tmpAnchor, cameraMode === 'observe');
     const cx = tmpAnchor[0];
     const cy = tmpAnchor[1];
 
