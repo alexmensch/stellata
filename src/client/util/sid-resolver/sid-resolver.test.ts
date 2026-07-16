@@ -41,6 +41,48 @@ describe('SidResolver', () => {
     });
   });
 
+  describe('successor following (docs/sid.md § 9.4)', () => {
+    it('resolves a retired sid to its successor', () => {
+      const r = new SidResolver(['star'], new Map([[99, 10]]));
+      r.attach('star', arrayDomain([10, 20]));
+      expect(r.resolve(99)).toEqual({ status: 'resolved', kind: 'star', localIndex: 0 });
+    });
+
+    it('follows a successor chain to its live end', () => {
+      const r = new SidResolver(['star'], new Map([[99, 98], [98, 20]]));
+      r.attach('star', arrayDomain([10, 20]));
+      expect(r.resolve(99)).toEqual({ status: 'resolved', kind: 'star', localIndex: 1 });
+    });
+
+    it('is pending for a successor whose domain has not settled', () => {
+      const r = new SidResolver(FULL_ROSTER, new Map([[99, 10]]));
+      r.attach('star', arrayDomain([20]));
+      expect(r.resolve(99)).toEqual({ status: 'pending' });
+    });
+
+    it('is unknown when the successor is claimed by no settled domain', () => {
+      const r = new SidResolver(['star'], new Map([[99, 55]]));
+      r.attach('star', arrayDomain([10]));
+      expect(r.resolve(99)).toEqual({ status: 'unknown' });
+    });
+
+    it('treats a corrupt successor cycle as unknown', () => {
+      const r = new SidResolver(['star'], new Map([[99, 98], [98, 99]]));
+      r.attach('star', arrayDomain([10]));
+      expect(r.resolve(99)).toEqual({ status: 'unknown' });
+    });
+
+    it('fires a deferred intent through the successor on late attach', () => {
+      const r = new SidResolver(FULL_ROSTER, new Map([[99, 7]]));
+      r.attach('star', arrayDomain([10]));
+      const apply = vi.fn();
+      r.whenResolved(99, apply);
+      expect(apply).not.toHaveBeenCalled();
+      r.attach('lg', arrayDomain([7]));
+      expect(apply).toHaveBeenCalledWith('lg', 0);
+    });
+  });
+
   describe('attach / conclude lifecycle', () => {
     it('attach replaces a previous domain', () => {
       const r = new SidResolver(['star']);

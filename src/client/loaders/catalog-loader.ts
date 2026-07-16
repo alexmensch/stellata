@@ -80,6 +80,10 @@ export interface Catalog {
   names: Map<number, string>;    // star index -> proper name (named stars only)
   solIndex: number;              // -1 if not found
   constellations: Constellation[];
+  // Retired sid → successor sid, from the manifest's sidSuccessors field
+  // (docs/sid.md § 9.4). Empty until a merge-type retirement ships. Fed to
+  // the SID resolver so retired wire sids resolve to their successor.
+  sidSuccessors: ReadonlyMap<number, number>;
 }
 
 export interface LoadProgress {
@@ -92,18 +96,18 @@ export async function loadCatalog(
   conUrl: string,
   onProgress?: (p: LoadProgress) => void,
 ): Promise<Catalog> {
-  const [binBuf, constellations] = await Promise.all([
+  const [{ binBuf, manifest }, constellations] = await Promise.all([
     fetchCatalogChunks(manifestUrl, onProgress),
     fetch(conUrl).then((r) => r.json() as Promise<Constellation[]>),
   ]);
 
-  return parseBinary(binBuf, constellations);
+  return parseBinary(binBuf, constellations, manifest.sidSuccessors);
 }
 
 async function fetchCatalogChunks(
   manifestUrl: string,
   onProgress?: (p: LoadProgress) => void,
-): Promise<ArrayBuffer> {
+): Promise<{ binBuf: ArrayBuffer; manifest: CatalogManifest }> {
   const mres = await fetch(manifestUrl);
   if (!mres.ok) throw new Error(`Failed to load ${manifestUrl}: ${mres.status}`);
   const manifest = (await mres.json()) as CatalogManifest;
@@ -124,7 +128,7 @@ async function fetchCatalogChunks(
     ),
   );
 
-  return assembleCatalogChunks(chunks, manifest);
+  return { binBuf: assembleCatalogChunks(chunks, manifest), manifest };
 }
 
 async function fetchCatalogChunk(
@@ -155,7 +159,11 @@ async function fetchCatalogChunk(
   return out;
 }
 
-export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): Catalog {
+export function parseBinary(
+  ab: ArrayBuffer,
+  constellations: Constellation[],
+  sidSuccessorPairs: readonly [number, number][] = [],
+): Catalog {
   const view = new DataView(ab);
   const magic = new TextDecoder().decode(new Uint8Array(ab, HEADER_LAYOUT.magic, 4));
   if (magic !== MAGIC) throw new Error(`Bad magic: ${magic}`);
@@ -270,5 +278,6 @@ export function parseBinary(ab: ArrayBuffer, constellations: Constellation[]): C
     names,
     solIndex,
     constellations,
+    sidSuccessors: new Map(sidSuccessorPairs),
   };
 }

@@ -36,5 +36,6 @@ export function makeEmptyCatalog(count: number): Catalog {
     names: new Map(),
     solIndex: -1,
     constellations: [],
+    sidSuccessors: new Map(),
   };
 }

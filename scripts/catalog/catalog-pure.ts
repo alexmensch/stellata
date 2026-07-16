@@ -788,6 +788,10 @@ export interface CatalogManifest {
   chunkBytes: number[];
   /** Sum of chunkBytes — assembled length, for pre-alloc + integrity check. */
   totalBytes: number;
+  /** Retired-sid → successor-sid pairs (docs/sid.md § 9.4). Omitted when
+   *  no effectively-retired sid carries a successor (merge-type
+   *  retirements only exist after a DR reconciliation). */
+  sidSuccessors?: [number, number][];
 }
 
 export function catalogChunkFilename(index: number): string {
