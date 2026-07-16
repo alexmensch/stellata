@@ -3,7 +3,7 @@ import type { Stellata } from '../stellata';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import type { LgCatalog } from '../local-group/local-group-loader';
-import { TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
+import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
 
@@ -25,6 +25,12 @@ export interface FuzzyEntry {
   label: string;        // what Fuse matches on
   primary: string;      // shown in dropdown primary line
   displayCon: string;   // shown in dropdown secondary line
+  /** Label is a constellation-name expansion ("Gamma Andromeda",
+   *  "V366 Andromeda", "20 Andromeda") — kept fuzzy-searchable but
+   *  ranked below plain names/aliases at equal score, so a query that
+   *  IS a constellation name surfaces the objects named for it (the
+   *  Andromeda Galaxy) above every star in the constellation. */
+  conExpansion?: boolean;
 }
 
 // Canonical Greek letter forms keyed by AT-HYG's 3-letter Latin abbreviation.
@@ -310,6 +316,9 @@ export function buildSearchIndex(
     const conCode = con?.code ?? '';
     const conName = con?.name ?? '';
 
+    const isConExpansion = (label: string): boolean =>
+      conName !== '' && label.includes(conName);
+
     const properName = entry.p ?? null;
     const bayerDisplay = entry.b && conCode ? formatBayerDisplay(entry.b, conCode) : null;
     let primary: string | null;
@@ -325,7 +334,10 @@ export function buildSearchIndex(
       }
       if (entry.b && conCode) {
         for (const label of buildBayerLabels(entry.b, conCode, conName)) {
-          fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary, displayCon });
+          fuzzyEntries.push({
+            kind: 'star', index: entry.i, label, primary, displayCon,
+            conExpansion: isConExpansion(label),
+          });
         }
       }
     }
@@ -338,7 +350,10 @@ export function buildSearchIndex(
     if (entry.g) {
       const gcvsPrimary = primary ?? formatGcvsDesignation(entry.g);
       for (const label of buildGcvsLabels(entry.g, conName)) {
-        fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon });
+        fuzzyEntries.push({
+          kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon,
+          conExpansion: isConExpansion(label),
+        });
       }
     }
 
@@ -353,7 +368,10 @@ export function buildSearchIndex(
         if (labels.length > 0) {
           const compDisplay = primary ?? labels[0];
           for (const label of labels) {
-            fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: compDisplay, displayCon });
+            fuzzyEntries.push({
+              kind: 'star', index: entry.i, label, primary: compDisplay, displayCon,
+              conExpansion: isConExpansion(label),
+            });
           }
         }
       }
@@ -373,7 +391,11 @@ export function buildSearchIndex(
       addFlam(`${entry.f} ${conName.toLowerCase()}`, flamEntry);
       if (primary !== null) {
         fuzzyEntries.push(flamEntry);
-        fuzzyEntries.push({ ...flamEntry, label: `${entry.f} ${conName}` });
+        fuzzyEntries.push({
+          ...flamEntry,
+          label: `${entry.f} ${conName}`,
+          conExpansion: conName !== '',
+        });
       }
     }
   }
@@ -430,10 +452,15 @@ export function createSearchRunner(
   // Threshold 0.25 trims the long tail of loose matches (e.g. "alpha cen"
   // used to dredge up "Aldebaran" via shared letters). 0.35 was too lenient
   // for short queries against a few-thousand-entry corpus.
+  // ignoreFieldNorm: Fuse's token-count norm would outvote the tier
+  // re-rank below (a 4-word "Andromeda XIX Dwarf Spheroidal" scores
+  // worse than a 2-word expansion label for the same match quality);
+  // the tier sort's label-length tiebreak owns that job instead.
   const fuse = new Fuse(fuzzyEntries, {
     keys: ['label'],
     threshold: 0.25,
     ignoreLocation: true,
+    ignoreFieldNorm: true,
     includeScore: true,
   });
 
@@ -492,10 +519,44 @@ export function createSearchRunner(
       // Fall through to fuzzy — maybe "58 Ori" is a partial match on a label.
     }
 
-    const res = fuse.search(trimmed, { limit: 30 });
+    // No result limit: with ignoreLocation, "andromeda" is a PERFECT
+    // match for hundreds of "<designation> Andromeda" expansion labels,
+    // and any pre-rank cap ordered by Fuse's score-then-insertion would
+    // evict the corpus-tail LG entries (the Andromeda Galaxy) before
+    // the tier re-rank below ever sees them. Sorting the full match set
+    // costs ms next to the corpus scan itself.
+    const res = fuse.search(trimmed);
+
+    // Re-rank at equal Fuse score (bucketed — sub-percent score noise
+    // must not outvote the tiers): exact label > query-is-prefix >
+    // plain name/alias > constellation-expansion label; then shorter
+    // label (higher query coverage — "Andromeda Galaxy" over
+    // "Andromeda XIX Dwarf Spheroidal"), then Fuse order.
+    const qNorm = trimmed.toLowerCase();
+    const tierOf = (e: FuzzyEntry): number => {
+      const l = e.label.toLowerCase();
+      if (l === qNorm) return 0;
+      if (l.startsWith(qNorm)) return 1;
+      return e.conExpansion ? 3 : 2;
+    };
+    const ranked = res
+      .map((r, i) => ({
+        item: r.item,
+        i,
+        bucket: Math.round((r.score ?? 0) * 100),
+        tier: tierOf(r.item),
+      }))
+      .sort(
+        (a, b) =>
+          a.bucket - b.bucket ||
+          a.tier - b.tier ||
+          a.item.label.length - b.item.label.length ||
+          a.i - b.i,
+      );
+
     const seen = new Set<string>();
     const out: FuzzyEntry[] = [];
-    for (const r of res) {
+    for (const r of ranked) {
       // Key by kind+index so a star whose name collides with a cloud name
       // (e.g. "Taurus" the cloud vs. some Tau star) doesn't dedupe across
       // categories. The fuzzy index intentionally carries multiple labels
@@ -586,6 +647,7 @@ export function bindSearch(
     onClear: () => stellata.unfocus(),
     positionResults: positionUnder(focusInput),
     group,
+    debounceMs: SEARCH_DEBOUNCE_MS,
   });
 
   // Distance-vector destination — accepts both star and cloud entries.
@@ -610,6 +672,7 @@ export function bindSearch(
     },
     positionResults: positionUnder(toInput),
     group,
+    debounceMs: SEARCH_DEBOUNCE_MS,
   });
 
   // Single sync for both star and cloud focus — the two are mutually
@@ -700,5 +763,6 @@ export function bindFindSearch(
       const row = input.closest('.search-row') as HTMLElement | null;
       if (row) resultsEl.style.top = row.offsetTop + row.offsetHeight + 'px';
     },
+    debounceMs: SEARCH_DEBOUNCE_MS,
   });
 }

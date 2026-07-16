@@ -4,7 +4,6 @@
 
 import {
   bnCoeff,
-  bulgeInDiscGeometryIntegral,
   discGeometryIntegral,
   fluxNumber,
   pnCoeff,
@@ -542,7 +541,7 @@ export function buildEmission(opts: {
         density0: solveDensity0(
           distancePc,
           bt * flux,
-          bulgeInDiscGeometryIntegral(rePc, n, uMax, rEnvPc, zEnvPc),
+          sersicGeometryIntegral([rePc, rePc, rePc], n, uMax),
         ),
       };
     }

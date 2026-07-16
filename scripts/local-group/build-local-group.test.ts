@@ -269,7 +269,7 @@ describe('emission over the committed catalog', () => {
     expect(e.mV).toBe(3.44);
     expect(e.density0).toBe(0.34273291272719336);
     expect(e.bulge!.n).toBe(2.2);
-    expect(e.bulge!.density0).toBe(24.056799890963106);
+    expect(e.bulge!.density0).toBe(13.392310279896599);
   });
 
   it('pins a default-path dwarf solve (Fornax)', () => {
