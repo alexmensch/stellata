@@ -24,12 +24,9 @@ export function targetsEqual(a: Target | null, b: Target | null): boolean {
 /** Per-kind geometry legs the kind-agnostic shell surface dispatches
  *  through (flyTo park math, overlay projection, chevron sizing).
  *  Camera-transition code consumes objects through `FocusTarget`
- *  instead; the two contracts meet in FocusController's per-kind
- *  factories. Star-only affordances (shader pin, orbital ride, planet
- *  systems, POI pinning, observe anchor) are NOT provider legs — they
- *  guard on `getFocusedStar()`, which returns null for every other
- *  kind; an affordance gains a provider leg here when a second kind
- *  implements it. */
+ *  instead. Star-only affordances are getFocusedStar() guards, never
+ *  provider legs — see README.md § FocusableProviders before adding
+ *  one. */
 export interface FocusableProvider {
   /** Floating-frame position; false when the layer hasn't loaded or
    *  the index is out of range (out untouched). */

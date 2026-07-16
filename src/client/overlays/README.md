@@ -136,8 +136,7 @@ Three SVG layers conditionally hide while `cameraMode === 'observe'`:
 - **Distance vector + To-row** — distance-vector measurement is
   meaningless from a camera parked on its own anchor; the search
   box's To-row hides via `syncFocusUI` and the underlying
-  `setVectorTo` / `setVectorToCloud` setters guard against
-  observe-mode calls defensively.
+  `setVector` slot guards against observe-mode writes defensively.
 
 The Sol/GC arrows + the HUD ring do **not** hide — they're the HUD,
 gated by `filter.showHud` independently of camera mode. In OBSERVE the

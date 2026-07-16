@@ -44,11 +44,11 @@ renderer. `type` (morphological string) and optional `aliases`
 feed the destination-search rows and the focus card.
 
 LG objects are focusable and warpable: they carry the `'lg'`
-`FocusKind` (`lgFocus` / `vectorLg` bus events, `flyToLg` /
-`setOrbitTargetLg` / `warpToLg` entry points mirroring the cloud
-pattern), park at `lgViewingDistancePc` (2.4 × max semi-axis, the
-shared `viewingDistanceForExtent` rule), and ride the URL's universal
-any-kind focus/to SID refs unchanged.
+`TargetKind` (kind-tagged `'focus'` / `'vector'` bus payloads, the
+Target-keyed `flyTo` / `setOrbitTarget` / `warpTo` entry points, and
+an `lg` FocusableProviders entry), park at `lgViewingDistancePc`
+(2.4 × max semi-axis, the shared `viewingDistanceForExtent` rule), and
+ride the URL's universal any-kind focus/to SID refs unchanged.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 

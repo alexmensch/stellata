@@ -31,14 +31,13 @@ Subscribers register via `stellata.on(name, fn)` and receive a typed
 payload per event. `on` returns an unsubscribe — call it to detach.
 The payload map is `StellataEventMap` in `stellata.ts`.
 
-- `'focus'` (`number | null`) — focused star changed (from any source).
-- `'cloudFocus'` (`number | null`) — focused molecular cloud changed.
-- `'lgFocus'` (`number | null`) — focused Local Group object changed.
+- `'focus'` (`Target | null`) — focused object changed (any kind, from
+  any source). The kind-tagged payload carries the whole transition —
+  a kind change is one emit, never a clearing emit followed by a set.
 - `'planetSystem'` (`PlanetSystem | null`) — focused star's planet
   system loaded, cleared, or swapped.
-- `'vector'` / `'vectorCloud'` / `'vectorLg'` (`number | null`) —
-  distance-vector destination changed (the three destination kinds are
-  mutually exclusive).
+- `'vector'` (`Target | null`) — distance-vector destination changed
+  (any kind; the single slot makes kinds mutually exclusive).
 - `'filter'` (`Readonly<FilterState>`) — any filter patch applied.
 - `'cameraMode'` (`'navigate' | 'observe'`) — camera mode flipped.
   Used by the mode toggle, search-row label swap, and scale-bar
@@ -58,8 +57,8 @@ The payload map is `StellataEventMap` in `stellata.ts`.
   frame hook with hash comparison for that.
 
 Emission pairing: each fine-grained mutation event (`'focus'`,
-`'cloudFocus'`, `'vector'` / `'vectorCloud'`, `'filter'`,
-`'cameraMode'`, `'pois'`, warp start) is followed by a `'state'` emit
+`'vector'`, `'filter'`, `'cameraMode'`, `'pois'`, warp start) is
+followed by a `'state'` emit
 from the same mutation site, so a `'state'` subscriber observes every
 mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
@@ -90,7 +89,8 @@ with the HUD hidden clicks step only the vector rungs. Navigate
 **double-click** on any star travels to it (`focusStar` — the
 focus-park teleport that clicking the vector tip used to trigger;
 lerps over `FOCUS_LERP_MS` or no-ops when already inside park);
-double-click on a cloud runs `flyToCloud`. The POI overlay's
+double-click on a cloud runs `flyTo` with the cloud Target. The POI
+overlay's
 on-screen labels route through the same `applyStarClick` semantics.
 
 Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
