@@ -175,8 +175,6 @@ interface Harness {
   uHide: { value: number };
   bus: EventBus<StellataEventMap>;
   busEvents: Array<{ name: string; payload: unknown }>;
-  vectorTo: Array<number | null>;
-  vectorToCloud: Array<number | null>;
   setCameraMode: (m: CameraMode) => void;
   getCameraMode: () => CameraMode;
   pert: { fn: (idx: number, out: THREE.Vector3) => boolean };
@@ -202,17 +200,13 @@ function makeHarness(opts: {
   const frame = makeFrameAnchor(catalog, pert);
   const uHide = { value: -1 };
   const bus = new EventBus<StellataEventMap>();
-  let cameraMode: CameraMode = opts.mode ?? 'navigate';
 
   const busEvents: Array<{ name: string; payload: unknown }> = [];
-  for (const name of ['focus', 'cloudFocus', 'lgFocus', 'planetSystem', 'focusLerp', 'state', 'cameraMode'] as const) {
+  for (const name of ['focus', 'cloudFocus', 'lgFocus', 'planetSystem', 'focusLerp', 'state', 'cameraMode', 'vector', 'vectorCloud', 'vectorLg'] as const) {
     bus.on(name, (payload: unknown) => {
       busEvents.push({ name, payload });
     });
   }
-
-  const vectorTo: Array<number | null> = [];
-  const vectorToCloud: Array<number | null> = [];
 
   const deps: FocusControllerDeps = {
     camera,
@@ -223,20 +217,18 @@ function makeHarness(opts: {
     frameAnchor: frame.anchor,
     aim,
     uHideFocusIdxRef: uHide,
-    getCameraMode: () => cameraMode,
-    setCameraModeValue: (m) => { cameraMode = m; },
     getClouds: () => null,
     getLocalGroup: () => null,
-    setVectorTo: (idx) => { vectorTo.push(idx); },
-    setVectorToCloud: (idx) => { vectorToCloud.push(idx); },
-    setVectorToLg: () => {},
     getWarp: () => warp,
     getObserve: () => observe,
     focalPerturbationInto: (idx, out) => pert.fn(idx, out),
   };
 
+  const focus = new FocusController(deps);
+  if (opts.mode) focus.setCameraModeValue(opts.mode);
+
   return {
-    focus: new FocusController(deps),
+    focus,
     camera,
     controls,
     observeControls,
@@ -248,10 +240,8 @@ function makeHarness(opts: {
     uHide,
     bus,
     busEvents,
-    vectorTo,
-    vectorToCloud,
-    setCameraMode: (m) => { cameraMode = m; },
-    getCameraMode: () => cameraMode,
+    setCameraMode: (m) => focus.setCameraModeValue(m),
+    getCameraMode: () => focus.getCameraMode(),
     pert,
   };
 }
@@ -666,19 +656,76 @@ describe('FocusController — frame anchor delegation', () => {
   });
 });
 
-describe('FocusController — vector slot delegation', () => {
-  it('setVectorTo and setVectorToCloud call through to dep callbacks', () => {
+describe('FocusController — vector slot', () => {
+  it('setVectorTo stores the destination and emits vector + state', () => {
     const h = makeHarness();
     h.focus.setVectorTo(3);
-    h.focus.setVectorToCloud(null);
-    expect(h.vectorTo).toEqual([3]);
-    expect(h.vectorToCloud).toEqual([null]);
+    expect(h.focus.getVectorTo()).toBe(3);
+    expect(h.busEvents).toEqual([
+      { name: 'vector', payload: 3 },
+      { name: 'state', payload: undefined },
+    ]);
   });
 
-  it('focusStar clears any in-flight vector', () => {
+  it('setting a cloud vector displaces a star vector with a clearing emit first', () => {
     const h = makeHarness();
+    h.focus.setVectorTo(3);
+    h.busEvents.length = 0;
+    h.focus.setVectorToCloud(5);
+    expect(h.focus.getVectorTo()).toBeNull();
+    expect(h.focus.getVectorToCloud()).toBe(5);
+    expect(h.busEvents.map((e) => e.name)).toEqual(['vector', 'vectorCloud', 'state']);
+    expect(h.busEvents[0].payload).toBeNull();
+  });
+
+  it('setVectorTo(null) leaves an other-kind destination untouched', () => {
+    const h = makeHarness();
+    h.focus.setVectorToLg(9);
+    h.busEvents.length = 0;
+    h.focus.setVectorTo(null);
+    expect(h.focus.getVectorToLg()).toBe(9);
+    expect(h.busEvents).toEqual([]);
+  });
+
+  it('same-value writes are silent no-ops', () => {
+    const h = makeHarness();
+    h.focus.setVectorTo(3);
+    h.busEvents.length = 0;
+    h.focus.setVectorTo(3);
+    expect(h.busEvents).toEqual([]);
+  });
+
+  it('non-null vector writes are dropped in observe mode', () => {
+    const h = makeHarness({ mode: 'observe' });
+    h.focus.setVectorTo(3);
+    expect(h.focus.getVectorTo()).toBeNull();
+  });
+
+  it('focusStar clears an in-flight star vector', () => {
+    const h = makeHarness();
+    h.focus.setVectorTo(2);
     h.focus.focusStar(2);
-    expect(h.vectorTo).toEqual([null]);
+    expect(h.focus.getVectorTo()).toBeNull();
+  });
+
+  it('unfocus with nothing focused wipes a drawn vector (vector-only path)', () => {
+    const h = makeHarness();
+    h.focus.setVectorToCloud(4);
+    h.busEvents.length = 0;
+    h.focus.unfocus();
+    expect(h.focus.getVectorToCloud()).toBeNull();
+    expect(h.busEvents.map((e) => e.name)).toEqual(['vectorCloud', 'state']);
+  });
+});
+
+describe('FocusController — cameraMode ownership', () => {
+  it('defaults to navigate; setCameraModeValue writes without emitting', () => {
+    const h = makeHarness();
+    expect(h.focus.getCameraMode()).toBe('navigate');
+    h.busEvents.length = 0;
+    h.focus.setCameraModeValue('observe');
+    expect(h.focus.getCameraMode()).toBe('observe');
+    expect(h.busEvents).toEqual([]);
   });
 });
 

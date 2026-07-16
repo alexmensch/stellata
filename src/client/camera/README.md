@@ -6,8 +6,9 @@ across all five.
 
 ## Subsystems
 
-- `controls/` — TrackballControls subclass, mode-toggle pill, click /
-  hover picker, aim slerps, `camera.up` re-anchor, and the angular
+- `controls/` — TrackballControls subclass, mode-toggle pill, the
+  pointer input controller (click FSM + gesture roll), click / hover
+  picker, aim slerps, `camera.up` re-anchor, and the angular
   star-geometry / star-physics helpers. The "steady-state geometry +
   cross-mode plumbing" layer.
 - `focus/` — focus FSM (`focus-controller` + `focus-target` +

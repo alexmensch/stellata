@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
-import type { FilterState } from '../../stellata';
+import type { FilterState } from '../../filters/filter-state';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';

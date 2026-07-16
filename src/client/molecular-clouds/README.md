@@ -44,8 +44,9 @@ normal alpha-over.
 ## Unified focus / measurement / warp UX
 
 Clouds are full participants in the click-state machine alongside
-stars. Internal state holds two mutually-exclusive pairs: `focusedStar`
-/ `focusedCloud` and `vectorTo` (star idx) / `vectorToCloud`. The click
+stars. Internal state is the two `Target` slots on `FocusController`
+(focus and vector destination, each a `{kind, idx}` sum type — cross-
+kind mutual exclusion is structural). The click
 handler dispatches by what was picked under the cursor — a cloud pick
 from a star focus sets a star→cloud measurement vector; a cloud pick
 from a cloud focus sets a cloud→cloud vector; clicking the current
@@ -99,11 +100,11 @@ snaps. For animated travel between distant focal points the user warps
 via the distance label.
 
 **`warpToCloud(destIdx)`:** the cloud-destination warp. Source point is
-the currently-focused star OR cloud (`currentFocusLocalPos`); destination
-is the cloud's centroid; arrival offset is `cloudViewingDistancePc`. The
-internal `WarpState` carries a `destKind: 'star' | 'cloud'` discriminator
-so `finishWarp` parks at the right point and dispatches to either
-`setFocus` or `setFocusedCloud` on arrival.
+the currently-focused star OR cloud (`currentFocusTarget()`); destination
+is the cloud's centroid; arrival offset is `cloudViewingDistancePc`.
+`WarpState` carries source/dest as kind-agnostic `FocusTarget`s
+(`../camera/focus/README.md` § FocusTarget contract), so arrival parks
+and focus dispatch need no per-kind switch.
 
 ## Floating-origin handling
 

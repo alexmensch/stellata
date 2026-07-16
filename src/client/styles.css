@@ -1260,9 +1260,13 @@ body.monochrome .panel,
 body.monochrome .tooltip,
 body.monochrome .search-row,
 body.monochrome .search-results,
+body.monochrome .card-strips,
 body.monochrome select {
   background: rgba(255, 255, 255, 0.92);
   color: var(--fg);
+}
+body.monochrome .card-strip:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 body.monochrome .topbar {
   background: rgba(255, 255, 255, 0.92);

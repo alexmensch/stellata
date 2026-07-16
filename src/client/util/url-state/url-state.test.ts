@@ -12,7 +12,8 @@ import {
   type StarRef,
   type IdMaps,
 } from './url-state';
-import { DEFAULT_FILTER, DEFAULT_FOV, type Stellata } from '../../stellata';
+import type { Stellata } from '../../stellata';
+import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 

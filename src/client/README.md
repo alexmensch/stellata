@@ -12,8 +12,12 @@ themselves.
   — bootstrap + integration shell.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `util/` — project-agnostic plumbing (event bus, URL state).
-- `camera/` — camera controllers split across `controls/`, `warp/`,
-  `observe/`, `arrival/`.
+- `filters/` — `FilterState` + magnitude presets + render knobs and
+  the `FilterController` that owns every mutation.
+- `scene/` — the `SceneLayer` contract + registry driving the
+  per-layer update / monochrome / recenter / dispose fan-outs.
+- `camera/` — camera controllers split across `controls/`, `focus/`,
+  `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
   `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/` — render
   layers.
@@ -62,7 +66,7 @@ mutation without enumerating the fine-grained names. `'planetSystem'`
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
 state mutation), and the warp-end edge emit alone.
 
-## Click-state machine (`stellata.ts`)
+## Click-state machine (`camera/controls/input-controller.ts`)
 
 Canvas clicks in BOTH modes are held for `DBL_CLICK_MS` (280 ms) by a
 shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
