@@ -384,6 +384,13 @@ describe('url-state', () => {
       expect(view.showMilkyway).toBe(false);
     });
 
+    it('round-trips showLgEmission=false (zero-byte presence bit, default-on elided)', () => {
+      const { view } = roundtrip({ showLgEmission: false });
+      expect(view.showLgEmission).toBe(false);
+      const { view: defaults } = roundtrip({});
+      expect(defaults.showLgEmission).toBeUndefined();
+    });
+
     it('round-trips unit=pc (ly is the default, so only pc is encoded)', () => {
       const { view } = roundtrip({ unit: 'pc' });
       expect(view.unit).toBe('pc');

@@ -82,10 +82,14 @@ consumes raw numbers and never re-derives photometry.
   numeric quadrature path (`integrateOverEllipsoid`, Gauss–Legendre in
   unit-ball coordinates) for every profile; the analytic
   incomplete-gamma closed forms exist only as vitest cross-pins.
-- **M31 bulge contract:** the bulge density0 is solved over the disc
-  proxy volume with the profile cut at u ≤ uMax. The emission shader
-  must apply the same cut, or the bulge flux drifts from the solved
-  calibration.
+- **M31 bulge contract:** the bulge is its own spheroid component —
+  density0 solves over the bulge's u ≤ uMax sphere via the same
+  Sérsic geometry integral as every spheroid, and the renderer packs
+  it as a separate Sérsic-pass instance beside the host disc
+  (`emissionComponents` in
+  `src/client/local-group/local-group-emission-pure.ts`). The two
+  volumes overlap; additive blending sums them, so the B/T flux split
+  holds without a shared profile cut.
 - Missing photometry, a disc row without `r_d_pc`, or a spheroid
   structure override without LVDB `rhalf_physical` fail the build
   loudly — an uncalibratable object must not ship silently dark.

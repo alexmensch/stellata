@@ -135,6 +135,7 @@ export interface DecodedView {
   showHud?: boolean;
   showConstellation?: boolean;
   showMilkyway?: boolean;
+  showLgEmission?: boolean;
   unit?: 'pc' | 'ly';
   mode?: 'navigate' | 'observe';
   /** Object focus. Undefined = default (Sol). 'cleared' = explicitly
@@ -545,6 +546,17 @@ function focusClearedField(bit: number): FieldSpec {
   };
 }
 
+// The flags byte (bits 0-7) is full, so this default-on toggle rides a
+// zero-byte presence bit of its own: bit set = LG emission disabled.
+function lgEmissionDisabledField(bit: number): FieldSpec {
+  return {
+    bit, key: 'lgEmissionDisabled', ...fixed(0),
+    isPresent: v => v.showLgEmission === false,
+    encode: () => 0,
+    decode: v => { v.showLgEmission = false; },
+  };
+}
+
 // Variable-length POI-HIP list: 1-byte count + count × fixed-width HIP
 // IDs (4 bytes in v1, 3 in v2/v3 — HIP space is < 2^17 so 24 bits is
 // plenty). Hard-capped at POI_MAX_COUNT both at encode time (defensive
@@ -780,6 +792,7 @@ const FIELDS_V4: FieldSpec[] = [
   poiSidsField(19),
   vec3FieldV3(20, 'worldOffset', () => VEC3_DEFAULTS.worldOffset),
   tField(21),
+  lgEmissionDisabledField(22),
 ];
 
 function packFlags(v: DecodedView): number {
@@ -957,6 +970,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (f.showHud) view.showHud = true;
   if (!f.showConstellation) view.showConstellation = false;
   if (!f.showMilkyway) view.showMilkyway = false;
+  if (!f.showLgEmission) view.showLgEmission = false;
 
   const fov = stellata.getCameraFov();
   if (!approx(fov, DEFAULT_FOV)) view.fov = fov;
@@ -1135,6 +1149,7 @@ export function applyDecodedView(
   if (view.showHud !== undefined) patch.showHud = view.showHud;
   if (view.showConstellation !== undefined) patch.showConstellation = view.showConstellation;
   if (view.showMilkyway !== undefined) patch.showMilkyway = view.showMilkyway;
+  if (view.showLgEmission !== undefined) patch.showLgEmission = view.showLgEmission;
   if (Object.keys(patch).length) stellata.setFilter(patch);
 
   if (view.fov !== undefined && view.fov > 0) stellata.setCameraFov(view.fov);

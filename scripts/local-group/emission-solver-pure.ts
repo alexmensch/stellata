@@ -232,27 +232,6 @@ export function discGeometryIntegral(
   }, [rEnvPc, rEnvPc, zEnvPc]);
 }
 
-/** Numeric geometry integral of a spherical Sérsic bulge evaluated
- *  inside the host disc's proxy ellipsoid, cut at u ≤ uMax (the
- *  shader accumulates the bulge only inside that cut — solver and
- *  shader must share it or the M31 bulge flux drifts). */
-export function bulgeInDiscGeometryIntegral(
-  rePc: number,
-  n: number,
-  uMax: number,
-  rEnvPc: number,
-  zEnvPc: number,
-): number {
-  const bn = bnCoeff(n);
-  const pn = pnCoeff(n);
-  return integrateOverEllipsoid((r, c) => {
-    const R = rEnvPc * r * Math.sqrt(1 - c * c);
-    const z = zEnvPc * r * c;
-    const u = Math.hypot(R, z) / rePc;
-    return u > uMax ? 0 : sersicNu(u, n, bn, pn);
-  }, [rEnvPc, rEnvPc, zEnvPc]);
-}
-
 /** ρ₀ such that far-field flux at the catalog distance reproduces the
  *  component's flux share: ρ₀ = d₀²·F / G. Truncation compensation is
  *  inherent — G is the integral over the ACTUAL mesh volume, so

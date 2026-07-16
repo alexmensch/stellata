@@ -43,6 +43,7 @@ function makeFilter(overrides: Partial<FilterState> = {}): FilterState {
     showGalacticGrid: true,
     showHud: true,
     showMilkyway: true,
+    showLgEmission: true,
     chart: false,
     ...overrides,
   };
