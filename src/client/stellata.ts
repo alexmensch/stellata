@@ -1518,6 +1518,12 @@ export class Stellata implements FrameAnchor {
   // catalog.positions so their math runs in the same frame as the camera.
   get localPositions(): Float32Array { return this._localPositions; }
 
+  /** Bucketised Julian epoch year the catalog positions currently sit at.
+   *  Changes exactly when a re-advance rewrote the positions buffers —
+   *  overlays that skip stationary frames must key on it alongside the
+   *  camera transform. */
+  get advancedEpochJyr(): number { return this._advancedEpochJyr; }
+
   // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
   // disc mask, distance vector tip) thread this through renderedSizePx so
   // the SVG estimate tracks the rendered disc on eclipsing-binary
