@@ -109,6 +109,21 @@ describe('AimController — navigate slerp lifecycle', () => {
     expect(h.controls.enabled).toBe(false);
   });
 
+  it('orbits the LIVE controls.target — a mid-aim focal-frame translation carries the orbit', () => {
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    const startMs = performance.now();
+    h.aim.aimAt(new THREE.Vector3(0, 10, 0));
+    // Focal-frame translation mid-aim (epoch re-advance follow / orbital
+    // ride): the pivot moves; the finished orbit must be centred on the
+    // moved pivot, not a click-time snapshot.
+    h.controls.target.add(new THREE.Vector3(3, -2, 1));
+    h.aim.tick(startMs + AIM_T_MAX_MS + 1);
+    expect(h.camera.position.x).toBeCloseTo(3 + 0, 5);
+    expect(h.camera.position.y).toBeCloseTo(-2 - 10, 5);
+    expect(h.camera.position.z).toBeCloseTo(1 + 0, 5);
+  });
+
   it('no-op when called twice — second aim is suppressed', () => {
     h.camera.position.set(10, 0, 0);
     h.aim.aimAt(new THREE.Vector3(0, 10, 0));
