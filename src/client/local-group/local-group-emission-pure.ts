@@ -1,8 +1,8 @@
-// Pure side of the LG emission renderer: instance-buffer packing, the
-// CPU mirror of the GLSL raymarch, and the flux ↔ magnitude inverse.
-// Keep the mirror in lockstep with local-group-emission.frag.glsl.
+// Pure side of the LG emission renderer: emission-block → component
+// decomposition, instance packing, flux ↔ magnitude inverse, and the
+// CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
-import type { LgEmission, LgObject, SersicParams } from './local-group-loader';
+import type { LgEmission, LgObject } from './local-group-loader';
 
 /** Population tints, seeded from the Milky Way palette (warm
  *  near-white bulge tone for old spheroid populations, pale lavender
@@ -10,47 +10,75 @@ import type { LgEmission, LgObject, SersicParams } from './local-group-loader';
 export const SPHEROID_COLOR_RGB: [number, number, number] = [1.0, 0.9647, 0.9294];
 export const DISC_COLOR_RGB: [number, number, number] = [0.6706, 0.6588, 0.8745];
 
-/** Raymarch scheme shared by the GLSL shader and the CPU mirror. */
-export const EMISSION_STEPS = 32;
+/** Raymarch scheme shared by the GLSL shader and the CPU mirror. The
+ *  disc pass marches denser: grazing rays run tens of kpc through an
+ *  envelope whose vertical scale height is ~10² pc, and undersampling
+ *  that profile bands. */
+export const EMISSION_STEPS_SERSIC = 32;
+export const EMISSION_STEPS_DISC = 64;
 export const EMISSION_S_MIN_PC = 0.1;
 /** Ellipsoidal-radius floor guarding the u^(−pn) central singularity. */
 export const EMISSION_U_FLOOR = 1e-4;
 
-export interface EmissionInstanceCommon {
-  count: number;
-  /** vec3 per instance — absolute ICRS centre, pc. */
-  centerAbs: Float32Array;
-  /** vec4 per instance — local→ICRS quaternion. */
-  quat: Float32Array;
-  /** vec3 per instance — proxy-mesh half-extents, pc. */
-  axes: Float32Array;
-  /** vec3 per instance — population tint. */
-  color: Float32Array;
-  /** Source object index per instance (test / debug read-back). */
-  objectIndex: number[];
+/** One raymarched proxy volume. A Sérsic-family emission block is one
+ *  component; a disc-family block is a disc component plus an optional
+ *  spheroidal bulge component rendered in the Sérsic pass. */
+export interface SersicComponent {
+  family: 'sersic';
+  /** Proxy-mesh half-extents, pc (= uMax × R_e per axis). */
+  axesPc: [number, number, number];
+  density0: number;
+  invN: number;
+  bn: number;
+  pn: number;
+  uMax: number;
 }
 
-export interface SersicInstanceData extends EmissionInstanceCommon {
-  /** vec4 per instance — (density0, 1/n, bn, pn). */
-  sersic: Float32Array;
-  /** float per instance — mesh radius in units of R_e. */
-  uMax: Float32Array;
+export interface DiscComponent {
+  family: 'disc';
+  /** Proxy-mesh half-extents, pc (= rEnv, rEnv, zEnv). */
+  axesPc: [number, number, number];
+  density0: number;
+  rdPc: number;
+  zdPc: number;
 }
 
-export interface DiscInstanceData extends EmissionInstanceCommon {
-  /** vec3 per instance — (density0, 1/R_d, 1/z_d). */
-  disc: Float32Array;
-  /** vec4 per instance — bulge (density0, 1/n, bn, pn); density0 = 0 → none. */
-  bulge: Float32Array;
-  /** vec2 per instance — bulge (1/R_e, uMax). */
-  bulgeExt: Float32Array;
+export type EmissionComponent = SersicComponent | DiscComponent;
+
+export function emissionComponents(e: LgEmission): EmissionComponent[] {
+  if (e.family === 'disc') {
+    const disc: DiscComponent = {
+      family: 'disc',
+      axesPc: [e.rEnvPc, e.rEnvPc, e.zEnvPc],
+      density0: e.density0,
+      rdPc: e.rdPc,
+      zdPc: e.zdPc,
+    };
+    if (!e.bulge) return [disc];
+    const b = e.bulge;
+    return [disc, {
+      family: 'sersic',
+      axesPc: [b.uMax * b.reffAxesPc[0], b.uMax * b.reffAxesPc[1], b.uMax * b.reffAxesPc[2]],
+      density0: b.density0,
+      invN: 1 / b.n,
+      bn: b.bn,
+      pn: b.pn,
+      uMax: b.uMax,
+    }];
+  }
+  return [{
+    family: 'sersic',
+    axesPc: [e.uMax * e.reffAxesPc[0], e.uMax * e.reffAxesPc[1], e.uMax * e.reffAxesPc[2]],
+    density0: e.density0,
+    invN: 1 / e.n,
+    bn: e.bn,
+    pn: e.pn,
+    uMax: e.uMax,
+  }];
 }
 
-/** Proxy-mesh half-extents for an emission block — uMax × R_e for
- *  spheroids, the (rEnv, rEnv, zEnv) envelope for discs. */
-export function emissionMeshAxes(e: LgEmission): [number, number, number] {
-  if (e.family === 'disc') return [e.rEnvPc, e.rEnvPc, e.zEnvPc];
-  return [e.uMax * e.reffAxesPc[0], e.uMax * e.reffAxesPc[1], e.uMax * e.reffAxesPc[2]];
+export function emissionStepsFor(comp: EmissionComponent): number {
+  return comp.family === 'disc' ? EMISSION_STEPS_DISC : EMISSION_STEPS_SERSIC;
 }
 
 /** Rotate v by quaternion q = [x, y, z, w] — the shader's quatRotate. */
@@ -84,72 +112,94 @@ function parseHexColor(hex: string): [number, number, number] | null {
   return [((v >> 16) & 0xff) / 255, ((v >> 8) & 0xff) / 255, (v & 0xff) / 255];
 }
 
-function tintFor(e: LgEmission): [number, number, number] {
+function tintFor(e: LgEmission, comp: EmissionComponent): [number, number, number] {
   const override = e.color ? parseHexColor(e.color) : null;
   if (override) return override;
-  return e.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB;
+  return comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB;
 }
 
-/** Split the catalog by emission family and pack the per-instance
- *  attribute arrays both GPU passes consume. Pure — testable without a
- *  GL context. */
+export interface EmissionInstanceCommon {
+  count: number;
+  /** vec3 per instance — absolute ICRS centre, pc. */
+  centerAbs: Float32Array;
+  /** vec4 per instance — local→ICRS quaternion. */
+  quat: Float32Array;
+  /** vec3 per instance — proxy-mesh half-extents, pc. */
+  axes: Float32Array;
+  /** vec3 per instance — population tint. */
+  color: Float32Array;
+  /** Source object index per instance (test / debug read-back). */
+  objectIndex: number[];
+}
+
+export interface SersicInstanceData extends EmissionInstanceCommon {
+  /** vec4 per instance — (density0, 1/n, bn, pn). */
+  sersic: Float32Array;
+  /** float per instance — mesh radius in units of R_e. */
+  uMax: Float32Array;
+}
+
+export interface DiscInstanceData extends EmissionInstanceCommon {
+  /** vec3 per instance — (density0, 1/R_d, 1/z_d). */
+  disc: Float32Array;
+}
+
+/** Decompose the catalog into per-family component lists and pack the
+ *  per-instance attribute arrays both GPU passes consume. Pure —
+ *  testable without a GL context. */
 export function buildEmissionInstanceData(objects: readonly LgObject[]): {
   sersic: SersicInstanceData;
   disc: DiscInstanceData;
 } {
-  const sersicIdx: number[] = [];
-  const discIdx: number[] = [];
+  const sersicComps: { obj: LgObject; idx: number; comp: SersicComponent }[] = [];
+  const discComps: { obj: LgObject; idx: number; comp: DiscComponent }[] = [];
   for (let i = 0; i < objects.length; i++) {
-    (objects[i].emission.family === 'disc' ? discIdx : sersicIdx).push(i);
+    for (const comp of emissionComponents(objects[i].emission)) {
+      if (comp.family === 'disc') discComps.push({ obj: objects[i], idx: i, comp });
+      else sersicComps.push({ obj: objects[i], idx: i, comp });
+    }
   }
 
-  const packCommon = (idxs: number[]): EmissionInstanceCommon => {
-    const n = idxs.length;
+  const packCommon = (
+    items: { obj: LgObject; idx: number; comp: EmissionComponent }[],
+  ): EmissionInstanceCommon => {
+    const n = items.length;
     const common: EmissionInstanceCommon = {
       count: n,
       centerAbs: new Float32Array(n * 3),
       quat: new Float32Array(n * 4),
       axes: new Float32Array(n * 3),
       color: new Float32Array(n * 3),
-      objectIndex: idxs.slice(),
+      objectIndex: items.map((it) => it.idx),
     };
     for (let k = 0; k < n; k++) {
-      const o = objects[idxs[k]];
-      common.centerAbs.set([o.centerAbs.x, o.centerAbs.y, o.centerAbs.z], k * 3);
-      common.quat.set([o.quat.x, o.quat.y, o.quat.z, o.quat.w], k * 4);
-      common.color.set(tintFor(o.emission), k * 3);
-      common.axes.set(emissionMeshAxes(o.emission), k * 3);
+      const { obj, comp } = items[k];
+      common.centerAbs.set([obj.centerAbs.x, obj.centerAbs.y, obj.centerAbs.z], k * 3);
+      common.quat.set([obj.quat.x, obj.quat.y, obj.quat.z, obj.quat.w], k * 4);
+      common.color.set(tintFor(obj.emission, comp), k * 3);
+      common.axes.set(comp.axesPc, k * 3);
     }
     return common;
   };
 
   const sersic: SersicInstanceData = {
-    ...packCommon(sersicIdx),
-    sersic: new Float32Array(sersicIdx.length * 4),
-    uMax: new Float32Array(sersicIdx.length),
+    ...packCommon(sersicComps),
+    sersic: new Float32Array(sersicComps.length * 4),
+    uMax: new Float32Array(sersicComps.length),
   };
-  for (let k = 0; k < sersicIdx.length; k++) {
-    const e = objects[sersicIdx[k]].emission;
-    if (e.family !== 'sersic') continue;
-    sersic.sersic.set([e.density0, 1 / e.n, e.bn, e.pn], k * 4);
-    sersic.uMax[k] = e.uMax;
+  for (let k = 0; k < sersicComps.length; k++) {
+    const c = sersicComps[k].comp;
+    sersic.sersic.set([c.density0, c.invN, c.bn, c.pn], k * 4);
+    sersic.uMax[k] = c.uMax;
   }
 
   const disc: DiscInstanceData = {
-    ...packCommon(discIdx),
-    disc: new Float32Array(discIdx.length * 3),
-    bulge: new Float32Array(discIdx.length * 4),
-    bulgeExt: new Float32Array(discIdx.length * 2),
+    ...packCommon(discComps),
+    disc: new Float32Array(discComps.length * 3),
   };
-  for (let k = 0; k < discIdx.length; k++) {
-    const e = objects[discIdx[k]].emission;
-    if (e.family !== 'disc') continue;
-    disc.disc.set([e.density0, 1 / e.rdPc, 1 / e.zdPc], k * 3);
-    const b: SersicParams | undefined = e.bulge;
-    if (b) {
-      disc.bulge.set([b.density0, 1 / b.n, b.bn, b.pn], k * 4);
-      disc.bulgeExt.set([1 / b.reffAxesPc[0], b.uMax], k * 2);
-    }
+  for (let k = 0; k < discComps.length; k++) {
+    const c = discComps[k].comp;
+    disc.disc.set([c.density0, 1 / c.rdPc, 1 / c.zdPc], k * 3);
   }
 
   return { sersic, disc };
@@ -162,43 +212,35 @@ export function cpuSersicNu(u: number, invN: number, bn: number, pn: number): nu
   return Math.pow(uc, -pn) * Math.exp(-bn * Math.pow(uc, invN));
 }
 
-/** Density at a unit-ball point for one emission block — the CPU twin
- *  of the shader's densityAt. pLocal is in the proxy mesh's unit-ball
- *  frame. */
+/** Density at a unit-ball point for one emission component — the CPU
+ *  twin of the shader's densityAt. pLocal is in the component's
+ *  unit-ball frame. */
 export function cpuDensityAt(
   pLocal: [number, number, number],
-  e: LgEmission,
+  comp: EmissionComponent,
 ): number {
-  if (e.family === 'disc') {
-    const x = pLocal[0] * e.rEnvPc;
-    const y = pLocal[1] * e.rEnvPc;
-    const z = pLocal[2] * e.zEnvPc;
-    const R = Math.hypot(x, y);
-    let rho = e.density0 * Math.exp(-R / e.rdPc - Math.abs(z) / e.zdPc);
-    if (e.bulge) {
-      const u = Math.hypot(x, y, z) / e.bulge.reffAxesPc[0];
-      if (u <= e.bulge.uMax) {
-        rho += e.bulge.density0 * cpuSersicNu(u, 1 / e.bulge.n, e.bulge.bn, e.bulge.pn);
-      }
-    }
-    return rho;
+  if (comp.family === 'disc') {
+    const R = Math.hypot(pLocal[0] * comp.axesPc[0], pLocal[1] * comp.axesPc[1]);
+    const z = pLocal[2] * comp.axesPc[2];
+    return comp.density0 * Math.exp(-R / comp.rdPc - Math.abs(z) / comp.zdPc);
   }
-  const u = Math.hypot(pLocal[0], pLocal[1], pLocal[2]) * e.uMax;
-  return e.density0 * cpuSersicNu(u, 1 / e.n, e.bn, e.pn);
+  const u = Math.hypot(pLocal[0], pLocal[1], pLocal[2]) * comp.uMax;
+  return comp.density0 * cpuSersicNu(u, comp.invN, comp.bn, comp.pn);
 }
 
 /** CPU mirror of the fragment shader's bounded raymarch: unit-sphere
  *  entry/exit from `camLocal` toward the back-face point `fragLocal`
- *  (on the unit sphere), EMISSION_STEPS log-distributed samples,
- *  Σ ρ·ds in F·pc column units. Returns 0 when the ray misses.
- *  `worldPerT` is the world-pc length of one t-unit
- *  (|fragWorld − cameraWorld|). */
+ *  (on the unit sphere), log-distributed samples, Σ ρ·ds in F·pc
+ *  column units. Returns 0 when the ray misses. `worldPerT` is the
+ *  world-pc length of one t-unit (|fragWorld − cameraWorld|).
+ *  Samples sit at step midpoints; the shader jitters them per-pixel
+ *  (uniform over the step, same expectation). */
 export function cpuRaymarchColumn(
   camLocal: [number, number, number],
   fragLocal: [number, number, number],
   worldPerT: number,
-  e: LgEmission,
-  steps: number = EMISSION_STEPS,
+  comp: EmissionComponent,
+  steps: number = emissionStepsFor(comp),
 ): number {
   const dir: [number, number, number] = [
     fragLocal[0] - camLocal[0],
@@ -233,7 +275,7 @@ export function cpuRaymarchColumn(
       camLocal[2] + t * dir[2],
     ];
     if (p[0] * p[0] + p[1] * p[1] + p[2] * p[2] > 1.001) break;
-    accum += cpuDensityAt(p, e) * dsPc;
+    accum += cpuDensityAt(p, comp) * dsPc;
   }
   return accum;
 }

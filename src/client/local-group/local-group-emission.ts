@@ -8,19 +8,23 @@ import emissionFrag from './local-group-emission.frag.glsl?raw';
 import type { LgObject } from './local-group-loader';
 import {
   buildEmissionInstanceData,
+  EMISSION_STEPS_DISC,
+  EMISSION_STEPS_SERSIC,
   type DiscInstanceData,
   type SersicInstanceData,
 } from './local-group-emission-pure';
 
-// Tone-map gain + magnitude calibration, seeded from the Milky Way's
-// pair (milkyway.ts DEFAULT_BRIGHTNESS / GLOW_MAG_OFFSET rationale).
-// LG columns integrate to ~10²–10³ F·pc vs the MW's 10⁴–10⁵, so the
-// seed brightness sits higher; both knobs are dev-tunable and retuned
-// together in smoke. uGlowMagOffset shifts WHERE the slider reveals
-// the layer, never per-object flux ratios — those are pinned by the
-// solved density0 values.
-const DEFAULT_BRIGHTNESS = 2e-4;
-const GLOW_MAG_OFFSET = 15.0;
+// Magnitude-domain tone map (README § Emission layer): pixel
+// brightness = 1 − exp(−color · uBrightnessScale · gate), where gate
+// is the star pipeline's normalized magnitude headroom. uGlowMagOffset
+// maps physical column → per-pixel surface-brightness magnitude and so
+// sets WHERE the slider reveals each isophote (seed 11.0: naked-eye
+// preset shows LMC/SMC + the M31 core, like the real sky; the "all"
+// preset reveals the M31 disc to its envelope). uBrightnessScale is
+// the overall gain. Neither knob touches per-object flux ratios —
+// those are pinned by the solved density0 values.
+const DEFAULT_BRIGHTNESS = 3.0;
+const GLOW_MAG_OFFSET = 11.0;
 
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
@@ -91,8 +95,6 @@ export class LocalGroupEmission {
     if (isDisc) {
       const d = data as DiscInstanceData;
       geometry.setAttribute('aDisc', inst(d.disc, 3));
-      geometry.setAttribute('aBulge', inst(d.bulge, 4));
-      geometry.setAttribute('aBulgeExt', inst(d.bulgeExt, 2));
     } else {
       const s = data as SersicInstanceData;
       geometry.setAttribute('aSersic', inst(s.sersic, 4));
@@ -103,7 +105,9 @@ export class LocalGroupEmission {
       glslVersion: THREE.GLSL3,
       vertexShader: emissionVert,
       fragmentShader: emissionFrag,
-      defines: isDisc ? { FAMILY_DISC: 1 } : {},
+      defines: isDisc
+        ? { FAMILY_DISC: 1, EMISSION_STEPS: EMISSION_STEPS_DISC }
+        : { EMISSION_STEPS: EMISSION_STEPS_SERSIC },
       // Same render contract as the MilkyWay volumetric pass: BackSide
       // gives one fragment per ray with the back face as the natural
       // exit; entry is computed analytically in the fragment shader.

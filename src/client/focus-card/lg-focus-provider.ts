@@ -56,7 +56,10 @@ export function createLgFocusProvider(
         { label: 'Size', value: formatAxisPair(maxSemiAxisPc(obj), minSemiAxisPc(obj)) },
         { label: 'Known from', value: SOURCE_LABEL[obj.source] },
       ];
-      const identityLines = [obj.type, ...(obj.aliases ?? [])];
+      // One dot-separated alias line, matching the star card's
+      // designation-line convention.
+      const identityLines = [obj.type];
+      if (obj.aliases?.length) identityLines.push(obj.aliases.join(' · '));
       return { name: obj.name, identityLines, rows, lines: [] };
     },
   };

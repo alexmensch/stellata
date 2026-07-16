@@ -539,3 +539,72 @@ describe('search / Local Group entries', () => {
     expect(rows.filter((e) => e.kind === 'lg' && e.index === 0)).toHaveLength(1);
   });
 });
+
+describe('search / ranking tiers', () => {
+  const CONS = [{ code: 'And', name: 'Andromeda' }];
+  // Constellation-member stars whose expansion labels ("Gamma
+  // Andromeda", "V366 Andromeda", "43 Andromeda") all contain the
+  // constellation name — the rows that used to bury the galaxy.
+  const raw: SearchEntry[] = [
+    { i: 0, p: 'Almach', b: 'Gam-1', c: 0 },
+    { i: 1, p: 'Alpheratz', b: 'Alp', c: 0 },
+    { i: 2, g: 'V0366 And', c: 0 },
+    { i: 3, p: 'Mirach', b: 'Bet', c: 0, f: 43 },
+  ];
+  const catalog = {
+    ...makeEmptyCatalog(4),
+    constellations: CONS,
+    constellation: Float32Array.from([0, 0, 0, 0]),
+    names: new Map([[0, 'Almach'], [1, 'Alpheratz'], [3, 'Mirach']]),
+  };
+  const lgObject = (name: string, distanceFromSol: number, aliases?: string[]) => ({
+    name,
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    type: 'Galaxy',
+    ...(aliases ? { aliases } : {}),
+    sid: 1,
+    centerAbs: new THREE.Vector3(distanceFromSol, 0, 0),
+    kind: 'disc' as const,
+    axes: [1000, 1000, 500] as [number, number, number],
+    quat: new THREE.Quaternion(),
+    source: 'OVERRIDE' as const,
+    distanceFromSol,
+    emission: {
+      family: 'disc' as const,
+      mV: 3.44, rdPc: 5300, zdPc: 167, rEnvPc: 21200, zEnvPc: 667, density0: 0.34,
+    },
+  });
+  const lg = {
+    count: 2,
+    objects: [
+      lgObject('M31', 776_000, ['Andromeda Galaxy', 'NGC 224']),
+      lgObject('Andromeda XIX Dwarf Spheroidal', 812_830),
+    ],
+  };
+  const run = createSearchRunner(catalog, raw, null, lg);
+
+  it('tags constellation-expansion labels and only them', () => {
+    const { fuzzyEntries } = buildSearchIndex(raw, CONS);
+    const labelFor = (i: number, label: string) =>
+      fuzzyEntries.find((e) => e.index === i && e.label === label);
+    expect(labelFor(0, 'Gamma Andromeda')?.conExpansion).toBe(true);
+    expect(labelFor(2, 'V366 Andromeda')?.conExpansion).toBe(true);
+    expect(labelFor(3, '43 Andromeda')?.conExpansion).toBe(true);
+    expect(labelFor(0, 'Gamma And')?.conExpansion).toBe(false);
+    expect(labelFor(0, 'Almach')?.conExpansion).toBeFalsy();
+  });
+
+  it('"andromeda" surfaces the galaxy first, then the dwarf, before any member star', () => {
+    const rows = run('andromeda');
+    expect(rows[0]).toMatchObject({ kind: 'lg', index: 0, primary: 'M31' });
+    expect(rows[1]).toMatchObject({ kind: 'lg', index: 1 });
+    // Expansion rows survive, ranked behind the direct name matches.
+    const firstStar = rows.findIndex((e) => e.kind === 'star');
+    expect(firstStar).toBeGreaterThan(1);
+  });
+
+  it('an exact expansion query still puts the star first', () => {
+    expect(run('gamma andromeda')[0]).toMatchObject({ kind: 'star', index: 0 });
+    expect(run('V366 Andromeda')[0]).toMatchObject({ kind: 'star', index: 2 });
+  });
+});

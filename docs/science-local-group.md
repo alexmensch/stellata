@@ -162,11 +162,25 @@ enclosing 99% of the light — and the mesh never sits inside the
 wireframe silhouette); discs extend to max(4·R_d, wireframe a) in
 plane and max(4·z_d, wireframe c) vertically, physical given observed
 disc truncations at 4–5 R_d. M31's bulge and disc are solved
-separately against B/T · F and (1 − B/T) · F. The solver
+separately against B/T · F and (1 − B/T) · F, each over its own proxy
+mesh — the bulge is a distinct spheroid volume (u ≤ u₉₉ sphere), not a
+term clipped inside the disc envelope, so it reads as a bulge from
+edge-on viewpoints too. The solver
 (`scripts/local-group/emission-solver-pure.ts`) uses one numeric
 quadrature path for all profiles; the analytic incomplete-gamma closed
 forms are vitest cross-pins. The ±0.1 mag render tolerance sits inside
 the catalogue's own ±0.2 mag median photometric uncertainty.
+
+The calibrated column field is what the renderer's magnitude gate
+reads: each pixel's column converts to a surface-brightness magnitude
+and reveals against the star pipeline's slider exactly like a star of
+that magnitude. Displayed pixel intensity follows that magnitude, not
+linear flux — a linear tone map across the ~7 mag bulge-to-disc-edge
+surface-brightness range would render every galaxy as a blown-out
+core on a black disc (the astrophotography stretch problem). Relative
+surface brightnesses, iso-magnitude reveal order, and the solved
+per-object flux ratios stay physical; only the display transfer curve
+is logarithmic.
 
 **Photometry.** LVDB `apparent_magnitude_v` is 100% complete over the
 121 dwarfs; M31 (m_V = 3.44) and M33 (m_V = 5.72) carry RC3 integrated

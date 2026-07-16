@@ -54,7 +54,7 @@ describe('createLgFocusProvider', () => {
     });
     const card = provider.format(0);
     expect(card.name).toBe('M31');
-    expect(card.identityLines).toEqual(['Spiral galaxy', 'Andromeda Galaxy', 'NGC 224']);
+    expect(card.identityLines).toEqual(['Spiral galaxy', 'Andromeda Galaxy · NGC 224']);
     const byLabel = new Map(card.rows.map((r) => [r.label, r.value]));
     expect((byLabel.get('Apparent mag') as () => string)()).toBe('3.4');
     camDist = 77_600;

@@ -13,7 +13,20 @@ Bayer designation. Selecting an entry dispatches through
 active.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
-within-kind dedup over stars + clouds + Local Group objects). LG
+tier re-rank + within-kind dedup over stars + clouds + Local Group
+objects). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
+label > query-is-prefix > plain name/alias > constellation-expansion
+label ("Gamma Andromeda" — fuzzy-searchable but never outranking the
+Andromeda Galaxy for the bare constellation-name query), then shorter
+label wins. Fuse runs with `ignoreFieldNorm` (token-count norm would
+outvote the tiers) and no result cap (the corpus-tail LG entries
+would be evicted from any pre-rank pool by score-then-insertion
+ordering). All three star-corpus boxes debounce keystrokes by
+`SEARCH_DEBOUNCE_MS` (250 ms trailing, `typeahead-util.ts`) — the
+fuzzy scan costs 40–170 ms and synchronous per-keystroke it stalls
+typing; Enter flushes a pending query first, so fast-type-then-enter
+selects against the full text. The constellation picker stays
+synchronous (cheap substring filter). LG
 entries index the display name plus every build-emitted alias
 ("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
 line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
