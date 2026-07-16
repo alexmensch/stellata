@@ -12,12 +12,12 @@ interface Harness {
   input: InputController;
   deps: {
     focusStar: ReturnType<typeof vi.fn>;
-    flyToCloud: ReturnType<typeof vi.fn>;
+    flyTo: ReturnType<typeof vi.fn>;
     unfocus: ReturnType<typeof vi.fn>;
     togglePoi: ReturnType<typeof vi.fn>;
     setVectorTo: ReturnType<typeof vi.fn>;
-    setVectorToCloud: ReturnType<typeof vi.fn>;
-    setOrbitTargetCloud: ReturnType<typeof vi.fn>;
+    setVector: ReturnType<typeof vi.fn>;
+    setOrbitTarget: ReturnType<typeof vi.fn>;
     aimAt: ReturnType<typeof vi.fn>;
   };
   state: {
@@ -65,12 +65,12 @@ function makeHarness(): Harness {
   } as unknown as TrackballControls;
   const deps = {
     focusStar: vi.fn(),
-    flyToCloud: vi.fn(),
+    flyTo: vi.fn(),
     unfocus: vi.fn(),
     togglePoi: vi.fn(() => true),
     setVectorTo: vi.fn(),
-    setVectorToCloud: vi.fn(),
-    setOrbitTargetCloud: vi.fn(),
+    setVector: vi.fn(),
+    setOrbitTarget: vi.fn(),
     aimAt: vi.fn(),
   };
   const input = new InputController({
@@ -92,19 +92,27 @@ function makeHarness(): Harness {
     getCameraMode: () => state.cameraMode,
     getFilter: () => state.filter,
     getFocusedStar: () => state.focusedStar,
-    getFocusedCloud: () => state.focusedCloud,
+    getFocusedTarget: () => {
+      if (state.focusedStar !== null) return { kind: 'star' as const, idx: state.focusedStar };
+      if (state.focusedCloud !== null) return { kind: 'cloud' as const, idx: state.focusedCloud };
+      return null;
+    },
     getVectorTo: () => state.vectorTo,
-    getVectorToCloud: () => state.vectorToCloud,
+    getVectorTarget: () => {
+      if (state.vectorTo !== null) return { kind: 'star' as const, idx: state.vectorTo };
+      if (state.vectorToCloud !== null) return { kind: 'cloud' as const, idx: state.vectorToCloud };
+      return null;
+    },
     setVectorTo: deps.setVectorTo,
-    setVectorToCloud: deps.setVectorToCloud,
+    setVector: deps.setVector,
     isWarpActive: () => false,
     isAimActive: () => false,
     isObserveTransitionActive: () => false,
     cancelUnfocusLerp: () => {},
     cancelFocusLerp: () => {},
     focusStar: deps.focusStar,
-    flyToCloud: deps.flyToCloud,
-    setOrbitTargetCloud: deps.setOrbitTargetCloud,
+    flyTo: deps.flyTo,
+    setOrbitTarget: deps.setOrbitTarget,
     unfocus: deps.unfocus,
     togglePoi: deps.togglePoi,
     aimAt: deps.aimAt,
@@ -144,8 +152,7 @@ describe('InputController.applyStarClick — navigate mode', () => {
     state.focusedStar = 7;
     state.vectorTo = 12;
     expect(input.applyStarClick(7)).toBe(true);
-    expect(deps.setVectorTo).toHaveBeenCalledWith(null);
-    expect(deps.setVectorToCloud).toHaveBeenCalledWith(null);
+    expect(deps.setVector).toHaveBeenCalledWith(null);
     expect(deps.unfocus).not.toHaveBeenCalled();
   });
 
@@ -222,7 +229,7 @@ describe('InputController click dispatch', () => {
     const { input, state, deps } = makeHarness();
     state.pickCloudResult = 2;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
-    expect(deps.setOrbitTargetCloud).toHaveBeenCalledWith(2);
+    expect(deps.setOrbitTarget).toHaveBeenCalledWith({ kind: 'cloud', idx: 2 });
   });
 });
 

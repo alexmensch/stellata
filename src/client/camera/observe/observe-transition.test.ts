@@ -49,8 +49,7 @@ interface FocusFixture {
   ops: ObserveFocusOps;
   calls: {
     setFocus: Array<number | null>;
-    setVectorTo: Array<number | null>;
-    setVectorToCloud: Array<number | null>;
+    clearVector: number;
   };
   parkDistByIdx: Map<number, number>;
   setFocusedStar(idx: number | null): void;
@@ -65,14 +64,12 @@ function makeFocus(): FocusFixture {
   const parkDistByIdx = new Map<number, number>();
   const calls = {
     setFocus: [] as Array<number | null>,
-    setVectorTo: [] as Array<number | null>,
-    setVectorToCloud: [] as Array<number | null>,
+    clearVector: 0,
   };
   const ops: ObserveFocusOps = {
     getFocusedStar: () => focusedStar,
     setFocus: (idx) => { focusedStar = idx; calls.setFocus.push(idx); },
-    setVectorTo: (idx) => { calls.setVectorTo.push(idx); },
-    setVectorToCloud: (idx) => { calls.setVectorToCloud.push(idx); },
+    clearVector: () => { calls.clearVector++; },
     parkDistForStar: (idx) => parkDistByIdx.get(idx) ?? 1.0,
     isCameraBusy: () => busy,
     focalLocalPositionInto: (out) => {
@@ -179,8 +176,7 @@ describe('ObserveTransition.setMode — navigate → observe (animated)', () => 
 
     expect(h.getCameraMode()).toBe('observe');
     expect(h.controls.enabled).toBe(false);
-    expect(h.focus.calls.setVectorTo).toEqual([null]);
-    expect(h.focus.calls.setVectorToCloud).toEqual([null]);
+    expect(h.focus.calls.clearVector).toBe(1);
     expect(h.observe.isActive()).toBe(true);
     expect(h.observe.isAnyActive()).toBe(true);
     // uHide stays -1 during the glide — focal star visible until park.

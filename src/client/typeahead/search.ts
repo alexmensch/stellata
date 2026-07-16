@@ -1,5 +1,7 @@
 import Fuse from 'fuse.js';
+import * as THREE from 'three';
 import type { Stellata } from '../stellata';
+import type { Target } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import type { LgCatalog } from '../local-group/local-group-loader';
@@ -570,15 +572,13 @@ export function bindSearch(
     runQuery: focusRunQuery,
     rowFor,
     onSelect: (entry) => {
-      if (entry.kind === 'cloud') {
-        stellata.flyToCloud(entry.index);
-      } else if (entry.kind === 'lg') {
-        stellata.flyToLg(entry.index);
+      if (entry.kind === 'cloud' || entry.kind === 'lg') {
+        stellata.flyTo({ kind: entry.kind, idx: entry.index });
       } else if (stellata.getCameraMode() === 'observe') {
         // Re-route through warp so the camera flies from the current
         // observation anchor to the new one and re-enters observe on
         // arrival, instead of teleporting via focusStar.
-        stellata.warpTo(entry.index);
+        stellata.warpTo({ kind: 'star', idx: entry.index });
       } else {
         stellata.focusStar(entry.index);
       }
@@ -599,15 +599,9 @@ export function bindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      if (entry.kind === 'cloud') stellata.setVectorToCloud(entry.index);
-      else if (entry.kind === 'lg') stellata.setVectorToLg(entry.index);
-      else stellata.setVectorTo(entry.index);
+      stellata.setVector({ kind: entry.kind, idx: entry.index });
     },
-    onClear: () => {
-      stellata.setVectorTo(null);
-      stellata.setVectorToCloud(null);
-      stellata.setVectorToLg(null);
-    },
+    onClear: () => stellata.setVector(null),
     positionResults: positionUnder(toInput),
     group,
   });
@@ -620,23 +614,23 @@ export function bindSearch(
   // the To row entirely: distance-vector measurement is meaningless from
   // a camera parked on its own anchor, and the underlying setters no-op
   // in that mode anyway.
+  // Display names stay a per-kind lookup — the rich star label
+  // (describe) lives in the search corpus, cloud / LG names on their
+  // catalogs; kind identity itself rides the Target.
+  const nameOf = (t: Target): string => {
+    if (t.kind === 'star') return describe(t.idx);
+    if (t.kind === 'cloud') return clouds ? clouds.clouds[t.idx].name : '';
+    return lg ? lg.objects[t.idx].name : '';
+  };
   const syncFocusUI = () => {
-    const starIdx = stellata.getFocusedStar();
-    const cloudIdx = stellata.getFocusedCloud();
-    const lgIdx = stellata.getFocusedLg();
+    const focused = stellata.getFocusedTarget();
     const observe = stellata.getCameraMode() === 'observe';
     // OBSERVE makes the focus row read as "where you are observing from"
     // rather than "what you have selected", which is what FOCUS implies in
     // navigate mode. Same field, different mental model.
     focusTag.textContent = observe ? 'Location' : 'Focus';
-    if (starIdx !== null) {
-      focusBox.setName(describe(starIdx));
-      toRow.hidden = observe;
-    } else if (cloudIdx !== null && clouds) {
-      focusBox.setName(clouds.clouds[cloudIdx].name);
-      toRow.hidden = observe;
-    } else if (lgIdx !== null && lg) {
-      focusBox.setName(lg.objects[lgIdx].name);
+    if (focused !== null) {
+      focusBox.setName(nameOf(focused));
       toRow.hidden = observe;
     } else {
       focusBox.setName('');
@@ -645,22 +639,13 @@ export function bindSearch(
     }
   };
   const syncVectorUI = () => {
-    const star = stellata.getVectorTo();
-    const cloudVec = stellata.getVectorToCloud();
-    const lgVec = stellata.getVectorToLg();
-    if (star !== null) toBox.setName(describe(star));
-    else if (cloudVec !== null && clouds) toBox.setName(clouds.clouds[cloudVec].name);
-    else if (lgVec !== null && lg) toBox.setName(lg.objects[lgVec].name);
-    else toBox.setName('');
+    const vec = stellata.getVectorTarget();
+    toBox.setName(vec !== null ? nameOf(vec) : '');
   };
 
   stellata.on('focus', syncFocusUI);
-  stellata.on('cloudFocus', syncFocusUI);
-  stellata.on('lgFocus', syncFocusUI);
   stellata.on('cameraMode', syncFocusUI);
   stellata.on('vector', syncVectorUI);
-  stellata.on('vectorCloud', syncVectorUI);
-  stellata.on('vectorLg', syncVectorUI);
 
   syncFocusUI();
   syncVectorUI();
@@ -689,12 +674,10 @@ export function bindFindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      const pos = entry.kind === 'cloud'
-        ? stellata.cloudLocalPosition(entry.index)
-        : entry.kind === 'lg'
-          ? stellata.lgLocalPosition(entry.index)
-          : stellata.starLocalPosition(entry.index);
-      if (pos) stellata.aimAt(pos);
+      const pos = new THREE.Vector3();
+      if (stellata.focusables[entry.kind].localPositionInto(entry.index, pos)) {
+        stellata.aimAt(pos);
+      }
     },
     positionResults: () => {
       const row = input.closest('.search-row') as HTMLElement | null;

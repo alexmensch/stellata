@@ -24,16 +24,9 @@ export function bindWarpButton(stellata: Stellata) {
     btn.blur();
   });
 
-  // Trigger the appropriate warp variant based on which vector slot is
-  // active — at most one of (vectorTo, vectorToCloud, vectorToLg) is
-  // set, so the dispatch is unambiguous.
   const triggerWarp = () => {
-    const star = stellata.getVectorTo();
-    if (star !== null) { stellata.warpTo(star); return; }
-    const cloud = stellata.getVectorToCloud();
-    if (cloud !== null) { stellata.warpToCloud(cloud); return; }
-    const lg = stellata.getVectorToLg();
-    if (lg !== null) stellata.warpToLg(lg);
+    const dest = stellata.getVectorTarget();
+    if (dest !== null) stellata.warpTo(dest);
   };
 
   window.addEventListener('keydown', (e) => {
@@ -46,7 +39,7 @@ export function bindWarpButton(stellata: Stellata) {
         stellata.skipWarp();
       }
     } else if (e.key === 'w' || e.key === 'W') {
-      if (stellata.getVectorTo() !== null || stellata.getVectorToCloud() !== null || stellata.getVectorToLg() !== null) {
+      if (stellata.getVectorTarget() !== null) {
         e.preventDefault();
         triggerWarp();
       }

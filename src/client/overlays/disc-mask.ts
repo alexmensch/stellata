@@ -105,10 +105,10 @@ export function createDiscMask(stellata: Stellata) {
   // the focal-pair mask alive after Esc-unfocus until the disc shrinks.
   let recentFocus: number | null = null;
   let recentCompanion = -1;
-  stellata.on('focus', (idx) => {
-    if (idx !== null) {
-      recentFocus = idx;
-      recentCompanion = stellata.catalog.companion[idx];
+  stellata.on('focus', (target) => {
+    if (target !== null && target.kind === 'star') {
+      recentFocus = target.idx;
+      recentCompanion = stellata.catalog.companion[target.idx];
     }
   });
 
