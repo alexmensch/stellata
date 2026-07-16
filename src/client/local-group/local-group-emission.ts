@@ -26,6 +26,12 @@ import {
 const DEFAULT_BRIGHTNESS = 3.0;
 const GLOW_MAG_OFFSET = 11.0;
 
+/** Shelve flag: while true the shell never constructs this layer, so
+ *  the emission glow renders nowhere (README.md § Emission layer).
+ *  Flip to false to re-enable — everything downstream (filter flag,
+ *  URL bit, debug knobs) is still wired. */
+export const LG_EMISSION_SHELVED = true;
+
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
 

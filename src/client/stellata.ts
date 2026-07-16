@@ -24,7 +24,7 @@ import {
 import { GalacticDisc } from './galactic/galactic-disc';
 import { LocalGroupLayer } from './local-group/local-group';
 import { lgViewingDistancePc, maxSemiAxisPc } from './local-group/local-group-loader';
-import { LocalGroupEmission } from './local-group/local-group-emission';
+import { LG_EMISSION_SHELVED, LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { GalacticGrid } from './galactic/galactic-grid';
@@ -1408,14 +1408,16 @@ export class Stellata implements FrameAnchor {
     this.localGroupLayer = new LocalGroupLayer(catalog);
     this.localGroupLayer.setMonochrome(this.monochrome);
     this.scene.add(this.localGroupLayer.group);
-    const u = this.starPipeline.discMaterial.uniforms;
-    this.lgEmission = new LocalGroupEmission(catalog.objects, {
-      uMaxAppMag: u.uMaxAppMag as { value: number },
-      uSizeSpan: u.uSizeSpan as { value: number },
-    });
-    this.lgEmission.setChartHidden(this.monochrome);
-    this.lgEmission.setEnabled(this.filter.showLgEmission);
-    this.scene.add(this.lgEmission.group);
+    if (!LG_EMISSION_SHELVED) {
+      const u = this.starPipeline.discMaterial.uniforms;
+      this.lgEmission = new LocalGroupEmission(catalog.objects, {
+        uMaxAppMag: u.uMaxAppMag as { value: number },
+        uSizeSpan: u.uSizeSpan as { value: number },
+      });
+      this.lgEmission.setChartHidden(this.monochrome);
+      this.lgEmission.setEnabled(this.filter.showLgEmission);
+      this.scene.add(this.lgEmission.group);
+    }
   }
 
   /** Direct access to the Local Group layer for dev-console / label

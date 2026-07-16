@@ -8,9 +8,9 @@ elements are moved into the modal on open and restored on close).
 ## Star search
 
 `search.ts` is fuse.js-backed; ranks against name + constellation +
-Bayer designation. Selecting an entry dispatches through
-`focusStar(idx)` for navigate or `warpTo(idx)` when the To slot is
-active.
+Bayer designation. Selecting an entry dispatches through `flyTo` /
+`focusStar` for navigate or `warpTo` when picking a location in
+observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
 tier re-rank + within-kind dedup over stars + clouds + Local Group

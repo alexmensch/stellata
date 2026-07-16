@@ -67,6 +67,13 @@ opacity write hits one slot.
 
 ## Emission layer
 
+> **Status:** Shelved while the visual treatment is refined —
+> `LG_EMISSION_SHELVED = true` in `local-group-emission.ts` stops the
+> shell from constructing the layer, so the glow renders nowhere. The
+> filter flag (`showLgEmission`), URL bit 22, and the debug-panel
+> Deep-field knobs all stay wired; flip the const to false to
+> re-enable with no other change.
+
 `local-group-emission.ts` renders every object's solved luminosity
 model (`emission` block, `docs/science-local-group.md` § Local Group
 luminosity model) as
