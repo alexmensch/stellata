@@ -111,10 +111,11 @@ by construction.
 approximation** with the cubic Jupiter–Neptune correction terms
 (Table 2a/2b inlined). Sub-arcminute accuracy 3000 BC – 3000 AD,
 which is overkill for billboarded discs that floor at ~2 px regardless
-of zoom. VSOP87 was rejected during 3re.3: the precision difference is
-invisible at user-reachable framings and the dependency cost was not
-worth it. Deep-time (sub-arcminute outside Standish's window) is filed
-as `stellata-1gh`.
+of zoom. VSOP87 was rejected: the precision difference is invisible at
+user-reachable framings and the dependency cost was not worth it.
+Deep-time never arises — the model clock clamps to the Standish window
+(§ Time `t` and the readout), so no reachable `t` needs a
+higher-precision ephemeris.
 
 Returned positions are heliocentric **ecliptic** parsecs, not ICRS —
 the rotation onto ICRS happens in the caller via the per-host
@@ -127,8 +128,10 @@ scale, sub-minute planet motion is invisible — Mercury moves ~3e-5 rad
 seen from Earth over 60 s, well below pixel resolution at any zoom we
 afford. The cache key is `t / CACHE_GRANULARITY_SEC` floored, so
 multiple frames within the same minute reuse the same `Vec3` triplet.
-A future time scrubber (`stellata-nmu`) reducing the granularity to
-sub-second is straightforward — the cache key just bucketises finer.
+Under scrubber fast-forward the sim-time step per frame quickly
+exceeds the bucket, so the cache simply misses every frame and the
+positions stay smooth; reducing the granularity finer is just a
+bucketisation change if ever needed.
 
 ## Time `t` and the readout
 
@@ -148,6 +151,15 @@ snapshot the current virtual time so scrubbing never teleports. `|rate|`
 saturates at `2³²` (~4.29e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
 live.
+
+`t` itself is clamped to the Standish ephemeris validity window
+(3000 BC – 3000 AD; `T_CLAMP_MIN_S` / `T_CLAMP_MAX_S`) — every clock
+mutation and `getT()` read clamps, so no consumer ever sees an epoch
+where planet positions (or linear star propagation) are garbage. A
+running clock **pins at the bound** with its rate intact: the readout
+freezes there, no invisible overshoot accrues (the clock re-anchors at
+the bound), and the first opposite-direction transport step moves off
+it immediately. See SCIENCE.md § Solar system for the decision record.
 
 Jump-to-date is a native `datetime-local` input whose value is
 read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
@@ -210,8 +222,11 @@ as prominently as play/pause. Rate shows as a human "time / second" phrase
 (`formatRatePerSecond`, pure + unit-tested). Colours ride the root CSS
 tokens so chart mode (`body.monochrome`) adapts; only the translucent
 panel background carries an explicit light-mode override in `styles.css`.
-Catalogue / proper-motion advance stays out — that's the deferred
-`stellata-nmu` epic; this widget is the clock-only slice.
+The catalogue moves with the scrubbed clock too — star positions
+re-advance off their J2016.0 baseline on 1/20-Julian-year bucket
+crossings (`../loaders/README.md` on `epoch-advance-pure.ts`;
+SCIENCE.md § Current-epoch star positions) — but this widget stays
+clock-only and never touches positions itself.
 
 ## Planet rendering
 

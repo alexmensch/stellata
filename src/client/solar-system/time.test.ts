@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   MAX_RATE,
+  T_CLAMP_MAX_S,
+  T_CLAMP_MIN_S,
   VirtualClock,
   isLive,
+  julianEpochYearToT,
   nextFastForwardRate,
   nextRewindRate,
   parseLocalDatetimeValue,
@@ -228,6 +231,46 @@ describe('VirtualClock', () => {
     const c = new VirtualClock(w.now);
     for (let i = 0; i < 40; i++) c.fastForward();
     expect(c.getRate()).toBe(MAX_RATE);
+  });
+});
+
+describe('model-clock clamp (Standish window)', () => {
+  it('julianEpochYearToT maps J2000.0 to the J2000 Unix instant', () => {
+    expect(julianEpochYearToT(2000)).toBe(946728000);
+  });
+
+  it('pins the clamp bounds to 3000 BC / 3000 AD Julian epoch years', () => {
+    expect(T_CLAMP_MIN_S).toBe(julianEpochYearToT(-2999));
+    expect(T_CLAMP_MAX_S).toBe(julianEpochYearToT(3001));
+  });
+
+  it('setTimeAbsolute clamps a jump beyond either bound', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.pause();
+    c.setTimeAbsolute(T_CLAMP_MAX_S + 1e12);
+    expect(c.getT()).toBe(T_CLAMP_MAX_S);
+    c.setTimeAbsolute(T_CLAMP_MIN_S - 1e12);
+    expect(c.getT()).toBe(T_CLAMP_MIN_S);
+  });
+
+  it('a running clock pins at the bound with its rate intact', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.setRate(MAX_RATE);
+    w.advance(1e7); // raw t would overshoot the bound by orders of magnitude
+    expect(c.getT()).toBe(T_CLAMP_MAX_S);
+    expect(c.getRate()).toBe(MAX_RATE);
+  });
+
+  it('no invisible overshoot accrues while pinned — reversing moves off the bound immediately', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.setRate(MAX_RATE);
+    w.advance(1e7);
+    c.setRate(-64);
+    w.advance(10);
+    expect(c.getT()).toBe(T_CLAMP_MAX_S - 640);
   });
 });
 
