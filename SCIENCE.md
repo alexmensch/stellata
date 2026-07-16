@@ -706,14 +706,55 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   targets, constellation lines, binaries baselines, eclipse
   photometry — inherits current-epoch positions *coherently by
   construction*, with zero per-frame cost and zero shader change.
-- Within-session drift with `t` pinned to now is invisible: the
-  fastest star moves ~0.001″/hour. No re-advance machinery needed
-  until the scrubber exists. When it does: re-run the pass when
-  `|t − t_advanced|` exceeds a sub-pixel drift threshold
-  (bucketised, same idea as the ephemeris 60 s cache); a per-frame
-  GPU path (per-instance velocity attribute) stays available as an
-  escalation and reads the same velocity columns, but is not needed for
-  v1.
+- **Scrubber-time re-advance.** The pristine J2016.0 positions are
+  snapshotted at load and kept immutable; whenever the model clock
+  crosses a 1/20-Julian-year bucket (worst catalog PM drifts ~0.5″
+  per bucket — sub-pixel at any reachable framing), the same pure
+  pass re-runs off that baseline into `catalog.positions`, the
+  local-frame buffer rebuilds, and `iPosition` re-uploads. Each
+  epoch is an idempotent function of the bucketised `t`, so scrubbed
+  views reproduce exactly across sessions and URL restores. When a
+  star is focused the camera, orbit target, and in-flight transition
+  pose caches translate by the focal's space-motion delta (the same
+  follow contract the focal-frame ride uses for orbital drift), so
+  the NDC pin survives the move. A per-frame GPU path (per-instance
+  velocity attribute) stays available as an escalation and reads the
+  same velocity columns; not needed at scrub cadence.
+- **Load-epoch caches stay put.** The Sol-distance machinery
+  (`distSol` values, the `iDistSol` filter attribute, and the
+  sorted-by-distance scan index) is built once at load and *not*
+  refreshed on re-advance — the GPU distance filter and the CPU pick
+  window read the same load-epoch values, so they stay mutually
+  consistent, and the worst star moves < ~3 pc over the whole
+  clamped scrub range (visible only as a slightly stale distance
+  filter edge for stars within that bound of the slider values). The
+  core-mask scan window widens by the load-computed worst-case drift
+  bound so a star that drifted toward the camera still enables the
+  mask. Per-star dust extinction is likewise not recomputed: maximum
+  drift is sub-voxel for the Edenhofer grid.
+
+**Scrub-range clamp — what moves with `t`, and why nothing fades.**
+The model clock is clamped to the Standish ephemeris window
+(3000 BC – 3000 AD, § Solar system); the scrubber pins at the bound
+with its rate intact. Within that window every layer is honest
+without hide/fade machinery: planets are sub-arcminute by
+construction; stars carry real 3D space motion (linear propagation
+degrades gracefully — arcminute-faithful to ~±1 kyr, worst-case
+~1° for Barnard's-class PM at the window edges); constellation
+figures and chart mode read the live positions array and deform with
+the stars; GCVS pulsation phase and binary orbits already run on
+`getT()`. The layers with no kinematics in their source data —
+molecular clouds, dust, Milky Way volume, galactic grid, Local Group
+wireframes, heliopause — are *genuinely static* on a ±3 kyr scale
+(Milky Way rotation shifts kpc-scale structure by < 1 pc; cloud
+morphology evolves on 10⁵–10⁶ yr), so rendering them fixed is
+physically correct, not a frozen lie. The misleading-freeze problem
+this epic once contemplated only exists at ≥100 kyr offsets, which
+the clamp — forced anyway by the ephemeris and linear-PM validity —
+never exposes. Known limitation: the ~950 Tier-3 wide pairs with
+divergent baked velocities (`stellata-zau1`) shear slowly under deep
+scrub, up to tens of arcminutes at the window edges for the worst
+pairs.
 
 **Time base.** `Stellata.getT()` → Julian epoch years via
 `(JDE − 2451545.0) / 365.25`. Single source of truth — never
@@ -1027,9 +1068,14 @@ sub-arcsecond accuracy ±4000 years from J2000. We dropped it during
 implementation: planets render as billboarded discs at a pixel-size
 floor, and sub-arcminute precision is invisible at every zoom the
 user can reach. The Standish approximation is ~50 lines of code over
-an 8-row element table, with no dependency cost. Extending validity
-beyond ±3000 years from J2000 would need a higher-precision ephemeris
-model (VSOP87 or a perturbation-theory series) and is deferred.
+an 8-row element table, with no dependency cost. **Decision (closes
+the deep-time question):** rather than adopting a heavier ephemeris,
+the model clock itself clamps to the Standish validity window
+(3000 BC – 3000 AD; `T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
+`src/client/solar-system/time.ts`) — the same window at which linear
+star propagation and the static background layers stop being honest
+(§ Current-epoch star positions). No scrubbable epoch can leave the
+window, so no higher-precision model is needed.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major

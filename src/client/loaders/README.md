@@ -34,18 +34,23 @@ catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader
                          round-trip through the shared writeStarRecord.
-epoch-advance-pure.ts    load-time space-motion propagation:
-                         `advancePositionsToEpoch(positions, velocities,
-                         epochJyr)` rewrites catalog.positions in place to
-                         `p(J2016) + v·(t − 2016)` (float64 math, float32
-                         write-back). Called ONCE from the Stellata
-                         constructor before `_localPositions` is derived,
-                         so every downstream consumer inherits current-epoch
-                         positions by construction — zero per-frame cost, no
-                         shader change. `jdeToJulianEpochYear` converts the
-                         model clock's JD to the propagation's Julian-year
-                         base. No re-advance in v1 (drift ~0.001″/h);
-                         scrubber-time re-advance is stellata-nmu.5. Pure +
+epoch-advance-pure.ts    space-motion propagation:
+                         `advancePositionsToEpoch(base, velocities,
+                         epochJyr, out)` writes `p(J2016) + v·(t − 2016)`
+                         (float64 math, float32 write-back) into `out`
+                         from an immutable J2016.0 baseline. The Stellata
+                         constructor snapshots that baseline and advances
+                         catalog.positions before `_localPositions` is
+                         derived, so every downstream consumer inherits
+                         current-epoch positions by construction; the
+                         per-frame `maybeReAdvanceEpoch` re-runs the same
+                         pass whenever the (scrubbed) model clock crosses a
+                         `bucketEpochJyr` bucket (1/20 Julian year —
+                         sub-pixel drift per bucket even for Barnard's).
+                         `jdeToJulianEpochYear` converts the model clock's
+                         JD to the propagation's Julian-year base;
+                         `maxSpeedPcPerYr` bounds scrub-range drift for
+                         the load-epoch distance-window consumers. Pure +
                          vitest-pinned; the sky-position corpus drives the
                          SAME function end-to-end. See SCIENCE.md
                          § Current-epoch star positions.

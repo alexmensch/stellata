@@ -65,12 +65,19 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
-import { VirtualClock, tToJDE } from './solar-system/time';
+import {
+  T_CLAMP_MAX_S,
+  T_CLAMP_MIN_S,
+  VirtualClock,
+  tToJDE,
+} from './solar-system/time';
 import {
   advancePositionsToEpoch,
+  bucketEpochJyr,
   jdeToJulianEpochYear,
+  maxSpeedPcPerYr,
 } from './loaders/epoch-advance-pure';
-import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import { J2000_JD, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
@@ -310,6 +317,14 @@ export class Stellata implements FrameAnchor {
   // `localPositions` getter so every path stays in the camera's frame.
   private worldOffset = new THREE.Vector3();
   private _localPositions: Float32Array;
+  // Pristine J2016.0 catalog positions — the immutable baseline every
+  // epoch (re-)advance writes catalog.positions from. Never mutate.
+  private readonly _basePositions: Float32Array;
+  // Bucketised Julian epoch year catalog.positions currently sits at.
+  private _advancedEpochJyr: number;
+  private readonly _maxEpochDriftPc: number;
+  // Scratch for the focused star's per-re-advance space-motion delta.
+  private readonly _epochFollowDelta = new THREE.Vector3();
   // Composite-suppress flag per catalog instance. 0 = render normally;
   // 1 = drop the disc + core depth-mask passes (additive glow still
   // runs). BinaryOrbitField writes per-frame for sub-pixel secondaries.
@@ -447,19 +462,31 @@ export class Stellata implements FrameAnchor {
   constructor({ canvas, catalog }: StellataOptions) {
     this.catalog = catalog;
 
-    // Space-motion propagation: advance catalog.positions off the fixed
-    // J2016.0 baseline to the model clock (getT() — live-now on a bare load;
-    // the clock field is initialised before the body runs), ONCE, before any
-    // consumer reads a position. _localPositions, iDistSol, hover/focus/warp
-    // targets, constellation lines, binaries baselines, and eclipse
-    // photometry all inherit current-epoch positions by construction, with
-    // zero per-frame cost. Within-session drift is invisible (~0.001″/h);
-    // scrubber-time re-advance is deferred. See SCIENCE.md
-    // § Current-epoch star positions.
-    advancePositionsToEpoch(
-      catalog.positions,
-      catalog.velocities,
+    // Space-motion propagation: advance catalog.positions off the pristine
+    // J2016.0 baseline (snapshotted here, kept immutable) to the model clock
+    // (getT() — live-now on a bare load; the clock field is initialised
+    // before the body runs) before any consumer reads a position.
+    // _localPositions, iDistSol, hover/focus/warp targets, constellation
+    // lines, binaries baselines, and eclipse photometry all inherit
+    // current-epoch positions by construction. maybeReAdvanceEpoch() re-runs
+    // the same pass from the same baseline whenever the scrubbed clock
+    // crosses a bucket. See SCIENCE.md § Current-epoch star positions.
+    this._basePositions = new Float32Array(catalog.positions);
+    this._advancedEpochJyr = bucketEpochJyr(
       jdeToJulianEpochYear(tToJDE(this.getT())),
+    );
+    advancePositionsToEpoch(
+      this._basePositions,
+      catalog.velocities,
+      this._advancedEpochJyr,
+      catalog.positions,
+    );
+    // How far any star can sit from its load-epoch position over the full
+    // clamped scrub range — the widening the load-time sortedDistFromSol
+    // windows need to stay correct at any scrubbed t.
+    this._maxEpochDriftPc = maxSpeedPcPerYr(catalog.velocities) * Math.max(
+      this._advancedEpochJyr - jdeToJulianEpochYear(tToJDE(T_CLAMP_MIN_S)),
+      jdeToJulianEpochYear(tToJDE(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
     );
 
     this.renderer = new THREE.WebGLRenderer({
@@ -1091,17 +1118,7 @@ export class Stellata implements FrameAnchor {
     const dz = newOrigin.z - this.worldOffset.z;
     if (dx === 0 && dy === 0 && dz === 0) return null;
 
-    const abs = this.catalog.positions;
-    const loc = this._localPositions;
-    const ox = newOrigin.x, oy = newOrigin.y, oz = newOrigin.z;
-    const n = this.catalog.count;
-    for (let i = 0; i < n; i++) {
-      const j = i * 3;
-      loc[j] = abs[j] - ox;
-      loc[j + 1] = abs[j + 1] - oy;
-      loc[j + 2] = abs[j + 2] - oz;
-    }
-    this.starPipeline.iPositionAttr.needsUpdate = true;
+    this.writeLocalPositions(newOrigin.x, newOrigin.y, newOrigin.z);
 
     this.camera.position.x -= dx;
     this.camera.position.y -= dy;
@@ -1119,6 +1136,67 @@ export class Stellata implements FrameAnchor {
     this.planetBodyField.recenter(newOrigin);
     this.binaryOrbitField?.recenter(newOrigin);
     return this._recenterDelta.set(dx, dy, dz);
+  }
+
+  // Rewrite _localPositions = catalog.positions − (ox, oy, oz) in float64
+  // per axis (float32 write-back) and flag the instance buffer for
+  // re-upload. Shared by recenterOrigin (origin moved) and
+  // maybeReAdvanceEpoch (absolute positions moved).
+  private writeLocalPositions(ox: number, oy: number, oz: number): void {
+    const abs = this.catalog.positions;
+    const loc = this._localPositions;
+    const n = this.catalog.count;
+    for (let i = 0; i < n; i++) {
+      const j = i * 3;
+      loc[j] = abs[j] - ox;
+      loc[j + 1] = abs[j + 1] - oy;
+      loc[j + 2] = abs[j + 2] - oz;
+    }
+    this.starPipeline.iPositionAttr.needsUpdate = true;
+  }
+
+  // Scrubber-time star motion: when the model clock crosses a re-advance
+  // bucket, re-run the epoch-advance pass off the immutable J2016.0
+  // baseline and rebuild the local frame. Runs at the top of animate() so
+  // BinaryOrbitField / eclipse photometry rewrite their active slots on
+  // top of the fresh baselines in the same frame. When a star is focused,
+  // the camera + orbit target (+ any in-flight transition pose caches)
+  // translate by the focal's space-motion delta — the same follow contract
+  // applyFocalFrameRide implements for orbital drift — so the pin
+  // invariant (target === focal live position) survives the move. Skipped
+  // during warp: the warp owns the camera and re-snaps on arrival.
+  private maybeReAdvanceEpoch(): void {
+    const targetJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJDE(this.getT())));
+    if (targetJyr === this._advancedEpochJyr) return;
+    const abs = this.catalog.positions;
+    const focal = this.focus.getFocusedStar();
+    let fx = 0, fy = 0, fz = 0;
+    if (focal !== null) {
+      fx = abs[focal * 3];
+      fy = abs[focal * 3 + 1];
+      fz = abs[focal * 3 + 2];
+    }
+    advancePositionsToEpoch(
+      this._basePositions,
+      this.catalog.velocities,
+      targetJyr,
+      abs,
+    );
+    this._advancedEpochJyr = targetJyr;
+    this.writeLocalPositions(this.worldOffset.x, this.worldOffset.y, this.worldOffset.z);
+    if (focal !== null && !this.warp.isActive()) {
+      const d = this._epochFollowDelta.set(
+        abs[focal * 3] - fx,
+        abs[focal * 3 + 1] - fy,
+        abs[focal * 3 + 2] - fz,
+      );
+      if (d.lengthSq() > 0) {
+        this.camera.position.add(d);
+        this.controls.target.add(d);
+        this.focus.translateFocusFrame(d);
+        this.observe.translateFocusFrame(d);
+      }
+    }
   }
 
  // recenterFocusToStar moved to FocusController — it
@@ -2298,8 +2376,11 @@ export class Stellata implements FrameAnchor {
     const camDistFromSol = Math.sqrt(
       camAbsX * camAbsX + camAbsY * camAbsY + camAbsZ * camAbsZ,
     );
-    const lo = camDistFromSol - dThresh;
-    const hi = camDistFromSol + dThresh;
+    // sortedDistFromSol holds load-epoch Sol distances; a scrubbed star can
+    // sit up to _maxEpochDriftPc away from its sorted value, so the window
+    // widens by that bound. The in-window test below reads live positions.
+    const lo = camDistFromSol - dThresh - this._maxEpochDriftPc;
+    const hi = camDistFromSol + dThresh + this._maxEpochDriftPc;
 
     const sortedIdx = this.sortedByDistFromSol;
     const { start, end } = sortedDistRange(this.sortedDistFromSol, lo, hi);
@@ -2321,6 +2402,7 @@ export class Stellata implements FrameAnchor {
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
+    this.maybeReAdvanceEpoch();
     perfMark('controls.update');
     if (this.warp.isActive()) {
       this.warp.tick(performance.now());
@@ -2362,7 +2444,7 @@ export class Stellata implements FrameAnchor {
     // glow material via sharedUniforms). Days since J2000 from getT(), plus
     // the warp rate in model-days/real-second for the anti-strobe floor.
     const varUniforms = this.starPipeline.discMaterial.uniforms;
-    varUniforms.uModelDays.value = tToJDE(this.getT()) - 2451545.0;
+    varUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
     varUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
     if (this.extinctionPrepass !== null) {
       // Absolute camera position in JS float64 — same frame convention as

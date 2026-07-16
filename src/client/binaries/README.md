@@ -124,10 +124,21 @@ the mass-fraction stored on each record.
 
 ### Composition with proper-motion propagation
 
-The load-time epoch-advance (`loaders/epoch-advance-pure.ts`) shifts
+The epoch-advance (`loaders/epoch-advance-pure.ts`) shifts
 `catalog.positions` by each star's baked space-motion velocity *before*
 `BinaryOrbitField` runs, so the pair's systemic drift is already in the
-primary slot this field reads. Because the walk places a Tier-1/2 secondary
+primary slot this field reads. That ordering holds per frame under time
+scrubbing too: `maybeReAdvanceEpoch` runs at the top of `animate()`,
+rewriting `catalog.positions` + `_localPositions` off the immutable
+J2016.0 baseline, and this field's walk then re-perturbs its active
+slots on top of the fresh baselines in the same frame. The slot-reset
+baseline and `focalPerturbationInto`'s `bakedDiff` read the live
+`catalog.positions`, and the systemic-velocity invariant keeps every
+`has_orbit` pair's baked diff constant under the advance, so no cache
+here is epoch-keyed. (The one deliberate exception: `baseDiffPc`'s ICRS
+tangent basis is built from the primary's attach-time direction — stale
+by sub-milliarcseconds over the full scrub range, orders below the
+elements' own uncertainty.) Because the walk places a Tier-1/2 secondary
 at `primary + baseDiffPc + ΔR(t)` from the **elements alone** (never
 `abs[s] − abs[p]`), the rendered relative offset is invariant under the
 advance regardless of the members' baked velocities — orbital motion stays
@@ -136,11 +147,12 @@ therefore matters only for **Tier-3 static** companions (skipped here): they
 ride their baked velocity directly, so a promoted companion with no own PM
 inherits its primary's systemic velocity at build time
 (`scripts/catalog/companion-promotion.ts`) or it would freeze at `v=0` and
-shear from a drifting primary. This resolves the anchor-seam question
-(`stellata-nmu.4`): v1 is the CPU-baseline scheme at load granularity. Full
-systemic coherence for *every* binaries.bin pair — keyed on this file's
-authoritative resolved pairing, which the catalog build can't replicate — is
-`stellata-zau1`.
+shear from a drifting primary. Full systemic coherence for *every*
+binaries.bin pair — keyed on this file's authoritative resolved pairing,
+which the catalog build can't replicate — is `stellata-zau1`; until it
+lands, the ~950 divergent-velocity Tier-3 wide pairs shear up to tens of
+arcminutes at the scrub-range extremes (SCIENCE.md § Current-epoch star
+positions).
 
 ### Focal-frame ride (no rebase)
 
