@@ -51,9 +51,8 @@ handler dispatches by what was picked under the cursor — a cloud pick
 from a star focus sets a star→cloud measurement vector; a cloud pick
 from a cloud focus sets a cloud→cloud vector; clicking the current
 vector tip (star or cloud) triggers a focus-park lerp via `focusStar`
-or `flyToCloud`; pressing W or clicking the distance label dispatches
-to `warpTo`
-or `warpToCloud` based on which vector slot is active. The two
+or `flyTo`; pressing W or clicking the distance label dispatches to
+`warpTo` with whatever Target the vector slot holds. The two
 cloud-specific carve-outs are (a) no focus ring (the SVG overlay reads
 `getFocusedStar` only and naturally ignores `focusedCloud`) and (b) the
 park-distance inputs use `cloudViewingDistancePc` (= `2.4 × max(axes)`,
@@ -74,34 +73,37 @@ existing tooltip element.
 
 Cloud entries share the same Fuse fuzzy index as star entries,
 discriminated by a `kind: 'star' | 'cloud'` tag. The Focus search box
-dispatches by kind — cloud picks call `flyToCloud` (focus-park lerp to
-viewing distance + set cloud focus); the To (distance vector) box
-accepts both, dispatching to `setVectorToCloud` for cloud picks.
+dispatches `flyTo` with the entry's Target (focus-park lerp to viewing
+distance + set cloud focus); the To (distance vector) box dispatches
+`setVector` the same way.
 
 ## Focus + warp entry points
 
-**`setOrbitTargetCloud(cloudIdx)`:** the click-without-focus path —
-mirrors `setOrbitTarget` for stars. Moves orbit pivot to the cloud
-centroid and sets the cloud focus, but leaves the camera position
-unchanged. Camera doesn't teleport; user pivots around the cloud from
-their current vantage. Calls `setFocusedCloud` first, which clears any
-star focus; the floating origin stays at the former focal star instead
-of snapping back to Sol, so the cloud's absolute centroid is converted
-to local-frame coordinates by subtracting `worldOffset` before assigning
-to `controls.target`.
+Clouds ride the Target-keyed shell surface — no cloud-specific entry
+points remain. Per-kind geometry (local position, park distance,
+rendered silhouette) comes from the `cloud` FocusableProviders entry
+(`../camera/focus/README.md` § FocusableProviders).
 
-**`flyToCloud(cloudIdx)`:** the focus-park path — used by search-select
-and click-vector-tip. Mirrors `focusStar`: clears prior focus + vector,
-then composes the generic `parkDistance(...)` primitive with the cloud's
-max-semi-axis as `R_pc` and `cloudViewingDistancePc(cloud)` as
-`dMinFloor`. Lerps over `FOCUS_LERP_MS` when the camera is currently
-outside park, or stays put when inside. `animate: false` (URL-restore)
-snaps. For animated travel between distant focal points the user warps
-via the distance label.
+**`setOrbitTarget({kind:'cloud', idx})`:** the click-without-focus
+path. Moves orbit pivot to the cloud centroid and sets the cloud
+focus, but leaves the camera position unchanged. Displacing a star
+focus doesn't snap the floating origin back to Sol, so the cloud's
+absolute centroid is converted to local-frame coordinates by
+subtracting `worldOffset` before assigning to `controls.target`.
 
-**`warpToCloud(destIdx)`:** the cloud-destination warp. Source point is
-the currently-focused star OR cloud (`currentFocusTarget()`); destination
-is the cloud's centroid; arrival offset is `cloudViewingDistancePc`.
+**`flyTo({kind:'cloud', idx})`:** the focus-park path — used by
+search-select and click-vector-tip. Mirrors `focusStar`: clears prior
+focus + vector, then composes the generic `parkDistance(...)`
+primitive with the cloud's max-semi-axis as `R_pc` and
+`cloudViewingDistancePc(cloud)` as `dMinFloor` (the provider's
+`focusParkDistance` leg). Lerps over `FOCUS_LERP_MS` when the camera
+is currently outside park, or stays put when inside. `animate: false`
+(URL-restore) snaps. For animated travel between distant focal points
+the user warps via the distance label.
+
+**`warpTo({kind:'cloud', idx})`:** the cloud-destination warp. Source
+point is whatever is focused (`currentFocusTarget()`); destination is
+the cloud's centroid; arrival offset is `cloudViewingDistancePc`.
 `WarpState` carries source/dest as kind-agnostic `FocusTarget`s
 (`../camera/focus/README.md` § FocusTarget contract), so arrival parks
 and focus dispatch need no per-kind switch.

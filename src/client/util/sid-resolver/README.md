@@ -28,7 +28,15 @@ then reaches exactly one terminal state:
   shelved layer); `conclude(kind)` records that so resolution can stop
   waiting for it.
 
-`resolve(sid)` returns:
+`resolve(sid)` first canonicalises through the **successor map**
+(retired sid → successor sid, docs/sid.md § 9.4) — built at catalog
+build time from `retirements.tsv` net of `reinstatements.tsv`, shipped
+as the catalog manifest's `sidSuccessors` side-field, and passed to
+the constructor. Chains are followed to their live end (a corrupt
+cycle resolves `unknown`); a retired sid never appears in any artifact
+(CI-guarded), so canonicalising before the domain walk is lossless.
+The map is empty until a merge-type retirement ships (all committed
+retirements today are successor-less). It then returns:
 
 - `{ status: 'resolved', kind, localIndex }` — an attached domain
   claims the sid. Domains are consulted in roster order, so `star`
@@ -36,9 +44,9 @@ then reaches exactly one terminal state:
 - `{ status: 'pending' }` — no attached domain claims it AND at least
   one rostered domain is still neither attached nor concluded.
 - `{ status: 'unknown' }` — every rostered domain has settled and none
-  claims it (retired/parked sid, or a URL from a newer deploy carrying
-  an object type this client doesn't ship). sid 0 (`NO_SID`) and
-  non-positive values are `unknown` immediately.
+  claims it (successor-less retired/parked sid, or a URL from a newer
+  deploy carrying an object type this client doesn't ship). sid 0
+  (`NO_SID`) and non-positive values are `unknown` immediately.
 
 ## Deferred intents
 

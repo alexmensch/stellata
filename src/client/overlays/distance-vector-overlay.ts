@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { renderedSizePx, renderedDiscPxAtPeak } from '../camera/controls/star-physics';
+import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import { fmtDistAuto } from '../ui/distance-util';
 import {
   buildArrowSvgPath,
@@ -64,20 +64,8 @@ export function createDistanceVectorOverlay(
   // the same affordance as the Sol/GC arrow labels. Warping there is
   // deliberately NOT on the label; it stays on the W key only.
   distUi.addEventListener('click', () => {
-    const toStar = stellata.getVectorTo();
-    if (toStar !== null) {
-      const lp = stellata.localPositions;
-      tmpClickAim.set(lp[toStar * 3], lp[toStar * 3 + 1], lp[toStar * 3 + 2]);
-      stellata.aimAt(tmpClickAim);
-      return;
-    }
-    const toCloud = stellata.getVectorToCloud();
-    if (toCloud !== null && stellata.cloudLocalPositionInto(toCloud, tmpClickAim)) {
-      stellata.aimAt(tmpClickAim);
-      return;
-    }
-    const toLg = stellata.getVectorToLg();
-    if (toLg !== null && stellata.lgLocalPositionInto(toLg, tmpClickAim)) {
+    const to = stellata.getVectorTarget();
+    if (to !== null && stellata.focusables[to.kind].localPositionInto(to.idx, tmpClickAim)) {
       stellata.aimAt(tmpClickAim);
     }
   });
@@ -125,58 +113,37 @@ export function createDistanceVectorOverlay(
     visible = false;
   };
 
-  // Vector and vectorCloud are mutually exclusive destinations; either
-  // event firing might leave both slots null (the canonical "no vector"
-  // state). Same handler on both edges keeps the hide() trigger DRY.
-  const onVectorDestChange = () => {
-    if (
-      stellata.getVectorTo() === null
-      && stellata.getVectorToCloud() === null
-      && stellata.getVectorToLg() === null
-    ) hide();
+  // A 'vector' emit that leaves the slot null is the canonical "no
+  // vector" state — hide immediately rather than on the next frame.
+  stellata.on('vector', () => {
+    if (stellata.getVectorTarget() === null) hide();
+  });
+
+  // Destination display names stay a per-kind lookup — star labels live
+  // on the search corpus, cloud / LG names on their catalogs.
+  const destLabelOf = (to: { kind: string; idx: number }): string => {
+    if (to.kind === 'star') return starLabels.get(to.idx) ?? `Unnamed #${to.idx}`;
+    if (to.kind === 'cloud') {
+      const cat = stellata.getCloudCatalog();
+      return cat ? cat.clouds[to.idx].name : 'Cloud';
+    }
+    return stellata.localGroup?.objects[to.idx]?.name ?? 'Galaxy';
   };
-  stellata.on('vector', onVectorDestChange);
-  stellata.on('vectorCloud', onVectorDestChange);
-  stellata.on('vectorLg', onVectorDestChange);
 
   stellata.on('frame', () => {
-    // Source: whichever is focused. Star wins when both are set (which
-    // shouldn't happen — they're mutually exclusive — but be defensive).
-    const fromStar = stellata.getFocusedStar();
-    const fromCloud = stellata.getFocusedCloud();
-    const fromLg = stellata.getFocusedLg();
-    const toStar = stellata.getVectorTo();
-    const toCloud = stellata.getVectorToCloud();
-    const toLg = stellata.getVectorToLg();
-    if ((fromStar === null && fromCloud === null && fromLg === null) ||
-        (toStar === null && toCloud === null && toLg === null)) { hide(); return; }
+    const from = stellata.getFocusedTarget();
+    const to = stellata.getVectorTarget();
+    if (from === null || to === null) { hide(); return; }
 
     const camera = stellata.camera;
-    // Local-frame positions — the camera and projection math operate in
-    // whatever frame the floating origin has set (see stellata.ts).
-    const positions = stellata.localPositions;
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    if (fromStar !== null) {
-      tmpA.set(positions[fromStar * 3], positions[fromStar * 3 + 1], positions[fromStar * 3 + 2]);
-    } else if (fromCloud !== null) {
-      if (!stellata.cloudLocalPositionInto(fromCloud, tmpA)) { hide(); return; }
-    } else if (fromLg !== null) {
-      if (!stellata.lgLocalPositionInto(fromLg, tmpA)) { hide(); return; }
-    }
-    let destLabel = '';
-    if (toStar !== null) {
-      tmpB.set(positions[toStar * 3], positions[toStar * 3 + 1], positions[toStar * 3 + 2]);
-      destLabel = starLabels.get(toStar) ?? `Unnamed #${toStar}`;
-    } else if (toCloud !== null) {
-      if (!stellata.cloudLocalPositionInto(toCloud, tmpB)) { hide(); return; }
-      const cat = stellata.getCloudCatalog();
-      destLabel = cat ? cat.clouds[toCloud].name : 'Cloud';
-    } else if (toLg !== null) {
-      if (!stellata.lgLocalPositionInto(toLg, tmpB)) { hide(); return; }
-      destLabel = stellata.localGroup?.objects[toLg]?.name ?? 'Galaxy';
-    }
+    // Local-frame positions — the camera and projection math operate in
+    // whatever frame the floating origin has set (see stellata.ts).
+    if (!stellata.focusables[from.kind].localPositionInto(from.idx, tmpA)) { hide(); return; }
+    if (!stellata.focusables[to.kind].localPositionInto(to.idx, tmpB)) { hide(); return; }
+    const destLabel = destLabelOf(to);
 
     const projected = projectWithNearClip(tmpA, tmpB, camera, w, h, projScratch);
     if (!projected) { hide(); return; }
@@ -189,19 +156,7 @@ export function createDistanceVectorOverlay(
     // and a nearby molecular cloud spans tens of degrees. Cloud silhouette
     // is keyed off the largest semi-axis (matches `cloudViewingDistancePc`);
     // exact for spheres, slight overshoot for prolate clouds viewed end-on.
-    const destOffsetPx = toStar !== null
-      ? Math.max(renderedSizePx({
-          catalog: stellata.catalog,
-          idx: toStar,
-          camPos: stellata.camera.position,
-          localPositions: stellata.localPositions,
-          uniforms: stellata.uniforms,
-          filter: stellata.getFilter(),
-          suppressPulsation: stellata.suppressPulsation,
-        }), 0)
-      : toCloud !== null
-        ? Math.max(stellata.renderedCloudSizePx(toCloud), 0)
-        : Math.max(stellata.renderedLgSizePx(toLg as number), 0);
+    const destOffsetPx = Math.max(stellata.focusables[to.kind].renderedSizePx(to.idx), 0);
     const dxPx = pB[0] - pA[0];
     const dyPx = pB[1] - pA[1];
     const lenPx = Math.hypot(dxPx, dyPx);
@@ -272,10 +227,10 @@ export function createDistanceVectorOverlay(
     // Drawn-shaft length is the distance from shaftStart to tip (with
     // SOURCE_OFFSET_PX inset at the source end and the destination's
     // rendered silhouette inset at the tip end) — i.e., the visible line.
-    const discRadiusPx = fromStar !== null
+    const discRadiusPx = from.kind === 'star'
       ? renderedDiscPxAtPeak({
           catalog: stellata.catalog,
-          idx: fromStar,
+          idx: from.idx,
           camPos: stellata.camera.position,
           localPositions: stellata.localPositions,
           uniforms: stellata.uniforms,

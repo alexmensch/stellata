@@ -44,11 +44,11 @@ renderer. `type` (morphological string) and optional `aliases`
 feed the destination-search rows and the focus card.
 
 LG objects are focusable and warpable: they carry the `'lg'`
-`FocusKind` (`lgFocus` / `vectorLg` bus events, `flyToLg` /
-`setOrbitTargetLg` / `warpToLg` entry points mirroring the cloud
-pattern), park at `lgViewingDistancePc` (2.4 × max semi-axis, the
-shared `viewingDistanceForExtent` rule), and ride the URL's universal
-any-kind focus/to SID refs unchanged.
+`TargetKind` (kind-tagged `'focus'` / `'vector'` bus payloads, the
+Target-keyed `flyTo` / `setOrbitTarget` / `warpTo` entry points, and
+an `lg` FocusableProviders entry), park at `lgViewingDistancePc`
+(2.4 × max semi-axis, the shared `viewingDistanceForExtent` rule), and
+ride the URL's universal any-kind focus/to SID refs unchanged.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 
@@ -66,6 +66,13 @@ shared `LineBasicMaterial` across the whole catalog — per-frame
 opacity write hits one slot.
 
 ## Emission layer
+
+> **Status:** Shelved while the visual treatment is refined —
+> `LG_EMISSION_SHELVED = true` in `local-group-emission.ts` stops the
+> shell from constructing the layer, so the glow renders nowhere. The
+> filter flag (`showLgEmission`), URL bit 22, and the debug-panel
+> Deep-field knobs all stay wired; flip the const to false to
+> re-enable with no other change.
 
 `local-group-emission.ts` renders every object's solved luminosity
 model (`emission` block, `docs/science-local-group.md` § Local Group

@@ -444,6 +444,13 @@ One global resolver built at boot from whatever artifacts attach:
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
   registered-but-unattached domain remains, or `unknown` once all
   attached domains have disclaimed it.
+- **Successor following (§ 9.4's last row):** resolution first
+  canonicalises through the retired-sid → successor-sid map, derived
+  at catalog build time from `retirements.tsv` net of
+  `reinstatements.tsv` (`sidSuccessorPairs` in `scripts/sid/sid-pure.ts`)
+  and shipped as the catalog manifest's `sidSuccessors` side-field —
+  so a merge-retired SID arriving on the wire resolves to its
+  survivor with no extra fetch.
 - **Deferred-resolution contract (pin):** applying a URL must never
   block on a late artifact. Unresolved sids from `applyFromUrl`
   register as deferred intents (focus / to / POI); each domain attach

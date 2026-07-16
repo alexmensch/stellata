@@ -76,7 +76,7 @@ so the whole unit stays card-sized regardless of pin count.
 - `card-rolodex.ts` — the stack wiring over `card-body`. Owns the
   `#card-stack` DOM (built in `index.html`, styled via `.card-stack` /
   `.card-strip` + the `.panel` chrome in `styles.css`), rebuilds on
-  `'focus'` / `'cloudFocus'` / `'cameraMode'` / `'pois'`, and ticks
+  `'focus'` / `'cameraMode'` / `'pois'`, and ticks
   LIVE rows on `'frame'`. Collapse rides the shared `bindCollapse`
   helper (`../ui/panel-layout.ts`).
 - `card-rolodex-pure.ts` (+ test) — the rolodex plan (front card +

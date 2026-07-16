@@ -82,9 +82,7 @@ interface FocusFixture {
     recenterOrigin: number;
     recenterFocusToStar: number[];
     setFocus: Array<number | null>;
-    setFocusedCloud: Array<number | null>;
-    setVectorTo: Array<number | null>;
-    setVectorToCloud: Array<number | null>;
+    clearVector: number;
     cancelFocusLerp: number;
     cancelUnfocusLerp: number;
     applyFocus: Array<{ kind: string; idx: number }>;
@@ -102,9 +100,7 @@ function makeFocus(): FocusFixture {
     recenterOrigin: 0,
     recenterFocusToStar: [],
     setFocus: [],
-    setFocusedCloud: [],
-    setVectorTo: [],
-    setVectorToCloud: [],
+    clearVector: 0,
     cancelFocusLerp: 0,
     cancelUnfocusLerp: 0,
     applyFocus: [],
@@ -160,9 +156,11 @@ function makeFocus(): FocusFixture {
       if (focusedCloud !== null) return makeCloudTarget(focusedCloud);
       return null;
     },
-    makeStarFocusTarget: makeStarTarget,
-    makeCloudFocusTarget: makeCloudTarget,
-    makeLgFocusTarget: () => null,
+    makeFocusTarget: (target) => {
+      if (target.kind === 'star') return makeStarTarget(target.idx);
+      if (target.kind === 'cloud') return makeCloudTarget(target.idx);
+      return null;
+    },
     starLocalPosition: (idx) => {
       const row = stars.get(idx);
       if (!row) throw new Error(`star ${idx} not seeded`);
@@ -195,17 +193,13 @@ function makeFocus(): FocusFixture {
       focusedStar = idx;
       calls.setFocus.push(idx);
     },
-    setFocusedCloud: (idx) => {
-      focusedCloud = idx;
-      calls.setFocusedCloud.push(idx);
-    },
-    setFocusedLg: () => {},
-    setVectorTo: (idx) => { calls.setVectorTo.push(idx); },
-    setVectorToCloud: (idx) => { calls.setVectorToCloud.push(idx); },
-    setVectorToLg: () => {},
+    clearVector: () => { calls.clearVector++; },
     getFocusedStar: () => focusedStar,
-    getFocusedCloud: () => focusedCloud,
-    getFocusedLg: () => null,
+    getFocusedTarget: () => {
+      if (focusedStar !== null) return { kind: 'star', idx: focusedStar };
+      if (focusedCloud !== null) return { kind: 'cloud', idx: focusedCloud };
+      return null;
+    },
     isObserveTransitionActive: () => false,
     cancelFocusLerp: () => { calls.cancelFocusLerp++; },
     cancelUnfocusLerp: () => { calls.cancelUnfocusLerp++; },
@@ -322,7 +316,7 @@ describe('WarpController — lifecycle + idempotency', () => {
       physicalRadius: null,
     });
     // focusedStar / focusedCloud both null
-    h.warp.warpTo(0);
+    h.warp.warpTo({ kind: 'star', idx: 0 });
     expect(h.warp.isActive()).toBe(false);
     expect(h.busEvents.filter((e) => e.name === 'warp')).toEqual([]);
   });
@@ -330,7 +324,7 @@ describe('WarpController — lifecycle + idempotency', () => {
   it('warpTo to the currently focused star is a no-op', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo(0); // dest == source
+    h.warp.warpTo({ kind: 'star', idx: 0 }); // dest == source
     expect(h.warp.isActive()).toBe(false);
   });
 
@@ -341,14 +335,14 @@ describe('WarpController — lifecycle + idempotency', () => {
       parkRadius: 5,
     });
     h.focus.setFocusedCloud(7);
-    h.warp.warpToCloud(7);
+    h.warp.warpTo({ kind: 'cloud', idx: 7 });
     expect(h.warp.isActive()).toBe(false);
   });
 
   it('warpToCloud bails when the cloud index is not seeded', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpToCloud(99); // makeCloudFocusTarget returns null
+    h.warp.warpTo({ kind: 'cloud', idx: 99 }); // makeCloudFocusTarget returns null
     expect(h.warp.isActive()).toBe(false);
   });
 
@@ -362,7 +356,7 @@ describe('WarpController — lifecycle + idempotency', () => {
   it('dispose clears state and is idempotent', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     h.warp.dispose();
     expect(h.warp.isActive()).toBe(false);
     h.warp.dispose();
@@ -372,7 +366,7 @@ describe('WarpController — lifecycle + idempotency', () => {
   it('startWarp emits warp:true + state, finishWarp emits warp:false', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     const startNames = h.busEvents.map((e) => `${e.name}:${e.payload}`);
     expect(startNames).toContain('warp:true');
     expect(startNames).toContain('state:undefined');
@@ -385,7 +379,7 @@ describe('WarpController — lifecycle + idempotency', () => {
     const h = makeHarness();
     // distPc = 0 — the view-direction fallback supplies the travel axis.
     seedStarStar(h, new THREE.Vector3(10, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.warp.isActive()).toBe(true);
     h.warp.tick(performance.now() + 1);
     expect(Number.isFinite(h.camera.position.x)).toBe(true);
@@ -409,11 +403,12 @@ describe('WarpController — lifecycle + idempotency', () => {
       parkRadius: 5,
     });
     h.focus.setFocusedStar(0);
-    h.warp.warpToCloud(5);
+    h.warp.warpTo({ kind: 'cloud', idx: 5 });
     expect(h.warp.isActive()).toBe(true);
     h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
-    expect(h.focus.calls.setFocusedCloud).toEqual([5]);
+    expect(h.focus.calls.applyFocus).toContainEqual({ kind: 'cloud', idx: 5 });
+    expect(h.focus.calls.emitFocusEvents).toContainEqual({ kind: 'cloud', idx: 5 });
   });
 
   it('coincident source/destination in OBSERVE flies and lands via swapObserveAnchor, stays in observe', () => {
@@ -422,7 +417,7 @@ describe('WarpController — lifecycle + idempotency', () => {
     // No degenerate shortcut: it runs the full warp and re-anchors through
     // finishWarp, so observe stays engaged.
     seedStarStar(h, new THREE.Vector3(10, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.warp.isActive()).toBe(true);
     h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
@@ -443,7 +438,7 @@ describe('WarpController — getWarpInfo / getWarpPhase', () => {
   });
 
   it('getWarpInfo returns A, B, destKind, destIdx', () => {
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     const info = h.warp.getWarpInfo();
     expect(info).not.toBeNull();
     expect(info!.destKind).toBe('star');
@@ -453,7 +448,7 @@ describe('WarpController — getWarpInfo / getWarpPhase', () => {
   });
 
   it('getWarpPhase reports reorient just after startWarp', () => {
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     const phase = h.warp.getWarpPhase();
     expect(phase).not.toBeNull();
     expect(phase!.kind).toBe('reorient');
@@ -463,7 +458,7 @@ describe('WarpController — getWarpInfo / getWarpPhase', () => {
   });
 
   it('flyArrivalUSeam sentinel = -1 when destination has null physicalRadius', () => {
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // Phase-query at a controlled time past reorient — the controller
     // accepts nowMs so this isn't subject to real-time drift.
     const flyMs = performance.now() + WARP_REORIENT_MS + 10;
@@ -482,7 +477,7 @@ describe('WarpController — getWarpInfo / getWarpPhase', () => {
       new THREE.Vector3(100, 0, 0),
       { destR: 4.65e-8, destPark: 1e-6 }, // ~Sol R in pc; parkDist ~ 1 AU
     );
-    h2.warp.warpTo(1);
+    h2.warp.warpTo({ kind: 'star', idx: 1 });
     const flyMs = performance.now() + WARP_REORIENT_MS + 10;
     h2.warp.tick(flyMs);
     const phase = h2.warp.getWarpPhase(flyMs)!;
@@ -499,7 +494,7 @@ describe('WarpController — 3-phase FSM transitions', () => {
   it('reorient → fly progression: reorient phase ends at reorientMs, fly phase begins', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // Just past the reorient boundary — must report 'fly'.
     const flyMs = performance.now() + WARP_REORIENT_MS + 5;
     h.warp.tick(flyMs);
@@ -510,7 +505,7 @@ describe('WarpController — 3-phase FSM transitions', () => {
     const h = makeHarness();
     // Short warp — Fly duration follows WARP_T_MIN_MS + k·log10(1+dist).
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // Tick well past reorient + WARP_T_MAX_MS so Fly is guaranteed to
     // finish under any panel-tuned durations.
     h.warp.tick(performance.now() + WARP_REORIENT_MS + WARP_T_MAX_MS + 1000);
@@ -523,7 +518,7 @@ describe('WarpController — 3-phase FSM transitions', () => {
   it('observe→observe arrival keeps a post-arrival phase of OBSERVE_TRANSITION_MS', () => {
     const h = makeHarness({ mode: 'observe' });
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // Land the tick precisely inside the post-arrival window: just
     // past reorient + flyDur, well short of post-arrival's end.
     const postMs = performance.now() + WARP_REORIENT_MS + flyDurMs(10) + 100;
@@ -536,14 +531,14 @@ describe('WarpController — 3-phase FSM transitions', () => {
   it('observe→observe arrival emits focus at swapObserveAnchor and re-enables observeControls', () => {
     const h = makeHarness({ mode: 'observe' });
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     h.warp.skip();
     expect(h.observeControls.enable).toHaveBeenCalled();
     expect(h.uHide.value).toBe(1);
     // 'focus' fires at swap.
     const focusEmits = h.busEvents.filter((e) => e.name === 'focus');
     expect(focusEmits.length).toBeGreaterThanOrEqual(1);
-    expect(focusEmits[focusEmits.length - 1].payload).toBe(1);
+    expect(focusEmits[focusEmits.length - 1].payload).toEqual({ kind: 'star', idx: 1 });
     // controls stays disabled — observe owns the camera.
     expect(h.controls.enabled).toBe(false);
   });
@@ -553,7 +548,7 @@ describe('WarpController — skipWarp during each phase', () => {
   it('skip during reorient lands and re-enables controls (navigate)', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(50, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     h.warp.skip(); // straight from reorient — never even entered Fly
     expect(h.warp.isActive()).toBe(false);
     expect(h.controls.enabled).toBe(true);
@@ -564,7 +559,7 @@ describe('WarpController — skipWarp during each phase', () => {
   it('skip during fly lands at the destination', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(50, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     h.warp.tick(performance.now() + WARP_REORIENT_MS + 100); // partway through Fly
     h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
@@ -573,7 +568,7 @@ describe('WarpController — skipWarp during each phase', () => {
   it('skip during post-arrival (observe→observe) lands and re-enables observeControls', () => {
     const h = makeHarness({ mode: 'observe' });
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // Tick into post-arrival without overshooting it.
     h.warp.tick(performance.now() + WARP_REORIENT_MS + flyDurMs(10) + 50);
     h.warp.skip();
@@ -583,7 +578,7 @@ describe('WarpController — skipWarp during each phase', () => {
 });
 
 describe('WarpController — source/dest variants', () => {
-  it('star → cloud uses cloud parkRadius and routes finish through setFocusedCloud', () => {
+  it('star → cloud uses cloud parkRadius and lands via the dest FocusTarget', () => {
     const h = makeHarness();
     h.focus.stars.set(0, {
       abs: new THREE.Vector3(0, 0, 0),
@@ -595,17 +590,14 @@ describe('WarpController — source/dest variants', () => {
       parkRadius: 5,
     });
     h.focus.setFocusedStar(0);
-    h.warp.warpToCloud(7);
+    h.warp.warpTo({ kind: 'cloud', idx: 7 });
     expect(h.warp.isActive()).toBe(true);
     h.warp.skip();
-    // Cloud dest, navigate mode → setFocusedCloud, not setFocus.
-    // (Mid-Fly recentre may have fired and pre-mutated, so we accept
-    // either path provided setFocusedCloud is the one called at the
-    // end — recentre path uses emitFocusEvents instead.)
-    const cloudArrival =
-      h.focus.calls.setFocusedCloud.includes(7) ||
-      h.focus.calls.emitFocusEvents.some((c) => c.kind === 'cloud' && c.idx === 7);
-    expect(cloudArrival).toBe(true);
+    // Cloud dest, navigate mode → the dest FocusTarget's applyFocus +
+    // emitFocusEvents pair, never setFocus (whether or not the mid-Fly
+    // recentre pre-mutated via applyFocus).
+    expect(h.focus.calls.emitFocusEvents).toContainEqual({ kind: 'cloud', idx: 7 });
+    expect(h.focus.calls.setFocus).toEqual([]);
   });
 
   it('cloud → star uses cloud source.parkRadius for the reorient pStart offset', () => {
@@ -622,7 +614,7 @@ describe('WarpController — source/dest variants', () => {
     h.focus.setFocusedCloud(0);
     h.camera.position.set(0, 0, 5); // parked at the cloud's viewing distance
     h.camera.lookAt(0, 0, 0);
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.warp.isActive()).toBe(true);
     // Forward through the FSM.
     h.warp.skip();
@@ -633,7 +625,7 @@ describe('WarpController — source/dest variants', () => {
     const h = makeHarness({ mode: 'observe' });
     h.uHide.value = 0; // observe pre-warp has source hidden
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // During the warp uHide stays pinned to source.
     expect(h.uHide.value).toBe(0);
     h.warp.skip();
@@ -650,7 +642,7 @@ describe('WarpController — mid-Fly recentre + isRecenteredToDest', () => {
   it('mid-Fly recentre fires when the camera crosses the trajectory midpoint', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.warp.isRecenteredToDest()).toBe(false);
     // Drive Fly far past its midpoint — the recentre must fire by then.
     const t0 = performance.now();
@@ -667,7 +659,7 @@ describe('WarpController — mid-Fly recentre + isRecenteredToDest', () => {
   it('mid-Fly recentre fires AT MOST once per warp', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     const t0 = performance.now();
     // Tick many times across Fly — recenter should not double-fire.
     for (let dt = WARP_REORIENT_MS + 10; dt < WARP_REORIENT_MS + WARP_T_MAX_MS; dt += 50) {
@@ -679,7 +671,7 @@ describe('WarpController — mid-Fly recentre + isRecenteredToDest', () => {
   it('navigate finish after mid-Fly recentre fires emitFocusEvents instead of setFocus', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0));
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     // Drive past mid-Fly so recentre fires.
     const t0 = performance.now();
     for (let dt = WARP_REORIENT_MS + 50; dt < WARP_REORIENT_MS + WARP_T_MAX_MS; dt += 50) {
@@ -697,7 +689,7 @@ describe('WarpController — bus emit shape', () => {
   it('warp emit pattern: true → false across a full FSM run', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     h.warp.skip();
     const seq = h.busEvents
       .filter((e) => e.name === 'warp')
@@ -708,17 +700,16 @@ describe('WarpController — bus emit shape', () => {
   it('startWarp cancels in-flight unfocus + focus lerps via the shim', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.focus.calls.cancelUnfocusLerp).toBe(1);
     expect(h.focus.calls.cancelFocusLerp).toBe(1);
   });
 
-  it('finishWarp clears both vector slots regardless of dest kind', () => {
+  it('finishWarp clears the vector slot regardless of dest kind', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo(1);
+    h.warp.warpTo({ kind: 'star', idx: 1 });
     h.warp.skip();
-    expect(h.focus.calls.setVectorTo).toContain(null);
-    expect(h.focus.calls.setVectorToCloud).toContain(null);
+    expect(h.focus.calls.clearVector).toBeGreaterThanOrEqual(1);
   });
 });

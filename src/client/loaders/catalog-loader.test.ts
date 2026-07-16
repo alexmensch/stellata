@@ -168,6 +168,14 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.solIndex).toBe(-1);
       expect(cat.names.size).toBe(0);
     });
+
+    it('builds sidSuccessors from manifest pairs, defaulting empty', () => {
+      const buf = buildCatalog([]);
+      expect(parseBinary(buf, blankConstellations).sidSuccessors.size).toBe(0);
+      const cat = parseBinary(buf, blankConstellations, [[99, 10], [98, 20]]);
+      expect(cat.sidSuccessors.get(99)).toBe(10);
+      expect(cat.sidSuccessors.get(98)).toBe(20);
+    });
   });
 
   describe('record fields', () => {

@@ -31,7 +31,13 @@ lives entirely under `src/client/hover/`:
 - **`hover-types.ts`** — the `HoverProvider` contract:
   `pick(event) → HoverHit | null` and `format(hit) → HoverPayload`.
   `HoverPayload` is `{ name, lines: string[] }` — at most ~5 sub-lines
-  per the design gate so the card stays glanceable.
+  per the design gate so the card stays glanceable. `HoverHit`'s
+  optional `hostStarIdx` sub-key is deliberate and stays: a planet is
+  identified by `(hostStarIdx, planetIdx)`, and the SID resolver does
+  NOT subsume it — its planet domain maps sid → planet index with the
+  host only implicit (Sol today), so replacing the field with a
+  resolver detour would hardcode Sol and lose the multi-host readiness
+  the exoplanet epic needs.
 - **`hover-pick-disambiguator.ts`** — when multiple providers return a
   hit for the same cursor position, pick the closest to the camera, with
   the prime/fallback tier as the higher-priority key. Prime always beats

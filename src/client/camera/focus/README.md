@@ -11,14 +11,14 @@ close-approach focused star sitting at exactly NDC origin.
 - `focus-controller.ts` (+ test) — the FSM. Owns the focused object
   and the distance-vector destination (one `Target` slot each — see
   § Focus state), `cameraMode`, `focusedPlanetSystem`, the focus-park
-  lerp state, pin-engage geometry, and the `makeStarFocusTarget` /
-  `makeCloudFocusTarget` / `makeLgFocusTarget` / `currentFocusTarget`
-  factories. Canonical home for `GLOBAL_MIN_DIST_PC` +
-  `PIN_ENGAGE_THRESHOLD_SQ_PC`.
+  lerp state, pin-engage geometry, and the `makeFocusTarget` /
+  `currentFocusTarget` factories. Canonical home for
+  `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
-- `focus-target.ts` — the `Target` sum type (`{kind, idx}`,
-  kind = `'star' | 'cloud' | 'lg'`) and the `FocusTarget` contract.
+- `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
+  kind = `'star' | 'cloud' | 'lg'`), the `FocusTarget` contract, and
+  the `FocusableProviders` registry contract (§ FocusableProviders).
   Per-kind factories return objects closing over the current focus
   state + controller deps so warp / overlays / arrival math can read
   positions and emit events without knowing the kind.
@@ -35,23 +35,22 @@ stays on `stellata.ts` — those primitives rewrite the star-pipeline
 
 - `focused: Target | null` and `vector: Target | null` — one sum-type
   slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG)
-  is structural rather than enforced by pairwise clears. The setters'
-  remaining job is emitting the clearing event for a displaced kind
-  before the new kind's event (`'cloudFocus'`/`'lgFocus'` null before
-  `'focus'` idx, and the mirror orderings). The per-kind event names
-  (`'focus'`/`'cloudFocus'`/`'lgFocus'`, `'vector'`/`'vectorCloud'`/
-  `'vectorLg'`) are a compatibility façade over the single slot;
-  subscribers are unchanged.
+  is structural rather than enforced by pairwise clears. The `'focus'`
+  and `'vector'` events carry the kind-tagged `Target | null` payload,
+  so a kind change is a single emit — no clearing emit for the
+  displaced kind precedes it; subscribers re-read state or switch on
+  `payload.kind`.
 - `cameraMode` lives here too — `getCameraMode()` is the single read
   path; `setCameraModeValue()` is the raw no-emit write used by
   ObserveTransition and the observe-cleanup branch of `setFocus`.
 - `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
   state.
-- Click/select-driven entry points: `focusStar`, `setOrbitTarget`,
-  `flyToCloud`, `flyToLg`, `setOrbitTargetCloud`, `setOrbitTargetLg`,
-  `unfocus` (including the vector-only wipe when nothing is focused).
-  Each gates on `getWarp().isActive()` and cancels any in-flight
-  focus-park / unfocus lerp before claiming the camera.
+- Click/select-driven entry points are Target-keyed: `flyTo(target)`
+  (star leg = `focusStar`; soft kinds share one provider-driven
+  focus-park path), `setOrbitTarget(target)`, `setVector(target |
+  null)`, `unfocus` (including the vector-only wipe when nothing is
+  focused). Each gates on `getWarp().isActive()` and cancels any
+  in-flight focus-park / unfocus lerp before claiming the camera.
 
 Construction cycle: `WarpController` and `ObserveTransition` both take
 `focus: FocusOps` from `FocusController`, but `FocusController`'s
@@ -64,7 +63,7 @@ resolve at first request. Same pattern Picker uses for async-attached
 layers (`getClouds`, `getLocalGroup`).
 
 Bus events emitted from the controller:
-- `'focus'` (number | null), `'cloudFocus'` (number | null),
+- `'focus'` (Target | null), `'vector'` (Target | null),
   `'planetSystem'` (PlanetSystem | null) — focus state mutations.
 - `'focusLerp'` (boolean) — focus-park lerp start / end edges.
 - `'cameraMode'` (CameraMode) — from `setFocus`'s observe-cleanup
@@ -108,10 +107,10 @@ interface FocusTarget {
 | Method | Role |
 |---|---|
 | `anchorInto` | Input to `recenterOrigin`. The floating origin lands here when the object is focused. |
-| `localPositionInto` | Per-frame `camera.lookAt(...)` source during warp Fly. Also used by overlays that project the object's position, and as the warp's source-`A` derivation in `warpTo` / `warpToCloud`. |
+| `localPositionInto` | Per-frame `camera.lookAt(...)` source during warp Fly. Also used by overlays that project the object's position, and as the warp's source-`A` / dest-`B` derivation in `warpTo`. |
 | `parkRadius` | The warp computes `pStart` / `pEnd` as `anchor − travelDir · parkRadius()` for source and destination respectively — symmetric across both endpoints. |
 | `applyFocus` | Sets the per-kind `focusedStar` / `focusedCloud` / etc. field, updates derived state (`minDistance`, planet system attach), clears whichever sibling-kind focus was set. **No events fire.** |
-| `emitFocusEvents` | Fires the deferred event family — typically `'focus'` / `'cloudFocus'` (plus a sibling-clearing `null` emit when the previously-focused object was a different kind), then `'state'`. Called from `finishWarp` after the camera lands. |
+| `emitFocusEvents` | Fires the deferred `'focus'` emit (kind-tagged Target payload) then `'state'`. Called from `finishWarp` after the camera lands. |
 | `physicalRadius` | Geometric radius in parsecs, or `null` when the kind has no single radius (clouds — ellipsoid axes don't reduce to one). Consumed by arrival curves that need angular size — the hybrid curve's inner regime uses `θ = R/d` for the close-approach smoothstep. Kinds returning `null` silently fall back to a log-d profile. |
 | `chartPlateauDistance` | Camera-to-anchor distance at which the chart-mode disc plateaus at `uChartDiscMaxPx`, given the current `uChartMagBright` threshold. Returns `null` when the chart-mode treatment isn't a magnitude-driven disc (clouds → isobar contour). Used by `updateWarp` to pivot Fly → phase 3 early when chart mode is active and the destination disc would stop growing perceptibly. |
 
@@ -126,20 +125,43 @@ arrives — events settle in lock-step with the landing.
 warp animation reads geometry via the interface methods and mutates
 focus state via `dest.applyFocus()` (mid-Fly recentre) and
 `dest.emitFocusEvents()` (`finishWarp`). No `destKind` switches remain
-in the warp pipeline; the dispatch table sits in the
-`makeStarFocusTarget` / `makeCloudFocusTarget` factory methods on
-`FocusController`, which is the one place that needs editing when a
-new kind is added.
+in the warp pipeline; the dispatch table is
+`FocusController.makeFocusTarget(target)` — the one per-kind switch,
+and the one place that needs editing when a new kind is added.
+
+## FocusableProviders — the kind-agnostic geometry registry
+
+`FocusableProviders` (`focus-target.ts`) is a mapped type EXHAUSTIVE
+over `TargetKind` — **adding a focusable kind without a provider fails
+`tsc`**, the same compile-time contract `FocusCardProviders` carries;
+`focus-target.test.ts` pins it with `@ts-expect-error`. Each provider
+holds the per-kind geometry legs the shell surface dispatches through:
+`localPositionInto`, `focusParkDistance` (the focus-park lerp landing
+distance), `arrivalRadiusPc` (angular-size ease input; null → log-d
+fallback), `renderedSizePx` (overlay chevron / silhouette sizing).
+The registry is constructed once in `stellata.ts` (exposed as
+`stellata.focusables`); lazily-attached layers are read through
+closures, so attach cycles need no re-registration. Overlays and
+pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
+of per-kind shell methods.
+
+**Star-only affordances are guards, not provider legs.** The orbital
+ride, `uPinFocusToCenter`, planet systems, POI pinning, and the
+observe anchor all guard on `getFocusedStar()`, which returns null for
+every non-star kind — so kind N+1 passes through them untouched with
+zero shell edits. An affordance gains an optional provider member only
+when a second kind actually implements it; don't add speculative
+capability methods before then.
 
 ## Focus-park lerp
 
-Click-focus on a star (or `flyToCloud` for clouds) doesn't teleport.
-The lerp lives here as the generic `parkDistance(...)` +
+Click-focus on a star (or `flyTo` for the soft kinds) doesn't
+teleport. The lerp lives here as the generic `parkDistance(...)` +
 `newFocusLerpFrom(...)` + `tickFocusLerp(...)` trio — stars consume it,
-clouds compose the same primitives, future focusable kinds plug in the
-same way.
+the soft kinds compose the same primitives through their provider's
+`focusParkDistance`, future focusable kinds plug in the same way.
 
-Branch in `focusStar` / `flyToCloud`:
+Branch in `focusStar` / the soft-kind leg of `flyTo`:
 
 - **`eyeDist <= parkDist` → stay put.** Camera doesn't move; only
   `controls.target`, `controls.minDistance`, and focus state update.
@@ -176,7 +198,7 @@ uses (`body.warping`). Stellata fires the `'focusLerp'` event on
 start / end edges; `main.ts` toggles the body class.
 
 `cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusStar`, `flyToCloud`, `unfocus`,
+`cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`,
 `startWarp`, `aimAt`, `aimAtConstellation`, `onPointerUp`) so a
 follow-up camera-changing action can't race the in-flight lerp.
 

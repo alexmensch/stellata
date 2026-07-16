@@ -102,8 +102,15 @@ import {
 import { readStars, type Star } from './stars-parse';
 import { loadDustGrid } from './dust-deextinction';
 import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
-import { resolveSids, starDesignations, type SidObject } from '../sid/sid-pure';
-import { HEAD_PATH, LEDGER_PATH, OVERRIDES_PATH, loadRegistry } from '../sid/registry-io';
+import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
+import {
+  HEAD_PATH,
+  LEDGER_PATH,
+  OVERRIDES_PATH,
+  REINSTATEMENTS_PATH,
+  RETIREMENTS_PATH,
+  loadRegistry,
+} from '../sid/registry-io';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -161,6 +168,10 @@ function isUpToDate(): boolean {
   const ledgerMtime = mtimeIfExists(LEDGER_PATH);
   const ledgerHeadMtime = mtimeIfExists(HEAD_PATH);
   const sidOverridesMtime = mtimeIfExists(OVERRIDES_PATH);
+  // Retirements/reinstatements feed the manifest's sidSuccessors field, so
+  // an appended row must invalidate an otherwise-fresh artifact.
+  const retirementsMtime = mtimeIfExists(RETIREMENTS_PATH);
+  const reinstatementsMtime = mtimeIfExists(REINSTATEMENTS_PATH);
   // This file is an orchestration shell — the build logic lives in the
   // sibling scripts/catalog modules plus scripts/util and scripts/sid,
   // so any of them must invalidate the artifact.
@@ -191,7 +202,9 @@ function isUpToDate(): boolean {
     binMtime > dustMtime &&
     binMtime > ledgerMtime &&
     binMtime > ledgerHeadMtime &&
-    binMtime > sidOverridesMtime
+    binMtime > sidOverridesMtime &&
+    binMtime > retirementsMtime &&
+    binMtime > reinstatementsMtime
   );
 }
 
@@ -957,7 +970,12 @@ async function main() {
   await mkdir(PUBLIC_DIR, { recursive: true });
   await removeStaleCatalogChunks(PUBLIC_DIR);
   const chunkBytes = planCatalogChunks(totalLength);
-  const manifest: CatalogManifest = { chunkBytes, totalBytes: totalLength };
+  const sidSuccessors = sidSuccessorPairs(registry.retirements, registry.reinstatements);
+  const manifest: CatalogManifest = {
+    chunkBytes,
+    totalBytes: totalLength,
+    ...(sidSuccessors.length > 0 ? { sidSuccessors } : {}),
+  };
   let chunkOff = 0;
   for (let i = 0; i < chunkBytes.length; i++) {
     await writeFile(

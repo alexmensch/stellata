@@ -263,21 +263,11 @@ function escCascade(stellata: Stellata) {
     stellata.setCameraMode('navigate');
     return;
   }
-  if (
-    stellata.getVectorTo() !== null ||
-    stellata.getVectorToCloud() !== null ||
-    stellata.getVectorToLg() !== null
-  ) {
-    stellata.setVectorTo(null);
-    stellata.setVectorToCloud(null);
-    stellata.setVectorToLg(null);
+  if (stellata.getVectorTarget() !== null) {
+    stellata.setVector(null);
     return;
   }
-  if (
-    stellata.getFocusedStar() !== null ||
-    stellata.getFocusedCloud() !== null ||
-    stellata.getFocusedLg() !== null
-  ) {
+  if (stellata.getFocusedTarget() !== null) {
     stellata.unfocus();
   }
 }

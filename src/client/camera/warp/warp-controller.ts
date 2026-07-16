@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
-import type { FocusTarget } from '../focus/focus-target';
+import { targetsEqual, type FocusTarget, type Target } from '../focus/focus-target';
 import { type FocusOps } from '../focus/focus-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 
@@ -138,34 +138,14 @@ export class WarpController {
     return this.state !== null && this.state.recenteredToDest;
   }
 
-  /** Star-destination warp — flies from the currently focused thing
-   *  (star or cloud) to a star at `destIdx`. No-ops if there's no focus
-   *  or the destination equals the source. Collocated endpoints still
-   *  fly (near-zero leg) — see the WARP_DEGENERATE_DIST_PC fallback. */
-  warpTo(destIdx: number): void {
-    if (destIdx === this.deps.focus.getFocusedStar()) return;
-    const source = this.deps.focus.currentFocusTarget();
-    if (!source) return;
-    const A = new THREE.Vector3();
-    if (!source.localPositionInto(A)) return;
-    const B = this.deps.focus.starLocalPosition(destIdx);
-    this.startWarp(A, B, source, this.deps.focus.makeStarFocusTarget(destIdx));
-  }
-
-  /** Cloud-destination warp — flies from the currently focused thing
-   *  to a cloud's centroid. Arrival distance is the cloud's recommended
-   *  viewing distance (per FocusTarget.parkRadius). */
-  warpToCloud(destIdx: number): void {
-    if (destIdx === this.deps.focus.getFocusedCloud()) return;
-    this.warpToTarget(this.deps.focus.makeCloudFocusTarget(destIdx));
-  }
-
-  /** Local-Group-destination warp — flies from the currently focused
-   *  thing to a galaxy's centroid, arriving along the approach line at
-   *  the galaxy's recommended viewing distance. */
-  warpToLg(destIdx: number): void {
-    if (destIdx === this.deps.focus.getFocusedLg()) return;
-    this.warpToTarget(this.deps.focus.makeLgFocusTarget(destIdx));
+  /** Warp to `target` (any kind) from the currently focused thing.
+   *  No-ops if there's no focus or the destination IS the focus.
+   *  Collocated endpoints still fly (near-zero leg) — see the
+   *  WARP_DEGENERATE_DIST_PC fallback. Arrival distance comes from the
+   *  destination's FocusTarget.parkRadius. */
+  warpTo(target: Target): void {
+    if (targetsEqual(this.deps.focus.getFocusedTarget(), target)) return;
+    this.warpToTarget(this.deps.focus.makeFocusTarget(target));
   }
 
   private warpToTarget(dest: FocusTarget | null): void {
@@ -481,10 +461,8 @@ export class WarpController {
     }
     this.deps.controls.target.copy(B);
     this.state = null;
-    // Clear every vector slot — vector destination has been reached.
-    this.deps.focus.setVectorTo(null);
-    this.deps.focus.setVectorToCloud(null);
-    this.deps.focus.setVectorToLg(null);
+    // Clear the vector slot (any kind) — the destination has been reached.
+    this.deps.focus.clearVector();
     if (state.dest.kind === 'star' && state.returnToObserve) {
       // observe→observe arrival. swapObserveAnchor finalises the anchor
       // swap — sets uHideFocusIdx to the destination, snaps the camera
@@ -505,10 +483,10 @@ export class WarpController {
         // `dest.applyFocus`. Fire the deferred event family here so the
         // search-row label, planet system, distance vector etc. settle
         // in lock-step with the camera landing rather than ~half a warp
-        // duration early. Calling setFocus / setFocusedCloud directly
-        // would short-circuit (focusedStar / focusedCloud already
-        // matches dest.idx) and silently drop the 'focus' / 'cloudFocus'
-        // emit; emitting via the FocusTarget keeps the contract clean.
+        // duration early. Calling setFocus directly would short-circuit
+        // (the focus slot already matches dest) and silently drop the
+        // 'focus' emit; emitting via the FocusTarget keeps the contract
+        // clean.
         state.dest.emitFocusEvents();
         if (state.dest.kind === 'star') {
           // Mid-Fly recentre put the destination's baseline at local
@@ -532,7 +510,11 @@ export class WarpController {
         this.deps.camera.position.copy(this.deps.controls.target).addScaledVector(forward, -state.endOffset);
         this.deps.camera.lookAt(this.deps.controls.target);
       } else {
-        this.deps.focus.setFocusedCloud(state.dest.idx);
+        // Soft-kind (cloud / LG) non-recentred arrival: mutate + emit
+        // through the FocusTarget so the displacement side effects match
+        // the mid-Fly-recentre path.
+        state.dest.applyFocus();
+        state.dest.emitFocusEvents();
       }
       this.deps.controls.enabled = true;
       this.deps.controls.update();
@@ -558,7 +540,7 @@ export class WarpController {
     // at its perturbed position, not the local origin. Quaternion
     // preserved from the post-arrival slerp end state.
     this.deps.focus.starLivePositionInto(newIdx, this.deps.camera.position);
-    this.deps.bus.emit('focus', newIdx);
+    this.deps.bus.emit('focus', { kind: 'star', idx: newIdx });
     this.deps.bus.emit('state');
   }
 

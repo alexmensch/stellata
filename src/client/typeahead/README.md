@@ -8,9 +8,9 @@ elements are moved into the modal on open and restored on close).
 ## Star search
 
 `search.ts` is fuse.js-backed; ranks against name + constellation +
-Bayer designation. Selecting an entry dispatches through
-`focusStar(idx)` for navigate or `warpTo(idx)` when the To slot is
-active.
+Bayer designation. Selecting an entry dispatches through `flyTo` /
+`focusStar` for navigate or `warpTo` when picking a location in
+observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
 tier re-rank + within-kind dedup over stars + clouds + Local Group
@@ -31,8 +31,9 @@ entries index the display name plus every build-emitted alias
 ("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
 line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
 disambiguates the dSph from star rows. Focus-box select dispatches to
-`flyToLg`, the To box to `setVectorToLg`; observe mode filters LG out
-of the location picker like clouds. Both the topbar boxes
+`flyTo` and the To box to `setVector`, each with the entry's
+kind-tagged Target; observe mode filters LG out of the location picker
+like clouds. Both the topbar boxes
 (`bindSearch`) and the `F` find picker (`bindFindSearch`) run it, so
 ranking never diverges between them. The find picker differs only in its
 `onSelect`: it resolves the pick to a local position and calls

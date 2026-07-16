@@ -270,9 +270,9 @@ are documented in `scripts/refresh/README.md` and `RELEASING.md`
 Don't refactor these layers' machinery away; each is paused until its
 visual treatment is refined. Details + flags in each folder README.
 
-- Molecular cloud overlay — `src/client/molecular-clouds/README.md`.
-- Volumetric Milky Way in chart mode — `src/client/milkyway/README.md`.
-- Dust particle layer — `src/client/dust/README.md`.
+Molecular cloud overlay (`molecular-clouds/`) · volumetric Milky Way
+in chart mode (`milkyway/`) · dust particles (`dust/`) · Local Group
+emission glow (`local-group/`).
 
 ## Things deliberately kept out — don't re-debate scope
 

@@ -977,34 +977,21 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
 
   if (getUnit() === 'pc') view.unit = 'pc';
 
-  // Star focus and cloud focus are mutually exclusive in Stellata, so at
-  // most one is non-null; both emit into the one universal `focus` SID
-  // ref. Sol focus is the default, encoded by *omitting* the field — so
-  // a fully-default state has no `?v=` at all. An object without a SID
-  // (never on a shipped catalog) omits the field rather than falling
-  // back to a build-volatile index.
-  const star = stellata.getFocusedStar();
-  const cloud = stellata.getFocusedCloud();
-  const lgFocus = stellata.getFocusedLg();
-  if (cloud !== null) {
-    view.focus = sidRefOf(idMaps, 'cloud', cloud);
-  } else if (lgFocus !== null) {
-    view.focus = sidRefOf(idMaps, 'lg', lgFocus);
-  } else if (star === null) {
+  // One focused Target of any kind emits into the one universal `focus`
+  // SID ref. Sol focus is the default, encoded by *omitting* the field —
+  // so a fully-default state has no `?v=` at all. An object without a
+  // SID (never on a shipped catalog) omits the field rather than
+  // falling back to a build-volatile index.
+  const focused = stellata.getFocusedTarget();
+  if (focused === null) {
     view.focus = 'cleared';
-  } else if (star !== idMaps.solIndex) {
-    view.focus = sidRefOf(idMaps, 'star', star);
+  } else if (focused.kind !== 'star' || focused.idx !== idMaps.solIndex) {
+    view.focus = sidRefOf(idMaps, focused.kind, focused.idx);
   }
 
-  const to = stellata.getVectorTo();
-  const toCloud = stellata.getVectorToCloud();
-  const toLg = stellata.getVectorToLg();
+  const to = stellata.getVectorTarget();
   if (to !== null) {
-    view.to = sidRefOf(idMaps, 'star', to);
-  } else if (toCloud !== null) {
-    view.to = sidRefOf(idMaps, 'cloud', toCloud);
-  } else if (toLg !== null) {
-    view.to = sidRefOf(idMaps, 'lg', toLg);
+    view.to = sidRefOf(idMaps, to.kind, to.idx);
   }
 
   const mode = stellata.getCameraMode();
@@ -1195,21 +1182,14 @@ export function applyDecodedView(
       // focus semantics yet (hover-only) and fall through.
       const snap = hasCam || hasTgt;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
-        if (kind === 'star') {
-          if (snap) stellata.setOrbitTarget(localIndex);
-          else stellata.focusStar(localIndex, { animate: false });
-        } else if (kind === 'cloud') {
-          if (snap) stellata.setFocusedCloud(localIndex);
-          else stellata.flyToCloud(localIndex, { animate: false });
-        } else if (kind === 'lg') {
-          if (snap) stellata.setOrbitTargetLg(localIndex);
-          else stellata.flyToLg(localIndex, { animate: false });
-        }
+        if (kind === 'planet') return;
+        if (snap) stellata.setOrbitTarget({ kind, idx: localIndex });
+        else stellata.flyTo({ kind, idx: localIndex }, { animate: false });
       });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {
-        if (hasCam || hasTgt) stellata.setOrbitTarget(idx);
+        if (hasCam || hasTgt) stellata.setOrbitTarget({ kind: 'star', idx });
         else stellata.focusStar(idx, { animate: false });
       }
     }
@@ -1218,20 +1198,21 @@ export function applyDecodedView(
   // encoder never emitted both — apply after `focus` so cloud wins on
   // the off chance both are present in a hand-crafted blob.
   if (view.cloud !== undefined && view.cloud >= 0) {
-    if (hasCam || hasTgt) stellata.setFocusedCloud(view.cloud);
-    else stellata.flyToCloud(view.cloud, { animate: false });
+    if (hasCam || hasTgt) stellata.setOrbitTarget({ kind: 'cloud', idx: view.cloud });
+    else stellata.flyTo({ kind: 'cloud', idx: view.cloud }, { animate: false });
   }
-  if (view.toc !== undefined && view.toc >= 0) stellata.setVectorToCloud(view.toc);
+  if (view.toc !== undefined && view.toc >= 0) {
+    stellata.setVector({ kind: 'cloud', idx: view.toc });
+  }
   if (view.to) {
     if (view.to.kind === 'sid') {
       idMaps.sidResolver.whenResolved(view.to.id, (kind, localIndex) => {
-        if (kind === 'star') stellata.setVectorTo(localIndex);
-        else if (kind === 'cloud') stellata.setVectorToCloud(localIndex);
-        else if (kind === 'lg') stellata.setVectorToLg(localIndex);
+        if (kind === 'planet') return;
+        stellata.setVector({ kind, idx: localIndex });
       });
     } else {
       const idx = resolveStarRef(view.to, idMaps, -1);
-      if (idx >= 0 && idx < idMaps.starCount) stellata.setVectorTo(idx);
+      if (idx >= 0 && idx < idMaps.starCount) stellata.setVector({ kind: 'star', idx });
     }
   }
 

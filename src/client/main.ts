@@ -132,7 +132,10 @@ async function main() {
     // future genuinely-async domain. `sun` is not in the planet domain —
     // Sol's catalog record carries the same sid, so the star domain
     // claims it (see util/sid-resolver/README.md).
-    const sidResolver = new SidResolver(['star', 'planet', 'cloud', 'lg']);
+    const sidResolver = new SidResolver(
+      ['star', 'planet', 'cloud', 'lg'],
+      catalog.sidSuccessors,
+    );
     sidResolver.attach('star', arrayDomain(catalog.sid));
     sidResolver.attach(
       'planet',

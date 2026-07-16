@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { EventBus } from '../../util/event-bus';
 import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { Target } from '../focus/focus-target';
 import type { FilterState } from '../../filters/filter-state';
 import type { PoiStore } from '../../poi/poi-store';
 import { starLadderAction } from '../../poi/click-ladder-pure';
@@ -23,11 +24,13 @@ export interface InputControllerDeps {
   getCameraMode: () => CameraMode;
   getFilter: () => Readonly<FilterState>;
   getFocusedStar: () => number | null;
-  getFocusedCloud: () => number | null;
+  getFocusedTarget: () => Target | null;
+  /** Star-kind vector reads/writes back the click ladder; the
+   *  Target-generic pair covers every other rung. */
   getVectorTo: () => number | null;
-  getVectorToCloud: () => number | null;
+  getVectorTarget: () => Target | null;
   setVectorTo: (idx: number | null) => void;
-  setVectorToCloud: (idx: number | null) => void;
+  setVector: (target: Target | null) => void;
   /** Composition-layer busy gates + cancellation the FSM re-checks at
    *  pointer-up AND again when a deferred click fires. */
   isWarpActive: () => boolean;
@@ -36,8 +39,8 @@ export interface InputControllerDeps {
   cancelUnfocusLerp: () => void;
   cancelFocusLerp: () => void;
   focusStar: (idx: number) => void;
-  flyToCloud: (idx: number) => void;
-  setOrbitTargetCloud: (idx: number) => void;
+  flyTo: (target: Target) => void;
+  setOrbitTarget: (target: Target) => void;
   unfocus: () => void;
   togglePoi: (idx: number) => boolean;
   aimAt: (pointLocal: THREE.Vector3) => void;
@@ -166,7 +169,7 @@ export class InputController {
     }
     const cloudIdx = this.deps.picker.pickCloud(x, y);
     if (cloudIdx !== null) {
-      this.deps.flyToCloud(cloudIdx);
+      this.deps.flyTo({ kind: 'cloud', idx: cloudIdx });
       return;
     }
     this.deps.bus.emit('noopClick', { x, y });
@@ -185,26 +188,26 @@ export class InputController {
     // Clouds keep the pre-ladder vector-first semantics — unreachable
     // while the MC layer is shelved; revisit at un-shelve. Viewing
     // distance for clouds is cloudViewingDistancePc, not parkDistForStar.
-    const focusedStar = this.deps.getFocusedStar();
-    const focusedCloud = this.deps.getFocusedCloud();
-    if (focusedStar === null && focusedCloud === null) {
-      this.deps.setOrbitTargetCloud(cloudIdx);
+    const clicked: Target = { kind: 'cloud', idx: cloudIdx };
+    const focused = this.deps.getFocusedTarget();
+    if (focused === null) {
+      this.deps.setOrbitTarget(clicked);
       return true;
     }
-    if (focusedCloud === cloudIdx) {
-      if (this.deps.getVectorTo() !== null || this.deps.getVectorToCloud() !== null) {
-        this.deps.setVectorTo(null);
-        this.deps.setVectorToCloud(null);
+    if (focused.kind === 'cloud' && focused.idx === cloudIdx) {
+      if (this.deps.getVectorTarget() !== null) {
+        this.deps.setVector(null);
       } else {
         this.deps.unfocus();
       }
       return true;
     }
-    if (this.deps.getVectorToCloud() === cloudIdx) {
-      this.deps.flyToCloud(cloudIdx);
+    const vec = this.deps.getVectorTarget();
+    if (vec !== null && vec.kind === 'cloud' && vec.idx === cloudIdx) {
+      this.deps.flyTo(clicked);
       return true;
     }
-    this.deps.setVectorToCloud(cloudIdx);
+    this.deps.setVector(clicked);
     return true;
   }
 
@@ -223,22 +226,20 @@ export class InputController {
       return this.deps.togglePoi(idx);
     }
 
-    const focusedStar = this.deps.getFocusedStar();
-    const focusedCloud = this.deps.getFocusedCloud();
+    const focused = this.deps.getFocusedTarget();
 
     // No focus → click parks the camera at the clicked star, matching
     // search-select and URL-restore (parkDistForStar, 10% disc fill).
-    if (focusedStar === null && focusedCloud === null) {
+    if (focused === null) {
       this.deps.focusStar(idx);
       return true;
     }
 
     // Click on the focused star → clear vector if present (the
     // destination stays pinned), else unfocus.
-    if (focusedStar === idx) {
-      if (this.deps.getVectorTo() !== null || this.deps.getVectorToCloud() !== null) {
-        this.deps.setVectorTo(null);
-        this.deps.setVectorToCloud(null);
+    if (focused.kind === 'star' && focused.idx === idx) {
+      if (this.deps.getVectorTarget() !== null) {
+        this.deps.setVector(null);
       } else {
         this.deps.unfocus();
       }

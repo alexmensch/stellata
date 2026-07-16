@@ -357,7 +357,11 @@ The build slices the assembled buffer into sequential byte-range chunks
 (16 MiB, headroom under the limit), plus `public/catalog-manifest.json`
 carrying `{ chunkBytes[], totalBytes }`. The split is **transport-only**
 — the record layout above is untouched, and `assembleCatalogChunks`
-reconstructs the source buffer byte-for-byte.
+reconstructs the source buffer byte-for-byte. The manifest also carries
+the optional `sidSuccessors` side-field (retired sid → successor sid
+pairs, docs/sid.md § 9.4, derived from `data/sid/retirements.tsv` net
+of reinstatements) so the runtime SID resolver can follow merge-type
+retirements without an extra fetch; omitted while empty.
 
 The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
 `catalogChunkFilename`, `assembleCatalogChunks`, `CatalogManifest`) live
