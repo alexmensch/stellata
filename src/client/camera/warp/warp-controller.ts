@@ -56,7 +56,7 @@ export interface WarpPhaseInfo {
 export interface WarpInfo {
   A: Readonly<THREE.Vector3>;
   B: Readonly<THREE.Vector3>;
-  destKind: 'star' | 'cloud';
+  destKind: 'star' | 'cloud' | 'lg';
   destIdx: number;
 }
 
@@ -157,7 +157,18 @@ export class WarpController {
    *  viewing distance (per FocusTarget.parkRadius). */
   warpToCloud(destIdx: number): void {
     if (destIdx === this.deps.focus.getFocusedCloud()) return;
-    const dest = this.deps.focus.makeCloudFocusTarget(destIdx);
+    this.warpToTarget(this.deps.focus.makeCloudFocusTarget(destIdx));
+  }
+
+  /** Local-Group-destination warp — flies from the currently focused
+   *  thing to a galaxy's centroid, arriving along the approach line at
+   *  the galaxy's recommended viewing distance. */
+  warpToLg(destIdx: number): void {
+    if (destIdx === this.deps.focus.getFocusedLg()) return;
+    this.warpToTarget(this.deps.focus.makeLgFocusTarget(destIdx));
+  }
+
+  private warpToTarget(dest: FocusTarget | null): void {
     if (!dest) return;
     const source = this.deps.focus.currentFocusTarget();
     if (!source) return;
@@ -470,9 +481,10 @@ export class WarpController {
     }
     this.deps.controls.target.copy(B);
     this.state = null;
-    // Clear both vector slots — vector destination has been reached.
+    // Clear every vector slot — vector destination has been reached.
     this.deps.focus.setVectorTo(null);
     this.deps.focus.setVectorToCloud(null);
+    this.deps.focus.setVectorToLg(null);
     if (state.dest.kind === 'star' && state.returnToObserve) {
       // observe→observe arrival. swapObserveAnchor finalises the anchor
       // swap — sets uHideFocusIdx to the destination, snaps the camera

@@ -231,7 +231,7 @@ in the vertex shader:
 - `appSize` is the brightness-based term. Below the visible-population
   window (`Δm = uMaxAppMag − appMag ≤ uSizeSpan`) it's the canonical
   `mix(uSizeMin, uSizeMax, sqrt(Δm / uSizeSpan))` Gaussian-PSF curve;
-  see `SCIENCE.md` §Stellar perception model for the √Δm derivation
+  see `docs/science-stellar-modelling.md` §Stellar perception model for the √Δm derivation
   (perceived radius ∝ √(magnitudes above threshold) because the
   visible footprint of a star is where PSF intensity exceeds
   detection). Above the window the size used to hard-clamp at

@@ -124,9 +124,27 @@ export type LgEmission =
       bulge?: SersicParams;
     };
 
+/** Search crosswalk + morphological type row from aliases.tsv. */
+export interface AliasRow {
+  name: string;
+  type: string;
+  aliases: string[];
+}
+
+/** Morphological-type string for the search dropdown + focus card.
+ *  Curated rows win; the default splits on the display-name suffix. */
+export function objectTypeFor(displayName: string, curated?: string): string {
+  if (curated) return curated;
+  return displayName.endsWith(DEFAULT_TYPE_SUFFIX) ? 'Dwarf spheroidal' : 'Dwarf galaxy';
+}
+
 export interface LgObject {
   name: string;
   id: string;
+  /** Morphological type for search rows + the focus card. */
+  type: string;
+  /** Extra typeable designations (catalog cross-IDs, common names). */
+  aliases?: string[];
   /** Heliocentric ICRS position, parsecs. */
   center: [number, number, number];
   kind: LgKind;
@@ -596,9 +614,11 @@ function buildLgObjectFromOrient(
   const kind: LgKind = orient.kind === 'disc' ? 'disc' : 'ellipsoid';
   const center = raDecDistanceToIcrs(raDeg, decDeg, distancePc);
   const quat = buildOrientationQuat(raDeg, decDeg, orient);
+  const display = displayName(nameKey);
   return {
-    name: displayName(nameKey),
+    name: display,
     id: slugify(idKey),
+    type: objectTypeFor(display),
     center,
     kind,
     axes,
@@ -607,6 +627,16 @@ function buildLgObjectFromOrient(
     distance: distancePc,
     emission,
   };
+}
+
+/** Overlay a curated alias/type row onto a built object. The row is
+ *  keyed by the source name (LVDB `name` / standalone override name),
+ *  which the caller matches before the display-name rewrite. */
+export function applyAliasMeta(obj: LgObject, meta: AliasRow | undefined): LgObject {
+  if (!meta) return obj;
+  obj.type = objectTypeFor(obj.name, meta.type);
+  if (meta.aliases.length > 0) obj.aliases = meta.aliases;
+  return obj;
 }
 
 /** Merge an LVDB row with an optional override into a fully-shaped

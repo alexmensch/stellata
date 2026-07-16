@@ -636,8 +636,9 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
 # Johnson V (the catalogue's absmag convention) and ci is Johnson B−V
 # (the colour-LUT convention), so both go through a Gaia→Johnson
 # transform rather than the raw Gaia bands. Provenance tag
-# PHOTOMETRY_VIA_GAIA. See SCIENCE.md § Multiple-star pipeline (companion
-# promotion) for the science framing and full source citations.
+# PHOTOMETRY_VIA_GAIA. See docs/science-multiple-star-pipeline.md §
+# Multiple-star pipeline (companion promotion) for the science framing
+# and full source citations.
 
 # Gaia EDR3 → Johnson V: G − V as a cubic in (BP − RP). Riello et al.
 # 2021, A&A 649, A3, Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).

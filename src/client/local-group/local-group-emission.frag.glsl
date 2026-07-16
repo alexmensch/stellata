@@ -11,8 +11,8 @@ precision highp float;
 // brightness follows the gate, not linear column flux — the star
 // pipeline's convention, NOT milkyway.frag's, which keeps linear
 // column in the exponent and would point-source any external view).
-// density0 values come solved from the build (SCIENCE.md § Local
-// Group luminosity model) — do NOT scale them per-object here;
+// density0 values come solved from the build (docs/science-local-group.md
+// § Local Group luminosity model) — do NOT scale them per-object here;
 // per-object flux ratios are physical.
 // CPU mirror: local-group-emission-pure.ts — keep the raymarch scheme
 // and density functions in lockstep or the calibration test lies. The

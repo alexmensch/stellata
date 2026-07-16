@@ -34,6 +34,13 @@ export interface TypeaheadOptions<T> {
    * panel). When provided, blur only hides the dropdown if no other
    * Typeahead in the group has claimed focus. */
   group?: TypeaheadGroup;
+  /** Trailing debounce on keystroke-driven queries, ms. 0 (default)
+   * queries synchronously on every input event. Set for expensive
+   * runQuery implementations (the fuzzy star corpus); keystrokes then
+   * only pay the query cost after a typing pause. Enter flushes a
+   * pending query so fast-type-then-enter still selects against the
+   * full typed text. */
+  debounceMs?: number;
 }
 
 /**
@@ -49,20 +56,34 @@ export class Typeahead<T> {
   private displayName = '';
   private results: T[] = [];
   private hoverIdx = -1;
+  private pendingQuery: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly opts: TypeaheadOptions<T>) {
     this.group = opts.group ?? new TypeaheadGroup();
 
-    const { input, resultsEl, clearBtn, onClear } = opts;
+    const { input, resultsEl, clearBtn, onClear, debounceMs = 0 } = opts;
 
-    input.addEventListener('input', () => this.render(input.value));
+    input.addEventListener('input', () => {
+      if (debounceMs <= 0) {
+        this.render(input.value);
+        return;
+      }
+      this.cancelPendingQuery();
+      this.pendingQuery = setTimeout(() => {
+        this.pendingQuery = null;
+        this.render(input.value);
+      }, debounceMs);
+    });
     input.addEventListener('focus', () => {
       this.group.active = this;
       this.render(input.value);
     });
     // Defer hide so a row mousedown wins the race against the input's
-    // blur. 140 ms matches both prior implementations.
+    // blur. 140 ms matches both prior implementations. A pending
+    // debounced query is cancelled — firing after blur would re-show
+    // the dropdown under nobody's focus.
     input.addEventListener('blur', () => {
+      this.cancelPendingQuery();
       setTimeout(() => {
         if (this.group.active === this) {
           resultsEl.hidden = true;
@@ -151,7 +172,23 @@ export class Typeahead<T> {
     this.opts.input.blur();
   }
 
+  private cancelPendingQuery(): void {
+    if (this.pendingQuery !== null) {
+      clearTimeout(this.pendingQuery);
+      this.pendingQuery = null;
+    }
+  }
+
+  /** Run a debounce-deferred query NOW so the key about to be handled
+   *  acts on results for the full typed text. */
+  private flushPendingQuery(): void {
+    if (this.pendingQuery === null) return;
+    this.cancelPendingQuery();
+    this.render(this.opts.input.value);
+  }
+
   private handleKey(e: KeyboardEvent): void {
+    if (e.key === 'Enter') this.flushPendingQuery();
     if (this.results.length === 0) return;
     if (e.key === 'ArrowDown') {
       this.setHover((this.hoverIdx + 1) % this.results.length);

@@ -74,6 +74,11 @@ export function createDistanceVectorOverlay(
     const toCloud = stellata.getVectorToCloud();
     if (toCloud !== null && stellata.cloudLocalPositionInto(toCloud, tmpClickAim)) {
       stellata.aimAt(tmpClickAim);
+      return;
+    }
+    const toLg = stellata.getVectorToLg();
+    if (toLg !== null && stellata.lgLocalPositionInto(toLg, tmpClickAim)) {
+      stellata.aimAt(tmpClickAim);
     }
   });
 
@@ -124,20 +129,27 @@ export function createDistanceVectorOverlay(
   // event firing might leave both slots null (the canonical "no vector"
   // state). Same handler on both edges keeps the hide() trigger DRY.
   const onVectorDestChange = () => {
-    if (stellata.getVectorTo() === null && stellata.getVectorToCloud() === null) hide();
+    if (
+      stellata.getVectorTo() === null
+      && stellata.getVectorToCloud() === null
+      && stellata.getVectorToLg() === null
+    ) hide();
   };
   stellata.on('vector', onVectorDestChange);
   stellata.on('vectorCloud', onVectorDestChange);
+  stellata.on('vectorLg', onVectorDestChange);
 
   stellata.on('frame', () => {
     // Source: whichever is focused. Star wins when both are set (which
     // shouldn't happen — they're mutually exclusive — but be defensive).
     const fromStar = stellata.getFocusedStar();
     const fromCloud = stellata.getFocusedCloud();
+    const fromLg = stellata.getFocusedLg();
     const toStar = stellata.getVectorTo();
     const toCloud = stellata.getVectorToCloud();
-    if ((fromStar === null && fromCloud === null) ||
-        (toStar === null && toCloud === null)) { hide(); return; }
+    const toLg = stellata.getVectorToLg();
+    if ((fromStar === null && fromCloud === null && fromLg === null) ||
+        (toStar === null && toCloud === null && toLg === null)) { hide(); return; }
 
     const camera = stellata.camera;
     // Local-frame positions — the camera and projection math operate in
@@ -150,6 +162,8 @@ export function createDistanceVectorOverlay(
       tmpA.set(positions[fromStar * 3], positions[fromStar * 3 + 1], positions[fromStar * 3 + 2]);
     } else if (fromCloud !== null) {
       if (!stellata.cloudLocalPositionInto(fromCloud, tmpA)) { hide(); return; }
+    } else if (fromLg !== null) {
+      if (!stellata.lgLocalPositionInto(fromLg, tmpA)) { hide(); return; }
     }
     let destLabel = '';
     if (toStar !== null) {
@@ -159,6 +173,9 @@ export function createDistanceVectorOverlay(
       if (!stellata.cloudLocalPositionInto(toCloud, tmpB)) { hide(); return; }
       const cat = stellata.getCloudCatalog();
       destLabel = cat ? cat.clouds[toCloud].name : 'Cloud';
+    } else if (toLg !== null) {
+      if (!stellata.lgLocalPositionInto(toLg, tmpB)) { hide(); return; }
+      destLabel = stellata.localGroup?.objects[toLg]?.name ?? 'Galaxy';
     }
 
     const projected = projectWithNearClip(tmpA, tmpB, camera, w, h, projScratch);
@@ -182,7 +199,9 @@ export function createDistanceVectorOverlay(
           filter: stellata.getFilter(),
           suppressPulsation: stellata.suppressPulsation,
         }), 0)
-      : Math.max(stellata.renderedCloudSizePx(toCloud as number), 0);
+      : toCloud !== null
+        ? Math.max(stellata.renderedCloudSizePx(toCloud), 0)
+        : Math.max(stellata.renderedLgSizePx(toLg as number), 0);
     const dxPx = pB[0] - pA[0];
     const dyPx = pB[1] - pA[1];
     const lenPx = Math.hypot(dxPx, dyPx);

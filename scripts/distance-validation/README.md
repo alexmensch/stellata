@@ -22,5 +22,6 @@ catalog build (`scripts/catalog/`); this validator is the cross-check.
 The validator reads the Bailer-Jones TSV directly rather than
 `public/catalog.bin` so the harness stays decoupled from in-flight
 writer-schema changes; the B-J override is the only distance source
-for these source_ids today. See `SCIENCE.md` § distance-override
-validation for the project-level rationale.
+for these source_ids today. See `docs/science-catalog-ingestion.md`
+§ Distance-override validation against Vaidman et al. 2025 for the
+project-level rationale.

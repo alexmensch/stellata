@@ -1,6 +1,6 @@
 // DENSITY0 solver for Local Group emission: numeric geometry integrals
 // over each object's truncated proxy-mesh volume, plus the analytic
-// Sérsic closed forms the tests cross-pin. SCIENCE.md § LG luminosity.
+// Sérsic closed forms the tests cross-pin. docs/science-local-group.md § LG luminosity.
 
 /** Ciotti & Bertin 1999 asymptotic b_n — the Sérsic shape constant
  *  placing half the projected light inside R_e. */

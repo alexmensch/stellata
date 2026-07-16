@@ -20,6 +20,7 @@ function makeObject(o: Partial<LgObject>): LgObject {
   return {
     name: o.name ?? 'Test',
     id: o.id ?? 'test',
+    type: o.type ?? 'Dwarf spheroidal',
     sid: o.sid ?? 1,
     centerAbs: o.centerAbs ?? new THREE.Vector3(10000, 0, 0),
     kind: o.kind ?? 'ellipsoid',

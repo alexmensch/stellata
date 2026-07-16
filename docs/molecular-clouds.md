@@ -454,8 +454,9 @@ as named uniforms with dev-console levers, mirroring the existing
 
 Precedent: the volumetric Milky Way deliberately does not sample the
 Edenhofer voxels because fixed-step marches alias into visible
-streaks (SCIENCE.md § Interstellar dust extinction; the standing
-spiral-arm non-goal exists for the same reason). The presence
+streaks (`docs/science-galactic-structure.md` § Interstellar dust
+extinction; the standing spiral-arm non-goal exists for the same
+reason). The presence
 raymarch has the same shape — 12–16 steps give step lengths of
 1.5–5 pc across typical chords, far past Nyquist for the 0.3 pc
 finest octave — plus a second hazard the MW case didn't have: the

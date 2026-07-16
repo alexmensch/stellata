@@ -4,13 +4,14 @@
 
 import * as THREE from 'three';
 
-/** A focusable object — star, cloud, future planet/probe/nebula/etc. */
+/** A focusable object — star, cloud, Local Group object, future
+ *  planet/probe/nebula/etc. */
 export interface FocusTarget {
   /** Identity tag. Used for event-payload dispatch and equality checks
    *  in higher-level code (URL state, focus-vector match-up). New kinds
    *  add a value to this union. The warp / lerp internals do not switch
    *  on `kind`. */
-  readonly kind: 'star' | 'cloud';
+  readonly kind: 'star' | 'cloud' | 'lg';
 
   /** Catalog index within this kind. Carries the same value the legacy
    *  `focusedStar` / `focusedCloud` integer fields hold. Event payloads

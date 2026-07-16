@@ -22,6 +22,7 @@ function lg(
   return {
     name,
     id: name.toLowerCase().replace(/\s+/g, '-'),
+    type: 'Dwarf spheroidal',
     sid: 1,
     centerAbs: new THREE.Vector3(0, 0, 0),
     kind,

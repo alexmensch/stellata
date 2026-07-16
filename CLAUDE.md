@@ -240,12 +240,12 @@ docs/     Genuinely cross-cutting docs that don't belong to one
 tests/    Repo-meta tests (CLAUDE.md size guard, etc.).
 ```
 
-`SCIENCE.md` covers every external data source (catalogues, papers,
-DOIs, licences) + physics/modelling decisions baked into the build
-pipeline and renderer. A vitest size guard
-(`tests/claude-md-size.test.ts`) holds this file at its budget — if
-you need to grow CLAUDE.md or add a new top-level surface, raise it
-with the user before expanding.
+`SCIENCE.md` carries scope principles, data sources, and non-goals;
+per-subsystem physics splits into `docs/science-*.md` (see its own
+index). A vitest size guard (`tests/claude-md-size.test.ts`) holds
+*this file* (CLAUDE.md) at its budget — if you need to grow CLAUDE.md
+or add a new top-level surface, raise it with the user before
+expanding.
 
 ## Local commands
 

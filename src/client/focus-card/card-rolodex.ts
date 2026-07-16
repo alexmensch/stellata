@@ -49,13 +49,15 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     inner: document.getElementById('front-card-inner')!,
   });
 
-  // Star and cloud focus are mutually exclusive; recompute from current
+  // The focus kinds are mutually exclusive; recompute from current
   // state on any input event rather than tracking event payloads.
   const focusContent = (): FocusCardContent | null => {
     const starIdx = stellata.getFocusedStar();
     if (starIdx !== null) return providers.star.format(starIdx);
     const cloudIdx = stellata.getFocusedCloud();
     if (cloudIdx !== null) return providers.cloud.format(cloudIdx);
+    const lgIdx = stellata.getFocusedLg();
+    if (lgIdx !== null) return providers.lg.format(lgIdx);
     return null;
   };
 
@@ -146,6 +148,10 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     }),
     stellata.on('cloudFocus', () => {
       desiredFront = stellata.getFocusedCloud() !== null ? FOCUS_KEY : null;
+      reconcile();
+    }),
+    stellata.on('lgFocus', () => {
+      desiredFront = stellata.getFocusedLg() !== null ? FOCUS_KEY : null;
       reconcile();
     }),
     stellata.on('cameraMode', reconcile),

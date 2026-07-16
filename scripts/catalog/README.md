@@ -79,7 +79,7 @@ Each AT-HYG row walks through, inside `readStars`:
 AT-HYG's stored `x0/y0/z0` is never consumed: it is a mixed-epoch
 merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
 inconsistent with the same row's printed ra/dec by up to tens of
-arcsec on high-PM stars (SCIENCE.md § Driver astrometry).
+arcsec on high-PM stars (`docs/science-catalog-ingestion.md` § Driver astrometry).
 
 ## Direction resolution
 
@@ -127,8 +127,8 @@ Each record carries a space-motion velocity (`vx/vy/vz`, pc/yr, equatorial
 Cartesian) alongside its J2016.0 position. Positions stay at the fixed
 scene epoch on disk; the runtime epoch-advance pass
 (`src/client/loaders/epoch-advance-pure.ts`) reads these once at load to
-propagate every position to `getT()`. Full design: SCIENCE.md
-§ Current-epoch star positions.
+propagate every position to `getT()`. Full design:
+`docs/science-catalog-ingestion.md` § Current-epoch star positions.
 
 `velocityPcPerYr` (`direction-cascade.ts`) assembles
 `v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the SAME tier solution
@@ -206,7 +206,7 @@ from the v3.3 classic-IDs subset.
 The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py`,
 which pulls the 5p astrometry into
 `data/gaia/gaia_dr3_astrometry_catalog.tsv` — the direction-cascade
-input (SCIENCE.md § Driver astrometry). This is a superset of the
+input (`docs/science-catalog-ingestion.md` § Driver astrometry). This is a superset of the
 shipped catalog by the handful of rows dropped at the `MAX_DIST_PC`
 cutoff; over-pulling those is harmless.
 
@@ -582,7 +582,7 @@ R ∝ T⁻², so the class-table fallback misized GSP-Spec-tier stars
 stars by up to ~2×. Tables are main-sequence values — cooler for
 giants/supergiants in reality — but the Mbol side of the equation
 absorbs the luminosity-class difference, so the end result lands close
-to published radii (SCIENCE.md § Physical radius carries the current
+to published radii (`docs/science-stellar-modelling.md` § Physical radius carries the current
 per-star numbers; `known-stars.test.ts` pins them end-to-end via the
 corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
 `[0.08, 2500]` so pathological catalog rows don't produce absurd
@@ -817,8 +817,9 @@ Per-row gates and resolution:
   carried Sirius A's 1.45 absmag, not the WD's 11.36); the row's own
   (non-inherited) absmag — including the Stage-6 Gaia-photometry value
   (`photometry_via = gaia_photometry`) derived from an own-DR3
-  companion's G/BP/RP + parallax when no AT-HYG row backs it (SCIENCE.md
-  § Multiple-star pipeline); primary + Δmag fallback; the row's own WDS
+  companion's G/BP/RP + parallax when no AT-HYG row backs it
+  (`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline);
+  primary + Δmag fallback; the row's own WDS
   apparent magnitude at the system distance (`wds_mag`, M = m −
   5·log₁₀(d/10) — fires when both Δmag paths are unavailable and
   rescues rows that previously dropped for want of a brightness);
@@ -886,7 +887,8 @@ Per-row gates and resolution:
   near-equal by construction, exact for the M-dwarf eclipsing pairs that
   dominate; total system light is preserved. `ci` stays the shared
   colour. Counted `companionBlendSplit`; runs before the absmag sort.
-  See SCIENCE.md § Multiple-star pipeline (Blend split).
+  See `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+  (Blend split).
 - **B-V (ci).** When Stage 6 tags the row's photometry as inherited
   (`photometry_via = athyg_system_inherited`), recompute from the
   spectral info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's
@@ -1240,7 +1242,7 @@ geometric pass still runs and chart mode still works, just with the
 
 Every star's final distance is the output of an ordered three-layer
 stack run inside `readStars` (`scripts/catalog/stars-parse.ts`). The
-order is non-commutative — see SCIENCE.md § Stellar catalog ingestion
+order is non-commutative — see `docs/science-catalog-ingestion.md`
 § Multi-layer distance refinement for the physical rationale; the
 diagram below is the build-side view:
 
@@ -1352,8 +1354,8 @@ is **not** a noise filter — it's a statement about which populations
 the model currently represents (Sol out to and including the LMC).
 The cutoff bumps in sync with each new modelled population the
 renderer takes responsibility for (future SMC, Sgr dSph, M31
-supergiant layers would extend it). See SCIENCE.md § Stellar catalog
-ingestion for the framing rationale.
+supergiant layers would extend it). See `docs/science-catalog-ingestion.md`
+§ Stellar catalog ingestion for the framing rationale.
 
 Every kinematic-override target distance must satisfy
 `dist < MAX_DIST_PC` or its entire population is silently dropped at
@@ -1435,8 +1437,9 @@ already-coherent anchors, and the baked pair geometry in catalog.bin
 matches what `binaries.bin` renders. Pinned in build-counts as
 `systemCoherenceSystems` / `systemCoherenceRepositioned` /
 `systemCoherenceMemberAnchorWins` /
-`systemCoherenceSignificantDepthKept`. SCIENCE.md § Multiple-star
-pipeline carries the science framing.
+`systemCoherenceSignificantDepthKept`.
+`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+carries the science framing.
 
 ## Gaia DR3 Apsis surfacing
 
@@ -1476,8 +1479,9 @@ Today's downstream consumers:
   classification) — already loaded; no rebuild needed when those
   consumers come online.
 
-Data refresh: `pnpm run refresh:gaia-apsis`. See SCIENCE.md
-§ Astrophysical parameters from Gaia DR3 Apsis for the science
+Data refresh: `pnpm run refresh:gaia-apsis`. See
+`docs/science-catalog-ingestion.md` § Astrophysical parameters from
+Gaia DR3 Apsis for the science
 framing.
 
 ## Validation harness

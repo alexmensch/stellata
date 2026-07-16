@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import type { LgEmission } from '../../../scripts/local-group/build-local-group-pure';
+import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { sidColumnError } from '../util/sid-resolver';
 
 export type LgKind = 'disc' | 'ellipsoid';
@@ -10,6 +11,10 @@ export type { LgEmission, SersicParams } from '../../../scripts/local-group/buil
 export interface LgObject {
   name: string;
   id: string;
+  /** Morphological type for search rows + the focus card. */
+  type: string;
+  /** Extra typeable designations (catalog cross-IDs, common names). */
+  aliases?: string[];
   /** Frozen Stellata ID (docs/sid.md § 7), stamped by the build. */
   sid: number;
   /** Absolute ICRS heliocentric position, parsecs. */
@@ -22,8 +27,8 @@ export interface LgObject {
   source: LgSource;
   /** Heliocentric distance to the centroid in parsecs. */
   distanceFromSol: number;
-  /** Solved luminosity model (SCIENCE.md § Local Group luminosity
-   *  model) — consumed by the emission renderer. */
+  /** Solved luminosity model (docs/science-local-group.md § Local Group
+   *  luminosity model) — consumed by the emission renderer. */
   emission: LgEmission;
 }
 
@@ -46,9 +51,17 @@ export function minSemiAxisPc(obj: Pick<LgObject, 'axes'>): number {
   return Math.min(obj.axes[0], obj.axes[1], obj.axes[2]);
 }
 
+/** Recommended camera-to-centroid distance when focusing / warping to
+ *  an LG object — the galaxy analogue of `cloudViewingDistancePc`. */
+export function lgViewingDistancePc(obj: Pick<LgObject, 'axes'>): number {
+  return viewingDistanceForExtent(maxSemiAxisPc(obj));
+}
+
 interface RawObject {
   name: string;
   id: string;
+  type: string;
+  aliases?: string[];
   sid: number;
   center: [number, number, number];
   kind: LgKind;
@@ -93,6 +106,8 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
   const objects: LgObject[] = raw.objects.map((o) => ({
     name: o.name,
     id: o.id,
+    type: o.type,
+    ...(o.aliases ? { aliases: o.aliases } : {}),
     sid: o.sid,
     centerAbs: new THREE.Vector3(o.center[0], o.center[1], o.center[2]),
     kind: o.kind,

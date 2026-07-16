@@ -41,6 +41,7 @@ import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
+import { createLgFocusProvider } from './focus-card/lg-focus-provider';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
@@ -181,8 +182,8 @@ async function main() {
     // null cloudCatalog: cloud layer is currently shelved (CLAUDE.md), so
     // search shouldn't surface unreachable cloud entries. Pass
     // `cloudCatalog` directly when re-enabling.
-    bindSearch(stellata, catalog, searchIndex, starLabels, null);
-    bindFindSearch(stellata, catalog, searchIndex, null);
+    bindSearch(stellata, catalog, searchIndex, starLabels, null, lgCatalog);
+    bindFindSearch(stellata, catalog, searchIndex, null, lgCatalog);
     createDiscMask(stellata);
     createConstellationOverlay(stellata);
     createDistanceVectorOverlay(stellata, starLabels);
@@ -309,6 +310,19 @@ async function main() {
               cloud.centerAbs.x - w.x - c.x,
               cloud.centerAbs.y - w.y - c.y,
               cloud.centerAbs.z - w.z - c.z,
+            );
+          },
+        }),
+        lg: createLgFocusProvider({
+          objects: lgCatalog?.objects ?? null,
+          cameraDistancePc: (idx) => {
+            const obj = lgCatalog!.objects[idx];
+            const w = stellata.getWorldOffset();
+            const c = stellata.camera.position;
+            return Math.hypot(
+              obj.centerAbs.x - w.x - c.x,
+              obj.centerAbs.y - w.y - c.y,
+              obj.centerAbs.z - w.z - c.z,
             );
           },
         }),

@@ -7,7 +7,8 @@ per-component spectra + the Pulkovo MSC to produce
 `data/binaries/multiples.tsv`. The
 science of *why* the choices below are made (Gaia DR3 parallax bias,
 NSS detectability regimes, HIP2 long-baseline corrections) is in
-`SCIENCE.md`; this file is the engineering side — layered strategies,
+`SCIENCE.md` and its `docs/science-*.md` splits (multiple-star pipeline,
+catalog ingestion); this file is the engineering side — layered strategies,
 numeric thresholds, provenance fields.
 
 ## When to read this
@@ -668,7 +669,8 @@ stores); everything else gets `q = None` here and falls through to Stage
 
 The same `q` also feeds **systemic-velocity composition** for
 proper-motion propagation. catalog.bin bakes a per-star space-motion
-velocity (SCIENCE.md § Current-epoch star positions); a bound pair's
+velocity (`docs/science-catalog-ingestion.md` § Current-epoch star
+positions); a bound pair's
 members must share one systemic velocity or the runtime epoch-advance
 shears a static (Tier-3) pair. `scripts/catalog/companion-promotion.ts`
 uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
@@ -857,8 +859,9 @@ Three system-level mechanisms run at emit time:
   orbit source published no relative semi-major axis (every NSS
   solution type; ORB6 rows whose a″→AU conversion lacked a parallax).
   The `a_via` column carries the provenance: `catalog` (orbit source
-  published it), `kepler_mass_estimate`, or `none`. SCIENCE.md
-  § Multiple-star pipeline carries the error analysis (a ∝ M^⅓).
+  published it), `kepler_mass_estimate`, or `none`.
+  `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+  carries the error analysis (a ∝ M^⅓).
 
 The `spect` column resolves through a four-tier cascade with
 provenance in `spect_via`: `curated` →
@@ -896,9 +899,9 @@ component in AT-HYG) still derives the source's COMBINED magnitude;
 companion promotion's blend-split post-pass divides it across the
 collocated records the source backs (see `scripts/catalog/README.md`
 § Companion promotion). It recovers the ~3.5k own-DR3 companions that
-would otherwise drop at promotion for a blank absmag; see SCIENCE.md
-§ Multiple-star pipeline (companion promotion) for the transforms and
-source citations.
+would otherwise drop at promotion for a blank absmag; see
+`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+(companion promotion) for the transforms and source citations.
 
 ## Stage 7 — Build-counts and rates snapshots
 

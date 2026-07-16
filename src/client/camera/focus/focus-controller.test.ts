@@ -205,7 +205,7 @@ function makeHarness(opts: {
   let cameraMode: CameraMode = opts.mode ?? 'navigate';
 
   const busEvents: Array<{ name: string; payload: unknown }> = [];
-  for (const name of ['focus', 'cloudFocus', 'planetSystem', 'focusLerp', 'state', 'cameraMode'] as const) {
+  for (const name of ['focus', 'cloudFocus', 'lgFocus', 'planetSystem', 'focusLerp', 'state', 'cameraMode'] as const) {
     bus.on(name, (payload: unknown) => {
       busEvents.push({ name, payload });
     });
@@ -226,8 +226,10 @@ function makeHarness(opts: {
     getCameraMode: () => cameraMode,
     setCameraModeValue: (m) => { cameraMode = m; },
     getClouds: () => null,
+    getLocalGroup: () => null,
     setVectorTo: (idx) => { vectorTo.push(idx); },
     setVectorToCloud: (idx) => { vectorToCloud.push(idx); },
+    setVectorToLg: () => {},
     getWarp: () => warp,
     getObserve: () => observe,
     focalPerturbationInto: (idx, out) => pert.fn(idx, out),
@@ -688,5 +690,47 @@ describe('FocusController.dispose', () => {
     expect(h.focus.getFocusedStar()).toBeNull();
     expect(h.focus.getFocusedCloud()).toBeNull();
     expect(h.focus.isFocusLerpActive()).toBe(false);
+  });
+});
+
+describe('FocusController.setFocusedLg — three-way exclusivity', () => {
+  it('lg focus clears a star focus, star events settle before lgFocus', () => {
+    const h = makeHarness();
+    h.focus.setFocus(3);
+    h.busEvents.length = 0;
+    h.focus.setFocusedLg(7);
+    expect(h.focus.getFocusedStar()).toBeNull();
+    expect(h.focus.getFocusedLg()).toBe(7);
+    expect(h.busEvents.map((e) => e.name)).toEqual(['focus', 'state', 'lgFocus', 'state']);
+  });
+
+  it('lg focus clears a cloud focus with a clearing cloudFocus emit', () => {
+    const h = makeHarness();
+    h.focus.setFocusedCloud(2);
+    h.busEvents.length = 0;
+    h.focus.setFocusedLg(7);
+    expect(h.focus.getFocusedCloud()).toBeNull();
+    expect(h.focus.getFocusedLg()).toBe(7);
+    expect(h.busEvents.map((e) => e.name)).toEqual(['cloudFocus', 'lgFocus', 'state']);
+  });
+
+  it('star focus clears an lg focus (lgFocus null precedes focus)', () => {
+    const h = makeHarness();
+    h.focus.setFocusedLg(7);
+    h.busEvents.length = 0;
+    h.focus.setFocus(3);
+    expect(h.focus.getFocusedLg()).toBeNull();
+    expect(h.focus.getFocusedStar()).toBe(3);
+    expect(h.busEvents.map((e) => e.name)).toEqual(['lgFocus', 'focus', 'state']);
+  });
+
+  it('cloud focus clears an lg focus', () => {
+    const h = makeHarness();
+    h.focus.setFocusedLg(7);
+    h.busEvents.length = 0;
+    h.focus.setFocusedCloud(2);
+    expect(h.focus.getFocusedLg()).toBeNull();
+    expect(h.focus.getFocusedCloud()).toBe(2);
+    expect(h.busEvents.map((e) => e.name)).toEqual(['lgFocus', 'cloudFocus', 'state']);
   });
 });

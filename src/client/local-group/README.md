@@ -35,10 +35,20 @@ When the artifact loads, `main.ts` attaches the `lg` SID domain over
 it (see `../util/sid-resolver/README.md`).
 
 Each object also carries an `emission` block — the solved luminosity
-model (per-family profile params + density0; SCIENCE.md § Local Group
-luminosity model, solver contract in `scripts/local-group/README.md`).
+model (per-family profile params + density0; `docs/science-local-group.md`
+§ Local Group luminosity model, solver contract in
+`scripts/local-group/README.md`).
 The wireframe layer ignores it; it feeds the volumetric emission
-renderer.
+renderer. `type` (morphological string) and optional `aliases`
+(catalog cross-IDs + common names from `data/local-group/aliases.tsv`)
+feed the destination-search rows and the focus card.
+
+LG objects are focusable and warpable: they carry the `'lg'`
+`FocusKind` (`lgFocus` / `vectorLg` bus events, `flyToLg` /
+`setOrbitTargetLg` / `warpToLg` entry points mirroring the cloud
+pattern), park at `lgViewingDistancePc` (2.4 × max semi-axis, the
+shared `viewingDistanceForExtent` rule), and ride the URL's universal
+any-kind focus/to SID refs unchanged.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 
@@ -58,7 +68,8 @@ opacity write hits one slot.
 ## Emission layer
 
 `local-group-emission.ts` renders every object's solved luminosity
-model (`emission` block, SCIENCE.md § Local Group luminosity model) as
+model (`emission` block, `docs/science-local-group.md` § Local Group
+luminosity model) as
 raymarched proxy volumes — the Milky Way's volumetric scheme
 (`../milkyway/README.md`) generalised to N instances. Two instanced
 unit-sphere passes, one per profile family, compiled from ONE shader
@@ -101,7 +112,7 @@ gate)` — the gate alone, never linear column flux, drives the pixel.
 The bulge-to-disc-edge column range spans ~7 mag ≈ 1000× linear; a
 linear tone map (the MW volume's convention, fine for the narrow
 in-galaxy column range) renders that as a blown core on a black disc
-from every external viewpoint. SCIENCE.md § Local Group luminosity
+from every external viewpoint. docs/science-local-group.md § Local Group luminosity
 model carries the display-transform rationale. **Do not scale
 density0 per object**: per-object flux ratios are physical, solved by
 the build; `setBrightness` (gain, seed 3.0) / `setGlowMagOffset`

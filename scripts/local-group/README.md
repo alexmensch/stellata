@@ -19,6 +19,9 @@ Reads two committed source files under `data/local-group/`:
 - `overrides.tsv` — hand-curated structural detail for LMC, SMC,
   Sagittarius dSph, M 32, NGC 205; plus standalone-position rows for
   M31 and M33 which LVDB's dwarf_all table excludes.
+- `aliases.tsv` — search crosswalk (type + alias designations) merged
+  into each object's `type` / `aliases` output fields; unmatched rows
+  fail the build.
 
 Emits `public/local-group.json` with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
@@ -60,8 +63,9 @@ through three branches:
 
 ## Emission solver — per-object DENSITY0
 
-Physics and calibration rationale in SCIENCE.md § Local Group
-luminosity model; this section carries the implementation contract.
+Physics and calibration rationale in `docs/science-local-group.md`
+§ Local Group luminosity model; this section carries the implementation
+contract.
 
 Every rendered object gets an `emission` block (JSON format version 2):
 `family: "sersic"` carries `{ mV, reffAxesPc, n, bn, pn, uMax,
