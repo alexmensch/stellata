@@ -74,12 +74,11 @@ opacity write hits one slot.
 
 ## Emission layer
 
-> **Status:** Shelved while the visual treatment is refined —
-> `LG_EMISSION_SHELVED = true` in `local-group-emission.ts` stops the
-> shell from constructing the layer, so the glow renders nowhere. The
+> **Status:** Re-enabled on this branch (`LG_EMISSION_SHELVED = false`
+> in `local-group-emission.ts`) — the visual-treatment workspace. On
+> main the flag is true and the shell never constructs the layer; the
 > filter flag (`showLgEmission`), URL bit 22, and the debug-panel
-> Deep-field knobs all stay wired; flip the const to false to
-> re-enable with no other change.
+> Deep-field knobs stay wired in both states.
 
 `local-group-emission.ts` renders every object's solved luminosity
 model (`emission` block, `docs/science-local-group.md` § Local Group
@@ -128,9 +127,9 @@ linear-in-column map (the MW volume's convention — and since its HDR
 conversion, literally a single scalar gain, fine for the narrow
 in-galaxy column range) renders that as a blown core on a black disc
 from every external viewpoint. **This layer has not been converted to
-the HDR unit** — it keeps the gate + `1 − exp(−x)` squash while it stays
-shelved; `docs/science-hdr-pipeline.md` § 4 maps it identically to the
-MW when it is unshelved. docs/science-local-group.md § Local Group luminosity
+the HDR unit** — it keeps the gate + `1 − exp(−x)` squash; the conversion
+is `stellata-gxx.8`'s remit and `docs/science-hdr-pipeline.md` § 4 maps it
+identically to the MW. docs/science-local-group.md § Local Group luminosity
 model carries the display-transform rationale. **Do not scale
 density0 per object**: per-object flux ratios are physical, solved by
 the build; `setBrightness` (gain, seed 3.0) / `setGlowMagOffset`
