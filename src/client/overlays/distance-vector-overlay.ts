@@ -123,6 +123,7 @@ export function createDistanceVectorOverlay(
   // on the search corpus, cloud / LG names on their catalogs.
   const destLabelOf = (to: { kind: string; idx: number }): string => {
     if (to.kind === 'star') return starLabels.get(to.idx) ?? `Unnamed #${to.idx}`;
+    if (to.kind === 'planet') return stellata.planetField.planetAt(to.idx)?.name ?? 'Planet';
     if (to.kind === 'cloud') {
       const cat = stellata.getCloudCatalog();
       return cat ? cat.clouds[to.idx].name : 'Cloud';

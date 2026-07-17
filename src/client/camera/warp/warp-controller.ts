@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
-import { targetsEqual, type FocusTarget, type Target } from '../focus/focus-target';
+import { targetsEqual, type FocusTarget, type Target, type TargetKind } from '../focus/focus-target';
 import { type FocusOps } from '../focus/focus-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 
@@ -56,7 +56,7 @@ export interface WarpPhaseInfo {
 export interface WarpInfo {
   A: Readonly<THREE.Vector3>;
   B: Readonly<THREE.Vector3>;
-  destKind: 'star' | 'cloud' | 'lg';
+  destKind: TargetKind;
   destIdx: number;
 }
 

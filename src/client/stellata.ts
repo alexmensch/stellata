@@ -80,7 +80,7 @@ import {
   jdeToJulianEpochYear,
   maxSpeedPcPerYr,
 } from './loaders/epoch-advance-pure';
-import { J2000_JD, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import { J2000_JD, KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
@@ -227,6 +227,18 @@ export class Stellata implements FrameAnchor {
   private readonly _rideLive = new THREE.Vector3();
   private _rideFocalIdx: number | null = null;
 
+  // Planet-focal ride state — the planet sibling of the binary ride
+  // above. A focused planet sweeps its orbit with `t` (fast under
+  // scrubber FF); the camera + orbit target translate by its per-frame
+  // local-position delta so the body stays under the camera and user
+  // pan offsets survive. `_planetRideIdx` reseeds on every 'focus'
+  // event (focus change or same-planet refocus both recentre the
+  // origin, staleing the cached last position).
+  private readonly _planetRideLast = new THREE.Vector3();
+  private readonly _planetRideLive = new THREE.Vector3();
+  private readonly _planetRideDelta = new THREE.Vector3();
+  private _planetRideIdx: number | null = null;
+
   // Sorted-by-distance-from-Sol index for the core-mask query. Distance
   // from Sol is intrinsic (computed from absolute catalog positions) and
   // therefore stable across floating-origin recenters, so this index is
@@ -333,6 +345,11 @@ export class Stellata implements FrameAnchor {
   // and pickers dispatch `focusables[target.kind].<leg>(target.idx)`
   // instead of per-kind shell methods.
   readonly focusables!: FocusableProviders;
+
+  // Resolves once every boot-time planet system has attached to the
+  // body field (Sol today). URL restore awaits it before applying a
+  // planet-focus ref — see the constructor's attach block.
+  readonly planetSystemsReady!: Promise<void>;
 
   constructor({ canvas, catalog }: StellataOptions) {
     this.catalog = catalog;
@@ -663,6 +680,7 @@ export class Stellata implements FrameAnchor {
       uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
       getClouds: () => this.clouds,
       getLocalGroup: () => this.localGroupLayer,
+      getPlanetField: () => this.planetBodyField,
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       getFocusables: () => this.focusables,
@@ -711,6 +729,24 @@ export class Stellata implements FrameAnchor {
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) => this.renderedLgSizePx(idx),
       },
+      planet: {
+        localPositionInto: (idx, out) =>
+          this.planetBodyField.planetLocalPositionInto(idx, out),
+        focusParkDistance: (idx) => {
+          const p = this.planetBodyField.planetAt(idx);
+          if (!p) return 0;
+          return starPhysics.parkDistForPlanet(
+            p.radiusKm * KM_PC,
+            starPhysics.fovMinorRad(this.camera),
+          );
+        },
+        arrivalRadiusPc: (idx) => {
+          const p = this.planetBodyField.planetAt(idx);
+          return p ? p.radiusKm * KM_PC : null;
+        },
+        renderedSizePx: (idx) =>
+          this.planetBodyField.renderedPlanetSizePx(idx, this.camera.position),
+      },
     };
     this.warp = new WarpController({
       camera: this.camera,
@@ -742,9 +778,18 @@ export class Stellata implements FrameAnchor {
       this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex);
       this.heliopause.setVisible(ps !== null && ps.hostStarIdx === this.catalog.solIndex);
     });
+    // Reseed the planet-focal ride on every focus mutation: focus
+    // change AND same-planet refocus both recentre the floating origin,
+    // which stales the ride's cached last position (hostLocalPos moved
+    // under it). The seed frame re-snaps against the fresh frame.
+    this.on('focus', () => { this._planetRideIdx = null; });
     // Attach Sol's planet system to the global body field once at
     // startup. Bodies render from now on independent of focus, gated
     // only by apparent-mag visibility + the per-host distance cull.
+    // `planetSystemsReady` resolves once the attach table is populated
+    // — URL planet-focus restore awaits it (the attach lands on a
+    // microtask, after this constructor but potentially after a
+    // synchronous applyFromUrl would have run).
     if (catalog.solIndex >= 0 && hasPlanets(catalog, catalog.solIndex)) {
       const solIdx = catalog.solIndex;
       const solAbs = new THREE.Vector3(
@@ -752,13 +797,15 @@ export class Stellata implements FrameAnchor {
         catalog.positions[solIdx * 3 + 1],
         catalog.positions[solIdx * 3 + 2],
       );
-      void getPlanetSystem(catalog, solIdx).then((ps) => {
+      this.planetSystemsReady = getPlanetSystem(catalog, solIdx).then((ps) => {
         if (ps !== null) {
           this.planetBodyField.attachHost(
             solIdx, ps, catalog.absmag[solIdx], solAbs, solIdx, this.getT(),
           );
         }
       });
+    } else {
+      this.planetSystemsReady = Promise.resolve();
     }
     this.galacticGrid = new GalacticGrid();
     this.scene.add(this.galacticGrid.group);
@@ -881,7 +928,12 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.orbitRingsLayer.dispose(),
     });
     this.layers.register({
-      update: (ctx) => this.planetBodyField.update(ctx.camera, ctx.t),
+      update: (ctx) => {
+        this.planetBodyField.update(ctx.camera, ctx.t);
+        // Ride runs right after the field wrote this frame's positions,
+        // mirroring the binary ride's placement after its orbit walk.
+        this.applyPlanetFocalRide();
+      },
       setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
       recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),
       dispose: () => this.planetBodyField.dispose(),
@@ -1404,6 +1456,53 @@ export class Stellata implements FrameAnchor {
     this.observe.translateFocusFrame(this._rideDelta);
   }
 
+  // Planet sibling of applyFocalFrameRide. Translate camera, orbit
+  // target, and in-flight transition pose caches by the focused
+  // planet's per-frame local-position delta (read from the same field
+  // buffers the shader renders, so target stays glued to the rendered
+  // body). Seed frames — focus change, warp, first frame after a
+  // 'focus'-event reseed — resync the baseline and re-snap target onto
+  // the live position instead of translating, exactly the
+  // focalRideStep contract applied to a planet.
+  private applyPlanetFocalRide(): void {
+    const focused = this.focus.getFocusedTarget();
+    const idx = focused?.kind === 'planet' ? focused.idx : null;
+    if (idx === null) {
+      this._planetRideIdx = null;
+      return;
+    }
+    const live = this._planetRideLive;
+    if (!this.planetBodyField.planetLocalPositionInto(idx, live)) {
+      this._planetRideIdx = null;
+      return;
+    }
+    const d = this._planetRideDelta;
+    if (this.warp.isActive() || this._planetRideIdx !== idx) {
+      if (!this.warp.isActive()) {
+        // Seed: re-snap target onto the live position — sim time may
+        // have advanced between the focus event and this frame (fast
+        // scrub), staleing the focus-entry snap.
+        d.subVectors(live, this.controls.target);
+        if (d.lengthSq() > 0) {
+          this.camera.position.add(d);
+          this.controls.target.add(d);
+          this.focus.translateFocusFrame(d);
+          this.observe.translateFocusFrame(d);
+        }
+      }
+      this._planetRideIdx = idx;
+      this._planetRideLast.copy(live);
+      return;
+    }
+    d.subVectors(live, this._planetRideLast);
+    this._planetRideLast.copy(live);
+    if (d.lengthSq() === 0) return;
+    this.camera.position.add(d);
+    this.controls.target.add(d);
+    this.focus.translateFocusFrame(d);
+    this.observe.translateFocusFrame(d);
+  }
+
   /** Debug-HUD view into the eclipse field's per-relation walk for the
    *  current camera/filter/sim-time. Empty when no binaries attached. */
   eclipseDebugRows(starIdx: number | null): EclipseRelationDebugRow[] {
@@ -1829,6 +1928,11 @@ export class Stellata implements FrameAnchor {
     return this.planetBodyField.getAttachedPlanetSystem(hostStarIdx);
   }
 
+  /** The global planet-body field — Target {kind:'planet'} identity
+   *  (flat instance index ↔ host/planet) + per-body geometry accessors
+   *  consumed by the focus card, search, and URL wiring in main.ts. */
+  get planetField(): PlanetBodyField { return this.planetBodyField; }
+
 
   /** Live apparent V mag for `(hostStarIdx, planetIdx)`, matching the
    *  planet shader's reflected-light formula at the current camera
@@ -1841,6 +1945,15 @@ export class Stellata implements FrameAnchor {
       planetIdx,
       this.camera.position,
     );
+  }
+
+  /** Live camera→planet distance in the local frame, pc; null when the
+   *  flat instance index isn't covered by an attached host. */
+  planetCameraDistancePc(instanceIdx: number): number | null {
+    if (!this.planetBodyField.planetLocalPositionInto(instanceIdx, this._tmpRenderLocal)) {
+      return null;
+    }
+    return this._tmpRenderLocal.distanceTo(this.camera.position);
   }
 
   private attachEvents() {

@@ -46,6 +46,11 @@ src/client/solar-system/
                                   the unified disc/glow chunk with stars
                                   (perceptual-disc.glsl) — see
                                   src/client/star-pipeline/README.md.
+                                  Also the identity table for Target
+                                  {kind:'planet'}: flat instance index ↔
+                                  (host, planet-within-host), plus local/
+                                  absolute position, appMag, and rendered-
+                                  size accessors keyed on the flat index.
   orbit-rings-layer.ts            Faint orbit rings in the host's orbital
                                   plane.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
@@ -422,6 +427,13 @@ specifically because Sol sits at the world origin — the float32
 jitter that bites at small distances *from non-origin focal stars*
 doesn't apply when the focal frame is also the world frame. Other
 focal stars retain the global `0.005 pc` (~1031 AU) floor.
+
+Focusing a planet body (`{kind:'planet'}` Targets — click, search,
+URL) recentres the floating origin onto the planet itself and drops
+the floor to `minOrbitDistForPlanet` (the same 90 %-fill angular
+solve, ~2.4 body radii); arrival parks at `parkDistForPlanet` (a
+30 %-fill solve). The camera follows the orbiting body via the
+planet-focal ride — see `../camera/focus/README.md` § Planet focus.
 
 `camera.near` is at `1e-10 pc` — well below `minOrbitDistForStar` —
 so very-close planet inspection isn't culled. The strict-less-than

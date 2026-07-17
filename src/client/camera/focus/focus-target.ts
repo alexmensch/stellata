@@ -4,8 +4,11 @@
 
 import * as THREE from 'three';
 
-/** Focusable-object kind tag. New kinds extend this union. */
-export type TargetKind = 'star' | 'cloud' | 'lg';
+/** Focusable-object kind tag. New kinds extend this union. A planet
+ *  target's idx is the PlanetBodyField flat global instance index;
+ *  (host, planet-within-host) resolve through the field's attach
+ *  table. */
+export type TargetKind = 'star' | 'cloud' | 'lg' | 'planet';
 
 /** A (kind, index) reference to one focusable object. The focus and
  *  distance-vector slots on FocusController each hold one of these —

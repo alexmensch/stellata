@@ -123,7 +123,14 @@ the new schema after the same 300 ms debounce as routine URL writes.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new
-artifact and the wire just works (docs/sid.md § 10).
+artifact and the wire just works (docs/sid.md § 10). The one wired
+exception: planet sids resolve to a planet-within-host domain index,
+which `IdMaps.planetTargetIndexOf` translates to the body-field flat
+Target index at apply time (and `planetDomainIndexOf` back at encode
+time); a translation miss — host body-field never attached — drops the
+focus like an unknown sid while the rest of the state applies.
+`main.ts` awaits `stellata.planetSystemsReady` before `applyFromUrl`
+so the attach table is populated when a planet ref resolves.
 
 **Console helpers.** `window.debug.decodeView('AQAA…')` decodes a blob
 and `console.table`s the fields; `window.debug.encodeView()` returns

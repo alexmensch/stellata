@@ -15,6 +15,7 @@ describe('FocusableProviders contract', () => {
       star: provider,
       cloud: provider,
       lg: provider,
+      planet: provider,
     };
 
     // @ts-expect-error — omitting a focusable kind must not compile.

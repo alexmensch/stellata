@@ -854,3 +854,110 @@ describe('PlanetBodyField.pick', () => {
   });
 });
 
+describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
+  function makeField(): PlanetBodyField {
+    return new PlanetBodyField(makeSharedUniforms(20));
+  }
+  function attach(f: PlanetBodyField, hostIdx: number, n: number, hostAbs = new THREE.Vector3()): void {
+    const ps: PlanetSystem = {
+      hostStarIdx: hostIdx,
+      planets: Array.from({ length: n }, (_, i) =>
+        makePlanet({ name: `H${hostIdx}P${i}`, semiMajorAxisAu: 1 + i, radiusKm: 6000 })),
+      positionsAt: (_t, out) => {
+        for (let i = 0; i < n; i++) {
+          out[i * 3 + 0] = (1 + i) * AU_PC;
+          out[i * 3 + 1] = 0;
+          out[i * 3 + 2] = 0;
+        }
+      },
+    };
+    f.attachHost(hostIdx, ps, 4.83, hostAbs, hostIdx === 0 ? 0 : -1, 0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hosts = (f as any).hosts as Map<number, { orientation: THREE.Quaternion }>;
+    hosts.get(hostIdx)!.orientation.identity();
+    // Re-run the fill under the identity orientation; camera parked on
+    // the host so the per-host cull gate stays open.
+    const cam = new THREE.PerspectiveCamera();
+    cam.position.copy(hostAbs);
+    f.update(cam, 0);
+  }
+
+  it('hostPlanetOf / instanceIndexOf are inverses across multiple hosts', () => {
+    const f = makeField();
+    attach(f, 0, 2);
+    attach(f, 5, 3, new THREE.Vector3(1, 0, 0));
+    expect(f.hostPlanetOf(0)).toEqual({ hostStarIdx: 0, planetIdx: 0 });
+    expect(f.hostPlanetOf(1)).toEqual({ hostStarIdx: 0, planetIdx: 1 });
+    expect(f.hostPlanetOf(2)).toEqual({ hostStarIdx: 5, planetIdx: 0 });
+    expect(f.hostPlanetOf(4)).toEqual({ hostStarIdx: 5, planetIdx: 2 });
+    expect(f.hostPlanetOf(5)).toBeNull();
+    expect(f.instanceIndexOf(5, 2)).toBe(4);
+    expect(f.instanceIndexOf(5, 3)).toBeNull();
+    expect(f.instanceIndexOf(9, 0)).toBeNull();
+    expect(f.planetAt(3)!.name).toBe('H5P1');
+    expect(f.planetAt(99)).toBeNull();
+    f.dispose();
+  });
+
+  it('flat indices re-resolve after a detach compaction', () => {
+    const f = makeField();
+    attach(f, 0, 2);
+    attach(f, 5, 1, new THREE.Vector3(1, 0, 0));
+    f.detachHost(0);
+    // Host 5's single planet compacted to flat slot 0.
+    expect(f.hostPlanetOf(0)).toEqual({ hostStarIdx: 5, planetIdx: 0 });
+    expect(f.instanceIndexOf(5, 0)).toBe(0);
+    expect(f.hostPlanetOf(1)).toBeNull();
+    f.dispose();
+  });
+
+  it('planetLocalPositionInto / planetAbsolutePositionInto compose host + orbital offset', () => {
+    const f = makeField();
+    const hostAbs = new THREE.Vector3(2, 0, 0);
+    attach(f, 5, 1, hostAbs);
+    const local = new THREE.Vector3();
+    const abs = new THREE.Vector3();
+    expect(f.planetLocalPositionInto(0, local)).toBe(true);
+    expect(f.planetAbsolutePositionInto(0, abs)).toBe(true);
+    // worldOffset is (0,0,0) so local == abs == hostAbs + (1 AU, 0, 0).
+    expect(abs.x).toBeCloseTo(2 + AU_PC, 10);
+    expect(local.x).toBeCloseTo(2 + AU_PC, 10);
+    // After a recenter onto the host, the local reading shifts but the
+    // absolute anchor doesn't.
+    f.recenter(hostAbs);
+    expect(f.planetLocalPositionInto(0, local)).toBe(true);
+    expect(f.planetAbsolutePositionInto(0, abs)).toBe(true);
+    expect(local.x).toBeCloseTo(AU_PC, 10);
+    expect(abs.x).toBeCloseTo(2 + AU_PC, 10);
+    expect(f.planetLocalPositionInto(9, local)).toBe(false);
+    f.dispose();
+  });
+
+  it('appMagForInstance matches the (host, planetIdx)-keyed appMagFor', () => {
+    const f = makeField();
+    attach(f, 5, 2, new THREE.Vector3(1, 0, 0));
+    const cam = new THREE.Vector3(0.5, 0.2, 0);
+    expect(f.appMagForInstance(1, cam)).toBeCloseTo(f.appMagFor(5, 1, cam)!, 12);
+    expect(f.appMagForInstance(9, cam)).toBeNull();
+    f.dispose();
+  });
+
+  it('renderedPlanetSizePx mirrors the shader sizing and kills below the taper', () => {
+    const f = makeField();
+    attach(f, 0, 1);
+    // Camera close to the planet at (1 AU, 0, 0): physical term visible.
+    const near = new THREE.Vector3(AU_PC - 10 * 6000 * KM_PC, 0, 0);
+    const px = f.renderedPlanetSizePx(0, near);
+    expect(px).toBeGreaterThan(0);
+    // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
+    // uViewport.y = 600, uFovYRad = 60°. physSize dominates appSize here.
+    // bufLocalRel stores the planet position in float32, so the
+    // camera→planet distance carries a ~1e-4 relative quantum at 1 AU
+    // magnitudes — compare at that tolerance.
+    const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
+    expect(Math.abs(px - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
+    // Unattached instance → 0.
+    expect(f.renderedPlanetSizePx(9, near)).toBe(0);
+    f.dispose();
+  });
+});

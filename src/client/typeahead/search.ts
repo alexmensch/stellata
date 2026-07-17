@@ -682,6 +682,7 @@ export function bindSearch(
   // catalogs; kind identity itself rides the Target.
   const nameOf = (t: Target): string => {
     if (t.kind === 'star') return describe(t.idx);
+    if (t.kind === 'planet') return stellata.planetField.planetAt(t.idx)?.name ?? '';
     if (t.kind === 'cloud') return clouds ? clouds.clouds[t.idx].name : '';
     return lg ? lg.objects[t.idx].name : '';
   };

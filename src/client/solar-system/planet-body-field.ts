@@ -2,7 +2,7 @@
 // src/client/solar-system/README.md § Planet rendering.
 
 import * as THREE from 'three';
-import type { PlanetSystem } from './planet-system';
+import type { Planet, PlanetSystem } from './planet-system';
 import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
@@ -424,6 +424,117 @@ export class PlanetBodyField {
     return host ? host.ps : null;
   }
 
+  // ── flat-instance identity (Target {kind:'planet'} currency) ────────
+  //
+  // A planet FocusTarget's idx is the flat global instance index. The
+  // accessors below are the attach-table resolution both directions.
+  // Flat indices are NOT stable across detach compaction — resolve per
+  // use, never cache one across an attach/detach cycle.
+
+  /** (host, planet-within-host) for a flat instance index, or null when
+   *  no attached host covers it. */
+  hostPlanetOf(instanceIdx: number): { hostStarIdx: number; planetIdx: number } | null {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return null;
+    return { hostStarIdx: host.hostStarIdx, planetIdx: instanceIdx - host.startInstance };
+  }
+
+  /** Flat instance index for (host, planet-within-host), or null when
+   *  the host isn't attached or the index is out of range. */
+  instanceIndexOf(hostStarIdx: number, planetIdx: number): number | null {
+    const host = this.hosts.get(hostStarIdx);
+    if (!host || planetIdx < 0 || planetIdx >= host.count) return null;
+    return host.startInstance + planetIdx;
+  }
+
+  /** Planet record for a flat instance index, or null. */
+  planetAt(instanceIdx: number): Planet | null {
+    const host = this.hostOfInstance(instanceIdx);
+    return host ? host.ps.planets[instanceIdx - host.startInstance] : null;
+  }
+
+  /** Renderer-local position (host local + orientation-applied orbital
+   *  offset — exactly what the shader renders) into `out`. */
+  planetLocalPositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const base = instanceIdx * 3;
+    out.set(
+      host.hostLocalPos.x + this.bufLocalRel[base + 0],
+      host.hostLocalPos.y + this.bufLocalRel[base + 1],
+      host.hostLocalPos.z + this.bufLocalRel[base + 2],
+    );
+    return true;
+  }
+
+  /** Absolute (catalog-space) position into `out` — the recenterOrigin
+   *  anchor when a planet is focused. */
+  planetAbsolutePositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const base = instanceIdx * 3;
+    out.set(
+      host.hostAbsPos.x + this.bufLocalRel[base + 0],
+      host.hostAbsPos.y + this.bufLocalRel[base + 1],
+      host.hostAbsPos.z + this.bufLocalRel[base + 2],
+    );
+    return true;
+  }
+
+  /** Apparent V mag for a flat instance from `cameraPosLocal` — the
+   *  instance-keyed sibling of `appMagFor`. */
+  appMagForInstance(
+    instanceIdx: number,
+    cameraPosLocal: Readonly<THREE.Vector3>,
+  ): number | null {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return null;
+    return this.evalPlanetView(host, instanceIdx - host.startInstance, cameraPosLocal).appMag;
+  }
+
+  /** Rendered disc diameter in px at `cameraPosLocal` — the CPU mirror
+   *  of the shader's `max(appSize, physSize)`, shared with `pick`.
+   *  0 when the instance is unattached or below the soft-taper kill. */
+  renderedPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return 0;
+    const i = instanceIdx - host.startInstance;
+    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + 0.5) return 0;
+    return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
+  }
+
+  private hostOfInstance(instanceIdx: number): AttachedHost | null {
+    for (const host of this.hosts.values()) {
+      if (
+        instanceIdx >= host.startInstance
+        && instanceIdx < host.startInstance + host.count
+      ) return host;
+    }
+    return null;
+  }
+
+  /** Shader-mirroring `max(appSize, physSize)` in CSS px, reading the
+   *  live shared uniforms so debug-panel writes stay in lockstep. */
+  private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
+    const viewportH = this.magShared.uViewport.value.y;
+    const fovYRad = this.magShared.uFovYRad.value;
+    const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
+    const dMEff = perceptualDmEff(
+      appMag,
+      this.magShared.uMaxAppMag.value,
+      this.magShared.uSizeSpan.value,
+      this.magShared.uSizeKnee.value,
+    );
+    const appSize = perceptualAppSizePx(
+      dMEff,
+      this.magShared.uSizeMin.value,
+      this.magShared.uSizeMax.value,
+      this.magShared.uSizeSpan.value,
+    );
+    return Math.max(appSize, physSize);
+  }
+
   /**
    * Hover-engine pick path for the planet layer. Walks
    * EVERY attached host's planets — the rule per
@@ -458,12 +569,7 @@ export class PlanetBodyField {
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
     const viewportH = rect.height;
-    const fovYRad = (camera.fov * Math.PI) / 180;
     const maxAppMag = this.magShared.uMaxAppMag.value;
-    const sizeMin = this.magShared.uSizeMin.value;
-    const sizeMax = this.magShared.uSizeMax.value;
-    const sizeSpan = this.magShared.uSizeSpan.value;
-    const sizeKnee = this.magShared.uSizeKnee.value;
     const camPos = camera.position;
 
     // Walk every host × planet and collect candidates that qualify for
@@ -493,10 +599,7 @@ export class PlanetBodyField {
         const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
         const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-        const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
-        const dMEff = perceptualDmEff(appMag, maxAppMag, sizeSpan, sizeKnee);
-        const appSize = perceptualAppSizePx(dMEff, sizeMin, sizeMax, sizeSpan);
-        const pxSize = Math.max(appSize, physSize);
+        const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
         const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
         if (pxDist > hitRadius && pxDist > pxThreshold) continue;

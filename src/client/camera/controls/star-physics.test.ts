@@ -7,14 +7,17 @@ import {
   fovMinorRad,
   peakAmplitudeFactor,
   minOrbitDistForStar,
+  minOrbitDistForPlanet,
   parkDistForStar,
+  parkDistForPlanet,
+  PLANET_PARK_FILL_FRACTION,
   renderedSizePx,
   renderedDiscPxAtPeak,
   getChartDiscParams,
   ZOOM_FLOOR_FRACTION,
   VAR_TROUGH_FLOOR_FRACTION,
 } from './star-physics';
-import { R_SUN_PC, AU_PC } from '../../util/astronomy-constants';
+import { R_SUN_PC, AU_PC, KM_PC } from '../../util/astronomy-constants';
 
 function makeCatalog(
   n: number,
@@ -391,5 +394,31 @@ describe('star-physics / getChartDiscParams', () => {
       uChartMagBright: { value: 4 },
     };
     expect(getChartDiscParams(u)).toEqual({ maxPx: 12, minPx: 1.5, magBright: 4 });
+  });
+});
+
+describe('star-physics / planet park + orbit floor', () => {
+  const RADIUS_PC = 6371 * KM_PC; // Earth
+  const FOV_MINOR = (50 * Math.PI) / 180;
+
+  it('minOrbitDistForPlanet is the 90 %-fill angular solve (~2.41 R at 50\u00b0)', () => {
+    const floor = minOrbitDistForPlanet(RADIUS_PC, FOV_MINOR);
+    const expected = RADIUS_PC / Math.tan(ZOOM_FLOOR_FRACTION * FOV_MINOR * 0.5);
+    expect(floor).toBeCloseTo(expected, 18);
+    expect(floor / RADIUS_PC).toBeCloseTo(2.414, 3);
+  });
+
+  it('parkDistForPlanet is the 30 %-fill solve (~7.6 R at 50\u00b0), outside the floor', () => {
+    const park = parkDistForPlanet(RADIUS_PC, FOV_MINOR);
+    const expected = RADIUS_PC / Math.tan(PLANET_PARK_FILL_FRACTION * FOV_MINOR * 0.5);
+    expect(park).toBeCloseTo(expected, 18);
+    expect(park / RADIUS_PC).toBeCloseTo(7.596, 3);
+    expect(park).toBeGreaterThan(minOrbitDistForPlanet(RADIUS_PC, FOV_MINOR));
+  });
+
+  it('scales linearly with the body radius (same on-screen framing for any planet)', () => {
+    const earth = parkDistForPlanet(RADIUS_PC, FOV_MINOR);
+    const jupiter = parkDistForPlanet(RADIUS_PC * 10.97, FOV_MINOR);
+    expect(jupiter / earth).toBeCloseTo(10.97, 9);
   });
 });

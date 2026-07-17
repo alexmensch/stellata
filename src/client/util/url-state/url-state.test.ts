@@ -792,6 +792,8 @@ describe('url-state', () => {
       starCount: 1,
       solIndex: 0,
       sidResolver: makeResolver(),
+      planetDomainIndexOf: () => null,
+      planetTargetIndexOf: () => null,
     };
 
     it('omits cam when observe-mode camera is parked at the focal-star origin', () => {
@@ -1221,6 +1223,8 @@ describe('url-state', () => {
         starCount: STAR_SIDS.length,
         solIndex: 0,
         sidResolver,
+        planetDomainIndexOf: () => null,
+        planetTargetIndexOf: () => null,
       };
     }
 
@@ -1228,6 +1232,7 @@ describe('url-state', () => {
       const state = {
         focusedStar: 0 as number | null, // Sol default focus
         focusedCloud: null as number | null,
+        focusedPlanet: null as number | null,
         vectorTo: null as number | null,
         vectorToCloud: null as number | null,
         pois: [] as number[],
@@ -1247,6 +1252,7 @@ describe('url-state', () => {
         getFocusedStar: () => state.focusedStar,
         getFocusedTarget: () => {
           if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
+          if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
           if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
           return null;
         },
@@ -1258,15 +1264,21 @@ describe('url-state', () => {
         getPois: () => state.pois,
         getCameraMode: () => state.mode,
         setCameraMode: (m) => { state.mode = m; },
-        focusStar: (idx) => { state.focusedStar = idx; state.focusedCloud = null; },
-        setOrbitTarget: (t) => {
-          if (t.kind === 'star') { state.focusedStar = t.idx; state.focusedCloud = null; }
-          else { state.focusedCloud = t.idx; state.focusedStar = null; }
+        focusStar: (idx) => {
+          state.focusedStar = idx; state.focusedCloud = null; state.focusedPlanet = null;
         },
-        unfocus: () => { state.focusedStar = null; },
+        setOrbitTarget: (t) => {
+          state.focusedStar = null; state.focusedCloud = null; state.focusedPlanet = null;
+          if (t.kind === 'star') state.focusedStar = t.idx;
+          else if (t.kind === 'planet') state.focusedPlanet = t.idx;
+          else state.focusedCloud = t.idx;
+        },
+        unfocus: () => { state.focusedStar = null; state.focusedPlanet = null; },
         flyTo: (t) => {
-          if (t.kind === 'star') { state.focusedStar = t.idx; state.focusedCloud = null; }
-          else { state.focusedCloud = t.idx; state.focusedStar = null; }
+          state.focusedStar = null; state.focusedCloud = null; state.focusedPlanet = null;
+          if (t.kind === 'star') state.focusedStar = t.idx;
+          else if (t.kind === 'planet') state.focusedPlanet = t.idx;
+          else state.focusedCloud = t.idx;
         },
         setVector: (t) => {
           if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
@@ -1391,6 +1403,8 @@ describe('url-state', () => {
         starCount: STAR_SIDS.length,
         solIndex: 0,
         sidResolver,
+        planetDomainIndexOf: () => null,
+        planetTargetIndexOf: () => null,
       };
       const { stellata, state } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 202 } });
@@ -1398,6 +1412,64 @@ describe('url-state', () => {
       expect(state.focusedCloud).toBeNull();
       sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
       expect(state.focusedCloud).toBe(1);
+    });
+
+    it('planet focus round-trips: sid on the wire, flat Target index in the runtime', () => {
+      // The planet SID domain is keyed planet-within-host; the Target
+      // currency is the body field's flat instance index. A deliberate
+      // offset between the two spaces pins that both directions of the
+      // IdMaps translation actually run.
+      const PLANET_SIDS = [901, 902, 903];
+      const FLAT_OFFSET = 5;
+      const sidResolver = new SidResolver(['star', 'planet']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      sidResolver.attach('planet', arrayDomain(PLANET_SIDS));
+      const idMaps: IdMaps = {
+        hipToIndex: new Map(),
+        indexToHip: new Uint32Array(STAR_SIDS.length),
+        starCount: STAR_SIDS.length,
+        solIndex: 0,
+        sidResolver,
+        planetDomainIndexOf: (t) =>
+          t - FLAT_OFFSET >= 0 && t - FLAT_OFFSET < PLANET_SIDS.length
+            ? t - FLAT_OFFSET
+            : null,
+        planetTargetIndexOf: (d) =>
+          d >= 0 && d < PLANET_SIDS.length ? d + FLAT_OFFSET : null,
+      };
+      // Encoder: focused planet at flat idx 7 → domain 2 → sid 903.
+      const tx = makeStatefulStellata();
+      tx.state.focusedStar = null;
+      tx.state.focusedPlanet = 7;
+      const view = currentStateOf(tx.stellata, idMaps);
+      expect(view.focus).toEqual({ kind: 'sid', id: 903 });
+      // Receiver: the sid resolves to domain 2 and translates back to
+      // the flat index before the flyTo dispatch.
+      const rx = makeStatefulStellata();
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      expect(rx.state.focusedPlanet).toBe(7);
+      expect(rx.state.focusedStar).toBeNull();
+    });
+
+    it('a planet sid with no attached body-field host drops the focus, rest applies', () => {
+      const PLANET_SIDS = [901];
+      const sidResolver = new SidResolver(['star', 'planet']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      sidResolver.attach('planet', arrayDomain(PLANET_SIDS));
+      const idMaps: IdMaps = {
+        hipToIndex: new Map(),
+        indexToHip: new Uint32Array(STAR_SIDS.length),
+        starCount: STAR_SIDS.length,
+        solIndex: 0,
+        sidResolver,
+        planetDomainIndexOf: () => null,
+        planetTargetIndexOf: () => null, // host never attached
+      };
+      const { stellata, state } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 901 }, mag: 9 });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      expect(state.focusedPlanet).toBeNull();
+      expect(state.focusedStar).toBe(0); // untouched default
     });
   });
 

@@ -27,7 +27,10 @@ in both navigate and observe modes.
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx`, `renderedDiscPxAtPeak`, `getChartDiscParams` +
-  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`.
+  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
+  planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
+  (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular
+  solves, keyed on the body radius directly.
 
 ### star-geometry vs star-physics vs stellata.ts
 

@@ -62,7 +62,8 @@ so the whole unit stays card-sized regardless of pin count.
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
-  `FocusKind` union (`'star' | 'cloud' | 'lg'`). `FocusCardProviders` is a
+  `FocusKind` union (`'star' | 'cloud' | 'lg' | 'planet'`).
+  `FocusCardProviders` is a
   mapped type EXHAUSTIVE over the union: **adding a focusable kind
   without a focus-card provider fails `tsc`** — that compile-time
   guarantee is the point of the registry shape, don't weaken it to a
@@ -93,6 +94,11 @@ so the whole unit stays card-sized regardless of pin count.
 - `lg-focus-provider.ts` — tier-2 Local Group rows (type + aliases as
   identity lines, live camera distance, live far-field apparent mag
   off the catalog m_V, absolute mag, axis pair, provenance).
+- `planet-focus-provider.ts` — tier-2 planet rows keyed on the
+  PlanetBodyField flat instance index: "Orbiting <host>" breadcrumb +
+  type descriptor as identity lines, radius (R⊕ + km), live camera
+  distance, live apparent mag (shader mirror), orbital period, and
+  semi-major axis.
 - `cloud-focus-provider.ts` — tier-2 cloud rows. Clouds are not a
   wired focus target while the layer is shelved
   (`../molecular-clouds/README.md`); the provider exists to satisfy
@@ -109,8 +115,3 @@ object's display name (text-transform none — Greek-letter Bayer forms
 must not uppercase) so a collapsed stack still says what its front card
 describes.
 
-## Planet focus (future)
-
-Planets are not FocusTargets today. When they become one, `'planet'`
-joins `FocusKind` and the compile-time contract forces a planet
-provider in the same change.

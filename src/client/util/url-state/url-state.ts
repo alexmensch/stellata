@@ -11,6 +11,7 @@ import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
+import type { TargetKind } from '../../camera/focus/focus-target';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Four wire
 // formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
@@ -108,6 +109,13 @@ export interface IdMaps {
   /** Global SID resolver over every object-carrying artifact —
    *  see src/client/util/sid-resolver/README.md for the wiring map. */
   sidResolver: SidResolver;
+  /** Planet index translation between the SID planet domain
+   *  (planet-within-host, host implicit per domain — Sol today) and
+   *  the Target {kind:'planet'} currency (PlanetBodyField flat
+   *  instance index). Null when the host isn't attached / the index
+   *  isn't covered. */
+  planetDomainIndexOf: (targetIdx: number) => number | null;
+  planetTargetIndexOf: (domainIndex: number) => number | null;
 }
 
 /** Legacy v1–v3 star ref — decode-only since v4. */
@@ -1086,8 +1094,15 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   return view;
 }
 
-function sidRefOf(idMaps: IdMaps, kind: 'star' | 'cloud' | 'lg', localIndex: number): SidRef | undefined {
-  const sid = idMaps.sidResolver.sidOf(kind, localIndex);
+function sidRefOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): SidRef | undefined {
+  // Planet Targets carry the PlanetBodyField flat instance index; the
+  // SID planet domain is keyed by planet-within-host — translate
+  // through IdMaps before the reverse lookup.
+  const domainIndex = kind === 'planet'
+    ? idMaps.planetDomainIndexOf(localIndex)
+    : localIndex;
+  if (domainIndex === null) return undefined;
+  const sid = idMaps.sidResolver.sidOf(kind, domainIndex);
   return sid === null ? undefined : { kind: 'sid', id: sid };
 }
 
@@ -1178,13 +1193,15 @@ export function applyDecodedView(
       // v4 universal ref. Deferred-resolution contract (docs/sid.md
       // § 8): a sid whose domain hasn't attached yet applies on that
       // attach; a sid no attached domain claims expires silently and
-      // the rest of the decoded state stands. Planet kinds have no
-      // focus semantics yet (hover-only) and fall through.
+      // the rest of the decoded state stands. Planet sids translate
+      // domain index → flat Target index; a translation miss (host
+      // body-field not attached) drops the focus like an unknown sid.
       const snap = hasCam || hasTgt;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
-        if (kind === 'planet') return;
-        if (snap) stellata.setOrbitTarget({ kind, idx: localIndex });
-        else stellata.flyTo({ kind, idx: localIndex }, { animate: false });
+        const idx = kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
+        if (idx === null) return;
+        if (snap) stellata.setOrbitTarget({ kind, idx });
+        else stellata.flyTo({ kind, idx }, { animate: false });
       });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
@@ -1207,8 +1224,9 @@ export function applyDecodedView(
   if (view.to) {
     if (view.to.kind === 'sid') {
       idMaps.sidResolver.whenResolved(view.to.id, (kind, localIndex) => {
-        if (kind === 'planet') return;
-        stellata.setVector({ kind, idx: localIndex });
+        const idx = kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
+        if (idx === null) return;
+        stellata.setVector({ kind, idx });
       });
     } else {
       const idx = resolveStarRef(view.to, idMaps, -1);

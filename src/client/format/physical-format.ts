@@ -73,6 +73,21 @@ export function appMagCameraDisplay(absmag: number, dCameraPc: number): string {
   return formatMagnitude(appMag);
 }
 
+/** Orbital-period readout in years. Sub-decade values keep two decimals
+ *  (Mercury 0.24, Earth 1.00); double-digit-plus drop to whole years
+ *  (Jupiter 12, Pluto 248) where the fractional part is noise. */
+export function formatPeriodYears(yr: number): string {
+  return yr >= 10 ? yr.toFixed(0) : yr.toFixed(2);
+}
+
+/** Planet orbital period in years from the semi-major axis — Kepler's
+ *  third law in the Sun-mass system: T(yr) = a(AU)^1.5. For exoplanets
+ *  the host-mass term reappears as T = a^1.5/√M; until then every
+ *  attached host is Sol-mass so the simple form is exact. */
+export function planetPeriodYears(semiMajorAxisAu: number): number {
+  return Math.pow(semiMajorAxisAu, 1.5);
+}
+
 /** "Period 332d · Δmag 7.6" for a GCVS-matched variable; null when the
  *  record carries no period/amplitude (not variable). */
 export function formatVariability(periodDays: number, amplitudeMag: number): string | null {
