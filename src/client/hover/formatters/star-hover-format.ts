@@ -7,6 +7,7 @@ import { fmtDistAuto } from '../../ui/distance-util';
 import { formatSpectral, spectralLine } from '../../format/spectral-format';
 import { formatVariability } from '../../format/physical-format';
 import {
+  collapsedClusterIndices,
   companionLines,
   resolveStarName,
   systemMemberIndices,
@@ -86,10 +87,12 @@ export function formatStarHover(
 /** System card for a screen-collapsed multiple. Fires only when the
  *  hovered star's system has 3+ components (a plain binary keeps its
  *  per-component card — the "Known companions" line already covers it)
- *  AND at least one member is composite-suppressed right now, i.e. the
- *  system renders as a single point from the current vantage. At
- *  close-in viewing nothing is suppressed and the per-component cards
- *  take over. */
+ *  AND the hovered star's own collapsed cluster — components reachable
+ *  through currently-suppressed relations, i.e. actually rendering as
+ *  one point with it — has 2+ members. The roster lists the CLUSTER
+ *  only: hovering Proxima (visibly separated from the α Cen A+B point)
+ *  or a close-up Castor A (only its spectroscopic partner overlaps)
+ *  must not enumerate members the user can see elsewhere on screen. */
 function systemCardOrNull(
   idx: number,
   ctxLine: string,
@@ -98,12 +101,15 @@ function systemCardOrNull(
   if (!ctx.binaries || !ctx.isCollapsed) return null;
   const members = systemMemberIndices(ctx.binaries, idx);
   if (members.length < 3) return null;
-  if (!members.some((m) => ctx.isCollapsed!(m))) return null;
+  const cluster = collapsedClusterIndices(ctx.binaries, idx, ctx.isCollapsed);
+  if (cluster.length < 2) return null;
   const lines: string[] = [];
   if (ctxLine) lines.push(ctxLine);
   lines.push(
-    `${members.length} components:`,
-    members.map((m) => resolveStarName(ctx, m)).join(', '),
+    cluster.length === members.length
+      ? `${members.length} components:`
+      : `${cluster.length} of ${members.length} components here:`,
+    cluster.map((m) => resolveStarName(ctx, m)).join(', '),
   );
-  return { name: `${resolveStarName(ctx, members[0])} system`, lines };
+  return { name: `${resolveStarName(ctx, cluster[0])} system`, lines };
 }

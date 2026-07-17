@@ -387,7 +387,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
       ...over,
     });
 
-  it('collapsed multiple: any member hover yields the roster card', () => {
+  it('fully collapsed multiple: any member hover yields the full roster card', () => {
     const ctx = sysCtx({ isCollapsed: () => true });
     for (const member of [0, 3]) {
       const out = formatStarHover(member, D_CAM, ctx);
@@ -404,6 +404,41 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
     const ctx = sysCtx({ isCollapsed: () => false });
     const out = formatStarHover(2, D_CAM, ctx);
     expect(out.name).toBe('Castor B');
+  });
+
+  it('partially collapsed: roster lists only the overlapping cluster, not the whole system', () => {
+    // Close-up Castor: only the spectroscopic inner pair (secondary 1)
+    // is still suppressed; B/Bb2/C/D are resolved or off-screen.
+    const ctx = sysCtx({ isCollapsed: (i) => i === 1 });
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.name).toBe('Castor system');
+    expect(out.lines).toEqual([
+      'Lyra · 7.1 pc',
+      '2 of 6 components here:',
+      'Castor, Castor Aa2',
+    ]);
+  });
+
+  it('visibly separated member of a collapsed system keeps its own card (Proxima case)', () => {
+    // α Cen from Sol: A+B collapse (secondary 1 suppressed); C sits
+    // 2.2° away, its relation unsuppressed. Hovering C must NOT show
+    // the system card even though other members are collapsed.
+    const rels = [
+      makeRelation({ primaryIdx: 0, secondaryIdx: 1 }),
+      makeRelation({ primaryIdx: 0, secondaryIdx: 2 }),
+    ];
+    const ctx = buildCtx({
+      starLabels: new Map([[0, 'Rigil Kentaurus'], [1, 'Toliman'], [2, 'Proxima Centauri']]),
+      binaries: makeBinaries(rels),
+      isCollapsed: (i) => i === 1,
+    });
+    expect(formatStarHover(2, D_CAM, ctx).name).toBe('Proxima Centauri');
+    // Hovering the A+B composite point shows the cluster card for the
+    // two overlapping members only.
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.name).toBe('Rigil Kentaurus system');
+    expect(out.lines[1]).toBe('2 of 3 components here:');
+    expect(out.lines[2]).toBe('Rigil Kentaurus, Toliman');
   });
 
   it('plain binary never swaps to a system card, suppressed or not', () => {

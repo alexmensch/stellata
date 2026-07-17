@@ -24,14 +24,19 @@ star-hover-format.ts             Star — name + constellation · distance
                                  ../../format/star-companion-format.ts,
                                  shared with the focus card.
                                  System card: when the hovered star's
-                                 system has 3+ components AND any member
-                                 is composite-suppressed this frame
-                                 (Stellata.isCompositeSuppressed — the
+                                 system has 3+ components AND its own
+                                 collapsed cluster — members reachable
+                                 through currently-suppressed relations
+                                 (Stellata.isCompositeSuppressed, the
                                  orbit walk's own sub-pixel verdict, so
-                                 card and rendering can't disagree), the
-                                 card swaps to "<primary> system" + the
-                                 component roster. Plain binaries keep
-                                 the per-component card; close-in
+                                 card and rendering can't disagree) —
+                                 has 2+ members, the card swaps to
+                                 "<primary> system" + the CLUSTER
+                                 roster ("2 of 6 components here:" when
+                                 partial). A visibly separated member
+                                 (Proxima off the α Cen A+B point)
+                                 keeps its own card. Plain binaries
+                                 keep the per-component card; close-in
                                  viewing (nothing suppressed) does too.
 planet-hover-format.ts           Planet — camera distance · apparent
                                  V mag, period (years), radius (R⊕ + km).

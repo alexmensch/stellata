@@ -40,11 +40,15 @@ export function resolveStarName(ctx: StarNameContext, idx: number): string {
   return `Unnamed (SID #${ctx.sid[idx]})`;
 }
 
-/** Every star record in `idx`'s multiple-star system — the connected
- *  component over primary/secondary links — in first-seen order walking
- *  the (topologically sorted) relation list, so outer primaries lead and
- *  inner members follow. Returns [] when the star is in no relation. */
-export function systemMemberIndices(binaries: BinariesData, idx: number): number[] {
+// Connected component over primary/secondary links containing `idx`,
+// restricted to relations passing `edgeActive`, in first-seen order
+// walking the (topologically sorted) relation list — outer primaries
+// lead, inner members follow. Returns [] when no edge is reachable.
+function connectedMemberIndices(
+  binaries: BinariesData,
+  idx: number,
+  edgeActive: (rel: BinaryRelation) => boolean,
+): number[] {
   const relIdxs = new Set<number>();
   const seen = new Set<number>();
   const stack = [idx];
@@ -58,12 +62,13 @@ export function systemMemberIndices(binaries: BinariesData, idx: number): number
     ]) {
       if (!list) continue;
       for (const ri of list) {
+        const r = binaries.relations[ri];
+        if (!edgeActive(r)) continue;
         relIdxs.add(ri);
-        stack.push(binaries.relations[ri].primaryIdx, binaries.relations[ri].secondaryIdx);
+        stack.push(r.primaryIdx, r.secondaryIdx);
       }
     }
   }
-  if (relIdxs.size === 0) return [];
   const members: number[] = [];
   const emitted = new Set<number>();
   for (const ri of [...relIdxs].sort((a, b) => a - b)) {
@@ -75,6 +80,26 @@ export function systemMemberIndices(binaries: BinariesData, idx: number): number
     }
   }
   return members;
+}
+
+/** Every star record in `idx`'s multiple-star system. Returns [] when
+ *  the star is in no relation. */
+export function systemMemberIndices(binaries: BinariesData, idx: number): number[] {
+  return connectedMemberIndices(binaries, idx, () => true);
+}
+
+/** Members of `idx`'s COLLAPSED cluster: stars reachable through
+ *  relations whose secondary is composite-suppressed right now — i.e.
+ *  the components actually rendering as one point with the hovered
+ *  star. A visually separated member (Proxima at 2.2° from α Cen A+B)
+ *  has no active suppressed edge and comes back a singleton [idx]. */
+export function collapsedClusterIndices(
+  binaries: BinariesData,
+  idx: number,
+  isCollapsed: (starIdx: number) => boolean,
+): number[] {
+  const members = connectedMemberIndices(binaries, idx, (r) => isCollapsed(r.secondaryIdx));
+  return members.length === 0 ? [idx] : members;
 }
 
 // Lines describing the star's binary role: a two-line block per relation
