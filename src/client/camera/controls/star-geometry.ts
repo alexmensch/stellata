@@ -12,9 +12,9 @@ export function angularToPx(viewport_y: number, fovYRad: number): number {
 
 // Star disc pixel diameter under the angular-diameter formula
 // `θ = 2·atan(R / d)`. `radiusFactor` modulates `R` for variable-star
-// pulsation (1 for non-variables; 10^(amp/10) at peak; 10^(-amp/10) at
-// trough). The shader's physSize calc must produce the same value for
-// the same inputs — keep them in sync.
+// pulsation (1 for non-variables; ρ^(±0.5) at the peak/trough of the
+// per-type radius swing). The shader's physSize calc must produce the
+// same value for the same inputs — keep them in sync.
 export function physSizePx(
   R_pc: number,
   dCam_pc: number,
@@ -25,43 +25,20 @@ export function physSizePx(
   return 2 * Math.atan((R_pc * radiusFactor) / dCam_pc) * angularToPx(viewport_y, fovYRad);
 }
 
-// Effective amplitude for a variable star, clamped so the disc neither
-// grows past `maxPhysFrac` of the viewport's minor axis at peak nor
-// shrinks below `varTroughFrac` of `baseSize` at trough. Returns 0 for
-// non-variables.
-//
-// Inputs:
-//   amp           — catalog amplitudeMag (peak-to-trough magnitudes)
-//   baseSize      — un-modulated disc size in px (radiusFactor = 1)
-//   maxPhysSize   — viewport-derived peak ceiling in px
-//                   (= maxPhysFrac × min(viewport.x, viewport.y))
-//   varTroughFrac — trough floor fraction (= VAR_TROUGH_FLOOR_FRACTION)
-//
-// Same compression rule the shader applies to `uMaxPhysFrac` /
-// `uVarTroughFrac`. Headroom is computed in log-flux space because the
-// disc-radius modulation is `R · 10^(-Δm/5)` (constant-T assumption).
-export function varEffectiveAmplitude(
-  amp: number,
-  baseSize: number,
-  maxPhysSize: number,
-  varTroughFrac: number,
-): number {
-  if (amp <= 0) return 0;
-  const maxUpLog10 = Math.log10(Math.max(maxPhysSize / Math.max(baseSize, 1), 1));
-  const maxDownLog10 = -Math.log10(varTroughFrac);
-  const ampLimitMag = 10 * Math.min(maxUpLog10, maxDownLog10);
-  return Math.min(amp, Math.max(0, ampLimitMag));
-}
-
 // Per-star variability factor on physical radius. A non-variable returns
-// 1. A variable returns 10^(amp/10) — the peak-to-mean radius ratio under
-// the constant-temperature assumption (`R ∝ √L`, `L ∝ 10^(-Δm/2.5)`),
-// driving the orbit floor and parking-distance calibration so the pulse
-// peak hits the same screen-fill fraction every star does. Returns 1 for
-// rows the GCVS pass couldn't model (no period, irregular type) so the
-// renderer treats them as static.
-export function peakAmplitudeFactor(amplitudeMag: number, periodDays: number): number {
-  return periodDays > 0 && amplitudeMag > 0 ? Math.pow(10, amplitudeMag / 10) : 1;
+// 1. A variable returns √ρ — the peak radius factor of the shader's
+// `radiusFactor = ρ^(−0.5·cos 2πφ)` (maximum at the radius peak, φ = 0.5),
+// where ρ is the per-type peak-to-peak disc-swing ratio. Drives the orbit
+// floor and parking-distance calibration so the pulse peak hits the same
+// screen-fill fraction every star does. Returns 1 for rows the GCVS pass
+// couldn't model (no period / no amplitude) so the renderer treats them
+// as static.
+export function peakAmplitudeFactor(
+  pulsRho: number,
+  amplitudeMag: number,
+  periodDays: number,
+): number {
+  return periodDays > 0 && amplitudeMag > 0 ? Math.sqrt(pulsRho) : 1;
 }
 
 // Sub-pixel magnitude bias in `pickScore`. A 1-mag-fainter candidate is
