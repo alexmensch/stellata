@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import type { Catalog } from '../loaders/catalog-loader';
+import { targetsEqual, type Target } from '../camera/focus/focus-target';
 import { fmtDist } from '../ui/distance-util';
 import { resolveStarName } from '../format/star-companion-format';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
@@ -26,17 +26,17 @@ import {
 import { focusedArrowFadeAlpha } from './arrow-fade';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 
-// Point-of-interest overlay — renders the pinned-star list
+// Point-of-interest overlay — renders the pinned-object list
 // (src/client/poi/README.md) in BOTH camera modes. Each pin renders two
 // ways:
 //   - **On screen** (POI projects inside the viewport, with a small
 //     pull-in margin so labels don't clip at the edge): a thin ring
-//     around the star + a text label `name · ConCode · distance`
+//     around the object + a text label `name · ConCode · distance`
 //     anchored at a fixed pixel offset from the ring rim. The fixed-px
-//     anchor keeps the label-to-star distance constant as FOV changes.
-//     Clicking either the ring's label or the star itself applies the
-//     mode's star-click semantics (unpin toggle in observe, the click
-//     ladder in navigate — Stellata.applyStarClick).
+//     anchor keeps the label-to-object distance constant as FOV changes.
+//     Clicking either the ring's label or the object itself applies the
+//     mode's click semantics (unpin toggle in observe, the click ladder
+//     in navigate — Stellata.applyObjectClick).
 //   - **Off screen**: a chevron arrow on the active ring rim (focus
 //     ring in navigate, HUD ring in observe) points toward the POI
 //     direction, with a name-only label by the chevron tip. Clicking
@@ -44,12 +44,12 @@ import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 //     (Stellata.aimAt) — same affordance the Sol/GC labels give in
 //     the HUD.
 // Distances are measured from the LIVE camera (in observe the camera is
-// parked at the focal star, so this equals the old from-the-focal-star
+// parked at the focal object, so this equals the old from-the-focal
 // reading). Visibility is gated as a HUD widget — hidden when the HUD
 // checkbox is off, during warp (CSS rule), and during the
 // navigate↔observe transition.
 
-// Detection margin: a star within ~40 px of the viewport edge still counts
+// Detection margin: a POI within ~40 px of the viewport edge still counts
 // as on-screen so its label survives small look-around drifts without
 // flipping to arrow mode every couple of frames.
 export const ON_SCREEN_PULL_IN_PX = 40;
@@ -75,10 +75,10 @@ export function isPoiOnScreen(
     projected[1] <= h - ON_SCREEN_PULL_IN_PX
   );
 }
-// Per-POI ring around the pinned star — same screen radius as the focus
-// ring so the two read as the same kind of indicator (shared
+// Per-POI ring around the pinned object — same screen radius as the
+// focus ring so the two read as the same kind of indicator (shared
 // FOCUS_RING_RADIUS_PX). The on-screen label rides just outside this rim
-// along a 45° diagonal, which is what makes the label-to-star distance
+// along a 45° diagonal, which is what makes the label-to-object distance
 // FOV-invariant: ring radius is fixed in screen pixels regardless of how
 // FOV scales the rendered disc.
 const LABEL_RIM_GAP_PX = 6;
@@ -104,7 +104,7 @@ export interface EntryDirtyState {
 }
 
 interface Entry extends EntryDirtyState {
-  idx: number;
+  target: Target;
   arrowPath: SVGPathElement;
   arrowLabel: SVGTextElement;
   ring: SVGCircleElement;
@@ -113,6 +113,10 @@ interface Entry extends EntryDirtyState {
   // the POI renders on-screen). Feeds the shared disc-coverage fade.
   drawnArrowLen: number;
   fade: FadeState;
+}
+
+function poiPoolKey(t: Target): string {
+  return `${t.kind}:${t.idx}`;
 }
 
 /**
@@ -166,15 +170,42 @@ export function createPoiOverlay(
   if (!arrowsGroup || !ringsGroup || !labelsGroup) return;
 
   const catalog = stellata.catalog;
-  const pool = new Map<number, Entry>();
+  const pool = new Map<string, Entry>();
 
-  const tmpStarLocal = new THREE.Vector3();
+  const tmpPoiLocal = new THREE.Vector3();
   const tmpDir = new THREE.Vector3();
   const tmpAim = new THREE.Vector3();
   const tmpOrigin = new THREE.Vector3();
   const tmpAnchor: [number, number] = [0, 0];
 
-  function createEntry(idx: number): Entry {
+  // Per-kind position in the floating local frame — the same buffers
+  // the renderer draws from, so labels can't drift off the pixels.
+  function poiLocalPositionInto(t: Target, out: THREE.Vector3): boolean {
+    if (t.kind === 'star') {
+      const lp = stellata.localPositions;
+      out.set(lp[t.idx * 3], lp[t.idx * 3 + 1], lp[t.idx * 3 + 2]);
+      return true;
+    }
+    if (t.kind === 'planet') {
+      return stellata.planetField.planetLocalPositionInto(t.idx, out);
+    }
+    return false;
+  }
+
+  function poiName(t: Target): string {
+    if (t.kind === 'star') {
+      return resolveStarName(
+        { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
+        t.idx,
+      );
+    }
+    if (t.kind === 'planet') {
+      return stellata.planetField.planetAt(t.idx)?.name ?? 'Planet';
+    }
+    return '';
+  }
+
+  function createEntry(target: Target): Entry {
     const NS = 'http://www.w3.org/2000/svg';
     const arrowPath = document.createElementNS(NS, 'path') as SVGPathElement;
     arrowPath.setAttribute('class', 'poi-arrow');
@@ -197,24 +228,23 @@ export function createPoiOverlay(
     onScreenLabel.setAttribute('dominant-baseline', 'central');
     labelsGroup!.appendChild(onScreenLabel);
 
-    // Click affordances. On-screen label applies the mode's star-click
-    // semantics — one behaviour whether the user hits the star or its
+    // Click affordances. On-screen label applies the mode's click
+    // semantics — one behaviour whether the user hits the object or its
     // label. Off-screen arrow label slerps the camera toward the POI (it
     // isn't visible so "show me where it is" is the natural action). The
-    // ring itself stays click-through — the star underneath is already a
-    // canvas click target, and putting pointer-events on the ring would
+    // ring itself stays click-through — the object underneath is already
+    // a canvas click target, and putting pointer-events on the ring would
     // shadow that.
     onScreenLabel.addEventListener('click', () => {
-      stellata.applyStarClick(idx);
+      stellata.applyObjectClick(target);
     });
     arrowLabel.addEventListener('click', () => {
-      const lp = stellata.localPositions;
-      tmpAim.set(lp[idx * 3], lp[idx * 3 + 1], lp[idx * 3 + 2]);
+      if (!poiLocalPositionInto(target, tmpAim)) return;
       stellata.aimAt(tmpAim);
     });
 
     return {
-      idx, arrowPath, arrowLabel, ring, onScreenLabel,
+      target, arrowPath, arrowLabel, ring, onScreenLabel,
       drawnArrowLen: 0,
       fade: emptyFadeState(),
       ...emptyEntryDirtyState(),
@@ -230,15 +260,16 @@ export function createPoiOverlay(
 
   function syncPool() {
     const pois = stellata.getPois();
-    const seen = new Set<number>(pois);
-    for (const [idx, e] of pool) {
-      if (!seen.has(idx)) {
+    const seen = new Set<string>(pois.map(poiPoolKey));
+    for (const [key, e] of pool) {
+      if (!seen.has(key)) {
         destroyEntry(e);
-        pool.delete(idx);
+        pool.delete(key);
       }
     }
-    for (const idx of pois) {
-      if (!pool.has(idx)) pool.set(idx, createEntry(idx));
+    for (const t of pois) {
+      const key = poiPoolKey(t);
+      if (!pool.has(key)) pool.set(key, createEntry(t));
     }
   }
 
@@ -304,6 +335,7 @@ export function createPoiOverlay(
     const localPositions = stellata.localPositions;
     const camPos = camera.position;
     const focusedStar = stellata.getFocusedStar();
+    const focusedTarget = stellata.getFocusedTarget();
 
     // Off-screen arrows mirror the HUD's Sol/GC arrows: shafts attach to
     // whichever ring is active (focus ring in navigate, HUD ring in
@@ -327,31 +359,30 @@ export function createPoiOverlay(
 
     let maxArrowLenPx = 0;
 
-    for (const idx of pois) {
-      const e = pool.get(idx);
+    for (const t of pois) {
+      const e = pool.get(poiPoolKey(t));
       if (!e) continue;
       e.drawnArrowLen = 0;
 
-      // The focused star's own pin is suppressed — a POI ring/label on
+      // The focused object's own pin is suppressed — a POI ring/label on
       // the object the camera is parked at (or orbiting) is noise. The
       // pin itself survives; the chrome returns on unfocus/refocus.
-      if (idx === focusedStar) {
+      if (targetsEqual(t, focusedTarget)) {
         hideEntry(e);
         continue;
       }
 
-      tmpStarLocal.set(
-        localPositions[idx * 3],
-        localPositions[idx * 3 + 1],
-        localPositions[idx * 3 + 2],
-      );
-      const projected = projectToScreen(tmpStarLocal, camera, w, h);
+      if (!poiLocalPositionInto(t, tmpPoiLocal)) {
+        hideEntry(e);
+        continue;
+      }
+      const projected = projectToScreen(tmpPoiLocal, camera, w, h);
       const onScreen = isPoiOnScreen(projected, w, h);
 
-      const distPc = tmpStarLocal.distanceTo(camPos);
+      const distPc = tmpPoiLocal.distanceTo(camPos);
 
-      const name = labelFor(idx, starLabels, catalog);
-      const conIdx = catalog.constellation[idx];
+      const name = poiName(t);
+      const conIdx = t.kind === 'star' ? catalog.constellation[t.idx] : 255;
       const conCode = conIdx !== 255 ? catalog.constellations[conIdx].code : '';
 
       if (onScreen && projected) {
@@ -359,13 +390,13 @@ export function createPoiOverlay(
         e.lastArrowD = setStrAttr(e.arrowPath, 'd', '', e.lastArrowD);
         e.lastArrowLabelDisplay = setStyle(e.arrowLabel, 'display', 'none', e.lastArrowLabelDisplay);
 
-        // Ring at the projected star.
+        // Ring at the projected POI.
         e.lastRingDisplay = setStyle(e.ring, 'display', '', e.lastRingDisplay);
         e.lastRingCx = setNumAttr(e.ring, 'cx', projected[0], e.lastRingCx);
         e.lastRingCy = setNumAttr(e.ring, 'cy', projected[1], e.lastRingCy);
 
         // On-screen label anchored just outside the ring rim along a 45°
-        // diagonal. Fixed-pixel offset → label-to-star distance is
+        // diagonal. Fixed-pixel offset → label-to-object distance is
         // FOV-invariant; the rendered disc may grow or shrink with FOV
         // but the label stays clear of the ring at all zoom levels.
         const fullText = conCode
@@ -387,9 +418,9 @@ export function createPoiOverlay(
       e.lastOnScreenLabelDisplay = setStyle(e.onScreenLabel, 'display', 'none', e.lastOnScreenLabelDisplay);
 
       tmpDir.set(
-        tmpStarLocal.x - camPos.x,
-        tmpStarLocal.y - camPos.y,
-        tmpStarLocal.z - camPos.z,
+        tmpPoiLocal.x - camPos.x,
+        tmpPoiLocal.y - camPos.y,
+        tmpPoiLocal.z - camPos.z,
       );
       const dirLenSq = tmpDir.lengthSq();
       if (dirLenSq < 1e-12) {
@@ -469,24 +500,13 @@ export function createPoiOverlay(
       const alpha = focusedArrowFadeAlpha(
         cameraMode, null, discRadiusPx, maxArrowLenPx, shaftStartPx,
       );
-      for (const idx of pois) {
-        const e = pool.get(idx);
+      for (const t of pois) {
+        const e = pool.get(poiPoolKey(t));
         if (!e || e.drawnArrowLen <= 0) continue;
         applyFade([e.arrowPath, e.arrowLabel], e.arrowLabel, alpha, e.fade);
       }
     }
   });
-}
-
-function labelFor(
-  idx: number,
-  starLabels: Map<number, string>,
-  catalog: Catalog,
-): string {
-  return resolveStarName(
-    { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
-    idx,
-  );
 }
 
 function clamp(v: number, lo: number, hi: number): number {

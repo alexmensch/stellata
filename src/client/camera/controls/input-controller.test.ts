@@ -3,19 +3,21 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { InputController, type InputControllerDeps } from './input-controller';
 import { DEFAULT_FILTER, type FilterState } from '../../filters/filter-state';
+import { targetsEqual, type Target } from '../focus/focus-target';
 import type { Picker } from './picker';
 import type { PoiStore } from '../../poi/poi-store';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 
+const star = (idx: number): Target => ({ kind: 'star', idx });
+const planet = (idx: number): Target => ({ kind: 'planet', idx });
+
 interface Harness {
   input: InputController;
   deps: {
-    focusStar: ReturnType<typeof vi.fn>;
     flyTo: ReturnType<typeof vi.fn>;
     unfocus: ReturnType<typeof vi.fn>;
     togglePoi: ReturnType<typeof vi.fn>;
-    setVectorTo: ReturnType<typeof vi.fn>;
     setVector: ReturnType<typeof vi.fn>;
     setOrbitTarget: ReturnType<typeof vi.fn>;
     aimAt: ReturnType<typeof vi.fn>;
@@ -23,12 +25,9 @@ interface Harness {
   state: {
     cameraMode: CameraMode;
     filter: FilterState;
-    focusedStar: number | null;
-    focusedCloud: number | null;
-    focusedPlanet: number | null;
-    vectorTo: number | null;
-    vectorToCloud: number | null;
-    pinned: Set<number>;
+    focused: Target | null;
+    vector: Target | null;
+    pinned: Target[];
     pickStarResult: number;
     pickStarDistancePc: number;
     pickStarTier: 'prime' | 'fallback';
@@ -49,12 +48,9 @@ function makeHarness(): Harness {
   const state = {
     cameraMode: 'navigate' as CameraMode,
     filter: { ...DEFAULT_FILTER, showHud: true },
-    focusedStar: null as number | null,
-    focusedCloud: null as number | null,
-    focusedPlanet: null as number | null,
-    vectorTo: null as number | null,
-    vectorToCloud: null as number | null,
-    pinned: new Set<number>(),
+    focused: null as Target | null,
+    vector: null as Target | null,
+    pinned: [] as Target[],
     pickStarResult: -1,
     pickStarDistancePc: 1,
     pickStarTier: 'prime' as 'prime' | 'fallback',
@@ -76,11 +72,9 @@ function makeHarness(): Harness {
     keys: ['', '', ''] as string[],
   } as unknown as TrackballControls;
   const deps = {
-    focusStar: vi.fn(),
     flyTo: vi.fn(),
     unfocus: vi.fn(),
     togglePoi: vi.fn(() => true),
-    setVectorTo: vi.fn(),
     setVector: vi.fn(),
     setOrbitTarget: vi.fn(),
     aimAt: vi.fn(),
@@ -111,33 +105,20 @@ function makeHarness(): Harness {
       emit: (name: string) => { emitted.push(name); },
     } as unknown as EventBus<StellataEventMap>,
     poiStore: {
-      pinnable: (idx: number) => idx !== 0,
-      has: (idx: number) => state.pinned.has(idx),
+      pinnable: (t: Target) => !(t.kind === 'star' && t.idx === 0),
+      has: (t: Target) => state.pinned.some((p) => targetsEqual(p, t)),
       atCap: () => false,
     } as unknown as PoiStore,
     getCameraMode: () => state.cameraMode,
     getFilter: () => state.filter,
-    getFocusedStar: () => state.focusedStar,
-    getFocusedTarget: () => {
-      if (state.focusedStar !== null) return { kind: 'star' as const, idx: state.focusedStar };
-      if (state.focusedPlanet !== null) return { kind: 'planet' as const, idx: state.focusedPlanet };
-      if (state.focusedCloud !== null) return { kind: 'cloud' as const, idx: state.focusedCloud };
-      return null;
-    },
-    getVectorTo: () => state.vectorTo,
-    getVectorTarget: () => {
-      if (state.vectorTo !== null) return { kind: 'star' as const, idx: state.vectorTo };
-      if (state.vectorToCloud !== null) return { kind: 'cloud' as const, idx: state.vectorToCloud };
-      return null;
-    },
-    setVectorTo: deps.setVectorTo,
+    getFocusedTarget: () => state.focused,
+    getVectorTarget: () => state.vector,
     setVector: deps.setVector,
     isWarpActive: () => false,
     isAimActive: () => false,
     isObserveTransitionActive: () => false,
     cancelUnfocusLerp: () => {},
     cancelFocusLerp: () => {},
-    focusStar: deps.focusStar,
     flyTo: deps.flyTo,
     setOrbitTarget: deps.setOrbitTarget,
     unfocus: deps.unfocus,
@@ -159,80 +140,106 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('InputController.applyStarClick — navigate mode', () => {
-  it('focuses the clicked star when nothing is focused', () => {
+describe('InputController.applyObjectClick — navigate mode', () => {
+  it('travels to the clicked object when nothing is focused', () => {
     const { input, deps } = makeHarness();
-    expect(input.applyStarClick(7)).toBe(true);
-    expect(deps.focusStar).toHaveBeenCalledWith(7);
+    expect(input.applyObjectClick(star(7))).toBe(true);
+    expect(deps.flyTo).toHaveBeenCalledWith(star(7));
   });
 
-  it('unfocuses on click-the-focused-star with no vector', () => {
+  it('unfocuses on click-the-focused-object with no vector', () => {
     const { input, deps, state } = makeHarness();
-    state.focusedStar = 7;
-    expect(input.applyStarClick(7)).toBe(true);
+    state.focused = star(7);
+    expect(input.applyObjectClick(star(7))).toBe(true);
     expect(deps.unfocus).toHaveBeenCalled();
-    expect(deps.setVectorTo).not.toHaveBeenCalled();
+    expect(deps.setVector).not.toHaveBeenCalled();
   });
 
-  it('clears the vector (stays focused) on click-the-focused-star with a vector drawn', () => {
+  it('clears the vector (stays focused) on click-the-focused-object with a vector drawn', () => {
     const { input, deps, state } = makeHarness();
-    state.focusedStar = 7;
-    state.vectorTo = 12;
-    expect(input.applyStarClick(7)).toBe(true);
+    state.focused = star(7);
+    state.vector = star(12);
+    expect(input.applyObjectClick(star(7))).toBe(true);
     expect(deps.setVector).toHaveBeenCalledWith(null);
     expect(deps.unfocus).not.toHaveBeenCalled();
   });
 
   it('pins an unpinned other star (ladder rung 1)', () => {
     const { input, deps, state } = makeHarness();
-    state.focusedStar = 7;
-    expect(input.applyStarClick(12)).toBe(true);
-    expect(deps.togglePoi).toHaveBeenCalledWith(12);
+    state.focused = star(7);
+    expect(input.applyObjectClick(star(12))).toBe(true);
+    expect(deps.togglePoi).toHaveBeenCalledWith(star(12));
   });
 
   it('sets the vector on a pinned other star that is not the destination', () => {
     const { input, deps, state } = makeHarness();
-    state.focusedStar = 7;
-    state.pinned.add(12);
-    expect(input.applyStarClick(12)).toBe(true);
-    expect(deps.setVectorTo).toHaveBeenCalledWith(12);
+    state.focused = star(7);
+    state.pinned.push(star(12));
+    expect(input.applyObjectClick(star(12))).toBe(true);
+    expect(deps.setVector).toHaveBeenCalledWith(star(12));
     expect(deps.togglePoi).not.toHaveBeenCalled();
   });
 
   it('clears vector AND unpins on the pinned vector destination', () => {
     const { input, deps, state } = makeHarness();
-    state.focusedStar = 7;
-    state.pinned.add(12);
-    state.vectorTo = 12;
-    expect(input.applyStarClick(12)).toBe(true);
-    expect(deps.setVectorTo).toHaveBeenCalledWith(null);
-    expect(deps.togglePoi).toHaveBeenCalledWith(12);
+    state.focused = star(7);
+    state.pinned.push(star(12));
+    state.vector = star(12);
+    expect(input.applyObjectClick(star(12))).toBe(true);
+    expect(deps.setVector).toHaveBeenCalledWith(null);
+    expect(deps.togglePoi).toHaveBeenCalledWith(star(12));
   });
 
   it('steps only the vector rungs when the HUD is hidden', () => {
     const { input, deps, state } = makeHarness();
-    state.focusedStar = 7;
+    state.focused = star(7);
     state.filter.showHud = false;
-    state.pinned.add(12);
-    expect(input.applyStarClick(12)).toBe(true);
-    expect(deps.setVectorTo).toHaveBeenCalledWith(12);
+    state.pinned.push(star(12));
+    expect(input.applyObjectClick(star(12))).toBe(true);
+    expect(deps.setVector).toHaveBeenCalledWith(star(12));
     expect(deps.togglePoi).not.toHaveBeenCalled();
+  });
+
+  it('runs the SAME ladder for planets: pin, then vector, then clear both', () => {
+    const { input, deps, state } = makeHarness();
+    state.focused = star(0);
+    expect(input.applyObjectClick(planet(4))).toBe(true);
+    expect(deps.togglePoi).toHaveBeenCalledWith(planet(4));
+
+    state.pinned.push(planet(4));
+    expect(input.applyObjectClick(planet(4))).toBe(true);
+    expect(deps.setVector).toHaveBeenCalledWith(planet(4));
+
+    state.vector = planet(4);
+    expect(input.applyObjectClick(planet(4))).toBe(true);
+    expect(deps.setVector).toHaveBeenCalledWith(null);
+    expect(deps.togglePoi).toHaveBeenCalledTimes(2);
+  });
+
+  it('a star pin and a planet pin with the same idx are distinct ladder states', () => {
+    const { input, deps, state } = makeHarness();
+    state.focused = star(7);
+    state.pinned.push(star(4));
+    expect(input.applyObjectClick(planet(4))).toBe(true);
+    expect(deps.togglePoi).toHaveBeenCalledWith(planet(4));
   });
 });
 
-describe('InputController.applyStarClick — observe mode', () => {
-  it('toggles the pin when the HUD is on', () => {
+describe('InputController.applyObjectClick — observe mode', () => {
+  it('toggles the pin when the HUD is on — stars and planets alike', () => {
     const { input, deps, state } = makeHarness();
     state.cameraMode = 'observe';
-    expect(input.applyStarClick(3)).toBe(true);
-    expect(deps.togglePoi).toHaveBeenCalledWith(3);
+    expect(input.applyObjectClick(star(3))).toBe(true);
+    expect(deps.togglePoi).toHaveBeenCalledWith(star(3));
+    expect(input.applyObjectClick(planet(2))).toBe(true);
+    expect(deps.togglePoi).toHaveBeenCalledWith(planet(2));
   });
 
   it('is a noop when the HUD is hidden', () => {
     const { input, deps, state } = makeHarness();
     state.cameraMode = 'observe';
     state.filter.showHud = false;
-    expect(input.applyStarClick(3)).toBe(false);
+    expect(input.applyObjectClick(star(3))).toBe(false);
     expect(deps.togglePoi).not.toHaveBeenCalled();
   });
 });
@@ -248,7 +255,7 @@ describe('InputController click dispatch', () => {
     const { input, emitted, state, deps } = makeHarness();
     state.pickStarResult = 5;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
-    expect(deps.focusStar).toHaveBeenCalledWith(5);
+    expect(deps.flyTo).toHaveBeenCalledWith(star(5));
     expect(emitted).toEqual([]);
   });
 
@@ -261,17 +268,26 @@ describe('InputController click dispatch', () => {
 });
 
 describe('InputController planet clicks — navigate mode', () => {
-  it('single click on a planet travels to it (flyTo, kind-agnostic)', () => {
+  it('single click on a planet with nothing focused travels to it', () => {
     const { input, state, deps, emitted } = makeHarness();
     state.pickPlanetResult = 4;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
-    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
+    expect(deps.flyTo).toHaveBeenCalledWith(planet(4));
     expect(emitted).toEqual([]);
+  });
+
+  it('single click on a planet while a star is focused PINS it (no focus change)', () => {
+    const { input, state, deps } = makeHarness();
+    state.focused = star(0);
+    state.pickPlanetResult = 4;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.togglePoi).toHaveBeenCalledWith(planet(4));
+    expect(deps.flyTo).not.toHaveBeenCalled();
   });
 
   it('single click on the focused planet unfocuses', () => {
     const { input, state, deps } = makeHarness();
-    state.focusedPlanet = 4;
+    state.focused = planet(4);
     state.pickPlanetResult = 4;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
     expect(deps.unfocus).toHaveBeenCalled();
@@ -280,9 +296,9 @@ describe('InputController planet clicks — navigate mode', () => {
 
   it('single click on the focused planet clears a drawn vector first', () => {
     const { input, state, deps } = makeHarness();
-    state.focusedPlanet = 4;
+    state.focused = planet(4);
     state.pickPlanetResult = 4;
-    state.vectorTo = 9;
+    state.vector = star(9);
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
     expect(deps.setVector).toHaveBeenCalledWith(null);
     expect(deps.unfocus).not.toHaveBeenCalled();
@@ -295,8 +311,7 @@ describe('InputController planet clicks — navigate mode', () => {
     state.pickPlanetResult = 4;
     state.pickPlanetDistancePc = 1e-5;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
-    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
-    expect(deps.focusStar).not.toHaveBeenCalled();
+    expect(deps.flyTo).toHaveBeenCalledWith(planet(4));
   });
 
   it('star vs planet overlap: prime beats fallback regardless of distance', () => {
@@ -307,8 +322,7 @@ describe('InputController planet clicks — navigate mode', () => {
     state.pickPlanetResult = 4;
     state.pickPlanetDistancePc = 1;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
-    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
-    expect(deps.focusStar).not.toHaveBeenCalled();
+    expect(deps.flyTo).toHaveBeenCalledWith(planet(4));
   });
 
   it('double click on a planet travels to it', () => {
@@ -316,7 +330,7 @@ describe('InputController planet clicks — navigate mode', () => {
     state.pickPlanetResult = 4;
     (input as unknown as { dispatchDoubleClick(x: number, y: number): void })
       .dispatchDoubleClick(10, 20);
-    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
+    expect(deps.flyTo).toHaveBeenCalledWith(planet(4));
   });
 });
 

@@ -234,7 +234,7 @@ through the shared `PendingClickDispatcher`
 single and fires a **double-click** instead.
 
 - *Single-click:* `picker.pickStar()` resolves the click; if a star is
-  hit, `applyStarClick()` toggles its pin (`togglePoi`). Pin
+  hit, `applyObjectClick()` toggles its pin (`togglePoi`). Pin
   eligibility + cap semantics live in `src/client/poi/README.md`. The
   POI overlay renders the resulting label + arrow.
 - *Double-click:* unprojects the click into a world-space ray, builds

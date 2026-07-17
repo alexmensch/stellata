@@ -13,6 +13,7 @@ import {
   type IdMaps,
 } from './url-state';
 import type { Stellata } from '../../stellata';
+import type { Target } from '../../camera/focus/focus-target';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
@@ -1235,7 +1236,7 @@ describe('url-state', () => {
         focusedPlanet: null as number | null,
         vectorTo: null as number | null,
         vectorToCloud: null as number | null,
-        pois: [] as number[],
+        pois: [] as Target[],
         mode: 'navigate' as 'navigate' | 'observe',
       };
       const stub: Partial<Stellata> = {
@@ -1363,7 +1364,7 @@ describe('url-state', () => {
       const blob = buildV2Blob((1 << 13) | (1 << 19), payload);
       const { state, re } = migrate(blob);
       expect(state.mode).toBe('observe');
-      expect(state.pois).toEqual([1, 3]);
+      expect(state.pois).toEqual([{ kind: 'star', idx: 1 }, { kind: 'star', idx: 3 }]);
       expect(re.view.poiSids).toEqual([101, 103]);
       expect(re.view.pois).toBeUndefined();
     });
@@ -1449,6 +1450,44 @@ describe('url-state', () => {
       applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
       expect(rx.state.focusedPlanet).toBe(7);
       expect(rx.state.focusedStar).toBeNull();
+    });
+
+    it('mixed star + planet POIs round-trip through the untagged SID list', () => {
+      const PLANET_SIDS = [901, 902, 903];
+      const FLAT_OFFSET = 5;
+      const sidResolver = new SidResolver(['star', 'planet']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      sidResolver.attach('planet', arrayDomain(PLANET_SIDS));
+      const idMaps: IdMaps = {
+        hipToIndex: new Map(),
+        indexToHip: new Uint32Array(STAR_SIDS.length),
+        starCount: STAR_SIDS.length,
+        solIndex: 0,
+        sidResolver,
+        planetDomainIndexOf: (t) =>
+          t - FLAT_OFFSET >= 0 && t - FLAT_OFFSET < PLANET_SIDS.length
+            ? t - FLAT_OFFSET
+            : null,
+        planetTargetIndexOf: (d) =>
+          d >= 0 && d < PLANET_SIDS.length ? d + FLAT_OFFSET : null,
+      };
+      // Encoder: star idx 1 → its sid; planet flat idx 6 → domain 1 →
+      // sid 902. Order preserved.
+      const tx = makeStatefulStellata();
+      tx.state.pois = [
+        { kind: 'star', idx: 1 },
+        { kind: 'planet', idx: 6 },
+      ];
+      const view = currentStateOf(tx.stellata, idMaps);
+      expect(view.poiSids).toEqual([STAR_SIDS[1], 902]);
+      // Receiver: both kinds restore, planet sid translated back to the
+      // flat Target index.
+      const rx = makeStatefulStellata();
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      expect(rx.state.pois).toEqual([
+        { kind: 'star', idx: 1 },
+        { kind: 'planet', idx: 6 },
+      ]);
     });
 
     it('a planet sid with no attached body-field host drops the focus, rest applies', () => {

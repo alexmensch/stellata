@@ -148,13 +148,21 @@ closures, so attach cycles need no re-registration. Overlays and
 pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
 
-**Star-only affordances are guards, not provider legs.** The orbital
-ride, `uPinFocusToCenter`, POI pinning, and the observe anchor all
-guard on `getFocusedStar()`, which returns null for every non-star
-kind — so kind N+1 passes through them untouched with zero shell
-edits. An affordance gains an optional provider member only when a
-second kind actually implements it; don't add speculative capability
-methods before then.
+**User-facing interaction affordances are kind-generic — never
+special-case a kind in UX behaviour.** The click ladder, POI pinning,
+the distance vector, Esc, focus, and warp all operate on `Target`s;
+a new kind joins them by implementing the existing contracts
+(FocusTarget, provider legs, `PoiStore.pinnable`), not by growing a
+per-kind branch in the shell or the input FSM. When exoplanets land,
+they must ride these paths with zero interaction-layer edits.
+
+**Internal star-only mechanisms stay guards, not provider legs.** The
+binary orbital ride and `uPinFocusToCenter` guard on
+`getFocusedStar()`, which returns null for every non-star kind — so
+kind N+1 passes through them untouched. A mechanism gains an optional
+provider member only when a second kind actually implements it (the
+planet-focal ride is the planet analogue of the binary ride); don't
+add speculative capability methods before then.
 
 ## Planet focus — the second hard kind
 

@@ -1,10 +1,11 @@
-// Decision table for the navigate-mode star-click ladder
+// Decision table for the navigate-mode click ladder on a non-focused
+// point object — any pinnable kind steps the same rungs
 // (README.md § Click ladder). Pure so every branch is unit-testable.
 
-export type StarLadderAction = 'pin' | 'vector' | 'clearVector' | 'clearBoth';
+export type ClickLadderAction = 'pin' | 'vector' | 'clearVector' | 'clearBoth';
 
-export interface StarLadderState {
-  /** PoiStore.pinnable(idx) — Sol and SID-less records can't be pinned. */
+export interface ClickLadderState {
+  /** PoiStore.pinnable(target) — Sol and SID-less records can't be pinned. */
   pinnable: boolean;
   /** Already in the POI list. */
   pinned: boolean;
@@ -15,12 +16,12 @@ export interface StarLadderState {
 }
 
 /**
- * State-based ladder for a navigate-mode click on a non-focused star:
- * pin → vector → clear both. Stars that can't take the pin rung right
- * now (Sol, cap reached) fall through to the vector rung so measuring
- * to them stays possible.
+ * State-based ladder for a navigate-mode click on a non-focused point
+ * object: pin → vector → clear both. Objects that can't take the pin
+ * rung right now (Sol, cap reached) fall through to the vector rung so
+ * measuring to them stays possible.
  */
-export function starLadderAction(s: StarLadderState): StarLadderAction {
+export function clickLadderAction(s: ClickLadderState): ClickLadderAction {
   if (s.pinned) return s.isVectorDest ? 'clearBoth' : 'vector';
   if (s.pinnable && !s.atCap) return 'pin';
   return s.isVectorDest ? 'clearVector' : 'vector';

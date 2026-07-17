@@ -11,7 +11,7 @@ import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
-import type { TargetKind } from '../../camera/focus/focus-target';
+import type { Target, TargetKind } from '../../camera/focus/focus-target';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Four wire
 // formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
@@ -1008,17 +1008,19 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // Chart on/off rides FLAG_CHART, gated to observe-only at pack time.
   if (f.chart) view.chart = true;
 
-  // POIs are encoded as SIDs (not catalog indices) so a catalog rebuild
-  // can't re-point old URLs; stars without a SID can't be pinned in the
-  // first place. Capped at POI_MAX_COUNT defensively.
+  // POIs are encoded as SIDs (not runtime indices) so a catalog rebuild
+  // can't re-point old URLs; objects without a resolvable SID can't be
+  // pinned in the first place. Any pinnable kind rides the same
+  // untagged-SID wire the focus/to refs use. Capped at POI_MAX_COUNT
+  // defensively.
   {
     const pois = stellata.getPois();
     if (pois.length > 0) {
       const sidsOut: number[] = [];
-      for (const idx of pois) {
+      for (const t of pois) {
         if (sidsOut.length >= POI_MAX_COUNT) break;
-        const sid = idMaps.sidResolver.sidOf('star', idx);
-        if (sid !== null) sidsOut.push(sid);
+        const ref = sidRefOf(idMaps, t.kind, t.idx);
+        if (ref !== undefined) sidsOut.push(ref.id);
       }
       if (sidsOut.length > 0) view.poiSids = sidsOut;
     }
@@ -1286,25 +1288,30 @@ export function applyDecodedView(
     stellata.setFilter({ chart: true });
   }
 
-  // Legacy HIP POI lists resolve through idMaps; v4 SID lists through
-  // the resolver. Entries that don't resolve are silently dropped
-  // (graceful partial restore). SID POIs resolve synchronously rather
-  // than via deferred intents: only star-kind objects are pinnable today
-  // and the star domain attaches at catalog load, strictly before
-  // applyFromUrl — a pending POI sid is therefore as dead as an unknown
-  // one.
+  // Legacy HIP POI lists resolve through idMaps (star-kind by
+  // construction); v4 SID lists through the resolver, any pinnable
+  // kind. Entries that don't resolve are silently dropped (graceful
+  // partial restore). SID POIs resolve synchronously rather than via
+  // deferred intents: the star domain attaches at catalog load and
+  // main.ts awaits planetSystemsReady, both strictly before
+  // applyFromUrl — a pending POI sid is therefore as dead as an
+  // unknown one.
   {
-    const resolved: number[] = [];
+    const resolved: Target[] = [];
     if (Array.isArray(view.pois)) {
       for (const hip of view.pois) {
         const idx = idMaps.hipToIndex.get(hip);
-        if (idx !== undefined) resolved.push(idx);
+        if (idx !== undefined) resolved.push({ kind: 'star', idx });
       }
     }
     if (Array.isArray(view.poiSids)) {
       for (const sid of view.poiSids) {
         const r = idMaps.sidResolver.resolve(sid);
-        if (r.status === 'resolved' && r.kind === 'star') resolved.push(r.localIndex);
+        if (r.status !== 'resolved') continue;
+        const idx = r.kind === 'planet'
+          ? idMaps.planetTargetIndexOf(r.localIndex)
+          : r.localIndex;
+        if (idx !== null) resolved.push({ kind: r.kind, idx });
       }
     }
     if (resolved.length > 0) stellata.setPois(resolved);

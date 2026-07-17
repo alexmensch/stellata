@@ -2,24 +2,32 @@
 // cards render as header strips, and the strip height for the count.
 // See ./README.md § Rolodex behaviour.
 
-/** `'focus'` or `poi:<catalog row index>`. */
+import { targetsEqual, type Target, type TargetKind } from '../camera/focus/focus-target';
+
+/** `'focus'` or `poi:<kind>:<index>`. */
 export type CardKey = string;
 
 export const FOCUS_KEY: CardKey = 'focus';
 
-export function poiKey(idx: number): CardKey {
-  return `poi:${idx}`;
+export function poiKey(target: Target): CardKey {
+  return `poi:${target.kind}:${target.idx}`;
 }
 
-export function poiIdxOf(key: CardKey): number | null {
-  return key.startsWith('poi:') ? Number(key.slice(4)) : null;
+export function poiTargetOf(key: CardKey): Target | null {
+  if (!key.startsWith('poi:')) return null;
+  const sep = key.indexOf(':', 4);
+  if (sep < 0) return null;
+  return {
+    kind: key.slice(4, sep) as TargetKind,
+    idx: Number(key.slice(sep + 1)),
+  };
 }
 
 export interface RolodexInputs {
-  /** Pinned star indices in store order (oldest pin first). */
-  pois: readonly number[];
-  /** Focused star — its pin card is suppressed while focused. */
-  focusedStar: number | null;
+  /** Pinned targets in store order (oldest pin first). */
+  pois: readonly Target[];
+  /** Focused object — its pin card is suppressed while focused. */
+  focused: Target | null;
   /** Whether the focus card is a stack member right now. */
   focusVisible: boolean;
   /** Last promote / auto-front request; null = default front. */
@@ -41,7 +49,7 @@ export function planRolodex(o: RolodexInputs): RolodexPlan {
   const cards: CardKey[] = [];
   if (o.focusVisible) cards.push(FOCUS_KEY);
   for (let i = o.pois.length - 1; i >= 0; i--) {
-    if (o.pois[i] !== o.focusedStar) cards.push(poiKey(o.pois[i]));
+    if (!targetsEqual(o.pois[i], o.focused)) cards.push(poiKey(o.pois[i]));
   }
   const front =
     o.desiredFront !== null && cards.includes(o.desiredFront)

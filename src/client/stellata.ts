@@ -152,7 +152,7 @@ export type StellataEventMap = {
   cameraMode: CameraMode;
   warp: boolean;
   focusLerp: boolean;
-  pois: readonly number[];
+  pois: readonly Target[];
   noopClick: { x: number; y: number };
   state: void;
   frame: void;
@@ -882,6 +882,7 @@ export class Stellata implements FrameAnchor {
       count: catalog.count,
       solIndex: catalog.solIndex,
       sid: catalog.sid,
+      planetPinnable: (idx) => this.planetBodyField.planetAt(idx) !== null,
       onChange: (pois) => {
         this.bus.emit('pois', pois);
         this.bus.emit('state');
@@ -1157,9 +1158,9 @@ export class Stellata implements FrameAnchor {
 
   // Points of interest — thin shims over PoiStore (poi/README.md).
 
-  getPois(): readonly number[] { return this.poiStore.get(); }
-  togglePoi(idx: number): boolean { return this.poiStore.toggle(idx); }
-  setPois(idxs: readonly number[]) { this.poiStore.set(idxs); }
+  getPois(): readonly Target[] { return this.poiStore.get(); }
+  togglePoi(target: Target): boolean { return this.poiStore.toggle(target); }
+  setPois(targets: readonly Target[]) { this.poiStore.set(targets); }
   clearPois() { this.poiStore.clear(); }
 
   // Mode-switch entry point. Forwards to the ObserveTransition
@@ -1994,22 +1995,18 @@ export class Stellata implements FrameAnchor {
       poiStore: this.poiStore,
       getCameraMode: () => this.focus.getCameraMode(),
       getFilter: () => this.filter,
-      getFocusedStar: () => this.focus.getFocusedStar(),
       getFocusedTarget: () => this.focus.getFocusedTarget(),
-      getVectorTo: () => this.focus.getVectorTo(),
       getVectorTarget: () => this.focus.getVectorTarget(),
-      setVectorTo: (idx) => this.focus.setVectorTo(idx),
       setVector: (target) => this.setVector(target),
       isWarpActive: () => this.warp.isActive(),
       isAimActive: () => this.aim.isActive(),
       isObserveTransitionActive: () => this.isObserveTransitionActive(),
       cancelUnfocusLerp: () => this.cancelUnfocusLerp(),
       cancelFocusLerp: () => this.cancelFocusLerp(),
-      focusStar: (idx) => this.focusStar(idx),
       flyTo: (target) => this.flyTo(target),
       setOrbitTarget: (target) => this.setOrbitTarget(target),
       unfocus: () => this.unfocus(),
-      togglePoi: (idx) => this.togglePoi(idx),
+      togglePoi: (target) => this.togglePoi(target),
       aimAt: (p) => this.aimAt(p),
     });
   }
@@ -2098,10 +2095,10 @@ export class Stellata implements FrameAnchor {
  // parkDistForStar moved to FocusController — used by
   // ObserveTransition's ObserveFocusOps seam and the focus-park lerp.
 
-  /** Canonical per-mode star-click semantics — the POI overlay's
-   *  on-screen labels route here alongside deferred canvas clicks. See
-   *  InputController.applyStarClick. */
-  applyStarClick(idx: number): boolean { return this.input.applyStarClick(idx); }
+  /** Canonical per-mode click semantics for any point object — the POI
+   *  overlay's on-screen labels route here alongside deferred canvas
+   *  clicks. See InputController.applyObjectClick. */
+  applyObjectClick(target: Target): boolean { return this.input.applyObjectClick(target); }
 
   // Pixel size below which a disc-pass core's bleed-through is small enough
   // that we don't bother enabling the depth mask. Conservative — at this
