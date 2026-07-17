@@ -149,12 +149,14 @@ pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
 
 **User-facing interaction affordances are kind-generic — never
-special-case a kind in UX behaviour.** The click ladder, POI pinning,
-the distance vector, Esc, focus, and warp all operate on `Target`s;
-a new kind joins them by implementing the existing contracts
-(FocusTarget, provider legs, `PoiStore.pinnable`), not by growing a
-per-kind branch in the shell or the input FSM. When exoplanets land,
-they must ride these paths with zero interaction-layer edits.
+special-case any kind in UX behaviour.** An object is an object: it
+sits at coordinates and observes the general rules of the click state
+machine, focus, POI pinning, the distance vector, Esc, observe, and
+warp, all of which operate on `Target`s. Every kind — current or
+future — joins by implementing the existing contracts (FocusTarget,
+provider legs, `PoiStore.pinnable`), with zero interaction-layer
+edits; a per-kind branch in the shell or the input FSM is a
+review-blocking defect, whatever the kind.
 
 **Internal star-only mechanisms stay guards, not provider legs.** The
 binary orbital ride and `uPinFocusToCenter` guard on
