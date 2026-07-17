@@ -139,6 +139,7 @@ function makePicker(
     camera?: THREE.PerspectiveCamera;
     renderedSizePxFn?: (idx: number) => number;
     warpActive?: boolean;
+    resolveCollapsedLead?: (idx: number) => number;
   } = {},
 ): { picker: Picker; camera: THREE.PerspectiveCamera; dom: HTMLElement } {
   const camera = opts.camera ?? makeCamera();
@@ -158,6 +159,7 @@ function makePicker(
     getWorldOffset: () => new THREE.Vector3(),
     getWarpActive: () => opts.warpActive ?? false,
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
+    resolveCollapsedLead: opts.resolveCollapsedLead ?? ((idx) => idx),
     fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
     viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
   };
@@ -187,6 +189,17 @@ describe('Picker / pickStar', () => {
       const { picker, camera } = makePicker(data, defaultFilter());
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
       expect(picker.pickStar(screen.x, screen.y)).toBe(0);
+    });
+
+    it('routes the winning idx through resolveCollapsedLead — clicks act on the cluster primary', () => {
+      const { picker, camera } = makePicker(data, defaultFilter(), {
+        resolveCollapsedLead: (idx) => idx + 100,
+      });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
+      expect(picker.pickStar(screen.x, screen.y)).toBe(100);
+      expect(picker.pickStarHit(screen.x, screen.y)?.idx).toBe(100);
+      // A miss stays -1 — the resolver never sees it.
+      expect(picker.pickStar(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBe(-1);
     });
 
     it('returns -1 when no star is near the cursor', () => {
@@ -418,6 +431,7 @@ describe('Picker / pickCloud', () => {
       getWorldOffset: () => new THREE.Vector3(),
       getWarpActive: () => true, // warp gate active
       renderedSizePxFn: () => 20,
+      resolveCollapsedLead: (idx) => idx,
       fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
       viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
     });

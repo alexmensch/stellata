@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from './loaders/catalog-loader';
+import { collapsedClusterIndices } from './format/star-companion-format';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
@@ -211,6 +212,7 @@ export class Stellata implements FrameAnchor {
   // then — the renderer functions identically with the static catalog
   // positions; binary orbital evolution simply doesn't fire.
   private binaryOrbitField: BinaryOrbitField | null = null;
+  private binariesData: BinariesData | null = null;
   private eclipsePhotometryField: EclipsePhotometryField | null = null;
 
   // Focal-frame ride state. The focal star (when a binary member) drifts
@@ -635,6 +637,7 @@ export class Stellata implements FrameAnchor {
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
+      resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
       fovYRadRef: this.starPipeline.discMaterial.uniforms.uFovYRad as { value: number },
       viewportRef: this.starPipeline.discMaterial.uniforms.uViewport as { value: THREE.Vector2 },
     });
@@ -1298,6 +1301,7 @@ export class Stellata implements FrameAnchor {
   attachBinaries(binaries: BinariesData | null): void {
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
+    this.binariesData = binaries;
     if (binaries === null) {
       this.binaryOrbitField = null;
       this.eclipsePhotometryField = null;
@@ -1821,6 +1825,19 @@ export class Stellata implements FrameAnchor {
   starLocalPositionInto(i: number, out: THREE.Vector3): THREE.Vector3 {
     const p = this._localPositions;
     return out.set(p[i * 3 + 0], p[i * 3 + 1], p[i * 3 + 2]);
+  }
+
+  /** Lead (first-seen outermost primary) of `idx`'s collapsed cluster,
+   *  or `idx` itself when nothing around it is suppressed. The Picker
+   *  routes every star pick through this so hover, POI pin, vector,
+   *  and focus all act on the object the system card names. */
+  private collapsedClusterLead(idx: number): number {
+    if (this.binariesData === null) return idx;
+    return collapsedClusterIndices(
+      this.binariesData,
+      idx,
+      (i) => this.isCompositeSuppressed(i),
+    )[0];
   }
 
   /** True when BinaryOrbitField's sub-pixel LOD gate collapsed this
