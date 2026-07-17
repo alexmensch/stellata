@@ -27,6 +27,8 @@ in vec2 aCorner;
 //                   a sentinel: alphaMaxDeg = 0 disables Mallama and
 //                   the renderer uses Lambertian for every α — the
 //                   default Pluto and every exoplanet hit.
+//   iPhaseCoefsC  — (c7,_,_,_). Only Mercury carries a degree-7 term;
+//                   the other three slots are reserved.
 in vec3 iHostLocalPos;
 in vec3 iLocalRel;
 in float iRadiusPc;
@@ -36,6 +38,7 @@ in float iAlbedoP;
 in float iHostAbsmag;
 in vec4 iPhaseCoefsA;
 in vec4 iPhaseCoefsB;
+in vec4 iPhaseCoefsC;
 
 uniform vec2 uViewport;       // CSS pixels
 uniform float uPixelRatio;
@@ -65,18 +68,18 @@ out float vSoftness;
 const float LOG10 = 2.302585093;
 const float PI_CONST = 3.14159265358979323846;
 
-// Phase-curve polynomial in α-degrees. The truncation rule (Mercury's
-// degree-7 c7 dropped to fit two-vec4 storage) sits in
-// phase-function.ts; this helper just evaluates whatever the buffer
-// carries.
-float mallamaDV(vec4 coefsA, vec4 coefsB, float aDeg) {
+// Phase-curve polynomial in α-degrees; this helper just evaluates
+// whatever the buffer carries (degree 7 — c7 rides coefsC.x, zero for
+// every planet but Mercury).
+float mallamaDV(vec4 coefsA, vec4 coefsB, vec4 coefsC, float aDeg) {
   return coefsA.x
        + aDeg * (coefsA.y
        + aDeg * (coefsA.z
        + aDeg * (coefsA.w
        + aDeg * (coefsB.x
        + aDeg * (coefsB.y
-       + aDeg * coefsB.z)))));
+       + aDeg * (coefsB.z
+       + aDeg * coefsC.x))))));
 }
 
 float lambertPhi(float alpha) {
@@ -124,7 +127,7 @@ void main() {
     // which makes φ(0) > 1 (intentional — `albedo` represents the
     // globe's α=0 reflectance, the c0 boost stacks the ring system
     // on top).
-    float dV = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, alphaDeg);
+    float dV = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaDeg);
     phi = exp(-dV * 0.4 * LOG10);
   } else if (alphaMaxDeg > 0.0) {
     // Anchor-scaled Lambert past the published validity bound:
@@ -133,7 +136,7 @@ void main() {
     // (Saturn's c0 boost; Mars's faster-than-Lambert darkening)
     // extending out instead of snapping to a uniform Lambertian
     // sphere. CPU mirror in phase-function.ts.
-    float dVb = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, alphaMaxDeg);
+    float dVb = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaMaxDeg);
     float boundaryFlux = exp(-dVb * 0.4 * LOG10);
     float alphaMaxRad = alphaMaxDeg * (PI_CONST / 180.0);
     phi = lambertPhi(alpha) * (boundaryFlux / lambertPhi(alphaMaxRad));

@@ -2,9 +2,10 @@
 // — Lambertian default + Mallama 2018 polynomials where published. See
 // docs/science-solar-system.md § Planet phase functions.
 
-/** Mallama 2018 ΔV(α°) = c0 + c1·α + … + c6·α⁶. c0 = 0 for every
+/** Mallama 2018 ΔV(α°) = c0 + c1·α + … + c7·α⁷. c0 = 0 for every
  *  planet except Saturn, which absorbs a static ring-tilt brightness
- *  boost via c0 < 0. */
+ *  boost via c0 < 0. c7 = 0 for every planet except Mercury — the
+ *  only published fit beyond degree 6. */
 export interface PhaseCoefficients {
   readonly c0: number;
   readonly c1: number;
@@ -13,6 +14,7 @@ export interface PhaseCoefficients {
   readonly c4: number;
   readonly c5: number;
   readonly c6: number;
+  readonly c7: number;
   /** Upper validity bound in degrees. Beyond this α, callers fall
    *  back to anchor-scaled Lambert. Sentinel `0` disables the
    *  polynomial entirely (pure Lambert). */
@@ -32,7 +34,7 @@ export function lambertianPhaseFactor(alphaRad: number): number {
 
 /** Horner-evaluated Mallama 2018 ΔV polynomial in α-degrees. Helper
  *  exists so the in-validity-bound and at-boundary-anchor paths share
- *  one definition — keeps the truncation rule (degree-6) localised. */
+ *  one definition. */
 function mallamaDV(coefs: PhaseCoefficients, aDeg: number): number {
   return (
     coefs.c0 +
@@ -42,7 +44,9 @@ function mallamaDV(coefs: PhaseCoefficients, aDeg: number): number {
           (coefs.c2 +
             aDeg *
               (coefs.c3 +
-                aDeg * (coefs.c4 + aDeg * (coefs.c5 + aDeg * coefs.c6)))))
+                aDeg *
+                  (coefs.c4 +
+                    aDeg * (coefs.c5 + aDeg * (coefs.c6 + aDeg * coefs.c7))))))
   );
 }
 
@@ -129,11 +133,10 @@ export function phaseFactorFor(
 // alphaMaxDeg is the upper bound observed in the cited data; outside
 // that range the renderer falls back to anchor-scaled Lambert.
 
-/** Mercury — Mallama 2018 Table A-1.2 7th-order fit, truncated to
- *  degree 6 to fit two vec4 attributes (the c7 term is dropped).
- *  alphaMaxDeg = 87° because past that the truncated polynomial
- *  diverges from the published 7th-order curve; Lambert anchored at
- *  87° takes over. Truncation budget pinned by phase-function.test.ts. */
+/** Mercury — Mallama 2018 Table A-1.2 full 7th-order fit, valid to
+ *  the paper's 170° bound. c7 rides the third per-instance vec4
+ *  (`iPhaseCoefsC`); the degree-6 storage era capped alphaMaxDeg at
+ *  87° because the dropped c7·α⁷ term diverged past that. */
 export const MERCURY_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 6.617e-2,
@@ -142,7 +145,8 @@ export const MERCURY_PHASE: PhaseCoefficients = {
   c4: -4.583e-7,
   c5: 2.643e-9,
   c6: -7.012e-12,
-  alphaMaxDeg: 87,
+  c7: 6.592e-15,
+  alphaMaxDeg: 170,
 };
 
 /** Venus — Mallama 2018 Table A-2.2 4th-order fit, valid to 165°.
@@ -156,6 +160,7 @@ export const VENUS_PHASE: PhaseCoefficients = {
   c4: 8.938e-9,
   c5: 0,
   c6: 0,
+  c7: 0,
   alphaMaxDeg: 165,
 };
 
@@ -170,6 +175,7 @@ export const EARTH_PHASE: PhaseCoefficients = {
   c4: 0,
   c5: 0,
   c6: 0,
+  c7: 0,
   alphaMaxDeg: 135,
 };
 
@@ -184,6 +190,7 @@ export const MARS_PHASE: PhaseCoefficients = {
   c4: 0,
   c5: 0,
   c6: 0,
+  c7: 0,
   alphaMaxDeg: 50,
 };
 
@@ -197,6 +204,7 @@ export const JUPITER_PHASE: PhaseCoefficients = {
   c4: 0,
   c5: 0,
   c6: 0,
+  c7: 0,
   alphaMaxDeg: 12,
 };
 
@@ -212,6 +220,7 @@ export const SATURN_PHASE: PhaseCoefficients = {
   c4: 0,
   c5: 0,
   c6: 0,
+  c7: 0,
   alphaMaxDeg: 6.5,
 };
 

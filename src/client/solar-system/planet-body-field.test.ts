@@ -8,6 +8,7 @@ import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc-un
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import type { PlanetSystem, Planet } from './planet-system';
 import {
+  MERCURY_PHASE,
   SATURN_PHASE,
   VENUS_PHASE,
   alphaZeroPhaseFactor,
@@ -275,22 +276,23 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('writes the Mallama coefficients into iPhaseCoefsA/B for the right slot', () => {
-    // The PR adds iPhaseCoefsA = (c0,c1,c2,c3) and iPhaseCoefsB =
-    // (c4,c5,c6,alphaMaxDeg) per-instance buffers plumbed through
+  it('writes the Mallama coefficients into iPhaseCoefsA/B/C for the right slot', () => {
+    // iPhaseCoefsA = (c0,c1,c2,c3), iPhaseCoefsB = (c4,c5,c6,alphaMaxDeg),
+    // iPhaseCoefsC = (c7,_,_,_) per-instance buffers plumbed through
     // allocate / grow / write-static / flush / shift-down. The
     // lifecycle tests above exercise the mechanics; this read-back
     // pins the buffer *contents* so a swapped index, miscopied stride
     // in growCapacity, or wrong shift in detachHost can't slip past.
     const f = new PlanetBodyField(makeSharedUniforms());
-    // Three planets: bare (no coefs) | bare | Saturn (rich coefs).
-    // Slot 2 is the one we read back.
+    // Four planets: bare (no coefs) | bare | Saturn | Mercury (the
+    // only c7 carrier). Slots 2 and 3 are the ones we read back.
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [
         makePlanet({ name: 'P0' }),
         makePlanet({ name: 'P1' }),
         makePlanet({ name: 'P2-Saturn', phaseCoefficients: SATURN_PHASE }),
+        makePlanet({ name: 'P3-Mercury', phaseCoefficients: MERCURY_PHASE }),
       ],
     };
     f.attachHost(0, ps, 4.83, new THREE.Vector3(), 0, 0);
@@ -302,6 +304,8 @@ describe('PlanetBodyField lifecycle', () => {
       .array as Float32Array;
     const phaseB = (geom.attributes.iPhaseCoefsB as THREE.InstancedBufferAttribute)
       .array as Float32Array;
+    const phaseC = (geom.attributes.iPhaseCoefsC as THREE.InstancedBufferAttribute)
+      .array as Float32Array;
     const off = 2 * 4; // slot 2, vec4 stride
     expect(phaseA[off + 0]).toBeCloseTo(SATURN_PHASE.c0, 6);
     expect(phaseA[off + 1]).toBeCloseTo(SATURN_PHASE.c1, 6);
@@ -311,6 +315,15 @@ describe('PlanetBodyField lifecycle', () => {
     expect(phaseB[off + 1]).toBeCloseTo(SATURN_PHASE.c5, 6);
     expect(phaseB[off + 2]).toBeCloseTo(SATURN_PHASE.c6, 6);
     expect(phaseB[off + 3]).toBeCloseTo(SATURN_PHASE.alphaMaxDeg, 6);
+    expect(phaseC[off + 0]).toBe(0); // Saturn carries no c7
+    // Mercury's c7 lands in slot 3's iPhaseCoefsC.x. Float32 compare —
+    // 6.592e-15 survives the narrowing with ~7 significant digits.
+    const offC = 3 * 4;
+    expect(phaseC[offC + 0]).toBeCloseTo(MERCURY_PHASE.c7, 20);
+    expect(phaseC[offC + 1]).toBe(0);
+    expect(phaseC[offC + 2]).toBe(0);
+    expect(phaseC[offC + 3]).toBe(0);
+    expect(phaseB[offC + 3]).toBeCloseTo(MERCURY_PHASE.alphaMaxDeg, 6);
     // Slots 0/1 carry the bare-coef sentinel: alphaMaxDeg = 0 (the
     // shader's "use Lambertian" signal).
     expect(phaseB[0 * 4 + 3]).toBe(0);
@@ -506,10 +519,10 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only iLocalRel — the other 8 attributes stay clean per frame', () => {
+  it('update() flushes only iLocalRel — the other 9 attributes stay clean per frame', () => {
     // bk5 scale (hundreds of hosts) makes per-frame re-uploads of
     // static attributes (iRadiusPc, iColour, iSolidity, iAlbedoP,
-    // iHostAbsmag, iPhaseCoefsA/B, iHostLocalPos) measurable wasted
+    // iHostAbsmag, iPhaseCoefsA/B/C, iHostLocalPos) measurable wasted
     // bus bandwidth. Pin the dynamic-only flush: after attach (which
     // legitimately touches every attribute) a single update() tick
     // only flips iLocalRel.
@@ -542,7 +555,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.update(camera, 1);
     // Only iLocalRel should have been touched. iHostLocalPos /
     // iRadiusPc / iColour / iSolidity / iAlbedoP / iHostAbsmag /
-    // iPhaseCoefsA / iPhaseCoefsB stay quiescent.
+    // iPhaseCoefsA / iPhaseCoefsB / iPhaseCoefsC stay quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
     expect(flagged.size).toBe(1);
     f.dispose();

@@ -132,14 +132,16 @@ export class PlanetBodyField {
   private bufSolidity!: Float32Array;
   private bufAlbedo!: Float32Array;
   private bufHostAbsmag!: Float32Array;
-  // Phase-curve coefficients packed as two vec4 attributes:
+  // Phase-curve coefficients packed as three vec4 attributes:
   //   bufPhaseA: (c0, c1, c2, c3)
   //   bufPhaseB: (c4, c5, c6, alphaMaxDeg)
+  //   bufPhaseC: (c7, _, _, _) — three slots reserved
   // alphaMaxDeg = 0 is the "no Mallama fit, use Lambertian" sentinel
   // — the same default Pluto and every exoplanet hit. See
   // `phase-function.ts` for the polynomial form.
   private bufPhaseA!: Float32Array;
   private bufPhaseB!: Float32Array;
+  private bufPhaseC!: Float32Array;
   private geometry!: THREE.InstancedBufferGeometry;
   private matDisc!: THREE.ShaderMaterial;
   private matGlow!: THREE.ShaderMaterial;
@@ -551,6 +553,7 @@ export class PlanetBodyField {
     this.bufHostAbsmag = new Float32Array(capacity);
     this.bufPhaseA = new Float32Array(capacity * 4);
     this.bufPhaseB = new Float32Array(capacity * 4);
+    this.bufPhaseC = new Float32Array(capacity * 4);
   }
 
   private growCapacity(): void {
@@ -564,6 +567,7 @@ export class PlanetBodyField {
     const oldAbsmag = this.bufHostAbsmag;
     const oldPhaseA = this.bufPhaseA;
     const oldPhaseB = this.bufPhaseB;
+    const oldPhaseC = this.bufPhaseC;
     this.allocateBuffers(newCap);
     this.bufLocalRel.set(oldLocalRel);
     this.bufHostLocalPos.set(oldHostLocal);
@@ -574,6 +578,7 @@ export class PlanetBodyField {
     this.bufHostAbsmag.set(oldAbsmag);
     this.bufPhaseA.set(oldPhaseA);
     this.bufPhaseB.set(oldPhaseB);
+    this.bufPhaseC.set(oldPhaseC);
     this.capacity = newCap;
     // Replace the geometry with a fresh one over the new buffers.
     // Materials and meshes are re-bound via three.js's normal
@@ -607,6 +612,7 @@ export class PlanetBodyField {
     geom.setAttribute('iHostAbsmag', new THREE.InstancedBufferAttribute(this.bufHostAbsmag, 1));
     geom.setAttribute('iPhaseCoefsA', new THREE.InstancedBufferAttribute(this.bufPhaseA, 4));
     geom.setAttribute('iPhaseCoefsB', new THREE.InstancedBufferAttribute(this.bufPhaseB, 4));
+    geom.setAttribute('iPhaseCoefsC', new THREE.InstancedBufferAttribute(this.bufPhaseC, 4));
     geom.instanceCount = this.liveCount;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = geom;
@@ -698,11 +704,11 @@ export class PlanetBodyField {
       this.bufSolidity[baseScalar + i] = solidityForType(planet.type);
       this.bufAlbedo[baseScalar + i] = planet.albedo;
       this.bufHostAbsmag[baseScalar + i] = host.hostAbsmag;
-      // Phase coefficients packed (c0,c1,c2,c3) | (c4,c5,c6,alphaMaxDeg).
-      // Bodies without published curves write all zeros — alphaMaxDeg=0
-      // is the shader's "use Lambertian" sentinel.
-      // `bufPhaseA` and `bufPhaseB` are separate Float32Arrays with the
-      // same vec4-shaped layout, so a single per-slot offset feeds both.
+      // Phase coefficients packed (c0,c1,c2,c3) | (c4,c5,c6,alphaMaxDeg)
+      // | (c7,_,_,_). Bodies without published curves write all zeros —
+      // alphaMaxDeg=0 is the shader's "use Lambertian" sentinel.
+      // The three bufPhase* arrays share the vec4-shaped layout, so a
+      // single per-slot offset feeds them all.
       const pc = planet.phaseCoefficients;
       const phaseOff = baseVec4 + i * 4;
       this.bufPhaseA[phaseOff + 0] = pc ? pc.c0 : 0;
@@ -713,6 +719,10 @@ export class PlanetBodyField {
       this.bufPhaseB[phaseOff + 1] = pc ? pc.c5 : 0;
       this.bufPhaseB[phaseOff + 2] = pc ? pc.c6 : 0;
       this.bufPhaseB[phaseOff + 3] = pc ? pc.alphaMaxDeg : 0;
+      this.bufPhaseC[phaseOff + 0] = pc ? pc.c7 : 0;
+      this.bufPhaseC[phaseOff + 1] = 0;
+      this.bufPhaseC[phaseOff + 2] = 0;
+      this.bufPhaseC[phaseOff + 3] = 0;
     }
     this.writeHostLocalPos(host);
   }
@@ -812,6 +822,7 @@ export class PlanetBodyField {
     (attrs.iHostAbsmag as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iPhaseCoefsA as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iPhaseCoefsB as THREE.InstancedBufferAttribute).needsUpdate = true;
+    (attrs.iPhaseCoefsC as THREE.InstancedBufferAttribute).needsUpdate = true;
   }
 
   /** Compact-down step used by detachHost(). Shifts a contiguous tail
@@ -831,5 +842,6 @@ export class PlanetBodyField {
     shiftScalar(this.bufHostAbsmag, 1);
     shiftScalar(this.bufPhaseA, 4);
     shiftScalar(this.bufPhaseB, 4);
+    shiftScalar(this.bufPhaseC, 4);
   }
 }

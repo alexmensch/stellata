@@ -46,7 +46,7 @@ describe('lambertianPhaseFactor', () => {
 describe('mallamaPhaseFactor', () => {
   it('returns Lambertian when alphaMaxDeg sentinel = 0', () => {
     const empty: PhaseCoefficients = {
-      c0: 0, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, alphaMaxDeg: 0,
+      c0: 0, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, c7: 0, alphaMaxDeg: 0,
     };
     for (const aDeg of [0, 30, 90, 150]) {
       expect(mallamaPhaseFactor(empty, aDeg * DEG))
@@ -139,87 +139,47 @@ describe('mallamaPhaseFactor', () => {
     expect(v).toBeLessThan(1.7);
   });
 
-  it('Mercury truncation budget: degree-6 vs full Mallama 7th-order', () => {
+  it('Mercury matches the published 7th-order Mallama fit across 0°–170°', () => {
     // Mallama 2018 Table A-1.2 publishes Mercury as a degree-7
-    // polynomial. We drop c7 = 6.592e-15 to fit degree-6 storage.
-    // This test pins the storage truncation independently of the
-    // αmax handover (it evaluates the truncated polynomial directly,
-    // so the αmax = 87° cap doesn't interfere). It motivates the
-    // αmax choice: past 88° the c7·α⁷ term dominates and the
-    // truncated polynomial is no longer faithful — αmax is set so
-    // the polynomial path stops where the budget breaks.
-    const c7 = 6.592e-15;
-    const directTruncDV = (aDeg: number): number =>
-      MERCURY_PHASE.c0 +
-      aDeg *
-        (MERCURY_PHASE.c1 +
-          aDeg *
-            (MERCURY_PHASE.c2 +
-              aDeg *
-                (MERCURY_PHASE.c3 +
-                  aDeg *
-                    (MERCURY_PHASE.c4 +
-                      aDeg * (MERCURY_PHASE.c5 + aDeg * MERCURY_PHASE.c6)))));
-    const fullDV = (aDeg: number): number =>
-      directTruncDV(aDeg) + c7 * aDeg ** 7;
-    // Sub-0.25 mag out to ≈87° (where c7·α^7 first exceeds 0.25).
-    for (let aDeg = 0; aDeg <= 84; aDeg += 4) {
-      const err = Math.abs(directTruncDV(aDeg) - fullDV(aDeg));
-      expect(err, `α=${aDeg}°`).toBeLessThan(0.25);
-    }
-    // The cutoff: just under 0.25 at 87°, just over at 88°. This is
-    // why MERCURY_PHASE.alphaMaxDeg is 87 (not Mallama's published
-    // 170° validity range — the truncation, not the source data,
-    // sets our usable bound).
-    expect(Math.abs(directTruncDV(87) - fullDV(87))).toBeLessThan(0.25);
-    expect(Math.abs(directTruncDV(88) - fullDV(88))).toBeGreaterThan(0.25);
-    expect(MERCURY_PHASE.alphaMaxDeg).toBe(87);
-    // Spot-checks at higher α — pin the actual budget so future
-    // edits to c0..c6 can't drift undetected.
-    expect(Math.abs(directTruncDV(100) - fullDV(100))).toBeCloseTo(0.659, 2);
-    expect(Math.abs(directTruncDV(120) - fullDV(120))).toBeCloseTo(2.362, 2);
-    expect(Math.abs(directTruncDV(170) - fullDV(170))).toBeCloseTo(27.05, 1);
-  });
-
-  it('Mercury at high α tracks Mallama via anchor-Lambert (within 0.5 mag)', () => {
-    // αmax = 87° hands over to anchor-scaled Lambert. Across
-    // 90°–170° the anchor approximation tracks the published
-    // 7th-order Mallama curve to within 0.5 mag — at high α
-    // Mercury reads as a thin crescent dominated by geometric
-    // `(sin α + (π−α)·cos α)/π` falloff, and the anchor multiplier
-    // `k = poly(87°)/Lambert(87°)` provides the normalization to
-    // match Mallama at the handover. Without this rule (αmax = 170°
-    // letting the truncated polynomial run all the way out) Mercury
-    // renders 27 mag too bright at α = 170° — apparent V ≈ −18
-    // instead of the real ≈ +8. Pin the physical fidelity.
-    const c7 = 6.592e-15;
+    // polynomial. c7 = 6.592e-15 now ships (third per-instance vec4),
+    // so the rendered curve IS the published fit across the full 170°
+    // validity range — the degree-6 truncation era capped αmax at 87°
+    // and fell back to anchor-Lambert (sub-0.5 mag error); with c7
+    // stored the budget collapses to float noise.
     const fullDV = (aDeg: number): number =>
       MERCURY_PHASE.c0 +
-      aDeg *
-        (MERCURY_PHASE.c1 +
-          aDeg *
-            (MERCURY_PHASE.c2 +
-              aDeg *
-                (MERCURY_PHASE.c3 +
-                  aDeg *
-                    (MERCURY_PHASE.c4 +
-                      aDeg *
-                        (MERCURY_PHASE.c5 +
-                          aDeg * (MERCURY_PHASE.c6 + aDeg * c7))))));
+      MERCURY_PHASE.c1 * aDeg +
+      MERCURY_PHASE.c2 * aDeg ** 2 +
+      MERCURY_PHASE.c3 * aDeg ** 3 +
+      MERCURY_PHASE.c4 * aDeg ** 4 +
+      MERCURY_PHASE.c5 * aDeg ** 5 +
+      MERCURY_PHASE.c6 * aDeg ** 6 +
+      MERCURY_PHASE.c7 * aDeg ** 7;
     const renderedDV = (aDeg: number): number => {
       const factor = mallamaPhaseFactor(MERCURY_PHASE, aDeg * DEG);
       return (-Math.log(factor) * 2.5) / Math.log(10);
     };
-    for (let aDeg = 90; aDeg <= 170; aDeg += 10) {
+    expect(MERCURY_PHASE.alphaMaxDeg).toBe(170);
+    for (let aDeg = 0; aDeg <= 170; aDeg += 2) {
       const err = Math.abs(renderedDV(aDeg) - fullDV(aDeg));
-      expect(err, `α=${aDeg}°`).toBeLessThan(0.55);
+      expect(err, `α=${aDeg}°`).toBeLessThan(0.01);
     }
-    // Brightness must be MONOTONE DECREASING with α past αmax (the
-    // physical sanity check Alex flagged: a thin crescent should get
-    // dimmer, not brighter, as α grows). ΔV grows ⇒ flux falls.
+    // Physical sanity at the far bound: ΔV(170°) ≈ +9.16 mag of phase
+    // dimming — with the truncated degree-6 polynomial let run to
+    // 170° this read ≈ −17.9 (27 mag too bright, apparent V ≈ −18
+    // instead of the real ≈ +8). Pin the published value.
+    expect(renderedDV(170)).toBeCloseTo(fullDV(170), 6);
+    expect(fullDV(170)).toBeCloseTo(9.161, 3);
+  });
+
+  it('Mercury brightness is monotone decreasing in α over 0°–170°', () => {
+    // A thin crescent gets dimmer, not brighter, as α grows — the
+    // physical sanity check Alex flagged when the truncated
+    // polynomial's runaway first shipped. ΔV grows ⇒ flux falls.
     let prev = -Infinity;
-    for (let aDeg = 90; aDeg <= 170; aDeg += 10) {
-      const dV = renderedDV(aDeg);
+    for (let aDeg = 2; aDeg <= 170; aDeg += 2) {
+      const factor = mallamaPhaseFactor(MERCURY_PHASE, aDeg * DEG);
+      const dV = (-Math.log(factor) * 2.5) / Math.log(10);
       expect(dV, `α=${aDeg}°`).toBeGreaterThan(prev);
       prev = dV;
     }
@@ -295,7 +255,7 @@ describe('alphaZeroPhaseFactor', () => {
 
   it('returns 1 when alphaMaxDeg = 0 (sentinel — Mallama disabled)', () => {
     const sentinel: PhaseCoefficients = {
-      c0: -1, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, alphaMaxDeg: 0,
+      c0: -1, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, c7: 0, alphaMaxDeg: 0,
     };
     expect(alphaZeroPhaseFactor(sentinel)).toBe(1);
   });
