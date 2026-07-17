@@ -2,6 +2,7 @@
 // companion=-1, lumClass=255 (unknown), Apsis fields=NaN (NO_APSIS).
 
 import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/catalog-pure';
+import { buildPulsationParams } from '../star-pipeline/pulsation-params-pure';
 import type { Catalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {
@@ -13,6 +14,8 @@ function nanFloat32(count: number): Float32Array {
 export function makeEmptyCatalog(count: number): Catalog {
   const apsis = {} as Record<ApsisField, Float32Array>;
   for (const name of APSIS_FIELDS) apsis[name] = nanFloat32(count);
+  const varType = new Uint8Array(count);
+  const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
   return {
     count,
     positions: new Float32Array(count * 3),
@@ -27,7 +30,9 @@ export function makeEmptyCatalog(count: number): Catalog {
     companion: new Int32Array(count).fill(-1),
     periodDays: new Float32Array(count),
     amplitudeMag: new Float32Array(count),
-    varType: new Uint8Array(count),
+    varType,
+    pulsRho,
+    pulsColorSwing,
     hip: new Uint32Array(count),
     sid: new Uint32Array(count),
     gaiaSourceId: new BigUint64Array(count),

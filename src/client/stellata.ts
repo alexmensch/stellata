@@ -41,10 +41,7 @@ import {
   sortedDistRange,
 } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
-import {
-  ZOOM_FLOOR_FRACTION,
-  VAR_TROUGH_FLOOR_FRACTION,
-} from './camera/controls/star-physics';
+import { ZOOM_FLOOR_FRACTION } from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import {
@@ -495,11 +492,10 @@ export class Stellata implements FrameAnchor {
       // to solar radii via pow(10, x); multiply by uRSunPc to get pc.
       uRSunPc: { value: R_SUN_PC },
       uViewport: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-      // Variability headroom drivers (mirrored to GLSL); single source of
-      // truth in the TS-side constants so the shader and the
-      // renderedSizePx mirror compute the same effective amplitude.
+      // Peak-disc cap (mirrored to GLSL); single source of truth in the
+      // TS-side ZOOM_FLOOR_FRACTION so the shader and the renderedSizePx
+      // mirror clamp resolved discs to the same viewport fraction.
       uMaxPhysFrac: { value: ZOOM_FLOOR_FRACTION },
-      uVarTroughFrac: { value: VAR_TROUGH_FLOOR_FRACTION },
       // Variability clock. Pulsation runs on the model clock (getT()) at
       // real GCVS periods, so it responds to time-warp like binary orbits.
       // uModelDays is model time in days since J2000; uModelDaysPerRealSec

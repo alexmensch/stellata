@@ -12,7 +12,6 @@ import {
   renderedDiscPxAtPeak,
   getChartDiscParams,
   ZOOM_FLOOR_FRACTION,
-  VAR_TROUGH_FLOOR_FRACTION,
 } from './star-physics';
 import { R_SUN_PC, AU_PC } from '../../util/astronomy-constants';
 
@@ -71,9 +70,8 @@ function makeUniforms(overrides: Partial<{
 }
 
 describe('star-physics / constants', () => {
-  it('exports the canonical viewport-fraction values', () => {
+  it('exports the canonical viewport-fraction value', () => {
     expect(ZOOM_FLOOR_FRACTION).toBe(0.9);
-    expect(VAR_TROUGH_FLOOR_FRACTION).toBe(0.2);
   });
 });
 
@@ -113,9 +111,11 @@ describe('star-physics / peakAmplitudeFactor (catalog-indexed)', () => {
     expect(peakAmplitudeFactor(cat, 0)).toBe(1);
   });
 
-  it('matches 10^(amp/10) when both period and amp are positive', () => {
-    const cat = makeCatalog(1, c => { c.amplitudeMag[0] = 5; c.periodDays[0] = 332; });
-    expect(peakAmplitudeFactor(cat, 0)).toBeCloseTo(Math.pow(10, 0.5), 12);
+  it('matches √ρ when both period and amp are positive', () => {
+    const cat = makeCatalog(1, c => {
+      c.amplitudeMag[0] = 8.5; c.periodDays[0] = 332; c.pulsRho[0] = 1.4;
+    });
+    expect(peakAmplitudeFactor(cat, 0)).toBeCloseTo(Math.sqrt(cat.pulsRho[0]), 12);
   });
 });
 
@@ -145,13 +145,14 @@ describe('star-physics / parkDistForStar', () => {
     expect(parkDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(dMinFloor);
   });
 
-  it('respects peak-amplitude radius for variables (Mira-like: amp=5, period=332)', () => {
+  it('respects peak-amplitude radius for variables (Mira-like: amp=8.5, ρ=1.4)', () => {
     const cat = makeCatalog(1, c => {
       c.physicalRadius[0] = 332;
-      c.amplitudeMag[0] = 5;
+      c.amplitudeMag[0] = 8.5;
       c.periodDays[0] = 332;
+      c.pulsRho[0] = 1.4;
     });
-    const Reff = cat.physicalRadius[0] * R_SUN_PC * Math.pow(10, cat.amplitudeMag[0] / 10);
+    const Reff = cat.physicalRadius[0] * R_SUN_PC * Math.sqrt(cat.pulsRho[0]);
     const dMinFloor = Reff / Math.tan((ZOOM_FLOOR_FRACTION * fovMinor) / 2);
     expect(parkDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(dMinFloor);
   });
@@ -182,8 +183,9 @@ describe('star-physics / minOrbitDistForStar', () => {
       c.physicalRadius[0] = 100;
       c.amplitudeMag[0] = 2;
       c.periodDays[0] = 50;
+      c.pulsRho[0] = 1.15;
     });
-    const Reff = cat.physicalRadius[0] * R_SUN_PC * Math.pow(10, cat.amplitudeMag[0] / 10);
+    const Reff = cat.physicalRadius[0] * R_SUN_PC * Math.sqrt(cat.pulsRho[0]);
     const expected = Reff / Math.tan((ZOOM_FLOOR_FRACTION * fovMinor) / 2);
     expect(minOrbitDistForStar({ catalog: cat, idx: 0, fovMinorRad: fovMinor })).toBe(expected);
   });
@@ -270,11 +272,12 @@ describe('star-physics / renderedSizePx', () => {
     expect(got).toBe(filter.sizeMax);
   });
 
-  it('returns the physSize when the camera is close enough that R/d dominates', () => {
+  it('returns the physSize (up-clamped to the viewport fraction) when R/d dominates', () => {
     const { catalog, localPositions } = sirius();
     const uniforms = makeUniforms();
     const filter = makeFilter();
-    // Camera 0.01 AU away → R/d is huge → physSize wins.
+    // Camera 0.01 AU away → R/d is huge → physSize wins, then hits the
+    // uMaxPhysFrac up-clamp (mirrors star.vert.glsl).
     const camPos = new THREE.Vector3(0.01 * AU_PC, 0, 0);
     const got = renderedSizePx({ catalog, idx: 0, camPos, localPositions, uniforms, filter });
     // Reconstruct via the float32-rounded catalog value so the pin is exact.
@@ -283,7 +286,8 @@ describe('star-physics / renderedSizePx', () => {
     const fovY = Math.PI / 3;
     const viewportY = 1080;
     const expectedPhys = 2 * Math.atan(R / dCam) * (viewportY / fovY);
-    expect(got).toBe(expectedPhys);
+    const maxPhys = ZOOM_FLOOR_FRACTION * Math.min(1920, viewportY);
+    expect(got).toBe(Math.min(expectedPhys, maxPhys));
   });
 
   it('modulates on the model clock: φ = 0 (max light) is largest, φ = ½ (min) smallest', () => {
@@ -357,18 +361,19 @@ describe('star-physics / renderedDiscPxAtPeak', () => {
     expect(got).toBe(expected);
   });
 
-  it('uses peak-amplitude radius for variables (Mira: amp=5)', () => {
+  it('uses peak-amplitude radius for variables (Mira: amp=8.5, ρ=1.4)', () => {
     const cat = makeCatalog(1, c => {
       c.physicalRadius[0] = 1;
-      c.amplitudeMag[0] = 5;
+      c.amplitudeMag[0] = 8.5;
       c.periodDays[0] = 332;
+      c.pulsRho[0] = 1.4;
     });
     const camPos = new THREE.Vector3(AU_PC * 100, 0, 0);
     const uniforms = makeUniforms();
     const got = renderedDiscPxAtPeak({ catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms });
     const dCam = camPos.x;
     const R = cat.physicalRadius[0] * R_SUN_PC;
-    const peak = Math.pow(10, cat.amplitudeMag[0] / 10);
+    const peak = Math.sqrt(cat.pulsRho[0]);
     const fovY = Math.PI / 3;
     const expected = 2 * Math.atan((R * peak) / dCam) * (1080 / fovY);
     expect(got).toBe(expected);
