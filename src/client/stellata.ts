@@ -1026,6 +1026,12 @@ export class Stellata implements FrameAnchor {
    *  pair this with `focusables[kind]`; star-only affordances keep
    *  guarding on `getFocusedStar()`. */
   getFocusedTarget(): Target | null { return this.focus.getFocusedTarget(); }
+  /** Focused object's live local position (any hard kind) into `out`;
+   *  false when no hard focus is set. Kind-generic — overlays anchoring
+   *  on "the focused object" use this, never a star-only buffer read. */
+  focalLocalPositionInto(out: THREE.Vector3): boolean {
+    return this.focus.focalLocalPositionInto(out);
+  }
   /** Planet system for the currently focused star, or null if the focus
    *  has none (or has not finished loading). The solar-system rendering
    *  layer gates on this — renderers also subscribe to
@@ -1063,6 +1069,25 @@ export class Stellata implements FrameAnchor {
    *  apparent-mag visibility) regardless. */
   isOrbitRingVisible(planetIdx: number): boolean {
     return this.orbitRingsLayer.isOrbitRingVisible(planetIdx);
+  }
+  /** Rendered disc radius (CSS px) of the focused object, any kind; 0
+   *  when nothing is focused. Single source for the arrow-fade coverage
+   *  inputs (HUD Sol/GC pair, POI arrows). */
+  getFocusedDiscRadiusPx(): number {
+    const t = this.focus.getFocusedTarget();
+    if (t?.kind === 'star') {
+      return starPhysics.renderedDiscPxAtPeak({
+        catalog: this.catalog,
+        idx: t.idx,
+        camPos: this.camera.position,
+        localPositions: this._localPositions,
+        uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      }) * 0.5;
+    }
+    if (t?.kind === 'planet') {
+      return this.planetBodyField.renderedPlanetSizePx(t.idx, this.camera.position) * 0.5;
+    }
+    return 0;
   }
   /** Absolute-space coordinate of the renderer's current local origin.
    *  Read-only snapshot; callers must not mutate. URL serialisation
@@ -2288,11 +2313,14 @@ export class Stellata implements FrameAnchor {
     // so without this call the labels lag by one frame during fast moves.
     this.camera.updateMatrixWorld();
 
+    // Kind-generic focal position: measuring HUD distances from
+    // controls.target is only right in navigate — in observe the target
+    // is parked 1 pc ahead of the camera (observeUpdateTarget), which
+    // read as "Sol · 3.3 ly" from a planet-anchored observe.
+    const focusedLocal = this.focus.focalLocalPositionInto(this._tmpAnimateLocal)
+      ? this._tmpAnimateLocal
+      : null;
     const focusedStar = this.focus.getFocusedStar();
-    const focusedLocal =
-      focusedStar !== null
-        ? this.starLocalPositionInto(focusedStar, this._tmpAnimateLocal)
-        : null;
     const isSolFocus = focusedStar !== null && focusedStar === this.catalog.solIndex;
     // HudOverlay computes its own fade alpha from THIS frame's shaft
     // geometry — no more one-frame-lag flash when the HUD toggles on
@@ -2309,15 +2337,7 @@ export class Stellata implements FrameAnchor {
       sizeMaxPx: this.filter.sizeMax,
       cameraMode: this.focus.getCameraMode(),
       transition: this.getObserveTransitionProgress(),
-      focusedDiscRadiusPx: focusedStar !== null
-        ? starPhysics.renderedDiscPxAtPeak({
-            catalog: this.catalog,
-            idx: focusedStar,
-            camPos: this.camera.position,
-            localPositions: this._localPositions,
-            uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
-          }) * 0.5
-        : 0,
+      focusedDiscRadiusPx: this.getFocusedDiscRadiusPx(),
       w: window.innerWidth,
       h: window.innerHeight,
     });

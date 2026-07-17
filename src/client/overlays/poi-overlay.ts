@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { targetsEqual, type Target } from '../camera/focus/focus-target';
-import { fmtDist } from '../ui/distance-util';
+import { fmtDistAuto } from '../ui/distance-util';
 import { resolveStarName } from '../format/star-companion-format';
-import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import { AIM_DEGENERATE_DIST_PC } from '../camera/controls/aim-controller';
 import {
   buildArrowSvgPath,
@@ -333,21 +332,13 @@ export function createPoiOverlay(
     const w = window.innerWidth;
     const h = window.innerHeight;
     const cameraMode = stellata.getCameraMode();
-    const localPositions = stellata.localPositions;
     const camPos = camera.position;
-    const focusedStar = stellata.getFocusedStar();
     const focusedTarget = stellata.getFocusedTarget();
 
     // Off-screen arrows mirror the HUD's Sol/GC arrows: shafts attach to
     // whichever ring is active (focus ring in navigate, HUD ring in
     // observe) around the shared HUD anchor.
-    if (focusedStar !== null) {
-      tmpOrigin.set(
-        localPositions[focusedStar * 3],
-        localPositions[focusedStar * 3 + 1],
-        localPositions[focusedStar * 3 + 2],
-      );
-    } else {
+    if (!stellata.focalLocalPositionInto(tmpOrigin)) {
       tmpOrigin.copy(stellata.controls.target);
     }
     hudAnchorInto(tmpOrigin, camera, w, h, tmpAnchor, cameraMode === 'observe');
@@ -401,8 +392,8 @@ export function createPoiOverlay(
         // FOV-invariant; the rendered disc may grow or shrink with FOV
         // but the label stays clear of the ring at all zoom levels.
         const fullText = conCode
-          ? `${name} · ${conCode} · ${fmtDist(distPc)}`
-          : `${name} · ${fmtDist(distPc)}`;
+          ? `${name} · ${conCode} · ${fmtDistAuto(distPc)}`
+          : `${name} · ${fmtDistAuto(distPc)}`;
         e.lastOnScreenLabelDisplay = setStyle(e.onScreenLabel, 'display', '', e.lastOnScreenLabelDisplay);
         e.lastOnScreenLabelText = setText(e.onScreenLabel, fullText, e.lastOnScreenLabelText);
         const lx = projected[0] + LABEL_DIAG;
@@ -489,15 +480,7 @@ export function createPoiOverlay(
     // alpha 0. On-screen rings/labels don't fade — they anchor at the
     // POI's own projection, not the focus origin.
     if (maxArrowLenPx > 0) {
-      const discRadiusPx = focusedStar !== null
-        ? renderedDiscPxAtPeak({
-            catalog: stellata.catalog,
-            idx: focusedStar,
-            camPos,
-            localPositions,
-            uniforms: stellata.uniforms,
-          }) * 0.5
-        : 0;
+      const discRadiusPx = stellata.getFocusedDiscRadiusPx();
       const alpha = focusedArrowFadeAlpha(
         cameraMode, null, discRadiusPx, maxArrowLenPx, shaftStartPx,
       );

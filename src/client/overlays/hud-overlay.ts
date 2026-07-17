@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
-import { fmtDist } from '../ui/distance-util';
+import { fmtDistAuto } from '../ui/distance-util';
 import {
   buildArrowSvgPath,
   screenDirToTarget,
@@ -448,7 +448,7 @@ export class HudOverlay {
     state.lastLabelDisplay = setStyle(label, 'display', '', state.lastLabelDisplay);
     state.lastLabelX = setNumAttr(label, 'x', sx, state.lastLabelX);
     state.lastLabelY = setNumAttr(label, 'y', sy, state.lastLabelY);
-    state.lastLabelText = setText(label, `${labelPrefix} · ${fmtDist(distancePc)}`, state.lastLabelText);
+    state.lastLabelText = setText(label, `${labelPrefix} · ${fmtDistAuto(distancePc)}`, state.lastLabelText);
 
     return shaftLengthPx;
   }
