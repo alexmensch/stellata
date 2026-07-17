@@ -91,13 +91,13 @@ void main() {
   vec4 planetView = modelViewMatrix * vec4(planetLocal, 1.0);
   vec4 hostView   = modelViewMatrix * vec4(iHostLocalPos, 1.0);
 
-  // Defensive — both planet and host behind near plane (camera past
-  // the system) → kill the quad. The disc/glow gates below will
-  // catch most other off-screen cases via the magnitude cutoff.
+  // Defensive against degenerate geometry (viewer exactly at the
+  // planet, or planet exactly at the host) → kill the quad. The
+  // viewer→host distance is deliberately NOT tested — observe mode
+  // parks the camera exactly at the host, and its planets must render.
   float d_vp = length(planetView.xyz);
-  float d_vh = length(hostView.xyz);
   float d_hp = length(planetView.xyz - hostView.xyz);
-  if (d_vp <= 0.0 || d_vh <= 0.0 || d_hp <= 0.0) {
+  if (d_vp <= 0.0 || d_hp <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAppMag = 0.0;
     vColor = vec3(0.0);
@@ -145,21 +145,24 @@ void main() {
 
   // Reflected-light apparent magnitude:
   //
-  //   m_host_at_viewer = M_host + 5·log10(d_vh / 10pc)
-  //   m_planet         = m_host_at_viewer
-  //                    − 2.5·log10( p · (R/d_vp)² · (d_vh/d_hp)² · φ(α) )
+  //   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
+  //   m_planet         = m_host_at_planet
+  //                    − 2.5·log10( p · (R/d_vp)² · φ(α) )
+  //
+  // The viewer→host distance d_vh cancels out of the physical formula
+  // and MUST NOT appear: observe mode parks the camera exactly at the
+  // host, so any d_vh term evaluates log(0) there and kills every
+  // planet of the focused host. CPU mirror (vitest-pinned):
+  // perceptual-magnitude.ts planetApparentMagnitude.
   //
   // Verified against Jupiter (R=69,911 km, p=0.538) under Lambert:
-  //   • Earth at opposition (d_vh=1 AU, d_hp=5.2 AU, d_vp=4.2 AU): −2.7 ✓
-  //   • Outside heliopause (d_vh=150 AU): +5.2 ✓
+  //   • Earth at opposition (d_hp=5.2 AU, d_vp=4.2 AU): −2.7 ✓
+  //   • Outside heliopause (d_vp=144.8 AU): +5.2 ✓
   //   • α Cen (1.34 pc): +21 ✓
-  float m_host_at_viewer = iHostAbsmag + 5.0 * (log(d_vh) / LOG10 - 1.0);
+  float m_host_at_planet = iHostAbsmag + 5.0 * (log(d_hp) / LOG10 - 1.0);
   float radRatio = iRadiusPc / d_vp;
-  float legRatio = d_vh / d_hp;
-  float reflFactor = iAlbedoP * radRatio * radRatio
-                   * legRatio * legRatio
-                   * max(phi, 0.0);
-  float appMag = m_host_at_viewer - 2.5 * log(max(reflFactor, 1e-30)) / LOG10;
+  float reflFactor = iAlbedoP * radRatio * radRatio * max(phi, 0.0);
+  float appMag = m_host_at_planet - 2.5 * log(max(reflFactor, 1e-30)) / LOG10;
 
   // Soft taper: pass a 0.5-mag overshoot so the glow pass can fade
   // intensity to zero across the threshold band — same hysteresis

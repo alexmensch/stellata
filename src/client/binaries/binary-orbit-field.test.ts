@@ -927,3 +927,82 @@ describe('BinaryOrbitField.update — no focal rebase (barycentric always)', () 
     expect(out.equals(new THREE.Vector3(0, 0, 0))).toBe(true);
   });
 });
+
+describe('BinaryOrbitField.update — static-frame skip', () => {
+  const t0 = (J2000_JD - 2440587.5) * 86400;
+  // At 2 pc with viewport 1080 / fov 0.8 the fixture's widest pair peaks
+  // well below SUB_PIXEL_THRESHOLD_PX, so both relations suppress: zero
+  // Kepler evals but non-zero active count — the shipping idle state.
+  const idleCamera = new THREE.Vector3(0, 0, 0);
+  let fx: ReturnType<typeof makeFixture>;
+  let field: BinaryOrbitField;
+  beforeEach(() => {
+    fx = makeFixture();
+    field = new BinaryOrbitField(fx);
+  });
+
+  const versions = () => [fx.iPositionAttr.version, fx.iCompositeSuppressAttr.version];
+
+  it('skips the walk + re-upload on identical inputs once zero Kepler evals settled', () => {
+    const first = field.update(t0, idleCamera, 15, 1080, 0.8);
+    expect(fx.compositeSuppress[1]).toBe(1);
+    expect(fx.compositeSuppress[2]).toBe(1);
+    const before = versions();
+    const second = field.update(t0 + 3600, idleCamera, 15, 1080, 0.8);
+    expect(second).toBe(first);
+    expect(versions()).toEqual(before);
+    expect(fx.compositeSuppress[1]).toBe(1);
+    expect(fx.compositeSuppress[2]).toBe(1);
+  });
+
+  it('never skips while any relation is Kepler-active (focused orbit keeps animating)', () => {
+    const closeCamera = new THREE.Vector3(1.999, 0, 0);
+    field.update(t0, closeCamera, 15, 1080, 0.8);
+    const before = versions();
+    field.update(t0 + 3600, closeCamera, 15, 1080, 0.8);
+    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
+    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+  });
+
+  it.each([
+    ['camera moves', (f: BinaryOrbitField) =>
+      f.update(t0, new THREE.Vector3(0.1, 0, 0), 15, 1080, 0.8)],
+    ['magnitude slider moves', (f: BinaryOrbitField) =>
+      f.update(t0, idleCamera, 14, 1080, 0.8)],
+    ['viewport changes', (f: BinaryOrbitField) =>
+      f.update(t0, idleCamera, 15, 2160, 0.8)],
+    ['fov changes', (f: BinaryOrbitField) =>
+      f.update(t0, idleCamera, 15, 1080, 0.4)],
+    ['focal changes', (f: BinaryOrbitField) =>
+      f.update(t0, idleCamera, 15, 1080, 0.8, 0)],
+  ] as const)('re-runs when %s', (_name, call) => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    const before = versions();
+    call(field);
+    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
+    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+  });
+
+  it.each([
+    ['markBaselinesDirty', (f: BinaryOrbitField) => f.markBaselinesDirty()],
+    ['recenter', (f: BinaryOrbitField) => f.recenter(new THREE.Vector3(1, 0, 0))],
+  ] as const)('%s forces the next update to walk again', (_name, poke) => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    const before = versions();
+    poke(field);
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
+    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+  });
+
+  it('markBaselinesDirty walk restores suppressed placements over a wholesale buffer rewrite', () => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    const placedX = fx.localPositions[2 * 3];
+    // Epoch re-advance / recentre stand-in: every slot back to bare baseline.
+    fx.localPositions.set(fx.absolutePositions);
+    field.markBaselinesDirty();
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    expect(fx.localPositions[2 * 3]).toBe(placedX);
+    expect(fx.compositeSuppress[2]).toBe(1);
+  });
+});

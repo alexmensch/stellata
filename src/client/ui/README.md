@@ -102,15 +102,19 @@ mirrors what the panel would have shown.
 
 The shared `bindRelocateModal` helper closes on:
 
+- Selection commit: `Typeahead.pick()` dispatches `'typeahead-pick'`
+  on its input right before `onSelect` runs, and the modal closes
+  synchronously inside that dispatch — so the focus glide / aim slerp
+  the selection triggers plays against the live scene from its first
+  frame instead of starting behind the modal backdrop.
 - ESC (handled in the shortcut module's capture-phase listener).
 - Backdrop click (`.kb-modal-backdrop`).
-- Input blur, deferred 180ms — covers `pick()`-then-blur (`Typeahead`
-  blurs the input synchronously after `onSelect`), click-outside, and
-  ESC inside the input. The 180ms sits just past `Typeahead`'s own
-  140ms blur deferral so its result-mousedown race finishes first.
-  An `onInputFocus` handler cancels the pending close, so re-focusing
-  via the typeahead's X-clear button doesn't tear down the modal mid
-  edit.
+- Input blur, deferred 180ms — the fallback for non-pick teardowns
+  (click-outside, ESC inside the input). The 180ms sits just past
+  `Typeahead`'s own 140ms blur deferral so its result-mousedown race
+  finishes first. An `onInputFocus` handler cancels the pending close,
+  so re-focusing via the typeahead's X-clear button doesn't tear down
+  the modal mid edit.
 
 ### Reset (R) scope
 

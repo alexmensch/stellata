@@ -12,6 +12,7 @@ function base(over: Partial<FocalRideInputs> = {}): FocalRideInputs {
     lastAppliedPert: V(0, 0, 0),
     liveLocal: V(0, 0, 0),
     target: V(0, 0, 0),
+    observeMode: false,
     ...over,
   };
 }
@@ -64,6 +65,24 @@ describe('focalRideStep', () => {
       target: V(3, -1, 4),
     }));
     expect([s.dx, s.dy, s.dz]).toEqual([0, 0, 0]);
+  });
+
+  it('seed frame in observe mode: no re-snap — target is the look pin, not the star', () => {
+    // Cold-load observe URL restore: the first-ever ride frame runs with
+    // mode already observe, where observeUpdateTarget parks target one
+    // parsec ahead of the camera. Re-snapping against that target would
+    // translate the star-parked camera a full parsec off the focal star.
+    const s = focalRideStep(base({
+      rideFocalIdx: null,
+      focalPert: V(3, -1, 4),
+      liveLocal: V(3, -1, 4),
+      target: V(4, -1, 4), // camera + 1 pc forward
+      observeMode: true,
+    }));
+    expect([s.dx, s.dy, s.dz]).toEqual([0, 0, 0]);
+    // Baseline still resyncs so the steady-state ride takes over cleanly.
+    expect([s.px, s.py, s.pz]).toEqual([3, -1, 4]);
+    expect(s.rideFocalIdx).toBe(1);
   });
 
   it('warp active: never translates, only resyncs the baseline', () => {

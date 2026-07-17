@@ -237,6 +237,8 @@ async function main() {
       stellata,
       context: {
         starLabels,
+        gaiaSourceId: catalog.gaiaSourceId,
+        sid: catalog.sid,
         spectralMap,
         spectClass: catalog.spectClass,
         luminosityClass: catalog.luminosityClass,

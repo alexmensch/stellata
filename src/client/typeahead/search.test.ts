@@ -608,3 +608,35 @@ describe('search / ranking tiers', () => {
     expect(run('V366 Andromeda')[0]).toMatchObject({ kind: 'star', index: 2 });
   });
 });
+
+describe('search / Gaia + SID direct dispatch', () => {
+  const catalog = {
+    ...makeEmptyCatalog(3),
+    gaiaSourceId: BigUint64Array.from([0n, 4472832130942575872n, 0n]),
+    sid: Uint32Array.from([11, 22, 33]),
+  };
+  const run = createSearchRunner(catalog, [], null);
+
+  it.each([
+    'Gaia DR3 4472832130942575872',
+    'gaia 4472832130942575872',
+    '4472832130942575872',
+  ])('resolves %s to the record and echoes the canonical form', (q) => {
+    const res = run(q);
+    expect(res).toHaveLength(1);
+    expect(res[0].index).toBe(1);
+    expect(res[0].label).toBe('Gaia DR3 4472832130942575872');
+  });
+
+  it.each(['SID 33', 'sid #33'])('resolves %s to the record', (q) => {
+    const res = run(q);
+    expect(res).toHaveLength(1);
+    expect(res[0].index).toBe(2);
+    expect(res[0].label).toBe('SID #33');
+  });
+
+  it('unknown Gaia / SID ids return no results rather than fuzzy noise', () => {
+    expect(run('Gaia DR3 9999999999999999999')).toEqual([]);
+    expect(run('SID 999')).toEqual([]);
+  });
+});

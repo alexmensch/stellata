@@ -30,6 +30,19 @@ star catalog records.
   applies the LOD cascade described below, and rewrites the active
   slots of `localPositions` plus `compositeSuppress`.
   `recenter(newOrigin)` updates the cached world offset.
+  **Static-frame skip:** when the previous `update()` evaluated zero
+  Kepler relations (everything gated out or sub-pixel-suppressed —
+  the shipping idle state at any wide view), every buffer write is a
+  pure function of (camera, slider, viewport, fov, focal), so an
+  `update()` with identical inputs skips the walk AND both
+  `needsUpdate` flags — without it three.js re-uploads the full
+  ~5 MB backing arrays every idle frame. Focal-chain relations are
+  always Kepler-active (they bypass the gates), so a focused orbit
+  never skips. `recenter()` and `markBaselinesDirty()` (called by the
+  shell whenever it rewrites `localPositions` wholesale — epoch
+  re-advance, origin recentre) force the next walk so suppressed
+  secondaries get their `baseDiffPc` placement re-applied on top of
+  the fresh baselines.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
   `ECLIPSE_DIM_TAU_S`, `DISC_DEPTH_BIAS` named constants the fields read
   and tests pin.
@@ -177,7 +190,11 @@ drives the ride. On the frame the focal changes, the ride re-snaps
 `controls.target` onto the star's **live `_localPositions` slot** rather
 than trusting that focus-entry snap — under fast scrub sim-time advances
 between the focus event and the next frame, so the event-time sample goes
-stale and would leave the star a fixed offset off-centre. The pure step
+stale and would leave the star a fixed offset off-centre. That re-snap
+is suppressed in observe mode: there `controls.target` is the
+look-direction pin one parsec ahead of the camera (not on the star),
+and re-snapping against it would drag the star-parked camera a parsec
+off the focal — the cold-load observe URL-restore bug. The pure step
 math is `focal-ride-pure.ts:focalRideStep`. CPU consumers (focus ring,
 distance vector, HUD shafts, hover picker) read the perturbed
 `_localPositions` and project through the same `lookAt(target)` camera,

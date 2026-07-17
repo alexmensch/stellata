@@ -598,6 +598,41 @@ describe('PlanetBodyField.appMagFor', () => {
     f.dispose();
   });
 
+  it('camera parked exactly at the host (observe mode): planets stay finite and visible', () => {
+    // Regression for observe-on-Sol: the camera sits at the host's
+    // exact local position, so the viewer->host distance is 0. The
+    // old formula killed the quad / returned NaN there; the cancelled
+    // form must yield a finite magnitude under the naked-eye cutoff
+    // for a Jupiter-like planet.
+    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({
+          radiusKm: 69911,
+          semiMajorAxisAu: 5.2,
+          eccentricity: 0,
+          albedo: 0.538,
+        })],
+        positionsAt: (_t, out) => { out[0] = 5.2 * AU_PC; out[1] = 0; out[2] = 0; },
+      },
+      4.83,
+      new THREE.Vector3(0, 0, 0),
+      0,
+      0,
+    );
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 0, 0); // exactly on the host
+    f.update(camera, 0);
+    const m = f.appMagFor(0, 0, camera.position);
+    expect(m).not.toBeNull();
+    expect(Number.isFinite(m!)).toBe(true);
+    // Jupiter from Sol at full phase: bright, well under naked-eye 6.5.
+    expect(m!).toBeLessThan(0);
+    f.dispose();
+  });
+
   it('happy path matches planetApparentMagnitude with explicit phase factor', () => {
     // Build a known geometry. Host at (0,0,0). Use positionsAt to
     // plant the planet at (1 AU, 0, 0) in plane frame, then override
@@ -637,11 +672,10 @@ describe('PlanetBodyField.appMagFor', () => {
     // Hand-built expectation. Planet at +1 AU, host at origin, viewer
     // at −0.1 pc on the same axis.
     const dVp = 1 * AU_PC + 0.1;
-    const dVh = 0.1;
     const dHp = 1 * AU_PC;
     const radiusPc = 6000 * KM_PC;
     // No Mallama coefs → Lambertian; α = 0 → φ = 1.
-    const expected = planetApparentMagnitude(4.83, dVh, dVp, dHp, 0.5, radiusPc, 1);
+    const expected = planetApparentMagnitude(4.83, dVp, dHp, 0.5, radiusPc, 1);
     expect(got).toBeCloseTo(expected, 5);
     f.dispose();
   });
@@ -690,10 +724,9 @@ describe('PlanetBodyField.appMagFor', () => {
     const dh = hostPos.clone().sub(camera.position);
     const phi = phaseFactorFor(dv.x, dv.y, dv.z, dh.x, dh.y, dh.z, VENUS_PHASE);
     const dVp = dv.length();
-    const dVh = dh.length();
     const dHp = planetPos.length();
     const radiusPc = 6052 * KM_PC;
-    const expected = planetApparentMagnitude(4.83, dVh, dVp, dHp, 0.689, radiusPc, phi);
+    const expected = planetApparentMagnitude(4.83, dVp, dHp, 0.689, radiusPc, phi);
     expect(got).toBeCloseTo(expected, 5);
     // Sanity: α is meaningfully non-zero (so Lambert(0) wouldn't
     // accidentally pass).

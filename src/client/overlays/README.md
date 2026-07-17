@@ -58,6 +58,13 @@ itself and skips the per-frame projection pass entirely; the picker UI
 in the panel is also disabled while the flag is off so users can't
 mutate the unseen `highlightCon`.
 
+The overlay carries a **full-tick skip** (same pattern as
+`chart-labels.ts` — see `../debug/README.md` § full-tick skip): the
+path `d` is a pure function of camera pose, viewport, advanced epoch,
+and filter state, so a tick whose tuple matches the previous one
+returns before any projection or string building. Filter / camera-mode
+changes poison the pose sentinel so the next tick always recomputes.
+
 When a constellation is highlighted, `constellation-overlay.ts` draws
 the classical asterism lines (sourced from Stellarium at build time
 and embedded in `public/constellations.json`) as an SVG

@@ -134,18 +134,18 @@ describe('planetApparentMagnitude', () => {
   const JUPITER_ALBEDO = 0.538;
   const SOL_ABSMAG = 4.83;
 
-  it('returns m_host_at_viewer when reflectance product = 1', () => {
+  it('returns m_host_at_planet when reflectance product = 1', () => {
     // Construct geometry such that the reflected-light correction is
-    // zero: albedo·(R/d_vp)²·(d_vh/d_hp)²·φ = 1.
-    const m = planetApparentMagnitude(0, 10, 1, 10, 1, 1, 1);
-    expect(m).toBeCloseTo(0, 12); // hostAbsmag=0 at d_vh=10pc, refl=1 → 0
+    // zero: albedo·(R/d_vp)²·φ = 1.
+    const m = planetApparentMagnitude(0, 1, 10, 1, 1, 1);
+    expect(m).toBeCloseTo(0, 12); // hostAbsmag=0 at d_hp=10pc, refl=1 → 0
   });
 
   it('Jupiter from Earth at opposition: ≈ -2.7 V', () => {
-    // d_vh = 1 AU, d_hp = 5.2 AU, d_vp = 4.2 AU, φ ≈ 1.
+    // d_hp = 5.2 AU, d_vp = 4.2 AU, φ ≈ 1.
     const m = planetApparentMagnitude(
       SOL_ABSMAG,
-      1 * AU_PC, 4.2 * AU_PC, 5.2 * AU_PC,
+      4.2 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(m).toBeCloseTo(-2.7, 1);
@@ -156,7 +156,7 @@ describe('planetApparentMagnitude', () => {
     // 5.2 AU on the same line ⇒ d_vp = 144.8 AU.
     const m = planetApparentMagnitude(
       SOL_ABSMAG,
-      150 * AU_PC, 144.8 * AU_PC, 5.2 * AU_PC,
+      144.8 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(m).toBeCloseTo(5.2, 0);
@@ -165,10 +165,9 @@ describe('planetApparentMagnitude', () => {
   it('Jupiter from α Cen (1.34 pc, Sol→Jupiter colinear with viewer): ≈ +21 V', () => {
     // Distance from α Cen to Sol is 1.34 pc; Jupiter is 5.2 AU from Sol
     // — negligible against 1.34 pc, so d_vh ≈ d_vp.
-    const dVh = 1.34;
-    const dVp = dVh - 5.2 * AU_PC;
+    const dVp = 1.34 - 5.2 * AU_PC;
     const m = planetApparentMagnitude(
-      SOL_ABSMAG, dVh, dVp, 5.2 * AU_PC,
+      SOL_ABSMAG, dVp, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(m).toBeCloseTo(21, 0);
@@ -176,31 +175,45 @@ describe('planetApparentMagnitude', () => {
 
   it('halving albedo dims the planet by 2.5·log10(2) ≈ 0.753 mag', () => {
     const m1 = planetApparentMagnitude(
-      0, 10, 1, 10, 1, 1, 1,
+      0, 1, 10, 1, 1, 1,
     );
     const m2 = planetApparentMagnitude(
-      0, 10, 1, 10, 0.5, 1, 1,
+      0, 1, 10, 0.5, 1, 1,
     );
     expect(m2 - m1).toBeCloseTo(2.5 * Math.log10(2), 12);
   });
 
   it('halving the phase factor dims the planet by 2.5·log10(2) mag', () => {
     const m1 = planetApparentMagnitude(
-      0, 10, 1, 10, 1, 1, 1,
+      0, 1, 10, 1, 1, 1,
     );
     const m2 = planetApparentMagnitude(
-      0, 10, 1, 10, 1, 1, 0.5,
+      0, 1, 10, 1, 1, 0.5,
     );
     expect(m2 - m1).toBeCloseTo(2.5 * Math.log10(2), 12);
   });
 
   it('zero phase factor floors at the 1e-30 clamp (finite, not -Inf)', () => {
-    const m = planetApparentMagnitude(0, 10, 1, 10, 1, 1, 0);
+    const m = planetApparentMagnitude(0, 1, 10, 1, 1, 0);
     expect(Number.isFinite(m)).toBe(true);
   });
 
+  it('viewer exactly at the host (observe mode): finite and equal to the near-host limit', () => {
+    // Observe parks the camera at the host's exact position, so the
+    // formula must not involve the viewer→host distance at all. Jupiter
+    // seen from Sol itself: d_vp = d_hp = 5.2 AU, full phase.
+    const atHost = planetApparentMagnitude(
+      SOL_ABSMAG, 5.2 * AU_PC, 5.2 * AU_PC,
+      JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
+    );
+    expect(Number.isFinite(atHost)).toBe(true);
+    // Brighter than from Earth at opposition (closer to the planet is
+    // farther in this colinear setup — from Sol, d_vp 5.2 vs 4.2 AU).
+    expect(atHost).toBeCloseTo(-2.3, 1);
+  });
+
   it('does not divide by zero at d_vp = 0', () => {
-    const m = planetApparentMagnitude(0, 10, 0, 10, 0.5, 1, 1);
+    const m = planetApparentMagnitude(0, 0, 10, 0.5, 1, 1);
     expect(Number.isFinite(m)).toBe(true);
   });
 });

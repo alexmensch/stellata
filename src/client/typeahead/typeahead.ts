@@ -167,6 +167,12 @@ export class Typeahead<T> {
   private pick(i: number): void {
     const item = this.results[i];
     if (!item) return;
+    // Announce the commit BEFORE onSelect runs its action: a hosting
+    // modal (the G / F / C keyboard pickers) listens for this and tears
+    // itself down synchronously, so a camera animation started inside
+    // onSelect plays against the live scene instead of behind the
+    // modal backdrop.
+    this.opts.input.dispatchEvent(new CustomEvent('typeahead-pick'));
     this.opts.onSelect(item);
     this.opts.resultsEl.hidden = true;
     this.opts.input.blur();
