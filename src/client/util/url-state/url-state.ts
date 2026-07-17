@@ -11,7 +11,7 @@ import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
-import type { Target, TargetKind } from '../../camera/focus/focus-target';
+import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Four wire
 // formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
@@ -1270,7 +1270,7 @@ export function applyDecodedView(
   // below preserves that quaternion when it pins position again.
   // setCameraToDefault routes through defaultCamForMode so the elision
   // invariant lives in one place.
-  const willEnterObserve = view.mode === 'observe' && stellata.getFocusedStar() !== null;
+  const willEnterObserve = view.mode === 'observe' && isHardTarget(stellata.getFocusedTarget());
   if (willEnterObserve && !hasCam) {
     setCameraToDefault(stellata, 'observe');
     controlsDirty = true;

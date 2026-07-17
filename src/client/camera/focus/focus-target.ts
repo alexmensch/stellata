@@ -24,6 +24,15 @@ export function targetsEqual(a: Target | null, b: Target | null): boolean {
   return a.kind === b.kind && a.idx === b.idx;
 }
 
+/** Hard focus kinds (star / planet) recentre the floating origin onto
+ *  the object and drop the orbit floor to a per-body physical solve;
+ *  they're also the only valid observe anchors (the camera parks
+ *  exactly at the object, which needs the float32-clean local frame a
+ *  recentre establishes). Soft kinds (cloud / LG) do neither. */
+export function isHardTarget(t: Target | null): boolean {
+  return t !== null && (t.kind === 'star' || t.kind === 'planet');
+}
+
 /** Per-kind geometry legs the kind-agnostic shell surface dispatches
  *  through (flyTo park math, overlay projection, chevron sizing).
  *  Camera-transition code consumes objects through `FocusTarget`

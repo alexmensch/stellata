@@ -53,6 +53,11 @@ uniform int uRenderMode;
 // Visibility cutoff (mag slider); shared with stars.
 uniform float uMaxAppMag;
 
+// Flat instance index to hide (-1 = none). The planet sibling of the
+// star pipeline's uHideFocusIdx: observe mode parks the camera AT the
+// focal body, whose disc would otherwise render from the interior.
+uniform int uHideIdx;
+
 // Perceptual-disc shaping. All shared with the star pipeline.
 uniform float uSizeMin;
 uniform float uSizeMax;
@@ -98,9 +103,11 @@ void main() {
   // planet, or planet exactly at the host) → kill the quad. The
   // viewer→host distance is deliberately NOT tested — observe mode
   // parks the camera exactly at the host, and its planets must render.
+  // The hidden instance (observe anchor body) kills through the same
+  // path, in every pass — a hidden body must not write depth either.
   float d_vp = length(planetView.xyz);
   float d_hp = length(planetView.xyz - hostView.xyz);
-  if (d_vp <= 0.0 || d_hp <= 0.0) {
+  if (gl_InstanceID == uHideIdx || d_vp <= 0.0 || d_hp <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAppMag = 0.0;
     vColor = vec3(0.0);

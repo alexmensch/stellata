@@ -51,6 +51,9 @@ src/client/solar-system/
                                   (host, planet-within-host), plus local/
                                   absolute position, appMag, and rendered-
                                   size accessors keyed on the flat index.
+                                  uHideIdx (one uniform shared by all
+                                  five passes) hides the observe-anchor
+                                  body via setHiddenInstance.
   orbit-rings-layer.ts            Faint orbit rings in the host's orbital
                                   plane.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
@@ -440,6 +443,9 @@ the floor to `minOrbitDistForPlanet` (the same 90 %-fill angular
 solve, ~2.4 body radii); arrival parks at `parkDistForPlanet` (a
 30 %-fill solve). The camera follows the orbiting body via the
 planet-focal ride — see `../camera/focus/README.md` § Planet focus.
+A focused planet is a full observe anchor: entering observe parks the
+camera on the body and hides it via `uHideIdx`
+(`../camera/observe/README.md`).
 
 `camera.near` is at `1e-10 pc` — well below `minOrbitDistForStar` —
 so very-close planet inspection isn't culled. The strict-less-than

@@ -183,6 +183,9 @@ kind, or Esc — runs the same detach side effects a star unfocus does
 - **Host-derived state stays alive.** The planet kind's applyFocus /
   setPlanetFocus attach the HOST's planet system (orbit rings,
   heliopause, labels) exactly as the host's own star focus would.
+- **Observe anchors.** Star and planet are both valid observe
+  anchors (`getFocusedHardTarget`); the focal-body hide dispatches per
+  kind through `setFocalBodyHidden` in `stellata.ts`.
 - **No shader pin.** `uPinFocusToCenter` is a star-instance pin; a
   focused planet is kept under the camera by the planet-focal ride in
   `stellata.ts` (`applyPlanetFocalRide`, the planet sibling of the

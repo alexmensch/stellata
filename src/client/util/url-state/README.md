@@ -95,7 +95,7 @@ bit order, so mode isn't known until the field loop completes).
 - `mode=observe` is applied **after** camera params + `controls.update()`
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
-  a focused star exists. Default-omitted (navigate).
+  a hard-kind focus (star / planet) exists. Default-omitted (navigate).
 - The URL writer skips frame-hash updates while
   `isObserveTransitionActive()` is true, mirroring the warp guard — the
   observe enter/exit translate animates camera position and would

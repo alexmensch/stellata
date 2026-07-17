@@ -1,7 +1,8 @@
 # OBSERVE camera mode
 
-A second camera mode that parks the camera at the focused star and
-swaps `TrackballControls` for a custom look-around controller. Drag
+A second camera mode that parks the camera at the focused hard-kind
+object — star or planet, one path for both — and swaps
+`TrackballControls` for a custom look-around controller. Drag
 mechanics, momentum, FOV-on-wheel, aim slerps, POI dispatch, and the
 click handlers (single = pin a POI, double = aim-at).
 
@@ -36,22 +37,29 @@ Public surface of `ObserveTransition`:
 
 Toggled
 via the navigate / observe pill in the top-right card (`#mode-toggle`,
-wired in `mode-toggle.ts`). The OBSERVE button is disabled until a star
-is focused — the underlying `setCameraMode('observe')` no-ops without
-an anchor, but disabling the button advertises the affordance up-front.
+wired in `mode-toggle.ts`). The OBSERVE button is disabled until a
+hard-kind object (star or planet) is focused — the underlying
+`setCameraMode('observe')` no-ops without an anchor, but disabling the
+button advertises the affordance up-front. Soft kinds (cloud / LG)
+can't anchor observe: their focus doesn't recentre the floating
+origin, and parking a camera exactly on an un-recentred object would
+sit in the float32 cancellation regime.
 
-**Camera state on enter:** position lerps to the focused star's **live**
-local position (catalog baseline + orbital perturbation — the local
-origin for a non-orbiting star, its perturbed position for a binary
-member) over `OBSERVE_TRANSITION_MS = 1800 ms`. Parking at the bare
-origin would leave the camera off an orbiting focal. The focal star stays visible across
-the glide and is hidden via `uHideFocusIdx = focusedStar` only at
-`ObserveTransition`'s `enter` finish branch — once the camera is parked
-on top of it. Hiding it at transition start would feel like the star
-vanishes before the camera arrives. `controls.enabled = false`;
-`observeControls.enable()` after the transition completes. The
-`animate=false` URL-restore path skips the transition and sets
-`uHideFocusIdx` immediately, since there's no glide to defer to.
+**Camera state on enter:** position lerps to the focal object's
+**live** local position (a star's catalog baseline + orbital
+perturbation; a planet's body-field position) over
+`OBSERVE_TRANSITION_MS = 1800 ms`. Parking at the bare origin would
+leave the camera off an orbiting focal. The focal body stays visible
+across the glide and is hidden via `setFocalBodyHidden` only at
+`ObserveTransition`'s `enter` finish branch — once the camera is
+parked on top of it. Hiding it at transition start would feel like the
+object vanishes before the camera arrives. The hide dispatches per
+kind in `stellata.ts` (star → the star pipeline's `uHideFocusIdx`;
+planet → the body field's `uHideIdx`, which also drops the body's
+label). `controls.enabled = false`; `observeControls.enable()` after
+the transition completes. The `animate=false` URL-restore path skips
+the transition and hides immediately, since there's no glide to defer
+to.
 
 **Look-around controller (`observe-controls.ts`) — direct manipulation:**
 - Drag grabs whatever world point sits under the cursor at pointer-down
@@ -148,12 +156,12 @@ math is degenerate at observe range.
 
 **Search row labels:** the search-tag swaps "Focus" → "Location" via
 `syncFocusUI` reading `getCameraMode()` on every focus / mode change.
-Cloud entries are filtered out of the location picker (`focusRunQuery`
-in `search.ts` drops `kind === 'cloud'` when in observe) — observe is
-star-only by design.
+Soft-kind entries are filtered out of the location picker
+(`focusRunQuery` in `search.ts` keeps stars + planets when in observe)
+— observe anchors are hard kinds only.
 
-**Picking a new location** routes through `warpTo(idx)` instead of
-`focusStar(idx)`. The warp animation flies between anchors and the
+**Picking a new location** (star or planet alike) routes through
+`warpTo(target)` instead of `flyTo(target)`. The warp animation flies between anchors and the
 post-arrival slerp leaves the camera pointing in the original celestial
 direction from the new vantage. Collocated locations (α Cen A/B at one
 catalog baseline, or a ρ=0 inner pair on its parent like Castor Bb→B) fly
@@ -167,19 +175,19 @@ was tried and reverted: it bypasses `finishWarp`'s `controls.target` setup
 and desyncs the focal-frame ride.
 
 **X button (clear focus from observe):** `unfocus()` detects observe +
-focused-star and immediately clears focus *before* starting the
+hard focus and immediately clears focus *before* starting the
 zoom-out animation. The search box empties via the `'focus'` event on the
-click, then the camera pulls back to `parkDistForStar(formerFocal)`
+click, then the camera pulls back to the former focal's park distance
 along its current view direction over `OBSERVE_TRANSITION_MS`.
 
 **Navigate-mode close-zoom unfocus** (a7d.2.6) takes the same shape:
-when the user hits Esc / clicks the focused star / clicks the X while
+when the user hits Esc / clicks the focused object / clicks the X while
 already in navigate, and the camera sits closer than
-`parkDistForStar(focal)`, `unfocus()` lerps the camera outward along
-its view direction to `parkDistForStar` over `OBSERVE_TRANSITION_MS`
+the focal object's park distance, `unfocus()` lerps the camera outward
+along its view direction to it over `OBSERVE_TRANSITION_MS`
 instead of teleporting. Reuses `ObserveTransition`'s state slot with a
 third `kind: 'unfocus'`. `setFocus(null)` runs at lerp start so UI clears
-immediately; `controls.minDistance` is tightened to `parkDistForStar`
+immediately; `controls.minDistance` is tightened to the park distance
 on landing so manual zoom-in is bounded by the same parking distance.
 Skipped (snap) when already at or beyond the floor; cancelled cleanly
 by any new camera-changing action via `cancelUnfocusLerp` calls at
@@ -257,8 +265,9 @@ the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
   `OBSERVE_TRANSITION_MS = 1800` with an inline time-smoothstep. The
   focal-frame ride translates the in-flight `fromPos`/`toPos` so the
   glide stays locked to the star.
-  `uHideFocusIdx` is held at -1 across the glide; the finish branch
-  writes `uHideFocusIdx = focusedStar` and enables `ObserveControls`.
+  The focal-body hide is held off across the glide; the finish branch
+  hides the focal body (`setFocalBodyHidden`) and enables
+  `ObserveControls`.
 - **`exit`** — animated observe → navigate exit. See § X button and
   § Navigate-mode close-zoom unfocus above for both code paths.
 - **`unfocus`** — navigate-mode close-zoom outbound park-arrival.
@@ -271,7 +280,8 @@ the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
 
 Cross-controller coupling lives behind the `ObserveFocusOps`
 interface (declared in `observe-transition.ts`): focused-star
-inspection, `parkDistForStar` lookup, vector-slot clears at observe
+inspection (`getFocusedHardTarget`), `hardFocusParkDist` lookup,
+vector-slot clears at observe
 entry, `setFocus` on `clearFocusOnExit`, and the `isCameraBusy` gate
 `setMode` consults before claiming the camera. `FocusController` (in
 `../focus/`) is the implementor.

@@ -680,7 +680,7 @@ export class Stellata implements FrameAnchor {
       bus: this.bus,
       frameAnchor: this,
       aim: this.aim,
-      uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
+      setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       getClouds: () => this.clouds,
       getLocalGroup: () => this.localGroupLayer,
       getPlanetField: () => this.planetBodyField,
@@ -755,7 +755,7 @@ export class Stellata implements FrameAnchor {
       camera: this.camera,
       controls: this.controls,
       observeControls: this.observeControls,
-      uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
+      setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       bus: this.bus,
       getCameraMode: () => this.focus.getCameraMode(),
       isChartMode: () => this.filter.chart,
@@ -768,7 +768,7 @@ export class Stellata implements FrameAnchor {
       controls: this.controls,
       observeControls: this.observeControls,
       aim: this.aim,
-      uHideFocusIdxRef: this.starPipeline.discMaterial.uniforms.uHideFocusIdx as { value: number },
+      setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       bus: this.bus,
       focus: this.focus,
       getCameraMode: () => this.focus.getCameraMode(),
@@ -1157,6 +1157,17 @@ export class Stellata implements FrameAnchor {
   }
 
   // Points of interest — thin shims over PoiStore (poi/README.md).
+
+  /** Hide/unhide the rendered body of a hard-focus target — observe
+   *  parks the camera AT the object, whose disc would render from the
+   *  interior. One choke point dispatching per kind: star → the
+   *  uHideFocusIdx shader pin, planet → the body field's uHideIdx.
+   *  Passing null (or a kind switch) unhides the other kind's slot. */
+  private setFocalBodyHidden(target: Target | null): void {
+    this.starPipeline.discMaterial.uniforms.uHideFocusIdx.value =
+      target?.kind === 'star' ? target.idx : -1;
+    this.planetBodyField.setHiddenInstance(target?.kind === 'planet' ? target.idx : -1);
+  }
 
   getPois(): readonly Target[] { return this.poiStore.get(); }
   togglePoi(target: Target): boolean { return this.poiStore.toggle(target); }

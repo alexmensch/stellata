@@ -915,6 +915,21 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.update(cam, 0);
   }
 
+  it('setHiddenInstance drives one shared uHideIdx uniform across all five passes', () => {
+    const f = makeField();
+    attach(f, 0, 2);
+    expect(f.hiddenInstance()).toBe(-1);
+    f.setHiddenInstance(1);
+    expect(f.hiddenInstance()).toBe(1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyF = f as any;
+    for (const mat of [anyF.matDisc, anyF.matGlow, anyF.matCore, anyF.matCorrupt, anyF.matRestore]) {
+      expect(mat.uniforms.uHideIdx.value).toBe(1);
+    }
+    f.setHiddenInstance(-1);
+    expect(f.hiddenInstance()).toBe(-1);
+  });
+
   it('hostPlanetOf / instanceIndexOf are inverses across multiple hosts', () => {
     const f = makeField();
     attach(f, 0, 2);

@@ -676,14 +676,15 @@ export function bindSearch(
     idx,
   );
 
-  // OBSERVE mode is star-only — clouds aren't valid observation anchors,
-  // so they shouldn't appear in the location picker. Wrap the shared query
-  // to drop them when observing; the To box still uses the unfiltered
-  // runner because the distance vector accepts cloud destinations.
+  // OBSERVE anchors are hard-kind objects (star / planet) — soft kinds
+  // (clouds, LG) don't recentre the floating origin, so they shouldn't
+  // appear in the location picker. Wrap the shared query to drop them
+  // when observing; the To box still uses the unfiltered runner because
+  // the distance vector accepts any-kind destinations.
   const focusRunQuery = (q: string): FuzzyEntry[] => {
     const all = runQuery(q);
     if (stellata.getCameraMode() === 'observe') {
-      return all.filter((e) => e.kind === 'star');
+      return all.filter((e) => e.kind === 'star' || e.kind === 'planet');
     }
     return all;
   };
@@ -710,19 +711,21 @@ export function bindSearch(
     runQuery: focusRunQuery,
     rowFor,
     onSelect: (entry) => {
-      if (entry.kind === 'star') {
-        if (stellata.getCameraMode() === 'observe') {
-          // Re-route through warp so the camera flies from the current
-          // observation anchor to the new one and re-enters observe on
-          // arrival, instead of teleporting via focusStar.
-          stellata.warpTo({ kind: 'star', idx: entry.index });
-        } else {
-          stellata.focusStar(entry.index);
-        }
+      const target = entry.kind === 'star'
+        ? { kind: 'star' as const, idx: entry.index }
+        : resolveEntryTarget(stellata, catalog, entry);
+      if (!target) return;
+      if (
+        stellata.getCameraMode() === 'observe'
+        && (target.kind === 'star' || target.kind === 'planet')
+      ) {
+        // Re-route through warp so the camera flies from the current
+        // observation anchor to the new one and re-enters observe on
+        // arrival, instead of teleporting via flyTo.
+        stellata.warpTo(target);
         return;
       }
-      const target = resolveEntryTarget(stellata, catalog, entry);
-      if (target) stellata.flyTo(target);
+      stellata.flyTo(target);
     },
     onClear: () => stellata.unfocus(),
     positionResults: positionUnder(focusInput),

@@ -153,6 +153,9 @@ export class PlanetBodyField {
   private meshCore!: THREE.Mesh;
   private meshCorrupt!: THREE.Mesh;
   private meshRestore!: THREE.Mesh;
+  // One shared { value } slot across all five materials — the uHideIdx
+  // uniform hiding the observe-anchor body (-1 = none).
+  private hideIdxUniform = { value: -1 };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
 
@@ -633,6 +636,18 @@ export class PlanetBodyField {
     else this.group.visible = !this.mono && this.liveCount > 0;
   }
 
+  /** Hide one body by flat instance index (-1 = none) — the planet
+   *  sibling of the star pipeline's uHideFocusIdx, consumed by observe
+   *  mode for the body the camera is parked at. All five passes share
+   *  the uniform, so the hidden body writes no colour and no depth. */
+  setHiddenInstance(instanceIdx: number): void {
+    this.hideIdxUniform.value = instanceIdx;
+  }
+
+  hiddenInstance(): number {
+    return this.hideIdxUniform.value;
+  }
+
   dispose(): void {
     this.geometry.dispose();
     this.matDisc.dispose();
@@ -727,7 +742,11 @@ export class PlanetBodyField {
         glslVersion: THREE.GLSL3,
         vertexShader: planetVert,
         fragmentShader: planetFrag,
-        uniforms: { ...sharedPlanetUniforms, uRenderMode: { value: mode } },
+        uniforms: {
+          ...sharedPlanetUniforms,
+          uRenderMode: { value: mode },
+          uHideIdx: this.hideIdxUniform,
+        },
         ...params,
       });
 

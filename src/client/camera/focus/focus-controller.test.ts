@@ -281,7 +281,9 @@ function makeHarness(opts: {
     bus,
     frameAnchor: frame.anchor,
     aim,
-    uHideFocusIdxRef: uHide,
+    setFocalBodyHidden: (target) => {
+      uHide.value = target?.kind === 'star' ? target.idx : -1;
+    },
     getClouds: () => null,
     getLocalGroup: () => null,
     getPlanetField: () => planetField,
@@ -995,6 +997,36 @@ describe('FocusController — planet focus (kind "planet")', () => {
     expect(ft.parkRadius()).toBeGreaterThan(
       minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)),
     );
+  });
+
+  it('a focused planet is an observe anchor: hard target, focal position, park dist', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    expect(h.focus.getFocusedHardTarget()).toEqual({ kind: 'planet', idx });
+    const out = new THREE.Vector3(9, 9, 9);
+    expect(h.focus.focalLocalPositionInto(out)).toBe(true);
+    expect(out.length()).toBeLessThan(1e-9);
+    expect(h.focus.hardFocusParkDist()).toBeCloseTo(
+      parkDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)), 15,
+    );
+  });
+
+  it('soft kinds are not observe anchors', () => {
+    const h = makeHarness();
+    h.focus.flyTo({ kind: 'lg', idx: 0 }, { animate: false });
+    expect(h.focus.getFocusedHardTarget()).toBeNull();
+    expect(h.focus.hardFocusParkDist()).toBeNull();
+  });
+
+  it('unfocus from observe on a planet drives the same animated exit stars get', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    h.setCameraMode('observe');
+    h.focus.unfocus();
+    expect(h.observe.startExit).toHaveBeenCalledWith({ animate: true, clearFocusOnExit: false });
+    expect(h.focus.getFocusedTarget()).toBeNull();
   });
 
   it('flyTo an unattached planet index is a no-op', () => {

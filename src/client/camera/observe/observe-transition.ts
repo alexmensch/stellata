@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { Target } from '../focus/focus-target';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
 import type { ObserveControls } from './observe-controls';
@@ -20,7 +21,10 @@ import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 /** Cross-controller seam consumed by ObserveTransition; implemented by
  *  FocusController (in ../focus/). */
 export interface ObserveFocusOps {
-  getFocusedStar(): number | null;
+  /** The focused hard-kind (star / planet) Target — the observe
+   *  anchor. Null when the focus is empty or a soft kind (cloud / LG),
+   *  which can't anchor observe: no floating-origin recentre. */
+  getFocusedHardTarget(): Target | null;
   /** Full setFocus path — fires 'focus' / 'state'. Used by the 'exit'
    *  kind's finish branch when `clearFocusOnExit` is true (the
    *  search-row X-button path). */
@@ -29,15 +33,15 @@ export interface ObserveFocusOps {
    *  because measurement endpoints don't survive the perspective
    *  change to "I'm standing on the source." */
   clearVector(): void;
-  /** Focal star's effective minDistance — consumed by the 'exit' kind's
+  /** Focal object's park distance — consumed by the 'exit' kind's
    *  toPos (a backward pull-out along the camera's current forward
-   *  direction, distance = parkDist). */
-  parkDistForStar(idx: number): number;
-  /** Focal star's LIVE local position (catalog baseline + orbital
-   *  perturbation) written into `out`; false when no star is focused.
-   *  OBSERVE parks the camera here, not at the local origin, so an
-   *  orbiting focal star stays centred on entry and the pin re-engages
-   *  on exit. */
+   *  direction, distance = parkDist). Null without a hard focus. */
+  hardFocusParkDist(): number | null;
+  /** Focal object's LIVE local position (a star's catalog baseline +
+   *  orbital perturbation; a planet's body-field position) written
+   *  into `out`; false when no hard-kind object is focused. OBSERVE
+   *  parks the camera here, not at the local origin, so an orbiting
+   *  focal stays centred on entry and the pin re-engages on exit. */
   focalLocalPositionInto(out: THREE.Vector3): boolean;
   /** True while ANY camera-driving animation is in flight (warp, aim,
    *  focus-lerp, or this controller's own state via `isAnyActive()`).
@@ -91,11 +95,11 @@ export interface ObserveTransitionDeps {
    *  handover). The controller calls `aim.cancel()` at every startExit
    *  entry. */
   aim: AimController;
-  /** Direct handle on `material.uniforms.uHideFocusIdx`. The 'enter' kind
-   *  pins the focal star to invisible at finish (the user is standing
-   *  ON the star — its disc would render from the interior). 'exit'
-   *  flips it back to -1 at start. */
-  uHideFocusIdxRef: { value: number };
+  /** Per-kind focal-body hide (star: uHideFocusIdx; planet: the body
+   *  field's uHideIdx). The 'enter' kind hides the focal body at
+   *  finish (the user is standing ON it — its disc would render from
+   *  the interior). 'exit' unhides at start. */
+  setFocalBodyHidden: (target: Target | null) => void;
   bus: EventBus<StellataEventMap>;
   focus: ObserveFocusOps;
   getCameraMode: () => CameraMode;
@@ -162,31 +166,31 @@ export class ObserveTransition {
     if (mode === this.deps.getCameraMode()) return;
     if (this.deps.focus.isCameraBusy()) return;
     if (mode === 'observe') {
-      const focusedStar = this.deps.focus.getFocusedStar();
-      if (focusedStar === null) return;
+      const anchor = this.deps.focus.getFocusedHardTarget();
+      if (anchor === null) return;
       // Drop any drawn vector — measurement endpoints don't survive a
       // perspective change to "I'm standing on the source."
       this.deps.focus.clearVector();
       this.deps.setCameraModeValue('observe');
       this.deps.controls.enabled = false;
-      // Park pose: the focal star's LIVE local position (baseline +
-      // orbital perturbation), not the local origin — an orbiting focal
-      // sits at its perturbed position, and standing at the origin would
-      // leave the camera off the star. Falls back to the origin when the
-      // star has no perturbation.
+      // Park pose: the focal object's LIVE local position (a star's
+      // baseline + orbital perturbation; a planet's body-field
+      // position), not the local origin — an orbiting focal sits at
+      // its live position, and standing at the origin would leave the
+      // camera off it.
       const parkPos = new THREE.Vector3();
       this.deps.focus.focalLocalPositionInto(parkPos);
       if (opts.animate === false) {
         // Snap. Camera quaternion is preserved; only its position moves
-        // to the focal star. Hide the focal star here since there's no
-        // transition to defer to.
+        // to the focal object. Hide the focal body here since there's
+        // no transition to defer to.
         this.deps.camera.position.copy(parkPos);
-        this.deps.uHideFocusIdxRef.value = focusedStar;
+        this.deps.setFocalBodyHidden(anchor);
         this.deps.observeControls.enable();
       } else {
-        // Animated entry: keep the focal star visible during the glide.
-        // finish() with kind='enter' sets uHideFocusIdx once the camera
-        // is parked at the star, so the star doesn't pop out before the
+        // Animated entry: keep the focal body visible during the glide.
+        // finish() with kind='enter' hides it once the camera is
+        // parked at the object, so it doesn't pop out before the
         // camera reaches it.
         this.state = {
           startTimeMs: performance.now(),
@@ -224,15 +228,15 @@ export class ObserveTransition {
   startExit(opts: { animate: boolean; clearFocusOnExit: boolean }): void {
     if (this.deps.getCameraMode() !== 'observe') return;
     this.deps.setCameraModeValue('navigate');
-    this.deps.uHideFocusIdxRef.value = -1;
+    this.deps.setFocalBodyHidden(null);
     this.deps.observeControls.disable();
     // Cancel any in-flight observe aim — its post-flight re-enable would
     // fight the upcoming exit transition / TrackballControls handover.
     this.deps.aim.cancel();
 
-    const focusedStar = this.deps.focus.getFocusedStar();
-    if (!opts.animate || focusedStar === null) {
-      // Hard switch. controls.target snaps back to the focal star's
+    const parkDist = this.deps.focus.hardFocusParkDist();
+    if (!opts.animate || parkDist === null) {
+      // Hard switch. controls.target snaps back to the focal object's
       // local origin (or world origin when unfocused) and
       // TrackballControls re-enables.
       this.deps.controls.target.set(0, 0, 0);
@@ -244,14 +248,16 @@ export class ObserveTransition {
     } else {
       // Pull back from the parked pose along the camera's current view
       // direction so whatever the user was just looking at stays forward
-      // after exit. Distance = the focal star's effective minDistance, so
+      // after exit. Distance = the focal object's park distance, so
       // orbit picks up exactly where it would on a fresh focus. fromPos is
-      // the focal star's live position (the observe park pose), so
-      // toPos = fromPos − forward·minDist keeps the star at orbit distance
-      // and the exit finish's controls.target = fromPos re-engages the pin.
+      // the focal object's live position (the observe park pose), so
+      // toPos = fromPos − forward·minDist keeps the object at orbit
+      // distance and the exit finish's controls.target = fromPos
+      // re-engages the star pin (planets have no shader pin; the
+      // planet-focal ride keeps target glued instead).
       const forward = new THREE.Vector3(0, 0, -1)
         .applyQuaternion(this.deps.camera.quaternion);
-      const minDist = this.deps.focus.parkDistForStar(focusedStar);
+      const minDist = parkDist;
       const fromPos = this.deps.camera.position.clone();
       this.state = {
         startTimeMs: performance.now(),
@@ -391,15 +397,12 @@ export class ObserveTransition {
     this.state = null;
     if (state.kind === 'enter') {
       this.deps.camera.position.copy(state.toPos);
-      // Hide the focal star now that the camera is parked at it.
-      // Deferred from setMode so the user sees the star throughout the
-      // glide — popping it out at transition start would read as "star
+      // Hide the focal body now that the camera is parked at it.
+      // Deferred from setMode so the user sees it throughout the
+      // glide — popping it out at transition start would read as "it
       // vanishes, then camera moves into its location" rather than a
       // continuous arrival.
-      const focusedStar = this.deps.focus.getFocusedStar();
-      if (focusedStar !== null) {
-        this.deps.uHideFocusIdxRef.value = focusedStar;
-      }
+      this.deps.setFocalBodyHidden(this.deps.focus.getFocusedHardTarget());
       this.deps.observeControls.enable();
     } else if (state.kind === 'unfocus') {
       this.deps.camera.position.copy(state.toPos);

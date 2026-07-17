@@ -10,7 +10,13 @@ import type { AimController } from '../controls/aim-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
-import type { FocusableProviders, FocusTarget, Target, TargetKind } from './focus-target';
+import {
+  isHardTarget,
+  type FocusableProviders,
+  type FocusTarget,
+  type Target,
+  type TargetKind,
+} from './focus-target';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
@@ -82,10 +88,6 @@ export interface FocusOps {
    *  delta. The returned Vector3 is shared scratch — copy if needed
    *  beyond the synchronous call. Returns null on no-op. */
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
-  /** Star-specific shorthand: recenterOrigin onto catalog[idx] PLUS
-   *  the focus-state book-keeping. No event emit; caller decides when
-   *  to fan out 'focus' / 'state'. */
-  recenterFocusToStar(idx: number): THREE.Vector3 | null;
   setFocus(idx: number | null): void;
   /** Clear whichever distance-vector destination is set (any kind) —
    *  warp arrival wipes the slot regardless of the warp's kind. */
@@ -107,7 +109,10 @@ export interface FocusControllerDeps {
   bus: EventBus<StellataEventMap>;
   frameAnchor: FrameAnchor;
   aim: AimController;
-  uHideFocusIdxRef: { value: number };
+  /** Hide/unhide the rendered body of a hard-focus target (star: the
+   *  uHideFocusIdx shader pin; planet: the body field's uHideIdx).
+   *  null unhides. The shell owns the per-kind dispatch. */
+  setFocalBodyHidden: (target: Target | null) => void;
   getClouds: () => MolecularClouds | null;
   getLocalGroup: () => LocalGroupLayer | null;
   /** Planet-body field — Target {kind:'planet'} identity + geometry.
@@ -311,13 +316,29 @@ export class FocusController implements FocusOps {
     return out;
   }
 
-  /** Focal star's live local position (baseline + orbital perturbation)
-   *  into `out`; false when unfocused. Consumed by ObserveTransition and
-   *  WarpController to park the camera on the star. */
+  /** Focal object's live local position into `out`; false when no
+   *  hard-kind focus is set. A star's is its baseline + orbital
+   *  perturbation; a planet's is its body-field position. Consumed by
+   *  ObserveTransition and WarpController to park the camera on the
+   *  object. */
   focalLocalPositionInto(out: THREE.Vector3): boolean {
-    if (this.focusedStar === null) return false;
-    this.starLivePositionInto(this.focusedStar, out);
-    return true;
+    if (this.focusedStar !== null) {
+      this.starLivePositionInto(this.focusedStar, out);
+      return true;
+    }
+    if (this.focused?.kind === 'planet') {
+      return this.deps.getPlanetField().planetLocalPositionInto(this.focused.idx, out);
+    }
+    return false;
+  }
+
+  /** The focused hard-kind (star / planet) Target, or null when the
+   *  focus is empty or soft. The observe anchor — observe parks the
+   *  camera exactly at the object, which requires the recentred local
+   *  frame only hard kinds establish. */
+  getFocusedHardTarget(): Target | null {
+    const t = this.getFocusedTarget();
+    return isHardTarget(t) ? t : null;
   }
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
     return this.deps.frameAnchor.recenterOrigin(newOrigin);
@@ -404,7 +425,7 @@ export class FocusController implements FocusOps {
     this.deps.getObserve().cancelTransition();
     this.deps.aim.cancel();
     this.cameraMode = 'navigate';
-    this.deps.uHideFocusIdxRef.value = -1;
+    this.deps.setFocalBodyHidden(null);
     this.deps.observeControls.disable();
     alignCameraUpToQuaternion(this.deps.camera);
     this.deps.controls.enabled = true;
@@ -417,7 +438,7 @@ export class FocusController implements FocusOps {
    *  another soft kind is displaced structurally by the slot write.
    *  Passing null clears only the named kind's focus. */
   private setSoftFocus(kind: 'cloud' | 'lg', idx: number | null): void {
-    if (idx !== null && (this.focusedStar !== null || this.focused?.kind === 'planet')) {
+    if (idx !== null && isHardTarget(this.focused)) {
       this.setFocus(null);
     }
     const cur = this.focused?.kind === kind ? this.focused.idx : null;
@@ -430,10 +451,8 @@ export class FocusController implements FocusOps {
   /** Star-focused recentre: pivot the floating origin onto catalog[idx]
    *  AND update the focus-state book-keeping (focusedStar, per-star
    *  minDistance, planet-system reload). No 'focus' / 'state' event
-   *  emit — caller fires those when the camera has landed (setFocus,
-   *  WarpController.swapObserveAnchor, WarpController.tryMidFlyRecentre
-   *  via dest.emitFocusEvents at finishWarp). */
-  recenterFocusToStar(newIdx: number): THREE.Vector3 | null {
+   *  emit — setFocus fires those when the camera has landed. */
+  private recenterFocusToStar(newIdx: number): THREE.Vector3 | null {
     const p = this.deps.catalog.positions;
     const delta = this.deps.frameAnchor.recenterOrigin(this.tmpRecenter.set(
       p[newIdx * 3], p[newIdx * 3 + 1], p[newIdx * 3 + 2],
@@ -841,7 +860,7 @@ export class FocusController implements FocusOps {
     // search box / overlays settle within the same frame. setFocus(null)
     // doesn't recentre, so the animation runs in the (former focal
     // star's) local frame.
-    if (animate && this.cameraMode === 'observe' && this.focusedStar !== null) {
+    if (animate && this.cameraMode === 'observe' && isHardTarget(this.focused)) {
       this.deps.getObserve().startExit({ animate: true, clearFocusOnExit: false });
       this.setFocus(null);
       return;
@@ -884,8 +903,9 @@ export class FocusController implements FocusOps {
   }
 
   /** Park distance of the current hard-kind focus (star / planet), or
-   *  null for soft kinds / no focus — the unfocus zoom-out anchor. */
-  private hardFocusParkDist(): number | null {
+   *  null for soft kinds / no focus — the unfocus zoom-out anchor and
+   *  the observe exit's pull-back distance. */
+  hardFocusParkDist(): number | null {
     if (this.focused === null) return null;
     if (this.focused.kind === 'star') return this.parkDistForStar(this.focused.idx);
     if (this.focused.kind === 'planet') {
@@ -918,9 +938,8 @@ export class FocusController implements FocusOps {
    *  emitFocusEvents carries the whole transition in one 'focus'
    *  payload when the camera lands. */
   private applyFocusState(target: Target): void {
-    const hadHard = this.focused !== null
-      && (this.focused.kind === 'star' || this.focused.kind === 'planet');
-    const toHard = target.kind === 'star' || target.kind === 'planet';
+    const hadHard = isHardTarget(this.focused);
+    const toHard = isHardTarget(target);
     if (hadHard && !toHard) {
       this.refreshPlanetSystem(null);
       // Per-cloud/LG minDistance floor isn't tracked today; mirror
