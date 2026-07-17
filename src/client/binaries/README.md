@@ -190,7 +190,11 @@ drives the ride. On the frame the focal changes, the ride re-snaps
 `controls.target` onto the star's **live `_localPositions` slot** rather
 than trusting that focus-entry snap — under fast scrub sim-time advances
 between the focus event and the next frame, so the event-time sample goes
-stale and would leave the star a fixed offset off-centre. The pure step
+stale and would leave the star a fixed offset off-centre. That re-snap
+is suppressed in observe mode: there `controls.target` is the
+look-direction pin one parsec ahead of the camera (not on the star),
+and re-snapping against it would drag the star-parked camera a parsec
+off the focal — the cold-load observe URL-restore bug. The pure step
 math is `focal-ride-pure.ts:focalRideStep`. CPU consumers (focus ring,
 distance vector, HUD shafts, hover picker) read the perturbed
 `_localPositions` and project through the same `lookAt(target)` camera,

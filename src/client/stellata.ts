@@ -1394,6 +1394,7 @@ export class Stellata implements FrameAnchor {
       lastAppliedPert: this._lastAppliedPert,
       liveLocal: live,
       target: this.controls.target,
+      observeMode: this.focus.getCameraMode() === 'observe',
     });
     this._rideFocalIdx = step.rideFocalIdx;
     this._lastAppliedPert.set(step.px, step.py, step.pz);
