@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import type { Catalog } from '../loaders/catalog-loader';
 import { fmtDist } from '../ui/distance-util';
+import { resolveStarName } from '../format/star-companion-format';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import {
   buildArrowSvgPath,
@@ -482,11 +483,10 @@ function labelFor(
   starLabels: Map<number, string>,
   catalog: Catalog,
 ): string {
-  const fromMap = starLabels.get(idx);
-  if (fromMap) return fromMap;
-  const hip = catalog.hip[idx];
-  if (hip > 0) return `HIP ${hip}`;
-  return `#${idx}`;
+  return resolveStarName(
+    { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
+    idx,
+  );
 }
 
 function clamp(v: number, lo: number, hi: number): number {

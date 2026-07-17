@@ -14,7 +14,10 @@ star-hover-format.ts             Star — name + constellation · distance
                                  plain-language descriptor), variability,
                                  and binary companion lines. Tier-ordered
                                  name fallback (proper → Bayer → Flamsteed →
-                                 HIP/HD/HR/Gl → "Unnamed #idx"). The
+                                 HIP/HD/HR/Gl → "Gaia DR3 <id>" →
+                                 "Unnamed (SID #<n>)" — stable identifiers,
+                                 never the rebuild-shuffled record index;
+                                 both typeable in search). The
                                  companion blocks (secondary "Orbits <A>"
                                  per-tier detail + primary "Known
                                  companions:" name list) live in

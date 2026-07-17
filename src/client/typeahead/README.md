@@ -66,6 +66,13 @@ Gliese → Gaia DR3) for the focus card's identity line. Bayer-form GCVS
 designations ("bet Per") are skipped — they duplicate the real Bayer
 display and are search aliases, not display names.
 
+Beyond the index-backed ID forms, the runner dispatches two
+catalog-wide exact-match forms with lazily-built lookup maps (no
+search-index bloat): `Gaia <id>` / `Gaia DR3 <id>` / a bare 19-digit
+source_id, and `SID <n>` / `SID #<n>` (the frozen Stellata ID) — so
+every star an identifier-less card labels "Gaia DR3 …" or
+"Unnamed (SID #…)" is typeable back into search.
+
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
 The numeric-ID maps are 1:1 and echo the matched identifier in the

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import { fmtDistAuto } from '../ui/distance-util';
+import { resolveStarName } from '../format/star-companion-format';
 import {
   buildArrowSvgPath,
   ARROW_HEAD_DEPTH_PX,
@@ -122,7 +123,12 @@ export function createDistanceVectorOverlay(
   // Destination display names stay a per-kind lookup — star labels live
   // on the search corpus, cloud / LG names on their catalogs.
   const destLabelOf = (to: { kind: string; idx: number }): string => {
-    if (to.kind === 'star') return starLabels.get(to.idx) ?? `Unnamed #${to.idx}`;
+    if (to.kind === 'star') {
+      return resolveStarName(
+        { starLabels, gaiaSourceId: stellata.catalog.gaiaSourceId, sid: stellata.catalog.sid },
+        to.idx,
+      );
+    }
     if (to.kind === 'cloud') {
       const cat = stellata.getCloudCatalog();
       return cat ? cat.clouds[to.idx].name : 'Cloud';

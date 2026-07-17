@@ -45,7 +45,6 @@ export function formatStarHover(
   ctx: StarHoverFormatContext,
 ): HoverPayload {
   const {
-    starLabels,
     spectralMap,
     spectClass,
     luminosityClass,
@@ -56,7 +55,7 @@ export function formatStarHover(
     amplitudeMag,
   } = ctx;
 
-  const name = resolveStarName(starLabels, idx);
+  const name = resolveStarName(ctx, idx);
   const conIdx = constellation[idx];
   const con = conIdx !== 255 ? constellations[conIdx].name : '';
   const lines: string[] = [];

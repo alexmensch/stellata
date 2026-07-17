@@ -33,8 +33,12 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
   const spectClass = new Float32Array([2, 6, 8]);
   const luminosityClass = new Uint8Array([2, 255, 255]);
   const flags = new Uint8Array(3);
+  const gaiaSourceId = new BigUint64Array(3);
+  const sid = new Uint32Array([101, 102, 103]);
   return {
     starLabels,
+    gaiaSourceId,
+    sid,
     spectralMap,
     spectClass,
     luminosityClass,
@@ -172,9 +176,17 @@ describe('formatStarHover', () => {
     expect(out.lines).toContain('Variable · Period 0.57d · Δmag 1.0');
   });
 
-  it('falls back to "Unnamed #idx" when starLabels has no entry', () => {
+  it('falls back to "Gaia DR3 <id>" when starLabels has no entry but the record carries a source_id', () => {
+    const ctx = buildCtx({
+      starLabels: new Map(),
+      gaiaSourceId: new BigUint64Array([4472832130942575872n, 0n, 0n]),
+    });
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Gaia DR3 4472832130942575872');
+  });
+
+  it('falls back to "Unnamed (SID #<n>)" when neither a label nor a Gaia id exists', () => {
     const ctx = buildCtx({ starLabels: new Map() });
-    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Unnamed #0');
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Unnamed (SID #101)');
   });
 
   it('marks a synthetic companion\'s brightness-derived class as estimated', () => {
