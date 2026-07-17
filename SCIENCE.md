@@ -267,11 +267,6 @@ science it relates to.
   worth the complexity.
 - **Irregular / supernova variables.** GCVS entries without a period are
   skipped — can't animate without one.
-- **Temperature-swing component of variable-star brightness change.**
-  We use `R ∝ √L` (constant-T assumption); real pulsating variables
-  split the brightness change between R and T swings. Modelling T
-  changes per variable type is more complexity than the visualisation
-  warrants.
 - **Moons.** Earth's Moon, the Galilean satellites, Titan, Triton, etc.
   The Standish ephemerides cover only the eight major planets +
   Earth-Moon barycentre stand-in for Earth. Adding satellite

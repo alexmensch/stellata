@@ -210,26 +210,77 @@ helpers), `src/client/star-pipeline/blackbody-lut.ts` (generated artifact),
 `src/client/star-pipeline/star.vert.glsl` (`ciToColor` sampler), and
 `src/client/stellata.ts::makeColorLutTexture`.
 
-## Variable-star modelling
+## Variable-star pulsation
 
-GCVS provides a period and a magnitude amplitude per matched star.
-The shader applies a sinusoidal magnitude modulation plus a matching
-radius factor to the physical-size term:
+GCVS provides a period and a V-band magnitude amplitude per matched
+star. Pulsation runs on the model clock (`getT()`) at real GCVS periods,
+anchored to `φ = 0 = maximum light` (cos convention, composing with the
+M0 epoch anchoring). Three modulations share that phase:
 
-- `magMod = 0.5 × ampEff × sin(2π × t / period)` adjusts `appMag`
-  (affects point-glow size for distant stars).
-- `radiusFactor = 10^(-magMod / 5)` applies to `physSize` (affects
-  resolved-disc radius for close stars). This is Stefan–Boltzmann-derived:
-  `R ∝ √L` at constant T, which is the defensible single-model assumption
-  even though real variables also swing temperature.
+- **Brightness.** `magMod = −(A_V / 2)·cos 2πφ` adjusts `appMag` — the
+  full GCVS V-band amplitude, driving point-glow size at distance (a
+  Mira still fades toward invisibility near minimum, as it should).
+- **Radius.** `radiusFactor = ρ^(−0.5·cos 2πφ)` scales the resolved-disc
+  radius, spanning `[ρ^−0.5, ρ^+0.5]` over a cycle. ρ is a **per-type
+  peak-to-peak physical-radius ratio**, not derived from the V-band
+  amplitude.
+- **Colour.** the LUT-input B−V is shifted by `−(ΔB−V / 2)·cos 2πφ`, so
+  the disc runs bluer/hotter at maximum light and reddens toward minimum.
+
+### Why radius and temperature split (not radius alone)
+
+The earlier model put the whole V-band amplitude on radius (`R ∝ √L` at
+constant T). For high-amplitude pulsators that is more than an order of
+magnitude wrong, in two ways:
+
+1. **Magnitude.** A Mira's V-band amplitude (8–11 mag) is dominated by a
+   *temperature* swing — cooling drives TiO band opacity up and shifts
+   the Planck peak out of V — so its bolometric amplitude is only ~1 mag.
+   Ascribing all of `L_V` to radius implied a modelled disc swing of
+   ~25–150× (before display compression) versus the ~1.1–1.5× the
+   physical radius actually varies (Woodruff et al. 2008 ApJ 673 418 /
+   2009 ApJ 691 1328; Ireland et al. 2004 MNRAS 352 318; Wittkowski et
+   al. 2016). χ Cyg's interferometric disc varies by up to ~40 %
+   (Lacour et al. 2009 ApJ 707 632).
+2. **Sign.** Interferometry places the **minimum** diameter near
+   **maximum** light (Lacour 2009: minimum at φ ≈ 0.94; diameter
+   anti-correlates with flux). The constant-T model had maximum radius
+   at maximum light — inverted. The negative exponent on `ρ^(…)` fixes
+   this: the disc is smallest at φ = 0.
+
+Cepheids and RR Lyrae swing radius more (ΔR/R ~10–20 %, Baade–Wesselink)
+with a moderate colour shift; DSCT-class low-amplitude pulsators barely
+move on any axis.
+
+### Per-type table
+
+One code path, parameterised by variability family. `classifyGcvsVarType`
+(`scripts/catalog/catalog-pure.ts`) refines the GCVS type into a subtype
+code (byte 37); `buildPulsationParams`
+(`src/client/star-pipeline/pulsation-params-pure.ts`) maps each code to
+`{ρ, ΔB−V}`:
+
+| Family (code)            | ρ    | ΔB−V | GCVS prefixes |
+| ------------------------ | ---- | ---- | ------------- |
+| Mira (4)                 | 1.4  | 0.35 | M |
+| Semiregular (5)          | 1.2  | 0.2  | SR, L |
+| Cepheid (6)              | 1.15 | 0.3  | DCEP, CEP, CW, WVIR |
+| RR Lyrae (7)             | 1.1  | 0.25 | RR |
+| DSCT-class low-amp (8)   | 1.02 | 0.05 | DSCT, GDOR, SXPHE, ROAP, SPB, PVTEL, ACYG, BCEP, ZZ |
+| generic / other (1, 3)   | 1.1  | 0.1  | RV, OTHER-with-period |
+
+Values are physically motivated to the archetype and tuned at smoke;
+they are not per-star fits. Eclipsing binaries (code 2) suppress
+pulsation entirely (`iSuppressPulsation`) — their photometric signal is
+the geometric-occlusion field, not intrinsic pulsation.
 
 GCVS rows without a parseable period, or with zero amplitude, are
 skipped at build time — that excludes constant stars, supernovae, and
-irregular variables. Typical match rate: ~3.7k of 313k catalog stars.
+irregular variables. Typical match rate: ~4.1k of ~313k catalog stars.
 
-Implementation: `src/client/star-pipeline/star.vert.glsl` and
-`src/client/camera/controls/star-physics.ts` (CPU-side `renderedSizePx`
-mirror); see `src/client/star-pipeline/README.md` §Variable star rendering, and
-`scripts/catalog/README.md` §GCVS variability cross-match for the
-build-time matching rules.
+Implementation: `src/client/star-pipeline/star.vert.glsl` (the `iPuls`
+attribute) and `src/client/camera/controls/star-physics.ts` (CPU-side
+`renderedSizePx` mirror); see `src/client/star-pipeline/README.md`
+§Variable star rendering, and `scripts/catalog/README.md` §GCVS
+variability cross-match for the build-time matching rules.
 

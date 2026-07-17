@@ -291,9 +291,6 @@ SCIENCE.md.
 - Spiral-arm overdensities in the Milky Way background (aliasing risk
   through 32-step raymarching outweighs the structural gain).
 - Irregular / supernova variables (no GCVS period → no animation).
-- Temperature-swing component of variable brightness (we use
-  `R ∝ √L`, constant-T; T-swing modelling per variable type is more
-  complexity than the visualisation warrants).
 
 ## Git workflow — worktree, PR, merge
 

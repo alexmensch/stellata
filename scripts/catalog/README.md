@@ -255,7 +255,11 @@ Ballesteros(B–V) → Apsis-direct).
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer, 4=is_binary_primary)
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
   - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
-                          1=pulsating, 2=eclipsing, 3=other). Every
+                          1=pulsating, 2=eclipsing, 3=other; 4+ refine
+                          pulsating into families — 4=Mira, 5=semiregular,
+                          6=Cepheid, 7=RR Lyr, 8=DSCT-class — keying the
+                          runtime per-type radius/colour-swing table,
+                          `pulsation-params-pure.ts`). Every
                           `VAR_TYPE_ECLIPSING` record also gets
                           `FLAG_BINARY_PRIMARY` (chart-mode wings) and is
                           suppressed from cosmetic runtime pulsation —
