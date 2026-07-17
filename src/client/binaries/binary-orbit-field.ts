@@ -135,11 +135,6 @@ export class BinaryOrbitField {
     fovYRad: number,
     focalIdx: number | null = null,
   ): number {
-    // Static-frame skip: zero Kepler evals last frame means nothing
-    // written depends on `t`, so identical inputs reproduce the buffers
-    // bit-for-bit — skip the walk and the ~5 MB attribute re-uploads.
-    // Any focal on a slot-chain keeps its relations Kepler-active (they
-    // bypass the LOD gates), so a focused orbit never skips.
     if (
       !this.baselinesDirty
       && this.lastKeplerCount === 0
