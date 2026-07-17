@@ -25,11 +25,17 @@ interface Harness {
     filter: FilterState;
     focusedStar: number | null;
     focusedCloud: number | null;
+    focusedPlanet: number | null;
     vectorTo: number | null;
     vectorToCloud: number | null;
     pinned: Set<number>;
     pickStarResult: number;
+    pickStarDistancePc: number;
+    pickStarTier: 'prime' | 'fallback';
     pickCloudResult: number | null;
+    pickPlanetResult: number | null;
+    pickPlanetDistancePc: number;
+    pickPlanetTier: 'prime' | 'fallback';
   };
   emitted: string[];
   camera: THREE.PerspectiveCamera;
@@ -45,11 +51,17 @@ function makeHarness(): Harness {
     filter: { ...DEFAULT_FILTER, showHud: true },
     focusedStar: null as number | null,
     focusedCloud: null as number | null,
+    focusedPlanet: null as number | null,
     vectorTo: null as number | null,
     vectorToCloud: null as number | null,
     pinned: new Set<number>(),
     pickStarResult: -1,
+    pickStarDistancePc: 1,
+    pickStarTier: 'prime' as 'prime' | 'fallback',
     pickCloudResult: null as number | null,
+    pickPlanetResult: null as number | null,
+    pickPlanetDistancePc: 1,
+    pickPlanetTier: 'prime' as 'prime' | 'fallback',
   };
   const emitted: string[] = [];
   const canvasMock = {
@@ -79,7 +91,21 @@ function makeHarness(): Harness {
     controls,
     picker: {
       pickStar: () => state.pickStarResult,
+      pickStarHit: () => (state.pickStarResult >= 0
+        ? {
+            idx: state.pickStarResult,
+            cameraDistancePc: state.pickStarDistancePc,
+            tier: state.pickStarTier,
+          }
+        : null),
       pickCloud: () => state.pickCloudResult,
+      pickPlanetClick: () => (state.pickPlanetResult !== null
+        ? {
+            idx: state.pickPlanetResult,
+            cameraDistancePc: state.pickPlanetDistancePc,
+            tier: state.pickPlanetTier,
+          }
+        : null),
     } as unknown as Picker,
     bus: {
       emit: (name: string) => { emitted.push(name); },
@@ -94,6 +120,7 @@ function makeHarness(): Harness {
     getFocusedStar: () => state.focusedStar,
     getFocusedTarget: () => {
       if (state.focusedStar !== null) return { kind: 'star' as const, idx: state.focusedStar };
+      if (state.focusedPlanet !== null) return { kind: 'planet' as const, idx: state.focusedPlanet };
       if (state.focusedCloud !== null) return { kind: 'cloud' as const, idx: state.focusedCloud };
       return null;
     },
@@ -230,6 +257,66 @@ describe('InputController click dispatch', () => {
     state.pickCloudResult = 2;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
     expect(deps.setOrbitTarget).toHaveBeenCalledWith({ kind: 'cloud', idx: 2 });
+  });
+});
+
+describe('InputController planet clicks — navigate mode', () => {
+  it('single click on a planet travels to it (flyTo, kind-agnostic)', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickPlanetResult = 4;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
+    expect(emitted).toEqual([]);
+  });
+
+  it('single click on the focused planet unfocuses', () => {
+    const { input, state, deps } = makeHarness();
+    state.focusedPlanet = 4;
+    state.pickPlanetResult = 4;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.unfocus).toHaveBeenCalled();
+    expect(deps.flyTo).not.toHaveBeenCalled();
+  });
+
+  it('single click on the focused planet clears a drawn vector first', () => {
+    const { input, state, deps } = makeHarness();
+    state.focusedPlanet = 4;
+    state.pickPlanetResult = 4;
+    state.vectorTo = 9;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.setVector).toHaveBeenCalledWith(null);
+    expect(deps.unfocus).not.toHaveBeenCalled();
+  });
+
+  it('star vs planet overlap: same tier, closer to camera wins', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickStarResult = 5;
+    state.pickStarDistancePc = 2;
+    state.pickPlanetResult = 4;
+    state.pickPlanetDistancePc = 1e-5;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
+    expect(deps.focusStar).not.toHaveBeenCalled();
+  });
+
+  it('star vs planet overlap: prime beats fallback regardless of distance', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickStarResult = 5;
+    state.pickStarDistancePc = 1e-6; // closer, but only a fallback hit
+    state.pickStarTier = 'fallback';
+    state.pickPlanetResult = 4;
+    state.pickPlanetDistancePc = 1;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
+    expect(deps.focusStar).not.toHaveBeenCalled();
+  });
+
+  it('double click on a planet travels to it', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickPlanetResult = 4;
+    (input as unknown as { dispatchDoubleClick(x: number, y: number): void })
+      .dispatchDoubleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith({ kind: 'planet', idx: 4 });
   });
 });
 

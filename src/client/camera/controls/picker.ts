@@ -115,6 +115,18 @@ export class Picker {
     );
   }
 
+  /** Click-pick sibling of `pickPlanetHit`: same pick, but `idx` is
+   *  rewritten to the field's FLAT instance index — the Target
+   *  {kind:'planet'} currency the click FSM feeds to flyTo. Tier and
+   *  camera distance ride through for the star-vs-planet tiebreak. */
+  pickPlanetClick(clientX: number, clientY: number, pixelThreshold = 16): HoverHit | null {
+    const hit = this.pickPlanetHit(clientX, clientY, pixelThreshold);
+    if (hit === null || hit.hostStarIdx === undefined) return null;
+    const flat = this.deps.getPlanetBodyField().instanceIndexOf(hit.hostStarIdx, hit.idx);
+    if (flat === null) return null;
+    return { ...hit, idx: flat };
+  }
+
   // Returns null when the LG layer isn't attached (fresh checkout
   // without the build artifact).
   pickLocalGroupHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {

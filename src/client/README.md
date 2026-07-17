@@ -72,6 +72,11 @@ shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
 and double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time.
 
+Navigate clicks pick point objects first — stars AND planet bodies,
+tiebroken by the hover engine's rule (`bestHitBy`: prime beats
+fallback, then closer camera) so click and hover can't disagree on
+which object wins an overlap — then fall back to clouds.
+
 Navigate single-click on a star (`applyStarClick`):
 
 | condition | action |
@@ -83,14 +88,19 @@ Navigate single-click on a star (`applyStarClick`):
 | clicked = other star, pinned, not vector destination | set vector focus → clicked |
 | clicked = other star, pinned + vector destination | clear vector AND unpin |
 
+Navigate single-click on a planet (`applyPlanetClick`) skips the POI
+ladder (planets aren't pinnable): the focused planet clears a drawn
+vector else unfocuses, mirroring the focused-star rung; any other
+planet travels via `flyTo({kind:'planet'})`.
+
 The ladder decision table is `poi/click-ladder-pure.ts`; the pin
 rungs require the HUD (`showHud`) to be on — pins are HUD widgets, so
 with the HUD hidden clicks step only the vector rungs. Navigate
 **double-click** on any star travels to it (`focusStar` — the
 focus-park teleport that clicking the vector tip used to trigger;
 lerps over `FOCUS_LERP_MS` or no-ops when already inside park);
-double-click on a cloud runs `flyTo` with the cloud Target. The POI
-overlay's
+double-click on a planet or cloud runs `flyTo` with its Target. The
+POI overlay's
 on-screen labels route through the same `applyStarClick` semantics.
 
 Cloud clicks keep the pre-ladder vector-first semantics (orbit-target

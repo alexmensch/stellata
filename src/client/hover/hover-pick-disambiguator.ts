@@ -13,30 +13,34 @@ export type HoverProviderHit = {
   hit: HoverHit;
 };
 
-export function disambiguateHits(
-  hits: readonly HoverProviderHit[],
-): HoverProviderHit | null {
-  if (hits.length === 0) return null;
-  if (hits.length === 1) return hits[0];
-
-  let primeBest: HoverProviderHit | null = null;
-  let fbBest: HoverProviderHit | null = null;
-  for (const h of hits) {
-    if (h.hit.tier === 'prime') {
-      if (
-        primeBest === null ||
-        h.hit.cameraDistancePc < primeBest.hit.cameraDistancePc
-      ) {
-        primeBest = h;
+/** Generic tiebreak core — prime beats fallback, then closer camera
+ *  wins. `disambiguateHits` wraps it for the engine's provider-paired
+ *  hits; the click FSM runs it over bare per-layer picks (star vs
+ *  planet) so click and hover can't disagree on which object wins. */
+export function bestHitBy<T>(
+  items: readonly (T | null)[],
+  hitOf: (item: T) => HoverHit,
+): T | null {
+  let primeBest: T | null = null;
+  let fbBest: T | null = null;
+  for (const item of items) {
+    if (item === null) continue;
+    const h = hitOf(item);
+    if (h.tier === 'prime') {
+      if (primeBest === null || h.cameraDistancePc < hitOf(primeBest).cameraDistancePc) {
+        primeBest = item;
       }
     } else {
-      if (
-        fbBest === null ||
-        h.hit.cameraDistancePc < fbBest.hit.cameraDistancePc
-      ) {
-        fbBest = h;
+      if (fbBest === null || h.cameraDistancePc < hitOf(fbBest).cameraDistancePc) {
+        fbBest = item;
       }
     }
   }
   return primeBest ?? fbBest;
+}
+
+export function disambiguateHits(
+  hits: readonly HoverProviderHit[],
+): HoverProviderHit | null {
+  return bestHitBy(hits, (h) => h.hit);
 }

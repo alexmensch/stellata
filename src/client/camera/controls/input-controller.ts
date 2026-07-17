@@ -11,6 +11,8 @@ import type { FilterState } from '../../filters/filter-state';
 import type { PoiStore } from '../../poi/poi-store';
 import { starLadderAction } from '../../poi/click-ladder-pure';
 import { PendingClickDispatcher } from '../../util/pending-click';
+import { bestHitBy } from '../../hover/hover-pick-disambiguator';
+import type { HoverHit } from '../../hover/hover-types';
 import type { Picker } from './picker';
 import { bindShiftPan } from './shift-pan';
 
@@ -161,10 +163,12 @@ export class InputController {
       return;
     }
     // Navigate double-click = travel: the focus-park teleport that
-    // click-the-vector-tip used to trigger, now on any star or cloud.
-    const starIdx = this.deps.picker.pickStar(x, y);
-    if (starIdx >= 0) {
-      this.deps.focusStar(starIdx);
+    // click-the-vector-tip used to trigger, now on any star, planet,
+    // or cloud.
+    const picked = this.pickStarOrPlanet(x, y);
+    if (picked !== null) {
+      if (picked.kind === 'star') this.deps.focusStar(picked.idx);
+      else this.deps.flyTo(picked);
       return;
     }
     const cloudIdx = this.deps.picker.pickCloud(x, y);
@@ -175,12 +179,29 @@ export class InputController {
     this.deps.bus.emit('noopClick', { x, y });
   }
 
+  /** Point objects under the cursor — stars and planet bodies — run
+   *  the same tiebreak the hover engine uses (prime beats fallback,
+   *  then closer camera), so click and hover can't disagree on which
+   *  object wins an overlap. */
+  private pickStarOrPlanet(x: number, y: number): Target | null {
+    const star = this.deps.picker.pickStarHit(x, y, 16);
+    const planet = this.deps.picker.pickPlanetClick(x, y, 16);
+    const picks: Array<{ kind: 'star' | 'planet'; hit: HoverHit } | null> = [
+      star ? { kind: 'star', hit: star } : null,
+      planet ? { kind: 'planet', hit: planet } : null,
+    ];
+    const winner = bestHitBy(picks, (p) => p.hit);
+    return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };
+  }
+
   private navigateSingleClick(x: number, y: number): boolean {
-    // Pick a star first — they're the primary interaction target. Fall
-    // back to clouds when no star is hit.
-    const starIdx = this.deps.picker.pickStar(x, y);
-    if (starIdx >= 0) {
-      return this.applyStarClick(starIdx);
+    // Point objects (stars, planet bodies) are the primary interaction
+    // targets. Fall back to clouds when neither is hit.
+    const picked = this.pickStarOrPlanet(x, y);
+    if (picked !== null) {
+      return picked.kind === 'star'
+        ? this.applyStarClick(picked.idx)
+        : this.applyPlanetClick(picked.idx);
     }
     const cloudIdx = this.deps.picker.pickCloud(x, y);
     if (cloudIdx === null) return false;
@@ -266,6 +287,24 @@ export class InputController {
         this.deps.togglePoi(idx);
         return true;
     }
+  }
+
+  /** Navigate planet-click semantics: the focused planet clears the
+   *  vector if one is drawn, else unfocuses (mirroring the focused-star
+   *  rung); any other planet travels via the kind-agnostic flyTo.
+   *  Planets skip the POI/vector ladder — they aren't pinnable. */
+  private applyPlanetClick(idx: number): boolean {
+    const focused = this.deps.getFocusedTarget();
+    if (focused !== null && focused.kind === 'planet' && focused.idx === idx) {
+      if (this.deps.getVectorTarget() !== null) {
+        this.deps.setVector(null);
+      } else {
+        this.deps.unfocus();
+      }
+      return true;
+    }
+    this.deps.flyTo({ kind: 'planet', idx });
+    return true;
   }
 
   private observeSingleClick(x: number, y: number): boolean {
