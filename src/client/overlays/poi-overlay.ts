@@ -4,6 +4,7 @@ import { targetsEqual, type Target } from '../camera/focus/focus-target';
 import { fmtDist } from '../ui/distance-util';
 import { resolveStarName } from '../format/star-companion-format';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
+import { AIM_DEGENERATE_DIST_PC } from '../camera/controls/aim-controller';
 import {
   buildArrowSvgPath,
   screenDirToTarget,
@@ -423,7 +424,7 @@ export function createPoiOverlay(
         tmpPoiLocal.z - camPos.z,
       );
       const dirLenSq = tmpDir.lengthSq();
-      if (dirLenSq < 1e-12) {
+      if (dirLenSq < AIM_DEGENERATE_DIST_PC * AIM_DEGENERATE_DIST_PC) {
         hideEntry(e);
         continue;
       }
