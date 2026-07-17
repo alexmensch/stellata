@@ -7,7 +7,6 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { FilterState } from '../../filters/filter-state';
 import {
   physSizePx,
-  varEffectiveAmplitude,
   distAtFillFraction,
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
@@ -28,13 +27,6 @@ import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 // approach. Hoisted here so stellata.ts seeds the uniform from the same
 // constant the orbit-floor + park-distance math reads.
 export const ZOOM_FLOOR_FRACTION = 0.9;
-
-// Trough floor for variable-star disc compression — the disc is allowed
-// to shrink to this fraction of its un-modulated `baseSize` at the
-// variability minimum. The shader reads this as `uVarTroughFrac`; the
-// renderedSizePx path applies the same `varEffectiveAmplitude` rule to
-// keep the SVG focus ring and disc mask aligned with the rendered disc.
-export const VAR_TROUGH_FLOOR_FRACTION = 0.2;
 
 // Subset of the star-shader uniforms read by renderedSizePx /
 // renderedDiscPxAtPeak. The fields shape-match `THREE.IUniform<T>` so
@@ -64,14 +56,15 @@ export function fovMinorRad(camera: THREE.PerspectiveCamera): number {
   return Math.min(fovX, fovY);
 }
 
-// Peak-amplitude radius factor for a catalog row. At brightest phase
-// `magMod = -0.5·amp`, so `radiusFactor = 10^(amp/10)`. Returns 1 for
-// non-variables (period = 0 or amplitude = 0). Feeds the orbit floor
-// and parking distance so the pulse peak (not the static R) hits
-// ZOOM_FLOOR_FRACTION at closest approach and the navigate-mode arrow
-// fade reads a phase-stable disc envelope.
+// Peak-amplitude radius factor for a catalog row. The disc swing peaks at
+// `radiusFactor = √ρ` (ρ = per-type peak-to-peak ratio, from the catalog
+// pulsation table). Returns 1 for non-variables (period = 0 or amplitude
+// = 0). Feeds the orbit floor and parking distance so the pulse peak (not
+// the static R) hits ZOOM_FLOOR_FRACTION at closest approach and the
+// navigate-mode arrow fade reads a phase-stable disc envelope.
 export function peakAmplitudeFactor(catalog: Catalog, idx: number): number {
   return peakAmplitudeFactorPrim(
+    catalog.pulsRho[idx],
     catalog.amplitudeMag[idx],
     catalog.periodDays[idx],
   );
@@ -146,7 +139,6 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
   const fovYRad = u.uFovYRad.value;
   const viewport = u.uViewport.value;
   const R = Math.max(physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
-  const baseSize = physSizePx(R, dCam, viewport.y, fovYRad);
   const maxPhysSize = ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y);
 
   let radiusFactor = 1;
@@ -161,18 +153,19 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
   if (period > 0 && amp > 0 && !suppressed) {
     // Mirror star.vert.glsl: model-clock phase (days since J2000) with the
     // uMinPeriodSec anti-strobe floor, φ = 0 = maximum light (cos).
+    // magMod carries the full V-band amplitude; radiusFactor swings the
+    // ρ-bounded disc with its minimum at maximum light (negative exponent).
     const periodDaysEff = Math.max(
       period,
       u.uModelDaysPerRealSec.value * u.uMinPeriodSec.value,
     );
     const phaseRaw = u.uModelDays.value / periodDaysEff;
     const phase = phaseRaw - Math.floor(phaseRaw); // fract, mirroring the shader
+    const c = Math.cos(2 * Math.PI * phase);
 
-    const ampEff = varEffectiveAmplitude(amp, baseSize, maxPhysSize, VAR_TROUGH_FLOOR_FRACTION);
-
-    const magMod = -0.5 * ampEff * Math.cos(2 * Math.PI * phase);
+    const magMod = -0.5 * amp * c;
     appMag += magMod;
-    radiusFactor = Math.pow(10, -magMod / 5);
+    radiusFactor = Math.pow(catalog.pulsRho[idx], -0.5 * c);
   }
 
   // Same perceptualDmEff soft-knee + √Δm curve as star.vert.glsl — the
@@ -182,7 +175,9 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
   const dMEff = perceptualDmEff(appMag, filter.maxAppMag, filter.sizeSpan, u.uSizeKnee.value);
   const appSize = perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, filter.sizeSpan);
 
-  return Math.max(appSize, physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor));
+  // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.
+  const physSize = Math.min(physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor), maxPhysSize);
+  return Math.max(appSize, physSize);
 }
 
 export interface PeakDiscArgs {
@@ -208,7 +203,9 @@ export function renderedDiscPxAtPeak(args: PeakDiscArgs): number {
 
   const R = Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const viewport = u.uViewport.value;
-  return physSizePx(R, dCam, viewport.y, u.uFovYRad.value, peakAmplitudeFactor(catalog, idx));
+  const peak = physSizePx(R, dCam, viewport.y, u.uFovYRad.value, peakAmplitudeFactor(catalog, idx));
+  // Up-clamp to the viewport fraction, mirroring star.vert.glsl / renderedSizePx.
+  return Math.min(peak, ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y));
 }
 
 // Chart-mode disc-tuning bag pulled from the shader uniforms. Surfaced

@@ -156,6 +156,14 @@ export class StarPipeline {
     this.geometry.setAttribute('iLogRadius', new THREE.InstancedBufferAttribute(logRadii, 1));
     this.geometry.setAttribute('iPeriodDays', new THREE.InstancedBufferAttribute(catalog.periodDays, 1));
     this.geometry.setAttribute('iAmplitudeMag', new THREE.InstancedBufferAttribute(catalog.amplitudeMag, 1));
+    // Pack ρ + ΔB−V into one vec2 attribute to stay within the WebGL2
+    // 16-attribute budget (star.vert.glsl reads iPuls.x / iPuls.y).
+    const pulsParams = new Float32Array(catalog.count * 2);
+    for (let i = 0; i < catalog.count; i++) {
+      pulsParams[i * 2] = catalog.pulsRho[i];
+      pulsParams[i * 2 + 1] = catalog.pulsColorSwing[i];
+    }
+    this.geometry.setAttribute('iPuls', new THREE.InstancedBufferAttribute(pulsParams, 2));
     this.geometry.setAttribute('iLumClass', new THREE.InstancedBufferAttribute(lumClassF32, 1));
     this.geometry.setAttribute('iDistSol', new THREE.InstancedBufferAttribute(distSol, 1));
     this.geometry.setAttribute('iTeffApsis', new THREE.InstancedBufferAttribute(teffApsis, 1));

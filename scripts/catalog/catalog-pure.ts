@@ -618,10 +618,23 @@ export function parseGcvsNumber(s: string): number | null {
 // has_orbit flag, the runtime suppresses GCVS-amplitude pulsation for
 // EA/EB/EW stars whose photometric signal now comes from the geometric-
 // occlusion field instead.
+//
+// Codes 0–3 are stable; 4+ refine VAR_TYPE_PULSATING into pulsator
+// families so the runtime can drive the per-type radius-swing / colour-
+// swing table (docs/science-stellar-modelling.md § Variable-star
+// pulsation). VAR_TYPE_PULSATING (1) remains the fallback for a pulsator
+// family with no dedicated bucket (RV Tauri). buildPulsationParams
+// (src/client/star-pipeline/pulsation-params-pure.ts) maps every code to
+// its {ρ, ΔB−V}; a non-pulsator or unbucketed code takes the default row.
 export const VAR_TYPE_UNKNOWN = 0;
 export const VAR_TYPE_PULSATING = 1;
 export const VAR_TYPE_ECLIPSING = 2;
 export const VAR_TYPE_OTHER = 3;
+export const VAR_TYPE_MIRA = 4;
+export const VAR_TYPE_SEMIREGULAR = 5;
+export const VAR_TYPE_CEPHEID = 6;
+export const VAR_TYPE_RR_LYRAE = 7;
+export const VAR_TYPE_DSCT = 8;
 
 // Multiplicity status stored at RECORD_LAYOUT.multiplicityStatus.
 // `resolved` = the record participates in a multiples.tsv system (a
@@ -667,28 +680,37 @@ export function classifyGcvsVarType(rawType: string | null | undefined): number 
   // multiple, so it must earn no wings and fall through to VAR_TYPE_OTHER.
   if (/\bE([ABW]|LL)?\b/.test(t)) return VAR_TYPE_ECLIPSING;
   // Intrinsic pulsators, identified by a family prefix at the start of a
-  // GCVS type component (split on the composite separators + / |). Only
-  // the base family is listed; GCVS's trailing subtype letters
-  // ("DCEP"→"DCEPS", "CW"→"CWA/CWB", "RV"→"RVA/RVB", "L"→"LB/LC") are
-  // accepted by the tail gate below, so the list never has to enumerate
-  // every subtype. Order matters: the longer of two nested families
-  // comes first so it wins the `startsWith` ("DCEP"/"BCEP" before "CEP").
-  // "M" and "L" are LAST — a bare single letter would otherwise shadow a
-  // longer family sharing that initial.
-  const pulsatorPrefixes = [
-    'DCEP', 'BCEP', 'CEP',
-    'DSCT', 'GDOR', 'SXPHE', 'PVTEL', 'ACYG', 'ROAP',
-    'WVIR', 'CW',
-    'RR', 'RV',
-    'SPB',
-    'SR',
-    'ZZ',
-    'M', 'L',
+  // GCVS type component (split on the composite separators + / |), each
+  // mapped to its refined subtype so the runtime can drive the per-type
+  // radius/colour-swing table. Only the base family is listed; GCVS's
+  // trailing subtype letters ("DCEP"→"DCEPS", "CW"→"CWA/CWB",
+  // "RV"→"RVA/RVB", "L"→"LB/LC") are accepted by the tail gate below, so
+  // the list never has to enumerate every subtype. Order matters: the
+  // longer of two nested families comes first so it wins the `startsWith`
+  // ("DCEP"/"BCEP" before "CEP"). "M" and "L" are LAST — a bare single
+  // letter would otherwise shadow a longer family sharing that initial.
+  //
+  // Family → subtype rationale: DCEP/CEP/CW/WVIR are the classical +
+  // Type-II Cepheid instability strip; BCEP (β Cep) is a short-period
+  // low-amplitude p-mode pulsator, grouped with the DSCT-class low-amp
+  // set (DSCT/GDOR/SXPHE/ROAP/SPB/PVTEL/ACYG/ZZ). SR + L are red-giant /
+  // supergiant semiregulars; M is the Mira archetype. RV (RV Tauri,
+  // ambiguous post-AGB) falls to the generic pulsating default.
+  const pulsatorPrefixes: [string, number][] = [
+    ['DCEP', VAR_TYPE_CEPHEID], ['BCEP', VAR_TYPE_DSCT], ['CEP', VAR_TYPE_CEPHEID],
+    ['DSCT', VAR_TYPE_DSCT], ['GDOR', VAR_TYPE_DSCT], ['SXPHE', VAR_TYPE_DSCT],
+    ['PVTEL', VAR_TYPE_DSCT], ['ACYG', VAR_TYPE_DSCT], ['ROAP', VAR_TYPE_DSCT],
+    ['WVIR', VAR_TYPE_CEPHEID], ['CW', VAR_TYPE_CEPHEID],
+    ['RR', VAR_TYPE_RR_LYRAE], ['RV', VAR_TYPE_PULSATING],
+    ['SPB', VAR_TYPE_DSCT],
+    ['SR', VAR_TYPE_SEMIREGULAR],
+    ['ZZ', VAR_TYPE_DSCT],
+    ['M', VAR_TYPE_MIRA], ['L', VAR_TYPE_SEMIREGULAR],
   ];
   for (const part of t.split(/[+/|]/)) {
     const p = part.trim();
     if (!p) continue;
-    for (const pre of pulsatorPrefixes) {
+    for (const [pre, subtype] of pulsatorPrefixes) {
       if (p.startsWith(pre)) {
         // The tail after the family prefix must be a GCVS subtype
         // continuation: trailing subtype letters, a digit, a paren, or
@@ -697,7 +719,7 @@ export function classifyGcvsVarType(rawType: string | null | undefined): number 
         // a coincidental longer word. A non-matching tail falls through
         // to the next prefix.
         const tail = p.slice(pre.length);
-        if (tail === '' || /^[A-Z0-9()/.]/.test(tail)) return VAR_TYPE_PULSATING;
+        if (tail === '' || /^[A-Z0-9()/.]/.test(tail)) return subtype;
       }
     }
   }

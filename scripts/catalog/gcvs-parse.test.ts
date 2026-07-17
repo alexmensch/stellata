@@ -11,6 +11,7 @@ import {
   type VarStarData,
   type VarStarXref,
 } from './gcvs-parse';
+import { VAR_TYPE_DSCT, VAR_TYPE_MIRA } from './catalog-pure';
 import { makeStar } from './star-fixture';
 
 const GCVS: Map<string, VarStarData> = new Map([
@@ -37,7 +38,7 @@ describe('gcvs-parse / parseGcvsMain amplitude notation', () => {
     expect(out.get('bet Cen')).toEqual({
       periodDays: 0.3,
       amplitudeMag: 0.045,
-      varType: 1,
+      varType: VAR_TYPE_DSCT, // BCEP → low-amplitude p-mode bucket
     });
   });
 
@@ -49,7 +50,7 @@ describe('gcvs-parse / parseGcvsMain amplitude notation', () => {
     expect(out.get('R Vir')).toEqual({
       periodDays: 145.63,
       amplitudeMag: 6.0,
-      varType: 1,
+      varType: VAR_TYPE_MIRA, // M → Mira
     });
   });
 

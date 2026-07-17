@@ -28,6 +28,11 @@ import {
   VAR_TYPE_PULSATING,
   VAR_TYPE_ECLIPSING,
   VAR_TYPE_OTHER,
+  VAR_TYPE_MIRA,
+  VAR_TYPE_SEMIREGULAR,
+  VAR_TYPE_CEPHEID,
+  VAR_TYPE_RR_LYRAE,
+  VAR_TYPE_DSCT,
   inferBinaries,
   pickBrightest,
   markPrimary,
@@ -902,34 +907,36 @@ describe('catalog-pure / classifyGcvsVarType', () => {
     expect(classifyGcvsVarType('EB/DM')).toBe(VAR_TYPE_ECLIPSING);
   });
 
-  it('classifies intrinsic pulsators: M / SR / DCEP / RRAB / RV / DSCT', () => {
-    expect(classifyGcvsVarType('M')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('SR')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('SRA')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('DCEP')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('CEP')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('RR')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('RRAB')).toBe(VAR_TYPE_PULSATING);
+  it('refines intrinsic pulsators into families: M / SR / DCEP / RRAB / RV / DSCT', () => {
+    expect(classifyGcvsVarType('M')).toBe(VAR_TYPE_MIRA);
+    expect(classifyGcvsVarType('SR')).toBe(VAR_TYPE_SEMIREGULAR);
+    expect(classifyGcvsVarType('SRA')).toBe(VAR_TYPE_SEMIREGULAR);
+    expect(classifyGcvsVarType('DCEP')).toBe(VAR_TYPE_CEPHEID);
+    expect(classifyGcvsVarType('CEP')).toBe(VAR_TYPE_CEPHEID);
+    expect(classifyGcvsVarType('RR')).toBe(VAR_TYPE_RR_LYRAE);
+    expect(classifyGcvsVarType('RRAB')).toBe(VAR_TYPE_RR_LYRAE);
+    // RV Tauri has no dedicated family bucket → generic pulsating fallback.
     expect(classifyGcvsVarType('RV')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('DSCT')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('DSCT')).toBe(VAR_TYPE_DSCT);
   });
 
-  it('classifies pulsator subtypes with trailing letters (DCEPS/Polaris, CWA, RVA, LB, DSCTC)', () => {
+  it('maps pulsator subtypes with trailing letters to their family (DCEPS/Polaris, CWA, RVA, LB, DSCTC)', () => {
     // Subtype letters after the family prefix — the tail gate must accept
     // them, not fall through to OTHER.
-    expect(classifyGcvsVarType('DCEPS')).toBe(VAR_TYPE_PULSATING);   // Polaris
-    expect(classifyGcvsVarType('DSCTC')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('CWA')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('CWB')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('DCEPS')).toBe(VAR_TYPE_CEPHEID);   // Polaris
+    expect(classifyGcvsVarType('DSCTC')).toBe(VAR_TYPE_DSCT);
+    expect(classifyGcvsVarType('CWA')).toBe(VAR_TYPE_CEPHEID);     // Type II Cepheid
+    expect(classifyGcvsVarType('CWB')).toBe(VAR_TYPE_CEPHEID);
     expect(classifyGcvsVarType('RVA')).toBe(VAR_TYPE_PULSATING);
     expect(classifyGcvsVarType('RVB')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('LB')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('LC')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('ZZA')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('LB')).toBe(VAR_TYPE_SEMIREGULAR);  // slow irregular red giant
+    expect(classifyGcvsVarType('LC')).toBe(VAR_TYPE_SEMIREGULAR);
+    expect(classifyGcvsVarType('ZZA')).toBe(VAR_TYPE_DSCT);        // ZZ Ceti (low-amp)
+    expect(classifyGcvsVarType('BCEP')).toBe(VAR_TYPE_DSCT);       // β Cep (low-amp p-mode)
     // Uncertainty-flagged subtype (GCVS ':' after the subtype letter).
-    expect(classifyGcvsVarType('SRA:')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('SRA:')).toBe(VAR_TYPE_SEMIREGULAR);
     // Composite: rotating + pulsator → the pulsator component wins.
-    expect(classifyGcvsVarType('ACV+DSCTC')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('ACV+DSCTC')).toBe(VAR_TYPE_DSCT);
   });
 
   it('classifies cataclysmic / eruptive / rotating as OTHER', () => {
@@ -956,7 +963,7 @@ describe('catalog-pure / classifyGcvsVarType', () => {
 
   it('is case-insensitive', () => {
     expect(classifyGcvsVarType('ea')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('dcep')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('dcep')).toBe(VAR_TYPE_CEPHEID);
   });
 });
 

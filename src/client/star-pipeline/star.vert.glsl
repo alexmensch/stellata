@@ -63,10 +63,10 @@ uniform float uMonochrome;       // 0 = colour mode, 1 = chart mode (shared with
 uniform float uFovYRad;   // camera vertical FOV in radians
 uniform float uRSunPc;    // 1 R_sun in parsecs; canonical R_SUN_PC in src/client/util/astronomy-constants.ts
 uniform vec2 uViewport;   // viewport size in CSS pixels (for quad expansion)
-// Variability headroom drivers, mirroring the TS-side ZOOM_FLOOR_FRACTION
-// and VAR_TROUGH_FLOOR_FRACTION. Driven from a single source in stellata.ts.
+// Peak-disc cap, mirroring the TS-side ZOOM_FLOOR_FRACTION. Driven from a
+// single source in stellata.ts. Bounds any resolved disc (variable or
+// not) so a supergiant at the orbit floor can't overflow the viewport.
 uniform float uMaxPhysFrac;     // peak disc fraction of min(viewport) (= ZOOM_FLOOR_FRACTION)
-uniform float uVarTroughFrac;   // trough floor fraction relative to baseSize
 
 // Variability. Pulsation runs on the MODEL clock (getT()), at real GCVS
 // periods — like binary orbital motion, and responding to the same
@@ -119,7 +119,14 @@ in float iCi;
 in float iSpectClass;
 in float iLogRadius;
 in float iPeriodDays;   // 0 = not a variable
-in float iAmplitudeMag; // 0 = not a variable
+in float iAmplitudeMag; // 0 = not a variable (V-band magnitude amplitude)
+// Per-type pulsation params (buildPulsationParams from catalog varType),
+// packed as one attribute to stay under the WebGL2 16-attribute budget.
+// iPuls.x = ρ (peak-to-peak physical-radius ratio); iPuls.y = ΔB−V
+// (peak-to-peak colour swing). Miras carry a small ρ (their V-band
+// amplitude is dominated by a temperature swing, not radius) and a large
+// colour swing. See src/client/star-pipeline/README.md § Variable star rendering.
+in vec2 iPuls;
 in float iLumClass;     // 0=WD, 2=V, 4=III, 6-9=supergiant/hypergiant, 255=?
 in float iDistSol;      // |absolute position| — precomputed at load
 // Best Gaia DR3 Apsis Teff per star (gspphot ∪ gspspec), 0.0 when neither
@@ -244,24 +251,23 @@ void main() {
     float dPc = max(distCam, 1e-30);
     float appMag = iAbsmag + 5.0 * (log(dPc) / LOG10 - 1.0);
 
-    // Variability. The same magnitude modulation drives two visual effects:
-    //   (1) appMag shifts — changes the point-glow size at ranges where the
-    //       star isn't already at max brightness. Handles distant variables.
-    //   (2) physical-radius scaling — at close range the point-glow is
-    //       saturated so appMag clipping hides the modulation; scaling the
-    //       resolved disc radius makes the pulse visible instead. Stefan-
-    //       Boltzmann-style: radius scales as sqrt(linear brightness), i.e.
-    //       10^(-magMod / 5). Physically motivated for Miras and Cepheids.
-    //
-    // The effective amplitude is compressed per-frame so that at the star's
-    // current baseSize the pulse stays within a sensible display range —
-    // peak ≤ MAX_PHYS_PX, trough ≥ VAR_TROUGH_FLOOR_FRACTION × baseSize.
-    // Keeps the sine smooth (no plateau at peak, no disappearing at trough)
-    // even for extreme-amplitude variables like Mira.
+    // Variability — the R+T amplitude split (docs/science-stellar-modelling.md
+    // § Variable-star pulsation). The three modulations are anchored to a
+    // single phase, φ = 0 = maximum light:
+    //   (1) magMod shifts appMag by the FULL GCVS V-band amplitude, driving
+    //       point-glow size at ranges where the star isn't already saturated.
+    //       A distant Mira still fades out near minimum — physical, desired.
+    //   (2) radiusFactor swings the resolved disc by the per-type physical
+    //       ratio ρ (interferometry, not V-band): min radius at max light,
+    //       peak-to-peak ρ. Miras carry a small ρ because their large V-band
+    //       amplitude is almost all temperature, not radius.
+    //   (3) ciMod reddens the LUT-input B−V toward minimum light by the
+    //       per-type colour swing ΔB−V (applied below at the LUT sample).
     float R_pc = pow(10.0, iLogRadius) * uRSunPc;
     float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
     float radiusFactor = 1.0;
     float magMod = 0.0;
+    float ciMod = 0.0;
     if (iPeriodDays > 0.0 && iAmplitudeMag > 0.0 && iSuppressPulsation < 0.5) {
         // Anti-strobe: floor the effective period (in model days) so a cycle
         // never completes faster than uMinPeriodSec in real time. At 1× the
@@ -278,25 +284,16 @@ void main() {
         // attribute lands; the φ = 0 = max-light convention below is already
         // set up for it.
         float phase = fract(uModelDays / periodDaysEff);
+        float c = cos(6.2831853 * phase);
 
-        // Precompute base (un-modulated) physSize to size the headroom.
-        float baseSize0 = 2.0 * atan(R_pc / dPc) * angularToPx;
-        // Cap the peak at uMaxPhysFrac of the viewport's minor axis —
-        // matches the TS-side ZOOM_FLOOR_FRACTION used by the orbit
-        // floor — and the trough at uVarTroughFrac of baseSize so the
-        // pulse never goes sub-baseSize × varTroughFrac.
-        float maxPhysSize = uMaxPhysFrac * min(uViewport.x, uViewport.y);
-
-        float maxUpLog10 = log(max(maxPhysSize / max(baseSize0, 1.0), 1.0)) / LOG10;
-        float maxDownLog10 = -log(uVarTroughFrac) / LOG10;
-        float ampLimitMag = 10.0 * min(maxUpLog10, maxDownLog10);
-        float ampEff = min(iAmplitudeMag, max(0.0, ampLimitMag));
-
-        // φ = 0 = maximum light (cos): brightest (most-negative magMod) and
-        // largest disc at phase 0.
-        magMod = -0.5 * ampEff * cos(6.2831853 * phase);
+        // φ = 0 = maximum light. magMod most-negative (brightest) at φ = 0;
+        // radiusFactor MINIMUM at max light (interferometry puts minimum
+        // diameter near maximum light) via the negative exponent, spanning
+        // [ρ^−0.5, ρ^+0.5] over a cycle; disc reddens toward minimum.
+        magMod = -0.5 * iAmplitudeMag * c;
         appMag += magMod;
-        radiusFactor = pow(10.0, -magMod / 5.0);
+        radiusFactor = pow(iPuls.x, -0.5 * c);
+        ciMod = -0.5 * iPuls.y * c;
     }
 
     // Geometric eclipse-occlusion dim, glow pass only. Disc pass at
@@ -373,7 +370,9 @@ void main() {
     float intrinsicBv = (iTeffApsis > 0.0)
         ? ballesterosBvFromTeff(iTeffApsis)
         : iCi;
-    float effectiveCi = intrinsicBv + absorbAV / R_V;
+    // Dust reddening + the per-frame variability colour swing (ciMod < 0
+    // near maximum light = bluer/hotter) both shift the same LUT input.
+    float effectiveCi = intrinsicBv + absorbAV / R_V + ciMod;
 
     // Final magnitude check with the extincted value. Soft taper: stars
     // within +0.5 mag of the limit still pass through and render in the
@@ -421,8 +420,13 @@ void main() {
         // Physical-size term. True angular diameter projected to pixels:
         // 2·atan(R/d) is the angle the disc subtends at the camera,
         // multiplied by viewport.y/fov_y to convert radians to pixels.
-        // radiusFactor is the already-compressed variability modulation.
+        // radiusFactor is the per-type variability modulation (ρ-bounded).
         float physSize = 2.0 * atan(R_pc * radiusFactor / dPc) * angularToPx;
+        // Up-clamp so a max-radius supergiant at the manual-zoom orbit
+        // floor can't overflow the viewport (the ρ-bounded pulse no longer
+        // needs the old per-frame amplitude compression). Mirrored in
+        // renderedSizePx.
+        physSize = min(physSize, uMaxPhysFrac * min(uViewport.x, uViewport.y));
 
         pxSize = max(appSize, physSize);
         vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);

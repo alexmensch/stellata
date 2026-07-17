@@ -19,8 +19,11 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          of truth shared with the writer. Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
-                         `../binaries/README.md` § Eclipse photometry).
-                         Exposes `velocities: Float32Array` (count×3,
+                         `../binaries/README.md` § Eclipse photometry) plus
+                         the derived `pulsRho` / `pulsColorSwing`
+                         (buildPulsationParams from varType — the per-type
+                         radius/colour swing the star shader + disc mirror
+                         read). Exposes `velocities: Float32Array` (count×3,
                          pc/yr) alongside `positions`; the epoch-advance
                          pass below consumes it. Exposes `sid: Uint32Array`
                          (frozen Stellata IDs, docs/sid.md § 7) — the star

@@ -6,7 +6,6 @@ import {
   pickFromCandidates,
   type StarPickCandidate,
   sortedDistRange,
-  varEffectiveAmplitude,
   distAtFillFraction,
   peakAmplitudeFactor,
 } from './star-geometry';
@@ -72,37 +71,6 @@ describe('star-geometry / physSizePx', () => {
   });
 });
 
-describe('star-geometry / varEffectiveAmplitude', () => {
-  it('returns 0 for non-variable stars (amp <= 0)', () => {
-    expect(varEffectiveAmplitude(0, 100, 500, 0.2)).toBe(0);
-    expect(varEffectiveAmplitude(-1, 100, 500, 0.2)).toBe(0);
-  });
-
-  it('returns the catalog amplitude when both peak and trough fit within bounds', () => {
-    // 1-mag amplitude with 5× peak headroom and 0.2× trough floor — fits.
-    // peak factor = 10^(amp/10) = 1.26; 1.26·100 < 500 ✓
-    // trough factor = 10^(-amp/10) = 0.79; 0.79·100 > 0.2·100 ✓
-    expect(varEffectiveAmplitude(1.0, 100, 500, 0.2)).toBeCloseTo(1.0, 6);
-  });
-
-  it('clamps when the peak ceiling is the binding constraint', () => {
-    // baseSize=400, maxPhys=500 → peak headroom 1.25× → maxUpLog10 ≈ 0.097
-    // trough headroom: -log10(0.2) ≈ 0.699
-    // ampLimit = 10·min(0.097, 0.699) ≈ 0.969 mag
-    // amp = 5 mag → clamped to ~0.969
-    const out = varEffectiveAmplitude(5, 400, 500, 0.2);
-    expect(out).toBeCloseTo(10 * Math.log10(500 / 400), 6);
-  });
-
-  it('clamps when the trough floor is the binding constraint', () => {
-    // baseSize=10, maxPhys=10000 → peak headroom huge → maxUpLog10 ≈ 3
-    // trough headroom: -log10(0.2) ≈ 0.699
-    // ampLimit = 10·0.699 ≈ 6.99 mag
-    const out = varEffectiveAmplitude(20, 10, 10000, 0.2);
-    expect(out).toBeCloseTo(-10 * Math.log10(0.2), 6);
-  });
-});
-
 describe('star-geometry / distAtFillFraction', () => {
   // Acceptance #3 — at d = minOrbit, a Sol-sized star
   // fills 90% of the viewport's minor axis.
@@ -137,32 +105,33 @@ describe('star-geometry / distAtFillFraction', () => {
 
 describe('star-geometry / peakAmplitudeFactor', () => {
   it('returns 1 for non-variables (no period, no amplitude)', () => {
-    expect(peakAmplitudeFactor(0, 0)).toBe(1);
+    expect(peakAmplitudeFactor(1.4, 0, 0)).toBe(1);
   });
 
-  it('returns 1 when amplitude is set but period is missing', () => {
+  it('returns 1 when amplitude is set but period is missing (and vice versa)', () => {
     // GCVS rows with a period but no amplitude (or vice versa) shouldn't
     // be modulated — the renderer treats them as static stars.
-    expect(peakAmplitudeFactor(0.5, 0)).toBe(1);
-    expect(peakAmplitudeFactor(0, 4.5)).toBe(1);
+    expect(peakAmplitudeFactor(1.4, 0.5, 0)).toBe(1);
+    expect(peakAmplitudeFactor(1.4, 0, 4.5)).toBe(1);
   });
 
-  it('returns 10^(amp/10) for a real variable', () => {
-    // Mira-like 5-mag amplitude → factor 10^0.5 ≈ 3.162. Means the
-    // pulse-peak radius is ~3.16× the static radius.
-    expect(peakAmplitudeFactor(5, 332)).toBeCloseTo(Math.pow(10, 0.5), 12);
-    // Algol-like 1.27-mag amplitude → factor 10^0.127 ≈ 1.34.
-    expect(peakAmplitudeFactor(1.27, 2.87)).toBeCloseTo(Math.pow(10, 0.127), 12);
+  it('returns √ρ for a real variable', () => {
+    // Mira ρ = 1.4 → peak radius factor √1.4 ≈ 1.183 (the disc swings by
+    // at most ~18% up from the static R — the radius no longer carries
+    // the full V-band amplitude).
+    expect(peakAmplitudeFactor(1.4, 8.5, 332)).toBeCloseTo(Math.sqrt(1.4), 12);
+    // Cepheid ρ = 1.15 → √1.15 ≈ 1.072.
+    expect(peakAmplitudeFactor(1.15, 0.89, 5.37)).toBeCloseTo(Math.sqrt(1.15), 12);
   });
 
-  it('is monotonic in amplitude for a fixed period', () => {
-    expect(peakAmplitudeFactor(2, 100)).toBeLessThan(peakAmplitudeFactor(4, 100));
-    expect(peakAmplitudeFactor(4, 100)).toBeLessThan(peakAmplitudeFactor(6, 100));
+  it('is monotonic in ρ for a fixed period/amplitude', () => {
+    expect(peakAmplitudeFactor(1.02, 1, 100)).toBeLessThan(peakAmplitudeFactor(1.15, 1, 100));
+    expect(peakAmplitudeFactor(1.15, 1, 100)).toBeLessThan(peakAmplitudeFactor(1.4, 1, 100));
   });
 
   it('treats negative amp/period as non-variable (defensive)', () => {
-    expect(peakAmplitudeFactor(-1, 100)).toBe(1);
-    expect(peakAmplitudeFactor(2, -100)).toBe(1);
+    expect(peakAmplitudeFactor(1.4, -1, 100)).toBe(1);
+    expect(peakAmplitudeFactor(1.4, 2, -100)).toBe(1);
   });
 });
 

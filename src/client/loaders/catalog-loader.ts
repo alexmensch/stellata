@@ -16,6 +16,7 @@ import {
   assembleCatalogChunks,
   type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
+import { buildPulsationParams } from '../star-pipeline/pulsation-params-pure';
 
 export interface Constellation {
   code: string;
@@ -51,9 +52,19 @@ export interface Catalog {
   amplitudeMag: Float32Array;    // length = count, 0 = not variable
   // Per-star GCVS variability class. 0=unknown/non-variable,
   // 1=pulsating, 2=eclipsing, 3=other (cataclysmic, eruptive,
-  // rotating, …). Gates the runtime pulsation-suppress for eclipsing
-  // binaries with orbital elements.
+  // rotating, …); 4+ refine pulsating into families (Mira/semiregular/
+  // Cepheid/RR Lyr/DSCT-class). Gates the runtime pulsation-suppress for
+  // eclipsing binaries with orbital elements and keys the per-type
+  // pulsation table below.
   varType: Uint8Array;           // length = count
+  // Per-star pulsation params derived from varType at load
+  // (buildPulsationParams). pulsRho = peak-to-peak physical-radius ratio;
+  // pulsColorSwing = peak-to-peak B−V swing. Consumed by the star shader
+  // (iPulsRho/iPulsColorSwing) and the CPU disc mirror (renderedSizePx /
+  // peakAmplitudeFactor). Inert on non-variables — the shader gates
+  // radius modulation on period/amplitude/suppress.
+  pulsRho: Float32Array;         // length = count
+  pulsColorSwing: Float32Array;  // length = count
   hip: Uint32Array;              // length = count, 0 = no HIP
   // Frozen Stellata ID per record (docs/sid.md § 7). 0 = NO_SID, which
   // never ships (the build hard-fails on unallocated records) but is
@@ -229,6 +240,8 @@ export function parseBinary(
     if (flags[i] & FLAG_IS_SOL) solIndex = i;
   }
 
+  const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
+
   const names = new Map<number, string>();
   if (nameTableLength > 0) {
     const td = new TextDecoder('utf-8');
@@ -270,6 +283,8 @@ export function parseBinary(
     periodDays,
     amplitudeMag,
     varType,
+    pulsRho,
+    pulsColorSwing,
     hip,
     sid,
     gaiaSourceId,
