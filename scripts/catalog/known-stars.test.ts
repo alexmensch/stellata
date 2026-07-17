@@ -19,6 +19,11 @@ import {
   VAR_TYPE_OTHER,
   VAR_TYPE_PULSATING,
   VAR_TYPE_UNKNOWN,
+  VAR_TYPE_MIRA,
+  VAR_TYPE_SEMIREGULAR,
+  VAR_TYPE_CEPHEID,
+  VAR_TYPE_RR_LYRAE,
+  VAR_TYPE_DSCT,
   type SpectralInfo,
 } from './catalog-pure';
 import {
@@ -118,6 +123,11 @@ const VAR_TYPE_TOKENS = {
   pulsating: VAR_TYPE_PULSATING,
   eclipsing: VAR_TYPE_ECLIPSING,
   other: VAR_TYPE_OTHER,
+  mira: VAR_TYPE_MIRA,
+  semiregular: VAR_TYPE_SEMIREGULAR,
+  cepheid: VAR_TYPE_CEPHEID,
+  rrlyrae: VAR_TYPE_RR_LYRAE,
+  dsct: VAR_TYPE_DSCT,
 } as const;
 
 interface TopologyRow {
@@ -680,7 +690,12 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   describe('variability (GCVS pins)', () => {
     it('corpus has ≥1 pin per animated class', () => {
       const types = new Set(VAR_PINNED.map(r => r.varType));
-      expect(types.has('pulsating'), 'expected ≥1 pulsating pin').toBe(true);
+      // Pulsators are refined into families; the corpus pins the four
+      // archetypes that drive the per-type radius/colour-swing table.
+      expect(types.has('mira'), 'expected ≥1 Mira pin').toBe(true);
+      expect(types.has('semiregular'), 'expected ≥1 semiregular pin').toBe(true);
+      expect(types.has('cepheid'), 'expected ≥1 Cepheid pin').toBe(true);
+      expect(types.has('dsct'), 'expected ≥1 DSCT-class pin').toBe(true);
       expect(types.has('eclipsing'), 'expected ≥1 eclipsing pin').toBe(true);
       expect(types.has('none'), 'expected ≥1 none guard').toBe(true);
     });
