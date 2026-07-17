@@ -89,7 +89,7 @@ per-host JSON shards without changing the call sites.
 `SOL_PLANETS` is the eight major planets + Pluto with constants
 sourced from NASA Planetary Fact Sheets (radii) and JPL DE440 (mean
 elements at J2000). Pluto comes from New Horizons 2015 reconnaissance.
-See `SCIENCE.md` §Solar system for the citation rationale.
+See `docs/science-solar-system.md` §Solar system for the citation rationale.
 
 ## Sol-system SID pins
 

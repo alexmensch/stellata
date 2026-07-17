@@ -9,6 +9,10 @@ in both navigate and observe modes.
 - `controls.ts` — settings-panel bindings (distance / magnitude / size
   sliders, spectral chips, overlay toggles) + the slider↔distance log
   mapping (`sliderToDist` / `distToSlider`).
+- `input-controller.ts` (+ test) — canvas pointer input: the click FSM
+  (single/double dispatch in both modes, the star click ladder, cloud
+  click semantics), two-finger / Safari-gesture roll, and the
+  shift-pan binding lifecycle (see § Input controller).
 - `shift-pan.ts` — orbit-first camera translation: pan only while a
   Shift key is held (see § Shift-drag panning).
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
@@ -30,6 +34,27 @@ in both navigate and observe modes.
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).
 - `star-physics.ts` — catalog-indexed wrappers around those formulae.
 - `stellata.ts` — wires per-frame uniforms and dispatches.
+
+## Input controller
+
+`InputController` owns every canvas pointer listener: pointerdown /
+pointerup / pointercancel (the click FSM), touch + WebKit gesture
+events (two-finger roll), and the shift-pan key binding. Clicks in
+both modes are held for `DBL_CLICK_MS` (280 ms) by a shared
+`PendingClickDispatcher` (`../../util/pending-click.ts`) so single and
+double clicks disambiguate; the deferred handlers re-check the
+warp / aim / transition guards at fire time. The full per-mode click
+decision table lives in `src/client/README.md` § Click-state machine;
+the star ladder's pure decision function is
+`../../poi/click-ladder-pure.ts`.
+
+The controller sees the rest of the app only through its deps
+closures (busy gates, Target-keyed focus/vector reads, focusStar /
+flyTo / setOrbitTarget / unfocus / togglePoi / aimAt) — it owns
+dispatch order and gesture math, never focus or camera-transition
+state. Roll math
+uses controller-owned scratch `Vector3`/`Quaternion` instances; the
+per-gesture-event path allocates nothing.
 
 ## Camera near plane vs controls minDistance
 
@@ -102,13 +127,14 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 
 ## Focus-park lerp (r9q.2)
 
-Click-focus on a star (or `flyToCloud` for clouds) no longer teleports.
-The lerp lives in `../focus/focus-transition.ts` as the generic
-`parkDistance(...)` + `newFocusLerpFrom(...)` + `tickFocusLerp(...)`
-trio — stars consume it now; clouds compose the same primitives;
-future focusable types (nebulae, etc.) plug in the same way.
+Click-focus on a star (or `flyTo` for the soft kinds) no longer
+teleports. The lerp lives in `../focus/focus-transition.ts` as the
+generic `parkDistance(...)` + `newFocusLerpFrom(...)` +
+`tickFocusLerp(...)` trio — stars consume it now; the soft kinds
+compose the same primitives; future focusable types (nebulae, etc.)
+plug in the same way.
 
-Branch in `focusStar` / `flyToCloud`:
+Branch in `focusStar` / the soft-kind leg of `flyTo`:
 
 - **`eyeDist <= parkDist` → stay put.** Camera doesn't move; only
   `controls.target`, `controls.minDistance`, and focus state update.
@@ -159,7 +185,7 @@ separate literal — a log-scale flight coefficient (see
 `src/client/camera/warp/README.md`), not a duration.
 
 `cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusStar`, `flyToCloud`, `unfocus`, `startWarp`,
+`cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`, `startWarp`,
 `aimAt`, `aimAtConstellation`, `onPointerUp`) so a follow-up
 camera-changing action can't race the in-flight lerp.
 

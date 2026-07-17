@@ -1,6 +1,6 @@
 // DENSITY0 solver for Local Group emission: numeric geometry integrals
 // over each object's truncated proxy-mesh volume, plus the analytic
-// Sérsic closed forms the tests cross-pin. SCIENCE.md § LG luminosity.
+// Sérsic closed forms the tests cross-pin. docs/science-local-group.md § LG luminosity.
 
 /** Ciotti & Bertin 1999 asymptotic b_n — the Sérsic shape constant
  *  placing half the projected light inside R_e. */
@@ -229,27 +229,6 @@ export function discGeometryIntegral(
     const R = rEnvPc * r * Math.sqrt(1 - c * c);
     const z = zEnvPc * r * c;
     return Math.exp(-R / rdPc - z / zdPc);
-  }, [rEnvPc, rEnvPc, zEnvPc]);
-}
-
-/** Numeric geometry integral of a spherical Sérsic bulge evaluated
- *  inside the host disc's proxy ellipsoid, cut at u ≤ uMax (the
- *  shader accumulates the bulge only inside that cut — solver and
- *  shader must share it or the M31 bulge flux drifts). */
-export function bulgeInDiscGeometryIntegral(
-  rePc: number,
-  n: number,
-  uMax: number,
-  rEnvPc: number,
-  zEnvPc: number,
-): number {
-  const bn = bnCoeff(n);
-  const pn = pnCoeff(n);
-  return integrateOverEllipsoid((r, c) => {
-    const R = rEnvPc * r * Math.sqrt(1 - c * c);
-    const z = zEnvPc * r * c;
-    const u = Math.hypot(R, z) / rePc;
-    return u > uMax ? 0 : sersicNu(u, n, bn, pn);
   }, [rEnvPc, rEnvPc, zEnvPc]);
 }
 

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { StellataEventMap } from './stellata';
 
-// Structural pin for the thirteen-event surface declared by
+// Structural pin for the eleven-event surface declared by
 // StellataEventMap. The unit-tested `EventBus` core covers
 // delivery/unsubscribe in isolation; the integration surface — every
 // event in the map is actually emitted somewhere under src/client/ —
@@ -30,11 +30,9 @@ import type { StellataEventMap } from './stellata';
 
 const EVENT_NAMES_MAP: Record<keyof StellataEventMap, true> = {
   focus: true,
-  cloudFocus: true,
   planetSystem: true,
   filter: true,
   vector: true,
-  vectorCloud: true,
   cameraMode: true,
   warp: true,
   focusLerp: true,
@@ -68,8 +66,8 @@ describe('StellataEventMap × bus.emit call sites under src/client', () => {
     }
   }
 
-  it('pins the surface size — thirteen events, no more, no fewer', () => {
-    expect(EVENT_NAMES.length).toBe(13);
+  it('pins the surface size — eleven events, no more, no fewer', () => {
+    expect(EVENT_NAMES.length).toBe(11);
   });
 
   it.each(EVENT_NAMES)(

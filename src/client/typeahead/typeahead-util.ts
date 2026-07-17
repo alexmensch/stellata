@@ -6,6 +6,14 @@
 // past invisible rows.
 export const TYPEAHEAD_MAX_RESULTS = 10;
 
+// Trailing debounce for the star-corpus search boxes. The fuzzy query
+// costs 40–170 ms (growing with query length) over the ~58k-label
+// corpus — synchronous per-keystroke it stalls the input between
+// letters. Sized to sit just above a typical inter-keystroke gap so
+// the query fires once, on the pause. Feel-tuned: raise if fast
+// typists still hitch, lower if results feel laggy after stopping.
+export const SEARCH_DEBOUNCE_MS = 250;
+
 // Class applied to the highlighted row. Coupled to styles.css selectors
 // (.search-results li.active and the monochrome variant) — keep them in
 // sync if this string changes.

@@ -8,12 +8,32 @@ elements are moved into the modal on open and restored on close).
 ## Star search
 
 `search.ts` is fuse.js-backed; ranks against name + constellation +
-Bayer designation. Selecting an entry dispatches through
-`focusStar(idx)` for navigate or `warpTo(idx)` when the To slot is
-active.
+Bayer designation. Selecting an entry dispatches through `flyTo` /
+`focusStar` for navigate or `warpTo` when picking a location in
+observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
-within-kind dedup over stars + clouds). Both the topbar boxes
+tier re-rank + within-kind dedup over stars + clouds + Local Group
+objects). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
+label > query-is-prefix > plain name/alias > constellation-expansion
+label ("Gamma Andromeda" — fuzzy-searchable but never outranking the
+Andromeda Galaxy for the bare constellation-name query), then shorter
+label wins. Fuse runs with `ignoreFieldNorm` (token-count norm would
+outvote the tiers) and no result cap (the corpus-tail LG entries
+would be evicted from any pre-rank pool by score-then-insertion
+ordering). All three star-corpus boxes debounce keystrokes by
+`SEARCH_DEBOUNCE_MS` (250 ms trailing, `typeahead-util.ts`) — the
+fuzzy scan costs 40–170 ms and synchronous per-keystroke it stalls
+typing; Enter flushes a pending query first, so fast-type-then-enter
+selects against the full text. The constellation picker stays
+synchronous (cheap substring filter). LG
+entries index the display name plus every build-emitted alias
+("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
+line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
+disambiguates the dSph from star rows. Focus-box select dispatches to
+`flyTo` and the To box to `setVector`, each with the entry's
+kind-tagged Target; observe mode filters LG out of the location picker
+like clouds. Both the topbar boxes
 (`bindSearch`) and the `F` find picker (`bindFindSearch`) run it, so
 ranking never diverges between them. The find picker differs only in its
 `onSelect`: it resolves the pick to a local position and calls

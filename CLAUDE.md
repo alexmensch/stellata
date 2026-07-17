@@ -230,8 +230,9 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           subfolder per subsystem (solar-system/, local-group/,
           milkyway/, galactic/, molecular-clouds/, chart-mode/,
           star-pipeline/, hover/, focus-card/, format/, overlays/,
-          camera/, ui/, typeahead/, modals/, debug/, util/, loaders/,
-          dust/, binaries/) — each with its own README.
+          camera/, filters/, scene/, poi/, ui/, typeahead/, modals/,
+          debug/, util/, loaders/, dust/, binaries/) — each with its
+          own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, ux-tweaks.md,
           extragalactic-roadmap.md. New docs default
@@ -240,12 +241,12 @@ docs/     Genuinely cross-cutting docs that don't belong to one
 tests/    Repo-meta tests (CLAUDE.md size guard, etc.).
 ```
 
-`SCIENCE.md` covers every external data source (catalogues, papers,
-DOIs, licences) + physics/modelling decisions baked into the build
-pipeline and renderer. A vitest size guard
-(`tests/claude-md-size.test.ts`) holds this file at its budget — if
-you need to grow CLAUDE.md or add a new top-level surface, raise it
-with the user before expanding.
+`SCIENCE.md` carries scope principles, data sources, and non-goals;
+per-subsystem physics splits into `docs/science-*.md` (see its own
+index). A vitest size guard (`tests/claude-md-size.test.ts`) holds
+*this file* (CLAUDE.md) at its budget — if you need to grow CLAUDE.md
+or add a new top-level surface, raise it with the user before
+expanding.
 
 ## Local commands
 
@@ -269,9 +270,9 @@ are documented in `scripts/refresh/README.md` and `RELEASING.md`
 Don't refactor these layers' machinery away; each is paused until its
 visual treatment is refined. Details + flags in each folder README.
 
-- Molecular cloud overlay — `src/client/molecular-clouds/README.md`.
-- Volumetric Milky Way in chart mode — `src/client/milkyway/README.md`.
-- Dust particle layer — `src/client/dust/README.md`.
+Molecular cloud overlay (`molecular-clouds/`) · volumetric Milky Way
+in chart mode (`milkyway/`) · dust particles (`dust/`) · Local Group
+emission glow (`local-group/`).
 
 ## Things deliberately kept out — don't re-debate scope
 

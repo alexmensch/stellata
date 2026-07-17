@@ -12,7 +12,8 @@ import {
   type StarRef,
   type IdMaps,
 } from './url-state';
-import { DEFAULT_FILTER, DEFAULT_FOV, type Stellata } from '../../stellata';
+import type { Stellata } from '../../stellata';
+import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 
@@ -382,6 +383,13 @@ describe('url-state', () => {
     it('round-trips showMilkyway=false', () => {
       const { view } = roundtrip({ showMilkyway: false });
       expect(view.showMilkyway).toBe(false);
+    });
+
+    it('round-trips showLgEmission=false (zero-byte presence bit, default-on elided)', () => {
+      const { view } = roundtrip({ showLgEmission: false });
+      expect(view.showLgEmission).toBe(false);
+      const { view: defaults } = roundtrip({});
+      expect(defaults.showLgEmission).toBeUndefined();
     });
 
     it('round-trips unit=pc (ly is the default, so only pc is encoded)', () => {
@@ -754,9 +762,10 @@ describe('url-state', () => {
         getFilter: () => ({ ...DEFAULT_FILTER }),
         getCameraFov: () => DEFAULT_FOV,
         getFocusedStar: () => opts.focusedStar ?? null,
-        getFocusedCloud: () => null,
-        getVectorTo: () => null,
-        getVectorToCloud: () => null,
+        getFocusedTarget: () => (opts.focusedStar != null
+          ? { kind: 'star' as const, idx: opts.focusedStar }
+          : null),
+        getVectorTarget: () => null,
         getCameraMode: () => mode,
         getPois: () => [],
         // Live `t` — encoder gates emission on isLive(getT()), so returning
@@ -1236,19 +1245,34 @@ describe('url-state', () => {
         getWorldOffset: () => migrationVec3() as any,
         setWorldOffset: () => {},
         getFocusedStar: () => state.focusedStar,
-        getFocusedCloud: () => state.focusedCloud,
-        getVectorTo: () => state.vectorTo,
-        getVectorToCloud: () => state.vectorToCloud,
+        getFocusedTarget: () => {
+          if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
+          if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
+          return null;
+        },
+        getVectorTarget: () => {
+          if (state.vectorTo !== null) return { kind: 'star', idx: state.vectorTo };
+          if (state.vectorToCloud !== null) return { kind: 'cloud', idx: state.vectorToCloud };
+          return null;
+        },
         getPois: () => state.pois,
         getCameraMode: () => state.mode,
         setCameraMode: (m) => { state.mode = m; },
         focusStar: (idx) => { state.focusedStar = idx; state.focusedCloud = null; },
-        setOrbitTarget: (idx) => { state.focusedStar = idx; state.focusedCloud = null; },
+        setOrbitTarget: (t) => {
+          if (t.kind === 'star') { state.focusedStar = t.idx; state.focusedCloud = null; }
+          else { state.focusedCloud = t.idx; state.focusedStar = null; }
+        },
         unfocus: () => { state.focusedStar = null; },
-        setFocusedCloud: (i) => { state.focusedCloud = i; state.focusedStar = null; },
-        flyToCloud: (i) => { state.focusedCloud = i; state.focusedStar = null; },
-        setVectorTo: (i) => { state.vectorTo = i; },
-        setVectorToCloud: (i) => { state.vectorToCloud = i; },
+        flyTo: (t) => {
+          if (t.kind === 'star') { state.focusedStar = t.idx; state.focusedCloud = null; }
+          else { state.focusedCloud = t.idx; state.focusedStar = null; }
+        },
+        setVector: (t) => {
+          if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
+          else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
+          else { state.vectorToCloud = t.idx; state.vectorTo = null; }
+        },
         setPois: (l) => { state.pois = [...l]; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         camera: { position: migrationVec3(0, 0, 30), up: migrationVec3(0, 1, 0) } as any,

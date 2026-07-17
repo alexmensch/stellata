@@ -98,6 +98,9 @@ without duplicate bookkeeping.
 units to the star magnitude scale. `setGlowMagOffset(x)` — lower lifts
 the layer through the gate sooner; higher demands a brighter slider.
 
+The Local Group emission layer (`../local-group/README.md` § Emission
+layer) reuses this exact gate + tone-map scheme per instance.
+
 ## Coordinate handling
 
 The mesh-local unit sphere has +X/+Y aligned with the galactic disc

@@ -247,13 +247,15 @@ stale and jolts the focal-frame ride.
 
 ## Public surface
 
-`warpTo(destIdx)`, `warpToCloud(destIdx)`, `skip()`, `tick(nowMs)`,
-`isActive()`, `isRecenteredToDest()`, `getWarpInfo()`,
-`getWarpPhase(nowMs?)`, `dispose()`.
+`warpTo(target)` (kind-agnostic — the dest FocusTarget comes from
+`FocusOps.makeFocusTarget`), `skip()`, `tick(nowMs)`, `isActive()`,
+`isRecenteredToDest()`, `getWarpInfo()`, `getWarpPhase(nowMs?)`,
+`dispose()`.
 
 Bus events emitted from the controller:
 - `'warp'` (boolean) — true at startWarp, false at finishWarp.
 - `'state'` — at startWarp, at finishWarp (via swapObserveAnchor on
-  observe→observe arrivals, or via `setFocus` / `setFocusedCloud` on
-  navigate arrivals).
-- `'focus'` (number | null) — only from `swapObserveAnchor`.
+  observe→observe arrivals, via `setFocus` on navigate star arrivals,
+  or via the dest FocusTarget's `emitFocusEvents` on soft-kind
+  arrivals).
+- `'focus'` (Target | null) — only from `swapObserveAnchor`.

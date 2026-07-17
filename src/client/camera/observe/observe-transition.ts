@@ -21,15 +21,14 @@ import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
  *  FocusController (in ../focus/). */
 export interface ObserveFocusOps {
   getFocusedStar(): number | null;
-  /** Full setFocus path — fires 'focus' / 'cloudFocus' / 'state'. Used
-   *  by the 'exit' kind's finish branch when `clearFocusOnExit` is true
-   *  (the search-row X-button path). */
+  /** Full setFocus path — fires 'focus' / 'state'. Used by the 'exit'
+   *  kind's finish branch when `clearFocusOnExit` is true (the
+   *  search-row X-button path). */
   setFocus(idx: number | null): void;
-  /** Distance-vector slots — cleared at setMode('observe') because
-   *  measurement endpoints don't survive the perspective change to
-   *  "I'm standing on the source." */
-  setVectorTo(idx: number | null): void;
-  setVectorToCloud(idx: number | null): void;
+  /** Distance-vector slot (any kind) — cleared at setMode('observe')
+   *  because measurement endpoints don't survive the perspective
+   *  change to "I'm standing on the source." */
+  clearVector(): void;
   /** Focal star's effective minDistance — consumed by the 'exit' kind's
    *  toPos (a backward pull-out along the camera's current forward
    *  direction, distance = parkDist). */
@@ -167,8 +166,7 @@ export class ObserveTransition {
       if (focusedStar === null) return;
       // Drop any drawn vector — measurement endpoints don't survive a
       // perspective change to "I'm standing on the source."
-      this.deps.focus.setVectorTo(null);
-      this.deps.focus.setVectorToCloud(null);
+      this.deps.focus.clearVector();
       this.deps.setCameraModeValue('observe');
       this.deps.controls.enabled = false;
       // Park pose: the focal star's LIVE local position (baseline +

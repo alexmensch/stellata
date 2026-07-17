@@ -264,6 +264,20 @@ export function effectiveRetirements(
   return out;
 }
 
+/** Retired-sid → successor-sid pairs for the runtime resolver's
+ *  successor-following (docs/sid.md § 9.4), sorted by retired sid.
+ *  Only effectively-retired sids with a successor appear. */
+export function sidSuccessorPairs(
+  retirements: RetirementRow[],
+  reinstatements: ReinstatementRow[],
+): [number, number][] {
+  const pairs: [number, number][] = [];
+  for (const [sid, row] of effectiveRetirements(retirements, reinstatements)) {
+    if (row.successorSid !== null) pairs.push([sid, row.successorSid]);
+  }
+  return pairs.sort((a, b) => a[0] - b[0]);
+}
+
 export function parseSameasTsv(text: string, label: string): SameasEdge[] {
   return splitTsv(text, SAMEAS_HEADER, label).dataLines.map((line) => {
     const cells = line.split('\t');

@@ -29,6 +29,14 @@ export function parkDistance(opts: ParkDistanceInputs): number {
   return Math.max(AU_PC + opts.R_pc, opts.dMinFloor);
 }
 
+/** Recommended viewing distance for an extended body (cloud, galaxy):
+ *  2.4 × the longest semi-axis so the silhouette fits lengthwise in
+ *  view — tan(half-FoV) at the 60° vertical FoV with margin — with a
+ *  floor so tiny bodies don't park the camera on their surface. */
+export function viewingDistanceForExtent(maxAxisPc: number, floorPc = 5): number {
+  return Math.max(maxAxisPc * 2.4, floorPc);
+}
+
 /** The focus-park lerp is one of the three park-arrival sites that share
  *  `camera-motion`'s `ArrivalState`. The alias preserves the historic name
  *  so call sites that hold the state slot don't have to track a rename. */

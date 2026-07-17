@@ -62,7 +62,7 @@ so the whole unit stays card-sized regardless of pin count.
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
-  `FocusKind` union (`'star' | 'cloud'`). `FocusCardProviders` is a
+  `FocusKind` union (`'star' | 'cloud' | 'lg'`). `FocusCardProviders` is a
   mapped type EXHAUSTIVE over the union: **adding a focusable kind
   without a focus-card provider fails `tsc`** — that compile-time
   guarantee is the point of the registry shape, don't weaken it to a
@@ -76,7 +76,7 @@ so the whole unit stays card-sized regardless of pin count.
 - `card-rolodex.ts` — the stack wiring over `card-body`. Owns the
   `#card-stack` DOM (built in `index.html`, styled via `.card-stack` /
   `.card-strip` + the `.panel` chrome in `styles.css`), rebuilds on
-  `'focus'` / `'cloudFocus'` / `'cameraMode'` / `'pois'`, and ticks
+  `'focus'` / `'cameraMode'` / `'pois'`, and ticks
   LIVE rows on `'frame'`. Collapse rides the shared `bindCollapse`
   helper (`../ui/panel-layout.ts`).
 - `card-rolodex-pure.ts` (+ test) — the rolodex plan (front card +
@@ -90,6 +90,9 @@ so the whole unit stays card-sized regardless of pin count.
   coarse provenance — omitted for Sol, constellation). Companion-of
   blocks ("Orbits <A> · ρ …") render as full-width live lines below
   the rows.
+- `lg-focus-provider.ts` — tier-2 Local Group rows (type + aliases as
+  identity lines, live camera distance, live far-field apparent mag
+  off the catalog m_V, absolute mag, axis pair, provenance).
 - `cloud-focus-provider.ts` — tier-2 cloud rows. Clouds are not a
   wired focus target while the layer is shelved
   (`../molecular-clouds/README.md`); the provider exists to satisfy

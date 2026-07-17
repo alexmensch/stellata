@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
-import type { FilterState } from '../../stellata';
+import type { FilterState } from '../../filters/filter-state';
 import {
   physSizePx,
   varEffectiveAmplitude,

@@ -1,4 +1,10 @@
-import { Stellata, ALL_SPECT_MASK, DEFAULT_FOV, MAG_PRESETS, type MagPresetName } from '../../stellata';
+import type { Stellata } from '../../stellata';
+import {
+  ALL_SPECT_MASK,
+  DEFAULT_FOV,
+  MAG_PRESETS,
+  type MagPresetName,
+} from '../../filters/filter-state';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
 

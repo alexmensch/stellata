@@ -8,12 +8,14 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import {
+  applyAliasMeta,
   buildOrientationQuat,
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
   roundN,
   roundSig,
+  type AliasRow,
   type LgEmission,
   type LgObject,
   type LvdbRow,
@@ -27,6 +29,7 @@ const ROOT = resolve(__dirname, '..', '..');
 
 const SRC_CSV = resolve(ROOT, 'data/local-group/lvdb-snapshot.csv');
 const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');
+const SRC_ALIASES = resolve(ROOT, 'data/local-group/aliases.tsv');
 const OUT = resolve(ROOT, 'public/local-group.json');
 
 /** Parse the LVDB CSV into a flat array of rows. Coerces strings to
@@ -189,6 +192,33 @@ export function parseOverrides(tsv: string): OverrideRow[] {
   return out;
 }
 
+/** Parse aliases.tsv: name<TAB>type[<TAB>alias1|alias2…]. Comments and
+ *  blank lines skipped; the first non-comment line is the header. */
+export function parseAliases(tsv: string): AliasRow[] {
+  const out: AliasRow[] = [];
+  let headerSeen = false;
+  for (const raw of tsv.split(/\r?\n/)) {
+    if (!raw || raw.startsWith('#')) continue;
+    const fields = raw.split('\t');
+    if (!headerSeen) {
+      if (fields[0].trim() !== 'name' || fields[1]?.trim() !== 'type' || fields[2]?.trim() !== 'aliases') {
+        throw new Error('aliases.tsv: malformed header (expected name<TAB>type<TAB>aliases)');
+      }
+      headerSeen = true;
+      continue;
+    }
+    if (fields.length < 2) continue;
+    const type = fields[1].trim();
+    if (!type) throw new Error(`aliases.tsv: '${fields[0].trim()}' has an empty type`);
+    out.push({
+      name: fields[0].trim(),
+      type,
+      aliases: (fields[2] ?? '').split('|').map((s) => s.trim()).filter(Boolean),
+    });
+  }
+  return out;
+}
+
 /** Convert merged LgObject(s) to the on-disk JSON shape. Trims numeric
  *  precision so repeat builds produce stable diffs. */
 function sersicParamsToJson(p: SersicParams) {
@@ -228,6 +258,8 @@ function toJsonObject(o: LgObject) {
   return {
     name: o.name,
     id: o.id,
+    type: o.type,
+    ...(o.aliases ? { aliases: o.aliases } : {}),
     center: o.center.map((v) => roundN(v, 2)),
     kind: o.kind,
     axes: o.axes.map((v) => roundN(v, 2)),
@@ -241,7 +273,7 @@ function toJsonObject(o: LgObject) {
 function isUpToDate(): boolean {
   if (!existsSync(OUT)) return false;
   const outMtime = statSync(OUT).mtimeMs;
-  for (const src of [SRC_CSV, SRC_OVERRIDES, __filename, resolve(__dirname, 'build-local-group-pure.ts')]) {
+  for (const src of [SRC_CSV, SRC_OVERRIDES, SRC_ALIASES, __filename, resolve(__dirname, 'build-local-group-pure.ts')]) {
     if (!existsSync(src)) return false;
     if (statSync(src).mtimeMs > outMtime) return false;
   }
@@ -267,6 +299,11 @@ async function main(): Promise<void> {
   const lvdb = parseLvdb(readFileSync(SRC_CSV, 'utf8'));
   const overrides = parseOverrides(readFileSync(SRC_OVERRIDES, 'utf8'));
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));
+  const aliasRows = existsSync(SRC_ALIASES)
+    ? parseAliases(readFileSync(SRC_ALIASES, 'utf8'))
+    : [];
+  const aliasByName = new Map(aliasRows.map((a) => [a.name, a]));
+  const aliasMatched = new Set<string>();
 
   const renderable = filterForRendering(lvdb);
   const objects: LgObject[] = [];
@@ -286,7 +323,9 @@ async function main(): Promise<void> {
     } else {
       lvdbDefaultHits += 1;
     }
-    objects.push(merged);
+    const alias = aliasByName.get(row.name);
+    if (alias) aliasMatched.add(row.name);
+    objects.push(applyAliasMeta(merged, alias));
   }
 
   // Standalone overrides — rows that name objects not present in LVDB
@@ -303,7 +342,18 @@ async function main(): Promise<void> {
       continue;
     }
     standaloneHits += 1;
-    objects.push(built);
+    const alias = aliasByName.get(ov.name);
+    if (alias) aliasMatched.add(ov.name);
+    objects.push(applyAliasMeta(built, alias));
+  }
+
+  // An alias row that matched nothing is a curation typo — fail loud
+  // rather than silently dropping a search designation.
+  const orphanAliases = aliasRows.filter((a) => !aliasMatched.has(a.name));
+  if (orphanAliases.length > 0) {
+    throw new Error(
+      `aliases.tsv: no rendered object matches ${orphanAliases.map((a) => `'${a.name}'`).join(', ')}`,
+    );
   }
 
   // Stable order — by name, case-insensitive — so repeat builds emit

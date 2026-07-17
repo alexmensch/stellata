@@ -788,6 +788,10 @@ export interface CatalogManifest {
   chunkBytes: number[];
   /** Sum of chunkBytes — assembled length, for pre-alloc + integrity check. */
   totalBytes: number;
+  /** Retired-sid → successor-sid pairs (docs/sid.md § 9.4). Omitted when
+   *  no effectively-retired sid carries a successor (merge-type
+   *  retirements only exist after a DR reconciliation). */
+  sidSuccessors?: [number, number][];
 }
 
 export function catalogChunkFilename(index: number): string {
@@ -906,7 +910,8 @@ export const RECORD_LAYOUT = {
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
   // Consumed once at load by the epoch-advance pass; positions stay at
   // the fixed J2016.0 scene epoch on disk. See scripts/catalog/README.md
-  // § Space-motion velocity and SCIENCE.md § Current-epoch star positions.
+  // § Space-motion velocity and docs/science-catalog-ingestion.md
+  // § Current-epoch star positions.
   vx: 84,
   vy: 88,
   vz: 92,

@@ -4,17 +4,59 @@
 
 import * as THREE from 'three';
 
-/** A focusable object — star, cloud, future planet/probe/nebula/etc. */
+/** Focusable-object kind tag. New kinds extend this union. */
+export type TargetKind = 'star' | 'cloud' | 'lg';
+
+/** A (kind, index) reference to one focusable object. The focus and
+ *  distance-vector slots on FocusController each hold one of these —
+ *  mutual exclusion between kinds is structural, not enforced by
+ *  pairwise clears. */
+export interface Target {
+  readonly kind: TargetKind;
+  readonly idx: number;
+}
+
+export function targetsEqual(a: Target | null, b: Target | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.kind === b.kind && a.idx === b.idx;
+}
+
+/** Per-kind geometry legs the kind-agnostic shell surface dispatches
+ *  through (flyTo park math, overlay projection, chevron sizing).
+ *  Camera-transition code consumes objects through `FocusTarget`
+ *  instead. Star-only affordances are getFocusedStar() guards, never
+ *  provider legs — see README.md § FocusableProviders before adding
+ *  one. */
+export interface FocusableProvider {
+  /** Floating-frame position; false when the layer hasn't loaded or
+   *  the index is out of range (out untouched). */
+  localPositionInto(idx: number, out: THREE.Vector3): boolean;
+  /** Camera-to-object distance the focus-park lerp lands at. */
+  focusParkDistance(idx: number): number;
+  /** Geometric radius (pc) driving the angular-size arrival ease, or
+   *  null when the kind has none (ellipsoids) — the curve falls back
+   *  to its log-d profile. */
+  arrivalRadiusPc(idx: number): number | null;
+  /** Rendered silhouette diameter in px at the current camera. */
+  renderedSizePx(idx: number): number;
+}
+
+/** EXHAUSTIVE over TargetKind — adding a focusable kind without a
+ *  provider fails tsc, same contract shape as FocusCardProviders.
+ *  Don't weaken it to a partial map. */
+export type FocusableProviders = { readonly [K in TargetKind]: FocusableProvider };
+
+/** A focusable object — star, cloud, Local Group object, future
+ *  planet/probe/nebula/etc. */
 export interface FocusTarget {
   /** Identity tag. Used for event-payload dispatch and equality checks
    *  in higher-level code (URL state, focus-vector match-up). New kinds
    *  add a value to this union. The warp / lerp internals do not switch
    *  on `kind`. */
-  readonly kind: 'star' | 'cloud';
+  readonly kind: TargetKind;
 
-  /** Catalog index within this kind. Carries the same value the legacy
-   *  `focusedStar` / `focusedCloud` integer fields hold. Event payloads
-   *  for `'focus'` / `'cloudFocus'` ship this value. */
+  /** Catalog index within this kind — the same value the 'focus' /
+   *  'vector' event payloads ship inside their Target. */
   readonly idx: number;
 
   /** Absolute-space anchor (catalog-frame parsecs). This is the value
@@ -46,9 +88,7 @@ export interface FocusTarget {
    *  camera landing (see `finishWarp`). */
   applyFocus(): void;
 
-  /** Fire the deferred focus-event family that `applyFocus` set up.
-   *  Typically `'focus'` / `'cloudFocus'` (plus a sibling-clearing null
-   *  emit when the previously-focused object was of a different kind),
+  /** Fire the deferred 'focus' emit (kind-tagged Target payload)
    *  followed by `'state'` so the URL writer serialises the new pose.
    *  Called from `finishWarp` after the camera has fully landed. */
   emitFocusEvents(): void;

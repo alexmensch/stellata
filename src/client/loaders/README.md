@@ -52,8 +52,9 @@ epoch-advance-pure.ts    space-motion propagation:
                          `maxSpeedPcPerYr` bounds scrub-range drift for
                          the load-epoch distance-window consumers. Pure +
                          vitest-pinned; the sky-position corpus drives the
-                         SAME function end-to-end. See SCIENCE.md
-                         § Current-epoch star positions.
+                         SAME function end-to-end. See
+                         docs/science-catalog-ingestion.md §
+                         Current-epoch star positions.
 catalog-mock.ts          test-only Catalog factory. NaN-fills Apsis
                          fields, -1 companion, lumClass=255.
 dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →

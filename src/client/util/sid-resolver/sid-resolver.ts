@@ -24,12 +24,19 @@ interface DeferredIntent {
 export class SidResolver {
   private readonly roster: readonly SidRuntimeKind[];
   private readonly domains = new Map<SidRuntimeKind, SidDomain | 'absent'>();
+  private readonly successors: ReadonlyMap<number, number>;
   private intents: DeferredIntent[] = [];
 
   /** `roster` declares every domain this client may attach; a sid stays
-   *  `pending` while any of them is neither attached nor concluded. */
-  constructor(roster: readonly SidRuntimeKind[]) {
+   *  `pending` while any of them is neither attached nor concluded.
+   *  `successors` is the retired-sid → successor-sid map (docs/sid.md
+   *  § 9.4) — resolution follows it before consulting the domains. */
+  constructor(
+    roster: readonly SidRuntimeKind[],
+    successors: ReadonlyMap<number, number> = new Map(),
+  ) {
     this.roster = roster;
+    this.successors = successors;
   }
 
   /** Wire a domain when its artifact attaches. Replaces a previous
@@ -52,6 +59,27 @@ export class SidResolver {
 
   resolve(sid: number): SidResolution {
     if (!Number.isInteger(sid) || sid <= 0) return { status: 'unknown' };
+    const canonical = this.followSuccessors(sid);
+    if (canonical === null) return { status: 'unknown' };
+    return this.resolveCanonical(canonical);
+  }
+
+  /** Chase the retired → successor chain to its live end. A retired sid
+   *  never appears in any artifact (ledger ⟷ build consistency is
+   *  CI-guarded), so canonicalising before the domain walk is lossless.
+   *  Returns null on a corrupt cycle. */
+  private followSuccessors(sid: number): number | null {
+    let cur = sid;
+    let hops = 0;
+    for (;;) {
+      const next = this.successors.get(cur);
+      if (next === undefined) return cur;
+      if (++hops > this.successors.size) return null;
+      cur = next;
+    }
+  }
+
+  private resolveCanonical(sid: number): SidResolution {
     let undetermined = false;
     for (const kind of this.roster) {
       const d = this.domains.get(kind);

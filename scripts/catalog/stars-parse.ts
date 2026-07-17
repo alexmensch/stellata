@@ -273,8 +273,9 @@ export async function readStars(
     // catalogued distance as a Gaia inverse (G_R3 / G_R2). Other
     // dist_src values (HIP / GJ / N / OTHER) carry a non-Gaia parallax;
     // applying B-J there would silently move low-S/N rows to ~10–40 kpc
-    // via the Galactic-density prior tail. See SCIENCE.md § Distances /
-    // Bailer-Jones DR3 override.
+    // via the Galactic-density prior tail. See
+    // docs/science-catalog-ingestion.md § Bailer-Jones DR3 distance
+    // override (Layer 1).
     const athygDistSrc = nonEmpty(row.dist_src);
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, athygDistSrc);
     let dist = athygDist;

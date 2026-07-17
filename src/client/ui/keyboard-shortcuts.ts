@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { DEFAULT_FOV } from '../stellata';
+import { DEFAULT_FOV } from '../filters/filter-state';
 import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import {
@@ -263,18 +263,11 @@ function escCascade(stellata: Stellata) {
     stellata.setCameraMode('navigate');
     return;
   }
-  if (
-    stellata.getVectorTo() !== null ||
-    stellata.getVectorToCloud() !== null
-  ) {
-    stellata.setVectorTo(null);
-    stellata.setVectorToCloud(null);
+  if (stellata.getVectorTarget() !== null) {
+    stellata.setVector(null);
     return;
   }
-  if (
-    stellata.getFocusedStar() !== null ||
-    stellata.getFocusedCloud() !== null
-  ) {
+  if (stellata.getFocusedTarget() !== null) {
     stellata.unfocus();
   }
 }

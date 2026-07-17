@@ -1,6 +1,7 @@
 // Space-motion propagation of catalog positions off their fixed J2016.0
-// baseline to the scene's time base. See SCIENCE.md § Current-epoch
-// star positions and scripts/catalog/README.md § Space-motion velocity.
+// baseline to the scene's time base. See docs/science-catalog-ingestion.md
+// § Current-epoch star positions and scripts/catalog/README.md
+// § Space-motion velocity.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../util/astronomy-constants';
 

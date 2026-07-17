@@ -19,6 +19,9 @@ Reads two committed source files under `data/local-group/`:
 - `overrides.tsv` — hand-curated structural detail for LMC, SMC,
   Sagittarius dSph, M 32, NGC 205; plus standalone-position rows for
   M31 and M33 which LVDB's dwarf_all table excludes.
+- `aliases.tsv` — search crosswalk (type + alias designations) merged
+  into each object's `type` / `aliases` output fields; unmatched rows
+  fail the build.
 
 Emits `public/local-group.json` with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
@@ -60,8 +63,9 @@ through three branches:
 
 ## Emission solver — per-object DENSITY0
 
-Physics and calibration rationale in SCIENCE.md § Local Group
-luminosity model; this section carries the implementation contract.
+Physics and calibration rationale in `docs/science-local-group.md`
+§ Local Group luminosity model; this section carries the implementation
+contract.
 
 Every rendered object gets an `emission` block (JSON format version 2):
 `family: "sersic"` carries `{ mV, reffAxesPc, n, bn, pn, uMax,
@@ -82,10 +86,14 @@ consumes raw numbers and never re-derives photometry.
   numeric quadrature path (`integrateOverEllipsoid`, Gauss–Legendre in
   unit-ball coordinates) for every profile; the analytic
   incomplete-gamma closed forms exist only as vitest cross-pins.
-- **M31 bulge contract:** the bulge density0 is solved over the disc
-  proxy volume with the profile cut at u ≤ uMax. The emission shader
-  must apply the same cut, or the bulge flux drifts from the solved
-  calibration.
+- **M31 bulge contract:** the bulge is its own spheroid component —
+  density0 solves over the bulge's u ≤ uMax sphere via the same
+  Sérsic geometry integral as every spheroid, and the renderer packs
+  it as a separate Sérsic-pass instance beside the host disc
+  (`emissionComponents` in
+  `src/client/local-group/local-group-emission-pure.ts`). The two
+  volumes overlap; additive blending sums them, so the B/T flux split
+  holds without a shared profile cut.
 - Missing photometry, a disc row without `r_d_pc`, or a spheroid
   structure override without LVDB `rhalf_physical` fail the build
   loudly — an uncalibratable object must not ship silently dark.

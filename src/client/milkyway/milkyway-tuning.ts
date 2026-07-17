@@ -1,5 +1,5 @@
 import type { MilkyWay } from './milkyway';
-import { type DebugSection, makeColor, makeSlider } from '../debug/debug-panel';
+import { type DebugSection, logScale, makeColor, makeSlider } from '../debug/debug-panel';
 
 // Dev-only tuning section for the volumetric Milky Way layer. Builds a
 // labelled section with sliders + colour pickers wired to the layer's
@@ -13,17 +13,7 @@ import { type DebugSection, makeColor, makeSlider } from '../debug/debug-panel';
 //
 // No reverse sync — see `SliderOpts.initial` in debug-panel.ts.
 
-const BRIGHTNESS_LOG_MIN = -7; // 10^-7
-const BRIGHTNESS_LOG_MAX = 1;  // 10^1
-const BRIGHTNESS_LOG_RANGE = BRIGHTNESS_LOG_MAX - BRIGHTNESS_LOG_MIN;
-
-function brightnessToSlider(v: number): number {
-  if (v <= 0) return 0;
-  return (Math.log10(v) - BRIGHTNESS_LOG_MIN) / BRIGHTNESS_LOG_RANGE;
-}
-function sliderToBrightness(s: number): number {
-  return Math.pow(10, BRIGHTNESS_LOG_MIN + s * BRIGHTNESS_LOG_RANGE);
-}
+const { toSlider: brightnessToSlider, fromSlider: sliderToBrightness } = logScale(-7, 1);
 
 export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   const body = document.createElement('div');

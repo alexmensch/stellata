@@ -526,7 +526,7 @@ function tick(
   const clouds = stellata.getCloudCatalog();
   if (clouds) {
     for (let i = 0; i < clouds.clouds.length; i++) {
-      if (!stellata.cloudLocalPositionInto(i, tmpCloudLocal)) continue;
+      if (!stellata.focusables.cloud.localPositionInto(i, tmpCloudLocal)) continue;
       const xy = projectVec(tmpCloudLocal, camera, w, h);
       if (!xy) continue;
       candidates.push({

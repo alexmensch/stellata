@@ -23,6 +23,7 @@ import {
   parseSolObjectsTsv,
   resolveSids,
   serializeLedgerRow,
+  sidSuccessorPairs,
   splitTsv,
   starDesignations,
   validateLedger,
@@ -209,6 +210,29 @@ describe('structural validation', () => {
     expect(
       validateReinstatements([{ ...rein(1), reason: '' }], ledger, retirements)[0],
     ).toMatch(/empty reason/);
+  });
+});
+
+describe('sidSuccessorPairs', () => {
+  const ret = (sid: number, successorSid: number | null, retired = '2026-07-10'): RetirementRow =>
+    ({ sid, retired, reason: 'merged', successorSid });
+  const rein = (sid: number) => ({ sid, reinstated: '2026-07-11', reason: 'came back' });
+
+  it('emits only successor-bearing retirements, sorted by sid', () => {
+    expect(sidSuccessorPairs([ret(5, 2), ret(3, null), ret(1, 4)], [])).toEqual([
+      [1, 4],
+      [5, 2],
+    ]);
+  });
+
+  it('drops a retirement cancelled by a reinstatement', () => {
+    expect(sidSuccessorPairs([ret(1, 2)], [rein(1)])).toEqual([]);
+  });
+
+  it('uses the last retirement row of a retire → reinstate → re-retire cycle', () => {
+    expect(sidSuccessorPairs([ret(1, 2), ret(1, 3, '2026-07-12')], [rein(1)])).toEqual([
+      [1, 3],
+    ]);
   });
 });
 

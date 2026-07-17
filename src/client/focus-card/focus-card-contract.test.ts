@@ -15,12 +15,17 @@ const cloudProvider: FocusCardProvider<'cloud'> = {
   kind: 'cloud',
   format: () => content,
 };
+const lgProvider: FocusCardProvider<'lg'> = {
+  kind: 'lg',
+  format: () => content,
+};
 
 describe('FocusCardProviders contract', () => {
   it('is exhaustive over FocusKind — a partial registry fails tsc', () => {
     const complete: FocusCardProviders = {
       star: starProvider,
       cloud: cloudProvider,
+      lg: lgProvider,
     };
 
     // @ts-expect-error — omitting a focusable kind must not compile.
@@ -30,6 +35,7 @@ describe('FocusCardProviders contract', () => {
       // @ts-expect-error — a provider can't register under the wrong kind.
       star: cloudProvider,
       cloud: cloudProvider,
+      lg: lgProvider,
     };
 
     expect(complete.star.kind).toBe('star');

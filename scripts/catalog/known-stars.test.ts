@@ -76,7 +76,7 @@ const DISTANCE_FLOOR_PC = 0.01;        // distance tolerance, hard floor
 const ABSMAG_TOLERANCE = 0.05;          // absmag tolerance, both primary + companion
 const PERIOD_REL_TOLERANCE = 0.05;      // orbital period, ±5%
 const CI_TOLERANCE = 0.03;              // primary_ci — float32 + Ballesteros round-trip headroom
-const RADIUS_REL_TOLERANCE = 0.10;      // primary_radius_rsun default, per SCIENCE.md § Physical radius
+const RADIUS_REL_TOLERANCE = 0.10;      // primary_radius_rsun default, per docs/science-stellar-modelling.md § Physical radius
 
 // ---- TSV row types -----------------------------------------------------
 

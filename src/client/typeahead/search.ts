@@ -1,14 +1,25 @@
 import Fuse from 'fuse.js';
+import * as THREE from 'three';
 import type { Stellata } from '../stellata';
+import type { Target } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
-import { TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
+import type { LgCatalog } from '../local-group/local-group-loader';
+import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
 
 export type { SearchEntry };
 
-type EntryKind = 'star' | 'cloud';
+type EntryKind = 'star' | 'cloud' | 'lg';
+
+/** Static dropdown-row distance for a Local Group entry. Fixed units by
+ *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
+ *  built once and galaxy distances read naturally in kpc either way. */
+export function formatLgSearchDistance(pc: number): string {
+  if (pc >= 1_000_000) return `${(pc / 1_000_000).toFixed(2)} Mpc`;
+  return `${Math.round(pc / 1000)} kpc`;
+}
 
 export interface FuzzyEntry {
   kind: EntryKind;
@@ -16,6 +27,12 @@ export interface FuzzyEntry {
   label: string;        // what Fuse matches on
   primary: string;      // shown in dropdown primary line
   displayCon: string;   // shown in dropdown secondary line
+  /** Label is a constellation-name expansion ("Gamma Andromeda",
+   *  "V366 Andromeda", "20 Andromeda") — kept fuzzy-searchable but
+   *  ranked below plain names/aliases at equal score, so a query that
+   *  IS a constellation name surfaces the objects named for it (the
+   *  Andromeda Galaxy) above every star in the constellation. */
+  conExpansion?: boolean;
 }
 
 // Canonical Greek letter forms keyed by AT-HYG's 3-letter Latin abbreviation.
@@ -301,6 +318,9 @@ export function buildSearchIndex(
     const conCode = con?.code ?? '';
     const conName = con?.name ?? '';
 
+    const isConExpansion = (label: string): boolean =>
+      conName !== '' && label.includes(conName);
+
     const properName = entry.p ?? null;
     const bayerDisplay = entry.b && conCode ? formatBayerDisplay(entry.b, conCode) : null;
     let primary: string | null;
@@ -316,7 +336,10 @@ export function buildSearchIndex(
       }
       if (entry.b && conCode) {
         for (const label of buildBayerLabels(entry.b, conCode, conName)) {
-          fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary, displayCon });
+          fuzzyEntries.push({
+            kind: 'star', index: entry.i, label, primary, displayCon,
+            conExpansion: isConExpansion(label),
+          });
         }
       }
     }
@@ -329,7 +352,10 @@ export function buildSearchIndex(
     if (entry.g) {
       const gcvsPrimary = primary ?? formatGcvsDesignation(entry.g);
       for (const label of buildGcvsLabels(entry.g, conName)) {
-        fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon });
+        fuzzyEntries.push({
+          kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon,
+          conExpansion: isConExpansion(label),
+        });
       }
     }
 
@@ -344,7 +370,10 @@ export function buildSearchIndex(
         if (labels.length > 0) {
           const compDisplay = primary ?? labels[0];
           for (const label of labels) {
-            fuzzyEntries.push({ kind: 'star', index: entry.i, label, primary: compDisplay, displayCon });
+            fuzzyEntries.push({
+              kind: 'star', index: entry.i, label, primary: compDisplay, displayCon,
+              conExpansion: isConExpansion(label),
+            });
           }
         }
       }
@@ -364,7 +393,11 @@ export function buildSearchIndex(
       addFlam(`${entry.f} ${conName.toLowerCase()}`, flamEntry);
       if (primary !== null) {
         fuzzyEntries.push(flamEntry);
-        fuzzyEntries.push({ ...flamEntry, label: `${entry.f} ${conName}` });
+        fuzzyEntries.push({
+          ...flamEntry,
+          label: `${entry.f} ${conName}`,
+          conExpansion: conName !== '',
+        });
       }
     }
   }
@@ -380,6 +413,7 @@ export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
   clouds: CloudCatalog | null,
+  lg: LgCatalog | null = null,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
@@ -402,13 +436,33 @@ export function createSearchRunner(
     }
   }
 
+  // Local Group entries — display name plus every catalog cross-ID /
+  // common-name alias the build emitted ("Andromeda Galaxy", "NGC 224",
+  // "M 110", …), each resolving to the same object. The secondary line
+  // carries type + distance so "Sagittarius" disambiguates the 26 kpc
+  // dSph from any star row at a glance.
+  if (lg) {
+    for (let i = 0; i < lg.objects.length; i++) {
+      const o = lg.objects[i];
+      const displayCon = `${o.type} · ${formatLgSearchDistance(o.distanceFromSol)}`;
+      for (const label of [o.name, ...(o.aliases ?? [])]) {
+        fuzzyEntries.push({ kind: 'lg', index: i, label, primary: o.name, displayCon });
+      }
+    }
+  }
+
   // Threshold 0.25 trims the long tail of loose matches (e.g. "alpha cen"
   // used to dredge up "Aldebaran" via shared letters). 0.35 was too lenient
   // for short queries against a few-thousand-entry corpus.
+  // ignoreFieldNorm: Fuse's token-count norm would outvote the tier
+  // re-rank below (a 4-word "Andromeda XIX Dwarf Spheroidal" scores
+  // worse than a 2-word expansion label for the same match quality);
+  // the tier sort's label-length tiebreak owns that job instead.
   const fuse = new Fuse(fuzzyEntries, {
     keys: ['label'],
     threshold: 0.25,
     ignoreLocation: true,
+    ignoreFieldNorm: true,
     includeScore: true,
   });
 
@@ -467,10 +521,44 @@ export function createSearchRunner(
       // Fall through to fuzzy — maybe "58 Ori" is a partial match on a label.
     }
 
-    const res = fuse.search(trimmed, { limit: 30 });
+    // No result limit: with ignoreLocation, "andromeda" is a PERFECT
+    // match for hundreds of "<designation> Andromeda" expansion labels,
+    // and any pre-rank cap ordered by Fuse's score-then-insertion would
+    // evict the corpus-tail LG entries (the Andromeda Galaxy) before
+    // the tier re-rank below ever sees them. Sorting the full match set
+    // costs ms next to the corpus scan itself.
+    const res = fuse.search(trimmed);
+
+    // Re-rank at equal Fuse score (bucketed — sub-percent score noise
+    // must not outvote the tiers): exact label > query-is-prefix >
+    // plain name/alias > constellation-expansion label; then shorter
+    // label (higher query coverage — "Andromeda Galaxy" over
+    // "Andromeda XIX Dwarf Spheroidal"), then Fuse order.
+    const qNorm = trimmed.toLowerCase();
+    const tierOf = (e: FuzzyEntry): number => {
+      const l = e.label.toLowerCase();
+      if (l === qNorm) return 0;
+      if (l.startsWith(qNorm)) return 1;
+      return e.conExpansion ? 3 : 2;
+    };
+    const ranked = res
+      .map((r, i) => ({
+        item: r.item,
+        i,
+        bucket: Math.round((r.score ?? 0) * 100),
+        tier: tierOf(r.item),
+      }))
+      .sort(
+        (a, b) =>
+          a.bucket - b.bucket ||
+          a.tier - b.tier ||
+          a.item.label.length - b.item.label.length ||
+          a.i - b.i,
+      );
+
     const seen = new Set<string>();
     const out: FuzzyEntry[] = [];
-    for (const r of res) {
+    for (const r of ranked) {
       // Key by kind+index so a star whose name collides with a cloud name
       // (e.g. "Taurus" the cloud vs. some Tau star) doesn't dedupe across
       // categories. The fuzzy index intentionally carries multiple labels
@@ -495,8 +583,9 @@ export function bindSearch(
   raw: SearchEntry[],
   starLabels: Map<number, string>,
   clouds: CloudCatalog | null,
+  lg: LgCatalog | null = null,
 ) {
-  const runQuery = createSearchRunner(catalog, raw, clouds);
+  const runQuery = createSearchRunner(catalog, raw, clouds, lg);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -544,13 +633,13 @@ export function bindSearch(
     runQuery: focusRunQuery,
     rowFor,
     onSelect: (entry) => {
-      if (entry.kind === 'cloud') {
-        stellata.flyToCloud(entry.index);
+      if (entry.kind === 'cloud' || entry.kind === 'lg') {
+        stellata.flyTo({ kind: entry.kind, idx: entry.index });
       } else if (stellata.getCameraMode() === 'observe') {
         // Re-route through warp so the camera flies from the current
         // observation anchor to the new one and re-enters observe on
         // arrival, instead of teleporting via focusStar.
-        stellata.warpTo(entry.index);
+        stellata.warpTo({ kind: 'star', idx: entry.index });
       } else {
         stellata.focusStar(entry.index);
       }
@@ -558,6 +647,7 @@ export function bindSearch(
     onClear: () => stellata.unfocus(),
     positionResults: positionUnder(focusInput),
     group,
+    debounceMs: SEARCH_DEBOUNCE_MS,
   });
 
   // Distance-vector destination — accepts both star and cloud entries.
@@ -571,15 +661,12 @@ export function bindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      if (entry.kind === 'cloud') stellata.setVectorToCloud(entry.index);
-      else stellata.setVectorTo(entry.index);
+      stellata.setVector({ kind: entry.kind, idx: entry.index });
     },
-    onClear: () => {
-      stellata.setVectorTo(null);
-      stellata.setVectorToCloud(null);
-    },
+    onClear: () => stellata.setVector(null),
     positionResults: positionUnder(toInput),
     group,
+    debounceMs: SEARCH_DEBOUNCE_MS,
   });
 
   // Single sync for both star and cloud focus — the two are mutually
@@ -590,19 +677,23 @@ export function bindSearch(
   // the To row entirely: distance-vector measurement is meaningless from
   // a camera parked on its own anchor, and the underlying setters no-op
   // in that mode anyway.
+  // Display names stay a per-kind lookup — the rich star label
+  // (describe) lives in the search corpus, cloud / LG names on their
+  // catalogs; kind identity itself rides the Target.
+  const nameOf = (t: Target): string => {
+    if (t.kind === 'star') return describe(t.idx);
+    if (t.kind === 'cloud') return clouds ? clouds.clouds[t.idx].name : '';
+    return lg ? lg.objects[t.idx].name : '';
+  };
   const syncFocusUI = () => {
-    const starIdx = stellata.getFocusedStar();
-    const cloudIdx = stellata.getFocusedCloud();
+    const focused = stellata.getFocusedTarget();
     const observe = stellata.getCameraMode() === 'observe';
     // OBSERVE makes the focus row read as "where you are observing from"
     // rather than "what you have selected", which is what FOCUS implies in
     // navigate mode. Same field, different mental model.
     focusTag.textContent = observe ? 'Location' : 'Focus';
-    if (starIdx !== null) {
-      focusBox.setName(describe(starIdx));
-      toRow.hidden = observe;
-    } else if (cloudIdx !== null && clouds) {
-      focusBox.setName(clouds.clouds[cloudIdx].name);
+    if (focused !== null) {
+      focusBox.setName(nameOf(focused));
       toRow.hidden = observe;
     } else {
       focusBox.setName('');
@@ -611,18 +702,13 @@ export function bindSearch(
     }
   };
   const syncVectorUI = () => {
-    const star = stellata.getVectorTo();
-    const cloudVec = stellata.getVectorToCloud();
-    if (star !== null) toBox.setName(describe(star));
-    else if (cloudVec !== null && clouds) toBox.setName(clouds.clouds[cloudVec].name);
-    else toBox.setName('');
+    const vec = stellata.getVectorTarget();
+    toBox.setName(vec !== null ? nameOf(vec) : '');
   };
 
   stellata.on('focus', syncFocusUI);
-  stellata.on('cloudFocus', syncFocusUI);
   stellata.on('cameraMode', syncFocusUI);
   stellata.on('vector', syncVectorUI);
-  stellata.on('vectorCloud', syncVectorUI);
 
   syncFocusUI();
   syncVectorUI();
@@ -639,8 +725,9 @@ export function bindFindSearch(
   catalog: Catalog,
   raw: SearchEntry[],
   clouds: CloudCatalog | null,
+  lg: LgCatalog | null = null,
 ): void {
-  const runQuery = createSearchRunner(catalog, raw, clouds);
+  const runQuery = createSearchRunner(catalog, raw, clouds, lg);
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;
 
@@ -650,14 +737,15 @@ export function bindFindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      const pos = entry.kind === 'cloud'
-        ? stellata.cloudLocalPosition(entry.index)
-        : stellata.starLocalPosition(entry.index);
-      if (pos) stellata.aimAt(pos);
+      const pos = new THREE.Vector3();
+      if (stellata.focusables[entry.kind].localPositionInto(entry.index, pos)) {
+        stellata.aimAt(pos);
+      }
     },
     positionResults: () => {
       const row = input.closest('.search-row') as HTMLElement | null;
       if (row) resultsEl.style.top = row.offsetTop + row.offsetHeight + 'px';
     },
+    debounceMs: SEARCH_DEBOUNCE_MS,
   });
 }

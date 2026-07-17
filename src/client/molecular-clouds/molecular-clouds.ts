@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Cloud, CloudCatalog } from './cloud-loader';
 import cloudVert from './cloud.vert.glsl?raw';
 import cloudFrag from './cloud.frag.glsl?raw';
+import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 
 // Shared sphere geometry — every cloud is a unit sphere scaled by its
 // semi-axes via the per-cloud Mesh matrix. 32×16 segmentation gives a
@@ -245,7 +246,7 @@ export class MolecularClouds {
  */
 export function cloudViewingDistancePc(cloud: Cloud): number {
   const maxAxis = Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]);
-  return Math.max(maxAxis * 2.4, 5.0);
+  return viewingDistanceForExtent(maxAxis);
 }
 
 // Scratch vectors / quaternion used by the silhouette projection — kept

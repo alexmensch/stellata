@@ -10,9 +10,11 @@ import type { AimController } from '../controls/aim-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
-import type { FocusTarget } from './focus-target';
+import type { FocusableProviders, FocusTarget, Target, TargetKind } from './focus-target';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
+import type { LocalGroupLayer } from '../../local-group/local-group';
+import { lgViewingDistancePc } from '../../local-group/local-group-loader';
 import {
   type PlanetSystem,
   getPlanetSystem,
@@ -24,7 +26,6 @@ import * as starPhysics from '../controls/star-physics';
 import {
   type FocusLerpState,
   newFocusLerpFrom,
-  parkDistance,
   tickFocusLerp,
 } from './focus-transition';
 import { shiftArrivalWaypoints } from '../arrival/camera-motion';
@@ -60,19 +61,16 @@ export interface FrameAnchor {
 }
 
 /** Cross-controller seam consumed by WarpController. FocusController
- *  implements it; the runtime swap in Stellata is `focus: this` →
- *  `focus: this.focus` in one line. Frame-anchor and vector-slot
- *  methods are delegated to the integration shell via deps. */
+ *  implements it natively (focus, vector slot, cameraMode all live
+ *  here); only the frame-anchor methods delegate to the integration
+ *  shell via deps. */
 export interface FocusOps {
-  /** FocusTarget describing whichever object is currently focused
-   *  (star or cloud), or null if nothing is focused. Source side of
-   *  a warp. */
+  /** FocusTarget describing whichever object is currently focused,
+   *  or null if nothing is focused. Source side of a warp. */
   currentFocusTarget(): FocusTarget | null;
-  /** Build a FocusTarget for a star at catalog index `idx`. */
-  makeStarFocusTarget(idx: number): FocusTarget;
-  /** Build a FocusTarget for the cloud at index `idx`, or null when
-   *  the cloud layer hasn't loaded or the index is out of range. */
-  makeCloudFocusTarget(idx: number): FocusTarget | null;
+  /** Build a FocusTarget for `target`, or null when its layer hasn't
+   *  loaded or the index is out of range. */
+  makeFocusTarget(target: Target): FocusTarget | null;
   /** Star position in the renderer's local frame. */
   starLocalPosition(idx: number): THREE.Vector3;
   /** Star's live local position (catalog baseline + orbital perturbation)
@@ -88,13 +86,11 @@ export interface FocusOps {
    *  to fan out 'focus' / 'state'. */
   recenterFocusToStar(idx: number): THREE.Vector3 | null;
   setFocus(idx: number | null): void;
-  setFocusedCloud(idx: number | null): void;
-  /** Distance-vector slots — cleared on warp arrival regardless of
-   *  which kind the warp targeted. */
-  setVectorTo(idx: number | null): void;
-  setVectorToCloud(idx: number | null): void;
+  /** Clear whichever distance-vector destination is set (any kind) —
+   *  warp arrival wipes the slot regardless of the warp's kind. */
+  clearVector(): void;
   getFocusedStar(): number | null;
-  getFocusedCloud(): number | null;
+  getFocusedTarget(): Target | null;
   /** True when an observe enter / exit transition is in flight ('unfocus'
    *  excluded). startWarp bails so warp doesn't collide. */
   isObserveTransitionActive(): boolean;
@@ -111,19 +107,16 @@ export interface FocusControllerDeps {
   frameAnchor: FrameAnchor;
   aim: AimController;
   uHideFocusIdxRef: { value: number };
-  getCameraMode: () => CameraMode;
-  setCameraModeValue: (m: CameraMode) => void;
   getClouds: () => MolecularClouds | null;
-  /** Vector slots stay on the integration shell — FocusController calls
-   *  these from `focusStar` / `flyToCloud` / `unfocus` to clear the
-   *  vector when focus changes. */
-  setVectorTo: (idx: number | null) => void;
-  setVectorToCloud: (idx: number | null) => void;
+  getLocalGroup: () => LocalGroupLayer | null;
   /** Lazy refs due to circular construction: warp + observe consume
    *  FocusOps from this controller, so they're built after. Resolved
    *  at request time. */
   getWarp: () => WarpController;
   getObserve: () => ObserveTransition;
+  /** Lazy for the same reason: the star provider's focusParkDistance
+   *  closes back over this controller. */
+  getFocusables: () => FocusableProviders;
   /** Focal star's float64 orbital perturbation from its catalog baseline
    *  at the current sim time, written into `out`; false when the star is
    *  in no binary relation. Wired to BinaryOrbitField.focalPerturbationInto
@@ -135,8 +128,12 @@ export interface FocusControllerDeps {
 
 export class FocusController implements FocusOps {
   private readonly deps: FocusControllerDeps;
-  private focusedStar: number | null = null;
-  private focusedCloud: number | null = null;
+  // Focused object and distance-vector destination, one Target each.
+  // Cross-kind mutual exclusion is structural; the setters' remaining
+  // job is emitting the clearing event for a displaced kind.
+  private focused: Target | null = null;
+  private vector: Target | null = null;
+  private cameraMode: CameraMode = 'navigate';
   private focusedPlanetSystem: PlanetSystem | null = null;
   private planetSystemToken = 0;
   private focusLerpState: FocusLerpState | null = null;
@@ -150,12 +147,68 @@ export class FocusController implements FocusOps {
     this.deps = deps;
   }
 
+  // Star-kind view over the sum-type slot — the star-only affordances'
+  // guard value (null for every other kind).
+  private get focusedStar(): number | null {
+    return this.focused?.kind === 'star' ? this.focused.idx : null;
+  }
+
   // ─── queries ───────────────────────────────────────────────────────
 
   getFocusedStar(): number | null { return this.focusedStar; }
-  getFocusedCloud(): number | null { return this.focusedCloud; }
+  getFocusedTarget(): Target | null { return this.focused; }
   getFocusedPlanetSystem(): PlanetSystem | null { return this.focusedPlanetSystem; }
   isFocusLerpActive(): boolean { return this.focusLerpState !== null; }
+
+  getCameraMode(): CameraMode { return this.cameraMode; }
+  /** Raw mode write — no event emit. ObserveTransition / the shell's
+   *  wiring drive this; 'cameraMode' events are emitted by whichever
+   *  transition owns the mode change. */
+  setCameraModeValue(mode: CameraMode): void { this.cameraMode = mode; }
+
+  // ─── distance-vector slot ──────────────────────────────────────────
+
+  getVectorTo(): number | null {
+    return this.vector?.kind === 'star' ? this.vector.idx : null;
+  }
+  getVectorTarget(): Target | null { return this.vector; }
+
+  /** Star-kind convenience for the click ladder + focusStar's
+   *  star-slot-only clear (a non-star vector deliberately survives a
+   *  star focus change). */
+  setVectorTo(idx: number | null): void { this.setVectorSlot('star', idx); }
+
+  /** Set (any kind) or clear (null → whichever kind is set) the
+   *  distance-vector destination. */
+  setVector(target: Target | null): void {
+    if (target === null) this.clearVector();
+    else this.setVectorSlot(target.kind, target.idx);
+  }
+
+  /** One mutation path for every vector kind — the single Target slot
+   *  makes cross-kind displacement structural. Passing null clears
+   *  only the named kind's slot. OBSERVE doesn't draw vectors —
+   *  non-null writes are dropped there (defensive: search "To" or URL
+   *  state could try one). */
+  private setVectorSlot(kind: TargetKind, idx: number | null): void {
+    if (idx !== null
+      && (this.cameraMode === 'observe' || this.isObserveTransitionActive())) return;
+    const cur = this.vector;
+    if (idx === null) {
+      if (cur === null || cur.kind !== kind) return;
+      this.vector = null;
+    } else {
+      if (cur !== null && cur.kind === kind && cur.idx === idx) return;
+      this.vector = { kind, idx };
+    }
+    this.deps.bus.emit('vector', this.vector);
+    this.deps.bus.emit('state');
+  }
+
+  /** Clear whichever vector destination is set (any kind). */
+  clearVector(): void {
+    if (this.vector !== null) this.setVectorSlot(this.vector.kind, null);
+  }
 
   /** True while *any* camera-driving animation is in flight: warp,
    *  aim-slerp, focus-park lerp, OR an observe transition (enter / exit /
@@ -197,7 +250,7 @@ export class FocusController implements FocusOps {
     const focal = this.focusedStar;
     if (
       focal === null
-      || this.deps.getCameraMode() !== 'navigate'
+      || this.cameraMode !== 'navigate'
       || (warp.isActive() && !warp.isRecenteredToDest())
       || this.deps.aim.isActive()
       || this.focusLerpState !== null
@@ -209,6 +262,19 @@ export class FocusController implements FocusOps {
     // origin under focus), so this reduces to target ≈ origin.
     const live = this.deps.frameAnchor.starLocalPositionInto(focal, this.tmpLive);
     return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
+  }
+
+  /** Re-solve the focused star's manual-zoom floor against the current
+   *  camera FOV / aspect. No-op when nothing is focused. Called on FOV
+   *  change (FilterController.setCameraFov) and viewport resize — both
+   *  move `fov_minor`, which the floor solve depends on. */
+  refreshOrbitFloor(): void {
+    if (this.focusedStar === null) return;
+    this.deps.controls.minDistance = starPhysics.minOrbitDistForStar({
+      catalog: this.deps.catalog,
+      idx: this.focusedStar,
+      fovMinorRad: starPhysics.fovMinorRad(this.deps.camera),
+    });
   }
 
   /** Auto-park target — pure star-physics helper applied with the
@@ -251,30 +317,27 @@ export class FocusController implements FocusOps {
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
     return this.deps.frameAnchor.recenterOrigin(newOrigin);
   }
-  setVectorTo(idx: number | null): void { this.deps.setVectorTo(idx); }
-  setVectorToCloud(idx: number | null): void { this.deps.setVectorToCloud(idx); }
 
   // ─── star/cloud focus FSM ──────────────────────────────────────────
 
   setFocus(idx: number | null): void {
-    // Star and cloud focus are mutually exclusive — selecting either one
-    // clears the other. Both setters end up here for the cloud-clear leg
-    // so the cloud-focus event always fires before the star-focus event,
-    // letting UI listeners settle in the right order.
-    const cloudCleared = this.focusedCloud !== null;
-    if (cloudCleared) {
-      this.focusedCloud = null;
-      this.deps.bus.emit('cloudFocus', null);
-    }
+    // Every kind's focus shares the one Target slot, so a non-star
+    // focus is displaced here structurally; the single 'focus' emit at
+    // the end carries the whole transition.
+    const displaced = this.focused !== null && this.focused.kind !== 'star';
+    if (displaced) this.focused = null;
     if (this.focusedStar === idx) {
-      if (cloudCleared) this.deps.bus.emit('state');
+      if (displaced) {
+        this.deps.bus.emit('focus', null);
+        this.deps.bus.emit('state');
+      }
       return;
     }
     // OBSERVE depends on a focused star anchor. Any change to the anchor
     // (unfocus or switch to another star) bails out of observe immediately.
     // Snap rather than animate because a transition needs the original
     // anchor to mean anything.
-    if (this.deps.getCameraMode() === 'observe') {
+    if (this.cameraMode === 'observe') {
       // Snap-exit observe BEFORE the focus mutation runs: an in-flight
       // 'enter' / 'exit' transition references the OLD focal star via
       // fromPos/toPos and must be dropped before the floating-origin
@@ -284,7 +347,7 @@ export class FocusController implements FocusOps {
       // recenterFocusToStar block below.
       this.deps.getObserve().cancelTransition();
       this.deps.aim.cancel();
-      this.deps.setCameraModeValue('navigate');
+      this.cameraMode = 'navigate';
       this.deps.uHideFocusIdxRef.value = -1;
       this.deps.observeControls.disable();
       alignCameraUpToQuaternion(this.deps.camera);
@@ -317,7 +380,7 @@ export class FocusController implements FocusOps {
       this.deps.camera.position.z += live.z - t.z;
       t.copy(live);
     } else {
-      this.focusedStar = null;
+      this.focused = null;
       // Unfocus: clamp the new minDistance to ≤ current eye distance so
       // TrackballControls doesn't push the camera outward when the user was
       // sitting closer than GLOBAL_MIN_DIST_PC to the (former) focal star.
@@ -327,19 +390,23 @@ export class FocusController implements FocusOps {
       this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, eye);
       this.refreshPlanetSystem(null);
     }
-    this.deps.bus.emit('focus', idx);
+    this.deps.bus.emit('focus', this.focused);
     this.deps.bus.emit('state');
   }
 
-  setFocusedCloud(idx: number | null): void {
+  /** Shared setter for the soft-focus kinds (cloud / LG). A star focus
+   *  is displaced through the full setFocus(null) path (orbit floor
+   *  clamp + planet-system detach + observe bail-out); another soft
+   *  kind is displaced structurally by the slot write. Passing null
+   *  clears only the named kind's focus. */
+  private setSoftFocus(kind: 'cloud' | 'lg', idx: number | null): void {
     if (idx !== null && this.focusedStar !== null) {
-      // Clear the star focus first; setFocus(null) doesn't touch
-      // focusedCloud unless it was already set, so no event noise.
       this.setFocus(null);
     }
-    if (this.focusedCloud === idx) return;
-    this.focusedCloud = idx;
-    this.deps.bus.emit('cloudFocus', idx);
+    const cur = this.focused?.kind === kind ? this.focused.idx : null;
+    if (cur === idx) return;
+    this.focused = idx === null ? null : { kind, idx };
+    this.deps.bus.emit('focus', this.focused);
     this.deps.bus.emit('state');
   }
 
@@ -354,7 +421,7 @@ export class FocusController implements FocusOps {
     const delta = this.deps.frameAnchor.recenterOrigin(this.tmpRecenter.set(
       p[newIdx * 3], p[newIdx * 3 + 1], p[newIdx * 3 + 2],
     ));
-    this.focusedStar = newIdx;
+    this.focused = { kind: 'star', idx: newIdx };
     this.deps.controls.minDistance = starPhysics.minOrbitDistForStar({
       catalog: this.deps.catalog,
       idx: newIdx,
@@ -486,7 +553,7 @@ export class FocusController implements FocusOps {
     // (0,0,0). Match that contract.
     this.deps.controls.target.copy(this.deps.frameAnchor.starLocalPosition(starIndex));
     this.deps.controls.minDistance = minOrbit;
-    this.deps.setVectorTo(null);
+    this.setVectorTo(null);
     this.setFocus(starIndex);
     // From here on: the new star sits at local (0,0,0); camera.position
     // is already translated into the new frame.
@@ -532,93 +599,85 @@ export class FocusController implements FocusOps {
     }
   }
 
-  setOrbitTarget(starIndex: number): void {
-    this.deps.controls.target.copy(this.deps.frameAnchor.starLocalPosition(starIndex));
-    this.deps.controls.update();
-    this.setFocus(starIndex);
-  }
-
-  /** Cloud-side analogue of focusStar — used by search-select and
-   *  click-vector-tip. Routes through the same focus-park primitives
-   *  so the lerp-or-noop UX matches stars. `animate: false`
-   *  (URL restore) snaps without a transition. setFocus(null) below
-   *  leaves worldOffset alone, so no frame-shift handling
-   *  is needed here — target is `cloud.centerAbs - worldOffset` in the
-   *  current local frame both before and after the focus clear. */
-  flyToCloud(idx: number, opts: { animate?: boolean } = {}): void {
-    const clouds = this.deps.getClouds();
-    if (!clouds) return;
-    const cloud = clouds.clouds[idx];
-    if (!cloud) return;
+  /** Kind-agnostic travel entry point — search-select, canvas clicks,
+   *  URL restore. Stars route through `focusStar`; soft kinds
+   *  (cloud / LG) share the focus-park path below, reading their
+   *  geometry through the FocusableProviders registry. No-op when the
+   *  target's layer hasn't loaded. */
+  flyTo(target: Target, opts: { animate?: boolean } = {}): void {
+    if (target.kind === 'star') {
+      this.focusStar(target.idx, opts);
+      return;
+    }
+    // setFocus(null) below leaves worldOffset alone, so no frame-shift
+    // handling is needed — the provider's local position is valid in
+    // the current local frame both before and after the focus clear.
+    const provider = this.deps.getFocusables()[target.kind];
+    const dest = new THREE.Vector3();
+    if (!provider.localPositionInto(target.idx, dest)) return;
     if (this.deps.getWarp().isActive()) return;
     this.cancelUnfocusLerp();
     this.cancelFocusLerp();
 
     if (this.focusedStar !== null) this.setFocus(null);
-    this.deps.setVectorTo(null);
-    this.deps.setVectorToCloud(null);
+    this.clearVector();
 
     const animate = opts.animate ?? true;
     const startQuat = this.deps.camera.quaternion.clone();
     const startUp = this.deps.camera.up.clone();
 
-    const target = new THREE.Vector3().copy(cloud.centerAbs).sub(this.deps.frameAnchor.getWorldOffset());
-    this.deps.controls.target.copy(target);
-    const parkDist = parkDistance({
-      R_pc: Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]),
-      dMinFloor: cloudViewingDistancePc(cloud),
-    });
-    const eyeDist = this.deps.camera.position.distanceTo(target);
+    this.deps.controls.target.copy(dest);
+    const parkDist = provider.focusParkDistance(target.idx);
+    const eyeDist = this.deps.camera.position.distanceTo(dest);
 
     if (animate && eyeDist > parkDist) {
-      // Cloud destination — `targetRadius: null` triggers the hybrid
-      // curve's fallback to cubic-Hermite. Clouds have no single
-      // geometric R (ellipsoid axes), so angular-size driving doesn't
-      // apply.
       this.startFocusLerp(newFocusLerpFrom(
         this.deps.camera.position,
         startQuat,
         startUp,
-        target,
+        dest,
         parkDist,
         FOCUS_LERP_MS,
         performance.now(),
         warpArrivalEaseFn({
           d0: eyeDist,
           dEnd: parkDist,
-          targetRadius: null,
+          targetRadius: provider.arrivalRadiusPc(target.idx),
         }),
       ));
       // controls.enabled stays true — see focusStar's comment.
     } else if (eyeDist > parkDist) {
       const dir = new THREE.Vector3()
-        .subVectors(this.deps.camera.position, target)
+        .subVectors(this.deps.camera.position, dest)
         .normalize();
       if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-      this.deps.camera.position.copy(target).addScaledVector(dir, parkDist);
-      this.deps.camera.lookAt(target);
+      this.deps.camera.position.copy(dest).addScaledVector(dir, parkDist);
+      this.deps.camera.lookAt(dest);
       this.deps.controls.update();
     } else {
       this.deps.controls.update();
     }
-    this.setFocusedCloud(idx);
+    this.setSoftFocus(target.kind, target.idx);
   }
 
-  /** Cloud-side analogue of setOrbitTarget — orbit pivot moves to the
-   *  cloud centroid and the cloud becomes the soft focus, but the camera
-   *  stays where it is (no teleport). User then orbits/zooms to view it.
-   *  Mirrors the click-on-star UX without teleporting. */
-  setOrbitTargetCloud(cloudIdx: number): void {
-    const clouds = this.deps.getClouds();
-    if (!clouds) return;
-    const cloud = clouds.clouds[cloudIdx];
-    if (!cloud) return;
-    // setFocusedCloud clears any star focus first; that doesn't
-    // recentre worldOffset back to Sol — the floating origin stays at
-    // the former focal star — so subtract worldOffset to translate
-    // the cloud's absolute centroid into the current local frame.
-    this.setFocusedCloud(cloudIdx);
-    this.deps.controls.target.copy(cloud.centerAbs).sub(this.deps.frameAnchor.getWorldOffset());
+  /** Orbit pivot moves to the object, the object becomes the focus,
+   *  but the camera stays where it is (no teleport) — the URL-restore
+   *  path when explicit camera params win, and the first-pick cloud
+   *  click. For soft kinds the focus is set BEFORE the target write:
+   *  displacing a star focus doesn't recentre worldOffset back to Sol,
+   *  so the provider's local position is read in whatever frame the
+   *  displacement left current. */
+  setOrbitTarget(target: Target): void {
+    if (target.kind === 'star') {
+      this.deps.controls.target.copy(this.deps.frameAnchor.starLocalPosition(target.idx));
+      this.deps.controls.update();
+      this.setFocus(target.idx);
+      return;
+    }
+    const provider = this.deps.getFocusables()[target.kind];
+    if (!provider.localPositionInto(target.idx, this.tmpLive)) return;
+    this.setSoftFocus(target.kind, target.idx);
+    provider.localPositionInto(target.idx, this.deps.controls.target);
     this.deps.controls.update();
   }
 
@@ -629,18 +688,17 @@ export class FocusController implements FocusOps {
    *  otherwise hard-clears. */
   unfocus(opts: { animate?: boolean } = {}): void {
     if (this.deps.getWarp().isActive()) return;
-    if (
-      this.focusedStar === null && this.focusedCloud === null
-      // Vector slots live on the integration shell — Stellata.unfocus()
-      // checks them BEFORE calling this method (it's the entry point
-      // for the UI). FocusController only sees the focus-state path.
-    ) return;
+    if (this.focused === null) {
+      // Vector-only: nothing focused, but a measurement vector may be
+      // drawn — wipe it (no-op when there's no vector either).
+      this.clearVector();
+      return;
+    }
     // A focus-park lerp inbound to the same star we're now unfocusing
     // away from would otherwise race the unfocus zoom-out below.
     this.cancelFocusLerp();
     const animate = opts.animate ?? true;
-    this.deps.setVectorTo(null);
-    this.deps.setVectorToCloud(null);
+    this.clearVector();
     // X-out from OBSERVE: drive the same animated zoom-out the
     // navigate-mode toggle uses, then clear focus. startExit captures
     // forward + camera.position before setFocus(null) runs, sets
@@ -650,7 +708,7 @@ export class FocusController implements FocusOps {
     // search box / overlays settle within the same frame. setFocus(null)
     // doesn't recentre, so the animation runs in the (former focal
     // star's) local frame.
-    if (animate && this.deps.getCameraMode() === 'observe' && this.focusedStar !== null) {
+    if (animate && this.cameraMode === 'observe' && this.focusedStar !== null) {
       this.deps.getObserve().startExit({ animate: true, clearFocusOnExit: false });
       this.setFocus(null);
       return;
@@ -662,7 +720,7 @@ export class FocusController implements FocusOps {
     // or when there's no focused star to anchor on.
     if (
       animate
-      && this.deps.getCameraMode() === 'navigate'
+      && this.cameraMode === 'navigate'
       && this.focusedStar !== null
       && !this.deps.getObserve().isAnyActive()
     ) {
@@ -679,7 +737,6 @@ export class FocusController implements FocusOps {
         // fight the lerp's outward motion. After the lerp lands, the
         // controller's finish branch tightens minDistance to minDist.
         this.setFocus(null);
-        this.setFocusedCloud(null);
         // Don't toggle controls.enabled during the lerp. The animate()
         // dispatcher routes to observe.tick(), which lerps
         // camera.position directly and skips controls.update().
@@ -689,8 +746,8 @@ export class FocusController implements FocusOps {
         return;
       }
     }
+    // Single Target slot: setFocus(null) displaces a soft focus too.
     this.setFocus(null);
-    this.setFocusedCloud(null);
   }
 
   // ─── FocusTarget factories ─────────────────────────────────────────
@@ -703,14 +760,24 @@ export class FocusController implements FocusOps {
   // family) just works without touching the warp internals. See
   // `src/client/README.md` § FocusTarget contract.
 
+  /** applyFocus leg shared by all kinds: run the star-detach side
+   *  effects when a star focus is displaced, then set the new target.
+   *  No events fire — emitFocusEvents carries the whole transition in
+   *  one 'focus' payload when the camera lands. */
+  private applyFocusState(target: Target): void {
+    if (this.focused !== null && this.focused.kind === 'star' && target.kind !== 'star') {
+      this.refreshPlanetSystem(null);
+      // Per-cloud/LG minDistance floor isn't tracked today; mirror
+      // setFocus(null)'s clamp so the controls don't trap the camera
+      // further out than the parked pose.
+      const eye = this.deps.camera.position.distanceTo(this.deps.controls.target);
+      this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, eye);
+    }
+    this.focused = target;
+  }
+
   /** Build a FocusTarget for the star at catalog index `idx`. */
-  makeStarFocusTarget(idx: number): FocusTarget {
-    // Captures whether a sibling-kind focus existed at the moment of
-    // applyFocus, so emitFocusEvents knows whether to emit a clearing
-    // 'cloudFocus' event for the displaced cloud focus. Snapshotted at
-    // applyFocus time because the focus fields may be mutated by other
-    // code between applyFocus and emitFocusEvents.
-    let cloudWasCleared = false;
+  private makeStarFocusTarget(idx: number): FocusTarget {
     return {
       kind: 'star',
       idx,
@@ -725,9 +792,7 @@ export class FocusController implements FocusOps {
       },
       parkRadius: () => this.parkDistForStar(idx),
       applyFocus: () => {
-        cloudWasCleared = this.focusedCloud !== null;
-        if (cloudWasCleared) this.focusedCloud = null;
-        this.focusedStar = idx;
+        this.applyFocusState({ kind: 'star', idx });
         this.deps.controls.minDistance = starPhysics.minOrbitDistForStar({
           catalog: this.deps.catalog,
           idx,
@@ -736,8 +801,7 @@ export class FocusController implements FocusOps {
         this.refreshPlanetSystem(idx);
       },
       emitFocusEvents: () => {
-        if (cloudWasCleared) this.deps.bus.emit('cloudFocus', null);
-        this.deps.bus.emit('focus', idx);
+        this.deps.bus.emit('focus', { kind: 'star', idx });
         this.deps.bus.emit('state');
       },
       physicalRadius: () =>
@@ -749,12 +813,11 @@ export class FocusController implements FocusOps {
 
   /** Build a FocusTarget for the cloud at index `idx`. Returns null
    *  when the cloud layer hasn't loaded or the index is out of range. */
-  makeCloudFocusTarget(idx: number): FocusTarget | null {
+  private makeCloudFocusTarget(idx: number): FocusTarget | null {
     const clouds = this.deps.getClouds();
     if (!clouds) return null;
     const cloud = clouds.clouds[idx];
     if (!cloud) return null;
-    let starWasCleared = false;
     return {
       kind: 'cloud',
       idx,
@@ -769,21 +832,10 @@ export class FocusController implements FocusOps {
       },
       parkRadius: () => cloudViewingDistancePc(cloud),
       applyFocus: () => {
-        starWasCleared = this.focusedStar !== null;
-        if (starWasCleared) {
-          this.focusedStar = null;
-          this.refreshPlanetSystem(null);
-          // Per-cloud minDistance floor isn't tracked today; mirror
-          // setFocus(null)'s clamp so the controls don't trap the
-          // camera further out than the cloud's parked pose.
-          const eye = this.deps.camera.position.distanceTo(this.deps.controls.target);
-          this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, eye);
-        }
-        this.focusedCloud = idx;
+        this.applyFocusState({ kind: 'cloud', idx });
       },
       emitFocusEvents: () => {
-        if (starWasCleared) this.deps.bus.emit('focus', null);
-        this.deps.bus.emit('cloudFocus', idx);
+        this.deps.bus.emit('focus', { kind: 'cloud', idx });
         this.deps.bus.emit('state');
       },
       physicalRadius: () => null,
@@ -791,20 +843,57 @@ export class FocusController implements FocusOps {
     };
   }
 
+  /** Build a FocusTarget for the LG object at index `idx`. Returns null
+   *  when the layer hasn't loaded or the index is out of range. */
+  private makeLgFocusTarget(idx: number): FocusTarget | null {
+    const lg = this.deps.getLocalGroup();
+    if (!lg) return null;
+    const obj = lg.objects[idx];
+    if (!obj) return null;
+    return {
+      kind: 'lg',
+      idx,
+      anchorInto: (out) => {
+        out.copy(obj.centerAbs);
+        return true;
+      },
+      localPositionInto: (out) => {
+        const wo = this.deps.frameAnchor.getWorldOffset();
+        out.copy(obj.centerAbs).sub(wo);
+        return true;
+      },
+      parkRadius: () => lgViewingDistancePc(obj),
+      applyFocus: () => {
+        this.applyFocusState({ kind: 'lg', idx });
+      },
+      emitFocusEvents: () => {
+        this.deps.bus.emit('focus', { kind: 'lg', idx });
+        this.deps.bus.emit('state');
+      },
+      physicalRadius: () => null,
+      chartPlateauDistance: () => null,
+    };
+  }
+
+  /** Per-kind FocusTarget dispatch — the one switch, feeding warp and
+   *  any future camera transition. Null when the target's layer hasn't
+   *  loaded or the index is out of range. */
+  makeFocusTarget(target: Target): FocusTarget | null {
+    if (target.kind === 'star') return this.makeStarFocusTarget(target.idx);
+    if (target.kind === 'cloud') return this.makeCloudFocusTarget(target.idx);
+    return this.makeLgFocusTarget(target.idx);
+  }
+
   /** Build a FocusTarget describing whichever object is currently
-   *  focused (star or cloud), or null if nothing is focused. Used as
-   *  the `source` side of a warp; the dispatch table sits in exactly
-   *  one place. */
+   *  focused, or null if nothing is focused. Source side of a warp. */
   currentFocusTarget(): FocusTarget | null {
-    if (this.focusedStar !== null) return this.makeStarFocusTarget(this.focusedStar);
-    if (this.focusedCloud !== null) return this.makeCloudFocusTarget(this.focusedCloud);
-    return null;
+    return this.focused === null ? null : this.makeFocusTarget(this.focused);
   }
 
   dispose(): void {
     this.focusLerpState = null;
-    this.focusedStar = null;
-    this.focusedCloud = null;
+    this.focused = null;
+    this.vector = null;
     this.focusedPlanetSystem = null;
   }
 }
