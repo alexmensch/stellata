@@ -1,4 +1,5 @@
 import type { Stellata } from '../stellata';
+import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
@@ -200,10 +201,11 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'o': case 'O':
-        // Mirror the panel's observe-button enable rule: only valid when
-        // a star is focused. setCameraMode no-ops without focus anyway,
-        // but bailing here keeps the key from feeling unresponsive.
-        if (stellata.getFocusedStar() !== null) {
+        // Mirror the panel's observe-button enable rule: any hard-kind
+        // focus (star / planet) is a valid anchor. setCameraMode no-ops
+        // without one anyway, but bailing here keeps the key from
+        // feeling unresponsive.
+        if (isHardTarget(stellata.getFocusedTarget())) {
           stellata.setCameraMode('observe');
           e.preventDefault();
         }
