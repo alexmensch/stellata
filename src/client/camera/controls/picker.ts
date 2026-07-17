@@ -49,6 +49,12 @@ export interface PickerDeps {
   // Star disc pixel diameter for the prime-tier hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
+  // Collapsed-cluster lead resolver: when the winning star renders as
+  // one point with other members of its system (composite-suppressed),
+  // every pick surface resolves to the cluster's primary — hover card,
+  // POI pin, vector, and focus must all act on the same object the
+  // user sees as "the point". Identity for unsuppressed stars.
+  resolveCollapsedLead: (idx: number) => number;
   // Currently unused by Picker — held on the deps struct for the
   // eventual hand-off when Picker computes physSizePx itself.
   fovYRadRef: { value: number };
@@ -73,7 +79,8 @@ export class Picker {
   /** Pick a star under the cursor for the click FSM. Returns the
    *  winning catalog index or -1 if no star is hit. */
   pickStar(clientX: number, clientY: number, pixelThreshold = 16): number {
-    return this.pickStarResult(clientX, clientY, pixelThreshold)?.candidate.idx ?? -1;
+    const idx = this.pickStarResult(clientX, clientY, pixelThreshold)?.candidate.idx ?? -1;
+    return idx >= 0 ? this.deps.resolveCollapsedLead(idx) : idx;
   }
 
   /** Hit-test a screen-space cursor against the cloud layer. Returns
@@ -97,8 +104,10 @@ export class Picker {
   pickStarHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
     const r = this.pickStarResult(clientX, clientY, pixelThreshold);
     if (r === null) return null;
+    // Collapsed members sit sub-pixel from their lead, so the picked
+    // candidate's camera distance stands in for the lead's.
     return {
-      idx: r.candidate.idx,
+      idx: this.deps.resolveCollapsedLead(r.candidate.idx),
       cameraDistancePc: r.candidate.cameraDistancePc,
       tier: r.tier,
     };

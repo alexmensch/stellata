@@ -41,11 +41,26 @@ export function createConstellationOverlay(stellata: Stellata) {
   // string (e.g. session starts with no constellation highlighted).
   let lastD = '\0';
 
+  // Full-tick skip — same pattern as chart-labels.ts: the path is a pure
+  // function of camera pose, viewport, advanced epoch, and filter state.
+  // Filter / mode changes route through update(), which poisons the pose
+  // sentinel so the next tick always recomputes.
+  const lastTickCamPos = new THREE.Vector3(NaN, NaN, NaN);
+  const lastTickCamQuat = new THREE.Quaternion(NaN, 0, 0, 0);
+  let lastTickViewportW = 0;
+  let lastTickViewportH = 0;
+  let lastTickEpochJyr = NaN;
+
+  // Per-tick scratch, reused across frames (cleared, never reallocated).
+  const segments: string[] = [];
+  const indices: number[] = [];
+
   const update = () => {
     const f = stellata.getFilter();
     current = f.highlightCon;
     visible = f.showConstellation;
     chartActive = f.chart && stellata.getCameraMode() === 'observe';
+    lastTickCamPos.set(NaN, NaN, NaN);
     if (!visible || (current < 0 && !chartActive)) {
       lastD = setStrAttr(figure, 'd', '', lastD);
       return;
@@ -63,10 +78,26 @@ export function createConstellationOverlay(stellata: Stellata) {
     const camera = stellata.camera;
     const positions = stellata.localPositions;
 
-    const segments: string[] = [];
+    const epochJyr = stellata.advancedEpochJyr;
+    if (
+      camera.position.equals(lastTickCamPos)
+      && camera.quaternion.equals(lastTickCamQuat)
+      && w === lastTickViewportW
+      && h === lastTickViewportH
+      && epochJyr === lastTickEpochJyr
+    ) {
+      return;
+    }
+    lastTickCamPos.copy(camera.position);
+    lastTickCamQuat.copy(camera.quaternion);
+    lastTickViewportW = w;
+    lastTickViewportH = h;
+    lastTickEpochJyr = epochJyr;
+
+    segments.length = 0;
     // Chart mode draws every constellation; otherwise only the highlighted
     // one. Same projection + near-clip path either way.
-    const indices: number[] = [];
+    indices.length = 0;
     if (chartActive) {
       for (let i = 0; i < cons.length; i++) indices.push(i);
     } else if (current >= 0 && current < cons.length) {

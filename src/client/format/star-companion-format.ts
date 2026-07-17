@@ -11,8 +11,15 @@ import {
 import { evaluateOrbitSkyAU } from '../binaries/binary-orbit-pure';
 import { relationToElements } from '../binaries/orbit-relation-cache';
 
-export interface CompanionFormatContext {
+export interface StarNameContext {
   starLabels: Map<number, string>;
+  // Catalog identifier arrays backing the no-label fallback (0n / the
+  // NO_SID 0 sentinel = absent).
+  gaiaSourceId: BigUint64Array;
+  sid: Uint32Array;
+}
+
+export interface CompanionFormatContext extends StarNameContext {
   // Parsed binaries.bin, or null when the artifact is absent — the
   // companion lines simply drop out in that case.
   binaries: BinariesData | null;
@@ -21,8 +28,78 @@ export interface CompanionFormatContext {
   nowJd: number;
 }
 
-export function resolveStarName(starLabels: Map<number, string>, idx: number): string {
-  return starLabels.get(idx) ?? `Unnamed #${idx}`;
+/** Display name for any star: search-index label when one exists, else
+ *  'Gaia DR3 <id>', else 'Unnamed (SID #<n>)'. The fallbacks are stable
+ *  identifiers — never the catalog record index, which reshuffles on
+ *  every pipeline rebuild. Both are typeable in search. */
+export function resolveStarName(ctx: StarNameContext, idx: number): string {
+  const named = ctx.starLabels.get(idx);
+  if (named) return named;
+  const gaia = ctx.gaiaSourceId[idx];
+  if (gaia !== 0n) return `Gaia DR3 ${gaia}`;
+  return `Unnamed (SID #${ctx.sid[idx]})`;
+}
+
+// Connected component over primary/secondary links containing `idx`,
+// restricted to relations passing `edgeActive`, in first-seen order
+// walking the (topologically sorted) relation list — outer primaries
+// lead, inner members follow. Returns [] when no edge is reachable.
+function connectedMemberIndices(
+  binaries: BinariesData,
+  idx: number,
+  edgeActive: (rel: BinaryRelation) => boolean,
+): number[] {
+  const relIdxs = new Set<number>();
+  const seen = new Set<number>();
+  const stack = [idx];
+  while (stack.length > 0) {
+    const star = stack.pop() as number;
+    if (seen.has(star)) continue;
+    seen.add(star);
+    for (const list of [
+      binaries.primaryIdxToRelations.get(star),
+      binaries.secondaryIdxToRelations.get(star),
+    ]) {
+      if (!list) continue;
+      for (const ri of list) {
+        const r = binaries.relations[ri];
+        if (!edgeActive(r)) continue;
+        relIdxs.add(ri);
+        stack.push(r.primaryIdx, r.secondaryIdx);
+      }
+    }
+  }
+  const members: number[] = [];
+  const emitted = new Set<number>();
+  for (const ri of [...relIdxs].sort((a, b) => a - b)) {
+    for (const m of [binaries.relations[ri].primaryIdx, binaries.relations[ri].secondaryIdx]) {
+      if (!emitted.has(m)) {
+        emitted.add(m);
+        members.push(m);
+      }
+    }
+  }
+  return members;
+}
+
+/** Every star record in `idx`'s multiple-star system. Returns [] when
+ *  the star is in no relation. */
+export function systemMemberIndices(binaries: BinariesData, idx: number): number[] {
+  return connectedMemberIndices(binaries, idx, () => true);
+}
+
+/** Members of `idx`'s COLLAPSED cluster: stars reachable through
+ *  relations whose secondary is composite-suppressed right now — i.e.
+ *  the components actually rendering as one point with the hovered
+ *  star. A visually separated member (Proxima at 2.2° from α Cen A+B)
+ *  has no active suppressed edge and comes back a singleton [idx]. */
+export function collapsedClusterIndices(
+  binaries: BinariesData,
+  idx: number,
+  isCollapsed: (starIdx: number) => boolean,
+): number[] {
+  const members = connectedMemberIndices(binaries, idx, (r) => isCollapsed(r.secondaryIdx));
+  return members.length === 0 ? [idx] : members;
 }
 
 // Lines describing the star's binary role: a two-line block per relation
@@ -58,7 +135,7 @@ export function companionNames(idx: number, ctx: CompanionFormatContext): string
   const relIdxs = binaries.primaryIdxToRelations.get(idx);
   if (!relIdxs) return [];
   return relIdxs.map((i) =>
-    resolveStarName(ctx.starLabels, binaries.relations[i].secondaryIdx),
+    resolveStarName(ctx, binaries.relations[i].secondaryIdx),
   );
 }
 
@@ -76,13 +153,13 @@ function companionOfAllLines(
       continue;
     }
     const detail = tier3DetailLine(rel);
-    const names = [resolveStarName(ctx.starLabels, rel.primaryIdx)];
+    const names = [resolveStarName(ctx, rel.primaryIdx)];
     for (let j = i + 1; j < rels.length; j++) {
       if (consumed.has(j)) continue;
       const other = rels[j];
       if ((other.flags & FLAG_HAS_ORBIT) === 0 && tier3DetailLine(other) === detail) {
         consumed.add(j);
-        names.push(resolveStarName(ctx.starLabels, other.primaryIdx));
+        names.push(resolveStarName(ctx, other.primaryIdx));
       }
     }
     out.push(`Visual companion of ${joinNames(names)}`);
@@ -117,7 +194,7 @@ function orbitCompanionOfLines(
   rel: BinaryRelation,
   ctx: CompanionFormatContext,
 ): string[] {
-  const primaryName = resolveStarName(ctx.starLabels, rel.primaryIdx);
+  const primaryName = resolveStarName(ctx, rel.primaryIdx);
   const period = formatOrbitalPeriod(rel.pDays);
   const head = `Orbits ${primaryName}`;
   if ((rel.flags & FLAG_HAS_INCLINATION) === 0) {

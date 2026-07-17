@@ -337,6 +337,7 @@ function bindRelocateModal(
       // through `onInputBlur`'s deferred timer.
       openInput.removeEventListener('blur', onInputBlur);
       openInput.removeEventListener('focus', onInputFocus);
+      openInput.removeEventListener('typeahead-pick', close);
       // Synchronously blur the input so the Typeahead's restore-on-blur
       // listener fires. Without this, the DOM move below can drop focus
       // silently and the input keeps any half-typed value the user just
@@ -370,6 +371,12 @@ function bindRelocateModal(
     backdrop.addEventListener('click', close);
     input.addEventListener('blur', onInputBlur);
     input.addEventListener('focus', onInputFocus);
+    // Typeahead dispatches 'typeahead-pick' on its input right before
+    // onSelect runs — close synchronously so the focus glide / aim slerp
+    // the selection triggers plays against the live scene, not behind
+    // the modal backdrop. The blur-deferred close below stays as the
+    // fallback for non-pick teardowns.
+    input.addEventListener('typeahead-pick', close);
 
     // Focus on the next frame so the modal show + DOM move settle first.
     requestAnimationFrame(() => {

@@ -33,8 +33,12 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
   const spectClass = new Float32Array([2, 6, 8]);
   const luminosityClass = new Uint8Array([2, 255, 255]);
   const flags = new Uint8Array(3);
+  const gaiaSourceId = new BigUint64Array(3);
+  const sid = new Uint32Array([101, 102, 103]);
   return {
     starLabels,
+    gaiaSourceId,
+    sid,
     spectralMap,
     spectClass,
     luminosityClass,
@@ -172,9 +176,17 @@ describe('formatStarHover', () => {
     expect(out.lines).toContain('Variable · Period 0.57d · Δmag 1.0');
   });
 
-  it('falls back to "Unnamed #idx" when starLabels has no entry', () => {
+  it('falls back to "Gaia DR3 <id>" when starLabels has no entry but the record carries a source_id', () => {
+    const ctx = buildCtx({
+      starLabels: new Map(),
+      gaiaSourceId: new BigUint64Array([4472832130942575872n, 0n, 0n]),
+    });
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Gaia DR3 4472832130942575872');
+  });
+
+  it('falls back to "Unnamed (SID #<n>)" when neither a label nor a Gaia id exists', () => {
     const ctx = buildCtx({ starLabels: new Map() });
-    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Unnamed #0');
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Unnamed (SID #101)');
   });
 
   it('marks a synthetic companion\'s brightness-derived class as estimated', () => {
@@ -339,5 +351,106 @@ describe('formatStarHover — binary companions', () => {
   it('drops companion lines entirely when binaries.bin is absent', () => {
     const out = formatStarHover(1, D_CAM, binaryCtx([], { binaries: null }));
     expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
+  });
+});
+
+describe('formatStarHover — system card for screen-collapsed multiples', () => {
+  // Castor-like sextuple over 6 records: 0=A, 1=Aa2 (inner of A),
+  // 2=B, 3=Bb2 (inner of B), 4=C, 5=D. Relations in topological order.
+  const SYSTEM_RELS = [
+    makeRelation({ primaryIdx: 0, secondaryIdx: 2 }),
+    makeRelation({ primaryIdx: 0, secondaryIdx: 1 }),
+    makeRelation({ primaryIdx: 2, secondaryIdx: 3 }),
+    makeRelation({ primaryIdx: 0, secondaryIdx: 4 }),
+    makeRelation({ primaryIdx: 0, secondaryIdx: 5 }),
+  ];
+  const LABELS = new Map<number, string>([
+    [0, 'Castor'],
+    [1, 'Castor Aa2'],
+    [2, 'Castor B'],
+    [3, 'Castor Bb2'],
+    [4, 'Castor C'],
+    [5, 'Castor D'],
+  ]);
+  const sysCtx = (over: Partial<StarHoverFormatContext> = {}): StarHoverFormatContext =>
+    buildCtx({
+      starLabels: LABELS,
+      constellation: new Float32Array(6),
+      spectClass: new Float32Array(6).fill(8),
+      luminosityClass: new Uint8Array(6).fill(255),
+      flags: new Uint8Array(6),
+      periodDays: new Float32Array(6),
+      amplitudeMag: new Float32Array(6),
+      gaiaSourceId: new BigUint64Array(6),
+      sid: new Uint32Array(6),
+      binaries: makeBinaries(SYSTEM_RELS),
+      ...over,
+    });
+
+  it('fully collapsed multiple: any member hover yields the full roster card', () => {
+    const ctx = sysCtx({ isCollapsed: () => true });
+    for (const member of [0, 3]) {
+      const out = formatStarHover(member, D_CAM, ctx);
+      expect(out.name).toBe('Castor system');
+      expect(out.lines).toEqual([
+        'Lyra · 7.1 pc',
+        '6 components:',
+        'Castor, Castor B, Castor Aa2, Castor Bb2, Castor C, Castor D',
+      ]);
+    }
+  });
+
+  it('close-in viewing (nothing suppressed): per-component card unchanged', () => {
+    const ctx = sysCtx({ isCollapsed: () => false });
+    const out = formatStarHover(2, D_CAM, ctx);
+    expect(out.name).toBe('Castor B');
+  });
+
+  it('partially collapsed: roster lists only the overlapping cluster, not the whole system', () => {
+    // Close-up Castor: only the spectroscopic inner pair (secondary 1)
+    // is still suppressed; B/Bb2/C/D are resolved or off-screen.
+    const ctx = sysCtx({ isCollapsed: (i) => i === 1 });
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.name).toBe('Castor system');
+    expect(out.lines).toEqual([
+      'Lyra · 7.1 pc',
+      '2 of 6 components here:',
+      'Castor, Castor Aa2',
+    ]);
+  });
+
+  it('visibly separated member of a collapsed system keeps its own card (Proxima case)', () => {
+    // α Cen from Sol: A+B collapse (secondary 1 suppressed); C sits
+    // 2.2° away, its relation unsuppressed. Hovering C must NOT show
+    // the system card even though other members are collapsed.
+    const rels = [
+      makeRelation({ primaryIdx: 0, secondaryIdx: 1 }),
+      makeRelation({ primaryIdx: 0, secondaryIdx: 2 }),
+    ];
+    const ctx = buildCtx({
+      starLabels: new Map([[0, 'Rigil Kentaurus'], [1, 'Toliman'], [2, 'Proxima Centauri']]),
+      binaries: makeBinaries(rels),
+      isCollapsed: (i) => i === 1,
+    });
+    expect(formatStarHover(2, D_CAM, ctx).name).toBe('Proxima Centauri');
+    // Hovering the A+B composite point shows the cluster card for the
+    // two overlapping members only.
+    const out = formatStarHover(0, D_CAM, ctx);
+    expect(out.name).toBe('Rigil Kentaurus system');
+    expect(out.lines[1]).toBe('2 of 3 components here:');
+    expect(out.lines[2]).toBe('Rigil Kentaurus, Toliman');
+  });
+
+  it('plain binary never swaps to a system card, suppressed or not', () => {
+    const ctx = buildCtx({
+      binaries: makeBinaries([makeRelation({ primaryIdx: 0, secondaryIdx: 1 })]),
+      isCollapsed: () => true,
+    });
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Vega');
+  });
+
+  it('no isCollapsed hook (formatter reused without live suppress state): no swap', () => {
+    const ctx = sysCtx();
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Castor');
   });
 });

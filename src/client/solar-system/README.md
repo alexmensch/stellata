@@ -285,16 +285,22 @@ planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles
 ### Apparent-magnitude formula
 
 For a planet of geometric albedo `p` and equatorial radius `R`, with
-the viewer at distance `d_vp` from the planet, `d_vh` from the host,
-and `d_hp` from the host to the planet:
+the viewer at distance `d_vp` from the planet and the host at `d_hp`
+from the planet:
 
 ```
-m_host_at_viewer = M_host + 5·log10(d_vh / 10pc)
-m_planet         = m_host_at_viewer
-                 − 2.5·log10( p · (R/d_vp)² · (d_vh/d_hp)² · φ(α) )
+m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
+m_planet         = m_host_at_planet
+                 − 2.5·log10( p · (R/d_vp)² · φ(α) )
 ```
 
-where `α = ∠(viewer–planet–host)` is the phase angle and `φ(α)` is
+The viewer→host distance cancels out of the physical formula and must
+not appear in either the shader or the CPU mirror: observe mode parks
+the camera exactly at the host, so any `d_vh` term evaluates `log(0)`
+there and kills every planet of the focused host (the
+planets-invisible-in-observe regression).
+
+`α = ∠(viewer–planet–host)` is the phase angle and `φ(α)` is
 the per-planet phase factor — Mallama 2018 empirical polynomial
 `10^(−ΔV(α)/2.5)` inside each planet's published α range, anchor-
 scaled Lambertian past it (Lambert(α) × poly(αmax)/Lambert(αmax) so

@@ -393,7 +393,6 @@ export class PlanetBodyField {
     const dhx = host.hostLocalPos.x - cameraPosLocal.x;
     const dhy = host.hostLocalPos.y - cameraPosLocal.y;
     const dhz = host.hostLocalPos.z - cameraPosLocal.z;
-    const dVh = Math.sqrt(dhx * dhx + dhy * dhy + dhz * dhz);
     // Planet→host distance is just the iLocalRel magnitude.
     const dHp = Math.sqrt(
       this.bufLocalRel[base + 0] ** 2 +
@@ -404,7 +403,6 @@ export class PlanetBodyField {
     const radiusPc = planet.radiusKm * KM_PC;
     const appMag = planetApparentMagnitude(
       host.hostAbsmag,
-      dVh,
       dVp,
       dHp,
       planet.albedo,

@@ -14,12 +14,30 @@ star-hover-format.ts             Star — name + constellation · distance
                                  plain-language descriptor), variability,
                                  and binary companion lines. Tier-ordered
                                  name fallback (proper → Bayer → Flamsteed →
-                                 HIP/HD/HR/Gl → "Unnamed #idx"). The
+                                 HIP/HD/HR/Gl → "Gaia DR3 <id>" →
+                                 "Unnamed (SID #<n>)" — stable identifiers,
+                                 never the rebuild-shuffled record index;
+                                 both typeable in search). The
                                  companion blocks (secondary "Orbits <A>"
                                  per-tier detail + primary "Known
                                  companions:" name list) live in
                                  ../../format/star-companion-format.ts,
                                  shared with the focus card.
+                                 System card: when the hovered star's
+                                 system has 3+ components AND its own
+                                 collapsed cluster — members reachable
+                                 through currently-suppressed relations
+                                 (Stellata.isCompositeSuppressed, the
+                                 orbit walk's own sub-pixel verdict, so
+                                 card and rendering can't disagree) —
+                                 has 2+ members, the card swaps to
+                                 "<primary> system" + the CLUSTER
+                                 roster ("2 of 6 components here:" when
+                                 partial). A visibly separated member
+                                 (Proxima off the α Cen A+B point)
+                                 keeps its own card. Plain binaries
+                                 keep the per-component card; close-in
+                                 viewing (nothing suppressed) does too.
 planet-hover-format.ts           Planet — camera distance · apparent
                                  V mag, period (years), radius (R⊕ + km).
 cloud-hover-format.ts            Cloud — camera distance + major × minor

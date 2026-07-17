@@ -45,11 +45,12 @@ export function createStarFocusProvider(
   config: StarFocusProviderConfig,
 ): FocusCardProvider<'star'> {
   const { catalog, starLabels, spectralMap, searchEntries, binaries } = config;
+  const nameCtx = { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid };
 
   return {
     kind: 'star',
     format(idx: number): FocusCardContent {
-      const name = resolveStarName(starLabels, idx);
+      const name = resolveStarName(nameCtx, idx);
       const identityLines: string[] = [];
       const entry = searchEntries.get(idx);
       const alts = (entry
@@ -91,7 +92,7 @@ export function createStarFocusProvider(
         catalog.velocities[idx * 3 + 2],
       );
       if (vel) rows.push({ label: 'Velocity', value: formatSpaceVelocity(vel) });
-      const names = companionNames(idx, { starLabels, binaries, nowJd: 0 });
+      const names = companionNames(idx, { ...nameCtx, binaries, nowJd: 0 });
       if (names.length > 0) {
         rows.push({ label: 'Known companions', value: names.join('\n') });
       }
@@ -117,7 +118,7 @@ export function createStarFocusProvider(
       // Live so a Tier-1 pair's ρ tracks the sim clock exactly as the
       // hover card's does — shared fields must agree between tiers.
       const orbits = () =>
-        companionOfLines(idx, { starLabels, binaries, nowJd: config.nowJd() }).join('\n');
+        companionOfLines(idx, { ...nameCtx, binaries, nowJd: config.nowJd() }).join('\n');
       if (orbits()) lines.push(orbits);
 
       return { name, identityLines, rows, lines };

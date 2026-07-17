@@ -1,4 +1,5 @@
 import Fuse from 'fuse.js';
+import { resolveStarName } from '../format/star-companion-format';
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import type { Target } from '../camera/focus/focus-target';
@@ -486,6 +487,32 @@ export function createSearchRunner(
     includeScore: true,
   });
 
+  // Gaia / SID lookup maps, built lazily on the first matching query —
+  // they cover the full 313k-row catalog (unlike the search-index maps
+  // above), and most sessions never type either form.
+  let gaiaMap: Map<bigint, number> | null = null;
+  const gaiaLookup = (id: bigint): number | undefined => {
+    if (!gaiaMap) {
+      gaiaMap = new Map();
+      for (let i = 0; i < catalog.count; i++) {
+        const g = catalog.gaiaSourceId[i];
+        if (g !== 0n && !gaiaMap.has(g)) gaiaMap.set(g, i);
+      }
+    }
+    return gaiaMap.get(id);
+  };
+  let sidMap: Map<number, number> | null = null;
+  const sidLookup = (sidVal: number): number | undefined => {
+    if (!sidMap) {
+      sidMap = new Map();
+      for (let i = 0; i < catalog.count; i++) {
+        const v = catalog.sid[i];
+        if (v !== 0 && !sidMap.has(v)) sidMap.set(v, i);
+      }
+    }
+    return sidMap.get(sidVal);
+  };
+
   const directResult = (idx: number, label: string): FuzzyEntry => {
     const conIdx = catalog.constellation[idx];
     const con = conIdx !== 255 ? catalog.constellations[conIdx] : null;
@@ -524,6 +551,21 @@ export function createSearchRunner(
         const idx = map.get(Number(m[1]));
         return idx !== undefined ? [directResult(idx, `${prefix} ${m[1]}`)] : [];
       }
+    }
+    // Gaia: "Gaia 4472…", "Gaia DR3 4472…", or a bare 19-digit source_id
+    // (Gaia DR3 ids are 19 digits; no other numeric form is that long).
+    const gaiaMatch =
+      trimmed.match(/^gaia\s*(?:dr\s*3\s*)?(\d+)$/i) ?? trimmed.match(/^(\d{19})$/);
+    if (gaiaMatch) {
+      const idx = gaiaLookup(BigInt(gaiaMatch[1]));
+      return idx !== undefined ? [directResult(idx, `Gaia DR3 ${gaiaMatch[1]}`)] : [];
+    }
+    // Stellata ID: "SID 216867" / "SID #216867" — the frozen fallback
+    // identifier every card can display (docs/sid.md).
+    const sidMatch = trimmed.match(/^sid\s*#?\s*(\d+)$/i);
+    if (sidMatch) {
+      const idx = sidLookup(Number(sidMatch[1]));
+      return idx !== undefined ? [directResult(idx, `SID #${sidMatch[1]}`)] : [];
     }
     // Gliese: "Gl 559A", "GJ 581", "Gliese 411"
     const glMatch = trimmed.match(/^(?:gliese|gj|gl)\s*(\d+\s*[a-z]?)$/i);
@@ -629,9 +671,10 @@ export function bindSearch(
   const toClear = document.getElementById('search-to-clear') as HTMLButtonElement;
   const toRow = document.getElementById('search-to-row')!;
 
-  const describe = (idx: number): string => {
-    return starLabels.get(idx) ?? `Unnamed #${idx}`;
-  };
+  const describe = (idx: number): string => resolveStarName(
+    { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
+    idx,
+  );
 
   // OBSERVE mode is star-only — clouds aren't valid observation anchors,
   // so they shouldn't appear in the location picker. Wrap the shared query
