@@ -14,7 +14,7 @@ import {
   type Vec3,
 } from './ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
-import { HELIOPAUSE_APEX_LOCAL_PC } from './heliopause';
+import { HELIOPAUSE_APEX_SOL_PC } from './heliopause';
 import { jdeToT } from './time';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -159,7 +159,7 @@ describe('sky-truth: heliopause nose vs the IBEX ISM inflow', () => {
 
   it('production upwind apex matches the published inflow within 0.01°', () => {
     const apex = new THREE.Vector3()
-      .copy(HELIOPAUSE_APEX_LOCAL_PC)
+      .copy(HELIOPAUSE_APEX_SOL_PC)
       .normalize();
     expect(separationDeg(apex, noseIcrs)).toBeLessThan(0.01);
   });
@@ -175,7 +175,7 @@ describe('sky-truth: heliopause nose vs the IBEX ISM inflow', () => {
     // and impossible for a Dec +27.4° nose (V1 would be near-nose yet
     // crossed at the nose distance).
     const apex = new THREE.Vector3()
-      .copy(HELIOPAUSE_APEX_LOCAL_PC)
+      .copy(HELIOPAUSE_APEX_SOL_PC)
       .normalize();
     const v1 = raDecToDir(258, 12);
     const sep = separationDeg(apex, v1);

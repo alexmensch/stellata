@@ -256,7 +256,12 @@ Planet rendering splits across two layers (stellata-3re.15):
 - **`orbit-rings-layer.ts`** — per-host orbit-ring layer. Geometry
   rebuilds whenever the focused star's PlanetSystem changes; per-frame
   tick drives the pixel-gap visibility heuristic. Representational
-  only — rings hide when the host loses focus.
+  only — rings hide when the host loses focus. The ring group rides
+  the host's live renderer-local position (fed each frame from
+  `PlanetBodyField.getHostLocalPositionInto`), and the pixel-gap
+  heuristic measures camera-to-host distance — under planet focus the
+  floating origin sits on the planet, so the host is NOT at the local
+  origin.
 
 Bodies render as billboarded discs through the same perceptual-disc
 abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
@@ -390,6 +395,13 @@ human timescales):
 Construction: unit sphere → scale to (115, 115, 161) AU → translate
 the centre 39 AU toward antiapex → rotate so +Z lands on the antiapex.
 Result: upwind apex at +122 AU, downwind at −200 AU along the apex.
+
+The shell, its label samples, and the hover picker all anchor on Sol,
+whose renderer-local position is `-worldOffset` (Sol is the catalog
+origin) — non-zero under planet focus. The group recentres via the
+scene-layer `recenter` hook; the label engine and picker subtract the
+live `worldOffset` from the exported Sol-anchored sample points
+(`HELIOPAUSE_SAMPLE_POINTS_SOL`, `HELIOPAUSE_APEX_SOL_PC`).
 
 Rendering uses a Fresnel limb-darkening fragment shader: alpha peaks
 at the silhouette where the view ray grazes the surface and falls to

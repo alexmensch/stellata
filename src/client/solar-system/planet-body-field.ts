@@ -320,13 +320,16 @@ export class PlanetBodyField {
   }
 
   /**
-   * Fresh-copy snapshot of the focused host's planet local-frame
-   * positions. Layout: 3 floats per planet, ordering matches
-   * PlanetSystem.planets. Returns null when the host isn't attached.
+   * Fresh-copy snapshot of a host's planet positions RELATIVE TO THE
+   * HOST (the shader's iLocalRel — renderer-local only after adding
+   * `getHostLocalPositionInto`). Layout: 3 floats per planet, ordering
+   * matches PlanetSystem.planets. Returns null when the host isn't
+   * attached.
    *
-   * The planet-labels overlay reads this so labels project to the same
-   * positions the body shader renders at, without re-running the
-   * Keplerian math itself.
+   * The planet-labels overlay reads this (host offset re-added by
+   * `Stellata.getFocusedPlanetLocalPositions`) so labels project to
+   * the same positions the body shader renders at, without re-running
+   * the Keplerian math itself.
    *
    * Returns a Float32Array `.slice()` (copy), not a `.subarray()`
    * view — the copy survives attach-driven capacity grow and
@@ -342,6 +345,21 @@ export class PlanetBodyField {
       host.startInstance * 3,
       (host.startInstance + host.count) * 3,
     );
+  }
+
+  /**
+   * Host star's renderer-local position into `out` — the same
+   * hostLocalPos the planet shader adds to iLocalRel, so any layer
+   * anchored on it (orbit rings, labels) stays centred on the exact
+   * point the bodies orbit. Under planet focus the floating origin
+   * sits on the planet, so this is NOT the local origin. Returns
+   * false when the host isn't attached.
+   */
+  getHostLocalPositionInto(hostStarIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hosts.get(hostStarIdx);
+    if (!host) return false;
+    out.copy(host.hostLocalPos);
+    return true;
   }
 
 

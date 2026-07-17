@@ -157,6 +157,25 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('getHostLocalPositionInto returns hostAbs − worldOffset and tracks recenter', () => {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    const hostAbs = new THREE.Vector3(1.5, 0, 2.0);
+    f.attachHost(0, makePlanetSystem(0, 1), 4.83, hostAbs, 0, 0);
+    const out = new THREE.Vector3();
+    expect(f.getHostLocalPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(1.5, 12);
+    expect(out.y).toBeCloseTo(0, 12);
+    expect(out.z).toBeCloseTo(2.0, 12);
+    // Recenter onto a planet-like offset: host local pos shifts by it.
+    f.recenter(new THREE.Vector3(1.0, 0, 2.0));
+    expect(f.getHostLocalPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(0.5, 12);
+    expect(out.y).toBeCloseTo(0, 12);
+    expect(out.z).toBeCloseTo(0, 12);
+    expect(f.getHostLocalPositionInto(9, out)).toBe(false);
+    f.dispose();
+  });
+
   it('handles multiple hosts in one field', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, new THREE.Vector3(), 0, 0);

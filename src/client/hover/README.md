@@ -137,7 +137,7 @@ existing one rather than rolling a new pickbox:
   `MolecularClouds.raycast`) — naturally hits the whole ellipsoid
   silhouette.
 - **Projected sample-point AABB** (heliopause, via
-  `HELIOPAUSE_SAMPLE_POINTS_LOCAL` — the same 62 silhouette samples the
+  `HELIOPAUSE_SAMPLE_POINTS_SOL` — the same 62 silhouette samples the
   label engine already projects every frame; shared via export so the
   hover surface can't drift from the label).
 - **Per-object angular-size disc** (Local Group wireframes — already

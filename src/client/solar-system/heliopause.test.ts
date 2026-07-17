@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { Heliopause, HELIOPAUSE_APEX_LOCAL_PC, createHeliopauseLabel } from './heliopause';
+import { Heliopause, HELIOPAUSE_APEX_SOL_PC, createHeliopauseLabel } from './heliopause';
 import { AU_PC } from '../util/astronomy-constants';
 
-describe('HELIOPAUSE_APEX_LOCAL_PC', () => {
+describe('HELIOPAUSE_APEX_SOL_PC', () => {
   it('lies 122 AU from Sol (the upwind heliopause boundary distance)', () => {
     const r = Math.hypot(
-      HELIOPAUSE_APEX_LOCAL_PC.x,
-      HELIOPAUSE_APEX_LOCAL_PC.y,
-      HELIOPAUSE_APEX_LOCAL_PC.z,
+      HELIOPAUSE_APEX_SOL_PC.x,
+      HELIOPAUSE_APEX_SOL_PC.y,
+      HELIOPAUSE_APEX_SOL_PC.z,
     );
     expect(r).toBeCloseTo(122 * AU_PC, 12);
   });
@@ -28,23 +28,23 @@ describe('HELIOPAUSE_APEX_LOCAL_PC', () => {
     const expectedZ = ye * Math.sin(eps) + ze * Math.cos(eps);
 
     const r = Math.hypot(
-      HELIOPAUSE_APEX_LOCAL_PC.x,
-      HELIOPAUSE_APEX_LOCAL_PC.y,
-      HELIOPAUSE_APEX_LOCAL_PC.z,
+      HELIOPAUSE_APEX_SOL_PC.x,
+      HELIOPAUSE_APEX_SOL_PC.y,
+      HELIOPAUSE_APEX_SOL_PC.z,
     );
-    expect(HELIOPAUSE_APEX_LOCAL_PC.x / r).toBeCloseTo(expectedX, 12);
-    expect(HELIOPAUSE_APEX_LOCAL_PC.y / r).toBeCloseTo(expectedY, 12);
-    expect(HELIOPAUSE_APEX_LOCAL_PC.z / r).toBeCloseTo(expectedZ, 12);
+    expect(HELIOPAUSE_APEX_SOL_PC.x / r).toBeCloseTo(expectedX, 12);
+    expect(HELIOPAUSE_APEX_SOL_PC.y / r).toBeCloseTo(expectedY, 12);
+    expect(HELIOPAUSE_APEX_SOL_PC.z / r).toBeCloseTo(expectedZ, 12);
   });
 
   it('nose lands at RA ≈ 17h00m, Dec ≈ −17.6° — not the solar apex 47° away', () => {
     const r = Math.hypot(
-      HELIOPAUSE_APEX_LOCAL_PC.x,
-      HELIOPAUSE_APEX_LOCAL_PC.y,
-      HELIOPAUSE_APEX_LOCAL_PC.z,
+      HELIOPAUSE_APEX_SOL_PC.x,
+      HELIOPAUSE_APEX_SOL_PC.y,
+      HELIOPAUSE_APEX_SOL_PC.z,
     );
-    const raDeg = (Math.atan2(HELIOPAUSE_APEX_LOCAL_PC.y, HELIOPAUSE_APEX_LOCAL_PC.x) * 180 / Math.PI + 360) % 360;
-    const decDeg = Math.asin(HELIOPAUSE_APEX_LOCAL_PC.z / r) * 180 / Math.PI;
+    const raDeg = (Math.atan2(HELIOPAUSE_APEX_SOL_PC.y, HELIOPAUSE_APEX_SOL_PC.x) * 180 / Math.PI + 360) % 360;
+    const decDeg = Math.asin(HELIOPAUSE_APEX_SOL_PC.z / r) * 180 / Math.PI;
     expect(raDeg).toBeCloseTo(255.04, 2);
     expect(decDeg).toBeCloseTo(-17.6, 2);
   });
@@ -74,6 +74,15 @@ describe('Heliopause', () => {
     h.dispose();
   });
 
+  it('recenter parks the group at −worldOffset (Sol local position)', () => {
+    const h = new Heliopause();
+    h.recenter(new THREE.Vector3(0.1, -0.2, 0.3));
+    expect(h.group.position.x).toBeCloseTo(-0.1, 12);
+    expect(h.group.position.y).toBeCloseTo(0.2, 12);
+    expect(h.group.position.z).toBeCloseTo(-0.3, 12);
+    h.dispose();
+  });
+
   it('group rotation maps local +Z onto the antiapex direction (forward heliotail)', () => {
     const h = new Heliopause();
     // The group's quaternion was built via setFromUnitVectors(+Z, antiapex).
@@ -81,9 +90,9 @@ describe('Heliopause', () => {
     const localZ = new THREE.Vector3(0, 0, 1);
     localZ.applyQuaternion(h.group.quaternion);
     const apex = new THREE.Vector3(
-      HELIOPAUSE_APEX_LOCAL_PC.x,
-      HELIOPAUSE_APEX_LOCAL_PC.y,
-      HELIOPAUSE_APEX_LOCAL_PC.z,
+      HELIOPAUSE_APEX_SOL_PC.x,
+      HELIOPAUSE_APEX_SOL_PC.y,
+      HELIOPAUSE_APEX_SOL_PC.z,
     ).normalize();
     expect(localZ.x).toBeCloseTo(-apex.x, 12);
     expect(localZ.y).toBeCloseTo(-apex.y, 12);
@@ -124,9 +133,9 @@ describe('Heliopause', () => {
     const apexLocalAu = new THREE.Vector3(0, 0, -122)
       .applyQuaternion(h.group.quaternion);
     const apex = new THREE.Vector3(
-      HELIOPAUSE_APEX_LOCAL_PC.x,
-      HELIOPAUSE_APEX_LOCAL_PC.y,
-      HELIOPAUSE_APEX_LOCAL_PC.z,
+      HELIOPAUSE_APEX_SOL_PC.x,
+      HELIOPAUSE_APEX_SOL_PC.y,
+      HELIOPAUSE_APEX_SOL_PC.z,
     ).normalize();
     apexLocalAu.normalize();
     expect(apexLocalAu.x).toBeCloseTo(apex.x, 12);

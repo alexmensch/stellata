@@ -55,12 +55,11 @@ const ALPHA_LIMB = 0.45;
 const FACE_ON_FLOOR = 0.04;
 const FRESNEL_POWER = 2.5;
 
-/** Upwind apex point in the Sol-anchored local frame (parsecs). The
- *  label overlay reads this to project the "Heliopause" tag to screen.
- *  Valid only while Sol is the focused star — under floating-origin,
- *  world origin sits at the focal star's absolute position, and the
- *  heliopause renders only when that star is Sol. */
-export const HELIOPAUSE_APEX_LOCAL_PC: Readonly<THREE.Vector3> =
+/** Upwind apex point relative to SOL (parsecs). Sol is the catalog
+ *  origin, so the renderer-local position is this minus worldOffset —
+ *  consumers (label overlay, hover picker) must apply that offset;
+ *  under planet focus the origin sits on the focused planet, not Sol. */
+export const HELIOPAUSE_APEX_SOL_PC: Readonly<THREE.Vector3> =
   APEX_DIR_ICRS.clone().multiplyScalar(UPWIND_APEX_AU * AU_PC);
 
 /** Upwind apex distance from Sol in AU. The shell's upwind boundary
@@ -163,6 +162,13 @@ export class Heliopause {
     this.group.visible = !this.hidden && !this.mono;
   }
 
+  /** Floating-origin recentre. The shell is Sol-anchored and Sol is the
+   *  catalog origin, so its renderer-local position is -worldOffset —
+   *  non-zero under planet focus, where the origin sits on the planet. */
+  recenter(newOrigin: Readonly<THREE.Vector3>): void {
+    this.group.position.copy(newOrigin).negate();
+  }
+
   /** Chart (mono / paper) mode hides the heliopause — chart-mode renders
    *  its own paper-aesthetic visualisation if/when chart-mode cares to
    *  cover this layer (currently it does not). */
@@ -188,11 +194,12 @@ export class Heliopause {
 }
 
 /** Sample points distributed on the heliopause's ellipsoid surface,
- *  pre-rotated through the group quaternion into the Sol-anchored
- *  local frame. Projecting these to screen each frame gives a screen-
- *  space bounding box that hugs the egg's silhouette tightly — within
- *  the tessellation precision of the sample grid. Computed once at
- *  module load; geometry is static.
+ *  pre-rotated through the group quaternion, expressed relative to SOL
+ *  (renderer-local = point − worldOffset, exactly like
+ *  `HELIOPAUSE_APEX_SOL_PC`). Projecting these to screen each frame
+ *  gives a screen-space bounding box that hugs the egg's silhouette
+ *  tightly — within the tessellation precision of the sample grid.
+ *  Computed once at module load; geometry is static.
  *
  *  Surface points (not AABB corners) — points off the surface sit
  *  further from the centre than the silhouette and produce a loose
@@ -203,7 +210,7 @@ export class Heliopause {
  *  Exported so the hover picker can hit-test the projected silhouette
  *  bbox against the cursor — same 62 points, same near-plane guard,
  *  so the hover surface stays in lockstep with the label engine. */
-export const HELIOPAUSE_SAMPLE_POINTS_LOCAL: readonly THREE.Vector3[] = (() => {
+export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
   const arr: THREE.Vector3[] = [];
   const cz = CENTRE_OFFSET_AU * AU_PC;
   const a = SEMI_EQUATORIAL_AU * AU_PC;
@@ -245,13 +252,9 @@ export const HELIOPAUSE_SAMPLE_POINTS_LOCAL: readonly THREE.Vector3[] = (() => {
 export function createHeliopauseLabel(stellata: Stellata): void {
   createDistanceGatedLabel(stellata, {
     elementId: HELIOPAUSE_LABEL_ELEMENT_ID,
-    sampleCount: HELIOPAUSE_SAMPLE_POINTS_LOCAL.length,
-    // HELIOPAUSE_SAMPLE_POINTS_LOCAL is already in Sol-anchored local pc — which
-    // *is* world space whenever the heliopause label can show (the
-    // predicate below requires a focused planet system, and Sol is
-    // currently the only planet-bearing host so worldOffset == Sol's
-    // absolute position). No worldOffset subtraction needed here.
-    getWorldSample: (i, out) => out.copy(HELIOPAUSE_SAMPLE_POINTS_LOCAL[i]),
+    sampleCount: HELIOPAUSE_SAMPLE_POINTS_SOL.length,
+    getWorldSample: (i, out) =>
+      out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(stellata.getWorldOffset()),
     visible: () => isHeliopauseApexVisible(stellata),
     // Bottom-right diagonal (1, 1)/√2 in CSS y-down coords.
     labelDir: { x: Math.SQRT1_2, y: Math.SQRT1_2 },

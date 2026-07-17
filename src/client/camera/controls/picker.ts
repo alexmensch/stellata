@@ -9,9 +9,9 @@ import type { LocalGroupLayer } from '../../local-group/local-group';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
 import {
   Heliopause,
-  HELIOPAUSE_APEX_LOCAL_PC,
+  HELIOPAUSE_APEX_SOL_PC,
   HELIOPAUSE_LABEL_ELEMENT_ID,
-  HELIOPAUSE_SAMPLE_POINTS_LOCAL,
+  HELIOPAUSE_SAMPLE_POINTS_SOL,
 } from '../../solar-system/heliopause';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
@@ -175,8 +175,9 @@ export class Picker {
     let maxX = -Infinity, maxY = -Infinity;
     const tmp = this.tmpV3;
     const nearNeg = -camera.near;
-    for (const sample of HELIOPAUSE_SAMPLE_POINTS_LOCAL) {
-      tmp.copy(sample);
+    const worldOffset = this.deps.getWorldOffset();
+    for (const sample of HELIOPAUSE_SAMPLE_POINTS_SOL) {
+      tmp.copy(sample).sub(worldOffset);
       tmp.applyMatrix4(camera.matrixWorldInverse);
       if (tmp.z >= nearNeg) { allInFront = false; break; }
       tmp.applyMatrix4(camera.projectionMatrix);
@@ -208,10 +209,10 @@ export class Picker {
     if (!insideSilhouette && !insideLabel) return null;
 
     const cam = camera.position;
-    const apex = HELIOPAUSE_APEX_LOCAL_PC;
-    const dx = apex.x - cam.x;
-    const dy = apex.y - cam.y;
-    const dz = apex.z - cam.z;
+    const apex = HELIOPAUSE_APEX_SOL_PC;
+    const dx = apex.x - worldOffset.x - cam.x;
+    const dy = apex.y - worldOffset.y - cam.y;
+    const dz = apex.z - worldOffset.z - cam.z;
     const cameraDistancePc = Math.sqrt(dx * dx + dy * dy + dz * dz);
     return { idx: 0, cameraDistancePc, tier: 'fallback' };
   }

@@ -927,7 +927,13 @@ export class Stellata implements FrameAnchor {
   // past Taurus is a feature). See scene/README.md.
   private registerSceneLayers(): void {
     this.layers.register({
-      update: (ctx) => this.orbitRingsLayer.update(ctx.camera, window.innerHeight),
+      update: (ctx) => {
+        const ps = this.focus.getFocusedPlanetSystem();
+        const hostPos = ps !== null
+          && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
+          ? this.tmpHostLocal : null;
+        this.orbitRingsLayer.update(ctx.camera, window.innerHeight, hostPos);
+      },
       setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
       dispose: () => this.orbitRingsLayer.dispose(),
     });
@@ -998,6 +1004,7 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       // Visibility is event-driven (host focus), no per-frame update.
       setMonochrome: (on) => this.heliopause.setMonochrome(on),
+      recenter: (newOrigin) => this.heliopause.recenter(newOrigin),
       dispose: () => this.heliopause.dispose(),
     });
     this.layers.register({
@@ -1029,15 +1036,26 @@ export class Stellata implements FrameAnchor {
    *  `'frame'` event handlers, so overlays driven by the frame loop
    *  (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean { return this.orbitRingsLayer.anyOrbitRingVisible(); }
-  /** Local-frame positions of the focused host's planets (xyz triples,
-   *  length 3·N), or null if no system is attached. Returns a fresh
-   *  Float32Array copy each call (see
+  /** Renderer-local positions of the focused host's planets (xyz
+   *  triples, length 3·N), or null if no system is attached. Host
+   *  offset is applied — under planet focus the host is not at the
+   *  local origin. Returns a fresh Float32Array copy each call (see
    *  `PlanetBodyField.getHostLocalPositions`) — safe to cache across
    *  frames; the value semantics survive attach grow / detach shift. */
   getFocusedPlanetLocalPositions(): Float32Array | null {
     const ps = this.focus.getFocusedPlanetSystem();
     if (!ps) return null;
-    return this.planetBodyField.getHostLocalPositions(ps.hostStarIdx);
+    const rel = this.planetBodyField.getHostLocalPositions(ps.hostStarIdx);
+    if (!rel) return null;
+    if (!this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)) {
+      return null;
+    }
+    for (let i = 0; i < rel.length; i += 3) {
+      rel[i] += this.tmpHostLocal.x;
+      rel[i + 1] += this.tmpHostLocal.y;
+      rel[i + 2] += this.tmpHostLocal.z;
+    }
+    return rel;
   }
   /** True when the orbit ring for planet `i` is currently rendering on
    *  the focused host. Used by planet-labels to hide labels in lockstep
@@ -1674,6 +1692,7 @@ export class Stellata implements FrameAnchor {
   }
 
   private tmpVec3b = new THREE.Vector3();
+  private tmpHostLocal = new THREE.Vector3();
 
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */
