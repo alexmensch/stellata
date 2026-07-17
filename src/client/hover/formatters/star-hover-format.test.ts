@@ -353,3 +353,69 @@ describe('formatStarHover — binary companions', () => {
     expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
   });
 });
+
+describe('formatStarHover — system card for screen-collapsed multiples', () => {
+  // Castor-like sextuple over 6 records: 0=A, 1=Aa2 (inner of A),
+  // 2=B, 3=Bb2 (inner of B), 4=C, 5=D. Relations in topological order.
+  const SYSTEM_RELS = [
+    makeRelation({ primaryIdx: 0, secondaryIdx: 2 }),
+    makeRelation({ primaryIdx: 0, secondaryIdx: 1 }),
+    makeRelation({ primaryIdx: 2, secondaryIdx: 3 }),
+    makeRelation({ primaryIdx: 0, secondaryIdx: 4 }),
+    makeRelation({ primaryIdx: 0, secondaryIdx: 5 }),
+  ];
+  const LABELS = new Map<number, string>([
+    [0, 'Castor'],
+    [1, 'Castor Aa2'],
+    [2, 'Castor B'],
+    [3, 'Castor Bb2'],
+    [4, 'Castor C'],
+    [5, 'Castor D'],
+  ]);
+  const sysCtx = (over: Partial<StarHoverFormatContext> = {}): StarHoverFormatContext =>
+    buildCtx({
+      starLabels: LABELS,
+      constellation: new Float32Array(6),
+      spectClass: new Float32Array(6).fill(8),
+      luminosityClass: new Uint8Array(6).fill(255),
+      flags: new Uint8Array(6),
+      periodDays: new Float32Array(6),
+      amplitudeMag: new Float32Array(6),
+      gaiaSourceId: new BigUint64Array(6),
+      sid: new Uint32Array(6),
+      binaries: makeBinaries(SYSTEM_RELS),
+      ...over,
+    });
+
+  it('collapsed multiple: any member hover yields the roster card', () => {
+    const ctx = sysCtx({ isCollapsed: () => true });
+    for (const member of [0, 3]) {
+      const out = formatStarHover(member, D_CAM, ctx);
+      expect(out.name).toBe('Castor system');
+      expect(out.lines).toEqual([
+        'Lyra · 7.1 pc',
+        '6 components:',
+        'Castor, Castor B, Castor Aa2, Castor Bb2, Castor C, Castor D',
+      ]);
+    }
+  });
+
+  it('close-in viewing (nothing suppressed): per-component card unchanged', () => {
+    const ctx = sysCtx({ isCollapsed: () => false });
+    const out = formatStarHover(2, D_CAM, ctx);
+    expect(out.name).toBe('Castor B');
+  });
+
+  it('plain binary never swaps to a system card, suppressed or not', () => {
+    const ctx = buildCtx({
+      binaries: makeBinaries([makeRelation({ primaryIdx: 0, secondaryIdx: 1 })]),
+      isCollapsed: () => true,
+    });
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Vega');
+  });
+
+  it('no isCollapsed hook (formatter reused without live suppress state): no swap', () => {
+    const ctx = sysCtx();
+    expect(formatStarHover(0, D_CAM, ctx).name).toBe('Castor');
+  });
+});

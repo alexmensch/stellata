@@ -23,6 +23,16 @@ star-hover-format.ts             Star — name + constellation · distance
                                  companions:" name list) live in
                                  ../../format/star-companion-format.ts,
                                  shared with the focus card.
+                                 System card: when the hovered star's
+                                 system has 3+ components AND any member
+                                 is composite-suppressed this frame
+                                 (Stellata.isCompositeSuppressed — the
+                                 orbit walk's own sub-pixel verdict, so
+                                 card and rendering can't disagree), the
+                                 card swaps to "<primary> system" + the
+                                 component roster. Plain binaries keep
+                                 the per-component card; close-in
+                                 viewing (nothing suppressed) does too.
 planet-hover-format.ts           Planet — camera distance · apparent
                                  V mag, period (years), radius (R⊕ + km).
 cloud-hover-format.ts            Cloud — camera distance + major × minor

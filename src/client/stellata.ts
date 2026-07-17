@@ -1823,6 +1823,14 @@ export class Stellata implements FrameAnchor {
     return out.set(p[i * 3 + 0], p[i * 3 + 1], p[i * 3 + 2]);
   }
 
+  /** True when BinaryOrbitField's sub-pixel LOD gate collapsed this
+   *  star onto its primary this frame — the renderer's own "these read
+   *  as one point" verdict. The star hover provider keys the
+   *  system-card swap on it so card and rendering can't disagree. */
+  isCompositeSuppressed(idx: number): boolean {
+    return this._compositeSuppress[idx] === 1;
+  }
+
   /** Cached PlanetSystem for an attached host, or null if the host
    *  isn't attached. Used by the planet hover formatter to resolve
    *  `(hostStarIdx, planetIdx)` from a pick back to a Planet record

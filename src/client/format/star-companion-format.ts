@@ -40,6 +40,43 @@ export function resolveStarName(ctx: StarNameContext, idx: number): string {
   return `Unnamed (SID #${ctx.sid[idx]})`;
 }
 
+/** Every star record in `idx`'s multiple-star system — the connected
+ *  component over primary/secondary links — in first-seen order walking
+ *  the (topologically sorted) relation list, so outer primaries lead and
+ *  inner members follow. Returns [] when the star is in no relation. */
+export function systemMemberIndices(binaries: BinariesData, idx: number): number[] {
+  const relIdxs = new Set<number>();
+  const seen = new Set<number>();
+  const stack = [idx];
+  while (stack.length > 0) {
+    const star = stack.pop() as number;
+    if (seen.has(star)) continue;
+    seen.add(star);
+    for (const list of [
+      binaries.primaryIdxToRelations.get(star),
+      binaries.secondaryIdxToRelations.get(star),
+    ]) {
+      if (!list) continue;
+      for (const ri of list) {
+        relIdxs.add(ri);
+        stack.push(binaries.relations[ri].primaryIdx, binaries.relations[ri].secondaryIdx);
+      }
+    }
+  }
+  if (relIdxs.size === 0) return [];
+  const members: number[] = [];
+  const emitted = new Set<number>();
+  for (const ri of [...relIdxs].sort((a, b) => a - b)) {
+    for (const m of [binaries.relations[ri].primaryIdx, binaries.relations[ri].secondaryIdx]) {
+      if (!emitted.has(m)) {
+        emitted.add(m);
+        members.push(m);
+      }
+    }
+  }
+  return members;
+}
+
 // Lines describing the star's binary role: a two-line block per relation
 // where it is a secondary (heading + orbital detail), then a
 // "Known companions:" heading + one name per line when it is itself a
