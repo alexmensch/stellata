@@ -640,6 +640,12 @@ export class FocusController implements FocusOps {
     const fovMinor = starPhysics.fovMinorRad(this.deps.camera);
     const parkDist = starPhysics.parkDistForPlanet(radiusPc, fovMinor);
 
+    // setPlanetFocus's contract matches setFocus's: the caller seeds
+    // controls.target with the planet's local position in the CURRENT
+    // (pre-recentre) frame, so the post-recentre snap is a residual
+    // clean-up, not a camera teleport onto the planet.
+    if (!field.planetLocalPositionInto(instanceIdx, this.tmpLive)) return;
+    this.deps.controls.target.copy(this.tmpLive);
     this.setVectorTo(null);
     this.setPlanetFocus(instanceIdx, radiusPc, fovMinor);
     // From here on: the planet sits under controls.target in a

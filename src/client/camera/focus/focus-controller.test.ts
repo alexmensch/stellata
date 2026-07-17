@@ -920,6 +920,22 @@ describe('FocusController — planet focus (kind "planet")', () => {
     expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
   });
 
+  it('focusPlanet preserves the camera absolute pose at lerp start (no teleport)', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.setFocus(0);
+    h.camera.position.set(0, 0, 30);
+    const absBefore = h.camera.position.clone().add(h.frame.worldOffset);
+    h.focus.flyTo({ kind: 'planet', idx });
+    const absAfter = h.camera.position.clone().add(h.frame.worldOffset);
+    // The camera must not move in absolute space when the focus lerp is
+    // scheduled — an unseeded controls.target here teleports the camera
+    // by the old-target→planet delta, visually swapping the planet into
+    // the former focus's screen position.
+    expect(absAfter.distanceTo(absBefore)).toBeLessThan(1e-12);
+    expect(h.controls.target.length()).toBeLessThan(1e-9);
+  });
+
   it('unfocus from a planet clamps the floor and detaches the planet system', async () => {
     const h = makeHarness();
     const idx = attachTestPlanet(h);
