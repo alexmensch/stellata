@@ -1,6 +1,8 @@
 // Simulation time `t` (Unix-seconds double) + UTC ↔ Julian-day helpers.
 // See src/client/solar-system/README.md § Time.
 
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../util/astronomy-constants';
+
 // Julian Date of the Unix epoch (1970-01-01T00:00:00Z). Subtracting
 // from any JD gives Unix-seconds × 86400.
 const UNIX_EPOCH_JD = 2440587.5;
@@ -20,6 +22,21 @@ export function tToJDE(t: number): number {
 /** Julian Date → Unix-seconds. Inverse of `tToJDE`. */
 export function jdeToT(jde: number): number {
   return (jde - UNIX_EPOCH_JD) * 86400;
+}
+
+/** Julian epoch year (e.g. 2016.0) → Unix-seconds. */
+export function julianEpochYearToT(jyr: number): number {
+  return jdeToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
+}
+
+// Model-clock clamp: the Standish 1992 ephemeris window (3000 BC – 3000 AD;
+// SCIENCE.md § Solar system). Outside it planet positions are garbage and
+// linear star propagation has long since degraded, so `t` never leaves it.
+export const T_CLAMP_MIN_S = julianEpochYearToT(-2999.0);
+export const T_CLAMP_MAX_S = julianEpochYearToT(3001.0);
+
+function clampT(secs: number): number {
+  return Math.min(Math.max(secs, T_CLAMP_MIN_S), T_CLAMP_MAX_S);
 }
 
 /** True when `t` is within `toleranceSec` of the current wall-clock. */
@@ -80,7 +97,17 @@ export class VirtualClock {
   }
 
   getT(): number {
-    return this.simT0 + this.rate * (this.wallNow() - this.wallT0);
+    const now = this.wallNow();
+    const raw = this.simT0 + this.rate * (now - this.wallT0);
+    if (raw < T_CLAMP_MIN_S || raw > T_CLAMP_MAX_S) {
+      // Pin at the bound (re-anchored, so no invisible overshoot accrues —
+      // the first opposite-direction transport step moves off it
+      // immediately). Rate is left alone; the readout freezes at the bound.
+      this.simT0 = clampT(raw);
+      this.wallT0 = now;
+      return this.simT0;
+    }
+    return raw;
   }
 
   getRate(): number {
@@ -89,14 +116,14 @@ export class VirtualClock {
 
   setRate(r: number): void {
     const now = this.wallNow();
-    this.simT0 += this.rate * (now - this.wallT0);
+    this.simT0 = clampT(this.simT0 + this.rate * (now - this.wallT0));
     this.wallT0 = now;
     this.rate = r;
     if (r > 0) this.lastPositiveRate = r;
   }
 
   setTimeAbsolute(secs: number): void {
-    this.simT0 = secs;
+    this.simT0 = clampT(secs);
     this.wallT0 = this.wallNow();
   }
 

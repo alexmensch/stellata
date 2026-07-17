@@ -35,9 +35,15 @@ sub-arcsecond accuracy ±4000 years from J2000. We dropped it during
 implementation: planets render as billboarded discs at a pixel-size
 floor, and sub-arcminute precision is invisible at every zoom the
 user can reach. The Standish approximation is ~50 lines of code over
-an 8-row element table, with no dependency cost. Extending validity
-beyond ±3000 years from J2000 would need a higher-precision ephemeris
-model (VSOP87 or a perturbation-theory series) and is deferred.
+an 8-row element table, with no dependency cost. **Decision (closes
+the deep-time question):** rather than adopting a heavier ephemeris,
+the model clock itself clamps to the Standish validity window
+(3000 BC – 3000 AD; `T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
+`src/client/solar-system/time.ts`) — the same window at which linear
+star propagation and the static background layers stop being honest
+(`docs/science-catalog-ingestion.md` § Current-epoch star positions).
+No scrubbable epoch can leave the window, so no higher-precision
+model is needed.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major

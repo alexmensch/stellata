@@ -1,37 +1,71 @@
-// Load-time space-motion propagation of catalog positions off their fixed
-// J2016.0 baseline to the scene's time base. See
-// docs/science-catalog-ingestion.md § Current-epoch star positions.
+// Space-motion propagation of catalog positions off their fixed J2016.0
+// baseline to the scene's time base. See docs/science-catalog-ingestion.md
+// § Current-epoch star positions.
+
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../util/astronomy-constants';
 
 // catalog.bin positions ship at this fixed scene epoch (Julian year);
 // velocities are pc/yr, so the advance is p(t) = p(J2016) + v·(t − 2016).
 // Mirrors CATALOG_SCENE_EPOCH in scripts/catalog/direction-cascade.ts.
 export const CATALOG_SCENE_EPOCH_JYR = 2016.0;
 
-const J2000_JD = 2451545.0;
-const JULIAN_YEAR_DAYS = 365.25;
-
 /** Julian Date → Julian epoch year (e.g. 2451545.0 → 2000.0). The time
  *  base the linear space-motion propagation runs in. */
 export function jdeToJulianEpochYear(jde: number): number {
-  return 2000.0 + (jde - J2000_JD) / JULIAN_YEAR_DAYS;
+  return 2000.0 + (jde - J2000_JD) / DAYS_PER_JULIAN_YEAR;
 }
 
-/** Advance `positions` in place to `epochJyr`:
- *  `p(t) = p(J2016) + v·(t − 2016)`, computed in float64, written back to
- *  the float32 buffer. `positions` and `velocities` are the flat
- *  `count × 3` equatorial-Cartesian buffers (pc and pc/yr). Idempotent only
- *  in that it must be called ONCE against the J2016.0 baseline — re-running
- *  would double-advance (there is no re-advance machinery in v1; scrubber-
- *  time re-advance is deferred). A zero Δt is a no-op. */
+// Advance-epoch quantum: 1/20 Julian year. The worst catalog proper motion
+// (Barnard's Star, ~10.4″/yr) drifts ~0.5″ per bucket — sub-pixel at the
+// tightest observe-mode FOV — so re-running the advance only on bucket
+// crossings is visually lossless while a scrub is in flight. Integer
+// buckets-per-year keeps the grid float64-exact (n/20 round-trips; n×0.05
+// does not).
+const READVANCE_BUCKETS_PER_JYR = 20;
+export const READVANCE_BUCKET_JYR = 1 / READVANCE_BUCKETS_PER_JYR;
+
+/** Quantise an epoch onto the re-advance bucket grid. Same `t` always
+ *  lands on the same bucket, so advanced positions are reproducible
+ *  across sessions and URL restores. */
+export function bucketEpochJyr(epochJyr: number): number {
+  return Math.round(epochJyr * READVANCE_BUCKETS_PER_JYR) / READVANCE_BUCKETS_PER_JYR;
+}
+
+/** Advance star positions to `epochJyr`:
+ *  `out = base + v·(t − 2016)`, computed in float64, written back to the
+ *  float32 buffer. `basePositions` must hold the pristine J2016.0 catalog
+ *  baseline and is never written when a distinct `outPositions` is given —
+ *  keeping it immutable is what makes every re-advance an idempotent
+ *  function of `epochJyr` alone. The single-buffer form (out defaulted to
+ *  base) is only valid ONCE against the J2016.0 baseline. */
 export function advancePositionsToEpoch(
-  positions: Float32Array,
+  basePositions: Float32Array,
   velocities: Float32Array,
   epochJyr: number,
+  outPositions: Float32Array = basePositions,
 ): void {
   const dt = epochJyr - CATALOG_SCENE_EPOCH_JYR;
-  if (dt === 0) return;
-  const n = positions.length;
-  for (let i = 0; i < n; i++) {
-    positions[i] = positions[i] + velocities[i] * dt;
+  const n = basePositions.length;
+  if (dt === 0) {
+    if (outPositions !== basePositions) outPositions.set(basePositions);
+    return;
   }
+  for (let i = 0; i < n; i++) {
+    outPositions[i] = basePositions[i] + velocities[i] * dt;
+  }
+}
+
+/** Largest space-motion speed (pc/yr) in a flat `count × 3` velocity
+ *  buffer. Bounds how far any star can drift from its load-epoch
+ *  position over the scrubbable range. */
+export function maxSpeedPcPerYr(velocities: Float32Array): number {
+  let maxSq = 0;
+  for (let i = 0; i < velocities.length; i += 3) {
+    const vx = velocities[i];
+    const vy = velocities[i + 1];
+    const vz = velocities[i + 2];
+    const sq = vx * vx + vy * vy + vz * vz;
+    if (sq > maxSq) maxSq = sq;
+  }
+  return Math.sqrt(maxSq);
 }

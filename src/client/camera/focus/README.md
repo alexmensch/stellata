@@ -264,6 +264,13 @@ silently disengages the pin. Residual sources that have bitten this:
    orbit each frame; a static target would fall off it. The focal-frame
    ride (§ binaries/README) translates `controls.target` by the star's
    per-frame perturbation so target stays on the star.
+5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
+   re-runs the epoch-advance pass, moving the focal star's baseline
+   mid-focus. `maybeReAdvanceEpoch` (`stellata.ts`) translates camera,
+   target, and the in-flight transition pose caches by the focal's
+   exact space-motion delta in the same step — the ride's follow
+   contract applied to proper motion (skipped during warp, like the
+   ride).
 
 **Fix for #1, #2, #4** lives at the choke point in
 `FocusController.setFocus`'s `idx !== null` branch: after

@@ -8,13 +8,18 @@ import type { CameraMode } from '../../stellata';
 import type { ObserveControls } from '../observe/observe-controls';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS, WARP_BASE_DIR } from '../timing';
 
+// The orbit pivot is deliberately NOT snapshotted here: the tick reads the
+// live controls.target, so focal-frame translations mid-aim (orbital ride,
+// epoch re-advance camera-follow) carry the whole orbit rigidly instead of
+// fighting a stale pivot every frame. q0/q1 stay click-time by design — under
+// fast time-scrubbing the aim lands where the object was at click, and the
+// per-frame HUD chrome takes over from there.
 interface NavigateAimState {
   startTimeMs: number;
   durationMs: number;
   q0: THREE.Quaternion;       // rotates WARP_BASE_DIR to the start radial dir
   q1: THREE.Quaternion;       // rotates WARP_BASE_DIR to the end radial dir
   radius: number;             // |camera - pivot| at start; held constant
-  pivot: THREE.Vector3;       // controls.target snapshot, in local frame
 }
 
 interface ObserveAimState {
@@ -80,12 +85,13 @@ export class AimController {
     if (!state) return;
     const u = Math.min(1, (nowMs - state.startTimeMs) / state.durationMs);
     const f = u * u * (3 - 2 * u);
+    const pivot = this.deps.controls.target;
     this.tickQ.copy(state.q0).slerp(state.q1, f);
     this.tickDir.copy(WARP_BASE_DIR).applyQuaternion(this.tickQ);
     this.deps.camera.position
-      .copy(state.pivot)
+      .copy(pivot)
       .addScaledVector(this.tickDir, state.radius);
-    this.deps.camera.lookAt(state.pivot);
+    this.deps.camera.lookAt(pivot);
     if (u >= 1) {
       this.navigate = null;
       this.deps.controls.enabled = true;
@@ -147,7 +153,6 @@ export class AimController {
       q0,
       q1,
       radius: r,
-      pivot: pivot.clone(),
     };
   }
 

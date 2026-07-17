@@ -228,7 +228,10 @@ export class HudOverlay {
     // arrows project from and what distance labels measure to.
     const origin = this.tmpOrigin.copy(focusedLocal ?? target);
 
-    hudAnchorInto(origin, camera, w, h, this.tmpOriginScreen);
+    hudAnchorInto(
+      origin, camera, w, h, this.tmpOriginScreen,
+      cameraMode === 'observe' && transition === null,
+    );
     const cx = this.tmpOriginScreen[0];
     const cy = this.tmpOriginScreen[1];
 
@@ -553,10 +556,13 @@ export function computeShaftStartRadius(
 /**
  * 2D anchor for HUD-attached chrome (ring centre, arrow shaft starts).
  * Projects `origin`; falls back to screen-centre when the projection is
- * degenerate (camera at/behind origin — the OBSERVE steady state, where
- * the camera is parked at the focal star). The fallback is also what the
- * focal-star projection naturally tends toward as the enter-transition
- * completes, so the post-transition switch is invisible.
+ * degenerate (camera at/behind origin). Pass `forceCentre` in the OBSERVE
+ * steady state: the camera is parked at the focal star there, but only
+ * within the float32 position quantum — the residual offset (which grows
+ * as the focal-frame ride / epoch re-advance translate the camera in
+ * float64 against a float32-written slot) projects from ~zero distance to
+ * an arbitrary on-screen point, so the "camera at origin is degenerate"
+ * assumption must be asserted by mode, not detected from the projection.
  */
 export function hudAnchorInto(
   origin: THREE.Vector3,
@@ -564,8 +570,9 @@ export function hudAnchorInto(
   w: number,
   h: number,
   out: [number, number],
+  forceCentre = false,
 ): void {
-  if (!projectToScreenInto(origin, camera, w, h, out)) {
+  if (forceCentre || !projectToScreenInto(origin, camera, w, h, out)) {
     out[0] = w * 0.5;
     out[1] = h * 0.5;
   }

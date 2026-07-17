@@ -175,20 +175,23 @@ stationary camera once the centroid cache is in.
 
 ### Chart-labels: full-tick skip when nothing changed
 
-`chart-labels.ts:251`. The chart label engine's output is purely a
-function of camera pose, filter state, and viewport size — variable
-pulsation animates on the GPU via `uTime`, the CPU labels don't
-move. Hash that tuple at the top of `tick()`:
+`chart-labels.ts`. The chart label engine's output is purely a
+function of camera pose, filter state, viewport size, and the
+advanced catalog epoch (`stellata.advancedEpochJyr` — time scrubbing
+re-advances star positions with the camera still, and the glyphs
+must follow) — variable pulsation animates on the GPU, the CPU
+labels don't otherwise move. Hash that tuple at the top of `tick()`:
 
 ```ts
 camera.position.equals(lastTickCamPos) &&
 camera.quaternion.equals(lastTickCamQuat) &&
 centroidsVersion === lastTickFilterVersion &&
 w === lastTickViewportW &&
-h === lastTickViewportH
+h === lastTickViewportH &&
+epochJyr === lastTickEpochJyr
 ```
 
-When all five match, the entire body returns early before any
+When all six match, the entire body returns early before any
 projection. NaN sentinels on `startChartLabels()` entry guarantee
 the first frame after engaging chart mode always runs.
 

@@ -264,11 +264,14 @@ let lastCentroidsVersion = -1;
 const CENTROID_RECOMPUTE_DIST_SQ = 0.25; // 0.5 pc squared
 
 // Full-tick skip state. The chart-mode visual is purely a function of
-// camera transform + filter version + viewport size — variable-star
-// pulsation animates on the GPU side via uTime, the CPU labels and ring
-// glyphs don't move when those inputs are stable. Identity-comparing the
-// state at the top of tick() lets us drop ~1.6ms / frame of iteration
-// work when the user is sitting idle in chart mode.
+// camera transform + filter version + viewport size + the advanced
+// catalog epoch — variable-star pulsation animates on the GPU side, the
+// CPU labels and ring glyphs don't move when those inputs are stable.
+// The epoch key matters under time scrubbing: a re-advance moves every
+// star with the camera still, and without it the glyphs freeze while
+// the WebGL discs walk away. Identity-comparing the state at the top of
+// tick() lets us drop ~1.6ms / frame of iteration work when the user is
+// sitting idle in chart mode.
 const lastTickCamPos = new THREE.Vector3(NaN, NaN, NaN);
 // Quaternion sentinel: x=NaN forces a mismatch on the first equals() call
 // after entering chart mode, since NaN === anything is always false.
@@ -276,6 +279,7 @@ const lastTickCamQuat = new THREE.Quaternion(NaN, 0, 0, 0);
 let lastTickFilterVersion = -1;
 let lastTickViewportW = 0;
 let lastTickViewportH = 0;
+let lastTickEpochJyr = NaN;
 
 function rebuildEligible(stellata: Stellata): void {
   if (!variableIdxs || !binaryIdxs || !distSolCache) return;
@@ -345,17 +349,19 @@ function tick(
   const cat = stellata.catalog;
 
   // Full-tick skip. Chart-mode SVG output is fully determined by camera
-  // transform + filter version + viewport — none of which are changing
-  // when the user is sitting still. Iterating ~1500 binaries / ~1000
-  // variables and ~hundreds of named stars to discover that nothing
-  // moved is the dominant idle cost; skipping the entire body collapses
-  // chart.* sections to zero on stationary frames.
+  // transform + filter version + viewport + advanced catalog epoch —
+  // none of which are changing when the user is sitting still. Iterating
+  // ~1500 binaries / ~1000 variables and ~hundreds of named stars to
+  // discover that nothing moved is the dominant idle cost; skipping the
+  // entire body collapses chart.* sections to zero on stationary frames.
+  const epochJyr = stellata.advancedEpochJyr;
   if (
     camera.position.equals(lastTickCamPos) &&
     camera.quaternion.equals(lastTickCamQuat) &&
     centroidsVersion === lastTickFilterVersion &&
     w === lastTickViewportW &&
-    h === lastTickViewportH
+    h === lastTickViewportH &&
+    epochJyr === lastTickEpochJyr
   ) {
     return;
   }
@@ -364,6 +370,7 @@ function tick(
   lastTickFilterVersion = centroidsVersion;
   lastTickViewportW = w;
   lastTickViewportH = h;
+  lastTickEpochJyr = epochJyr;
 
   // Disc-tuning bag drives both the per-label offset (label clears the
   // rendered disc edge regardless of magnitude) and the glyph loops

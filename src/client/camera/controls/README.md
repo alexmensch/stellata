@@ -265,7 +265,12 @@ world content appear CW in the camera's view.
 - **navigate slot** — orbits the camera around `controls.target` at
   constant radius, slerping two quaternions that rotate `WARP_BASE_DIR`
   to the start / end radial directions. Disables TrackballControls for
-  the duration so its damping doesn't fight the slerp.
+  the duration so its damping doesn't fight the slerp. The pivot is the
+  **live** `controls.target`, never a snapshot: focal-frame translations
+  mid-aim (orbital ride, epoch re-advance follow) carry the whole orbit
+  rigidly instead of the tick snapping the camera back to a stale pivot
+  every frame. The end direction stays click-time by design — under fast
+  time-scrubbing the aim lands where the object was at click.
 - **observe slot** — camera position is fixed at the focal star's local
   origin; only the camera quaternion changes, slerping the live pose
   toward a `lookAt(point)` target. Disables `ObserveControls` so a stray
