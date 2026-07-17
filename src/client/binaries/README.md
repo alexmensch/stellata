@@ -30,6 +30,19 @@ star catalog records.
   applies the LOD cascade described below, and rewrites the active
   slots of `localPositions` plus `compositeSuppress`.
   `recenter(newOrigin)` updates the cached world offset.
+  **Static-frame skip:** when the previous `update()` evaluated zero
+  Kepler relations (everything gated out or sub-pixel-suppressed —
+  the shipping idle state at any wide view), every buffer write is a
+  pure function of (camera, slider, viewport, fov, focal), so an
+  `update()` with identical inputs skips the walk AND both
+  `needsUpdate` flags — without it three.js re-uploads the full
+  ~5 MB backing arrays every idle frame. Focal-chain relations are
+  always Kepler-active (they bypass the gates), so a focused orbit
+  never skips. `recenter()` and `markBaselinesDirty()` (called by the
+  shell whenever it rewrites `localPositions` wholesale — epoch
+  re-advance, origin recentre) force the next walk so suppressed
+  secondaries get their `baseDiffPc` placement re-applied on top of
+  the fresh baselines.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
   `ECLIPSE_DIM_TAU_S`, `DISC_DEPTH_BIAS` named constants the fields read
   and tests pin.

@@ -63,6 +63,22 @@ export class BinaryOrbitField {
   // focalPerturbationInto across frames (cleared per call).
   private slotPert = new Map<number, SlotPert>();
 
+  // Static-frame skip state. When the previous update() evaluated zero
+  // Kepler relations (everything gated out or sub-pixel-suppressed),
+  // every buffer write is a pure function of the inputs below — an
+  // update() with identical inputs would rewrite identical values, so
+  // both the walk and the attribute re-uploads are skipped. Poisoned so
+  // the first update() always runs; recenter()/markBaselinesDirty()
+  // re-poison when the baselines the writes derive from move.
+  private baselinesDirty = true;
+  private lastKeplerCount = -1;
+  private lastActiveCount = 0;
+  private lastCamPos = new THREE.Vector3(NaN, NaN, NaN);
+  private lastMaxAppMag = NaN;
+  private lastViewportPx = NaN;
+  private lastFovYRad = NaN;
+  private lastFocalIdx: number | null = null;
+
   constructor(opts: BinaryOrbitFieldOptions) {
     this.opts = opts;
     this.relations = buildOrbitRelationCaches(
@@ -85,6 +101,17 @@ export class BinaryOrbitField {
    *  offset for every active relation. */
   recenter(newOrigin: Readonly<THREE.Vector3>): void {
     this.worldOffset.copy(newOrigin);
+    this.baselinesDirty = true;
+  }
+
+  /** Force the next update() to walk + re-upload even when the static-
+   *  frame skip would otherwise fire. The integration shell calls this
+   *  whenever it rewrites `localPositions` wholesale (epoch re-advance,
+   *  origin recentre) — those writes park every slot at its bare
+   *  baseline, and the walk must re-apply the suppressed secondaries'
+   *  `baseDiffPc` placements on top. */
+  markBaselinesDirty(): void {
+    this.baselinesDirty = true;
   }
 
   /** Per-frame walk + perturbation pass.
@@ -108,8 +135,26 @@ export class BinaryOrbitField {
     fovYRad: number,
     focalIdx: number | null = null,
   ): number {
+    // Static-frame skip: zero Kepler evals last frame means nothing
+    // written depends on `t`, so identical inputs reproduce the buffers
+    // bit-for-bit — skip the walk and the ~5 MB attribute re-uploads.
+    // Any focal on a slot-chain keeps its relations Kepler-active (they
+    // bypass the LOD gates), so a focused orbit never skips.
+    if (
+      !this.baselinesDirty
+      && this.lastKeplerCount === 0
+      && focalIdx === this.lastFocalIdx
+      && maxAppMag === this.lastMaxAppMag
+      && viewportPx === this.lastViewportPx
+      && fovYRad === this.lastFovYRad
+      && cameraPos.equals(this.lastCamPos)
+    ) {
+      return this.lastActiveCount;
+    }
+
     const tJd = tToJDE(t);
     this.ensureFocalChain(focalIdx);
+    let keplerCount = 0;
     const pxPerRad = viewportPx / Math.max(fovYRad, 1e-9);
     const wox = this.worldOffset.x;
     const woy = this.worldOffset.y;
@@ -203,6 +248,7 @@ export class BinaryOrbitField {
       // members while its relative offset stays clean. See README § Tier
       // mapping + § Hierarchical walk.
       this.evaluateDelta(rc, r, tJd);
+      keplerCount++;
       const dxDelta = DELTA_OUT.x;
       const dyDelta = DELTA_OUT.y;
       const dzDelta = DELTA_OUT.z;
@@ -217,6 +263,14 @@ export class BinaryOrbitField {
 
     this.opts.iPositionAttr.needsUpdate = true;
     this.opts.iCompositeSuppressAttr.needsUpdate = true;
+    this.baselinesDirty = false;
+    this.lastKeplerCount = keplerCount;
+    this.lastActiveCount = activeCount;
+    this.lastCamPos.copy(cameraPos);
+    this.lastMaxAppMag = maxAppMag;
+    this.lastViewportPx = viewportPx;
+    this.lastFovYRad = fovYRad;
+    this.lastFocalIdx = focalIdx;
     return activeCount;
   }
 
@@ -282,6 +336,9 @@ export class BinaryOrbitField {
     this.focalChainRelIdx.clear();
     this.focalChainIdx = null;
     this.slotPert.clear();
+    this.baselinesDirty = true;
+    this.lastKeplerCount = -1;
+    this.lastCamPos.set(NaN, NaN, NaN);
   }
 
   // ── private ─────────────────────────────────────────────────────────

@@ -1194,6 +1194,7 @@ export class Stellata implements FrameAnchor {
       loc[j + 2] = abs[j + 2] - oz;
     }
     this.starPipeline.iPositionAttr.needsUpdate = true;
+    this.binaryOrbitField?.markBaselinesDirty();
   }
 
   // Scrubber-time star motion: when the model clock crosses a re-advance
