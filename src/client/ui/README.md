@@ -37,7 +37,7 @@ registry only describes what to display.
 | `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
 | `=` | `applyMagnitudePreset('naked-eye')` |
 | `?` | Open the keyboard-shortcuts help modal (the full shortcut list) |
-| `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → planet steps back to its host star → clear focus) |
+| `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus, uniform across focusable kinds) |
 
 The Find picker reuses the shared search corpus via `createSearchRunner`
 (`../typeahead/search.ts`) and is relocated into the `#kb-modal` card

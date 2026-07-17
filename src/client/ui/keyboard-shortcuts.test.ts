@@ -7,7 +7,6 @@ function makeStub(opts: {
   mode?: 'navigate' | 'observe';
   vector?: Target | null;
   focused?: Target | null;
-  hostOf?: (idx: number) => { hostStarIdx: number; planetIdx: number } | null;
 } = {}) {
   const calls: string[] = [];
   const stub = {
@@ -16,11 +15,7 @@ function makeStub(opts: {
     getVectorTarget: () => opts.vector ?? null,
     setVector: vi.fn(() => calls.push('setVector')),
     getFocusedTarget: () => opts.focused ?? null,
-    focusStar: vi.fn(() => calls.push('focusStar')),
     unfocus: vi.fn(() => calls.push('unfocus')),
-    planetField: {
-      hostPlanetOf: opts.hostOf ?? (() => null),
-    },
   } as unknown as Stellata;
   return { stub, calls };
 }
@@ -43,28 +38,19 @@ describe('escCascade', () => {
     expect(stub.unfocus).not.toHaveBeenCalled();
   });
 
-  it('steps a focused planet back to its host star, not to unfocused', () => {
-    const { stub } = makeStub({
-      focused: { kind: 'planet', idx: 3 },
-      hostOf: () => ({ hostStarIdx: 42, planetIdx: 3 }),
-    });
-    escCascade(stub);
-    expect(stub.focusStar).toHaveBeenCalledWith(42);
-    expect(stub.unfocus).not.toHaveBeenCalled();
+  it('unfocuses whichever kind is focused — planets are not special-cased', () => {
+    for (const focused of [
+      { kind: 'star', idx: 1 },
+      { kind: 'planet', idx: 3 },
+      { kind: 'lg', idx: 0 },
+    ] as const) {
+      const { stub } = makeStub({ focused });
+      escCascade(stub);
+      expect(stub.unfocus).toHaveBeenCalled();
+    }
   });
 
-  it('a focused planet with no attach-table entry falls back to unfocus', () => {
-    const { stub } = makeStub({ focused: { kind: 'planet', idx: 3 } });
-    escCascade(stub);
-    expect(stub.unfocus).toHaveBeenCalled();
-    expect(stub.focusStar).not.toHaveBeenCalled();
-  });
-
-  it('a focused star unfocuses; nothing set is a no-op', () => {
-    const focused = makeStub({ focused: { kind: 'star', idx: 1 } });
-    escCascade(focused.stub);
-    expect(focused.stub.unfocus).toHaveBeenCalled();
-
+  it('nothing set is a no-op', () => {
     const empty = makeStub();
     escCascade(empty.stub);
     expect(empty.calls).toEqual([]);
