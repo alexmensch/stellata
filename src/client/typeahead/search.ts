@@ -5,13 +5,14 @@ import type { Target } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import type { LgCatalog } from '../local-group/local-group-loader';
+import { SOL_PLANETS } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
 
 export type { SearchEntry };
 
-type EntryKind = 'star' | 'cloud' | 'lg';
+type EntryKind = 'star' | 'cloud' | 'lg' | 'planet';
 
 /** Static dropdown-row distance for a Local Group entry. Fixed units by
  *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
@@ -451,6 +452,25 @@ export function createSearchRunner(
     }
   }
 
+  // Sol's planets — search-by-planet-name is deliberately Sol-only
+  // (bk5 exoplanets are visit-to-discover). Entry index is the
+  // SOL_PLANETS index; select handlers resolve it to the body field's
+  // flat Target index at pick time via `resolveEntryTarget` (the field
+  // attaches on a microtask after boot, so the corpus can't bake flat
+  // indices).
+  if (catalog.solIndex >= 0) {
+    for (let i = 0; i < SOL_PLANETS.length; i++) {
+      const p = SOL_PLANETS[i];
+      fuzzyEntries.push({
+        kind: 'planet',
+        index: i,
+        label: p.name,
+        primary: p.name,
+        displayCon: 'Planet · Sol system',
+      });
+    }
+  }
+
   // Threshold 0.25 trims the long tail of loose matches (e.g. "alpha cen"
   // used to dredge up "Aldebaran" via shared letters). 0.35 was too lenient
   // for short queries against a few-thousand-entry corpus.
@@ -573,6 +593,20 @@ export function createSearchRunner(
   };
 }
 
+/** FuzzyEntry → kind-tagged Target. Planet entries carry the
+ *  SOL_PLANETS index and resolve to the body field's flat instance
+ *  index at pick time (null when Sol's system hasn't attached); every
+ *  other kind's index IS its Target idx. */
+export function resolveEntryTarget(
+  stellata: Stellata,
+  catalog: Catalog,
+  entry: FuzzyEntry,
+): Target | null {
+  if (entry.kind !== 'planet') return { kind: entry.kind, idx: entry.index };
+  const flat = stellata.planetField.instanceIndexOf(catalog.solIndex, entry.index);
+  return flat === null ? null : { kind: 'planet', idx: flat };
+}
+
 // A dropdown row's primary/sub display. Empty constellation falls back to an
 // em-dash so the secondary column never collapses.
 const rowFor = (e: FuzzyEntry) => ({ primary: e.primary, sub: e.displayCon || '—' });
@@ -633,16 +667,19 @@ export function bindSearch(
     runQuery: focusRunQuery,
     rowFor,
     onSelect: (entry) => {
-      if (entry.kind === 'cloud' || entry.kind === 'lg') {
-        stellata.flyTo({ kind: entry.kind, idx: entry.index });
-      } else if (stellata.getCameraMode() === 'observe') {
-        // Re-route through warp so the camera flies from the current
-        // observation anchor to the new one and re-enters observe on
-        // arrival, instead of teleporting via focusStar.
-        stellata.warpTo({ kind: 'star', idx: entry.index });
-      } else {
-        stellata.focusStar(entry.index);
+      if (entry.kind === 'star') {
+        if (stellata.getCameraMode() === 'observe') {
+          // Re-route through warp so the camera flies from the current
+          // observation anchor to the new one and re-enters observe on
+          // arrival, instead of teleporting via focusStar.
+          stellata.warpTo({ kind: 'star', idx: entry.index });
+        } else {
+          stellata.focusStar(entry.index);
+        }
+        return;
       }
+      const target = resolveEntryTarget(stellata, catalog, entry);
+      if (target) stellata.flyTo(target);
     },
     onClear: () => stellata.unfocus(),
     positionResults: positionUnder(focusInput),
@@ -661,7 +698,8 @@ export function bindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      stellata.setVector({ kind: entry.kind, idx: entry.index });
+      const target = resolveEntryTarget(stellata, catalog, entry);
+      if (target) stellata.setVector(target);
     },
     onClear: () => stellata.setVector(null),
     positionResults: positionUnder(toInput),
@@ -738,8 +776,10 @@ export function bindFindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
+      const target = resolveEntryTarget(stellata, catalog, entry);
+      if (!target) return;
       const pos = new THREE.Vector3();
-      if (stellata.focusables[entry.kind].localPositionInto(entry.index, pos)) {
+      if (stellata.focusables[target.kind].localPositionInto(target.idx, pos)) {
         stellata.aimAt(pos);
       }
     },

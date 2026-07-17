@@ -256,9 +256,11 @@ function resetCameraSection(stellata: Stellata) {
 }
 
 // ESC progression: observe→navigate (keep focus, animated exit), then
-// in navigate clear destination if any, else clear focus. A no-op if
-// neither is set.
-function escCascade(stellata: Stellata) {
+// in navigate clear destination if any, then step back up the focus:
+// a focused planet steps to its host star before a further Esc clears
+// focus entirely (UI policy over the planet target — not a focus-state
+// shape). A no-op if nothing is set. Exported for its unit test.
+export function escCascade(stellata: Stellata) {
   if (stellata.getCameraMode() === 'observe') {
     stellata.setCameraMode('navigate');
     return;
@@ -267,9 +269,16 @@ function escCascade(stellata: Stellata) {
     stellata.setVector(null);
     return;
   }
-  if (stellata.getFocusedTarget() !== null) {
-    stellata.unfocus();
+  const focused = stellata.getFocusedTarget();
+  if (focused === null) return;
+  if (focused.kind === 'planet') {
+    const host = stellata.planetField.hostPlanetOf(focused.idx);
+    if (host !== null) {
+      stellata.focusStar(host.hostStarIdx);
+      return;
+    }
   }
+  stellata.unfocus();
 }
 
 interface RelocateModalOptions {
