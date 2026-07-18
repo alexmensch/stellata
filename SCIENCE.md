@@ -205,14 +205,18 @@ enough to see it.
   Marble NG + Black Marble 2016 for Earth day/night — public domain;
   Björn Jónsson's Galileo Venus cloud map, Cassini Saturn map, Voyager
   Neptune map, and Saturn-ring radial profiles
-  (https://bjj.mmedia.is/) — free use with attribution; Solar System
-  Scope's Viking-derived Mars map — CC BY 4.0. Frozen in
+  (https://bjj.mmedia.is/) — free use with attribution; USGS Viking
+  MDIM 2.1 colorized mosaic for Mars — public domain. Frozen in
   `data/textures/src/` (per-file table in its README), downsampled to
   ≤2048-wide lazy-load JPEGs by `scripts/textures/build-textures.py`.
   Venus deliberately shows the cloud deck, not the Magellan radar
   surface; Uranus ships texture-less (featureless cyan + limb
   darkening is the accurate rendering); Neptune's map depicts its
-  1989 Voyager appearance with a reconstructed north polar region.
+  1989 Voyager appearance with a reconstructed north polar region;
+  Mercury's monochrome mosaic is tinted to its near-neutral
+  gray-brown visible appearance and Pluto's un-imaged southern band
+  is filled with its representative disc colour (per-body colour
+  rationale in data/textures/README.md § Colour fidelity).
 
 > **Molecular cloud sources currently shelved.** Zucker et al. 2020 +
 > 2021 cloud distances and 3D bounding boxes drive the molecular-cloud

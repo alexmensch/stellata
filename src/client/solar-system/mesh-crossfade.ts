@@ -3,11 +3,11 @@
 // size, which floors). Contract in README.md § Planet mesh LOD.
 
 /** Below this projected diameter the perceptual disc renders alone. */
-export const MESH_FADE_START_PX = 20;
+export const MESH_FADE_START_PX = 2;
 /** Above this the mesh renders alone (disc fully faded). */
-export const MESH_FADE_END_PX = 40;
+export const MESH_FADE_END_PX = 4;
 /** Kick off the lazy texture fetch on approach, before the band. */
-export const TEXTURE_PREFETCH_PX = 8;
+export const TEXTURE_PREFETCH_PX = 0.8;
 
 /** True projected angular diameter in CSS px: θ = 2·atan(R/d) mapped
  *  through the vertical FOV. Matches the shader's `physSize`. */

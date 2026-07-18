@@ -11,7 +11,7 @@ ring-profile text tables are small and stay on regular git.
 | `venus-bjj.jpg` | Venus (cloud deck) | Galileo 1990 flyby UV cloud mosaic (1800×900), map by Björn Jónsson | Free use with attribution (https://bjj.mmedia.is/acknow.html) | https://bjj.mmedia.is/data/venus/venus.html |
 | `earth-bmng.jpg` | Earth (day) | Blue Marble Next Generation, Dec 2004 (5400×2700), NASA Earth Observatory | Public domain | https://visibleearth.nasa.gov/images/73909 |
 | `earth-night.jpg` | Earth (night) | Black Marble 2016 (3600×1800), NASA Earth Observatory / Suomi NPP VIIRS | Public domain | https://earthobservatory.nasa.gov/features/NightLights |
-| `mars-sss.jpg` | Mars | Solar System Scope 8k map (8192×4096), Viking-orbiter-derived, by INOVE | CC BY 4.0 | https://www.solarsystemscope.com/textures/ |
+| `mars-viking-mdim21.jpg` | Mars | USGS Viking MDIM 2.1 colorized global mosaic, 1 km/px browse (21339×10670), NASA/USGS/AMES | Public domain | https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m |
 | `jupiter-pia07782.jpg` | Jupiter | Cassini Dec 2000 flyby cylindrical map (PIA07782, 3601×1801), NASA/JPL/Space Science Institute | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA07782 |
 | `saturn-bjj.jpg` | Saturn | Cassini Sep 2004 southern-hemisphere mosaic, mirrored north (2880×1440), map by Björn Jónsson | Free use with attribution | https://bjj.mmedia.is/data/saturn/index.html |
 | `neptune-bjj.jpg` | Neptune | Voyager 2 Aug 1989 mosaic (1800×900), map by Björn Jónsson. North of ~50°N is reconstructed (no Voyager coverage); depicts 1989 appearance — the Great Dark Spot has since dissipated | Free use with attribution | https://bjj.mmedia.is/data/neptune/index.html |

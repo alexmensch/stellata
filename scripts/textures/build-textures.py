@@ -6,6 +6,9 @@ from pathlib import Path
 
 from PIL import Image
 
+# Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
+Image.MAX_IMAGE_PIXELS = None
+
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "data" / "textures" / "src"
 OUT = ROOT / "data" / "textures"
@@ -22,12 +25,32 @@ BODIES = {
     "venus": "venus-bjj.jpg",
     "earth": "earth-bmng.jpg",
     "earth-night": "earth-night.jpg",
-    "mars": "mars-sss.jpg",
+    "mars": "mars-viking-mdim21.jpg",
     "jupiter": "jupiter-pia07782.jpg",
     "saturn": "saturn-bjj.jpg",
     "neptune": "neptune-bjj.jpg",
     "pluto": "pluto-pia11707.jpg",
 }
+
+# Representative body colours, [0,1] RGB — MUST match SOL_PLANETS in
+# src/client/solar-system/planet-system.ts (texture-colours.test.ts
+# pins the parity). Used for the Mercury tint and the Pluto gap fill
+# so the treated regions match the disc the body renders as at
+# distance.
+REPRESENTATIVE_COLOURS = {
+    "mercury": (0.55, 0.47, 0.32),
+    "pluto": (0.78, 0.62, 0.49),
+}
+
+# Mercury's true appearance is near-neutral gray-brown (Moon-like);
+# the full representative-colour tint reads sepia, so apply half the
+# chroma.
+MERCURY_TINT_STRENGTH = 0.5
+
+# Luminance floor below which a pixel counts as an un-imaged gap
+# (both mosaics carry true black there: Pluto's southern band, a
+# north-polar wedge on Mercury).
+GAP_LUMINANCE = {"pluto": 12, "mercury": 8}
 
 RINGS_COLOR = "rings-color-bjj.txt"
 RINGS_TRANSPARENCY = "rings-transparency-bjj.txt"
@@ -42,6 +65,30 @@ def up_to_date(out_path: Path, *inputs: Path) -> bool:
     return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
 
 
+def tint_grayscale(
+    im: Image.Image,
+    colour: tuple[float, float, float],
+    strength: float,
+) -> Image.Image:
+    """Luminance-preserving tint: hue from `colour` at `strength`
+    (0 = stay gray, 1 = full chroma), detail from `im`."""
+    lum = 0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2]
+    gains = [1 + (c / lum - 1) * strength for c in colour]
+    l = im.convert("L")
+    return Image.merge("RGB", [
+        l.point(lambda v, g=g: min(255, round(v * g))) for g in gains
+    ])
+
+
+def fill_gap(im: Image.Image, colour: tuple[float, float, float], threshold: int) -> Image.Image:
+    """Replace no-data (near-black) pixels with the solid body colour."""
+    rgb = im.convert("RGB")
+    mask = rgb.convert("L").point(lambda v: 255 if v < threshold else 0)
+    solid = Image.new("RGB", rgb.size, tuple(round(c * 255) for c in colour))
+    rgb.paste(solid, mask=mask)
+    return rgb
+
+
 def build_body(name: str, src_name: str) -> None:
     src_path = SRC / src_name
     out_path = OUT / f"{name}.jpg"
@@ -54,6 +101,12 @@ def build_body(name: str, src_name: str) -> None:
         im = im.resize((TARGET_W, h), Image.LANCZOS)
     if im.mode not in ("RGB", "L"):
         im = im.convert("RGB")
+    # Per-body colour treatments — rationale in data/textures/README.md
+    # § Colour fidelity.
+    if name == "mercury":
+        im = tint_grayscale(im, REPRESENTATIVE_COLOURS["mercury"], MERCURY_TINT_STRENGTH)
+    if name in GAP_LUMINANCE:
+        im = fill_gap(im, REPRESENTATIVE_COLOURS[name], GAP_LUMINANCE[name])
     im.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
     kb = out_path.stat().st_size // 1024
     print(f"  {name}: {im.width}x{im.height} {im.mode} -> {kb} KB")

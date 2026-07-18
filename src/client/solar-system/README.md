@@ -358,7 +358,7 @@ every slider move.
 On close approach the billboarded disc hands off to a real oblate
 spheroid mesh (`planet-mesh-layer.ts`), crossfaded on the body's TRUE
 projected angular diameter — `mesh-crossfade.ts` owns the band
-(20 → 40 px) and both sides evaluate the same smoothstep: the disc
+(2 → 4 px) and both sides evaluate the same smoothstep: the disc
 passes multiply by `1 − vMeshFade` (vertex shader computes it from
 `physSize` against the shared `uMeshFadePx` uniform) while the mesh's
 `uFade` rises, so there is no double-brightness at the seam. The
