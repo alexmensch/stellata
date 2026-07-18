@@ -1905,7 +1905,10 @@ export class Stellata implements FrameAnchor {
       stars: set('stars'),
       planetBodies: set('planetBodies'),
       milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
-      milkyWayIsobar: set('milkyWayIsobar'),
+      milkyWayIsobar: set('milkyWayIsobar', (on) => {
+        this.setMilkywayIsobar(on);
+        this.applyMilkywayEnabled();
+      }),
       lgEmissionGlow: set('lgEmissionGlow', () => this.applyLgEmissionEnabled()),
       galacticDiscWireframe: set('galacticDiscWireframe'),
       lgWireframes: set('lgWireframes'),
@@ -1927,7 +1930,11 @@ export class Stellata implements FrameAnchor {
   }
 
   private applyMilkywayEnabled(): void {
-    this.milkyway.setEnabled(this.detailPermitted.milkyWayBand && this.filter.showMilkyway);
+    // The layer group carries both realistic treatments: the volumetric
+    // band (realistic floor) and the chart isobar (chart floor). Exactly
+    // one is permitted per render style; the user's mw toggle gates both.
+    const permitted = this.detailPermitted.milkyWayBand || this.detailPermitted.milkyWayIsobar;
+    this.milkyway.setEnabled(permitted && this.filter.showMilkyway);
   }
   private applyLgEmissionEnabled(): void {
     this.lgEmission?.setEnabled(this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
@@ -1939,11 +1946,10 @@ export class Stellata implements FrameAnchor {
     this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
-    // Per-layer palette swaps fan out through the registry. The
-    // milky-way layer has no monochrome hook: chart mode re-purposes it
-    // as an isobar contour, driven by the chart-mode orchestrator via
-    // `setMilkywayIsobar` / `setCloudsIsobar` below — call them
-    // alongside setMonochrome.
+    // Per-layer palette swaps fan out through the registry. The milky-way
+    // layer has no monochrome hook: chart mode re-purposes it as an isobar
+    // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
+    // isobar is orchestrator-driven (`setCloudsIsobar`, no detail element).
     this.layers.setMonochromeAll(on);
     this.bus.emit('state');
   }
@@ -1955,7 +1961,8 @@ export class Stellata implements FrameAnchor {
     this.clouds?.setIsobar(on, this.starPipeline.discMaterial.uniforms.uMaxAppMag);
   }
 
-  /** Chart-mode isobar pass on/off for the milky-way layer. */
+  /** Chart-mode isobar pass on/off for the milky-way layer. Driven by the
+   *  `milkyWayIsobar` detail bind, not called directly by chart-mode. */
   setMilkywayIsobar(on: boolean) {
     this.milkyway.setIsobar(on);
   }

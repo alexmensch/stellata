@@ -34,10 +34,15 @@ src/client/chart-mode/
    labels, monochrome topbar / brand box / typeahead).
 2. `applyTheme('mono')` — flips the existing dark-mode palette to the
    mono palette (already in `theme-toggle.ts`).
-3. `setCloudsIsobar(true)` + `setMilkywayIsobar(true)` — flips the
-   layers into chart-mode treatment (below).
+3. `setCloudsIsobar(true)` — flips the cloud layer into chart treatment.
+   The milky-way band↔isobar swap is **not** called here: it rides
+   `applyDetailPreset` (step 3b) through the `milkyWayIsobar` detail bind.
+3b. `applyDetailPreset(getDetailLevel())` — re-derives the permitted set
+   from the chart floor column (see `../scene/README.md` § Detail-level
+   declutter cycle). Drives the MW isobar swap, hides realistic-only
+   structure, and gates the label tiers in step 4.
 4. `startChartLabels()` — registers the per-frame label engine
-   (`chart-labels.ts`).
+   (`chart-labels.ts`), whose tiers are gated by the detail cycle.
 5. Constellation overlay flips to "always draw every constellation"
    (vs. only the highlighted one) so the chart shows the full asterism
    network. Subject to the master `showConstellation` toggle —
@@ -137,7 +142,13 @@ respective layer modules toggle the branch and pass the
 
 ## Label engine + glyphs (`chart-labels.ts`)
 
-Per-frame engine that emits two SVG layers under `#overlay`:
+Per-frame engine that emits two SVG layers under `#overlay`. Each tier is
+gated by the detail cycle — `tick()` reads `detailPermits(id)` per group
+(star names + planets → `chartStarNameLabels`, Bayer → `chartBayerGlyphs`,
+rings + wings → `chartVariableRings`, constellation names →
+`chartConstellationNames`, cloud names → `chartCloudNames`) and skips the
+group's build loop when the current level doesn't reach its chart floor.
+See `../scene/README.md` § Chart-content wiring for the couplings.
 
 - `<g id="chart-labels">` — `<text>` elements for proper-named stars,
   Bayer-letter Greek glyphs (drawn from `bayerMap` built in

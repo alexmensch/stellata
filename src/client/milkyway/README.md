@@ -166,7 +166,10 @@ contour** along the magnitude limit (a thin ink line tracking "where
 the integrated MW would equal the visible magnitude limit" reads as a
 paper-atlas equivalent of the volumetric band). The contour rendering
 is handled by chart-mode wiring; this layer's `setIsobar(true)` simply
-hides the meshes.
+hides the meshes. The band↔isobar swap is driven by the `milkyWayIsobar`
+detail bind (chart floor), not chart-mode.ts directly — the group stays
+enabled in chart because `applyMilkywayEnabled` permits either the band
+or the isobar (`../scene/README.md` § Chart-content wiring).
 
 Warp keeps the layer visible in dark mode — the band reorienting as
 the camera flies past the GC is the realism payoff.

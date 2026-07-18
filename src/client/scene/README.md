@@ -45,12 +45,22 @@ supersedes its floor until the next `applyDetailPreset` overwrites the
 whole set.
 
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
-behaviour-neutral at startup and `applyDetailPreset` runs only on `V` /
-the control / a decluttered `?v=` restore. Chart-only element floors ship
-as data here; wiring the chart glyph binds into `chart-labels.ts` is the
-follow-up (`stellata-8hu.7`). `USER_OWNED_IDS` enumerates the chrome the
-cycle never writes (HUD, coord sphere, cards, feedback) — toggled by
-their own affordances (`H` / `S` / `U` / `T`).
+behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
+control / a decluttered `?v=` restore, **and on every chart↔realistic
+flip** (`chart-mode.ts`) so the permitted set tracks the active style's
+floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
+writes (HUD, coord sphere, cards, feedback) — toggled by their own
+affordances (`H` / `S` / `U` / `T`).
+
+**Chart-content wiring.** The chart-only elements are read per-frame by
+`chart-labels.ts`, which gates each label/glyph tier on
+`detailPermits(id)`. Two couplings aren't one-to-one: planet name labels
+ride `chartStarNameLabels` (no separate planet-label element — uadc.3
+gave planets star-style labels), and `chartVariableRings` gates **both**
+the variable rings and the binary wings (one row for the paired glyphs).
+`milkyWayIsobar` has no per-frame reader — it *pushes* through its bind
+(`setMilkywayIsobar` + `applyMilkywayEnabled`); the MW group is enabled
+when either the band (realistic) or the isobar (chart) is permitted.
 
 ## How the shell uses it
 
