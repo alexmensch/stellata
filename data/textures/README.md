@@ -15,8 +15,10 @@ the Saturn-ring radial profile. Two layers in this folder:
 
 - Equirectangular (plate carrée), longitude 0 at the left edge or map
   centre per source convention — the renderer's prime-meridian offset
-  is a per-body concern handled with the IAU rotation elements
-  (stellata-2f6.13), not baked here.
+  is a per-body concern (`mapCenterLonDeg` in
+  `src/client/solar-system/rotation-elements-pure.ts`), not baked
+  here. All shipped maps are centred on 0° except Pluto (~180°E,
+  Sputnik Planitia at map centre).
 - Max 2048 px wide, JPEG quality 82; sources narrower than 2048 keep
   their native size (never upscaled).
 - One file per body, `<body>.jpg`, lazy-loaded on close approach —

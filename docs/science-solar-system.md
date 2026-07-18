@@ -54,6 +54,39 @@ values per planet are observation-derived; pixel-accurate texturing,
 banding, and atmospheric haloes are deferred until the renderer
 exposes a planet-zoom affordance close enough for them to register.
 
+**Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
+angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic
+Coordinates and Rotational Elements 2015 report (Archinal et al. 2018,
+Celest Mech Dyn Astr 130:22, https://doi.org/10.1007/s10569-017-9805-5),
+values as distributed in NAIF `pck00011.tpc`. Only the main linear
+terms ship: the periodic nutation/precession corrections are sub-degree
+(largest: Neptune's ±0.7° pole nod) and invisible at render scale,
+while the linear pole rates keep the visually meaningful long-term
+behaviour (Earth's axial precession moves the pole ~30° across the
+model-clock window). `t` is treated as TDB — the ~69 s UTC↔TDB gap is
+~0.3° of Earth spin, consistent with the Standish accuracy budget. The
+regression corpus pins Earth's sub-solar longitude at an
+equation-of-time zero crossing (Greenwich noon → ~0° lon).
+Implementation: `src/client/solar-system/rotation-elements-pure.ts`.
+
+**Saturn rings.** Annulus spanning 74,510→140,390 km in Saturn's
+equatorial (IAU-pole) plane, coloured by Björn Jónsson's
+Voyager/Cassini radial colour + transparency profiles
+(`data/textures/README.md`). Lighting is a deliberately simple model:
+full strip colour on the sunlit face, a dimmed transmitted factor on
+the unlit face, both dying off as illumination goes edge-on to the
+ring plane, and an analytic ray–ellipsoid planet-shadow test that
+drops the occluded far-side segment to a residual floor. Phase-angle
+brightening of the rings already reaches the *disc/glow* path through
+the Mallama Saturn `c0` term; the resolved-mesh regime makes no
+photometric claim beyond the above.
+
+**Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)
+blended in as an *emissive* term — no limb darkening, unlike the
+reflected day texture — ramping in across a narrow band past the
+geometric terminator. With rotation on the model clock, the hemisphere
+showing its lights is the one actually dark at `t`.
+
 **Planet geometric albedos** (V-band) from Mallama et al. 2018
 (https://doi.org/10.1016/j.icarus.2017.05.018) and the NASA fact
 sheets above: Mercury 0.142, Venus 0.689, Earth 0.434, Mars 0.170,

@@ -247,6 +247,8 @@ mechanism.
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
 | Planet disc                                      | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
+| Planet ring annulus (Saturn)                     | WebGL   | `renderOrder: 2.81`                                |       | [solar-system/](solar-system/README.md) |
+| Planet spheroid mesh (close LOD)                 | WebGL   | `renderOrder: 2.8`                                 |       | [solar-system/](solar-system/README.md) |
 | Planet restore (depth-only)                      | WebGL   | `renderOrder: 2.5`                                 |       | [solar-system/](solar-system/README.md) |
 | Orbit rings                                      | WebGL   | `renderOrder: 2`                                   |       | [solar-system/](solar-system/README.md) |
 | Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       | [dust/](dust/README.md) |

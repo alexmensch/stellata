@@ -217,6 +217,13 @@ enough to see it.
   gray-brown visible appearance and Pluto's un-imaged southern band
   is filled with its representative disc colour (per-body colour
   rationale in data/textures/README.md § Colour fidelity).
+- **IAU planet rotation elements** (pole RA/Dec + prime meridian per
+  body): IAU WG on Cartographic Coordinates and Rotational Elements
+  2015 report (Archinal et al. 2018,
+  https://doi.org/10.1007/s10569-017-9805-5), values as distributed
+  in NAIF `pck00011.tpc`; linear terms only (see
+  `docs/science-solar-system.md` § Planet rotation). Table in
+  `src/client/solar-system/rotation-elements-pure.ts`.
 
 > **Molecular cloud sources currently shelved.** Zucker et al. 2020 +
 > 2021 cloud distances and 3D bounding boxes drive the molecular-cloud
@@ -288,19 +295,20 @@ science it relates to.
   skipped — can't animate without one.
 - **Moons.** Earth's Moon, the Galilean satellites, Titan, Triton, etc.
   The Standish ephemerides cover only the eight major planets +
-  Earth-Moon barycentre stand-in for Earth. Adding satellite
-  ephemerides is a separate effort and out of scope at the camera
-  framings the app currently affords.
+  Earth-Moon barycentre stand-in for Earth; satellite ephemerides are
+  a separate ingest. Planned (not a permanent non-goal) now that
+  planet focus affords close framings — tracked as the major-moons
+  epic.
 - **Asteroids and minor planets.** Ceres, Vesta, the Trojans, NEOs.
   Same reason as moons — separate ephemeris source and not visible
   as discs at any camera distance the app currently exposes.
 - **Time-evolving heliopause shape.** Solar-cycle variation in the
   upwind boundary is real (~few AU peak-to-peak) but well below the
   layer's coarse 122-AU anchor; we treat the shell as static.
-- **Planet textures, banding, atmospheric haloes, ring systems,
-  axial-tilt cues, day-night phase shading.** All deferred until the
-  renderer can fly the camera close enough to a single planet for the
-  detail to register. At the user-reachable camera distances today
-  every planet floors at the disc-pixel minimum, so detail rendering
-  would be invisible. See § Scope principles — Defer detail until
-  zoom affordance above.
+- **Planet atmospheric haloes / scattering.** The remaining deferred
+  per-planet detail now that planet focus + the spheroid mesh LOD
+  shipped textures, IAU axial tilt + rotation, day-night terminator
+  shading, Earth night lights, and Saturn's rings. The other giants'
+  faint ring systems also stay out — invisible at any realistic
+  framing. See § Scope principles — Defer detail until zoom
+  affordance above.

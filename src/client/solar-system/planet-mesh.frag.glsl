@@ -3,10 +3,13 @@ precision highp float;
 #include <common>
 #include <logdepthbuf_pars_fragment>
 
-// uMap is always bound (1×1 white placeholder when the body has no
-// texture) — sampling an unbound texture is undefined in WebGL.
+// uMap and uNightMap are always bound (1×1 white placeholder when the
+// body has no texture) — sampling an unbound texture is undefined in
+// WebGL.
 uniform sampler2D uMap;
 uniform float uHasMap;
+uniform sampler2D uNightMap;
+uniform float uHasNight;
 uniform vec3 uColour;
 // Planet → host-star direction in VIEW space; per-fragment Lambert
 // against it is what produces the day/night terminator.
@@ -25,13 +28,22 @@ out vec4 outColor;
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
 
+// Night-lights crossfade half-width on dot(n, sunDir): the emissive
+// term ramps in across ±this band around the geometric terminator so
+// the day-texture → city-lights handoff has no hard seam.
+const float NIGHT_RAMP = 0.05;
+
 void main() {
   #include <logdepthbuf_fragment>
   vec3 n = normalize(vNormalV);
   vec3 v = normalize(-vPosV);
-  float dayside = max(dot(n, uSunDirView), 0.0);
+  float sunCos = dot(n, uSunDirView);
+  float dayside = max(sunCos, 0.0);
   float ndotv = clamp(dot(n, v), 0.0, 1.0);
   float limb = mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
   vec3 base = mix(uColour, texture(uMap, vUvM).rgb, uHasMap);
-  outColor = vec4(base * dayside * limb, uFade);
+  // Emissive, not reflective: no limb darkening on the lights.
+  float nightRamp = 1.0 - smoothstep(-NIGHT_RAMP, NIGHT_RAMP, sunCos);
+  vec3 night = texture(uNightMap, vUvM).rgb * nightRamp * uHasNight;
+  outColor = vec4(base * dayside * limb + night, uFade);
 }

@@ -64,7 +64,14 @@ src/client/solar-system/
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
-                                  fallback).
+                                  fallback, emissive night-lights blend).
+  planet-rings.vert.glsl,
+  planet-rings.frag.glsl          Ring-annulus shaders (radial strip
+                                  sample, lit/transmitted faces, body
+                                  shadow) — see § Planet mesh LOD.
+  rotation-elements-pure.ts       IAU rotation elements per body (pole +
+                                  prime meridian on the model clock) —
+                                  see § Planet rotation.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
                                   (Lambertian + Mallama phase factors).
                                   Drives both the body field's disc/glow
@@ -374,14 +381,21 @@ stellata-2f6.3).
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
-  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical). The
-  pole aligns to the host's orbital-plane normal via the host
-  orientation quaternion; the prime meridian is arbitrary until IAU
-  rotation elements land (stellata-2f6.13).
+  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical).
+  Orientation comes from the body's IAU rotation elements
+  (§ Planet rotation); bodies without them fall back to pole =
+  host orbital-plane normal with an arbitrary fixed meridian.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; no ambient term, so the night
   side is black (physically honest).
+- **Earth night lights** (stellata-2f6.14): `Planet.hasNightTexture`
+  lazy-loads the `<body>-night.jpg` companion (Black Marble) with the
+  day map; the shader adds it as an *emissive* term (no limb
+  darkening) ramping in across a ±0.05 dot(n, sun) band around the
+  terminator, so the day→lights handoff has no hard seam. With IAU
+  rotation on `getT()`, the actually-dark hemisphere shows its lights
+  at model time.
 - **Textures**: lazy-fetched from `public/textures/<body>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
   `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is
@@ -392,6 +406,60 @@ stellata-2f6.3).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+- **Saturn rings** (stellata-2f6.15): `Planet.rings` adds an annulus
+  mesh (`planet-rings.*.glsl`) in the body's equatorial plane (IAU
+  pole; host orbital plane as the no-elements fallback), textured by
+  the `<body>-rings.png` 1-D radial strip (RGB colour, A opacity;
+  U = inner→outer edge, span in `data/textures/README.md`). Lit-face
+  fragments get full strip colour, the unlit face a dimmer
+  transmitted factor, both fading out as illumination goes edge-on to
+  the ring plane; the far-side segment inside the body's shadow
+  (analytic ray–ellipsoid test toward the host) drops to a residual
+  floor. Rendered only in the mesh-LOD regime: alpha rides the same
+  crossfade `uFade`, hidden until the strip texture arrives (no
+  representative-colour fallback), `renderOrder` 2.81 (after the body
+  mesh) with `depthWrite: false`. **Body occlusion is analytic, not
+  depth-tested**: at planet scale the log-depth buffer quantises the
+  whole solar system into one depth step (`log2(1+w)` is linear for
+  w ≪ 1), so the ring fragment shader discards fragments whose
+  camera→fragment segment passes through the body ellipsoid — the
+  same ray–ellipsoid helper as the shadow test, with a camera ray.
+  Any future geometry drawn near a planet body must use the same
+  trick; the depth buffer cannot separate planet-scale distances.
+  Edge-on the zero-thickness annulus thins to a line, which is the
+  physically honest look.
+
+### Planet rotation (stellata-2f6.13)
+
+`rotation-elements-pure.ts` carries per-body IAU rotation elements —
+pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
+`W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
+Cartographic Coordinates and Rotational Elements 2015 report
+(Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`. The
+sub-degree periodic nutation/precession terms are dropped: at render
+scale they're invisible (largest is Neptune's ±0.7° pole nod), and
+the linear pole rates already carry the visually meaningful part
+(Earth's axial precession drifts the pole ~30° across the model-clock
+window). `t` is treated as TDB via `tToJDE` — the ~69 s UTC↔TDB gap
+is ~0.3° of Earth spin, accepted repo-wide.
+
+The mesh layer composes body→ICRS as `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`
+(the IAU convention: body +z = pole, +x = prime meridian, W measured
+from the node of the body equator on the ICRS equator), then the
+geometry pole tilt (+Y → +z). Driven off `getT()` each frame like
+binary orbits, so the scrubber spins planets and the day side tracks
+the actual model-time hemisphere. `Planet.rotation` is optional —
+bodies without published elements (exoplanets) keep the fallback
+pole = host orbital-plane normal with an arbitrary fixed meridian.
+
+`RotationElements.mapCenterLonDeg` is texture metadata riding the
+same table: the east longitude at the horizontal centre of the
+body's equirect map, added to the spin term so texture features land
+on their true longitudes. All shipped maps are centred on 0° except
+Pluto (PIA11707 is centred on ~180°E — Sputnik Planitia at map
+centre). Gas-giant and Venus cloud maps are epoch snapshots of
+rotating cloud decks, so their longitude alignment is inherently
+arbitrary; 0 is used.
 
 `planet-labels.ts` draws per-planet body-anchored SVG labels above
 the canvas. The label engine is independent of the chart-mode label
