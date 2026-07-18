@@ -4,11 +4,7 @@
 import * as THREE from 'three';
 import { KM_PC } from '../util/astronomy-constants';
 import type { PlanetBodyField } from './planet-body-field';
-import {
-  meshFade,
-  physicalDiameterPx,
-  TEXTURE_PREFETCH_PX,
-} from './mesh-crossfade';
+import { meshFadeFromRatio, TEXTURE_PREFETCH_RATIO } from './mesh-crossfade';
 import meshVert from './planet-mesh.vert.glsl?raw';
 import meshFrag from './planet-mesh.frag.glsl?raw';
 
@@ -56,11 +52,10 @@ export class PlanetMeshLayer {
   /** Per-frame: show/scale/light every body inside the crossfade band.
    *  Reads the body field's live buffers, so recentres and scrubber
    *  motion need no extra hooks. */
-  update(camera: THREE.PerspectiveCamera, viewportHPx: number): void {
+  update(camera: THREE.PerspectiveCamera): void {
     this.group.visible = this.field.group.visible;
     if (!this.group.visible) return;
 
-    const fovYRad = (camera.fov * Math.PI) / 180;
     const shown = new Set<number>();
     const n = this.field.liveInstanceCount;
     for (let idx = 0; idx < n; idx++) {
@@ -70,10 +65,9 @@ export class PlanetMeshLayer {
       if (!this.field.planetLocalPositionInto(idx, this.tmpPlanet)) continue;
 
       const radiusPc = planet.radiusKm * KM_PC;
-      const distPc = this.tmpPlanet.distanceTo(camera.position);
-      const px = physicalDiameterPx(radiusPc, distPc, fovYRad, viewportHPx);
-      if (px >= TEXTURE_PREFETCH_PX) this.ensureTexture(planet.name);
-      const fade = meshFade(px);
+      const ratio = this.field.meshFadeRatio(idx, camera.position);
+      if (ratio >= TEXTURE_PREFETCH_RATIO) this.ensureTexture(planet.name);
+      const fade = meshFadeFromRatio(ratio);
       if (fade <= 0) continue;
 
       const entry = this.entries.get(idx) ?? this.createEntry(idx);

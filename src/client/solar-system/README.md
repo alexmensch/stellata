@@ -356,12 +356,17 @@ every slider move.
 ### Planet mesh LOD (stellata-2f6.9)
 
 On close approach the billboarded disc hands off to a real oblate
-spheroid mesh (`planet-mesh-layer.ts`), crossfaded on the body's TRUE
-projected angular diameter — `mesh-crossfade.ts` owns the band
-(2 → 4 px) and both sides evaluate the same smoothstep: the disc
-passes multiply by `1 − vMeshFade` (vertex shader computes it from
-`physSize` against the shared `uMeshFadePx` uniform) while the mesh's
-`uFade` rises, so there is no double-brightness at the seam. The
+spheroid mesh (`planet-mesh-layer.ts`), crossfaded on the ratio of
+the body's TRUE projected diameter to its perceptual disc size —
+`mesh-crossfade.ts` owns the band (physSize/appSize 1.0 → 1.5) and
+both sides evaluate the same smoothstep (shader: `uMeshFadeRatio`;
+CPU: `PlanetBodyField.meshFadeRatio` → `meshFadeFromRatio`). The band
+starts at ratio 1, exactly where the disc's `max(appSize, physSize)`
+switches to the physical term, so the mesh (drawn at physSize) and
+the disc share the same footprint through the whole fade — the
+handoff can't pop in size, and the disc passes multiplying by
+`1 − vMeshFade` against the mesh's rising `uFade` means no
+double-brightness either. The
 core / corrupt / restore depth passes deliberately keep running
 through the fade — the mesh silhouette matches the disc core, so the
 ring-occlusion dance is preserved (full mesh-era ring clipping is

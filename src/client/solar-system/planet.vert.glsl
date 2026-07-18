@@ -64,10 +64,10 @@ uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
 
-// Disc ↔ spheroid-mesh crossfade band in projected-diameter px
-// (MESH_FADE_START/END_PX from mesh-crossfade.ts — the mesh layer
+// Disc ↔ spheroid-mesh crossfade band in physSize/appSize ratio
+// (MESH_FADE_START/END_RATIO from mesh-crossfade.ts — the mesh layer
 // evaluates the same smoothstep from the other end).
-uniform vec2 uMeshFadePx;
+uniform vec2 uMeshFadeRatio;
 
 out vec3 vColor;
 out vec2 vUv;
@@ -199,15 +199,19 @@ void main() {
   float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
   float physSize = 2.0 * atan(iRadiusPc / d_vp) * angularToPx;
 
-  // Disc ramps out as the spheroid mesh ramps in across the band —
-  // keyed on the TRUE projected diameter, matching the mesh layer.
-  vMeshFade = smoothstep(uMeshFadePx.x, uMeshFadePx.y, physSize);
-
   // Apparent-magnitude size via the perceptual-disc chunk. No
   // unconditional pixel floor — sub-pixel planets fade naturally
   // when their reflected-light flux drops below the slider cutoff.
   float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
   float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+
+  // Disc ramps out as the spheroid mesh ramps in, keyed on the
+  // physSize/appSize ratio: the band starts at 1 — exactly where the
+  // max() below switches to the physical term — so the disc and the
+  // mesh (drawn at physSize) share the same footprint through the
+  // whole fade and the handoff cannot pop in size.
+  vMeshFade = smoothstep(
+      uMeshFadeRatio.x, uMeshFadeRatio.y, physSize / max(appSize, 1e-6));
 
   float pxSize = max(appSize, physSize);
   vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);

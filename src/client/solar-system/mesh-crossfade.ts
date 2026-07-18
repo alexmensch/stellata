@@ -1,31 +1,26 @@
-// Disc ↔ spheroid-mesh LOD crossfade band, keyed on the body's TRUE
-// projected angular diameter in CSS px (never the perceptual disc
-// size, which floors). Contract in README.md § Planet mesh LOD.
+// Disc ↔ spheroid-mesh LOD crossfade, keyed on the ratio of the
+// body's TRUE projected diameter (physSize) to its perceptual disc
+// size (appSize). Contract in README.md § Planet mesh LOD.
 
-/** Below this projected diameter the perceptual disc renders alone. */
-export const MESH_FADE_START_PX = 2;
-/** Above this the mesh renders alone (disc fully faded). */
-export const MESH_FADE_END_PX = 4;
+/** Fade starts at physSize = appSize — exactly where the disc's
+ *  `max(appSize, physSize)` switches to the physical term, so the
+ *  mesh and the disc share the same footprint through the whole band
+ *  and the handoff can't pop in size. Must stay ≥ 1 for that
+ *  invariant to hold. */
+export const MESH_FADE_START_RATIO = 1.0;
+/** Mesh renders alone once physSize is this multiple of appSize. */
+export const MESH_FADE_END_RATIO = 1.5;
 /** Kick off the lazy texture fetch on approach, before the band. */
-export const TEXTURE_PREFETCH_PX = 0.8;
+export const TEXTURE_PREFETCH_RATIO = 0.5;
 
-/** True projected angular diameter in CSS px: θ = 2·atan(R/d) mapped
- *  through the vertical FOV. Matches the shader's `physSize`. */
-export function physicalDiameterPx(
-  radiusPc: number,
-  distPc: number,
-  fovYRad: number,
-  viewportHPx: number,
-): number {
-  if (distPc <= 0 || fovYRad <= 0) return 0;
-  return 2 * Math.atan(radiusPc / distPc) * (viewportHPx / fovYRad);
-}
-
-/** Mesh opacity for a projected diameter: 0 below the band, 1 above,
- *  smoothstep across it. Disc opacity is `1 − meshFade(px)`. */
-export function meshFade(px: number): number {
+/** Mesh opacity for a physSize/appSize ratio: 0 below the band, 1
+ *  above, smoothstep across it. Disc opacity is `1 − meshFade`. */
+export function meshFadeFromRatio(ratio: number): number {
   const t = Math.min(
-    Math.max((px - MESH_FADE_START_PX) / (MESH_FADE_END_PX - MESH_FADE_START_PX), 0),
+    Math.max(
+      (ratio - MESH_FADE_START_RATIO) / (MESH_FADE_END_RATIO - MESH_FADE_START_RATIO),
+      0,
+    ),
     1,
   );
   return t * t * (3 - 2 * t);
