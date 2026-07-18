@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { selectMaskCandidates, type ConstellationLike } from './disc-mask-pure';
+import {
+  selectMaskCandidates,
+  selectPlanetMaskCandidates,
+  type ConstellationLike,
+} from './disc-mask-pure';
 
 const cons = (lines: number[][]): ConstellationLike => ({ lines });
 
@@ -60,5 +64,28 @@ describe('selectMaskCandidates', () => {
     // Even if a vertex comes earlier numerically, focus/companion win priority.
     const c = [cons([[1, 2, 3]])];
     expect(selectMaskCandidates(9, 8, 0, c)).toEqual([9, 8, 1, 2, 3]);
+  });
+});
+
+describe('selectPlanetMaskCandidates', () => {
+  it('returns empty when no planets are live', () => {
+    expect(selectPlanetMaskCandidates(0, -1)).toEqual([]);
+  });
+
+  it('returns every live instance when none is hidden', () => {
+    expect(selectPlanetMaskCandidates(3, -1)).toEqual([0, 1, 2]);
+  });
+
+  it('excludes the observe-anchor hidden instance', () => {
+    expect(selectPlanetMaskCandidates(3, 1)).toEqual([0, 2]);
+  });
+
+  it('excludes a hidden instance at either end of the range', () => {
+    expect(selectPlanetMaskCandidates(3, 0)).toEqual([1, 2]);
+    expect(selectPlanetMaskCandidates(3, 2)).toEqual([0, 1]);
+  });
+
+  it('ignores a hidden index outside the live range', () => {
+    expect(selectPlanetMaskCandidates(3, 5)).toEqual([0, 1, 2]);
   });
 });

@@ -90,9 +90,13 @@ companion (not the *current* focus — the mask persists after Esc so the
 just-unfocused star stays masked while its disc still clears the
 threshold; the entry self-evicts when the disc shrinks below it), plus
 every vertex star in the highlighted constellation whose disc still
-exceeds the threshold. Iterating constellation members (rather than
-scanning the catalog) bounds the work to the few dozen vertex stars per
-constellation; the cutout pool grows on demand. That gives the visual
+exceeds the threshold, plus **every visible planet body** (a foreground
+physical body must occlude the background asterism exactly as a star disc
+does; `renderedPlanetSizePx`/`planetLocalPositionInto` off
+`stellata.planetField`, skipping the observe-anchor body hidden via
+uHideIdx). Iterating constellation members (rather than scanning the
+catalog) bounds the work to the few dozen vertex stars per constellation;
+the cutout pool grows on demand. That gives the visual
 effect of constellation lines passing *behind* a close-range resolved
 disc rather than being painted on top of it. The cutout circle's radius
 tracks the disc's variable-star pulsation exactly via `renderedSizePx`
@@ -136,18 +140,21 @@ Three SVG layers conditionally hide while `cameraMode === 'observe'`:
   0 (enter) or back to 24 px (exit) instead of hard-hiding so it visually
   morphs through the HUD ring. The eased progress comes from
   `Stellata.getObserveTransitionProgress()`.
-- **Disc mask cutouts** (`disc-mask.ts`) — all cutouts (focal,
+- **Disc mask cutouts** (`disc-mask.ts`) — the **star** cutouts (focal,
   companion, and constellation members) are skipped when in observe.
   The focal disc isn't rendered, and any other disc-rendering star
   would have to be near enough to a camera parked at the focal star
-  to clear the threshold — far enough away in practice that the
-  whole-mask early-return is a safe simplification. The
+  to clear the threshold — far enough away in practice that skipping
+  the star pass is a safe simplification. The
   camera-position invariant is enforced in `stellata.ts setFocus` —
   on observe entry the camera moves to the focal star's local origin
   (`camera.position.set(0, 0, 0)` after the floating-origin recentre),
   so every other catalog star sits at least one inter-star gap away
   (parsec-scale at minimum), well beyond `DISC_THRESHOLD_PX` at any
-  reasonable FOV.
+  reasonable FOV. **Planet** cutouts do NOT skip in observe — a
+  planet system can sit right at a camera parked on its host or on a
+  sibling planet (chart mode is observe-only and observes from a
+  planet), so planet bodies keep occluding the figure in every mode.
 - **Distance vector + To-row** — distance-vector measurement is
   meaningless from a camera parked on its own anchor; the search
   box's To-row hides via `syncFocusUI` and the underlying

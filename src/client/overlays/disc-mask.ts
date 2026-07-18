@@ -2,22 +2,25 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { renderedSizePx } from '../camera/controls/star-physics';
 import { projectToScreenInto } from './overlay-project';
-import { selectMaskCandidates } from './disc-mask-pure';
+import { selectMaskCandidates, selectPlanetMaskCandidates } from './disc-mask-pure';
 import { setNumAttr } from './dirty-attr';
 
 // Per-frame SVG mask updater. Overlays using mask="url(#disc-occlude-mask)"
-// render BEHIND close rendered-disc stars. Cutouts are placed for the
+// render BEHIND close rendered discs. Cutouts are placed for the
 // most-recently-focused star + its binary companion (lastFocused, not
 // current, so Esc-unfocus doesn't drop the mask while the disc is still
 // visible — placeSlot self-evicts when the disc shrinks) plus every
-// highlighted-constellation vertex whose disc exceeds the threshold.
+// highlighted-constellation vertex whose disc exceeds the threshold, plus
+// every visible planet body (a foreground physical body occludes the
+// background asterism the same way a star disc does).
 //
 // Selection contract pinned in disc-mask-pure.test.ts.
 const DISC_THRESHOLD_PX = 48;
 // Soft cap on the cutout pool. Today's ceiling is the largest Stellarium
-// asterism (~40 vertices) + 2 for focal + companion; 64 leaves headroom
-// without ever firing in practice. Exceeding it warns once (dev signal
-// that the iteration source changed); growth itself is not blocked.
+// asterism (~40 vertices) + 2 for focal + companion + Sol's ~9 planet
+// bodies; 64 leaves headroom without ever firing in practice. Exceeding
+// it warns once (dev signal that the iteration source changed); growth
+// itself is not blocked.
 const MAX_MASK_CIRCLES = 64;
 
 interface Slot {
@@ -91,13 +94,35 @@ export function createDiscMask(stellata: Stellata) {
     return true;
   };
 
+  // Project a planet body to screen + set a mask circle. Returns whether a
+  // circle was placed (false = culled / sub-cutoff / off-screen).
+  // renderedPlanetSizePx already floors visible discs and returns 0 below
+  // the magnitude cutoff, so a `size <= 0` gate needs no separate threshold.
+  const placePlanetSlot = (s: Slot, instanceIdx: number): boolean => {
+    const field = stellata.planetField;
+    const size = field.renderedPlanetSizePx(instanceIdx, stellata.camera.position);
+    if (size <= 0) return false;
+    if (!field.planetLocalPositionInto(instanceIdx, v)) return false;
+    if (!projectToScreenInto(v, stellata.camera, window.innerWidth, window.innerHeight, outXY)) {
+      return false;
+    }
+    s.lastCx = setNumAttr(s.el, 'cx', outXY[0], s.lastCx);
+    s.lastCy = setNumAttr(s.el, 'cy', outXY[1], s.lastCy);
+    s.lastR = setNumAttr(s.el, 'r', size * 0.5, s.lastR);
+    return true;
+  };
+
   // Cache the highlighted-constellation index so the per-frame tick doesn't
   // re-read getFilter() each frame. Mirrors constellation-overlay.ts (which
   // consumes the same field via the 'filter' event) so the two overlays react
   // to filter mutations through the same mechanism.
   let highlightCon = stellata.getFilter().highlightCon;
+  let chart = stellata.getFilter().chart;
+  let showConstellation = stellata.getFilter().showConstellation;
   stellata.on('filter', (f) => {
     highlightCon = f.highlightCon;
+    chart = f.chart;
+    showConstellation = f.showConstellation;
   });
 
   // Track the most-recently-focused star + its companion. Updated only on
@@ -117,35 +142,45 @@ export function createDiscMask(stellata: Stellata) {
   let lastUsed = 0;
 
   stellata.on('frame', () => {
-    // In OBSERVE mode the focal star (and its companion if any) are hidden
-    // by the vertex shader, so a mask cutout for them would just be a black
-    // hole carved out of overlays for nothing. Other stars are always far
-    // away from a camera parked at a focal star (camera position is set to
-    // the focal star's local origin in setFocus when observe is engaged),
-    // so they don't reach the disc threshold either. Skip mask updates
-    // entirely.
     const observe =
       stellata.getCameraMode() === 'observe' || stellata.isObserveTransitionActive();
-    if (observe) {
-      if (lastUsed > 0) {
-        for (let i = 0; i < lastUsed; i++) clearSlot(slots[i]);
-        lastUsed = 0;
-      }
-      return;
-    }
-
-    const candidates = selectMaskCandidates(
-      recentFocus,
-      recentCompanion,
-      highlightCon,
-      stellata.catalog.constellations,
-    );
 
     let used = 0;
-    for (const idx of candidates) {
-      ensureSlots(used + 1);
-      if (placeSlot(slots[used], idx)) used++;
+
+    // Star disc cutouts skip in observe: the focal pair is shader-hidden,
+    // and every other star sits at least an inter-star gap from a camera
+    // parked at the focal star (setFocus moves it to the focal local
+    // origin), so none reaches the disc threshold.
+    if (!observe) {
+      const candidates = selectMaskCandidates(
+        recentFocus,
+        recentCompanion,
+        highlightCon,
+        stellata.catalog.constellations,
+      );
+      for (const idx of candidates) {
+        ensureSlots(used + 1);
+        if (placeSlot(slots[used], idx)) used++;
+      }
     }
+
+    // Planet bodies occlude the figure in every mode — unlike stars they can
+    // sit close to the camera under observe/chart. Gated on the same inputs
+    // that give the figure content (constellation-overlay.ts), so idle frames
+    // skip the projection pass.
+    const figureHasContent = showConstellation && (highlightCon >= 0 || (chart && observe));
+    if (figureHasContent) {
+      const planets = stellata.planetField;
+      const planetCandidates = selectPlanetMaskCandidates(
+        planets.liveInstanceCount,
+        planets.hiddenInstanceIdx,
+      );
+      for (const idx of planetCandidates) {
+        ensureSlots(used + 1);
+        if (placePlanetSlot(slots[used], idx)) used++;
+      }
+    }
+
     for (let i = used; i < lastUsed; i++) clearSlot(slots[i]);
     lastUsed = used;
   });

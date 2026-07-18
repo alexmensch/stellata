@@ -11,10 +11,10 @@
 
     <svg id="overlay" class="overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <!-- Mask applied to overlays that should appear BEHIND the rendered
-             star disc for the focused star. White = visible, black = cut out.
-             The circle is sized and positioned each frame in
-             constellation-overlay.ts / focus-ring-overlay.ts. -->
+        <!-- Mask applied to the constellation figure so close rendered discs
+             (stars + planet bodies) read as if in front of the lines.
+             White = visible, black = cut out. disc-mask.ts removes the
+             placeholder circle and manages the cutout circles each frame. -->
         <mask id="disc-occlude-mask" maskUnits="userSpaceOnUse">
           <rect id="disc-mask-bg" x="0" y="0" width="100%" height="100%" fill="white" />
           <circle id="disc-mask-cutout" cx="-100" cy="-100" r="0" fill="black" />

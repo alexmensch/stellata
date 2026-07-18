@@ -47,3 +47,20 @@ export function selectMaskCandidates(
 
   return out;
 }
+
+// Flat planet-instance indices the mask pass should cut out this frame:
+// every live instance except the observe-anchor body hidden via uHideIdx
+// (that body writes no colour, so a cutout for it would carve a spurious
+// gap in the figure). Size/projection filtering happens in the caller,
+// mirroring the star candidate path.
+export function selectPlanetMaskCandidates(
+  liveInstanceCount: number,
+  hiddenInstanceIdx: number,
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < liveInstanceCount; i++) {
+    if (i === hiddenInstanceIdx) continue;
+    out.push(i);
+  }
+  return out;
+}
