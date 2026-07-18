@@ -2,12 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
 import {
+  SOL_BODIES,
+  SOL_MOONS,
   SOL_PLANETS,
   getPlanetSystem,
   hasPlanets,
   type Planet,
   type PlanetType,
 } from './planet-system';
+import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
+import { AU_KM, KM_PC } from '../util/astronomy-constants';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,
@@ -45,12 +49,13 @@ describe('hasPlanets', () => {
 });
 
 describe('getPlanetSystem', () => {
-  it('resolves with Sol planets for the Sol index', async () => {
+  it('resolves with Sol bodies (planets + moons) for the Sol index', async () => {
     const cat = stubCatalog(3);
     const ps = await getPlanetSystem(cat, 3);
     expect(ps).not.toBeNull();
     expect(ps!.hostStarIdx).toBe(3);
-    expect(ps!.planets).toBe(SOL_PLANETS);
+    expect(ps!.planets).toBe(SOL_BODIES);
+    expect(ps!.planets.length).toBe(SOL_PLANETS.length + SOL_MOONS.length);
   });
 
   it('resolves to null for any other star', async () => {
@@ -59,6 +64,65 @@ describe('getPlanetSystem', () => {
     expect(await getPlanetSystem(cat, 99)).toBeNull();
     expect(await getPlanetSystem(cat, null)).toBeNull();
     expect(await getPlanetSystem(cat, -1)).toBeNull();
+  });
+});
+
+describe('solPositionsAt moon composition', () => {
+  // A fixed epoch inside the Standish window; the concrete instant is
+  // irrelevant — the assertions are frame-invariant distance bounds.
+  const T_UNIX = 1_700_000_000;
+  const planetCount = PLANET_ORDER.length;
+
+  async function positions(): Promise<Float32Array> {
+    const cat = stubCatalog(3);
+    const ps = await getPlanetSystem(cat, 3);
+    const out = new Float32Array(ps!.planets.length * 3);
+    ps!.positionsAt!(T_UNIX, out);
+    return out;
+  }
+
+  const bodyIdx = (name: string) => SOL_BODIES.findIndex((b) => b.name === name);
+  const distPc = (out: Float32Array, a: number, b: number) =>
+    Math.hypot(
+      out[a * 3] - out[b * 3],
+      out[a * 3 + 1] - out[b * 3 + 1],
+      out[a * 3 + 2] - out[b * 3 + 2],
+    );
+
+  it('writes a position for every planet and moon', async () => {
+    const out = await positions();
+    expect(out.length).toBe((planetCount + SOL_MOONS.length) * 3);
+  });
+
+  it('places each moon within its eccentric orbit radius of its parent', async () => {
+    const out = await positions();
+    for (const moon of SOL_MOONS) {
+      const aKm = moon.semiMajorAxisAu * AU_KM;
+      const d = distPc(out, bodyIdx(moon.name), bodyIdx(moon.parentName!)) / KM_PC;
+      const e = moon.eccentricity;
+      // Distance from the parent stays within the apo/peri bounds a(1±e),
+      // with a small slack for the reference-plane rotation round-trip.
+      expect(d).toBeGreaterThan(aKm * (1 - e) * 0.98);
+      expect(d).toBeLessThan(aKm * (1 + e) * 1.02);
+    }
+  });
+
+  it('splits the Earth–Moon barycentre — Earth ~4700 km off it, Moon opposite', async () => {
+    const out = await positions();
+    const earthI = bodyIdx('Earth');
+    const moonI = bodyIdx('Moon');
+    const bary = getPlanetPositions(T_UNIX).earth;
+    const earthOffKm = Math.hypot(
+      out[earthI * 3] - bary.x,
+      out[earthI * 3 + 1] - bary.y,
+      out[earthI * 3 + 2] - bary.z,
+    ) / KM_PC;
+    // Earth's centre lies m_moon/(m_earth+m_moon) ≈ 1.2% of the ~384,400 km
+    // geocentric Moon vector back from the barycentre.
+    expect(earthOffKm).toBeGreaterThan(4000);
+    expect(earthOffKm).toBeLessThan(5500);
+    // Earth and Moon straddle the barycentre — geocentric separation ~Moon a.
+    expect(distPc(out, earthI, moonI) / KM_PC).toBeGreaterThan(350000);
   });
 });
 

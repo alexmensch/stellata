@@ -36,13 +36,14 @@ import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { SidResolver, arrayDomain } from './util/sid-resolver';
 import { SOL_OBJECT_SIDS } from './solar-system/sol-object-sids';
-import { SOL_PLANETS } from './solar-system/planet-system';
+import { SOL_BODIES } from './solar-system/planet-system';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
+import { orbitDescriptorFor } from './solar-system/orbit-descriptor';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createLgFocusProvider } from './focus-card/lg-focus-provider';
 import { createStarHoverProvider } from './hover/star-hover-provider';
@@ -142,7 +143,9 @@ async function main() {
     // attach settles here at boot; `pending` is only reachable for a
     // future genuinely-async domain. `sun` is not in the planet domain —
     // Sol's catalog record carries the same sid, so the star domain
-    // claims it (see util/sid-resolver/README.md).
+    // claims it (see util/sid-resolver/README.md). The planet domain is
+    // keyed body-within-host over SOL_BODIES (planets then moons), so a
+    // moon's sid sits at its body index and resolves like any planet.
     const sidResolver = new SidResolver(
       ['star', 'planet', 'cloud', 'lg'],
       catalog.sidSuccessors,
@@ -150,7 +153,7 @@ async function main() {
     sidResolver.attach('star', arrayDomain(catalog.sid));
     sidResolver.attach(
       'planet',
-      arrayDomain(SOL_PLANETS.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
+      arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
     sidResolver.conclude('cloud');
     if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
@@ -332,9 +335,13 @@ async function main() {
         star: starFocusProvider,
         planet: createPlanetFocusProvider({
           planetAt: (idx) => stellata.planetField.planetAt(idx),
-          hostNameOf: (idx) => {
+          orbitDescriptorOf: (idx) => {
+            const planet = stellata.planetField.planetAt(idx);
             const host = stellata.planetField.hostPlanetOf(idx);
-            return host ? starLabels.get(host.hostStarIdx) ?? null : null;
+            if (!planet || !host) return null;
+            const ps = stellata.planetField.getAttachedPlanetSystem(host.hostStarIdx);
+            if (!ps) return null;
+            return orbitDescriptorFor(planet, ps, starLabels.get(host.hostStarIdx) ?? null);
           },
           cameraDistancePc: (idx) => stellata.planetCameraDistancePc(idx),
           appMagFor: (idx) =>

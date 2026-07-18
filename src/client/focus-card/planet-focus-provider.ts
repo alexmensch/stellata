@@ -2,13 +2,13 @@
 // rows. See ./README.md § Frame-of-reference principle.
 
 import type { Planet, PlanetType } from '../solar-system/planet-system';
-import { fmtDistAuto } from '../ui/distance-util';
 import {
-  formatEarthRadii,
-  formatMagnitude,
-  formatPeriodYears,
-  planetPeriodYears,
-} from '../format/physical-format';
+  formatOrbitDistance,
+  formatOrbitPeriod,
+  type OrbitDescriptor,
+} from '../solar-system/orbit-descriptor';
+import { fmtDistAuto } from '../ui/distance-util';
+import { formatEarthRadii, formatMagnitude } from '../format/physical-format';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';
 
 const TYPE_DESCRIPTOR: Record<PlanetType, string> = {
@@ -18,11 +18,19 @@ const TYPE_DESCRIPTOR: Record<PlanetType, string> = {
   icy: 'Icy moon',
 };
 
+/** Type line for a moon — labelled a moon, not a planet class. Moons are
+ *  only ever rocky (the Moon, Io) or icy (everything else). */
+function moonTypeDescriptor(type: PlanetType): string {
+  return type === 'rocky' ? 'Rocky moon' : 'Icy moon';
+}
+
 export interface PlanetFocusProviderConfig {
   /** Planet record for a flat instance index (PlanetBodyField.planetAt). */
   planetAt: (idx: number) => Planet | null;
-  /** Host star's display name, or null when unnamed / unattached. */
-  hostNameOf: (idx: number) => string | null;
+  /** Parent/orbit descriptor for the body — breadcrumb parent, orbit, and
+   *  period, resolved against the parent (host star for a planet, parent
+   *  planet for a moon). Null omits the orbit rows. */
+  orbitDescriptorOf: (idx: number) => OrbitDescriptor | null;
   /** Live camera→planet distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number | null;
   /** Live apparent V mag from the camera (shader mirror). */
@@ -38,12 +46,14 @@ export function createPlanetFocusProvider(
       const planet = config.planetAt(idx);
       if (!planet) return { name: '', identityLines: [], rows: [], lines: [] };
 
+      const orbit = config.orbitDescriptorOf(idx);
       const identityLines: string[] = [];
-      // Breadcrumb: header carries the body, this line its system —
-      // "Earth" / "Orbiting Sol".
-      const hostName = config.hostNameOf(idx);
-      if (hostName) identityLines.push(`Orbiting ${hostName}`);
-      identityLines.push(TYPE_DESCRIPTOR[planet.type]);
+      // Breadcrumb: header carries the body, this line its parent —
+      // "Earth" / "Orbiting Sol"; "Europa" / "Orbiting Jupiter".
+      if (orbit?.parentName) identityLines.push(`Orbiting ${orbit.parentName}`);
+      identityLines.push(
+        planet.parentName ? moonTypeDescriptor(planet.type) : TYPE_DESCRIPTOR[planet.type],
+      );
 
       const rows: FocusCardRow[] = [
         { label: 'Radius', value: formatEarthRadii(planet.radiusKm) },
@@ -61,15 +71,13 @@ export function createPlanetFocusProvider(
             return m !== null && Number.isFinite(m) ? formatMagnitude(m) : '—';
           },
         },
-        {
-          label: 'Period',
-          value: `${formatPeriodYears(planetPeriodYears(planet.semiMajorAxisAu))} yr`,
-        },
-        {
-          label: 'Orbit',
-          value: `${planet.semiMajorAxisAu.toFixed(planet.semiMajorAxisAu >= 10 ? 1 : 3)} AU`,
-        },
       ];
+      if (orbit) {
+        rows.push(
+          { label: 'Period', value: formatOrbitPeriod(orbit) },
+          { label: 'Orbit', value: formatOrbitDistance(orbit) },
+        );
+      }
 
       return { name: planet.name, identityLines, rows, lines: [] };
     },

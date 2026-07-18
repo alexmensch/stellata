@@ -6,7 +6,7 @@ import type { Target } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import type { LgCatalog } from '../local-group/local-group-loader';
-import { SOL_PLANETS } from '../solar-system/planet-system';
+import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
@@ -453,21 +453,21 @@ export function createSearchRunner(
     }
   }
 
-  // Sol's planets — search-by-planet-name is deliberately Sol-only
-  // (bk5 exoplanets are visit-to-discover). Entry index is the
-  // SOL_PLANETS index; select handlers resolve it to the body field's
-  // flat Target index at pick time via `resolveEntryTarget` (the field
-  // attaches on a microtask after boot, so the corpus can't bake flat
-  // indices).
+  // Sol's planets and moons — search-by-name is deliberately Sol-only
+  // (bk5 exoplanets are visit-to-discover). Entry index is the SOL_BODIES
+  // body-within-host index; select handlers resolve it to the body
+  // field's flat Target index at pick time via `resolveEntryTarget` (the
+  // field attaches on a microtask after boot, so the corpus can't bake
+  // flat indices).
   if (catalog.solIndex >= 0) {
-    for (let i = 0; i < SOL_PLANETS.length; i++) {
-      const p = SOL_PLANETS[i];
+    for (let i = 0; i < SOL_BODIES.length; i++) {
+      const p = SOL_BODIES[i];
       fuzzyEntries.push({
         kind: 'planet',
         index: i,
         label: p.name,
         primary: p.name,
-        displayCon: 'Planet · Sol system',
+        displayCon: p.parentName ? `Moon · ${p.parentName}` : 'Planet · Sol system',
       });
     }
   }
@@ -635,10 +635,10 @@ export function createSearchRunner(
   };
 }
 
-/** FuzzyEntry → kind-tagged Target. Planet entries carry the
- *  SOL_PLANETS index and resolve to the body field's flat instance
- *  index at pick time (null when Sol's system hasn't attached); every
- *  other kind's index IS its Target idx. */
+/** FuzzyEntry → kind-tagged Target. Planet entries (planets + moons)
+ *  carry the SOL_BODIES body-within-host index and resolve to the body
+ *  field's flat instance index at pick time (null when Sol's system
+ *  hasn't attached); every other kind's index IS its Target idx. */
 export function resolveEntryTarget(
   stellata: Stellata,
   catalog: Catalog,
