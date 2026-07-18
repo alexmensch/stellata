@@ -120,8 +120,7 @@ import {
   type ExtinctionPrepassUniforms,
 } from './star-pipeline/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import { BinaryLinkLayer } from './binaries/binary-link-layer';
-import { binaryLinkPairs } from './binaries/binary-link-pure';
+import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
@@ -313,7 +312,7 @@ export class Stellata implements FrameAnchor {
   private galacticDisc: GalacticDisc;
   // Representational layer — only renders when the host is focused.
   private orbitRingsLayer: OrbitRingsLayer;
-  private binaryLinkLayer: BinaryLinkLayer;
+  private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   // Physical layer — renders for every attached host regardless of
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
@@ -642,8 +641,8 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer();
     this.scene.add(this.orbitRingsLayer.group);
-    this.binaryLinkLayer = new BinaryLinkLayer();
-    this.scene.add(this.binaryLinkLayer.group);
+    this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
+    this.scene.add(this.binaryOrbitPathLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
     this.scene.add(this.planetBodyField.group);
     this.planetMeshLayer = new PlanetMeshLayer(
@@ -807,11 +806,13 @@ export class Stellata implements FrameAnchor {
       this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex);
       this.heliopause.setVisible(ps !== null && ps.hostStarIdx === this.catalog.solIndex);
     });
-    // Connector lines rebuild on every focus mutation: a focused member's
-    // slot-chain pairs, or none when focus leaves a multi-star system.
+    // Orbit paths rebuild on every focus mutation: the focused system's
+    // Kepler pairs, or none when focus leaves a multi-star system.
     this.on('focus', () => {
-      this.binaryLinkLayer.setPairs(
-        binaryLinkPairs(this.binariesData, this.focus.getFocusedStar()),
+      this.binaryOrbitPathLayer.setSystem(
+        this.binariesData,
+        this.focus.getFocusedStar(),
+        this.catalog.positions,
       );
     });
     // Reseed the planet-focal ride on every focus mutation: focus
@@ -1008,15 +1009,15 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       update: () => {
         this.updateBinaryOrbits();
-        // After the walk wrote this frame's slots, so links track the
-        // live orbital positions of a focused pair.
-        this.binaryLinkLayer.update(this._localPositions);
+        // After the walk wrote this frame's slots, so each path rides its
+        // pair's live barycentre drift.
+        this.binaryOrbitPathLayer.update(this._localPositions);
       },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
         this.binaryOrbitField?.dispose();
         this.eclipsePhotometryField?.dispose();
-        this.binaryLinkLayer.dispose();
+        this.binaryOrbitPathLayer.dispose();
       },
     });
     this.layers.register({
@@ -1961,7 +1962,7 @@ export class Stellata implements FrameAnchor {
       galacticDiscWireframe: set('galacticDiscWireframe'),
       lgWireframes: set('lgWireframes'),
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
-      binaryLinks: set('binaryLinks', (on) => this.binaryLinkLayer.setPermitted(on)),
+      binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
       localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
       constellationFigures: set('constellationFigures'),

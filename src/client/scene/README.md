@@ -38,9 +38,9 @@ applyDetailPreset(level)` computes each element's floor permission and
 calls its bind, which writes the `detailPermitted` cache. Per-frame
 layers *pull* — their update / label predicate reads
 `stellata.detailPermits(id)`. The few event-driven layers (Milky Way /
-LG-emission `setEnabled`, orbit rings, binary links, heliopause shell,
-Local Bubble shell) have no per-frame gate, so their bind *pushes* the
-change imperatively. A per-element
+LG-emission `setEnabled`, orbit rings, binary orbit rings, heliopause
+shell, Local Bubble shell) have no per-frame gate, so their bind *pushes*
+the change imperatively. A per-element
 override (`setSceneElementVisible`) writes one cache slot directly and
 supersedes its floor until the next `applyDetailPreset` overwrites the
 whole set.

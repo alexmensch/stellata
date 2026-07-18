@@ -6,7 +6,7 @@ import { NO_PARENT, type BinariesData } from './binaries-loader';
 /** Every relation that writes the focal's slot (focal as primary or
  *  secondary) plus their `parentRelation` ancestors — the set
  *  `BinaryOrbitField` keeps LOD-exempt (both members' positions stay live)
- *  and the connector layer draws links for. Empty when `focalIdx` is null. */
+ *  and the orbit-path layer traces. Empty when `focalIdx` is null. */
 export function focalChainRelationSet(
   binaries: BinariesData,
   focalIdx: number | null,
