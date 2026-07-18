@@ -253,6 +253,15 @@ Planet rendering splits across two layers (stellata-3re.15):
      positions, apply the per-host orientation quaternion, and write
      into the host's iLocalRel slot in the global instance buffer.
 
+  The ephemeris walk runs whenever a host is in range **regardless of
+  render visibility** — chart-mono and `setHidden` gate only the draw
+  and the GPU upload, never the position update. Chart mode is
+  observe-only and can observe from a planet, so the observe anchor and
+  the focal-frame ride read the live `bufLocalRel` positions off this
+  walk even while the bodies aren't drawn; freezing the walk there
+  strands the observer's orbital motion (Sol + planets appear static
+  while catalog stars still advance).
+
 - **`orbit-rings-layer.ts`** — per-host orbit-ring layer. Geometry
   rebuilds whenever the focused star's PlanetSystem changes; per-frame
   tick drives the pixel-gap visibility heuristic. Representational

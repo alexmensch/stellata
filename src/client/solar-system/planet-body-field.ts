@@ -309,11 +309,18 @@ export class PlanetBodyField {
    * is harmless once the host comes back into range.
    */
   update(camera: THREE.PerspectiveCamera, t: number): void {
-    if (this.hidden || this.mono || this.liveCount === 0) {
+    if (this.liveCount === 0) {
       this.group.visible = false;
       return;
     }
-    this.group.visible = true;
+    // Rendering is gated by hidden / chart-mono; the ephemeris walk is
+    // NOT. The focal-frame ride and observe anchor read live planet
+    // positions (bufLocalRel) off this walk even when the bodies aren't
+    // drawn — chart mode observes from a planet, so freezing the walk
+    // there strands the anchor's orbital motion. Only the GPU upload is
+    // skipped while invisible (the CPU buffer still advances).
+    const render = !this.hidden && !this.mono;
+    this.group.visible = render;
     let touched = false;
     for (const host of this.hosts.values()) {
       const dToHost = camera.position.distanceTo(host.hostLocalPos);
@@ -323,7 +330,7 @@ export class PlanetBodyField {
         touched = true;
       }
     }
-    if (touched) this.flushDynamicAttributes();
+    if (touched && render) this.flushDynamicAttributes();
   }
 
   /**

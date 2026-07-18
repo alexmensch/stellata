@@ -459,6 +459,44 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('update() keeps advancing the ephemeris under chart-mono / hidden (bodies not drawn, anchor still rides)', () => {
+    // Chart mode is observe-only and can observe from a planet, so the
+    // observe anchor / focal-frame ride read live positions off this walk
+    // even though the bodies aren't drawn. Rendering gates on mono/hidden;
+    // the ephemeris walk must not — freezing it strands the Earth-orbit
+    // anchor (Sol + planets appear static while catalog stars still move).
+    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    let calls = 0;
+    const positionsAt = (_t: number, out: Float32Array): void => {
+      calls++;
+      for (let i = 0; i < out.length; i++) out[i] = 0;
+    };
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet({ semiMajorAxisAu: 1, radiusKm: 6000 })],
+      positionsAt,
+    };
+    f.attachHost(0, ps, 4.83, new THREE.Vector3(), 0, 0); // initial fill → calls === 1
+    const camera = new THREE.PerspectiveCamera(); // parked at the host, gate open
+
+    f.setMonochrome(true);
+    f.update(camera, 0);
+    expect(f.group.visible).toBe(false); // bodies not drawn in chart mode
+    expect(calls).toBe(2); // …but the ephemeris still advanced
+
+    f.setMonochrome(false);
+    f.setHidden(true);
+    f.update(camera, 1);
+    expect(f.group.visible).toBe(false);
+    expect(calls).toBe(3);
+
+    f.setHidden(false);
+    f.update(camera, 2);
+    expect(f.group.visible).toBe(true);
+    expect(calls).toBe(4);
+    f.dispose();
+  });
+
   it('update() writes positionsAt output into bufLocalRel after orientation rotation', () => {
     // positionsAt returns plane-frame triples; the field rotates them
     // through the host orientation quaternion before writing into the
