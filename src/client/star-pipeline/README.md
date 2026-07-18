@@ -186,11 +186,11 @@ by magnitude.
 The renderer is constructed with
 `WebGLRenderer({ logarithmicDepthBuffer: true })`. Linear depth
 doesn't have the dynamic range to handle the camera dollying from
-`~1e-10` pc (intra-star) to `~3e4` pc (galactic centre) without
+`~1e-12` pc (small-moon surface) to `~3e4` pc (galactic centre) without
 z-fighting at intermediate scales — log depth maps
 `log(z+1) / log(far+1)` into the depth buffer so precision is roughly
 constant in `log(z)` instead of collapsing near the far plane. This
-is what enables `camera.near = 1e-10`.
+is what enables `camera.near = 1e-12`.
 
 Per-pass overrides on top of the chunk default:
 
@@ -310,7 +310,7 @@ the value when diverged from default.
 at the orbit floor fills `ZOOM_FLOOR_FRACTION` (= 0.9) of the
 viewport's minor axis purely because `minOrbitDistForStar` solves for
 that distance. Smaller stars land closer to fill the same 90%; the
-camera near plane (`1e-10`) gives several orders of magnitude of
+camera near plane (`1e-12`) gives several orders of magnitude of
 headroom even for white dwarfs and Sirius B-class radii.
 
 A varying `vPhysRatio = physSize / max(pxSize, 0.001)` is passed to
