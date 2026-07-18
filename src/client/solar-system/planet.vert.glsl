@@ -64,11 +64,17 @@ uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
 
+// Disc ↔ spheroid-mesh crossfade band in physSize/appSize ratio
+// (MESH_FADE_START/END_RATIO from mesh-crossfade.ts — the mesh layer
+// evaluates the same smoothstep from the other end).
+uniform vec2 uMeshFadeRatio;
+
 out vec3 vColor;
 out vec2 vUv;
 out float vAppMag;
 out float vPhysRatio;
 out float vSoftness;
+out float vMeshFade;
 
 const float LOG10 = 2.302585093;
 const float PI_CONST = 3.14159265358979323846;
@@ -114,6 +120,7 @@ void main() {
     vUv = aCorner;
     vPhysRatio = 0.0;
     vSoftness = 0.0;
+    vMeshFade = 0.0;
     return;
   }
 
@@ -184,6 +191,7 @@ void main() {
     vUv = aCorner;
     vPhysRatio = 0.0;
     vSoftness = 1.0 - iSolidity;
+    vMeshFade = 0.0;
     return;
   }
 
@@ -196,6 +204,14 @@ void main() {
   // when their reflected-light flux drops below the slider cutoff.
   float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
   float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+
+  // Disc ramps out as the spheroid mesh ramps in, keyed on the
+  // physSize/appSize ratio: the band starts at 1 — exactly where the
+  // max() below switches to the physical term — so the disc and the
+  // mesh (drawn at physSize) share the same footprint through the
+  // whole fade and the handoff cannot pop in size.
+  vMeshFade = smoothstep(
+      uMeshFadeRatio.x, uMeshFadeRatio.y, physSize / max(appSize, 1e-6));
 
   float pxSize = max(appSize, physSize);
   vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);

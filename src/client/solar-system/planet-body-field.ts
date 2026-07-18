@@ -13,6 +13,7 @@ import {
   type PerceptualDiscUniforms,
 } from '../star-pipeline/perceptual-disc-uniforms';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { MESH_FADE_END_RATIO, MESH_FADE_START_RATIO } from './mesh-crossfade';
 import {
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
@@ -465,6 +466,22 @@ export class PlanetBodyField {
   // Flat indices are NOT stable across detach compaction — resolve per
   // use, never cache one across an attach/detach cycle.
 
+  /** Live flat-instance count (mesh-LOD layer iteration bound). */
+  get liveInstanceCount(): number {
+    return this.liveCount;
+  }
+
+  /** Flat instance currently hidden via setHiddenInstance (-1 = none)
+   *  — the observe-anchor body; the mesh LOD must hide it too. */
+  get hiddenInstanceIdx(): number {
+    return this.hideIdxUniform.value;
+  }
+
+  /** Host's ICRS orbital-plane orientation, or null when unattached. */
+  hostOrientationOf(hostStarIdx: number): THREE.Quaternion | null {
+    return this.hosts.get(hostStarIdx)?.orientation ?? null;
+  }
+
   /** (host, planet-within-host) for a flat instance index, or null when
    *  no attached host covers it. */
   hostPlanetOf(instanceIdx: number): { hostStarIdx: number; planetIdx: number } | null {
@@ -557,7 +574,11 @@ export class PlanetBodyField {
 
   /** Shader-mirroring `max(appSize, physSize)` in CSS px, reading the
    *  live shared uniforms so debug-panel writes stay in lockstep. */
-  private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
+  private discSizeTerms(
+    radiusPc: number,
+    dVp: number,
+    appMag: number,
+  ): { physSize: number; appSize: number } {
     const viewportH = this.magShared.uViewport.value.y;
     const fovYRad = this.magShared.uFovYRad.value;
     const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
@@ -573,7 +594,30 @@ export class PlanetBodyField {
       this.magShared.uSizeMax.value,
       this.magShared.uSizeSpan.value,
     );
+    return { physSize, appSize };
+  }
+
+  private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
+    const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
     return Math.max(appSize, physSize);
+  }
+
+  /** physSize/appSize for a flat instance — the disc↔mesh crossfade
+   *  input (CPU mirror of the vertex shader's vMeshFade ratio; the
+   *  mesh layer maps it through meshFadeFromRatio). 0 when unattached
+   *  or degenerate. */
+  meshFadeRatio(
+    instanceIdx: number,
+    cameraPosLocal: Readonly<THREE.Vector3>,
+  ): number {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return 0;
+    const i = instanceIdx - host.startInstance;
+    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0) return 0;
+    const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
+    const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
+    return physSize / Math.max(appSize, 1e-6);
   }
 
   /**
@@ -787,6 +831,9 @@ export class PlanetBodyField {
           ...sharedPlanetUniforms,
           uRenderMode: { value: mode },
           uHideIdx: this.hideIdxUniform,
+          uMeshFadeRatio: {
+            value: new THREE.Vector2(MESH_FADE_START_RATIO, MESH_FADE_END_RATIO),
+          },
         },
         ...params,
       });

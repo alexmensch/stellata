@@ -64,6 +64,7 @@ import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-r
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
+import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
 import {
@@ -299,6 +300,7 @@ export class Stellata implements FrameAnchor {
   // Physical layer — renders for every attached host regardless of
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
+  private planetMeshLayer: PlanetMeshLayer;
   // Sol-anchored asymmetric ellipsoid; visible only when Sol is the
   // focused host.
   private heliopause: Heliopause;
@@ -624,6 +626,11 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.orbitRingsLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
     this.scene.add(this.planetBodyField.group);
+    this.planetMeshLayer = new PlanetMeshLayer(
+      this.planetBodyField,
+      import.meta.env.BASE_URL,
+    );
+    this.scene.add(this.planetMeshLayer.group);
     // Heliopause is Sol-anchored — added once, visibility gated on
     // focused star = Sol via the planet-system event below.
     this.heliopause = new Heliopause();
@@ -945,10 +952,17 @@ export class Stellata implements FrameAnchor {
         // Ride runs right after the field wrote this frame's positions,
         // mirroring the binary ride's placement after its orbit walk.
         this.applyPlanetFocalRide();
+        // Mesh LOD reads the field's freshly-written positions; its
+        // group mirrors the field's visibility, so monochrome/hidden
+        // need no second hook here.
+        this.planetMeshLayer.update(ctx.camera);
       },
       setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
       recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),
-      dispose: () => this.planetBodyField.dispose(),
+      dispose: () => {
+        this.planetBodyField.dispose();
+        this.planetMeshLayer.dispose();
+      },
     });
     this.layers.register({
       update: () => this.updateBinaryOrbits(),

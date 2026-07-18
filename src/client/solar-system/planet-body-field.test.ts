@@ -980,6 +980,42 @@ describe('PlanetBodyField.pick', () => {
   });
 });
 
+describe('PlanetBodyField.meshFadeRatio', () => {
+  it('crosses 1 exactly when the physical size overtakes the perceptual disc', () => {
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0);
+
+    // From the host (1 AU away) the perceptual disc dominates.
+    camera.position.set(0, 0, 0);
+    const far = f.meshFadeRatio(0, camera.position);
+    expect(far).toBeGreaterThan(0);
+    expect(far).toBeLessThan(1);
+
+    // Surface-grazing the physical size dominates.
+    const KM_PC_LOCAL = 1 / 3.0857e13;
+    camera.position.set(0, 0, -1 * AU_PC + 20 * 6000 * KM_PC_LOCAL);
+    expect(f.meshFadeRatio(0, camera.position)).toBeGreaterThan(1);
+
+    expect(f.meshFadeRatio(99, camera.position)).toBe(0); // unattached
+    f.dispose();
+  });
+});
+
 describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
   function makeField(): PlanetBodyField {
     return new PlanetBodyField(makeSharedUniforms(20));

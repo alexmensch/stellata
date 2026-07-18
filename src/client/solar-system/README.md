@@ -56,6 +56,15 @@ src/client/solar-system/
                                   body via setHiddenInstance.
   orbit-rings-layer.ts            Faint orbit rings in the host's orbital
                                   plane.
+  planet-mesh-layer.ts            Close-range spheroid mesh LOD — see
+                                  § Planet mesh LOD.
+  mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
+                                  (shared shader/CPU contract).
+  planet-mesh.vert.glsl,
+  planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
+                                  host-direction Lambert terminator,
+                                  representative-colour + limb-darkening
+                                  fallback).
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
                                   (Lambertian + Mallama phase factors).
                                   Drives both the body field's disc/glow
@@ -343,6 +352,46 @@ preset gives ~290 AU — confirming that any non-Sol focus already
 collapses Sol's bodies far past the cull distance, exactly as
 intended. `PlanetBodyField.setMaxAppMag` recomputes the cache on
 every slider move.
+
+### Planet mesh LOD (stellata-2f6.9)
+
+On close approach the billboarded disc hands off to a real oblate
+spheroid mesh (`planet-mesh-layer.ts`), crossfaded on the ratio of
+the body's TRUE projected diameter to its perceptual disc size —
+`mesh-crossfade.ts` owns the band (physSize/appSize 1.0 → 1.5) and
+both sides evaluate the same smoothstep (shader: `uMeshFadeRatio`;
+CPU: `PlanetBodyField.meshFadeRatio` → `meshFadeFromRatio`). The band
+starts at ratio 1, exactly where the disc's `max(appSize, physSize)`
+switches to the physical term, so the mesh (drawn at physSize) and
+the disc share the same footprint through the whole fade — the
+handoff can't pop in size, and the disc passes multiplying by
+`1 − vMeshFade` against the mesh's rising `uFade` means no
+double-brightness either. The
+core / corrupt / restore depth passes deliberately keep running
+through the fade — the mesh silhouette matches the disc core, so the
+ring-occlusion dance is preserved (full mesh-era ring clipping is
+stellata-2f6.3).
+
+- **Geometry**: one shared unit sphere, scaled per body to
+  `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
+  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical). The
+  pole aligns to the host's orbital-plane normal via the host
+  orientation quaternion; the prime meridian is arbitrary until IAU
+  rotation elements land (stellata-2f6.13).
+- **Lighting**: per-fragment Lambert against the planet→host
+  direction (view space) — the day/night terminator IS this lighting,
+  not imagery. Limb darkening on top; no ambient term, so the night
+  side is black (physically honest).
+- **Textures**: lazy-fetched from `public/textures/<body>.jpg`
+  (pipeline: `data/textures/README.md`) when the body crosses
+  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is
+  expected data — texture-less bodies (Uranus, future exoplanets)
+  render the representative-colour + limb-darkening base path; there
+  is no separate renderer for them. Textures load with
+  `NoColorSpace` to match the pipeline's raw-framebuffer convention.
+- **Visibility**: the layer's group mirrors `PlanetBodyField.group`
+  (chart-mono + hidden ride along for free) and skips the field's
+  `hiddenInstanceIdx` (observe anchor).
 
 `planet-labels.ts` draws per-planet body-anchored SVG labels above
 the canvas. The label engine is independent of the chart-mode label

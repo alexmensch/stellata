@@ -27,6 +27,10 @@ export interface Planet {
   // disc sizing) is the renderer's responsibility — keep the canonical
   // unit human-readable here.
   readonly radiusKm: number;
+  // Polar flattening f = (R_eq − R_pol) / R_eq, NASA fact sheets.
+  // Omitted = spherical; the mesh renderer scales its polar axis by
+  // (1 − f).
+  readonly flattening?: number;
   // Semi-major axis in AU. Real orbital phase comes from VSOP87
   // ephemerides; placeholder positions use this alone.
   readonly semiMajorAxisAu: number;
@@ -125,6 +129,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Earth',
     radiusKm: 6371,
+    flattening: 0.00335,
     semiMajorAxisAu: 1.000,
     eccentricity: 0.0167,
     type: 'rocky',
@@ -135,6 +140,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Mars',
     radiusKm: 3390,
+    flattening: 0.00589,
     semiMajorAxisAu: 1.524,
     eccentricity: 0.0934,
     type: 'rocky',
@@ -145,6 +151,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Jupiter',
     radiusKm: 69911,
+    flattening: 0.06487,
     semiMajorAxisAu: 5.203,
     eccentricity: 0.0485,
     type: 'gas_giant',
@@ -155,6 +162,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Saturn',
     radiusKm: 58232,
+    flattening: 0.09796,
     semiMajorAxisAu: 9.537,
     eccentricity: 0.0555,
     type: 'gas_giant',
@@ -169,6 +177,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Uranus',
     radiusKm: 25362,
+    flattening: 0.02293,
     semiMajorAxisAu: 19.191,
     eccentricity: 0.0464,
     type: 'ice_giant',
@@ -178,6 +187,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Neptune',
     radiusKm: 24622,
+    flattening: 0.01708,
     semiMajorAxisAu: 30.069,
     eccentricity: 0.0095,
     type: 'ice_giant',

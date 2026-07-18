@@ -24,6 +24,7 @@ in vec2 vUv;
 in float vAppMag;
 in float vPhysRatio;
 in float vSoftness;
+in float vMeshFade;
 
 out vec4 outColor;
 
@@ -103,16 +104,24 @@ void main() {
     return;
   }
 
+  // Crossfade to the spheroid mesh: the disc's visible passes fade
+  // out as vMeshFade rises. The depth passes (core / corrupt /
+  // restore) deliberately keep running through the fade — the mesh
+  // silhouette matches the disc's core region, so the ring-occlusion
+  // dance stays intact while the visual handoff happens.
+  float discFade = 1.0 - vMeshFade;
+
   if (uRenderMode == 0) {
     // Glow pass — additive, distant point-glow planets only.
     if (vPhysRatio >= PHYS_RATIO_THRESHOLD) discard;
     float tap = 1.0 - smoothstep(uMaxAppMag, uMaxAppMag + 0.5, vAppMag);
-    glow *= tap;
+    glow *= tap * discFade;
     outColor = vec4(vColor * glow, glow);
     return;
   }
 
   // Disc pass — per-channel-max, close-range resolved discs only.
+  if (discFade <= 0.0) discard;
   if (vPhysRatio < PHYS_RATIO_THRESHOLD) discard;
   if (vAppMag > uMaxAppMag) discard;
   if (glow < uDiscardThreshold) discard;
@@ -120,5 +129,5 @@ void main() {
   // background sources still depth-test through them. Mirrors
   // star.frag exactly.
   if (glow < uCoreThreshold) gl_FragDepth = 1.0;
-  outColor = vec4(vColor * glow, glow);
+  outColor = vec4(vColor * glow * discFade, glow * discFade);
 }

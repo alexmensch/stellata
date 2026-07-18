@@ -24,6 +24,10 @@ public/binding-integrity-verdicts.tsv
 # scripts/dust/build-dust.py copies chunks here so Vite's publicDir serves them.
 public/dust/
 
+# Mirror of data/textures/ artifacts — scripts/textures/sync-textures.ts
+# copies the built per-body maps here so Vite's publicDir serves them.
+public/textures/
+
 # Manual-run validation report emitted by `pnpm run validate:simbad`.
 # Local-only — re-run when investigating drift.
 docs/validation-residuals.md
