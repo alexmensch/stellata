@@ -1,8 +1,59 @@
 import { describe, expect, it } from 'vitest';
 
-import { AU_KM } from '../util/astronomy-constants';
-import { MOON_ELEMENTS } from './moon-ephemeris';
+import { AU_KM, J2000_OBLIQUITY_RAD, KM_PC } from '../util/astronomy-constants';
+import {
+  earthMoonSplit,
+  MOON_ELEMENTS,
+  MOON_MASS_FRACTION,
+  moonOffsetEcliptic,
+  type MoonElements,
+} from './moon-ephemeris';
+import type { Vec3 } from './ephemeris';
 import { SOL_MOONS } from './planet-system';
+import { julianEpochYearToT } from './time';
+
+const DEG = Math.PI / 180;
+const elem = (name: string): MoonElements =>
+  MOON_ELEMENTS.find((m) => m.name === name)!;
+
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return {
+    x: a.y * b.z - a.z * b.y,
+    y: a.z * b.x - a.x * b.z,
+    z: a.x * b.y - a.y * b.x,
+  };
+}
+function mag(v: Vec3): number {
+  return Math.hypot(v.x, v.y, v.z);
+}
+function normalize(v: Vec3): Vec3 {
+  const m = mag(v);
+  return { x: v.x / m, y: v.y / m, z: v.z / m };
+}
+
+// The moon's reference-plane pole, rotated ICRS → ecliptic (Rx(−ε)) — the
+// axis its orbit normal should line up with under the resolver's frame
+// composition.
+function refPoleEcliptic(m: MoonElements): Vec3 {
+  const a = m.refPoleRaDeg! * DEG;
+  const d = m.refPoleDecDeg! * DEG;
+  const icrs = { x: Math.cos(d) * Math.cos(a), y: Math.cos(d) * Math.sin(a), z: Math.sin(d) };
+  const ce = Math.cos(J2000_OBLIQUITY_RAD), se = Math.sin(J2000_OBLIQUITY_RAD);
+  return { x: icrs.x, y: ce * icrs.y + se * icrs.z, z: -se * icrs.y + ce * icrs.z };
+}
+
+// Orbit normal (unit) sampled from two nearby epochs a small fraction of
+// the period apart — direction of r(t0) × r(t1).
+function orbitNormal(m: MoonElements, t0: number): Vec3 {
+  const dtSec = (m.periodDays / 500) * 86400;
+  const r0: Vec3 = { x: 0, y: 0, z: 0 };
+  const r1: Vec3 = { x: 0, y: 0, z: 0 };
+  moonOffsetEcliptic(m, t0, r0);
+  moonOffsetEcliptic(m, t0 + dtSec, r1);
+  return normalize(cross(r0, r1));
+}
+
+const T_J2000 = julianEpochYearToT(2000.0);
 
 const EXPECTED_MOONS: Record<string, string> = {
   Moon: 'Earth',
@@ -80,5 +131,117 @@ describe('SOL_MOONS', () => {
     const rocky = SOL_MOONS.filter((m) => m.type === 'rocky').map((m) => m.name).sort();
     expect(rocky).toEqual(['Io', 'Moon']);
     expect(SOL_MOONS.every((m) => m.type === 'rocky' || m.type === 'icy')).toBe(true);
+  });
+});
+
+describe('moonOffsetEcliptic', () => {
+  const out: Vec3 = { x: 0, y: 0, z: 0 };
+
+  it('keeps parent distance within [a(1−e), a(1+e)] across ±3000 yr', () => {
+    // 40 samples spanning the Standish window for every moon.
+    const tMin = julianEpochYearToT(-1000.0);
+    const tMax = julianEpochYearToT(3000.0);
+    for (const m of MOON_ELEMENTS) {
+      const aPc = m.aKm * KM_PC;
+      const lo = aPc * (1 - m.e);
+      const hi = aPc * (1 + m.e);
+      for (let i = 0; i <= 40; i++) {
+        const t = tMin + ((tMax - tMin) * i) / 40;
+        moonOffsetEcliptic(m, t, out);
+        const r = mag(out);
+        expect(r, `${m.name} @ ${i}`).toBeGreaterThanOrEqual(lo * (1 - 1e-9));
+        expect(r, `${m.name} @ ${i}`).toBeLessThanOrEqual(hi * (1 + 1e-9));
+      }
+    }
+  });
+
+  it('returns to the same position after one sidereal period', () => {
+    for (const m of MOON_ELEMENTS) {
+      const start: Vec3 = { x: 0, y: 0, z: 0 };
+      const after: Vec3 = { x: 0, y: 0, z: 0 };
+      moonOffsetEcliptic(m, T_J2000, start);
+      moonOffsetEcliptic(m, T_J2000 + m.periodDays * 86400, after);
+      const drift = mag({ x: after.x - start.x, y: after.y - start.y, z: after.z - start.z });
+      expect(drift / mag(start), m.name).toBeLessThan(1e-6);
+    }
+  });
+
+  it('produces a measurable displacement at a quarter period', () => {
+    for (const m of MOON_ELEMENTS) {
+      const start: Vec3 = { x: 0, y: 0, z: 0 };
+      const quarter: Vec3 = { x: 0, y: 0, z: 0 };
+      moonOffsetEcliptic(m, T_J2000, start);
+      moonOffsetEcliptic(m, T_J2000 + (m.periodDays / 4) * 86400, quarter);
+      const step = mag({ x: quarter.x - start.x, y: quarter.y - start.y, z: quarter.z - start.z });
+      // A quarter-orbit sweep is order-of-a itself, never sub-milli-a.
+      expect(step / mag(start), m.name).toBeGreaterThan(0.1);
+    }
+  });
+
+  it('places the geocentric Moon at ~384,400 km on the ecliptic', () => {
+    moonOffsetEcliptic(elem('Moon'), T_J2000, out);
+    const km = mag(out) / KM_PC;
+    expect(km).toBeGreaterThan(363000);
+    expect(km).toBeLessThan(406000);
+    // The Moon's orbit sits ~5° off the ecliptic, NOT ~23° — proof it is
+    // not being rotated through Earth's equatorial pole.
+    const n = orbitNormal(elem('Moon'), T_J2000);
+    const tiltDeg = Math.acos(Math.min(1, Math.abs(n.z))) / DEG;
+    expect(tiltDeg).toBeGreaterThan(3);
+    expect(tiltDeg).toBeLessThan(8);
+  });
+
+  it('aligns a Galilean orbit normal with Jupiter’s reference pole', () => {
+    // Io's inclination to its reference plane is ~0, so its orbit normal
+    // must land on the reference pole once rotated into the ecliptic —
+    // validates the reference-plane → ecliptic composition direction.
+    const io = elem('Io');
+    const n = orbitNormal(io, T_J2000);
+    const pole = refPoleEcliptic(io);
+    const angleDeg = Math.acos(Math.min(1, Math.abs(n.x * pole.x + n.y * pole.y + n.z * pole.z))) / DEG;
+    expect(angleDeg).toBeLessThan(1);
+  });
+
+  it('sweeps Triton retrograde and the Galileans prograde about their poles', () => {
+    // Angular momentum r×v aligned with the reference pole ⇒ prograde
+    // (positive dot); anti-aligned ⇒ retrograde. Triton (i≈157°) is the
+    // one retrograde major moon.
+    const dot = (m: MoonElements): number => {
+      const n = orbitNormal(m, T_J2000);
+      const p = refPoleEcliptic(m);
+      return n.x * p.x + n.y * p.y + n.z * p.z;
+    };
+    expect(dot(elem('Triton'))).toBeLessThan(0);
+    for (const name of ['Io', 'Europa', 'Ganymede', 'Callisto']) {
+      expect(dot(elem(name)), name).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('earthMoonSplit', () => {
+  it('offsets Earth from the barycentre by the Moon mass fraction of r', () => {
+    const bary: Vec3 = { x: 1.2, y: -0.4, z: 0.05 };
+    const moonGeo: Vec3 = { x: 0, y: 0, z: 0 };
+    moonOffsetEcliptic(elem('Moon'), T_J2000, moonGeo);
+    const earth: Vec3 = { x: 0, y: 0, z: 0 };
+    const moon: Vec3 = { x: 0, y: 0, z: 0 };
+    earthMoonSplit(bary, moonGeo, earth, moon);
+
+    // Earth sits MOON_MASS_FRACTION·r back from the barycentre — ~4700 km.
+    const earthOff = mag({ x: earth.x - bary.x, y: earth.y - bary.y, z: earth.z - bary.z });
+    expect(earthOff / KM_PC).toBeGreaterThan(4000);
+    expect(earthOff / KM_PC).toBeLessThan(5500);
+    expect(earthOff).toBeCloseTo(MOON_MASS_FRACTION * mag(moonGeo), 12);
+
+    // Moon − Earth reproduces the geocentric offset exactly.
+    expect(moon.x - earth.x).toBeCloseTo(moonGeo.x, 12);
+    expect(moon.y - earth.y).toBeCloseTo(moonGeo.y, 12);
+    expect(moon.z - earth.z).toBeCloseTo(moonGeo.z, 12);
+
+    // Mass-weighted centroid recovers the barycentre.
+    const f = MOON_MASS_FRACTION;
+    expect((1 - f) * earth.x + f * moon.x).toBeCloseTo(bary.x, 12);
+    expect((1 - f) * earth.y + f * moon.y).toBeCloseTo(bary.y, 12);
+    expect((1 - f) * earth.z + f * moon.z).toBeCloseTo(bary.z, 12);
   });
 });
