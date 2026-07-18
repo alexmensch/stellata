@@ -22,6 +22,7 @@ this file carries only the cross-folder policies.
 | [`stellarium/`](stellarium/README.md) | Stellarium modern sky culture (HIP-indexed constellation lines). |
 | [`local-group/`](local-group/README.md) | Pace 2024 LVDB dwarf snapshot + hand-curated structural overrides. |
 | [`molecular-clouds/`](molecular-clouds/README.md) | Zucker 2020 / 2021 cloud distances + 3D bounding boxes (shelved). |
+| [`local-bubble/`](local-bubble/README.md) | Zucker 2022 Local Bubble inner-surface HEALPix map (dust-wall distance). |
 | [`dust/`](dust/README.md) | Edenhofer 2023 3D dust map (resampled voxel grid + particle field). |
 | [`horizons/`](horizons/README.md) | JPL Horizons planet RA/Dec truth set for the sky-truth regression corpus. |
 | [`textures/`](textures/README.md) | Planet surface/cloud equirect maps + Saturn-ring radial profile (frozen sources + built artifacts). |
