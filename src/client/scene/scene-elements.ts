@@ -75,7 +75,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   heliopauseLabel:           { realistic: 'all',              chart: 'never' },
   mwLabel:                   { realistic: 'all',              chart: 'never' },
   lgObjectLabels:            { realistic: 'all',              chart: 'never' },
-  chartStarNameLabels:       { realistic: 'never',            chart: 'representational' },
+  chartStarNameLabels:       { realistic: 'never',            chart: 'physical' },
   chartBayerGlyphs:          { realistic: 'never',            chart: 'physical' },
   chartVariableRings:        { realistic: 'never',            chart: 'physical' },
   chartConstellationNames:   { realistic: 'never',            chart: 'all' },
