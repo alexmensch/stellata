@@ -955,7 +955,7 @@ export class Stellata implements FrameAnchor {
         // Mesh LOD reads the field's freshly-written positions; its
         // group mirrors the field's visibility, so monochrome/hidden
         // need no second hook here.
-        this.planetMeshLayer.update(ctx.camera);
+        this.planetMeshLayer.update(ctx.camera, ctx.t);
       },
       setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
       recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),

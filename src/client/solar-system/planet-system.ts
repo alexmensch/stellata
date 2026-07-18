@@ -18,6 +18,18 @@ import {
   SATURN_PHASE,
   VENUS_PHASE,
 } from './phase-function';
+import {
+  EARTH_ROTATION,
+  JUPITER_ROTATION,
+  MARS_ROTATION,
+  MERCURY_ROTATION,
+  NEPTUNE_ROTATION,
+  PLUTO_ROTATION,
+  type RotationElements,
+  SATURN_ROTATION,
+  URANUS_ROTATION,
+  VENUS_ROTATION,
+} from './rotation-elements-pure';
 
 export type PlanetType = 'rocky' | 'gas_giant' | 'ice_giant';
 
@@ -56,6 +68,12 @@ export interface Planet {
   // and per-planet citations. Pluto and every exoplanet under
   // the exoplanet epic leave this undefined and fall back to Lambert.
   readonly phaseCoefficients?: PhaseCoefficients;
+  // Optional IAU rotation elements (pole + prime meridian on the model
+  // clock). Bodies without published elements leave this undefined —
+  // the mesh renderer falls back to pole = host orbital-plane normal
+  // with an arbitrary fixed meridian, the same convention shape as the
+  // Lambertian phase fallback.
+  readonly rotation?: RotationElements;
 }
 
 export interface PlanetSystem {
@@ -115,6 +133,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.55, 0.47, 0.32],
     albedo: 0.142,
     phaseCoefficients: MERCURY_PHASE,
+    rotation: MERCURY_ROTATION,
   },
   {
     name: 'Venus',
@@ -125,6 +144,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.91, 0.82, 0.60],
     albedo: 0.689,
     phaseCoefficients: VENUS_PHASE,
+    rotation: VENUS_ROTATION,
   },
   {
     name: 'Earth',
@@ -136,6 +156,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.31, 0.49, 0.67],
     albedo: 0.434,
     phaseCoefficients: EARTH_PHASE,
+    rotation: EARTH_ROTATION,
   },
   {
     name: 'Mars',
@@ -147,6 +168,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.76, 0.27, 0.05],
     albedo: 0.170,
     phaseCoefficients: MARS_PHASE,
+    rotation: MARS_ROTATION,
   },
   {
     name: 'Jupiter',
@@ -158,6 +180,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.85, 0.72, 0.51],
     albedo: 0.538,
     phaseCoefficients: JUPITER_PHASE,
+    rotation: JUPITER_ROTATION,
   },
   {
     name: 'Saturn',
@@ -169,6 +192,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.90, 0.79, 0.62],
     albedo: 0.499,
     phaseCoefficients: SATURN_PHASE,
+    rotation: SATURN_ROTATION,
   },
   // Uranus and Neptune deliberately omit `phaseCoefficients` — see
   // the comment in `phase-function.ts` for the reason. Both fall
@@ -183,6 +207,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     type: 'ice_giant',
     colour: [0.64, 0.85, 0.90],
     albedo: 0.488,
+    rotation: URANUS_ROTATION,
   },
   {
     name: 'Neptune',
@@ -193,6 +218,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     type: 'ice_giant',
     colour: [0.25, 0.37, 0.75],
     albedo: 0.442,
+    rotation: NEPTUNE_ROTATION,
   },
   // Pluto — mean radius from New Horizons 2015 reconnaissance. Type
   // 'rocky' is the closest match in our existing tri-state; Pluto is
@@ -210,6 +236,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     type: 'rocky',
     colour: [0.78, 0.62, 0.49],
     albedo: 0.49,
+    rotation: PLUTO_ROTATION,
   },
 ] as const;
 

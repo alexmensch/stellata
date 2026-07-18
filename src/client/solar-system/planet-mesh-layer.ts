@@ -5,8 +5,16 @@ import * as THREE from 'three';
 import { KM_PC } from '../util/astronomy-constants';
 import type { PlanetBodyField } from './planet-body-field';
 import { meshFadeFromRatio, TEXTURE_PREFETCH_RATIO } from './mesh-crossfade';
+import {
+  poleRaDecDegAt,
+  type RotationElements,
+  spinDegAt,
+} from './rotation-elements-pure';
 import meshVert from './planet-mesh.vert.glsl?raw';
 import meshFrag from './planet-mesh.frag.glsl?raw';
+
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 interface MeshEntry {
   mesh: THREE.Mesh;
@@ -32,8 +40,10 @@ export class PlanetMeshLayer {
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
   private readonly tmpSun = new THREE.Vector3();
+  private readonly tmpQuatA = new THREE.Quaternion();
+  private readonly tmpQuatB = new THREE.Quaternion();
   private readonly poleTilt = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(1, 0, 0),
+    X_AXIS,
     Math.PI / 2,
   );
 
@@ -51,8 +61,9 @@ export class PlanetMeshLayer {
 
   /** Per-frame: show/scale/light every body inside the crossfade band.
    *  Reads the body field's live buffers, so recentres and scrubber
-   *  motion need no extra hooks. */
-  update(camera: THREE.PerspectiveCamera): void {
+   *  motion need no extra hooks. `t` is the model clock (getT()) —
+   *  IAU spin runs on it like binary orbits. */
+  update(camera: THREE.PerspectiveCamera, t: number): void {
     // Chart mode inks the bodies as flat discs (chart-mode/README.md);
     // a lit photographic sphere has no place on paper.
     this.group.visible = this.field.group.visible && !this.field.monochrome;
@@ -80,15 +91,19 @@ export class PlanetMeshLayer {
       const polar = radiusPc * (1 - (planet.flattening ?? 0));
       mesh.scale.set(radiusPc, polar, radiusPc);
 
-      // Geometry pole (+Y) → orbital-plane normal (host frame +Z) →
-      // ICRS via the host orientation. Prime meridian is arbitrary
-      // until IAU rotation elements land.
       const hp = this.field.hostPlanetOf(idx);
-      const orientation = hp === null
-        ? null
-        : this.field.hostOrientationOf(hp.hostStarIdx);
-      if (orientation) {
-        mesh.quaternion.copy(orientation).multiply(this.poleTilt);
+      if (planet.rotation) {
+        this.applyIauOrientation(mesh, planet.rotation, t);
+      } else {
+        // Fallback for bodies without published elements: geometry
+        // pole (+Y) → orbital-plane normal (host frame +Z) → ICRS via
+        // the host orientation; prime meridian arbitrary but fixed.
+        const orientation = hp === null
+          ? null
+          : this.field.hostOrientationOf(hp.hostStarIdx);
+        if (orientation) {
+          mesh.quaternion.copy(orientation).multiply(this.poleTilt);
+        }
       }
 
       // Host-star direction in view space drives the terminator.
@@ -117,6 +132,23 @@ export class PlanetMeshLayer {
     for (const [idx, entry] of this.entries) {
       if (!shown.has(idx)) entry.mesh.visible = false;
     }
+  }
+
+  /** IAU body→ICRS composition Rz(90°+α0)·Rx(90°−δ0)·Rz(W), then the
+   *  geometry pole tilt (+Y → body +z). The map-centre offset rides
+   *  the spin term so texture features land on their true longitudes. */
+  private applyIauOrientation(
+    mesh: THREE.Mesh,
+    rot: RotationElements,
+    t: number,
+  ): void {
+    const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
+    const spinDeg = spinDegAt(rot, t) + (rot.mapCenterLonDeg ?? 0);
+    mesh.quaternion
+      .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
+      .multiply(this.tmpQuatA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)))
+      .multiply(this.tmpQuatB.setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(spinDeg)))
+      .multiply(this.poleTilt);
   }
 
   private createEntry(idx: number): MeshEntry {

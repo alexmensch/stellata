@@ -65,6 +65,9 @@ src/client/solar-system/
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
                                   fallback).
+  rotation-elements-pure.ts       IAU rotation elements per body (pole +
+                                  prime meridian on the model clock) —
+                                  see § Planet rotation.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
                                   (Lambertian + Mallama phase factors).
                                   Drives both the body field's disc/glow
@@ -374,10 +377,10 @@ stellata-2f6.3).
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
-  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical). The
-  pole aligns to the host's orbital-plane normal via the host
-  orientation quaternion; the prime meridian is arbitrary until IAU
-  rotation elements land (stellata-2f6.13).
+  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical).
+  Orientation comes from the body's IAU rotation elements
+  (§ Planet rotation); bodies without them fall back to pole =
+  host orbital-plane normal with an arbitrary fixed meridian.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; no ambient term, so the night
@@ -392,6 +395,38 @@ stellata-2f6.3).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+
+### Planet rotation (stellata-2f6.13)
+
+`rotation-elements-pure.ts` carries per-body IAU rotation elements —
+pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
+`W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
+Cartographic Coordinates and Rotational Elements 2015 report
+(Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`. The
+sub-degree periodic nutation/precession terms are dropped: at render
+scale they're invisible (largest is Neptune's ±0.7° pole nod), and
+the linear pole rates already carry the visually meaningful part
+(Earth's axial precession drifts the pole ~30° across the model-clock
+window). `t` is treated as TDB via `tToJDE` — the ~69 s UTC↔TDB gap
+is ~0.3° of Earth spin, accepted repo-wide.
+
+The mesh layer composes body→ICRS as `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`
+(the IAU convention: body +z = pole, +x = prime meridian, W measured
+from the node of the body equator on the ICRS equator), then the
+geometry pole tilt (+Y → +z). Driven off `getT()` each frame like
+binary orbits, so the scrubber spins planets and the day side tracks
+the actual model-time hemisphere. `Planet.rotation` is optional —
+bodies without published elements (exoplanets) keep the fallback
+pole = host orbital-plane normal with an arbitrary fixed meridian.
+
+`RotationElements.mapCenterLonDeg` is texture metadata riding the
+same table: the east longitude at the horizontal centre of the
+body's equirect map, added to the spin term so texture features land
+on their true longitudes. All shipped maps are centred on 0° except
+Pluto (PIA11707 is centred on ~180°E — Sputnik Planitia at map
+centre). Gas-giant and Venus cloud maps are epoch snapshots of
+rotating cloud decks, so their longitude alignment is inherently
+arbitrary; 0 is used.
 
 `planet-labels.ts` draws per-planet body-anchored SVG labels above
 the canvas. The label engine is independent of the chart-mode label
