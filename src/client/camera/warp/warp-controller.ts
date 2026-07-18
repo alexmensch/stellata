@@ -5,7 +5,13 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
-import { targetsEqual, type FocusTarget, type Target } from '../focus/focus-target';
+import {
+  isHardTarget,
+  targetsEqual,
+  type FocusTarget,
+  type Target,
+  type TargetKind,
+} from '../focus/focus-target';
 import { type FocusOps } from '../focus/focus-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 
@@ -56,7 +62,7 @@ export interface WarpPhaseInfo {
 export interface WarpInfo {
   A: Readonly<THREE.Vector3>;
   B: Readonly<THREE.Vector3>;
-  destKind: 'star' | 'cloud' | 'lg';
+  destKind: TargetKind;
   destIdx: number;
 }
 
@@ -64,12 +70,13 @@ export interface WarpControllerDeps {
   camera: THREE.PerspectiveCamera;
   controls: TrackballControls;
   observeControls: ObserveControls;
-  /** Direct handle on `material.uniforms.uHideFocusIdx` — the source
-   *  star stays pinned to -1 except across the observe-launch reorient
-   *  (where it's already pinned to the source by setCameraMode), so the
-   *  controller only writes -1 on navigate-mode arrival and `dest.idx`
-   *  on observe→observe arrival via swapObserveAnchor. */
-  uHideFocusIdxRef: { value: number };
+  /** Per-kind focal-body hide (star: uHideFocusIdx; planet: the body
+   *  field's uHideIdx). The source body stays hidden across the
+   *  observe-launch reorient (it was hidden at observe entry), so the
+   *  controller only unhides on navigate-mode arrival and swaps the
+   *  hide to the destination on observe→observe arrival via
+   *  swapObserveAnchor. */
+  setFocalBodyHidden: (target: Target | null) => void;
   bus: EventBus<StellataEventMap>;
   getCameraMode: () => CameraMode;
   /** Whether chart mode is currently engaged — read at startWarp to
@@ -256,13 +263,13 @@ export class WarpController {
     // disc from the camera's interior.
     //
     // returnToObserve gates the post-arrival parallax slerp + observe
-    // re-entry. Restricted to star destinations because observe-mode
-    // parks the camera AT the focal object's local origin and that
-    // invariant is only set up for stars today.
+    // re-entry. Hard kinds only (star / planet) — observe parks the
+    // camera AT the focal object, which needs the recentred local
+    // frame; soft kinds land in navigate.
     let returnToObserve = false;
     if (this.deps.getCameraMode() === 'observe') {
       this.deps.observeControls.disable();
-      returnToObserve = dest.kind === 'star';
+      returnToObserve = isHardTarget({ kind: dest.kind, idx: dest.idx });
     }
     const endOffset = dest.parkRadius();
     const AB = new THREE.Vector3().subVectors(B, A);
@@ -463,21 +470,22 @@ export class WarpController {
     this.state = null;
     // Clear the vector slot (any kind) — the destination has been reached.
     this.deps.focus.clearVector();
-    if (state.dest.kind === 'star' && state.returnToObserve) {
-      // observe→observe arrival. swapObserveAnchor finalises the anchor
-      // swap — sets uHideFocusIdx to the destination, snaps the camera
-      // to local origin, and (if it hasn't already been done at phase-3
-      // start for jitter mitigation) recentres the floating origin and
-      // updates focused-star state. No cameraMode flip through navigate
-      // (which is what setFocus would do, triggering a 'cameraMode'
-      // event flicker).
-      this.swapObserveAnchor(state.dest.idx);
+    if (state.returnToObserve) {
+      // observe→observe arrival (hard-kind destination by
+      // construction). swapObserveAnchor finalises the anchor swap —
+      // moves the focal-body hide to the destination, snaps the camera
+      // to its live local position, and (if it hasn't already been
+      // done at phase-3 start for jitter mitigation) recentres the
+      // floating origin and updates focus state. No cameraMode flip
+      // through navigate (which is what setFocus would do, triggering
+      // a 'cameraMode' event flicker).
+      this.swapObserveAnchor(state.dest);
       this.deps.observeControls.enable();
       // controls.enabled stays false — observe owns the camera now.
     } else {
-      // Navigate-mode arrival. Source-star hide expires with the warp;
-      // the destination star (if any) renders normally.
-      this.deps.uHideFocusIdxRef.value = -1;
+      // Navigate-mode arrival. Source-body hide expires with the warp;
+      // the destination (if any) renders normally.
+      this.deps.setFocalBodyHidden(null);
       if (state.recenteredToDest) {
         // Mid-Fly recentre already mutated focus state via
         // `dest.applyFocus`. Fire the deferred event family here so the
@@ -530,17 +538,24 @@ export class WarpController {
   // on newIdx, only the observe-specific tail runs (anchor hide + camera
   // snap to local origin). The 'focus' event fires unconditionally so
   // the deferred-from-phase-3 case still emits in lockstep with arrival.
-  private swapObserveAnchor(newIdx: number): void {
-    if (this.deps.focus.getFocusedStar() !== newIdx) {
-      this.deps.focus.recenterFocusToStar(newIdx);
+  private swapObserveAnchor(dest: FocusTarget): void {
+    const target: Target = { kind: dest.kind, idx: dest.idx };
+    if (!targetsEqual(this.deps.focus.getFocusedTarget(), target)) {
+      // Late anchor swap — the mid-Fly recentre didn't fire (collocated
+      // source/dest). Same recentre + focus mutation the mid-Fly path
+      // runs, through the kind-agnostic FocusTarget contract.
+      if (dest.anchorInto(this.tmpAbs)) {
+        this.deps.focus.recenterOrigin(this.tmpAbs);
+      }
+      dest.applyFocus();
     }
-    this.deps.uHideFocusIdxRef.value = newIdx;
-    // Park at the new anchor's LIVE local position (baseline + orbital
-    // perturbation) — observe stands the camera on the star, which sits
-    // at its perturbed position, not the local origin. Quaternion
+    this.deps.setFocalBodyHidden(target);
+    // Park at the new anchor's LIVE local position (a star's baseline +
+    // orbital perturbation; a planet's body-field position) — observe
+    // stands the camera on the object, not the local origin. Quaternion
     // preserved from the post-arrival slerp end state.
-    this.deps.focus.starLivePositionInto(newIdx, this.deps.camera.position);
-    this.deps.bus.emit('focus', { kind: 'star', idx: newIdx });
+    dest.localPositionInto(this.deps.camera.position);
+    this.deps.bus.emit('focus', target);
     this.deps.bus.emit('state');
   }
 

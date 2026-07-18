@@ -17,11 +17,14 @@ close-approach focused star sitting at exactly NDC origin.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
 - `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
-  kind = `'star' | 'cloud' | 'lg'`), the `FocusTarget` contract, and
-  the `FocusableProviders` registry contract (§ FocusableProviders).
-  Per-kind factories return objects closing over the current focus
-  state + controller deps so warp / overlays / arrival math can read
-  positions and emit events without knowing the kind.
+  kind = `'star' | 'cloud' | 'lg' | 'planet'`), the `FocusTarget`
+  contract, and the `FocusableProviders` registry contract
+  (§ FocusableProviders). Per-kind factories return objects closing
+  over the current focus state + controller deps so warp / overlays /
+  arrival math can read positions and emit events without knowing the
+  kind. A planet Target's idx is the PlanetBodyField flat global
+  instance index; (host, planet-within-host) resolve through the
+  field's attach table.
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The
@@ -34,12 +37,12 @@ stays on `stellata.ts` — those primitives rewrite the star-pipeline
 ## Focus state
 
 - `focused: Target | null` and `vector: Target | null` — one sum-type
-  slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG)
-  is structural rather than enforced by pairwise clears. The `'focus'`
-  and `'vector'` events carry the kind-tagged `Target | null` payload,
-  so a kind change is a single emit — no clearing emit for the
-  displaced kind precedes it; subscribers re-read state or switch on
-  `payload.kind`.
+  slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG
+  ↔ planet) is structural rather than enforced by pairwise clears.
+  The `'focus'` and `'vector'` events carry the kind-tagged
+  `Target | null` payload, so a kind change is a single emit — no
+  clearing emit for the displaced kind precedes it; subscribers
+  re-read state or switch on `payload.kind`.
 - `cameraMode` lives here too — `getCameraMode()` is the single read
   path; `setCameraModeValue()` is the raw no-emit write used by
   ObserveTransition and the observe-cleanup branch of `setFocus`.
@@ -92,7 +95,7 @@ this seam and do not need to change.
 
 ```ts
 interface FocusTarget {
-  readonly kind: 'star' | 'cloud';   // extend the union per new kind
+  readonly kind: TargetKind;         // extend the union per new kind
   readonly idx: number;
   anchorInto(out: Vector3): boolean;        // absolute-space anchor
   localPositionInto(out: Vector3): boolean; // current floating-frame position
@@ -145,13 +148,58 @@ closures, so attach cycles need no re-registration. Overlays and
 pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
 
-**Star-only affordances are guards, not provider legs.** The orbital
-ride, `uPinFocusToCenter`, planet systems, POI pinning, and the
-observe anchor all guard on `getFocusedStar()`, which returns null for
-every non-star kind — so kind N+1 passes through them untouched with
-zero shell edits. An affordance gains an optional provider member only
-when a second kind actually implements it; don't add speculative
-capability methods before then.
+**User-facing interaction affordances are kind-generic — never
+special-case any kind in UX behaviour.** An object is an object: it
+sits at coordinates and observes the general rules of the click state
+machine, focus, POI pinning, the distance vector, Esc, observe, and
+warp, all of which operate on `Target`s. Every kind — current or
+future — joins by implementing the existing contracts (FocusTarget,
+provider legs, `PoiStore.pinnable`), with zero interaction-layer
+edits; a per-kind branch in the shell or the input FSM is a
+review-blocking defect, whatever the kind.
+
+**Internal star-only mechanisms stay guards, not provider legs.** The
+binary orbital ride and `uPinFocusToCenter` guard on
+`getFocusedStar()`, which returns null for every non-star kind — so
+kind N+1 passes through them untouched. A mechanism gains an optional
+provider member only when a second kind actually implements it (the
+planet-focal ride is the planet analogue of the binary ride); don't
+add speculative capability methods before then.
+
+## Planet focus — the second hard kind
+
+Star and planet are the two **hard** focus kinds: both recentre the
+floating origin onto the object and drop `controls.minDistance` to a
+per-body physical floor; clouds and LG objects stay **soft** (no
+recentre, no floor change). `focusPlanet` mirrors `focusStar`;
+`setPlanetFocus` is the setFocus-analogue (observe bail-out, recentre
+onto the planet's absolute position, floor drop, pose-preserving
+target snap). Displacing a planet focus — `setFocus(null)`, a soft
+kind, or Esc — runs the same detach side effects a star unfocus does
+(floor clamp to `min(GLOBAL_MIN_DIST_PC, eye)`, planet-system detach).
+
+- Floors/parks come from `star-physics.ts`: `minOrbitDistForPlanet`
+  (the same 90 %-fill solve stars use) and `parkDistForPlanet` (a
+  30 %-fill solve — purely angular, no 1 AU term, because a planet is
+  a dim reflected-light body whose park has to actually show the disc).
+- **Host-derived state stays alive.** The planet kind's applyFocus /
+  setPlanetFocus attach the HOST's planet system (orbit rings,
+  heliopause, labels) exactly as the host's own star focus would.
+- **Observe anchors.** Star and planet are both valid observe
+  anchors (`getFocusedHardTarget`); the focal-body hide dispatches per
+  kind through `setFocalBodyHidden` in `stellata.ts`.
+- **No shader pin.** `uPinFocusToCenter` is a star-instance pin; a
+  focused planet is kept under the camera by the planet-focal ride in
+  `stellata.ts` (`applyPlanetFocalRide`, the planet sibling of the
+  binary focal-frame ride): camera + target + in-flight pose caches
+  translate by the body's per-frame local-position delta read from the
+  body-field buffers, so pan offsets survive and the rendered body
+  stays glued to the orbit target under scrubber fast-forward. The
+  ride reseeds on every `'focus'` event (each planet focus recentres
+  the origin, staleing the cached last position). Float32 precision as
+  the body orbits far from the focus-time origin is held generically by
+  the origin-follow recentre (`../../binaries/README.md` § Focal-frame
+  ride — kind-agnostic, no planet pin).
 
 ## Focus-park lerp
 

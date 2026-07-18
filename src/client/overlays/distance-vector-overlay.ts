@@ -129,6 +129,7 @@ export function createDistanceVectorOverlay(
         to.idx,
       );
     }
+    if (to.kind === 'planet') return stellata.planetField.planetAt(to.idx)?.name ?? 'Planet';
     if (to.kind === 'cloud') {
       const cat = stellata.getCloudCatalog();
       return cat ? cat.clouds[to.idx].name : 'Cloud';

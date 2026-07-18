@@ -1,4 +1,5 @@
 import type { Stellata } from '../stellata';
+import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
@@ -200,10 +201,11 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'o': case 'O':
-        // Mirror the panel's observe-button enable rule: only valid when
-        // a star is focused. setCameraMode no-ops without focus anyway,
-        // but bailing here keeps the key from feeling unresponsive.
-        if (stellata.getFocusedStar() !== null) {
+        // Mirror the panel's observe-button enable rule: any hard-kind
+        // focus (star / planet) is a valid anchor. setCameraMode no-ops
+        // without one anyway, but bailing here keeps the key from
+        // feeling unresponsive.
+        if (isHardTarget(stellata.getFocusedTarget())) {
           stellata.setCameraMode('observe');
           e.preventDefault();
         }
@@ -256,9 +258,10 @@ function resetCameraSection(stellata: Stellata) {
 }
 
 // ESC progression: observe→navigate (keep focus, animated exit), then
-// in navigate clear destination if any, else clear focus. A no-op if
-// neither is set.
-function escCascade(stellata: Stellata) {
+// in navigate clear destination if any, else clear focus — uniform
+// across every focusable kind. A no-op if neither is set. Exported for
+// its unit test.
+export function escCascade(stellata: Stellata) {
   if (stellata.getCameraMode() === 'observe') {
     stellata.setCameraMode('navigate');
     return;

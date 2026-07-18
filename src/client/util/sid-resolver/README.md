@@ -79,7 +79,10 @@ with an `attach('cloud', arrayDomain(...))` alongside the restored
 ## Scope
 
 Identity substrate only: resolution says which object a sid names, not
-what focus/hover does with it — per-kind focus behaviour is unchanged
-(planets and Local Group objects stay hover-only). Routing the runtime's
+what focus/hover does with it. One wrinkle for the planet domain: its
+localIndex (planet-within-host, host implicit — Sol today) is NOT the
+Target `{kind:'planet'}` currency (the PlanetBodyField flat instance
+index) — the URL layer translates through `IdMaps.planetDomainIndexOf`
+/ `planetTargetIndexOf` (wired in `main.ts`). Routing the runtime's
 index-keyed APIs through this resolver is `stellata-9mm.227`; POI
 generalisation to non-star kinds is `stellata-o6nx.1`.

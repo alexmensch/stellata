@@ -117,7 +117,8 @@ toggled by `filter.showHud`, separately from the sphere/grid). Rendered
 as **SVG** paths inside `#overlay`, not 3D meshes. Geometry is computed
 entirely in screen space:
 
-1. Project the origin (focused star's local position when focused, else
+1. Project the origin (the focused object's live local position — any
+   hard kind, star or planet, via `focalLocalPositionInto` — else
    `controls.target`) into screen pixels. In the OBSERVE steady state the
    anchor is **forced** to screen centre by mode rather than detected: the
    camera is parked at the focal star only within the float32 position
@@ -257,9 +258,13 @@ visible — same halo gap in both steady states, smooth lerp through the
 transition. In the OBSERVE steady state the anchor is forced to screen
 centre (see step 1 above) — the post-transition switch is invisible
 because the focal-star projection has already drifted to centre by
-`f = 1`. Distance labels measure from `origin` (the focal
-star or `controls.target`) so the displayed distance reflects "from the
-focal star", which is meaningful in both modes.
+`f = 1`. Distance labels measure from `origin` so the displayed
+distance reflects "from the focal object", which is meaningful in both
+modes. The focal position (never `controls.target`) is load-bearing in
+observe: `observeUpdateTarget` keeps `controls.target` parked 1 pc
+ahead of the camera there, so a target-based origin would report every
+distance ~1 pc off — invisible for the galactic centre, but "Sol ·
+3.3 ly" from a planet-anchored observe where the truth is ~1 AU.
 
 SVG distance labels (`#sol-arrow-label`, `#gc-arrow-label`) sit at
 `tip + (LABEL_OFFSET_PX + ARROW_HEAD_DEPTH_PX, -LABEL_OFFSET_PX)` —

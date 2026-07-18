@@ -10,8 +10,8 @@ in both navigate and observe modes.
   sliders, spectral chips, overlay toggles) + the slider↔distance log
   mapping (`sliderToDist` / `distToSlider`).
 - `input-controller.ts` (+ test) — canvas pointer input: the click FSM
-  (single/double dispatch in both modes, the star click ladder, cloud
-  click semantics), two-finger / Safari-gesture roll, and the
+  (single/double dispatch in both modes, the kind-generic click ladder,
+  cloud click semantics), two-finger / Safari-gesture roll, and the
   shift-pan binding lifecycle (see § Input controller).
 - `shift-pan.ts` — orbit-first camera translation: pan only while a
   Shift key is held (see § Shift-drag panning).
@@ -34,7 +34,10 @@ in both navigate and observe modes.
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx`, `renderedDiscPxAtPeak`, `getChartDiscParams` +
-  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`.
+  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
+  planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
+  (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular
+  solves, keyed on the body radius directly.
 
 ### star-geometry vs star-physics vs stellata.ts
 
@@ -52,12 +55,12 @@ both modes are held for `DBL_CLICK_MS` (280 ms) by a shared
 double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time. The full per-mode click
 decision table lives in `src/client/README.md` § Click-state machine;
-the star ladder's pure decision function is
+the ladder's pure decision function is
 `../../poi/click-ladder-pure.ts`.
 
 The controller sees the rest of the app only through its deps
-closures (busy gates, Target-keyed focus/vector reads, focusStar /
-flyTo / setOrbitTarget / unfocus / togglePoi / aimAt) — it owns
+closures (busy gates, Target-keyed focus/vector reads, flyTo /
+setOrbitTarget / unfocus / togglePoi / aimAt) — it owns
 dispatch order and gesture math, never focus or camera-transition
 state. Roll math
 uses controller-owned scratch `Vector3`/`Quaternion` instances; the

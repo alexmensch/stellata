@@ -9,12 +9,12 @@ import type { LocalGroupLayer } from '../../local-group/local-group';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
 import {
   Heliopause,
-  HELIOPAUSE_APEX_LOCAL_PC,
+  HELIOPAUSE_APEX_SOL_PC,
   HELIOPAUSE_LABEL_ELEMENT_ID,
-  HELIOPAUSE_SAMPLE_POINTS_LOCAL,
+  HELIOPAUSE_SAMPLE_POINTS_SOL,
 } from '../../solar-system/heliopause';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
-import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -124,6 +124,18 @@ export class Picker {
     );
   }
 
+  /** Click-pick sibling of `pickPlanetHit`: same pick, but `idx` is
+   *  rewritten to the field's FLAT instance index — the Target
+   *  {kind:'planet'} currency the click FSM feeds to flyTo. Tier and
+   *  camera distance ride through for the star-vs-planet tiebreak. */
+  pickPlanetClick(clientX: number, clientY: number, pixelThreshold = 16): HoverHit | null {
+    const hit = this.pickPlanetHit(clientX, clientY, pixelThreshold);
+    if (hit === null || hit.hostStarIdx === undefined) return null;
+    const flat = this.deps.getPlanetBodyField().instanceIndexOf(hit.hostStarIdx, hit.idx);
+    if (flat === null) return null;
+    return { ...hit, idx: flat };
+  }
+
   // Returns null when the LG layer isn't attached (fresh checkout
   // without the build artifact).
   pickLocalGroupHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
@@ -163,8 +175,9 @@ export class Picker {
     let maxX = -Infinity, maxY = -Infinity;
     const tmp = this.tmpV3;
     const nearNeg = -camera.near;
-    for (const sample of HELIOPAUSE_SAMPLE_POINTS_LOCAL) {
-      tmp.copy(sample);
+    const worldOffset = this.deps.getWorldOffset();
+    for (const sample of HELIOPAUSE_SAMPLE_POINTS_SOL) {
+      tmp.copy(sample).sub(worldOffset);
       tmp.applyMatrix4(camera.matrixWorldInverse);
       if (tmp.z >= nearNeg) { allInFront = false; break; }
       tmp.applyMatrix4(camera.projectionMatrix);
@@ -196,10 +209,10 @@ export class Picker {
     if (!insideSilhouette && !insideLabel) return null;
 
     const cam = camera.position;
-    const apex = HELIOPAUSE_APEX_LOCAL_PC;
-    const dx = apex.x - cam.x;
-    const dy = apex.y - cam.y;
-    const dz = apex.z - cam.z;
+    const apex = HELIOPAUSE_APEX_SOL_PC;
+    const dx = apex.x - worldOffset.x - cam.x;
+    const dy = apex.y - worldOffset.y - cam.y;
+    const dz = apex.z - worldOffset.z - cam.z;
     const cameraDistancePc = Math.sqrt(dx * dx + dy * dy + dz * dz);
     return { idx: 0, cameraDistancePc, tier: 'fallback' };
   }
@@ -282,7 +295,12 @@ export class Picker {
       // its disc whenever magMod swings negative.
       const amp = periodDays[i] > 0 ? amplitudeMag[i] : 0;
       const filterMag = appMag - amp * 0.5;
-      if (filterMag > f.maxAppMag) continue;
+      // Pickable exactly where the disc renders: the shader fades over the
+      // soft taper in navigate/normal (cutoff + margin), and hard-clips at
+      // the bare cutoff in chart mode. Matching this here closes the
+      // renders-but-unpickable band at the visibility edge.
+      const cutoff = f.maxAppMag + (f.chart ? 0 : SOFT_TAPER_MARGIN_MAG);
+      if (filterMag > cutoff) continue;
 
       v.set(x, y, z);
       const screen = projectToScreen(v, camera, viewportW, viewportH);

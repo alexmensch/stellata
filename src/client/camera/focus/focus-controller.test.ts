@@ -17,6 +17,14 @@ import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
+import { PlanetBodyField } from '../../solar-system/planet-body-field';
+import type { PlanetSystem } from '../../solar-system/planet-system';
+import { AU_PC, KM_PC } from '../../util/astronomy-constants';
+import {
+  fovMinorRad,
+  minOrbitDistForPlanet,
+  parkDistForPlanet,
+} from '../controls/star-physics';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../../stellata';
@@ -179,6 +187,7 @@ interface Harness {
   setCameraMode: (m: CameraMode) => void;
   getCameraMode: () => CameraMode;
   pert: { fn: (idx: number, out: THREE.Vector3) => boolean };
+  planetField: PlanetBodyField;
 }
 
 function makeHarness(opts: {
@@ -230,6 +239,38 @@ function makeHarness(opts: {
     },
     cloud: softProvider,
     lg: softProvider,
+    planet: softProvider,
+  };
+
+  // Body field stub with no attached hosts — planet-kind paths no-op
+  // (planetAt returns null). Tests exercising planet focus construct a
+  // real PlanetBodyField instead.
+  const planetField = new PlanetBodyField({
+    uMaxAppMag: { value: 6.5 },
+    uSizeMin: { value: 2 },
+    uSizeMax: { value: 24 },
+    uSizeSpan: { value: 8 },
+    uSizeKnee: { value: 16 },
+    uVisibleThreshold: { value: 0.2 },
+    uVisibleK: { value: -Math.log(0.2) },
+    uCoreThreshold: { value: 0.4 },
+    uDiscardThreshold: { value: 0.02 },
+    uDistNMin: { value: 2.2 },
+    uDistNMax: { value: 10.0 },
+    uLumBiasMin: { value: 1.0 },
+    uLumBiasMax: { value: 0.6 },
+    uViewport: { value: new THREE.Vector2(800, 600) },
+    uPixelRatio: { value: 1 },
+    uFovYRad: { value: (60 * Math.PI) / 180 },
+  });
+
+  // Production recenterOrigin fans out to every scene layer's recenter
+  // hook (the body field included); mirror that so a planet-focus
+  // recentre updates hostLocalPos before the target snap reads it.
+  const innerRecenter = frame.anchor.recenterOrigin;
+  frame.anchor.recenterOrigin = (newOrigin) => {
+    planetField.recenter(newOrigin);
+    return innerRecenter(newOrigin);
   };
 
   const deps: FocusControllerDeps = {
@@ -240,9 +281,12 @@ function makeHarness(opts: {
     bus,
     frameAnchor: frame.anchor,
     aim,
-    uHideFocusIdxRef: uHide,
+    setFocalBodyHidden: (target) => {
+      uHide.value = target?.kind === 'star' ? target.idx : -1;
+    },
     getClouds: () => null,
     getLocalGroup: () => null,
+    getPlanetField: () => planetField,
     getWarp: () => warp,
     getObserve: () => observe,
     getFocusables: () => focusables,
@@ -268,6 +312,7 @@ function makeHarness(opts: {
     setCameraMode: (m) => focus.setCameraModeValue(m),
     getCameraMode: () => focus.getCameraMode(),
     pert,
+    planetField,
   };
 }
 
@@ -811,5 +856,184 @@ describe('FocusController — three-way focus exclusivity (single Target slot)',
     h.focus.setOrbitTarget({ kind: 'cloud', idx: 2 });
     expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 2 });
     expect(h.busEvents.map((e) => e.name)).toEqual(['focus', 'state']);
+  });
+});
+
+// Attach a single-planet host to the harness body field: planet planted
+// at +1 AU on the local x axis with the orientation forced to identity
+// (renderer-local == plane-frame, so expectations stay hand-checkable).
+// Returns the planet's flat instance index.
+function attachTestPlanet(h: Harness, hostIdx = 0, radiusKm = 6000): number {
+  const ps: PlanetSystem = {
+    hostStarIdx: hostIdx,
+    planets: [{
+      name: 'TestPlanet',
+      radiusKm,
+      semiMajorAxisAu: 1,
+      eccentricity: 0,
+      type: 'rocky',
+      colour: [1, 1, 1],
+      albedo: 0.5,
+    }],
+    positionsAt: (_t, out) => { out[0] = AU_PC; out[1] = 0; out[2] = 0; },
+  };
+  const hostAbs = new THREE.Vector3(
+    h.catalog.positions[hostIdx * 3],
+    h.catalog.positions[hostIdx * 3 + 1],
+    h.catalog.positions[hostIdx * 3 + 2],
+  );
+  h.planetField.attachHost(hostIdx, ps, 4.83, hostAbs, h.catalog.solIndex, 0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hosts = (h.planetField as any).hosts as Map<number, { orientation: THREE.Quaternion }>;
+  hosts.get(hostIdx)!.orientation.identity();
+  h.planetField.update(new THREE.PerspectiveCamera(), 0);
+  return h.planetField.instanceIndexOf(hostIdx, 0)!;
+}
+
+describe('FocusController — planet focus (kind "planet")', () => {
+  const RADIUS_PC = 6000 * KM_PC;
+
+  it('flyTo({kind:planet}) recentres onto the planet, drops the orbit floor, parks', async () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.camera.position.set(0, 0, 30);
+    h.busEvents.length = 0;
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+
+    expect(h.focus.getFocusedTarget()).toEqual({ kind: 'planet', idx });
+    expect(h.focus.getFocusedStar()).toBeNull();
+    // worldOffset recentred onto the planet's absolute position (1 AU
+    // from the host at the origin) — planet focus is a hard focus.
+    expect(h.frame.worldOffset.x).toBeCloseTo(AU_PC, 10);
+    // Target glued to the planet's local position (≈ local origin).
+    expect(h.controls.target.length()).toBeLessThan(1e-9);
+    // Orbit floor at the planet's 90 %-fill solve.
+    const floor = minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera));
+    expect(h.controls.minDistance).toBeCloseTo(floor, 15);
+    expect(h.controls.minDistance).toBeLessThan(RADIUS_PC * 3);
+    // Snap path (animate: false): camera parked at parkDistForPlanet.
+    const park = parkDistForPlanet(RADIUS_PC, fovMinorRad(h.camera));
+    expect(h.camera.position.distanceTo(h.controls.target)).toBeCloseTo(park, 12);
+    const focusEvents = h.busEvents.filter((e) => e.name === 'focus');
+    expect(focusEvents[focusEvents.length - 1].payload).toEqual({ kind: 'planet', idx });
+    // The HOST's planet system attaches (async resolve), keeping orbit
+    // rings / labels alive exactly as the host's own focus would.
+    await Promise.resolve();
+    expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
+  });
+
+  it('focusPlanet preserves the camera absolute pose at lerp start (no teleport)', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.setFocus(0);
+    h.camera.position.set(0, 0, 30);
+    const absBefore = h.camera.position.clone().add(h.frame.worldOffset);
+    h.focus.flyTo({ kind: 'planet', idx });
+    const absAfter = h.camera.position.clone().add(h.frame.worldOffset);
+    // The camera must not move in absolute space when the focus lerp is
+    // scheduled — an unseeded controls.target here teleports the camera
+    // by the old-target→planet delta, visually swapping the planet into
+    // the former focus's screen position.
+    expect(absAfter.distanceTo(absBefore)).toBeLessThan(1e-12);
+    expect(h.controls.target.length()).toBeLessThan(1e-9);
+  });
+
+  it('unfocus from a planet clamps the floor and detaches the planet system', async () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    await Promise.resolve();
+    h.busEvents.length = 0;
+    const eye = h.camera.position.distanceTo(h.controls.target);
+    h.focus.unfocus({ animate: false });
+    expect(h.focus.getFocusedTarget()).toBeNull();
+    // Clamp mirrors star unfocus: min(GLOBAL_MIN_DIST_PC, eye) so the
+    // controls don't shove the camera outward from the parked pose.
+    expect(h.controls.minDistance).toBeLessThanOrEqual(eye);
+    expect(h.controls.minDistance).toBeLessThanOrEqual(GLOBAL_MIN_DIST_PC);
+    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    const focusEvent = h.busEvents.find((e) => e.name === 'focus');
+    expect(focusEvent).toBeDefined();
+    expect(focusEvent!.payload).toBeNull();
+  });
+
+  it('setFocus(host star) from a planet focus swaps to the star focus', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    h.busEvents.length = 0;
+    h.focus.setFocus(0);
+    expect(h.focus.getFocusedStar()).toBe(0);
+    expect(h.focus.getFocusedTarget()).toEqual({ kind: 'star', idx: 0 });
+    // worldOffset back on the host (origin).
+    expect(h.frame.worldOffset.x).toBeCloseTo(0, 8);
+    expect(h.busEvents.map((e) => e.name)).toEqual(['focus', 'state']);
+  });
+
+  it('a soft-kind focus displaces a planet focus through the full detach path', async () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    await Promise.resolve();
+    h.focus.flyTo({ kind: 'cloud', idx: 0 }, { animate: false });
+    expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 0 });
+    expect(h.controls.minDistance).toBeLessThanOrEqual(GLOBAL_MIN_DIST_PC);
+    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+  });
+
+  it('currentFocusTarget round-trips the planet kind geometry', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    const ft = h.focus.currentFocusTarget()!;
+    expect(ft.kind).toBe('planet');
+    expect(ft.idx).toBe(idx);
+    expect(ft.physicalRadius()).toBeCloseTo(RADIUS_PC, 15);
+    // No chart-mode disc for planets — arrival falls back to log-d.
+    expect(ft.chartPlateauDistance(-2)).toBeNull();
+    const abs = new THREE.Vector3();
+    expect(ft.anchorInto(abs)).toBe(true);
+    expect(abs.x).toBeCloseTo(AU_PC, 10);
+    expect(ft.parkRadius()).toBeGreaterThan(
+      minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)),
+    );
+  });
+
+  it('a focused planet is an observe anchor: hard target, focal position, park dist', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    expect(h.focus.getFocusedHardTarget()).toEqual({ kind: 'planet', idx });
+    const out = new THREE.Vector3(9, 9, 9);
+    expect(h.focus.focalLocalPositionInto(out)).toBe(true);
+    expect(out.length()).toBeLessThan(1e-9);
+    expect(h.focus.hardFocusParkDist()).toBeCloseTo(
+      parkDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)), 15,
+    );
+  });
+
+  it('soft kinds are not observe anchors', () => {
+    const h = makeHarness();
+    h.focus.flyTo({ kind: 'lg', idx: 0 }, { animate: false });
+    expect(h.focus.getFocusedHardTarget()).toBeNull();
+    expect(h.focus.hardFocusParkDist()).toBeNull();
+  });
+
+  it('unfocus from observe on a planet drives the same animated exit stars get', () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    h.setCameraMode('observe');
+    h.focus.unfocus();
+    expect(h.observe.startExit).toHaveBeenCalledWith({ animate: true, clearFocusOnExit: false });
+    expect(h.focus.getFocusedTarget()).toBeNull();
+  });
+
+  it('flyTo an unattached planet index is a no-op', () => {
+    const h = makeHarness();
+    h.busEvents.length = 0;
+    h.focus.flyTo({ kind: 'planet', idx: 99 }, { animate: false });
+    expect(h.focus.getFocusedTarget()).toBeNull();
+    expect(h.busEvents).toEqual([]);
   });
 });

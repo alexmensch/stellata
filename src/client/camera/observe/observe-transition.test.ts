@@ -53,12 +53,14 @@ interface FocusFixture {
   };
   parkDistByIdx: Map<number, number>;
   setFocusedStar(idx: number | null): void;
+  setFocusedPlanet(idx: number | null): void;
   setBusy(busy: boolean): void;
   setFocalLocalPos(v: THREE.Vector3): void;
 }
 
 function makeFocus(): FocusFixture {
   let focusedStar: number | null = null;
+  let focusedPlanet: number | null = null;
   let busy = false;
   const focalLocalPos = new THREE.Vector3();
   const parkDistByIdx = new Map<number, number>();
@@ -67,13 +69,24 @@ function makeFocus(): FocusFixture {
     clearVector: 0,
   };
   const ops: ObserveFocusOps = {
-    getFocusedStar: () => focusedStar,
-    setFocus: (idx) => { focusedStar = idx; calls.setFocus.push(idx); },
+    getFocusedHardTarget: () => {
+      if (focusedStar !== null) return { kind: 'star', idx: focusedStar };
+      if (focusedPlanet !== null) return { kind: 'planet', idx: focusedPlanet };
+      return null;
+    },
+    setFocus: (idx) => {
+      focusedStar = idx;
+      focusedPlanet = null;
+      calls.setFocus.push(idx);
+    },
     clearVector: () => { calls.clearVector++; },
-    parkDistForStar: (idx) => parkDistByIdx.get(idx) ?? 1.0,
+    hardFocusParkDist: () => {
+      const idx = focusedStar ?? focusedPlanet;
+      return idx === null ? null : parkDistByIdx.get(idx) ?? 1.0;
+    },
     isCameraBusy: () => busy,
     focalLocalPositionInto: (out) => {
-      if (focusedStar === null) return false;
+      if (focusedStar === null && focusedPlanet === null) return false;
       out.copy(focalLocalPos);
       return true;
     },
@@ -82,7 +95,8 @@ function makeFocus(): FocusFixture {
     ops,
     calls,
     parkDistByIdx,
-    setFocusedStar: (idx) => { focusedStar = idx; },
+    setFocusedStar: (idx) => { focusedStar = idx; focusedPlanet = null; },
+    setFocusedPlanet: (idx) => { focusedPlanet = idx; focusedStar = null; },
     setBusy: (b) => { busy = b; },
     setFocalLocalPos: (v) => { focalLocalPos.copy(v); },
   };
@@ -95,6 +109,7 @@ interface Harness {
   observeControls: ReturnType<typeof makeObserveControlsStub>;
   aim: ReturnType<typeof makeAimStub>;
   uHide: { value: number };
+  hidden: { target: unknown };
   bus: EventBus<StellataEventMap>;
   focus: FocusFixture;
   setCameraMode(m: CameraMode): void;
@@ -108,6 +123,7 @@ function makeHarness(opts: { mode?: CameraMode } = {}): Harness {
   const observeControls = makeObserveControlsStub();
   const aim = makeAimStub();
   const uHide = { value: -1 };
+  const hidden: { target: unknown } = { target: null };
   const bus = new EventBus<StellataEventMap>();
   const focus = makeFocus();
   let cameraMode: CameraMode = opts.mode ?? 'navigate';
@@ -124,7 +140,10 @@ function makeHarness(opts: { mode?: CameraMode } = {}): Harness {
     controls,
     observeControls,
     aim,
-    uHideFocusIdxRef: uHide,
+    setFocalBodyHidden: (target) => {
+      hidden.target = target;
+      uHide.value = target?.kind === 'star' ? target.idx : -1;
+    },
     bus,
     focus: focus.ops,
     getCameraMode: () => cameraMode,
@@ -133,6 +152,7 @@ function makeHarness(opts: { mode?: CameraMode } = {}): Harness {
 
   return {
     observe: new ObserveTransition(deps),
+    hidden,
     camera,
     controls,
     observeControls,
@@ -245,6 +265,57 @@ describe('ObserveTransition.setMode — navigate → observe (animated)', () => 
     expect(h.camera.position.x).toBeCloseTo(live.x, 9);
     expect(h.camera.position.y).toBeCloseTo(live.y, 9);
     expect(h.camera.position.z).toBeCloseTo(live.z, 9);
+  });
+});
+
+describe('ObserveTransition — planet anchor (hard-kind generality)', () => {
+  it('enters observe from a focused planet: parks at its live position, hides the body', () => {
+    const h = makeHarness({ mode: 'navigate' });
+    h.focus.setFocusedPlanet(4);
+    const live = new THREE.Vector3(2e-6, 0, -1e-6);
+    h.focus.setFocalLocalPos(live);
+    h.camera.position.set(3, 0, 0);
+    const startNow = 8000;
+    vi.spyOn(performance, 'now').mockReturnValue(startNow);
+    h.observe.setMode('observe', { animate: true });
+    expect(h.getCameraMode()).toBe('observe');
+    expect(h.observe.isActive()).toBe(true);
+    // Body visible during the glide, hidden only at park.
+    expect(h.hidden.target).toBeNull();
+
+    vi.spyOn(performance, 'now').mockReturnValue(startNow + OBSERVE_TRANSITION_MS + 1);
+    h.observe.tick(startNow + OBSERVE_TRANSITION_MS + 1);
+    expect(h.camera.position.x).toBeCloseTo(live.x, 12);
+    expect(h.hidden.target).toEqual({ kind: 'planet', idx: 4 });
+    expect(h.uHide.value).toBe(-1);
+    expect(h.observeControls.enable).toHaveBeenCalledTimes(1);
+  });
+
+  it('exits observe from a planet anchor with the planet park distance, unhiding at start', () => {
+    const h = makeHarness({ mode: 'observe' });
+    h.focus.setFocusedPlanet(4);
+    h.focus.parkDistByIdx.set(4, 0.25);
+    h.camera.position.set(0, 0, 0);
+    h.camera.quaternion.identity();
+    const startNow = 9000;
+    vi.spyOn(performance, 'now').mockReturnValue(startNow);
+    h.observe.setMode('navigate', { animate: true });
+    expect(h.hidden.target).toBeNull();
+    expect(h.observe.isActive()).toBe(true);
+
+    vi.spyOn(performance, 'now').mockReturnValue(startNow + OBSERVE_TRANSITION_MS + 1);
+    h.observe.tick(startNow + OBSERVE_TRANSITION_MS + 1);
+    // Pulled back along -forward (identity quaternion looks down -z) by
+    // the planet's park distance.
+    expect(h.camera.position.z).toBeCloseTo(0.25, 9);
+    expect(h.getCameraMode()).toBe('navigate');
+  });
+
+  it('setMode(observe) still no-ops without any hard focus', () => {
+    const h = makeHarness({ mode: 'navigate' });
+    h.observe.setMode('observe', { animate: true });
+    expect(h.getCameraMode()).toBe('navigate');
+    expect(h.observe.isActive()).toBe(false);
   });
 });
 

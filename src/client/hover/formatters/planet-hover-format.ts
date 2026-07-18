@@ -2,7 +2,12 @@
 // radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
-import { formatEarthRadii } from '../../format/physical-format';
+import {
+  formatEarthRadii,
+  formatMagnitude,
+  formatPeriodYears,
+  planetPeriodYears,
+} from '../../format/physical-format';
 import type { Planet } from '../../solar-system/planet-system';
 import type { HoverPayload } from '../hover-types';
 
@@ -26,38 +31,16 @@ export function formatPlanetHover(
 
   const lines: string[] = [];
   const appMag = ctx.appMagFor(planetIdx);
-  const magStr = appMag !== null ? `Vmag ${formatAppMag(appMag)}` : '';
+  const magStr = appMag !== null ? `Vmag ${formatMagnitude(appMag)}` : '';
   const headLine = [fmtDistAuto(cameraDistancePc), magStr].filter(Boolean).join(' · ');
   lines.push(headLine);
 
   // Period above Radius — orbital period is the user's first "is this
   // a fast inner planet or a slow outer one?" tell, and the AU
   // distance on line 2 pairs naturally with the period rather than
-  // with the body's physical size. Kepler's third law in the Sun-mass
-  // system: T(years) = a(AU)^1.5. For exoplanets (bk5) the host-mass
-  // term reappears as T = a^1.5/√M; until then every attached host
-  // is Sol-mass so the simple form is exact.
-  const yearsPeriod = Math.pow(planet.semiMajorAxisAu, 1.5);
-  lines.push(`Period ${formatPeriodYears(yearsPeriod)} yr`);
+  // with the body's physical size.
+  lines.push(`Period ${formatPeriodYears(planetPeriodYears(planet.semiMajorAxisAu))} yr`);
   lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);
 
   return { name: planet.name, lines };
-}
-
-// Apparent magnitude with explicit sign so users can see at a glance
-// whether the planet would be naked-eye-bright (negative) or near the
-// telescope-only edge (positive). One decimal matches the precision of
-// the published Mallama 2018 fits; finer is noise.
-function formatAppMag(m: number): string {
-  if (m >= 0) return `+${m.toFixed(1)}`;
-  // toFixed(1) already prints the leading minus.
-  return m.toFixed(1);
-}
-
-// Orbital period readout. Sub-decade values keep two decimals (Mercury
-// 0.24 yr, Earth 1.00 yr, Mars 1.88 yr); double-digit-plus values drop
-// to whole years (Jupiter 12 yr, Pluto 248 yr) where the fractional
-// part is noise next to the planet-class hover's overall purpose.
-function formatPeriodYears(yr: number): string {
-  return yr >= 10 ? yr.toFixed(0) : yr.toFixed(2);
 }

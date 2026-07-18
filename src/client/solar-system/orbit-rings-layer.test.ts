@@ -326,7 +326,7 @@ describe('OrbitRingsLayer', () => {
     ss.setPlanetSystem(ps, 0);
     // Camera at 5 AU from the (origin) host. A lone ring has no
     // neighbours, so the gap heuristic always lets it render.
-    ss.update(makeCamera(5 * AU_PC), 800);
+    ss.update(makeCamera(5 * AU_PC), 800, null);
     expect(ss.anyOrbitRingVisible()).toBe(true);
     ss.dispose();
   });
@@ -338,7 +338,7 @@ describe('OrbitRingsLayer', () => {
       planets: [makePlanet()],
     };
     ss.setPlanetSystem(ps, 0);
-    ss.update(makeCamera(5 * AU_PC), 800);
+    ss.update(makeCamera(5 * AU_PC), 800, null);
     ss.setPlanetSystem(null, 0);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -351,7 +351,7 @@ describe('OrbitRingsLayer', () => {
       planets: [makePlanet()],
     };
     ss.setPlanetSystem(ps, 0);
-    ss.update(makeCamera(5 * AU_PC), 800);
+    ss.update(makeCamera(5 * AU_PC), 800, null);
     ss.setHidden(true);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -364,7 +364,7 @@ describe('OrbitRingsLayer', () => {
       planets: [makePlanet()],
     };
     ss.setPlanetSystem(ps, 0);
-    ss.update(makeCamera(5 * AU_PC), 800);
+    ss.update(makeCamera(5 * AU_PC), 800, null);
     ss.setMonochrome(true);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -384,7 +384,7 @@ describe('OrbitRingsLayer', () => {
     // (pile-up against neighbour) while the outer ring remains spread.
     // The exact heuristic outcome is exercised in `ringVisibility` tests
     // above; here we just confirm the per-index API plumbs through.
-    ss.update(makeCamera(50 * AU_PC), 800);
+    ss.update(makeCamera(50 * AU_PC), 800, null);
     const a = ss.isOrbitRingVisible(0);
     const b = ss.isOrbitRingVisible(1);
     expect(typeof a).toBe('boolean');
@@ -412,8 +412,66 @@ describe('OrbitRingsLayer', () => {
     };
     ss.setPlanetSystem(ps, 0);
     // 1e6 pc is absurdly far; both ring projections shrink to indistinguishable.
-    ss.update(makeCamera(1e6), 800);
+    ss.update(makeCamera(1e6), 800, null);
     expect(ss.anyOrbitRingVisible()).toBe(false);
+    ss.dispose();
+  });
+});
+
+describe('OrbitRingsLayer host centring', () => {
+  it('update() parks the ring group at the host local position', () => {
+    const ss = new OrbitRingsLayer();
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet({ semiMajorAxisAu: 1 })],
+    };
+    ss.setPlanetSystem(ps, 0);
+    const host = new THREE.Vector3(3, -2, 1).multiplyScalar(AU_PC);
+    const cam = makeCamera(0);
+    cam.position.copy(host);
+    cam.position.z += 5 * AU_PC;
+    ss.update(cam, 800, host);
+    expect(ss.group.position.x).toBeCloseTo(host.x, 12);
+    expect(ss.group.position.y).toBeCloseTo(host.y, 12);
+    expect(ss.group.position.z).toBeCloseTo(host.z, 12);
+    ss.dispose();
+  });
+
+  it('the pixel-gap heuristic measures camera-to-host distance, not camera-to-origin', () => {
+    // Host 1e6 pc from the local origin, camera parked 5 AU from the
+    // HOST. Origin-based distance would collapse both ring radii to
+    // ~0 px (gap 0 → both suppressed); host-based distance resolves
+    // them at hundreds of px apart.
+    const ss = new OrbitRingsLayer();
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [
+        makePlanet({ name: 'A', semiMajorAxisAu: 1 }),
+        makePlanet({ name: 'B', semiMajorAxisAu: 2 }),
+      ],
+    };
+    ss.setPlanetSystem(ps, 0);
+    const host = new THREE.Vector3(1e6, 0, 0);
+    const cam = makeCamera(0);
+    cam.position.copy(host);
+    cam.position.z += 5 * AU_PC;
+    ss.update(cam, 800, host);
+    expect(ss.isOrbitRingVisible(0)).toBe(true);
+    expect(ss.isOrbitRingVisible(1)).toBe(true);
+    ss.dispose();
+  });
+
+  it('setPlanetSystem resets the group to the origin until the next update feeds a host', () => {
+    const ss = new OrbitRingsLayer();
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet()],
+    };
+    ss.setPlanetSystem(ps, 0);
+    const host = new THREE.Vector3(0.5, 0.5, 0.5);
+    ss.update(makeCamera(5 * AU_PC), 800, host);
+    ss.setPlanetSystem(ps, 0);
+    expect(ss.group.position.length()).toBe(0);
     ss.dispose();
   });
 });

@@ -8,6 +8,14 @@ import type { CameraMode } from '../../stellata';
 import type { ObserveControls } from '../observe/observe-controls';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS, WARP_BASE_DIR } from '../timing';
 
+/** Degeneracy guard for aim geometry (zero-length directions). MUST sit
+ *  at/below camera.near (1e-10 pc ≈ 3 km) so every renderable framing
+ *  can still aim — a pc-scale epsilon here silently no-ops aims at
+ *  solar-system range (planets observed from their host are ≤ 2e-4 pc
+ *  away; Sol observed from Earth is ~5e-6 pc). */
+export const AIM_DEGENERATE_DIST_PC = 1e-10;
+const AIM_DEGENERATE_DIST_SQ = AIM_DEGENERATE_DIST_PC * AIM_DEGENERATE_DIST_PC;
+
 // The orbit pivot is deliberately NOT snapshotted here: the tick reads the
 // live controls.target, so focal-frame translations mid-aim (orbital ride,
 // epoch re-advance camera-follow) carry the whole orbit rigidly instead of
@@ -124,13 +132,13 @@ export class AimController {
     const offsetY = camera.position.y - pivot.y;
     const offsetZ = camera.position.z - pivot.z;
     const r = Math.sqrt(offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ);
-    if (r < 1e-6) return; // camera coincident with pivot — no orbit to rotate
+    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot — no orbit to rotate
 
     const aimX = pointLocal.x - pivot.x;
     const aimY = pointLocal.y - pivot.y;
     const aimZ = pointLocal.z - pivot.z;
     const aimLen = Math.sqrt(aimX * aimX + aimY * aimY + aimZ * aimZ);
-    if (aimLen < 1e-6) return; // target coincides with pivot
+    if (aimLen < AIM_DEGENERATE_DIST_PC) return; // target coincides with pivot
 
     // Start radial direction = camera - pivot, normalised.
     const dir0 = new THREE.Vector3(offsetX / r, offsetY / r, offsetZ / r);
@@ -161,7 +169,7 @@ export class AimController {
     const aimDx = pointLocal.x - camera.position.x;
     const aimDy = pointLocal.y - camera.position.y;
     const aimDz = pointLocal.z - camera.position.z;
-    if (aimDx * aimDx + aimDy * aimDy + aimDz * aimDz < 1e-6) return;
+    if (aimDx * aimDx + aimDy * aimDy + aimDz * aimDz < AIM_DEGENERATE_DIST_SQ) return;
 
     const lookMat = new THREE.Matrix4().lookAt(
       camera.position,

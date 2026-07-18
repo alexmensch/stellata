@@ -216,6 +216,15 @@ the end of each tick.
 
 ## Picking under chart mode
 
+Click-pick tracks **render visibility** identically for every kind: a
+body is click-pinnable iff it is currently drawn. Chart mode hard-clips
+the star disc at `uMaxAppMag` (no soft taper — § Star disc sizing), so
+`pickStar`'s cutoff drops the `SOFT_TAPER_MARGIN_MAG` it adds in
+navigate; planet bodies are hidden entirely in chart mode, so
+`PlanetBodyField.pick` returns null there (find via `F` still works —
+that's aim, not a pin). The shared cutoff constant lives in
+`solar-system/perceptual-magnitude.ts`.
+
 `Picker.pickStar` (`camera/picker.ts`) three fixes for the small-disc /
 variable case:
 

@@ -29,7 +29,7 @@ src/client/overlays/
                                   out from the click point to the
                                   POI-ring radius and collapses back —
                                   fires ONLY for clicks that changed
-                                  nothing (empty sky, Sol, POI cap);
+                                  nothing (empty sky, POI cap);
                                   successful actions carry their own
                                   feedback. Driven by the 'noopClick'
                                   bus event.
@@ -176,8 +176,9 @@ mode's renderer.
 
 ## Points of interest
 
-`poi-overlay.ts` renders the user-pinned star list (state + pin
-semantics in `../poi/README.md`) in BOTH camera modes. Three SVG
+`poi-overlay.ts` renders the user-pinned object list — stars and
+planets through one Target-keyed pool (state + pin semantics in
+`../poi/README.md`) — in BOTH camera modes. Three SVG
 groups under `#overlay`:
 
 - `<g id="poi-arrows">` — pooled `<path>` + `<text>` per POI for
@@ -196,13 +197,14 @@ groups under `#overlay`:
   the rendered disc grows/shrinks with FOV, but the ring doesn't.
 - `<g id="poi-labels">` — pooled `<text>` per POI for on-screen labels
   anchored just outside the ring rim along a 45° diagonal. Format:
-  `name · constellation-code · distance-from-camera` (live camera, per
+  `name · constellation-code · distance-from-camera` (constellation
+  code is a star-kind field; planet labels carry name + distance) (live camera, per
   the tier-1/2 frame principle — in observe the camera is parked at
   the focal star, so it reads as distance from the observed star).
 
 Click affordances (both label classes set `pointer-events: auto`):
-- **On-screen label** → `Stellata.applyStarClick(idx)` — the same
-  per-mode semantics as clicking the star itself (unpin toggle in
+- **On-screen label** → `Stellata.applyObjectClick(target)` — the same
+  per-mode semantics as clicking the object itself (unpin toggle in
   observe, click ladder in navigate); the label is a second, larger
   click target.
 - **Off-screen arrow label** → `Stellata.aimAt(localPositions[idx])`

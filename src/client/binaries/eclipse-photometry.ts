@@ -21,7 +21,7 @@ import {
   DISC_DEPTH_BIAS,
   RENDERED_DISC_SINLIMIT_MARGIN,
 } from './binary-tuning';
-import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
 
 export interface EclipsePhotometryFieldOptions {
   binaries: BinariesData;
@@ -309,7 +309,7 @@ export class EclipsePhotometryField {
       return { gate: 'horizon', dCamPc, planeDot: null, relX: 0, relY: 0, relZ: 0, result: null };
     }
     const appMag = apparentMagnitude(this.opts.absoluteMags[rc.primaryIdx], dCamPc);
-    if (appMag > maxAppMag + 0.5) {
+    if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) {
       return { gate: 'mag', dCamPc, planeDot: null, relX: 0, relY: 0, relZ: 0, result: null };
     }
 

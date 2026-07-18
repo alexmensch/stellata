@@ -3,13 +3,14 @@
 // promotable header strips. See ./README.md.
 
 import type { Stellata } from '../stellata';
+import type { Target } from '../camera/focus/focus-target';
 import { bindCollapse } from '../ui/panel-layout';
 import { createCardBody } from './card-body';
 import type { FocusCardContent, FocusCardProviders } from './focus-card-types';
 import {
   FOCUS_KEY,
   planRolodex,
-  poiIdxOf,
+  poiTargetOf,
   poiKey,
   stripHeightPx,
   type CardKey,
@@ -33,7 +34,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   let desiredFront: CardKey | null = null;
   let frontKey: CardKey | null = null;
-  let knownPois: readonly number[] = stellata.getPois();
+  let knownPois: readonly Target[] = stellata.getPois();
 
   bindCollapse({
     container: stack,
@@ -58,7 +59,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   const dismiss = (key: CardKey) => {
     if (key === FOCUS_KEY) stellata.unfocus();
-    else stellata.togglePoi(poiIdxOf(key)!);
+    else stellata.togglePoi(poiTargetOf(key)!);
   };
 
   const buildStrip = (key: CardKey, name: string): HTMLElement => {
@@ -89,7 +90,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     const focus = stellata.getCameraMode() === 'observe' ? null : focusContent();
     const plan = planRolodex({
       pois: stellata.getPois(),
-      focusedStar: stellata.getFocusedStar(),
+      focused: stellata.getFocusedTarget(),
       focusVisible: focus !== null,
       desiredFront,
     });
@@ -100,8 +101,11 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
       stripsEl.textContent = '';
       return;
     }
-    const contentFor = (key: CardKey): FocusCardContent =>
-      key === FOCUS_KEY ? focus! : providers.star.format(poiIdxOf(key)!);
+    const contentFor = (key: CardKey): FocusCardContent => {
+      if (key === FOCUS_KEY) return focus!;
+      const t = poiTargetOf(key)!;
+      return providers[t.kind].format(t.idx);
+    };
     // Minimized shows the focused object regardless of which card is
     // fronted for the expanded body; the × still dismisses whatever's
     // on display, so it tracks the same key.
@@ -143,8 +147,8 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     }),
     stellata.on('cameraMode', reconcile),
     stellata.on('pois', (pois) => {
-      const prev = new Set(knownPois);
-      const added = pois.filter((idx) => !prev.has(idx));
+      const prev = new Set(knownPois.map(poiKey));
+      const added = pois.filter((t) => !prev.has(poiKey(t)));
       knownPois = [...pois];
       if (added.length > 0) desiredFront = poiKey(added[added.length - 1]);
       reconcile();

@@ -40,6 +40,7 @@ import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
+import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createLgFocusProvider } from './focus-card/lg-focus-provider';
 import { createStarHoverProvider } from './hover/star-hover-provider';
@@ -151,6 +152,16 @@ async function main() {
       starCount: catalog.count,
       solIndex: catalog.solIndex,
       sidResolver,
+      // The planet SID domain is keyed planet-within-host with the host
+      // implicit (Sol today — wiring map in util/sid-resolver/README.md);
+      // Target {kind:'planet'} carries the body field's flat instance
+      // index. Translate at the URL boundary in both directions.
+      planetDomainIndexOf: (targetIdx) => {
+        const host = stellata.planetField.hostPlanetOf(targetIdx);
+        return host && host.hostStarIdx === catalog.solIndex ? host.planetIdx : null;
+      },
+      planetTargetIndexOf: (domainIndex) =>
+        stellata.planetField.instanceIndexOf(catalog.solIndex, domainIndex),
     };
 
     const debugTools = setupDebug(stellata, idMaps);
@@ -219,6 +230,9 @@ async function main() {
     // the same params back into history on load. With no `?v=`, fall back
     // to the canonical first-load view (Sol focus, parked at 5 AU aimed at
     // the galactic centre, HUD on, no constellation highlight).
+    // Planet-focus refs resolve through the body field's attach table,
+    // which populates on a microtask — settle it first.
+    await stellata.planetSystemsReady;
     if (!applyFromUrl(stellata, idMaps)) {
       applyFirstLoadView(stellata, idMaps);
     }
@@ -305,6 +319,16 @@ async function main() {
       stellata,
       providers: {
         star: starFocusProvider,
+        planet: createPlanetFocusProvider({
+          planetAt: (idx) => stellata.planetField.planetAt(idx),
+          hostNameOf: (idx) => {
+            const host = stellata.planetField.hostPlanetOf(idx);
+            return host ? starLabels.get(host.hostStarIdx) ?? null : null;
+          },
+          cameraDistancePc: (idx) => stellata.planetCameraDistancePc(idx),
+          appMagFor: (idx) =>
+            stellata.planetField.appMagForInstance(idx, stellata.camera.position),
+        }),
         cloud: createCloudFocusProvider({
           clouds: cloudCatalog?.clouds ?? null,
           cameraDistancePc: (idx) => {

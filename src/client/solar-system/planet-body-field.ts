@@ -2,7 +2,7 @@
 // src/client/solar-system/README.md § Planet rendering.
 
 import * as THREE from 'three';
-import type { PlanetSystem } from './planet-system';
+import type { Planet, PlanetSystem } from './planet-system';
 import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
@@ -23,6 +23,7 @@ import {
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
+  SOFT_TAPER_MARGIN_MAG,
 } from './perceptual-magnitude';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -132,14 +133,21 @@ export class PlanetBodyField {
   private bufSolidity!: Float32Array;
   private bufAlbedo!: Float32Array;
   private bufHostAbsmag!: Float32Array;
-  // Phase-curve coefficients packed as two vec4 attributes:
+  // Phase-curve coefficients packed as three vec4 attributes:
   //   bufPhaseA: (c0, c1, c2, c3)
   //   bufPhaseB: (c4, c5, c6, alphaMaxDeg)
+  //   bufPhaseC: (c7, _, _, _) — three slots reserved
   // alphaMaxDeg = 0 is the "no Mallama fit, use Lambertian" sentinel
   // — the same default Pluto and every exoplanet hit. See
   // `phase-function.ts` for the polynomial form.
   private bufPhaseA!: Float32Array;
   private bufPhaseB!: Float32Array;
+  private bufPhaseC!: Float32Array;
+  // Reverse index: flat instance → owning hostStarIdx (-1 = unused
+  // slot). Rebuilt on every attach/detach so the flat-index accessors
+  // resolve their host in O(1) instead of an O(hosts) scan — several
+  // run per-frame (focal ride, POI overlay per pin, focus-card rows).
+  private instanceHost!: Int32Array;
   private geometry!: THREE.InstancedBufferGeometry;
   private matDisc!: THREE.ShaderMaterial;
   private matGlow!: THREE.ShaderMaterial;
@@ -151,6 +159,9 @@ export class PlanetBodyField {
   private meshCore!: THREE.Mesh;
   private meshCorrupt!: THREE.Mesh;
   private meshRestore!: THREE.Mesh;
+  // One shared { value } slot across all five materials — the uHideIdx
+  // uniform hiding the observe-anchor body (-1 = none).
+  private hideIdxUniform = { value: -1 };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
 
@@ -227,6 +238,7 @@ export class PlanetBodyField {
     };
     this.hosts.set(hostStarIdx, host);
     this.liveCount += n;
+    this.rebuildInstanceMap();
 
     // Initial fill — bodies, host position, and one immediate
     // ephemeris-or-placeholder pass so the first frame after attach
@@ -259,6 +271,7 @@ export class PlanetBodyField {
     this.geometry.instanceCount = this.liveCount;
     this.flushAllAttributes();
     this.hosts.delete(hostStarIdx);
+    this.rebuildInstanceMap();
     if (this.liveCount === 0) this.group.visible = false;
   }
 
@@ -297,11 +310,18 @@ export class PlanetBodyField {
    * is harmless once the host comes back into range.
    */
   update(camera: THREE.PerspectiveCamera, t: number): void {
-    if (this.hidden || this.mono || this.liveCount === 0) {
+    if (this.liveCount === 0) {
       this.group.visible = false;
       return;
     }
-    this.group.visible = true;
+    // Rendering is gated by hidden / chart-mono; the ephemeris walk is
+    // NOT. The focal-frame ride and observe anchor read live planet
+    // positions (bufLocalRel) off this walk even when the bodies aren't
+    // drawn — chart mode observes from a planet, so freezing the walk
+    // there strands the anchor's orbital motion. Only the GPU upload is
+    // skipped while invisible (the CPU buffer still advances).
+    const render = !this.hidden && !this.mono;
+    this.group.visible = render;
     let touched = false;
     for (const host of this.hosts.values()) {
       const dToHost = camera.position.distanceTo(host.hostLocalPos);
@@ -311,17 +331,20 @@ export class PlanetBodyField {
         touched = true;
       }
     }
-    if (touched) this.flushDynamicAttributes();
+    if (touched && render) this.flushDynamicAttributes();
   }
 
   /**
-   * Fresh-copy snapshot of the focused host's planet local-frame
-   * positions. Layout: 3 floats per planet, ordering matches
-   * PlanetSystem.planets. Returns null when the host isn't attached.
+   * Fresh-copy snapshot of a host's planet positions RELATIVE TO THE
+   * HOST (the shader's iLocalRel — renderer-local only after adding
+   * `getHostLocalPositionInto`). Layout: 3 floats per planet, ordering
+   * matches PlanetSystem.planets. Returns null when the host isn't
+   * attached.
    *
-   * The planet-labels overlay reads this so labels project to the same
-   * positions the body shader renders at, without re-running the
-   * Keplerian math itself.
+   * The planet-labels overlay reads this (host offset re-added by
+   * `Stellata.getFocusedPlanetLocalPositions`) so labels project to
+   * the same positions the body shader renders at, without re-running
+   * the Keplerian math itself.
    *
    * Returns a Float32Array `.slice()` (copy), not a `.subarray()`
    * view — the copy survives attach-driven capacity grow and
@@ -337,6 +360,21 @@ export class PlanetBodyField {
       host.startInstance * 3,
       (host.startInstance + host.count) * 3,
     );
+  }
+
+  /**
+   * Host star's renderer-local position into `out` — the same
+   * hostLocalPos the planet shader adds to iLocalRel, so any layer
+   * anchored on it (orbit rings, labels) stays centred on the exact
+   * point the bodies orbit. Under planet focus the floating origin
+   * sits on the planet, so this is NOT the local origin. Returns
+   * false when the host isn't attached.
+   */
+  getHostLocalPositionInto(hostStarIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hosts.get(hostStarIdx);
+    if (!host) return false;
+    out.copy(host.hostLocalPos);
+    return true;
   }
 
 
@@ -420,6 +458,124 @@ export class PlanetBodyField {
     return host ? host.ps : null;
   }
 
+  // ── flat-instance identity (Target {kind:'planet'} currency) ────────
+  //
+  // A planet FocusTarget's idx is the flat global instance index. The
+  // accessors below are the attach-table resolution both directions.
+  // Flat indices are NOT stable across detach compaction — resolve per
+  // use, never cache one across an attach/detach cycle.
+
+  /** (host, planet-within-host) for a flat instance index, or null when
+   *  no attached host covers it. */
+  hostPlanetOf(instanceIdx: number): { hostStarIdx: number; planetIdx: number } | null {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return null;
+    return { hostStarIdx: host.hostStarIdx, planetIdx: instanceIdx - host.startInstance };
+  }
+
+  /** Flat instance index for (host, planet-within-host), or null when
+   *  the host isn't attached or the index is out of range. */
+  instanceIndexOf(hostStarIdx: number, planetIdx: number): number | null {
+    const host = this.hosts.get(hostStarIdx);
+    if (!host || planetIdx < 0 || planetIdx >= host.count) return null;
+    return host.startInstance + planetIdx;
+  }
+
+  /** Planet record for a flat instance index, or null. */
+  planetAt(instanceIdx: number): Planet | null {
+    const host = this.hostOfInstance(instanceIdx);
+    return host ? host.ps.planets[instanceIdx - host.startInstance] : null;
+  }
+
+  /** Renderer-local position (host local + orientation-applied orbital
+   *  offset — exactly what the shader renders) into `out`. */
+  planetLocalPositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const base = instanceIdx * 3;
+    out.set(
+      host.hostLocalPos.x + this.bufLocalRel[base + 0],
+      host.hostLocalPos.y + this.bufLocalRel[base + 1],
+      host.hostLocalPos.z + this.bufLocalRel[base + 2],
+    );
+    return true;
+  }
+
+  /** Absolute (catalog-space) position into `out` — the recenterOrigin
+   *  anchor when a planet is focused. */
+  planetAbsolutePositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const base = instanceIdx * 3;
+    out.set(
+      host.hostAbsPos.x + this.bufLocalRel[base + 0],
+      host.hostAbsPos.y + this.bufLocalRel[base + 1],
+      host.hostAbsPos.z + this.bufLocalRel[base + 2],
+    );
+    return true;
+  }
+
+  /** Apparent V mag for a flat instance from `cameraPosLocal` — the
+   *  instance-keyed sibling of `appMagFor`. */
+  appMagForInstance(
+    instanceIdx: number,
+    cameraPosLocal: Readonly<THREE.Vector3>,
+  ): number | null {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return null;
+    return this.evalPlanetView(host, instanceIdx - host.startInstance, cameraPosLocal).appMag;
+  }
+
+  /** Rendered disc diameter in px at `cameraPosLocal` — the CPU mirror
+   *  of the shader's `max(appSize, physSize)`, shared with `pick`.
+   *  0 when the instance is unattached or below the soft-taper kill. */
+  renderedPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return 0;
+    const i = instanceIdx - host.startInstance;
+    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
+  }
+
+  private hostOfInstance(instanceIdx: number): AttachedHost | null {
+    if (instanceIdx < 0 || instanceIdx >= this.liveCount) return null;
+    const hostStarIdx = this.instanceHost[instanceIdx];
+    return hostStarIdx < 0 ? null : this.hosts.get(hostStarIdx) ?? null;
+  }
+
+  /** Rebuild the flat-instance → hostStarIdx reverse index from the
+   *  attach table. Called after every attach/detach. */
+  private rebuildInstanceMap(): void {
+    this.instanceHost.fill(-1);
+    for (const host of this.hosts.values()) {
+      for (let i = 0; i < host.count; i++) {
+        this.instanceHost[host.startInstance + i] = host.hostStarIdx;
+      }
+    }
+  }
+
+  /** Shader-mirroring `max(appSize, physSize)` in CSS px, reading the
+   *  live shared uniforms so debug-panel writes stay in lockstep. */
+  private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
+    const viewportH = this.magShared.uViewport.value.y;
+    const fovYRad = this.magShared.uFovYRad.value;
+    const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
+    const dMEff = perceptualDmEff(
+      appMag,
+      this.magShared.uMaxAppMag.value,
+      this.magShared.uSizeSpan.value,
+      this.magShared.uSizeKnee.value,
+    );
+    const appSize = perceptualAppSizePx(
+      dMEff,
+      this.magShared.uSizeMin.value,
+      this.magShared.uSizeMax.value,
+      this.magShared.uSizeSpan.value,
+    );
+    return Math.max(appSize, physSize);
+  }
+
   /**
    * Hover-engine pick path for the planet layer. Walks
    * EVERY attached host's planets — the rule per
@@ -438,9 +594,10 @@ export class PlanetBodyField {
    * Disc sizing mirrors the planet vertex shader's
    * `pxSize = max(appSize, physSize)` exactly via the shared
    * perceptual + angular-diameter helpers. Planets whose appMag exceeds
-   * `maxAppMag + 0.5` (the shader's soft-taper kill condition) are
-   * skipped — the GPU emits no quad, so hover can't pick what isn't
-   * drawn.
+   * the soft-taper cutoff are skipped — the GPU emits no quad, so hover
+   * can't pick what isn't drawn. The whole field is unpickable when it
+   * isn't rendered at all (chart mode hides the bodies; `setHidden`), so
+   * click-pick matches render visibility exactly, like the star pick.
    */
   pick(
     camera: THREE.PerspectiveCamera,
@@ -449,17 +606,12 @@ export class PlanetBodyField {
     clientY: number,
     pxThreshold: number,
   ): HoverHit | null {
-    if (this.hosts.size === 0) return null;
+    if (this.hosts.size === 0 || this.hidden || this.mono) return null;
     const cursorX = clientX - rect.left;
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
     const viewportH = rect.height;
-    const fovYRad = (camera.fov * Math.PI) / 180;
     const maxAppMag = this.magShared.uMaxAppMag.value;
-    const sizeMin = this.magShared.uSizeMin.value;
-    const sizeMax = this.magShared.uSizeMax.value;
-    const sizeSpan = this.magShared.uSizeSpan.value;
-    const sizeKnee = this.magShared.uSizeKnee.value;
     const camPos = camera.position;
 
     // Walk every host × planet and collect candidates that qualify for
@@ -478,10 +630,9 @@ export class PlanetBodyField {
           this.evalPlanetView(host, i, camPos);
         if (dVp <= 0) continue;
         // Same kill condition as the planet vertex shader's soft-taper
-        // discard: if the planet is more than half a mag below the
-        // slider cutoff, the GPU emits no quad and the hover can't
-        // pick what isn't drawn.
-        if (appMag > maxAppMag + 0.5) continue;
+        // discard: past the cutoff the GPU emits no quad and the hover
+        // can't pick what isn't drawn.
+        if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) continue;
 
         v.set(planetX, planetY, planetZ);
         const screen = projectToScreen(v, camera, viewportW, viewportH);
@@ -489,10 +640,7 @@ export class PlanetBodyField {
         const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
         const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-        const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
-        const dMEff = perceptualDmEff(appMag, maxAppMag, sizeSpan, sizeKnee);
-        const appSize = perceptualAppSizePx(dMEff, sizeMin, sizeMax, sizeSpan);
-        const pxSize = Math.max(appSize, physSize);
+        const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
         const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
         if (pxDist > hitRadius && pxDist > pxThreshold) continue;
@@ -528,6 +676,18 @@ export class PlanetBodyField {
     else this.group.visible = !this.mono && this.liveCount > 0;
   }
 
+  /** Hide one body by flat instance index (-1 = none) — the planet
+   *  sibling of the star pipeline's uHideFocusIdx, consumed by observe
+   *  mode for the body the camera is parked at. All five passes share
+   *  the uniform, so the hidden body writes no colour and no depth. */
+  setHiddenInstance(instanceIdx: number): void {
+    this.hideIdxUniform.value = instanceIdx;
+  }
+
+  hiddenInstance(): number {
+    return this.hideIdxUniform.value;
+  }
+
   dispose(): void {
     this.geometry.dispose();
     this.matDisc.dispose();
@@ -549,6 +709,8 @@ export class PlanetBodyField {
     this.bufHostAbsmag = new Float32Array(capacity);
     this.bufPhaseA = new Float32Array(capacity * 4);
     this.bufPhaseB = new Float32Array(capacity * 4);
+    this.bufPhaseC = new Float32Array(capacity * 4);
+    this.instanceHost = new Int32Array(capacity).fill(-1);
   }
 
   private growCapacity(): void {
@@ -562,6 +724,7 @@ export class PlanetBodyField {
     const oldAbsmag = this.bufHostAbsmag;
     const oldPhaseA = this.bufPhaseA;
     const oldPhaseB = this.bufPhaseB;
+    const oldPhaseC = this.bufPhaseC;
     this.allocateBuffers(newCap);
     this.bufLocalRel.set(oldLocalRel);
     this.bufHostLocalPos.set(oldHostLocal);
@@ -572,6 +735,7 @@ export class PlanetBodyField {
     this.bufHostAbsmag.set(oldAbsmag);
     this.bufPhaseA.set(oldPhaseA);
     this.bufPhaseB.set(oldPhaseB);
+    this.bufPhaseC.set(oldPhaseC);
     this.capacity = newCap;
     // Replace the geometry with a fresh one over the new buffers.
     // Materials and meshes are re-bound via three.js's normal
@@ -605,6 +769,7 @@ export class PlanetBodyField {
     geom.setAttribute('iHostAbsmag', new THREE.InstancedBufferAttribute(this.bufHostAbsmag, 1));
     geom.setAttribute('iPhaseCoefsA', new THREE.InstancedBufferAttribute(this.bufPhaseA, 4));
     geom.setAttribute('iPhaseCoefsB', new THREE.InstancedBufferAttribute(this.bufPhaseB, 4));
+    geom.setAttribute('iPhaseCoefsC', new THREE.InstancedBufferAttribute(this.bufPhaseC, 4));
     geom.instanceCount = this.liveCount;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = geom;
@@ -618,7 +783,11 @@ export class PlanetBodyField {
         glslVersion: THREE.GLSL3,
         vertexShader: planetVert,
         fragmentShader: planetFrag,
-        uniforms: { ...sharedPlanetUniforms, uRenderMode: { value: mode } },
+        uniforms: {
+          ...sharedPlanetUniforms,
+          uRenderMode: { value: mode },
+          uHideIdx: this.hideIdxUniform,
+        },
         ...params,
       });
 
@@ -696,11 +865,11 @@ export class PlanetBodyField {
       this.bufSolidity[baseScalar + i] = solidityForType(planet.type);
       this.bufAlbedo[baseScalar + i] = planet.albedo;
       this.bufHostAbsmag[baseScalar + i] = host.hostAbsmag;
-      // Phase coefficients packed (c0,c1,c2,c3) | (c4,c5,c6,alphaMaxDeg).
-      // Bodies without published curves write all zeros — alphaMaxDeg=0
-      // is the shader's "use Lambertian" sentinel.
-      // `bufPhaseA` and `bufPhaseB` are separate Float32Arrays with the
-      // same vec4-shaped layout, so a single per-slot offset feeds both.
+      // Phase coefficients packed (c0,c1,c2,c3) | (c4,c5,c6,alphaMaxDeg)
+      // | (c7,_,_,_). Bodies without published curves write all zeros —
+      // alphaMaxDeg=0 is the shader's "use Lambertian" sentinel.
+      // The three bufPhase* arrays share the vec4-shaped layout, so a
+      // single per-slot offset feeds them all.
       const pc = planet.phaseCoefficients;
       const phaseOff = baseVec4 + i * 4;
       this.bufPhaseA[phaseOff + 0] = pc ? pc.c0 : 0;
@@ -711,6 +880,10 @@ export class PlanetBodyField {
       this.bufPhaseB[phaseOff + 1] = pc ? pc.c5 : 0;
       this.bufPhaseB[phaseOff + 2] = pc ? pc.c6 : 0;
       this.bufPhaseB[phaseOff + 3] = pc ? pc.alphaMaxDeg : 0;
+      this.bufPhaseC[phaseOff + 0] = pc ? pc.c7 : 0;
+      this.bufPhaseC[phaseOff + 1] = 0;
+      this.bufPhaseC[phaseOff + 2] = 0;
+      this.bufPhaseC[phaseOff + 3] = 0;
     }
     this.writeHostLocalPos(host);
   }
@@ -810,6 +983,7 @@ export class PlanetBodyField {
     (attrs.iHostAbsmag as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iPhaseCoefsA as THREE.InstancedBufferAttribute).needsUpdate = true;
     (attrs.iPhaseCoefsB as THREE.InstancedBufferAttribute).needsUpdate = true;
+    (attrs.iPhaseCoefsC as THREE.InstancedBufferAttribute).needsUpdate = true;
   }
 
   /** Compact-down step used by detachHost(). Shifts a contiguous tail
@@ -829,5 +1003,6 @@ export class PlanetBodyField {
     shiftScalar(this.bufHostAbsmag, 1);
     shiftScalar(this.bufPhaseA, 4);
     shiftScalar(this.bufPhaseB, 4);
+    shiftScalar(this.bufPhaseC, 4);
   }
 }

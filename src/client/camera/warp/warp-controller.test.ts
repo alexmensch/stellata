@@ -78,9 +78,9 @@ interface FocusFixture {
   setFocusedCloud: (idx: number | null) => void;
   stars: Map<number, StarRow>;
   clouds: Map<number, CloudRow>;
+  planets: Map<number, StarRow>;
   calls: {
     recenterOrigin: number;
-    recenterFocusToStar: number[];
     setFocus: Array<number | null>;
     clearVector: number;
     cancelFocusLerp: number;
@@ -94,11 +94,12 @@ function makeFocus(): FocusFixture {
   const worldOffset = new THREE.Vector3();
   const stars = new Map<number, StarRow>();
   const clouds = new Map<number, CloudRow>();
+  const planets = new Map<number, StarRow>();
   let focusedStar: number | null = null;
   let focusedCloud: number | null = null;
+  let focusedPlanet: number | null = null;
   const calls: FocusFixture['calls'] = {
     recenterOrigin: 0,
-    recenterFocusToStar: [],
     setFocus: [],
     clearVector: 0,
     cancelFocusLerp: 0,
@@ -123,6 +124,28 @@ function makeFocus(): FocusFixture {
       },
       emitFocusEvents: () => {
         calls.emitFocusEvents.push({ kind: 'star', idx });
+      },
+      physicalRadius: () => row.physicalRadius,
+      chartPlateauDistance: () => null,
+    };
+  }
+  function makePlanetTarget(idx: number): FocusTarget | null {
+    const row = planets.get(idx);
+    if (!row) return null;
+    return {
+      kind: 'planet',
+      idx,
+      anchorInto(out) { out.copy(row.abs); return true; },
+      localPositionInto(out) { out.copy(row.abs).sub(worldOffset); return true; },
+      parkRadius: () => row.parkRadius,
+      applyFocus: () => {
+        focusedStar = null;
+        focusedCloud = null;
+        focusedPlanet = idx;
+        calls.applyFocus.push({ kind: 'planet', idx });
+      },
+      emitFocusEvents: () => {
+        calls.emitFocusEvents.push({ kind: 'planet', idx });
       },
       physicalRadius: () => row.physicalRadius,
       chartPlateauDistance: () => null,
@@ -158,6 +181,7 @@ function makeFocus(): FocusFixture {
     },
     makeFocusTarget: (target) => {
       if (target.kind === 'star') return makeStarTarget(target.idx);
+      if (target.kind === 'planet') return makePlanetTarget(target.idx);
       if (target.kind === 'cloud') return makeCloudTarget(target.idx);
       return null;
     },
@@ -180,23 +204,16 @@ function makeFocus(): FocusFixture {
       calls.recenterOrigin++;
       return new THREE.Vector3(dx, dy, dz);
     },
-    recenterFocusToStar: (idx) => {
-      const row = stars.get(idx);
-      if (!row) throw new Error(`star ${idx} not seeded`);
-      const delta = new THREE.Vector3().subVectors(row.abs, worldOffset);
-      worldOffset.copy(row.abs);
-      focusedStar = idx;
-      calls.recenterFocusToStar.push(idx);
-      return delta;
-    },
     setFocus: (idx) => {
       focusedStar = idx;
+      focusedPlanet = null;
       calls.setFocus.push(idx);
     },
     clearVector: () => { calls.clearVector++; },
     getFocusedStar: () => focusedStar,
     getFocusedTarget: () => {
       if (focusedStar !== null) return { kind: 'star', idx: focusedStar };
+      if (focusedPlanet !== null) return { kind: 'planet', idx: focusedPlanet };
       if (focusedCloud !== null) return { kind: 'cloud', idx: focusedCloud };
       return null;
     },
@@ -208,10 +225,11 @@ function makeFocus(): FocusFixture {
   return {
     ops,
     worldOffset,
-    setFocusedStar: (idx) => { focusedStar = idx; focusedCloud = null; },
-    setFocusedCloud: (idx) => { focusedCloud = idx; focusedStar = null; },
+    setFocusedStar: (idx) => { focusedStar = idx; focusedCloud = null; focusedPlanet = null; },
+    setFocusedCloud: (idx) => { focusedCloud = idx; focusedStar = null; focusedPlanet = null; },
     stars,
     clouds,
+    planets,
     calls,
   };
 }
@@ -222,6 +240,7 @@ interface Harness {
   controls: ReturnType<typeof makeControlsStub>;
   observeControls: ReturnType<typeof makeObserveControlsStub>;
   uHide: { value: number };
+  hidden: { target: unknown };
   bus: EventBus<StellataEventMap>;
   focus: FocusFixture;
   setCameraMode: (m: CameraMode) => void;
@@ -236,6 +255,7 @@ function makeHarness(opts: {
   const controls = makeControlsStub();
   const observeControls = makeObserveControlsStub();
   const uHide = { value: -1 };
+  const hidden: { target: unknown } = { target: null };
   const bus = new EventBus<StellataEventMap>();
   const focus = makeFocus();
   let cameraMode: CameraMode = opts.mode ?? 'navigate';
@@ -253,7 +273,10 @@ function makeHarness(opts: {
     camera,
     controls,
     observeControls,
-    uHideFocusIdxRef: uHide,
+    setFocalBodyHidden: (target) => {
+      hidden.target = target;
+      uHide.value = target?.kind === 'star' ? target.idx : -1;
+    },
     bus,
     getCameraMode: () => cameraMode,
     isChartMode: () => opts.isChart ?? false,
@@ -267,6 +290,7 @@ function makeHarness(opts: {
     controls,
     observeControls,
     uHide,
+    hidden,
     bus,
     focus,
     setCameraMode: (m: CameraMode) => { cameraMode = m; },
@@ -421,12 +445,38 @@ describe('WarpController — lifecycle + idempotency', () => {
     expect(h.warp.isActive()).toBe(true);
     h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
-    // swapObserveAnchor re-anchors onto the destination without a
-    // setFocus navigate flip.
-    expect(h.focus.calls.recenterFocusToStar).toContain(1);
+    // swapObserveAnchor re-anchors onto the destination through the
+    // kind-agnostic FocusTarget contract (recentre + applyFocus),
+    // without a setFocus navigate flip.
+    expect(h.focus.calls.applyFocus).toContainEqual({ kind: 'star', idx: 1 });
     expect(h.focus.calls.setFocus).not.toContain(1);
     expect(h.uHide.value).toBe(1);
     expect(h.observeControls.enable).toHaveBeenCalled();
+  });
+
+  it('warp from OBSERVE to a planet re-enters observe parked on the planet', () => {
+    const h = makeHarness({ mode: 'observe' });
+    h.focus.stars.set(0, {
+      abs: new THREE.Vector3(0, 0, 0),
+      parkRadius: 0.001,
+      physicalRadius: 1e-7,
+    });
+    h.focus.planets.set(4, {
+      abs: new THREE.Vector3(5e-6, 0, 0),
+      parkRadius: 1e-9,
+      physicalRadius: 3e-10,
+    });
+    h.focus.setFocusedStar(0);
+    h.warp.warpTo({ kind: 'planet', idx: 4 });
+    expect(h.warp.isActive()).toBe(true);
+    h.warp.skip();
+    expect(h.warp.isActive()).toBe(false);
+    // Hard-kind destination re-enters observe: focus swapped onto the
+    // planet, its body hidden, camera parked at its local position.
+    expect(h.focus.calls.applyFocus).toContainEqual({ kind: 'planet', idx: 4 });
+    expect(h.hidden.target).toEqual({ kind: 'planet', idx: 4 });
+    expect(h.observeControls.enable).toHaveBeenCalled();
+    expect(h.controls.enabled).toBe(false);
   });
 });
 

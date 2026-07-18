@@ -8,6 +8,7 @@ import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc-un
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import type { PlanetSystem, Planet } from './planet-system';
 import {
+  MERCURY_PHASE,
   SATURN_PHASE,
   VENUS_PHASE,
   alphaZeroPhaseFactor,
@@ -156,6 +157,25 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('getHostLocalPositionInto returns hostAbs − worldOffset and tracks recenter', () => {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    const hostAbs = new THREE.Vector3(1.5, 0, 2.0);
+    f.attachHost(0, makePlanetSystem(0, 1), 4.83, hostAbs, 0, 0);
+    const out = new THREE.Vector3();
+    expect(f.getHostLocalPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(1.5, 12);
+    expect(out.y).toBeCloseTo(0, 12);
+    expect(out.z).toBeCloseTo(2.0, 12);
+    // Recenter onto a planet-like offset: host local pos shifts by it.
+    f.recenter(new THREE.Vector3(1.0, 0, 2.0));
+    expect(f.getHostLocalPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(0.5, 12);
+    expect(out.y).toBeCloseTo(0, 12);
+    expect(out.z).toBeCloseTo(0, 12);
+    expect(f.getHostLocalPositionInto(9, out)).toBe(false);
+    f.dispose();
+  });
+
   it('handles multiple hosts in one field', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, new THREE.Vector3(), 0, 0);
@@ -275,22 +295,23 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('writes the Mallama coefficients into iPhaseCoefsA/B for the right slot', () => {
-    // The PR adds iPhaseCoefsA = (c0,c1,c2,c3) and iPhaseCoefsB =
-    // (c4,c5,c6,alphaMaxDeg) per-instance buffers plumbed through
+  it('writes the Mallama coefficients into iPhaseCoefsA/B/C for the right slot', () => {
+    // iPhaseCoefsA = (c0,c1,c2,c3), iPhaseCoefsB = (c4,c5,c6,alphaMaxDeg),
+    // iPhaseCoefsC = (c7,_,_,_) per-instance buffers plumbed through
     // allocate / grow / write-static / flush / shift-down. The
     // lifecycle tests above exercise the mechanics; this read-back
     // pins the buffer *contents* so a swapped index, miscopied stride
     // in growCapacity, or wrong shift in detachHost can't slip past.
     const f = new PlanetBodyField(makeSharedUniforms());
-    // Three planets: bare (no coefs) | bare | Saturn (rich coefs).
-    // Slot 2 is the one we read back.
+    // Four planets: bare (no coefs) | bare | Saturn | Mercury (the
+    // only c7 carrier). Slots 2 and 3 are the ones we read back.
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [
         makePlanet({ name: 'P0' }),
         makePlanet({ name: 'P1' }),
         makePlanet({ name: 'P2-Saturn', phaseCoefficients: SATURN_PHASE }),
+        makePlanet({ name: 'P3-Mercury', phaseCoefficients: MERCURY_PHASE }),
       ],
     };
     f.attachHost(0, ps, 4.83, new THREE.Vector3(), 0, 0);
@@ -302,6 +323,8 @@ describe('PlanetBodyField lifecycle', () => {
       .array as Float32Array;
     const phaseB = (geom.attributes.iPhaseCoefsB as THREE.InstancedBufferAttribute)
       .array as Float32Array;
+    const phaseC = (geom.attributes.iPhaseCoefsC as THREE.InstancedBufferAttribute)
+      .array as Float32Array;
     const off = 2 * 4; // slot 2, vec4 stride
     expect(phaseA[off + 0]).toBeCloseTo(SATURN_PHASE.c0, 6);
     expect(phaseA[off + 1]).toBeCloseTo(SATURN_PHASE.c1, 6);
@@ -311,6 +334,15 @@ describe('PlanetBodyField lifecycle', () => {
     expect(phaseB[off + 1]).toBeCloseTo(SATURN_PHASE.c5, 6);
     expect(phaseB[off + 2]).toBeCloseTo(SATURN_PHASE.c6, 6);
     expect(phaseB[off + 3]).toBeCloseTo(SATURN_PHASE.alphaMaxDeg, 6);
+    expect(phaseC[off + 0]).toBe(0); // Saturn carries no c7
+    // Mercury's c7 lands in slot 3's iPhaseCoefsC.x. Float32 compare —
+    // 6.592e-15 survives the narrowing with ~7 significant digits.
+    const offC = 3 * 4;
+    expect(phaseC[offC + 0]).toBeCloseTo(MERCURY_PHASE.c7, 20);
+    expect(phaseC[offC + 1]).toBe(0);
+    expect(phaseC[offC + 2]).toBe(0);
+    expect(phaseC[offC + 3]).toBe(0);
+    expect(phaseB[offC + 3]).toBeCloseTo(MERCURY_PHASE.alphaMaxDeg, 6);
     // Slots 0/1 carry the bare-coef sentinel: alphaMaxDeg = 0 (the
     // shader's "use Lambertian" signal).
     expect(phaseB[0 * 4 + 3]).toBe(0);
@@ -427,6 +459,44 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('update() keeps advancing the ephemeris under chart-mono / hidden (bodies not drawn, anchor still rides)', () => {
+    // Chart mode is observe-only and can observe from a planet, so the
+    // observe anchor / focal-frame ride read live positions off this walk
+    // even though the bodies aren't drawn. Rendering gates on mono/hidden;
+    // the ephemeris walk must not — freezing it strands the Earth-orbit
+    // anchor (Sol + planets appear static while catalog stars still move).
+    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    let calls = 0;
+    const positionsAt = (_t: number, out: Float32Array): void => {
+      calls++;
+      for (let i = 0; i < out.length; i++) out[i] = 0;
+    };
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet({ semiMajorAxisAu: 1, radiusKm: 6000 })],
+      positionsAt,
+    };
+    f.attachHost(0, ps, 4.83, new THREE.Vector3(), 0, 0); // initial fill → calls === 1
+    const camera = new THREE.PerspectiveCamera(); // parked at the host, gate open
+
+    f.setMonochrome(true);
+    f.update(camera, 0);
+    expect(f.group.visible).toBe(false); // bodies not drawn in chart mode
+    expect(calls).toBe(2); // …but the ephemeris still advanced
+
+    f.setMonochrome(false);
+    f.setHidden(true);
+    f.update(camera, 1);
+    expect(f.group.visible).toBe(false);
+    expect(calls).toBe(3);
+
+    f.setHidden(false);
+    f.update(camera, 2);
+    expect(f.group.visible).toBe(true);
+    expect(calls).toBe(4);
+    f.dispose();
+  });
+
   it('update() writes positionsAt output into bufLocalRel after orientation rotation', () => {
     // positionsAt returns plane-frame triples; the field rotates them
     // through the host orientation quaternion before writing into the
@@ -506,10 +576,10 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only iLocalRel — the other 8 attributes stay clean per frame', () => {
+  it('update() flushes only iLocalRel — the other 9 attributes stay clean per frame', () => {
     // bk5 scale (hundreds of hosts) makes per-frame re-uploads of
     // static attributes (iRadiusPc, iColour, iSolidity, iAlbedoP,
-    // iHostAbsmag, iPhaseCoefsA/B, iHostLocalPos) measurable wasted
+    // iHostAbsmag, iPhaseCoefsA/B/C, iHostLocalPos) measurable wasted
     // bus bandwidth. Pin the dynamic-only flush: after attach (which
     // legitimately touches every attribute) a single update() tick
     // only flips iLocalRel.
@@ -542,7 +612,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.update(camera, 1);
     // Only iLocalRel should have been touched. iHostLocalPos /
     // iRadiusPc / iColour / iSolidity / iAlbedoP / iHostAbsmag /
-    // iPhaseCoefsA / iPhaseCoefsB stay quiescent.
+    // iPhaseCoefsA / iPhaseCoefsB / iPhaseCoefsC stay quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
     expect(flagged.size).toBe(1);
     f.dispose();
@@ -794,6 +864,42 @@ describe('PlanetBodyField.pick', () => {
     f.dispose();
   });
 
+  it('is unpickable when not rendered (chart-mono / hidden) — matches the star pick', () => {
+    // Regression: pick() walked hosts regardless of render visibility, so
+    // a chart-mode-hidden planet (bodies not drawn) was still click-pinnable
+    // while stars respected their render state. Click-pick must equal render.
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull(); // drawn → pickable
+
+    f.setMonochrome(true); // chart mode hides the bodies
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+
+    f.setMonochrome(false);
+    f.setHidden(true);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+
+    f.setHidden(false);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
+    f.dispose();
+  });
+
   it('kill condition: appMag > maxAppMag + 0.5 drops the candidate', () => {
     // Same setup as prime but with the planet shoved far enough away
     // that its appMag exceeds the slider cutoff by > 0.5 mag. The
@@ -874,3 +980,125 @@ describe('PlanetBodyField.pick', () => {
   });
 });
 
+describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
+  function makeField(): PlanetBodyField {
+    return new PlanetBodyField(makeSharedUniforms(20));
+  }
+  function attach(f: PlanetBodyField, hostIdx: number, n: number, hostAbs = new THREE.Vector3()): void {
+    const ps: PlanetSystem = {
+      hostStarIdx: hostIdx,
+      planets: Array.from({ length: n }, (_, i) =>
+        makePlanet({ name: `H${hostIdx}P${i}`, semiMajorAxisAu: 1 + i, radiusKm: 6000 })),
+      positionsAt: (_t, out) => {
+        for (let i = 0; i < n; i++) {
+          out[i * 3 + 0] = (1 + i) * AU_PC;
+          out[i * 3 + 1] = 0;
+          out[i * 3 + 2] = 0;
+        }
+      },
+    };
+    f.attachHost(hostIdx, ps, 4.83, hostAbs, hostIdx === 0 ? 0 : -1, 0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hosts = (f as any).hosts as Map<number, { orientation: THREE.Quaternion }>;
+    hosts.get(hostIdx)!.orientation.identity();
+    // Re-run the fill under the identity orientation; camera parked on
+    // the host so the per-host cull gate stays open.
+    const cam = new THREE.PerspectiveCamera();
+    cam.position.copy(hostAbs);
+    f.update(cam, 0);
+  }
+
+  it('setHiddenInstance drives one shared uHideIdx uniform across all five passes', () => {
+    const f = makeField();
+    attach(f, 0, 2);
+    expect(f.hiddenInstance()).toBe(-1);
+    f.setHiddenInstance(1);
+    expect(f.hiddenInstance()).toBe(1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyF = f as any;
+    for (const mat of [anyF.matDisc, anyF.matGlow, anyF.matCore, anyF.matCorrupt, anyF.matRestore]) {
+      expect(mat.uniforms.uHideIdx.value).toBe(1);
+    }
+    f.setHiddenInstance(-1);
+    expect(f.hiddenInstance()).toBe(-1);
+  });
+
+  it('hostPlanetOf / instanceIndexOf are inverses across multiple hosts', () => {
+    const f = makeField();
+    attach(f, 0, 2);
+    attach(f, 5, 3, new THREE.Vector3(1, 0, 0));
+    expect(f.hostPlanetOf(0)).toEqual({ hostStarIdx: 0, planetIdx: 0 });
+    expect(f.hostPlanetOf(1)).toEqual({ hostStarIdx: 0, planetIdx: 1 });
+    expect(f.hostPlanetOf(2)).toEqual({ hostStarIdx: 5, planetIdx: 0 });
+    expect(f.hostPlanetOf(4)).toEqual({ hostStarIdx: 5, planetIdx: 2 });
+    expect(f.hostPlanetOf(5)).toBeNull();
+    expect(f.instanceIndexOf(5, 2)).toBe(4);
+    expect(f.instanceIndexOf(5, 3)).toBeNull();
+    expect(f.instanceIndexOf(9, 0)).toBeNull();
+    expect(f.planetAt(3)!.name).toBe('H5P1');
+    expect(f.planetAt(99)).toBeNull();
+    f.dispose();
+  });
+
+  it('flat indices re-resolve after a detach compaction', () => {
+    const f = makeField();
+    attach(f, 0, 2);
+    attach(f, 5, 1, new THREE.Vector3(1, 0, 0));
+    f.detachHost(0);
+    // Host 5's single planet compacted to flat slot 0.
+    expect(f.hostPlanetOf(0)).toEqual({ hostStarIdx: 5, planetIdx: 0 });
+    expect(f.instanceIndexOf(5, 0)).toBe(0);
+    expect(f.hostPlanetOf(1)).toBeNull();
+    f.dispose();
+  });
+
+  it('planetLocalPositionInto / planetAbsolutePositionInto compose host + orbital offset', () => {
+    const f = makeField();
+    const hostAbs = new THREE.Vector3(2, 0, 0);
+    attach(f, 5, 1, hostAbs);
+    const local = new THREE.Vector3();
+    const abs = new THREE.Vector3();
+    expect(f.planetLocalPositionInto(0, local)).toBe(true);
+    expect(f.planetAbsolutePositionInto(0, abs)).toBe(true);
+    // worldOffset is (0,0,0) so local == abs == hostAbs + (1 AU, 0, 0).
+    expect(abs.x).toBeCloseTo(2 + AU_PC, 10);
+    expect(local.x).toBeCloseTo(2 + AU_PC, 10);
+    // After a recenter onto the host, the local reading shifts but the
+    // absolute anchor doesn't.
+    f.recenter(hostAbs);
+    expect(f.planetLocalPositionInto(0, local)).toBe(true);
+    expect(f.planetAbsolutePositionInto(0, abs)).toBe(true);
+    expect(local.x).toBeCloseTo(AU_PC, 10);
+    expect(abs.x).toBeCloseTo(2 + AU_PC, 10);
+    expect(f.planetLocalPositionInto(9, local)).toBe(false);
+    f.dispose();
+  });
+
+  it('appMagForInstance matches the (host, planetIdx)-keyed appMagFor', () => {
+    const f = makeField();
+    attach(f, 5, 2, new THREE.Vector3(1, 0, 0));
+    const cam = new THREE.Vector3(0.5, 0.2, 0);
+    expect(f.appMagForInstance(1, cam)).toBeCloseTo(f.appMagFor(5, 1, cam)!, 12);
+    expect(f.appMagForInstance(9, cam)).toBeNull();
+    f.dispose();
+  });
+
+  it('renderedPlanetSizePx mirrors the shader sizing and kills below the taper', () => {
+    const f = makeField();
+    attach(f, 0, 1);
+    // Camera close to the planet at (1 AU, 0, 0): physical term visible.
+    const near = new THREE.Vector3(AU_PC - 10 * 6000 * KM_PC, 0, 0);
+    const px = f.renderedPlanetSizePx(0, near);
+    expect(px).toBeGreaterThan(0);
+    // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
+    // uViewport.y = 600, uFovYRad = 60°. physSize dominates appSize here.
+    // bufLocalRel stores the planet position in float32, so the
+    // camera→planet distance carries a ~1e-4 relative quantum at 1 AU
+    // magnitudes — compare at that tolerance.
+    const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
+    expect(Math.abs(px - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
+    // Unattached instance → 0.
+    expect(f.renderedPlanetSizePx(9, near)).toBe(0);
+    f.dispose();
+  });
+});

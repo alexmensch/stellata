@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { focalRideStep, type FocalRideInputs } from './focal-ride-pure';
+import {
+  FOCAL_ORIGIN_DRIFT_RATIO,
+  focalRideStep,
+  shouldRecenterFocalOrigin,
+  type FocalRideInputs,
+} from './focal-ride-pure';
 
 const V = (x: number, y: number, z: number) => ({ x, y, z });
 
@@ -109,5 +114,25 @@ describe('focalRideStep', () => {
     }));
     expect([s.dx, s.dy, s.dz]).toEqual([0, 0, 0]);
     expect(s.rideFocalIdx).toBeNull();
+  });
+});
+
+describe('shouldRecenterFocalOrigin', () => {
+  it('holds until the camera drifts past the ratio, then triggers', () => {
+    const eye = 1e-4; // ride-along eye distance, pc
+    expect(shouldRecenterFocalOrigin(eye, eye)).toBe(false);
+    expect(shouldRecenterFocalOrigin(eye * FOCAL_ORIGIN_DRIFT_RATIO, eye)).toBe(false);
+    expect(shouldRecenterFocalOrigin(eye * FOCAL_ORIGIN_DRIFT_RATIO * 1.001, eye)).toBe(true);
+  });
+
+  it('scales with the eye distance — same trigger geometry at any zoom/object', () => {
+    for (const eye of [1e-9, 1e-4, 1, 100]) {
+      expect(shouldRecenterFocalOrigin(eye * (FOCAL_ORIGIN_DRIFT_RATIO + 1), eye)).toBe(true);
+      expect(shouldRecenterFocalOrigin(eye * (FOCAL_ORIGIN_DRIFT_RATIO - 1), eye)).toBe(false);
+    }
+  });
+
+  it('never triggers on a degenerate (zero) eye distance', () => {
+    expect(shouldRecenterFocalOrigin(1, 0)).toBe(false);
   });
 });

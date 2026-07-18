@@ -95,7 +95,7 @@ bit order, so mode isn't known until the field loop completes).
 - `mode=observe` is applied **after** camera params + `controls.update()`
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
-  a focused star exists. Default-omitted (navigate).
+  a hard-kind focus (star / planet) exists. Default-omitted (navigate).
 - The URL writer skips frame-hash updates while
   `isObserveTransitionActive()` is true, mirroring the warp guard — the
   observe enter/exit translate animates camera position and would
@@ -123,7 +123,14 @@ the new schema after the same 300 ms debounce as routine URL writes.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new
-artifact and the wire just works (docs/sid.md § 10).
+artifact and the wire just works (docs/sid.md § 10). The one wired
+exception: planet sids resolve to a planet-within-host domain index,
+which `IdMaps.planetTargetIndexOf` translates to the body-field flat
+Target index at apply time (and `planetDomainIndexOf` back at encode
+time); a translation miss — host body-field never attached — drops the
+focus like an unknown sid while the rest of the state applies.
+`main.ts` awaits `stellata.planetSystemsReady` before `applyFromUrl`
+so the attach table is populated when a planet ref resolves.
 
 **Console helpers.** `window.debug.decodeView('AQAA…')` decodes a blob
 and `console.table`s the fields; `window.debug.encodeView()` returns

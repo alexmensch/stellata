@@ -4,8 +4,11 @@
 
 import * as THREE from 'three';
 
-/** Focusable-object kind tag. New kinds extend this union. */
-export type TargetKind = 'star' | 'cloud' | 'lg';
+/** Focusable-object kind tag. New kinds extend this union. A planet
+ *  target's idx is the PlanetBodyField flat global instance index;
+ *  (host, planet-within-host) resolve through the field's attach
+ *  table. */
+export type TargetKind = 'star' | 'cloud' | 'lg' | 'planet';
 
 /** A (kind, index) reference to one focusable object. The focus and
  *  distance-vector slots on FocusController each hold one of these —
@@ -19,6 +22,15 @@ export interface Target {
 export function targetsEqual(a: Target | null, b: Target | null): boolean {
   if (a === null || b === null) return a === b;
   return a.kind === b.kind && a.idx === b.idx;
+}
+
+/** Hard focus kinds (star / planet) recentre the floating origin onto
+ *  the object and drop the orbit floor to a per-body physical solve;
+ *  they're also the only valid observe anchors (the camera parks
+ *  exactly at the object, which needs the float32-clean local frame a
+ *  recentre establishes). Soft kinds (cloud / LG) do neither. */
+export function isHardTarget(t: Target | null): boolean {
+  return t !== null && (t.kind === 'star' || t.kind === 'planet');
 }
 
 /** Per-kind geometry legs the kind-agnostic shell surface dispatches

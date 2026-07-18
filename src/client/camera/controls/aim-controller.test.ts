@@ -4,7 +4,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import { AimController, aimDurationMs, type AimControllerDeps } from './aim-controller';
+import {
+  AIM_DEGENERATE_DIST_PC,
+  AimController,
+  aimDurationMs,
+  type AimControllerDeps,
+} from './aim-controller';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS } from '../timing';
 import type { ObserveControls } from '../observe/observe-controls';
 
@@ -149,6 +154,17 @@ describe('AimController — navigate slerp lifecycle', () => {
     expect(h.controls.enabled).toBe(true);
   });
 
+  it('aims from a planet-scale orbit radius (~2.4 body radii, 5e-9 pc)', () => {
+    // Regression companion to the observe-branch solar-system test: a
+    // pc-scale epsilon on the orbit radius killed navigate aims while
+    // zoomed close to a focused planet.
+    h.camera.position.set(5e-9, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.aim.aimAt(new THREE.Vector3(0, 4.848e-6, 0));
+    expect(h.aim.isActive()).toBe(true);
+    expect(h.controls.enabled).toBe(false);
+  });
+
   it('no-op when already aimed (dir0 == dir1)', () => {
     // Camera at (+X, 0, 0) currently aimed at origin (forward = -X). For
     // the aim-end pose to coincide with the start pose, the point must
@@ -201,6 +217,27 @@ describe('AimController — observe slerp lifecycle', () => {
     h.aim.aimAt(new THREE.Vector3(1, 2, 3));
     expect(h.aim.isObserveAimActive()).toBe(false);
     expect(h.observeControls.disable).not.toHaveBeenCalled();
+  });
+
+  it('aims at solar-system range — 1 AU (~5e-6 pc) is NOT degenerate', () => {
+    // Regression: a pc-scale epsilon here silently no-opped every aim
+    // at a planet (≤ 2e-4 pc from an observe park) and at Sol observed
+    // from Earth (~5e-6 pc). The guard must only reject sub-camera.near
+    // distances.
+    h.camera.position.set(0, 0, 0); // parked at a planet
+    h.camera.lookAt(0, 0, -1);
+    h.camera.updateMatrixWorld();
+    h.aim.aimAt(new THREE.Vector3(4.848e-6, 0, 0)); // Sol, 1 AU away, off-axis
+    expect(h.aim.isObserveAimActive()).toBe(true);
+    expect(h.observeControls.disable).toHaveBeenCalled();
+  });
+
+  it('still rejects sub-camera.near distances via AIM_DEGENERATE_DIST_PC', () => {
+    h.camera.position.set(0, 0, 0);
+    h.camera.lookAt(0, 0, -1);
+    h.camera.updateMatrixWorld();
+    h.aim.aimAt(new THREE.Vector3(AIM_DEGENERATE_DIST_PC / 2, 0, 0));
+    expect(h.aim.isObserveAimActive()).toBe(false);
   });
 
   it('no-op when already aimed', () => {

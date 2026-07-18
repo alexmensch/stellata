@@ -87,9 +87,23 @@ export function createPlanetLabels(stellata: Stellata): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
+    // The observe-anchor body is shader-hidden (uHideIdx); its label
+    // must not float alone at the camera's own position.
+    const ps = stellata.getFocusedPlanetSystem();
+    const hiddenFlat = stellata.planetField.hiddenInstance();
+    const hiddenHost = hiddenFlat >= 0 ? stellata.planetField.hostPlanetOf(hiddenFlat) : null;
+    const hiddenPlanetIdx =
+      hiddenHost && ps && hiddenHost.hostStarIdx === ps.hostStarIdx
+        ? hiddenHost.planetIdx
+        : -1;
+
     setGroupVisible(true);
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i];
+      if (i === hiddenPlanetIdx) {
+        e.el.style.display = 'none';
+        continue;
+      }
       // Sync label visibility with the planet's orbit ring. A ring
       // suppressed by the pixel-gap heuristic at far framings means
       // its body is floor-clamped sub-pixel anyway; a floating label

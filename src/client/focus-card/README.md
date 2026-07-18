@@ -21,7 +21,7 @@ an Earth-vantage catalog tag kept for familiarity.
 
 ## Rolodex behaviour
 
-All tier-2 cards — the focus card plus one card per pinned star — form
+All tier-2 cards — the focus card plus one card per pinned object — form
 ONE stack (`#card-stack` in `.ui-top-bottom`) with a single visible
 front card; the other cards show as overlapping header strips above it,
 so the whole unit stays card-sized regardless of pin count.
@@ -36,7 +36,7 @@ so the whole unit stays card-sized regardless of pin count.
   compresses with count (`stripHeightPx`, floor 15 px) so the stack
   never scrolls, even at the 16-pin cap.
 - **Auto-front** — the focus card jumps to front on any focus change;
-  a newly pinned star's card jumps to front on pin. A manual promote
+  a newly pinned object's card jumps to front on pin. A manual promote
   holds until the next such event. With no focus card in the stack the
   newest pin is front; with no cards at all the stack is hidden.
 - **Minimized** — the front card's header row alone, with the
@@ -52,9 +52,10 @@ so the whole unit stays card-sized regardless of pin count.
   `stellata.focus-card-collapsed`; front-card choice does not persist.
 - **Observe mode** hides the focus card (the camera sits on the focal
   object, so the camera-frame rows are degenerate there); POI cards
-  render in BOTH camera modes. The focused star's POI card is
+  render in BOTH camera modes. The focused object's POI card is
   suppressed while focused — pin retained, card returns on unfocus —
-  mirroring the overlay suppressing its ring/label/arrow.
+  mirroring the overlay suppressing its ring/label/arrow. POI card
+  content dispatches through `FocusCardProviders` by the pin's kind.
 - **Live rows** tick only on the front card, and only while the stack
   is neither hidden nor collapsed (the `CardBody` gate points at
   `#card-stack`).
@@ -62,7 +63,8 @@ so the whole unit stays card-sized regardless of pin count.
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
-  `FocusKind` union (`'star' | 'cloud' | 'lg'`). `FocusCardProviders` is a
+  `FocusKind` union (`'star' | 'cloud' | 'lg' | 'planet'`).
+  `FocusCardProviders` is a
   mapped type EXHAUSTIVE over the union: **adding a focusable kind
   without a focus-card provider fails `tsc`** — that compile-time
   guarantee is the point of the registry shape, don't weaken it to a
@@ -93,6 +95,11 @@ so the whole unit stays card-sized regardless of pin count.
 - `lg-focus-provider.ts` — tier-2 Local Group rows (type + aliases as
   identity lines, live camera distance, live far-field apparent mag
   off the catalog m_V, absolute mag, axis pair, provenance).
+- `planet-focus-provider.ts` — tier-2 planet rows keyed on the
+  PlanetBodyField flat instance index: "Orbiting <host>" breadcrumb +
+  type descriptor as identity lines, radius (R⊕ + km), live camera
+  distance, live apparent mag (shader mirror), orbital period, and
+  semi-major axis.
 - `cloud-focus-provider.ts` — tier-2 cloud rows. Clouds are not a
   wired focus target while the layer is shelved
   (`../molecular-clouds/README.md`); the provider exists to satisfy
@@ -109,8 +116,3 @@ object's display name (text-transform none — Greek-letter Bayer forms
 must not uppercase) so a collapsed stack still says what its front card
 describes.
 
-## Planet focus (future)
-
-Planets are not FocusTargets today. When they become one, `'planet'`
-joins `FocusKind` and the compile-time contract forces a planet
-provider in the same change.

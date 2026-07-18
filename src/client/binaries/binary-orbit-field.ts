@@ -14,7 +14,7 @@ import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
 } from './binary-tuning';
-import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
 
 export interface BinaryOrbitFieldOptions {
   binaries: BinariesData;
@@ -214,7 +214,7 @@ export class BinaryOrbitField {
         const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dCamPc > VISIBILITY_HORIZON_PC) continue;
         const appMag = apparentMagnitude(absMags[pIdx], dCamPc);
-        if (appMag > maxAppMag + 0.5) continue;
+        if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) continue;
         activeCount++;
         // Peak angular separation envelope. AU / pc converts to arcsec
         // because 1 AU subtends 1″ at 1 pc by definition.

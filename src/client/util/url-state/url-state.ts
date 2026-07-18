@@ -11,6 +11,7 @@ import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
+import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 
 // URL state lives in a single opaque `?v=<base64url>` param. Four wire
 // formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
@@ -108,6 +109,13 @@ export interface IdMaps {
   /** Global SID resolver over every object-carrying artifact —
    *  see src/client/util/sid-resolver/README.md for the wiring map. */
   sidResolver: SidResolver;
+  /** Planet index translation between the SID planet domain
+   *  (planet-within-host, host implicit per domain — Sol today) and
+   *  the Target {kind:'planet'} currency (PlanetBodyField flat
+   *  instance index). Null when the host isn't attached / the index
+   *  isn't covered. */
+  planetDomainIndexOf: (targetIdx: number) => number | null;
+  planetTargetIndexOf: (domainIndex: number) => number | null;
 }
 
 /** Legacy v1–v3 star ref — decode-only since v4. */
@@ -1000,17 +1008,19 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // Chart on/off rides FLAG_CHART, gated to observe-only at pack time.
   if (f.chart) view.chart = true;
 
-  // POIs are encoded as SIDs (not catalog indices) so a catalog rebuild
-  // can't re-point old URLs; stars without a SID can't be pinned in the
-  // first place. Capped at POI_MAX_COUNT defensively.
+  // POIs are encoded as SIDs (not runtime indices) so a catalog rebuild
+  // can't re-point old URLs; objects without a resolvable SID can't be
+  // pinned in the first place. Any pinnable kind rides the same
+  // untagged-SID wire the focus/to refs use. Capped at POI_MAX_COUNT
+  // defensively.
   {
     const pois = stellata.getPois();
     if (pois.length > 0) {
       const sidsOut: number[] = [];
-      for (const idx of pois) {
+      for (const t of pois) {
         if (sidsOut.length >= POI_MAX_COUNT) break;
-        const sid = idMaps.sidResolver.sidOf('star', idx);
-        if (sid !== null) sidsOut.push(sid);
+        const ref = sidRefOf(idMaps, t.kind, t.idx);
+        if (ref !== undefined) sidsOut.push(ref.id);
       }
       if (sidsOut.length > 0) view.poiSids = sidsOut;
     }
@@ -1086,9 +1096,25 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   return view;
 }
 
-function sidRefOf(idMaps: IdMaps, kind: 'star' | 'cloud' | 'lg', localIndex: number): SidRef | undefined {
-  const sid = idMaps.sidResolver.sidOf(kind, localIndex);
+function sidRefOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): SidRef | undefined {
+  // Planet Targets carry the PlanetBodyField flat instance index; the
+  // SID planet domain is keyed by planet-within-host — translate
+  // through IdMaps before the reverse lookup.
+  const domainIndex = kind === 'planet'
+    ? idMaps.planetDomainIndexOf(localIndex)
+    : localIndex;
+  if (domainIndex === null) return undefined;
+  const sid = idMaps.sidResolver.sidOf(kind, domainIndex);
   return sid === null ? undefined : { kind: 'sid', id: sid };
+}
+
+/** Decode-direction sibling of `sidRefOf`: a resolver domain localIndex →
+ *  Target idx. Planet sids carry a planet-within-host domain index that
+ *  translates to the body-field flat instance index; every other kind's
+ *  domain index IS its Target idx. Null on a planet translation miss
+ *  (host body-field not attached). */
+function targetIdxOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): number | null {
+  return kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
 }
 
 function resolveStarRef(ref: StarRef, idMaps: IdMaps, fallback: number): number {
@@ -1178,13 +1204,15 @@ export function applyDecodedView(
       // v4 universal ref. Deferred-resolution contract (docs/sid.md
       // § 8): a sid whose domain hasn't attached yet applies on that
       // attach; a sid no attached domain claims expires silently and
-      // the rest of the decoded state stands. Planet kinds have no
-      // focus semantics yet (hover-only) and fall through.
+      // the rest of the decoded state stands. Planet sids translate
+      // domain index → flat Target index; a translation miss (host
+      // body-field not attached) drops the focus like an unknown sid.
       const snap = hasCam || hasTgt;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
-        if (kind === 'planet') return;
-        if (snap) stellata.setOrbitTarget({ kind, idx: localIndex });
-        else stellata.flyTo({ kind, idx: localIndex }, { animate: false });
+        const idx = targetIdxOf(idMaps, kind, localIndex);
+        if (idx === null) return;
+        if (snap) stellata.setOrbitTarget({ kind, idx });
+        else stellata.flyTo({ kind, idx }, { animate: false });
       });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
@@ -1207,8 +1235,9 @@ export function applyDecodedView(
   if (view.to) {
     if (view.to.kind === 'sid') {
       idMaps.sidResolver.whenResolved(view.to.id, (kind, localIndex) => {
-        if (kind === 'planet') return;
-        stellata.setVector({ kind, idx: localIndex });
+        const idx = targetIdxOf(idMaps, kind, localIndex);
+        if (idx === null) return;
+        stellata.setVector({ kind, idx });
       });
     } else {
       const idx = resolveStarRef(view.to, idMaps, -1);
@@ -1250,7 +1279,7 @@ export function applyDecodedView(
   // below preserves that quaternion when it pins position again.
   // setCameraToDefault routes through defaultCamForMode so the elision
   // invariant lives in one place.
-  const willEnterObserve = view.mode === 'observe' && stellata.getFocusedStar() !== null;
+  const willEnterObserve = view.mode === 'observe' && isHardTarget(stellata.getFocusedTarget());
   if (willEnterObserve && !hasCam) {
     setCameraToDefault(stellata, 'observe');
     controlsDirty = true;
@@ -1268,25 +1297,28 @@ export function applyDecodedView(
     stellata.setFilter({ chart: true });
   }
 
-  // Legacy HIP POI lists resolve through idMaps; v4 SID lists through
-  // the resolver. Entries that don't resolve are silently dropped
-  // (graceful partial restore). SID POIs resolve synchronously rather
-  // than via deferred intents: only star-kind objects are pinnable today
-  // and the star domain attaches at catalog load, strictly before
-  // applyFromUrl — a pending POI sid is therefore as dead as an unknown
-  // one.
+  // Legacy HIP POI lists resolve through idMaps (star-kind by
+  // construction); v4 SID lists through the resolver, any pinnable
+  // kind. Entries that don't resolve are silently dropped (graceful
+  // partial restore). SID POIs resolve synchronously rather than via
+  // deferred intents: the star domain attaches at catalog load and
+  // main.ts awaits planetSystemsReady, both strictly before
+  // applyFromUrl — a pending POI sid is therefore as dead as an
+  // unknown one.
   {
-    const resolved: number[] = [];
+    const resolved: Target[] = [];
     if (Array.isArray(view.pois)) {
       for (const hip of view.pois) {
         const idx = idMaps.hipToIndex.get(hip);
-        if (idx !== undefined) resolved.push(idx);
+        if (idx !== undefined) resolved.push({ kind: 'star', idx });
       }
     }
     if (Array.isArray(view.poiSids)) {
       for (const sid of view.poiSids) {
         const r = idMaps.sidResolver.resolve(sid);
-        if (r.status === 'resolved' && r.kind === 'star') resolved.push(r.localIndex);
+        if (r.status !== 'resolved') continue;
+        const idx = targetIdxOf(idMaps, r.kind, r.localIndex);
+        if (idx !== null) resolved.push({ kind: r.kind, idx });
       }
     }
     if (resolved.length > 0) stellata.setPois(resolved);

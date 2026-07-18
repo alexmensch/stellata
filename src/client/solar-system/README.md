@@ -46,6 +46,14 @@ src/client/solar-system/
                                   the unified disc/glow chunk with stars
                                   (perceptual-disc.glsl) — see
                                   src/client/star-pipeline/README.md.
+                                  Also the identity table for Target
+                                  {kind:'planet'}: flat instance index ↔
+                                  (host, planet-within-host), plus local/
+                                  absolute position, appMag, and rendered-
+                                  size accessors keyed on the flat index.
+                                  uHideIdx (one uniform shared by all
+                                  five passes) hides the observe-anchor
+                                  body via setHiddenInstance.
   orbit-rings-layer.ts            Faint orbit rings in the host's orbital
                                   plane.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
@@ -245,10 +253,24 @@ Planet rendering splits across two layers (stellata-3re.15):
      positions, apply the per-host orientation quaternion, and write
      into the host's iLocalRel slot in the global instance buffer.
 
+  The ephemeris walk runs whenever a host is in range **regardless of
+  render visibility** — chart-mono and `setHidden` gate only the draw
+  and the GPU upload, never the position update. Chart mode is
+  observe-only and can observe from a planet, so the observe anchor and
+  the focal-frame ride read the live `bufLocalRel` positions off this
+  walk even while the bodies aren't drawn; freezing the walk there
+  strands the observer's orbital motion (Sol + planets appear static
+  while catalog stars still advance).
+
 - **`orbit-rings-layer.ts`** — per-host orbit-ring layer. Geometry
   rebuilds whenever the focused star's PlanetSystem changes; per-frame
   tick drives the pixel-gap visibility heuristic. Representational
-  only — rings hide when the host loses focus.
+  only — rings hide when the host loses focus. The ring group rides
+  the host's live renderer-local position (fed each frame from
+  `PlanetBodyField.getHostLocalPositionInto`), and the pixel-gap
+  heuristic measures camera-to-host distance — under planet focus the
+  floating origin sits on the planet, so the host is NOT at the local
+  origin.
 
 Bodies render as billboarded discs through the same perceptual-disc
 abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
@@ -383,6 +405,13 @@ Construction: unit sphere → scale to (115, 115, 161) AU → translate
 the centre 39 AU toward antiapex → rotate so +Z lands on the antiapex.
 Result: upwind apex at +122 AU, downwind at −200 AU along the apex.
 
+The shell, its label samples, and the hover picker all anchor on Sol,
+whose renderer-local position is `-worldOffset` (Sol is the catalog
+origin) — non-zero under planet focus. The group recentres via the
+scene-layer `recenter` hook; the label engine and picker subtract the
+live `worldOffset` from the exported Sol-anchored sample points
+(`HELIOPAUSE_SAMPLE_POINTS_SOL`, `HELIOPAUSE_APEX_SOL_PC`).
+
 Rendering uses a Fresnel limb-darkening fragment shader: alpha peaks
 at the silhouette where the view ray grazes the surface and falls to
 a small floor face-on, so the upwind apex region doesn't paint the
@@ -428,6 +457,16 @@ specifically because Sol sits at the world origin — the float32
 jitter that bites at small distances *from non-origin focal stars*
 doesn't apply when the focal frame is also the world frame. Other
 focal stars retain the global `0.005 pc` (~1031 AU) floor.
+
+Focusing a planet body (`{kind:'planet'}` Targets — click, search,
+URL) recentres the floating origin onto the planet itself and drops
+the floor to `minOrbitDistForPlanet` (the same 90 %-fill angular
+solve, ~2.4 body radii); arrival parks at `parkDistForPlanet` (a
+30 %-fill solve). The camera follows the orbiting body via the
+planet-focal ride — see `../camera/focus/README.md` § Planet focus.
+A focused planet is a full observe anchor: entering observe parks the
+camera on the body and hides it via `uHideIdx`
+(`../camera/observe/README.md`).
 
 `camera.near` is at `1e-10 pc` — well below `minOrbitDistForStar` —
 so very-close planet inspection isn't culled. The strict-less-than

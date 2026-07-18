@@ -43,7 +43,7 @@ The payload map is `StellataEventMap` in `stellata.ts`.
   Used by the mode toggle, search-row label swap, and scale-bar
   (which switches to angular degrees in observe).
 - `'warp'` (`boolean`) — warp animation start/finish.
-- `'pois'` (`readonly number[]`) — pinned-star list changed (shared
+- `'pois'` (`readonly Target[]`) — pinned-object list changed (shared
   across camera modes — see `poi/README.md`).
 - `'noopClick'` (`{ x, y }`) — a canvas click ran its per-mode
   dispatch and changed nothing (empty sky, rejected pin). Drives the
@@ -72,26 +72,32 @@ shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
 and double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time.
 
-Navigate single-click on a star (`applyStarClick`):
+Navigate clicks pick point objects first — stars AND planet bodies,
+tiebroken by the hover engine's rule (`bestHitBy`: prime beats
+fallback, then closer camera) so click and hover can't disagree on
+which object wins an overlap — then fall back to clouds.
+
+Navigate single-click on a point object — ONE table for stars and
+planets alike (`applyObjectClick`); a planet is not a special case,
+and neither is any future pinnable kind:
 
 | condition | action |
 | --- | --- |
-| no focus | focus on clicked star |
+| no focus | travel to clicked object (`flyTo`) |
 | clicked = focused, no vector | unfocus |
 | clicked = focused, vector drawn | clear vector (stay focused; the destination stays pinned) |
-| clicked = other star, unpinned | pin as POI (ladder rung 1 — Sol / at-cap fall through to rung 2) |
-| clicked = other star, pinned, not vector destination | set vector focus → clicked |
-| clicked = other star, pinned + vector destination | clear vector AND unpin |
+| clicked = other object, unpinned | pin as POI (ladder rung 1 — Sol / at-cap fall through to rung 2) |
+| clicked = other object, pinned, not vector destination | set vector focus → clicked |
+| clicked = other object, pinned + vector destination | clear vector AND unpin |
 
 The ladder decision table is `poi/click-ladder-pure.ts`; the pin
 rungs require the HUD (`showHud`) to be on — pins are HUD widgets, so
 with the HUD hidden clicks step only the vector rungs. Navigate
-**double-click** on any star travels to it (`focusStar` — the
-focus-park teleport that clicking the vector tip used to trigger;
-lerps over `FOCUS_LERP_MS` or no-ops when already inside park);
-double-click on a cloud runs `flyTo` with the cloud Target. The POI
-overlay's
-on-screen labels route through the same `applyStarClick` semantics.
+**double-click** on any star, planet, or cloud travels to it via
+`flyTo` (the focus-park teleport that clicking the vector tip used to
+trigger; lerps over `FOCUS_LERP_MS` or no-ops when already inside
+park). The POI overlay's on-screen labels route through the same
+`applyObjectClick` semantics.
 
 Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
 on first pick from no focus, vector destination on pick from a focus,
@@ -100,7 +106,8 @@ shelved (`src/client/molecular-clouds/README.md`); revisit the ladder
 fit at un-shelve.
 
 In OBSERVE mode single-click is the pin/unpin toggle
-(`applyStarClick`'s observe branch, gated on `showHud`) and
+(`applyObjectClick`'s observe branch, gated on `showHud` — stars and
+planets alike) and
 double-click slerps the camera so the clicked direction lands at view
 centre; drags land on the custom look-around controller
 (direct-manipulation drag + wheel-FOV). The SVG-layer Sol/GC arrow

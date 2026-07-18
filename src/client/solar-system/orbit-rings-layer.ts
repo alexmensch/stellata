@@ -221,6 +221,11 @@ export class OrbitRingsLayer {
    */
   setPlanetSystem(ps: PlanetSystem | null, solIndex: number): void {
     this.disposeRings();
+    // Fresh system: park at the origin until the first update() feeds
+    // the live host position — a star focus recentres the origin onto
+    // the host, so this is exact there and one-frame-stale at worst
+    // under planet focus.
+    this.group.position.set(0, 0, 0);
     if (ps === null || ps.planets.length === 0) {
       this.group.visible = false;
       return;
@@ -282,21 +287,27 @@ export class OrbitRingsLayer {
   }
 
   /**
-   * Per-frame visibility update. The host always sits at the local
-   * origin under the floating-origin recenter from setFocus(idx) (see
-   * the solar-system contract / unfocus-split: orbit rings only render when the
-   * host is the focused star, by which point worldOffset = host's
-   * absolute position).
+   * Per-frame visibility update. `hostLocalPos` is the host star's
+   * renderer-local position (PlanetBodyField's hostLocalPos, so rings
+   * stay glued to the same centre the bodies orbit) — under planet
+   * focus the floating origin sits on the PLANET, not the host, so the
+   * host is generally NOT at the local origin. Pass null while the
+   * host isn't attached yet; the group then stays where it was.
    */
-  update(camera: THREE.PerspectiveCamera, viewportHeightPx: number): void {
+  update(
+    camera: THREE.PerspectiveCamera,
+    viewportHeightPx: number,
+    hostLocalPos: Readonly<THREE.Vector3> | null,
+  ): void {
     if (this.hidden || this.mono || this.rings.length === 0) {
       this.group.visible = false;
       return;
     }
     this.group.visible = true;
+    if (hostLocalPos) this.group.position.copy(hostLocalPos);
 
     const fovYRad = (camera.fov * Math.PI) / 180;
-    const dPc = camera.position.length();
+    const dPc = camera.position.distanceTo(this.group.position);
     const pxPerRad = viewportHeightPx / fovYRad;
     const radii = this.rings.map(
       (r) => Math.atan(r.semiMajorPc / Math.max(dPc, 1e-30)) * pxPerRad,

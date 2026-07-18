@@ -1,10 +1,12 @@
 import type { Stellata } from '../../stellata';
+import { isHardTarget } from '../focus/focus-target';
 
 // Two-button pill in the top-right card. Switches the camera between
-// NAVIGATE (default orbit) and OBSERVE (parked at the focused star, custom
-// look-around). OBSERVE is disabled until a star is focused — the
-// handler-side `setCameraMode('observe')` no-ops without an anchor, but
-// disabling the button advertises the affordance up-front.
+// NAVIGATE (default orbit) and OBSERVE (parked at the focused object,
+// custom look-around). OBSERVE is disabled until a hard-kind object
+// (star / planet) is focused — the handler-side
+// `setCameraMode('observe')` no-ops without an anchor, but disabling
+// the button advertises the affordance up-front.
 export function bindModeToggle(stellata: Stellata) {
   const host = document.getElementById('mode-toggle');
   if (!host) return;
@@ -24,7 +26,7 @@ export function bindModeToggle(stellata: Stellata) {
 
   const sync = () => {
     const mode = stellata.getCameraMode();
-    const hasFocus = stellata.getFocusedStar() !== null;
+    const hasFocus = isHardTarget(stellata.getFocusedTarget());
     for (const btn of buttons) {
       const btnMode = btn.dataset.mode;
       btn.classList.toggle('on', btnMode === mode);
@@ -34,7 +36,7 @@ export function bindModeToggle(stellata: Stellata) {
         // navigate, which is the wanted exit. Otherwise: gated on focus.
         const enable = hasFocus || mode === 'observe';
         btn.disabled = !enable;
-        btn.title = enable ? '' : 'Focus a star to observe from it';
+        btn.title = enable ? '' : 'Focus a star or planet to observe from it';
       }
     }
   };

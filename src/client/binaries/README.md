@@ -201,6 +201,21 @@ distance vector, HUD shafts, hover picker) read the perturbed
 so they land on the disc without any rebase. The ride is skipped during
 warp (the warp owns the camera and tracks the live buffer itself).
 
+**Origin-follow (drift recentre).** The ride translates the camera to
+follow the focal, so under fast scrub a far-orbiting focal (a planet
+across its orbit; a wide binary) drags the camera tens of AU from the
+fixed focus-time origin — reviving the float32 modelview cancellation
+the floating origin exists to prevent (a growing wobble on the focal
+body). `stellata.ts:maybeRecenterOnFocalDrift` recentres the origin
+back onto the look target once camera-from-origin exceeds
+`FOCAL_ORIGIN_DRIFT_RATIO × eye distance` (`focal-ride-pure.ts`),
+restoring camera-from-origin ≈ eye distance. It is kind-agnostic —
+keyed on camera geometry, not the focus kind — so every hard focus
+benefits with no per-kind code. The shared origin is the one precision
+lever a per-shader pin (`uPinFocusToCenter`) can't generalise; that pin
+still handles the separate close-approach-at-origin case (§ focus/README
+§ Pin-to-center).
+
 ## Walk-active LOD
 
 Two filters on top of the magnitude slider gate per-frame Kepler

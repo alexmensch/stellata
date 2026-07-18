@@ -14,7 +14,7 @@ observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
 tier re-rank + within-kind dedup over stars + clouds + Local Group
-objects). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
+objects + Sol's planets). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
 label > query-is-prefix > plain name/alias > constellation-expansion
 label ("Gamma Andromeda" — fuzzy-searchable but never outranking the
 Andromeda Galaxy for the bare constellation-name query), then shorter
@@ -30,10 +30,15 @@ synchronous (cheap substring filter). LG
 entries index the display name plus every build-emitted alias
 ("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
 line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
-disambiguates the dSph from star rows. Focus-box select dispatches to
+disambiguates the dSph from star rows. Sol's planets enter the corpus
+by name (secondary line "Planet · Sol system") — deliberately
+Sol-only, since bk5 exoplanets are visit-to-discover. A planet entry
+carries the SOL_PLANETS index; `resolveEntryTarget` translates it to
+the body field's flat Target index at pick time (the field attaches on
+a microtask after boot). Focus-box select dispatches to
 `flyTo` and the To box to `setVector`, each with the entry's
-kind-tagged Target; observe mode filters LG out of the location picker
-like clouds. Both the topbar boxes
+kind-tagged Target; observe mode filters non-star kinds out of the
+location picker. Both the topbar boxes
 (`bindSearch`) and the `F` find picker (`bindFindSearch`) run it, so
 ranking never diverges between them. The find picker differs only in its
 `onSelect`: it resolves the pick to a local position and calls

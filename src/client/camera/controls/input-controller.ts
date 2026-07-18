@@ -6,11 +6,13 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { EventBus } from '../../util/event-bus';
 import type { CameraMode, StellataEventMap } from '../../stellata';
-import type { Target } from '../focus/focus-target';
+import { targetsEqual, type Target } from '../focus/focus-target';
 import type { FilterState } from '../../filters/filter-state';
 import type { PoiStore } from '../../poi/poi-store';
-import { starLadderAction } from '../../poi/click-ladder-pure';
+import { clickLadderAction } from '../../poi/click-ladder-pure';
 import { PendingClickDispatcher } from '../../util/pending-click';
+import { bestHitBy } from '../../hover/hover-pick-disambiguator';
+import type { HoverHit } from '../../hover/hover-types';
 import type { Picker } from './picker';
 import { bindShiftPan } from './shift-pan';
 
@@ -23,13 +25,8 @@ export interface InputControllerDeps {
   poiStore: PoiStore;
   getCameraMode: () => CameraMode;
   getFilter: () => Readonly<FilterState>;
-  getFocusedStar: () => number | null;
   getFocusedTarget: () => Target | null;
-  /** Star-kind vector reads/writes back the click ladder; the
-   *  Target-generic pair covers every other rung. */
-  getVectorTo: () => number | null;
   getVectorTarget: () => Target | null;
-  setVectorTo: (idx: number | null) => void;
   setVector: (target: Target | null) => void;
   /** Composition-layer busy gates + cancellation the FSM re-checks at
    *  pointer-up AND again when a deferred click fires. */
@@ -38,11 +35,10 @@ export interface InputControllerDeps {
   isObserveTransitionActive: () => boolean;
   cancelUnfocusLerp: () => void;
   cancelFocusLerp: () => void;
-  focusStar: (idx: number) => void;
   flyTo: (target: Target) => void;
   setOrbitTarget: (target: Target) => void;
   unfocus: () => void;
-  togglePoi: (idx: number) => boolean;
+  togglePoi: (target: Target) => boolean;
   aimAt: (pointLocal: THREE.Vector3) => void;
 }
 
@@ -161,10 +157,11 @@ export class InputController {
       return;
     }
     // Navigate double-click = travel: the focus-park teleport that
-    // click-the-vector-tip used to trigger, now on any star or cloud.
-    const starIdx = this.deps.picker.pickStar(x, y);
-    if (starIdx >= 0) {
-      this.deps.focusStar(starIdx);
+    // click-the-vector-tip used to trigger, now on any star, planet,
+    // or cloud.
+    const picked = this.pickStarOrPlanet(x, y);
+    if (picked !== null) {
+      this.deps.flyTo(picked);
       return;
     }
     const cloudIdx = this.deps.picker.pickCloud(x, y);
@@ -175,12 +172,27 @@ export class InputController {
     this.deps.bus.emit('noopClick', { x, y });
   }
 
+  /** Point objects under the cursor — stars and planet bodies — run
+   *  the same tiebreak the hover engine uses (prime beats fallback,
+   *  then closer camera), so click and hover can't disagree on which
+   *  object wins an overlap. */
+  private pickStarOrPlanet(x: number, y: number): Target | null {
+    const star = this.deps.picker.pickStarHit(x, y, 16);
+    const planet = this.deps.picker.pickPlanetClick(x, y, 16);
+    const picks: Array<{ kind: 'star' | 'planet'; hit: HoverHit } | null> = [
+      star ? { kind: 'star', hit: star } : null,
+      planet ? { kind: 'planet', hit: planet } : null,
+    ];
+    const winner = bestHitBy(picks, (p) => p.hit);
+    return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };
+  }
+
   private navigateSingleClick(x: number, y: number): boolean {
-    // Pick a star first — they're the primary interaction target. Fall
-    // back to clouds when no star is hit.
-    const starIdx = this.deps.picker.pickStar(x, y);
-    if (starIdx >= 0) {
-      return this.applyStarClick(starIdx);
+    // Point objects (stars, planet bodies) are the primary interaction
+    // targets. Fall back to clouds when neither is hit.
+    const picked = this.pickStarOrPlanet(x, y);
+    if (picked !== null) {
+      return this.applyObjectClick(picked);
     }
     const cloudIdx = this.deps.picker.pickCloud(x, y);
     if (cloudIdx === null) return false;
@@ -212,32 +224,33 @@ export class InputController {
   }
 
   /**
-   * Canonical per-mode star-click semantics — deferred canvas clicks and
-   * the POI overlay's on-screen labels both route here. Observe toggles
-   * the pin; navigate handles focus / unfocus, then runs the click
-   * ladder (pin → vector → clear both) for any other star. Returns
-   * whether the click changed anything (false → noop-click ripple).
+   * Canonical per-mode click semantics for point objects — one path for
+   * every kind; deferred canvas clicks and the POI overlay's on-screen
+   * labels both route here. Observe toggles the pin; navigate handles
+   * focus / unfocus, then runs the click ladder (pin → vector → clear
+   * both) for any other object. Returns whether the click changed
+   * anything (false → noop-click ripple).
    */
-  applyStarClick(idx: number): boolean {
+  applyObjectClick(target: Target): boolean {
     if (this.deps.getCameraMode() === 'observe') {
       // Mirror the POI overlay visibility gate — toggling without a
       // visible ring/arrow would change state with no feedback.
       if (!this.deps.getFilter().showHud) return false;
-      return this.deps.togglePoi(idx);
+      return this.deps.togglePoi(target);
     }
 
     const focused = this.deps.getFocusedTarget();
 
-    // No focus → click parks the camera at the clicked star, matching
-    // search-select and URL-restore (parkDistForStar, 10% disc fill).
+    // No focus → click parks the camera at the clicked object, matching
+    // search-select and URL-restore.
     if (focused === null) {
-      this.deps.focusStar(idx);
+      this.deps.flyTo(target);
       return true;
     }
 
-    // Click on the focused star → clear vector if present (the
+    // Click on the focused object → clear vector if present (the
     // destination stays pinned), else unfocus.
-    if (focused.kind === 'star' && focused.idx === idx) {
+    if (targetsEqual(focused, target)) {
       if (this.deps.getVectorTarget() !== null) {
         this.deps.setVector(null);
       } else {
@@ -247,31 +260,31 @@ export class InputController {
     }
 
     // Pins are HUD widgets — with the HUD hidden a pin would be an
-    // invisible state change, so the ladder sees HUD-off stars as
+    // invisible state change, so the ladder sees HUD-off objects as
     // unpinnable/unpinned and steps only its vector rungs (existing
     // pins are left untouched). Mirrors the observe-branch gate above.
     const hudOn = this.deps.getFilter().showHud;
-    const action = starLadderAction({
-      pinnable: hudOn && this.deps.poiStore.pinnable(idx),
-      pinned: hudOn && this.deps.poiStore.has(idx),
+    const action = clickLadderAction({
+      pinnable: hudOn && this.deps.poiStore.pinnable(target),
+      pinned: hudOn && this.deps.poiStore.has(target),
       atCap: this.deps.poiStore.atCap(),
-      isVectorDest: this.deps.getVectorTo() === idx,
+      isVectorDest: targetsEqual(this.deps.getVectorTarget(), target),
     });
     switch (action) {
-      case 'pin': return this.deps.togglePoi(idx);
-      case 'vector': this.deps.setVectorTo(idx); return true;
-      case 'clearVector': this.deps.setVectorTo(null); return true;
+      case 'pin': return this.deps.togglePoi(target);
+      case 'vector': this.deps.setVector(target); return true;
+      case 'clearVector': this.deps.setVector(null); return true;
       case 'clearBoth':
-        this.deps.setVectorTo(null);
-        this.deps.togglePoi(idx);
+        this.deps.setVector(null);
+        this.deps.togglePoi(target);
         return true;
     }
   }
 
   private observeSingleClick(x: number, y: number): boolean {
-    const idx = this.deps.picker.pickStar(x, y);
-    if (idx < 0) return false;
-    return this.applyStarClick(idx);
+    const picked = this.pickStarOrPlanet(x, y);
+    if (picked === null) return false;
+    return this.applyObjectClick(picked);
   }
 
   private observeDoubleClick(x: number, y: number) {

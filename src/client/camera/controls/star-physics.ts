@@ -104,6 +104,27 @@ export function parkDistForStar(args: ParkArgs): number {
   return parkDistance({ R_pc: Reff, dMinFloor });
 }
 
+// Screen-fill fraction of the viewport minor axis at a focused planet's
+// auto-park pose. A star parks 1 AU outside its surface (parkDistance's
+// AU term) because its brightness carries the arrival; a planet is a
+// dim reflected-light body, so the park is purely angular — close
+// enough that the disc reads as a world, far enough to keep context.
+export const PLANET_PARK_FILL_FRACTION = 0.3;
+
+// Manual-zoom floor for a focused planet — same 90 %-fill angular solve
+// as minOrbitDistForStar, keyed on the body's equatorial radius (~2.4 R
+// at the default FOV; ~15 000 km camera-to-centre for Earth).
+export function minOrbitDistForPlanet(radiusPc: number, fovMinorRad: number): number {
+  return distAtFillFraction(radiusPc, fovMinorRad, ZOOM_FLOOR_FRACTION);
+}
+
+// Auto-park target for a focused planet (~7.6 R at the default FOV —
+// Earth from ~48 000 km). Never inside the manual-zoom floor by
+// construction (fill fractions are ordered).
+export function parkDistForPlanet(radiusPc: number, fovMinorRad: number): number {
+  return distAtFillFraction(radiusPc, fovMinorRad, PLANET_PARK_FILL_FRACTION);
+}
+
 export interface RenderedSizeArgs {
   catalog: Catalog;
   idx: number;
