@@ -206,7 +206,11 @@ enough to see it.
   Björn Jónsson's Galileo Venus cloud map, Cassini Saturn map, Voyager
   Neptune map, and Saturn-ring radial profiles
   (https://bjj.mmedia.is/) — free use with attribution; USGS Viking
-  MDIM 2.1 colorized mosaic for Mars — public domain. Frozen in
+  MDIM 2.1 colorized mosaic for Mars — public domain. Uranus and
+  Neptune ring strips are built from authored tables of occultation +
+  Voyager 2 ring parameters (French et al. 1991 in *Uranus*; Porco
+  et al. 1995 in *Neptune and Triton* — per-file rows in
+  `data/textures/src/README.md`). Frozen in
   `data/textures/src/` (per-file table in its README), downsampled to
   ≤2048-wide lazy-load JPEGs by `scripts/textures/build-textures.py`.
   Venus deliberately shows the cloud deck, not the Magellan radar
@@ -308,7 +312,14 @@ science it relates to.
 - **Planet atmospheric haloes / scattering.** The remaining deferred
   per-planet detail now that planet focus + the spheroid mesh LOD
   shipped textures, IAU axial tilt + rotation, day-night terminator
-  shading, Earth night lights, and Saturn's rings. The other giants'
-  faint ring systems also stay out — invisible at any realistic
-  framing. See § Scope principles — Defer detail until zoom
-  affordance above.
+  shading, Earth night lights, and the Saturn, Uranus and Neptune
+  ring systems (the faint rings at true opacity — barely-there dark
+  threads by design). See § Scope principles — Defer detail until
+  zoom affordance above.
+- **Jupiter's rings.** Normal optical depth ≤ 10⁻⁵ (main ring ~10⁻⁶)
+  is three orders of magnitude below the smallest 8-bit-representable
+  opacity (1/255 ≈ 4×10⁻³) — at the true-opacity policy the strip
+  would be identically zero. Physically honest: Jupiter's rings are
+  invisible in backscattered visible light (they were discovered in
+  forward scatter, which the ring shader doesn't model). See
+  `data/textures/README.md` § Ring strips.
