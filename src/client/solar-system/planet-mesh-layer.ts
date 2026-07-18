@@ -79,7 +79,10 @@ export class PlanetMeshLayer {
 
       const radiusPc = planet.radiusKm * KM_PC;
       const ratio = this.field.meshFadeRatio(idx, camera.position);
-      if (ratio >= TEXTURE_PREFETCH_RATIO) this.ensureTexture(planet.name);
+      if (ratio >= TEXTURE_PREFETCH_RATIO) {
+        this.ensureTexture(planet.name);
+        if (planet.hasNightTexture) this.ensureTexture(`${planet.name}-night`);
+      }
       const fade = meshFadeFromRatio(ratio);
       if (fade <= 0) continue;
 
@@ -127,6 +130,16 @@ export class PlanetMeshLayer {
           planet.colour[0], planet.colour[1], planet.colour[2],
         );
       }
+      const nightState = planet.hasNightTexture
+        ? this.textures.get(`${planet.name.toLowerCase()}-night`)
+        : undefined;
+      if (nightState?.state === 'ready') {
+        material.uniforms.uNightMap.value = nightState.tex;
+        material.uniforms.uHasNight.value = 1;
+      } else {
+        material.uniforms.uNightMap.value = this.placeholder;
+        material.uniforms.uHasNight.value = 0;
+      }
     }
 
     for (const [idx, entry] of this.entries) {
@@ -159,6 +172,8 @@ export class PlanetMeshLayer {
       uniforms: {
         uMap: { value: this.placeholder },
         uHasMap: { value: 0 },
+        uNightMap: { value: this.placeholder },
+        uHasNight: { value: 0 },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },

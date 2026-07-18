@@ -385,6 +385,13 @@ stellata-2f6.3).
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; no ambient term, so the night
   side is black (physically honest).
+- **Earth night lights** (stellata-2f6.14): `Planet.hasNightTexture`
+  lazy-loads the `<body>-night.jpg` companion (Black Marble) with the
+  day map; the shader adds it as an *emissive* term (no limb
+  darkening) ramping in across a ±0.05 dot(n, sun) band around the
+  terminator, so the day→lights handoff has no hard seam. With IAU
+  rotation on `getT()`, the actually-dark hemisphere shows its lights
+  at model time.
 - **Textures**: lazy-fetched from `public/textures/<body>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
   `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is

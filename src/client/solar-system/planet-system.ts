@@ -74,6 +74,11 @@ export interface Planet {
   // with an arbitrary fixed meridian, the same convention shape as the
   // Lambertian phase fallback.
   readonly rotation?: RotationElements;
+  // True when a `<body>-night.jpg` emissive night-side companion map
+  // ships alongside the day texture (Earth's Black Marble city
+  // lights). The mesh renderer lazy-loads and blends it past the
+  // terminator.
+  readonly hasNightTexture?: boolean;
 }
 
 export interface PlanetSystem {
@@ -157,6 +162,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.434,
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
+    hasNightTexture: true,
   },
   {
     name: 'Mars',
