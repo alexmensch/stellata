@@ -54,6 +54,34 @@ values per planet are observation-derived; pixel-accurate texturing,
 banding, and atmospheric haloes are deferred until the renderer
 exposes a planet-zoom affordance close enough for them to register.
 
+**Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
+Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
+Rhea, Titan, Iapetus; Uranus's Miranda, Ariel, Umbriel, Titania,
+Oberon; and Neptune's Triton — carry J2000 osculating orbital elements
+from the JPL Solar System Dynamics planetary-satellite mean-elements
+table (https://ssd.jpl.nasa.gov/sats/elem/), in
+`src/client/solar-system/moon-ephemeris.ts`. Each moon's elements are
+referred to the plane JPL tabulates them against, and that plane's
+ICRS north pole is stored per moon so the resolver can rotate the
+orbit into the ecliptic: the local **Laplace plane** for most (its
+outward tilt for Callisto, Titan and Iapetus preserved rather than
+collapsed onto the planet's equator), **Uranus's equatorial plane**
+for the Uranian regulars, and — uniquely — the **ecliptic** for the
+Moon, whose orbit tracks the ecliptic rather than Earth's equator (an
+equatorial reference would swing its inclination 18°–29° over the
+18.6-year nodal cycle). Triton is retrograde (i ≈ 157°). Node and
+periapsis precession rates are dropped — at planet-zoom render scale
+the frozen-J2000 orientation reads correctly over the model-clock
+window. Mean radii from NASA/JPL fact sheets; geometric albedos span
+the near-unity icy surfaces (Enceladus ≈ 0.99, Mimas ≈ 0.96) to the
+dark carbonaceous ones (Callisto ≈ 0.22, Iapetus's leading hemisphere
+far darker still), in `MOON_PHYSICAL` alongside representative colours.
+Minor / irregular moons, Pluto's satellites, and moon ring systems are
+out of scope. Parent gravitational parameters GM (Kepler III → a moon's
+period) live on the parent `Planet` entries. Position composition,
+rendering, orbit rings, and phase are layered on in later work; this
+data establishes the frozen element and physical tables.
+
 **Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
 angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic
 Coordinates and Rotational Elements 2015 report (Archinal et al. 2018,
