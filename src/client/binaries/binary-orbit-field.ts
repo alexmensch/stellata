@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
 import { jdeToJulianEpochYear, writeAdvancedLocal } from '../loaders/epoch-advance-pure';
-import { NO_PARENT, type BinariesData, type BinaryRelation } from './binaries-loader';
+import { type BinariesData, type BinaryRelation } from './binaries-loader';
+import { focalChainRelationSet } from './focal-chain';
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
@@ -363,21 +364,7 @@ export class BinaryOrbitField {
   private ensureFocalChain(focalIdx: number | null): void {
     if (focalIdx === this.focalChainIdx) return;
     this.focalChainIdx = focalIdx;
-    this.focalChainRelIdx.clear();
-    if (focalIdx === null) return;
-    const bin = this.opts.binaries;
-    const stack: number[] = [];
-    const primRels = bin.primaryIdxToRelations.get(focalIdx);
-    if (primRels) for (const ri of primRels) stack.push(ri);
-    const secRels = bin.secondaryIdxToRelations.get(focalIdx);
-    if (secRels) for (const ri of secRels) stack.push(ri);
-    while (stack.length > 0) {
-      const ri = stack.pop() as number;
-      if (this.focalChainRelIdx.has(ri)) continue;
-      this.focalChainRelIdx.add(ri);
-      const parent = bin.relations[ri].parentRelation;
-      if (parent !== NO_PARENT) stack.push(parent);
-    }
+    this.focalChainRelIdx = focalChainRelationSet(this.opts.binaries, focalIdx);
   }
 
   private evaluateDelta(
