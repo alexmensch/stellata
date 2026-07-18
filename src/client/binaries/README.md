@@ -366,7 +366,15 @@ system draws, never every catalog pair.
   canvas), so the path cannot sit over them.
 - Geometry rebuilds on focus change (`setSystem`), mirroring
   `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` only moves
-  barycentre anchors.
+  barycentre anchors. The two loops per pair share one alpha-blended
+  material built by `util/orbit-line.ts` (`makeOrbitLineLoop` /
+  `makeOrbitLineMaterial`) — the same primitive the planet orbit rings use.
+- **Focus-ring suppression.** `anyOrbitRingVisible()` (the sibling name
+  `OrbitRingsLayer` carries) reports true while a system's paths are
+  drawn; `Stellata.anyOrbitRingVisible` ORs it with the planet rings, and
+  the focus-ring overlay hides itself when either is up — the drawn orbit
+  already marks the focal star, so the ring would read as a spurious inner
+  orbital (`../overlays/README.md`).
 
 ## Eclipse photometry
 

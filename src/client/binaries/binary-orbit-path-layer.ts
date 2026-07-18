@@ -3,17 +3,18 @@
 
 import * as THREE from 'three';
 import { type BinariesData } from './binaries-loader';
-import { keplerRelationParams } from './orbit-relation-cache';
+import { keplerRelationParams, relationIndicesInBounds } from './orbit-relation-cache';
 import { keplerChainRelationIdxs, buildBinaryOrbitRingPoints } from './binary-orbit-path-pure';
+import {
+  makeOrbitLineMaterial,
+  makeOrbitLineLoop,
+  ORBIT_LINE_SEGMENTS,
+} from '../util/orbit-line';
 
 const PATH_COLOUR = 0x9fc2d6;
-const PATH_OPACITY = 0.5;
 // Below the star discs (renderOrder 0) so a disc composites over the path
 // where a member sits on it; above the galactic disc / grid (−1).
 const PATH_RENDER_ORDER = -0.5;
-// Vertices per ellipse — smooth at maximum zoom into a focused pair, and
-// trivial at ≤3 pairs × 2 members per focused system.
-const PATH_SEGMENTS = 128;
 
 interface OrbitPathPair {
   readonly primaryIdx: number;
@@ -43,13 +44,7 @@ export class BinaryOrbitPathLayer {
     this.group = new THREE.Group();
     this.group.renderOrder = PATH_RENDER_ORDER;
     this.group.visible = false;
-    this.material = new THREE.LineBasicMaterial({
-      color: PATH_COLOUR,
-      transparent: true,
-      opacity: PATH_OPACITY,
-      depthTest: true,
-      depthWrite: false,
-    });
+    this.material = makeOrbitLineMaterial(PATH_COLOUR);
   }
 
   /**
@@ -72,19 +67,17 @@ export class BinaryOrbitPathLayer {
       const r = binaries.relations[ri];
       const params = keplerRelationParams(r);
       if (params === null) continue;
+      if (!relationIndicesInBounds(r, absolutePositions.length)) continue;
       const pBase = r.primaryIdx * 3;
-      if (pBase + 2 >= absolutePositions.length || r.secondaryIdx * 3 + 2 >= absolutePositions.length) {
-        continue;
-      }
       const { primary, secondary } = buildBinaryOrbitRingPoints(
         params.elements,
         params.tier,
         { x: absolutePositions[pBase], y: absolutePositions[pBase + 1], z: absolutePositions[pBase + 2] },
-        PATH_SEGMENTS,
+        ORBIT_LINE_SEGMENTS,
       );
       const g = new THREE.Group();
-      const primaryLoop = this.makeLoop(primary);
-      const secondaryLoop = this.makeLoop(secondary);
+      const primaryLoop = makeOrbitLineLoop(primary, this.material, this.group.renderOrder);
+      const secondaryLoop = makeOrbitLineLoop(secondary, this.material, this.group.renderOrder);
       g.add(primaryLoop);
       g.add(secondaryLoop);
       this.group.add(g);
@@ -98,17 +91,6 @@ export class BinaryOrbitPathLayer {
       });
     }
     this.group.visible = this.permitted && this.pairs.length > 0;
-  }
-
-  private makeLoop(points: Float32Array): THREE.LineLoop {
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.BufferAttribute(points, 3));
-    const loop = new THREE.LineLoop(geom, this.material);
-    // A sub-AU loop with the camera potentially inside it culls unreliably;
-    // let the GPU clip per-vertex.
-    loop.frustumCulled = false;
-    loop.renderOrder = this.group.renderOrder;
-    return loop;
   }
 
   /**
@@ -138,6 +120,16 @@ export class BinaryOrbitPathLayer {
   setPermitted(on: boolean): void {
     this.permitted = on;
     if (!on) this.group.visible = false;
+  }
+
+  /**
+   * True when the focused system's paths are currently drawn. The focus
+   * ring overlay reads this (via `Stellata.anyOrbitRingVisible`) to
+   * suppress itself when the orbit paths already mark the focal star —
+   * mirrors `OrbitRingsLayer.anyOrbitRingVisible`.
+   */
+  anyOrbitRingVisible(): boolean {
+    return this.permitted && this.group.visible && this.pairs.length > 0;
   }
 
   dispose(): void {
