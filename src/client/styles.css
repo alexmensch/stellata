@@ -876,7 +876,8 @@ input[type="range"]::-moz-range-thumb {
 }
 .link-btn:hover { color: var(--accent); }
 .row-actions .sep { opacity: 0.4; margin: 0 4px; }
-.mag-preset.on {
+.mag-preset.on,
+.detail-stop.on {
   color: var(--accent);
   background: rgba(125, 211, 252, 0.12);
   padding: 1px 6px;

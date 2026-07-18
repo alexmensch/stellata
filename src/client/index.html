@@ -410,7 +410,18 @@
             <button class="group-toggle" type="button" aria-label="Toggle Overlays section" aria-expanded="true">−</button>
           </header>
           <div class="group-body">
-            <label class="checkbox-row">
+            <div class="sub-label-row">
+              <label class="sub-label">Detail level</label>
+              <span class="row-actions" id="detail-level">
+                <button class="link-btn detail-stop" data-detail="physical" type="button">physical</button>
+                <span class="sep">·</span>
+                <button class="link-btn detail-stop" data-detail="representational" type="button">structure</button>
+                <span class="sep">·</span>
+                <button class="link-btn detail-stop" data-detail="all" type="button">all</button>
+              </span>
+            </div>
+
+            <label class="checkbox-row" style="margin-top: 12px;">
               <input id="show-constellation" type="checkbox" checked />
               <span>Show constellations</span>
             </label>
