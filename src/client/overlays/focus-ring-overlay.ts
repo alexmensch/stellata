@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { renderedSizePx } from '../camera/controls/star-physics';
 import { projectToScreenInto } from './overlay-project';
 import { setNumAttr, setStyle } from './dirty-attr';
 
@@ -30,15 +29,15 @@ export function createFocusRingOverlay(stellata: Stellata) {
   const show = () => { lastDisplay = setStyle(ring, 'display', '', lastDisplay); };
 
   const syncVisibility = () => {
-    if (stellata.getFocusedStar() === null) hide();
+    if (stellata.getFocusedHardTarget() === null) hide();
     else show();
   };
   stellata.on('focus', syncVisibility);
   syncVisibility();
 
   stellata.on('frame', () => {
-    const idx = stellata.getFocusedStar();
-    if (idx === null) return;
+    const target = stellata.getFocusedHardTarget();
+    if (target === null) return;
 
     // During the navigate↔observe transition the ring smoothly shrinks to
     // 0 (enter) or grows back to FOCUS_RING_RADIUS_PX (exit) so it visually morphs
@@ -62,44 +61,30 @@ export function createFocusRingOverlay(stellata: Stellata) {
         return;
       }
     } else {
-      // Steady-state navigate: skip the ring when the focal star's rendered
+      // Steady-state navigate: skip the ring when the focal object's rendered
       // disc exceeds the ring diameter — the ring becomes redundant chrome
-      // on top of the star. Skipped during transitions because the disc is
+      // on top of the object. Skipped during transitions because the disc is
       // about to be hidden / has just appeared anyway.
-      const sizePx = renderedSizePx({
-        catalog: stellata.catalog,
-        idx,
-        camPos: stellata.camera.position,
-        localPositions: stellata.localPositions,
-        uniforms: stellata.uniforms,
-        filter: stellata.getFilter(),
-        suppressPulsation: stellata.suppressPulsation,
-      });
+      const sizePx = stellata.focusables[target.kind].renderedSizePx(target.idx);
       if (sizePx > FOCUS_RING_RADIUS_PX * 2) {
         hide();
         return;
       }
-      // Same redundancy logic for orbit rings: when the focused host has
- // visible orbit rings centred on it, the rings already
-      // identify the star and the focus ring just adds visual noise that
-      // can be confused for an inner orbital. When all rings are
-      // suppressed by the pixel-gap heuristic (camera far from host or
-      // the host has no planets at all), the focus ring stays as the
-      // primary "you are here" cue.
+      // Visible host orbit rings already mark the object, so the ring would
+      // just add noise readable as an inner orbital — see overlays/README.md.
       if (stellata.anyOrbitRingVisible()) {
         hide();
         return;
       }
     }
 
-    // Project the focal star to screen. During the enter transition the
+    // Project the focal object to screen. During the enter transition the
     // projection naturally slides toward screen-centre as the camera
     // approaches; during the exit transition it starts degenerate (camera
-    // sits at the star) and becomes well-defined as the camera pulls away.
+    // sits at the object) and becomes well-defined as the camera pulls away.
     // Either way, fall back to screen-centre when the projection fails so
     // the shrinking/growing ring still has a sensible centre.
-    const positions = stellata.localPositions;
-    v.set(positions[idx * 3], positions[idx * 3 + 1], positions[idx * 3 + 2]);
+    if (!stellata.focalLocalPositionInto(v)) { hide(); return; }
     const projected = projectToScreenInto(v, camera, window.innerWidth, window.innerHeight, outXY);
     let sx: number, sy: number;
     if (!projected) {
