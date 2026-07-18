@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { targetsEqual, type Target } from '../camera/focus/focus-target';
 import { fmtDistAuto } from '../ui/distance-util';
-import { resolveStarName } from '../format/star-companion-format';
+import { targetDisplayName } from './target-name';
 import { AIM_DEGENERATE_DIST_PC } from '../camera/controls/aim-controller';
 import {
   buildArrowSvgPath,
@@ -178,31 +178,15 @@ export function createPoiOverlay(
   const tmpOrigin = new THREE.Vector3();
   const tmpAnchor: [number, number] = [0, 0];
 
-  // Per-kind position in the floating local frame — the same buffers
-  // the renderer draws from, so labels can't drift off the pixels.
+  // Position + name dispatch through the kind-generic registries so a
+  // new pinnable kind needs no overlay edit (camera/focus/README.md
+  // § FocusableProviders).
   function poiLocalPositionInto(t: Target, out: THREE.Vector3): boolean {
-    if (t.kind === 'star') {
-      const lp = stellata.localPositions;
-      out.set(lp[t.idx * 3], lp[t.idx * 3 + 1], lp[t.idx * 3 + 2]);
-      return true;
-    }
-    if (t.kind === 'planet') {
-      return stellata.planetField.planetLocalPositionInto(t.idx, out);
-    }
-    return false;
+    return stellata.focusables[t.kind].localPositionInto(t.idx, out);
   }
 
   function poiName(t: Target): string {
-    if (t.kind === 'star') {
-      return resolveStarName(
-        { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
-        t.idx,
-      );
-    }
-    if (t.kind === 'planet') {
-      return stellata.planetField.planetAt(t.idx)?.name ?? 'Planet';
-    }
-    return '';
+    return targetDisplayName(stellata, starLabels, t);
   }
 
   function createEntry(target: Target): Entry {

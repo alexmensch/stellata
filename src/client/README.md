@@ -72,14 +72,15 @@ shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
 and double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time.
 
-Navigate clicks pick point objects first — stars AND planet bodies,
-tiebroken by the hover engine's rule (`bestHitBy`: prime beats
-fallback, then closer camera) so click and hover can't disagree on
-which object wins an overlap — then fall back to clouds.
+Navigate clicks pick ladder-eligible objects first — stars, planet
+bodies, AND Local Group objects, tiebroken by the hover engine's rule
+(`bestHitBy`: prime beats fallback, then closer camera) so click and
+hover can't disagree on which object wins an overlap — then fall back
+to clouds.
 
-Navigate single-click on a point object — ONE table for stars and
-planets alike (`applyObjectClick`); a planet is not a special case,
-and neither is any future pinnable kind:
+Navigate single-click on a ladder-eligible object — ONE table for
+stars, planets, and LG objects alike (`applyObjectClick`); no kind is
+a special case, and neither is any future pinnable kind:
 
 | condition | action |
 | --- | --- |
@@ -93,11 +94,11 @@ and neither is any future pinnable kind:
 The ladder decision table is `poi/click-ladder-pure.ts`; the pin
 rungs require the HUD (`showHud`) to be on — pins are HUD widgets, so
 with the HUD hidden clicks step only the vector rungs. Navigate
-**double-click** on any star, planet, or cloud travels to it via
-`flyTo` (the focus-park teleport that clicking the vector tip used to
-trigger; lerps over `FOCUS_LERP_MS` or no-ops when already inside
-park). The POI overlay's on-screen labels route through the same
-`applyObjectClick` semantics.
+**double-click** on any star, planet, LG object, or cloud travels to
+it via `flyTo` (the focus-park teleport that clicking the vector tip
+used to trigger; lerps over `FOCUS_LERP_MS` or no-ops when already
+inside park). The POI overlay's on-screen labels route through the
+same `applyObjectClick` semantics.
 
 Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
 on first pick from no focus, vector destination on pick from a focus,

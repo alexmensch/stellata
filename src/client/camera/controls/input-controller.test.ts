@@ -11,6 +11,7 @@ import type { EventBus } from '../../util/event-bus';
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
 const planet = (idx: number): Target => ({ kind: 'planet', idx });
+const lg = (idx: number): Target => ({ kind: 'lg', idx });
 
 interface Harness {
   input: InputController;
@@ -35,6 +36,9 @@ interface Harness {
     pickPlanetResult: number | null;
     pickPlanetDistancePc: number;
     pickPlanetTier: 'prime' | 'fallback';
+    pickLgResult: number | null;
+    pickLgDistancePc: number;
+    pickLgTier: 'prime' | 'fallback';
   };
   emitted: string[];
   camera: THREE.PerspectiveCamera;
@@ -58,6 +62,9 @@ function makeHarness(): Harness {
     pickPlanetResult: null as number | null,
     pickPlanetDistancePc: 1,
     pickPlanetTier: 'prime' as 'prime' | 'fallback',
+    pickLgResult: null as number | null,
+    pickLgDistancePc: 1,
+    pickLgTier: 'prime' as 'prime' | 'fallback',
   };
   const emitted: string[] = [];
   const canvasMock = {
@@ -98,6 +105,13 @@ function makeHarness(): Harness {
             idx: state.pickPlanetResult,
             cameraDistancePc: state.pickPlanetDistancePc,
             tier: state.pickPlanetTier,
+          }
+        : null),
+      pickLocalGroupHit: () => (state.pickLgResult !== null
+        ? {
+            idx: state.pickLgResult,
+            cameraDistancePc: state.pickLgDistancePc,
+            tier: state.pickLgTier,
           }
         : null),
     } as unknown as Picker,
@@ -234,9 +248,12 @@ describe('InputController.applyObjectClick × real PoiStore — full ladder walk
   function makeIntegrated() {
     const h = makeHarness();
     const store = new PoiStore({
-      count: 10,
-      sid: new Uint32Array(10).fill(1),
-      planetPinnable: (idx) => idx >= 0 && idx < 9,
+      pinnable: {
+        star: (idx) => idx >= 0 && idx < 10,
+        planet: (idx) => idx >= 0 && idx < 9,
+        lg: (idx) => idx >= 0 && idx < 4,
+        cloud: () => false,
+      },
       onChange: () => {},
     });
     const deps = (h.input as unknown as { deps: Record<string, unknown> }).deps;
@@ -271,6 +288,12 @@ describe('InputController.applyObjectClick × real PoiStore — full ladder walk
     const h = makeIntegrated();
     h.state.focused = star(1);
     walkLadder(h, planet(4));
+  });
+
+  it('walks the same ladder for a Local Group object', () => {
+    const h = makeIntegrated();
+    h.state.focused = star(1);
+    walkLadder(h, lg(2));
   });
 
   it('walks the same ladder for Sol — no per-object carve-out', () => {
@@ -389,6 +412,44 @@ describe('InputController planet clicks — navigate mode', () => {
     (input as unknown as { dispatchDoubleClick(x: number, y: number): void })
       .dispatchDoubleClick(10, 20);
     expect(deps.flyTo).toHaveBeenCalledWith(planet(4));
+  });
+});
+
+describe('InputController Local Group clicks — navigate mode', () => {
+  it('single click on an LG object with nothing focused travels to it', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickLgResult = 2;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(lg(2));
+    expect(emitted).toEqual([]);
+  });
+
+  it('single click on an LG object while a star is focused PINS it', () => {
+    const { input, state, deps } = makeHarness();
+    state.focused = star(0);
+    state.pickLgResult = 2;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.togglePoi).toHaveBeenCalledWith(lg(2));
+    expect(deps.flyTo).not.toHaveBeenCalled();
+  });
+
+  it('star vs LG overlap: a prime star hit beats a fallback LG hit', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickStarResult = 5;
+    state.pickStarDistancePc = 100;
+    state.pickLgResult = 2;
+    state.pickLgDistancePc = 1; // closer, but only a fallback hit
+    state.pickLgTier = 'fallback';
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(star(5));
+  });
+
+  it('double click on an LG object travels to it', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickLgResult = 2;
+    (input as unknown as { dispatchDoubleClick(x: number, y: number): void })
+      .dispatchDoubleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(lg(2));
   });
 });
 

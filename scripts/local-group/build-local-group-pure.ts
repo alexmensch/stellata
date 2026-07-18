@@ -392,6 +392,10 @@ export function filterForRendering(rows: LvdbRow[]): LvdbRow[] {
  *  type is not the default dSph — dIrrs, dwarf transitions, and one-
  *  word proper names that read fine without a suffix. */
 export const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  // LVDB's shortform is the SIMBAD-spaced "M 32"; the hand-curated
+  // M31 / M33 rows carry no space, so normalise for consistency
+  // across the three Messier members.
+  'M 32': 'M32',
   LMC: 'Large Magellanic Cloud',
   SMC: 'Small Magellanic Cloud',
   'Leo A': 'Leo A',

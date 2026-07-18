@@ -159,7 +159,7 @@ export class InputController {
     // Navigate double-click = travel: the focus-park teleport that
     // click-the-vector-tip used to trigger, now on any star, planet,
     // or cloud.
-    const picked = this.pickStarOrPlanet(x, y);
+    const picked = this.pickLadderObject(x, y);
     if (picked !== null) {
       this.deps.flyTo(picked);
       return;
@@ -172,16 +172,18 @@ export class InputController {
     this.deps.bus.emit('noopClick', { x, y });
   }
 
-  /** Point objects under the cursor — stars and planet bodies — run
-   *  the same tiebreak the hover engine uses (prime beats fallback,
-   *  then closer camera), so click and hover can't disagree on which
-   *  object wins an overlap. */
-  private pickStarOrPlanet(x: number, y: number): Target | null {
+  /** Ladder-eligible objects under the cursor — stars, planet bodies,
+   *  and Local Group objects — run the same tiebreak the hover engine
+   *  uses (prime beats fallback, then closer camera), so click and
+   *  hover can't disagree on which object wins an overlap. */
+  private pickLadderObject(x: number, y: number): Target | null {
     const star = this.deps.picker.pickStarHit(x, y, 16);
     const planet = this.deps.picker.pickPlanetClick(x, y, 16);
-    const picks: Array<{ kind: 'star' | 'planet'; hit: HoverHit } | null> = [
+    const lg = this.deps.picker.pickLocalGroupHit(x, y, 16);
+    const picks: Array<{ kind: 'star' | 'planet' | 'lg'; hit: HoverHit } | null> = [
       star ? { kind: 'star', hit: star } : null,
       planet ? { kind: 'planet', hit: planet } : null,
+      lg ? { kind: 'lg', hit: lg } : null,
     ];
     const winner = bestHitBy(picks, (p) => p.hit);
     return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };
@@ -190,7 +192,7 @@ export class InputController {
   private navigateSingleClick(x: number, y: number): boolean {
     // Point objects (stars, planet bodies) are the primary interaction
     // targets. Fall back to clouds when neither is hit.
-    const picked = this.pickStarOrPlanet(x, y);
+    const picked = this.pickLadderObject(x, y);
     if (picked !== null) {
       return this.applyObjectClick(picked);
     }
@@ -282,7 +284,7 @@ export class InputController {
   }
 
   private observeSingleClick(x: number, y: number): boolean {
-    const picked = this.pickStarOrPlanet(x, y);
+    const picked = this.pickLadderObject(x, y);
     if (picked === null) return false;
     return this.applyObjectClick(picked);
   }
