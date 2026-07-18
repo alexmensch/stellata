@@ -20,7 +20,8 @@ src/client/overlays/
                                   near-plane clipping; chevrons +
                                   distance label (click = aim at the
                                   destination; warp stays on W).
-  focus-ring-overlay.ts           SVG ring around the focused star.
+  focus-ring-overlay.ts           SVG ring around the focused object
+                                  (star or planet — kind-generic).
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
                                   src/client/galactic/README.md.
   poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows
@@ -128,7 +129,7 @@ Three SVG layers conditionally hide while `cameraMode === 'observe'`:
 
 - **Focus ring** (`focus-ring-overlay.ts`) — hidden in steady-state
   observe (the ring is meaningless when the camera sits *at* the focal
-  star), but during the navigate↔observe transition its radius lerps to
+  object), but during the navigate↔observe transition its radius lerps to
   0 (enter) or back to 24 px (exit) instead of hard-hiding so it visually
   morphs through the HUD ring. The eased progress comes from
   `Stellata.getObserveTransitionProgress()`.

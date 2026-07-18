@@ -1028,6 +1028,10 @@ export class Stellata implements FrameAnchor {
    *  pair this with `focusables[kind]`; star-only affordances keep
    *  guarding on `getFocusedStar()`. */
   getFocusedTarget(): Target | null { return this.focus.getFocusedTarget(); }
+  /** Focused hard-kind (star / planet) Target, or null when the focus is
+   *  empty or soft. Pairs with `focalLocalPositionInto` for overlays that
+   *  anchor on the focused object regardless of kind. */
+  getFocusedHardTarget(): Target | null { return this.focus.getFocusedHardTarget(); }
   /** Focused object's live local position (any hard kind) into `out`;
    *  false when no hard focus is set. Kind-generic — overlays anchoring
    *  on "the focused object" use this, never a star-only buffer read. */
