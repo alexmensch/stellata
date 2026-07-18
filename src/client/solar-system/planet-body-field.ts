@@ -13,6 +13,7 @@ import {
   type PerceptualDiscUniforms,
 } from '../star-pipeline/perceptual-disc-uniforms';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { MESH_FADE_END_PX, MESH_FADE_START_PX } from './mesh-crossfade';
 import {
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
@@ -465,6 +466,22 @@ export class PlanetBodyField {
   // Flat indices are NOT stable across detach compaction — resolve per
   // use, never cache one across an attach/detach cycle.
 
+  /** Live flat-instance count (mesh-LOD layer iteration bound). */
+  get liveInstanceCount(): number {
+    return this.liveCount;
+  }
+
+  /** Flat instance currently hidden via setHiddenInstance (-1 = none)
+   *  — the observe-anchor body; the mesh LOD must hide it too. */
+  get hiddenInstanceIdx(): number {
+    return this.hideIdxUniform.value;
+  }
+
+  /** Host's ICRS orbital-plane orientation, or null when unattached. */
+  hostOrientationOf(hostStarIdx: number): THREE.Quaternion | null {
+    return this.hosts.get(hostStarIdx)?.orientation ?? null;
+  }
+
   /** (host, planet-within-host) for a flat instance index, or null when
    *  no attached host covers it. */
   hostPlanetOf(instanceIdx: number): { hostStarIdx: number; planetIdx: number } | null {
@@ -787,6 +804,9 @@ export class PlanetBodyField {
           ...sharedPlanetUniforms,
           uRenderMode: { value: mode },
           uHideIdx: this.hideIdxUniform,
+          uMeshFadePx: {
+            value: new THREE.Vector2(MESH_FADE_START_PX, MESH_FADE_END_PX),
+          },
         },
         ...params,
       });

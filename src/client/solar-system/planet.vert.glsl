@@ -64,11 +64,17 @@ uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
 
+// Disc ↔ spheroid-mesh crossfade band in projected-diameter px
+// (MESH_FADE_START/END_PX from mesh-crossfade.ts — the mesh layer
+// evaluates the same smoothstep from the other end).
+uniform vec2 uMeshFadePx;
+
 out vec3 vColor;
 out vec2 vUv;
 out float vAppMag;
 out float vPhysRatio;
 out float vSoftness;
+out float vMeshFade;
 
 const float LOG10 = 2.302585093;
 const float PI_CONST = 3.14159265358979323846;
@@ -114,6 +120,7 @@ void main() {
     vUv = aCorner;
     vPhysRatio = 0.0;
     vSoftness = 0.0;
+    vMeshFade = 0.0;
     return;
   }
 
@@ -184,12 +191,17 @@ void main() {
     vUv = aCorner;
     vPhysRatio = 0.0;
     vSoftness = 1.0 - iSolidity;
+    vMeshFade = 0.0;
     return;
   }
 
   // Physical disc size in CSS pixels. θ = 2·atan(R/d_vp).
   float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
   float physSize = 2.0 * atan(iRadiusPc / d_vp) * angularToPx;
+
+  // Disc ramps out as the spheroid mesh ramps in across the band —
+  // keyed on the TRUE projected diameter, matching the mesh layer.
+  vMeshFade = smoothstep(uMeshFadePx.x, uMeshFadePx.y, physSize);
 
   // Apparent-magnitude size via the perceptual-disc chunk. No
   // unconditional pixel floor — sub-pixel planets fade naturally
