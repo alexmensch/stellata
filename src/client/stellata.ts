@@ -876,7 +876,6 @@ export class Stellata implements FrameAnchor {
 
     this.poiStore = new PoiStore({
       count: catalog.count,
-      solIndex: catalog.solIndex,
       sid: catalog.sid,
       planetPinnable: (idx) => this.planetBodyField.planetAt(idx) !== null,
       onChange: (pois) => {

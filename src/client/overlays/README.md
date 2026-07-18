@@ -29,7 +29,7 @@ src/client/overlays/
                                   out from the click point to the
                                   POI-ring radius and collapses back —
                                   fires ONLY for clicks that changed
-                                  nothing (empty sky, Sol, POI cap);
+                                  nothing (empty sky, POI cap);
                                   successful actions carry their own
                                   feedback. Driven by the 'noopClick'
                                   bus event.

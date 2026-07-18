@@ -10,9 +10,6 @@ export const POI_MAX_COUNT = 16;
 export interface PoiStoreDeps {
   /** Catalog row count — out-of-range star indices are rejected. */
   count: number;
-  /** Sol's catalog row — excluded from pinning (the dedicated HUD
-   *  #sol-arrow already covers it). */
-  solIndex: number;
   /** Per-record star SIDs. URL state persists POIs by SID, so a record
    *  without one (never occurs on a shipped catalog) is rejected. */
   sid: Uint32Array;
@@ -43,13 +40,16 @@ export class PoiStore {
     return this.pois.length >= POI_MAX_COUNT;
   }
 
-  /** Whether `target` may be pinned at all (independent of the cap). */
+  /** Whether `target` may be pinned at all (independent of the cap).
+   *  Kind-generic and object-generic: every catalog star with a SID
+   *  pins, Sol included — the click ladder's pin rung must behave
+   *  identically for all objects (a per-object carve-out reads as a
+   *  broken ladder, not as chrome dedup). */
   pinnable(target: Target): boolean {
     if (target.kind === 'star') {
       return (
         target.idx >= 0 &&
         target.idx < this.deps.count &&
-        target.idx !== this.deps.solIndex &&
         this.deps.sid[target.idx] !== 0
       );
     }
@@ -69,11 +69,7 @@ export class PoiStore {
       return true;
     }
     if (!this.pinnable(target)) {
-      console.info(
-        target.kind === 'star' && target.idx === this.deps.solIndex
-          ? '[POI] Sol is excluded (already shown via #sol-arrow).'
-          : `[POI] cannot pin ${target.kind} ${target.idx} (unknown or no SID).`,
-      );
+      console.info(`[POI] cannot pin ${target.kind} ${target.idx} (unknown or no SID).`);
       return false;
     }
     if (this.pois.length >= POI_MAX_COUNT) {

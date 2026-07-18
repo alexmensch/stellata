@@ -2,7 +2,7 @@ import type { Stellata } from '../stellata';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 
 // Noop-click feedback: a canvas click that changed nothing (empty sky,
-// Sol, POI cap, HUD-off pin attempt) ripples a ring out from the click
+// POI cap, HUD-off pin attempt) ripples a ring out from the click
 // point to the standard POI-ring radius, then collapses it back while
 // fading — "your click landed, nothing stuck". Clicks that DO something
 // rely on their own lasting feedback (ring, vector, focus, aim); they

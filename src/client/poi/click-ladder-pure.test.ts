@@ -16,7 +16,7 @@ describe('clickLadderAction', () => {
     expect(clickLadderAction({ ...base, pinned: true, isVectorDest: true })).toBe('clearBoth');
   });
 
-  it('unpinnable (Sol) skips the pin rung: vector, then clear vector', () => {
+  it('unpinnable (no-SID record) skips the pin rung: vector, then clear vector', () => {
     expect(clickLadderAction({ ...base, pinnable: false })).toBe('vector');
     expect(clickLadderAction({ ...base, pinnable: false, isVectorDest: true })).toBe('clearVector');
   });

@@ -5,7 +5,7 @@ import { InputController, type InputControllerDeps } from './input-controller';
 import { DEFAULT_FILTER, type FilterState } from '../../filters/filter-state';
 import { targetsEqual, type Target } from '../focus/focus-target';
 import type { Picker } from './picker';
-import type { PoiStore } from '../../poi/poi-store';
+import { PoiStore } from '../../poi/poi-store';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 
@@ -105,7 +105,7 @@ function makeHarness(): Harness {
       emit: (name: string) => { emitted.push(name); },
     } as unknown as EventBus<StellataEventMap>,
     poiStore: {
-      pinnable: (t: Target) => !(t.kind === 'star' && t.idx === 0),
+      pinnable: () => true,
       has: (t: Target) => state.pinned.some((p) => targetsEqual(p, t)),
       atCap: () => false,
     } as unknown as PoiStore,
@@ -222,6 +222,64 @@ describe('InputController.applyObjectClick — navigate mode', () => {
     state.pinned.push(star(4));
     expect(input.applyObjectClick(planet(4))).toBe(true);
     expect(deps.togglePoi).toHaveBeenCalledWith(planet(4));
+  });
+});
+
+describe('InputController.applyObjectClick × real PoiStore — full ladder walk', () => {
+  // Integration over the store seam the mocked harness skips: the real
+  // PoiStore decides pinnable / pinned / atCap, so a store-level
+  // carve-out that silently degrades the ladder (click → vector with
+  // no pin, the reported regression shape) fails here even when the
+  // pure ladder tests stay green.
+  function makeIntegrated() {
+    const h = makeHarness();
+    const store = new PoiStore({
+      count: 10,
+      sid: new Uint32Array(10).fill(1),
+      planetPinnable: (idx) => idx >= 0 && idx < 9,
+      onChange: () => {},
+    });
+    const deps = (h.input as unknown as { deps: Record<string, unknown> }).deps;
+    deps.poiStore = store;
+    deps.togglePoi = (t: Target) => store.toggle(t);
+    deps.setVector = (t: Target | null) => { h.state.vector = t; };
+    return { ...h, store };
+  }
+
+  function walkLadder(h: ReturnType<typeof makeIntegrated>, target: Target) {
+    // Rung 1: fresh object pins — no vector.
+    expect(h.input.applyObjectClick(target)).toBe(true);
+    expect(h.store.has(target)).toBe(true);
+    expect(h.state.vector).toBe(null);
+    // Rung 2: pinned object becomes the vector destination, stays pinned.
+    expect(h.input.applyObjectClick(target)).toBe(true);
+    expect(h.state.vector).toEqual(target);
+    expect(h.store.has(target)).toBe(true);
+    // Rung 3: pinned vector destination clears both.
+    expect(h.input.applyObjectClick(target)).toBe(true);
+    expect(h.state.vector).toBe(null);
+    expect(h.store.has(target)).toBe(false);
+  }
+
+  it('walks pin → vector → clear-both on a fresh star', () => {
+    const h = makeIntegrated();
+    h.state.focused = star(1);
+    walkLadder(h, star(2));
+  });
+
+  it('walks the same ladder for a planet', () => {
+    const h = makeIntegrated();
+    h.state.focused = star(1);
+    walkLadder(h, planet(4));
+  });
+
+  it('walks the same ladder for Sol — no per-object carve-out', () => {
+    // Regression: PoiStore once excluded Sol from pinning, so a click
+    // on Sol while focused elsewhere skipped rung 1 and drew the
+    // distance vector immediately.
+    const h = makeIntegrated();
+    h.state.focused = star(1);
+    walkLadder(h, star(0));
   });
 });
 

@@ -15,7 +15,6 @@ function makeStore() {
   const onChange = vi.fn();
   const store = new PoiStore({
     count: 40,
-    solIndex: SOL,
     sid,
     planetPinnable: (idx) => idx >= 0 && idx < ATTACHED_PLANETS,
     onChange,
@@ -47,9 +46,8 @@ describe('PoiStore', () => {
     expect(onChange).toHaveBeenCalledTimes(3);
   });
 
-  it('rejects Sol, missing-SID, out-of-range, and unattached planets without firing onChange', () => {
+  it('rejects missing-SID, out-of-range, and unattached planets without firing onChange', () => {
     const { store, onChange } = makeStore();
-    store.toggle(star(SOL));
     store.toggle(star(NO_SID));
     store.toggle(star(-1));
     store.toggle(star(40));
@@ -57,6 +55,18 @@ describe('PoiStore', () => {
     store.toggle({ kind: 'lg', idx: 0 });
     expect(store.get()).toEqual([]);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('pins Sol like any other star — no per-object carve-out in the ladder', () => {
+    // Regression: Sol was once excluded ("the HUD #sol-arrow already
+    // covers it"), which made a navigate click on Sol skip the pin rung
+    // and draw the distance vector immediately — read by users as the
+    // pin→vector→clear ladder being broken.
+    const { store, onChange } = makeStore();
+    expect(store.pinnable(star(SOL))).toBe(true);
+    store.toggle(star(SOL));
+    expect(store.has(star(SOL))).toBe(true);
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it('caps additions at POI_MAX_COUNT', () => {
@@ -80,7 +90,7 @@ describe('PoiStore', () => {
   it('pinnable mirrors the toggle gates', () => {
     const { store } = makeStore();
     expect(store.pinnable(star(3))).toBe(true);
-    expect(store.pinnable(star(SOL))).toBe(false);
+    expect(store.pinnable(star(SOL))).toBe(true);
     expect(store.pinnable(star(NO_SID))).toBe(false);
     expect(store.pinnable(star(-1))).toBe(false);
     expect(store.pinnable(star(40))).toBe(false);
@@ -93,9 +103,9 @@ describe('PoiStore', () => {
   it('set validates, dedupes, caps, and skips the no-change write', () => {
     const { store, onChange } = makeStore();
     store.set([star(3), star(SOL), star(NO_SID), star(3), planet(1), star(-1), star(40)]);
-    expect(store.get()).toEqual([star(3), planet(1)]);
+    expect(store.get()).toEqual([star(3), star(SOL), planet(1)]);
     expect(onChange).toHaveBeenCalledTimes(1);
-    store.set([star(3), planet(1)]);
+    store.set([star(3), star(SOL), planet(1)]);
     expect(onChange).toHaveBeenCalledTimes(1);
     store.set(Array.from({ length: 30 }, (_, i) => star(7 + i)));
     expect(store.get()).toHaveLength(POI_MAX_COUNT);

@@ -24,7 +24,7 @@ one ladder for every kind — steps a state-based ladder:
 2. pinned but not the vector destination → set the distance vector
 3. pinned + vector destination → clear the vector AND unpin
 
-Objects that can't take the pin rung right now (Sol, cap reached) fall
+Objects that can't take the pin rung right now (no-SID record, cap reached) fall
 through to the vector rung so measuring to them stays possible. Pins
 are HUD widgets, so with the HUD hidden (`showHud` off — the default)
 the ladder steps only its vector rungs and existing pins are left
@@ -41,13 +41,16 @@ apart.
   the `?v=` blob (see `../util/url-state/README.md`), so pins survive
   catalogue rebuilds. A planet Target's idx is the body-field flat
   instance index; its SID rides the planet domain.
-- **Sol is not pinnable** — the HUD's dedicated Sol arrow already
-  covers it. Stars without a SID are not pinnable either (never
-  occurs on a shipped catalog; the guard protects URL round-trip).
-  Planets are pinnable while their host is attached to the body field
-  (which is also what makes their SID resolvable). Clouds and LG
-  objects have no pin affordance today — `pinnable` returns false and
-  the ladder steps only its vector rungs for them.
+- **Every catalog star with a SID pins — Sol included.** Sol was once
+  carved out ("the HUD #sol-arrow already covers it"), but a
+  per-object exception in the pin rung reads as a broken click ladder
+  (click → vector with no ring), so the carve-out is gone; a pinned
+  Sol coexists with the HUD arrow. Stars without a SID are not
+  pinnable (never occurs on a shipped catalog; the guard protects URL
+  round-trip). Planets are pinnable while their host is attached to
+  the body field (which is also what makes their SID resolvable).
+  Clouds and LG objects have no pin affordance today — `pinnable`
+  returns false and the ladder steps only its vector rungs for them.
 - Hard cap `POI_MAX_COUNT = 16`; adding past it is a no-op. The same
   constant bounds the URL payload — import it, never redefine it.
 - Insertion-ordered so URL round-trips preserve the user's pin order.
@@ -55,7 +58,7 @@ apart.
   that to the `'pois'` + `'state'` bus events (payload
   `readonly Target[]`).
 
-Rejected mutations (Sol, no SID, cap) leave a `console.info`
+Rejected mutations (no SID, cap) leave a `console.info`
 breadcrumb only — visible feedback is the click-ripple overlay's job,
 not the store's.
 

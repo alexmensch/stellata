@@ -5,7 +5,7 @@
 export type ClickLadderAction = 'pin' | 'vector' | 'clearVector' | 'clearBoth';
 
 export interface ClickLadderState {
-  /** PoiStore.pinnable(target) — Sol and SID-less records can't be pinned. */
+  /** PoiStore.pinnable(target) — SID-less records can't be pinned. */
   pinnable: boolean;
   /** Already in the POI list. */
   pinned: boolean;
@@ -18,7 +18,7 @@ export interface ClickLadderState {
 /**
  * State-based ladder for a navigate-mode click on a non-focused point
  * object: pin → vector → clear both. Objects that can't take the pin
- * rung right now (Sol, cap reached) fall through to the vector rung so
+ * rung right now (no-SID record, cap reached) fall through to the vector rung so
  * measuring to them stays possible.
  */
 export function clickLadderAction(s: ClickLadderState): ClickLadderAction {
