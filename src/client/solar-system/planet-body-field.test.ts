@@ -864,6 +864,42 @@ describe('PlanetBodyField.pick', () => {
     f.dispose();
   });
 
+  it('is unpickable when not rendered (chart-mono / hidden) — matches the star pick', () => {
+    // Regression: pick() walked hosts regardless of render visibility, so
+    // a chart-mode-hidden planet (bodies not drawn) was still click-pinnable
+    // while stars respected their render state. Click-pick must equal render.
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull(); // drawn → pickable
+
+    f.setMonochrome(true); // chart mode hides the bodies
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+
+    f.setMonochrome(false);
+    f.setHidden(true);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+
+    f.setHidden(false);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
+    f.dispose();
+  });
+
   it('kill condition: appMag > maxAppMag + 0.5 drops the candidate', () => {
     // Same setup as prime but with the planet shoved far enough away
     // that its appMag exceeds the slider cutoff by > 0.5 mag. The

@@ -326,6 +326,21 @@ describe('Picker / pickStar', () => {
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
       expect(picker.pickStar(screen.x, screen.y)).toBe(0);
     });
+
+    it('picks in the soft-taper band where the disc still renders (navigate) but not in chart', () => {
+      // Regression: the click pick cut at maxAppMag while the shader
+      // fades the disc out over the maxAppMag + 0.5 soft taper, leaving a
+      // band that renders but couldn't be selected. absmag 4 at dCam 30 pc
+      // → appMag ≈ 6.39, inside (6, 6.5] for maxAppMag = 6.
+      const data = makeCatalog([[0, 0, 0]], { absmag: [4] });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), makeCamera());
+      // Navigate: soft taper applies → the band star is pickable.
+      const nav = makePicker(data, defaultFilter({ maxAppMag: 6, chart: false }));
+      expect(nav.picker.pickStar(screen.x, screen.y)).toBe(0);
+      // Chart mode hard-clips at maxAppMag (no taper) → not drawn, not pickable.
+      const chart = makePicker(data, defaultFilter({ maxAppMag: 6, chart: true }));
+      expect(chart.picker.pickStar(screen.x, screen.y)).toBe(-1);
+    });
   });
 });
 

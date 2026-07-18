@@ -23,6 +23,7 @@ import {
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
+  SOFT_TAPER_MARGIN_MAG,
 } from './perceptual-magnitude';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -533,7 +534,7 @@ export class PlanetBodyField {
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + 0.5) return 0;
+    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
@@ -593,9 +594,10 @@ export class PlanetBodyField {
    * Disc sizing mirrors the planet vertex shader's
    * `pxSize = max(appSize, physSize)` exactly via the shared
    * perceptual + angular-diameter helpers. Planets whose appMag exceeds
-   * `maxAppMag + 0.5` (the shader's soft-taper kill condition) are
-   * skipped — the GPU emits no quad, so hover can't pick what isn't
-   * drawn.
+   * the soft-taper cutoff are skipped — the GPU emits no quad, so hover
+   * can't pick what isn't drawn. The whole field is unpickable when it
+   * isn't rendered at all (chart mode hides the bodies; `setHidden`), so
+   * click-pick matches render visibility exactly, like the star pick.
    */
   pick(
     camera: THREE.PerspectiveCamera,
@@ -604,7 +606,7 @@ export class PlanetBodyField {
     clientY: number,
     pxThreshold: number,
   ): HoverHit | null {
-    if (this.hosts.size === 0) return null;
+    if (this.hosts.size === 0 || this.hidden || this.mono) return null;
     const cursorX = clientX - rect.left;
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
@@ -628,10 +630,9 @@ export class PlanetBodyField {
           this.evalPlanetView(host, i, camPos);
         if (dVp <= 0) continue;
         // Same kill condition as the planet vertex shader's soft-taper
-        // discard: if the planet is more than half a mag below the
-        // slider cutoff, the GPU emits no quad and the hover can't
-        // pick what isn't drawn.
-        if (appMag > maxAppMag + 0.5) continue;
+        // discard: past the cutoff the GPU emits no quad and the hover
+        // can't pick what isn't drawn.
+        if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) continue;
 
         v.set(planetX, planetY, planetZ);
         const screen = projectToScreen(v, camera, viewportW, viewportH);

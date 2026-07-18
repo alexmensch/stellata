@@ -2,6 +2,16 @@
 // math and brightness → disc-radius mapping the star and planet vertex
 // shaders use. Shader is the source of truth; this mirror is test-pinned.
 
+// Magnitudes below the slider cutoff a body still renders: the vertex
+// shaders fade the disc out over this soft taper rather than hard-cutting
+// at `uMaxAppMag`, so a body is drawn (and therefore pickable) while
+// `appMag <= uMaxAppMag + SOFT_TAPER_MARGIN_MAG`. Every CPU mirror that
+// gates on "is this drawn?" — pick paths, orbit-walk LOD, eclipse LOD —
+// reads this so the CPU cutoff can't drift from the shader's. Chart mode
+// hard-clips at `uMaxAppMag` instead (no taper); callers add the margin
+// only in the non-chart path.
+export const SOFT_TAPER_MARGIN_MAG = 0.5;
+
 /**
  * Standard apparent-magnitude formula for an unobscured emitter.
  *

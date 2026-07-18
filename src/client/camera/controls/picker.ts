@@ -14,7 +14,7 @@ import {
   HELIOPAUSE_SAMPLE_POINTS_SOL,
 } from '../../solar-system/heliopause';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
-import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -295,7 +295,12 @@ export class Picker {
       // its disc whenever magMod swings negative.
       const amp = periodDays[i] > 0 ? amplitudeMag[i] : 0;
       const filterMag = appMag - amp * 0.5;
-      if (filterMag > f.maxAppMag) continue;
+      // Pickable exactly where the disc renders: the shader fades over the
+      // soft taper in navigate/normal (cutoff + margin), and hard-clips at
+      // the bare cutoff in chart mode. Matching this here closes the
+      // renders-but-unpickable band at the visibility edge.
+      const cutoff = f.maxAppMag + (f.chart ? 0 : SOFT_TAPER_MARGIN_MAG);
+      if (filterMag > cutoff) continue;
 
       v.set(x, y, z);
       const screen = projectToScreen(v, camera, viewportW, viewportH);
