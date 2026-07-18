@@ -246,6 +246,10 @@ function makeHarness(opts: {
   // (planetAt returns null). Tests exercising planet focus construct a
   // real PlanetBodyField instead.
   const planetField = new PlanetBodyField({
+    uMonochrome: { value: 0 },
+    uChartDiscMaxPx: { value: 28 },
+    uChartDiscMinPx: { value: 1.5 },
+    uChartMagBright: { value: -2 },
     uMaxAppMag: { value: 6.5 },
     uSizeMin: { value: 2 },
     uSizeMax: { value: 24 },

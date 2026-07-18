@@ -70,7 +70,7 @@ const BINARY_WING_MIN_EXTENSION_PX = 1.5;
 const VARIABLE_RING_MIN_GAP_PX = 1.0;
 
 export interface Candidate {
-  kind: 'name' | 'bayer' | 'con' | 'cloud';
+  kind: 'name' | 'bayer' | 'con' | 'cloud' | 'planet';
   text: string;
   // Screen-space anchor (top-left of the projected bbox), already
   // computed from the projected centre + offset.
@@ -144,6 +144,7 @@ let activeCtx: ChartModeContext | null = null;
 // Avoids a Vector3 allocation per cloud per frame in the chart-mode
 // labels pass (60+ allocs/sec at typical Zucker counts).
 const tmpCloudLocal = new THREE.Vector3();
+const tmpPlanetLocal = new THREE.Vector3();
 const pool = new Map<string, PooledText>();
 const ringPool = new Map<number, PooledCircle>();
 const wingPool = new Map<number, PooledLine>();
@@ -280,6 +281,7 @@ let lastTickFilterVersion = -1;
 let lastTickViewportW = 0;
 let lastTickViewportH = 0;
 let lastTickEpochJyr = NaN;
+let lastTickTBucket = NaN;
 
 function rebuildEligible(stellata: Stellata): void {
   if (!variableIdxs || !binaryIdxs || !distSolCache) return;
@@ -355,13 +357,18 @@ function tick(
   // discover that nothing moved is the dominant idle cost; skipping the
   // entire body collapses chart.* sections to zero on stationary frames.
   const epochJyr = stellata.advancedEpochJyr;
+  // Planet labels track the ephemeris, which moves with the model
+  // clock even under a still camera — bucketed at the ephemeris
+  // cache's own 60 s granularity so idle frames still skip.
+  const tBucket = Math.floor(stellata.getT() / 60);
   if (
     camera.position.equals(lastTickCamPos) &&
     camera.quaternion.equals(lastTickCamQuat) &&
     centroidsVersion === lastTickFilterVersion &&
     w === lastTickViewportW &&
     h === lastTickViewportH &&
-    epochJyr === lastTickEpochJyr
+    epochJyr === lastTickEpochJyr &&
+    tBucket === lastTickTBucket
   ) {
     return;
   }
@@ -371,6 +378,7 @@ function tick(
   lastTickViewportW = w;
   lastTickViewportH = h;
   lastTickEpochJyr = epochJyr;
+  lastTickTBucket = tBucket;
 
   // Disc-tuning bag drives both the per-label offset (label clears the
   // rendered disc edge regardless of magnitude) and the glyph loops
@@ -542,6 +550,33 @@ function tick(
     }
   }
   perfMeasure('chart.clouds');
+
+  // 5) Planet bodies — name labels beside the chart disc, gated by the
+  // same magnitude rule as the ink disc itself (uadc.3 decision:
+  // magnitude disc + star-style name label, no glyph vocabulary).
+  perfMark('chart.planets');
+  const planetField = stellata.planetField;
+  for (let i = 0; i < planetField.liveInstanceCount; i++) {
+    const planet = planetField.planetAt(i);
+    if (!planet) continue;
+    if (!planetField.planetLocalPositionInto(i, tmpPlanetLocal)) continue;
+    const xy = projectVec(tmpPlanetLocal, camera, w, h);
+    if (!xy) continue;
+    const appMag = planetField.appMagForInstance(i, camera.position);
+    if (appMag === null || appMag > f.maxAppMag) continue;
+    const offset = starLabelOffsetPx(discPxFor(appMag));
+    candidates.push({
+      kind: 'planet',
+      text: planet.name,
+      x: xy[0] + offset,
+      y: xy[1] - offset,
+      width: 0,
+      height: 0,
+      priority: 1 + appMag * 0.001, // same tier as proper-named stars
+      key: `p:${i}`,
+    });
+  }
+  perfMeasure('chart.planets');
 
   // Sort by priority — proper names first, then Bayer, then clouds.
   // Constellation Latin labels skip the collision pass entirely

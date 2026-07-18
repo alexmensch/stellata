@@ -9,9 +9,12 @@ import {
 } from './phase-function';
 import { applyDiscBlendDefaults } from '../star-pipeline/star-pipeline';
 import {
+  pickChartDiscUniforms,
   pickPerceptualDiscUniforms,
+  type ChartDiscUniforms,
   type PerceptualDiscUniforms,
 } from '../star-pipeline/perceptual-disc-uniforms';
+import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import { MESH_FADE_END_RATIO, MESH_FADE_START_RATIO } from './mesh-crossfade';
 import {
@@ -125,7 +128,7 @@ export class PlanetBodyField {
   // Shared uniform bundle — references, not copies. The picker reads
   // current values directly so it stays in lockstep with the shaders
   // and any debug-panel writes to the same `{ value }` slots.
-  private magShared: PerceptualDiscUniforms;
+  private magShared: PerceptualDiscUniforms & ChartDiscUniforms;
   // Per-instance attribute buffers. Re-allocated on capacity grow.
   private bufLocalRel!: Float32Array;
   private bufHostLocalPos!: Float32Array;
@@ -166,7 +169,7 @@ export class PlanetBodyField {
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
 
-  constructor(magnitudeShared: PerceptualDiscUniforms) {
+  constructor(magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms) {
     this.magShared = magnitudeShared;
     this.maxAppMag = magnitudeShared.uMaxAppMag.value;
     this.group = new THREE.Group();
@@ -248,7 +251,7 @@ export class PlanetBodyField {
     this.writeHostPositions(host, t);
     this.flushAllAttributes();
     this.geometry.instanceCount = this.liveCount;
-    this.group.visible = !this.hidden && !this.mono;
+    this.group.visible = !this.hidden;
   }
 
   detachHost(hostStarIdx: number): void {
@@ -315,13 +318,13 @@ export class PlanetBodyField {
       this.group.visible = false;
       return;
     }
-    // Rendering is gated by hidden / chart-mono; the ephemeris walk is
+    // Rendering is gated by hidden; the ephemeris walk is
     // NOT. The focal-frame ride and observe anchor read live planet
     // positions (bufLocalRel) off this walk even when the bodies aren't
     // drawn — chart mode observes from a planet, so freezing the walk
     // there strands the anchor's orbital motion. Only the GPU upload is
     // skipped while invisible (the CPU buffer still advances).
-    const render = !this.hidden && !this.mono;
+    const render = !this.hidden;
     this.group.visible = render;
     let touched = false;
     for (const host of this.hosts.values()) {
@@ -572,8 +575,9 @@ export class PlanetBodyField {
     }
   }
 
-  /** Shader-mirroring `max(appSize, physSize)` in CSS px, reading the
-   *  live shared uniforms so debug-panel writes stay in lockstep. */
+  /** Shader-mirroring physical + perceptual disc sizes in CSS px,
+   *  reading the live shared uniforms so debug-panel writes stay in
+   *  lockstep. */
   private discSizeTerms(
     radiusPc: number,
     dVp: number,
@@ -598,6 +602,19 @@ export class PlanetBodyField {
   }
 
   private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
+    // Chart mode mirrors the vertex shader's chart branch — flat
+    // magnitude-driven disc, no physical/perceptual terms.
+    if (this.mono) {
+      return chartDiscPxForAppMag(
+        appMag,
+        {
+          maxPx: this.magShared.uChartDiscMaxPx.value,
+          minPx: this.magShared.uChartDiscMinPx.value,
+          magBright: this.magShared.uChartMagBright.value,
+        },
+        this.magShared.uMaxAppMag.value,
+      );
+    }
     const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
     return Math.max(appSize, physSize);
   }
@@ -650,7 +667,7 @@ export class PlanetBodyField {
     clientY: number,
     pxThreshold: number,
   ): HoverHit | null {
-    if (this.hosts.size === 0 || this.hidden || this.mono) return null;
+    if (this.hosts.size === 0 || this.hidden) return null;
     const cursorX = clientX - rect.left;
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
@@ -673,10 +690,12 @@ export class PlanetBodyField {
         const { appMag, planetX, planetY, planetZ, dVp } =
           this.evalPlanetView(host, i, camPos);
         if (dVp <= 0) continue;
-        // Same kill condition as the planet vertex shader's soft-taper
-        // discard: past the cutoff the GPU emits no quad and the hover
-        // can't pick what isn't drawn.
-        if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) continue;
+        // Same kill condition as the planet vertex shader: past the
+        // cutoff the GPU emits no quad and the hover can't pick what
+        // isn't drawn. Chart mode hard-clips (no soft taper) — same
+        // rule Picker.pickStar applies there.
+        const cutoff = maxAppMag + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
+        if (appMag > cutoff) continue;
 
         v.set(planetX, planetY, planetZ);
         const screen = projectToScreen(v, camera, viewportW, viewportH);
@@ -708,16 +727,37 @@ export class PlanetBodyField {
     };
   }
 
+  /** Chart mode renders the bodies as flat ink discs, star-identical:
+   *  the shared uMonochrome uniform flips the shader branches; here we
+   *  only swap the blending the same way the star pipeline's
+   *  setMonochromeBlend does. Rings stay hidden (their own layer);
+   *  the mesh LOD hides via `monochrome` below. */
   setMonochrome(on: boolean): void {
     this.mono = on;
-    if (on) this.group.visible = false;
-    else this.group.visible = !this.hidden && this.liveCount > 0;
+    if (on) {
+      this.matDisc.blending = THREE.MultiplyBlending;
+      this.matDisc.depthWrite = false;
+      this.matDisc.depthTest = false;
+      this.matGlow.blending = THREE.MultiplyBlending;
+      this.matGlow.depthTest = false;
+    } else {
+      applyDiscBlendDefaults(this.matDisc);
+      this.matGlow.blending = THREE.AdditiveBlending;
+      this.matGlow.depthTest = true;
+    }
+    this.matDisc.needsUpdate = true;
+    this.matGlow.needsUpdate = true;
+    this.group.visible = !this.hidden && this.liveCount > 0;
+  }
+
+  get monochrome(): boolean {
+    return this.mono;
   }
 
   setHidden(on: boolean): void {
     this.hidden = on;
     if (on) this.group.visible = false;
-    else this.group.visible = !this.mono && this.liveCount > 0;
+    else this.group.visible = this.liveCount > 0;
   }
 
   /** Hide one body by flat instance index (-1 = none) — the planet
@@ -819,8 +859,11 @@ export class PlanetBodyField {
     this.geometry = geom;
   }
 
-  private buildMaterials(sm: PerceptualDiscUniforms): void {
-    const sharedPlanetUniforms = pickPerceptualDiscUniforms(sm);
+  private buildMaterials(sm: PerceptualDiscUniforms & ChartDiscUniforms): void {
+    const sharedPlanetUniforms = {
+      ...pickPerceptualDiscUniforms(sm),
+      ...pickChartDiscUniforms(sm),
+    };
 
     const makeMat = (mode: number, params: THREE.ShaderMaterialParameters) =>
       new THREE.ShaderMaterial({

@@ -1384,6 +1384,12 @@ body.monochrome #con-results {
   font-size: 10.5px;
   font-style: italic;
 }
+/* Planet names read like proper-named stars — the disc is the same
+   magnitude-driven ink, so the label is the only planet marker. */
+#chart-labels .chart-label.kind-planet {
+  font-size: 11.5px;
+  font-weight: 500;
+}
 
 .checkbox-row input[type="checkbox"]:disabled {
   cursor: not-allowed;

@@ -4,7 +4,11 @@ import {
   cullDistancePc,
   PlanetBodyField,
 } from './planet-body-field';
-import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc-uniforms';
+import type {
+  ChartDiscUniforms,
+  PerceptualDiscUniforms,
+} from '../star-pipeline/perceptual-disc-uniforms';
+import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import type { PlanetSystem, Planet } from './planet-system';
 import {
@@ -16,8 +20,14 @@ import {
 } from './phase-function';
 import { planetApparentMagnitude } from './perceptual-magnitude';
 
-function makeSharedUniforms(maxAppMag = 6.5): PerceptualDiscUniforms {
+function makeSharedUniforms(
+  maxAppMag = 6.5,
+): PerceptualDiscUniforms & ChartDiscUniforms {
   return {
+    uMonochrome: { value: 0 },
+    uChartDiscMaxPx: { value: 28 },
+    uChartDiscMinPx: { value: 1.5 },
+    uChartMagBright: { value: -2 },
     uMaxAppMag: { value: maxAppMag },
     uSizeMin: { value: 2 },
     uSizeMax: { value: 24 },
@@ -481,8 +491,10 @@ describe('PlanetBodyField lifecycle', () => {
 
     f.setMonochrome(true);
     f.update(camera, 0);
-    expect(f.group.visible).toBe(false); // bodies not drawn in chart mode
-    expect(calls).toBe(2); // …but the ephemeris still advanced
+    // Chart mode keeps the bodies drawn — as flat ink discs (uadc.3);
+    // only the blending swaps, mirroring the star pipeline.
+    expect(f.group.visible).toBe(true);
+    expect(calls).toBe(2);
 
     f.setMonochrome(false);
     f.setHidden(true);
@@ -864,10 +876,10 @@ describe('PlanetBodyField.pick', () => {
     f.dispose();
   });
 
-  it('is unpickable when not rendered (chart-mono / hidden) — matches the star pick', () => {
-    // Regression: pick() walked hosts regardless of render visibility, so
-    // a chart-mode-hidden planet (bodies not drawn) was still click-pinnable
-    // while stars respected their render state. Click-pick must equal render.
+  it('tracks render visibility: pickable in chart mode (ink discs), unpickable when hidden', () => {
+    // Click-pick must equal render. Chart mode now DRAWS the bodies as
+    // flat ink discs (uadc.3), so they stay pickable there; setHidden
+    // still takes them out of both render and pick.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -888,14 +900,56 @@ describe('PlanetBodyField.pick', () => {
     f.update(camera, 0);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull(); // drawn → pickable
 
-    f.setMonochrome(true); // chart mode hides the bodies
-    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+    f.setMonochrome(true); // chart mode: ink discs, still pickable
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
 
     f.setMonochrome(false);
     f.setHidden(true);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
 
     f.setHidden(false);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
+    f.dispose();
+  });
+
+  it('chart mode: hard mag clip (no soft taper) and chart-px hit radius', () => {
+    const shared = makeSharedUniforms(20);
+    const f = new PlanetBodyField(shared);
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0);
+    f.setMonochrome(true);
+
+    const appMag = f.appMagForInstance(0, camera.position)!;
+    // In chart mode the rendered size is the flat magnitude-driven disc
+    // (CPU mirror of the vertex shader's chart branch), not the
+    // physical/perceptual max.
+    const expected = chartDiscPxForAppMag(
+      appMag,
+      { maxPx: 28, minPx: 1.5, magBright: -2 },
+      shared.uMaxAppMag.value,
+    );
+    expect(f.renderedPlanetSizePx(0, camera.position)).toBeCloseTo(expected, 10);
+
+    // Hard clip: a limit just below appMag drops the pick immediately —
+    // the navigate-mode soft-taper margin must not apply in chart.
+    shared.uMaxAppMag.value = appMag - 0.01;
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+    f.setMonochrome(false);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
     f.dispose();
   });
