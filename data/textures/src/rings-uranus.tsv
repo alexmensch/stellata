@@ -1,0 +1,12 @@
+# Provenance, value derivation, and exclusions: README.md (this folder).
+ring	mid_radius_km	width_km	tau
+6	41837	2.0	0.22
+5	42234	3.0	0.55
+4	42570	3.0	0.30
+alpha	44718	7.0	0.35
+beta	45661	9.0	0.20
+eta	47175	2.5	0.20
+gamma	47627	4.0	1.50
+delta	48300	5.0	0.45
+lambda	50023	2.0	0.15
+epsilon	51149	58.0	0.85
