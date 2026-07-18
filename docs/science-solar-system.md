@@ -102,8 +102,10 @@ showing its lights is the one actually dark at `t`.
 
 **True-eclipse dimming.** A planet geometrically behind its host's
 physical disc dims by the occluded area fraction (closed-form
-circle-circle lens, the binaries eclipse-photometry math), floored at
-7.5 mag for a full eclipse. Glow through the host's perceptual halo
+circle-circle lens, the binaries eclipse-photometry math); a full
+eclipse renders nothing at all — zero flux, quad collapsed — since
+even a 7.5-mag residual is visible on a mag −1 Mercury behind Sol.
+Glow through the host's perceptual halo
 stays undimmed — the halo is a rendering artefact, not a surface. The
 reverse transit (planet in front) would dim the host by (R_p/R_host)²
 ≲ 10⁻² mag and is deliberately not modelled.

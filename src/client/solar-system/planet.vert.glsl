@@ -194,10 +194,23 @@ void main() {
   float appMag = m_host_at_planet - 2.5 * log(max(reflFactor, 1e-30)) / LOG10;
 
   // True-eclipse dim, glow pass only — the star pipeline's iEclipseDim
-  // fold verbatim. The disc pass needs no dim: its per-channel-max
-  // blend already keeps the darker back disc from painting over the
-  // host's saturated disc.
+  // fold verbatim: exactly 0 = totality, collapse the quad (the
+  // planet-scale depth buffer can't hide it, and a floored residual is
+  // still visible on a bright close body — Mercury behind Sol's disc).
+  // The disc pass needs no dim: its per-channel-max blend already keeps
+  // the darker back disc from painting over the host's saturated disc.
   if (uRenderMode == 0 && iEclipseDim < 1.0) {
+    if (iEclipseDim <= 0.0) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      vAppMag = 0.0;
+      vColor = vec3(0.0);
+      vUv = aCorner;
+      vPhysRatio = 0.0;
+      vSoftness = 0.0;
+      vMeshFade = 0.0;
+      vAaWidth = 0.0;
+      return;
+    }
     appMag += -2.5 * log(iEclipseDim) / LOG10;
   }
 

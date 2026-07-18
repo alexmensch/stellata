@@ -127,8 +127,9 @@ describe('EclipsePhotometryField.update — conjunction geometry', () => {
     const fx = edgeOnFixture();
     const field = new EclipsePhotometryField(fx);
     field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
-    // Secondary (5 R☉) fully covered by the primary's larger disc.
-    expect(fx.eclipseDimBuffer[1]).toBeCloseTo(DIM_FLOOR, 8);
+    // Secondary (5 R☉) fully covered by the primary's larger disc —
+    // totality writes exactly 0 (the shader collapses the glow quad).
+    expect(fx.eclipseDimBuffer[1]).toBe(0);
     expect(fx.eclipseDimBuffer[0]).toBe(1);
   });
 
@@ -252,7 +253,7 @@ describe('EclipsePhotometryField.update — anti-strobe smoothing', () => {
     const fx = edgeOnFixture();
     const field = new EclipsePhotometryField(fx);
     field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
-    expect(fx.eclipseDimBuffer[1]).toBeCloseTo(DIM_FLOOR, 8);
+    expect(fx.eclipseDimBuffer[1]).toBe(0);
     // Occlusion ends; 16 ms later the dim has only partially recovered.
     field.update(tForJd(J2000_JD), CAM, 6, 16);
     expect(fx.eclipseDimBuffer[1]).toBeGreaterThan(DIM_FLOOR);

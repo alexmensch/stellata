@@ -300,8 +300,22 @@ void main() {
     // close range resolves the occlusion via the depth buffer; double-
     // applying here would dim the back disc's non-occluded fragments.
     // Buffer defaults to 1.0 (no-dim); EclipsePhotometryField writes
-    // values in [DIM_FLOOR, 1) onto the back component per frame.
+    // [DIM_FLOOR, 1) for partial occlusion and exactly 0 at totality.
+    // Totality collapses the quad (off-screen-sentinel pattern above):
+    // a floored +7.5 mag residual is still visible on a bright
+    // close-range back body, and the depth buffer can't hide it (the
+    // pair's separation sits inside one log-depth bucket).
     if (uRenderMode == 0 && iEclipseDim < 1.0) {
+        if (iEclipseDim <= 0.0) {
+            gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+            vAppMag = 0.0;
+            vColor = vec3(0.0);
+            vUv = aCorner;
+            vPhysRatio = 0.0;
+            vSoftness = 0.0;
+            vAaWidth = 0.0;
+            return;
+        }
         appMag += -2.5 * log(iEclipseDim) / LOG10;
     }
 

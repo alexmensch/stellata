@@ -130,11 +130,13 @@ describe('eclipseDimFromOffsets — front/back determination', () => {
 });
 
 describe('eclipseDimFromOffsets — full and partial occlusion', () => {
-  it('small back fully hidden by larger front: dim clamps to DIM_FLOOR', () => {
+  it('small back fully hidden by larger front: dim is exactly 0 (totality)', () => {
     // Front (secondary) closer and much bigger; back's full disc hidden.
+    // Totality returns 0, not DIM_FLOOR — consumers collapse the quad;
+    // the floor exists only to keep the log finite for PARTIAL dims.
     const r = dimOf([0, 0, 10], [0, 0, -5], 5e-3, 0.5);
     expect(r.front).toBe('secondary');
-    expect(r.dim).toBe(DIM_FLOOR);
+    expect(r.dim).toBe(0);
   });
 
   it('small front on bigger back: dim = 1 − (alpha_front / alpha_back)²', () => {
@@ -244,5 +246,20 @@ describe('blendDimBuffer', () => {
     // Nothing targeted, nothing active → no write.
     expect(blendDimBuffer(buf, new Map(), active, 1)).toBe(false);
     expect(buf[0]).toBe(1);
+  });
+
+  it('a totality target (0) snaps to exactly 0 below the partial floor', () => {
+    const buf = new Float32Array([0.0015]);
+    const active = new Set<number>([0]);
+    // Blend leaves the value above the floor → no snap yet.
+    blendDimBuffer(buf, new Map([[0, 0]]), active, 0.25);
+    expect(buf[0]).toBeGreaterThan(DIM_FLOOR);
+    // Next step crosses the floor → exact 0 (the shader's collapse gate;
+    // an exponential decay would never reach it on its own).
+    blendDimBuffer(buf, new Map([[0, 0]]), active, 0.5);
+    expect(buf[0]).toBe(0);
+    // A PARTIAL target near the floor must NOT snap — only totality does.
+    blendDimBuffer(buf, new Map([[0, DIM_FLOOR]]), active, 1);
+    expect(buf[0]).toBe(Math.fround(DIM_FLOOR));
   });
 });

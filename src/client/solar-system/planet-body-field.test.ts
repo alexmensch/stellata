@@ -1227,7 +1227,7 @@ describe('PlanetBodyField true-eclipse dim', () => {
     return { f, planetDir: p.normalize(), planetDist };
   }
 
-  it('superior conjunction inside the host disc dims to DIM_FLOOR', () => {
+  it('superior conjunction inside the host disc dims to exactly 0', () => {
     const { f, planetDir } = makeEclipseField();
     const camera = new THREE.PerspectiveCamera();
     // Camera on the far side of the host from the planet, dead on the
@@ -1236,7 +1236,7 @@ describe('PlanetBodyField true-eclipse dim', () => {
     // dim snaps straight to the geometric target.
     camera.position.copy(planetDir).multiplyScalar(-5 * AU_PC);
     f.update(camera, 0, 0);
-    expect(f.eclipseDimForInstance(0)).toBe(Math.fround(DIM_FLOOR));
+    expect(f.eclipseDimForInstance(0)).toBe(0);
     f.dispose();
   });
 
@@ -1271,7 +1271,7 @@ describe('PlanetBodyField true-eclipse dim', () => {
     const camera = new THREE.PerspectiveCamera();
     camera.position.copy(planetDir).multiplyScalar(-5 * AU_PC);
     f.update(camera, 0, 0);
-    expect(f.eclipseDimForInstance(0)).toBe(Math.fround(DIM_FLOOR));
+    expect(f.eclipseDimForInstance(0)).toBe(0);
     // Move off-axis: no occlusion. The dim decays through the
     // anti-strobe filter (dt clamps at 0.25 s per frame) and snaps to
     // exactly 1 at the settle threshold.

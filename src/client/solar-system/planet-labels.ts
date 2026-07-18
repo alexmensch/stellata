@@ -114,6 +114,13 @@ export function createPlanetLabels(stellata: Stellata): void {
         e.el.style.display = 'none';
         continue;
       }
+      // A fully eclipsed body (behind the host's physical disc) renders
+      // nothing — its label must not float alone on the host's disc.
+      const flat = ps ? stellata.planetField.instanceIndexOf(ps.hostStarIdx, i) : null;
+      if (flat !== null && stellata.planetField.eclipseDimForInstance(flat) <= 0) {
+        e.el.style.display = 'none';
+        continue;
+      }
       tmp.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
       tmp.applyMatrix4(camera.matrixWorldInverse);
       // Behind-or-at-near-plane points have no meaningful screen

@@ -298,7 +298,11 @@ evaluates each in-range host's planets per frame (the pair-relative
 offset is `iLocalRel` itself — small values, no large-position
 differencing) and writes the per-instance `iEclipseDim` attribute;
 the vertex shader folds it into appMag in the **glow pass only**,
-mirroring the star pipeline's fold. Glow through the host's
+mirroring the star pipeline's fold. A FULL eclipse writes exactly 0
+and the shader collapses the quad — a floored +7.5 mag residual is
+still visible on a mag −1 Mercury, and the planet-scale depth buffer
+can't hide it — and the planet's label hides with it (the fully
+eclipsed body renders nothing). Glow through the host's
 perceptual *halo* stays undimmed — the halo is a perceptual
 artefact, not a surface, so a body behind it correctly shines
 through. The disc pass needs no dim or depth bias: its
