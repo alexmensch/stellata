@@ -1,6 +1,7 @@
 import type { Stellata } from '../stellata';
 import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
+import { DETAIL_LEVELS } from '../scene/scene-elements';
 import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import {
@@ -221,6 +222,12 @@ export function bindKeyboardShortcuts(
           e.preventDefault();
         }
         break;
+      case 'v': case 'V':
+        // Declutter cycle: physical → representational → all → physical,
+        // within the current render style. Not mode-gated (unlike M).
+        cycleDetailLevel(stellata);
+        e.preventDefault();
+        break;
       case '?':
         help.open();
         e.preventDefault();
@@ -239,6 +246,12 @@ export function bindKeyboardShortcuts(
         break;
     }
   }, { capture: true });
+}
+
+function cycleDetailLevel(stellata: Stellata) {
+  const cur = stellata.getDetailLevel();
+  const next = DETAIL_LEVELS[(DETAIL_LEVELS.indexOf(cur) + 1) % DETAIL_LEVELS.length];
+  stellata.applyDetailPreset(next);
 }
 
 function adjustMag(stellata: Stellata, delta: number) {
