@@ -19,7 +19,7 @@ import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
 import { PlanetBodyField } from '../../solar-system/planet-body-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
-import { AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import {
   fovMinorRad,
   minOrbitDistForPlanet,
@@ -886,11 +886,11 @@ function attachTestPlanet(h: Harness, hostIdx = 0, radiusKm = 6000): number {
     h.catalog.positions[hostIdx * 3 + 1],
     h.catalog.positions[hostIdx * 3 + 2],
   );
-  h.planetField.attachHost(hostIdx, ps, 4.83, hostAbs, h.catalog.solIndex, 0);
+  h.planetField.attachHost(hostIdx, ps, 4.83, R_SUN_PC, hostAbs, h.catalog.solIndex, 0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hosts = (h.planetField as any).hosts as Map<number, { orientation: THREE.Quaternion }>;
   hosts.get(hostIdx)!.orientation.identity();
-  h.planetField.update(new THREE.PerspectiveCamera(), 0);
+  h.planetField.update(new THREE.PerspectiveCamera(), 0, 0);
   return h.planetField.instanceIndexOf(hostIdx, 0)!;
 }
 

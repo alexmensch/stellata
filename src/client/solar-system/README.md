@@ -288,6 +288,25 @@ Planet rendering splits across two layers (stellata-3re.15):
   floating origin sits on the planet, so the host is NOT at the local
   origin.
 
+**True-eclipse dim (stellata-2f6.4).** A planet crossing behind its
+host's *physical disc* (superior conjunction inside the host's
+angular radius) dims by the occluded area fraction — the same
+camera-anywhere geometry the binaries eclipse photometry runs
+(`binaries/eclipse-photometry-pure.ts`: `eclipseDimFromOffsets` +
+the shared anti-strobe blend helpers). `PlanetBodyField.update`
+evaluates each in-range host's planets per frame (the pair-relative
+offset is `iLocalRel` itself — small values, no large-position
+differencing) and writes the per-instance `iEclipseDim` attribute;
+the vertex shader folds it into appMag in the **glow pass only**,
+mirroring the star pipeline's fold. Glow through the host's
+perceptual *halo* stays undimmed — the halo is a perceptual
+artefact, not a surface, so a body behind it correctly shines
+through. The disc pass needs no dim or depth bias: its
+per-channel-max blend keeps the darker back disc from painting over
+the host's saturated disc. A planet in *front* (transit) dims the
+host by (R_p/R_host)² — negligible and owned by the star pipeline,
+so it is deliberately not modelled.
+
 Bodies render as billboarded discs through the same perceptual-disc
 abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
 Apparent magnitude is computed in the vertex shader from reflected

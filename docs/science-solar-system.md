@@ -100,6 +100,14 @@ reflected day texture — ramping in across a narrow band past the
 geometric terminator. With rotation on the model clock, the hemisphere
 showing its lights is the one actually dark at `t`.
 
+**True-eclipse dimming.** A planet geometrically behind its host's
+physical disc dims by the occluded area fraction (closed-form
+circle-circle lens, the binaries eclipse-photometry math), floored at
+7.5 mag for a full eclipse. Glow through the host's perceptual halo
+stays undimmed — the halo is a rendering artefact, not a surface. The
+reverse transit (planet in front) would dim the host by (R_p/R_host)²
+≲ 10⁻² mag and is deliberately not modelled.
+
 **Planet geometric albedos** (V-band) from Mallama et al. 2018
 (https://doi.org/10.1016/j.icarus.2017.05.018) and the NASA fact
 sheets above: Mercury 0.142, Venus 0.689, Earth 0.434, Mars 0.170,
