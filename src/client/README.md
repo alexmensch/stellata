@@ -19,8 +19,11 @@ themselves.
 - `camera/` — camera controllers split across `controls/`, `focus/`,
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
-  `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/` — render
-  layers.
+  `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/`,
+  `local-bubble/` — render layers.
+- `fresnel-shell/` — shared translucent-boundary-shell primitive
+  (material + shader pair + gating base) used by the heliopause and the
+  Local Bubble.
 - `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
   cross-cutting UI.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.

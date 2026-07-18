@@ -11,11 +11,14 @@ sits *inside* a bubble. A `representational`-tier declutter element
   for `public/local-bubble.bin` (magic `LBUB`; format in
   `scripts/local-bubble/README.md`). `load*` resolves null when the asset
   is absent — the layer is optional.
-- `local-bubble.ts` — `LocalBubbleShell` (builds a `BufferGeometry` from
-  the parsed mesh, `computeVertexNormals` at runtime, folds the
-  detail-cycle + chart gates into `group.visible`) plus
-  `createLocalBubbleLabel` (the centroid SVG label).
-- `local-bubble.{vert,frag}.glsl` — the Fresnel shell shader.
+- `local-bubble.ts` — `LocalBubbleShell` (extends the shared
+  `fresnel-shell/` base: builds a `BufferGeometry` from the parsed mesh,
+  `computeVertexNormals` at runtime, folds the detail-cycle + chart gates
+  into `group.visible`) plus `createLocalBubbleLabel` (the
+  silhouette-hugging SVG label).
+
+The Fresnel shell material + shader pair + gating base live in
+`src/client/fresnel-shell/` (shared with the heliopause).
 
 ## Invariants
 
