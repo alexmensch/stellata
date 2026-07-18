@@ -51,6 +51,48 @@ import planetFrag from './planet.frag.glsl?raw';
 // instanced attribute buffers — relatively cheap compared to a frame.
 const INITIAL_CAPACITY = 16;
 
+interface InstanceAttrSpec {
+  /** GLSL attribute name. */
+  attr: string;
+  /** Floats per instance. */
+  dims: number;
+  /** THREE.DynamicDrawUsage hint for per-frame-rewritten buffers. */
+  dynamicUsage?: boolean;
+  /** Initial fill value (buffers default to 0). */
+  fill?: number;
+}
+
+// Identity helper: preserves the literal key union (so `bufs` access
+// is typo-checked) while widening values to InstanceAttrSpec (so the
+// optional fields are readable on every row).
+const attrSpecs = <K extends string>(s: Record<K, InstanceAttrSpec>) => s;
+
+/** One row per per-instance GPU attribute: `key` names the CPU-side
+ *  Float32Array in `bufs`, `attr` the shader attribute. Allocation,
+ *  grow-copy, geometry binding, full flush, and detach compaction all
+ *  iterate this table — a new attribute is one row here plus its
+ *  write site. */
+const INSTANCE_ATTR_SPECS = attrSpecs({
+  localRel: { attr: 'iLocalRel', dims: 3 },
+  hostLocalPos: { attr: 'iHostLocalPos', dims: 3 },
+  radius: { attr: 'iRadiusPc', dims: 1 },
+  colour: { attr: 'iColour', dims: 3 },
+  solidity: { attr: 'iSolidity', dims: 1 },
+  albedo: { attr: 'iAlbedoP', dims: 1 },
+  hostAbsmag: { attr: 'iHostAbsmag', dims: 1 },
+  phaseA: { attr: 'iPhaseCoefsA', dims: 4 },
+  phaseB: { attr: 'iPhaseCoefsB', dims: 4 },
+  phaseC: { attr: 'iPhaseCoefsC', dims: 4 },
+  eclipseDim: { attr: 'iEclipseDim', dims: 1, dynamicUsage: true, fill: 1 },
+});
+
+type InstanceBufKey = keyof typeof INSTANCE_ATTR_SPECS;
+
+const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
+  InstanceBufKey,
+  InstanceAttrSpec,
+][];
+
 /**
  * Maximum d_v_p at which any planet of an attached host could plausibly
  * cross the magnitude cutoff. Closed-form solution of the apparent-mag
@@ -138,28 +180,9 @@ export class PlanetBodyField {
   // current values directly so it stays in lockstep with the shaders
   // and any debug-panel writes to the same `{ value }` slots.
   private magShared: PerceptualDiscUniforms & ChartDiscUniforms;
-  // Per-instance attribute buffers. Re-allocated on capacity grow.
-  private bufLocalRel!: Float32Array;
-  private bufHostLocalPos!: Float32Array;
-  private bufRadius!: Float32Array;
-  private bufColour!: Float32Array;
-  private bufSolidity!: Float32Array;
-  private bufAlbedo!: Float32Array;
-  private bufHostAbsmag!: Float32Array;
-  // Phase-curve coefficients packed as three vec4 attributes:
-  //   bufPhaseA: (c0, c1, c2, c3)
-  //   bufPhaseB: (c4, c5, c6, alphaMaxDeg)
-  //   bufPhaseC: (c7, _, _, _) — three slots reserved
-  // alphaMaxDeg = 0 is the "no Mallama fit, use Lambertian" sentinel
-  // — the same default Pluto and every exoplanet hit. See
-  // `phase-function.ts` for the polynomial form.
-  private bufPhaseA!: Float32Array;
-  private bufPhaseB!: Float32Array;
-  private bufPhaseC!: Float32Array;
-  // True-eclipse dim on a planet behind its host's physical disc —
-  // the planet sibling of the star pipeline's iEclipseDim (glow pass
-  // only, anti-strobe smoothed). 1.0 = no dim.
-  private bufEclipseDim!: Float32Array;
+  // Per-instance attribute buffers keyed per INSTANCE_ATTR_SPECS.
+  // Re-allocated on capacity grow.
+  private bufs!: Record<InstanceBufKey, Float32Array>;
   private dimTargets = new Map<number, number>();
   private dimActive = new Set<number>();
   private lastDimNowMs: number | null = null;
@@ -304,7 +327,7 @@ export class PlanetBodyField {
    *  (correct within one anti-strobe time constant, and attach/detach
    *  is a rare lifecycle event, not a per-frame path). */
   private resetEclipseDims(): void {
-    this.bufEclipseDim.fill(1);
+    this.bufs.eclipseDim.fill(1);
     this.dimActive.clear();
     this.dimTargets.clear();
   }
@@ -373,7 +396,7 @@ export class PlanetBodyField {
 
     const blend = dimBlendFactor(nowMs, this.lastDimNowMs, ECLIPSE_DIM_TAU_S);
     this.lastDimNowMs = nowMs;
-    if (blendDimBuffer(this.bufEclipseDim, this.dimTargets, this.dimActive, blend)) {
+    if (blendDimBuffer(this.bufs.eclipseDim, this.dimTargets, this.dimActive, blend)) {
       (this.geometry.attributes.iEclipseDim as THREE.InstancedBufferAttribute)
         .needsUpdate = true;
     }
@@ -401,11 +424,11 @@ export class PlanetBodyField {
       const base = idx * 3;
       const result = eclipseDimFromOffsets(
         losX, losY, losZ,
-        this.bufLocalRel[base + 0],
-        this.bufLocalRel[base + 1],
-        this.bufLocalRel[base + 2],
+        this.bufs.localRel[base + 0],
+        this.bufs.localRel[base + 1],
+        this.bufs.localRel[base + 2],
         host.hostRadiusPc,
-        this.bufRadius[idx],
+        this.bufs.radius[idx],
       );
       if (result.front === 'primary' && result.dim < 1) {
         this.dimTargets.set(idx, result.dim);
@@ -416,7 +439,7 @@ export class PlanetBodyField {
   /** Current eclipse-dim slot for a flat instance (1 = undimmed). */
   eclipseDimForInstance(instanceIdx: number): number {
     return instanceIdx >= 0 && instanceIdx < this.liveCount
-      ? this.bufEclipseDim[instanceIdx]
+      ? this.bufs.eclipseDim[instanceIdx]
       : 1;
   }
 
@@ -442,7 +465,7 @@ export class PlanetBodyField {
   getHostLocalPositions(hostStarIdx: number): Float32Array | null {
     const host = this.hosts.get(hostStarIdx);
     if (!host) return null;
-    return this.bufLocalRel.slice(
+    return this.bufs.localRel.slice(
       host.startInstance * 3,
       (host.startInstance + host.count) * 3,
     );
@@ -505,9 +528,9 @@ export class PlanetBodyField {
   ): { appMag: number; planetX: number; planetY: number; planetZ: number; dVp: number } {
     const planet = host.ps.planets[planetIdx];
     const base = (host.startInstance + planetIdx) * 3;
-    const planetX = host.hostLocalPos.x + this.bufLocalRel[base + 0];
-    const planetY = host.hostLocalPos.y + this.bufLocalRel[base + 1];
-    const planetZ = host.hostLocalPos.z + this.bufLocalRel[base + 2];
+    const planetX = host.hostLocalPos.x + this.bufs.localRel[base + 0];
+    const planetY = host.hostLocalPos.y + this.bufs.localRel[base + 1];
+    const planetZ = host.hostLocalPos.z + this.bufs.localRel[base + 2];
     const dvx = planetX - cameraPosLocal.x;
     const dvy = planetY - cameraPosLocal.y;
     const dvz = planetZ - cameraPosLocal.z;
@@ -517,9 +540,9 @@ export class PlanetBodyField {
     const dhz = host.hostLocalPos.z - cameraPosLocal.z;
     // Planet→host distance is just the iLocalRel magnitude.
     const dHp = Math.sqrt(
-      this.bufLocalRel[base + 0] ** 2 +
-        this.bufLocalRel[base + 1] ** 2 +
-        this.bufLocalRel[base + 2] ** 2,
+      this.bufs.localRel[base + 0] ** 2 +
+        this.bufs.localRel[base + 1] ** 2 +
+        this.bufs.localRel[base + 2] ** 2,
     );
     const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, planet.phaseCoefficients);
     const radiusPc = planet.radiusKm * KM_PC;
@@ -596,9 +619,9 @@ export class PlanetBodyField {
     if (!host) return false;
     const base = instanceIdx * 3;
     out.set(
-      host.hostLocalPos.x + this.bufLocalRel[base + 0],
-      host.hostLocalPos.y + this.bufLocalRel[base + 1],
-      host.hostLocalPos.z + this.bufLocalRel[base + 2],
+      host.hostLocalPos.x + this.bufs.localRel[base + 0],
+      host.hostLocalPos.y + this.bufs.localRel[base + 1],
+      host.hostLocalPos.z + this.bufs.localRel[base + 2],
     );
     return true;
   }
@@ -610,9 +633,9 @@ export class PlanetBodyField {
     if (!host) return false;
     const base = instanceIdx * 3;
     out.set(
-      host.hostAbsPos.x + this.bufLocalRel[base + 0],
-      host.hostAbsPos.y + this.bufLocalRel[base + 1],
-      host.hostAbsPos.z + this.bufLocalRel[base + 2],
+      host.hostAbsPos.x + this.bufs.localRel[base + 0],
+      host.hostAbsPos.y + this.bufs.localRel[base + 1],
+      host.hostAbsPos.z + this.bufs.localRel[base + 2],
     );
     return true;
   }
@@ -866,57 +889,33 @@ export class PlanetBodyField {
   // ── private ─────────────────────────────────────────────────────────
 
   private allocateBuffers(capacity: number): void {
-    this.bufLocalRel = new Float32Array(capacity * 3);
-    this.bufHostLocalPos = new Float32Array(capacity * 3);
-    this.bufRadius = new Float32Array(capacity);
-    this.bufColour = new Float32Array(capacity * 3);
-    this.bufSolidity = new Float32Array(capacity);
-    this.bufAlbedo = new Float32Array(capacity);
-    this.bufHostAbsmag = new Float32Array(capacity);
-    this.bufPhaseA = new Float32Array(capacity * 4);
-    this.bufPhaseB = new Float32Array(capacity * 4);
-    this.bufPhaseC = new Float32Array(capacity * 4);
-    this.bufEclipseDim = new Float32Array(capacity).fill(1);
+    const bufs = {} as Record<InstanceBufKey, Float32Array>;
+    for (const [key, spec] of SPEC_ENTRIES) {
+      bufs[key] = new Float32Array(capacity * spec.dims);
+      if (spec.fill !== undefined) bufs[key].fill(spec.fill);
+    }
+    this.bufs = bufs;
     this.instanceHost = new Int32Array(capacity).fill(-1);
   }
 
   private growCapacity(): void {
-    const newCap = this.capacity * 2;
-    const oldLocalRel = this.bufLocalRel;
-    const oldHostLocal = this.bufHostLocalPos;
-    const oldRadius = this.bufRadius;
-    const oldColour = this.bufColour;
-    const oldSolidity = this.bufSolidity;
-    const oldAlbedo = this.bufAlbedo;
-    const oldAbsmag = this.bufHostAbsmag;
-    const oldPhaseA = this.bufPhaseA;
-    const oldPhaseB = this.bufPhaseB;
-    const oldPhaseC = this.bufPhaseC;
-    const oldEclipseDim = this.bufEclipseDim;
-    this.allocateBuffers(newCap);
-    this.bufLocalRel.set(oldLocalRel);
-    this.bufHostLocalPos.set(oldHostLocal);
-    this.bufRadius.set(oldRadius);
-    this.bufColour.set(oldColour);
-    this.bufSolidity.set(oldSolidity);
-    this.bufAlbedo.set(oldAlbedo);
-    this.bufHostAbsmag.set(oldAbsmag);
-    this.bufPhaseA.set(oldPhaseA);
-    this.bufPhaseB.set(oldPhaseB);
-    this.bufPhaseC.set(oldPhaseC);
-    this.bufEclipseDim.set(oldEclipseDim);
-    this.capacity = newCap;
+    const oldBufs = this.bufs;
+    this.allocateBuffers(this.capacity * 2);
+    for (const [key] of SPEC_ENTRIES) {
+      this.bufs[key].set(oldBufs[key]);
+    }
+    this.capacity *= 2;
     // Replace the geometry with a fresh one over the new buffers.
     // Materials and meshes are re-bound via three.js's normal
     // geometry-swap path.
-    const old = this.geometry;
+    const oldGeom = this.geometry;
     this.buildGeometry();
     this.meshDisc.geometry = this.geometry;
     this.meshGlow.geometry = this.geometry;
     this.meshCore.geometry = this.geometry;
     this.meshCorrupt.geometry = this.geometry;
     this.meshRestore.geometry = this.geometry;
-    old.dispose();
+    oldGeom.dispose();
   }
 
   private buildGeometry(): void {
@@ -929,19 +928,11 @@ export class PlanetBodyField {
       ),
     );
     geom.setIndex([0, 1, 2, 1, 3, 2]);
-    geom.setAttribute('iLocalRel', new THREE.InstancedBufferAttribute(this.bufLocalRel, 3));
-    geom.setAttribute('iHostLocalPos', new THREE.InstancedBufferAttribute(this.bufHostLocalPos, 3));
-    geom.setAttribute('iRadiusPc', new THREE.InstancedBufferAttribute(this.bufRadius, 1));
-    geom.setAttribute('iColour', new THREE.InstancedBufferAttribute(this.bufColour, 3));
-    geom.setAttribute('iSolidity', new THREE.InstancedBufferAttribute(this.bufSolidity, 1));
-    geom.setAttribute('iAlbedoP', new THREE.InstancedBufferAttribute(this.bufAlbedo, 1));
-    geom.setAttribute('iHostAbsmag', new THREE.InstancedBufferAttribute(this.bufHostAbsmag, 1));
-    geom.setAttribute('iPhaseCoefsA', new THREE.InstancedBufferAttribute(this.bufPhaseA, 4));
-    geom.setAttribute('iPhaseCoefsB', new THREE.InstancedBufferAttribute(this.bufPhaseB, 4));
-    geom.setAttribute('iPhaseCoefsC', new THREE.InstancedBufferAttribute(this.bufPhaseC, 4));
-    const dimAttr = new THREE.InstancedBufferAttribute(this.bufEclipseDim, 1);
-    dimAttr.setUsage(THREE.DynamicDrawUsage);
-    geom.setAttribute('iEclipseDim', dimAttr);
+    for (const [key, spec] of SPEC_ENTRIES) {
+      const attr = new THREE.InstancedBufferAttribute(this.bufs[key], spec.dims);
+      if (spec.dynamicUsage) attr.setUsage(THREE.DynamicDrawUsage);
+      geom.setAttribute(spec.attr, attr);
+    }
     geom.instanceCount = this.liveCount;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = geom;
@@ -1036,32 +1027,30 @@ export class PlanetBodyField {
     const baseVec4 = host.startInstance * 4;
     for (let i = 0; i < host.count; i++) {
       const planet = host.ps.planets[i];
-      this.bufRadius[baseScalar + i] = planet.radiusKm * KM_PC;
-      this.bufColour[baseVec3 + i * 3 + 0] = planet.colour[0];
-      this.bufColour[baseVec3 + i * 3 + 1] = planet.colour[1];
-      this.bufColour[baseVec3 + i * 3 + 2] = planet.colour[2];
-      this.bufSolidity[baseScalar + i] = solidityForType(planet.type);
-      this.bufAlbedo[baseScalar + i] = planet.albedo;
-      this.bufHostAbsmag[baseScalar + i] = host.hostAbsmag;
+      this.bufs.radius[baseScalar + i] = planet.radiusKm * KM_PC;
+      this.bufs.colour[baseVec3 + i * 3 + 0] = planet.colour[0];
+      this.bufs.colour[baseVec3 + i * 3 + 1] = planet.colour[1];
+      this.bufs.colour[baseVec3 + i * 3 + 2] = planet.colour[2];
+      this.bufs.solidity[baseScalar + i] = solidityForType(planet.type);
+      this.bufs.albedo[baseScalar + i] = planet.albedo;
+      this.bufs.hostAbsmag[baseScalar + i] = host.hostAbsmag;
       // Phase coefficients packed (c0,c1,c2,c3) | (c4,c5,c6,alphaMaxDeg)
       // | (c7,_,_,_). Bodies without published curves write all zeros —
       // alphaMaxDeg=0 is the shader's "use Lambertian" sentinel.
-      // The three bufPhase* arrays share the vec4-shaped layout, so a
-      // single per-slot offset feeds them all.
       const pc = planet.phaseCoefficients;
       const phaseOff = baseVec4 + i * 4;
-      this.bufPhaseA[phaseOff + 0] = pc ? pc.c0 : 0;
-      this.bufPhaseA[phaseOff + 1] = pc ? pc.c1 : 0;
-      this.bufPhaseA[phaseOff + 2] = pc ? pc.c2 : 0;
-      this.bufPhaseA[phaseOff + 3] = pc ? pc.c3 : 0;
-      this.bufPhaseB[phaseOff + 0] = pc ? pc.c4 : 0;
-      this.bufPhaseB[phaseOff + 1] = pc ? pc.c5 : 0;
-      this.bufPhaseB[phaseOff + 2] = pc ? pc.c6 : 0;
-      this.bufPhaseB[phaseOff + 3] = pc ? pc.alphaMaxDeg : 0;
-      this.bufPhaseC[phaseOff + 0] = pc ? pc.c7 : 0;
-      this.bufPhaseC[phaseOff + 1] = 0;
-      this.bufPhaseC[phaseOff + 2] = 0;
-      this.bufPhaseC[phaseOff + 3] = 0;
+      this.bufs.phaseA[phaseOff + 0] = pc ? pc.c0 : 0;
+      this.bufs.phaseA[phaseOff + 1] = pc ? pc.c1 : 0;
+      this.bufs.phaseA[phaseOff + 2] = pc ? pc.c2 : 0;
+      this.bufs.phaseA[phaseOff + 3] = pc ? pc.c3 : 0;
+      this.bufs.phaseB[phaseOff + 0] = pc ? pc.c4 : 0;
+      this.bufs.phaseB[phaseOff + 1] = pc ? pc.c5 : 0;
+      this.bufs.phaseB[phaseOff + 2] = pc ? pc.c6 : 0;
+      this.bufs.phaseB[phaseOff + 3] = pc ? pc.alphaMaxDeg : 0;
+      this.bufs.phaseC[phaseOff + 0] = pc ? pc.c7 : 0;
+      this.bufs.phaseC[phaseOff + 1] = 0;
+      this.bufs.phaseC[phaseOff + 2] = 0;
+      this.bufs.phaseC[phaseOff + 3] = 0;
     }
     this.writeHostLocalPos(host);
   }
@@ -1074,9 +1063,9 @@ export class PlanetBodyField {
     const y = host.hostLocalPos.y;
     const z = host.hostLocalPos.z;
     for (let i = 0; i < host.count; i++) {
-      this.bufHostLocalPos[base + i * 3 + 0] = x;
-      this.bufHostLocalPos[base + i * 3 + 1] = y;
-      this.bufHostLocalPos[base + i * 3 + 2] = z;
+      this.bufs.hostLocalPos[base + i * 3 + 0] = x;
+      this.bufs.hostLocalPos[base + i * 3 + 1] = y;
+      this.bufs.hostLocalPos[base + i * 3 + 2] = z;
     }
   }
 
@@ -1090,7 +1079,7 @@ export class PlanetBodyField {
       host.positionsAt(t, host.positionsScratch);
       this.rotateInto(
         host.positionsScratch,
-        this.bufLocalRel,
+        this.bufs.localRel,
         base,
         host.orientation,
       );
@@ -1100,9 +1089,9 @@ export class PlanetBodyField {
         const p = host.ps.planets[i];
         const ea = placeholderEccentricAnomaly(i, host.count);
         planetLocalPosition(p.semiMajorAxisAu, p.eccentricity, ea, host.orientation, tmp);
-        this.bufLocalRel[base + i * 3 + 0] = tmp.x;
-        this.bufLocalRel[base + i * 3 + 1] = tmp.y;
-        this.bufLocalRel[base + i * 3 + 2] = tmp.z;
+        this.bufs.localRel[base + i * 3 + 0] = tmp.x;
+        this.bufs.localRel[base + i * 3 + 1] = tmp.y;
+        this.bufs.localRel[base + i * 3 + 2] = tmp.z;
       }
     }
   }
@@ -1151,37 +1140,19 @@ export class PlanetBodyField {
    *  every other host's data). */
   private flushAllAttributes(): void {
     if (!this.geometry) return;
-    const attrs = this.geometry.attributes;
-    (attrs.iLocalRel as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iHostLocalPos as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iRadiusPc as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iColour as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iSolidity as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iAlbedoP as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iHostAbsmag as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iPhaseCoefsA as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iPhaseCoefsB as THREE.InstancedBufferAttribute).needsUpdate = true;
-    (attrs.iPhaseCoefsC as THREE.InstancedBufferAttribute).needsUpdate = true;
+    for (const [, spec] of SPEC_ENTRIES) {
+      (this.geometry.attributes[spec.attr] as THREE.InstancedBufferAttribute)
+        .needsUpdate = true;
+    }
   }
 
   /** Compact-down step used by detachHost(). Shifts a contiguous tail
    *  range backwards by `gap` slots in every per-instance buffer. */
   private shiftInstancesDown(tailStart: number, tailCount: number, gap: number): void {
-    const shiftScalar = (buf: Float32Array, dim: number) => {
-      const tailBase = tailStart * dim;
-      const tailEnd = tailBase + tailCount * dim;
-      buf.copyWithin(tailBase - gap * dim, tailBase, tailEnd);
-    };
-    shiftScalar(this.bufLocalRel, 3);
-    shiftScalar(this.bufHostLocalPos, 3);
-    shiftScalar(this.bufRadius, 1);
-    shiftScalar(this.bufColour, 3);
-    shiftScalar(this.bufSolidity, 1);
-    shiftScalar(this.bufAlbedo, 1);
-    shiftScalar(this.bufHostAbsmag, 1);
-    shiftScalar(this.bufPhaseA, 4);
-    shiftScalar(this.bufPhaseB, 4);
-    shiftScalar(this.bufPhaseC, 4);
-    shiftScalar(this.bufEclipseDim, 1);
+    for (const [key, spec] of SPEC_ENTRIES) {
+      const tailBase = tailStart * spec.dims;
+      const tailEnd = tailBase + tailCount * spec.dims;
+      this.bufs[key].copyWithin(tailBase - gap * spec.dims, tailBase, tailEnd);
+    }
   }
 }

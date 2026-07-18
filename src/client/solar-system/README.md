@@ -273,7 +273,7 @@ Planet rendering splits across two layers (stellata-3re.15):
   render visibility** — chart-mono and `setHidden` gate only the draw
   and the GPU upload, never the position update. Chart mode is
   observe-only and can observe from a planet, so the observe anchor and
-  the focal-frame ride read the live `bufLocalRel` positions off this
+  the focal-frame ride read the live `iLocalRel` positions off this
   walk even while the bodies aren't drawn; freezing the walk there
   strands the observer's orbital motion (Sol + planets appear static
   while catalog stars still advance).

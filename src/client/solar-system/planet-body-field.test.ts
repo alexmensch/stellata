@@ -582,7 +582,7 @@ describe('PlanetBodyField lifecycle', () => {
     const hostAbs = new THREE.Vector3(1.5, 0, 2.0);
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, hostAbs, 0, 0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buf = (f as any).bufHostLocalPos as Float32Array;
+    const buf = (f as any).bufs.hostLocalPos as Float32Array;
     expect(buf[0]).toBeCloseTo(1.5, 6);
     expect(buf[1]).toBeCloseTo(0,   6);
     expect(buf[2]).toBeCloseTo(2.0, 6);
