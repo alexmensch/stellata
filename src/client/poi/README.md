@@ -48,7 +48,10 @@ apart.
   Sol coexists with the HUD arrow. Stars without a SID are not
   pinnable (never occurs on a shipped catalog; the guard protects URL
   round-trip). Planets are pinnable while their host is attached to
-  the body field (which is also what makes their SID resolvable).
+  the body field; URL round-trip additionally needs the planet SID to
+  resolve, wired for Sol's domain only today (`main.ts`
+  `planetDomainIndexOf`) — a future non-Sol host's pin would work
+  in-session but silently drop from a shared `?v=`.
   Clouds and LG objects have no pin affordance today — `pinnable`
   returns false and the ladder steps only its vector rungs for them.
 - Hard cap `POI_MAX_COUNT = 16`; adding past it is a no-op. The same

@@ -877,6 +877,10 @@ export class Stellata implements FrameAnchor {
     this.poiStore = new PoiStore({
       count: catalog.count,
       sid: catalog.sid,
+      // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
+      // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
+      // so a future non-Sol host's pin works live yet won't round-trip
+      // through ?v=.
       planetPinnable: (idx) => this.planetBodyField.planetAt(idx) !== null,
       onChange: (pois) => {
         this.bus.emit('pois', pois);
@@ -1512,14 +1516,14 @@ export class Stellata implements FrameAnchor {
     this.observe.translateFocusFrame(this._rideDelta);
   }
 
-  // Planet sibling of applyFocalFrameRide. Translate camera, orbit
-  // target, and in-flight transition pose caches by the focused
-  // planet's per-frame local-position delta (read from the same field
-  // buffers the shader renders, so target stays glued to the rendered
-  // body). Seed frames — focus change, warp, first frame after a
-  // 'focus'-event reseed — resync the baseline and re-snap target onto
-  // the live position instead of translating, exactly the
-  // focalRideStep contract applied to a planet.
+  // Planet sibling of applyFocalFrameRide, over the shared focalRideStep.
+  // The planet's full live local position plays the role the star ride's
+  // perturbation does — its frame-to-frame delta is what the camera /
+  // target / transition caches translate by, so the body stays glued to
+  // controls.target and pan offsets survive. Seed frames (focus change,
+  // warp) resync the baseline; the observe-mode guard in focalRideStep
+  // suppresses the seed target re-snap, where target is the parsec-ahead
+  // look pin rather than on the body.
   private applyPlanetFocalRide(): void {
     const focused = this.focus.getFocusedTarget();
     const idx = focused?.kind === 'planet' ? focused.idx : null;
@@ -1532,31 +1536,24 @@ export class Stellata implements FrameAnchor {
       this._planetRideIdx = null;
       return;
     }
-    const d = this._planetRideDelta;
-    if (this.warp.isActive() || this._planetRideIdx !== idx) {
-      if (!this.warp.isActive()) {
-        // Seed: re-snap target onto the live position — sim time may
-        // have advanced between the focus event and this frame (fast
-        // scrub), staleing the focus-entry snap.
-        d.subVectors(live, this.controls.target);
-        if (d.lengthSq() > 0) {
-          this.camera.position.add(d);
-          this.controls.target.add(d);
-          this.focus.translateFocusFrame(d);
-          this.observe.translateFocusFrame(d);
-        }
-      }
-      this._planetRideIdx = idx;
-      this._planetRideLast.copy(live);
-      return;
-    }
-    d.subVectors(live, this._planetRideLast);
-    this._planetRideLast.copy(live);
-    if (d.lengthSq() === 0) return;
-    this.camera.position.add(d);
-    this.controls.target.add(d);
-    this.focus.translateFocusFrame(d);
-    this.observe.translateFocusFrame(d);
+    const step = focalRideStep({
+      focal: idx,
+      rideFocalIdx: this._planetRideIdx,
+      warpActive: this.warp.isActive(),
+      focalPert: live,
+      lastAppliedPert: this._planetRideLast,
+      liveLocal: live,
+      target: this.controls.target,
+      observeMode: this.focus.getCameraMode() === 'observe',
+    });
+    this._planetRideIdx = step.rideFocalIdx;
+    this._planetRideLast.set(step.px, step.py, step.pz);
+    this._planetRideDelta.set(step.dx, step.dy, step.dz);
+    if (this._planetRideDelta.lengthSq() === 0) return;
+    this.camera.position.add(this._planetRideDelta);
+    this.controls.target.add(this._planetRideDelta);
+    this.focus.translateFocusFrame(this._planetRideDelta);
+    this.observe.translateFocusFrame(this._planetRideDelta);
   }
 
   /** Debug-HUD view into the eclipse field's per-relation walk for the

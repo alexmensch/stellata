@@ -1108,6 +1108,15 @@ function sidRefOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): SidRef 
   return sid === null ? undefined : { kind: 'sid', id: sid };
 }
 
+/** Decode-direction sibling of `sidRefOf`: a resolver domain localIndex →
+ *  Target idx. Planet sids carry a planet-within-host domain index that
+ *  translates to the body-field flat instance index; every other kind's
+ *  domain index IS its Target idx. Null on a planet translation miss
+ *  (host body-field not attached). */
+function targetIdxOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): number | null {
+  return kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
+}
+
 function resolveStarRef(ref: StarRef, idMaps: IdMaps, fallback: number): number {
   if (ref.kind === 'hip') {
     const idx = idMaps.hipToIndex.get(ref.id);
@@ -1200,7 +1209,7 @@ export function applyDecodedView(
       // body-field not attached) drops the focus like an unknown sid.
       const snap = hasCam || hasTgt;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
-        const idx = kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
+        const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
         if (snap) stellata.setOrbitTarget({ kind, idx });
         else stellata.flyTo({ kind, idx }, { animate: false });
@@ -1226,7 +1235,7 @@ export function applyDecodedView(
   if (view.to) {
     if (view.to.kind === 'sid') {
       idMaps.sidResolver.whenResolved(view.to.id, (kind, localIndex) => {
-        const idx = kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
+        const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
         stellata.setVector({ kind, idx });
       });
@@ -1308,9 +1317,7 @@ export function applyDecodedView(
       for (const sid of view.poiSids) {
         const r = idMaps.sidResolver.resolve(sid);
         if (r.status !== 'resolved') continue;
-        const idx = r.kind === 'planet'
-          ? idMaps.planetTargetIndexOf(r.localIndex)
-          : r.localIndex;
+        const idx = targetIdxOf(idMaps, r.kind, r.localIndex);
         if (idx !== null) resolved.push({ kind: r.kind, idx });
       }
     }

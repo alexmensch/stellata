@@ -142,6 +142,11 @@ export class PlanetBodyField {
   private bufPhaseA!: Float32Array;
   private bufPhaseB!: Float32Array;
   private bufPhaseC!: Float32Array;
+  // Reverse index: flat instance → owning hostStarIdx (-1 = unused
+  // slot). Rebuilt on every attach/detach so the flat-index accessors
+  // resolve their host in O(1) instead of an O(hosts) scan — several
+  // run per-frame (focal ride, POI overlay per pin, focus-card rows).
+  private instanceHost!: Int32Array;
   private geometry!: THREE.InstancedBufferGeometry;
   private matDisc!: THREE.ShaderMaterial;
   private matGlow!: THREE.ShaderMaterial;
@@ -232,6 +237,7 @@ export class PlanetBodyField {
     };
     this.hosts.set(hostStarIdx, host);
     this.liveCount += n;
+    this.rebuildInstanceMap();
 
     // Initial fill — bodies, host position, and one immediate
     // ephemeris-or-placeholder pass so the first frame after attach
@@ -264,6 +270,7 @@ export class PlanetBodyField {
     this.geometry.instanceCount = this.liveCount;
     this.flushAllAttributes();
     this.hosts.delete(hostStarIdx);
+    this.rebuildInstanceMap();
     if (this.liveCount === 0) this.group.visible = false;
   }
 
@@ -524,13 +531,20 @@ export class PlanetBodyField {
   }
 
   private hostOfInstance(instanceIdx: number): AttachedHost | null {
+    if (instanceIdx < 0 || instanceIdx >= this.liveCount) return null;
+    const hostStarIdx = this.instanceHost[instanceIdx];
+    return hostStarIdx < 0 ? null : this.hosts.get(hostStarIdx) ?? null;
+  }
+
+  /** Rebuild the flat-instance → hostStarIdx reverse index from the
+   *  attach table. Called after every attach/detach. */
+  private rebuildInstanceMap(): void {
+    this.instanceHost.fill(-1);
     for (const host of this.hosts.values()) {
-      if (
-        instanceIdx >= host.startInstance
-        && instanceIdx < host.startInstance + host.count
-      ) return host;
+      for (let i = 0; i < host.count; i++) {
+        this.instanceHost[host.startInstance + i] = host.hostStarIdx;
+      }
     }
-    return null;
   }
 
   /** Shader-mirroring `max(appSize, physSize)` in CSS px, reading the
@@ -688,6 +702,7 @@ export class PlanetBodyField {
     this.bufPhaseA = new Float32Array(capacity * 4);
     this.bufPhaseB = new Float32Array(capacity * 4);
     this.bufPhaseC = new Float32Array(capacity * 4);
+    this.instanceHost = new Int32Array(capacity).fill(-1);
   }
 
   private growCapacity(): void {
