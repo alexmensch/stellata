@@ -42,8 +42,12 @@ J2000 IAU galactic-pole and galactic-centre angles with explicit
 re-orthogonalisation. The Milky Way volumetric layer reuses these
 constants directly — keep the module minimal and stable.
 
-**Galactic disc outline** (`galactic-disc.ts`) — *always on in dark mode,
-hidden in chart mode*. A 15 kpc midplane ring, two thickness rings at
+**Galactic disc outline** (`galactic-disc.ts`) — *on in dark mode at
+detail level ≥ representational, hidden in chart mode*. The declutter
+cycle gates it as `galacticDiscWireframe` (floor `representational`); the
+per-frame warp/fade update is skipped when the detail cycle doesn't
+permit it (`../scene/README.md` § Detail-level declutter cycle). A 15 kpc
+midplane ring, two thickness rings at
 ±400 pc, and a 3 kpc × 1.5 kpc bulge wireframe (three orthogonal ring
 loops in the galactic frame), all centred on the galactic centre — Sol
 sits ~8 kpc *inside* the disc, not at its middle. Each ring is a basic
@@ -302,8 +306,10 @@ the Sol/GC label affordance (warp stays on the `W` key).
   under **Navigation** ("Head up display (HUD)") since the HUD's role is
   navigational orientation. Future HUD widgets hang off the same flag.
 
-The disc has no toggle by design — it's the orientation primitive the
-catalog itself was missing, and is hidden in chart mode anyway.
+The disc has no *dedicated* checkbox by design — it's the orientation
+primitive the catalog itself was missing, and is hidden in chart mode
+anyway. It is part of the declutter cycle, though: the detail level
+(`V` / the 3-stop control) hides it below `representational`.
 
 **Chart mode**:
 - Disc layer hides entirely (the 15 kpc reference ring reads as

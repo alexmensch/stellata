@@ -23,6 +23,7 @@ registry only describes what to display.
 | `F` | Open the Find picker — point the camera at any object without travelling to it (`aimAt`; observe mode only) |
 | `O` | Switch to observe mode (gated on `getFocusedStar() !== null`) |
 | `M` | Toggle chart mode (gated on `cameraMode === 'observe'`; auto-clears on observe→navigate) |
+| `V` | Cycle detail level: physical → representational → all (declutter cycle; `../scene/README.md`) |
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
 | `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |

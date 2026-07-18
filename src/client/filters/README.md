@@ -16,7 +16,12 @@ star-disc render knobs, and the controller that owns every mutation.
 - `filter-controller.ts` — `FilterController`. Owns the single live
   `FilterState` instance and every mutation path: `setFilter`,
   `applyMagnitudePreset`, `recomputePresetPxSizes`, `setCameraFov`,
-  `setStarExaggerationK`, `setStarRenderParams`, `clearSizeOverrides`.
+  `setStarExaggerationK`, `setStarRenderParams`, `clearSizeOverrides`,
+  and the declutter cycle — `applyDetailPreset` /
+  `setSceneElementVisible` drive the exhaustive scene-element binds
+  (`../scene/README.md` § Detail-level declutter cycle). `FilterState`
+  carries `detailLevel` (default `all`); the effective permitted set is a
+  runtime cache on `Stellata`, not part of `FilterState`.
 - `filter-controller.test.ts` — preset/override/clamp semantics against
   stub uniforms + camera.
 
