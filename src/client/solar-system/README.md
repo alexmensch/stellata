@@ -417,10 +417,17 @@ stellata-2f6.3).
   (analytic ray–ellipsoid test toward the host) drops to a residual
   floor. Rendered only in the mesh-LOD regime: alpha rides the same
   crossfade `uFade`, hidden until the strip texture arrives (no
-  representative-colour fallback), `renderOrder` 2.81 with
-  `depthWrite: false` so the body mesh's depth hides the far-side
-  half. Edge-on the zero-thickness annulus thins to a line, which is
-  the physically honest look.
+  representative-colour fallback), `renderOrder` 2.81 (after the body
+  mesh) with `depthWrite: false`. **Body occlusion is analytic, not
+  depth-tested**: at planet scale the log-depth buffer quantises the
+  whole solar system into one depth step (`log2(1+w)` is linear for
+  w ≪ 1), so the ring fragment shader discards fragments whose
+  camera→fragment segment passes through the body ellipsoid — the
+  same ray–ellipsoid helper as the shadow test, with a camera ray.
+  Any future geometry drawn near a planet body must use the same
+  trick; the depth buffer cannot separate planet-scale distances.
+  Edge-on the zero-thickness annulus thins to a line, which is the
+  physically honest look.
 
 ### Planet rotation (stellata-2f6.13)
 

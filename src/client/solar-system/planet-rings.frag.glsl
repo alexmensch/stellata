@@ -29,23 +29,33 @@ const float TRANSMIT = 0.35;
 // Residual brightness inside the planet's shadow.
 const float SHADOW_FLOOR = 0.05;
 
-// True when the sun ray from ring point `p` (pc, ring-local) hits the
-// body ellipsoid — scale space so the spheroid becomes a unit sphere,
-// then ray–sphere intersect toward the sun.
-bool inPlanetShadow(vec3 p) {
-  vec3 ps = vec3(p.xy / uEqRadiusPc, p.z / uPolarRadiusPc);
-  vec3 ds = vec3(uSunDirLocal.xy / uEqRadiusPc, uSunDirLocal.z / uPolarRadiusPc);
+// Ray–ellipsoid roots for `o + t·d` against the body spheroid: scale
+// space so it becomes a unit sphere, solve the quadratic. Returns
+// (t0, t1) with t0 ≤ t1, or (1e30, 1e30) on a miss.
+vec2 bodyRoots(vec3 o, vec3 d) {
+  vec3 os = vec3(o.xy / uEqRadiusPc, o.z / uPolarRadiusPc);
+  vec3 ds = vec3(d.xy / uEqRadiusPc, d.z / uPolarRadiusPc);
   float a = dot(ds, ds);
-  float b = 2.0 * dot(ps, ds);
-  float c = dot(ps, ps) - 1.0;
+  float b = 2.0 * dot(os, ds);
+  float c = dot(os, os) - 1.0;
   float disc = b * b - 4.0 * a * c;
-  if (disc < 0.0) return false;
-  // Nearest intersection must lie toward the sun (t > 0).
-  return (-b + sqrt(disc)) > 0.0;
+  if (disc < 0.0) return vec2(1e30);
+  float s = sqrt(disc);
+  return vec2((-b - s) / (2.0 * a), (-b + s) / (2.0 * a));
 }
 
 void main() {
   #include <logdepthbuf_fragment>
+
+  // Body occlusion is analytic, not depth-tested: every distance at
+  // planet scale quantises to the same log-depth value (log2(1+w) is
+  // linear in w ≪ 1, putting the whole solar system inside one depth
+  // step), so the buffer cannot separate ring from body. Discard when
+  // the camera→fragment segment passes through the body.
+  vec3 frag = vec3(vLocalXY * uOuterPc, 0.0);
+  vec2 occ = bodyRoots(uCamPosLocal, frag - uCamPosLocal);
+  if (occ.x > 0.0 && occ.x < 1.0) discard;
+
   float r = length(vLocalXY);
   float u = clamp((r - uInnerRatio) / (1.0 - uInnerRatio), 0.0, 1.0);
   vec4 strip = texture(uRingMap, vec2(u, 0.5));
@@ -56,8 +66,8 @@ void main() {
   float light = mix(TRANSMIT, 1.0, sameSide)
     * smoothstep(0.0, 0.02, abs(uSunDirLocal.z));
 
-  vec3 p = vec3(vLocalXY * uOuterPc, 0.0);
-  if (inPlanetShadow(p)) light *= SHADOW_FLOOR;
+  // In the body's shadow when the ray toward the sun hits it.
+  if (bodyRoots(frag, uSunDirLocal).y > 0.0) light *= SHADOW_FLOOR;
 
   outColor = vec4(strip.rgb * light, strip.a * uFade);
 }
