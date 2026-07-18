@@ -1505,6 +1505,8 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField = new BinaryOrbitField({
       binaries,
       absolutePositions: this.catalog.positions,
+      basePositions: this._basePositions,
+      velocities: this.catalog.velocities,
       absoluteMags: this.catalog.absmag,
       localPositions: this._localPositions,
       compositeSuppress: this._compositeSuppress,

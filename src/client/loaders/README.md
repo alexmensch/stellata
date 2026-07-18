@@ -53,7 +53,13 @@ epoch-advance-pure.ts    space-motion propagation:
                          `jdeToJulianEpochYear` converts the model clock's
                          JD to the propagation's Julian-year base;
                          `maxSpeedPcPerYr` bounds scrub-range drift for
-                         the load-epoch distance-window consumers. Pure +
+                         the load-epoch distance-window consumers;
+                         `writeAdvancedLocal` forms one star's local-frame
+                         position `(base + v·Δt) − origin` in float64 —
+                         `BinaryOrbitField`'s per-frame reset uses it so a
+                         drifting unfocused pair doesn't snap onto the float32
+                         absolute grid (`../binaries/README.md` § Walk-active
+                         LOD). Pure +
                          vitest-pinned; the sky-position corpus drives the
                          SAME function end-to-end. See
                          docs/science-catalog-ingestion.md §

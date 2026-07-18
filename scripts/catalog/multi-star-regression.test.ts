@@ -623,6 +623,11 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
         const field = new BinaryOrbitField({
           binaries: BINARIES!,
           absolutePositions: abs,
+          // Static single-epoch regression: base = abs, zero velocities, so
+          // off-focal-chain resets reduce to `abs − origin` (the focal Algol
+          // pair rides the abs path regardless — it's on the focal chain).
+          basePositions: new Float32Array(abs),
+          velocities: new Float32Array(abs.length),
           absoluteMags: catalogAbsoluteMags(catalog),
           localPositions: local,
           compositeSuppress: suppress,

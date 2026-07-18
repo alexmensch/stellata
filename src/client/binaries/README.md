@@ -148,11 +148,16 @@ primary slot this field reads. That ordering holds per frame under time
 scrubbing too: `maybeReAdvanceEpoch` runs at the top of `animate()`,
 rewriting `catalog.positions` + `_localPositions` off the immutable
 J2016.0 baseline, and this field's walk then re-perturbs its active
-slots on top of the fresh baselines in the same frame. The slot-reset
-baseline and `focalPerturbationInto`'s `bakedDiff` read the live
-`catalog.positions`, and the systemic-velocity invariant keeps every
-`has_orbit` pair's baked diff constant under the advance, so no cache
-here is epoch-keyed. (The one deliberate exception: `baseDiffPc`'s ICRS
+slots on top of the fresh baselines in the same frame. Unfocused, that
+slot-reset baseline is reconstructed in float64 off the J2016.0 baseline
++ velocities rather than read from the float32 `catalog.positions`
+(§ Walk-active LOD). When a star is focused every relation instead resets
+from `catalog.positions`, so the whole scene rides the same absolute the
+shell's epoch-follow moves the camera by (`focalPerturbationInto`'s
+`bakedDiff` also reads the live `catalog.positions`) — the two cancel and
+the focal stays pinned. The systemic-velocity invariant keeps every
+`has_orbit` pair's baked diff constant under the advance, so no cache here
+is epoch-keyed. (The one deliberate exception: `baseDiffPc`'s ICRS
 tangent basis is built from the primary's attach-time direction — stale
 by sub-milliarcseconds over the full scrub range, orders below the
 elements' own uncertainty.) Because the walk places a Tier-1/2 secondary
@@ -221,6 +226,18 @@ still handles the separate close-approach-at-origin case (§ focus/README
 § Pin-to-center).
 
 ## Walk-active LOD
+
+Each frame the walk first resets every relation's primary + secondary
+local slots to their unperturbed systemic baseline (then the passes
+below ADD orbital perturbation on top). **Unfocused** that reset is
+`(base + v·Δt) − worldOffset` computed in float64 (`writeAdvancedLocal`
+off the immutable J2016.0 baseline + velocities), NOT `catalog.positions
+− worldOffset`: the float32 absolute ULP is ~0.4 AU at 28 pc, so the
+rounded-absolute path snaps a drifting system onto that grid under time
+scrub (the reported unfocused-system teleport). **When a star is focused**
+every relation resets from `catalog.positions` instead — see § Composition
+with proper-motion propagation for why the whole focused scene must ride
+the absolute.
 
 Two filters on top of the magnitude slider gate per-frame Kepler
 evaluation:
