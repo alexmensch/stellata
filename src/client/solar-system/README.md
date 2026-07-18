@@ -64,7 +64,11 @@ src/client/solar-system/
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
-                                  fallback).
+                                  fallback, emissive night-lights blend).
+  planet-rings.vert.glsl,
+  planet-rings.frag.glsl          Ring-annulus shaders (radial strip
+                                  sample, lit/transmitted faces, body
+                                  shadow) — see § Planet mesh LOD.
   rotation-elements-pure.ts       IAU rotation elements per body (pole +
                                   prime meridian on the model clock) —
                                   see § Planet rotation.
@@ -402,6 +406,21 @@ stellata-2f6.3).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+- **Saturn rings** (stellata-2f6.15): `Planet.rings` adds an annulus
+  mesh (`planet-rings.*.glsl`) in the body's equatorial plane (IAU
+  pole; host orbital plane as the no-elements fallback), textured by
+  the `<body>-rings.png` 1-D radial strip (RGB colour, A opacity;
+  U = inner→outer edge, span in `data/textures/README.md`). Lit-face
+  fragments get full strip colour, the unlit face a dimmer
+  transmitted factor, both fading out as illumination goes edge-on to
+  the ring plane; the far-side segment inside the body's shadow
+  (analytic ray–ellipsoid test toward the host) drops to a residual
+  floor. Rendered only in the mesh-LOD regime: alpha rides the same
+  crossfade `uFade`, hidden until the strip texture arrives (no
+  representative-colour fallback), `renderOrder` 2.81 with
+  `depthWrite: false` so the body mesh's depth hides the far-side
+  half. Edge-on the zero-thickness annulus thins to a line, which is
+  the physically honest look.
 
 ### Planet rotation (stellata-2f6.13)
 

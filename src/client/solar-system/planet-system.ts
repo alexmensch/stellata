@@ -79,6 +79,17 @@ export interface Planet {
   // lights). The mesh renderer lazy-loads and blends it past the
   // terminator.
   readonly hasNightTexture?: boolean;
+  // Optional ring system: annulus span in the body's equatorial
+  // plane, textured by the `<body>-rings.png` radial strip (RGB =
+  // colour, A = opacity; U maps inner→outer). Saturn only in v1;
+  // the other giants' faint rings are deliberately out of scope.
+  readonly rings?: PlanetRings;
+}
+
+export interface PlanetRings {
+  /** Inner/outer edge of the textured annulus, km from body centre. */
+  readonly innerRadiusKm: number;
+  readonly outerRadiusKm: number;
 }
 
 export interface PlanetSystem {
@@ -199,6 +210,9 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.499,
     phaseCoefficients: SATURN_PHASE,
     rotation: SATURN_ROTATION,
+    // Radial span of the shipped ring profile (data/textures/README.md
+    // § Artifact contract) — D-ring inner edge to F-ring outer.
+    rings: { innerRadiusKm: 74510, outerRadiusKm: 140390 },
   },
   // Uranus and Neptune deliberately omit `phaseCoefficients` — see
   // the comment in `phase-function.ts` for the reason. Both fall
