@@ -18,10 +18,13 @@ import { J2000_JD } from '../util/astronomy-constants';
 
 const T_J2000 = jdeToT(J2000_JD);
 
-/** Earth→Sun unit vector in ICRS at Unix-seconds `t`, from the same
+/** Planet→Sun unit vector in ICRS at Unix-seconds `t`, from the same
  *  ephemeris + ecliptic→ICRS rotation the renderer applies. */
-function sunDirIcrsFromEarth(t: number): { x: number; y: number; z: number } {
-  const p = getPlanetPositions(t).earth;
+function sunDirIcrsFrom(
+  body: 'earth' | 'venus',
+  t: number,
+): { x: number; y: number; z: number } {
+  const p = getPlanetPositions(t)[body];
   const sinE = -ECLIPTIC_NORTH_POLE_ICRS.y;
   const cosE = ECLIPTIC_NORTH_POLE_ICRS.z;
   const x = -p.x;
@@ -102,22 +105,36 @@ describe('subObserverLongitudeEastDeg — Earth sub-solar point', () => {
   const NOON = Date.UTC(2026, 5, 13, 12) / 1000;
 
   it('Greenwich noon puts the sub-solar point near 0° longitude', () => {
-    const lon = subObserverLongitudeEastDeg(EARTH_ROTATION, NOON, sunDirIcrsFromEarth(NOON));
+    const lon = subObserverLongitudeEastDeg(EARTH_ROTATION, NOON, sunDirIcrsFrom('earth', NOON));
     expect(Math.abs(lon)).toBeLessThan(1.5);
   });
 
   it('midnight UTC puts the sub-solar point near the antimeridian', () => {
     const t = NOON - 12 * 3600;
-    const lon = subObserverLongitudeEastDeg(EARTH_ROTATION, t, sunDirIcrsFromEarth(t));
+    const lon = subObserverLongitudeEastDeg(EARTH_ROTATION, t, sunDirIcrsFrom('earth', t));
     expect(Math.abs(Math.abs(lon) - 180)).toBeLessThan(1.5);
   });
 
   it('sub-solar point drifts west ~15°/hour', () => {
-    const lonA = subObserverLongitudeEastDeg(EARTH_ROTATION, NOON, sunDirIcrsFromEarth(NOON));
+    const lonA = subObserverLongitudeEastDeg(EARTH_ROTATION, NOON, sunDirIcrsFrom('earth', NOON));
     const tB = NOON + 3600;
-    const lonB = subObserverLongitudeEastDeg(EARTH_ROTATION, tB, sunDirIcrsFromEarth(tB));
+    const lonB = subObserverLongitudeEastDeg(EARTH_ROTATION, tB, sunDirIcrsFrom('earth', tB));
     const drift = ((lonA - lonB) % 360 + 360) % 360;
     expect(drift).toBeGreaterThan(14.9);
     expect(drift).toBeLessThan(15.1);
+  });
+
+  // Venus's retrograde spin makes its sub-solar point drift EAST (the
+  // sun rises in the west) at 360° per 116.75-day solar day — an
+  // emergent value combining the negative Ẇ with the orbital rate, so
+  // a handedness error anywhere in the chain fails this.
+  it('Venus sub-solar point drifts east ~3.08°/day (retrograde solar day)', () => {
+    const dayS = 86400;
+    const lonA = subObserverLongitudeEastDeg(VENUS_ROTATION, NOON, sunDirIcrsFrom('venus', NOON));
+    const tB = NOON + dayS;
+    const lonB = subObserverLongitudeEastDeg(VENUS_ROTATION, tB, sunDirIcrsFrom('venus', tB));
+    const drift = ((lonB - lonA) % 360 + 360) % 360;
+    expect(drift).toBeGreaterThan(2.9);
+    expect(drift).toBeLessThan(3.3);
   });
 });
