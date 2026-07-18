@@ -26,7 +26,8 @@ cross-script policy and pointers.
   classifier, and `sid:stamp` (stamps sids onto clouds.json /
   local-group.json). The catalog build resolves stellar sids in-record
   from the ledger. See `docs/sid.md`.
-- `clouds/`, `dust/`, `local-group/` — per-layer build helpers.
+- `clouds/`, `dust/`, `local-group/`, `textures/` — per-layer build
+  helpers.
 
 ## Preprocessor idempotency
 

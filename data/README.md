@@ -24,6 +24,7 @@ this file carries only the cross-folder policies.
 | [`molecular-clouds/`](molecular-clouds/README.md) | Zucker 2020 / 2021 cloud distances + 3D bounding boxes (shelved). |
 | [`dust/`](dust/README.md) | Edenhofer 2023 3D dust map (resampled voxel grid + particle field). |
 | [`horizons/`](horizons/README.md) | JPL Horizons planet RA/Dec truth set for the sky-truth regression corpus. |
+| [`textures/`](textures/README.md) | Planet surface/cloud equirect maps + Saturn-ring radial profile (frozen sources + built artifacts). |
 | [`sid/`](sid/README.md) | Stellata ID registry — append-only SID ledger + stored same-as edges (NOT external data; see docs/sid.md). |
 
 ## Frozen external data
