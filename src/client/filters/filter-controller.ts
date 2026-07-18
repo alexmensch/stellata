@@ -80,8 +80,20 @@ export class FilterController {
   // Re-derive every element's permission from the preset floors within the
   // current render style. Overwriting the whole set clears any per-element
   // override a prior setSceneElementVisible left in the cache.
-  applyDetailPreset(level: DetailLevel): void {
+  //
+  // The preset is authoritative, so it also clears the per-element user
+  // toggles (`C` constellations, mw band, lg emission) that AND with the
+  // floors — a within-scene hide must not outlive the mode change. An
+  // element below its floor stays hidden regardless. `resetOverrides:false`
+  // is the render-style recompute (chart↔realistic) preserving those
+  // toggles across the style flip and through URL restore.
+  applyDetailPreset(level: DetailLevel, resetOverrides = true): void {
     this.filter.detailLevel = level;
+    if (resetOverrides) {
+      this.filter.showConstellation = true;
+      this.filter.showMilkyway = true;
+      this.filter.showLgEmission = true;
+    }
     const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
     for (const id of SCENE_ELEMENT_IDS) {
       this.deps.sceneElementBinds[id](floorPermits(SCENE_ELEMENT_FLOORS[id][style], level));

@@ -44,6 +44,17 @@ override (`setSceneElementVisible`) writes one cache slot directly and
 supersedes its floor until the next `applyDetailPreset` overwrites the
 whole set.
 
+**The preset is authoritative — overrides are within-scene only.** Three
+elements also carry a legacy user toggle that ANDs with the floor:
+`constellationFigures`←`showConstellation` (`C`), `milkyWayBand`/
+`milkyWayIsobar`←`showMilkyway`, `lgEmissionGlow`←`showLgEmission`.
+`applyDetailPreset` resets those toggles to `on` so a per-element hide
+does **not** outlive a detail-level change — pick a new mode and the
+scene's floors alone decide. A toggle can only *hide* a permitted element,
+never force one below its floor. The chart↔realistic recompute passes
+`resetOverrides:false`, so a style flip (and URL restore, which re-applies
+the shared toggle state afterward) preserves the user's toggles.
+
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
 behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
 control / a decluttered `?v=` restore, **and on every chart↔realistic

@@ -1887,7 +1887,9 @@ export class Stellata implements FrameAnchor {
   // Declutter cycle. detailPermits is the per-frame read path layers gate
   // on (effective = permitted AND the layer's instance gates).
   getDetailLevel(): DetailLevel { return this.filters.getDetailLevel(); }
-  applyDetailPreset(level: DetailLevel) { this.filters.applyDetailPreset(level); }
+  applyDetailPreset(level: DetailLevel, resetOverrides = true) {
+    this.filters.applyDetailPreset(level, resetOverrides);
+  }
   setSceneElementVisible(id: SceneElementId, on: boolean) {
     this.filters.setSceneElementVisible(id, on);
   }

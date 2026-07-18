@@ -46,18 +46,20 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     // The render style flipped, so re-derive the detail-permitted set from
     // the new style's floors: this drives the milky-way band↔isobar swap
     // (via the milkyWayIsobar bind), hides the realistic-only structure
-    // layers, and gates the chart-labels tiers below.
+    // layers, and gates the chart-labels tiers below. `false` preserves the
+    // user's per-element toggles across the style flip — only a detail-level
+    // change (V / the control) clears them.
     if (active) {
       document.body.classList.add('chart');
       applyTheme('mono');
       stellata.setCloudsIsobar(true);
-      stellata.applyDetailPreset(stellata.getDetailLevel());
+      stellata.applyDetailPreset(stellata.getDetailLevel(), false);
       startChartLabels(stellata, ctx);
     } else {
       document.body.classList.remove('chart');
       applyTheme('dark');
       stellata.setCloudsIsobar(false);
-      stellata.applyDetailPreset(stellata.getDetailLevel());
+      stellata.applyDetailPreset(stellata.getDetailLevel(), false);
       stopChartLabels();
     }
   };
