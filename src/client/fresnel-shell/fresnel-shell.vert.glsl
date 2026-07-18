@@ -3,7 +3,6 @@ precision highp float;
 #include <common>
 #include <logdepthbuf_pars_vertex>
 
-// View-space normal + position carried to the fragment for Fresnel.
 out vec3 vNormalView;
 out vec3 vPositionView;
 

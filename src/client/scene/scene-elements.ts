@@ -34,12 +34,14 @@ export type SceneElementId =
   | 'lgWireframes'
   | 'orbitRings'
   | 'heliopauseShell'
+  | 'localBubbleShell'
   | 'constellationFigures'
   | 'molecularCloudEllipsoids'
   | 'dustParticles'
   // Labels tier.
   | 'planetLabels'
   | 'heliopauseLabel'
+  | 'localBubbleLabel'
   | 'mwLabel'
   | 'lgObjectLabels'
   // Chart-only content (chart-labels.ts).
@@ -68,11 +70,13 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   lgWireframes:              { realistic: 'representational', chart: 'never' },
   orbitRings:                { realistic: 'representational', chart: 'never' },
   heliopauseShell:           { realistic: 'representational', chart: 'never' },
+  localBubbleShell:          { realistic: 'representational', chart: 'never' },
   constellationFigures:      { realistic: 'representational', chart: 'representational' },
   molecularCloudEllipsoids:  { realistic: 'representational', chart: 'representational' },
   dustParticles:             { realistic: 'representational', chart: 'never' },
   planetLabels:              { realistic: 'all',              chart: 'never' },
   heliopauseLabel:           { realistic: 'all',              chart: 'never' },
+  localBubbleLabel:          { realistic: 'all',              chart: 'never' },
   mwLabel:                   { realistic: 'all',              chart: 'never' },
   lgObjectLabels:            { realistic: 'all',              chart: 'never' },
   chartStarNameLabels:       { realistic: 'never',            chart: 'physical' },

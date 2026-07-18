@@ -4,6 +4,8 @@ import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-l
 import { loadClouds } from './molecular-clouds/cloud-loader';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
+import { loadLocalBubble } from './local-bubble/local-bubble-loader';
+import { createLocalBubbleLabel } from './local-bubble/local-bubble';
 import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
@@ -62,7 +64,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, lgCatalog, binaries] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, lgCatalog, binaries, localBubble] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -89,6 +91,10 @@ async function main() {
       // `pnpm run build:binaries`). The renderer renders identically
       // without the field; orbital evolution simply doesn't fire.
       loadBinaries(`${import.meta.env.BASE_URL}binaries.bin`),
+      // Local Bubble shell mesh. ~650 KB; null when the artifact is
+      // missing (fresh checkout without `pnpm run build:local-bubble`).
+      // The scene renders fine without it — the shell simply doesn't draw.
+      loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
     ]);
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
@@ -118,6 +124,10 @@ async function main() {
     // catalog pairs against `Stellata.getT()`. Static placements remain
     // identical when this artifact is absent.
     if (binaries) stellata.attachBinaries(binaries);
+
+    // Local Bubble shell — the dust-wall cavity the Sun sits inside.
+    // A representational declutter element; absent artifact = no shell.
+    if (localBubble) stellata.attachLocalBubble(localBubble);
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.
@@ -207,6 +217,7 @@ async function main() {
     createGalacticGridLabels(stellata);
     createPlanetLabels(stellata);
     createHeliopauseLabel(stellata);
+    createLocalBubbleLabel(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.

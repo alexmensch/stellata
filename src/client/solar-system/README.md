@@ -86,7 +86,9 @@ src/client/solar-system/
                                   Pure helpers with vitest coverage.
   planet-labels.ts                Per-planet SVG labels, distance-gated.
   heliopause.ts                   Sol's heliopause boundary as a translucent
-                                  asymmetric shell (Sol-only).
+                                  asymmetric shell (Sol-only). Extends the
+                                  shared `fresnel-shell/` primitive (material
+                                  + shader pair + gating base).
   first-load.ts                   Canonical no-URL first-load view: 5 AU
                                   galactic-centre-aimed park.
   planet.vert.glsl,
@@ -94,8 +96,6 @@ src/client/solar-system/
                                   Imports `perceptual-disc.glsl` from
                                   `../star-pipeline/` (shared disc/glow
                                   chunk with stars).
-  heliopause.vert.glsl,
-  heliopause.frag.glsl            Asymmetric heliopause shell shaders.
 ```
 
 ## Data model
@@ -577,8 +577,9 @@ emitted by `positionsAt`.
 
 ## Heliopause boundary
 
-`heliopause.ts` and the matching shaders. Asymmetric ellipsoid centred
-on Sol, aligned to the interstellar-medium inflow — the direction the
+`heliopause.ts`, on the shared `fresnel-shell/` primitive. Asymmetric
+ellipsoid centred on Sol, aligned to the interstellar-medium inflow —
+the direction the
 heliosphere's nose points. Geometry is fixed (no `t` dependence on
 human timescales):
 

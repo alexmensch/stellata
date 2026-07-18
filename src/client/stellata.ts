@@ -67,6 +67,8 @@ import { PlanetBodyField } from './solar-system/planet-body-field';
 import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
+import { LocalBubbleShell } from './local-bubble/local-bubble';
+import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
 import {
   T_CLAMP_MAX_S,
   T_CLAMP_MIN_S,
@@ -316,6 +318,7 @@ export class Stellata implements FrameAnchor {
   // Sol-anchored asymmetric ellipsoid; visible only when Sol is the
   // focused host.
   private heliopause: Heliopause;
+  private localBubbleShell: LocalBubbleShell;
   private galacticGrid: GalacticGrid;
   private hudOverlay: HudOverlay;
 
@@ -647,6 +650,9 @@ export class Stellata implements FrameAnchor {
     // focused star = Sol via the planet-system event below.
     this.heliopause = new Heliopause();
     this.scene.add(this.heliopause.group);
+    this.localBubbleShell = new LocalBubbleShell();
+    this.scene.add(this.localBubbleShell.group);
+    this.localBubbleShell.recenter(this.worldOffset);
 
     // Picker resolves every layer's "what's under (x, y)?" — composed
     // by the click FSM in onPointerUp and by the hover providers.
@@ -1047,6 +1053,12 @@ export class Stellata implements FrameAnchor {
       setMonochrome: (on) => this.heliopause.setMonochrome(on),
       recenter: (newOrigin) => this.heliopause.recenter(newOrigin),
       dispose: () => this.heliopause.dispose(),
+    });
+    this.layers.register({
+      // Static shell — only the floating-origin recentre moves it.
+      setMonochrome: (on) => this.localBubbleShell.setMonochrome(on),
+      recenter: (newOrigin) => this.localBubbleShell.recenter(newOrigin),
+      dispose: () => this.localBubbleShell.dispose(),
     });
     this.layers.register({
       dispose: () => this.dustParticles.dispose(),
@@ -1728,6 +1740,20 @@ export class Stellata implements FrameAnchor {
     }
   }
 
+  /** Attach the parsed Local Bubble shell mesh. The layer is constructed
+   *  in the ctor and already in the scene (Sol-anchored, like the
+   *  heliopause); this just builds its geometry once the async load
+   *  resolves. */
+  attachLocalBubble(mesh: LocalBubbleMesh): void {
+    this.localBubbleShell.attach(mesh);
+    this.localBubbleShell.recenter(this.worldOffset);
+    this.localBubbleShell.setMonochrome(this.monochrome);
+  }
+
+  /** The Local Bubble shell layer — read by its silhouette label for the
+   *  surface samples + attach state. */
+  getLocalBubbleShell(): LocalBubbleShell { return this.localBubbleShell; }
+
   /** Direct access to the Local Group layer for dev-console / label
    *  wiring in main.ts. null until attachLocalGroup runs. */
   get localGroup(): LocalGroupLayer | null { return this.localGroupLayer; }
@@ -1916,11 +1942,13 @@ export class Stellata implements FrameAnchor {
       lgWireframes: set('lgWireframes'),
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
+      localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
       constellationFigures: set('constellationFigures'),
       molecularCloudEllipsoids: set('molecularCloudEllipsoids'),
       dustParticles: set('dustParticles'),
       planetLabels: set('planetLabels'),
       heliopauseLabel: set('heliopauseLabel'),
+      localBubbleLabel: set('localBubbleLabel'),
       mwLabel: set('mwLabel'),
       lgObjectLabels: set('lgObjectLabels'),
       chartStarNameLabels: set('chartStarNameLabels'),

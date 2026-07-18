@@ -5,10 +5,11 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { AU_PC } from '../util/astronomy-constants';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
-import { LABEL_OFFSET_PX } from './planet-labels';
-import { createDistanceGatedLabel } from '../ui/distance-gated-label';
-import heliopauseVert from './heliopause.vert.glsl?raw';
-import heliopauseFrag from './heliopause.frag.glsl?raw';
+import {
+  FresnelShell,
+  createFresnelShellMaterial,
+  createShellSilhouetteLabel,
+} from '../fresnel-shell/fresnel-shell';
 
 // Nose (upwind apex) direction: the interstellar He inflow measured by
 // IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
@@ -52,8 +53,6 @@ const SPHERE_H_SEGMENTS = 32;
 // shell as a flat disc against the starfield.
 const COLOUR = new THREE.Color(0xc8d6ff);
 const ALPHA_LIMB = 0.45;
-const FACE_ON_FLOOR = 0.04;
-const FRESNEL_POWER = 2.5;
 
 /** Upwind apex point relative to SOL (parsecs). Sol is the catalog
  *  origin, so the renderer-local position is this minus worldOffset —
@@ -103,51 +102,24 @@ const GROUP_QUATERNION = new THREE.Quaternion().setFromUnitVectors(
   APEX_DIR_ICRS.clone().negate(),
 );
 
-export class Heliopause {
-  readonly group: THREE.Group;
-  private mesh: THREE.Mesh;
-  private geometry: THREE.SphereGeometry;
-  private material: THREE.ShaderMaterial;
+export class Heliopause extends FresnelShell {
+  private readonly mesh: THREE.Mesh;
+  private readonly geometry: THREE.SphereGeometry;
+  // Sol-focus gate — the shell only shows when Sol is the focused host.
   private hidden = true;
-  private mono = false;
-  // Detail-cycle permission (floor 'representational'). AND'd with the
-  // Sol-focus gate (`hidden`) and chart gate (`mono`).
-  private permitted = true;
 
   constructor() {
-    this.group = new THREE.Group();
     // renderOrder = 1: shares the slot with star glow (both are dim
-    // chrome). See src/client/star-pipeline/README.md §RenderOrder ladder for the full
-    // cross-layer hierarchy.
-    this.group.renderOrder = 1;
-    this.group.visible = false;
+    // chrome). See src/client/star-pipeline/README.md §RenderOrder ladder
+    // for the full cross-layer hierarchy.
+    super(createFresnelShellMaterial({ colour: COLOUR, alphaLimb: ALPHA_LIMB }), 1);
     // Rotate the entire group so its local +Z aligns with the antiapex
     // direction in ICRS. The mesh inside scales + translates within
     // that rotated frame.
     this.group.quaternion.copy(GROUP_QUATERNION);
 
     this.geometry = new THREE.SphereGeometry(1, SPHERE_W_SEGMENTS, SPHERE_H_SEGMENTS);
-    this.material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: heliopauseVert,
-      fragmentShader: heliopauseFrag,
-      transparent: true,
-      depthWrite: false,
-      // FrontSide so the inside of the shell back-face-culls when the
-      // camera sits inside the heliopause (Sol focus, zoomed in to
-      // sub-100 AU). From outside the shell, the near hemisphere's
-      // front faces render with the Fresnel limb-darkening below.
-      side: THREE.FrontSide,
-      uniforms: {
-        uColour: { value: COLOUR },
-        uAlphaLimb: { value: ALPHA_LIMB },
-        uFaceOnFloor: { value: FACE_ON_FLOOR },
-        uFresnelPower: { value: FRESNEL_POWER },
-      },
-    });
     this.mesh = new THREE.Mesh(this.geometry, this.material);
-    // The ellipsoid is huge (~hundreds of AU) and the camera can sit
-    // inside it; auto-bounding sphere culling gets confused. Skip cull.
     this.mesh.frustumCulled = false;
 
     // Scale to ellipsoid semi-axes in parsecs. Local (x, y, z) →
@@ -163,45 +135,16 @@ export class Heliopause {
 
   setVisible(on: boolean): void {
     this.hidden = !on;
-    this.group.visible = !this.hidden && !this.mono && this.permitted;
+    this.refreshVisibility();
   }
 
-  /** Detail-cycle permission (declutter). Independent of the Sol-focus
-   *  gate (`setVisible`) and chart gate (`setMonochrome`) — all three
-   *  AND into `group.visible`. */
-  setPermitted(on: boolean): void {
-    this.permitted = on;
-    this.group.visible = !this.hidden && !this.mono && this.permitted;
+  protected shellReady(): boolean {
+    return !this.hidden;
   }
 
-  /** Floating-origin recentre. The shell is Sol-anchored and Sol is the
-   *  catalog origin, so its renderer-local position is -worldOffset —
-   *  non-zero under planet focus, where the origin sits on the planet. */
-  recenter(newOrigin: Readonly<THREE.Vector3>): void {
-    this.group.position.copy(newOrigin).negate();
-  }
-
-  /** Chart (mono / paper) mode hides the heliopause — chart-mode renders
-   *  its own paper-aesthetic visualisation if/when chart-mode cares to
-   *  cover this layer (currently it does not). */
-  setMonochrome(on: boolean): void {
-    this.mono = on;
-    this.group.visible = !this.hidden && !this.mono && this.permitted;
-  }
-
-  /** Live shell-mesh visibility. Mirrors the actual rendered state
-   *  (`group.visible`) so the hover picker can gate without re-deriving
-   *  the Sol-focus + chart-mode + future-toggle conjunction. The right
-   *  single source of truth — any layer-level toggle added later (a
-   *  representational-layer settings switch, for example) AND's into
-   *  `group.visible` automatically. */
-  isVisible(): boolean {
-    return this.group.visible;
-  }
-
-  dispose(): void {
+  override dispose(): void {
     this.geometry.dispose();
-    this.material.dispose();
+    super.dispose();
   }
 }
 
@@ -262,17 +205,11 @@ export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
  *  planet ring would draw and vanishes in lockstep with the last
  *  planet label. */
 export function createHeliopauseLabel(stellata: Stellata): void {
-  createDistanceGatedLabel(stellata, {
+  createShellSilhouetteLabel(stellata, {
     elementId: HELIOPAUSE_LABEL_ELEMENT_ID,
     sampleCount: HELIOPAUSE_SAMPLE_POINTS_SOL.length,
     getWorldSample: (i, out) =>
       out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(stellata.getWorldOffset()),
     visible: () => isHeliopauseApexVisible(stellata),
-    // Bottom-right diagonal (1, 1)/√2 in CSS y-down coords.
-    labelDir: { x: Math.SQRT1_2, y: Math.SQRT1_2 },
-    offsetPx: LABEL_OFFSET_PX,
-    // Settles in ~4-5 frames (~70 ms at 60 fps) — responsive but smooth
-    // enough to hide the support-point's discrete neighbour switching.
-    lerp: 0.25,
   });
 }
