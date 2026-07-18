@@ -69,23 +69,46 @@ regression corpus pins Earth's sub-solar longitude at an
 equation-of-time zero crossing (Greenwich noon → ~0° lon).
 Implementation: `src/client/solar-system/rotation-elements-pure.ts`.
 
-**Saturn rings.** Annulus spanning 74,510→140,390 km in Saturn's
-equatorial (IAU-pole) plane, coloured by Björn Jónsson's
-Voyager/Cassini radial colour + transparency profiles
-(`data/textures/README.md`). Lighting is a deliberately simple model:
+**Ring systems.** Each ringed body renders an annulus in its
+equatorial (IAU-pole) plane textured by a 2048×1 radial strip.
+Saturn (74,510→140,390 km) is coloured by Björn Jónsson's
+Voyager/Cassini radial colour + transparency profiles; Uranus
+(41,600→51,300 km, the 10 narrow main rings) and Neptune
+(40,900→63,100 km, all five rings) are built from occultation +
+Voyager 2 ring tables at **true opacity** — `1 − e^−τ`, box-averaged
+so equivalent width is conserved — which makes them the barely-there
+charcoal threads they really are (ring-particle albedo ~0.05).
+Uranus's ε ring dominates and finally gives its ~98° obliquity a
+visible cue; Neptune's Le Verrier and Adams rings (arcs folded in as
+an azimuthal average) sit at 2–4/255 alpha, and the τ~10⁻⁴ Galle and
+Lassell sheets quantise to zero. Jupiter's rings (τ ≤ 10⁻⁵) fall
+three orders below the 8-bit floor and ship no strip at all —
+scoping analysis in `data/textures/README.md` § Ring strips.
+Lighting is a deliberately simple model:
 full strip colour on the sunlit face, a dimmed transmitted factor on
 the unlit face, both dying off as illumination goes edge-on to the
 ring plane, and an analytic ray–ellipsoid planet-shadow test that
 drops the occluded far-side segment to a residual floor. Phase-angle
 brightening of the rings already reaches the *disc/glow* path through
 the Mallama Saturn `c0` term; the resolved-mesh regime makes no
-photometric claim beyond the above.
+photometric claim beyond the above (in particular no forward-scatter
+term, which is where Jupiter's dust rings would live).
 
 **Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)
 blended in as an *emissive* term — no limb darkening, unlike the
 reflected day texture — ramping in across a narrow band past the
 geometric terminator. With rotation on the model clock, the hemisphere
 showing its lights is the one actually dark at `t`.
+
+**True-eclipse dimming.** A planet geometrically behind its host's
+physical disc dims by the occluded area fraction (closed-form
+circle-circle lens, the binaries eclipse-photometry math); a full
+eclipse renders nothing at all — zero flux, quad collapsed — since
+even a 7.5-mag residual is visible on a mag −1 Mercury behind Sol.
+Glow through the host's perceptual halo
+stays undimmed — the halo is a rendering artefact, not a surface. The
+reverse transit (planet in front) would dim the host by (R_p/R_host)²
+≲ 10⁻² mag and is deliberately not modelled.
 
 **Planet geometric albedos** (V-band) from Mallama et al. 2018
 (https://doi.org/10.1016/j.icarus.2017.05.018) and the NASA fact

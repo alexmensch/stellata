@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import { type BinariesData } from './binaries-loader';
 import {
+  blendDimBuffer,
+  dimBlendFactor,
   eclipseDimFromOffsets,
   orbitPlaneNormalICRS,
   type EclipseResult,
@@ -104,10 +106,6 @@ interface RelationEval {
   result: EclipseResult | null;
 }
 
-/** A slot whose dim has decayed above this snaps to exactly 1 and leaves
- *  the active set (the shader gate is `iEclipseDim < 1.0`). */
-const DIM_SETTLED = 0.999;
-
 const SYSTEM_XYZ = { x: 0, y: 0, z: 0 };
 
 export class EclipsePhotometryField {
@@ -159,11 +157,7 @@ export class EclipsePhotometryField {
     renderedAngRadiusRad?: (idx: number) => number,
   ): void {
     const tJd = tToJDE(t);
-    let blend = 1;
-    if (this.lastNowMs !== null) {
-      const dtS = Math.min(Math.max((nowMs - this.lastNowMs) / 1000, 0), 0.25);
-      blend = 1 - Math.exp(-dtS / ECLIPSE_DIM_TAU_S);
-    }
+    const blend = dimBlendFactor(nowMs, this.lastNowMs, ECLIPSE_DIM_TAU_S);
     this.lastNowMs = nowMs;
 
     const dimBuf = this.opts.eclipseDimBuffer;
@@ -217,24 +211,9 @@ export class EclipsePhotometryField {
       }
     }
 
-    let wrote = false;
-    for (const [idx, target] of targets) {
-      dimBuf[idx] += (target - dimBuf[idx]) * blend;
-      this.active.add(idx);
-      wrote = true;
+    if (blendDimBuffer(dimBuf, targets, this.active, blend)) {
+      this.opts.iEclipseDimAttr.needsUpdate = true;
     }
-    for (const idx of this.active) {
-      if (targets.has(idx)) continue;
-      const next = dimBuf[idx] + (1 - dimBuf[idx]) * blend;
-      if (next >= DIM_SETTLED) {
-        dimBuf[idx] = 1;
-        this.active.delete(idx);
-      } else {
-        dimBuf[idx] = next;
-      }
-      wrote = true;
-    }
-    if (wrote) this.opts.iEclipseDimAttr.needsUpdate = true;
     if (biasChanged) this.opts.iDepthBiasAttr.needsUpdate = true;
   }
 

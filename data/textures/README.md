@@ -1,12 +1,13 @@
 # Planet textures
 
 Per-body equirectangular surface/cloud maps for the Sol planets, plus
-the Saturn-ring radial profile. Two layers in this folder:
+the ring-system radial strips. Two layers in this folder:
 
-- `src/` — frozen source maps as downloaded (LFS for the JPEGs; see
-  `src/README.md` for the per-file provenance table).
-- `*.jpg` + `saturn-rings.png` (this level) — the built runtime
-  artifacts, committed on regular git (~1.9 MB total). Produced by
+- `src/` — frozen source maps as downloaded, plus the authored ring
+  tables (LFS for the JPEGs; see `src/README.md` for the per-file
+  provenance table).
+- `*.jpg` + `<body>-rings.png` (this level) — the built runtime
+  artifacts, committed on regular git (~2 MB total). Produced by
   `scripts/textures/build-textures.py` (manual, infrequent — like the
   dust build); `scripts/textures/sync-textures.ts` mirrors them to
   `public/textures/` on every `pnpm run build` / `dev`.
@@ -28,11 +29,49 @@ the Saturn-ring radial profile. Two layers in this folder:
 - **Uranus has no texture by design** — a featureless cyan spheroid
   with limb darkening is the accurate rendering (2f6.6 design
   record); it exercises the renderer's texture-less base path.
-- `saturn-rings.png` is a 2048×1 RGBA strip: RGB = ring colour, A =
-  opacity (source transparency inverted). The radial span is
-  **74,510 km → 140,390 km** from Saturn's centre (left → right edge)
-  — consumers (stellata-2f6.15) map ring-plane radius to U with that
-  span.
+- `<body>-rings.png` (saturn, uranus, neptune) is a 2048×1 RGBA
+  strip: RGB = ring colour, A = opacity. U maps ring-plane radius
+  from the body's centre across the strip span (left → right edge):
+  Saturn **74,510 → 140,390 km** (the Jónsson profile span, source
+  transparency inverted), Uranus **41,600 → 51,300 km**, Neptune
+  **40,900 → 63,100 km**. Each span must match the body's `rings`
+  entry in `src/client/solar-system/planet-system.ts` —
+  `scripts/textures/ring-strips.test.ts` pins the parity.
+
+## Ring strips — true opacity and the 8-bit floor
+
+The Uranus and Neptune strips are rendered from literature ring
+tables (`src/rings-<body>.tsv`) at **true opacity**: alpha is
+`1 − e^−τ` from each ring's normal optical depth, box-averaged onto
+the strip so a ring narrower than a texel dilutes linearly
+(equivalent width — opacity × width — is conserved; mipmaps preserve
+it further down). No brightening for effect: these rings read as
+barely-there charcoal threads, which is the physically correct look.
+
+The strip's 8-bit alpha floor (1/255 ≈ 3.9×10⁻³) is the binding
+physical constraint, and it drives three scope decisions:
+
+- **Uranus** ships its 10 narrow main rings (6, 5, 4, α, β, η, γ, δ,
+  λ, ε) — all survive the floor after box averaging (peaks 13–167 of
+  255; ε dominant). The ζ, ν and μ dust rings (τ ≲ 10⁻⁴) fall below
+  it and are excluded; ν/μ would also double the span and halve the
+  narrow rings' texel resolution.
+- **Neptune** ships all five rings for data honesty, but only
+  Le Verrier (τ 0.0062 → alpha 2) and Adams (alpha 4) survive; the
+  Galle/Lassell/Arago sheets (τ ~10⁻⁴) render to 0. The Adams τ folds
+  its azimuthal arcs in as a longitude average (a 1-D radial strip
+  cannot carry arc structure): non-arc τ 0.011 plus the arcs'
+  τ 0.03–0.09 over ~25° of longitude → 0.014.
+- **Jupiter ships no strip at all.** Its rings' normal optical depth
+  (main ring ~10⁻⁶, all components < 10⁻⁵) sits three orders of
+  magnitude below the floor — at true opacity the strip is
+  identically zero, so shipping one would be dead weight. Jupiter's
+  rings are genuinely invisible in backscattered visible light; they
+  were discovered in forward scatter.
+
+Display RGB anchors the ~0.05 particle geometric albedo (dark,
+Uranian-moon-like material; Neptune's slightly red) to the Saturn
+strip's bright-ring tone: 0.05/0.50 × ~0.97 ≈ 0.10.
 
 ## Colour fidelity
 

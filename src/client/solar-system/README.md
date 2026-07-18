@@ -288,6 +288,29 @@ Planet rendering splits across two layers (stellata-3re.15):
   floating origin sits on the planet, so the host is NOT at the local
   origin.
 
+**True-eclipse dim (stellata-2f6.4).** A planet crossing behind its
+host's *physical disc* (superior conjunction inside the host's
+angular radius) dims by the occluded area fraction — the same
+camera-anywhere geometry the binaries eclipse photometry runs
+(`binaries/eclipse-photometry-pure.ts`: `eclipseDimFromOffsets` +
+the shared anti-strobe blend helpers). `PlanetBodyField.update`
+evaluates each in-range host's planets per frame (the pair-relative
+offset is `iLocalRel` itself — small values, no large-position
+differencing) and writes the per-instance `iEclipseDim` attribute;
+the vertex shader folds it into appMag in the **glow pass only**,
+mirroring the star pipeline's fold. A FULL eclipse writes exactly 0
+and the shader collapses the quad — a floored +7.5 mag residual is
+still visible on a mag −1 Mercury, and the planet-scale depth buffer
+can't hide it — and the planet's label hides with it (the fully
+eclipsed body renders nothing). Glow through the host's
+perceptual *halo* stays undimmed — the halo is a perceptual
+artefact, not a surface, so a body behind it correctly shines
+through. The disc pass needs no dim or depth bias: its
+per-channel-max blend keeps the darker back disc from painting over
+the host's saturated disc. A planet in *front* (transit) dims the
+host by (R_p/R_host)² — negligible and owned by the star pipeline,
+so it is deliberately not modelled.
+
 Bodies render as billboarded discs through the same perceptual-disc
 abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
 Apparent magnitude is computed in the vertex shader from reflected
@@ -406,11 +429,13 @@ stellata-2f6.3).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
-- **Saturn rings** (stellata-2f6.15): `Planet.rings` adds an annulus
-  mesh (`planet-rings.*.glsl`) in the body's equatorial plane (IAU
-  pole; host orbital plane as the no-elements fallback), textured by
-  the `<body>-rings.png` 1-D radial strip (RGB colour, A opacity;
-  U = inner→outer edge, span in `data/textures/README.md`). Lit-face
+- **Ring systems** (Saturn, plus Uranus + Neptune's faint rings at
+  true opacity — spans and the Jupiter exclusion in
+  `data/textures/README.md` § Ring strips): `Planet.rings` adds an
+  annulus mesh (`planet-rings.*.glsl`) in the body's equatorial plane
+  (IAU pole; host orbital plane as the no-elements fallback),
+  textured by the `<body>-rings.png` 1-D radial strip (RGB colour,
+  A opacity; U = inner→outer edge). Lit-face
   fragments get full strip colour, the unlit face a dimmer
   transmitted factor, both fading out as illumination goes edge-on to
   the ring plane; the far-side segment inside the body's shadow

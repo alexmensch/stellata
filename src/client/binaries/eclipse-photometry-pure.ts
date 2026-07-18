@@ -10,17 +10,72 @@ import {
   type Vec3,
 } from './binary-orbit-pure';
 
-/** Positive lower bound for the dim multiplier `eclipseDimFromOffsets`
- *  returns. Keeps `-2.5·log10(dim)` finite at a full geometric eclipse;
- *  the resulting ~7.5 mag of dim reads as effectively invisible under
- *  the glow pass's additive blend. See
+/** Positive lower bound for a PARTIAL-occlusion dim — keeps
+ *  `-2.5·log10(dim)` finite as the overlap approaches totality. A FULL
+ *  geometric eclipse returns exactly 0 instead: any floored residual
+ *  (+7.5 mag) is still visible on a bright close-range body (Mercury
+ *  behind Sol's disc), so the glow shaders collapse the quad at 0
+ *  before the log ever runs. See
  *  `src/client/binaries/README.md` § Eclipse photometry. */
 export const DIM_FLOOR = 0.001;
 
+/** A slot whose dim has decayed above this snaps to exactly 1 and
+ *  leaves the active set (the shader gate is `iEclipseDim < 1.0`). */
+export const DIM_SETTLED = 0.999;
+
+/** Anti-strobe blend factor for this frame's dim writes: 1 on the
+ *  first frame (snap to target), else `1 − e^(−dt/τ)` with dt clamped
+ *  to [0, 0.25] s. `nowMs` is wall-clock (a render filter, not sim
+ *  time). See src/client/binaries/README.md § Anti-strobe smoothing. */
+export function dimBlendFactor(
+  nowMs: number,
+  lastNowMs: number | null,
+  tauS: number,
+): number {
+  if (lastNowMs === null) return 1;
+  const dtS = Math.min(Math.max((nowMs - lastNowMs) / 1000, 0), 0.25);
+  return 1 - Math.exp(-dtS / tauS);
+}
+
+/** Blend each targeted slot of `dimBuf` toward its target, decay every
+ *  other active slot back toward 1 (snapping at DIM_SETTLED), and keep
+ *  `active` = the set of slots still below 1. Returns true when any
+ *  slot was written (the caller's attribute-flush signal). */
+export function blendDimBuffer(
+  dimBuf: Float32Array,
+  targets: ReadonlyMap<number, number>,
+  active: Set<number>,
+  blend: number,
+): boolean {
+  let wrote = false;
+  for (const [idx, target] of targets) {
+    const next = dimBuf[idx] + (target - dimBuf[idx]) * blend;
+    // Totality (target 0) snaps to exactly 0 once the smoothed value
+    // drops below the partial floor — the shader's collapse gate is
+    // `iEclipseDim <= 0`, which an exponential decay never reaches.
+    dimBuf[idx] = target < DIM_FLOOR && next < DIM_FLOOR ? 0 : next;
+    active.add(idx);
+    wrote = true;
+  }
+  for (const idx of active) {
+    if (targets.has(idx)) continue;
+    const next = dimBuf[idx] + (1 - dimBuf[idx]) * blend;
+    if (next >= DIM_SETTLED) {
+      dimBuf[idx] = 1;
+      active.delete(idx);
+    } else {
+      dimBuf[idx] = next;
+    }
+    wrote = true;
+  }
+  return wrote;
+}
+
 export interface EclipseResult {
   /** Multiplicative dim factor on the BACK star's flux. 1.0 = no
-   *  occlusion. `DIM_FLOOR` = back fully occluded. The front star is
-   *  not dimmed. */
+   *  occlusion; partial occlusion floors at `DIM_FLOOR`; exactly 0 =
+   *  back fully occluded (consumers collapse the quad — never fed to
+   *  a log). The front star is not dimmed. */
   dim: number;
   /** Which member of the pair is in front of the other from the
    *  camera's viewpoint. 'primary' means d_primary < d_secondary;
@@ -149,7 +204,8 @@ export function eclipseDimFromOffsets(
   const alphaBack = front === 'primary' ? alphaSec : alphaPri;
   if (alphaBack <= 0) return { dim: 1, front, thetaRad: theta, alphaPri, alphaSec };
   const backDiscArea = Math.PI * alphaBack * alphaBack;
-  const dim = clamp(1 - lensArea / backDiscArea, DIM_FLOOR, 1);
+  const raw = 1 - lensArea / backDiscArea;
+  const dim = raw <= 0 ? 0 : clamp(raw, DIM_FLOOR, 1);
   return { dim, front, thetaRad: theta, alphaPri, alphaSec };
 }
 

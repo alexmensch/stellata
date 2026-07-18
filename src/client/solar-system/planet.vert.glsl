@@ -29,6 +29,8 @@ in vec2 aCorner;
 //                   default Pluto and every exoplanet hit.
 //   iPhaseCoefsC  — (c7,_,_,_). Only Mercury carries a degree-7 term;
 //                   the other three slots are reserved.
+//   iEclipseDim   — true-eclipse flux dim on a planet behind the
+//                   host's physical disc (1 = no dim).
 in vec3 iHostLocalPos;
 in vec3 iLocalRel;
 in float iRadiusPc;
@@ -39,6 +41,7 @@ in float iHostAbsmag;
 in vec4 iPhaseCoefsA;
 in vec4 iPhaseCoefsB;
 in vec4 iPhaseCoefsC;
+in float iEclipseDim;
 
 uniform vec2 uViewport;       // CSS pixels
 uniform float uPixelRatio;
@@ -189,6 +192,27 @@ void main() {
   float radRatio = iRadiusPc / d_vp;
   float reflFactor = iAlbedoP * radRatio * radRatio * max(phi, 0.0);
   float appMag = m_host_at_planet - 2.5 * log(max(reflFactor, 1e-30)) / LOG10;
+
+  // True-eclipse dim, glow pass only — the star pipeline's iEclipseDim
+  // fold verbatim: exactly 0 = totality, collapse the quad (the
+  // planet-scale depth buffer can't hide it, and a floored residual is
+  // still visible on a bright close body — Mercury behind Sol's disc).
+  // The disc pass needs no dim: its per-channel-max blend already keeps
+  // the darker back disc from painting over the host's saturated disc.
+  if (uRenderMode == 0 && iEclipseDim < 1.0) {
+    if (iEclipseDim <= 0.0) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      vAppMag = 0.0;
+      vColor = vec3(0.0);
+      vUv = aCorner;
+      vPhysRatio = 0.0;
+      vSoftness = 0.0;
+      vMeshFade = 0.0;
+      vAaWidth = 0.0;
+      return;
+    }
+    appMag += -2.5 * log(iEclipseDim) / LOG10;
+  }
 
   // Soft taper: pass a 0.5-mag overshoot so the glow pass can fade
   // intensity to zero across the threshold band — same hysteresis

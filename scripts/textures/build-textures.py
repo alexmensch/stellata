@@ -54,8 +54,25 @@ GAP_LUMINANCE = {"pluto": 12, "mercury": 8}
 
 RINGS_COLOR = "rings-color-bjj.txt"
 RINGS_TRANSPARENCY = "rings-transparency-bjj.txt"
-RINGS_OUT = "saturn-rings.png"
 RINGS_W = 2048
+
+# Uranus/Neptune ring strips built from literature tables at TRUE
+# opacity (derivation + 8-bit floor analysis in
+# data/textures/README.md § Ring strips). span_km MUST match the
+# body's `rings` entry in src/client/solar-system/planet-system.ts —
+# scripts/textures/ring-strips.test.ts pins the parity.
+RING_TABLES = {
+    "uranus": {
+        "src": "rings-uranus.tsv",
+        "span_km": (41600.0, 51300.0),
+        "rgb": (0.10, 0.10, 0.10),
+    },
+    "neptune": {
+        "src": "rings-neptune.tsv",
+        "span_km": (40900.0, 63100.0),
+        "rgb": (0.11, 0.10, 0.09),
+    },
+}
 
 
 def up_to_date(out_path: Path, *inputs: Path) -> bool:
@@ -124,35 +141,84 @@ def resample_rows(rows: list[list[float]], width: int) -> list[list[float]]:
     return out
 
 
-def build_rings() -> None:
-    color_path = SRC / RINGS_COLOR
-    trans_path = SRC / RINGS_TRANSPARENCY
-    out_path = OUT / RINGS_OUT
-    if up_to_date(out_path, color_path, trans_path):
-        print("  saturn-rings: up to date")
-        return
-    color = [[float(v) for v in line.split()] for line in color_path.read_text().split("\n") if line.strip()]
-    trans = [[float(line)] for line in trans_path.read_text().split("\n") if line.strip()]
-    assert len(color) == len(trans), (len(color), len(trans))
-    rgb = resample_rows(color, RINGS_W)
-    # Source transparency is 1 = no ring material; the artifact's alpha
-    # channel is opacity, so invert.
-    alpha = [1.0 - t[0] for t in resample_rows(trans, RINGS_W)]
+def save_strip(
+    out_path: Path,
+    rgb: list[tuple[float, float, float]],
+    alpha: list[float],
+) -> None:
     im = Image.new("RGBA", (RINGS_W, 1))
     im.putdata([
         (round(r * 255), round(g * 255), round(b * 255), round(a * 255))
         for (r, g, b), a in zip(rgb, alpha)
     ])
     im.save(out_path, "PNG", optimize=True)
-    print(f"  saturn-rings: {RINGS_W}x1 RGBA -> {out_path.stat().st_size // 1024} KB")
+    print(f"  {out_path.name}: {RINGS_W}x1 RGBA -> {out_path.stat().st_size // 1024} KB")
+
+
+def build_saturn_rings() -> None:
+    color_path = SRC / RINGS_COLOR
+    trans_path = SRC / RINGS_TRANSPARENCY
+    out_path = OUT / "saturn-rings.png"
+    if up_to_date(out_path, color_path, trans_path):
+        print("  saturn-rings: up to date")
+        return
+    color = [[float(v) for v in line.split()] for line in color_path.read_text().split("\n") if line.strip()]
+    trans = [[float(line)] for line in trans_path.read_text().split("\n") if line.strip()]
+    assert len(color) == len(trans), (len(color), len(trans))
+    rgb = [(r, g, b) for r, g, b in resample_rows(color, RINGS_W)]
+    # Source transparency is 1 = no ring material; the artifact's alpha
+    # channel is opacity, so invert.
+    alpha = [1.0 - t[0] for t in resample_rows(trans, RINGS_W)]
+    save_strip(out_path, rgb, alpha)
+
+
+def parse_ring_table(path: Path) -> list[tuple[float, float, float]]:
+    """(inner_km, outer_km, opacity) per ring from a TSV row of
+    mid_radius_km / width_km / tau."""
+    from math import exp
+
+    rings = []
+    for line in path.read_text().split("\n"):
+        if not line.strip() or line.startswith("#") or line.startswith("ring\t"):
+            continue
+        _, mid, width, tau = line.split("\t")
+        half = float(width) / 2
+        rings.append((float(mid) - half, float(mid) + half, 1.0 - exp(-float(tau))))
+    return rings
+
+
+def build_ring_table(body: str, spec: dict) -> None:
+    src_path = SRC / spec["src"]
+    out_path = OUT / f"{body}-rings.png"
+    if up_to_date(out_path, src_path):
+        print(f"  {body}-rings: up to date")
+        return
+    rings = parse_ring_table(src_path)
+    lo, hi = spec["span_km"]
+    texel = (hi - lo) / RINGS_W
+    # Box average: a ring narrower than a texel dilutes linearly, so
+    # equivalent width (opacity x width) is conserved.
+    alpha = []
+    for i in range(RINGS_W):
+        t0, t1 = lo + i * texel, lo + (i + 1) * texel
+        a = sum(
+            op * max(0.0, min(t1, outer) - max(t0, inner)) / texel
+            for inner, outer, op in rings
+        )
+        alpha.append(min(1.0, a))
+    save_strip(out_path, [spec["rgb"]] * RINGS_W, alpha)
 
 
 def main() -> None:
     print("building planet texture artifacts:")
     for name, src_name in BODIES.items():
         build_body(name, src_name)
-    build_rings()
-    total = sum(p.stat().st_size for p in OUT.glob("*.jpg")) + (OUT / RINGS_OUT).stat().st_size
+    build_saturn_rings()
+    for body, spec in RING_TABLES.items():
+        build_ring_table(body, spec)
+    total = sum(
+        p.stat().st_size for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"))
+    )
     print(f"total artifact size: {total / 1e6:.2f} MB")
 
 

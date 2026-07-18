@@ -806,7 +806,13 @@ export class Stellata implements FrameAnchor {
       this.planetSystemsReady = getPlanetSystem(catalog, solIdx).then((ps) => {
         if (ps !== null) {
           this.planetBodyField.attachHost(
-            solIdx, ps, catalog.absmag[solIdx], solAbs, solIdx, this.getT(),
+            solIdx,
+            ps,
+            catalog.absmag[solIdx],
+            Math.max(catalog.physicalRadius[solIdx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
+            solAbs,
+            solIdx,
+            this.getT(),
           );
         }
       });
@@ -948,7 +954,7 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       update: (ctx) => {
-        this.planetBodyField.update(ctx.camera, ctx.t);
+        this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
         // Ride runs right after the field wrote this frame's positions,
         // mirroring the binary ride's placement after its orbit walk.
         this.applyPlanetFocalRide();

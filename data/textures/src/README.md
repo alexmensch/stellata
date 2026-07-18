@@ -1,9 +1,10 @@
 # Planet texture sources
 
 Frozen originals, downloaded 2026-07-18 (retrieval date for every
-row). Consumed only by `scripts/textures/build-textures.py`. JPEGs
-ride LFS (`data/textures/src/*.jpg` in `.gitattributes`); the two
-ring-profile text tables are small and stay on regular git.
+row), plus two authored ring tables compiled from the literature.
+Consumed only by `scripts/textures/build-textures.py`. JPEGs ride LFS
+(`data/textures/src/*.jpg` in `.gitattributes`); the ring-profile
+text tables are small and stay on regular git.
 
 | File | Body | Source & credit | License | URL |
 |---|---|---|---|---|
@@ -18,6 +19,8 @@ ring-profile text tables are small and stay on regular git.
 | `pluto-pia11707.jpg` | Pluto | New Horizons LORRI/MVIC global mosaic (PIA11707, 5926×2963), NASA/JHU-APL/SwRI. Black band = un-imaged southern hemisphere (real data gap, kept) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA11707 |
 | `rings-color-bjj.txt` | Saturn rings | Radial colour profile, 13 177 samples spanning 74 510–140 390 km, from Voyager + Cassini data by Björn Jónsson | Free use with attribution | https://bjj.mmedia.is/data/s_rings/index.html |
 | `rings-transparency-bjj.txt` | Saturn rings | Radial transparency profile, same sampling/span (1 = no ring material) | Free use with attribution | https://bjj.mmedia.is/data/s_rings/index.html |
+| `rings-uranus.tsv` | Uranus rings | Authored table (not a download), values compiled 2026-07-18: the 10 narrow main rings' mid radii, mean widths and mid-range normal optical depths from the Earth-based + Voyager 2 occultation canon (French, Nicholson, Porco & Elliot 1991, in *Uranus*, Univ. of Arizona Press) | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F/abstract |
+| `rings-neptune.tsv` | Neptune rings | Authored table (not a download), values compiled 2026-07-18: Galle/Le Verrier/Lassell/Arago/Adams radii, widths and normal optical depths from Voyager 2 + stellar occultations (Porco et al. 1995, in *Neptune and Triton*, Univ. of Arizona Press); Adams τ is the azimuthal average folding in its arcs | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N/abstract |
 
 Venus is deliberately the **cloud deck**, not the Magellan radar
 surface — the physically honest naked-eye appearance (2f6.6 design

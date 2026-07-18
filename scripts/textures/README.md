@@ -5,10 +5,14 @@ live in `data/textures/README.md`; this folder owns the two scripts.
 
 - `build-textures.py` — `data/textures/src/` → `data/textures/`
   artifacts (per-body ≤2048-wide equirect JPEG + the 2048×1 RGBA
-  `saturn-rings.png` strip). Manual, infrequent (`pnpm run
-  build:textures`); needs Pillow. Idempotent via mtime against source
-  + script. Uranus is deliberately absent from `BODIES` (2f6.6 design
-  record: texture-less by design).
+  `<body>-rings.png` strips: Saturn from the Jónsson radial profiles,
+  Uranus/Neptune from authored ring tables at true opacity —
+  `data/textures/README.md` § Ring strips). Manual, infrequent
+  (`pnpm run build:textures`); needs Pillow. Idempotent via mtime
+  against source + script. Uranus is deliberately absent from
+  `BODIES` (2f6.6 design record: texture-less by design — its ring
+  strip is separate). `ring-strips.test.ts` pins `RING_TABLES` spans
+  to `SOL_PLANETS` and the strips' 8-bit visibility claims.
 - `sync-textures.ts` (+ `-pure.ts`, test) — mirrors the committed
   artifacts to `public/textures/` (gitignored) on every `pnpm run
   build` / `dev`; pure copy, so CI/deploy never needs Pillow. The

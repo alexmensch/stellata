@@ -37,6 +37,12 @@ import {
 } from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
 import { projectToScreen } from '../overlays/overlay-project';
+import {
+  blendDimBuffer,
+  dimBlendFactor,
+  eclipseDimFromOffsets,
+} from '../binaries/eclipse-photometry-pure';
+import { ECLIPSE_DIM_TAU_S } from '../binaries/binary-tuning';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
@@ -82,6 +88,9 @@ interface AttachedHost {
   hostStarIdx: number;
   ps: PlanetSystem;
   hostAbsmag: number;
+  /** Host star's physical radius in pc — the occluding disc of the
+   *  true-eclipse dim. */
+  hostRadiusPc: number;
   /** Absolute (catalog-space) host position in pc. Static for the
    *  session — used to recompute hostLocalPos whenever worldOffset
    *  changes. */
@@ -147,6 +156,13 @@ export class PlanetBodyField {
   private bufPhaseA!: Float32Array;
   private bufPhaseB!: Float32Array;
   private bufPhaseC!: Float32Array;
+  // True-eclipse dim on a planet behind its host's physical disc —
+  // the planet sibling of the star pipeline's iEclipseDim (glow pass
+  // only, anti-strobe smoothed). 1.0 = no dim.
+  private bufEclipseDim!: Float32Array;
+  private dimTargets = new Map<number, number>();
+  private dimActive = new Set<number>();
+  private lastDimNowMs: number | null = null;
   // Reverse index: flat instance → owning hostStarIdx (-1 = unused
   // slot). Rebuilt on every attach/detach so the flat-index accessors
   // resolve their host in O(1) instead of an O(hosts) scan — several
@@ -195,6 +211,7 @@ export class PlanetBodyField {
     hostStarIdx: number,
     ps: PlanetSystem,
     hostAbsmag: number,
+    hostRadiusPc: number,
     hostAbsPos: Readonly<THREE.Vector3>,
     solIndex: number,
     t: number,
@@ -230,6 +247,7 @@ export class PlanetBodyField {
       hostStarIdx,
       ps,
       hostAbsmag,
+      hostRadiusPc,
       hostAbsPos: new THREE.Vector3().copy(hostAbsPos),
       hostLocalPos: new THREE.Vector3().copy(hostAbsPos).sub(this.worldOffset),
       orientation,
@@ -243,6 +261,7 @@ export class PlanetBodyField {
     this.hosts.set(hostStarIdx, host);
     this.liveCount += n;
     this.rebuildInstanceMap();
+    this.resetEclipseDims();
 
     // Initial fill — bodies, host position, and one immediate
     // ephemeris-or-placeholder pass so the first frame after attach
@@ -276,7 +295,18 @@ export class PlanetBodyField {
     this.flushAllAttributes();
     this.hosts.delete(hostStarIdx);
     this.rebuildInstanceMap();
+    this.resetEclipseDims();
     if (this.liveCount === 0) this.group.visible = false;
+  }
+
+  /** Attach/detach shifts flat indices, invalidating any mid-decay dim
+   *  slot the active set points at — reset the whole buffer to 1
+   *  (correct within one anti-strobe time constant, and attach/detach
+   *  is a rare lifecycle event, not a per-frame path). */
+  private resetEclipseDims(): void {
+    this.bufEclipseDim.fill(1);
+    this.dimActive.clear();
+    this.dimTargets.clear();
   }
 
   /**
@@ -312,8 +342,11 @@ export class PlanetBodyField {
    * host, skip the work entirely when the camera is past `cullDistance`
    * — the planets would be sub-cutoff anyway and stale iLocalRel data
    * is harmless once the host comes back into range.
+   *
+   * `nowMs` is wall-clock (performance.now()) for the eclipse-dim
+   * anti-strobe filter — a render filter, not sim time.
    */
-  update(camera: THREE.PerspectiveCamera, t: number): void {
+  update(camera: THREE.PerspectiveCamera, t: number, nowMs: number): void {
     if (this.liveCount === 0) {
       this.group.visible = false;
       return;
@@ -334,8 +367,57 @@ export class PlanetBodyField {
         this.writeHostPositions(host, t);
         touched = true;
       }
+      this.collectEclipseDimTargets(host, camera.position);
     }
     if (touched && render) this.flushDynamicAttributes();
+
+    const blend = dimBlendFactor(nowMs, this.lastDimNowMs, ECLIPSE_DIM_TAU_S);
+    this.lastDimNowMs = nowMs;
+    if (blendDimBuffer(this.bufEclipseDim, this.dimTargets, this.dimActive, blend)) {
+      (this.geometry.attributes.iEclipseDim as THREE.InstancedBufferAttribute)
+        .needsUpdate = true;
+    }
+    this.dimTargets.clear();
+  }
+
+  /** True-eclipse targets for one host's planets: a planet whose disc
+   *  crosses BEHIND the host's physical disc dims by the occluded area
+   *  fraction (`eclipseDimFromOffsets`, the binaries eclipse-photometry
+   *  math). Glow through the host's perceptual halo is physically
+   *  correct and stays undimmed; a planet in FRONT (transit) dims the
+   *  host by (R_p/R_host)² — negligible, and the host is a star-pipeline
+   *  instance this field doesn't own. The pair-relative offset is
+   *  iLocalRel itself (small values, not a large-position difference),
+   *  so float32 carries it fine. */
+  private collectEclipseDimTargets(
+    host: AttachedHost,
+    cameraPos: Readonly<THREE.Vector3>,
+  ): void {
+    const losX = host.hostLocalPos.x - cameraPos.x;
+    const losY = host.hostLocalPos.y - cameraPos.y;
+    const losZ = host.hostLocalPos.z - cameraPos.z;
+    for (let i = 0; i < host.count; i++) {
+      const idx = host.startInstance + i;
+      const base = idx * 3;
+      const result = eclipseDimFromOffsets(
+        losX, losY, losZ,
+        this.bufLocalRel[base + 0],
+        this.bufLocalRel[base + 1],
+        this.bufLocalRel[base + 2],
+        host.hostRadiusPc,
+        this.bufRadius[idx],
+      );
+      if (result.front === 'primary' && result.dim < 1) {
+        this.dimTargets.set(idx, result.dim);
+      }
+    }
+  }
+
+  /** Current eclipse-dim slot for a flat instance (1 = undimmed). */
+  eclipseDimForInstance(instanceIdx: number): number {
+    return instanceIdx >= 0 && instanceIdx < this.liveCount
+      ? this.bufEclipseDim[instanceIdx]
+      : 1;
   }
 
   /**
@@ -794,6 +876,7 @@ export class PlanetBodyField {
     this.bufPhaseA = new Float32Array(capacity * 4);
     this.bufPhaseB = new Float32Array(capacity * 4);
     this.bufPhaseC = new Float32Array(capacity * 4);
+    this.bufEclipseDim = new Float32Array(capacity).fill(1);
     this.instanceHost = new Int32Array(capacity).fill(-1);
   }
 
@@ -809,6 +892,7 @@ export class PlanetBodyField {
     const oldPhaseA = this.bufPhaseA;
     const oldPhaseB = this.bufPhaseB;
     const oldPhaseC = this.bufPhaseC;
+    const oldEclipseDim = this.bufEclipseDim;
     this.allocateBuffers(newCap);
     this.bufLocalRel.set(oldLocalRel);
     this.bufHostLocalPos.set(oldHostLocal);
@@ -820,6 +904,7 @@ export class PlanetBodyField {
     this.bufPhaseA.set(oldPhaseA);
     this.bufPhaseB.set(oldPhaseB);
     this.bufPhaseC.set(oldPhaseC);
+    this.bufEclipseDim.set(oldEclipseDim);
     this.capacity = newCap;
     // Replace the geometry with a fresh one over the new buffers.
     // Materials and meshes are re-bound via three.js's normal
@@ -854,6 +939,9 @@ export class PlanetBodyField {
     geom.setAttribute('iPhaseCoefsA', new THREE.InstancedBufferAttribute(this.bufPhaseA, 4));
     geom.setAttribute('iPhaseCoefsB', new THREE.InstancedBufferAttribute(this.bufPhaseB, 4));
     geom.setAttribute('iPhaseCoefsC', new THREE.InstancedBufferAttribute(this.bufPhaseC, 4));
+    const dimAttr = new THREE.InstancedBufferAttribute(this.bufEclipseDim, 1);
+    dimAttr.setUsage(THREE.DynamicDrawUsage);
+    geom.setAttribute('iEclipseDim', dimAttr);
     geom.instanceCount = this.liveCount;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     this.geometry = geom;
@@ -1094,5 +1182,6 @@ export class PlanetBodyField {
     shiftScalar(this.bufPhaseA, 4);
     shiftScalar(this.bufPhaseB, 4);
     shiftScalar(this.bufPhaseC, 4);
+    shiftScalar(this.bufEclipseDim, 1);
   }
 }

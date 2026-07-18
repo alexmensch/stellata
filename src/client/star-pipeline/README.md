@@ -134,6 +134,8 @@ viewpoint. Written by `EclipsePhotometryField` (see
 smoothing, and re-uploaded only on frames with active dims. Folded
 into `appMag` in the **glow pass only** — the disc pass resolves the
 overlap through the depth buffer, ordered by `iDepthBias` below.
+Exactly 0 means totality: the glow quad collapses via the
+off-screen-sentinel pattern instead of taking a floored log.
 Integration shell initialises the buffer to 1.0 at allocation and on
 every re-attach, so the shader's `iEclipseDim < 1.0` gate fires only on
 slots the field holds below 1.

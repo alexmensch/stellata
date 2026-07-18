@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
+  blendDimBuffer,
   circleCircleLensArea,
+  dimBlendFactor,
   eclipseDimFromOffsets,
   orbitPlaneNormalICRS,
   DIM_FLOOR,
   type EclipseResult,
 } from './eclipse-photometry-pure';
 import { type OrbitalElements } from './binary-orbit-pure';
+import { ECLIPSE_DIM_TAU_S } from './binary-tuning';
 
 describe('circleCircleLensArea', () => {
   it('disjoint circles return zero', () => {
@@ -127,11 +130,13 @@ describe('eclipseDimFromOffsets — front/back determination', () => {
 });
 
 describe('eclipseDimFromOffsets — full and partial occlusion', () => {
-  it('small back fully hidden by larger front: dim clamps to DIM_FLOOR', () => {
+  it('small back fully hidden by larger front: dim is exactly 0 (totality)', () => {
     // Front (secondary) closer and much bigger; back's full disc hidden.
+    // Totality returns 0, not DIM_FLOOR — consumers collapse the quad;
+    // the floor exists only to keep the log finite for PARTIAL dims.
     const r = dimOf([0, 0, 10], [0, 0, -5], 5e-3, 0.5);
     expect(r.front).toBe('secondary');
-    expect(r.dim).toBe(DIM_FLOOR);
+    expect(r.dim).toBe(0);
   });
 
   it('small front on bigger back: dim = 1 − (alpha_front / alpha_back)²', () => {
@@ -204,5 +209,57 @@ describe('orbitPlaneNormalICRS', () => {
     const n = orbitPlaneNormalICRS(1, elements, sys);
     expect(n).not.toBeNull();
     expect(Math.hypot(n!.x, n!.y, n!.z)).toBeCloseTo(1, 9);
+  });
+});
+
+describe('dimBlendFactor', () => {
+  it('snaps on the first frame (no previous timestamp)', () => {
+    expect(dimBlendFactor(1234, null, ECLIPSE_DIM_TAU_S)).toBe(1);
+  });
+
+  it('follows 1 − e^(−dt/τ) and clamps dt to 0.25 s', () => {
+    const b = dimBlendFactor(1120, 1000, ECLIPSE_DIM_TAU_S);
+    expect(b).toBeCloseTo(1 - Math.exp(-0.12 / ECLIPSE_DIM_TAU_S), 12);
+    // A 10 s stall blends exactly like 0.25 s — no teleport-decay.
+    expect(dimBlendFactor(11_000, 1000, ECLIPSE_DIM_TAU_S)).toBe(
+      dimBlendFactor(1250, 1000, ECLIPSE_DIM_TAU_S),
+    );
+    // Backwards clock clamps at 0 → no movement.
+    expect(dimBlendFactor(900, 1000, ECLIPSE_DIM_TAU_S)).toBe(0);
+  });
+});
+
+describe('blendDimBuffer', () => {
+  it('blends targets in, decays the rest, and snaps at DIM_SETTLED', () => {
+    const buf = new Float32Array([1, 1, 0.5]);
+    const active = new Set<number>([2]);
+    // Slot 1 acquires a target; slot 2 (active, untargeted) decays.
+    expect(blendDimBuffer(buf, new Map([[1, 0.2]]), active, 0.5)).toBe(true);
+    expect(buf[1]).toBeCloseTo(0.6, 6);
+    expect(buf[2]).toBeCloseTo(0.75, 6);
+    expect(active.has(1)).toBe(true);
+    // Decay to within DIM_SETTLED of 1 → snap to exactly 1, leave set.
+    blendDimBuffer(buf, new Map(), active, 1);
+    expect(buf[1]).toBe(1);
+    expect(buf[2]).toBe(1);
+    expect(active.size).toBe(0);
+    // Nothing targeted, nothing active → no write.
+    expect(blendDimBuffer(buf, new Map(), active, 1)).toBe(false);
+    expect(buf[0]).toBe(1);
+  });
+
+  it('a totality target (0) snaps to exactly 0 below the partial floor', () => {
+    const buf = new Float32Array([0.0015]);
+    const active = new Set<number>([0]);
+    // Blend leaves the value above the floor → no snap yet.
+    blendDimBuffer(buf, new Map([[0, 0]]), active, 0.25);
+    expect(buf[0]).toBeGreaterThan(DIM_FLOOR);
+    // Next step crosses the floor → exact 0 (the shader's collapse gate;
+    // an exponential decay would never reach it on its own).
+    blendDimBuffer(buf, new Map([[0, 0]]), active, 0.5);
+    expect(buf[0]).toBe(0);
+    // A PARTIAL target near the floor must NOT snap — only totality does.
+    blendDimBuffer(buf, new Map([[0, DIM_FLOOR]]), active, 1);
+    expect(buf[0]).toBe(Math.fround(DIM_FLOOR));
   });
 });

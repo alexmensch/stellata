@@ -8,6 +8,8 @@ describe('sync-textures / isTexturePublicAsset', () => {
     expect(isTexturePublicAsset('earth-night.jpg')).toBe(true);
     expect(isTexturePublicAsset('jupiter.jpg')).toBe(true);
     expect(isTexturePublicAsset('saturn-rings.png')).toBe(true);
+    expect(isTexturePublicAsset('uranus-rings.png')).toBe(true);
+    expect(isTexturePublicAsset('neptune-rings.png')).toBe(true);
   });
 
   it('rejects docs and source originals', () => {
@@ -15,6 +17,7 @@ describe('sync-textures / isTexturePublicAsset', () => {
     expect(isTexturePublicAsset('src')).toBe(false);
     expect(isTexturePublicAsset('mercury-pia15063.JPG')).toBe(false);
     expect(isTexturePublicAsset('rings-color-bjj.txt')).toBe(false);
+    expect(isTexturePublicAsset('rings-uranus.tsv')).toBe(false);
     expect(isTexturePublicAsset('earth.jpg.bak')).toBe(false);
     expect(isTexturePublicAsset('other.png')).toBe(false);
   });

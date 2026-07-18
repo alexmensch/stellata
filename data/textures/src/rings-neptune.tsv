@@ -1,0 +1,7 @@
+# Provenance, value derivation, and the Adams-arc fold: README.md (this folder).
+ring	mid_radius_km	width_km	tau
+galle	41900	2000	0.0001
+leverrier	53200	113	0.0062
+lassell	55200	4000	0.0001
+arago	57200	100	0.0001
+adams	62932	35	0.014

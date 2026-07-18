@@ -49,9 +49,13 @@ star catalog records.
 - `eclipse-photometry-pure.ts` — pure math for camera-anywhere
   geometric occlusion: `eclipseDimFromOffsets` (angular separation via
   atan2 of unit view vectors, closed-form circle-circle lens area,
-  geometric dim factor on the back component's flux) and
+  geometric dim factor on the back component's flux),
   `orbitPlaneNormalICRS` (the view-direction prefilter's normal,
-  sampled from the same eval path the renderer uses).
+  sampled from the same eval path the renderer uses), and the shared
+  anti-strobe helpers `dimBlendFactor` + `blendDimBuffer` (+
+  `DIM_SETTLED`). Second consumer: the planet field's true-eclipse
+  dim (`solar-system/README.md` § Planet rendering) reuses all of
+  these for planet-behind-host-disc occlusion.
   `eclipse-photometry-pure.test.ts` pins the degenerate cases and the
   float32-line-of-sight immunity.
 - `eclipse-photometry.ts` — per-frame field over the same relation
@@ -384,11 +388,18 @@ field owns `iDepthBias` exclusively, so it clears its own prior-frame
 entries rather than relying on `BinaryOrbitField`'s reset (which only
 touches `compositeSuppress`).
 
-`eclipse-photometry-pure` floors its return value at
-`DIM_FLOOR = 0.001` rather than 0 so `-2.5·log10(dim)` stays
-finite for a full geometric eclipse. 7.5 mag of dim reads as
-effectively invisible in the additive glow composite — the
-floor is a numeric-domain guard, not a sentinel encoding.
+`eclipse-photometry-pure` floors PARTIAL dims at `DIM_FLOOR = 0.001`
+(a numeric-domain guard so `-2.5·log10(dim)` stays finite as overlap
+approaches totality) but returns **exactly 0 for a full geometric
+eclipse**, and both glow shaders collapse the quad at 0 (the star
+pipeline's off-screen-sentinel pattern). A floored +7.5 mag residual
+is invisible for typical binary flux levels but NOT for a bright
+close-range back body — Mercury (mag ≈ −1) behind Sol's disc stayed a
+visible glow point — and the depth buffer can't hide it either (the
+pair's line-of-sight separation sits inside one log-depth bucket).
+`blendDimBuffer` snaps a decaying totality slot to exact 0 once it
+drops below the floor, since the exponential smoothing alone never
+reaches the shader's `<= 0` gate.
 
 ### Pulsation gate for eclipsing binaries
 
