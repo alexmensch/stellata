@@ -31,7 +31,8 @@ const float SHADOW_FLOOR = 0.05;
 
 // Ray–ellipsoid roots for `o + t·d` against the body spheroid: scale
 // space so it becomes a unit sphere, solve the quadratic. Returns
-// (t0, t1) with t0 ≤ t1, or (1e30, 1e30) on a miss.
+// (t0, t1) with t0 ≤ t1. A miss returns (-1e30, -1e30) — negative so
+// it fails both the occlusion (0 < t0 < 1) and shadow (t1 > 0) tests.
 vec2 bodyRoots(vec3 o, vec3 d) {
   vec3 os = vec3(o.xy / uEqRadiusPc, o.z / uPolarRadiusPc);
   vec3 ds = vec3(d.xy / uEqRadiusPc, d.z / uPolarRadiusPc);
@@ -39,7 +40,7 @@ vec2 bodyRoots(vec3 o, vec3 d) {
   float b = 2.0 * dot(os, ds);
   float c = dot(os, os) - 1.0;
   float disc = b * b - 4.0 * a * c;
-  if (disc < 0.0) return vec2(1e30);
+  if (disc < 0.0) return vec2(-1e30);
   float s = sqrt(disc);
   return vec2((-b - s) / (2.0 * a), (-b + s) / (2.0 * a));
 }
