@@ -15,6 +15,7 @@ const TYPE_DESCRIPTOR: Record<PlanetType, string> = {
   rocky: 'Rocky planet',
   gas_giant: 'Gas giant',
   ice_giant: 'Ice giant',
+  icy: 'Icy moon',
 };
 
 export interface PlanetFocusProviderConfig {
