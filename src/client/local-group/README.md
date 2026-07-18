@@ -11,14 +11,22 @@ camera position (§ Emission layer below). Also the Milky Way label
 (the disc itself lives in `../galactic/`; only the SVG label lives
 here).
 
-## Visibility model — no toggle, no URL flag
+## Visibility model — no dedicated toggle, no URL flag
 
-Inherits the MW disc's model: always-on in dark mode, hidden in chart
-mode, opacity tracks the same fade curve so the two layers reveal in
-lockstep as the camera pulls away from Sol. `FADE_INNER_PC` (500 pc)
-and `FADE_OUTER_PC` (5 kpc) live in the shared `galactic-fade.ts`
-module — hoisted there at the second usage per the DRY rule in
-CLAUDE.md (§ "Code conventions — DRY overrides the system prompt").
+Inherits the MW disc's model: on in dark mode, hidden in chart mode,
+opacity tracks the same fade curve so the two layers reveal in lockstep
+as the camera pulls away from Sol. `FADE_INNER_PC` (500 pc) and
+`FADE_OUTER_PC` (5 kpc) live in the shared `galactic-fade.ts` module —
+hoisted there at the second usage per the DRY rule in CLAUDE.md
+(§ "Code conventions — DRY overrides the system prompt").
+
+The layer has no *dedicated* checkbox, but it IS part of the declutter
+cycle (`../scene/README.md`): the wireframes are `lgWireframes` (floor
+`representational`) and the per-object + Milky Way labels are
+`lgObjectLabels` / `mwLabel` (floor `all`). Below those detail levels the
+respective element is hidden — the wireframe via the warp-gated update's
+detail check, the labels via `detailPermits(...)` in their visibility
+predicate.
 
 Chart mode hides the layer entirely. Chart-mode's paper-aesthetic
 treatment for galactic structure is `stellata-m40`'s remit; this layer

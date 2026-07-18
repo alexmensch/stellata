@@ -61,7 +61,10 @@ the stick-figure overlay and the chart-mode Latin-name labels (default
 on, panel toggle at the top of Overlays). When false the overlay clears
 itself and skips the per-frame projection pass entirely; the picker UI
 in the panel is also disabled while the flag is off so users can't
-mutate the unseen `highlightCon`.
+mutate the unseen `highlightCon`. The declutter cycle AND's a second
+gate: the overlay is `constellationFigures` (floor `representational`),
+so `update()` also requires `stellata.detailPermits('constellationFigures')`
+(`../scene/README.md`).
 
 The overlay carries a **full-tick skip** (same pattern as
 `chart-labels.ts` — see `../debug/README.md` § full-tick skip): the

@@ -202,6 +202,10 @@ export class OrbitRingsLayer {
   private rings: PlanetRing[] = [];
   private mono = false;
   private hidden = false;
+  // Detail-cycle permission (floor 'representational'). AND'd with the
+  // focus/warp/chart gates — false hides the rings even when a host is
+  // focused. Sibling of `hidden` / `mono`.
+  private permitted = true;
 
   constructor() {
     this.group = new THREE.Group();
@@ -284,7 +288,7 @@ export class OrbitRingsLayer {
       this.rings.push({ planet, line, material: mat, semiMajorPc: aPc });
     }
 
-    this.group.visible = !this.hidden && !this.mono;
+    this.group.visible = !this.hidden && !this.mono && this.permitted;
   }
 
   /**
@@ -300,7 +304,7 @@ export class OrbitRingsLayer {
     viewportHeightPx: number,
     hostLocalPos: Readonly<THREE.Vector3> | null,
   ): void {
-    if (this.hidden || this.mono || this.rings.length === 0) {
+    if (this.hidden || this.mono || !this.permitted || this.rings.length === 0) {
       this.group.visible = false;
       return;
     }
@@ -325,7 +329,7 @@ export class OrbitRingsLayer {
    * when the orbit rings are already identifying the focused host.
    */
   anyOrbitRingVisible(): boolean {
-    if (this.hidden || this.mono || !this.group.visible) return false;
+    if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     for (const r of this.rings) {
       if (r.line.visible) return true;
     }
@@ -343,9 +347,18 @@ export class OrbitRingsLayer {
    * not "what am I currently rendering."
    */
   isOrbitRingVisible(i: number): boolean {
-    if (this.hidden || this.mono || !this.group.visible) return false;
+    if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     if (i < 0 || i >= this.rings.length) return false;
     return this.rings[i].line.visible;
+  }
+
+  /**
+   * Detail-cycle permission (declutter). Independent of `setHidden`
+   * (warp) and `setMonochrome` (chart) — all three AND into visibility.
+   */
+  setPermitted(on: boolean): void {
+    this.permitted = on;
+    if (!on) this.group.visible = false;
   }
 
   /**

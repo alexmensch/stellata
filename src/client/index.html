@@ -60,19 +60,19 @@
       <g id="poi-labels"></g>
       <!-- Per-planet body labels for the focused host's planet system.
            Always-on when a planet system is attached, hidden in chart
-           mode (m40.3 owns chart-mode glyphs). Pooled <text> children
+           mode (chart-mode owns its own glyphs). Pooled <text> children
            created at runtime by planet-labels.ts. -->
       <g id="planet-labels"></g>
-      <!-- Heliopause label (3re.5). Anchored each frame to the bottom-
+      <!-- Heliopause label. Anchored each frame to the bottom-
            right of the egg's projected silhouette by heliopause.ts —
            hugs the curve at constant 10 px. Visibility tracks the
            orbit-ring heuristic so the label disappears in lockstep
            with the planet labels. -->
       <text id="heliopause-label" class="heliopause-label" text-anchor="start" dominant-baseline="hanging">Heliopause</text>
-      <!-- Milky Way label (stellata-38m). Anchored to the galactic-
-           centre projection; fades in once the camera is far enough
-           from GC that the disc reads as a whole structure. Same
-           SVG layer as the Local Group labels below. -->
+      <!-- Milky Way label. Anchored to the galactic-centre projection;
+           fades in once the camera is far enough from GC that the disc
+           reads as a whole structure. Same SVG layer as the Local Group
+           labels below. -->
       <text id="mw-label" class="lg-label" text-anchor="start" dominant-baseline="hanging">Milky Way</text>
       <!-- Per-object Local Group labels (LMC, SMC, Sagittarius, classical
            dSphs). Pooled <text> children minted at runtime by main.ts
@@ -410,7 +410,18 @@
             <button class="group-toggle" type="button" aria-label="Toggle Overlays section" aria-expanded="true">−</button>
           </header>
           <div class="group-body">
-            <label class="checkbox-row">
+            <div class="sub-label-row">
+              <label class="sub-label">Detail level</label>
+              <span class="row-actions" id="detail-level">
+                <button class="link-btn detail-stop" data-detail="physical" type="button">physical</button>
+                <span class="sep">·</span>
+                <button class="link-btn detail-stop" data-detail="representational" type="button">structure</button>
+                <span class="sep">·</span>
+                <button class="link-btn detail-stop" data-detail="all" type="button">all</button>
+              </span>
+            </div>
+
+            <label class="checkbox-row" style="margin-top: 12px;">
               <input id="show-constellation" type="checkbox" checked />
               <span>Show constellations</span>
             </label>

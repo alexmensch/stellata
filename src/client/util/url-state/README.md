@@ -105,6 +105,10 @@ Cloud-related state (cloud focus, cloud measurement vector) rides the
 same universal `focus` / `to` SID refs; the shelved MC overlay toggle's
 flag bit stays reserved.
 
+The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
+`detailLevelField`), present only when the user cycled below the default
+`all` — a fully-cluttered share stays byte-identical to before.
+
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
 `focusedStar === null` AND the offset isn't ≈Sol — see
 `src/client/README.md` § Floating origin for the precision-anchor

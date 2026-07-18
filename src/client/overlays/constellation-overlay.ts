@@ -58,7 +58,7 @@ export function createConstellationOverlay(stellata: Stellata) {
   const update = () => {
     const f = stellata.getFilter();
     current = f.highlightCon;
-    visible = f.showConstellation;
+    visible = f.showConstellation && stellata.detailPermits('constellationFigures');
     chartActive = f.chart && stellata.getCameraMode() === 'observe';
     lastTickCamPos.set(NaN, NaN, NaN);
     if (!visible || (current < 0 && !chartActive)) {

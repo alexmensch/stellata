@@ -106,6 +106,12 @@ import {
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
 import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
+import {
+  type DetailLevel,
+  type SceneElementBinds,
+  type SceneElementId,
+  SCENE_ELEMENT_IDS,
+} from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import {
   ExtinctionPrepass,
@@ -259,6 +265,14 @@ export class Stellata implements FrameAnchor {
   // state through this getter for per-frame gates and dep closures.
   private filters!: FilterController;
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
+
+  // Declutter cycle: the effective per-element permitted set (floors +
+  // any per-element override), the fold point where FilterController's
+  // binds (push) meet per-frame layer gates (pull, via detailPermits).
+  // Init all-true so the default detailLevel='all' matches today's
+  // always-on scene — the seam is behaviour-neutral until V is pressed.
+  private readonly detailPermitted: Record<SceneElementId, boolean> =
+    Object.fromEntries(SCENE_ELEMENT_IDS.map((id) => [id, true])) as Record<SceneElementId, boolean>;
 
   private disposed = false;
   private bus = new EventBus<StellataEventMap>();
@@ -859,10 +873,12 @@ export class Stellata implements FrameAnchor {
         // in maxAppMag — refresh the cached cullDistancePc whenever the
         // slider moves so distant hosts stay culled at the new threshold.
         this.planetBodyField.setMaxAppMag(f.maxAppMag);
-        this.milkyway.setEnabled(f.showMilkyway);
-        this.lgEmission?.setEnabled(f.showLgEmission);
+        // Effective = detail permission AND the user's own toggle.
+        this.applyMilkywayEnabled();
+        this.applyLgEmissionEnabled();
       },
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
+      sceneElementBinds: this.buildSceneElementBinds(),
     });
 
     // Engage focus on Sol if it exists so measurement and per-star zoom
@@ -925,9 +941,12 @@ export class Stellata implements FrameAnchor {
       update: (worldOffset: THREE.Vector3, distFromSol: number) => void;
     } | null,
     ctx: FrameCtx,
+    permitted: boolean,
   ): void {
     if (!layer) return;
-    if (ctx.warpActive) {
+    // Detail-cycle permission (representational floor) AND's with the warp
+    // gate; either false hides the group.
+    if (ctx.warpActive || !permitted) {
       layer.group.visible = false;
       return;
     }
@@ -979,12 +998,14 @@ export class Stellata implements FrameAnchor {
       },
     });
     this.layers.register({
-      update: (ctx) => this.updateWarpGatedRefLayer(this.galacticDisc, ctx),
+      update: (ctx) => this.updateWarpGatedRefLayer(
+        this.galacticDisc, ctx, this.detailPermits('galacticDiscWireframe')),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
       dispose: () => this.galacticDisc.dispose(),
     });
     this.layers.register({
-      update: (ctx) => this.updateWarpGatedRefLayer(this.localGroupLayer, ctx),
+      update: (ctx) => this.updateWarpGatedRefLayer(
+        this.localGroupLayer, ctx, this.detailPermits('lgWireframes')),
       setMonochrome: (on) => this.localGroupLayer?.setMonochrome(on),
       dispose: () => this.localGroupLayer?.dispose(),
     });
@@ -1863,6 +1884,58 @@ export class Stellata implements FrameAnchor {
   getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
     this.filters.clearSizeOverrides(fields);
+  }
+
+  // Declutter cycle (scene/scene-elements.ts). applyDetailPreset re-derives
+  // every element from the preset floors; setSceneElementVisible overrides
+  // one element until the next preset apply. detailPermits is the per-frame
+  // read path layers gate on (effective = permitted AND instance gates).
+  getDetailLevel(): DetailLevel { return this.filters.getDetailLevel(); }
+  applyDetailPreset(level: DetailLevel) { this.filters.applyDetailPreset(level); }
+  setSceneElementVisible(id: SceneElementId, on: boolean) {
+    this.filters.setSceneElementVisible(id, on);
+  }
+  detailPermits(id: SceneElementId): boolean { return this.detailPermitted[id]; }
+
+  // Per-element bind adapters (exhaustive over SceneElementId — a new
+  // renderable that isn't wired fails tsc). Each writes the permitted
+  // cache; the imperative layers (Milky Way / LG-emission enable, orbit
+  // rings, heliopause shell) also push the change, since they have no
+  // per-frame gate that would pick it up. The rest are read live via
+  // detailPermits() by their per-frame update / label predicate.
+  private buildSceneElementBinds(): SceneElementBinds {
+    const set = (id: SceneElementId, extra?: (on: boolean) => void) =>
+      (on: boolean) => { this.detailPermitted[id] = on; extra?.(on); };
+    return {
+      stars: set('stars'),
+      planetBodies: set('planetBodies'),
+      milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
+      milkyWayIsobar: set('milkyWayIsobar'),
+      lgEmissionGlow: set('lgEmissionGlow', () => this.applyLgEmissionEnabled()),
+      galacticDiscWireframe: set('galacticDiscWireframe'),
+      lgWireframes: set('lgWireframes'),
+      orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
+      heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
+      constellationFigures: set('constellationFigures'),
+      molecularCloudEllipsoids: set('molecularCloudEllipsoids'),
+      dustParticles: set('dustParticles'),
+      planetLabels: set('planetLabels'),
+      heliopauseLabel: set('heliopauseLabel'),
+      mwLabel: set('mwLabel'),
+      lgObjectLabels: set('lgObjectLabels'),
+      chartStarNameLabels: set('chartStarNameLabels'),
+      chartBayerGlyphs: set('chartBayerGlyphs'),
+      chartVariableRings: set('chartVariableRings'),
+      chartConstellationNames: set('chartConstellationNames'),
+      chartCloudNames: set('chartCloudNames'),
+    };
+  }
+
+  private applyMilkywayEnabled(): void {
+    this.milkyway.setEnabled(this.detailPermitted.milkyWayBand && this.filter.showMilkyway);
+  }
+  private applyLgEmissionEnabled(): void {
+    this.lgEmission?.setEnabled(this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
   }
 
   setMonochrome(on: boolean) {

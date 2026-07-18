@@ -521,9 +521,10 @@ arbitrary; 0 is used.
 
 `planet-labels.ts` draws per-planet body-anchored SVG labels above
 the canvas. The label engine is independent of the chart-mode label
-engine (`chart-labels.ts`); planet labels are always-on when a planet
-system is attached, and hidden in chart mode so the chart-mode glyph
-contract isn't doubled up.
+engine (`chart-labels.ts`); planet labels show when a planet system is
+attached and the detail cycle permits `planetLabels` (floor `all`), and
+are hidden in chart mode so the chart-mode glyph contract isn't doubled
+up (`../scene/README.md` § Detail-level declutter cycle).
 
 ## Orbit rings
 
@@ -535,6 +536,11 @@ longitude-of-perihelion landed alongside Standish elements in 3re.13.
 
 Ring visibility is gated on an angular-separation heuristic so
 distant host stars don't spam invisible rings into the framebuffer.
+Orbit rings + the heliopause shell are also declutter-cycle elements
+(floor `representational`) — `OrbitRingsLayer.setPermitted` /
+`Heliopause.setPermitted` AND into `group.visible` alongside the existing
+warp / chart / focus gates, so both hide at detail level `physical`
+(`../scene/README.md`).
 
 ### Orbital plane convention
 

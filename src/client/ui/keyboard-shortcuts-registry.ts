@@ -23,6 +23,7 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   },
   { keys: ['O'], label: 'Switch to observe mode when a star is focused' },
   { keys: ['M'], label: 'Toggle star chart mode (in observe mode only)' },
+  { keys: ['V'], label: 'Cycle detail level (physical → structure → all)' },
   { keys: ['W'], label: 'Warp to the destination' },
   {
     keys: ['C'],

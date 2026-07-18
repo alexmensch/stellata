@@ -12,6 +12,45 @@ guarantee.
 
 - `scene-layer.ts` — `FrameCtx`, `SceneLayer`, `SceneLayerRegistry`.
 - `scene-layer.test.ts` — fan-out order + optional-hook semantics.
+- `scene-elements.ts` — the declutter-cycle floor table + derivation
+  (§ Detail-level declutter cycle).
+- `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
+
+## Detail-level declutter cycle
+
+`scene-elements.ts` owns the **declutter cycle** (`V` key + the settings
+3-stop control). `DetailLevel` = `physical | representational | all`,
+cumulative, cycled *within* the current render style (`realistic` /
+`chart`). `SCENE_ELEMENT_FLOORS` is the one exhaustive record — one row
+per renderable, a `Floor` per style — so `permitted = floorPermits(floor,
+level)`. Effective visibility is always `permitted AND` the layer's own
+instance gates (focus / apparent-magnitude / warp), which are unchanged.
+
+**Exhaustiveness is the load-bearing contract** (same shape as
+`FocusableProviders`): `SCENE_ELEMENT_FLOORS` is a mapped type over the
+closed `SceneElementId` union — a new renderable that skips a floor row
+fails `tsc`, pinned by `scene-elements.test.ts`. The runtime binds in
+`stellata.ts` (`buildSceneElementBinds`) are a second exhaustive `Record`,
+so an unwired element also fails `tsc`.
+
+**Push meets pull at `Stellata.detailPermitted`.** `FilterController.
+applyDetailPreset(level)` computes each element's floor permission and
+calls its bind, which writes the `detailPermitted` cache. Per-frame
+layers *pull* — their update / label predicate reads
+`stellata.detailPermits(id)`. The few event-driven layers (Milky Way /
+LG-emission `setEnabled`, orbit rings, heliopause shell) have no per-frame
+gate, so their bind *pushes* the change imperatively. A per-element
+override (`setSceneElementVisible`) writes one cache slot directly and
+supersedes its floor until the next `applyDetailPreset` overwrites the
+whole set.
+
+Default `detailLevel = 'all'` (fully cluttered) → the seam is
+behaviour-neutral at startup and `applyDetailPreset` runs only on `V` /
+the control / a decluttered `?v=` restore. Chart-only element floors ship
+as data here; wiring the chart glyph binds into `chart-labels.ts` is the
+follow-up (`stellata-8hu.7`). `USER_OWNED_IDS` enumerates the chrome the
+cycle never writes (HUD, coord sphere, cards, feedback) — toggled by
+their own affordances (`H` / `S` / `U` / `T`).
 
 ## How the shell uses it
 

@@ -90,6 +90,7 @@ export const HELIOPAUSE_LABEL_ELEMENT_ID = 'heliopause-label';
 export function isHeliopauseApexVisible(stellata: Stellata): boolean {
   return stellata.getFocusedPlanetSystem() !== null
     && !stellata.getMonochrome()
+    && stellata.detailPermits('heliopauseLabel')
     && stellata.anyOrbitRingVisible();
 }
 
@@ -109,6 +110,9 @@ export class Heliopause {
   private material: THREE.ShaderMaterial;
   private hidden = true;
   private mono = false;
+  // Detail-cycle permission (floor 'representational'). AND'd with the
+  // Sol-focus gate (`hidden`) and chart gate (`mono`).
+  private permitted = true;
 
   constructor() {
     this.group = new THREE.Group();
@@ -159,7 +163,15 @@ export class Heliopause {
 
   setVisible(on: boolean): void {
     this.hidden = !on;
-    this.group.visible = !this.hidden && !this.mono;
+    this.group.visible = !this.hidden && !this.mono && this.permitted;
+  }
+
+  /** Detail-cycle permission (declutter). Independent of the Sol-focus
+   *  gate (`setVisible`) and chart gate (`setMonochrome`) — all three
+   *  AND into `group.visible`. */
+  setPermitted(on: boolean): void {
+    this.permitted = on;
+    this.group.visible = !this.hidden && !this.mono && this.permitted;
   }
 
   /** Floating-origin recentre. The shell is Sol-anchored and Sol is the
@@ -174,7 +186,7 @@ export class Heliopause {
    *  cover this layer (currently it does not). */
   setMonochrome(on: boolean): void {
     this.mono = on;
-    this.group.visible = !this.hidden && !this.mono;
+    this.group.visible = !this.hidden && !this.mono && this.permitted;
   }
 
   /** Live shell-mesh visibility. Mirrors the actual rendered state

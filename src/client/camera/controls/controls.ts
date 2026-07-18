@@ -5,6 +5,7 @@ import {
   MAG_PRESETS,
   type MagPresetName,
 } from '../../filters/filter-state';
+import type { DetailLevel } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
 
@@ -46,6 +47,7 @@ export function bindControls(stellata: Stellata) {
   const appMag = document.getElementById('app-mag') as HTMLInputElement;
   const appMagReadout = document.getElementById('app-mag-readout')!;
   const magPresets = document.querySelectorAll<HTMLButtonElement>('.mag-preset');
+  const detailStops = document.querySelectorAll<HTMLButtonElement>('.detail-stop');
   const chipsHost = document.getElementById('spect-chips')!;
   const spectAllBtn = document.getElementById('spect-all')!;
   const spectNoneBtn = document.getElementById('spect-none')!;
@@ -122,6 +124,14 @@ export function bindControls(stellata: Stellata) {
       const preset = btn.dataset.preset as MagPresetName | undefined;
       if (preset === 'naked-eye' || preset === 'binoculars' || preset === 'all') {
         stellata.applyMagnitudePreset(preset);
+      }
+    });
+  }
+  for (const btn of Array.from(detailStops)) {
+    btn.addEventListener('click', () => {
+      const d = btn.dataset.detail as DetailLevel | undefined;
+      if (d === 'physical' || d === 'representational' || d === 'all') {
+        stellata.applyDetailPreset(d);
       }
     });
   }
@@ -211,6 +221,12 @@ export function bindControls(stellata: Stellata) {
           ? Math.abs(f.maxAppMag - MAG_PRESETS[preset].maxAppMag) < 0.05
           : false;
       btn.classList.toggle('on', matches);
+    }
+
+    // Detail-level 3-stop: highlight the active level (value-driven, so V
+    // and URL restore light the right stop the same as a click).
+    for (const btn of Array.from(detailStops)) {
+      btn.classList.toggle('on', btn.dataset.detail === f.detailLevel);
     }
 
     for (const el of chipEls) {

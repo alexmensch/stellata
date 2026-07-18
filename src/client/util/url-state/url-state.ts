@@ -6,6 +6,7 @@ import {
   DEFAULT_FOV,
   ALL_SPECT_MASK,
 } from '../../filters/filter-state';
+import type { DetailLevel } from '../../scene/scene-elements';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
@@ -84,6 +85,13 @@ const PRESET_TO_INDEX: Record<MagPresetName, number> = {
 };
 const INDEX_TO_PRESET: MagPresetName[] = ['naked-eye', 'binoculars', 'all'];
 
+const DETAIL_LEVEL_TO_INDEX: Record<DetailLevel, number> = {
+  physical: 0,
+  representational: 1,
+  all: 2,
+};
+const INDEX_TO_DETAIL_LEVEL: DetailLevel[] = ['physical', 'representational', 'all'];
+
 // Flags byte — packed booleans + small enums. Each bit is "non-default":
 //   0 = grid on, 1 = HUD on, 2 = MC disabled, 3 = MW disabled,
 //   4 = unit pc, 5 = mode observe, 6 = chart on (only set when also
@@ -135,6 +143,9 @@ export interface DecodedView {
   dmax?: number;
   spect?: number;
   preset?: MagPresetName;
+  /** Declutter detail level. Default 'all' (fully cluttered) — encoded
+   *  only when the user cycled below it. */
+  detailLevel?: DetailLevel;
   con?: number;
   smin?: number;
   smax?: number;
@@ -523,6 +534,20 @@ function presetField(bit: number): FieldSpec {
   };
 }
 
+// Declutter detail level — 1-byte enum, present only when != 'all' (the
+// default). Mirrors presetField's shape.
+function detailLevelField(bit: number): FieldSpec {
+  return {
+    bit, key: 'detailLevel', ...fixed(1),
+    isPresent: v => v.detailLevel !== undefined && v.detailLevel !== 'all',
+    encode: (v, dv, o) => { dv.setUint8(o, DETAIL_LEVEL_TO_INDEX[v.detailLevel!]); return 1; },
+    decode: (v, dv, o) => {
+      const idx = dv.getUint8(o);
+      v.detailLevel = INDEX_TO_DETAIL_LEVEL[idx] ?? 'all';
+    },
+  };
+}
+
 function conField(bit: number): FieldSpec {
   return {
     bit, key: 'con', ...fixed(1),
@@ -801,6 +826,7 @@ const FIELDS_V4: FieldSpec[] = [
   vec3FieldV3(20, 'worldOffset', () => VEC3_DEFAULTS.worldOffset),
   tField(21),
   lgEmissionDisabledField(22),
+  detailLevelField(23),
 ];
 
 function packFlags(v: DecodedView): number {
@@ -964,6 +990,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (sMin !== 0) view.dmin = sMin;
   if (sMax !== SLIDER_STEPS) view.dmax = sMax;
   if (f.activePreset !== 'naked-eye') view.preset = f.activePreset;
+  if (f.detailLevel !== 'all') view.detailLevel = f.detailLevel;
   // Magnitude diverges from the active preset only when the user moved the
   // slider — otherwise it should adapt to the receiver's preset.
   if (!approx(f.maxAppMag, MAG_PRESETS[f.activePreset].maxAppMag)) view.mag = f.maxAppMag;
@@ -1152,6 +1179,12 @@ export function applyDecodedView(
   if (view.unit) setUnit(view.unit);
 
   if (view.preset) stellata.applyMagnitudePreset(view.preset);
+  // Declutter level — applied before the filter patch below; drives the
+  // scene-element binds (default 'all' omitted, so this only fires for a
+  // decluttered share). Runs after layers are constructed (applyFromUrl
+  // runs post-construction), so lazily-attached layers pick up the
+  // permitted set via their per-frame detailPermits() read.
+  if (view.detailLevel) stellata.applyDetailPreset(view.detailLevel);
 
   const patch: Partial<FilterState> = {};
   if (view.dmin !== undefined || view.dmax !== undefined) {
