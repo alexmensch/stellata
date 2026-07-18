@@ -10,6 +10,8 @@ import {
   type BinaryRelation,
 } from './binaries-loader';
 import { AU_PC, J2000_JD } from '../util/astronomy-constants';
+import { tToJDE } from '../solar-system/time';
+import { advancePositionsToEpoch, jdeToJulianEpochYear } from '../loaders/epoch-advance-pure';
 import { SUB_PIXEL_THRESHOLD_PX } from './binary-tuning';
 import {
   evaluateOrbitSkyAU,
@@ -986,18 +988,30 @@ describe('BinaryOrbitField.update — epoch drift precision', () => {
     const camera = new THREE.Vector3(1e-4, 0, 0); // ~20 AU: super-pixel, Kepler active
 
     let prevX: number | null = null;
+    let firstX: number | null = null;
+    let lastX = 0;
     let maxStepAu = 0;
     // Sweep 1.5 yr of epoch in fine steps (~0.005 yr): each true systemic
-    // step is ~0.004 AU. The abs-grid reset would force ≥ ~0.3 AU jumps.
+    // step is ~0.004 AU. Each frame also re-advances the float32 absolute
+    // buffer exactly as `maybeReAdvanceEpoch` does at runtime — the abs-reset
+    // path (focused/pre-fix) reads it and snaps in ~0.4 AU ULP jumps. Both
+    // assertions discriminate the fix: smoothness fails on the snap, total
+    // drift confirms the float64 reset tracks the systemic motion at all.
     for (let k = 0; k <= 300; k++) {
       const years = 10 + k * (1.5 / 300);
       const tSec = (J2000_JD - 2440587.5) * 86400 + years * 365.25 * 86400;
+      advancePositionsToEpoch(base, vel, jdeToJulianEpochYear(tToJDE(tSec)), positions);
       field.update(tSec, camera, 15, 1080, 0.8, null);
       const x = local[0];
       if (prevX !== null) maxStepAu = Math.max(maxStepAu, Math.abs(x - prevX) / AU_PC);
+      if (firstX === null) firstX = x;
+      lastX = x;
       prevX = x;
     }
     expect(maxStepAu).toBeLessThan(0.05);
+    // The float64 reset tracks the full systemic drift (~1.27 AU over 1.5 yr);
+    // the abs-reset path swallows sub-ULP motion and drifts ~0.
+    expect(Math.abs(lastX - (firstX ?? 0)) / AU_PC).toBeGreaterThan(1.0);
   });
 });
 
