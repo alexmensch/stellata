@@ -26,12 +26,13 @@ function buildBuffer(
 }
 
 describe('parseLocalBubble', () => {
-  it('round-trips positions, indices, and centroid', () => {
+  it('round-trips positions and indices past the reserved header', () => {
+    // Centroid bytes (16–27) are written but reserved — the parser skips
+    // them; positions/indices must still read back exactly.
     const buf = buildBuffer([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 1, 2], [8, 10, -7]);
     const m = parseLocalBubble(buf);
     expect(Array.from(m.positions)).toEqual([0, 0, 0, 1, 0, 0, 0, 1, 0]);
     expect(Array.from(m.indices)).toEqual([0, 1, 2]);
-    expect(m.centroid).toEqual([8, 10, -7]);
   });
 
   it('rejects a bad magic', () => {

@@ -1750,8 +1750,8 @@ export class Stellata implements FrameAnchor {
     this.localBubbleShell.setMonochrome(this.monochrome);
   }
 
-  /** The Local Bubble shell layer — read by its centroid label for the
-   *  anchor point + attach state. */
+  /** The Local Bubble shell layer — read by its silhouette label for the
+   *  surface samples + attach state. */
   getLocalBubbleShell(): LocalBubbleShell { return this.localBubbleShell; }
 
   /** Direct access to the Local Group layer for dev-console / label
