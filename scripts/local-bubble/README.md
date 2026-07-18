@@ -13,7 +13,7 @@ never runs it: `build:local-bubble-sync` (`sync-local-bubble.ts`, in the
 
 ```
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/local-bubble/requirements.txt
-pnpm run build:local-bubble          # default: r_in_lmax-08, 96×192 grid
+pnpm run build:local-bubble          # default: r_in_lmax-08, 48×96 grid
 ./.venv/bin/python scripts/local-bubble/build-local-bubble.py --column r_in_lmax-10
 ```
 
@@ -28,8 +28,9 @@ vertex normals.
 ## Output format (`local-bubble.bin`, magic `LBUB`)
 
 - Header (32 B): `LBUB` · uint32 version · uint32 vertexCount · uint32
-  indexCount · float32×3 volume centroid (ICRS pc, Sol origin) · uint32
-  reserved.
+  indexCount · float32×3 volume centroid (ICRS pc, Sol origin; written
+  for reference, unused by the runtime — the label hugs the silhouette,
+  not the centroid) · uint32 reserved.
 - `vertexCount × float32×3` positions (ICRS pc, Sol origin).
 - `indexCount × uint32` triangle indices.
 

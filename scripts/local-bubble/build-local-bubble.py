@@ -125,8 +125,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--column", default="r_in_lmax-08",
                     help="FITS wall-distance column (SH truncation).")
-    ap.add_argument("--n-lat", type=int, default=96)
-    ap.add_argument("--n-lon", type=int, default=192)
+    ap.add_argument("--n-lat", type=int, default=48)
+    ap.add_argument("--n-lon", type=int, default=96)
     ap.add_argument("--skip-crosscheck", action="store_true")
     args = ap.parse_args()
 
