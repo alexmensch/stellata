@@ -1750,6 +1750,10 @@ export class Stellata implements FrameAnchor {
     this.localBubbleShell.setMonochrome(this.monochrome);
   }
 
+  /** The Local Bubble shell layer — read by its centroid label for the
+   *  anchor point + attach state. */
+  getLocalBubbleShell(): LocalBubbleShell { return this.localBubbleShell; }
+
   /** Direct access to the Local Group layer for dev-console / label
    *  wiring in main.ts. null until attachLocalGroup runs. */
   get localGroup(): LocalGroupLayer | null { return this.localGroupLayer; }
@@ -1944,6 +1948,7 @@ export class Stellata implements FrameAnchor {
       dustParticles: set('dustParticles'),
       planetLabels: set('planetLabels'),
       heliopauseLabel: set('heliopauseLabel'),
+      localBubbleLabel: set('localBubbleLabel'),
       mwLabel: set('mwLabel'),
       lgObjectLabels: set('lgObjectLabels'),
       chartStarNameLabels: set('chartStarNameLabels'),

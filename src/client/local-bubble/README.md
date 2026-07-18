@@ -11,11 +11,11 @@ sits *inside* a bubble. A `representational`-tier declutter element
   for `public/local-bubble.bin` (magic `LBUB`; format in
   `scripts/local-bubble/README.md`). `load*` resolves null when the asset
   is absent — the layer is optional.
-- `local-bubble.ts` — `LocalBubbleShell`: builds a `BufferGeometry` from
-  the parsed mesh (`computeVertexNormals` at runtime), renders it with the
-  Fresnel shader, and folds the detail-cycle + chart gates into
-  `group.visible`.
-- `local-bubble.{vert,frag}.glsl` — the shell shader.
+- `local-bubble.ts` — `LocalBubbleShell` (builds a `BufferGeometry` from
+  the parsed mesh, `computeVertexNormals` at runtime, folds the
+  detail-cycle + chart gates into `group.visible`) plus
+  `createLocalBubbleLabel` (the centroid SVG label).
+- `local-bubble.{vert,frag}.glsl` — the Fresnel shell shader.
 
 ## Invariants
 
@@ -23,15 +23,21 @@ sits *inside* a bubble. A `representational`-tier declutter element
   `catalog.bin` frame). The group sits at `−worldOffset` (`recenter`),
   exactly like the heliopause — non-zero under planet focus, where the
   floating origin leaves Sol.
-- **Camera-inside.** The camera sits inside the ~200 pc shell, so the
-  material is `DoubleSide` and the mesh is `frustumCulled = false`
-  (bounding-sphere culling is unreliable with the camera interior). The
-  fragment shader flips the normal by `gl_FrontFacing` so the Fresnel rim
-  is symmetric on both faces, and tints the inner vs outer face
-  differently so orientation reads.
-- **renderOrder −1**, additive, `depthWrite:false`: a dim background
-  glow the local stars composite over. See `src/client/README.md`
-  § Render order.
+- **Hide-when-inside.** The material is `FrontSide` (like the heliopause)
+  and the build orients the winding **outward**, so the shell back-face-
+  culls when the camera sits inside the bubble — the common view at Sol —
+  and appears only when the camera flies out beyond the wall (~300 pc).
+  Without this the near-wall rim glow washes the whole scene. The mesh is
+  `frustumCulled = false` (bounding-sphere culling is unreliable with the
+  camera interior).
+- **renderOrder −1**, additive, `depthWrite:false`: a dim rim glow the
+  local stars composite over. See `src/client/README.md` § Render order.
+- **Label** (`localBubbleLabel`, a `labels`-tier declutter element at
+  floor `all`) is an SVG `<text>` bound through the shared distance-gated
+  label engine over ~96 shell-surface samples, so it hugs the silhouette.
+  Because the samples sit on the wall, the engine's near-plane bail hides
+  the label whenever the camera is inside the bubble — the same mechanism
+  (and behaviour) as the heliopause apex label.
 
 ## Data + validation
 
@@ -42,5 +48,5 @@ cross-checks the surface against the independent Edenhofer dust grid
 
 ## Not yet
 
-The centroid "Local Bubble" text label and any per-layer visual tuning
-(opacity / colour / smoothing column) are follow-up (`stellata`-tracked).
+Per-layer visual tuning (opacity / colour / Fresnel power / smoothing
+column) is follow-up (`stellata`-tracked).

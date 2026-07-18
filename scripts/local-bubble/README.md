@@ -1,9 +1,15 @@
 # Local Bubble build
 
 `build-local-bubble.py` turns the Zucker 2022 inner-surface HEALPix map
-(`data/local-bubble/`) into `public/local-bubble.bin` — a star-shaped
-triangle-mesh shell of the Local Bubble's dust wall, consumed by
-`src/client/local-bubble/`.
+(`data/local-bubble/`) into `data/local-bubble/local-bubble.bin` — a
+star-shaped triangle-mesh shell of the Local Bubble's dust wall, consumed
+by `src/client/local-bubble/`.
+
+The Python build needs numpy/astropy/healpy, so — like the dust grid — it
+runs **offline** and its output is **committed** (LFS). The deploy build
+never runs it: `build:local-bubble-sync` (`sync-local-bubble.ts`, in the
+`pnpm run build` chain) just copies `data/local-bubble/local-bubble.bin` →
+`public/local-bubble.bin`. Regenerate offline and commit the result:
 
 ```
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/local-bubble/requirements.txt
@@ -15,13 +21,15 @@ The map gives, per galactic direction, the distance to the wall in pc.
 The shell is single-valued from the Sun, so the build resamples the map
 onto a lat-long grid (bilinear HEALPix interpolation), rotates each
 direction galactic→ICRS (the `catalog.bin` frame), scales by the wall
-distance, and triangulates. Runtime computes vertex normals.
+distance, orients the winding outward (so the client's FrontSide material
+culls when the camera is inside), and triangulates. Runtime computes
+vertex normals.
 
-## Output format (`public/local-bubble.bin`, magic `LBUB`)
+## Output format (`local-bubble.bin`, magic `LBUB`)
 
 - Header (32 B): `LBUB` · uint32 version · uint32 vertexCount · uint32
-  indexCount · float32×3 centroid (ICRS pc, Sol origin — the label
-  anchor) · uint32 reserved.
+  indexCount · float32×3 volume centroid (ICRS pc, Sol origin) · uint32
+  reserved.
 - `vertexCount × float32×3` positions (ICRS pc, Sol origin).
 - `indexCount × uint32` triangle indices.
 

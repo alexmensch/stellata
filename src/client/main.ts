@@ -5,6 +5,7 @@ import { loadClouds } from './molecular-clouds/cloud-loader';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
+import { createLocalBubbleLabel } from './local-bubble/local-bubble';
 import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
@@ -216,6 +217,7 @@ async function main() {
     createGalacticGridLabels(stellata);
     createPlanetLabels(stellata);
     createHeliopauseLabel(stellata);
+    createLocalBubbleLabel(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.

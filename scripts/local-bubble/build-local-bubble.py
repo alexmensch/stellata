@@ -17,7 +17,9 @@ import astropy.units as u
 
 REPO = Path(__file__).resolve().parents[2]
 FITS_PATH = REPO / "data" / "local-bubble" / "zucker2022-inner-surface.fits"
-OUT_PATH = REPO / "public" / "local-bubble.bin"
+# Committed product (LFS), like the dust grid — sync-local-bubble.ts copies
+# it to public/ at build time so deploy needs no astro-Python.
+OUT_PATH = REPO / "data" / "local-bubble" / "local-bubble.bin"
 DUST_DIR = REPO / "data" / "dust"
 
 MAGIC = b"LBUB"
@@ -65,7 +67,18 @@ def build_mesh(r_map: np.ndarray, n_lat: int, n_lon: int):
             d = (i + 1) * cols + jn
             tris.append((a, c, b_))
             tris.append((b_, c, d))
-    indices = np.asarray(tris, dtype=np.uint32).ravel()
+    faces = np.asarray(tris, dtype=np.uint32)
+    # Orient winding so face normals point OUTWARD (away from the Sun). The
+    # surface is star-shaped from the origin, so outward ≈ the face-centre
+    # direction. FrontSide culling then hides the shell when the camera is
+    # inside it (the common view at Sol) — matching the heliopause.
+    p = positions.astype(np.float64)
+    v0, v1, v2 = p[faces[:, 0]], p[faces[:, 1]], p[faces[:, 2]]
+    fnorm = np.cross(v1 - v0, v2 - v0)
+    fcen = (v0 + v1 + v2) / 3.0
+    if np.sum(fnorm * fcen) < 0.0:
+        faces = faces[:, ::-1].copy()  # reverse winding globally
+    indices = faces.ravel()
     centroid = positions.mean(axis=0).astype(np.float32)
     return positions, indices, centroid
 

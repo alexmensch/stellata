@@ -1,14 +1,19 @@
 # Local Bubble reference data
 
-Frozen input for the Local Bubble shell mesh
-(`scripts/local-bubble/build-local-bubble.py` → `public/local-bubble.bin`,
-consumed by `src/client/local-bubble/`).
+Frozen input + built product for the Local Bubble shell mesh
+(`scripts/local-bubble/build-local-bubble.py`, consumed by
+`src/client/local-bubble/`).
 
 ```
 zucker2022-inner-surface.fits   HEALPix map (NSIDE 128, RING) of the
                                 distance to the INNER (dust-traced) wall
                                 of the Local Bubble in each galactic
                                 direction, in parsecs. LFS (~14 MiB).
+local-bubble.bin                Built shell mesh (magic LBUB). The frozen
+                                PRODUCT of build-local-bubble.py, committed
+                                like the dust grid so deploy needs no
+                                astro-Python — sync-local-bubble.ts copies
+                                it to public/ at build time. LFS (~650 KiB).
 ```
 
 The binary table carries the raw dust-derived wall distance

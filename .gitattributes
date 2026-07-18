@@ -13,3 +13,4 @@ data/dust/*.bin filter=lfs diff=lfs merge=lfs -text
 data/sid/ledger.tsv filter=lfs diff=lfs merge=lfs -text
 data/textures/src/*.jpg filter=lfs diff=lfs merge=lfs -text
 data/local-bubble/*.fits filter=lfs diff=lfs merge=lfs -text
+data/local-bubble/*.bin filter=lfs diff=lfs merge=lfs -text
