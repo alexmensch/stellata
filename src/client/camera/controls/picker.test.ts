@@ -128,6 +128,7 @@ function defaultFilter(overrides: Partial<FilterState> = {}): FilterState {
     showMilkyway: true,
     showLgEmission: true,
     chart: false,
+    detailLevel: 'all',
     ...overrides,
   };
 }
