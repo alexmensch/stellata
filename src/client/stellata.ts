@@ -266,11 +266,9 @@ export class Stellata implements FrameAnchor {
   private filters!: FilterController;
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
 
-  // Declutter cycle: the effective per-element permitted set (floors +
-  // any per-element override), the fold point where FilterController's
-  // binds (push) meet per-frame layer gates (pull, via detailPermits).
-  // Init all-true so the default detailLevel='all' matches today's
-  // always-on scene — the seam is behaviour-neutral until V is pressed.
+  // Declutter cycle (scene/README.md § Detail-level declutter cycle).
+  // Init all-true so the default detailLevel='all' is behaviour-neutral —
+  // the seam changes nothing until V is pressed.
   private readonly detailPermitted: Record<SceneElementId, boolean> =
     Object.fromEntries(SCENE_ELEMENT_IDS.map((id) => [id, true])) as Record<SceneElementId, boolean>;
 
@@ -1725,7 +1723,7 @@ export class Stellata implements FrameAnchor {
         uSizeSpan: u.uSizeSpan as { value: number },
       });
       this.lgEmission.setChartHidden(this.monochrome);
-      this.lgEmission.setEnabled(this.filter.showLgEmission);
+      this.applyLgEmissionEnabled();
       this.scene.add(this.lgEmission.group);
     }
   }
@@ -1886,12 +1884,12 @@ export class Stellata implements FrameAnchor {
     this.filters.clearSizeOverrides(fields);
   }
 
-  // Declutter cycle (scene/scene-elements.ts). applyDetailPreset re-derives
-  // every element from the preset floors; setSceneElementVisible overrides
-  // one element until the next preset apply. detailPermits is the per-frame
-  // read path layers gate on (effective = permitted AND instance gates).
+  // Declutter cycle. detailPermits is the per-frame read path layers gate
+  // on (effective = permitted AND the layer's instance gates).
   getDetailLevel(): DetailLevel { return this.filters.getDetailLevel(); }
-  applyDetailPreset(level: DetailLevel) { this.filters.applyDetailPreset(level); }
+  applyDetailPreset(level: DetailLevel, resetOverrides = true) {
+    this.filters.applyDetailPreset(level, resetOverrides);
+  }
   setSceneElementVisible(id: SceneElementId, on: boolean) {
     this.filters.setSceneElementVisible(id, on);
   }
@@ -1900,9 +1898,8 @@ export class Stellata implements FrameAnchor {
   // Per-element bind adapters (exhaustive over SceneElementId — a new
   // renderable that isn't wired fails tsc). Each writes the permitted
   // cache; the imperative layers (Milky Way / LG-emission enable, orbit
-  // rings, heliopause shell) also push the change, since they have no
-  // per-frame gate that would pick it up. The rest are read live via
-  // detailPermits() by their per-frame update / label predicate.
+  // rings, heliopause shell) pass an `extra` push because they have no
+  // per-frame gate that would pick the cache change up on its own.
   private buildSceneElementBinds(): SceneElementBinds {
     const set = (id: SceneElementId, extra?: (on: boolean) => void) =>
       (on: boolean) => { this.detailPermitted[id] = on; extra?.(on); };
@@ -1910,7 +1907,10 @@ export class Stellata implements FrameAnchor {
       stars: set('stars'),
       planetBodies: set('planetBodies'),
       milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
-      milkyWayIsobar: set('milkyWayIsobar'),
+      milkyWayIsobar: set('milkyWayIsobar', (on) => {
+        this.setMilkywayIsobar(on);
+        this.applyMilkywayEnabled();
+      }),
       lgEmissionGlow: set('lgEmissionGlow', () => this.applyLgEmissionEnabled()),
       galacticDiscWireframe: set('galacticDiscWireframe'),
       lgWireframes: set('lgWireframes'),
@@ -1932,7 +1932,11 @@ export class Stellata implements FrameAnchor {
   }
 
   private applyMilkywayEnabled(): void {
-    this.milkyway.setEnabled(this.detailPermitted.milkyWayBand && this.filter.showMilkyway);
+    // The layer group carries both realistic treatments: the volumetric
+    // band (realistic floor) and the chart isobar (chart floor). Exactly
+    // one is permitted per render style; the user's mw toggle gates both.
+    const permitted = this.detailPermitted.milkyWayBand || this.detailPermitted.milkyWayIsobar;
+    this.milkyway.setEnabled(permitted && this.filter.showMilkyway);
   }
   private applyLgEmissionEnabled(): void {
     this.lgEmission?.setEnabled(this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
@@ -1944,11 +1948,10 @@ export class Stellata implements FrameAnchor {
     this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
-    // Per-layer palette swaps fan out through the registry. The
-    // milky-way layer has no monochrome hook: chart mode re-purposes it
-    // as an isobar contour, driven by the chart-mode orchestrator via
-    // `setMilkywayIsobar` / `setCloudsIsobar` below — call them
-    // alongside setMonochrome.
+    // Per-layer palette swaps fan out through the registry. The milky-way
+    // layer has no monochrome hook: chart mode re-purposes it as an isobar
+    // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
+    // isobar is orchestrator-driven (`setCloudsIsobar`, no detail element).
     this.layers.setMonochromeAll(on);
     this.bus.emit('state');
   }
@@ -1960,7 +1963,8 @@ export class Stellata implements FrameAnchor {
     this.clouds?.setIsobar(on, this.starPipeline.discMaterial.uniforms.uMaxAppMag);
   }
 
-  /** Chart-mode isobar pass on/off for the milky-way layer. */
+  /** Chart-mode isobar pass on/off for the milky-way layer. Driven by the
+   *  `milkyWayIsobar` detail bind, not called directly by chart-mode. */
   setMilkywayIsobar(on: boolean) {
     this.milkyway.setIsobar(on);
   }

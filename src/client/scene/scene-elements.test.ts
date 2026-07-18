@@ -47,7 +47,9 @@ describe('visibleSet — cumulative floor derivation', () => {
   });
 
   it('chart cumulative sizes are pinned', () => {
-    expect(visibleSet('physical', 'chart').size).toBe(5);
+    // Chart 'physical' carries star + planet names (chartStarNameLabels) —
+    // chart mode has no true naked-eye tier, so the base chart is legible.
+    expect(visibleSet('physical', 'chart').size).toBe(6);
     expect(visibleSet('representational', 'chart').size).toBe(8);
     expect(visibleSet('all', 'chart').size).toBe(10);
   });
@@ -77,4 +79,31 @@ describe('visibleSet — cumulative floor derivation', () => {
     expect(elementPermitted('chartBayerGlyphs', 'physical', 'chart')).toBe(true);
     expect(elementPermitted('chartBayerGlyphs', 'all', 'realistic')).toBe(false);
   });
+});
+
+// The chart-labels engine (chart-mode/chart-labels.ts) gates each label /
+// glyph tier on detailPermits(id) for these elements. Pin the exact chart
+// floors so a floor-table reorder that would silently re-tier a glyph
+// group fails here rather than in a manual chart-mode smoke.
+describe('chart-content gating contract', () => {
+  const chartFloor: Record<string, 'physical' | 'representational' | 'all'> = {
+    chartBayerGlyphs: 'physical',
+    chartVariableRings: 'physical', // gates both variable rings AND binary wings
+    chartStarNameLabels: 'physical', // planet name labels ride this tier too
+    chartConstellationNames: 'all',
+    chartCloudNames: 'all',
+  };
+
+  for (const [id, floor] of Object.entries(chartFloor)) {
+    it(`${id} is permitted at chart·${floor} and above, not below`, () => {
+      const ranks = DETAIL_LEVELS;
+      const floorRank = ranks.indexOf(floor);
+      for (const level of ranks) {
+        expect(elementPermitted(id as SceneElementId, level, 'chart'))
+          .toBe(ranks.indexOf(level) >= floorRank);
+        // Chart-only content is never part of the realistic style.
+        expect(elementPermitted(id as SceneElementId, level, 'realistic')).toBe(false);
+      }
+    });
+  }
 });

@@ -8,7 +8,10 @@
 > are all preserved so the layer can be re-enabled by restoring that
 > call once the visual treatment is refined. Chart-mode integration
 > (`setCloudsIsobar`) is still wired but no-ops via optional chaining
-> while the layer is unattached.
+> while the layer is unattached. The declutter cycle reserves a floor
+> slot (`molecularCloudEllipsoids`, floor `representational`) whose
+> per-frame `detailPermits(...)` pull is unwired while shelved — gate the
+> layer's visibility on it at un-shelve (`../scene/README.md`).
 
 `molecular-clouds.ts` renders ~96 named local SF clouds as soft warm
 ellipsoids. Originally default-on with a toggle in the Galactic-overlays

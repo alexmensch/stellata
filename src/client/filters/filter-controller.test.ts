@@ -189,6 +189,24 @@ describe('FilterController', () => {
     expect(permitted.constellationFigures).toBe(true);
   });
 
+  it('applyDetailPreset clears the per-element user toggles (C / mw / lg)', () => {
+    const { ctrl } = makeHarness();
+    ctrl.setFilter({ showConstellation: false, showMilkyway: false, showLgEmission: false });
+    ctrl.applyDetailPreset('representational');
+    expect(ctrl.getFilter().showConstellation).toBe(true);
+    expect(ctrl.getFilter().showMilkyway).toBe(true);
+    expect(ctrl.getFilter().showLgEmission).toBe(true);
+  });
+
+  it('applyDetailPreset(level, false) preserves the toggles for a style recompute', () => {
+    const { ctrl } = makeHarness();
+    ctrl.setFilter({ showConstellation: false, showMilkyway: false, showLgEmission: false });
+    ctrl.applyDetailPreset('representational', false);
+    expect(ctrl.getFilter().showConstellation).toBe(false);
+    expect(ctrl.getFilter().showMilkyway).toBe(false);
+    expect(ctrl.getFilter().showLgEmission).toBe(false);
+  });
+
   it('clearSizeOverrides drops the flags and restores preset values', () => {
     const { ctrl } = makeHarness();
     ctrl.setFilter({

@@ -44,13 +44,41 @@ override (`setSceneElementVisible`) writes one cache slot directly and
 supersedes its floor until the next `applyDetailPreset` overwrites the
 whole set.
 
+**The preset is authoritative — overrides are within-scene only.** Three
+elements also carry a legacy user toggle that ANDs with the floor:
+`constellationFigures`←`showConstellation` (`C`), `milkyWayBand`/
+`milkyWayIsobar`←`showMilkyway`, `lgEmissionGlow`←`showLgEmission`.
+`applyDetailPreset` resets those toggles to `on` so a per-element hide
+does **not** outlive a detail-level change — pick a new mode and the
+scene's floors alone decide. A toggle can only *hide* a permitted element,
+never force one below its floor. The chart↔realistic recompute passes
+`resetOverrides:false`, so a style flip (and URL restore, which re-applies
+the shared toggle state afterward) preserves the user's toggles.
+
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
-behaviour-neutral at startup and `applyDetailPreset` runs only on `V` /
-the control / a decluttered `?v=` restore. Chart-only element floors ship
-as data here; wiring the chart glyph binds into `chart-labels.ts` is the
-follow-up (`stellata-8hu.7`). `USER_OWNED_IDS` enumerates the chrome the
-cycle never writes (HUD, coord sphere, cards, feedback) — toggled by
-their own affordances (`H` / `S` / `U` / `T`).
+behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
+control / a decluttered `?v=` restore, **and on every chart↔realistic
+flip** (`chart-mode.ts`) so the permitted set tracks the active style's
+floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
+writes (HUD, coord sphere, cards, feedback) — toggled by their own
+affordances (`H` / `S` / `U` / `T`).
+
+**Chart-content wiring.** The chart-only elements are read per-frame by
+`chart-labels.ts`, which gates each label/glyph tier on
+`detailPermits(id)`. Two couplings aren't one-to-one: planet name labels
+ride `chartStarNameLabels` (no separate planet-label element — uadc.3
+gave planets star-style labels), and `chartVariableRings` gates **both**
+the variable rings and the binary wings (one row for the paired glyphs).
+`milkyWayIsobar` has no per-frame reader — it *pushes* through its bind
+(`setMilkywayIsobar` + `applyMilkywayEnabled`); the MW group is enabled
+when either the band (realistic) or the isobar (chart) is permitted.
+
+The chart column deliberately diverges from the general tier model: chart
+mode has no true naked-eye tier, so its `physical` base is the *legible
+chart* — `chartStarNameLabels` (hence planet names) and `chartBayerGlyphs`
+sit at `physical`, not `representational`. `constellationFigures` enters
+at `representational`, constellation Latin names (`chartConstellationNames`)
+at `all`.
 
 ## How the shell uses it
 

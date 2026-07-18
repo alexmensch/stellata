@@ -388,6 +388,15 @@ function tick(
   const discPxFor = (mag: number): number =>
     chartDiscPxForAppMag(mag, discParams, f.maxAppMag);
 
+  // Chart-content detail gates (recomputed on chart entry + V). Planet
+  // name labels ride the star-name tier; rings + wings share one element.
+  // See scene/README.md § Detail-level declutter cycle.
+  const showStarNames = stellata.detailPermits('chartStarNameLabels');
+  const showBayer = stellata.detailPermits('chartBayerGlyphs');
+  const showConNames = stellata.detailPermits('chartConstellationNames');
+  const showCloudNames = stellata.detailPermits('chartCloudNames');
+  const showVariableRings = stellata.detailPermits('chartVariableRings');
+
   const candidates: Candidate[] = [];
   const seen = new Set<number>(); // dedupe star idx across name+bayer
 
@@ -396,7 +405,7 @@ function tick(
   // constellation Latin labels (priority 0) so the constellation name
   // always wins a collision.
   perfMark('chart.names');
-  for (const [idx, name] of cat.names) {
+  if (showStarNames) for (const [idx, name] of cat.names) {
     const xy = projectStar(idx, positions, camera, w, h);
     if (!xy) continue;
     const appMag = computeAppMag(idx, positions, cat.absmag);
@@ -423,7 +432,7 @@ function tick(
   // mode renders the Latin name separately at the constellation's
   // brightness-weighted centroid.
   perfMark('chart.bayer');
-  for (const [idx, info] of ctx.bayerMap) {
+  if (showBayer) for (const [idx, info] of ctx.bayerMap) {
     if (seen.has(idx)) continue;
     const xy = projectStar(idx, positions, camera, w, h);
     if (!xy) continue;
@@ -476,7 +485,7 @@ function tick(
     lastCentroidCamPos.copy(camera.position);
     lastCentroidsVersion = centroidsVersion;
   }
-  if (f.showConstellation) for (const [conIdx, m] of conStars) {
+  if (f.showConstellation && showConNames) for (const [conIdx, m] of conStars) {
     const con = constellations[conIdx];
     if (!con) continue;
 
@@ -532,7 +541,7 @@ function tick(
   // chart-labels integration is preserved against `clouds` non-null.
   perfMark('chart.clouds');
   const clouds = stellata.getCloudCatalog();
-  if (clouds) {
+  if (clouds && showCloudNames) {
     for (let i = 0; i < clouds.clouds.length; i++) {
       if (!stellata.focusables.cloud.localPositionInto(i, tmpCloudLocal)) continue;
       const xy = projectVec(tmpCloudLocal, camera, w, h);
@@ -556,7 +565,7 @@ function tick(
   // magnitude disc + star-style name label, no glyph vocabulary).
   perfMark('chart.planets');
   const planetField = stellata.planetField;
-  for (let i = 0; i < planetField.liveInstanceCount; i++) {
+  if (showStarNames) for (let i = 0; i < planetField.liveInstanceCount; i++) {
     const planet = planetField.planetAt(i);
     if (!planet) continue;
     if (!planetField.planetLocalPositionInto(i, tmpPlanetLocal)) continue;
@@ -660,7 +669,7 @@ function tick(
   // dim past the limit and disappear; the ring still indicates that
   // a variable lives here.
   perfMark('chart.glyphs.var');
-  if (variableEligible) {
+  if (showVariableRings && variableEligible) {
     for (const idx of variableEligible) {
       const appMag = computeAppMag(idx, positions, absmag);
       const amp = cat.amplitudeMag[idx];
@@ -710,7 +719,7 @@ function tick(
   // filter gate as variable rings so the wings track inner-disc
   // visibility instead of floating standalone.
   perfMark('chart.glyphs.bin');
-  if (binaryEligible) {
+  if (showVariableRings && binaryEligible) {
     for (const idx of binaryEligible) {
       const appMag = computeAppMag(idx, positions, absmag);
       // Magnitude gate before the projection — same reasoning as above.

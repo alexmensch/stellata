@@ -18,11 +18,12 @@ import { startChartLabels, stopChartLabels } from './chart-labels';
 //     branch on this independently of the existing body.monochrome).
 //   - Paper-aesthetic palette via the existing setMonochrome plumbing
 //     (stars, clouds, hud, galactic disc/grid, blend modes, clear color).
-//   - Isobar passes on cloud + milky-way layers (driven by uMaxAppMag).
+//   - Cloud isobar pass (driven by uMaxAppMag); the milky-way band↔isobar
+//     swap rides applyDetailPreset via the milkyWayIsobar detail bind.
 //   - Constellation-overlay flips to "all constellations" mode (handled
 //     directly inside constellation-overlay.ts via the same predicate).
-//   - Label engine spins up to render proper-name + Bayer + constellation
-//     + cloud labels each frame.
+//   - Label engine spins up; which label tiers render is gated by the
+//     detail cycle (chart-labels.ts reads detailPermits per tier).
 
 export interface ChartModeContext {
   bayerMap: Map<number, BayerInfo>;
@@ -42,17 +43,23 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     const next = f.chart && observed;
     if (next === active) return;
     active = next;
+    // The render style flipped, so re-derive the detail-permitted set from
+    // the new style's floors: this drives the milky-way band↔isobar swap
+    // (via the milkyWayIsobar bind), hides the realistic-only structure
+    // layers, and gates the chart-labels tiers below. `false` preserves the
+    // user's per-element toggles across the style flip — only a detail-level
+    // change (V / the control) clears them.
     if (active) {
       document.body.classList.add('chart');
       applyTheme('mono');
       stellata.setCloudsIsobar(true);
-      stellata.setMilkywayIsobar(true);
+      stellata.applyDetailPreset(stellata.getDetailLevel(), false);
       startChartLabels(stellata, ctx);
     } else {
       document.body.classList.remove('chart');
       applyTheme('dark');
       stellata.setCloudsIsobar(false);
-      stellata.setMilkywayIsobar(false);
+      stellata.applyDetailPreset(stellata.getDetailLevel(), false);
       stopChartLabels();
     }
   };

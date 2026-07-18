@@ -6,7 +6,7 @@ import {
   DEFAULT_FOV,
   ALL_SPECT_MASK,
 } from '../../filters/filter-state';
-import type { DetailLevel } from '../../scene/scene-elements';
+import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/scene-elements';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
@@ -84,13 +84,6 @@ const PRESET_TO_INDEX: Record<MagPresetName, number> = {
   'all': 2,
 };
 const INDEX_TO_PRESET: MagPresetName[] = ['naked-eye', 'binoculars', 'all'];
-
-const DETAIL_LEVEL_TO_INDEX: Record<DetailLevel, number> = {
-  physical: 0,
-  representational: 1,
-  all: 2,
-};
-const INDEX_TO_DETAIL_LEVEL: DetailLevel[] = ['physical', 'representational', 'all'];
 
 // Flags byte — packed booleans + small enums. Each bit is "non-default":
 //   0 = grid on, 1 = HUD on, 2 = MC disabled, 3 = MW disabled,
@@ -540,10 +533,10 @@ function detailLevelField(bit: number): FieldSpec {
   return {
     bit, key: 'detailLevel', ...fixed(1),
     isPresent: v => v.detailLevel !== undefined && v.detailLevel !== 'all',
-    encode: (v, dv, o) => { dv.setUint8(o, DETAIL_LEVEL_TO_INDEX[v.detailLevel!]); return 1; },
+    encode: (v, dv, o) => { dv.setUint8(o, DETAIL_RANK[v.detailLevel!]); return 1; },
     decode: (v, dv, o) => {
       const idx = dv.getUint8(o);
-      v.detailLevel = INDEX_TO_DETAIL_LEVEL[idx] ?? 'all';
+      v.detailLevel = DETAIL_LEVELS[idx] ?? 'all';
     },
   };
 }
