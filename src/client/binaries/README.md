@@ -49,9 +49,13 @@ star catalog records.
 - `eclipse-photometry-pure.ts` — pure math for camera-anywhere
   geometric occlusion: `eclipseDimFromOffsets` (angular separation via
   atan2 of unit view vectors, closed-form circle-circle lens area,
-  geometric dim factor on the back component's flux) and
+  geometric dim factor on the back component's flux),
   `orbitPlaneNormalICRS` (the view-direction prefilter's normal,
-  sampled from the same eval path the renderer uses).
+  sampled from the same eval path the renderer uses), and the shared
+  anti-strobe helpers `dimBlendFactor` + `blendDimBuffer` (+
+  `DIM_SETTLED`). Second consumer: the planet field's true-eclipse
+  dim (`solar-system/README.md` § Planet rendering) reuses all of
+  these for planet-behind-host-disc occlusion.
   `eclipse-photometry-pure.test.ts` pins the degenerate cases and the
   float32-line-of-sight immunity.
 - `eclipse-photometry.ts` — per-frame field over the same relation

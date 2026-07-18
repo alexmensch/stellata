@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
+  blendDimBuffer,
   circleCircleLensArea,
+  dimBlendFactor,
   eclipseDimFromOffsets,
   orbitPlaneNormalICRS,
   DIM_FLOOR,
   type EclipseResult,
 } from './eclipse-photometry-pure';
 import { type OrbitalElements } from './binary-orbit-pure';
+import { ECLIPSE_DIM_TAU_S } from './binary-tuning';
 
 describe('circleCircleLensArea', () => {
   it('disjoint circles return zero', () => {
@@ -204,5 +207,42 @@ describe('orbitPlaneNormalICRS', () => {
     const n = orbitPlaneNormalICRS(1, elements, sys);
     expect(n).not.toBeNull();
     expect(Math.hypot(n!.x, n!.y, n!.z)).toBeCloseTo(1, 9);
+  });
+});
+
+describe('dimBlendFactor', () => {
+  it('snaps on the first frame (no previous timestamp)', () => {
+    expect(dimBlendFactor(1234, null, ECLIPSE_DIM_TAU_S)).toBe(1);
+  });
+
+  it('follows 1 − e^(−dt/τ) and clamps dt to 0.25 s', () => {
+    const b = dimBlendFactor(1120, 1000, ECLIPSE_DIM_TAU_S);
+    expect(b).toBeCloseTo(1 - Math.exp(-0.12 / ECLIPSE_DIM_TAU_S), 12);
+    // A 10 s stall blends exactly like 0.25 s — no teleport-decay.
+    expect(dimBlendFactor(11_000, 1000, ECLIPSE_DIM_TAU_S)).toBe(
+      dimBlendFactor(1250, 1000, ECLIPSE_DIM_TAU_S),
+    );
+    // Backwards clock clamps at 0 → no movement.
+    expect(dimBlendFactor(900, 1000, ECLIPSE_DIM_TAU_S)).toBe(0);
+  });
+});
+
+describe('blendDimBuffer', () => {
+  it('blends targets in, decays the rest, and snaps at DIM_SETTLED', () => {
+    const buf = new Float32Array([1, 1, 0.5]);
+    const active = new Set<number>([2]);
+    // Slot 1 acquires a target; slot 2 (active, untargeted) decays.
+    expect(blendDimBuffer(buf, new Map([[1, 0.2]]), active, 0.5)).toBe(true);
+    expect(buf[1]).toBeCloseTo(0.6, 6);
+    expect(buf[2]).toBeCloseTo(0.75, 6);
+    expect(active.has(1)).toBe(true);
+    // Decay to within DIM_SETTLED of 1 → snap to exactly 1, leave set.
+    blendDimBuffer(buf, new Map(), active, 1);
+    expect(buf[1]).toBe(1);
+    expect(buf[2]).toBe(1);
+    expect(active.size).toBe(0);
+    // Nothing targeted, nothing active → no write.
+    expect(blendDimBuffer(buf, new Map(), active, 1)).toBe(false);
+    expect(buf[0]).toBe(1);
   });
 });

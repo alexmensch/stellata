@@ -17,6 +17,54 @@ import {
  *  `src/client/binaries/README.md` § Eclipse photometry. */
 export const DIM_FLOOR = 0.001;
 
+/** A slot whose dim has decayed above this snaps to exactly 1 and
+ *  leaves the active set (the shader gate is `iEclipseDim < 1.0`). */
+export const DIM_SETTLED = 0.999;
+
+/** Anti-strobe blend factor for this frame's dim writes: 1 on the
+ *  first frame (snap to target), else `1 − e^(−dt/τ)` with dt clamped
+ *  to [0, 0.25] s. `nowMs` is wall-clock (a render filter, not sim
+ *  time). See src/client/binaries/README.md § Anti-strobe smoothing. */
+export function dimBlendFactor(
+  nowMs: number,
+  lastNowMs: number | null,
+  tauS: number,
+): number {
+  if (lastNowMs === null) return 1;
+  const dtS = Math.min(Math.max((nowMs - lastNowMs) / 1000, 0), 0.25);
+  return 1 - Math.exp(-dtS / tauS);
+}
+
+/** Blend each targeted slot of `dimBuf` toward its target, decay every
+ *  other active slot back toward 1 (snapping at DIM_SETTLED), and keep
+ *  `active` = the set of slots still below 1. Returns true when any
+ *  slot was written (the caller's attribute-flush signal). */
+export function blendDimBuffer(
+  dimBuf: Float32Array,
+  targets: ReadonlyMap<number, number>,
+  active: Set<number>,
+  blend: number,
+): boolean {
+  let wrote = false;
+  for (const [idx, target] of targets) {
+    dimBuf[idx] += (target - dimBuf[idx]) * blend;
+    active.add(idx);
+    wrote = true;
+  }
+  for (const idx of active) {
+    if (targets.has(idx)) continue;
+    const next = dimBuf[idx] + (1 - dimBuf[idx]) * blend;
+    if (next >= DIM_SETTLED) {
+      dimBuf[idx] = 1;
+      active.delete(idx);
+    } else {
+      dimBuf[idx] = next;
+    }
+    wrote = true;
+  }
+  return wrote;
+}
+
 export interface EclipseResult {
   /** Multiplicative dim factor on the BACK star's flux. 1.0 = no
    *  occlusion. `DIM_FLOOR` = back fully occluded. The front star is
