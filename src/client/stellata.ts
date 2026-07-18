@@ -882,13 +882,16 @@ export class Stellata implements FrameAnchor {
     this.filters.recomputePresetPxSizes();
 
     this.poiStore = new PoiStore({
-      count: catalog.count,
-      sid: catalog.sid,
-      // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
-      // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
-      // so a future non-Sol host's pin works live yet won't round-trip
-      // through ?v=.
-      planetPinnable: (idx) => this.planetBodyField.planetAt(idx) !== null,
+      pinnable: {
+        star: (idx) => idx >= 0 && idx < catalog.count && catalog.sid[idx] !== 0,
+        // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
+        // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
+        // so a future non-Sol host's pin works live yet won't round-trip
+        // through ?v=.
+        planet: (idx) => this.planetBodyField.planetAt(idx) !== null,
+        lg: (idx) => (this.localGroupLayer?.objects[idx]?.sid ?? 0) !== 0,
+        cloud: () => false,
+      },
       onChange: (pois) => {
         this.bus.emit('pois', pois);
         this.bus.emit('state');
@@ -1039,6 +1042,10 @@ export class Stellata implements FrameAnchor {
    *  pair this with `focusables[kind]`; star-only affordances keep
    *  guarding on `getFocusedStar()`. */
   getFocusedTarget(): Target | null { return this.focus.getFocusedTarget(); }
+  /** Focused hard-kind (star / planet) Target, or null when the focus is
+   *  empty or soft. Pairs with `focalLocalPositionInto` for overlays that
+   *  anchor on the focused object regardless of kind. */
+  getFocusedHardTarget(): Target | null { return this.focus.getFocusedHardTarget(); }
   /** Focused object's live local position (any hard kind) into `out`;
    *  false when no hard focus is set. Kind-generic — overlays anchoring
    *  on "the focused object" use this, never a star-only buffer read. */

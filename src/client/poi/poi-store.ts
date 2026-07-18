@@ -1,22 +1,18 @@
 // Store for user-pinned points of interest — the single source of truth
 // for the pinned-object list. See README.md for the pin semantics.
 
-import { targetsEqual, type Target } from '../camera/focus/focus-target';
+import { targetsEqual, type Target, type TargetKind } from '../camera/focus/focus-target';
 
 // POI cap. Bounds both the in-app pin list and the `?v=` blob's POI
 // payload — one constant so the two can't drift apart.
 export const POI_MAX_COUNT = 16;
 
 export interface PoiStoreDeps {
-  /** Catalog row count — out-of-range star indices are rejected. */
-  count: number;
-  /** Per-record star SIDs. URL state persists POIs by SID, so a record
-   *  without one (never occurs on a shipped catalog) is rejected. */
-  sid: Uint32Array;
-  /** Planet-kind pinnability: true when the flat instance index is
-   *  covered by an attached host, which is also what makes its SID
-   *  resolvable for the URL round-trip. */
-  planetPinnable: (idx: number) => boolean;
+  /** Per-kind pin rule, EXHAUSTIVE over TargetKind — a new focusable
+   *  kind must state its rule (or `() => false`) to compile, the same
+   *  contract FocusableProviders / FocusCardProviders carry. URL state
+   *  persists POIs by SID, so every rule must imply a resolvable SID. */
+  pinnable: { readonly [K in TargetKind]: (idx: number) => boolean };
   /** Fired after every accepted mutation with the live list. */
   onChange: (pois: readonly Target[]) => void;
 }
@@ -40,21 +36,9 @@ export class PoiStore {
     return this.pois.length >= POI_MAX_COUNT;
   }
 
-  /** Whether `target` may be pinned at all (independent of the cap).
-   *  Kind-generic and object-generic: every catalog star with a SID
-   *  pins, Sol included — the click ladder's pin rung must behave
-   *  identically for all objects (a per-object carve-out reads as a
-   *  broken ladder, not as chrome dedup). */
+  /** Whether `target` may be pinned at all (independent of the cap). */
   pinnable(target: Target): boolean {
-    if (target.kind === 'star') {
-      return (
-        target.idx >= 0 &&
-        target.idx < this.deps.count &&
-        this.deps.sid[target.idx] !== 0
-      );
-    }
-    if (target.kind === 'planet') return this.deps.planetPinnable(target.idx);
-    return false;
+    return this.deps.pinnable[target.kind](target.idx);
   }
 
   /** Pin `target`, or unpin it when already pinned. Unpinning always

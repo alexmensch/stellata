@@ -330,7 +330,8 @@ describe('displayName overrides + default type suffix', () => {
     expect(displayName('NGC 6822')).toBe('NGC 6822');
     expect(displayName('IC 10')).toBe('IC 10');
     expect(displayName('IC 1613')).toBe('IC 1613');
-    expect(displayName('M 32')).toBe('M 32');
+    // LVDB's SIMBAD-spaced shortform normalises to match M31 / M33.
+    expect(displayName('M 32')).toBe('M32');
     expect(displayName('M31')).toBe('M31');
     expect(displayName('M33')).toBe('M33');
     expect(displayName('UGC 4879')).toBe('UGC 4879');
@@ -360,6 +361,7 @@ describe('displayName overrides + default type suffix', () => {
       'LMC',
       'Leo A',
       'Leo P',
+      'M 32',
       'Pegasus W',
       'Pegasus dIrr',
       'Phoenix',
