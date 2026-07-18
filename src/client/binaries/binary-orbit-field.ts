@@ -27,11 +27,9 @@ export interface BinaryOrbitFieldOptions {
    *  on `OrbitRelationCache.baseDiffPc` + ΔR(t). */
   absolutePositions: Float32Array;
   /** Immutable J2016.0 catalog baseline (count × 3) + per-star space-motion
-   *  velocities (pc/yr). Off-focal-chain relations reset their local slots
-   *  from `(base + v·Δt) − worldOffset` in float64 rather than from the
-   *  float32 `absolutePositions`, so a drifting unfocused system doesn't
-   *  snap onto the ~0.4 AU float32 absolute grid under time scrub. See
-   *  § Walk-active LOD. */
+   *  velocities (pc/yr). Unfocused, relations reset their local slots from
+   *  these in float64 via `writeAdvancedLocal` rather than from the float32
+   *  `absolutePositions`. See § Walk-active LOD. */
   basePositions: Float32Array;
   velocities: Float32Array;
   /** Catalog-wide absolute magnitudes, length = catalog.count. Drives
@@ -184,13 +182,9 @@ export class BinaryOrbitField {
       // for hierarchical walks — the inner-pair pass below ADDs onto the
       // slot the outer pass wrote first.
       //
-      // Unfocused, reconstruct that baseline in float64 from the exact epoch
-      // (writeAdvancedLocal off base + velocities): subtracting the origin
-      // from the float32 absolute instead snaps the pair onto the ~0.4 AU
-      // absolute grid as it drifts under scrub — the "whole system teleports"
-      // bug. When a star is focused the whole scene rides the absolute: the
-      // shell's epoch-follow moves the camera by the focal's abs delta, and
-      // every hierarchy slot must share that absolute so the two cancel and
+      // Unfocused: reconstruct the baseline in float64 off base + velocities
+      // (writeAdvancedLocal), NOT from the float32 absolute. Focused: reset
+      // from the absolute so the shell's epoch-follow camera move cancels and
       // the focal stays pinned. See § Walk-active LOD.
       const pBase = pIdx * 3;
       const sBase = sIdx * 3;
