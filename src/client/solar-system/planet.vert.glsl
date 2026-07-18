@@ -69,12 +69,20 @@ uniform float uSizeKnee;
 // evaluates the same smoothstep from the other end).
 uniform vec2 uMeshFadeRatio;
 
+// Chart-mode flat-disc sizing — same uniforms (same { value } slots)
+// as the star pipeline's chart branch; see chart-mode/README.md.
+uniform float uChartDiscMaxPx;
+uniform float uChartDiscMinPx;
+uniform float uChartMagBright;
+uniform float uMonochrome;
+
 out vec3 vColor;
 out vec2 vUv;
 out float vAppMag;
 out float vPhysRatio;
 out float vSoftness;
 out float vMeshFade;
+out float vAaWidth;
 
 const float LOG10 = 2.302585093;
 const float PI_CONST = 3.14159265358979323846;
@@ -121,6 +129,7 @@ void main() {
     vPhysRatio = 0.0;
     vSoftness = 0.0;
     vMeshFade = 0.0;
+    vAaWidth = 0.0;
     return;
   }
 
@@ -192,6 +201,7 @@ void main() {
     vPhysRatio = 0.0;
     vSoftness = 1.0 - iSolidity;
     vMeshFade = 0.0;
+    vAaWidth = 0.0;
     return;
   }
 
@@ -199,22 +209,38 @@ void main() {
   float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
   float physSize = 2.0 * atan(iRadiusPc / d_vp) * angularToPx;
 
-  // Apparent-magnitude size via the perceptual-disc chunk. No
-  // unconditional pixel floor — sub-pixel planets fade naturally
-  // when their reflected-light flux drops below the slider cutoff.
-  float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
-  float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+  float pxSize;
+  if (uMonochrome > 0.5) {
+    // Chart-mode flat-disc sizing — the star vertex shader's chart
+    // branch verbatim: magnitude-linear px, disc pass forced, no
+    // mesh handoff (the mesh LOD hides in chart mode).
+    float chartT = clamp(
+        (appMag - uChartMagBright)
+            / max(uMaxAppMag - uChartMagBright, 0.001),
+        0.0, 1.0);
+    pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
+    vPhysRatio = 1.0;
+    vMeshFade = 0.0;
+  } else {
+    // Apparent-magnitude size via the perceptual-disc chunk. No
+    // unconditional pixel floor — sub-pixel planets fade naturally
+    // when their reflected-light flux drops below the slider cutoff.
+    float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
+    float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
 
-  // Disc ramps out as the spheroid mesh ramps in, keyed on the
-  // physSize/appSize ratio: the band starts at 1 — exactly where the
-  // max() below switches to the physical term — so the disc and the
-  // mesh (drawn at physSize) share the same footprint through the
-  // whole fade and the handoff cannot pop in size.
-  vMeshFade = smoothstep(
-      uMeshFadeRatio.x, uMeshFadeRatio.y, physSize / max(appSize, 1e-6));
+    // Disc ramps out as the spheroid mesh ramps in, keyed on the
+    // physSize/appSize ratio: the band starts at 1 — exactly where the
+    // max() below switches to the physical term — so the disc and the
+    // mesh (drawn at physSize) share the same footprint through the
+    // whole fade and the handoff cannot pop in size.
+    vMeshFade = smoothstep(
+        uMeshFadeRatio.x, uMeshFadeRatio.y, physSize / max(appSize, 1e-6));
 
-  float pxSize = max(appSize, physSize);
-  vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+    pxSize = max(appSize, physSize);
+    vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+  }
+  // One CSS pixel in vUv units — the chart frag's edge-AA width.
+  vAaWidth = 1.0 / max(pxSize, 0.5);
   vAppMag = appMag;
   vColor = iColour;
   vUv = aCorner;

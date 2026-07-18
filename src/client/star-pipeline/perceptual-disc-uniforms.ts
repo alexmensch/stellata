@@ -68,3 +68,32 @@ export function pickPerceptualDiscUniforms<T extends PerceptualDiscUniforms>(
   }
   return out as unknown as PerceptualDiscUniforms;
 }
+
+/** Chart-mode disc uniforms — shared `{ value }` slots so the one
+ *  `setMonochrome` write in stellata.ts reaches every material that
+ *  picks these (star pipeline + planet body field). Not part of the
+ *  perceptual-disc chunk contract; each vertex shader's chart branch
+ *  reads them directly. */
+export interface ChartDiscUniforms {
+  uMonochrome: { value: number };
+  uChartDiscMaxPx: { value: number };
+  uChartDiscMinPx: { value: number };
+  uChartMagBright: { value: number };
+}
+
+export const CHART_DISC_UNIFORM_KEYS = [
+  'uMonochrome',
+  'uChartDiscMaxPx',
+  'uChartDiscMinPx',
+  'uChartMagBright',
+] as const satisfies readonly (keyof ChartDiscUniforms)[];
+
+export function pickChartDiscUniforms<T extends ChartDiscUniforms>(
+  src: T,
+): ChartDiscUniforms {
+  const out: Record<string, THREE.IUniform> = {};
+  for (const key of CHART_DISC_UNIFORM_KEYS) {
+    out[key] = src[key];
+  }
+  return out as unknown as ChartDiscUniforms;
+}

@@ -56,7 +56,16 @@ Exit reverses each step.
 
 In chart mode the vertex shader replaces `max(appSize, physSize)` with
 a **linear-in-magnitude** mapping (= log10-in-flux by definition of
-magnitude):
+magnitude). **Planet bodies take the identical treatment** (uadc.3
+decision: magnitude disc + star-style name label, no glyph
+vocabulary): `planet.vert.glsl` carries the same chart branch driven
+by the same shared uniforms, the reflected-light appMag feeds the same
+formula, and `PlanetBodyField.setMonochrome` swaps blending exactly
+like the star pipeline's `setMonochromeBlend` (the spheroid mesh LOD
+and the corrupt/restore ring-occlusion passes idle in chart — rings
+are hidden on paper). Planet name labels ride the chart-labels engine
+(`kind-planet`, proper-name priority tier); `planet-labels.ts` stays
+chart-hidden as before.
 
 ```glsl
 chartT = clamp(
@@ -220,9 +229,10 @@ Click-pick tracks **render visibility** identically for every kind: a
 body is click-pinnable iff it is currently drawn. Chart mode hard-clips
 the star disc at `uMaxAppMag` (no soft taper — § Star disc sizing), so
 `pickStar`'s cutoff drops the `SOFT_TAPER_MARGIN_MAG` it adds in
-navigate; planet bodies are hidden entirely in chart mode, so
-`PlanetBodyField.pick` returns null there (find via `F` still works —
-that's aim, not a pin). The shared cutoff constant lives in
+navigate; `PlanetBodyField.pick` applies the same hard clip in chart
+mode and sizes its hit radius from the chart disc px
+(`chartDiscPxForAppMag`) instead of the physical/perceptual disc. The
+shared cutoff constant lives in
 `solar-system/perceptual-magnitude.ts`.
 
 `Picker.pickStar` (`camera/picker.ts`) three fixes for the small-disc /

@@ -53,7 +53,9 @@ export class PlanetMeshLayer {
    *  Reads the body field's live buffers, so recentres and scrubber
    *  motion need no extra hooks. */
   update(camera: THREE.PerspectiveCamera): void {
-    this.group.visible = this.field.group.visible;
+    // Chart mode inks the bodies as flat discs (chart-mode/README.md);
+    // a lit photographic sphere has no place on paper.
+    this.group.visible = this.field.group.visible && !this.field.monochrome;
     if (!this.group.visible) return;
 
     const shown = new Set<number>();

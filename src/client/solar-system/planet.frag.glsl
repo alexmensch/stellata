@@ -10,6 +10,7 @@ precision highp float;
 
 uniform int uRenderMode;
 uniform float uMaxAppMag;
+uniform float uMonochrome;
 uniform float uVisibleThreshold;
 uniform float uVisibleK;
 uniform float uCoreThreshold;
@@ -25,6 +26,7 @@ in float vAppMag;
 in float vPhysRatio;
 in float vSoftness;
 in float vMeshFade;
+in float vAaWidth;
 
 out vec4 outColor;
 
@@ -42,6 +44,26 @@ void main() {
   // sensible default.
   gl_FragDepth = gl_FragCoord.z;
   #include <logdepthbuf_fragment>
+
+  // Chart mode: flat hard-edged ink discs, star.frag's mono branch
+  // with the planet-only corrupt/restore passes idled — orbit rings
+  // are hidden on paper, so there is nothing to depth-corrupt.
+  if (uMonochrome > 0.5) {
+    if (uRenderMode == 3 || uRenderMode == 4) discard;
+    if (uRenderMode == 0 && vPhysRatio >= PHYS_RATIO_THRESHOLD) discard;
+    if (uRenderMode == 1 && vPhysRatio <  PHYS_RATIO_THRESHOLD) discard;
+    if (uRenderMode == 2 && vPhysRatio <  PHYS_RATIO_THRESHOLD) discard;
+    if (vAppMag > uMaxAppMag) discard;
+    float aa = max(vAaWidth, 1e-3);
+    float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
+    if (disc <= 0.0) discard;
+    if (uRenderMode == 2) {
+      outColor = vec4(0.0); // material has colorWrite = false on the mask
+      return;
+    }
+    outColor = vec4(vec3(1.0 - disc), 1.0);
+    return;
+  }
 
   float glow = perceptualDiscProfile(
       r, vSoftness, vPhysRatio,
