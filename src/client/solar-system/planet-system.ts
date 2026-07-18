@@ -81,8 +81,10 @@ export interface Planet {
   readonly hasNightTexture?: boolean;
   // Optional ring system: annulus span in the body's equatorial
   // plane, textured by the `<body>-rings.png` radial strip (RGB =
-  // colour, A = opacity; U maps inner→outer). Saturn only in v1;
-  // the other giants' faint rings are deliberately out of scope.
+  // colour, A = opacity; U maps inner→outer). Spans must match the
+  // strip builds in scripts/textures/build-textures.py — see
+  // data/textures/README.md § Ring strips (Jupiter's rings ship no
+  // strip: below the 8-bit-representable opacity floor).
   readonly rings?: PlanetRings;
 }
 
@@ -228,6 +230,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.64, 0.85, 0.90],
     albedo: 0.488,
     rotation: URANUS_ROTATION,
+    rings: { innerRadiusKm: 41600, outerRadiusKm: 51300 },
   },
   {
     name: 'Neptune',
@@ -239,6 +242,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.25, 0.37, 0.75],
     albedo: 0.442,
     rotation: NEPTUNE_ROTATION,
+    rings: { innerRadiusKm: 40900, outerRadiusKm: 63100 },
   },
   // Pluto — mean radius from New Horizons 2015 reconnaissance. Type
   // 'rocky' is the closest match in our existing tri-state; Pluto is

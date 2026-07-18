@@ -406,11 +406,13 @@ stellata-2f6.3).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
-- **Saturn rings** (stellata-2f6.15): `Planet.rings` adds an annulus
-  mesh (`planet-rings.*.glsl`) in the body's equatorial plane (IAU
-  pole; host orbital plane as the no-elements fallback), textured by
-  the `<body>-rings.png` 1-D radial strip (RGB colour, A opacity;
-  U = inner→outer edge, span in `data/textures/README.md`). Lit-face
+- **Ring systems** (Saturn, plus Uranus + Neptune's faint rings at
+  true opacity — spans and the Jupiter exclusion in
+  `data/textures/README.md` § Ring strips): `Planet.rings` adds an
+  annulus mesh (`planet-rings.*.glsl`) in the body's equatorial plane
+  (IAU pole; host orbital plane as the no-elements fallback),
+  textured by the `<body>-rings.png` 1-D radial strip (RGB colour,
+  A opacity; U = inner→outer edge). Lit-face
   fragments get full strip colour, the unlit face a dimmer
   transmitted factor, both fading out as illumination goes edge-on to
   the ring plane; the far-side segment inside the body's shadow
