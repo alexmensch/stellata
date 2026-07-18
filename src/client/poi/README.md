@@ -1,7 +1,7 @@
 # Points of interest (POIs)
 
-User-pinned objects — any pinnable Target kind (stars and planets
-today) in one list. This folder owns the pin **state**; the SVG
+User-pinned objects — any pinnable Target kind (stars, planets, and
+Local Group objects today) in one list. This folder owns the pin **state**; the SVG
 rendering (rings, labels, off-screen arrows) lives in
 `../overlays/poi-overlay.ts`, and the per-POI info cards are members of
 the card rolodex (`../focus-card/README.md` § Rolodex behaviour).
@@ -17,8 +17,9 @@ the card rolodex (`../focus-card/README.md` § Rolodex behaviour).
 
 ## Click ladder (navigate mode)
 
-A navigate-mode click on a non-focused point object — star or planet,
-one ladder for every kind — steps a state-based ladder:
+A navigate-mode click on a non-focused object — star, planet, or
+Local Group object, one ladder for every kind — steps a state-based
+ladder:
 
 1. unpinned → pin
 2. pinned but not the vector destination → set the distance vector
@@ -40,7 +41,11 @@ apart.
 - Keyed by `Target` (`{kind, idx}`) at runtime; persisted as SIDs in
   the `?v=` blob (see `../util/url-state/README.md`), so pins survive
   catalogue rebuilds. A planet Target's idx is the body-field flat
-  instance index; its SID rides the planet domain.
+  instance index; its SID rides the planet domain. The per-kind pin
+  rules live on `PoiStoreDeps.pinnable`, a map EXHAUSTIVE over
+  `TargetKind` (wired in `stellata.ts`) — a new focusable kind must
+  state its rule to compile, like the focusable / focus-card provider
+  registries.
 - **Every catalog star with a SID pins — Sol included.** Sol was once
   carved out ("the HUD #sol-arrow already covers it"), but a
   per-object exception in the pin rung reads as a broken click ladder
@@ -51,9 +56,10 @@ apart.
   the body field; URL round-trip additionally needs the planet SID to
   resolve, wired for Sol's domain only today (`main.ts`
   `planetDomainIndexOf`) — a future non-Sol host's pin would work
-  in-session but silently drop from a shared `?v=`.
-  Clouds and LG objects have no pin affordance today — `pinnable`
-  returns false and the ladder steps only its vector rungs for them.
+  in-session but silently drop from a shared `?v=`. Local Group
+  objects pin like stars (their SID domain attaches at boot); clouds
+  stay unpinnable while the MC layer is shelved — their rule returns
+  false and the ladder steps only its vector rungs for them.
 - Hard cap `POI_MAX_COUNT = 16`; adding past it is a no-op. The same
   constant bounds the URL payload — import it, never redefine it.
 - Insertion-ordered so URL round-trips preserve the user's pin order.

@@ -47,6 +47,10 @@ src/client/overlays/
                                   arrows + future arrow consumers.
   arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)
                                   used by hud-overlay and others.
+  target-name.ts                  targetDisplayName — per-kind display
+                                  name for any Target; shared by the
+                                  POI labels and the distance-vector
+                                  destination label.
 ```
 
 ## Constellation stick-figure overlay
@@ -176,9 +180,11 @@ mode's renderer.
 
 ## Points of interest
 
-`poi-overlay.ts` renders the user-pinned object list — stars and
-planets through one Target-keyed pool (state + pin semantics in
-`../poi/README.md`) — in BOTH camera modes. Three SVG
+`poi-overlay.ts` renders the user-pinned object list — every pinnable
+kind through one Target-keyed pool (state + pin semantics in
+`../poi/README.md`); positions dispatch through
+`stellata.focusables`, names through `target-name.ts`, so a new
+pinnable kind needs no overlay edit — in BOTH camera modes. Three SVG
 groups under `#overlay`:
 
 - `<g id="poi-arrows">` — pooled `<path>` + `<text>` per POI for

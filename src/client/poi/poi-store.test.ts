@@ -5,18 +5,23 @@ import type { Target } from '../camera/focus/focus-target';
 const SOL = 0;
 const NO_SID = 5;
 const ATTACHED_PLANETS = 9;
+const LG_COUNT = 4;
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
 const planet = (idx: number): Target => ({ kind: 'planet', idx });
+const lg = (idx: number): Target => ({ kind: 'lg', idx });
 
 function makeStore() {
   const sid = new Uint32Array(40).fill(1);
   sid[NO_SID] = 0;
   const onChange = vi.fn();
   const store = new PoiStore({
-    count: 40,
-    sid,
-    planetPinnable: (idx) => idx >= 0 && idx < ATTACHED_PLANETS,
+    pinnable: {
+      star: (idx) => idx >= 0 && idx < 40 && sid[idx] !== 0,
+      planet: (idx) => idx >= 0 && idx < ATTACHED_PLANETS,
+      lg: (idx) => idx >= 0 && idx < LG_COUNT,
+      cloud: () => false,
+    },
     onChange,
   });
   return { store, onChange };
@@ -46,13 +51,14 @@ describe('PoiStore', () => {
     expect(onChange).toHaveBeenCalledTimes(3);
   });
 
-  it('rejects missing-SID, out-of-range, and unattached planets without firing onChange', () => {
+  it('rejects missing-SID, out-of-range, unattached-planet, and cloud pins without firing onChange', () => {
     const { store, onChange } = makeStore();
     store.toggle(star(NO_SID));
     store.toggle(star(-1));
     store.toggle(star(40));
     store.toggle(planet(ATTACHED_PLANETS));
-    store.toggle({ kind: 'lg', idx: 0 });
+    store.toggle(lg(LG_COUNT));
+    store.toggle({ kind: 'cloud', idx: 0 });
     expect(store.get()).toEqual([]);
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -83,8 +89,9 @@ describe('PoiStore', () => {
     const { store } = makeStore();
     store.toggle(star(7));
     store.toggle(planet(2));
+    store.toggle(lg(1));
     store.toggle(star(30));
-    expect(store.get()).toEqual([star(7), planet(2), star(30)]);
+    expect(store.get()).toEqual([star(7), planet(2), lg(1), star(30)]);
   });
 
   it('pinnable mirrors the toggle gates', () => {
@@ -97,7 +104,8 @@ describe('PoiStore', () => {
     expect(store.pinnable(planet(0))).toBe(true);
     expect(store.pinnable(planet(ATTACHED_PLANETS))).toBe(false);
     expect(store.pinnable({ kind: 'cloud', idx: 0 })).toBe(false);
-    expect(store.pinnable({ kind: 'lg', idx: 0 })).toBe(false);
+    expect(store.pinnable(lg(0))).toBe(true);
+    expect(store.pinnable(lg(LG_COUNT))).toBe(false);
   });
 
   it('set validates, dedupes, caps, and skips the no-change write', () => {
