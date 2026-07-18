@@ -60,7 +60,7 @@ import {
 import type { FocusableProviders, Target } from './camera/focus/focus-target';
 import { parkDistance } from './camera/focus/focus-transition';
 import { cloudViewingDistancePc } from './molecular-clouds/molecular-clouds';
-import { focalRideStep } from './camera/focus/focal-ride-pure';
+import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
@@ -1350,6 +1350,37 @@ export class Stellata implements FrameAnchor {
     }
   }
 
+  // Keep the floating origin locked to the focal object as it moves under
+  // time advance. The focal-frame rides translate the camera to follow the
+  // object, so under scrubber fast-forward the camera drifts far from the
+  // fixed focus-time origin — reviving the float32 modelview cancellation the
+  // floating origin exists to prevent (a growing wobble on the focal body).
+  // Recentring onto the look target (glued to the object by the ride)
+  // restores camera-from-origin ≈ eye distance. Kind-agnostic: every hard
+  // focus kind, current or future, benefits with no per-kind code, because
+  // the origin is shared by every layer. Skipped during camera-owning
+  // animations, which reference the current frame and re-snap themselves.
+  private maybeRecenterOnFocalDrift(): void {
+    if (this.focus.getFocusedHardTarget() === null) return;
+    if (
+      this.warp.isActive()
+      || this.aim.isActive()
+      || this.aim.isObserveAimActive()
+      || this.focus.isFocusLerpActive()
+      || this.observe.isAnyActive()
+    ) return;
+    const eye = this.camera.position.distanceTo(this.controls.target);
+    if (!shouldRecenterFocalOrigin(this.camera.position.length(), eye)) return;
+    this.tmpRecenter.copy(this.controls.target).add(this.worldOffset);
+    if (this.recenterOrigin(this.tmpRecenter) !== null) {
+      // The planet ride caches the focal's full local position; the recentre
+      // shifted the frame under it, so reseed to skip a one-frame jump. The
+      // binary ride tracks baseline-relative perturbation (frame-invariant)
+      // and needs none.
+      this._planetRideIdx = null;
+    }
+  }
+
  // recenterFocusToStar moved to FocusController — it
   // mutates focus state (focusedStar + per-star minDistance +
   // planet-system reload), which now lives there.
@@ -2209,6 +2240,7 @@ export class Stellata implements FrameAnchor {
     if (this.disposed) return;
     perfMark('frame.total');
     this.maybeReAdvanceEpoch();
+    this.maybeRecenterOnFocalDrift();
     perfMark('controls.update');
     if (this.warp.isActive()) {
       this.warp.tick(performance.now());

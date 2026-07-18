@@ -8,6 +8,24 @@ export interface Vec3 {
   readonly z: number;
 }
 
+// Once the camera has drifted this many × the eye distance from the focal
+// object, the origin recentres onto it. The float32 modelview cancellation
+// near the focal object projects ≈ (camFromOrigin / eye) · 2⁻²³ rad of
+// jitter, so bounding the ratio bounds the jitter (16 · 2⁻²³ ≈ 2e-6 rad,
+// sub-pixel at any framing). This is the ONE kind-agnostic precision lever:
+// the per-object shader pin (uPinFocusToCenter) can only ever be per-shader,
+// but recentring the shared origin fixes every layer near the focal object
+// at once, for every hard focus kind — current or future.
+export const FOCAL_ORIGIN_DRIFT_RATIO = 16;
+
+/** True when the camera has drifted far enough from the focal object — its
+ *  distance from the local origin exceeds FOCAL_ORIGIN_DRIFT_RATIO × the eye
+ *  distance — that the floating origin should recentre onto it to restore
+ *  float32 precision. Kind-agnostic: keyed on camera geometry alone. */
+export function shouldRecenterFocalOrigin(camFromOriginPc: number, eyeDistPc: number): boolean {
+  return eyeDistPc > 0 && camFromOriginPc > eyeDistPc * FOCAL_ORIGIN_DRIFT_RATIO;
+}
+
 export interface FocalRideInputs {
   /** Currently focused star index, or null. */
   focal: number | null;

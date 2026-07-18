@@ -196,7 +196,10 @@ kind, or Esc — runs the same detach side effects a star unfocus does
   body-field buffers, so pan offsets survive and the rendered body
   stays glued to the orbit target under scrubber fast-forward. The
   ride reseeds on every `'focus'` event (each planet focus recentres
-  the origin, staleing the cached last position).
+  the origin, staleing the cached last position). Float32 precision as
+  the body orbits far from the focus-time origin is held generically by
+  the origin-follow recentre (`../../binaries/README.md` § Focal-frame
+  ride — kind-agnostic, no planet pin).
 
 ## Focus-park lerp
 
