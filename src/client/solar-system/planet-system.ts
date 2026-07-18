@@ -3,12 +3,14 @@
 // src/client/solar-system/README.md § Data model.
 
 import type { Catalog } from '../loaders/catalog-loader';
+import { AU_KM } from '../util/astronomy-constants';
 import {
   getPlanetOrbitOrientations,
   getPlanetPositions,
   PLANET_ORDER,
   type OrbitOrientationRad,
 } from './ephemeris';
+import { MOON_ELEMENTS } from './moon-ephemeris';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,
@@ -31,7 +33,7 @@ import {
   VENUS_ROTATION,
 } from './rotation-elements-pure';
 
-export type PlanetType = 'rocky' | 'gas_giant' | 'ice_giant';
+export type PlanetType = 'rocky' | 'gas_giant' | 'ice_giant' | 'icy';
 
 export interface Planet {
   readonly name: string;
@@ -43,6 +45,11 @@ export interface Planet {
   // Omitted = spherical; the mesh renderer scales its polar axis by
   // (1 − f).
   readonly flattening?: number;
+  // Standard gravitational parameter GM (km³/s²). Carried by bodies that
+  // parent a moon; the moon's orbital period follows from its parent's GM
+  // (Kepler III), not the host star's, so a moon's focus-card period row
+  // reads this rather than assuming solar mass.
+  readonly gravParamGM?: number;
   // Semi-major axis in AU. Real orbital phase comes from VSOP87
   // ephemerides; placeholder positions use this alone.
   readonly semiMajorAxisAu: number;
@@ -52,6 +59,11 @@ export interface Planet {
   // placeholder until VSOP87 longitude-of-perihelion lands.
   readonly eccentricity: number;
   readonly type: PlanetType;
+  // Parent body's `name` when this body orbits a planet rather than the
+  // host star (a moon). Presence flips position composition, orbit-ring
+  // centring, and the focus-card breadcrumb from host-star to this parent;
+  // absence ⇒ the body orbits the host star directly.
+  readonly parentName?: string;
   // Representative single-colour RGB in linear-ish [0,1]. Average tones
   // only — atmospheric scattering, banding, and surface texturing all
   // depend on a future planet-selection / close-zoom affordance that
@@ -168,6 +180,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     name: 'Earth',
     radiusKm: 6371,
     flattening: 0.00335,
+    gravParamGM: 398600.435,
     semiMajorAxisAu: 1.000,
     eccentricity: 0.0167,
     type: 'rocky',
@@ -193,6 +206,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     name: 'Jupiter',
     radiusKm: 69911,
     flattening: 0.06487,
+    gravParamGM: 126686534,
     semiMajorAxisAu: 5.203,
     eccentricity: 0.0485,
     type: 'gas_giant',
@@ -205,6 +219,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     name: 'Saturn',
     radiusKm: 58232,
     flattening: 0.09796,
+    gravParamGM: 37931207,
     semiMajorAxisAu: 9.537,
     eccentricity: 0.0555,
     type: 'gas_giant',
@@ -224,6 +239,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     name: 'Uranus',
     radiusKm: 25362,
     flattening: 0.02293,
+    gravParamGM: 5793939,
     semiMajorAxisAu: 19.191,
     eccentricity: 0.0464,
     type: 'ice_giant',
@@ -236,6 +252,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     name: 'Neptune',
     radiusKm: 24622,
     flattening: 0.01708,
+    gravParamGM: 6836529,
     semiMajorAxisAu: 30.069,
     eccentricity: 0.0095,
     type: 'ice_giant',
@@ -263,6 +280,69 @@ export const SOL_PLANETS: readonly Planet[] = [
     rotation: PLUTO_ROTATION,
   },
 ] as const;
+
+interface MoonPhysical {
+  readonly name: string;
+  readonly parentName: string;
+  readonly radiusKm: number;
+  readonly albedo: number;
+  readonly type: PlanetType;
+  readonly colour: readonly [number, number, number];
+}
+
+// Physical properties for the 18 major moons. Mean radii from NASA/JPL
+// fact sheets; geometric albedos and representative colours per
+// docs/science-solar-system.md § Moons. Orbital a/e are NOT repeated here
+// — SOL_MOONS reads them from MOON_ELEMENTS by name, so each has a single
+// source of truth.
+const MOON_PHYSICAL: readonly MoonPhysical[] = [
+  { name: 'Moon', parentName: 'Earth', radiusKm: 1737.4, albedo: 0.12, type: 'rocky', colour: [0.55, 0.54, 0.52] },
+
+  { name: 'Io', parentName: 'Jupiter', radiusKm: 1821.6, albedo: 0.63, type: 'rocky', colour: [0.86, 0.78, 0.45] },
+  { name: 'Europa', parentName: 'Jupiter', radiusKm: 1560.8, albedo: 0.67, type: 'icy', colour: [0.82, 0.76, 0.68] },
+  { name: 'Ganymede', parentName: 'Jupiter', radiusKm: 2634.1, albedo: 0.43, type: 'icy', colour: [0.58, 0.53, 0.47] },
+  { name: 'Callisto', parentName: 'Jupiter', radiusKm: 2410.3, albedo: 0.22, type: 'icy', colour: [0.45, 0.41, 0.37] },
+
+  { name: 'Mimas', parentName: 'Saturn', radiusKm: 198.2, albedo: 0.96, type: 'icy', colour: [0.72, 0.72, 0.72] },
+  { name: 'Enceladus', parentName: 'Saturn', radiusKm: 252.1, albedo: 0.99, type: 'icy', colour: [0.92, 0.93, 0.95] },
+  { name: 'Tethys', parentName: 'Saturn', radiusKm: 531.1, albedo: 0.80, type: 'icy', colour: [0.80, 0.80, 0.80] },
+  { name: 'Dione', parentName: 'Saturn', radiusKm: 561.4, albedo: 0.70, type: 'icy', colour: [0.75, 0.75, 0.74] },
+  { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.78, 0.78, 0.77] },
+  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28] },
+  { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
+
+  { name: 'Miranda', parentName: 'Uranus', radiusKm: 235.8, albedo: 0.32, type: 'icy', colour: [0.62, 0.62, 0.63] },
+  { name: 'Ariel', parentName: 'Uranus', radiusKm: 578.9, albedo: 0.39, type: 'icy', colour: [0.66, 0.66, 0.66] },
+  { name: 'Umbriel', parentName: 'Uranus', radiusKm: 584.7, albedo: 0.21, type: 'icy', colour: [0.45, 0.45, 0.46] },
+  { name: 'Titania', parentName: 'Uranus', radiusKm: 788.4, albedo: 0.27, type: 'icy', colour: [0.58, 0.55, 0.53] },
+  { name: 'Oberon', parentName: 'Uranus', radiusKm: 761.4, albedo: 0.23, type: 'icy', colour: [0.55, 0.50, 0.47] },
+
+  { name: 'Triton', parentName: 'Neptune', radiusKm: 1353.4, albedo: 0.76, type: 'icy', colour: [0.85, 0.80, 0.76] },
+] as const;
+
+const MOON_ELEMENTS_BY_NAME = new Map(MOON_ELEMENTS.map((m) => [m.name, m]));
+
+// The 18 major moons as `Planet` entries. Defined here but deliberately
+// NOT part of SOL_PLANETS yet: appending an unpositioned body to the
+// field's iterated array would render it at the origin. The render /
+// interaction wiring (positions, focus, orbit rings) attaches these
+// separately. `semiMajorAxisAu` is parent-relative, for the field's cull
+// and ring bookkeeping — real positions come from the resolver, never
+// this field, the same contract planets follow.
+export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
+  const el = MOON_ELEMENTS_BY_NAME.get(m.name);
+  if (!el) throw new Error(`SOL_MOONS: no orbital elements for ${m.name}`);
+  return {
+    name: m.name,
+    parentName: m.parentName,
+    radiusKm: m.radiusKm,
+    semiMajorAxisAu: el.aKm / AU_KM,
+    eccentricity: el.e,
+    type: m.type,
+    albedo: m.albedo,
+    colour: m.colour,
+  };
+});
 
 // Sync probe — does this star have a planet system at all?
 //

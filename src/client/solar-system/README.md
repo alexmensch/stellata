@@ -14,7 +14,8 @@ can plug in without changing the renderer.
 src/client/solar-system/
   planet-system.ts                Planet / PlanetSystem contract.
                                   hasPlanets + getPlanetSystem; SOL_PLANETS
-                                  table (eight majors + Pluto).
+                                  table (eight majors + Pluto) + SOL_MOONS
+                                  table (18 major moons; see § Moons).
   sol-object-sids.ts              SOL_OBJECT_SIDS — hand-written body →
                                   frozen Stellata ID pins (Sun + planets).
                                   See § Sol-system SID pins.
@@ -22,6 +23,11 @@ src/client/solar-system/
                                   approximation + cubic Jupiter–Neptune
                                   correction terms. Heliocentric ecliptic
                                   parsecs out.
+  moon-ephemeris.ts               MOON_ELEMENTS — J2000 osculating orbital
+                                  elements for the 18 major moons, each
+                                  with its reference-plane pole. Data table
+                                  + type only; resolver lands later. See
+                                  § Moons.
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
@@ -98,8 +104,11 @@ src/client/solar-system/
 satisfies:
 
 - `Planet` — name, equatorial radius (km), semi-major axis (AU),
-  eccentricity, type (`rocky` / `gas_giant` / `ice_giant`),
-  representative RGB colour.
+  eccentricity, type (`rocky` / `gas_giant` / `ice_giant` / `icy`),
+  representative RGB colour. Optional `parentName` marks a body that
+  orbits a planet rather than the host star (a moon); optional
+  `gravParamGM` (km³/s²) is carried by moon parents so a moon's period
+  derives from its parent's mass, not the host star's.
 - `PlanetSystem` — host star catalog index, `planets` array,
   optional `positionsAt(t, out)` resolver writing 3 floats per planet
   in the host's local orbital-plane frame, optional
@@ -114,6 +123,30 @@ per-host JSON shards without changing the call sites.
 sourced from NASA Planetary Fact Sheets (radii) and JPL DE440 (mean
 elements at J2000). Pluto comes from New Horizons 2015 reconnaissance.
 See `docs/science-solar-system.md` §Solar system for the citation rationale.
+
+## Moons
+
+`SOL_MOONS` (in `planet-system.ts`) is the 18 major moons as `Planet`
+entries: Earth's Moon; the four Galileans; seven Saturnian moons;
+five Uranian moons; and Triton. Physical props (`MOON_PHYSICAL`) live
+next to `SOL_PLANETS`; orbital `a`/`e` are read from `MOON_ELEMENTS`
+by name so they have a single source of truth. Scope + citations in
+`docs/science-solar-system.md` § Moons.
+
+`SOL_MOONS` is **not** part of `SOL_PLANETS`. The body field iterates
+one array and expects a position for every entry, so a moon appended
+before its resolver exists would render at the origin. Moons attach to
+the runtime system separately, with position composition, focus, and
+orbit rings, in later work — until then this is inert data.
+
+Orbital elements (`moon-ephemeris.ts`) are J2000 osculating, each
+referred to the plane JPL tabulates it against, with that plane's ICRS
+pole stored per moon (`refPoleRaDeg`/`refPoleDecDeg`): the local
+Laplace plane for most, Uranus's equator for the Uranian regulars,
+and the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
+not Earth's equator). The resolver rotates each orbit from its
+reference plane into the ecliptic before composing it onto the parent's
+heliocentric position.
 
 ## Sol-system SID pins
 

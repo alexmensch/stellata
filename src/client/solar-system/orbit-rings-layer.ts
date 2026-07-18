@@ -168,6 +168,7 @@ export function planetLocalPosition(
 export function solidityForType(type: PlanetType): number {
   switch (type) {
     case 'rocky': return 1.0;
+    case 'icy': return 1.0;
     case 'ice_giant': return 0.4;
     case 'gas_giant': return 0.0;
   }
