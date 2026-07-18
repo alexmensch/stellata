@@ -72,6 +72,13 @@ export function keplerRelationParams(
   return { tier, elements: relationToElements(r) };
 }
 
+/** Both members' xyz triples fall inside a catalog-wide position buffer.
+ *  Defensive against a binaries.bin / catalog.bin generation mismatch;
+ *  shared by the cache builder and the orbit-path layer. */
+export function relationIndicesInBounds(r: BinaryRelation, absLength: number): boolean {
+  return r.primaryIdx * 3 + 2 < absLength && r.secondaryIdx * 3 + 2 < absLength;
+}
+
 /** Build one cache entry per Kepler-evaluable relation.
  *  `absolutePositions` is the catalog-wide xyz buffer; relations whose
  *  member indices fall outside it are skipped (defensive against a
@@ -87,7 +94,7 @@ export function buildOrbitRelationCaches(
     const r = relations[i];
     const params = keplerRelationParams(r);
     if (params === null) continue;
-    if (r.primaryIdx * 3 + 2 >= absLength || r.secondaryIdx * 3 + 2 >= absLength) continue;
+    if (!relationIndicesInBounds(r, absLength)) continue;
     const { tier, elements } = params;
     const baselineJd = Number.isFinite(r.sepPaEpochJd)
       ? r.sepPaEpochJd
