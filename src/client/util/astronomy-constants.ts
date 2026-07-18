@@ -34,5 +34,13 @@ export const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
 // JD-offset wire formats and the JD ↔ Julian-year converter in stage 6.
 export const J2000_JD = 2451545.0;
 
+// J2000 obliquity of the ecliptic (IAU) — the tilt between the ICRS
+// equatorial and ecliptic planes, about the +X (vernal equinox) axis.
+// Single source so every ecliptic↔equatorial rotation (planet ephemeris
+// chain, orbit-ring plane, moon reference-frame composition) uses the
+// identical value; the Standish accuracy budget does not need the
+// time-varying obliquity term.
+export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
+
 // Days in a Julian year (used by WDS year-of-observation → JD conversion).
 export const DAYS_PER_JULIAN_YEAR = 365.25;

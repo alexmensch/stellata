@@ -78,9 +78,11 @@ dark carbonaceous ones (Callisto ≈ 0.22, Iapetus's leading hemisphere
 far darker still), in `MOON_PHYSICAL` alongside representative colours.
 Minor / irregular moons, Pluto's satellites, and moon ring systems are
 out of scope. Parent gravitational parameters GM (Kepler III → a moon's
-period) live on the parent `Planet` entries. Position composition,
-rendering, orbit rings, and phase are layered on in later work; this
-data establishes the frozen element and physical tables.
+period) live on the parent `Planet` entries. The resolver
+(`moonOffsetEcliptic`) Kepler-solves each moon in its reference plane
+and rotates it into the ecliptic; `earthMoonSplit` divides Standish's
+Earth–Moon barycentre into Earth-centre and Moon. Rendering, orbit
+rings, and phase are layered on in later work.
 
 **Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
 angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic

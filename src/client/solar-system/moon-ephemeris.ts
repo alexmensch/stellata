@@ -1,6 +1,19 @@
-// J2000 osculating orbital elements for the major moons, keyed by name.
-// Sibling of ephemeris.ts (planets); the position resolver is a separate
-// concern. See src/client/solar-system/README.md § Moons.
+// J2000 osculating orbital elements for the major moons + the resolver
+// that composes their heliocentric ecliptic positions. Sibling of
+// ephemeris.ts (planets). See src/client/solar-system/README.md § Moons.
+
+import {
+  J2000_JD,
+  J2000_OBLIQUITY_RAD,
+  KM_PC,
+} from '../util/astronomy-constants';
+import { orbitalStateToCartesian } from '../util/kepler-solver';
+import type { Vec3 } from './ephemeris';
+import { tToJDE } from './time';
+
+const DEG = Math.PI / 180;
+const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
+const SIN_OBLIQUITY = Math.sin(J2000_OBLIQUITY_RAD);
 
 export interface MoonElements {
   // Matches the moon's `Planet.name` and its `sol:<lowercase>` SID key.
@@ -160,3 +173,71 @@ export const MOON_ELEMENTS: readonly MoonElements[] = [
     refPoleRaDeg: 299.8, refPoleDecDeg: 43.1,
   },
 ] as const;
+
+// Moon mass as a fraction of the Earth–Moon total,
+// m_moon/(m_earth+m_moon), from the IAU Moon:Earth mass ratio
+// 0.0123000371. Standish's ephemeris gives the Earth–Moon barycentre;
+// Earth's centre lies this fraction of the geocentric Moon vector back
+// from the barycentre (~4700 km — sub-pixel at disc scale, resolvable at
+// Earth-zoom).
+export const MOON_MASS_FRACTION = 0.0123000371 / (1 + 0.0123000371);
+
+/** Position of a moon relative to its parent's centre at Unix-seconds
+ *  `t`, in **heliocentric-ecliptic-aligned parsecs** (parent-centred, but
+ *  already rotated into the ecliptic axes so the caller adds it straight
+ *  onto the parent's ecliptic position). Kepler solve in the moon's
+ *  reference plane, then reference-plane → ecliptic. */
+export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): void {
+  const days = tToJDE(t) - J2000_JD;
+  const M = (elem.m0Deg + (360 / elem.periodDays) * days) * DEG;
+  orbitalStateToCartesian(
+    elem.aKm * KM_PC,
+    elem.e,
+    elem.incDeg * DEG,
+    elem.nodeDeg * DEG,
+    elem.periDeg * DEG,
+    M,
+    out,
+  );
+
+  // No reference pole ⇒ the elements are already J2000-ecliptic (the
+  // Moon tracks the ecliptic, not Earth's equator). Rotating it by an
+  // equatorial pole would tilt its orbit ~23° instead of the true ~5°.
+  if (elem.refPoleRaDeg === undefined || elem.refPoleDecDeg === undefined) return;
+
+  // Reference-plane → ICRS is Rz(α0+90°)·Rx(90°−δ0) — the IAU pole
+  // convention, node measured from the reference plane's ascending node
+  // on the ICRS equator. Then ICRS → ecliptic is Rx(−ε).
+  const psi = (elem.refPoleRaDeg + 90) * DEG;
+  const theta = (90 - elem.refPoleDecDeg) * DEG;
+  const cosPsi = Math.cos(psi), sinPsi = Math.sin(psi);
+  const cosTheta = Math.cos(theta), sinTheta = Math.sin(theta);
+
+  const xr = out.x, yr = out.y, zr = out.z;
+  const y1 = cosTheta * yr - sinTheta * zr;
+  const z1 = sinTheta * yr + cosTheta * zr;
+  const xi = cosPsi * xr - sinPsi * y1;
+  const yi = sinPsi * xr + cosPsi * y1;
+
+  out.x = xi;
+  out.y = COS_OBLIQUITY * yi + SIN_OBLIQUITY * z1;
+  out.z = -SIN_OBLIQUITY * yi + COS_OBLIQUITY * z1;
+}
+
+/** Split the Earth–Moon barycentre into Earth-centre and Moon positions.
+ *  `bary` is the Standish EM-barycentre; `moonGeoOffset` is the Moon's
+ *  geocentric offset from `moonOffsetEcliptic`. All vectors ecliptic pc. */
+export function earthMoonSplit(
+  bary: Readonly<Vec3>,
+  moonGeoOffset: Readonly<Vec3>,
+  outEarth: Vec3,
+  outMoon: Vec3,
+): void {
+  const f = MOON_MASS_FRACTION;
+  outEarth.x = bary.x - f * moonGeoOffset.x;
+  outEarth.y = bary.y - f * moonGeoOffset.y;
+  outEarth.z = bary.z - f * moonGeoOffset.z;
+  outMoon.x = bary.x + (1 - f) * moonGeoOffset.x;
+  outMoon.y = bary.y + (1 - f) * moonGeoOffset.y;
+  outMoon.z = bary.z + (1 - f) * moonGeoOffset.z;
+}

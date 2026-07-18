@@ -25,9 +25,9 @@ src/client/solar-system/
                                   parsecs out.
   moon-ephemeris.ts               MOON_ELEMENTS — J2000 osculating orbital
                                   elements for the 18 major moons, each
-                                  with its reference-plane pole. Data table
-                                  + type only; resolver lands later. See
-                                  § Moons.
+                                  with its reference-plane pole — plus the
+                                  resolver (`moonOffsetEcliptic`,
+                                  `earthMoonSplit`). See § Moons.
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
@@ -144,9 +144,22 @@ referred to the plane JPL tabulates it against, with that plane's ICRS
 pole stored per moon (`refPoleRaDeg`/`refPoleDecDeg`): the local
 Laplace plane for most, Uranus's equator for the Uranian regulars,
 and the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
-not Earth's equator). The resolver rotates each orbit from its
-reference plane into the ecliptic before composing it onto the parent's
-heliocentric position.
+not Earth's equator).
+
+`moonOffsetEcliptic(elem, t, out)` is the resolver: a Kepler solve in
+the moon's reference plane (shared `orbitalStateToCartesian` core with
+the planet ephemeris), then reference-plane → ICRS `Rz(α0+90°)·Rx(90°−δ0)`
+(IAU pole convention — node from the plane's ascending node on the ICRS
+equator) → ecliptic `Rx(−ε)`, so the result adds straight onto the
+parent's ecliptic position. The Moon skips the rotation (already
+ecliptic). `earthMoonSplit` then divides Standish's EM-barycentre into
+Earth-centre and Moon by `MOON_MASS_FRACTION` (Earth ~4700 km
+off-barycentre, resolvable at Earth-zoom).
+
+The resolver is **not yet wired into the rendered body positions** —
+`SOL_MOONS` is still absent from the field's iterated array
+(§ above), so composing moons into `solPositionsAt` and attaching them
+to the runtime system is the next step.
 
 ## Sol-system SID pins
 

@@ -2,7 +2,7 @@
 // `t` (Unix-seconds). See src/client/solar-system/README.md § Ephemerides.
 
 import { AU_PC, J2000_JD } from '../util/astronomy-constants';
-import { solveKepler } from '../util/kepler-solver';
+import { orbitalStateToCartesian } from '../util/kepler-solver';
 import { tToJDE } from './time';
 
 // Cache granularity for per-`t` recompute. Sub-minute planet motion at the
@@ -180,32 +180,7 @@ export function planetEclipticAU(elem: ElementSet, T: number, out: Vec3): void {
     + elem.c * DEG * Math.cos(fT)
     + elem.s * DEG * Math.sin(fT);
 
-  const E = solveKepler(M, e);
-
-  // In-plane heliocentric coordinates with perihelion on +x'.
-  const xPrime = a * (Math.cos(E) - e);
-  const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(E);
-
-  // Rotate (x', y', 0) by ω in-plane, then by I about x'', then by Ω
-  // around the ecliptic z. JPL "approx_pos.html" expansion of
-  // R_z(−Ω)·R_x(−I)·R_z(−ω):
-  const cosO = Math.cos(omega), sinO = Math.sin(omega);
-  const cosN = Math.cos(longnode), sinN = Math.sin(longnode);
-  const cosI = Math.cos(I), sinI = Math.sin(I);
-
-  const xEcl =
-    (cosO * cosN - sinO * sinN * cosI) * xPrime +
-    (-sinO * cosN - cosO * sinN * cosI) * yPrime;
-  const yEcl =
-    (cosO * sinN + sinO * cosN * cosI) * xPrime +
-    (-sinO * sinN + cosO * cosN * cosI) * yPrime;
-  const zEcl =
-    (sinO * sinI) * xPrime +
-    (cosO * sinI) * yPrime;
-
-  out.x = xEcl;
-  out.y = yEcl;
-  out.z = zEcl;
+  orbitalStateToCartesian(a, e, I, longnode, omega, M, out);
 }
 
 /** Heliocentric ecliptic positions (parsecs) of the eight planets at

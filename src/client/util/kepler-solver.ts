@@ -23,3 +23,37 @@ export function solveKepler(
   }
   return E;
 }
+
+// Cartesian position of a Keplerian orbit in its reference frame, given
+// the classical elements and mean anomaly `M`. `out` is the in-plane
+// ellipse (periapsis on +x') rotated by Rz(Ω)·Rx(I)·Rz(ω): +z along the
+// reference-plane normal, +x toward the reference frame's node. Distance
+// units follow `a`. Shared by the planet ephemeris (ecliptic frame) and
+// the moon resolver (each moon's reference plane).
+export function orbitalStateToCartesian(
+  a: number,
+  e: number,
+  incRad: number,
+  nodeRad: number,
+  argPeriRad: number,
+  M: number,
+  out: { x: number; y: number; z: number },
+): void {
+  const E = solveKepler(M, e);
+  const xP = a * (Math.cos(E) - e);
+  const yP = a * Math.sqrt(1 - e * e) * Math.sin(E);
+
+  const cosO = Math.cos(argPeriRad), sinO = Math.sin(argPeriRad);
+  const cosN = Math.cos(nodeRad), sinN = Math.sin(nodeRad);
+  const cosI = Math.cos(incRad), sinI = Math.sin(incRad);
+
+  out.x =
+    (cosO * cosN - sinO * sinN * cosI) * xP +
+    (-sinO * cosN - cosO * sinN * cosI) * yP;
+  out.y =
+    (cosO * sinN + sinO * cosN * cosI) * xP +
+    (-sinO * sinN + cosO * cosN * cosI) * yP;
+  out.z =
+    (sinO * sinI) * xP +
+    (cosO * sinI) * yP;
+}

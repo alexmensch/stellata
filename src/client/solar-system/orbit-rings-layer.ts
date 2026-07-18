@@ -3,14 +3,9 @@
 
 import * as THREE from 'three';
 import type { PlanetSystem, Planet, PlanetType } from './planet-system';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC, J2000_OBLIQUITY_RAD } from '../util/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
-
-// J2000 obliquity of the ecliptic (IAU). Sol's orbital plane is tilted
-// from the ICRS equatorial plane by this angle around the +X (vernal
-// equinox) direction.
-const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
 /**
  * North ecliptic pole expressed in ICRS — the normal to Sol's orbital
