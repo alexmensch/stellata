@@ -1113,11 +1113,15 @@ export class Stellata implements FrameAnchor {
    *  layer gates on this — renderers also subscribe to
    *  the 'planetSystem' event to react to focus swaps. */
   getFocusedPlanetSystem(): PlanetSystem | null { return this.focus.getFocusedPlanetSystem(); }
-  /** True when the orbit-rings layer is currently rendering at least one
-   *  ring. Frame-coherent — the scene-layer update fan-out runs before
-   *  `'frame'` event handlers, so overlays driven by the frame loop
-   *  (focus ring, etc.) read current-frame data. */
-  anyOrbitRingVisible(): boolean { return this.orbitRingsLayer.anyOrbitRingVisible(); }
+  /** True when planet orbit rings OR binary orbit paths are currently
+   *  circumscribing the focus — either already marks the focal object, so
+   *  the focus ring suppresses itself. Frame-coherent — the scene-layer
+   *  update fan-out runs before `'frame'` event handlers, so overlays
+   *  driven by the frame loop (focus ring, etc.) read current-frame data. */
+  anyOrbitRingVisible(): boolean {
+    return this.orbitRingsLayer.anyOrbitRingVisible()
+      || this.binaryOrbitPathLayer.anyOrbitRingVisible();
+  }
   /** Renderer-local positions of the focused host's planets (xyz
    *  triples, length 3·N), or null if no system is attached. Host
    *  offset is applied — under planet focus the host is not at the
