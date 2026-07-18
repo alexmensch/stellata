@@ -15,6 +15,15 @@ import {
   getStarExaggerationK as readExaggerationK,
   setStarExaggerationK as patchExaggerationK,
 } from './filter-state';
+import {
+  type DetailLevel,
+  type RenderStyle,
+  type SceneElementBinds,
+  type SceneElementId,
+  SCENE_ELEMENT_FLOORS,
+  SCENE_ELEMENT_IDS,
+  floorPermits,
+} from '../scene/scene-elements';
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
@@ -49,6 +58,10 @@ export interface FilterControllerDeps {
   /** The focused star's orbit floor depends on FOV — re-solve when the
    *  FOV changes. Wired to FocusController.refreshOrbitFloor. */
   refreshOrbitFloor: () => void;
+  /** Per-element visibility adapters, exhaustive over SceneElementId.
+   *  applyDetailPreset / setSceneElementVisible drive these; each folds
+   *  one scene layer's visibility idiom into a single call site. */
+  sceneElementBinds: SceneElementBinds;
 }
 
 export class FilterController {
@@ -61,6 +74,33 @@ export class FilterController {
 
   /** Live readonly view — callers must mutate through setFilter. */
   getFilter(): Readonly<FilterState> { return this.filter; }
+
+  getDetailLevel(): DetailLevel { return this.filter.detailLevel; }
+
+  // Declutter cycle: re-derive every scene element's visibility from the
+  // preset floors at `level` within the current render style, driving each
+  // bind. Overwriting every element clears any per-element overrides a
+  // prior setSceneElementVisible left in the permitted cache — pressing V
+  // recomputes from the preset. Effective visibility stays permitted AND
+  // the layer's own instance gates (focus / app-mag / warp).
+  applyDetailPreset(level: DetailLevel): void {
+    this.filter.detailLevel = level;
+    const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
+    for (const id of SCENE_ELEMENT_IDS) {
+      this.deps.sceneElementBinds[id](floorPermits(SCENE_ELEMENT_FLOORS[id][style], level));
+    }
+    this.deps.bus.emit('filter', this.filter);
+    this.deps.bus.emit('state');
+  }
+
+  // Per-element override: sets one element's permission directly, leaving
+  // the others untouched. Supersedes that element's floor until the next
+  // applyDetailPreset re-derives the whole set from the preset.
+  setSceneElementVisible(id: SceneElementId, on: boolean): void {
+    this.deps.sceneElementBinds[id](on);
+    this.deps.bus.emit('filter', this.filter);
+    this.deps.bus.emit('state');
+  }
 
   setFilter(patch: Partial<FilterState>): void {
     Object.assign(this.filter, patch);

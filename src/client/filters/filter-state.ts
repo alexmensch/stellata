@@ -1,6 +1,8 @@
 // Filter / magnitude-preset / star-render-knob state: types, defaults,
 // and the preset derivation math. See src/client/filters/README.md.
 
+import type { DetailLevel } from '../scene/scene-elements';
+
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
 
 export interface FilterState {
@@ -46,6 +48,11 @@ export interface FilterState {
   // the paper-aesthetic palette, label rendering, isobar outlines on
   // cloud / milkyway, and flat-disc star rendering.
   chart: boolean;
+  // Declutter cycle: how much of the scene is drawn within the current
+  // render style. Cumulative physical<representational<all; the floor
+  // table + derivation live in scene/scene-elements.ts. Default 'all' so
+  // a fresh scene draws everything (fully cluttered).
+  detailLevel: DetailLevel;
 }
 
 export const ALL_SPECT_MASK = 0b111111111;
@@ -172,6 +179,7 @@ export const DEFAULT_FILTER: FilterState = {
   showMilkyway: true,
   showLgEmission: true,
   chart: false,
+  detailLevel: 'all',
 };
 
 // Convert a preset's angular size targets to CSS pixels for a camera FOV

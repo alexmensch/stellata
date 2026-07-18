@@ -508,7 +508,7 @@ export function createMilkyWayLabel(stellata: Stellata): void {
     elementId: 'mw-label',
     sampleCount: rimSamplesAbs.length,
     getWorldSample: (i, out) => out.copy(rimSamplesAbs[i]).sub(stellata.getWorldOffset()),
-    visible: () => visibleLabelIds.has('mw'),
+    visible: () => visibleLabelIds.has('mw') && stellata.detailPermits('mwLabel'),
     labelDir: LABEL_DIR,
     offsetPx: LABEL_OFFSET_PX,
     lerp: LABEL_LERP,
@@ -572,7 +572,7 @@ export function createLocalGroupLabels(
         layer.getAbsSample(idx, j, out);
         out.sub(stellata.getWorldOffset());
       },
-      visible: () => visibleLabelIds.has(id),
+      visible: () => visibleLabelIds.has(id) && stellata.detailPermits('lgObjectLabels'),
       labelDir: LABEL_DIR,
       offsetPx: LABEL_OFFSET_PX,
       lerp: LABEL_LERP,

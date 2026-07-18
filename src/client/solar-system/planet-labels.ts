@@ -77,6 +77,11 @@ export function createPlanetLabels(stellata: Stellata): void {
       setGroupVisible(false);
       return;
     }
+    // Detail cycle: planet labels are the 'all' (labels) tier.
+    if (!stellata.detailPermits('planetLabels')) {
+      setGroupVisible(false);
+      return;
+    }
     const positions = stellata.getFocusedPlanetLocalPositions();
     if (!positions || positions.length / 3 !== entries.length) {
       setGroupVisible(false);

@@ -7,6 +7,28 @@ import {
   resetStarExaggerationK,
   STAR_RENDER_DEFAULTS,
 } from './filter-state';
+import {
+  type SceneElementBinds,
+  type SceneElementId,
+  SCENE_ELEMENT_IDS,
+  visibleSet,
+} from '../scene/scene-elements';
+
+function makeSceneBinds(): { binds: SceneElementBinds; permitted: Record<SceneElementId, boolean> } {
+  const permitted = Object.fromEntries(
+    SCENE_ELEMENT_IDS.map((id) => [id, true]),
+  ) as Record<SceneElementId, boolean>;
+  const binds = Object.fromEntries(
+    SCENE_ELEMENT_IDS.map((id) => [id, (on: boolean) => { permitted[id] = on; }]),
+  ) as SceneElementBinds;
+  return { binds, permitted };
+}
+
+/** The set of ids currently permitted (bound to true) — for comparison
+ *  against visibleSet(). */
+function permittedSet(permitted: Record<SceneElementId, boolean>): Set<SceneElementId> {
+  return new Set(SCENE_ELEMENT_IDS.filter((id) => permitted[id]));
+}
 
 function makeUniforms(): FilterUniforms {
   return {
@@ -42,14 +64,16 @@ function makeHarness() {
   } as never;
   const onFilterApplied = vi.fn();
   const refreshOrbitFloor = vi.fn();
+  const { binds, permitted } = makeSceneBinds();
   const ctrl = new FilterController({
     camera,
     uniforms,
     bus,
     onFilterApplied,
     refreshOrbitFloor,
+    sceneElementBinds: binds,
   });
-  return { ctrl, uniforms, camera, emitted, onFilterApplied, refreshOrbitFloor };
+  return { ctrl, uniforms, camera, emitted, onFilterApplied, refreshOrbitFloor, permitted };
 }
 
 beforeEach(() => {
@@ -129,6 +153,40 @@ describe('FilterController', () => {
     expect(uniforms.uVisibleK.value).toBeCloseTo(-Math.log(0.5), 12);
     expect(uniforms.uSizeKnee.value).toBe(4);
     expect(ctrl.getStarRenderParams().visibleThreshold).toBe(0.5);
+  });
+
+  it('applyDetailPreset drives the cumulative floor set for the realistic style', () => {
+    const { ctrl, permitted, emitted } = makeHarness();
+    ctrl.applyDetailPreset('physical');
+    expect(permittedSet(permitted)).toEqual(visibleSet('physical', 'realistic'));
+    expect(ctrl.getDetailLevel()).toBe('physical');
+    expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
+
+    ctrl.applyDetailPreset('representational');
+    expect(permittedSet(permitted)).toEqual(visibleSet('representational', 'realistic'));
+
+    ctrl.applyDetailPreset('all');
+    expect(permittedSet(permitted)).toEqual(visibleSet('all', 'realistic'));
+  });
+
+  it('applyDetailPreset uses the chart floors while chart is active', () => {
+    const { ctrl, permitted } = makeHarness();
+    ctrl.setFilter({ chart: true });
+    ctrl.applyDetailPreset('physical');
+    expect(permittedSet(permitted)).toEqual(visibleSet('physical', 'chart'));
+  });
+
+  it('a per-element override supersedes its floor until the next applyDetailPreset', () => {
+    const { ctrl, permitted } = makeHarness();
+    ctrl.applyDetailPreset('all');
+    expect(permitted.constellationFigures).toBe(true);
+    // Override one element off — others stay put.
+    ctrl.setSceneElementVisible('constellationFigures', false);
+    expect(permitted.constellationFigures).toBe(false);
+    expect(permitted.planetLabels).toBe(true);
+    // Re-applying the preset recomputes from floors, clearing the override.
+    ctrl.applyDetailPreset('all');
+    expect(permitted.constellationFigures).toBe(true);
   });
 
   it('clearSizeOverrides drops the flags and restores preset values', () => {
