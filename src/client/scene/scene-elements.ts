@@ -34,6 +34,7 @@ export type SceneElementId =
   | 'lgWireframes'
   | 'orbitRings'
   | 'heliopauseShell'
+  | 'localBubbleShell'
   | 'constellationFigures'
   | 'molecularCloudEllipsoids'
   | 'dustParticles'
@@ -68,6 +69,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   lgWireframes:              { realistic: 'representational', chart: 'never' },
   orbitRings:                { realistic: 'representational', chart: 'never' },
   heliopauseShell:           { realistic: 'representational', chart: 'never' },
+  localBubbleShell:          { realistic: 'representational', chart: 'never' },
   constellationFigures:      { realistic: 'representational', chart: 'representational' },
   molecularCloudEllipsoids:  { realistic: 'representational', chart: 'representational' },
   dustParticles:             { realistic: 'representational', chart: 'never' },
