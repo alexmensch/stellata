@@ -55,6 +55,31 @@ export function advancePositionsToEpoch(
   }
 }
 
+/** Write star `i3` (its ×3 flat offset) into `localOut` at the local-frame
+ *  position for epoch `epochJyr`, formed in float64 as
+ *  `(base + v·Δt) − origin`. Doing the origin subtraction on the un-rounded
+ *  float64 advance — rather than on the float32 absolute — keeps the
+ *  systemic drift at full precision: the float32 absolute ULP is ~0.4 AU at
+ *  28 pc, coarser than a tight binary orbit, so subtracting the origin from
+ *  the rounded absolute snaps a drifting system onto that grid frame to
+ *  frame. `BinaryOrbitField`'s per-frame baseline reset uses this so a
+ *  drifting pair doesn't teleport under time scrub. */
+export function writeAdvancedLocal(
+  basePositions: Float32Array,
+  velocities: Float32Array,
+  epochJyr: number,
+  i3: number,
+  ox: number,
+  oy: number,
+  oz: number,
+  localOut: Float32Array,
+): void {
+  const dt = epochJyr - CATALOG_SCENE_EPOCH_JYR;
+  localOut[i3] = basePositions[i3] + velocities[i3] * dt - ox;
+  localOut[i3 + 1] = basePositions[i3 + 1] + velocities[i3 + 1] * dt - oy;
+  localOut[i3 + 2] = basePositions[i3 + 2] + velocities[i3 + 2] * dt - oz;
+}
+
 /** Largest space-motion speed (pc/yr) in a flat `count × 3` velocity
  *  buffer. Bounds how far any star can drift from its load-epoch
  *  position over the scrubbable range. */

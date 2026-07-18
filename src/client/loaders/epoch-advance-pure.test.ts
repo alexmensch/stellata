@@ -6,6 +6,7 @@ import {
   bucketEpochJyr,
   jdeToJulianEpochYear,
   maxSpeedPcPerYr,
+  writeAdvancedLocal,
 } from './epoch-advance-pure';
 
 describe('jdeToJulianEpochYear', () => {
@@ -97,6 +98,35 @@ describe('bucketEpochJyr', () => {
     // drift stays ~0.5″ — sub-pixel at the tightest observe FOV.
     expect(READVANCE_BUCKET_JYR).toBe(0.05);
     expect(10.4 * READVANCE_BUCKET_JYR).toBeLessThan(1);
+  });
+});
+
+describe('writeAdvancedLocal', () => {
+  it('writes (base + v·Δt) − origin per axis at the given ×3 offset', () => {
+    const base = new Float32Array([0, 0, 0, 10, 20, 30]);
+    const vel = new Float32Array([0, 0, 0, 0.5, -0.25, 0.1]);
+    const out = new Float32Array(6);
+    writeAdvancedLocal(base, vel, CATALOG_SCENE_EPOCH_JYR + 4, 3, 1, 2, 3, out);
+    expect(out[3]).toBeCloseTo(10 + 0.5 * 4 - 1, 5);
+    expect(out[4]).toBeCloseTo(20 - 0.25 * 4 - 2, 5);
+    expect(out[5]).toBeCloseTo(30 + 0.1 * 4 - 3, 5);
+    // Untouched offset stays zero.
+    expect(out[0]).toBe(0);
+  });
+
+  it('keeps sub-float32-ULP drift near a distant origin (the epoch-scrub fix)', () => {
+    // Star at 28.5 pc: float32 ULP there is ~1.9e-6 pc (~0.4 AU). A 5e-7 pc
+    // systemic drift is below that ULP — forming the local frame off the
+    // float32 absolute would swallow it (snapping the system onto the grid),
+    // but subtracting the origin from the float64 advance keeps it.
+    const base = new Float32Array([28.5, 0, 0]);
+    const vel = new Float32Array([1e-7, 0, 0]);
+    const out = new Float32Array(3);
+    writeAdvancedLocal(base, vel, CATALOG_SCENE_EPOCH_JYR + 5, 0, 28.5, 0, 0, out);
+    expect(out[0]).toBeCloseTo(5e-7, 12);
+    // Contrast: rounding the advanced absolute to float32 first loses it.
+    const roundedAbs = Math.fround(28.5 + 1e-7 * 5);
+    expect(roundedAbs - 28.5).toBe(0);
   });
 });
 

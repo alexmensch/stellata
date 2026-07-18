@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { tToJDE } from '../solar-system/time';
+import { jdeToJulianEpochYear, writeAdvancedLocal } from '../loaders/epoch-advance-pure';
 import { NO_PARENT, type BinariesData, type BinaryRelation } from './binaries-loader';
 import {
   buildOrbitRelationCaches,
@@ -25,6 +26,14 @@ export interface BinaryOrbitFieldOptions {
    *  float32 diff carries WDS/Kepler placement disagreement) — it rides
    *  on `OrbitRelationCache.baseDiffPc` + ΔR(t). */
   absolutePositions: Float32Array;
+  /** Immutable J2016.0 catalog baseline (count × 3) + per-star space-motion
+   *  velocities (pc/yr). Off-focal-chain relations reset their local slots
+   *  from `(base + v·Δt) − worldOffset` in float64 rather than from the
+   *  float32 `absolutePositions`, so a drifting unfocused system doesn't
+   *  snap onto the ~0.4 AU float32 absolute grid under time scrub. See
+   *  § Walk-active LOD. */
+  basePositions: Float32Array;
+  velocities: Float32Array;
   /** Catalog-wide absolute magnitudes, length = catalog.count. Drives
    *  the per-relation primary-visibility LOD. */
   absoluteMags: Float32Array;
@@ -155,6 +164,9 @@ export class BinaryOrbitField {
     const woy = this.worldOffset.y;
     const woz = this.worldOffset.z;
     const abs = this.opts.absolutePositions;
+    const base = this.opts.basePositions;
+    const vel = this.opts.velocities;
+    const epochJyr = jdeToJulianEpochYear(tJd);
     const local = this.opts.localPositions;
     const suppress = this.opts.compositeSuppress;
     const absMags = this.opts.absoluteMags;
@@ -166,22 +178,33 @@ export class BinaryOrbitField {
       const pIdx = r.primaryIdx;
       const sIdx = r.secondaryIdx;
 
-      // Reset to catalog-baseline-minus-worldOffset and clear suppress so transient
-      // active→inactive transitions don't leave stale state behind. This
-      // also restores the parent-perturbation baseline for hierarchical
-      // walks — the inner-pair pass below ADDs onto the slot the outer
-      // pass wrote first.
+      // Reset to the systemic baseline (minus worldOffset) and clear
+      // suppress so transient active→inactive transitions don't leave stale
+      // state behind. This also restores the parent-perturbation baseline
+      // for hierarchical walks — the inner-pair pass below ADDs onto the
+      // slot the outer pass wrote first.
+      //
+      // Unfocused, reconstruct that baseline in float64 from the exact epoch
+      // (writeAdvancedLocal off base + velocities): subtracting the origin
+      // from the float32 absolute instead snaps the pair onto the ~0.4 AU
+      // absolute grid as it drifts under scrub — the "whole system teleports"
+      // bug. When a star is focused the whole scene rides the absolute: the
+      // shell's epoch-follow moves the camera by the focal's abs delta, and
+      // every hierarchy slot must share that absolute so the two cancel and
+      // the focal stays pinned. See § Walk-active LOD.
       const pBase = pIdx * 3;
       const sBase = sIdx * 3;
-      const aPx = abs[pBase + 0] - wox;
-      const aPy = abs[pBase + 1] - woy;
-      const aPz = abs[pBase + 2] - woz;
-      local[pBase + 0] = aPx;
-      local[pBase + 1] = aPy;
-      local[pBase + 2] = aPz;
-      local[sBase + 0] = abs[sBase + 0] - wox;
-      local[sBase + 1] = abs[sBase + 1] - woy;
-      local[sBase + 2] = abs[sBase + 2] - woz;
+      if (focalIdx !== null) {
+        local[pBase + 0] = abs[pBase + 0] - wox;
+        local[pBase + 1] = abs[pBase + 1] - woy;
+        local[pBase + 2] = abs[pBase + 2] - woz;
+        local[sBase + 0] = abs[sBase + 0] - wox;
+        local[sBase + 1] = abs[sBase + 1] - woy;
+        local[sBase + 2] = abs[sBase + 2] - woz;
+      } else {
+        writeAdvancedLocal(base, vel, epochJyr, pBase, wox, woy, woz, local);
+        writeAdvancedLocal(base, vel, epochJyr, sBase, wox, woy, woz, local);
+      }
       suppress[sIdx] = 0;
     }
 

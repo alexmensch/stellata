@@ -49,6 +49,8 @@ function bakeSecondaryFromElements(positions: Float32Array, rel: BinaryRelation)
 function makeFixture(): {
   binaries: BinariesData;
   absolutePositions: Float32Array;
+  basePositions: Float32Array;
+  velocities: Float32Array;
   absoluteMags: Float32Array;
   localPositions: Float32Array;
   compositeSuppress: Float32Array;
@@ -121,6 +123,11 @@ function makeFixture(): {
   return {
     binaries,
     absolutePositions: positions,
+    // Tests carry zero space motion, so the epoch-advanced baseline equals
+    // the absolute — off-focal-chain resets reduce to `base − worldOffset`,
+    // matching the pre-fix `abs − worldOffset` the assertions below expect.
+    basePositions: new Float32Array(positions),
+    velocities: new Float32Array(positions.length),
     absoluteMags: mags,
     localPositions: local,
     compositeSuppress: suppress,
@@ -368,7 +375,10 @@ describe('BinaryOrbitField.update — sub-pixel suppress', () => {
       secondaryIdxToRelations: new Map([[1, [0]]]),
     };
     const field = new BinaryOrbitField({
-      binaries, absolutePositions: positions, absoluteMags: mags,
+      binaries, absolutePositions: positions,
+      basePositions: new Float32Array(positions),
+      velocities: new Float32Array(positions.length),
+      absoluteMags: mags,
       localPositions: local, compositeSuppress: suppress,
       iPositionAttr: new THREE.InstancedBufferAttribute(local, 3),
       iCompositeSuppressAttr: new THREE.InstancedBufferAttribute(suppress, 1),
@@ -521,6 +531,8 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
     return {
       binaries,
       absolutePositions: positions,
+      basePositions: new Float32Array(positions),
+      velocities: new Float32Array(positions.length),
       absoluteMags: mags,
       localPositions: local,
       compositeSuppress: suppress,
@@ -783,6 +795,8 @@ describe('BinaryOrbitField — physical sanity (Sirius-shaped)', () => {
     const field = new BinaryOrbitField({
       binaries,
       absolutePositions: positions,
+      basePositions: new Float32Array(positions),
+      velocities: new Float32Array(positions.length),
       absoluteMags: mags,
       localPositions: local,
       compositeSuppress: suppress,
@@ -853,6 +867,8 @@ describe('BinaryOrbitField.update — no focal rebase (barycentric always)', () 
     return {
       binaries,
       absolutePositions: positions,
+      basePositions: new Float32Array(positions),
+      velocities: new Float32Array(positions.length),
       absoluteMags: mags,
       localPositions: local,
       compositeSuppress: suppress,
@@ -925,6 +941,63 @@ describe('BinaryOrbitField.update — no focal rebase (barycentric always)', () 
     const out = new THREE.Vector3(9, 9, 9);
     expect(field.focalPerturbationInto(99, tNonZero, out)).toBe(false);
     expect(out.equals(new THREE.Vector3(0, 0, 0))).toBe(true);
+  });
+});
+
+describe('BinaryOrbitField.update — epoch drift precision', () => {
+  it('unfocused: a drifting system advances smoothly, not on the float32 abs grid', () => {
+    // Primary ~18 pc out — where the float32 absolute ULP (~2.1e-6 pc ≈
+    // 0.4 AU) dwarfs a tight binary orbit. Resetting the local slot from
+    // `abs − origin` snaps the whole system onto that grid as it drifts
+    // under scrub (the reported "all three stars teleport" bug); the
+    // float64 `(base + v·Δt) − origin` reset keeps it continuous.
+    const D = 18.0;
+    const positions = new Float32Array([D, 0, 0, D, 0, 0]);
+    const base = new Float32Array(positions);
+    // ~0.85 AU/yr radial on both members (systemic space motion).
+    const vRadial = 0.85 * AU_PC;
+    const vel = new Float32Array([vRadial, 0, 0, vRadial, 0, 0]);
+    const mags = new Float32Array([2.0, 5.0]);
+    const local = new Float32Array(positions);
+    const suppress = new Float32Array(2);
+    // e=0, effectively static orbit (Myr period) so the primary slot's
+    // frame-to-frame delta is dominated by the systemic drift under test.
+    const rel: BinaryRelation = {
+      primaryIdx: 0, secondaryIdx: 1,
+      flags: FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION,
+      parentRelation: NO_PARENT,
+      pDays: 365.25e6, tJd: J2000_JD, e: 0.0, aAU: 1.0,
+      iRad: 0.5, omegaRad: 0.0, OmegaRad: 0.0, q: 0.5,
+      sepArcsec: 0.001, paDeg: 0.0, sepPaEpochJd: J2000_JD,
+    };
+    const binaries: BinariesData = {
+      version: 1, relations: [rel],
+      primaryIdxToRelations: new Map([[0, [0]]]),
+      secondaryIdxToRelations: new Map([[1, [0]]]),
+    };
+    const field = new BinaryOrbitField({
+      binaries, absolutePositions: positions,
+      basePositions: base, velocities: vel,
+      absoluteMags: mags, localPositions: local, compositeSuppress: suppress,
+      iPositionAttr: new THREE.InstancedBufferAttribute(local, 3),
+      iCompositeSuppressAttr: new THREE.InstancedBufferAttribute(suppress, 1),
+    });
+    field.recenter(new THREE.Vector3(D, 0, 0)); // origin on the primary
+    const camera = new THREE.Vector3(1e-4, 0, 0); // ~20 AU: super-pixel, Kepler active
+
+    let prevX: number | null = null;
+    let maxStepAu = 0;
+    // Sweep 1.5 yr of epoch in fine steps (~0.005 yr): each true systemic
+    // step is ~0.004 AU. The abs-grid reset would force ≥ ~0.3 AU jumps.
+    for (let k = 0; k <= 300; k++) {
+      const years = 10 + k * (1.5 / 300);
+      const tSec = (J2000_JD - 2440587.5) * 86400 + years * 365.25 * 86400;
+      field.update(tSec, camera, 15, 1080, 0.8, null);
+      const x = local[0];
+      if (prevX !== null) maxStepAu = Math.max(maxStepAu, Math.abs(x - prevX) / AU_PC);
+      prevX = x;
+    }
+    expect(maxStepAu).toBeLessThan(0.05);
   });
 });
 
