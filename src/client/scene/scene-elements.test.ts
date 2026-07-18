@@ -16,7 +16,7 @@ describe('SCENE_ELEMENT_FLOORS contract', () => {
       stars: { realistic: 'physical', chart: 'physical' },
     };
     expect(partial).toBeDefined();
-    expect(SCENE_ELEMENT_IDS.length).toBe(23);
+    expect(SCENE_ELEMENT_IDS.length).toBe(24);
   });
 
   it('SCENE_ELEMENT_IDS matches the floor-table keys exactly', () => {
@@ -42,8 +42,8 @@ describe('floorPermits', () => {
 describe('visibleSet — cumulative floor derivation', () => {
   it('realistic cumulative sizes are pinned', () => {
     expect(visibleSet('physical', 'realistic').size).toBe(4);
-    expect(visibleSet('representational', 'realistic').size).toBe(12);
-    expect(visibleSet('all', 'realistic').size).toBe(17);
+    expect(visibleSet('representational', 'realistic').size).toBe(13);
+    expect(visibleSet('all', 'realistic').size).toBe(18);
   });
 
   it('chart cumulative sizes are pinned', () => {

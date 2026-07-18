@@ -33,6 +33,7 @@ export type SceneElementId =
   | 'galacticDiscWireframe'
   | 'lgWireframes'
   | 'orbitRings'
+  | 'binaryLinks'
   | 'heliopauseShell'
   | 'localBubbleShell'
   | 'constellationFigures'
@@ -69,6 +70,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   galacticDiscWireframe:     { realistic: 'representational', chart: 'never' },
   lgWireframes:              { realistic: 'representational', chart: 'never' },
   orbitRings:                { realistic: 'representational', chart: 'never' },
+  binaryLinks:               { realistic: 'representational', chart: 'never' },
   heliopauseShell:           { realistic: 'representational', chart: 'never' },
   localBubbleShell:          { realistic: 'representational', chart: 'never' },
   constellationFigures:      { realistic: 'representational', chart: 'representational' },

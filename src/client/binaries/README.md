@@ -43,6 +43,15 @@ star catalog records.
   re-advance, origin recentre) force the next walk so suppressed
   secondaries get their `baseDiffPc` placement re-applied on top of
   the fresh baselines.
+- `focal-chain.ts` — `focalChainRelationSet(binaries, focalIdx)`: the
+  relation-index set on a focal star's slot-chain (focal as primary or
+  secondary, plus `parentRelation` ancestors). Shared by
+  `BinaryOrbitField`'s LOD-exemption walk and the connector layer.
+- `binary-link-pure.ts` — `binaryLinkPairs(binaries, focalIdx)`: the
+  focal chain mapped to `[primaryIdx, secondaryIdx]` slot pairs the
+  connector layer links. See § Binary link layer.
+- `binary-link-layer.ts` — `BinaryLinkLayer`, the connector render layer.
+  See § Binary link layer.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
   `ECLIPSE_DIM_TAU_S`, `DISC_DEPTH_BIAS` named constants the fields read
   and tests pin.
@@ -312,6 +321,35 @@ the buffer (the walk anchors the secondary on `baseDiffPc` too), so the
 ride tracks the true perturbed position; without `corr` the ride would
 leave `controls.target` off a focused secondary of a mismatched pair by
 that constant, silently disengaging the pin (§ focus/README).
+
+## Binary link layer
+
+`BinaryLinkLayer` (`binary-link-layer.ts`) draws faint connector lines
+between the bound members of the **focused** multi-star system — a
+`representational`-tier declutter element (`binaryLinks`,
+`scene/README.md`), realistic-only (chart mode answers the same question
+with the wings glyph, `chart-mode/README.md`). Focus-gated by design:
+representational annotations hide on unfocus, so the layer links only the
+focused star's slot-chain rather than every catalog pair.
+
+- **Pairs** come from `binaryLinkPairs` = the focal chain (`focal-chain.ts`)
+  mapped to `[primaryIdx, secondaryIdx]`. That chain is exactly the set
+  `BinaryOrbitField` holds LOD-exempt, so both endpoints of every linked
+  pair carry a live position — the sub-pixel gate never collapses a
+  focused member onto its primary.
+- **Endpoints** are the two members' `localPositions` slots, refreshed
+  per frame right after the orbit walk. This is a *rendered connector
+  between two stars*, not pair geometry — the "never subtract two
+  `localPositions` slots" rule guards relative-offset derivation, which
+  this layer doesn't do; it reads each member's own slot as a line
+  endpoint.
+- **Render order** `−0.5`: below the star discs (`0`) so a disc
+  composites over the line where it meets each member, above the galactic
+  disc/grid (`−1`). Constellation figures are SVG (always above the WebGL
+  canvas), so the line cannot sit over them.
+- Geometry rebuilds on focus change (`setPairs`), mirroring
+  `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` only rewrites
+  endpoints.
 
 ## Eclipse photometry
 
