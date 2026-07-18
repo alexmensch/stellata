@@ -8,14 +8,14 @@ export type RenderStyle = 'realistic' | 'chart';
  *  'never' (the element is not part of that style at all). */
 export type Floor = DetailLevel | 'never';
 
-/** Ascending order — cumulative: physical ⊂ representational ⊂ all. */
+/** Ascending order — cumulative: physical ⊂ representational ⊂ all. The
+ *  single source of the level ordering; DETAIL_RANK and the URL enum
+ *  index both derive from it. */
 export const DETAIL_LEVELS: readonly DetailLevel[] = ['physical', 'representational', 'all'];
 
-const DETAIL_RANK: Record<DetailLevel, number> = {
-  physical: 0,
-  representational: 1,
-  all: 2,
-};
+export const DETAIL_RANK: Record<DetailLevel, number> = Object.fromEntries(
+  DETAIL_LEVELS.map((level, i) => [level, i]),
+) as Record<DetailLevel, number>;
 
 /** Closed union of every renderable the detail cycle governs. Adding a
  *  renderable here forces a SCENE_ELEMENT_FLOORS row (tsc) and a bind in

@@ -14,6 +14,11 @@ remains live in the star pipeline (see
 `../star-pipeline/README.md` § Dust extinction), independent of this
 particle-render layer.
 
+The declutter cycle reserves a floor slot (`dustParticles`, floor
+`representational`) whose per-frame `detailPermits(...)` pull is unwired
+while shelved — gate the mesh's visibility on it at un-shelve
+(`../scene/README.md`).
+
 `dust-particle-layer.ts` instantiates an `InstancedMesh` keyed to
 `public/dust/particles.bin` (importance-sampled from
 `data/dust/chunk_*.bin`; build script:

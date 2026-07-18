@@ -77,12 +77,9 @@ export class FilterController {
 
   getDetailLevel(): DetailLevel { return this.filter.detailLevel; }
 
-  // Declutter cycle: re-derive every scene element's visibility from the
-  // preset floors at `level` within the current render style, driving each
-  // bind. Overwriting every element clears any per-element overrides a
-  // prior setSceneElementVisible left in the permitted cache — pressing V
-  // recomputes from the preset. Effective visibility stays permitted AND
-  // the layer's own instance gates (focus / app-mag / warp).
+  // Re-derive every element's permission from the preset floors within the
+  // current render style. Overwriting the whole set clears any per-element
+  // override a prior setSceneElementVisible left in the cache.
   applyDetailPreset(level: DetailLevel): void {
     this.filter.detailLevel = level;
     const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
@@ -93,9 +90,8 @@ export class FilterController {
     this.deps.bus.emit('state');
   }
 
-  // Per-element override: sets one element's permission directly, leaving
-  // the others untouched. Supersedes that element's floor until the next
-  // applyDetailPreset re-derives the whole set from the preset.
+  // Override one element's permission directly; superseded by the next
+  // applyDetailPreset, which re-derives the whole set.
   setSceneElementVisible(id: SceneElementId, on: boolean): void {
     this.deps.sceneElementBinds[id](on);
     this.deps.bus.emit('filter', this.filter);
