@@ -162,7 +162,12 @@ describe('moonOffsetEcliptic', () => {
       moonOffsetEcliptic(m, T_J2000, start);
       moonOffsetEcliptic(m, T_J2000 + m.periodDays * 86400, after);
       const drift = mag({ x: after.x - start.x, y: after.y - start.y, z: after.z - start.z });
-      expect(drift / mag(start), m.name).toBeLessThan(1e-6);
+      // A modelled libration / node precession legitimately breaks
+      // exact single-period recurrence (Mimas's libration advances
+      // ~0.01° per orbit); those moons get a bound covering the
+      // modelled secular motion, not float noise.
+      const tol = m.libAmpDeg !== undefined || m.nodeDegPerDay !== undefined ? 1e-3 : 1e-6;
+      expect(drift / mag(start), m.name).toBeLessThan(tol);
     }
   });
 

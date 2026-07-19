@@ -51,6 +51,14 @@ src/client/solar-system/
                                   ecliptic→ICRS chain vs JPL Horizons
                                   RA/Dec frozen in data/horizons/, plus
                                   solstice/equinox mirror detectors.
+  moon-sky-truth.test.ts          Moon half of the corpus: every major
+                                  moon's parent-relative on-sky position
+                                  angle + separation vs Horizons at four
+                                  epochs — catches orbital-phase drift
+                                  (truncated mean motions, wrong frames).
+  texture-orientation.test.ts     Rendered IAU-orientation → texture-UV
+                                  chain vs Horizons sub-observer lon/lat
+                                  (pole-up, no mirror, prime meridian).
   time-readout.ts                 UTC readout display next to the time
                                   scrubber.
   planet-body-field.ts            Instanced planet-body renderer. Three-pass
@@ -171,9 +179,16 @@ against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 Orbital elements (`moon-ephemeris.ts`) are J2000 osculating, each
 referred to the plane JPL tabulates it against, with that plane's ICRS
 pole stored per moon (`refPoleRaDeg`/`refPoleDecDeg`): the local
-Laplace plane for most, Uranus's equator for the Uranian regulars,
-and the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
-not Earth's equator).
+Laplace plane for most, Uranus's equator for the Uranian regulars
+(the ORBIT-NORMAL pole — the antipode of the retrograde IAU spin
+pole; composing about the IAU pole mirrors every Uranian orbit), and
+the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
+not Earth's equator). Sidereal periods carry full published precision
+(a truncated mean motion scrambles phase within years), Triton models
+its slow node precession, and Mimas carries the Mimas–Tethys
+resonance libration — `moon-sky-truth.test.ts` pins all of it against
+frozen Horizons truth, including a present-day epoch where phase
+drift is at its most visible.
 
 `moonOffsetEcliptic(elem, t, out)` is the resolver: a Kepler solve in
 the moon's reference plane (shared `orbitalStateToCartesian` core with
