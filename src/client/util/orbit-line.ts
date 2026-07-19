@@ -4,9 +4,14 @@
 
 import * as THREE from 'three';
 
-// Vertices per ellipse. 256 keeps a large orbit (Sirius B, Neptune) smooth
-// on close approach — 128 facets visibly along the long axis.
-export const ORBIT_LINE_SEGMENTS = 256;
+// Vertices per ellipse. The binding requirement is body-on-the-line at
+// resolved-disc zoom: the polyline's max sagitta is ≈ a·(π/N)²/2, and
+// the worst case is Pluto (a = 39.5 AU vs r = 1188 km) — N = 4096 puts
+// the sagitta at ~1740 km ≈ 1.5 Pluto radii, sub-pixel wherever the
+// ring and disc are both visible. (256 left a ~440,000 km gap the body
+// visibly drifted across each orbit.) Cost is trivial: ~30 line loops
+// × 4096 verts, rebuilt only on focus change / sim-day drift.
+export const ORBIT_LINE_SEGMENTS = 4096;
 export const ORBIT_LINE_OPACITY = 0.5;
 
 /** Screen pixels per radian of angular size, from the camera's vertical FOV
