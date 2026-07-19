@@ -365,16 +365,24 @@ system draws, never every catalog pair.
   disc/grid (`−1`). Constellation figures are SVG (always above the WebGL
   canvas), so the path cannot sit over them.
 - Geometry rebuilds on focus change (`setSystem`), mirroring
-  `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` only moves
-  barycentre anchors. The two loops per pair share one alpha-blended
-  material built by `util/orbit-line.ts` (`makeOrbitLineLoop` /
-  `makeOrbitLineMaterial`) — the same primitive the planet orbit rings use.
+  `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` moves
+  barycentre anchors and applies the size gate below. The two loops per
+  pair share one alpha-blended material built by `util/orbit-line.ts`
+  (`makeOrbitLineLoop` / `makeOrbitLineMaterial` + shared
+  `ORBIT_LINE_SEGMENTS`) — the same primitive the planet orbit rings use.
+- **On-screen-size gate.** `update` hides a pair once its larger ellipse
+  subtends less than `PATH_MIN_RADIUS_PX` (`pixelsPerRadian` /
+  `angularRadiusPx` from `util/orbit-line.ts`), so a distant or zoomed-out
+  system stops drawing sub-pixel loops — the analog of the planet rings'
+  pixel gate (an absolute per-pair threshold, not `ringVisibility`'s
+  neighbour-gap, which degenerates for a lone or equal-mass pair).
 - **Focus-ring suppression.** `anyOrbitRingVisible()` (the sibling name
-  `OrbitRingsLayer` carries) reports true while a system's paths are
-  drawn; `Stellata.anyOrbitRingVisible` ORs it with the planet rings, and
-  the focus-ring overlay hides itself when either is up — the drawn orbit
-  already marks the focal star, so the ring would read as a spurious inner
-  orbital (`../overlays/README.md`).
+  `OrbitRingsLayer` carries) reports true only while a pair is drawn AND
+  above that size gate; `Stellata.anyOrbitRingVisible` ORs it with the
+  planet rings, and the focus-ring overlay hides itself when either is up —
+  the drawn orbit already marks the focal star, so the ring would read as a
+  spurious inner orbital. Zoom out until the paths fall below the gate and
+  the focus ring returns (`../overlays/README.md`).
 
 ## Eclipse photometry
 

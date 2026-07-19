@@ -2,6 +2,7 @@
 // multi-star system. See src/client/binaries/README.md § Binary orbit paths.
 
 import * as THREE from 'three';
+import { AU_PC } from '../util/astronomy-constants';
 import { type BinariesData } from './binaries-loader';
 import { keplerRelationParams, relationIndicesInBounds } from './orbit-relation-cache';
 import { keplerChainRelationIdxs, buildBinaryOrbitRingPoints } from './binary-orbit-path-pure';
@@ -9,18 +10,27 @@ import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
   ORBIT_LINE_SEGMENTS,
+  pixelsPerRadian,
+  angularRadiusPx,
 } from '../util/orbit-line';
 
 const PATH_COLOUR = 0x9fc2d6;
 // Below the star discs (renderOrder 0) so a disc composites over the path
 // where a member sits on it; above the galactic disc / grid (−1).
 const PATH_RENDER_ORDER = -0.5;
+// Hide a pair once its larger ellipse subtends less than this on-screen
+// radius: at that size the orbit no longer reads as a loop, and the focus
+// ring (24 px) takes back over as the "you are here" marker.
+const PATH_MIN_RADIUS_PX = 24;
 
 interface OrbitPathPair {
   readonly primaryIdx: number;
   readonly secondaryIdx: number;
   /** Secondary mass fraction M_s/(M_p+M_s); drives the barycentre split. */
   readonly q: number;
+  /** Larger member's ellipse semi-major (pc) — the on-screen-size proxy
+   *  for the per-frame visibility gate. */
+  readonly charSizePc: number;
   readonly group: THREE.Group;
   readonly primaryLoop: THREE.LineLoop;
   readonly secondaryLoop: THREE.LineLoop;
@@ -39,6 +49,8 @@ export class BinaryOrbitPathLayer {
   // Detail-cycle permission (floor 'representational'); false hides the
   // paths even while a system is focused.
   private permitted = true;
+  // Whether the last update() left any pair above the on-screen-size gate.
+  private anyVisible = false;
 
   constructor() {
     this.group = new THREE.Group();
@@ -85,6 +97,7 @@ export class BinaryOrbitPathLayer {
         primaryIdx: r.primaryIdx,
         secondaryIdx: r.secondaryIdx,
         q: params.elements.q,
+        charSizePc: Math.max(params.elements.q, 1 - params.elements.q) * params.elements.a * AU_PC,
         group: g,
         primaryLoop,
         secondaryLoop,
@@ -94,17 +107,22 @@ export class BinaryOrbitPathLayer {
   }
 
   /**
-   * Per-frame barycentre reposition from the freshly-walked local
-   * positions. Must run AFTER `BinaryOrbitField.update()` writes this
-   * frame's slots, so each ellipse rides its pair's live drift and the
-   * two members sit on their own paths.
+   * Per-frame barycentre reposition + on-screen-size visibility gate. Must
+   * run AFTER `BinaryOrbitField.update()` writes this frame's slots, so
+   * each ellipse rides its pair's live drift and the two members sit on
+   * their own paths. A pair hides once its orbit shrinks below
+   * `PATH_MIN_RADIUS_PX` (zoom-out / distant system), mirroring the planet
+   * orbit rings' pixel gate.
    */
-  update(localPositions: Float32Array): void {
+  update(localPositions: Float32Array, camera: THREE.PerspectiveCamera, viewportHeightPx: number): void {
     if (!this.permitted || this.pairs.length === 0) {
       this.group.visible = false;
+      this.anyVisible = false;
       return;
     }
     this.group.visible = true;
+    const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
+    let anyVisible = false;
     for (const p of this.pairs) {
       const pB = p.primaryIdx * 3;
       const sB = p.secondaryIdx * 3;
@@ -114,7 +132,12 @@ export class BinaryOrbitPathLayer {
         primaryFrac * localPositions[pB + 1] + p.q * localPositions[sB + 1],
         primaryFrac * localPositions[pB + 2] + p.q * localPositions[sB + 2],
       );
+      const dPc = camera.position.distanceTo(p.group.position);
+      const visible = angularRadiusPx(p.charSizePc, dPc, pxPerRad) >= PATH_MIN_RADIUS_PX;
+      p.group.visible = visible;
+      if (visible) anyVisible = true;
     }
+    this.anyVisible = anyVisible;
   }
 
   setPermitted(on: boolean): void {
@@ -123,13 +146,14 @@ export class BinaryOrbitPathLayer {
   }
 
   /**
-   * True when the focused system's paths are currently drawn. The focus
-   * ring overlay reads this (via `Stellata.anyOrbitRingVisible`) to
-   * suppress itself when the orbit paths already mark the focal star —
-   * mirrors `OrbitRingsLayer.anyOrbitRingVisible`.
+   * True when at least one of the focused system's paths is drawn AND
+   * large enough on screen to read as an orbit. The focus ring overlay
+   * reads this (via `Stellata.anyOrbitRingVisible`) to suppress itself
+   * while the paths mark the focal star — mirrors
+   * `OrbitRingsLayer.anyOrbitRingVisible`.
    */
   anyOrbitRingVisible(): boolean {
-    return this.permitted && this.group.visible && this.pairs.length > 0;
+    return this.permitted && this.group.visible && this.anyVisible;
   }
 
   dispose(): void {

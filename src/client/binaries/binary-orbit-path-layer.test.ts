@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { FLAG_HAS_ORBIT, type BinariesData } from './binaries-loader';
 import { makeRelation } from './binary-relation-fixture';
 import { relationIndicesInBounds } from './orbit-relation-cache';
@@ -24,6 +25,20 @@ const VISUAL: BinariesData = {
 };
 
 const ABS = new Float32Array([10, 0, 0, 10, 0, 0]);
+// primary slot (idx 0) at (2,0,0); secondary slot (idx 1) at (0,5,0) →
+// barycentre (1−q)·primary + q·secondary = (1.2, 2, 0).
+const LOCAL = new Float32Array([2, 0, 0, 0, 5, 0]);
+const BARYCENTRE = new THREE.Vector3(1.2, 2, 0);
+const VIEWPORT_H = 1000;
+
+function cameraAt(offsetFromBarycentrePc: number): THREE.PerspectiveCamera {
+  const cam = new THREE.PerspectiveCamera(60, 1, 1e-6, 100);
+  cam.position.copy(BARYCENTRE).add(new THREE.Vector3(0, 0, offsetFromBarycentrePc));
+  return cam;
+}
+// A 1-AU orbit fills the view from ~2 AU away; from parsecs it is sub-pixel.
+const CLOSE = () => cameraAt(1e-5);
+const FAR = () => cameraAt(5);
 
 describe('BinaryOrbitPathLayer.setSystem', () => {
   it('builds one pair-group per Kepler relation on the focal chain', () => {
@@ -56,26 +71,39 @@ describe('BinaryOrbitPathLayer.update', () => {
   it('parks each pair-group at the barycentre (1−q)·primary + q·secondary', () => {
     const layer = new BinaryOrbitPathLayer();
     layer.setSystem(SINGLE, 0, ABS);
-    // primary slot (idx 0) at (2,0,0); secondary slot (idx 1) at (0,5,0).
-    layer.update(new Float32Array([2, 0, 0, 0, 5, 0]));
+    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
     const pos = layer.group.children[0].position;
-    expect(pos.x).toBeCloseTo((1 - PAIR_Q) * 2, 12);
-    expect(pos.y).toBeCloseTo(PAIR_Q * 5, 12);
-    expect(pos.z).toBeCloseTo(0, 12);
+    expect(pos.x).toBeCloseTo(BARYCENTRE.x, 12);
+    expect(pos.y).toBeCloseTo(BARYCENTRE.y, 12);
+    expect(pos.z).toBeCloseTo(BARYCENTRE.z, 12);
+    layer.dispose();
+  });
+
+  it('hides a pair once its orbit shrinks below the on-screen-size gate', () => {
+    const layer = new BinaryOrbitPathLayer();
+    layer.setSystem(SINGLE, 0, ABS);
+    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
+    expect(layer.group.children[0].visible).toBe(true);
+    layer.update(LOCAL, FAR(), VIEWPORT_H);
+    expect(layer.group.children[0].visible).toBe(false);
     layer.dispose();
   });
 });
 
 describe('BinaryOrbitPathLayer.anyOrbitRingVisible', () => {
-  it('is false with no system, true while a focused system draws, false once decluttered', () => {
+  it('tracks whether a focused system draws a large-enough path this frame', () => {
     const layer = new BinaryOrbitPathLayer();
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.setSystem(SINGLE, 0, ABS);
+    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
     expect(layer.anyOrbitRingVisible()).toBe(true);
-    layer.setPermitted(false);
+    // Zoomed far out — the orbit is sub-pixel, so the focus ring should
+    // take back over.
+    layer.update(LOCAL, FAR(), VIEWPORT_H);
     expect(layer.anyOrbitRingVisible()).toBe(false);
-    layer.setPermitted(true);
-    layer.setSystem(null, 0, ABS);
+    // Decluttered (representational off) hides it even when close.
+    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
+    layer.setPermitted(false);
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.dispose();
   });
