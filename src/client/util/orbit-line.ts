@@ -3,10 +3,23 @@
 
 import * as THREE from 'three';
 
-// 128 keeps even the tightest ellipse smooth at maximum zoom; a lower
-// count facets visibly on close approach.
-export const ORBIT_LINE_SEGMENTS = 128;
+// Vertices per ellipse. 256 keeps a large orbit (Sirius B, Neptune) smooth
+// on close approach — 128 facets visibly along the long axis.
+export const ORBIT_LINE_SEGMENTS = 256;
 export const ORBIT_LINE_OPACITY = 0.5;
+
+/** Screen pixels per radian of angular size, from the camera's vertical FOV
+ *  and viewport height. Pair with `angularRadiusPx` for the on-screen size
+ *  visibility gate shared by the orbit overlays. */
+export function pixelsPerRadian(fovDeg: number, viewportHeightPx: number): number {
+  return viewportHeightPx / ((fovDeg * Math.PI) / 180);
+}
+
+/** On-screen radius (px) of a feature of half-extent `sizePc` at range
+ *  `distancePc`. */
+export function angularRadiusPx(sizePc: number, distancePc: number, pxPerRad: number): number {
+  return Math.atan(sizePc / Math.max(distancePc, 1e-30)) * pxPerRad;
+}
 
 export function makeOrbitLineMaterial(color: number): THREE.LineBasicMaterial {
   return new THREE.LineBasicMaterial({

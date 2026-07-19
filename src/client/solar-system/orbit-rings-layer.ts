@@ -6,7 +6,13 @@ import type { PlanetSystem, Planet, PlanetType } from './planet-system';
 import { AU_PC, J2000_OBLIQUITY_RAD } from '../util/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
-import { makeOrbitLineMaterial, makeOrbitLineLoop, ORBIT_LINE_SEGMENTS } from '../util/orbit-line';
+import {
+  makeOrbitLineMaterial,
+  makeOrbitLineLoop,
+  ORBIT_LINE_SEGMENTS,
+  pixelsPerRadian,
+  angularRadiusPx,
+} from '../util/orbit-line';
 
 /**
  * North ecliptic pole expressed in ICRS — the normal to Sol's orbital
@@ -286,12 +292,9 @@ export class OrbitRingsLayer {
     this.group.visible = true;
     if (hostLocalPos) this.group.position.copy(hostLocalPos);
 
-    const fovYRad = (camera.fov * Math.PI) / 180;
+    const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dPc = camera.position.distanceTo(this.group.position);
-    const pxPerRad = viewportHeightPx / fovYRad;
-    const radii = this.rings.map(
-      (r) => Math.atan(r.semiMajorPc / Math.max(dPc, 1e-30)) * pxPerRad,
-    );
+    const radii = this.rings.map((r) => angularRadiusPx(r.semiMajorPc, dPc, pxPerRad));
     const visible = ringVisibility(radii, RING_VISIBILITY_THRESHOLD_PX);
     for (let i = 0; i < this.rings.length; i++) {
       this.rings[i].line.visible = visible[i];

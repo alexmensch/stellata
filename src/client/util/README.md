@@ -12,10 +12,12 @@ build scripts, tests, and shader uniforms.
 - `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
-- `orbit-line.ts` — `makeOrbitLineMaterial` / `makeOrbitLineLoop` +
-  `ORBIT_LINE_SEGMENTS` / `ORBIT_LINE_OPACITY`: the alpha-blended
-  `LineLoop` primitive shared by the orbital-geometry overlays
-  (`solar-system/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`).
+- `orbit-line.ts` — shared bits of the orbital-geometry overlays
+  (`solar-system/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`):
+  the alpha-blended `LineLoop` primitive (`makeOrbitLineLoop` /
+  `makeOrbitLineMaterial` + `ORBIT_LINE_SEGMENTS` / `ORBIT_LINE_OPACITY`)
+  and the on-screen-size helpers `pixelsPerRadian` / `angularRadiusPx` both
+  layers use for their pixel-size visibility gate.
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry). Drives canvas
   clicks in both camera modes.
