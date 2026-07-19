@@ -120,6 +120,7 @@ import {
   type ExtinctionPrepassUniforms,
 } from './star-pipeline/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
+import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
@@ -311,6 +312,7 @@ export class Stellata implements FrameAnchor {
   private galacticDisc: GalacticDisc;
   // Representational layer — only renders when the host is focused.
   private orbitRingsLayer: OrbitRingsLayer;
+  private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   // Physical layer — renders for every attached host regardless of
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
@@ -639,6 +641,8 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer();
     this.scene.add(this.orbitRingsLayer.group);
+    this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
+    this.scene.add(this.binaryOrbitPathLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
     this.scene.add(this.planetBodyField.group);
     this.planetMeshLayer = new PlanetMeshLayer(
@@ -801,6 +805,15 @@ export class Stellata implements FrameAnchor {
     this.on('planetSystem', (ps) => {
       this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex);
       this.heliopause.setVisible(ps !== null && ps.hostStarIdx === this.catalog.solIndex);
+    });
+    // Orbit paths rebuild on every focus mutation: the focused system's
+    // Kepler pairs, or none when focus leaves a multi-star system.
+    this.on('focus', () => {
+      this.binaryOrbitPathLayer.setSystem(
+        this.binariesData,
+        this.focus.getFocusedStar(),
+        this.catalog.positions,
+      );
     });
     // Reseed the planet-focal ride on every focus mutation: focus
     // change AND same-planet refocus both recentre the floating origin,
@@ -994,11 +1007,17 @@ export class Stellata implements FrameAnchor {
       },
     });
     this.layers.register({
-      update: () => this.updateBinaryOrbits(),
+      update: (ctx) => {
+        this.updateBinaryOrbits();
+        // After the walk wrote this frame's slots, so each path rides its
+        // pair's live barycentre drift.
+        this.binaryOrbitPathLayer.update(this._localPositions, ctx.camera, window.innerHeight);
+      },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
         this.binaryOrbitField?.dispose();
         this.eclipsePhotometryField?.dispose();
+        this.binaryOrbitPathLayer.dispose();
       },
     });
     this.layers.register({
@@ -1094,11 +1113,15 @@ export class Stellata implements FrameAnchor {
    *  layer gates on this — renderers also subscribe to
    *  the 'planetSystem' event to react to focus swaps. */
   getFocusedPlanetSystem(): PlanetSystem | null { return this.focus.getFocusedPlanetSystem(); }
-  /** True when the orbit-rings layer is currently rendering at least one
-   *  ring. Frame-coherent — the scene-layer update fan-out runs before
-   *  `'frame'` event handlers, so overlays driven by the frame loop
-   *  (focus ring, etc.) read current-frame data. */
-  anyOrbitRingVisible(): boolean { return this.orbitRingsLayer.anyOrbitRingVisible(); }
+  /** True when planet orbit rings OR binary orbit paths are currently
+   *  circumscribing the focus — either already marks the focal object, so
+   *  the focus ring suppresses itself. Frame-coherent — the scene-layer
+   *  update fan-out runs before `'frame'` event handlers, so overlays
+   *  driven by the frame loop (focus ring, etc.) read current-frame data. */
+  anyOrbitRingVisible(): boolean {
+    return this.orbitRingsLayer.anyOrbitRingVisible()
+      || this.binaryOrbitPathLayer.anyOrbitRingVisible();
+  }
   /** Renderer-local positions of the focused host's planets (xyz
    *  triples, length 3·N), or null if no system is attached. Host
    *  offset is applied — under planet focus the host is not at the
@@ -1943,6 +1966,7 @@ export class Stellata implements FrameAnchor {
       galacticDiscWireframe: set('galacticDiscWireframe'),
       lgWireframes: set('lgWireframes'),
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
+      binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
       localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
       constellationFigures: set('constellationFigures'),

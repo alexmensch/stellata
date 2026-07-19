@@ -70,8 +70,9 @@ export function createFocusRingOverlay(stellata: Stellata) {
         hide();
         return;
       }
-      // Visible host orbit rings already mark the object, so the ring would
-      // just add noise readable as an inner orbital — see overlays/README.md.
+      // Visible orbit rings (planet or binary) already mark the object, so
+      // the ring would just add noise readable as an inner orbital — see
+      // overlays/README.md.
       if (stellata.anyOrbitRingVisible()) {
         hide();
         return;

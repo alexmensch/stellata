@@ -6,6 +6,13 @@ import type { PlanetSystem, Planet, PlanetType } from './planet-system';
 import { AU_PC, J2000_OBLIQUITY_RAD } from '../util/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
+import {
+  makeOrbitLineMaterial,
+  makeOrbitLineLoop,
+  ORBIT_LINE_SEGMENTS,
+  pixelsPerRadian,
+  angularRadiusPx,
+} from '../util/orbit-line';
 
 /**
  * North ecliptic pole expressed in ICRS — the normal to Sol's orbital
@@ -26,17 +33,9 @@ export const ECLIPTIC_NORTH_POLE_ICRS = new THREE.Vector3(
 // re-emerge as the camera approaches sub-AU range.
 export const RING_VISIBILITY_THRESHOLD_PX = 6;
 
-// Number of vertices per ring. 128 is enough to keep even Mercury's
-// ellipse smooth at maximum zoom (sub-AU focal range), while staying
-// trivial for 8 hosts × N planets at GPU rates.
-const RING_SEGMENTS = 128;
-
-// Material colour and opacity. Cool blue-white at moderate alpha contrasts
-// against the warm-amber galactic disc and the additive Milky Way disc
-// without competing with point-source stars. Held alpha-blended (not
-// additive) so rings read as faint *lines*, not glow.
+// Cool blue-white contrasting against the warm-amber galactic disc and the
+// additive Milky Way disc without competing with point-source stars.
 const RING_COLOUR = 0x88aacc;
-const RING_OPACITY = 0.5;
 
 interface PlanetRing {
   readonly planet: Planet;
@@ -242,8 +241,8 @@ export class OrbitRingsLayer {
     for (let pIdx = 0; pIdx < ps.planets.length; pIdx++) {
       const planet = ps.planets[pIdx];
       const aPc = planet.semiMajorAxisAu * AU_PC;
-      const verts = new Float32Array(RING_SEGMENTS * 3);
-      buildEllipsePoints(aPc, planet.eccentricity, RING_SEGMENTS, verts);
+      const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
+      buildEllipsePoints(aPc, planet.eccentricity, ORBIT_LINE_SEGMENTS, verts);
       // Compose per-planet in-plane→host-plane rotation Rz(Ω)·Rx(I)·Rz(ω)
       // (matching the body-position math in ephemeris.planetEclipticAU)
       // with the host plane→ICRS orientation, so a single applyQuaternion
@@ -256,7 +255,7 @@ export class OrbitRingsLayer {
         ringQuat.multiply(composeOrbitOrientationQuat(o, planeQuat));
       }
       const tmp = new THREE.Vector3();
-      for (let i = 0; i < RING_SEGMENTS; i++) {
+      for (let i = 0; i < ORBIT_LINE_SEGMENTS; i++) {
         tmp.set(verts[i * 3], verts[i * 3 + 1], verts[i * 3 + 2]);
         tmp.applyQuaternion(ringQuat);
         verts[i * 3 + 0] = tmp.x;
@@ -264,21 +263,8 @@ export class OrbitRingsLayer {
         verts[i * 3 + 2] = tmp.z;
       }
 
-      const geom = new THREE.BufferGeometry();
-      geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-      const mat = new THREE.LineBasicMaterial({
-        color: RING_COLOUR,
-        transparent: true,
-        opacity: RING_OPACITY,
-        depthTest: true,
-        depthWrite: false,
-      });
-      const line = new THREE.LineLoop(geom, mat);
-      // Frustum culling on a tiny sub-AU loop with the camera potentially
-      // sitting inside it is unreliable; we already gate visibility via
-      // the pixel-gap heuristic, so let the GPU clip per-vertex.
-      line.frustumCulled = false;
-      line.renderOrder = this.group.renderOrder;
+      const mat = makeOrbitLineMaterial(RING_COLOUR);
+      const line = makeOrbitLineLoop(verts, mat, this.group.renderOrder);
       this.group.add(line);
       this.rings.push({ planet, line, material: mat, semiMajorPc: aPc });
     }
@@ -306,12 +292,9 @@ export class OrbitRingsLayer {
     this.group.visible = true;
     if (hostLocalPos) this.group.position.copy(hostLocalPos);
 
-    const fovYRad = (camera.fov * Math.PI) / 180;
+    const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dPc = camera.position.distanceTo(this.group.position);
-    const pxPerRad = viewportHeightPx / fovYRad;
-    const radii = this.rings.map(
-      (r) => Math.atan(r.semiMajorPc / Math.max(dPc, 1e-30)) * pxPerRad,
-    );
+    const radii = this.rings.map((r) => angularRadiusPx(r.semiMajorPc, dPc, pxPerRad));
     const visible = ringVisibility(radii, RING_VISIBILITY_THRESHOLD_PX);
     for (let i = 0; i < this.rings.length; i++) {
       this.rings[i].line.visible = visible[i];

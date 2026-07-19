@@ -21,10 +21,11 @@ star catalog records.
   component `Z = r·sin(ν+ω)·sin i` — so orbits have real depth from
   any camera vantage. Tier 2 galactic-plane fallback
   (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`). No state.
-- `orbit-relation-cache.ts` — shared per-attach cache builder
-  (`buildOrbitRelationCaches`: has_orbit + finite-elements gates, tier,
-  elements, baseline `R(sep_pa_epoch_jd)`) and the per-frame
-  `evaluateOrbitRelationDeltaPc` dispatch. Both fields below consume it.
+- `orbit-relation-cache.ts` — `keplerRelationParams` (the has_orbit +
+  finite-elements gate → tier + elements, shared with the orbit-path
+  layer), the per-attach cache builder (`buildOrbitRelationCaches`:
+  adds baseline `R(sep_pa_epoch_jd)`), and the per-frame
+  `evaluateOrbitRelationDeltaPc` dispatch. Both runtime fields consume it.
 - `binary-orbit-field.ts` — per-frame position field. `update(t,
   camera, …)` walks `BinariesData.relations` in topological order,
   applies the LOD cascade described below, and rewrites the active
@@ -43,6 +44,18 @@ star catalog records.
   re-advance, origin recentre) force the next walk so suppressed
   secondaries get their `baseDiffPc` placement re-applied on top of
   the fresh baselines.
+- `focal-chain.ts` — `focalChainRelationSet(binaries, focalIdx)`: the
+  relation-index set on a focal star's slot-chain (focal as primary or
+  secondary, plus `parentRelation` ancestors). Shared by
+  `BinaryOrbitField`'s LOD-exemption walk and the orbit-path layer.
+- `binary-orbit-path-pure.ts` — `keplerChainRelationIdxs` (the focal
+  chain filtered to `has_orbit` pairs) + `buildBinaryOrbitRingPoints`
+  (one pair sampled into the two members' barycentric ellipses). See
+  § Binary orbit paths.
+- `binary-orbit-path-layer.ts` — `BinaryOrbitPathLayer`, the orbit-path
+  render layer. See § Binary orbit paths.
+- `binary-relation-fixture.ts` — `makeRelation(overrides)`, the shared
+  `BinaryRelation` test builder.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
   `ECLIPSE_DIM_TAU_S`, `DISC_DEPTH_BIAS` named constants the fields read
   and tests pin.
@@ -312,6 +325,64 @@ the buffer (the walk anchors the secondary on `baseDiffPc` too), so the
 ride tracks the true perturbed position; without `corr` the ride would
 leave `controls.target` off a focused secondary of a mismatched pair by
 that constant, silently disengaging the pin (§ focus/README).
+
+## Binary orbit paths
+
+`BinaryOrbitPathLayer` (`binary-orbit-path-layer.ts`) traces the actual
+orbital path each member of the **focused** multi-star system sweeps — a
+`representational`-tier declutter element (`binaryOrbitRings`,
+`scene/README.md`), realistic-only. Focus-gated by design:
+representational annotations hide on unfocus, so only the focused star's
+system draws, never every catalog pair.
+
+- **Which pairs** come from `keplerChainRelationIdxs` = the focal chain
+  (`focal-chain.ts`) filtered to `has_orbit` relations. Visual companions
+  (Tier 3, no Kepler elements) are excluded — there is no orbit to draw,
+  so a wide optical double shows nothing. The chain is exactly the set
+  `BinaryOrbitField` holds LOD-exempt, so both members stay live.
+- **Barycentric two-ellipse convention.** Each pair draws two ellipses
+  about the common barycentre — the physically honest "actual paths",
+  not the primary-fixed apparent-orbit plot. `buildBinaryOrbitRingPoints`
+  samples `evaluateOrbitOffsetPc` over one period and splits it `−q` :
+  `+(1−q)` (the same mass fraction the orbit walk applies), so the more
+  massive member traces the smaller ellipse, the two sit 180° apart, and
+  the barycentre lands at each ellipse's focus. The stars sit *on* their
+  own paths: the sampled vertex at the live phase equals the walk's
+  rendered offset.
+- **Anchor.** Ellipse vertices are ICRS pc *offsets* from the
+  barycentre (frame-independent), built once per focus change. Per frame
+  `update` only repositions each pair's group at its live barycentre
+  `(1−q)·primary + q·secondary`, read from the walked `localPositions`
+  right after the orbit walk. Hierarchical inner pairs anchor on their
+  parent-perturbed slots, so an inner ellipse rides the outer orbit —
+  the honest epicyclic decomposition, one ellipse-pair per relation.
+- **Tier 2** (`has_orbit`, no measured inclination) draws too: period
+  and semi-major axis are real, but the orbit plane is the galactic-Z
+  fallback, so the ellipse *orientation* is not physical — size and
+  timing are.
+- **Render order** `−0.5`: below the star discs (`0`) so a disc
+  composites over the path where a member sits on it, above the galactic
+  disc/grid (`−1`). Constellation figures are SVG (always above the WebGL
+  canvas), so the path cannot sit over them.
+- Geometry rebuilds on focus change (`setSystem`), mirroring
+  `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` moves
+  barycentre anchors and applies the size gate below. The two loops per
+  pair share one alpha-blended material built by `util/orbit-line.ts`
+  (`makeOrbitLineLoop` / `makeOrbitLineMaterial` + shared
+  `ORBIT_LINE_SEGMENTS`) — the same primitive the planet orbit rings use.
+- **On-screen-size gate.** `update` hides a pair once its larger ellipse
+  subtends less than `PATH_MIN_RADIUS_PX` (`pixelsPerRadian` /
+  `angularRadiusPx` from `util/orbit-line.ts`), so a distant or zoomed-out
+  system stops drawing sub-pixel loops — the analog of the planet rings'
+  pixel gate (an absolute per-pair threshold, not `ringVisibility`'s
+  neighbour-gap, which degenerates for a lone or equal-mass pair).
+- **Focus-ring suppression.** `anyOrbitRingVisible()` (the sibling name
+  `OrbitRingsLayer` carries) reports true only while a pair is drawn AND
+  above that size gate; `Stellata.anyOrbitRingVisible` ORs it with the
+  planet rings, and the focus-ring overlay hides itself when either is up —
+  the drawn orbit already marks the focal star, so the ring would read as a
+  spurious inner orbital. Zoom out until the paths fall below the gate and
+  the focus ring returns (`../overlays/README.md`).
 
 ## Eclipse photometry
 

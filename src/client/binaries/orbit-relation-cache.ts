@@ -53,6 +53,32 @@ export function relationToElements(r: BinaryRelation): OrbitalElements {
   };
 }
 
+/** Tier + elements for a Kepler-evaluable relation, or null for a Tier-3
+ *  (no has_orbit) or malformed record whose ΔR(t) would go NaN. The
+ *  has_orbit + finite gate: `has_orbit=1` should imply P, T, e, a, ω, q
+ *  finite, so a violating record is skipped rather than poisoning every
+ *  downstream consumer. Shared by the per-frame cache builder and the
+ *  focus-gated orbit-path layer. */
+export function keplerRelationParams(
+  r: BinaryRelation,
+): { tier: 1 | 2; elements: OrbitalElements } | null {
+  if ((r.flags & FLAG_HAS_ORBIT) === 0) return null;
+  if (
+    !Number.isFinite(r.q) || !Number.isFinite(r.aAU)
+    || !Number.isFinite(r.e) || !Number.isFinite(r.pDays)
+    || !Number.isFinite(r.tJd) || !Number.isFinite(r.omegaRad)
+  ) return null;
+  const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
+  return { tier, elements: relationToElements(r) };
+}
+
+/** Both members' xyz triples fall inside a catalog-wide position buffer.
+ *  Defensive against a binaries.bin / catalog.bin generation mismatch;
+ *  shared by the cache builder and the orbit-path layer. */
+export function relationIndicesInBounds(r: BinaryRelation, absLength: number): boolean {
+  return r.primaryIdx * 3 + 2 < absLength && r.secondaryIdx * 3 + 2 < absLength;
+}
+
 /** Build one cache entry per Kepler-evaluable relation.
  *  `absolutePositions` is the catalog-wide xyz buffer; relations whose
  *  member indices fall outside it are skipped (defensive against a
@@ -66,21 +92,10 @@ export function buildOrbitRelationCaches(
   const relations = binaries.relations;
   for (let i = 0; i < relations.length; i++) {
     const r = relations[i];
-    if ((r.flags & FLAG_HAS_ORBIT) === 0) continue;
-    // binaries.bin invariant restated at the consumer: has_orbit=1
-    // implies all elements needed for ΔR(t) are finite (P, T, e, a,
-    // ω, q — i and Ω fall back to 0 in relationToElements). A record
-    // that violates that contract would drive the per-frame eval to
-    // NaN ΔR, poisoning every downstream consumer. Skip the cache
-    // entry so the relation stays at its catalog baseline.
-    if (
-      !Number.isFinite(r.q) || !Number.isFinite(r.aAU)
-      || !Number.isFinite(r.e) || !Number.isFinite(r.pDays)
-      || !Number.isFinite(r.tJd) || !Number.isFinite(r.omegaRad)
-    ) continue;
-    if (r.primaryIdx * 3 + 2 >= absLength || r.secondaryIdx * 3 + 2 >= absLength) continue;
-    const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
-    const elements = relationToElements(r);
+    const params = keplerRelationParams(r);
+    if (params === null) continue;
+    if (!relationIndicesInBounds(r, absLength)) continue;
+    const { tier, elements } = params;
     const baselineJd = Number.isFinite(r.sepPaEpochJd)
       ? r.sepPaEpochJd
       : J2000_JD;
