@@ -847,7 +847,7 @@ export class Stellata implements FrameAnchor {
     // host-focus. Planet bodies live in PlanetBodyField and render
     // whenever inside the per-host cull distance regardless of focus.
     this.on('planetSystem', (ps) => {
-      this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex);
+      this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex, this.getT());
       this.heliopause.setVisible(ps !== null && ps.hostStarIdx === this.catalog.solIndex);
     });
     // Orbit paths rebuild on every focus mutation: the focused system's
@@ -1059,7 +1059,18 @@ export class Stellata implements FrameAnchor {
         const hostPos = ps !== null
           && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
           ? this.tmpHostLocal : null;
-        this.orbitRingsLayer.update(ctx.camera, window.innerHeight, hostPos);
+        this.orbitRingsLayer.update(
+          ctx.camera,
+          window.innerHeight,
+          hostPos,
+          ctx.t,
+          (planetIdx, out) => {
+            if (ps === null) return false;
+            const flat = this.planetBodyField.instanceIndexOf(ps.hostStarIdx, planetIdx);
+            return flat !== null
+              && this.planetBodyField.planetHostRelPositionInto(flat, out);
+          },
+        );
       },
       setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
       dispose: () => this.orbitRingsLayer.dispose(),

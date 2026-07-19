@@ -5,7 +5,7 @@
 import type { Catalog } from '../loaders/catalog-loader';
 import { AU_KM } from '../util/astronomy-constants';
 import {
-  getPlanetOrbitOrientations,
+  getPlanetOrbitShapes,
   getPlanetPositions,
   PLANET_ORDER,
   type OrbitOrientationRad,
@@ -57,13 +57,13 @@ export interface Planet {
   // (Kepler III), not the host star's, so a moon's focus-card period row
   // reads this rather than assuming solar mass.
   readonly gravParamGM?: number;
-  // Semi-major axis in AU. Real orbital phase comes from VSOP87
-  // ephemerides; placeholder positions use this alone.
+  // Display-only approximate semi-major axis (AU) and eccentricity:
+  // cull proxies, focus-card rows, placeholder layouts. Rendered ring
+  // geometry and body positions come from the live element source
+  // (`orbitGeometryAt` / `positionsAt`), never these fields — the two
+  // tables were once unreconciled and rings visibly missed their
+  // bodies (Mercury by ~6 body radii at J2000).
   readonly semiMajorAxisAu: number;
-  // Orbital eccentricity. The orbit-rings layer draws each ring as an
-  // ellipse with the host at one focus, using b = a·√(1−e²) and a
-  // focal offset c = a·e. Perihelion sits along local +x as a
-  // placeholder until VSOP87 longitude-of-perihelion lands.
   readonly eccentricity: number;
   readonly type: PlanetType;
   // Parent body's `name` when this body orbits a planet rather than the
@@ -130,14 +130,55 @@ export interface PlanetSystem {
    *  rotate into ICRS — Sol's ecliptic frame becomes ICRS via the
  * same quaternion that orients its orbit rings. */
   positionsAt?: (t: number, out: Float32Array) => void;
-  /** Optional per-planet orbital-frame orientation in the host's local
-   *  plane frame, indexed parallel to `planets`. The ring renderer
-   *  composes each entry's Rz(Ω)·Rx(I)·Rz(ω) before the host plane→ICRS
-   *  rotation, so rings line up with the body positions emitted by
-   *  `positionsAt` (which apply the same composition internally).
-   *  When absent, rings sit flat on the host plane with perihelion at
- * +x — the pre-placeholder behaviour. */
-  orbitOrientations?: readonly OrbitOrientationRad[];
+  /** Optional live orbit-ring geometry, indexed parallel to `planets`,
+   *  from the SAME element source `positionsAt` evaluates — so a ring
+   *  built from it passes through its body at every model time. When
+   *  absent the ring layer falls back to `defaultOrbitGeometry`
+   *  (static Planet a/e, flat on the host plane, perihelion at +x). */
+  orbitGeometryAt?: (t: number) => readonly BodyOrbitGeometry[];
+}
+
+/** Parent-relative Keplerian ring geometry for one body — the orbit-
+ *  ring layer's build input. */
+export interface BodyOrbitGeometry {
+  readonly aAu: number;
+  readonly e: number;
+  /** Rz(Ω)·Rx(I)·Rz(ω) in the body's element reference frame. */
+  readonly orientation: OrbitOrientationRad;
+  /** ICRS pole of the element reference plane when it is not the host
+   *  plane (a moon's Laplace / parent-equatorial plane). Omitted ⇒ the
+   *  elements are already host-plane-referenced (planets: ecliptic;
+   *  the Moon too). */
+  readonly refPoleRaDeg?: number;
+  readonly refPoleDecDeg?: number;
+  /** Index into `planets` of the centre body a moon orbits; null ⇒
+   *  the body orbits the host star. */
+  readonly parentIdx: number | null;
+}
+
+const ZERO_ORIENTATION: OrbitOrientationRad = {
+  inclination: 0,
+  longAscNode: 0,
+  argPerihelion: 0,
+};
+
+/** Ring-geometry fallback for hosts without a live element source
+ *  (future exoplanet shards): static Planet a/e, flat on the host
+ *  plane, perihelion at +x; a moon resolves its parent by name. */
+export function defaultOrbitGeometry(
+  planets: readonly Planet[],
+): BodyOrbitGeometry[] {
+  return planets.map((p) => {
+    const parentIdx = p.parentName
+      ? planets.findIndex((q) => q.name === p.parentName)
+      : -1;
+    return {
+      aAu: p.semiMajorAxisAu,
+      e: p.eccentricity,
+      orientation: ZERO_ORIENTATION,
+      parentIdx: parentIdx >= 0 ? parentIdx : null,
+    };
+  });
 }
 
 /** Sol's positionsAt — heliocentric ecliptic positions in parsecs, in
@@ -401,6 +442,34 @@ const _moonOffset: Vec3 = { x: 0, y: 0, z: 0 };
 const _earthCentre: Vec3 = { x: 0, y: 0, z: 0 };
 const _moonAbs: Vec3 = { x: 0, y: 0, z: 0 };
 
+const DEG = Math.PI / 180;
+
+/** Sol's orbitGeometryAt — planets from the live Standish elements
+ *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS (J2000
+ *  osculating, no secular terms — constant in `t`, matching the
+ *  resolver that positions them), in SOL_BODIES order. */
+export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
+  const out: BodyOrbitGeometry[] = getPlanetOrbitShapes(t).map((s) => ({
+    ...s,
+    parentIdx: null,
+  }));
+  for (const { elem, parent } of MOON_COMPOSE) {
+    out.push({
+      aAu: elem.aKm / AU_KM,
+      e: elem.e,
+      orientation: {
+        inclination: elem.incDeg * DEG,
+        longAscNode: elem.nodeDeg * DEG,
+        argPerihelion: elem.periDeg * DEG,
+      },
+      refPoleRaDeg: elem.refPoleRaDeg,
+      refPoleDecDeg: elem.refPoleDecDeg,
+      parentIdx: PLANET_ORDER.indexOf(parent),
+    });
+  }
+  return out;
+}
+
 // Sync probe — does this star have a planet system at all?
 //
 // Currently hardwires "planets ⇔ Sol". When the exoplanet epic lands an
@@ -425,8 +494,6 @@ export async function getPlanetSystem(
     hostStarIdx: starIdx as number,
     planets: SOL_BODIES,
     positionsAt: solPositionsAt,
-    // Evaluated once at attach. Drift is sub-degree per millennium —
-    // the orbit-ring renderer keeps these frozen for the session.
-    orbitOrientations: getPlanetOrbitOrientations(Date.now() / 1000),
+    orbitGeometryAt: solOrbitGeometryAt,
   };
 }

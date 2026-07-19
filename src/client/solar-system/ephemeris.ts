@@ -217,25 +217,35 @@ export interface OrbitOrientationRad {
   argPerihelion: number;
 }
 
-/** Per-planet orbit orientations at Unix-seconds `t`, in PLANET_ORDER.
- *
- *  The orbit-ring renderer reads this once per attach to align each
- *  ring with its actual orbital plane (inclination + node + perihelion
- *  direction); without it, all rings sit flat on the ecliptic and miss
- *  Mercury's 7° tilt and 77° perihelion offset entirely. Drift across
- *  ±3000 years is bounded (≲5°) and ignored — rings stay frozen at
- *  attach-time orientation for the rest of the session. */
-export function getPlanetOrbitOrientations(t: number): OrbitOrientationRad[] {
+/** One planet's orbit-ring geometry: secular-rate-applied a/e plus the
+ *  Rz(Ω)·Rx(I)·Rz(ω) orientation. */
+export interface PlanetOrbitShape {
+  readonly aAu: number;
+  readonly e: number;
+  readonly orientation: OrbitOrientationRad;
+}
+
+/** Per-planet orbit shapes at Unix-seconds `t`, in PLANET_ORDER — the
+ *  SAME evaluated elements `planetEclipticAU` positions the body with
+ *  (a/e with aDot/eDot applied, live-`t` node/inclination/perihelion),
+ *  so a ring built from a shape passes through its body by construction
+ *  at every `t`. The former attach-time snapshot desynced under time
+ *  scrubbing, and its ring a/e came from a second, rounded table. */
+export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
   const T = (tToJDE(t) - J2000_JD) / 36525;
-  const out: OrbitOrientationRad[] = [];
+  const out: PlanetOrbitShape[] = [];
   for (let i = 0; i < ELEMENTS.length; i++) {
     const e = ELEMENTS[i];
     const longnode = (e.longnode + e.longnodeDot * T) * DEG;
     const longperi = (e.longperi + e.longperiDot * T) * DEG;
     out.push({
-      inclination: (e.I + e.IDot * T) * DEG,
-      longAscNode: longnode,
-      argPerihelion: longperi - longnode,
+      aAu: e.a + e.aDot * T,
+      e: e.e + e.eDot * T,
+      orientation: {
+        inclination: (e.I + e.IDot * T) * DEG,
+        longAscNode: longnode,
+        argPerihelion: longperi - longnode,
+      },
     });
   }
   return out;

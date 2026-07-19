@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
   ELEMENTS,
   PLANET_ORDER,
-  getPlanetOrbitOrientations,
+  getPlanetOrbitShapes,
   getPlanetPositions,
   planetEclipticAU,
   _resetCacheForTests,
@@ -157,7 +157,7 @@ describe('getPlanetPositions', () => {
     const a = getPlanetPositions(J2000_UNIX);
     const aMercury = { ...a.mercury };
     // One second — well inside the old 60s bucket that froze positions
-    // (visible as a snap at mesh-LOD zoom, stellata-2f6.19).
+    // (visible as a snap at mesh-LOD zoom).
     const b = getPlanetPositions(J2000_UNIX + 1);
     expect(b).not.toBe(a);
     const dx = b.mercury.x - aMercury.x;
@@ -206,36 +206,54 @@ describe('getPlanetPositions', () => {
   });
 });
 
-describe('getPlanetOrbitOrientations', () => {
-  it('returns one orientation per planet, in PLANET_ORDER', () => {
-    const o = getPlanetOrbitOrientations(J2000_UNIX);
+describe('getPlanetOrbitShapes', () => {
+  it('returns one shape per planet, in PLANET_ORDER', () => {
+    const o = getPlanetOrbitShapes(J2000_UNIX);
     expect(o.length).toBe(PLANET_ORDER.length);
     for (const oi of o) {
-      expect(oi).toHaveProperty('inclination');
-      expect(oi).toHaveProperty('longAscNode');
-      expect(oi).toHaveProperty('argPerihelion');
+      expect(oi.aAu).toBeGreaterThan(0);
+      expect(oi.e).toBeGreaterThanOrEqual(0);
+      expect(oi.orientation).toHaveProperty('inclination');
+      expect(oi.orientation).toHaveProperty('longAscNode');
+      expect(oi.orientation).toHaveProperty('argPerihelion');
     }
   });
 
+  it('a/e come from the full-precision element table, secular rates applied', () => {
+    // At J2000 (T≈0) each shape's a/e must match the ELEMENTS row to
+    // float precision — NOT the 3-4-decimal SOL_PLANETS display values
+    // (Mercury a=0.38709843 vs 0.387: a ~14,700 km ring-to-body miss).
+    const o = getPlanetOrbitShapes(J2000_UNIX);
+    for (let i = 0; i < ELEMENTS.length; i++) {
+      expect(o[i].aAu).toBeCloseTo(ELEMENTS[i].a, 6);
+      expect(o[i].e).toBeCloseTo(ELEMENTS[i].e, 6);
+    }
+    // A millennium out, the secular terms must have moved a drifting
+    // element (Uranus aDot = -2e-4 AU/cty is the largest).
+    const later = getPlanetOrbitShapes(J2000_UNIX + 1000 * 365.25 * 86400);
+    const uranus = PLANET_ORDER.indexOf('uranus');
+    expect(later[uranus].aAu).not.toBeCloseTo(o[uranus].aAu, 4);
+  });
+
   it("Earth's J2000 orientation has near-zero inclination", () => {
-    const o = getPlanetOrbitOrientations(J2000_UNIX);
+    const o = getPlanetOrbitShapes(J2000_UNIX);
     const earthIdx = PLANET_ORDER.indexOf('earth');
     // Earth's ecliptic IS the reference plane — inclination is defined
     // as zero (the JPL table gives -0.00054° drift basis only).
-    expect(Math.abs(o[earthIdx].inclination)).toBeLessThan(1e-4);
+    expect(Math.abs(o[earthIdx].orientation.inclination)).toBeLessThan(1e-4);
   });
 
   it("Mercury's J2000 inclination is ~7°", () => {
-    const o = getPlanetOrbitOrientations(J2000_UNIX);
+    const o = getPlanetOrbitShapes(J2000_UNIX);
     const mercIdx = PLANET_ORDER.indexOf('mercury');
-    expect(o[mercIdx].inclination * 180 / Math.PI).toBeCloseTo(7.0056, 3);
+    expect(o[mercIdx].orientation.inclination * 180 / Math.PI).toBeCloseTo(7.0056, 3);
   });
 
   it("argPerihelion = ϖ − Ω matches the JPL element table", () => {
-    const o = getPlanetOrbitOrientations(J2000_UNIX);
+    const o = getPlanetOrbitShapes(J2000_UNIX);
     for (let i = 0; i < ELEMENTS.length; i++) {
       const expectedDeg = ELEMENTS[i].longperi - ELEMENTS[i].longnode;
-      expect(o[i].argPerihelion * 180 / Math.PI).toBeCloseTo(expectedDeg, 6);
+      expect(o[i].orientation.argPerihelion * 180 / Math.PI).toBeCloseTo(expectedDeg, 6);
     }
   });
 
@@ -254,8 +272,8 @@ describe('getPlanetOrbitOrientations', () => {
       // Skip outer planets — non-zero b/c/s/f shifts M away from L−ϖ
       // and breaks the "M=0 ⇔ perihelion at E=0" assumption.
       if (e.b !== 0 || e.c !== 0 || e.s !== 0) continue;
-      const o = getPlanetOrbitOrientations(J2000_UNIX);
-      const oi = o[i];
+      const o = getPlanetOrbitShapes(J2000_UNIX);
+      const oi = o[i].orientation;
       // Synthesised perihelion point at (a(1-e), 0, 0).
       const p = new THREE.Vector3(e.a * (1 - e.e), 0, 0);
       // Apply Rz(Ω)·Rx(I)·Rz(ω) via the shared helper that orbit-rings-layer
