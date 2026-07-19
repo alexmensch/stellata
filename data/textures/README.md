@@ -78,39 +78,67 @@ Display RGB anchors the ~0.05 particle geometric albedo (dark,
 Uranian-moon-like material; Neptune's slightly red) to the Saturn
 strip's bright-ring tone: 0.05/0.50 × ~0.97 ≈ 0.10.
 
-## Colour fidelity
+## Colour fidelity — index-anchored calibration
 
-Per-body colour status — the honest answer to "is that what it looks
-like from space?":
+The maps come from different instruments, filter sets, and processing
+eras; per-map colour judgement doesn't scale. Instead the build
+calibrates every map with a published disc-integrated colour to a
+**measured target** (`scripts/textures/texture_calibration.py`):
 
-- **Earth day/night** — NASA calibrated true colour (BMNG / VIIRS),
-  untouched.
-- **Jupiter** — Cassini natural colour, untouched.
-- **Saturn / Venus / Neptune** — Björn Jónsson's natural-colour
-  reconstructions. Venus caveat: the cloud FEATURES are ultraviolet
-  structure colourised to Venus's visible tones (in visible light the
-  cloud deck is nearly featureless pale yellow). Neptune caveat: 1989
-  Voyager OGB-filter colour; Irwin et al. 2024 argue the true colour
-  is paler and greener than the classic deep azure.
-- **Mars** — USGS Viking MDIM 2.1 colorized mosaic, the muted
-  butterscotch Mars actually presents from space (an earlier
-  Solar System Scope map was rejected as over-saturated).
-- **Mercury** — the MESSENGER mosaic is monochrome and every
-  MESSENGER colour product is false colour (IR/blue filters), so the
-  build tints the grayscale with the body's representative colour at
-  half chroma — Mercury's true appearance is near-neutral gray-brown,
-  Moon-like.
-- **Pluto** — New Horizons natural-ish colour. The un-imaged southern
-  band (real data gap) is filled with the map's mean imaged colour,
-  feathered at the boundary, so it reads as "no data", not as a
-  contrasting terrain band.
+- **Reference white is the solar spectrum**, not D65 — a body
+  reflecting sunlight neutrally renders R = G = B. Decision record in
+  `docs/science-solar-system.md` § Naked-eye colour calibration.
+- Each body's target chromaticity is its adopted **B−V / V−Rc** from
+  Mallama, Krobusek & Pavlov 2017 (Icarus 282, 19, Table 3),
+  expressed as flux ratios against the Sun's own indices and mapped
+  B→blue, V→green, Rc→red.
+- Per-map linear-RGB gains move the map's **sphere-weighted mean**
+  (rows weighted by cos-latitude; no-data gaps excluded) onto the
+  target while preserving mean luminance. Achieved-vs-target numbers
+  live in the committed `calibration.json`, pinned by
+  `scripts/textures/texture-calibration.test.ts`.
+- **Moons are not yet index-calibrated** — Mallama 2017 covers the
+  planets only, so the moon maps keep the hand treatments below until
+  a vetted satellite index table exists. The machinery extends with
+  one row per body in `COLOUR_INDICES`.
+
+What the calibration corrects, per planet:
+
+- **Earth day** — the Blue Marble 2002 composite (real ocean +
+  clouds) was near-neutral; nudged to Earth's measured bluish tone.
+  `earth-night` is emissive city light, not reflectance — never
+  calibrated.
+- **Jupiter** — Cassini natural colour; near-target, small nudge.
+- **Venus** — Jónsson's colourised UV cloud structure read far
+  yellower than Venus measures; calibrated to its near-neutral white
+  (B−V 0.70 is barely off the Sun's 0.653). Cloud FEATURES remain UV
+  structure — in visible light the deck is nearly featureless.
+- **Neptune** — 1989 Voyager OGB deep azure paled toward the measured
+  tone, consistent with Irwin et al. 2024.
+- **Mars** — the Viking MDIM 2.1 mosaic's blue boost dimmed ~0.57×;
+  lands on the muted butterscotch Mars presents from space.
+- **Mercury** — the MESSENGER mosaic is monochrome (every MESSENGER
+  colour product is false colour), so the calibration gains ARE the
+  tint: measured warm gray, replacing the old hand-tuned half-chroma
+  judgement.
+- **Saturn** — Jónsson reconstruction, small warm correction. (Its
+  V−Rc uses the paper's internally-consistent synthetic pair; the
+  photometric V and synthetic Rc rows disagree by 0.17 mag.)
+- **Pluto** — NOT calibrated: no adopted index row in Mallama 2017,
+  and the New Horizons natural-ish colour is trusted as shipped. The
+  un-imaged southern band (real data gap) is filled with the map's
+  mean imaged colour, feathered at the boundary, so it reads as
+  "no data", not as a contrasting terrain band.
+
+Moon treatments (hand-tuned pending measured targets):
+
 - **Moon** — LROC WAC colour (NASA SVS CGI Moon Kit), untouched.
 - **Io / Ganymede** — USGS Galileo/Voyager colour merges, natural-ish
   colour, untouched (Ganymede's un-imaged polar wedges gap-fill with
   the map's feathered mean colour).
 - **Europa / Callisto** — the only global USGS mosaics are grayscale;
   the build tints them with each body's representative colour at half
-  chroma (both are near-neutral bodies), same treatment as Mercury.
+  chroma (both are near-neutral bodies).
 - **Saturnian mids (Mimas, Enceladus, Tethys, Dione, Rhea, Iapetus)
   and Triton** — Schenk 2014 IR-G-UV *enhanced-colour* mosaics; the
   colour separation is exaggerated far past what the eye would see on
@@ -127,11 +155,11 @@ like from space?":
   hemisphere-only coverage; they exercise the renderer's texture-less
   base path.
 
-The per-body treatments live in `build-textures.py`
+The moon treatments live in `build-textures.py`
 (`REPRESENTATIVE_COLOURS`, tint + desaturate + gap-fill + flip
-helpers); the colour constants are pinned to `SOL_BODIES` by
-`scripts/textures/texture-colours.test.ts`, so the treated regions
-always match the disc the body renders as at distance.
+helpers); the tint colours are pinned to `SOL_BODIES` by
+`scripts/textures/texture-colours.test.ts`, so the tinted maps always
+match the disc the body renders as at distance.
 
 ## Rebuilding
 
