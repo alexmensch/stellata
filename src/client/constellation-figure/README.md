@@ -53,17 +53,21 @@ The lines render at `renderOrder −0.75` with `depthTest: true`,
 
 The vertex buffer is the members' `stellata.localPositions` — the same
 floating-origin frame the star instances use, so the GPU projection lines up
-with the discs automatically and **camera motion costs zero CPU work**.
+with the discs automatically and **camera motion adds no CPU work** — the
+per-frame refill below is a fixed cost independent of the camera.
 
 - `setFigures(constellations, conIndices, localPositions)` — rebuild geometry.
   The shell calls it when the active set changes: the highlighted index, chart
   ↔ navigate, or the `showConstellation` master toggle. `conIndices` is the
   highlighted one, all 88 (chart), or empty (hidden).
-- `update(localPositions, epochJyr, origin)` — per frame; refills positions
-  only when the local frame moved (epoch re-advance or floating-origin
-  recentre), gated on an `(epochJyr, origin)` sentinel. A member star's
-  sub-pixel binary orbital drift is deliberately not tracked — invisible at any
-  framing where the figure reads as a figure, matching the former SVG overlay.
+- `update(localPositions)` — re-copies vertex positions from the live buffer
+  every drawn frame, so a vertex tracks its star through everything that
+  rewrites `localPositions` with no separate signal: proper-motion epoch
+  advance, floating-origin recentre, **and binary orbital motion under time
+  scrub** (a figure vertex is often a bright binary — Mizar, Castor, Algol).
+  The buffer is at most a few thousand floats, so the copy + re-upload is
+  negligible; the `BinaryOrbitPathLayer` repositions per frame the same way.
+  Skipped while the group is hidden.
 
 ## Visibility gates
 

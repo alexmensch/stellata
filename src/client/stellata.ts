@@ -1069,10 +1069,9 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       // After the binary + planet walks so a figure vertex that is a binary
-      // member reads its live slot. Vertex positions refresh only on an
-      // epoch-advance / recentre (worldOffset move); camera motion is GPU-only.
-      update: (ctx) => this.constellationFigureLayer.update(
-        this._localPositions, this._advancedEpochJyr, ctx.worldOffset),
+      // member re-copies its live slot (orbital motion under scrub, epoch
+      // advance, recentre — all land in localPositions with no separate signal).
+      update: () => this.constellationFigureLayer.update(this._localPositions),
       setMonochrome: (on) => this.constellationFigureLayer.setMonochrome(on),
       dispose: () => this.constellationFigureLayer.dispose(),
     });

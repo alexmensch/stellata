@@ -21,10 +21,11 @@ const FIGURE_OPACITY = 0.85;
 
 /**
  * The constellation stick figure as a `THREE.LineSegments` group. Geometry is
- * rebuilt on highlight / chart change (`setFigures`); vertex positions refresh
- * only when the local frame moves under it — epoch re-advance or floating-
- * origin recentre (`update`). Camera motion needs no CPU work: the GPU projects
- * the local-frame vertices exactly as it does the star instances.
+ * rebuilt on highlight / chart change (`setFigures`); vertex positions re-copy
+ * from the live `localPositions` every drawn frame (`update`) so a vertex
+ * tracks its star through epoch advance, recentre, and binary orbital motion.
+ * Camera motion adds no work: the GPU projects the local-frame vertices exactly
+ * as it does the star instances.
  */
 export class ConstellationFigureLayer {
   readonly group: THREE.Group;
@@ -33,12 +34,6 @@ export class ConstellationFigureLayer {
   private positions: Float32Array | null = null;
   private endpointIdx: number[] = [];
   private permitted = true;
-  // Local-frame sentinels: a refill is skipped while both are unchanged.
-  // NaN forces the first post-rebuild fill through.
-  private lastEpochJyr = NaN;
-  private lastOx = NaN;
-  private lastOy = NaN;
-  private lastOz = NaN;
 
   constructor() {
     this.group = new THREE.Group();
@@ -82,23 +77,15 @@ export class ConstellationFigureLayer {
     this.group.visible = this.permitted;
   }
 
-  /** Refresh vertex positions when the local frame shifted (epoch re-advance
-   *  or recentre). Sub-pixel binary orbital drift of a member star is ignored,
-   *  matching the former SVG overlay's per-tick skip. */
-  update(localPositions: Float32Array, epochJyr: number, origin: Readonly<THREE.Vector3>): void {
-    if (this.lineSegments === null || this.positions === null) return;
-    if (
-      epochJyr === this.lastEpochJyr
-      && origin.x === this.lastOx
-      && origin.y === this.lastOy
-      && origin.z === this.lastOz
-    ) {
-      return;
-    }
-    this.lastEpochJyr = epochJyr;
-    this.lastOx = origin.x;
-    this.lastOy = origin.y;
-    this.lastOz = origin.z;
+  /** Re-copy vertex positions from the live local-frame buffer. Runs every
+   *  drawn frame: a figure vertex tracks its star through proper-motion epoch
+   *  advance, floating-origin recentre, AND binary orbital motion under time
+   *  scrub — all of which rewrite `localPositions` with no separate signal.
+   *  The buffer is at most a few thousand floats, so the copy + re-upload is
+   *  negligible (the `BinaryOrbitPathLayer` repositions per frame the same
+   *  way). Skipped while hidden. */
+  update(localPositions: Float32Array): void {
+    if (this.lineSegments === null || !this.group.visible) return;
     this.writePositions(localPositions);
     this.lineSegments.geometry.attributes.position.needsUpdate = true;
   }
