@@ -47,8 +47,6 @@ for the surrounding context.
   (`star.vert.glsl`) and the matching `smoothstep(uMaxAppMag, uMaxAppMag
   + 0.5, vAppMag)` in the fragment shader's glow pass. Wider = softer
   fade-in across the magnitude limit; 0 = hard cutoff.
-- **Star-gap radius around constellation lines** — `STAR_GAP_PX` in
-  `constellation-overlay.ts`.
 - **Warp duration curve** — `WARP_T_MIN_MS`, `WARP_T_MAX_MS`,
   `WARP_T_K_MS` (ms-per-log10-parsec slope) in `stellata.ts`. Also
   `WARP_REORIENT_MS`. Arrival offset is per-star via `minDistForStar`.

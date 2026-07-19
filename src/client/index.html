@@ -10,17 +10,6 @@
     <canvas id="scene"></canvas>
 
     <svg id="overlay" class="overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <!-- Mask applied to overlays that should appear BEHIND the rendered
-             star disc for the focused star. White = visible, black = cut out.
-             The circle is sized and positioned each frame in
-             constellation-overlay.ts / focus-ring-overlay.ts. -->
-        <mask id="disc-occlude-mask" maskUnits="userSpaceOnUse">
-          <rect id="disc-mask-bg" x="0" y="0" width="100%" height="100%" fill="white" />
-          <circle id="disc-mask-cutout" cx="-100" cy="-100" r="0" fill="black" />
-        </mask>
-      </defs>
-      <path id="con-figure" mask="url(#disc-occlude-mask)" />
       <!-- Galactic coordinate sphere l/b labels. Pooled <text> positioned +
            rotated each frame by galactic-grid-labels.ts. Drawn early so the
            background orientation grid sits behind the HUD / POI / star-name

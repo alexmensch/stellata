@@ -20,8 +20,9 @@ import { startChartLabels, stopChartLabels } from './chart-labels';
 //     (stars, clouds, hud, galactic disc/grid, blend modes, clear color).
 //   - Cloud isobar pass (driven by uMaxAppMag); the milky-way band↔isobar
 //     swap rides applyDetailPreset via the milkyWayIsobar detail bind.
-//   - Constellation-overlay flips to "all constellations" mode (handled
-//     directly inside constellation-overlay.ts via the same predicate).
+//   - Constellation figure switches to all-88 mode — the WebGL
+//     constellation-figure/ layer, rebuilt by the shell on the same
+//     chart-and-observe predicate.
 //   - Label engine spins up; which label tiers render is gated by the
 //     detail cycle (chart-labels.ts reads detailPermits per tier).
 

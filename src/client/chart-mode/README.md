@@ -14,8 +14,8 @@ src/client/chart-mode/
   chart-mode.ts                   Orchestrator. Toggles body.chart class,
                                   mono theme, cloud + Milky Way isobar
                                   handoffs, chart-labels engine, and
-                                  the constellation overlay's
-                                  draw-all-asterisms branch.
+                                  the constellation figure's
+                                  draw-all-asterisms mode.
   chart-labels.ts                 Per-frame label engine: proper names,
                                   Bayer Greek glyphs, constellation
                                   Latin labels, cloud labels (no-op
@@ -43,10 +43,12 @@ src/client/chart-mode/
    structure, and gates the label tiers in step 4.
 4. `startChartLabels()` — registers the per-frame label engine
    (`chart-labels.ts`), whose tiers are gated by the detail cycle.
-5. Constellation overlay flips to "always draw every constellation"
+5. Constellation figure flips to "always draw every constellation"
    (vs. only the highlighted one) so the chart shows the full asterism
-   network. Subject to the master `showConstellation` toggle —
-   when off, no asterism lines or constellation Latin labels render.
+   network. Passive — the WebGL `constellation-figure/` layer is rebuilt
+   by the shell off the same `chart && observe` predicate, not toggled
+   here. Subject to the master `showConstellation` toggle — when off, no
+   asterism lines or constellation Latin labels render.
 
 Exit reverses each step.
 

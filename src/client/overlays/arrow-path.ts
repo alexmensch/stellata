@@ -43,7 +43,7 @@ export const RING_HALO_GAP_PX = 4;
  * view in any preferred direction.
  */
 // Module-scope scratch vector for viewSpaceScreenDir. Owning it inside the
-// helper keeps arrow-path symmetric with focus-ring-overlay / disc-mask /
+// helper keeps arrow-path symmetric with focus-ring-overlay /
 // distance-vector-overlay (all of which hide their per-frame scratch
 // state) and frees call sites from threading a Vector3 through.
 const scratchVS = /*@__PURE__*/ new THREE.Vector3();
