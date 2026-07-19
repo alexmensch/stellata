@@ -50,7 +50,6 @@ export class PlanetMeshLayer {
   private readonly loader = new THREE.TextureLoader();
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
-  private localDepthPass = false;
 
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
@@ -74,25 +73,6 @@ export class PlanetMeshLayer {
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
     this.placeholder.needsUpdate = true;
-  }
-
-  /** Local-depth-pass spike flag: strips the log-depth chunks from
-   *  every entry material so fragments carry standard bracket depth.
-   *  Must track which scene the group is parked in — a local-pass
-   *  material writing log depth breaks the bracket's ordering. */
-  setLocalDepthPass(on: boolean): void {
-    if (on === this.localDepthPass) return;
-    this.localDepthPass = on;
-    for (const entry of this.entries.values()) {
-      this.applyDepthDefines(entry.material);
-      if (entry.ring) this.applyDepthDefines(entry.ring.material);
-    }
-  }
-
-  private applyDepthDefines(material: THREE.ShaderMaterial): void {
-    if (this.localDepthPass) material.defines.LOCAL_DEPTH_PASS = '';
-    else delete material.defines.LOCAL_DEPTH_PASS;
-    material.needsUpdate = true;
   }
 
   /** Append camera-relative bounding spheres for every mesh-visible
@@ -304,12 +284,9 @@ export class PlanetMeshLayer {
       depthWrite: true,
       depthTest: true,
     });
-    this.applyDepthDefines(material);
     const mesh = new THREE.Mesh(this.geometry, material);
     mesh.name = 'planet-mesh';
     mesh.frustumCulled = false;
-    // After the corrupt/restore depth pair (1.5/2.5), before the disc
-    // pass (3) so the fading disc max-blends over the mesh.
     mesh.renderOrder = 2.8;
     this.group.add(mesh);
     const boundRadiusPc =
@@ -343,7 +320,6 @@ export class PlanetMeshLayer {
       depthTest: true,
       side: THREE.DoubleSide,
     });
-    this.applyDepthDefines(material);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = 'planet-rings';
     mesh.frustumCulled = false;

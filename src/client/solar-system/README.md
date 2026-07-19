@@ -506,19 +506,16 @@ stellata-2f6.3).
   floor. Rendered only in the mesh-LOD regime: alpha rides the same
   crossfade `uFade`, hidden until the strip texture arrives (no
   representative-colour fallback), `renderOrder` 2.81 (after the body
-  mesh) with `depthWrite: false`. **Body occlusion is analytic, not
-  depth-tested**: at planet scale the log-depth buffer quantises the
-  whole solar system into one depth step (`log2(1+w)` is linear for
-  w ≪ 1), so the ring fragment shader discards fragments whose
-  camera→fragment segment passes through the body ellipsoid — the
-  same ray–ellipsoid helper as the shadow test, with a camera ray.
-  This limitation is being retired by the local depth pass
-  (`../local-depth/README.md`, design stellata-shvs): under its spike
-  flag (`stellata.setLocalDepthPassEnabled(true)`) the meshes + annuli
-  render in a bracketed second pass where the z-buffer orders
-  ring↔body natively and the analytic discard is skipped. Until that
-  migration completes, any new geometry drawn near a planet body in
-  the MAIN pass still needs the analytic trick.
+  mesh) with `depthWrite: false`. **Body occlusion is the local depth
+  pass's z-buffer**: meshes + annuli render in the bracketed second
+  pass (`../local-depth/README.md`), where standard depth orders
+  ring↔body natively — including the oblate limb. The analytic
+  ray–ellipsoid helper survives only for the body-shadow term (sun
+  ray, not camera ray). Geometry drawn near a planet body in the MAIN
+  pass still cannot depth-test against it (the log buffer quantises
+  the whole system into one step; `log2(1+w)` is linear for w ≪ 1) —
+  new close-range geometry belongs in the local pass, not behind a
+  new analytic trick.
   Edge-on the zero-thickness annulus thins to a line, which is the
   physically honest look.
 

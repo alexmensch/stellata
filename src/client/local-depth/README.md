@@ -9,9 +9,11 @@ where the z-buffer resolves everything natively.
 
 This README is the design record for the primitive (stellata-shvs):
 architecture, precision analysis, cluster API, and migration plan.
-The current code is the reusable core (`slice-pure.ts`,
-`local-depth-pass.ts`) plus a spike wiring the planet mesh LOD
-through it behind a dev-console flag.
+The reusable core is `slice-pure.ts` + `local-depth-pass.ts`; the
+planet mesh LOD (spheroid meshes + ring annuli) renders through it
+unconditionally (migration step 1 — its shaders carry no log-depth
+chunks and the ring shader's analytic body-occlusion discard is
+gone).
 
 ## Files
 
@@ -83,15 +85,16 @@ prepass), sharing the main pipeline's uniform objects (the
 `perceptual-disc-uniforms.ts` pattern) with cloned materials that set
 `LOCAL_DEPTH_PASS`.
 
-### `LOCAL_DEPTH_PASS` — the shader define
+### Local-pass materials carry NO log-depth chunks
 
-Materials rendered in the local pass define `LOCAL_DEPTH_PASS`, which
-strips the three.js `logdepthbuf` chunk includes so fragments keep
-standard `gl_FragCoord.z` from the bracketed projection matrix.
-Including the log chunks in the local pass would encode depth against
-the renderer-wide far plane and destroy the bracket's precision —
-that is the invariant behind the `#ifndef LOCAL_DEPTH_PASS` guards in
-the shaders.
+Fragments in the local pass must keep standard `gl_FragCoord.z` from
+the bracketed projection matrix — including the three.js
+`logdepthbuf` chunks would encode depth against the renderer-wide far
+plane and destroy the bracket's precision. Shaders that render *only*
+here (planet mesh, ring annulus) simply omit the includes; shaders
+shared with the main pass (the billboard mirror draws of step 2) wrap
+them in `#ifndef LOCAL_DEPTH_PASS` and their local-pass material
+clones set that define.
 
 ### Depth slices — unconditionally correct painter's partitioning
 
@@ -209,11 +212,11 @@ pass solves.
 
 ## Interactions
 
-- **Disc↔mesh crossfade** — under full membership the fading disc and
-  the rising mesh render in the *same* pass with their existing blend
-  contract (`mesh-crossfade.ts`), so the handoff is untouched. In the
-  spike interim (mesh local, disc still main-pass) the fade composites
-  across the pass boundary — verify visually; acceptable for a spike.
+- **Disc↔mesh crossfade** — until step 2 lands, the fading disc
+  (main pass) and the rising mesh (local pass) composite across the
+  pass boundary — smoke-validated on Saturn. Under full membership
+  both render in the *same* pass with their existing blend contract
+  (`mesh-crossfade.ts`), so the handoff tightens further.
 - **Chart mode** — inert. Chart flattens bodies to ink discs with
   depth disabled; the mesh layer already hides in monochrome and
   member suppression must not engage (billboards render normally in
@@ -235,18 +238,20 @@ pass solves.
 - **Extinction prepass** — mirror draws read the same star-indexed
   A_V texture via `iSourceIdx`.
 
-## What this deletes (at migration, not in the spike)
+## What this deletes
 
-Ring-shader analytic body-occlusion discard · orbit-ring
-corrupt/restore depth passes (`uRenderMode` 3/4, renderOrders
-1.5/2.5) · `iDepthBias` + its EclipsePhotometryField wiring · the
-reverted PR #252 apparatus stays deleted (disc silhouette clip,
-mesh ray-sphere occlusion, iOccluder/familyOccluders).
+Ring-shader analytic body-occlusion discard (done, step 1) ·
+orbit-ring corrupt/restore depth passes (`uRenderMode` 3/4,
+renderOrders 1.5/2.5 — step 2) · `iDepthBias` + its
+EclipsePhotometryField wiring (step 4) · the reverted PR #252
+apparatus stays deleted (disc silhouette clip, mesh ray-sphere
+occlusion, iOccluder/familyOccluders).
 
 ## Migration plan (implementation children)
 
-1. **Mesh LOD + ring annuli by default** — promote the spike to
-   always-on; delete the ring shader's analytic occlusion discard.
+1. **Mesh LOD + ring annuli by default** — DONE: the mesh layer's
+   group lives in the pass scene from construction, its shaders carry
+   standard depth only, and the analytic occlusion discard is gone.
 2. **Planet billboard members + host star mirror draw; full main-pass
    member suppression** (extend the sentinel to collapse disc + glow
    + core mask for members); delete corrupt/restore.
@@ -258,14 +263,13 @@ mesh ray-sphere occlusion, iOccluder/familyOccluders).
 Each step is independently shippable and visually verifiable; the
 order minimises the window where two occlusion mechanisms coexist.
 
-## Spike (current wiring)
+## Current wiring
 
-`stellata.setLocalDepthPassEnabled(true)` (dev console) reparents the
-planet mesh LOD (`PlanetMeshLayer.group` — spheroid meshes + ring
-annuli) into the pass scene, flips `LOCAL_DEPTH_PASS` on its
-materials, and skips the ring shader's analytic occlusion discard so
-ring↔body ordering runs on the bracket z-buffer alone. Perf label:
-`gpu.localDepth`.
+The shell registers the planet mesh LOD as a cluster at construction
+(`PlanetMeshLayer.group` parked in the pass scene;
+`collectSpheres` reports mesh-visible bodies) and calls
+`localDepthPass.render` after every main render — a no-op frame when
+no body is in mesh range. Perf label: `gpu.localDepth`.
 
 Smoke (Saturn + moons): focus Saturn, scrub time; check ring↔body
 occlusion incl. the oblate limb (the analytic path's polar-gap bug

@@ -18,9 +18,9 @@ themselves.
   per-layer update / monochrome / recenter / dispose fan-outs.
 - `local-depth/` — the bracketed local depth pass: camera-relative
   depth slices giving close bodies (moons, rings, binary pairs) true
-  z-buffer occlusion the main pass's log depth cannot. Currently a
-  dev-flag spike over the planet mesh LOD; the design doc for the
-  full migration lives in its README.
+  z-buffer occlusion the main pass's log depth cannot. The planet
+  mesh LOD renders through it; the design doc for the remaining
+  migration steps lives in its README.
 - `camera/` — camera controllers split across `controls/`, `focus/`,
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
@@ -252,10 +252,11 @@ SVG mask (`constellation-figure/README.md`).
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | Galactic grid l/b labels                         | SVG     | source order (first SVG child)                     |       | [galactic/](galactic/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
+| Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
 | Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
 | Planet disc                                      | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
-| Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | `renderOrder: 2.81`                                |       | [solar-system/](solar-system/README.md) |
-| Planet spheroid mesh (close LOD)                 | WebGL   | `renderOrder: 2.8`                                 |       | [solar-system/](solar-system/README.md) |
 | Planet restore (depth-only)                      | WebGL   | `renderOrder: 2.5`                                 |       | [solar-system/](solar-system/README.md) |
 | Orbit rings                                      | WebGL   | `renderOrder: 2`                                   |       | [solar-system/](solar-system/README.md) |
 | Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       | [dust/](dust/README.md) |
@@ -303,9 +304,8 @@ rule of the three.js renderer determines order; opaque depth-write
 meshes establish the depth buffer that transparent passes test
 against.
 
-With the local-depth spike flag on
-(`stellata.setLocalDepthPassEnabled(true)`), the planet spheroid mesh
-and ring annulus rows leave this table: they render in a second,
-depth-cleared pass *after* the whole main stack, ordered by a
-bracketed standard-depth z-buffer instead of `renderOrder` — see
+The planet spheroid mesh + ring annulus rows sit above the local-depth
+boundary: they render in a second, depth-cleared pass *after* the
+whole main stack, ordered against each other by a bracketed
+standard-depth z-buffer rather than by main-scene `renderOrder` — see
 [local-depth/](local-depth/README.md).
