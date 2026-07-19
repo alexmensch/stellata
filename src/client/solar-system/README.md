@@ -51,6 +51,14 @@ src/client/solar-system/
                                   ecliptic→ICRS chain vs JPL Horizons
                                   RA/Dec frozen in data/horizons/, plus
                                   solstice/equinox mirror detectors.
+  moon-sky-truth.test.ts          Moon half of the corpus: every major
+                                  moon's parent-relative on-sky position
+                                  angle + separation vs Horizons at four
+                                  epochs — catches orbital-phase drift
+                                  (truncated mean motions, wrong frames).
+  texture-orientation.test.ts     Rendered IAU-orientation → texture-UV
+                                  chain vs Horizons sub-observer lon/lat
+                                  (pole-up, no mirror, prime meridian).
   time-readout.ts                 UTC readout display next to the time
                                   scrubber.
   planet-body-field.ts            Instanced planet-body renderer. Three-pass
@@ -66,8 +74,9 @@ src/client/solar-system/
                                   uHideIdx (one uniform shared by all
                                   five passes) hides the observe-anchor
                                   body via setHiddenInstance.
-  orbit-rings-layer.ts            Faint orbit rings in the host's orbital
-                                  plane.
+  orbit-rings-layer.ts            Faint orbit rings: host-centred planet
+                                  rings + parent-centred moon rings, built
+                                  from the system's live element source.
   planet-mesh-layer.ts            Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD.
   local-cluster.ts                SolarSystemCluster — per-frame local-
@@ -92,11 +101,19 @@ src/client/solar-system/
                                   prime meridian on the model clock) —
                                   see § Planet rotation.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
-                                  (Lambertian + Mallama phase factors).
-                                  Drives both the body field's disc/glow
-                                  sizing and the per-planet label gating.
-  phase-function.ts (+ test)      Lambertian + Mallama phase functions.
-                                  Pure helpers with vitest coverage.
+                                  (Lambertian + Mallama phase factors)
+                                  + hostIntensityScale (mesh-regime
+                                  host-distance lighting). Drives the
+                                  body field's disc/glow sizing and the
+                                  per-planet label gating.
+  phase-function.ts (+ test)      Lambertian + Mallama phase functions
+                                  + phaseRatioToLambert (mesh phase
+                                  scalar). Pure helpers with vitest
+                                  coverage.
+  body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math —
+                                  CPU mirror of the mesh shader's caster
+                                  loop, plus Io-transit / lunar-eclipse
+                                  search tests on the real ephemeris.
   planet-labels.ts                Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § below.
   heliopause.ts                   Sol's heliopause boundary as a translucent
@@ -126,7 +143,8 @@ satisfies:
 - `PlanetSystem` — host star catalog index, `planets` array,
   optional `positionsAt(t, out)` resolver writing 3 floats per planet
   in the host's local orbital-plane frame, optional
-  `orbitOrientations` for the orbit-ring renderer.
+  `orbitGeometryAt(t)` (live per-body ring geometry) for the
+  orbit-ring renderer.
 
 Sync probe: `hasPlanets(catalog, idx)` — currently hardwires "planets ⇔ Sol".
 Async resolver: `getPlanetSystem(catalog, idx)` returns the system or
@@ -153,17 +171,24 @@ by name so they have a single source of truth. Scope + citations in
 every interaction contract iterate that one array, so a moon inherits
 Target / focus / click / POI / hover / search as an ordinary body — no
 moon-specific path. `solPositionsAt` writes positions in `SOL_BODIES`
-order (planets first). Moon rotation elements (tidal-lock orientation)
-land with the texture work, where a map validates pole/prime-meridian;
-until then a moon uses the mesh's pole-fallback, invisible on an
-untextured near-spherical body.
+order (planets first). Every moon carries IAU rotation elements
+(`MOON_ROTATION_BY_NAME` in `rotation-elements-pure.ts`) — tidally
+locked, so each `Ẇ` equals the orbital mean motion (test-pinned
+against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 
 Orbital elements (`moon-ephemeris.ts`) are J2000 osculating, each
 referred to the plane JPL tabulates it against, with that plane's ICRS
 pole stored per moon (`refPoleRaDeg`/`refPoleDecDeg`): the local
-Laplace plane for most, Uranus's equator for the Uranian regulars,
-and the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
-not Earth's equator).
+Laplace plane for most, Uranus's equator for the Uranian regulars
+(the ORBIT-NORMAL pole — the antipode of the retrograde IAU spin
+pole; composing about the IAU pole mirrors every Uranian orbit), and
+the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
+not Earth's equator). Sidereal periods carry full published precision
+(a truncated mean motion scrambles phase within years), Triton models
+its slow node precession, and Mimas carries the Mimas–Tethys
+resonance libration — `moon-sky-truth.test.ts` pins all of it against
+frozen Horizons truth, including a present-day epoch where phase
+drift is at its most visible.
 
 `moonOffsetEcliptic(elem, t, out)` is the resolver: a Kepler solve in
 the moon's reference plane (shared `orbitalStateToCartesian` core with
@@ -217,15 +242,14 @@ orbital-plane orientation quaternion. Sol's quaternion is the J2000
 obliquity rotation; future exoplanet hosts (`bk5`) get a galactic-
 plane-aligned default per the 3re.8 rule below.
 
-Per-`t` cache granularity is 60 seconds. At billboarded-disc pixel
-scale, sub-minute planet motion is invisible — Mercury moves ~3e-5 rad
-seen from Earth over 60 s, well below pixel resolution at any zoom we
-afford. The cache key is `t / CACHE_GRANULARITY_SEC` floored, so
-multiple frames within the same minute reuse the same `Vec3` triplet.
-Under scrubber fast-forward the sim-time step per frame quickly
-exceeds the bucket, so the cache simply misses every frame and the
-positions stay smooth; reducing the granularity finer is just a
-bucketisation change if ever needed.
+Positions recompute at every distinct `t` — the single-slot cache is
+keyed on exact `t` and only collapses the several same-frame consumers
+(body field, focal ride, overlays) into one Kepler solve per frame.
+The former 60-second bucket was reasoned against billboarded-disc
+pixel scale ("sub-minute motion is invisible"); mesh-LOD close viewing
+invalidated that premise — a resolved disc visibly snapped position
+once a minute — so the bucket is gone. Nine Kepler solves per frame is
+noise next to the 18 moon solves that already ran unbucketed.
 
 ## Time `t` and the readout
 
@@ -351,12 +375,15 @@ Planet rendering splits across two layers (stellata-3re.15):
 - **`orbit-rings-layer.ts`** — per-host orbit-ring layer. Geometry
   rebuilds whenever the focused star's PlanetSystem changes; per-frame
   tick drives the pixel-gap visibility heuristic. Representational
-  only — rings hide when the host loses focus. The ring group rides
-  the host's live renderer-local position (fed each frame from
-  `PlanetBodyField.getHostLocalPositionInto`), and the pixel-gap
-  heuristic measures camera-to-host distance — under planet focus the
-  floating origin sits on the planet, so the host is NOT at the local
-  origin.
+  only — rings hide when the host loses focus. Each ring rides its
+  live centre (the host's renderer-local position, fed each frame from
+  `PlanetBodyField.getHostLocalPositionInto`) through the anchored-line
+  scheme in `../util/orbit-line.ts`: float64 centre-relative master
+  verts, float32 GPU buffer baked renderer-local and rebaked on centre
+  drift — under planet focus the floating origin sits on the planet,
+  the host is NOT at the local origin, and centre-relative float32
+  verts would jitter by hundreds of km under camera motion. The
+  pixel-gap heuristic measures camera-to-host distance.
 
 **True-eclipse dim (stellata-2f6.4).** A planet crossing behind its
 host's *physical disc* (superior conjunction inside the host's
@@ -366,7 +393,12 @@ camera-anywhere geometry the binaries eclipse photometry runs
 the shared anti-strobe blend helpers). `PlanetBodyField.update`
 evaluates each in-range host's planets per frame (the pair-relative
 offset is `iLocalRel` itself — small values, no large-position
-differencing) and writes the per-instance `iEclipseDim` attribute;
+differencing) and writes the per-instance `iEclipseDim` attribute.
+A moon composes a second, multiplicative dim: the same lens math from
+the MOON's viewpoint with the parent planet as occluder of the host
+disc — the visible host fraction IS the moon's illumination, so a
+lunar-style eclipse darkens the moon continuously through the
+penumbra (search-tested against a year of real ephemeris);
 the vertex shader folds it into appMag in the **glow pass only**,
 mirroring the star pipeline's fold. A FULL eclipse writes exactly 0
 and the shader collapses the quad — a floored +7.5 mag residual is
@@ -477,7 +509,43 @@ occluded while the visual handoff happens.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; no ambient term, so the night
-  side is black (physically honest).
+  side is black (physically honest). Three scalars refine it, all
+  CPU-computed per frame from vitest-pinned pure helpers:
+  - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
+    (`phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
+    the disc-integrated output to the body's measured Mallama curve —
+    Venus's forward-scattered crescent brightens where the data says.
+    A pure function of phase angle (1 at α = 0); an appMag match was
+    rejected: it depends on viewer distance and blows out on approach.
+  - `uLitIntensity` (`perceptual-magnitude.ts:litIntensity`) —
+    host-distance irradiance on a quarter-power display compression
+    (`hostIntensityScale`: reference 1 AU ⇒ Earth = 1, Mercury ~1.6×
+    clamped, Neptune ~0.18×) composed with the magnitude slider as a
+    camera-sensitivity exposure — the threshold flux ratio
+    `10^((maxAppMag − naked-eye)/2.5)` under the same quarter-power
+    law, so turning sensitivity up brightens a dim Neptune surface in
+    step with the star field and exposure is exactly 1 at the
+    naked-eye default. The product keeps the 1.6 LDR ceiling but no
+    floor (low sensitivity fades surfaces toward black). Still no
+    viewer-distance term, so approach can't blow it out; the ring
+    annulus multiplies the same scalar so ring↔body contrast is
+    preserved. Body-kind-agnostic: planets, moons, and future lit
+    bodies all read the one scalar the mesh layer computes.
+  - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
+    half-width carrying twilight past the geometric terminator on
+    atmospheric bodies (Venus 0.08 widest; Titan the one moon with a
+    band; undefined = airless hard cut).
+- **Inter-body shadows**: each drawn body carries up to 8 view-space
+  caster spheres (`uCasters` — a moon's parent; a planet's moons); the
+  fragment shader attenuates the reflected term when the ray toward
+  the sun intersects one, with a penumbra half-width of
+  `distance × uSunAngRad` (the host's angular disc), so a Galilean
+  shadow transit reads as a soft-edged disc on Jupiter and the
+  antumbral case falls out naturally. CPU mirror + transit search
+  tests in `body-shadow-pure.ts`. Analytic because bodies at
+  planet-scale separations share one log-depth bucket in any shadow
+  map the main pass could render — and the local pass's z-buffer
+  orders camera rays, not sun rays.
 - **Earth night lights** (stellata-2f6.14): `Planet.hasNightTexture`
   lazy-loads the `<body>-night.jpg` companion (Black Marble) with the
   day map; the shader adds it as an *emissive* term (no limb
@@ -529,12 +597,20 @@ pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
 `W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
 Cartographic Coordinates and Rotational Elements 2015 report
 (Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`. The
-sub-degree periodic nutation/precession terms are dropped: at render
-scale they're invisible (largest is Neptune's ±0.7° pole nod), and
-the linear pole rates already carry the visually meaningful part
-(Earth's axial precession drifts the pole ~30° across the model-clock
-window). `t` is treated as TDB via `tToJDE` — the ~69 s UTC↔TDB gap
-is ~0.3° of Earth spin, accepted repo-wide.
+periodic nutation/precession terms are dropped, with two caveats:
+Mars's pck linear row is incomplete WITHOUT its ~71-kyr slow terms
+(1.55° of pole Dec, 0.58° of W) — those are folded into the table as
+a J2000 linearisation (see the MARS_ROTATION comment) — and the
+dropped short-period librations are not all sub-degree (Moon E1
+terms ~3.9°, Europa ~1°, Neptune's ±0.7° pole nod; follow-up bead
+filed). The linear pole rates carry the visually meaningful secular
+part (Earth's axial precession drifts the pole ~30° across the
+model-clock window). `t` is treated as TDB via `tToJDE` — the ~69 s
+UTC↔TDB gap is ~0.3° of Earth spin, accepted repo-wide.
+`texture-orientation.test.ts` pins the whole orientation → texture-UV
+chain (pole-up, no mirror, prime meridian) against frozen JPL
+Horizons sub-observer lon/lat for Mars, Ganymede, and Io
+(`data/horizons/sub-observer-truth.tsv`).
 
 The mesh layer composes body→ICRS as `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`
 (the IAU convention: body +z = pole, +x = prime meridian, W measured
@@ -548,11 +624,12 @@ pole = host orbital-plane normal with an arbitrary fixed meridian.
 `RotationElements.mapCenterLonDeg` is texture metadata riding the
 same table: the east longitude at the horizontal centre of the
 body's equirect map, added to the spin term so texture features land
-on their true longitudes. All shipped maps are centred on 0° except
+on their true longitudes. Planet maps are centred on 0° except
 Pluto (PIA11707 is centred on ~180°E — Sputnik Planitia at map
-centre). Gas-giant and Venus cloud maps are epoch snapshots of
-rotating cloud decks, so their longitude alignment is inherently
-arbitrary; 0 is used.
+centre); moon maps are centred on 180° except the Moon and Io (0°) —
+see `data/textures/README.md` § Artifact contract. Gas-giant and
+Venus cloud maps are epoch snapshots of rotating cloud decks, so
+their longitude alignment is inherently arbitrary; 0 is used.
 
 `planet-labels.ts` draws per-body-anchored SVG labels (planets **and**
 moons) above the canvas. The label engine is independent of the
@@ -561,25 +638,41 @@ system is attached and the detail cycle permits `planetLabels` (floor
 `all`), and are hidden in chart mode so the chart-mode glyph contract
 isn't doubled up (`../scene/README.md` § Detail-level declutter cycle).
 
-Per-body resolvability gate: a **planet** label tracks its orbit ring
+Per-body resolvability gate: every label tracks its orbit ring
 (`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the
-body is floor-clamped sub-pixel, so the label would anchor to nothing). A
-**moon** has no host-centred ring, so it tracks its own physical disc
-size (`physicalPlanetSizePx ≥ MOON_LABEL_MIN_DISC_PX`) — a moon collapsed
-toward its parent's dot drops its label rather than stacking on it. When
-parent-centred moon rings land (a later layer) moons fold back onto the
-same `isOrbitRingVisible` path and the asymmetry goes away.
+body is floor-clamped sub-pixel, so the label would anchor to nothing).
+Planets gate on their host-centred ring, moons on their parent-centred
+ring — a moon collapsed toward its parent's dot drops its ring (and so
+its label) rather than stacking on the parent.
 
 ## Orbit rings
 
-The orbit-ring layer (`orbit-rings-layer.ts`) draws each planet's
-orbit as an ellipse with the host star at one focus. Geometry:
-`b = a · √(1 − e²)`, focal offset `c = a · e`. The perihelion is placed
-along the local +x axis as a placeholder; per-planet
-longitude-of-perihelion landed alongside Standish elements in 3re.13.
+The orbit-ring layer (`orbit-rings-layer.ts`) draws every body's orbit
+as an ellipse with its centre body at one focus — the host star for a
+planet, the parent planet for a moon (the moon ring rides its parent's
+live host-relative offset each frame and lies on the moon's tabulated
+reference plane, rotated to the ecliptic by the same pole convention
+the moon resolver applies — parity vitest-pinned).
+
+**Geometry comes from `PlanetSystem.orbitGeometryAt(t)` — the SAME
+element source that positions the bodies** (Sol: live Standish
+elements for planets, `MOON_ELEMENTS` for moons), never the
+display-only `Planet.semiMajorAxisAu`/`.eccentricity` fields. The two
+tables were once unreconciled and rings visibly missed their bodies.
+Host-centred geometry re-derives whenever its build `t` ages past
+`RING_GEOMETRY_MAX_AGE_S` (one sim-day), so time scrubbing keeps ring
+orientation locked to the secular element drift the body positions
+follow; there is no attach-time wall-clock snapshot. Hosts without an
+element source fall back to `defaultOrbitGeometry` (static a/e, flat
+on the host plane).
 
 Ring visibility is gated on an angular-separation heuristic so
 distant host stars don't spam invisible rings into the framebuffer.
+The pixel-gap test runs per centre body (host rings gap against each
+other; each parent's moon rings form their own group measured at the
+parent's camera distance), and every ring additionally needs its own
+radius above the threshold — the floor that suppresses a lone
+sub-pixel ring, e.g. a single-moon parent seen from across the system.
 Orbit rings + the heliopause shell are also declutter-cycle elements
 (floor `representational`) — `OrbitRingsLayer.setPermitted` /
 `Heliopause.setPermitted` AND into `group.visible` alongside the existing
@@ -599,10 +692,10 @@ Per the 3re.8 design rule:
   the galactic plane gives a consistent visual "this star has
   planets" cue without implying a measured orientation we don't have.
 
-The per-host quaternion is composed once at `getPlanetSystem` attach
-time and reused for both the body positions and the ring renderer.
-Ring renderer composes `Rz(Ω) · Rx(I) · Rz(ω)` per planet (from the
-Sol-only `orbitOrientations` array, when present) before the
+The per-host quaternion is composed once at attach time and reused for
+both the body positions and the ring renderer. The ring renderer
+composes `Rz(Ω) · Rx(I) · Rz(ω)` per body from `orbitGeometryAt(t)`
+(plus the reference-plane → ecliptic rotation for a moon) before the
 host-plane → ICRS rotation, so rings line up with the body positions
 emitted by `positionsAt`.
 

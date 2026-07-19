@@ -19,6 +19,7 @@ export function isHostLocallyActive(
 }
 
 interface RingExtentPlanet {
+  name: string;
   parentName?: string;
   semiMajorAxisAu: number;
   eccentricity: number;
@@ -36,4 +37,27 @@ export function ringExtentRadiusPc(planets: readonly RingExtentPlanet[]): number
     if (apo > maxApoapsisAu) maxApoapsisAu = apo;
   }
   return maxApoapsisAu * AU_PC * RING_EXTENT_MARGIN;
+}
+
+/** Parent-centred moon-ring extents: parent index (into `planets`) →
+ *  the largest moon apoapsis (pc) × RING_EXTENT_MARGIN, one entry per
+ *  moon-parenting body — the bracket spheres that keep drawn moon rings
+ *  inside the local depth pass. */
+export function moonRingExtentsPc(
+  planets: readonly RingExtentPlanet[],
+): Map<number, number> {
+  const out = new Map<number, number>();
+  let indexByName: Map<string, number> | null = null;
+  for (const planet of planets) {
+    if (!planet.parentName) continue;
+    if (!indexByName) {
+      indexByName = new Map(planets.map((p, i) => [p.name, i]));
+    }
+    const parentIdx = indexByName.get(planet.parentName);
+    if (parentIdx === undefined) continue;
+    const apoPc =
+      planet.semiMajorAxisAu * (1 + planet.eccentricity) * AU_PC * RING_EXTENT_MARGIN;
+    if (apoPc > (out.get(parentIdx) ?? 0)) out.set(parentIdx, apoPc);
+  }
+  return out;
 }

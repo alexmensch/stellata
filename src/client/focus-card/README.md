@@ -103,7 +103,10 @@ so the whole unit stays card-sized regardless of pin count.
   `OrbitDescriptor` (`../solar-system/orbit-descriptor.ts`): a planet
   reads its host star + solar-mass period (AU / years); a moon reads its
   parent planet + parent-GM period (km / days) and labels as a moon —
-  no host-star reach or solar-mass assumption in the provider.
+  no host-star reach or solar-mass assumption in the provider. A
+  moon-parenting planet closes with a standard 'Moons' row, one name
+  per line — the 'Known companions' shape (the hover card shows the
+  capped comma roster via `../format/moon-list-format.ts`).
 - `cloud-focus-provider.ts` — tier-2 cloud rows. Clouds are not a
   wired focus target while the layer is shelved
   (`../molecular-clouds/README.md`); the provider exists to satisfy

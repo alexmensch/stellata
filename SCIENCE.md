@@ -219,14 +219,27 @@ enough to see it.
   1989 Voyager appearance with a reconstructed north polar region;
   Mercury's monochrome mosaic is tinted to its near-neutral
   gray-brown visible appearance and Pluto's un-imaged southern band
-  is filled with its representative disc colour (per-body colour
+  is filled with the map's feathered mean colour (per-body colour
   rationale in data/textures/README.md § Colour fidelity).
-- **IAU planet rotation elements** (pole RA/Dec + prime meridian per
-  body): IAU WG on Cartographic Coordinates and Rotational Elements
-  2015 report (Archinal et al. 2018,
-  https://doi.org/10.1007/s10569-017-9805-5), values as distributed
-  in NAIF `pck00011.tpc`; linear terms only (see
-  `docs/science-solar-system.md` § Planet rotation). Table in
+- **Moon surface maps** (13 of the 18 major moons, retrieved
+  2026-07-19): NASA SVS CGI Moon Kit (LROC WAC) for the Moon; USGS
+  Galileo/Voyager global mosaics for the Galileans (Io + Ganymede in
+  colour; Europa + Callisto grayscale, tinted); USGS Cassini ISS
+  938 nm mosaic for Titan (tinted to the visible haze orange);
+  Schenk/LPI 2014 Cassini enhanced-colour mosaics (PIA18434–18439)
+  for the mid-sized Saturnians, chroma-halved toward their true
+  near-neutral ice tones; Schenk's Voyager 2 mosaic (PIA18668) for
+  Triton — all public domain. The Uranian moons ship texture-less
+  (Voyager southern-hemisphere coverage only). Per-file provenance
+  in `data/textures/src/README.md`.
+- **IAU rotation elements** (pole RA/Dec + prime meridian per body,
+  the nine planets AND the 18 major moons): IAU WG on Cartographic
+  Coordinates and Rotational Elements 2015 report (Archinal et al.
+  2018, https://doi.org/10.1007/s10569-017-9805-5), values as
+  distributed in NAIF `pck00011.tpc`; linear terms only (see
+  `docs/science-solar-system.md` § Planet rotation). Every moon is
+  tidally locked — its Ẇ equals the orbital mean motion, test-pinned
+  against the JPL mean elements. Tables in
   `src/client/solar-system/rotation-elements-pure.ts`.
 
 > **Molecular cloud sources currently shelved.** Zucker et al. 2020 +

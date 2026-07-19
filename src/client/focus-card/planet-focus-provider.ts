@@ -35,6 +35,10 @@ export interface PlanetFocusProviderConfig {
   cameraDistancePc: (idx: number) => number | null;
   /** Live apparent V mag from the camera (shader mirror). */
   appMagFor: (idx: number) => number | null;
+  /** The body's moon names in semi-major-axis order (empty for moons
+   *  and moonless bodies) — same source the hover card reads; the
+   *  focus card shows the uncapped list. */
+  moonNamesOf: (idx: number) => readonly string[];
 }
 
 export function createPlanetFocusProvider(
@@ -77,6 +81,12 @@ export function createPlanetFocusProvider(
           { label: 'Period', value: formatOrbitPeriod(orbit) },
           { label: 'Orbit', value: formatOrbitDistance(orbit) },
         );
+      }
+
+      // Standard row, one name per line — the 'Known companions' shape.
+      const moonNames = config.moonNamesOf(idx);
+      if (moonNames.length > 0) {
+        rows.push({ label: 'Moons', value: moonNames.join('\n') });
       }
 
       return { name: planet.name, identityLines, rows, lines: [] };

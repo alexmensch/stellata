@@ -1208,21 +1208,20 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('physicalPlanetSizePx is the true angular size, excluding the perceptual floor', () => {
+  it('planetHostRelPositionInto returns the raw iLocalRel offset', () => {
     const f = makeField();
     attach(f, 0, 1);
-    // Camera parked on the host, planet 1 AU out: the true disc is deeply
-    // sub-pixel, but the perceptual floor keeps the RENDERED dot at uSizeMin
-    // (=2 here). The physical measure must report the sub-pixel truth so the
-    // moon-label gate can tell a resolved disc from a floor-clamped dot.
-    const atHost = new THREE.Vector3(0, 0, 0);
-    const phys = f.physicalPlanetSizePx(0, atHost);
-    const expectedPhys = 2 * Math.atan((6000 * KM_PC) / AU_PC) * (600 / ((60 * Math.PI) / 180));
-    expect(Math.abs(phys - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
-    expect(phys).toBeLessThan(2);
-    expect(f.renderedPlanetSizePx(0, atHost)).toBeGreaterThanOrEqual(2);
-    // Unattached instance → 0.
-    expect(f.physicalPlanetSizePx(9, atHost)).toBe(0);
+    const rel = new THREE.Vector3();
+    expect(f.planetHostRelPositionInto(0, rel)).toBe(true);
+    const local = new THREE.Vector3();
+    const host = new THREE.Vector3();
+    f.planetLocalPositionInto(0, local);
+    f.getHostLocalPositionInto(0, host);
+    expect(rel.x).toBeCloseTo(local.x - host.x, 12);
+    expect(rel.y).toBeCloseTo(local.y - host.y, 12);
+    expect(rel.z).toBeCloseTo(local.z - host.z, 12);
+    // Unattached instance → false.
+    expect(f.planetHostRelPositionInto(9, rel)).toBe(false);
     f.dispose();
   });
 });
@@ -1309,6 +1308,84 @@ describe('PlanetBodyField true-eclipse dim', () => {
     expect(firstDecayed).toBeLessThan(1);
     // ...settled exactly at 1 after the filter converges.
     expect(f.eclipseDimForInstance(0)).toBe(1);
+    f.dispose();
+  });
+});
+
+describe('PlanetBodyField moon-in-parent-shadow dim', () => {
+  const PARENT_R_KM = 70000;
+  const MOON_ORBIT_KM = 400000;
+
+  // Parent at 1 AU on local +x, moon offset (dxKm, yKm) from the
+  // parent. The attach orientation rotates everything rigidly, so
+  // sun–parent–moon geometry survives; the camera parks perpendicular
+  // to the sun–moon line so the camera-occlusion dim stays silent.
+  function makeMoonField(dxKm: number, yKm: number): {
+    f: PlanetBodyField;
+    camera: THREE.PerspectiveCamera;
+  } {
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [
+        makePlanet({ name: 'P', semiMajorAxisAu: 1, radiusKm: PARENT_R_KM }),
+        makePlanet({
+          name: 'M',
+          parentName: 'P',
+          semiMajorAxisAu: (MOON_ORBIT_KM * KM_PC) / AU_PC,
+          radiusKm: 1737,
+        }),
+      ],
+      positionsAt: (_t, out) => {
+        out[0] = AU_PC;
+        out[1] = 0;
+        out[2] = 0;
+        out[3] = AU_PC + dxKm * KM_PC;
+        out[4] = yKm * KM_PC;
+        out[5] = 0;
+      },
+    };
+    const f = new PlanetBodyField(makeSharedUniforms());
+    f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    const moonPos = new THREE.Vector3();
+    f.planetLocalPositionInto(1, moonPos);
+    const camera = new THREE.PerspectiveCamera();
+    camera.position
+      .crossVectors(moonPos, new THREE.Vector3(0, 0, 1))
+      .normalize()
+      .multiplyScalar(5 * AU_PC);
+    return { f, camera };
+  }
+
+  it('a moon dead in the parent umbra dims to exactly 0', () => {
+    // Anti-sun side, on the sun–parent line: the parent (0.175 rad from
+    // the moon) swallows the whole solar disc (0.005 rad).
+    const { f, camera } = makeMoonField(MOON_ORBIT_KM, 0);
+    f.update(camera, 0, 0);
+    expect(f.eclipseDimForInstance(1)).toBe(0);
+    // The parent itself is not shadow-dimmed.
+    expect(f.eclipseDimForInstance(0)).toBe(1);
+    f.dispose();
+  });
+
+  it('a grazing geometry dims partially (penumbra)', () => {
+    // Moon placed so the parent's limb crosses the solar disc's centre:
+    // about half the sun is covered.
+    const angle = PARENT_R_KM / MOON_ORBIT_KM;
+    const { f, camera } = makeMoonField(
+      MOON_ORBIT_KM * Math.cos(angle),
+      MOON_ORBIT_KM * Math.sin(angle),
+    );
+    f.update(camera, 0, 0);
+    const dim = f.eclipseDimForInstance(1);
+    expect(dim).toBeGreaterThan(0.2);
+    expect(dim).toBeLessThan(0.8);
+    f.dispose();
+  });
+
+  it('a moon on the sunward side of its parent stays undimmed', () => {
+    const { f, camera } = makeMoonField(-MOON_ORBIT_KM, 0);
+    f.update(camera, 0, 0);
+    expect(f.eclipseDimForInstance(1)).toBe(1);
     f.dispose();
   });
 });

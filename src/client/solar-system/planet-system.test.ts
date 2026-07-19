@@ -7,6 +7,7 @@ import {
   SOL_PLANETS,
   getPlanetSystem,
   hasPlanets,
+  systemFamily,
   type Planet,
   type PlanetType,
 } from './planet-system';
@@ -243,5 +244,53 @@ describe('Planet / PlanetType type surface', () => {
     // Compile-time assertion — if this stops type-checking, the enum widened.
     const t: Planet = SOL_PLANETS[0];
     expect(t.name).toBeTruthy();
+  });
+});
+
+describe('terminatorSoftness seeds', () => {
+  const byName = new Map(SOL_BODIES.map((p) => [p.name, p]));
+  const w = (name: string) => byName.get(name)!.terminatorSoftness ?? 0;
+
+  it('airless bodies keep the hard cut (0 / undefined)', () => {
+    for (const name of ['Mercury', 'Pluto', 'Moon', 'Io', 'Europa', 'Triton']) {
+      expect(w(name)).toBe(0);
+    }
+  });
+
+  it('Venus carries the widest band; Earth and Titan share the next tier', () => {
+    expect(w('Venus')).toBe(0.08);
+    expect(w('Earth')).toBe(0.05);
+    expect(w('Titan')).toBe(0.05);
+    for (const name of ['Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']) {
+      expect(w(name)).toBeGreaterThan(0);
+      expect(w(name)).toBeLessThan(w('Earth'));
+    }
+  });
+});
+
+describe('systemFamily', () => {
+  it('maps every SOL body to its parent and children consistently', () => {
+    const family = systemFamily(SOL_BODIES);
+    expect(family.parentIdx.length).toBe(SOL_BODIES.length);
+    for (let i = 0; i < SOL_BODIES.length; i++) {
+      const body = SOL_BODIES[i];
+      if (body.parentName) {
+        expect(SOL_BODIES[family.parentIdx[i]].name).toBe(body.parentName);
+        expect(family.childIdxs[i]).toEqual([]);
+      } else {
+        expect(family.parentIdx[i]).toBe(-1);
+        for (const c of family.childIdxs[i]) {
+          expect(SOL_BODIES[c].parentName).toBe(body.name);
+        }
+      }
+    }
+    const jupiter = SOL_BODIES.findIndex((p) => p.name === 'Jupiter');
+    const saturn = SOL_BODIES.findIndex((p) => p.name === 'Saturn');
+    expect(family.childIdxs[jupiter].length).toBe(4);
+    expect(family.childIdxs[saturn].length).toBe(7);
+  });
+
+  it('memoises on the array identity', () => {
+    expect(systemFamily(SOL_BODIES)).toBe(systemFamily(SOL_BODIES));
   });
 });

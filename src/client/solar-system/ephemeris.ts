@@ -5,14 +5,6 @@ import { AU_PC, J2000_JD } from '../util/astronomy-constants';
 import { orbitalStateToCartesian } from '../util/kepler-solver';
 import { tToJDE } from './time';
 
-// Cache granularity for per-`t` recompute. Sub-minute planet motion at the
-// billboarded-disc pixel scale is invisible (Mercury moves ~3e-5 rad as
-// seen from Earth in 60s — ~8 arcsec, well below pixel resolution at any
-// zoom). Future animated time scrubbers that want smoother
-// motion can reduce this; the caller checks the bucket before uploading
-// to the GPU.
-const CACHE_GRANULARITY_SEC = 60;
-
 const DEG = Math.PI / 180;
 
 // JPL Table 2a — J2000 mean elements + Julian-century rates. Angles in
@@ -152,10 +144,15 @@ export interface Vec3 { x: number; y: number; z: number; }
 
 export type PlanetPositions = Record<PlanetName, Vec3>;
 
-// Cache: keyed by t-bucketed-to-CACHE_GRANULARITY_SEC, holds the same
-// PlanetPositions object reference across frames in the bucket. Single-
-// slot — planet positions are only ever queried for one `t` per frame.
-let cachedBucket: number | null = null;
+// Cache: keyed on exact `t`, holds the same PlanetPositions object
+// reference across same-`t` calls. Single-slot — planet positions are
+// only ever queried for one `t` per frame, so this collapses the
+// several per-frame consumers (body field, focal ride, overlays) into
+// one Kepler solve without quantising motion across frames. The former
+// 60-second bucket was reasoned against billboarded-disc pixel scale;
+// mesh-LOD close viewing (resolved discs at planet zoom) made the
+// bucket's position snap visible, so recompute follows `t` exactly.
+let cachedT: number | null = null;
 let cachedPositions: PlanetPositions | null = null;
 
 /** Heliocentric ecliptic position (AU) of a single planet at centuries-
@@ -184,14 +181,14 @@ export function planetEclipticAU(elem: ElementSet, T: number, out: Vec3): void {
 }
 
 /** Heliocentric ecliptic positions (parsecs) of the eight planets at
- *  Unix-seconds `t`. Returned object is cached per minute-bucket of `t`
- *  — successive frames within the bucket get the same reference. */
+ *  Unix-seconds `t`. Returned object is cached per exact `t` — repeat
+ *  calls within a frame get the same reference; any `t` advance
+ *  recomputes. */
 export function getPlanetPositions(t: number): PlanetPositions {
-  const bucket = Math.round(t / CACHE_GRANULARITY_SEC) * CACHE_GRANULARITY_SEC;
-  if (cachedBucket === bucket && cachedPositions !== null) {
+  if (cachedT === t && cachedPositions !== null) {
     return cachedPositions;
   }
-  const T = (tToJDE(bucket) - J2000_JD) / 36525;
+  const T = (tToJDE(t) - J2000_JD) / 36525;
   const out = {} as PlanetPositions;
   const tmp: Vec3 = { x: 0, y: 0, z: 0 };
   for (let i = 0; i < ELEMENTS.length; i++) {
@@ -202,7 +199,7 @@ export function getPlanetPositions(t: number): PlanetPositions {
       z: tmp.z * AU_PC,
     };
   }
-  cachedBucket = bucket;
+  cachedT = t;
   cachedPositions = out;
   return out;
 }
@@ -220,25 +217,35 @@ export interface OrbitOrientationRad {
   argPerihelion: number;
 }
 
-/** Per-planet orbit orientations at Unix-seconds `t`, in PLANET_ORDER.
- *
- *  The orbit-ring renderer reads this once per attach to align each
- *  ring with its actual orbital plane (inclination + node + perihelion
- *  direction); without it, all rings sit flat on the ecliptic and miss
- *  Mercury's 7° tilt and 77° perihelion offset entirely. Drift across
- *  ±3000 years is bounded (≲5°) and ignored — rings stay frozen at
- *  attach-time orientation for the rest of the session. */
-export function getPlanetOrbitOrientations(t: number): OrbitOrientationRad[] {
+/** One planet's orbit-ring geometry: secular-rate-applied a/e plus the
+ *  Rz(Ω)·Rx(I)·Rz(ω) orientation. */
+export interface PlanetOrbitShape {
+  readonly aAu: number;
+  readonly e: number;
+  readonly orientation: OrbitOrientationRad;
+}
+
+/** Per-planet orbit shapes at Unix-seconds `t`, in PLANET_ORDER — the
+ *  SAME evaluated elements `planetEclipticAU` positions the body with
+ *  (a/e with aDot/eDot applied, live-`t` node/inclination/perihelion),
+ *  so a ring built from a shape passes through its body by construction
+ *  at every `t`. The former attach-time snapshot desynced under time
+ *  scrubbing, and its ring a/e came from a second, rounded table. */
+export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
   const T = (tToJDE(t) - J2000_JD) / 36525;
-  const out: OrbitOrientationRad[] = [];
+  const out: PlanetOrbitShape[] = [];
   for (let i = 0; i < ELEMENTS.length; i++) {
     const e = ELEMENTS[i];
     const longnode = (e.longnode + e.longnodeDot * T) * DEG;
     const longperi = (e.longperi + e.longperiDot * T) * DEG;
     out.push({
-      inclination: (e.I + e.IDot * T) * DEG,
-      longAscNode: longnode,
-      argPerihelion: longperi - longnode,
+      aAu: e.a + e.aDot * T,
+      e: e.e + e.eDot * T,
+      orientation: {
+        inclination: (e.I + e.IDot * T) * DEG,
+        longAscNode: longnode,
+        argPerihelion: longperi - longnode,
+      },
     });
   }
   return out;
@@ -247,9 +254,9 @@ export function getPlanetOrbitOrientations(t: number): OrbitOrientationRad[] {
 /** Reset the per-`t` cache. Test-only — production callers never need
  *  this; the cache invalidates naturally as `t` advances. */
 export function _resetCacheForTests(): void {
-  cachedBucket = null;
+  cachedT = null;
   cachedPositions = null;
 }
 
 export type { ElementSet };
-export { ELEMENTS, J2000_JD, CACHE_GRANULARITY_SEC };
+export { ELEMENTS, J2000_JD };

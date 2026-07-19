@@ -4,8 +4,11 @@
 import * as THREE from 'three';
 import type { MemberSphere } from '../local-depth/slice-pure';
 import { KM_PC } from '../util/astronomy-constants';
+import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
+import { litIntensity } from './perceptual-magnitude';
+import { phaseAngleFor, phaseRatioToLambert } from './phase-function';
 import type { PlanetBodyField } from './planet-body-field';
-import type { Planet, PlanetRings } from './planet-system';
+import { systemFamily, type Planet, type PlanetRings } from './planet-system';
 import { meshFadeFromRatio, TEXTURE_PREFETCH_RATIO } from './mesh-crossfade';
 import {
   poleRaDecDegAt,
@@ -19,6 +22,44 @@ import ringsFrag from './planet-rings.frag.glsl?raw';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
+
+/** Geometry pole tilt: SphereGeometry's +Y pole (texture v = 1, the
+ *  image top) onto the body-frame +z the IAU chain treats as north. */
+export const POLE_TILT = new THREE.Quaternion().setFromAxisAngle(
+  X_AXIS,
+  Math.PI / 2,
+);
+
+const _iauTmpA = new THREE.Quaternion();
+const _iauTmpB = new THREE.Quaternion();
+
+/** IAU pole frame `Rz(90°+α0)·Rx(90°−δ0)` at model time `t` → `out`. */
+export function iauPoleQuat(
+  rot: RotationElements,
+  t: number,
+  out: THREE.Quaternion,
+): THREE.Quaternion {
+  const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
+  return out
+    .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
+    .multiply(_iauTmpA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)));
+}
+
+/** Full mesh orientation: the IAU body→ICRS composition
+ *  `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`, then POLE_TILT. The map-centre
+ *  offset rides the spin term so texture features land on their true
+ *  longitudes. Exported so tests pin the exact rendered composition
+ *  against external ephemeris truth. */
+export function iauMeshOrientationQuat(
+  rot: RotationElements,
+  t: number,
+  out: THREE.Quaternion,
+): THREE.Quaternion {
+  const spinDeg = spinDegAt(rot, t) + (rot.mapCenterLonDeg ?? 0);
+  return iauPoleQuat(rot, t, out)
+    .multiply(_iauTmpB.setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(spinDeg)))
+    .multiply(POLE_TILT);
+}
 
 interface RingEntry {
   mesh: THREE.Mesh;
@@ -54,14 +95,10 @@ export class PlanetMeshLayer {
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
   private readonly tmpSun = new THREE.Vector3();
-  private readonly tmpQuatA = new THREE.Quaternion();
-  private readonly tmpQuatB = new THREE.Quaternion();
+  private readonly tmpCaster = new THREE.Vector3();
+  private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatRing = new THREE.Quaternion();
   private readonly tmpQuatInv = new THREE.Quaternion();
-  private readonly poleTilt = new THREE.Quaternion().setFromAxisAngle(
-    X_AXIS,
-    Math.PI / 2,
-  );
 
   constructor(field: PlanetBodyField, textureBaseUrl: string) {
     this.field = field;
@@ -99,6 +136,13 @@ export class PlanetMeshLayer {
     this.group.visible = this.field.group.visible && !this.field.monochrome;
     if (!this.group.visible) return;
 
+    // camera.matrixWorldInverse is refreshed inside render(), AFTER
+    // this update — the stored value is one frame stale, so view-space
+    // sun and caster uniforms built from it swim against the surface
+    // under camera motion. Derive a fresh inverse here.
+    camera.updateMatrixWorld();
+    this.viewInverse.copy(camera.matrixWorld).invert();
+
     const shown = new Set<number>();
     const n = this.field.liveInstanceCount;
     for (let idx = 0; idx < n; idx++) {
@@ -127,7 +171,7 @@ export class PlanetMeshLayer {
 
       const hp = this.field.hostPlanetOf(idx);
       if (planet.rotation) {
-        this.applyIauOrientation(mesh, planet.rotation, t);
+        iauMeshOrientationQuat(planet.rotation, t, mesh.quaternion);
       } else {
         // Fallback for bodies without published elements: geometry
         // pole (+Y) → orbital-plane normal (host frame +Z) → ICRS via
@@ -136,28 +180,51 @@ export class PlanetMeshLayer {
           ? null
           : this.field.hostOrientationOf(hp.hostStarIdx);
         if (orientation) {
-          mesh.quaternion.copy(orientation).multiply(this.poleTilt);
+          mesh.quaternion.copy(orientation).multiply(POLE_TILT);
         }
       }
 
       // Host-star direction: world-frame first (the ring lighting
       // frame), then into view space for the terminator.
       let hasSun = false;
+      let dHpPc = 0;
       if (hp && this.field.getHostLocalPositionInto(hp.hostStarIdx, this.tmpHost)) {
         this.tmpSun.subVectors(this.tmpHost, this.tmpPlanet);
-        if (this.tmpSun.lengthSq() > 0) {
-          this.tmpSun.normalize();
+        dHpPc = this.tmpSun.length();
+        if (dHpPc > 0) {
+          this.tmpSun.divideScalar(dHpPc);
           hasSun = true;
         }
       }
+      const lit = hasSun ? litIntensity(dHpPc, this.field.getMaxAppMag()) : 1;
 
       if (entry.ring) {
-        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade);
+        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, lit);
       }
 
+      material.uniforms.uLitIntensity.value = lit;
+      material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
+        ? phaseRatioToLambert(
+            planet.phaseCoefficients,
+            phaseAngleFor(
+              this.tmpPlanet.x - camera.position.x,
+              this.tmpPlanet.y - camera.position.y,
+              this.tmpPlanet.z - camera.position.z,
+              this.tmpHost.x - camera.position.x,
+              this.tmpHost.y - camera.position.y,
+              this.tmpHost.z - camera.position.z,
+            ),
+          )
+        : 1;
+      material.uniforms.uCasterCount.value =
+        hasSun && hp ? this.writeCasters(material, hp) : 0;
+
       if (hasSun) {
-        this.tmpSun.transformDirection(camera.matrixWorldInverse);
+        this.tmpSun.transformDirection(this.viewInverse);
         (material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSun);
+        const hostRadiusPc = this.field.hostRadiusOf(hp!.hostStarIdx);
+        material.uniforms.uSunAngRad.value =
+          hostRadiusPc !== null ? hostRadiusPc / dHpPc : 0;
       }
 
       material.uniforms.uFade.value = fade;
@@ -192,32 +259,55 @@ export class PlanetMeshLayer {
     }
   }
 
-  /** `out` ← Rz(90°+α0)·Rx(90°−δ0): local +z lands on the body's IAU
-   *  pole in ICRS. */
-  private setIauPole(
-    out: THREE.Quaternion,
-    rot: RotationElements,
-    t: number,
-  ): THREE.Quaternion {
-    const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
-    return out
-      .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
-      .multiply(this.tmpQuatA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)));
+  /** Fill the material's uCasters array with view-space shadow spheres
+   *  for one drawn body — its parent when it is a moon, its moons when
+   *  it is a parent (moon-on-moon events are out of scope). Returns the
+   *  caster count. */
+  private writeCasters(
+    material: THREE.ShaderMaterial,
+    hp: { hostStarIdx: number; planetIdx: number },
+  ): number {
+    const ps = this.field.getAttachedPlanetSystem(hp.hostStarIdx);
+    if (!ps) return 0;
+    const family = systemFamily(ps.planets);
+    const casters = material.uniforms.uCasters.value as THREE.Vector4[];
+    const parentIdx = family.parentIdx[hp.planetIdx];
+    let count = 0;
+    if (parentIdx >= 0) {
+      count += this.writeCaster(casters, count, hp.hostStarIdx, parentIdx);
+    } else {
+      const children = family.childIdxs[hp.planetIdx];
+      for (let c = 0; c < children.length && count < MAX_SHADOW_CASTERS; c++) {
+        count += this.writeCaster(casters, count, hp.hostStarIdx, children[c]);
+      }
+    }
+    return count;
   }
 
-  /** IAU body→ICRS composition Rz(90°+α0)·Rx(90°−δ0)·Rz(W), then the
-   *  geometry pole tilt (+Y → body +z). The map-centre offset rides
-   *  the spin term so texture features land on their true longitudes. */
-  private applyIauOrientation(
-    mesh: THREE.Mesh,
-    rot: RotationElements,
-    t: number,
-  ): void {
-    const spinDeg = spinDegAt(rot, t) + (rot.mapCenterLonDeg ?? 0);
-    this.setIauPole(mesh.quaternion, rot, t)
-      .multiply(this.tmpQuatB.setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(spinDeg)))
-      .multiply(this.poleTilt);
+  /** Write one caster's view-space sphere into `casters[slot]`; returns
+   *  1 on success, 0 when the body isn't resolvable. */
+  private writeCaster(
+    casters: THREE.Vector4[],
+    slot: number,
+    hostStarIdx: number,
+    planetIdx: number,
+  ): number {
+    const flat = this.field.instanceIndexOf(hostStarIdx, planetIdx);
+    if (flat === null) return 0;
+    const body = this.field.planetAt(flat);
+    if (!body || !this.field.planetLocalPositionInto(flat, this.tmpCaster)) return 0;
+    this.tmpCaster.applyMatrix4(this.viewInverse);
+    casters[slot].set(
+      this.tmpCaster.x,
+      this.tmpCaster.y,
+      this.tmpCaster.z,
+      body.radiusKm * KM_PC,
+    );
+    return 1;
   }
+
+  /** `out` ← Rz(90°+α0)·Rx(90°−δ0): local +z lands on the body's IAU
+   *  pole in ICRS. */
 
   /** Pose + light the ring annulus: equatorial plane from the IAU
    *  pole (host orbital plane when elements are absent), sun and
@@ -232,6 +322,7 @@ export class PlanetMeshLayer {
     camera: THREE.PerspectiveCamera,
     hasSun: boolean,
     fade: number,
+    litIntensity: number,
   ): void {
     const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
     if (texState?.state !== 'ready' || !hasSun) {
@@ -239,7 +330,7 @@ export class PlanetMeshLayer {
       return;
     }
     if (planet.rotation) {
-      this.setIauPole(this.tmpQuatRing, planet.rotation, t);
+      iauPoleQuat(planet.rotation, t, this.tmpQuatRing);
     } else {
       const orientation = hp === null
         ? null
@@ -253,6 +344,7 @@ export class PlanetMeshLayer {
     ring.mesh.visible = true;
     ring.material.uniforms.uRingMap.value = texState.tex;
     ring.material.uniforms.uFade.value = fade;
+    ring.material.uniforms.uLitIntensity.value = litIntensity;
     ring.mesh.position.copy(this.tmpPlanet);
     ring.mesh.quaternion.copy(this.tmpQuatRing);
 
@@ -279,6 +371,14 @@ export class PlanetMeshLayer {
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
+        uPhaseScale: { value: 1 },
+        uLitIntensity: { value: 1 },
+        uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
+        uCasters: {
+          value: Array.from({ length: MAX_SHADOW_CASTERS }, () => new THREE.Vector4()),
+        },
+        uCasterCount: { value: 0 },
+        uSunAngRad: { value: 0 },
       },
       transparent: true,
       depthWrite: true,
@@ -314,6 +414,7 @@ export class PlanetMeshLayer {
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
+        uLitIntensity: { value: 1 },
       },
       transparent: true,
       depthWrite: false,

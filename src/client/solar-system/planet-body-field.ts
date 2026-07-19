@@ -2,7 +2,7 @@
 // src/client/solar-system/README.md § Planet rendering.
 
 import * as THREE from 'three';
-import type { Planet, PlanetSystem } from './planet-system';
+import { systemFamily, type Planet, type PlanetSystem } from './planet-system';
 import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
@@ -368,6 +368,12 @@ export class PlanetBodyField {
     }
   }
 
+  /** Current magnitude-slider cutoff — the sensitivity the mesh
+   *  layer's lit-surface exposure tracks. */
+  getMaxAppMag(): number {
+    return this.maxAppMag;
+  }
+
   /**
    * Per-frame ephemeris refresh + buffer upload. For each attached
    * host, skip the work entirely when the camera is past `cullDistance`
@@ -419,7 +425,14 @@ export class PlanetBodyField {
    *  host by (R_p/R_host)² — negligible, and the host is a star-pipeline
    *  instance this field doesn't own. The pair-relative offset is
    *  iLocalRel itself (small values, not a large-position difference),
-   *  so float32 carries it fine. */
+   *  so float32 carries it fine.
+   *
+   *  A moon additionally dims by its parent's shadow — the same lens
+   *  math evaluated from the MOON's viewpoint (primary = host, secondary
+   *  = parent planet): the visible fraction of the host disc IS the
+   *  moon's illumination factor, so a lunar-style eclipse darkens the
+   *  moon continuously through the penumbra. The two dims compose
+   *  multiplicatively (independent light losses). */
   private collectEclipseDimTargets(
     host: AttachedHost,
     cameraPos: Readonly<THREE.Vector3>,
@@ -427,9 +440,11 @@ export class PlanetBodyField {
     const losX = host.hostLocalPos.x - cameraPos.x;
     const losY = host.hostLocalPos.y - cameraPos.y;
     const losZ = host.hostLocalPos.z - cameraPos.z;
+    const family = systemFamily(host.ps.planets);
     for (let i = 0; i < host.count; i++) {
       const idx = host.startInstance + i;
       const base = idx * 3;
+      let dim = 1;
       const result = eclipseDimFromOffsets(
         losX, losY, losZ,
         this.bufs.localRel[base + 0],
@@ -439,8 +454,26 @@ export class PlanetBodyField {
         this.bufs.radius[idx],
       );
       if (result.front === 'primary' && result.dim < 1) {
-        this.dimTargets.set(idx, result.dim);
+        dim = result.dim;
       }
+      const parentIdx = family.parentIdx[i];
+      if (parentIdx >= 0) {
+        const pBase = (host.startInstance + parentIdx) * 3;
+        const shadow = eclipseDimFromOffsets(
+          -this.bufs.localRel[base + 0],
+          -this.bufs.localRel[base + 1],
+          -this.bufs.localRel[base + 2],
+          this.bufs.localRel[pBase + 0],
+          this.bufs.localRel[pBase + 1],
+          this.bufs.localRel[pBase + 2],
+          host.hostRadiusPc,
+          this.bufs.radius[host.startInstance + parentIdx],
+        );
+        if (shadow.front === 'secondary' && shadow.dim < 1) {
+          dim *= shadow.dim;
+        }
+      }
+      if (dim < 1) this.dimTargets.set(idx, dim);
     }
   }
 
@@ -598,6 +631,12 @@ export class PlanetBodyField {
     return this.hosts.get(hostStarIdx)?.orientation ?? null;
   }
 
+  /** Host star's physical radius (pc), or null when unattached — the
+   *  light source's disc for shadow penumbra and eclipse dims. */
+  hostRadiusOf(hostStarIdx: number): number | null {
+    return this.hosts.get(hostStarIdx)?.hostRadiusPc ?? null;
+  }
+
   /** (host, planet-within-host) for a flat instance index, or null when
    *  no attached host covers it. */
   hostPlanetOf(instanceIdx: number): { hostStarIdx: number; planetIdx: number } | null {
@@ -618,6 +657,21 @@ export class PlanetBodyField {
   planetAt(instanceIdx: number): Planet | null {
     const host = this.hostOfInstance(instanceIdx);
     return host ? host.ps.planets[instanceIdx - host.startInstance] : null;
+  }
+
+  /** Host-relative offset (the shader's iLocalRel — orientation-applied
+   *  orbital offset without the host position) into `out`. The orbit-
+   *  ring layer anchors a moon's parent-centred ring on it. */
+  planetHostRelPositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const base = instanceIdx * 3;
+    out.set(
+      this.bufs.localRel[base + 0],
+      this.bufs.localRel[base + 1],
+      this.bufs.localRel[base + 2],
+    );
+    return true;
   }
 
   /** Renderer-local position (host local + orientation-applied orbital
@@ -669,21 +723,6 @@ export class PlanetBodyField {
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
     if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
-  }
-
-  /** Physical (true angular-diameter) disc size in px, excluding the
-   *  perceptual brightness floor that keeps faint bodies visible as dots —
-   *  the "is this a resolved disc, not a floor-clamped point?" measure.
-   *  Unlike renderedPlanetSizePx it's independent of the disc-size filter,
-   *  so a distant body reads genuinely sub-pixel. 0 when unattached,
-   *  degenerate, or below the soft-taper kill. */
-  physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
-    const host = this.hostOfInstance(instanceIdx);
-    if (!host) return 0;
-    const i = instanceIdx - host.startInstance;
-    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
-    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
   }
 
   private hostOfInstance(instanceIdx: number): AttachedHost | null {

@@ -35,6 +35,14 @@ velocity-format.ts        spaceVelocity(vx, vy, vz) → { kms, lDeg,
                           ../galactic/galactic-coords.ts). The
                           formatter puts the heading on its own line
                           (consumers use white-space: pre-line).
+moon-list-format.ts       moonRosterText(names, maxNames?) → capped
+                          comma roster for the hover card's "Moons …"
+                          line (truncating to "+N more"). The focus
+                          card renders the same names as a standard
+                          'Moons' row, one per line (the 'Known
+                          companions' shape). Names come from
+                          moonNamesOf (solar-system/planet-system.ts)
+                          in semi-major-axis order on both tiers.
 star-companion-format.ts  Binary-role card lines, read from
                           binaries.bin: companionOfLines (secondary
                           "Orbits <A>" blocks with per-tier detail),

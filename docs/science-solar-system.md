@@ -58,9 +58,16 @@ exposes a planet-zoom affordance close enough for them to register.
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
 Rhea, Titan, Iapetus; Uranus's Miranda, Ariel, Umbriel, Titania,
 Oberon; and Neptune's Triton — carry J2000 osculating orbital elements
-from the JPL Solar System Dynamics planetary-satellite mean-elements
-table (https://ssd.jpl.nasa.gov/sats/elem/), in
-`src/client/solar-system/moon-ephemeris.ts`. Each moon's elements are
+in `src/client/solar-system/moon-ephemeris.ts`, from two sources: the
+Moon and the Galileans from the JPL Solar System Dynamics
+planetary-satellite mean-elements table
+(https://ssd.jpl.nasa.gov/sats/elem/); the Saturnians and Triton
+re-derived from JPL Horizons osculating ecliptic elements at J2000
+rotated into their reference planes, because the summary table's
+node/ω/M triplets for those systems are not in the frame its legend
+states (verified against Horizons state vectors). Sidereal periods are
+stored at full published precision — a 1e-4 relative truncation puts
+Io half an orbit off by 2026. Each moon's elements are
 referred to the plane JPL tabulates them against, and that plane's
 ICRS north pole is stored per moon so the resolver can rotate the
 orbit into the ecliptic: the local **Laplace plane** for most (its
@@ -70,9 +77,16 @@ for the Uranian regulars, and — uniquely — the **ecliptic** for the
 Moon, whose orbit tracks the ecliptic rather than Earth's equator (an
 equatorial reference would swing its inclination 18°–29° over the
 18.6-year nodal cycle). Triton is retrograde (i ≈ 157°). Node and
-periapsis precession rates are dropped — at planet-zoom render scale
-the frozen-J2000 orientation reads correctly over the model-clock
-window. Mean radii from NASA/JPL fact sheets; geometric albedos span
+periapsis precession rates are dropped except where the Horizons
+truth corpus showed them at on-sky-visible scale by 2026: Triton
+carries its ~675-yr node precession about the Laplace pole, and Mimas
+carries the ±43° / 71.8-yr Mimas–Tethys 4:2 resonance libration of
+its mean longitude (both fitted to the corpus and consistent with
+published values). Elsewhere the frozen-J2000 orientation reads
+correctly over the model-clock window;
+`src/client/solar-system/moon-sky-truth.test.ts` pins every moon's
+geocentric parent-relative position angle and separation against
+frozen Horizons truth at four epochs (data/horizons/). Mean radii from NASA/JPL fact sheets; geometric albedos span
 the near-unity icy surfaces (Enceladus ≈ 0.99, Mimas ≈ 0.96) to the
 dark carbonaceous ones (Callisto ≈ 0.22, Iapetus's leading hemisphere
 far darker still), in `MOON_PHYSICAL` alongside representative colours.

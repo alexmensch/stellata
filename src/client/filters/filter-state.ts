@@ -106,13 +106,18 @@ export interface MagPreset {
   sizeMaxArcsec: number;
 }
 
+/** Naked-eye limiting magnitude (Bortle-1 dark sky) — the app-default
+ *  sensitivity. Safe to import as a scalar where the MAG_PRESETS live
+ *  binding must not be captured at module load. */
+export const NAKED_EYE_LIMIT_MAG = 6.5;
+
 // Static portion of each preset — the magnitude limit and dynamic range
 // don't depend on the exaggeration constant. sizeMinArcsec / sizeMaxArcsec
 // are recomputed from the current K via computeMagPresets().
 const PRESET_BASE: Record<MagPresetName, { maxAppMag: number; sizeSpan: number }> = {
-  // Magnitudes: naked eye 6.5 (Bortle-1 dark sky); binoculars 10.5 (typical
-  // 7×50 dark sky); all 15 (matches the catalog/UI slider ceiling).
-  'naked-eye':  { maxAppMag: 6.5,  sizeSpan: 8 },
+  // Magnitudes: binoculars 10.5 (typical 7×50 dark sky); all 15
+  // (matches the catalog/UI slider ceiling).
+  'naked-eye':  { maxAppMag: NAKED_EYE_LIMIT_MAG, sizeSpan: 8 },
   'binoculars': { maxAppMag: 10.5, sizeSpan: 12 },
   'all':        { maxAppMag: 15,   sizeSpan: 17 },
 };

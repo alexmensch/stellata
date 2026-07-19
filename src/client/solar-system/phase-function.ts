@@ -89,18 +89,45 @@ export function alphaZeroPhaseFactor(coefs: PhaseCoefficients | undefined): numb
 }
 
 /**
+ * Phase angle α = ∠(viewer–planet–host) from displacement vectors.
+ * `(dvx, dvy, dvz)` is the viewer → planet displacement and
+ * `(dhx, dhy, dhz)` the viewer → host displacement (any consistent
+ * frame); the planet → host leg is the difference. Returns 0 if either
+ * leg has zero length (degenerate viewer/host/planet coincidence).
+ */
+export function phaseAngleFor(
+  dvx: number,
+  dvy: number,
+  dvz: number,
+  dhx: number,
+  dhy: number,
+  dhz: number,
+): number {
+  // vphHat = planet → viewer (= −view-space planet direction).
+  // hphHat = planet → host. Both normalised; cos α is the dot product.
+  const lenV = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
+  const lenHp = Math.sqrt(
+    (dhx - dvx) ** 2 + (dhy - dvy) ** 2 + (dhz - dvz) ** 2,
+  );
+  if (lenV <= 0 || lenHp <= 0) return 0;
+  const vphX = -dvx / lenV;
+  const vphY = -dvy / lenV;
+  const vphZ = -dvz / lenV;
+  const hphX = (dhx - dvx) / lenHp;
+  const hphY = (dhy - dvy) / lenHp;
+  const hphZ = (dhz - dvz) / lenHp;
+  const cosA = Math.max(-1, Math.min(1, vphX * hphX + vphY * hphY + vphZ * hphZ));
+  return Math.acos(cosA);
+}
+
+/**
  * Phase factor φ(α) given viewer→planet and viewer→host displacement
- * vectors. Computes α = ∠(viewer–planet–host) from the two vectors and
- * dispatches into Mallama (when a polynomial exists) or Lambertian (the
- * default fallback for Pluto + every exoplanet). Mirrors the
+ * vectors. Computes α via `phaseAngleFor` and dispatches into Mallama
+ * (when a polynomial exists) or Lambertian (the default fallback for
+ * Pluto + every exoplanet). Mirrors the
  * `if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg)` branch in
  * `planet.vert.glsl` exactly through the shared helpers above.
- *
- * The `(dvx, dvy, dvz)` vector is the viewer → planet displacement and
- * `(dhx, dhy, dhz)` is the viewer → host displacement (both in any
- * consistent frame); the planet → host leg is the difference. Returns 1
- * if either leg has zero length (degenerate viewer/host/planet
- * coincidence).
+ * Degenerate zero-length legs land at α = 0 ⇒ φ = 1.
  */
 export function phaseFactorFor(
   dvx: number,
@@ -111,22 +138,35 @@ export function phaseFactorFor(
   dhz: number,
   coefs: PhaseCoefficients | undefined,
 ): number {
-  // vphHat = planet → viewer (= −view-space planet direction).
-  // hphHat = planet → host. Both normalised; cos α is the dot product.
-  const lenV = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
-  const lenHp = Math.sqrt(
-    (dhx - dvx) ** 2 + (dhy - dvy) ** 2 + (dhz - dvz) ** 2,
-  );
-  if (lenV <= 0 || lenHp <= 0) return 1;
-  const vphX = -dvx / lenV;
-  const vphY = -dvy / lenV;
-  const vphZ = -dvz / lenV;
-  const hphX = (dhx - dvx) / lenHp;
-  const hphY = (dhy - dvy) / lenHp;
-  const hphZ = (dhz - dvz) / lenHp;
-  const cosA = Math.max(-1, Math.min(1, vphX * hphX + vphY * hphY + vphZ * hphZ));
-  const alpha = Math.acos(cosA);
+  const alpha = phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz);
   return coefs ? mallamaPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
+}
+
+/** Clamp bounds for `phaseRatioToLambert` — the thin-crescent regime is
+ *  where big ratios occur and it is cos-weighted dim, so the bound
+ *  limits LDR clipping without visibly flattening the curve. */
+export const PHASE_RATIO_MIN = 0.25;
+export const PHASE_RATIO_MAX = 4;
+
+/**
+ * φ_body(α) / φ_Lambert(α), clamped to [PHASE_RATIO_MIN, PHASE_RATIO_MAX]
+ * — the mesh-LOD lighting scalar that corrects the mesh's Lambert
+ * disc-integrated output to the measured phase curve. A pure function of
+ * phase angle (= 1 at α = 0 by construction, no distance term — an
+ * appMag match would blow out on approach). Bodies without coefficients
+ * return exactly 1. Past αmax both curves are anchor-scaled Lambert, so
+ * the ratio is evaluated at min(α, αmax) — also what keeps the
+ * denominator away from Lambert's α → π zero.
+ */
+export function phaseRatioToLambert(
+  coefs: PhaseCoefficients | undefined,
+  alphaRad: number,
+): number {
+  if (!coefs || coefs.alphaMaxDeg <= 0) return 1;
+  const a = Math.max(0, Math.min(Math.PI, alphaRad));
+  const aCap = Math.min(a, coefs.alphaMaxDeg / RAD_TO_DEG);
+  const ratio = mallamaPhaseFactor(coefs, aCap) / lambertianPhaseFactor(aCap);
+  return Math.min(PHASE_RATIO_MAX, Math.max(PHASE_RATIO_MIN, ratio));
 }
 
 // Per-planet coefficients from Mallama 2018 (Icarus 282). Each

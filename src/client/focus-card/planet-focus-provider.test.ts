@@ -39,6 +39,8 @@ function makeProvider(overrides: Partial<Parameters<typeof createPlanetFocusProv
       idx === 0 ? EARTH_ORBIT : idx === 1 ? JUPITER_ORBIT : idx === 2 ? EUROPA_ORBIT : null,
     cameraDistancePc: () => 0.5 * AU_PC,
     appMagFor: () => -3.86,
+    moonNamesOf: (idx) =>
+      idx === 1 ? ['Io', 'Europa', 'Ganymede', 'Callisto'] : [],
     ...overrides,
   });
 }
@@ -105,5 +107,16 @@ describe('planet focus-card provider', () => {
   it('returns empty content for an unattached instance', () => {
     const content = makeProvider().format(9);
     expect(content).toEqual({ name: '', identityLines: [], rows: [], lines: [] });
+  });
+
+  it('a moon-parenting planet carries a standard Moons row, one name per line', () => {
+    const content = makeProvider().format(1);
+    expect(rowValue(content.rows, 'Moons')).toBe('Io\nEuropa\nGanymede\nCallisto');
+    expect(content.lines).toEqual([]);
+  });
+
+  it('moonless bodies and moons carry no Moons row', () => {
+    expect(makeProvider().format(0).rows.find((r) => r.label === 'Moons')).toBeUndefined();
+    expect(makeProvider().format(2).rows.find((r) => r.label === 'Moons')).toBeUndefined();
   });
 });

@@ -5,7 +5,11 @@ import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
 import type { MemberSphere } from '../local-depth/slice-pure';
 import { KM_PC } from '../util/astronomy-constants';
-import { isHostLocallyActive, ringExtentRadiusPc } from './local-cluster-pure';
+import {
+  isHostLocallyActive,
+  moonRingExtentsPc,
+  ringExtentRadiusPc,
+} from './local-cluster-pure';
 import type { OrbitRingsLayer } from './orbit-rings-layer';
 import type { PlanetBodyField } from './planet-body-field';
 import type { PlanetMeshLayer } from './planet-mesh-layer';
@@ -89,6 +93,14 @@ export class SolarSystemCluster implements LocalCluster {
             distPc: dHost,
             radiusPc: ringExtentRadiusPc(host.ps.planets),
           });
+          for (const [parentIdx, radiusPc] of moonRingExtentsPc(host.ps.planets)) {
+            const flat = host.startInstance + parentIdx;
+            if (!this.field.planetLocalPositionInto(flat, this.tmpBody)) continue;
+            this.spheres.push({
+              distPc: this.tmpBody.distanceTo(camera.position),
+              radiusPc,
+            });
+          }
         }
         break;
       }

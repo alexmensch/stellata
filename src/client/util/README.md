@@ -18,7 +18,14 @@ build scripts, tests, and shader uniforms.
   primitives `makeOrbitLineLoop` / `makeOrbitLineSegments` +
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and
   the on-screen-size helpers `pixelsPerRadian` / `angularRadiusPx` the orbit
-  layers use for their pixel-size visibility gate.
+  layers use for their pixel-size visibility gate. Also the anchored-line
+  precision pair `bakeAnchoredLineVerts` / `trackAnchoredLine`: a loop
+  whose centre rides far from the floating origin (a host star's ring
+  under planet focus) keeps a float64 centre-relative master array and
+  bakes its float32 GPU buffer renderer-local, rebaking once the centre
+  drifts past `LINE_ANCHOR_MAX_DRIFT_PC` — otherwise the shader cancels
+  two large float32 quantities per vertex and the line visibly jitters
+  under camera motion at close framings (the Pluto-focus wobble).
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry). Drives canvas
   clicks in both camera modes.

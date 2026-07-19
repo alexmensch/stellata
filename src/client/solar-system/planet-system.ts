@@ -5,7 +5,7 @@
 import type { Catalog } from '../loaders/catalog-loader';
 import { AU_KM } from '../util/astronomy-constants';
 import {
-  getPlanetOrbitOrientations,
+  getPlanetOrbitShapes,
   getPlanetPositions,
   PLANET_ORDER,
   type OrbitOrientationRad,
@@ -32,6 +32,7 @@ import {
   JUPITER_ROTATION,
   MARS_ROTATION,
   MERCURY_ROTATION,
+  MOON_ROTATION_BY_NAME,
   NEPTUNE_ROTATION,
   PLUTO_ROTATION,
   type RotationElements,
@@ -57,13 +58,13 @@ export interface Planet {
   // (Kepler III), not the host star's, so a moon's focus-card period row
   // reads this rather than assuming solar mass.
   readonly gravParamGM?: number;
-  // Semi-major axis in AU. Real orbital phase comes from VSOP87
-  // ephemerides; placeholder positions use this alone.
+  // Display-only approximate semi-major axis (AU) and eccentricity:
+  // cull proxies, focus-card rows, placeholder layouts. Rendered ring
+  // geometry and body positions come from the live element source
+  // (`orbitGeometryAt` / `positionsAt`), never these fields — the two
+  // tables were once unreconciled and rings visibly missed their
+  // bodies (Mercury by ~6 body radii at J2000).
   readonly semiMajorAxisAu: number;
-  // Orbital eccentricity. The orbit-rings layer draws each ring as an
-  // ellipse with the host at one focus, using b = a·√(1−e²) and a
-  // focal offset c = a·e. Perihelion sits along local +x as a
-  // placeholder until VSOP87 longitude-of-perihelion lands.
   readonly eccentricity: number;
   readonly type: PlanetType;
   // Parent body's `name` when this body orbits a planet rather than the
@@ -93,6 +94,11 @@ export interface Planet {
   // with an arbitrary fixed meridian, the same convention shape as the
   // Lambertian phase fallback.
   readonly rotation?: RotationElements;
+  // Mesh-terminator softness half-width on dot(n, sunDir) — how far
+  // atmospheric scattering carries light past the geometric terminator.
+  // Undefined = 0 = airless hard cut. Perceptual seeds tuned at smoke,
+  // scaled to atmosphere density (Venus thickest).
+  readonly terminatorSoftness?: number;
   // True when a `<body>-night.jpg` emissive night-side companion map
   // ships alongside the day texture (Earth's Black Marble city
   // lights). The mesh renderer lazy-loads and blends it past the
@@ -130,14 +136,55 @@ export interface PlanetSystem {
    *  rotate into ICRS — Sol's ecliptic frame becomes ICRS via the
  * same quaternion that orients its orbit rings. */
   positionsAt?: (t: number, out: Float32Array) => void;
-  /** Optional per-planet orbital-frame orientation in the host's local
-   *  plane frame, indexed parallel to `planets`. The ring renderer
-   *  composes each entry's Rz(Ω)·Rx(I)·Rz(ω) before the host plane→ICRS
-   *  rotation, so rings line up with the body positions emitted by
-   *  `positionsAt` (which apply the same composition internally).
-   *  When absent, rings sit flat on the host plane with perihelion at
- * +x — the pre-placeholder behaviour. */
-  orbitOrientations?: readonly OrbitOrientationRad[];
+  /** Optional live orbit-ring geometry, indexed parallel to `planets`,
+   *  from the SAME element source `positionsAt` evaluates — so a ring
+   *  built from it passes through its body at every model time. When
+   *  absent the ring layer falls back to `defaultOrbitGeometry`
+   *  (static Planet a/e, flat on the host plane, perihelion at +x). */
+  orbitGeometryAt?: (t: number) => readonly BodyOrbitGeometry[];
+}
+
+/** Parent-relative Keplerian ring geometry for one body — the orbit-
+ *  ring layer's build input. */
+export interface BodyOrbitGeometry {
+  readonly aAu: number;
+  readonly e: number;
+  /** Rz(Ω)·Rx(I)·Rz(ω) in the body's element reference frame. */
+  readonly orientation: OrbitOrientationRad;
+  /** ICRS pole of the element reference plane when it is not the host
+   *  plane (a moon's Laplace / parent-equatorial plane). Omitted ⇒ the
+   *  elements are already host-plane-referenced (planets: ecliptic;
+   *  the Moon too). */
+  readonly refPoleRaDeg?: number;
+  readonly refPoleDecDeg?: number;
+  /** Index into `planets` of the centre body a moon orbits; null ⇒
+   *  the body orbits the host star. */
+  readonly parentIdx: number | null;
+}
+
+const ZERO_ORIENTATION: OrbitOrientationRad = {
+  inclination: 0,
+  longAscNode: 0,
+  argPerihelion: 0,
+};
+
+/** Ring-geometry fallback for hosts without a live element source
+ *  (future exoplanet shards): static Planet a/e, flat on the host
+ *  plane, perihelion at +x; a moon resolves its parent by name. */
+export function defaultOrbitGeometry(
+  planets: readonly Planet[],
+): BodyOrbitGeometry[] {
+  return planets.map((p) => {
+    const parentIdx = p.parentName
+      ? planets.findIndex((q) => q.name === p.parentName)
+      : -1;
+    return {
+      aAu: p.semiMajorAxisAu,
+      e: p.eccentricity,
+      orientation: ZERO_ORIENTATION,
+      parentIdx: parentIdx >= 0 ? parentIdx : null,
+    };
+  });
 }
 
 /** Sol's positionsAt — heliocentric ecliptic positions in parsecs, in
@@ -148,9 +195,8 @@ export interface PlanetSystem {
  *  Earth sits ~4700 km off-barycentre. The caller applies the single
  *  ecliptic→ICRS host quaternion to the whole vector, so composing the
  *  offset in the ecliptic frame here lands the moon at parent+offset in
- *  ICRS. Planets cache per-`t`-bucket inside getPlanetPositions; the moon
- *  Kepler solves run every call (cheap, and only reached at planet zoom
- *  where the field walks every frame regardless). */
+ *  ICRS. Planet and moon Kepler solves both run at every distinct `t`
+ *  (getPlanetPositions memoises same-`t` repeat calls only). */
 function solPositionsAt(t: number, out: Float32Array): void {
   const positions = getPlanetPositions(t);
   const planetCount = PLANET_ORDER.length;
@@ -210,6 +256,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.689,
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
+    terminatorSoftness: 0.08,
   },
   {
     name: 'Earth',
@@ -223,6 +270,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.434,
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
+    terminatorSoftness: 0.05,
     hasNightTexture: true,
   },
   {
@@ -236,6 +284,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.170,
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
+    terminatorSoftness: 0.02,
   },
   {
     name: 'Jupiter',
@@ -249,6 +298,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.538,
     phaseCoefficients: JUPITER_PHASE,
     rotation: JUPITER_ROTATION,
+    terminatorSoftness: 0.02,
   },
   {
     name: 'Saturn',
@@ -262,6 +312,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.499,
     phaseCoefficients: SATURN_PHASE,
     rotation: SATURN_ROTATION,
+    terminatorSoftness: 0.02,
     // Radial span of the shipped ring profile (data/textures/README.md
     // § Artifact contract) — D-ring inner edge to F-ring outer.
     rings: { innerRadiusKm: 74510, outerRadiusKm: 140390 },
@@ -281,6 +332,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.64, 0.85, 0.90],
     albedo: 0.488,
     rotation: URANUS_ROTATION,
+    terminatorSoftness: 0.03,
     rings: { innerRadiusKm: 41600, outerRadiusKm: 51300 },
   },
   {
@@ -294,6 +346,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.25, 0.37, 0.75],
     albedo: 0.442,
     rotation: NEPTUNE_ROTATION,
+    terminatorSoftness: 0.03,
     rings: { innerRadiusKm: 40900, outerRadiusKm: 63100 },
   },
   // Pluto — mean radius from New Horizons 2015 reconnaissance. Type
@@ -323,6 +376,7 @@ interface MoonPhysical {
   readonly albedo: number;
   readonly type: PlanetType;
   readonly colour: readonly [number, number, number];
+  readonly terminatorSoftness?: number;
 }
 
 // Physical properties for the 18 major moons. Mean radii from NASA/JPL
@@ -343,7 +397,9 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   { name: 'Tethys', parentName: 'Saturn', radiusKm: 531.1, albedo: 0.80, type: 'icy', colour: [0.80, 0.80, 0.80] },
   { name: 'Dione', parentName: 'Saturn', radiusKm: 561.4, albedo: 0.70, type: 'icy', colour: [0.75, 0.75, 0.74] },
   { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.78, 0.78, 0.77] },
-  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28] },
+  // Titan is the one moon with a dense atmosphere (1.5 bar N2 haze) —
+  // Earth-like terminator softness; every other in-scope moon is airless.
+  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28], terminatorSoftness: 0.05 },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 
   { name: 'Miranda', parentName: 'Uranus', radiusKm: 235.8, albedo: 0.32, type: 'icy', colour: [0.62, 0.62, 0.63] },
@@ -375,6 +431,8 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     type: m.type,
     albedo: m.albedo,
     colour: m.colour,
+    terminatorSoftness: m.terminatorSoftness,
+    rotation: MOON_ROTATION_BY_NAME.get(m.name),
   };
 });
 
@@ -402,6 +460,76 @@ const _moonOffset: Vec3 = { x: 0, y: 0, z: 0 };
 const _earthCentre: Vec3 = { x: 0, y: 0, z: 0 };
 const _moonAbs: Vec3 = { x: 0, y: 0, z: 0 };
 
+const DEG = Math.PI / 180;
+
+/** Sol's orbitGeometryAt — planets from the live Standish elements
+ *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS (J2000
+ *  osculating, no secular terms — constant in `t`, matching the
+ *  resolver that positions them), in SOL_BODIES order. */
+export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
+  const out: BodyOrbitGeometry[] = getPlanetOrbitShapes(t).map((s) => ({
+    ...s,
+    parentIdx: null,
+  }));
+  for (const { elem, parent } of MOON_COMPOSE) {
+    out.push({
+      aAu: elem.aKm / AU_KM,
+      e: elem.e,
+      orientation: {
+        inclination: elem.incDeg * DEG,
+        longAscNode: elem.nodeDeg * DEG,
+        argPerihelion: elem.periDeg * DEG,
+      },
+      refPoleRaDeg: elem.refPoleRaDeg,
+      refPoleDecDeg: elem.refPoleDecDeg,
+      parentIdx: PLANET_ORDER.indexOf(parent),
+    });
+  }
+  return out;
+}
+
+/** Parent/children index maps for a system's body list. */
+export interface SystemFamily {
+  /** Per body: index of its parent in `planets`, or -1 (orbits the host). */
+  readonly parentIdx: Int32Array;
+  /** Per body: indices of its moons in `planets` (empty when none). */
+  readonly childIdxs: readonly (readonly number[])[];
+}
+
+// Memoised on the planets-array identity, which is stable for a session
+// (SOL_BODIES; one lazily-built shard per future exoplanet host).
+const familyCache = new WeakMap<readonly Planet[], SystemFamily>();
+
+/** Parent/children maps for `planets` — moon↔parent resolution for
+ *  shadow casters, membership rosters, and ring extents. */
+export function systemFamily(planets: readonly Planet[]): SystemFamily {
+  let family = familyCache.get(planets);
+  if (family) return family;
+  const indexByName = new Map(planets.map((p, i) => [p.name, i]));
+  const parentIdx = new Int32Array(planets.length).fill(-1);
+  const childIdxs: number[][] = planets.map(() => []);
+  for (let i = 0; i < planets.length; i++) {
+    const parentName = planets[i].parentName;
+    if (!parentName) continue;
+    const p = indexByName.get(parentName);
+    if (p === undefined) continue;
+    parentIdx[i] = p;
+    childIdxs[p].push(i);
+  }
+  family = { parentIdx, childIdxs };
+  familyCache.set(planets, family);
+  return family;
+}
+
+/** Names of `planets[planetIdx]`'s moons in array (semi-major-axis)
+ *  order — the card-roster feed. Empty for moons and moonless bodies. */
+export function moonNamesOf(
+  planets: readonly Planet[],
+  planetIdx: number,
+): string[] {
+  return systemFamily(planets).childIdxs[planetIdx].map((i) => planets[i].name);
+}
+
 // Sync probe — does this star have a planet system at all?
 //
 // Currently hardwires "planets ⇔ Sol". When the exoplanet epic lands an
@@ -426,8 +554,6 @@ export async function getPlanetSystem(
     hostStarIdx: starIdx as number,
     planets: SOL_BODIES,
     positionsAt: solPositionsAt,
-    // Evaluated once at attach. Drift is sub-degree per millennium —
-    // the orbit-ring renderer keeps these frozen for the session.
-    orbitOrientations: getPlanetOrbitOrientations(Date.now() / 1000),
+    orbitGeometryAt: solOrbitGeometryAt,
   };
 }

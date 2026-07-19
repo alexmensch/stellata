@@ -847,7 +847,7 @@ export class Stellata implements FrameAnchor {
     // host-focus. Planet bodies live in PlanetBodyField and render
     // whenever inside the per-host cull distance regardless of focus.
     this.on('planetSystem', (ps) => {
-      this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex);
+      this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex, this.getT());
       this.heliopause.setVisible(ps !== null && ps.hostStarIdx === this.catalog.solIndex);
     });
     // Orbit paths rebuild on every focus mutation: the focused system's
@@ -1055,17 +1055,6 @@ export class Stellata implements FrameAnchor {
   private registerSceneLayers(): void {
     this.layers.register({
       update: (ctx) => {
-        const ps = this.focus.getFocusedPlanetSystem();
-        const hostPos = ps !== null
-          && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
-          ? this.tmpHostLocal : null;
-        this.orbitRingsLayer.update(ctx.camera, window.innerHeight, hostPos);
-      },
-      setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
-      dispose: () => this.orbitRingsLayer.dispose(),
-    });
-    this.layers.register({
-      update: (ctx) => {
         this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
         // Ride runs right after the field wrote this frame's positions,
         // mirroring the binary ride's placement after its orbit walk.
@@ -1081,6 +1070,32 @@ export class Stellata implements FrameAnchor {
         this.planetBodyField.dispose();
         this.planetMeshLayer.dispose();
       },
+    });
+    this.layers.register({
+      // AFTER the body field: a moon ring's centre is the parent's
+      // live iLocalRel — reading it before the field's walk left the
+      // rings one frame of sim-time behind the bodies, a visible lag
+      // under fast scrub.
+      update: (ctx) => {
+        const ps = this.focus.getFocusedPlanetSystem();
+        const hostPos = ps !== null
+          && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
+          ? this.tmpHostLocal : null;
+        this.orbitRingsLayer.update(
+          ctx.camera,
+          window.innerHeight,
+          hostPos,
+          ctx.t,
+          (planetIdx, out) => {
+            if (ps === null) return false;
+            const flat = this.planetBodyField.instanceIndexOf(ps.hostStarIdx, planetIdx);
+            return flat !== null
+              && this.planetBodyField.planetHostRelPositionInto(flat, out);
+          },
+        );
+      },
+      setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
+      dispose: () => this.orbitRingsLayer.dispose(),
     });
     this.layers.register({
       // After the field + rings updates it reads; before the main
