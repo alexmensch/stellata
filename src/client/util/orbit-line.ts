@@ -80,6 +80,63 @@ function orbitLineGeometry(points: Float32Array): THREE.BufferGeometry {
   return geom;
 }
 
+// Anchor drift beyond which trackAnchoredLine rebakes the float32
+// buffer. A near-camera vertex carries |drift| in its baked float32
+// value, so its worst rounding error is 2^-24 × drift ≈ 28 m at this
+// cap — sub-pixel at the tightest body framing in the app (a Mimas
+// park, ~500 km range). Raising the cap grows that error linearly.
+export const LINE_ANCHOR_MAX_DRIFT_PC = 1.5e-8;
+
+/** Bake anchor-relative float64 vertices into a renderer-local float32
+ *  buffer: `out[i] = master[i] + anchor`, summed in float64 so vertices
+ *  near the local origin keep sub-metre precision no matter how far the
+ *  anchor sits. */
+export function bakeAnchoredLineVerts(
+  master: Float64Array,
+  anchor: Readonly<THREE.Vector3>,
+  out: Float32Array,
+): void {
+  for (let i = 0; i < master.length; i += 3) {
+    out[i] = master[i] + anchor.x;
+    out[i + 1] = master[i + 1] + anchor.y;
+    out[i + 2] = master[i + 2] + anchor.z;
+  }
+}
+
+const _anchorDelta = new THREE.Vector3();
+
+/**
+ * Per-frame tracking for a line whose float32 position buffer is baked
+ * renderer-local about `bakedAnchor` (see `bakeAnchoredLineVerts`; a
+ * fresh line starts with anchor-relative float32 verts and
+ * `bakedAnchor = 0`). Sets `line.position` to the anchor drift so the
+ * loop follows its live centre exactly, and rebakes about the current
+ * anchor once the drift passes LINE_ANCHOR_MAX_DRIFT_PC.
+ *
+ * This is the line-primitive arm of the floating-origin discipline: a
+ * loop spanning AU-scale extents whose centre rides far from the local
+ * origin (a host star's ring under planet focus) otherwise cancels two
+ * large float32 quantities per vertex in the shader, and the rounding
+ * jitters with every modelview change while the camera moves.
+ */
+export function trackAnchoredLine(
+  line: THREE.Line,
+  master: Float64Array,
+  bakedAnchor: THREE.Vector3,
+  anchor: Readonly<THREE.Vector3>,
+): void {
+  _anchorDelta.copy(anchor).sub(bakedAnchor);
+  if (_anchorDelta.length() > LINE_ANCHOR_MAX_DRIFT_PC) {
+    const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+    bakeAnchoredLineVerts(master, anchor, attr.array as Float32Array);
+    attr.needsUpdate = true;
+    bakedAnchor.copy(anchor);
+    line.position.set(0, 0, 0);
+  } else {
+    line.position.copy(_anchorDelta);
+  }
+}
+
 // A loop or figure with the camera potentially inside it culls unreliably on
 // a bounding-sphere test; let the GPU clip per-vertex.
 function configureLinePrimitive<T extends THREE.Object3D>(line: T, renderOrder: number): T {

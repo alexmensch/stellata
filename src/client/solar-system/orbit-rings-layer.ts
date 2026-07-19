@@ -15,6 +15,8 @@ import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
+  bakeAnchoredLineVerts,
+  trackAnchoredLine,
   ORBIT_LINE_OPACITY,
   ORBIT_LINE_SEGMENTS,
   pixelsPerRadian,
@@ -56,7 +58,15 @@ interface PlanetRing {
   readonly planet: Planet;
   readonly line: THREE.LineLoop;
   readonly material: THREE.LineBasicMaterial;
+  // Centre-relative float64 vertices (the element-source truth); the
+  // line's float32 GPU buffer is baked renderer-local from these about
+  // `bakedCentre` (util/orbit-line.ts trackAnchoredLine).
+  readonly master: Float64Array;
   readonly verts: Float32Array;
+  readonly bakedCentre: THREE.Vector3;
+  // Live renderer-local centre this frame (host, or host + parent
+  // offset for a moon).
+  readonly centre: THREE.Vector3;
   // Index into ps.planets of the centre body (a moon's parent); null =
   // host-centred. A moon's line rides its parent's live host-relative
   // offset each frame; its visibility group measures camera→parent.
@@ -118,7 +128,7 @@ export function ringVisibility(
  * - `aPc` — semi-major axis in parsecs.
  * - `e`  — orbital eccentricity, in [0, 1).
  * - `segments` — number of points around the loop.
- * - `out` — float32 buffer of length `segments * 3` (xyz triples). The
+ * - `out` — buffer of length `segments * 3` (xyz triples). The
  *   ellipse is laid out in the local xy plane (z = 0); the caller
  *   rotates it into the host's orbital plane afterwards.
  */
@@ -126,7 +136,7 @@ export function buildEllipsePoints(
   aPc: number,
   e: number,
   segments: number,
-  out: Float32Array,
+  out: Float32Array | Float64Array,
 ): void {
   const b = aPc * Math.sqrt(1 - e * e);
   const c = aPc * e;
@@ -247,7 +257,7 @@ const _writeVec = new THREE.Vector3();
  * axis in pc (the visibility heuristic's characteristic size).
  */
 export function writeRingVerts(
-  verts: Float32Array,
+  verts: Float32Array | Float64Array,
   g: BodyOrbitGeometry,
   hostQuat: Readonly<THREE.Quaternion>,
 ): number {
@@ -283,7 +293,9 @@ export class OrbitRingsLayer {
   // focused. Sibling of `hidden` / `mono`.
   private permitted = true;
   private readonly tmpParentRel = new THREE.Vector3();
-  private readonly tmpCentre = new THREE.Vector3();
+  // Last host renderer-local position update() received; retained so a
+  // null feed (host not attached yet) keeps the rings where they were.
+  private readonly hostLocal = new THREE.Vector3();
 
   constructor() {
     this.group = new THREE.Group();
@@ -307,11 +319,11 @@ export class OrbitRingsLayer {
   setPlanetSystem(ps: PlanetSystem | null, solIndex: number, t: number): void {
     this.disposeRings();
     this.ps = ps;
-    // Fresh system: park at the origin until the first update() feeds
-    // the live host position — a star focus recentres the origin onto
-    // the host, so this is exact there and one-frame-stale at worst
-    // under planet focus.
-    this.group.position.set(0, 0, 0);
+    // Fresh system: centres park at the origin until the first update()
+    // feeds the live host position — a star focus recentres the origin
+    // onto the host, so this is exact there and one-frame-stale at
+    // worst under planet focus.
+    this.hostLocal.set(0, 0, 0);
     if (ps === null || ps.planets.length === 0) {
       this.group.visible = false;
       return;
@@ -323,8 +335,9 @@ export class OrbitRingsLayer {
     const geoms = ps.orbitGeometryAt?.(t) ?? defaultOrbitGeometry(ps.planets);
     for (let pIdx = 0; pIdx < ps.planets.length; pIdx++) {
       const g = geoms[pIdx];
-      const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
-      const semiMajorPc = writeRingVerts(verts, g, this.hostQuat);
+      const master = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
+      const semiMajorPc = writeRingVerts(master, g, this.hostQuat);
+      const verts = new Float32Array(master);
       const mat = makeOrbitLineMaterial(RING_COLOUR, ORBIT_LINE_OPACITY, true);
       const line = makeOrbitLineLoop(verts, mat, this.group.renderOrder);
       this.group.add(line);
@@ -332,7 +345,10 @@ export class OrbitRingsLayer {
         planet: ps.planets[pIdx],
         line,
         material: mat,
+        master,
         verts,
+        bakedCentre: new THREE.Vector3(),
+        centre: new THREE.Vector3(),
         parentIdx: g.parentIdx,
         semiMajorPc,
       });
@@ -352,7 +368,8 @@ export class OrbitRingsLayer {
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
       if (r.parentIdx !== null) continue;
-      r.semiMajorPc = writeRingVerts(r.verts, geoms[i], this.hostQuat);
+      r.semiMajorPc = writeRingVerts(r.master, geoms[i], this.hostQuat);
+      bakeAnchoredLineVerts(r.master, r.bakedCentre, r.verts);
       (r.line.geometry.getAttribute('position') as THREE.BufferAttribute)
         .needsUpdate = true;
     }
@@ -364,7 +381,7 @@ export class OrbitRingsLayer {
    * stay glued to the same centre the bodies orbit) — under planet
    * focus the floating origin sits on the PLANET, not the host, so the
    * host is generally NOT at the local origin. Pass null while the
-   * host isn't attached yet; the group then stays where it was.
+   * host isn't attached yet; the rings then stay where they were.
    *
    * `parentRelInto` supplies a body's live host-relative offset (the
    * field's iLocalRel) — a moon's ring rides its parent through it, and
@@ -383,30 +400,28 @@ export class OrbitRingsLayer {
       return;
     }
     this.group.visible = true;
-    if (hostLocalPos) this.group.position.copy(hostLocalPos);
+    if (hostLocalPos) this.hostLocal.copy(hostLocalPos);
     if (Math.abs(t - this.builtT) > RING_GEOMETRY_MAX_AGE_S) {
       this.refreshGeometry(t);
     }
 
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
-    const dHost = camera.position.distanceTo(this.group.position);
+    const dHost = camera.position.distanceTo(this.hostLocal);
     // The pixel-gap heuristic runs per centre body: host-centred rings
     // gap against each other; each parent's moon rings form their own
     // group measured at the parent's distance (key = parentIdx).
     const groups = new Map<number, { idxs: number[]; radii: number[] }>();
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
+      r.centre.copy(this.hostLocal);
       let dPc = dHost;
       if (r.parentIdx !== null) {
         if (!parentRelInto || !parentRelInto(r.parentIdx, this.tmpParentRel)) {
           r.line.visible = false;
           continue;
         }
-        r.line.position.copy(this.tmpParentRel);
-        dPc = this.tmpCentre
-          .copy(this.group.position)
-          .add(this.tmpParentRel)
-          .distanceTo(camera.position);
+        r.centre.add(this.tmpParentRel);
+        dPc = r.centre.distanceTo(camera.position);
       }
       const key = r.parentIdx ?? -1;
       let group = groups.get(key);
@@ -422,6 +437,12 @@ export class OrbitRingsLayer {
       for (let k = 0; k < g.idxs.length; k++) {
         this.rings[g.idxs[k]].line.visible = visible[k];
       }
+    }
+    // Position pass, after visibility so an invisible ring never pays a
+    // rebake. A ring flipping visible is positioned the same frame.
+    for (const r of this.rings) {
+      if (!r.line.visible) continue;
+      trackAnchoredLine(r.line, r.master, r.bakedCentre, r.centre);
     }
   }
 

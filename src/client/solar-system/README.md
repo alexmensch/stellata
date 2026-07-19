@@ -360,12 +360,15 @@ Planet rendering splits across two layers (stellata-3re.15):
 - **`orbit-rings-layer.ts`** — per-host orbit-ring layer. Geometry
   rebuilds whenever the focused star's PlanetSystem changes; per-frame
   tick drives the pixel-gap visibility heuristic. Representational
-  only — rings hide when the host loses focus. The ring group rides
-  the host's live renderer-local position (fed each frame from
-  `PlanetBodyField.getHostLocalPositionInto`), and the pixel-gap
-  heuristic measures camera-to-host distance — under planet focus the
-  floating origin sits on the planet, so the host is NOT at the local
-  origin.
+  only — rings hide when the host loses focus. Each ring rides its
+  live centre (the host's renderer-local position, fed each frame from
+  `PlanetBodyField.getHostLocalPositionInto`) through the anchored-line
+  scheme in `../util/orbit-line.ts`: float64 centre-relative master
+  verts, float32 GPU buffer baked renderer-local and rebaked on centre
+  drift — under planet focus the floating origin sits on the planet,
+  the host is NOT at the local origin, and centre-relative float32
+  verts would jitter by hundreds of km under camera motion. The
+  pixel-gap heuristic measures camera-to-host distance.
 
 **True-eclipse dim (stellata-2f6.4).** A planet crossing behind its
 host's *physical disc* (superior conjunction inside the host's

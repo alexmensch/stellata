@@ -14,7 +14,7 @@ import {
   solidityForType,
   writeRingVerts,
 } from './orbit-rings-layer';
-import { ORBIT_LINE_SEGMENTS } from '../util/orbit-line';
+import { LINE_ANCHOR_MAX_DRIFT_PC, ORBIT_LINE_SEGMENTS } from '../util/orbit-line';
 import { AU_KM, AU_PC, KM_PC } from '../util/astronomy-constants';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
@@ -443,12 +443,22 @@ describe('OrbitRingsLayer', () => {
   });
 });
 
+/** Renderer-local position of ring vertex `i`: line offset + baked f32
+ *  vertex. The group itself stays at the origin under the anchored-line
+ *  scheme. */
+function ringVertexWorld(line: THREE.LineLoop, i: number): THREE.Vector3 {
+  const v = (line.geometry.getAttribute('position') as THREE.BufferAttribute)
+    .array as Float32Array;
+  return new THREE.Vector3(v[i * 3], v[i * 3 + 1], v[i * 3 + 2])
+    .add(line.position);
+}
+
 describe('OrbitRingsLayer host centring', () => {
-  it('update() parks the ring group at the host local position', () => {
+  it('update() tracks ring vertices to the host local position', () => {
     const ss = new OrbitRingsLayer();
     const ps: PlanetSystem = {
       hostStarIdx: 0,
-      planets: [makePlanet({ semiMajorAxisAu: 1 })],
+      planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
     };
     ss.setPlanetSystem(ps, 0, T0);
     const host = new THREE.Vector3(3, -2, 1).multiplyScalar(AU_PC);
@@ -456,9 +466,87 @@ describe('OrbitRingsLayer host centring', () => {
     cam.position.copy(host);
     cam.position.z += 5 * AU_PC;
     ss.update(cam, 800, host, T0);
-    expect(ss.group.position.x).toBeCloseTo(host.x, 12);
-    expect(ss.group.position.y).toBeCloseTo(host.y, 12);
-    expect(ss.group.position.z).toBeCloseTo(host.z, 12);
+    // Circular ring (e = 0): every vertex sits exactly one semi-major
+    // axis from the host, wherever the host is parked.
+    const line = ss.group.children[0] as THREE.LineLoop;
+    expect(ss.group.position.length()).toBe(0);
+    for (const i of [0, 1000, 3000]) {
+      expect(ringVertexWorld(line, i).distanceTo(host) / AU_PC)
+        .toBeCloseTo(1, 6);
+    }
+    ss.dispose();
+  });
+
+  it('rebakes float32 verts about the live centre at planet-focus scale (the Pluto jitter)', () => {
+    // Pluto regime: host 39.5 AU from the floating origin (which sits
+    // on the focused planet), camera at close framing near the origin.
+    // Centre-relative float32 verts carry a half-ULP quantum of
+    // hundreds of km at this magnitude — the rebake must land the
+    // near-camera vertex within metres instead.
+    const aAu = 39.5;
+    const ss = new OrbitRingsLayer();
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet({ semiMajorAxisAu: aAu, eccentricity: 0 })],
+    };
+    ss.setPlanetSystem(ps, 0, T0);
+
+    const line = ss.group.children[0] as THREE.LineLoop;
+    // Pre-rebase (centre-relative) float32 rounding at Pluto scale:
+    // worst vertex component is off by > 30 km — the jitter amplitude
+    // class the anchored rebase exists to kill.
+    const aPc = aAu * AU_PC;
+    let centreRelErr = 0;
+    for (let i = 0; i < ORBIT_LINE_SEGMENTS; i++) {
+      const t = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+      for (const exact of [aPc * Math.cos(t), aPc * Math.sin(t)]) {
+        centreRelErr = Math.max(centreRelErr, Math.abs(Math.fround(exact) - exact));
+      }
+    }
+    expect(centreRelErr / KM_PC).toBeGreaterThan(30);
+
+    // Host parked so the ring's t=0 vertex lands exactly on the origin;
+    // camera at a 3000-km framing of a body there.
+    const host = new THREE.Vector3(-aPc, 0, 0);
+    const cam = makeCamera(3000 * KM_PC);
+    ss.update(cam, 800, host, T0);
+    // Drift (39.5 AU) far exceeds LINE_ANCHOR_MAX_DRIFT_PC → verts must
+    // have been rebaked about the live centre.
+    expect(line.position.length()).toBe(0);
+    // Float64 truth for vertex 0 is host + (aPc, 0, 0) = exactly 0; the
+    // baked float32 value must land within metres, not the hundreds of
+    // km the centre-relative buffer carried.
+    expect(ringVertexWorld(line, 0).length() / KM_PC).toBeLessThan(0.05);
+    ss.dispose();
+  });
+
+  it('sub-threshold centre drift moves line.position and leaves the buffer unbaked', () => {
+    const ss = new OrbitRingsLayer();
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
+    };
+    ss.setPlanetSystem(ps, 0, T0);
+    const line = ss.group.children[0] as THREE.LineLoop;
+    const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+
+    // Host drifting well under LINE_ANCHOR_MAX_DRIFT_PC from the baked
+    // origin: no rebake — the line just rides the delta.
+    const versionBefore = attr.version;
+    const drift = LINE_ANCHOR_MAX_DRIFT_PC / 10;
+    const host = new THREE.Vector3(drift, 0, 0);
+    ss.update(makeCamera(5 * AU_PC), 800, host, T0);
+    expect(line.position.x).toBeCloseTo(drift, 24);
+    expect(attr.version).toBe(versionBefore);
+
+    // A drift beyond the cap → rebake: position resets, buffer version
+    // bumps, and the world-space ring is unchanged (circle still one
+    // semi-major axis from the host).
+    const far = new THREE.Vector3(0.1 * AU_PC, 0, 0);
+    ss.update(makeCamera(5 * AU_PC), 800, far, T0);
+    expect(line.position.length()).toBe(0);
+    expect(attr.version).toBeGreaterThan(versionBefore);
+    expect(ringVertexWorld(line, 512).distanceTo(far) / AU_PC).toBeCloseTo(1, 6);
     ss.dispose();
   });
 
@@ -486,17 +574,19 @@ describe('OrbitRingsLayer host centring', () => {
     ss.dispose();
   });
 
-  it('setPlanetSystem resets the group to the origin until the next update feeds a host', () => {
+  it('setPlanetSystem resets the centre to the origin until the next update feeds a host', () => {
     const ss = new OrbitRingsLayer();
     const ps: PlanetSystem = {
       hostStarIdx: 0,
-      planets: [makePlanet()],
+      planets: [makePlanet({ eccentricity: 0 })],
     };
     ss.setPlanetSystem(ps, 0, T0);
     const host = new THREE.Vector3(0.5, 0.5, 0.5);
     ss.update(makeCamera(5 * AU_PC), 800, host, T0);
     ss.setPlanetSystem(ps, 0, T0);
-    expect(ss.group.position.length()).toBe(0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    const line = ss.group.children[0] as THREE.LineLoop;
+    expect(ringVertexWorld(line, 0).length() / AU_PC).toBeCloseTo(1, 6);
     ss.dispose();
   });
 });
@@ -699,8 +789,10 @@ describe('OrbitRingsLayer moon rings', () => {
       return true;
     });
     const moonLine = ss.group.children[1] as THREE.LineLoop;
-    expect(moonLine.position.x).toBeCloseTo(parentRel.x, 12);
-    expect(moonLine.position.y).toBeCloseTo(0, 12);
+    // Circular 0.003 AU moon ring: every vertex sits one moon
+    // semi-major axis from the parent's live offset.
+    expect(ringVertexWorld(moonLine, 0).distanceTo(parentRel) / AU_PC)
+      .toBeCloseTo(0.003, 6);
     // Camera parked 0.01 AU from the parent: the 0.003 AU moon ring is
     // enormous on screen and must draw.
     expect(ss.isOrbitRingVisible(1)).toBe(true);
