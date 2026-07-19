@@ -5,12 +5,11 @@ import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
 import type { MemberSphere } from '../local-depth/slice-pure';
 import type { StarLocalMirror } from '../star-pipeline/star-local-mirror';
-import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { KM_PC } from '../util/astronomy-constants';
+import { isHostLocallyActive, ringExtentRadiusPc } from './local-cluster-pure';
 import type { OrbitRingsLayer } from './orbit-rings-layer';
 import type { PlanetBodyField } from './planet-body-field';
 import type { PlanetMeshLayer } from './planet-mesh-layer';
-
-const RING_EXTENT_MARGIN = 1.02;
 
 /**
  * Owns the "is a system locally active" decision each frame. Active =
@@ -68,7 +67,7 @@ export class SolarSystemCluster implements LocalCluster {
       const ringsUp = this.orbitRings.anyOrbitRingVisible();
       for (const host of this.field.attachedHosts()) {
         const dHost = camera.position.distanceTo(host.hostLocalPos);
-        if (dHost > host.cullDistance && !ringsUp) continue;
+        if (!isHostLocallyActive(dHost, host.cullDistance, ringsUp)) continue;
 
         // v1: one active host (Sol is the only attached host). The
         // single suppression range + member star generalise to a list
@@ -89,15 +88,9 @@ export class SolarSystemCluster implements LocalCluster {
           });
         }
         if (ringsUp) {
-          let maxApoapsisPc = 0;
-          for (const planet of host.ps.planets) {
-            if (planet.parentName) continue;
-            const apo = planet.semiMajorAxisAu * (1 + planet.eccentricity) * AU_PC;
-            if (apo > maxApoapsisPc) maxApoapsisPc = apo;
-          }
           this.spheres.push({
             distPc: dHost,
-            radiusPc: maxApoapsisPc * RING_EXTENT_MARGIN,
+            radiusPc: ringExtentRadiusPc(host.ps.planets),
           });
         }
         break;
@@ -113,6 +106,9 @@ export class SolarSystemCluster implements LocalCluster {
     this.meshLayer.collectSpheres(camera, this.spheres);
   }
 
+  /** Replays the spheres `update()` computed this frame — the scene-
+   *  layer registry runs `update()` before `localDepthPass.render`, so
+   *  the list is current. Not self-sufficient: never call standalone. */
   collectSpheres(_camera: THREE.PerspectiveCamera, out: MemberSphere[]): void {
     for (const s of this.spheres) out.push(s);
   }

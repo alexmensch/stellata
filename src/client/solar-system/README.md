@@ -75,6 +75,8 @@ src/client/solar-system/
                                   spheres; owns the "system is locally
                                   active" decision. See
                                   ../local-depth/README.md.
+  local-cluster-pure.ts (+ test)  Activation predicate + orbit-ring
+                                  extent radius, pure. Vitest-pinned.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   planet-mesh.vert.glsl,
