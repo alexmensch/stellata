@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { type Constellation } from '../loaders/catalog-loader';
+import { makeOrbitLineMaterial, makeOrbitLineSegments } from '../util/orbit-line';
 import { collectFigureSegmentEndpoints } from './constellation-figure-pure';
 
 // Above the galactic disc/grid (−1) and Local Bubble shell (−1), below the
@@ -12,9 +13,9 @@ import { collectFigureSegmentEndpoints } from './constellation-figure-pure';
 // discs occlude the lines through the depth buffer without a screen-space mask.
 const FIGURE_RENDER_ORDER = -0.75;
 
-// Realistic strokes match the former #con-figure CSS (sky blue); chart mode
-// swaps to the ink-on-paper palette and drops depth-testing so the figure
-// reads as a flat atlas overlay against the depth-disabled chart starfield.
+// Chart mode swaps the sky-blue stroke for the ink-on-paper palette and drops
+// depth-testing so the figure reads as a flat atlas overlay against the
+// depth-disabled chart starfield.
 const REALISTIC_COLOUR = 0x7dd3fc;
 const CHART_COLOUR = 0x14161e;
 const FIGURE_OPACITY = 0.85;
@@ -39,13 +40,7 @@ export class ConstellationFigureLayer {
     this.group = new THREE.Group();
     this.group.renderOrder = FIGURE_RENDER_ORDER;
     this.group.visible = false;
-    this.material = new THREE.LineBasicMaterial({
-      color: REALISTIC_COLOUR,
-      transparent: true,
-      opacity: FIGURE_OPACITY,
-      depthTest: true,
-      depthWrite: false,
-    });
+    this.material = makeOrbitLineMaterial(REALISTIC_COLOUR, FIGURE_OPACITY);
   }
 
   /** Rebuild the line geometry for the active constellation set (one index
@@ -65,13 +60,7 @@ export class ConstellationFigureLayer {
     }
     this.positions = new Float32Array(this.endpointIdx.length * 3);
     this.writePositions(localPositions);
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
-    const seg = new THREE.LineSegments(geom, this.material);
-    // A figure can span the whole sky with the camera inside it — let the GPU
-    // clip per-vertex rather than trust a bounding-sphere frustum test.
-    seg.frustumCulled = false;
-    seg.renderOrder = FIGURE_RENDER_ORDER;
+    const seg = makeOrbitLineSegments(this.positions, this.material, FIGURE_RENDER_ORDER);
     this.group.add(seg);
     this.lineSegments = seg;
     this.group.visible = this.permitted;
