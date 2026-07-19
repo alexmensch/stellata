@@ -66,6 +66,8 @@ import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
+import { SolarSystemCluster } from './solar-system/local-cluster';
+import { StarLocalMirror } from './star-pipeline/star-local-mirror';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
 import { LocalBubbleShell } from './local-bubble/local-bubble';
@@ -324,6 +326,8 @@ export class Stellata implements FrameAnchor {
   private planetBodyField: PlanetBodyField;
   private planetMeshLayer: PlanetMeshLayer;
   private readonly localDepthPass = new LocalDepthPass();
+  private starLocalMirror: StarLocalMirror;
+  private solarCluster: SolarSystemCluster;
   // Sol-anchored asymmetric ellipsoid; visible only when Sol is the
   // focused host.
   private heliopause: Heliopause;
@@ -598,6 +602,10 @@ export class Stellata implements FrameAnchor {
       // three star passes (disc, glow, core mask) share these uniforms so
       // the suppression fires uniformly.
       uHideFocusIdx: { value: -1 },
+      // Star whose system is the active local-depth cluster; its
+      // main-pass instance collapses and the pass's mirror draw renders
+      // it. Written per frame by SolarSystemCluster.update. -1 = none.
+      uLocalMemberIdx: { value: -1 },
       // Blackbody → sRGB lookup for the star vertex shader's ciToColor.
       // See docs/science-stellar-modelling.md § "Star colour calibration".
       uColorLut: { value: makeColorLutTexture() },
@@ -636,6 +644,13 @@ export class Stellata implements FrameAnchor {
       boundingSphereRadiusPc: 60_000,
     });
 
+    this.starLocalMirror = new StarLocalMirror(
+      this.starPipeline.geometry,
+      vertexShader,
+      fragmentShader,
+      sharedUniforms,
+    );
+
     // Star-material uniforms passed by reference so floating-origin
     // recenters, resize updates, and dust loads propagate to the
     // particle pass automatically.
@@ -651,7 +666,6 @@ export class Stellata implements FrameAnchor {
     this.galacticDisc = new GalacticDisc();
     this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer();
-    this.scene.add(this.orbitRingsLayer.group);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
     this.scene.add(this.binaryOrbitPathLayer.group);
     this.constellationFigureLayer = new ConstellationFigureLayer();
@@ -662,11 +676,14 @@ export class Stellata implements FrameAnchor {
       this.planetBodyField,
       import.meta.env.BASE_URL,
     );
-    this.localDepthPass.register({
-      group: this.planetMeshLayer.group,
-      collectSpheres: (camera, out) =>
-        this.planetMeshLayer.collectSpheres(camera, out),
-    });
+    this.solarCluster = new SolarSystemCluster(
+      this.planetBodyField,
+      this.planetMeshLayer,
+      this.orbitRingsLayer,
+      this.starLocalMirror,
+      sharedUniforms.uLocalMemberIdx,
+    );
+    this.localDepthPass.register(this.solarCluster);
     // Heliopause is Sol-anchored — added once, visibility gated on
     // focused star = Sol via the planet-system event below.
     this.heliopause = new Heliopause();
@@ -1054,6 +1071,12 @@ export class Stellata implements FrameAnchor {
         this.planetBodyField.dispose();
         this.planetMeshLayer.dispose();
       },
+    });
+    this.layers.register({
+      // After the field + rings updates it reads; before the main
+      // render its suppression uniforms gate.
+      update: (ctx) => this.solarCluster.update(ctx.camera),
+      dispose: () => this.solarCluster.dispose(),
     });
     this.layers.register({
       update: (ctx) => {

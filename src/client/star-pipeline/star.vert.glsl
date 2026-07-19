@@ -19,6 +19,10 @@ uniform uint uSpectMask;
 // every other mode disables the suppression by construction (gl_InstanceID
 // is non-negative).
 uniform int uHideFocusIdx;
+// Star whose system is the active local-depth cluster (-1 = none). Its
+// main-pass instance collapses in all three passes — the local pass's
+// mirror draw renders it instead (src/client/local-depth/README.md).
+uniform int uLocalMemberIdx;
 // Pass index — 0=glow, 1=disc, 2=core mask. Shared with the frag shader;
 // the vert reads it so the composite-suppress sentinel below can drop
 // the disc and core-mask passes for sub-pixel binary secondaries while
@@ -153,6 +157,17 @@ in float iEclipseDim;
 // See src/client/binaries/README.md § Pulsation gate for eclipsing
 // binaries.
 in float iSuppressPulsation;
+#ifdef LOCAL_DEPTH_PASS
+// Mirror-draw slot → source catalog index. Replaces gl_InstanceID for
+// every star-indexed lookup (extinction texel, hide/pin compares) so a
+// mirror slot behaves exactly like its source instance. It takes the
+// attribute slot iDepthBias occupies in the main variant — each
+// variant must declare EXACTLY 16 attributes (the WebGL2 guaranteed
+// minimum, pinned in star-pipeline.test.ts); the local pass's bracket
+// z-buffer orders close pairs natively, so it never needs the bias.
+in float iSourceIdx;
+#define STAR_SELF_ID int(iSourceIdx + 0.5)
+#else
 // Log-depth bias written by EclipsePhotometryField each frame onto the
 // back component of an overlapping orbital pair. Added to gl_FragDepth in
 // the opaque disc + core-mask passes so the front wins the z-test where a
@@ -160,6 +175,8 @@ in float iSuppressPulsation;
 // resolvable quantum. 0.0 = no bias. See src/client/binaries/README.md
 // § Eclipse photometry and star-pipeline/README.md § Depth encoding.
 in float iDepthBias;
+#define STAR_SELF_ID gl_InstanceID
+#endif
 
 out float vAppMag;
 out vec3 vColor;
@@ -213,8 +230,16 @@ void main() {
     // and the fragment shader never executes for it. A future change
     // that makes the off-screen position per-vertex would break this
     // invariant and need to write vFragDepth before returning.
+#ifdef LOCAL_DEPTH_PASS
+    vDepthBias = 0.0;
+#else
     vDepthBias = iDepthBias;
-    if (gl_InstanceID == uHideFocusIdx) {
+#endif
+    bool suppressed = STAR_SELF_ID == uHideFocusIdx;
+#ifndef LOCAL_DEPTH_PASS
+    suppressed = suppressed || gl_InstanceID == uLocalMemberIdx;
+#endif
+    if (suppressed) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
         vAppMag = 0.0;
         vColor = vec3(0.0);
@@ -368,7 +393,7 @@ void main() {
     if (dustEffective > 0.0) {
         if (uAvPrepassEnabled > 0.5) {
             int w = textureSize(uAvPrepassTex, 0).x;
-            ivec2 avTexel = ivec2(gl_InstanceID % w, gl_InstanceID / w);
+            ivec2 avTexel = ivec2(STAR_SELF_ID % w, STAR_SELF_ID / w);
             absorbAV = texelFetch(uAvPrepassTex, avTexel, 0).r * dustEffective;
         } else {
             absorbAV = dustRaymarchAV(uCameraPos + uWorldOffset, worldPos + uWorldOffset)
@@ -459,7 +484,7 @@ void main() {
     // by centreClip.w makes it perspective-correct (so the quad stays the
     // same pixel size regardless of depth).
     vec4 centreClip = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
-    if (gl_InstanceID == uPinFocusToCenter) {
+    if (STAR_SELF_ID == uPinFocusToCenter) {
         // Bypass float32 cancellation in the matrix chain at extreme
         // close approach. The focused star is mathematically at view
         // (0, 0, -distCam) since controls.target = star and lookAt()

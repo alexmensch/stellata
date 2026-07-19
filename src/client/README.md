@@ -252,15 +252,17 @@ SVG mask (`constellation-figure/README.md`).
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | Galactic grid l/b labels                         | SVG     | source order (first SVG child)                     |       | [galactic/](galactic/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
+| Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Member-star glow mirror                          | WebGL   | local depth pass (3.5 in-pass)                     |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
+| Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Planet disc mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (3 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
-| Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
-| Planet disc                                      | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
-| Planet restore (depth-only)                      | WebGL   | `renderOrder: 2.5`                                 |       | [solar-system/](solar-system/README.md) |
-| Orbit rings                                      | WebGL   | `renderOrder: 2`                                   |       | [solar-system/](solar-system/README.md) |
+| Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
+| Planet disc (inactive-cluster hosts)             | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
 | Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       | [dust/](dust/README.md) |
-| Planet corrupt (depth-only)                      | WebGL   | `renderOrder: 1.5`                                 |       | [solar-system/](solar-system/README.md) |
 | Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
 | Star disc                                        | WebGL   | `renderOrder: 0`                                   |       | [star-pipeline/](star-pipeline/README.md) |
 | Binary orbit paths                               | WebGL   | `renderOrder: -0.5`                                |       | [binaries/](binaries/README.md) |
@@ -284,28 +286,26 @@ The two cross-layer pinning rules `stellata.ts` is responsible for:
   behind close-range bright cores instead of bleeding through. Stars
   and planets share this slot; both write opaque depth with
   `colorWrite: false`.
-- **`1.5` + `2.5` planet outer-disc corrupt + restore pair** is the
-  mechanism that keeps the planet reading as a solid body across an
-  orbit ring. The corrupt pass at 1.5 writes `gl_FragDepth = 0.0`
-  across the planet's core region; the orbit ring at `renderOrder 2`
-  then depth-fails at every fragment landing on the planet's body —
-  far-side AND near-side, regardless of the ring's actual 3D
-  position. The restore pass at 2.5 writes the planet's actual
-  `gl_FragCoord.z` back across the same region (with
-  `depthFunc: AlwaysDepth` so it can overwrite the 0.0), so the disc
-  and glow passes at 3 / 4 still depth-test correctly against other
-  planets and stars. The `planet-body-field` test pins these values
-  for the five planet passes; a future reorder fails CI rather than
-  silently regressing. See [solar-system/](solar-system/README.md)
-  for the rationale in context.
+- **The local depth pass owns the active system.** While a system is
+  locally active (host in cull range, or its orbit rings drawing),
+  every one of its bodies — the host star included — collapses in the
+  main pass via the sentinel uniforms (`uLocalMemberIdx`,
+  `uLocalPassRange`) and renders through the pass's mirror draws
+  instead, where a bracketed standard-depth z-buffer orders
+  everything natively (ring↔body, moon↔planet, transits, near-side
+  orbit-ring arcs). The `planet-body-field` test pins the pass
+  renderOrders; a reorder fails CI rather than silently regressing.
+  See [local-depth/](local-depth/README.md).
 
 Within the same `renderOrder` value, the opaque-before-transparent
 rule of the three.js renderer determines order; opaque depth-write
 meshes establish the depth buffer that transparent passes test
 against.
 
-The planet spheroid mesh + ring annulus rows sit above the local-depth
-boundary: they render in a second, depth-cleared pass *after* the
-whole main stack, ordered against each other by a bracketed
-standard-depth z-buffer rather than by main-scene `renderOrder` — see
-[local-depth/](local-depth/README.md).
+Rows above the local-depth boundary render in a second, depth-cleared
+pass *after* the whole main stack, ordered against each other by a
+bracketed standard-depth z-buffer (the in-pass renderOrder only
+sequences opaque-before-transparent) — see
+[local-depth/](local-depth/README.md). While the solar-system cluster
+is inactive (camera beyond the cull range, or chart mode) its bodies
+render through the ordinary main-pass planet/star rows instead.

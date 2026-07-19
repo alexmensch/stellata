@@ -1,7 +1,9 @@
 precision highp float;
 
 #include <common>
+#ifndef LOCAL_DEPTH_PASS
 #include <logdepthbuf_pars_fragment>
+#endif
 // Shared radial-intensity profile. Planet bodies render with the
 // same super-Gaussian I(r) the star pipeline uses; "softness" comes
 // from solidity rather than luminosity class but feeds the same
@@ -43,13 +45,12 @@ void main() {
   // conditionally writes gl_FragDepth so unwritten paths must have a
   // sensible default.
   gl_FragDepth = gl_FragCoord.z;
+  #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_fragment>
+  #endif
 
-  // Chart mode: flat hard-edged ink discs, star.frag's mono branch
-  // with the planet-only corrupt/restore passes idled — orbit rings
-  // are hidden on paper, so there is nothing to depth-corrupt.
+  // Chart mode: flat hard-edged ink discs, star.frag's mono branch.
   if (uMonochrome > 0.5) {
-    if (uRenderMode == 3 || uRenderMode == 4) discard;
     if (uRenderMode == 0 && vPhysRatio >= PHYS_RATIO_THRESHOLD) discard;
     if (uRenderMode == 1 && vPhysRatio <  PHYS_RATIO_THRESHOLD) discard;
     if (uRenderMode == 2 && vPhysRatio <  PHYS_RATIO_THRESHOLD) discard;
@@ -82,55 +83,11 @@ void main() {
     return;
   }
 
-  if (uRenderMode == 3) {
-    // Outer-disc CORRUPT pass (stellata-3re.19). Writes near-plane
-    // depth (gl_FragDepth = 0.0) across the planet's core region so
-    // the orbit ring at renderOrder 2 depth-fails regardless of its
-    // 3D position — including near-side ring segments physically in
-    // front of the planet. The conceptual rule the user wants is "the
-    // planet looks solid; the orbit ring is hidden wherever it would
-    // overlap the body, from any angle." Pure depth occlusion can't
-    // express that (near-side rings legitimately have smaller depth
-    // than the planet centre), so we corrupt the framebuffer depth to
-    // a value the ring is guaranteed to exceed.
-    //
-    // Gated on `glow >= uCoreThreshold` (NOT `>= uDiscardThreshold` as
-    // before) so the ring discontinuity matches the bright body, not
-    // the dim perceptual halo — tighter break, more readable.
-    //
-    // The corrupted depth is restored to gl_FragCoord.z at
-    // renderOrder 2.5 (uRenderMode == 4) before disc/glow at 3/4 run,
-    // so multi-planet/star depth occlusion downstream still works.
-    if (vAppMag > uMaxAppMag) discard;
-    if (glow < uCoreThreshold) discard;
-    // Override the chunk's log-depth write — we want screen-space 0.0,
-    // which is the near plane in any depth encoding.
-    gl_FragDepth = 0.0;
-    outColor = vec4(0.0);
-    return;
-  }
-
-  if (uRenderMode == 4) {
-    // Outer-disc RESTORE pass (stellata-3re.19). Runs at renderOrder
-    // 2.5 after the orbit rings have depth-failed against the corrupt
-    // pass's 0.0, and writes the planet's actual depth back so disc /
-    // glow at renderOrder 3 / 4 depth-test and write correctly. The
-    // material has `depthFunc: AlwaysDepth` so it can overwrite the
-    // 0.0 (default LessEqual would reject `planet_z > 0.0`).
-    //
-    // Same gate as the corrupt pass — same screen region.
-    // gl_FragDepth is left as the chunk's log-depth-correct value.
-    if (vAppMag > uMaxAppMag) discard;
-    if (glow < uCoreThreshold) discard;
-    outColor = vec4(0.0);
-    return;
-  }
-
   // Crossfade to the spheroid mesh: the disc's visible passes fade
-  // out as vMeshFade rises. The depth passes (core / corrupt /
-  // restore) deliberately keep running through the fade — the mesh
-  // silhouette matches the disc's core region, so the ring-occlusion
-  // dance stays intact while the visual handoff happens.
+  // out as vMeshFade rises. The core depth pass deliberately keeps
+  // running through the fade — the mesh silhouette matches the disc's
+  // core region, so occlusion of background layers stays intact while
+  // the visual handoff happens.
   float discFade = 1.0 - vMeshFade;
 
   if (uRenderMode == 0) {

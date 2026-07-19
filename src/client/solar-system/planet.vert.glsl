@@ -1,7 +1,9 @@
 precision highp float;
 
 #include <common>
+#ifndef LOCAL_DEPTH_PASS
 #include <logdepthbuf_pars_vertex>
+#endif
 // Shared apparent-magnitude → disc-pixel-size mapping. Stars and
 // planets use the same chunk; see its header for the rationale.
 #include <stellata_perceptual_disc>
@@ -60,6 +62,13 @@ uniform float uMaxAppMag;
 // star pipeline's uHideFocusIdx: observe mode parks the camera AT the
 // focal body, whose disc would otherwise render from the interior.
 uniform int uHideIdx;
+
+// Active local-depth cluster's slot range (start, count); (-1, 0) =
+// none. Main-pass materials collapse instances INSIDE the range (the
+// local pass's mirror draws render them); mirror materials (which
+// define LOCAL_DEPTH_PASS) collapse instances OUTSIDE it. One shared
+// value object drives both. See src/client/local-depth/README.md.
+uniform ivec2 uLocalPassRange;
 
 // Perceptual-disc shaping. All shared with the star pipeline.
 uniform float uSizeMin;
@@ -124,7 +133,14 @@ void main() {
   // path, in every pass — a hidden body must not write depth either.
   float d_vp = length(planetView.xyz);
   float d_hp = length(planetView.xyz - hostView.xyz);
-  if (gl_InstanceID == uHideIdx || d_vp <= 0.0 || d_hp <= 0.0) {
+  bool inClusterRange = gl_InstanceID >= uLocalPassRange.x
+      && gl_InstanceID < uLocalPassRange.x + uLocalPassRange.y;
+#ifdef LOCAL_DEPTH_PASS
+  bool passSuppressed = !inClusterRange;
+#else
+  bool passSuppressed = inClusterRange;
+#endif
+  if (passSuppressed || gl_InstanceID == uHideIdx || d_vp <= 0.0 || d_hp <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAppMag = 0.0;
     vColor = vec3(0.0);
@@ -281,5 +297,7 @@ void main() {
   vec2 ndcOffset = pixelOffset / (uViewport * uPixelRatio) * 2.0;
   gl_Position = centreClip + vec4(ndcOffset * centreClip.w, 0.0, 0.0);
 
+  #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_vertex>
+  #endif
 }

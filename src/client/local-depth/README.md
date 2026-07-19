@@ -3,17 +3,17 @@
 A camera-relative second render pass that gives close bodies (moons,
 planets, rings, close binary pairs, future probes) true z-buffer
 occlusion the main pass cannot provide. The main pass keeps its
-whole-universe logarithmic depth; this pass re-renders the active
+whole-universe depth encodings; this pass re-renders the active
 local system over the finished frame in tight standard-depth brackets
 where the z-buffer resolves everything natively.
 
 This README is the design record for the primitive (stellata-shvs):
 architecture, precision analysis, cluster API, and migration plan.
 The reusable core is `slice-pure.ts` + `local-depth-pass.ts`; the
-planet mesh LOD (spheroid meshes + ring annuli) renders through it
-unconditionally (migration step 1 — its shaders carry no log-depth
-chunks and the ring shader's analytic body-occlusion discard is
-gone).
+solar system consumes it fully (steps 1–3): mesh LOD + ring annuli,
+billboard member mirror draws incl. the host star, and orbit rings
+all render through the pass while the system is locally active
+(`../solar-system/local-cluster.ts`).
 
 ## Files
 
@@ -27,14 +27,18 @@ gone).
 
 ## Why the main pass cannot do this
 
-The renderer's log-depth encoding (`log2(1+w) / log2(1+far)`, `w` in
-pc) is logarithmic only for `w ≫ 1`. Every intra-system distance is
-`w ≪ 1 pc`, so the buffer sits in its *linear* regime: one depth
-quantum ≈ `ln(1+far)/2²⁴` ≈ 7e-7 pc ≈ **0.14 AU**. Planet↔planet
-ordering (AU apart) barely resolves; moon↔parent, ring↔body, and
-close-binary separations (≪ 0.01 AU) land inside a single quantum and
-z-order as frame-to-frame float noise. See
-`../star-pipeline/README.md` § Depth encoding.
+The main pass's depth is a patchwork spanning 17 orders of
+magnitude, and neither half of it can order intra-system distances.
+Non-raw materials get the renderer's log encoding
+(`log2(1+w) / log2(1+far)`), which is logarithmic only for `w ≫ 1`;
+every intra-system distance is `w ≪ 1 pc`, inside its *linear*
+regime with one depth quantum ≈ `ln(1+far)/2²⁴` ≈ **0.14 AU**. The
+star passes (RawShaderMaterial — no `USE_LOGDEPTHBUF`) write plain
+standard depth over the full range, quantising everything beyond
+~3 AU to exactly 1.0. Moon↔parent, ring↔body, and close-binary
+separations land inside a single quantum either way and z-order as
+frame-to-frame float noise. See `../star-pipeline/README.md` § Depth
+encoding for the full main-pass picture.
 
 Every analytic workaround (disc silhouette clip, ray-sphere occlusion,
 the orbit-ring corrupt/restore dance, ring-shader ray-ellipsoid
@@ -46,10 +50,9 @@ reality somewhere — the apparatus this primitive deletes.
 Canonical space-sim depth-range partitioning (KSP local/scaled space,
 Celestia, Outerra), generalised:
 
-1. **Main pass** — unchanged. Log depth, `near 1e-10 / far 1e5 pc`.
-   Paints the universe: stars, MW, grids, and the *far regime* of
-   every body (sub-pixel / disc-LOD billboards of systems with no
-   active cluster).
+1. **Main pass** — unchanged, `near 1e-12 / far 1e5 pc`. Paints the
+   universe: stars, MW, grids, and every body of systems with no
+   active cluster.
 2. **Local pass** — for each active cluster: `autoClear = false`,
    then per depth slice far→near: `clearDepth()` (colour kept),
    camera near/far set to the slice bracket, standard (non-log)
@@ -77,13 +80,18 @@ the moon's billboard depth-tests against the parent mesh and wins.
 The same argument gives close binary pairs native disc ordering,
 retiring `iDepthBias`.
 
-Billboards use small **mirror draws**: a per-pipeline
-`InstancedBufferGeometry` holding only the cluster members (per-frame
-attribute copy of a handful of instances, plus an `iSourceIdx`
-indirection for star-indexed texture reads like the extinction
-prepass), sharing the main pipeline's uniform objects (the
-`perceptual-disc-uniforms.ts` pattern) with cloned materials that set
-`LOCAL_DEPTH_PASS`.
+Billboards use **mirror draws**, sharing the main pipeline's uniform
+objects with cloned materials that set `LOCAL_DEPTH_PASS`:
+
+- Stars: `../star-pipeline/star-local-mirror.ts` — a small
+  `InstancedBufferGeometry` whose slots re-copy member attributes per
+  frame, with an `iSourceIdx` indirection for star-indexed lookups
+  (extinction texelFetch, hide/pin compares).
+- Planets: the body field redraws its own geometry with the shared
+  `uLocalPassRange` uniform gating the opposite way in each pass —
+  main-pass materials collapse instances inside the range, mirror
+  materials collapse instances outside it. One uniform write flips a
+  whole host between passes with no attribute copying.
 
 ### Local-pass materials carry NO log-depth chunks
 
@@ -206,7 +214,7 @@ depth-tested non-writers (ring annuli, orbit-ring lines, additive
 glow). No core depth-mask is needed in the local pass — there are no
 background layers here to pre-fail; the disc pass's own core depth +
 halo `gl_FragDepth = 1.0` convention carries over unchanged. The
-corrupt/restore pair does not carry over — it exists only because the
+corrupt/restore pair did not carry over — it existed only because the
 main pass's depth can't order ring vs body, which is the problem this
 pass solves.
 
@@ -241,9 +249,8 @@ pass solves.
 ## What this deletes
 
 Ring-shader analytic body-occlusion discard (done, step 1) ·
-orbit-ring corrupt/restore depth passes (`uRenderMode` 3/4,
-renderOrders 1.5/2.5 — step 2) · `iDepthBias` + its
-EclipsePhotometryField wiring (step 4) · the reverted PR #252
+orbit-ring corrupt/restore depth passes (done, step 2) · `iDepthBias`
++ its EclipsePhotometryField wiring (step 4) · the reverted PR #252
 apparatus stays deleted (disc silhouette clip, mesh ray-sphere
 occlusion, iOccluder/familyOccluders).
 
@@ -253,26 +260,31 @@ occlusion, iOccluder/familyOccluders).
    group lives in the pass scene from construction, its shaders carry
    standard depth only, and the analytic occlusion discard is gone.
 2. **Planet billboard members + host star mirror draw; full main-pass
-   member suppression** (extend the sentinel to collapse disc + glow
-   + core mask for members); delete corrupt/restore.
-3. **Orbit rings (planet + moon) into the pass** — extents join
-   `collectSpheres`.
+   member suppression** — DONE (`uLocalPassRange`, `uLocalMemberIdx`,
+   `star-local-mirror.ts`); corrupt/restore deleted.
+3. **Orbit rings into the pass** — DONE: extents join
+   `collectSpheres`; near-side arcs now physically pass in FRONT of
+   body discs/meshes (the corrupt-era behaviour hid them).
 4. **Binaries migration** — focal-chain star mirror draws +
    `BinaryOrbitPathLayer`; delete `iDepthBias`.
 
-Each step is independently shippable and visually verifiable; the
-order minimises the window where two occlusion mechanisms coexist.
-
 ## Current wiring
 
-The shell registers the planet mesh LOD as a cluster at construction
-(`PlanetMeshLayer.group` parked in the pass scene;
-`collectSpheres` reports mesh-visible bodies) and calls
-`localDepthPass.render` after every main render — a no-op frame when
-no body is in mesh range. Perf label: `gpu.localDepth`.
+`SolarSystemCluster` (`../solar-system/local-cluster.ts`) owns the
+per-frame activation decision — any attached host inside its cull
+distance, or its orbit rings drawing — and, while active, writes the
+suppression uniforms, syncs the star mirror, and reports member
+spheres (host star, every body, ring extents, mesh bounds). Its
+`update` runs in the scene-layer registry after the field + rings
+updates it reads and before the main render its uniforms gate;
+`localDepthPass.render` runs after every main render — a no-op frame
+when no cluster is active (deep field, chart mode). Perf label:
+`gpu.localDepth`.
 
 Smoke (Saturn + moons): focus Saturn, scrub time; check ring↔body
-occlusion incl. the oblate limb (the analytic path's polar-gap bug
-must not reappear), moon-mesh↔Saturn-mesh ordering on close passes,
-no popping through the disc↔mesh crossfade band, and no z-artefacts
-when Titan stretches the bracket to two slices.
+occlusion incl. the oblate limb, a sub-pixel moon transiting IN FRONT
+of Saturn staying visible, moon-mesh↔Saturn-mesh ordering, near-side
+orbit-ring arcs drawing over the body while far-side arcs hide, the
+Sun's disc occluding far ring arcs, no popping through the disc↔mesh
+crossfade band, and clean regime flips at the cull boundary and on
+chart-mode entry/exit.

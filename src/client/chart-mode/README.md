@@ -69,7 +69,7 @@ vocabulary): `planet.vert.glsl` carries the same chart branch driven
 by the same shared uniforms, the reflected-light appMag feeds the same
 formula, and `PlanetBodyField.setMonochrome` swaps blending exactly
 like the star pipeline's `setMonochromeBlend` (the spheroid mesh LOD
-and the corrupt/restore ring-occlusion passes idle in chart — rings
+and the local depth pass idles in chart — rings
 are hidden on paper). Planet name labels ride the chart-labels engine
 (`kind-planet`, proper-name priority tier); `planet-labels.ts` stays
 chart-hidden as before.
