@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import {
   ELEMENTS,
   PLANET_ORDER,
-  CACHE_GRANULARITY_SEC,
   getPlanetOrbitOrientations,
   getPlanetPositions,
   planetEclipticAU,
@@ -148,22 +147,22 @@ describe('getPlanetPositions', () => {
     }
   });
 
-  it('caches by minute-bucket — same reference within bucket', () => {
+  it('caches by exact t — same reference for repeat same-t calls', () => {
     const a = getPlanetPositions(J2000_UNIX);
-    const b = getPlanetPositions(J2000_UNIX + CACHE_GRANULARITY_SEC / 4);
+    const b = getPlanetPositions(J2000_UNIX);
     expect(a).toBe(b);
   });
 
-  it('recomputes when bucket changes', () => {
+  it('recomputes on any t advance — no quantised position hold', () => {
     const a = getPlanetPositions(J2000_UNIX);
-    const b = getPlanetPositions(J2000_UNIX + CACHE_GRANULARITY_SEC * 2);
-    // Different bucket → fresh object.
-    expect(a).not.toBe(b);
-    // Position must have moved measurably for a fast planet (Mercury
-    // covers ~0.1° in 2 minutes).
-    const dx = b.mercury.x - a.mercury.x;
-    const dy = b.mercury.y - a.mercury.y;
-    const dz = b.mercury.z - a.mercury.z;
+    const aMercury = { ...a.mercury };
+    // One second — well inside the old 60s bucket that froze positions
+    // (visible as a snap at mesh-LOD zoom, stellata-2f6.19).
+    const b = getPlanetPositions(J2000_UNIX + 1);
+    expect(b).not.toBe(a);
+    const dx = b.mercury.x - aMercury.x;
+    const dy = b.mercury.y - aMercury.y;
+    const dz = b.mercury.z - aMercury.z;
     expect(Math.hypot(dx, dy, dz)).toBeGreaterThan(0);
   });
 

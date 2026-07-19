@@ -217,15 +217,14 @@ orbital-plane orientation quaternion. Sol's quaternion is the J2000
 obliquity rotation; future exoplanet hosts (`bk5`) get a galactic-
 plane-aligned default per the 3re.8 rule below.
 
-Per-`t` cache granularity is 60 seconds. At billboarded-disc pixel
-scale, sub-minute planet motion is invisible — Mercury moves ~3e-5 rad
-seen from Earth over 60 s, well below pixel resolution at any zoom we
-afford. The cache key is `t / CACHE_GRANULARITY_SEC` floored, so
-multiple frames within the same minute reuse the same `Vec3` triplet.
-Under scrubber fast-forward the sim-time step per frame quickly
-exceeds the bucket, so the cache simply misses every frame and the
-positions stay smooth; reducing the granularity finer is just a
-bucketisation change if ever needed.
+Positions recompute at every distinct `t` — the single-slot cache is
+keyed on exact `t` and only collapses the several same-frame consumers
+(body field, focal ride, overlays) into one Kepler solve per frame.
+The former 60-second bucket was reasoned against billboarded-disc
+pixel scale ("sub-minute motion is invisible"); mesh-LOD close viewing
+invalidated that premise — a resolved disc visibly snapped position
+once a minute — so the bucket is gone. Nine Kepler solves per frame is
+noise next to the 18 moon solves that already ran unbucketed.
 
 ## Time `t` and the readout
 

@@ -148,9 +148,8 @@ export interface PlanetSystem {
  *  Earth sits ~4700 km off-barycentre. The caller applies the single
  *  ecliptic→ICRS host quaternion to the whole vector, so composing the
  *  offset in the ecliptic frame here lands the moon at parent+offset in
- *  ICRS. Planets cache per-`t`-bucket inside getPlanetPositions; the moon
- *  Kepler solves run every call (cheap, and only reached at planet zoom
- *  where the field walks every frame regardless). */
+ *  ICRS. Planet and moon Kepler solves both run at every distinct `t`
+ *  (getPlanetPositions memoises same-`t` repeat calls only). */
 function solPositionsAt(t: number, out: Float32Array): void {
   const positions = getPlanetPositions(t);
   const planetCount = PLANET_ORDER.length;
