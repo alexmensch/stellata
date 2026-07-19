@@ -2,7 +2,7 @@
 // src/client/solar-system/README.md § Planet rendering.
 
 import * as THREE from 'three';
-import type { Planet, PlanetSystem } from './planet-system';
+import { systemFamily, type Planet, type PlanetSystem } from './planet-system';
 import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
@@ -419,7 +419,14 @@ export class PlanetBodyField {
    *  host by (R_p/R_host)² — negligible, and the host is a star-pipeline
    *  instance this field doesn't own. The pair-relative offset is
    *  iLocalRel itself (small values, not a large-position difference),
-   *  so float32 carries it fine. */
+   *  so float32 carries it fine.
+   *
+   *  A moon additionally dims by its parent's shadow — the same lens
+   *  math evaluated from the MOON's viewpoint (primary = host, secondary
+   *  = parent planet): the visible fraction of the host disc IS the
+   *  moon's illumination factor, so a lunar-style eclipse darkens the
+   *  moon continuously through the penumbra. The two dims compose
+   *  multiplicatively (independent light losses). */
   private collectEclipseDimTargets(
     host: AttachedHost,
     cameraPos: Readonly<THREE.Vector3>,
@@ -427,9 +434,11 @@ export class PlanetBodyField {
     const losX = host.hostLocalPos.x - cameraPos.x;
     const losY = host.hostLocalPos.y - cameraPos.y;
     const losZ = host.hostLocalPos.z - cameraPos.z;
+    const family = systemFamily(host.ps.planets);
     for (let i = 0; i < host.count; i++) {
       const idx = host.startInstance + i;
       const base = idx * 3;
+      let dim = 1;
       const result = eclipseDimFromOffsets(
         losX, losY, losZ,
         this.bufs.localRel[base + 0],
@@ -439,8 +448,26 @@ export class PlanetBodyField {
         this.bufs.radius[idx],
       );
       if (result.front === 'primary' && result.dim < 1) {
-        this.dimTargets.set(idx, result.dim);
+        dim = result.dim;
       }
+      const parentIdx = family.parentIdx[i];
+      if (parentIdx >= 0) {
+        const pBase = (host.startInstance + parentIdx) * 3;
+        const shadow = eclipseDimFromOffsets(
+          -this.bufs.localRel[base + 0],
+          -this.bufs.localRel[base + 1],
+          -this.bufs.localRel[base + 2],
+          this.bufs.localRel[pBase + 0],
+          this.bufs.localRel[pBase + 1],
+          this.bufs.localRel[pBase + 2],
+          host.hostRadiusPc,
+          this.bufs.radius[host.startInstance + parentIdx],
+        );
+        if (shadow.front === 'secondary' && shadow.dim < 1) {
+          dim *= shadow.dim;
+        }
+      }
+      if (dim < 1) this.dimTargets.set(idx, dim);
     }
   }
 
@@ -596,6 +623,12 @@ export class PlanetBodyField {
   /** Host's ICRS orbital-plane orientation, or null when unattached. */
   hostOrientationOf(hostStarIdx: number): THREE.Quaternion | null {
     return this.hosts.get(hostStarIdx)?.orientation ?? null;
+  }
+
+  /** Host star's physical radius (pc), or null when unattached — the
+   *  light source's disc for shadow penumbra and eclipse dims. */
+  hostRadiusOf(hostStarIdx: number): number | null {
+    return this.hosts.get(hostStarIdx)?.hostRadiusPc ?? null;
   }
 
   /** (host, planet-within-host) for a flat instance index, or null when
