@@ -9,6 +9,7 @@ import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
+  ORBIT_LINE_OPACITY,
   ORBIT_LINE_SEGMENTS,
   pixelsPerRadian,
   angularRadiusPx,
