@@ -279,10 +279,13 @@ iOccluder/familyOccluders).
    scan mirrors ANY resolved-disc star (unfocused fly-bys included),
    fixing the standard-depth 1.0 tie that let background glow bleed
    through a giant's disc after the near-plane drop to 1e-12 pc
-   (Betelgeuse regression). One compositing nuance: background stars
-   behind a mirrored halo annulus now MaxEquation-blend under it
-   (main-pass colour, local-pass halo) instead of adding over it — a
-   dim star inside a bright halo washes into the glare.
+   (Betelgeuse regression). Core opacity is depth-gated in BOTH
+   passes, never paint-over — the disc pass's MaxEquation blend can't
+   cover a brighter fragment, so a member keeps its main-pass core
+   depth-mask (stamping nearest depth) and the mirror carries its own
+   depth-only core prepass; see `../star-pipeline/README.md`
+   § Local-pass mirror draw. The halo annulus stays translucent
+   (background max-blends under it — dim stars wash into the glare).
 
 ## Current wiring
 

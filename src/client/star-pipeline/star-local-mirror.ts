@@ -16,6 +16,7 @@ export class StarLocalMirror {
   readonly group: THREE.Group;
 
   private readonly geometry: THREE.InstancedBufferGeometry;
+  private readonly maskMaterial: THREE.RawShaderMaterial;
   private readonly discMaterial: THREE.RawShaderMaterial;
   private readonly glowMaterial: THREE.RawShaderMaterial;
   private readonly attrs: MirrorAttr[] = [];
@@ -63,6 +64,11 @@ export class StarLocalMirror {
       });
       return m;
     };
+    this.maskMaterial = makeMat(2, {
+      depthWrite: true,
+      depthTest: true,
+      colorWrite: false,
+    });
     this.discMaterial = makeMat(1, { transparent: true });
     applyDiscBlendDefaults(this.discMaterial);
     this.glowMaterial = makeMat(0, {});
@@ -70,6 +76,14 @@ export class StarLocalMirror {
 
     this.group = new THREE.Group();
     this.group.name = 'star-local-mirror';
+    // Depth-only core prepass: stamps every member core's bracket depth
+    // before the disc mirror draws, so an occluded core depth-fails
+    // instead of reaching the blender — the disc pass's MaxEquation
+    // cannot paint OVER an already-painted farther core, it can only be
+    // kept from painting at all.
+    const maskMesh = new THREE.Mesh(this.geometry, this.maskMaterial);
+    maskMesh.frustumCulled = false;
+    maskMesh.renderOrder = -1;
     const discMesh = new THREE.Mesh(this.geometry, this.discMaterial);
     discMesh.frustumCulled = false;
     discMesh.renderOrder = 0;
@@ -79,6 +93,7 @@ export class StarLocalMirror {
     // holes at planet cores, matching the main pass's core-mask
     // semantics; planet glow (4) still adds over everything.
     glowMesh.renderOrder = 3.5;
+    this.group.add(maskMesh);
     this.group.add(discMesh);
     this.group.add(glowMesh);
   }
@@ -113,6 +128,7 @@ export class StarLocalMirror {
 
   dispose(): void {
     this.geometry.dispose();
+    this.maskMaterial.dispose();
     this.discMaterial.dispose();
     this.glowMaterial.dispose();
   }

@@ -166,6 +166,14 @@ export class StarLocalCluster implements LocalCluster {
     for (const s of this.spheres) out.push(s);
   }
 
+  /** True when this frame's `update()` produced members. The shell ORs
+   *  this into the core-mask mesh gate: a member's mask stamp must
+   *  render even when the pure-physSize window misses an
+   *  appSize-driven member disc. */
+  hasMembers(): boolean {
+    return this.members.length > 0;
+  }
+
   dispose(): void {
     this.mirror.dispose();
   }

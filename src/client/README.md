@@ -260,6 +260,7 @@ SVG mask (`constellation-figure/README.md`).
 | Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
+| Member-star core mask (depth-only)               | WebGL   | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
 | Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
 | Planet disc (inactive-cluster hosts)             | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |

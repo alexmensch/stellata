@@ -2564,9 +2564,6 @@ export class Stellata implements FrameAnchor {
       );
       perfMeasure('extinction.prepass');
     }
-    perfMark('coreMask');
-    this.starPipeline.coreMaskMesh.visible = this.shouldEnableCoreMask();
-    perfMeasure('coreMask');
     // Per-frame layer fan-out through the registry. distFromSol is the
     // camera's absolute ICRS distance, summed in JS float64 so it stays
     // exact with kpc-scale worldOffset values (the disc-fade smoothstep
@@ -2579,6 +2576,13 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
     this.layers.updateAll(this.frameCtx);
+    // After the layer fan-out so the star cluster's membership is
+    // current-frame: a member's core-mask stamp must render even when
+    // the physSize-only window misses an appSize-driven member disc.
+    perfMark('coreMask');
+    this.starPipeline.coreMaskMesh.visible =
+      this.starLocalCluster.hasMembers() || this.shouldEnableCoreMask();
+    perfMeasure('coreMask');
     perfMeasure('pre-render');
     perfMark('gpu.render');
     this.renderer.render(this.scene, this.camera);

@@ -88,7 +88,9 @@ Rendering is **three passes over the same instanced geometry**:
   Way, molecular clouds, galactic disc, and galactic grid (all
   `depthTest: true`) to depth-fail behind close-range disc cores
   rather than bleeding through. Mesh `visible` is gated CPU-side each
-  frame by `shouldEnableCoreMask()` — a binary-search over the
+  frame by `starLocalCluster.hasMembers() || shouldEnableCoreMask()`
+  (members stamp regardless of the physSize window — § Local-pass
+  mirror draw). `shouldEnableCoreMask()` is a binary-search over the
   Sol-distance-sorted index (built once at construction) that walks
   only the `[camDistFromSol ± dThresh]` window (typically 50–500 of
   313k candidates; triangle-inequality bounds it) and returns `true`
@@ -263,11 +265,33 @@ over-painted — and a camera-window scan for any resolved-disc star
 (`isResolvedDiscStar`: disc-pass split × `RESOLVED_DISC_MIN_PX`,
 evaluated on the `renderedSizeComponents` CPU mirror). The scan
 window reuses the core-mask gate's sorted-distance walk
-(`forEachStarNearCamera` in `stellata.ts`). Compositing note: a
-mirrored halo MaxEquation-blends over main-pass background glow
-(brighter background stars peek through; dimmer ones wash into the
-glare) — the additive-after ordering of the pure main-pass path isn't
-reproducible from a second pass, and glare physics reads right.
+(`forEachStarNearCamera` in `stellata.ts`).
+
+**Core opacity is depth-gated, never paint-over.** The disc pass
+blends with per-channel MaxEquation, which cannot cover anything
+brighter in any channel — a white background glow survives "under" a
+warm core repaint. So occlusion always works by keeping occluded
+fragments from painting at all:
+
+- **Main pass** — a member keeps its core depth-mask draw (only the
+  colour passes collapse; `vLocalMember` in the shaders) and the mask
+  stamps `gl_FragDepth = 0.0`. The member's true standard depth
+  quantises to 1.0 past ~7 AU and would TIE background glow instead of
+  occluding it; the nearest-possible stamp is safe because the local
+  pass repaints the core and membership range (a ≥5 px disc)
+  guarantees nothing renderable sits between camera and disc. The
+  shell ORs `starLocalCluster.hasMembers()` into the core-mask mesh
+  gate so an appSize-driven member disc outside the physSize window
+  still stamps.
+- **Local pass** — the mirror carries a third depth-only core-mask
+  mesh (in-pass renderOrder −1, before the disc mirror) so an occluded
+  member core depth-fails against the front core's bracket depth
+  before the blender runs — no purple max-blend of two overlapping
+  cores.
+
+The halo annulus stays translucent: background stars paint there in
+the main pass and the mirrored halo MaxEquation-blends over them —
+brighter stars peek through, dimmer ones wash into the glare.
 
 ## Physical-size rendering
 

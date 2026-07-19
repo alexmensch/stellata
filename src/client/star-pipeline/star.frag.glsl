@@ -59,6 +59,7 @@ in float vPhysRatio; // 1 = physical-size-driven (render as solid disc),
                      // 0 = apparent-mag-driven (render as soft point glow)
 in float vSoftness;  // 0 = crisp (WD) … 1 = fuzzy (hypergiant)
 in float vAaWidth;   // chart-mode disc edge width in vUv units (1 CSS px)
+in float vLocalMember; // 1 = local-depth-cluster member (main variant only)
 
 out vec4 outColor;
 
@@ -123,6 +124,12 @@ void main() {
         if (vPhysRatio < PHYS_RATIO_THRESHOLD) discard;
         if (vAppMag > uMaxAppMag) discard;
         if (glow < uCoreThreshold) discard;
+        // Local-depth-cluster member: stamp the nearest possible depth.
+        // The member's true standard depth quantises to 1.0 past ~7 AU
+        // and TIES background glow instead of occluding it; the local
+        // pass repaints the core, and membership range (a ≥5 px disc)
+        // guarantees nothing renderable sits between camera and disc.
+        if (vLocalMember > 0.5) gl_FragDepth = 0.0;
         outColor = vec4(0.0); // ignored — material has colorWrite = false
         return;
     }

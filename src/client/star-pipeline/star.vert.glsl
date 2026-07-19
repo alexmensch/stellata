@@ -186,6 +186,7 @@ out float vSoftness;   // 0 = crisp (white dwarf), 1 = fuzzy (hypergiant) —
 // the screen-space derivative of `length(vUv)` is undefined, leaving the
 // inner disc faint or invisible.
 out float vAaWidth;
+out float vLocalMember; // 1 = local-depth-cluster member (main variant only)
 
 const float LOG10 = 2.302585093;
 
@@ -222,12 +223,19 @@ void main() {
     // and the fragment shader never executes for it. A future change
     // that makes the off-screen position per-vertex would break this
     // invariant and need to write vFragDepth before returning.
-    bool suppressed = STAR_SELF_ID == uHideFocusIdx;
+    bool isLocalMember = false;
 #ifndef LOCAL_DEPTH_PASS
     for (int k = 0; k < 8; k++) {
-        suppressed = suppressed || gl_InstanceID == uLocalMemberIdx[k];
+        isLocalMember = isLocalMember || gl_InstanceID == uLocalMemberIdx[k];
     }
 #endif
+    vLocalMember = isLocalMember ? 1.0 : 0.0;
+    // A member keeps its core depth-mask draw (mode 2): the stamp is what
+    // stops main-pass background from painting inside the core the local
+    // pass repaints — MaxEquation blending cannot paint over it later.
+    // Only the colour passes collapse in favour of the mirror draws.
+    bool suppressed = STAR_SELF_ID == uHideFocusIdx
+        || (isLocalMember && uRenderMode != 2);
     if (suppressed) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
         vAppMag = 0.0;
