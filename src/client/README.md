@@ -16,6 +16,11 @@ themselves.
   the `FilterController` that owns every mutation.
 - `scene/` — the `SceneLayer` contract + registry driving the
   per-layer update / monochrome / recenter / dispose fan-outs.
+- `local-depth/` — the bracketed local depth pass: camera-relative
+  depth slices giving close bodies (moons, rings, binary pairs) true
+  z-buffer occlusion the main pass's log depth cannot. Currently a
+  dev-flag spike over the planet mesh LOD; the design doc for the
+  full migration lives in its README.
 - `camera/` — camera controllers split across `controls/`, `focus/`,
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
@@ -297,3 +302,10 @@ Within the same `renderOrder` value, the opaque-before-transparent
 rule of the three.js renderer determines order; opaque depth-write
 meshes establish the depth buffer that transparent passes test
 against.
+
+With the local-depth spike flag on
+(`stellata.setLocalDepthPassEnabled(true)`), the planet spheroid mesh
+and ring annulus rows leave this table: they render in a second,
+depth-cleared pass *after* the whole main stack, ordered by a
+bracketed standard-depth z-buffer instead of `renderOrder` — see
+[local-depth/](local-depth/README.md).

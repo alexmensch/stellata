@@ -1,7 +1,9 @@
 precision highp float;
 
 #include <common>
+#ifndef LOCAL_DEPTH_PASS
 #include <logdepthbuf_pars_fragment>
+#endif
 
 // 1-D radial ring profile: RGB = ring colour, A = opacity. U spans
 // the annulus inner→outer edge.
@@ -46,16 +48,19 @@ vec2 bodyRoots(vec3 o, vec3 d) {
 }
 
 void main() {
+  vec3 frag = vec3(vLocalXY * uOuterPc, 0.0);
+  #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_fragment>
 
-  // Body occlusion is analytic, not depth-tested: every distance at
-  // planet scale quantises to the same log-depth value (log2(1+w) is
-  // linear in w ≪ 1, putting the whole solar system inside one depth
-  // step), so the buffer cannot separate ring from body. Discard when
-  // the camera→fragment segment passes through the body.
-  vec3 frag = vec3(vLocalXY * uOuterPc, 0.0);
+  // Body occlusion is analytic in the MAIN pass only: there, every
+  // distance at planet scale quantises to the same log-depth value
+  // (log2(1+w) is linear in w ≪ 1), so the buffer cannot separate
+  // ring from body. Discard when the camera→fragment segment passes
+  // through the body. In the local depth pass the bracketed z-buffer
+  // orders ring vs body natively (../local-depth/README.md).
   vec2 occ = bodyRoots(uCamPosLocal, frag - uCamPosLocal);
   if (occ.x > 0.0 && occ.x < 1.0) discard;
+  #endif
 
   float r = length(vLocalXY);
   float u = clamp((r - uInnerRatio) / (1.0 - uInnerRatio), 0.0, 1.0);

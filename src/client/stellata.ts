@@ -65,6 +65,7 @@ import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/p
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
 import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
+import { LocalDepthPass } from './local-depth/local-depth-pass';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
 import { LocalBubbleShell } from './local-bubble/local-bubble';
@@ -317,6 +318,9 @@ export class Stellata implements FrameAnchor {
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
   private planetMeshLayer: PlanetMeshLayer;
+  private readonly localDepthPass = new LocalDepthPass();
+  private localDepthPassEnabled = false;
+  private localDepthUnregister: (() => void) | null = null;
   // Sol-anchored asymmetric ellipsoid; visible only when Sol is the
   // focused host.
   private heliopause: Heliopause;
@@ -1733,6 +1737,28 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass?.setEnabled(on);
   }
 
+  /** Dev-console spike flag: render the planet mesh LOD (spheroid
+   *  meshes + ring annuli) in the bracketed local depth pass instead
+   *  of the main log-depth pass, giving native z-buffer ring↔body and
+   *  moon↔planet occlusion. Design + smoke steps in
+   *  src/client/local-depth/README.md. */
+  setLocalDepthPassEnabled(on: boolean) {
+    if (on === this.localDepthPassEnabled) return;
+    this.localDepthPassEnabled = on;
+    this.planetMeshLayer.setLocalDepthPass(on);
+    if (on) {
+      this.localDepthUnregister = this.localDepthPass.register({
+        group: this.planetMeshLayer.group,
+        collectSpheres: (camera, out) =>
+          this.planetMeshLayer.collectSpheres(camera, out),
+      });
+    } else {
+      this.localDepthUnregister?.();
+      this.localDepthUnregister = null;
+      this.scene.add(this.planetMeshLayer.group);
+    }
+  }
+
   /** Direct access to the Milky Way layer for dev-console tuning
    *  (e.g. `stellata.milkywayLayer.setBrightness(0.4)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }
@@ -2476,6 +2502,11 @@ export class Stellata implements FrameAnchor {
     perfMark('gpu.render');
     this.renderer.render(this.scene, this.camera);
     perfMeasure('gpu.render');
+    if (this.localDepthPassEnabled) {
+      perfMark('gpu.localDepth');
+      this.localDepthPass.render(this.renderer, this.camera);
+      perfMeasure('gpu.localDepth');
+    }
     perfMark('frame.handlers');
     this.bus.emit('frame');
     perfMeasure('frame.handlers');
@@ -2557,6 +2588,8 @@ export class Stellata implements FrameAnchor {
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
+    this.localDepthPass.dispose();
+    this.localDepthUnregister = null;
     this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but

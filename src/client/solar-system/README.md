@@ -512,8 +512,13 @@ stellata-2f6.3).
   w ≪ 1), so the ring fragment shader discards fragments whose
   camera→fragment segment passes through the body ellipsoid — the
   same ray–ellipsoid helper as the shadow test, with a camera ray.
-  Any future geometry drawn near a planet body must use the same
-  trick; the depth buffer cannot separate planet-scale distances.
+  This limitation is being retired by the local depth pass
+  (`../local-depth/README.md`, design stellata-shvs): under its spike
+  flag (`stellata.setLocalDepthPassEnabled(true)`) the meshes + annuli
+  render in a bracketed second pass where the z-buffer orders
+  ring↔body natively and the analytic discard is skipped. Until that
+  migration completes, any new geometry drawn near a planet body in
+  the MAIN pass still needs the analytic trick.
   Edge-on the zero-thickness annulus thins to a line, which is the
   physically honest look.
 

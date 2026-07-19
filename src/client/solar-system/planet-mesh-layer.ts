@@ -2,6 +2,7 @@
 // § Planet mesh LOD for the crossfade + lazy-texture contract.
 
 import * as THREE from 'three';
+import type { MemberSphere } from '../local-depth/slice-pure';
 import { KM_PC } from '../util/astronomy-constants';
 import type { PlanetBodyField } from './planet-body-field';
 import type { Planet, PlanetRings } from './planet-system';
@@ -28,6 +29,9 @@ interface RingEntry {
 interface MeshEntry {
   mesh: THREE.Mesh;
   material: THREE.ShaderMaterial;
+  /** Body radius, or the ring outer radius for ringed bodies — the
+   *  local-depth-pass bounding sphere. */
+  boundRadiusPc: number;
   ring?: RingEntry;
 }
 
@@ -46,6 +50,7 @@ export class PlanetMeshLayer {
   private readonly loader = new THREE.TextureLoader();
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
+  private localDepthPass = false;
 
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
@@ -69,6 +74,39 @@ export class PlanetMeshLayer {
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
     this.placeholder.needsUpdate = true;
+  }
+
+  /** Local-depth-pass spike flag: strips the log-depth chunks from
+   *  every entry material so fragments carry standard bracket depth.
+   *  Must track which scene the group is parked in — a local-pass
+   *  material writing log depth breaks the bracket's ordering. */
+  setLocalDepthPass(on: boolean): void {
+    if (on === this.localDepthPass) return;
+    this.localDepthPass = on;
+    for (const entry of this.entries.values()) {
+      this.applyDepthDefines(entry.material);
+      if (entry.ring) this.applyDepthDefines(entry.ring.material);
+    }
+  }
+
+  private applyDepthDefines(material: THREE.ShaderMaterial): void {
+    if (this.localDepthPass) material.defines.LOCAL_DEPTH_PASS = '';
+    else delete material.defines.LOCAL_DEPTH_PASS;
+    material.needsUpdate = true;
+  }
+
+  /** Append camera-relative bounding spheres for every mesh-visible
+   *  body (ring annulus included via the stored bound). The
+   *  local-depth-pass bracket input; empty while the layer is hidden. */
+  collectSpheres(camera: THREE.PerspectiveCamera, out: MemberSphere[]): void {
+    if (!this.group.visible) return;
+    for (const entry of this.entries.values()) {
+      if (!entry.mesh.visible) continue;
+      out.push({
+        distPc: entry.mesh.position.distanceTo(camera.position),
+        radiusPc: entry.boundRadiusPc,
+      });
+    }
   }
 
   /** Per-frame: show/scale/light every body inside the crossfade band.
@@ -266,6 +304,7 @@ export class PlanetMeshLayer {
       depthWrite: true,
       depthTest: true,
     });
+    this.applyDepthDefines(material);
     const mesh = new THREE.Mesh(this.geometry, material);
     mesh.name = 'planet-mesh';
     mesh.frustumCulled = false;
@@ -273,7 +312,9 @@ export class PlanetMeshLayer {
     // pass (3) so the fading disc max-blends over the mesh.
     mesh.renderOrder = 2.8;
     this.group.add(mesh);
-    const entry: MeshEntry = { mesh, material };
+    const boundRadiusPc =
+      (planet.rings ? planet.rings.outerRadiusKm : planet.radiusKm) * KM_PC;
+    const entry: MeshEntry = { mesh, material, boundRadiusPc };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     this.entries.set(idx, entry);
     return entry;
@@ -302,6 +343,7 @@ export class PlanetMeshLayer {
       depthTest: true,
       side: THREE.DoubleSide,
     });
+    this.applyDepthDefines(material);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = 'planet-rings';
     mesh.frustumCulled = false;
