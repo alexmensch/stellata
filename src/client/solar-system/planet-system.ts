@@ -93,6 +93,11 @@ export interface Planet {
   // with an arbitrary fixed meridian, the same convention shape as the
   // Lambertian phase fallback.
   readonly rotation?: RotationElements;
+  // Mesh-terminator softness half-width on dot(n, sunDir) — how far
+  // atmospheric scattering carries light past the geometric terminator.
+  // Undefined = 0 = airless hard cut. Perceptual seeds tuned at smoke,
+  // scaled to atmosphere density (Venus thickest).
+  readonly terminatorSoftness?: number;
   // True when a `<body>-night.jpg` emissive night-side companion map
   // ships alongside the day texture (Earth's Black Marble city
   // lights). The mesh renderer lazy-loads and blends it past the
@@ -250,6 +255,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.689,
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
+    terminatorSoftness: 0.08,
   },
   {
     name: 'Earth',
@@ -263,6 +269,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.434,
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
+    terminatorSoftness: 0.05,
     hasNightTexture: true,
   },
   {
@@ -276,6 +283,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.170,
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
+    terminatorSoftness: 0.02,
   },
   {
     name: 'Jupiter',
@@ -289,6 +297,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.538,
     phaseCoefficients: JUPITER_PHASE,
     rotation: JUPITER_ROTATION,
+    terminatorSoftness: 0.02,
   },
   {
     name: 'Saturn',
@@ -302,6 +311,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.499,
     phaseCoefficients: SATURN_PHASE,
     rotation: SATURN_ROTATION,
+    terminatorSoftness: 0.02,
     // Radial span of the shipped ring profile (data/textures/README.md
     // § Artifact contract) — D-ring inner edge to F-ring outer.
     rings: { innerRadiusKm: 74510, outerRadiusKm: 140390 },
@@ -321,6 +331,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.64, 0.85, 0.90],
     albedo: 0.488,
     rotation: URANUS_ROTATION,
+    terminatorSoftness: 0.03,
     rings: { innerRadiusKm: 41600, outerRadiusKm: 51300 },
   },
   {
@@ -334,6 +345,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     colour: [0.25, 0.37, 0.75],
     albedo: 0.442,
     rotation: NEPTUNE_ROTATION,
+    terminatorSoftness: 0.03,
     rings: { innerRadiusKm: 40900, outerRadiusKm: 63100 },
   },
   // Pluto — mean radius from New Horizons 2015 reconnaissance. Type
@@ -363,6 +375,7 @@ interface MoonPhysical {
   readonly albedo: number;
   readonly type: PlanetType;
   readonly colour: readonly [number, number, number];
+  readonly terminatorSoftness?: number;
 }
 
 // Physical properties for the 18 major moons. Mean radii from NASA/JPL
@@ -383,7 +396,9 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   { name: 'Tethys', parentName: 'Saturn', radiusKm: 531.1, albedo: 0.80, type: 'icy', colour: [0.80, 0.80, 0.80] },
   { name: 'Dione', parentName: 'Saturn', radiusKm: 561.4, albedo: 0.70, type: 'icy', colour: [0.75, 0.75, 0.74] },
   { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.78, 0.78, 0.77] },
-  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28] },
+  // Titan is the one moon with a dense atmosphere (1.5 bar N2 haze) —
+  // Earth-like terminator softness; every other in-scope moon is airless.
+  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28], terminatorSoftness: 0.05 },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 
   { name: 'Miranda', parentName: 'Uranus', radiusKm: 235.8, albedo: 0.32, type: 'icy', colour: [0.62, 0.62, 0.63] },
@@ -415,6 +430,7 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     type: m.type,
     albedo: m.albedo,
     colour: m.colour,
+    terminatorSoftness: m.terminatorSoftness,
   };
 });
 
@@ -468,6 +484,39 @@ export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
     });
   }
   return out;
+}
+
+/** Parent/children index maps for a system's body list. */
+export interface SystemFamily {
+  /** Per body: index of its parent in `planets`, or -1 (orbits the host). */
+  readonly parentIdx: Int32Array;
+  /** Per body: indices of its moons in `planets` (empty when none). */
+  readonly childIdxs: readonly (readonly number[])[];
+}
+
+// Memoised on the planets-array identity, which is stable for a session
+// (SOL_BODIES; one lazily-built shard per future exoplanet host).
+const familyCache = new WeakMap<readonly Planet[], SystemFamily>();
+
+/** Parent/children maps for `planets` — moon↔parent resolution for
+ *  shadow casters, membership rosters, and ring extents. */
+export function systemFamily(planets: readonly Planet[]): SystemFamily {
+  let family = familyCache.get(planets);
+  if (family) return family;
+  const indexByName = new Map(planets.map((p, i) => [p.name, i]));
+  const parentIdx = new Int32Array(planets.length).fill(-1);
+  const childIdxs: number[][] = planets.map(() => []);
+  for (let i = 0; i < planets.length; i++) {
+    const parentName = planets[i].parentName;
+    if (!parentName) continue;
+    const p = indexByName.get(parentName);
+    if (p === undefined) continue;
+    parentIdx[i] = p;
+    childIdxs[p].push(i);
+  }
+  family = { parentIdx, childIdxs };
+  familyCache.set(planets, family);
+  return family;
 }
 
 // Sync probe — does this star have a planet system at all?

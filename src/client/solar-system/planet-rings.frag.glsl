@@ -17,6 +17,10 @@ uniform float uPolarRadiusPc;
 uniform vec3 uSunDirLocal;
 uniform vec3 uCamPosLocal;
 uniform float uFade;
+// Host-distance display intensity — same scalar the body mesh applies
+// (perceptual-magnitude.ts hostIntensityScale), so ring↔body contrast
+// is preserved while both dim with distance from the host.
+uniform float uHostIntensity;
 
 in vec2 vLocalXY;
 
@@ -60,5 +64,5 @@ void main() {
   // In the body's shadow when the ray toward the sun hits it.
   if (bodyRoots(frag, uSunDirLocal).y > 0.0) light *= SHADOW_FLOOR;
 
-  outColor = vec4(strip.rgb * light, strip.a * uFade);
+  outColor = vec4(strip.rgb * light * uHostIntensity, strip.a * uFade);
 }

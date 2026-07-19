@@ -4,8 +4,11 @@
 import * as THREE from 'three';
 import type { MemberSphere } from '../local-depth/slice-pure';
 import { KM_PC } from '../util/astronomy-constants';
+import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
+import { hostIntensityScale } from './perceptual-magnitude';
+import { phaseAngleFor, phaseRatioToLambert } from './phase-function';
 import type { PlanetBodyField } from './planet-body-field';
-import type { Planet, PlanetRings } from './planet-system';
+import { systemFamily, type Planet, type PlanetRings } from './planet-system';
 import { meshFadeFromRatio, TEXTURE_PREFETCH_RATIO } from './mesh-crossfade';
 import {
   poleRaDecDegAt,
@@ -54,6 +57,7 @@ export class PlanetMeshLayer {
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
   private readonly tmpSun = new THREE.Vector3();
+  private readonly tmpCaster = new THREE.Vector3();
   private readonly tmpQuatA = new THREE.Quaternion();
   private readonly tmpQuatB = new THREE.Quaternion();
   private readonly tmpQuatRing = new THREE.Quaternion();
@@ -143,21 +147,44 @@ export class PlanetMeshLayer {
       // Host-star direction: world-frame first (the ring lighting
       // frame), then into view space for the terminator.
       let hasSun = false;
+      let dHpPc = 0;
       if (hp && this.field.getHostLocalPositionInto(hp.hostStarIdx, this.tmpHost)) {
         this.tmpSun.subVectors(this.tmpHost, this.tmpPlanet);
-        if (this.tmpSun.lengthSq() > 0) {
-          this.tmpSun.normalize();
+        dHpPc = this.tmpSun.length();
+        if (dHpPc > 0) {
+          this.tmpSun.divideScalar(dHpPc);
           hasSun = true;
         }
       }
+      const hostIntensity = hasSun ? hostIntensityScale(dHpPc) : 1;
 
       if (entry.ring) {
-        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade);
+        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, hostIntensity);
       }
+
+      material.uniforms.uHostIntensity.value = hostIntensity;
+      material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
+        ? phaseRatioToLambert(
+            planet.phaseCoefficients,
+            phaseAngleFor(
+              this.tmpPlanet.x - camera.position.x,
+              this.tmpPlanet.y - camera.position.y,
+              this.tmpPlanet.z - camera.position.z,
+              this.tmpHost.x - camera.position.x,
+              this.tmpHost.y - camera.position.y,
+              this.tmpHost.z - camera.position.z,
+            ),
+          )
+        : 1;
+      material.uniforms.uCasterCount.value =
+        hasSun && hp ? this.writeCasters(material, hp, camera) : 0;
 
       if (hasSun) {
         this.tmpSun.transformDirection(camera.matrixWorldInverse);
         (material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSun);
+        const hostRadiusPc = this.field.hostRadiusOf(hp!.hostStarIdx);
+        material.uniforms.uSunAngRad.value =
+          hostRadiusPc !== null ? hostRadiusPc / dHpPc : 0;
       }
 
       material.uniforms.uFade.value = fade;
@@ -190,6 +217,55 @@ export class PlanetMeshLayer {
         if (entry.ring) entry.ring.mesh.visible = false;
       }
     }
+  }
+
+  /** Fill the material's uCasters array with view-space shadow spheres
+   *  for one drawn body — its parent when it is a moon, its moons when
+   *  it is a parent (moon-on-moon events are out of scope). Returns the
+   *  caster count. */
+  private writeCasters(
+    material: THREE.ShaderMaterial,
+    hp: { hostStarIdx: number; planetIdx: number },
+    camera: THREE.PerspectiveCamera,
+  ): number {
+    const ps = this.field.getAttachedPlanetSystem(hp.hostStarIdx);
+    if (!ps) return 0;
+    const family = systemFamily(ps.planets);
+    const casters = material.uniforms.uCasters.value as THREE.Vector4[];
+    const parentIdx = family.parentIdx[hp.planetIdx];
+    let count = 0;
+    if (parentIdx >= 0) {
+      count += this.writeCaster(casters, count, hp.hostStarIdx, parentIdx, camera);
+    } else {
+      const children = family.childIdxs[hp.planetIdx];
+      for (let c = 0; c < children.length && count < MAX_SHADOW_CASTERS; c++) {
+        count += this.writeCaster(casters, count, hp.hostStarIdx, children[c], camera);
+      }
+    }
+    return count;
+  }
+
+  /** Write one caster's view-space sphere into `casters[slot]`; returns
+   *  1 on success, 0 when the body isn't resolvable. */
+  private writeCaster(
+    casters: THREE.Vector4[],
+    slot: number,
+    hostStarIdx: number,
+    planetIdx: number,
+    camera: THREE.PerspectiveCamera,
+  ): number {
+    const flat = this.field.instanceIndexOf(hostStarIdx, planetIdx);
+    if (flat === null) return 0;
+    const body = this.field.planetAt(flat);
+    if (!body || !this.field.planetLocalPositionInto(flat, this.tmpCaster)) return 0;
+    this.tmpCaster.applyMatrix4(camera.matrixWorldInverse);
+    casters[slot].set(
+      this.tmpCaster.x,
+      this.tmpCaster.y,
+      this.tmpCaster.z,
+      body.radiusKm * KM_PC,
+    );
+    return 1;
   }
 
   /** `out` ← Rz(90°+α0)·Rx(90°−δ0): local +z lands on the body's IAU
@@ -232,6 +308,7 @@ export class PlanetMeshLayer {
     camera: THREE.PerspectiveCamera,
     hasSun: boolean,
     fade: number,
+    hostIntensity: number,
   ): void {
     const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
     if (texState?.state !== 'ready' || !hasSun) {
@@ -253,6 +330,7 @@ export class PlanetMeshLayer {
     ring.mesh.visible = true;
     ring.material.uniforms.uRingMap.value = texState.tex;
     ring.material.uniforms.uFade.value = fade;
+    ring.material.uniforms.uHostIntensity.value = hostIntensity;
     ring.mesh.position.copy(this.tmpPlanet);
     ring.mesh.quaternion.copy(this.tmpQuatRing);
 
@@ -279,6 +357,14 @@ export class PlanetMeshLayer {
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
+        uPhaseScale: { value: 1 },
+        uHostIntensity: { value: 1 },
+        uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
+        uCasters: {
+          value: Array.from({ length: MAX_SHADOW_CASTERS }, () => new THREE.Vector4()),
+        },
+        uCasterCount: { value: 0 },
+        uSunAngRad: { value: 0 },
       },
       transparent: true,
       depthWrite: true,
@@ -314,6 +400,7 @@ export class PlanetMeshLayer {
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
+        uHostIntensity: { value: 1 },
       },
       transparent: true,
       depthWrite: false,

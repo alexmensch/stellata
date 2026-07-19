@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   apparentMagnitude,
+  HOST_INTENSITY_MAX,
+  HOST_INTENSITY_MIN,
+  HOST_IRRADIANCE_DISPLAY_EXPONENT,
+  hostIntensityScale,
   perceptualDmEff,
   perceptualAppSizePx,
   planetApparentMagnitude,
@@ -215,5 +219,38 @@ describe('planetApparentMagnitude', () => {
   it('does not divide by zero at d_vp = 0', () => {
     const m = planetApparentMagnitude(0, 0, 10, 0.5, 1, 1);
     expect(Number.isFinite(m)).toBe(true);
+  });
+});
+
+describe('hostIntensityScale', () => {
+  it('is exactly 1 at the 1 AU reference (Earth insolation)', () => {
+    expect(hostIntensityScale(AU_PC)).toBeCloseTo(1, 9);
+  });
+
+  it('follows (1/d_au)^(2·exponent) between the clamps', () => {
+    expect(hostIntensityScale(5.203 * AU_PC)).toBeCloseTo(
+      5.203 ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT), 9);
+    expect(hostIntensityScale(30.069 * AU_PC)).toBeCloseTo(
+      30.069 ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT), 9);
+  });
+
+  it('Mercury clamps at the ceiling; nothing in-system hits the floor', () => {
+    expect(hostIntensityScale(0.387 * AU_PC)).toBe(HOST_INTENSITY_MAX);
+    expect(hostIntensityScale(39.482 * AU_PC)).toBeGreaterThan(HOST_INTENSITY_MIN);
+  });
+
+  it('is monotonically non-increasing in host distance', () => {
+    let prev = Infinity;
+    for (const dAu of [0.1, 0.387, 1, 5.2, 9.5, 19.2, 30, 39.5, 100]) {
+      const v = hostIntensityScale(dAu * AU_PC);
+      expect(v).toBeLessThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('Mercury reads visibly brighter than Neptune (the reported defect)', () => {
+    expect(
+      hostIntensityScale(0.387 * AU_PC) / hostIntensityScale(30.069 * AU_PC),
+    ).toBeGreaterThan(5);
   });
 });

@@ -10,7 +10,11 @@ import {
   lambertianPhaseFactor,
   mallamaPhaseFactor,
   alphaZeroPhaseFactor,
+  phaseAngleFor,
   phaseFactorFor,
+  phaseRatioToLambert,
+  PHASE_RATIO_MAX,
+  PHASE_RATIO_MIN,
 } from './phase-function';
 
 const DEG = Math.PI / 180;
@@ -311,5 +315,67 @@ describe('phaseFactorFor', () => {
       const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, coefs);
       expect(phi).toBeCloseTo(alphaZeroPhaseFactor(coefs), 6);
     }
+  });
+});
+
+describe('phaseRatioToLambert', () => {
+  it('is exactly 1 for bodies without coefficients (sentinel path)', () => {
+    expect(phaseRatioToLambert(undefined, 1.2)).toBe(1);
+    const sentinel = { ...MARS_PHASE, alphaMaxDeg: 0 };
+    expect(phaseRatioToLambert(sentinel, 1.2)).toBe(1);
+  });
+
+  it('is 1 at α = 0 for c0 = 0 bodies (both curves normalise to full phase)', () => {
+    for (const coefs of [MERCURY_PHASE, VENUS_PHASE, MARS_PHASE, JUPITER_PHASE]) {
+      expect(phaseRatioToLambert(coefs, 0)).toBeCloseTo(1, 9);
+    }
+  });
+
+  it("Saturn's ring-boost c0 lifts the α = 0 ratio above 1", () => {
+    expect(phaseRatioToLambert(SATURN_PHASE, 0)).toBeCloseTo(
+      alphaZeroPhaseFactor(SATURN_PHASE), 9);
+  });
+
+  it("Venus's forward scattering exceeds Lambert at high α", () => {
+    // The measured crescent is brighter than a diffuse sphere's — the
+    // visible payoff of the ratio scalar.
+    expect(phaseRatioToLambert(VENUS_PHASE, (150 * Math.PI) / 180))
+      .toBeGreaterThan(1.5);
+  });
+
+  it('matches the raw curve ratio inside the validity bound', () => {
+    const a = (30 * Math.PI) / 180;
+    const raw = mallamaPhaseFactor(MARS_PHASE, a) / lambertianPhaseFactor(a);
+    expect(phaseRatioToLambert(MARS_PHASE, a)).toBeCloseTo(raw, 12);
+  });
+
+  it('is constant past αmax (anchor-scaled Lambert over Lambert) and finite at α = π', () => {
+    const atMax = phaseRatioToLambert(MARS_PHASE, (50 * Math.PI) / 180);
+    expect(phaseRatioToLambert(MARS_PHASE, (120 * Math.PI) / 180)).toBeCloseTo(atMax, 12);
+    expect(Number.isFinite(phaseRatioToLambert(MERCURY_PHASE, Math.PI))).toBe(true);
+  });
+
+  it('clamps to [PHASE_RATIO_MIN, PHASE_RATIO_MAX]', () => {
+    for (const coefs of [MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, SATURN_PHASE]) {
+      for (let deg = 0; deg <= 180; deg += 5) {
+        const r = phaseRatioToLambert(coefs, (deg * Math.PI) / 180);
+        expect(r).toBeGreaterThanOrEqual(PHASE_RATIO_MIN);
+        expect(r).toBeLessThanOrEqual(PHASE_RATIO_MAX);
+      }
+    }
+  });
+});
+
+describe('phaseAngleFor', () => {
+  it('feeds phaseFactorFor: same α as the reference geometry', () => {
+    const a = (73 * Math.PI) / 180;
+    const dvx = 1, dvy = 0, dvz = 0;
+    const dhx = 1 - Math.cos(a), dhy = Math.sin(a), dhz = 0;
+    expect(phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz)).toBeCloseTo(a, 9);
+  });
+
+  it('returns 0 on degenerate legs', () => {
+    expect(phaseAngleFor(0, 0, 0, 1, 0, 0)).toBe(0);
+    expect(phaseAngleFor(1, 0, 0, 1, 0, 0)).toBe(0);
   });
 });

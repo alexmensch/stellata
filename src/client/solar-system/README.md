@@ -93,11 +93,19 @@ src/client/solar-system/
                                   prime meridian on the model clock) —
                                   see § Planet rotation.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
-                                  (Lambertian + Mallama phase factors).
-                                  Drives both the body field's disc/glow
-                                  sizing and the per-planet label gating.
-  phase-function.ts (+ test)      Lambertian + Mallama phase functions.
-                                  Pure helpers with vitest coverage.
+                                  (Lambertian + Mallama phase factors)
+                                  + hostIntensityScale (mesh-regime
+                                  host-distance lighting). Drives the
+                                  body field's disc/glow sizing and the
+                                  per-planet label gating.
+  phase-function.ts (+ test)      Lambertian + Mallama phase functions
+                                  + phaseRatioToLambert (mesh phase
+                                  scalar). Pure helpers with vitest
+                                  coverage.
+  body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math —
+                                  CPU mirror of the mesh shader's caster
+                                  loop, plus Io-transit / lunar-eclipse
+                                  search tests on the real ephemeris.
   planet-labels.ts                Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § below.
   heliopause.ts                   Sol's heliopause boundary as a translucent
@@ -367,7 +375,12 @@ camera-anywhere geometry the binaries eclipse photometry runs
 the shared anti-strobe blend helpers). `PlanetBodyField.update`
 evaluates each in-range host's planets per frame (the pair-relative
 offset is `iLocalRel` itself — small values, no large-position
-differencing) and writes the per-instance `iEclipseDim` attribute;
+differencing) and writes the per-instance `iEclipseDim` attribute.
+A moon composes a second, multiplicative dim: the same lens math from
+the MOON's viewpoint with the parent planet as occluder of the host
+disc — the visible host fraction IS the moon's illumination, so a
+lunar-style eclipse darkens the moon continuously through the
+penumbra (search-tested against a year of real ephemeris);
 the vertex shader folds it into appMag in the **glow pass only**,
 mirroring the star pipeline's fold. A FULL eclipse writes exactly 0
 and the shader collapses the quad — a floored +7.5 mag residual is
@@ -478,7 +491,35 @@ occluded while the visual handoff happens.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; no ambient term, so the night
-  side is black (physically honest).
+  side is black (physically honest). Three scalars refine it, all
+  CPU-computed per frame from vitest-pinned pure helpers:
+  - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
+    (`phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
+    the disc-integrated output to the body's measured Mallama curve —
+    Venus's forward-scattered crescent brightens where the data says.
+    A pure function of phase angle (1 at α = 0); an appMag match was
+    rejected: it depends on viewer distance and blows out on approach.
+  - `uHostIntensity` (`perceptual-magnitude.ts:hostIntensityScale`) —
+    host-distance irradiance on a quarter-power display compression,
+    reference 1 AU ⇒ Earth = 1, Mercury ~1.6× (clamped), Neptune
+    ~0.18×. A function of host→body distance ONLY, so approach can't
+    blow it out; the ring annulus multiplies the same scalar so
+    ring↔body contrast is preserved.
+  - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
+    half-width carrying twilight past the geometric terminator on
+    atmospheric bodies (Venus 0.08 widest; Titan the one moon with a
+    band; undefined = airless hard cut).
+- **Inter-body shadows**: each drawn body carries up to 8 view-space
+  caster spheres (`uCasters` — a moon's parent; a planet's moons); the
+  fragment shader attenuates the reflected term when the ray toward
+  the sun intersects one, with a penumbra half-width of
+  `distance × uSunAngRad` (the host's angular disc), so a Galilean
+  shadow transit reads as a soft-edged disc on Jupiter and the
+  antumbral case falls out naturally. CPU mirror + transit search
+  tests in `body-shadow-pure.ts`. Analytic because bodies at
+  planet-scale separations share one log-depth bucket in any shadow
+  map the main pass could render — and the local pass's z-buffer
+  orders camera rays, not sun rays.
 - **Earth night lights** (stellata-2f6.14): `Planet.hasNightTexture`
   lazy-loads the `<body>-night.jpg` companion (Black Marble) with the
   day map; the shader adds it as an *emissive* term (no limb

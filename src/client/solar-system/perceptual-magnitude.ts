@@ -2,6 +2,8 @@
 // math and brightness → disc-radius mapping the star and planet vertex
 // shaders use. Shader is the source of truth; this mirror is test-pinned.
 
+import { AU_PC } from '../util/astronomy-constants';
+
 // Magnitudes below the slider cutoff a body still renders: the vertex
 // shaders fade the disc out over this soft taper rather than hard-cutting
 // at `uMaxAppMag`, so a body is drawn (and therefore pickable) while
@@ -90,6 +92,28 @@ export function perceptualAppSizePx(
  * Distances and the reflectance product floor at 1e-30 to match the
  * shader's defensive clamps at the singular zero-distance point.
  */
+/** Display-compression exponent on the host-irradiance ratio: raw
+ *  1/d² spans ~4 decades Mercury→Pluto, unrenderable in LDR; the
+ *  quarter power maps it to ~[0.16, 1.6]. */
+export const HOST_IRRADIANCE_DISPLAY_EXPONENT = 0.25;
+export const HOST_INTENSITY_MIN = 0.12;
+export const HOST_INTENSITY_MAX = 1.6;
+
+/**
+ * Mesh-regime lighting intensity from the host→body distance:
+ * `(E / E_ref)^HOST_IRRADIANCE_DISPLAY_EXPONENT` with `E ∝ 1/d²` and
+ * the reference at 1 AU (Earth's insolation ⇒ exactly 1), clamped to
+ * [HOST_INTENSITY_MIN, HOST_INTENSITY_MAX]. Deliberately a function of
+ * host→body distance ONLY: it is fixed for a given orbital position, so
+ * it cannot blow out as the camera approaches the body — the failure
+ * mode that rules out any viewer-distance term in mesh brightness.
+ */
+export function hostIntensityScale(dHpPc: number): number {
+  const dAu = Math.max(dHpPc / AU_PC, 1e-12);
+  const scale = dAu ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT);
+  return Math.min(HOST_INTENSITY_MAX, Math.max(HOST_INTENSITY_MIN, scale));
+}
+
 export function planetApparentMagnitude(
   hostAbsmag: number,
   dVpPc: number,
