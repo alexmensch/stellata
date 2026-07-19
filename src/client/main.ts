@@ -34,7 +34,7 @@ import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { SidResolver, arrayDomain } from './util/sid-resolver';
 import { SOL_OBJECT_SIDS } from './solar-system/sol-object-sids';
-import { SOL_BODIES } from './solar-system/planet-system';
+import { moonNamesOf, SOL_BODIES } from './solar-system/planet-system';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
@@ -342,6 +342,13 @@ async function main() {
           cameraDistancePc: (idx) => stellata.planetCameraDistancePc(idx),
           appMagFor: (idx) =>
             stellata.planetField.appMagForInstance(idx, stellata.camera.position),
+          moonNamesOf: (idx) => {
+            const host = stellata.planetField.hostPlanetOf(idx);
+            const ps = host
+              ? stellata.planetField.getAttachedPlanetSystem(host.hostStarIdx)
+              : null;
+            return ps ? moonNamesOf(ps.planets, host!.planetIdx) : [];
+          },
         }),
         cloud: createCloudFocusProvider({
           clouds: cloudCatalog?.clouds ?? null,

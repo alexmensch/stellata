@@ -519,6 +519,15 @@ export function systemFamily(planets: readonly Planet[]): SystemFamily {
   return family;
 }
 
+/** Names of `planets[planetIdx]`'s moons in array (semi-major-axis)
+ *  order — the card-roster feed. Empty for moons and moonless bodies. */
+export function moonNamesOf(
+  planets: readonly Planet[],
+  planetIdx: number,
+): string[] {
+  return systemFamily(planets).childIdxs[planetIdx].map((i) => planets[i].name);
+}
+
 // Sync probe — does this star have a planet system at all?
 //
 // Currently hardwires "planets ⇔ Sol". When the exoplanet epic lands an

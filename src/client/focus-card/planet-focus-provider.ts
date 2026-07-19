@@ -9,6 +9,7 @@ import {
 } from '../solar-system/orbit-descriptor';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatEarthRadii, formatMagnitude } from '../format/physical-format';
+import { formatMoonsLine } from '../format/moon-list-format';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';
 
 const TYPE_DESCRIPTOR: Record<PlanetType, string> = {
@@ -35,6 +36,10 @@ export interface PlanetFocusProviderConfig {
   cameraDistancePc: (idx: number) => number | null;
   /** Live apparent V mag from the camera (shader mirror). */
   appMagFor: (idx: number) => number | null;
+  /** The body's moon names in semi-major-axis order (empty for moons
+   *  and moonless bodies) — same source the hover card reads; the
+   *  focus card shows the uncapped list. */
+  moonNamesOf: (idx: number) => readonly string[];
 }
 
 export function createPlanetFocusProvider(
@@ -79,7 +84,13 @@ export function createPlanetFocusProvider(
         );
       }
 
-      return { name: planet.name, identityLines, rows, lines: [] };
+      const moonsLine = formatMoonsLine(config.moonNamesOf(idx));
+      return {
+        name: planet.name,
+        identityLines,
+        rows,
+        lines: moonsLine ? [moonsLine] : [],
+      };
     },
   };
 }

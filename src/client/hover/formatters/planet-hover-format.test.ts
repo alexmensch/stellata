@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setUnit } from '../../ui/distance-util';
-import { SOL_BODIES, SOL_PLANETS, type PlanetSystem } from '../../solar-system/planet-system';
+import {
+  moonNamesOf,
+  SOL_BODIES,
+  SOL_PLANETS,
+  type PlanetSystem,
+} from '../../solar-system/planet-system';
 import { orbitDescriptorFor } from '../../solar-system/orbit-descriptor';
 import {
   formatPlanetHover,
@@ -24,6 +29,9 @@ function buildCtx(
     orbitOf(planetIdx) {
       const p = bodies[planetIdx];
       return p ? orbitDescriptorFor(p, system, null) : null;
+    },
+    moonsOf(planetIdx) {
+      return moonNamesOf(bodies, planetIdx);
     },
   };
 }
@@ -122,5 +130,29 @@ describe('formatPlanetHover', () => {
   it('returns empty payload for out-of-range index', () => {
     const out = formatPlanetHover(99, 1, buildCtx({}));
     expect(out).toEqual({ name: '', lines: [] });
+  });
+
+  it('a moon-parenting planet lists its moons; four Galileans fit uncapped', () => {
+    const jupiter = SOL_BODIES.findIndex((p) => p.name === 'Jupiter');
+    const out = formatPlanetHover(
+      jupiter, 1, buildCtx({ Jupiter: { appMag: -2.7 } }, SOL_BODIES));
+    expect(out.lines[out.lines.length - 1])
+      .toBe('Moons: Io, Europa, Ganymede, Callisto');
+  });
+
+  it("Saturn's seven moons truncate to the hover name cap", () => {
+    const saturn = SOL_BODIES.findIndex((p) => p.name === 'Saturn');
+    const out = formatPlanetHover(
+      saturn, 1, buildCtx({ Saturn: { appMag: 0.5 } }, SOL_BODIES));
+    expect(out.lines[out.lines.length - 1])
+      .toBe('Moons: Mimas, Enceladus, Tethys +4 more');
+  });
+
+  it('moonless bodies and moons themselves carry no roster line', () => {
+    for (const name of ['Mercury', 'Europa']) {
+      const idx = SOL_BODIES.findIndex((p) => p.name === name);
+      const out = formatPlanetHover(idx, 1, buildCtx({}, SOL_BODIES));
+      expect(out.lines.some((l) => l.startsWith('Moons:'))).toBe(false);
+    }
   });
 });

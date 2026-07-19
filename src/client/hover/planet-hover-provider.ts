@@ -7,6 +7,7 @@ import {
   type PlanetHoverFormatContext,
 } from './formatters/planet-hover-format';
 import { orbitDescriptorFor } from '../solar-system/orbit-descriptor';
+import { moonNamesOf } from '../solar-system/planet-system';
 import type { HoverProvider } from './hover-types';
 
 export interface PlanetHoverProviderConfig {
@@ -38,6 +39,7 @@ export function createPlanetHoverProvider(
           const p = ps.planets[i];
           return p ? orbitDescriptorFor(p, ps, null) : null;
         },
+        moonsOf: (i) => moonNamesOf(ps.planets, i),
       };
       return formatPlanetHover(hit.idx, hit.cameraDistancePc, ctx);
     },

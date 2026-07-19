@@ -3,12 +3,17 @@
 
 import { fmtDistAuto } from '../../ui/distance-util';
 import { formatEarthRadii, formatMagnitude } from '../../format/physical-format';
+import { formatMoonsLine } from '../../format/moon-list-format';
 import {
   formatOrbitPeriod,
   type OrbitDescriptor,
 } from '../../solar-system/orbit-descriptor';
 import type { Planet } from '../../solar-system/planet-system';
 import type { HoverPayload } from '../hover-types';
+
+// Name budget for the hover roster line — the card stays glanceable;
+// the focus card carries the uncapped list.
+export const HOVER_MOON_NAME_CAP = 4;
 
 export interface PlanetHoverFormatContext {
   // Planet roster for the focused host. `planetIdx` indexes into this
@@ -23,6 +28,9 @@ export interface PlanetHoverFormatContext {
   // reads its period against its parent planet's mass, in days, not the
   // solar-mass years a planet uses). Null omits the period line.
   orbitOf(planetIdx: number): OrbitDescriptor | null;
+  // The body's moon names in semi-major-axis order (empty for moons and
+  // moonless bodies) — same source the focus card reads, capped here.
+  moonsOf(planetIdx: number): readonly string[];
 }
 
 export function formatPlanetHover(
@@ -46,6 +54,9 @@ export function formatPlanetHover(
   const orbit = ctx.orbitOf(planetIdx);
   if (orbit) lines.push(`Period ${formatOrbitPeriod(orbit)}`);
   lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);
+
+  const moonsLine = formatMoonsLine(ctx.moonsOf(planetIdx), HOVER_MOON_NAME_CAP);
+  if (moonsLine) lines.push(moonsLine);
 
   return { name: planet.name, lines };
 }
