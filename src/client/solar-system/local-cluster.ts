@@ -4,12 +4,18 @@
 import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
 import type { MemberSphere } from '../local-depth/slice-pure';
-import type { StarLocalMirror } from '../star-pipeline/star-local-mirror';
 import { KM_PC } from '../util/astronomy-constants';
 import { isHostLocallyActive, ringExtentRadiusPc } from './local-cluster-pure';
 import type { OrbitRingsLayer } from './orbit-rings-layer';
 import type { PlanetBodyField } from './planet-body-field';
 import type { PlanetMeshLayer } from './planet-mesh-layer';
+
+/** The seam to the star cluster: the active host's star mirrors there
+ *  (full membership — the host's billboard renders in the pass with its
+ *  bodies), so this cluster only reports which star that is. */
+export interface HostStarMemberSink {
+  setHostMember(idx: number | null): void;
+}
 
 /**
  * Owns the "is a system locally active" decision each frame. Active =
@@ -25,30 +31,25 @@ export class SolarSystemCluster implements LocalCluster {
   private readonly field: PlanetBodyField;
   private readonly meshLayer: PlanetMeshLayer;
   private readonly orbitRings: OrbitRingsLayer;
-  private readonly starMirror: StarLocalMirror;
-  private readonly localMemberIdxUniform: { value: number };
+  private readonly starCluster: HostStarMemberSink;
   private readonly spheres: MemberSphere[] = [];
   private readonly tmpBody = new THREE.Vector3();
-  private readonly memberScratch: number[] = [];
 
   constructor(
     field: PlanetBodyField,
     meshLayer: PlanetMeshLayer,
     orbitRings: OrbitRingsLayer,
-    starMirror: StarLocalMirror,
-    localMemberIdxUniform: { value: number },
+    starCluster: HostStarMemberSink,
   ) {
     this.field = field;
     this.meshLayer = meshLayer;
     this.orbitRings = orbitRings;
-    this.starMirror = starMirror;
-    this.localMemberIdxUniform = localMemberIdxUniform;
+    this.starCluster = starCluster;
     this.group = new THREE.Group();
     this.group.name = 'solar-system-cluster';
     this.group.add(meshLayer.group);
     this.group.add(orbitRings.group);
     this.group.add(field.localGroup);
-    this.group.add(starMirror.group);
   }
 
   /** Runs in the scene-layer registry AFTER the field + rings updates
@@ -57,12 +58,11 @@ export class SolarSystemCluster implements LocalCluster {
    *  render). */
   update(camera: THREE.PerspectiveCamera): void {
     this.spheres.length = 0;
-    this.memberScratch.length = 0;
 
     // Chart mode inks every body as a flat main-pass disc; suppression
     // and mirrors must stay out of the way entirely.
     const fieldLive = this.field.group.visible && !this.field.monochrome;
-    let active = false;
+    let hostMember: number | null = null;
     if (fieldLive) {
       const ringsUp = this.orbitRings.anyOrbitRingVisible();
       for (const host of this.field.attachedHosts()) {
@@ -72,12 +72,9 @@ export class SolarSystemCluster implements LocalCluster {
         // v1: one active host (Sol is the only attached host). The
         // single suppression range + member star generalise to a list
         // when bk5 attaches more hosts.
-        active = true;
         this.field.setLocalPassRange(host.startInstance, host.count);
-        this.memberScratch.push(host.hostStarIdx);
-        this.localMemberIdxUniform.value = host.hostStarIdx;
+        hostMember = host.hostStarIdx;
 
-        this.spheres.push({ distPc: dHost, radiusPc: host.hostRadiusPc });
         for (let i = 0; i < host.count; i++) {
           const flat = host.startInstance + i;
           const planet = this.field.planetAt(flat);
@@ -97,12 +94,8 @@ export class SolarSystemCluster implements LocalCluster {
       }
     }
 
-    if (!active) {
-      this.field.setLocalPassRange(-1, 0);
-      this.localMemberIdxUniform.value = -1;
-    }
-    this.starMirror.setMembers(this.memberScratch);
-    this.starMirror.sync();
+    if (hostMember === null) this.field.setLocalPassRange(-1, 0);
+    this.starCluster.setHostMember(hostMember);
     this.meshLayer.collectSpheres(camera, this.spheres);
   }
 
@@ -111,9 +104,5 @@ export class SolarSystemCluster implements LocalCluster {
    *  the list is current. Not self-sufficient: never call standalone. */
   collectSpheres(_camera: THREE.PerspectiveCamera, out: MemberSphere[]): void {
     for (const s of this.spheres) out.push(s);
-  }
-
-  dispose(): void {
-    this.starMirror.dispose();
   }
 }

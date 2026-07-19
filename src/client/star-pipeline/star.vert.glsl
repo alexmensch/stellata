@@ -19,10 +19,12 @@ uniform uint uSpectMask;
 // every other mode disables the suppression by construction (gl_InstanceID
 // is non-negative).
 uniform int uHideFocusIdx;
-// Star whose system is the active local-depth cluster (-1 = none). Its
-// main-pass instance collapses in all three passes — the local pass's
-// mirror draw renders it instead (src/client/local-depth/README.md).
-uniform int uLocalMemberIdx;
+// Member stars of the frame's active local-depth clusters (-1 = empty
+// slot; slot count pinned to MIRROR_CAPACITY in star-pipeline.test.ts).
+// A member's main-pass instance collapses in all three passes — the
+// local pass's mirror draws render it instead
+// (src/client/local-depth/README.md § Full membership).
+uniform int uLocalMemberIdx[8];
 // Pass index — 0=glow, 1=disc, 2=core mask. Shared with the frag shader;
 // the vert reads it so the composite-suppress sentinel below can drop
 // the disc and core-mask passes for sub-pixel binary secondaries while
@@ -160,21 +162,12 @@ in float iSuppressPulsation;
 #ifdef LOCAL_DEPTH_PASS
 // Mirror-draw slot → source catalog index. Replaces gl_InstanceID for
 // every star-indexed lookup (extinction texel, hide/pin compares) so a
-// mirror slot behaves exactly like its source instance. It reuses the
-// attribute slot iDepthBias occupies in the main variant, so each
-// variant stays within the 16-attribute WebGL2 minimum (pinned per-
-// variant in star-pipeline.test.ts); the local pass's bracket z-buffer
-// orders close pairs natively, so it never needs the bias.
+// mirror slot behaves exactly like its source instance. Both compile
+// variants stay within the 16-attribute WebGL2 minimum (pinned per-
+// variant in star-pipeline.test.ts).
 in float iSourceIdx;
 #define STAR_SELF_ID int(iSourceIdx + 0.5)
 #else
-// Log-depth bias written by EclipsePhotometryField each frame onto the
-// back component of an overlapping orbital pair. Added to gl_FragDepth in
-// the opaque disc + core-mask passes so the front wins the z-test where a
-// tight pair's line-of-sight separation is below the depth buffer's
-// resolvable quantum. 0.0 = no bias. See src/client/binaries/README.md
-// § Eclipse photometry and star-pipeline/README.md § Depth encoding.
-in float iDepthBias;
 #define STAR_SELF_ID gl_InstanceID
 #endif
 
@@ -193,7 +186,7 @@ out float vSoftness;   // 0 = crisp (white dwarf), 1 = fuzzy (hypergiant) —
 // the screen-space derivative of `length(vUv)` is undefined, leaving the
 // inner disc faint or invisible.
 out float vAaWidth;
-out float vDepthBias; // pass-through of iDepthBias; frag adds it to gl_FragDepth
+out float vLocalMember; // 1 = local-depth-cluster member (main variant only)
 
 const float LOG10 = 2.302585093;
 
@@ -230,15 +223,19 @@ void main() {
     // and the fragment shader never executes for it. A future change
     // that makes the off-screen position per-vertex would break this
     // invariant and need to write vFragDepth before returning.
-#ifdef LOCAL_DEPTH_PASS
-    vDepthBias = 0.0;
-#else
-    vDepthBias = iDepthBias;
-#endif
-    bool suppressed = STAR_SELF_ID == uHideFocusIdx;
+    bool isLocalMember = false;
 #ifndef LOCAL_DEPTH_PASS
-    suppressed = suppressed || gl_InstanceID == uLocalMemberIdx;
+    for (int k = 0; k < 8; k++) {
+        isLocalMember = isLocalMember || gl_InstanceID == uLocalMemberIdx[k];
+    }
 #endif
+    vLocalMember = isLocalMember ? 1.0 : 0.0;
+    // A member keeps its core depth-mask draw (mode 2): the stamp is what
+    // stops main-pass background from painting inside the core the local
+    // pass repaints — MaxEquation blending cannot paint over it later.
+    // Only the colour passes collapse in favour of the mirror draws.
+    bool suppressed = STAR_SELF_ID == uHideFocusIdx
+        || (isLocalMember && uRenderMode != 2);
     if (suppressed) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
         vAppMag = 0.0;

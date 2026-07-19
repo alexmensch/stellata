@@ -67,7 +67,13 @@ import { PlanetBodyField } from './solar-system/planet-body-field';
 import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
-import { StarLocalMirror } from './star-pipeline/star-local-mirror';
+import { MIRROR_CAPACITY, StarLocalMirror } from './star-pipeline/star-local-mirror';
+import { StarLocalCluster } from './star-pipeline/star-local-cluster';
+import {
+  discWindowPc,
+  PHYS_RATIO_THRESHOLD,
+  RESOLVED_DISC_MIN_PX,
+} from './star-pipeline/star-local-cluster-pure';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import { Heliopause } from './solar-system/heliopause';
 import { LocalBubbleShell } from './local-bubble/local-bubble';
@@ -209,11 +215,6 @@ export class Stellata implements FrameAnchor {
   // EclipsePhotometryField writes per-frame for the back component of
   // orbital pairs whose discs overlap from the camera viewpoint.
   private _eclipseDim: Float32Array;
-  // Per-instance disc-pass depth bias. 0 = none; EclipsePhotometryField
-  // writes a small bias onto the back component of an overlapping pair so
-  // the front wins the z-test deterministically instead of z-fighting on
-  // the sub-quantum depth separation at close range.
-  private _depthBias: Float32Array;
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for every eclipsing binary
   // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
@@ -327,6 +328,7 @@ export class Stellata implements FrameAnchor {
   private planetMeshLayer: PlanetMeshLayer;
   private readonly localDepthPass = new LocalDepthPass();
   private starLocalMirror: StarLocalMirror;
+  private starLocalCluster: StarLocalCluster;
   private solarCluster: SolarSystemCluster;
   // Sol-anchored asymmetric ellipsoid; visible only when Sol is the
   // focused host.
@@ -494,7 +496,6 @@ export class Stellata implements FrameAnchor {
     this._localPositions = new Float32Array(catalog.positions);
     this._compositeSuppress = new Float32Array(catalog.count);
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
-    this._depthBias = new Float32Array(catalog.count);
     // Built here (not attachBinaries) because the gate is varType-driven
     // and binary-independent; see the field declaration for the rationale.
     this._suppressPulsation = buildPulsationSuppressMask(catalog.varType);
@@ -602,10 +603,10 @@ export class Stellata implements FrameAnchor {
       // three star passes (disc, glow, core mask) share these uniforms so
       // the suppression fires uniformly.
       uHideFocusIdx: { value: -1 },
-      // Star whose system is the active local-depth cluster; its
-      // main-pass instance collapses and the pass's mirror draw renders
-      // it. Written per frame by SolarSystemCluster.update. -1 = none.
-      uLocalMemberIdx: { value: -1 },
+      // Member stars of the active local-depth clusters; a member's
+      // main-pass instance collapses and the pass's mirror draws render
+      // it. Written per frame by StarLocalCluster.update. -1 = empty slot.
+      uLocalMemberIdx: { value: new Int32Array(MIRROR_CAPACITY).fill(-1) },
       // Blackbody → sRGB lookup for the star vertex shader's ciToColor.
       // See docs/science-stellar-modelling.md § "Star colour calibration".
       uColorLut: { value: makeColorLutTexture() },
@@ -619,11 +620,6 @@ export class Stellata implements FrameAnchor {
       // (0, 0, -distCam, 1) to bypass the cancellation. -1 disables.
       // Updated each frame in animate() since pan can move target away.
       uPinFocusToCenter: { value: -1 },
-      // Debug: flat-colour the disc-pass cores by iDepthBias so the
-      // intra-pair depth ordering is visible — biased (back) core red,
-      // everything else green. 0 = off. Toggled from the Eclipse debug
-      // section. See star.frag.glsl.
-      uDebugDepthBias: { value: 0 },
     } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 
     this.starPipeline = new StarPipeline({
@@ -636,7 +632,6 @@ export class Stellata implements FrameAnchor {
       localPositions: this._localPositions,
       compositeSuppress: this._compositeSuppress,
       eclipseDim: this._eclipseDim,
-      depthBias: this._depthBias,
       suppressPulsation: this._suppressPulsation,
       vertexShader,
       fragmentShader,
@@ -667,7 +662,23 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer();
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
-    this.scene.add(this.binaryOrbitPathLayer.group);
+    this.starLocalCluster = new StarLocalCluster(
+      this.starLocalMirror,
+      this.binaryOrbitPathLayer,
+      sharedUniforms.uLocalMemberIdx as { value: Int32Array },
+      {
+        catalog,
+        localPositions: () => this._localPositions,
+        renderedSizeComponents: (idx, out) => this.renderedSizeComponentsFor(idx, out),
+        forEachStarNearCamera: (d, cb) => this.forEachStarNearCamera(d, cb),
+        // Membership needs physSize ≥ PHYS_RATIO_THRESHOLD × pxSize with
+        // pxSize ≥ RESOLVED_DISC_MIN_PX, so the widest useful window is
+        // where the largest star's disc crosses the product.
+        scanWindowPc: () =>
+          this.discWindowFromUniformsPc(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
+      },
+    );
+    this.localDepthPass.register(this.starLocalCluster);
     this.constellationFigureLayer = new ConstellationFigureLayer();
     this.scene.add(this.constellationFigureLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
@@ -680,8 +691,7 @@ export class Stellata implements FrameAnchor {
       this.planetBodyField,
       this.planetMeshLayer,
       this.orbitRingsLayer,
-      this.starLocalMirror,
-      sharedUniforms.uLocalMemberIdx,
+      this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
     // Heliopause is Sol-anchored — added once, visibility gated on
@@ -1074,9 +1084,10 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       // After the field + rings updates it reads; before the main
-      // render its suppression uniforms gate.
+      // render its suppression uniforms gate. Owns no GPU resources —
+      // the star mirror it feeds is disposed with the star cluster.
       update: (ctx) => this.solarCluster.update(ctx.camera),
-      dispose: () => this.solarCluster.dispose(),
+      dispose: () => {},
     });
     this.layers.register({
       update: (ctx) => {
@@ -1091,6 +1102,17 @@ export class Stellata implements FrameAnchor {
         this.eclipsePhotometryField?.dispose();
         this.binaryOrbitPathLayer.dispose();
       },
+    });
+    this.layers.register({
+      // After the binary walk + eclipse photometry + path-layer update:
+      // membership reads this frame's positions and path visibility, and
+      // the mirror sync re-copies the slots those fields just wrote.
+      update: (ctx) => this.starLocalCluster.update(ctx.camera, {
+        monochrome: this.monochrome,
+        focalIdx: this.focus.getFocusedStar(),
+        maxAppMag: this.filter.maxAppMag,
+      }),
+      dispose: () => this.starLocalCluster.dispose(),
     });
     this.layers.register({
       // After the binary + planet walks so a figure vertex that is a binary
@@ -1600,6 +1622,7 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
     this.binariesData = binaries;
+    this.starLocalCluster.setBinaries(binaries);
     if (binaries === null) {
       this.binaryOrbitField = null;
       this.eclipsePhotometryField = null;
@@ -1623,8 +1646,6 @@ export class Stellata implements FrameAnchor {
     // persist on stars the new set doesn't touch.
     this._eclipseDim.fill(1);
     this.starPipeline.iEclipseDimAttr.needsUpdate = true;
-    this._depthBias.fill(0);
-    this.starPipeline.iDepthBiasAttr.needsUpdate = true;
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
       absolutePositions: this.catalog.positions,
@@ -1633,8 +1654,6 @@ export class Stellata implements FrameAnchor {
       physicalRadiusSolar: this.catalog.physicalRadius,
       eclipseDimBuffer: this._eclipseDim,
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
-      depthBiasBuffer: this._depthBias,
-      iDepthBiasAttr: this.starPipeline.iDepthBiasAttr,
     });
   }
 
@@ -1656,15 +1675,11 @@ export class Stellata implements FrameAnchor {
     // reads post-perturbation positions; the pair-relative geometry is
     // evaluated independently in float64. See
     // src/client/binaries/README.md § Eclipse photometry.
-    const ums = this.starPipeline.discMaterial.uniforms;
-    const radPerPx = (ums.uFovYRad.value as number)
-      / (ums.uViewport.value as THREE.Vector2).y;
     this.eclipsePhotometryField?.update(
       this.getT(),
       this.camera.position,
       this.filter.maxAppMag,
       performance.now(),
-      (idx) => this.renderedSizePxFor(idx) * 0.5 * radPerPx,
     );
   }
 
@@ -1766,16 +1781,9 @@ export class Stellata implements FrameAnchor {
     return this.eclipsePhotometryField?.activeDimCount ?? 0;
   }
 
-  /** Debug: tint disc-pass cores by iDepthBias (biased/back core red, rest
-   *  green) to reveal which instance the depth buffer keeps in an overlap.
-   *  The uniform object is shared across all three star materials. */
-  setDebugDepthBias(on: boolean): void {
-    this.starPipeline.discMaterial.uniforms.uDebugDepthBias.value = on ? 1 : 0;
-  }
-
   /** Rendered disc diameter (px) for one instance — the CPU mirror of the
    *  shader's `max(appSize, physSize)` sizing (`star-physics.ts`). Shared
-   *  by the navigate-mode fade closure and the eclipse depth-bias trigger. */
+   *  by the navigate-mode fade closure and the overlay/pick paths. */
   private renderedSizePxFor(idx: number): number {
     return starPhysics.renderedSizePx({
       catalog: this.catalog,
@@ -1786,6 +1794,23 @@ export class Stellata implements FrameAnchor {
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
     });
+  }
+
+  /** Component split of `renderedSizePxFor` — the star local cluster's
+   *  membership test needs the disc/glow dominance, not just the max. */
+  private renderedSizeComponentsFor(
+    idx: number,
+    out: starPhysics.RenderedSizeComponents,
+  ): starPhysics.RenderedSizeComponents {
+    return starPhysics.renderedSizeComponents({
+      catalog: this.catalog,
+      idx,
+      camPos: this.camera.position,
+      localPositions: this._localPositions,
+      uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      filter: this.filter,
+      suppressPulsation: this._suppressPulsation,
+    }, out);
   }
 
   /** User-facing extinction multiplier scaling the A_V re-added on top of
@@ -2416,33 +2441,28 @@ export class Stellata implements FrameAnchor {
    *  clicks. See InputController.applyObjectClick. */
   applyObjectClick(target: Target): boolean { return this.input.applyObjectClick(target); }
 
-  // Pixel size below which a disc-pass core's bleed-through is small enough
-  // that we don't bother enabling the depth mask. Conservative — at this
-  // pivot a max-radius supergiant only takes a handful of pixels on screen.
-  private static readonly CORE_MASK_MIN_PX = 5;
-
-  // Should the core depth-mask render this frame? True iff at least one
-  // star is close enough to the camera that its physSize term could exceed
-  // CORE_MASK_MIN_PX. Derived from the live uniforms, so changing
-  // exaggeration K, FOV, or viewport keeps the gate honest.
-  //
-  // Uses the sorted-by-distance-from-Sol index plus the triangle
-  // inequality: any star within `dThresh` of the camera must have
-  // |distFromSol(star) - distFromSol(camera)| <= dThresh. We binary-
-  // search that window in the sorted array (typically tens to hundreds of
-  // candidates) and only do the squared-distance check on those. Replaces
-  // a full 313k-element linear scan that ran every frame in every mode.
-  private shouldEnableCoreMask(): boolean {
-    // Largest catalog star at distance d subtends 2·atan(R_max/d) radians,
-    // which is CORE_MASK_MIN_PX × fov_y / viewport.y radians at the
-    // threshold. Solve for d → R_max / tan(half-angle).
+  // Camera-distance bound at which the catalog's largest star subtends
+  // `px` pixels under the live FOV / viewport uniforms, so changing
+  // exaggeration K, FOV, or viewport keeps the dependent gates honest.
+  private discWindowFromUniformsPc(px: number): number {
     const u = this.starPipeline.discMaterial.uniforms;
-    const fovYRad = u.uFovYRad.value as number;
-    const viewport = u.uViewport.value as THREE.Vector2;
-    const halfAngle = (Stellata.CORE_MASK_MIN_PX * fovYRad)
-      / (Math.max(viewport.y, 1) * 2);
-    const dThresh = this.maxPhysicalRadiusPc / Math.max(Math.tan(halfAngle), DCAM_LOG_FLOOR_PC);
-    const dThreshSq = dThresh * dThresh;
+    return discWindowPc(
+      this.maxPhysicalRadiusPc,
+      px,
+      u.uFovYRad.value as number,
+      (u.uViewport.value as THREE.Vector2).y,
+    );
+  }
+
+  // Walk stars within `dThreshPc` of the camera. Uses the sorted-by-
+  // distance-from-Sol index plus the triangle inequality: any star within
+  // `dThreshPc` of the camera must have |distFromSol(star) −
+  // distFromSol(camera)| ≤ dThreshPc. We binary-search that window in the
+  // sorted array (typically tens to hundreds of candidates) and only do
+  // the squared-distance check on those — replaces a full 313k-element
+  // linear scan per frame. `cb` returns true to stop the walk early.
+  private forEachStarNearCamera(dThreshPc: number, cb: (idx: number) => boolean): void {
+    const dThreshSq = dThreshPc * dThreshPc;
 
     // Camera distance from Sol in absolute space (catalog frame).
     const camAbsX = this.camera.position.x + this.worldOffset.x;
@@ -2454,8 +2474,8 @@ export class Stellata implements FrameAnchor {
     // sortedDistFromSol holds load-epoch Sol distances; a scrubbed star can
     // sit up to _maxEpochDriftPc away from its sorted value, so the window
     // widens by that bound. The in-window test below reads live positions.
-    const lo = camDistFromSol - dThresh - this._maxEpochDriftPc;
-    const hi = camDistFromSol + dThresh + this._maxEpochDriftPc;
+    const lo = camDistFromSol - dThreshPc - this._maxEpochDriftPc;
+    const hi = camDistFromSol + dThreshPc + this._maxEpochDriftPc;
 
     const sortedIdx = this.sortedByDistFromSol;
     const { start, end } = sortedDistRange(this.sortedDistFromSol, lo, hi);
@@ -2469,9 +2489,20 @@ export class Stellata implements FrameAnchor {
       const dx = positions[i * 3] - cx;
       const dy = positions[i * 3 + 1] - cy;
       const dz = positions[i * 3 + 2] - cz;
-      if (dx * dx + dy * dy + dz * dz < dThreshSq) return true;
+      if (dx * dx + dy * dy + dz * dz < dThreshSq && cb(i)) return;
     }
-    return false;
+  }
+
+  // Should the core depth-mask render this frame? True iff at least one
+  // star is close enough that its disc could reach RESOLVED_DISC_MIN_PX —
+  // below that, bleed-through is too small to see.
+  private shouldEnableCoreMask(): boolean {
+    let found = false;
+    this.forEachStarNearCamera(
+      this.discWindowFromUniformsPc(RESOLVED_DISC_MIN_PX),
+      () => { found = true; return true; },
+    );
+    return found;
   }
 
   private animate = () => {
@@ -2533,9 +2564,6 @@ export class Stellata implements FrameAnchor {
       );
       perfMeasure('extinction.prepass');
     }
-    perfMark('coreMask');
-    this.starPipeline.coreMaskMesh.visible = this.shouldEnableCoreMask();
-    perfMeasure('coreMask');
     // Per-frame layer fan-out through the registry. distFromSol is the
     // camera's absolute ICRS distance, summed in JS float64 so it stays
     // exact with kpc-scale worldOffset values (the disc-fade smoothstep
@@ -2548,6 +2576,13 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
     this.layers.updateAll(this.frameCtx);
+    // After the layer fan-out so the star cluster's membership is
+    // current-frame: a member's core-mask stamp must render even when
+    // the physSize-only window misses an appSize-driven member disc.
+    perfMark('coreMask');
+    this.starPipeline.coreMaskMesh.visible =
+      this.starLocalCluster.hasMembers() || this.shouldEnableCoreMask();
+    perfMeasure('coreMask');
     perfMeasure('pre-render');
     perfMark('gpu.render');
     this.renderer.render(this.scene, this.camera);

@@ -8,12 +8,13 @@ local system over the finished frame in tight standard-depth brackets
 where the z-buffer resolves everything natively.
 
 This README is the design record for the primitive (stellata-shvs):
-architecture, precision analysis, cluster API, and migration plan.
-The reusable core is `slice-pure.ts` + `local-depth-pass.ts`; the
-solar system consumes it fully (steps 1–3): mesh LOD + ring annuli,
-billboard member mirror draws incl. the host star, and orbit rings
-all render through the pass while the system is locally active
-(`../solar-system/local-cluster.ts`).
+architecture, precision analysis, cluster API, and migration plan
+(all four steps live). The reusable core is `slice-pure.ts` +
+`local-depth-pass.ts`. Two clusters consume it: the solar system
+(mesh LOD + ring annuli, planet billboard mirrors, orbit rings —
+`../solar-system/local-cluster.ts`) and the star cluster (host-star +
+binary-chain + resolved-disc mirror draws, binary orbit-path
+ellipses — `../star-pipeline/star-local-cluster.ts`).
 
 ## Files
 
@@ -198,13 +199,17 @@ localDepthPass.render(renderer, camera)        // after the main render
   invariant under `recenterOrigin` — no recenter hook needed beyond
   what each layer already does.
 
-Planned providers:
+Live providers:
 
-- **solar-system** — the planet/moon mesh LOD + ring annuli (spike,
-  live), then billboard members + host star mirror draws, planet +
-  moon orbit rings.
-- **binaries** — the focal star's slot-chain pairs: star-pipeline
-  mirror draws for both members + `BinaryOrbitPathLayer` ellipses.
+- **solar-system** (`SolarSystemCluster`) — the planet/moon mesh LOD +
+  ring annuli, billboard members, planet + moon orbit rings. Reports
+  the active host's star to the star cluster (`setHostMember`) instead
+  of mirroring it itself.
+- **star cluster** (`../star-pipeline/star-local-cluster.ts`) — star
+  mirror draws for the active host, the focal star's Kepler chain
+  (engaged by drawn orbit paths or any member resolving as a disc),
+  and any resolved-disc star near the camera; plus
+  `BinaryOrbitPathLayer` ellipses and their extent spheres.
 
 ## Pass composition rules
 
@@ -241,8 +246,8 @@ pass solves.
   background — no mask.
 - **Eclipse photometry** — `iEclipseDim` survives unchanged: it is
   the *photometric* signal for sub-pixel overlaps, which no depth
-  buffer can provide. `iDepthBias` (the geometric half) retires once
-  binaries migrate.
+  buffer can provide. `iDepthBias` (the geometric half) is retired —
+  the bracket orders resolved-pair discs natively.
 - **Extinction prepass** — mirror draws read the same star-indexed
   A_V texture via `iSourceIdx`.
 
@@ -250,11 +255,12 @@ pass solves.
 
 Ring-shader analytic body-occlusion discard (done, step 1) ·
 orbit-ring corrupt/restore depth passes (done, step 2) · `iDepthBias`
-+ its EclipsePhotometryField wiring (step 4) · the reverted PR #252
-apparatus stays deleted (disc silhouette clip, mesh ray-sphere
-occlusion, iOccluder/familyOccluders).
++ its EclipsePhotometryField wiring incl. the rendered-overlap
+trigger (done, step 4) · the reverted PR #252 apparatus stays deleted
+(disc silhouette clip, mesh ray-sphere occlusion,
+iOccluder/familyOccluders).
 
-## Migration plan (implementation children)
+## Migration plan (implementation children) — complete
 
 1. **Mesh LOD + ring annuli by default** — DONE: the mesh layer's
    group lives in the pass scene from construction, its shaders carry
@@ -265,21 +271,38 @@ occlusion, iOccluder/familyOccluders).
 3. **Orbit rings into the pass** — DONE: extents join
    `collectSpheres`; near-side arcs now physically pass in FRONT of
    body discs/meshes (the corrupt-era behaviour hid them).
-4. **Binaries migration** — focal-chain star mirror draws +
-   `BinaryOrbitPathLayer`; delete `iDepthBias`.
+4. **Binaries migration** — DONE: the focal star's Kepler-chain
+   members mirror via `star-local-cluster.ts` (engaged by drawn orbit
+   paths or a member resolving as a disc) and `BinaryOrbitPathLayer`
+   renders in the pass; close-pair disc overlap orders on the bracket
+   z-buffer natively and `iDepthBias` is deleted. The same membership
+   scan mirrors ANY resolved-disc star (unfocused fly-bys included),
+   fixing the standard-depth 1.0 tie that let background glow bleed
+   through a giant's disc after the near-plane drop to 1e-12 pc
+   (Betelgeuse regression). Core opacity is depth-gated in BOTH
+   passes, never paint-over — the disc pass's MaxEquation blend can't
+   cover a brighter fragment, so a member keeps its main-pass core
+   depth-mask (stamping nearest depth) and the mirror carries its own
+   depth-only core prepass; see `../star-pipeline/README.md`
+   § Local-pass mirror draw. The halo annulus stays translucent
+   (background max-blends under it — dim stars wash into the glare).
 
 ## Current wiring
 
-`SolarSystemCluster` (`../solar-system/local-cluster.ts`) owns the
-per-frame activation decision — any attached host inside its cull
+Two clusters register with the pass. `SolarSystemCluster`
+(`../solar-system/local-cluster.ts`) owns the per-frame "system is
+locally active" decision — any attached host inside its cull
 distance, or its orbit rings drawing — and, while active, writes the
-suppression uniforms, syncs the star mirror, and reports member
-spheres (host star, every body, ring extents, mesh bounds). Its
-`update` runs in the scene-layer registry after the field + rings
-updates it reads and before the main render its uniforms gate;
-`localDepthPass.render` runs after every main render — a no-op frame
-when no cluster is active (deep field, chart mode). Perf label:
-`gpu.localDepth`.
+planet suppression range, reports the host star to the star cluster,
+and reports body/ring/mesh spheres. `StarLocalCluster`
+(`../star-pipeline/star-local-cluster.ts`) unions the star members
+(host, focal Kepler chain, resolved-disc scan), writes the
+`uLocalMemberIdx` slots, syncs the mirror, and reports star + orbit-
+path spheres. Both `update`s run in the scene-layer registry — the
+star cluster's after the binary orbit walk + eclipse photometry whose
+per-instance writes its mirror re-copies; `localDepthPass.render`
+runs after every main render — a no-op frame when no cluster is
+active (deep field, chart mode). Perf label: `gpu.localDepth`.
 
 Smoke (Saturn + moons): focus Saturn, scrub time; check ring↔body
 occlusion incl. the oblate limb, a sub-pixel moon transiting IN FRONT
@@ -288,3 +311,10 @@ orbit-ring arcs drawing over the body while far-side arcs hide, the
 Sun's disc occluding far ring arcs, no popping through the disc↔mesh
 crossfade band, and clean regime flips at the cull boundary and on
 chart-mode entry/exit.
+
+Smoke (stars): focus Betelgeuse / Antares, zoom to the orbit floor —
+opaque disc with no background-star bleed-through, halo still lets
+brighter background stars peek; Algol / Alsephina close approach —
+no disc flicker in the overlap; α Cen with orbit paths drawn —
+near-side path arc over a resolved disc, far-side hidden; Sol close
+approach unchanged; sub-Pluto moon parks still don't near-clip.

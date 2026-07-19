@@ -2,6 +2,8 @@
 // multi-star system. See src/client/binaries/README.md § Binary orbit paths.
 
 import * as THREE from 'three';
+import type { MemberSphere } from '../local-depth/slice-pure';
+import { RING_EXTENT_MARGIN } from '../solar-system/local-cluster-pure';
 import { AU_PC } from '../util/astronomy-constants';
 import { type BinariesData } from './binaries-loader';
 import { keplerRelationParams, relationIndicesInBounds } from './orbit-relation-cache';
@@ -10,14 +12,17 @@ import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
   ORBIT_LINE_SEGMENTS,
+  ORBIT_LINE_OPACITY,
   pixelsPerRadian,
   angularRadiusPx,
 } from '../util/orbit-line';
 
 const PATH_COLOUR = 0x9fc2d6;
-// Below the star discs (renderOrder 0) so a disc composites over the path
-// where a member sits on it; above the galactic disc / grid (−1).
-const PATH_RENDER_ORDER = -0.5;
+// In-pass order (the group lives in the local depth pass, same slot the
+// planet orbit rings use): after the member-star disc mirror (0) so the
+// bracket z-buffer hides far-side arcs behind a resolved disc and draws
+// near-side arcs over it; before the member glow (3.5), which adds on top.
+const PATH_RENDER_ORDER = 3.2;
 // Hide a pair once its larger ellipse subtends less than this on-screen
 // radius: at that size the orbit no longer reads as a loop, and the focus
 // ring (24 px) takes back over as the "you are here" marker.
@@ -31,6 +36,10 @@ interface OrbitPathPair {
   /** Larger member's ellipse semi-major (pc) — the on-screen-size proxy
    *  for the per-frame visibility gate. */
   readonly charSizePc: number;
+  /** Bounding radius (pc) of the pair's drawn ellipses about the
+   *  barycentre — larger member's apoapsis plus margin. Feeds the local
+   *  depth pass's slice bracket. */
+  readonly extentPc: number;
   readonly group: THREE.Group;
   readonly primaryLoop: THREE.LineLoop;
   readonly secondaryLoop: THREE.LineLoop;
@@ -56,7 +65,7 @@ export class BinaryOrbitPathLayer {
     this.group = new THREE.Group();
     this.group.renderOrder = PATH_RENDER_ORDER;
     this.group.visible = false;
-    this.material = makeOrbitLineMaterial(PATH_COLOUR);
+    this.material = makeOrbitLineMaterial(PATH_COLOUR, ORBIT_LINE_OPACITY, true);
   }
 
   /**
@@ -93,11 +102,14 @@ export class BinaryOrbitPathLayer {
       g.add(primaryLoop);
       g.add(secondaryLoop);
       this.group.add(g);
+      const charSizePc = Math.max(params.elements.q, 1 - params.elements.q)
+        * params.elements.a * AU_PC;
       this.pairs.push({
         primaryIdx: r.primaryIdx,
         secondaryIdx: r.secondaryIdx,
         q: params.elements.q,
-        charSizePc: Math.max(params.elements.q, 1 - params.elements.q) * params.elements.a * AU_PC,
+        charSizePc,
+        extentPc: charSizePc * (1 + params.elements.e) * RING_EXTENT_MARGIN,
         group: g,
         primaryLoop,
         secondaryLoop,
@@ -150,10 +162,25 @@ export class BinaryOrbitPathLayer {
    * large enough on screen to read as an orbit. The focus ring overlay
    * reads this (via `Stellata.anyOrbitRingVisible`) to suppress itself
    * while the paths mark the focal star — mirrors
-   * `OrbitRingsLayer.anyOrbitRingVisible`.
+   * `OrbitRingsLayer.anyOrbitRingVisible`. The star local cluster reads
+   * it too: paths drawing engage the whole focal chain's mirror draws.
    */
   anyOrbitRingVisible(): boolean {
     return this.permitted && this.group.visible && this.anyVisible;
+  }
+
+  /** Append each drawn pair's barycentre-anchored extent sphere so the
+   *  local depth pass's slice bracket contains the ellipses. Positions
+   *  were set by this frame's `update()`. */
+  collectSpheres(camera: THREE.PerspectiveCamera, out: MemberSphere[]): void {
+    if (!this.anyOrbitRingVisible()) return;
+    for (const p of this.pairs) {
+      if (!p.group.visible) continue;
+      out.push({
+        distPc: camera.position.distanceTo(p.group.position),
+        radiusPc: p.extentPc,
+      });
+    }
   }
 
   dispose(): void {

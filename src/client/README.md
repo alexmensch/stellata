@@ -255,17 +255,18 @@ SVG mask (`constellation-figure/README.md`).
 | Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Member-star glow mirror                          | WebGL   | local depth pass (3.5 in-pass)                     |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Binary orbit paths                               | WebGL   | local depth pass (3.2 in-pass)                     |       | [binaries/](binaries/README.md), [local-depth/](local-depth/README.md) |
 | Planet disc mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (3 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
+| Member-star core mask (depth-only)               | WebGL   | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
 | Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
 | Planet disc (inactive-cluster hosts)             | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
 | Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       | [dust/](dust/README.md) |
 | Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
 | Star disc                                        | WebGL   | `renderOrder: 0`                                   |       | [star-pipeline/](star-pipeline/README.md) |
-| Binary orbit paths                               | WebGL   | `renderOrder: -0.5`                                |       | [binaries/](binaries/README.md) |
 | Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
 | Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
 | Local Bubble shell                               | WebGL   | `renderOrder: -1`                                  |       | [local-bubble/](local-bubble/README.md) |
@@ -286,15 +287,19 @@ The two cross-layer pinning rules `stellata.ts` is responsible for:
   behind close-range bright cores instead of bleeding through. Stars
   and planets share this slot; both write opaque depth with
   `colorWrite: false`.
-- **The local depth pass owns the active system.** While a system is
-  locally active (host in cull range, or its orbit rings drawing),
-  every one of its bodies — the host star included — collapses in the
-  main pass via the sentinel uniforms (`uLocalMemberIdx`,
-  `uLocalPassRange`) and renders through the pass's mirror draws
-  instead, where a bracketed standard-depth z-buffer orders
-  everything natively (ring↔body, moon↔planet, transits, near-side
-  orbit-ring arcs). The `planet-body-field` test pins the pass
-  renderOrders; a reorder fails CI rather than silently regressing.
+- **The local depth pass owns the active system — and every resolved
+  star disc.** While a system is locally active (host in cull range,
+  or its orbit rings drawing), every one of its bodies — the host
+  star included — collapses in the main pass via the sentinel
+  uniforms (`uLocalMemberIdx`, `uLocalPassRange`) and renders through
+  the pass's mirror draws instead, where a bracketed standard-depth
+  z-buffer orders everything natively (ring↔body, moon↔planet,
+  transits, near-side orbit-ring arcs). Star membership extends
+  beyond the host: the focal binary chain (with its orbit-path
+  ellipses) and any resolved-disc star near the camera mirror the
+  same way (`star-pipeline/star-local-cluster.ts`). The
+  `planet-body-field` test pins the pass renderOrders; a reorder
+  fails CI rather than silently regressing.
   See [local-depth/](local-depth/README.md).
 
 Within the same `renderOrder` value, the opaque-before-transparent

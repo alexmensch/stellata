@@ -142,12 +142,25 @@ export interface RenderedSizeArgs {
   suppressPulsation?: Float32Array;
 }
 
-// Approximate the GPU-rendered pixel size of a star's quad so SVG /
-// overlay code (focus ring, distance-vector tip) can align
-// to the rendered disc edge. Mirrors the vertex-shader angular-diameter
-// formula and the variability-compression rule in star.vert.glsl; if
-// the shader's size computation changes, this must change in lockstep.
-export function renderedSizePx(args: RenderedSizeArgs): number {
+export interface RenderedSizeComponents {
+  /** Apparent magnitude incl. the pulsation modulation (no extinction —
+   *  the CPU mirror deliberately skips the dust term, same as every
+   *  overlay consumer). */
+  appMag: number;
+  appSizePx: number;
+  physSizePx: number;
+}
+
+// The two size terms behind the GPU-rendered quad size — the CPU mirror
+// of star.vert.glsl's `max(appSize, physSize)` sizing. Consumers that
+// need the disc/glow pass split (physSize vs appSize dominance) read the
+// components; everything sizing against the rendered disc edge takes the
+// max via `renderedSizePx`. If the shader's size computation changes,
+// this must change in lockstep.
+export function renderedSizeComponents(
+  args: RenderedSizeArgs,
+  out: RenderedSizeComponents,
+): RenderedSizeComponents {
   const { catalog, idx, camPos, localPositions, uniforms: u, filter } = args;
   const { physicalRadius, absmag, periodDays, amplitudeMag } = catalog;
 
@@ -198,7 +211,20 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
 
   // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.
   const physSize = Math.min(physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor), maxPhysSize);
-  return Math.max(appSize, physSize);
+  out.appMag = appMag;
+  out.appSizePx = appSize;
+  out.physSizePx = physSize;
+  return out;
+}
+
+const sizeScratch: RenderedSizeComponents = { appMag: 0, appSizePx: 0, physSizePx: 0 };
+
+// Rendered quad diameter (px) — `max(appSize, physSize)` over the
+// components above. What SVG / overlay code (focus ring, distance-vector
+// tip) aligns to.
+export function renderedSizePx(args: RenderedSizeArgs): number {
+  const c = renderedSizeComponents(args, sizeScratch);
+  return Math.max(c.appSizePx, c.physSizePx);
 }
 
 export interface PeakDiscArgs {

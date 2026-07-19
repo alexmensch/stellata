@@ -13,19 +13,6 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
 
   const { root, body } = buildDiagnosticReadout({ onResetLatches: () => {} });
 
-  const tintLabel = document.createElement('label');
-  tintLabel.style.cssText =
-    'display:flex;align-items:center;gap:6px;margin-bottom:6px;'
-    + 'cursor:pointer;user-select:none;';
-  const tintBox = document.createElement('input');
-  tintBox.type = 'checkbox';
-  tintBox.addEventListener('change', () => {
-    stellata.setDebugDepthBias(tintBox.checked);
-  });
-  tintLabel.appendChild(tintBox);
-  tintLabel.appendChild(document.createTextNode('tint disc cores by depthBias (back=red)'));
-  root.insertBefore(tintLabel, body);
-
   const au = (pc: number) => (pc / AU_PC).toPrecision(3);
 
   const onFrame = () => {
@@ -57,9 +44,6 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
         + ` dim→${res.dim.toFixed(3)}`
         + ` buf=${r.bufPrimary.toFixed(3)}/${r.bufSecondary.toFixed(3)}`,
       );
-      lines.push(
-        `  bias=${r.biasPrimary.toExponential(1)}/${r.biasSecondary.toExponential(1)}`,
-      );
     }
     if (rows.length > 12) lines.push(`… +${rows.length - 12} more`);
     body.textContent = lines.join('\n');
@@ -69,7 +53,7 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
 
   return {
     element: root,
-    dispose: () => { unsubscribe(); stellata.setDebugDepthBias(false); },
+    dispose: () => { unsubscribe(); },
     setVisible: (v: boolean) => { visible = v; },
   };
 }

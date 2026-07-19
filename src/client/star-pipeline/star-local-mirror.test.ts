@@ -33,8 +33,8 @@ function makeMirror(source: THREE.InstancedBufferGeometry): StarLocalMirror {
   return new StarLocalMirror(source, DUMMY_SHADER, DUMMY_SHADER, {});
 }
 
-function meshes(mirror: StarLocalMirror): [THREE.Mesh, THREE.Mesh] {
-  return mirror.group.children as [THREE.Mesh, THREE.Mesh];
+function meshes(mirror: StarLocalMirror): [THREE.Mesh, THREE.Mesh, THREE.Mesh] {
+  return mirror.group.children as [THREE.Mesh, THREE.Mesh, THREE.Mesh];
 }
 
 function mirrorGeometry(mirror: StarLocalMirror): THREE.InstancedBufferGeometry {
@@ -61,24 +61,36 @@ describe('StarLocalMirror construction', () => {
     expect(geom.getIndex()).toBe(source.getIndex());
   });
 
-  it('sets renderOrder disc 0 / glow 3.5 with frustum culling off', () => {
-    const [disc, glow] = meshes(makeMirror(makeSource()));
+  it('sets renderOrder mask −1 / disc 0 / glow 3.5 with frustum culling off', () => {
+    const [mask, disc, glow] = meshes(makeMirror(makeSource()));
+    expect(mask.renderOrder).toBe(-1);
     expect(disc.renderOrder).toBe(0);
     expect(glow.renderOrder).toBe(3.5);
+    expect(mask.frustumCulled).toBe(false);
     expect(disc.frustumCulled).toBe(false);
     expect(glow.frustumCulled).toBe(false);
   });
 
-  it('compiles both materials in the local-depth variant with the shared blend defaults', () => {
-    const [disc, glow] = meshes(makeMirror(makeSource()));
+  it('compiles all three materials in the local-depth variant with the shared blend defaults', () => {
+    const [mask, disc, glow] = meshes(makeMirror(makeSource()));
+    const maskMat = mask.material as THREE.RawShaderMaterial;
     const discMat = disc.material as THREE.RawShaderMaterial;
     const glowMat = glow.material as THREE.RawShaderMaterial;
+    expect(maskMat.defines?.LOCAL_DEPTH_PASS).toBe('');
     expect(discMat.defines?.LOCAL_DEPTH_PASS).toBe('');
     expect(glowMat.defines?.LOCAL_DEPTH_PASS).toBe('');
+    // Mask: depth-only core prepass — an occluded core must depth-fail
+    // before the disc pass blends (MaxEquation cannot paint over it).
+    expect(maskMat.uniforms.uRenderMode.value).toBe(2);
+    expect(maskMat.colorWrite).toBe(false);
+    expect(maskMat.depthWrite).toBe(true);
+    expect(maskMat.depthTest).toBe(true);
     // Disc: applyDiscBlendDefaults (opaque max-blend, writes depth).
+    expect(discMat.uniforms.uRenderMode.value).toBe(1);
     expect(discMat.blending).toBe(THREE.CustomBlending);
     expect(discMat.depthWrite).toBe(true);
     // Glow: applyGlowBlendDefaults (additive, no depth write, depth test on).
+    expect(glowMat.uniforms.uRenderMode.value).toBe(0);
     expect(glowMat.blending).toBe(THREE.AdditiveBlending);
     expect(glowMat.depthWrite).toBe(false);
     expect(glowMat.depthTest).toBe(true);
