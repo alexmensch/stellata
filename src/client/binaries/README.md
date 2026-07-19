@@ -57,8 +57,7 @@ star catalog records.
 - `binary-relation-fixture.ts` — `makeRelation(overrides)`, the shared
   `BinaryRelation` test builder.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
-  `ECLIPSE_DIM_TAU_S`, `DISC_DEPTH_BIAS` named constants the fields read
-  and tests pin.
+  `ECLIPSE_DIM_TAU_S` named constants the fields read and tests pin.
 - `eclipse-photometry-pure.ts` — pure math for camera-anywhere
   geometric occlusion: `eclipseDimFromOffsets` (angular separation via
   atan2 of unit view vectors, closed-form circle-circle lens area,
@@ -360,10 +359,15 @@ system draws, never every catalog pair.
   and semi-major axis are real, but the orbit plane is the galactic-Z
   fallback, so the ellipse *orientation* is not physical — size and
   timing are.
-- **Render order** `−0.5`: below the star discs (`0`) so a disc
-  composites over the path where a member sits on it, above the galactic
-  disc/grid (`−1`). Constellation figures are SVG (always above the WebGL
-  canvas), so the path cannot sit over them.
+- **Renders in the local depth pass.** The layer's group lives in the
+  star cluster's pass group (`../star-pipeline/star-local-cluster.ts`),
+  drawn after the member-star disc mirror so the bracket z-buffer hides
+  far-side arcs behind a resolved disc and passes near-side arcs over
+  it. The line material strips the log-depth chunks
+  (`makeOrbitLineMaterial(..., localPass)`); `collectSpheres` reports
+  each drawn pair's barycentre + apoapsis extent so the slice bracket
+  contains the ellipses. Paths drawing ⇒ the cluster is active, so
+  they always render.
 - Geometry rebuilds on focus change (`setSystem`), mirroring
   `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` moves
   barycentre anchors and applies the size gate below. The two loops per
@@ -413,15 +417,11 @@ screen-pixel LOD: the photometric dip is exactly the signal that
 remains when the pair is sub-pixel. Instead each relation carries a
 **view-direction prefilter** — the rendered offset always lies in
 the orbit plane, so lines of sight steeper against that plane than
-`discSum / min_separation` can never bring the discs into overlap and
-skip the Kepler solve (the vast majority of (camera, pair)
-combinations each frame). The minimum separation is closed-form
+`(r_pri + r_sec) / min_separation` can never bring the discs into
+overlap and skip the Kepler solve (the vast majority of (camera,
+pair) combinations each frame). The minimum separation is closed-form
 periapsis `a(1−e)` — the rendered offset is `R(t)` exactly, no
-sampling. `discSum` is inflated to the **rendered** disc-sum bound
-(`(r_pri + r_sec) × RENDERED_DISC_SINLIMIT_MARGIN`, the disc-pass 2×
-cap) so the prefilter can't cull a pair whose rendered discs overlap
-and z-fight while the physical discs just miss — the exact gate that
-was silently dropping the depth-bias write.
+sampling.
 
 Surface-brightness ratios stay implicit: each star is its own
 instance with its own absmag, and dimming the back's flux by the
@@ -447,34 +447,13 @@ frames that write nothing skip the attribute re-upload entirely.
 dim the back disc's non-occluded fragments. The integration shell
 initialises the buffer to 1.0 at allocation and on every re-attach.
 
-The disc pass instead orders the two overlapping cores through the
-depth buffer — but at close range the log-depth buffer can't resolve a
-tight pair's sub-AU line-of-sight separation (`log2(z+1)` is
-near-linear when `z ≪ 1 pc`; see `star-pipeline/README.md`
-§ Depth encoding), so the raw z-order is float noise that flickers
-frame-to-frame. Whenever the two **rendered** discs overlap, the field
-writes `DISC_DEPTH_BIAS` (`binary-tuning.ts`) into the shared
-`iDepthBias` attribute on the **back** component — the float64 `front`
-verdict, not the buffer, decides the order.
-
-The bias trigger is deliberately NOT the `dim < 1` occlusion condition.
-`dim` keys off the **physical** disc radii (true angular size), but the
-z-fight happens over the **rendered** footprint: a bright star's
-brightness-driven `appSize` term inflates its disc past its true
-angular radius, so the opaque cores overlap — and flicker — across an
-annulus where `dim` is still 1. The bias therefore fires when
-`θ < renderedRadius_pri + renderedRadius_sec`, the rendered angular
-radii supplied per frame by the integration shell via
-`star-physics.ts:renderedSizePx` (the same CPU mirror the focus
-ring + distance-vector tip trust). This set is a superset of the dimmed set. The
-`front` verdict is valid across this whole annulus — `eclipse-photometry-pure`
-computes it before the physical-overlap test.
-
-The bias is a hard per-frame verdict with no smoothing: it resets to 0
-the frame the overlap ends (unlike the anti-strobe-smoothed dim). The
-field owns `iDepthBias` exclusively, so it clears its own prior-frame
-entries rather than relying on `BinaryOrbitField`'s reset (which only
-touches `compositeSuppress`).
+A resolved pair's overlapping disc cores order **geometrically in the
+local depth pass**: both members mirror into the bracketed pass
+(chain membership — `star-pipeline/README.md` § Local-pass mirror
+draw), whose standard-depth bracket resolves the pair's sub-AU
+line-of-sight separation natively. The main pass never has to order
+them — the retired `iDepthBias` mechanism did that with a per-frame
+float64 front/back nudge before the pass existed.
 
 `eclipse-photometry-pure` floors PARTIAL dims at `DIM_FLOOR = 0.001`
 (a numeric-domain guard so `-2.5·log10(dim)` stays finite as overlap

@@ -14,6 +14,12 @@ read.
 - `star-local-mirror.ts` — `StarLocalMirror`: the local-depth-pass
   mirror draw for cluster-member stars. See § Depth encoding and
   `../local-depth/README.md` § Full membership.
+- `star-local-cluster.ts` — `StarLocalCluster`: per-frame star
+  membership for the pass (active host + focal Kepler chain +
+  resolved-disc scan), the `uLocalMemberIdx` slot writes, and the
+  binary orbit-path group. Membership predicate + window bound in
+  `star-local-cluster-pure.ts` (vitest-pinned) — shared with the
+  core-mask gate via `RESOLVED_DISC_MIN_PX` / `discWindowPc`.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `dust-raymarch.glsl` — shared camera→star Edenhofer raymarch chunk
   (`stellata_dust_raymarch`), included by the extinction prepass and by
@@ -137,27 +143,13 @@ component's flux when an orbital pair's discs overlap from the camera
 viewpoint. Written by `EclipsePhotometryField` (see
 `../binaries/README.md` § Eclipse photometry) with real-time
 smoothing, and re-uploaded only on frames with active dims. Folded
-into `appMag` in the **glow pass only** — the disc pass resolves the
-overlap through the depth buffer, ordered by `iDepthBias` below.
-Exactly 0 means totality: the glow quad collapses via the
-off-screen-sentinel pattern instead of taking a floored log.
-Integration shell initialises the buffer to 1.0 at allocation and on
-every re-attach, so the shader's `iEclipseDim < 1.0` gate fires only on
-slots the field holds below 1.
-
-`iDepthBias` (float, per-instance, default 0.0) is added to
-`gl_FragDepth` in the disc (mode 1) and core-mask (mode 2) passes so a
-close pair's front component deterministically wins the overlap z-test.
-A tight pair's line-of-sight separation is sub-AU; at close range the
-log-depth buffer can't resolve it (see § Depth encoding), so the raw
-z-order is float noise that flips frame-to-frame — the disc flicker.
-`EclipsePhotometryField` writes the bias onto the **back** component
-(the float64 front/back verdict) whenever the two **rendered** discs
-overlap — a wider condition than the physical occlusion that drives
-`iEclipseDim`, since the brightness-driven disc extends past the true
-angular radius (see `../binaries/README.md` § Eclipse photometry). Glow
-pass (no depth write) ignores it; halo fragments overwrite
-`gl_FragDepth = 1.0` regardless, so only disc cores carry the bias.
+into `appMag` in the **glow pass only** — a resolved pair's disc
+overlap orders geometrically in the local depth pass instead
+(§ Local-pass mirror draw). Exactly 0 means totality: the glow quad
+collapses via the off-screen-sentinel pattern instead of taking a
+floored log. Integration shell initialises the buffer to 1.0 at
+allocation and on every re-attach, so the shader's
+`iEclipseDim < 1.0` gate fires only on slots the field holds below 1.
 
 `iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude
 radial pulsation block. Built once at catalog-load time from
@@ -235,17 +227,21 @@ Per-pass depth rules:
 Standard depth at whole-catalog range **cannot** order two disc cores
 of a tight pair against each other (both quantise to the same value;
 their z-order is float noise that flips frame-to-frame — a visible
-flicker in the overlap). Main-pass intra-pair occlusion is therefore
-taken off the buffer: `EclipsePhotometryField` decides front/back in
-float64 and writes `iDepthBias` (above) onto the back core so the
-front wins deterministically. Once binaries migrate onto the local
-depth pass (its bracket resolves sub-AU separations natively),
-`iDepthBias` retires.
+flicker in the overlap). Nor can it occlude background glow behind a
+resolved disc past the sub-1.0 band (~7 AU at near = 1e-12 pc): the
+disc writes exactly 1.0, ties the background's 1.0, and LessEqual
+lets everything through. Both problems move to the local depth pass:
+any disc-pass star mirrors into the bracketed pass (§ Local-pass
+mirror draw), whose standard-depth bracket resolves sub-AU pair
+separations natively and whose repaint over the finished frame
+occludes main-pass glow by construction. The retired alternative was
+`iDepthBias`, a per-instance nudge from EclipsePhotometryField's
+float64 front/back verdict.
 
 ### Local-pass mirror draw
 
-While a system is locally active, its host star's main-pass instance
-collapses (`uLocalMemberIdx`, all three passes) and
+A member star's main-pass instance collapses (`uLocalMemberIdx`, an
+int array of `MIRROR_CAPACITY` slots checked in all three passes) and
 `star-local-mirror.ts` re-renders it in the local depth pass: a small
 instanced geometry whose slots re-copy the member's attributes from
 the live source arrays each frame, drawn with `LOCAL_DEPTH_PASS`
@@ -254,9 +250,24 @@ the shader swaps `gl_InstanceID` for the `iSourceIdx` attribute
 (`STAR_SELF_ID`) so star-indexed lookups — the extinction texelFetch,
 `uHideFocusIdx`, `uPinFocusToCenter` — behave identically. The
 attribute-budget invariant: each compile variant must fit within 16
-attributes (the WebGL2 guaranteed minimum) — `iSourceIdx` reuses the
-slot `iDepthBias` occupies in the main variant, which the local pass
-never needs. Pinned per-variant in `star-pipeline.test.ts`.
+attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
+`star-pipeline.test.ts`, along with the uniform-array-size ↔
+`MIRROR_CAPACITY` tie.
+
+Membership (`star-local-cluster.ts`) unions three triggers per frame:
+the active planet-system host (reported by `SolarSystemCluster`), the
+focal star's Kepler chain — the whole chain engages as soon as its
+orbit paths draw or any member resolves as a disc, so a glow-sized
+companion transiting a resolved primary depth-tests instead of being
+over-painted — and a camera-window scan for any resolved-disc star
+(`isResolvedDiscStar`: disc-pass split × `RESOLVED_DISC_MIN_PX`,
+evaluated on the `renderedSizeComponents` CPU mirror). The scan
+window reuses the core-mask gate's sorted-distance walk
+(`forEachStarNearCamera` in `stellata.ts`). Compositing note: a
+mirrored halo MaxEquation-blends over main-pass background glow
+(brighter background stars peek through; dimmer ones wash into the
+glare) — the additive-after ordering of the pure main-pass path isn't
+reproducible from a second pass, and glare physics reads right.
 
 ## Physical-size rendering
 

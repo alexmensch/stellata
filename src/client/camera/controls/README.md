@@ -33,7 +33,9 @@ in both navigate and observe modes.
   (θ = 2·atan(R/d), `parkDistForStar` derivations).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
-  `renderedSizePx`, `renderedDiscPxAtPeak`, `getChartDiscParams` +
+  `renderedSizePx` (+ its `renderedSizeComponents` split — the star
+  local cluster's disc/glow membership test reads the two size terms
+  separately), `renderedDiscPxAtPeak`, `getChartDiscParams` +
   canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
   planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
   (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular

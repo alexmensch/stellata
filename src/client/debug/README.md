@@ -91,25 +91,23 @@ the measured numbers.
 
 Ordered by impact. Each item shipped as a separate commit.
 
-### `shouldEnableCoreMask` — sorted-distance binary-search window
+### `forEachStarNearCamera` — sorted-distance binary-search window
 
-`stellata.ts:2578`. The core depth-mask is only useful when a star
-is rendered close enough to the camera to occlude others, so the
-test is "any star within `dThresh` pc of the camera?" The original
-implementation scanned all 313k positions every frame in every
-mode.
+`stellata.ts`. The core depth-mask gate (`shouldEnableCoreMask`) and
+the star local-depth membership scan both need "which stars sit
+within `dThresh` pc of the camera?" The original implementation
+scanned all 313k positions every frame in every mode.
 
-Build-time setup (`stellata.ts:546`): sort the indices by distance
-from Sol once; store the sorted index and parallel distances as
-`Uint32Array` + `Float32Array`. At query time, compute
+Build-time setup: sort the indices by distance from Sol once; store
+the sorted index and parallel distances as `Uint32Array` +
+`Float32Array`. At query time, compute
 `camDistFromSol = (camera.position + worldOffset).length()` (the
 absolute frame, not the floating-origin local frame), binary-search
 for `[camDistFromSol − dThresh, camDistFromSol + dThresh]`, and
 walk only that window. Triangle-inequality guarantees no candidate
 falls outside it.
 
-Typical window: 50–500 candidates instead of 313k. Same boolean
-result.
+Typical window: 50–500 candidates instead of 313k.
 
 ### Chart-labels: scratch `Vector3` for projection
 
