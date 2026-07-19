@@ -1055,6 +1055,28 @@ export class Stellata implements FrameAnchor {
   private registerSceneLayers(): void {
     this.layers.register({
       update: (ctx) => {
+        this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
+        // Ride runs right after the field wrote this frame's positions,
+        // mirroring the binary ride's placement after its orbit walk.
+        this.applyPlanetFocalRide();
+        // Mesh LOD reads the field's freshly-written positions; its
+        // group mirrors the field's visibility, so monochrome/hidden
+        // need no second hook here.
+        this.planetMeshLayer.update(ctx.camera, ctx.t);
+      },
+      setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
+      recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),
+      dispose: () => {
+        this.planetBodyField.dispose();
+        this.planetMeshLayer.dispose();
+      },
+    });
+    this.layers.register({
+      // AFTER the body field: a moon ring's centre is the parent's
+      // live iLocalRel — reading it before the field's walk left the
+      // rings one frame of sim-time behind the bodies, a visible lag
+      // under fast scrub.
+      update: (ctx) => {
         const ps = this.focus.getFocusedPlanetSystem();
         const hostPos = ps !== null
           && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
@@ -1074,24 +1096,6 @@ export class Stellata implements FrameAnchor {
       },
       setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
       dispose: () => this.orbitRingsLayer.dispose(),
-    });
-    this.layers.register({
-      update: (ctx) => {
-        this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
-        // Ride runs right after the field wrote this frame's positions,
-        // mirroring the binary ride's placement after its orbit walk.
-        this.applyPlanetFocalRide();
-        // Mesh LOD reads the field's freshly-written positions; its
-        // group mirrors the field's visibility, so monochrome/hidden
-        // need no second hook here.
-        this.planetMeshLayer.update(ctx.camera, ctx.t);
-      },
-      setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
-      recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),
-      dispose: () => {
-        this.planetBodyField.dispose();
-        this.planetMeshLayer.dispose();
-      },
     });
     this.layers.register({
       // After the field + rings updates it reads; before the main
