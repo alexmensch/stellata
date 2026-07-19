@@ -255,14 +255,16 @@ camera-to-focus distance) is retired — the focus card
 (`../focus-card/README.md`) is the home for focused-object identity
 and live camera distance.
 
-**Unit auto-switch.** The bar label uses `fmtDistAuto` from
-`distance-util.ts`: pc/ly above 0.01 pc (respecting the user's pc/ly
-toggle), AU below. The threshold is a one-way switch where "0.005 pc"
-reads as awkward but "1031 AU" lands in the user's mental Voyager /
-outer-Oort frame of reference. Sub-AU readings stay in AU with
-3-decimal precision (orbit floor for Sol-class is ~0.005 AU, so we
-never need scientific notation in normal use). See `distance-util.ts
-AU_SWITCH_PC` for the constant.
+**Unit auto-switch.** The bar label (and every camera-distance readout)
+uses `fmtDistAuto` from `distance-util.ts`, a three-step tier chain:
+pc/ly above 0.01 pc (`AU_SWITCH_PC`, respecting the user's pc/ly toggle),
+then AU, then km below 0.1 AU (`KM_SWITCH_AU`). Each switch is one-way and
+graspability-driven: "0.005 pc" reads as awkward but "1031 AU" lands in
+the user's mental Voyager / outer-Oort frame; likewise "0.03 AU" is
+unpicturable but "4.5M km" lands in the planetary-neighbourhood frame, so
+the whole sub-0.1-AU band reads in km (k/M decade suffixes mirror the
+pc/ly upper tiers). This matters for close-approach moon/planet inspection
+where the camera parks a few hundred to a few million km out.
 
 ## Fullscreen toggle
 

@@ -2,12 +2,11 @@
 // radius. See ../README.md § Rule 1a for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
+import { formatEarthRadii, formatMagnitude } from '../../format/physical-format';
 import {
-  formatEarthRadii,
-  formatMagnitude,
-  formatPeriodYears,
-  planetPeriodYears,
-} from '../../format/physical-format';
+  formatOrbitPeriod,
+  type OrbitDescriptor,
+} from '../../solar-system/orbit-descriptor';
 import type { Planet } from '../../solar-system/planet-system';
 import type { HoverPayload } from '../hover-types';
 
@@ -19,6 +18,11 @@ export interface PlanetHoverFormatContext {
   // the planet system isn't attached at format time (degenerate;
   // shouldn't happen because the provider gates on the attached system).
   appMagFor(planetIdx: number): number | null;
+  // Parent/orbit descriptor for the body — same source the focus card
+  // uses, so the shared Period field can't diverge between tiers (a moon
+  // reads its period against its parent planet's mass, in days, not the
+  // solar-mass years a planet uses). Null omits the period line.
+  orbitOf(planetIdx: number): OrbitDescriptor | null;
 }
 
 export function formatPlanetHover(
@@ -39,7 +43,8 @@ export function formatPlanetHover(
   // a fast inner planet or a slow outer one?" tell, and the AU
   // distance on line 2 pairs naturally with the period rather than
   // with the body's physical size.
-  lines.push(`Period ${formatPeriodYears(planetPeriodYears(planet.semiMajorAxisAu))} yr`);
+  const orbit = ctx.orbitOf(planetIdx);
+  if (orbit) lines.push(`Period ${formatOrbitPeriod(orbit)}`);
   lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);
 
   return { name: planet.name, lines };

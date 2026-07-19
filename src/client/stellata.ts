@@ -414,14 +414,18 @@ export class Stellata implements FrameAnchor {
     this.scene = new THREE.Scene();
 
     // Near plane must be strictly smaller than controls.minDistance,
-    // otherwise a maximally-zoomed-in star lands on the clip plane and
-    // disappears at the closest zoom. Far plane (`CAMERA_FAR_PC`) is
-    // paired with `MAX_DISTANCE_PC` so the build filter and camera can
-    // never drift; see build-local-group-pure.ts for the definition.
+    // otherwise a maximally-zoomed-in body lands on the clip plane and
+    // disappears at the closest zoom. The tightest floor is a focused
+    // small moon: minOrbitDistForPlanet(Mimas, R≈198 km) ≈ 1.5e-11 pc, so
+    // the near plane sits well below that (a larger 1e-10 pc value clipped
+    // every sub-Pluto moon at its park distance). logarithmicDepthBuffer
+    // keeps depth precision intact across the widened near→far range. Far
+    // plane (`CAMERA_FAR_PC`) is paired with `MAX_DISTANCE_PC` so the build
+    // filter and camera can never drift; see build-local-group-pure.ts.
     this.camera = new THREE.PerspectiveCamera(
       DEFAULT_FOV,
       window.innerWidth / window.innerHeight,
-      1e-10,
+      1e-12,
       CAMERA_FAR_PC,
     );
     this.camera.position.set(0, 0, 30);

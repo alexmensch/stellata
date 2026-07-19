@@ -46,10 +46,12 @@ import { ECLIPSE_DIM_TAU_S } from '../binaries/binary-tuning';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
-// Initial slot capacity. v1 attaches Sol (9 planets) once; bk5 may
-// grow this as exoplanet hosts come online. Resizing reallocates the
-// instanced attribute buffers — relatively cheap compared to a frame.
-const INITIAL_CAPACITY = 16;
+// Initial slot capacity. v1 attaches Sol (9 planets + 18 moons = 27
+// bodies) once; sized to hold that in one shot so the sole attach doesn't
+// immediately grow. bk5 may grow this as exoplanet hosts come online.
+// Resizing reallocates the instanced attribute buffers — relatively cheap
+// compared to a frame.
+const INITIAL_CAPACITY = 32;
 
 interface InstanceAttrSpec {
   /** GLSL attribute name. */
@@ -661,6 +663,21 @@ export class PlanetBodyField {
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
     if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
+  }
+
+  /** Physical (true angular-diameter) disc size in px, excluding the
+   *  perceptual brightness floor that keeps faint bodies visible as dots —
+   *  the "is this a resolved disc, not a floor-clamped point?" measure.
+   *  Unlike renderedPlanetSizePx it's independent of the disc-size filter,
+   *  so a distant body reads genuinely sub-pixel. 0 when unattached,
+   *  degenerate, or below the soft-taper kill. */
+  physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return 0;
+    const i = instanceIdx - host.startInstance;
+    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
   }
 
   private hostOfInstance(instanceIdx: number): AttachedHost | null {

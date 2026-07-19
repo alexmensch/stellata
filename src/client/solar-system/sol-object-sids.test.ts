@@ -9,7 +9,7 @@ import {
   loadRegistry,
   type Registry,
 } from '../../../scripts/sid/registry-io';
-import { SOL_PLANETS } from './planet-system';
+import { SOL_BODIES } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
 
 // The append-only ledger is LFS; in the bare CI `test` job it is a pointer
@@ -45,9 +45,9 @@ suite('SOL_OBJECT_SIDS pins against the ledger', () => {
     expect(Object.keys(SOL_OBJECT_SIDS).sort()).toEqual(mintKeys);
   });
 
-  it('carries a SID for the Sun and every runtime planet body', () => {
+  it('carries a SID for the Sun and every runtime body (planets + moons)', () => {
     expect(SOL_OBJECT_SIDS.sun).toBeGreaterThan(0);
-    for (const p of SOL_PLANETS) {
+    for (const p of SOL_BODIES) {
       expect(SOL_OBJECT_SIDS[p.name.toLowerCase()], `no SID for ${p.name}`).toBeGreaterThan(0);
     }
   });

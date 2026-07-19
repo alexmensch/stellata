@@ -39,8 +39,13 @@ const RING_COLOUR = 0x88aacc;
 
 interface PlanetRing {
   readonly planet: Planet;
-  readonly line: THREE.LineLoop;
-  readonly material: THREE.LineBasicMaterial;
+  // Null for a moon: moons orbit a planet, not the host star, so this
+  // host-centred layer draws no ring for them (their parent-centred rings
+  // are a separate layer). The entry is kept so `rings` stays index-
+  // parallel with `ps.planets` — planet-labels gates each label on
+  // isOrbitRingVisible(i) keyed by that shared index.
+  readonly line: THREE.LineLoop | null;
+  readonly material: THREE.LineBasicMaterial | null;
   // Cached for the visibility heuristic. The on-screen extent of an
   // elliptical orbit is bounded by the semi-major axis at every viewing
   // angle, so we use it as the per-ring "characteristic size" the
@@ -240,6 +245,10 @@ export class OrbitRingsLayer {
     const planeQuat = new THREE.Quaternion();
     for (let pIdx = 0; pIdx < ps.planets.length; pIdx++) {
       const planet = ps.planets[pIdx];
+      if (planet.parentName) {
+        this.rings.push({ planet, line: null, material: null, semiMajorPc: 0 });
+        continue;
+      }
       const aPc = planet.semiMajorAxisAu * AU_PC;
       const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
       buildEllipsePoints(aPc, planet.eccentricity, ORBIT_LINE_SEGMENTS, verts);
@@ -294,10 +303,20 @@ export class OrbitRingsLayer {
 
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dPc = camera.position.distanceTo(this.group.position);
-    const radii = this.rings.map((r) => angularRadiusPx(r.semiMajorPc, dPc, pxPerRad));
-    const visible = ringVisibility(radii, RING_VISIBILITY_THRESHOLD_PX);
+    // Only real (planet) rings feed the pixel-gap heuristic; moon
+    // placeholders carry no line and must not perturb the neighbour-gap
+    // math. Collect their indices so the visibility result maps back to
+    // the right entries.
+    const realIndices: number[] = [];
+    const radii: number[] = [];
     for (let i = 0; i < this.rings.length; i++) {
-      this.rings[i].line.visible = visible[i];
+      if (!this.rings[i].line) continue;
+      realIndices.push(i);
+      radii.push(angularRadiusPx(this.rings[i].semiMajorPc, dPc, pxPerRad));
+    }
+    const visible = ringVisibility(radii, RING_VISIBILITY_THRESHOLD_PX);
+    for (let k = 0; k < realIndices.length; k++) {
+      this.rings[realIndices[k]].line!.visible = visible[k];
     }
   }
 
@@ -309,7 +328,7 @@ export class OrbitRingsLayer {
   anyOrbitRingVisible(): boolean {
     if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     for (const r of this.rings) {
-      if (r.line.visible) return true;
+      if (r.line?.visible) return true;
     }
     return false;
   }
@@ -327,7 +346,7 @@ export class OrbitRingsLayer {
   isOrbitRingVisible(i: number): boolean {
     if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     if (i < 0 || i >= this.rings.length) return false;
-    return this.rings[i].line.visible;
+    return this.rings[i].line?.visible ?? false;
   }
 
   /**
@@ -365,9 +384,11 @@ export class OrbitRingsLayer {
 
   private disposeRings(): void {
     for (const r of this.rings) {
-      this.group.remove(r.line);
-      r.line.geometry.dispose();
-      r.material.dispose();
+      if (r.line) {
+        this.group.remove(r.line);
+        r.line.geometry.dispose();
+      }
+      r.material?.dispose();
     }
     this.rings = [];
   }

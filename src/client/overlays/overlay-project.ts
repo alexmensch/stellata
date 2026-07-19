@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // World-to-screen projection for SVG overlays. Returns null when the
-// input projects at or behind the camera (camera.near = 1e-10 pc
+// input projects at or behind the camera (camera.near = 1e-12 pc
 // under logarithmicDepthBuffer, so the threshold acts as plain
 // "view-z >= 0"). Pixel coordinates are CSS-pixel space (x right, y
 // down) — every overlay uses this convention.

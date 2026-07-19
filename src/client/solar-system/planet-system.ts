@@ -9,8 +9,15 @@ import {
   getPlanetPositions,
   PLANET_ORDER,
   type OrbitOrientationRad,
+  type PlanetName,
+  type Vec3,
 } from './ephemeris';
-import { MOON_ELEMENTS } from './moon-ephemeris';
+import {
+  earthMoonSplit,
+  MOON_ELEMENTS,
+  moonOffsetEcliptic,
+  type MoonElements,
+} from './moon-ephemeris';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,
@@ -133,17 +140,45 @@ export interface PlanetSystem {
   orbitOrientations?: readonly OrbitOrientationRad[];
 }
 
-/** Sol's positionsAt — JPL Standish ecliptic positions in parsecs,
- *  written in the SOL_PLANETS / PLANET_ORDER ordering (Mercury through
- *  Neptune). Pure dispatch into ephemeris.getPlanetPositions, which
- *  caches per-`t`-bucket internally. */
+/** Sol's positionsAt — heliocentric ecliptic positions in parsecs, in
+ *  SOL_BODIES order: the nine planets (PLANET_ORDER) first, then the 18
+ *  moons (SOL_MOONS order). Each moon is `parent_ecliptic +
+ *  moonOffsetEcliptic`; the Earth slot and the Moon slot are jointly
+ *  resolved from the Standish EM-barycentre via `earthMoonSplit`, so
+ *  Earth sits ~4700 km off-barycentre. The caller applies the single
+ *  ecliptic→ICRS host quaternion to the whole vector, so composing the
+ *  offset in the ecliptic frame here lands the moon at parent+offset in
+ *  ICRS. Planets cache per-`t`-bucket inside getPlanetPositions; the moon
+ *  Kepler solves run every call (cheap, and only reached at planet zoom
+ *  where the field walks every frame regardless). */
 function solPositionsAt(t: number, out: Float32Array): void {
   const positions = getPlanetPositions(t);
-  for (let i = 0; i < PLANET_ORDER.length; i++) {
+  const planetCount = PLANET_ORDER.length;
+  for (let i = 0; i < planetCount; i++) {
     const p = positions[PLANET_ORDER[i]];
     out[i * 3 + 0] = p.x;
     out[i * 3 + 1] = p.y;
     out[i * 3 + 2] = p.z;
+  }
+  for (let j = 0; j < MOON_COMPOSE.length; j++) {
+    const { elem, parent } = MOON_COMPOSE[j];
+    const parentPos = positions[parent];
+    moonOffsetEcliptic(elem, t, _moonOffset);
+    const slot = (planetCount + j) * 3;
+    if (elem.name === 'Moon') {
+      earthMoonSplit(parentPos, _moonOffset, _earthCentre, _moonAbs);
+      const es = EARTH_ORDER_INDEX * 3;
+      out[es + 0] = _earthCentre.x;
+      out[es + 1] = _earthCentre.y;
+      out[es + 2] = _earthCentre.z;
+      out[slot + 0] = _moonAbs.x;
+      out[slot + 1] = _moonAbs.y;
+      out[slot + 2] = _moonAbs.z;
+    } else {
+      out[slot + 0] = parentPos.x + _moonOffset.x;
+      out[slot + 1] = parentPos.y + _moonOffset.y;
+      out[slot + 2] = parentPos.z + _moonOffset.z;
+    }
   }
 }
 
@@ -322,13 +357,12 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
 
 const MOON_ELEMENTS_BY_NAME = new Map(MOON_ELEMENTS.map((m) => [m.name, m]));
 
-// The 18 major moons as `Planet` entries. Defined here but deliberately
-// NOT part of SOL_PLANETS yet: appending an unpositioned body to the
-// field's iterated array would render it at the origin. The render /
-// interaction wiring (positions, focus, orbit rings) attaches these
-// separately. `semiMajorAxisAu` is parent-relative, for the field's cull
-// and ring bookkeeping — real positions come from the resolver, never
-// this field, the same contract planets follow.
+// The 18 major moons as `Planet` entries. Concatenated after SOL_PLANETS
+// into SOL_BODIES (the runtime body list); solPositionsAt composes their
+// heliocentric positions so they inherit the field / mesh / interaction
+// stack as ordinary bodies. `semiMajorAxisAu` is parent-relative, for the
+// field's cull and ring bookkeeping — real positions come from the
+// resolver, never this field, the same contract planets follow.
 export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
   const el = MOON_ELEMENTS_BY_NAME.get(m.name);
   if (!el) throw new Error(`SOL_MOONS: no orbital elements for ${m.name}`);
@@ -343,6 +377,30 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     colour: m.colour,
   };
 });
+
+// Sol's runtime body list: the nine planets followed by the 18 moons.
+// One array so the body field, mesh layer, and every interaction contract
+// iterate a single stream — a moon is just another entry. Position
+// composition (solPositionsAt) writes this exact order.
+export const SOL_BODIES: readonly Planet[] = [...SOL_PLANETS, ...SOL_MOONS];
+
+// Per-moon composition inputs in SOL_MOONS order, so solPositionsAt walks
+// them by flat slot without a per-frame map lookup. `parent` is the
+// PlanetName key into the ephemeris position table.
+interface MoonCompose {
+  readonly elem: MoonElements;
+  readonly parent: PlanetName;
+}
+const EARTH_ORDER_INDEX = PLANET_ORDER.indexOf('earth');
+const MOON_COMPOSE: readonly MoonCompose[] = SOL_MOONS.map((m) => {
+  const elem = MOON_ELEMENTS_BY_NAME.get(m.name);
+  if (!elem) throw new Error(`MOON_COMPOSE: no orbital elements for ${m.name}`);
+  return { elem, parent: elem.parent.toLowerCase() as PlanetName };
+});
+
+const _moonOffset: Vec3 = { x: 0, y: 0, z: 0 };
+const _earthCentre: Vec3 = { x: 0, y: 0, z: 0 };
+const _moonAbs: Vec3 = { x: 0, y: 0, z: 0 };
 
 // Sync probe — does this star have a planet system at all?
 //
@@ -366,7 +424,7 @@ export async function getPlanetSystem(
   if (!hasPlanets(catalog, starIdx)) return null;
   return {
     hostStarIdx: starIdx as number,
-    planets: SOL_PLANETS,
+    planets: SOL_BODIES,
     positionsAt: solPositionsAt,
     // Evaluated once at attach. Drift is sub-degree per millennium —
     // the orbit-ring renderer keeps these frozen for the session.

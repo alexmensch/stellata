@@ -38,8 +38,14 @@ star-hover-format.ts             Star — name + constellation · distance
                                  keeps its own card. Plain binaries
                                  keep the per-component card; close-in
                                  viewing (nothing suppressed) does too.
-planet-hover-format.ts           Planet — camera distance · apparent
-                                 V mag, period (years), radius (R⊕ + km).
+planet-hover-format.ts           Planet / moon — camera distance ·
+                                 apparent V mag, orbital period, radius
+                                 (R⊕ + km). Period comes from the shared
+                                 OrbitDescriptor (../../solar-system/
+                                 orbit-descriptor.ts) so it matches the
+                                 focus card: years for a planet, days for
+                                 a moon (whose period is set by its parent
+                                 planet's mass, not the Sun's).
 cloud-hover-format.ts            Cloud — camera distance + major × minor
                                  span. Z2020 spheres collapse to
                                  "<r> × <r>".

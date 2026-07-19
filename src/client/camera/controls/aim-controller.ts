@@ -9,11 +9,13 @@ import type { ObserveControls } from '../observe/observe-controls';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS, WARP_BASE_DIR } from '../timing';
 
 /** Degeneracy guard for aim geometry (zero-length directions). MUST sit
- *  at/below camera.near (1e-10 pc ≈ 3 km) so every renderable framing
+ *  at/below camera.near (1e-12 pc ≈ 31 km) so every renderable framing
  *  can still aim — a pc-scale epsilon here silently no-ops aims at
  *  solar-system range (planets observed from their host are ≤ 2e-4 pc
- *  away; Sol observed from Earth is ~5e-6 pc). */
-export const AIM_DEGENERATE_DIST_PC = 1e-10;
+ *  away; Sol observed from Earth is ~5e-6 pc; a focused small moon parks
+ *  ~5e-11 pc out). Tracks the near plane: it dropped to 1e-12 pc so
+ *  sub-Pluto moons clear the clip plane at their zoom floor. */
+export const AIM_DEGENERATE_DIST_PC = 1e-12;
 const AIM_DEGENERATE_DIST_SQ = AIM_DEGENERATE_DIST_PC * AIM_DEGENERATE_DIST_PC;
 
 // The orbit pivot is deliberately NOT snapshotted here: the tick reads the

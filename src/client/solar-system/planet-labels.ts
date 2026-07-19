@@ -14,6 +14,14 @@ import { setStyle } from '../overlays/dirty-attr';
 // their referents.
 export const LABEL_OFFSET_PX = 10;
 
+// Physical disc diameter (px) a moon must reach before its label shows.
+// Moons have no host-centred orbit ring to gate on, so they track their
+// own resolved-disc size: a moon collapsed toward its parent's dot (a
+// distant Jovian moon seen from Saturn, say) falls below this and drops
+// its label instead of stacking on the parent. Above the sub-pixel floor,
+// below a close-in moon's disc — verify in-browser when tuning.
+const MOON_LABEL_MIN_DISC_PX = 1;
+
 interface Entry {
   el: SVGTextElement;
   name: string;
@@ -109,19 +117,25 @@ export function createPlanetLabels(stellata: Stellata): void {
         e.el.style.display = 'none';
         continue;
       }
-      // Sync label visibility with the planet's orbit ring. A ring
-      // suppressed by the pixel-gap heuristic at far framings means
-      // its body is floor-clamped sub-pixel anyway; a floating label
-      // attached to nothing visible reads as noise. Bodies still
-      // render (the floor keeps them visible) — only labels track the
-      // ring's "is this planet meaningfully resolvable?" answer.
-      if (!stellata.isOrbitRingVisible(i)) {
+      const flat = ps ? stellata.planetField.instanceIndexOf(ps.hostStarIdx, i) : null;
+      // Resolvability gate — hide a label whose body isn't meaningfully on
+      // screen. A planet tracks its orbit ring: a ring the pixel-gap
+      // heuristic suppressed at far framings means its body is floor-clamped
+      // sub-pixel anyway, so the label would attach to nothing. A moon has
+      // no host-centred ring, so it tracks its own physical disc size
+      // instead (moon rings, which would fold moons back onto this same
+      // isOrbitRingVisible path, are a later layer).
+      const isMoon = !!ps?.planets[i].parentName;
+      const resolvable = isMoon
+        ? flat !== null &&
+          stellata.planetField.physicalPlanetSizePx(flat, camera.position) >= MOON_LABEL_MIN_DISC_PX
+        : stellata.isOrbitRingVisible(i);
+      if (!resolvable) {
         e.el.style.display = 'none';
         continue;
       }
       // A fully eclipsed body (behind the host's physical disc) renders
       // nothing — its label must not float alone on the host's disc.
-      const flat = ps ? stellata.planetField.instanceIndexOf(ps.hostStarIdx, i) : null;
       if (flat !== null && stellata.planetField.eclipseDimForInstance(flat) <= 0) {
         e.el.style.display = 'none';
         continue;

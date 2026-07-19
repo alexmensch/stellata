@@ -71,12 +71,12 @@ is fine without a label when it reads as a location (`Lyra · 7.1 pc`,
 
 ### Rule 1a — Line ordering for object cards
 
-The planet hover card layout:
+The planet/moon hover card layout:
 
 ```
 <name>
 <distance> · Vmag <m>
-Period <years> yr
+Period <years> yr        (a moon reads days: "Period 3.55 d")
 Radius <R⊕> (<km> km)
 ```
 
@@ -85,7 +85,10 @@ both are camera-relative quantities that change as the camera moves
 (every tier-1/2 distance is from the CAMERA, per the lo5 frame
 principle; Sol-centred values are tier-3 territory). Period sits on its
 own line as the user's first "is this a fast inner planet or a slow
-outer one?" tell. Radius sits on the bottom as the physical-body fact
+outer one?" tell — sourced from the shared `OrbitDescriptor`
+(`../solar-system/orbit-descriptor.ts`) so it matches the focus card
+exactly and a moon's period derives from its parent planet's mass (in
+days), not the solar-mass years a planet uses. Radius sits on the bottom as the physical-body fact
 that doesn't change with viewpoint.
 
 Layout shape (distance+mag line, then per-quantity stack lines)

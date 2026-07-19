@@ -37,7 +37,8 @@ sameas-overrides.tsv    Curated same-as edges (a → b → note):
                         bridges (docs/sid.md § 5), slug-rename bridges.
                         Regular git, hand-edited.
 sol-objects.tsv         The sol: namespace mint list (key → kind):
-                        sun + eight majors + Pluto.
+                        sun + eight majors + Pluto + the 18 major moons
+                        (moons reuse kind=planet).
 bridges/<from>_<to>.tsv Machine-generated cross-release Gaia bridges
                         (docs/sid.md § 6), human-reviewed per DR bump.
                         Directory appears with the first bridge.

@@ -68,7 +68,7 @@ per-gesture-event path allocates nothing.
 
 ## Camera near plane vs controls minDistance
 
-`camera.near = 1e-10`, `controls.minDistance` (when no star is focused)
+`camera.near = 1e-12`, `controls.minDistance` (when no star is focused)
 = `GLOBAL_MIN_DIST_PC = 5e-3` pc. The unfocused floor sits well above
 the float32-cancellation threshold so an unfocused orbit can't drift
 into the regime where projection precision breaks down — to get any

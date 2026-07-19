@@ -1205,6 +1205,24 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     expect(f.renderedPlanetSizePx(9, near)).toBe(0);
     f.dispose();
   });
+
+  it('physicalPlanetSizePx is the true angular size, excluding the perceptual floor', () => {
+    const f = makeField();
+    attach(f, 0, 1);
+    // Camera parked on the host, planet 1 AU out: the true disc is deeply
+    // sub-pixel, but the perceptual floor keeps the RENDERED dot at uSizeMin
+    // (=2 here). The physical measure must report the sub-pixel truth so the
+    // moon-label gate can tell a resolved disc from a floor-clamped dot.
+    const atHost = new THREE.Vector3(0, 0, 0);
+    const phys = f.physicalPlanetSizePx(0, atHost);
+    const expectedPhys = 2 * Math.atan((6000 * KM_PC) / AU_PC) * (600 / ((60 * Math.PI) / 180));
+    expect(Math.abs(phys - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
+    expect(phys).toBeLessThan(2);
+    expect(f.renderedPlanetSizePx(0, atHost)).toBeGreaterThanOrEqual(2);
+    // Unattached instance → 0.
+    expect(f.physicalPlanetSizePx(9, atHost)).toBe(0);
+    f.dispose();
+  });
 });
 
 describe('PlanetBodyField true-eclipse dim', () => {

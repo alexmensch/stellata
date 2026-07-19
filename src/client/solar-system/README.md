@@ -28,6 +28,12 @@ src/client/solar-system/
                                   with its reference-plane pole — plus the
                                   resolver (`moonOffsetEcliptic`,
                                   `earthMoonSplit`). See § Moons.
+  orbit-descriptor.ts             Parent/orbit descriptor for the focus
+                                  card — every body's breadcrumb, orbit
+                                  distance, and period from its parent
+                                  (planet ← host star, solar mass; moon ←
+                                  parent planet, parent GM). Pure; no
+                                  solar-mass assumption. See § Moons.
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
@@ -84,7 +90,8 @@ src/client/solar-system/
                                   sizing and the per-planet label gating.
   phase-function.ts (+ test)      Lambertian + Mallama phase functions.
                                   Pure helpers with vitest coverage.
-  planet-labels.ts                Per-planet SVG labels, distance-gated.
+  planet-labels.ts                Per-body (planet + moon) SVG labels,
+                                  resolvability-gated. See § below.
   heliopause.ts                   Sol's heliopause boundary as a translucent
                                   asymmetric shell (Sol-only). Extends the
                                   shared `fresnel-shell/` primitive (material
@@ -133,11 +140,16 @@ next to `SOL_PLANETS`; orbital `a`/`e` are read from `MOON_ELEMENTS`
 by name so they have a single source of truth. Scope + citations in
 `docs/science-solar-system.md` § Moons.
 
-`SOL_MOONS` is **not** part of `SOL_PLANETS`. The body field iterates
-one array and expects a position for every entry, so a moon appended
-before its resolver exists would render at the origin. Moons attach to
-the runtime system separately, with position composition, focus, and
-orbit rings, in later work — until then this is inert data.
+`SOL_MOONS` is **not** part of `SOL_PLANETS`; the two concatenate into
+`SOL_BODIES` (the nine planets then the 18 moons), which is what
+`getPlanetSystem` returns as `planets`. The body field, mesh layer, and
+every interaction contract iterate that one array, so a moon inherits
+Target / focus / click / POI / hover / search as an ordinary body — no
+moon-specific path. `solPositionsAt` writes positions in `SOL_BODIES`
+order (planets first). Moon rotation elements (tidal-lock orientation)
+land with the texture work, where a map validates pole/prime-meridian;
+until then a moon uses the mesh's pole-fallback, invisible on an
+untextured near-spherical body.
 
 Orbital elements (`moon-ephemeris.ts`) are J2000 osculating, each
 referred to the plane JPL tabulates it against, with that plane's ICRS
@@ -156,24 +168,29 @@ ecliptic). `earthMoonSplit` then divides Standish's EM-barycentre into
 Earth-centre and Moon by `MOON_MASS_FRACTION` (Earth ~4700 km
 off-barycentre, resolvable at Earth-zoom).
 
-The resolver is **not yet wired into the rendered body positions** —
-`SOL_MOONS` is still absent from the field's iterated array
-(§ above), so composing moons into `solPositionsAt` and attaching them
-to the runtime system is the next step.
+`solPositionsAt` calls the resolver each frame: after the nine planet
+positions it appends `parent_ecliptic + moonOffsetEcliptic` per moon,
+and jointly resolves the Earth slot + Moon slot from the Standish
+EM-barycentre via `earthMoonSplit`. The single ecliptic→ICRS host
+quaternion the field already applies then rotates the whole vector, so
+the offset composes in the ecliptic frame here and lands at
+parent+offset in ICRS.
 
 ## Sol-system SID pins
 
-`sol-object-sids.ts` maps each Sol body (`sun`, `mercury` … `pluto`) to
-its frozen Stellata ID (docs/sid.md § 7). Planets and the Sun carry no
-catalog record or artifact of their own, so this hand-written table is
-their runtime SID source — the B4 resolver (`stellata-efju.5`) will
-register a `planet` domain over it. The values are frozen ledger sids
-minted from `data/sid/sol-objects.tsv`; `sol-object-sids.test.ts` imports
-the ledger and asserts each entry matches (tests import, never redefine),
-covers exactly the mint list, and pins a sid for every `SOL_PLANETS`
-body. `sol:sun` rides the Sol **catalog** record via a same-as edge, so
-that record's in-record sid and `SOL_OBJECT_SIDS.sun` are the same integer
-by construction.
+`sol-object-sids.ts` maps each Sol body (`sun`, `mercury` … `pluto`, then
+the 18 moons `moon`, `io` … `triton`) to its frozen Stellata ID
+(docs/sid.md § 7). These bodies carry no catalog record or artifact of
+their own, so this hand-written table is their runtime SID source — the
+B4 resolver (`stellata-efju.5`) will register a `planet` domain over it
+(moons reuse the `planet` kind; a moon is a planet-domain object under
+the resolver). The values are frozen ledger sids minted from
+`data/sid/sol-objects.tsv`; `sol-object-sids.test.ts` imports the ledger
+and asserts each entry matches (tests import, never redefine), covers
+exactly the mint list, and pins a sid for every `SOL_BODIES` runtime body
+(planets + moons). `sol:sun` rides the Sol **catalog** record via a
+same-as edge, so that record's in-record sid and `SOL_OBJECT_SIDS.sun`
+are the same integer by construction.
 
 ## Ephemerides
 
@@ -532,12 +549,21 @@ centre). Gas-giant and Venus cloud maps are epoch snapshots of
 rotating cloud decks, so their longitude alignment is inherently
 arbitrary; 0 is used.
 
-`planet-labels.ts` draws per-planet body-anchored SVG labels above
-the canvas. The label engine is independent of the chart-mode label
-engine (`chart-labels.ts`); planet labels show when a planet system is
-attached and the detail cycle permits `planetLabels` (floor `all`), and
-are hidden in chart mode so the chart-mode glyph contract isn't doubled
-up (`../scene/README.md` § Detail-level declutter cycle).
+`planet-labels.ts` draws per-body-anchored SVG labels (planets **and**
+moons) above the canvas. The label engine is independent of the
+chart-mode label engine (`chart-labels.ts`); labels show when a planet
+system is attached and the detail cycle permits `planetLabels` (floor
+`all`), and are hidden in chart mode so the chart-mode glyph contract
+isn't doubled up (`../scene/README.md` § Detail-level declutter cycle).
+
+Per-body resolvability gate: a **planet** label tracks its orbit ring
+(`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the
+body is floor-clamped sub-pixel, so the label would anchor to nothing). A
+**moon** has no host-centred ring, so it tracks its own physical disc
+size (`physicalPlanetSizePx ≥ MOON_LABEL_MIN_DISC_PX`) — a moon collapsed
+toward its parent's dot drops its label rather than stacking on it. When
+parent-centred moon rings land (a later layer) moons fold back onto the
+same `isOrbitRingVisible` path and the asymmetry goes away.
 
 ## Orbit rings
 
@@ -663,9 +689,12 @@ A focused planet is a full observe anchor: entering observe parks the
 camera on the body and hides it via `uHideIdx`
 (`../camera/observe/README.md`).
 
-`camera.near` is at `1e-10 pc` — well below `minOrbitDistForStar` —
-so very-close planet inspection isn't culled. The strict-less-than
-`camera.near < minDistance` invariant holds.
+`camera.near` is at `1e-12 pc` — well below `minOrbitDistForStar` and
+below the tightest planet/moon floor (`minOrbitDistForPlanet` for a
+small moon like Mimas ≈ 1.5e-11 pc) — so very-close planet and moon
+inspection isn't culled. The strict-less-than `camera.near < minDistance`
+invariant holds; the earlier `1e-10 pc` value clipped every sub-Pluto
+moon at its park distance.
 
 ## Gotchas
 

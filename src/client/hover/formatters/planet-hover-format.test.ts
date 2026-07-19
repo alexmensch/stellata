@@ -1,21 +1,29 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setUnit } from '../../ui/distance-util';
-import { SOL_PLANETS } from '../../solar-system/planet-system';
+import { SOL_BODIES, SOL_PLANETS, type PlanetSystem } from '../../solar-system/planet-system';
+import { orbitDescriptorFor } from '../../solar-system/orbit-descriptor';
 import {
   formatPlanetHover,
   type PlanetHoverFormatContext,
 } from './planet-hover-format';
 
-// Helper: per-planet distance/mag map keyed by planet name, so the test
-// inputs read in calling order rather than as bare numeric vectors.
-function buildCtx(byName: {
-  [name: string]: { appMag?: number | null };
-}): PlanetHoverFormatContext {
+// Helper: per-body distance/mag map keyed by name, so the test inputs
+// read in calling order rather than as bare numeric vectors. `bodies`
+// defaults to the planets; a moon test passes SOL_BODIES.
+function buildCtx(
+  byName: { [name: string]: { appMag?: number | null } },
+  bodies: readonly PlanetSystem['planets'][number][] = SOL_PLANETS,
+): PlanetHoverFormatContext {
+  const system: PlanetSystem = { hostStarIdx: 0, planets: bodies };
   return {
-    planets: SOL_PLANETS,
+    planets: bodies,
     appMagFor(planetIdx) {
-      const entry = byName[SOL_PLANETS[planetIdx].name];
+      const entry = byName[bodies[planetIdx].name];
       return entry?.appMag ?? null;
+    },
+    orbitOf(planetIdx) {
+      const p = bodies[planetIdx];
+      return p ? orbitDescriptorFor(p, system, null) : null;
     },
   };
 }
@@ -95,6 +103,20 @@ describe('formatPlanetHover', () => {
       'Period 1.00 yr',
       'Radius 1.00 R⊕ (6,371 km)',
     ]);
+  });
+
+  it('a moon shows a day-scale period against its parent, not solar years', () => {
+    // Europa's body index in SOL_BODIES; period is Kepler-III against
+    // Jupiter's GM (~3.55 d), NOT planetPeriodYears on its tiny
+    // parent-relative AU (which would read "0.00 yr").
+    const europaIdx = SOL_BODIES.findIndex((b) => b.name === 'Europa');
+    const out = formatPlanetHover(
+      europaIdx,
+      671100 / 1.495978707e8 / 206264.80624709636,
+      buildCtx({ Europa: { appMag: 5.3 } }, SOL_BODIES),
+    );
+    expect(out.name).toBe('Europa');
+    expect(out.lines[1]).toBe('Period 3.55 d');
   });
 
   it('returns empty payload for out-of-range index', () => {
