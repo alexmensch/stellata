@@ -3,9 +3,9 @@
 // See src/client/local-depth/README.md § Full membership.
 
 import * as THREE from 'three';
-import { applyDiscBlendDefaults } from './star-pipeline';
+import { applyDiscBlendDefaults, applyGlowBlendDefaults } from './star-pipeline';
 
-const MIRROR_CAPACITY = 8;
+export const MIRROR_CAPACITY = 8;
 
 interface MirrorAttr {
   src: THREE.InstancedBufferAttribute;
@@ -65,12 +65,8 @@ export class StarLocalMirror {
     };
     this.discMaterial = makeMat(1, { transparent: true });
     applyDiscBlendDefaults(this.discMaterial);
-    this.glowMaterial = makeMat(0, {
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-    });
+    this.glowMaterial = makeMat(0, {});
+    applyGlowBlendDefaults(this.glowMaterial);
 
     this.group = new THREE.Group();
     this.group.name = 'star-local-mirror';

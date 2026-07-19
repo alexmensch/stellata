@@ -7,7 +7,7 @@ import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
 } from './phase-function';
-import { applyDiscBlendDefaults } from '../star-pipeline/star-pipeline';
+import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline/star-pipeline';
 import {
   pickChartDiscUniforms,
   pickPerceptualDiscUniforms,
@@ -900,8 +900,7 @@ export class PlanetBodyField {
       this.matGlow.depthTest = false;
     } else {
       applyDiscBlendDefaults(this.matDisc);
-      this.matGlow.blending = THREE.AdditiveBlending;
-      this.matGlow.depthTest = true;
+      applyGlowBlendDefaults(this.matGlow);
     }
     this.matDisc.needsUpdate = true;
     this.matGlow.needsUpdate = true;
@@ -1022,13 +1021,8 @@ export class PlanetBodyField {
     this.matDisc = makeMat(1, { transparent: true });
     applyDiscBlendDefaults(this.matDisc);
 
-    const glowParams = {
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-    };
-    this.matGlow = makeMat(0, glowParams);
+    this.matGlow = makeMat(0, {});
+    applyGlowBlendDefaults(this.matGlow);
 
     this.matCore = makeMat(2, {
       depthWrite: true,
@@ -1038,7 +1032,8 @@ export class PlanetBodyField {
 
     this.matDiscLocal = makeMat(1, { transparent: true }, true);
     applyDiscBlendDefaults(this.matDiscLocal);
-    this.matGlowLocal = makeMat(0, glowParams, true);
+    this.matGlowLocal = makeMat(0, {}, true);
+    applyGlowBlendDefaults(this.matGlowLocal);
 
     const makeMesh = (mat: THREE.ShaderMaterial, name: string, order: number) => {
       const m = new THREE.Mesh(this.geometry, mat);

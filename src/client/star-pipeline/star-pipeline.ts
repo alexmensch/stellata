@@ -15,6 +15,20 @@ export function applyDiscBlendDefaults(m: THREE.ShaderMaterial) {
   m.depthTest = true;
 }
 
+// Glow-pass blending state — the additive sibling of
+// applyDiscBlendDefaults, shared by the star pipeline, its local-pass
+// mirror, and the planet body field so the four fields live in one
+// place. Additive so overlapping distant glows accumulate; no depth
+// write so co-located glows all contribute; depth test on so a glow
+// behind a disc drawn earlier is occluded. Re-applied on chart-mode ->
+// colour-mode swap-back (chart flips glow to MultiplyBlending).
+export function applyGlowBlendDefaults(m: THREE.ShaderMaterial) {
+  m.transparent = true;
+  m.depthWrite = false;
+  m.depthTest = true;
+  m.blending = THREE.AdditiveBlending;
+}
+
 export interface StarPipelineOptions {
   scene: THREE.Scene;
   catalog: Catalog;
@@ -201,11 +215,8 @@ export class StarPipeline {
       uniforms: { ...sharedUniforms, uRenderMode: { value: 0 } },
       vertexShader,
       fragmentShader,
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
     });
+    applyGlowBlendDefaults(this.glowMaterial);
 
     // Core depth-mask: writes near depth at disc-pass star cores before any
     // background layer renders, so the Milky Way / molecular clouds /
@@ -255,8 +266,7 @@ export class StarPipeline {
       this.glowMaterial.depthTest = false;
     } else {
       applyDiscBlendDefaults(this.discMaterial);
-      this.glowMaterial.blending = THREE.AdditiveBlending;
-      this.glowMaterial.depthTest = true;
+      applyGlowBlendDefaults(this.glowMaterial);
     }
     this.discMaterial.needsUpdate = true;
     this.glowMaterial.needsUpdate = true;

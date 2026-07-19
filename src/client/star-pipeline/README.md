@@ -9,7 +9,8 @@ read.
 
 - `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
   coreMask `ShaderMaterial`s + meshes. Owns
-  `applyDiscBlendDefaults` + `setMonochromeBlend` + `dispose`.
+  `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
+  local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
 - `star-local-mirror.ts` — `StarLocalMirror`: the local-depth-pass
   mirror draw for cluster-member stars. See § Depth encoding and
   `../local-depth/README.md` § Full membership.
@@ -56,6 +57,7 @@ read.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
+- `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-color-routing-pure.test.ts` — six-tier routing pin.
 - `pulsation-suppress-pure.test.ts` — suppress-mask build pin.
 
@@ -251,8 +253,8 @@ material clones sharing the same uniform objects. Under that define
 the shader swaps `gl_InstanceID` for the `iSourceIdx` attribute
 (`STAR_SELF_ID`) so star-indexed lookups — the extinction texelFetch,
 `uHideFocusIdx`, `uPinFocusToCenter` — behave identically. The
-attribute-budget invariant: each compile variant declares EXACTLY 16
-attributes (the WebGL2 guaranteed minimum) — `iSourceIdx` takes the
+attribute-budget invariant: each compile variant must fit within 16
+attributes (the WebGL2 guaranteed minimum) — `iSourceIdx` reuses the
 slot `iDepthBias` occupies in the main variant, which the local pass
 never needs. Pinned per-variant in `star-pipeline.test.ts`.
 

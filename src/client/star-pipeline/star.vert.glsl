@@ -160,11 +160,11 @@ in float iSuppressPulsation;
 #ifdef LOCAL_DEPTH_PASS
 // Mirror-draw slot → source catalog index. Replaces gl_InstanceID for
 // every star-indexed lookup (extinction texel, hide/pin compares) so a
-// mirror slot behaves exactly like its source instance. It takes the
-// attribute slot iDepthBias occupies in the main variant — each
-// variant must declare EXACTLY 16 attributes (the WebGL2 guaranteed
-// minimum, pinned in star-pipeline.test.ts); the local pass's bracket
-// z-buffer orders close pairs natively, so it never needs the bias.
+// mirror slot behaves exactly like its source instance. It reuses the
+// attribute slot iDepthBias occupies in the main variant, so each
+// variant stays within the 16-attribute WebGL2 minimum (pinned per-
+// variant in star-pipeline.test.ts); the local pass's bracket z-buffer
+// orders close pairs natively, so it never needs the bias.
 in float iSourceIdx;
 #define STAR_SELF_ID int(iSourceIdx + 0.5)
 #else
