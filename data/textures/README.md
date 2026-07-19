@@ -101,12 +101,13 @@ like from space?":
   half chroma — Mercury's true appearance is near-neutral gray-brown,
   Moon-like.
 - **Pluto** — New Horizons natural-ish colour. The un-imaged southern
-  band (real data gap) is filled with the representative disc colour
-  so it reads as "no data", not as terrain.
+  band (real data gap) is filled with the map's mean imaged colour,
+  feathered at the boundary, so it reads as "no data", not as a
+  contrasting terrain band.
 - **Moon** — LROC WAC colour (NASA SVS CGI Moon Kit), untouched.
 - **Io / Ganymede** — USGS Galileo/Voyager colour merges, natural-ish
   colour, untouched (Ganymede's un-imaged polar wedges gap-fill with
-  the representative colour).
+  the map's feathered mean colour).
 - **Europa / Callisto** — the only global USGS mosaics are grayscale;
   the build tints them with each body's representative colour at half
   chroma (both are near-neutral bodies), same treatment as Mercury.
@@ -115,7 +116,7 @@ like from space?":
   colour separation is exaggerated far past what the eye would see on
   these near-neutral ices, so the build pulls chroma halfway back
   toward gray (`DESATURATE`). Triton's un-imaged northern hemisphere
-  gap-fills with the representative colour, like Pluto's band.
+  gap-fills with the map's feathered mean colour, like Pluto's band.
 - **Titan** — Cassini ISS 938 nm mosaic: surface detail seen THROUGH
   the opaque haze, not the visible-light appearance. The build tints
   the grayscale with Titan's full representative orange so the

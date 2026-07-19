@@ -219,7 +219,7 @@ enough to see it.
   1989 Voyager appearance with a reconstructed north polar region;
   Mercury's monochrome mosaic is tinted to its near-neutral
   gray-brown visible appearance and Pluto's un-imaged southern band
-  is filled with its representative disc colour (per-body colour
+  is filled with the map's feathered mean colour (per-body colour
   rationale in data/textures/README.md § Colour fidelity).
 - **Moon surface maps** (13 of the 18 major moons, retrieved
   2026-07-19): NASA SVS CGI Moon Kit (LROC WAC) for the Moon; USGS
