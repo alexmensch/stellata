@@ -58,6 +58,7 @@ export class PlanetMeshLayer {
   private readonly tmpHost = new THREE.Vector3();
   private readonly tmpSun = new THREE.Vector3();
   private readonly tmpCaster = new THREE.Vector3();
+  private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatA = new THREE.Quaternion();
   private readonly tmpQuatB = new THREE.Quaternion();
   private readonly tmpQuatRing = new THREE.Quaternion();
@@ -102,6 +103,13 @@ export class PlanetMeshLayer {
     // a lit photographic sphere has no place on paper.
     this.group.visible = this.field.group.visible && !this.field.monochrome;
     if (!this.group.visible) return;
+
+    // camera.matrixWorldInverse is refreshed inside render(), AFTER
+    // this update — the stored value is one frame stale, so view-space
+    // sun and caster uniforms built from it swim against the surface
+    // under camera motion. Derive a fresh inverse here.
+    camera.updateMatrixWorld();
+    this.viewInverse.copy(camera.matrixWorld).invert();
 
     const shown = new Set<number>();
     const n = this.field.liveInstanceCount;
@@ -177,10 +185,10 @@ export class PlanetMeshLayer {
           )
         : 1;
       material.uniforms.uCasterCount.value =
-        hasSun && hp ? this.writeCasters(material, hp, camera) : 0;
+        hasSun && hp ? this.writeCasters(material, hp) : 0;
 
       if (hasSun) {
-        this.tmpSun.transformDirection(camera.matrixWorldInverse);
+        this.tmpSun.transformDirection(this.viewInverse);
         (material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSun);
         const hostRadiusPc = this.field.hostRadiusOf(hp!.hostStarIdx);
         material.uniforms.uSunAngRad.value =
@@ -226,7 +234,6 @@ export class PlanetMeshLayer {
   private writeCasters(
     material: THREE.ShaderMaterial,
     hp: { hostStarIdx: number; planetIdx: number },
-    camera: THREE.PerspectiveCamera,
   ): number {
     const ps = this.field.getAttachedPlanetSystem(hp.hostStarIdx);
     if (!ps) return 0;
@@ -235,11 +242,11 @@ export class PlanetMeshLayer {
     const parentIdx = family.parentIdx[hp.planetIdx];
     let count = 0;
     if (parentIdx >= 0) {
-      count += this.writeCaster(casters, count, hp.hostStarIdx, parentIdx, camera);
+      count += this.writeCaster(casters, count, hp.hostStarIdx, parentIdx);
     } else {
       const children = family.childIdxs[hp.planetIdx];
       for (let c = 0; c < children.length && count < MAX_SHADOW_CASTERS; c++) {
-        count += this.writeCaster(casters, count, hp.hostStarIdx, children[c], camera);
+        count += this.writeCaster(casters, count, hp.hostStarIdx, children[c]);
       }
     }
     return count;
@@ -252,13 +259,12 @@ export class PlanetMeshLayer {
     slot: number,
     hostStarIdx: number,
     planetIdx: number,
-    camera: THREE.PerspectiveCamera,
   ): number {
     const flat = this.field.instanceIndexOf(hostStarIdx, planetIdx);
     if (flat === null) return 0;
     const body = this.field.planetAt(flat);
     if (!body || !this.field.planetLocalPositionInto(flat, this.tmpCaster)) return 0;
-    this.tmpCaster.applyMatrix4(camera.matrixWorldInverse);
+    this.tmpCaster.applyMatrix4(this.viewInverse);
     casters[slot].set(
       this.tmpCaster.x,
       this.tmpCaster.y,
