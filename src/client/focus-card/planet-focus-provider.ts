@@ -9,7 +9,6 @@ import {
 } from '../solar-system/orbit-descriptor';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatEarthRadii, formatMagnitude } from '../format/physical-format';
-import { formatMoonsLine } from '../format/moon-list-format';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';
 
 const TYPE_DESCRIPTOR: Record<PlanetType, string> = {
@@ -84,13 +83,13 @@ export function createPlanetFocusProvider(
         );
       }
 
-      const moonsLine = formatMoonsLine(config.moonNamesOf(idx));
-      return {
-        name: planet.name,
-        identityLines,
-        rows,
-        lines: moonsLine ? [moonsLine] : [],
-      };
+      // Standard row, one name per line — the 'Known companions' shape.
+      const moonNames = config.moonNamesOf(idx);
+      if (moonNames.length > 0) {
+        rows.push({ label: 'Moons', value: moonNames.join('\n') });
+      }
+
+      return { name: planet.name, identityLines, rows, lines: [] };
     },
   };
 }

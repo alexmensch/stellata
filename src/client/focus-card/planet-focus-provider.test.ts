@@ -109,13 +109,14 @@ describe('planet focus-card provider', () => {
     expect(content).toEqual({ name: '', identityLines: [], rows: [], lines: [] });
   });
 
-  it('a moon-parenting planet carries the full (uncapped) moon roster line', () => {
+  it('a moon-parenting planet carries a standard Moons row, one name per line', () => {
     const content = makeProvider().format(1);
-    expect(content.lines).toEqual(['Moons: Io, Europa, Ganymede, Callisto']);
+    expect(rowValue(content.rows, 'Moons')).toBe('Io\nEuropa\nGanymede\nCallisto');
+    expect(content.lines).toEqual([]);
   });
 
-  it('moonless bodies and moons carry no roster line', () => {
-    expect(makeProvider().format(0).lines).toEqual([]);
-    expect(makeProvider().format(2).lines).toEqual([]);
+  it('moonless bodies and moons carry no Moons row', () => {
+    expect(makeProvider().format(0).rows.find((r) => r.label === 'Moons')).toBeUndefined();
+    expect(makeProvider().format(2).rows.find((r) => r.label === 'Moons')).toBeUndefined();
   });
 });

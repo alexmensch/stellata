@@ -137,7 +137,7 @@ describe('formatPlanetHover', () => {
     const out = formatPlanetHover(
       jupiter, 1, buildCtx({ Jupiter: { appMag: -2.7 } }, SOL_BODIES));
     expect(out.lines[out.lines.length - 1])
-      .toBe('Moons: Io, Europa, Ganymede, Callisto');
+      .toBe('Moons Io, Europa, Ganymede, Callisto');
   });
 
   it("Saturn's seven moons truncate to the hover name cap", () => {
@@ -145,14 +145,14 @@ describe('formatPlanetHover', () => {
     const out = formatPlanetHover(
       saturn, 1, buildCtx({ Saturn: { appMag: 0.5 } }, SOL_BODIES));
     expect(out.lines[out.lines.length - 1])
-      .toBe('Moons: Mimas, Enceladus, Tethys +4 more');
+      .toBe('Moons Mimas, Enceladus, Tethys +4 more');
   });
 
   it('moonless bodies and moons themselves carry no roster line', () => {
     for (const name of ['Mercury', 'Europa']) {
       const idx = SOL_BODIES.findIndex((p) => p.name === name);
       const out = formatPlanetHover(idx, 1, buildCtx({}, SOL_BODIES));
-      expect(out.lines.some((l) => l.startsWith('Moons:'))).toBe(false);
+      expect(out.lines.some((l) => l.startsWith('Moons'))).toBe(false);
     }
   });
 });

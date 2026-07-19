@@ -78,7 +78,7 @@ The planet/moon hover card layout:
 <distance> · Vmag <m>
 Period <years> yr        (a moon reads days: "Period 3.55 d")
 Radius <R⊕> (<km> km)
-Moons: Io, Europa, …     (moon-parenting planets only; capped at
+Moons Io, Europa, …      (moon-parenting planets only; capped at
                           HOVER_MOON_NAME_CAP names with a "+N more"
                           tail — the natural inverse of a moon's
                           "Orbits Jupiter" breadcrumb)

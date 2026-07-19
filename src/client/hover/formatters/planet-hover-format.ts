@@ -3,7 +3,7 @@
 
 import { fmtDistAuto } from '../../ui/distance-util';
 import { formatEarthRadii, formatMagnitude } from '../../format/physical-format';
-import { formatMoonsLine } from '../../format/moon-list-format';
+import { moonRosterText } from '../../format/moon-list-format';
 import {
   formatOrbitPeriod,
   type OrbitDescriptor,
@@ -55,8 +55,9 @@ export function formatPlanetHover(
   if (orbit) lines.push(`Period ${formatOrbitPeriod(orbit)}`);
   lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);
 
-  const moonsLine = formatMoonsLine(ctx.moonsOf(planetIdx), HOVER_MOON_NAME_CAP);
-  if (moonsLine) lines.push(moonsLine);
+  // Label-first, no colon — the same shape as the Period/Radius lines.
+  const roster = moonRosterText(ctx.moonsOf(planetIdx), HOVER_MOON_NAME_CAP);
+  if (roster) lines.push(`Moons ${roster}`);
 
   return { name: planet.name, lines };
 }
