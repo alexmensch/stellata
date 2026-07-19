@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
+import { MIRROR_CAPACITY } from './star-local-mirror';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 
 function makeOpts(count = 4) {
@@ -124,6 +125,16 @@ describe('StarPipeline', () => {
     const LIMIT = 16;   // WebGL2 minimum MAX_VERTEX_ATTRIBS.
     expect(declaredInVariant(false) + INJECTED).toBeLessThanOrEqual(LIMIT);
     expect(declaredInVariant(true) + INJECTED).toBeLessThanOrEqual(LIMIT);
+  });
+
+  // The GLSL literal can't read the TS constant, so pin the two sides
+  // together here: a MIRROR_CAPACITY change must touch the shader's
+  // uniform array length and its suppression loop in the same diff.
+  it('star.vert.glsl sizes uLocalMemberIdx to MIRROR_CAPACITY', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
+    expect(src).toContain(`uniform int uLocalMemberIdx[${MIRROR_CAPACITY}];`);
+    expect(src).toContain(`for (int k = 0; k < ${MIRROR_CAPACITY}; k++)`);
   });
 
   it('binds the caller-owned localPositions buffer to iPosition', () => {

@@ -19,10 +19,12 @@ uniform uint uSpectMask;
 // every other mode disables the suppression by construction (gl_InstanceID
 // is non-negative).
 uniform int uHideFocusIdx;
-// Star whose system is the active local-depth cluster (-1 = none). Its
-// main-pass instance collapses in all three passes — the local pass's
-// mirror draw renders it instead (src/client/local-depth/README.md).
-uniform int uLocalMemberIdx;
+// Member stars of the frame's active local-depth clusters (-1 = empty
+// slot; slot count pinned to MIRROR_CAPACITY in star-pipeline.test.ts).
+// A member's main-pass instance collapses in all three passes — the
+// local pass's mirror draws render it instead
+// (src/client/local-depth/README.md § Full membership).
+uniform int uLocalMemberIdx[8];
 // Pass index — 0=glow, 1=disc, 2=core mask. Shared with the frag shader;
 // the vert reads it so the composite-suppress sentinel below can drop
 // the disc and core-mask passes for sub-pixel binary secondaries while
@@ -237,7 +239,9 @@ void main() {
 #endif
     bool suppressed = STAR_SELF_ID == uHideFocusIdx;
 #ifndef LOCAL_DEPTH_PASS
-    suppressed = suppressed || gl_InstanceID == uLocalMemberIdx;
+    for (int k = 0; k < 8; k++) {
+        suppressed = suppressed || gl_InstanceID == uLocalMemberIdx[k];
+    }
 #endif
     if (suppressed) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
