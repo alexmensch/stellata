@@ -116,6 +116,11 @@ src/client/solar-system/
   planet-rings.frag.glsl          Ring-annulus shaders (radial strip
                                   sample, lit/transmitted faces, body
                                   shadow) — see § Planet mesh LOD.
+  planet-atmosphere.vert.glsl,
+  planet-atmosphere.frag.glsl     Atmosphere-shell shaders (analytic
+                                  chord density, day-side limb glow,
+                                  back-lit forward-scatter ring) — see
+                                  § Atmospheres.
   rotation-elements-pure.ts       IAU rotation elements per body (pole +
                                   prime meridian on the model clock) —
                                   see § Planet rotation.
@@ -619,6 +624,39 @@ occluded while the visual handoff happens.
   new analytic trick.
   Edge-on the zero-thickness annulus thins to a line, which is the
   physically honest look.
+
+### Atmospheres
+
+Venus, Earth, Mars, and Titan carry `Planet.atmosphere` — a spherical
+shell mesh at `R + heightKm` (shared unit sphere, `renderOrder` 2.82,
+additive, depth-tested so the body occludes the far hemisphere) shown
+only in the mesh-LOD regime, riding the same crossfade `uFade`. The
+fragment shader integrates the view ray's optical path through the
+shell analytically (chord through shell minus the body-blocked
+segment, normalised at body-grazing), squared to bias the light to
+the limb, and drives two terms:
+
+- **Day-side limb glow** — the chord density gated on the
+  closest-approach normal facing the host, with a soft wrap past the
+  terminator standing in for twilight refraction.
+- **Back-lit forward-scatter ring** — peak-normalised
+  Henyey-Greenstein (g = 0.85) against the light propagation
+  direction, appearing smoothly as the phase angle approaches 180°
+  (body between camera and host). Venus and Titan carry the strongest
+  weights — the inferior-conjunction ring and Cassini's back-lit haze
+  ring respectively. Venus's high-α *photometric* brightening is
+  already in its Mallama curve; this is the morphology only.
+
+Shell heights are TRUE scattering extents (Earth 100 km ≈ Kármán,
+Venus 90 km haze tops, Mars 60 km dust haze, Titan 300 km detached
+haze), never exaggerated: at the planet focus park (30 %-fill
+framing) Earth's shell reads ≈ 3 px — deliberately subtle, per the
+camera-anywhere honesty rule. The shell is spherical even on oblate
+bodies (flattening ≤ 0.6 % for these four, far below shell
+thickness). **Gas giants deliberately carry no shell**: their fuzzy
+limb is already carried by the solidity-soft billboard edge at
+distance and the cloud-deck maps up close, and none has a detached
+haze layer distinct from the cloud deck at render scale.
 
 ### Planet rotation (stellata-2f6.13)
 

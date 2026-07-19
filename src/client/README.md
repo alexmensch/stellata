@@ -264,6 +264,7 @@ SVG mask (`constellation-figure/README.md`).
 | Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Binary orbit paths                               | WebGL   | local depth pass (3.2 in-pass)                     |       | [binaries/](binaries/README.md), [local-depth/](local-depth/README.md) |
 | Planet disc mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (3 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Planet atmosphere shell (Venus/Earth/Mars/Titan) | WebGL   | local depth pass; additive (2.82 in-pass)          |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
 | Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |

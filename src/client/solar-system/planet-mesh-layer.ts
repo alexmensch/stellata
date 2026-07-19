@@ -8,7 +8,12 @@ import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { litIntensity } from './perceptual-magnitude';
 import { phaseAngleFor, phaseRatioToLambert } from './phase-function';
 import type { PlanetBodyField } from './planet-body-field';
-import { systemFamily, type Planet, type PlanetRings } from './planet-system';
+import {
+  systemFamily,
+  type Planet,
+  type PlanetAtmosphere,
+  type PlanetRings,
+} from './planet-system';
 import { meshFadeFromPhysPx, TEXTURE_PREFETCH_PX } from './mesh-crossfade';
 import {
   poleRaDecDegAt,
@@ -19,6 +24,8 @@ import meshVert from './planet-mesh.vert.glsl?raw';
 import meshFrag from './planet-mesh.frag.glsl?raw';
 import ringsVert from './planet-rings.vert.glsl?raw';
 import ringsFrag from './planet-rings.frag.glsl?raw';
+import atmoVert from './planet-atmosphere.vert.glsl?raw';
+import atmoFrag from './planet-atmosphere.frag.glsl?raw';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -67,13 +74,20 @@ interface RingEntry {
   geometry: THREE.RingGeometry;
 }
 
+interface AtmosphereEntry {
+  mesh: THREE.Mesh;
+  material: THREE.ShaderMaterial;
+  shellRadiusPc: number;
+}
+
 interface MeshEntry {
   mesh: THREE.Mesh;
   material: THREE.ShaderMaterial;
-  /** Body radius, or the ring outer radius for ringed bodies — the
-   *  local-depth-pass bounding sphere. */
+  /** Body radius, extended to the ring outer edge / atmosphere shell
+   *  when present — the local-depth-pass bounding sphere. */
   boundRadiusPc: number;
   ring?: RingEntry;
+  atmosphere?: AtmosphereEntry;
 }
 
 type TextureState =
@@ -201,6 +215,9 @@ export class PlanetMeshLayer {
       if (entry.ring) {
         this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, lit);
       }
+      if (entry.atmosphere) {
+        this.updateAtmosphere(entry.atmosphere, camera, hasSun, fade);
+      }
 
       material.uniforms.uLitIntensity.value = lit;
       material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
@@ -255,6 +272,7 @@ export class PlanetMeshLayer {
       if (!shown.has(idx)) {
         entry.mesh.visible = false;
         if (entry.ring) entry.ring.mesh.visible = false;
+        if (entry.atmosphere) entry.atmosphere.mesh.visible = false;
       }
     }
   }
@@ -358,6 +376,29 @@ export class PlanetMeshLayer {
       .applyQuaternion(this.tmpQuatInv);
   }
 
+  /** Pose the shell on the body and hand the fragment shader its
+   *  shell-local inputs. Sun and camera stay in world axes — the shell
+   *  is untextured and spherical, so no body rotation applies. */
+  private updateAtmosphere(
+    atmo: AtmosphereEntry,
+    camera: THREE.PerspectiveCamera,
+    hasSun: boolean,
+    fade: number,
+  ): void {
+    if (!hasSun) {
+      atmo.mesh.visible = false;
+      return;
+    }
+    atmo.mesh.visible = true;
+    atmo.mesh.position.copy(this.tmpPlanet);
+    atmo.material.uniforms.uFade.value = fade;
+    (atmo.material.uniforms.uSunDirShell.value as THREE.Vector3).copy(this.tmpSun);
+    (atmo.material.uniforms.uCamPosShell.value as THREE.Vector3)
+      .copy(camera.position)
+      .sub(this.tmpPlanet)
+      .divideScalar(atmo.shellRadiusPc);
+  }
+
   private createEntry(idx: number, planet: Planet): MeshEntry {
     const material = new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -389,12 +430,54 @@ export class PlanetMeshLayer {
     mesh.frustumCulled = false;
     mesh.renderOrder = 2.8;
     this.group.add(mesh);
-    const boundRadiusPc =
-      (planet.rings ? planet.rings.outerRadiusKm : planet.radiusKm) * KM_PC;
+    const boundRadiusPc = Math.max(
+      planet.rings ? planet.rings.outerRadiusKm : 0,
+      planet.radiusKm + (planet.atmosphere?.heightKm ?? 0),
+    ) * KM_PC;
     const entry: MeshEntry = { mesh, material, boundRadiusPc };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
+    if (planet.atmosphere) {
+      entry.atmosphere = this.createAtmosphere(planet, planet.atmosphere);
+    }
     this.entries.set(idx, entry);
     return entry;
+  }
+
+  // Slightly-larger spherical shell over the shared unit sphere. The
+  // fragment shader integrates the view ray's optical path through the
+  // shell analytically, so no per-body geometry is needed; flattening
+  // is ignored (≤ 0.6 % for the atmosphere bodies, far below the shell
+  // thickness).
+  private createAtmosphere(planet: Planet, atmo: PlanetAtmosphere): AtmosphereEntry {
+    const shellRadiusPc = (planet.radiusKm + atmo.heightKm) * KM_PC;
+    const material = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: atmoVert,
+      fragmentShader: atmoFrag,
+      uniforms: {
+        uCamPosShell: { value: new THREE.Vector3(0, 0, 2) },
+        uSunDirShell: { value: new THREE.Vector3(0, 0, 1) },
+        uAtmoColour: { value: new THREE.Color(atmo.colour[0], atmo.colour[1], atmo.colour[2]) },
+        uBodyRadiusFrac: { value: planet.radiusKm / (planet.radiusKm + atmo.heightKm) },
+        uLimbStrength: { value: atmo.limbStrength },
+        uScatterStrength: { value: atmo.scatterStrength },
+        uFade: { value: 0 },
+      },
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: true,
+    });
+    const mesh = new THREE.Mesh(this.geometry, material);
+    mesh.name = 'planet-atmosphere';
+    mesh.frustumCulled = false;
+    // After the body mesh (2.8) and rings (2.81): additive light over
+    // both, depth-tested so the body occludes the far hemisphere.
+    mesh.renderOrder = 2.82;
+    mesh.scale.setScalar(shellRadiusPc);
+    mesh.visible = false;
+    this.group.add(mesh);
+    return { mesh, material, shellRadiusPc };
   }
 
   private createRing(planet: Planet, rings: PlanetRings): RingEntry {
@@ -458,13 +541,17 @@ export class PlanetMeshLayer {
   }
 
   dispose(): void {
-    for (const { mesh, material, ring } of this.entries.values()) {
+    for (const { mesh, material, ring, atmosphere } of this.entries.values()) {
       this.group.remove(mesh);
       material.dispose();
       if (ring) {
         this.group.remove(ring.mesh);
         ring.material.dispose();
         ring.geometry.dispose();
+      }
+      if (atmosphere) {
+        this.group.remove(atmosphere.mesh);
+        atmosphere.material.dispose();
       }
     }
     this.entries.clear();

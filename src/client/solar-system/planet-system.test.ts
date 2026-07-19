@@ -294,3 +294,22 @@ describe('systemFamily', () => {
     expect(systemFamily(SOL_BODIES)).toBe(systemFamily(SOL_BODIES));
   });
 });
+
+describe('atmosphere shells', () => {
+  it('exactly Venus, Earth, Mars, and Titan carry an atmosphere', () => {
+    const withAtmo = SOL_BODIES.filter((b) => b.atmosphere).map((b) => b.name);
+    expect(withAtmo).toEqual(['Venus', 'Earth', 'Mars', 'Titan']);
+  });
+
+  it('shell heights are the true scattering extents, km', () => {
+    const heights = Object.fromEntries(
+      SOL_BODIES.filter((b) => b.atmosphere).map((b) => [b.name, b.atmosphere!.heightKm]),
+    );
+    expect(heights).toEqual({ Venus: 90, Earth: 100, Mars: 60, Titan: 300 });
+  });
+
+  it('Titan carries the proportionally largest shell (~12% of R)', () => {
+    const titan = SOL_BODIES.find((b) => b.name === 'Titan')!;
+    expect(titan.atmosphere!.heightKm / titan.radiusKm).toBeCloseTo(0.117, 2);
+  });
+});

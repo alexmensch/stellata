@@ -111,6 +111,23 @@ export interface Planet {
   // data/textures/README.md § Ring strips (Jupiter's rings ship no
   // strip: below the 8-bit-representable opacity floor).
   readonly rings?: PlanetRings;
+  // Optional atmosphere shell (mesh-LOD regime only): day-side limb
+  // glow + back-lit forward-scatter halo. Gas giants deliberately
+  // carry none — see src/client/solar-system/README.md § Atmospheres.
+  readonly atmosphere?: PlanetAtmosphere;
+}
+
+export interface PlanetAtmosphere {
+  /** Visible shell height above the surface, km — the TRUE scattering
+   *  extent (Kármán-line scale for Earth, haze-top for Venus/Titan),
+   *  never an exaggerated art value. */
+  readonly heightKm: number;
+  /** Scattering tint, linear-ish [0,1] RGB. */
+  readonly colour: readonly [number, number, number];
+  /** Day-side limb glow strength (≈0.2 thin Mars … ≈0.7 dense Venus). */
+  readonly limbStrength: number;
+  /** Back-lit forward-scatter ring strength as phase → 180°. */
+  readonly scatterStrength: number;
 }
 
 export interface PlanetRings {
@@ -257,6 +274,10 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
     terminatorSoftness: 0.08,
+    // Haze tops ~90 km; the densest atmosphere of the four, with the
+    // strongest forward-scatter ring (its high-α brightening is already
+    // in the Mallama curve photometrically — this is the morphology).
+    atmosphere: { heightKm: 90, colour: [1.0, 0.95, 0.82], limbStrength: 0.7, scatterStrength: 1.2 },
   },
   {
     name: 'Earth',
@@ -272,6 +293,8 @@ export const SOL_PLANETS: readonly Planet[] = [
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
     hasNightTexture: true,
+    // Kármán-line visible extent; Rayleigh blue.
+    atmosphere: { heightKm: 100, colour: [0.42, 0.60, 1.0], limbStrength: 0.5, scatterStrength: 0.6 },
   },
   {
     name: 'Mars',
@@ -285,6 +308,9 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
     terminatorSoftness: 0.02,
+    // Thin CO2 + dust haze to ~60 km; orbiter limb shots read faint
+    // dusty-blue.
+    atmosphere: { heightKm: 60, colour: [0.62, 0.66, 0.80], limbStrength: 0.2, scatterStrength: 0.25 },
   },
   {
     name: 'Jupiter',
@@ -377,6 +403,7 @@ interface MoonPhysical {
   readonly type: PlanetType;
   readonly colour: readonly [number, number, number];
   readonly terminatorSoftness?: number;
+  readonly atmosphere?: PlanetAtmosphere;
 }
 
 // Physical properties for the 18 major moons. Mean radii from NASA/JPL
@@ -399,7 +426,12 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.78, 0.78, 0.77] },
   // Titan is the one moon with a dense atmosphere (1.5 bar N2 haze) —
   // Earth-like terminator softness; every other in-scope moon is airless.
-  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28], terminatorSoftness: 0.05 },
+  // Its detached haze layers extend ~300 km above the surface —
+  // proportionally the largest shell of the four atmosphere bodies
+  // (~12 % of R); the famous Cassini back-lit ring.
+  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28],
+    terminatorSoftness: 0.05,
+    atmosphere: { heightKm: 300, colour: [0.85, 0.58, 0.32], limbStrength: 0.55, scatterStrength: 1.1 } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 
   { name: 'Miranda', parentName: 'Uranus', radiusKm: 235.8, albedo: 0.32, type: 'icy', colour: [0.62, 0.62, 0.63] },
@@ -433,6 +465,7 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     colour: m.colour,
     terminatorSoftness: m.terminatorSoftness,
     rotation: MOON_ROTATION_BY_NAME.get(m.name),
+    atmosphere: m.atmosphere,
   };
 });
 
