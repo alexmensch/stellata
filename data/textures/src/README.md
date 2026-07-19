@@ -1,7 +1,7 @@
 # Planet texture sources
 
-Frozen originals, downloaded 2026-07-18 (retrieval date for every
-row), plus two authored ring tables compiled from the literature.
+Frozen originals, downloaded 2026-07-18 unless a row states
+otherwise, plus two authored ring tables compiled from the literature.
 Consumed only by `scripts/textures/build-textures.py`. JPEGs ride LFS
 (`data/textures/src/*.jpg` in `.gitattributes`); the ring-profile
 text tables are small and stay on regular git.
@@ -10,7 +10,7 @@ text tables are small and stay on regular git.
 |---|---|---|---|---|
 | `mercury-pia15063.jpg` | Mercury | MESSENGER MDIS global mosaic (PIA15063, 6132×3066 grayscale), NASA/JHU-APL/Carnegie | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA15063 |
 | `venus-bjj.jpg` | Venus (cloud deck) | Galileo 1990 flyby UV cloud mosaic (1800×900), map by Björn Jónsson | Free use with attribution (https://bjj.mmedia.is/acknow.html) | https://bjj.mmedia.is/data/venus/venus.html |
-| `earth-bmng.jpg` | Earth (day) | Blue Marble Next Generation, Dec 2004 (5400×2700), NASA Earth Observatory | Public domain | https://visibleearth.nasa.gov/images/73909 |
+| `earth-blue-marble-2002.jpg` | Earth (day) | The Blue Marble, 2002 (land + ocean colour + sea ice + clouds composite, 2048×1024), NASA Earth Observatory / MODIS, downloaded 2026-07-19 | Public domain | https://visibleearth.nasa.gov/images/57735 |
 | `earth-night.jpg` | Earth (night) | Black Marble 2016 (3600×1800), NASA Earth Observatory / Suomi NPP VIIRS | Public domain | https://earthobservatory.nasa.gov/features/NightLights |
 | `mars-viking-mdim21.jpg` | Mars | USGS Viking MDIM 2.1 colorized global mosaic, 1 km/px browse (21339×10670), NASA/USGS/AMES | Public domain | https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m |
 | `jupiter-pia07782.jpg` | Jupiter | Cassini Dec 2000 flyby cylindrical map (PIA07782, 3601×1801), NASA/JPL/Space Science Institute | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA07782 |
