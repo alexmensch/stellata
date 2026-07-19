@@ -665,6 +665,21 @@ export class PlanetBodyField {
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
+  /** Physical (true angular-diameter) disc size in px, excluding the
+   *  perceptual brightness floor that keeps faint bodies visible as dots —
+   *  the "is this a resolved disc, not a floor-clamped point?" measure.
+   *  Unlike renderedPlanetSizePx it's independent of the disc-size filter,
+   *  so a distant body reads genuinely sub-pixel. 0 when unattached,
+   *  degenerate, or below the soft-taper kill. */
+  physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return 0;
+    const i = instanceIdx - host.startInstance;
+    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
+  }
+
   private hostOfInstance(instanceIdx: number): AttachedHost | null {
     if (instanceIdx < 0 || instanceIdx >= this.liveCount) return null;
     const hostStarIdx = this.instanceHost[instanceIdx];

@@ -90,7 +90,8 @@ src/client/solar-system/
                                   sizing and the per-planet label gating.
   phase-function.ts (+ test)      Lambertian + Mallama phase functions.
                                   Pure helpers with vitest coverage.
-  planet-labels.ts                Per-planet SVG labels, distance-gated.
+  planet-labels.ts                Per-body (planet + moon) SVG labels,
+                                  resolvability-gated. See § below.
   heliopause.ts                   Sol's heliopause boundary as a translucent
                                   asymmetric shell (Sol-only). Extends the
                                   shared `fresnel-shell/` primitive (material
@@ -548,12 +549,21 @@ centre). Gas-giant and Venus cloud maps are epoch snapshots of
 rotating cloud decks, so their longitude alignment is inherently
 arbitrary; 0 is used.
 
-`planet-labels.ts` draws per-planet body-anchored SVG labels above
-the canvas. The label engine is independent of the chart-mode label
-engine (`chart-labels.ts`); planet labels show when a planet system is
-attached and the detail cycle permits `planetLabels` (floor `all`), and
-are hidden in chart mode so the chart-mode glyph contract isn't doubled
-up (`../scene/README.md` § Detail-level declutter cycle).
+`planet-labels.ts` draws per-body-anchored SVG labels (planets **and**
+moons) above the canvas. The label engine is independent of the
+chart-mode label engine (`chart-labels.ts`); labels show when a planet
+system is attached and the detail cycle permits `planetLabels` (floor
+`all`), and are hidden in chart mode so the chart-mode glyph contract
+isn't doubled up (`../scene/README.md` § Detail-level declutter cycle).
+
+Per-body resolvability gate: a **planet** label tracks its orbit ring
+(`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the
+body is floor-clamped sub-pixel, so the label would anchor to nothing). A
+**moon** has no host-centred ring, so it tracks its own physical disc
+size (`physicalPlanetSizePx ≥ MOON_LABEL_MIN_DISC_PX`) — a moon collapsed
+toward its parent's dot drops its label rather than stacking on it. When
+parent-centred moon rings land (a later layer) moons fold back onto the
+same `isOrbitRingVisible` path and the asymmetry goes away.
 
 ## Orbit rings
 
