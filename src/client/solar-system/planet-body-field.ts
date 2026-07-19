@@ -46,10 +46,12 @@ import { ECLIPSE_DIM_TAU_S } from '../binaries/binary-tuning';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
-// Initial slot capacity. v1 attaches Sol (9 planets) once; bk5 may
-// grow this as exoplanet hosts come online. Resizing reallocates the
-// instanced attribute buffers — relatively cheap compared to a frame.
-const INITIAL_CAPACITY = 16;
+// Initial slot capacity. v1 attaches Sol (9 planets + 18 moons = 27
+// bodies) once; sized to hold that in one shot so the sole attach doesn't
+// immediately grow. bk5 may grow this as exoplanet hosts come online.
+// Resizing reallocates the instanced attribute buffers — relatively cheap
+// compared to a frame.
+const INITIAL_CAPACITY = 32;
 
 interface InstanceAttrSpec {
   /** GLSL attribute name. */
