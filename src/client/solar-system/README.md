@@ -163,10 +163,10 @@ by name so they have a single source of truth. Scope + citations in
 every interaction contract iterate that one array, so a moon inherits
 Target / focus / click / POI / hover / search as an ordinary body — no
 moon-specific path. `solPositionsAt` writes positions in `SOL_BODIES`
-order (planets first). Moon rotation elements (tidal-lock orientation)
-land with the texture work, where a map validates pole/prime-meridian;
-until then a moon uses the mesh's pole-fallback, invisible on an
-untextured near-spherical body.
+order (planets first). Every moon carries IAU rotation elements
+(`MOON_ROTATION_BY_NAME` in `rotation-elements-pure.ts`) — tidally
+locked, so each `Ẇ` equals the orbital mean motion (test-pinned
+against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 
 Orbital elements (`moon-ephemeris.ts`) are J2000 osculating, each
 referred to the plane JPL tabulates it against, with that plane's ICRS
@@ -590,11 +590,12 @@ pole = host orbital-plane normal with an arbitrary fixed meridian.
 `RotationElements.mapCenterLonDeg` is texture metadata riding the
 same table: the east longitude at the horizontal centre of the
 body's equirect map, added to the spin term so texture features land
-on their true longitudes. All shipped maps are centred on 0° except
+on their true longitudes. Planet maps are centred on 0° except
 Pluto (PIA11707 is centred on ~180°E — Sputnik Planitia at map
-centre). Gas-giant and Venus cloud maps are epoch snapshots of
-rotating cloud decks, so their longitude alignment is inherently
-arbitrary; 0 is used.
+centre); moon maps are centred on 180° except the Moon and Io (0°) —
+see `data/textures/README.md` § Artifact contract. Gas-giant and
+Venus cloud maps are epoch snapshots of rotating cloud decks, so
+their longitude alignment is inherently arbitrary; 0 is used.
 
 `planet-labels.ts` draws per-body-anchored SVG labels (planets **and**
 moons) above the canvas. The label engine is independent of the

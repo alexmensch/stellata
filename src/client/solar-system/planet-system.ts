@@ -32,6 +32,7 @@ import {
   JUPITER_ROTATION,
   MARS_ROTATION,
   MERCURY_ROTATION,
+  MOON_ROTATION_BY_NAME,
   NEPTUNE_ROTATION,
   PLUTO_ROTATION,
   type RotationElements,
@@ -431,6 +432,7 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     albedo: m.albedo,
     colour: m.colour,
     terminatorSoftness: m.terminatorSoftness,
+    rotation: MOON_ROTATION_BY_NAME.get(m.name),
   };
 });
 

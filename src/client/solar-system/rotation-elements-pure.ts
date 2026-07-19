@@ -82,6 +82,121 @@ export const PLUTO_ROTATION: RotationElements = {
   mapCenterLonDeg: 180,
 };
 
+// The 18 major moons — same IAU WG 2015 linear terms as the planets
+// (sub-degree periodic librations dropped; README.md § Planet
+// rotation). Every entry is tidally locked, so |wDegPerDay| equals the
+// orbital mean motion 360/periodDays (rotation-elements-pure.test.ts
+// pins the parity against MOON_ELEMENTS). mapCenterLonDeg matches each
+// shipped map's centre after the build's positive-east normalisation
+// (data/textures/src/README.md); texture-less Uranian moons carry no
+// offset.
+export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new Map<
+  string,
+  RotationElements
+>([
+  ['Moon', {
+    poleRaDeg: 269.9949, poleRaDegPerCty: 0.0031,
+    poleDecDeg: 66.5392, poleDecDegPerCty: 0.0130,
+    w0Deg: 38.3213, wDegPerDay: 13.17635815,
+  }],
+  ['Io', {
+    poleRaDeg: 268.05, poleRaDegPerCty: -0.009,
+    poleDecDeg: 64.50, poleDecDegPerCty: 0.003,
+    w0Deg: 200.39, wDegPerDay: 203.4889538,
+  }],
+  ['Europa', {
+    poleRaDeg: 268.08, poleRaDegPerCty: -0.009,
+    poleDecDeg: 64.51, poleDecDegPerCty: 0.003,
+    w0Deg: 36.022, wDegPerDay: 101.3747235,
+    mapCenterLonDeg: 180,
+  }],
+  ['Ganymede', {
+    poleRaDeg: 268.20, poleRaDegPerCty: -0.009,
+    poleDecDeg: 64.57, poleDecDegPerCty: 0.003,
+    w0Deg: 44.064, wDegPerDay: 50.3176081,
+    mapCenterLonDeg: 180,
+  }],
+  ['Callisto', {
+    poleRaDeg: 268.72, poleRaDegPerCty: -0.009,
+    poleDecDeg: 64.83, poleDecDegPerCty: 0.003,
+    w0Deg: 259.51, wDegPerDay: 21.5710715,
+    mapCenterLonDeg: 180,
+  }],
+  ['Mimas', {
+    poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
+    poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
+    w0Deg: 333.46, wDegPerDay: 381.9945550,
+    mapCenterLonDeg: 180,
+  }],
+  ['Enceladus', {
+    poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
+    poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
+    w0Deg: 6.32, wDegPerDay: 262.7318996,
+    mapCenterLonDeg: 180,
+  }],
+  ['Tethys', {
+    poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
+    poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
+    w0Deg: 8.95, wDegPerDay: 190.6979085,
+    mapCenterLonDeg: 180,
+  }],
+  ['Dione', {
+    poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
+    poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
+    w0Deg: 357.6, wDegPerDay: 131.5349316,
+    mapCenterLonDeg: 180,
+  }],
+  ['Rhea', {
+    poleRaDeg: 40.38, poleRaDegPerCty: -0.036,
+    poleDecDeg: 83.55, poleDecDegPerCty: -0.004,
+    w0Deg: 235.16, wDegPerDay: 79.6900478,
+    mapCenterLonDeg: 180,
+  }],
+  ['Titan', {
+    poleRaDeg: 39.4827, poleRaDegPerCty: 0,
+    poleDecDeg: 83.4279, poleDecDegPerCty: 0,
+    w0Deg: 186.5855, wDegPerDay: 22.5769768,
+    mapCenterLonDeg: 180,
+  }],
+  ['Iapetus', {
+    poleRaDeg: 318.16, poleRaDegPerCty: -3.949,
+    poleDecDeg: 75.03, poleDecDegPerCty: -1.143,
+    w0Deg: 355.2, wDegPerDay: 4.5379572,
+    mapCenterLonDeg: 180,
+  }],
+  ['Miranda', {
+    poleRaDeg: 257.43, poleRaDegPerCty: 0,
+    poleDecDeg: -15.08, poleDecDegPerCty: 0,
+    w0Deg: 30.70, wDegPerDay: -254.6906892,
+  }],
+  ['Ariel', {
+    poleRaDeg: 257.43, poleRaDegPerCty: 0,
+    poleDecDeg: -15.10, poleDecDegPerCty: 0,
+    w0Deg: 156.22, wDegPerDay: -142.8356681,
+  }],
+  ['Umbriel', {
+    poleRaDeg: 257.43, poleRaDegPerCty: 0,
+    poleDecDeg: -15.10, poleDecDegPerCty: 0,
+    w0Deg: 108.05, wDegPerDay: -86.8688923,
+  }],
+  ['Titania', {
+    poleRaDeg: 257.43, poleRaDegPerCty: 0,
+    poleDecDeg: -15.10, poleDecDegPerCty: 0,
+    w0Deg: 77.74, wDegPerDay: -41.3514316,
+  }],
+  ['Oberon', {
+    poleRaDeg: 257.43, poleRaDegPerCty: 0,
+    poleDecDeg: -15.10, poleDecDegPerCty: 0,
+    w0Deg: 6.77, wDegPerDay: -26.7394932,
+  }],
+  ['Triton', {
+    poleRaDeg: 299.36, poleRaDegPerCty: 0,
+    poleDecDeg: 41.17, poleDecDegPerCty: 0,
+    w0Deg: 296.53, wDegPerDay: -61.2572637,
+    mapCenterLonDeg: 180,
+  }],
+]);
+
 /** Pole RA/Dec (deg, ICRS) at Unix-seconds `t`. */
 export function poleRaDecDegAt(
   rot: RotationElements,

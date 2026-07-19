@@ -3,6 +3,7 @@ import {
   EARTH_ROTATION,
   JUPITER_ROTATION,
   MERCURY_ROTATION,
+  MOON_ROTATION_BY_NAME,
   PLUTO_ROTATION,
   poleRaDecDegAt,
   poleVectorAt,
@@ -12,9 +13,11 @@ import {
   VENUS_ROTATION,
 } from './rotation-elements-pure';
 import { getPlanetPositions } from './ephemeris';
+import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
+import { SOL_MOONS } from './planet-system';
 import { jdeToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from './time';
-import { J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD, J2000_OBLIQUITY_RAD } from '../util/astronomy-constants';
 
 const T_J2000 = jdeToT(J2000_JD);
 
@@ -136,5 +139,55 @@ describe('subObserverLongitudeEastDeg — Earth sub-solar point', () => {
     const drift = ((lonB - lonA) % 360 + 360) % 360;
     expect(drift).toBeGreaterThan(2.9);
     expect(drift).toBeLessThan(3.3);
+  });
+});
+
+describe('MOON_ROTATION_BY_NAME', () => {
+  it('covers every SOL_MOONS body', () => {
+    for (const m of SOL_MOONS) {
+      expect(MOON_ROTATION_BY_NAME.get(m.name), m.name).toBeDefined();
+    }
+    expect(MOON_ROTATION_BY_NAME.size).toBe(SOL_MOONS.length);
+  });
+
+  it('tidal lock: |wDegPerDay| equals the orbital mean motion 360/periodDays', () => {
+    for (const elem of MOON_ELEMENTS) {
+      const rot = MOON_ROTATION_BY_NAME.get(elem.name)!;
+      const meanMotion = 360 / elem.periodDays;
+      // IAU W rates and the JPL mean-element periods are independent
+      // sources; sub-0.2% agreement is the tidal-lock cross-check.
+      expect(
+        Math.abs(Math.abs(rot.wDegPerDay) - meanMotion) / meanMotion,
+        elem.name,
+      ).toBeLessThan(2e-3);
+    }
+  });
+
+  it('retrograde spins carry negative W rates (Uranian moons, Triton)', () => {
+    for (const name of ['Miranda', 'Ariel', 'Umbriel', 'Titania', 'Oberon', 'Triton']) {
+      expect(MOON_ROTATION_BY_NAME.get(name)!.wDegPerDay).toBeLessThan(0);
+    }
+    expect(MOON_ROTATION_BY_NAME.get('Moon')!.wDegPerDay).toBeGreaterThan(0);
+  });
+
+  it("the Moon's near side faces Earth: sub-Earth longitude stays near 0°E", () => {
+    // Tidal lock in the composed frame: the direction moon → Earth,
+    // pushed through the IAU pole + spin inversion, must land near
+    // longitude 0 (mean libration excursions are a few degrees; the
+    // dropped periodic terms and mean elements widen the tolerance).
+    const moonRot = MOON_ROTATION_BY_NAME.get('Moon')!;
+    const moonEl = MOON_ELEMENTS.find((m) => m.name === 'Moon')!;
+    const off = { x: 0, y: 0, z: 0 };
+    const eps = J2000_OBLIQUITY_RAD;
+    for (const dayOffset of [0, 7.3, 14.6, 21.9]) {
+      const t = 946728000 + dayOffset * 86400;
+      moonOffsetEcliptic(moonEl, t, off);
+      // Moon → Earth in ecliptic, then ecliptic → ICRS (Rx(+ε)).
+      const ex = -off.x;
+      const ey = Math.cos(eps) * -off.y - Math.sin(eps) * -off.z;
+      const ez = Math.sin(eps) * -off.y + Math.cos(eps) * -off.z;
+      const lon = subObserverLongitudeEastDeg(moonRot, t, { x: ex, y: ey, z: ez });
+      expect(Math.abs(lon), `t+${dayOffset}d -> ${lon.toFixed(1)}°E`).toBeLessThan(12);
+    }
   });
 });

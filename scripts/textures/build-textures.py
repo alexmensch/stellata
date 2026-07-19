@@ -17,9 +17,11 @@ SCRIPT = Path(__file__)
 TARGET_W = 2048
 JPEG_QUALITY = 82
 
-# body artifact name -> source file. Uranus is deliberately absent —
-# a featureless cyan sphere with limb darkening IS the accurate
-# rendering, so it ships texture-less by design (README.md).
+# body artifact name -> source file. Uranus and its five moons are
+# deliberately absent — a featureless representative-colour spheroid
+# with limb darkening IS the honest rendering (Uranus by design;
+# the Uranian moons have Voyager southern-hemisphere coverage only,
+# so a half-empty map would read worse than the clean fallback).
 BODIES = {
     "mercury": "mercury-pia15063.jpg",
     "venus": "venus-bjj.jpg",
@@ -30,27 +32,80 @@ BODIES = {
     "saturn": "saturn-bjj.jpg",
     "neptune": "neptune-bjj.jpg",
     "pluto": "pluto-pia11707.jpg",
+    "moon": "moon-lroc-svs.tif",
+    "io": "io-usgs-clrmerge.jpg",
+    "europa": "europa-usgs-global.jpg",
+    "ganymede": "ganymede-usgs-clr.jpg",
+    "callisto": "callisto-usgs-global.jpg",
+    "mimas": "mimas-pia18437.jpg",
+    "enceladus": "enceladus-pia18435.jpg",
+    "tethys": "tethys-pia18439.jpg",
+    "dione": "dione-pia18434.jpg",
+    "rhea": "rhea-pia18438.jpg",
+    "titan": "titan-iss-p19658.tif",
+    "iapetus": "iapetus-pia18436.jpg",
+    "triton": "triton-pia18668.jpg",
 }
 
-# Representative body colours, [0,1] RGB — MUST match SOL_PLANETS in
+# Representative body colours, [0,1] RGB — MUST match SOL_BODIES in
 # src/client/solar-system/planet-system.ts (texture-colours.test.ts
-# pins the parity). Used for the Mercury tint and the Pluto gap fill
-# so the treated regions match the disc the body renders as at
-# distance.
+# pins the parity). Used for the grayscale tints and the un-imaged
+# gap fills so the treated regions match the disc the body renders
+# as at distance.
 REPRESENTATIVE_COLOURS = {
     "mercury": (0.55, 0.47, 0.32),
     "pluto": (0.78, 0.62, 0.49),
+    "europa": (0.82, 0.76, 0.68),
+    "ganymede": (0.58, 0.53, 0.47),
+    "callisto": (0.45, 0.41, 0.37),
+    "titan": (0.83, 0.60, 0.28),
+    "triton": (0.85, 0.80, 0.76),
 }
 
-# Mercury's true appearance is near-neutral gray-brown (Moon-like);
-# the full representative-colour tint reads sepia, so apply half the
-# chroma.
-MERCURY_TINT_STRENGTH = 0.5
+# Grayscale-source tints: chroma fraction of the representative
+# colour applied over the mosaic's luminance detail. Mercury/Europa/
+# Callisto are near-neutral bodies shipped as grayscale mosaics —
+# half chroma keeps them honest; Titan's ISS map is 938 nm surface
+# detail under an opaque orange haze, so it takes the full
+# representative chroma (the visible-light appearance).
+TINT_STRENGTH = {
+    "mercury": 0.5,
+    "europa": 0.5,
+    "callisto": 0.5,
+    "titan": 1.0,
+}
+
+# Schenk IR-G-UV enhanced-colour mosaics (the 2014 Cassini icy-moon
+# series + Triton): the colour separation is exaggerated far past
+# what the eye would see on these near-neutral ices, so pull the
+# chroma halfway back toward gray (README.md § Colour fidelity).
+DESATURATE = {
+    "mimas": 0.5,
+    "enceladus": 0.5,
+    "tethys": 0.5,
+    "dione": 0.5,
+    "rhea": 0.5,
+    "iapetus": 0.5,
+    "triton": 0.5,
+}
+
+# Sources whose PDS label says LongitudeDirection = PositiveWest —
+# stored mirrored against the positive-east texture convention every
+# other map (and the renderer) uses; flipped at build.
+FLIP_HORIZONTAL = {"io", "europa", "callisto", "titan"}
 
 # Luminance floor below which a pixel counts as an un-imaged gap
-# (both mosaics carry true black there: Pluto's southern band, a
-# north-polar wedge on Mercury).
-GAP_LUMINANCE = {"pluto": 12, "mercury": 8}
+# (true black in the source: Pluto's southern band, a north-polar
+# wedge on Mercury, polar wedges on the Galilean mosaics, Triton's
+# un-imaged northern hemisphere).
+GAP_LUMINANCE = {
+    "pluto": 12,
+    "mercury": 8,
+    "europa": 8,
+    "ganymede": 8,
+    "callisto": 8,
+    "triton": 10,
+}
 
 RINGS_COLOR = "rings-color-bjj.txt"
 RINGS_TRANSPARENCY = "rings-transparency-bjj.txt"
@@ -106,6 +161,11 @@ def fill_gap(im: Image.Image, colour: tuple[float, float, float], threshold: int
     return rgb
 
 
+def desaturate(im: Image.Image, strength: float) -> Image.Image:
+    """Blend toward the luminance channel: 0 = untouched, 1 = grayscale."""
+    return Image.blend(im.convert("RGB"), im.convert("L").convert("RGB"), strength)
+
+
 def build_body(name: str, src_name: str) -> None:
     src_path = SRC / src_name
     out_path = OUT / f"{name}.jpg"
@@ -118,10 +178,14 @@ def build_body(name: str, src_name: str) -> None:
         im = im.resize((TARGET_W, h), Image.LANCZOS)
     if im.mode not in ("RGB", "L"):
         im = im.convert("RGB")
-    # Per-body colour treatments — rationale in data/textures/README.md
+    # Per-body treatments — rationale in data/textures/README.md
     # § Colour fidelity.
-    if name == "mercury":
-        im = tint_grayscale(im, REPRESENTATIVE_COLOURS["mercury"], MERCURY_TINT_STRENGTH)
+    if name in FLIP_HORIZONTAL:
+        im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    if name in TINT_STRENGTH:
+        im = tint_grayscale(im, REPRESENTATIVE_COLOURS[name], TINT_STRENGTH[name])
+    if name in DESATURATE:
+        im = desaturate(im, DESATURATE[name])
     if name in GAP_LUMINANCE:
         im = fill_gap(im, REPRESENTATIVE_COLOURS[name], GAP_LUMINANCE[name])
     im.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)

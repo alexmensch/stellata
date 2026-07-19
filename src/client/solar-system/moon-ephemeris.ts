@@ -67,13 +67,13 @@ export const MOON_ELEMENTS: readonly MoonElements[] = [
   {
     name: 'Io', parent: 'Jupiter',
     aKm: 421800, e: 0.004, incDeg: 0.0,
-    nodeDeg: 0.0, periDeg: 49.1, m0Deg: 330.9, periodDays: 1.763,
+    nodeDeg: 0.0, periDeg: 49.1, m0Deg: 330.9, periodDays: 1.769,
     refPoleRaDeg: 268.1, refPoleDecDeg: 64.5,
   },
   {
     name: 'Europa', parent: 'Jupiter',
     aKm: 671100, e: 0.009, incDeg: 0.5,
-    nodeDeg: 184.0, periDeg: 45.0, m0Deg: 345.4, periodDays: 3.525,
+    nodeDeg: 184.0, periDeg: 45.0, m0Deg: 345.4, periodDays: 3.551,
     refPoleRaDeg: 268.1, refPoleDecDeg: 64.5,
   },
   {

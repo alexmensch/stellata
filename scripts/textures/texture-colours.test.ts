@@ -3,11 +3,11 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { SOL_PLANETS } from '../../src/client/solar-system/planet-system';
+import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 
-// build-textures.py can't import the TS SOL_PLANETS table, so it
-// carries its own REPRESENTATIVE_COLOURS copies for the Mercury tint
-// and gap fills. This pin keeps the two in lockstep — a colour
+// build-textures.py can't import the TS SOL_BODIES table, so it
+// carries its own REPRESENTATIVE_COLOURS copies for the grayscale
+// tints and gap fills. This pin keeps the two in lockstep — a colour
 // retune in planet-system.ts fails here until the build script (and
 // its artifacts) follow.
 
@@ -25,13 +25,13 @@ function pyColours(): Record<string, [number, number, number]> {
 }
 
 describe('build-textures.py representative colours', () => {
-  it('match SOL_PLANETS for every body the script treats', () => {
+  it('match SOL_BODIES for every body the script treats', () => {
     const colours = pyColours();
     expect(Object.keys(colours).length).toBeGreaterThan(0);
     for (const [name, rgb] of Object.entries(colours)) {
-      const planet = SOL_PLANETS.find((p) => p.name.toLowerCase() === name);
-      expect(planet, `unknown body "${name}" in build-textures.py`).toBeDefined();
-      expect(rgb).toEqual([...planet!.colour]);
+      const body = SOL_BODIES.find((p) => p.name.toLowerCase() === name);
+      expect(body, `unknown body "${name}" in build-textures.py`).toBeDefined();
+      expect(rgb).toEqual([...body!.colour]);
     }
   });
 });

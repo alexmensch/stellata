@@ -1,25 +1,30 @@
 # Planet textures
 
-Per-body equirectangular surface/cloud maps for the Sol planets, plus
-the ring-system radial strips. Two layers in this folder:
+Per-body equirectangular surface/cloud maps for the Sol planets and
+major moons, plus the ring-system radial strips. Two layers in this
+folder:
 
 - `src/` — frozen source maps as downloaded, plus the authored ring
   tables (LFS for the JPEGs; see `src/README.md` for the per-file
   provenance table).
 - `*.jpg` + `<body>-rings.png` (this level) — the built runtime
-  artifacts, committed on regular git (~2 MB total). Produced by
+  artifacts, committed on regular git (~8 MB total). Produced by
   `scripts/textures/build-textures.py` (manual, infrequent — like the
   dust build); `scripts/textures/sync-textures.ts` mirrors them to
   `public/textures/` on every `pnpm run build` / `dev`.
 
 ## Artifact contract
 
-- Equirectangular (plate carrée), longitude 0 at the left edge or map
-  centre per source convention — the renderer's prime-meridian offset
-  is a per-body concern (`mapCenterLonDeg` in
+- Equirectangular (plate carrée), **positive-east** left-to-right —
+  sources stored positive-west (PDS `LongitudeDirection`, several USGS
+  moon mosaics) are flipped at build (`FLIP_HORIZONTAL`). Longitude 0
+  at the left edge or map centre per source convention — the
+  renderer's prime-meridian offset is a per-body concern
+  (`mapCenterLonDeg` in
   `src/client/solar-system/rotation-elements-pure.ts`), not baked
-  here. All shipped maps are centred on 0° except Pluto (~180°E,
-  Sputnik Planitia at map centre).
+  here. Planets are centred on 0° except Pluto (~180°E, Sputnik
+  Planitia at map centre); moon maps are centred on 180° except the
+  Moon and Io (0°).
 - Max 2048 px wide, JPEG quality 82; sources narrower than 2048 keep
   their native size (never upscaled).
 - One file per body, `<body>.jpg`, lazy-loaded on close approach —
@@ -98,10 +103,32 @@ like from space?":
 - **Pluto** — New Horizons natural-ish colour. The un-imaged southern
   band (real data gap) is filled with the representative disc colour
   so it reads as "no data", not as terrain.
+- **Moon** — LROC WAC colour (NASA SVS CGI Moon Kit), untouched.
+- **Io / Ganymede** — USGS Galileo/Voyager colour merges, natural-ish
+  colour, untouched (Ganymede's un-imaged polar wedges gap-fill with
+  the representative colour).
+- **Europa / Callisto** — the only global USGS mosaics are grayscale;
+  the build tints them with each body's representative colour at half
+  chroma (both are near-neutral bodies), same treatment as Mercury.
+- **Saturnian mids (Mimas, Enceladus, Tethys, Dione, Rhea, Iapetus)
+  and Triton** — Schenk 2014 IR-G-UV *enhanced-colour* mosaics; the
+  colour separation is exaggerated far past what the eye would see on
+  these near-neutral ices, so the build pulls chroma halfway back
+  toward gray (`DESATURATE`). Triton's un-imaged northern hemisphere
+  gap-fills with the representative colour, like Pluto's band.
+- **Titan** — Cassini ISS 938 nm mosaic: surface detail seen THROUGH
+  the opaque haze, not the visible-light appearance. The build tints
+  the grayscale with Titan's full representative orange so the
+  naked-eye haze colour dominates and the surface reads as faint
+  markings (the Venus-style "features colourised to visible tones"
+  caveat).
+- **Uranian moons** — no texture by design: Voyager southern-
+  hemisphere-only coverage; they exercise the renderer's texture-less
+  base path.
 
 The per-body treatments live in `build-textures.py`
-(`REPRESENTATIVE_COLOURS`, tint + gap-fill helpers); the colour
-constants are pinned to `SOL_PLANETS` by
+(`REPRESENTATIVE_COLOURS`, tint + desaturate + gap-fill + flip
+helpers); the colour constants are pinned to `SOL_BODIES` by
 `scripts/textures/texture-colours.test.ts`, so the treated regions
 always match the disc the body renders as at distance.
 
