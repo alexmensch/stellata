@@ -3,12 +3,7 @@
 // moon ← parent planet), with no solar-mass assumption. See README.md § Moons.
 
 import { AU_KM } from '../util/astronomy-constants';
-import {
-  formatKm,
-  formatPeriodDays,
-  formatPeriodYears,
-  planetPeriodYears,
-} from '../format/physical-format';
+import { formatKm, planetPeriodYears } from '../format/physical-format';
 import type { Planet, PlanetSystem } from './planet-system';
 
 export interface OrbitDescriptor {
@@ -33,6 +28,20 @@ export function keplerPeriodDays(semiMajorAxisKm: number, gravParamGM: number): 
   return (TWO_PI * Math.sqrt((a * a * a) / gravParamGM)) / SECONDS_PER_DAY;
 }
 
+// Name → body map per `planets` array, so a moon's parent lookup is O(1)
+// instead of a per-frame linear scan. Keyed on the array identity, which is
+// stable for a session (SOL_BODIES; one lazily-built shard per exoplanet
+// host), so the map is built once and reused.
+const bodyByName = new WeakMap<readonly Planet[], Map<string, Planet>>();
+function parentOf(planets: readonly Planet[], name: string): Planet | undefined {
+  let m = bodyByName.get(planets);
+  if (!m) {
+    m = new Map(planets.map((p) => [p.name, p]));
+    bodyByName.set(planets, m);
+  }
+  return m.get(name);
+}
+
 /** Orbit descriptor for a body at flat instance `planet` in `system`. A
  *  planet fills it from its host star + solar-mass period (a^1.5 years, in
  *  AU); a moon from its `parentName` + the parent planet's GM (Kepler-III
@@ -45,7 +54,7 @@ export function orbitDescriptorFor(
   hostName: string | null,
 ): OrbitDescriptor | null {
   if (planet.parentName) {
-    const parent = system.planets.find((p) => p.name === planet.parentName);
+    const parent = parentOf(system.planets, planet.parentName);
     if (!parent || parent.gravParamGM === undefined) return null;
     const aKm = planet.semiMajorAxisAu * AU_KM;
     return {
@@ -66,11 +75,12 @@ export function orbitDescriptorFor(
 }
 
 /** Orbital-period row string for a descriptor. Shared by the hover card
- *  and the focus card so a shared field can't diverge between tiers. */
+ *  and the focus card so a shared field can't diverge between tiers. The
+ *  decade split (integer ≥ 10, else two decimals) is unit-agnostic; the
+ *  descriptor's `periodUnit` supplies the suffix. */
 export function formatOrbitPeriod(d: OrbitDescriptor): string {
-  return d.periodUnit === 'd'
-    ? `${formatPeriodDays(d.period)} d`
-    : `${formatPeriodYears(d.period)} yr`;
+  const v = d.period >= 10 ? d.period.toFixed(0) : d.period.toFixed(2);
+  return `${v} ${d.periodUnit}`;
 }
 
 /** Semi-major-axis row string for a descriptor (AU for a planet, km for
