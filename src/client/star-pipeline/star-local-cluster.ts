@@ -1,7 +1,5 @@
-// The star LocalCluster: per-frame membership for star mirror draws in
-// the local depth pass — the active planet-system host, the focal
-// binary chain, and any resolved-disc star near the camera — plus the
-// focused system's orbit-path ellipses. See ../local-depth/README.md
+// The star LocalCluster: per-frame star membership + orbit-path
+// ellipses for the local depth pass. See ../local-depth/README.md
 // § Full membership.
 
 import * as THREE from 'three';

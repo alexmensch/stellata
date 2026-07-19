@@ -20,8 +20,6 @@ import { tToJDE } from '../solar-system/time';
 import {
   VISIBILITY_HORIZON_PC,
   ECLIPSE_DIM_TAU_S,
-  DISC_DEPTH_BIAS,
-  RENDERED_DISC_SINLIMIT_MARGIN,
 } from './binary-tuning';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
 
@@ -48,16 +46,6 @@ export interface EclipsePhotometryFieldOptions {
   eclipseDimBuffer: Float32Array;
   /** Three.js attribute carrier, flushed only on frames that write. */
   iEclipseDimAttr: THREE.InstancedBufferAttribute;
-  /** Per-instance disc-pass depth bias on the back component of an
-   *  overlapping pair. Length = catalog.count, initialised to 0. Written
-   *  in lockstep with the dim: whenever a pair's discs overlap, the back
-   *  component gets a bias so the front wins the z-test deterministically
-   *  (the buffer can't resolve their sub-AU depth separation at close
-   *  range). See README § Eclipse photometry. */
-  depthBiasBuffer: Float32Array;
-  /** Three.js attribute carrier for `depthBiasBuffer`, flushed with the
-   *  dim on frames that change the bias set. */
-  iDepthBiasAttr: THREE.InstancedBufferAttribute;
 }
 
 interface EclipseRelationCache {
@@ -92,8 +80,6 @@ export interface EclipseRelationDebugRow {
   result: EclipseResult | null;
   bufPrimary: number;
   bufSecondary: number;
-  biasPrimary: number;
-  biasSecondary: number;
 }
 
 interface RelationEval {
@@ -117,11 +103,6 @@ export class EclipsePhotometryField {
   /** Per-frame dim targets, keyed by back-star instance index. Reused
    *  across frames to avoid per-frame allocation. */
   private targets = new Map<number, number>();
-  /** Instance indices this field wrote a depth bias onto last frame. The
-   *  field owns `depthBiasBuffer` exclusively, so it clears its own stale
-   *  entries each frame (unlike compositeSuppress, which BinaryOrbitField
-   *  resets). */
-  private biasedIdx = new Set<number>();
   private lastNowMs: number | null = null;
 
   constructor(opts: EclipsePhotometryFieldOptions) {
@@ -141,36 +122,20 @@ export class EclipsePhotometryField {
    *  their shape with BinaryOrbitField's so the two fields skip the
    *  same off-screen population; the Kepler eval here is deliberately
    *  NOT gated on the orbit field's screen-pixel LOD — the photometric
-   *  dip is exactly the signal that remains when the pair is sub-pixel.
-   *
-   *  `renderedAngRadiusRad(idx)` returns an instance's rendered disc
-   *  angular radius (radians) — the CPU mirror of the shader's
-   *  `max(appSize, physSize)` sizing. The disc-pass depth bias keys off
-   *  rendered overlap (see the loop), not physical occlusion, so it must
-   *  be supplied for the bias to fire; omitted, only physically
-   *  overlapping pairs are biased. */
+   *  dip is exactly the signal that remains when the pair is sub-pixel. */
   update(
     t: number,
     cameraPos: Readonly<THREE.Vector3>,
     maxAppMag: number,
     nowMs: number,
-    renderedAngRadiusRad?: (idx: number) => number,
   ): void {
     const tJd = tToJDE(t);
     const blend = dimBlendFactor(nowMs, this.lastNowMs, ECLIPSE_DIM_TAU_S);
     this.lastNowMs = nowMs;
 
     const dimBuf = this.opts.eclipseDimBuffer;
-    const biasBuf = this.opts.depthBiasBuffer;
     const targets = this.targets;
     targets.clear();
-
-    // Clear last frame's depth biases before recomputing. Discs that no
-    // longer overlap must return to zero bias or they'd stay ordered.
-    let biasChanged = false;
-    for (const idx of this.biasedIdx) biasBuf[idx] = 0;
-    if (this.biasedIdx.size > 0) biasChanged = true;
-    this.biasedIdx.clear();
 
     for (let i = 0; i < this.relations.length; i++) {
       const rc = this.relations[i];
@@ -190,31 +155,11 @@ export class EclipsePhotometryField {
         const prev = targets.get(backIdx);
         if (prev === undefined || result.dim < prev) targets.set(backIdx, result.dim);
       }
-
-      // Disc-pass depth bias — keyed on RENDERED-disc overlap, wider than
-      // physical occlusion: a bright star's brightness-driven disc extends
-      // past its true angular radius, so the opaque cores z-fight across an
-      // annulus where dim is still 1. The biased set is thus a superset of
-      // the dimmed set. front/back is valid here (computed before the
-      // overlap test). See README § Eclipse photometry.
-      const realEval = result.alphaPri > 0 && result.alphaSec > 0;
-      let renderedOverlap = false;
-      if (renderedAngRadiusRad !== undefined && realEval) {
-        const sumAngR = renderedAngRadiusRad(rc.primaryIdx)
-          + renderedAngRadiusRad(rc.secondaryIdx);
-        renderedOverlap = result.thetaRad < sumAngR;
-      }
-      if (result.dim < 1 || renderedOverlap) {
-        biasBuf[backIdx] = DISC_DEPTH_BIAS;
-        this.biasedIdx.add(backIdx);
-        biasChanged = true;
-      }
     }
 
     if (blendDimBuffer(dimBuf, targets, this.active, blend)) {
       this.opts.iEclipseDimAttr.needsUpdate = true;
     }
-    if (biasChanged) this.opts.iDepthBiasAttr.needsUpdate = true;
   }
 
   /** Count of slots currently held below 1.0 (occluding or decaying). */
@@ -234,7 +179,6 @@ export class EclipsePhotometryField {
   ): EclipseRelationDebugRow[] {
     const tJd = tToJDE(t);
     const dimBuf = this.opts.eclipseDimBuffer;
-    const biasBuf = this.opts.depthBiasBuffer;
     const rows: EclipseRelationDebugRow[] = [];
     for (const rc of this.relations) {
       if (starIdx !== null
@@ -257,8 +201,6 @@ export class EclipsePhotometryField {
         result: ev.result,
         bufPrimary: dimBuf[rc.primaryIdx],
         bufSecondary: dimBuf[rc.secondaryIdx],
-        biasPrimary: biasBuf[rc.primaryIdx],
-        biasSecondary: biasBuf[rc.secondaryIdx],
       });
     }
     return rows;
@@ -341,14 +283,12 @@ export class EclipsePhotometryField {
       const normal = orbitPlaneNormalICRS(orbit.tier, orbit.elements, SYSTEM_XYZ);
 
       // Minimum pair separation over one orbit bounds the prefilter: the
-      // widest LOS-vs-plane angle that can still overlap is
+      // widest LOS-vs-plane angle that can still occlude is
       // discSum / minSep. The rendered offset is baseDiffPc + ΔR(t) = R(t)
       // exactly, so its minimum is closed-form periapsis a(1−e) — no
-      // sampling. discSum is the RENDERED disc sum bound (physical × the
-      // disc-pass 2× cap), so the prefilter can't cull a pair whose
-      // rendered discs overlap and z-fight though the physical discs miss.
+      // sampling.
       const minSepPc = orbit.elements.a * (1 - orbit.elements.e) * AU_PC;
-      const discSumPc = (rPriPc + rSecPc) * RENDERED_DISC_SINLIMIT_MARGIN;
+      const discSumPc = rPriPc + rSecPc;
       const sinLimit = minSepPc > discSumPc
         ? Math.min(1, discSumPc / minSepPc)
         : 1;

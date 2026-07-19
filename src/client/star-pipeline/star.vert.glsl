@@ -162,21 +162,12 @@ in float iSuppressPulsation;
 #ifdef LOCAL_DEPTH_PASS
 // Mirror-draw slot → source catalog index. Replaces gl_InstanceID for
 // every star-indexed lookup (extinction texel, hide/pin compares) so a
-// mirror slot behaves exactly like its source instance. It reuses the
-// attribute slot iDepthBias occupies in the main variant, so each
-// variant stays within the 16-attribute WebGL2 minimum (pinned per-
-// variant in star-pipeline.test.ts); the local pass's bracket z-buffer
-// orders close pairs natively, so it never needs the bias.
+// mirror slot behaves exactly like its source instance. Both compile
+// variants stay within the 16-attribute WebGL2 minimum (pinned per-
+// variant in star-pipeline.test.ts).
 in float iSourceIdx;
 #define STAR_SELF_ID int(iSourceIdx + 0.5)
 #else
-// Log-depth bias written by EclipsePhotometryField each frame onto the
-// back component of an overlapping orbital pair. Added to gl_FragDepth in
-// the opaque disc + core-mask passes so the front wins the z-test where a
-// tight pair's line-of-sight separation is below the depth buffer's
-// resolvable quantum. 0.0 = no bias. See src/client/binaries/README.md
-// § Eclipse photometry and star-pipeline/README.md § Depth encoding.
-in float iDepthBias;
 #define STAR_SELF_ID gl_InstanceID
 #endif
 
@@ -195,7 +186,6 @@ out float vSoftness;   // 0 = crisp (white dwarf), 1 = fuzzy (hypergiant) —
 // the screen-space derivative of `length(vUv)` is undefined, leaving the
 // inner disc faint or invisible.
 out float vAaWidth;
-out float vDepthBias; // pass-through of iDepthBias; frag adds it to gl_FragDepth
 
 const float LOG10 = 2.302585093;
 
@@ -232,11 +222,6 @@ void main() {
     // and the fragment shader never executes for it. A future change
     // that makes the off-screen position per-vertex would break this
     // invariant and need to write vFragDepth before returning.
-#ifdef LOCAL_DEPTH_PASS
-    vDepthBias = 0.0;
-#else
-    vDepthBias = iDepthBias;
-#endif
     bool suppressed = STAR_SELF_ID == uHideFocusIdx;
 #ifndef LOCAL_DEPTH_PASS
     for (int k = 0; k < 8; k++) {
