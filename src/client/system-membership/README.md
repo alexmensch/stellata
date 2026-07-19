@@ -25,8 +25,13 @@ Sol's probes tomorrow. Two consumers drive the shape:
   nameable: a provider returns `name: null` when it can't name a
   member (stars defer to `resolveStarName` in the consumer; unnameable
   members get a generic label).
-- `membersOf` returns the WHOLE connected system, primary first; `[]`
-  when the provider doesn't cover the target.
+- `membersOf` returns the target's system at the provider's natural
+  granularity, primary first; `[]` when the provider doesn't cover the
+  target. Binaries use the whole connected multi-star system; planet
+  systems are **hierarchical, one level per target** — a host's
+  members are its planets, a planet's its moons — so counts and
+  rosters stay scoped to what the user is pointing at (hovering
+  Saturn reads "N of 8", never "N of 28").
 - `collapsedClusterOf` returns only members currently rendering as one
   point with the target (target included), primary first — and `[]`
   when nothing is collapsed with it. "Currently collapsed" is always
@@ -42,12 +47,15 @@ Sol's probes tomorrow. Two consumers drive the shape:
   the relation-graph walk in `../format/star-companion-format.ts` over
   `binaries.bin` + the orbit walk's live `isCompositeSuppressed`.
 - **Planet systems** — `../solar-system/planet-system-membership.ts`,
-  over `PlanetBodyField`'s attached hosts. Members are the host star +
-  every body; the collapse verdict is
-  `PlanetBodyField.isCollapsedOntoParent` (rendered this frame AND
-  sub-pixel from its parent — host star for a planet, parent planet
-  for a moon). The same implementation covers exoplanet hosts as soon
-  as `stellata-bk5` attaches them — no new provider needed.
+  over `PlanetBodyField`'s attached hosts, one hierarchy level per
+  target: host → planets, planet → its moons; a collapsed moon is
+  represented by its planet in the host's roster, never listed beside
+  it. The collapse verdict is `PlanetBodyField.isCollapsedOntoParent`
+  (rendered this frame AND within `BODY_COLLAPSE_THRESHOLD_PX` of its
+  parent — looser than the binary 1.5 px render gate because body dots
+  carry multi-px glow footprints). The same implementation covers
+  exoplanet hosts as soon as `stellata-bk5` attaches them — no new
+  provider needed.
 
 ## Consumers
 

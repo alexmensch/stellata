@@ -5,7 +5,7 @@ import {
 } from './planet-system-membership';
 import type { Planet, PlanetSystem } from './planet-system';
 
-// Minimal host: two planets + one moon of the second planet. Flat
+// Minimal host: two planets + two moons of the second planet. Flat
 // instance indices offset by 10 to prove the provider round-trips
 // through the attach table rather than assuming flat == planetIdx.
 const BODY = (name: string, parentName?: string): Planet =>
@@ -15,6 +15,7 @@ const PLANETS: readonly Planet[] = [
   BODY('Mercury'),
   BODY('Jupiter'),
   BODY('Io', 'Jupiter'),
+  BODY('Europa', 'Jupiter'),
 ];
 const HOST = 42;
 const FLAT_BASE = 10;
@@ -36,18 +37,31 @@ function sourceWith(collapsedFlats: Set<number>): PlanetMembershipSource {
 const starT = (idx: number) => ({ kind: 'star', idx }) as const;
 const planetT = (idx: number) => ({ kind: 'planet', idx }) as const;
 
-describe('createPlanetSystemMembership', () => {
-  it('membersOf lists the host first, then every body with its name', () => {
+describe('createPlanetSystemMembership — one hierarchy level per target', () => {
+  it("a host's sub-system is itself + its planets, never the moons", () => {
     const p = createPlanetSystemMembership(sourceWith(new Set()));
-    const members = p.membersOf(starT(HOST));
-    expect(members).toEqual([
+    expect(p.membersOf(starT(HOST))).toEqual([
       { target: { kind: 'star', idx: HOST }, name: null },
       { target: { kind: 'planet', idx: 10 }, name: 'Mercury' },
       { target: { kind: 'planet', idx: 11 }, name: 'Jupiter' },
-      { target: { kind: 'planet', idx: 12 }, name: 'Io' },
     ]);
-    // A body target resolves the same system.
-    expect(p.membersOf(planetT(12))).toEqual(members);
+  });
+
+  it("a planet's sub-system is itself + its moons", () => {
+    const p = createPlanetSystemMembership(sourceWith(new Set()));
+    expect(p.membersOf(planetT(11))).toEqual([
+      { target: { kind: 'planet', idx: 11 }, name: 'Jupiter' },
+      { target: { kind: 'planet', idx: 12 }, name: 'Io' },
+      { target: { kind: 'planet', idx: 13 }, name: 'Europa' },
+    ]);
+  });
+
+  it('childless bodies (moons, moon-less planets) own no sub-system', () => {
+    const p = createPlanetSystemMembership(sourceWith(new Set([12, 13])));
+    expect(p.membersOf(planetT(10))).toEqual([]); // Mercury
+    expect(p.membersOf(planetT(12))).toEqual([]); // Io
+    expect(p.collapsedClusterOf(planetT(10))).toEqual([]);
+    expect(p.collapsedClusterOf(planetT(12))).toEqual([]);
   });
 
   it('membersOf is [] for unattached hosts and non-planet kinds', () => {
@@ -57,35 +71,29 @@ describe('createPlanetSystemMembership', () => {
     expect(p.membersOf({ kind: 'cloud', idx: 0 })).toEqual([]);
   });
 
-  it('cluster from the host spans bodies reachable through collapsed edges only', () => {
-    // Mercury collapsed onto the host; Jupiter resolved; Io collapsed
-    // onto Jupiter (reachable from Jupiter, NOT from the host).
+  it("the host's cluster lists collapsed planets only — a collapsed moon folds into its planet", () => {
+    // Mercury collapsed onto the host; Io collapsed onto Jupiter;
+    // Jupiter itself resolved. Sol's roster shows Mercury alone: Io is
+    // represented by Jupiter one level down, and Jupiter isn't here.
     const p = createPlanetSystemMembership(sourceWith(new Set([10, 12])));
     const cluster = p.collapsedClusterOf(starT(HOST));
     expect(cluster.map((m) => m.name)).toEqual([null, 'Mercury']);
     expect(cluster[0].target).toEqual({ kind: 'star', idx: HOST });
   });
 
-  it('a planet with collapsed moons forms its own sub-cluster, planet first', () => {
+  it('a planet with collapsed moons forms its own cluster, planet first', () => {
     const p = createPlanetSystemMembership(sourceWith(new Set([12])));
     const cluster = p.collapsedClusterOf(planetT(11));
     expect(cluster.map((m) => m.name)).toEqual(['Jupiter', 'Io']);
-    // The host is not in the component — Jupiter is resolved from it.
-    expect(cluster.every((m) => m.target.kind === 'planet')).toBe(true);
-    // The collapsed moon reports the same cluster.
-    expect(p.collapsedClusterOf(planetT(12))).toEqual(cluster);
   });
 
-  it('a fully collapsed chain reaches the host from every member', () => {
-    const p = createPlanetSystemMembership(sourceWith(new Set([10, 11, 12])));
-    const fromMoon = p.collapsedClusterOf(planetT(12));
-    expect(fromMoon.map((m) => m.name)).toEqual([null, 'Mercury', 'Jupiter', 'Io']);
-    expect(fromMoon[0].target).toEqual({ kind: 'star', idx: HOST });
-  });
-
-  it('cluster is [] when nothing is collapsed', () => {
-    const p = createPlanetSystemMembership(sourceWith(new Set()));
+  it('cluster is [] when no direct child is collapsed', () => {
+    // Io collapsed onto Jupiter has no bearing on the HOST's cluster.
+    const p = createPlanetSystemMembership(sourceWith(new Set([12])));
     expect(p.collapsedClusterOf(starT(HOST))).toEqual([]);
-    expect(p.collapsedClusterOf(planetT(11))).toEqual([]);
+    // And a fully resolved system reports none anywhere.
+    const q = createPlanetSystemMembership(sourceWith(new Set()));
+    expect(q.collapsedClusterOf(starT(HOST))).toEqual([]);
+    expect(q.collapsedClusterOf(planetT(11))).toEqual([]);
   });
 });

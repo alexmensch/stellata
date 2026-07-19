@@ -4,9 +4,9 @@
 
 import type { HoverPayload } from '../hover-types';
 
-/** Roster names shown before the list truncates to "+ N more" — keeps
- *  the card glanceable for a 28-body planet system. */
-export const SYSTEM_ROSTER_MAX_NAMES = 8;
+/** Roster names shown before the list truncates to "+ N more" — sized
+ *  so Sol's full sub-system (Sol + nine planets) fits uncut. */
+export const SYSTEM_ROSTER_MAX_NAMES = 10;
 
 /** Generic label for a member the providing implementation could not
  *  name — members are keyed on stable ids, never guaranteed a name. */

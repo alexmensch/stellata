@@ -1,13 +1,12 @@
-// SystemMembershipProvider over attached planet systems: host star +
-// bodies, clusters from the per-body collapsed-onto-parent verdict.
-// See ../system-membership/README.md.
+// SystemMembershipProvider over attached planet systems, one hierarchy
+// level at a time: a host's sub-system is its planets, a planet's its
+// moons. See ../system-membership/README.md.
 
 import type { Target } from '../camera/focus/focus-target';
 import type {
   SystemMember,
   SystemMembershipProvider,
 } from '../system-membership/system-membership';
-import { parentIndexOf } from './orbit-descriptor';
 import type { PlanetSystem } from './planet-system';
 
 /** The PlanetBodyField surface this provider reads — structural so
@@ -20,97 +19,85 @@ export interface PlanetMembershipSource {
   isCollapsedOntoParent(instanceIdx: number): boolean;
 }
 
-// Node id −1 is the host star; 0..n−1 are planets-array indices.
-const HOST_NODE = -1;
+interface SubSystem {
+  host: number;
+  ps: PlanetSystem;
+  owner: SystemMember;
+  childIdxs: number[];
+}
 
 export function createPlanetSystemMembership(
   source: PlanetMembershipSource,
 ): SystemMembershipProvider {
-  const hostOf = (target: Target): number | null => {
+  // A target's sub-system is the hierarchy level it OWNS: the host's
+  // direct children are the planets (no parentName), a planet's its
+  // moons (parentName === planet.name). Moons and childless planets
+  // own no sub-system — a body that has collapsed into a parent's
+  // point is unpickable anyway, so only owners ever surface a roster.
+  // Deeper levels fold into their parent: a moon collapsed onto
+  // Jupiter is represented BY Jupiter in Sol's roster, never listed
+  // beside it — which is also exactly how exoplanet hosts will read
+  // (host → planets, nothing deeper).
+  const subSystemOf = (target: Target): SubSystem | null => {
+    let host: number;
+    let ownerName: string | undefined;
+    let owner: SystemMember;
     if (target.kind === 'star') {
-      return source.getAttachedPlanetSystem(target.idx) ? target.idx : null;
+      host = target.idx;
+      ownerName = undefined;
+      owner = { target, name: null };
+    } else if (target.kind === 'planet') {
+      const hp = source.hostPlanetOf(target.idx);
+      if (!hp) return null;
+      host = hp.hostStarIdx;
+      const named = source.getAttachedPlanetSystem(host)?.planets[hp.planetIdx]?.name;
+      if (!named) return null;
+      ownerName = named;
+      owner = { target, name: named };
+    } else {
+      return null;
     }
-    if (target.kind === 'planet') {
-      return source.hostPlanetOf(target.idx)?.hostStarIdx ?? null;
+    const ps = source.getAttachedPlanetSystem(host);
+    if (!ps) return null;
+    const childIdxs: number[] = [];
+    for (let i = 0; i < ps.planets.length; i++) {
+      if (ps.planets[i].parentName === ownerName) childIdxs.push(i);
     }
-    return null;
+    if (childIdxs.length === 0) return null;
+    return { host, ps, owner, childIdxs };
   };
-
-  const hostMember = (hostStarIdx: number): SystemMember => ({
-    target: { kind: 'star', idx: hostStarIdx },
-    name: null,
-  });
 
   const bodyMember = (
     ps: PlanetSystem,
-    hostStarIdx: number,
+    host: number,
     planetIdx: number,
   ): SystemMember | null => {
-    const flat = source.instanceIndexOf(hostStarIdx, planetIdx);
+    const flat = source.instanceIndexOf(host, planetIdx);
     if (flat === null) return null;
     return { target: { kind: 'planet', idx: flat }, name: ps.planets[planetIdx].name ?? null };
   };
 
   return {
     membersOf(target: Target): SystemMember[] {
-      const host = hostOf(target);
-      if (host === null) return [];
-      const ps = source.getAttachedPlanetSystem(host);
-      if (!ps) return [];
-      const members: SystemMember[] = [hostMember(host)];
-      for (let i = 0; i < ps.planets.length; i++) {
-        const m = bodyMember(ps, host, i);
+      const sub = subSystemOf(target);
+      if (!sub) return [];
+      const members: SystemMember[] = [sub.owner];
+      for (const i of sub.childIdxs) {
+        const m = bodyMember(sub.ps, sub.host, i);
         if (m) members.push(m);
       }
       return members;
     },
 
     collapsedClusterOf(target: Target): SystemMember[] {
-      const host = hostOf(target);
-      if (host === null) return [];
-      const ps = source.getAttachedPlanetSystem(host);
-      if (!ps) return [];
-      const n = ps.planets.length;
-
-      // Tree edges child → parent (host or parent body), active iff
-      // the child currently collapses onto its parent — the same
-      // undirected active-edge walk the binary cluster runs.
-      const parent = new Array<number>(n);
-      const edgeActive = new Array<boolean>(n);
-      for (let i = 0; i < n; i++) {
-        const parentName = ps.planets[i].parentName;
-        parent[i] = parentName ? parentIndexOf(ps.planets, parentName) : HOST_NODE;
-        const flat = source.instanceIndexOf(host, i);
-        edgeActive[i] = flat !== null && source.isCollapsedOntoParent(flat);
+      const sub = subSystemOf(target);
+      if (!sub) return [];
+      const cluster: SystemMember[] = [sub.owner];
+      for (const i of sub.childIdxs) {
+        const m = bodyMember(sub.ps, sub.host, i);
+        if (m && source.isCollapsedOntoParent(m.target.idx)) cluster.push(m);
       }
-
-      const start =
-        target.kind === 'star'
-          ? HOST_NODE
-          : source.hostPlanetOf(target.idx)?.planetIdx ?? HOST_NODE;
-      const component = new Set<number>();
-      const stack = [start];
-      while (stack.length > 0) {
-        const node = stack.pop() as number;
-        if (component.has(node)) continue;
-        component.add(node);
-        if (node !== HOST_NODE && edgeActive[node]) stack.push(parent[node]);
-        for (let i = 0; i < n; i++) {
-          if (parent[i] === node && edgeActive[i]) stack.push(i);
-        }
-      }
-      if (component.size < 2) return [];
-
-      // Canonical primary-first order: host, then bodies ascending
-      // (planets precede moons in every PlanetSystem roster).
-      const out: SystemMember[] = [];
-      if (component.has(HOST_NODE)) out.push(hostMember(host));
-      for (let i = 0; i < n; i++) {
-        if (!component.has(i)) continue;
-        const m = bodyMember(ps, host, i);
-        if (m) out.push(m);
-      }
-      return out;
+      return cluster.length < 2 ? [] : cluster;
     },
   };
 }

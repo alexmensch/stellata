@@ -482,7 +482,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
     // 6 stars + 9 planets = 15 members, all collapsed at the hover point.
     expect(out.lines[1]).toBe('15 components:');
     expect(out.lines[2]).toBe(
-      'Castor, Castor B, Castor Aa2, Castor Bb2, Castor C, Castor D, b, c + 7 more',
+      'Castor, Castor B, Castor Aa2, Castor Bb2, Castor C, Castor D, b, c, d, e + 5 more',
     );
   });
 });
