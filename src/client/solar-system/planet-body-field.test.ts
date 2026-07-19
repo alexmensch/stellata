@@ -1208,21 +1208,20 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('physicalPlanetSizePx is the true angular size, excluding the perceptual floor', () => {
+  it('planetHostRelPositionInto returns the raw iLocalRel offset', () => {
     const f = makeField();
     attach(f, 0, 1);
-    // Camera parked on the host, planet 1 AU out: the true disc is deeply
-    // sub-pixel, but the perceptual floor keeps the RENDERED dot at uSizeMin
-    // (=2 here). The physical measure must report the sub-pixel truth so the
-    // moon-label gate can tell a resolved disc from a floor-clamped dot.
-    const atHost = new THREE.Vector3(0, 0, 0);
-    const phys = f.physicalPlanetSizePx(0, atHost);
-    const expectedPhys = 2 * Math.atan((6000 * KM_PC) / AU_PC) * (600 / ((60 * Math.PI) / 180));
-    expect(Math.abs(phys - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
-    expect(phys).toBeLessThan(2);
-    expect(f.renderedPlanetSizePx(0, atHost)).toBeGreaterThanOrEqual(2);
-    // Unattached instance → 0.
-    expect(f.physicalPlanetSizePx(9, atHost)).toBe(0);
+    const rel = new THREE.Vector3();
+    expect(f.planetHostRelPositionInto(0, rel)).toBe(true);
+    const local = new THREE.Vector3();
+    const host = new THREE.Vector3();
+    f.planetLocalPositionInto(0, local);
+    f.getHostLocalPositionInto(0, host);
+    expect(rel.x).toBeCloseTo(local.x - host.x, 12);
+    expect(rel.y).toBeCloseTo(local.y - host.y, 12);
+    expect(rel.z).toBeCloseTo(local.z - host.z, 12);
+    // Unattached instance → false.
+    expect(f.planetHostRelPositionInto(9, rel)).toBe(false);
     f.dispose();
   });
 });

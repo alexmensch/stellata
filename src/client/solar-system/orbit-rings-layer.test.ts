@@ -2,18 +2,33 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
+  RING_GEOMETRY_MAX_AGE_S,
   RING_VISIBILITY_THRESHOLD_PX,
   OrbitRingsLayer,
   buildEllipsePoints,
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
   planetLocalPosition,
+  refPlaneToEclipticQuat,
   ringVisibility,
   solidityForType,
+  writeRingVerts,
 } from './orbit-rings-layer';
+import { ORBIT_LINE_SEGMENTS } from '../util/orbit-line';
 import { AU_KM, AU_PC, KM_PC } from '../util/astronomy-constants';
 import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
-import type { Planet, PlanetSystem } from './planet-system';
+import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
+import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
+import {
+  SOL_BODIES,
+  solOrbitGeometryAt,
+  type Planet,
+  type PlanetSystem,
+} from './planet-system';
+
+// J2000.0 in Unix-seconds — the model time every static-geometry test
+// builds rings at.
+const T0 = 946728000;
 
 function makePlanet(overrides: Partial<Planet> = {}): Planet {
   return {
@@ -152,7 +167,17 @@ describe('ringVisibility', () => {
 
   it('uses strict-greater-than against the threshold (gap == threshold hides)', () => {
     expect(ringVisibility([0, 6], 6)).toEqual([false, false]);
-    expect(ringVisibility([0, 7], 6)).toEqual([true, true]);
+    // Gap 7 clears the threshold for both, but the inner ring's own
+    // radius (0 px) fails the size floor.
+    expect(ringVisibility([0, 7], 6)).toEqual([false, true]);
+    expect(ringVisibility([7, 14], 6)).toEqual([true, true]);
+  });
+
+  it('suppresses a lone sub-pixel ring via the own-radius floor', () => {
+    // A single-moon parent seen from across the system: no neighbour
+    // gap exists to fail, so the ring's own size must gate it.
+    expect(ringVisibility([2], 6)).toEqual([false]);
+    expect(ringVisibility([42], 6)).toEqual([true]);
   });
 });
 
@@ -323,10 +348,10 @@ describe('OrbitRingsLayer', () => {
       hostStarIdx: 0,
       planets: [makePlanet({ name: 'Alpha', semiMajorAxisAu: 1 })],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     // Camera at 5 AU from the (origin) host. A lone ring has no
     // neighbours, so the gap heuristic always lets it render.
-    ss.update(makeCamera(5 * AU_PC), 800, null);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
     expect(ss.anyOrbitRingVisible()).toBe(true);
     ss.dispose();
   });
@@ -337,9 +362,9 @@ describe('OrbitRingsLayer', () => {
       hostStarIdx: 0,
       planets: [makePlanet()],
     };
-    ss.setPlanetSystem(ps, 0);
-    ss.update(makeCamera(5 * AU_PC), 800, null);
-    ss.setPlanetSystem(null, 0);
+    ss.setPlanetSystem(ps, 0, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    ss.setPlanetSystem(null, 0, T0);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
   });
@@ -350,8 +375,8 @@ describe('OrbitRingsLayer', () => {
       hostStarIdx: 0,
       planets: [makePlanet()],
     };
-    ss.setPlanetSystem(ps, 0);
-    ss.update(makeCamera(5 * AU_PC), 800, null);
+    ss.setPlanetSystem(ps, 0, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
     ss.setHidden(true);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -363,8 +388,8 @@ describe('OrbitRingsLayer', () => {
       hostStarIdx: 0,
       planets: [makePlanet()],
     };
-    ss.setPlanetSystem(ps, 0);
-    ss.update(makeCamera(5 * AU_PC), 800, null);
+    ss.setPlanetSystem(ps, 0, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
     ss.setMonochrome(true);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -379,12 +404,12 @@ describe('OrbitRingsLayer', () => {
         makePlanet({ name: 'B', semiMajorAxisAu: 100 }),
       ],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     // Mid-range camera distance — the inner ring's pixel radius collapses
     // (pile-up against neighbour) while the outer ring remains spread.
     // The exact heuristic outcome is exercised in `ringVisibility` tests
     // above; here we just confirm the per-index API plumbs through.
-    ss.update(makeCamera(50 * AU_PC), 800, null);
+    ss.update(makeCamera(50 * AU_PC), 800, null, T0);
     const a = ss.isOrbitRingVisible(0);
     const b = ss.isOrbitRingVisible(1);
     expect(typeof a).toBe('boolean');
@@ -410,9 +435,9 @@ describe('OrbitRingsLayer', () => {
         makePlanet({ name: 'B', semiMajorAxisAu: 1.001 }),
       ],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     // 1e6 pc is absurdly far; both ring projections shrink to indistinguishable.
-    ss.update(makeCamera(1e6), 800, null);
+    ss.update(makeCamera(1e6), 800, null, T0);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
   });
@@ -425,12 +450,12 @@ describe('OrbitRingsLayer host centring', () => {
       hostStarIdx: 0,
       planets: [makePlanet({ semiMajorAxisAu: 1 })],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     const host = new THREE.Vector3(3, -2, 1).multiplyScalar(AU_PC);
     const cam = makeCamera(0);
     cam.position.copy(host);
     cam.position.z += 5 * AU_PC;
-    ss.update(cam, 800, host);
+    ss.update(cam, 800, host, T0);
     expect(ss.group.position.x).toBeCloseTo(host.x, 12);
     expect(ss.group.position.y).toBeCloseTo(host.y, 12);
     expect(ss.group.position.z).toBeCloseTo(host.z, 12);
@@ -450,12 +475,12 @@ describe('OrbitRingsLayer host centring', () => {
         makePlanet({ name: 'B', semiMajorAxisAu: 2 }),
       ],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     const host = new THREE.Vector3(1e6, 0, 0);
     const cam = makeCamera(0);
     cam.position.copy(host);
     cam.position.z += 5 * AU_PC;
-    ss.update(cam, 800, host);
+    ss.update(cam, 800, host, T0);
     expect(ss.isOrbitRingVisible(0)).toBe(true);
     expect(ss.isOrbitRingVisible(1)).toBe(true);
     ss.dispose();
@@ -467,10 +492,10 @@ describe('OrbitRingsLayer host centring', () => {
       hostStarIdx: 0,
       planets: [makePlanet()],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     const host = new THREE.Vector3(0.5, 0.5, 0.5);
-    ss.update(makeCamera(5 * AU_PC), 800, host);
-    ss.setPlanetSystem(ps, 0);
+    ss.update(makeCamera(5 * AU_PC), 800, host, T0);
+    ss.setPlanetSystem(ps, 0, T0);
     expect(ss.group.position.length()).toBe(0);
     ss.dispose();
   });
@@ -486,13 +511,18 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
     const ps: PlanetSystem = {
       hostStarIdx: 1,
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
-      orbitOrientations: [{
-        inclination: 30 * Math.PI / 180,
-        longAscNode: 0,
-        argPerihelion: 0,
+      orbitGeometryAt: () => [{
+        aAu: 1,
+        e: 0,
+        orientation: {
+          inclination: 30 * Math.PI / 180,
+          longAscNode: 0,
+          argPerihelion: 0,
+        },
+        parentIdx: null,
       }],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     // Rummage in the scene graph for the ring's position buffer.
     const ringLine = ss.group.children.find(
       (c) => (c as THREE.LineLoop).isLineLoop,
@@ -518,16 +548,17 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
     ss.dispose();
   });
 
-  it('without orbitOrientations the ring sits flat on the host plane', () => {
-    // Same setup as above but no orbitOrientations field — ring
-    // collapses to the host-plane disc; the host-normal projection
-    // should be ~zero across all vertices.
+  it('without orbitGeometryAt the fallback ring sits flat on the host plane', () => {
+    // Same setup as above but no orbitGeometryAt field — the
+    // defaultOrbitGeometry fallback lays the ring flat on the host
+    // plane; the host-normal projection should be ~zero across all
+    // vertices.
     const ss = new OrbitRingsLayer();
     const ps: PlanetSystem = {
       hostStarIdx: 1,
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
     };
-    ss.setPlanetSystem(ps, 0);
+    ss.setPlanetSystem(ps, 0, T0);
     const ringLine = ss.group.children.find(
       (c) => (c as THREE.LineLoop).isLineLoop,
     ) as THREE.LineLoop | undefined;
@@ -543,6 +574,188 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
       maxAbsZ = Math.max(maxAbsZ, Math.abs(dot));
     }
     expect(maxAbsZ).toBeLessThan(1e-9);
+    ss.dispose();
+  });
+});
+
+/** Min distance from `p` to any vertex of the ring polyline. */
+function minDistToRing(p: { x: number; y: number; z: number }, verts: Float32Array): number {
+  let min = Infinity;
+  for (let i = 0; i < verts.length; i += 3) {
+    const d = Math.hypot(p.x - verts[i], p.y - verts[i + 1], p.z - verts[i + 2]);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+describe('ring geometry passes through the body (single element source)', () => {
+  const IDENTITY = new THREE.Quaternion();
+
+  it('every planet sits on its ring at arbitrary model times', () => {
+    // The ring-desync defect in one assertion: the ring built from
+    // solOrbitGeometryAt(t) must contain the body positioned by
+    // getPlanetPositions(t) — same elements, same t, both ecliptic.
+    // Nearest-vertex spacing on a 256-segment loop is ≈2πa/256, so
+    // 0.02·a bounds the polyline discretisation with margin.
+    const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
+    for (const tYears of [0, 137.4, -880.2]) {
+      const t = T0 + tYears * 365.25 * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      const positions = getPlanetPositions(t);
+      for (let i = 0; i < PLANET_ORDER.length; i++) {
+        const aPc = writeRingVerts(verts, geoms[i], IDENTITY);
+        expect(minDistToRing(positions[PLANET_ORDER[i]], verts))
+          .toBeLessThan(0.02 * aPc);
+      }
+    }
+  });
+
+  it('every moon ring contains the moon resolver’s parent-relative track', () => {
+    // Parity pin for refPlaneToEclipticQuat: the quaternion chain in
+    // writeRingVerts must reproduce the scalar reference-plane →
+    // ecliptic rotation moonOffsetEcliptic applies, for every tabulated
+    // reference pole (Laplace planes, Uranus equator, Triton) and the
+    // no-pole ecliptic case (the Moon).
+    const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
+    const geoms = solOrbitGeometryAt(T0);
+    const planetCount = PLANET_ORDER.length;
+    const offset = { x: 0, y: 0, z: 0 };
+    for (let m = 0; m < MOON_ELEMENTS.length; m++) {
+      const elem = MOON_ELEMENTS[m];
+      const g = geoms[planetCount + m];
+      const aPc = writeRingVerts(verts, g, IDENTITY);
+      for (const dayOffset of [0, 3.1, 11.7, 40.4]) {
+        moonOffsetEcliptic(elem, T0 + dayOffset * 86400, offset);
+        expect(minDistToRing(offset, verts)).toBeLessThan(0.02 * aPc);
+      }
+    }
+  });
+
+  it('solOrbitGeometryAt covers SOL_BODIES with parentIdx pointing at each moon’s parent', () => {
+    const geoms = solOrbitGeometryAt(T0);
+    expect(geoms.length).toBe(SOL_BODIES.length);
+    for (let i = 0; i < SOL_BODIES.length; i++) {
+      const body = SOL_BODIES[i];
+      if (body.parentName) {
+        const parentIdx = geoms[i].parentIdx;
+        expect(parentIdx).not.toBeNull();
+        expect(SOL_BODIES[parentIdx!].name).toBe(body.parentName);
+      } else {
+        expect(geoms[i].parentIdx).toBeNull();
+      }
+    }
+  });
+});
+
+describe('refPlaneToEclipticQuat', () => {
+  it('maps the reference-plane pole (+z) onto the pole’s ecliptic direction', () => {
+    // Uranus equator pole: ICRS RA 257.311°, Dec −15.175°. Rotate the
+    // ICRS unit vector to ecliptic by Rx(−ε) and compare with the
+    // quaternion image of +z.
+    const ra = 257.311 * (Math.PI / 180);
+    const dec = -15.175 * (Math.PI / 180);
+    const eps = 23.4392911 * (Math.PI / 180);
+    const icrs = new THREE.Vector3(
+      Math.cos(dec) * Math.cos(ra),
+      Math.cos(dec) * Math.sin(ra),
+      Math.sin(dec),
+    );
+    const expected = new THREE.Vector3(
+      icrs.x,
+      Math.cos(eps) * icrs.y + Math.sin(eps) * icrs.z,
+      -Math.sin(eps) * icrs.y + Math.cos(eps) * icrs.z,
+    );
+    const q = refPlaneToEclipticQuat(257.311, -15.175, new THREE.Quaternion());
+    const pole = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+    expect(pole.x).toBeCloseTo(expected.x, 10);
+    expect(pole.y).toBeCloseTo(expected.y, 10);
+    expect(pole.z).toBeCloseTo(expected.z, 10);
+  });
+});
+
+describe('OrbitRingsLayer moon rings', () => {
+  const zeroOrientation = { inclination: 0, longAscNode: 0, argPerihelion: 0 };
+
+  function makeMoonSystem(): PlanetSystem {
+    return {
+      hostStarIdx: 1,
+      planets: [
+        makePlanet({ name: 'P', semiMajorAxisAu: 5 }),
+        makePlanet({ name: 'M', parentName: 'P', semiMajorAxisAu: 0.003 }),
+      ],
+    };
+  }
+
+  it('a moon ring rides its parent’s live host-relative offset', () => {
+    const ss = new OrbitRingsLayer();
+    ss.setPlanetSystem(makeMoonSystem(), 0, T0);
+    const parentRel = new THREE.Vector3(5 * AU_PC, 0, 0);
+    const cam = makeCamera(0);
+    cam.position.copy(parentRel);
+    cam.position.x += 0.01 * AU_PC;
+    ss.update(cam, 800, null, T0, (idx, out) => {
+      expect(idx).toBe(0);
+      out.copy(parentRel);
+      return true;
+    });
+    const moonLine = ss.group.children[1] as THREE.LineLoop;
+    expect(moonLine.position.x).toBeCloseTo(parentRel.x, 12);
+    expect(moonLine.position.y).toBeCloseTo(0, 12);
+    // Camera parked 0.01 AU from the parent: the 0.003 AU moon ring is
+    // enormous on screen and must draw.
+    expect(ss.isOrbitRingVisible(1)).toBe(true);
+    ss.dispose();
+  });
+
+  it('a moon ring hides when no parent offset is available', () => {
+    const ss = new OrbitRingsLayer();
+    ss.setPlanetSystem(makeMoonSystem(), 0, T0);
+    const cam = makeCamera(5 * AU_PC);
+    ss.update(cam, 800, null, T0);
+    expect(ss.isOrbitRingVisible(1)).toBe(false);
+    ss.dispose();
+  });
+
+  it('moon visibility measures camera→parent distance, not camera→host', () => {
+    // Camera 5 AU from the HOST but right next to the parent: the moon
+    // ring (0.003 AU) is sub-pixel from the host but hundreds of px
+    // from the parent — it must draw.
+    const ss = new OrbitRingsLayer();
+    ss.setPlanetSystem(makeMoonSystem(), 0, T0);
+    const parentRel = new THREE.Vector3(0, 0, 5 * AU_PC);
+    const cam = makeCamera(5 * AU_PC + 0.01 * AU_PC);
+    ss.update(cam, 800, null, T0, (_idx, out) => {
+      out.copy(parentRel);
+      return true;
+    });
+    expect(ss.isOrbitRingVisible(1)).toBe(true);
+    ss.dispose();
+  });
+
+  it('re-derives host-centred geometry once builtT ages past RING_GEOMETRY_MAX_AGE_S', () => {
+    const ss = new OrbitRingsLayer();
+    const ps: PlanetSystem = {
+      hostStarIdx: 1,
+      planets: [makePlanet({ semiMajorAxisAu: 1 })],
+      orbitGeometryAt: (t) => [{
+        aAu: t === T0 ? 1 : 2,
+        e: 0,
+        orientation: zeroOrientation,
+        parentIdx: null,
+      }],
+    };
+    ss.setPlanetSystem(ps, 0, T0);
+    const line = ss.group.children[0] as THREE.LineLoop;
+    const verts = line.geometry.getAttribute('position').array as Float32Array;
+    const radiusAu = () => Math.hypot(verts[0], verts[1], verts[2]) / AU_PC;
+    expect(radiusAu()).toBeCloseTo(1, 6);
+    const cam = makeCamera(5 * AU_PC);
+    // Within the age budget: geometry holds.
+    ss.update(cam, 800, null, T0 + RING_GEOMETRY_MAX_AGE_S - 1);
+    expect(radiusAu()).toBeCloseTo(1, 6);
+    // Past it: geometry re-derives at the live t.
+    ss.update(cam, 800, null, T0 + RING_GEOMETRY_MAX_AGE_S + 1);
+    expect(radiusAu()).toBeCloseTo(2, 6);
     ss.dispose();
   });
 });

@@ -620,6 +620,21 @@ export class PlanetBodyField {
     return host ? host.ps.planets[instanceIdx - host.startInstance] : null;
   }
 
+  /** Host-relative offset (the shader's iLocalRel — orientation-applied
+   *  orbital offset without the host position) into `out`. The orbit-
+   *  ring layer anchors a moon's parent-centred ring on it. */
+  planetHostRelPositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const base = instanceIdx * 3;
+    out.set(
+      this.bufs.localRel[base + 0],
+      this.bufs.localRel[base + 1],
+      this.bufs.localRel[base + 2],
+    );
+    return true;
+  }
+
   /** Renderer-local position (host local + orientation-applied orbital
    *  offset — exactly what the shader renders) into `out`. */
   planetLocalPositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
@@ -669,21 +684,6 @@ export class PlanetBodyField {
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
     if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
-  }
-
-  /** Physical (true angular-diameter) disc size in px, excluding the
-   *  perceptual brightness floor that keeps faint bodies visible as dots —
-   *  the "is this a resolved disc, not a floor-clamped point?" measure.
-   *  Unlike renderedPlanetSizePx it's independent of the disc-size filter,
-   *  so a distant body reads genuinely sub-pixel. 0 when unattached,
-   *  degenerate, or below the soft-taper kill. */
-  physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
-    const host = this.hostOfInstance(instanceIdx);
-    if (!host) return 0;
-    const i = instanceIdx - host.startInstance;
-    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
-    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
   }
 
   private hostOfInstance(instanceIdx: number): AttachedHost | null {

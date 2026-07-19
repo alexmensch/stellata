@@ -66,8 +66,9 @@ src/client/solar-system/
                                   uHideIdx (one uniform shared by all
                                   five passes) hides the observe-anchor
                                   body via setHiddenInstance.
-  orbit-rings-layer.ts            Faint orbit rings in the host's orbital
-                                  plane.
+  orbit-rings-layer.ts            Faint orbit rings: host-centred planet
+                                  rings + parent-centred moon rings, built
+                                  from the system's live element source.
   planet-mesh-layer.ts            Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD.
   local-cluster.ts                SolarSystemCluster — per-frame local-
@@ -126,7 +127,8 @@ satisfies:
 - `PlanetSystem` — host star catalog index, `planets` array,
   optional `positionsAt(t, out)` resolver writing 3 floats per planet
   in the host's local orbital-plane frame, optional
-  `orbitOrientations` for the orbit-ring renderer.
+  `orbitGeometryAt(t)` (live per-body ring geometry) for the
+  orbit-ring renderer.
 
 Sync probe: `hasPlanets(catalog, idx)` — currently hardwires "planets ⇔ Sol".
 Async resolver: `getPlanetSystem(catalog, idx)` returns the system or
@@ -560,25 +562,41 @@ system is attached and the detail cycle permits `planetLabels` (floor
 `all`), and are hidden in chart mode so the chart-mode glyph contract
 isn't doubled up (`../scene/README.md` § Detail-level declutter cycle).
 
-Per-body resolvability gate: a **planet** label tracks its orbit ring
+Per-body resolvability gate: every label tracks its orbit ring
 (`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the
-body is floor-clamped sub-pixel, so the label would anchor to nothing). A
-**moon** has no host-centred ring, so it tracks its own physical disc
-size (`physicalPlanetSizePx ≥ MOON_LABEL_MIN_DISC_PX`) — a moon collapsed
-toward its parent's dot drops its label rather than stacking on it. When
-parent-centred moon rings land (a later layer) moons fold back onto the
-same `isOrbitRingVisible` path and the asymmetry goes away.
+body is floor-clamped sub-pixel, so the label would anchor to nothing).
+Planets gate on their host-centred ring, moons on their parent-centred
+ring — a moon collapsed toward its parent's dot drops its ring (and so
+its label) rather than stacking on the parent.
 
 ## Orbit rings
 
-The orbit-ring layer (`orbit-rings-layer.ts`) draws each planet's
-orbit as an ellipse with the host star at one focus. Geometry:
-`b = a · √(1 − e²)`, focal offset `c = a · e`. The perihelion is placed
-along the local +x axis as a placeholder; per-planet
-longitude-of-perihelion landed alongside Standish elements in 3re.13.
+The orbit-ring layer (`orbit-rings-layer.ts`) draws every body's orbit
+as an ellipse with its centre body at one focus — the host star for a
+planet, the parent planet for a moon (the moon ring rides its parent's
+live host-relative offset each frame and lies on the moon's tabulated
+reference plane, rotated to the ecliptic by the same pole convention
+the moon resolver applies — parity vitest-pinned).
+
+**Geometry comes from `PlanetSystem.orbitGeometryAt(t)` — the SAME
+element source that positions the bodies** (Sol: live Standish
+elements for planets, `MOON_ELEMENTS` for moons), never the
+display-only `Planet.semiMajorAxisAu`/`.eccentricity` fields. The two
+tables were once unreconciled and rings visibly missed their bodies.
+Host-centred geometry re-derives whenever its build `t` ages past
+`RING_GEOMETRY_MAX_AGE_S` (one sim-day), so time scrubbing keeps ring
+orientation locked to the secular element drift the body positions
+follow; there is no attach-time wall-clock snapshot. Hosts without an
+element source fall back to `defaultOrbitGeometry` (static a/e, flat
+on the host plane).
 
 Ring visibility is gated on an angular-separation heuristic so
 distant host stars don't spam invisible rings into the framebuffer.
+The pixel-gap test runs per centre body (host rings gap against each
+other; each parent's moon rings form their own group measured at the
+parent's camera distance), and every ring additionally needs its own
+radius above the threshold — the floor that suppresses a lone
+sub-pixel ring, e.g. a single-moon parent seen from across the system.
 Orbit rings + the heliopause shell are also declutter-cycle elements
 (floor `representational`) — `OrbitRingsLayer.setPermitted` /
 `Heliopause.setPermitted` AND into `group.visible` alongside the existing
@@ -598,10 +616,10 @@ Per the 3re.8 design rule:
   the galactic plane gives a consistent visual "this star has
   planets" cue without implying a measured orientation we don't have.
 
-The per-host quaternion is composed once at `getPlanetSystem` attach
-time and reused for both the body positions and the ring renderer.
-Ring renderer composes `Rz(Ω) · Rx(I) · Rz(ω)` per planet (from the
-Sol-only `orbitOrientations` array, when present) before the
+The per-host quaternion is composed once at attach time and reused for
+both the body positions and the ring renderer. The ring renderer
+composes `Rz(Ω) · Rx(I) · Rz(ω)` per body from `orbitGeometryAt(t)`
+(plus the reference-plane → ecliptic rotation for a moon) before the
 host-plane → ICRS rotation, so rings line up with the body positions
 emitted by `positionsAt`.
 
