@@ -225,25 +225,27 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('exposes five render passes with the documented renderOrder layout', () => {
-    // The contract is: orbit rings (2) sit BETWEEN the corrupt pass
-    // (1.5, writes near-plane depth across the planet's core) and the
-    // restore pass (2.5, writes the planet's actual depth back so the
-    // disc/glow passes at 3/4 still depth-test correctly). If anyone
-    // reorders these — e.g. moves restore before orbit rings — the
-    // near-side ring will no longer be hidden by the planet body
-    // (regressing the user-visible "planet looks solid" behaviour).
-    // Pin each mesh by name → renderOrder so a swap fails CI.
+  it('exposes the main-pass trio + local-pass mirror pair, orders pinned', () => {
+    // Main pass: core depth-mask (-4) before background layers, disc
+    // (3), glow (4). Local pass mirrors: disc at 3 — after the mesh
+    // LOD (2.8/2.81), so the fading disc composites over the mesh —
+    // and glow last at 4 so a transiting body's glow adds over a
+    // parent mesh behind it. Pin each mesh by name → renderOrder so a
+    // swap fails CI. See src/client/local-depth/README.md.
     const f = new PlanetBodyField(makeSharedUniforms());
     const orderByName = new Map(
       f.group.children.map((m) => [m.name, m.renderOrder]),
     );
     expect(orderByName.get('core')).toBe(-4);
-    expect(orderByName.get('corrupt')).toBe(1.5);
-    expect(orderByName.get('restore')).toBe(2.5);
     expect(orderByName.get('disc')).toBe(3);
     expect(orderByName.get('glow')).toBe(4);
-    expect(f.group.children).toHaveLength(5);
+    expect(f.group.children).toHaveLength(3);
+    const localByName = new Map(
+      f.localGroup.children.map((m) => [m.name, m.renderOrder]),
+    );
+    expect(localByName.get('disc-local')).toBe(3);
+    expect(localByName.get('glow-local')).toBe(4);
+    expect(f.localGroup.children).toHaveLength(2);
     f.dispose();
   });
 
@@ -1120,7 +1122,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     expect(f.hiddenInstance()).toBe(1);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyF = f as any;
-    for (const mat of [anyF.matDisc, anyF.matGlow, anyF.matCore, anyF.matCorrupt, anyF.matRestore]) {
+    for (const mat of [anyF.matDisc, anyF.matGlow, anyF.matCore, anyF.matDiscLocal, anyF.matGlowLocal]) {
       expect(mat.uniforms.uHideIdx.value).toBe(1);
     }
     f.setHiddenInstance(-1);

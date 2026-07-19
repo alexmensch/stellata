@@ -68,7 +68,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `gpu.render`            | `stellata.ts` `animate()`       | The `renderer.render()` call — three-pass star draw + overlays. |
-| `gpu.localDepth`        | `stellata.ts` `animate()`       | The local depth pass's per-slice renders (spike flag only). |
+| `gpu.localDepth`        | `stellata.ts` `animate()`       | The local depth pass's per-slice renders (near-zero when no cluster is active). |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `chart.names`           | `chart-labels.ts` `tick()`       | Proper-name label projection + culling. |
 | `chart.bayer`           | `chart-labels.ts` `tick()`       | Bayer-letter Greek-glyph pass. |

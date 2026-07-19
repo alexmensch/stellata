@@ -9,6 +9,7 @@ import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
+  ORBIT_LINE_OPACITY,
   ORBIT_LINE_SEGMENTS,
   pixelsPerRadian,
   angularRadiusPx,
@@ -208,12 +209,12 @@ export class OrbitRingsLayer {
 
   constructor() {
     this.group = new THREE.Group();
-    // renderOrder = 2: sits between the planet CORRUPT pass (1.5) and
-    // the RESTORE pass (2.5) — load-bearing, that's how near-side ring
-    // segments are masked by the planet body. See
-    // src/client/star-pipeline/README.md §RenderOrder ladder for the full cross-layer
-    // hierarchy.
-    this.group.renderOrder = 2;
+    // Local-depth-pass in-pass order: after the planet disc mirrors (3)
+    // so ring fragments depth-test against real body depth — near-side
+    // arcs draw over a disc/mesh, far-side arcs depth-fail — and before
+    // the star glow mirror (3.5) so the host's halo adds over the
+    // lines. See src/client/local-depth/README.md.
+    this.group.renderOrder = 3.2;
     this.group.visible = false;
   }
 
@@ -272,7 +273,7 @@ export class OrbitRingsLayer {
         verts[i * 3 + 2] = tmp.z;
       }
 
-      const mat = makeOrbitLineMaterial(RING_COLOUR);
+      const mat = makeOrbitLineMaterial(RING_COLOUR, ORBIT_LINE_OPACITY, true);
       const line = makeOrbitLineLoop(verts, mat, this.group.renderOrder);
       this.group.add(line);
       this.rings.push({ planet, line, material: mat, semiMajorPc: aPc });

@@ -9,7 +9,11 @@ read.
 
 - `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
   coreMask `ShaderMaterial`s + meshes. Owns
-  `applyDiscBlendDefaults` + `setMonochromeBlend` + `dispose`.
+  `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
+  local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
+- `star-local-mirror.ts` — `StarLocalMirror`: the local-depth-pass
+  mirror draw for cluster-member stars. See § Depth encoding and
+  `../local-depth/README.md` § Full membership.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `dust-raymarch.glsl` — shared camera→star Edenhofer raymarch chunk
   (`stellata_dust_raymarch`), included by the extinction prepass and by
@@ -53,6 +57,7 @@ read.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
+- `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-color-routing-pure.test.ts` — six-tier routing pin.
 - `pulsation-suppress-pure.test.ts` — suppress-mask build pin.
 
@@ -184,50 +189,74 @@ by magnitude.
 ## Depth encoding
 
 The renderer is constructed with
-`WebGLRenderer({ logarithmicDepthBuffer: true })`. Linear depth
-doesn't have the dynamic range to handle the camera dollying from
-`~1e-12` pc (small-moon surface) to `~3e4` pc (galactic centre) without
-z-fighting at intermediate scales — log depth maps
-`log(z+1) / log(far+1)` into the depth buffer so precision is roughly
-constant in `log(z)` instead of collapsing near the far plane. This
-is what enables `camera.near = 1e-12`.
+`WebGLRenderer({ logarithmicDepthBuffer: true })`, but that flag only
+injects `USE_LOGDEPTHBUF` into NON-raw materials (planet billboards,
+meshes, lines, volumes) — that is what enables `camera.near = 1e-12`
+for the layers that need intra-system depth. **The star materials are
+RawShaderMaterial, which three.js gives only `material.defines` — so
+the `logdepthbuf` chunk includes in the star shaders compile to
+nothing and the star passes write STANDARD depth** over the full
+`[near 1e-12, far 1e5]` range. Standard depth ≈ `1 − near/z`: every
+star fragment beyond ~3 AU quantises to exactly 1.0 in the 24-bit
+buffer; only close-approach fragments write less.
 
-Per-pass overrides on top of the chunk default:
+Why this de facto two-band split works in the main pass:
 
-- All star vertex/fragment shaders include the standard three.js
-  `<logdepthbuf_pars_vertex/fragment>` + `<logdepthbuf_vertex/fragment>`
-  chunks. The chunks populate the `vFragDepth` varying and write it
-  into `gl_FragDepth` when `USE_LOGDEPTHBUF` is defined.
-  `star.frag.glsl` also writes `gl_FragDepth = gl_FragCoord.z`
-  unconditionally before the chunk include — defensive against the
-  GLSL rule that, once any path writes `gl_FragDepth`, unwritten paths
-  leave it undefined. The halo override below relies on that; the
-  unconditional write keeps the shader correct if
-  `logarithmicDepthBuffer` is ever toggled off.
+- Star ↔ star colour is order-independent — per-channel max in the
+  disc pass, additive in the glow pass — so equal-depth (1.0)
+  fragments need no ordering.
+- Background layers (MW, grids, clouds — log-encoded or at the far
+  plane) land at or near 1.0 and lose the LessEqual test against a
+  close-range core's `< 1.0` depth — the core depth-mask mechanism.
+- Planet billboards ARE log-encoded (ShaderMaterial), which lands
+  every intra-system depth near 0.0 — planets always beat stars in
+  the main pass. A planet *behind* the host's disc is handled
+  photometrically (`iEclipseDim`), not by depth; while a system is
+  locally active the whole question moves to the local depth pass,
+  where member stars and planets share one bracketed standard-depth
+  buffer and order natively (`../local-depth/README.md`).
+
+Per-pass depth rules:
+
+- `star.frag.glsl` writes `gl_FragDepth = gl_FragCoord.z`
+  unconditionally before the (inert) chunk include — defensive
+  against the GLSL rule that once any path writes `gl_FragDepth`,
+  unwritten paths leave it undefined; the halo override below relies
+  on it.
 - Off-screen-sentinel early-returns in `star.vert.glsl` skip the
-  `<logdepthbuf_vertex>` chunk and leave `vFragDepth` undefined. Safe
-  because every vertex of the primitive lands at the same off-screen
-  NDC, so the whole quad is clipped before rasterization and the
-  fragment shader never runs. A load-bearing invariant — see the
-  in-shader comments.
+  `<logdepthbuf_vertex>` chunk — harmless while the chunk is inert,
+  load-bearing if a raw→non-raw material change ever activates it
+  (see the in-shader comments).
 - The disc pass's halo override `gl_FragDepth = 1.0` (when
-  `glow < uCoreThreshold`) writes the far-plane depth directly. `1.0`
-  is the far plane in *any* depth encoding, so this works under
-  log-depth without modification — distant stars in the later glow
-  pass pass the depth test against haloed fragments and peek through.
+  `glow < uCoreThreshold`) writes the far plane — true in any depth
+  encoding — so distant stars in the later glow pass peek through
+  haloed fragments.
 
-Log depth gives uniform precision across the multi-decade star ↔
-background range, but it **cannot** order two disc cores of a tight
-pair against each other. `log2(z+1)` with `z` in parsecs degrades to
-near-linear when `z ≪ 1 pc` (the `+1` swamps the term), so at a ~1 AU
-viewing distance a pair's sub-AU line-of-sight separation lands inside
-a single ~24-bit depth bucket. Their z-order is then float noise that
-flips frame-to-frame under camera micro-motion — a visible flicker in
-the overlap. Intra-pair occlusion is therefore taken off the buffer:
-`EclipsePhotometryField` decides front/back in float64 and writes
-`iDepthBias` (above) onto the back core so the front wins
-deterministically. The buffer still orders star ↔ background and
-star ↔ unrelated-star, where the depth ratios are large.
+Standard depth at whole-catalog range **cannot** order two disc cores
+of a tight pair against each other (both quantise to the same value;
+their z-order is float noise that flips frame-to-frame — a visible
+flicker in the overlap). Main-pass intra-pair occlusion is therefore
+taken off the buffer: `EclipsePhotometryField` decides front/back in
+float64 and writes `iDepthBias` (above) onto the back core so the
+front wins deterministically. Once binaries migrate onto the local
+depth pass (its bracket resolves sub-AU separations natively),
+`iDepthBias` retires.
+
+### Local-pass mirror draw
+
+While a system is locally active, its host star's main-pass instance
+collapses (`uLocalMemberIdx`, all three passes) and
+`star-local-mirror.ts` re-renders it in the local depth pass: a small
+instanced geometry whose slots re-copy the member's attributes from
+the live source arrays each frame, drawn with `LOCAL_DEPTH_PASS`
+material clones sharing the same uniform objects. Under that define
+the shader swaps `gl_InstanceID` for the `iSourceIdx` attribute
+(`STAR_SELF_ID`) so star-indexed lookups — the extinction texelFetch,
+`uHideFocusIdx`, `uPinFocusToCenter` — behave identically. The
+attribute-budget invariant: each compile variant must fit within 16
+attributes (the WebGL2 guaranteed minimum) — `iSourceIdx` reuses the
+slot `iDepthBias` occupies in the main variant, which the local pass
+never needs. Pinned per-variant in `star-pipeline.test.ts`.
 
 ## Physical-size rendering
 

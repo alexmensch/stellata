@@ -22,17 +22,33 @@ export function angularRadiusPx(sizePc: number, distancePc: number, pxPerRad: nu
   return Math.atan(sizePc / Math.max(distancePc, 1e-30)) * pxPerRad;
 }
 
+/** `localPass` strips the built-in log-depth chunks so fragments keep
+ *  standard bracket depth — required for any line rendered in the
+ *  local depth pass (src/client/local-depth/README.md). */
 export function makeOrbitLineMaterial(
   color: number,
   opacity: number = ORBIT_LINE_OPACITY,
+  localPass = false,
 ): THREE.LineBasicMaterial {
-  return new THREE.LineBasicMaterial({
+  const mat = new THREE.LineBasicMaterial({
     color,
     transparent: true,
     opacity,
     depthTest: true,
     depthWrite: false,
   });
+  if (localPass) {
+    mat.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <logdepthbuf_pars_vertex>', '')
+        .replace('#include <logdepthbuf_vertex>', '');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <logdepthbuf_pars_fragment>', '')
+        .replace('#include <logdepthbuf_fragment>', '');
+    };
+    mat.customProgramCacheKey = () => 'orbit-line-local-depth';
+  }
+  return mat;
 }
 
 export function makeOrbitLineLoop(

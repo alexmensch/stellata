@@ -103,10 +103,27 @@ describe('StarPipeline', () => {
   it('star.vert.glsl in-declaration count fits inside the WebGL2 attribute budget', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const src = readFileSync(join(here, 'star.vert.glsl'), 'utf8');
-    const declared = src.split('\n').filter(line => /^in\s/.test(line)).length;
+    // The shader has two compile variants keyed on LOCAL_DEPTH_PASS
+    // (main pass vs the local-pass mirror draw); each must fit the
+    // budget on its own. Resolve the #ifdef/#ifndef/#else blocks for
+    // that one macro and count `in` declarations per variant.
+    const declaredInVariant = (localPass: boolean): number => {
+      const stack: boolean[] = [];
+      let count = 0;
+      for (const line of src.split('\n')) {
+        const t = line.trim();
+        if (t.startsWith('#ifdef LOCAL_DEPTH_PASS')) { stack.push(localPass); continue; }
+        if (t.startsWith('#ifndef LOCAL_DEPTH_PASS')) { stack.push(!localPass); continue; }
+        if (t.startsWith('#else')) { stack.push(!stack.pop()!); continue; }
+        if (t.startsWith('#endif')) { stack.pop(); continue; }
+        if (stack.every(Boolean) && /^in\s/.test(line)) count++;
+      }
+      return count;
+    };
     const INJECTED = 0; // RawShaderMaterial; ShaderMaterial would be 3.
     const LIMIT = 16;   // WebGL2 minimum MAX_VERTEX_ATTRIBS.
-    expect(declared + INJECTED).toBeLessThanOrEqual(LIMIT);
+    expect(declaredInVariant(false) + INJECTED).toBeLessThanOrEqual(LIMIT);
+    expect(declaredInVariant(true) + INJECTED).toBeLessThanOrEqual(LIMIT);
   });
 
   it('binds the caller-owned localPositions buffer to iPosition', () => {

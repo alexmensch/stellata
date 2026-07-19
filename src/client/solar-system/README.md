@@ -70,6 +70,13 @@ src/client/solar-system/
                                   plane.
   planet-mesh-layer.ts            Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD.
+  local-cluster.ts                SolarSystemCluster — per-frame local-
+                                  depth-pass membership + bracket
+                                  spheres; owns the "system is locally
+                                  active" decision. See
+                                  ../local-depth/README.md.
+  local-cluster-pure.ts (+ test)  Activation predicate + orbit-ring
+                                  extent radius, pure. Vitest-pinned.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   planet-mesh.vert.glsl,
@@ -383,20 +390,17 @@ Saturn (3re.18); Lambertian fallback for Uranus, Neptune, Pluto and
 every exoplanet (`stellata-bk5`), since Mallama 2018 publishes no
 phase-angle polynomial for those. The slider visibility cutoff
 applies — sub-cutoff planets fade naturally, no unconditional pixel
-floor. Five passes: the star-pipeline trio (core depth-mask + disc
-+ glow) plus a planet-only **corrupt + restore** pair around the
-orbit ring layer (stellata-3re.19). The CORRUPT pass
-(`uRenderMode == 3`, renderOrder 1.5) writes `gl_FragDepth = 0.0`
-across the planet's bright body (`glow >= uCoreThreshold`); the orbit
-ring at renderOrder 2 then depth-fails for every fragment landing on
-the body — far-side AND near-side, regardless of the ring's actual 3D
-position. The RESTORE pass (`uRenderMode == 4`, renderOrder 2.5,
-`depthFunc: AlwaysDepth`) writes the planet's actual `gl_FragCoord.z`
-back across the same region so disc / glow at 3 / 4 still depth-test
-correctly against other planets and stars. Background layers (MW /
-clouds / stars) paint colour into the framebuffer before the corrupt
-pass overwrites depth, so they still peek through the perceptual
-halo. Surface detail (textures, atmospheric haloes,
+floor. Passes: the star-pipeline trio (core depth-mask + disc + glow)
+in the main pass, plus **local-pass mirror draws** (disc + glow over
+the active cluster's slot range, gated by the shared
+`uLocalPassRange` uniform — opposite sense under the
+`LOCAL_DEPTH_PASS` define). While the system is locally active
+(`local-cluster.ts`) the main-pass instances collapse and every body
+renders through the mirrors in the bracketed local depth pass, where
+the z-buffer natively orders ring↔body, moon↔planet, transits, and
+near-side orbit-ring arcs (`../local-depth/README.md`) — the old
+corrupt/restore depth dance around the orbit rings is gone. Surface
+detail (textures, atmospheric haloes,
 banding, axial-tilt cue) stays **deliberately deferred** to the
 planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles
 — Defer detail until zoom affordance.
@@ -460,10 +464,9 @@ the disc share the same footprint through the whole fade — the
 handoff can't pop in size, and the disc passes multiplying by
 `1 − vMeshFade` against the mesh's rising `uFade` means no
 double-brightness either. The
-core / corrupt / restore depth passes deliberately keep running
-through the fade — the mesh silhouette matches the disc core, so the
-ring-occlusion dance is preserved (full mesh-era ring clipping is
-stellata-2f6.3).
+core depth pass deliberately keeps running through the fade — the
+mesh silhouette matches the disc core, so background layers stay
+occluded while the visual handoff happens.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
@@ -506,19 +509,16 @@ stellata-2f6.3).
   floor. Rendered only in the mesh-LOD regime: alpha rides the same
   crossfade `uFade`, hidden until the strip texture arrives (no
   representative-colour fallback), `renderOrder` 2.81 (after the body
-  mesh) with `depthWrite: false`. **Body occlusion is analytic, not
-  depth-tested**: at planet scale the log-depth buffer quantises the
-  whole solar system into one depth step (`log2(1+w)` is linear for
-  w ≪ 1), so the ring fragment shader discards fragments whose
-  camera→fragment segment passes through the body ellipsoid — the
-  same ray–ellipsoid helper as the shadow test, with a camera ray.
-  This limitation is being retired by the local depth pass
-  (`../local-depth/README.md`, design stellata-shvs): under its spike
-  flag (`stellata.setLocalDepthPassEnabled(true)`) the meshes + annuli
-  render in a bracketed second pass where the z-buffer orders
-  ring↔body natively and the analytic discard is skipped. Until that
-  migration completes, any new geometry drawn near a planet body in
-  the MAIN pass still needs the analytic trick.
+  mesh) with `depthWrite: false`. **Body occlusion is the local depth
+  pass's z-buffer**: meshes + annuli render in the bracketed second
+  pass (`../local-depth/README.md`), where standard depth orders
+  ring↔body natively — including the oblate limb. The analytic
+  ray–ellipsoid helper survives only for the body-shadow term (sun
+  ray, not camera ray). Geometry drawn near a planet body in the MAIN
+  pass still cannot depth-test against it (the log buffer quantises
+  the whole system into one step; `log2(1+w)` is linear for w ≪ 1) —
+  new close-range geometry belongs in the local pass, not behind a
+  new analytic trick.
   Edge-on the zero-thickness annulus thins to a line, which is the
   physically honest look.
 

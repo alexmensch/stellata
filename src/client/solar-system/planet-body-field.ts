@@ -7,7 +7,7 @@ import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
 } from './phase-function';
-import { applyDiscBlendDefaults } from '../star-pipeline/star-pipeline';
+import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline/star-pipeline';
 import {
   pickChartDiscUniforms,
   pickPerceptualDiscUniforms,
@@ -171,6 +171,7 @@ type CrossHostCandidate = PickCandidate & {
 
 export class PlanetBodyField {
   readonly group: THREE.Group;
+  private readonly localMirrorGroup = new THREE.Group();
   private mono = false;
   private hidden = false;
   private hosts = new Map<number, AttachedHost>();
@@ -197,16 +198,21 @@ export class PlanetBodyField {
   private matDisc!: THREE.ShaderMaterial;
   private matGlow!: THREE.ShaderMaterial;
   private matCore!: THREE.ShaderMaterial;
-  private matCorrupt!: THREE.ShaderMaterial;
-  private matRestore!: THREE.ShaderMaterial;
+  private matDiscLocal!: THREE.ShaderMaterial;
+  private matGlowLocal!: THREE.ShaderMaterial;
   private meshDisc!: THREE.Mesh;
   private meshGlow!: THREE.Mesh;
   private meshCore!: THREE.Mesh;
-  private meshCorrupt!: THREE.Mesh;
-  private meshRestore!: THREE.Mesh;
-  // One shared { value } slot across all five materials — the uHideIdx
+  private meshDiscLocal!: THREE.Mesh;
+  private meshGlowLocal!: THREE.Mesh;
+  // One shared { value } slot across every material — the uHideIdx
   // uniform hiding the observe-anchor body (-1 = none).
   private hideIdxUniform = { value: -1 };
+  // Active local-depth cluster's slot range (start, count); (-1, 0) =
+  // none. One shared value drives the main-pass suppression AND the
+  // mirror draws' member gate (opposite sense, keyed on the
+  // LOCAL_DEPTH_PASS define).
+  private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
 
@@ -849,6 +855,36 @@ export class PlanetBodyField {
     };
   }
 
+  /** Local-depth-pass mirror draws (disc + glow over the active
+   *  cluster's slot range). The solar-system cluster parents this into
+   *  the pass scene; it renders nothing while no range is set. */
+  get localGroup(): THREE.Group {
+    return this.localMirrorGroup;
+  }
+
+  /** Set (or clear, with (-1, 0)) the active cluster's slot range.
+   *  Instances inside the range collapse in the main pass and render
+   *  via the mirror draws in the local depth pass instead. */
+  setLocalPassRange(start: number, count: number): void {
+    const v = this.localPassRangeUniform.value;
+    v[0] = start;
+    v[1] = count;
+  }
+
+  /** Attach-table view for the solar-system cluster: slot range +
+   *  live host geometry per attached host. */
+  attachedHosts(): IterableIterator<{
+    hostStarIdx: number;
+    startInstance: number;
+    count: number;
+    hostLocalPos: Readonly<THREE.Vector3>;
+    hostRadiusPc: number;
+    cullDistance: number;
+    ps: PlanetSystem;
+  }> {
+    return this.hosts.values();
+  }
+
   /** Chart mode renders the bodies as flat ink discs, star-identical:
    *  the shared uMonochrome uniform flips the shader branches; here we
    *  only swap the blending the same way the star pipeline's
@@ -864,8 +900,7 @@ export class PlanetBodyField {
       this.matGlow.depthTest = false;
     } else {
       applyDiscBlendDefaults(this.matDisc);
-      this.matGlow.blending = THREE.AdditiveBlending;
-      this.matGlow.depthTest = true;
+      applyGlowBlendDefaults(this.matGlow);
     }
     this.matDisc.needsUpdate = true;
     this.matGlow.needsUpdate = true;
@@ -899,8 +934,8 @@ export class PlanetBodyField {
     this.matDisc.dispose();
     this.matGlow.dispose();
     this.matCore.dispose();
-    this.matCorrupt.dispose();
-    this.matRestore.dispose();
+    this.matDiscLocal.dispose();
+    this.matGlowLocal.dispose();
   }
 
   // ── private ─────────────────────────────────────────────────────────
@@ -930,8 +965,8 @@ export class PlanetBodyField {
     this.meshDisc.geometry = this.geometry;
     this.meshGlow.geometry = this.geometry;
     this.meshCore.geometry = this.geometry;
-    this.meshCorrupt.geometry = this.geometry;
-    this.meshRestore.geometry = this.geometry;
+    this.meshDiscLocal.geometry = this.geometry;
+    this.meshGlowLocal.geometry = this.geometry;
     oldGeom.dispose();
   }
 
@@ -961,15 +996,21 @@ export class PlanetBodyField {
       ...pickChartDiscUniforms(sm),
     };
 
-    const makeMat = (mode: number, params: THREE.ShaderMaterialParameters) =>
+    const makeMat = (
+      mode: number,
+      params: THREE.ShaderMaterialParameters,
+      localPass = false,
+    ) =>
       new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
         vertexShader: planetVert,
         fragmentShader: planetFrag,
+        ...(localPass ? { defines: { LOCAL_DEPTH_PASS: '' } } : {}),
         uniforms: {
           ...sharedPlanetUniforms,
           uRenderMode: { value: mode },
           uHideIdx: this.hideIdxUniform,
+          uLocalPassRange: this.localPassRangeUniform,
           uMeshFadeRatio: {
             value: new THREE.Vector2(MESH_FADE_START_RATIO, MESH_FADE_END_RATIO),
           },
@@ -980,12 +1021,8 @@ export class PlanetBodyField {
     this.matDisc = makeMat(1, { transparent: true });
     applyDiscBlendDefaults(this.matDisc);
 
-    this.matGlow = makeMat(0, {
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-    });
+    this.matGlow = makeMat(0, {});
+    applyGlowBlendDefaults(this.matGlow);
 
     this.matCore = makeMat(2, {
       depthWrite: true,
@@ -993,26 +1030,10 @@ export class PlanetBodyField {
       colorWrite: false,
     });
 
-    // transparent: true on corrupt + restore puts them in the
-    // transparent queue so their renderOrder (1.5, 2.5) is honoured
-    // relative to the orbit-rings layer (2) — opaque always draws
-    // before transparent.
-    this.matCorrupt = makeMat(3, {
-      transparent: true,
-      depthWrite: true,
-      depthTest: true,
-      colorWrite: false,
-    });
-
-    // depthFunc: AlwaysDepth so the restore can overwrite the 0.0 the
-    // corrupt pass wrote (default LessEqual would reject planet_z > 0).
-    this.matRestore = makeMat(4, {
-      transparent: true,
-      depthWrite: true,
-      depthTest: true,
-      depthFunc: THREE.AlwaysDepth,
-      colorWrite: false,
-    });
+    this.matDiscLocal = makeMat(1, { transparent: true }, true);
+    applyDiscBlendDefaults(this.matDiscLocal);
+    this.matGlowLocal = makeMat(0, {}, true);
+    applyGlowBlendDefaults(this.matGlowLocal);
 
     const makeMesh = (mat: THREE.ShaderMaterial, name: string, order: number) => {
       const m = new THREE.Mesh(this.geometry, mat);
@@ -1023,16 +1044,23 @@ export class PlanetBodyField {
     };
 
     this.meshCore = makeMesh(this.matCore, 'core', -4);
-    this.meshCorrupt = makeMesh(this.matCorrupt, 'corrupt', 1.5);
-    this.meshRestore = makeMesh(this.matRestore, 'restore', 2.5);
     this.meshDisc = makeMesh(this.matDisc, 'disc', 3);
     this.meshGlow = makeMesh(this.matGlow, 'glow', 4);
 
     this.group.add(this.meshCore);
-    this.group.add(this.meshCorrupt);
-    this.group.add(this.meshRestore);
     this.group.add(this.meshDisc);
     this.group.add(this.meshGlow);
+
+    // Local-pass mirrors: same geometry, member-range-gated. Disc at 3
+    // (after the mesh LOD at 2.8/2.81, so the fading disc composites
+    // over the mesh exactly as it did in the main pass); glow last at
+    // 4 so a transiting body's glow adds over everything — including a
+    // parent mesh behind it. No core mask: the local pass has no
+    // background layers to pre-fail.
+    this.meshDiscLocal = makeMesh(this.matDiscLocal, 'disc-local', 3);
+    this.meshGlowLocal = makeMesh(this.matGlowLocal, 'glow-local', 4);
+    this.localMirrorGroup.add(this.meshDiscLocal);
+    this.localMirrorGroup.add(this.meshGlowLocal);
   }
 
   /** One-shot fill of static per-instance attributes (radius, colour,

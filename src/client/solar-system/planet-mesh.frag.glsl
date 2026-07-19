@@ -1,9 +1,6 @@
 precision highp float;
 
 #include <common>
-#ifndef LOCAL_DEPTH_PASS
-#include <logdepthbuf_pars_fragment>
-#endif
 
 // uMap and uNightMap are always bound (1×1 white placeholder when the
 // body has no texture) — sampling an unbound texture is undefined in
@@ -36,9 +33,6 @@ const float LIMB_EXP = 0.5;
 const float NIGHT_RAMP = 0.05;
 
 void main() {
-  #ifndef LOCAL_DEPTH_PASS
-  #include <logdepthbuf_fragment>
-  #endif
   vec3 n = normalize(vNormalV);
   vec3 v = normalize(-vPosV);
   float sunCos = dot(n, uSunDirView);
