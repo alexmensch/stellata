@@ -9,7 +9,8 @@ star-disc render knobs, and the controller that owns every mutation.
 
 - `filter-state.ts` — `FilterState`, `DEFAULT_FILTER`, `MagPresetName`,
   `MAG_PRESETS` (live binding — re-bound on every exaggeration-K
-  change), `DEFAULT_FOV`, `ALL_SPECT_MASK`, `StarRenderParams`,
+  change), `NAKED_EYE_LIMIT_MAG` (scalar for consumers that must not
+  capture the live binding), `DEFAULT_FOV`, `ALL_SPECT_MASK`, `StarRenderParams`,
   `STAR_RENDER_DEFAULTS`, and the pure `presetPxSizes` arcsec→px
   conversion. Import filter types and preset constants from here, not
   from `stellata.ts`.

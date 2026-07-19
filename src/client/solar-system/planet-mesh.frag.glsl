@@ -18,9 +18,9 @@ uniform float uFade;
 // (phaseRatioToLambert) and clamped there — corrects the Lambert
 // disc-integrated output to the body's measured phase curve.
 uniform float uPhaseScale;
-// Host-distance display intensity, CPU-computed via
-// perceptual-magnitude.ts (hostIntensityScale).
-uniform float uHostIntensity;
+// Host-distance × slider-sensitivity display intensity, CPU-computed
+// via perceptual-magnitude.ts (litIntensity).
+uniform float uLitIntensity;
 // Terminator softness half-width on dot(n, sunDir); 0 = airless hard
 // cut (Planet.terminatorSoftness).
 uniform float uTermSoftness;
@@ -88,6 +88,6 @@ void main() {
   // intensity, or shadow on the lights.
   float nightRamp = 1.0 - smoothstep(-NIGHT_RAMP, NIGHT_RAMP, sunCos);
   vec3 night = texture(uNightMap, vUvM).rgb * nightRamp * uHasNight * NIGHT_INTENSITY;
-  vec3 reflected = base * dayside * limb * uPhaseScale * uHostIntensity * shadow;
+  vec3 reflected = base * dayside * limb * uPhaseScale * uLitIntensity * shadow;
   outColor = vec4(reflected + night, uFade);
 }

@@ -368,6 +368,12 @@ export class PlanetBodyField {
     }
   }
 
+  /** Current magnitude-slider cutoff — the sensitivity the mesh
+   *  layer's lit-surface exposure tracks. */
+  getMaxAppMag(): number {
+    return this.maxAppMag;
+  }
+
   /**
    * Per-frame ephemeris refresh + buffer upload. For each attached
    * host, skip the work entirely when the camera is past `cullDistance`

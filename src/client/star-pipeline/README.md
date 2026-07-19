@@ -336,7 +336,7 @@ sub-pixel speck and read as a hard cutoff anyway).
 
 ## Magnitude presets and angular-size calibration
 
-Three presets live in `MAG_PRESETS` in `stellata.ts`: `naked-eye`
+Three presets live in `MAG_PRESETS` in `../filters/filter-state.ts`: `naked-eye`
 (m_lim = 6.5, span = 8 mag), `binoculars` (10.5, 12), and `all`
 (15, 17). Each carries `sizeMinArcsec` / `sizeMaxArcsec` — the
 *angular* size of the threshold disc and the saturation disc on the

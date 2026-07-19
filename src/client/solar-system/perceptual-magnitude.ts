@@ -3,6 +3,7 @@
 // shaders use. Shader is the source of truth; this mirror is test-pinned.
 
 import { AU_PC } from '../util/astronomy-constants';
+import { NAKED_EYE_LIMIT_MAG } from '../filters/filter-state';
 
 // Magnitudes below the slider cutoff a body still renders: the vertex
 // shaders fade the disc out over this soft taper rather than hard-cutting
@@ -112,6 +113,29 @@ export function hostIntensityScale(dHpPc: number): number {
   const dAu = Math.max(dHpPc / AU_PC, 1e-12);
   const scale = dAu ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT);
   return Math.min(HOST_INTENSITY_MAX, Math.max(HOST_INTENSITY_MIN, scale));
+}
+
+/** Sensitivity reference: lit-surface exposure is exactly 1 at the
+ *  naked-eye preset, so the default framing is untouched by the
+ *  slider coupling. */
+export const LIT_EXPOSURE_REF_MAG = NAKED_EYE_LIMIT_MAG;
+
+/**
+ * Mesh-regime lighting intensity: `hostIntensityScale` composed with
+ * the magnitude slider as a camera-sensitivity exposure. The slider is
+ * the camera's flux threshold, so the exposure is the threshold flux
+ * ratio `10^((maxAppMag − ref)/2.5)` under the same
+ * HOST_IRRADIANCE_DISPLAY_EXPONENT compression the irradiance term
+ * uses — one display law for both inputs. The product keeps the
+ * HOST_INTENSITY_MAX ceiling (LDR: values past it only clip textures)
+ * but not the floor: at low sensitivity a dim surface fades toward
+ * black exactly like the star field does. Still no viewer-distance
+ * term — approach cannot blow it out.
+ */
+export function litIntensity(dHpPc: number, maxAppMag: number): number {
+  const thresholdFluxRatio = 10 ** ((maxAppMag - LIT_EXPOSURE_REF_MAG) / 2.5);
+  const exposure = thresholdFluxRatio ** HOST_IRRADIANCE_DISPLAY_EXPONENT;
+  return Math.min(HOST_INTENSITY_MAX, hostIntensityScale(dHpPc) * exposure);
 }
 
 export function planetApparentMagnitude(

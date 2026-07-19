@@ -502,12 +502,20 @@ occluded while the visual handoff happens.
     Venus's forward-scattered crescent brightens where the data says.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
-  - `uHostIntensity` (`perceptual-magnitude.ts:hostIntensityScale`) —
-    host-distance irradiance on a quarter-power display compression,
-    reference 1 AU ⇒ Earth = 1, Mercury ~1.6× (clamped), Neptune
-    ~0.18×. A function of host→body distance ONLY, so approach can't
-    blow it out; the ring annulus multiplies the same scalar so
-    ring↔body contrast is preserved.
+  - `uLitIntensity` (`perceptual-magnitude.ts:litIntensity`) —
+    host-distance irradiance on a quarter-power display compression
+    (`hostIntensityScale`: reference 1 AU ⇒ Earth = 1, Mercury ~1.6×
+    clamped, Neptune ~0.18×) composed with the magnitude slider as a
+    camera-sensitivity exposure — the threshold flux ratio
+    `10^((maxAppMag − naked-eye)/2.5)` under the same quarter-power
+    law, so turning sensitivity up brightens a dim Neptune surface in
+    step with the star field and exposure is exactly 1 at the
+    naked-eye default. The product keeps the 1.6 LDR ceiling but no
+    floor (low sensitivity fades surfaces toward black). Still no
+    viewer-distance term, so approach can't blow it out; the ring
+    annulus multiplies the same scalar so ring↔body contrast is
+    preserved. Body-kind-agnostic: planets, moons, and future lit
+    bodies all read the one scalar the mesh layer computes.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
     half-width carrying twilight past the geometric terminator on
     atmospheric bodies (Venus 0.08 widest; Titan the one moon with a

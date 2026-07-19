@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { MemberSphere } from '../local-depth/slice-pure';
 import { KM_PC } from '../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
-import { hostIntensityScale } from './perceptual-magnitude';
+import { litIntensity } from './perceptual-magnitude';
 import { phaseAngleFor, phaseRatioToLambert } from './phase-function';
 import type { PlanetBodyField } from './planet-body-field';
 import { systemFamily, type Planet, type PlanetRings } from './planet-system';
@@ -164,13 +164,13 @@ export class PlanetMeshLayer {
           hasSun = true;
         }
       }
-      const hostIntensity = hasSun ? hostIntensityScale(dHpPc) : 1;
+      const lit = hasSun ? litIntensity(dHpPc, this.field.getMaxAppMag()) : 1;
 
       if (entry.ring) {
-        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, hostIntensity);
+        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, lit);
       }
 
-      material.uniforms.uHostIntensity.value = hostIntensity;
+      material.uniforms.uLitIntensity.value = lit;
       material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
         ? phaseRatioToLambert(
             planet.phaseCoefficients,
@@ -314,7 +314,7 @@ export class PlanetMeshLayer {
     camera: THREE.PerspectiveCamera,
     hasSun: boolean,
     fade: number,
-    hostIntensity: number,
+    litIntensity: number,
   ): void {
     const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
     if (texState?.state !== 'ready' || !hasSun) {
@@ -336,7 +336,7 @@ export class PlanetMeshLayer {
     ring.mesh.visible = true;
     ring.material.uniforms.uRingMap.value = texState.tex;
     ring.material.uniforms.uFade.value = fade;
-    ring.material.uniforms.uHostIntensity.value = hostIntensity;
+    ring.material.uniforms.uLitIntensity.value = litIntensity;
     ring.mesh.position.copy(this.tmpPlanet);
     ring.mesh.quaternion.copy(this.tmpQuatRing);
 
@@ -364,7 +364,7 @@ export class PlanetMeshLayer {
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
         uPhaseScale: { value: 1 },
-        uHostIntensity: { value: 1 },
+        uLitIntensity: { value: 1 },
         uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
         uCasters: {
           value: Array.from({ length: MAX_SHADOW_CASTERS }, () => new THREE.Vector4()),
@@ -406,7 +406,7 @@ export class PlanetMeshLayer {
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
-        uHostIntensity: { value: 1 },
+        uLitIntensity: { value: 1 },
       },
       transparent: true,
       depthWrite: false,
