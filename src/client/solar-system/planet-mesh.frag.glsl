@@ -51,6 +51,12 @@ const float LIMB_EXP = 0.5;
 // the day-texture → city-lights handoff has no hard seam.
 const float NIGHT_RAMP = 0.05;
 
+// Night-lights emissive scale. The Black Marble source is a deeply
+// stretched long exposure — at map value the night side reads as
+// bright as the day side, when to the naked eye city lights are faint
+// specks on a near-black hemisphere. Tune at smoke.
+const float NIGHT_INTENSITY = 0.2;
+
 void main() {
   vec3 n = normalize(vNormalV);
   vec3 v = normalize(-vPosV);
@@ -81,7 +87,7 @@ void main() {
   // Emissive, not reflective: no limb darkening, phase scale, host
   // intensity, or shadow on the lights.
   float nightRamp = 1.0 - smoothstep(-NIGHT_RAMP, NIGHT_RAMP, sunCos);
-  vec3 night = texture(uNightMap, vUvM).rgb * nightRamp * uHasNight;
+  vec3 night = texture(uNightMap, vUvM).rgb * nightRamp * uHasNight * NIGHT_INTENSITY;
   vec3 reflected = base * dayside * limb * uPhaseScale * uHostIntensity * shadow;
   outColor = vec4(reflected + night, uFade);
 }
