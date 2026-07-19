@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fmtDist, fmtDistAuto, niceRound, setUnit, getUnit, LY_PER_PC, AU_SWITCH_PC } from './distance-util';
-import { AU_PER_PC } from '../util/astronomy-constants';
+import { AU_KM, AU_PER_PC } from '../util/astronomy-constants';
 
 // fmtDist reads a module-level current unit; tests reset it explicitly so
 // they're order-independent.
@@ -177,18 +177,27 @@ describe('distance-util / fmtDistAuto', () => {
     expect(fmtDistAuto(AU_SWITCH_PC - 1e-9)).toBe(`${Math.round((AU_SWITCH_PC - 1e-9) * AU_PER_PC)} AU`);
   });
 
-  it('uses fractional precision for sub-AU distances', () => {
+  it('uses fractional precision for AU distances down to the km switch', () => {
     // 1 AU == 1 / AU_PER_PC pc — sits at the 1-decimal tier boundary.
     expect(fmtDistAuto(1 / AU_PER_PC)).toBe('1.0 AU');
     // 0.5 AU — sub-1 tier uses 3 decimals.
     expect(fmtDistAuto(0.5 / AU_PER_PC)).toBe('0.500 AU');
-    // 0.05 AU
-    expect(fmtDistAuto(0.05 / AU_PER_PC)).toBe('0.050 AU');
+    // 0.1 AU sits exactly at the km switch and stays AU (switch is < only).
+    expect(fmtDistAuto(0.1 / AU_PER_PC)).toBe('0.100 AU');
   });
 
   it('uses integer rounding above 100 AU', () => {
     expect(fmtDistAuto(100 / AU_PER_PC)).toBe('100 AU');
     expect(fmtDistAuto(1234 / AU_PER_PC)).toBe('1234 AU');
+  });
+
+  it('switches to km below KM_SWITCH_AU (0.1 AU), with k/M decade tiers', () => {
+    // 0.05 AU ≈ 7.48M km.
+    expect(fmtDistAuto(0.05 / AU_PER_PC)).toBe('7.48M km');
+    // Lunar distance 384,400 km ≈ 0.00257 AU → k tier.
+    expect(fmtDistAuto((384_400 / AU_KM) / AU_PER_PC)).toBe('384.4k km');
+    // A small-moon zoom-floor camera distance ~465 km → integer km.
+    expect(fmtDistAuto((465 / AU_KM) / AU_PER_PC)).toBe('465 km');
   });
 });
 

@@ -1,4 +1,4 @@
-import { AU_PER_PC } from '../util/astronomy-constants';
+import { AU_KM, AU_PER_PC } from '../util/astronomy-constants';
 
 export type DistanceUnit = 'pc' | 'ly';
 
@@ -7,6 +7,11 @@ export const LY_PER_PC = 3.2615638;
 // ("0.005 pc") and AU is the more graspable unit — Voyager-class /
 // outer-Oort scale. The switch is one-way: pc-or-ly above, AU below.
 export const AU_SWITCH_PC = 0.01;
+// Below this the AU readout stops being graspable ("0.03 AU"); km lands in
+// the planetary-neighbourhood / spacecraft frame. 0.1 AU is the smallest
+// AU fraction that still pictures ("a tenth of Earth–Sun") and moving the
+// whole sub-0.1-AU band to km avoids awkward "0.0x AU" readouts entirely.
+export const KM_SWITCH_AU = 0.1;
 
 let currentUnit: DistanceUnit = 'ly';
 const handlers: Array<(u: DistanceUnit) => void> = [];
@@ -42,12 +47,21 @@ export function fmtDist(pc: number): string {
   return `${mStr}M ${unit}`;
 }
 
-// Pc/ly above AU_SWITCH_PC (~0.01 pc ≈ 2063 AU); AU below. The toggle
-// only governs the upper regime — close-approach always reads in AU
-// regardless of the user's pc/ly preference.
+// Distance readout tier chain: pc/ly above AU_SWITCH_PC (~0.01 pc ≈ 2063
+// AU), then AU, then km below KM_SWITCH_AU. The pc/ly toggle only governs
+// the upper regime — close-approach always reads in AU/km regardless of
+// the user's preference.
 export function fmtDistAuto(pc: number): string {
   if (pc < AU_SWITCH_PC) {
     const au = pc * AU_PER_PC;
+    if (au < KM_SWITCH_AU) {
+      const km = au * AU_KM;
+      // Same k/M decade tiering as fmtDist's upper end, so the AU→km step
+      // reads consistently.
+      if (km < 10_000) return `${Math.round(km)} km`;
+      if (km < 1_000_000) return `${(km / 1000).toFixed(1).replace(/\.0$/, '')}k km`;
+      return `${(km / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M km`;
+    }
     // Tier breakpoints mirror fmtDist's 3 / 1 / integer pattern so the
     // transition across the AU switch reads consistently.
     if (au < 1) return `${au.toFixed(3)} AU`;
