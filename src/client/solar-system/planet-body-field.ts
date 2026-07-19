@@ -16,7 +16,7 @@ import {
 } from '../star-pipeline/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
-import { MESH_FADE_END_RATIO, MESH_FADE_START_RATIO } from './mesh-crossfade';
+import { DISC_FADE_END_RATIO, DISC_FADE_START_RATIO } from './mesh-crossfade';
 import {
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
@@ -42,10 +42,18 @@ import {
   dimBlendFactor,
   eclipseDimFromOffsets,
 } from '../binaries/eclipse-photometry-pure';
-import { ECLIPSE_DIM_TAU_S, SUB_PIXEL_THRESHOLD_PX } from '../binaries/binary-tuning';
+import { ECLIPSE_DIM_TAU_S } from '../binaries/binary-tuning';
 import { parentIndexOf } from './orbit-descriptor';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
+
+/** Screen separation below which a body reads as one point with its
+ *  parent (host star / parent planet). Deliberately looser than the
+ *  binary orbit walk's 1.5 px render-LOD gate: planet and moon dots
+ *  carry ~2–4 px glow footprints and 4 px hit radii, so a few px of
+ *  separation still reads as a single blob to the eye. Iterated at
+ *  smoke. */
+export const BODY_COLLAPSE_THRESHOLD_PX = 6;
 
 // Initial slot capacity. v1 attaches Sol (9 planets + 18 moons = 27
 // bodies) once; sized to hold that in one shot so the sole attach doesn't
@@ -726,13 +734,27 @@ export class PlanetBodyField {
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
+  /** Physical (true angular-diameter) disc size in px, excluding the
+   *  perceptual brightness floor that keeps faint bodies visible as dots —
+   *  the "is this a resolved body?" measure driving the mesh LOD's
+   *  presence band. 0 when unattached, degenerate, or below the
+   *  soft-taper kill (mesh and billboard die together). */
+  physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return 0;
+    const i = instanceIdx - host.startInstance;
+    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
+  }
+
   /** True when the body currently renders as one on-screen point with
    *  its parent (host star for a planet, parent body for a moon):
    *  drawn this frame — past the same cutoff the shader applies — AND
-   *  angular separation from the parent below the shared sub-pixel
-   *  threshold. Collapsed bodies drop out of `pick` (the parent's own
-   *  pick surface owns the point) and drive the planet
-   *  system-membership provider's clusters. */
+   *  angular separation from the parent below
+   *  BODY_COLLAPSE_THRESHOLD_PX. Collapsed bodies drop out of `pick`
+   *  (the parent's own pick surface owns the point) and drive the
+   *  planet system-membership provider's clusters. */
   isCollapsedOntoParent(instanceIdx: number, camera: THREE.PerspectiveCamera): boolean {
     const host = this.hostOfInstance(instanceIdx);
     if (!host || this.hidden) return false;
@@ -768,7 +790,7 @@ export class PlanetBodyField {
     const cz = ux * vy - uy * vx;
     const angle = Math.atan2(Math.sqrt(cx * cx + cy * cy + cz * cz), ux * vx + uy * vy + uz * vz);
     const pxPerRad = this.magShared.uViewport.value.y / this.magShared.uFovYRad.value;
-    return angle * pxPerRad < SUB_PIXEL_THRESHOLD_PX;
+    return angle * pxPerRad < BODY_COLLAPSE_THRESHOLD_PX;
   }
 
   private hostOfInstance(instanceIdx: number): AttachedHost | null {
@@ -830,24 +852,6 @@ export class PlanetBodyField {
     }
     const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
     return Math.max(appSize, physSize);
-  }
-
-  /** physSize/appSize for a flat instance — the disc↔mesh crossfade
-   *  input (CPU mirror of the vertex shader's vMeshFade ratio; the
-   *  mesh layer maps it through meshFadeFromRatio). 0 when unattached
-   *  or degenerate. */
-  meshFadeRatio(
-    instanceIdx: number,
-    cameraPosLocal: Readonly<THREE.Vector3>,
-  ): number {
-    const host = this.hostOfInstance(instanceIdx);
-    if (!host) return 0;
-    const i = instanceIdx - host.startInstance;
-    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0) return 0;
-    const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-    const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
-    return physSize / Math.max(appSize, 1e-6);
   }
 
   /**
@@ -1101,8 +1105,8 @@ export class PlanetBodyField {
           uRenderMode: { value: mode },
           uHideIdx: this.hideIdxUniform,
           uLocalPassRange: this.localPassRangeUniform,
-          uMeshFadeRatio: {
-            value: new THREE.Vector2(MESH_FADE_START_RATIO, MESH_FADE_END_RATIO),
+          uDiscFadeRatio: {
+            value: new THREE.Vector2(DISC_FADE_START_RATIO, DISC_FADE_END_RATIO),
           },
         },
         ...params,

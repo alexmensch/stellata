@@ -38,9 +38,9 @@ src/client/solar-system/
                                   parent-by-name resolution. See § Moons.
   planet-system-membership.ts     Planet-system implementation of the
                                   kind-generic system-membership contract
-                                  (../system-membership/README.md): host
-                                  star + bodies as members; collapsed
-                                  clusters walk the host/parent tree over
+                                  (../system-membership/README.md), one
+                                  hierarchy level per target: host →
+                                  planets, planet → its moons, over
                                   PlanetBodyField.isCollapsedOntoParent
                                   verdicts. Covers exoplanet hosts as
                                   soon as bk5 attaches them.
@@ -78,11 +78,13 @@ src/client/solar-system/
                                   src/client/star-pipeline/README.md.
                                   isCollapsedOntoParent is the per-body
                                   "renders as one point with its parent"
-                                  verdict (drawn this frame AND sub-pixel
-                                  from host / parent planet, same 1.5 px
-                                  threshold as the binary orbit walk);
-                                  pick() drops collapsed bodies so the
-                                  parent's pick surface owns the point.
+                                  verdict (drawn this frame AND within
+                                  BODY_COLLAPSE_THRESHOLD_PX of host /
+                                  parent planet — looser than the binary
+                                  1.5 px gate; body dots have multi-px
+                                  glow footprints); pick() drops
+                                  collapsed bodies so the parent's pick
+                                  surface owns the point.
                                   Also the identity table for Target
                                   {kind:'planet'}: flat instance index ↔
                                   (host, planet-within-host), plus local/
@@ -502,19 +504,30 @@ every slider move.
 ### Planet mesh LOD (stellata-2f6.9)
 
 On close approach the billboarded disc hands off to a real oblate
-spheroid mesh (`planet-mesh-layer.ts`), crossfaded on the ratio of
-the body's TRUE projected diameter to its perceptual disc size —
-`mesh-crossfade.ts` owns the band (physSize/appSize 1.0 → 1.5) and
-both sides evaluate the same smoothstep (shader: `uMeshFadeRatio`;
-CPU: `PlanetBodyField.meshFadeRatio` → `meshFadeFromRatio`). The band
-starts at ratio 1, exactly where the disc's `max(appSize, physSize)`
-switches to the physical term, so the mesh (drawn at physSize) and
-the disc share the same footprint through the whole fade — the
-handoff can't pop in size, and the disc passes multiplying by
-`1 − vMeshFade` against the mesh's rising `uFade` means no
-double-brightness either. The
-core depth pass deliberately keeps running through the fade — the
-mesh silhouette matches the disc core, so background layers stay
+spheroid mesh (`planet-mesh-layer.ts`). Two independent fade bands
+(`mesh-crossfade.ts`):
+
+- **Mesh presence** rides the body's TRUE projected diameter in CSS
+  px — full at ≥ 2 px, gone at ≤ 1 px (`meshFadeFromPhysPx` on
+  `PlanetBodyField.physicalPlanetSizePx`). The eye tracks a resolved
+  body — and its crescent phase, the thing a billboard can't show —
+  down to ~1 px, so the mesh persists to that limit instead of
+  handing off at the (much larger) perceptual-disc scale.
+- **Billboard disc fade** rides the physSize/appSize ratio
+  (`uDiscFadeRatio`, 1.0 → 1.5; shader `vDiscFade`, CPU mirror
+  `discFadeFromRatio`). Below the band the billboard runs at FULL
+  strength: at ratio < 1 the perceptual glow is the correct glare for
+  a bright body, and the mesh crescent sits inside it, depth-occluding
+  the glow core (both render in the local depth pass). Through the
+  band the disc CORE stays depth-hidden behind the fully-shown mesh
+  (core radius < 0.5 · quad = the mesh silhouette), so only the thin
+  halo annulus visibly fades — no pop in size or brightness at any
+  point of the zoom-out: mesh-in-glare → halo fades (ratio 1 → 1.5)
+  → mesh alone → crescent shrinks to 1–2 px and fades inside the
+  returning glow.
+
+The core depth pass deliberately keeps running through both fades —
+the mesh silhouette matches the disc core, so background layers stay
 occluded while the visual handoff happens.
 
 - **Geometry**: one shared unit sphere, scaled per body to

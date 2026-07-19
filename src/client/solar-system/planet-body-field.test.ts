@@ -19,6 +19,11 @@ import {
   phaseFactorFor,
 } from './phase-function';
 import { planetApparentMagnitude } from './perceptual-magnitude';
+import {
+  MESH_FADE_FULL_PX,
+  MESH_FADE_MIN_PX,
+  meshFadeFromPhysPx,
+} from './mesh-crossfade';
 import { DIM_FLOOR } from '../binaries/eclipse-photometry-pure';
 
 function makeSharedUniforms(
@@ -1050,8 +1055,8 @@ describe('PlanetBodyField.pick', () => {
   });
 });
 
-describe('PlanetBodyField.meshFadeRatio', () => {
-  it('crosses 1 exactly when the physical size overtakes the perceptual disc', () => {
+describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', () => {
+  it('mesh absent at planet-system range, fully on at close approach', () => {
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -1070,18 +1075,22 @@ describe('PlanetBodyField.meshFadeRatio', () => {
     camera.updateProjectionMatrix();
     f.update(camera, 0, 0);
 
-    // From the host (1 AU away) the perceptual disc dominates.
+    // From the host (1 AU away): a 6000 km body is far sub-pixel, so
+    // the mesh stays fully faded even though the perceptual disc is
+    // several px — the crescent has nothing to show at that scale.
     camera.position.set(0, 0, 0);
-    const far = f.meshFadeRatio(0, camera.position);
-    expect(far).toBeGreaterThan(0);
-    expect(far).toBeLessThan(1);
+    const farPx = f.physicalPlanetSizePx(0, camera.position);
+    expect(farPx).toBeLessThan(MESH_FADE_MIN_PX);
+    expect(meshFadeFromPhysPx(farPx)).toBe(0);
 
-    // Surface-grazing the physical size dominates.
+    // Surface-grazing: physical size dominates by orders of magnitude.
     const KM_PC_LOCAL = 1 / 3.0857e13;
     camera.position.set(0, 0, -1 * AU_PC + 20 * 6000 * KM_PC_LOCAL);
-    expect(f.meshFadeRatio(0, camera.position)).toBeGreaterThan(1);
+    const nearPx = f.physicalPlanetSizePx(0, camera.position);
+    expect(nearPx).toBeGreaterThan(MESH_FADE_FULL_PX);
+    expect(meshFadeFromPhysPx(nearPx)).toBe(1);
 
-    expect(f.meshFadeRatio(99, camera.position)).toBe(0); // unattached
+    expect(f.physicalPlanetSizePx(99, camera.position)).toBe(0); // unattached
     f.dispose();
   });
 });
@@ -1421,14 +1430,14 @@ describe('PlanetBodyField.isCollapsedOntoParent', () => {
 
   it('true for a rendered planet sub-pixel from its host', () => {
     // 1 AU host offset seen from 500 AU ≈ 2e-3 rad ≈ 1.15 px on the
-    // 600-px / 60° shared-uniform viewport — under the 1.5 px gate.
+    // 600-px / 60° shared-uniform viewport — under the collapse gate.
     const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
     expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 500, 0))).toBe(true);
     f.dispose();
   });
 
   it('false once the camera is close enough to resolve the separation', () => {
-    // Same geometry from 50 AU ≈ 11.5 px — resolved.
+    // Same geometry from 50 AU ≈ 11.5 px — past the collapse gate.
     const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
     expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 50, 0))).toBe(false);
     f.dispose();

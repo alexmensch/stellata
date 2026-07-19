@@ -9,7 +9,7 @@ import { litIntensity } from './perceptual-magnitude';
 import { phaseAngleFor, phaseRatioToLambert } from './phase-function';
 import type { PlanetBodyField } from './planet-body-field';
 import { systemFamily, type Planet, type PlanetRings } from './planet-system';
-import { meshFadeFromRatio, TEXTURE_PREFETCH_RATIO } from './mesh-crossfade';
+import { meshFadeFromPhysPx, TEXTURE_PREFETCH_PX } from './mesh-crossfade';
 import {
   poleRaDecDegAt,
   type RotationElements,
@@ -152,13 +152,13 @@ export class PlanetMeshLayer {
       if (!this.field.planetLocalPositionInto(idx, this.tmpPlanet)) continue;
 
       const radiusPc = planet.radiusKm * KM_PC;
-      const ratio = this.field.meshFadeRatio(idx, camera.position);
-      if (ratio >= TEXTURE_PREFETCH_RATIO) {
+      const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
+      if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureTexture(planet.name);
         if (planet.hasNightTexture) this.ensureTexture(`${planet.name}-night`);
         if (planet.rings) this.ensureTexture(`${planet.name}-rings`, 'png');
       }
-      const fade = meshFadeFromRatio(ratio);
+      const fade = meshFadeFromPhysPx(physPx);
       if (fade <= 0) continue;
 
       const entry = this.entries.get(idx) ?? this.createEntry(idx, planet);

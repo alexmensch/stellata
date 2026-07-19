@@ -76,10 +76,10 @@ uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
 
-// Disc ↔ spheroid-mesh crossfade band in physSize/appSize ratio
-// (MESH_FADE_START/END_RATIO from mesh-crossfade.ts — the mesh layer
-// evaluates the same smoothstep from the other end).
-uniform vec2 uMeshFadeRatio;
+// Billboard disc fade-out band in physSize/appSize ratio
+// (DISC_FADE_START/END_RATIO from mesh-crossfade.ts; the mesh itself
+// fades on an independent physical-pixel band — see that file).
+uniform vec2 uDiscFadeRatio;
 
 // Chart-mode flat-disc sizing — same uniforms (same { value } slots)
 // as the star pipeline's chart branch; see chart-mode/README.md.
@@ -93,7 +93,7 @@ out vec2 vUv;
 out float vAppMag;
 out float vPhysRatio;
 out float vSoftness;
-out float vMeshFade;
+out float vDiscFade;
 out float vAaWidth;
 
 const float LOG10 = 2.302585093;
@@ -147,7 +147,7 @@ void main() {
     vUv = aCorner;
     vPhysRatio = 0.0;
     vSoftness = 0.0;
-    vMeshFade = 0.0;
+    vDiscFade = 1.0;
     vAaWidth = 0.0;
     return;
   }
@@ -223,7 +223,7 @@ void main() {
       vUv = aCorner;
       vPhysRatio = 0.0;
       vSoftness = 0.0;
-      vMeshFade = 0.0;
+      vDiscFade = 1.0;
       vAaWidth = 0.0;
       return;
     }
@@ -240,7 +240,7 @@ void main() {
     vUv = aCorner;
     vPhysRatio = 0.0;
     vSoftness = 1.0 - iSolidity;
-    vMeshFade = 0.0;
+    vDiscFade = 1.0;
     vAaWidth = 0.0;
     return;
   }
@@ -260,7 +260,7 @@ void main() {
         0.0, 1.0);
     pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
     vPhysRatio = 1.0;
-    vMeshFade = 0.0;
+    vDiscFade = 1.0;
   } else {
     // Apparent-magnitude size via the perceptual-disc chunk. No
     // unconditional pixel floor — sub-pixel planets fade naturally
@@ -268,13 +268,13 @@ void main() {
     float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
     float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
 
-    // Disc ramps out as the spheroid mesh ramps in, keyed on the
-    // physSize/appSize ratio: the band starts at 1 — exactly where the
-    // max() below switches to the physical term — so the disc and the
-    // mesh (drawn at physSize) share the same footprint through the
-    // whole fade and the handoff cannot pop in size.
-    vMeshFade = smoothstep(
-        uMeshFadeRatio.x, uMeshFadeRatio.y, physSize / max(appSize, 1e-6));
+    // Billboard fades out as the physical term outgrows the
+    // perceptual size. Through the band the disc CORE is depth-hidden
+    // behind the fully-shown mesh, so only the halo annulus visibly
+    // fades; below the band the billboard runs at full strength and
+    // the mesh crescent sits inside the glare (mesh-crossfade.ts).
+    vDiscFade = 1.0 - smoothstep(
+        uDiscFadeRatio.x, uDiscFadeRatio.y, physSize / max(appSize, 1e-6));
 
     pxSize = max(appSize, physSize);
     vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
