@@ -42,7 +42,8 @@ import {
   dimBlendFactor,
   eclipseDimFromOffsets,
 } from '../binaries/eclipse-photometry-pure';
-import { ECLIPSE_DIM_TAU_S } from '../binaries/binary-tuning';
+import { ECLIPSE_DIM_TAU_S, SUB_PIXEL_THRESHOLD_PX } from '../binaries/binary-tuning';
+import { parentIndexOf } from './orbit-descriptor';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
@@ -725,6 +726,51 @@ export class PlanetBodyField {
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
+  /** True when the body currently renders as one on-screen point with
+   *  its parent (host star for a planet, parent body for a moon):
+   *  drawn this frame — past the same cutoff the shader applies — AND
+   *  angular separation from the parent below the shared sub-pixel
+   *  threshold. Collapsed bodies drop out of `pick` (the parent's own
+   *  pick surface owns the point) and drive the planet
+   *  system-membership provider's clusters. */
+  isCollapsedOntoParent(instanceIdx: number, camera: THREE.PerspectiveCamera): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host || this.hidden) return false;
+    const i = instanceIdx - host.startInstance;
+    const camPos = camera.position;
+    const { appMag, planetX, planetY, planetZ, dVp } = this.evalPlanetView(host, i, camPos);
+    const cutoff = this.magShared.uMaxAppMag.value + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
+    if (dVp <= 0 || appMag > cutoff) return false;
+
+    const planet = host.ps.planets[i];
+    const pi = planet.parentName ? parentIndexOf(host.ps.planets, planet.parentName) : -1;
+    let px = host.hostLocalPos.x;
+    let py = host.hostLocalPos.y;
+    let pz = host.hostLocalPos.z;
+    if (pi >= 0) {
+      const base = (host.startInstance + pi) * 3;
+      px += this.bufs.localRel[base + 0];
+      py += this.bufs.localRel[base + 1];
+      pz += this.bufs.localRel[base + 2];
+    }
+
+    const ux = planetX - camPos.x;
+    const uy = planetY - camPos.y;
+    const uz = planetZ - camPos.z;
+    const vx = px - camPos.x;
+    const vy = py - camPos.y;
+    const vz = pz - camPos.z;
+    // Camera exactly at the parent (observe mode parks there): the
+    // parent has no screen point to collapse onto.
+    if (vx * vx + vy * vy + vz * vz === 0) return false;
+    const cx = uy * vz - uz * vy;
+    const cy = uz * vx - ux * vz;
+    const cz = ux * vy - uy * vx;
+    const angle = Math.atan2(Math.sqrt(cx * cx + cy * cy + cz * cz), ux * vx + uy * vy + uz * vz);
+    const pxPerRad = this.magShared.uViewport.value.y / this.magShared.uFovYRad.value;
+    return angle * pxPerRad < SUB_PIXEL_THRESHOLD_PX;
+  }
+
   private hostOfInstance(instanceIdx: number): AttachedHost | null {
     if (instanceIdx < 0 || instanceIdx >= this.liveCount) return null;
     const hostStarIdx = this.instanceHost[instanceIdx];
@@ -863,6 +909,11 @@ export class PlanetBodyField {
         // rule Picker.pickStar applies there.
         const cutoff = maxAppMag + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
         if (appMag > cutoff) continue;
+        // A body collapsed onto its parent renders as one point with
+        // it — that point's pick belongs to the parent (the star
+        // picker for a host, the parent planet's own candidacy for a
+        // moon), so the member is not individually pickable.
+        if (this.isCollapsedOntoParent(host.startInstance + i, camera)) continue;
 
         v.set(planetX, planetY, planetZ);
         const screen = projectToScreen(v, camera, viewportW, viewportH);

@@ -33,7 +33,17 @@ src/client/solar-system/
                                   distance, and period from its parent
                                   (planet ← host star, solar mass; moon ←
                                   parent planet, parent GM). Pure; no
-                                  solar-mass assumption. See § Moons.
+                                  solar-mass assumption. Also exports
+                                  `parentIndexOf`, the shared
+                                  parent-by-name resolution. See § Moons.
+  planet-system-membership.ts     Planet-system implementation of the
+                                  kind-generic system-membership contract
+                                  (../system-membership/README.md): host
+                                  star + bodies as members; collapsed
+                                  clusters walk the host/parent tree over
+                                  PlanetBodyField.isCollapsedOntoParent
+                                  verdicts. Covers exoplanet hosts as
+                                  soon as bk5 attaches them.
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
@@ -66,6 +76,13 @@ src/client/solar-system/
                                   the unified disc/glow chunk with stars
                                   (perceptual-disc.glsl) — see
                                   src/client/star-pipeline/README.md.
+                                  isCollapsedOntoParent is the per-body
+                                  "renders as one point with its parent"
+                                  verdict (drawn this frame AND sub-pixel
+                                  from host / parent planet, same 1.5 px
+                                  threshold as the binary orbit walk);
+                                  pick() drops collapsed bodies so the
+                                  parent's pick surface owns the point.
                                   Also the identity table for Target
                                   {kind:'planet'}: flat instance index ↔
                                   (host, planet-within-host), plus local/

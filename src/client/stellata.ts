@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from './loaders/catalog-loader';
-import { collapsedClusterIndices } from './format/star-companion-format';
+import { createBinarySystemMembership } from './binaries/binary-system-membership';
+import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
+import { SystemMembershipRegistry } from './system-membership/system-membership';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
@@ -236,6 +238,11 @@ export class Stellata implements FrameAnchor {
   // positions; binary orbital evolution simply doesn't fire.
   private binaryOrbitField: BinaryOrbitField | null = null;
   private binariesData: BinariesData | null = null;
+
+  /** Kind-generic system membership (multi-star clusters, planet
+   *  systems) — hover roster cards and collapsed-pick resolution both
+   *  consume this. See src/client/system-membership/README.md. */
+  readonly systemMembership = new SystemMembershipRegistry();
   private eclipsePhotometryField: EclipsePhotometryField | null = null;
 
   // Focal-frame ride state. The focal star (when a binary member) drifts
@@ -735,6 +742,24 @@ export class Stellata implements FrameAnchor {
     this.localBubbleShell = new LocalBubbleShell();
     this.scene.add(this.localBubbleShell.group);
     this.localBubbleShell.recenter(this.worldOffset);
+
+    // System-membership registry: binaries FIRST so a collapsed pair's
+    // outer primary leads the union over the member's planet-host role.
+    this.systemMembership.register(
+      createBinarySystemMembership({
+        getBinaries: () => this.binariesData,
+        isCollapsed: (i) => this.isCompositeSuppressed(i),
+      }),
+    );
+    this.systemMembership.register(
+      createPlanetSystemMembership({
+        getAttachedPlanetSystem: (h) => this.planetBodyField.getAttachedPlanetSystem(h),
+        hostPlanetOf: (i) => this.planetBodyField.hostPlanetOf(i),
+        instanceIndexOf: (h, p) => this.planetBodyField.instanceIndexOf(h, p),
+        isCollapsedOntoParent: (i) =>
+          this.planetBodyField.isCollapsedOntoParent(i, this.camera),
+      }),
+    );
 
     // Picker resolves every layer's "what's under (x, y)?" — composed
     // by the click FSM in onPointerUp and by the hover providers.
@@ -2315,14 +2340,12 @@ export class Stellata implements FrameAnchor {
   /** Lead (first-seen outermost primary) of `idx`'s collapsed cluster,
    *  or `idx` itself when nothing around it is suppressed. The Picker
    *  routes every star pick through this so hover, POI pin, vector,
-   *  and focus all act on the object the system card names. */
+   *  and focus all act on the object the system card names. A host
+   *  star always leads its own planet cluster, so the resolved lead is
+   *  star-kind by construction. */
   private collapsedClusterLead(idx: number): number {
-    if (this.binariesData === null) return idx;
-    return collapsedClusterIndices(
-      this.binariesData,
-      idx,
-      (i) => this.isCompositeSuppressed(i),
-    )[0];
+    const lead = this.systemMembership.collapsedLeadOf({ kind: 'star', idx });
+    return lead.kind === 'star' ? lead.idx : idx;
   }
 
   /** True when BinaryOrbitField's sub-pixel LOD gate collapsed this

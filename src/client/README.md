@@ -31,6 +31,10 @@ themselves.
   Local Bubble.
 - `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
   cross-cutting UI.
+- `system-membership/` — kind-generic multi-object system contract
+  (roster + collapsed-cluster queries) behind the hover system card
+  and collapsed-pick-to-primary resolution; implemented by
+  `binaries/` and `solar-system/`.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.
 
 ## Event bus on `Stellata`

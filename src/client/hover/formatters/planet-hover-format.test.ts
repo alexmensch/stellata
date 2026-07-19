@@ -155,4 +155,39 @@ describe('formatPlanetHover', () => {
       expect(out.lines.some((l) => l.startsWith('Moons'))).toBe(false);
     }
   });
+
+  it('swaps to the roster card when the body has a collapsed cluster', () => {
+    // Jupiter (idx 4) with its moons sub-pixel: the membership queries
+    // report a Jupiter-led cluster inside the full Sol-system roster.
+    const jupiter = { target: { kind: 'planet' as const, idx: 4 }, name: 'Jupiter' };
+    const moons = ['Io', 'Europa', 'Ganymede', 'Callisto'].map((name, i) => ({
+      target: { kind: 'planet' as const, idx: 30 + i },
+      name,
+    }));
+    const ctx = buildCtx({ Jupiter: { appMag: -2.7 } }, SOL_BODIES);
+    ctx.targetOf = (i) => ({ kind: 'planet', idx: i });
+    ctx.membership = {
+      membersOf: () => [
+        { target: { kind: 'star', idx: 0 }, name: null },
+        jupiter,
+        ...moons,
+      ],
+      collapsedClusterOf: (t) =>
+        t.kind === 'planet' && t.idx === 4 ? [jupiter, ...moons] : [],
+    };
+    const out = formatPlanetHover(4, 5.2 / 206264.80624709636, ctx);
+    expect(out.name).toBe('Jupiter system');
+    expect(out.lines).toEqual([
+      '5.2 AU',
+      '5 of 6 components here:',
+      'Jupiter, Io, Europa, Ganymede, Callisto',
+    ]);
+  });
+
+  it('keeps the per-body card when nothing is collapsed onto it', () => {
+    const ctx = buildCtx({ Jupiter: { appMag: -2.7 } });
+    ctx.targetOf = (i) => ({ kind: 'planet', idx: i });
+    ctx.membership = { membersOf: () => [], collapsedClusterOf: () => [] };
+    expect(formatPlanetHover(4, 5.2 / 206264.80624709636, ctx).name).toBe('Jupiter');
+  });
 });

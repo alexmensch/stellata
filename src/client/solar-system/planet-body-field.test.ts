@@ -1389,3 +1389,78 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
     f.dispose();
   });
 });
+
+describe('PlanetBodyField.isCollapsedOntoParent', () => {
+  // Positions ride positionsAt so the geometry is exact: rel offsets on
+  // the +x axis are invariant under the host orientation quaternion
+  // (a rotation about x for Sol's ecliptic plane).
+  function fieldWith(planets: Planet[], positionsAu: number[][]): PlanetBodyField {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets,
+      positionsAt: (_t, out) => {
+        positionsAu.forEach((p, i) => {
+          out[i * 3 + 0] = p[0] * AU_PC;
+          out[i * 3 + 1] = p[1] * AU_PC;
+          out[i * 3 + 2] = p[2] * AU_PC;
+        });
+      },
+    };
+    f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    return f;
+  }
+
+  function cameraAtAu(x: number, y: number, z: number): THREE.PerspectiveCamera {
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(x * AU_PC, y * AU_PC, z * AU_PC);
+    return camera;
+  }
+
+  const JUPITER_LIKE = makePlanet({ name: 'J', radiusKm: 70000, semiMajorAxisAu: 1 });
+
+  it('true for a rendered planet sub-pixel from its host', () => {
+    // 1 AU host offset seen from 500 AU ≈ 2e-3 rad ≈ 1.15 px on the
+    // 600-px / 60° shared-uniform viewport — under the 1.5 px gate.
+    const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 500, 0))).toBe(true);
+    f.dispose();
+  });
+
+  it('false once the camera is close enough to resolve the separation', () => {
+    // Same geometry from 50 AU ≈ 11.5 px — resolved.
+    const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 50, 0))).toBe(false);
+    f.dispose();
+  });
+
+  it('false for a body below the magnitude cutoff (not drawn ⇒ not part of the point)', () => {
+    const dim = makePlanet({ name: 'D', radiusKm: 1000, albedo: 0.01, semiMajorAxisAu: 1 });
+    const f = fieldWith([dim], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 500, 0))).toBe(false);
+    f.dispose();
+  });
+
+  it('a moon collapses onto its parent planet, not the host', () => {
+    const moon = makePlanet({
+      name: 'M',
+      parentName: 'J',
+      radiusKm: 3000,
+      semiMajorAxisAu: 0.003,
+    });
+    // Moon 0.003 AU from its planet, seen from 2 AU above the planet:
+    // ~0.86 px from the planet (collapsed) while the planet sits ~0.46
+    // rad from the host (resolved).
+    const f = fieldWith([JUPITER_LIKE, moon], [[1, 0, 0], [1.003, 0, 0]]);
+    const camera = cameraAtAu(1, 2, 0);
+    expect(f.isCollapsedOntoParent(1, camera)).toBe(true);
+    expect(f.isCollapsedOntoParent(0, camera)).toBe(false);
+    f.dispose();
+  });
+
+  it('false for an out-of-range instance', () => {
+    const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(5, cameraAtAu(0, 500, 0))).toBe(false);
+    f.dispose();
+  });
+});
