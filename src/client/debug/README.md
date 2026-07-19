@@ -201,7 +201,7 @@ navigate-mode idle cost.
 
 ### Overlay self-gating fast-paths
 
-`disc-mask.ts`, `distance-vector-overlay.ts`, `poi-overlay.ts`,
+`distance-vector-overlay.ts`, `poi-overlay.ts`,
 `focus-ring-overlay.ts`. Each overlay subscribes to `'frame'` and
 runs every frame regardless of state. The empty-state path (no
 focus / no vector) bails in <10 ns before doing any DOM work.

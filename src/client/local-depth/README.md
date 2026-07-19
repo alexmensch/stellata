@@ -223,9 +223,11 @@ pass solves.
 - **Observe** — `uHideIdx` / `hiddenInstanceIdx` (the observe-anchor
   hide) applies to mirror draws exactly as to main-pass instances.
 - **SVG overlays** — a separate compositing channel, always above
-  WebGL. The disc-occlude-mask (constellation lines vs bodies) is
-  unaffected and still required; camera near/far changes don't touch
-  x/y projection, so overlay math is untouched.
+  WebGL; camera near/far changes don't touch x/y projection, so overlay
+  math is untouched. The constellation figure is now WebGL line geometry
+  in the main pass (`../constellation-figure/README.md`), so the local
+  pass's repaint occludes it with a body's true silhouette like any
+  background — no mask.
 - **Eclipse photometry** — `iEclipseDim` survives unchanged: it is
   the *photometric* signal for sub-pixel overlaps, which no depth
   buffer can provide. `iDepthBias` (the geometric half) retires once

@@ -1,5 +1,6 @@
-// Alpha-blended line-loop primitive shared by the orbital-geometry
-// overlays (planet orbit rings, binary orbit paths).
+// Alpha-blended line primitives (loop + segments) shared by the
+// orbital-geometry overlays (planet orbit rings, binary orbit paths) and the
+// constellation figure layer.
 
 import * as THREE from 'three';
 
@@ -21,11 +22,14 @@ export function angularRadiusPx(sizePc: number, distancePc: number, pxPerRad: nu
   return Math.atan(sizePc / Math.max(distancePc, 1e-30)) * pxPerRad;
 }
 
-export function makeOrbitLineMaterial(color: number): THREE.LineBasicMaterial {
+export function makeOrbitLineMaterial(
+  color: number,
+  opacity: number = ORBIT_LINE_OPACITY,
+): THREE.LineBasicMaterial {
   return new THREE.LineBasicMaterial({
     color,
     transparent: true,
-    opacity: ORBIT_LINE_OPACITY,
+    opacity,
     depthTest: true,
     depthWrite: false,
   });
@@ -36,12 +40,29 @@ export function makeOrbitLineLoop(
   material: THREE.LineBasicMaterial,
   renderOrder: number,
 ): THREE.LineLoop {
+  return configureLinePrimitive(
+    new THREE.LineLoop(orbitLineGeometry(points), material), renderOrder);
+}
+
+export function makeOrbitLineSegments(
+  points: Float32Array,
+  material: THREE.LineBasicMaterial,
+  renderOrder: number,
+): THREE.LineSegments {
+  return configureLinePrimitive(
+    new THREE.LineSegments(orbitLineGeometry(points), material), renderOrder);
+}
+
+function orbitLineGeometry(points: Float32Array): THREE.BufferGeometry {
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(points, 3));
-  const loop = new THREE.LineLoop(geom, material);
-  // A sub-AU loop with the camera potentially inside it culls unreliably;
-  // let the GPU clip per-vertex.
-  loop.frustumCulled = false;
-  loop.renderOrder = renderOrder;
-  return loop;
+  return geom;
+}
+
+// A loop or figure with the camera potentially inside it culls unreliably on
+// a bounding-sphere test; let the GPU clip per-vertex.
+function configureLinePrimitive<T extends THREE.Object3D>(line: T, renderOrder: number): T {
+  line.frustumCulled = false;
+  line.renderOrder = renderOrder;
+  return line;
 }

@@ -122,6 +122,7 @@ import {
 } from './star-pipeline/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
+import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
@@ -314,6 +315,10 @@ export class Stellata implements FrameAnchor {
   // Representational layer — only renders when the host is focused.
   private orbitRingsLayer: OrbitRingsLayer;
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
+  private constellationFigureLayer: ConstellationFigureLayer;
+  // Active-figure-set signature; skips a rebuild when a filter emit didn't
+  // change which constellations draw. Poison '\0' forces the first refresh.
+  private conFigureSig = '\0';
   // Physical layer — renders for every attached host regardless of
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
@@ -651,6 +656,8 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.orbitRingsLayer.group);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
     this.scene.add(this.binaryOrbitPathLayer.group);
+    this.constellationFigureLayer = new ConstellationFigureLayer();
+    this.scene.add(this.constellationFigureLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
     this.scene.add(this.planetBodyField.group);
     this.planetMeshLayer = new PlanetMeshLayer(
@@ -828,6 +835,12 @@ export class Stellata implements FrameAnchor {
     // which stales the ride's cached last position (hostLocalPos moved
     // under it). The seed frame re-snaps against the fresh frame.
     this.on('focus', () => { this._planetRideIdx = null; });
+    // Constellation figure lines rebuild when the active set changes: the
+    // highlighted figure, chart ↔ navigate (chart draws all 88), or the
+    // showConstellation master toggle. Detail-cycle permission is a separate
+    // push (buildSceneElementBinds).
+    this.on('filter', () => this.refreshConstellationFigure());
+    this.on('cameraMode', () => this.refreshConstellationFigure());
     // Attach Sol's planet system to the global body field once at
     // startup. Bodies render from now on independent of focus, gated
     // only by apparent-mag visibility + the per-host distance cull.
@@ -919,6 +932,9 @@ export class Stellata implements FrameAnchor {
     if (catalog.solIndex >= 0) {
       this.focus.setFocus(catalog.solIndex);
     }
+    // Seed the constellation figure now that filters + focus are live (its
+    // handlers only fire on later mutations; a URL restore emits 'filter').
+    this.refreshConstellationFigure();
     // No camera-position park here. The bare-URL pose is fully owned by
     // first-load.ts (`applyFirstLoadView`) and `?v=` URLs apply their
     // own cam — both run before first paint in main.ts.
@@ -978,6 +994,29 @@ export class Stellata implements FrameAnchor {
     layer.update(ctx.worldOffset, ctx.distFromSol);
   }
 
+  // Rebuild the constellation figure geometry for the active set: the
+  // highlighted figure, all 88 in chart mode, or none. Skips the rebuild when
+  // the active set is unchanged (filter emits fire on every slider drag).
+  private refreshConstellationFigure(): void {
+    const f = this.filter;
+    const chartActive = f.chart && this.focus.getCameraMode() === 'observe';
+    const sig = `${f.showConstellation ? 1 : 0}|${chartActive ? 1 : 0}|${f.highlightCon}`;
+    if (sig === this.conFigureSig) return;
+    this.conFigureSig = sig;
+    let indices: number[];
+    if (!f.showConstellation) {
+      indices = [];
+    } else if (chartActive) {
+      indices = this.catalog.constellations.map((_, i) => i);
+    } else if (f.highlightCon >= 0) {
+      indices = [f.highlightCon];
+    } else {
+      indices = [];
+    }
+    this.constellationFigureLayer.setFigures(
+      this.catalog.constellations, indices, this._localPositions);
+  }
+
   // One adapter entry per scene layer; registration order is per-frame
   // update order. Lazily-attached layers are read through closures so
   // attach/replace cycles need no re-registration. Warp gating is
@@ -1027,6 +1066,14 @@ export class Stellata implements FrameAnchor {
         this.eclipsePhotometryField?.dispose();
         this.binaryOrbitPathLayer.dispose();
       },
+    });
+    this.layers.register({
+      // After the binary + planet walks so a figure vertex that is a binary
+      // member re-copies its live slot (orbital motion under scrub, epoch
+      // advance, recentre — all land in localPositions with no separate signal).
+      update: () => this.constellationFigureLayer.update(this._localPositions),
+      setMonochrome: (on) => this.constellationFigureLayer.setMonochrome(on),
+      dispose: () => this.constellationFigureLayer.dispose(),
     });
     this.layers.register({
       update: (ctx) => this.updateWarpGatedRefLayer(
@@ -1917,7 +1964,7 @@ export class Stellata implements FrameAnchor {
   get advancedEpochJyr(): number { return this._advancedEpochJyr; }
 
   // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
-  // disc mask, distance vector tip) thread this through renderedSizePx so
+  // distance vector tip) thread this through renderedSizePx so
   // the SVG estimate tracks the rendered disc on eclipsing-binary
   // primaries whose pulsation has been gated off.
   get suppressPulsation(): Float32Array { return this._suppressPulsation; }
@@ -1999,7 +2046,7 @@ export class Stellata implements FrameAnchor {
       binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
       localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
-      constellationFigures: set('constellationFigures'),
+      constellationFigures: set('constellationFigures', (on) => this.constellationFigureLayer.setPermitted(on)),
       molecularCloudEllipsoids: set('molecularCloudEllipsoids'),
       dustParticles: set('dustParticles'),
       planetLabels: set('planetLabels'),

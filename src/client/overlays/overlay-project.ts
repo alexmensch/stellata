@@ -18,7 +18,7 @@ export function projectToScreen(
 }
 
 // Out-param variant for per-frame hot-path callers projecting many points
-// a frame (disc mask, focus ring, constellation lines, HUD arrows) — reuse
+// a frame (focus ring, HUD arrows) — reuse
 // a single caller-owned tuple across calls instead of allocating a fresh
 // one every projection. Returns false (leaving `out` untouched) when the
 // point is at or behind the near plane.

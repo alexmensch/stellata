@@ -1287,16 +1287,6 @@ body.monochrome input[type="range"]::-webkit-slider-thumb,
 body.monochrome input[type="range"]::-moz-range-thumb {
   background: var(--fg);
 }
-#con-figure {
-  fill: none;
-  stroke: rgba(125, 211, 252, 0.85);
-  stroke-width: 1.1;
-  stroke-linecap: round;
-}
-body.monochrome #con-figure {
-  fill: none;
-  stroke: rgba(20, 22, 30, 0.85);
-}
 /* In chart mode the three reference arrows (distance vector + Sol/GC) all
    collapse to the same dark-grey-on-white palette — chart aesthetic
    treats them as identical paper-chart annotations. Backing strokes stay

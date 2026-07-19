@@ -428,7 +428,7 @@ keeps a supergiant at the orbit floor inside the viewport.
 
 `renderedSizePx` in `../camera/controls/star-physics.ts` replicates this
 whole shader pipeline on the CPU (reading `catalog.pulsRho`) so the SVG
-`disc-mask` and focus-ring overlays follow the pulsating disc size
+focus-ring and distance-vector overlays follow the pulsating disc size
 exactly frame-by-frame.
 
 ## Dust extinction

@@ -1,21 +1,15 @@
 # SVG overlays
 
-The SVG layer above the canvas. Constellation stick-figures, the disc
-mask that lets WebGL stars show through SVG paths, the focus ring,
-the distance vector with near-plane clipping, the HUD ring + Sol/GC
-arrows, the per-frame world-to-screen projector, and the shared arrow
-geometry helper.
+The SVG layer above the canvas. The focus ring, the distance vector
+with near-plane clipping, the HUD ring + Sol/GC arrows, the per-frame
+world-to-screen projector, and the shared arrow geometry helper. The
+constellation stick figure is now WebGL line geometry — see
+`../constellation-figure/README.md`.
 
 ## Files in this area
 
 ```
 src/client/overlays/
-  constellation-overlay.ts        Stellarium HIP polyline asterism
-                                  renderer; masked by disc-mask.
-  disc-mask.ts (+ pure + test)    Per-frame circle cutouts for the
-                                  most-recently-focused star + binary
-                                  companion + highlighted constellation's
-                                  vertex discs.
   distance-vector-overlay.ts      Yellow distance line A → B with
                                   near-plane clipping; chevrons +
                                   distance label (click = aim at the
@@ -42,8 +36,7 @@ src/client/overlays/
                                   allocates a fresh tuple per call;
                                   projectToScreenInto writes into a
                                   caller-owned tuple for per-frame hot
-                                  paths (disc-mask, focus ring,
-                                  constellation lines, HUD).
+                                  paths (focus ring, HUD).
   arrow-fade.ts (+ test)          Shared shaft-fade curve for Sol/GC
                                   arrows + future arrow consumers.
   arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)
@@ -53,60 +46,6 @@ src/client/overlays/
                                   POI labels and the distance-vector
                                   destination label.
 ```
-
-## Constellation stick-figure overlay
-
-`FilterState.showConstellation` is the master visibility flag for both
-the stick-figure overlay and the chart-mode Latin-name labels (default
-on, panel toggle at the top of Overlays). When false the overlay clears
-itself and skips the per-frame projection pass entirely; the picker UI
-in the panel is also disabled while the flag is off so users can't
-mutate the unseen `highlightCon`. The declutter cycle AND's a second
-gate: the overlay is `constellationFigures` (floor `representational`),
-so `update()` also requires `stellata.detailPermits('constellationFigures')`
-(`../scene/README.md`).
-
-The overlay carries a **full-tick skip** (same pattern as
-`chart-labels.ts` — see `../debug/README.md` § full-tick skip): the
-path `d` is a pure function of camera pose, viewport, advanced epoch,
-and filter state, so a tick whose tuple matches the previous one
-returns before any projection or string building. Filter / camera-mode
-changes poison the pose sentinel so the next tick always recomputes.
-
-When a constellation is highlighted, `constellation-overlay.ts` draws
-the classical asterism lines (sourced from Stellarium at build time
-and embedded in `public/constellations.json`) as an SVG
-`<path id="con-figure">`. Every segment is emitted as a separate
-`M..L..` subpath with both endpoints pulled back by `STAR_GAP_PX`, and
-the path uses `stroke-linecap: round`. Net effect: each stick-figure
-line is a rounded-end segment with a circular gap around every
-vertex star, so the actual star glyphs remain visible through the figure.
-
-The `<path>` also applies `mask="url(#disc-occlude-mask)"`. The mask is
-driven per-frame by `disc-mask.ts` which cuts out circles at the
-projected position + rendered size of every visible disc that the lines
-might pass through: the **most-recently-focused** star + its binary
-companion (not the *current* focus — the mask persists after Esc so the
-just-unfocused star stays masked while its disc still clears the
-threshold; the entry self-evicts when the disc shrinks below it), plus
-every vertex star in the highlighted constellation whose disc still
-exceeds the threshold. Iterating constellation members (rather than
-scanning the catalog) bounds the work to the few dozen vertex stars per
-constellation; the cutout pool grows on demand. That gives the visual
-effect of constellation lines passing *behind* a close-range resolved
-disc rather than being painted on top of it. The cutout circle's radius
-tracks the disc's variable-star pulsation exactly via `renderedSizePx`
-replicating the shader math, so there's no stale gap as a variable
-shrinks. SVG renders above the canvas unconditionally, so this masking
-is the only practical substitute for real z-ordering between WebGL
-content and SVG overlays.
-
-Earlier versions also drew a convex hull around the top-N brightest
-constellation members. That layer was removed — the hull is defined by
-*what's bright from Earth*, while the figure is defined by *what humans
-traditionally drew as the shape*. When the camera isn't at Sol those
-two answers diverge, and showing the hull was more confusing than
-helpful. The 3D-deforming stick figure alone conveys the intent.
 
 ## Vector clipping at the near plane
 
@@ -128,7 +67,7 @@ If you see a disappearing vector, check this logic first.
 
 ## OBSERVE-mode hides
 
-Three SVG layers conditionally hide while `cameraMode === 'observe'`:
+Two SVG layers conditionally hide while `cameraMode === 'observe'`:
 
 - **Focus ring** (`focus-ring-overlay.ts`) — hidden in steady-state
   observe (the ring is meaningless when the camera sits *at* the focal
@@ -136,18 +75,6 @@ Three SVG layers conditionally hide while `cameraMode === 'observe'`:
   0 (enter) or back to 24 px (exit) instead of hard-hiding so it visually
   morphs through the HUD ring. The eased progress comes from
   `Stellata.getObserveTransitionProgress()`.
-- **Disc mask cutouts** (`disc-mask.ts`) — all cutouts (focal,
-  companion, and constellation members) are skipped when in observe.
-  The focal disc isn't rendered, and any other disc-rendering star
-  would have to be near enough to a camera parked at the focal star
-  to clear the threshold — far enough away in practice that the
-  whole-mask early-return is a safe simplification. The
-  camera-position invariant is enforced in `stellata.ts setFocus` —
-  on observe entry the camera moves to the focal star's local origin
-  (`camera.position.set(0, 0, 0)` after the floating-origin recentre),
-  so every other catalog star sits at least one inter-star gap away
-  (parsec-scale at minimum), well beyond `DISC_THRESHOLD_PX` at any
-  reasonable FOV.
 - **Distance vector + To-row** — distance-vector measurement is
   meaningless from a camera parked on its own anchor; the search
   box's To-row hides via `syncFocusUI` and the underlying
@@ -260,9 +187,9 @@ purpose, not by mimicry of whichever neighbour they read first.**
     — one independent input flipping forces the full redraw even though
     only one attribute would actually change.
 
-- **Per-attribute dirty-track** (used by `constellation-overlay.ts`,
-  `disc-mask.ts`, `distance-vector-overlay.ts`, `hud-overlay.ts`,
-  `poi-overlay.ts`). Always run the full per-frame computation, then gate
+- **Per-attribute dirty-track** (used by `distance-vector-overlay.ts`,
+  `hud-overlay.ts`, `poi-overlay.ts`). Always run the full per-frame
+  computation, then gate
   each `setAttribute` / `setStyle` / `textContent` write through
   `dirty-attr.ts` helpers (`setNumAttr`, `setStrAttr`, `setStyle`,
   `setText`) against a per-attribute sentinel.
@@ -274,8 +201,8 @@ purpose, not by mimicry of whichever neighbour they read first.**
     attribute keys off the same input — strictly more JS work than the
     signature gate on a stationary frame.
 
-The **default for new overlays is per-attribute**, matching the five files
-the pattern scaled to in PR #55. Pick whole-frame signature only when the
+The **default for new overlays is per-attribute**, matching the pattern's
+existing consumers. Pick whole-frame signature only when the
 inputs collapse cleanly into a small key string AND the per-frame
 computation is more expensive than the SVG writes it would gate. Mixing
 the two strategies on a single overlay's outputs is a mistake — the

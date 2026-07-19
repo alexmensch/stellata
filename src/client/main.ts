@@ -10,8 +10,6 @@ import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
-import { createConstellationOverlay } from './overlays/constellation-overlay';
-import { createDiscMask } from './overlays/disc-mask';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -211,8 +209,6 @@ async function main() {
     // `cloudCatalog` directly when re-enabling.
     bindSearch(stellata, catalog, searchIndex, starLabels, null, lgCatalog);
     bindFindSearch(stellata, catalog, searchIndex, null, lgCatalog);
-    createDiscMask(stellata);
-    createConstellationOverlay(stellata);
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);

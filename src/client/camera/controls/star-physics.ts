@@ -143,7 +143,7 @@ export interface RenderedSizeArgs {
 }
 
 // Approximate the GPU-rendered pixel size of a star's quad so SVG /
-// overlay code (focus ring, disc mask, distance-vector tip) can align
+// overlay code (focus ring, distance-vector tip) can align
 // to the rendered disc edge. Mirrors the vertex-shader angular-diameter
 // formula and the variability-compression rule in star.vert.glsl; if
 // the shader's size computation changes, this must change in lockstep.
@@ -166,8 +166,8 @@ export function renderedSizePx(args: RenderedSizeArgs): number {
   const period = periodDays[idx];
   const amp = amplitudeMag[idx];
   // Mirror the shader's `iSuppressPulsation` gate so the SVG focus
-  // ring + disc mask track the rendered disc on eclipsing binaries
-  // whose pulsation has been gated off.
+  // ring + distance-vector tip track the rendered disc on eclipsing
+  // binaries whose pulsation has been gated off.
   const suppressed = args.suppressPulsation
     ? args.suppressPulsation[idx] > 0.5
     : false;

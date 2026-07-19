@@ -25,7 +25,7 @@ themselves.
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
   `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/`,
-  `local-bubble/` — render layers.
+  `local-bubble/`, `constellation-figure/` — render layers.
 - `fresnel-shell/` — shared translucent-boundary-shell primitive
   (material + shader pair + gating base) used by the heliopause and the
   Local Bubble.
@@ -231,10 +231,10 @@ There is no z-ordering between WebGL and SVG. The WebGL canvas paints
 first; the SVG `#overlay` always sits above it (`z-index: 5`,
 `pointer-events: none`). Inside each layer the ordering is local:
 WebGL by `THREE.Object3D.renderOrder`, SVG by source order in
-`src/client/index.html` (later child = on top). The disc-mask cuts
-holes through the constellation stick-figure path so close discs read
-as if they were in front of the lines — it is not a real z-order
-mechanism.
+`src/client/index.html` (later child = on top). The constellation
+figure is depth-tested WebGL line geometry (`renderOrder −0.75`), so
+close star and planet discs occlude it through the depth buffer — no
+SVG mask (`constellation-figure/README.md`).
 
 | Layer                                            | Surface | Mechanism                                          | Order | Owner |
 | ------------------------------------------------ | ------- | -------------------------------------------------- | :---: | ----- |
@@ -250,8 +250,7 @@ mechanism.
 | Distance vector + bg                             | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Sol/GC arrows + bg                               | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
-| Galactic grid l/b labels                         | SVG     | source order (just above constellation figure)     |       | [galactic/](galactic/README.md) |
-| **Constellation stick-figure**                   | SVG     | first SVG child + `mask="url(#disc-occlude-mask)"` |       | [overlays/](overlays/README.md) |
+| Galactic grid l/b labels                         | SVG     | source order (first SVG child)                     |       | [galactic/](galactic/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow                                      | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
 | Planet disc                                      | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
@@ -264,6 +263,7 @@ mechanism.
 | Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
 | Star disc                                        | WebGL   | `renderOrder: 0`                                   |       | [star-pipeline/](star-pipeline/README.md) |
 | Binary orbit paths                               | WebGL   | `renderOrder: -0.5`                                |       | [binaries/](binaries/README.md) |
+| Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
 | Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
 | Local Bubble shell                               | WebGL   | `renderOrder: -1`                                  |       | [local-bubble/](local-bubble/README.md) |
 | Molecular clouds (shelved)                       | WebGL   | `renderOrder: -2`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |

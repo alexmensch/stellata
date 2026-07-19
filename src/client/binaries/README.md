@@ -466,7 +466,7 @@ annulus where `dim` is still 1. The bias therefore fires when
 `θ < renderedRadius_pri + renderedRadius_sec`, the rendered angular
 radii supplied per frame by the integration shell via
 `star-physics.ts:renderedSizePx` (the same CPU mirror the focus
-ring/disc mask trust). This set is a superset of the dimmed set. The
+ring + distance-vector tip trust). This set is a superset of the dimmed set. The
 `front` verdict is valid across this whole annulus — `eclipse-photometry-pure`
 computes it before the physical-overlap test.
 
@@ -507,5 +507,5 @@ we can't derive.
 
 `star-physics.ts`'s `renderedSizePx` reads the same suppress mask
 (via the optional `suppressPulsation` arg) so the SVG focus ring +
-disc mask + distance-vector tip track the rendered (un-modulated)
+distance-vector tip track the rendered (un-modulated)
 disc on suppressed primaries.
