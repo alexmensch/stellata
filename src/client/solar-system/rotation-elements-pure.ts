@@ -44,10 +44,17 @@ export const EARTH_ROTATION: RotationElements = {
   w0Deg: 190.147, wDegPerDay: 360.9856235,
 };
 
+// NOT the raw pck00011 linear row: Mars's linear terms are incomplete
+// without the ~71-kyr NUT_PREC precession terms (RA +0.419°·sin,
+// Dec +1.591°·cos, W +0.585°·sin of 0.5042615°/cty angles) — the bare
+// row misplaces the pole by 1.55° and the meridian by 0.58°. These
+// coefficients are that sum linearised at J2000 (≤ 0.06° error across
+// the model window); texture-orientation.test.ts pins the result
+// against Horizons. Do not "correct" them back to the pck row.
 export const MARS_ROTATION: RotationElements = {
-  poleRaDeg: 317.269202, poleRaDegPerCty: -0.10927547,
-  poleDecDeg: 54.432516, poleDecDegPerCty: -0.05827105,
-  w0Deg: 176.049863, wDegPerDay: 350.891982443297,
+  poleRaDeg: 317.681106, poleRaDegPerCty: -0.10859696,
+  poleDecDeg: 52.886346, poleDecDegPerCty: -0.06158182,
+  w0Deg: 176.631819, wDegPerDay: 350.891982430062,
 };
 
 export const JUPITER_ROTATION: RotationElements = {

@@ -582,12 +582,20 @@ pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
 `W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
 Cartographic Coordinates and Rotational Elements 2015 report
 (Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`. The
-sub-degree periodic nutation/precession terms are dropped: at render
-scale they're invisible (largest is Neptune's ±0.7° pole nod), and
-the linear pole rates already carry the visually meaningful part
-(Earth's axial precession drifts the pole ~30° across the model-clock
-window). `t` is treated as TDB via `tToJDE` — the ~69 s UTC↔TDB gap
-is ~0.3° of Earth spin, accepted repo-wide.
+periodic nutation/precession terms are dropped, with two caveats:
+Mars's pck linear row is incomplete WITHOUT its ~71-kyr slow terms
+(1.55° of pole Dec, 0.58° of W) — those are folded into the table as
+a J2000 linearisation (see the MARS_ROTATION comment) — and the
+dropped short-period librations are not all sub-degree (Moon E1
+terms ~3.9°, Europa ~1°, Neptune's ±0.7° pole nod; follow-up bead
+filed). The linear pole rates carry the visually meaningful secular
+part (Earth's axial precession drifts the pole ~30° across the
+model-clock window). `t` is treated as TDB via `tToJDE` — the ~69 s
+UTC↔TDB gap is ~0.3° of Earth spin, accepted repo-wide.
+`texture-orientation.test.ts` pins the whole orientation → texture-UV
+chain (pole-up, no mirror, prime meridian) against frozen JPL
+Horizons sub-observer lon/lat for Mars, Ganymede, and Io
+(`data/horizons/sub-observer-truth.tsv`).
 
 The mesh layer composes body→ICRS as `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`
 (the IAU convention: body +z = pole, +x = prime meridian, W measured

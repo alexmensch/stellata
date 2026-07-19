@@ -23,6 +23,44 @@ import ringsFrag from './planet-rings.frag.glsl?raw';
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 
+/** Geometry pole tilt: SphereGeometry's +Y pole (texture v = 1, the
+ *  image top) onto the body-frame +z the IAU chain treats as north. */
+export const POLE_TILT = new THREE.Quaternion().setFromAxisAngle(
+  X_AXIS,
+  Math.PI / 2,
+);
+
+const _iauTmpA = new THREE.Quaternion();
+const _iauTmpB = new THREE.Quaternion();
+
+/** IAU pole frame `Rz(90°+α0)·Rx(90°−δ0)` at model time `t` → `out`. */
+export function iauPoleQuat(
+  rot: RotationElements,
+  t: number,
+  out: THREE.Quaternion,
+): THREE.Quaternion {
+  const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
+  return out
+    .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
+    .multiply(_iauTmpA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)));
+}
+
+/** Full mesh orientation: the IAU body→ICRS composition
+ *  `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`, then POLE_TILT. The map-centre
+ *  offset rides the spin term so texture features land on their true
+ *  longitudes. Exported so tests pin the exact rendered composition
+ *  against external ephemeris truth. */
+export function iauMeshOrientationQuat(
+  rot: RotationElements,
+  t: number,
+  out: THREE.Quaternion,
+): THREE.Quaternion {
+  const spinDeg = spinDegAt(rot, t) + (rot.mapCenterLonDeg ?? 0);
+  return iauPoleQuat(rot, t, out)
+    .multiply(_iauTmpB.setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(spinDeg)))
+    .multiply(POLE_TILT);
+}
+
 interface RingEntry {
   mesh: THREE.Mesh;
   material: THREE.ShaderMaterial;
@@ -59,14 +97,8 @@ export class PlanetMeshLayer {
   private readonly tmpSun = new THREE.Vector3();
   private readonly tmpCaster = new THREE.Vector3();
   private readonly viewInverse = new THREE.Matrix4();
-  private readonly tmpQuatA = new THREE.Quaternion();
-  private readonly tmpQuatB = new THREE.Quaternion();
   private readonly tmpQuatRing = new THREE.Quaternion();
   private readonly tmpQuatInv = new THREE.Quaternion();
-  private readonly poleTilt = new THREE.Quaternion().setFromAxisAngle(
-    X_AXIS,
-    Math.PI / 2,
-  );
 
   constructor(field: PlanetBodyField, textureBaseUrl: string) {
     this.field = field;
@@ -139,7 +171,7 @@ export class PlanetMeshLayer {
 
       const hp = this.field.hostPlanetOf(idx);
       if (planet.rotation) {
-        this.applyIauOrientation(mesh, planet.rotation, t);
+        iauMeshOrientationQuat(planet.rotation, t, mesh.quaternion);
       } else {
         // Fallback for bodies without published elements: geometry
         // pole (+Y) → orbital-plane normal (host frame +Z) → ICRS via
@@ -148,7 +180,7 @@ export class PlanetMeshLayer {
           ? null
           : this.field.hostOrientationOf(hp.hostStarIdx);
         if (orientation) {
-          mesh.quaternion.copy(orientation).multiply(this.poleTilt);
+          mesh.quaternion.copy(orientation).multiply(POLE_TILT);
         }
       }
 
@@ -276,30 +308,6 @@ export class PlanetMeshLayer {
 
   /** `out` ← Rz(90°+α0)·Rx(90°−δ0): local +z lands on the body's IAU
    *  pole in ICRS. */
-  private setIauPole(
-    out: THREE.Quaternion,
-    rot: RotationElements,
-    t: number,
-  ): THREE.Quaternion {
-    const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
-    return out
-      .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
-      .multiply(this.tmpQuatA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)));
-  }
-
-  /** IAU body→ICRS composition Rz(90°+α0)·Rx(90°−δ0)·Rz(W), then the
-   *  geometry pole tilt (+Y → body +z). The map-centre offset rides
-   *  the spin term so texture features land on their true longitudes. */
-  private applyIauOrientation(
-    mesh: THREE.Mesh,
-    rot: RotationElements,
-    t: number,
-  ): void {
-    const spinDeg = spinDegAt(rot, t) + (rot.mapCenterLonDeg ?? 0);
-    this.setIauPole(mesh.quaternion, rot, t)
-      .multiply(this.tmpQuatB.setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(spinDeg)))
-      .multiply(this.poleTilt);
-  }
 
   /** Pose + light the ring annulus: equatorial plane from the IAU
    *  pole (host orbital plane when elements are absent), sun and
@@ -322,7 +330,7 @@ export class PlanetMeshLayer {
       return;
     }
     if (planet.rotation) {
-      this.setIauPole(this.tmpQuatRing, planet.rotation, t);
+      iauPoleQuat(planet.rotation, t, this.tmpQuatRing);
     } else {
       const orientation = hp === null
         ? null

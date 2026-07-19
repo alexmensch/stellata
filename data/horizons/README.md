@@ -7,6 +7,21 @@ Horizons API. Consumed only by the sky-truth regression corpus
 production Standish-ephemeris → ecliptic→ICRS chain lands each body
 within tolerance of these positions. Never read at build time.
 
+A second table, `sub-observer-truth.tsv`, freezes geocentric
+sub-observer and sub-solar lon/lat for Mars, Ganymede, and Io at the
+same three epochs (`QUANTITIES='14,15'`, retrieved 2026-07-19).
+Consumed by `src/client/solar-system/texture-orientation.test.ts`,
+which pins the full IAU-orientation → texture-UV chain. Columns:
+`body`, `jd_ut`, then `ob_lon_west_deg` / `ob_lat_deg` (quantity 14)
+and `subsol_lon_west_deg` / `subsol_lat_deg` (quantity 15). All three
+bodies use the IAU **positive-west** planetographic longitude
+convention (`{West-longitude positive}` in the Horizons header) —
+east longitude = 360 − value. Latitudes are planetographic; the
+planetocentric difference is bounded by ~0.35° for Mars's flattening
+and sits inside the test tolerance. Horizons evaluates both
+quantities at the light-time-corrected emission epoch, so the
+consumer retards the spin angle by one light time.
+
 ## Provenance
 
 - Source: JPL Horizons API (`https://ssd.jpl.nasa.gov/api/horizons.api`),
