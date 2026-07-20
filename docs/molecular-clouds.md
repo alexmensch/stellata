@@ -18,20 +18,31 @@ the shelved cloud presence layer in `src/client/molecular-clouds/`.
 Four decisions, settled with the user (2026-07-03), that revise or
 refine the epic's original scoping:
 
-1. **Edenhofer stays the extinction baseline; Zucker is a floor, not
-   a replacement.** The Edenhofer volume is a reconstruction of real
-   dust and already contains every in-grid cloud. Only the 12
-   Zucker 2021 clouds carry density information (fitted Plummer
-   profiles + masses + peak A_K); the other 84 Zucker 2020 entries
-   are bare centroid+radius spheres. The bake is therefore
-   `voxel = max(edenhofer, cloudModel)` for the 12 profiled clouds
-   (§ 4), and **no density change** for the 84 spheres — they are
-   already present in Edenhofer at better fidelity than a uniform
-   sphere. The spheres contribute identity only: name, taxonomy,
-   embedded stars, presence-pass geometry. This supersedes the
-   epic's "Zucker replaces Edenhofer in overlap regions" — the
-   `max()` still guarantees the per-star raymarch is the single
-   source of truth for absorption, which was that decision's intent.
+1. **Edenhofer alone is the extinction field; Zucker calibrates the
+   presence model.** The original plan (settled 2026-07-03) baked
+   `max(edenhofer, cloudModel)` for the profiled clouds on the belief
+   that Edenhofer's posterior mean under-recovers dense cores. A.2's
+   measurements overturned the premise: the under-recovery in the app
+   was the *encode ceiling's* fault — the 99.95th-percentile
+   `DENSITY_MAX` autotune (0.0053 E_ZGR/pc) clipped the raw field 25×,
+   crushing peak cloud columns to 0.06–0.6 mag where the raw data
+   carries 0.8–2.7 mag. With the ceiling fixed (§ 2.2), peak Edenhofer
+   columns reach 0.3–1.0× the Zucker Leike-resolution targets
+   (Ophiuchus 1.03×), consistent with 1 pc → 4.9 pc beam dilution —
+   i.e. Edenhofer is *not* materially biased at our grid scale. The
+   ellipsoid overlay, by contrast, is morphologically wrong: real
+   cores sit off-centre in their bboxes (Ophiuchus's centroid chord
+   through Edenhofer is 0.09 mag vs 2.7 at the true core), so a
+   centroid-anchored `max()` mints a second fake core per cloud and
+   corrupts clean sightlines (Antares: 0.84 mag — matching the
+   literature 0.6–0.8 — bulldozed to 2.4 by the overlay). Per-star
+   extinction therefore reads **pure Edenhofer**; the calibrated
+   Zucker model (§ 4) ships in `clouds.json` v2 and drives only the
+   presence pass. `build-dust.py` asserts the per-cloud peak-column
+   ratios each run (`zucker` block in the dust manifest) so an encode
+   regression is caught at build time. The 84 Zucker 2020 spheres
+   contribute identity only: name, taxonomy, embedded stars,
+   presence-pass geometry.
 2. **Out-of-grid clouds are presence-only.** 18 of 96 clouds extend
    beyond the ±1250 pc voxel cube (Carina 2.5 kpc, IC 2944, L379,
    Maddalena, W3/W4/W5, Gem OB1, M16, M17, Rosette, …). They render
@@ -41,14 +52,12 @@ refine the epic's original scoping:
    `stellata-ju3` (galactic-arm dust / grid extension); its scoping
    bead carries the hand-off context (Edenhofer's
    `less_data_but_2kpc` flavor covers 14 of the 18).
-3. **Coarse noise octaves bake into the voxels; fine octaves render
-   in-shader.** The substructure noise ladder (§ 5) splits at the
-   voxel Nyquist scale (~10 pc): wavelengths ≥ 10 pc are baked
-   mass-conservingly into the extinction field, so stars behind
-   large-scale density enhancements genuinely dim more; wavelengths
-   below that render only in the presence-pass shader, where the
-   grid could never represent them anyway. Same noise function and
-   frequency ladder on both sides so the two agree at shared scales.
+3. **The substructure noise ladder is wholly shader-side.** With no
+   synthetic density baked into the voxels (decision 1 — the real
+   Edenhofer structure *is* the coarse variance), the noise ladder
+   (§ 5) exists only in the presence-pass shader, band-limited per
+   § 9.1. Its constants ship as the `noiseModel` block in
+   `clouds.json` v2 so A.4/A.6 read one source of truth.
 4. **Embedded stars come from an in-catalog cross-match, behind a
    generic reader interface.** Build-time point-in-ellipsoid test of
    catalog stars with O/early-B spectral types against cloud
@@ -91,35 +100,38 @@ That range applies to sub-0.1 pc pencil beams (2D NICEST-style maps:
 Taurus max A_K 0.90 → A_V ≈ 7.7; Ophiuchus 1.99 → ≈ 17). At the
 4.88 pc voxel scale the correct, area-averaged columns are what the
 Leike-resolution 3D values give: Zucker Table 3 `max_ak_leike` 0.19 –
-0.38 → **A_V ≈ 1.6 – 3.3 through the densest cores**. That is the
-calibration target for the *smooth* baked field. The baked coarse
-noise (§ 5) then pushes voxel-to-voxel variance so unlucky sightlines
-reach ~2–3× that (≈ 5–9 mag) — physically justified by the log-normal
-column-density PDF — and the presence pass's fine octaves convey the
-darker sub-beam cores visually. Per-star extinction deliberately does
+0.38 → **A_V ≈ 1.6 – 3.3 through the densest cores** — and those
+values are themselves 1 pc-beam peaks, so the 4.9 pc grid's peak
+columns legitimately land below them (measured 0.3–1.0×, § 1
+decision 1). The presence pass's fine octaves convey the darker
+sub-beam cores visually. Per-star extinction deliberately does
 **not** reach 25 mag: no 4.9 pc-averaged column does.
 
-### 2.2 Encoding ceiling — DENSITY_MAX must rise
+### 2.2 Encoding ceiling — the fixed DENSITY_MAX
 
-Current manifest: `densityMax = 5.33×10⁻³` E_ZGR/pc → max
-0.0146 A_V mag/pc → even a 30 pc path of saturated voxels yields only
-0.44 mag. The calibrated Taurus core needs peak voxel rates around
-0.3 mag/pc (ρ_ZGR ≈ 0.11), ~20× the current ceiling. A.2 raises
-`DENSITY_MAX` to **0.15 E_ZGR/pc** (headroom over the computed peak
-across all 12 clouds + noise; recompute at bake and assert). Cost:
-the 255-step log window widens from 4.73 to 6.18 decades →
-quantisation step grows from 4.4 %/step to 5.7 %/step — invisible
-against everything downstream. The shader decodes from manifest
-constants, so no client change beyond the regenerated data.
+The pre-A.2 manifest autotuned `densityMax` to the 99.95th percentile
+of nonzero voxels: 5.33×10⁻³ E_ZGR/pc → max 0.0146 A_V mag/pc → even
+a 30 pc path of saturated voxels yielded only 0.44 mag, while the raw
+Edenhofer field peaks at 0.135 E_ZGR/pc (the ρ Oph core) — a silent
+25× clip of every dense core. A.2 replaced the autotune with a fixed
+`DENSITY_MAX_REAL = 0.2` (raw grid max × 1.2 headroom, asserted at
+every build). Cost: the 255-step log window widens from 4.73 to 6.30
+decades → quantisation step grows from 4.4 %/step to 5.9 %/step —
+invisible against everything downstream. The shader decodes from
+manifest constants, so no client change beyond the regenerated data.
 
-Stale-comment sweep for A.2: `star.vert.glsl`'s `DUST_AV_HEADROOM`
-comment claims clouds peak at A_V ~1–2 mag; after the bake the
-correct statement is ~3–8 mag through the profiled cores. The
-prefilter logic itself stays correct (extinction only dims; the
-headroom only controls which too-faint stars still pay for the
-raymarch) but re-derive whether 1.5 mag is still the right
-cost/correctness trade once real columns exist, and rewrite the
-comment.
+The de-extinction invariant (`scripts/catalog/README.md` § Build-time
+de-extinction) means the catalog rebuild ships with the re-encoded
+grid: intrinsic absmags of stars behind dense dust brightened by up
+to ~1.8 mag (the corpus pins for Antares moved by the Ophiuchus-edge
+sightline's restored 0.43 mag).
+
+A.2's `DUST_AV_HEADROOM` sweep in `star.vert.glsl` re-derived the
+prefilter and **removed** the headroom term: extinction only dims
+(A_V ≥ 0), so a star whose unextincted appMag exceeds the soft-taper
+bound can never become visible — the prefilter is exact with zero
+headroom, and the 1.5 mag term only made too-faint stars pay for the
+raymarch.
 
 ## 3. Cloud geometry model
 
@@ -141,37 +153,37 @@ spine, and the ellipsoid's short axis is our best available proxy for
 bboxes are what Table 1 publishes. The noise anisotropy in § 5.3
 restores the elongated look.)
 
-## 4. Per-cloud density model
+## 4. Per-cloud density model — the presence-pass field
 
-### 4.1 The 12 profiled clouds (Zucker 2021)
+The analytic model below drives the presence pass (A.6) and the
+embedded-star/cavity work (A.5). It does **not** modify the voxel
+extinction field (§ 1 decision 1). Shared implementation:
+`scripts/clouds/cloud_model.py`, consumed by `build-clouds.py`
+(clouds.json v2 fields) and `build-dust.py` (the column check).
+
+### 4.1 The 11 profiled clouds (Zucker 2021)
 
 Plummer-like profile, parameters from Table 2 (`n0`, `rflat`, `p` —
-Plummer columns, not the Gaussian fits):
+Plummer columns, not the Gaussian fits). Corona Australis has a
+Table 1 bbox but **no Table 2/3 rows** — it takes the § 4.3 class
+defaults, so 11 of the 12 ellipsoids are profiled. Semi-axes floor at
+3 pc per axis (matching the renderer; Musca's fitted bbox is 0.5 pc
+thin).
 
 ```
-n(x) = n0_cal · (1 + (r_eff(x)/rflat)²)^(−p/2) · envelope(u)
-envelope(u) = 1 − smoothstep(0.85, 1.0, u)        # soft edge at bbox
+n(x) = n0_cal · (1 + (r_eff(x)/rflat)²)^(−p/2) · envelope(u, u_env)
+envelope(u, u_env) = 1 − smoothstep(0.85·u_env, u_env, u)
 ```
 
-`n0_cal` is the calibrated amplitude (§ 4.2), NOT Table 2's `n0`.
+`n0_cal` is the calibrated amplitude (§ 4.2), NOT Table 2's `n0`;
+`u_env ≤ 1` is the mass-budget envelope tightening (§ 4.2).
 Fitted values for reference (Table 2): Taurus n0 = 72.8 cm⁻³,
 rflat = 1.2 pc, p = 1.2; Perseus 47.8 / 6.1 / 2.4; Orion B 50.3 /
 8.1 / 3.0; etc. Note p ≤ 2 profiles have slowly-converging columns —
 all column integrals are taken numerically with the envelope cutoff,
 never analytically to infinity.
 
-Baked voxel value (A.2):
-
-```
-voxel = max( edenhofer(x), ρ_ZGR(n(x)) · noise_coarse(x) · cavity(x) )
-```
-
-`max()` (not `+`) is the double-counting guard: where Edenhofer
-already recovered the cloud, the model only fills in what the
-reconstruction under-recovers (Edenhofer's posterior mean is biased
-low in the densest, most poorly-constrained cores).
-
-### 4.2 Calibration procedure (A.2, per cloud)
+### 4.2 Calibration procedure (per cloud)
 
 1. Compute the model column through the centroid along the shortest
    axis: `N_A_V = ∫ 1.65×10⁻³ · n(l) dl` (numeric, envelope-bounded).
@@ -179,26 +191,25 @@ low in the densest, most poorly-constrained cores).
    Leike-scale values are the resolution-matched truth for a 3D
    grid; NICEST 2D values are sub-beam and would over-darken every
    sightline (§ 2.1).
-3. Mass sanity check: `M_model = μ m_H ∫ n dV` with μ = 1.37 per H
-   nucleon. Assert `M_model` within a factor of 2 of Table 3
-   `mass_leike`. (Expect agreement well inside that — same
-   underlying map. `mass_nicest`/`mass_leike` ratios up to 13.7×
-   for Orion λ show how resolution moves these numbers; we stay
-   internally consistent with Leike/Edenhofer-class resolution.)
-4. Assert the peak baked density (including coarse noise) fits under
-   the new `DENSITY_MAX` with ≥ 20 % headroom.
+3. Mass budget: `M_model = μ m_H ∫ n dV` with μ = 1.37 per H
+   nucleon. A filled ellipsoid at the observed peak column
+   over-masses elongated / flat-profile clouds (a real cloud is a
+   filament inside its bbox): where `M_model` exceeds
+   2 × `mass_leike`, the envelope tightens (`u_env < 1`, bisected
+   jointly with the re-solved `n0_cal`) until the budget holds.
+   Measured u_env: 1.0 for Taurus/Ophiuchus/Perseus/Orion A/B;
+   0.49 Pipe; 0.72 Cepheus; 0.22 Orion λ — the ring morphology the
+   centrally-peaked model cannot represent (A.5's 30 pc cavity carve
+   owns it).
 
-Pin all 12 calibrated `n0_cal` values in a vitest snapshot
-(`toBe`-style, per the write-time test discipline) so catalog or
-constant drift is caught.
+All 11 calibrated `n0_cal` + `u_env` values are pinned in
+`scripts/clouds/clouds-json.test.ts` (`toBe`, per the write-time test
+discipline) so table or constant drift is caught.
 
-### 4.3 The 84 sphere clouds (Zucker 2020)
+### 4.3 The sphere clouds (Zucker 2020) + Corona Australis
 
-No density data → **no bake contribution** (Edenhofer already
-carries them). The analytic model still needs an amplitude for the
-presence pass and for out-of-grid extinction context, so assign a
-class-based default column and derive the amplitude from the sphere
-radius R:
+No density data → class-based default column, amplitude derived from
+the sphere radius R (Coraus: its floored shortest semi-axis):
 
 ```
 A_V_target(class):  dark 2.0, sf 3.0, hii 4.0   (mag, through centre)
@@ -231,28 +242,31 @@ octaves' ridged shaping, not as a separate PDF term.
 ### 5.2 The multiplicative field
 
 ```
-ρ(x) → ρ(x) · exp( σ_s · g(x) − σ_s²/2 )
+ρ(x) → ρ(x) · exp( σ_s · g(x) − σ_s²/2 )        g clamped to ±2.5σ
 ```
 
-`g` is unit-variance fBm; the `−σ_s²/2` offset makes the field
-mean-preserving in expectation. A.2 additionally renormalises each
-baked cloud numerically so total mass is *exactly* conserved after
-noise + cavities (the log-normal correction is exact only for
-infinite samples).
+`g` is a unit-variance octave sum; the `−σ_s²/2` offset makes the
+field mean-preserving in expectation, and the clamp bounds the
+log-normal tail (the presence integral must stay finite and
+band-limited, § 9.1).
 
-The octave ladder is one geometric sequence (lacunarity 2,
-persistence ≈ 0.55, base wavelength = the cloud's major diameter),
-**split by rendering surface**:
+The octave ladder is one geometric sequence (lacunarity 2, base
+wavelength = the cloud's major diameter, down to ~0.3 pc), evaluated
+wholly in the presence-pass shader (§ 1 decision 3). Per-octave
+variance follows a turbulence power-law — ratio 2^(3−β) per octave
+toward finer scales with β ≈ 2 (supersonic-turbulence density
+spectra are shallower than Kolmogorov), so variance concentrates at
+small scales. All ladder constants ship in the `noiseModel` block of
+`clouds.json` v2 (single source of truth for A.4/A.6):
+`{lacunarity, betaSpectral, lambdaMinPc, domainStretchMajor,
+noiseClampSigma, ridgedFinestCount, ridgedExponent, sigmaS,
+hash: pcg3d, interp: quintic}` — the noise function is
+quintic-interpolated lattice value noise under a PCG3D hash,
+expressible in GLSL ES 3.0 uint arithmetic.
 
-- **Baked (A.2):** octaves with wavelength ≥ 10 pc (≈ 2 voxels).
-  Carries σ_s,coarse — the fraction of total σ_s² in those octaves.
-- **Shader (A.4/A.6):** the continuation of the same ladder from
-  10 pc down to ~0.3 pc (≈ 5 octaves), carrying the remaining
-  variance. Evaluated per-sample in the presence-pass raymarch.
-
-Seeded per cloud (`seed` in the schema, § 8) with world-space
-(cloud-local-frame) coordinates so bake and shader sample the same
-field where their scales overlap and the structure is static.
+Seeded per cloud (`seed` in the schema, § 8 — FNV-1a of the raw
+Zucker table name) with cloud-local-frame coordinates so the
+structure is static and per-cloud distinct.
 
 ### 5.3 Filamentary anisotropy
 
@@ -262,12 +276,12 @@ shaping terms, both in cloud-local frame:
 
 1. **Domain stretch**: scale the noise domain by 2.5× along the
    major axis before sampling — structures elongate along the cloud.
-2. **Ridged transform** on the two finest baked octaves and all
-   shader octaves: `g_r = 1 − |2g − 1|` sharpened by one squaring —
-   turns smooth blobs into ridge/lane structure. For sf/hii classes,
-   raise the ridged octaves to the 1.5 power to emulate the
-   power-law tail's contrasty cores; dark clouds keep the plain
-   ridged form.
+2. **Ridged transform** on the finest octaves (`ridgedFinestCount`):
+   `g_r = 1 − |2g − 1|` sharpened by one squaring — turns smooth
+   blobs into ridge/lane structure. For sf/hii classes, raise the
+   ridged octaves to the 1.5 power (`ridgedExponent` 3 vs 2) to
+   emulate the power-law tail's contrasty cores; dark clouds keep
+   the plain ridged form.
 
 This is deliberately a *look* model at the fine end — the epic's
 decision 2 accepts procedural substructure for v1, and
@@ -333,11 +347,15 @@ cross-match unchanged.
 
 Classification rule: any ≤ B1 star → `hii`; else any B2–B9 or a
 curated flag → `sf`; else `dark`. A small curated override table in
-`build-clouds.py` handles (a) out-of-grid famous HII regions whose
+`cloud_model.py` handles (a) out-of-grid famous HII regions whose
 ionising stars may be missing/too-faint in the catalog (Carina, W3,
 W4, W5, M16, M17, Rosette, IC 2944, NGC 6604, Gem OB1), (b) IC 443
 (a supernova remnant — treat as `hii` for tinting; one-line note in
-the table), (c) any misclassification found during smoke.
+the table), (c) any misclassification found during smoke. A.2 seeded
+that table with curated classes for the 12 Zucker 2021 clouds too
+(Taurus/Chamaeleon/Musca/Pipe/Lupus/Cepheus dark; Ophiuchus/Perseus/
+Coraus sf; the three Orion clouds hii) — the A.5 cross-match
+supersedes those in-grid entries.
 
 ### 7.3 Cavities
 
@@ -368,8 +386,9 @@ R_cav = max( R_S , R_curated )     R_curated: Orion Nebula 4 pc,
                                    λ Ori 30 pc, else absent
 ```
 
-Density modulation (applied in both the bake and the presence
-shader):
+Density modulation (applied in the presence shader; the voxel field
+already carries the real cavities — Edenhofer resolves the λ Ori
+ring):
 
 ```
 cavity(x) = [ ε + (1−ε) · smoothstep(0.7 R_cav, 1.15 R_cav, r) ]
@@ -386,26 +405,32 @@ taking the larger R_cav.
 
 ## 8. Per-cloud parameter schema (`clouds.json` v2)
 
-`version: 2`. Existing fields unchanged (`name`, `id`, `center`,
-`axes`, `quat`, `source`, `distance`). New per-cloud fields, all
-baked by `build-clouds.py`:
+`version: 2`, shipped by A.2. Existing fields unchanged (`name`,
+`id`, `center`, `axes`, `quat`, `source`, `distance`, and `mass` —
+which stays Table 3 `mass_nicest`, the literature-comparable display
+value). A top-level `noiseModel` block carries the § 5.2 ladder
+constants. New per-cloud fields, all emitted by `build-clouds.py`
+from `cloud_model.py`:
 
 ```
 class        "dark" | "sf" | "hii"
 n0Cal        calibrated peak density, cm⁻³            (§ 4.2 / § 4.3)
+uEnv         mass-budget envelope tightening, ≤ 1      (§ 4.2)
 rflat        Plummer flattening radius, pc
 p            Plummer index
 sigmaS       total log-normal σ_s                      (§ 5.1)
-massMsun     Zucker Table 3 mass_leike, null for spheres
-akPeak       Zucker Table 3 max_ak_leike, null for spheres
-inGrid       true if the ellipsoid lies fully inside ±1250 pc
-seed         uint32 noise seed (hash of id)
+massLeike    Zucker Table 3 mass_leike, null unless profiled
+akPeak       Zucker Table 3 max_ak_leike, null unless profiled
+inGrid       true if the cloud lies fully inside ±1250 pc
+seed         uint32 noise seed (FNV-1a of the raw table name)
 embedded[]   { name, xyz [pc, ICRS], sptype, logQH, rCavPc }  ≤ 4
+             (empty until A.5)
 ```
 
-The loader (`cloud-loader.ts`) versions on `version`; the presence
-renderer consumes everything; the A.2 bake consumes the 12 profiled
-entries + cavities.
+The loader (`cloud-loader.ts`) versions on `version` (A.2 bumped the
+gate; field decoding beyond v1's set lands with A.6); the presence
+renderer consumes everything. Pinned in
+`scripts/clouds/clouds-json.test.ts`.
 
 ## 9. Presence pass (A.6) — supersedes the warm glow
 
@@ -516,7 +541,8 @@ Everything falls out of the two mechanisms already specified:
 
 - **Stars:** the per-star raymarch handles camera-inside-cloud
   automatically (the camera→star segment starts inside the dense
-  region). Bake fidelity (§ 4) is what makes this real.
+  region). The un-clipped Edenhofer encode (§ 2.2) is what makes
+  this real.
 - **Diffuse background:** the presence mesh is `DoubleSide`; with
   the camera inside, each fragment integrates the *outward* column
   in its direction, so the MW band dims anisotropically — darkest
@@ -542,18 +568,17 @@ the shader framework A.4's fine noise and A.5's tints plug into).
 
 | Phase | Bead | Scope from this design | Key acceptance |
 | --- | --- | --- | --- |
-| A.2 | c7u.2 | Bake `max(edenhofer, model)` for the 12 profiled clouds; coarse noise; cavities (needs A.5's cross-match output *or* ship first pass without cavities and rebake in A.5); raise `DENSITY_MAX` → 0.15; calibration + mass asserts; `DUST_AV_HEADROOM` comment sweep | 12 pinned `n0Cal`; Taurus core column A_V ≈ 3.2 ± 0.3 at bake resolution; masses within 2× `mass_leike`; idempotent |
+| A.2 (shipped) | c7u.2 | Fixed `DENSITY_MAX` → 0.2 (un-clips the real Edenhofer cores; § 2.2); per-star extinction = pure Edenhofer with the measured evidence retiring the `max(edenhofer, model)` overlay (§ 1 decision 1); calibrated analytic model + taxonomy + `noiseModel` into `clouds.json` v2 (§ 4, § 8); catalog rebuild (de-extinction invariant); `DUST_AV_HEADROOM` removal | 11 pinned `n0Cal`/`uEnv` (`clouds-json.test.ts`); per-cloud peak-column check pinned (`dust-manifest.test.ts`; Ophiuchus 1.03×, Taurus 0.50× of Leike targets); masses within 2× `mass_leike`; idempotent |
 | A.3 | c7u.3 | Pin existing A_V + B−V-shift behaviour; density-dependent R_V two-accumulator upgrade (visual-gated) | Synthetic-cloud fixture pins; Taurus-core star visibly less over-red with R_V(ρ) if shipped |
-| A.4 | c7u.4 | Fine-octave ladder (10 → 0.3 pc) + ridged/anisotropic shaping in the presence shader; shares § 5 constants with the bake via one exported table | Bake and shader agree at 10 pc scale (fixture comparing baked voxel vs shader-evaluated coarse octaves) |
-| A.5 | c7u.5.x | Generic-reader cross-match; taxonomy + overrides; cavity list into `clouds.json` v2; rebake with cavities; HII/reflection tints (5.2) | λ Ori renders as a ring; Orion A carves around the Trapezium; Taurus stays `dark` with zero cavities |
-| A.6 | c7u.6 | Replace `cloud.frag.glsl` with absorption + whisper-glow model; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 loader; re-enable the layer | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
+| A.4 | c7u.4 | The § 5 octave ladder + ridged/anisotropic shaping in the presence shader, constants from the `noiseModel` block | Structured, filamentary silhouettes; § 9.1 band-limits hold |
+| A.5 | c7u.5.x | Generic-reader cross-match; taxonomy + overrides; cavity list into `clouds.json` v2; presence-model cavity carve; HII/reflection tints (5.2) | λ Ori's presence silhouette reads as a ring; Orion A carves around the Trapezium; Taurus stays `dark` with zero cavities |
+| A.6 | c7u.6 | Replace `cloud.frag.glsl` with absorption + whisper-glow model; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 field decoding; re-enable the layer | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
 | A.7 | c7u.7 | Fly-through verification + tuning (§ 10) | § 10 acceptance list |
 
-Cross-phase invariant: § 5's noise constants (ladder, persistence,
-stretch, ridged shaping) live in **one** source-of-truth table
-consumed by both `build-clouds.py`/`build-dust.py` and the shader
-uniform setup — the sibling-symmetry rule applies to the bake/shader
-pair.
+Cross-phase invariant: § 5's noise constants and the § 4 model
+parameters live in **one** source-of-truth chain —
+`cloud_model.py` → `clouds.json` v2 → shader uniforms — never
+redefined shader-side.
 
 ## 12. References
 

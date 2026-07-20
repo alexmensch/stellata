@@ -33,7 +33,12 @@ manifest.json     grid params + chunk index + particle count.
 Voxel density is `uint8: 255 · (log10(clamp(d, dmin, dmax)) -
 log10(dmin)) / log10(dmax/dmin)` over `[densityMin, densityMax]`;
 runtime A_V is `density · avPerDensityPerPc · path_length_pc` with
-`avPerDensityPerPc ≈ 2.742`.
+`avPerDensityPerPc ≈ 2.742`. `densityMax` is a fixed ceiling (0.2,
+covering the raw grid max 0.135 with headroom) — see
+`scripts/dust/README.md` § Encoding for why the old percentile
+autotune was a 25× clip of dense cloud cores. The manifest's `zucker`
+block records the per-cloud peak-column check against the Zucker 2021
+targets (pinned in `scripts/dust/dust-manifest.test.ts`).
 
 ## Consumed by
 

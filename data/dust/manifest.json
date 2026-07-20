@@ -14,7 +14,7 @@
   "axisOrderInFile": "z-major (innermost = x)",
   "frame": "ICRS heliocentric Cartesian (matches catalog.bin)",
   "densityMin": 1e-07,
-  "densityMax": 0.005329673178493977,
+  "densityMax": 0.2,
   "encoding": "uint8: 255 * (log10(clamp(d,dmin,dmax)) - log10(dmin)) / log10(dmax/dmin)",
   "avPerDensityPerPc": 2.742,
   "chunks": [
@@ -24,7 +24,7 @@
       "iz": 0,
       "file": "chunk_0_0_0.bin",
       "bytes": 2097152,
-      "sha256": "cc27302a5e7bf406",
+      "sha256": "f6290ef90c78faa7",
       "centerPc": [
         -937.5,
         -937.5,
@@ -37,7 +37,7 @@
       "iz": 1,
       "file": "chunk_0_0_1.bin",
       "bytes": 2097152,
-      "sha256": "07341372dc792374",
+      "sha256": "7a61b8dfc490a732",
       "centerPc": [
         -937.5,
         -937.5,
@@ -50,7 +50,7 @@
       "iz": 2,
       "file": "chunk_0_0_2.bin",
       "bytes": 2097152,
-      "sha256": "c505c8d89a125429",
+      "sha256": "77b40e4eb73fd3b2",
       "centerPc": [
         -937.5,
         -937.5,
@@ -63,7 +63,7 @@
       "iz": 3,
       "file": "chunk_0_0_3.bin",
       "bytes": 2097152,
-      "sha256": "dd1a4ed9b9501acd",
+      "sha256": "ea0cf5abe892dc83",
       "centerPc": [
         -937.5,
         -937.5,
@@ -76,7 +76,7 @@
       "iz": 0,
       "file": "chunk_0_1_0.bin",
       "bytes": 2097152,
-      "sha256": "773f7fe2b7a47176",
+      "sha256": "55d16394165e0a54",
       "centerPc": [
         -937.5,
         -312.5,
@@ -89,7 +89,7 @@
       "iz": 1,
       "file": "chunk_0_1_1.bin",
       "bytes": 2097152,
-      "sha256": "bccc48871d0d53f1",
+      "sha256": "e2641b80c77794bd",
       "centerPc": [
         -937.5,
         -312.5,
@@ -102,7 +102,7 @@
       "iz": 2,
       "file": "chunk_0_1_2.bin",
       "bytes": 2097152,
-      "sha256": "efb57c6764ff7b20",
+      "sha256": "3c510332bb58c7e5",
       "centerPc": [
         -937.5,
         -312.5,
@@ -115,7 +115,7 @@
       "iz": 3,
       "file": "chunk_0_1_3.bin",
       "bytes": 2097152,
-      "sha256": "3c1c809b61052c67",
+      "sha256": "d513905c74750187",
       "centerPc": [
         -937.5,
         -312.5,
@@ -128,7 +128,7 @@
       "iz": 0,
       "file": "chunk_0_2_0.bin",
       "bytes": 2097152,
-      "sha256": "dc57482eea1bb78f",
+      "sha256": "931fadcaffa74cd9",
       "centerPc": [
         -937.5,
         312.5,
@@ -141,7 +141,7 @@
       "iz": 1,
       "file": "chunk_0_2_1.bin",
       "bytes": 2097152,
-      "sha256": "2b13ee914588b142",
+      "sha256": "e7c6f74d7320aa80",
       "centerPc": [
         -937.5,
         312.5,
@@ -154,7 +154,7 @@
       "iz": 2,
       "file": "chunk_0_2_2.bin",
       "bytes": 2097152,
-      "sha256": "4f0fa6afa1c3acdb",
+      "sha256": "167d4a45e78bb456",
       "centerPc": [
         -937.5,
         312.5,
@@ -167,7 +167,7 @@
       "iz": 3,
       "file": "chunk_0_2_3.bin",
       "bytes": 2097152,
-      "sha256": "fa880ad25aa6c30c",
+      "sha256": "3ed3fb575f862ab3",
       "centerPc": [
         -937.5,
         312.5,
@@ -180,7 +180,7 @@
       "iz": 0,
       "file": "chunk_0_3_0.bin",
       "bytes": 2097152,
-      "sha256": "90d95b7b52e9ecc5",
+      "sha256": "25e22a3e6ad201b1",
       "centerPc": [
         -937.5,
         937.5,
@@ -193,7 +193,7 @@
       "iz": 1,
       "file": "chunk_0_3_1.bin",
       "bytes": 2097152,
-      "sha256": "81000d1a5b334630",
+      "sha256": "901dcd7d11dc4305",
       "centerPc": [
         -937.5,
         937.5,
@@ -206,7 +206,7 @@
       "iz": 2,
       "file": "chunk_0_3_2.bin",
       "bytes": 2097152,
-      "sha256": "63a5edea2ca6e088",
+      "sha256": "19d7b8ec4251837e",
       "centerPc": [
         -937.5,
         937.5,
@@ -219,7 +219,7 @@
       "iz": 3,
       "file": "chunk_0_3_3.bin",
       "bytes": 2097152,
-      "sha256": "9f1ca8a6df77480f",
+      "sha256": "a3e46d6567c79e17",
       "centerPc": [
         -937.5,
         937.5,
@@ -232,7 +232,7 @@
       "iz": 0,
       "file": "chunk_1_0_0.bin",
       "bytes": 2097152,
-      "sha256": "ddf7c479e031cf92",
+      "sha256": "8b935042b364cd02",
       "centerPc": [
         -312.5,
         -937.5,
@@ -245,7 +245,7 @@
       "iz": 1,
       "file": "chunk_1_0_1.bin",
       "bytes": 2097152,
-      "sha256": "4bff566b7e8565b0",
+      "sha256": "669affc96d36ae8b",
       "centerPc": [
         -312.5,
         -937.5,
@@ -258,7 +258,7 @@
       "iz": 2,
       "file": "chunk_1_0_2.bin",
       "bytes": 2097152,
-      "sha256": "c630fe300ac9795d",
+      "sha256": "561b6d210106e7fa",
       "centerPc": [
         -312.5,
         -937.5,
@@ -271,7 +271,7 @@
       "iz": 3,
       "file": "chunk_1_0_3.bin",
       "bytes": 2097152,
-      "sha256": "27ca903a6e11345f",
+      "sha256": "879c04e2b89f0e7a",
       "centerPc": [
         -312.5,
         -937.5,
@@ -284,7 +284,7 @@
       "iz": 0,
       "file": "chunk_1_1_0.bin",
       "bytes": 2097152,
-      "sha256": "f1de6409d4ef9c44",
+      "sha256": "ea800b7ba0d5bf56",
       "centerPc": [
         -312.5,
         -312.5,
@@ -297,7 +297,7 @@
       "iz": 1,
       "file": "chunk_1_1_1.bin",
       "bytes": 2097152,
-      "sha256": "863adfe4dfdd3529",
+      "sha256": "90e02ab07a8b4682",
       "centerPc": [
         -312.5,
         -312.5,
@@ -310,7 +310,7 @@
       "iz": 2,
       "file": "chunk_1_1_2.bin",
       "bytes": 2097152,
-      "sha256": "b9ff4398cf35959e",
+      "sha256": "96a32abe0dc40358",
       "centerPc": [
         -312.5,
         -312.5,
@@ -323,7 +323,7 @@
       "iz": 3,
       "file": "chunk_1_1_3.bin",
       "bytes": 2097152,
-      "sha256": "f53c18c241739f93",
+      "sha256": "570beed6d695a9f4",
       "centerPc": [
         -312.5,
         -312.5,
@@ -336,7 +336,7 @@
       "iz": 0,
       "file": "chunk_1_2_0.bin",
       "bytes": 2097152,
-      "sha256": "505e9c1fda9c2879",
+      "sha256": "9bd05b1538bc67c2",
       "centerPc": [
         -312.5,
         312.5,
@@ -349,7 +349,7 @@
       "iz": 1,
       "file": "chunk_1_2_1.bin",
       "bytes": 2097152,
-      "sha256": "321ede7ed3695803",
+      "sha256": "5002eb914b1e3d3c",
       "centerPc": [
         -312.5,
         312.5,
@@ -362,7 +362,7 @@
       "iz": 2,
       "file": "chunk_1_2_2.bin",
       "bytes": 2097152,
-      "sha256": "85ccae5c71b5c6ea",
+      "sha256": "4aad7b35ce1b84c8",
       "centerPc": [
         -312.5,
         312.5,
@@ -375,7 +375,7 @@
       "iz": 3,
       "file": "chunk_1_2_3.bin",
       "bytes": 2097152,
-      "sha256": "f9fe77ab1004404e",
+      "sha256": "e8b3f75beab447f2",
       "centerPc": [
         -312.5,
         312.5,
@@ -388,7 +388,7 @@
       "iz": 0,
       "file": "chunk_1_3_0.bin",
       "bytes": 2097152,
-      "sha256": "413dd363ff045bf1",
+      "sha256": "361f3dd3e37aad94",
       "centerPc": [
         -312.5,
         937.5,
@@ -401,7 +401,7 @@
       "iz": 1,
       "file": "chunk_1_3_1.bin",
       "bytes": 2097152,
-      "sha256": "bcda70d118a8ac71",
+      "sha256": "1fee1b3786076426",
       "centerPc": [
         -312.5,
         937.5,
@@ -414,7 +414,7 @@
       "iz": 2,
       "file": "chunk_1_3_2.bin",
       "bytes": 2097152,
-      "sha256": "940c985e7a287ed2",
+      "sha256": "899a9b0a0c00f407",
       "centerPc": [
         -312.5,
         937.5,
@@ -427,7 +427,7 @@
       "iz": 3,
       "file": "chunk_1_3_3.bin",
       "bytes": 2097152,
-      "sha256": "e96b902582086771",
+      "sha256": "d83de3df680c918f",
       "centerPc": [
         -312.5,
         937.5,
@@ -440,7 +440,7 @@
       "iz": 0,
       "file": "chunk_2_0_0.bin",
       "bytes": 2097152,
-      "sha256": "834940bbacd4e87f",
+      "sha256": "94407a5e441d5b81",
       "centerPc": [
         312.5,
         -937.5,
@@ -453,7 +453,7 @@
       "iz": 1,
       "file": "chunk_2_0_1.bin",
       "bytes": 2097152,
-      "sha256": "3224bc888b8ef8f4",
+      "sha256": "584a9cab234d6ca8",
       "centerPc": [
         312.5,
         -937.5,
@@ -466,7 +466,7 @@
       "iz": 2,
       "file": "chunk_2_0_2.bin",
       "bytes": 2097152,
-      "sha256": "3d4aaff850febd98",
+      "sha256": "9067188227e1b6bb",
       "centerPc": [
         312.5,
         -937.5,
@@ -479,7 +479,7 @@
       "iz": 3,
       "file": "chunk_2_0_3.bin",
       "bytes": 2097152,
-      "sha256": "94d24763789c7b27",
+      "sha256": "f4f1e67f209c1b49",
       "centerPc": [
         312.5,
         -937.5,
@@ -492,7 +492,7 @@
       "iz": 0,
       "file": "chunk_2_1_0.bin",
       "bytes": 2097152,
-      "sha256": "58bf7479bf3a61b6",
+      "sha256": "fd54c9f5a3ca8600",
       "centerPc": [
         312.5,
         -312.5,
@@ -505,7 +505,7 @@
       "iz": 1,
       "file": "chunk_2_1_1.bin",
       "bytes": 2097152,
-      "sha256": "670c8bfdbbdcd12e",
+      "sha256": "ff6b1c1399665e7d",
       "centerPc": [
         312.5,
         -312.5,
@@ -518,7 +518,7 @@
       "iz": 2,
       "file": "chunk_2_1_2.bin",
       "bytes": 2097152,
-      "sha256": "a6e720a83f14f28f",
+      "sha256": "5a7ce48af76bc030",
       "centerPc": [
         312.5,
         -312.5,
@@ -531,7 +531,7 @@
       "iz": 3,
       "file": "chunk_2_1_3.bin",
       "bytes": 2097152,
-      "sha256": "1cb2d9f0b0d5dac5",
+      "sha256": "ca7f4da3e81bf470",
       "centerPc": [
         312.5,
         -312.5,
@@ -544,7 +544,7 @@
       "iz": 0,
       "file": "chunk_2_2_0.bin",
       "bytes": 2097152,
-      "sha256": "2e5e63ba803ddc14",
+      "sha256": "8f50d553d0c16f62",
       "centerPc": [
         312.5,
         312.5,
@@ -557,7 +557,7 @@
       "iz": 1,
       "file": "chunk_2_2_1.bin",
       "bytes": 2097152,
-      "sha256": "31969e65b42d97e1",
+      "sha256": "5c86e17a998702e1",
       "centerPc": [
         312.5,
         312.5,
@@ -570,7 +570,7 @@
       "iz": 2,
       "file": "chunk_2_2_2.bin",
       "bytes": 2097152,
-      "sha256": "d5096488778ad996",
+      "sha256": "5d366175c403bc4c",
       "centerPc": [
         312.5,
         312.5,
@@ -583,7 +583,7 @@
       "iz": 3,
       "file": "chunk_2_2_3.bin",
       "bytes": 2097152,
-      "sha256": "5a4878a6e08b1086",
+      "sha256": "95d42af5e8f38281",
       "centerPc": [
         312.5,
         312.5,
@@ -596,7 +596,7 @@
       "iz": 0,
       "file": "chunk_2_3_0.bin",
       "bytes": 2097152,
-      "sha256": "78db815004064354",
+      "sha256": "8445762be9563149",
       "centerPc": [
         312.5,
         937.5,
@@ -609,7 +609,7 @@
       "iz": 1,
       "file": "chunk_2_3_1.bin",
       "bytes": 2097152,
-      "sha256": "c9b0e08fc29ca658",
+      "sha256": "82957775bb930c5d",
       "centerPc": [
         312.5,
         937.5,
@@ -622,7 +622,7 @@
       "iz": 2,
       "file": "chunk_2_3_2.bin",
       "bytes": 2097152,
-      "sha256": "d2c58bcd7ed91339",
+      "sha256": "6ae03bc05c95bbe4",
       "centerPc": [
         312.5,
         937.5,
@@ -635,7 +635,7 @@
       "iz": 3,
       "file": "chunk_2_3_3.bin",
       "bytes": 2097152,
-      "sha256": "252d090ba68c7613",
+      "sha256": "7484769e3d068559",
       "centerPc": [
         312.5,
         937.5,
@@ -648,7 +648,7 @@
       "iz": 0,
       "file": "chunk_3_0_0.bin",
       "bytes": 2097152,
-      "sha256": "65d4da7c9841950b",
+      "sha256": "97a5bc5000eaa6d5",
       "centerPc": [
         937.5,
         -937.5,
@@ -661,7 +661,7 @@
       "iz": 1,
       "file": "chunk_3_0_1.bin",
       "bytes": 2097152,
-      "sha256": "884d7263a9a85245",
+      "sha256": "2f04cc010518903d",
       "centerPc": [
         937.5,
         -937.5,
@@ -674,7 +674,7 @@
       "iz": 2,
       "file": "chunk_3_0_2.bin",
       "bytes": 2097152,
-      "sha256": "46a045b62b562446",
+      "sha256": "f74c9ca1022f500f",
       "centerPc": [
         937.5,
         -937.5,
@@ -687,7 +687,7 @@
       "iz": 3,
       "file": "chunk_3_0_3.bin",
       "bytes": 2097152,
-      "sha256": "2547e0f21de779c8",
+      "sha256": "29691a349c0a5400",
       "centerPc": [
         937.5,
         -937.5,
@@ -700,7 +700,7 @@
       "iz": 0,
       "file": "chunk_3_1_0.bin",
       "bytes": 2097152,
-      "sha256": "7553d089473af3f6",
+      "sha256": "ceff1aaca1b92fd8",
       "centerPc": [
         937.5,
         -312.5,
@@ -713,7 +713,7 @@
       "iz": 1,
       "file": "chunk_3_1_1.bin",
       "bytes": 2097152,
-      "sha256": "2247b42e8b5d4ef7",
+      "sha256": "bb735cd0b8039e47",
       "centerPc": [
         937.5,
         -312.5,
@@ -726,7 +726,7 @@
       "iz": 2,
       "file": "chunk_3_1_2.bin",
       "bytes": 2097152,
-      "sha256": "751e5614081b9538",
+      "sha256": "68ae9adc865e2125",
       "centerPc": [
         937.5,
         -312.5,
@@ -739,7 +739,7 @@
       "iz": 3,
       "file": "chunk_3_1_3.bin",
       "bytes": 2097152,
-      "sha256": "9cddd7330ef2b762",
+      "sha256": "71aa9e43b26842de",
       "centerPc": [
         937.5,
         -312.5,
@@ -752,7 +752,7 @@
       "iz": 0,
       "file": "chunk_3_2_0.bin",
       "bytes": 2097152,
-      "sha256": "2b6699be962b99bb",
+      "sha256": "57e03ffd9d7b1f31",
       "centerPc": [
         937.5,
         312.5,
@@ -765,7 +765,7 @@
       "iz": 1,
       "file": "chunk_3_2_1.bin",
       "bytes": 2097152,
-      "sha256": "239fd10f8a18abb6",
+      "sha256": "77e7961768a95e79",
       "centerPc": [
         937.5,
         312.5,
@@ -778,7 +778,7 @@
       "iz": 2,
       "file": "chunk_3_2_2.bin",
       "bytes": 2097152,
-      "sha256": "e751218af1173d2f",
+      "sha256": "0680d33514210894",
       "centerPc": [
         937.5,
         312.5,
@@ -791,7 +791,7 @@
       "iz": 3,
       "file": "chunk_3_2_3.bin",
       "bytes": 2097152,
-      "sha256": "a6d2149f6d55162b",
+      "sha256": "93eac6636972ec29",
       "centerPc": [
         937.5,
         312.5,
@@ -804,7 +804,7 @@
       "iz": 0,
       "file": "chunk_3_3_0.bin",
       "bytes": 2097152,
-      "sha256": "14e78d3b6bcf5276",
+      "sha256": "f8cde6a4af256f2d",
       "centerPc": [
         937.5,
         937.5,
@@ -817,7 +817,7 @@
       "iz": 1,
       "file": "chunk_3_3_1.bin",
       "bytes": 2097152,
-      "sha256": "69aa0036c33e4b20",
+      "sha256": "3259425d40ddaf54",
       "centerPc": [
         937.5,
         937.5,
@@ -830,7 +830,7 @@
       "iz": 2,
       "file": "chunk_3_3_2.bin",
       "bytes": 2097152,
-      "sha256": "a49e2f135b4182e0",
+      "sha256": "3cff7dd4a9993d54",
       "centerPc": [
         937.5,
         937.5,
@@ -843,7 +843,7 @@
       "iz": 3,
       "file": "chunk_3_3_3.bin",
       "bytes": 2097152,
-      "sha256": "1114e14385808cd8",
+      "sha256": "2e0bca0d5678820a",
       "centerPc": [
         937.5,
         937.5,
@@ -854,5 +854,76 @@
   "particles": {
     "file": "particles.bin",
     "count": 50000
+  },
+  "zucker": {
+    "gridMaxZgr": 0.1346,
+    "clouds": [
+      {
+        "cloud": "Chamaeleon",
+        "avColumnTargetLeike": 2.479,
+        "avPeakColumnEdenhofer": 0.735,
+        "ratio": 0.296
+      },
+      {
+        "cloud": "Ophiuchus",
+        "avColumnTargetLeike": 2.65,
+        "avPeakColumnEdenhofer": 2.729,
+        "ratio": 1.03
+      },
+      {
+        "cloud": "Lupus",
+        "avColumnTargetLeike": 2.393,
+        "avPeakColumnEdenhofer": 1.517,
+        "ratio": 0.634
+      },
+      {
+        "cloud": "Taurus",
+        "avColumnTargetLeike": 3.248,
+        "avPeakColumnEdenhofer": 1.625,
+        "ratio": 0.5
+      },
+      {
+        "cloud": "Perseus",
+        "avColumnTargetLeike": 2.393,
+        "avPeakColumnEdenhofer": 0.773,
+        "ratio": 0.323
+      },
+      {
+        "cloud": "Musca",
+        "avColumnTargetLeike": 1.624,
+        "avPeakColumnEdenhofer": 0.07,
+        "ratio": 0.043
+      },
+      {
+        "cloud": "Pipe",
+        "avColumnTargetLeike": 1.966,
+        "avPeakColumnEdenhofer": 1.748,
+        "ratio": 0.889
+      },
+      {
+        "cloud": "Cepheus",
+        "avColumnTargetLeike": 2.821,
+        "avPeakColumnEdenhofer": 0.826,
+        "ratio": 0.293
+      },
+      {
+        "cloud": "Oriona",
+        "avColumnTargetLeike": 2.906,
+        "avPeakColumnEdenhofer": 1.51,
+        "ratio": 0.52
+      },
+      {
+        "cloud": "Orionb",
+        "avColumnTargetLeike": 2.821,
+        "avPeakColumnEdenhofer": 1.482,
+        "ratio": 0.525
+      },
+      {
+        "cloud": "Orionlam",
+        "avColumnTargetLeike": 1.88,
+        "avPeakColumnEdenhofer": 0.355,
+        "ratio": 0.189
+      }
+    ]
   }
 }

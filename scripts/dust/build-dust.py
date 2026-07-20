@@ -22,13 +22,18 @@ BOUNDS_PC = 1250.0                          # half-extent; full cube is 2*bounds
 VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
 
 # Encoding params. DENSITY_MIN is fixed below the real-data noise floor;
-# DENSITY_MAX is autotuned from the 99.95th percentile of nonzero voxels so
-# the brightest cores saturate but the bulk of the range is unsaturated.
+# DENSITY_MAX is a fixed ceiling covering the raw Edenhofer peak with
+# headroom (grid max 0.135 E_ZGR/pc, in the rho Oph core). The previous
+# 99.95th-percentile autotune (0.0053) silently clipped dense molecular
+# cloud cores 25x — peak cloud columns encoded at 0.06-0.6 mag A_V where
+# the raw field carries 0.8-2.7 mag (docs/molecular-clouds.md § 2.2).
+# The build asserts the ceiling still covers the data each run.
 # Synthetic mode uses the same DENSITY_MIN and a fixed DENSITY_MAX matching
 # the real-data scale, so both pipelines share a single shader decode.
 DENSITY_MIN = 1e-7
 DENSITY_MAX_SYNTHETIC = 0.1
-DENSITY_MAX_PERCENTILE = 99.95
+DENSITY_MAX_REAL = 0.2
+DENSITY_MAX_HEADROOM = 1.2
 
 # Particle cloud — for visualising dust as discrete additive billboards
 # (replaces the fullscreen raymarch fog, which had unfixable banding/
@@ -61,6 +66,9 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DUST = ROOT / "data" / "dust"
 PUBLIC_DUST = ROOT / "public" / "dust"
 
+sys.path.insert(0, str(ROOT / "scripts" / "clouds"))
+import cloud_model  # noqa: E402
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -81,6 +89,7 @@ def main() -> int:
 
     args.output.mkdir(parents=True, exist_ok=True)
 
+    zucker_report = None
     if args.synthetic:
         print("Generating synthetic test-pattern dust grid…", file=sys.stderr)
         voxels = make_synthetic_grid()
@@ -99,11 +108,8 @@ def main() -> int:
             voxels = resample_edenhofer(flavor=args.flavor)
             print(f"Saving raw grid cache to {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             np.save(cache_path, voxels)
-        nonzero = voxels[voxels > 0]
-        if nonzero.size:
-            density_max = float(np.percentile(nonzero, DENSITY_MAX_PERCENTILE))
-        else:
-            density_max = DENSITY_MAX_SYNTHETIC  # shouldn't happen; safe fallback
+        zucker_report = zucker_column_check(voxels)
+        density_max = DENSITY_MAX_REAL
 
     # Encode float densities → uint8 via pure-log scaling over
     # [DENSITY_MIN, density_max]. The shader inverts this; manifest carries
@@ -130,7 +136,7 @@ def main() -> int:
 
     manifest = build_manifest(
         chunks, synthetic=args.synthetic, density_max=density_max,
-        particle_count=int(particles.shape[0]),
+        particle_count=int(particles.shape[0]), zucker=zucker_report,
     )
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Wrote {len(chunks)} chunks + manifest to {args.output.relative_to(ROOT)}/", file=sys.stderr)
@@ -139,6 +145,80 @@ def main() -> int:
         copy_to_public()
 
     return 0
+
+
+def _peak_column_av(voxels: np.ndarray, cloud, rot: np.ndarray,
+                    offset_step_pc: float = 2.0, n_samples: int = 201) -> float:
+    """Peak A_V column through the raw grid across the cloud's bounding
+    ellipsoid, along the local shortest axis (trilinear, trapezoid) —
+    mirrors the shader's raymarch geometry."""
+    axes = np.array(cloud.axes_gal, dtype=np.float64)
+    center = np.array(cloud.center_icrs, dtype=np.float64)
+    k_min = int(np.argmin(axes))
+    perp = [i for i in range(3) if i != k_min]
+    s_min = float(axes.min())
+    o1 = np.arange(-axes[perp[0]], axes[perp[0]] + 1e-9, offset_step_pc)
+    o2 = np.arange(-axes[perp[1]], axes[perp[1]] + 1e-9, offset_step_pc)
+    t = np.linspace(-s_min, s_min, n_samples)
+
+    off = np.zeros((len(o1), len(o2), 3))
+    off[..., perp[0]] = o1[:, None]
+    off[..., perp[1]] = o2[None, :]
+    e_chord = np.zeros(3)
+    e_chord[k_min] = 1.0
+    # chord points: (n1, n2, nl, 3) in ICRS
+    pts = (off[:, :, None, :] + t[None, None, :, None] * e_chord) @ rot.T + center
+
+    g = np.clip((pts + BOUNDS_PC) / VOXEL_SIZE_PC - 0.5, 0.0, GRID_SIZE - 1.001)
+    i0 = np.floor(g).astype(np.int64)
+    f = g - i0
+    acc = np.zeros(pts.shape[:-1])
+    for dx in (0, 1):
+        for dy in (0, 1):
+            for dz in (0, 1):
+                w = ((f[..., 0] if dx else 1 - f[..., 0])
+                     * (f[..., 1] if dy else 1 - f[..., 1])
+                     * (f[..., 2] if dz else 1 - f[..., 2]))
+                acc += w * voxels[i0[..., 0] + dx, i0[..., 1] + dy, i0[..., 2] + dz]
+    cols = np.trapezoid(acc, t, axis=-1) * ZGR_TO_AV
+    return float(cols.max())
+
+
+def zucker_column_check(voxels: np.ndarray) -> dict:
+    """Compare peak extinction columns through the raw Edenhofer field
+    against the Zucker 2021 Leike-resolution peak columns, per profiled
+    cloud. Read-only: per-star extinction reads pure Edenhofer — the
+    real reconstruction carries each cloud's morphology (cores sit
+    off-centre in their bboxes), and the analytic cloud model in
+    clouds.json drives only the presence pass. The ratios below run
+    0.3–1.0 with the fixed DENSITY_MAX ceiling, consistent with 1 pc →
+    4.9 pc beam dilution of the Leike peaks (docs/molecular-clouds.md § 4).
+    Also asserts the encode ceiling covers the data."""
+    cm = cloud_model
+    rot = np.array(cm.GAL_TO_ICRS, dtype=np.float64)
+    report: list[dict] = []
+    for cloud in cm.profiled_clouds():
+        peak_av = _peak_column_av(voxels, cloud, rot)
+        ratio = peak_av / cloud.av_column_target
+        report.append({
+            "cloud": cloud.raw_name,
+            "avColumnTargetLeike": round(cloud.av_column_target, 3),
+            "avPeakColumnEdenhofer": round(peak_av, 3),
+            "ratio": round(ratio, 3),
+        })
+        print(f"  zucker-check {cloud.raw_name:12} peak column "
+              f"{peak_av:5.2f} / target {cloud.av_column_target:5.2f} mag "
+              f"({ratio:4.2f}x)", file=sys.stderr)
+        assert ratio >= 0.03, \
+            f"{cloud.raw_name}: peak column {peak_av:.2f} mag is <3% of the " \
+            f"Leike target — encoding or resample regression"
+
+    grid_max = float(voxels.max())
+    assert grid_max * DENSITY_MAX_HEADROOM <= DENSITY_MAX_REAL, \
+        f"grid max {grid_max:.4f} E_ZGR/pc needs DENSITY_MAX_REAL >= " \
+        f"{grid_max * DENSITY_MAX_HEADROOM:.4f} (currently {DENSITY_MAX_REAL})"
+
+    return {"gridMaxZgr": round(grid_max, 4), "clouds": report}
 
 
 def sample_particles(voxels: np.ndarray, n: int, seed: int = 42) -> np.ndarray:
@@ -341,8 +421,8 @@ def write_chunks(encoded: np.ndarray, out_dir: Path) -> list[dict]:
 
 
 def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
-                   particle_count: int) -> dict:
-    return {
+                   particle_count: int, zucker: dict | None) -> dict:
+    manifest = {
         "version": 2,
         "format": "u8-log-window",
         "synthetic": synthetic,
@@ -364,6 +444,17 @@ def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
             "count": particle_count,
         },
     }
+    if zucker is not None:
+        manifest["zucker"] = zucker
+    return manifest
+
+
+def is_runtime_asset(name: str) -> bool:
+    """Mirror of the sync-dust-pure.ts allowlist — only runtime assets may
+    land in public/dust/ (tests/bundle-content.test.ts guards the built
+    tree against strays like README.md or the .voxels.npy cache)."""
+    return (name == "manifest.json" or name == "particles.bin"
+            or (name.startswith("chunk_") and name.endswith(".bin")))
 
 
 def copy_to_public() -> None:
@@ -381,7 +472,7 @@ def copy_to_public() -> None:
         if old.is_file():
             old.unlink()
     for src in DATA_DUST.iterdir():
-        if src.is_file():
+        if src.is_file() and is_runtime_asset(src.name):
             shutil.copy2(src, PUBLIC_DUST / src.name)
     print(f"Mirrored to {PUBLIC_DUST.relative_to(ROOT)}/", file=sys.stderr)
 

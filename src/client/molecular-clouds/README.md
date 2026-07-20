@@ -19,7 +19,11 @@ panel section; the toggle is now gone and the layer renders nothing.
 Stays visible during warp by design (flying past Taurus is a feature,
 not noise) — relevant once re-enabled.
 
-The runtime renderer fetches `public/clouds.json` via `cloud-loader.ts`.
+The runtime renderer fetches `public/clouds.json` via `cloud-loader.ts`
+(version gate: v2 — the artifact carries the calibrated density-model
+fields + `noiseModel` block per `docs/molecular-clouds.md` § 8; the
+loader decodes v1's field set today, with the v2 fields consumed when
+the presence pass lands, stellata-c7u.6).
 Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
