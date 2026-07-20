@@ -19,6 +19,16 @@ AV_PER_NH_PC = 1.65e-3      # mag A_V per pc per (n_H cm^-3)
 ZGR_PER_NH = 6.02e-4        # E_ZGR per pc per (n_H cm^-3)
 AK_OVER_AV = 0.117          # CCM 1989 at R_V = 3.1
 
+# Zhang-Green-Rix 2023 "E" unit → V-band extinction: A_V = ZGR_TO_AV * E_ZGR.
+# Edenhofer densities are E_ZGR/pc, so a path integral times this yields A_V.
+# The ZGR23 curve (Zenodo 10.5281/zenodo.7811871) gives A_λ/E_ZGR = 2.78 at
+# 540 nm, 2.73 at 545 nm; 2.742 is λ ≈ 544 nm, inside the V-band effective
+# wavelength (Edenhofer 2024 round to 2.8). Agrees with the n_H chain
+# (AV_PER_NH_PC / ZGR_PER_NH = 2.741) to <0.1%. Applied at runtime in the
+# shader / dust manifest, never baked into the stored density — retuning
+# needs no re-encode.
+ZGR_TO_AV = 2.742
+
 # Mass integral M/Msun = MSUN_PER_NH_PC3 * ∫ n dV  (n in cm^-3, V in pc^3),
 # mu = 1.37 per H nucleon.
 _MU = 1.37
@@ -31,10 +41,17 @@ MSUN_PER_NH_PC3 = _MU * _M_H_G * _PC_CM ** 3 / _MSUN_G
 # outer 15% of the ellipsoidal radius u.
 ENVELOPE_FADE_START = 0.85
 
-# Per-axis semi-axis floor — must match build-clouds.py's
-# MIN_SPHERE_RADIUS_PC so the model geometry equals the rendered geometry
-# (Musca's fitted bbox is 0.5 pc thin; the renderer floors it to 3 pc).
+# Semi-axis / sphere-radius floor for rendered cloud geometry: a degenerate
+# flat bbox (Musca's fitted box is 0.5 pc thin) would render invisibly
+# edge-on, so both the ellipsoid axes and the Z2020 sphere radii floor to
+# this. Single source shared with build-clouds.py.
 MIN_AXIS_PC = 3.0
+
+# Half-extent of the Edenhofer dust voxel cube (build-dust.py bakes into
+# ±this along each ICRS axis). Clouds fully inside get baked per-star
+# extinction; the rest are presence-only (docs/molecular-clouds.md § 1
+# decision 2).
+DUST_GRID_HALF_EXTENT_PC = 1250.0
 
 # Mass budget: the peak-column calibration alone over-fills elongated /
 # near-uniform-profile clouds (a real cloud is a filament inside its bbox,
