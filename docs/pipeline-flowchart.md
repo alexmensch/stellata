@@ -117,6 +117,7 @@ flowchart TD
     LUT1["blackbody-lut.ts<br/>Ballesteros B-V to Teff + Planck + CIE 1931"]
   end
   ZUCKER --> CLOUDS1
+  ZUCKER -->|cloud_model.py column check| DUST1
   LVDB --> LG1
   DUSTSRC --> DUST1
   CLOUDSOUT[("public/clouds.json")]
