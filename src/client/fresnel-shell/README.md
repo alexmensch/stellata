@@ -19,6 +19,10 @@ it — the heliopause (`solar-system/`) and the Local Bubble
   - `createShellSilhouetteLabel(stellata, opts)` — a `distance-gated-label`
     with the shared shell config (bottom-right anchor, standard offset,
     0.25 chase lerp).
+  - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
+    viewportHeightPx, fovYRad)` / `SHELL_LABEL_MIN_PX` — the label
+    legibility floor both shells' visibility predicates gate on (§
+    Invariants below).
 - `shell-registry.ts` — the focus-target seam (§ Boundary shells as
   focus targets): `SHELL_KEYS`, the `ShellInstance` contract, and
   `ShellRegistry` (owns per-shell geometry: localPositionInto,
@@ -84,6 +88,14 @@ dispatch + exhaustive-map entries, and each shell instance registers into
   independent of what's focused (a warp changes focus but not shell
   visibility). A future ~1px LOD cull is tracked separately (a shell far
   enough to be sub-pixel still draws today).
+- **Label legibility floor.** The shell mesh itself has no distance
+  cutoff (previous bullet), but its silhouette label is screen-space
+  fixed-size text, so without a floor it would keep reading long after
+  the shell has visually shrunk to nothing. Both labels' visibility
+  predicates gate on `isShellLabelResolvable`: the shell's projected
+  diameter (`ShellRegistry.renderedSizePx`) must clear `SHELL_LABEL_MIN_PX`
+  (6 px). Mirrors the Local Group's `minPixelSize` label floor
+  (`local-group/local-group.ts`).
 
 ## SID pins
 

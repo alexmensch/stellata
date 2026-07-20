@@ -740,10 +740,12 @@ intentional, since from inside there's nothing geometrically
 informative to show.
 
 The "Heliopause" SVG label is anchored to the upwind apex's projected
-silhouette by `createHeliopauseLabel` in `main.ts`. Visibility tracks
-the same orbit-ring heuristic so the label disappears in lockstep
-with the planet labels when the host system is too far for the
-geometry to read.
+silhouette by `createHeliopauseLabel` in `main.ts`. The shell itself has
+no distance-based render cutoff, so the label gates on
+`isShellLabelResolvable` (`../fresnel-shell/README.md` § Boundary shells
+as focus targets) — the shell's projected diameter must clear
+`SHELL_LABEL_MIN_PX`, or the label would outlive the shell's legibility
+as the camera zooms out.
 
 ### Heliopause as a focus target
 
@@ -842,8 +844,9 @@ moon at its park distance.
   system is attached the same frame `setFocus` fires; the renderer
   handles `planetSystem === null` gracefully.
 - **Heliopause label visibility.** Hidden when the camera is inside
-  the shell or when the host is not Sol. Don't add a "show always"
-  toggle without thinking through the dual gating.
+  the shell, when the host is not Sol, or when the shell's projected
+  size drops below `SHELL_LABEL_MIN_PX`. Don't add a "show always"
+  toggle without thinking through the triple gating.
 - **Orbital plane rule for new hosts.** Any new planet-bearing host
   must declare its plane via the orientation quaternion. The default
   for non-Sol hosts is the galactic plane — don't accidentally
