@@ -454,6 +454,19 @@ export class FocusController implements FocusOps {
     this.deps.bus.emit('state');
   }
 
+  /** Manual-zoom floor for a soft (non-recentring) focus, applied on every
+   *  path that parks one — `flyTo` and the warp / mid-fly arrival's
+   *  `applyFocus`. Keeps the global orbit floor unless the object's own
+   *  park distance is tighter: an AU-scale shell (heliopause parks
+   *  ~480 AU ≈ 2.3e-3 pc, inside the 5e-3 pc floor) would otherwise be
+   *  clamped straight back out to the floor by `controls.update()`. Safe
+   *  because such a shell sits at the origin (Sol), where float32 is
+   *  precise; distant soft kinds (cloud / LG) keep the full floor
+   *  (park ≫ floor), so the min() is a no-op for them. */
+  private applySoftParkFloor(parkDist: number): void {
+    this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, parkDist);
+  }
+
   /** Star-focused recentre: pivot the floating origin onto catalog[idx]
    *  AND update the focus-state book-keeping (focusedStar, per-star
    *  minDistance, planet-system reload). No 'focus' / 'state' event
@@ -809,14 +822,7 @@ export class FocusController implements FocusOps {
       this.deps.controls.update();
     }
     this.setSoftFocus(target.kind, target.idx);
-    // A soft focus keeps the GLOBAL_MIN_DIST_PC orbit floor — except when
-    // the object's own park distance is tighter (an AU-scale shell like the
-    // heliopause parks ~480 AU ≈ 2.3e-3 pc, inside the 5e-3 pc floor).
-    // Without this, controls.update() clamps the camera straight back out
-    // to the floor after the lerp lands — the "zoom in then snap out" bug.
-    // Safe because such a shell sits at the origin (Sol), where float32 is
-    // precise; distant soft kinds keep the full floor (park ≫ floor).
-    this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, parkDist);
+    this.applySoftParkFloor(parkDist);
   }
 
   /** Orbit pivot moves to the object, the object becomes the focus,
@@ -963,11 +969,6 @@ export class FocusController implements FocusOps {
     const toHard = isHardTarget(target);
     if (hadHard && !toHard) {
       this.refreshPlanetSystem(null);
-      // Per-cloud/LG minDistance floor isn't tracked today; mirror
-      // setFocus(null)'s clamp so the controls don't trap the camera
-      // further out than the parked pose.
-      const eye = this.deps.camera.position.distanceTo(this.deps.controls.target);
-      this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, eye);
     }
     this.focused = target;
   }
@@ -1029,6 +1030,7 @@ export class FocusController implements FocusOps {
       parkRadius: () => cloudViewingDistancePc(cloud),
       applyFocus: () => {
         this.applyFocusState({ kind: 'cloud', idx });
+        this.applySoftParkFloor(cloudViewingDistancePc(cloud));
       },
       emitFocusEvents: () => {
         this.deps.bus.emit('focus', { kind: 'cloud', idx });
@@ -1097,6 +1099,7 @@ export class FocusController implements FocusOps {
       parkRadius: () => lgViewingDistancePc(obj),
       applyFocus: () => {
         this.applyFocusState({ kind: 'lg', idx });
+        this.applySoftParkFloor(lgViewingDistancePc(obj));
       },
       emitFocusEvents: () => {
         this.deps.bus.emit('focus', { kind: 'lg', idx });
@@ -1129,6 +1132,7 @@ export class FocusController implements FocusOps {
       parkRadius: () => shells.viewingDistancePc(idx),
       applyFocus: () => {
         this.applyFocusState({ kind: 'shell', idx });
+        this.applySoftParkFloor(shells.viewingDistancePc(idx));
       },
       emitFocusEvents: () => {
         this.deps.bus.emit('focus', { kind: 'shell', idx });

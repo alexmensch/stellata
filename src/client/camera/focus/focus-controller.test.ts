@@ -17,7 +17,7 @@ import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
-import { ShellRegistry } from '../../fresnel-shell/shell-registry';
+import { ShellRegistry, type ShellInstance } from '../../fresnel-shell/shell-registry';
 import { PlanetBodyField } from '../../solar-system/planet-body-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
@@ -189,6 +189,7 @@ interface Harness {
   getCameraMode: () => CameraMode;
   pert: { fn: (idx: number, out: THREE.Vector3) => boolean };
   planetField: PlanetBodyField;
+  shells: ShellRegistry;
 }
 
 function makeHarness(opts: {
@@ -322,6 +323,7 @@ function makeHarness(opts: {
     getCameraMode: () => focus.getCameraMode(),
     pert,
     planetField,
+    shells,
   };
 }
 
@@ -1044,5 +1046,42 @@ describe('FocusController — planet focus (kind "planet")', () => {
     h.focus.flyTo({ kind: 'planet', idx: 99 }, { animate: false });
     expect(h.focus.getFocusedTarget()).toBeNull();
     expect(h.busEvents).toEqual([]);
+  });
+
+  it('soft-kind flyTo flies OUT to park when the camera sits inside it', () => {
+    // A camera inside a boundary shell (Sol inside the Local Bubble /
+    // heliopause) must be pushed OUT to the framing distance, not left put
+    // — otherwise the back-face-culled wall stays invisible. softProvider
+    // centres at (1,2,3) and parks at 1 pc; start the camera 0.1 pc inside.
+    const h = makeHarness();
+    const dest = new THREE.Vector3(1, 2, 3);
+    h.camera.position.copy(dest).add(new THREE.Vector3(0.1, 0, 0));
+    h.focus.flyTo({ kind: 'cloud', idx: 0 }, { animate: false });
+    expect(h.camera.position.distanceTo(dest)).toBeCloseTo(1, 6);
+  });
+
+  it('soft applyFocus tightens minDistance to an AU-scale park (warp-arrival snap-out regression)', () => {
+    // Warp / mid-fly arrival parks a soft target via FocusTarget.applyFocus,
+    // NOT flyTo. A ~200 AU heliopause parks at ~480 AU ≈ 2.3e-3 pc — inside
+    // the 5e-3 pc GLOBAL_MIN_DIST_PC floor. If applyFocus doesn't tighten
+    // minDistance, controls.update() at finishWarp snaps the camera straight
+    // back out to the floor (~1031 AU).
+    const h = makeHarness();
+    const auShell: ShellInstance = {
+      label: 'Heliopause',
+      sid: 1,
+      card: { typeLine: 't', size: 's', knownFrom: 'k' },
+      centerAbsInto: (out) => { out.set(0, 0, 0); return true; },
+      extentPc: () => 200 * AU_PC,
+      pick: { labelElementId: 'x', visible: () => true, sampleCount: () => 0, sampleLocalInto: () => {} },
+    };
+    h.shells.register('heliopause', auShell); // SHELL_KEYS idx 1
+    const park = h.shells.viewingDistancePc(1);
+    expect(park).toBeLessThan(GLOBAL_MIN_DIST_PC);
+
+    const ft = h.focus.makeFocusTarget({ kind: 'shell', idx: 1 })!;
+    expect(ft).not.toBeNull();
+    ft.applyFocus();
+    expect(h.controls.minDistance).toBeCloseTo(park, 12);
   });
 });
