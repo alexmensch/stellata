@@ -24,6 +24,10 @@ read.
 - `dust-raymarch.glsl` — shared camera→star Edenhofer raymarch chunk
   (`stellata_dust_raymarch`), included by the extinction prepass and by
   `star.vert.glsl`'s fallback path.
+- `dust-raymarch-pure.ts` — CPU mirror of the raymarch decode +
+  trapezoidal integration and the `E(B−V) = A_V / R_V` reddening.
+  Test-only; pins the shader math against synthetic-cloud fixtures.
+  Vitest-pinned.
 - `extinction-prepass.ts`, `extinction-prepass.vert.glsl`,
   `extinction-prepass.frag.glsl` — per-star A_V cache; see § Dust
   extinction.
@@ -66,6 +70,7 @@ read.
 - `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-color-routing-pure.test.ts` — six-tier routing pin.
 - `pulsation-suppress-pure.test.ts` — suppress-mask build pin.
+- `dust-raymarch-pure.test.ts` — decode + integration + reddening pin.
 
 ## Star rendering: instanced quads, three passes
 

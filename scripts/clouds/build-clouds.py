@@ -14,6 +14,7 @@ import cloud_model
 from cloud_model import (
     AV_PER_NH_PC,
     AV_TARGET_BY_CLASS,
+    DUST_GRID_HALF_EXTENT_PC,
     GAL_TO_ICRS,
     MIN_AXIS_PC,
     NOISE_MODEL,
@@ -35,20 +36,11 @@ SRC_2021 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
 SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 OUT = ROOT / 'public' / 'clouds.json'
 
-# The voxel grid the extinction bake writes into (docs/molecular-clouds.md
-# § 1 decision 2) — clouds fully inside render with baked per-star
-# extinction; the rest are presence-only.
-DUST_GRID_HALF_EXTENT_PC = 1250.0
-
 # Default sphere radius for Zucker-2020 clouds with only a single sightline.
 # Most local SF clouds fall in the 5–30 pc effective-radius range; 5 pc is the
 # small end so over-estimation isn't visually dominant. Multi-sightline clouds
 # get a real spread-based radius.
 DEFAULT_SPHERE_RADIUS_PC = 5.0
-
-# Floor for spread-based radius so a tight pair of sightlines doesn't render
-# as a near-zero-size dot.
-MIN_SPHERE_RADIUS_PC = 3.0
 
 
 # Display-name normalisation. Z2020 uses underscores; Z2021 uses contracted
@@ -256,7 +248,7 @@ def build_z2020_clouds(
                 math.sqrt((p[0] - cx) ** 2 + (p[1] - cy) ** 2 + (p[2] - cz) ** 2)
                 for p in gal_pts
             )
-            radius = max(spread, MIN_SPHERE_RADIUS_PC)
+            radius = max(spread, MIN_AXIS_PC)
         else:
             radius = DEFAULT_SPHERE_RADIUS_PC
         center_icrs = matvec(GAL_TO_ICRS, (cx, cy, cz))

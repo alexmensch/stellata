@@ -14,11 +14,15 @@ from pathlib import Path
 
 import numpy as np
 
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / "scripts" / "clouds"))
+import cloud_model  # noqa: E402
+
 # Canonical grid params — changing any of these is a format version bump.
 GRID_SIZE = 512
 CHUNK_SIZE = 128
 CHUNKS_PER_AXIS = GRID_SIZE // CHUNK_SIZE   # 4
-BOUNDS_PC = 1250.0                          # half-extent; full cube is 2*bounds
+BOUNDS_PC = cloud_model.DUST_GRID_HALF_EXTENT_PC  # half-extent; full cube is 2*bounds
 VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
 
 # Encoding params. DENSITY_MIN is fixed below the real-data noise floor;
@@ -47,27 +51,14 @@ PARTICLE_COUNT_DEFAULT = 50_000
 # sampling concentrated where there's actually visible structure.
 PARTICLE_DENSITY_THRESHOLD = 1e-6
 
-# Zhang-Green-Rix 2023 "E" unit → V-band extinction. Edenhofer outputs
-# density in units of E_ZGR per parsec, so path-integral × this factor
-# yields A_V magnitudes. The published ZGR23 extinction curve
-# (extinction_curve.txt in the data release, Zenodo 10.5281/zenodo.7811871)
-# gives A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm, 2.67 at 551 nm;
-# 2.742 corresponds to λ ≈ 544 nm, inside the V-band effective-wavelength
-# convention spread (Edenhofer 2024 round the same conversion to 2.8).
-# Applied at runtime in the shader, NOT baked into the stored density, so
-# we can retune without re-encoding.
-ZGR_TO_AV = 2.742   # mag A_V per E_ZGR (dimensionless)
-
+# A_V-per-E_ZGR conversion (cloud_model.ZGR_TO_AV) is applied at runtime in
+# the shader / manifest, never baked into the stored density.
 # Sanity check: Aquila Rift at ~200 pc, peak density ~0.05 E_ZGR/pc,
 # sightline 200 pc → 10 E_ZGR → 27 mag A_V peak-through-the-densest-filament
 # (matches published values; most real sightlines clip far below this).
 
-ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DUST = ROOT / "data" / "dust"
 PUBLIC_DUST = ROOT / "public" / "dust"
-
-sys.path.insert(0, str(ROOT / "scripts" / "clouds"))
-import cloud_model  # noqa: E402
 
 
 def main() -> int:
@@ -180,7 +171,7 @@ def _peak_column_av(voxels: np.ndarray, cloud, rot: np.ndarray,
                      * (f[..., 1] if dy else 1 - f[..., 1])
                      * (f[..., 2] if dz else 1 - f[..., 2]))
                 acc += w * voxels[i0[..., 0] + dx, i0[..., 1] + dy, i0[..., 2] + dz]
-    cols = np.trapezoid(acc, t, axis=-1) * ZGR_TO_AV
+    cols = np.trapezoid(acc, t, axis=-1) * cloud_model.ZGR_TO_AV
     return float(cols.max())
 
 
@@ -437,7 +428,7 @@ def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
         "densityMin": DENSITY_MIN,
         "densityMax": density_max,
         "encoding": "uint8: 255 * (log10(clamp(d,dmin,dmax)) - log10(dmin)) / log10(dmax/dmin)",
-        "avPerDensityPerPc": ZGR_TO_AV,
+        "avPerDensityPerPc": cloud_model.ZGR_TO_AV,
         "chunks": chunks,
         "particles": {
             "file": "particles.bin",
