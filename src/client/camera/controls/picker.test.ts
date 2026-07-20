@@ -7,9 +7,14 @@ import { Picker, type PickerDeps } from './picker';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
+import type { Cloud } from '../../molecular-clouds/cloud-loader';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
-import type { Heliopause } from '../../solar-system/heliopause';
+import {
+  HELIOPAUSE_APEX_SOL_PC,
+  HELIOPAUSE_LABEL_ELEMENT_ID,
+  type Heliopause,
+} from '../../solar-system/heliopause';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -452,5 +457,209 @@ describe('Picker / pickCloud', () => {
       viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
     });
     expect(picker.pickCloud(100, 100)).toBeNull();
+  });
+});
+
+describe('Picker / pickCloudHit', () => {
+  // Fallback-only tier — the click gate (pickCloud's warp check) doesn't
+  // apply to hover, so these only cover the layer/visibility/raycast gates.
+
+  function makeCloudPicker(opts: {
+    clouds: MolecularClouds | null;
+    camera?: THREE.PerspectiveCamera;
+    worldOffset?: THREE.Vector3;
+  }): { picker: Picker; camera: THREE.PerspectiveCamera } {
+    const data = makeCatalog([]);
+    const camera = opts.camera ?? makeCamera();
+    const deps: PickerDeps = {
+      domElement: makeDomElementStub(),
+      camera,
+      catalog: data.catalog,
+      sortedByDistFromSol: data.sortedByDistFromSol,
+      sortedDistFromSol: data.sortedDistFromSol,
+      getLocalPositions: () => data.localPositions,
+      getFilter: () => defaultFilter(),
+      getClouds: () => opts.clouds,
+      getLocalGroupLayer: () => null,
+      getHeliopause: () => ({ isVisible: () => false }) as unknown as Heliopause,
+      getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
+      getWorldOffset: () => opts.worldOffset ?? new THREE.Vector3(),
+      getWarpActive: () => false,
+      renderedSizePxFn: () => 20,
+      resolveCollapsedLead: (idx) => idx,
+      fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
+      viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
+    };
+    return { picker: new Picker(deps), camera };
+  }
+
+  it('returns null when no cloud layer is attached', () => {
+    const { picker } = makeCloudPicker({ clouds: null });
+    expect(picker.pickCloudHit(400, 300)).toBeNull();
+  });
+
+  it('returns null when the cloud group is not visible', () => {
+    const stubClouds = {
+      raycast: () => 0,
+      group: { visible: false },
+      clouds: [],
+    } as unknown as MolecularClouds;
+    const { picker } = makeCloudPicker({ clouds: stubClouds });
+    expect(picker.pickCloudHit(400, 300)).toBeNull();
+  });
+
+  it('returns a fallback hit with the right cameraDistancePc when the raycast hits a cloud', () => {
+    const cloud = { centerAbs: new THREE.Vector3(0, 0, 0) } as Cloud;
+    const stubClouds = {
+      raycast: () => 0,
+      group: { visible: true },
+      clouds: [cloud],
+    } as unknown as MolecularClouds;
+    // Camera at (0,0,30) (the shared makeCamera fixture) → distance to a
+    // cloud centred at the origin is exactly 30 pc.
+    const { picker } = makeCloudPicker({ clouds: stubClouds });
+    const hit = picker.pickCloudHit(400, 300);
+    expect(hit).not.toBeNull();
+    expect(hit!.idx).toBe(0);
+    expect(hit!.tier).toBe('fallback');
+    expect(hit!.cameraDistancePc).toBeCloseTo(30, 5);
+  });
+
+  it('returns null when the raycast misses every cloud', () => {
+    const stubClouds = {
+      raycast: () => null,
+      group: { visible: true },
+      clouds: [],
+    } as unknown as MolecularClouds;
+    const { picker } = makeCloudPicker({ clouds: stubClouds });
+    expect(picker.pickCloudHit(400, 300)).toBeNull();
+  });
+});
+
+describe('Picker / pickHeliopauseHit', () => {
+  // The picker projects the real HELIOPAUSE_SAMPLE_POINTS_SOL / apex
+  // constants (no fixture data of its own) — these tests place the
+  // camera relative to that real geometry rather than mocking it.
+
+  function makeHelioPicker(opts: {
+    visible: boolean;
+    camera: THREE.PerspectiveCamera;
+    worldOffset?: THREE.Vector3;
+  }): Picker {
+    const data = makeCatalog([]);
+    const deps: PickerDeps = {
+      domElement: makeDomElementStub(),
+      camera: opts.camera,
+      catalog: data.catalog,
+      sortedByDistFromSol: data.sortedByDistFromSol,
+      sortedDistFromSol: data.sortedDistFromSol,
+      getLocalPositions: () => data.localPositions,
+      getFilter: () => defaultFilter(),
+      getClouds: () => null,
+      getLocalGroupLayer: () => null,
+      getHeliopause: () => ({ isVisible: () => opts.visible }) as unknown as Heliopause,
+      getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
+      getWorldOffset: () => opts.worldOffset ?? new THREE.Vector3(),
+      getWarpActive: () => false,
+      renderedSizePxFn: () => 20,
+      resolveCollapsedLead: (idx) => idx,
+      fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
+      viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
+    };
+    return new Picker(deps);
+  }
+
+  // Camera parked far outside the shell along the apex axis, looking
+  // back at Sol — the apex sample sits on the view axis (screen centre)
+  // and the whole ~200 AU shell subtends only a few degrees at this
+  // distance, so every sample projects safely in front of the near plane.
+  function makeOutsideShellCamera(): THREE.PerspectiveCamera {
+    const apexDir = HELIOPAUSE_APEX_SOL_PC.clone().normalize();
+    const camPos = apexDir.multiplyScalar(HELIOPAUSE_APEX_SOL_PC.length() * 20);
+    const cam = new THREE.PerspectiveCamera(FOV_DEG, VIEWPORT_W / VIEWPORT_H, 1e-10, 1e6);
+    cam.position.copy(camPos);
+    cam.lookAt(0, 0, 0);
+    cam.updateMatrixWorld();
+    return cam;
+  }
+
+  // Camera at Sol (the shell's interior) — the ellipsoid surrounds the
+  // origin, so whichever way the camera looks, the samples on the far
+  // side of the shell land behind it, tripping the near-plane bail.
+  function makeInsideShellCamera(): THREE.PerspectiveCamera {
+    const cam = new THREE.PerspectiveCamera(FOV_DEG, VIEWPORT_W / VIEWPORT_H, 1e-10, 1e6);
+    cam.position.set(0, 0, 0);
+    cam.lookAt(HELIOPAUSE_APEX_SOL_PC);
+    cam.updateMatrixWorld();
+    return cam;
+  }
+
+  const withDocumentStub = (
+    getElementById: (id: string) => unknown,
+    fn: () => void,
+  ) => {
+    const prevDoc = (globalThis as { document?: unknown }).document;
+    (globalThis as { document?: unknown }).document = { getElementById };
+    try {
+      fn();
+    } finally {
+      (globalThis as { document?: unknown }).document = prevDoc;
+    }
+  };
+
+  it('returns null when the heliopause is not visible', () => {
+    withDocumentStub(() => null, () => {
+      const picker = makeHelioPicker({ visible: false, camera: makeOutsideShellCamera() });
+      expect(picker.pickHeliopauseHit(VIEWPORT_W / 2, VIEWPORT_H / 2)).toBeNull();
+    });
+  });
+
+  it('outside-shell: cursor inside the projected silhouette bbox → fallback hit', () => {
+    withDocumentStub(() => null, () => {
+      const camera = makeOutsideShellCamera();
+      const picker = makeHelioPicker({ visible: true, camera });
+      // The apex sample sits on the view axis → screen centre.
+      const hit = picker.pickHeliopauseHit(VIEWPORT_W / 2, VIEWPORT_H / 2);
+      expect(hit).not.toBeNull();
+      expect(hit!.tier).toBe('fallback');
+    });
+  });
+
+  it('outside-shell: cursor far from the silhouette → miss', () => {
+    withDocumentStub(() => null, () => {
+      const camera = makeOutsideShellCamera();
+      const picker = makeHelioPicker({ visible: true, camera });
+      // The shell subtends only a few degrees at this camera distance —
+      // a far corner is well outside the projected bbox.
+      expect(picker.pickHeliopauseHit(2, 2)).toBeNull();
+    });
+  });
+
+  it('inside-shell: a sample point behind the near plane bails the silhouette test', () => {
+    withDocumentStub(() => null, () => {
+      const camera = makeInsideShellCamera();
+      const picker = makeHelioPicker({ visible: true, camera });
+      // Any cursor position misses — the silhouette test bails outright
+      // once any sample lands behind the near plane, regardless of bbox.
+      expect(picker.pickHeliopauseHit(VIEWPORT_W / 2, VIEWPORT_H / 2)).toBeNull();
+    });
+  });
+
+  it('inside-shell: label bbox overlap still fallback-hits even though the silhouette test bailed', () => {
+    const labelRect = {
+      left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
+    } as DOMRect;
+    withDocumentStub(
+      (id) => (id === HELIOPAUSE_LABEL_ELEMENT_ID
+        ? { getBoundingClientRect: () => labelRect }
+        : null),
+      () => {
+        const camera = makeInsideShellCamera();
+        const picker = makeHelioPicker({ visible: true, camera });
+        const hit = picker.pickHeliopauseHit(120, 110);
+        expect(hit).not.toBeNull();
+        expect(hit!.tier).toBe('fallback');
+      },
+    );
   });
 });
