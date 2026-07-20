@@ -80,14 +80,11 @@ import {
   HELIOPAUSE_LABEL,
   HELIOPAUSE_CARD,
   HELIOPAUSE_EXTENT_PC,
-  HELIOPAUSE_LABEL_ELEMENT_ID,
-  HELIOPAUSE_SAMPLE_POINTS_SOL,
 } from './solar-system/heliopause';
 import {
   LocalBubbleShell,
   LOCAL_BUBBLE_LABEL,
   LOCAL_BUBBLE_CARD,
-  LOCAL_BUBBLE_LABEL_ELEMENT_ID,
 } from './local-bubble/local-bubble';
 import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
 import { ShellRegistry } from './fresnel-shell/shell-registry';
@@ -732,13 +729,7 @@ export class Stellata implements FrameAnchor {
           return true;
         },
         extentPc: () => HELIOPAUSE_EXTENT_PC,
-        pick: {
-          labelElementId: HELIOPAUSE_LABEL_ELEMENT_ID,
-          visible: () => this.heliopause.isVisible(),
-          sampleCount: () => HELIOPAUSE_SAMPLE_POINTS_SOL.length,
-          sampleLocalInto: (i, worldOffset, out) =>
-            void out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(worldOffset),
-        },
+        pick: this.heliopause.shellPickSurface(),
       });
     }
     this.localBubbleShell = new LocalBubbleShell();
@@ -1960,13 +1951,7 @@ export class Stellata implements FrameAnchor {
         return true;
       },
       extentPc: () => mesh.extentPc,
-      pick: {
-        labelElementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
-        visible: () => this.localBubbleShell.isVisible(),
-        sampleCount: () => this.localBubbleShell.labelSampleCount(),
-        sampleLocalInto: (i, worldOffset, out) =>
-          void this.localBubbleShell.labelSampleInto(i, worldOffset, out),
-      },
+      pick: this.localBubbleShell.shellPickSurface(),
     });
   }
 

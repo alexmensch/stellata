@@ -41,6 +41,28 @@ describe('createShellFocusProvider', () => {
     expect(dist()).not.toBe(first);
   });
 
+  it('renders labelled size measurements as their own right-justified rows (heliopause)', () => {
+    const helio: ShellInstance = {
+      ...LOCAL_BUBBLE,
+      label: 'Heliopause',
+      card: {
+        typeLine: 'Solar-wind boundary',
+        size: [
+          { label: 'Upwind', value: '122 AU' },
+          { label: 'Laterally', value: '115 AU' },
+          { label: 'Downwind tail', value: '200 AU' },
+        ],
+        knownFrom: 'Voyager 1 & 2 crossings',
+      },
+    };
+    const provider = createShellFocusProvider({ shellAt: () => helio, cameraDistancePc: () => 1200 });
+    const byLabel = new Map(provider.format(0).rows.map((r) => [r.label, r.value]));
+    expect(byLabel.has('Size')).toBe(false); // no single "Size" row — one row per axis
+    expect(byLabel.get('Upwind')).toBe('122 AU');
+    expect(byLabel.get('Laterally')).toBe('115 AU');
+    expect(byLabel.get('Downwind tail')).toBe('200 AU');
+  });
+
   it('returns an empty card when the shell is absent', () => {
     const provider = createShellFocusProvider({ shellAt: () => null, cameraDistancePc: () => 0 });
     expect(provider.format(0)).toEqual({ name: '', identityLines: [], rows: [], lines: [] });

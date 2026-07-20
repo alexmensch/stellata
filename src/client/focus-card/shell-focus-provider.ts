@@ -19,9 +19,12 @@ export function createShellFocusProvider(
     format(idx: number): FocusCardContent {
       const shell = config.shellAt(idx);
       if (!shell) return { name: '', identityLines: [], rows: [], lines: [] };
+      const sizeRows: FocusCardRow[] = typeof shell.card.size === 'string'
+        ? [{ label: 'Size', value: shell.card.size }]
+        : shell.card.size.map((m) => ({ label: m.label, value: m.value }));
       const rows: FocusCardRow[] = [
         { label: 'Distance', value: () => fmtDistAuto(config.cameraDistancePc(idx)) },
-        { label: 'Size', value: shell.card.size },
+        ...sizeRows,
         { label: 'Known from', value: shell.card.knownFrom },
       ];
       return { name: shell.label, identityLines: [shell.card.typeLine], rows, lines: [] };

@@ -10,7 +10,7 @@ import {
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
-import type { ShellCardInfo } from '../fresnel-shell/shell-registry';
+import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
 
 // Nose (upwind apex) direction: the interstellar He inflow measured by
 // IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
@@ -63,12 +63,6 @@ const ALPHA_LIMB = 0.45;
 export const HELIOPAUSE_APEX_SOL_PC: Readonly<THREE.Vector3> =
   APEX_DIR_ICRS.clone().multiplyScalar(UPWIND_APEX_AU * AU_PC);
 
-/** Upwind apex distance from Sol in AU. The shell's upwind boundary
- *  (Voyager 1 termination crossing, 2012-08-25). Surfaced for hover
- *  labels so the readout is keyed off the same constant the geometry
- *  is derived from rather than duplicated downstream. */
-export const HELIOPAUSE_UPWIND_APEX_AU = UPWIND_APEX_AU;
-
 /** DOM element id of the SVG `<text>` node that renders the apex label.
  *  Exported so the hover picker can hit-test the label's bounding rect
  *  via getElementById — single source so the id can't drift between
@@ -80,7 +74,11 @@ export const HELIOPAUSE_LABEL_ELEMENT_ID = 'heliopause-label';
 export const HELIOPAUSE_LABEL = 'Heliopause';
 export const HELIOPAUSE_CARD: ShellCardInfo = {
   typeLine: 'Solar-wind boundary',
-  size: `${UPWIND_APEX_AU} AU nose · teardrop-shaped`,
+  size: [
+    { label: 'Upwind', value: `${UPWIND_APEX_AU} AU` },
+    { label: 'Laterally', value: `${SEMI_EQUATORIAL_AU} AU` },
+    { label: 'Downwind tail', value: `${DOWNWIND_APEX_AU} AU` },
+  ],
   knownFrom: 'Voyager 1 & 2 crossings',
 };
 
@@ -144,6 +142,20 @@ export class Heliopause extends FresnelShell {
   // Bubble, it's a free-standing structure the declutter cycle owns.
   protected shellReady(): boolean {
     return true;
+  }
+
+  /** The registry pick surface: the 62-point ellipsoid silhouette (in
+   *  step with the apex label) + the label bbox, gated on the shell's
+   *  live rendered visibility. */
+  shellPickSurface(): ShellPickSurface {
+    return {
+      labelElementId: HELIOPAUSE_LABEL_ELEMENT_ID,
+      visible: () => this.isVisible(),
+      sampleCount: () => HELIOPAUSE_SAMPLE_POINTS_SOL.length,
+      sampleLocalInto: (i, worldOffset, out) => {
+        out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(worldOffset);
+      },
+    };
   }
 
   override dispose(): void {

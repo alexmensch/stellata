@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 
 import { parkDistance, viewingDistanceForExtent } from '../camera/focus/focus-transition';
+import { angularDiameterPx } from '../camera/controls/star-geometry';
 
 /** Canonical shell order. A shell's `Target.idx`, its SID-domain local
  *  index, and its `SHELL_OBJECT_SIDS` pin all key off this array — the
@@ -11,14 +12,24 @@ import { parkDistance, viewingDistanceForExtent } from '../camera/focus/focus-tr
 export const SHELL_KEYS = ['local_bubble', 'heliopause'] as const;
 export type ShellKey = (typeof SHELL_KEYS)[number];
 
+/** One labelled size extent — a right-justified `label → value` card row
+ *  (`focus-card-types.ts`), e.g. the heliopause's upwind / lateral /
+ *  downwind axes. */
+export interface ShellSizeMeasurement {
+  label: string;
+  value: string;
+}
+
 /** Static focus-card fields for a shell (non-luminous, so no magnitude
  *  rows). Distance is computed generically camera→center, not carried
  *  here. */
 export interface ShellCardInfo {
   /** Identity line under the header — the object's type descriptor. */
   typeLine: string;
-  /** "Size" row value. */
-  size: string;
+  /** Size descriptor: a single "Size" row value (Local Bubble), or a set
+   *  of labelled extents each rendered as its own right-justified row
+   *  (the heliopause's asymmetric axes). */
+  size: string | ShellSizeMeasurement[];
   /** "Known from" row value. */
   knownFrom: string;
 }
@@ -122,6 +133,6 @@ export class ShellRegistry {
     const shell = this.at(idx);
     if (!shell || !this.localPositionInto(idx, worldOffset, this.tmp)) return 0;
     const dCam = Math.max(this.tmp.distanceTo(cameraPos), 1);
-    return 2 * Math.atan(shell.extentPc() / dCam) * angularToPx;
+    return angularDiameterPx(shell.extentPc(), dCam, angularToPx);
   }
 }

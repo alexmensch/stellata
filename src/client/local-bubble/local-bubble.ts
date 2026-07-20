@@ -9,7 +9,7 @@ import {
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
-import type { ShellCardInfo } from '../fresnel-shell/shell-registry';
+import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
 
 // Dim additive cool tint — a soft rim glow seen from beyond the wall.
 const COLOUR = new THREE.Color(0x5a7a9c);
@@ -99,6 +99,19 @@ export class LocalBubbleShell extends FresnelShell {
 
   protected shellReady(): boolean {
     return this.mesh !== null;
+  }
+
+  /** The registry pick surface: the ~96 wall samples the label projects
+   *  + the label bbox, gated on the shell's live rendered visibility. */
+  shellPickSurface(): ShellPickSurface {
+    return {
+      labelElementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
+      visible: () => this.isVisible(),
+      sampleCount: () => this.labelSampleCount(),
+      sampleLocalInto: (i, worldOffset, out) => {
+        this.labelSampleInto(i, worldOffset, out);
+      },
+    };
   }
 
   override dispose(): void {
