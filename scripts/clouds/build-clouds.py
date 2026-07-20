@@ -10,11 +10,35 @@ import re
 import sys
 from pathlib import Path
 
+import cloud_model
+from cloud_model import (
+    AV_PER_NH_PC,
+    AV_TARGET_BY_CLASS,
+    GAL_TO_ICRS,
+    MIN_AXIS_PC,
+    NOISE_MODEL,
+    SIGMA_S_BY_CLASS,
+    SPHERE_PLUMMER_P,
+    SPHERE_RFLAT_FRACTION,
+    cloud_class,
+    fnv1a32,
+    galactic_lbd_to_xyz_pc,
+    matrix_to_quat,
+    matvec,
+    parse_z2021_table3,
+    profiled_clouds,
+)
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 SRC_2020 = ROOT / 'data' / 'molecular-clouds' / 'zucker2020-tablea1.tsv'
 SRC_2021 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
 SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 OUT = ROOT / 'public' / 'clouds.json'
+
+# The voxel grid the extinction bake writes into (docs/molecular-clouds.md
+# § 1 decision 2) — clouds fully inside render with baked per-star
+# extinction; the rest are presence-only.
+DUST_GRID_HALF_EXTENT_PC = 1250.0
 
 # Default sphere radius for Zucker-2020 clouds with only a single sightline.
 # Most local SF clouds fall in the 5–30 pc effective-radius range; 5 pc is the
@@ -25,93 +49,6 @@ DEFAULT_SPHERE_RADIUS_PC = 5.0
 # Floor for spread-based radius so a tight pair of sightlines doesn't render
 # as a near-zero-size dot.
 MIN_SPHERE_RADIUS_PC = 3.0
-
-# IAU/Hipparcos J2000 galactic-frame definition (must match
-# src/client/galactic-coords.ts so all coordinate transforms agree).
-ALPHA_GC = math.radians(266.4051)
-DELTA_GC = math.radians(-28.93617)
-ALPHA_NGP = math.radians(192.85948)
-DELTA_NGP = math.radians(27.12825)
-
-
-def normalise(v: tuple[float, float, float]) -> tuple[float, float, float]:
-    n = math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2)
-    return (v[0] / n, v[1] / n, v[2] / n)
-
-
-def cross(
-    a: tuple[float, float, float],
-    b: tuple[float, float, float],
-) -> tuple[float, float, float]:
-    return (
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    )
-
-
-def build_gal_to_icrs() -> list[list[float]]:
-    """3x3 rotation matrix mapping galactic-Cartesian → ICRS-Cartesian.
-    Columns are unit vectors of galactic +X, +Y, +Z expressed in ICRS.
-    """
-    gc_dir = normalise((
-        math.cos(DELTA_GC) * math.cos(ALPHA_GC),
-        math.cos(DELTA_GC) * math.sin(ALPHA_GC),
-        math.sin(DELTA_GC),
-    ))
-    ngp_dir = normalise((
-        math.cos(DELTA_NGP) * math.cos(ALPHA_NGP),
-        math.cos(DELTA_NGP) * math.sin(ALPHA_NGP),
-        math.sin(DELTA_NGP),
-    ))
-    gal_y = normalise(cross(ngp_dir, gc_dir))
-    gal_z = normalise(cross(gc_dir, gal_y))
-    # Column-major: row i column j = component i of basis vector j.
-    return [
-        [gc_dir[0], gal_y[0], gal_z[0]],
-        [gc_dir[1], gal_y[1], gal_z[1]],
-        [gc_dir[2], gal_y[2], gal_z[2]],
-    ]
-
-
-GAL_TO_ICRS = build_gal_to_icrs()
-
-
-def matvec(m: list[list[float]], v: tuple[float, float, float]) -> tuple[float, float, float]:
-    return (
-        m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
-        m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
-        m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
-    )
-
-
-def matrix_to_quat(m: list[list[float]]) -> tuple[float, float, float, float]:
-    """Convert a 3x3 rotation matrix to a unit quaternion [x, y, z, w].
-    Standard Shepperd's method — robust to all rotations.
-    """
-    m00, m01, m02 = m[0]
-    m10, m11, m12 = m[1]
-    m20, m21, m22 = m[2]
-    trace = m00 + m11 + m22
-    if trace > 0:
-        s = 0.5 / math.sqrt(trace + 1.0)
-        return ((m21 - m12) * s, (m02 - m20) * s, (m10 - m01) * s, 0.25 / s)
-    if m00 > m11 and m00 > m22:
-        s = 2.0 * math.sqrt(1.0 + m00 - m11 - m22)
-        return (0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s)
-    if m11 > m22:
-        s = 2.0 * math.sqrt(1.0 + m11 - m00 - m22)
-        return ((m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s)
-    s = 2.0 * math.sqrt(1.0 + m22 - m00 - m11)
-    return ((m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s)
-
-
-def galactic_lbd_to_xyz_pc(l_deg: float, b_deg: float, d_pc: float) -> tuple[float, float, float]:
-    """Galactic spherical (l, b, distance) → galactic-Cartesian heliocentric pc."""
-    lr = math.radians(l_deg)
-    br = math.radians(b_deg)
-    cb = math.cos(br)
-    return (d_pc * cb * math.cos(lr), d_pc * cb * math.sin(lr), d_pc * math.sin(br))
 
 
 # Display-name normalisation. Z2020 uses underscores; Z2021 uses contracted
@@ -205,51 +142,49 @@ def parse_z2020(path: Path) -> dict[str, list[dict]]:
     return rows
 
 
-def parse_z2021(path: Path) -> list[dict]:
-    """Parse the Zucker 2021 Table 1 (whitespace-delimited)."""
-    out: list[dict] = []
-    with path.open() as fh:
-        header = fh.readline().split()
-        col = {name: i for i, name in enumerate(header)}
-        for line in fh:
-            parts = line.split()
-            if not parts:
-                continue
-            out.append({
-                'cloud': parts[col['cloud']],
-                'lmed': float(parts[col['lmed']]),
-                'bmed': float(parts[col['bmed']]),
-                'dmed': float(parts[col['dmed']]),
-                'xmin': float(parts[col['xmin']]),
-                'xmax': float(parts[col['xmax']]),
-                'ymin': float(parts[col['ymin']]),
-                'ymax': float(parts[col['ymax']]),
-                'zmin': float(parts[col['zmin']]),
-                'zmax': float(parts[col['zmax']]),
-            })
-    return out
+def in_grid(center_icrs: tuple[float, float, float], half_extents_icrs: tuple[float, float, float]) -> bool:
+    """True when the cloud volume lies fully inside the dust voxel cube."""
+    return all(
+        abs(c) + h <= DUST_GRID_HALF_EXTENT_PC
+        for c, h in zip(center_icrs, half_extents_icrs)
+    )
 
 
-def parse_z2021_masses(path: Path) -> dict[str, float]:
-    """Parse Zucker 2021 Table 3 → {raw cloud name: mass in Msun}.
-    mass_nicest (2D NICEST extinction-map mass) over mass_leike: the
-    Leike-2020 3D map saturates in dense gas and underestimates by up to
-    ~14x (Orionlam), so the extinction-based value is the one comparable
-    to literature cloud masses.
-    """
-    out: dict[str, float] = {}
-    with path.open() as fh:
-        header = fh.readline().split()
-        col = {name: i for i, name in enumerate(header)}
-        for line in fh:
-            parts = line.split()
-            if not parts:
-                continue
-            out[parts[col['cloud']]] = float(parts[col['mass_nicest']])
-    return out
+def density_model_fields(raw_name: str, *, radius_pc: float,
+                         profiled: dict[str, cloud_model.ProfiledCloud]) -> dict:
+    """The clouds.json v2 per-cloud density-model block. Profiled clouds
+    carry the calibrated Plummer parameters the bake used; the rest get the
+    class-based presence-pass defaults (docs/molecular-clouds.md § 4.3)."""
+    cls = cloud_class(raw_name)
+    common = {
+        'class': cls,
+        'sigmaS': SIGMA_S_BY_CLASS[cls],
+        'seed': fnv1a32(raw_name),
+        'embedded': [],
+    }
+    p = profiled.get(raw_name)
+    if p is not None:
+        return common | {
+            'n0Cal': round(p.n0_cal, 2),
+            'uEnv': round(p.u_env, 4),
+            'rflat': p.rflat,
+            'p': p.p,
+            'massLeike': p.mass_leike,
+            'akPeak': p.ak_leike,
+        }
+    av_target = AV_TARGET_BY_CLASS[cls]
+    return common | {
+        'n0Cal': round(av_target / (2.0 * radius_pc * AV_PER_NH_PC), 2),
+        'uEnv': 1.0,
+        'rflat': round(SPHERE_RFLAT_FRACTION * radius_pc, 2),
+        'p': SPHERE_PLUMMER_P,
+        'massLeike': None,
+        'akPeak': None,
+    }
 
 
-def build_z2021_clouds(entries: list[dict], masses: dict[str, float]) -> list[dict]:
+def build_z2021_clouds(entries: list[dict], masses: dict[str, float],
+                       profiled: dict[str, cloud_model.ProfiledCloud]) -> list[dict]:
     """Z2021 → ellipsoid clouds in ICRS frame.
     Bounding box is axis-aligned in galactic Cartesian; rotate the *centre*
     to ICRS, and emit the GAL_TO_ICRS rotation as the orientation quaternion
@@ -266,13 +201,19 @@ def build_z2021_clouds(entries: list[dict], masses: dict[str, float]) -> list[di
         b = 0.5 * (e['ymax'] - e['ymin'])
         c = 0.5 * (e['zmax'] - e['zmin'])
         # Per-axis floor — Musca's c=7 pc is fine, but a degenerate flat box
-        # would render invisibly edge-on; clamp to MIN_SPHERE_RADIUS_PC.
-        a = max(a, MIN_SPHERE_RADIUS_PC)
-        b = max(b, MIN_SPHERE_RADIUS_PC)
-        c = max(c, MIN_SPHERE_RADIUS_PC)
+        # would render invisibly edge-on. Shared with the density model
+        # (cloud_model.MIN_AXIS_PC) so extinction and rendering agree.
+        a = max(a, MIN_AXIS_PC)
+        b = max(b, MIN_AXIS_PC)
+        c = max(c, MIN_AXIS_PC)
         center_icrs = matvec(GAL_TO_ICRS, (cx, cy, cz))
         name = display_name(e['cloud'])
         d = math.sqrt(center_icrs[0] ** 2 + center_icrs[1] ** 2 + center_icrs[2] ** 2)
+        # ICRS-axis half-extents of the rotated ellipsoid's bounding box.
+        half = tuple(
+            sum(abs(GAL_TO_ICRS[i][j]) * ax for j, ax in enumerate((a, b, c)))
+            for i in range(3)
+        )
         cloud = {
             'name': name,
             'id': slugify(name),
@@ -281,9 +222,11 @@ def build_z2021_clouds(entries: list[dict], masses: dict[str, float]) -> list[di
             'quat': [round(q, 6) for q in quat_gal_to_icrs],
             'source': 'Z2021T1',
             'distance': round(d, 1),
+            'inGrid': in_grid(center_icrs, half),
         }
         if e['cloud'] in masses:
             cloud['mass'] = masses[e['cloud']]
+        cloud |= density_model_fields(e['cloud'], radius_pc=min(a, b, c), profiled=profiled)
         out.append(cloud)
     return out
 
@@ -291,6 +234,7 @@ def build_z2021_clouds(entries: list[dict], masses: dict[str, float]) -> list[di
 def build_z2020_clouds(
     grouped: dict[str, list[dict]],
     suppress: set[str],
+    profiled: dict[str, cloud_model.ProfiledCloud],
 ) -> list[dict]:
     """Z2020 → sphere clouds in ICRS frame.
     For multi-sightline clouds, the sphere radius is the maximum distance from
@@ -318,7 +262,7 @@ def build_z2020_clouds(
         center_icrs = matvec(GAL_TO_ICRS, (cx, cy, cz))
         name = display_name(raw_name)
         d = math.sqrt(center_icrs[0] ** 2 + center_icrs[1] ** 2 + center_icrs[2] ** 2)
-        out.append({
+        cloud = {
             'name': name,
             'id': slugify(name),
             'center': [round(center_icrs[0], 2), round(center_icrs[1], 2), round(center_icrs[2], 2)],
@@ -326,7 +270,10 @@ def build_z2020_clouds(
             'quat': [0, 0, 0, 1],
             'source': 'Z2020',
             'distance': round(d, 1),
-        })
+            'inGrid': in_grid(center_icrs, (radius, radius, radius)),
+        }
+        cloud |= density_model_fields(raw_name, radius_pc=radius, profiled=profiled)
+        out.append(cloud)
     return out
 
 
@@ -334,7 +281,9 @@ def is_up_to_date() -> bool:
     if not OUT.exists():
         return False
     out_mtime = OUT.stat().st_mtime
-    for src in (SRC_2020, SRC_2021, SRC_2021_T3, Path(__file__)):
+    sources = (SRC_2020, SRC_2021, cloud_model.SRC_2021_T2, SRC_2021_T3,
+               Path(__file__), Path(cloud_model.__file__))
+    for src in sources:
         if src.stat().st_mtime > out_mtime:
             return False
     return True
@@ -356,12 +305,19 @@ def main() -> None:
         sys.exit(1)
 
     z2020 = parse_z2020(SRC_2020)
-    z2021 = parse_z2021(SRC_2021)
-    masses = parse_z2021_masses(SRC_2021_T3)
+    z2021 = cloud_model.parse_z2021_table1(SRC_2021)
+    # Display mass stays mass_nicest: the Leike-2020 3D map saturates in
+    # dense gas and underestimates by up to ~14x (Orionlam), so the
+    # NICEST extinction-based value is the one comparable to literature
+    # cloud masses. The density model calibrates against the
+    # Leike-resolution values separately (massLeike / akPeak fields).
+    masses = {name: row['mass_nicest']
+              for name, row in parse_z2021_table3(SRC_2021_T3).items()}
+    profiled = {p.raw_name: p for p in profiled_clouds()}
     suppress = {z20 for raw, z20 in Z2021_TO_Z2020_SUPPRESS.items()
                 if any(raw == e['cloud'] for e in z2021)}
-    ellipsoids = build_z2021_clouds(z2021, masses)
-    spheres = build_z2020_clouds(z2020, suppress)
+    ellipsoids = build_z2021_clouds(z2021, masses, profiled)
+    spheres = build_z2020_clouds(z2020, suppress, profiled)
 
     # Dedup by id — Z2021 wins when ids collide (defensive; the suppress
     # table should already have prevented this).
@@ -372,8 +328,9 @@ def main() -> None:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        'version': 1,
+        'version': 2,
         'count': len(clouds),
+        'noiseModel': NOISE_MODEL,
         'clouds': clouds,
     }
     OUT.write_text(json.dumps(payload, separators=(',', ':')) + '\n')
