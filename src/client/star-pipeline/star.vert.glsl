@@ -345,22 +345,13 @@ void main() {
     // band are absolute filters (not affected by extinction). The magnitude
     // band is monotonic in dust: A_V ≥ 0, so a star whose unextincted
     // appMag already sits above (uMaxAppMag + 0.5) cannot become visible
-    // after extinction. Skip the extinction read for those stars — a
-    // texelFetch on the prepass path, the full 48-tap raymarch on the
-    // fallback path (where this is the dominant vertex-shader saving).
-    //
-    // DUST_AV_HEADROOM is the worst-case A_V we keep in the raymarch
-    // population on top of the +0.5 soft-taper window. 1.5 mag covers
-    // typical molecular cloud sightlines (the closer Zucker clouds peak
-    // at A_V ~ 1–2 mag through their cores; sparser ISM is well under
-    // 1 mag). A star whose unextincted appMag falls inside
-    // [uMaxAppMag + 0.5, uMaxAppMag + 0.5 + DUST_AV_HEADROOM] still
-    // gets the raymarch so the post-extinction magnitude can land in or
-    // out of the soft taper without popping as the slider moves.
-    const float DUST_AV_HEADROOM = 1.5;
+    // after extinction — the prefilter is exact, no dust headroom needed.
+    // Skip the extinction read for those stars — a texelFetch on the
+    // prepass path, the full 48-tap raymarch on the fallback path (where
+    // this is the dominant vertex-shader saving).
     bool spectOk = (uSpectMask & (1u << uint(iSpectClass))) != 0u;
     bool distOk = iDistSol >= uMinDistSol && iDistSol <= uMaxDistSol;
-    bool magOkPrelim = appMag <= uMaxAppMag + 0.5 + DUST_AV_HEADROOM;
+    bool magOkPrelim = appMag <= uMaxAppMag + 0.5;
 
     // Luminosity-class softness: linear from white dwarf (0) → hypergiant
     // (9). Unknown (iLumClass = 255) falls back to main-sequence-dwarf
