@@ -1,6 +1,6 @@
-import * as THREE from 'three';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Cloud } from '../../molecular-clouds/cloud-loader';
+import { makeMockCloud } from '../../molecular-clouds/cloud-mock';
 import { setUnit } from '../../ui/distance-util';
 import {
   formatCloudHover,
@@ -8,9 +8,8 @@ import {
 } from './cloud-hover-format';
 
 // Build a synthetic Cloud fixture. Only the fields the formatter reads
-// (name, axes) matter; centerAbs, quat, and distanceFromSol are
-// placeholders — the hover distance is the camera distance passed per
-// pick. The fixture values match real entries in the v1
+// (name, axes) matter; the hover distance is the camera distance passed
+// per pick. The fixture values match real entries in the
 // public/clouds.json catalog so the goldens reflect the actual hover
 // strings a user would see.
 function cloud(
@@ -19,17 +18,13 @@ function cloud(
   distancePc: number,
   source: 'Z2020' | 'Z2021T1' = 'Z2021T1',
 ): Cloud {
-  return {
+  return makeMockCloud({
     name,
     id: name.toLowerCase().replace(/\s+/g, '-'),
-    sid: 1,
-    centerAbs: new THREE.Vector3(0, 0, 0),
     axes,
-    quat: new THREE.Quaternion(0, 0, 0, 1),
     source,
     distanceFromSol: distancePc,
-    massMsun: null,
-  };
+  });
 }
 
 function buildCtx(clouds: Cloud[]): CloudHoverFormatContext {

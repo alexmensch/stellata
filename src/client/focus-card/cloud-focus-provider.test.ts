@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import { setUnit } from '../ui/distance-util';
 import type { Cloud } from '../molecular-clouds/cloud-loader';
+import { makeMockCloud } from '../molecular-clouds/cloud-mock';
 import { createCloudFocusProvider } from './cloud-focus-provider';
 import type { FocusCardRow } from './focus-card-types';
 
@@ -11,17 +11,14 @@ function cloud(
   source: Cloud['source'],
   massMsun: number | null,
 ): Cloud {
-  return {
+  return makeMockCloud({
     name,
     id: name.toLowerCase(),
-    sid: 1,
-    centerAbs: new THREE.Vector3(0, 0, 0),
     axes,
-    quat: new THREE.Quaternion(0, 0, 0, 1),
     source,
     distanceFromSol: 150,
     massMsun,
-  };
+  });
 }
 
 function rowValue(rows: FocusCardRow[], label: string): string | undefined {
