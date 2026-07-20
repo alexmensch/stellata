@@ -6,6 +6,7 @@ import type { Target } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import type { LgCatalog } from '../local-group/local-group-loader';
+import type { ShellRegistry } from '../fresnel-shell/shell-registry';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
@@ -13,7 +14,7 @@ import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
 
 export type { SearchEntry };
 
-type EntryKind = 'star' | 'cloud' | 'lg' | 'planet';
+type EntryKind = 'star' | 'cloud' | 'lg' | 'planet' | 'shell';
 
 /** Static dropdown-row distance for a Local Group entry. Fixed units by
  *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
@@ -416,6 +417,7 @@ export function createSearchRunner(
   raw: SearchEntry[],
   clouds: CloudCatalog | null,
   lg: LgCatalog | null = null,
+  shells: ShellRegistry | null = null,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
@@ -450,6 +452,23 @@ export function createSearchRunner(
       for (const label of [o.name, ...(o.aliases ?? [])]) {
         fuzzyEntries.push({ kind: 'lg', index: i, label, primary: o.name, displayCon });
       }
+    }
+  }
+
+  // Boundary shells (Local Bubble, heliopause) — the registry holds only
+  // the shells whose layer attached; index is the SHELL_KEYS/Target idx.
+  // Secondary line is the shell's type descriptor.
+  if (shells) {
+    for (let i = 0; i < shells.count; i++) {
+      const s = shells.at(i);
+      if (!s) continue;
+      fuzzyEntries.push({
+        kind: 'shell',
+        index: i,
+        label: s.label,
+        primary: s.label,
+        displayCon: s.card.typeLine,
+      });
     }
   }
 
@@ -661,7 +680,7 @@ export function bindSearch(
   clouds: CloudCatalog | null,
   lg: LgCatalog | null = null,
 ) {
-  const runQuery = createSearchRunner(catalog, raw, clouds, lg);
+  const runQuery = createSearchRunner(catalog, raw, clouds, lg, stellata.shells);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -812,7 +831,7 @@ export function bindFindSearch(
   clouds: CloudCatalog | null,
   lg: LgCatalog | null = null,
 ): void {
-  const runQuery = createSearchRunner(catalog, raw, clouds, lg);
+  const runQuery = createSearchRunner(catalog, raw, clouds, lg, stellata.shells);
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;
 

@@ -52,8 +52,10 @@ cloud-hover-format.ts            Cloud — camera distance + major × minor
 local-group-hover-format.ts      Local Group object — display name,
                                  camera distance, "Disc"/"Ellipsoid",
                                  axis pair.
-heliopause-hover-format.ts       Static — upwind + lateral + downwind
-                                 extents. Geometry is fixed.
+shell-hover-format.ts            Boundary shell (Local Bubble, heliopause)
+                                 — display name, camera distance, type
+                                 descriptor, size. Reads the registered
+                                 ShellInstance's card.
 *.test.ts                        vitest pin per formatter. Tests pin
                                  the unit via setUnit('pc') for
                                  stable golden strings.

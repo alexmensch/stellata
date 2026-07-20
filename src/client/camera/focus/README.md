@@ -17,7 +17,7 @@ close-approach focused star sitting at exactly NDC origin.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
 - `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
-  kind = `'star' | 'cloud' | 'lg' | 'planet'`), the `FocusTarget`
+  kind = `'star' | 'cloud' | 'lg' | 'planet' | 'shell'`), the `FocusTarget`
   contract, and the `FocusableProviders` registry contract
   (§ FocusableProviders). Per-kind factories return objects closing
   over the current focus state + controller deps so warp / overlays /
@@ -38,7 +38,7 @@ stays on `stellata.ts` — those primitives rewrite the star-pipeline
 
 - `focused: Target | null` and `vector: Target | null` — one sum-type
   slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG
-  ↔ planet) is structural rather than enforced by pairwise clears.
+  ↔ planet ↔ shell) is structural rather than enforced by pairwise clears.
   The `'focus'` and `'vector'` events carry the kind-tagged
   `Target | null` payload, so a kind change is a single emit — no
   clearing emit for the displaced kind precedes it; subscribers
@@ -170,8 +170,8 @@ add speculative capability methods before then.
 
 Star and planet are the two **hard** focus kinds: both recentre the
 floating origin onto the object and drop `controls.minDistance` to a
-per-body physical floor; clouds and LG objects stay **soft** (no
-recentre, no floor change). `focusPlanet` mirrors `focusStar`;
+per-body physical floor; clouds, LG objects, and boundary shells stay
+**soft** (no recentre, no floor change). `focusPlanet` mirrors `focusStar`;
 `setPlanetFocus` is the setFocus-analogue (observe bail-out, recentre
 onto the planet's absolute position, floor drop, pose-preserving
 target snap). Displacing a planet focus — `setFocus(null)`, a soft

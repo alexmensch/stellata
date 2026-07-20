@@ -17,6 +17,7 @@ import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
+import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import { PlanetBodyField } from '../../solar-system/planet-body-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
@@ -240,6 +241,7 @@ function makeHarness(opts: {
     cloud: softProvider,
     lg: softProvider,
     planet: softProvider,
+    shell: softProvider,
   };
 
   // Body field stub with no attached hosts — planet-kind paths no-op
@@ -277,6 +279,8 @@ function makeHarness(opts: {
     return innerRecenter(newOrigin);
   };
 
+  const shells = new ShellRegistry();
+
   const deps: FocusControllerDeps = {
     camera,
     controls,
@@ -290,6 +294,7 @@ function makeHarness(opts: {
     },
     getClouds: () => null,
     getLocalGroup: () => null,
+    getShells: () => shells,
     getPlanetField: () => planetField,
     getWarp: () => warp,
     getObserve: () => observe,

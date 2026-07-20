@@ -6,13 +6,9 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { FilterState } from '../../filters/filter-state';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
+import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
+import { pickShellSilhouette } from '../../fresnel-shell/shell-pick';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
-import {
-  Heliopause,
-  HELIOPAUSE_APEX_SOL_PC,
-  HELIOPAUSE_LABEL_ELEMENT_ID,
-  HELIOPAUSE_SAMPLE_POINTS_SOL,
-} from '../../solar-system/heliopause';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';
@@ -39,7 +35,7 @@ export interface PickerDeps {
   getFilter: () => Readonly<FilterState>;
   getClouds: () => MolecularClouds | null;
   getLocalGroupLayer: () => LocalGroupLayer | null;
-  getHeliopause: () => Heliopause;
+  getShells: () => ShellRegistry;
   getPlanetBodyField: () => PlanetBodyField;
   // Floating-origin offset — picks for objects in absolute (catalog)
   // space (clouds, Local Group) need to project into the local frame
@@ -152,69 +148,33 @@ export class Picker {
     );
   }
 
-  // Fallback-only tier (extended shell, no rendered disc). Hit surface
-  // is the projected ellipsoid silhouette OR the apex SVG label rect.
-  // Inside-shell branch (camera within ellipsoid): any sample behind
-  // the near plane bails the silhouette test, but the label test still
-  // fires via getBoundingClientRect (zero bounds when display:none, so
-  // the inside-bbox check harmlessly fails when the label is hidden).
-  pickHeliopauseHit(clientX: number, clientY: number, _pixelThreshold = 14): HoverHit | null {
-    const heliopause = this.deps.getHeliopause();
-    if (!heliopause.isVisible()) return null;
-    const camera = this.deps.camera;
+  // Boundary-shell hit (Local Bubble, heliopause): the nearest registered
+  // shell whose silhouette / label bbox is under the cursor. Fallback tier
+  // — stars / planets / LG win any overlap. Only visible (drawn) shells
+  // pick, so a decluttered or camera-inside shell isn't hoverable.
+  pickShellHit(clientX: number, clientY: number, _pixelThreshold = 14): HoverHit | null {
+    const shells = this.deps.getShells();
     const rect = this.deps.domElement.getBoundingClientRect();
-    const cursorX = clientX - rect.left;
-    const cursorY = clientY - rect.top;
-
-    // Silhouette bbox: project all sample points to screen-space.
-    // Bail (allInFront=false) if any sample is behind the near plane —
-    // matches the label engine's exact predicate so the silhouette is
-    // hoverable iff it's also drawn.
-    let allInFront = true;
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
-    const tmp = this.tmpV3;
-    const nearNeg = -camera.near;
-    const worldOffset = this.deps.getWorldOffset();
-    for (const sample of HELIOPAUSE_SAMPLE_POINTS_SOL) {
-      tmp.copy(sample).sub(worldOffset);
-      tmp.applyMatrix4(camera.matrixWorldInverse);
-      if (tmp.z >= nearNeg) { allInFront = false; break; }
-      tmp.applyMatrix4(camera.projectionMatrix);
-      const sx = (tmp.x + 1) * 0.5 * rect.width;
-      const sy = (1 - tmp.y) * 0.5 * rect.height;
-      if (sx < minX) minX = sx;
-      if (sx > maxX) maxX = sx;
-      if (sy < minY) minY = sy;
-      if (sy > maxY) maxY = sy;
+    const worldOffset = this.deps.getWorldOffset() as THREE.Vector3;
+    const cameraPos = this.deps.camera.position;
+    let best: HoverHit | null = null;
+    for (let idx = 0; idx < shells.count; idx++) {
+      const shell = shells.at(idx);
+      if (!shell || !shell.pick.visible()) continue;
+      const hit = pickShellSilhouette({
+        camera: this.deps.camera,
+        rect,
+        clientX,
+        clientY,
+        worldOffset,
+        surface: shell.pick,
+        cameraDistancePc: shells.cameraDistancePc(idx, worldOffset, cameraPos),
+        idx,
+        scratch: this.tmpV3,
+      });
+      if (hit && (best === null || hit.cameraDistancePc < best.cameraDistancePc)) best = hit;
     }
-    const insideSilhouette = allInFront
-      && cursorX >= minX && cursorX <= maxX
-      && cursorY >= minY && cursorY <= maxY;
-
-    // Label bbox: getBoundingClientRect returns all-zero bounds for a
-    // `display: none` element, so this test harmlessly fails whenever
-    // the label engine has hidden the label (orbit-ring fade, chart
-    // mode, near-plane guard).
-    let insideLabel = false;
-    const labelEl = document.getElementById(HELIOPAUSE_LABEL_ELEMENT_ID);
-    if (labelEl) {
-      const lr = labelEl.getBoundingClientRect();
-      if (lr.width > 0 && lr.height > 0) {
-        insideLabel = clientX >= lr.left && clientX <= lr.right
-          && clientY >= lr.top && clientY <= lr.bottom;
-      }
-    }
-
-    if (!insideSilhouette && !insideLabel) return null;
-
-    const cam = camera.position;
-    const apex = HELIOPAUSE_APEX_SOL_PC;
-    const dx = apex.x - worldOffset.x - cam.x;
-    const dy = apex.y - worldOffset.y - cam.y;
-    const dz = apex.z - worldOffset.z - cam.z;
-    const cameraDistancePc = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    return { idx: 0, cameraDistancePc, tier: 'fallback' };
+    return best;
   }
 
   // Fallback-only tier. Decoupled from warp state (the click-focus

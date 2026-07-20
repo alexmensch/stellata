@@ -1,7 +1,7 @@
 # Points of interest (POIs)
 
-User-pinned objects — any pinnable Target kind (stars, planets, and
-Local Group objects today) in one list. This folder owns the pin **state**; the SVG
+User-pinned objects — any pinnable Target kind (stars, planets,
+Local Group objects, and boundary shells today) in one list. This folder owns the pin **state**; the SVG
 rendering (rings, labels, off-screen arrows) lives in
 `../overlays/poi-overlay.ts`, and the per-POI info cards are members of
 the card rolodex (`../focus-card/README.md` § Rolodex behaviour).

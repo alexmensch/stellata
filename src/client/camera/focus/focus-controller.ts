@@ -21,6 +21,7 @@ import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
 import { lgViewingDistancePc } from '../../local-group/local-group-loader';
+import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import {
   type PlanetSystem,
   getPlanetSystem,
@@ -115,6 +116,10 @@ export interface FocusControllerDeps {
   setFocalBodyHidden: (target: Target | null) => void;
   getClouds: () => MolecularClouds | null;
   getLocalGroup: () => LocalGroupLayer | null;
+  /** Boundary-shell instance registry — Target {kind:'shell'} identity +
+   *  geometry. Eagerly constructed by the shell; the closure just breaks
+   *  the construction-order dependency. */
+  getShells: () => ShellRegistry;
   /** Planet-body field — Target {kind:'planet'} identity + geometry.
    *  Eagerly constructed by the shell, so not a lazy attach getter;
    *  the closure just breaks the construction-order dependency. */
@@ -152,6 +157,7 @@ export class FocusController implements FocusOps {
   private readonly tmpRecenter = new THREE.Vector3();
   private readonly tmpLive = new THREE.Vector3();
   private readonly tmpPert = new THREE.Vector3();
+  private readonly tmpShell = new THREE.Vector3();
 
   constructor(deps: FocusControllerDeps) {
     this.deps = deps;
@@ -437,7 +443,7 @@ export class FocusController implements FocusOps {
    *  (orbit floor clamp + planet-system detach + observe bail-out);
    *  another soft kind is displaced structurally by the slot write.
    *  Passing null clears only the named kind's focus. */
-  private setSoftFocus(kind: 'cloud' | 'lg', idx: number | null): void {
+  private setSoftFocus(kind: 'cloud' | 'lg' | 'shell', idx: number | null): void {
     if (idx !== null && isHardTarget(this.focused)) {
       this.setFocus(null);
     }
@@ -1086,6 +1092,38 @@ export class FocusController implements FocusOps {
     };
   }
 
+  /** Build a FocusTarget for the boundary shell at index `idx`. Returns
+   *  null when the shell's layer hasn't loaded or the index is out of
+   *  range. Soft kind: parks at `viewingDistanceForExtent(extent)` so the
+   *  whole shell fits — which is also the distance the hide-when-inside
+   *  wall becomes visible (fresnel-shell/README.md). */
+  private makeShellFocusTarget(idx: number): FocusTarget | null {
+    const shells = this.deps.getShells();
+    const shell = shells.at(idx);
+    if (!shell) return null;
+    if (!shell.centerAbsInto(this.tmpShell)) return null;
+    return {
+      kind: 'shell',
+      idx,
+      anchorInto: (out) => shell.centerAbsInto(out),
+      localPositionInto: (out) => {
+        if (!shell.centerAbsInto(out)) return false;
+        out.sub(this.deps.frameAnchor.getWorldOffset());
+        return true;
+      },
+      parkRadius: () => shells.viewingDistancePc(idx),
+      applyFocus: () => {
+        this.applyFocusState({ kind: 'shell', idx });
+      },
+      emitFocusEvents: () => {
+        this.deps.bus.emit('focus', { kind: 'shell', idx });
+        this.deps.bus.emit('state');
+      },
+      physicalRadius: () => null,
+      chartPlateauDistance: () => null,
+    };
+  }
+
   /** Per-kind FocusTarget dispatch — the one switch, feeding warp and
    *  any future camera transition. Null when the target's layer hasn't
    *  loaded or the index is out of range. */
@@ -1093,6 +1131,7 @@ export class FocusController implements FocusOps {
     if (target.kind === 'star') return this.makeStarFocusTarget(target.idx);
     if (target.kind === 'planet') return this.makePlanetFocusTarget(target.idx);
     if (target.kind === 'cloud') return this.makeCloudFocusTarget(target.idx);
+    if (target.kind === 'shell') return this.makeShellFocusTarget(target.idx);
     return this.makeLgFocusTarget(target.idx);
   }
 

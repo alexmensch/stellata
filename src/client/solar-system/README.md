@@ -745,6 +745,26 @@ the same orbit-ring heuristic so the label disappears in lockstep
 with the planet labels when the host system is too far for the
 geometry to read.
 
+### Heliopause as a focus target
+
+The heliopause is a full boundary-shell focus target (`shell`
+`TargetKind`): searchable, focusable, warpable, pinnable, hoverable —
+registered into the shared `ShellRegistry` in the Stellata ctor (center =
+Sol, extent = the 200 AU downwind apex, SID =
+`SHELL_OBJECT_SIDS.heliopause`, card + `HELIOPAUSE_SAMPLE_POINTS_SOL`
+pick surface). Search / focus card / hover / click-pick all route through
+the shared shell machinery (`../fresnel-shell/README.md` § Boundary
+shells as focus targets) — there is no heliopause-specific hover or
+picker anymore.
+
+**Visibility reconcile.** The shell renders when Sol's planet system is
+focused OR when the heliopause itself is the focus target
+(`Stellata.updateHeliopauseVisibility`, re-run on every focus /
+planetSystem mutation) — so focusing it as an object from any vantage
+reveals it, while the original Sol-focus behaviour is unchanged. The
+hide-when-inside cull still applies, so near Sol (camera inside) it stays
+hidden and unpickable regardless.
+
 ## First-load default and `minDistance` relaxation
 
 When the URL carries no view state, `first-load.ts` applies a

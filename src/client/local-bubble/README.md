@@ -5,12 +5,21 @@ cavity's inner (dust-traced) wall, giving immediate context that the Sun
 sits *inside* a bubble. A `representational`-tier declutter element
 (`localBubbleShell`, `scene/README.md`).
 
+It is also a full **boundary-shell focus target** (`shell` `TargetKind`):
+searchable, focusable, warpable, and pinnable. `Stellata.attachLocalBubble`
+registers it into the shared `ShellRegistry` (center = mesh centroid,
+extent = max wall distance, SID = `SHELL_OBJECT_SIDS.local_bubble`, card +
+silhouette pick surface) — see `../fresnel-shell/README.md` § Boundary
+shells as focus targets.
+
 ## Files
 
 - `local-bubble-loader.ts` — `parseLocalBubble(buf)` / `loadLocalBubble(url)`
   for `public/local-bubble.bin` (magic `LBUB`; format in
   `scripts/local-bubble/README.md`). `load*` resolves null when the asset
-  is absent — the layer is optional.
+  is absent — the layer is optional. The parse also surfaces the header's
+  volume `centroidAbs` (the focus-target center) and computes `extentPc`
+  (max wall-vertex distance from the centroid — the framing extent).
 - `local-bubble.ts` — `LocalBubbleShell` (extends the shared
   `fresnel-shell/` base: builds a `BufferGeometry` from the parsed mesh,
   `computeVertexNormals` at runtime, folds the detail-cycle + chart gates

@@ -17,7 +17,8 @@ in both navigate and observe modes.
   Shift key is held (see § Shift-drag panning).
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
-  stars / clouds / planets / Local Group / heliopause. Both star pick
+  stars / clouds / planets / Local Group / heliopause / boundary shells
+  (`pickShellHit`, shared silhouette helper in `fresnel-shell/`). Both star pick
   surfaces route the winner through `resolveCollapsedLead`: a member of
   a composite-suppressed cluster resolves to the cluster's primary, so
   the hover card, POI pin, vector, and focus all act on the object the

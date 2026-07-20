@@ -2,7 +2,7 @@
 // whichever object-carrying artifacts attach, plus deferred intents for
 // late-attaching domains. See README.md and docs/sid.md § 8.
 
-export type SidRuntimeKind = 'star' | 'planet' | 'cloud' | 'lg';
+export type SidRuntimeKind = 'star' | 'planet' | 'cloud' | 'lg' | 'shell';
 
 export interface SidDomain {
   /** sid → this domain's local index, or null when it doesn't carry it. */

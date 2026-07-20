@@ -14,7 +14,7 @@ observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
 tier re-rank + within-kind dedup over stars + clouds + Local Group
-objects + Sol's planets). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
+objects + Sol's planets + boundary shells). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
 label > query-is-prefix > plain name/alias > constellation-expansion
 label ("Gamma Andromeda" — fuzzy-searchable but never outranking the
 Andromeda Galaxy for the bare constellation-name query), then shorter
@@ -30,7 +30,9 @@ synchronous (cheap substring filter). LG
 entries index the display name plus every build-emitted alias
 ("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
 line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
-disambiguates the dSph from star rows. Sol's planets and moons enter the corpus
+disambiguates the dSph from star rows. The two boundary shells (Local Bubble, heliopause) enter the corpus by
+name, secondary line = their type descriptor, index = the `SHELL_KEYS`
+Target idx. Sol's planets and moons enter the corpus
 by name (secondary line "Planet · Sol system" or "Moon · <parent>") —
 deliberately Sol-only, since bk5 exoplanets are visit-to-discover. A
 planet entry carries the SOL_BODIES body-within-host index (planets then

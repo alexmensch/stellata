@@ -75,9 +75,23 @@ import {
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/star-local-cluster-pure';
 import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
-import { Heliopause } from './solar-system/heliopause';
-import { LocalBubbleShell } from './local-bubble/local-bubble';
+import {
+  Heliopause,
+  HELIOPAUSE_LABEL,
+  HELIOPAUSE_CARD,
+  HELIOPAUSE_EXTENT_PC,
+  HELIOPAUSE_LABEL_ELEMENT_ID,
+  HELIOPAUSE_SAMPLE_POINTS_SOL,
+} from './solar-system/heliopause';
+import {
+  LocalBubbleShell,
+  LOCAL_BUBBLE_LABEL,
+  LOCAL_BUBBLE_CARD,
+  LOCAL_BUBBLE_LABEL_ELEMENT_ID,
+} from './local-bubble/local-bubble';
 import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
+import { ShellRegistry } from './fresnel-shell/shell-registry';
+import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
 import {
   T_CLAMP_MAX_S,
   T_CLAMP_MIN_S,
@@ -334,6 +348,10 @@ export class Stellata implements FrameAnchor {
   // focused host.
   private heliopause: Heliopause;
   private localBubbleShell: LocalBubbleShell;
+  /** Boundary-shell focus-target instances (Local Bubble, heliopause).
+   *  Populated by each shell's attach; the kind-agnostic shell dispatch
+   *  reads it. See fresnel-shell/shell-registry.ts. */
+  readonly shells = new ShellRegistry();
   private galacticGrid: GalacticGrid;
   private hudOverlay: HudOverlay;
 
@@ -695,9 +713,35 @@ export class Stellata implements FrameAnchor {
     );
     this.localDepthPass.register(this.solarCluster);
     // Heliopause is Sol-anchored — added once, visibility gated on
-    // focused star = Sol via the planet-system event below.
+    // focused star = Sol OR the heliopause itself being the focus target
+    // (updateHeliopauseVisibility, wired below).
     this.heliopause = new Heliopause();
     this.scene.add(this.heliopause.group);
+    if (catalog.solIndex >= 0) {
+      const si = catalog.solIndex;
+      const solAbs = new THREE.Vector3(
+        catalog.positions[si * 3],
+        catalog.positions[si * 3 + 1],
+        catalog.positions[si * 3 + 2],
+      );
+      this.shells.register('heliopause', {
+        label: HELIOPAUSE_LABEL,
+        sid: SHELL_OBJECT_SIDS.heliopause,
+        card: HELIOPAUSE_CARD,
+        centerAbsInto: (out) => {
+          out.copy(solAbs);
+          return true;
+        },
+        extentPc: () => HELIOPAUSE_EXTENT_PC,
+        pick: {
+          labelElementId: HELIOPAUSE_LABEL_ELEMENT_ID,
+          visible: () => this.heliopause.isVisible(),
+          sampleCount: () => HELIOPAUSE_SAMPLE_POINTS_SOL.length,
+          sampleLocalInto: (i, worldOffset, out) =>
+            void out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(worldOffset),
+        },
+      });
+    }
     this.localBubbleShell = new LocalBubbleShell();
     this.scene.add(this.localBubbleShell.group);
     this.localBubbleShell.recenter(this.worldOffset);
@@ -718,7 +762,7 @@ export class Stellata implements FrameAnchor {
       getFilter: () => this.filter,
       getClouds: () => this.clouds,
       getLocalGroupLayer: () => this.localGroupLayer,
-      getHeliopause: () => this.heliopause,
+      getShells: () => this.shells,
       getPlanetBodyField: () => this.planetBodyField,
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
@@ -752,6 +796,7 @@ export class Stellata implements FrameAnchor {
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       getClouds: () => this.clouds,
       getLocalGroup: () => this.localGroupLayer,
+      getShells: () => this.shells,
       getPlanetField: () => this.planetBodyField,
       getWarp: () => this.warp,
       getObserve: () => this.observe,
@@ -801,6 +846,13 @@ export class Stellata implements FrameAnchor {
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) => this.renderedLgSizePx(idx),
       },
+      shell: {
+        localPositionInto: (idx, out) => this.shells.localPositionInto(idx, this.worldOffset, out),
+        focusParkDistance: (idx) => this.shells.focusParkDistancePc(idx),
+        arrivalRadiusPc: () => null,
+        renderedSizePx: (idx) =>
+          this.shells.renderedSizePx(idx, this.worldOffset, this.camera.position, this.angularToPx()),
+      },
       planet: {
         localPositionInto: (idx, out) =>
           this.planetBodyField.planetLocalPositionInto(idx, out),
@@ -848,8 +900,13 @@ export class Stellata implements FrameAnchor {
     // whenever inside the per-host cull distance regardless of focus.
     this.on('planetSystem', (ps) => {
       this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex, this.getT());
-      this.heliopause.setVisible(ps !== null && ps.hostStarIdx === this.catalog.solIndex);
+      this.updateHeliopauseVisibility();
     });
+    // The heliopause shows when Sol's system is focused OR when the
+    // heliopause itself is the focus target (so focusing it as an object
+    // from any vantage reveals it). Both conditions derive from focus
+    // state, so one predicate re-evaluated on every focus mutation.
+    this.on('focus', () => this.updateHeliopauseVisibility());
     // Orbit paths rebuild on every focus mutation: the focused system's
     // Kepler pairs, or none when focus leaves a multi-star system.
     this.on('focus', () => {
@@ -982,6 +1039,7 @@ export class Stellata implements FrameAnchor {
         // through ?v=.
         planet: (idx) => this.planetBodyField.planetAt(idx) !== null,
         lg: (idx) => (this.localGroupLayer?.objects[idx]?.sid ?? 0) !== 0,
+        shell: (idx) => (this.shells.at(idx)?.sid ?? 0) !== 0,
         cloud: () => false,
       },
       onChange: (pois) => {
@@ -1893,6 +1951,35 @@ export class Stellata implements FrameAnchor {
     this.localBubbleShell.attach(mesh);
     this.localBubbleShell.recenter(this.worldOffset);
     this.localBubbleShell.setMonochrome(this.monochrome);
+    this.shells.register('local_bubble', {
+      label: LOCAL_BUBBLE_LABEL,
+      sid: SHELL_OBJECT_SIDS.local_bubble,
+      card: LOCAL_BUBBLE_CARD,
+      centerAbsInto: (out) => {
+        out.set(mesh.centroidAbs[0], mesh.centroidAbs[1], mesh.centroidAbs[2]);
+        return true;
+      },
+      extentPc: () => mesh.extentPc,
+      pick: {
+        labelElementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
+        visible: () => this.localBubbleShell.isVisible(),
+        sampleCount: () => this.localBubbleShell.labelSampleCount(),
+        sampleLocalInto: (i, worldOffset, out) =>
+          void this.localBubbleShell.labelSampleInto(i, worldOffset, out),
+      },
+    });
+  }
+
+  /** Heliopause renders when Sol's planet system is focused OR the
+   *  heliopause shell is the focus target. Recomputed on focus /
+   *  planetSystem mutations so focusing it as an object reveals it from
+   *  any vantage while the Sol-focus behaviour is unchanged. */
+  private updateHeliopauseVisibility(): void {
+    const ps = this.focus.getFocusedPlanetSystem();
+    const solFocused = ps !== null && ps.hostStarIdx === this.catalog.solIndex;
+    const t = this.focus.getFocusedTarget();
+    const shellFocused = t !== null && t.kind === 'shell' && this.shells.keyOf(t.idx) === 'heliopause';
+    this.heliopause.setVisible(solFocused || shellFocused);
   }
 
   /** The Local Bubble shell layer — read by its silhouette label for the

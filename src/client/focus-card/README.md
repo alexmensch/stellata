@@ -63,7 +63,7 @@ so the whole unit stays card-sized regardless of pin count.
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
-  `FocusKind` union (`'star' | 'cloud' | 'lg' | 'planet'`).
+  `FocusKind` union (`'star' | 'cloud' | 'lg' | 'planet' | 'shell'`).
   `FocusCardProviders` is a
   mapped type EXHAUSTIVE over the union: **adding a focusable kind
   without a focus-card provider fails `tsc`** — that compile-time
@@ -111,6 +111,10 @@ so the whole unit stays card-sized regardless of pin count.
   wired focus target while the layer is shelved
   (`../molecular-clouds/README.md`); the provider exists to satisfy
   the exhaustive contract and is ready for the un-shelve.
+- `shell-focus-provider.ts` — tier-2 boundary-shell rows (Local Bubble,
+  heliopause): type identity line, live camera distance, size, and
+  provenance, read from the registered `ShellInstance`
+  (`../fresnel-shell/README.md`). Non-luminous, so no magnitude rows.
 
 ## Placement
 

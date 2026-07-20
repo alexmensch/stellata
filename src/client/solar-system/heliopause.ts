@@ -10,6 +10,7 @@ import {
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
+import type { ShellCardInfo } from '../fresnel-shell/shell-registry';
 
 // Nose (upwind apex) direction: the interstellar He inflow measured by
 // IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
@@ -39,6 +40,7 @@ const SEMI_EQUATORIAL_AU = 115;
 const SEMI_MAJOR_AU = 161;
 const CENTRE_OFFSET_AU = 39;
 const UPWIND_APEX_AU = SEMI_MAJOR_AU - CENTRE_OFFSET_AU; // 122
+const DOWNWIND_APEX_AU = SEMI_MAJOR_AU + CENTRE_OFFSET_AU; // 200
 
 // Sphere tessellation. 64 longitudes × 32 latitudes — silhouette reads
 // smooth at any zoom we afford. Cost is negligible (one mesh, one
@@ -72,6 +74,19 @@ export const HELIOPAUSE_UPWIND_APEX_AU = UPWIND_APEX_AU;
  *  via getElementById — single source so the id can't drift between
  *  the label engine and the hover picker. */
 export const HELIOPAUSE_LABEL_ELEMENT_ID = 'heliopause-label';
+
+/** Focus-target display name + card content (registered into the shell
+ *  registry). Non-luminous, so no magnitude rows. */
+export const HELIOPAUSE_LABEL = 'Heliopause';
+export const HELIOPAUSE_CARD: ShellCardInfo = {
+  typeLine: 'Solar-wind boundary',
+  size: `${UPWIND_APEX_AU} AU nose · teardrop-shaped`,
+  knownFrom: 'Voyager 1 & 2 crossings',
+};
+
+/** Max distance from Sol to the shell surface (the downwind apex), pc —
+ *  the framing extent so focus pulls out to fit the whole teardrop. */
+export const HELIOPAUSE_EXTENT_PC = DOWNWIND_APEX_AU * AU_PC;
 
 /** Visibility predicate for the apex SVG label. The label engine layers
  *  an additional near-plane guard on top of this (any sample point behind

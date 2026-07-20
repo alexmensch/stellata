@@ -23,6 +23,10 @@ const planetProvider: FocusCardProvider<'planet'> = {
   kind: 'planet',
   format: () => content,
 };
+const shellProvider: FocusCardProvider<'shell'> = {
+  kind: 'shell',
+  format: () => content,
+};
 
 describe('FocusCardProviders contract', () => {
   it('is exhaustive over FocusKind — a partial registry fails tsc', () => {
@@ -31,6 +35,7 @@ describe('FocusCardProviders contract', () => {
       cloud: cloudProvider,
       lg: lgProvider,
       planet: planetProvider,
+      shell: shellProvider,
     };
 
     // @ts-expect-error — omitting a focusable kind must not compile.
@@ -42,6 +47,7 @@ describe('FocusCardProviders contract', () => {
       cloud: cloudProvider,
       lg: lgProvider,
       planet: planetProvider,
+      shell: shellProvider,
     };
 
     expect(complete.star.kind).toBe('star');

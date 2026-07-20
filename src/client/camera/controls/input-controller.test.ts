@@ -114,6 +114,7 @@ function makeHarness(): Harness {
             tier: state.pickLgTier,
           }
         : null),
+      pickShellHit: () => null,
     } as unknown as Picker,
     bus: {
       emit: (name: string) => { emitted.push(name); },
@@ -252,6 +253,7 @@ describe('InputController.applyObjectClick × real PoiStore — full ladder walk
         star: (idx) => idx >= 0 && idx < 10,
         planet: (idx) => idx >= 0 && idx < 9,
         lg: (idx) => idx >= 0 && idx < 4,
+        shell: () => false,
         cloud: () => false,
       },
       onChange: () => {},

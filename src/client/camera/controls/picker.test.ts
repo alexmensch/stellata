@@ -9,7 +9,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
-import type { Heliopause } from '../../solar-system/heliopause';
+import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -155,7 +155,7 @@ function makePicker(
     getFilter: () => filter,
     getClouds: () => null,
     getLocalGroupLayer: () => null,
-    getHeliopause: () => ({ isVisible: () => false }) as unknown as Heliopause,
+    getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     getWorldOffset: () => new THREE.Vector3(),
     getWarpActive: () => opts.warpActive ?? false,
@@ -442,7 +442,7 @@ describe('Picker / pickCloud', () => {
       getFilter: () => defaultFilter(),
       getClouds: () => stubClouds,
       getLocalGroupLayer: () => null,
-      getHeliopause: () => ({ isVisible: () => false }) as unknown as Heliopause,
+      getShells: () => new ShellRegistry(),
       getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
       getWorldOffset: () => new THREE.Vector3(),
       getWarpActive: () => true, // warp gate active

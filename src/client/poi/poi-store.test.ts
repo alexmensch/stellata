@@ -20,6 +20,7 @@ function makeStore() {
       star: (idx) => idx >= 0 && idx < 40 && sid[idx] !== 0,
       planet: (idx) => idx >= 0 && idx < ATTACHED_PLANETS,
       lg: (idx) => idx >= 0 && idx < LG_COUNT,
+      shell: () => false,
       cloud: () => false,
     },
     onChange,

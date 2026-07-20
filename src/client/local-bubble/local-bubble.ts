@@ -9,6 +9,7 @@ import {
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
+import type { ShellCardInfo } from '../fresnel-shell/shell-registry';
 
 // Dim additive cool tint — a soft rim glow seen from beyond the wall.
 const COLOUR = new THREE.Color(0x5a7a9c);
@@ -16,6 +17,15 @@ const ALPHA_LIMB = 0.5;
 
 /** DOM id of the SVG `<text>` node for the label. */
 export const LOCAL_BUBBLE_LABEL_ELEMENT_ID = 'local-bubble-label';
+
+/** Focus-target display name + card content (registered into the shell
+ *  registry on attach). Non-luminous, so no magnitude rows. */
+export const LOCAL_BUBBLE_LABEL = 'Local Bubble';
+export const LOCAL_BUBBLE_CARD: ShellCardInfo = {
+  typeLine: 'Interstellar medium cavity',
+  size: '~75–300 pc wall',
+  knownFrom: 'Zucker et al. 2022',
+};
 
 // Surface samples the label projects each frame for its silhouette bbox.
 // ~96 vertices spread across the shell: enough to hug the silhouette, and

@@ -83,6 +83,19 @@ describe('SidResolver', () => {
     });
   });
 
+  describe('shell domain round-trip (docs/sid.md § 8)', () => {
+    it('resolves a shell sid to its SHELL_KEYS index and sidOf reverses', () => {
+      // Fabricated pins in SHELL_KEYS order (local_bubble, heliopause) —
+      // exercises the wiring independent of the frozen ledger values.
+      const r = new SidResolver(['shell']);
+      r.attach('shell', arrayDomain([5001, 5002]));
+      expect(r.resolve(5001)).toEqual({ status: 'resolved', kind: 'shell', localIndex: 0 });
+      expect(r.resolve(5002)).toEqual({ status: 'resolved', kind: 'shell', localIndex: 1 });
+      expect(r.sidOf('shell', 0)).toBe(5001);
+      expect(r.sidOf('shell', 1)).toBe(5002);
+    });
+  });
+
   describe('attach / conclude lifecycle', () => {
     it('attach replaces a previous domain', () => {
       const r = new SidResolver(['star']);

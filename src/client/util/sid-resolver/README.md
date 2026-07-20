@@ -19,8 +19,8 @@ index.ts                   Re-export.
 ## Domain lifecycle
 
 The resolver is constructed with a **roster** — every domain kind this
-client may ever attach (`star`, `planet`, `cloud`, `lg`). Each domain
-then reaches exactly one terminal state:
+client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`). Each
+domain then reaches exactly one terminal state:
 
 - **attached** — its artifact loaded; `attach(kind, domain)` wires a
   `{ localIndexOf, sidOf }` pair over the artifact's sid column.
@@ -67,6 +67,7 @@ layer:
 | `planet` | boot | `SOL_OBJECT_SIDS` in `SOL_PLANETS` order | index into `SOL_PLANETS` |
 | `lg` | after `loadLocalGroup` resolves (concluded when the artifact is missing) | `local-group.json` per-object `sid` | `LgCatalog.objects` index |
 | `cloud` | **concluded at boot** while the layer is shelved | `clouds.json` per-object `sid` | `CloudCatalog.clouds` index |
+| `shell` | boot (both sids static) | `SHELL_OBJECT_SIDS` in `SHELL_KEYS` order | `SHELL_KEYS` index = Target `{kind:'shell'}` idx |
 
 `SOL_OBJECT_SIDS.sun` is deliberately NOT in the planet domain: Sol's
 catalog record carries the same sid (same-as edge, docs/sid.md § 7), so
