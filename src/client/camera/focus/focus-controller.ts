@@ -21,6 +21,7 @@ import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
 import { lgViewingDistancePc } from '../../local-group/local-group-loader';
+import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import {
   type PlanetSystem,
   getPlanetSystem,
@@ -115,6 +116,10 @@ export interface FocusControllerDeps {
   setFocalBodyHidden: (target: Target | null) => void;
   getClouds: () => MolecularClouds | null;
   getLocalGroup: () => LocalGroupLayer | null;
+  /** Boundary-shell instance registry — Target {kind:'shell'} identity +
+   *  geometry. Eagerly constructed by the shell; the closure just breaks
+   *  the construction-order dependency. */
+  getShells: () => ShellRegistry;
   /** Planet-body field — Target {kind:'planet'} identity + geometry.
    *  Eagerly constructed by the shell, so not a lazy attach getter;
    *  the closure just breaks the construction-order dependency. */
@@ -152,6 +157,7 @@ export class FocusController implements FocusOps {
   private readonly tmpRecenter = new THREE.Vector3();
   private readonly tmpLive = new THREE.Vector3();
   private readonly tmpPert = new THREE.Vector3();
+  private readonly tmpShell = new THREE.Vector3();
 
   constructor(deps: FocusControllerDeps) {
     this.deps = deps;
@@ -437,7 +443,7 @@ export class FocusController implements FocusOps {
    *  (orbit floor clamp + planet-system detach + observe bail-out);
    *  another soft kind is displaced structurally by the slot write.
    *  Passing null clears only the named kind's focus. */
-  private setSoftFocus(kind: 'cloud' | 'lg', idx: number | null): void {
+  private setSoftFocus(kind: 'cloud' | 'lg' | 'shell', idx: number | null): void {
     if (idx !== null && isHardTarget(this.focused)) {
       this.setFocus(null);
     }
@@ -446,6 +452,19 @@ export class FocusController implements FocusOps {
     this.focused = idx === null ? null : { kind, idx };
     this.deps.bus.emit('focus', this.focused);
     this.deps.bus.emit('state');
+  }
+
+  /** Manual-zoom floor for a soft (non-recentring) focus, applied on every
+   *  path that parks one — `flyTo` and the warp / mid-fly arrival's
+   *  `applyFocus`. Keeps the global orbit floor unless the object's own
+   *  park distance is tighter: an AU-scale shell (heliopause parks
+   *  ~480 AU ≈ 2.3e-3 pc, inside the 5e-3 pc floor) would otherwise be
+   *  clamped straight back out to the floor by `controls.update()`. Safe
+   *  because such a shell sits at the origin (Sol), where float32 is
+   *  precise; distant soft kinds (cloud / LG) keep the full floor
+   *  (park ≫ floor), so the min() is a no-op for them. */
+  private applySoftParkFloor(parkDist: number): void {
+    this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, parkDist);
   }
 
   /** Star-focused recentre: pivot the floating origin onto catalog[idx]
@@ -768,34 +787,42 @@ export class FocusController implements FocusOps {
     const parkDist = provider.focusParkDistance(target.idx);
     const eyeDist = this.deps.camera.position.distanceTo(dest);
 
-    if (animate && eyeDist > parkDist) {
-      this.startFocusLerp(newFocusLerpFrom(
-        this.deps.camera.position,
-        startQuat,
-        startUp,
-        dest,
-        parkDist,
-        FOCUS_LERP_MS,
-        performance.now(),
-        warpArrivalEaseFn({
-          d0: eyeDist,
-          dEnd: parkDist,
-          targetRadius: provider.arrivalRadiusPc(target.idx),
-        }),
-      ));
-      // controls.enabled stays true — see focusStar's comment.
-    } else if (eyeDist > parkDist) {
-      const dir = new THREE.Vector3()
-        .subVectors(this.deps.camera.position, dest)
-        .normalize();
-      if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-      this.deps.camera.position.copy(dest).addScaledVector(dir, parkDist);
-      this.deps.camera.lookAt(dest);
-      this.deps.controls.update();
+    // Move to parkDist in BOTH directions — a soft focus frames the whole
+    // extended object. Flying IN (eye > park) is the common case; flying
+    // OUT (eye < park) matters for a boundary shell the camera sits
+    // *inside* (Sol inside the Local Bubble / heliopause), where staying
+    // put would leave the back-face-culled shell invisible.
+    if (Math.abs(eyeDist - parkDist) > parkDist * 1e-4) {
+      if (animate) {
+        this.startFocusLerp(newFocusLerpFrom(
+          this.deps.camera.position,
+          startQuat,
+          startUp,
+          dest,
+          parkDist,
+          FOCUS_LERP_MS,
+          performance.now(),
+          warpArrivalEaseFn({
+            d0: eyeDist,
+            dEnd: parkDist,
+            targetRadius: provider.arrivalRadiusPc(target.idx),
+          }),
+        ));
+        // controls.enabled stays true — see focusStar's comment.
+      } else {
+        const dir = new THREE.Vector3()
+          .subVectors(this.deps.camera.position, dest)
+          .normalize();
+        if (dir.lengthSq() === 0) dir.set(0, 0, 1);
+        this.deps.camera.position.copy(dest).addScaledVector(dir, parkDist);
+        this.deps.camera.lookAt(dest);
+        this.deps.controls.update();
+      }
     } else {
       this.deps.controls.update();
     }
     this.setSoftFocus(target.kind, target.idx);
+    this.applySoftParkFloor(parkDist);
   }
 
   /** Orbit pivot moves to the object, the object becomes the focus,
@@ -942,11 +969,6 @@ export class FocusController implements FocusOps {
     const toHard = isHardTarget(target);
     if (hadHard && !toHard) {
       this.refreshPlanetSystem(null);
-      // Per-cloud/LG minDistance floor isn't tracked today; mirror
-      // setFocus(null)'s clamp so the controls don't trap the camera
-      // further out than the parked pose.
-      const eye = this.deps.camera.position.distanceTo(this.deps.controls.target);
-      this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, eye);
     }
     this.focused = target;
   }
@@ -1008,6 +1030,7 @@ export class FocusController implements FocusOps {
       parkRadius: () => cloudViewingDistancePc(cloud),
       applyFocus: () => {
         this.applyFocusState({ kind: 'cloud', idx });
+        this.applySoftParkFloor(cloudViewingDistancePc(cloud));
       },
       emitFocusEvents: () => {
         this.deps.bus.emit('focus', { kind: 'cloud', idx });
@@ -1076,9 +1099,43 @@ export class FocusController implements FocusOps {
       parkRadius: () => lgViewingDistancePc(obj),
       applyFocus: () => {
         this.applyFocusState({ kind: 'lg', idx });
+        this.applySoftParkFloor(lgViewingDistancePc(obj));
       },
       emitFocusEvents: () => {
         this.deps.bus.emit('focus', { kind: 'lg', idx });
+        this.deps.bus.emit('state');
+      },
+      physicalRadius: () => null,
+      chartPlateauDistance: () => null,
+    };
+  }
+
+  /** Build a FocusTarget for the boundary shell at index `idx`. Returns
+   *  null when the shell's layer hasn't loaded or the index is out of
+   *  range. Soft kind: parks at `viewingDistanceForExtent(extent)` so the
+   *  whole shell fits — which is also the distance the hide-when-inside
+   *  wall becomes visible (fresnel-shell/README.md). */
+  private makeShellFocusTarget(idx: number): FocusTarget | null {
+    const shells = this.deps.getShells();
+    const shell = shells.at(idx);
+    if (!shell) return null;
+    if (!shell.centerAbsInto(this.tmpShell)) return null;
+    return {
+      kind: 'shell',
+      idx,
+      anchorInto: (out) => shell.centerAbsInto(out),
+      localPositionInto: (out) => {
+        if (!shell.centerAbsInto(out)) return false;
+        out.sub(this.deps.frameAnchor.getWorldOffset());
+        return true;
+      },
+      parkRadius: () => shells.viewingDistancePc(idx),
+      applyFocus: () => {
+        this.applyFocusState({ kind: 'shell', idx });
+        this.applySoftParkFloor(shells.viewingDistancePc(idx));
+      },
+      emitFocusEvents: () => {
+        this.deps.bus.emit('focus', { kind: 'shell', idx });
         this.deps.bus.emit('state');
       },
       physicalRadius: () => null,
@@ -1093,6 +1150,7 @@ export class FocusController implements FocusOps {
     if (target.kind === 'star') return this.makeStarFocusTarget(target.idx);
     if (target.kind === 'planet') return this.makePlanetFocusTarget(target.idx);
     if (target.kind === 'cloud') return this.makeCloudFocusTarget(target.idx);
+    if (target.kind === 'shell') return this.makeShellFocusTarget(target.idx);
     return this.makeLgFocusTarget(target.idx);
   }
 

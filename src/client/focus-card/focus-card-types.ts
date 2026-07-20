@@ -4,7 +4,7 @@
 /** Every object kind the app can focus. Extending this union without
  *  adding a provider to `FocusCardProviders` fails the TypeScript
  *  build — that is the contract, not a convention. */
-export type FocusKind = 'star' | 'cloud' | 'lg' | 'planet';
+export type FocusKind = 'star' | 'cloud' | 'lg' | 'planet' | 'shell';
 
 export interface FocusCardRow {
   label: string;

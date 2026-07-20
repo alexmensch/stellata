@@ -17,7 +17,8 @@ in both navigate and observe modes.
   Shift key is held (see § Shift-drag panning).
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
-  stars / clouds / planets / Local Group / heliopause. Both star pick
+  stars / clouds / planets / Local Group / heliopause / boundary shells
+  (`pickShellHit`, shared silhouette helper in `fresnel-shell/`). Both star pick
   surfaces route the winner through `resolveCollapsedLead`: a member of
   a composite-suppressed cluster resolves to the cluster's primary, so
   the hover card, POI pin, vector, and focus all act on the object the
@@ -148,8 +149,11 @@ plug in the same way.
 
 Branch in `focusStar` / the soft-kind leg of `flyTo`:
 
-- **`eyeDist <= parkDist` → stay put.** Camera doesn't move; only
-  `controls.target`, `controls.minDistance`, and focus state update.
+- **`eyeDist <= parkDist` → stay put (`focusStar` only).** Camera
+  doesn't move; only `controls.target`, `controls.minDistance`, and
+  focus state update. (Soft-kind `flyTo` instead moves to `parkDist` in
+  both directions so it frames the whole extended object — it flies OUT
+  of a boundary shell the camera sits inside, not just in.)
 - **`eyeDist > parkDist` → lerp.** Camera position lerps from
   `fromPos` to `toPos = target + (eye-direction × parkDist)` and
   camera orientation slerps in parallel from `fromQuat` to a quaternion

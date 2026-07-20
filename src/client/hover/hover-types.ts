@@ -51,5 +51,5 @@ export type HoverKind =
   | 'star'
   | 'planet'
   | 'local-group'
-  | 'heliopause'
-  | 'cloud';
+  | 'cloud'
+  | 'shell';

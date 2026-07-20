@@ -11,6 +11,7 @@ import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import {
   MIN_DISC_HIT_RADIUS_PX,
+  angularDiameterPx,
   pickFromCandidates,
   type PickCandidate,
 } from '../camera/controls/star-geometry';
@@ -49,6 +50,7 @@ export class LocalGroupLayer {
    *  `absSamples[objectIdx][sampleIdx]`. */
   private readonly absSamples: THREE.Vector3[][];
   private mono = false;
+  private readonly tmpFocusableLocal = new THREE.Vector3();
 
   constructor(catalog: LgCatalog) {
     this.objects = catalog.objects;
@@ -102,6 +104,30 @@ export class LocalGroupLayer {
 
   setMonochrome(on: boolean): void {
     this.mono = on;
+  }
+
+  /** LG object's centroid in the renderer's local frame — the lg
+   *  provider's localPositionInto leg. */
+  lgLocalPositionInto(idx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
+    const obj = this.objects[idx];
+    if (!obj) return false;
+    out.copy(obj.centerAbs).sub(worldOffset);
+    return true;
+  }
+
+  /** Projected silhouette diameter of an LG object in pixels — the
+   *  orientation-independent maxAxis bound the hover pickbox uses. */
+  renderedLgSizePx(
+    idx: number,
+    camera: THREE.PerspectiveCamera,
+    worldOffset: THREE.Vector3,
+    angularToPx: () => number,
+  ): number {
+    const obj = this.objects[idx];
+    if (!obj) return 0;
+    if (!this.lgLocalPositionInto(idx, worldOffset, this.tmpFocusableLocal)) return 0;
+    const dCam = Math.max(this.tmpFocusableLocal.distanceTo(camera.position), 1);
+    return angularDiameterPx(maxSemiAxisPc(obj), dCam, angularToPx());
   }
 
   /** Number of silhouette samples for an object — for the label engine. */

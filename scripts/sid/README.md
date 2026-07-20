@@ -27,7 +27,8 @@ allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger-head.json). Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
                           catalog-row-index-map.json, clouds.json,
-                          local-group.json, data/sid/sol-objects.tsv.
+                          local-group.json, data/sid/sol-objects.tsv,
+                          data/sid/shell-objects.tsv.
                           Run build:catalog / build:clouds /
                           build:local-group first.
                           pnpm run sid:check (--check) — read-only CI
@@ -72,7 +73,9 @@ Per catalog record: `hip:` + `gaia_dr3:` from the record fields,
 stripped), `sol:sun` from `FLAG_IS_SOL`. Clouds and Local Group carry
 their artifact `id` slugs; planets come from `data/sid/sol-objects.tsv`
 (the `sun` row is not a second object — it rides the Sol record,
-realising the § 7 same-as edge). `gl:` keys have whitespace collapsed
+realising the § 7 same-as edge); boundary shells come from
+`data/sid/shell-objects.tsv` (same `key\tkind` format, `shell:` ns).
+`gl:` keys have whitespace collapsed
 to `_` (`gl:Gl_804`) to satisfy the § 3 no-whitespace grammar.
 
 ## Ambiguous designations are dropped, not assigned

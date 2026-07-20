@@ -17,7 +17,7 @@ close-approach focused star sitting at exactly NDC origin.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
 - `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
-  kind = `'star' | 'cloud' | 'lg' | 'planet'`), the `FocusTarget`
+  kind = `'star' | 'cloud' | 'lg' | 'planet' | 'shell'`), the `FocusTarget`
   contract, and the `FocusableProviders` registry contract
   (§ FocusableProviders). Per-kind factories return objects closing
   over the current focus state + controller deps so warp / overlays /
@@ -38,7 +38,7 @@ stays on `stellata.ts` — those primitives rewrite the star-pipeline
 
 - `focused: Target | null` and `vector: Target | null` — one sum-type
   slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG
-  ↔ planet) is structural rather than enforced by pairwise clears.
+  ↔ planet ↔ shell) is structural rather than enforced by pairwise clears.
   The `'focus'` and `'vector'` events carry the kind-tagged
   `Target | null` payload, so a kind change is a single emit — no
   clearing emit for the displaced kind precedes it; subscribers
@@ -170,8 +170,8 @@ add speculative capability methods before then.
 
 Star and planet are the two **hard** focus kinds: both recentre the
 floating origin onto the object and drop `controls.minDistance` to a
-per-body physical floor; clouds and LG objects stay **soft** (no
-recentre, no floor change). `focusPlanet` mirrors `focusStar`;
+per-body physical floor; clouds, LG objects, and boundary shells stay
+**soft** (no recentre, no floor change). `focusPlanet` mirrors `focusStar`;
 `setPlanetFocus` is the setFocus-analogue (observe bail-out, recentre
 onto the planet's absolute position, floor drop, pose-preserving
 target snap). Displacing a planet focus — `setFocus(null)`, a soft
@@ -211,8 +211,10 @@ the soft kinds compose the same primitives through their provider's
 
 Branch in `focusStar` / the soft-kind leg of `flyTo`:
 
-- **`eyeDist <= parkDist` → stay put.** Camera doesn't move; only
-  `controls.target`, `controls.minDistance`, and focus state update.
+- **`eyeDist <= parkDist` → stay put (`focusStar` only).** Camera
+  doesn't move; only `controls.target`, `controls.minDistance`, and
+  focus state update. You can sit close to a star, so a re-focus
+  shouldn't yank the camera back out.
 - **`eyeDist > parkDist` → lerp.** Camera position lerps from
   `fromPos` to `toPos = target + (eye-direction × parkDist)` and
   camera orientation slerps in parallel from `fromQuat` to a
@@ -221,6 +223,12 @@ Branch in `focusStar` / the soft-kind leg of `flyTo`:
   continuously rotates toward the new target as it flies in. Builds
   the lerp **after** `setFocus` recentres the floating origin so
   `fromPos` / `toPos` live in the post-recentre frame.
+- **Soft-kind `flyTo` moves to `parkDist` in BOTH directions.** A soft
+  focus frames the whole extended object, so it flies OUT as well as in
+  — required for a boundary shell the camera sits *inside* (Sol inside
+  the Local Bubble / heliopause), where staying put leaves the
+  back-face-culled shell invisible. Only a near-exact match (already at
+  park) stays put.
 - **`opts.animate === false`** (URL restore) bypasses the lerp and
   snaps to the park pose.
 

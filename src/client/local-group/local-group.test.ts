@@ -15,6 +15,7 @@ import {
 import type { LgCatalog, LgObject } from './local-group-loader';
 import { FADE_INNER_PC, FADE_OUTER_PC } from '../galactic/galactic-fade';
 import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
+import { MIN_DISC_HIT_RADIUS_PX } from '../camera/controls/star-geometry';
 
 function makeObject(o: Partial<LgObject>): LgObject {
   return {
@@ -139,6 +140,124 @@ describe('LocalGroupLayer', () => {
       (c) => (c as THREE.LineLoop).material as THREE.LineBasicMaterial,
     ));
     expect(materials.size).toBe(1);
+    layer.dispose();
+  });
+});
+
+// Pick fixtures — a camera at (0,0,30) looking at the origin, 60° FOV,
+// 800×600 viewport (same convention as camera/controls/picker.test.ts),
+// with a worldOffset of zero so an object's centerAbs IS its local
+// position. The layer must be `update()`d past FADE_OUTER_PC first —
+// `pick()` short-circuits on `!group.visible`.
+const PICK_FOV_DEG = 60;
+const PICK_VIEWPORT_W = 800;
+const PICK_VIEWPORT_H = 600;
+
+function makePickCamera(): THREE.PerspectiveCamera {
+  const cam = new THREE.PerspectiveCamera(PICK_FOV_DEG, PICK_VIEWPORT_W / PICK_VIEWPORT_H, 0.01, 1e9);
+  cam.position.set(0, 0, 30);
+  cam.lookAt(0, 0, 0);
+  cam.updateMatrixWorld();
+  return cam;
+}
+
+function makePickRect(): DOMRect {
+  return {
+    left: 0, top: 0, width: PICK_VIEWPORT_W, height: PICK_VIEWPORT_H,
+    right: PICK_VIEWPORT_W, bottom: PICK_VIEWPORT_H, x: 0, y: 0,
+    toJSON() { return {}; },
+  };
+}
+
+function projectToPickScreen(p: THREE.Vector3, camera: THREE.PerspectiveCamera): { x: number; y: number } {
+  const v = p.clone().project(camera);
+  return {
+    x: (v.x + 1) * 0.5 * PICK_VIEWPORT_W,
+    y: (1 - v.y) * 0.5 * PICK_VIEWPORT_H,
+  };
+}
+
+function makeVisibleLayer(objects: LgObject[]): LocalGroupLayer {
+  const layer = new LocalGroupLayer(makeCatalog(objects));
+  layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
+  return layer;
+}
+
+describe('LocalGroupLayer.pick', () => {
+  it('returns null immediately when the layer is not visible', () => {
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({ centerAbs: new THREE.Vector3() })]));
+    // Push distFromSol below FADE_INNER_PC so update() sets group.visible
+    // = false (the Object3D default is visible = true pre-update()).
+    layer.update(new THREE.Vector3(), FADE_INNER_PC - 100);
+    const camera = makePickCamera();
+    const screen = projectToPickScreen(new THREE.Vector3(0, 0, 0), camera);
+    expect(layer.pick(camera, new THREE.Vector3(), makePickRect(), screen.x, screen.y, 14)).toBeNull();
+    layer.dispose();
+  });
+
+  it('prime tier: cursor inside the floored hit radius hits the object', () => {
+    const layer = makeVisibleLayer([
+      makeObject({ centerAbs: new THREE.Vector3(0, 0, 0), axes: [100, 80, 80] }),
+    ]);
+    const camera = makePickCamera();
+    const screen = projectToPickScreen(new THREE.Vector3(0, 0, 0), camera);
+    const hit = layer.pick(camera, new THREE.Vector3(), makePickRect(), screen.x, screen.y, 14);
+    expect(hit).not.toBeNull();
+    expect(hit!.idx).toBe(0);
+    expect(hit!.tier).toBe('prime');
+    layer.dispose();
+  });
+
+  it('fallback tier: cursor within pixelThreshold but outside a sub-floor hit radius', () => {
+    // Tiny axes → pxSize floors at MIN_DISC_HIT_RADIUS_PX (4 px). A
+    // cursor 6 px away misses the prime tier but lands inside the 14 px
+    // fallback threshold.
+    const layer = makeVisibleLayer([
+      makeObject({ centerAbs: new THREE.Vector3(0, 0, 0), axes: [1e-6, 1e-6, 1e-6] }),
+    ]);
+    const camera = makePickCamera();
+    const screen = projectToPickScreen(new THREE.Vector3(0, 0, 0), camera);
+    const hit = layer.pick(
+      camera, new THREE.Vector3(), makePickRect(), screen.x + MIN_DISC_HIT_RADIUS_PX + 2, screen.y, 14,
+    );
+    expect(hit).not.toBeNull();
+    expect(hit!.idx).toBe(0);
+    expect(hit!.tier).toBe('fallback');
+    layer.dispose();
+  });
+
+  it('returns null once the cursor clears both tiers', () => {
+    const layer = makeVisibleLayer([
+      makeObject({ centerAbs: new THREE.Vector3(0, 0, 0), axes: [1e-6, 1e-6, 1e-6] }),
+    ]);
+    const camera = makePickCamera();
+    const screen = projectToPickScreen(new THREE.Vector3(0, 0, 0), camera);
+    const hit = layer.pick(camera, new THREE.Vector3(), makePickRect(), screen.x + 20, screen.y, 14);
+    expect(hit).toBeNull();
+    layer.dispose();
+  });
+
+  it('overlapping objects: within a tier, the candidate closer to the cursor wins (no brightness axis)', () => {
+    // Two large, near-identical-distance objects with overlapping hit
+    // radii, offset a few pixels apart on screen. Per the pick()
+    // docstring, LG has no apparent-magnitude bias — the default
+    // pickFromCandidates scorer (closest pxDist) breaks the tie, not
+    // cameraDistancePc.
+    const fovYRad = (PICK_FOV_DEG * Math.PI) / 180;
+    const pxPerRad = PICK_VIEWPORT_H / fovYRad;
+    const dx = (10 / pxPerRad) * 30; // ~10 px separation at dCam = 30 pc
+    const layer = makeVisibleLayer([
+      makeObject({ id: 'far-from-cursor', centerAbs: new THREE.Vector3(dx, 0, 0), axes: [5000, 5000, 5000] }),
+      makeObject({ id: 'at-cursor', centerAbs: new THREE.Vector3(0, 0, 0), axes: [5000, 5000, 5000] }),
+    ]);
+    const camera = makePickCamera();
+    // Cursor lands exactly on object 1 ('at-cursor'); object 0 is ~10 px
+    // away but its huge hit radius still covers the cursor (both prime).
+    const screen = projectToPickScreen(new THREE.Vector3(0, 0, 0), camera);
+    const hit = layer.pick(camera, new THREE.Vector3(), makePickRect(), screen.x, screen.y, 14);
+    expect(hit).not.toBeNull();
+    expect(hit!.tier).toBe('prime');
+    expect(hit!.idx).toBe(1);
     layer.dispose();
   });
 });

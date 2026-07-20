@@ -9,6 +9,7 @@ import {
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
+import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
 
 // Dim additive cool tint — a soft rim glow seen from beyond the wall.
 const COLOUR = new THREE.Color(0x5a7a9c);
@@ -16,6 +17,15 @@ const ALPHA_LIMB = 0.5;
 
 /** DOM id of the SVG `<text>` node for the label. */
 export const LOCAL_BUBBLE_LABEL_ELEMENT_ID = 'local-bubble-label';
+
+/** Focus-target display name + card content (registered into the shell
+ *  registry on attach). Non-luminous, so no magnitude rows. */
+export const LOCAL_BUBBLE_LABEL = 'Local Bubble';
+export const LOCAL_BUBBLE_CARD: ShellCardInfo = {
+  typeLine: 'Interstellar medium cavity',
+  size: '~75–300 pc wall',
+  knownFrom: 'Zucker et al. 2022',
+};
 
 // Surface samples the label projects each frame for its silhouette bbox.
 // ~96 vertices spread across the shell: enough to hug the silhouette, and
@@ -89,6 +99,19 @@ export class LocalBubbleShell extends FresnelShell {
 
   protected shellReady(): boolean {
     return this.mesh !== null;
+  }
+
+  /** The registry pick surface: the ~96 wall samples the label projects
+   *  + the label bbox, gated on the shell's live rendered visibility. */
+  shellPickSurface(): ShellPickSurface {
+    return {
+      labelElementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
+      visible: () => this.isVisible(),
+      sampleCount: () => this.labelSampleCount(),
+      sampleLocalInto: (i, worldOffset, out) => {
+        this.labelSampleInto(i, worldOffset, out);
+      },
+    };
   }
 
   override dispose(): void {

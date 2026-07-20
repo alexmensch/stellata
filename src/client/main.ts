@@ -44,10 +44,13 @@ import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
 import { orbitDescriptorFor } from './solar-system/orbit-descriptor';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createLgFocusProvider } from './focus-card/lg-focus-provider';
+import { createShellFocusProvider } from './focus-card/shell-focus-provider';
+import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
+import { SHELL_KEYS } from './fresnel-shell/shell-registry';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
-import { createHeliopauseHoverProvider } from './hover/heliopause-hover-provider';
+import { createShellHoverProvider } from './hover/shell-hover-provider';
 import { createCloudHoverProvider } from './hover/cloud-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
@@ -145,7 +148,7 @@ async function main() {
     // keyed body-within-host over SOL_BODIES (planets then moons), so a
     // moon's sid sits at its body index and resolves like any planet.
     const sidResolver = new SidResolver(
-      ['star', 'planet', 'cloud', 'lg'],
+      ['star', 'planet', 'cloud', 'lg', 'shell'],
       catalog.sidSuccessors,
     );
     sidResolver.attach('star', arrayDomain(catalog.sid));
@@ -156,6 +159,12 @@ async function main() {
     sidResolver.conclude('cloud');
     if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
     else sidResolver.conclude('lg');
+    // Both boundary shells carry static, always-known SIDs (generated /
+    // curated objects, docs/sid.md § 7). localIndex = SHELL_KEYS index =
+    // Target {kind:'shell'} idx. Attach unconditionally: a shell whose
+    // layer is absent still resolves its sid, then focus/pin fall through
+    // to null via makeShellFocusTarget (same graceful path as lg).
+    sidResolver.attach('shell', arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])));
 
     const idMaps: IdMaps = {
       hipToIndex,
@@ -275,11 +284,13 @@ async function main() {
       },
     });
     const planetHoverProvider = createPlanetHoverProvider({ stellata });
-    const heliopauseHoverProvider = createHeliopauseHoverProvider({ stellata });
+    // Boundary-shell hover dispatches over the shell registry — one
+    // provider covers the Local Bubble and the heliopause alike.
+    const shellHoverProvider = createShellHoverProvider({ stellata });
     const hoverProviders: HoverProvider[] = [
       starHoverProvider,
       planetHoverProvider,
-      heliopauseHoverProvider,
+      shellHoverProvider,
     ];
     // LG provider only registers when the build artifact loaded — fresh
     // checkouts without `pnpm run build:local-group` leave stellata.localGroup
@@ -375,6 +386,11 @@ async function main() {
               obj.centerAbs.z - w.z - c.z,
             );
           },
+        }),
+        shell: createShellFocusProvider({
+          shellAt: (idx) => stellata.shells.at(idx),
+          cameraDistancePc: (idx) =>
+            stellata.shells.cameraDistancePc(idx, stellata.getWorldOffset(), stellata.camera.position),
         }),
       },
     });

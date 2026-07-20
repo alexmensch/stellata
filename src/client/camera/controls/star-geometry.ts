@@ -10,8 +10,16 @@ export function angularToPx(viewport_y: number, fovYRad: number): number {
   return viewport_y / Math.max(fovYRad, 1e-9);
 }
 
-// Star disc pixel diameter under the angular-diameter formula
-// `θ = 2·atan(R / d)`. `radiusFactor` modulates `R` for variable-star
+// Angular diameter in pixels under `θ = 2·atan(R / d)`, given a
+// precomputed pixels-per-radian factor. The shared core of physSizePx
+// (stars) and the extended-object rendered-size helpers (molecular
+// clouds, Local Group, boundary shells) — each caller supplies its own
+// dCam floor before calling.
+export function angularDiameterPx(radiusPc: number, dCamPc: number, angularToPxValue: number): number {
+  return 2 * Math.atan(radiusPc / dCamPc) * angularToPxValue;
+}
+
+// Star disc pixel diameter. `radiusFactor` modulates `R` for variable-star
 // pulsation (1 for non-variables; ρ^(±0.5) at the peak/trough of the
 // per-type radius swing). The shader's physSize calc must produce the
 // same value for the same inputs — keep them in sync.
@@ -22,7 +30,7 @@ export function physSizePx(
   fovYRad: number,
   radiusFactor = 1,
 ): number {
-  return 2 * Math.atan((R_pc * radiusFactor) / dCam_pc) * angularToPx(viewport_y, fovYRad);
+  return angularDiameterPx(R_pc * radiusFactor, dCam_pc, angularToPx(viewport_y, fovYRad));
 }
 
 // Per-star variability factor on physical radius. A non-variable returns

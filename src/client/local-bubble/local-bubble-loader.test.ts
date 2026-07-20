@@ -26,13 +26,19 @@ function buildBuffer(
 }
 
 describe('parseLocalBubble', () => {
-  it('round-trips positions and indices past the reserved header', () => {
-    // Centroid bytes (16–27) are written but reserved — the parser skips
-    // them; positions/indices must still read back exactly.
+  it('round-trips positions and indices past the header', () => {
     const buf = buildBuffer([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 1, 2], [8, 10, -7]);
     const m = parseLocalBubble(buf);
     expect(Array.from(m.positions)).toEqual([0, 0, 0, 1, 0, 0, 0, 1, 0]);
     expect(Array.from(m.indices)).toEqual([0, 1, 2]);
+  });
+
+  it('reads the header centroid and computes extent as the max vertex distance', () => {
+    // Centroid at (10,0,0); farthest vertex (0,0,0) is 10 pc away.
+    const buf = buildBuffer([0, 0, 0, 13, 0, 0, 10, 4, 0], [0, 1, 2], [10, 0, 0]);
+    const m = parseLocalBubble(buf);
+    expect(m.centroidAbs).toEqual([10, 0, 0]);
+    expect(m.extentPc).toBeCloseTo(10, 6);
   });
 
   it('rejects a bad magic', () => {

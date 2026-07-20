@@ -173,17 +173,20 @@ export class InputController {
   }
 
   /** Ladder-eligible objects under the cursor — stars, planet bodies,
-   *  and Local Group objects — run the same tiebreak the hover engine
-   *  uses (prime beats fallback, then closer camera), so click and
-   *  hover can't disagree on which object wins an overlap. */
+   *  Local Group objects, and boundary shells — run the same tiebreak the
+   *  hover engine uses (prime beats fallback, then closer camera), so
+   *  click and hover can't disagree on which object wins an overlap.
+   *  Shells are fallback-tier, so a star/planet/LG in front always wins. */
   private pickLadderObject(x: number, y: number): Target | null {
     const star = this.deps.picker.pickStarHit(x, y, 16);
     const planet = this.deps.picker.pickPlanetClick(x, y, 16);
     const lg = this.deps.picker.pickLocalGroupHit(x, y, 16);
-    const picks: Array<{ kind: 'star' | 'planet' | 'lg'; hit: HoverHit } | null> = [
+    const shell = this.deps.picker.pickShellHit(x, y, 16);
+    const picks: Array<{ kind: 'star' | 'planet' | 'lg' | 'shell'; hit: HoverHit } | null> = [
       star ? { kind: 'star', hit: star } : null,
       planet ? { kind: 'planet', hit: planet } : null,
       lg ? { kind: 'lg', hit: lg } : null,
+      shell ? { kind: 'shell', hit: shell } : null,
     ];
     const winner = bestHitBy(picks, (p) => p.hit);
     return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };

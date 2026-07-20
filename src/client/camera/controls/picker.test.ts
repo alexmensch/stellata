@@ -7,9 +7,10 @@ import { Picker, type PickerDeps } from './picker';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
+import type { Cloud } from '../../molecular-clouds/cloud-loader';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
-import type { Heliopause } from '../../solar-system/heliopause';
+import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -155,7 +156,7 @@ function makePicker(
     getFilter: () => filter,
     getClouds: () => null,
     getLocalGroupLayer: () => null,
-    getHeliopause: () => ({ isVisible: () => false }) as unknown as Heliopause,
+    getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     getWorldOffset: () => new THREE.Vector3(),
     getWarpActive: () => opts.warpActive ?? false,
@@ -442,7 +443,7 @@ describe('Picker / pickCloud', () => {
       getFilter: () => defaultFilter(),
       getClouds: () => stubClouds,
       getLocalGroupLayer: () => null,
-      getHeliopause: () => ({ isVisible: () => false }) as unknown as Heliopause,
+      getShells: () => new ShellRegistry(),
       getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
       getWorldOffset: () => new THREE.Vector3(),
       getWarpActive: () => true, // warp gate active
@@ -452,5 +453,81 @@ describe('Picker / pickCloud', () => {
       viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
     });
     expect(picker.pickCloud(100, 100)).toBeNull();
+  });
+});
+
+describe('Picker / pickCloudHit', () => {
+  // Fallback-only tier — the click gate (pickCloud's warp check) doesn't
+  // apply to hover, so these only cover the layer/visibility/raycast gates.
+
+  function makeCloudPicker(opts: {
+    clouds: MolecularClouds | null;
+    camera?: THREE.PerspectiveCamera;
+    worldOffset?: THREE.Vector3;
+  }): { picker: Picker; camera: THREE.PerspectiveCamera } {
+    const data = makeCatalog([]);
+    const camera = opts.camera ?? makeCamera();
+    const deps: PickerDeps = {
+      domElement: makeDomElementStub(),
+      camera,
+      catalog: data.catalog,
+      sortedByDistFromSol: data.sortedByDistFromSol,
+      sortedDistFromSol: data.sortedDistFromSol,
+      getLocalPositions: () => data.localPositions,
+      getFilter: () => defaultFilter(),
+      getClouds: () => opts.clouds,
+      getLocalGroupLayer: () => null,
+      getShells: () => new ShellRegistry(),
+      getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
+      getWorldOffset: () => opts.worldOffset ?? new THREE.Vector3(),
+      getWarpActive: () => false,
+      renderedSizePxFn: () => 20,
+      resolveCollapsedLead: (idx) => idx,
+      fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
+      viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
+    };
+    return { picker: new Picker(deps), camera };
+  }
+
+  it('returns null when no cloud layer is attached', () => {
+    const { picker } = makeCloudPicker({ clouds: null });
+    expect(picker.pickCloudHit(400, 300)).toBeNull();
+  });
+
+  it('returns null when the cloud group is not visible', () => {
+    const stubClouds = {
+      raycast: () => 0,
+      group: { visible: false },
+      clouds: [],
+    } as unknown as MolecularClouds;
+    const { picker } = makeCloudPicker({ clouds: stubClouds });
+    expect(picker.pickCloudHit(400, 300)).toBeNull();
+  });
+
+  it('returns a fallback hit with the right cameraDistancePc when the raycast hits a cloud', () => {
+    const cloud = { centerAbs: new THREE.Vector3(0, 0, 0) } as Cloud;
+    const stubClouds = {
+      raycast: () => 0,
+      group: { visible: true },
+      clouds: [cloud],
+    } as unknown as MolecularClouds;
+    // Camera at (0,0,30) (the shared makeCamera fixture) → distance to a
+    // cloud centred at the origin is exactly 30 pc.
+    const { picker } = makeCloudPicker({ clouds: stubClouds });
+    const hit = picker.pickCloudHit(400, 300);
+    expect(hit).not.toBeNull();
+    expect(hit!.idx).toBe(0);
+    expect(hit!.tier).toBe('fallback');
+    expect(hit!.cameraDistancePc).toBeCloseTo(30, 5);
+  });
+
+  it('returns null when the raycast misses every cloud', () => {
+    const stubClouds = {
+      raycast: () => null,
+      group: { visible: true },
+      clouds: [],
+    } as unknown as MolecularClouds;
+    const { picker } = makeCloudPicker({ clouds: stubClouds });
+    expect(picker.pickCloudHit(400, 300)).toBeNull();
   });
 });

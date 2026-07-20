@@ -3,6 +3,7 @@ import type { Cloud, CloudCatalog } from './cloud-loader';
 import cloudVert from './cloud.vert.glsl?raw';
 import cloudFrag from './cloud.frag.glsl?raw';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
+import { angularDiameterPx } from '../camera/controls/star-geometry';
 
 // Shared sphere geometry — every cloud is a unit sphere scaled by its
 // semi-axes via the per-cloud Mesh matrix. 32×16 segmentation gives a
@@ -95,6 +96,17 @@ export class MolecularClouds {
     this.group.visible = visible;
     if (!visible) return;
     this.group.position.copy(worldOffset).negate();
+  }
+
+  /** The cloud provider's localPositionInto leg: writes the cloud's
+   *  local-frame centroid into `out` when the cloud exists, returns
+   *  `true`. Returns `false` (and leaves `out` untouched) when the
+   *  index is out of range. */
+  cloudLocalPositionInto(cloudIdx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
+    const c = this.clouds[cloudIdx];
+    if (!c) return false;
+    out.copy(c.centerAbs).sub(worldOffset);
+    return true;
   }
 
   setMonochrome(on: boolean) {
@@ -320,5 +332,5 @@ export function renderedCloudSizePx(
   } else {
     R = Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]);
   }
-  return 2 * Math.atan(R / Math.max(dCamPc, 1e-30)) * angularToPx;
+  return angularDiameterPx(R, Math.max(dCamPc, 1e-30), angularToPx);
 }

@@ -76,7 +76,7 @@ export function starDesignations(f: StarDesignationFields): string[] {
 // ---- Canonical-key ladder (docs/sid.md § 4.2) ----------------------------
 
 const LADDER_BEFORE_GAIA = ['sol', 'hip', 'hd', 'hr', 'gl'] as const;
-const LADDER_AFTER_GAIA = ['synth', 'cloud', 'lg'] as const;
+const LADDER_AFTER_GAIA = ['synth', 'cloud', 'lg', 'shell'] as const;
 const GAIA_RANK = LADDER_BEFORE_GAIA.length;
 
 export function namespaceRank(ns: string): number {
@@ -132,7 +132,7 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
 
 // ---- Ledger / retirements codecs (docs/sid.md § 4.3) ---------------------
 
-export const SID_KINDS = ['star', 'cloud', 'galaxy', 'planet'] as const;
+export const SID_KINDS = ['star', 'cloud', 'galaxy', 'planet', 'shell'] as const;
 export type SidKind = (typeof SID_KINDS)[number];
 
 export const LEDGER_HEADER = 'sid\tcanonical_key\tkind\tfirst_seen';
@@ -140,6 +140,7 @@ export const RETIREMENTS_HEADER = 'sid\tretired\treason\tsuccessor_sid';
 export const REINSTATEMENTS_HEADER = 'sid\treinstated\treason';
 export const SAMEAS_HEADER = 'a\tb\tnote';
 export const SOL_OBJECTS_HEADER = 'key\tkind';
+export const SHELL_OBJECTS_HEADER = 'key\tkind';
 
 export interface LedgerRow {
   sid: number;
@@ -294,17 +295,33 @@ export interface SolObjectRow {
   kind: SidKind;
 }
 
-export function parseSolObjectsTsv(text: string): SolObjectRow[] {
-  return splitTsv(text, SOL_OBJECTS_HEADER, 'sol-objects.tsv').dataLines.map((line) => {
+/** Parse a `key\tkind` mint list (sol-objects / shell-objects). Validates
+ *  each row against the `<ns>:<key>` designation grammar and the kind
+ *  enum. */
+function parseObjectMintTsv(
+  text: string,
+  header: string,
+  sourceLabel: string,
+  ns: string,
+): SolObjectRow[] {
+  return splitTsv(text, header, sourceLabel).dataLines.map((line) => {
     const cells = line.split('\t');
-    if (cells.length !== 2) throw new Error(`sol-objects row "${line}": expected 2 columns`);
+    if (cells.length !== 2) throw new Error(`${sourceLabel} row "${line}": expected 2 columns`);
     const [key, kind] = cells;
-    parseDesignation(`sol:${key}`);
+    parseDesignation(`${ns}:${key}`);
     if (!(SID_KINDS as readonly string[]).includes(kind)) {
-      throw new Error(`sol-objects row "${line}": bad kind "${kind}"`);
+      throw new Error(`${sourceLabel} row "${line}": bad kind "${kind}"`);
     }
     return { key, kind: kind as SidKind };
   });
+}
+
+export function parseSolObjectsTsv(text: string): SolObjectRow[] {
+  return parseObjectMintTsv(text, SOL_OBJECTS_HEADER, 'sol-objects.tsv', 'sol');
+}
+
+export function parseShellObjectsTsv(text: string): SolObjectRow[] {
+  return parseObjectMintTsv(text, SHELL_OBJECTS_HEADER, 'shell-objects.tsv', 'shell');
 }
 
 // ---- Structural validation (docs/sid.md § 4.5 check 1) -------------------

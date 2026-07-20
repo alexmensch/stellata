@@ -3,7 +3,8 @@
 The hover-label subsystem (`src/client/hover/`) surfaces a small floating
 card next to the cursor after a 280 ms dwell. One engine, many providers:
 each renderable layer (stars, Sol planets, Local Group wireframes,
-heliopause apex, future nebulae / Radcliffe Wave segments / probes)
+boundary shells — Local Bubble + heliopause, future nebulae / Radcliffe
+Wave segments / probes)
 implements `HoverProvider` and registers with the engine; the engine
 owns the pointer listener, the dwell timer, the cross-provider
 disambiguator, and the `#tooltip` render.
@@ -17,7 +18,8 @@ lives entirely under `src/client/hover/`:
 - `hover-types.ts` — the `HoverProvider` contract.
 - `hover-pick-disambiguator.ts` — cross-provider picker tiebreak.
 - `*-hover-provider.ts` (one per layer) — stars, planets, Local Group,
-  heliopause, …
+  heliopause, boundary shells (`shell-hover-provider.ts`, dispatching
+  over the `ShellRegistry`), …
 - `formatters/*-hover-format.ts` (one per layer) — pure functions with
   their own vitest coverage.
 
@@ -114,10 +116,10 @@ How to apply:
 - For the planet layer specifically: the planet shader emits no quad
   when `appMag > maxAppMag + 0.5`; the picker mirrors that exact kill
   condition. NO additional gate on `focusedPlanetSystem !== null`.
-- For heliopause: gate on `heliopause.isVisible()` (mirrors
-  `group.visible` — the actual rendered shell state). Any future
-  user-toggle AND's into `group.visible` and the hover surface follows
-  for free.
+- For boundary shells (Local Bubble, heliopause): the shared shell
+  provider gates each `ShellPickSurface.visible()` on the shell's
+  `isVisible()` (mirrors `group.visible` — the actual rendered state), so
+  a decluttered / chart-hidden / camera-inside shell isn't hoverable.
 
 When designing or auditing a new hover provider, walk through this
 checklist:
@@ -143,10 +145,11 @@ existing one rather than rolling a new pickbox:
 - **Three.js raycast against the rendered mesh** (clouds, via
   `MolecularClouds.raycast`) — naturally hits the whole ellipsoid
   silhouette.
-- **Projected sample-point AABB** (heliopause, via
-  `HELIOPAUSE_SAMPLE_POINTS_SOL` — the same 62 silhouette samples the
-  label engine already projects every frame; shared via export so the
-  hover surface can't drift from the label).
+- **Projected sample-point AABB** (boundary shells, via the shared
+  `pickShellSilhouette` helper — each shell exposes a `ShellPickSurface`
+  of the same silhouette samples its label engine projects, so the hover
+  surface can't drift from the label; the heliopause feeds
+  `HELIOPAUSE_SAMPLE_POINTS_SOL`, the Local Bubble its wall samples).
 - **Per-object angular-size disc** (Local Group wireframes — already
   small enough that the disc reads as "the whole object").
 
@@ -163,10 +166,11 @@ the centroid + small-radius pickbox pattern. The "extended object"
 trigger is "the user sees it as a shape", not "the layer has > N
 rows".
 
-When a second extended object needs the same projected-sample-AABB
-approach, lift the inline logic to a helper that accepts the
-sample-point iterator + label element id, parameterised on the
-per-layer geometry source — per the DRY-at-second-usage rule.
+This projected-sample-AABB + label-rect logic is lifted to
+`fresnel-shell/shell-pick.ts` (`pickShellSilhouette`), parameterised on a
+`ShellPickSurface` (sample iterator + label id + visibility) — shared by
+both boundary shells per the DRY-at-second-usage rule. A third extended
+object with the same shape reuses it.
 
 ### Rule 4 — HTML hover-card typography stays monospace, even in chart mode
 

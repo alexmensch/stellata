@@ -81,13 +81,15 @@ and double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time.
 
 Navigate clicks pick ladder-eligible objects first — stars, planet
-bodies, AND Local Group objects, tiebroken by the hover engine's rule
+bodies, Local Group objects, AND boundary shells (fallback tier),
+tiebroken by the hover engine's rule
 (`bestHitBy`: prime beats fallback, then closer camera) so click and
 hover can't disagree on which object wins an overlap — then fall back
 to clouds.
 
 Navigate single-click on a ladder-eligible object — ONE table for
-stars, planets, and LG objects alike (`applyObjectClick`); no kind is
+stars, planets, LG objects, and boundary shells alike
+(`applyObjectClick`); no kind is
 a special case, and neither is any future pinnable kind:
 
 | condition | action |

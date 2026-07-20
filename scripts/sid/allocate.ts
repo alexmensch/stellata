@@ -19,6 +19,7 @@ import {
   parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSolObjectsTsv,
+  parseShellObjectsTsv,
   serializeLedgerRow,
   starDesignations,
   validateLedger,
@@ -28,7 +29,7 @@ import {
 } from './sid-pure';
 import {
   HEAD_PATH, LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
-  SOL_OBJECTS_PATH, loadStoredEdges,
+  SOL_OBJECTS_PATH, SHELL_OBJECTS_PATH, loadStoredEdges,
 } from './registry-io';
 import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
@@ -105,6 +106,13 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
     // docs/sid.md § 7 — so it must not surface as a second object here.
     if (row.key === 'sun') continue;
     objects.push({ designations: [`sol:${row.key}`], kind: row.kind, label: `sol ${row.key}` });
+  }
+
+  const shellRows = parseShellObjectsTsv(
+    requireFile(SHELL_OBJECTS_PATH, 'committed under data/sid/'),
+  );
+  for (const row of shellRows) {
+    objects.push({ designations: [`shell:${row.key}`], kind: row.kind, label: `shell ${row.key}` });
   }
 
   return { objects, starCount };

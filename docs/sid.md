@@ -69,6 +69,7 @@ Current namespaces:
 | `cloud` | `clouds.json` `id` slug | clouds pipeline | slug — rename requires a bridge (§ 4.1) |
 | `lg` | `local-group.json` `id` slug | LVDB pipeline | slug — rename requires a bridge |
 | `sol` | `sun`, `mercury` … `pluto` | committed list | frozen by us |
+| `shell` | `local_bubble`, `heliopause` | committed list (`shell-objects.tsv`) | frozen by us |
 
 Reserved for future layers (see § 10): `pgc`, `ngc`, `ic`, `ugc`,
 `messier` (extragalactic tiers — PGC runs past 3 million, which is
@@ -425,6 +426,15 @@ In-record, not a runtime sidecar:
   table matches (tests import, never redefine). `sol:sun` is minted
   for the ledger's completeness; Sol's catalog record resolves to the
   same SID through the same-as edge, not a second allocation.
+- **Boundary shells:** ledger rows minted from the committed
+  `data/sid/shell-objects.tsv` list (`shell:local_bubble`,
+  `shell:heliopause`). Client-side, a hand-written `SHELL_OBJECT_SIDS`
+  table in `src/client/fresnel-shell/` pins key → sid, with a vitest
+  that imports the ledger and asserts the table matches (tests import,
+  never redefine). Both shells are generated / curated objects Stellata
+  owns (the heliopause has no artifact rows; `local-bubble.bin` carries
+  no sid field) — so they mint like the Sol system, not like the
+  in-record sibling artifacts.
 - **Loader maps (B4):** `catalog-loader.ts` inverts the sid column
   into `sidToIndex` / `indexToSid`, mirroring `hipToIndex`.
 
@@ -437,9 +447,12 @@ One global resolver built at boot from whatever artifacts attach:
   at resolver construction and then either **attached** when its
   artifact lands or **concluded** absent when it never will: stars
   over `catalog.sid` at catalog load, planets from `SOL_OBJECT_SIDS`
-  at boot, Local Group when its fetch resolves (concluded when the
-  artifact is missing), clouds concluded at boot while the layer is
-  shelved — re-enabling `attachClouds` must attach the domain
+  at boot, boundary shells from `SHELL_OBJECT_SIDS` at boot (both sids
+  always known — a shell whose layer is absent still resolves, then
+  focus/pin fall through to null), Local Group when its fetch resolves
+  (concluded when the artifact is missing), clouds concluded at boot
+  while the layer is shelved — re-enabling `attachClouds` must attach the
+  domain
   (`src/client/util/sid-resolver/README.md`).
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
   registered-but-unattached domain remains, or `unknown` once all
