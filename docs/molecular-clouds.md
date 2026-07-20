@@ -295,8 +295,8 @@ accumulates A_V and applies `E(B−V) = A_V / 3.1` as a shift of the
 LUT-input B−V — the CCM 1989 diffuse-ISM law. The epic's "current
 path appears single-channel; confirm" resolves to: the raymarch is
 single-channel in *storage* (one A_V accumulator) but the colour
-effect is present. A.3 is therefore **verify + pin + one physics
-upgrade**, not new plumbing:
+effect is present. A.3 is therefore **verify + pin + resolve the
+R_V upgrade analytically**, not new plumbing:
 
 1. Regression-pin the existing behaviour: synthetic single-cloud
    fixture → assert A_V and the B−V shift to `toBe` precision. Shipped
