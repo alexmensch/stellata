@@ -809,6 +809,14 @@ export class FocusController implements FocusOps {
       this.deps.controls.update();
     }
     this.setSoftFocus(target.kind, target.idx);
+    // A soft focus keeps the GLOBAL_MIN_DIST_PC orbit floor — except when
+    // the object's own park distance is tighter (an AU-scale shell like the
+    // heliopause parks ~480 AU ≈ 2.3e-3 pc, inside the 5e-3 pc floor).
+    // Without this, controls.update() clamps the camera straight back out
+    // to the floor after the lerp lands — the "zoom in then snap out" bug.
+    // Safe because such a shell sits at the origin (Sol), where float32 is
+    // precise; distant soft kinds keep the full floor (park ≫ floor).
+    this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, parkDist);
   }
 
   /** Orbit pivot moves to the object, the object becomes the focus,
