@@ -11,7 +11,7 @@ Data inputs: Zucker 2020 Table A1 + Zucker 2021 Tables 1–3
 (`scripts/dust/build-dust.py` → `public/dust/`), and the star catalog
 (embedded-star cross-match). Rendering surfaces: the per-star
 extinction raymarch in `src/client/star-pipeline/star.vert.glsl` and
-the shelved cloud presence layer in `src/client/molecular-clouds/`.
+the cloud presence layer in `src/client/molecular-clouds/`.
 
 ## 1. Architecture
 
@@ -477,16 +477,24 @@ integral:
   no double counting). This is the mechanism by which clouds
   extinct the volumetric Milky Way, which deliberately does not
   sample the voxel grid.
-- **Scattered-light presence (additive, whisper-level):** the same
-  integral drives a faint emissive term so cloud shape reads
-  against empty black sky — the epic's "very subtle stylised
-  presence". Peak intensity target ≈ 0.05–0.15 of a
-  threshold-visible star's glow; must lose to any physical signal.
-  Class tinting: dark → neutral warm grey-brown; sf → slightly
-  warmer; hii → faint Hα red bias near cavity rims + faint blue
-  reflection bias within ~2 pc of B stars. Actual HII emission
-  overlays are `stellata-c7u.5.2`'s scope, driven by the same
-  cavity list.
+- **Fresnel-rim presence (additive, whisper-level):** the same
+  integral modulates a faint rim glow so cloud shape reads against
+  empty black sky — the epic's "very subtle stylised presence",
+  revised at A.6 (2026-07-20, with the user) to the Local Bubble's
+  fresnel-rim treatment (`src/client/fresnel-shell/`): the layer is
+  an orientation aid for objects you can't actually see, so the
+  limb-brightened silhouette reads as annotation rather than
+  luminous gas, and decluttering to `physical` removes it entirely.
+  The rim shape is the shared `stellata_fresnel_rim` chunk at the
+  ray's entry point, textured by the fine octaves, faded by the
+  column, and suppressed with the camera inside the envelope (the
+  fresnel-shell hide-when-inside contract, glow only — absorption
+  keeps working from inside). Peak intensity target ≈ 0.05–0.15 of
+  a threshold-visible star's glow; must lose to any physical
+  signal. Class tinting: dark → neutral warm grey-brown; sf →
+  slightly warmer; hii → faint red bias. Actual HII emission
+  overlays are `stellata-c7u.5.2`'s scope, driven by the cavity
+  list.
 
 Chart mode keeps the existing mono treatment (soft grey, normal
 alpha) fed by the new density integral. All intensity constants land
@@ -561,11 +569,13 @@ Everything falls out of the two mechanisms already specified:
   automatically (the camera→star segment starts inside the dense
   region). The un-clipped Edenhofer encode (§ 2.2) is what makes
   this real.
-- **Diffuse background:** the presence mesh is `DoubleSide`; with
+- **Diffuse background:** the presence mesh is `BackSide` with an
+  analytic ray-envelope segment, so it renders from inside too; with
   the camera inside, each fragment integrates the *outward* column
   in its direction, so the MW band dims anisotropically — darkest
   toward the core, brightest toward the nearest edge. This is the
   correct first-order model of sitting inside an extinction shell.
+  (The rim glow — not the absorption — is suppressed inside, § 9.)
 
 A.7 is therefore a verification-and-tuning phase, not new machinery:
 fly into Taurus, Ophiuchus (dense, nearby), and the λ Ori ring
@@ -588,9 +598,9 @@ the shader framework A.4's fine noise and A.5's tints plug into).
 | --- | --- | --- | --- |
 | A.2 (shipped) | c7u.2 | Fixed `DENSITY_MAX` → 0.2 (un-clips the real Edenhofer cores; § 2.2); per-star extinction = pure Edenhofer with the measured evidence retiring the `max(edenhofer, model)` overlay (§ 1 decision 1); calibrated analytic model + taxonomy + `noiseModel` into `clouds.json` v2 (§ 4, § 8); catalog rebuild (de-extinction invariant); `DUST_AV_HEADROOM` removal | 11 pinned `n0Cal`/`uEnv` (`clouds-json.test.ts`); per-cloud peak-column check pinned (`dust-manifest.test.ts`; Ophiuchus 1.03×, Taurus 0.50× of Leike targets); masses within 2× `mass_leike`; idempotent |
 | A.3 | c7u.3 | Pin existing A_V + B−V-shift behaviour (`dust-raymarch-pure.ts`); density-dependent R_V upgrade resolved analytically as a no-op at our A_V ≤ 2.73 column ceiling (§ 6), not shipped | Synthetic-cloud fixture pins A_V + B−V shift to `toBe`; constant R_V = 3.1 within ≲ 0.1 mag of the measured R_V(A_V) relation |
-| A.4 | c7u.4 | The § 5 octave ladder + ridged/anisotropic shaping in the presence shader, constants from the `noiseModel` block | Structured, filamentary silhouettes; § 9.1 band-limits hold |
+| A.4 (shipped) | c7u.4 | The § 5 octave ladder + ridged/anisotropic shaping in the presence shader, constants from the `noiseModel` block | Structured, filamentary silhouettes; § 9.1 band-limits hold |
 | A.5 | c7u.5.x | Generic-reader cross-match; taxonomy + overrides; cavity list into `clouds.json` v2; presence-model cavity carve; HII/reflection tints (5.2) | λ Ori's presence silhouette reads as a ring; Orion A carves around the Trapezium; Taurus stays `dark` with zero cavities |
-| A.6 | c7u.6 | Replace `cloud.frag.glsl` with absorption + whisper-glow model; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 field decoding; re-enable the layer | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
+| A.6 (shipped) | c7u.6 | Replace `cloud.frag.glsl` with absorption + fresnel-rim whisper glow; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 field decoding; re-enable the layer at the `representational` declutter floor | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
 | A.7 | c7u.7 | Fly-through verification + tuning (§ 10) | § 10 acceptance list |
 
 Cross-phase invariant: § 5's noise constants and the § 4 model

@@ -18,8 +18,7 @@ src/client/chart-mode/
                                   draw-all-asterisms mode.
   chart-labels.ts                 Per-frame label engine: proper names,
                                   Bayer Greek glyphs, constellation
-                                  Latin labels, cloud labels (no-op
-                                  while clouds are shelved). Dirty-tracked
+                                  Latin labels, cloud labels. Dirty-tracked
                                   SVG writes + centroid cache + sorted
                                   apparent-size top-N — see
                                   src/client/debug/README.md § What got
@@ -52,10 +51,8 @@ src/client/chart-mode/
 
 Exit reverses each step.
 
-> **Shelved layers.** The molecular cloud layer is shelved, so its
-> isobar pass is a no-op against an invisible group. The Milky Way
-> isobar is also disabled — `Milkyway.setIsobar(true)` now hard-hides
-> the disc + bulge meshes
+> **Shelved layer.** The Milky Way isobar is disabled —
+> `Milkyway.setIsobar(true)` hard-hides the disc + bulge meshes
 > instead of emitting the contour. The blending / `uChartIsobar` switch
 > is preserved in code so the contour pass can return after refinement.
 
@@ -132,9 +129,11 @@ that renders a **single thin line** instead of the volumetric body:
   through the band like a topographic line. Discarded outside the
   line so depth stays clean.
 - **Molecular clouds** (`cloud.frag.glsl`): `line = 1 -
-  smoothstep(fw*0.5, fw*1.5, |density - t|)` where `t` is a
-  magnitude-driven density threshold and `fw = fwidth(density)`.
-  Same idea against the per-cloud density field.
+  smoothstep(fw*0.5, fw*1.5, |av - avT|)` where `avT` is a
+  magnitude-driven A_V threshold and `fw = fwidth(av)` — the same
+  raymarched column that drives the dark-mode presence pass
+  (`../molecular-clouds/README.md` § Render; the ray jitter pins to
+  0.5 in the isobar branch so the contour stays clean).
 
 Black ink colour (`uChartInkColor` / `uMonoColor` set to `0x000000`),
 no alpha gradient — the line is solid, paper-chart-style, not a

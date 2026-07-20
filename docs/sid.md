@@ -449,10 +449,8 @@ One global resolver built at boot from whatever artifacts attach:
   over `catalog.sid` at catalog load, planets from `SOL_OBJECT_SIDS`
   at boot, boundary shells from `SHELL_OBJECT_SIDS` at boot (both sids
   always known — a shell whose layer is absent still resolves, then
-  focus/pin fall through to null), Local Group when its fetch resolves
-  (concluded when the artifact is missing), clouds concluded at boot
-  while the layer is shelved — re-enabling `attachClouds` must attach the
-  domain
+  focus/pin fall through to null), Local Group and clouds when their
+  fetches resolve (concluded when the artifact is missing)
   (`src/client/util/sid-resolver/README.md`).
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
   registered-but-unattached domain remains, or `unknown` once all
@@ -468,7 +466,7 @@ One global resolver built at boot from whatever artifacts attach:
   block on a late artifact. Unresolved sids from `applyFromUrl`
   register as deferred intents (focus / to / POI); each domain attach
   flushes matching intents; intents for domains that never attach
-  (shelved clouds) or sids no domain claims (a URL minted by a newer
+  (a missing artifact) or sids no domain claims (a URL minted by a newer
   deploy carrying an object type this client doesn't ship) expire
   silently, leaving the rest of the decoded state applied. This is
   the runtime half of wire forward-tolerance.

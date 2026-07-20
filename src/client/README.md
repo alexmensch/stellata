@@ -112,9 +112,8 @@ same `applyObjectClick` semantics.
 
 Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
 on first pick from no focus, vector destination on pick from a focus,
-click-destination-to-travel) — unreachable while the MC layer is
-shelved (`src/client/molecular-clouds/README.md`); revisit the ladder
-fit at un-shelve.
+click-destination-to-travel); folding clouds into the click ladder is
+tracked as its own bead.
 
 In OBSERVE mode single-click is the pin/unpin toggle
 (`applyObjectClick`'s observe branch, gated on `showHud` — stars and
@@ -272,7 +271,7 @@ SVG mask (`constellation-figure/README.md`).
 | Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
 | Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
 | Local Bubble shell                               | WebGL   | `renderOrder: -1`                                  |       | [local-bubble/](local-bubble/README.md) |
-| Molecular clouds (shelved)                       | WebGL   | `renderOrder: -2`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
+| Molecular clouds                                 | WebGL   | `renderOrder: -2`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
 | Milky Way volume + Local Group emission          | WebGL   | `renderOrder: -3`                                  |       | [milkyway/](milkyway/README.md), [local-group/](local-group/README.md) |
 | Star core depth-mask + planet core (depth-only)  | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
 

@@ -2,8 +2,8 @@
 
 `build-clouds.py` — Zucker 2020 Table A1 + Zucker 2021 Tables 1–3 →
 `public/clouds.json` (v2). Z2021 entries take precedence over Z2020
-for the clouds both cover. Renderer is currently shelved at the
-runtime.
+for the clouds both cover. Consumed by the runtime presence layer
+(`src/client/molecular-clouds/`).
 
 `cloud_model.py` is the shared physics module (stdlib-pure where
 `build-clouds.py` needs it — CI runs it without numpy): the
