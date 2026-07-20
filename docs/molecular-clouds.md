@@ -486,10 +486,12 @@ integral:
   limb-brightened silhouette reads as annotation rather than
   luminous gas, and decluttering to `physical` removes it entirely.
   The rim shape is the shared `stellata_fresnel_rim` chunk at the
-  ray's entry point, textured by the fine octaves, faded by the
-  column, and suppressed with the camera inside the envelope (the
-  fresnel-shell hide-when-inside contract, glow only — absorption
-  keeps working from inside). Peak intensity target ≈ 0.05–0.15 of
+  ray's envelope entry point, textured by the fine octaves, faded at
+  the envelope edge by the ray's closest approach (geometric — a
+  column fade would cancel the rim exactly where the fresnel peaks,
+  since grazing rays carry no column), and suppressed with the camera
+  inside the envelope (the fresnel-shell hide-when-inside contract,
+  glow only — absorption keeps working from inside). Peak intensity target ≈ 0.05–0.15 of
   a threshold-visible star's glow; must lose to any physical
   signal. Class tinting: dark → neutral warm grey-brown; sf →
   slightly warmer; hii → faint red bias. Actual HII emission

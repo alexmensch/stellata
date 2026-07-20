@@ -53,12 +53,30 @@ Without `premultipliedAlpha: true`, src.alpha multiplies into rgb a
 second time and the glow collapses. The whisper glow is the shared
 fresnel-rim shape (`../fresnel-shell/fresnel-rim.glsl`, the
 `stellata_fresnel_rim` chunk registered by `fresnel-shell.ts`)
-evaluated at the ray's entry point, class-tinted (dark / sf / hii),
-textured by the fine octaves, and suppressed when the camera is inside
-the envelope — the fresnel-shell hide-when-inside contract applied to
-the glow only, while the absorption keeps working from inside the
-cloud. Output carries a ±0.5-LSB gradient-noise dither (the whisper
-level spans only ~13–38 8-bit levels).
+evaluated at the ray's envelope entry point, class-tinted
+(dark / sf / hii), textured by the fine octaves, and faded at the
+envelope edge by the ray's closest approach — **geometric, never a
+column fade**: the fresnel peaks exactly where the grazing column
+vanishes, so a column product cancels the rim to invisibility. The
+glow is suppressed when the camera is inside the envelope — the
+fresnel-shell hide-when-inside contract applied to the glow only,
+while the absorption keeps working from inside the cloud. Output
+carries a ±0.5-LSB gradient-noise dither (the whisper level spans
+only ~13–38 8-bit levels).
+
+**Fragment budget.** The march is clipped to the envelope sphere
+`u = uEnv` (density is identically zero outside it; a
+mass-budget-tightened cloud like Orion λ at uEnv 0.22 discards ~95%
+of its projected disc in one dot product), the step count adapts to
+the chord's projected pixel extent (capped by the `uSteps` lever),
+samples whose noise-free column contribution is negligible skip the
+octave loop, the octave sum is evaluated on alternate steps and
+reused (the band-limit makes the in-integral field smooth at step
+scale by construction), and the march breaks once the column
+saturates the alpha cap. The remaining hot case is the handful of
+large Z2020 spheres that subtend tens of degrees from Sol — the next
+lever is baking the value-noise octaves into a small tiling 3D
+texture (tracked as a bead).
 
 The material is `BackSide`: exactly one fragment per covered pixel
 from outside and inside (the raymarch segment is analytic either way);

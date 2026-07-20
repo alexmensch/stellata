@@ -29,8 +29,10 @@ const CLASS_TINTS: Record<CloudClass, number> = {
 };
 
 // Rim silhouette calibrated whisper-level: peak intensity ≈ 0.05–0.15 of
-// a threshold-visible star's glow, losing to any physical signal.
-const ALPHA_LIMB_DEFAULT = 0.09;
+// a threshold-visible star's glow, losing to any physical signal. (The
+// boundary shells run alphaLimb 0.45–0.5; clouds sit far below that
+// deliberately — 96 rims at shell strength would dominate the sky.)
+const ALPHA_LIMB_DEFAULT = 0.15;
 const GLOW_GAIN_DEFAULT = 1.0;
 const STEPS_DEFAULT = 14;
 const TEX_GAIN_DEFAULT = 0.6;
