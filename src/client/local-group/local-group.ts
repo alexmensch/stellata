@@ -11,6 +11,7 @@ import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import {
   MIN_DISC_HIT_RADIUS_PX,
+  angularDiameterPx,
   pickFromCandidates,
   type PickCandidate,
 } from '../camera/controls/star-geometry';
@@ -126,7 +127,7 @@ export class LocalGroupLayer {
     if (!obj) return 0;
     if (!this.lgLocalPositionInto(idx, worldOffset, this.tmpFocusableLocal)) return 0;
     const dCam = Math.max(this.tmpFocusableLocal.distanceTo(camera.position), 1);
-    return 2 * Math.atan(maxSemiAxisPc(obj) / dCam) * angularToPx();
+    return angularDiameterPx(maxSemiAxisPc(obj), dCam, angularToPx());
   }
 
   /** Number of silhouette samples for an object — for the label engine. */

@@ -3,6 +3,7 @@ import type { Cloud, CloudCatalog } from './cloud-loader';
 import cloudVert from './cloud.vert.glsl?raw';
 import cloudFrag from './cloud.frag.glsl?raw';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
+import { angularDiameterPx } from '../camera/controls/star-geometry';
 
 // Shared sphere geometry — every cloud is a unit sphere scaled by its
 // semi-axes via the per-cloud Mesh matrix. 32×16 segmentation gives a
@@ -331,5 +332,5 @@ export function renderedCloudSizePx(
   } else {
     R = Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]);
   }
-  return 2 * Math.atan(R / Math.max(dCamPc, 1e-30)) * angularToPx;
+  return angularDiameterPx(R, Math.max(dCamPc, 1e-30), angularToPx);
 }
