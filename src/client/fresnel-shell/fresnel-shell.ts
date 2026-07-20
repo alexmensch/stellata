@@ -8,9 +8,13 @@ import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import { LABEL_OFFSET_PX } from '../solar-system/planet-labels';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
+import fresnelRimChunk from './fresnel-rim.glsl?raw';
 
-const DEFAULT_FACE_ON_FLOOR = 0.04;
-const DEFAULT_FRESNEL_POWER = 2.5;
+(THREE.ShaderChunk as Record<string, string>)['stellata_fresnel_rim'] =
+  fresnelRimChunk;
+
+export const DEFAULT_FACE_ON_FLOOR = 0.04;
+export const DEFAULT_FRESNEL_POWER = 2.5;
 
 export interface FresnelShellMaterialOptions {
   colour: THREE.Color;
