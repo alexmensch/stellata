@@ -258,6 +258,13 @@ export class DustField {
     }
     gl.bindTexture(gl.TEXTURE_3D, glTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    // three.js leaves UNPACK_FLIP_Y / UNPACK_PREMULTIPLY_ALPHA behind after
+    // its own 2D uploads (e.g. planet textures lazy-loading mid-stream), and
+    // WebGL2 rejects texSubImage3D outright when either is set — reset both
+    // or this upload INVALID_OPERATIONs and the chunk drops. No restore
+    // needed: three re-runs pixelStorei per upload.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
     const c = this.manifest.chunkSize;
     // Chunk bytes are z-major per the Python writer (innermost=x), which
     // matches WebGL's width/height/depth interpretation of texSubImage3D.
