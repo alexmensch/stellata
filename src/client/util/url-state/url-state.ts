@@ -86,12 +86,13 @@ const PRESET_TO_INDEX: Record<MagPresetName, number> = {
 const INDEX_TO_PRESET: MagPresetName[] = ['naked-eye', 'binoculars', 'all'];
 
 // Flags byte — packed booleans + small enums. Each bit is "non-default":
-//   0 = grid on, 1 = HUD on, 2 = MC disabled, 3 = MW disabled,
+//   0 = grid on, 1 = HUD on, 2 = reserved, 3 = MW disabled,
 //   4 = unit pc, 5 = mode observe, 6 = chart on (only set when also
 //   mode=observe — chart is observe-gated), 7 = constellations disabled.
 const FLAG_GRID         = 1 << 0;
 const FLAG_HUD          = 1 << 1;
-// bit 2 reserved (formerly FLAG_MC_DISABLED — molecular clouds shelved)
+// bit 2 reserved (formerly FLAG_MC_DISABLED — retired; molecular-cloud
+// visibility is the declutter floor, no per-layer flag)
 const FLAG_MW_DISABLED  = 1 << 3;
 const FLAG_UNIT_PC      = 1 << 4;
 const FLAG_MODE_OBSERVE = 1 << 5;

@@ -111,12 +111,9 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Cloud layer is currently shelved (CLAUDE.md). The fetch and parsing
-    // stay so the machinery is verified; the attach is suppressed so the
-    // layer doesn't enter the scene. Re-enable by uncommenting the line
-    // below AND attaching the 'cloud' SID domain in place of the
-    // conclude('cloud') call further down.
-    // if (cloudCatalog) stellata.attachClouds(cloudCatalog);
+    // Molecular-cloud presence layer — a representational-tier declutter
+    // element; absent artifact = no layer.
+    if (cloudCatalog) stellata.attachClouds(cloudCatalog);
 
     // Local Group wireframes. Always-on when the artifact is present —
     // same model as the MW disc, no toggle / URL flag.
@@ -156,7 +153,8 @@ async function main() {
       'planet',
       arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
-    sidResolver.conclude('cloud');
+    if (cloudCatalog) sidResolver.attach('cloud', arrayDomain(cloudCatalog.clouds.map((c) => c.sid)));
+    else sidResolver.conclude('cloud');
     if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
     else sidResolver.conclude('lg');
     // Both boundary shells carry static, always-known SIDs (generated /
@@ -213,11 +211,8 @@ async function main() {
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    // null cloudCatalog: cloud layer is currently shelved (CLAUDE.md), so
-    // search shouldn't surface unreachable cloud entries. Pass
-    // `cloudCatalog` directly when re-enabling.
-    bindSearch(stellata, catalog, searchIndex, starLabels, null, lgCatalog);
-    bindFindSearch(stellata, catalog, searchIndex, null, lgCatalog);
+    bindSearch(stellata, catalog, searchIndex, starLabels, cloudCatalog, lgCatalog);
+    bindFindSearch(stellata, catalog, searchIndex, cloudCatalog, lgCatalog);
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
@@ -301,12 +296,8 @@ async function main() {
         context: { objects: lgCatalog.objects },
       }));
     }
-    // Cloud provider registers iff the cloud layer is attached. The
-    // attach call is currently shelved (CLAUDE.md), so this branch is
-    // unreached in shipping builds — un-shelving (uncommenting the
-    // `attachClouds(cloudCatalog)` line above) auto-registers the
-    // provider with no further wiring. The formatter and provider class
-    // ship anyway so the un-shelve diff is one line, not a re-implement.
+    // Cloud provider registers iff the cloud layer is attached (absent
+    // clouds.json artifact = no layer, no provider).
     if (stellata.cloudLayer) {
       hoverProviders.push(createCloudHoverProvider({
         stellata,

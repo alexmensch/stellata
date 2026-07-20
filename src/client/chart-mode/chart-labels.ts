@@ -536,9 +536,7 @@ function tick(
   perfMeasure('chart.constellations');
 
   // 4) Molecular clouds — name labels at the cloud centroid. Cheap to
-  // iterate (count is in the hundreds at most). Cloud layer is currently
-  // shelved (CLAUDE.md) so this block is dead until re-enabled; the
-  // chart-labels integration is preserved against `clouds` non-null.
+  // iterate (count is in the hundreds at most).
   perfMark('chart.clouds');
   const clouds = stellata.getCloudCatalog();
   if (clouds && showCloudNames) {

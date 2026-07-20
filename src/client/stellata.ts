@@ -1216,9 +1216,8 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.hudOverlay.dispose(),
     });
     this.layers.register({
-      // Layer shelved (CLAUDE.md): visible=false. Flip to true (or
-      // restore a FilterState flag) when re-enabling.
-      update: (ctx) => this.clouds?.update(ctx.worldOffset, false),
+      update: (ctx) =>
+        this.clouds?.update(ctx.worldOffset, this.detailPermits('molecularCloudEllipsoids')),
       setMonochrome: (on) => this.clouds?.setMonochrome(on),
       dispose: () => this.clouds?.dispose(),
     });
@@ -1902,8 +1901,6 @@ export class Stellata implements FrameAnchor {
    *  (e.g. `stellata.milkywayLayer.setBrightness(0.4)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }
 
-  /** Wire the loaded molecular cloud catalog into the scene. Idempotent —
-   *  calling again replaces the layer. Pass null to detach. */
   /** Attach (or replace, or detach with null) the Local Group wireframe
    *  layer. Mirrors attachClouds — load is async in main.ts, the layer
    *  appears once the JSON arrives. Empty catalog detaches. */
@@ -1967,6 +1964,8 @@ export class Stellata implements FrameAnchor {
    *  glow-mag-offset levers). null until attachLocalGroup runs. */
   get localGroupEmission(): LocalGroupEmission | null { return this.lgEmission; }
 
+  /** Wire the loaded molecular cloud catalog into the scene. Idempotent —
+   *  calling again replaces the layer. Pass null to detach. */
   attachClouds(catalog: CloudCatalog | null) {
     if (this.clouds) {
       this.scene.remove(this.clouds.group);
@@ -1974,7 +1973,12 @@ export class Stellata implements FrameAnchor {
       this.clouds = null;
     }
     if (catalog === null || catalog.clouds.length === 0) return;
-    this.clouds = new MolecularClouds(catalog);
+    const u = this.starPipeline.discMaterial.uniforms;
+    this.clouds = new MolecularClouds(catalog, {
+      uMaxAppMag: u.uMaxAppMag as { value: number },
+      uFovYRad: u.uFovYRad as { value: number },
+      uViewport: u.uViewport as { value: THREE.Vector2 },
+    });
     this.clouds.setMonochrome(this.monochrome);
     this.scene.add(this.clouds.group);
   }
@@ -1982,7 +1986,13 @@ export class Stellata implements FrameAnchor {
   /** Catalog of clouds, or null if none are attached. Exposed for search
    *  index integration in main.ts. */
   getCloudCatalog(): CloudCatalog | null {
-    return this.clouds ? { count: this.clouds.clouds.length, clouds: this.clouds.clouds } : null;
+    return this.clouds
+      ? {
+          count: this.clouds.clouds.length,
+          clouds: this.clouds.clouds,
+          noiseModel: this.clouds.noiseModel,
+        }
+      : null;
   }
 
   /** Direct access to the cloud render layer for dev-console tuning
