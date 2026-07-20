@@ -776,7 +776,8 @@ export class Stellata implements FrameAnchor {
         renderedSizePx: (idx) => this.renderedSizePxFor(idx),
       },
       cloud: {
-        localPositionInto: (idx, out) => this.cloudLocalPositionInto(idx, out),
+        localPositionInto: (idx, out) =>
+          this.clouds?.cloudLocalPositionInto(idx, this.worldOffset, out) ?? false,
         focusParkDistance: (idx) => {
           const cloud = this.clouds?.clouds[idx];
           if (!cloud) return 0;
@@ -789,7 +790,8 @@ export class Stellata implements FrameAnchor {
         renderedSizePx: (idx) => this.renderedCloudSizePx(idx),
       },
       lg: {
-        localPositionInto: (idx, out) => this.lgLocalPositionInto(idx, out),
+        localPositionInto: (idx, out) =>
+          this.localGroupLayer?.lgLocalPositionInto(idx, this.worldOffset, out) ?? false,
         focusParkDistance: (idx) => {
           const obj = this.localGroupLayer?.objects[idx];
           if (!obj) return 0;
@@ -799,7 +801,10 @@ export class Stellata implements FrameAnchor {
           });
         },
         arrivalRadiusPc: () => null,
-        renderedSizePx: (idx) => this.renderedLgSizePx(idx),
+        renderedSizePx: (idx) =>
+          this.localGroupLayer?.renderedLgSizePx(
+            idx, this.camera, this.worldOffset, () => this.angularToPx(),
+          ) ?? 0,
       },
       planet: {
         localPositionInto: (idx, out) =>
@@ -1936,26 +1941,6 @@ export class Stellata implements FrameAnchor {
     this.focus.flyTo(target, opts);
   }
 
-  /** LG object's centroid in the renderer's local frame — the lg
-   *  provider's localPositionInto leg. */
-  private lgLocalPositionInto(idx: number, out: THREE.Vector3): boolean {
-    const obj = this.localGroupLayer?.objects[idx];
-    if (!obj) return false;
-    out.copy(obj.centerAbs).sub(this.worldOffset);
-    return true;
-  }
-
-  /** Projected silhouette diameter of an LG object in pixels — the
-   *  orientation-independent maxAxis bound the hover pickbox uses. */
-  private renderedLgSizePx(idx: number): number {
-    const obj = this.localGroupLayer?.objects[idx];
-    if (!obj) return 0;
-    const local = this._tmpRenderLocal;
-    if (!this.lgLocalPositionInto(idx, local)) return 0;
-    const dCam = Math.max(local.distanceTo(this.camera.position), 1);
-    return 2 * Math.atan(maxSemiAxisPc(obj) / dCam) * this.angularToPx();
-  }
-
   private tmpVec3b = new THREE.Vector3();
   private tmpHostLocal = new THREE.Vector3();
 
@@ -2163,18 +2148,6 @@ export class Stellata implements FrameAnchor {
    *  `target` (any kind). Thin shim over WarpController. */
   warpTo(target: Target) {
     this.warp.warpTo(target);
-  }
-
-  /** The cloud provider's localPositionInto leg: writes the cloud's
-   *  local-frame centroid into `out` when the cloud exists, returns
-   *  `true`. Returns `false` (and leaves `out` untouched) when no cloud
-   *  layer is attached or the index is out of range. */
-  private cloudLocalPositionInto(cloudIdx: number, out: THREE.Vector3): boolean {
-    if (!this.clouds) return false;
-    const c = this.clouds.clouds[cloudIdx];
-    if (!c) return false;
-    out.copy(c.centerAbs).sub(this.worldOffset);
-    return true;
   }
 
   // Swing the camera to face the selected constellation while keeping the
@@ -2411,7 +2384,7 @@ export class Stellata implements FrameAnchor {
     const cloud = this.clouds.clouds[cloudIdx];
     if (!cloud) return 0;
     const local = this._tmpRenderLocal;
-    if (!this.cloudLocalPositionInto(cloudIdx, local)) return 0;
+    if (!this.clouds.cloudLocalPositionInto(cloudIdx, this.worldOffset, local)) return 0;
     const camPos = this.camera.position;
     const dx = local.x - camPos.x;
     const dy = local.y - camPos.y;

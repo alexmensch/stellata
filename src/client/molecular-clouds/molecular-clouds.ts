@@ -97,6 +97,17 @@ export class MolecularClouds {
     this.group.position.copy(worldOffset).negate();
   }
 
+  /** The cloud provider's localPositionInto leg: writes the cloud's
+   *  local-frame centroid into `out` when the cloud exists, returns
+   *  `true`. Returns `false` (and leaves `out` untouched) when the
+   *  index is out of range. */
+  cloudLocalPositionInto(cloudIdx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
+    const c = this.clouds[cloudIdx];
+    if (!c) return false;
+    out.copy(c.centerAbs).sub(worldOffset);
+    return true;
+  }
+
   setMonochrome(on: boolean) {
     if (this.mono === on) return;
     this.mono = on;
