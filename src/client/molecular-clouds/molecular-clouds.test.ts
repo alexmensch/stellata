@@ -2,111 +2,86 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { MolecularClouds, renderedCloudSizePx, cloudViewingDistancePc } from './molecular-clouds';
 import type { Cloud, CloudCatalog } from './cloud-loader';
+import { MAX_OCTAVES } from './cloud-presence-pure';
+import { makeMockCloud, makeMockCatalog } from './cloud-mock';
+
+function makeCloud(axes: [number, number, number], id = 'test'): Cloud {
+  return makeMockCloud({ name: id, id, sid: id.charCodeAt(0), axes });
+}
 
 // Two-cloud stub catalog so the per-cloud loops in setMonochrome /
-// setIsobar / applyBlending all run with `materials.length > 1`.
+// setIsobar / the levers all run with `materials.length > 1`.
 function makeCatalog(): CloudCatalog {
-  const cloud = (id: string): Cloud => ({
-    name: id,
-    id,
-    sid: id.charCodeAt(0),
-    centerAbs: new THREE.Vector3(0, 0, 0),
-    axes: [10, 10, 10],
-    quat: new THREE.Quaternion(),
-    source: 'Z2020',
-    distanceFromSol: 100,
-    massMsun: null,
-  });
-  const clouds = [cloud('A'), cloud('B')];
-  return { count: clouds.length, clouds };
+  return makeMockCatalog([makeCloud([10, 10, 10], 'A'), makeCloud([22, 19, 9.5], 'B')]);
 }
 
-function makeCloud(axes: [number, number, number]): Cloud {
-  return {
-    name: 'test',
-    id: 'test',
-    sid: 1,
-    centerAbs: new THREE.Vector3(),
-    axes,
-    quat: new THREE.Quaternion(),
-    source: 'Z2021T1',
-    distanceFromSol: 0,
-    massMsun: null,
-  };
-}
-
-function blendings(c: MolecularClouds): THREE.Blending[] {
-  // Reach into the meshes — this is a unit test of the blending state
-  // contract, not of the public API.
+function materials(c: MolecularClouds): THREE.ShaderMaterial[] {
   return c.group.children.map(
-    (m) => ((m as THREE.Mesh).material as THREE.ShaderMaterial).blending,
+    (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
   );
 }
 
-describe('MolecularClouds / blending state coordination (mu9)', () => {
+describe('MolecularClouds / presence material contract', () => {
   const u1 = { value: 7.5 };
 
-  it('starts in AdditiveBlending (colour mode, no isobar)', () => {
+  it('always blends premultiplied-over (NormalBlending), in every mode', () => {
+    // One draw carries both components: rgb = additive rim glow, alpha =
+    // absorption. Additive blending would drop the absorption term.
     const c = new MolecularClouds(makeCatalog());
-    expect(blendings(c)).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);
-  });
-
-  it('setMonochrome(true) flips to NormalBlending (mono ink-on-paper)', () => {
-    const c = new MolecularClouds(makeCatalog());
+    const expectNormal = () => {
+      for (const m of materials(c)) {
+        expect(m.blending).toBe(THREE.NormalBlending);
+        expect(m.premultipliedAlpha).toBe(true);
+        expect(m.side).toBe(THREE.BackSide);
+      }
+    };
+    expectNormal();
     c.setMonochrome(true);
-    expect(blendings(c)).toEqual([THREE.NormalBlending, THREE.NormalBlending]);
-  });
-
-  it('setMonochrome(false) restores AdditiveBlending', () => {
-    const c = new MolecularClouds(makeCatalog());
-    c.setMonochrome(true);
+    expectNormal();
+    c.setIsobar(true, u1);
+    expectNormal();
     c.setMonochrome(false);
-    expect(blendings(c)).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);
-  });
-
-  it('setIsobar(true) forces NormalBlending regardless of mono state', () => {
-    const c = new MolecularClouds(makeCatalog());
-    c.setIsobar(true, u1);
-    expect(blendings(c)).toEqual([THREE.NormalBlending, THREE.NormalBlending]);
-
-    const c2 = new MolecularClouds(makeCatalog());
-    c2.setMonochrome(true);
-    c2.setIsobar(true, u1);
-    expect(blendings(c2)).toEqual([THREE.NormalBlending, THREE.NormalBlending]);
-  });
-
-  it('setIsobar(false) restores per-mode default (Additive in colour, Normal in mono)', () => {
-    const c = new MolecularClouds(makeCatalog());
-    c.setIsobar(true, u1);
     c.setIsobar(false, u1);
-    expect(blendings(c)).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);
-
-    const c2 = new MolecularClouds(makeCatalog());
-    c2.setMonochrome(true);
-    c2.setIsobar(true, u1);
-    c2.setIsobar(false, u1);
-    expect(blendings(c2)).toEqual([THREE.NormalBlending, THREE.NormalBlending]);
+    expectNormal();
   });
 
-  it('setMonochrome while isobar is live does not clobber the isobar blending', () => {
-    // pre-fix, setMonochrome(true) would
-    // unconditionally write NormalBlending and setMonochrome(false)
-    // would write AdditiveBlending — the latter would clobber a live
-    // isobar. The applyBlending helper now derives from both flags.
+  it('setMonochrome swaps the uMonochrome flag and the uOpacity value', () => {
     const c = new MolecularClouds(makeCatalog());
-    c.setIsobar(true, u1);
     c.setMonochrome(true);
-    expect(blendings(c)).toEqual([THREE.NormalBlending, THREE.NormalBlending]);
+    for (const m of materials(c)) {
+      expect(m.uniforms.uMonochrome.value).toBe(1);
+      expect(m.uniforms.uOpacity.value).toBe(0.95);
+    }
     c.setMonochrome(false);
-    expect(blendings(c)).toEqual([THREE.NormalBlending, THREE.NormalBlending]);
+    for (const m of materials(c)) {
+      expect(m.uniforms.uMonochrome.value).toBe(0);
+      expect(m.uniforms.uOpacity.value).toBe(1);
+    }
   });
 
-  it('setIsobar binds the magnitude-uniform reference (mu9 regression)', () => {
+  it('builds the per-cloud octave ladder inside the uniform budget', () => {
+    const c = new MolecularClouds(makeCatalog());
+    for (const m of materials(c)) {
+      const lambdas = m.uniforms.uOctLambda.value as number[];
+      const amps = m.uniforms.uOctAmp.value as number[];
+      const n = m.uniforms.uNumOct.value as number;
+      expect(lambdas).toHaveLength(MAX_OCTAVES);
+      expect(n).toBeGreaterThan(0);
+      expect(n).toBeLessThanOrEqual(MAX_OCTAVES);
+      // Padding beyond uNumOct is zero and never read by the shader loops.
+      expect(lambdas[n]).toBe(0);
+      const total = amps.slice(0, n).reduce((a, b) => a + b * b, 0);
+      expect(total).toBeCloseTo(1, 10);
+    }
+    // Cloud B: major diameter 44 pc → the pinned Taurus ladder head.
+    expect((materials(c)[1].uniforms.uOctLambda.value as number[])[0]).toBe(44);
+  });
+
+  it('setIsobar binds the magnitude-uniform reference', () => {
     const c = new MolecularClouds(makeCatalog());
     c.setIsobar(true, u1);
-    for (const child of c.group.children) {
-      const mat = (child as THREE.Mesh).material as THREE.ShaderMaterial;
-      expect(mat.uniforms.uMaxAppMag).toBe(u1);
+    for (const m of materials(c)) {
+      expect(m.uniforms.uMaxAppMag).toBe(u1);
     }
   });
 
@@ -117,10 +92,31 @@ describe('MolecularClouds / blending state coordination (mu9)', () => {
     const c = new MolecularClouds(makeCatalog());
     c.setIsobar(true, u1);
     c.setIsobar(true, u1);
-    for (const child of c.group.children) {
-      const mat = (child as THREE.Mesh).material as THREE.ShaderMaterial;
-      expect(mat.uniforms.uMaxAppMag).toBe(u1);
+    for (const m of materials(c)) {
+      expect(m.uniforms.uMaxAppMag).toBe(u1);
     }
+  });
+
+  it('shares uFovYRad / uViewport by reference when provided', () => {
+    const shared = {
+      uMaxAppMag: { value: 6.5 },
+      uFovYRad: { value: 0.9 },
+      uViewport: { value: new THREE.Vector2(800, 600) },
+    };
+    const c = new MolecularClouds(makeCatalog(), shared);
+    for (const m of materials(c)) {
+      expect(m.uniforms.uFovYRad).toBe(shared.uFovYRad);
+      expect(m.uniforms.uViewport).toBe(shared.uViewport);
+      expect(m.uniforms.uMaxAppMag).toBe(shared.uMaxAppMag);
+    }
+  });
+
+  it('setDebugBoost overrides and restores the glow gain', () => {
+    const c = new MolecularClouds(makeCatalog());
+    c.setDebugBoost(25);
+    for (const m of materials(c)) expect(m.uniforms.uOpacity.value).toBe(25);
+    c.setDebugBoost(null);
+    for (const m of materials(c)) expect(m.uniforms.uOpacity.value).toBe(1);
   });
 });
 

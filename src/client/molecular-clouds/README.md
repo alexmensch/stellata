@@ -1,52 +1,82 @@
-# Molecular cloud overlay
+# Molecular cloud presence layer
 
-> **Status:** Shelved. The `attachClouds(...)` call in `main.ts` is
-> commented out, so the layer is never constructed and renders nothing
-> (there is no `FilterState` field for it). The user-facing toggle is
-> removed from the panel, and URL flag bit 2 is reserved (no longer
-> encoded). The render path, shaders, and renderer code in this folder
-> are all preserved so the layer can be re-enabled by restoring that
-> call once the visual treatment is refined. Chart-mode integration
-> (`setCloudsIsobar`) is still wired but no-ops via optional chaining
-> while the layer is unattached. The declutter cycle reserves a floor
-> slot (`molecularCloudEllipsoids`, floor `representational`) whose
-> per-frame `detailPermits(...)` pull is unwired while shelved — gate the
-> layer's visibility on it at un-shelve (`../scene/README.md`).
-
-`molecular-clouds.ts` renders ~96 named local SF clouds as soft warm
-ellipsoids. Originally default-on with a toggle in the Galactic-overlays
-panel section; the toggle is now gone and the layer renders nothing.
-Stays visible during warp by design (flying past Taurus is a feature,
-not noise) — relevant once re-enabled.
+`molecular-clouds.ts` renders the ~96 named local SF clouds as an
+orientation aid, the Local-Bubble treatment applied per cloud: a
+fresnel-rim whisper silhouette plus a physically-driven absorption
+alpha, both fed by one band-limited raymarch of the calibrated Zucker
+density model (`docs/molecular-clouds.md` §§ 4–5, 9). A
+`representational`-tier declutter element (`molecularCloudEllipsoids`,
+`../scene/README.md`) — decluttering to `physical` hides the mesh
+entirely, leaving pure per-star extinction physics. Stays visible
+during warp by design (flying past Taurus is a feature, not noise).
 
 The runtime renderer fetches `public/clouds.json` via `cloud-loader.ts`
-(version gate: v2 — the artifact carries the calibrated density-model
-fields + `noiseModel` block per `docs/molecular-clouds.md` § 8; the
-loader decodes v1's field set today, with the v2 fields consumed when
-the presence pass lands, stellata-c7u.6).
+(version gate: v2 — the calibrated density-model fields + the
+`noiseModel` block per `docs/molecular-clouds.md` § 8; a missing
+`noiseModel` rejects like a version mismatch).
 Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
-`pnpm run build:clouds`. While the layer is shelved the resolver's
-`cloud` SID domain is concluded-unattached in `main.ts`; re-enabling
-must attach it (see `../util/sid-resolver/README.md`).
+`pnpm run build:clouds`. The resolver's `cloud` SID domain attaches in
+`main.ts` when the catalog loads (see `../util/sid-resolver/README.md`).
+
+## Files
+
+- `molecular-clouds.ts` — `MolecularClouds` renderer + the silhouette /
+  viewing-distance helpers.
+- `cloud-loader.ts` — `clouds.json` v2 fetch/decode.
+- `cloud-presence-pure.ts` — CPU mirror of the shader math (octave
+  ladder, PCG3D value noise, band-limit fade, Plummer density,
+  absorption alpha). Vitest-pinned.
+- `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.
+- `cloud.vert.glsl`, `cloud.frag.glsl` — the presence shader pair.
 
 ## Render
 
-Every cloud is one shared `SphereGeometry(1, 32, 16)` mesh scaled
-per-instance to its semi-axes and rotated by its quaternion. The
-fragment shader derives a smooth view-direction-based density —
-`pow(|n·v|, 1.5)` — so silhouettes fade rather than hard-edge. Material
-uses `DoubleSide` so the layer reads correctly when the camera is inside
-a cloud. **Premultiplied alpha** is critical: the shader bakes intensity
-into rgb (`vec4(col × intensity, intensity)`) and the material sets
-`premultipliedAlpha: true`, so additive blending becomes `(ONE, ONE)` —
-without it, src.alpha multiplies into rgb a second time and the cloud
-comes out ~30× too dim to see. The shaders also avoid the `#version
-300 es` directive and don't redeclare auto-injected attributes
-(`position`, `normal`, `modelMatrix`, etc.); doing either silently
-breaks the GLSL3 compile. Mono mode swaps to a soft warm grey with
-normal alpha-over.
+Every cloud is one shared `SphereGeometry(1.03, 32, 16)` mesh scaled
+per-instance to its semi-axes and rotated by its quaternion (the 3%
+inflation covers tessellation sag; the shader clips to the analytic
+unit sphere). The fragment shader raymarches the ellipsoid segment
+(12–16 jittered steps) through the calibrated Plummer profile times
+the log-normal octave noise, band-limited per
+`docs/molecular-clouds.md` § 9.1: only octaves with λ ≥ 2·step feed
+the integral; the fine octaves (ridged on the finest two) apply as one
+post-integral texture factor clamped to [0.6, 1.4], with sub-pixel
+wavelengths faded by the screen-space footprint. Constants flow
+`cloud_model.py` → `clouds.json` `noiseModel` → `buildOctaveLadder` →
+uniforms — never redefined shader-side.
+
+One draw carries both components under **premultiplied alpha** +
+`NormalBlending` — rgb is the additive rim glow, alpha the absorption,
+so the blend `(ONE, ONE−α)` yields `glow + background × (1−absorption)`.
+Without `premultipliedAlpha: true`, src.alpha multiplies into rgb a
+second time and the glow collapses. The whisper glow is the shared
+fresnel-rim shape (`../fresnel-shell/fresnel-rim.glsl`, the
+`stellata_fresnel_rim` chunk registered by `fresnel-shell.ts`)
+evaluated at the ray's entry point, class-tinted (dark / sf / hii),
+textured by the fine octaves, and suppressed when the camera is inside
+the envelope — the fresnel-shell hide-when-inside contract applied to
+the glow only, while the absorption keeps working from inside the
+cloud. Output carries a ±0.5-LSB gradient-noise dither (the whisper
+level spans only ~13–38 8-bit levels).
+
+The material is `BackSide`: exactly one fragment per covered pixel
+from outside and inside (the raymarch segment is analytic either way);
+`FrontSide` would kill the inside-the-cloud absorption. The shaders
+avoid the `#version 300 es` directive and don't redeclare
+auto-injected attributes (`position`, `normal`, `modelMatrix`, etc.);
+doing either silently breaks the GLSL3 compile. Mono mode swaps to a
+soft grey alpha-over of the absorption column.
+
+**Render-order contract** (`docs/molecular-clouds.md` § 9.1 rule 5):
+the absorption alpha dims only layers drawn *before* the presence mesh
+(`renderOrder −2`). Every diffuse background the clouds should extinct
+— the MW band and LG emission (−3), any future HiPS / sky-imagery
+layer — must render earlier; a layer added after the mesh silently
+escapes extinction. Point sources are exempt (the per-star raymarch
+owns their extinction; no double-count). The reference wireframes at
+−1 (galactic disc/grid, Local Bubble shell) deliberately draw after
+the mesh — chart-like chrome shouldn't be extincted.
 
 ## Unified focus / measurement / warp UX
 
@@ -127,15 +157,20 @@ where they should.
 
 Cloud focus and the cloud measurement vector ride in the shared `?v=`
 blob (mutually exclusive with star focus and the star measurement vector
-respectively). The MC overlay disable flag formerly rode at flags-byte
-bit 2; with the layer shelved, that bit is reserved and no longer
-encoded (`url-state.ts` `FLAG_*` block).
+respectively). The old MC overlay disable flag at flags-byte bit 2
+stays reserved and unencoded (`url-state.ts` `FLAG_*` block) — there
+is no per-layer toggle; visibility is the declutter floor.
 
 ## Dev-console levers
 
 Under `stellata.cloudLayer.*`:
-- `setOpacity(x)` / `setColor(0xRRGGBB)` — dark mode tuning
+- `setOpacity(x)` — master rim-glow gain (dark mode)
+- `setColor(0xRRGGBB)` — override the per-class tints
+- `setRimParams({alphaLimb, faceOnFloor, fresnelPower})` — rim shape,
+  shared vocabulary with the fresnel shells
+- `setSteps(n)` / `setTexGain(x)` — raymarch step count, fine-octave
+  texture strength
 - `setMonoOpacity(x)` / `setMonoColor(0xRRGGBB)` — chart mode tuning
-- `setDebugBoost(strength)` — force max-opacity (or `null` to restore);
-  use this first when "I can't see anything" to confirm the layer is
-  rendering at all.
+- `setDebugBoost(strength)` — boost the rim glow (or `null` to
+  restore); use this first when "I can't see anything" to confirm the
+  layer is rendering at all.

@@ -1,41 +1,66 @@
 import * as THREE from 'three';
-import type { Cloud, CloudCatalog } from './cloud-loader';
+import type { Cloud, CloudCatalog, CloudClass } from './cloud-loader';
 import cloudVert from './cloud.vert.glsl?raw';
 import cloudFrag from './cloud.frag.glsl?raw';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { angularDiameterPx } from '../camera/controls/star-geometry';
+// Registers the stellata_fresnel_rim chunk the fragment shader includes —
+// removing this import breaks the shader compile at first render.
+import {
+  DEFAULT_FACE_ON_FLOOR,
+  DEFAULT_FRESNEL_POWER,
+} from '../fresnel-shell/fresnel-shell';
+import { buildOctaveLadder, MAX_OCTAVES } from './cloud-presence-pure';
 
-// Shared sphere geometry — every cloud is a unit sphere scaled by its
-// semi-axes via the per-cloud Mesh matrix. 32×16 segmentation gives a
-// smooth silhouette without spending too much on geometry; clouds are
-// alpha-blended so silhouette quality matters more than face count.
+// Shared sphere geometry — every cloud is one unit sphere scaled by its
+// semi-axes via the per-cloud Mesh matrix. The raymarch clips to the
+// analytic unit sphere, so the mesh is slightly circumscribed (1.03) to
+// cover the tessellation sag at 32×16 — the overhang discards.
 const SEGMENTS_LON = 32;
 const SEGMENTS_LAT = 16;
+const MESH_RADIUS = 1.03;
 
-// Naturalistic dark-mode palette: a warm reddish-brown reminiscent of
-// reddened starlight passing through dust. Real ISM dust is dark and
-// extincts rather than emits, but the per-star extinction layer
-// already represents that physically; this overlay is the "where the dust
-// is" decoration mode the user explicitly chose, so additive warm tones
-// are the right stylization. Opacity tuned low (0.18) so even overlapping
-// large clouds don't washout the local stellata.
-const DARK_COLOR_DEFAULT = 0xb87850;
-const DARK_OPACITY_DEFAULT = 0.18;
+// Whisper-glow tints by taxonomy (docs/molecular-clouds.md § 9): dark →
+// neutral warm grey-brown, sf → slightly warmer, hii → faint red bias.
+const CLASS_TINTS: Record<CloudClass, number> = {
+  dark: 0x8f7a66,
+  sf: 0xa08258,
+  hii: 0xa4746b,
+};
+
+// Rim silhouette calibrated whisper-level: peak intensity ≈ 0.05–0.15 of
+// a threshold-visible star's glow, losing to any physical signal.
+const ALPHA_LIMB_DEFAULT = 0.09;
+const GLOW_GAIN_DEFAULT = 1.0;
+const STEPS_DEFAULT = 14;
+const TEX_GAIN_DEFAULT = 0.6;
 
 // Chart/mono mode: solid black ink so the isobar contour reads as a
-// definite chart annotation against the paper background. Single-line
-// isobar pass uses uMonoColor at full alpha; the older shaded mono path
-// (now unused by chart mode) carried the same colour at lower opacity.
+// definite chart annotation against the paper background.
 const MONO_COLOR_DEFAULT = 0x000000;
 const MONO_OPACITY_DEFAULT = 0.95;
 
+/** Star-pipeline uniforms the presence shader shares by reference. */
+export interface CloudSharedUniforms {
+  uMaxAppMag: { value: number };
+  uFovYRad: { value: number };
+  uViewport: { value: THREE.Vector2 };
+}
+
+function localSharedUniforms(): CloudSharedUniforms {
+  return {
+    uMaxAppMag: { value: 6.5 },
+    uFovYRad: { value: Math.PI / 3.6 },
+    uViewport: { value: new THREE.Vector2(1920, 1080) },
+  };
+}
+
 /**
- * Always-on layer rendering molecular clouds as soft warm ellipsoids.
- * Each cloud is a unit sphere mesh scaled by per-cloud semi-axes and
- * rotated by the per-cloud quaternion (Z2021 ellipsoids align to the
- * galactic basis; Z2020 spheres are quat=identity). A custom shader
- * derives a smooth view-direction-based density so the ellipsoid edges
- * fade rather than hard-clip.
+ * Molecular-cloud presence layer: per-cloud ellipsoid meshes running the
+ * band-limited density raymarch in cloud.frag.glsl — absorption alpha
+ * over the diffuse background plus a fresnel-rim whisper glow. A
+ * `representational`-tier declutter element; the caller gates `update`'s
+ * `visible` flag on the floor permit.
  *
  * Lives in absolute ICRS space; the group's position is rebased by
  * -worldOffset each frame so the geometry stays anchored when the
@@ -44,21 +69,19 @@ const MONO_OPACITY_DEFAULT = 0.95;
 export class MolecularClouds {
   readonly group: THREE.Group;
   readonly clouds: Cloud[];
+  readonly noiseModel: CloudCatalog['noiseModel'];
   private materials: THREE.ShaderMaterial[] = [];
   private geometry: THREE.SphereGeometry;
   private mono = false;
-  private isobar = false;
   /** Mesh references in catalog order, for picking ray-ellipsoid analytically.
    *  Cloud index is stashed on `mesh.userData.cloudIdx` so raycast results
    *  resolve back to a cloud without a separate uuid→index Map. */
   private meshes: THREE.Mesh[] = [];
 
-  // User-tunable from the dev console via `stellata.clouds.set*()`.
-  // Kept here rather than imported as constants so the live materials can
-  // be re-pointed when values change without rebuilding the layer.
-  private darkColor = new THREE.Color(DARK_COLOR_DEFAULT);
+  // User-tunable from the dev console via `stellata.cloudLayer.set*()`.
+  private tintOverride: THREE.Color | null = null;
   private monoColor = new THREE.Color(MONO_COLOR_DEFAULT);
-  private darkOpacity = DARK_OPACITY_DEFAULT;
+  private glowGain = GLOW_GAIN_DEFAULT;
   private monoOpacity = MONO_OPACITY_DEFAULT;
 
   // The shared uMaxAppMag uniform reference last bound by setIsobar. Cached
@@ -67,16 +90,18 @@ export class MolecularClouds {
   // remain live).
   private boundMagUniform: { value: number } | null = null;
 
-  constructor(catalog: CloudCatalog) {
+  constructor(catalog: CloudCatalog, shared: CloudSharedUniforms = localSharedUniforms()) {
     this.clouds = catalog.clouds;
+    this.noiseModel = catalog.noiseModel;
     this.group = new THREE.Group();
     this.group.renderOrder = -2; // draw before stars so stars composit on top
 
-    this.geometry = new THREE.SphereGeometry(1, SEGMENTS_LON, SEGMENTS_LAT);
+    this.geometry = new THREE.SphereGeometry(MESH_RADIUS, SEGMENTS_LON, SEGMENTS_LAT);
 
+    const nm = catalog.noiseModel;
     for (let i = 0; i < this.clouds.length; i++) {
       const c = this.clouds[i];
-      const mat = this.makeMaterial();
+      const mat = this.makeMaterial(c, nm, shared);
       this.materials.push(mat);
 
       const mesh = new THREE.Mesh(this.geometry, mat);
@@ -114,20 +139,18 @@ export class MolecularClouds {
     this.mono = on;
     for (const mat of this.materials) {
       mat.uniforms.uMonochrome.value = on ? 1 : 0;
-      mat.uniforms.uOpacity.value = on ? this.monoOpacity : this.darkOpacity;
+      mat.uniforms.uOpacity.value = on ? this.monoOpacity : this.glowGain;
     }
-    this.applyBlending();
   }
 
   /**
    * Chart-mode isobar pass. When on, each cloud's fragment shader emits
-   * only a thin outline at the density iso-line driven by uMaxAppMag — a
+   * only a thin outline at the A_V iso-line driven by uMaxAppMag — a
    * topographic-contour treatment that follows the user's "minimally
    * visible magnitude" slider.
    */
   setIsobar(on: boolean, magnitudeUniform: { value: number }) {
     const rebind = this.boundMagUniform !== magnitudeUniform;
-    this.isobar = on;
     for (const mat of this.materials) {
       mat.uniforms.uChartIsobar.value = on ? 1 : 0;
       // Reuse the stellata's shared uMaxAppMag uniform reference so the
@@ -138,44 +161,24 @@ export class MolecularClouds {
       if (rebind) mat.uniforms.uMaxAppMag = magnitudeUniform;
     }
     this.boundMagUniform = magnitudeUniform;
-    this.applyBlending();
-  }
-
-  // Single source of truth for blend mode, derived from (mono, isobar).
-  // Isobar wins when on (opaque outline ink); mono = alpha-over (paper);
-  // colour = additive (glow). Both non-isobar branches rely on
-  // `premultipliedAlpha = true` — the shader bakes intensity into rgb so
-  // additive becomes a clean (ONE, ONE) sum and normal becomes a clean
-  // (ONE, ONE-α) over-blend. Without that, src.a multiplies into rgb a
-  // second time and the cloud comes out ~30× too dim to see.
-  private applyBlending() {
-    const blending = this.isobar || this.mono
-      ? THREE.NormalBlending
-      : THREE.AdditiveBlending;
-    for (const mat of this.materials) {
-      if (mat.blending === blending) continue;
-      mat.blending = blending;
-      mat.needsUpdate = true;
-    }
   }
 
   /**
    * Console-accessible debug levers. Live-update all cloud materials so
    * tweaking happens without restart. Examples:
-   *   stellata.clouds.setOpacity(0.5)         // make them obvious
-   *   stellata.clouds.setColor(0xff8844)      // hotter orange
-   *   stellata.clouds.setMonoOpacity(0.4)
-   *   stellata.clouds.setMonoColor(0x000000)
+   *   stellata.cloudLayer.setOpacity(5)        // boost the rim glow
+   *   stellata.cloudLayer.setColor(0xff8844)   // override class tints
+   *   stellata.cloudLayer.setRimParams({ fresnelPower: 4 })
    */
   setOpacity(x: number) {
-    this.darkOpacity = Math.max(0, x);
+    this.glowGain = Math.max(0, x);
     if (!this.mono) {
-      for (const mat of this.materials) mat.uniforms.uOpacity.value = this.darkOpacity;
+      for (const mat of this.materials) mat.uniforms.uOpacity.value = this.glowGain;
     }
   }
   setColor(hex: number) {
-    this.darkColor.setHex(hex);
-    for (const mat of this.materials) mat.uniforms.uColor.value = this.darkColor;
+    this.tintOverride = new THREE.Color(hex);
+    for (const mat of this.materials) mat.uniforms.uTint.value = this.tintOverride;
   }
   setMonoOpacity(x: number) {
     this.monoOpacity = Math.max(0, x);
@@ -187,14 +190,30 @@ export class MolecularClouds {
     this.monoColor.setHex(hex);
     for (const mat of this.materials) mat.uniforms.uMonoColor.value = this.monoColor;
   }
-  /** Force-show every cloud at maximum opacity — handy for "is the layer
-   *  rendering at all?" debugging. Pass null to restore the configured
-   *  per-mode opacities. */
+  /** Raymarch step count (§ 9.1 lever — the sampling rules are not). */
+  setSteps(n: number) {
+    const steps = Math.max(4, Math.min(24, Math.round(n)));
+    for (const mat of this.materials) mat.uniforms.uSteps.value = steps;
+  }
+  /** Fine-octave texture strength (clamped [0.6, 1.4] in-shader). */
+  setTexGain(x: number) {
+    for (const mat of this.materials) mat.uniforms.uTexGain.value = Math.max(0, x);
+  }
+  /** Rim-glow shape levers, shared vocabulary with the fresnel shells. */
+  setRimParams(p: { alphaLimb?: number; faceOnFloor?: number; fresnelPower?: number }) {
+    for (const mat of this.materials) {
+      if (p.alphaLimb !== undefined) mat.uniforms.uAlphaLimb.value = p.alphaLimb;
+      if (p.faceOnFloor !== undefined) mat.uniforms.uFaceOnFloor.value = p.faceOnFloor;
+      if (p.fresnelPower !== undefined) mat.uniforms.uFresnelPower.value = p.fresnelPower;
+    }
+  }
+  /** Force-boost the rim glow — handy for "is the layer rendering at
+   *  all?" debugging. Pass null to restore the configured gain. */
   setDebugBoost(strength: number | null) {
     for (const mat of this.materials) {
       mat.uniforms.uOpacity.value =
         strength === null
-          ? (this.mono ? this.monoOpacity : this.darkOpacity)
+          ? (this.mono ? this.monoOpacity : this.glowGain)
           : strength;
     }
   }
@@ -220,7 +239,21 @@ export class MolecularClouds {
     for (const mat of this.materials) mat.dispose();
   }
 
-  private makeMaterial(): THREE.ShaderMaterial {
+  private makeMaterial(
+    cloud: Cloud,
+    nm: CloudCatalog['noiseModel'],
+    shared: CloudSharedUniforms,
+  ): THREE.ShaderMaterial {
+    const ladder = buildOctaveLadder(2 * cloud.axes[0], nm);
+    const octLambda = new Array<number>(MAX_OCTAVES).fill(0);
+    const octAmp = new Array<number>(MAX_OCTAVES).fill(0);
+    for (let k = 0; k < ladder.lambdasPc.length; k++) {
+      octLambda[k] = ladder.lambdasPc[k];
+      octAmp[k] = ladder.amps[k];
+    }
+    const invQuat = new THREE.Matrix3().setFromMatrix4(
+      new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),
+    );
     return new THREE.ShaderMaterial({
       vertexShader: cloudVert,
       fragmentShader: cloudFrag,
@@ -228,21 +261,45 @@ export class MolecularClouds {
       transparent: true,
       depthTest: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      // Shader output is premultiplied — see fragment shader comment for
-      // why this matters for both the additive and alpha-over paths.
+      // Premultiplied-over in one draw: rgb carries the additive rim glow,
+      // alpha the absorption — NormalBlending becomes (ONE, ONE−α), i.e.
+      // glow + background × (1 − absorption). Without premultipliedAlpha,
+      // src.a multiplies into rgb a second time and the glow collapses.
+      blending: THREE.NormalBlending,
       premultipliedAlpha: true,
+      // BackSide: exactly one fragment per covered pixel from outside AND
+      // inside (the raymarch segment is analytic either way); FrontSide
+      // would kill the inside-the-cloud absorption.
+      side: THREE.BackSide,
       uniforms: {
-        uColor: { value: this.darkColor },
-        uMonoColor: { value: this.monoColor },
-        uOpacity: { value: this.darkOpacity },
+        uAxes: { value: new THREE.Vector3(cloud.axes[0], cloud.axes[1], cloud.axes[2]) },
+        uInvQuat: { value: invQuat },
+        uN0Cal: { value: cloud.n0Cal },
+        uRflat: { value: cloud.rflatPc },
+        uP: { value: cloud.p },
+        uUEnv: { value: cloud.uEnv },
+        uSigmaS: { value: cloud.sigmaS },
+        uSeed: { value: cloud.seed },
+        uRidgedExp: { value: nm.ridgedExponent[cloud.cloudClass] },
+        uTint: { value: this.tintOverride ?? new THREE.Color(CLASS_TINTS[cloud.cloudClass]) },
+        uOctLambda: { value: octLambda },
+        uOctAmp: { value: octAmp },
+        uNumOct: { value: ladder.lambdasPc.length },
+        uDomainStretch: { value: nm.domainStretchMajor },
+        uClampSigma: { value: nm.noiseClampSigma },
+        uRidgedCount: { value: nm.ridgedFinestCount },
+        uSteps: { value: STEPS_DEFAULT },
+        uOpacity: { value: this.glowGain },
+        uAlphaLimb: { value: ALPHA_LIMB_DEFAULT },
+        uFaceOnFloor: { value: DEFAULT_FACE_ON_FLOOR },
+        uFresnelPower: { value: DEFAULT_FRESNEL_POWER },
+        uTexGain: { value: TEX_GAIN_DEFAULT },
+        uMaxAppMag: shared.uMaxAppMag,
+        uFovYRad: shared.uFovYRad,
+        uViewport: shared.uViewport,
         uMonochrome: { value: 0 },
-        // Isobar (chart-mode contour) pass. The shared uMaxAppMag uniform
-        // is wired in from the stellata material via setIsobar() — until
-        // then a placeholder is fine since uChartIsobar gates the branch.
+        uMonoColor: { value: this.monoColor },
         uChartIsobar: { value: 0 },
-        uMaxAppMag: { value: 6.5 },
       },
     });
   }
