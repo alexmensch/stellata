@@ -299,11 +299,12 @@ effect is present. A.3 is therefore **verify + pin + one physics
 upgrade**, not new plumbing:
 
 1. Regression-pin the existing behaviour: synthetic single-cloud
-   fixture → assert A_V and the B−V shift to `toBe` precision.
-2. **Density-dependent R_V (the upgrade).** Dense cores have
-   R_V ≈ 5.5 from grain growth (Weingartner & Draine 2001; Chapman
-   et al. 2009) — same A_V, ~44 % less reddening. Implement as a
-   second accumulator in the existing 48-step loop:
+   fixture → assert A_V and the B−V shift to `toBe` precision. Shipped
+   as `dust-raymarch-pure.ts` + `dust-raymarch-pure.test.ts` (CPU
+   mirror of the decode + integration + `E(B−V) = A_V / R_V`).
+2. **Density-dependent R_V — resolved analytically, not shipped.**
+   The upgrade would raise R_V from 3.1 toward ~5.5 in dense cores
+   (grain growth; Weingartner & Draine 2001; Chapman et al. 2009):
 
    ```
    E(B−V) = Σ  (dA_V/dl) / R_V(ρ)  · dl
@@ -311,11 +312,28 @@ upgrade**, not new plumbing:
    ρ₁ = 0.01, ρ₂ = 0.08 E_ZGR/pc   (diffuse → core transition)
    ```
 
-   Cost: one extra multiply-add per step; no new texture reads.
-   Gate on a visual smoke: if the RV = 3.1-everywhere rendering
-   already reads correctly through Taurus (no over-red cores), ship
-   the constant law and file the upgrade as a follow-up instead —
-   the doc records the equation either way.
+   But R_V is a *measured observable* with a known column dependence,
+   not a look-knob — so "do cores read over-red?" is answered by the
+   numbers, not by eye. Chapman et al. 2009 measure R_V ≈ 3.1–3.5 for
+   A_V ≲ 4–5, reaching ~5 only at A_V ≳ 10–18. Our per-star columns
+   are voxel-averaged and bounded: the pinned peak (dust manifest
+   `zucker` block) is Ophiuchus at A_V = 2.73, everything else ≤ 1.75,
+   and the grid-max density (0.135 E_ZGR/pc → 0.37 A_V/pc) makes
+   A_V ≳ 4 physically unreachable on any realistic chord (a 1–3 pc
+   core can't stack the ~27 pc of peak gas A_V = 10 would need). The
+   R_V = 5.5 grain-growth regime is exactly the sub-0.1 pc
+   pencil-beam column the 4.88 pc grid deliberately does not resolve
+   (§ 2.1). At A_V ≤ 2.73 the measured R_V is ≈ 3.1–3.5, so the global
+   R_V = 3.1 is correct to ≲ 0.1 mag of B−V even on the densest core;
+   the ρ₂ = 0.08 local-density trigger above would over-correct that
+   core's *effective* column-integrated R_V to ~4 and slightly
+   *under*-redden it. The constant law is therefore the
+   physically-grounded choice at our resolution, and the two-accumulator
+   plumbing (RG-channel prepass) is not worth its cost. If the star
+   catalog ever gains a sub-pc dust field that reaches A_V ≳ 10, the
+   honest refinement is to match the measured R_V(A_V) column relation
+   directly — not this local-ρ 5.5-ceiling law. The equation is kept
+   here for that contingency.
 
 Out of scope (matches the epic's standing non-goals): full
 per-channel RGB extinction curves. The B−V-shift-through-LUT path is
@@ -569,7 +587,7 @@ the shader framework A.4's fine noise and A.5's tints plug into).
 | Phase | Bead | Scope from this design | Key acceptance |
 | --- | --- | --- | --- |
 | A.2 (shipped) | c7u.2 | Fixed `DENSITY_MAX` → 0.2 (un-clips the real Edenhofer cores; § 2.2); per-star extinction = pure Edenhofer with the measured evidence retiring the `max(edenhofer, model)` overlay (§ 1 decision 1); calibrated analytic model + taxonomy + `noiseModel` into `clouds.json` v2 (§ 4, § 8); catalog rebuild (de-extinction invariant); `DUST_AV_HEADROOM` removal | 11 pinned `n0Cal`/`uEnv` (`clouds-json.test.ts`); per-cloud peak-column check pinned (`dust-manifest.test.ts`; Ophiuchus 1.03×, Taurus 0.50× of Leike targets); masses within 2× `mass_leike`; idempotent |
-| A.3 | c7u.3 | Pin existing A_V + B−V-shift behaviour; density-dependent R_V two-accumulator upgrade (visual-gated) | Synthetic-cloud fixture pins; Taurus-core star visibly less over-red with R_V(ρ) if shipped |
+| A.3 | c7u.3 | Pin existing A_V + B−V-shift behaviour (`dust-raymarch-pure.ts`); density-dependent R_V upgrade resolved analytically as a no-op at our A_V ≤ 2.73 column ceiling (§ 6), not shipped | Synthetic-cloud fixture pins A_V + B−V shift to `toBe`; constant R_V = 3.1 within ≲ 0.1 mag of the measured R_V(A_V) relation |
 | A.4 | c7u.4 | The § 5 octave ladder + ridged/anisotropic shaping in the presence shader, constants from the `noiseModel` block | Structured, filamentary silhouettes; § 9.1 band-limits hold |
 | A.5 | c7u.5.x | Generic-reader cross-match; taxonomy + overrides; cavity list into `clouds.json` v2; presence-model cavity carve; HII/reflection tints (5.2) | λ Ori's presence silhouette reads as a ring; Orion A carves around the Trapezium; Taurus stays `dark` with zero cavities |
 | A.6 | c7u.6 | Replace `cloud.frag.glsl` with absorption + whisper-glow model; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 field decoding; re-enable the layer | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
