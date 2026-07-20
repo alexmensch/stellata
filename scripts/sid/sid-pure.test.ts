@@ -55,7 +55,7 @@ describe('designation grammar', () => {
 });
 
 describe('canonical-key ladder', () => {
-  it('orders namespaces sol > hip > hd > hr > gl > gaia_* > synth > cloud > lg', () => {
+  it('orders namespaces sol > hip > hd > hr > gl > gaia_* > synth > cloud > lg > shell', () => {
     const ladder = [
       'sol:sun',
       'hip:99999',
@@ -66,6 +66,7 @@ describe('canonical-key ladder', () => {
       'synth:a',
       'cloud:orion-a',
       'lg:lmc',
+      'shell:local_bubble',
     ];
     for (let i = 1; i < ladder.length; i++) {
       expect(compareDesignations(ladder[i - 1], ladder[i])).toBeLessThan(0);

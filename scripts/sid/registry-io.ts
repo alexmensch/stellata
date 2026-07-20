@@ -31,6 +31,7 @@ export const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 export const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
 export const OVERRIDES_PATH = resolve(SID_DIR, 'sameas-overrides.tsv');
 export const SOL_OBJECTS_PATH = resolve(SID_DIR, 'sol-objects.tsv');
+export const SHELL_OBJECTS_PATH = resolve(SID_DIR, 'shell-objects.tsv');
 export const BRIDGES_DIR = resolve(SID_DIR, 'bridges');
 
 /** The stored (committed) same-as edges: curated overrides plus every

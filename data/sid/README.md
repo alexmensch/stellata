@@ -39,6 +39,10 @@ sameas-overrides.tsv    Curated same-as edges (a → b → note):
 sol-objects.tsv         The sol: namespace mint list (key → kind):
                         sun + eight majors + Pluto + the 18 major moons
                         (moons reuse kind=planet).
+shell-objects.tsv       The shell: namespace mint list (key → kind):
+                        local_bubble + heliopause (kind=shell). Boundary
+                        shells Stellata generates/curates; client pin in
+                        src/client/fresnel-shell/shell-object-sids.ts.
 bridges/<from>_<to>.tsv Machine-generated cross-release Gaia bridges
                         (docs/sid.md § 6), human-reviewed per DR bump.
                         Directory appears with the first bridge.
