@@ -211,8 +211,10 @@ the soft kinds compose the same primitives through their provider's
 
 Branch in `focusStar` / the soft-kind leg of `flyTo`:
 
-- **`eyeDist <= parkDist` → stay put.** Camera doesn't move; only
-  `controls.target`, `controls.minDistance`, and focus state update.
+- **`eyeDist <= parkDist` → stay put (`focusStar` only).** Camera
+  doesn't move; only `controls.target`, `controls.minDistance`, and
+  focus state update. You can sit close to a star, so a re-focus
+  shouldn't yank the camera back out.
 - **`eyeDist > parkDist` → lerp.** Camera position lerps from
   `fromPos` to `toPos = target + (eye-direction × parkDist)` and
   camera orientation slerps in parallel from `fromQuat` to a
@@ -221,6 +223,12 @@ Branch in `focusStar` / the soft-kind leg of `flyTo`:
   continuously rotates toward the new target as it flies in. Builds
   the lerp **after** `setFocus` recentres the floating origin so
   `fromPos` / `toPos` live in the post-recentre frame.
+- **Soft-kind `flyTo` moves to `parkDist` in BOTH directions.** A soft
+  focus frames the whole extended object, so it flies OUT as well as in
+  — required for a boundary shell the camera sits *inside* (Sol inside
+  the Local Bubble / heliopause), where staying put leaves the
+  back-face-culled shell invisible. Only a near-exact match (already at
+  park) stays put.
 - **`opts.animate === false`** (URL restore) bypasses the lerp and
   snaps to the park pose.
 

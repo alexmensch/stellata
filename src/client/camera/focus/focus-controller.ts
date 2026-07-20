@@ -774,30 +774,37 @@ export class FocusController implements FocusOps {
     const parkDist = provider.focusParkDistance(target.idx);
     const eyeDist = this.deps.camera.position.distanceTo(dest);
 
-    if (animate && eyeDist > parkDist) {
-      this.startFocusLerp(newFocusLerpFrom(
-        this.deps.camera.position,
-        startQuat,
-        startUp,
-        dest,
-        parkDist,
-        FOCUS_LERP_MS,
-        performance.now(),
-        warpArrivalEaseFn({
-          d0: eyeDist,
-          dEnd: parkDist,
-          targetRadius: provider.arrivalRadiusPc(target.idx),
-        }),
-      ));
-      // controls.enabled stays true — see focusStar's comment.
-    } else if (eyeDist > parkDist) {
-      const dir = new THREE.Vector3()
-        .subVectors(this.deps.camera.position, dest)
-        .normalize();
-      if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-      this.deps.camera.position.copy(dest).addScaledVector(dir, parkDist);
-      this.deps.camera.lookAt(dest);
-      this.deps.controls.update();
+    // Move to parkDist in BOTH directions — a soft focus frames the whole
+    // extended object. Flying IN (eye > park) is the common case; flying
+    // OUT (eye < park) matters for a boundary shell the camera sits
+    // *inside* (Sol inside the Local Bubble / heliopause), where staying
+    // put would leave the back-face-culled shell invisible.
+    if (Math.abs(eyeDist - parkDist) > parkDist * 1e-4) {
+      if (animate) {
+        this.startFocusLerp(newFocusLerpFrom(
+          this.deps.camera.position,
+          startQuat,
+          startUp,
+          dest,
+          parkDist,
+          FOCUS_LERP_MS,
+          performance.now(),
+          warpArrivalEaseFn({
+            d0: eyeDist,
+            dEnd: parkDist,
+            targetRadius: provider.arrivalRadiusPc(target.idx),
+          }),
+        ));
+        // controls.enabled stays true — see focusStar's comment.
+      } else {
+        const dir = new THREE.Vector3()
+          .subVectors(this.deps.camera.position, dest)
+          .normalize();
+        if (dir.lengthSq() === 0) dir.set(0, 0, 1);
+        this.deps.camera.position.copy(dest).addScaledVector(dir, parkDist);
+        this.deps.camera.lookAt(dest);
+        this.deps.controls.update();
+      }
     } else {
       this.deps.controls.update();
     }

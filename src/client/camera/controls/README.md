@@ -149,8 +149,11 @@ plug in the same way.
 
 Branch in `focusStar` / the soft-kind leg of `flyTo`:
 
-- **`eyeDist <= parkDist` → stay put.** Camera doesn't move; only
-  `controls.target`, `controls.minDistance`, and focus state update.
+- **`eyeDist <= parkDist` → stay put (`focusStar` only).** Camera
+  doesn't move; only `controls.target`, `controls.minDistance`, and
+  focus state update. (Soft-kind `flyTo` instead moves to `parkDist` in
+  both directions so it frames the whole extended object — it flies OUT
+  of a boundary shell the camera sits inside, not just in.)
 - **`eyeDist > parkDist` → lerp.** Camera position lerps from
   `fromPos` to `toPos = target + (eye-direction × parkDist)` and
   camera orientation slerps in parallel from `fromQuat` to a quaternion

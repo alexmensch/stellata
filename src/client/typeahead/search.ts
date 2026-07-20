@@ -783,11 +783,16 @@ export function bindSearch(
   // Display names stay a per-kind lookup — the rich star label
   // (describe) lives in the search corpus, cloud / LG names on their
   // catalogs; kind identity itself rides the Target.
+  // Returns on every kind so a new TargetKind fails tsc (missing return)
+  // rather than silently falling through to the wrong catalog.
   const nameOf = (t: Target): string => {
-    if (t.kind === 'star') return describe(t.idx);
-    if (t.kind === 'planet') return stellata.planetField.planetAt(t.idx)?.name ?? '';
-    if (t.kind === 'cloud') return clouds ? clouds.clouds[t.idx].name : '';
-    return lg ? lg.objects[t.idx].name : '';
+    switch (t.kind) {
+      case 'star': return describe(t.idx);
+      case 'planet': return stellata.planetField.planetAt(t.idx)?.name ?? '';
+      case 'cloud': return clouds ? clouds.clouds[t.idx].name : '';
+      case 'lg': return lg ? lg.objects[t.idx].name : '';
+      case 'shell': return stellata.shells.at(t.idx)?.label ?? '';
+    }
   };
   const syncFocusUI = () => {
     const focused = stellata.getFocusedTarget();

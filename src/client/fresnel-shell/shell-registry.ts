@@ -99,10 +99,13 @@ export class ShellRegistry {
 
   /** Camera-to-center distance that frames the whole shell — the
    *  FocusTarget.parkRadius leg (= the distance the hide-when-inside wall
-   *  becomes visible). 0 when absent. */
+   *  becomes visible). 0 when absent. floorPc=0: shells span AU (helio-
+   *  pause) to hundreds of pc, so the default 5 pc floor would park the
+   *  camera ~1e6 AU from the ~200 AU heliopause; `2.4 × extent` governs,
+   *  and `controls.minDistance` is the real close-approach floor. */
   viewingDistancePc(idx: number): number {
     const shell = this.at(idx);
-    return shell ? viewingDistanceForExtent(shell.extentPc()) : 0;
+    return shell ? viewingDistanceForExtent(shell.extentPc(), 0) : 0;
   }
 
   /** Focus-park lerp landing distance — the FocusableProvider leg. 0 when
@@ -111,7 +114,7 @@ export class ShellRegistry {
     const shell = this.at(idx);
     if (!shell) return 0;
     const extent = shell.extentPc();
-    return parkDistance({ R_pc: extent, dMinFloor: viewingDistanceForExtent(extent) });
+    return parkDistance({ R_pc: extent, dMinFloor: viewingDistanceForExtent(extent, 0) });
   }
 
   /** Projected shell diameter in px from its extent radius — chevron /
