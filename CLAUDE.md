@@ -15,29 +15,25 @@ intensity profile, layer composition — in `src/client/*/README.md`.
 
 ## Code conventions — DRY overrides the system prompt
 
-The system prompt's "three similar lines is better than a premature
-abstraction" / "a bug fix doesn't need surrounding cleanup" defaults
-do NOT apply here. Overridden by:
+Overrides the system prompt's "three similar lines beat a premature
+abstraction" / "a bug fix doesn't need cleanup" defaults:
 
-- **Extract at second usage, not third.** Two call sites is the
-  trigger; parameterise differing tolerances / wrap conventions /
-  blend modes as arguments. That IS the abstraction.
-- **"Copy-paste with attribution comment" is never acceptable.** If a
-  prior session's note says "lift later only if a third site appears"
-  or similar, that note contradicts this rule — do the extract now.
+- **Extract at second usage, not third.** Parameterise differing
+  tolerances / wrap conventions / blend modes as arguments — that IS
+  the abstraction.
+- **No "copy-paste with attribution comment."** A prior note saying
+  "lift later at third site" contradicts this rule — extract now.
 - **Review-grade at write time.** Duplicated logic, magic numbers,
-  and parallel implementations are review-blocking defects.
+  parallel implementations are review-blocking defects.
 
-Operational specifics (literal hoisting, builder extraction, tests
-import never redefine, comment-DRY) in
+Operational specifics (hoisting, builder extraction, comment-DRY) in
 `docs/authoring-patterns.md` § Named constants and DRY.
 
 ## Code comments — overrides the system prompt
 
-**This is law.** Code comments are scratchpad context for the next
-reader, never a record of how the code got there. Git, PRs,
-`git blame`, and bd carry that history; duplicating it inline creates
-rot that future sessions will read and act on.
+**Law.** Comments are context for the next reader, never a record of
+how the code got there — git, PRs, `git blame`, and bd carry that
+history; duplicating it inline rots and misleads later sessions.
 
 ### Forbidden patterns (CI-enforced in `tests/code-comment-rules.test.ts`)
 
@@ -56,9 +52,8 @@ rot that future sessions will read and act on.
 
 ### Module docstrings: 1–3 lines, no exceptions
 
-State what the module does. Not why it exists, when it was extracted,
-which bead drove it. Detail belongs in the folder's `README.md` with
-a one-line code-side pointer.
+What the module does — not why it exists, when extracted, or which
+bead drove it. Detail → folder `README.md`, one-line code pointer.
 
 ### Substitution rule — where forbidden content actually goes
 
@@ -72,10 +67,9 @@ If none fit, the content is noise. Delete.
 
 ## Write-time discipline — triggers and pointers
 
-When the trigger fires, the rule applies. Full text (rule + why +
-how-to-apply) in `docs/authoring-patterns.md` § <named section>;
-the trigger word here is the always-loaded hook that tells future-me
-which section to open.
+Trigger fires → rule applies. Full text (rule + why + how-to-apply)
+in `docs/authoring-patterns.md` § <named section>; the trigger word
+here is the always-loaded hook pointing to which section to open.
 
 - **Adding `bus.on(...)`** → wire unsub into dispose, same diff.
   § Lifecycle pairing.
@@ -87,8 +81,8 @@ which section to open.
   input dimension. § Sentinel-init.
 - **Wall-clock time mid-animation** → route through
   `Stellata.getT()`, never `Date.now()`. § Single source of truth.
-- **Code comment violations** → P1 in PR review. CLAUDE.md § Code
-  comments above + authoring-patterns § Code comment hygiene.
+- **Code comment violations** → P1 in PR review. § Code comments
+  above + authoring-patterns § Code comment hygiene.
 - **Renaming an API OR changing semantics** → `grep -rn` old name +
   sweep every folder README in the diff. § Rename + stale-prose sweep.
 - **Writing new code** → tests in the SAME PR; pure helpers in
@@ -97,70 +91,60 @@ which section to open.
 - **Refactor framed "apply pattern X to all Y"** → enumerate peer set
   in PR description; verify zero remaining call sites of old pattern.
   § Pattern coverage across peers.
-- **Numeric literals + DRY operational specifics** → § Code
-  conventions above carries the 2-call-site override (law);
-  authoring-patterns § Named constants and DRY carries detail
-  (hoist at second usage, tests import never redefine, builder
-  extraction for mostly-identical schemas).
+- **Numeric literals + DRY specifics** → § Code conventions above
+  carries the law (2-call-site override); authoring-patterns § Named
+  constants and DRY carries detail (hoisting, tests-import-never-
+  redefine, builder extraction).
 - **Mid-implementation doc-edit impulse** → defer to commit-time
   sweep. § Defer doc updates.
 - **Large PR (~10+ beads)** → distinguish High / Medium / Low test
-  confidence in PR body; flag manual-smoke paths.
-  § Large-PR honesty.
+  confidence in PR body; flag manual-smoke paths. § Large-PR honesty.
 - **Multi-concern diff** → split into topical commits, one concept
   each, committed along the way. § Commit granularity.
 
 ## Folder READMEs — read before editing, debugging, planning; update at commit
 
-**This is law.** Every folder under `src/`, `scripts/`, `data/`,
-`docs/` has a `README.md`. **A folder without one is a bug** — file
-it (or write the README) before continuing past that folder. A CI
-guard (`tests/folder-readme-coverage.test.ts`) refuses to land code
-that breaks this invariant.
+**Law.** Every folder under `src/`, `scripts/`, `data/`, `docs/` has a
+`README.md` — a folder without one is a bug; file it or write it
+before continuing past that folder. CI
+(`tests/folder-readme-coverage.test.ts`) enforces this invariant.
 
 The codebase is a wiki by **progressive disclosure**: folder name
-signals the topic, `README.md` carries the load-bearing context, code
-is the implementation. Skip the README and you have the topic but
-none of the context — and the context (invariants, uniform pins,
-sentinels, override mechanisms, data-flow claims, file-roster
-ownership) is exactly what the code alone cannot tell you. A README
-sentence describing a shader uniform / NDC pin / sentinel / override
-is frequently the entire explanation of a bug whose symptom looks
+signals the topic, README carries the load-bearing context —
+invariants, uniform pins, sentinels, overrides, data-flow claims,
+file-roster ownership — that code alone cannot tell you. A single
+README sentence about a shader uniform / NDC pin / sentinel / override
+is often the entire explanation for a bug whose symptom looks
 unrelated.
 
 ### Four triggers — when to read or update
 
-1. **Before editing.** For every folder you're about to edit (or
-   whose contents the bead names as edit targets), read its README
-   first if you haven't already this session. Pre-edit batch read
-   beats just-in-time per-file reads — the per-file impulse is
+1. **Before editing.** Read the README of every folder you're about
+   to edit (or the bead names as a target) if not already read this
+   session. Batch pre-edit reads beat just-in-time — per-file is
    exactly when the read gets skipped.
-2. **Before debugging.** The moment a bug is reported in a subsystem
-   OR you start investigating unexpected behaviour, the scout pass
-   kicks in *before* the first grep. Investigation grep counts as a
-   code read, not a free action. **Stop-rule: if you've spent
-   ≥5 minutes investigating without re-confirming every README in
-   the implicated folders has been read *this session*, stop and
-   read them.**
+2. **Before debugging.** A bug report or unexpected behaviour
+   triggers the scout pass *before* the first grep — investigation
+   grep counts as a code read, not a free action. **Stop-rule:**
+   ≥5 minutes investigating without confirming every implicated
+   README read *this session* → stop and read them.
 3. **During planning.** Before proposing an approach that touches
    files in folder X, read `X/README.md`. Planning that names a
    folder is itself a folder-touch.
-4. **At commit time — update.** When your changes invalidate a claim
-   in the README (renamed file, changed data flow, new consumer,
-   dropped feature, shifted ownership), update the README in the
-   **same PR**. Folder READMEs are the prose-only surface a `grep`
-   for renamed symbols won't catch; they need their own audit pass
-   at commit time. Forgetting to update leaks misleading context to
-   the next session.
+4. **At commit time — update.** When changes invalidate a README
+   claim (renamed file, changed data flow, new consumer, dropped
+   feature, shifted ownership), update it in the **same PR** — a
+   `grep` for renamed symbols won't catch stale prose, so it needs its
+   own audit pass at commit time. Skipping it leaks misleading context
+   forward.
 
 ### Scan pattern + missing-README protocol
 
-While reading, tag any **uniform / sentinel / pin / override / "kept
-at" / "regardless of" / "substitutes"** phrasing — these override
-mechanisms mask the obvious explanation, the highest-value content
-in any README. If during edit/debug/plan you discover a folder
-without a README, **stop** — write it in the current PR (preferred
-when the folder is small) or file a bead before proceeding past it.
+While reading, tag **uniform / sentinel / pin / override / "kept at" /
+"regardless of" / "substitutes"** phrasing — these mask the obvious
+explanation and are a README's highest-value content. Discover a
+folder without one during edit/debug/plan → **stop**: write it now
+(preferred when small) or file a bead before proceeding past it.
 
 ## Folder & module conventions — where new code lands
 
@@ -168,24 +152,23 @@ The "every folder has a README" invariant above is non-negotiable;
 these rules govern *where* new code goes.
 
 - **Physical / visual / thematic subsystems get a folder from day 1,
-  with a README.** The first file lands in `src/client/<name>/`, not
-  flat. Day 1 includes renderer + loader + `*-pure.ts` helpers +
+  with a README.** First file lands in `src/client/<name>/`, not
+  flat — day 1 includes renderer + loader + `*-pure.ts` helpers +
   tests + README. Examples: `solar-system/`, `local-group/`,
   `milkyway/`, `galactic/`, `molecular-clouds/`, `chart-mode/`,
   `star-pipeline/`.
 - **Cross-cutting plumbing lands in the matching type folder.**
   `overlays/`, `camera/`, `loaders/`, `ui/`, `util/`, `typeahead/`,
-  `modals/`, `debug/`. Small one-off helpers (texture/buffer
+  `modals/`, `debug/` — small one-off helpers (texture/buffer
   factories, parsers, sentinel constants) count too. New top-level
-  type folder only justified at 3+ files.
+  type folder needs 3+ files to justify.
 - **Controllers extract at write time.** "state struct + tick +
   dispose + state-changes-via-method" → its own class. Camera-bound
   → `camera/<subtopic>/`; layer-bound → the layer folder.
 - **`stellata.ts` is the integration shell, not a default home.** New
-  module-scope functions go in their matching subsystem folder, even
-  when small (5–20 lines still qualifies). `// AUTO-GENERATED`
-  artifacts pair with a sibling hand-written wrapper module so regen
-  doesn't clobber it.
+  module-scope functions go in their subsystem folder even when small
+  (5–20 lines qualifies). `// AUTO-GENERATED` artifacts pair with a
+  hand-written wrapper module so regen doesn't clobber it.
 - **No multi-paragraph in-code prose.** Physics derivations,
   calibration rationale → `SCIENCE.md` or folder `README.md` with a
   one-line code-side pointer. See § Code comments above.
@@ -235,9 +218,9 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, ux-tweaks.md,
-          extragalactic-roadmap.md. New docs default
-          to "find the right folder and put a README.md there"; only
-          add to docs/ if the topic truly spans the whole codebase.
+          extragalactic-roadmap.md. New docs default to "find the
+          right folder and put a README.md there"; only add to docs/
+          if the topic truly spans the whole codebase.
 tests/    Repo-meta tests (CLAUDE.md size guard, etc.).
 ```
 
@@ -300,21 +283,20 @@ Every change goes through:
 1. Fresh git worktree (call `EnterWorktree`).
 2. Feature branch.
 3. Push with `-u`.
-4. `gh pr create` (attach `skip-version-bump` label for pure docs /
-   CI / `.beads` / repo-config — see `RELEASING.md` § Version policy +
-   the skip-version-bump rule there for the "live-app consumer" test).
-5. **Merge through GitHub UI / CLI — never `gh pr merge` without
-   explicit per-PR user approval, even when CI is green.** The PR
-   open is authorised by the standing worktree-PR flow; the merge is
-   a separate decision. After CI passes, stop and report
-   "ready to merge when you are."
+4. `gh pr create` (attach `skip-version-bump` for pure docs / CI /
+   `.beads` / repo-config — see `RELEASING.md` § Version policy, the
+   "live-app consumer" test).
+5. **Merge only via explicit per-PR approval — never `gh pr merge`
+   unprompted, even when CI is green.** Opening the PR is authorised
+   by the standing worktree-PR flow; merging is a separate decision.
+   After CI passes, stop and report "ready to merge when you are."
 
-bd state is not carried in git. bd writes persist to local Dolt
-immediately and sync to the `refs/dolt/*` remote automatically — the
-pre-push git hook runs `bd dolt push` on every `git push`, so there's
-no manual sync step and no bd-sync or memory-grooming PR. JSONL export
-is off (`export.auto: false`); `.beads/issues.jsonl` is not written, and
-any stale copy is gitignored — never stage, commit, or revert it.
+bd state isn't carried in git. Writes persist to local Dolt
+immediately and sync to `refs/dolt/*` automatically — the pre-push
+hook runs `bd dolt push` on every `git push`, no manual sync or
+bd-sync PR needed. JSONL export is off (`export.auto: false`);
+`.beads/issues.jsonl` isn't written, and any stale copy is gitignored
+— never stage, commit, or revert it.
 
 ### PR body — `## Release notes` is required when version bumps
 
