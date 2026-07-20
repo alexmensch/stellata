@@ -51,22 +51,22 @@ describe('HELIOPAUSE_APEX_SOL_PC', () => {
 });
 
 describe('Heliopause', () => {
-  it('group is hidden by default — gated on Sol-focus', () => {
+  it('group is hidden until the declutter cycle permits it (no focus coupling)', () => {
     const h = new Heliopause();
     expect(h.group.visible).toBe(false);
     h.dispose();
   });
 
-  it('setVisible(true) reveals the group', () => {
+  it('setPermitted(true) reveals the group — the declutter floor governs', () => {
     const h = new Heliopause();
-    h.setVisible(true);
+    h.setPermitted(true);
     expect(h.group.visible).toBe(true);
     h.dispose();
   });
 
-  it('setMonochrome hides the group even when otherwise visible', () => {
+  it('setMonochrome hides the group even when permitted', () => {
     const h = new Heliopause();
-    h.setVisible(true);
+    h.setPermitted(true);
     h.setMonochrome(true);
     expect(h.group.visible).toBe(false);
     h.setMonochrome(false);

@@ -88,24 +88,15 @@ export const HELIOPAUSE_CARD: ShellCardInfo = {
  *  the framing extent so focus pulls out to fit the whole teardrop. */
 export const HELIOPAUSE_EXTENT_PC = DOWNWIND_APEX_AU * AU_PC;
 
-/** Visibility predicate for the apex SVG label. The label engine layers
- *  an additional near-plane guard on top of this (any sample point behind
- *  the camera near plane hides the label, since that means the camera
- *  is geometrically inside the ellipsoid). Shared between
- *  `createHeliopauseLabel` and the hover picker so the label eligibility
- *  rule can't silently drift between them.
- *
- *  Predicate: a planet system is focused, chart mode is off, and at
- *  least one orbit ring is currently drawn. In v1 the only attached
- *  planet host is Sol, so "focused planet system" effectively means
- *  "Sol focused"; once the exoplanet epic attaches exoplanet hosts the
- *  apex visibility will need to additionally require Sol-host —
- *  flag at that bead, don't pre-empt here. */
+/** Visibility predicate for the apex SVG label — declutter-governed, not
+ *  focus-coupled, mirroring the Local Bubble label (`local-bubble.ts`):
+ *  chart mode off and the `heliopauseLabel` detail floor permitted. The
+ *  label engine layers a near-plane guard on top (a sample behind the
+ *  camera near plane means the camera is inside the ellipsoid → hide), so
+ *  the label appears exactly when the shell reads on screen. Shared with
+ *  the hover picker so the eligibility rule can't drift between them. */
 export function isHeliopauseApexVisible(stellata: Stellata): boolean {
-  return stellata.getFocusedPlanetSystem() !== null
-    && !stellata.getMonochrome()
-    && stellata.detailPermits('heliopauseLabel')
-    && stellata.anyOrbitRingVisible();
+  return !stellata.getMonochrome() && stellata.detailPermits('heliopauseLabel');
 }
 
 // Group quaternion that rotates +Z onto the antiapex direction in ICRS.
@@ -120,8 +111,6 @@ const GROUP_QUATERNION = new THREE.Quaternion().setFromUnitVectors(
 export class Heliopause extends FresnelShell {
   private readonly mesh: THREE.Mesh;
   private readonly geometry: THREE.SphereGeometry;
-  // Sol-focus gate — the shell only shows when Sol is the focused host.
-  private hidden = true;
 
   constructor() {
     // renderOrder = 1: shares the slot with star glow (both are dim
@@ -148,13 +137,13 @@ export class Heliopause extends FresnelShell {
     this.group.add(this.mesh);
   }
 
-  setVisible(on: boolean): void {
-    this.hidden = !on;
-    this.refreshVisibility();
-  }
-
+  // The mesh is built in the constructor and never detaches, so the shell
+  // is always ready — visibility is governed purely by the declutter floor
+  // (`heliopauseShell`) + chart mode in the base, plus the automatic
+  // hide-when-inside back-face cull. No focus coupling: like the Local
+  // Bubble, it's a free-standing structure the declutter cycle owns.
   protected shellReady(): boolean {
-    return !this.hidden;
+    return true;
   }
 
   override dispose(): void {

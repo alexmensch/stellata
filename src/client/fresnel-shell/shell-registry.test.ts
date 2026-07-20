@@ -18,14 +18,12 @@ function makeShell(extentPc: number): ShellInstance {
 }
 
 describe('ShellRegistry', () => {
-  it('at / keyOf map the Target idx to the SHELL_KEYS slot', () => {
+  it('at maps the Target idx to the SHELL_KEYS slot', () => {
     const r = new ShellRegistry();
     r.register('heliopause', makeShell(1));
     expect(r.count).toBe(2);
-    expect(r.keyOf(0)).toBe('local_bubble');
-    expect(r.keyOf(1)).toBe('heliopause');
-    expect(r.at(0)).toBeNull(); // local_bubble slot unregistered
-    expect(r.at(1)?.label).toBe('Test Shell');
+    expect(r.at(0)).toBeNull(); // local_bubble slot (idx 0) unregistered
+    expect(r.at(1)?.label).toBe('Test Shell'); // heliopause slot (idx 1)
     expect(r.at(9)).toBeNull();
   });
 

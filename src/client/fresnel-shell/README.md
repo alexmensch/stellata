@@ -43,8 +43,12 @@ it — the heliopause (`solar-system/`) and the Local Bubble
   edge; default 2.5). Pass `blending: AdditiveBlending` for a glow that
   composites over the layers behind it; the default is `NormalBlending`.
 - **Visibility.** `group.visible = permitted && !mono && shellReady()`.
-  `shellReady()` is the consumer's own gate (heliopause: Sol-focus;
-  Local Bubble: mesh-attached). Starts hidden until a gate opens it.
+  `shellReady()` is the consumer's own gate — both shells are now
+  declutter-governed (no focus coupling): the heliopause is always ready
+  (mesh built in its ctor), the Local Bubble ready once its mesh attaches.
+  `permitted` is the declutter floor (`heliopauseShell` / `localBubbleShell`,
+  both `representational`). Starts hidden until the declutter cycle permits
+  it. Camera-inside is handled separately by the back-face cull.
 - **Recenter.** Sol-anchored geometry (Sol = catalog origin), so the
   group parks at −worldOffset — non-zero under planet focus.
 
@@ -73,9 +77,13 @@ dispatch + exhaustive-map entries, and each shell instance registers into
   generic park-radius path — no new camera code. This aligns with the
   hide-when-inside invariant above: the pulled-out "whole shell on screen"
   distance is exactly where the back-face-culled wall becomes visible.
-- **The heliopause's Sol-focus visibility gate** (`shellReady()`, above)
-  is separate from focusability: focusing the heliopause as an object must
-  render it from any vantage — see `solar-system/README.md`.
+- **Neither shell is focus-coupled.** Visibility is purely the declutter
+  floor + chart mode (+ the automatic hide-when-inside cull) — the
+  heliopause was decoupled from its old Sol-focus gate once the declutter
+  cycle covered it. So both render whenever their tier is decluttered on,
+  independent of what's focused (a warp changes focus but not shell
+  visibility). A future ~1px LOD cull is tracked separately (a shell far
+  enough to be sub-pixel still draws today).
 
 ## SID pins
 

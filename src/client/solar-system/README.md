@@ -757,13 +757,15 @@ the shared shell machinery (`../fresnel-shell/README.md` § Boundary
 shells as focus targets) — there is no heliopause-specific hover or
 picker anymore.
 
-**Visibility reconcile.** The shell renders when Sol's planet system is
-focused OR when the heliopause itself is the focus target
-(`Stellata.updateHeliopauseVisibility`, re-run on every focus /
-planetSystem mutation) — so focusing it as an object from any vantage
-reveals it, while the original Sol-focus behaviour is unchanged. The
-hide-when-inside cull still applies, so near Sol (camera inside) it stays
-hidden and unpickable regardless.
+**Visibility is declutter-governed, not focus-coupled.** The shell (and
+its apex label) render whenever the `heliopauseShell` /`heliopauseLabel`
+declutter floors permit + chart mode is off — exactly like the Local
+Bubble, and independent of focus (a warp changes focus but not shell
+visibility). It was previously gated on Sol-focus; the declutter cycle now
+covers it, so `shellReady()` is simply `true` (the mesh is built in the
+ctor). The hide-when-inside back-face cull still applies, so near Sol
+(camera inside) it's hidden and unpickable regardless. A shell far enough
+to be sub-pixel still draws today — a ~1px LOD cull is tracked separately.
 
 ## First-load default and `minDistance` relaxation
 

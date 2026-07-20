@@ -71,12 +71,6 @@ export class ShellRegistry {
     return key ? (this.slots.get(key) ?? null) : null;
   }
 
-  /** The `SHELL_KEYS` key at a Target idx (null out of range) — lets
-   *  callers identify a specific shell without hard-coding the index. */
-  keyOf(idx: number): ShellKey | null {
-    return SHELL_KEYS[idx] ?? null;
-  }
-
   get count(): number {
     return SHELL_KEYS.length;
   }

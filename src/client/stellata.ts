@@ -712,9 +712,8 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
-    // Heliopause is Sol-anchored — added once, visibility gated on
-    // focused star = Sol OR the heliopause itself being the focus target
-    // (updateHeliopauseVisibility, wired below).
+    // Heliopause is Sol-anchored — added once; visibility is governed by
+    // the declutter cycle (`heliopauseShell`), like the Local Bubble.
     this.heliopause = new Heliopause();
     this.scene.add(this.heliopause.group);
     if (catalog.solIndex >= 0) {
@@ -900,18 +899,14 @@ export class Stellata implements FrameAnchor {
       getCameraMode: () => this.focus.getCameraMode(),
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
-    // Orbit rings + heliopause are representational layers gated on
-    // host-focus. Planet bodies live in PlanetBodyField and render
-    // whenever inside the per-host cull distance regardless of focus.
+    // Orbit rings are representational layers gated on host-focus. Planet
+    // bodies live in PlanetBodyField and render whenever inside the
+    // per-host cull distance regardless of focus. (The heliopause is no
+    // longer focus-coupled — the declutter cycle governs it, like the
+    // Local Bubble.)
     this.on('planetSystem', (ps) => {
       this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex, this.getT());
-      this.updateHeliopauseVisibility();
     });
-    // The heliopause shows when Sol's system is focused OR when the
-    // heliopause itself is the focus target (so focusing it as an object
-    // from any vantage reveals it). Both conditions derive from focus
-    // state, so one predicate re-evaluated on every focus mutation.
-    this.on('focus', () => this.updateHeliopauseVisibility());
     // Orbit paths rebuild on every focus mutation: the focused system's
     // Kepler pairs, or none when focus leaves a multi-star system.
     this.on('focus', () => {
@@ -1973,18 +1968,6 @@ export class Stellata implements FrameAnchor {
           void this.localBubbleShell.labelSampleInto(i, worldOffset, out),
       },
     });
-  }
-
-  /** Heliopause renders when Sol's planet system is focused OR the
-   *  heliopause shell is the focus target. Recomputed on focus /
-   *  planetSystem mutations so focusing it as an object reveals it from
-   *  any vantage while the Sol-focus behaviour is unchanged. */
-  private updateHeliopauseVisibility(): void {
-    const ps = this.focus.getFocusedPlanetSystem();
-    const solFocused = ps !== null && ps.hostStarIdx === this.catalog.solIndex;
-    const t = this.focus.getFocusedTarget();
-    const shellFocused = t !== null && t.kind === 'shell' && this.shells.keyOf(t.idx) === 'heliopause';
-    this.heliopause.setVisible(solFocused || shellFocused);
   }
 
   /** The Local Bubble shell layer — read by its silhouette label for the
