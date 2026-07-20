@@ -22,6 +22,9 @@ in vec2 aCorner;
 //   iColour       — representative single-colour RGB.
 //   iSolidity     — 1 = rocky (crisp edge), 0 = gas-giant (fuzzy).
 //   iAlbedoP      — geometric albedo p, V-band.
+//   iLitIntensity — mesh-regime lit-surface brightness (host irradiance
+//     × slider exposure); the resolved bloom peak derives from it so
+//     the glare matches the mesh it sits over (perceptual-magnitude.ts).
 //   iHostAbsmag   — host star's absolute magnitude.
 //   iPhaseCoefsA  — Mallama 2018 phase polynomial (c0,c1,c2,c3) in
 //                   α-degrees, ΔV in mag. See phase-function.ts.
@@ -39,6 +42,7 @@ in float iRadiusPc;
 in vec3 iColour;
 in float iSolidity;
 in float iAlbedoP;
+in float iLitIntensity;
 in float iHostAbsmag;
 in vec4 iPhaseCoefsA;
 in vec4 iPhaseCoefsB;
@@ -49,24 +53,18 @@ uniform vec2 uViewport;       // CSS pixels
 uniform float uPixelRatio;
 uniform float uFovYRad;
 
-// Render mode — same convention as the star pipeline:
-//   0 = glow (additive halo for distant point-glow planets)
-//   1 = disc (per-channel-max, close-range resolved planets)
-//   2 = core mask (depth-only for disc cores, occludes background)
-uniform int uRenderMode;
-
 // Visibility cutoff (mag slider); shared with stars.
 uniform float uMaxAppMag;
 
 // Flat instance index to hide (-1 = none). The planet sibling of the
 // star pipeline's uHideFocusIdx: observe mode parks the camera AT the
-// focal body, whose disc would otherwise render from the interior.
+// focal body, whose glare would otherwise render from the interior.
 uniform int uHideIdx;
 
 // Active local-depth cluster's slot range (start, count); (-1, 0) =
-// none. Main-pass materials collapse instances INSIDE the range (the
-// local pass's mirror draws render them); mirror materials (which
-// define LOCAL_DEPTH_PASS) collapse instances OUTSIDE it. One shared
+// none. Main-pass material collapses instances INSIDE the range (the
+// local pass's mirror draw renders them); the mirror material (which
+// defines LOCAL_DEPTH_PASS) collapses instances OUTSIDE it. One shared
 // value object drives both. See src/client/local-depth/README.md.
 uniform ivec2 uLocalPassRange;
 
@@ -76,10 +74,17 @@ uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
 
-// Billboard disc fade-out band in physSize/appSize ratio
-// (DISC_FADE_START/END_RATIO from mesh-crossfade.ts; the mesh itself
-// fades on an independent physical-pixel band — see that file).
-uniform vec2 uDiscFadeRatio;
+// Glare resolvedness band in physical CSS px (MESH_FADE_MIN/FULL_PX from
+// mesh-crossfade.ts): the true disc grows from a point to a resolved
+// body across it. res = smoothstep(x, y, physSize) drives the glare's
+// point→bloom morph in lockstep with the mesh presence.
+uniform vec2 uMeshFadePx;
+// Reflected-glare gain — flux-continuity calibration between the
+// resolved bloom peak and the mesh surface it sits over (smoke-tuned).
+uniform float uGlareGain;
+// (GLARE_BLOOM_OVERSIZE, GLARE_PHOTOCENTRE_SHIFT) from mesh-crossfade.ts:
+// resolved bloom cap × disc, and lit-limb photocentre shift × radius.
+uniform vec2 uGlareShape;
 
 // Chart-mode flat-disc sizing — same uniforms (same { value } slots)
 // as the star pipeline's chart branch; see chart-mode/README.md.
@@ -91,9 +96,8 @@ uniform float uMonochrome;
 out vec3 vColor;
 out vec2 vUv;
 out float vAppMag;
-out float vPhysRatio;
 out float vSoftness;
-out float vDiscFade;
+out float vGlareIntensity;
 out float vAaWidth;
 
 const float LOG10 = 2.302585093;
@@ -130,7 +134,7 @@ void main() {
   // viewer→host distance is deliberately NOT tested — observe mode
   // parks the camera exactly at the host, and its planets must render.
   // The hidden instance (observe anchor body) kills through the same
-  // path, in every pass — a hidden body must not write depth either.
+  // path — a hidden body must not write depth either.
   float d_vp = length(planetView.xyz);
   float d_hp = length(planetView.xyz - hostView.xyz);
   bool inClusterRange = gl_InstanceID >= uLocalPassRange.x
@@ -145,9 +149,8 @@ void main() {
     vAppMag = 0.0;
     vColor = vec3(0.0);
     vUv = aCorner;
-    vPhysRatio = 0.0;
     vSoftness = 0.0;
-    vDiscFade = 1.0;
+    vGlareIntensity = 0.0;
     vAaWidth = 0.0;
     return;
   }
@@ -209,28 +212,27 @@ void main() {
   float reflFactor = iAlbedoP * radRatio * radRatio * max(phi, 0.0);
   float appMag = m_host_at_planet - 2.5 * log(max(reflFactor, 1e-30)) / LOG10;
 
-  // True-eclipse dim, glow pass only — the star pipeline's iEclipseDim
-  // fold verbatim: exactly 0 = totality, collapse the quad (the
-  // planet-scale depth buffer can't hide it, and a floored residual is
-  // still visible on a bright close body — Mercury behind Sol's disc).
-  // The disc pass needs no dim: its per-channel-max blend already keeps
-  // the darker back disc from painting over the host's saturated disc.
-  if (uRenderMode == 0 && iEclipseDim < 1.0) {
+  // True-eclipse dim — the star pipeline's iEclipseDim fold verbatim:
+  // exactly 0 = totality, collapse the quad (the planet-scale depth
+  // buffer can't hide it, and a floored residual is still visible on a
+  // bright close body — Mercury behind Sol's disc). Applies to the sole
+  // additive glare pass; it drives the unresolved point brightness where
+  // a host-disc eclipse actually reads.
+  if (iEclipseDim < 1.0) {
     if (iEclipseDim <= 0.0) {
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
       vAppMag = 0.0;
       vColor = vec3(0.0);
       vUv = aCorner;
-      vPhysRatio = 0.0;
       vSoftness = 0.0;
-      vDiscFade = 1.0;
+      vGlareIntensity = 0.0;
       vAaWidth = 0.0;
       return;
     }
     appMag += -2.5 * log(iEclipseDim) / LOG10;
   }
 
-  // Soft taper: pass a 0.5-mag overshoot so the glow pass can fade
+  // Soft taper: pass a 0.5-mag overshoot so the glare can fade
   // intensity to zero across the threshold band — same hysteresis
   // the star pipeline uses to avoid pop-in/out as the slider moves.
   if (appMag > uMaxAppMag + 0.5) {
@@ -238,9 +240,8 @@ void main() {
     vAppMag = appMag;
     vColor = vec3(0.0);
     vUv = aCorner;
-    vPhysRatio = 0.0;
     vSoftness = 1.0 - iSolidity;
-    vDiscFade = 1.0;
+    vGlareIntensity = 0.0;
     vAaWidth = 0.0;
     return;
   }
@@ -250,34 +251,55 @@ void main() {
   float physSize = 2.0 * atan(iRadiusPc / d_vp) * angularToPx;
 
   float pxSize;
+  vec2 photoOffsetPx = vec2(0.0);
   if (uMonochrome > 0.5) {
     // Chart-mode flat-disc sizing — the star vertex shader's chart
-    // branch verbatim: magnitude-linear px, disc pass forced, no
-    // mesh handoff (the mesh LOD hides in chart mode).
+    // branch verbatim: magnitude-linear px, no mesh handoff (the mesh
+    // LOD hides in chart mode). The single glare material renders the
+    // flat ink disc; no phase morphology on paper.
     float chartT = clamp(
         (appMag - uChartMagBright)
             / max(uMaxAppMag - uChartMagBright, 0.001),
         0.0, 1.0);
     pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
-    vPhysRatio = 1.0;
-    vDiscFade = 1.0;
+    vGlareIntensity = 1.0;
   } else {
-    // Apparent-magnitude size via the perceptual-disc chunk. No
-    // unconditional pixel floor — sub-pixel planets fade naturally
-    // when their reflected-light flux drops below the slider cutoff.
+    // Reflected glare: one additive quad blended from the star-
+    // perceptual POINT (unresolved) to a size-clamped BLOOM (resolved)
+    // on the mesh resolvedness band. Below the band a distant planet
+    // reads as a star of its magnitude (peak ~1, size = appSize);
+    // above it the mesh carries the surface and the glare is a thin
+    // lit-limb bloom whose peak ∝ the mesh brightness (no luminosity
+    // pop). Mirrors mesh-crossfade.ts glareSizePx + perceptual-
+    // magnitude.ts glare intensity. See README § Planet mesh LOD.
+    float res = smoothstep(uMeshFadePx.x, uMeshFadePx.y, physSize);
+    float illumFrac = (1.0 + cosA) * 0.5;
+
     float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
     float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+    float bloomSize = physSize * uGlareShape.x;
+    pxSize = mix(appSize, bloomSize, res);
 
-    // Billboard fades out as the physical term outgrows the
-    // perceptual size. Through the band the disc CORE is depth-hidden
-    // behind the fully-shown mesh, so only the halo annulus visibly
-    // fades; below the band the billboard runs at full strength and
-    // the mesh crescent sits inside the glare (mesh-crossfade.ts).
-    vDiscFade = 1.0 - smoothstep(
-        uDiscFadeRatio.x, uDiscFadeRatio.y, physSize / max(appSize, 1e-6));
+    // Bloom peak ∝ mesh surface brightness (litIntensity·albedo·gain),
+    // illuminated-fraction gated so a crescent's dark limb emits ~none
+    // (kills the symmetric halo ring). Point regime keeps peak 1 —
+    // phase there is already photometric in appMag, so illumFrac must
+    // not double-count.
+    float bloomPeak = iLitIntensity * iAlbedoP * uGlareGain * illumFrac;
+    vGlareIntensity = mix(1.0, bloomPeak, res);
 
-    pxSize = max(appSize, physSize);
-    vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+    // Photocentre shift toward the lit limb (sub-solar screen dir),
+    // scaled by how crescent (1−illumFrac) and how resolved (res), so
+    // the residual bloom concentrates on the illuminated side instead
+    // of ringing. GLARE_PHOTOCENTRE_SHIFT · radius. Guarded against a
+    // degenerate on-axis sub-solar direction.
+    vec2 sunDir = hphHat.xy;
+    float sunLen = length(sunDir);
+    if (sunLen > 1e-5) {
+      float radiusPx = physSize * 0.5;
+      photoOffsetPx = (sunDir / sunLen)
+          * (radiusPx * uGlareShape.y * (1.0 - illumFrac) * res);
+    }
   }
   // One CSS pixel in vUv units — the chart frag's edge-AA width.
   vAaWidth = 1.0 / max(pxSize, 0.5);
@@ -290,10 +312,11 @@ void main() {
   vSoftness = clamp(1.0 - iSolidity, 0.0, 1.0);
 
   // Project the planet centre, then offset each corner in screen
-  // space by aCorner × pxSize. Mirrors the star vertex shader's
-  // perspective-correct pixel-stable quad expansion.
+  // space by aCorner × pxSize plus the photocentre shift. Mirrors the
+  // star vertex shader's perspective-correct pixel-stable quad
+  // expansion.
   vec4 centreClip = projectionMatrix * vec4(planetView.xyz, 1.0);
-  vec2 pixelOffset = aCorner * pxSize * uPixelRatio;
+  vec2 pixelOffset = (aCorner * pxSize + photoOffsetPx) * uPixelRatio;
   vec2 ndcOffset = pixelOffset / (uViewport * uPixelRatio) * 2.0;
   gl_Position = centreClip + vec4(ndcOffset * centreClip.w, 0.0, 0.0);
 

@@ -7,7 +7,7 @@ import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
 } from './phase-function';
-import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults } from '../star-pipeline/star-pipeline';
 import {
   pickChartDiscUniforms,
   pickPerceptualDiscUniforms,
@@ -16,7 +16,14 @@ import {
 } from '../star-pipeline/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
-import { DISC_FADE_END_RATIO, DISC_FADE_START_RATIO } from './mesh-crossfade';
+import {
+  DEFAULT_GLARE_GAIN,
+  GLARE_BLOOM_OVERSIZE,
+  GLARE_PHOTOCENTRE_SHIFT,
+  glareSizePx,
+  MESH_FADE_FULL_PX,
+  MESH_FADE_MIN_PX,
+} from './mesh-crossfade';
 import {
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
@@ -24,6 +31,7 @@ import {
   solidityForType,
 } from './orbit-rings-layer';
 import {
+  litIntensity,
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
@@ -90,6 +98,7 @@ const INSTANCE_ATTR_SPECS = attrSpecs({
   colour: { attr: 'iColour', dims: 3 },
   solidity: { attr: 'iSolidity', dims: 1 },
   albedo: { attr: 'iAlbedoP', dims: 1 },
+  litIntensity: { attr: 'iLitIntensity', dims: 1, dynamicUsage: true, fill: 1 },
   hostAbsmag: { attr: 'iHostAbsmag', dims: 1 },
   phaseA: { attr: 'iPhaseCoefsA', dims: 4 },
   phaseB: { attr: 'iPhaseCoefsB', dims: 4 },
@@ -204,19 +213,16 @@ export class PlanetBodyField {
   // run per-frame (focal ride, POI overlay per pin, focus-card rows).
   private instanceHost!: Int32Array;
   private geometry!: THREE.InstancedBufferGeometry;
-  private matDisc!: THREE.ShaderMaterial;
   private matGlow!: THREE.ShaderMaterial;
-  private matCore!: THREE.ShaderMaterial;
-  private matDiscLocal!: THREE.ShaderMaterial;
   private matGlowLocal!: THREE.ShaderMaterial;
-  private meshDisc!: THREE.Mesh;
   private meshGlow!: THREE.Mesh;
-  private meshCore!: THREE.Mesh;
-  private meshDiscLocal!: THREE.Mesh;
   private meshGlowLocal!: THREE.Mesh;
   // One shared { value } slot across every material — the uHideIdx
   // uniform hiding the observe-anchor body (-1 = none).
   private hideIdxUniform = { value: -1 };
+  // Tunable reflected-glare gain — one shared slot across the main-pass
+  // and local-pass glare materials; setGlareGain writes it for smoke.
+  private glareGainUniform = { value: DEFAULT_GLARE_GAIN };
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
   // none. One shared value drives the main-pass suppression AND the
   // mirror draws' member gate (opposite sense, keyed on the
@@ -381,6 +387,18 @@ export class PlanetBodyField {
    *  layer's lit-surface exposure tracks. */
   getMaxAppMag(): number {
     return this.maxAppMag;
+  }
+
+  /** Reflected-glare gain — the flux-continuity calibration between the
+   *  resolved bloom peak and the mesh surface it sits over. One shared
+   *  uniform across the main- and local-pass glare materials; smoke-tuned
+   *  from the default in mesh-crossfade.ts. */
+  setGlareGain(gain: number): void {
+    this.glareGainUniform.value = gain;
+  }
+
+  getGlareGain(): number {
+    return this.glareGainUniform.value;
   }
 
   /**
@@ -851,7 +869,10 @@ export class PlanetBodyField {
       );
     }
     const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
-    return Math.max(appSize, physSize);
+    // Rendered footprint = the wider of the true disc (mesh) and the
+    // reflected glare quad (point→bloom on resolvedness). Mirrors the
+    // vertex shader's glare sizing so hover picks the visible body + halo.
+    return Math.max(physSize, glareSizePx(appSize, physSize));
   }
 
   /**
@@ -979,24 +1000,20 @@ export class PlanetBodyField {
     return this.hosts.values();
   }
 
-  /** Chart mode renders the bodies as flat ink discs, star-identical:
-   *  the shared uMonochrome uniform flips the shader branches; here we
-   *  only swap the blending the same way the star pipeline's
-   *  setMonochromeBlend does. Rings stay hidden (their own layer);
-   *  the mesh LOD hides via `monochrome` below. */
+  /** Chart mode renders the bodies as flat ink discs through the single
+   *  glare material: the shared uMonochrome uniform flips the shader to
+   *  the flat-disc branch; here we only swap the blending to Multiply
+   *  (ink on white), the same swap the star pipeline's setMonochromeBlend
+   *  does. Rings stay hidden (their own layer); the mesh LOD hides via
+   *  `monochrome` below. */
   setMonochrome(on: boolean): void {
     this.mono = on;
     if (on) {
-      this.matDisc.blending = THREE.MultiplyBlending;
-      this.matDisc.depthWrite = false;
-      this.matDisc.depthTest = false;
       this.matGlow.blending = THREE.MultiplyBlending;
       this.matGlow.depthTest = false;
     } else {
-      applyDiscBlendDefaults(this.matDisc);
       applyGlowBlendDefaults(this.matGlow);
     }
-    this.matDisc.needsUpdate = true;
     this.matGlow.needsUpdate = true;
     this.group.visible = !this.hidden && this.liveCount > 0;
   }
@@ -1025,10 +1042,7 @@ export class PlanetBodyField {
 
   dispose(): void {
     this.geometry.dispose();
-    this.matDisc.dispose();
     this.matGlow.dispose();
-    this.matCore.dispose();
-    this.matDiscLocal.dispose();
     this.matGlowLocal.dispose();
   }
 
@@ -1056,10 +1070,7 @@ export class PlanetBodyField {
     // geometry-swap path.
     const oldGeom = this.geometry;
     this.buildGeometry();
-    this.meshDisc.geometry = this.geometry;
     this.meshGlow.geometry = this.geometry;
-    this.meshCore.geometry = this.geometry;
-    this.meshDiscLocal.geometry = this.geometry;
     this.meshGlowLocal.geometry = this.geometry;
     oldGeom.dispose();
   }
@@ -1090,11 +1101,7 @@ export class PlanetBodyField {
       ...pickChartDiscUniforms(sm),
     };
 
-    const makeMat = (
-      mode: number,
-      params: THREE.ShaderMaterialParameters,
-      localPass = false,
-    ) =>
+    const makeMat = (localPass = false) =>
       new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
         vertexShader: planetVert,
@@ -1102,31 +1109,28 @@ export class PlanetBodyField {
         ...(localPass ? { defines: { LOCAL_DEPTH_PASS: '' } } : {}),
         uniforms: {
           ...sharedPlanetUniforms,
-          uRenderMode: { value: mode },
           uHideIdx: this.hideIdxUniform,
           uLocalPassRange: this.localPassRangeUniform,
-          uDiscFadeRatio: {
-            value: new THREE.Vector2(DISC_FADE_START_RATIO, DISC_FADE_END_RATIO),
+          uMeshFadePx: {
+            value: new THREE.Vector2(MESH_FADE_MIN_PX, MESH_FADE_FULL_PX),
+          },
+          uGlareGain: this.glareGainUniform,
+          uGlareShape: {
+            value: new THREE.Vector2(GLARE_BLOOM_OVERSIZE, GLARE_PHOTOCENTRE_SHIFT),
           },
         },
-        ...params,
       });
 
-    this.matDisc = makeMat(1, { transparent: true });
-    applyDiscBlendDefaults(this.matDisc);
-
-    this.matGlow = makeMat(0, {});
+    // Planet bodies = spheroid mesh (resolved surface) + one additive
+    // reflected-glare pass. No opaque disc / core-mask: the mesh writes
+    // depth for background occlusion in the resolved regime, and an
+    // unresolved point-glare needs none (additive like a star). The
+    // main-pass glare draws distant, not-locally-active bodies; the
+    // mirror draws the locally-active cluster in the local depth pass.
+    this.matGlow = makeMat();
     applyGlowBlendDefaults(this.matGlow);
 
-    this.matCore = makeMat(2, {
-      depthWrite: true,
-      depthTest: true,
-      colorWrite: false,
-    });
-
-    this.matDiscLocal = makeMat(1, { transparent: true }, true);
-    applyDiscBlendDefaults(this.matDiscLocal);
-    this.matGlowLocal = makeMat(0, {}, true);
+    this.matGlowLocal = makeMat(true);
     applyGlowBlendDefaults(this.matGlowLocal);
 
     const makeMesh = (mat: THREE.ShaderMaterial, name: string, order: number) => {
@@ -1137,23 +1141,12 @@ export class PlanetBodyField {
       return m;
     };
 
-    this.meshCore = makeMesh(this.matCore, 'core', -4);
-    this.meshDisc = makeMesh(this.matDisc, 'disc', 3);
+    // Glare last (4) so a transiting body's glare adds over everything,
+    // including a parent mesh behind it.
     this.meshGlow = makeMesh(this.matGlow, 'glow', 4);
-
-    this.group.add(this.meshCore);
-    this.group.add(this.meshDisc);
     this.group.add(this.meshGlow);
 
-    // Local-pass mirrors: same geometry, member-range-gated. Disc at 3
-    // (after the mesh LOD at 2.8/2.81, so the fading disc composites
-    // over the mesh exactly as it did in the main pass); glow last at
-    // 4 so a transiting body's glow adds over everything — including a
-    // parent mesh behind it. No core mask: the local pass has no
-    // background layers to pre-fail.
-    this.meshDiscLocal = makeMesh(this.matDiscLocal, 'disc-local', 3);
     this.meshGlowLocal = makeMesh(this.matGlowLocal, 'glow-local', 4);
-    this.localMirrorGroup.add(this.meshDiscLocal);
     this.localMirrorGroup.add(this.meshGlowLocal);
   }
 
@@ -1233,6 +1226,24 @@ export class PlanetBodyField {
         this.bufs.localRel[base + i * 3 + 2] = tmp.z;
       }
     }
+    this.writeHostLitIntensity(host);
+  }
+
+  /** Mesh-regime lit-surface brightness per planet, from the just-written
+   *  host→body distance (|iLocalRel|) and the current slider exposure —
+   *  the SAME `litIntensity` the mesh layer uses, so the resolved glare
+   *  bloom peak matches the surface it sits over. Written wherever
+   *  iLocalRel is (attach + per-frame ephemeris walk). */
+  private writeHostLitIntensity(host: AttachedHost): void {
+    const base = host.startInstance * 3;
+    for (let i = 0; i < host.count; i++) {
+      const dHp = Math.sqrt(
+        this.bufs.localRel[base + i * 3 + 0] ** 2 +
+          this.bufs.localRel[base + i * 3 + 1] ** 2 +
+          this.bufs.localRel[base + i * 3 + 2] ** 2,
+      );
+      this.bufs.litIntensity[host.startInstance + i] = litIntensity(dHp, this.maxAppMag);
+    }
   }
 
   /** Rotate a flat plane-frame xyz buffer into ICRS-aligned local frame
@@ -1254,15 +1265,17 @@ export class PlanetBodyField {
     }
   }
 
-  /** Per-frame: only iLocalRel changes in `update()` (the planet
-   *  positions tick; host position, radius, colour, phase coefficients
-   *  are static for the host's lifetime). At bk5 scale (hundreds of
-   *  hosts × thousands of planets) flagging only the one dirty buffer
-   *  matters — the others would re-upload static data every frame
-   *  otherwise. */
+  /** Per-frame: iLocalRel (positions tick) and iLitIntensity (rides the
+   *  host→body distance + slider exposure, rewritten alongside) change in
+   *  `update()`; host position, radius, colour, albedo, phase
+   *  coefficients are static for the host's lifetime. At bk5 scale
+   *  (hundreds of hosts × thousands of planets) flagging only the dirty
+   *  buffers matters — the statics would re-upload every frame otherwise. */
   private flushDynamicAttributes(): void {
     if (!this.geometry) return;
     (this.geometry.attributes.iLocalRel as THREE.InstancedBufferAttribute)
+      .needsUpdate = true;
+    (this.geometry.attributes.iLitIntensity as THREE.InstancedBufferAttribute)
       .needsUpdate = true;
   }
 

@@ -1,7 +1,8 @@
 # Solar-system layer
 
 Solar-system layer (`stellata-3re`). When a focusable star carries a planet
-system, Stellata renders the planets as billboarded discs at their
+system, Stellata renders the planets as lit spheroid meshes (with a
+reflected-glare billboard) at their
 heliocentric positions, faint orbit rings on the host's orbital plane,
 and (Sol only) the heliopause boundary as a translucent asymmetric
 shell. Sol is the only populated host so far; the framework is
@@ -71,10 +72,12 @@ src/client/solar-system/
                                   (pole-up, no mirror, prime meridian).
   time-readout.ts                 UTC readout display next to the time
                                   scrubber.
-  planet-body-field.ts            Instanced planet-body renderer. Three-pass
-                                  (depth-only mask + disc + glow), shares
-                                  the unified disc/glow chunk with stars
-                                  (perceptual-disc.glsl) — see
+  planet-body-field.ts            Instanced planet-body renderer. One
+                                  additive reflected-glare pass (+ its
+                                  local-pass mirror); the resolved surface
+                                  is the spheroid mesh (planet-mesh-layer).
+                                  Shares the glow half of perceptual-disc.glsl
+                                  with stars — see
                                   src/client/star-pipeline/README.md.
                                   isCollapsedOntoParent is the per-body
                                   "renders as one point with its parent"
@@ -90,8 +93,8 @@ src/client/solar-system/
                                   (host, planet-within-host), plus local/
                                   absolute position, appMag, and rendered-
                                   size accessors keyed on the flat index.
-                                  uHideIdx (one uniform shared by all
-                                  five passes) hides the observe-anchor
+                                  uHideIdx (one uniform shared by both
+                                  glare passes) hides the observe-anchor
                                   body via setHiddenInstance.
   orbit-rings-layer.ts            Faint orbit rings: host-centred planet
                                   rings + parent-centred moon rings, built
@@ -128,8 +131,8 @@ src/client/solar-system/
                                   (Lambertian + Mallama phase factors)
                                   + hostIntensityScale (mesh-regime
                                   host-distance lighting). Drives the
-                                  body field's disc/glow sizing and the
-                                  per-planet label gating.
+                                  body field's glare sizing/brightness and
+                                  the per-planet label gating.
   phase-function.ts (+ test)      Lambertian + Mallama phase functions
                                   + phaseRatioToLambert (mesh phase
                                   scalar). Pure helpers with vitest
@@ -147,10 +150,12 @@ src/client/solar-system/
   first-load.ts                   Canonical no-URL first-load view: 5 AU
                                   galactic-centre-aimed park.
   planet.vert.glsl,
-  planet.frag.glsl                Three-pass instanced planet bodies.
-                                  Imports `perceptual-disc.glsl` from
-                                  `../star-pipeline/` (shared disc/glow
-                                  chunk with stars).
+  planet.frag.glsl                Instanced reflected-glare billboards
+                                  (point↔bloom on resolvedness, phase-
+                                  gated + photocentre-shifted). Imports
+                                  `perceptual-disc.glsl` from
+                                  `../star-pipeline/` (shared glow profile
+                                  with stars).
 ```
 
 ## Data model
@@ -423,39 +428,39 @@ the MOON's viewpoint with the parent planet as occluder of the host
 disc — the visible host fraction IS the moon's illumination, so a
 lunar-style eclipse darkens the moon continuously through the
 penumbra (search-tested against a year of real ephemeris);
-the vertex shader folds it into appMag in the **glow pass only**,
-mirroring the star pipeline's fold. A FULL eclipse writes exactly 0
-and the shader collapses the quad — a floored +7.5 mag residual is
-still visible on a mag −1 Mercury, and the planet-scale depth buffer
-can't hide it — and the planet's label hides with it (the fully
-eclipsed body renders nothing). Glow through the host's
+the vertex shader folds it into appMag on the sole glare pass,
+mirroring the star pipeline's fold — it drives the unresolved-point
+brightness where a host-disc eclipse actually reads. A FULL eclipse
+writes exactly 0 and the shader collapses the quad — a floored +7.5
+mag residual is still visible on a mag −1 Mercury, and the planet-
+scale depth buffer can't hide it — and the planet's label hides with
+it (the fully eclipsed body renders nothing). Glare through the host's
 perceptual *halo* stays undimmed — the halo is a perceptual
 artefact, not a surface, so a body behind it correctly shines
-through. The disc pass needs no dim or depth bias: its
-per-channel-max blend keeps the darker back disc from painting over
-the host's saturated disc. A planet in *front* (transit) dims the
+through. A planet in *front* (transit) dims the
 host by (R_p/R_host)² — negligible and owned by the star pipeline,
 so it is deliberately not modelled.
 
-Bodies render as billboarded discs through the same perceptual-disc
-abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
-Apparent magnitude is computed in the vertex shader from reflected
-host-star light through a per-planet phase function — Mallama 2018
-empirical polynomials for Mercury, Venus, Earth, Mars, Jupiter and
-Saturn (3re.18); Lambertian fallback for Uranus, Neptune, Pluto and
-every exoplanet (`stellata-bk5`), since Mallama 2018 publishes no
-phase-angle polynomial for those. The slider visibility cutoff
-applies — sub-cutoff planets fade naturally, no unconditional pixel
-floor. Passes: the star-pipeline trio (core depth-mask + disc + glow)
-in the main pass, plus **local-pass mirror draws** (disc + glow over
-the active cluster's slot range, gated by the shared
-`uLocalPassRange` uniform — opposite sense under the
+Bodies render as the spheroid mesh (resolved surface) plus **one
+additive reflected-glare billboard** — no opaque disc / core-mask
+pass. Apparent magnitude is computed in the vertex shader from
+reflected host-star light through a per-planet phase function —
+Mallama 2018 empirical polynomials for Mercury, Venus, Earth, Mars,
+Jupiter and Saturn (3re.18); Lambertian fallback for Uranus, Neptune,
+Pluto and every exoplanet (`stellata-bk5`), since Mallama 2018
+publishes no phase-angle polynomial for those. The slider visibility
+cutoff applies — sub-cutoff planets fade naturally, no unconditional
+pixel floor. The glare is one pass (main-pass draw + **local-pass
+mirror draw** over the active cluster's slot range, gated by the
+shared `uLocalPassRange` uniform — opposite sense under the
 `LOCAL_DEPTH_PASS` define). While the system is locally active
 (`local-cluster.ts`) the main-pass instances collapse and every body
-renders through the mirrors in the bracketed local depth pass, where
-the z-buffer natively orders ring↔body, moon↔planet, transits, and
-near-side orbit-ring arcs (`../local-depth/README.md`) — the old
-corrupt/restore depth dance around the orbit rings is gone. Surface
+renders through the mirror in the bracketed local depth pass, where
+the **mesh** writes depth so the additive glare is occluded to a
+lit-limb halo and the z-buffer natively orders ring↔body, moon↔planet,
+transits, and near-side orbit-ring arcs (`../local-depth/README.md`).
+Distant, not-locally-active bodies draw in the main pass as a faint
+additive point that needs no depth occlusion (like a star). Surface
 detail (textures, atmospheric haloes,
 banding, axial-tilt cue) stays **deliberately deferred** to the
 planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles
@@ -508,32 +513,40 @@ every slider move.
 
 ### Planet mesh LOD (stellata-2f6.9)
 
-On close approach the billboarded disc hands off to a real oblate
-spheroid mesh (`planet-mesh-layer.ts`). Two independent fade bands
-(`mesh-crossfade.ts`):
+On close approach the reflected glare hands off to a real oblate
+spheroid mesh (`planet-mesh-layer.ts`). Mesh presence and the glare's
+point↔bloom regime ride **one** physical-pixel resolvedness band
+(`mesh-crossfade.ts`), so the two morph in lockstep — there is no
+separate billboard fade band and no opaque disc / core-mask to
+crossfade.
 
 - **Mesh presence** rides the body's TRUE projected diameter in CSS
-  px — full at ≥ 2 px, gone at ≤ 1 px (`meshFadeFromPhysPx` on
-  `PlanetBodyField.physicalPlanetSizePx`). The eye tracks a resolved
-  body — and its crescent phase, the thing a billboard can't show —
-  down to ~1 px, so the mesh persists to that limit instead of
-  handing off at the (much larger) perceptual-disc scale.
-- **Billboard disc fade** rides the physSize/appSize ratio
-  (`uDiscFadeRatio`, 1.0 → 1.5; shader `vDiscFade`, CPU mirror
-  `discFadeFromRatio`). Below the band the billboard runs at FULL
-  strength: at ratio < 1 the perceptual glow is the correct glare for
-  a bright body, and the mesh crescent sits inside it, depth-occluding
-  the glow core (both render in the local depth pass). Through the
-  band the disc CORE stays depth-hidden behind the fully-shown mesh
-  (core radius < 0.5 · quad = the mesh silhouette), so only the thin
-  halo annulus visibly fades — no pop in size or brightness at any
-  point of the zoom-out: mesh-in-glare → halo fades (ratio 1 → 1.5)
-  → mesh alone → crescent shrinks to 1–2 px and fades inside the
-  returning glow.
+  px — full at ≥ `MESH_FADE_FULL_PX` (2 px), gone at ≤ `MESH_FADE_MIN_PX`
+  (1 px) (`meshFadeFromPhysPx` on `PlanetBodyField.physicalPlanetSizePx`).
+  The eye tracks a resolved body — and its crescent phase, the thing a
+  billboard can't show — down to ~1 px, so the mesh persists to that
+  limit instead of handing off at the (much larger) perceptual-disc scale.
+- **Reflected glare** is one additive quad whose size and brightness
+  blend on the SAME band (`res = smoothstep(MESH_FADE_MIN_PX,
+  MESH_FADE_FULL_PX, physSize)` in the shader; `glareSizePx` /
+  `litIntensity` CPU mirrors). Unresolved (`res → 0`): the
+  star-perceptual point — size `appSize(appMag)`, peak ~1 — so a
+  distant planet reads exactly like a star of its magnitude, phase
+  purely photometric (already in `appMag`). Resolved (`res → 1`): a
+  lit-limb bloom over the mesh — size clamped to `physSize ·
+  GLARE_BLOOM_OVERSIZE` (1.3, so a bright body's huge `appSize` can't
+  balloon a giant symmetric halo), peak ∝ the mesh surface brightness
+  (`iLitIntensity · albedo · uGlareGain`, same units → no luminosity
+  pop), illuminated-fraction gated (`(1+cosα)/2`) and photocentre-
+  shifted toward the sub-solar limb (`GLARE_PHOTOCENTRE_SHIFT`) so a
+  crescent's dark limb emits ~none — which is what kills the halo ring
+  the old symmetric disc pass drew around dark/crescent bodies.
 
-The core depth pass deliberately keeps running through both fades —
-the mesh silhouette matches the disc core, so background layers stay
-occluded while the visual handoff happens.
+`uGlareGain` is the tunable flux-continuity calibration between the
+resolved bloom peak and the mesh it sits over (`setGlareGain`;
+default `DEFAULT_GLARE_GAIN`). In the resolved regime the **mesh**
+writes depth (local depth pass), so the additive glare is naturally
+occluded to the lit-limb halo — the old core depth-mask is gone.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA

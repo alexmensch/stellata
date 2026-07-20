@@ -36,7 +36,11 @@ read.
 - `perceptual-disc.glsl` — super-Gaussian disc/glow chunk. Imported by
   `star.frag.glsl` and (via relative `?raw` import) by
   `../solar-system/planet.frag.glsl` so stars and planet bodies share
-  the same brightness-PSF saturation physics.
+  the same brightness-PSF saturation physics. Stars use the full
+  disc + glow + core-mask trio; planet bodies use the **glow profile
+  only** (their resolved surface is the spheroid mesh, so the billboard
+  is reflected glare, never an opaque disc) — see
+  `../solar-system/README.md` § Planet mesh LOD.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
   the chunk consumes. The star pipeline's `sharedUniforms` map in
   `stellata.ts` `satisfies` this interface, and
@@ -207,13 +211,14 @@ Why this de facto two-band split works in the main pass:
 - Background layers (MW, grids, clouds — log-encoded or at the far
   plane) land at or near 1.0 and lose the LessEqual test against a
   close-range core's `< 1.0` depth — the core depth-mask mechanism.
-- Planet billboards ARE log-encoded (ShaderMaterial), which lands
-  every intra-system depth near 0.0 — planets always beat stars in
-  the main pass. A planet *behind* the host's disc is handled
-  photometrically (`iEclipseDim`), not by depth; while a system is
-  locally active the whole question moves to the local depth pass,
-  where member stars and planets share one bracketed standard-depth
-  buffer and order natively (`../local-depth/README.md`).
+- Planet billboards are the additive reflected glare only (no opaque
+  disc / core-mask), so in the main pass they never write depth — they
+  just add, order-independent like the star glow pass. A planet
+  *behind* the host's disc is handled photometrically (`iEclipseDim`),
+  not by depth; while a system is locally active the whole question
+  moves to the local depth pass, where the planet **mesh** writes depth
+  and member stars, meshes, and glare order natively
+  (`../local-depth/README.md`).
 
 Per-pass depth rules:
 

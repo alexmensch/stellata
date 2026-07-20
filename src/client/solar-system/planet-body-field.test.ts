@@ -20,6 +20,7 @@ import {
 } from './phase-function';
 import { planetApparentMagnitude } from './perceptual-magnitude';
 import {
+  GLARE_BLOOM_OVERSIZE,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
   meshFadeFromPhysPx,
@@ -230,27 +231,24 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('exposes the main-pass trio + local-pass mirror pair, orders pinned', () => {
-    // Main pass: core depth-mask (-4) before background layers, disc
-    // (3), glow (4). Local pass mirrors: disc at 3 — after the mesh
-    // LOD (2.8/2.81), so the fading disc composites over the mesh —
-    // and glow last at 4 so a transiting body's glow adds over a
-    // parent mesh behind it. Pin each mesh by name → renderOrder so a
-    // swap fails CI. See src/client/local-depth/README.md.
+  it('exposes the single glare mesh + its local-pass mirror, orders pinned', () => {
+    // Planets = spheroid mesh + one additive glare pass (no opaque disc
+    // / core-mask — the mesh writes depth for occlusion, an unresolved
+    // point-glare needs none). Main-pass glare at 4; local-pass mirror
+    // at 4 too, so a transiting body's glare adds over a parent mesh
+    // behind it. Pin by name → renderOrder so a regression fails CI.
+    // See src/client/local-depth/README.md.
     const f = new PlanetBodyField(makeSharedUniforms());
     const orderByName = new Map(
       f.group.children.map((m) => [m.name, m.renderOrder]),
     );
-    expect(orderByName.get('core')).toBe(-4);
-    expect(orderByName.get('disc')).toBe(3);
     expect(orderByName.get('glow')).toBe(4);
-    expect(f.group.children).toHaveLength(3);
+    expect(f.group.children).toHaveLength(1);
     const localByName = new Map(
       f.localGroup.children.map((m) => [m.name, m.renderOrder]),
     );
-    expect(localByName.get('disc-local')).toBe(3);
     expect(localByName.get('glow-local')).toBe(4);
-    expect(f.localGroup.children).toHaveLength(2);
+    expect(f.localGroup.children).toHaveLength(1);
     f.dispose();
   });
 
@@ -600,13 +598,14 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only iLocalRel — the other 9 attributes stay clean per frame', () => {
+  it('update() flushes only the dynamic pair — the static attributes stay clean per frame', () => {
     // bk5 scale (hundreds of hosts) makes per-frame re-uploads of
     // static attributes (iRadiusPc, iColour, iSolidity, iAlbedoP,
     // iHostAbsmag, iPhaseCoefsA/B/C, iHostLocalPos) measurable wasted
     // bus bandwidth. Pin the dynamic-only flush: after attach (which
     // legitimately touches every attribute) a single update() tick
-    // only flips iLocalRel.
+    // only flips iLocalRel + iLitIntensity (the position + the lit
+    // brightness that rides the host→body distance and slider).
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -635,11 +634,13 @@ describe('PlanetBodyField lifecycle', () => {
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(0, 0, 0);
     f.update(camera, 1, 0);
-    // Only iLocalRel should have been touched. iHostLocalPos /
-    // iRadiusPc / iColour / iSolidity / iAlbedoP / iHostAbsmag /
-    // iPhaseCoefsA / iPhaseCoefsB / iPhaseCoefsC stay quiescent.
+    // Only iLocalRel + iLitIntensity should have been touched.
+    // iHostLocalPos / iRadiusPc / iColour / iSolidity / iAlbedoP /
+    // iHostAbsmag / iPhaseCoefsA / iPhaseCoefsB / iPhaseCoefsC stay
+    // quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
-    expect(flagged.size).toBe(1);
+    expect(flagged.has('iLitIntensity')).toBe(true);
+    expect(flagged.size).toBe(2);
     f.dispose();
   });
 
@@ -1123,7 +1124,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.update(cam, 0, 0);
   }
 
-  it('setHiddenInstance drives one shared uHideIdx uniform across all five passes', () => {
+  it('setHiddenInstance drives one shared uHideIdx uniform across both glare passes', () => {
     const f = makeField();
     attach(f, 0, 2);
     expect(f.hiddenInstance()).toBe(-1);
@@ -1131,7 +1132,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     expect(f.hiddenInstance()).toBe(1);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyF = f as any;
-    for (const mat of [anyF.matDisc, anyF.matGlow, anyF.matCore, anyF.matDiscLocal, anyF.matGlowLocal]) {
+    for (const mat of [anyF.matGlow, anyF.matGlowLocal]) {
       expect(mat.uniforms.uHideIdx.value).toBe(1);
     }
     f.setHiddenInstance(-1);
@@ -1198,7 +1199,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('renderedPlanetSizePx mirrors the shader sizing and kills below the taper', () => {
+  it('renderedPlanetSizePx mirrors the shader glare footprint and kills below the taper', () => {
     const f = makeField();
     attach(f, 0, 1);
     // Camera close to the planet at (1 AU, 0, 0): physical term visible.
@@ -1206,12 +1207,15 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     const px = f.renderedPlanetSizePx(0, near);
     expect(px).toBeGreaterThan(0);
     // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
-    // uViewport.y = 600, uFovYRad = 60°. physSize dominates appSize here.
-    // bufLocalRel stores the planet position in float32, so the
+    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ the 2 px
+    // resolvedness ceiling, so the glare is fully in its resolved bloom:
+    // the footprint is physSize · GLARE_BLOOM_OVERSIZE (the size-clamped
+    // halo). bufLocalRel stores the planet position in float32, so the
     // camera→planet distance carries a ~1e-4 relative quantum at 1 AU
     // magnitudes — compare at that tolerance.
     const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
-    expect(Math.abs(px - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
+    const expectedFootprint = expectedPhys * GLARE_BLOOM_OVERSIZE;
+    expect(Math.abs(px - expectedFootprint) / expectedFootprint).toBeLessThan(1e-3);
     // Unattached instance → 0.
     expect(f.renderedPlanetSizePx(9, near)).toBe(0);
     f.dispose();
