@@ -1,23 +1,42 @@
 # Molecular cloud build
 
-`build-clouds.py` — Zucker 2020 Table A1 + Zucker 2021 Table 1 →
-`public/clouds.json`. Z2021 entries take precedence over Z2020 for the
-clouds both cover. Renderer is currently shelved at the runtime.
+`build-clouds.py` — Zucker 2020 Table A1 + Zucker 2021 Tables 1–3 →
+`public/clouds.json` (v2). Z2021 entries take precedence over Z2020
+for the clouds both cover. Renderer is currently shelved at the
+runtime.
+
+`cloud_model.py` is the shared physics module (stdlib-pure where
+`build-clouds.py` needs it — CI runs it without numpy): the
+galactic↔ICRS frame math, Zucker table parsers, the calibrated
+Plummer density model (column calibration + mass-budget envelope
+tightening), the curated class taxonomy, and the substructure-noise
+constants exported as the `noiseModel` block. `build-dust.py` imports
+it for the per-cloud extinction column check. Physics + measured
+numbers: `docs/molecular-clouds.md` §§ 2–5.
+
+`clouds-json.test.ts` pins the emitted v2 payload (11 calibrated
+clouds, class defaults, noiseModel, in-grid split); it self-skips
+until `public/clouds.json` is built.
 
 Sources under `data/molecular-clouds/`:
 
 - `zucker2020-tablea1.tsv` — 326 sightlines, ~96 unique cloud names.
 - `zucker2021-table1.dat` — 12 famous local SF clouds with 3D bounding
   boxes.
-- `zucker2021-table3.dat` — masses for the same 12 clouds (joined on
-  the raw cloud name).
+- `zucker2021-table2.dat` — fitted radial profiles (Plummer columns)
+  for 11 of the 12 (Corona Australis has no fit and takes class
+  defaults).
+- `zucker2021-table3.dat` — masses + peak A_K for the same 11 clouds
+  (joined on the raw cloud name).
 
 Idempotent — exits early if `public/clouds.json` is newer than the
-script and both source files. Run via `pnpm run build:clouds`.
+scripts and source files. Run via `pnpm run build:clouds`.
 
 ## Output schema
 
-One entry per cloud in `public/clouds.json`:
+`{version: 2, count, noiseModel, clouds[]}` — `noiseModel` carries
+the presence-shader noise-ladder constants
+(docs/molecular-clouds.md § 5.2). One entry per cloud:
 
 | Field      | Meaning |
 | ---------- | ------- |
@@ -30,6 +49,12 @@ One entry per cloud in `public/clouds.json`:
 | `distance` | Heliocentric distance to centroid (pc). |
 | `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the Leike-map `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
 | `sid`      | Frozen Stellata ID (docs/sid.md § 7). |
+| `class`    | `dark` / `sf` / `hii` taxonomy (curated; A.5 cross-match supersedes). |
+| `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model (docs/molecular-clouds.md § 4). |
+| `sigmaS`, `seed` | Log-normal σ_s by class + FNV-1a noise seed. |
+| `massLeike`, `akPeak` | Zucker Table 3 Leike-resolution calibration anchors; null unless profiled. |
+| `inGrid`   | Cloud lies fully inside the ±1250 pc dust voxel cube. |
+| `embedded` | Embedded-star/cavity list — empty until A.5. |
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
 (the tail of `pnpm run build:clouds`), resolving each `cloud:<id>` slug against

@@ -44,15 +44,15 @@ describe('loadClouds', () => {
   });
 
   it('returns null on unsupported version (forward-compat guard)', async () => {
-    mockFetch({ version: 2, count: 0, clouds: [] } satisfies Raw);
+    mockFetch({ version: 3, count: 0, clouds: [] } satisfies Raw);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await loadClouds('/clouds.json')).toBeNull();
     warn.mockRestore();
   });
 
-  it('parses a v1 catalog including the sid and mass columns', async () => {
+  it('parses a v2 catalog including the sid and mass columns', async () => {
     mockFetch({
-      version: 1,
+      version: 2,
       count: 1,
       clouds: [{ ...baseCloud, mass: 32122 }],
     } satisfies Raw);
@@ -67,14 +67,14 @@ describe('loadClouds', () => {
   });
 
   it('maps a missing mass to null (Z2020 clouds carry none)', async () => {
-    mockFetch({ version: 1, count: 1, clouds: [baseCloud] } satisfies Raw);
+    mockFetch({ version: 2, count: 1, clouds: [baseCloud] } satisfies Raw);
     const out = await loadClouds('/clouds.json');
     expect(out!.clouds[0].massMsun).toBeNull();
   });
 
   it('returns null when any cloud is missing its sid (pre-stamp artifact)', async () => {
     const { sid: _sid, ...noSid } = baseCloud;
-    mockFetch({ version: 1, count: 1, clouds: [noSid] } satisfies Raw);
+    mockFetch({ version: 2, count: 1, clouds: [noSid] } satisfies Raw);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await loadClouds('/clouds.json')).toBeNull();
     expect(warn).toHaveBeenCalledWith(
@@ -85,7 +85,7 @@ describe('loadClouds', () => {
 
   it('returns null on a duplicate sid', async () => {
     mockFetch({
-      version: 1,
+      version: 2,
       count: 2,
       clouds: [baseCloud, { ...baseCloud, id: 'orion-b' }],
     } satisfies Raw);

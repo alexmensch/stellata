@@ -61,7 +61,7 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   }
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
-  if (raw.version !== 1) {
+  if (raw.version !== 2) {
     console.warn(`clouds.json version ${raw.version} unsupported`);
     return null;
   }
