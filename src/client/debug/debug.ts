@@ -3,6 +3,7 @@ import { type DebugSection, makeCollapsibleSection, makeDebugPanel } from './deb
 import { buildMilkywaySection } from '../milkyway/milkyway-tuning';
 import { buildStarSection } from './star-tuning';
 import { buildPlanetSection } from './planet-tuning';
+import { buildAtmosphereSection } from './atmosphere-tuning';
 import { buildDeepFieldSection } from '../local-group/local-group-tuning';
 import { buildPerfSection } from './perf-hud';
 import { buildPinSection } from './pin-debug-hud';
@@ -72,6 +73,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
       { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
       { title: 'Planet glare', storageKey: 'planet',   build: () => buildPlanetSection(stellata) },
+      { title: 'Atmosphere', storageKey: 'atmosphere', build: () => buildAtmosphereSection(stellata) },
       { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkywayLayer) },
       { title: 'Deep field', storageKey: 'deep-field', build: () => buildDeepFieldSection(() => stellata.localGroupEmission) },
       { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection() },

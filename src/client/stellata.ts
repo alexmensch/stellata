@@ -66,7 +66,7 @@ import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-r
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
-import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
+import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { MIRROR_CAPACITY, StarLocalMirror } from './star-pipeline/star-local-mirror';
@@ -2128,6 +2128,12 @@ export class Stellata implements FrameAnchor {
    *  knob (debug/planet-tuning.ts). */
   setPlanetGlareGain(gain: number) { this.planetBodyField.setGlareGain(gain); }
   getPlanetGlareGain(): number { return this.planetBodyField.getGlareGain(); }
+  /** Global atmosphere-scattering multipliers — dev-panel smoke knobs
+   *  (debug/atmosphere-tuning.ts). Applied on top of each body's base. */
+  setAtmosphereTuning(patch: Partial<AtmosphereTuning>) {
+    this.planetMeshLayer.setAtmosphereTuning(patch);
+  }
+  getAtmosphereTuning(): AtmosphereTuning { return this.planetMeshLayer.getAtmosphereTuning(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
     this.filters.clearSizeOverrides(fields);
   }
