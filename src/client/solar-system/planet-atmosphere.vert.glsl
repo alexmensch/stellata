@@ -2,11 +2,12 @@ precision highp float;
 
 #include <common>
 
-// Shell-local unit-sphere position — the fragment shader runs the
-// ray/shell geometry in this frame (shell radius = 1).
-out vec3 vPosL;
+// View-space shell position — the fragment shader runs the ray/atmosphere
+// geometry with the camera at the view-space origin.
+out vec3 vPosV;
 
 void main() {
-  vPosL = position;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec4 posV = modelViewMatrix * vec4(position, 1.0);
+  vPosV = posV.xyz;
+  gl_Position = projectionMatrix * posV;
 }

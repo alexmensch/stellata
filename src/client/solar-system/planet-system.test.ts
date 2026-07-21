@@ -312,4 +312,17 @@ describe('atmosphere shells', () => {
     const titan = SOL_BODIES.find((b) => b.name === 'Titan')!;
     expect(titan.atmosphere!.heightKm / titan.radiusKm).toBeCloseTo(0.117, 2);
   });
+
+  it('Earth Rayleigh scatter is blue-heavy (1/λ⁴), zero aerosol absorption', () => {
+    const earth = SOL_BODIES.find((b) => b.name === 'Earth')!.atmosphere!;
+    expect(earth.rayleighCoeff[2]).toBeGreaterThan(earth.rayleighCoeff[0]);
+    expect(earth.absorbCoeff).toEqual([0, 0, 0]);
+  });
+
+  it('Mars and Titan absorb blue most (butterscotch / orange, not blue)', () => {
+    for (const name of ['Mars', 'Titan']) {
+      const atmo = SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
+      expect(atmo.absorbCoeff[2]).toBeGreaterThan(atmo.absorbCoeff[0]);
+    }
+  });
 });

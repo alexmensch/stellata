@@ -120,14 +120,26 @@ export interface Planet {
 export interface PlanetAtmosphere {
   /** Visible shell height above the surface, km — the TRUE scattering
    *  extent (Kármán-line scale for Earth, haze-top for Venus/Titan),
-   *  never an exaggerated art value. */
+   *  never an exaggerated art value. Sets the integration extent. */
   readonly heightKm: number;
-  /** Scattering tint, linear-ish [0,1] RGB. */
-  readonly colour: readonly [number, number, number];
-  /** Day-side limb glow strength (≈0.2 thin Mars … ≈0.7 dense Venus). */
-  readonly limbStrength: number;
-  /** Back-lit forward-scatter ring strength as phase → 180°. */
-  readonly scatterStrength: number;
+  /** Rayleigh (molecular) scale height, km. */
+  readonly rayleighHeightKm: number;
+  /** Mie (aerosol) scale height, km — also the absorption profile. */
+  readonly mieHeightKm: number;
+  /** Rayleigh scatter coefficient per channel, as a vertical optical depth
+   *  (1/λ⁴ shape → blue). Earth's blue sky; a near-zero molecular column on
+   *  dust-dominated Mars. */
+  readonly rayleighCoeff: readonly [number, number, number];
+  /** Grey Mie (aerosol) scatter coefficient, vertical optical depth. */
+  readonly mieCoeff: number;
+  /** Aerosol absorption per channel, vertical optical depth — the hue
+   *  source a grey-Mie model cannot give: blue removed → Titan orange,
+   *  Mars butterscotch, Venus pale yellow. */
+  readonly absorbCoeff: readonly [number, number, number];
+  /** Henyey-Greenstein forward asymmetry; default MIE_G_DEFAULT (0.76). */
+  readonly mieG?: number;
+  /** Illuminant colour; default SUN_COLOUR (Sol warm-white). */
+  readonly sunColour?: readonly [number, number, number];
 }
 
 export interface PlanetRings {
@@ -274,10 +286,13 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
     terminatorSoftness: 0.08,
-    // Haze tops ~90 km; the densest atmosphere of the four, with the
-    // strongest forward-scatter ring (its high-α brightening is already
-    // in the Mallama curve photometrically — this is the morphology).
-    atmosphere: { heightKm: 90, colour: [1.0, 0.95, 0.82], limbStrength: 0.7, scatterStrength: 1.2 },
+    // Thick sulphuric-acid cloud: huge grey Mie scatter (bright uniform
+    // disc), mild blue absorption for the pale-yellow tint.
+    atmosphere: {
+      heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
+      rayleighCoeff: [0.01, 0.024, 0.06], mieCoeff: 5.0,
+      absorbCoeff: [0.02, 0.05, 0.12], mieG: 0.70,
+    },
   },
   {
     name: 'Earth',
@@ -293,8 +308,13 @@ export const SOL_PLANETS: readonly Planet[] = [
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
     hasNightTexture: true,
-    // Kármán-line visible extent; Rayleigh blue.
-    atmosphere: { heightKm: 100, colour: [0.42, 0.60, 1.0], limbStrength: 0.5, scatterStrength: 0.6 },
+    // Clean air: Rayleigh (1/λ⁴) dominates → blue airlight over the dark
+    // ocean; negligible aerosol.
+    atmosphere: {
+      heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
+      rayleighCoeff: [0.038, 0.090, 0.220], mieCoeff: 0.021,
+      absorbCoeff: [0, 0, 0],
+    },
   },
   {
     name: 'Mars',
@@ -308,9 +328,14 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
     terminatorSoftness: 0.02,
-    // Thin CO2 + dust haze to ~60 km; orbiter limb shots read faint
-    // dusty-blue.
-    atmosphere: { heightKm: 60, colour: [0.62, 0.66, 0.80], limbStrength: 0.2, scatterStrength: 0.25 },
+    // Dust-dominated: negligible molecular Rayleigh, moderate Mie dust
+    // scatter, blue-absorbing dust → butterscotch sky (blue forward-sunset
+    // falls out of the Mie phase).
+    atmosphere: {
+      heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
+      rayleighCoeff: [0.004, 0.009, 0.020], mieCoeff: 0.40,
+      absorbCoeff: [0.03, 0.12, 0.35],
+    },
   },
   {
     name: 'Jupiter',
@@ -431,7 +456,14 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   // (~12 % of R); the famous Cassini back-lit ring.
   { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28],
     terminatorSoftness: 0.05,
-    atmosphere: { heightKm: 300, colour: [0.85, 0.58, 0.32], limbStrength: 0.55, scatterStrength: 1.1 } },
+    // Thick tholin haze: strong grey Mie scatter, strongly forward (Cassini
+    // back-lit ring), and heavy blue absorption (high-in-blue absorbCoeff)
+    // → orange. Do not invert the absorption channels.
+    atmosphere: {
+      heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
+      rayleighCoeff: [0.02, 0.04, 0.08], mieCoeff: 2.5,
+      absorbCoeff: [0.10, 0.45, 1.10], mieG: 0.80,
+    } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 
   { name: 'Miranda', parentName: 'Uranus', radiusKm: 235.8, albedo: 0.32, type: 'icy', colour: [0.62, 0.62, 0.63] },

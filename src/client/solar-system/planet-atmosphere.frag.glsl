@@ -1,63 +1,55 @@
 precision highp float;
 
 #include <common>
+#include <stellata_atmosphere_scatter>
 
-// Camera position in shell-local units (shell radius = 1). The camera
-// never enters the shell: the tightest orbit floor is ~2.4 body radii
-// and the largest shell (Titan) is 1.12 R.
-uniform vec3 uCamPosShell;
-// Body → host direction, unit, same frame.
-uniform vec3 uSunDirShell;
-uniform vec3 uAtmoColour;
-// Body radius as a fraction of the shell radius, R / (R + h).
-uniform float uBodyRadiusFrac;
-uniform float uLimbStrength;
-uniform float uScatterStrength;
+// Planet centre + radii in view space (rigid, so pc lengths are preserved).
+uniform vec3 uCenterView;
+uniform float uRadiusPc;
+// Atmosphere top radius in planet-radius units (1 + heightKm/radiusKm).
+uniform float uAtmoRadius;
+// Body → host direction, unit, view space.
+uniform vec3 uSunDirView;
+// Scale heights (planet-radius units) + per-channel coefficients.
+uniform float uScaleHeightR;
+uniform float uScaleHeightM;
+uniform vec3 uBetaRayleigh;
+uniform float uBetaMie;
+uniform vec3 uBetaAbsorb;
+uniform float uMieG;
+// Sun colour × intensity, and the host-distance display exposure.
+uniform vec3 uSunColour;
+uniform float uLitIntensity;
 uniform float uFade;
 
-in vec3 vPosL;
+in vec3 vPosV;
 
 out vec4 outColor;
 
-// Henyey-Greenstein asymmetry for the back-lit forward-scatter ring.
-const float HG_G = 0.85;
-// Day-side gate band on dot(limb normal, sun): a soft wrap past the
-// geometric terminator stands in for twilight refraction.
-const float DAY_WRAP_LO = -0.15;
-const float DAY_WRAP_HI = 0.25;
-
 void main() {
-  vec3 dir = normalize(vPosL - uCamPosShell);
+  vec3 dir = normalize(vPosV);
+  // Camera (origin) relative to the planet centre, planet-radius units.
+  vec3 o = -uCenterView / uRadiusPc;
 
-  // Closest approach of the view ray to the body centre gives the
-  // impact parameter; the optical path through the shell is the chord
-  // (both halves when the ray misses the body, entry-to-surface when
-  // it hits), normalised by the body-grazing maximum. Squaring biases
-  // the density toward the limb so the disc face stays untinted.
-  float t0 = -dot(uCamPosShell, dir);
-  vec3 p0 = uCamPosShell + t0 * dir;
-  float b2 = dot(p0, p0);
-  float rb = uBodyRadiusFrac;
-  float outerHalf = sqrt(max(1.0 - b2, 0.0));
-  float bodyHalf = sqrt(max(rb * rb - b2, 0.0));
-  float path = b2 < rb * rb ? outerHalf - bodyHalf : 2.0 * outerHalf;
-  float density = clamp(path / (2.0 * sqrt(1.0 - rb * rb)), 0.0, 1.0);
-  density *= density;
+  float b = dot(o, dir);
+  float discA = b * b - (dot(o, o) - uAtmoRadius * uAtmoRadius);
+  if (discA <= 0.0) discard;
+  float rootA = sqrt(discA);
+  float t0 = -b - rootA;
+  float t1 = -b + rootA;
+  if (t1 <= 0.0) discard;
 
-  // Day-side limb glow: lit where the shell's closest-approach normal
-  // faces the host.
-  float day = smoothstep(DAY_WRAP_LO, DAY_WRAP_HI, dot(normalize(p0), uSunDirShell));
+  // Rays that strike the body ahead of the camera belong to the lit disc —
+  // the mesh shader paints their airlight; the shell handles only the limb.
+  float discP = b * b - (dot(o, o) - 1.0);
+  if (discP > 0.0 && -b - sqrt(discP) > 0.0) discard;
 
-  // Back-lit refraction / forward-scatter ring: peak-normalised HG
-  // against the light propagation direction, ramping in smoothly as
-  // the phase angle approaches 180° (body between camera and host).
-  float cosT = dot(dir, -uSunDirShell);
-  float denom = 1.0 + HG_G * HG_G - 2.0 * HG_G * cosT;
-  float hg = (1.0 - HG_G * HG_G) / (denom * sqrt(denom));
-  float hgPeak = (1.0 - HG_G * HG_G) / pow(1.0 - HG_G, 3.0);
-  float scatter = hg / hgPeak;
+  vec3 inscatter;
+  vec3 transmittance;
+  stellata_atmosphereRadiance(
+    o, dir, max(t0, 0.0), t1, uAtmoRadius, uSunDirView,
+    uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
+    inscatter, transmittance);
 
-  float glow = (uLimbStrength * day + uScatterStrength * scatter) * density;
-  // Additive blending — alpha is ignored by the (One, One) equation.
-  outColor = vec4(uAtmoColour * glow * uFade, 1.0);
+  outColor = vec4(inscatter * uSunColour * uLitIntensity * uFade, 1.0);
 }

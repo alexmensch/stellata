@@ -1,6 +1,7 @@
 precision highp float;
 
 #include <common>
+#include <stellata_atmosphere_scatter>
 
 // uMap and uNightMap are always bound (1×1 white placeholder when the
 // body has no texture) — sampling an unbound texture is undefined in
@@ -33,6 +34,19 @@ uniform int uCasterCount;
 // Host angular radius from the body — penumbra half-width per unit
 // distance along the sun ray.
 uniform float uSunAngRad;
+// Atmosphere airlight over the lit disc (final = surface·T_view + L_air).
+// uHasAtmosphere gates the whole block; the rest mirror the shell shader.
+uniform float uHasAtmosphere;
+uniform vec3 uCenterView;
+uniform float uRadiusPc;
+uniform float uAtmoRadius;
+uniform float uScaleHeightR;
+uniform float uScaleHeightM;
+uniform vec3 uBetaRayleigh;
+uniform float uBetaMie;
+uniform vec3 uBetaAbsorb;
+uniform float uMieG;
+uniform vec3 uSunColour;
 
 in vec3 vNormalV;
 in vec3 vPosV;
@@ -89,5 +103,25 @@ void main() {
   float nightRamp = 1.0 - smoothstep(-NIGHT_RAMP, NIGHT_RAMP, sunCos);
   vec3 night = texture(uNightMap, vUvM).rgb * nightRamp * uHasNight * NIGHT_INTENSITY;
   vec3 reflected = base * dayside * limb * uPhaseScale * uLitIntensity * shadow;
-  outColor = vec4(reflected + night, uFade);
+  vec3 col = reflected + night;
+
+  if (uHasAtmosphere > 0.5) {
+    // Airlight in front of this surface fragment + the transmittance the
+    // surface radiance loses on its way out through the atmosphere.
+    vec3 dir = normalize(vPosV);
+    vec3 o = -uCenterView / uRadiusPc;
+    float tStop = length(vPosV) / uRadiusPc;
+    float b = dot(o, dir);
+    float discA = b * b - (dot(o, o) - uAtmoRadius * uAtmoRadius);
+    float tStart = discA > 0.0 ? max(-b - sqrt(discA), 0.0) : 0.0;
+    vec3 inscatter;
+    vec3 transmittance;
+    stellata_atmosphereRadiance(
+      o, dir, tStart, tStop, uAtmoRadius, uSunDirView,
+      uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
+      inscatter, transmittance);
+    col = col * transmittance + inscatter * uSunColour * uLitIntensity;
+  }
+
+  outColor = vec4(col, uFade);
 }
