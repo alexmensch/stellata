@@ -120,10 +120,15 @@ src/client/solar-system/
                                   sample, lit/transmitted faces, body
                                   shadow) — see § Planet mesh LOD.
   planet-atmosphere.vert.glsl,
-  planet-atmosphere.frag.glsl     Atmosphere-shell shaders (analytic
-                                  chord density, day-side limb glow,
-                                  back-lit forward-scatter ring) — see
-                                  § Atmospheres.
+  planet-atmosphere.frag.glsl     Atmosphere limb/halo shell shaders —
+                                  single-scattering airlight for rays that
+                                  miss the disc. See § Atmospheres.
+  atmosphere-scatter.glsl         Shared single-scattering integrator,
+                                  spliced into the mesh + shell frag sources
+                                  (disc airlight + limb halo).
+  atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body
+                                  calibration constants + phase functions.
+                                  Vitest-pinned. See § Atmospheres.
   rotation-elements-pure.ts       IAU rotation elements per body (pole +
                                   prime meridian on the model clock) —
                                   see § Planet rotation.
@@ -665,36 +670,60 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
 
 ### Atmospheres
 
-Venus, Earth, Mars, and Titan carry `Planet.atmosphere` — a spherical
-shell mesh at `R + heightKm` (shared unit sphere, `renderOrder` 2.82,
-additive, depth-tested so the body occludes the far hemisphere) shown
-only in the mesh-LOD regime, riding the same crossfade `uFade`. The
-fragment shader integrates the view ray's optical path through the
-shell analytically (chord through shell minus the body-blocked
-segment, normalised at body-grazing), squared to bias the light to
-the limb, and drives two terms:
+Venus, Earth, Mars, and Titan carry `Planet.atmosphere`, rendered as a
+**first-principles single-scattering** model (Nishita/O'Neil few-sample:
+`ATMO_N_VIEW` view samples × `ATMO_N_LIGHT` sun-ray samples). The integrator
+lives once in `atmosphere-scatter.glsl`, spliced into both fragment sources
+and CPU-mirrored (vitest-pinned) in `atmosphere-scattering-pure.ts` — the TS
+constants seed the GLSL sample-count `#define`s so the loop bounds cannot
+drift. Only runs in the mesh-LOD regime; both paths ride the crossfade
+`uFade`.
 
-- **Day-side limb glow** — the chord density gated on the
-  closest-approach normal facing the host, with a soft wrap past the
-  terminator standing in for twilight refraction.
-- **Back-lit forward-scatter ring** — peak-normalised
-  Henyey-Greenstein (g = 0.85) against the light propagation
-  direction, appearing smoothly as the phase angle approaches 180°
-  (body between camera and host). Venus and Titan carry the strongest
-  weights — the inferior-conjunction ring and Cassini's back-lit haze
-  ring respectively. Venus's high-α *photometric* brightening is
-  already in its Mallama curve; this is the morphology only.
+Three species over two exponential density profiles ρ(h) = exp(−h/H):
 
-Shell heights are TRUE scattering extents (Earth 100 km ≈ Kármán,
-Venus 90 km haze tops, Mars 60 km dust haze, Titan 300 km detached
-haze), never exaggerated: at the planet focus park (30 %-fill
-framing) Earth's shell reads ≈ 3 px — deliberately subtle, per the
-camera-anywhere honesty rule. The shell is spherical even on oblate
-bodies (flattening ≤ 0.6 % for these four, far below shell
-thickness). **Gas giants deliberately carry no shell**: their fuzzy
-limb is already carried by the solidity-soft billboard edge at
-distance and the cloud-deck maps up close, and none has a detached
-haze layer distinct from the cloud deck at render scale.
+- **Rayleigh** (molecular) — per-channel scatter coefficient ∝ 1/λ⁴ (blue),
+  phase `3/16π·(1 + cos²θ)`. Earth's blue airlight.
+- **Mie** (aerosol) — grey scatter coefficient, forward Henyey-Greenstein
+  (default g = 0.76). The haze glow + Cassini-style back-lit limb ring.
+- **Aerosol absorption** — a per-channel extinction term (no re-emission).
+  This is the hue source a grey-Mie-scatter model cannot give: high-in-blue
+  absorption removes blue from both the airlight and the view-path
+  transmittance, so **Titan reads orange, Mars butterscotch, Venus pale
+  yellow**. Earth's is zero. Do not invert the `absorbCoeff` channels — blue
+  is the *most* absorbed.
+
+The night/day terminator falls out of the geometry: a sun-ray sample that
+re-enters the planet sphere is in shadow and contributes no in-scatter, so
+there is no ad-hoc day gate. **Airlight is applied on both surfaces:**
+
+- **Disc** (`planet-mesh.frag.glsl`) — `final = surface·T_view + L_air`. The
+  transmittance `T_view` pales/desaturates the surface (Earth's dark ocean
+  goes pale blue — this subsumes the old "tint the ocean texture" idea; the
+  texture stays a pure albedo) and `L_air` is the in-scattered column in
+  front of it.
+- **Limb** (`planet-atmosphere.frag.glsl`) — additive halo for rays that miss
+  the disc (impact parameter > R); rays that strike the body are `discard`-ed
+  so the disc path owns them (no double-count). The full-chord airlight is the
+  physical back-lit ring.
+
+Per-body params live in `planet-system.ts` `PlanetAtmosphere` as scale
+heights + **vertical optical depths** (`rayleighCoeff`, `mieCoeff`,
+`absorbCoeff`); the layer divides by H/R to get the surface extinction the
+integrator wants. A dev **'Atmosphere' debug panel** (`debug/atmosphere-tuning.ts`)
+exposes four global multipliers applied on top of the per-body base — density
+(the 'dial Titan down' knob), Rayleigh↔Mie balance, scale height, and sun
+intensity — for live calibration; read a good value off the slider and bake it
+into the per-body table.
+
+Shell heights are TRUE scattering extents (Earth 100 km ≈ Kármán, Venus 90 km
+haze tops, Mars 60 km dust haze, Titan 300 km detached haze), never
+exaggerated: at the planet focus park (30 %-fill framing) Earth's shell reads
+≈ 3 px — deliberately subtle, per the camera-anywhere honesty rule. The shell
+is spherical even on oblate bodies (flattening ≤ 0.6 % for these four, far
+below shell thickness). **Gas giants deliberately carry no shell**: their
+fuzzy limb is already carried by the solidity-soft billboard edge at distance
+and the cloud-deck maps up close, and none has a detached haze layer distinct
+from the cloud deck at render scale.
 
 ### Planet rotation (stellata-2f6.13)
 

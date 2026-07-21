@@ -26,6 +26,9 @@ src/client/debug/
   planet-tuning.ts                Reflected-planet-glare peak slider
                                   (uGlareGain — planet glare brightness
                                   vs a star of the same magnitude).
+  atmosphere-tuning.ts            Four global atmosphere-scattering
+                                  multipliers (density, Rayleigh↔Mie
+                                  balance, scale height, sun intensity).
   (+ tests for the pure helpers.)
 ```
 
@@ -34,7 +37,7 @@ src/client/debug/
 The HUD is an opt-in dev tool, not a user feature. Activation paths:
 
 - **`debug.panel()`** in the dev console — opens the unified debug
-  panel; the Perf section is one of nine
+  panel; the Perf section is one of ten
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
   `mark`/`measure`/`frame` functions to real implementations).
@@ -253,9 +256,10 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with nine sections:
+collapsible host with ten sections:
 Star disc (`star-tuning.ts`),
 Planet glare (`planet-tuning.ts`),
+Atmosphere (`atmosphere-tuning.ts`),
 Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse
