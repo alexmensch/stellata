@@ -6,6 +6,9 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
+// Mirror of AIRLIGHT_GAIN / MS_STRENGTH in atmosphere-scattering-pure.ts.
+const float STELLATA_AIRLIGHT_GAIN = 3.0;
+const float STELLATA_MS_STRENGTH = 0.6;
 
 float stellata_rayleighPhase(float mu) {
   return STELLATA_RAYLEIGH_PHASE_K * (1.0 + mu * mu);
@@ -15,6 +18,13 @@ float stellata_miePhase(float mu, float g) {
   float g2 = g * g;
   float denom = max(1.0 + g2 - 2.0 * g * mu, 1e-6);
   return STELLATA_INV_4PI * (1.0 - g2) / (denom * sqrt(denom));
+}
+
+// Interleaved gradient noise — a cheap per-fragment [0,1) hash used to jitter
+// the ray-march sample lattice so the low sample count reads as fine noise
+// rather than a fixed moiré grid.
+float stellata_atmoJitter(vec2 fragCoord) {
+  return fract(52.9829189 * fract(dot(fragCoord, vec2(0.06711056, 0.00583715))));
 }
 
 // Second (far) positive root of |o + t·d| = radius, or -1 on a miss.
@@ -35,11 +45,12 @@ bool stellata_inPlanetShadow(vec3 p, vec3 d) {
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along
-// o + t·d for t ∈ [tStart, tStop].
+// o + t·d for t ∈ [tStart, tStop]. `jitter` ∈ [0,1) offsets the sample
+// lattice per fragment (anti-banding).
 void stellata_atmosphereRadiance(
   vec3 o, vec3 d, float tStart, float tStop, float rAtmo,
   vec3 sunDir, float hR, float hM,
-  vec3 betaRs, float betaMs, vec3 betaA, float g,
+  vec3 betaRs, float betaMs, vec3 betaA, float g, float jitter,
   out vec3 inscatter, out vec3 transmittance
 ) {
   float span = tStop - tStart;
@@ -54,9 +65,10 @@ void stellata_atmosphereRadiance(
 
   float viewOdR = 0.0;
   float viewOdM = 0.0;
+  float litSum = 0.0;
 
   for (int i = 0; i < ATMO_N_VIEW; i++) {
-    float t = tStart + (float(i) + 0.5) * segLen;
+    float t = tStart + (float(i) + jitter) * segLen;
     vec3 p = o + t * d;
     float h = max(length(p) - 1.0, 0.0);
     float dR = exp(-h / hR);
@@ -65,14 +77,15 @@ void stellata_atmosphereRadiance(
     viewOdM += dM * segLen;
 
     if (stellata_inPlanetShadow(p, sunDir)) continue;
-
     float sExit = stellata_farRoot(p, sunDir, rAtmo);
     if (sExit <= 0.0) continue;
+    litSum += 1.0;
+
     float lStep = sExit / float(ATMO_N_LIGHT);
     float lightOdR = 0.0;
     float lightOdM = 0.0;
     for (int j = 0; j < ATMO_N_LIGHT; j++) {
-      float s = (float(j) + 0.5) * lStep;
+      float s = (float(j) + jitter) * lStep;
       vec3 q = p + s * sunDir;
       float hq = max(length(q) - 1.0, 0.0);
       lightOdR += exp(-hq / hR) * lStep;
@@ -86,4 +99,10 @@ void stellata_atmosphereRadiance(
   }
 
   transmittance = exp(-(betaRs * viewOdR + (betaMs + betaA) * viewOdM));
+  // Isotropic multiple-scattering fill: fraction-scattered × opacity × sunlit.
+  float litFrac = litSum / float(ATMO_N_VIEW);
+  vec3 scatterC = betaRs + betaMs;
+  vec3 ssAlbedo = scatterC / max(scatterC + betaA, vec3(1e-6));
+  vec3 ms = ssAlbedo * (1.0 - transmittance) * (litFrac * STELLATA_MS_STRENGTH);
+  inscatter = inscatter * STELLATA_AIRLIGHT_GAIN + ms;
 }

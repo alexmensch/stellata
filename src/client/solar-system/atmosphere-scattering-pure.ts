@@ -2,9 +2,20 @@
 // mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § Atmospheres.
 
-export const ATMO_N_VIEW = 6;
-export const ATMO_N_LIGHT = 4;
+export const ATMO_N_VIEW = 12;
+export const ATMO_N_LIGHT = 6;
 export const MIE_G_DEFAULT = 0.76;
+
+/** Overall single-scatter brightness so the neutral slider (sun = 1) is
+ *  roughly calibrated — the airlight is dim in absolute radiance units. */
+export const AIRLIGHT_GAIN = 3.0;
+
+/** Isotropic multiple-scattering fill weight. Single scattering alone leaves
+ *  optically thick hazes (Venus, Titan) far too dark — most of their light
+ *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
+ *  opacity × sunlit, which is negligible for thin atmospheres (Earth) and
+ *  dominant for thick ones. */
+export const MS_STRENGTH = 0.6;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];
@@ -69,9 +80,12 @@ export interface ScatterResult {
   readonly transmittance: Vec3;
 }
 
-/** Integrate single-scattered airlight and view-path transmittance along the
- *  ray o + t·d for t ∈ [tStart, tStop] (planet centred at origin, rPlanet = 1).
- *  Mirrors stellata_atmosphereRadiance in atmosphere-scatter.glsl. */
+/** Integrate single-scattered airlight (+ a cheap multiple-scattering fill)
+ *  and view-path transmittance along the ray o + t·d for t ∈ [tStart, tStop]
+ *  (planet centred at origin, rPlanet = 1). Mirrors stellata_atmosphereRadiance
+ *  in atmosphere-scatter.glsl. `jitter` ∈ [0,1) offsets the sample lattice
+ *  within each segment — the shader passes a per-fragment value to break
+ *  ray-march banding; the CPU mirror uses the midpoint (0.5). */
 export function scatterAlongRay(
   o: Vec3,
   d: Vec3,
@@ -79,6 +93,7 @@ export function scatterAlongRay(
   tStop: number,
   sunDir: Vec3,
   p: AtmosphereParams,
+  jitter = 0.5,
 ): ScatterResult {
   const span = tStop - tStart;
   if (span <= 0) {
@@ -91,10 +106,11 @@ export function scatterAlongRay(
 
   let viewOdR = 0;
   let viewOdM = 0;
+  let litSum = 0;
   const inscatter: [number, number, number] = [0, 0, 0];
 
   for (let i = 0; i < ATMO_N_VIEW; i++) {
-    const t = tStart + (i + 0.5) * segLen;
+    const t = tStart + (i + jitter) * segLen;
     const px = o[0] + t * d[0];
     const py = o[1] + t * d[1];
     const pz = o[2] + t * d[2];
@@ -105,14 +121,15 @@ export function scatterAlongRay(
     viewOdM += dM * segLen;
 
     if (inPlanetShadow(px, py, pz, sunDir[0], sunDir[1], sunDir[2])) continue;
-
     const sExit = farRoot(px, py, pz, sunDir[0], sunDir[1], sunDir[2], p.rAtmo);
     if (sExit <= 0) continue;
+    litSum++;
+
     const lStep = sExit / ATMO_N_LIGHT;
     let lightOdR = 0;
     let lightOdM = 0;
     for (let j = 0; j < ATMO_N_LIGHT; j++) {
-      const s = (j + 0.5) * lStep;
+      const s = (j + jitter) * lStep;
       const qx = px + s * sunDir[0];
       const qy = py + s * sunDir[1];
       const qz = pz + s * sunDir[2];
@@ -122,9 +139,7 @@ export function scatterAlongRay(
     }
 
     for (let c = 0; c < 3; c++) {
-      const odR = viewOdR + lightOdR;
-      const odM = viewOdM + lightOdM;
-      const tau = p.betaRs[c] * odR + (p.betaMs + p.betaA[c]) * odM;
+      const tau = p.betaRs[c] * (viewOdR + lightOdR) + (p.betaMs + p.betaA[c]) * (viewOdM + lightOdM);
       const attn = Math.exp(-tau);
       const scatter = p.betaRs[c] * dR * pR + p.betaMs * dM * pM;
       inscatter[c] += scatter * attn * segLen;
@@ -132,8 +147,15 @@ export function scatterAlongRay(
   }
 
   const transmittance: [number, number, number] = [0, 0, 0];
+  const litFrac = litSum / ATMO_N_VIEW;
   for (let c = 0; c < 3; c++) {
     transmittance[c] = Math.exp(-(p.betaRs[c] * viewOdR + (p.betaMs + p.betaA[c]) * viewOdM));
+    // Isotropic multiple-scattering fill: fraction-scattered × opacity ×
+    // sunlit. Negligible when thin (opacity → 0), dominant when thick.
+    const scatterC = p.betaRs[c] + p.betaMs;
+    const ssAlbedo = scatterC / Math.max(scatterC + p.betaA[c], 1e-6);
+    const ms = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
+    inscatter[c] = inscatter[c] * AIRLIGHT_GAIN + ms;
   }
   return { inscatter, transmittance };
 }

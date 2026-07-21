@@ -286,12 +286,12 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
     terminatorSoftness: 0.08,
-    // Thick sulphuric-acid cloud: huge grey Mie scatter (bright uniform
-    // disc), mild blue absorption for the pale-yellow tint.
+    // Thick sulphuric-acid cloud: grey Mie scatter (bright featureless disc
+    // via the multiple-scattering fill), mild blue absorption → pale yellow.
     atmosphere: {
       heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
-      rayleighCoeff: [0.01, 0.024, 0.06], mieCoeff: 5.0,
-      absorbCoeff: [0.02, 0.05, 0.12], mieG: 0.70,
+      rayleighCoeff: [0.003, 0.007, 0.018], mieCoeff: 1.5,
+      absorbCoeff: [0.006, 0.015, 0.036], mieG: 0.70,
     },
   },
   {
@@ -312,7 +312,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     // ocean; negligible aerosol.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
-      rayleighCoeff: [0.038, 0.090, 0.220], mieCoeff: 0.021,
+      rayleighCoeff: [0.011, 0.027, 0.066], mieCoeff: 0.005,
       absorbCoeff: [0, 0, 0],
     },
   },
@@ -328,13 +328,13 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
     terminatorSoftness: 0.02,
-    // Dust-dominated: negligible molecular Rayleigh, moderate Mie dust
-    // scatter, blue-absorbing dust → butterscotch sky (blue forward-sunset
-    // falls out of the Mie phase).
+    // Dust-dominated: negligible molecular Rayleigh, thin Mie dust scatter,
+    // blue-absorbing dust → butterscotch sky (blue forward-sunset falls out
+    // of the Mie phase).
     atmosphere: {
       heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
-      rayleighCoeff: [0.004, 0.009, 0.020], mieCoeff: 0.40,
-      absorbCoeff: [0.03, 0.12, 0.35],
+      rayleighCoeff: [0.0012, 0.0027, 0.006], mieCoeff: 0.08,
+      absorbCoeff: [0.01, 0.04, 0.11],
     },
   },
   {
@@ -461,8 +461,8 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
     // → orange. Do not invert the absorption channels.
     atmosphere: {
       heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
-      rayleighCoeff: [0.02, 0.04, 0.08], mieCoeff: 2.5,
-      absorbCoeff: [0.10, 0.45, 1.10], mieG: 0.80,
+      rayleighCoeff: [0.006, 0.012, 0.024], mieCoeff: 0.8,
+      absorbCoeff: [0.03, 0.14, 0.35], mieG: 0.80,
     } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 

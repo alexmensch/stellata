@@ -49,6 +49,7 @@ void main() {
   stellata_atmosphereRadiance(
     o, dir, max(t0, 0.0), t1, uAtmoRadius, uSunDirView,
     uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
+    stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);
 
   outColor = vec4(inscatter * uSunColour * uLitIntensity * uFade, 1.0);

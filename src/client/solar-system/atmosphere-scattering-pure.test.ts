@@ -94,6 +94,26 @@ describe('scatterAlongRay', () => {
     expect(r.inscatter[0]).toBeGreaterThan(r.inscatter[2]); // red > blue
     expect(r.transmittance[0]).toBeGreaterThan(r.transmittance[2]); // blue absorbed
   });
+
+  it('thick haze lights up via the multiple-scattering fill (not black)', () => {
+    // Single scatter self-extinguishes at this thickness; the isotropic MS
+    // fill is what keeps a Venus-class disc bright rather than going dark.
+    const venus: AtmosphereParams = {
+      rAtmo: 1.05, hR: 0.02, hM: 0.02,
+      betaRs: [0.01, 0.02, 0.05], betaMs: 40, betaA: [0.05, 0.1, 0.2], g: 0.7,
+    };
+    const r = scatterAlongRay(O, D, T0, T1, SUN_DAY, venus);
+    expect(r.transmittance[0]).toBeLessThan(0.05); // surface behind is extinguished
+    expect(Math.min(...r.inscatter)).toBeGreaterThan(0.1); // yet the disc is lit
+  });
+
+  it('jitter offsets the sample lattice (shader anti-banding) without breaking sign', () => {
+    const a = scatterAlongRay(O, D, T0, T1, SUN_DAY, EARTH, 0.5);
+    const b = scatterAlongRay(O, D, T0, T1, SUN_DAY, EARTH, 0.1);
+    expect(a.inscatter[2]).toBeGreaterThan(0);
+    expect(b.inscatter[2]).toBeGreaterThan(0);
+    expect(a.inscatter[2]).not.toBe(b.inscatter[2]);
+  });
 });
 
 describe('sample-count constants', () => {
