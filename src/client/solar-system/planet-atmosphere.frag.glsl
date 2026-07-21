@@ -23,11 +23,17 @@ uniform float uLitIntensity;
 uniform float uFade;
 
 in vec3 vPosV;
+in vec3 vNormalV;
 
 out vec4 outColor;
 
 void main() {
-  vec3 dir = normalize(vPosV);
+  // Reconstruct the shell-surface point on the SMOOTH sphere from the
+  // renormalized normal (the shell mesh is a uniform sphere, so the normal
+  // is exactly radial) — avoids the faceting grid the interpolated position
+  // would introduce into the analytic march.
+  vec3 shellPoint = uCenterView + (uRadiusPc * uAtmoRadius) * normalize(vNormalV);
+  vec3 dir = normalize(shellPoint);
   // Camera (origin) relative to the planet centre, planet-radius units.
   vec3 o = -uCenterView / uRadiusPc;
 

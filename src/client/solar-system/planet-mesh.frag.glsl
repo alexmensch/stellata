@@ -96,7 +96,10 @@ void main() {
     shadow *= smoothstep(uCasters[i].w - pen, uCasters[i].w + pen, missPc);
   }
   float ndotv = clamp(dot(n, v), 0.0, 1.0);
-  float limb = mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
+  // Atmospheric bodies: the scattering governs the limb, so the ad-hoc
+  // surface limb-darkening is dropped (it double-darkened the disc edge into
+  // a black rim). Airless bodies keep it as their whole limb character.
+  float limb = uHasAtmosphere > 0.5 ? 1.0 : mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
   vec3 base = mix(uColour, texture(uMap, vUvM).rgb, uHasMap);
   // Emissive, not reflective: no limb darkening, phase scale, host
   // intensity, or shadow on the lights.
@@ -107,10 +110,14 @@ void main() {
 
   if (uHasAtmosphere > 0.5) {
     // Airlight in front of this surface fragment + the transmittance the
-    // surface radiance loses on its way out through the atmosphere.
-    vec3 dir = normalize(vPosV);
+    // surface radiance loses on its way out. Reconstruct the surface point on
+    // the SMOOTH sphere from the renormalized normal, not the faceted
+    // position — the latter grids the analytic march to the tessellation.
+    vec3 nrm = normalize(vNormalV);
+    vec3 surf = uCenterView + uRadiusPc * nrm;
+    vec3 dir = normalize(surf);
     vec3 o = -uCenterView / uRadiusPc;
-    float tStop = length(vPosV) / uRadiusPc;
+    float tStop = length(surf) / uRadiusPc;
     float b = dot(o, dir);
     float discA = b * b - (dot(o, o) - uAtmoRadius * uAtmoRadius);
     float tStart = discA > 0.0 ? max(-b - sqrt(discA), 0.0) : 0.0;

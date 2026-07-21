@@ -207,7 +207,7 @@ export class PlanetMeshLayer {
     this.textureBaseUrl = textureBaseUrl;
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
-    this.geometry = new THREE.SphereGeometry(1, 96, 48);
+    this.geometry = new THREE.SphereGeometry(1, 128, 64);
     this.placeholder = new THREE.DataTexture(
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
