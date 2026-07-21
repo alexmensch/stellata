@@ -73,7 +73,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `chart.names`           | `chart-labels.ts` `tick()`       | Proper-name label projection + culling. |
 | `chart.bayer`           | `chart-labels.ts` `tick()`       | Bayer-letter Greek-glyph pass. |
 | `chart.constellations`  | `chart-labels.ts` `tick()`       | Constellation centroid recompute + label placement. |
-| `chart.clouds`          | `chart-labels.ts` `tick()`       | Molecular cloud labels (no-op while clouds are shelved). |
+| `chart.clouds`          | `chart-labels.ts` `tick()`       | Molecular cloud labels. |
 | `chart.collision`       | `chart-labels.ts` `tick()`       | Sort + greedy AABB collision pass. |
 | `chart.dom`             | `chart-labels.ts` `tick()`       | SVG attribute writes for surviving labels. |
 | `chart.glyphs.var`      | `chart-labels.ts` `tick()`       | Variable-ring `<circle>` projection + emission. |

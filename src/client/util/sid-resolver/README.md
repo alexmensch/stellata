@@ -66,16 +66,12 @@ layer:
 | `star` | after catalog load | `catalog.sid` column (`arrayDomain`) | catalog record index |
 | `planet` | boot | `SOL_OBJECT_SIDS` in `SOL_PLANETS` order | index into `SOL_PLANETS` |
 | `lg` | after `loadLocalGroup` resolves (concluded when the artifact is missing) | `local-group.json` per-object `sid` | `LgCatalog.objects` index |
-| `cloud` | **concluded at boot** while the layer is shelved | `clouds.json` per-object `sid` | `CloudCatalog.clouds` index |
+| `cloud` | after `loadClouds` resolves (concluded when the artifact is missing) | `clouds.json` per-object `sid` | `CloudCatalog.clouds` index |
 | `shell` | boot (both sids static) | `SHELL_OBJECT_SIDS` in `SHELL_KEYS` order | `SHELL_KEYS` index = Target `{kind:'shell'}` idx |
 
 `SOL_OBJECT_SIDS.sun` is deliberately NOT in the planet domain: Sol's
 catalog record carries the same sid (same-as edge, docs/sid.md § 7), so
 the star domain claims it and a "sun" focus resolves to the Sol record.
-
-Re-enabling the shelved cloud layer must replace `conclude('cloud')`
-with an `attach('cloud', arrayDomain(...))` alongside the restored
-`attachClouds` call, or cloud sids in shared URLs stay `unknown`.
 
 ## Scope
 

@@ -52,7 +52,7 @@ export function minSemiAxisPc(obj: Pick<LgObject, 'axes'>): number {
 }
 
 /** Recommended camera-to-centroid distance when focusing / warping to
- *  an LG object — the galaxy analogue of `cloudViewingDistancePc`. */
+ *  an LG object — the galaxy analogue of the clouds' viewing distance. */
 export function lgViewingDistancePc(obj: Pick<LgObject, 'axes'>): number {
   return viewingDistanceForExtent(maxSemiAxisPc(obj));
 }

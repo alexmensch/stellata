@@ -11,9 +11,23 @@ import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
+import fresnelRimChunk from './fresnel-rim.glsl?raw';
 
-const DEFAULT_FACE_ON_FLOOR = 0.04;
-const DEFAULT_FRESNEL_POWER = 2.5;
+(THREE.ShaderChunk as Record<string, string>)['stellata_fresnel_rim'] =
+  fresnelRimChunk;
+
+export const DEFAULT_FACE_ON_FLOOR = 0.04;
+export const DEFAULT_FRESNEL_POWER = 2.5;
+
+/** Dim additive cool tint shared by the Local Bubble shell and the
+ *  molecular-cloud rim shells — one annotation colour for "boundary of
+ *  a thing you can't actually see". */
+export const SHELL_RIM_BLUE = 0x5a7a9c;
+
+/** Limb alpha shared by the same two consumers — one rim strength so a
+ *  cloud shell and the Local Bubble wall read as the same annotation
+ *  vocabulary. */
+export const SHELL_RIM_ALPHA_LIMB = 0.5;
 
 export interface FresnelShellMaterialOptions {
   colour: THREE.Color;

@@ -2,6 +2,8 @@ import { loadCatalog } from './loaders/catalog-loader';
 import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadClouds } from './molecular-clouds/cloud-loader';
+import { loadCloudSurfaces } from './molecular-clouds/cloud-surfaces-loader';
+import { createMolecularCloudLabels } from './molecular-clouds/cloud-labels';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
@@ -66,7 +68,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, lgCatalog, binaries, localBubble] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -83,6 +85,9 @@ async function main() {
       // a few hundred KB; null if the artifact is missing (fresh checkout
       // without `pnpm run build:clouds`).
       loadClouds(`${import.meta.env.BASE_URL}clouds.json`),
+      // Per-cloud isosurface rim meshes; null if the artifact is missing —
+      // every cloud then falls back to its ellipsoid rim shape.
+      loadCloudSurfaces(`${import.meta.env.BASE_URL}cloud-surfaces.bin`),
       // Local Group wireframes. ~20 KB JSON; null if
       // the artifact is missing (fresh checkout without
       // `pnpm run build:local-group`). No-op layer in that case —
@@ -111,12 +116,9 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Cloud layer is currently shelved (CLAUDE.md). The fetch and parsing
-    // stay so the machinery is verified; the attach is suppressed so the
-    // layer doesn't enter the scene. Re-enable by uncommenting the line
-    // below AND attaching the 'cloud' SID domain in place of the
-    // conclude('cloud') call further down.
-    // if (cloudCatalog) stellata.attachClouds(cloudCatalog);
+    // Molecular-cloud presence layer — a representational-tier declutter
+    // element; absent artifact = no layer.
+    if (cloudCatalog) stellata.attachClouds(cloudCatalog, cloudSurfaces);
 
     // Local Group wireframes. Always-on when the artifact is present —
     // same model as the MW disc, no toggle / URL flag.
@@ -156,7 +158,8 @@ async function main() {
       'planet',
       arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
-    sidResolver.conclude('cloud');
+    if (cloudCatalog) sidResolver.attach('cloud', arrayDomain(cloudCatalog.clouds.map((c) => c.sid)));
+    else sidResolver.conclude('cloud');
     if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
     else sidResolver.conclude('lg');
     // Both boundary shells carry static, always-known SIDs (generated /
@@ -213,11 +216,8 @@ async function main() {
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    // null cloudCatalog: cloud layer is currently shelved (CLAUDE.md), so
-    // search shouldn't surface unreachable cloud entries. Pass
-    // `cloudCatalog` directly when re-enabling.
-    bindSearch(stellata, catalog, searchIndex, starLabels, null, lgCatalog);
-    bindFindSearch(stellata, catalog, searchIndex, null, lgCatalog);
+    bindSearch(stellata, catalog, searchIndex, starLabels, cloudCatalog, lgCatalog);
+    bindFindSearch(stellata, catalog, searchIndex, cloudCatalog, lgCatalog);
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
@@ -226,6 +226,9 @@ async function main() {
     createPlanetLabels(stellata);
     createHeliopauseLabel(stellata);
     createLocalBubbleLabel(stellata);
+    // Per-cloud molecular-cloud labels. Mints SVG <text> children under
+    // #cloud-labels; no-op when the cloud layer didn't attach.
+    createMolecularCloudLabels(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.
@@ -301,12 +304,8 @@ async function main() {
         context: { objects: lgCatalog.objects },
       }));
     }
-    // Cloud provider registers iff the cloud layer is attached. The
-    // attach call is currently shelved (CLAUDE.md), so this branch is
-    // unreached in shipping builds — un-shelving (uncommenting the
-    // `attachClouds(cloudCatalog)` line above) auto-registers the
-    // provider with no further wiring. The formatter and provider class
-    // ship anyway so the un-shelve diff is one line, not a re-implement.
+    // Cloud provider registers iff the cloud layer is attached (absent
+    // clouds.json artifact = no layer, no provider).
     if (stellata.cloudLayer) {
       hoverProviders.push(createCloudHoverProvider({
         stellata,

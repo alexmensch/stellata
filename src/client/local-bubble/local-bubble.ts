@@ -6,6 +6,8 @@ import type { Stellata } from '../stellata';
 import type { LocalBubbleMesh } from './local-bubble-loader';
 import {
   FresnelShell,
+  SHELL_RIM_BLUE,
+  SHELL_RIM_ALPHA_LIMB,
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
   isShellLabelResolvable,
@@ -14,9 +16,7 @@ import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../fresne
 
 const LOCAL_BUBBLE_SHELL_IDX = SHELL_KEYS.indexOf('local_bubble');
 
-// Dim additive cool tint — a soft rim glow seen from beyond the wall.
-const COLOUR = new THREE.Color(0x5a7a9c);
-const ALPHA_LIMB = 0.5;
+const COLOUR = new THREE.Color(SHELL_RIM_BLUE);
 
 /** DOM id of the SVG `<text>` node for the label. */
 export const LOCAL_BUBBLE_LABEL_ELEMENT_ID = 'local-bubble-label';
@@ -49,7 +49,7 @@ export class LocalBubbleShell extends FresnelShell {
     super(
       createFresnelShellMaterial({
         colour: COLOUR,
-        alphaLimb: ALPHA_LIMB,
+        alphaLimb: SHELL_RIM_ALPHA_LIMB,
         blending: THREE.AdditiveBlending,
       }),
       -1,

@@ -1,5 +1,4 @@
-// Molecular-cloud provider for the tier-2 focus card — satisfies the
-// exhaustive contract while the cloud layer is shelved. See ./README.md.
+// Molecular-cloud provider for the tier-2 focus card. See ./README.md.
 
 import type { Cloud } from '../molecular-clouds/cloud-loader';
 import { fmtDistAuto } from '../ui/distance-util';

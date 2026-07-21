@@ -87,9 +87,10 @@ export interface FocusTarget {
 
   /** Camera-to-anchor distance at the parked pose. For stars: the
    *  per-star `parkDistForStar` (90 %-fill floor or GLOBAL_MIN_DIST).
-   *  For clouds: `cloudViewingDistancePc` (ellipsoid-aware). The warp
-   *  computes `pStart` / `pEnd` as `anchor − travelDir · parkRadius()`
-   *  for source and destination respectively. */
+   *  For clouds: `MolecularClouds.viewingDistancePc` (keyed on the
+   *  rendered shape's extent). The warp computes `pStart` / `pEnd` as
+   *  `anchor − travelDir · parkRadius()` for source and destination
+   *  respectively. */
   parkRadius(): number;
 
   /** Per-kind focus-state mutation. Sets the relevant

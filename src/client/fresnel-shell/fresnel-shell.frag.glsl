@@ -2,6 +2,7 @@ precision highp float;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>
+#include <stellata_fresnel_rim>
 
 in vec3 vNormalView;
 in vec3 vPositionView;
@@ -18,9 +19,7 @@ void main() {
 
   vec3 n = normalize(vNormalView);
   vec3 viewDir = normalize(-vPositionView);
-  float ndotv = max(dot(n, viewDir), 0.0);
-  float fresnel = pow(1.0 - ndotv, uFresnelPower);
-  float alpha = uAlphaLimb * mix(uFaceOnFloor, 1.0, fresnel);
+  float alpha = fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower);
 
   outColor = vec4(uColour, alpha);
 }

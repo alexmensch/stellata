@@ -242,16 +242,16 @@ enough to see it.
   against the JPL mean elements. Tables in
   `src/client/solar-system/rotation-elements-pure.ts`.
 
-> **Molecular cloud sources currently shelved.** Zucker et al. 2020 +
-> 2021 cloud distances and 3D bounding boxes drive the molecular-cloud
-> ellipsoid layer, which is committed but not currently rendered while
-> the visual treatment is being refined. The build script
-> (`scripts/clouds/build-clouds.py`) and source files
-> (`data/molecular-clouds/`) remain in the repository for the future
-> re-enable. Cloud masses come from Zucker 2021 Table 3's NICEST
-> extinction-map column (`mass_nicest`); the Leike-map alternative
-> saturates in dense gas and underestimates by up to ~14× (the paper's
-> own `mass_ratio` column), so it is not used.
+> **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
+> distances, 3D bounding boxes, and radial profiles drive the
+> molecular-cloud presence layer (`scripts/clouds/build-clouds.py`,
+> `data/molecular-clouds/`; physics model in
+> `docs/molecular-clouds.md`). Cloud masses come from Zucker 2021
+> Table 3's NICEST extinction-map column (`mass_nicest`); the
+> Leike-map alternative saturates in dense gas and underestimates by
+> up to ~14× (the paper's own `mass_ratio` column), so it is not used
+> for display (the Leike-resolution `mass_leike` / `max_ak_leike`
+> columns do calibrate the presence-pass density model).
 
 
 ## Where the topic-specific detail lives

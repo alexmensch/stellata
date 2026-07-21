@@ -1,20 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { loadClouds } from './cloud-loader';
 
+interface RawTestCloud {
+  name: string;
+  id: string;
+  sid?: number;
+  center: [number, number, number];
+  axes: [number, number, number];
+  quat: [number, number, number, number];
+  source: 'Z2021T1' | 'Z2020';
+  distance: number;
+  mass?: number;
+  class: 'dark' | 'sf' | 'hii';
+  n0Cal: number;
+  uEnv: number;
+  rflat: number;
+  p: number;
+  sigmaS: number;
+  seed: number;
+  inGrid: boolean;
+  embedded: unknown[];
+}
+
 interface Raw {
   version: number;
   count: number;
-  clouds: Array<{
-    name: string;
-    id: string;
-    sid?: number;
-    center: [number, number, number];
-    axes: [number, number, number];
-    quat: [number, number, number, number];
-    source: 'Z2021T1' | 'Z2020';
-    distance: number;
-    mass?: number;
-  }>;
+  clouds: RawTestCloud[];
 }
 
 const savedFetch = (globalThis as { fetch?: unknown }).fetch;
@@ -24,15 +35,24 @@ function mockFetch(json: unknown) {
     async () => ({ ok: true, json: async () => json });
 }
 
-const baseCloud = {
+const baseCloud: RawTestCloud = {
   name: 'Orion A',
   id: 'orion-a',
   sid: 327400,
-  center: [100, -50, -200] as [number, number, number],
-  axes: [20, 10, 8] as [number, number, number],
-  quat: [0, 0, 0, 1] as [number, number, number, number],
-  source: 'Z2021T1' as const,
+  center: [100, -50, -200],
+  axes: [20, 10, 8],
+  quat: [0, 0, 0, 1],
+  source: 'Z2021T1',
   distance: 230,
+  class: 'hii',
+  n0Cal: 224.5,
+  uEnv: 1,
+  rflat: 8.1,
+  p: 3.0,
+  sigmaS: 1.9,
+  seed: 123456789,
+  inGrid: true,
+  embedded: [],
 };
 
 describe('loadClouds', () => {
@@ -50,7 +70,7 @@ describe('loadClouds', () => {
     warn.mockRestore();
   });
 
-  it('parses a v2 catalog including the sid and mass columns', async () => {
+  it('parses a v2 catalog including the presence-model fields', async () => {
     mockFetch({
       version: 2,
       count: 1,
@@ -64,6 +84,15 @@ describe('loadClouds', () => {
     expect(c.centerAbs.x).toBe(100);
     expect(c.distanceFromSol).toBe(230);
     expect(c.massMsun).toBe(32122);
+    expect(c.cloudClass).toBe('hii');
+    expect(c.n0Cal).toBe(224.5);
+    expect(c.uEnv).toBe(1);
+    expect(c.rflatPc).toBe(8.1);
+    expect(c.p).toBe(3.0);
+    expect(c.sigmaS).toBe(1.9);
+    expect(c.seed).toBe(123456789);
+    expect(c.inGrid).toBe(true);
+    expect(c.embedded).toEqual([]);
   });
 
   it('maps a missing mass to null (Z2020 clouds carry none)', async () => {

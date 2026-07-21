@@ -19,6 +19,7 @@ public/clouds.json
 public/local-group.json
 public/binaries.bin
 public/local-bubble.bin
+public/cloud-surfaces.bin
 public/binding-integrity-verdicts.tsv
 
 # Mirror of data/dust/ — the canonical LFS-tracked copy lives in data/dust/;
