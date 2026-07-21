@@ -8,8 +8,11 @@ import {
   FresnelShell,
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
+  isShellLabelResolvable,
 } from '../fresnel-shell/fresnel-shell';
-import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
+import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../fresnel-shell/shell-registry';
+
+const LOCAL_BUBBLE_SHELL_IDX = SHELL_KEYS.indexOf('local_bubble');
 
 // Dim additive cool tint — a soft rim glow seen from beyond the wall.
 const COLOUR = new THREE.Color(0x5a7a9c);
@@ -131,7 +134,11 @@ export class LocalBubbleShell extends FresnelShell {
  *  (`localBubbleLabel`) — shows at detail level `all` in realistic mode,
  *  hugging the shell's silhouette. It hides when the camera is inside the
  *  bubble: a surface sample then crosses behind the near plane and the
- *  label engine bails (same mechanism as the heliopause apex label). */
+ *  label engine bails (same mechanism as the heliopause apex label). It
+ *  also hides once the shell's projected silhouette shrinks below the
+ *  legibility floor (`isShellLabelResolvable`) — the shell has no distance
+ *  cutoff of its own, so without this the label would outlive the shell's
+ *  legibility as the camera zooms out. */
 export function createLocalBubbleLabel(stellata: Stellata): void {
   const shell = stellata.getLocalBubbleShell();
   createShellSilhouetteLabel(stellata, {
@@ -141,6 +148,14 @@ export function createLocalBubbleLabel(stellata: Stellata): void {
     visible: () =>
       !stellata.getMonochrome()
       && stellata.detailPermits('localBubbleLabel')
-      && shell.hasMesh(),
+      && shell.hasMesh()
+      && isShellLabelResolvable(
+        stellata.shells,
+        LOCAL_BUBBLE_SHELL_IDX,
+        stellata.getWorldOffset(),
+        stellata.camera.position,
+        window.innerHeight,
+        stellata.camera.fov * Math.PI / 180,
+      ),
   });
 }

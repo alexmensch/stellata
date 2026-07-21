@@ -19,6 +19,9 @@ it — the heliopause (`solar-system/`) and the Local Bubble
   - `createShellSilhouetteLabel(stellata, opts)` — a `distance-gated-label`
     with the shared shell config (bottom-right anchor, standard offset,
     0.25 chase lerp).
+  - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
+    viewportHeightPx, fovYRad)` — the label legibility gate both shells'
+    visibility predicates share (§ Invariants below).
 - `shell-registry.ts` — the focus-target seam (§ Boundary shells as
   focus targets): `SHELL_KEYS`, the `ShellInstance` contract, and
   `ShellRegistry` (owns per-shell geometry: localPositionInto,
@@ -84,6 +87,20 @@ dispatch + exhaustive-map entries, and each shell instance registers into
   independent of what's focused (a warp changes focus but not shell
   visibility). A future ~1px LOD cull is tracked separately (a shell far
   enough to be sub-pixel still draws today).
+- **Label legibility floor.** The shell mesh itself has no distance
+  cutoff (previous bullet), but its silhouette label is screen-space
+  fixed-size text, so without a floor it would keep reading long after
+  the shell has visually shrunk to nothing. Both labels' visibility
+  predicates gate on `isShellLabelResolvable`: the shell's projected
+  angular *radius* at the true camera distance must clear
+  `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`). That's the same
+  screen-size floor the planet labels ride through the orbit-ring
+  visibility gate — one legibility rule shared across labelled features,
+  correct from AU-scale shells (heliopause) to hundred-pc ones (Local
+  Bubble). Do **not** reuse `ShellRegistry.renderedSizePx` here: that
+  carries a 1 pc distance clamp for chevron sizing, which floors an
+  AU-scale shell's projected size below the threshold so its label would
+  never show.
 
 ## SID pins
 

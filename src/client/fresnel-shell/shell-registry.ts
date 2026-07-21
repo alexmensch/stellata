@@ -102,6 +102,12 @@ export class ShellRegistry {
     return this.tmp.distanceTo(cameraPos);
   }
 
+  /** Representative radius (pc) of shell `idx`; 0 when absent. */
+  extentPc(idx: number): number {
+    const shell = this.at(idx);
+    return shell ? shell.extentPc() : 0;
+  }
+
   /** Camera-to-center distance that frames the whole shell — the
    *  FocusTarget.parkRadius leg (= the distance the hide-when-inside wall
    *  becomes visible). 0 when absent. floorPc=0: shells span AU (helio-
