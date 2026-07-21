@@ -17,14 +17,8 @@ import {
 import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import {
-  DEFAULT_GLARE_BLOOM_THRESHOLD,
   DEFAULT_GLARE_GAIN,
-  GLARE_BLOOM_KNEE,
-  GLARE_BLOOM_OVERSIZE,
-  GLARE_MIN_PX,
   GLARE_PHOTOCENTRE_SHIFT,
-  glareBloomAmount,
-  glareSizePx,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
 } from './mesh-crossfade';
@@ -35,7 +29,6 @@ import {
   solidityForType,
 } from './orbit-rings-layer';
 import {
-  litIntensity,
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
@@ -102,7 +95,6 @@ const INSTANCE_ATTR_SPECS = attrSpecs({
   colour: { attr: 'iColour', dims: 3 },
   solidity: { attr: 'iSolidity', dims: 1 },
   albedo: { attr: 'iAlbedoP', dims: 1 },
-  litIntensity: { attr: 'iLitIntensity', dims: 1, dynamicUsage: true, fill: 1 },
   hostAbsmag: { attr: 'iHostAbsmag', dims: 1 },
   phaseA: { attr: 'iPhaseCoefsA', dims: 4 },
   phaseB: { attr: 'iPhaseCoefsB', dims: 4 },
@@ -224,13 +216,10 @@ export class PlanetBodyField {
   // One shared { value } slot across every material — the uHideIdx
   // uniform hiding the observe-anchor body (-1 = none).
   private hideIdxUniform = { value: -1 };
-  // Tunable reflected-glare gain — one shared slot across the main-pass
+  // Tunable reflected-glare peak multiplier (planet glare brightness vs a
+  // star of the same magnitude) — one shared slot across the main-pass
   // and local-pass glare materials; setGlareGain writes it for smoke.
   private glareGainUniform = { value: DEFAULT_GLARE_GAIN };
-  // Tunable veiling-glare bloom threshold (lit-surface radiance at which
-  // a body starts blooming like a star); shared slot, setBloomThreshold
-  // writes it for smoke.
-  private bloomThresholdUniform = { value: DEFAULT_GLARE_BLOOM_THRESHOLD };
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
   // none. One shared value drives the main-pass suppression AND the
   // mirror draws' member gate (opposite sense, keyed on the
@@ -407,18 +396,6 @@ export class PlanetBodyField {
 
   getGlareGain(): number {
     return this.glareGainUniform.value;
-  }
-
-  /** Veiling-glare bloom threshold — the lit-surface radiance at which a
-   *  body starts blooming into a star-like halo (below it, only its
-   *  flux-conserving base draws). One shared uniform across the glare
-   *  materials; smoke-tuned from the default in mesh-crossfade.ts. */
-  setBloomThreshold(threshold: number): void {
-    this.bloomThresholdUniform.value = threshold;
-  }
-
-  getBloomThreshold(): number {
-    return this.bloomThresholdUniform.value;
   }
 
   /**
@@ -776,12 +753,7 @@ export class PlanetBodyField {
     const i = instanceIdx - host.startInstance;
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
     if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
-    return this.discPixelSize(
-      host.ps.planets[i].radiusKm * KM_PC,
-      dVp,
-      appMag,
-      this.litSurfaceRadiance(instanceIdx),
-    );
+    return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
   /** Physical (true angular-diameter) disc size in px, excluding the
@@ -886,12 +858,7 @@ export class PlanetBodyField {
     return { physSize, appSize };
   }
 
-  private discPixelSize(
-    radiusPc: number,
-    dVp: number,
-    appMag: number,
-    litSurf: number,
-  ): number {
+  private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
     // Chart mode mirrors the vertex shader's chart branch — flat
     // magnitude-driven disc, no physical/perceptual terms.
     if (this.mono) {
@@ -905,14 +872,12 @@ export class PlanetBodyField {
         this.magShared.uMaxAppMag.value,
       );
     }
-    const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
     // Rendered footprint = the wider of the true disc (mesh) and the
-    // glare quad. Mirrors the vertex shader: the flux-conserving base
-    // (disc·OVERSIZE floored at GLARE_MIN_PX) blended toward the
-    // star-perceptual bloom extent by the lit-surface bloom amount, so
-    // hover picks the visible body + whatever halo it blooms.
-    const bloom = glareBloomAmount(litSurf, this.bloomThresholdUniform.value);
-    return Math.max(physSize, glareSizePx(physSize, appSize, bloom));
+    // star-perceptual glare point. Mirrors the vertex shader
+    // (`max(appSize, physSize)`-style) so hover picks the visible body +
+    // its glare halo.
+    const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
+    return Math.max(physSize, appSize);
   }
 
   /**
@@ -986,12 +951,7 @@ export class PlanetBodyField {
         const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
         const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-        const pxSize = this.discPixelSize(
-          radiusPc,
-          dVp,
-          appMag,
-          this.litSurfaceRadiance(host.startInstance + i),
-        );
+        const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
         const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
         if (pxDist > hitRadius && pxDist > pxThreshold) continue;
@@ -1031,16 +991,6 @@ export class PlanetBodyField {
     v[1] = count;
   }
 
-  /** Lit-surface radiance (`iLitIntensity·albedo·uGlareGain`) for an
-   *  instance — the veiling-glare bloom onset input, mirroring the
-   *  shader's `litRadiance`. */
-  private litSurfaceRadiance(instanceIdx: number): number {
-    return (
-      this.bufs.litIntensity[instanceIdx] *
-      this.bufs.albedo[instanceIdx] *
-      this.glareGainUniform.value
-    );
-  }
 
   /** Attach-table view for the solar-system cluster: slot range +
    *  live host geometry per attached host. */
@@ -1171,15 +1121,7 @@ export class PlanetBodyField {
             value: new THREE.Vector2(MESH_FADE_MIN_PX, MESH_FADE_FULL_PX),
           },
           uGlareGain: this.glareGainUniform,
-          uBloomThreshold: this.bloomThresholdUniform,
-          uGlareShape: {
-            value: new THREE.Vector4(
-              GLARE_BLOOM_OVERSIZE,
-              GLARE_PHOTOCENTRE_SHIFT,
-              GLARE_MIN_PX,
-              GLARE_BLOOM_KNEE,
-            ),
-          },
+          uGlarePhotocentreShift: { value: GLARE_PHOTOCENTRE_SHIFT },
         },
       });
 
@@ -1288,28 +1230,6 @@ export class PlanetBodyField {
         this.bufs.localRel[base + i * 3 + 2] = tmp.z;
       }
     }
-    this.writeHostLitIntensity(host);
-  }
-
-  /** Mesh-regime lit-surface brightness per planet, from the just-written
-   *  host→body distance (|iLocalRel|) and the current slider exposure —
-   *  the SAME `litIntensity` the mesh layer uses, so the resolved glare
-   *  bloom peak matches the surface it sits over. Written wherever
-   *  iLocalRel is (attach + per-frame ephemeris walk). */
-  private writeHostLitIntensity(host: AttachedHost): void {
-    const base = host.startInstance * 3;
-    for (let i = 0; i < host.count; i++) {
-      const dHp = Math.sqrt(
-        this.bufs.localRel[base + i * 3 + 0] ** 2 +
-          this.bufs.localRel[base + i * 3 + 1] ** 2 +
-          this.bufs.localRel[base + i * 3 + 2] ** 2,
-      );
-      this.bufs.litIntensity[host.startInstance + i] = litIntensity(
-        host.hostAbsmag,
-        dHp,
-        this.maxAppMag,
-      );
-    }
   }
 
   /** Rotate a flat plane-frame xyz buffer into ICRS-aligned local frame
@@ -1331,17 +1251,14 @@ export class PlanetBodyField {
     }
   }
 
-  /** Per-frame: iLocalRel (positions tick) and iLitIntensity (rides the
-   *  host→body distance + slider exposure, rewritten alongside) change in
-   *  `update()`; host position, radius, colour, albedo, phase
-   *  coefficients are static for the host's lifetime. At bk5 scale
-   *  (hundreds of hosts × thousands of planets) flagging only the dirty
-   *  buffers matters — the statics would re-upload every frame otherwise. */
+  /** Per-frame: only iLocalRel (positions tick) changes in `update()`;
+   *  host position, radius, colour, albedo, phase coefficients are static
+   *  for the host's lifetime. At bk5 scale (hundreds of hosts × thousands
+   *  of planets) flagging only the dirty buffer matters — the statics
+   *  would re-upload every frame otherwise. */
   private flushDynamicAttributes(): void {
     if (!this.geometry) return;
     (this.geometry.attributes.iLocalRel as THREE.InstancedBufferAttribute)
-      .needsUpdate = true;
-    (this.geometry.attributes.iLitIntensity as THREE.InstancedBufferAttribute)
       .needsUpdate = true;
   }
 

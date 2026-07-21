@@ -527,52 +527,41 @@ crossfade.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.
-- **Reflected glare** is one additive quad carrying **two physical
-  effects** (a bright point is a linear image *plus* the eye's veiling
-  glare), gated on **resolvedness** and **surface brightness** — never on
-  locally-active:
-  - **Base — the linear image (flux-conserving photographic).** Surface
-    radiance `L = iLitIntensity · albedo · uGlareGain · illumFrac` is the
-    mesh's own display scale. Size = `physSize · GLARE_BLOOM_OVERSIZE`
-    (1.3) floored at `GLARE_MIN_PX`; peak = `L · √(disc·OVERSIZE /
-    baseSize) ≤ L`. The quarter-power display law turns linear flux
-    conservation (`peak · area`) into `peak · √area`, so a sub-pixel
-    body's peak stays ≤ its surface radiance and dims ∝ physSize with
-    distance — it can **never outshine** a resolved neighbour and
-    **never brightens on recede** (the two defects of the old `mix(1,
-    bloomPeak, res)`). Illuminated-fraction gated + photocentre-shifted
-    toward the sub-solar limb (scaled by resolvedness) so a crescent's
-    dark limb emits ~none — kills the halo ring.
-  - **Bloom — the eye's veiling glare.** A bright sunlit surface scatters
-    into a star-like halo; a dim one doesn't. Gated on **lit-surface
-    radiance** `iLitIntensity · albedo · uGlareGain` (no illumFrac — a
-    thin bright crescent still glares from its sunlit sliver) via
-    `bloom = smoothstep(uBloomThreshold, +GLARE_BLOOM_KNEE, litRadiance)`.
-    Extent = the shared star-perceptual `appSize(appMag)`, so a bloomed
-    body reads exactly like a star of its magnitude (Venus as the
-    brilliant evening "star"). Blended in: `size = mix(baseSize,
-    max(baseSize, appSize), bloom)`, `peak = mix(basePeak, 1, bloom)`.
-    The bloom **persists through resolution** (gated on brightness, not
-    resolvedness), so a bright body keeps its halo as it resolves — no
-    dimming-pop on approach; the mesh draws the surface within the halo.
+- **Reflected glare** is the **shared star-perceptual point** — a planet
+  reads *exactly* like a star of its apparent magnitude: size =
+  `perceptualAppSizePx(appMag)`, peak = `uGlareGain` (≈1). This is the
+  load-bearing invariant: **visibility matches magnitude.** A body
+  visible in chart mode (`appMag ≤ slider`) is equally visible here,
+  rendered like the naked-eye "wandering star" it is — Mars (~+1.3),
+  Jupiter (~−2), Saturn (~+0.5), Venus (~−4) all show, ordered by
+  magnitude, exactly as the surrounding star field does. `appMag` already
+  folds the phase factor φ(α) (`planetApparentMagnitude`), so a crescent
+  is correctly dimmer — no separate illumFrac on brightness. A
+  **photocentre shift** toward the sub-solar limb (shape only — brightness
+  unchanged), scaled by crescentness `(1−illumFrac)` and resolvedness
+  `res`, keeps a barely-resolved crescent's halo off its dark limb (kills
+  the ring) while leaving a sub-pixel dot centred. Eclipse folds in as a
+  flux multiplier on the peak.
 
-  Net: a dim outer moon (low lit radiance) stays its dim flux-conserving
-  point (`bloom→0`); a sunlit inner body (high lit radiance) blooms
-  brilliant (`bloom→1`); both continuous through the resolved↔unresolved
-  transition and both dim on recede. The full-Moon calibration
+  When **resolved** the mesh draws the surface, writes depth, and occludes
+  the glare's core: since the magnitude bloom (`appSize`, capped at
+  `uSizeMax`) is smaller than a well-resolved disc (`physSize`), the glare
+  is hidden inside the disc and only shows as a lit-limb halo while the
+  body is small/bright. The full-Moon calibration
   (`perceptual-magnitude.test.ts`, −12.7) anchors the underlying flux, so
-  it generalises to any host star. CPU mirror for the hover footprint:
-  `glareSizePx(physSize, appSize, glareBloomAmount(litRadiance, threshold))`.
+  the magnitude — and therefore visibility — is correct for any host star.
+  CPU mirror for the hover footprint: `max(physSize, appSize)`.
 
-Why two effects, not one: the mesh's display radiance is quarter-power
-**compressed** (outer planets visible, inner ones not blown out), so on
-its own it can't reproduce the eye's glare that makes a bright compact
-source dazzle. The base carries the compressed linear image; the bloom
-adds the intensity-dependent glare the compression discards.
+Known refinement (smoke): a dim-surfaced body's resolved mesh (compressed
+`uLitIntensity`) can read dimmer than its own peak-1 glare, so there is a
+mild luminosity step as it resolves and a bright unresolved moon can look
+brighter than a resolved dim-surfaced parent. Visibility (the hard
+requirement) takes priority; matching resolved-surface brightness to the
+point scale is a separate mesh-shading calibration.
 
-`uGlareGain` scales the surface-radiance the base and bloom onset both
-read; `uBloomThreshold` sets how bright a surface must be to bloom (both
-debug-tunable — `setGlareGain` / `setBloomThreshold`). When resolved the
+`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak
+multiplier: planet-glare brightness relative to a star of the same
+magnitude (1 = identical). When resolved the
 **mesh** writes depth (local depth pass), so the additive glare is
 naturally occluded to the lit-limb halo — the old core depth-mask is gone.
 
@@ -611,10 +600,10 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
     floor (low sensitivity fades surfaces toward black). Still no
     viewer-distance term, so approach can't blow it out; the ring
     annulus multiplies the same scalar so ring↔body contrast is
-    preserved, and the locally-active glare peak IS this scalar (× phase
-    gate) so glare and surface never disagree. Body-kind-agnostic:
-    planets, moons, and future lit bodies all read the one scalar the
-    mesh layer computes.
+    preserved. Surface-only: the reflected glare is the star-perceptual
+    point (driven by appMag, above), so `uLitIntensity` shades the mesh
+    and ring, not the glare. Body-kind-agnostic: planets, moons, and
+    future lit bodies all read the one scalar the mesh layer computes.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
     half-width carrying twilight past the geometric terminator on
     atmospheric bodies (Venus 0.08 widest; Titan the one moon with a

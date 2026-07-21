@@ -23,9 +23,9 @@ src/client/debug/
                                   active dims when unfocused).
   star-tuning.ts                  Live-tunable star exaggeration /
                                   magnitude / size knobs.
-  planet-tuning.ts                Reflected-planet-glare sliders:
-                                  uGlareGain (surface-radiance scale) +
-                                  uBloomThreshold (veiling-glare onset).
+  planet-tuning.ts                Reflected-planet-glare peak slider
+                                  (uGlareGain — planet glare brightness
+                                  vs a star of the same magnitude).
   (+ tests for the pure helpers.)
 ```
 

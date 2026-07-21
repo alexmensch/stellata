@@ -20,8 +20,6 @@ import {
 } from './phase-function';
 import { planetApparentMagnitude } from './perceptual-magnitude';
 import {
-  GLARE_BLOOM_OVERSIZE,
-  GLARE_MIN_PX,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
   meshFadeFromPhysPx,
@@ -599,14 +597,13 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only the dynamic pair — the static attributes stay clean per frame', () => {
+  it('update() flushes only iLocalRel — the static attributes stay clean per frame', () => {
     // bk5 scale (hundreds of hosts) makes per-frame re-uploads of
     // static attributes (iRadiusPc, iColour, iSolidity, iAlbedoP,
     // iHostAbsmag, iPhaseCoefsA/B/C, iHostLocalPos) measurable wasted
     // bus bandwidth. Pin the dynamic-only flush: after attach (which
     // legitimately touches every attribute) a single update() tick
-    // only flips iLocalRel + iLitIntensity (the position + the lit
-    // brightness that rides the host→body distance and slider).
+    // only flips iLocalRel (the planet positions tick).
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -635,13 +632,11 @@ describe('PlanetBodyField lifecycle', () => {
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(0, 0, 0);
     f.update(camera, 1, 0);
-    // Only iLocalRel + iLitIntensity should have been touched.
-    // iHostLocalPos / iRadiusPc / iColour / iSolidity / iAlbedoP /
-    // iHostAbsmag / iPhaseCoefsA / iPhaseCoefsB / iPhaseCoefsC stay
+    // Only iLocalRel should have been touched. iHostLocalPos / iRadiusPc /
+    // iColour / iSolidity / iAlbedoP / iHostAbsmag / iPhaseCoefsA/B/C stay
     // quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
-    expect(flagged.has('iLitIntensity')).toBe(true);
-    expect(flagged.size).toBe(2);
+    expect(flagged.size).toBe(1);
     f.dispose();
   });
 
@@ -1200,7 +1195,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('renderedPlanetSizePx mirrors the resolved glare footprint (disc·OVERSIZE)', () => {
+  it('renderedPlanetSizePx mirrors the true disc when resolved (physSize ≫ appSize)', () => {
     const f = makeField();
     attach(f, 0, 1);
     // Camera close to the planet at (1 AU, 0, 0): physical term visible.
@@ -1208,38 +1203,29 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     const px = f.renderedPlanetSizePx(0, near);
     expect(px).toBeGreaterThan(0);
     // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
-    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ appSize and
-    // ≫ GLARE_MIN_PX, so the footprint is physSize · GLARE_BLOOM_OVERSIZE
-    // (the lit-limb halo) whatever the bloom amount — the star bloom can't
-    // shrink a resolved body below its disc. bufLocalRel stores the planet
-    // position in float32, so the camera→planet distance carries a ~1e-4
-    // relative quantum at 1 AU magnitudes — compare at that tolerance.
+    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ appSize, so
+    // the footprint is the mesh's true disc (max(physSize, appSize) =
+    // physSize). bufLocalRel stores the planet position in float32, so the
+    // camera→planet distance carries a ~1e-4 relative quantum at 1 AU
+    // magnitudes — compare at that tolerance.
     const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
-    const expectedFootprint = expectedPhys * GLARE_BLOOM_OVERSIZE;
-    expect(Math.abs(px - expectedFootprint) / expectedFootprint).toBeLessThan(1e-3);
+    expect(Math.abs(px - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
     // Unattached instance → 0.
     expect(f.renderedPlanetSizePx(9, near)).toBe(0);
     f.dispose();
   });
 
-  it('renderedPlanetSizePx blooms an unresolved bright body to the star extent', () => {
+  it('renderedPlanetSizePx is the star-perceptual point when unresolved', () => {
     const f = makeField();
     attach(f, 0, 1);
-    // Camera ~0.1 AU from the planet at 1 AU: the true disc is sub-pixel
-    // (unresolved) but the body is bright, so its lit-surface radiance is
-    // above the bloom threshold and it reads as a star-like point.
+    // Camera ~0.1 AU from the planet at 1 AU: the true disc is sub-pixel,
+    // so the footprint is the star-perceptual appSize (≫ physSize) — the
+    // planet reads as a star of its magnitude, visible per its appMag.
     const far = new THREE.Vector3(0.9 * AU_PC, 0, 0);
-
-    f.setBloomThreshold(0); // force full bloom
-    const bloomed = f.renderedPlanetSizePx(0, far);
-    f.setBloomThreshold(10); // force no bloom (base only)
-    const base = f.renderedPlanetSizePx(0, far);
-
-    expect(base).toBeGreaterThan(0);
-    // No bloom: the footprint floors at the flux-conserving base
-    // (GLARE_MIN_PX). Full bloom: it grows to the star-perceptual appSize.
-    expect(base).toBeCloseTo(GLARE_MIN_PX, 6);
-    expect(bloomed).toBeGreaterThan(base);
+    const px = f.renderedPlanetSizePx(0, far);
+    // uSizeMin = 2: a visible unresolved body is at least the perceptual
+    // floor, far above its sub-pixel true disc.
+    expect(px).toBeGreaterThanOrEqual(2);
     f.dispose();
   });
 

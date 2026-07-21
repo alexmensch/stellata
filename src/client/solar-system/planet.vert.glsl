@@ -22,9 +22,6 @@ in vec2 aCorner;
 //   iColour       — representative single-colour RGB.
 //   iSolidity     — 1 = rocky (crisp edge), 0 = gas-giant (fuzzy).
 //   iAlbedoP      — geometric albedo p, V-band.
-//   iLitIntensity — mesh-regime lit-surface brightness (host irradiance
-//     × slider exposure); the resolved bloom peak derives from it so
-//     the glare matches the mesh it sits over (perceptual-magnitude.ts).
 //   iHostAbsmag   — host star's absolute magnitude.
 //   iPhaseCoefsA  — Mallama 2018 phase polynomial (c0,c1,c2,c3) in
 //                   α-degrees, ΔV in mag. See phase-function.ts.
@@ -42,7 +39,6 @@ in float iRadiusPc;
 in vec3 iColour;
 in float iSolidity;
 in float iAlbedoP;
-in float iLitIntensity;
 in float iHostAbsmag;
 in vec4 iPhaseCoefsA;
 in vec4 iPhaseCoefsB;
@@ -74,24 +70,17 @@ uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
 
-// Glare resolvedness band in physical CSS px (MESH_FADE_MIN/FULL_PX from
-// mesh-crossfade.ts): the true disc grows from a point to a resolved
-// body across it. res = smoothstep(x, y, physSize) drives the glare's
-// point→bloom morph in lockstep with the mesh presence.
+// Mesh resolvedness band in physical CSS px (MESH_FADE_MIN/FULL_PX from
+// mesh-crossfade.ts): res = smoothstep(x, y, physSize) fades in the
+// crescent photocentre shift as the body resolves.
 uniform vec2 uMeshFadePx;
-// Reflected-glare gain — scales the surface-radiance scale the glare
-// base and bloom onset both read (smoke-tuned).
+// Reflected-glare peak multiplier — planet-glare brightness relative to
+// a star of the same magnitude (1 = identical). Debug-tunable.
 uniform float uGlareGain;
-// (GLARE_BLOOM_OVERSIZE, GLARE_PHOTOCENTRE_SHIFT, GLARE_MIN_PX,
-// GLARE_BLOOM_KNEE) from mesh-crossfade.ts: resolved bloom cap × disc,
-// lit-limb photocentre shift × radius, the glare base's sub-pixel
-// visibility floor (below it the peak scales down to conserve flux), and
-// the veiling-glare bloom smoothstep width.
-uniform vec4 uGlareShape;
-// Lit-surface radiance at which the veiling-glare bloom onsets — a bright
-// sunlit surface blooms into a star-like halo, a dim one stays its
-// flux-conserving base. Debug-tunable (debug/planet-tuning.ts).
-uniform float uBloomThreshold;
+// Photocentre shift toward the lit limb, as a fraction of the disc
+// radius, at maximum crescent and full resolvedness (GLARE_PHOTOCENTRE_
+// SHIFT from mesh-crossfade.ts).
+uniform float uGlarePhotocentreShift;
 
 // Chart-mode flat-disc sizing — same uniforms (same { value } slots)
 // as the star pipeline's chart branch; see chart-mode/README.md.
@@ -272,53 +261,30 @@ void main() {
     pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
     vGlareIntensity = 1.0;
   } else {
-    // Reflected glare = one additive quad: a flux-conserving photographic
-    // BASE (the linear image) plus an intensity-gated veiling-glare BLOOM
-    // (the eye's response to a bright point). Two physical effects, one
-    // quad. See README § Planet mesh LOD.
-    float illumFrac = (1.0 + cosA) * 0.5;
-    // Disc-averaged surface radiance drives the base; the LIT-surface
-    // radiance (no illumFrac — a thin bright crescent still glares from
-    // its sunlit sliver) drives the bloom onset.
-    float discRadiance = iLitIntensity * iAlbedoP * uGlareGain * illumFrac;
-    float litRadiance = iLitIntensity * iAlbedoP * uGlareGain;
-
-    // BASE: size = true disc·OVERSIZE floored at GLARE_MIN_PX; peak =
-    // L·√(disc·OVERSIZE / baseSize) ≤ L. Quarter-power display law turns
-    // linear flux conservation (peak·area) into peak·√area, so a
-    // sub-pixel body's peak stays ≤ its surface radiance and dims ∝
-    // physSize with distance — it can never outshine a resolved
-    // neighbour, and never brightens on recede.
-    float over = physSize * uGlareShape.x;
-    float baseSize = max(over, uGlareShape.z);
-    float basePeak = discRadiance * sqrt(min(1.0, over / baseSize));
-
-    // BLOOM: a bright lit surface scatters into a star-like halo. Gated
-    // on lit-surface radiance so a dim outer moon stays its dim base and
-    // a sunlit inner surface blooms; the extent is the shared
-    // star-perceptual appSize so a bloomed body reads exactly like a star
-    // of its magnitude (Venus as the brilliant evening "star"). The bloom
-    // persists through resolution — a bright resolved body keeps its
-    // halo, so approach never dims-pops.
-    float bloom = smoothstep(uBloomThreshold, uBloomThreshold + uGlareShape.w, litRadiance);
+    // Reflected glare = the shared star-perceptual point. A planet reads
+    // EXACTLY like a star of its apparent magnitude — size = appSize(appMag),
+    // peak = uGlareGain (≈1) — so a body visible in chart mode is equally
+    // visible here (a naked-eye planet is a naked-eye point). appMag
+    // already folds the phase factor φ(α), so brightness needs no
+    // illumFrac. The mesh, when resolved, writes depth and occludes the
+    // glare core to a lit-limb halo. See README § Planet mesh LOD.
     float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
-    float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+    pxSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+    vGlareIntensity = uGlareGain * eclipseFactor;
 
-    pxSize = mix(baseSize, max(baseSize, appSize), bloom);
-    vGlareIntensity = mix(basePeak, 1.0, bloom) * eclipseFactor;
-
-    // Photocentre shift toward the lit limb (sub-solar screen dir),
-    // scaled by how crescent (1−illumFrac) and how resolved (res), so a
-    // resolved crescent's residual glare concentrates on the illuminated
-    // side instead of ringing; a sub-pixel dot (res→0) keeps its centre.
-    // Guarded against a degenerate on-axis sub-solar direction.
+    // Photocentre shift toward the lit limb on a resolved crescent —
+    // SHAPE only (brightness stays appMag-driven), scaled by crescentness
+    // (1−illumFrac) and resolvedness (res) so a barely-resolved crescent's
+    // halo doesn't ring its dark limb; a sub-pixel dot (res→0) stays
+    // centred. Guarded against a degenerate on-axis sub-solar direction.
+    float illumFrac = (1.0 + cosA) * 0.5;
     float res = smoothstep(uMeshFadePx.x, uMeshFadePx.y, physSize);
     vec2 sunDir = hphHat.xy;
     float sunLen = length(sunDir);
     if (sunLen > 1e-5) {
       float radiusPx = physSize * 0.5;
       photoOffsetPx = (sunDir / sunLen)
-          * (radiusPx * uGlareShape.y * (1.0 - illumFrac) * res);
+          * (radiusPx * uGlarePhotocentreShift * (1.0 - illumFrac) * res);
     }
   }
   // One CSS pixel in vUv units — the chart frag's edge-AA width.

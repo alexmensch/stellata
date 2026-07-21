@@ -2123,16 +2123,11 @@ export class Stellata implements FrameAnchor {
     this.filters.setStarRenderParams(patch);
   }
   getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
-  /** Reflected-glare gain — the flux-continuity calibration between the
-   *  resolved bloom peak and the mesh surface it sits over. Dev-panel
-   *  smoke knob (debug/planet-tuning.ts). */
+  /** Reflected-glare peak multiplier — planet-glare brightness relative
+   *  to a star of the same magnitude (1 = identical). Dev-panel smoke
+   *  knob (debug/planet-tuning.ts). */
   setPlanetGlareGain(gain: number) { this.planetBodyField.setGlareGain(gain); }
   getPlanetGlareGain(): number { return this.planetBodyField.getGlareGain(); }
-  /** Veiling-glare bloom threshold — the lit-surface radiance at which a
-   *  body blooms into a star-like halo. Dev-panel smoke knob
-   *  (debug/planet-tuning.ts). */
-  setPlanetBloomThreshold(t: number) { this.planetBodyField.setBloomThreshold(t); }
-  getPlanetBloomThreshold(): number { return this.planetBodyField.getBloomThreshold(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
     this.filters.clearSizeOverrides(fields);
   }
