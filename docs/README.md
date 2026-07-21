@@ -33,12 +33,13 @@ molecular-clouds.md     Physics model + implementation design for the
                         taxonomy, presence pass). Drives phases A.2–A.7;
                         spans scripts/clouds, scripts/dust,
                         star-pipeline, and molecular-clouds folders.
-pipeline-flowchart.md   Mermaid flowchart of the full build pipeline:
-                        external sources → binary cross-match →
-                        catalog build → runtime binaries → parallel
-                        layers → validation → client. Spans
-                        scripts/catalog, scripts/binaries, data/, and
-                        every other build script folder.
+pipeline-flowchart.md   Plain-language flowchart + walkthrough of the
+                        full data pipeline: which published datasets
+                        feed it, the decisions each build stage makes,
+                        and what the viewer loads. Written for readers
+                        who know the data sources, not the codebase —
+                        no file paths or script names. Implementation
+                        detail lives in each build folder's README.
 ux-tweaks.md            Reference table of UX knobs (orbit feel,
                         chevron density, focus-ring size, panel
                         defaults, etc.) and where to find them. Look

@@ -1,166 +1,295 @@
-# Data pipeline flowchart
+# How Stellata's catalogue is built
 
-Mermaid flowchart of the full build pipeline: external data sources →
-binary-system cross-match (`scripts/binaries/`) → single-star catalog
-build (`scripts/catalog/`) → runtime binaries → parallel layers
-(clouds, local group, dust, colour LUT) → validation → client
-consumption. Node labels carry the reconciliation precedence chains
-(distance refinement, direction cascade, binary identity resolution,
-orbital-element precedence) rather than exploding each gate into its
-own box — full detail for each stage lives in the corresponding
-folder's `README.md` and `SCIENCE.md`.
+A plain-language walkthrough of the data pipeline: which published
+astronomical datasets go in, what decisions the build makes along the
+way, and what the viewer in your browser finally loads. It is written
+for a reader who knows the data sources — or is simply curious — but
+not this codebase. Citations and the physical rationale behind each
+decision live in `SCIENCE.md` and its per-topic companions.
 
-Renders natively in GitHub's markdown viewer.
+The flowchart renders natively in GitHub's markdown viewer.
 
 ```mermaid
 flowchart TD
 
-  subgraph SRC["External Data Sources — data/ (frozen, network-free build)"]
-    ATHYG["AT-HYG v3.3<br/>data/athyg/<br/>membership · IDs · names · mags · driver of catalogue identity"]
-    GCVS["GCVS 5.1<br/>data/gcvs/<br/>variable periods + amplitudes"]
-    CCDM["Hipparcos CCDM + MultFlag<br/>data/hipparcos/<br/>visual-double flags"]
-    HIP2["HIP2 van Leeuwen<br/>data/hipparcos/<br/>full-precision astrometry"]
-    WDS["WDS + ORB6<br/>data/wds/<br/>visual binary catalogue + orbital elements"]
-    MSC["Pulkovo MSC<br/>data/msc/<br/>multi-star hierarchies + compiled orbits"]
-    SIMBAD["SIMBAD<br/>data/simbad/<br/>sp_type · WDS↔Gaia cross-IDs"]
-    GAIA["Gaia DR3<br/>data/gaia/<br/>astrometry · NSS orbits · Apsis · xmatches"]
-    BJ["Bailer-Jones DR3<br/>data/bailer-jones/<br/>Bayesian distance posteriors"]
-    STELL["Stellarium skyculture<br/>data/stellarium/<br/>HIP-indexed constellation lines"]
-    DUSTSRC["Edenhofer 2023 dust map<br/>data/dust/ (raw)"]
-    LVDB["Pace 2024 LVDB<br/>data/local-group/"]
-    ZUCKER["Zucker 2020/2021 clouds<br/>data/molecular-clouds/"]
+  subgraph SRC["Published astronomical datasets — frozen local copies"]
+    ATHYG["AT-HYG star catalogue<br/>the base list: ~313,000 stars with<br/>names, identifiers, brightness"]
+    GAIA["Gaia DR3<br/>positions · parallaxes · motions ·<br/>binary-orbit fits · temperatures"]
+    HIP["Hipparcos (van Leeuwen)<br/>astrometry for stars too bright for Gaia<br/>+ historical double-star annotations"]
+    BJ["Bailer-Jones et al.<br/>probabilistic distances from Gaia parallaxes"]
+    SIMBAD["SIMBAD<br/>spectral types · cross-identifications"]
+    GCVS["GCVS<br/>variable-star periods and amplitudes"]
+    WDS["WDS · ORB6 · Pulkovo MSC<br/>double stars · published orbits ·<br/>multiple-system hierarchies"]
+    EDEN["Edenhofer et al. 3D dust map"]
+    ZUCKER["Zucker et al. molecular-cloud<br/>catalogues + Local Bubble surface"]
+    LVDB["Local Volume Database (Pace)<br/>nearby galaxies"]
+    STELL["Stellarium sky culture<br/>constellation figures"]
   end
 
-  RF["Layer 2 refresh — scripts/refresh/*.py<br/>manual · infrequent · atomic writes<br/>never wired into pnpm run build"]
-  RF -.-> GAIA
-  RF -.-> BJ
-  RF -.-> HIP2
-  RF -.-> SIMBAD
-  RF -.-> MSC
+  RF["Occasional manual refresh of the frozen copies —<br/>the build itself never touches the network"]
+  RF -.-> SRC
 
-  subgraph BIN["STAGE 1 — scripts/binaries/build-binaries.py (pnpm run build:binaries)"]
-    BIN1["Stage 1 — parse & index<br/>WDS summ/notes/refs, ORB6, MSC, SIMBAD xIDs"]
-    BIN2["Stage 2 — resolve identity<br/>WDS component to Gaia source_id:<br/>orb6_hip &gt; athyg_gaia_native &gt; simbad_xid<br/>&gt; ccdm_hip &gt; position_match &gt; unresolved<br/>+ G-V mag-consistency gate<br/>+ binding-integrity audit (geometric arbitration)"]
-    BIN3["Stage 3 — astrometry per component<br/>gaia_nss_systemic &gt; hip2_saturated<br/>&gt; hip2_pm_discrepant &gt; gaia_5p &gt; athyg_printed"]
-    BIN4["Stage 4 — orbital elements per pair<br/>orb6(visual) &gt; gaia_nss &gt; orb6_spectroscopic<br/>&gt; msc(sub-resolution only) &gt; none"]
-    BIN5["Stage 5 — optical vs physical filter<br/>WDS notes &gt; orbit-on-file &gt; 3D-sep limit(1pc)<br/>&gt; parallax+escape-velocity &gt; asymmetric-Gaia<br/>&gt; CPM epoch-baseline &gt; mag-gap heuristic"]
-    BIN6["Stage 6 — emit multiples.tsv<br/>+ spectral-type: curated &gt; SIMBAD &gt; MSC &gt; AT-HYG &gt; none<br/>+ photometry: AT-HYG own &gt; inherited(dmag) &gt; Gaia-derived &gt; none<br/>+ subdivide.py sub-pair synthesis"]
-    BIN7["Stage 7 — count/rate snapshot gate<br/>build-binaries-expected.json"]
-    BIN1 --> BIN2 --> BIN3 --> BIN4 --> BIN5 --> BIN6 --> BIN7
+  subgraph MULT["Multiple-star assembly"]
+    M1["Match every catalogued double-star<br/>component to a real, identified star"]
+    M2["Choose the most trustworthy position<br/>and motion for each member"]
+    M3["Choose the best published orbit<br/>for each pair"]
+    M4["Separate true binaries from chance<br/>alignments — keep only bound pairs"]
+    M5["Fill in each member's brightness<br/>and spectral type"]
+    M1 --> M2 --> M3 --> M4 --> M5
   end
 
-  WDS --> BIN1
-  MSC --> BIN1
-  SIMBAD --> BIN1
-  ATHYG --> BIN2
-  CCDM --> BIN2
-  GAIA --> BIN2
-  GAIA --> BIN3
-  HIP2 --> BIN3
-  GAIA --> BIN4
-  MSC --> BIN4
-  GCVS --> BIN6
-  SIMBAD --> BIN6
-
-  MULT[("data/binaries/multiples.tsv")]
-  BIN7 --> MULT
-
-  subgraph CAT["STAGE 2 — scripts/catalog/build-catalog.ts (pnpm run build:catalog)"]
-    CAT1["Ingest AT-HYG rows<br/>drop: missing ra/dec/dist, missing absmag<br/>carries pos_src/dist_src/mag_src/pm_src provenance"]
-    CAT2["Distance refinement cascade (order-dependent)<br/>AT-HYG dist<br/>then Bailer-Jones override (Gaia-sourced rows only)<br/>then HIP2 full-precision redistance (HIP-sourced rows)<br/>then LMC kinematic override (15deg cone + dPM under 0.5 mas/yr, snaps to 49.594 kpc)<br/>then MAX_DIST_PC 50,000 pc cutoff<br/>(recomputes absmag at every layer)"]
-    CAT3["Direction cascade — shared with binaries Stage 3<br/>gaia_5p &gt; gaia_nss_systemic &gt; hip2_saturated<br/>&gt; hip2_pm_discrepant &gt; athyg_printed<br/>(AT-HYG's own x0/y0/z0 never consumed)"]
-    CAT4["Build-time de-extinction<br/>via dust voxel grid (hard fail if absent)"]
-    CAT5["Spectral classification<br/>curated HIP override &gt; SIMBAD by source_id<br/>&gt; SIMBAD by HIP &gt; Gaia GSP-Spec enum &gt; unknown"]
-    CAT6["Colour / Teff resolution<br/>Gaia Apsis gspphot &gt; gspspec &gt; AT-HYG B-V<br/>&gt; spectral-class table &gt; WD Sion Teff &gt; solar"]
-    CAT7["Physical radius — Stefan-Boltzmann"]
-    CAT8["System-distance coherence<br/>anchor: clean Gaia 5p &gt; HIP2 &gt; Bailer-Jones &gt; inherited<br/>non-anchor members snap unless 3-sigma parallax gap"]
-    CAT9["Companion promotion<br/>from multiples.tsv, FLAG_BINARY_COMPANION_ONLY rows"]
-    CAT10["SID resolution"]
-    CAT1 --> CAT2 --> CAT3 --> CAT4 --> CAT5 --> CAT6 --> CAT7 --> CAT8 --> CAT9 --> CAT10
+  subgraph CATG["Star-catalogue assembly"]
+    C1["Ingest the base star list — drop rows with<br/>no position, distance, or brightness"]
+    C2["Refine every distance —<br/>best available measurement wins"]
+    C3["Refine every sky direction —<br/>most trustworthy astrometry wins"]
+    C4["Subtract foreground dust dimming<br/>and reddening"]
+    C5["Classify each spectrum —<br/>assign temperature and colour"]
+    C6["Compute each star's physical size"]
+    C7["Give bound systems one shared distance"]
+    C8["Add companion stars the base list<br/>doesn't carry"]
+    C9["Assign every object a permanent identifier"]
+    C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7 --> C8 --> C9
   end
 
-  ATHYG --> CAT1
-  GCVS --> CAT1
-  CCDM --> CAT1
-  BJ --> CAT2
-  HIP2 --> CAT2
-  HIP2 --> CAT3
-  GAIA --> CAT3
-  GAIA --> CAT5
-  GAIA --> CAT6
-  SIMBAD --> CAT5
-  STELL --> CONSTOUT
-  MULT --> CAT9
-  DUSTOUT --> CAT4
+  ORB["Package the orbits — compact per-pair<br/>orbital elements for live motion"]
 
-  CATBIN[("public/catalog.bin.i +<br/>catalog-manifest.json")]
-  CONSTOUT[("public/constellations.json")]
-  SEARCHOUT[("public/search-index.json")]
-  RIMOUT[("public/catalog-row-index-map.json")]
-  CAT10 --> CATBIN
-  CAT10 --> CONSTOUT
-  CAT10 --> SEARCHOUT
-  CAT10 --> RIMOUT
-
-  subgraph RTB["STAGE 3 — build-runtime-binaries.py (pnpm run build:binaries-runtime)"]
-    RTB1["Join multiples.tsv with row-index-map<br/>emit Kepler elements per pair"]
+  subgraph ENV["Surroundings — built independently of the star chain"]
+    E1["Molecular clouds: fitted shapes, plus true<br/>irregular silhouettes traced from the dust map"]
+    E2["3D dust cube — dims and reddens<br/>stars behind dust"]
+    E3["Local Bubble shell — the cavity wall<br/>the Sun sits inside"]
+    E4["Nearby galaxies out to 2 Mpc"]
+    E5["Star-colour table —<br/>blackbody spectrum to screen colour"]
+    E6["Planet and ring textures"]
   end
-  MULT --> RTB1
-  RIMOUT --> RTB1
-  BINBIN[("public/binaries.bin")]
-  RTB1 --> BINBIN
 
-  subgraph PAR["Parallel layers — independent of star/binary chain"]
-    CLOUDS1["build-clouds.py<br/>Z2021(precise ellipsoids) over Z2020(sphere aggregates)"]
-    LG1["build-local-group.ts<br/>filter: confirmed_real and confirmed_galaxy, under 2 Mpc"]
-    DUST1["build-dust.py then sync-dust.ts<br/>log10 density, uint8, 512-cubed voxels"]
-    LUT1["blackbody-lut.ts<br/>Ballesteros B-V to Teff + Planck + CIE 1931"]
+  subgraph CHECK["Cross-checks"]
+    V1["Distances vs independently measured<br/>supergiants"]
+    V2["Multiple-star identities vs<br/>hand-verified systems"]
+    V3["Output counts vs expected snapshots —<br/>unexplained drift fails the build"]
   end
-  ZUCKER --> CLOUDS1
-  ZUCKER -->|cloud_model.py column check| DUST1
-  LVDB --> LG1
-  DUSTSRC --> DUST1
-  CLOUDSOUT[("public/clouds.json")]
-  LGOUT[("public/local-group.json")]
-  DUSTOUT[("public/dust/*")]
-  LUTOUT[("src/client/star-pipeline/blackbody-lut-data.ts")]
-  CLOUDS1 --> CLOUDSOUT
-  LG1 --> LGOUT
-  DUST1 --> DUSTOUT
-  LUT1 --> LUTOUT
 
-  subgraph VAL["Validation — side-branch, gated"]
-    VAL1["validate-distances.py<br/>Vaidman 2025 BA-supergiant cross-check"]
-    VAL2["build-binaries-spotcheck.py<br/>vs spot_check_ground_truth.tsv"]
+  subgraph VIEW["In the browser"]
+    W1["Load the catalogue, orbits,<br/>and surroundings"]
+    W2["Advance every star to the displayed date<br/>along its space velocity"]
+    W3["Binaries orbit live · eclipsing pairs dim<br/>on schedule · variables pulse on their<br/>real periods"]
+    W4["Render each star with its physical colour,<br/>dust dimming and reddening computed from<br/>the camera's actual viewpoint"]
+    W1 --> W2 --> W3 --> W4
   end
-  BJ --> VAL1
-  MULT --> VAL2
 
-  subgraph CLIENT["Client — pnpm run build:client (vite build)"]
-    CLI1["loaders/* — read catalog.bin, binaries.bin,<br/>clouds.json, local-group.json, dust chunks"]
-    CLI2["epoch-advance-pure.ts<br/>J2016.0 to model clock t (baked per-star velocity)"]
-    CLI3["BinaryOrbitField / EclipsePhotometryField<br/>per-frame Kepler walk"]
-    CLI4["star-pipeline render<br/>colour LUT + dust extinction + variable pulsation"]
-    CLI1 --> CLI2 --> CLI3 --> CLI4
-  end
-  CATBIN --> CLI1
-  BINBIN --> CLI1
-  CLOUDSOUT --> CLI1
-  LGOUT --> CLI1
-  DUSTOUT --> CLI1
-  LUTOUT --> CLI4
+  ATHYG --> MULT
+  GAIA --> MULT
+  HIP --> MULT
+  SIMBAD --> MULT
+  WDS --> MULT
+
+  ATHYG --> CATG
+  GAIA --> CATG
+  HIP --> CATG
+  BJ --> CATG
+  SIMBAD --> CATG
+  GCVS --> CATG
+  STELL --> CATG
+
+  EDEN --> ENV
+  ZUCKER --> ENV
+  LVDB --> ENV
+
+  MULT -->|companions + pair geometry| CATG
+  ENV -->|dust cube| C4
+
+  MULT --> ORB
+  CATG --> ORB
+
+  MULT --> CHECK
+  CATG --> CHECK
+  BJ --> CHECK
+
+  CATG --> VIEW
+  ORB --> VIEW
+  ENV --> VIEW
 
   classDef source fill:#2b6cb0,stroke:#1a365d,color:#fff
   classDef refresh fill:#718096,stroke:#4a5568,color:#fff,stroke-dasharray: 5 5
   classDef stage fill:#2c5282,stroke:#1a365d,color:#fff
-  classDef output fill:#276749,stroke:#1a3c26,color:#fff
   classDef validation fill:#c05621,stroke:#7b341e,color:#fff
   classDef client fill:#553c9a,stroke:#322659,color:#fff
 
-  class ATHYG,GCVS,CCDM,HIP2,WDS,MSC,SIMBAD,GAIA,BJ,STELL,DUSTSRC,LVDB,ZUCKER source
+  class ATHYG,GAIA,HIP,BJ,SIMBAD,GCVS,WDS,EDEN,ZUCKER,LVDB,STELL source
   class RF refresh
-  class BIN1,BIN2,BIN3,BIN4,BIN5,BIN6,BIN7,CAT1,CAT2,CAT3,CAT4,CAT5,CAT6,CAT7,CAT8,CAT9,CAT10,RTB1,CLOUDS1,LG1,DUST1,LUT1 stage
-  class MULT,CATBIN,CONSTOUT,SEARCHOUT,RIMOUT,BINBIN,CLOUDSOUT,LGOUT,DUSTOUT,LUTOUT output
-  class VAL1,VAL2 validation
-  class CLI1,CLI2,CLI3,CLI4 client
+  class M1,M2,M3,M4,M5,C1,C2,C3,C4,C5,C6,C7,C8,C9,ORB,E1,E2,E3,E4,E5,E6 stage
+  class V1,V2,V3 validation
+  class W1,W2,W3,W4 client
 ```
+
+## The sources, and keeping them fresh
+
+Every input is a frozen local copy of a published dataset, so the
+build is reproducible and never depends on a remote service being up.
+A separate set of manual refresh scripts re-downloads the Gaia-era
+sources (Gaia, Hipparcos, SIMBAD, Bailer-Jones, the Pulkovo multiple-
+star compilation) when something upstream changes — infrequently, and
+always as a deliberate, reviewed step. The base star list itself is
+swapped only when a new AT-HYG release lands.
+
+## Multiple-star assembly
+
+Double-star catalogues describe *observations* — "a companion at this
+separation and angle" — not identified stars, so the first job is
+deciding which real star each catalogued component actually is. Every
+component is matched to a Gaia source through a ladder of
+identifications (a published orbit's Hipparcos ID, the base
+catalogue's own Gaia ID, SIMBAD cross-identifications, Hipparcos
+double-star records), and every candidate match must pass a brightness
+sanity check: a claimed match more than a magnitude fainter than the
+star it is supposed to be is really a companion or a background
+interloper that an automated cross-match landed on, and is rejected.
+
+Each member then gets the most trustworthy position and motion
+available. Gaia is the default; the exceptions are stars whose Gaia
+fit is corrupted by unmodelled orbital motion (Gaia's centre-of-mass
+solution is used where it has one, Hipparcos's longer baseline where
+it doesn't) and stars too bright for Gaia altogether, which also fall
+back to Hipparcos.
+
+Each pair gets the best published orbit: a visual orbit from the orbit
+catalogue first, then a Gaia orbital fit, then a spectroscopic orbit,
+then a compiled literature orbit for pairs too tight to resolve.
+
+Most catalogued "doubles" are chance alignments, so every pair runs a
+physical-vs-optical gauntlet: cataloguers' own notes, whether an orbit
+is on file, a hard separation limit (no pair wider than one parsec
+survives the Galaxy's tides), parallax agreement plus relative
+velocity against escape velocity, and common-proper-motion tests.
+Only pairs judged genuinely bound are kept.
+
+Finally each member is given a brightness and a spectral type from the
+best available source, preferring measured values and being explicit
+about what was inherited or derived, and the results are written out
+as a table of physically bound systems.
+
+## Star-catalogue assembly
+
+The base list contributes identity: which stars exist, their names and
+designations, and their observed brightness. Almost everything else is
+re-derived from better sources.
+
+**Distances.** A star's naive distance (one over its parallax) is
+biased and noisy, so distances are refined in a fixed order: the
+Bailer-Jones probabilistic distance replaces the naive value for
+Gaia-sourced stars; Hipparcos-sourced stars get their distance
+re-derived at full precision from the original parallax; stars in the
+direction of the Large Magellanic Cloud that also share its motion are
+snapped to its precisely known distance of 49.6 kpc (from eclipsing
+binaries — parallax is useless that far out); and anything still
+beyond 50 kpc is out of scope and dropped. Every refinement also
+recomputes the star's intrinsic brightness, so a star moved to a new
+distance is lit correctly for it.
+
+**Directions.** Sky positions use the same trust ladder as the
+multiple-star pipeline: Gaia by default, Gaia's centre-of-mass
+solution for binaries whose plain fit is flagged unreliable, Hipparcos
+for the saturated bright stars and for stars whose Gaia and Hipparcos
+proper motions disagree wildly, and the base catalogue's printed
+position for a residual handful. Positions are propagated to a common
+epoch, and each star's full 3D space velocity is recorded alongside —
+implausible velocities (almost always measurement artifacts) are
+zeroed rather than letting stars streak across the model.
+
+**Dust, counted exactly once.** Observed brightness includes dimming
+by interstellar dust between the Sun and the star. The viewer,
+however, computes dust dimming live from wherever the camera actually
+is — so the catalogue stores each star's *intrinsic* brightness and
+colour, with the Sun-to-star dust contribution subtracted using the
+same 3D dust map the viewer integrates through. From the Sun's
+vantage the two operations cancel exactly and you see the star's
+catalogued magnitude; from anywhere else, the lighting is physically
+consistent with the new sightline.
+
+**Spectra, colour, size.** Each star's spectral classification comes
+from curated overrides for a few famous problem cases, then SIMBAD,
+then Gaia's own classification. Colour and temperature prefer Gaia's
+measured temperature estimates, then the star's observed colour index,
+then the colour implied by its spectral class, with white dwarfs on
+their own temperature scale and a solar colour as the last resort.
+Physical radius follows from luminosity and temperature via the
+Stefan-Boltzmann law, with white dwarfs special-cased.
+
+**Coherent systems.** Two members of a bound system carry
+independently measured distances whose noise is far larger than the
+system's true size, so a naive build renders famous binaries split
+visibly apart along the line of sight. Each system's most trustworthy
+member becomes the anchor and other members adopt its distance —
+unless a member's own parallax disagrees significantly, which is how
+genuinely measured depth (Alpha Centauri and Proxima) survives.
+
+**Missing companions.** Thousands of well-known companions — Sirius B,
+the components of Algol — have no entry of their own in general star
+catalogues. These are minted as first-class objects from the
+multiple-star table, positioned from the measured separation and angle
+off their primary, and given an honest brightness: a companion never
+inherits its primary's full brightness, and a row with no defensible
+brightness source is dropped rather than faked. A conservation pass
+then dims each primary whose catalogued magnitude actually included a
+now-separate companion's light, so no photon is counted twice.
+
+**Permanent identity.** Every object receives a permanent identifier,
+allocated once in a frozen registry, so links and shared views survive
+future data updates that reshuffle the underlying catalogues.
+
+The finished catalogue ships with the constellation figures (resolved
+from the Stellarium sky culture against the final star list) and a
+search index covering proper names, Bayer and Flamsteed designations,
+catalogue numbers, and variable-star names.
+
+## Orbits for the viewer
+
+Pairs with usable orbital elements are packaged into a compact file
+keyed to the finished catalogue, which is what lets the viewer move
+binaries along their true orbits in real time rather than displaying a
+frozen snapshot.
+
+## Surroundings
+
+Independently of the star chain, the build prepares the environment
+the stars sit in:
+
+- **Molecular clouds** — the named nearby star-forming clouds, with
+  precisely fitted shapes where available and, for clouds inside the
+  dust map's volume, true irregular silhouettes traced from the dust
+  distribution itself.
+- **The dust cube** — the 3D dust map resampled into a volume the
+  renderer integrates through on every sightline, dimming and
+  reddening stars behind dust; the same volume the catalogue build
+  used for de-extinction, so the two stay consistent by construction.
+- **The Local Bubble** — a closed shell tracing the wall of the
+  low-density cavity the Sun sits inside.
+- **Nearby galaxies** — confirmed galaxies out to 2 Mpc, each drawn as
+  an oriented luminous body.
+- **Star colours** — a precomputed table from stellar temperature
+  through a blackbody spectrum and the standard human colour-response
+  functions to screen colour, so every star renders a physically
+  grounded hue.
+- **Planet textures** — imagery for the solar-system bodies.
+
+## Cross-checks
+
+Three kinds of independent verification guard the pipeline: refined
+distances are compared against supergiants with independently
+measured distances; multiple-star identity resolution is compared
+against a hand-verified list of famous systems; and every build
+asserts its output counts (stars kept, matches made, companions
+minted, rows dropped and why) against an expected snapshot, so any
+unexplained drift fails the build instead of shipping silently.
+
+## In the browser
+
+The viewer loads the catalogue, the orbit file, and the surroundings.
+Star positions advance from the catalogue's reference epoch (2016.0)
+to the displayed date along each star's recorded space velocity, and
+keep advancing as you scrub time. Binaries with orbits move live along
+Kepler orbits; eclipsing pairs dim on schedule; variable stars pulse
+with their real periods and amplitudes. Each star is drawn with its
+physically derived colour and size, dimmed and reddened by integrating
+the dust cube along the sightline from wherever the camera actually is
+— so flying somewhere else in the Galaxy re-lights the sky the way it
+would really look from there.
