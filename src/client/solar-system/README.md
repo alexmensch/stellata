@@ -706,6 +706,24 @@ there is no ad-hoc day gate. **Airlight is applied on both surfaces:**
   so the disc path owns them (no double-count). The full-chord airlight is the
   physical back-lit ring.
 
+**Multiple-scattering fill.** Single scattering alone leaves optically thick
+hazes (Venus, Titan) far too dark — most of their brightness is *multiply*
+scattered, which the single-scatter integral misses, so the thick-Mie
+extinction would kill the surface and leave a black disc. After the
+single-scatter loop the integrator adds a cheap isotropic term = fraction
+scattered (not absorbed) × opacity (1 − T) × sunlit-fraction, weighted by
+`MS_STRENGTH`. It is negligible for thin atmospheres (Earth: opacity ≈ 0) and
+dominant for thick ones (Venus → bright featureless yellow ball; Titan → glowing
+orange disc, its channel colour set by the absorption albedo). `AIRLIGHT_GAIN`
+scales the single-scatter term so the neutral slider (sun intensity = 1) is
+roughly calibrated.
+
+**Anti-banding.** The few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`) would
+read as a fixed moiré grid; each fragment jitters its sample lattice by an
+interleaved-gradient-noise offset (`stellata_atmoJitter(gl_FragCoord)`) so the
+residual reads as fine noise instead. The CPU mirror uses the midpoint (0.5),
+so vitest pins deterministic quadrature while the shader decorrelates.
+
 Per-body params live in `planet-system.ts` `PlanetAtmosphere` as scale
 heights + **vertical optical depths** (`rayleighCoeff`, `mieCoeff`,
 `absorbCoeff`); the layer divides by H/R to get the surface extinction the
@@ -714,6 +732,24 @@ exposes four global multipliers applied on top of the per-body base — density
 (the 'dial Titan down' knob), Rayleigh↔Mie balance, scale height, and sun
 intensity — for live calibration; read a good value off the slider and bake it
 into the per-body table.
+
+**Calibrating per-body values — anchor to physics, not a photo.** Every
+real image (Blue Marble included) is exposure- and white-balance-processed, so
+pixel-matching is a trap. Instead:
+- The mesh *surface* already renders at the Mallama-correct apparent magnitude,
+  so absolute brightness is anchored; the atmosphere only supplies *hue* + limb
+  behaviour + (for thick hazes) the multiscatter disc.
+- **Relative brightness** follows geometric albedo (`Planet.albedo`: Venus 0.69
+  > Earth 0.43 > Titan 0.22 ≈ Mars 0.17) — Venus should read brightest.
+- **Rayleigh `rayleighCoeff`** keeps the 1/λ⁴ (blue-heavy) shape; its magnitude
+  is the molecular optical depth (near-zero on dust-dominated Mars). Lower it
+  to keep Earth's limb *blue* — too high and the long limb path reddens it
+  (sunset physics).
+- **`absorbCoeff`** is blue-heaviest for the coloured hazes (Titan, Mars dust,
+  Venus) — it removes blue from airlight and transmittance. Do not invert.
+- Target appearance: Earth = blue limb, dark oceans, white clouds; Venus =
+  featureless pale yellow; Mars = butterscotch; Titan = featureless orange.
+  Near-raw full-disc references: DSCOVR/EPIC daily Earth images.
 
 Shell heights are TRUE scattering extents (Earth 100 km ≈ Kármán, Venus 90 km
 haze tops, Mars 60 km dust haze, Titan 300 km detached haze), never
