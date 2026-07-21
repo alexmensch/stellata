@@ -26,10 +26,12 @@ cross-script policy and pointers.
   classifier, and `sid:stamp` (stamps sids onto clouds.json /
   local-group.json). The catalog build resolves stellar sids in-record
   from the ledger. See `docs/sid.md`.
-- `clouds/`, `dust/`, `local-group/`, `local-bubble/`, `textures/` —
-  per-layer build helpers. `local-bubble/` turns the Zucker 2022
-  inner-surface HEALPix map into `public/local-bubble.bin` (shell mesh),
-  cross-checked against the Edenhofer dust grid.
+- `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
+  `local-bubble/`, `textures/` — per-layer build helpers.
+  `local-bubble/` turns the Zucker 2022 inner-surface HEALPix map into
+  `public/local-bubble.bin` (shell mesh), cross-checked against the
+  Edenhofer dust grid; `cloud-surfaces/` traces per-cloud isosurface
+  meshes from the Edenhofer posterior (offline, LFS-committed).
 
 ## Preprocessor idempotency
 

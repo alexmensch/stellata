@@ -35,8 +35,9 @@ scripts and source files. Run via `pnpm run build:clouds`.
 ## Output schema
 
 `{version: 2, count, noiseModel, clouds[]}` — `noiseModel` carries
-the presence-shader noise-ladder constants
-(docs/molecular-clouds.md § 5.2). One entry per cloud:
+the substructure noise-ladder constants (docs/molecular-clouds.md
+§ 5.2; build-side only — the client no longer reads them, see the § 5
+status note). One entry per cloud:
 
 | Field      | Meaning |
 | ---------- | ------- |

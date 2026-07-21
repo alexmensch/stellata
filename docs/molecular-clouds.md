@@ -58,6 +58,13 @@ refine the epic's original scoping:
    (§ 5) exists only in the presence-pass shader, band-limited per
    § 9.1. Its constants ship as the `noiseModel` block in
    `clouds.json` v2 so A.4/A.6 read one source of truth.
+   *Revised at the A.6 rework (2026-07-21, with the user):* the
+   shader-side ladder is retired entirely — cloud shape now comes from
+   **real data**, per-cloud isosurface meshes traced from the
+   Edenhofer field at build time (§ 9; `scripts/cloud-surfaces/`).
+   The `noiseModel` block stays in `clouds.json` v2 as the build-side
+   single source of truth for a future volumetric-substructure
+   upgrade, but no client code reads it.
 4. **Embedded stars come from an in-catalog cross-match, behind a
    generic reader interface.** Build-time point-in-ellipsoid test of
    catalog stars with O/early-B spectral types against cloud
@@ -222,6 +229,15 @@ These defaults are presence-pass cosmetics, not extinction truth —
 they only shape silhouettes.
 
 ## 5. Substructure noise
+
+> **Status (2026-07-21, A.6 rework):** the client-side octave ladder
+> below was superseded before shipping — cloud substructure now comes
+> from the data itself, per-cloud isosurface meshes traced from the
+> Edenhofer field (§ 9, `scripts/cloud-surfaces/README.md`), and the
+> presence shader carries no noise. The model below remains the
+> build-side spec: `cloud_model.py` still emits the `noiseModel` block
+> (§ 8) so a future volumetric-substructure upgrade (`stellata-5nh`)
+> has one calibrated source of truth to pick up.
 
 ### 5.1 Physical basis
 
@@ -427,7 +443,8 @@ taking the larger R_cav.
 `id`, `center`, `axes`, `quat`, `source`, `distance`, and `mass` —
 which stays Table 3 `mass_nicest`, the literature-comparable display
 value). A top-level `noiseModel` block carries the § 5.2 ladder
-constants. New per-cloud fields, all emitted by `build-clouds.py`
+constants (build-side only — the client no longer decodes it; § 5
+status note). New per-cloud fields, all emitted by `build-clouds.py`
 from `cloud_model.py`:
 
 ```
@@ -446,62 +463,61 @@ embedded[]   { name, xyz [pc, ICRS], sptype, logQH, rCavPc }  ≤ 4
 ```
 
 The loader (`cloud-loader.ts`) versions on `version` (A.2 bumped the
-gate; field decoding beyond v1's set lands with A.6); the presence
-renderer consumes everything. Pinned in
+gate; field decoding beyond v1's set landed with A.6). Pinned in
 `scripts/clouds/clouds-json.test.ts`.
 
 ## 9. Presence pass (A.6) — supersedes the warm glow
 
 Decision: the shelved `cloud.frag.glsl` warm-glow shader is
-**replaced**, not re-framed. The renderer machinery around it — the
-shared ellipsoid mesh, per-instance scaling, premultiplied-alpha
-material invariant, GLSL3 constraints, picking / focus / warp /
-search integration — is all preserved as documented in
-`src/client/molecular-clouds/README.md`.
+**replaced**, not re-framed. The renderer machinery around it —
+per-instance scaling, premultiplied-alpha material invariant, GLSL3
+constraints, picking / focus / warp / search integration — is all
+preserved as documented in `src/client/molecular-clouds/README.md`.
 
 Physical grounding: in the optical, a molecular cloud seen from
 outside is (a) a *dark patch* occluding the diffuse background (the
-Milky Way band, the galactic glow) and (b) a very faint
-surface-brightness glow from scattered interstellar radiation (real
-clouds sit at ~21–23 mag/arcsec²). Two components, one density
-integral:
+Milky Way band, the galactic glow) and (b) essentially invisible
+otherwise (real clouds sit at ~21–23 mag/arcsec² of scattered light).
+Two **decoupled** components (revised 2026-07-21, with the user —
+the original one-raymarch-drives-everything design coupled the
+annotation to the physics):
 
-- **Absorption (alpha-over):** per-fragment short raymarch (12–16
-  steps) through the ellipsoid segment, sampling the analytic model
-  (Plummer × fine-octave noise × cavities). Opacity
-  `α = 1 − exp(−0.921 · A_V_ray)`, capped at 0.95. Because the
-  cloud mesh renders in the background group — after the Milky Way
-  band but before the star passes — the alpha-over correctly dims
-  the MW band / galactic glow / grid behind the cloud while leaving
-  stars untouched (their dimming comes from the per-star raymarch;
-  no double counting). This is the mechanism by which clouds
-  extinct the volumetric Milky Way, which deliberately does not
-  sample the voxel grid.
-- **Fresnel-rim presence (additive, whisper-level):** the same
-  integral modulates a faint rim glow so cloud shape reads against
-  empty black sky — the epic's "very subtle stylised presence",
-  revised at A.6 (2026-07-20, with the user) to the Local Bubble's
-  fresnel-rim treatment (`src/client/fresnel-shell/`): the layer is
+- **Absorption (alpha-over, always on):** per-fragment short raymarch
+  through the ellipsoid segment, sampling the analytic model (Plummer
+  × cavities; no noise — the integrand is smooth by construction).
+  Opacity `α = 1 − exp(−0.921 · A_V_ray)`, capped at 0.95, emitted as
+  an **alpha-only premultiplied over** (rgb = 0). Because the mesh
+  renders in the background group — after the Milky Way band but
+  before the star passes — the alpha-over correctly dims the MW band
+  / galactic glow behind the cloud while leaving stars untouched
+  (their dimming comes from the per-star raymarch; no double
+  counting). This is the mechanism by which clouds extinct the
+  volumetric Milky Way, which deliberately does not sample the voxel
+  grid — so it is **physics, never declutter-gated**: it stays on at
+  every detail level in realistic mode and hides only in chart mode.
+- **Rim silhouette (additive, whisper-level, declutter-gated):** the
+  Local Bubble's fresnel-rim treatment (`src/client/fresnel-shell/`,
+  shared `stellata_fresnel_rim` chunk + `SHELL_RIM_BLUE`) on a
+  per-cloud **isosurface mesh traced from the real Edenhofer field**
+  at build time (`scripts/cloud-surfaces/README.md`; clouds the field
+  can't resolve fall back to their ellipsoid envelope). The layer is
   an orientation aid for objects you can't actually see, so the
-  limb-brightened silhouette reads as annotation rather than
-  luminous gas, and decluttering to `physical` removes it entirely.
-  The rim shape is the shared `stellata_fresnel_rim` chunk at the
-  ray's envelope entry point, textured by the fine octaves, faded at
-  the envelope edge by the ray's closest approach (geometric — a
-  column fade would cancel the rim exactly where the fresnel peaks,
-  since grazing rays carry no column), and suppressed with the camera
-  inside the envelope (the fresnel-shell hide-when-inside contract,
-  glow only — absorption keeps working from inside). Peak intensity target ≈ 0.05–0.15 of
-  a threshold-visible star's glow; must lose to any physical
-  signal. Class tinting: dark → neutral warm grey-brown; sf →
-  slightly warmer; hii → faint red bias. Actual HII emission
-  overlays are `stellata-c7u.5.2`'s scope, driven by the cavity
-  list.
+  limb-brightened silhouette reads as annotation rather than luminous
+  gas — one shared blue, no class tinting — and it is gated at the
+  `representational` declutter floor (`molecularCloudEllipsoids`):
+  decluttering to `physical` removes it entirely, leaving pure
+  physics. FrontSide + outward winding is the fresnel-shell
+  hide-when-inside contract (the rim culls with the camera inside the
+  cloud; the BackSide absorption keeps working from inside). Peak
+  intensity target ≈ 0.05–0.15 of a threshold-visible star's glow;
+  must lose to any physical signal. Actual HII emission overlays are
+  `stellata-c7u.5.2`'s scope, driven by the cavity list.
 
-Chart mode keeps the existing mono treatment (soft grey, normal
-alpha) fed by the new density integral. All intensity constants land
-as named uniforms with dev-console levers, mirroring the existing
-`stellata.cloudLayer.*` pattern.
+Chart mode renders the rim meshes as **stippled silhouette outlines**
+(the SkyAtlas 2000 nebula convention — an fwidth-scaled contour where
+n·v → 0, masked by a screen-space dot grid) and hides the absorption.
+All intensity constants land as named uniforms with dev-console
+levers, mirroring the existing `stellata.cloudLayer.*` pattern.
 
 ### 9.1 Sampling and anti-aliasing — banding is the known failure mode
 
@@ -509,53 +525,34 @@ Precedent: the volumetric Milky Way deliberately does not sample the
 Edenhofer voxels because fixed-step marches alias into visible
 streaks (`docs/science-galactic-structure.md` § Interstellar dust
 extinction; the standing spiral-arm non-goal exists for the same
-reason). The presence
-raymarch has the same shape — 12–16 steps give step lengths of
-1.5–5 pc across typical chords, far past Nyquist for the 0.3 pc
-finest octave — plus a second hazard the MW case didn't have: the
-noise field is heavy-tailed (log-normal, σ_s up to ~1.9, ridged
-fine octaves), so a few jittered samples of the full field have
-enormous estimator variance, amplified by the nonlinear
-`α = 1 − exp(−0.921 A_V)` output. Naive marching bands; naive
-jittered marching shimmers. Five rules, all mandatory in A.6:
+reason). With the noise ladder retired (§ 5 status note) the
+absorption integrand is the smooth analytic Plummer profile — the
+heavy-tailed-estimator hazard the original five-rule set defended
+against is gone, and the band-limit / texture-role rules (old rules
+1–2) retired with it. Three rules remain mandatory:
 
-1. **Band-limited integral (the role split).** Only octaves with
-   wavelength ≥ 2 × step length may contribute *inside* the
-   integral — in practice the analytic envelope + the coarse
-   (≥ 10 pc) octaves, which are smooth at 16 steps by construction.
-   Octave amplitudes fade via `smoothstep` on λ/(2Δ), never a hard
-   cut. The column that drives absorption α and glow amplitude is
-   therefore always well-sampled.
-2. **Fine octaves as bounded texture, not density.** The sub-10 pc
-   octaves apply as a single post-integral multiplicative factor
-   (evaluated at the densest sample along the ray), clamped to
-   [0.6, 1.4]. They add filamentary texture without adding column
-   variance — consistent with their § 5.3 status as a look model.
-   Octaves below the world-space pixel footprint
-   (`d · uFovYRad / viewport.y`) fade out of the texture term too
-   (screen-space Nyquist; the detail-floor principle applied
-   per-pixel).
-3. **Static per-pixel ray jitter.** Offset each ray's start by one
+1. **Static per-pixel ray jitter.** Offset each ray's start by one
    step length scaled by interleaved gradient noise of
    `gl_FragCoord.xy` — cheap, no texture. Do NOT reseed per frame:
    with no temporal accumulation pass, animated jitter reads as
    shimmer; static jitter is stable and camera motion decorrelates
    it naturally.
-4. **Output dither.** The whisper glow at 0.05–0.15 intensity spans
+2. **Output dither.** The whisper rim at 0.05–0.15 intensity spans
    only ~13–38 levels of an 8-bit framebuffer — quantisation
    banding is guaranteed even with a perfect integral. Add
-   ±0.5-LSB gradient-noise dither to the final rgb and α.
-5. **Render-order contract for extinctable layers.** The alpha-over
-   dimming reaches only layers drawn *before* the presence mesh.
-   Every diffuse background the clouds should extinct — the MW
-   band, the galactic disc glow, any future HiPS / sky-imagery
-   layer — must render earlier in the background group; a layer
-   added after the mesh silently escapes extinction. Point sources
-   are exempt (per-star raymarch owns them). Record this constraint
-   in `src/client/molecular-clouds/README.md` when A.6 lands.
+   ±0.5-LSB gradient-noise dither to the final output (both the
+   absorption alpha and the rim rgb).
+3. **Render-order contract for extinctable layers.** The alpha-over
+   dimming reaches only layers drawn *before* the absorption mesh
+   (`renderOrder −2`). Every diffuse background the clouds should
+   extinct — the MW band, the galactic disc glow, any future HiPS /
+   sky-imagery layer — must render earlier in the background group;
+   a layer added after the mesh silently escapes extinction. Point
+   sources are exempt (per-star raymarch owns them). Recorded in
+   `src/client/molecular-clouds/README.md` § Absorption render.
 
-Step count, jitter scale, and the texture-clamp bounds are
-dev-console levers; the structure above is not tunable away.
+Step count is a dev-console lever; the structure above is not
+tunable away.
 
 ## 10. Inside-the-cloud experience (A.7)
 
@@ -571,7 +568,7 @@ Everything falls out of the two mechanisms already specified:
   automatically (the camera→star segment starts inside the dense
   region). The un-clipped Edenhofer encode (§ 2.2) is what makes
   this real.
-- **Diffuse background:** the presence mesh is `BackSide` with an
+- **Diffuse background:** the absorption mesh is `BackSide` with an
   analytic ray-envelope segment, so it renders from inside too; with
   the camera inside, each fragment integrates the *outward* column
   in its direction, so the MW band dims anisotropically — darkest
@@ -594,21 +591,22 @@ during a slow orbit with the galactic-core gradient behind the cloud
 ## 11. Phase map and execution order
 
 Recommended order: **A.2 → A.3 → A.6 → A.4 → A.5 → A.7** (A.6 hosts
-the shader framework A.4's fine noise and A.5's tints plug into).
+the shader framework A.5's cavity carve plugs into; A.4 was
+superseded by A.6's real-data shapes).
 
 | Phase | Bead | Scope from this design | Key acceptance |
 | --- | --- | --- | --- |
 | A.2 (shipped) | c7u.2 | Fixed `DENSITY_MAX` → 0.2 (un-clips the real Edenhofer cores; § 2.2); per-star extinction = pure Edenhofer with the measured evidence retiring the `max(edenhofer, model)` overlay (§ 1 decision 1); calibrated analytic model + taxonomy + `noiseModel` into `clouds.json` v2 (§ 4, § 8); catalog rebuild (de-extinction invariant); `DUST_AV_HEADROOM` removal | 11 pinned `n0Cal`/`uEnv` (`clouds-json.test.ts`); per-cloud peak-column check pinned (`dust-manifest.test.ts`; Ophiuchus 1.03×, Taurus 0.50× of Leike targets); masses within 2× `mass_leike`; idempotent |
 | A.3 | c7u.3 | Pin existing A_V + B−V-shift behaviour (`dust-raymarch-pure.ts`); density-dependent R_V upgrade resolved analytically as a no-op at our A_V ≤ 2.73 column ceiling (§ 6), not shipped | Synthetic-cloud fixture pins A_V + B−V shift to `toBe`; constant R_V = 3.1 within ≲ 0.1 mag of the measured R_V(A_V) relation |
-| A.4 (shipped) | c7u.4 | The § 5 octave ladder + ridged/anisotropic shaping in the presence shader, constants from the `noiseModel` block | Structured, filamentary silhouettes; § 9.1 band-limits hold |
+| A.4 (superseded) | c7u.4 | Retired before shipping: real-data isosurface shapes (§ 9, `scripts/cloud-surfaces/`) replace the § 5 shader ladder; `noiseModel` stays build-side for the `stellata-5nh` upgrade | Structured, filamentary silhouettes — now from the traced meshes |
 | A.5 | c7u.5.x | Generic-reader cross-match; taxonomy + overrides; cavity list into `clouds.json` v2; presence-model cavity carve; HII/reflection tints (5.2) | λ Ori's presence silhouette reads as a ring; Orion A carves around the Trapezium; Taurus stays `dark` with zero cavities |
-| A.6 (shipped) | c7u.6 | Replace `cloud.frag.glsl` with absorption + fresnel-rim whisper glow; § 9.1 sampling rules (band-limit, texture role split, static jitter, output dither, render-order contract); `clouds.json` v2 field decoding; re-enable the layer at the `representational` declutter floor | MW band visibly occluded behind Taurus with no banding/shimmer against the galactic-core gradient; empty-sky silhouette barely perceptible; chart mode unchanged in spirit |
+| A.6 (shipped) | c7u.6 | Replace `cloud.frag.glsl` with two decoupled components (§ 9): always-on alpha-only absorption + declutter-gated fresnel rim on Edenhofer-traced isosurface meshes; § 9.1 rules (static jitter, output dither, render-order contract); `clouds.json` v2 field decoding + `cloud-surfaces.bin`; chart-mode stippled outlines | MW band visibly occluded behind Taurus — at every declutter level — with no banding/shimmer against the galactic-core gradient; rim silhouette barely perceptible and gone at `physical`; chart shows dotted outlines |
 | A.7 | c7u.7 | Fly-through verification + tuning (§ 10) | § 10 acceptance list |
 
-Cross-phase invariant: § 5's noise constants and the § 4 model
-parameters live in **one** source-of-truth chain —
-`cloud_model.py` → `clouds.json` v2 → shader uniforms — never
-redefined shader-side.
+Cross-phase invariant: the § 4 model parameters live in **one**
+source-of-truth chain — `cloud_model.py` → `clouds.json` v2 → shader
+uniforms — never redefined shader-side. (§ 5's noise constants stop at
+the `clouds.json` block; nothing downstream reads them today.)
 
 ## 12. References
 
