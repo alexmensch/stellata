@@ -16,7 +16,12 @@ CLOUDS_JSON = REPO / "public" / "clouds.json"
 OUT_PATH = REPO / "data" / "molecular-clouds" / "cloud-surfaces.bin"
 
 MAGIC = b"CSUR"
-VERSION = 1
+VERSION = 2
+
+# Density-brick budget: the sampled volume ships (mean-pooled to fit)
+# as a per-cloud uint8 3D texture so the runtime absorption raymarch
+# integrates the SAME field the isosurface was traced from.
+MAX_BRICK_DIM = 56
 
 # Sampling: ~1.25 pc inside each cloud's bbox (well below the 4.88 pc
 # runtime voxel grid — the dustmaps GP posterior is queried directly),
@@ -152,6 +157,23 @@ def orient_outward(verts, faces):
     return faces[:, ::-1].copy() if signed < 0 else faces
 
 
+def build_brick(volume, aabb_min, step):
+    """Mean-pool the sampled volume to ≤ MAX_BRICK_DIM per axis and
+    encode linear uint8 against the per-cloud max. Returns
+    (data u8 [x-major ravel], dims, brick_aabb_min, brick_step, dmax)."""
+    from skimage.measure import block_reduce
+    factor = max(1, int(np.ceil(max(volume.shape) / MAX_BRICK_DIM)))
+    pooled = block_reduce(volume, (factor, factor, factor), np.mean) \
+        if factor > 1 else volume
+    dmax = float(pooled.max())
+    scale = 255.0 / dmax if dmax > 0 else 0.0
+    data = np.clip(np.rint(pooled * scale), 0, 255).astype(np.uint8)
+    # Pooled sample k averages source points [k·f, (k+1)·f) — its
+    # effective position is aabb_min + (k·f + (f−1)/2)·step.
+    brick_aabb_min = aabb_min + (factor - 1) / 2 * step
+    return data, pooled.shape, brick_aabb_min, factor * step, dmax
+
+
 def build_mesh(volume, iso, aabb_min, step):
     from skimage import measure
     import fast_simplification
@@ -217,11 +239,15 @@ def main() -> None:
                   f"— empty after speckle cut")
             continue
         positions, indices = mesh
-        entries.append((c["sid"], positions, indices))
+        brick = build_brick(volume, aabb_min, step)
+        entries.append((c["sid"], positions, indices, brick))
+        bd = brick[1]
         print(f"  {c['name']:<24} step {step:4.2f}  p99 {peak:.4f}  iso {iso:.4f}  "
-              f"{len(positions)} verts  {len(indices) // 3} tris")
+              f"{len(positions)} verts  {len(indices) // 3} tris  "
+              f"brick {bd[0]}x{bd[1]}x{bd[2]}")
 
-    total = sum(len(p) * 12 + len(i) * 4 for _, p, i in entries)
+    total = sum(len(p) * 12 + len(i) * 4 + b[0].size
+                for _, p, i, b in entries)
     print(f"{len(entries)} surfaces, {len(skipped)} fallbacks, "
           f"payload {total / 1024:.0f} KiB")
     if args.dry_run:
@@ -231,11 +257,17 @@ def main() -> None:
     with open(OUT_PATH, "wb") as f:
         f.write(MAGIC)
         f.write(struct.pack("<III", VERSION, len(entries), 0))
-        for sid, positions, indices in entries:
+        for sid, positions, indices, brick in entries:
+            data, dims, bmin, bstep, dmax = brick
             f.write(struct.pack("<III", sid, len(positions), len(indices)))
-        for _, positions, indices in entries:
+            f.write(struct.pack("<III", *dims))
+            f.write(struct.pack("<fff", *bmin.tolist()))
+            f.write(struct.pack("<ff", bstep, dmax))
+        for _, positions, indices, brick in entries:
             f.write(positions.tobytes())
             f.write(indices.tobytes())
+            # x-fastest ravel: WebGL 3D-texture layout (index = x + y·w + z·w·h).
+            f.write(brick[0].transpose(2, 1, 0).tobytes())
     print(f"wrote {OUT_PATH.relative_to(REPO)} ({OUT_PATH.stat().st_size} bytes)")
 
 

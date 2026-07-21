@@ -40,6 +40,11 @@ const INK_ALPHA_DEFAULT = 0.95;
 const LABEL_SAMPLE_TARGET = 32;
 const GOLDEN_ANGLE = 2.399963229728653;
 
+// Field-mode march clip: the brick carries real density out to the
+// build's envelope taper edge (u = 1.05, scripts/cloud-surfaces/), so
+// the ray clips there rather than at the analytic mass-budget uEnv.
+const BRICK_ENVELOPE = 1.05;
+
 const ABSORPTION_RENDER_ORDER = -2;
 // Rim shells draw with the reference wireframes at −1 — annotation
 // chrome, deliberately NOT extincted by the absorption pass.
@@ -86,6 +91,8 @@ export class MolecularClouds {
   private rimFallbackGeometry: THREE.SphereGeometry;
   /** Owned per-cloud isosurface geometries (disposed with the layer). */
   private rimSurfaceGeometries: THREE.BufferGeometry[] = [];
+  /** Owned per-cloud density-brick textures (disposed with the layer). */
+  private brickTextures: THREE.Data3DTexture[] = [];
   /** Per-cloud absolute-ICRS surface samples for the silhouette labels. */
   private labelSampleAbs: Float32Array[] = [];
   /** Effective focus geometry: the traced mesh's vertex centroid + max
@@ -128,7 +135,8 @@ export class MolecularClouds {
     for (let i = 0; i < this.clouds.length; i++) {
       const c = this.clouds[i];
 
-      const mat = this.makeAbsorptionMaterial(c, shared);
+      const surfaceForCloud = surfaces?.get(c.sid);
+      const mat = this.makeAbsorptionMaterial(c, shared, surfaceForCloud);
       this.absorptionMaterials.push(mat);
       const mesh = new THREE.Mesh(this.absorptionGeometry, mat);
       mesh.position.copy(c.centerAbs);
@@ -140,7 +148,7 @@ export class MolecularClouds {
       this.meshes.push(mesh);
       this.absorptionGroup.add(mesh);
 
-      const surface = surfaces?.get(c.sid);
+      const surface = surfaceForCloud;
       this.rimGroup.add(this.makeRimMesh(c, surface));
       this.labelSampleAbs.push(buildLabelSamples(c, surface));
 
@@ -318,6 +326,7 @@ export class MolecularClouds {
     this.absorptionGeometry.dispose();
     this.rimFallbackGeometry.dispose();
     for (const g of this.rimSurfaceGeometries) g.dispose();
+    for (const t of this.brickTextures) t.dispose();
     for (const mat of this.absorptionMaterials) mat.dispose();
     this.rimMaterial.dispose();
   }
@@ -325,11 +334,69 @@ export class MolecularClouds {
   private makeAbsorptionMaterial(
     cloud: Cloud,
     shared: CloudSharedUniforms,
+    surface: CloudSurface | undefined,
   ): THREE.ShaderMaterial {
+    const uniforms: Record<string, THREE.IUniform> = {
+      uAxes: { value: new THREE.Vector3(cloud.axes[0], cloud.axes[1], cloud.axes[2]) },
+      uN0Cal: { value: cloud.n0Cal },
+      uRflat: { value: cloud.rflatPc },
+      uP: { value: cloud.p },
+      // Field mode marches the brick's full taper edge (density is real
+      // data out to u = 1.05); the analytic path clips to the
+      // mass-budget envelope where its model density ends.
+      uUEnv: { value: surface ? BRICK_ENVELOPE : cloud.uEnv },
+      uInvQuat: {
+        value: new THREE.Matrix3().setFromMatrix4(
+          new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),
+        ),
+      },
+      uSteps: { value: STEPS_DEFAULT },
+      uFovYRad: shared.uFovYRad,
+      uViewport: shared.uViewport,
+    };
+    if (surface) {
+      const b = surface.brick;
+      const tex = new THREE.Data3DTexture(b.data, b.dims[0], b.dims[1], b.dims[2]);
+      tex.format = THREE.RedFormat;
+      tex.type = THREE.UnsignedByteType;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.wrapR = THREE.ClampToEdgeWrapping;
+      tex.unpackAlignment = 1;
+      tex.needsUpdate = true;
+      this.brickTextures.push(tex);
+      uniforms.uBrick = { value: tex };
+      uniforms.uDensityMax = { value: b.densityMax };
+      uniforms.uCenterFromAabb = {
+        value: new THREE.Vector3(
+          cloud.centerAbs.x - b.aabbMinAbs[0],
+          cloud.centerAbs.y - b.aabbMinAbs[1],
+          cloud.centerAbs.z - b.aabbMinAbs[2],
+        ),
+      };
+      uniforms.uRotMat = {
+        value: new THREE.Matrix3().setFromMatrix4(
+          new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat),
+        ),
+      };
+      uniforms.uUvwScale = {
+        value: new THREE.Vector3(
+          1 / (b.stepPc * b.dims[0]),
+          1 / (b.stepPc * b.dims[1]),
+          1 / (b.stepPc * b.dims[2]),
+        ),
+      };
+      uniforms.uUvwBias = {
+        value: new THREE.Vector3(0.5 / b.dims[0], 0.5 / b.dims[1], 0.5 / b.dims[2]),
+      };
+    }
     return new THREE.ShaderMaterial({
       vertexShader: absorptionVert,
       fragmentShader: absorptionFrag,
       glslVersion: THREE.GLSL3,
+      defines: surface ? { USE_FIELD: '' } : {},
       transparent: true,
       depthTest: true,
       depthWrite: false,
@@ -341,21 +408,7 @@ export class MolecularClouds {
       // inside (the raymarch segment is analytic either way); FrontSide
       // would kill the inside-the-cloud absorption.
       side: THREE.BackSide,
-      uniforms: {
-        uAxes: { value: new THREE.Vector3(cloud.axes[0], cloud.axes[1], cloud.axes[2]) },
-        uN0Cal: { value: cloud.n0Cal },
-        uRflat: { value: cloud.rflatPc },
-        uP: { value: cloud.p },
-        uUEnv: { value: cloud.uEnv },
-        uInvQuat: {
-          value: new THREE.Matrix3().setFromMatrix4(
-            new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),
-          ),
-        },
-        uSteps: { value: STEPS_DEFAULT },
-        uFovYRad: shared.uFovYRad,
-        uViewport: shared.uViewport,
-      },
+      uniforms,
     });
   }
 

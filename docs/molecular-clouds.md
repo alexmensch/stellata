@@ -483,10 +483,16 @@ the original one-raymarch-drives-everything design coupled the
 annotation to the physics):
 
 - **Absorption (alpha-over, always on):** per-fragment short raymarch
-  through the ellipsoid segment, sampling the analytic model (Plummer
-  × cavities; no noise — the integrand is smooth by construction).
-  Opacity `α = 1 − exp(−0.921 · A_V_ray)`, capped at 0.95, emitted as
-  an **alpha-only premultiplied over** (rgb = 0). Because the mesh
+  through the ellipsoid segment. Traced clouds integrate the
+  **per-cloud Edenhofer density brick** (a uint8 3D texture shipped in
+  `cloud-surfaces.bin` v2 — the exact volume the rim isosurface was
+  traced from, so the shadow and the silhouette agree 1:1, and the
+  band dimming is the same pure-Edenhofer physics as the per-star
+  raymarch, `A_V = 2.742 · ∫E dl`). Fallback clouds integrate the
+  analytic model (Plummer × cavities; no noise — the integrand is
+  smooth by construction). Opacity `α = 1 − exp(−0.921 · A_V_ray)`,
+  capped at 0.95, emitted as an **alpha-only premultiplied over**
+  (rgb = 0). Because the mesh
   renders in the background group — after the Milky Way band but
   before the star passes — the alpha-over correctly dims the MW band
   / galactic glow behind the cloud while leaving stars untouched

@@ -72,6 +72,30 @@ describe.skipIf(!ready)('cloud-surfaces.bin (committed artifact)', () => {
     }
   });
 
+  it('every brick is within budget, non-empty, and contains its mesh', () => {
+    const { surfaces } = load();
+    for (const s of surfaces.values()) {
+      const b = s.brick;
+      expect(Math.max(...b.dims)).toBeLessThanOrEqual(56);
+      expect(b.data.length).toBe(b.dims[0] * b.dims[1] * b.dims[2]);
+      expect(b.densityMax).toBeGreaterThan(0);
+      expect(b.stepPc).toBeGreaterThan(0);
+      // Some texel actually encodes the peak (the linear scale is tight).
+      let max = 0;
+      for (const v of b.data) if (v > max) max = v;
+      expect(max).toBe(255);
+      // Every mesh vertex lies inside the brick's world-space AABB —
+      // the absorption raymarch can see the dust the rim traces.
+      for (let k = 0; k < 3; k++) {
+        const hi = b.aabbMinAbs[k] + (b.dims[k] - 1) * b.stepPc;
+        for (let i = k; i < s.positions.length; i += 3) {
+          expect(s.positions[i]).toBeGreaterThanOrEqual(b.aabbMinAbs[k] - b.stepPc);
+          expect(s.positions[i]).toBeLessThanOrEqual(hi + b.stepPc);
+        }
+      }
+    }
+  });
+
   it('winds outward (positive signed volume — the FrontSide cull contract)', () => {
     const { surfaces } = load();
     for (const s of surfaces.values()) {

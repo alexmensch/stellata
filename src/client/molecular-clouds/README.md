@@ -56,9 +56,15 @@ Every cloud is one shared `SphereGeometry(1.03, 32, 16)` mesh scaled
 per-instance to its semi-axes and rotated by its quaternion (the 3%
 inflation covers tessellation sag; the shader clips to the analytic
 envelope sphere). The fragment shader raymarches the ellipsoid segment
-(4–14 jittered steps, screen-adaptive) through the calibrated Plummer
-profile and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
-capped at 0.95. The draw is **alpha-only premultiplied over** (rgb = 0
+(4–14 jittered steps, screen-adaptive) and converts the A_V column to
+`α = 1 − exp(−0.921·A_V)`, capped at 0.95. **Traced clouds march the
+per-cloud Edenhofer density brick** (`USE_FIELD` define; a linear-u8
+`Data3DTexture` from `cloud-surfaces.bin`, `A_V = 2.742·∫E dl`, clip
+at the brick's u = 1.05 taper edge) — the same volume the rim
+isosurface was traced from, so the shadow matches the silhouette 1:1
+and the dimming matches per-star extinction physics. Fallback clouds
+march the calibrated Plummer profile, clipped at the mass-budget
+envelope `u = uEnv`. The draw is **alpha-only premultiplied over** (rgb = 0
 under `premultipliedAlpha: true` + `NormalBlending`), i.e. the blend is
 `background × (1 − absorption)` — nothing is added. Per § 9.1 the ray
 start carries static IGN jitter (never reseeded per frame) and the

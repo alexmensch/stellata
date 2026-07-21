@@ -41,15 +41,23 @@ when tuning.
    (`fast-simplification`), and orient winding **outward** via the
    signed-volume test — the renderer's FrontSide material relies on it
    for the hide-when-inside cull.
+5. Ship the sampled volume itself as a **density brick** — mean-pooled
+   to ≤ 56 texels per axis, linear uint8 against the per-cloud max —
+   so the runtime absorption raymarch integrates the exact field the
+   isosurface was traced from (shadow ↔ silhouette 1:1).
 
-## Output format (`cloud-surfaces.bin`, magic `CSUR`)
+## Output format (`cloud-surfaces.bin`, magic `CSUR`, v2)
 
 - Header (16 B): `CSUR` · uint32 version · uint32 cloudCount ·
   uint32 reserved.
-- Directory (cloudCount × 12 B): uint32 sid · uint32 vertexCount ·
-  uint32 indexCount (u32s, = 3 × triangles).
+- Directory (cloudCount × 44 B): uint32 sid · uint32 vertexCount ·
+  uint32 indexCount (u32s, = 3 × triangles) · uint32×3 brick dims ·
+  float32×3 brick aabbMin (ICRS pc, texel (0,0,0)'s sample position) ·
+  float32 brick step (pc) · float32 densityMax (E_ZGR/pc at 255).
 - Blobs in directory order: `vertexCount × float32×3` positions
-  (ICRS pc, Sol origin), then `indexCount × uint32` indices.
+  (ICRS pc, Sol origin), `indexCount × uint32` indices, then
+  `dims[0]·dims[1]·dims[2]` brick bytes (x-fastest — WebGL 3D-texture
+  layout).
 
 Parsed by `src/client/molecular-clouds/cloud-surfaces-loader.ts`
 (sid-keyed map); `cloud-surfaces.test.ts` here pins the committed

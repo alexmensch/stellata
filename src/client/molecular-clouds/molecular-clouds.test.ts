@@ -20,11 +20,19 @@ function makeCatalog(): CloudCatalog {
   return makeMockCatalog([makeCloud([10, 10, 10], 'A'), makeCloud([22, 19, 9.5], 'B')]);
 }
 
-// A tiny valid surface mesh (one triangle) for sid-keyed rim tests.
+// A tiny valid surface mesh (one triangle + a 2×1×1 brick) for
+// sid-keyed rim / field-absorption tests.
 function makeSurface(): CloudSurface {
   return {
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
     indices: new Uint32Array([0, 1, 2]),
+    brick: {
+      dims: [2, 1, 1],
+      aabbMinAbs: [-5, -5, -5],
+      stepPc: 5,
+      densityMax: 0.05,
+      data: new Uint8Array([255, 128]),
+    },
   };
 }
 
@@ -100,6 +108,27 @@ describe('MolecularClouds / absorption material contract', () => {
     for (const m of absorptionMaterials(c)) expect(m.uniforms.uSteps.value).toBe(24);
     c.setSteps(1);
     for (const m of absorptionMaterials(c)) expect(m.uniforms.uSteps.value).toBe(4);
+  });
+
+  it('traced clouds march the density brick (USE_FIELD); fallbacks stay analytic', () => {
+    const catalog = makeCatalog();
+    const surfaces = new Map([[catalog.clouds[0].sid, makeSurface()]]);
+    const c = new MolecularClouds(catalog, surfaces);
+    const [matA, matB] = absorptionMaterials(c);
+    expect(matA.defines).toHaveProperty('USE_FIELD');
+    expect(matA.uniforms.uBrick.value).toBeInstanceOf(THREE.Data3DTexture);
+    expect(matA.uniforms.uDensityMax.value).toBeCloseTo(0.05, 7);
+    // Field mode clips at the brick's taper edge, not the analytic uEnv.
+    expect(matA.uniforms.uUEnv.value).toBeCloseTo(1.05, 12);
+    // Texel-centre uvw mapping: scale = 1/(step·dims), bias = 0.5/dims.
+    const scale = matA.uniforms.uUvwScale.value as THREE.Vector3;
+    expect(scale.x).toBeCloseTo(1 / (5 * 2), 12);
+    expect(scale.y).toBeCloseTo(1 / (5 * 1), 12);
+    const bias = matA.uniforms.uUvwBias.value as THREE.Vector3;
+    expect(bias.x).toBeCloseTo(0.25, 12);
+    expect(matB.defines).not.toHaveProperty('USE_FIELD');
+    expect(matB.uniforms.uUEnv.value).toBe(catalog.clouds[1].uEnv);
+    expect(matB.uniforms.uBrick).toBeUndefined();
   });
 
   it('shares uFovYRad / uViewport by reference when provided', () => {
@@ -296,8 +325,8 @@ describe('effective focus geometry', () => {
       makeMockCloud({ centerAbs: new THREE.Vector3(100, 0, 0), axes: [30, 30, 30] }),
     ]);
     const surfaces = new Map([[catalog.clouds[0].sid, {
+      ...makeSurface(),
       positions: new Float32Array([90, 0, 0, 96, 0, 0, 93, 3, 0]),
-      indices: new Uint32Array([0, 1, 2]),
     }]]);
     const c = new MolecularClouds(catalog, surfaces);
     const out = new THREE.Vector3();

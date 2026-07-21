@@ -4,11 +4,14 @@ precision highp int;
 #include <common>
 #include <logdepthbuf_pars_fragment>
 
-// Absorption pass: a jittered raymarch of the calibrated Plummer density
-// model (docs/molecular-clouds.md § 4) accumulates the sightline A_V and
+// Absorption pass: a jittered raymarch accumulates the sightline A_V and
 // emits an alpha-only premultiplied-over fragment (rgb = 0) that dims
-// every diffuse layer drawn behind the mesh. Sampling rules: § 9.1.
-// CPU mirror of the density/alpha math: cloud-presence-pure.ts.
+// every diffuse layer drawn behind the mesh. Traced clouds (USE_FIELD)
+// integrate the per-cloud Edenhofer density brick — the exact field the
+// rim isosurface was traced from, so shadow and silhouette agree 1:1;
+// fallback clouds integrate the calibrated Plummer model
+// (docs/molecular-clouds.md §§ 4, 9). Sampling rules: § 9.1.
+// CPU mirror of the analytic density/alpha math: cloud-presence-pure.ts.
 
 const float TAU_PER_AV = 0.921;
 const float AV_RATE_PER_NH = 1.65e-3;
@@ -16,7 +19,21 @@ const float ALPHA_CAP = 0.95;
 // Beyond this column the alpha cap has long saturated — stop marching.
 const float AV_SATURATED = 6.0;
 
-// Per-cloud calibrated density model (clouds.json v2).
+#ifdef USE_FIELD
+precision highp sampler3D;
+// A_V per E_ZGR — the dust manifest's avPerDensityPerPc.
+const float AV_PER_DENSITY = 2.742;
+uniform sampler3D uBrick;
+uniform float uDensityMax;
+uniform vec3 uCenterFromAabb; // centerAbs − brick aabbMin, pc
+uniform mat3 uRotMat;         // cloud-local → world
+uniform vec3 uUvwScale;       // 1 / (stepPc · dims)
+uniform vec3 uUvwBias;        // 0.5 / dims (texel-centre alignment)
+#endif
+
+// Per-cloud calibrated density model (clouds.json v2). For USE_FIELD
+// materials uUEnv is the brick's taper edge (1.05), not the analytic
+// mass-budget envelope — the brick already carries the true shape.
 uniform vec3 uAxes;
 uniform float uN0Cal;
 uniform float uRflat;
@@ -76,11 +93,17 @@ void main() {
     if (av > AV_SATURATED) break;
     float t = t0 + (float(i) + jitter) * dt;
     vec3 pu = ro + rd * t;
+#ifdef USE_FIELD
+    vec3 off = uCenterFromAabb + uRotMat * (pu * uAxes);
+    float d = texture(uBrick, off * uUvwScale + uUvwBias).r * uDensityMax;
+    av += AV_PER_DENSITY * d * stepPc;
+#else
     float u = length(pu);
     float env = 1.0 - smoothstep(0.85 * uUEnv, uUEnv, u);
     if (env <= 0.0) continue;
     float q = (u * uAxes.z) / uRflat;
     av += AV_RATE_PER_NH * uN0Cal * pow(1.0 + q * q, -0.5 * uP) * env * stepPc;
+#endif
   }
 
   float alpha = min(1.0 - exp(-TAU_PER_AV * av), ALPHA_CAP);
