@@ -29,6 +29,20 @@ export function angularRadiusPx(sizePc: number, distancePc: number, pxPerRad: nu
   return Math.atan(sizePc / Math.max(distancePc, 1e-30)) * pxPerRad;
 }
 
+/** On-screen angular radius (px) below which a thin circular/extended
+ *  feature reads as sub-pixel clutter rather than legible structure. The
+ *  shared floor behind both the orbit-ring visibility gate
+ *  (`RING_VISIBILITY_THRESHOLD_PX`) and boundary-shell silhouette labels
+ *  (`isShellLabelResolvable`) — one source so the two can't drift. */
+export const FEATURE_LEGIBILITY_MIN_PX = 6;
+
+/** Whether a feature of half-extent `sizePc` at range `distancePc` clears
+ *  the legibility floor. The screen-size predicate a referent's label
+ *  gates on so the label shows exactly while its geometry reads. */
+export function isFeatureLegible(sizePc: number, distancePc: number, pxPerRad: number): boolean {
+  return angularRadiusPx(sizePc, distancePc, pxPerRad) >= FEATURE_LEGIBILITY_MIN_PX;
+}
+
 /** `localPass` strips the built-in log-depth chunks so fragments keep
  *  standard bracket depth — required for any line rendered in the
  *  local depth pass (src/client/local-depth/README.md). */

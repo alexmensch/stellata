@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { ShellRegistry, type ShellInstance } from './shell-registry';
-import { SHELL_LABEL_MIN_PX, isShellLabelResolvable } from './fresnel-shell';
+import { isShellLabelResolvable } from './fresnel-shell';
+import { FEATURE_LEGIBILITY_MIN_PX, angularRadiusPx } from '../util/orbit-line';
 
 function makeShell(extentPc: number): ShellInstance {
   return {
@@ -19,43 +20,50 @@ function makeShell(extentPc: number): ShellInstance {
 
 const VIEWPORT_Y = 900;
 const FOV_Y_RAD = 60 * Math.PI / 180;
+const PX_PER_RAD = VIEWPORT_Y / FOV_Y_RAD;
+const AU_PC = 1 / 206264.806;
+
+function resolvableAt(extentPc: number, distPc: number): boolean {
+  const shells = new ShellRegistry();
+  shells.register('heliopause', makeShell(extentPc));
+  return isShellLabelResolvable(
+    shells, 1, new THREE.Vector3(), new THREE.Vector3(0, 0, distPc), VIEWPORT_Y, FOV_Y_RAD,
+  );
+}
 
 describe('isShellLabelResolvable', () => {
   it('is true when the shell reads well above the legibility floor (close camera)', () => {
-    const shells = new ShellRegistry();
-    shells.register('heliopause', makeShell(1));
-    const worldOffset = new THREE.Vector3();
-    const cameraPos = new THREE.Vector3(0, 0, 2);
-    expect(isShellLabelResolvable(shells, 1, worldOffset, cameraPos, VIEWPORT_Y, FOV_Y_RAD)).toBe(true);
+    expect(resolvableAt(1, 2)).toBe(true);
   });
 
   it('is false once the camera pulls out far enough that the shell shrinks sub-floor', () => {
-    const shells = new ShellRegistry();
-    shells.register('heliopause', makeShell(1));
-    const worldOffset = new THREE.Vector3();
-    const cameraPos = new THREE.Vector3(0, 0, 1e6);
-    expect(isShellLabelResolvable(shells, 1, worldOffset, cameraPos, VIEWPORT_Y, FOV_Y_RAD)).toBe(false);
+    expect(resolvableAt(1, 1e6)).toBe(false);
   });
 
-  it('matches renderedSizePx against SHELL_LABEL_MIN_PX exactly at the boundary', () => {
-    const shells = new ShellRegistry();
+  // Regression: an AU-scale shell (the heliopause, extent ~200 AU) must
+  // resolve from AU-scale range. A distance clamp measured in pc — as the
+  // chevron-sizing path carries — would floor the projected size below the
+  // legibility threshold and the label would never show.
+  it('resolves an AU-scale shell viewed from AU-scale range', () => {
+    const extentPc = 200 * AU_PC;
+    expect(resolvableAt(extentPc, 250 * AU_PC)).toBe(true);
+    expect(resolvableAt(extentPc, 1)).toBe(false);
+  });
+
+  it('gates on angular RADIUS against the shared legibility floor, at the boundary', () => {
     const extentPc = 1;
-    shells.register('heliopause', makeShell(extentPc));
-    const worldOffset = new THREE.Vector3();
-    const angularToPxValue = VIEWPORT_Y / FOV_Y_RAD;
-    // Solve dCam so renderedSizePx lands exactly on SHELL_LABEL_MIN_PX:
-    // px = 2·atan(extentPc / dCam)·angularToPxValue.
-    const dCam = extentPc / Math.tan((SHELL_LABEL_MIN_PX / angularToPxValue) / 2);
-    const cameraPos = new THREE.Vector3(0, 0, dCam);
-    const px = shells.renderedSizePx(1, worldOffset, cameraPos, angularToPxValue);
-    expect(px).toBeCloseTo(SHELL_LABEL_MIN_PX, 9);
-    expect(isShellLabelResolvable(shells, 1, worldOffset, cameraPos, VIEWPORT_Y, FOV_Y_RAD)).toBe(true);
+    // Solve dist so the projected radius lands exactly on the floor:
+    // FEATURE_LEGIBILITY_MIN_PX = atan(extentPc / dist) · pxPerRad.
+    const dist = extentPc / Math.tan(FEATURE_LEGIBILITY_MIN_PX / PX_PER_RAD);
+    expect(angularRadiusPx(extentPc, dist, PX_PER_RAD)).toBeCloseTo(FEATURE_LEGIBILITY_MIN_PX, 9);
+    expect(resolvableAt(extentPc, dist * 0.999)).toBe(true);
+    expect(resolvableAt(extentPc, dist * 1.001)).toBe(false);
   });
 
-  it('is false for an unregistered shell slot (renderedSizePx reports 0)', () => {
+  it('is false for an unregistered shell slot (no distance to report)', () => {
     const shells = new ShellRegistry();
-    const worldOffset = new THREE.Vector3();
-    const cameraPos = new THREE.Vector3(0, 0, 2);
-    expect(isShellLabelResolvable(shells, 0, worldOffset, cameraPos, VIEWPORT_Y, FOV_Y_RAD)).toBe(false);
+    expect(isShellLabelResolvable(
+      shells, 0, new THREE.Vector3(), new THREE.Vector3(0, 0, 2), VIEWPORT_Y, FOV_Y_RAD,
+    )).toBe(false);
   });
 });

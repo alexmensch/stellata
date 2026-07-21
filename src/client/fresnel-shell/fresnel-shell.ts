@@ -7,6 +7,7 @@ import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import { LABEL_OFFSET_PX } from '../solar-system/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
+import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
@@ -101,20 +102,15 @@ export abstract class FresnelShell {
   }
 }
 
-// Apparent on-screen diameter floor (px) below which a shell's silhouette
-// has shrunk past legibility. Neither shell has a distance-based render
-// cutoff of its own (README § Boundary shells as focus targets: "a shell
-// far enough to be sub-pixel still draws today"), so without this floor
-// a silhouette label — pinned to a fixed screen-space font size — stays
-// visible indefinitely as the shell itself shrinks toward invisible.
-// Mirrors the Local Group's `minPixelSize` label floor
-// (`local-group/local-group.ts`).
-export const SHELL_LABEL_MIN_PX = 6;
-
-/** Whether shell `shellIdx`'s projected silhouette clears the label
- *  legibility floor this frame — the resolvability gate both boundary
- *  shells' label predicates share. Takes primitives rather than a
- *  `Stellata` so it's unit-testable against a bare `ShellRegistry`. */
+/** Whether shell `shellIdx`'s projected silhouette clears the shared
+ *  feature-legibility floor this frame — the resolvability gate both
+ *  boundary shells' label predicates share, so a silhouette label (fixed
+ *  screen-space text) hides once the shell shrinks past legibility as the
+ *  camera pulls out. Same rule the planet labels ride via the orbit-ring
+ *  gate: `isFeatureLegible` on the true camera distance (no size clamp),
+ *  so it reads correctly from AU-scale shells to hundred-pc ones. Takes
+ *  primitives rather than a `Stellata` so it's unit-testable against a
+ *  bare `ShellRegistry`. */
 export function isShellLabelResolvable(
   shells: ShellRegistry,
   shellIdx: number,
@@ -123,13 +119,9 @@ export function isShellLabelResolvable(
   viewportHeightPx: number,
   fovYRad: number,
 ): boolean {
-  const px = shells.renderedSizePx(
-    shellIdx,
-    worldOffset,
-    cameraPos,
-    angularToPx(viewportHeightPx, fovYRad),
-  );
-  return px >= SHELL_LABEL_MIN_PX;
+  const distPc = shells.cameraDistancePc(shellIdx, worldOffset, cameraPos);
+  if (distPc <= 0) return false;
+  return isFeatureLegible(shells.extentPc(shellIdx), distPc, angularToPx(viewportHeightPx, fovYRad));
 }
 
 export interface ShellSilhouetteLabelOptions {

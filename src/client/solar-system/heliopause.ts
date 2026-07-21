@@ -230,11 +230,8 @@ export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
 /** Mount the SVG "Heliopause" label and bind per-frame projection.
  *  Thin wrapper around the shared distance-gated label engine that
  *  carries the heliopause-specific configuration: the 62-sample
- *  ellipsoid silhouette, the bottom-right anchor direction, and the
- *  visibility predicate gated on the same orbit-ring heuristic the
- *  planet labels use — so the heliopause label appears whenever any
- *  planet ring would draw and vanishes in lockstep with the last
- *  planet label. */
+ *  ellipsoid silhouette, the bottom-right anchor direction, and
+ *  `isHeliopauseApexVisible`. */
 export function createHeliopauseLabel(stellata: Stellata): void {
   createShellSilhouetteLabel(stellata, {
     elementId: HELIOPAUSE_LABEL_ELEMENT_ID,

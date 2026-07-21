@@ -743,9 +743,10 @@ The "Heliopause" SVG label is anchored to the upwind apex's projected
 silhouette by `createHeliopauseLabel` in `main.ts`. The shell itself has
 no distance-based render cutoff, so the label gates on
 `isShellLabelResolvable` (`../fresnel-shell/README.md` § Boundary shells
-as focus targets) — the shell's projected diameter must clear
-`SHELL_LABEL_MIN_PX`, or the label would outlive the shell's legibility
-as the camera zooms out.
+as focus targets) — the shell's projected angular radius at the true
+camera distance must clear the shared `FEATURE_LEGIBILITY_MIN_PX`, or the
+label would outlive the shell's legibility as the camera zooms out. Same
+screen-size floor the planet labels ride via the orbit-ring gate.
 
 ### Heliopause as a focus target
 
@@ -843,10 +844,13 @@ moon at its park distance.
   even for Sol (which currently resolves synchronously). Don't assume the
   system is attached the same frame `setFocus` fires; the renderer
   handles `planetSystem === null` gracefully.
-- **Heliopause label visibility.** Hidden when the camera is inside
-  the shell, when the host is not Sol, or when the shell's projected
-  size drops below `SHELL_LABEL_MIN_PX`. Don't add a "show always"
-  toggle without thinking through the triple gating.
+- **Heliopause label visibility.** Hidden when the camera is inside the
+  shell (near-plane bail), in chart mode / below the `heliopauseLabel`
+  declutter floor, or when the shell's projected angular radius drops
+  below the shared `FEATURE_LEGIBILITY_MIN_PX`. The legibility gate is
+  also what keeps it away from non-Sol focus — from light-years off, Sol's
+  ~200 AU shell reads sub-pixel. Don't add a "show always" toggle without
+  thinking through the gating.
 - **Orbital plane rule for new hosts.** Any new planet-bearing host
   must declare its plane via the orientation quaternion. The default
   for non-Sol hosts is the galactic plane — don't accidentally

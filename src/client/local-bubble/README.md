@@ -50,10 +50,11 @@ The Fresnel shell material + shader pair + gating base live in
   Because the samples sit on the wall, the engine's near-plane bail hides
   the label whenever the camera is inside the bubble — the same mechanism
   (and behaviour) as the heliopause apex label. It also hides once the
-  shell's projected size drops below `SHELL_LABEL_MIN_PX`
-  (`../fresnel-shell/README.md` § Invariants) — the shell has no distance
-  cutoff of its own, so without this floor the label would outlive the
-  shell's legibility as the camera zooms out.
+  shell's projected silhouette shrinks below the shared feature-legibility
+  floor (`isShellLabelResolvable`, `../fresnel-shell/README.md`
+  § Invariants) — the shell has no distance cutoff of its own, so without
+  this floor the label would outlive the shell's legibility as the camera
+  zooms out.
 
 ## Data + validation
 
