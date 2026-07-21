@@ -210,7 +210,13 @@ export class PlanetMeshLayer {
           hasSun = true;
         }
       }
-      const lit = hasSun ? litIntensity(dHpPc, this.field.getMaxAppMag()) : 1;
+      const lit = hasSun
+        ? litIntensity(
+            this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0,
+            dHpPc,
+            this.field.getMaxAppMag(),
+          )
+        : 1;
 
       if (entry.ring) {
         this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, lit);

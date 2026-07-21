@@ -428,9 +428,10 @@ the MOON's viewpoint with the parent planet as occluder of the host
 disc — the visible host fraction IS the moon's illumination, so a
 lunar-style eclipse darkens the moon continuously through the
 penumbra (search-tested against a year of real ephemeris);
-the vertex shader folds it into appMag on the sole glare pass,
-mirroring the star pipeline's fold — it drives the unresolved-point
-brightness where a host-disc eclipse actually reads. A FULL eclipse
+the vertex shader applies it as a flux multiplier on the glare
+intensity in both regimes — not an appMag fold, because the
+locally-active photographic regime derives brightness from surface
+radiance rather than appMag. A FULL eclipse
 writes exactly 0 and the shader collapses the quad — a floored +7.5
 mag residual is still visible on a mag −1 Mercury, and the planet-
 scale depth buffer can't hide it — and the planet's label hides with
@@ -526,27 +527,48 @@ crossfade.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.
-- **Reflected glare** is one additive quad whose size and brightness
-  blend on the SAME band (`res = smoothstep(MESH_FADE_MIN_PX,
-  MESH_FADE_FULL_PX, physSize)` in the shader; `glareSizePx` /
-  `litIntensity` CPU mirrors). Unresolved (`res → 0`): the
-  star-perceptual point — size `appSize(appMag)`, peak ~1 — so a
-  distant planet reads exactly like a star of its magnitude, phase
-  purely photometric (already in `appMag`). Resolved (`res → 1`): a
-  lit-limb bloom over the mesh — size clamped to `physSize ·
-  GLARE_BLOOM_OVERSIZE` (1.3, so a bright body's huge `appSize` can't
-  balloon a giant symmetric halo), peak ∝ the mesh surface brightness
-  (`iLitIntensity · albedo · uGlareGain`, same units → no luminosity
-  pop), illuminated-fraction gated (`(1+cosα)/2`) and photocentre-
-  shifted toward the sub-solar limb (`GLARE_PHOTOCENTRE_SHIFT`) so a
-  crescent's dark limb emits ~none — which is what kills the halo ring
-  the old symmetric disc pass drew around dark/crescent bodies.
+- **Reflected glare** is one additive quad whose scale is gated on
+  whether the system is **locally active** — the same `LOCAL_DEPTH_PASS`
+  split that decides main-pass vs mirror draw (`../local-depth/`). The
+  two regimes meet at the host cull distance, where bodies vanish, so
+  the switch never pops:
+  - **Locally active** (flying around the system — `LOCAL_DEPTH_PASS`
+    mirror draw): **photographic, flux-conserving.** Surface radiance
+    `L = iLitIntensity · albedo · uGlareGain · illumFrac` is the mesh's
+    own display scale; the glare renders it directly. Size = `physSize ·
+    GLARE_BLOOM_OVERSIZE` (1.3) floored at `GLARE_MIN_PX`; below the
+    floor the peak scales by `(size ratio)²` so integrated flux (`peak ·
+    size²`) equals `L · physSize²` at every scale. Consequences: a
+    sub-pixel body dims with distance and can **never exceed** a
+    resolved neighbour's surface `L` (no tiny-moon-outshines-parent, no
+    brightening-on-recede — the two defects the old `mix(1, bloomPeak,
+    res)` produced by crossing two mismatched brightness scales).
+    Illuminated-fraction gated (`(1+cosα)/2`) + photocentre-shifted
+    toward the sub-solar limb (`GLARE_PHOTOCENTRE_SHIFT`, scaled by
+    resolvedness) so a crescent's dark limb emits ~none — kills the halo
+    ring the old symmetric disc drew. When resolved the **mesh** writes
+    depth and occludes the core to a lit-limb bloom.
+  - **Not locally active** (the whole system is a distant dot among the
+    stars — main pass): **star-perceptual.** Size = `appSize(appMag)`,
+    peak 1 — each body reads exactly like a star of its magnitude,
+    consistent with the surrounding field, phase purely photometric
+    (already in `appMag`). This is the `perceptual-disc.glsl` point
+    model shared with the star pipeline.
+  CPU mirror for the hover footprint: `glareSizePx(physSize)`
+  (photographic) or `appSize` (star), chosen by `isLocallyActive`.
 
-`uGlareGain` is the tunable flux-continuity calibration between the
-resolved bloom peak and the mesh it sits over (`setGlareGain`;
-default `DEFAULT_GLARE_GAIN`). In the resolved regime the **mesh**
-writes depth (local depth pass), so the additive glare is naturally
-occluded to the lit-limb halo — the old core depth-mask is gone.
+Why the split (not a single blend): the mesh's display radiance is
+quarter-power **compressed** (so outer planets stay visible and inner
+ones don't blow out), while the star-perceptual point tracks
+**uncompressed** true flux. Their ratio is exactly that compression, so
+no continuous blend can join them across the crossover — the choice is
+per-regime, and each regime is correct where it applies (physical when
+close, star-field-consistent when far).
+
+`uGlareGain` tunes the photographic surface-radiance scale
+(`setGlareGain`; default `DEFAULT_GLARE_GAIN`). In the resolved regime
+the **mesh** writes depth (local depth pass), so the additive glare is
+naturally occluded to the lit-limb halo — the old core depth-mask is gone.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
@@ -566,19 +588,27 @@ occluded to the lit-limb halo — the old core depth-mask is gone.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
   - `uLitIntensity` (`perceptual-magnitude.ts:litIntensity`) —
-    host-distance irradiance on a quarter-power display compression
-    (`hostIntensityScale`: reference 1 AU ⇒ Earth = 1, Mercury ~1.6×
-    clamped, Neptune ~0.18×) composed with the magnitude slider as a
-    camera-sensitivity exposure — the threshold flux ratio
-    `10^((maxAppMag − naked-eye)/2.5)` under the same quarter-power
-    law, so turning sensitivity up brightens a dim Neptune surface in
-    step with the star field and exposure is exactly 1 at the
-    naked-eye default. The product keeps the 1.6 LDR ceiling but no
+    **host irradiance at the body** on a quarter-power display
+    compression (`hostIntensityScale`), folding the host's absolute
+    magnitude so surface brightness scales with **star class**: the
+    ratio is `(E_body / E_ref)^0.25` where `E_body / E_ref =
+    10^(0.4·(HOST_IRRADIANCE_REF_MAG − m_host@body))` and
+    `m_host@body = M_host + 5·(log10(d_hp) − 1)`. For Sol it reduces
+    exactly to the old `(d_AU)^(−0.5)` law (reference 1 AU ⇒ Earth = 1,
+    Mercury ~1.6× clamped, Neptune ~0.18×); a body 1 AU from an O-class
+    host is far brighter, by star class alone. Composed with the
+    magnitude slider as a camera-sensitivity exposure — the threshold
+    flux ratio `10^((maxAppMag − naked-eye)/2.5)` under the same
+    quarter-power law, so turning sensitivity up brightens a dim
+    surface in step with the star field and exposure is exactly 1 at
+    the naked-eye default. The product keeps the 1.6 LDR ceiling but no
     floor (low sensitivity fades surfaces toward black). Still no
     viewer-distance term, so approach can't blow it out; the ring
     annulus multiplies the same scalar so ring↔body contrast is
-    preserved. Body-kind-agnostic: planets, moons, and future lit
-    bodies all read the one scalar the mesh layer computes.
+    preserved, and the locally-active glare peak IS this scalar (× phase
+    gate) so glare and surface never disagree. Body-kind-agnostic:
+    planets, moons, and future lit bodies all read the one scalar the
+    mesh layer computes.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
     half-width carrying twilight past the geometric terminator on
     atmospheric bodies (Venus 0.08 widest; Titan the one moon with a

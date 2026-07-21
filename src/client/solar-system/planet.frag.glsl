@@ -50,11 +50,11 @@ void main() {
   }
 
   // Reflected glare — additive, always the fuzzy point-glow profile
-  // (physRatio 0 ⇒ Gaussian n): a distant planet reads like a star of
-  // its magnitude, a resolved one gets a soft lit-limb bloom over the
-  // mesh. vGlareIntensity carries the point→bloom brightness blend and
-  // the crescent illuminated-fraction gate (planet.vert.glsl); the tap
-  // fades intensity to zero across the slider threshold band.
+  // (physRatio 0 ⇒ Gaussian n). vGlareIntensity carries the per-regime
+  // peak set in planet.vert.glsl: locally-active = flux-conserving
+  // surface radiance (crescent illuminated-fraction gated); not active =
+  // star-perceptual peak 1. The tap fades intensity to zero across the
+  // slider threshold band.
   float glow = perceptualDiscProfile(
       r, vSoftness, 0.0,
       uVisibleThreshold, uVisibleK,

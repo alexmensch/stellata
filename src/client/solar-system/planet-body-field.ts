@@ -19,6 +19,7 @@ import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import {
   DEFAULT_GLARE_GAIN,
   GLARE_BLOOM_OVERSIZE,
+  GLARE_MIN_PX,
   GLARE_PHOTOCENTRE_SHIFT,
   glareSizePx,
   MESH_FADE_FULL_PX,
@@ -664,6 +665,13 @@ export class PlanetBodyField {
     return this.hosts.get(hostStarIdx)?.hostRadiusPc ?? null;
   }
 
+  /** Host star's absolute V-band magnitude, or null when unattached —
+   *  the luminosity input to the mesh's reflected-light intensity so
+   *  surface brightness scales with the host's class (litIntensity). */
+  hostAbsmagOf(hostStarIdx: number): number | null {
+    return this.hosts.get(hostStarIdx)?.hostAbsmag ?? null;
+  }
+
   /** (host, planet-within-host) for a flat instance index, or null when
    *  no attached host covers it. */
   hostPlanetOf(instanceIdx: number): { hostStarIdx: number; planetIdx: number } | null {
@@ -749,7 +757,12 @@ export class PlanetBodyField {
     const i = instanceIdx - host.startInstance;
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
     if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
-    return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
+    return this.discPixelSize(
+      host.ps.planets[i].radiusKm * KM_PC,
+      dVp,
+      appMag,
+      this.isLocallyActive(instanceIdx),
+    );
   }
 
   /** Physical (true angular-diameter) disc size in px, excluding the
@@ -854,7 +867,12 @@ export class PlanetBodyField {
     return { physSize, appSize };
   }
 
-  private discPixelSize(radiusPc: number, dVp: number, appMag: number): number {
+  private discPixelSize(
+    radiusPc: number,
+    dVp: number,
+    appMag: number,
+    locallyActive: boolean,
+  ): number {
     // Chart mode mirrors the vertex shader's chart branch — flat
     // magnitude-driven disc, no physical/perceptual terms.
     if (this.mono) {
@@ -870,9 +888,11 @@ export class PlanetBodyField {
     }
     const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
     // Rendered footprint = the wider of the true disc (mesh) and the
-    // reflected glare quad (point→bloom on resolvedness). Mirrors the
-    // vertex shader's glare sizing so hover picks the visible body + halo.
-    return Math.max(physSize, glareSizePx(appSize, physSize));
+    // glare quad. Mirrors the vertex shader's per-regime glare sizing so
+    // hover picks the visible body + halo: locally-active photographic
+    // (disc·OVERSIZE floored at GLARE_MIN_PX), else star-perceptual appSize.
+    const glare = locallyActive ? glareSizePx(physSize) : appSize;
+    return Math.max(physSize, glare);
   }
 
   /**
@@ -946,7 +966,12 @@ export class PlanetBodyField {
         const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
         const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-        const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
+        const pxSize = this.discPixelSize(
+          radiusPc,
+          dVp,
+          appMag,
+          this.isLocallyActive(host.startInstance + i),
+        );
         const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
         if (pxDist > hitRadius && pxDist > pxThreshold) continue;
@@ -984,6 +1009,15 @@ export class PlanetBodyField {
     const v = this.localPassRangeUniform.value;
     v[0] = start;
     v[1] = count;
+  }
+
+  /** True when this instance renders through the local depth pass this
+   *  frame (its system is locally active) — the CPU read of the same
+   *  `uLocalPassRange` gate the shader uses to pick the photographic
+   *  (locally-active) vs star-perceptual (distant) glare regime. */
+  private isLocallyActive(instanceIdx: number): boolean {
+    const [start, count] = this.localPassRangeUniform.value;
+    return instanceIdx >= start && instanceIdx < start + count;
   }
 
   /** Attach-table view for the solar-system cluster: slot range +
@@ -1116,7 +1150,11 @@ export class PlanetBodyField {
           },
           uGlareGain: this.glareGainUniform,
           uGlareShape: {
-            value: new THREE.Vector2(GLARE_BLOOM_OVERSIZE, GLARE_PHOTOCENTRE_SHIFT),
+            value: new THREE.Vector3(
+              GLARE_BLOOM_OVERSIZE,
+              GLARE_PHOTOCENTRE_SHIFT,
+              GLARE_MIN_PX,
+            ),
           },
         },
       });
@@ -1242,7 +1280,11 @@ export class PlanetBodyField {
           this.bufs.localRel[base + i * 3 + 1] ** 2 +
           this.bufs.localRel[base + i * 3 + 2] ** 2,
       );
-      this.bufs.litIntensity[host.startInstance + i] = litIntensity(dHp, this.maxAppMag);
+      this.bufs.litIntensity[host.startInstance + i] = litIntensity(
+        host.hostAbsmag,
+        dHp,
+        this.maxAppMag,
+      );
     }
   }
 

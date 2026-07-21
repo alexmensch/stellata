@@ -24,6 +24,13 @@ export const GLARE_BLOOM_OVERSIZE = 1.3;
  *  Mirrored in planet.vert.glsl. */
 export const GLARE_PHOTOCENTRE_SHIFT = 0.5;
 
+/** Visibility floor for the locally-active photographic glare quad: a
+ *  body whose true disc·OVERSIZE falls below this renders at this pixel
+ *  diameter with its peak scaled down to conserve flux (peak·size²
+ *  invariant), so a sub-pixel body dims with distance instead of
+ *  vanishing or aliasing. Mirrored in planet.vert.glsl (uGlareShape.z). */
+export const GLARE_MIN_PX = 2.0;
+
 /** Default reflected-glare gain — the flux-continuity calibration
  *  between the resolved bloom peak and the mesh surface brightness it
  *  sits over. Smoke-tuned; drives the tunable uGlareGain uniform. */
@@ -37,14 +44,14 @@ export function meshFadeFromPhysPx(physPx: number): number {
   return smooth01((physPx - MESH_FADE_MIN_PX) / (MESH_FADE_FULL_PX - MESH_FADE_MIN_PX));
 }
 
-/** Glare quad diameter in CSS px. Blends the star-perceptual point size
- *  (unresolved) toward the size-clamped bloom `physPx · OVERSIZE`
- *  (resolved) on the mesh resolvedness band, so the glare shrinks onto
- *  the disc as the mesh appears. CPU mirror of the planet vertex
- *  shader's glare sizing; consumed by the hover pick footprint. */
-export function glareSizePx(appSizePx: number, physPx: number): number {
-  const res = meshFadeFromPhysPx(physPx);
-  return appSizePx + res * (physPx * GLARE_BLOOM_OVERSIZE - appSizePx);
+/** Locally-active photographic glare quad diameter in CSS px: the true
+ *  disc scaled by OVERSIZE, floored at GLARE_MIN_PX. CPU mirror of the
+ *  planet vertex shader's `LOCAL_DEPTH_PASS` glare sizing; consumed by
+ *  the hover pick footprint. The not-locally-active regime uses the
+ *  star-perceptual `perceptualAppSizePx` instead (a distant planet reads
+ *  as a star of its magnitude). */
+export function glareSizePx(physPx: number): number {
+  return Math.max(physPx * GLARE_BLOOM_OVERSIZE, GLARE_MIN_PX);
 }
 
 function smooth01(x: number): number {

@@ -2,7 +2,7 @@
 // math and brightness → disc-radius mapping the star and planet vertex
 // shaders use. Shader is the source of truth; this mirror is test-pinned.
 
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 import { NAKED_EYE_LIMIT_MAG } from '../filters/filter-state';
 
 // Magnitudes below the slider cutoff a body still renders: the vertex
@@ -100,18 +100,30 @@ export const HOST_IRRADIANCE_DISPLAY_EXPONENT = 0.25;
 export const HOST_INTENSITY_MIN = 0.12;
 export const HOST_INTENSITY_MAX = 1.6;
 
+/** Apparent magnitude of the reference source (a solar-luminosity host)
+ *  at the reference distance (1 AU) — the irradiance anchor for
+ *  `hostIntensityScale`. `E_body / E_ref = 10^(0.4·(this − m_host@body))`
+ *  so a body 1 AU from Sol reads a ratio of exactly 1. */
+export const HOST_IRRADIANCE_REF_MAG = SUN_ABSMAG_V + 5 * (Math.log10(AU_PC) - 1);
+
 /**
- * Mesh-regime lighting intensity from the host→body distance:
- * `(E / E_ref)^HOST_IRRADIANCE_DISPLAY_EXPONENT` with `E ∝ 1/d²` and
- * the reference at 1 AU (Earth's insolation ⇒ exactly 1), clamped to
- * [HOST_INTENSITY_MIN, HOST_INTENSITY_MAX]. Deliberately a function of
- * host→body distance ONLY: it is fixed for a given orbital position, so
- * it cannot blow out as the camera approaches the body — the failure
- * mode that rules out any viewer-distance term in mesh brightness.
+ * Mesh-regime lighting intensity from the host's irradiance at the body:
+ * `(E_body / E_ref)^HOST_IRRADIANCE_DISPLAY_EXPONENT`, clamped to
+ * [HOST_INTENSITY_MIN, HOST_INTENSITY_MAX]. `E_body` is the host flux at
+ * the body, folding the host's absolute magnitude — so an O-class host
+ * lights its bodies far brighter than Sol does at the same distance. The
+ * ratio is `10^(0.4·(HOST_IRRADIANCE_REF_MAG − m_host@body))` with
+ * `m_host@body = M_host + 5·(log10(d_hp) − 1)`; for Sol it reduces exactly
+ * to the old `(d_AU)^(−0.5)` law. Deliberately independent of viewer
+ * distance: fixed for a given orbital position, so it cannot blow out as
+ * the camera approaches — the failure mode that rules out any
+ * viewer-distance term in mesh brightness.
  */
-export function hostIntensityScale(dHpPc: number): number {
-  const dAu = Math.max(dHpPc / AU_PC, 1e-12);
-  const scale = dAu ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT);
+export function hostIntensityScale(hostAbsmag: number, dHpPc: number): number {
+  const dPc = Math.max(dHpPc, 1e-30);
+  const mHostAtBody = hostAbsmag + 5 * (Math.log10(dPc) - 1);
+  const irradianceRatio = 10 ** (0.4 * (HOST_IRRADIANCE_REF_MAG - mHostAtBody));
+  const scale = irradianceRatio ** HOST_IRRADIANCE_DISPLAY_EXPONENT;
   return Math.min(HOST_INTENSITY_MAX, Math.max(HOST_INTENSITY_MIN, scale));
 }
 
@@ -132,10 +144,14 @@ export const LIT_EXPOSURE_REF_MAG = NAKED_EYE_LIMIT_MAG;
  * black exactly like the star field does. Still no viewer-distance
  * term — approach cannot blow it out.
  */
-export function litIntensity(dHpPc: number, maxAppMag: number): number {
+export function litIntensity(
+  hostAbsmag: number,
+  dHpPc: number,
+  maxAppMag: number,
+): number {
   const thresholdFluxRatio = 10 ** ((maxAppMag - LIT_EXPOSURE_REF_MAG) / 2.5);
   const exposure = thresholdFluxRatio ** HOST_IRRADIANCE_DISPLAY_EXPONENT;
-  return Math.min(HOST_INTENSITY_MAX, hostIntensityScale(dHpPc) * exposure);
+  return Math.min(HOST_INTENSITY_MAX, hostIntensityScale(hostAbsmag, dHpPc) * exposure);
 }
 
 export function planetApparentMagnitude(

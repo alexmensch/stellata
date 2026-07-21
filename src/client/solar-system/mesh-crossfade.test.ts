@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_GLARE_GAIN,
   GLARE_BLOOM_OVERSIZE,
+  GLARE_MIN_PX,
   GLARE_PHOTOCENTRE_SHIFT,
   glareSizePx,
   MESH_FADE_FULL_PX,
@@ -48,41 +49,38 @@ describe('reflected-glare calibration constants', () => {
     expect(GLARE_PHOTOCENTRE_SHIFT).toBeLessThanOrEqual(1);
   });
 
+  it('floors the sub-pixel glare above the mesh band so it stays visible', () => {
+    expect(GLARE_MIN_PX).toBeGreaterThanOrEqual(MESH_FADE_MIN_PX);
+  });
+
   it('defaults the flux-continuity gain to a defined starting point', () => {
     expect(DEFAULT_GLARE_GAIN).toBeGreaterThan(0);
   });
 });
 
-describe('glareSizePx: point ↔ bloom on resolvedness', () => {
-  it('is the star-perceptual point size when unresolved (res = 0)', () => {
-    // At/below MESH_FADE_MIN_PX the true disc is sub-pixel: the glare is
-    // the star point, size = appSize, regardless of physSize.
-    expect(glareSizePx(12, 0)).toBe(12);
-    expect(glareSizePx(12, MESH_FADE_MIN_PX)).toBe(12);
+describe('glareSizePx: locally-active photographic footprint', () => {
+  it('is the true disc · OVERSIZE once past the visibility floor', () => {
+    // A resolved body's glare hugs the disc — exactly physSize · OVERSIZE,
+    // no dependence on brightness (a bright body can't balloon a halo).
+    expect(glareSizePx(10)).toBe(10 * GLARE_BLOOM_OVERSIZE);
+    expect(glareSizePx(100)).toBe(100 * GLARE_BLOOM_OVERSIZE);
   });
 
-  it('is the size-clamped bloom when fully resolved (res = 1)', () => {
-    // At/above MESH_FADE_FULL_PX the glare collapses onto the disc: the
-    // bloom is exactly physSize · OVERSIZE, independent of appSize — a
-    // bright body (huge appSize) can no longer balloon a giant halo.
-    expect(glareSizePx(24, 10)).toBeCloseTo(10 * GLARE_BLOOM_OVERSIZE, 10);
-    expect(glareSizePx(2, 10)).toBeCloseTo(10 * GLARE_BLOOM_OVERSIZE, 10);
+  it('floors at GLARE_MIN_PX when the disc·OVERSIZE is sub-floor', () => {
+    // A sub-pixel body renders at the floor (the shader scales its peak
+    // down to conserve flux); size never collapses below the floor.
+    expect(glareSizePx(0)).toBe(GLARE_MIN_PX);
+    expect(glareSizePx(0.1)).toBe(GLARE_MIN_PX);
+    const floorPhys = GLARE_MIN_PX / GLARE_BLOOM_OVERSIZE;
+    expect(glareSizePx(floorPhys)).toBeCloseTo(GLARE_MIN_PX, 10);
   });
 
-  it('interpolates continuously across the band (no size pop)', () => {
-    const mid = (MESH_FADE_MIN_PX + MESH_FADE_FULL_PX) / 2;
-    const appSize = 8;
-    const bloom = mid * GLARE_BLOOM_OVERSIZE;
-    expect(glareSizePx(appSize, mid)).toBeCloseTo(
-      appSize + 0.5 * (bloom - appSize),
-      10,
-    );
-    // Continuous at both band edges — the value at the edge equals the
-    // regime it hands off to.
-    expect(glareSizePx(appSize, MESH_FADE_MIN_PX)).toBe(appSize);
-    expect(glareSizePx(appSize, MESH_FADE_FULL_PX)).toBeCloseTo(
-      MESH_FADE_FULL_PX * GLARE_BLOOM_OVERSIZE,
-      10,
-    );
+  it('is monotone non-decreasing in physSize', () => {
+    let prev = -1;
+    for (let px = 0; px <= 20; px += 0.05) {
+      const s = glareSizePx(px);
+      expect(s).toBeGreaterThanOrEqual(prev);
+      prev = s;
+    }
   });
 });

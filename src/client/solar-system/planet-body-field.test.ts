@@ -1199,25 +1199,46 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('renderedPlanetSizePx mirrors the shader glare footprint and kills below the taper', () => {
+  it('renderedPlanetSizePx mirrors the resolved photographic footprint (locally active)', () => {
     const f = makeField();
     attach(f, 0, 1);
+    // Locally active: the body renders through the local depth pass, on
+    // the photographic glare scale.
+    f.setLocalPassRange(0, 1);
     // Camera close to the planet at (1 AU, 0, 0): physical term visible.
     const near = new THREE.Vector3(AU_PC - 10 * 6000 * KM_PC, 0, 0);
     const px = f.renderedPlanetSizePx(0, near);
     expect(px).toBeGreaterThan(0);
     // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
-    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ the 2 px
-    // resolvedness ceiling, so the glare is fully in its resolved bloom:
-    // the footprint is physSize · GLARE_BLOOM_OVERSIZE (the size-clamped
-    // halo). bufLocalRel stores the planet position in float32, so the
-    // camera→planet distance carries a ~1e-4 relative quantum at 1 AU
-    // magnitudes — compare at that tolerance.
+    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ GLARE_MIN_PX,
+    // so the photographic glare footprint is physSize · GLARE_BLOOM_OVERSIZE
+    // (the size-clamped lit-limb halo). bufLocalRel stores the planet
+    // position in float32, so the camera→planet distance carries a ~1e-4
+    // relative quantum at 1 AU magnitudes — compare at that tolerance.
     const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
     const expectedFootprint = expectedPhys * GLARE_BLOOM_OVERSIZE;
     expect(Math.abs(px - expectedFootprint) / expectedFootprint).toBeLessThan(1e-3);
     // Unattached instance → 0.
     expect(f.renderedPlanetSizePx(9, near)).toBe(0);
+    f.dispose();
+  });
+
+  it('renderedPlanetSizePx switches regime on local-pass membership', () => {
+    const f = makeField();
+    attach(f, 0, 1);
+    // Same resolved pose as above (physSize ≈ 114 px ≫ appSize).
+    const near = new THREE.Vector3(AU_PC - 10 * 6000 * KM_PC, 0, 0);
+    f.setLocalPassRange(0, 1);
+    const active = f.renderedPlanetSizePx(0, near);
+    f.setLocalPassRange(-1, 0);
+    const inactive = f.renderedPlanetSizePx(0, near);
+    expect(active).toBeGreaterThan(0);
+    expect(inactive).toBeGreaterThan(0);
+    // Locally active adds the photographic lit-limb halo (disc·OVERSIZE);
+    // the star-perceptual regime is just the true disc here (appSize is
+    // far below physSize for a resolved body), so the two differ by
+    // exactly the OVERSIZE factor.
+    expect(active / inactive).toBeCloseTo(GLARE_BLOOM_OVERSIZE, 3);
     f.dispose();
   });
 
