@@ -508,10 +508,14 @@ annotation to the physics):
   decluttering to `physical` removes it entirely, leaving pure
   physics. FrontSide + outward winding is the fresnel-shell
   hide-when-inside contract (the rim culls with the camera inside the
-  cloud; the BackSide absorption keeps working from inside). Peak
-  intensity target ≈ 0.05–0.15 of a threshold-visible star's glow;
-  must lose to any physical signal. Actual HII emission overlays are
-  `stellata-c7u.5.2`'s scope, driven by the cavity list.
+  cloud; the BackSide absorption keeps working from inside). Rim
+  strength is the shared boundary-shell value (`SHELL_RIM_ALPHA_LIMB`,
+  the Local Bubble's — user decision 2026-07-21, revising the earlier
+  whisper-level target: one annotation vocabulary beats a per-family
+  intensity). Per-cloud silhouette name labels ride the shared
+  shell-label engine at the `all` declutter level, screen-size gated.
+  Actual HII emission overlays are `stellata-c7u.5.2`'s scope, driven
+  by the cavity list.
 
 Chart mode renders the rim meshes as **stippled silhouette outlines**
 (the SkyAtlas 2000 nebula convention — an fwidth-scaled contour where

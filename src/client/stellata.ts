@@ -2143,6 +2143,7 @@ export class Stellata implements FrameAnchor {
       planetLabels: set('planetLabels'),
       heliopauseLabel: set('heliopauseLabel'),
       localBubbleLabel: set('localBubbleLabel'),
+      molecularCloudLabels: set('molecularCloudLabels'),
       mwLabel: set('mwLabel'),
       lgObjectLabels: set('lgObjectLabels'),
       chartStarNameLabels: set('chartStarNameLabels'),
@@ -2432,10 +2433,10 @@ export class Stellata implements FrameAnchor {
   /** Cloud analogue of `renderedSizePx` — pixel diameter of the cloud's
    *  silhouette at the current camera distance, the cloud provider's
    *  renderedSizePx leg (the distance-vector chevron tip lands on the
-   *  rendered edge instead of the user's `sizeMax` star-size knob).
-   *  Returns 0 when no cloud layer is loaded or the index is out of
-   *  range. */
-  private renderedCloudSizePx(cloudIdx: number): number {
+   *  rendered edge instead of the user's `sizeMax` star-size knob) and
+   *  the cloud labels' screen-size gate. Returns 0 when no cloud layer
+   *  is loaded or the index is out of range. */
+  renderedCloudSizePx(cloudIdx: number): number {
     if (!this.clouds) return 0;
     const cloud = this.clouds.clouds[cloudIdx];
     if (!cloud) return 0;

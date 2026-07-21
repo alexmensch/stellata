@@ -7,13 +7,13 @@ import type { LocalBubbleMesh } from './local-bubble-loader';
 import {
   FresnelShell,
   SHELL_RIM_BLUE,
+  SHELL_RIM_ALPHA_LIMB,
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
 import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
 
 const COLOUR = new THREE.Color(SHELL_RIM_BLUE);
-const ALPHA_LIMB = 0.5;
 
 /** DOM id of the SVG `<text>` node for the label. */
 export const LOCAL_BUBBLE_LABEL_ELEMENT_ID = 'local-bubble-label';
@@ -46,7 +46,7 @@ export class LocalBubbleShell extends FresnelShell {
     super(
       createFresnelShellMaterial({
         colour: COLOUR,
-        alphaLimb: ALPHA_LIMB,
+        alphaLimb: SHELL_RIM_ALPHA_LIMB,
         blending: THREE.AdditiveBlending,
       }),
       -1,

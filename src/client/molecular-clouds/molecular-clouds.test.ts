@@ -4,6 +4,11 @@ import { MolecularClouds, renderedCloudSizePx, cloudViewingDistancePc } from './
 import type { Cloud, CloudCatalog } from './cloud-loader';
 import type { CloudSurface } from './cloud-surfaces-loader';
 import { makeMockCloud, makeMockCatalog } from './cloud-mock';
+import {
+  DEFAULT_FACE_ON_FLOOR,
+  DEFAULT_FRESNEL_POWER,
+  SHELL_RIM_ALPHA_LIMB,
+} from '../fresnel-shell/fresnel-shell';
 
 function makeCloud(axes: [number, number, number], id = 'test'): Cloud {
   return makeMockCloud({ name: id, id, sid: id.charCodeAt(0), axes });
@@ -98,7 +103,7 @@ describe('MolecularClouds / absorption material contract', () => {
 });
 
 describe('MolecularClouds / rim shell contract', () => {
-  it('is one shared FrontSide material, additive in realistic mode', () => {
+  it('is one shared FrontSide material, additive, at the Local Bubble rim params', () => {
     const c = new MolecularClouds(makeCatalog());
     const mats = rimGroup(c).children.map(
       (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
@@ -107,6 +112,9 @@ describe('MolecularClouds / rim shell contract', () => {
     expect(mats[0].side).toBe(THREE.FrontSide);
     expect(mats[0].blending).toBe(THREE.AdditiveBlending);
     expect(mats[0].uniforms.uChart.value).toBe(0);
+    expect(mats[0].uniforms.uAlphaLimb.value).toBe(SHELL_RIM_ALPHA_LIMB);
+    expect(mats[0].uniforms.uFaceOnFloor.value).toBe(DEFAULT_FACE_ON_FLOOR);
+    expect(mats[0].uniforms.uFresnelPower.value).toBe(DEFAULT_FRESNEL_POWER);
   });
 
   it('swaps to the stippled ink pass (normal blending) in chart mode and back', () => {
@@ -143,6 +151,43 @@ describe('MolecularClouds / rim shell contract', () => {
     expect(rimMaterial(c).uniforms.uOpacity.value).toBe(25);
     c.setDebugBoost(null);
     expect(rimMaterial(c).uniforms.uOpacity.value).toBe(0.4);
+  });
+
+  it('label samples: traced meshes subsample their vertices, fallbacks sweep the envelope', () => {
+    const catalog = makeCatalog();
+    const sidA = catalog.clouds[0].sid;
+    const surfaces = new Map([[sidA, makeSurface()]]);
+    const c = new MolecularClouds(catalog, surfaces);
+    // Cloud A (3-vertex surface): every vertex is a sample.
+    expect(c.labelSampleCount(0)).toBe(3);
+    const out = new THREE.Vector3();
+    c.labelSampleInto(0, 1, new THREE.Vector3(0, 0, 0), out);
+    expect(out.x).toBe(1); // surface vertex 1 = (1, 0, 0)
+    // Cloud B (fallback): fixed sweep of the u = uEnv envelope.
+    expect(c.labelSampleCount(1)).toBe(32);
+    const b = catalog.clouds[1];
+    for (let i = 0; i < c.labelSampleCount(1); i++) {
+      c.labelSampleInto(1, i, new THREE.Vector3(0, 0, 0), out);
+      const local = out.clone().sub(b.centerAbs).applyQuaternion(b.quat.clone().conjugate());
+      const u = Math.sqrt(
+        (local.x / (b.axes[0] * b.uEnv)) ** 2
+        + (local.y / (b.axes[1] * b.uEnv)) ** 2
+        + (local.z / (b.axes[2] * b.uEnv)) ** 2,
+      );
+      // Samples are stored float32, so ~7 significant digits survive.
+      expect(u).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('labelSampleInto subtracts the world offset', () => {
+    const c = new MolecularClouds(makeCatalog());
+    const out = new THREE.Vector3();
+    c.labelSampleInto(0, 0, new THREE.Vector3(5, -3, 2), out);
+    const raw = new THREE.Vector3();
+    c.labelSampleInto(0, 0, new THREE.Vector3(0, 0, 0), raw);
+    expect(out.x).toBeCloseTo(raw.x - 5, 12);
+    expect(out.y).toBeCloseTo(raw.y + 3, 12);
+    expect(out.z).toBeCloseTo(raw.z - 2, 12);
   });
 
   it('setMonoColor / setMonoOpacity drive the chart ink uniforms', () => {

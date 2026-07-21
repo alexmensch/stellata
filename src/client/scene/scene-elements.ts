@@ -43,6 +43,7 @@ export type SceneElementId =
   | 'planetLabels'
   | 'heliopauseLabel'
   | 'localBubbleLabel'
+  | 'molecularCloudLabels'
   | 'mwLabel'
   | 'lgObjectLabels'
   // Chart-only content (chart-labels.ts).
@@ -79,6 +80,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   planetLabels:              { realistic: 'all',              chart: 'never' },
   heliopauseLabel:           { realistic: 'all',              chart: 'never' },
   localBubbleLabel:          { realistic: 'all',              chart: 'never' },
+  molecularCloudLabels:      { realistic: 'all',              chart: 'never' },
   mwLabel:                   { realistic: 'all',              chart: 'never' },
   lgObjectLabels:            { realistic: 'all',              chart: 'never' },
   chartStarNameLabels:       { realistic: 'never',            chart: 'physical' },

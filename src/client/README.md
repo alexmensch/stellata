@@ -242,6 +242,8 @@ SVG mask (`constellation-figure/README.md`).
 | Focus ring                                       | SVG     | source order (last child)                          | front | [overlays/](overlays/README.md) |
 | Click ripple                                     | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Heliopause label                                 | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
+| Local Bubble label                               | SVG     | source order                                       |       | [local-bubble/](local-bubble/README.md) |
+| Molecular cloud labels                           | SVG     | source order                                       |       | [molecular-clouds/](molecular-clouds/README.md) |
 | Planet labels                                    | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI rings                                        | SVG     | source order                                       |       | [overlays/](overlays/README.md) |

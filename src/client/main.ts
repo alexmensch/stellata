@@ -3,6 +3,7 @@ import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadClouds } from './molecular-clouds/cloud-loader';
 import { loadCloudSurfaces } from './molecular-clouds/cloud-surfaces-loader';
+import { createMolecularCloudLabels } from './molecular-clouds/cloud-labels';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
@@ -225,6 +226,9 @@ async function main() {
     createPlanetLabels(stellata);
     createHeliopauseLabel(stellata);
     createLocalBubbleLabel(stellata);
+    // Per-cloud molecular-cloud labels. Mints SVG <text> children under
+    // #cloud-labels; no-op when the cloud layer didn't attach.
+    createMolecularCloudLabels(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.

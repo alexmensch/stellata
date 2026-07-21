@@ -62,6 +62,11 @@
            the shared distance-gated label engine; a labels-tier declutter
            element shown at detail level "all". -->
       <text id="local-bubble-label" class="heliopause-label" text-anchor="start" dominant-baseline="hanging">Local Bubble</text>
+      <!-- Per-cloud molecular-cloud labels. Pooled <text> children minted
+           at runtime by cloud-labels.ts — one per cloud, hugging each
+           cloud's projected silhouette via the shared shell-label engine;
+           a labels-tier declutter element shown at detail level "all". -->
+      <g id="cloud-labels"></g>
       <!-- Milky Way label. Anchored to the galactic-centre projection;
            fades in once the camera is far enough from GC that the disc
            reads as a whole structure. Same SVG layer as the Local Group

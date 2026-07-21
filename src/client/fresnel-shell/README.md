@@ -6,8 +6,9 @@ reads as a soft glowing rim rather than a flat disc. Two layers consume
 the full primitive — the heliopause (`solar-system/`) and the Local
 Bubble (`local-bubble/`); the molecular-cloud rim shells consume the
 `stellata_fresnel_rim` chunk, the shared vertex stage
-(`fresnel-shell.vert.glsl`), and `SHELL_RIM_BLUE` with their own
-fragment stage (`molecular-clouds/cloud-rim.frag.glsl`).
+(`fresnel-shell.vert.glsl`), and the shared rim constants
+(`SHELL_RIM_BLUE`, `SHELL_RIM_ALPHA_LIMB`) with their own fragment
+stage (`molecular-clouds/cloud-rim.frag.glsl`).
 
 ## Files
 

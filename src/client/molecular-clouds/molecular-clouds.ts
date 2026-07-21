@@ -13,6 +13,7 @@ import {
   DEFAULT_FACE_ON_FLOOR,
   DEFAULT_FRESNEL_POWER,
   SHELL_RIM_BLUE,
+  SHELL_RIM_ALPHA_LIMB,
 } from '../fresnel-shell/fresnel-shell';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
@@ -25,11 +26,6 @@ const ABSORPTION_MESH_RADIUS = 1.03;
 const RIM_SEGMENTS_LON = 48;
 const RIM_SEGMENTS_LAT = 24;
 
-// Rim silhouette calibrated whisper-level: peak intensity ≈ 0.05–0.15 of
-// a threshold-visible star's glow, losing to any physical signal. (The
-// boundary shells run alphaLimb 0.45–0.5; clouds sit far below that
-// deliberately — 96 rims at shell strength would dominate the sky.)
-const ALPHA_LIMB_DEFAULT = 0.15;
 const RIM_GAIN_DEFAULT = 1.0;
 const STEPS_DEFAULT = 14;
 
@@ -37,6 +33,12 @@ const STEPS_DEFAULT = 14;
 // definite chart annotation against the paper background.
 const INK_COLOR_DEFAULT = 0x000000;
 const INK_ALPHA_DEFAULT = 0.95;
+
+// Per-cloud silhouette samples for the shared distance-gated label
+// engine — the Local Bubble pattern (~96 samples for one shell) scaled
+// down per cloud so 96 labels keep a flat per-frame projection budget.
+const LABEL_SAMPLE_TARGET = 32;
+const GOLDEN_ANGLE = 2.399963229728653;
 
 const ABSORPTION_RENDER_ORDER = -2;
 // Rim shells draw with the reference wireframes at −1 — annotation
@@ -84,6 +86,8 @@ export class MolecularClouds {
   private rimFallbackGeometry: THREE.SphereGeometry;
   /** Owned per-cloud isosurface geometries (disposed with the layer). */
   private rimSurfaceGeometries: THREE.BufferGeometry[] = [];
+  /** Per-cloud absolute-ICRS surface samples for the silhouette labels. */
+  private labelSampleAbs: Float32Array[] = [];
   private mono = false;
   /** Absorption meshes in catalog order, for picking. Cloud index is
    *  stashed on `mesh.userData.cloudIdx` so raycast results resolve back
@@ -126,8 +130,28 @@ export class MolecularClouds {
       this.meshes.push(mesh);
       this.absorptionGroup.add(mesh);
 
-      this.rimGroup.add(this.makeRimMesh(c, surfaces?.get(c.sid)));
+      const surface = surfaces?.get(c.sid);
+      this.rimGroup.add(this.makeRimMesh(c, surface));
+      this.labelSampleAbs.push(buildLabelSamples(c, surface));
     }
+  }
+
+  /** Number of silhouette samples for cloud `cloudIdx` (0 if out of range). */
+  labelSampleCount(cloudIdx: number): number {
+    return (this.labelSampleAbs[cloudIdx]?.length ?? 0) / 3;
+  }
+
+  /** Surface sample `i` of cloud `cloudIdx` in renderer-local coords
+   *  (absolute − worldOffset), written into `out` — the same contract as
+   *  `LocalBubbleShell.labelSampleInto`. */
+  labelSampleInto(
+    cloudIdx: number,
+    i: number,
+    worldOffset: Readonly<THREE.Vector3>,
+    out: THREE.Vector3,
+  ): THREE.Vector3 {
+    const s = this.labelSampleAbs[cloudIdx];
+    return out.set(s[i * 3], s[i * 3 + 1], s[i * 3 + 2]).sub(worldOffset);
   }
 
   /** Per-frame: rebase to the floating origin and gate the rim shells on
@@ -275,7 +299,7 @@ export class MolecularClouds {
       side: THREE.FrontSide,
       uniforms: {
         uColour: { value: new THREE.Color(SHELL_RIM_BLUE) },
-        uAlphaLimb: { value: ALPHA_LIMB_DEFAULT },
+        uAlphaLimb: { value: SHELL_RIM_ALPHA_LIMB },
         uFaceOnFloor: { value: DEFAULT_FACE_ON_FLOOR },
         uFresnelPower: { value: DEFAULT_FRESNEL_POWER },
         uOpacity: { value: this.rimGain },
@@ -313,6 +337,42 @@ export class MolecularClouds {
     mesh.renderOrder = RIM_RENDER_ORDER;
     return mesh;
   }
+}
+
+const scratchSampleVec = /*@__PURE__*/ new THREE.Vector3();
+
+/** Absolute-ICRS silhouette samples for one cloud: a stride subsample of
+ *  the traced mesh's vertices, or a fibonacci-sphere sweep of the
+ *  ellipsoid envelope for fallback clouds. */
+function buildLabelSamples(cloud: Cloud, surface: CloudSurface | undefined): Float32Array {
+  if (surface) {
+    const vertexCount = surface.positions.length / 3;
+    const stride = Math.max(1, Math.floor(vertexCount / LABEL_SAMPLE_TARGET));
+    const samples: number[] = [];
+    for (let k = 0; k < vertexCount; k += stride) {
+      samples.push(
+        surface.positions[k * 3],
+        surface.positions[k * 3 + 1],
+        surface.positions[k * 3 + 2],
+      );
+    }
+    return new Float32Array(samples);
+  }
+  const out = new Float32Array(LABEL_SAMPLE_TARGET * 3);
+  for (let k = 0; k < LABEL_SAMPLE_TARGET; k++) {
+    const z = 1 - (2 * (k + 0.5)) / LABEL_SAMPLE_TARGET;
+    const r = Math.sqrt(Math.max(0, 1 - z * z));
+    const phi = k * GOLDEN_ANGLE;
+    scratchSampleVec.set(
+      r * Math.cos(phi) * cloud.axes[0] * cloud.uEnv,
+      r * Math.sin(phi) * cloud.axes[1] * cloud.uEnv,
+      z * cloud.axes[2] * cloud.uEnv,
+    ).applyQuaternion(cloud.quat).add(cloud.centerAbs);
+    out[k * 3] = scratchSampleVec.x;
+    out[k * 3 + 1] = scratchSampleVec.y;
+    out[k * 3 + 2] = scratchSampleVec.z;
+  }
+  return out;
 }
 
 /**

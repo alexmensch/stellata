@@ -21,6 +21,11 @@ export const DEFAULT_FRESNEL_POWER = 2.5;
  *  a thing you can't actually see". */
 export const SHELL_RIM_BLUE = 0x5a7a9c;
 
+/** Limb alpha shared by the same two consumers — one rim strength so a
+ *  cloud shell and the Local Bubble wall read as the same annotation
+ *  vocabulary. */
+export const SHELL_RIM_ALPHA_LIMB = 0.5;
+
 export interface FresnelShellMaterialOptions {
   colour: THREE.Color;
   /** Alpha at the silhouette (limb); face-on alpha is this × faceOnFloor. */

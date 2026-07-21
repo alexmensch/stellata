@@ -47,6 +47,8 @@ when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
   absorption raymarch pair.
 - `cloud-rim.frag.glsl` — the rim/outline fragment stage; the vertex
   stage is the shared `../fresnel-shell/fresnel-shell.vert.glsl`.
+- `cloud-labels.ts` — per-cloud silhouette-hugging SVG name labels
+  (§ Labels).
 
 ## Absorption render
 
@@ -99,12 +101,28 @@ winding is the fresnel-shell **hide-when-inside** contract: the shell
 back-face-culls with the camera inside the cloud, while the BackSide
 absorption keeps working from inside.
 
-- **Realistic:** additive fresnel rim (`stellata_fresnel_rim` chunk),
-  whisper-level (`uAlphaLimb` 0.15 vs the boundary shells' 0.45–0.5 —
-  96 rims at shell strength would dominate the sky), ±0.5-LSB dither.
+- **Realistic:** additive fresnel rim (`stellata_fresnel_rim` chunk) at
+  the exact Local Bubble params (`SHELL_RIM_ALPHA_LIMB` + the shared
+  face-on-floor / fresnel-power defaults — one annotation vocabulary),
+  ±0.5-LSB dither.
 - **Chart:** the material swaps to `NormalBlending` ink and the shader
   emits a stippled silhouette contour — an fwidth-scaled band where
   n·v → 0, masked by a screen-space dot grid.
+
+## Labels
+
+`cloud-labels.ts` mints one SVG `<text>` per cloud into `#cloud-labels`
+and wires each through the shared shell-label engine
+(`createShellSilhouetteLabel` — identical placement to the Local Bubble
+and heliopause labels: silhouette support point + bottom-right offset +
+chase lerp, near-plane bail hides the label with the camera inside).
+Samples come from `labelSampleCount` / `labelSampleInto` on the layer —
+a stride subsample of the traced mesh's vertices, or a fibonacci sweep
+of the `u = uEnv` envelope for fallback clouds. A `labels`-tier
+declutter element (`molecularCloudLabels`, floor `all`, realistic only —
+chart names ride `chart-labels.ts`), additionally gated on the cloud's
+projected silhouette reaching ~40 px (`renderedCloudSizePx`) so distant
+complexes don't stack a label per member.
 
 ## Unified focus / measurement / warp UX
 
