@@ -8,7 +8,7 @@ const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
 // Mirror of AIRLIGHT_GAIN / MS_STRENGTH in atmosphere-scattering-pure.ts.
 const float STELLATA_AIRLIGHT_GAIN = 3.0;
-const float STELLATA_MS_STRENGTH = 0.6;
+const float STELLATA_MS_STRENGTH = 0.2;
 
 float stellata_rayleighPhase(float mu) {
   return STELLATA_RAYLEIGH_PHASE_K * (1.0 + mu * mu);

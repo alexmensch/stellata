@@ -286,12 +286,13 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
     terminatorSoftness: 0.08,
-    // Thick sulphuric-acid cloud: grey Mie scatter (bright featureless disc
-    // via the multiple-scattering fill), mild blue absorption → pale yellow.
+    // The cloud-top texture carries the visible disc; the atmosphere stays
+    // optically thin over it (a limb/airlight overlay, not a second cloud
+    // layer that would double-count), mild blue absorption → pale-yellow tint.
     atmosphere: {
       heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
-      rayleighCoeff: [0.003, 0.007, 0.018], mieCoeff: 1.5,
-      absorbCoeff: [0.006, 0.015, 0.036], mieG: 0.70,
+      rayleighCoeff: [0.002, 0.004, 0.010], mieCoeff: 0.12,
+      absorbCoeff: [0.003, 0.008, 0.020], mieG: 0.70,
     },
   },
   {
@@ -308,11 +309,12 @@ export const SOL_PLANETS: readonly Planet[] = [
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
     hasNightTexture: true,
-    // Clean air: Rayleigh (1/λ⁴) dominates → blue airlight over the dark
-    // ocean; negligible aerosol.
+    // Rayleigh (1/λ⁴) gives the blue airlight; a real aerosol/haze Mie term
+    // (τ ≈ 0.05, grey) desaturates it toward the grey-blue limb seen from
+    // orbit rather than a vivid pure-Rayleigh blue.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
-      rayleighCoeff: [0.011, 0.027, 0.066], mieCoeff: 0.005,
+      rayleighCoeff: [0.010, 0.023, 0.050], mieCoeff: 0.05,
       absorbCoeff: [0, 0, 0],
     },
   },
@@ -333,8 +335,8 @@ export const SOL_PLANETS: readonly Planet[] = [
     // of the Mie phase).
     atmosphere: {
       heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
-      rayleighCoeff: [0.0012, 0.0027, 0.006], mieCoeff: 0.08,
-      absorbCoeff: [0.01, 0.04, 0.11],
+      rayleighCoeff: [0.0012, 0.0027, 0.006], mieCoeff: 0.06,
+      absorbCoeff: [0.008, 0.03, 0.08],
     },
   },
   {
@@ -461,8 +463,8 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
     // → orange. Do not invert the absorption channels.
     atmosphere: {
       heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
-      rayleighCoeff: [0.006, 0.012, 0.024], mieCoeff: 0.8,
-      absorbCoeff: [0.03, 0.14, 0.35], mieG: 0.80,
+      rayleighCoeff: [0.004, 0.008, 0.016], mieCoeff: 0.35,
+      absorbCoeff: [0.02, 0.09, 0.22], mieG: 0.80,
     } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 

@@ -706,23 +706,32 @@ there is no ad-hoc day gate. **Airlight is applied on both surfaces:**
   so the disc path owns them (no double-count). The full-chord airlight is the
   physical back-lit ring.
 
-**Multiple-scattering fill.** Single scattering alone leaves optically thick
-hazes (Venus, Titan) far too dark — most of their brightness is *multiply*
-scattered, which the single-scatter integral misses, so the thick-Mie
-extinction would kill the surface and leave a black disc. After the
-single-scatter loop the integrator adds a cheap isotropic term = fraction
-scattered (not absorbed) × opacity (1 − T) × sunlit-fraction, weighted by
-`MS_STRENGTH`. It is negligible for thin atmospheres (Earth: opacity ≈ 0) and
-dominant for thick ones (Venus → bright featureless yellow ball; Titan → glowing
-orange disc, its channel colour set by the absorption albedo). `AIRLIGHT_GAIN`
+**The texture carries the disc; the atmosphere is an overlay.** Each body's
+surface texture is its visible disc — including the *cloud-top* map for cloudy
+bodies (Venus, Titan). The atmosphere therefore stays **optically thin** over
+it: a limb/airlight overlay, never a second scattering layer thick enough to
+extinguish the texture (`T_view → 0`) and replace it with a featureless ball —
+that double-counts the clouds the texture already shows. Keep the per-body
+optical depths low enough that `T_view` stays high across the lit disc.
+
+**Multiple-scattering fill.** A small isotropic term = fraction scattered (not
+absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds
+day-side ambient so the terminator doesn't fall to pure single-scatter black.
+Kept low precisely so it doesn't grey-wash the surface texture. `AIRLIGHT_GAIN`
 scales the single-scatter term so the neutral slider (sun intensity = 1) is
 roughly calibrated.
 
-**Anti-banding.** The few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`) would
-read as a fixed moiré grid; each fragment jitters its sample lattice by an
-interleaved-gradient-noise offset (`stellata_atmoJitter(gl_FragCoord)`) so the
-residual reads as fine noise instead. The CPU mirror uses the midpoint (0.5),
-so vitest pins deterministic quadrature while the shader decorrelates.
+**Anti-banding.** Two sources, two fixes. (1) *Geometric* — the analytic march
+must not read the mesh tessellation as a lat/long grid, so both shaders
+reconstruct the ray direction from the **renormalized interpolated normal** (a
+smooth sphere direction), never the faceted interpolated position. (2)
+*Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`) jitters
+its sample lattice per fragment by an interleaved-gradient-noise offset
+(`stellata_atmoJitter(gl_FragCoord)`) so the residual reads as fine noise. The
+CPU mirror uses the midpoint (0.5), so vitest pins deterministic quadrature
+while the shader decorrelates. The ad-hoc surface **limb-darkening** is dropped
+for atmospheric bodies (the scattering governs the limb; keeping it double-
+darkened the disc edge into a black rim).
 
 Per-body params live in `planet-system.ts` `PlanetAtmosphere` as scale
 heights + **vertical optical depths** (`rayleighCoeff`, `mieCoeff`,

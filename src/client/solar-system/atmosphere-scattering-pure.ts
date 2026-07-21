@@ -15,7 +15,7 @@ export const AIRLIGHT_GAIN = 3.0;
  *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
  *  opacity × sunlit, which is negligible for thin atmospheres (Earth) and
  *  dominant for thick ones. */
-export const MS_STRENGTH = 0.6;
+export const MS_STRENGTH = 0.2;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];
