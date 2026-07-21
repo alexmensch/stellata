@@ -79,14 +79,19 @@ uniform float uSizeKnee;
 // body across it. res = smoothstep(x, y, physSize) drives the glare's
 // point→bloom morph in lockstep with the mesh presence.
 uniform vec2 uMeshFadePx;
-// Reflected-glare gain — flux-continuity calibration between the
-// resolved bloom peak and the mesh surface it sits over (smoke-tuned).
+// Reflected-glare gain — scales the surface-radiance scale the glare
+// base and bloom onset both read (smoke-tuned).
 uniform float uGlareGain;
-// (GLARE_BLOOM_OVERSIZE, GLARE_PHOTOCENTRE_SHIFT, GLARE_MIN_PX) from
-// mesh-crossfade.ts: resolved bloom cap × disc, lit-limb photocentre
-// shift × radius, and the locally-active glare's sub-pixel visibility
-// floor (below it the peak scales down to conserve flux).
-uniform vec3 uGlareShape;
+// (GLARE_BLOOM_OVERSIZE, GLARE_PHOTOCENTRE_SHIFT, GLARE_MIN_PX,
+// GLARE_BLOOM_KNEE) from mesh-crossfade.ts: resolved bloom cap × disc,
+// lit-limb photocentre shift × radius, the glare base's sub-pixel
+// visibility floor (below it the peak scales down to conserve flux), and
+// the veiling-glare bloom smoothstep width.
+uniform vec4 uGlareShape;
+// Lit-surface radiance at which the veiling-glare bloom onsets — a bright
+// sunlit surface blooms into a star-like halo, a dim one stays its
+// flux-conserving base. Debug-tunable (debug/planet-tuning.ts).
+uniform float uBloomThreshold;
 
 // Chart-mode flat-disc sizing — same uniforms (same { value } slots)
 // as the star pipeline's chart branch; see chart-mode/README.md.
@@ -267,35 +272,46 @@ void main() {
     pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
     vGlareIntensity = 1.0;
   } else {
-#ifdef LOCAL_DEPTH_PASS
-    // Locally active (flying around the system): the glare is one
-    // reflected-radiance quantity on the mesh's display scale. Surface
-    // radiance L = iLitIntensity·albedo·gain, illuminated-fraction gated
-    // so a crescent's dark limb emits ~none (kills the symmetric halo
-    // ring). Size = true disc·OVERSIZE floored at GLARE_MIN_PX; below the
-    // floor the peak scales by (size ratio)² so integrated flux (peak·
-    // size²) stays L·physSize² at every scale — a sub-pixel body dims
-    // with distance and can never exceed a resolved neighbour's surface
-    // L (no outshining, no receding-brightening). When resolved the mesh
-    // writes depth and occludes the core to a lit-limb bloom. See
-    // README § Planet mesh LOD.
+    // Reflected glare = one additive quad: a flux-conserving photographic
+    // BASE (the linear image) plus an intensity-gated veiling-glare BLOOM
+    // (the eye's response to a bright point). Two physical effects, one
+    // quad. See README § Planet mesh LOD.
     float illumFrac = (1.0 + cosA) * 0.5;
-    float L = iLitIntensity * iAlbedoP * uGlareGain * illumFrac * eclipseFactor;
-    float glareSize = physSize * uGlareShape.x;
-    float peak = L;
-    if (glareSize < uGlareShape.z) {
-      float k = glareSize / max(uGlareShape.z, 1e-6);
-      peak *= k * k;
-      glareSize = uGlareShape.z;
-    }
-    pxSize = glareSize;
-    vGlareIntensity = peak;
+    // Disc-averaged surface radiance drives the base; the LIT-surface
+    // radiance (no illumFrac — a thin bright crescent still glares from
+    // its sunlit sliver) drives the bloom onset.
+    float discRadiance = iLitIntensity * iAlbedoP * uGlareGain * illumFrac;
+    float litRadiance = iLitIntensity * iAlbedoP * uGlareGain;
+
+    // BASE: size = true disc·OVERSIZE floored at GLARE_MIN_PX; peak =
+    // L·√(disc·OVERSIZE / baseSize) ≤ L. Quarter-power display law turns
+    // linear flux conservation (peak·area) into peak·√area, so a
+    // sub-pixel body's peak stays ≤ its surface radiance and dims ∝
+    // physSize with distance — it can never outshine a resolved
+    // neighbour, and never brightens on recede.
+    float over = physSize * uGlareShape.x;
+    float baseSize = max(over, uGlareShape.z);
+    float basePeak = discRadiance * sqrt(min(1.0, over / baseSize));
+
+    // BLOOM: a bright lit surface scatters into a star-like halo. Gated
+    // on lit-surface radiance so a dim outer moon stays its dim base and
+    // a sunlit inner surface blooms; the extent is the shared
+    // star-perceptual appSize so a bloomed body reads exactly like a star
+    // of its magnitude (Venus as the brilliant evening "star"). The bloom
+    // persists through resolution — a bright resolved body keeps its
+    // halo, so approach never dims-pops.
+    float bloom = smoothstep(uBloomThreshold, uBloomThreshold + uGlareShape.w, litRadiance);
+    float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
+    float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
+
+    pxSize = mix(baseSize, max(baseSize, appSize), bloom);
+    vGlareIntensity = mix(basePeak, 1.0, bloom) * eclipseFactor;
 
     // Photocentre shift toward the lit limb (sub-solar screen dir),
-    // scaled by how crescent (1−illumFrac) and how resolved (res), so
-    // the residual bloom concentrates on the illuminated side instead of
-    // ringing; a sub-pixel dot (res→0) keeps its centre. Guarded against
-    // a degenerate on-axis sub-solar direction.
+    // scaled by how crescent (1−illumFrac) and how resolved (res), so a
+    // resolved crescent's residual glare concentrates on the illuminated
+    // side instead of ringing; a sub-pixel dot (res→0) keeps its centre.
+    // Guarded against a degenerate on-axis sub-solar direction.
     float res = smoothstep(uMeshFadePx.x, uMeshFadePx.y, physSize);
     vec2 sunDir = hphHat.xy;
     float sunLen = length(sunDir);
@@ -304,15 +320,6 @@ void main() {
       photoOffsetPx = (sunDir / sunLen)
           * (radiusPx * uGlareShape.y * (1.0 - illumFrac) * res);
     }
-#else
-    // Not locally active: the whole system is a distant dot in the star
-    // field, so each body reads as a star of its apparent magnitude
-    // (peak 1, size = appSize) — consistent with the surrounding stars.
-    // Phase is already photometric in appMag; eclipse dims the peak.
-    float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
-    pxSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
-    vGlareIntensity = eclipseFactor;
-#endif
   }
   // One CSS pixel in vUv units — the chart frag's edge-AA width.
   vAaWidth = 1.0 / max(pxSize, 0.5);

@@ -11,7 +11,7 @@ import {
   perceptualAppSizePx,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
-import { AU_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
+import { AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 
 describe('apparentMagnitude', () => {
   it('returns the absolute magnitude at 10 pc by definition', () => {
@@ -221,6 +221,25 @@ describe('planetApparentMagnitude', () => {
   it('does not divide by zero at d_vp = 0', () => {
     const m = planetApparentMagnitude(0, 0, 10, 0.5, 1, 1);
     expect(Number.isFinite(m)).toBe(true);
+  });
+
+  it('nails the full Moon at −12.7 — the absolute-flux calibration anchor', () => {
+    // The formula has NO free constant; it lands on the standard V-mag
+    // scale from M_host + physical p/R/distances alone. Full Moon from
+    // Earth is the canonical check: Sun (M=4.83) at d_hp=1 AU, viewer at
+    // d_vp=384,400 km, R=1737.4 km, geometric albedo p=0.12, φ(0)=1.
+    // Real full-Moon V ≈ −12.74. Agreement here proves the inverse-square
+    // flux is correctly calibrated, and (being anchored on M_host) it
+    // flows to any host star for free.
+    const m = planetApparentMagnitude(
+      SUN_ABSMAG_V,
+      384_400 * KM_PC,
+      AU_PC,
+      0.12,
+      1737.4 * KM_PC,
+      1,
+    );
+    expect(m).toBeCloseTo(-12.7, 1);
   });
 });
 

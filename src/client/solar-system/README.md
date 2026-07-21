@@ -527,47 +527,53 @@ crossfade.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.
-- **Reflected glare** is one additive quad whose scale is gated on
-  whether the system is **locally active** — the same `LOCAL_DEPTH_PASS`
-  split that decides main-pass vs mirror draw (`../local-depth/`). The
-  two regimes meet at the host cull distance, where bodies vanish, so
-  the switch never pops:
-  - **Locally active** (flying around the system — `LOCAL_DEPTH_PASS`
-    mirror draw): **photographic, flux-conserving.** Surface radiance
-    `L = iLitIntensity · albedo · uGlareGain · illumFrac` is the mesh's
-    own display scale; the glare renders it directly. Size = `physSize ·
-    GLARE_BLOOM_OVERSIZE` (1.3) floored at `GLARE_MIN_PX`; below the
-    floor the peak scales by `(size ratio)²` so integrated flux (`peak ·
-    size²`) equals `L · physSize²` at every scale. Consequences: a
-    sub-pixel body dims with distance and can **never exceed** a
-    resolved neighbour's surface `L` (no tiny-moon-outshines-parent, no
-    brightening-on-recede — the two defects the old `mix(1, bloomPeak,
-    res)` produced by crossing two mismatched brightness scales).
-    Illuminated-fraction gated (`(1+cosα)/2`) + photocentre-shifted
-    toward the sub-solar limb (`GLARE_PHOTOCENTRE_SHIFT`, scaled by
-    resolvedness) so a crescent's dark limb emits ~none — kills the halo
-    ring the old symmetric disc drew. When resolved the **mesh** writes
-    depth and occludes the core to a lit-limb bloom.
-  - **Not locally active** (the whole system is a distant dot among the
-    stars — main pass): **star-perceptual.** Size = `appSize(appMag)`,
-    peak 1 — each body reads exactly like a star of its magnitude,
-    consistent with the surrounding field, phase purely photometric
-    (already in `appMag`). This is the `perceptual-disc.glsl` point
-    model shared with the star pipeline.
-  CPU mirror for the hover footprint: `glareSizePx(physSize)`
-  (photographic) or `appSize` (star), chosen by `isLocallyActive`.
+- **Reflected glare** is one additive quad carrying **two physical
+  effects** (a bright point is a linear image *plus* the eye's veiling
+  glare), gated on **resolvedness** and **surface brightness** — never on
+  locally-active:
+  - **Base — the linear image (flux-conserving photographic).** Surface
+    radiance `L = iLitIntensity · albedo · uGlareGain · illumFrac` is the
+    mesh's own display scale. Size = `physSize · GLARE_BLOOM_OVERSIZE`
+    (1.3) floored at `GLARE_MIN_PX`; peak = `L · √(disc·OVERSIZE /
+    baseSize) ≤ L`. The quarter-power display law turns linear flux
+    conservation (`peak · area`) into `peak · √area`, so a sub-pixel
+    body's peak stays ≤ its surface radiance and dims ∝ physSize with
+    distance — it can **never outshine** a resolved neighbour and
+    **never brightens on recede** (the two defects of the old `mix(1,
+    bloomPeak, res)`). Illuminated-fraction gated + photocentre-shifted
+    toward the sub-solar limb (scaled by resolvedness) so a crescent's
+    dark limb emits ~none — kills the halo ring.
+  - **Bloom — the eye's veiling glare.** A bright sunlit surface scatters
+    into a star-like halo; a dim one doesn't. Gated on **lit-surface
+    radiance** `iLitIntensity · albedo · uGlareGain` (no illumFrac — a
+    thin bright crescent still glares from its sunlit sliver) via
+    `bloom = smoothstep(uBloomThreshold, +GLARE_BLOOM_KNEE, litRadiance)`.
+    Extent = the shared star-perceptual `appSize(appMag)`, so a bloomed
+    body reads exactly like a star of its magnitude (Venus as the
+    brilliant evening "star"). Blended in: `size = mix(baseSize,
+    max(baseSize, appSize), bloom)`, `peak = mix(basePeak, 1, bloom)`.
+    The bloom **persists through resolution** (gated on brightness, not
+    resolvedness), so a bright body keeps its halo as it resolves — no
+    dimming-pop on approach; the mesh draws the surface within the halo.
 
-Why the split (not a single blend): the mesh's display radiance is
-quarter-power **compressed** (so outer planets stay visible and inner
-ones don't blow out), while the star-perceptual point tracks
-**uncompressed** true flux. Their ratio is exactly that compression, so
-no continuous blend can join them across the crossover — the choice is
-per-regime, and each regime is correct where it applies (physical when
-close, star-field-consistent when far).
+  Net: a dim outer moon (low lit radiance) stays its dim flux-conserving
+  point (`bloom→0`); a sunlit inner body (high lit radiance) blooms
+  brilliant (`bloom→1`); both continuous through the resolved↔unresolved
+  transition and both dim on recede. The full-Moon calibration
+  (`perceptual-magnitude.test.ts`, −12.7) anchors the underlying flux, so
+  it generalises to any host star. CPU mirror for the hover footprint:
+  `glareSizePx(physSize, appSize, glareBloomAmount(litRadiance, threshold))`.
 
-`uGlareGain` tunes the photographic surface-radiance scale
-(`setGlareGain`; default `DEFAULT_GLARE_GAIN`). In the resolved regime
-the **mesh** writes depth (local depth pass), so the additive glare is
+Why two effects, not one: the mesh's display radiance is quarter-power
+**compressed** (outer planets visible, inner ones not blown out), so on
+its own it can't reproduce the eye's glare that makes a bright compact
+source dazzle. The base carries the compressed linear image; the bloom
+adds the intensity-dependent glare the compression discards.
+
+`uGlareGain` scales the surface-radiance the base and bloom onset both
+read; `uBloomThreshold` sets how bright a surface must be to bloom (both
+debug-tunable — `setGlareGain` / `setBloomThreshold`). When resolved the
+**mesh** writes depth (local depth pass), so the additive glare is
 naturally occluded to the lit-limb halo — the old core depth-mask is gone.
 
 - **Geometry**: one shared unit sphere, scaled per body to

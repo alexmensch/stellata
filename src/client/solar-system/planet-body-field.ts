@@ -17,10 +17,13 @@ import {
 import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import {
+  DEFAULT_GLARE_BLOOM_THRESHOLD,
   DEFAULT_GLARE_GAIN,
+  GLARE_BLOOM_KNEE,
   GLARE_BLOOM_OVERSIZE,
   GLARE_MIN_PX,
   GLARE_PHOTOCENTRE_SHIFT,
+  glareBloomAmount,
   glareSizePx,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
@@ -224,6 +227,10 @@ export class PlanetBodyField {
   // Tunable reflected-glare gain — one shared slot across the main-pass
   // and local-pass glare materials; setGlareGain writes it for smoke.
   private glareGainUniform = { value: DEFAULT_GLARE_GAIN };
+  // Tunable veiling-glare bloom threshold (lit-surface radiance at which
+  // a body starts blooming like a star); shared slot, setBloomThreshold
+  // writes it for smoke.
+  private bloomThresholdUniform = { value: DEFAULT_GLARE_BLOOM_THRESHOLD };
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
   // none. One shared value drives the main-pass suppression AND the
   // mirror draws' member gate (opposite sense, keyed on the
@@ -400,6 +407,18 @@ export class PlanetBodyField {
 
   getGlareGain(): number {
     return this.glareGainUniform.value;
+  }
+
+  /** Veiling-glare bloom threshold — the lit-surface radiance at which a
+   *  body starts blooming into a star-like halo (below it, only its
+   *  flux-conserving base draws). One shared uniform across the glare
+   *  materials; smoke-tuned from the default in mesh-crossfade.ts. */
+  setBloomThreshold(threshold: number): void {
+    this.bloomThresholdUniform.value = threshold;
+  }
+
+  getBloomThreshold(): number {
+    return this.bloomThresholdUniform.value;
   }
 
   /**
@@ -761,7 +780,7 @@ export class PlanetBodyField {
       host.ps.planets[i].radiusKm * KM_PC,
       dVp,
       appMag,
-      this.isLocallyActive(instanceIdx),
+      this.litSurfaceRadiance(instanceIdx),
     );
   }
 
@@ -871,7 +890,7 @@ export class PlanetBodyField {
     radiusPc: number,
     dVp: number,
     appMag: number,
-    locallyActive: boolean,
+    litSurf: number,
   ): number {
     // Chart mode mirrors the vertex shader's chart branch — flat
     // magnitude-driven disc, no physical/perceptual terms.
@@ -888,11 +907,12 @@ export class PlanetBodyField {
     }
     const { physSize, appSize } = this.discSizeTerms(radiusPc, dVp, appMag);
     // Rendered footprint = the wider of the true disc (mesh) and the
-    // glare quad. Mirrors the vertex shader's per-regime glare sizing so
-    // hover picks the visible body + halo: locally-active photographic
-    // (disc·OVERSIZE floored at GLARE_MIN_PX), else star-perceptual appSize.
-    const glare = locallyActive ? glareSizePx(physSize) : appSize;
-    return Math.max(physSize, glare);
+    // glare quad. Mirrors the vertex shader: the flux-conserving base
+    // (disc·OVERSIZE floored at GLARE_MIN_PX) blended toward the
+    // star-perceptual bloom extent by the lit-surface bloom amount, so
+    // hover picks the visible body + whatever halo it blooms.
+    const bloom = glareBloomAmount(litSurf, this.bloomThresholdUniform.value);
+    return Math.max(physSize, glareSizePx(physSize, appSize, bloom));
   }
 
   /**
@@ -970,7 +990,7 @@ export class PlanetBodyField {
           radiusPc,
           dVp,
           appMag,
-          this.isLocallyActive(host.startInstance + i),
+          this.litSurfaceRadiance(host.startInstance + i),
         );
         const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
@@ -1011,13 +1031,15 @@ export class PlanetBodyField {
     v[1] = count;
   }
 
-  /** True when this instance renders through the local depth pass this
-   *  frame (its system is locally active) — the CPU read of the same
-   *  `uLocalPassRange` gate the shader uses to pick the photographic
-   *  (locally-active) vs star-perceptual (distant) glare regime. */
-  private isLocallyActive(instanceIdx: number): boolean {
-    const [start, count] = this.localPassRangeUniform.value;
-    return instanceIdx >= start && instanceIdx < start + count;
+  /** Lit-surface radiance (`iLitIntensity·albedo·uGlareGain`) for an
+   *  instance — the veiling-glare bloom onset input, mirroring the
+   *  shader's `litRadiance`. */
+  private litSurfaceRadiance(instanceIdx: number): number {
+    return (
+      this.bufs.litIntensity[instanceIdx] *
+      this.bufs.albedo[instanceIdx] *
+      this.glareGainUniform.value
+    );
   }
 
   /** Attach-table view for the solar-system cluster: slot range +
@@ -1149,11 +1171,13 @@ export class PlanetBodyField {
             value: new THREE.Vector2(MESH_FADE_MIN_PX, MESH_FADE_FULL_PX),
           },
           uGlareGain: this.glareGainUniform,
+          uBloomThreshold: this.bloomThresholdUniform,
           uGlareShape: {
-            value: new THREE.Vector3(
+            value: new THREE.Vector4(
               GLARE_BLOOM_OVERSIZE,
               GLARE_PHOTOCENTRE_SHIFT,
               GLARE_MIN_PX,
+              GLARE_BLOOM_KNEE,
             ),
           },
         },

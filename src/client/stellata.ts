@@ -2128,6 +2128,11 @@ export class Stellata implements FrameAnchor {
    *  smoke knob (debug/planet-tuning.ts). */
   setPlanetGlareGain(gain: number) { this.planetBodyField.setGlareGain(gain); }
   getPlanetGlareGain(): number { return this.planetBodyField.getGlareGain(); }
+  /** Veiling-glare bloom threshold — the lit-surface radiance at which a
+   *  body blooms into a star-like halo. Dev-panel smoke knob
+   *  (debug/planet-tuning.ts). */
+  setPlanetBloomThreshold(t: number) { this.planetBodyField.setBloomThreshold(t); }
+  getPlanetBloomThreshold(): number { return this.planetBodyField.getBloomThreshold(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
     this.filters.clearSizeOverrides(fields);
   }

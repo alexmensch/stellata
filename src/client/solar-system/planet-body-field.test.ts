@@ -21,6 +21,7 @@ import {
 import { planetApparentMagnitude } from './perceptual-magnitude';
 import {
   GLARE_BLOOM_OVERSIZE,
+  GLARE_MIN_PX,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
   meshFadeFromPhysPx,
@@ -1199,20 +1200,18 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('renderedPlanetSizePx mirrors the resolved photographic footprint (locally active)', () => {
+  it('renderedPlanetSizePx mirrors the resolved glare footprint (disc·OVERSIZE)', () => {
     const f = makeField();
     attach(f, 0, 1);
-    // Locally active: the body renders through the local depth pass, on
-    // the photographic glare scale.
-    f.setLocalPassRange(0, 1);
     // Camera close to the planet at (1 AU, 0, 0): physical term visible.
     const near = new THREE.Vector3(AU_PC - 10 * 6000 * KM_PC, 0, 0);
     const px = f.renderedPlanetSizePx(0, near);
     expect(px).toBeGreaterThan(0);
     // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
-    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ GLARE_MIN_PX,
-    // so the photographic glare footprint is physSize · GLARE_BLOOM_OVERSIZE
-    // (the size-clamped lit-limb halo). bufLocalRel stores the planet
+    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ appSize and
+    // ≫ GLARE_MIN_PX, so the footprint is physSize · GLARE_BLOOM_OVERSIZE
+    // (the lit-limb halo) whatever the bloom amount — the star bloom can't
+    // shrink a resolved body below its disc. bufLocalRel stores the planet
     // position in float32, so the camera→planet distance carries a ~1e-4
     // relative quantum at 1 AU magnitudes — compare at that tolerance.
     const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
@@ -1223,22 +1222,24 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('renderedPlanetSizePx switches regime on local-pass membership', () => {
+  it('renderedPlanetSizePx blooms an unresolved bright body to the star extent', () => {
     const f = makeField();
     attach(f, 0, 1);
-    // Same resolved pose as above (physSize ≈ 114 px ≫ appSize).
-    const near = new THREE.Vector3(AU_PC - 10 * 6000 * KM_PC, 0, 0);
-    f.setLocalPassRange(0, 1);
-    const active = f.renderedPlanetSizePx(0, near);
-    f.setLocalPassRange(-1, 0);
-    const inactive = f.renderedPlanetSizePx(0, near);
-    expect(active).toBeGreaterThan(0);
-    expect(inactive).toBeGreaterThan(0);
-    // Locally active adds the photographic lit-limb halo (disc·OVERSIZE);
-    // the star-perceptual regime is just the true disc here (appSize is
-    // far below physSize for a resolved body), so the two differ by
-    // exactly the OVERSIZE factor.
-    expect(active / inactive).toBeCloseTo(GLARE_BLOOM_OVERSIZE, 3);
+    // Camera ~0.1 AU from the planet at 1 AU: the true disc is sub-pixel
+    // (unresolved) but the body is bright, so its lit-surface radiance is
+    // above the bloom threshold and it reads as a star-like point.
+    const far = new THREE.Vector3(0.9 * AU_PC, 0, 0);
+
+    f.setBloomThreshold(0); // force full bloom
+    const bloomed = f.renderedPlanetSizePx(0, far);
+    f.setBloomThreshold(10); // force no bloom (base only)
+    const base = f.renderedPlanetSizePx(0, far);
+
+    expect(base).toBeGreaterThan(0);
+    // No bloom: the footprint floors at the flux-conserving base
+    // (GLARE_MIN_PX). Full bloom: it grows to the star-perceptual appSize.
+    expect(base).toBeCloseTo(GLARE_MIN_PX, 6);
+    expect(bloomed).toBeGreaterThan(base);
     f.dispose();
   });
 

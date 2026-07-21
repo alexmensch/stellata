@@ -50,11 +50,11 @@ void main() {
   }
 
   // Reflected glare — additive, always the fuzzy point-glow profile
-  // (physRatio 0 ⇒ Gaussian n). vGlareIntensity carries the per-regime
-  // peak set in planet.vert.glsl: locally-active = flux-conserving
-  // surface radiance (crescent illuminated-fraction gated); not active =
-  // star-perceptual peak 1. The tap fades intensity to zero across the
-  // slider threshold band.
+  // (physRatio 0 ⇒ Gaussian n). vGlareIntensity carries the peak set in
+  // planet.vert.glsl: the flux-conserving photographic base blended with
+  // the intensity-gated veiling-glare bloom (bright surfaces reach peak
+  // 1 like a star). The tap fades intensity to zero across the slider
+  // threshold band.
   float glow = perceptualDiscProfile(
       r, vSoftness, 0.0,
       uVisibleThreshold, uVisibleK,

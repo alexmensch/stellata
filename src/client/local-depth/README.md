@@ -228,16 +228,15 @@ pass solves.
 - **Glare↔mesh crossfade** — a planet body is the spheroid mesh plus
   one additive reflected-glare quad, both rendered in the local pass
   under full membership. The mesh writes depth so the glare is occluded
-  to a lit-limb bloom. The `LOCAL_DEPTH_PASS` define doubles as the
-  glare **brightness-scale gate**: in the local pass the glare is
-  flux-conserving photographic surface radiance (matches the mesh);
-  in the main pass (a not-locally-active distant system) it is the
-  star-perceptual point (matches the star field). The two scales are
-  irreconcilable across a blend (mesh radiance is compressed, the point
-  tracks true flux), so the pass split IS the regime choice; they meet
-  at the host cull distance where bodies vanish, so no pop
-  (`../solar-system/README.md` § Planet mesh LOD; `mesh-crossfade.ts`).
-  There is no opaque planet disc to composite across the pass boundary.
+  to a lit-limb bloom. The glare's brightness is gated on **resolvedness
+  and surface brightness**, NOT on the pass define: a flux-conserving
+  photographic base (matches the mesh, dims on recede, never outshines)
+  plus an intensity-gated veiling-glare bloom (bright surfaces bloom
+  star-like). Identical in both compile variants — `LOCAL_DEPTH_PASS`
+  gates only member suppression + the log-depth chunk here, never
+  brightness (`../solar-system/README.md` § Planet mesh LOD;
+  `mesh-crossfade.ts`). There is no opaque planet disc to composite
+  across the pass boundary.
 - **Chart mode** — inert. Chart flattens bodies to ink discs with
   depth disabled; the mesh layer already hides in monochrome and
   member suppression must not engage (billboards render normally in

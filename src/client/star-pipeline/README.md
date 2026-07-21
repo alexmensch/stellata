@@ -39,12 +39,12 @@ read.
   the same brightness-PSF saturation physics. Stars use the full
   disc + glow + core-mask trio; planet bodies use the **glow profile
   only** (their resolved surface is the spheroid mesh, so the billboard
-  is reflected glare, never an opaque disc). The `perceptualAppSizePx`
-  point sizing is used by a planet only when its system is **not
-  locally active** (a distant dot reading as a star of its magnitude);
-  once locally active the glare switches to a flux-conserving
-  photographic scale on the mesh's surface radiance — see
-  `../solar-system/README.md` § Planet mesh LOD.
+  is reflected glare, never an opaque disc). A planet's glare is a
+  flux-conserving photographic base plus an intensity-gated veiling-glare
+  **bloom**, and `perceptualAppSizePx` sizes that bloom — so a bright
+  body reads exactly like a star of its magnitude, while a dim one stays
+  its flux-conserving point — see `../solar-system/README.md` § Planet
+  mesh LOD.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
   the chunk consumes. The star pipeline's `sharedUniforms` map in
   `stellata.ts` `satisfies` this interface, and
