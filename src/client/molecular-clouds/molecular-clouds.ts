@@ -1,68 +1,73 @@
 import * as THREE from 'three';
-import type { Cloud, CloudCatalog, CloudClass } from './cloud-loader';
-import cloudVert from './cloud.vert.glsl?raw';
-import cloudFrag from './cloud.frag.glsl?raw';
+import type { Cloud, CloudCatalog } from './cloud-loader';
+import type { CloudSurface } from './cloud-surfaces-loader';
+import absorptionVert from './cloud-absorption.vert.glsl?raw';
+import absorptionFrag from './cloud-absorption.frag.glsl?raw';
+import rimFrag from './cloud-rim.frag.glsl?raw';
+import rimVert from '../fresnel-shell/fresnel-shell.vert.glsl?raw';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { angularDiameterPx } from '../camera/controls/star-geometry';
-// Registers the stellata_fresnel_rim chunk the fragment shader includes —
+// Registers the stellata_fresnel_rim chunk the rim shader includes —
 // removing this import breaks the shader compile at first render.
 import {
   DEFAULT_FACE_ON_FLOOR,
   DEFAULT_FRESNEL_POWER,
+  SHELL_RIM_BLUE,
 } from '../fresnel-shell/fresnel-shell';
-import { buildOctaveLadder, MAX_OCTAVES } from './cloud-presence-pure';
 
-// Shared sphere geometry — every cloud is one unit sphere scaled by its
-// semi-axes via the per-cloud Mesh matrix. The raymarch clips to the
-// analytic unit sphere, so the mesh is slightly circumscribed (1.03) to
-// cover the tessellation sag at 32×16 — the overhang discards.
+// Shared sphere geometries. The absorption mesh is slightly circumscribed
+// (1.03) to cover tessellation sag — its raymarch clips to the analytic
+// unit sphere, so the overhang discards. The rim-fallback sphere IS the
+// rendered surface, so it sits at exactly 1 with finer tessellation.
 const SEGMENTS_LON = 32;
 const SEGMENTS_LAT = 16;
-const MESH_RADIUS = 1.03;
-
-// Whisper-glow tints by taxonomy (docs/molecular-clouds.md § 9): dark →
-// neutral warm grey-brown, sf → slightly warmer, hii → faint red bias.
-const CLASS_TINTS: Record<CloudClass, number> = {
-  dark: 0x8f7a66,
-  sf: 0xa08258,
-  hii: 0xa4746b,
-};
+const ABSORPTION_MESH_RADIUS = 1.03;
+const RIM_SEGMENTS_LON = 48;
+const RIM_SEGMENTS_LAT = 24;
 
 // Rim silhouette calibrated whisper-level: peak intensity ≈ 0.05–0.15 of
 // a threshold-visible star's glow, losing to any physical signal. (The
 // boundary shells run alphaLimb 0.45–0.5; clouds sit far below that
 // deliberately — 96 rims at shell strength would dominate the sky.)
 const ALPHA_LIMB_DEFAULT = 0.15;
-const GLOW_GAIN_DEFAULT = 1.0;
+const RIM_GAIN_DEFAULT = 1.0;
 const STEPS_DEFAULT = 14;
-const TEX_GAIN_DEFAULT = 0.6;
 
-// Chart/mono mode: solid black ink so the isobar contour reads as a
+// Chart/mono mode: solid black ink so the stippled outline reads as a
 // definite chart annotation against the paper background.
-const MONO_COLOR_DEFAULT = 0x000000;
-const MONO_OPACITY_DEFAULT = 0.95;
+const INK_COLOR_DEFAULT = 0x000000;
+const INK_ALPHA_DEFAULT = 0.95;
 
-/** Star-pipeline uniforms the presence shader shares by reference. */
+const ABSORPTION_RENDER_ORDER = -2;
+// Rim shells draw with the reference wireframes at −1 — annotation
+// chrome, deliberately NOT extincted by the absorption pass.
+const RIM_RENDER_ORDER = -1;
+
+/** Star-pipeline uniforms the absorption shader shares by reference. */
 export interface CloudSharedUniforms {
-  uMaxAppMag: { value: number };
   uFovYRad: { value: number };
   uViewport: { value: THREE.Vector2 };
 }
 
 function localSharedUniforms(): CloudSharedUniforms {
   return {
-    uMaxAppMag: { value: 6.5 },
     uFovYRad: { value: Math.PI / 3.6 },
     uViewport: { value: new THREE.Vector2(1920, 1080) },
   };
 }
 
 /**
- * Molecular-cloud presence layer: per-cloud ellipsoid meshes running the
- * band-limited density raymarch in cloud.frag.glsl — absorption alpha
- * over the diffuse background plus a fresnel-rim whisper glow. A
- * `representational`-tier declutter element; the caller gates `update`'s
- * `visible` flag on the floor permit.
+ * Molecular-cloud layer — two decoupled components per cloud:
+ *
+ * - Absorption: per-cloud ellipsoid raymarch of the calibrated Plummer
+ *   model (cloud-absorption.frag.glsl), an alpha-only over that dims the
+ *   diffuse background. Physics, so it is ALWAYS on in realistic mode —
+ *   never declutter-gated — and hidden only in chart mode.
+ * - Rim shell: the fresnel-rim orientation silhouette on the per-cloud
+ *   isosurface mesh (cloud-surfaces.bin; ellipsoid fallback when a cloud
+ *   has no traced surface), gated at the `representational` declutter
+ *   floor (`molecularCloudEllipsoids`). In chart mode it renders as a
+ *   stippled outline instead.
  *
  * Lives in absolute ICRS space; the group's position is rebased by
  * -worldOffset each frame so the geometry stays anchored when the
@@ -71,58 +76,67 @@ function localSharedUniforms(): CloudSharedUniforms {
 export class MolecularClouds {
   readonly group: THREE.Group;
   readonly clouds: Cloud[];
-  readonly noiseModel: CloudCatalog['noiseModel'];
-  private materials: THREE.ShaderMaterial[] = [];
-  private geometry: THREE.SphereGeometry;
+  private absorptionGroup: THREE.Group;
+  private rimGroup: THREE.Group;
+  private absorptionMaterials: THREE.ShaderMaterial[] = [];
+  private rimMaterial: THREE.ShaderMaterial;
+  private absorptionGeometry: THREE.SphereGeometry;
+  private rimFallbackGeometry: THREE.SphereGeometry;
+  /** Owned per-cloud isosurface geometries (disposed with the layer). */
+  private rimSurfaceGeometries: THREE.BufferGeometry[] = [];
   private mono = false;
-  /** Mesh references in catalog order, for picking ray-ellipsoid analytically.
-   *  Cloud index is stashed on `mesh.userData.cloudIdx` so raycast results
-   *  resolve back to a cloud without a separate uuid→index Map. */
+  /** Absorption meshes in catalog order, for picking. Cloud index is
+   *  stashed on `mesh.userData.cloudIdx` so raycast results resolve back
+   *  to a cloud without a separate uuid→index Map. */
   private meshes: THREE.Mesh[] = [];
 
   // User-tunable from the dev console via `stellata.cloudLayer.set*()`.
-  private tintOverride: THREE.Color | null = null;
-  private monoColor = new THREE.Color(MONO_COLOR_DEFAULT);
-  private glowGain = GLOW_GAIN_DEFAULT;
-  private monoOpacity = MONO_OPACITY_DEFAULT;
+  private rimGain = RIM_GAIN_DEFAULT;
 
-  // The shared uMaxAppMag uniform reference last bound by setIsobar. Cached
-  // so repeated isobar toggles don't replace the wrapper on every call (which
-  // would silently abandon any prior binding the caller may have expected to
-  // remain live).
-  private boundMagUniform: { value: number } | null = null;
-
-  constructor(catalog: CloudCatalog, shared: CloudSharedUniforms = localSharedUniforms()) {
+  constructor(
+    catalog: CloudCatalog,
+    surfaces: Map<number, CloudSurface> | null = null,
+    shared: CloudSharedUniforms = localSharedUniforms(),
+  ) {
     this.clouds = catalog.clouds;
-    this.noiseModel = catalog.noiseModel;
     this.group = new THREE.Group();
-    this.group.renderOrder = -2; // draw before stars so stars composit on top
+    this.absorptionGroup = new THREE.Group();
+    this.absorptionGroup.renderOrder = ABSORPTION_RENDER_ORDER;
+    this.rimGroup = new THREE.Group();
+    this.rimGroup.renderOrder = RIM_RENDER_ORDER;
+    this.group.add(this.absorptionGroup, this.rimGroup);
 
-    this.geometry = new THREE.SphereGeometry(MESH_RADIUS, SEGMENTS_LON, SEGMENTS_LAT);
+    this.absorptionGeometry = new THREE.SphereGeometry(
+      ABSORPTION_MESH_RADIUS, SEGMENTS_LON, SEGMENTS_LAT);
+    this.rimFallbackGeometry = new THREE.SphereGeometry(1, RIM_SEGMENTS_LON, RIM_SEGMENTS_LAT);
+    this.rimMaterial = this.makeRimMaterial();
 
-    const nm = catalog.noiseModel;
     for (let i = 0; i < this.clouds.length; i++) {
       const c = this.clouds[i];
-      const mat = this.makeMaterial(c, nm, shared);
-      this.materials.push(mat);
 
-      const mesh = new THREE.Mesh(this.geometry, mat);
+      const mat = this.makeAbsorptionMaterial(c, shared);
+      this.absorptionMaterials.push(mat);
+      const mesh = new THREE.Mesh(this.absorptionGeometry, mat);
       mesh.position.copy(c.centerAbs);
       mesh.quaternion.copy(c.quat);
       mesh.scale.set(c.axes[0], c.axes[1], c.axes[2]);
       mesh.frustumCulled = false; // group origin is offset per frame
-      mesh.renderOrder = -2;
+      mesh.renderOrder = ABSORPTION_RENDER_ORDER;
       mesh.userData.cloudIdx = i;
       this.meshes.push(mesh);
-      this.group.add(mesh);
+      this.absorptionGroup.add(mesh);
+
+      this.rimGroup.add(this.makeRimMesh(c, surfaces?.get(c.sid)));
     }
   }
 
-  /** Per-frame: rebase the group to compensate for the floating origin. */
-  update(worldOffset: THREE.Vector3, visible: boolean) {
-    this.group.visible = visible;
-    if (!visible) return;
+  /** Per-frame: rebase to the floating origin and gate the rim shells on
+   *  the declutter permit. Absorption is physics — it stays on in
+   *  realistic mode regardless of `rimPermitted`. */
+  update(worldOffset: THREE.Vector3, rimPermitted: boolean) {
     this.group.position.copy(worldOffset).negate();
+    this.absorptionGroup.visible = !this.mono;
+    this.rimGroup.visible = rimPermitted;
   }
 
   /** The cloud provider's localPositionInto leg: writes the cloud's
@@ -136,88 +150,53 @@ export class MolecularClouds {
     return true;
   }
 
+  /** Chart mode: absorption hides entirely; the rim material swaps to the
+   *  stippled-outline ink pass (normal blending over the paper). */
   setMonochrome(on: boolean) {
     if (this.mono === on) return;
     this.mono = on;
-    for (const mat of this.materials) {
-      mat.uniforms.uMonochrome.value = on ? 1 : 0;
-      mat.uniforms.uOpacity.value = on ? this.monoOpacity : this.glowGain;
-    }
+    this.absorptionGroup.visible = !on;
+    this.rimMaterial.uniforms.uChart.value = on ? 1 : 0;
+    this.rimMaterial.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending;
   }
 
   /**
-   * Chart-mode isobar pass. When on, each cloud's fragment shader emits
-   * only a thin outline at the A_V iso-line driven by uMaxAppMag — a
-   * topographic-contour treatment that follows the user's "minimally
-   * visible magnitude" slider.
-   */
-  setIsobar(on: boolean, magnitudeUniform: { value: number }) {
-    const rebind = this.boundMagUniform !== magnitudeUniform;
-    for (const mat of this.materials) {
-      mat.uniforms.uChartIsobar.value = on ? 1 : 0;
-      // Reuse the stellata's shared uMaxAppMag uniform reference so the
-      // isobar threshold tracks the slider live without per-frame writes.
-      // Only rebind on first call or if the caller swapped to a different
-      // shared reference — repeated rebinds with the same wrapper silently
-      // abandon prior bindings.
-      if (rebind) mat.uniforms.uMaxAppMag = magnitudeUniform;
-    }
-    this.boundMagUniform = magnitudeUniform;
-  }
-
-  /**
-   * Console-accessible debug levers. Live-update all cloud materials so
+   * Console-accessible debug levers. Live-update the materials so
    * tweaking happens without restart. Examples:
    *   stellata.cloudLayer.setOpacity(5)        // boost the rim glow
-   *   stellata.cloudLayer.setColor(0xff8844)   // override class tints
+   *   stellata.cloudLayer.setColor(0xff8844)   // override the rim blue
    *   stellata.cloudLayer.setRimParams({ fresnelPower: 4 })
    */
   setOpacity(x: number) {
-    this.glowGain = Math.max(0, x);
-    if (!this.mono) {
-      for (const mat of this.materials) mat.uniforms.uOpacity.value = this.glowGain;
-    }
+    this.rimGain = Math.max(0, x);
+    this.rimMaterial.uniforms.uOpacity.value = this.rimGain;
   }
   setColor(hex: number) {
-    this.tintOverride = new THREE.Color(hex);
-    for (const mat of this.materials) mat.uniforms.uTint.value = this.tintOverride;
+    (this.rimMaterial.uniforms.uColour.value as THREE.Color).setHex(hex);
   }
   setMonoOpacity(x: number) {
-    this.monoOpacity = Math.max(0, x);
-    if (this.mono) {
-      for (const mat of this.materials) mat.uniforms.uOpacity.value = this.monoOpacity;
-    }
+    this.rimMaterial.uniforms.uInkAlpha.value = Math.max(0, x);
   }
   setMonoColor(hex: number) {
-    this.monoColor.setHex(hex);
-    for (const mat of this.materials) mat.uniforms.uMonoColor.value = this.monoColor;
+    (this.rimMaterial.uniforms.uInk.value as THREE.Color).setHex(hex);
   }
-  /** Raymarch step count (§ 9.1 lever — the sampling rules are not). */
+  /** Absorption raymarch step count (§ 9.1 lever — the sampling rules
+   *  are not). */
   setSteps(n: number) {
     const steps = Math.max(4, Math.min(24, Math.round(n)));
-    for (const mat of this.materials) mat.uniforms.uSteps.value = steps;
-  }
-  /** Fine-octave texture strength (clamped [0.6, 1.4] in-shader). */
-  setTexGain(x: number) {
-    for (const mat of this.materials) mat.uniforms.uTexGain.value = Math.max(0, x);
+    for (const mat of this.absorptionMaterials) mat.uniforms.uSteps.value = steps;
   }
   /** Rim-glow shape levers, shared vocabulary with the fresnel shells. */
   setRimParams(p: { alphaLimb?: number; faceOnFloor?: number; fresnelPower?: number }) {
-    for (const mat of this.materials) {
-      if (p.alphaLimb !== undefined) mat.uniforms.uAlphaLimb.value = p.alphaLimb;
-      if (p.faceOnFloor !== undefined) mat.uniforms.uFaceOnFloor.value = p.faceOnFloor;
-      if (p.fresnelPower !== undefined) mat.uniforms.uFresnelPower.value = p.fresnelPower;
-    }
+    const u = this.rimMaterial.uniforms;
+    if (p.alphaLimb !== undefined) u.uAlphaLimb.value = p.alphaLimb;
+    if (p.faceOnFloor !== undefined) u.uFaceOnFloor.value = p.faceOnFloor;
+    if (p.fresnelPower !== undefined) u.uFresnelPower.value = p.fresnelPower;
   }
   /** Force-boost the rim glow — handy for "is the layer rendering at
    *  all?" debugging. Pass null to restore the configured gain. */
   setDebugBoost(strength: number | null) {
-    for (const mat of this.materials) {
-      mat.uniforms.uOpacity.value =
-        strength === null
-          ? (this.mono ? this.monoOpacity : this.glowGain)
-          : strength;
-    }
+    this.rimMaterial.uniforms.uOpacity.value = strength === null ? this.rimGain : strength;
   }
 
   /**
@@ -237,36 +216,26 @@ export class MolecularClouds {
   }
 
   dispose() {
-    this.geometry.dispose();
-    for (const mat of this.materials) mat.dispose();
+    this.absorptionGeometry.dispose();
+    this.rimFallbackGeometry.dispose();
+    for (const g of this.rimSurfaceGeometries) g.dispose();
+    for (const mat of this.absorptionMaterials) mat.dispose();
+    this.rimMaterial.dispose();
   }
 
-  private makeMaterial(
+  private makeAbsorptionMaterial(
     cloud: Cloud,
-    nm: CloudCatalog['noiseModel'],
     shared: CloudSharedUniforms,
   ): THREE.ShaderMaterial {
-    const ladder = buildOctaveLadder(2 * cloud.axes[0], nm);
-    const octLambda = new Array<number>(MAX_OCTAVES).fill(0);
-    const octAmp = new Array<number>(MAX_OCTAVES).fill(0);
-    for (let k = 0; k < ladder.lambdasPc.length; k++) {
-      octLambda[k] = ladder.lambdasPc[k];
-      octAmp[k] = ladder.amps[k];
-    }
-    const invQuat = new THREE.Matrix3().setFromMatrix4(
-      new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),
-    );
     return new THREE.ShaderMaterial({
-      vertexShader: cloudVert,
-      fragmentShader: cloudFrag,
+      vertexShader: absorptionVert,
+      fragmentShader: absorptionFrag,
       glslVersion: THREE.GLSL3,
       transparent: true,
       depthTest: true,
       depthWrite: false,
-      // Premultiplied-over in one draw: rgb carries the additive rim glow,
-      // alpha the absorption — NormalBlending becomes (ONE, ONE−α), i.e.
-      // glow + background × (1 − absorption). Without premultipliedAlpha,
-      // src.a multiplies into rgb a second time and the glow collapses.
+      // Alpha-only premultiplied-over: rgb = 0, so NormalBlending becomes
+      // (ONE, ONE−α) = background × (1 − absorption).
       blending: THREE.NormalBlending,
       premultipliedAlpha: true,
       // BackSide: exactly one fragment per covered pixel from outside AND
@@ -275,35 +244,74 @@ export class MolecularClouds {
       side: THREE.BackSide,
       uniforms: {
         uAxes: { value: new THREE.Vector3(cloud.axes[0], cloud.axes[1], cloud.axes[2]) },
-        uInvQuat: { value: invQuat },
         uN0Cal: { value: cloud.n0Cal },
         uRflat: { value: cloud.rflatPc },
         uP: { value: cloud.p },
         uUEnv: { value: cloud.uEnv },
-        uSigmaS: { value: cloud.sigmaS },
-        uSeed: { value: cloud.seed },
-        uRidgedExp: { value: nm.ridgedExponent[cloud.cloudClass] },
-        uTint: { value: this.tintOverride ?? new THREE.Color(CLASS_TINTS[cloud.cloudClass]) },
-        uOctLambda: { value: octLambda },
-        uOctAmp: { value: octAmp },
-        uNumOct: { value: ladder.lambdasPc.length },
-        uDomainStretch: { value: nm.domainStretchMajor },
-        uClampSigma: { value: nm.noiseClampSigma },
-        uRidgedCount: { value: nm.ridgedFinestCount },
+        uInvQuat: {
+          value: new THREE.Matrix3().setFromMatrix4(
+            new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),
+          ),
+        },
         uSteps: { value: STEPS_DEFAULT },
-        uOpacity: { value: this.glowGain },
+        uFovYRad: shared.uFovYRad,
+        uViewport: shared.uViewport,
+      },
+    });
+  }
+
+  private makeRimMaterial(): THREE.ShaderMaterial {
+    return new THREE.ShaderMaterial({
+      vertexShader: rimVert,
+      fragmentShader: rimFrag,
+      glslVersion: THREE.GLSL3,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      // FrontSide + outward winding = the fresnel-shell hide-when-inside
+      // contract: the shell back-face-culls when the camera is inside the
+      // cloud (absorption keeps working from inside — it is BackSide).
+      side: THREE.FrontSide,
+      uniforms: {
+        uColour: { value: new THREE.Color(SHELL_RIM_BLUE) },
         uAlphaLimb: { value: ALPHA_LIMB_DEFAULT },
         uFaceOnFloor: { value: DEFAULT_FACE_ON_FLOOR },
         uFresnelPower: { value: DEFAULT_FRESNEL_POWER },
-        uTexGain: { value: TEX_GAIN_DEFAULT },
-        uMaxAppMag: shared.uMaxAppMag,
-        uFovYRad: shared.uFovYRad,
-        uViewport: shared.uViewport,
-        uMonochrome: { value: 0 },
-        uMonoColor: { value: this.monoColor },
-        uChartIsobar: { value: 0 },
+        uOpacity: { value: this.rimGain },
+        uChart: { value: 0 },
+        uInk: { value: new THREE.Color(INK_COLOR_DEFAULT) },
+        uInkAlpha: { value: INK_ALPHA_DEFAULT },
       },
     });
+  }
+
+  private makeRimMesh(cloud: Cloud, surface: CloudSurface | undefined): THREE.Mesh {
+    let mesh: THREE.Mesh;
+    if (surface) {
+      // Traced isosurface — vertex positions are absolute ICRS pc with
+      // outward winding baked by the build; normals compute at runtime.
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(surface.positions, 3));
+      geometry.setIndex(new THREE.BufferAttribute(surface.indices, 1));
+      geometry.computeVertexNormals();
+      this.rimSurfaceGeometries.push(geometry);
+      mesh = new THREE.Mesh(geometry, this.rimMaterial);
+    } else {
+      // Ellipsoid fallback (out-of-grid clouds, or no cloud-surfaces.bin):
+      // the density envelope u = uEnv, where the absorption ends.
+      mesh = new THREE.Mesh(this.rimFallbackGeometry, this.rimMaterial);
+      mesh.position.copy(cloud.centerAbs);
+      mesh.quaternion.copy(cloud.quat);
+      mesh.scale.set(
+        cloud.axes[0] * cloud.uEnv,
+        cloud.axes[1] * cloud.uEnv,
+        cloud.axes[2] * cloud.uEnv,
+      );
+    }
+    mesh.frustumCulled = false;
+    mesh.renderOrder = RIM_RENDER_ORDER;
+    return mesh;
   }
 }
 

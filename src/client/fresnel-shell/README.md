@@ -4,8 +4,10 @@ Shared runtime for translucent **boundary shells**: a mesh whose alpha
 peaks at the silhouette (limb) and floors to a dim value face-on, so it
 reads as a soft glowing rim rather than a flat disc. Two layers consume
 the full primitive — the heliopause (`solar-system/`) and the Local
-Bubble (`local-bubble/`); the molecular-cloud presence pass consumes
-the rim formula alone via the `stellata_fresnel_rim` chunk.
+Bubble (`local-bubble/`); the molecular-cloud rim shells consume the
+`stellata_fresnel_rim` chunk, the shared vertex stage
+(`fresnel-shell.vert.glsl`), and `SHELL_RIM_BLUE` with their own
+fragment stage (`molecular-clouds/cloud-rim.frag.glsl`).
 
 ## Files
 
@@ -13,7 +15,7 @@ the rim formula alone via the `stellata_fresnel_rim` chunk.
   (`fresnel = pow(1 − n·v, uFresnelPower)`,
   `alpha = uAlphaLimb · mix(uFaceOnFloor, 1, fresnel)`), registered by
   `fresnel-shell.ts` as the `stellata_fresnel_rim` ShaderChunk. Shared
-  with `molecular-clouds/cloud.frag.glsl`.
+  with `molecular-clouds/cloud-rim.frag.glsl`.
 - `fresnel-shell.{vert,frag}.glsl` — the shader pair. The vert carries
   view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`

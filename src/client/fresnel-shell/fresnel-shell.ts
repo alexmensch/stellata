@@ -16,6 +16,11 @@ import fresnelRimChunk from './fresnel-rim.glsl?raw';
 export const DEFAULT_FACE_ON_FLOOR = 0.04;
 export const DEFAULT_FRESNEL_POWER = 2.5;
 
+/** Dim additive cool tint shared by the Local Bubble shell and the
+ *  molecular-cloud rim shells — one annotation colour for "boundary of
+ *  a thing you can't actually see". */
+export const SHELL_RIM_BLUE = 0x5a7a9c;
+
 export interface FresnelShellMaterialOptions {
   colour: THREE.Color;
   /** Alpha at the silhouette (limb); face-on alpha is this × faceOnFloor. */

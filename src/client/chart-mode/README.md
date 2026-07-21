@@ -12,9 +12,9 @@ are set (FLAG_CHART = 1 << 6 in the flags byte).
 ```
 src/client/chart-mode/
   chart-mode.ts                   Orchestrator. Toggles body.chart class,
-                                  mono theme, cloud + Milky Way isobar
-                                  handoffs, chart-labels engine, and
-                                  the constellation figure's
+                                  mono theme, Milky Way isobar handoff,
+                                  chart-labels engine, and the
+                                  constellation figure's
                                   draw-all-asterisms mode.
   chart-labels.ts                 Per-frame label engine: proper names,
                                   Bayer Greek glyphs, constellation
@@ -27,16 +27,17 @@ src/client/chart-mode/
                                   pixel-size mapping in chart mode.
 ```
 
-`chart-mode.ts` toggles five things on entry:
+`chart-mode.ts` toggles four things on entry:
 
 1. `body.chart` class for CSS palette swaps (paper background, ink
    labels, monochrome topbar / brand box / typeahead).
 2. `applyTheme('mono')` — flips the existing dark-mode palette to the
-   mono palette (already in `theme-toggle.ts`).
-3. `setCloudsIsobar(true)` — flips the cloud layer into chart treatment.
-   The milky-way band↔isobar swap is **not** called here: it rides
-   `applyDetailPreset` (step 3b) through the `milkyWayIsobar` detail bind.
-3b. `applyDetailPreset(getDetailLevel())` — re-derives the permitted set
+   mono palette (already in `theme-toggle.ts`). Its `setMonochrome`
+   fan-out is what swaps the cloud layer into its chart treatment
+   (stippled silhouette outlines — `../molecular-clouds/README.md`
+   § Rim shell render); the milky-way band↔isobar swap instead rides
+   `applyDetailPreset` (step 3) through the `milkyWayIsobar` detail bind.
+3. `applyDetailPreset(getDetailLevel())` — re-derives the permitted set
    from the chart floor column (see `../scene/README.md` § Detail-level
    declutter cycle). Drives the MW isobar swap, hides realistic-only
    structure, and gates the label tiers in step 4.
@@ -117,29 +118,22 @@ The disc-pass branch hard-clips at `vAppMag > uMaxAppMag` (no soft
 taper, since a sub-pixel fade-in band reads as a hard cutoff anyway
 on a paper chart).
 
-## Isobar contours — Milky Way + molecular clouds
+## Chart treatments — Milky Way isobar + cloud outlines
 
-Both layers' fragment shaders gain an `if (uChartIsobar > 0.5)` branch
-that renders a **single thin line** instead of the volumetric body:
-
-- **Milky Way** (`milkyway.frag.glsl`): `line = 1 - smoothstep(fw*0.5,
+- **Milky Way** (`milkyway.frag.glsl`): an `if (uChartIsobar > 0.5)`
+  branch renders a single thin line, `line = 1 - smoothstep(fw*0.5,
   fw*1.5, |appMag - uMaxAppMag|)` where `fw = fwidth(appMag)`. The
   contour tracks "where the integrated brightness would equal the
   slider limit" — drag the magnitude slider and the contour moves
   through the band like a topographic line. Discarded outside the
-  line so depth stays clean.
-- **Molecular clouds** (`cloud.frag.glsl`): `line = 1 -
-  smoothstep(fw*0.5, fw*1.5, |av - avT|)` where `avT` is a
-  magnitude-driven A_V threshold and `fw = fwidth(av)` — the same
-  raymarched column that drives the dark-mode presence pass
-  (`../molecular-clouds/README.md` § Render; the ray jitter pins to
-  0.5 in the isobar branch so the contour stays clean).
-
-Black ink colour (`uChartInkColor` / `uMonoColor` set to `0x000000`),
-no alpha gradient — the line is solid, paper-chart-style, not a
-shaded falloff. `setCloudsIsobar` and `setMilkywayIsobar` on the
-respective layer modules toggle the branch and pass the
-`uMaxAppMag` uniform reference.
+  line so depth stays clean. Solid black ink (`uMonoColor`), toggled by
+  `setMilkywayIsobar` with the shared `uMaxAppMag` uniform reference.
+- **Molecular clouds** (`../molecular-clouds/cloud-rim.frag.glsl`): the
+  rim-shell material's chart branch draws a **stippled silhouette
+  outline** of each cloud's isosurface mesh — the SkyAtlas 2000 nebula
+  convention — via `MolecularClouds.setMonochrome` (the registry
+  fan-out), not an orchestrator call. The absorption pass hides
+  entirely on paper.
 
 ## Label engine + glyphs (`chart-labels.ts`)
 

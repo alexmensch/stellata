@@ -53,13 +53,11 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     if (active) {
       document.body.classList.add('chart');
       applyTheme('mono');
-      stellata.setCloudsIsobar(true);
       stellata.applyDetailPreset(stellata.getDetailLevel(), false);
       startChartLabels(stellata, ctx);
     } else {
       document.body.classList.remove('chart');
       applyTheme('dark');
-      stellata.setCloudsIsobar(false);
       stellata.applyDetailPreset(stellata.getDetailLevel(), false);
       stopChartLabels();
     }

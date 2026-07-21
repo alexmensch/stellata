@@ -6,13 +6,13 @@ import type { Stellata } from '../stellata';
 import type { LocalBubbleMesh } from './local-bubble-loader';
 import {
   FresnelShell,
+  SHELL_RIM_BLUE,
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
 } from '../fresnel-shell/fresnel-shell';
 import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
 
-// Dim additive cool tint — a soft rim glow seen from beyond the wall.
-const COLOUR = new THREE.Color(0x5a7a9c);
+const COLOUR = new THREE.Color(SHELL_RIM_BLUE);
 const ALPHA_LIMB = 0.5;
 
 /** DOM id of the SVG `<text>` node for the label. */

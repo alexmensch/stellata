@@ -2,121 +2,155 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { MolecularClouds, renderedCloudSizePx, cloudViewingDistancePc } from './molecular-clouds';
 import type { Cloud, CloudCatalog } from './cloud-loader';
-import { MAX_OCTAVES } from './cloud-presence-pure';
+import type { CloudSurface } from './cloud-surfaces-loader';
 import { makeMockCloud, makeMockCatalog } from './cloud-mock';
 
 function makeCloud(axes: [number, number, number], id = 'test'): Cloud {
   return makeMockCloud({ name: id, id, sid: id.charCodeAt(0), axes });
 }
 
-// Two-cloud stub catalog so the per-cloud loops in setMonochrome /
-// setIsobar / the levers all run with `materials.length > 1`.
+// Two-cloud stub catalog so the per-cloud loops in setMonochrome / the
+// levers all run with more than one cloud.
 function makeCatalog(): CloudCatalog {
   return makeMockCatalog([makeCloud([10, 10, 10], 'A'), makeCloud([22, 19, 9.5], 'B')]);
 }
 
-function materials(c: MolecularClouds): THREE.ShaderMaterial[] {
-  return c.group.children.map(
+// A tiny valid surface mesh (one triangle) for sid-keyed rim tests.
+function makeSurface(): CloudSurface {
+  return {
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    indices: new Uint32Array([0, 1, 2]),
+  };
+}
+
+function absorptionGroup(c: MolecularClouds): THREE.Group {
+  return c.group.children[0] as THREE.Group;
+}
+function rimGroup(c: MolecularClouds): THREE.Group {
+  return c.group.children[1] as THREE.Group;
+}
+function absorptionMaterials(c: MolecularClouds): THREE.ShaderMaterial[] {
+  return absorptionGroup(c).children.map(
     (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
   );
 }
+function rimMaterial(c: MolecularClouds): THREE.ShaderMaterial {
+  return (rimGroup(c).children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
+}
 
-describe('MolecularClouds / presence material contract', () => {
-  const u1 = { value: 7.5 };
-
-  it('always blends premultiplied-over (NormalBlending), in every mode', () => {
-    // One draw carries both components: rgb = additive rim glow, alpha =
-    // absorption. Additive blending would drop the absorption term.
+describe('MolecularClouds / absorption material contract', () => {
+  it('is an alpha-only premultiplied-over BackSide draw, in every mode', () => {
     const c = new MolecularClouds(makeCatalog());
-    const expectNormal = () => {
-      for (const m of materials(c)) {
+    const expectContract = () => {
+      for (const m of absorptionMaterials(c)) {
         expect(m.blending).toBe(THREE.NormalBlending);
         expect(m.premultipliedAlpha).toBe(true);
         expect(m.side).toBe(THREE.BackSide);
       }
     };
-    expectNormal();
+    expectContract();
     c.setMonochrome(true);
-    expectNormal();
-    c.setIsobar(true, u1);
-    expectNormal();
+    expectContract();
     c.setMonochrome(false);
-    c.setIsobar(false, u1);
-    expectNormal();
+    expectContract();
   });
 
-  it('setMonochrome swaps the uMonochrome flag and the uOpacity value', () => {
+  it('stays visible regardless of the rim declutter permit (physics, always on)', () => {
+    const c = new MolecularClouds(makeCatalog());
+    c.update(new THREE.Vector3(), false);
+    expect(absorptionGroup(c).visible).toBe(true);
+    expect(rimGroup(c).visible).toBe(false);
+    c.update(new THREE.Vector3(), true);
+    expect(absorptionGroup(c).visible).toBe(true);
+    expect(rimGroup(c).visible).toBe(true);
+  });
+
+  it('hides only in chart mode', () => {
     const c = new MolecularClouds(makeCatalog());
     c.setMonochrome(true);
-    for (const m of materials(c)) {
-      expect(m.uniforms.uMonochrome.value).toBe(1);
-      expect(m.uniforms.uOpacity.value).toBe(0.95);
-    }
+    c.update(new THREE.Vector3(), true);
+    expect(absorptionGroup(c).visible).toBe(false);
+    expect(rimGroup(c).visible).toBe(true); // the stippled outline
     c.setMonochrome(false);
-    for (const m of materials(c)) {
-      expect(m.uniforms.uMonochrome.value).toBe(0);
-      expect(m.uniforms.uOpacity.value).toBe(1);
-    }
+    c.update(new THREE.Vector3(), true);
+    expect(absorptionGroup(c).visible).toBe(true);
   });
 
-  it('builds the per-cloud octave ladder inside the uniform budget', () => {
+  it('setSteps clamps into the shader budget', () => {
     const c = new MolecularClouds(makeCatalog());
-    for (const m of materials(c)) {
-      const lambdas = m.uniforms.uOctLambda.value as number[];
-      const amps = m.uniforms.uOctAmp.value as number[];
-      const n = m.uniforms.uNumOct.value as number;
-      expect(lambdas).toHaveLength(MAX_OCTAVES);
-      expect(n).toBeGreaterThan(0);
-      expect(n).toBeLessThanOrEqual(MAX_OCTAVES);
-      // Padding beyond uNumOct is zero and never read by the shader loops.
-      expect(lambdas[n]).toBe(0);
-      const total = amps.slice(0, n).reduce((a, b) => a + b * b, 0);
-      expect(total).toBeCloseTo(1, 10);
-    }
-    // Cloud B: major diameter 44 pc → the pinned Taurus ladder head.
-    expect((materials(c)[1].uniforms.uOctLambda.value as number[])[0]).toBe(44);
-  });
-
-  it('setIsobar binds the magnitude-uniform reference', () => {
-    const c = new MolecularClouds(makeCatalog());
-    c.setIsobar(true, u1);
-    for (const m of materials(c)) {
-      expect(m.uniforms.uMaxAppMag).toBe(u1);
-    }
-  });
-
-  it('setIsobar with the same magnitude uniform repeated does not silently rebind', () => {
-    // The cached boundMagUniform short-circuits the rebind when the
-    // wrapper hasn't changed. Verify no-op-ness by re-asserting
-    // identity after a no-change call.
-    const c = new MolecularClouds(makeCatalog());
-    c.setIsobar(true, u1);
-    c.setIsobar(true, u1);
-    for (const m of materials(c)) {
-      expect(m.uniforms.uMaxAppMag).toBe(u1);
-    }
+    c.setSteps(100);
+    for (const m of absorptionMaterials(c)) expect(m.uniforms.uSteps.value).toBe(24);
+    c.setSteps(1);
+    for (const m of absorptionMaterials(c)) expect(m.uniforms.uSteps.value).toBe(4);
   });
 
   it('shares uFovYRad / uViewport by reference when provided', () => {
     const shared = {
-      uMaxAppMag: { value: 6.5 },
       uFovYRad: { value: 0.9 },
       uViewport: { value: new THREE.Vector2(800, 600) },
     };
-    const c = new MolecularClouds(makeCatalog(), shared);
-    for (const m of materials(c)) {
+    const c = new MolecularClouds(makeCatalog(), null, shared);
+    for (const m of absorptionMaterials(c)) {
       expect(m.uniforms.uFovYRad).toBe(shared.uFovYRad);
       expect(m.uniforms.uViewport).toBe(shared.uViewport);
-      expect(m.uniforms.uMaxAppMag).toBe(shared.uMaxAppMag);
     }
   });
+});
 
-  it('setDebugBoost overrides and restores the glow gain', () => {
+describe('MolecularClouds / rim shell contract', () => {
+  it('is one shared FrontSide material, additive in realistic mode', () => {
     const c = new MolecularClouds(makeCatalog());
+    const mats = rimGroup(c).children.map(
+      (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
+    );
+    expect(mats[1]).toBe(mats[0]);
+    expect(mats[0].side).toBe(THREE.FrontSide);
+    expect(mats[0].blending).toBe(THREE.AdditiveBlending);
+    expect(mats[0].uniforms.uChart.value).toBe(0);
+  });
+
+  it('swaps to the stippled ink pass (normal blending) in chart mode and back', () => {
+    const c = new MolecularClouds(makeCatalog());
+    c.setMonochrome(true);
+    expect(rimMaterial(c).blending).toBe(THREE.NormalBlending);
+    expect(rimMaterial(c).uniforms.uChart.value).toBe(1);
+    c.setMonochrome(false);
+    expect(rimMaterial(c).blending).toBe(THREE.AdditiveBlending);
+    expect(rimMaterial(c).uniforms.uChart.value).toBe(0);
+  });
+
+  it('uses the traced isosurface when the sid has one, ellipsoid fallback otherwise', () => {
+    const catalog = makeCatalog();
+    const sidA = catalog.clouds[0].sid;
+    const surfaces = new Map([[sidA, makeSurface()]]);
+    const c = new MolecularClouds(catalog, surfaces);
+    const meshA = rimGroup(c).children[0] as THREE.Mesh;
+    const meshB = rimGroup(c).children[1] as THREE.Mesh;
+    // Traced mesh: absolute positions baked in, no per-mesh transform.
+    expect(meshA.geometry.getAttribute('position').count).toBe(3);
+    expect(meshA.position.length()).toBe(0);
+    expect(meshA.scale.x).toBe(1);
+    // Fallback: shared unit sphere scaled to the density envelope.
+    expect(meshB.position.x).toBe(catalog.clouds[1].centerAbs.x);
+    expect(meshB.scale.x).toBeCloseTo(catalog.clouds[1].axes[0] * catalog.clouds[1].uEnv, 12);
+  });
+
+  it('setOpacity / setDebugBoost drive and restore the rim gain', () => {
+    const c = new MolecularClouds(makeCatalog());
+    c.setOpacity(0.4);
+    expect(rimMaterial(c).uniforms.uOpacity.value).toBe(0.4);
     c.setDebugBoost(25);
-    for (const m of materials(c)) expect(m.uniforms.uOpacity.value).toBe(25);
+    expect(rimMaterial(c).uniforms.uOpacity.value).toBe(25);
     c.setDebugBoost(null);
-    for (const m of materials(c)) expect(m.uniforms.uOpacity.value).toBe(1);
+    expect(rimMaterial(c).uniforms.uOpacity.value).toBe(0.4);
+  });
+
+  it('setMonoColor / setMonoOpacity drive the chart ink uniforms', () => {
+    const c = new MolecularClouds(makeCatalog());
+    c.setMonoColor(0x336699);
+    c.setMonoOpacity(0.5);
+    expect((rimMaterial(c).uniforms.uInk.value as THREE.Color).getHex()).toBe(0x336699);
+    expect(rimMaterial(c).uniforms.uInkAlpha.value).toBe(0.5);
   });
 });
 

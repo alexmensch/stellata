@@ -1,19 +1,32 @@
-# Molecular cloud presence layer
+# Molecular cloud layer
 
-`molecular-clouds.ts` renders the ~96 named local SF clouds as an
-orientation aid, the Local-Bubble treatment applied per cloud: a
-fresnel-rim whisper silhouette plus a physically-driven absorption
-alpha, both fed by one band-limited raymarch of the calibrated Zucker
-density model (`docs/molecular-clouds.md` §§ 4–5, 9). A
-`representational`-tier declutter element (`molecularCloudEllipsoids`,
-`../scene/README.md`) — decluttering to `physical` hides the mesh
-entirely, leaving pure per-star extinction physics. Stays visible
-during warp by design (flying past Taurus is a feature, not noise).
+`molecular-clouds.ts` renders the ~96 named local SF clouds as two
+decoupled components per cloud:
 
-The runtime renderer fetches `public/clouds.json` via `cloud-loader.ts`
-(version gate: v2 — the calibrated density-model fields + the
-`noiseModel` block per `docs/molecular-clouds.md` § 8; a missing
-`noiseModel` rejects like a version mismatch).
+- **Absorption** — a per-fragment raymarch of the calibrated Zucker
+  density model (`docs/molecular-clouds.md` §§ 4, 9) that dims every
+  diffuse layer drawn behind the cloud (the MW band, LG emission).
+  Physics, so it is **always on in realistic mode — never
+  declutter-gated** — and hides only in chart mode.
+- **Rim shell** — the Local-Bubble fresnel-rim treatment
+  (`../fresnel-shell/`) on a per-cloud **isosurface mesh** traced from
+  the Edenhofer dust field (`cloud-surfaces.bin`; clouds without one
+  fall back to their ellipsoid envelope), in the shared
+  `SHELL_RIM_BLUE`. An orientation annotation, gated at the
+  `representational` declutter floor (`molecularCloudEllipsoids`,
+  `../scene/README.md`) — decluttering to `physical` leaves pure
+  per-star extinction physics plus the absorption above. In chart mode
+  it renders as a stippled silhouette outline (the SkyAtlas 2000 nebula
+  convention) instead of a glow.
+
+Both stay visible during warp by design (flying past Taurus is a
+feature, not noise).
+
+The runtime fetches `public/clouds.json` via `cloud-loader.ts`
+(version gate: v2; the client reads the geometry + density-model fields
+and ignores the build-side `noiseModel` block) and
+`public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
+meshes; a missing artifact means every cloud uses its ellipsoid rim).
 Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
@@ -25,76 +38,73 @@ when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
 - `molecular-clouds.ts` — `MolecularClouds` renderer + the silhouette /
   viewing-distance helpers.
 - `cloud-loader.ts` — `clouds.json` v2 fetch/decode.
-- `cloud-presence-pure.ts` — CPU mirror of the shader math (octave
-  ladder, PCG3D value noise, band-limit fade, Plummer density,
-  absorption alpha). Vitest-pinned.
+- `cloud-surfaces-loader.ts` — `cloud-surfaces.bin` fetch/decode
+  (format: `scripts/cloud-surfaces/README.md`).
+- `cloud-presence-pure.ts` — CPU mirror of the absorption math (Plummer
+  density, absorption alpha). Vitest-pinned.
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.
-- `cloud.vert.glsl`, `cloud.frag.glsl` — the presence shader pair.
+- `cloud-absorption.vert.glsl`, `cloud-absorption.frag.glsl` — the
+  absorption raymarch pair.
+- `cloud-rim.frag.glsl` — the rim/outline fragment stage; the vertex
+  stage is the shared `../fresnel-shell/fresnel-shell.vert.glsl`.
 
-## Render
+## Absorption render
 
 Every cloud is one shared `SphereGeometry(1.03, 32, 16)` mesh scaled
 per-instance to its semi-axes and rotated by its quaternion (the 3%
 inflation covers tessellation sag; the shader clips to the analytic
-unit sphere). The fragment shader raymarches the ellipsoid segment
-(12–16 jittered steps) through the calibrated Plummer profile times
-the log-normal octave noise, band-limited per
-`docs/molecular-clouds.md` § 9.1: only octaves with λ ≥ 2·step feed
-the integral; the fine octaves (ridged on the finest two) apply as one
-post-integral texture factor clamped to [0.6, 1.4], with sub-pixel
-wavelengths faded by the screen-space footprint. Constants flow
-`cloud_model.py` → `clouds.json` `noiseModel` → `buildOctaveLadder` →
-uniforms — never redefined shader-side.
-
-One draw carries both components under **premultiplied alpha** +
-`NormalBlending` — rgb is the additive rim glow, alpha the absorption,
-so the blend `(ONE, ONE−α)` yields `glow + background × (1−absorption)`.
-Without `premultipliedAlpha: true`, src.alpha multiplies into rgb a
-second time and the glow collapses. The whisper glow is the shared
-fresnel-rim shape (`../fresnel-shell/fresnel-rim.glsl`, the
-`stellata_fresnel_rim` chunk registered by `fresnel-shell.ts`)
-evaluated at the ray's envelope entry point, class-tinted
-(dark / sf / hii), textured by the fine octaves, and faded at the
-envelope edge by the ray's closest approach — **geometric, never a
-column fade**: the fresnel peaks exactly where the grazing column
-vanishes, so a column product cancels the rim to invisibility. The
-glow is suppressed when the camera is inside the envelope — the
-fresnel-shell hide-when-inside contract applied to the glow only,
-while the absorption keeps working from inside the cloud. Output
-carries a ±0.5-LSB gradient-noise dither (the whisper level spans
-only ~13–38 8-bit levels).
+envelope sphere). The fragment shader raymarches the ellipsoid segment
+(4–14 jittered steps, screen-adaptive) through the calibrated Plummer
+profile and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
+capped at 0.95. The draw is **alpha-only premultiplied over** (rgb = 0
+under `premultipliedAlpha: true` + `NormalBlending`), i.e. the blend is
+`background × (1 − absorption)` — nothing is added. Per § 9.1 the ray
+start carries static IGN jitter (never reseeded per frame) and the
+output carries ±0.5-LSB dither.
 
 **Fragment budget.** The march is clipped to the envelope sphere
 `u = uEnv` (density is identically zero outside it; a
 mass-budget-tightened cloud like Orion λ at uEnv 0.22 discards ~95%
 of its projected disc in one dot product), the step count adapts to
-the chord's projected pixel extent (capped by the `uSteps` lever),
-samples whose noise-free column contribution is negligible skip the
-octave loop, the octave sum is evaluated on alternate steps and
-reused (the band-limit makes the in-integral field smooth at step
-scale by construction), and the march breaks once the column
-saturates the alpha cap. The remaining hot case is the handful of
-large Z2020 spheres that subtend tens of degrees from Sol — the next
-lever is baking the value-noise octaves into a small tiling 3D
-texture (tracked as a bead).
+the chord's projected pixel extent (capped by the `uSteps` lever), and
+the march breaks once the column saturates the alpha cap.
 
 The material is `BackSide`: exactly one fragment per covered pixel
 from outside and inside (the raymarch segment is analytic either way);
 `FrontSide` would kill the inside-the-cloud absorption. The shaders
 avoid the `#version 300 es` directive and don't redeclare
 auto-injected attributes (`position`, `normal`, `modelMatrix`, etc.);
-doing either silently breaks the GLSL3 compile. Mono mode swaps to a
-soft grey alpha-over of the absorption column.
+doing either silently breaks the GLSL3 compile.
 
 **Render-order contract** (`docs/molecular-clouds.md` § 9.1 rule 5):
-the absorption alpha dims only layers drawn *before* the presence mesh
-(`renderOrder −2`). Every diffuse background the clouds should extinct
-— the MW band and LG emission (−3), any future HiPS / sky-imagery
-layer — must render earlier; a layer added after the mesh silently
-escapes extinction. Point sources are exempt (the per-star raymarch
-owns their extinction; no double-count). The reference wireframes at
-−1 (galactic disc/grid, Local Bubble shell) deliberately draw after
-the mesh — chart-like chrome shouldn't be extincted.
+the absorption alpha dims only layers drawn *before* the absorption
+meshes (`renderOrder −2`). Every diffuse background the clouds should
+extinct — the MW band and LG emission (−3), any future HiPS /
+sky-imagery layer — must render earlier; a layer added after the mesh
+silently escapes extinction. Point sources are exempt (the per-star
+raymarch owns their extinction; no double-count). The reference chrome
+at −1 (galactic disc/grid, Local Bubble shell, the cloud rim shells
+themselves) deliberately draws after the mesh — annotation shouldn't
+be extincted.
+
+## Rim shell render
+
+One shared `ShaderMaterial` across all clouds (`FrontSide`,
+`depthWrite: false`). Geometry is the traced isosurface mesh when
+`cloud-surfaces.bin` carries the cloud's sid — absolute ICRS pc
+positions with outward winding baked by the build, normals computed at
+runtime — else the shared unit sphere scaled to `axes × uEnv` (the
+density envelope, where the absorption ends). FrontSide + outward
+winding is the fresnel-shell **hide-when-inside** contract: the shell
+back-face-culls with the camera inside the cloud, while the BackSide
+absorption keeps working from inside.
+
+- **Realistic:** additive fresnel rim (`stellata_fresnel_rim` chunk),
+  whisper-level (`uAlphaLimb` 0.15 vs the boundary shells' 0.45–0.5 —
+  96 rims at shell strength would dominate the sky), ±0.5-LSB dither.
+- **Chart:** the material swaps to `NormalBlending` ink and the shader
+  emits a stippled silhouette contour — an fwidth-scaled band where
+  n·v → 0, masked by a screen-space dot grid.
 
 ## Unified focus / measurement / warp UX
 
@@ -116,8 +126,8 @@ with a 5 pc floor) as the cloud's `dMinFloor` instead of the star
 
 ## Picking + hover
 
-Per-cloud `Mesh` objects participate in `THREE.Raycaster` intersection
-via the cloud `Group`. `Picker.pickCloud` does the raycast; the click
+Per-cloud absorption `Mesh` objects participate in `THREE.Raycaster`
+intersection. `Picker.pickCloud` does the raycast; the click
 handler in `onPointerUp` falls back to a cloud pick when no star is hit
 (stars take priority because they're the smaller, more precise target),
 and the hover engine's `cloud-hover-provider` calls `Picker.pickCloudHit`
@@ -183,12 +193,11 @@ is no per-layer toggle; visibility is the declutter floor.
 
 Under `stellata.cloudLayer.*`:
 - `setOpacity(x)` — master rim-glow gain (dark mode)
-- `setColor(0xRRGGBB)` — override the per-class tints
+- `setColor(0xRRGGBB)` — override the shared rim blue
 - `setRimParams({alphaLimb, faceOnFloor, fresnelPower})` — rim shape,
   shared vocabulary with the fresnel shells
-- `setSteps(n)` / `setTexGain(x)` — raymarch step count, fine-octave
-  texture strength
-- `setMonoOpacity(x)` / `setMonoColor(0xRRGGBB)` — chart mode tuning
+- `setSteps(n)` — absorption raymarch step count
+- `setMonoOpacity(x)` / `setMonoColor(0xRRGGBB)` — chart outline tuning
 - `setDebugBoost(strength)` — boost the rim glow (or `null` to
   restore); use this first when "I can't see anything" to confirm the
   layer is rendering at all.

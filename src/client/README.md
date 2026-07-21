@@ -271,7 +271,8 @@ SVG mask (`constellation-figure/README.md`).
 | Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
 | Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
 | Local Bubble shell                               | WebGL   | `renderOrder: -1`                                  |       | [local-bubble/](local-bubble/README.md) |
-| Molecular clouds                                 | WebGL   | `renderOrder: -2`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
+| Molecular cloud rim shells                       | WebGL   | `renderOrder: -1`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
+| Molecular cloud absorption                       | WebGL   | `renderOrder: -2`                                  | back  | [molecular-clouds/](molecular-clouds/README.md) |
 | Milky Way volume + Local Group emission          | WebGL   | `renderOrder: -3`                                  |       | [milkyway/](milkyway/README.md), [local-group/](local-group/README.md) |
 | Star core depth-mask + planet core (depth-only)  | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
 

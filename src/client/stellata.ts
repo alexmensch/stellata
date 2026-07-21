@@ -33,6 +33,7 @@ import { HudOverlay } from './overlays/hud-overlay';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
 import { MolecularClouds, renderedCloudSizePx } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
+import type { CloudSurface } from './molecular-clouds/cloud-surfaces-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import { mark as perfMark, measure as perfMeasure, frame as perfFrame } from './debug/perf-hud';
@@ -1965,8 +1966,10 @@ export class Stellata implements FrameAnchor {
   get localGroupEmission(): LocalGroupEmission | null { return this.lgEmission; }
 
   /** Wire the loaded molecular cloud catalog into the scene. Idempotent —
-   *  calling again replaces the layer. Pass null to detach. */
-  attachClouds(catalog: CloudCatalog | null) {
+   *  calling again replaces the layer. Pass null to detach. `surfaces` is
+   *  the optional sid-keyed isosurface mesh map (cloud-surfaces.bin);
+   *  clouds without one fall back to their ellipsoid rim shape. */
+  attachClouds(catalog: CloudCatalog | null, surfaces: Map<number, CloudSurface> | null = null) {
     if (this.clouds) {
       this.scene.remove(this.clouds.group);
       this.clouds.dispose();
@@ -1974,8 +1977,7 @@ export class Stellata implements FrameAnchor {
     }
     if (catalog === null || catalog.clouds.length === 0) return;
     const u = this.starPipeline.discMaterial.uniforms;
-    this.clouds = new MolecularClouds(catalog, {
-      uMaxAppMag: u.uMaxAppMag as { value: number },
+    this.clouds = new MolecularClouds(catalog, surfaces, {
       uFovYRad: u.uFovYRad as { value: number },
       uViewport: u.uViewport as { value: THREE.Vector2 },
     });
@@ -1987,11 +1989,7 @@ export class Stellata implements FrameAnchor {
    *  index integration in main.ts. */
   getCloudCatalog(): CloudCatalog | null {
     return this.clouds
-      ? {
-          count: this.clouds.clouds.length,
-          clouds: this.clouds.clouds,
-          noiseModel: this.clouds.noiseModel,
-        }
+      ? { count: this.clouds.clouds.length, clouds: this.clouds.clouds }
       : null;
   }
 
@@ -2175,16 +2173,9 @@ export class Stellata implements FrameAnchor {
     // Per-layer palette swaps fan out through the registry. The milky-way
     // layer has no monochrome hook: chart mode re-purposes it as an isobar
     // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
-    // isobar is orchestrator-driven (`setCloudsIsobar`, no detail element).
+    // layer's stippled chart outline rides its registry setMonochrome hook.
     this.layers.setMonochromeAll(on);
     this.bus.emit('state');
-  }
-
-  /** Chart-mode isobar pass on/off for the molecular cloud layer.
-   *  Wires the shader's uMaxAppMag uniform to the stellata's shared
-   *  reference so the contour tracks the magnitude slider live. */
-  setCloudsIsobar(on: boolean) {
-    this.clouds?.setIsobar(on, this.starPipeline.discMaterial.uniforms.uMaxAppMag);
   }
 
   /** Chart-mode isobar pass on/off for the milky-way layer. Driven by the

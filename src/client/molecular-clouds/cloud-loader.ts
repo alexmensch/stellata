@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 import { sidColumnError } from '../util/sid-resolver';
-import type { NoiseModel } from './cloud-presence-pure';
 
 export type CloudSource = 'Z2021T1' | 'Z2020';
 
@@ -55,8 +54,6 @@ export interface Cloud {
 export interface CloudCatalog {
   count: number;
   clouds: Cloud[];
-  /** Presence-shader noise-ladder constants (docs/molecular-clouds.md § 5.2). */
-  noiseModel: NoiseModel;
 }
 
 interface RawCloud {
@@ -83,7 +80,6 @@ interface RawCloud {
 interface RawCatalog {
   version: number;
   count: number;
-  noiseModel: NoiseModel;
   clouds: RawCloud[];
 }
 
@@ -104,10 +100,6 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   const raw = (await res.json()) as RawCatalog;
   if (raw.version !== 2) {
     console.warn(`clouds.json version ${raw.version} unsupported`);
-    return null;
-  }
-  if (!raw.noiseModel) {
-    console.warn('clouds.json v2 is missing the noiseModel block — rebuild with `pnpm run build:clouds`');
     return null;
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
@@ -135,5 +127,5 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     inGrid: c.inGrid,
     embedded: c.embedded,
   }));
-  return { count: raw.count, clouds, noiseModel: raw.noiseModel };
+  return { count: raw.count, clouds };
 }

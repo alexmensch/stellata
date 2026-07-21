@@ -2,6 +2,7 @@ import { loadCatalog } from './loaders/catalog-loader';
 import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadClouds } from './molecular-clouds/cloud-loader';
+import { loadCloudSurfaces } from './molecular-clouds/cloud-surfaces-loader';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
@@ -66,7 +67,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, lgCatalog, binaries, localBubble] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -83,6 +84,9 @@ async function main() {
       // a few hundred KB; null if the artifact is missing (fresh checkout
       // without `pnpm run build:clouds`).
       loadClouds(`${import.meta.env.BASE_URL}clouds.json`),
+      // Per-cloud isosurface rim meshes; null if the artifact is missing —
+      // every cloud then falls back to its ellipsoid rim shape.
+      loadCloudSurfaces(`${import.meta.env.BASE_URL}cloud-surfaces.bin`),
       // Local Group wireframes. ~20 KB JSON; null if
       // the artifact is missing (fresh checkout without
       // `pnpm run build:local-group`). No-op layer in that case —
@@ -113,7 +117,7 @@ async function main() {
     window.stellata = stellata;
     // Molecular-cloud presence layer — a representational-tier declutter
     // element; absent artifact = no layer.
-    if (cloudCatalog) stellata.attachClouds(cloudCatalog);
+    if (cloudCatalog) stellata.attachClouds(cloudCatalog, cloudSurfaces);
 
     // Local Group wireframes. Always-on when the artifact is present —
     // same model as the MW disc, no toggle / URL flag.
