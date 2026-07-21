@@ -138,9 +138,18 @@ or `flyTo`; pressing W or clicking the distance label dispatches to
 `warpTo` with whatever Target the vector slot holds. The two
 cloud-specific carve-outs are (a) no focus ring (the SVG overlay reads
 `getFocusedStar` only and naturally ignores `focusedCloud`) and (b) the
-park-distance inputs use `cloudViewingDistancePc` (= `2.4 × max(axes)`,
-with a 5 pc floor) as the cloud's `dMinFloor` instead of the star
-90 %-fill solve.
+park-distance inputs use the layer's `viewingDistancePc` (= `2.4 ×`
+the effective extent, with a 5 pc floor) as the cloud's `dMinFloor`
+instead of the star 90 %-fill solve.
+
+**Effective focus geometry.** Fly-to / orbit / warp / labels / the
+distance vector all aim at the layer's per-cloud **effective centre**
+— the traced mesh's vertex centroid (with its max vertex radius as the
+extent) — never at the Zucker bbox centroid, which can sit far from
+the actual dust (Orion λ's traced knot is well off its ring-shaped
+bbox centre). Fallback clouds keep the ellipsoid centroid with extent
+`max(axes) × uEnv`. The absorption meshes stay anchored at the Zucker
+centroid — the calibrated density model is defined in that frame.
 
 ## Picking + hover
 
@@ -177,8 +186,8 @@ subtracting `worldOffset` before assigning to `controls.target`.
 **`flyTo({kind:'cloud', idx})`:** the focus-park path — used by
 search-select and click-vector-tip. Mirrors `focusStar`: clears prior
 focus + vector, then composes the generic `parkDistance(...)`
-primitive with the cloud's max-semi-axis as `R_pc` and
-`cloudViewingDistancePc(cloud)` as `dMinFloor` (the provider's
+primitive with the cloud's effective extent as `R_pc` and the layer's
+`viewingDistancePc(idx)` as `dMinFloor` (the provider's
 `focusParkDistance` leg). Lerps over `FOCUS_LERP_MS` when the camera
 is currently outside park, or stays put when inside. `animate: false`
 (URL-restore) snaps. For animated travel between distant focal points
@@ -186,7 +195,7 @@ the user warps via the distance label.
 
 **`warpTo({kind:'cloud', idx})`:** the cloud-destination warp. Source
 point is whatever is focused (`currentFocusTarget()`); destination is
-the cloud's centroid; arrival offset is `cloudViewingDistancePc`.
+the cloud's effective centre; arrival offset is `viewingDistancePc`.
 `WarpState` carries source/dest as kind-agnostic `FocusTarget`s
 (`../camera/focus/README.md` § FocusTarget contract), so arrival parks
 and focus dispatch need no per-kind switch.

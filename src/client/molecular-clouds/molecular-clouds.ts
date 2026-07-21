@@ -88,6 +88,13 @@ export class MolecularClouds {
   private rimSurfaceGeometries: THREE.BufferGeometry[] = [];
   /** Per-cloud absolute-ICRS surface samples for the silhouette labels. */
   private labelSampleAbs: Float32Array[] = [];
+  /** Effective focus geometry: the traced mesh's vertex centroid + max
+   *  vertex radius, else the Zucker ellipsoid centroid + envelope extent.
+   *  A traced core can sit far off-centre in its bbox (Orion λ), so
+   *  fly-to / orbit / warp / labels aim here, never at `centerAbs`. */
+  private focusCenters: THREE.Vector3[] = [];
+  private focusExtents: number[] = [];
+  private traced: boolean[] = [];
   private mono = false;
   /** Absorption meshes in catalog order, for picking. Cloud index is
    *  stashed on `mesh.userData.cloudIdx` so raycast results resolve back
@@ -104,10 +111,13 @@ export class MolecularClouds {
   ) {
     this.clouds = catalog.clouds;
     this.group = new THREE.Group();
+    // Groups keep renderOrder 0: a non-zero Group.renderOrder becomes the
+    // three.js groupOrder, which outranks per-mesh renderOrder in the
+    // transparent sort — the whole cloud pass would draw BEFORE the MW
+    // band (its group is 0, meshes −3) and the band would paint over the
+    // absorption, silently defeating the § 9.1 render-order contract.
     this.absorptionGroup = new THREE.Group();
-    this.absorptionGroup.renderOrder = ABSORPTION_RENDER_ORDER;
     this.rimGroup = new THREE.Group();
-    this.rimGroup.renderOrder = RIM_RENDER_ORDER;
     this.group.add(this.absorptionGroup, this.rimGroup);
 
     this.absorptionGeometry = new THREE.SphereGeometry(
@@ -133,7 +143,72 @@ export class MolecularClouds {
       const surface = surfaces?.get(c.sid);
       this.rimGroup.add(this.makeRimMesh(c, surface));
       this.labelSampleAbs.push(buildLabelSamples(c, surface));
+
+      if (surface) {
+        const n = surface.positions.length / 3;
+        let cx = 0; let cy = 0; let cz = 0;
+        for (let k = 0; k < n; k++) {
+          cx += surface.positions[k * 3];
+          cy += surface.positions[k * 3 + 1];
+          cz += surface.positions[k * 3 + 2];
+        }
+        const center = new THREE.Vector3(cx / n, cy / n, cz / n);
+        let extentSq = 0;
+        for (let k = 0; k < n; k++) {
+          const dx = surface.positions[k * 3] - center.x;
+          const dy = surface.positions[k * 3 + 1] - center.y;
+          const dz = surface.positions[k * 3 + 2] - center.z;
+          const d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 > extentSq) extentSq = d2;
+        }
+        this.focusCenters.push(center);
+        this.focusExtents.push(Math.sqrt(extentSq));
+        this.traced.push(true);
+      } else {
+        this.focusCenters.push(c.centerAbs.clone());
+        this.focusExtents.push(
+          Math.max(c.axes[0], c.axes[1], c.axes[2]) * c.uEnv);
+        this.traced.push(false);
+      }
     }
+  }
+
+  /** Effective focus centre (absolute ICRS pc) written into `out`;
+   *  false when the index is out of range. */
+  focusCenterAbsInto(cloudIdx: number, out: THREE.Vector3): boolean {
+    const c = this.focusCenters[cloudIdx];
+    if (!c) return false;
+    out.copy(c);
+    return true;
+  }
+
+  /** Representative radius of the rendered shape (pc). */
+  focusExtentPc(cloudIdx: number): number {
+    return this.focusExtents[cloudIdx] ?? 0;
+  }
+
+  /** Comfortable fly-to park distance for the rendered shape — the
+   *  Local-Group-style `viewingDistanceForExtent` over the effective
+   *  extent (2.4× with a 5 pc floor). */
+  viewingDistancePc(cloudIdx: number): number {
+    return viewingDistanceForExtent(this.focusExtentPc(cloudIdx));
+  }
+
+  /** Silhouette pixel diameter at camera distance `dCamPc`: the extent
+   *  sphere for traced meshes, the tight ellipsoid quadric otherwise. */
+  renderedSizePx(
+    cloudIdx: number,
+    dCamPc: number,
+    angularToPx: number,
+    viewDir?: THREE.Vector3,
+  ): number {
+    const cloud = this.clouds[cloudIdx];
+    if (!cloud) return 0;
+    if (this.traced[cloudIdx]) {
+      return angularDiameterPx(
+        this.focusExtents[cloudIdx], Math.max(dCamPc, 1e-30), angularToPx);
+    }
+    return renderedCloudSizePx(cloud, dCamPc, angularToPx, viewDir);
   }
 
   /** Number of silhouette samples for cloud `cloudIdx` (0 if out of range). */
@@ -164,13 +239,13 @@ export class MolecularClouds {
   }
 
   /** The cloud provider's localPositionInto leg: writes the cloud's
-   *  local-frame centroid into `out` when the cloud exists, returns
-   *  `true`. Returns `false` (and leaves `out` untouched) when the
-   *  index is out of range. */
+   *  local-frame effective focus centre into `out` when the cloud
+   *  exists, returns `true`. Returns `false` (and leaves `out`
+   *  untouched) when the index is out of range. */
   cloudLocalPositionInto(cloudIdx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
-    const c = this.clouds[cloudIdx];
+    const c = this.focusCenters[cloudIdx];
     if (!c) return false;
-    out.copy(c.centerAbs).sub(worldOffset);
+    out.copy(c).sub(worldOffset);
     return true;
   }
 
@@ -375,19 +450,6 @@ function buildLabelSamples(cloud: Cloud, surface: CloudSurface | undefined): Flo
   return out;
 }
 
-/**
- * Compute a comfortable camera offset distance for viewing the given cloud
- * — the magnitude users pull back by when "fly to" snaps the camera. Uses
- * the cloud's largest semi-axis so a long, thin cloud (Cepheus, Aquila
- * Rift) gets enough pull-back to fit lengthwise in view, but small clouds
- * (Musca) don't park the camera a kpc away. The 2.4× factor matches the
- * tan(half-FoV) at our 60° vertical FoV with a bit of margin.
- */
-export function cloudViewingDistancePc(cloud: Cloud): number {
-  const maxAxis = Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]);
-  return viewingDistanceForExtent(maxAxis);
-}
-
 // Scratch vectors / quaternion used by the silhouette projection — kept
 // at module scope so the per-frame distance-vector overlay calls allocate
 // nothing.
@@ -408,9 +470,9 @@ const scratchQuatInv = /*@__PURE__*/ new THREE.Quaternion();
  * diameter (= 2), not the long-axis diameter (= 20).
  *
  * When `viewDir` is omitted, falls back to the longest semi-axis — the
- * legacy conservative answer used by `cloudViewingDistancePc`. This is
- * what the distance-vector chevron-tip clearance still wants when the
- * caller isn't yet plumbed for a view direction.
+ * legacy conservative answer. This is what the distance-vector
+ * chevron-tip clearance still wants when the caller isn't yet plumbed
+ * for a view direction.
  */
 export function renderedCloudSizePx(
   cloud: Cloud,

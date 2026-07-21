@@ -31,7 +31,7 @@ import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-
 import { GalacticGrid } from './galactic/galactic-grid';
 import { HudOverlay } from './overlays/hud-overlay';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
-import { MolecularClouds, renderedCloudSizePx } from './molecular-clouds/molecular-clouds';
+import { MolecularClouds } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import type { CloudSurface } from './molecular-clouds/cloud-surfaces-loader';
 import { MilkyWay } from './milkyway/milkyway';
@@ -60,7 +60,6 @@ import {
 } from './camera/focus/focus-controller';
 import type { FocusableProviders, Target } from './camera/focus/focus-target';
 import { parkDistance } from './camera/focus/focus-transition';
-import { cloudViewingDistancePc } from './molecular-clouds/molecular-clouds';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
@@ -815,11 +814,11 @@ export class Stellata implements FrameAnchor {
         localPositionInto: (idx, out) =>
           this.clouds?.cloudLocalPositionInto(idx, this.worldOffset, out) ?? false,
         focusParkDistance: (idx) => {
-          const cloud = this.clouds?.clouds[idx];
-          if (!cloud) return 0;
+          const clouds = this.clouds;
+          if (!clouds?.clouds[idx]) return 0;
           return parkDistance({
-            R_pc: Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]),
-            dMinFloor: cloudViewingDistancePc(cloud),
+            R_pc: clouds.focusExtentPc(idx),
+            dMinFloor: clouds.viewingDistancePc(idx),
           });
         },
         arrivalRadiusPc: () => null,
@@ -2438,8 +2437,6 @@ export class Stellata implements FrameAnchor {
    *  is loaded or the index is out of range. */
   renderedCloudSizePx(cloudIdx: number): number {
     if (!this.clouds) return 0;
-    const cloud = this.clouds.clouds[cloudIdx];
-    if (!cloud) return 0;
     const local = this._tmpRenderLocal;
     if (!this.clouds.cloudLocalPositionInto(cloudIdx, this.worldOffset, local)) return 0;
     const camPos = this.camera.position;
@@ -2448,15 +2445,15 @@ export class Stellata implements FrameAnchor {
     const dz = local.z - camPos.z;
     const dCam = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (dCam < 1e-12) {
-      return renderedCloudSizePx(cloud, dCam, this.angularToPx());
+      return this.clouds.renderedSizePx(cloudIdx, dCam, this.angularToPx());
     }
     // World-space unit direction from the cloud toward the camera. The
-    // helper rotates this into the cloud's local frame so the silhouette
-    // bound tightens for axis-aligned views (prolate end-on no longer
-    // overshoots by the prolate axis ratio).
+    // ellipsoid-fallback path rotates this into the cloud's local frame
+    // so the silhouette bound tightens for axis-aligned views (prolate
+    // end-on no longer overshoots by the prolate axis ratio).
     this.tmpCloudDir.set(camPos.x - local.x, camPos.y - local.y, camPos.z - local.z)
       .multiplyScalar(1 / dCam);
-    return renderedCloudSizePx(cloud, dCam, this.angularToPx(), this.tmpCloudDir);
+    return this.clouds.renderedSizePx(cloudIdx, dCam, this.angularToPx(), this.tmpCloudDir);
   }
   private tmpCloudDir = new THREE.Vector3();
   // Scratch slots for the non-allocating *LocalPositionInto helpers.

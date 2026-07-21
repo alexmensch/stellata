@@ -18,7 +18,6 @@ import {
   type TargetKind,
 } from './focus-target';
 import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
-import { cloudViewingDistancePc } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
 import { lgViewingDistancePc } from '../../local-group/local-group-loader';
 import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
@@ -1013,24 +1012,17 @@ export class FocusController implements FocusOps {
   private makeCloudFocusTarget(idx: number): FocusTarget | null {
     const clouds = this.deps.getClouds();
     if (!clouds) return null;
-    const cloud = clouds.clouds[idx];
-    if (!cloud) return null;
+    if (!clouds.clouds[idx]) return null;
     return {
       kind: 'cloud',
       idx,
-      anchorInto: (out) => {
-        out.copy(cloud.centerAbs);
-        return true;
-      },
-      localPositionInto: (out) => {
-        const wo = this.deps.frameAnchor.getWorldOffset();
-        out.copy(cloud.centerAbs).sub(wo);
-        return true;
-      },
-      parkRadius: () => cloudViewingDistancePc(cloud),
+      anchorInto: (out) => clouds.focusCenterAbsInto(idx, out),
+      localPositionInto: (out) =>
+        clouds.cloudLocalPositionInto(idx, this.deps.frameAnchor.getWorldOffset(), out),
+      parkRadius: () => clouds.viewingDistancePc(idx),
       applyFocus: () => {
         this.applyFocusState({ kind: 'cloud', idx });
-        this.applySoftParkFloor(cloudViewingDistancePc(cloud));
+        this.applySoftParkFloor(clouds.viewingDistancePc(idx));
       },
       emitFocusEvents: () => {
         this.deps.bus.emit('focus', { kind: 'cloud', idx });

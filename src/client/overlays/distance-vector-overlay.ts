@@ -146,9 +146,7 @@ export function createDistanceVectorOverlay(
     // the destination's actual rendered silhouette diameter so the tip
     // lands on the visible edge regardless of size — a supergiant's disc
     // can fill a large fraction of the viewport, a dwarf is a few pixels,
-    // and a nearby molecular cloud spans tens of degrees. Cloud silhouette
-    // is keyed off the largest semi-axis (matches `cloudViewingDistancePc`);
-    // exact for spheres, slight overshoot for prolate clouds viewed end-on.
+    // and a nearby molecular cloud spans tens of degrees.
     const destOffsetPx = Math.max(stellata.focusables[to.kind].renderedSizePx(to.idx), 0);
     const dxPx = pB[0] - pA[0];
     const dyPx = pB[1] - pA[1];

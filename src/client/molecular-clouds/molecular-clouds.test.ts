@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { MolecularClouds, renderedCloudSizePx, cloudViewingDistancePc } from './molecular-clouds';
+import { MolecularClouds, renderedCloudSizePx } from './molecular-clouds';
 import type { Cloud, CloudCatalog } from './cloud-loader';
 import type { CloudSurface } from './cloud-surfaces-loader';
 import { makeMockCloud, makeMockCatalog } from './cloud-mock';
@@ -58,6 +58,19 @@ describe('MolecularClouds / absorption material contract', () => {
     expectContract();
     c.setMonochrome(false);
     expectContract();
+  });
+
+  it('keeps group renderOrder at 0 so per-mesh renderOrder sorts against the MW band', () => {
+    // Group.renderOrder becomes the three.js groupOrder, which outranks
+    // per-mesh renderOrder in the transparent sort — a non-zero value
+    // here draws the whole cloud pass before the MW band (group 0,
+    // meshes −3) and the band paints over the absorption.
+    const c = new MolecularClouds(makeCatalog());
+    expect(c.group.renderOrder).toBe(0);
+    expect(absorptionGroup(c).renderOrder).toBe(0);
+    expect(rimGroup(c).renderOrder).toBe(0);
+    for (const m of absorptionGroup(c).children) expect(m.renderOrder).toBe(-2);
+    for (const m of rimGroup(c).children) expect(m.renderOrder).toBe(-1);
   });
 
   it('stays visible regardless of the rim declutter permit (physics, always on)', () => {
@@ -266,9 +279,64 @@ describe('renderedCloudSizePx', () => {
   });
 });
 
-describe('cloudViewingDistancePc', () => {
-  it('keys off the largest semi-axis with a 5 pc floor', () => {
-    expect(cloudViewingDistancePc(makeCloud([10, 1, 1]))).toBeCloseTo(24, 6);
-    expect(cloudViewingDistancePc(makeCloud([0.5, 0.5, 0.5]))).toBeCloseTo(5.0, 6);
+describe('effective focus geometry', () => {
+  it('fallback clouds anchor at the ellipsoid centroid with the envelope extent', () => {
+    const c = new MolecularClouds(makeMockCatalog([
+      makeMockCloud({ centerAbs: new THREE.Vector3(50, -20, 30), axes: [10, 4, 2], uEnv: 0.5 }),
+    ]));
+    const out = new THREE.Vector3();
+    expect(c.focusCenterAbsInto(0, out)).toBe(true);
+    expect(out.x).toBe(50);
+    expect(c.focusExtentPc(0)).toBeCloseTo(10 * 0.5, 12);
+  });
+
+  it('traced clouds anchor at the mesh vertex centroid with the max vertex radius', () => {
+    // One triangle far from the ellipsoid centre: centroid = vertex mean.
+    const catalog = makeMockCatalog([
+      makeMockCloud({ centerAbs: new THREE.Vector3(100, 0, 0), axes: [30, 30, 30] }),
+    ]);
+    const surfaces = new Map([[catalog.clouds[0].sid, {
+      positions: new Float32Array([90, 0, 0, 96, 0, 0, 93, 3, 0]),
+      indices: new Uint32Array([0, 1, 2]),
+    }]]);
+    const c = new MolecularClouds(catalog, surfaces);
+    const out = new THREE.Vector3();
+    c.focusCenterAbsInto(0, out);
+    expect(out.x).toBeCloseTo(93, 5);
+    expect(out.y).toBeCloseTo(1, 5);
+    // Farthest vertex from (93, 1, 0): (90, 0, 0) or (96, 0, 0) at √10.
+    expect(c.focusExtentPc(0)).toBeCloseTo(Math.sqrt(10), 5);
+    // cloudLocalPositionInto follows the effective centre too.
+    c.cloudLocalPositionInto(0, new THREE.Vector3(3, 1, 0), out);
+    expect(out.x).toBeCloseTo(90, 5);
+    expect(out.y).toBeCloseTo(0, 5);
+  });
+
+  it('viewingDistancePc keys off the effective extent with the 5 pc floor', () => {
+    const c = new MolecularClouds(makeMockCatalog([
+      makeMockCloud({ axes: [10, 1, 1] }),
+      makeMockCloud({ id: 'tiny', sid: 2, axes: [0.5, 0.5, 0.5] }),
+    ]));
+    expect(c.viewingDistancePc(0)).toBeCloseTo(24, 6);
+    expect(c.viewingDistancePc(1)).toBeCloseTo(5.0, 6);
+  });
+
+  it('renderedSizePx uses the extent sphere for traced clouds, the quadric otherwise', () => {
+    const catalog = makeMockCatalog([
+      makeCloud([10, 1, 1], 'A'),
+      makeCloud([10, 1, 1], 'B'),
+    ]);
+    const surfaces = new Map([[catalog.clouds[0].sid, makeSurface()]]);
+    const c = new MolecularClouds(catalog, surfaces);
+    const angularToPx = 1000;
+    const endOn = new THREE.Vector3(1, 0, 0);
+    // Traced: sphere of the mesh extent — viewDir is irrelevant.
+    const traced = c.renderedSizePx(0, 100, angularToPx, endOn);
+    expect(traced).toBeCloseTo(
+      2 * Math.atan(c.focusExtentPc(0) / 100) * angularToPx, 9);
+    // Fallback: the tight ellipsoid quadric (end-on prolate → short axis).
+    const fallback = c.renderedSizePx(1, 100, angularToPx, endOn);
+    expect(fallback).toBeCloseTo(
+      renderedCloudSizePx(catalog.clouds[1], 100, angularToPx, endOn), 9);
   });
 });

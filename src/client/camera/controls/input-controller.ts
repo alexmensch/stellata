@@ -202,9 +202,8 @@ export class InputController {
     const cloudIdx = this.deps.picker.pickCloud(x, y);
     if (cloudIdx === null) return false;
 
-    // Clouds keep the pre-ladder vector-first semantics — unreachable
-    // while the MC layer is shelved; revisit at un-shelve. Viewing
-    // distance for clouds is cloudViewingDistancePc, not parkDistForStar.
+    // Clouds keep the pre-ladder vector-first semantics (stellata-t2u5
+    // tracks folding them into the click ladder).
     const clicked: Target = { kind: 'cloud', idx: cloudIdx };
     const focused = this.deps.getFocusedTarget();
     if (focused === null) {
