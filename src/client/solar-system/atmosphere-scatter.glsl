@@ -6,9 +6,11 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of AIRLIGHT_GAIN / MS_STRENGTH in atmosphere-scattering-pure.ts.
+// Mirror of AIRLIGHT_GAIN / MS_STRENGTH / SHADOW_SOFTNESS in
+// atmosphere-scattering-pure.ts.
 const float STELLATA_AIRLIGHT_GAIN = 3.0;
 const float STELLATA_MS_STRENGTH = 0.2;
+const float STELLATA_SHADOW_SOFTNESS = 0.03;
 
 float stellata_rayleighPhase(float mu) {
   return STELLATA_RAYLEIGH_PHASE_K * (1.0 + mu * mu);
@@ -36,12 +38,13 @@ float stellata_farRoot(vec3 o, vec3 d, float radius) {
   return -b + sqrt(disc);
 }
 
-bool stellata_inPlanetShadow(vec3 p, vec3 d) {
+// Fraction of the sun visible from p toward d (unit): 1 in full sun, 0 in
+// full shadow, a soft ramp across the terminator penumbra.
+float stellata_sunVisibility(vec3 p, vec3 d) {
   float b = dot(p, d);
-  float c = dot(p, p) - 1.0;
-  float disc = b * b - c;
-  if (disc < 0.0) return false;
-  return -b - sqrt(disc) > 0.0;
+  if (b >= 0.0) return 1.0;
+  float dPerp = sqrt(max(dot(p, p) - b * b, 0.0));
+  return smoothstep(1.0 - STELLATA_SHADOW_SOFTNESS, 1.0 + STELLATA_SHADOW_SOFTNESS, dPerp);
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along
@@ -76,10 +79,11 @@ void stellata_atmosphereRadiance(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    if (stellata_inPlanetShadow(p, sunDir)) continue;
+    float vis = stellata_sunVisibility(p, sunDir);
+    if (vis <= 0.0) continue;
     float sExit = stellata_farRoot(p, sunDir, rAtmo);
     if (sExit <= 0.0) continue;
-    litSum += 1.0;
+    litSum += vis;
 
     float lStep = sExit / float(ATMO_N_LIGHT);
     float lightOdR = 0.0;
@@ -95,7 +99,7 @@ void stellata_atmosphereRadiance(
     vec3 tau = betaRs * (viewOdR + lightOdR) + (betaMs + betaA) * (viewOdM + lightOdM);
     vec3 attn = exp(-tau);
     vec3 scatter = betaRs * (dR * pR) + betaMs * (dM * pM);
-    inscatter += scatter * attn * segLen;
+    inscatter += scatter * attn * segLen * vis;
   }
 
   transmittance = exp(-(betaRs * viewOdR + (betaMs + betaA) * viewOdM));

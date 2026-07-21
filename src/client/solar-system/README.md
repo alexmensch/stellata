@@ -707,12 +707,24 @@ there is no ad-hoc day gate. **Airlight is applied on both surfaces:**
   physical back-lit ring.
 
 **The texture carries the disc; the atmosphere is an overlay.** Each body's
-surface texture is its visible disc — including the *cloud-top* map for cloudy
-bodies (Venus, Titan). The atmosphere therefore stays **optically thin** over
-it: a limb/airlight overlay, never a second scattering layer thick enough to
-extinguish the texture (`T_view → 0`) and replace it with a featureless ball —
-that double-counts the clouds the texture already shows. Keep the per-body
-optical depths low enough that `T_view` stays high across the lit disc.
+surface texture is its visible disc — including the *cloud-top* map for Venus.
+The atmosphere therefore stays **optically thin** over it: a limb/airlight
+overlay, never a second scattering layer thick enough to extinguish the texture
+(`T_view → 0`) and replace it with a featureless ball — that double-counts the
+clouds the texture already shows. Keep the per-body optical depths low enough
+that `T_view` stays high across the lit disc.
+
+**Titan is the deliberate exception.** Its tholin haze is optically thick in
+*visible* light (the surface — and our near-IR texture — is genuinely invisible
+from space), so Titan's row alone runs a dense Mie + heavy-blue-absorption
+atmosphere that hides its texture and reads as a featureless orange ball. Every
+atmosphere is an independent per-body `PlanetAtmosphere` row, so this is a local
+choice, not a global one; the debug sliders are global multipliers on top.
+
+**Soft terminator (twilight).** The sun-shadow test is a smooth penumbra, not a
+binary in/out (`SHADOW_SOFTNESS`) — a hard test snapped the low atmosphere at
+the terminator to black; the soft band stands in for the twilight that
+refraction, the finite solar disc, and multiple scattering produce.
 
 **Multiple-scattering fill.** A small isotropic term = fraction scattered (not
 absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds

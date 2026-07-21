@@ -461,10 +461,15 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
     // Thick tholin haze: strong grey Mie scatter, strongly forward (Cassini
     // back-lit ring), and heavy blue absorption (high-in-blue absorbCoeff)
     // → orange. Do not invert the absorption channels.
+    // Unlike the others, Titan's haze is OPTICALLY THICK in visible light —
+    // the surface is invisible, so the atmosphere is deliberately dense
+    // enough to hide the (near-IR) texture and read as a featureless orange
+    // ball: strong grey Mie scatter + heavy blue absorption. Independent of
+    // the other bodies (per-row params); do not invert the absorption.
     atmosphere: {
       heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
-      rayleighCoeff: [0.004, 0.008, 0.016], mieCoeff: 0.35,
-      absorbCoeff: [0.02, 0.09, 0.22], mieG: 0.80,
+      rayleighCoeff: [0.004, 0.008, 0.016], mieCoeff: 2.5,
+      absorbCoeff: [0.15, 0.6, 1.4], mieG: 0.80,
     } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 

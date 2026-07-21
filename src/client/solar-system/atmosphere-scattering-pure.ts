@@ -2,9 +2,16 @@
 // mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § Atmospheres.
 
-export const ATMO_N_VIEW = 12;
-export const ATMO_N_LIGHT = 6;
+export const ATMO_N_VIEW = 16;
+export const ATMO_N_LIGHT = 10;
 export const MIE_G_DEFAULT = 0.76;
+
+/** Penumbra half-width (planet-radius units of the sun-ray's closest approach
+ *  to the centre) over which the planet's own shadow ramps in. A hard binary
+ *  shadow made the low atmosphere at the terminator snap to black; this soft
+ *  band stands in for the twilight that refraction + the finite solar disc +
+ *  multiple scattering produce. */
+export const SHADOW_SOFTNESS = 0.03;
 
 /** Overall single-scatter brightness so the neutral slider (sun = 1) is
  *  roughly calibrated — the airlight is dim in absolute radiance units. */
@@ -47,14 +54,20 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
   return -b + Math.sqrt(disc);
 }
 
-/** True when the ray o + s·d (s > 0) enters the unit sphere ahead — the
- *  sample sits in the planet's own shadow (night side). */
-function inPlanetShadow(px: number, py: number, pz: number, dx: number, dy: number, dz: number): boolean {
+/** Fraction of the sun visible from sample P toward L (unit): 1 in full sun,
+ *  0 in full shadow, a soft ramp across the terminator penumbra. The sun ray
+ *  P + s·L (s > 0) is blocked by the unit sphere when its closest approach to
+ *  the centre falls below the limb; smoothstep over SHADOW_SOFTNESS softens it. */
+export function sunVisibility(px: number, py: number, pz: number, dx: number, dy: number, dz: number): number {
   const b = px * dx + py * dy + pz * dz;
-  const c = px * px + py * py + pz * pz - 1;
-  const disc = b * b - c;
-  if (disc < 0) return false;
-  return -b - Math.sqrt(disc) > 0;
+  if (b >= 0) return 1; // closest approach is behind the sample → unobstructed
+  const dPerp = Math.sqrt(Math.max(px * px + py * py + pz * pz - b * b, 0));
+  return smoothstep(1 - SHADOW_SOFTNESS, 1 + SHADOW_SOFTNESS, dPerp);
+}
+
+function smoothstep(e0: number, e1: number, x: number): number {
+  const t = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1);
+  return t * t * (3 - 2 * t);
 }
 
 export interface AtmosphereParams {
@@ -120,10 +133,11 @@ export function scatterAlongRay(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    if (inPlanetShadow(px, py, pz, sunDir[0], sunDir[1], sunDir[2])) continue;
+    const vis = sunVisibility(px, py, pz, sunDir[0], sunDir[1], sunDir[2]);
+    if (vis <= 0) continue;
     const sExit = farRoot(px, py, pz, sunDir[0], sunDir[1], sunDir[2], p.rAtmo);
     if (sExit <= 0) continue;
-    litSum++;
+    litSum += vis;
 
     const lStep = sExit / ATMO_N_LIGHT;
     let lightOdR = 0;
@@ -142,7 +156,7 @@ export function scatterAlongRay(
       const tau = p.betaRs[c] * (viewOdR + lightOdR) + (p.betaMs + p.betaA[c]) * (viewOdM + lightOdM);
       const attn = Math.exp(-tau);
       const scatter = p.betaRs[c] * dR * pR + p.betaMs * dM * pM;
-      inscatter[c] += scatter * attn * segLen;
+      inscatter[c] += scatter * attn * segLen * vis;
     }
   }
 
