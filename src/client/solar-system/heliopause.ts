@@ -9,8 +9,11 @@ import {
   FresnelShell,
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
+  isShellLabelResolvable,
 } from '../fresnel-shell/fresnel-shell';
-import type { ShellCardInfo, ShellPickSurface } from '../fresnel-shell/shell-registry';
+import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../fresnel-shell/shell-registry';
+
+const HELIOPAUSE_SHELL_IDX = SHELL_KEYS.indexOf('heliopause');
 
 // Nose (upwind apex) direction: the interstellar He inflow measured by
 // IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
@@ -88,13 +91,25 @@ export const HELIOPAUSE_EXTENT_PC = DOWNWIND_APEX_AU * AU_PC;
 
 /** Visibility predicate for the apex SVG label — declutter-governed, not
  *  focus-coupled, mirroring the Local Bubble label (`local-bubble.ts`):
- *  chart mode off and the `heliopauseLabel` detail floor permitted. The
- *  label engine layers a near-plane guard on top (a sample behind the
+ *  chart mode off, the `heliopauseLabel` detail floor permitted, and the
+ *  shell's projected silhouette still resolvable (`isShellLabelResolvable`
+ *  — the shell has no distance cutoff of its own, so without this the
+ *  label would outlive the shell's legibility as the camera zooms out).
+ *  The label engine layers a near-plane guard on top (a sample behind the
  *  camera near plane means the camera is inside the ellipsoid → hide), so
  *  the label appears exactly when the shell reads on screen. Shared with
  *  the hover picker so the eligibility rule can't drift between them. */
 export function isHeliopauseApexVisible(stellata: Stellata): boolean {
-  return !stellata.getMonochrome() && stellata.detailPermits('heliopauseLabel');
+  return !stellata.getMonochrome()
+    && stellata.detailPermits('heliopauseLabel')
+    && isShellLabelResolvable(
+      stellata.shells,
+      HELIOPAUSE_SHELL_IDX,
+      stellata.getWorldOffset(),
+      stellata.camera.position,
+      window.innerHeight,
+      stellata.camera.fov * Math.PI / 180,
+    );
 }
 
 // Group quaternion that rotates +Z onto the antiapex direction in ICRS.
@@ -215,11 +230,8 @@ export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
 /** Mount the SVG "Heliopause" label and bind per-frame projection.
  *  Thin wrapper around the shared distance-gated label engine that
  *  carries the heliopause-specific configuration: the 62-sample
- *  ellipsoid silhouette, the bottom-right anchor direction, and the
- *  visibility predicate gated on the same orbit-ring heuristic the
- *  planet labels use — so the heliopause label appears whenever any
- *  planet ring would draw and vanishes in lockstep with the last
- *  planet label. */
+ *  ellipsoid silhouette, the bottom-right anchor direction, and
+ *  `isHeliopauseApexVisible`. */
 export function createHeliopauseLabel(stellata: Stellata): void {
   createShellSilhouetteLabel(stellata, {
     elementId: HELIOPAUSE_LABEL_ELEMENT_ID,

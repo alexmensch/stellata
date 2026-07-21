@@ -6,6 +6,9 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import { LABEL_OFFSET_PX } from '../solar-system/planet-labels';
+import { angularToPx } from '../camera/controls/star-geometry';
+import { isFeatureLegible } from '../util/orbit-line';
+import type { ShellRegistry } from './shell-registry';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
 import fresnelRimChunk from './fresnel-rim.glsl?raw';
@@ -111,6 +114,28 @@ export abstract class FresnelShell {
   protected refreshVisibility(): void {
     this.group.visible = this.permitted && !this.mono && this.shellReady();
   }
+}
+
+/** Whether shell `shellIdx`'s projected silhouette clears the shared
+ *  feature-legibility floor this frame — the resolvability gate both
+ *  boundary shells' label predicates share, so a silhouette label (fixed
+ *  screen-space text) hides once the shell shrinks past legibility as the
+ *  camera pulls out. Same rule the planet labels ride via the orbit-ring
+ *  gate: `isFeatureLegible` on the true camera distance (no size clamp),
+ *  so it reads correctly from AU-scale shells to hundred-pc ones. Takes
+ *  primitives rather than a `Stellata` so it's unit-testable against a
+ *  bare `ShellRegistry`. */
+export function isShellLabelResolvable(
+  shells: ShellRegistry,
+  shellIdx: number,
+  worldOffset: THREE.Vector3,
+  cameraPos: THREE.Vector3,
+  viewportHeightPx: number,
+  fovYRad: number,
+): boolean {
+  const distPc = shells.cameraDistancePc(shellIdx, worldOffset, cameraPos);
+  if (distPc <= 0) return false;
+  return isFeatureLegible(shells.extentPc(shellIdx), distPc, angularToPx(viewportHeightPx, fovYRad));
 }
 
 export interface ShellSilhouetteLabelOptions {

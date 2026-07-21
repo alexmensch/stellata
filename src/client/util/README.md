@@ -18,7 +18,11 @@ build scripts, tests, and shader uniforms.
   primitives `makeOrbitLineLoop` / `makeOrbitLineSegments` +
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and
   the on-screen-size helpers `pixelsPerRadian` / `angularRadiusPx` the orbit
-  layers use for their pixel-size visibility gate. Also the anchored-line
+  layers use for their pixel-size visibility gate, plus the shared
+  `FEATURE_LEGIBILITY_MIN_PX` floor + `isFeatureLegible` predicate that both
+  the orbit-ring gate and the boundary-shell silhouette labels
+  (`fresnel-shell/`) ride so their legibility cutoff can't drift. Also the
+  anchored-line
   precision pair `bakeAnchoredLineVerts` / `trackAnchoredLine`: a loop
   whose centre rides far from the floating origin (a host star's ring
   under planet focus) keeps a float64 centre-relative master array and

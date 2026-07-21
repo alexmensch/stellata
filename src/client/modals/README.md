@@ -50,9 +50,9 @@ dismiss triggers are click-delegated on the modal root, so
 
 ## Mobile advisory
 
-`mobile-advisory.ts` shows a soft, dismiss-once warning that Stellata
-isn't optimised for small screens / touch and that a keyboard is
-effectively required. It is a soft warning, not a hard gate.
+`mobile-advisory.ts` shows a soft, dismiss-per-session warning that
+Stellata isn't optimised for small screens / touch and that a keyboard
+is effectively required. It is a soft warning, not a hard gate.
 
 `maybeShowMobileAdvisory()` is called from `main.ts` and returns
 whether it showed — when it does, the caller suppresses the welcome
@@ -62,8 +62,12 @@ viewport (`< MOBILE_ADVISORY_MAX_WIDTH`) that also looks touch-only
 (`matchMedia('(pointer: coarse)')` and `navigator.maxTouchPoints > 0`),
 so an iPad-with-keyboard passes through; it falls back to
 viewport-width-only when the pointer/touch signals are unavailable.
-Dismissal writes `stellata.mobile-advisory-dismissed` unconditionally,
-so the splash appears at most once per browser.
+Dismissal writes `stellata.mobile-advisory-dismissed` to
+`sessionStorage`, so the splash appears at most once per session, not
+once ever — the underlying viewport constraint doesn't go away after
+one dismissal, so a returning small-viewport user gets re-advised each
+new session instead of silently falling through to the welcome modal
+forever after the first close.
 
 The broader minimum-viewport / WebGL2-capability gating decision
 (`stellata-qsg`) is out of scope here — this is only the advisory.

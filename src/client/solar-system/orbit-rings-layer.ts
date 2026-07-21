@@ -21,6 +21,7 @@ import {
   ORBIT_LINE_SEGMENTS,
   pixelsPerRadian,
   angularRadiusPx,
+  FEATURE_LEGIBILITY_MIN_PX,
 } from '../util/orbit-line';
 
 /**
@@ -36,11 +37,11 @@ export const ECLIPTIC_NORTH_POLE_ICRS = new THREE.Vector3(
 );
 
 // Visibility heuristic: ring i renders only when the on-screen pixel gap
-// to both of its neighbours exceeds this threshold. Tuned at 6 px to
-// suppress the inner-rocky-pile-up at far framings (camera at hundreds
-// of AU staring back at the inner solar system) and let the inner rings
-// re-emerge as the camera approaches sub-AU range.
-export const RING_VISIBILITY_THRESHOLD_PX = 6;
+// to both of its neighbours — and its own radius — exceeds this threshold.
+// The own-radius leg is the shared feature-legibility floor; the same
+// value doubles as the inter-ring gap that suppresses the inner-rocky
+// pile-up at far framings and lets inner rings re-emerge on close approach.
+export const RING_VISIBILITY_THRESHOLD_PX = FEATURE_LEGIBILITY_MIN_PX;
 
 // Cool blue-white contrasting against the warm-amber galactic disc and the
 // additive Milky Way disc without competing with point-source stars.
