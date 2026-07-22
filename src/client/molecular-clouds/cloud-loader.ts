@@ -20,6 +20,10 @@ export interface EmbeddedStar {
 export interface Cloud {
   name: string;
   id: string;
+  /** Cross-catalogue / common names (Messier, NGC/IC, common) — search
+   *  aliases + the focus-card alias row, mirroring the Local Group pattern.
+   *  Absent when the build curated none. */
+  aliases?: string[];
   /** Frozen Stellata ID (docs/sid.md § 7), stamped by the build. */
   sid: number;
   /** Absolute ICRS heliocentric position in parsecs. */
@@ -59,6 +63,7 @@ export interface CloudCatalog {
 interface RawCloud {
   name: string;
   id: string;
+  aliases?: string[];
   sid: number;
   center: [number, number, number];
   axes: [number, number, number];
@@ -98,7 +103,7 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   }
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
-  if (raw.version !== 2) {
+  if (raw.version !== 3) {
     console.warn(`clouds.json version ${raw.version} unsupported`);
     return null;
   }
@@ -110,6 +115,7 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   const clouds: Cloud[] = raw.clouds.map((c) => ({
     name: c.name,
     id: c.id,
+    ...(c.aliases ? { aliases: c.aliases } : {}),
     sid: c.sid,
     centerAbs: new THREE.Vector3(c.center[0], c.center[1], c.center[2]),
     axes: [c.axes[0], c.axes[1], c.axes[2]],

@@ -23,8 +23,8 @@ Both stay visible during warp by design (flying past Taurus is a
 feature, not noise).
 
 The runtime fetches `public/clouds.json` via `cloud-loader.ts`
-(version gate: v2; the client reads the geometry + density-model fields
-and ignores the build-side `noiseModel` block) and
+(version gate: v3; the client reads the geometry + density-model fields
++ the curated `aliases` and ignores the build-side `noiseModel` block) and
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
 meshes; a missing artifact means every cloud uses its ellipsoid rim).
 Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
@@ -37,7 +37,7 @@ when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
 
 - `molecular-clouds.ts` — `MolecularClouds` renderer + the silhouette /
   viewing-distance helpers.
-- `cloud-loader.ts` — `clouds.json` v2 fetch/decode.
+- `cloud-loader.ts` — `clouds.json` v3 fetch/decode.
 - `cloud-surfaces-loader.ts` — `cloud-surfaces.bin` fetch/decode
   (format: `scripts/cloud-surfaces/README.md`).
 - `cloud-presence-pure.ts` — CPU mirror of the absorption math (Plummer
@@ -170,10 +170,12 @@ existing tooltip element.
 ## Search
 
 Cloud entries share the same Fuse fuzzy index as star entries,
-discriminated by a `kind: 'star' | 'cloud'` tag. The Focus search box
-dispatches `flyTo` with the entry's Target (focus-park lerp to viewing
-distance + set cloud focus); the To (distance vector) box dispatches
-`setVector` the same way.
+discriminated by a `kind: 'star' | 'cloud'` tag. Each cloud indexes its
+canonical `name` plus every curated `aliases` entry (`scripts/clouds/README.md`
+§ Alternate names), all resolving to the same cloud — the Local Group
+pattern. The Focus search box dispatches `flyTo` with the entry's Target
+(focus-park lerp to viewing distance + set cloud focus); the To (distance
+vector) box dispatches `setVector` the same way.
 
 ## Focus + warp entry points
 

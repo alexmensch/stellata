@@ -424,19 +424,23 @@ export function createSearchRunner(
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
     buildSearchIndex(raw, catalog.constellations);
 
-  // Cloud entries — typed-name match plus a "cloud" badge in the dropdown
-  // secondary line so users can distinguish Taurus (the cloud) from Tau
-  // (any star labelled "Tau …").
+  // Cloud entries — display name plus every curated cross-catalogue / common
+  // alias ("Eagle Nebula", "M16", "NGC 6611"), each resolving to the same
+  // cloud (the Local Group pattern below). The "cloud" badge in the dropdown
+  // secondary line distinguishes Taurus (the cloud) from Tau (any star
+  // labelled "Tau …").
   if (clouds) {
     for (let i = 0; i < clouds.clouds.length; i++) {
       const c = clouds.clouds[i];
-      fuzzyEntries.push({
-        kind: 'cloud',
-        index: i,
-        label: c.name,
-        primary: c.name,
-        displayCon: 'Molecular cloud',
-      });
+      for (const label of [c.name, ...(c.aliases ?? [])]) {
+        fuzzyEntries.push({
+          kind: 'cloud',
+          index: i,
+          label,
+          primary: c.name,
+          displayCon: 'Molecular cloud',
+        });
+      }
     }
   }
 

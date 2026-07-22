@@ -38,9 +38,13 @@ export function createCloudFocusProvider(
         rows.push({ label: 'Mass', value: `${formatThousands(cloud.massMsun)} M☉` });
       }
       rows.push({ label: 'Known from', value: SOURCE_LABEL[cloud.source] });
+      // One dot-separated alias line below the type, matching the LG /
+      // star card designation-line convention.
+      const identityLines = ['Molecular cloud'];
+      if (cloud.aliases?.length) identityLines.push(cloud.aliases.join(' · '));
       return {
         name: cloud.name,
-        identityLines: ['Molecular cloud'],
+        identityLines,
         rows,
         lines: [],
       };
