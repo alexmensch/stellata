@@ -16,7 +16,7 @@ import type {
   SystemMember,
   SystemMembershipProvider,
 } from '../../system-membership/system-membership';
-import { systemCard, UNNAMED_MEMBER_LABEL } from './system-card-format';
+import { rosterCardOrNull, UNNAMED_MEMBER_LABEL } from './system-card-format';
 import type { HoverPayload } from '../hover-types';
 
 export interface StarHoverFormatContext extends CompanionFormatContext {
@@ -71,7 +71,9 @@ export function formatStarHover(
   const con = conIdx !== 255 ? constellations[conIdx].name : '';
   const ctxLine = [con, fmtDistAuto(cameraDistancePc)].filter(Boolean).join(' · ');
 
-  const system = systemCardOrNull(idx, ctxLine, ctx);
+  const system = ctx.membership
+    ? rosterCardOrNull(ctx.membership, { kind: 'star', idx }, ctxLine, (m) => starMemberLabel(m, ctx))
+    : null;
   if (system) return system;
 
   const name = resolveStarName(ctx, idx);
@@ -86,31 +88,6 @@ export function formatStarHover(
   if (variability) lines.push(`Variable · ${variability}`);
   lines.push(...companionLines(idx, ctx));
   return { name, lines };
-}
-
-/** System card for a screen-collapsed system. Fires only when the
- *  hovered star's system has 3+ members (a plain binary keeps its
- *  per-component card — the "Known companions" line already covers it)
- *  AND the hovered star's own collapsed cluster — members actually
- *  rendering as one point with it, from any registered system kind
- *  (multi-star cluster, this host's collapsed planets) — has 2+
- *  members. The roster lists the CLUSTER only: hovering Proxima
- *  (visibly separated from the α Cen A+B point) or a close-up Castor A
- *  (only its spectroscopic partner overlaps) must not enumerate
- *  members the user can see elsewhere on screen. */
-function systemCardOrNull(
-  idx: number,
-  ctxLine: string,
-  ctx: StarHoverFormatContext,
-): HoverPayload | null {
-  if (!ctx.membership) return null;
-  const target = { kind: 'star', idx } as const;
-  const cluster = ctx.membership.collapsedClusterOf(target);
-  if (cluster.length < 2) return null;
-  const members = ctx.membership.membersOf(target);
-  if (members.length < 3) return null;
-  const label = (m: SystemMember) => starMemberLabel(m, ctx);
-  return systemCard(label(cluster[0]), ctxLine, members.length, cluster.map(label));
 }
 
 // Members carry a name only when their implementation could supply one

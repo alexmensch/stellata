@@ -3,9 +3,10 @@
 // moons. See ../system-membership/README.md.
 
 import type { Target } from '../camera/focus/focus-target';
-import type {
-  SystemMember,
-  SystemMembershipProvider,
+import {
+  MIN_CLUSTER_MEMBERS,
+  type SystemMember,
+  type SystemMembershipProvider,
 } from '../system-membership/system-membership';
 import type { PlanetSystem } from './planet-system';
 
@@ -29,15 +30,9 @@ interface SubSystem {
 export function createPlanetSystemMembership(
   source: PlanetMembershipSource,
 ): SystemMembershipProvider {
-  // A target's sub-system is the hierarchy level it OWNS: the host's
-  // direct children are the planets (no parentName), a planet's its
-  // moons (parentName === planet.name). Moons and childless planets
-  // own no sub-system — a body that has collapsed into a parent's
-  // point is unpickable anyway, so only owners ever surface a roster.
-  // Deeper levels fold into their parent: a moon collapsed onto
-  // Jupiter is represented BY Jupiter in Sol's roster, never listed
-  // beside it — which is also exactly how exoplanet hosts will read
-  // (host → planets, nothing deeper).
+  // A target owns exactly one hierarchy level (host → planets, planet →
+  // moons); see ../system-membership/README.md. Invariant: a collapsed
+  // body is unpickable, so only owners ever reach this to surface a roster.
   const subSystemOf = (target: Target): SubSystem | null => {
     let host: number;
     let ownerName: string | undefined;
@@ -97,7 +92,7 @@ export function createPlanetSystemMembership(
         const m = bodyMember(sub.ps, sub.host, i);
         if (m && source.isCollapsedOntoParent(m.target.idx)) cluster.push(m);
       }
-      return cluster.length < 2 ? [] : cluster;
+      return cluster.length < MIN_CLUSTER_MEMBERS ? [] : cluster;
     },
   };
 }

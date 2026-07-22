@@ -4,6 +4,11 @@
 
 import type { Target } from '../camera/focus/focus-target';
 
+/** A cluster needs at least this many members to be a cluster — every
+ *  provider's `collapsedClusterOf` returns [] or 2+, never a singleton
+ *  ("nothing collapsed here"). */
+export const MIN_CLUSTER_MEMBERS = 2;
+
 export interface SystemMember {
   readonly target: Target;
   /** Display name, or null when the implementation cannot name the

@@ -10,11 +10,8 @@ import {
 } from '../../solar-system/orbit-descriptor';
 import type { Planet } from '../../solar-system/planet-system';
 import type { Target } from '../../camera/focus/focus-target';
-import type {
-  SystemMember,
-  SystemMembershipProvider,
-} from '../../system-membership/system-membership';
-import { systemCard, UNNAMED_MEMBER_LABEL } from './system-card-format';
+import type { SystemMembershipProvider } from '../../system-membership/system-membership';
+import { rosterCardOrNull, UNNAMED_MEMBER_LABEL } from './system-card-format';
 import type { HoverPayload } from '../hover-types';
 
 // Name budget for the hover roster line — the card stays glanceable;
@@ -52,7 +49,16 @@ export function formatPlanetHover(
   const planet = ctx.planets[planetIdx];
   if (!planet) return { name: '', lines: [] };
 
-  const system = systemCardOrNull(planetIdx, cameraDistancePc, ctx);
+  const target = ctx.membership && ctx.targetOf ? ctx.targetOf(planetIdx) : null;
+  const system =
+    target && ctx.membership
+      ? rosterCardOrNull(
+          ctx.membership,
+          target,
+          fmtDistAuto(cameraDistancePc),
+          (m) => m.name ?? UNNAMED_MEMBER_LABEL,
+        )
+      : null;
   if (system) return system;
 
   const lines: string[] = [];
@@ -76,27 +82,3 @@ export function formatPlanetHover(
   return { name: planet.name, lines };
 }
 
-/** Roster swap for a hovered body whose own collapsed cluster (its
- *  sub-pixel moons) has 2+ members — the moon-planet analogue of the
- *  star card's multi-star swap. The hovered body itself was picked, so
- *  it is resolvable; the cluster never reaches the host star. */
-function systemCardOrNull(
-  planetIdx: number,
-  cameraDistancePc: number,
-  ctx: PlanetHoverFormatContext,
-): HoverPayload | null {
-  if (!ctx.membership || !ctx.targetOf) return null;
-  const target = ctx.targetOf(planetIdx);
-  if (!target) return null;
-  const cluster = ctx.membership.collapsedClusterOf(target);
-  if (cluster.length < 2) return null;
-  const members = ctx.membership.membersOf(target);
-  if (members.length < 3) return null;
-  const label = (m: SystemMember) => m.name ?? UNNAMED_MEMBER_LABEL;
-  return systemCard(
-    label(cluster[0]),
-    fmtDistAuto(cameraDistancePc),
-    members.length,
-    cluster.map(label),
-  );
-}

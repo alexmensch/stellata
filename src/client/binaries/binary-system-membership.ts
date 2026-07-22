@@ -7,9 +7,10 @@ import {
   collapsedClusterIndices,
   systemMemberIndices,
 } from '../format/star-companion-format';
-import type {
-  SystemMember,
-  SystemMembershipProvider,
+import {
+  MIN_CLUSTER_MEMBERS,
+  type SystemMember,
+  type SystemMembershipProvider,
 } from '../system-membership/system-membership';
 import type { BinariesData } from './binaries-loader';
 
@@ -43,7 +44,7 @@ export function createBinarySystemMembership(
       const cluster = collapsedClusterIndices(binaries, target.idx, deps.isCollapsed);
       // A singleton is "nothing collapsed here" (covers both a star in
       // no relation and a visibly separated member like Proxima).
-      return cluster.length < 2 ? [] : cluster.map(starMember);
+      return cluster.length < MIN_CLUSTER_MEMBERS ? [] : cluster.map(starMember);
     },
   };
 }
