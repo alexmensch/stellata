@@ -181,8 +181,9 @@
           <p>
             Stellata is an observational 3D model of our local part of
             the galaxy at every scale we've measured it. From individual
-            stars and their planets, through the local interstellar medium,
-            out to the structure of the galactic disc. Every object in Stellata
+            stars and their planets, through the local interstellar medium
+            and its molecular clouds, out to the structure of the galactic
+            disc and the nearest galaxies. Every object in Stellata
             comes from databases of direct, empirical measurement. Theoretical
             predictions and conjectured structures are excluded. The goal of
             Stellata is to continue to build observational data into the model
@@ -193,20 +194,29 @@
             you would actually see from any given point in space,
             including the effects of dust extinction and reddening
             through the interstellar medium. Known variable stars pulsate at
-            their catalogue period. When focused on Sol, the eight
-            planets and Pluto render at their heliocentric positions for
-            the current wall-clock time, with faint orbit rings shown for
-            reference. The heliopause is represented as an asymmetric shell at
-            ~122 AU upwind, ~200 AU into the heliotail.
+            their catalogue period, close binaries orbit on their measured
+            elements, and every star's position advances from its catalogue
+            epoch to the current date along its measured space motion. The
+            local molecular clouds — Taurus, Orion, Ophiuchus and their
+            neighbours — are drawn as dust silhouettes traced directly from
+            the 3D dust map. When focused on Sol, the eight planets and Pluto
+            render at their heliocentric positions for the current wall-clock
+            time — with their major moons, atmospheres, axial tilt and
+            rotation, and faint orbit rings for reference. The heliopause is
+            represented as an asymmetric shell at ~122 AU upwind, ~200 AU into
+            the heliotail.
           </p>
           <p>
-            ~313,000 stars come from the AT-HYG v3.3 catalogue, cross-matched
-            with the GCVS variable-star catalogue and the Hipparcos CCDM list of
-            visual binaries. Planet positions come from JPL Standish 1992
-            Keplerian elements, and heliopause sizing derives from Voyager 1 &amp; 2 and
-            IBEX measurements. The Milky Way's volumetric backdrop is
-            drawn from published density profiles. See the Credits tab for the
-            full list and more details.
+            <span id="about-star-count">313,000</span> stars come from the
+            AT-HYG v3.3 catalogue, cross-matched with the GCVS variable-star
+            catalogue and the Hipparcos CCDM list of visual binaries. The
+            local molecular clouds are traced from the Zucker 2020 &amp; 2021
+            catalogues and the Edenhofer 3D dust map; the nearest galaxies
+            come from the Local Volume Database. Planet positions come from
+            JPL Standish 1992 Keplerian elements, and heliopause sizing
+            derives from Voyager 1 &amp; 2 and IBEX measurements. The Milky
+            Way's volumetric backdrop is drawn from published density
+            profiles. See the Credits tab for the full list and more details.
           </p>
           <p>
             There are two camera modes: <strong>Navigate</strong> orbits, zooms,
@@ -249,8 +259,18 @@
             </div>
             <div class="credit-entry">
               <div class="credit-label">Interstellar dust</div>
-              <a href="https://doi.org/10.5281/zenodo.8187943" target="_blank" rel="noopener noreferrer">Edenhofer &amp; Green 2024</a>
+              <a href="https://doi.org/10.5281/zenodo.8187943" target="_blank" rel="noopener noreferrer">Edenhofer et al. 2024</a>
               — 3D dust extinction map of the local Milky Way
+            </div>
+            <div class="credit-entry">
+              <div class="credit-label">Molecular clouds</div>
+              <a href="https://doi.org/10.3847/1538-4357/ac1f96" target="_blank" rel="noopener noreferrer">Zucker et al. 2020 &amp; 2021</a>
+              — cloud distances, 3D bounding boxes, and radial density profiles
+            </div>
+            <div class="credit-entry">
+              <div class="credit-label">Star distances</div>
+              <a href="https://doi.org/10.3847/1538-3881/abd806" target="_blank" rel="noopener noreferrer">Bailer-Jones et al. 2021</a>
+              — geometric distances from Gaia DR3 parallaxes
             </div>
             <div class="credit-entry">
               <div class="credit-label">Planet positions</div>
@@ -261,6 +281,16 @@
               <div class="credit-label">Planet bodies</div>
               <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/" target="_blank" rel="noopener noreferrer">NASA planetary fact sheets</a>
               — radii, mean elements; Pluto from New Horizons 2015 reconnaissance
+            </div>
+            <div class="credit-entry">
+              <div class="credit-label">Moons</div>
+              <a href="https://ssd.jpl.nasa.gov/sats/elem/" target="_blank" rel="noopener noreferrer">JPL Solar System Dynamics</a>
+              — mean orbital elements for the 18 major satellites
+            </div>
+            <div class="credit-entry">
+              <div class="credit-label">Axial tilt &amp; rotation</div>
+              <a href="https://doi.org/10.1007/s10569-017-9805-5" target="_blank" rel="noopener noreferrer">IAU WGCCRE (Archinal et al. 2018)</a>
+              — planet &amp; moon pole orientation and rotation rates
             </div>
             <div class="credit-entry">
               <div class="credit-label">Planet brightness</div>
@@ -276,6 +306,11 @@
               <div class="credit-label">Solar apex direction</div>
               <a href="https://doi.org/10.1146/annurev-astro-082312-140843" target="_blank" rel="noopener noreferrer">Frisch &amp; Slavin 2013</a>
               — direction of solar motion through the local interstellar medium
+            </div>
+            <div class="credit-entry">
+              <div class="credit-label">Nearby galaxies</div>
+              <a href="https://doi.org/10.1088/0004-6256/144/1/4" target="_blank" rel="noopener noreferrer">McConnachie 2012</a>
+              and the Local Volume Database (Pace 2024) — Local Group positions, distances, luminosities
             </div>
           </div>
           <p style="margin-top: 16px;">

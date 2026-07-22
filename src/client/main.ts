@@ -404,7 +404,7 @@ async function main() {
       brandBox.hidden = false;
       meta.hidden = false;
       bindPanelLayout();
-      bindBrandModals();
+      bindBrandModals(catalog.count);
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, {
         toggleDebugPanel: debugTools.panel,
