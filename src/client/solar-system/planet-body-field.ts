@@ -34,6 +34,7 @@ import {
   planetApparentMagnitude,
   SOFT_TAPER_MARGIN_MAG,
 } from './perceptual-magnitude';
+import { pixelsPerRadianFromFovRad } from '../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
@@ -59,6 +60,17 @@ import planetFrag from './planet.frag.glsl?raw';
  *  separation still reads as a single blob to the eye. Iterated at
  *  smoke. */
 export const BODY_COLLAPSE_THRESHOLD_PX = 6;
+
+/** One planet's per-frame view geometry: apparent magnitude, world-local
+ *  position, and camera distance. Computed once by evalPlanetView and reused
+ *  by the pick walk and the collapse test. */
+interface PlanetView {
+  appMag: number;
+  planetX: number;
+  planetY: number;
+  planetZ: number;
+  dVp: number;
+}
 
 // Initial slot capacity. v1 attaches Sol (9 planets + 18 moons = 27
 // bodies) once; sized to hold that in one shot so the sole attach doesn't
@@ -590,7 +602,7 @@ export class PlanetBodyField {
     host: AttachedHost,
     planetIdx: number,
     cameraPosLocal: Readonly<THREE.Vector3>,
-  ): { appMag: number; planetX: number; planetY: number; planetZ: number; dVp: number } {
+  ): PlanetView {
     const planet = host.ps.planets[planetIdx];
     const base = (host.startInstance + planetIdx) * 3;
     const planetX = host.hostLocalPos.x + this.bufs.localRel[base + 0];
@@ -781,8 +793,21 @@ export class PlanetBodyField {
     const host = this.hostOfInstance(instanceIdx);
     if (!host || this.hidden) return false;
     const i = instanceIdx - host.startInstance;
+    const view = this.evalPlanetView(host, i, camera.position);
+    return this.isViewCollapsedOntoParent(host, i, view, camera);
+  }
+
+  /** Collapse verdict given a body's already-computed view — the pick walk
+   *  passes the view it just evaluated so evalPlanetView isn't run twice. */
+  private isViewCollapsedOntoParent(
+    host: AttachedHost,
+    i: number,
+    view: PlanetView,
+    camera: THREE.PerspectiveCamera,
+  ): boolean {
+    if (this.hidden) return false;
     const camPos = camera.position;
-    const { appMag, planetX, planetY, planetZ, dVp } = this.evalPlanetView(host, i, camPos);
+    const { appMag, planetX, planetY, planetZ, dVp } = view;
     const cutoff = this.magShared.uMaxAppMag.value + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
     if (dVp <= 0 || appMag > cutoff) return false;
 
@@ -811,7 +836,10 @@ export class PlanetBodyField {
     const cy = uz * vx - ux * vz;
     const cz = ux * vy - uy * vx;
     const angle = Math.atan2(Math.sqrt(cx * cx + cy * cy + cz * cz), ux * vx + uy * vy + uz * vz);
-    const pxPerRad = this.magShared.uViewport.value.y / this.magShared.uFovYRad.value;
+    const pxPerRad = pixelsPerRadianFromFovRad(
+      this.magShared.uFovYRad.value,
+      this.magShared.uViewport.value.y,
+    );
     return angle * pxPerRad < BODY_COLLAPSE_THRESHOLD_PX;
   }
 
@@ -930,8 +958,8 @@ export class PlanetBodyField {
     const v = new THREE.Vector3();
     for (const host of this.hosts.values()) {
       for (let i = 0; i < host.count; i++) {
-        const { appMag, planetX, planetY, planetZ, dVp } =
-          this.evalPlanetView(host, i, camPos);
+        const view = this.evalPlanetView(host, i, camPos);
+        const { appMag, planetX, planetY, planetZ, dVp } = view;
         if (dVp <= 0) continue;
         // Same kill condition as the planet vertex shader: past the
         // cutoff the GPU emits no quad and the hover can't pick what
@@ -943,7 +971,7 @@ export class PlanetBodyField {
         // it — that point's pick belongs to the parent (the star
         // picker for a host, the parent planet's own candidacy for a
         // moon), so the member is not individually pickable.
-        if (this.isCollapsedOntoParent(host.startInstance + i, camera)) continue;
+        if (this.isViewCollapsedOntoParent(host, i, view, camera)) continue;
 
         v.set(planetX, planetY, planetZ);
         const screen = projectToScreen(v, camera, viewportW, viewportH);

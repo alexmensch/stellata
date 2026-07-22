@@ -73,9 +73,8 @@ describe('cullDistancePc', () => {
 
   it('reproduces Jupiter-from-Sol naked-eye threshold (~290 AU)', () => {
     // Jupiter: p=0.538, R=69911 km, a=5.203 AU. Sol M=4.83. Naked-eye
-    // cutoff 6.5. The bead --design says "cullDistancePc for Sol with
-    // naked-eye preset is sub-parsec" — 290 AU is comfortably sub-pc
-    // and within the Standard-mode focus zoom range.
+    // cutoff 6.5. 290 AU is comfortably sub-parsec (Sol's naked-eye
+    // preset stays sub-pc) and within the Standard-mode focus zoom range.
     const aPc = 5.203 * AU_PC;
     const Rpc = 69911 * KM_PC;
     const refl = 0.538 * (Rpc / aPc) ** 2;
@@ -284,8 +283,9 @@ describe('PlanetBodyField lifecycle', () => {
     expect(cached[2]).toBeCloseTo(7,    6);
 
     // Force growCapacity by overflowing the initial allocation.
-    // INITIAL_CAPACITY = 16, so 20 single-planet hosts trigger one grow.
-    for (let i = 1; i < 20; i++) {
+    // INITIAL_CAPACITY = 32 instances, so 40 single-planet hosts (40
+    // instances) force at least one grow past the first host's slot.
+    for (let i = 1; i < 40; i++) {
       f.attachHost(i, makePlanetSystem(i, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     }
     // Cached reference must still read the original values — the
@@ -299,11 +299,12 @@ describe('PlanetBodyField lifecycle', () => {
 
   it('grows capacity when many hosts attach beyond the initial budget', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
-    // Initial capacity is 16; attach 20 single-planet hosts.
-    for (let i = 0; i < 20; i++) {
+    // INITIAL_CAPACITY = 32 instances; attach 40 single-planet hosts so
+    // growCapacity fires and every slot survives the reallocation.
+    for (let i = 0; i < 40; i++) {
       f.attachHost(i, makePlanetSystem(i, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     }
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 40; i++) {
       const slice = f.getHostLocalPositions(i);
       expect(slice).not.toBeNull();
       expect(slice!.length).toBe(3);
@@ -425,8 +426,8 @@ describe('PlanetBodyField lifecycle', () => {
 
   it('update() per-host cull gate: skips positionsAt past cullDistance', () => {
     // The architectural promise of PlanetBodyField is the per-host cull
-    // gate at update():L353 — `if (dToHost > host.cullDistance) continue`
-    // is what makes the bk5 "hundreds of hosts" scaling tractable. The
+    // gate in update() — `if (dToHost > host.cullDistance) continue` —
+    // is what makes the hundreds-of-hosts scaling tractable. The
     // gate has unit-test coverage on its derived inputs (cullDistance
     // formula above) but none on the gate behaviour itself. A stub
     // positionsAt with a counter pins it: inside cullDistance the
@@ -499,8 +500,8 @@ describe('PlanetBodyField lifecycle', () => {
 
     f.setMonochrome(true);
     f.update(camera, 0, 0);
-    // Chart mode keeps the bodies drawn — as flat ink discs (uadc.3);
-    // only the blending swaps, mirroring the star pipeline.
+    // Chart mode keeps the bodies drawn — as flat ink discs; only the
+    // blending swaps, mirroring the star pipeline.
     expect(f.group.visible).toBe(true);
     expect(calls).toBe(2);
 
@@ -598,10 +599,10 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('update() flushes only iLocalRel — the static attributes stay clean per frame', () => {
-    // bk5 scale (hundreds of hosts) makes per-frame re-uploads of
-    // static attributes (iRadiusPc, iColour, iSolidity, iAlbedoP,
-    // iHostAbsmag, iPhaseCoefsA/B/C, iHostLocalPos) measurable wasted
-    // bus bandwidth. Pin the dynamic-only flush: after attach (which
+    // At hundreds-of-hosts scale, per-frame re-uploads of the static
+    // attributes (iRadiusPc, iColour, iSolidity, iAlbedoP, iHostAbsmag,
+    // iPhaseCoefsA/B/C, iHostLocalPos) would be measurable wasted bus
+    // bandwidth. Pin the dynamic-only flush: after attach (which
     // legitimately touches every attribute) a single update() tick
     // only flips iLocalRel (the planet positions tick).
     const f = new PlanetBodyField(makeSharedUniforms(20));
@@ -644,7 +645,7 @@ describe('PlanetBodyField lifecycle', () => {
     // Recenter writes per-host hostLocalPos into its iHostLocalPos
     // slot but doesn't touch iLocalRel (planet positions in the host
     // plane frame are recenter-invariant). The narrow flush keeps the
-    // floating-origin pivot cheap at bk5 scale.
+    // floating-origin pivot cheap at hundreds-of-hosts scale.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(1, 0, 0), 0, 0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -893,8 +894,8 @@ describe('PlanetBodyField.pick', () => {
 
   it('tracks render visibility: pickable in chart mode (ink discs), unpickable when hidden', () => {
     // Click-pick must equal render. Chart mode now DRAWS the bodies as
-    // flat ink discs (uadc.3), so they stay pickable there; setHidden
-    // still takes them out of both render and pick.
+    // flat ink discs, so they stay pickable there; setHidden still takes
+    // them out of both render and pick.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,

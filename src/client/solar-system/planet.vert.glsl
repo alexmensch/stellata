@@ -182,8 +182,8 @@ void main() {
     float alphaMaxRad = alphaMaxDeg * (PI_CONST / 180.0);
     phi = lambertPhi(alpha) * (boundaryFlux / lambertPhi(alphaMaxRad));
   } else {
-    // No published curve — pure Lambertian (Pluto, Uranus, Neptune,
-    // every exoplanet via stellata-bk5).
+    // No published curve — pure Lambertian (Pluto, Uranus, Neptune, and
+    // future exoplanet hosts).
     phi = lambertPhi(alpha);
   }
 
