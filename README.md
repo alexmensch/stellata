@@ -17,7 +17,7 @@ a volume up to 6.5 million light years from our solar system.
 Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 ![Stellata — hero view](docs/screenshots/hero.png)
-<!-- view-url: TODO — paste the stellata.xyz ?v= share link that reproduces this screenshot's camera pose -->
+<!-- view-url: https://stellata.xyz/?v=BIWEIgeSiYo3GAWyOXD4hDkH7eeAPeZqWj7Qlnk_TPbKDwGH1xI -->
 
 ## Highlights
 
@@ -71,7 +71,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
   variable-star rings.
 
 ![Stellata — chart mode](docs/screenshots/chart-mode.png)
-<!-- view-url: TODO — paste the stellata.xyz ?v= share link that reproduces this screenshot's camera pose -->
+<!-- view-url: https://stellata.xyz/?v=BJbEoAQHthJ4Pautez9BzDA-B6R7ob4MQ6w9Q_pxP1o7YQGH1xIB -->
 
 - **Navigate, observe, warp.** Orbit any star (navigate), or land on
   it and look at the sky from its location (observe). Pick a second star
