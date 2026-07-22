@@ -1,5 +1,5 @@
-// Pins the clouds.json v2 payload: calibrated density-model fields,
-// presence-only class defaults, and the noiseModel constants. Self-skips
+// Pins the clouds.json v3 payload: density-model fields, class defaults,
+// noiseModel constants, and the alias / canonical-name table. Self-skips
 // when the artifact isn't built; runs for real in CI's tier-a-corpus job.
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -13,6 +13,7 @@ const CLOUDS_JSON = resolve(ROOT, 'public', 'clouds.json');
 interface CloudV2 {
   name: string;
   id: string;
+  aliases?: string[];
   source: string;
   inGrid: boolean;
   class: 'dark' | 'sf' | 'hii';
@@ -50,7 +51,7 @@ const PROFILED_PINS: Record<
   orion: { cls: 'hii', n0Cal: 512.21, uEnv: 0.2229, massLeike: 856, akPeak: 0.22 },
 };
 
-describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v2', () => {
+describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
   const payload = existsSync(CLOUDS_JSON)
     ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as {
         version: number;
@@ -60,8 +61,8 @@ describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v2', () => {
       })
     : null!;
 
-  it('carries version 2 and the full cloud set', () => {
-    expect(payload.version).toBe(2);
+  it('carries version 3 and the full cloud set', () => {
+    expect(payload.version).toBe(3);
     expect(payload.count).toBe(96);
     expect(payload.clouds).toHaveLength(96);
   });
@@ -105,12 +106,39 @@ describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v2', () => {
   });
 
   it('marks exactly the 18 clouds outside the ±1250 pc dust cube presence-only', () => {
-    const out = payload.clouds.filter((c) => !c.inGrid).map((c) => c.name).sort();
+    // Pinned by stable id — display names are curated (m16 → "Eagle Nebula").
+    const out = payload.clouds.filter((c) => !c.inGrid).map((c) => c.id).sort();
     expect(out).toEqual([
-      'Carina', 'GGD4', 'Gem OB1', 'IC 2944', 'IC 443', 'L291', 'L379',
-      'M16', 'M17', 'Maddalena', 'NGC 6604', 'Rosette', 'Serpens OB2',
-      'Sh2-231', 'Sh2-232', 'W3', 'W4', 'W5',
+      'carina', 'gem-ob1', 'ggd4', 'ic-2944', 'ic-443', 'l291', 'l379',
+      'm16', 'm17', 'maddalena', 'ngc-6604', 'rosette', 'serpens-ob2',
+      'sh2-231', 'sh2-232', 'w3', 'w4', 'w5',
     ]);
+  });
+
+  it('splits the composite label and pins the canonical-name precedence', () => {
+    // No label joins two names; the one former composite keeps its stable id.
+    for (const c of payload.clouds) expect(c.name, c.id).not.toContain(' / ');
+    const mon = payload.clouds.find((c) => c.id === 'mon-ob1-ngc-2264')!;
+    expect(mon.name).toBe('NGC 2264');
+    expect(mon.aliases).toContain('Mon OB1');
+    // Whole-cloud common name outranks the Messier OR IC designation,
+    // applied uniformly; the designation drops to an alias.
+    const eagle = payload.clouds.find((c) => c.id === 'm16')!;
+    expect(eagle.name).toBe('Eagle Nebula');
+    expect(eagle.aliases).toEqual(['M16', 'NGC 6611', 'IC 4703']);
+    const jellyfish = payload.clouds.find((c) => c.id === 'ic-443')!;
+    expect(jellyfish.name).toBe('Jellyfish Nebula');
+    expect(jellyfish.aliases).toContain('IC 443');
+    // Carve-out: a sub-feature common name does NOT win the whole cloud.
+    const carina = payload.clouds.find((c) => c.id === 'carina')!;
+    expect(carina.name).toBe('Carina');
+    expect(carina.aliases).toContain('Carina Nebula');
+  });
+
+  it('emits aliases only for curated clouds, never an empty array', () => {
+    const withAliases = payload.clouds.filter((c) => c.aliases !== undefined);
+    expect(withAliases.length).toBeGreaterThan(0);
+    for (const c of withAliases) expect(c.aliases!.length, c.id).toBeGreaterThan(0);
   });
 
   it('every cloud carries the v2 model block', () => {

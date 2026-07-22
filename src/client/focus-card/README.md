@@ -107,10 +107,11 @@ so the whole unit stays card-sized regardless of pin count.
   moon-parenting planet closes with a standard 'Moons' row, one name
   per line — the 'Known companions' shape (the hover card shows the
   capped comma roster via `../format/moon-list-format.ts`).
-- `cloud-focus-provider.ts` — tier-2 cloud rows. Clouds are not a
-  wired focus target while the layer is shelved
-  (`../molecular-clouds/README.md`); the provider exists to satisfy
-  the exhaustive contract and is ready for the un-shelve.
+- `cloud-focus-provider.ts` — tier-2 cloud rows: type identity line, a
+  dot-separated alias line when the cloud carries curated cross-catalogue
+  names (`../molecular-clouds/README.md` § Search; the LG / star card
+  designation-line convention), live camera distance, size, mass (Z2021
+  only), and provenance.
 - `shell-focus-provider.ts` — tier-2 boundary-shell rows (Local Bubble,
   heliopause): type identity line, live camera distance, size, and
   provenance, read from the registered `ShellInstance`

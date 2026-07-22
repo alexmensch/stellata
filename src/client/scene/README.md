@@ -77,9 +77,11 @@ when either the band (realistic) or the isobar (chart) is permitted.
 The chart column deliberately diverges from the general tier model: chart
 mode has no true naked-eye tier, so its `physical` base is the *legible
 chart* — `chartStarNameLabels` (hence planet names) and `chartBayerGlyphs`
-sit at `physical`, not `representational`. `constellationFigures` enters
-at `representational`, constellation Latin names (`chartConstellationNames`)
-at `all`.
+sit at `physical`, not `representational`. `constellationFigures`, the
+molecular-cloud silhouette (`molecularCloudEllipsoids`), and cloud names
+(`chartCloudNames`) enter together at `representational` — a cloud's name
+never appears before its outline; constellation Latin names
+(`chartConstellationNames`) at `all`.
 
 ## How the shell uses it
 

@@ -21,6 +21,7 @@ import {
 } from './search';
 import type { Stellata } from '../stellata';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
+import { makeMockCloud, makeMockCatalog } from '../molecular-clouds/cloud-mock';
 
 describe('search / splitBayer', () => {
   it('parses a Latin 3-letter Bayer with no suffix', () => {
@@ -540,6 +541,37 @@ describe('search / Local Group entries', () => {
     const run = createSearchRunner(catalog, [], null, lg);
     const rows = run('andromeda');
     expect(rows.filter((e) => e.kind === 'lg' && e.index === 0)).toHaveLength(1);
+  });
+});
+
+describe('search / molecular cloud entries', () => {
+  const catalog = { ...makeEmptyCatalog(0), constellations: [], names: new Map() };
+  const clouds = makeMockCatalog([
+    makeMockCloud({ name: 'Eagle Nebula', id: 'm16', aliases: ['M16', 'NGC 6611'] }),
+    makeMockCloud({ name: 'Taurus', id: 'taurus' }),
+  ]);
+
+  it('resolves the display name + every alias to the same cloud', () => {
+    const run = createSearchRunner(catalog, [], clouds);
+    for (const q of ['Eagle Nebula', 'M16', 'NGC 6611']) {
+      const hit = run(q)[0];
+      expect(hit?.kind, q).toBe('cloud');
+      expect(hit?.index, q).toBe(0);
+      expect(hit?.primary, q).toBe('Eagle Nebula');
+      expect(hit?.displayCon, q).toBe('Molecular cloud');
+    }
+  });
+
+  it('dedupes multiple alias matches of one cloud to a single dropdown row', () => {
+    const run = createSearchRunner(catalog, [], clouds);
+    expect(run('eagle').filter((e) => e.kind === 'cloud' && e.index === 0)).toHaveLength(1);
+  });
+
+  it('indexes an alias-less cloud by name alone', () => {
+    const run = createSearchRunner(catalog, [], clouds);
+    const hit = run('Taurus')[0];
+    expect(hit?.kind).toBe('cloud');
+    expect(hit?.index).toBe(1);
   });
 });
 

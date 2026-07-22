@@ -44,6 +44,16 @@ describe('createCloudFocusProvider', () => {
     expect(rowValue(out.rows, 'Known from')).toBe('Zucker 2021');
   });
 
+  it('renders a dot-separated alias line below the type when aliases exist', () => {
+    const provider = createCloudFocusProvider({
+      clouds: [makeMockCloud({ name: 'Eagle Nebula', aliases: ['M16', 'NGC 6611'] })],
+      cameraDistancePc: () => 42,
+    });
+    const out = provider.format(0);
+    expect(out.name).toBe('Eagle Nebula');
+    expect(out.identityLines).toEqual(['Molecular cloud', 'M16 · NGC 6611']);
+  });
+
   it('omits the mass row for Z2020 clouds (no Table 3 estimate)', () => {
     const provider = createCloudFocusProvider({
       clouds: [cloud('Aquila Rift', [75.73, 75.73, 75.73], 'Z2020', null)],
