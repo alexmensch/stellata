@@ -8,6 +8,9 @@ import {
   type BinariesData,
   type BinaryRelation,
 } from '../../binaries/binaries-loader';
+import { makeBinaries } from '../../binaries/binary-relation-fixture';
+import { createBinarySystemMembership } from '../../binaries/binary-system-membership';
+import { SystemMembershipRegistry } from '../../system-membership/system-membership';
 import { formatStarHover, type StarHoverFormatContext } from './star-hover-format';
 
 // Tiny fixture builder. Three stars by default — idx 0 is the named
@@ -53,8 +56,9 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
   };
 }
 
-// Binary-relation fixture builders. Defaults are NaN for every orbital
-// element so a test opts into exactly the fields its tier needs.
+// Local relation builder — unlike the shared fixture's sane-finite
+// defaults, every orbital element defaults to NaN so a test opts into
+// exactly the fields its tier needs (tier-3 lines gate on finiteness).
 function makeRelation(o: Partial<BinaryRelation>): BinaryRelation {
   return {
     primaryIdx: 0,
@@ -76,18 +80,16 @@ function makeRelation(o: Partial<BinaryRelation>): BinaryRelation {
   };
 }
 
-function makeBinaries(relations: BinaryRelation[]): BinariesData {
-  const primaryIdxToRelations = new Map<number, number[]>();
-  const secondaryIdxToRelations = new Map<number, number[]>();
-  relations.forEach((r, i) => {
-    const arr = primaryIdxToRelations.get(r.primaryIdx);
-    if (arr) arr.push(i);
-    else primaryIdxToRelations.set(r.primaryIdx, [i]);
-    const sArr = secondaryIdxToRelations.get(r.secondaryIdx);
-    if (sArr) sArr.push(i);
-    else secondaryIdxToRelations.set(r.secondaryIdx, [i]);
-  });
-  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelations };
+// Registry over the real binary provider — the system-card tests below
+// exercise the formatter through the same membership path the shell
+// wires (binaries + the live composite-suppress verdict).
+function membershipOf(
+  binaries: BinariesData,
+  isCollapsed: (i: number) => boolean,
+): SystemMembershipRegistry {
+  const reg = new SystemMembershipRegistry();
+  reg.register(createBinarySystemMembership({ getBinaries: () => binaries, isCollapsed }));
+  return reg;
 }
 
 // idx 0 = primary "Sirius A", idx 1 = secondary "Sirius B". Reuses
@@ -388,7 +390,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
     });
 
   it('fully collapsed multiple: any member hover yields the full roster card', () => {
-    const ctx = sysCtx({ isCollapsed: () => true });
+    const ctx = sysCtx({ membership: membershipOf(makeBinaries(SYSTEM_RELS), () => true) });
     for (const member of [0, 3]) {
       const out = formatStarHover(member, D_CAM, ctx);
       expect(out.name).toBe('Castor system');
@@ -401,7 +403,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
   });
 
   it('close-in viewing (nothing suppressed): per-component card unchanged', () => {
-    const ctx = sysCtx({ isCollapsed: () => false });
+    const ctx = sysCtx({ membership: membershipOf(makeBinaries(SYSTEM_RELS), () => false) });
     const out = formatStarHover(2, D_CAM, ctx);
     expect(out.name).toBe('Castor B');
   });
@@ -409,7 +411,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
   it('partially collapsed: roster lists only the overlapping cluster, not the whole system', () => {
     // Close-up Castor: only the spectroscopic inner pair (secondary 1)
     // is still suppressed; B/Bb2/C/D are resolved or off-screen.
-    const ctx = sysCtx({ isCollapsed: (i) => i === 1 });
+    const ctx = sysCtx({ membership: membershipOf(makeBinaries(SYSTEM_RELS), (i) => i === 1) });
     const out = formatStarHover(0, D_CAM, ctx);
     expect(out.name).toBe('Castor system');
     expect(out.lines).toEqual([
@@ -430,7 +432,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
     const ctx = buildCtx({
       starLabels: new Map([[0, 'Rigil Kentaurus'], [1, 'Toliman'], [2, 'Proxima Centauri']]),
       binaries: makeBinaries(rels),
-      isCollapsed: (i) => i === 1,
+      membership: membershipOf(makeBinaries(rels), (i) => i === 1),
     });
     expect(formatStarHover(2, D_CAM, ctx).name).toBe('Proxima Centauri');
     // Hovering the A+B composite point shows the cluster card for the
@@ -442,15 +444,45 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
   });
 
   it('plain binary never swaps to a system card, suppressed or not', () => {
+    const rels = [makeRelation({ primaryIdx: 0, secondaryIdx: 1 })];
     const ctx = buildCtx({
-      binaries: makeBinaries([makeRelation({ primaryIdx: 0, secondaryIdx: 1 })]),
-      isCollapsed: () => true,
+      binaries: makeBinaries(rels),
+      membership: membershipOf(makeBinaries(rels), () => true),
     });
     expect(formatStarHover(0, D_CAM, ctx).name).toBe('Vega');
   });
 
-  it('no isCollapsed hook (formatter reused without live suppress state): no swap', () => {
+  it('no membership hook (formatter reused without live collapse state): no swap', () => {
     const ctx = sysCtx();
     expect(formatStarHover(0, D_CAM, ctx).name).toBe('Castor');
+  });
+
+  it('planet-system members ride the roster: collapsed planets list by name, capped', () => {
+    // Fake planet-shaped provider alongside the binary one: Castor
+    // additionally "hosts" nine named bodies, all collapsed. Exercises
+    // the mixed-kind roster (star names resolved, planet names carried
+    // by the member) and the +N-more cap.
+    const reg = membershipOf(makeBinaries(SYSTEM_RELS), () => true);
+    const bodies = ['b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'].map((name, i) => ({
+      target: { kind: 'planet' as const, idx: 100 + i },
+      name,
+    }));
+    reg.register({
+      membersOf: (t) =>
+        t.kind === 'star' && t.idx === 0
+          ? [{ target: { kind: 'star', idx: 0 }, name: null }, ...bodies]
+          : [],
+      collapsedClusterOf: (t) =>
+        t.kind === 'star' && t.idx === 0
+          ? [{ target: { kind: 'star', idx: 0 }, name: null }, ...bodies]
+          : [],
+    });
+    const out = formatStarHover(0, D_CAM, sysCtx({ membership: reg }));
+    expect(out.name).toBe('Castor system');
+    // 6 stars + 9 planets = 15 members, all collapsed at the hover point.
+    expect(out.lines[1]).toBe('15 components:');
+    expect(out.lines[2]).toBe(
+      'Castor, Castor B, Castor Aa2, Castor Bb2, Castor C, Castor D, b, c, d, e + 5 more',
+    );
   });
 });

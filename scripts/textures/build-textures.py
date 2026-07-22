@@ -2,9 +2,12 @@
 """Planet texture artifact build, data/textures/src/ -> data/textures/
 (contract + provenance in README.md and data/textures/README.md)."""
 
+import json
 from pathlib import Path
 
 from PIL import Image, ImageFilter, ImageStat
+
+from texture_calibration import COLOUR_INDICES, LUMA, calibrate
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
 Image.MAX_IMAGE_PIXELS = None
@@ -12,7 +15,9 @@ Image.MAX_IMAGE_PIXELS = None
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "data" / "textures" / "src"
 OUT = ROOT / "data" / "textures"
+MANIFEST = OUT / "calibration.json"
 SCRIPT = Path(__file__)
+CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
 
 TARGET_W = 2048
 JPEG_QUALITY = 82
@@ -25,8 +30,7 @@ JPEG_QUALITY = 82
 BODIES = {
     "mercury": "mercury-pia15063.jpg",
     "venus": "venus-bjj.jpg",
-    "earth": "earth-bmng.jpg",
-    "earth-night": "earth-night.jpg",
+    "earth": "earth-blue-marble-2002.jpg",
     "mars": "mars-viking-mdim21.jpg",
     "jupiter": "jupiter-pia07782.jpg",
     "saturn": "saturn-bjj.jpg",
@@ -51,22 +55,24 @@ BODIES = {
 # src/client/solar-system/planet-system.ts (texture-colours.test.ts
 # pins the parity). Used for the grayscale tints so the tinted map
 # matches the disc the body renders as at distance. (Gap fills use
-# each map's own mean imaged colour, not these.)
+# each map's own mean imaged colour, not these; Mercury's grayscale
+# mosaic is tinted by its measured colour index via `calibrate`.)
 REPRESENTATIVE_COLOURS = {
-    "mercury": (0.55, 0.47, 0.32),
     "europa": (0.82, 0.76, 0.68),
     "callisto": (0.45, 0.41, 0.37),
     "titan": (0.83, 0.60, 0.28),
 }
 
 # Grayscale-source tints: chroma fraction of the representative
-# colour applied over the mosaic's luminance detail. Mercury/Europa/
-# Callisto are near-neutral bodies shipped as grayscale mosaics —
-# half chroma keeps them honest; Titan's ISS map is 938 nm surface
-# detail under an opaque orange haze, so it takes the full
-# representative chroma (the visible-light appearance).
+# colour applied over the mosaic's luminance detail — MOON hand-tuning
+# only. Europa/Callisto are near-neutral bodies shipped as grayscale
+# mosaics (half chroma keeps them honest); Titan's ISS map is 938 nm
+# surface detail under an opaque orange haze, so it takes the full
+# representative chroma. Planets with a published disc-integrated
+# colour index are calibrated to it instead (texture_calibration.py);
+# extending measured targets to the moons awaits a vetted satellite
+# index table.
 TINT_STRENGTH = {
-    "mercury": 0.5,
     "europa": 0.5,
     "callisto": 0.5,
     "titan": 1.0,
@@ -137,7 +143,9 @@ def up_to_date(out_path: Path, *inputs: Path) -> bool:
     if not out_path.exists():
         return False
     out_mtime = out_path.stat().st_mtime
-    return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
+    return all(
+        out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT, CALIB_SCRIPT)
+    )
 
 
 def tint_grayscale(
@@ -147,7 +155,7 @@ def tint_grayscale(
 ) -> Image.Image:
     """Luminance-preserving tint: hue from `colour` at `strength`
     (0 = stay gray, 1 = full chroma), detail from `im`."""
-    lum = 0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2]
+    lum = sum(w * c for w, c in zip(LUMA, colour))
     gains = [1 + (c / lum - 1) * strength for c in colour]
     l = im.convert("L")
     return Image.merge("RGB", [
@@ -175,7 +183,7 @@ def desaturate(im: Image.Image, strength: float) -> Image.Image:
     return Image.blend(im.convert("RGB"), im.convert("L").convert("RGB"), strength)
 
 
-def build_body(name: str, src_name: str) -> None:
+def build_body(name: str, src_name: str, manifest: dict) -> None:
     src_path = SRC / src_name
     out_path = OUT / f"{name}.jpg"
     if up_to_date(out_path, src_path):
@@ -188,9 +196,15 @@ def build_body(name: str, src_name: str) -> None:
     if im.mode not in ("RGB", "L"):
         im = im.convert("RGB")
     # Per-body treatments — rationale in data/textures/README.md
-    # § Colour fidelity.
+    # § Colour fidelity. Bodies with a published disc-integrated index
+    # take the measured calibration (Mercury's grayscale gets its tint
+    # from it); the moon hand-treatments (tint/desaturate) hold until
+    # a vetted satellite index table exists. Pluto ships its source
+    # colour untouched.
     if name in FLIP_HORIZONTAL:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    if name in COLOUR_INDICES:
+        im, manifest[name] = calibrate(im, name, GAP_LUMINANCE.get(name))
     if name in TINT_STRENGTH:
         im = tint_grayscale(im, REPRESENTATIVE_COLOURS[name], TINT_STRENGTH[name])
     if name in DESATURATE:
@@ -284,8 +298,15 @@ def build_ring_table(body: str, spec: dict) -> None:
 
 def main() -> None:
     print("building planet texture artifacts:")
+    manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
     for name, src_name in BODIES.items():
-        build_body(name, src_name)
+        build_body(name, src_name, manifest)
+    # Drop rows for bodies no longer built + calibrated, so a removed body
+    # can't leave a stale entry across incremental (up-to-date) runs.
+    calibrated = {name for name in BODIES if name in COLOUR_INDICES}
+    for stale in manifest.keys() - calibrated:
+        del manifest[stale]
+    MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     build_saturn_rings()
     for body, spec in RING_TABLES.items():
         build_ring_table(body, spec)
