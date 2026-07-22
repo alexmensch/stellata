@@ -13,7 +13,7 @@ themselves.
   carries the SEO / OpenGraph / Twitter meta, canonical, favicon links,
   and Schema.org JSON-LD; the `<body>` opens with a `<noscript>`
   crawler/GEO fallback describing the app. The referenced static assets
-  (`og-image.png`, icons, `robots.txt`, `llms.txt`, `sitemap.xml`,
+  (`og-image.jpg`, icons, `robots.txt`, `llms.txt`, `sitemap.xml`,
   `manifest.webmanifest`) live in `public/`.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `util/` — project-agnostic plumbing (event bus, URL state).
