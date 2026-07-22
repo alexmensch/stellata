@@ -116,6 +116,11 @@ How to apply:
 - For the planet layer specifically: the planet shader emits no quad
   when `appMag > maxAppMag + 0.5`; the picker mirrors that exact kill
   condition. NO additional gate on `focusedPlanetSystem !== null`.
+  The one non-visibility drop: a body collapsed onto its parent
+  (`isCollapsedOntoParent` — sub-pixel from host / parent planet) is
+  not individually hoverable; its point belongs to the parent's pick
+  surface, and the parent's card swaps to the system roster
+  (`../system-membership/README.md`).
 - For boundary shells (Local Bubble, heliopause): the shared shell
   provider gates each `ShellPickSurface.visible()` on the shell's
   `isVisible()` (mirrors `group.visible` — the actual rendered state), so

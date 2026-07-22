@@ -9,6 +9,9 @@ import {
   type OrbitDescriptor,
 } from '../../solar-system/orbit-descriptor';
 import type { Planet } from '../../solar-system/planet-system';
+import type { Target } from '../../camera/focus/focus-target';
+import type { SystemMembershipProvider } from '../../system-membership/system-membership';
+import { rosterCardOrNull, UNNAMED_MEMBER_LABEL } from './system-card-format';
 import type { HoverPayload } from '../hover-types';
 
 // Name budget for the hover roster line — the card stays glanceable;
@@ -31,6 +34,11 @@ export interface PlanetHoverFormatContext {
   // The body's moon names in semi-major-axis order (empty for moons and
   // moonless bodies) — same source the focus card reads, capped here.
   moonsOf(planetIdx: number): readonly string[];
+  // Kind-generic membership queries + the planetIdx → Target mapping.
+  // Both present ⇒ a body whose children currently collapse onto it
+  // (a planet with sub-pixel moons) swaps to the shared roster card.
+  membership?: SystemMembershipProvider;
+  targetOf?(planetIdx: number): Target | null;
 }
 
 export function formatPlanetHover(
@@ -40,6 +48,18 @@ export function formatPlanetHover(
 ): HoverPayload {
   const planet = ctx.planets[planetIdx];
   if (!planet) return { name: '', lines: [] };
+
+  const target = ctx.membership && ctx.targetOf ? ctx.targetOf(planetIdx) : null;
+  const system =
+    target && ctx.membership
+      ? rosterCardOrNull(
+          ctx.membership,
+          target,
+          fmtDistAuto(cameraDistancePc),
+          (m) => m.name ?? UNNAMED_MEMBER_LABEL,
+        )
+      : null;
+  if (system) return system;
 
   const lines: string[] = [];
   const appMag = ctx.appMagFor(planetIdx);
@@ -61,3 +81,4 @@ export function formatPlanetHover(
 
   return { name: planet.name, lines };
 }
+

@@ -50,9 +50,43 @@ Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major
 axes and eccentricities from JPL DE440 mean elements at J2000. Pluto
 data from New Horizons 2015 reconnaissance (mean radius 1188 km,
 tan-pink colour from MVIC imagery). Representative single-colour RGB
-values per planet are observation-derived; pixel-accurate texturing,
-banding, and atmospheric haloes are deferred until the renderer
-exposes a planet-zoom affordance close enough for them to register.
+values per planet are observation-derived.
+
+**Naked-eye colour calibration — reference white is the solar
+spectrum.** The renderer's white point is sunlight, not D65: a body
+reflecting the solar spectrum neutrally renders R = G = B. This is
+the physically meaningful choice for a scene whose sole illuminant is
+Sol — the eye white-balances to the ambient illuminant, and the star
+pipeline's Ballesteros B−V mapping already places the Sun near
+neutral. On top of that white point, each shipped surface map is
+calibrated at build time so its sphere-weighted mean chromaticity
+equals the body's **measured disc-integrated colour**: the adopted
+B−V and V−Rc indices of Mallama, Krobusek & Pavlov 2017 (Icarus 282,
+19, Table 3), expressed as flux ratios relative to the Sun's own
+indices (B−V 0.653, V−Rc 0.352 — Ramírez et al. 2012 solar analogs)
+and mapped onto the sRGB channels as B→blue, V→green, Rc→red (the
+band/primary mismatch is second-order against the instrument-era
+spread this removes). Per-map linear-RGB gains preserve mean
+luminance, so only chromaticity moves. This replaces hand-tuned
+per-map tint/desaturation judgement with measured targets, and the
+corrections it makes are the known biases of the source imagery: the
+Viking Mars mosaic's blue boost, the 1989 Voyager Neptune's
+over-deep azure (Irwin et al. 2024), Venus's near-neutral white.
+Machinery in `scripts/textures/texture_calibration.py`; per-body
+numbers in the committed `data/textures/calibration.json`, pinned by
+`scripts/textures/texture-calibration.test.ts`.
+
+**Atmosphere shells.** Venus, Earth, Mars and Titan render a
+scattering shell at their true visible atmosphere heights (90, 100,
+60 and 300 km — Kármán-scale for Earth, haze tops for Venus, dust
+haze for Mars, the detached haze layers for Titan), never
+exaggerated. Two terms: a day-side limb glow from the analytic
+optical path through the shell, and a Henyey-Greenstein forward-
+scatter ring that appears as the phase angle approaches 180° — the
+back-lit halo Cassini photographed at Titan and telescopes see at
+Venus's inferior conjunction. Gas giants carry no shell: no detached
+haze exists distinct from their cloud decks at render scale.
+Implementation in `src/client/solar-system/README.md` § Atmospheres.
 
 **Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,

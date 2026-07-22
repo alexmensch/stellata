@@ -99,11 +99,6 @@ export interface Planet {
   // Undefined = 0 = airless hard cut. Perceptual seeds tuned at smoke,
   // scaled to atmosphere density (Venus thickest).
   readonly terminatorSoftness?: number;
-  // True when a `<body>-night.jpg` emissive night-side companion map
-  // ships alongside the day texture (Earth's Black Marble city
-  // lights). The mesh renderer lazy-loads and blends it past the
-  // terminator.
-  readonly hasNightTexture?: boolean;
   // Optional ring system: annulus span in the body's equatorial
   // plane, textured by the `<body>-rings.png` radial strip (RGB =
   // colour, A = opacity; U maps inner→outer). Spans must match the
@@ -111,6 +106,35 @@ export interface Planet {
   // data/textures/README.md § Ring strips (Jupiter's rings ship no
   // strip: below the 8-bit-representable opacity floor).
   readonly rings?: PlanetRings;
+  // Optional atmosphere shell (mesh-LOD regime only): day-side limb
+  // glow + back-lit forward-scatter halo. Gas giants deliberately
+  // carry none — see src/client/solar-system/README.md § Atmospheres.
+  readonly atmosphere?: PlanetAtmosphere;
+}
+
+export interface PlanetAtmosphere {
+  /** Visible shell height above the surface, km — the TRUE scattering
+   *  extent (Kármán-line scale for Earth, haze-top for Venus/Titan),
+   *  never an exaggerated art value. Sets the integration extent. */
+  readonly heightKm: number;
+  /** Rayleigh (molecular) scale height, km. */
+  readonly rayleighHeightKm: number;
+  /** Mie (aerosol) scale height, km — also the absorption profile. */
+  readonly mieHeightKm: number;
+  /** Rayleigh scatter coefficient per channel, as a vertical optical depth
+   *  (1/λ⁴ shape → blue). Earth's blue sky; a near-zero molecular column on
+   *  dust-dominated Mars. */
+  readonly rayleighCoeff: readonly [number, number, number];
+  /** Grey Mie (aerosol) scatter coefficient, vertical optical depth. */
+  readonly mieCoeff: number;
+  /** Aerosol absorption per channel, vertical optical depth — the hue
+   *  source a grey-Mie model cannot give: blue removed → Titan orange,
+   *  Mars butterscotch, Venus pale yellow. */
+  readonly absorbCoeff: readonly [number, number, number];
+  /** Henyey-Greenstein forward asymmetry; default MIE_G_DEFAULT (0.76). */
+  readonly mieG?: number;
+  /** Illuminant colour; default SUN_COLOUR (Sol warm-white). */
+  readonly sunColour?: readonly [number, number, number];
 }
 
 export interface PlanetRings {
@@ -257,6 +281,14 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: VENUS_PHASE,
     rotation: VENUS_ROTATION,
     terminatorSoftness: 0.08,
+    // The cloud-top texture carries the visible disc; the atmosphere stays
+    // optically thin over it (a limb/airlight overlay, not a second cloud
+    // layer that would double-count), mild blue absorption → pale-yellow tint.
+    atmosphere: {
+      heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
+      rayleighCoeff: [0.002, 0.004, 0.010], mieCoeff: 0.12,
+      absorbCoeff: [0.003, 0.008, 0.020], mieG: 0.70,
+    },
   },
   {
     name: 'Earth',
@@ -271,7 +303,14 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
-    hasNightTexture: true,
+    // Rayleigh (1/λ⁴) gives the blue airlight; a real aerosol/haze Mie term
+    // (τ ≈ 0.05, grey) desaturates it toward the grey-blue limb seen from
+    // orbit rather than a vivid pure-Rayleigh blue.
+    atmosphere: {
+      heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
+      rayleighCoeff: [0.010, 0.023, 0.050], mieCoeff: 0.05,
+      absorbCoeff: [0, 0, 0],
+    },
   },
   {
     name: 'Mars',
@@ -285,6 +324,14 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
     terminatorSoftness: 0.02,
+    // Dust-dominated: negligible molecular Rayleigh, thin Mie dust scatter,
+    // blue-absorbing dust → butterscotch sky (blue forward-sunset falls out
+    // of the Mie phase).
+    atmosphere: {
+      heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
+      rayleighCoeff: [0.0012, 0.0027, 0.006], mieCoeff: 0.06,
+      absorbCoeff: [0.008, 0.03, 0.08],
+    },
   },
   {
     name: 'Jupiter',
@@ -377,6 +424,7 @@ interface MoonPhysical {
   readonly type: PlanetType;
   readonly colour: readonly [number, number, number];
   readonly terminatorSoftness?: number;
+  readonly atmosphere?: PlanetAtmosphere;
 }
 
 // Physical properties for the 18 major moons. Mean radii from NASA/JPL
@@ -399,7 +447,24 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.78, 0.78, 0.77] },
   // Titan is the one moon with a dense atmosphere (1.5 bar N2 haze) —
   // Earth-like terminator softness; every other in-scope moon is airless.
-  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28], terminatorSoftness: 0.05 },
+  // Its detached haze layers extend ~300 km above the surface —
+  // proportionally the largest shell of the four atmosphere bodies
+  // (~12 % of R); the famous Cassini back-lit ring.
+  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28],
+    terminatorSoftness: 0.05,
+    // Thick tholin haze: strong grey Mie scatter, strongly forward (Cassini
+    // back-lit ring), and heavy blue absorption (high-in-blue absorbCoeff)
+    // → orange. Do not invert the absorption channels.
+    // Unlike the others, Titan's haze is OPTICALLY THICK in visible light —
+    // the surface is invisible, so the atmosphere is deliberately dense
+    // enough to hide the (near-IR) texture and read as a featureless orange
+    // ball: strong grey Mie scatter + heavy blue absorption. Independent of
+    // the other bodies (per-row params); do not invert the absorption.
+    atmosphere: {
+      heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
+      rayleighCoeff: [0.004, 0.008, 0.016], mieCoeff: 2.5,
+      absorbCoeff: [0.15, 0.6, 1.4], mieG: 0.80,
+    } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
 
   { name: 'Miranda', parentName: 'Uranus', radiusKm: 235.8, albedo: 0.32, type: 'icy', colour: [0.62, 0.62, 0.63] },
@@ -433,6 +498,7 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     colour: m.colour,
     terminatorSoftness: m.terminatorSoftness,
     rotation: MOON_ROTATION_BY_NAME.get(m.name),
+    atmosphere: m.atmosphere,
   };
 });
 

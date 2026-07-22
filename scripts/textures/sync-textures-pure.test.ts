@@ -5,7 +5,6 @@ import { isTexturePublicAsset } from './sync-textures-pure';
 describe('sync-textures / isTexturePublicAsset', () => {
   it('allows the built runtime artifacts', () => {
     expect(isTexturePublicAsset('earth.jpg')).toBe(true);
-    expect(isTexturePublicAsset('earth-night.jpg')).toBe(true);
     expect(isTexturePublicAsset('jupiter.jpg')).toBe(true);
     expect(isTexturePublicAsset('saturn-rings.png')).toBe(true);
     expect(isTexturePublicAsset('uranus-rings.png')).toBe(true);

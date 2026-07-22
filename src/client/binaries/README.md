@@ -54,8 +54,14 @@ star catalog records.
   § Binary orbit paths.
 - `binary-orbit-path-layer.ts` — `BinaryOrbitPathLayer`, the orbit-path
   render layer. See § Binary orbit paths.
-- `binary-relation-fixture.ts` — `makeRelation(overrides)`, the shared
-  `BinaryRelation` test builder.
+- `binary-relation-fixture.ts` — `makeRelation(overrides)` +
+  `makeBinaries(relations)`, the shared test builders.
+- `binary-system-membership.ts` — the multi-star implementation of the
+  kind-generic system-membership contract
+  (`../system-membership/README.md`): the star-companion graph walk +
+  the orbit walk's live composite-suppress verdict, wrapped as
+  `membersOf` / `collapsedClusterOf` for the hover roster card and the
+  Picker's collapsed-lead resolution.
 - `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
   `ECLIPSE_DIM_TAU_S` named constants the fields read and tests pin.
 - `eclipse-photometry-pure.ts` — pure math for camera-anywhere

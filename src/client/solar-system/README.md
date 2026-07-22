@@ -1,7 +1,8 @@
 # Solar-system layer
 
 Solar-system layer (`stellata-3re`). When a focusable star carries a planet
-system, Stellata renders the planets as billboarded discs at their
+system, Stellata renders the planets as lit spheroid meshes (with a
+reflected-glare billboard) at their
 heliocentric positions, faint orbit rings on the host's orbital plane,
 and (Sol only) the heliopause boundary as a translucent asymmetric
 shell. Sol is the only populated host so far; the framework is
@@ -33,7 +34,17 @@ src/client/solar-system/
                                   distance, and period from its parent
                                   (planet ← host star, solar mass; moon ←
                                   parent planet, parent GM). Pure; no
-                                  solar-mass assumption. See § Moons.
+                                  solar-mass assumption. Also exports
+                                  `parentIndexOf`, the shared
+                                  parent-by-name resolution. See § Moons.
+  planet-system-membership.ts     Planet-system implementation of the
+                                  kind-generic system-membership contract
+                                  (../system-membership/README.md), one
+                                  hierarchy level per target: host →
+                                  planets, planet → its moons, over
+                                  PlanetBodyField.isCollapsedOntoParent
+                                  verdicts. Covers exoplanet hosts as
+                                  soon as bk5 attaches them.
   time.ts                         Simulation time `t` + UTC ↔ Julian-day
                                   helpers. Owns `VirtualClock`, the clock
                                   behind `Stellata.getT()`, plus the
@@ -61,18 +72,29 @@ src/client/solar-system/
                                   (pole-up, no mirror, prime meridian).
   time-readout.ts                 UTC readout display next to the time
                                   scrubber.
-  planet-body-field.ts            Instanced planet-body renderer. Three-pass
-                                  (depth-only mask + disc + glow), shares
-                                  the unified disc/glow chunk with stars
-                                  (perceptual-disc.glsl) — see
+  planet-body-field.ts            Instanced planet-body renderer. One
+                                  additive reflected-glare pass (+ its
+                                  local-pass mirror); the resolved surface
+                                  is the spheroid mesh (planet-mesh-layer).
+                                  Shares the glow half of perceptual-disc.glsl
+                                  with stars — see
                                   src/client/star-pipeline/README.md.
+                                  isCollapsedOntoParent is the per-body
+                                  "renders as one point with its parent"
+                                  verdict (drawn this frame AND within
+                                  BODY_COLLAPSE_THRESHOLD_PX of host /
+                                  parent planet — looser than the binary
+                                  1.5 px gate; body dots have multi-px
+                                  glow footprints); pick() drops
+                                  collapsed bodies so the parent's pick
+                                  surface owns the point.
                                   Also the identity table for Target
                                   {kind:'planet'}: flat instance index ↔
                                   (host, planet-within-host), plus local/
                                   absolute position, appMag, and rendered-
                                   size accessors keyed on the flat index.
-                                  uHideIdx (one uniform shared by all
-                                  five passes) hides the observe-anchor
+                                  uHideIdx (one uniform shared by both
+                                  glare passes) hides the observe-anchor
                                   body via setHiddenInstance.
   orbit-rings-layer.ts            Faint orbit rings: host-centred planet
                                   rings + parent-centred moon rings, built
@@ -92,11 +114,25 @@ src/client/solar-system/
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
-                                  fallback, emissive night-lights blend).
+                                  fallback, atmosphere airlight over the disc).
   planet-rings.vert.glsl,
   planet-rings.frag.glsl          Ring-annulus shaders (radial strip
                                   sample, lit/transmitted faces, body
                                   shadow) — see § Planet mesh LOD.
+  planet-atmosphere.vert.glsl,
+  planet-atmosphere.frag.glsl     Atmosphere limb/halo shell shaders —
+                                  single-scattering airlight for rays that
+                                  miss the disc. See § Atmospheres.
+  atmosphere-uniforms.glsl        Shared atmosphere-scatter uniform contract,
+                                  spliced into both frags (single source vs
+                                  sharedAtmoUniforms in planet-mesh-layer.ts).
+  atmosphere-scatter.glsl         Shared single-scattering integrator + ray
+                                  helpers (shell entry, body-strike, luma),
+                                  spliced into the mesh + shell frag sources
+                                  (disc airlight + limb halo).
+  atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body
+                                  calibration constants + phase functions.
+                                  Vitest-pinned. See § Atmospheres.
   rotation-elements-pure.ts       IAU rotation elements per body (pole +
                                   prime meridian on the model clock) —
                                   see § Planet rotation.
@@ -104,8 +140,8 @@ src/client/solar-system/
                                   (Lambertian + Mallama phase factors)
                                   + hostIntensityScale (mesh-regime
                                   host-distance lighting). Drives the
-                                  body field's disc/glow sizing and the
-                                  per-planet label gating.
+                                  body field's glare sizing/brightness and
+                                  the per-planet label gating.
   phase-function.ts (+ test)      Lambertian + Mallama phase functions
                                   + phaseRatioToLambert (mesh phase
                                   scalar). Pure helpers with vitest
@@ -123,10 +159,12 @@ src/client/solar-system/
   first-load.ts                   Canonical no-URL first-load view: 5 AU
                                   galactic-centre-aimed park.
   planet.vert.glsl,
-  planet.frag.glsl                Three-pass instanced planet bodies.
-                                  Imports `perceptual-disc.glsl` from
-                                  `../star-pipeline/` (shared disc/glow
-                                  chunk with stars).
+  planet.frag.glsl                Instanced reflected-glare billboards
+                                  (point↔bloom on resolvedness, phase-
+                                  gated + photocentre-shifted). Imports
+                                  `perceptual-disc.glsl` from
+                                  `../star-pipeline/` (shared glow profile
+                                  with stars).
 ```
 
 ## Data model
@@ -399,39 +437,40 @@ the MOON's viewpoint with the parent planet as occluder of the host
 disc — the visible host fraction IS the moon's illumination, so a
 lunar-style eclipse darkens the moon continuously through the
 penumbra (search-tested against a year of real ephemeris);
-the vertex shader folds it into appMag in the **glow pass only**,
-mirroring the star pipeline's fold. A FULL eclipse writes exactly 0
-and the shader collapses the quad — a floored +7.5 mag residual is
-still visible on a mag −1 Mercury, and the planet-scale depth buffer
-can't hide it — and the planet's label hides with it (the fully
-eclipsed body renders nothing). Glow through the host's
+the vertex shader applies it as a flux multiplier on the glare
+intensity in both regimes — not an appMag fold, because the
+locally-active photographic regime derives brightness from surface
+radiance rather than appMag. A FULL eclipse
+writes exactly 0 and the shader collapses the quad — a floored +7.5
+mag residual is still visible on a mag −1 Mercury, and the planet-
+scale depth buffer can't hide it — and the planet's label hides with
+it (the fully eclipsed body renders nothing). Glare through the host's
 perceptual *halo* stays undimmed — the halo is a perceptual
 artefact, not a surface, so a body behind it correctly shines
-through. The disc pass needs no dim or depth bias: its
-per-channel-max blend keeps the darker back disc from painting over
-the host's saturated disc. A planet in *front* (transit) dims the
+through. A planet in *front* (transit) dims the
 host by (R_p/R_host)² — negligible and owned by the star pipeline,
 so it is deliberately not modelled.
 
-Bodies render as billboarded discs through the same perceptual-disc
-abstraction the star pipeline uses (`shaders/perceptual-disc.glsl`).
-Apparent magnitude is computed in the vertex shader from reflected
-host-star light through a per-planet phase function — Mallama 2018
-empirical polynomials for Mercury, Venus, Earth, Mars, Jupiter and
-Saturn (3re.18); Lambertian fallback for Uranus, Neptune, Pluto and
-every exoplanet (`stellata-bk5`), since Mallama 2018 publishes no
-phase-angle polynomial for those. The slider visibility cutoff
-applies — sub-cutoff planets fade naturally, no unconditional pixel
-floor. Passes: the star-pipeline trio (core depth-mask + disc + glow)
-in the main pass, plus **local-pass mirror draws** (disc + glow over
-the active cluster's slot range, gated by the shared
-`uLocalPassRange` uniform — opposite sense under the
+Bodies render as the spheroid mesh (resolved surface) plus **one
+additive reflected-glare billboard** — no opaque disc / core-mask
+pass. Apparent magnitude is computed in the vertex shader from
+reflected host-star light through a per-planet phase function —
+Mallama 2018 empirical polynomials for Mercury, Venus, Earth, Mars,
+Jupiter and Saturn (3re.18); Lambertian fallback for Uranus, Neptune,
+Pluto and every exoplanet (`stellata-bk5`), since Mallama 2018
+publishes no phase-angle polynomial for those. The slider visibility
+cutoff applies — sub-cutoff planets fade naturally, no unconditional
+pixel floor. The glare is one pass (main-pass draw + **local-pass
+mirror draw** over the active cluster's slot range, gated by the
+shared `uLocalPassRange` uniform — opposite sense under the
 `LOCAL_DEPTH_PASS` define). While the system is locally active
 (`local-cluster.ts`) the main-pass instances collapse and every body
-renders through the mirrors in the bracketed local depth pass, where
-the z-buffer natively orders ring↔body, moon↔planet, transits, and
-near-side orbit-ring arcs (`../local-depth/README.md`) — the old
-corrupt/restore depth dance around the orbit rings is gone. Surface
+renders through the mirror in the bracketed local depth pass, where
+the **mesh** writes depth so the additive glare is occluded to a
+lit-limb halo and the z-buffer natively orders ring↔body, moon↔planet,
+transits, and near-side orbit-ring arcs (`../local-depth/README.md`).
+Distant, not-locally-active bodies draw in the main pass as a faint
+additive point that needs no depth occlusion (like a star). Surface
 detail (textures, atmospheric haloes,
 banding, axial-tilt cue) stays **deliberately deferred** to the
 planet-zoom epic (`stellata-2f6`); see `SCIENCE.md` § Scope principles
@@ -484,21 +523,56 @@ every slider move.
 
 ### Planet mesh LOD (stellata-2f6.9)
 
-On close approach the billboarded disc hands off to a real oblate
-spheroid mesh (`planet-mesh-layer.ts`), crossfaded on the ratio of
-the body's TRUE projected diameter to its perceptual disc size —
-`mesh-crossfade.ts` owns the band (physSize/appSize 1.0 → 1.5) and
-both sides evaluate the same smoothstep (shader: `uMeshFadeRatio`;
-CPU: `PlanetBodyField.meshFadeRatio` → `meshFadeFromRatio`). The band
-starts at ratio 1, exactly where the disc's `max(appSize, physSize)`
-switches to the physical term, so the mesh (drawn at physSize) and
-the disc share the same footprint through the whole fade — the
-handoff can't pop in size, and the disc passes multiplying by
-`1 − vMeshFade` against the mesh's rising `uFade` means no
-double-brightness either. The
-core depth pass deliberately keeps running through the fade — the
-mesh silhouette matches the disc core, so background layers stay
-occluded while the visual handoff happens.
+On close approach the reflected glare hands off to a real oblate
+spheroid mesh (`planet-mesh-layer.ts`). Mesh presence and the glare's
+point↔bloom regime ride **one** physical-pixel resolvedness band
+(`mesh-crossfade.ts`), so the two morph in lockstep — there is no
+separate billboard fade band and no opaque disc / core-mask to
+crossfade.
+
+- **Mesh presence** rides the body's TRUE projected diameter in CSS
+  px — full at ≥ `MESH_FADE_FULL_PX` (2 px), gone at ≤ `MESH_FADE_MIN_PX`
+  (1 px) (`meshFadeFromPhysPx` on `PlanetBodyField.physicalPlanetSizePx`).
+  The eye tracks a resolved body — and its crescent phase, the thing a
+  billboard can't show — down to ~1 px, so the mesh persists to that
+  limit instead of handing off at the (much larger) perceptual-disc scale.
+- **Reflected glare** is the **shared star-perceptual point** — a planet
+  reads *exactly* like a star of its apparent magnitude: size =
+  `perceptualAppSizePx(appMag)`, peak = `uGlareGain` (≈1). This is the
+  load-bearing invariant: **visibility matches magnitude.** A body
+  visible in chart mode (`appMag ≤ slider`) is equally visible here,
+  rendered like the naked-eye "wandering star" it is — Mars (~+1.3),
+  Jupiter (~−2), Saturn (~+0.5), Venus (~−4) all show, ordered by
+  magnitude, exactly as the surrounding star field does. `appMag` already
+  folds the phase factor φ(α) (`planetApparentMagnitude`), so a crescent
+  is correctly dimmer — no separate illumFrac on brightness. A
+  **photocentre shift** toward the sub-solar limb (shape only — brightness
+  unchanged), scaled by crescentness `(1−illumFrac)` and resolvedness
+  `res`, keeps a barely-resolved crescent's halo off its dark limb (kills
+  the ring) while leaving a sub-pixel dot centred. Eclipse folds in as a
+  flux multiplier on the peak.
+
+  When **resolved** the mesh draws the surface, writes depth, and occludes
+  the glare's core: since the magnitude bloom (`appSize`, capped at
+  `uSizeMax`) is smaller than a well-resolved disc (`physSize`), the glare
+  is hidden inside the disc and only shows as a lit-limb halo while the
+  body is small/bright. The full-Moon calibration
+  (`perceptual-magnitude.test.ts`, −12.7) anchors the underlying flux, so
+  the magnitude — and therefore visibility — is correct for any host star.
+  CPU mirror for the hover footprint: `max(physSize, appSize)`.
+
+Known refinement (smoke): a dim-surfaced body's resolved mesh (compressed
+`uLitIntensity`) can read dimmer than its own peak-1 glare, so there is a
+mild luminosity step as it resolves and a bright unresolved moon can look
+brighter than a resolved dim-surfaced parent. Visibility (the hard
+requirement) takes priority; matching resolved-surface brightness to the
+point scale is a separate mesh-shading calibration.
+
+`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak
+multiplier: planet-glare brightness relative to a star of the same
+magnitude (1 = identical). When resolved the
+**mesh** writes depth (local depth pass), so the additive glare is
+naturally occluded to the lit-limb halo — the old core depth-mask is gone.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
@@ -518,19 +592,27 @@ occluded while the visual handoff happens.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
   - `uLitIntensity` (`perceptual-magnitude.ts:litIntensity`) —
-    host-distance irradiance on a quarter-power display compression
-    (`hostIntensityScale`: reference 1 AU ⇒ Earth = 1, Mercury ~1.6×
-    clamped, Neptune ~0.18×) composed with the magnitude slider as a
-    camera-sensitivity exposure — the threshold flux ratio
-    `10^((maxAppMag − naked-eye)/2.5)` under the same quarter-power
-    law, so turning sensitivity up brightens a dim Neptune surface in
-    step with the star field and exposure is exactly 1 at the
-    naked-eye default. The product keeps the 1.6 LDR ceiling but no
+    **host irradiance at the body** on a quarter-power display
+    compression (`hostIntensityScale`), folding the host's absolute
+    magnitude so surface brightness scales with **star class**: the
+    ratio is `(E_body / E_ref)^0.25` where `E_body / E_ref =
+    10^(0.4·(HOST_IRRADIANCE_REF_MAG − m_host@body))` and
+    `m_host@body = M_host + 5·(log10(d_hp) − 1)`. For Sol it reduces
+    exactly to the old `(d_AU)^(−0.5)` law (reference 1 AU ⇒ Earth = 1,
+    Mercury ~1.6× clamped, Neptune ~0.18×); a body 1 AU from an O-class
+    host is far brighter, by star class alone. Composed with the
+    magnitude slider as a camera-sensitivity exposure — the threshold
+    flux ratio `10^((maxAppMag − naked-eye)/2.5)` under the same
+    quarter-power law, so turning sensitivity up brightens a dim
+    surface in step with the star field and exposure is exactly 1 at
+    the naked-eye default. The product keeps the 1.6 LDR ceiling but no
     floor (low sensitivity fades surfaces toward black). Still no
     viewer-distance term, so approach can't blow it out; the ring
     annulus multiplies the same scalar so ring↔body contrast is
-    preserved. Body-kind-agnostic: planets, moons, and future lit
-    bodies all read the one scalar the mesh layer computes.
+    preserved. Surface-only: the reflected glare is the star-perceptual
+    point (driven by appMag, above), so `uLitIntensity` shades the mesh
+    and ring, not the glare. Body-kind-agnostic: planets, moons, and
+    future lit bodies all read the one scalar the mesh layer computes.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
     half-width carrying twilight past the geometric terminator on
     atmospheric bodies (Venus 0.08 widest; Titan the one moon with a
@@ -546,13 +628,6 @@ occluded while the visual handoff happens.
   planet-scale separations share one log-depth bucket in any shadow
   map the main pass could render — and the local pass's z-buffer
   orders camera rays, not sun rays.
-- **Earth night lights** (stellata-2f6.14): `Planet.hasNightTexture`
-  lazy-loads the `<body>-night.jpg` companion (Black Marble) with the
-  day map; the shader adds it as an *emissive* term (no limb
-  darkening) ramping in across a ±0.05 dot(n, sun) band around the
-  terminator, so the day→lights handoff has no hard seam. With IAU
-  rotation on `getT()`, the actually-dark hemisphere shows its lights
-  at model time.
 - **Textures**: lazy-fetched from `public/textures/<body>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
   `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is
@@ -589,6 +664,131 @@ occluded while the visual handoff happens.
   new analytic trick.
   Edge-on the zero-thickness annulus thins to a line, which is the
   physically honest look.
+
+### Atmospheres
+
+Venus, Earth, Mars, and Titan carry `Planet.atmosphere`, rendered as a
+**first-principles single-scattering** model (Nishita/O'Neil few-sample:
+`ATMO_N_VIEW` view samples × `ATMO_N_LIGHT` sun-ray samples). The integrator
+lives once in `atmosphere-scatter.glsl`, spliced into both fragment sources
+and CPU-mirrored (vitest-pinned) in `atmosphere-scattering-pure.ts` — the TS
+constants seed the GLSL sample-count `#define`s so the loop bounds cannot
+drift. Only runs in the mesh-LOD regime; both paths ride the crossfade
+`uFade`.
+
+Three species over two exponential density profiles ρ(h) = exp(−h/H):
+
+- **Rayleigh** (molecular) — per-channel scatter coefficient ∝ 1/λ⁴ (blue),
+  phase `3/16π·(1 + cos²θ)`. Earth's blue airlight.
+- **Mie** (aerosol) — grey scatter coefficient, forward Henyey-Greenstein
+  (default g = 0.76). The haze glow + Cassini-style back-lit limb ring.
+- **Aerosol absorption** — a per-channel extinction term (no re-emission).
+  This is the hue source a grey-Mie-scatter model cannot give: high-in-blue
+  absorption removes blue from both the airlight and the view-path
+  transmittance, so **Titan reads orange, Mars butterscotch, Venus pale
+  yellow**. Earth's is zero. Do not invert the `absorbCoeff` channels — blue
+  is the *most* absorbed.
+
+The night/day terminator falls out of the geometry: a sample inside the
+planet's shadow cylinder is dark and contributes no in-scatter (a soft-edged
+`stellata_sunLit` weight, not an ad-hoc day gate — see *Anti-banding* for why
+the edge is softened). **Airlight is applied on both surfaces:**
+
+- **Disc** (`planet-mesh.frag.glsl`) — `final = surface·T_view + L_air`. The
+  transmittance `T_view` pales/desaturates the surface (Earth's dark ocean
+  goes pale blue — this subsumes the old "tint the ocean texture" idea; the
+  texture stays a pure albedo) and `L_air` is the in-scattered column in
+  front of it.
+- **Limb** (`planet-atmosphere.frag.glsl`) — halo for rays that miss the disc
+  (impact parameter > R); rays that strike the body are `discard`-ed so the
+  disc path owns them (no double-count). The full-chord airlight is the
+  physical back-lit ring. The shell composites **premultiplied-over, not
+  additive** (`CustomBlending`, `frag alpha = 1 − luminance(T_view)`): it adds
+  airlight *and* occludes the background by the chord's opacity, so a dense
+  near-limb chord that scatters no light toward the eye (its base in the body's
+  own shadow) still extincts the stars behind it. Additive left that base
+  transparent — stars leaked through the ring gap, worst on thick-haze Titan.
+
+**The texture carries the disc; the atmosphere is an overlay.** Each body's
+surface texture is its visible disc — including the *cloud-top* map for Venus.
+The atmosphere therefore stays **optically thin** over it: a limb/airlight
+overlay, never a second scattering layer thick enough to extinguish the texture
+(`T_view → 0`) and replace it with a featureless ball — that double-counts the
+clouds the texture already shows. Keep the per-body optical depths low enough
+that `T_view` stays high across the lit disc.
+
+**Titan is the deliberate exception.** Its tholin haze is optically thick in
+*visible* light (the surface — and our near-IR texture — is genuinely invisible
+from space), so Titan's row alone runs a dense Mie + heavy-blue-absorption
+atmosphere that hides its texture and reads as a featureless orange ball. Every
+atmosphere is an independent per-body `PlanetAtmosphere` row, so this is a local
+choice, not a global one; the debug sliders are global multipliers on top.
+
+**Multiple-scattering fill.** A small isotropic term = fraction scattered (not
+absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds
+day-side ambient so the terminator doesn't fall to pure single-scatter black.
+Kept low precisely so it doesn't grey-wash the surface texture. `AIRLIGHT_GAIN`
+scales the single-scatter term so the neutral slider (sun intensity = 1) is
+roughly calibrated.
+
+**Anti-banding.** Three sources, three fixes. (1) *Geometric* — the analytic
+march must not read the mesh tessellation as a lat/long grid, so both shaders
+reconstruct the ray direction from the **renormalized interpolated normal** (a
+smooth sphere direction), never the faceted interpolated position. (2)
+*Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`) jitters
+its sample lattice per fragment by an interleaved-gradient-noise offset
+(`stellata_atmoJitter(gl_FragCoord)`), and the light march offsets by a further
+golden-ratio stride per view sample (`LIGHT_JITTER_STRIDE`) so the view and
+light lattices stay **decorrelated** — otherwise the two beat into a moiré
+rather than dissolving into fine grain. The CPU mirror uses the midpoint (0.5),
+so vitest pins deterministic quadrature while the shader decorrelates. (3)
+*Terminator* — a hard lit/unlit sun test steps the multiscatter lit-fraction
+(`litSum / ATMO_N_VIEW`) and the single-scatter edge in `1/ATMO_N_VIEW`
+increments, drawing ~`ATMO_N_VIEW` brightness contours across the terminator
+that beat against the jitter into the dominant moiré. `stellata_sunLit`
+replaces the boolean with a **soft shadow** — lit unless a sample is both
+anti-sunward of the terminator plane and inside the shadow cylinder, smoothed
+over `SHADOW_SOFT` — so the lit-fraction is continuous and the contours are
+gone. The ad-hoc surface **limb-darkening** is dropped
+for atmospheric bodies (the scattering governs the limb; keeping it double-
+darkened the disc edge into a black rim).
+
+Per-body params live in `planet-system.ts` `PlanetAtmosphere` as scale
+heights + **vertical optical depths** (`rayleighCoeff`, `mieCoeff`,
+`absorbCoeff`); the layer divides by H/R to get the surface extinction the
+integrator wants. A dev **'Atmosphere' debug panel** (`debug/atmosphere-tuning.ts`)
+exposes four global multipliers applied on top of the per-body base — density
+(the 'dial Titan down' knob), Rayleigh↔Mie balance, scale height, and sun
+intensity — for live calibration; read a good value off the slider and bake it
+into the per-body table.
+
+**Calibrating per-body values — anchor to physics, not a photo.** Every
+real image (Blue Marble included) is exposure- and white-balance-processed, so
+pixel-matching is a trap. Instead:
+- The mesh *surface* already renders at the Mallama-correct apparent magnitude,
+  so absolute brightness is anchored; the atmosphere only supplies *hue* + limb
+  behaviour + (for thick hazes) the multiscatter disc.
+- **Relative brightness** follows geometric albedo (`Planet.albedo`: Venus 0.69
+  > Earth 0.43 > Titan 0.22 ≈ Mars 0.17) — Venus should read brightest.
+- **Rayleigh `rayleighCoeff`** keeps the 1/λ⁴ (blue-heavy) shape; its magnitude
+  is the molecular optical depth (near-zero on dust-dominated Mars). Lower it
+  to keep Earth's limb *blue* — too high and the long limb path reddens it
+  (sunset physics).
+- **`absorbCoeff`** is blue-heaviest for the coloured hazes (Titan, Mars dust,
+  Venus) — it removes blue from airlight and transmittance. Do not invert.
+- Target appearance: Earth = blue limb, dark oceans, white clouds; Venus =
+  featureless pale yellow; Mars = butterscotch; Titan = featureless orange.
+  Near-raw full-disc references: DSCOVR/EPIC daily Earth images.
+
+Shell heights are TRUE scattering extents (Earth 100 km ≈ Kármán, Venus 90 km
+haze tops, Mars 60 km dust haze, Titan 300 km detached haze), never
+exaggerated: at the planet focus park (30 %-fill framing) Earth's shell reads
+≈ 3 px — deliberately subtle, per the camera-anywhere honesty rule. The shell
+is spherical even on oblate bodies (flattening ≤ 0.6 % for these four, far
+below shell thickness). **Gas giants deliberately carry no shell**: their
+fuzzy limb is already carried by the solidity-soft billboard edge at distance
+and the cloud-deck maps up close, and none has a detached haze layer distinct
+from the cloud deck at render scale.
 
 ### Planet rotation (stellata-2f6.13)
 
