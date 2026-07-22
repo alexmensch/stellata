@@ -24,20 +24,29 @@ star-hover-format.ts             Star — name + constellation · distance
                                  ../../format/star-companion-format.ts,
                                  shared with the focus card.
                                  System card: when the hovered star's
-                                 system has 3+ components AND its own
-                                 collapsed cluster — members reachable
-                                 through currently-suppressed relations
-                                 (Stellata.isCompositeSuppressed, the
-                                 orbit walk's own sub-pixel verdict, so
-                                 card and rendering can't disagree) —
-                                 has 2+ members, the card swaps to
-                                 "<primary> system" + the CLUSTER
-                                 roster ("2 of 6 components here:" when
-                                 partial). A visibly separated member
-                                 (Proxima off the α Cen A+B point)
-                                 keeps its own card. Plain binaries
-                                 keep the per-component card; close-in
-                                 viewing (nothing suppressed) does too.
+                                 system has 3+ members AND its own
+                                 collapsed cluster has 2+ members, the
+                                 card swaps to the shared roster card
+                                 (system-card-format.ts). Membership
+                                 and clusters come from the kind-
+                                 generic registry (../../system-
+                                 membership/), so a host star's
+                                 collapsed planets ride the same roster
+                                 as multi-star clusters; each cluster
+                                 is the renderer's own live verdict, so
+                                 card and rendering can't disagree. A
+                                 visibly separated member (Proxima off
+                                 the α Cen A+B point) keeps its own
+                                 card. Plain binaries keep the
+                                 per-component card; close-in viewing
+                                 (nothing suppressed) does too.
+system-card-format.ts            Shared "<lead> system" roster card for
+                                 a screen-collapsed system — count line
+                                 ("N components:" / "N of M components
+                                 here:") + comma roster capped at
+                                 SYSTEM_ROSTER_MAX_NAMES with "+ N
+                                 more". Star and planet formatters both
+                                 build their swap card here.
 planet-hover-format.ts           Planet / moon — camera distance ·
                                  apparent V mag, orbital period, radius
                                  (R⊕ + km). Period comes from the shared
@@ -45,7 +54,11 @@ planet-hover-format.ts           Planet / moon — camera distance ·
                                  orbit-descriptor.ts) so it matches the
                                  focus card: years for a planet, days for
                                  a moon (whose period is set by its parent
-                                 planet's mass, not the Sun's).
+                                 planet's mass, not the Sun's). Swaps to
+                                 the shared roster card when the hovered
+                                 body has its own collapsed cluster (a
+                                 planet whose moons read as one point
+                                 with it).
 cloud-hover-format.ts            Cloud — camera distance + major × minor
                                  span. Z2020 spheres collapse to
                                  "<r> × <r>".

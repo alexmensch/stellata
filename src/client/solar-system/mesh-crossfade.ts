@@ -1,27 +1,37 @@
-// Disc ↔ spheroid-mesh LOD crossfade, keyed on the ratio of the
-// body's TRUE projected diameter (physSize) to its perceptual disc
-// size (appSize). Contract in README.md § Planet mesh LOD.
+// Disc ↔ spheroid-mesh LOD crossfade + reflected-glare sizing: the glare
+// is the shared star-perceptual point (a planet reads as a star of its
+// magnitude). Contract in README.md § Planet mesh LOD.
 
-/** Fade starts at physSize = appSize — exactly where the disc's
- *  `max(appSize, physSize)` switches to the physical term, so the
- *  mesh and the disc share the same footprint through the whole band
- *  and the handoff can't pop in size. Must stay ≥ 1 for that
- *  invariant to hold. */
-export const MESH_FADE_START_RATIO = 1.0;
-/** Mesh renders alone once physSize is this multiple of appSize. */
-export const MESH_FADE_END_RATIO = 1.5;
+/** Mesh fully faded out at/below this physical diameter — the eye can
+ *  track a resolved body (and its crescent phase) down to ~1 px, so
+ *  the mesh persists to that limit instead of handing off at the
+ *  perceptual-disc scale. Doubles as the crescent-photocentre floor. */
+export const MESH_FADE_MIN_PX = 1.0;
+/** Mesh fully on at/above this physical diameter. */
+export const MESH_FADE_FULL_PX = 2.0;
 /** Kick off the lazy texture fetch on approach, before the band. */
-export const TEXTURE_PREFETCH_RATIO = 0.5;
+export const TEXTURE_PREFETCH_PX = 0.5;
 
-/** Mesh opacity for a physSize/appSize ratio: 0 below the band, 1
- *  above, smoothstep across it. Disc opacity is `1 − meshFade`. */
-export function meshFadeFromRatio(ratio: number): number {
-  const t = Math.min(
-    Math.max(
-      (ratio - MESH_FADE_START_RATIO) / (MESH_FADE_END_RATIO - MESH_FADE_START_RATIO),
-      0,
-    ),
-    1,
-  );
+/** Photocentre shift toward the lit limb, as a fraction of the disc
+ *  radius, at maximum crescent (illumFrac → 0) and full resolvedness —
+ *  shape only, so a barely-resolved crescent's halo doesn't ring its
+ *  dark limb. Mirrored in planet.vert.glsl (uGlarePhotocentreShift). */
+export const GLARE_PHOTOCENTRE_SHIFT = 0.5;
+
+/** Default reflected-glare peak multiplier — planet-glare brightness
+ *  relative to a star of the same magnitude (1 = identical). Smoke-tuned;
+ *  drives the tunable uGlareGain uniform. */
+export const DEFAULT_GLARE_GAIN = 1.0;
+
+/** Mesh opacity for a physical diameter in CSS px: 0 at/below
+ *  MESH_FADE_MIN_PX, 1 at/above MESH_FADE_FULL_PX, smoothstep across.
+ *  Doubles as glare resolvedness `res` — the shader computes the same
+ *  smoothstep over uMeshFadePx (fades in the crescent photocentre). */
+export function meshFadeFromPhysPx(physPx: number): number {
+  return smooth01((physPx - MESH_FADE_MIN_PX) / (MESH_FADE_FULL_PX - MESH_FADE_MIN_PX));
+}
+
+function smooth01(x: number): number {
+  const t = Math.min(Math.max(x, 0), 1);
   return t * t * (3 - 2 * t);
 }

@@ -20,7 +20,13 @@ export const ORBIT_LINE_OPACITY = 0.5;
  *  and viewport height. Pair with `angularRadiusPx` for the on-screen size
  *  visibility gate shared by the orbit overlays. */
 export function pixelsPerRadian(fovDeg: number, viewportHeightPx: number): number {
-  return viewportHeightPx / ((fovDeg * Math.PI) / 180);
+  return pixelsPerRadianFromFovRad((fovDeg * Math.PI) / 180, viewportHeightPx);
+}
+
+/** As `pixelsPerRadian`, for callers that already hold the vertical FOV in
+ *  radians (e.g. the shared uFovYRad uniform). */
+export function pixelsPerRadianFromFovRad(fovRad: number, viewportHeightPx: number): number {
+  return viewportHeightPx / fovRad;
 }
 
 /** On-screen radius (px) of a feature of half-extent `sizePc` at range

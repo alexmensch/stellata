@@ -11,7 +11,7 @@ import {
   perceptualAppSizePx,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 
 describe('apparentMagnitude', () => {
   it('returns the absolute magnitude at 10 pc by definition', () => {
@@ -138,7 +138,6 @@ describe('planetApparentMagnitude', () => {
   // hand-verified against.
   const JUPITER_RADIUS_PC = 69911 / 3.0857e13; // km → pc
   const JUPITER_ALBEDO = 0.538;
-  const SOL_ABSMAG = 4.83;
 
   it('returns m_host_at_planet when reflectance product = 1', () => {
     // Construct geometry such that the reflected-light correction is
@@ -150,7 +149,7 @@ describe('planetApparentMagnitude', () => {
   it('Jupiter from Earth at opposition: ≈ -2.7 V', () => {
     // d_hp = 5.2 AU, d_vp = 4.2 AU, φ ≈ 1.
     const m = planetApparentMagnitude(
-      SOL_ABSMAG,
+      SUN_ABSMAG_V,
       4.2 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
@@ -161,7 +160,7 @@ describe('planetApparentMagnitude', () => {
     // Viewer 150 AU upwind from Sol along Sol→Jupiter line. Jupiter at
     // 5.2 AU on the same line ⇒ d_vp = 144.8 AU.
     const m = planetApparentMagnitude(
-      SOL_ABSMAG,
+      SUN_ABSMAG_V,
       144.8 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
@@ -173,7 +172,7 @@ describe('planetApparentMagnitude', () => {
     // — negligible against 1.34 pc, so d_vh ≈ d_vp.
     const dVp = 1.34 - 5.2 * AU_PC;
     const m = planetApparentMagnitude(
-      SOL_ABSMAG, dVp, 5.2 * AU_PC,
+      SUN_ABSMAG_V, dVp, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(m).toBeCloseTo(21, 0);
@@ -209,7 +208,7 @@ describe('planetApparentMagnitude', () => {
     // formula must not involve the viewer→host distance at all. Jupiter
     // seen from Sol itself: d_vp = d_hp = 5.2 AU, full phase.
     const atHost = planetApparentMagnitude(
-      SOL_ABSMAG, 5.2 * AU_PC, 5.2 * AU_PC,
+      SUN_ABSMAG_V, 5.2 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(Number.isFinite(atHost)).toBe(true);
@@ -222,29 +221,48 @@ describe('planetApparentMagnitude', () => {
     const m = planetApparentMagnitude(0, 0, 10, 0.5, 1, 1);
     expect(Number.isFinite(m)).toBe(true);
   });
+
+  it('nails the full Moon at −12.7 — the absolute-flux calibration anchor', () => {
+    // The formula has NO free constant; it lands on the standard V-mag
+    // scale from M_host + physical p/R/distances alone. Full Moon from
+    // Earth is the canonical check: Sun (M=4.83) at d_hp=1 AU, viewer at
+    // d_vp=384,400 km, R=1737.4 km, geometric albedo p=0.12, φ(0)=1.
+    // Real full-Moon V ≈ −12.74. Agreement here proves the inverse-square
+    // flux is correctly calibrated, and (being anchored on M_host) it
+    // flows to any host star for free.
+    const m = planetApparentMagnitude(
+      SUN_ABSMAG_V,
+      384_400 * KM_PC,
+      AU_PC,
+      0.12,
+      1737.4 * KM_PC,
+      1,
+    );
+    expect(m).toBeCloseTo(-12.7, 1);
+  });
 });
 
 describe('hostIntensityScale', () => {
-  it('is exactly 1 at the 1 AU reference (Earth insolation)', () => {
-    expect(hostIntensityScale(AU_PC)).toBeCloseTo(1, 9);
+  it('is exactly 1 for a solar host at the 1 AU reference (Earth insolation)', () => {
+    expect(hostIntensityScale(SUN_ABSMAG_V, AU_PC)).toBeCloseTo(1, 9);
   });
 
-  it('follows (1/d_au)^(2·exponent) between the clamps', () => {
-    expect(hostIntensityScale(5.203 * AU_PC)).toBeCloseTo(
+  it('reduces to the old Sol (1/d_au)^(2·exponent) law for a solar host', () => {
+    expect(hostIntensityScale(SUN_ABSMAG_V, 5.203 * AU_PC)).toBeCloseTo(
       5.203 ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT), 9);
-    expect(hostIntensityScale(30.069 * AU_PC)).toBeCloseTo(
+    expect(hostIntensityScale(SUN_ABSMAG_V, 30.069 * AU_PC)).toBeCloseTo(
       30.069 ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT), 9);
   });
 
   it('Mercury clamps at the ceiling; nothing in-system hits the floor', () => {
-    expect(hostIntensityScale(0.387 * AU_PC)).toBe(HOST_INTENSITY_MAX);
-    expect(hostIntensityScale(39.482 * AU_PC)).toBeGreaterThan(HOST_INTENSITY_MIN);
+    expect(hostIntensityScale(SUN_ABSMAG_V, 0.387 * AU_PC)).toBe(HOST_INTENSITY_MAX);
+    expect(hostIntensityScale(SUN_ABSMAG_V, 39.482 * AU_PC)).toBeGreaterThan(HOST_INTENSITY_MIN);
   });
 
   it('is monotonically non-increasing in host distance', () => {
     let prev = Infinity;
     for (const dAu of [0.1, 0.387, 1, 5.2, 9.5, 19.2, 30, 39.5, 100]) {
-      const v = hostIntensityScale(dAu * AU_PC);
+      const v = hostIntensityScale(SUN_ABSMAG_V, dAu * AU_PC);
       expect(v).toBeLessThanOrEqual(prev);
       prev = v;
     }
@@ -252,16 +270,36 @@ describe('hostIntensityScale', () => {
 
   it('Mercury reads visibly brighter than Neptune (the reported defect)', () => {
     expect(
-      hostIntensityScale(0.387 * AU_PC) / hostIntensityScale(30.069 * AU_PC),
+      hostIntensityScale(SUN_ABSMAG_V, 0.387 * AU_PC)
+        / hostIntensityScale(SUN_ABSMAG_V, 30.069 * AU_PC),
     ).toBeGreaterThan(5);
+  });
+
+  it('scales with host luminosity — a luminous host lights bodies brighter', () => {
+    // A body 5 AU from a host 5 mag brighter (100× luminosity) than Sol
+    // receives 100× the irradiance; under the quarter-power display law
+    // that is 100^0.25 ≈ 3.16× the surface brightness of the same body at
+    // 5 AU from Sol — purely a function of star class, nothing else.
+    const sol5 = hostIntensityScale(SUN_ABSMAG_V, 5 * AU_PC);
+    const bright5 = hostIntensityScale(SUN_ABSMAG_V - 5, 5 * AU_PC);
+    expect(bright5 / sol5).toBeCloseTo(100 ** HOST_IRRADIANCE_DISPLAY_EXPONENT, 6);
+  });
+
+  it('depends only on the irradiance M_host + 5·log10(d_hp): equal irradiance ⇒ equal scale', () => {
+    // A host 5 mag fainter at 10× closer delivers the same irradiance
+    // (Δm = −5 from distance cancels +5 from luminosity), so the scale is
+    // identical — the invariant that makes the law general across systems.
+    const a = hostIntensityScale(SUN_ABSMAG_V, 10 * AU_PC);
+    const b = hostIntensityScale(SUN_ABSMAG_V + 5, 1 * AU_PC);
+    expect(b).toBeCloseTo(a, 9);
   });
 });
 
 describe('litIntensity', () => {
   it('equals hostIntensityScale at the naked-eye reference — defaults unchanged', () => {
     for (const dAu of [0.387, 1, 5.2, 30.069]) {
-      expect(litIntensity(dAu * AU_PC, LIT_EXPOSURE_REF_MAG))
-        .toBe(hostIntensityScale(dAu * AU_PC));
+      expect(litIntensity(SUN_ABSMAG_V, dAu * AU_PC, LIT_EXPOSURE_REF_MAG))
+        .toBe(hostIntensityScale(SUN_ABSMAG_V, dAu * AU_PC));
     }
   });
 
@@ -271,11 +309,11 @@ describe('litIntensity', () => {
     // 1.29 — a dim surface brightening well past its default, still
     // under the ceiling. Mercury (already at the ceiling) caps there.
     const exposure = 10 ** (8.5 / 10);
-    const neptune = litIntensity(30.069 * AU_PC, LIT_EXPOSURE_REF_MAG + 8.5);
+    const neptune = litIntensity(SUN_ABSMAG_V, 30.069 * AU_PC, LIT_EXPOSURE_REF_MAG + 8.5);
     expect(neptune).toBeCloseTo(
-      hostIntensityScale(30.069 * AU_PC) * exposure, 9);
+      hostIntensityScale(SUN_ABSMAG_V, 30.069 * AU_PC) * exposure, 9);
     expect(neptune).toBeLessThan(HOST_INTENSITY_MAX);
-    expect(litIntensity(0.387 * AU_PC, LIT_EXPOSURE_REF_MAG + 8.5))
+    expect(litIntensity(SUN_ABSMAG_V, 0.387 * AU_PC, LIT_EXPOSURE_REF_MAG + 8.5))
       .toBe(HOST_INTENSITY_MAX);
   });
 
@@ -283,15 +321,15 @@ describe('litIntensity', () => {
     // The distance floor keeps a default-sensitivity Pluto readable;
     // the composed exposure must still fade it toward black when the
     // slider drops — no floor on the product.
-    const dim = litIntensity(39.482 * AU_PC, LIT_EXPOSURE_REF_MAG - 5);
+    const dim = litIntensity(SUN_ABSMAG_V, 39.482 * AU_PC, LIT_EXPOSURE_REF_MAG - 5);
     expect(dim).toBeLessThan(HOST_INTENSITY_MIN);
     expect(dim).toBeCloseTo(
-      hostIntensityScale(39.482 * AU_PC) * 10 ** (-0.5), 9);
+      hostIntensityScale(SUN_ABSMAG_V, 39.482 * AU_PC) * 10 ** (-0.5), 9);
   });
 
   it('never exceeds the LDR ceiling at any sensitivity', () => {
     for (const dAu of [0.387, 1, 30.069]) {
-      expect(litIntensity(dAu * AU_PC, LIT_EXPOSURE_REF_MAG + 20))
+      expect(litIntensity(SUN_ABSMAG_V, dAu * AU_PC, LIT_EXPOSURE_REF_MAG + 20))
         .toBeLessThanOrEqual(HOST_INTENSITY_MAX);
     }
   });

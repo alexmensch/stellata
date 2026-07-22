@@ -20,6 +20,13 @@ export const KM_PC = AU_PC / AU_KM;
 // Also uploaded to the star vertex shader as the `uRSunPc` uniform.
 export const R_SUN_PC = 2.2543e-8;
 
+// Absolute V-band magnitude of the Sun (IAU / Willmer 2018). Anchors the
+// host-irradiance reference in perceptual-magnitude.ts so reflected-light
+// surface brightness scales with the host star's luminosity class rather
+// than assuming solar output — a body 1 AU from an O star is far brighter
+// than one 1 AU from Sol.
+export const SUN_ABSMAG_V = 4.83;
+
 // Floor on a catalog `physicalRadius[idx]` (in solar radii) before
 // converting to parsecs (`* R_SUN_PC`). Keeps R > 0 in geometric formulas
 // that divide by it or take its log.

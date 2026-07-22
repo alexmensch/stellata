@@ -225,11 +225,15 @@ pass solves.
 
 ## Interactions
 
-- **Disc↔mesh crossfade** — until step 2 lands, the fading disc
-  (main pass) and the rising mesh (local pass) composite across the
-  pass boundary — smoke-validated on Saturn. Under full membership
-  both render in the *same* pass with their existing blend contract
-  (`mesh-crossfade.ts`), so the handoff tightens further.
+- **Glare↔mesh crossfade** — a planet body is the spheroid mesh plus
+  one additive reflected-glare quad, both rendered in the local pass
+  under full membership. The mesh writes depth so the glare is occluded
+  to a lit-limb halo. The glare is the shared star-perceptual point —
+  a planet reads as a star of its apparent magnitude (visibility matches
+  chart mode) — identical in both compile variants; `LOCAL_DEPTH_PASS`
+  gates only member suppression + the log-depth chunk here, never
+  brightness (`../solar-system/README.md` § Planet mesh LOD). There is no
+  opaque planet disc to composite across the pass boundary.
 - **Chart mode** — inert. Chart flattens bodies to ink discs with
   depth disabled; the mesh layer already hides in monochrome and
   member suppression must not engage (billboards render normally in

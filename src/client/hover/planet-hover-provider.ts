@@ -40,6 +40,11 @@ export function createPlanetHoverProvider(
           return p ? orbitDescriptorFor(p, ps, null) : null;
         },
         moonsOf: (i) => moonNamesOf(ps.planets, i),
+        membership: stellata.systemMembership,
+        targetOf: (i) => {
+          const flat = stellata.planetField.instanceIndexOf(hostStarIdx, i);
+          return flat === null ? null : { kind: 'planet', idx: flat };
+        },
       };
       return formatPlanetHover(hit.idx, hit.cameraDistancePc, ctx);
     },

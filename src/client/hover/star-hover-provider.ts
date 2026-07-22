@@ -9,8 +9,8 @@ import type { HoverProvider } from './hover-types';
 export interface StarHoverProviderConfig {
   stellata: Stellata;
   // Everything the formatter needs except the live sim time and the
-  // composite-suppress verdict, which the provider samples per hover.
-  context: Omit<StarHoverFormatContext, 'nowJd' | 'isCollapsed'>;
+  // membership queries, which the provider wires from Stellata itself.
+  context: Omit<StarHoverFormatContext, 'nowJd' | 'membership'>;
 }
 
 export function createStarHoverProvider(
@@ -27,7 +27,7 @@ export function createStarHoverProvider(
       formatStarHover(hit.idx, hit.cameraDistancePc, {
         ...context,
         nowJd: tToJDE(stellata.getT()),
-        isCollapsed: (i) => stellata.isCompositeSuppressed(i),
+        membership: stellata.systemMembership,
       }),
   };
 }

@@ -1,14 +1,13 @@
 precision highp float;
 
 #include <common>
+#include <stellata_atmosphere_uniforms>
+#include <stellata_atmosphere_scatter>
 
-// uMap and uNightMap are always bound (1×1 white placeholder when the
-// body has no texture) — sampling an unbound texture is undefined in
-// WebGL.
+// uMap is always bound (1×1 white placeholder when the body has no texture)
+// — sampling an unbound texture is undefined in WebGL.
 uniform sampler2D uMap;
 uniform float uHasMap;
-uniform sampler2D uNightMap;
-uniform float uHasNight;
 uniform vec3 uColour;
 // Planet → host-star direction in VIEW space; per-fragment Lambert
 // against it is what produces the day/night terminator.
@@ -33,6 +32,10 @@ uniform int uCasterCount;
 // Host angular radius from the body — penumbra half-width per unit
 // distance along the sun ray.
 uniform float uSunAngRad;
+// Atmosphere airlight over the lit disc (final = surface·T_view + L_air).
+// uHasAtmosphere gates the whole block; the scatter uniforms it reads are the
+// shared contract (planet-atmosphere.frag.glsl reads the same set).
+uniform float uHasAtmosphere;
 
 in vec3 vNormalV;
 in vec3 vPosV;
@@ -45,17 +48,6 @@ out vec4 outColor;
 // bodies (Uranus) and reads subtly on textured ones.
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
-
-// Night-lights crossfade half-width on dot(n, sunDir): the emissive
-// term ramps in across ±this band around the geometric terminator so
-// the day-texture → city-lights handoff has no hard seam.
-const float NIGHT_RAMP = 0.05;
-
-// Night-lights emissive scale. The Black Marble source is a deeply
-// stretched long exposure — at map value the night side reads as
-// bright as the day side, when to the naked eye city lights are faint
-// specks on a near-black hemisphere. Tune at smoke.
-const float NIGHT_INTENSITY = 0.2;
 
 void main() {
   vec3 n = normalize(vNormalV);
@@ -82,12 +74,35 @@ void main() {
     shadow *= smoothstep(uCasters[i].w - pen, uCasters[i].w + pen, missPc);
   }
   float ndotv = clamp(dot(n, v), 0.0, 1.0);
-  float limb = mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
+  // Atmospheric bodies: the scattering governs the limb, so the ad-hoc
+  // surface limb-darkening is dropped (it double-darkened the disc edge into
+  // a black rim). Airless bodies keep it as their whole limb character.
+  float limb = uHasAtmosphere > 0.5 ? 1.0 : mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
   vec3 base = mix(uColour, texture(uMap, vUvM).rgb, uHasMap);
-  // Emissive, not reflective: no limb darkening, phase scale, host
-  // intensity, or shadow on the lights.
-  float nightRamp = 1.0 - smoothstep(-NIGHT_RAMP, NIGHT_RAMP, sunCos);
-  vec3 night = texture(uNightMap, vUvM).rgb * nightRamp * uHasNight * NIGHT_INTENSITY;
-  vec3 reflected = base * dayside * limb * uPhaseScale * uLitIntensity * shadow;
-  outColor = vec4(reflected + night, uFade);
+  vec3 col = base * dayside * limb * uPhaseScale * uLitIntensity * shadow;
+
+  if (uHasAtmosphere > 0.5) {
+    // Airlight in front of this surface fragment + the transmittance the
+    // surface radiance loses on its way out. Reconstruct the surface point on
+    // the SMOOTH sphere from the renormalized normal, not the faceted
+    // position — the latter grids the analytic march to the tessellation.
+    vec3 nrm = normalize(vNormalV);
+    vec3 surf = uCenterView + uRadiusPc * nrm;
+    vec3 dir = normalize(surf);
+    vec3 o = -uCenterView / uRadiusPc;
+    float tStop = length(surf) / uRadiusPc;
+    float t0, t1;
+    float discA = stellata_shellEntry(o, dir, uAtmoRadius, t0, t1);
+    float tStart = discA > 0.0 ? max(t0, 0.0) : 0.0;
+    vec3 inscatter;
+    vec3 transmittance;
+    stellata_atmosphereRadiance(
+      o, dir, tStart, tStop, uAtmoRadius, uSunDirView,
+      uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
+      stellata_atmoJitter(gl_FragCoord.xy),
+      inscatter, transmittance);
+    col = col * transmittance + inscatter * uSunColour * uLitIntensity;
+  }
+
+  outColor = vec4(col, uFade);
 }

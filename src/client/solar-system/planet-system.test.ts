@@ -294,3 +294,35 @@ describe('systemFamily', () => {
     expect(systemFamily(SOL_BODIES)).toBe(systemFamily(SOL_BODIES));
   });
 });
+
+describe('atmosphere shells', () => {
+  it('exactly Venus, Earth, Mars, and Titan carry an atmosphere', () => {
+    const withAtmo = SOL_BODIES.filter((b) => b.atmosphere).map((b) => b.name);
+    expect(withAtmo).toEqual(['Venus', 'Earth', 'Mars', 'Titan']);
+  });
+
+  it('shell heights are the true scattering extents, km', () => {
+    const heights = Object.fromEntries(
+      SOL_BODIES.filter((b) => b.atmosphere).map((b) => [b.name, b.atmosphere!.heightKm]),
+    );
+    expect(heights).toEqual({ Venus: 90, Earth: 100, Mars: 60, Titan: 300 });
+  });
+
+  it('Titan carries the proportionally largest shell (~12% of R)', () => {
+    const titan = SOL_BODIES.find((b) => b.name === 'Titan')!;
+    expect(titan.atmosphere!.heightKm / titan.radiusKm).toBeCloseTo(0.117, 2);
+  });
+
+  it('Earth Rayleigh scatter is blue-heavy (1/λ⁴), zero aerosol absorption', () => {
+    const earth = SOL_BODIES.find((b) => b.name === 'Earth')!.atmosphere!;
+    expect(earth.rayleighCoeff[2]).toBeGreaterThan(earth.rayleighCoeff[0]);
+    expect(earth.absorbCoeff).toEqual([0, 0, 0]);
+  });
+
+  it('Mars and Titan absorb blue most (butterscotch / orange, not blue)', () => {
+    for (const name of ['Mars', 'Titan']) {
+      const atmo = SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
+      expect(atmo.absorbCoeff[2]).toBeGreaterThan(atmo.absorbCoeff[0]);
+    }
+  });
+});
