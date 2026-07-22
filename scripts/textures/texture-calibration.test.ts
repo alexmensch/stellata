@@ -42,7 +42,7 @@ const SUN_VRC = 0.352;
 describe('texture colour calibration manifest', () => {
   it('covers exactly the bodies with a shipped map AND a published index', () => {
     // Uranus ships no map; Pluto has no index row (New Horizons colour
-    // trusted as-is); earth-night is emissive, not reflectance.
+    // trusted as-is).
     expect(Object.keys(manifest).sort()).toEqual(Object.keys(INDICES).sort());
   });
 

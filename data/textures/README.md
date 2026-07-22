@@ -28,9 +28,7 @@ folder:
 - Max 2048 px wide, JPEG quality 82; sources narrower than 2048 keep
   their native size (never upscaled).
 - One file per body, `<body>.jpg`, lazy-loaded on close approach —
-  the lazy-load unit is one body. `earth-night.jpg` is the Black
-  Marble night-lights companion consumed by the city-lights blend
-  (stellata-2f6.14).
+  the lazy-load unit is one body.
 - **Uranus has no texture by design** — a featureless cyan spheroid
   with limb darkening is the accurate rendering (2f6.6 design
   record); it exercises the renderer's texture-less base path.
@@ -104,10 +102,8 @@ calibrates every map with a published disc-integrated colour to a
 
 What the calibration corrects, per planet:
 
-- **Earth day** — the Blue Marble 2002 composite (real ocean +
-  clouds) was near-neutral; nudged to Earth's measured bluish tone.
-  `earth-night` is emissive city light, not reflectance — never
-  calibrated.
+- **Earth** — the Blue Marble 2002 composite (real ocean + clouds)
+  was near-neutral; nudged to Earth's measured bluish tone.
 - **Jupiter** — Cassini natural colour; near-target, small nudge.
 - **Venus** — Jónsson's colourised UV cloud structure read far
   yellower than Venus measures; calibrated to its near-neutral white

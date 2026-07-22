@@ -31,7 +31,6 @@ BODIES = {
     "mercury": "mercury-pia15063.jpg",
     "venus": "venus-bjj.jpg",
     "earth": "earth-blue-marble-2002.jpg",
-    "earth-night": "earth-night.jpg",
     "mars": "mars-viking-mdim21.jpg",
     "jupiter": "jupiter-pia07782.jpg",
     "saturn": "saturn-bjj.jpg",
@@ -200,8 +199,8 @@ def build_body(name: str, src_name: str, manifest: dict) -> None:
     # § Colour fidelity. Bodies with a published disc-integrated index
     # take the measured calibration (Mercury's grayscale gets its tint
     # from it); the moon hand-treatments (tint/desaturate) hold until
-    # a vetted satellite index table exists. Pluto and the emissive
-    # earth-night companion ship their source colour untouched.
+    # a vetted satellite index table exists. Pluto ships its source
+    # colour untouched.
     if name in FLIP_HORIZONTAL:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
     if name in COLOUR_INDICES:
