@@ -85,4 +85,22 @@ describe('texture colour calibration manifest', () => {
     expect(manifest.neptune.meanBefore[2]).toBeGreaterThan(1.5);
     expect(manifest.neptune.achieved[2]).toBeLessThan(1.35);
   });
+
+  it('pins the committed gains + achieved of the correction bodies', () => {
+    // The loose "landed on target" / "documents the corrections" checks pass
+    // for any recalibration under tolerance; these pin the actual committed
+    // numbers, so a silent retune (or source-image swap) that leaves the
+    // artifacts stale fails until they are rebuilt and recommitted.
+    const pins: Record<string, { gains: [number, number, number]; achievedB: number }> = {
+      mars: { gains: [0.9692, 1.0566, 0.574], achievedB: 0.5214 },
+      neptune: { gains: [0.8701, 1.0818, 0.7123], achievedB: 1.2735 },
+      venus: { gains: [0.7977, 1.0331, 1.8085], achievedB: 0.9393 },
+    };
+    for (const [body, { gains, achievedB }] of Object.entries(pins)) {
+      for (const c of [0, 1, 2]) {
+        expect(manifest[body].gains[c], `${body} gain ${c}`).toBeCloseTo(gains[c], 4);
+      }
+      expect(manifest[body].achieved[2], `${body} achieved B`).toBeCloseTo(achievedB, 4);
+    }
+  });
 });

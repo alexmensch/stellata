@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PIL import Image, ImageFilter, ImageStat
 
-from texture_calibration import COLOUR_INDICES, calibrate
+from texture_calibration import COLOUR_INDICES, LUMA, calibrate
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
 Image.MAX_IMAGE_PIXELS = None
@@ -155,7 +155,7 @@ def tint_grayscale(
 ) -> Image.Image:
     """Luminance-preserving tint: hue from `colour` at `strength`
     (0 = stay gray, 1 = full chroma), detail from `im`."""
-    lum = 0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2]
+    lum = sum(w * c for w, c in zip(LUMA, colour))
     gains = [1 + (c / lum - 1) * strength for c in colour]
     l = im.convert("L")
     return Image.merge("RGB", [
@@ -301,6 +301,11 @@ def main() -> None:
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
     for name, src_name in BODIES.items():
         build_body(name, src_name, manifest)
+    # Drop rows for bodies no longer built + calibrated, so a removed body
+    # can't leave a stale entry across incremental (up-to-date) runs.
+    calibrated = {name for name in BODIES if name in COLOUR_INDICES}
+    for stale in manifest.keys() - calibrated:
+        del manifest[stale]
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     build_saturn_rings()
     for body, spec in RING_TABLES.items():
