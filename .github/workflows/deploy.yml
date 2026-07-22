@@ -64,8 +64,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          lfs: true
           fetch-depth: 0
+
+      - uses: ./.github/actions/lfs-cache
 
       - uses: pnpm/action-setup@v6
 
