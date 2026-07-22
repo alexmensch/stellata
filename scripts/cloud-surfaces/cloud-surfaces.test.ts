@@ -49,15 +49,15 @@ function uEllipsoid(c: RawCloud, x: number, y: number, z: number): number {
 }
 
 describe.skipIf(!ready)('cloud-surfaces.bin (committed artifact)', () => {
-  it('pins the traced-surface count (46 of 78 in-grid; the rest keep ellipsoids)', () => {
+  it('pins the traced-surface count (63 of 96; the rest keep ellipsoids)', () => {
     const { surfaces } = load();
-    expect(surfaces.size).toBe(46);
+    expect(surfaces.size).toBe(63);
   });
 
-  it('keys every mesh to an in-grid cloud sid', () => {
+  it('keys every mesh to a known cloud sid', () => {
     const { surfaces, clouds } = load();
-    const inGrid = new Set(clouds.filter((c) => c.inGrid).map((c) => c.sid));
-    for (const sid of surfaces.keys()) expect(inGrid.has(sid)).toBe(true);
+    const known = new Set(clouds.map((c) => c.sid));
+    for (const sid of surfaces.keys()) expect(known.has(sid)).toBe(true);
   });
 
   it('every mesh is non-degenerate and within the decimation budget', () => {
@@ -65,7 +65,7 @@ describe.skipIf(!ready)('cloud-surfaces.bin (committed artifact)', () => {
     for (const s of surfaces.values()) {
       expect(s.positions.length).toBeGreaterThanOrEqual(4 * 3);
       expect(s.indices.length % 3).toBe(0);
-      expect(s.indices.length / 3).toBeLessThanOrEqual(2400);
+      expect(s.indices.length / 3).toBeLessThanOrEqual(6000);
       let maxIdx = 0;
       for (const i of s.indices) if (i > maxIdx) maxIdx = i;
       expect(maxIdx).toBeLessThan(s.positions.length / 3);
@@ -74,26 +74,31 @@ describe.skipIf(!ready)('cloud-surfaces.bin (committed artifact)', () => {
 
   it('every brick is within budget, non-empty, and contains its mesh', () => {
     const { surfaces } = load();
+    // Aggregate over ~8 MB of brick texels + ~200k mesh vertices across 63
+    // clouds; a per-element expect() would run into the millions, so scan
+    // with indexed loops and assert once.
+    let containmentViolations = 0;
     for (const s of surfaces.values()) {
       const b = s.brick;
-      expect(Math.max(...b.dims)).toBeLessThanOrEqual(56);
+      expect(Math.max(...b.dims)).toBeLessThanOrEqual(72);
       expect(b.data.length).toBe(b.dims[0] * b.dims[1] * b.dims[2]);
       expect(b.densityMax).toBeGreaterThan(0);
       expect(b.stepPc).toBeGreaterThan(0);
       // Some texel actually encodes the peak (the linear scale is tight).
       let max = 0;
-      for (const v of b.data) if (v > max) max = v;
+      for (let i = 0; i < b.data.length; i++) if (b.data[i] > max) max = b.data[i];
       expect(max).toBe(255);
       // Every mesh vertex lies inside the brick's world-space AABB —
       // the absorption raymarch can see the dust the rim traces.
       for (let k = 0; k < 3; k++) {
-        const hi = b.aabbMinAbs[k] + (b.dims[k] - 1) * b.stepPc;
+        const lo = b.aabbMinAbs[k] - b.stepPc;
+        const hi = b.aabbMinAbs[k] + (b.dims[k] - 1) * b.stepPc + b.stepPc;
         for (let i = k; i < s.positions.length; i += 3) {
-          expect(s.positions[i]).toBeGreaterThanOrEqual(b.aabbMinAbs[k] - b.stepPc);
-          expect(s.positions[i]).toBeLessThanOrEqual(hi + b.stepPc);
+          if (s.positions[i] < lo || s.positions[i] > hi) containmentViolations++;
         }
       }
     }
+    expect(containmentViolations).toBe(0);
   });
 
   it('winds outward (positive signed volume — the FrontSide cull contract)', () => {
@@ -126,12 +131,14 @@ describe.skipIf(!ready)('cloud-surfaces.bin (committed artifact)', () => {
   it('every vertex sits inside its cloud envelope (u ≤ 1.1)', () => {
     const { surfaces, clouds } = load();
     const bySid = new Map(clouds.map((c) => [c.sid, c]));
+    let worstU = 0;
     for (const [sid, s] of surfaces) {
       const cloud = bySid.get(sid)!;
       for (let i = 0; i < s.positions.length; i += 3) {
         const u = uEllipsoid(cloud, s.positions[i], s.positions[i + 1], s.positions[i + 2]);
-        expect(u).toBeLessThanOrEqual(1.1);
+        if (u > worstU) worstU = u;
       }
     }
+    expect(worstU).toBeLessThanOrEqual(1.1);
   });
 });

@@ -20,15 +20,16 @@ VERSION = 2
 
 # Density-brick budget: the sampled volume ships (mean-pooled to fit)
 # as a per-cloud uint8 3D texture so the runtime absorption raymarch
-# integrates the SAME field the isosurface was traced from.
-MAX_BRICK_DIM = 56
+# integrates the SAME field the isosurface was traced from. Runtime GPU
+# cost: 3D-texture VRAM per cloud grows as the cube of this.
+MAX_BRICK_DIM = 72
 
-# Sampling: ~1.25 pc inside each cloud's bbox (well below the 4.88 pc
+# Sampling: ~0.5 pc inside each cloud's bbox (well below the 4.88 pc
 # runtime voxel grid — the dustmaps GP posterior is queried directly),
-# coarsening only for the giant Z2020 spheres so no grid exceeds
-# MAX_GRID_DIM per axis.
-STEP_PC = 1.25
-MAX_GRID_DIM = 144
+# coarsening only for the larger clouds so no grid exceeds MAX_GRID_DIM
+# per axis. MAX_GRID_DIM caps offline query cost (∝ dim³), not runtime.
+STEP_PC = 0.5
+MAX_GRID_DIM = 256
 QUERY_BATCH = 2_000_000
 
 # Envelope taper: density fades to zero over u ∈ [0.95, 1.05] of the
@@ -44,7 +45,32 @@ ENVELOPE_HI = 1.05
 ISO_FRAC = 0.25
 ISO_FLOOR = 0.005
 
-TARGET_TRIS = 2400
+# Per-cloud floor overrides (by cloud id) for weak globules + distant HII
+# regions the global ISO_FLOOR rejects but that carry a genuine — if faint
+# — Edenhofer signal at their distance (out-of-grid clouds sample the
+# noisier 2 kpc flavor, so their peaks read lower). Each floor is ~half the
+# cloud's in-envelope peak, tracing the dense knot while staying above the
+# diffuse-noise pedestal. Clouds with no real signal are deliberately
+# absent (Carina, IC 2944, RCW38, the CB/LBN/Draco globules — they keep
+# their ellipsoid fallback).
+ISO_FLOOR_OVERRIDES: dict[str, float] = {
+    "w4": 0.0023,       # W4
+    "gem-ob1": 0.00175, # Gem OB1
+    "m17": 0.0018,      # Omega Nebula
+    "rosette": 0.0016,  # Rosette
+    "ggd4": 0.0021,     # GGD4
+    "m16": 0.0008,      # Eagle Nebula
+    "ic-443": 0.0007,   # Jellyfish Nebula
+    "m20": 0.0022,      # Trifid Nebula
+    "l1251": 0.0022,    # L1251
+    "l1355": 0.00185,   # L1355
+    "l1307": 0.0014,    # L1307
+    "l1335": 0.0013,    # L1335
+    "lbn991": 0.00145,  # LBN991
+    "lacerta": 0.0013,  # Lacerta
+}
+
+TARGET_TRIS = 6000
 SMOOTH_ITERS = 6
 # Drop disconnected speckle components below this share of a cloud's
 # faces (tiny isolated blobs read as noise rims).
@@ -62,9 +88,20 @@ def quat_to_matrix(q):
     ])
 
 
-def load_query():
+def load_query(flavor="main"):
     from dustmaps.edenhofer2023 import Edenhofer2023Query
-    return Edenhofer2023Query()
+    return Edenhofer2023Query(flavor=flavor)
+
+
+def query_for(cache, cloud):
+    """Lazily load + memoise the Edenhofer flavor a cloud samples from:
+    in-grid clouds use the cleaner 1.25 kpc 'main' posterior; out-of-grid
+    clouds use the noisier 'less_data_but_2kpc' flavor that reaches 2 kpc."""
+    flavor = "main" if cloud["inGrid"] else "less_data_but_2kpc"
+    if flavor not in cache:
+        print(f"  loading Edenhofer query (flavor={flavor})…")
+        cache[flavor] = load_query(flavor)
+    return cache[flavor]
 
 
 def query_density(query, xyz):
@@ -207,29 +244,33 @@ def main() -> None:
     if not CLOUDS_JSON.exists():
         sys.exit("public/clouds.json missing — run `pnpm run build:clouds` first.")
     catalog = json.loads(CLOUDS_JSON.read_text())
-    if catalog.get("version") != 2:
+    if catalog.get("version") != 3:
         sys.exit(f"clouds.json version {catalog.get('version')} unsupported.")
-    clouds = [c for c in catalog["clouds"] if c["inGrid"]]
+    clouds = catalog["clouds"]
     if args.only:
         clouds = [c for c in clouds if c["id"] == args.only]
     for c in clouds:
         if "sid" not in c:
             sys.exit(f"cloud {c['id']} has no sid — run `pnpm run build:clouds`.")
 
-    print(f"tracing {len(clouds)} in-grid clouds "
-          f"(of {catalog['count']}; out-of-grid keep ellipsoids)")
-    query = load_query()
+    n_in = sum(c["inGrid"] for c in clouds)
+    print(f"tracing {len(clouds)} clouds of {catalog['count']} "
+          f"({n_in} in-grid main flavor + {len(clouds) - n_in} out-of-grid "
+          f"2 kpc flavor)")
+    queries: dict = {}
 
     entries = []
     skipped = []
     for c in clouds:
+        query = query_for(queries, c)
         volume, aabb_min, step, u_ell = sample_cloud(query, c)
         inside = volume[u_ell < 1.0]
         peak = float(np.percentile(inside, 99)) if inside.size else 0.0
-        iso = max(ISO_FLOOR, ISO_FRAC * peak)
+        iso = max(ISO_FLOOR_OVERRIDES.get(c["id"], ISO_FLOOR), ISO_FRAC * peak)
         if volume.max() <= iso:
             skipped.append(c["id"])
             print(f"  {c['name']:<24} step {step:4.2f}  p99 {peak:.4f}  "
+                  f"max {float(volume.max()):.4f}  iso {iso:.4f}  "
                   f"— no surface (ellipsoid fallback)")
             continue
         mesh = build_mesh(volume, iso, aabb_min, step)
