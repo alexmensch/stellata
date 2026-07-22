@@ -114,7 +114,7 @@ src/client/solar-system/
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
-                                  fallback, emissive night-lights blend).
+                                  fallback, atmosphere airlight over the disc).
   planet-rings.vert.glsl,
   planet-rings.frag.glsl          Ring-annulus shaders (radial strip
                                   sample, lit/transmitted faces, body
@@ -624,13 +624,6 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
   planet-scale separations share one log-depth bucket in any shadow
   map the main pass could render — and the local pass's z-buffer
   orders camera rays, not sun rays.
-- **Earth night lights** (stellata-2f6.14): `Planet.hasNightTexture`
-  lazy-loads the `<body>-night.jpg` companion (Black Marble) with the
-  day map; the shader adds it as an *emissive* term (no limb
-  darkening) ramping in across a ±0.05 dot(n, sun) band around the
-  terminator, so the day→lights handoff has no hard seam. With IAU
-  rotation on `getT()`, the actually-dark hemisphere shows its lights
-  at model time.
 - **Textures**: lazy-fetched from `public/textures/<body>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
   `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is
@@ -721,11 +714,6 @@ atmosphere that hides its texture and reads as a featureless orange ball. Every
 atmosphere is an independent per-body `PlanetAtmosphere` row, so this is a local
 choice, not a global one; the debug sliders are global multipliers on top.
 
-**Soft terminator (twilight).** The sun-shadow test is a smooth penumbra, not a
-binary in/out (`SHADOW_SOFTNESS`) — a hard test snapped the low atmosphere at
-the terminator to black; the soft band stands in for the twilight that
-refraction, the finite solar disc, and multiple scattering produce.
-
 **Multiple-scattering fill.** A small isotropic term = fraction scattered (not
 absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds
 day-side ambient so the terminator doesn't fall to pure single-scatter black.
@@ -739,9 +727,12 @@ reconstruct the ray direction from the **renormalized interpolated normal** (a
 smooth sphere direction), never the faceted interpolated position. (2)
 *Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`) jitters
 its sample lattice per fragment by an interleaved-gradient-noise offset
-(`stellata_atmoJitter(gl_FragCoord)`) so the residual reads as fine noise. The
-CPU mirror uses the midpoint (0.5), so vitest pins deterministic quadrature
-while the shader decorrelates. The ad-hoc surface **limb-darkening** is dropped
+(`stellata_atmoJitter(gl_FragCoord)`), and the light march offsets by a further
+golden-ratio stride per view sample (`LIGHT_JITTER_STRIDE`) so the view and
+light lattices stay **decorrelated** — otherwise the two beat into a moiré
+rather than dissolving into fine grain. The CPU mirror uses the midpoint (0.5),
+so vitest pins deterministic quadrature while the shader decorrelates. The
+ad-hoc surface **limb-darkening** is dropped
 for atmospheric bodies (the scattering governs the limb; keeping it double-
 darkened the disc edge into a black rim).
 

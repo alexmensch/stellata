@@ -99,11 +99,6 @@ export interface Planet {
   // Undefined = 0 = airless hard cut. Perceptual seeds tuned at smoke,
   // scaled to atmosphere density (Venus thickest).
   readonly terminatorSoftness?: number;
-  // True when a `<body>-night.jpg` emissive night-side companion map
-  // ships alongside the day texture (Earth's Black Marble city
-  // lights). The mesh renderer lazy-loads and blends it past the
-  // terminator.
-  readonly hasNightTexture?: boolean;
   // Optional ring system: annulus span in the body's equatorial
   // plane, textured by the `<body>-rings.png` radial strip (RGB =
   // colour, A = opacity; U maps inner→outer). Spans must match the
@@ -308,7 +303,6 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
-    hasNightTexture: true,
     // Rayleigh (1/λ⁴) gives the blue airlight; a real aerosol/haze Mie term
     // (τ ≈ 0.05, grey) desaturates it toward the grey-blue limb seen from
     // orbit rather than a vivid pure-Rayleigh blue.

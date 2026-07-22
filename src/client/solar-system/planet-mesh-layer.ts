@@ -257,7 +257,6 @@ export class PlanetMeshLayer {
       const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureTexture(planet.name);
-        if (planet.hasNightTexture) this.ensureTexture(`${planet.name}-night`);
         if (planet.rings) this.ensureTexture(`${planet.name}-rings`, 'png');
       }
       const fade = meshFadeFromPhysPx(physPx);
@@ -359,16 +358,6 @@ export class PlanetMeshLayer {
         (material.uniforms.uColour.value as THREE.Color).setRGB(
           planet.colour[0], planet.colour[1], planet.colour[2],
         );
-      }
-      const nightState = planet.hasNightTexture
-        ? this.textures.get(`${planet.name.toLowerCase()}-night`)
-        : undefined;
-      if (nightState?.state === 'ready') {
-        material.uniforms.uNightMap.value = nightState.tex;
-        material.uniforms.uHasNight.value = 1;
-      } else {
-        material.uniforms.uNightMap.value = this.placeholder;
-        material.uniforms.uHasNight.value = 0;
       }
     }
 
@@ -546,8 +535,6 @@ export class PlanetMeshLayer {
       uniforms: {
         uMap: { value: this.placeholder },
         uHasMap: { value: 0 },
-        uNightMap: { value: this.placeholder },
-        uHasNight: { value: 0 },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },

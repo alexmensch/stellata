@@ -7,7 +7,6 @@ import {
   miePhase,
   rayleighPhase,
   scatterAlongRay,
-  sunVisibility,
 } from './atmosphere-scattering-pure';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -114,21 +113,6 @@ describe('scatterAlongRay', () => {
     expect(a.inscatter[2]).toBeGreaterThan(0);
     expect(b.inscatter[2]).toBeGreaterThan(0);
     expect(a.inscatter[2]).not.toBe(b.inscatter[2]);
-  });
-});
-
-describe('sunVisibility (soft terminator shadow)', () => {
-  it('full sun when the sun is behind the sample (closest approach behind)', () => {
-    expect(sunVisibility(2, 0, 0, 1, 0, 0)).toBe(1);
-  });
-
-  it('full shadow when the sun ray points straight through the planet', () => {
-    expect(sunVisibility(2, 0, 0, -1, 0, 0)).toBe(0);
-  });
-
-  it('half-lit at the grazing limb (penumbra midpoint)', () => {
-    // Ray from (0,0,2) grazing the unit sphere at perpendicular distance 1.
-    expect(sunVisibility(0, 0, 2, 0.5, 0, -Math.sqrt(0.75))).toBeCloseTo(0.5, 5);
   });
 });
 
