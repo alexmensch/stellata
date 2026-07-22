@@ -46,20 +46,36 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Stellata",
-        "alternateName": "Stellata Star Catalog",
-        "url": "https://stellata.xyz/",
-        "image": "https://stellata.xyz/og-image.png",
-        "description": "A browser-based 3D model of our galaxy rendering 313,257 real stars from the AT-HYG catalogue, with variable stars, planets, dust, and the Milky Way.",
-        "applicationCategory": "EducationalApplication",
-        "operatingSystem": "Any (WebGL2-capable browser)",
-        "browserRequirements": "Requires WebGL2",
-        "inLanguage": "en",
-        "isAccessibleForFree": true,
-        "author": { "@type": "Person", "name": "Alex Marshall", "url": "https://alxm.me" },
-        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        "@graph": [
+          {
+            "@type": "Person",
+            "@id": "https://alxm.me/#person",
+            "name": "Alex Marshall",
+            "url": "https://alxm.me",
+            "sameAs": [
+              "https://github.com/alexmensch",
+              "https://www.linkedin.com/in/awmars"
+            ]
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://stellata.xyz/#webapp",
+            "name": "Stellata",
+            "alternateName": "Stellata Star Catalog",
+            "url": "https://stellata.xyz/",
+            "image": "https://stellata.xyz/og-image.png",
+            "description": "A browser-based 3D model of our galaxy rendering 313,257 real stars from the AT-HYG catalogue, with variable stars, planets, dust, and the Milky Way.",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Any (WebGL2-capable browser)",
+            "browserRequirements": "Requires WebGL2",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "author": { "@id": "https://alxm.me/#person" },
+            "creator": { "@id": "https://alxm.me/#person" },
+            "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        ]
       }
     </script>
 
