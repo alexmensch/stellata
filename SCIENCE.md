@@ -246,7 +246,7 @@ enough to see it.
 > distances, 3D bounding boxes, and radial profiles drive the
 > molecular-cloud presence layer (`scripts/clouds/build-clouds.py`,
 > `data/molecular-clouds/`; physics model in
-> `docs/molecular-clouds.md`). Cloud masses come from Zucker 2021
+> `docs/science-molecular-clouds.md`). Cloud masses come from Zucker 2021
 > Table 3's NICEST extinction-map column (`mass_nicest`); the
 > Leike-map alternative saturates in dense gas and underestimates by
 > up to ~14× (the paper's own `mass_ratio` column), so it is not used
@@ -280,6 +280,11 @@ docs/science-galactic-structure.md     Galactic coordinate frame,
                                         Milky Way density profiles,
                                         interstellar dust extinction,
                                         constellation stick figures.
+docs/science-molecular-clouds.md       Extinction units chain,
+                                        calibrated Zucker density model,
+                                        taxonomy + embedded-star
+                                        cavities, isosurface presence
+                                        pass, anti-aliasing rules.
 docs/science-multiple-star-pipeline.md Binary/multiple detection
                                         philosophy, blend-split math,
                                         worked examples.
@@ -294,14 +299,6 @@ science it relates to.
 - **IAU constellation boundary datasets.** Only the asterism lines are
   included — boundaries would be a separate Stellarium dataset and
   carry no visual benefit at the camera scales the app operates in.
-- **Time-series proper motion — decision reversed, design accepted.**
-  Positions are still a static snapshot today (now J2016.0, ~10 years
-  stale; the highest-PM neighbours are visibly off by ~1–2 arcmin), but
-  runtime propagation to `t` is now designed — see
-  `docs/science-catalog-ingestion.md` § Current-epoch star positions;
-  implementation is tracked work. Per-layer
-  epoch table and the staleness audit live in `data/README.md`
-  § Reference epoch and proper motion.
 - **Spiral-arm overdensities** in the Milky Way volumetric background.
   The Reid et al. masers offer a maser-anchored spiral model that could
   ride atop the smooth disc profile, but the smooth band reads
@@ -310,25 +307,12 @@ science it relates to.
   worth the complexity.
 - **Irregular / supernova variables.** GCVS entries without a period are
   skipped — can't animate without one.
-- **Moons.** Earth's Moon, the Galilean satellites, Titan, Triton, etc.
-  The Standish ephemerides cover only the eight major planets +
-  Earth-Moon barycentre stand-in for Earth; satellite ephemerides are
-  a separate ingest. Planned (not a permanent non-goal) now that
-  planet focus affords close framings — tracked as the major-moons
-  epic.
 - **Asteroids and minor planets.** Ceres, Vesta, the Trojans, NEOs.
-  Same reason as moons — separate ephemeris source and not visible
-  as discs at any camera distance the app currently exposes.
+  Separate ephemeris source, and not visible as discs at any camera
+  distance the app currently exposes.
 - **Time-evolving heliopause shape.** Solar-cycle variation in the
   upwind boundary is real (~few AU peak-to-peak) but well below the
   layer's coarse 122-AU anchor; we treat the shell as static.
-- **Planet atmospheric haloes / scattering.** The remaining deferred
-  per-planet detail now that planet focus + the spheroid mesh LOD
-  shipped textures, IAU axial tilt + rotation, day-night terminator
-  shading, Earth night lights, and the Saturn, Uranus and Neptune
-  ring systems (the faint rings at true opacity — barely-there dark
-  threads by design). See § Scope principles — Defer detail until
-  zoom affordance above.
 - **Jupiter's rings.** Normal optical depth ≤ 10⁻⁵ (main ring ~10⁻⁶)
   is three orders of magnitude below the smallest 8-bit-representable
   opacity (1/255 ≈ 4×10⁻³) — at the true-opacity policy the strip

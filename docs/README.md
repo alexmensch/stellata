@@ -27,12 +27,6 @@ sid.md                  Design gate for the Stellata ID epic:
                         DR2→DR3 churn, v4 URL wire + exact legacy
                         migration table. Spans scripts/, data/sid/,
                         url-state, and every object-carrying layer.
-molecular-clouds.md     Physics model + implementation design for the
-                        molecular-cloud epic (extinction calibration,
-                        density profiles, substructure noise, cavities,
-                        taxonomy, presence pass). Drives phases A.2–A.7;
-                        spans scripts/clouds, scripts/dust,
-                        star-pipeline, and molecular-clouds folders.
 pipeline-flowchart.md   Plain-language flowchart + walkthrough of the
                         full data pipeline: which published datasets
                         feed it, the decisions each build stage makes,
@@ -63,6 +57,10 @@ science-galactic-structure.md  Split out of SCIENCE.md: galactic
                         coordinate frame, Milky Way density profiles,
                         interstellar dust extinction, constellation
                         stick figures.
+science-molecular-clouds.md    Extinction units chain, calibrated Zucker
+                        density model, taxonomy + embedded-star cavities,
+                        isosurface-traced presence pass, anti-aliasing
+                        rules.
 science-multiple-star-pipeline.md  Split out of SCIENCE.md:
                         binary/multiple detection philosophy,
                         blend-split math, worked examples.

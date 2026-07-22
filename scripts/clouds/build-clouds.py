@@ -190,9 +190,9 @@ def in_grid(center_icrs: tuple[float, float, float], half_extents_icrs: tuple[fl
 
 def density_model_fields(raw_name: str, *, radius_pc: float,
                          profiled: dict[str, cloud_model.ProfiledCloud]) -> dict:
-    """The clouds.json v2 per-cloud density-model block. Profiled clouds
+    """The clouds.json v3 per-cloud density-model block. Profiled clouds
     carry the calibrated Plummer parameters the bake used; the rest get the
-    class-based presence-pass defaults (docs/molecular-clouds.md § 4.3)."""
+    class-based presence-pass defaults (docs/science-molecular-clouds.md § 4.3)."""
     cls = cloud_class(raw_name)
     common = {
         'class': cls,

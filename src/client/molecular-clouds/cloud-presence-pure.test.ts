@@ -7,7 +7,7 @@ import {
 } from './cloud-presence-pure';
 
 describe('cloudModelDensity', () => {
-  // Taurus (clouds.json v2): n0Cal 355.55, rflat 1.2, p 1.2, uEnv 1, sMin 9.5.
+  // Taurus (clouds.json v3): n0Cal 355.55, rflat 1.2, p 1.2, uEnv 1, sMin 9.5.
   it('equals n0Cal at the centroid', () => {
     expect(cloudModelDensity(0, 9.5, 355.55, 1.2, 1.2, 1)).toBe(355.55);
   });

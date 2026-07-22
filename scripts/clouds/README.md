@@ -12,7 +12,7 @@ Plummer density model (column calibration + mass-budget envelope
 tightening), the curated class taxonomy, and the substructure-noise
 constants exported as the `noiseModel` block. `build-dust.py` imports
 it for the per-cloud extinction column check. Physics + measured
-numbers: `docs/molecular-clouds.md` §§ 2–5.
+numbers: `docs/science-molecular-clouds.md` §§ 2–5.
 
 `clouds-json.test.ts` pins the emitted v3 payload (11 calibrated
 clouds, class defaults, noiseModel, in-grid split, the alias /
@@ -35,10 +35,10 @@ scripts and source files. Run via `pnpm run build:clouds`.
 
 ## Output schema
 
-`{version: 2, count, noiseModel, clouds[]}` — `noiseModel` carries
-the substructure noise-ladder constants (docs/molecular-clouds.md
-§ 5.2; build-side only — the client no longer reads them, see the § 5
-status note). One entry per cloud:
+`{version: 3, count, noiseModel, clouds[]}` — `noiseModel` carries
+the substructure noise-ladder constants (docs/science-molecular-clouds.md
+§ 5.2; build-side only — the client no longer reads them, see § 5).
+One entry per cloud:
 
 | Field      | Meaning |
 | ---------- | ------- |
@@ -52,12 +52,12 @@ status note). One entry per cloud:
 | `distance` | Heliocentric distance to centroid (pc). |
 | `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the Leike-map `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
 | `sid`      | Frozen Stellata ID (docs/sid.md § 7). |
-| `class`    | `dark` / `sf` / `hii` taxonomy (curated; A.5 cross-match supersedes). |
-| `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model (docs/molecular-clouds.md § 4). |
+| `class`    | `dark` / `sf` / `hii` taxonomy (curated seed; a planned build-time embedded-star cross-match will supersede). |
+| `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model (docs/science-molecular-clouds.md § 4). |
 | `sigmaS`, `seed` | Log-normal σ_s by class + FNV-1a noise seed. |
 | `massLeike`, `akPeak` | Zucker Table 3 Leike-resolution calibration anchors; null unless profiled. |
 | `inGrid`   | Cloud lies fully inside the ±1250 pc dust voxel cube. |
-| `embedded` | Embedded-star/cavity list — empty until A.5. |
+| `embedded` | Embedded-star/cavity list — currently empty (the cross-match + cavity carve are tracked, not yet shipped). |
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
 (the tail of `pnpm run build:clouds`), resolving each `cloud:<id>` slug against

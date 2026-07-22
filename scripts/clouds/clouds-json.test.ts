@@ -29,7 +29,7 @@ interface CloudV2 {
   mass?: number;
 }
 
-// The calibration contract (docs/molecular-clouds.md § 4.2): n0Cal sets the
+// The calibration contract (docs/science-molecular-clouds.md § 4.2): n0Cal sets the
 // centroid shortest-axis column to akPeak/0.117 mag; uEnv < 1 records the
 // mass-budget envelope tightening. Any drift here means the calibration
 // inputs (Zucker tables, constants, integrator) changed.

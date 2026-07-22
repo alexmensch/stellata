@@ -10,7 +10,7 @@ precision highp int;
 // integrate the per-cloud Edenhofer density brick — the exact field the
 // rim isosurface was traced from, so shadow and silhouette agree 1:1;
 // fallback clouds integrate the calibrated Plummer model
-// (docs/molecular-clouds.md §§ 4, 9). Sampling rules: § 9.1.
+// (docs/science-molecular-clouds.md §§ 4, 9). Sampling rules: § 9.1.
 // CPU mirror of the analytic density/alpha math: cloud-presence-pure.ts.
 
 const float TAU_PER_AV = 0.921;
@@ -31,7 +31,7 @@ uniform vec3 uUvwScale;       // 1 / (stepPc · dims)
 uniform vec3 uUvwBias;        // 0.5 / dims (texel-centre alignment)
 #endif
 
-// Per-cloud calibrated density model (clouds.json v2). For USE_FIELD
+// Per-cloud calibrated density model (clouds.json v3). For USE_FIELD
 // materials uUEnv is the brick's taper edge (1.05), not the analytic
 // mass-budget envelope — the brick already carries the true shape.
 uniform vec3 uAxes;

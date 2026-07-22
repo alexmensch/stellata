@@ -30,7 +30,7 @@ VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
 # headroom (grid max 0.135 E_ZGR/pc, in the rho Oph core). The previous
 # 99.95th-percentile autotune (0.0053) silently clipped dense molecular
 # cloud cores 25x — peak cloud columns encoded at 0.06-0.6 mag A_V where
-# the raw field carries 0.8-2.7 mag (docs/molecular-clouds.md § 2.2).
+# the raw field carries 0.8-2.7 mag (docs/science-molecular-clouds.md § 2.2).
 # The build asserts the ceiling still covers the data each run.
 # Synthetic mode uses the same DENSITY_MIN and a fixed DENSITY_MAX matching
 # the real-data scale, so both pipelines share a single shader decode.
@@ -183,7 +183,7 @@ def zucker_column_check(voxels: np.ndarray) -> dict:
     off-centre in their bboxes), and the analytic cloud model in
     clouds.json drives only the presence pass. The ratios below run
     0.3–1.0 with the fixed DENSITY_MAX ceiling, consistent with 1 pc →
-    4.9 pc beam dilution of the Leike peaks (docs/molecular-clouds.md § 4).
+    4.9 pc beam dilution of the Leike peaks (docs/science-molecular-clouds.md § 4).
     Also asserts the encode ceiling covers the data."""
     cm = cloud_model
     rot = np.array(cm.GAL_TO_ICRS, dtype=np.float64)
