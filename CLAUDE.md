@@ -248,32 +248,6 @@ and the manual `pnpm run refresh:*` / `pnpm run validate:simbad` chain
 are documented in `scripts/refresh/README.md` and `RELEASING.md`
 § Catalogue refresh policy.
 
-## Temporarily shelved — machinery preserved, rendering disabled
-
-Don't refactor these layers' machinery away; each is paused until its
-visual treatment is refined. Details + flags in each folder README.
-
-Volumetric Milky Way in chart mode (`milkyway/`) · dust particles
-(`dust/`) · Local Group emission glow (`local-group/`).
-
-## Things deliberately kept out — don't re-debate scope
-
-Non-goals, noted so the scoping question doesn't recur. Per-feature
-detail (where relevant) lives in the closest folder README or
-SCIENCE.md.
-
-- IAU constellation **boundary** datasets (asterisms only).
-- HR diagram side panel.
-- WASD / flight controls.
-- Desktop two-finger roll on Chrome / Firefox (Safari-only by design;
-  no rotate gesture in the other browsers).
-- Time-series proper motion (single-star positions are snapshot-only).
-  Binary / multiple-star orbital motion IS live — `BinaryOrbitField`
-  against `getT()`, for pairs with Kepler elements in `binaries.bin`.
-- Spiral-arm overdensities in the Milky Way background (aliasing risk
-  through 32-step raymarching outweighs the structural gain).
-- Irregular / supernova variables (no GCVS period → no animation).
-
 ## Git workflow — worktree, PR, merge
 
 **Never push or commit to main.** Diff size is never a justification.
