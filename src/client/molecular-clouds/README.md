@@ -159,8 +159,13 @@ centroid — the calibrated density model is defined in that frame.
 
 ## Picking + hover
 
-Per-cloud absorption `Mesh` objects participate in `THREE.Raycaster`
-intersection. `Picker.pickCloud` does the raycast; the click
+Picking raycasts the **rim-shell meshes** — the depicted shape (traced
+isosurface, or the `u = uEnv` ellipsoid for fallback clouds), the same
+geometry behind the fresnel rim and the chart stipple outline — so the
+hitbox matches the silhouette in both modes rather than the far-larger
+absorption ellipsoid (its `SphereGeometry` is only the raymarch domain).
+Raycasting ignores mesh visibility, so picking works while the rim is
+decluttered or in chart mode. `Picker.pickCloud` does the raycast; the click
 handler in `onPointerUp` falls back to a cloud pick when no star is hit
 (stars take priority because they're the smaller, more precise target),
 and the hover engine's `cloud-hover-provider` calls `Picker.pickCloudHit`

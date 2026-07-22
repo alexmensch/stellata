@@ -241,6 +241,39 @@ describe('MolecularClouds / rim shell contract', () => {
   });
 });
 
+describe('MolecularClouds / picking geometry', () => {
+  const catalog = makeMockCatalog([
+    makeMockCloud({ name: 'A', id: 'a', sid: 1, axes: [10, 10, 10] }),
+  ]);
+
+  function raycastAt(c: MolecularClouds, origin: THREE.Vector3, dir: THREE.Vector3) {
+    c.group.updateMatrixWorld(true);
+    const rc = new THREE.Raycaster();
+    rc.set(origin, dir.clone().normalize());
+    return c.raycast(rc);
+  }
+
+  const down = new THREE.Vector3(0, 0, -1);
+
+  it('hits a traced cloud only where its shell is, not across the ellipsoid envelope', () => {
+    // makeSurface is a ~1 pc triangle (0,0,0)-(1,0,0)-(0,1,0) in a radius-10 bbox.
+    const c = new MolecularClouds(catalog, new Map([[1, makeSurface()]]));
+    // Through the triangle (x + y < 1): a hit.
+    expect(raycastAt(c, new THREE.Vector3(0.25, 0.25, 5), down)).toBe(0);
+    // Well inside the radius-10 ellipsoid but clear of the triangle: a miss.
+    // The former ellipsoid hitbox would have returned 0 here.
+    expect(raycastAt(c, new THREE.Vector3(5, 5, 5), down)).toBeNull();
+  });
+
+  it('falls back to the u = uEnv ellipsoid for clouds with no traced surface', () => {
+    const c = new MolecularClouds(catalog); // no surfaces
+    // Origins sit outside the radius-10 sphere; the FrontSide rim is a
+    // hide-when-inside shell, so a ray must enter through a front face.
+    expect(raycastAt(c, new THREE.Vector3(5, 5, 20), down)).toBe(0); // crosses r = 10
+    expect(raycastAt(c, new THREE.Vector3(20, 0, 20), down)).toBeNull(); // clears it
+  });
+});
+
 describe('renderedCloudSizePx', () => {
   it('picks the largest semi-axis regardless of which slot it lives in', () => {
     const angularToPx = 1000; // arbitrary; cancels out across the comparison

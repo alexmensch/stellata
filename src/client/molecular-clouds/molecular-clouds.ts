@@ -103,10 +103,16 @@ export class MolecularClouds {
   private focusExtents: number[] = [];
   private traced: boolean[] = [];
   private mono = false;
-  /** Absorption meshes in catalog order, for picking. Cloud index is
-   *  stashed on `mesh.userData.cloudIdx` so raycast results resolve back
-   *  to a cloud without a separate uuid→index Map. */
-  private meshes: THREE.Mesh[] = [];
+  /** Rim-shell meshes in catalog order — the pick / hover target. This is
+   *  the *depicted* shape (traced isosurface, or the u = uEnv ellipsoid for
+   *  fallback clouds), the same geometry that renders the fresnel rim and
+   *  the chart stipple outline, so the hitbox matches the silhouette in both
+   *  modes. Picking ignores mesh visibility (three raycasts hidden objects),
+   *  so it works while the rim is decluttered or in chart mode. Cloud index
+   *  rides `mesh.userData.cloudIdx`. The absorption meshes deliberately do
+   *  NOT pick — their ellipsoid is only the raymarch domain, far larger than
+   *  the shell for complex clouds (Aquila Rift). */
+  private pickMeshes: THREE.Mesh[] = [];
 
   // User-tunable from the dev console via `stellata.cloudLayer.set*()`.
   private rimGain = RIM_GAIN_DEFAULT;
@@ -144,12 +150,13 @@ export class MolecularClouds {
       mesh.scale.set(c.axes[0], c.axes[1], c.axes[2]);
       mesh.frustumCulled = false; // group origin is offset per frame
       mesh.renderOrder = ABSORPTION_RENDER_ORDER;
-      mesh.userData.cloudIdx = i;
-      this.meshes.push(mesh);
       this.absorptionGroup.add(mesh);
 
       const surface = surfaceForCloud;
-      this.rimGroup.add(this.makeRimMesh(c, surface));
+      const rimMesh = this.makeRimMesh(c, surface);
+      rimMesh.userData.cloudIdx = i;
+      this.rimGroup.add(rimMesh);
+      this.pickMeshes.push(rimMesh);
       this.labelSampleAbs.push(buildLabelSamples(c, surface));
 
       if (surface) {
@@ -315,7 +322,7 @@ export class MolecularClouds {
    * first and fall back to a cloud pick when no star is hit.
    */
   raycast(raycaster: THREE.Raycaster): number | null {
-    const hits = raycaster.intersectObjects(this.meshes, false);
+    const hits = raycaster.intersectObjects(this.pickMeshes, false);
     if (hits.length === 0) return null;
     // intersectObjects sorts by distance ascending, so first hit wins.
     const idx = hits[0].object.userData.cloudIdx;
