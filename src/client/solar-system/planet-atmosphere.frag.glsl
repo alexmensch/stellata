@@ -58,5 +58,9 @@ void main() {
     stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);
 
-  outColor = vec4(inscatter * uSunColour * uLitIntensity * uFade, 1.0);
+  // Alpha = medium opacity along the chord (1 − luminance transmittance), so
+  // the premultiplied-over shell occludes the background even where it adds no
+  // airlight. Both channels ride uFade for the LOD crossfade.
+  float opacity = 1.0 - dot(transmittance, vec3(0.2126, 0.7152, 0.0722));
+  outColor = vec4(inscatter * uSunColour * uLitIntensity * uFade, opacity * uFade);
 }

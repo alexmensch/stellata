@@ -593,15 +593,23 @@ export class PlanetMeshLayer {
       },
       defines: { ...ATMO_DEFINES },
       transparent: true,
-      blending: THREE.AdditiveBlending,
+      // Premultiplied over (not additive): the shell adds airlight AND
+      // occludes the background by its opacity (frag alpha = 1 − view-path
+      // transmittance), so a dense limb chord that scatters no light toward
+      // the eye still extincts the stars behind it. Additive left the
+      // shadowed base transparent and leaked stars through the ring gap.
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
       depthWrite: false,
       depthTest: true,
     });
     const mesh = new THREE.Mesh(this.geometry, material);
     mesh.name = 'planet-atmosphere';
     mesh.frustumCulled = false;
-    // After the body mesh (2.8) and rings (2.81): additive light over
-    // both, depth-tested so the body occludes the far hemisphere.
+    // After the body mesh (2.8) and rings (2.81), depth-tested so the body
+    // occludes the far hemisphere.
     mesh.renderOrder = 2.82;
     mesh.scale.setScalar(shellRadiusPc);
     mesh.visible = false;

@@ -685,19 +685,25 @@ Three species over two exponential density profiles ρ(h) = exp(−h/H):
   yellow**. Earth's is zero. Do not invert the `absorbCoeff` channels — blue
   is the *most* absorbed.
 
-The night/day terminator falls out of the geometry: a sun-ray sample that
-re-enters the planet sphere is in shadow and contributes no in-scatter, so
-there is no ad-hoc day gate. **Airlight is applied on both surfaces:**
+The night/day terminator falls out of the geometry: a sample inside the
+planet's shadow cylinder is dark and contributes no in-scatter (a soft-edged
+`stellata_sunLit` weight, not an ad-hoc day gate — see *Anti-banding* for why
+the edge is softened). **Airlight is applied on both surfaces:**
 
 - **Disc** (`planet-mesh.frag.glsl`) — `final = surface·T_view + L_air`. The
   transmittance `T_view` pales/desaturates the surface (Earth's dark ocean
   goes pale blue — this subsumes the old "tint the ocean texture" idea; the
   texture stays a pure albedo) and `L_air` is the in-scattered column in
   front of it.
-- **Limb** (`planet-atmosphere.frag.glsl`) — additive halo for rays that miss
-  the disc (impact parameter > R); rays that strike the body are `discard`-ed
-  so the disc path owns them (no double-count). The full-chord airlight is the
-  physical back-lit ring.
+- **Limb** (`planet-atmosphere.frag.glsl`) — halo for rays that miss the disc
+  (impact parameter > R); rays that strike the body are `discard`-ed so the
+  disc path owns them (no double-count). The full-chord airlight is the
+  physical back-lit ring. The shell composites **premultiplied-over, not
+  additive** (`CustomBlending`, `frag alpha = 1 − luminance(T_view)`): it adds
+  airlight *and* occludes the background by the chord's opacity, so a dense
+  near-limb chord that scatters no light toward the eye (its base in the body's
+  own shadow) still extincts the stars behind it. Additive left that base
+  transparent — stars leaked through the ring gap, worst on thick-haze Titan.
 
 **The texture carries the disc; the atmosphere is an overlay.** Each body's
 surface texture is its visible disc — including the *cloud-top* map for Venus.
@@ -721,8 +727,8 @@ Kept low precisely so it doesn't grey-wash the surface texture. `AIRLIGHT_GAIN`
 scales the single-scatter term so the neutral slider (sun intensity = 1) is
 roughly calibrated.
 
-**Anti-banding.** Two sources, two fixes. (1) *Geometric* — the analytic march
-must not read the mesh tessellation as a lat/long grid, so both shaders
+**Anti-banding.** Three sources, three fixes. (1) *Geometric* — the analytic
+march must not read the mesh tessellation as a lat/long grid, so both shaders
 reconstruct the ray direction from the **renormalized interpolated normal** (a
 smooth sphere direction), never the faceted interpolated position. (2)
 *Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`) jitters
@@ -731,8 +737,15 @@ its sample lattice per fragment by an interleaved-gradient-noise offset
 golden-ratio stride per view sample (`LIGHT_JITTER_STRIDE`) so the view and
 light lattices stay **decorrelated** — otherwise the two beat into a moiré
 rather than dissolving into fine grain. The CPU mirror uses the midpoint (0.5),
-so vitest pins deterministic quadrature while the shader decorrelates. The
-ad-hoc surface **limb-darkening** is dropped
+so vitest pins deterministic quadrature while the shader decorrelates. (3)
+*Terminator* — a hard lit/unlit sun test steps the multiscatter lit-fraction
+(`litSum / ATMO_N_VIEW`) and the single-scatter edge in `1/ATMO_N_VIEW`
+increments, drawing ~`ATMO_N_VIEW` brightness contours across the terminator
+that beat against the jitter into the dominant moiré. `stellata_sunLit`
+replaces the boolean with a **soft shadow** — lit unless a sample is both
+anti-sunward of the terminator plane and inside the shadow cylinder, smoothed
+over `SHADOW_SOFT` — so the lit-fraction is continuous and the contours are
+gone. The ad-hoc surface **limb-darkening** is dropped
 for atmospheric bodies (the scattering governs the limb; keeping it double-
 darkened the disc edge into a black rim).
 
