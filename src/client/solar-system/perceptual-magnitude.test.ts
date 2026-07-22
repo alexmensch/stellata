@@ -138,7 +138,6 @@ describe('planetApparentMagnitude', () => {
   // hand-verified against.
   const JUPITER_RADIUS_PC = 69911 / 3.0857e13; // km → pc
   const JUPITER_ALBEDO = 0.538;
-  const SOL_ABSMAG = 4.83;
 
   it('returns m_host_at_planet when reflectance product = 1', () => {
     // Construct geometry such that the reflected-light correction is
@@ -150,7 +149,7 @@ describe('planetApparentMagnitude', () => {
   it('Jupiter from Earth at opposition: ≈ -2.7 V', () => {
     // d_hp = 5.2 AU, d_vp = 4.2 AU, φ ≈ 1.
     const m = planetApparentMagnitude(
-      SOL_ABSMAG,
+      SUN_ABSMAG_V,
       4.2 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
@@ -161,7 +160,7 @@ describe('planetApparentMagnitude', () => {
     // Viewer 150 AU upwind from Sol along Sol→Jupiter line. Jupiter at
     // 5.2 AU on the same line ⇒ d_vp = 144.8 AU.
     const m = planetApparentMagnitude(
-      SOL_ABSMAG,
+      SUN_ABSMAG_V,
       144.8 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
@@ -173,7 +172,7 @@ describe('planetApparentMagnitude', () => {
     // — negligible against 1.34 pc, so d_vh ≈ d_vp.
     const dVp = 1.34 - 5.2 * AU_PC;
     const m = planetApparentMagnitude(
-      SOL_ABSMAG, dVp, 5.2 * AU_PC,
+      SUN_ABSMAG_V, dVp, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(m).toBeCloseTo(21, 0);
@@ -209,7 +208,7 @@ describe('planetApparentMagnitude', () => {
     // formula must not involve the viewer→host distance at all. Jupiter
     // seen from Sol itself: d_vp = d_hp = 5.2 AU, full phase.
     const atHost = planetApparentMagnitude(
-      SOL_ABSMAG, 5.2 * AU_PC, 5.2 * AU_PC,
+      SUN_ABSMAG_V, 5.2 * AU_PC, 5.2 * AU_PC,
       JUPITER_ALBEDO, JUPITER_RADIUS_PC, 1,
     );
     expect(Number.isFinite(atHost)).toBe(true);
