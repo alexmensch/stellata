@@ -7,12 +7,16 @@ import { fmtDistAuto } from '../../ui/distance-util';
 import { formatSpectral, spectralLine } from '../../format/spectral-format';
 import { formatVariability } from '../../format/physical-format';
 import {
-  collapsedClusterIndices,
   companionLines,
   resolveStarName,
-  systemMemberIndices,
   type CompanionFormatContext,
+  type StarNameContext,
 } from '../../format/star-companion-format';
+import type {
+  SystemMember,
+  SystemMembershipProvider,
+} from '../../system-membership/system-membership';
+import { rosterCardOrNull, UNNAMED_MEMBER_LABEL } from './system-card-format';
 import type { HoverPayload } from '../hover-types';
 
 export interface StarHoverFormatContext extends CompanionFormatContext {
@@ -29,12 +33,12 @@ export interface StarHoverFormatContext extends CompanionFormatContext {
   constellations: ReadonlyArray<{ name: string }>;
   periodDays: Float32Array;
   amplitudeMag: Float32Array;
-  /** Live per-star composite-suppress verdict (Stellata
-   *  .isCompositeSuppressed) — true when the orbit walk's sub-pixel LOD
-   *  collapsed the star onto its primary this frame. Drives the
-   *  system-card swap for multiples; omit (tests, focus card reuse) to
-   *  always get the per-component card. */
-  isCollapsed?: (idx: number) => boolean;
+  /** Kind-generic membership queries (Stellata.systemMembership) —
+   *  each cluster is the renderer's own live "these render as one
+   *  point" verdict. Drives the system-card swap for collapsed
+   *  multiples; omit (focus card reuse) to always get the
+   *  per-component card. */
+  membership?: SystemMembershipProvider;
 }
 
 /** A record's spectral class is an estimate (not an observation) when it
@@ -67,7 +71,9 @@ export function formatStarHover(
   const con = conIdx !== 255 ? constellations[conIdx].name : '';
   const ctxLine = [con, fmtDistAuto(cameraDistancePc)].filter(Boolean).join(' · ');
 
-  const system = systemCardOrNull(idx, ctxLine, ctx);
+  const system = ctx.membership
+    ? rosterCardOrNull(ctx.membership, { kind: 'star', idx }, ctxLine, (m) => starMemberLabel(m, ctx))
+    : null;
   if (system) return system;
 
   const name = resolveStarName(ctx, idx);
@@ -84,32 +90,9 @@ export function formatStarHover(
   return { name, lines };
 }
 
-/** System card for a screen-collapsed multiple. Fires only when the
- *  hovered star's system has 3+ components (a plain binary keeps its
- *  per-component card — the "Known companions" line already covers it)
- *  AND the hovered star's own collapsed cluster — components reachable
- *  through currently-suppressed relations, i.e. actually rendering as
- *  one point with it — has 2+ members. The roster lists the CLUSTER
- *  only: hovering Proxima (visibly separated from the α Cen A+B point)
- *  or a close-up Castor A (only its spectroscopic partner overlaps)
- *  must not enumerate members the user can see elsewhere on screen. */
-function systemCardOrNull(
-  idx: number,
-  ctxLine: string,
-  ctx: StarHoverFormatContext,
-): HoverPayload | null {
-  if (!ctx.binaries || !ctx.isCollapsed) return null;
-  const members = systemMemberIndices(ctx.binaries, idx);
-  if (members.length < 3) return null;
-  const cluster = collapsedClusterIndices(ctx.binaries, idx, ctx.isCollapsed);
-  if (cluster.length < 2) return null;
-  const lines: string[] = [];
-  if (ctxLine) lines.push(ctxLine);
-  lines.push(
-    cluster.length === members.length
-      ? `${members.length} components:`
-      : `${cluster.length} of ${members.length} components here:`,
-    cluster.map((m) => resolveStarName(ctx, m)).join(', '),
-  );
-  return { name: `${resolveStarName(ctx, cluster[0])} system`, lines };
+// Members carry a name only when their implementation could supply one
+// (planets); star members resolve through the shared name fallbacks.
+function starMemberLabel(m: SystemMember, ctx: StarNameContext): string {
+  if (m.name) return m.name;
+  return m.target.kind === 'star' ? resolveStarName(ctx, m.target.idx) : UNNAMED_MEMBER_LABEL;
 }

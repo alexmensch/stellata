@@ -28,18 +28,27 @@ export function keplerPeriodDays(semiMajorAxisKm: number, gravParamGM: number): 
   return (TWO_PI * Math.sqrt((a * a * a) / gravParamGM)) / SECONDS_PER_DAY;
 }
 
-// Name → body map per `planets` array, so a moon's parent lookup is O(1)
+// Name → index map per `planets` array, so a moon's parent lookup is O(1)
 // instead of a per-frame linear scan. Keyed on the array identity, which is
 // stable for a session (SOL_BODIES; one lazily-built shard per exoplanet
 // host), so the map is built once and reused.
-const bodyByName = new WeakMap<readonly Planet[], Map<string, Planet>>();
-function parentOf(planets: readonly Planet[], name: string): Planet | undefined {
-  let m = bodyByName.get(planets);
+const bodyIndexByName = new WeakMap<readonly Planet[], Map<string, number>>();
+
+/** Index of the body named `name` in `planets`, or −1 when absent — the
+ *  moon-parent resolution shared by the orbit descriptor and the planet
+ *  system-membership provider. */
+export function parentIndexOf(planets: readonly Planet[], name: string): number {
+  let m = bodyIndexByName.get(planets);
   if (!m) {
-    m = new Map(planets.map((p) => [p.name, p]));
-    bodyByName.set(planets, m);
+    m = new Map(planets.map((p, i) => [p.name, i]));
+    bodyIndexByName.set(planets, m);
   }
-  return m.get(name);
+  return m.get(name) ?? -1;
+}
+
+function parentOf(planets: readonly Planet[], name: string): Planet | undefined {
+  const i = parentIndexOf(planets, name);
+  return i >= 0 ? planets[i] : undefined;
 }
 
 /** Orbit descriptor for a body at flat instance `planet` in `system`. A

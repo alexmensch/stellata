@@ -53,8 +53,9 @@ science-stellar-modelling.md   Split out of SCIENCE.md: physical
                         colour temperature routing + Teff calibration,
                         variable-star pulsation.
 science-solar-system.md        Split out of SCIENCE.md: planet
-                        rendering, phase functions, heliopause
-                        boundary.
+                        rendering, phase functions, naked-eye colour
+                        calibration (solar reference white), atmosphere
+                        shells, heliopause boundary.
 science-local-group.md         Split out of SCIENCE.md: wireframe
                         layer + per-object luminosity/density model
                         for the volumetric emission raymarch.

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from './loaders/catalog-loader';
-import { collapsedClusterIndices } from './format/star-companion-format';
+import { createBinarySystemMembership } from './binaries/binary-system-membership';
+import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
+import { SystemMembershipRegistry } from './system-membership/system-membership';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
@@ -64,7 +66,7 @@ import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-r
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planet-body-field';
-import { PlanetMeshLayer } from './solar-system/planet-mesh-layer';
+import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { MIRROR_CAPACITY, StarLocalMirror } from './star-pipeline/star-local-mirror';
@@ -236,6 +238,11 @@ export class Stellata implements FrameAnchor {
   // positions; binary orbital evolution simply doesn't fire.
   private binaryOrbitField: BinaryOrbitField | null = null;
   private binariesData: BinariesData | null = null;
+
+  /** Kind-generic system membership (multi-star clusters, planet
+   *  systems) — hover roster cards and collapsed-pick resolution both
+   *  consume this. See src/client/system-membership/README.md. */
+  readonly systemMembership = new SystemMembershipRegistry();
   private eclipsePhotometryField: EclipsePhotometryField | null = null;
 
   // Focal-frame ride state. The focal star (when a binary member) drifts
@@ -735,6 +742,24 @@ export class Stellata implements FrameAnchor {
     this.localBubbleShell = new LocalBubbleShell();
     this.scene.add(this.localBubbleShell.group);
     this.localBubbleShell.recenter(this.worldOffset);
+
+    // System-membership registry: binaries FIRST so a collapsed pair's
+    // outer primary leads the union over the member's planet-host role.
+    this.systemMembership.register(
+      createBinarySystemMembership({
+        getBinaries: () => this.binariesData,
+        isCollapsed: (i) => this.isCompositeSuppressed(i),
+      }),
+    );
+    this.systemMembership.register(
+      createPlanetSystemMembership({
+        getAttachedPlanetSystem: (h) => this.planetBodyField.getAttachedPlanetSystem(h),
+        hostPlanetOf: (i) => this.planetBodyField.hostPlanetOf(i),
+        instanceIndexOf: (h, p) => this.planetBodyField.instanceIndexOf(h, p),
+        isCollapsedOntoParent: (i) =>
+          this.planetBodyField.isCollapsedOntoParent(i, this.camera),
+      }),
+    );
 
     // Picker resolves every layer's "what's under (x, y)?" — composed
     // by the click FSM in onPointerUp and by the hover providers.
@@ -2098,6 +2123,17 @@ export class Stellata implements FrameAnchor {
     this.filters.setStarRenderParams(patch);
   }
   getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
+  /** Reflected-glare peak multiplier — planet-glare brightness relative
+   *  to a star of the same magnitude (1 = identical). Dev-panel smoke
+   *  knob (debug/planet-tuning.ts). */
+  setPlanetGlareGain(gain: number) { this.planetBodyField.setGlareGain(gain); }
+  getPlanetGlareGain(): number { return this.planetBodyField.getGlareGain(); }
+  /** Global atmosphere-scattering multipliers — dev-panel smoke knobs
+   *  (debug/atmosphere-tuning.ts). Applied on top of each body's base. */
+  setAtmosphereTuning(patch: Partial<AtmosphereTuning>) {
+    this.planetMeshLayer.setAtmosphereTuning(patch);
+  }
+  getAtmosphereTuning(): AtmosphereTuning { return this.planetMeshLayer.getAtmosphereTuning(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
     this.filters.clearSizeOverrides(fields);
   }
@@ -2315,14 +2351,12 @@ export class Stellata implements FrameAnchor {
   /** Lead (first-seen outermost primary) of `idx`'s collapsed cluster,
    *  or `idx` itself when nothing around it is suppressed. The Picker
    *  routes every star pick through this so hover, POI pin, vector,
-   *  and focus all act on the object the system card names. */
+   *  and focus all act on the object the system card names. A host
+   *  star always leads its own planet cluster, so the resolved lead is
+   *  star-kind by construction. */
   private collapsedClusterLead(idx: number): number {
-    if (this.binariesData === null) return idx;
-    return collapsedClusterIndices(
-      this.binariesData,
-      idx,
-      (i) => this.isCompositeSuppressed(i),
-    )[0];
+    const lead = this.systemMembership.collapsedLeadOf({ kind: 'star', idx });
+    return lead.kind === 'star' ? lead.idx : idx;
   }
 
   /** True when BinaryOrbitField's sub-pixel LOD gate collapsed this

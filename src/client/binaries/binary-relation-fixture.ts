@@ -1,7 +1,7 @@
-// Test-only builder for a BinaryRelation with sane defaults, overridable
-// per field. Shared by the focal-chain and orbit-path unit tests.
+// Test-only builders: a BinaryRelation with sane defaults (overridable
+// per field) and a BinariesData assembled from a relation list.
 
-import { NO_PARENT, type BinaryRelation } from './binaries-loader';
+import { NO_PARENT, type BinariesData, type BinaryRelation } from './binaries-loader';
 
 export function makeRelation(overrides: Partial<BinaryRelation> = {}): BinaryRelation {
   return {
@@ -22,4 +22,20 @@ export function makeRelation(overrides: Partial<BinaryRelation> = {}): BinaryRel
     sepPaEpochJd: 0,
     ...overrides,
   };
+}
+
+/** BinariesData over `relations`, index maps built the way the loader
+ *  builds them. */
+export function makeBinaries(relations: BinaryRelation[]): BinariesData {
+  const primaryIdxToRelations = new Map<number, number[]>();
+  const secondaryIdxToRelations = new Map<number, number[]>();
+  relations.forEach((r, i) => {
+    const pArr = primaryIdxToRelations.get(r.primaryIdx);
+    if (pArr) pArr.push(i);
+    else primaryIdxToRelations.set(r.primaryIdx, [i]);
+    const sArr = secondaryIdxToRelations.get(r.secondaryIdx);
+    if (sArr) sArr.push(i);
+    else secondaryIdxToRelations.set(r.secondaryIdx, [i]);
+  });
+  return { version: 1, relations, primaryIdxToRelations, secondaryIdxToRelations };
 }

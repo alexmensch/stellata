@@ -19,13 +19,17 @@ in both navigate and observe modes.
 - `picker.ts` — pure target resolver; click + hover pick paths for
   stars / clouds / planets / Local Group / heliopause / boundary shells
   (`pickShellHit`, shared silhouette helper in `fresnel-shell/`). Both star pick
-  surfaces route the winner through `resolveCollapsedLead`: a member of
-  a composite-suppressed cluster resolves to the cluster's primary, so
+  surfaces route the winner through `resolveCollapsedLead` (backed by
+  the system-membership registry — `src/client/system-membership/`):
+  a member of a collapsed cluster resolves to the cluster's primary, so
   the hover card, POI pin, vector, and focus all act on the object the
   user sees as "the point" (never an arbitrary closest-to-camera
   member). Identity for unsuppressed stars — a focused member's
   relations bypass the LOD gates, so focused-star click semantics are
-  untouched.
+  untouched. The planet pick needs no lead rewrite: a body collapsed
+  onto its parent drops out of `PlanetBodyField.pick`, so the parent's
+  own pick surface (the star picker for a host, the parent planet for
+  a moon) wins the point.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), shared `aimDurationMs` ramp.
 - `up-align-pure.ts` — `alignCameraUpToQuaternion` helper.

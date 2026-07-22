@@ -19,6 +19,11 @@ import {
   phaseFactorFor,
 } from './phase-function';
 import { planetApparentMagnitude } from './perceptual-magnitude';
+import {
+  MESH_FADE_FULL_PX,
+  MESH_FADE_MIN_PX,
+  meshFadeFromPhysPx,
+} from './mesh-crossfade';
 import { DIM_FLOOR } from '../binaries/eclipse-photometry-pure';
 
 function makeSharedUniforms(
@@ -68,9 +73,8 @@ describe('cullDistancePc', () => {
 
   it('reproduces Jupiter-from-Sol naked-eye threshold (~290 AU)', () => {
     // Jupiter: p=0.538, R=69911 km, a=5.203 AU. Sol M=4.83. Naked-eye
-    // cutoff 6.5. The bead --design says "cullDistancePc for Sol with
-    // naked-eye preset is sub-parsec" — 290 AU is comfortably sub-pc
-    // and within the Standard-mode focus zoom range.
+    // cutoff 6.5. 290 AU is comfortably sub-parsec (Sol's naked-eye
+    // preset stays sub-pc) and within the Standard-mode focus zoom range.
     const aPc = 5.203 * AU_PC;
     const Rpc = 69911 * KM_PC;
     const refl = 0.538 * (Rpc / aPc) ** 2;
@@ -225,27 +229,24 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('exposes the main-pass trio + local-pass mirror pair, orders pinned', () => {
-    // Main pass: core depth-mask (-4) before background layers, disc
-    // (3), glow (4). Local pass mirrors: disc at 3 — after the mesh
-    // LOD (2.8/2.81), so the fading disc composites over the mesh —
-    // and glow last at 4 so a transiting body's glow adds over a
-    // parent mesh behind it. Pin each mesh by name → renderOrder so a
-    // swap fails CI. See src/client/local-depth/README.md.
+  it('exposes the single glare mesh + its local-pass mirror, orders pinned', () => {
+    // Planets = spheroid mesh + one additive glare pass (no opaque disc
+    // / core-mask — the mesh writes depth for occlusion, an unresolved
+    // point-glare needs none). Main-pass glare at 4; local-pass mirror
+    // at 4 too, so a transiting body's glare adds over a parent mesh
+    // behind it. Pin by name → renderOrder so a regression fails CI.
+    // See src/client/local-depth/README.md.
     const f = new PlanetBodyField(makeSharedUniforms());
     const orderByName = new Map(
       f.group.children.map((m) => [m.name, m.renderOrder]),
     );
-    expect(orderByName.get('core')).toBe(-4);
-    expect(orderByName.get('disc')).toBe(3);
     expect(orderByName.get('glow')).toBe(4);
-    expect(f.group.children).toHaveLength(3);
+    expect(f.group.children).toHaveLength(1);
     const localByName = new Map(
       f.localGroup.children.map((m) => [m.name, m.renderOrder]),
     );
-    expect(localByName.get('disc-local')).toBe(3);
     expect(localByName.get('glow-local')).toBe(4);
-    expect(f.localGroup.children).toHaveLength(2);
+    expect(f.localGroup.children).toHaveLength(1);
     f.dispose();
   });
 
@@ -282,8 +283,9 @@ describe('PlanetBodyField lifecycle', () => {
     expect(cached[2]).toBeCloseTo(7,    6);
 
     // Force growCapacity by overflowing the initial allocation.
-    // INITIAL_CAPACITY = 16, so 20 single-planet hosts trigger one grow.
-    for (let i = 1; i < 20; i++) {
+    // INITIAL_CAPACITY = 32 instances, so 40 single-planet hosts (40
+    // instances) force at least one grow past the first host's slot.
+    for (let i = 1; i < 40; i++) {
       f.attachHost(i, makePlanetSystem(i, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     }
     // Cached reference must still read the original values — the
@@ -297,11 +299,12 @@ describe('PlanetBodyField lifecycle', () => {
 
   it('grows capacity when many hosts attach beyond the initial budget', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
-    // Initial capacity is 16; attach 20 single-planet hosts.
-    for (let i = 0; i < 20; i++) {
+    // INITIAL_CAPACITY = 32 instances; attach 40 single-planet hosts so
+    // growCapacity fires and every slot survives the reallocation.
+    for (let i = 0; i < 40; i++) {
       f.attachHost(i, makePlanetSystem(i, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     }
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 40; i++) {
       const slice = f.getHostLocalPositions(i);
       expect(slice).not.toBeNull();
       expect(slice!.length).toBe(3);
@@ -423,8 +426,8 @@ describe('PlanetBodyField lifecycle', () => {
 
   it('update() per-host cull gate: skips positionsAt past cullDistance', () => {
     // The architectural promise of PlanetBodyField is the per-host cull
-    // gate at update():L353 — `if (dToHost > host.cullDistance) continue`
-    // is what makes the bk5 "hundreds of hosts" scaling tractable. The
+    // gate in update() — `if (dToHost > host.cullDistance) continue` —
+    // is what makes the hundreds-of-hosts scaling tractable. The
     // gate has unit-test coverage on its derived inputs (cullDistance
     // formula above) but none on the gate behaviour itself. A stub
     // positionsAt with a counter pins it: inside cullDistance the
@@ -497,8 +500,8 @@ describe('PlanetBodyField lifecycle', () => {
 
     f.setMonochrome(true);
     f.update(camera, 0, 0);
-    // Chart mode keeps the bodies drawn — as flat ink discs (uadc.3);
-    // only the blending swaps, mirroring the star pipeline.
+    // Chart mode keeps the bodies drawn — as flat ink discs; only the
+    // blending swaps, mirroring the star pipeline.
     expect(f.group.visible).toBe(true);
     expect(calls).toBe(2);
 
@@ -595,13 +598,13 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only iLocalRel — the other 9 attributes stay clean per frame', () => {
-    // bk5 scale (hundreds of hosts) makes per-frame re-uploads of
-    // static attributes (iRadiusPc, iColour, iSolidity, iAlbedoP,
-    // iHostAbsmag, iPhaseCoefsA/B/C, iHostLocalPos) measurable wasted
-    // bus bandwidth. Pin the dynamic-only flush: after attach (which
+  it('update() flushes only iLocalRel — the static attributes stay clean per frame', () => {
+    // At hundreds-of-hosts scale, per-frame re-uploads of the static
+    // attributes (iRadiusPc, iColour, iSolidity, iAlbedoP, iHostAbsmag,
+    // iPhaseCoefsA/B/C, iHostLocalPos) would be measurable wasted bus
+    // bandwidth. Pin the dynamic-only flush: after attach (which
     // legitimately touches every attribute) a single update() tick
-    // only flips iLocalRel.
+    // only flips iLocalRel (the planet positions tick).
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -630,9 +633,9 @@ describe('PlanetBodyField lifecycle', () => {
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(0, 0, 0);
     f.update(camera, 1, 0);
-    // Only iLocalRel should have been touched. iHostLocalPos /
-    // iRadiusPc / iColour / iSolidity / iAlbedoP / iHostAbsmag /
-    // iPhaseCoefsA / iPhaseCoefsB / iPhaseCoefsC stay quiescent.
+    // Only iLocalRel should have been touched. iHostLocalPos / iRadiusPc /
+    // iColour / iSolidity / iAlbedoP / iHostAbsmag / iPhaseCoefsA/B/C stay
+    // quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
     expect(flagged.size).toBe(1);
     f.dispose();
@@ -642,7 +645,7 @@ describe('PlanetBodyField lifecycle', () => {
     // Recenter writes per-host hostLocalPos into its iHostLocalPos
     // slot but doesn't touch iLocalRel (planet positions in the host
     // plane frame are recenter-invariant). The narrow flush keeps the
-    // floating-origin pivot cheap at bk5 scale.
+    // floating-origin pivot cheap at hundreds-of-hosts scale.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(1, 0, 0), 0, 0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -891,8 +894,8 @@ describe('PlanetBodyField.pick', () => {
 
   it('tracks render visibility: pickable in chart mode (ink discs), unpickable when hidden', () => {
     // Click-pick must equal render. Chart mode now DRAWS the bodies as
-    // flat ink discs (uadc.3), so they stay pickable there; setHidden
-    // still takes them out of both render and pick.
+    // flat ink discs, so they stay pickable there; setHidden still takes
+    // them out of both render and pick.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -1050,8 +1053,8 @@ describe('PlanetBodyField.pick', () => {
   });
 });
 
-describe('PlanetBodyField.meshFadeRatio', () => {
-  it('crosses 1 exactly when the physical size overtakes the perceptual disc', () => {
+describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', () => {
+  it('mesh absent at planet-system range, fully on at close approach', () => {
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -1070,18 +1073,22 @@ describe('PlanetBodyField.meshFadeRatio', () => {
     camera.updateProjectionMatrix();
     f.update(camera, 0, 0);
 
-    // From the host (1 AU away) the perceptual disc dominates.
+    // From the host (1 AU away): a 6000 km body is far sub-pixel, so
+    // the mesh stays fully faded even though the perceptual disc is
+    // several px — the crescent has nothing to show at that scale.
     camera.position.set(0, 0, 0);
-    const far = f.meshFadeRatio(0, camera.position);
-    expect(far).toBeGreaterThan(0);
-    expect(far).toBeLessThan(1);
+    const farPx = f.physicalPlanetSizePx(0, camera.position);
+    expect(farPx).toBeLessThan(MESH_FADE_MIN_PX);
+    expect(meshFadeFromPhysPx(farPx)).toBe(0);
 
-    // Surface-grazing the physical size dominates.
+    // Surface-grazing: physical size dominates by orders of magnitude.
     const KM_PC_LOCAL = 1 / 3.0857e13;
     camera.position.set(0, 0, -1 * AU_PC + 20 * 6000 * KM_PC_LOCAL);
-    expect(f.meshFadeRatio(0, camera.position)).toBeGreaterThan(1);
+    const nearPx = f.physicalPlanetSizePx(0, camera.position);
+    expect(nearPx).toBeGreaterThan(MESH_FADE_FULL_PX);
+    expect(meshFadeFromPhysPx(nearPx)).toBe(1);
 
-    expect(f.meshFadeRatio(99, camera.position)).toBe(0); // unattached
+    expect(f.physicalPlanetSizePx(99, camera.position)).toBe(0); // unattached
     f.dispose();
   });
 });
@@ -1114,7 +1121,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.update(cam, 0, 0);
   }
 
-  it('setHiddenInstance drives one shared uHideIdx uniform across all five passes', () => {
+  it('setHiddenInstance drives one shared uHideIdx uniform across both glare passes', () => {
     const f = makeField();
     attach(f, 0, 2);
     expect(f.hiddenInstance()).toBe(-1);
@@ -1122,7 +1129,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     expect(f.hiddenInstance()).toBe(1);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyF = f as any;
-    for (const mat of [anyF.matDisc, anyF.matGlow, anyF.matCore, anyF.matDiscLocal, anyF.matGlowLocal]) {
+    for (const mat of [anyF.matGlow, anyF.matGlowLocal]) {
       expect(mat.uniforms.uHideIdx.value).toBe(1);
     }
     f.setHiddenInstance(-1);
@@ -1189,7 +1196,7 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.dispose();
   });
 
-  it('renderedPlanetSizePx mirrors the shader sizing and kills below the taper', () => {
+  it('renderedPlanetSizePx mirrors the true disc when resolved (physSize ≫ appSize)', () => {
     const f = makeField();
     attach(f, 0, 1);
     // Camera close to the planet at (1 AU, 0, 0): physical term visible.
@@ -1197,14 +1204,29 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     const px = f.renderedPlanetSizePx(0, near);
     expect(px).toBeGreaterThan(0);
     // At 10 body radii the true angular diameter is 2·atan(1/10) rad;
-    // uViewport.y = 600, uFovYRad = 60°. physSize dominates appSize here.
-    // bufLocalRel stores the planet position in float32, so the
+    // uViewport.y = 600, uFovYRad = 60°. physSize ≈ 114 px ≫ appSize, so
+    // the footprint is the mesh's true disc (max(physSize, appSize) =
+    // physSize). bufLocalRel stores the planet position in float32, so the
     // camera→planet distance carries a ~1e-4 relative quantum at 1 AU
     // magnitudes — compare at that tolerance.
     const expectedPhys = 2 * Math.atan(1 / 10) * (600 / ((60 * Math.PI) / 180));
     expect(Math.abs(px - expectedPhys) / expectedPhys).toBeLessThan(1e-3);
     // Unattached instance → 0.
     expect(f.renderedPlanetSizePx(9, near)).toBe(0);
+    f.dispose();
+  });
+
+  it('renderedPlanetSizePx is the star-perceptual point when unresolved', () => {
+    const f = makeField();
+    attach(f, 0, 1);
+    // Camera ~0.1 AU from the planet at 1 AU: the true disc is sub-pixel,
+    // so the footprint is the star-perceptual appSize (≫ physSize) — the
+    // planet reads as a star of its magnitude, visible per its appMag.
+    const far = new THREE.Vector3(0.9 * AU_PC, 0, 0);
+    const px = f.renderedPlanetSizePx(0, far);
+    // uSizeMin = 2: a visible unresolved body is at least the perceptual
+    // floor, far above its sub-pixel true disc.
+    expect(px).toBeGreaterThanOrEqual(2);
     f.dispose();
   });
 
@@ -1386,6 +1408,81 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
     const { f, camera } = makeMoonField(-MOON_ORBIT_KM, 0);
     f.update(camera, 0, 0);
     expect(f.eclipseDimForInstance(1)).toBe(1);
+    f.dispose();
+  });
+});
+
+describe('PlanetBodyField.isCollapsedOntoParent', () => {
+  // Positions ride positionsAt so the geometry is exact: rel offsets on
+  // the +x axis are invariant under the host orientation quaternion
+  // (a rotation about x for Sol's ecliptic plane).
+  function fieldWith(planets: Planet[], positionsAu: number[][]): PlanetBodyField {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets,
+      positionsAt: (_t, out) => {
+        positionsAu.forEach((p, i) => {
+          out[i * 3 + 0] = p[0] * AU_PC;
+          out[i * 3 + 1] = p[1] * AU_PC;
+          out[i * 3 + 2] = p[2] * AU_PC;
+        });
+      },
+    };
+    f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    return f;
+  }
+
+  function cameraAtAu(x: number, y: number, z: number): THREE.PerspectiveCamera {
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(x * AU_PC, y * AU_PC, z * AU_PC);
+    return camera;
+  }
+
+  const JUPITER_LIKE = makePlanet({ name: 'J', radiusKm: 70000, semiMajorAxisAu: 1 });
+
+  it('true for a rendered planet sub-pixel from its host', () => {
+    // 1 AU host offset seen from 500 AU ≈ 2e-3 rad ≈ 1.15 px on the
+    // 600-px / 60° shared-uniform viewport — under the collapse gate.
+    const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 500, 0))).toBe(true);
+    f.dispose();
+  });
+
+  it('false once the camera is close enough to resolve the separation', () => {
+    // Same geometry from 50 AU ≈ 11.5 px — past the collapse gate.
+    const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 50, 0))).toBe(false);
+    f.dispose();
+  });
+
+  it('false for a body below the magnitude cutoff (not drawn ⇒ not part of the point)', () => {
+    const dim = makePlanet({ name: 'D', radiusKm: 1000, albedo: 0.01, semiMajorAxisAu: 1 });
+    const f = fieldWith([dim], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(0, cameraAtAu(0, 500, 0))).toBe(false);
+    f.dispose();
+  });
+
+  it('a moon collapses onto its parent planet, not the host', () => {
+    const moon = makePlanet({
+      name: 'M',
+      parentName: 'J',
+      radiusKm: 3000,
+      semiMajorAxisAu: 0.003,
+    });
+    // Moon 0.003 AU from its planet, seen from 2 AU above the planet:
+    // ~0.86 px from the planet (collapsed) while the planet sits ~0.46
+    // rad from the host (resolved).
+    const f = fieldWith([JUPITER_LIKE, moon], [[1, 0, 0], [1.003, 0, 0]]);
+    const camera = cameraAtAu(1, 2, 0);
+    expect(f.isCollapsedOntoParent(1, camera)).toBe(true);
+    expect(f.isCollapsedOntoParent(0, camera)).toBe(false);
+    f.dispose();
+  });
+
+  it('false for an out-of-range instance', () => {
+    const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
+    expect(f.isCollapsedOntoParent(5, cameraAtAu(0, 500, 0))).toBe(false);
     f.dispose();
   });
 });

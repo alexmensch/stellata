@@ -142,6 +142,15 @@ export function phaseFactorFor(
   return coefs ? mallamaPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
 }
 
+/** Illuminated fraction of a sphere seen at phase angle α: (1 + cos α)/2
+ *  — 1 at full phase (α = 0), 0 at new (α = 180). Gates the resolved-
+ *  regime reflected glare so a crescent body's dark limb emits ~none;
+ *  mirrored in planet.vert.glsl as (1 + cosA)·0.5. α clamped to [0, π]. */
+export function illuminatedFraction(alphaRad: number): number {
+  const a = Math.max(0, Math.min(Math.PI, alphaRad));
+  return (1 + Math.cos(a)) / 2;
+}
+
 /** Clamp bounds for `phaseRatioToLambert` — the thin-crescent regime is
  *  where big ratios occur and it is cos-weighted dim, so the bound
  *  limits LDR clipping without visibly flattening the curve. */
