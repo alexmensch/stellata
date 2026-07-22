@@ -15,6 +15,11 @@ auto-generated release notes with the PR-author-written block.
 The PR-body extraction is the reason `release-notes-guard.yml` exists
 (below) — a missing block would land an empty release page.
 
+Restores LFS content via the shared `.github/actions/lfs-cache`
+composite action (same as the data-consuming jobs in `test.yml`)
+rather than an `lfs: true` checkout, so a deploy reuses the cached
+objects instead of pulling ~600 MB from the LFS store every push.
+
 ## `release-notes-guard.yml`
 
 CI check on every PR. Fails the PR if the `## Release notes` block in
