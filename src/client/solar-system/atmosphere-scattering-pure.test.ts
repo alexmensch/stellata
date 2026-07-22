@@ -3,10 +3,12 @@ import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
   type AtmosphereParams,
+  SHADOW_SOFT,
   type Vec3,
   miePhase,
   rayleighPhase,
   scatterAlongRay,
+  sunLit,
 } from './atmosphere-scattering-pure';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -113,6 +115,41 @@ describe('scatterAlongRay', () => {
     expect(a.inscatter[2]).toBeGreaterThan(0);
     expect(b.inscatter[2]).toBeGreaterThan(0);
     expect(a.inscatter[2]).not.toBe(b.inscatter[2]);
+  });
+});
+
+describe('sunLit — soft planetary shadow terminator', () => {
+  const SUN: Vec3 = [1, 0, 0];
+
+  it('fully lit deep on the sunward hemisphere', () => {
+    expect(sunLit(1, 0, 0, ...SUN)).toBe(1);
+  });
+
+  it('fully dark deep in the shadow cylinder (anti-sunward, inside radius)', () => {
+    expect(sunLit(-1, 0, 0, ...SUN)).toBe(0);
+  });
+
+  it('half-lit at the terminator plane on the surface', () => {
+    // sunT = 0, impact = 1 → axial term 0, radial smoothstep centred at 1 → 0.5.
+    expect(sunLit(0, 1, 0, ...SUN)).toBeCloseTo(0.5, 12);
+  });
+
+  it('lit above the shadow cylinder even on the night side (twilight)', () => {
+    // Anti-sunward but impact clears the cylinder by more than SHADOW_SOFT.
+    expect(sunLit(-1, 1 + SHADOW_SOFT + 0.01, 0, ...SUN)).toBe(1);
+  });
+
+  it('varies continuously across the terminator (no quantised jump)', () => {
+    let prev = sunLit(0, 1 - 0.3, 0, ...SUN);
+    let maxStep = 0;
+    for (let k = 1; k <= 60; k++) {
+      const y = 1 - 0.3 + (0.6 * k) / 60; // sweep impact through the soft band
+      const cur = sunLit(0, y, 0, ...SUN);
+      maxStep = Math.max(maxStep, Math.abs(cur - prev));
+      prev = cur;
+    }
+    // A hard 0/1 test would jump by 1.0 in a single step; the soft band caps it.
+    expect(maxStep).toBeLessThan(0.1);
   });
 });
 

@@ -15,6 +15,13 @@ const LIGHT_JITTER_STRIDE = 0.6180339887;
  *  roughly calibrated — the airlight is dim in absolute radiance units. */
 export const AIRLIGHT_GAIN = 3.0;
 
+/** Soft half-width (planet-radius units) of the planetary shadow terminator in
+ *  the atmosphere. A hard lit/unlit test quantises the multiscatter lit-fraction
+ *  and the single-scatter terminator into visible contours across the terminator
+ *  (moiré under the few-sample march); smoothing over this band keeps both
+ *  continuous. */
+export const SHADOW_SOFT = 0.15;
+
 /** Isotropic multiple-scattering fill weight. Single scattering alone leaves
  *  optically thick hazes (Venus, Titan) far too dark — most of their light
  *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
@@ -52,14 +59,21 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
   return -b + Math.sqrt(disc);
 }
 
-/** True when the ray o + s·d (s > 0) enters the unit sphere ahead — the
- *  sample sits in the planet's own shadow (night side). */
-function inPlanetShadow(px: number, py: number, pz: number, dx: number, dy: number, dz: number): boolean {
-  const b = px * dx + py * dy + pz * dz;
-  const c = px * px + py * py + pz * pz - 1;
-  const disc = b * b - c;
-  if (disc < 0) return false;
-  return -b - Math.sqrt(disc) > 0;
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
+  return t * t * (3 - 2 * t);
+}
+
+/** Fraction of the point (px,py,pz) lit by the sun: 1 unless it is BOTH
+ *  anti-sunward of the terminator plane AND inside the planet's shadow
+ *  cylinder, smoothed over SHADOW_SOFT. Mirrors stellata_sunLit in the GLSL. */
+export function sunLit(px: number, py: number, pz: number, sx: number, sy: number, sz: number): number {
+  const sunT = px * sx + py * sy + pz * sz;
+  const impact = Math.sqrt(Math.max(px * px + py * py + pz * pz - sunT * sunT, 0));
+  return Math.max(
+    smoothstep(0, SHADOW_SOFT, sunT),
+    smoothstep(1 - SHADOW_SOFT, 1 + SHADOW_SOFT, impact),
+  );
 }
 
 export interface AtmosphereParams {
@@ -125,10 +139,11 @@ export function scatterAlongRay(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    if (inPlanetShadow(px, py, pz, sunDir[0], sunDir[1], sunDir[2])) continue;
+    const lit = sunLit(px, py, pz, sunDir[0], sunDir[1], sunDir[2]);
+    litSum += lit;
+    if (lit <= 0) continue;
     const sExit = farRoot(px, py, pz, sunDir[0], sunDir[1], sunDir[2], p.rAtmo);
     if (sExit <= 0) continue;
-    litSum++;
 
     // Decorrelate the light-march offset from the view-march (and per view
     // sample) so the two lattices don't beat into a moiré.
@@ -150,7 +165,7 @@ export function scatterAlongRay(
       const tau = p.betaRs[c] * (viewOdR + lightOdR) + (p.betaMs + p.betaA[c]) * (viewOdM + lightOdM);
       const attn = Math.exp(-tau);
       const scatter = p.betaRs[c] * dR * pR + p.betaMs * dM * pM;
-      inscatter[c] += scatter * attn * segLen;
+      inscatter[c] += scatter * attn * segLen * lit;
     }
   }
 
