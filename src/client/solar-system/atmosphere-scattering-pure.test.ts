@@ -154,8 +154,10 @@ describe('sunLit — soft planetary shadow terminator', () => {
 });
 
 describe('sample-count constants', () => {
-  it('are positive integers (loop bounds shared with the shader defines)', () => {
-    expect(Number.isInteger(ATMO_N_VIEW) && ATMO_N_VIEW > 0).toBe(true);
-    expect(Number.isInteger(ATMO_N_LIGHT) && ATMO_N_LIGHT > 0).toBe(true);
+  it('are pinned integers (loop bounds shared with the shader defines)', () => {
+    // Headline march budget: a change is a deliberate perf/quality retune, so
+    // it should trip this pin (the #defines are seeded from these constants).
+    expect(ATMO_N_VIEW).toBe(16);
+    expect(ATMO_N_LIGHT).toBe(10);
   });
 });

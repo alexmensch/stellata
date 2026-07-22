@@ -1,6 +1,7 @@
 precision highp float;
 
 #include <common>
+#include <stellata_atmosphere_uniforms>
 #include <stellata_atmosphere_scatter>
 
 // uMap is always bound (1×1 white placeholder when the body has no texture)
@@ -32,18 +33,9 @@ uniform int uCasterCount;
 // distance along the sun ray.
 uniform float uSunAngRad;
 // Atmosphere airlight over the lit disc (final = surface·T_view + L_air).
-// uHasAtmosphere gates the whole block; the rest mirror the shell shader.
+// uHasAtmosphere gates the whole block; the scatter uniforms it reads are the
+// shared contract (planet-atmosphere.frag.glsl reads the same set).
 uniform float uHasAtmosphere;
-uniform vec3 uCenterView;
-uniform float uRadiusPc;
-uniform float uAtmoRadius;
-uniform float uScaleHeightR;
-uniform float uScaleHeightM;
-uniform vec3 uBetaRayleigh;
-uniform float uBetaMie;
-uniform vec3 uBetaAbsorb;
-uniform float uMieG;
-uniform vec3 uSunColour;
 
 in vec3 vNormalV;
 in vec3 vPosV;
@@ -99,9 +91,9 @@ void main() {
     vec3 dir = normalize(surf);
     vec3 o = -uCenterView / uRadiusPc;
     float tStop = length(surf) / uRadiusPc;
-    float b = dot(o, dir);
-    float discA = b * b - (dot(o, o) - uAtmoRadius * uAtmoRadius);
-    float tStart = discA > 0.0 ? max(-b - sqrt(discA), 0.0) : 0.0;
+    float t0, t1;
+    float discA = stellata_shellEntry(o, dir, uAtmoRadius, t0, t1);
+    float tStart = discA > 0.0 ? max(t0, 0.0) : 0.0;
     vec3 inscatter;
     vec3 transmittance;
     stellata_atmosphereRadiance(

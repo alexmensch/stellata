@@ -27,6 +27,7 @@ import ringsFrag from './planet-rings.frag.glsl?raw';
 import atmoVert from './planet-atmosphere.vert.glsl?raw';
 import atmoFrag from './planet-atmosphere.frag.glsl?raw';
 import atmoScatterChunk from './atmosphere-scatter.glsl?raw';
+import atmoUniformsChunk from './atmosphere-uniforms.glsl?raw';
 import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
@@ -34,13 +35,18 @@ import {
   SUN_COLOUR,
 } from './atmosphere-scattering-pure';
 
-// Splice the shared single-scattering integrator into both the mesh disc and
-// the atmosphere shell fragment sources; the sample-count #defines ride each
-// material so the GLSL loop bounds track atmosphere-scattering-pure.ts.
-const ATMO_INCLUDE = '#include <stellata_atmosphere_scatter>';
-const withAtmoChunk = (frag: string): string => frag.replace(ATMO_INCLUDE, atmoScatterChunk);
-const MESH_FRAG = withAtmoChunk(meshFrag);
-const ATMO_FRAG = withAtmoChunk(atmoFrag);
+// Splice the shared atmosphere GLSL — the uniform contract and the
+// single-scattering integrator — into both the mesh disc and the shell
+// fragment sources; the sample-count #defines ride each material so the GLSL
+// loop bounds track atmosphere-scattering-pure.ts.
+const ATMO_CHUNKS: Record<string, string> = {
+  '#include <stellata_atmosphere_uniforms>': atmoUniformsChunk,
+  '#include <stellata_atmosphere_scatter>': atmoScatterChunk,
+};
+const withAtmoChunks = (frag: string): string =>
+  Object.entries(ATMO_CHUNKS).reduce((src, [inc, chunk]) => src.replace(inc, chunk), frag);
+const MESH_FRAG = withAtmoChunks(meshFrag);
+const ATMO_FRAG = withAtmoChunks(atmoFrag);
 const ATMO_DEFINES = { ATMO_N_VIEW, ATMO_N_LIGHT } as const;
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);

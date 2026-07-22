@@ -123,7 +123,11 @@ src/client/solar-system/
   planet-atmosphere.frag.glsl     Atmosphere limb/halo shell shaders —
                                   single-scattering airlight for rays that
                                   miss the disc. See § Atmospheres.
-  atmosphere-scatter.glsl         Shared single-scattering integrator,
+  atmosphere-uniforms.glsl        Shared atmosphere-scatter uniform contract,
+                                  spliced into both frags (single source vs
+                                  sharedAtmoUniforms in planet-mesh-layer.ts).
+  atmosphere-scatter.glsl         Shared single-scattering integrator + ray
+                                  helpers (shell entry, body-strike, luma),
                                   spliced into the mesh + shell frag sources
                                   (disc airlight + limb halo).
   atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body

@@ -1,24 +1,13 @@
 precision highp float;
 
 #include <common>
+#include <stellata_atmosphere_uniforms>
 #include <stellata_atmosphere_scatter>
 
-// Planet centre + radii in view space (rigid, so pc lengths are preserved).
-uniform vec3 uCenterView;
-uniform float uRadiusPc;
-// Atmosphere top radius in planet-radius units (1 + heightKm/radiusKm).
-uniform float uAtmoRadius;
-// Body → host direction, unit, view space.
+// Body → host direction (unit, view space); sun colour × intensity display
+// exposure; and the LOD crossfade weight — not part of the shared scatter
+// contract (the mesh shader uses these outside its atmosphere block too).
 uniform vec3 uSunDirView;
-// Scale heights (planet-radius units) + per-channel coefficients.
-uniform float uScaleHeightR;
-uniform float uScaleHeightM;
-uniform vec3 uBetaRayleigh;
-uniform float uBetaMie;
-uniform vec3 uBetaAbsorb;
-uniform float uMieG;
-// Sun colour × intensity, and the host-distance display exposure.
-uniform vec3 uSunColour;
 uniform float uLitIntensity;
 uniform float uFade;
 
@@ -37,18 +26,11 @@ void main() {
   // Camera (origin) relative to the planet centre, planet-radius units.
   vec3 o = -uCenterView / uRadiusPc;
 
-  float b = dot(o, dir);
-  float discA = b * b - (dot(o, o) - uAtmoRadius * uAtmoRadius);
-  if (discA <= 0.0) discard;
-  float rootA = sqrt(discA);
-  float t0 = -b - rootA;
-  float t1 = -b + rootA;
-  if (t1 <= 0.0) discard;
-
+  float t0, t1;
+  if (stellata_shellEntry(o, dir, uAtmoRadius, t0, t1) <= 0.0 || t1 <= 0.0) discard;
   // Rays that strike the body ahead of the camera belong to the lit disc —
   // the mesh shader paints their airlight; the shell handles only the limb.
-  float discP = b * b - (dot(o, o) - 1.0);
-  if (discP > 0.0 && -b - sqrt(discP) > 0.0) discard;
+  if (stellata_hitsBodyAhead(o, dir)) discard;
 
   vec3 inscatter;
   vec3 transmittance;
@@ -61,6 +43,6 @@ void main() {
   // Alpha = medium opacity along the chord (1 − luminance transmittance), so
   // the premultiplied-over shell occludes the background even where it adds no
   // airlight. Both channels ride uFade for the LOD crossfade.
-  float opacity = 1.0 - dot(transmittance, vec3(0.2126, 0.7152, 0.0722));
+  float opacity = 1.0 - stellata_luma(transmittance);
   outColor = vec4(inscatter * uSunColour * uLitIntensity * uFade, opacity * uFade);
 }

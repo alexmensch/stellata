@@ -30,6 +30,12 @@ float stellata_atmoJitter(vec2 fragCoord) {
   return fract(52.9829189 * fract(dot(fragCoord, vec2(0.06711056, 0.00583715))));
 }
 
+const vec3 STELLATA_LUMA = vec3(0.2126, 0.7152, 0.0722); // Rec.709
+
+float stellata_luma(vec3 c) {
+  return dot(c, STELLATA_LUMA);
+}
+
 // Second (far) positive root of |o + t·d| = radius, or -1 on a miss.
 float stellata_farRoot(vec3 o, vec3 d, float radius) {
   float b = dot(o, d);
@@ -37,6 +43,26 @@ float stellata_farRoot(vec3 o, vec3 d, float radius) {
   float disc = b * b - c;
   if (disc < 0.0) return -1.0;
   return -b + sqrt(disc);
+}
+
+// Camera-ray entry against the atmosphere shell (radius rAtmo, origin-centred,
+// planet-radius units). Returns the discriminant; near/far roots land in
+// t0/t1 (meaningful only when the discriminant is > 0). Shared by both frags.
+float stellata_shellEntry(vec3 o, vec3 dir, float rAtmo, out float t0, out float t1) {
+  float b = dot(o, dir);
+  float disc = b * b - (dot(o, o) - rAtmo * rAtmo);
+  float root = disc > 0.0 ? sqrt(disc) : 0.0;
+  t0 = -b - root;
+  t1 = -b + root;
+  return disc;
+}
+
+// True when o + t·dir (t > 0) enters the unit body sphere ahead of the camera
+// — the shell shader discards these so the disc path owns them.
+bool stellata_hitsBodyAhead(vec3 o, vec3 dir) {
+  float b = dot(o, dir);
+  float disc = b * b - (dot(o, o) - 1.0);
+  return disc > 0.0 && -b - sqrt(disc) > 0.0;
 }
 
 // Fraction of a point lit by the sun: 1 unless it is BOTH anti-sunward of the
