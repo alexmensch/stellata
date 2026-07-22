@@ -1,0 +1,23 @@
+# Stellata
+
+> Stellata is a browser-based, physics-grounded 3D model of our galaxy and local universe. It renders 313,257 real stars from the AT-HYG catalogue — cross-matched with GCVS variable stars and Hipparcos visual binaries — along with the Solar System's planets and moons, the Sun's heliopause, local interstellar dust and molecular clouds, the Milky Way disc, and the nearest galaxies. Every object is drawn at the colour and apparent brightness you would actually see from any point in space, including dust extinction and reddening. It requires a WebGL2-capable browser.
+
+Stellata simulates what it would look like to move through our galaxy. Variable stars pulsate at their catalogue periods, close binaries orbit on their measured elements, and every star advances from its catalogue epoch to the present along its measured space motion. It is not a theoretical or artistic rendering: every object comes from published astronomical catalogues and direct, empirical measurement.
+
+## About
+
+- [Stellata](https://stellata.xyz/): the live WebGL application.
+- [Source on GitHub](https://github.com/alexmensch/stellata): full source, released under AGPL-3.0-only.
+- [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md): data sources, modelling notes, and project scope.
+
+## Data sources
+
+- Stars: AT-HYG v3.3 (Tycho-2 / Hipparcos / Gaia DR3), Bailer-Jones et al. 2021 geometric distances, GCVS 5.1 variable-star periods.
+- Double & multiple stars: Washington Double Star Catalog, Sixth Orbit Catalog (ORB6), Tokovinin Multiple Star Catalog (2018), Hipparcos CCDM.
+- Interstellar medium: Edenhofer et al. 2024 3D dust map, Zucker et al. 2020 & 2021 molecular clouds.
+- Solar System: JPL Standish 1992 planet elements, JPL SSD moon elements, IAU WGCCRE rotation, Mallama et al. 2018 albedos.
+- Nearby galaxies: McConnachie 2012, Local Volume Database (Pace 2024).
+
+## License
+
+Stellata is released under AGPL-3.0-only. Created by Alex Marshall.
