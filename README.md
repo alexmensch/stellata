@@ -17,11 +17,12 @@ a volume up to 6.5 million light years from our solar system.
 Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 ![Stellata — hero view](docs/screenshots/hero.png)
+<!-- view-url: TODO — paste the stellata.xyz ?v= share link that reproduces this screenshot's camera pose -->
 
 ## Highlights
 
 - **Everything is rendered live, from where you are.** Stars (more than
-  313,000 in the catalogue), planets, the volumetric Milky Way, the
+  329,000 in the catalogue), planets, the volumetric Milky Way, the
   Local Group dwarf galaxies, and the 3D dust between them: every
   object continually re-renders against the current camera each frame.
   Fly halfway to Sirius and the sky changes: parallax, reddening, and 
@@ -38,17 +39,24 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
   star at run time, so stars behind dense ISM look fainter and
   redder, exactly as you would see them.
 
+- **Molecular clouds have real shape.** The local star-forming clouds
+  (Taurus, Orion, Ophiuchus and their neighbours) render as dust
+  silhouettes traced directly from the Edenhofer field, and dim the
+  diffuse background behind them.
+
 - **Variable stars pulsate.** ~3,700 stars cross-matched with GCVS
-  pulse on time-compressed cycles: Cepheids in seconds, Miras in a
-  minute, Betelgeuse in ~8 minutes. Visible both as brightness
-  swing and as physical disc-radius change at close range.
+  pulse at their true catalogue period on the model clock — brightness,
+  disc radius, and colour all swing together. Open the time scrubber
+  (`T`) to accelerate time and watch a Cepheid or Mira run through a
+  cycle.
 
 - **The solar system at live planetary positions.** Around Sol, the
   eight planets and Pluto render at their current heliocentric
   positions (JPL Standish ephemerides, sub-arcminute accurate
-  3000 BC – 3000 AD), inside the asymmetric heliopause shell
-  measured by Voyager and IBEX. A small clock in the corner shows
-  the UTC time the positions correspond to.
+  3000 BC – 3000 AD), with their major moons, atmospheres, and axial
+  rotation, inside the asymmetric heliopause shell measured by Voyager
+  and IBEX. A small clock in the corner shows the UTC time the
+  positions correspond to.
 
 - **The Milky Way is volumetric, not a skybox.** A bounded raymarch
   through galactic-scale density meshes produces the surface-
@@ -63,6 +71,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
   variable-star rings.
 
 ![Stellata — chart mode](docs/screenshots/chart-mode.png)
+<!-- view-url: TODO — paste the stellata.xyz ?v= share link that reproduces this screenshot's camera pose -->
 
 - **Navigate, observe, warp.** Orbit any star (navigate), or land on
   it and look at the sky from its location (observe). Pick a second star
@@ -76,8 +85,9 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 Everything you see is calibrated against the source data. Star sizes
 come from absolute magnitudes via Stefan–Boltzmann; halo softness
-tracks MK luminosity class; binaries come from the Hipparcos CCDM
-cross-reference filtered by MultFlag; dwarf galaxies in the Local
+tracks MK luminosity class; double and multiple stars come from the
+Washington Double Star Catalog and ORB6, with Gaia DR3 NSS and the
+Pulkovo Multiple Star Catalog for orbits; dwarf galaxies in the Local
 Group come from Pace 2024's Local Volume Database with hand-curated
 structural detail for the LMC, SMC, M31, M33, and Sagittarius dSph
 from the primary literature.
@@ -100,7 +110,7 @@ so they fill the viewport long before you'd expect.
 
 - **Betelgeuse (α Orionis)** — the canonical red supergiant.
   M2 Ia at 152 pc; the disc resolves to a large fraction of the
-  viewport at close range and pulses on an ~8-minute cycle.
+  viewport at close range.
 - **Antares (α Scorpii)** — the other canonical red supergiant.
   M1.5 Iab at 170 pc. Visibly redder than Betelgeuse.
 - **Rigel (β Orionis)** — blue supergiant in the same constellation
@@ -111,18 +121,19 @@ so they fill the viewport long before you'd expect.
 - **Deneb (α Cygni)** — A2 Ia supergiant at 433 pc, in Cygnus.
   Renders as a notably bright white-blue disc.
 
-### Watch variables pulse in real time
+### Watch variables pulse
 
-Stellata compresses time so periods you'd never see in a human
-lifetime cycle in seconds. Focus on one of these and just wait:
+Variables pulse at their true GCVS period on the model clock. Open the
+time scrubber (press `T`) to accelerate time, then focus on one and
+watch it swing in brightness, size, and colour:
 
-- **δ Cephei** — the namesake Cepheid. Full cycle in a few seconds.
+- **δ Cephei** — the namesake Cepheid.
 - **η Aquilae** — another bright classical Cepheid.
-- **Mira (o Ceti)** — the long-period prototype. ~1 minute per
-  cycle; amplitude is dramatic.
-- **Betelgeuse** — slower (~8 minutes per cycle) but visible as
-  both brightness swing and physical disc-radius pulse if you're
-  focused close in.
+- **Mira (o Ceti)** — the long-period prototype; the amplitude is
+  dramatic.
+- **Betelgeuse** — a slow, low-amplitude pulse, visible as both a
+  brightness swing and a physical disc-radius change if you're focused
+  close in.
 
 ### Fly out and watch the constellations break
 
@@ -177,7 +188,7 @@ anchor. From there:
 
 ### Watch the dust shape the sky
 
-Set the magnitude limit to "All" (showing all 313,000 stars) and
+Set the magnitude limit to "All" (showing all ~329,000 stars) and
 pull the camera out to ~3 kpc from Sol, then orbit around. The
 Edenhofer 2023 3D dust grid is real volumetric structure, not an
 analytical shell — as you move, extinction patterns paint
@@ -245,99 +256,14 @@ navigation (orbit, zoom, pan) works the same everywhere.
 
 ## Known limitations
 
-- **Proper motion is not accounted for.** Stars are rendered at their
-  catalog Julian 2000.0 positions; they don't move as you would see over
-  astronomical timescales. A future update will account for this to
-  render present time positions.
-- **Variable-star pulsation uses a constant-temperature model.**
-  Real pulsating variables (Miras, Cepheids) split their brightness
-  change between radius and temperature; we attribute the whole
-  swing to radius (`R ∝ √L`). Visually more dramatic than real
-  life.
 - **Only ~3,700 variables pulse** — those successfully cross-matched
   between AT-HYG (via HIP or HD) and GCVS. Variables without a
   HIP/HD cross-reference, or whose GCVS entry lacks a parseable
   period, render as non-variable.
-- **Most secondaries aren't separately positioned yet.** ~13k primaries
-  are flagged as visual doubles via the CCDM cross-match (Sirius,
-  Mizar, Castor, Albireo, γ And, ε Lyr, Algol, …) and carry the
-  chart-mode binary glyph, but AT-HYG only stores the primary's
-  position for most of them. Apart from α Cen-style cases
-  caught by the geometric pass, the secondary doesn't render as its
-  own disc.
-- **Spectral-class colouring is provisional.** The current B–V →
-  RGB mapping is a placeholder pending a perceptually-calibrated
-  pass.
-- **No nebulae or dark clouds yet.** Molecular-cloud ellipsoids
-  (Zucker 2020/2021) are committed but shelved while the visual
-  treatment is refined. Diffuse and emission nebulae are not
-  currently modelled.
-
-## For developers
-
-Most users won't need this section: the deployed site at
-[stellata.xyz](https://stellata.xyz) is the whole product. This is
-how to run it locally.
-
-### Prerequisites
-
-- Node 20+
-- [Git LFS](https://git-lfs.com/) — catalogue source files are
-  tracked via LFS. A clone without LFS will check out pointer stubs
-  and the preprocessor will fail.
-
-### Setup
-
-```bash
-git lfs install        # one-time, if you haven't already
-git clone <this-repo>
-cd stellata
-pnpm install
-```
-
-All catalogue source files are included in the repo, no manual
-downloads needed. The dust voxel chunks (~120 MiB total) and stellar
-catalogue ride on Git LFS.
-
-### Running
-
-```bash
-pnpm run dev
-```
-
-Runs the preprocessor (regenerating `public/catalog.bin` if the
-source CSV has changed) and starts Vite on
-<http://localhost:5173>.
-
-### Other commands
-
-| Command                          | What it does                                                                              |
-| -------------------------------- | ----------------------------------------------------------------------------------------- |
-| `pnpm run build:binaries`         | Regenerate `data/binaries/multiples.tsv` from WDS / ORB6 / Gaia NSS / SIMBAD              |
-| `pnpm run build:catalog`          | Regenerate `public/catalog.bin` + `search-index.json` + `catalog-row-index-map.json`      |
-| `pnpm run build:binaries-runtime` | Regenerate `public/binaries.bin` (runtime artifact for `BinaryOrbitField`)                |
-| `pnpm run build:clouds`           | Regenerate `public/clouds.json` from the Zucker tables                                    |
-| `pnpm run build:dust-sync`        | Mirror `data/dust/` voxel chunks to `public/dust/`                                        |
-| `pnpm run build`                  | Full production build into `dist/` (runs every step above in order)                       |
-| `pnpm run typecheck`       | `tsc --noEmit` over everything                         |
-| `pnpm test`                | Run the vitest regression suite                        |
-| `pnpm run test:coverage`   | Vitest run with v8 coverage report                     |
-| `pnpm run deploy`          | `wrangler deploy` (requires Cloudflare auth)           |
-
-### Project documentation
-
-- **[CLAUDE.md](./CLAUDE.md)** — project conventions and the top-level
-  folder layout. Start here when navigating the codebase.
-- **[SCIENCE.md](./SCIENCE.md)** — every data source, citation,
-  formula, and modelling decision.
-- **Per-folder `README.md` files** — topic-specific deep dives live
-  next to the code they describe (see `src/client/<subsystem>/README.md`,
-  `scripts/<pipeline>/README.md`, `data/<source>/README.md`). The
-  folder tree itself is the documentation index.
-- **[`docs/`](./docs/)** — genuinely cross-cutting notes that don't
-  belong to a single folder: code-review patterns
-  (`authoring-patterns.md`), UX-tweak reference table
-  (`ux-tweaks.md`).
+- **Emission and reflection nebulae are not modelled yet.** The local
+  molecular clouds (Zucker 2020/2021) now render as traced dust
+  silhouettes, but catalogued H II regions, planetary nebulae, and
+  reflection nebulae are not yet drawn as discrete objects.
 
 ## Sponsorship
 
@@ -364,11 +290,28 @@ Data sources retain their own licences:
   [Codeberg](https://codeberg.org/astronexus/athyg), CC-BY-SA-4.0.
   The generated `catalog.bin` and `search-index.json` are
   derivatives and carry the same licence.
+- **Gaia DR3** (astrometry, astrophysical parameters, NSS orbits) —
+  ESA / Gaia / DPAC, [Gaia archive](https://gea.esac.esa.int/archive/),
+  CC-BY-4.0 (Gaia data-release policy).
+- **Bailer-Jones et al. 2021** (Gaia DR3 geometric distances) — via
+  [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/352); cite
+  the paper ([10.3847/1538-3881/abd806](https://doi.org/10.3847/1538-3881/abd806)).
+- **SIMBAD** (cross-identifications + validation sample) — CDS
+  Strasbourg, [simbad.cds.unistra.fr](https://simbad.cds.unistra.fr/simbad/);
+  publicly accessible per CDS policy (academic / non-commercial), cite
+  Wenger et al. 2000.
 - **GCVS 5.1** (variable stars) — Samus et al at the Sternberg
   Astronomical Institute, [http://www.sai.msu.su/gcvs/gcvs/](http://www.sai.msu.su/gcvs/gcvs/).
   Free for research and educational use with attribution.
 - **Hipparcos Main Catalogue + CCDM** (ESA SP-1200, 1997; Dommanget
   & Nys 1994) — public domain via [CDS](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239).
+- **Washington Double Star Catalog + ORB6** (double-star geometry and
+  visual orbits) — U.S. Naval Observatory,
+  [astro.gsu.edu/wds](http://www.astro.gsu.edu/wds/); public domain
+  (U.S. Government work).
+- **Multiple Star Catalog** (hierarchical multiple-star orbits) —
+  Tokovinin 2018, via CDS/VizieR (`J/ApJS/235/6`); standard academic
+  use, cite the paper.
 - **Stellarium modern sky culture** (constellation stick figures) —
   [Stellarium](https://github.com/Stellarium/stellarium/tree/master/skycultures/modern),
   MIT-licensed (line data; illustrations not used).
@@ -381,7 +324,7 @@ Data sources retain their own licences:
   `dwarf_all` snapshot at `data/local-group/lvdb-snapshot.csv` is a
   frozen copy of the upstream table.
 - **Zucker 2020 + 2021** (molecular cloud distances and bounding
-  boxes; data committed but rendering currently shelved) —
+  boxes) —
   [10.3847/1538-4357/ab9d24](https://doi.org/10.3847/1538-4357/ab9d24)
   and [10.3847/1538-4357/ac1f96](https://doi.org/10.3847/1538-4357/ac1f96).
 
