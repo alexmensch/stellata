@@ -47,10 +47,11 @@ describe('visibleSet — cumulative floor derivation', () => {
   });
 
   it('chart cumulative sizes are pinned', () => {
-    // Chart 'physical' carries star + planet names (chartStarNameLabels) —
-    // chart mode has no true naked-eye tier, so the base chart is legible.
-    expect(visibleSet('physical', 'chart').size).toBe(6);
-    expect(visibleSet('representational', 'chart').size).toBe(8);
+    // Chart 'physical' carries star + planet names (chartStarNameLabels) and
+    // cloud names (chartCloudNames) — chart mode has no true naked-eye tier,
+    // so the base chart is legible.
+    expect(visibleSet('physical', 'chart').size).toBe(7);
+    expect(visibleSet('representational', 'chart').size).toBe(9);
     expect(visibleSet('all', 'chart').size).toBe(10);
   });
 
@@ -90,8 +91,8 @@ describe('chart-content gating contract', () => {
     chartBayerGlyphs: 'physical',
     chartVariableRings: 'physical', // gates both variable rings AND binary wings
     chartStarNameLabels: 'physical', // planet name labels ride this tier too
+    chartCloudNames: 'physical', // cloud names sit alongside star names
     chartConstellationNames: 'all',
-    chartCloudNames: 'all',
   };
 
   for (const [id, floor] of Object.entries(chartFloor)) {

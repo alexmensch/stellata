@@ -87,7 +87,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   chartBayerGlyphs:          { realistic: 'never',            chart: 'physical' },
   chartVariableRings:        { realistic: 'never',            chart: 'physical' },
   chartConstellationNames:   { realistic: 'never',            chart: 'all' },
-  chartCloudNames:           { realistic: 'never',            chart: 'all' },
+  chartCloudNames:           { realistic: 'never',            chart: 'physical' },
 };
 
 /** Iteration order for applyDetailPreset — the SceneElementId union as a
