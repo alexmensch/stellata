@@ -92,11 +92,18 @@ the focus-card alias row — so "Eagle Nebula", "M16", and "NGC 6611" all
 find the same cloud, the way star / LG aliasing works.
 
 **Canonical-name precedence:** common/proper name > Messier > NGC/IC >
-other catalogue (Sh2 / RCW / LBN / LDN / Caldwell) > Zucker region. The
-table promotes Messier-only labels to their common names (M16 → "Eagle
-Nebula") and splits composite labels into one canonical name plus
-aliases ("Mon OB1 / NGC 2264" → "NGC 2264" + `["Mon OB1", …]`). No label
-joins two names.
+other catalogue (Sh2 / RCW / LBN / LDN / Caldwell) > Zucker region.
+Applied uniformly — a whole-cloud common name wins over its Messier or
+IC designation (M16 → "Eagle Nebula", IC 443 → "Jellyfish Nebula"), with
+the designations kept as aliases. Composite labels split into one
+canonical name plus aliases ("Mon OB1 / NGC 2264" → "NGC 2264" +
+`["Mon OB1", …]`). No label joins two names.
+
+**Carve-out:** a common name that labels a *sub-feature*, not the whole
+cloud, does NOT win — the catalogue / region name stays canonical
+(Carina keeps "Carina"; "Carina Nebula" / NGC 3372 is one HII region
+within it. IC 1396 keeps its designation; "Elephant's Trunk" is one
+globule inside it).
 
 The table is **keyed by the stable slug `id`, not the display name** —
 `id` is the frozen SID / URL key (docs/sid.md § 7), so a canonical-name

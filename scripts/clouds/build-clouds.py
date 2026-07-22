@@ -89,18 +89,22 @@ CLOUD_ALT_NAMES: dict[str, tuple[str | None, list[str]]] = {
     'm16': ('Eagle Nebula', ['M16', 'NGC 6611', 'IC 4703']),
     'm17': ('Omega Nebula', ['M17', 'NGC 6618', 'Swan Nebula']),
     'm20': ('Trifid Nebula', ['M20', 'NGC 6514']),
-    # Common-name labels kept; catalogue designations added as aliases.
+    # IC-designated clouds whose whole-cloud common name is the canonical label.
+    'ic-443': ('Jellyfish Nebula', ['IC 443']),
+    'ic-5146': ('Cocoon Nebula', ['IC 5146', 'Caldwell 19']),
+    'ic-2118': ('Witch Head Nebula', ['IC 2118']),
+    'ic-2944': ('Running Chicken Nebula', ['IC 2944', 'Lambda Centauri Nebula']),
+    # Already common-named; catalogue designations added as aliases.
     'lagoon': (None, ['M8', 'NGC 6523']),
     'north-america': (None, ['NGC 7000', 'Caldwell 20']),
     'california': (None, ['NGC 1499', 'Sh2-220']),
     'rosette': (None, ['NGC 2237', 'NGC 2244', 'Caldwell 49']),
     'coalsack': (None, ['Caldwell 99']),
+    # Common name names a sub-feature, not the whole cloud → keep the
+    # catalogue / region label canonical (Carina Nebula = NGC 3372 within the
+    # Carina cloud; Elephant's Trunk = one globule inside IC 1396).
     'carina': (None, ['Carina Nebula', 'NGC 3372', 'Eta Carinae Nebula', 'Caldwell 92']),
-    'ic-5146': (None, ['Cocoon Nebula', 'Caldwell 19']),
-    'ic-2118': (None, ['Witch Head Nebula']),
     'ic-1396': (None, ["Elephant's Trunk Nebula"]),
-    'ic-2944': (None, ['Running Chicken Nebula', 'Lambda Centauri Nebula']),
-    'ic-443': (None, ['Jellyfish Nebula']),
 }
 
 

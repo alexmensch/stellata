@@ -121,10 +121,18 @@ describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
     const mon = payload.clouds.find((c) => c.id === 'mon-ob1-ngc-2264')!;
     expect(mon.name).toBe('NGC 2264');
     expect(mon.aliases).toContain('Mon OB1');
-    // Common name outranks the Messier designation for the canonical label.
+    // Whole-cloud common name outranks the Messier OR IC designation,
+    // applied uniformly; the designation drops to an alias.
     const eagle = payload.clouds.find((c) => c.id === 'm16')!;
     expect(eagle.name).toBe('Eagle Nebula');
     expect(eagle.aliases).toEqual(['M16', 'NGC 6611', 'IC 4703']);
+    const jellyfish = payload.clouds.find((c) => c.id === 'ic-443')!;
+    expect(jellyfish.name).toBe('Jellyfish Nebula');
+    expect(jellyfish.aliases).toContain('IC 443');
+    // Carve-out: a sub-feature common name does NOT win the whole cloud.
+    const carina = payload.clouds.find((c) => c.id === 'carina')!;
+    expect(carina.name).toBe('Carina');
+    expect(carina.aliases).toContain('Carina Nebula');
   });
 
   it('emits aliases only for curated clouds, never an empty array', () => {
