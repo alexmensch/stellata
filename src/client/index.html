@@ -4,10 +4,113 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stellata — Observational 3D Model of our Galaxy</title>
+
+    <meta
+      name="description"
+      content="A browser-based 3D model of our galaxy rendering 313,257 real stars from the AT-HYG catalogue, with variable stars, planets, dust, and the Milky Way."
+    />
+    <link rel="canonical" href="https://stellata.xyz/" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="author" content="Alex Marshall" />
+    <meta name="theme-color" content="#000000" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Stellata" />
+    <meta property="og:title" content="Stellata — Observational 3D Model of our Galaxy" />
+    <meta
+      property="og:description"
+      content="A browser-based 3D model of our galaxy rendering 313,257 real stars from the AT-HYG catalogue, with variable stars, planets, dust, and the Milky Way."
+    />
+    <meta property="og:url" content="https://stellata.xyz/" />
+    <meta property="og:image" content="https://stellata.xyz/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Stellata — a 3D map of real stars against the Milky Way." />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Stellata — Observational 3D Model of our Galaxy" />
+    <meta
+      name="twitter:description"
+      content="A browser-based 3D model of our galaxy rendering 313,257 real stars from the AT-HYG catalogue, with variable stars, planets, dust, and the Milky Way."
+    />
+    <meta name="twitter:image" content="https://stellata.xyz/og-image.png" />
+    <meta name="twitter:image:alt" content="Stellata — a 3D map of real stars against the Milky Way." />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Stellata",
+        "alternateName": "Stellata Star Catalog",
+        "url": "https://stellata.xyz/",
+        "image": "https://stellata.xyz/og-image.png",
+        "description": "A browser-based 3D model of our galaxy rendering 313,257 real stars from the AT-HYG catalogue, with variable stars, planets, dust, and the Milky Way.",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (WebGL2-capable browser)",
+        "browserRequirements": "Requires WebGL2",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "author": { "@type": "Person", "name": "Alex Marshall", "url": "https://alxm.me" },
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <canvas id="scene"></canvas>
+
+    <noscript>
+      <style>
+        #scene { display: none; }
+        .noscript-fallback {
+          max-width: 46rem;
+          margin: 0 auto;
+          padding: 3rem 1.5rem;
+          color: #cdd6e4;
+          font: 16px/1.6 system-ui, sans-serif;
+        }
+        .noscript-fallback h1 { color: #fff; font-weight: 600; }
+        .noscript-fallback a { color: #9fbcff; }
+      </style>
+      <main class="noscript-fallback">
+        <h1>Stellata — an observational 3D model of our galaxy</h1>
+        <p>
+          Stellata is a browser-based, physics-grounded 3D star map that
+          simulates what it would look like to move through our galaxy and
+          local universe. It renders 313,257 real stars from the AT-HYG
+          catalogue, cross-matched with GCVS variable stars and Hipparcos
+          visual binaries, along with the Solar System's planets and moons,
+          the Sun's heliopause, local interstellar dust and molecular clouds,
+          the Milky Way disc, and the nearest galaxies.
+        </p>
+        <p>
+          Every object is drawn at the colour and apparent brightness you
+          would actually see from any point in space, including dust
+          extinction and reddening. Variable stars pulsate at their catalogue
+          periods, close binaries orbit on their measured elements, and every
+          star advances from its catalogue epoch to the present along its
+          measured space motion. Every object comes from published
+          astronomical catalogues and direct measurement — no theoretical or
+          artistic content.
+        </p>
+        <p>
+          Stellata requires a modern browser with WebGL2 and JavaScript
+          enabled. The source code is available on
+          <a href="https://github.com/alexmensch/stellata">GitHub</a> under the
+          AGPL-3.0 licence; data sources and modelling notes are documented in
+          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>.
+        </p>
+      </main>
+    </noscript>
 
     <svg id="overlay" class="overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
       <!-- Galactic coordinate sphere l/b labels. Pooled <text> positioned +
