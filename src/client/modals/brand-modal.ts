@@ -10,11 +10,13 @@ const SHARE_FLASH_MS = 1500;
 
 type Tab = 'about' | 'credits';
 
-export function bindBrandModals() {
+export function bindBrandModals(starCount: number) {
   const aboutBtn = document.getElementById('brand-about')!;
   const aboutModal = document.getElementById('about-modal')!;
   const versionEl = document.getElementById('about-version');
   if (versionEl) versionEl.textContent = `v${import.meta.env.VITE_APP_VERSION}`;
+  const starCountEl = document.getElementById('about-star-count');
+  if (starCountEl) starCountEl.textContent = starCount.toLocaleString();
 
   const tabAbout = document.getElementById('about-tab-about')!;
   const tabCredits = document.getElementById('about-tab-credits')!;

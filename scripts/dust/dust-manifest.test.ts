@@ -57,7 +57,7 @@ describe('data/dust/manifest.json encode contract', () => {
     expect(Object.keys(byCloud)).toHaveLength(11);
     // Ophiuchus reaches its Leike-resolution target outright; the others
     // sit at 0.19-0.9× — consistent with 1 pc → 4.9 pc beam dilution
-    // (docs/molecular-clouds.md § 4). A collapse below these levels means
+    // (docs/science-molecular-clouds.md § 4). A collapse below these levels means
     // an encode or resample regression.
     expect(byCloud['Ophiuchus'].ratio).toBe(1.03);
     expect(byCloud['Taurus'].ratio).toBe(0.5);

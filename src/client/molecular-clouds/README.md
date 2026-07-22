@@ -4,7 +4,7 @@
 decoupled components per cloud:
 
 - **Absorption** — a per-fragment raymarch of the calibrated Zucker
-  density model (`docs/molecular-clouds.md` §§ 4, 9) that dims every
+  density model (`docs/science-molecular-clouds.md` §§ 4, 9) that dims every
   diffuse layer drawn behind the cloud (the MW band, LG emission).
   Physics, so it is **always on in realistic mode — never
   declutter-gated** — and hides only in chart mode.
@@ -84,7 +84,7 @@ avoid the `#version 300 es` directive and don't redeclare
 auto-injected attributes (`position`, `normal`, `modelMatrix`, etc.);
 doing either silently breaks the GLSL3 compile.
 
-**Render-order contract** (`docs/molecular-clouds.md` § 9.1 rule 5):
+**Render-order contract** (`docs/science-molecular-clouds.md` § 9.1 rule 5):
 the absorption alpha dims only layers drawn *before* the absorption
 meshes (`renderOrder −2`). Every diffuse background the clouds should
 extinct — the MW band and LG emission (−3), any future HiPS /

@@ -34,7 +34,10 @@ class width-locks the slot so the glyph swap never reflows the flex
 row.
 
 `brand-modal.ts` wires the modal-dismissal helper, the tab swap,
-and the share-button click handler in one `bindBrandModals()` call.
+and the share-button click handler in one `bindBrandModals(starCount)`
+call, and populates the About pane's version + live star count (the
+count shares `catalog.count` and the `toLocaleString` path with the
+welcome info modal — no second formatter).
 The `.ui-top-left` container sits independently of `.ui-top` so
 changes to the right-side stack's width / wrap behaviour don't
 affect the brand.

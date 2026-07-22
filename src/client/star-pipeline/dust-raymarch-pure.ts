@@ -7,7 +7,7 @@ export const DUST_STEPS = 48;
 /** Canonical interstellar reddening ratio A_V / E(B-V) (CCM 1989,
  *  diffuse ISM). Single global value — mirrors `R_V` in star.vert.glsl.
  *  The density-dependent R_V(ρ) upgrade is a no-op at our voxel-scale
- *  column ceiling (peak A_V ≈ 2.7); see docs/molecular-clouds.md § 6. */
+ *  column ceiling (peak A_V ≈ 2.7); see docs/science-molecular-clouds.md § 6. */
 export const R_V = 3.1;
 
 export interface DustDecodeParams {
