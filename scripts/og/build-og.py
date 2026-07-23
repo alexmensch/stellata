@@ -17,13 +17,17 @@ FONT_CANDIDATES = [
     "/System/Library/Fonts/SFNSMono.ttf",
     "/System/Library/Fonts/Menlo.ttc",
 ]
+ITALIC_FONT_CANDIDATES = [
+    "/System/Library/Fonts/SFNSMonoItalic.ttf",
+    *FONT_CANDIDATES,
+]
 
 FG = (230, 237, 247, 255)  # --fg  #e6edf7
 FG_DIM = (170, 182, 200, 255)
 
 
-def load_font(px: int) -> ImageFont.FreeTypeFont:
-    for path in FONT_CANDIDATES:
+def load_font(px: int, italic: bool = False) -> ImageFont.FreeTypeFont:
+    for path in ITALIC_FONT_CANDIDATES if italic else FONT_CANDIDATES:
         if Path(path).exists():
             return ImageFont.truetype(path, px)
     raise SystemExit("No monospace font found (SF Mono / Menlo).")
@@ -67,9 +71,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--size", type=int, default=66, help="wordmark cap size (px, 1x)")
     ap.add_argument("--tracking", type=float, default=0.30, help="letter-spacing (em)")
-    ap.add_argument("--y", type=int, default=560, help="wordmark centre y (1x, of 630)")
-    ap.add_argument("--tagline", default="")
-    ap.add_argument("--tagline-size", type=int, default=21)
+    ap.add_argument("--y", type=int, default=500, help="wordmark centre y (1x, of 630)")
+    ap.add_argument("--tagline", default="Explore the universe")
+    ap.add_argument("--tagline-size", type=int, default=27)
     ap.add_argument("--out", default=str(ROOT / "public" / "og-image.jpg"))
     args = ap.parse_args()
 
@@ -83,11 +87,11 @@ def main() -> None:
     )
 
     if args.tagline:
-        tag_font = load_font(args.tagline_size * SS)
-        tag_y = args.y + args.size * 0.62 + args.tagline_size * 0.9
+        tag_font = load_font(args.tagline_size * SS, italic=True)
+        tag_y = args.y + args.size * 0.62 + args.tagline_size * 1.0
         base = stamp(
             base, args.tagline, tag_font,
-            0.18 * args.tagline_size * SS, OUT_W * SS / 2, tag_y * SS, FG_DIM,
+            0.10 * args.tagline_size * SS, OUT_W * SS / 2, tag_y * SS, FG_DIM,
         )
 
     out = base.resize((OUT_W, OUT_H), Image.LANCZOS).convert("RGB")
