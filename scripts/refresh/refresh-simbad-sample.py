@@ -331,10 +331,10 @@ def main() -> None:
             f"bin {i+1}/{len(BINS)} {label} target={bin_.target} mod_K={bin_.mod_K}…"
         )
         table = fetch_bin_candidates(client, bin_, star_otypes_inlist)
-        # Schema-validate once on the first table — covers every later table
-        # with the same JOIN shape; matches refresh-bailer-jones.py's pattern.
-        if i == 0:
-            rl.validate_schema(table, BASIC_SCHEMA, label="SIMBAD basic+allfluxes")
+        # Every bin runs a distinct WHERE (its own MOD-K stratum), so validate
+        # each — a first-bin-only check can't catch a planner returning a
+        # different schema for the MOD-K branch.
+        rl.validate_schema(table, BASIC_SCHEMA, label=f"SIMBAD basic+allfluxes bin {i+1}")
         candidates = list(table)
         picked = select_sample(candidates, bin_.target, rng)
         selected.extend(picked)

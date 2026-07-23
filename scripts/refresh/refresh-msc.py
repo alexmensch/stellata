@@ -160,12 +160,10 @@ def main() -> None:
 
         rl.validate_schema(table, spec.expected_schema, label=spec.vizier_table)
         lo, hi = spec.row_bounds
-        if not (lo <= len(table) <= hi):
-            raise SystemExit(
-                f"refresh-msc: {spec.vizier_table} row count {len(table)} "
-                f"outside expected [{lo}, {hi}] — upstream drift; "
-                f"investigate before re-pinning."
-            )
+        rl.assert_row_count(
+            len(table), lo, hi, f"refresh-msc: {spec.vizier_table}",
+            hint="upstream drift; investigate before re-pinning.",
+        )
 
         if spec.output is OUT_ORBITS:
             spot = [

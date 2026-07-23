@@ -59,8 +59,12 @@ validation and row bounds — source detail in `data/msc/README.md`.
 
 `scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
 atomic-rename plumbing every refresh script imports — handles retry,
-batching, schema validation, and partial-write protection so a
-mid-run failure never leaves a half-written TSV under `data/`.
+batched pulls (`run_in_batches`), schema validation, row-count and
+coverage gating (`assert_row_count`, `report_coverage`), spot-check
+pinning (`validate_spot_rows`, `check_spot_rows_tolerant`), and
+partial-write protection so a mid-run failure never leaves a
+half-written TSV under `data/`. `assert_row_count` is also imported by
+`scripts/binaries/build-binaries.py` for its Stage-1 parser bounds.
 
 `scripts/refresh/gaia_astrometry_pull.py` is the shared 5p-astrometry
 pull (schema, ADQL, batching, coverage + spot-check gates, atomic

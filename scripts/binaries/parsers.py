@@ -472,11 +472,20 @@ class CcdmRow:
     mult_flag: str      # blank / "O" / etc. — see Hipparcos doc
 
 
-# Full Hipparcos main-catalogue slice (117,955 HIPs + VizieR quirks);
-# asserted by the build call site so a VizieR reformat that blanks or
-# truncates the parse fails loudly instead of silently degrading the
-# CCDM tier.
+# Expected Stage-1 parse cardinalities, asserted at the build call site
+# (build-binaries.py run()) via rl.assert_row_count so a corrupted or
+# reformatted source file fails loudly instead of silently degrading a
+# downstream tier. Bands sit ~10% either side of the current v3.3 /
+# frozen-catalogue counts to absorb minor upstream maintenance; a swap
+# to a new AT-HYG / VizieR release re-pins them deliberately. CCDM is
+# the full Hipparcos main-catalogue slice (117,955 HIPs + VizieR quirks),
+# not the double-star subset.
+ATHYG_ROW_COUNT_BOUNDS = (280_000, 345_000)
+WDS_SUMM_ROW_COUNT_BOUNDS = (140_000, 174_000)
+ORB6_ROW_COUNT_BOUNDS = (3_600, 4_500)
+GCVS_ROW_COUNT_BOUNDS = (55_000, 69_000)
 CCDM_ROW_COUNT_BOUNDS = (100_000, 140_000)
+HIP2_ROW_COUNT_BOUNDS = (106_000, 130_000)
 
 
 def parse_ccdm(path: Path) -> list[CcdmRow]:

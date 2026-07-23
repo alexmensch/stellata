@@ -185,19 +185,77 @@ def retry(
 
 # ─── Batched query ────────────────────────────────────────────────────
 
-def run_batched(
-    ids: Sequence[Any],
+def run_in_batches(
+    items: Sequence[Any],
     batch_size: int,
-    query_fn: Callable[[Sequence[Any]], Iterable[R]],
-) -> list[R]:
-    """Chunk `ids` into batches of `batch_size`, call `query_fn(batch)`
-    for each, return the concatenated row list. Empty `ids` returns []."""
+    query_fn: Callable[[Sequence[Any]], Any],
+    collect: Callable[[Any], None],
+    *,
+    schema: Mapping[str, type | tuple[type, ...]] | None = None,
+    schema_label: str = "batch",
+    log: Callable[[str], None] = print,
+) -> None:
+    """Split `items` into `batch_size` chunks, query each, feed the result
+    table to `collect`, logging per-batch timing + cumulative progress.
+
+    `collect` owns accumulation — a dict keyed by source_id, a transformed
+    list, whatever the caller needs — so the shape of the result never
+    leaks into this helper. The first batch is schema-validated against
+    `schema` (labelled `schema_label`) when given; the batched pulls all
+    validate exactly once, on batch 1, since every batch shares one ADQL
+    projection. `collect=rows.extend` recovers a plain concatenating pull.
+    """
     if batch_size <= 0:
         raise ValueError(f"batch_size must be positive, got {batch_size}")
-    out: list[R] = []
-    for i in range(0, len(ids), batch_size):
-        out.extend(query_fn(ids[i : i + batch_size]))
-    return out
+    total = len(items)
+    n_batches = (total + batch_size - 1) // batch_size
+    start = time.time()
+    seen = 0
+    for batch_idx, offset in enumerate(range(0, total, batch_size), start=1):
+        batch = items[offset : offset + batch_size]
+        t0 = time.time()
+        table = query_fn(batch)
+        if batch_idx == 1 and schema is not None:
+            validate_schema(table, schema, label=schema_label)
+        collect(table)
+        seen += len(table)
+        elapsed = time.time() - t0
+        cum = time.time() - start
+        log(
+            f"  batch {batch_idx}/{n_batches}: {len(table):4d} rows in "
+            f"{elapsed:5.1f}s (cum {cum/60:.1f}m, total rows {seen})"
+        )
+
+
+# ─── Row-count guard ──────────────────────────────────────────────────
+
+_ROW_COUNT_DEFAULT_HINT = (
+    "upstream schema or selection has changed; investigate before re-pinning."
+)
+
+
+def assert_row_count(
+    n: int,
+    low: int,
+    high: int,
+    label: str,
+    *,
+    hint: str = _ROW_COUNT_DEFAULT_HINT,
+) -> None:
+    """Raise SystemExit unless ``low <= n <= high`` (inclusive both ends).
+
+    The frozen external catalogues each pin an expected row-count band; a
+    pull outside it means upstream re-indexed, the request set changed, or
+    the ADQL drifted — all of which want a human before the output is
+    re-committed. ``hint`` tails the failure message with the script-
+    specific cause; ``label`` prefixes it (a per-table label carries the
+    VizieR table name for multi-table pulls).
+    """
+    if not (low <= n <= high):
+        raise SystemExit(
+            f"{label}: row count {n} outside expected "
+            f"[{low}, {high}] — {hint}"
+        )
 
 
 # ─── Schema validation ────────────────────────────────────────────────
@@ -213,10 +271,12 @@ def validate_schema(
     *,
     label: str = "table",
 ) -> None:
-    """Validate column names + dtypes of an astropy Table, pandas DataFrame,
-    or dict-of-columns. Each `expected` entry is a column name → expected
-    Python base type or tuple of types. Extra columns in `table` are
-    allowed; missing columns or mismatched dtypes raise SchemaError.
+    """Validate column names + dtypes of an astropy Table, a dict-of-columns,
+    or any table-like exposing `.columns` (names) with `table[col].dtype`.
+    Each `expected` entry is a column name → expected Python base type or
+    tuple of types; dtypes resolve for numpy dtypes and Python builtin
+    types. Extra columns in `table` are allowed; missing columns or
+    mismatched dtypes raise SchemaError.
     """
     colnames = _column_names(table)
     missing = [c for c in expected if c not in colnames]
@@ -508,6 +568,100 @@ def check_spot_row(
     return True
 
 
+def validate_spot_rows(
+    rows_by_key: Mapping[Any, Any],
+    specs: Iterable[Mapping[str, Any]],
+    *,
+    script_name: str,
+    key_field: str = "source_id",
+    missing_hint: str = "missing from query result — upstream selection has changed.",
+) -> None:
+    """Run ``check_spot_row`` over every pinned ``spec``, hard-failing on an
+    absent row. A present-but-drifted row raises inside ``check_spot_row``
+    with its per-field delta list; an absent keyed row raises SystemExit
+    here with ``missing_hint`` (which names the retirement cause — a HIP /
+    Tycho identifier can't retire, a Gaia selection can). This is the
+    hard-fail contract shared by the xmatch / nss / apsis pulls; the
+    soft-tolerance retirement pattern (Bailer-Jones) stays inline —
+    absence there is expected within a bound.
+    """
+    for spec in specs:
+        if not check_spot_row(
+            rows_by_key, spec, script_name=script_name, key_field=key_field
+        ):
+            raise SystemExit(
+                f"{script_name}: pinned {key_field}={spec[key_field]} {missing_hint}"
+            )
+
+
+def check_spot_rows_tolerant(
+    rows_by_key: Mapping[Any, Any],
+    specs: Iterable[Mapping[str, Any]],
+    *,
+    script_name: str,
+    key_field: str = "source_id",
+    max_missing: int,
+    warn_template: str,
+    fail_hint: str,
+    log: Callable[[str], None] = print,
+) -> list[Any]:
+    """Soft-tolerance sibling of ``validate_spot_rows``. A present-but-drifted
+    row still hard-fails inside ``check_spot_row``; an ABSENT pinned row is
+    a warning (``warn_template.format(key=...)``) tolerated up to
+    ``max_missing`` — a Gaia DR4 maintenance reload can quietly retire a
+    source_id or two from a small pinned sample. More than ``max_missing``
+    absent raises SystemExit. Returns the list of missing keys.
+    """
+    missing: list[Any] = []
+    for spec in specs:
+        if not check_spot_row(
+            rows_by_key, spec, script_name=script_name, key_field=key_field
+        ):
+            key = spec[key_field]
+            missing.append(key)
+            log(warn_template.format(key=key))
+    if len(missing) > max_missing:
+        raise SystemExit(
+            f"{script_name}: {len(missing)} pinned {key_field}s missing "
+            f"(tolerance {max_missing}): {missing} — {fail_hint}"
+        )
+    return missing
+
+
+# ─── Coverage report ──────────────────────────────────────────────────
+
+def report_coverage(
+    rows: Iterable[Mapping[str, Any]],
+    total_input: int,
+    groups: Sequence[tuple[str, Callable[[Mapping[str, Any]], bool]]],
+    *,
+    label: str = "source_ids",
+    log: Callable[[str], None] = print,
+) -> float:
+    """Log row-present, per-group, and union coverage of `rows` over
+    `total_input`; return the union fraction. Each `groups` entry is a
+    ``(name, predicate)``; a row counts toward the union when it satisfies
+    ANY predicate. The union is the headline number a pull gates on; the
+    per-group lines show which pipeline contributed it. Shared by the
+    Apsis (gspphot ∪ gspspec) and Bailer-Jones (geo ∪ photogeo) pulls so
+    their observability reads the same way.
+    """
+    rows = list(rows)
+    n = len(rows)
+    width = max([len("row present"), len("union"), *(len(name) for name, _ in groups)])
+
+    def line(name: str, count: int) -> str:
+        return f"  {name.ljust(width)}  {count:>6} ({100 * count / total_input:.1f}%)"
+
+    out = [f"coverage of {total_input} {label}:", line("row present", n)]
+    for name, pred in groups:
+        out.append(line(name, sum(1 for r in rows if pred(r))))
+    union = sum(1 for r in rows if any(pred(r) for _, pred in groups))
+    out.append(line("union", union))
+    log("\n".join(out))
+    return union / total_input
+
+
 # ─── Masked-value normaliser ──────────────────────────────────────────
 
 def coerce_masked(value: Any) -> Any:
@@ -519,6 +673,13 @@ def coerce_masked(value: Any) -> Any:
     None so write_tsv emits an empty cell. Object-dtype string columns
     return masked as `--` strings too — the MaskedConstant isinstance
     check catches those.
+
+    The `.mask` fallback covers masked scalars that aren't the shared
+    MaskedConstant singleton — a 0-d masked array, or whatever a future
+    astropy/numpy version returns from a masked-cell access path — so a
+    masked value can't slip through as the literal "--" string. A
+    non-scalar `.mask` (a whole column passed by mistake) is left alone
+    rather than guessed at.
     """
     try:
         import numpy as np
@@ -526,6 +687,13 @@ def coerce_masked(value: Any) -> Any:
             return None
         if isinstance(value, np.ma.core.MaskedConstant):
             return None
+        mask = getattr(value, "mask", None)
+        if mask is not None:
+            try:
+                if bool(mask):
+                    return None
+            except (ValueError, TypeError):
+                pass
     except ImportError:
         pass
     return value

@@ -22,7 +22,7 @@ sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
 sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
 sys.path.insert(0, str(SCRIPT.parent))
 
-from refresh_lib import is_up_to_date  # noqa: E402
+from refresh_lib import assert_row_count, is_up_to_date  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -37,7 +37,9 @@ DATA = ROOT / "data"
 # consumes these names directly.
 
 from parsers import (  # noqa: E402, F401
-    AthygRow, CCDM_ROW_COUNT_BOUNDS, CcdmRow, GaiaAstrometryRow, Hip2Row,
+    ATHYG_ROW_COUNT_BOUNDS, AthygRow, CCDM_ROW_COUNT_BOUNDS, CcdmRow,
+    GaiaAstrometryRow, GCVS_ROW_COUNT_BOUNDS, HIP2_ROW_COUNT_BOUNDS, Hip2Row,
+    ORB6_ROW_COUNT_BOUNDS, WDS_SUMM_ROW_COUNT_BOUNDS,
     MscComponentRow, MscOrbitRow, MscSystemRow, Orb6Entry,
     SimbadWdsXid, WdsPair,
     parse_astrometry_exclusions,
@@ -296,9 +298,12 @@ def resolve_through_stage2() -> Stage2Resolution:
     (Stage 2), and enforce the binding-integrity audit."""
     log("loading reference catalogs (Stage 1) …")
 
-    wds_pairs, n_wds_dup_dropped = dedup_wds_pair_rows(
-        parse_wds_summ(SRC_WDS_SUMM),
+    wds_raw = parse_wds_summ(SRC_WDS_SUMM)
+    assert_row_count(
+        len(wds_raw), *WDS_SUMM_ROW_COUNT_BOUNDS, "WDS summary parse",
+        hint=f"check the source file format of {SRC_WDS_SUMM}",
     )
+    wds_pairs, n_wds_dup_dropped = dedup_wds_pair_rows(wds_raw)
     log(f"loaded {len(wds_pairs):,} WDS pair rows")
     if n_wds_dup_dropped:
         log(
@@ -307,6 +312,10 @@ def resolve_through_stage2() -> Stage2Resolution:
         )
 
     orb6 = parse_orb6(SRC_ORB6)
+    assert_row_count(
+        len(orb6), *ORB6_ROW_COUNT_BOUNDS, "ORB6 parse",
+        hint=f"check the source file format of {SRC_ORB6}",
+    )
     log(f"loaded {len(orb6):,} ORB6 orbit rows")
 
     orb6_component_overrides = parse_orb6_component_overrides(
@@ -328,6 +337,10 @@ def resolve_through_stage2() -> Stage2Resolution:
     )
 
     athyg = parse_athyg(SRC_ATHYG)
+    assert_row_count(
+        len(athyg), *ATHYG_ROW_COUNT_BOUNDS, "AT-HYG parse",
+        hint=f"check the source file format of {SRC_ATHYG}",
+    )
     n_gaia = sum(1 for r in athyg if r.gaia is not None)
     log(f"loaded {len(athyg):,} AT-HYG rows")
     coverage = n_gaia / len(athyg) if athyg else 0.0
@@ -340,6 +353,10 @@ def resolve_through_stage2() -> Stage2Resolution:
         )
 
     gcvs = parse_gcvs(SRC_GCVS)
+    assert_row_count(
+        len(gcvs), *GCVS_ROW_COUNT_BOUNDS, "GCVS parse",
+        hint=f"check the source file format of {SRC_GCVS}",
+    )
     log(f"loaded {len(gcvs):,} GCVS variable-star rows")
 
     gcvs_xid = parse_gcvs_crossid(SRC_GCVS_CROSSID)
@@ -349,16 +366,17 @@ def resolve_through_stage2() -> Stage2Resolution:
     )
 
     ccdm = parse_ccdm(SRC_CCDM)
-    lo_ccdm, hi_ccdm = CCDM_ROW_COUNT_BOUNDS
-    if not (lo_ccdm <= len(ccdm) <= hi_ccdm):
-        raise SystemExit(
-            f"CCDM parse returned {len(ccdm):,} rows, outside "
-            f"[{lo_ccdm:,}, {hi_ccdm:,}] — check the VizieR file format "
-            f"of {SRC_CCDM}"
-        )
+    assert_row_count(
+        len(ccdm), *CCDM_ROW_COUNT_BOUNDS, "CCDM parse",
+        hint=f"check the VizieR file format of {SRC_CCDM}",
+    )
     log(f"loaded {len(ccdm):,} CCDM rows")
 
     hip2 = parse_hip2(SRC_HIP2)
+    assert_row_count(
+        len(hip2), *HIP2_ROW_COUNT_BOUNDS, "HIP2 parse",
+        hint=f"check the source file format of {SRC_HIP2}",
+    )
     log(f"loaded {len(hip2):,} HIP2 van Leeuwen astrometry rows")
 
     hip_to_gaia = parse_gaia_hip_xmatch(SRC_GAIA_HIP_XM)

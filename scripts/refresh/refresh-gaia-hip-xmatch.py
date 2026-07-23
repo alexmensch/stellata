@@ -101,24 +101,16 @@ def main() -> None:
 
     rl.validate_schema(table, EXPECTED_SCHEMA, label="hipparcos2_best_neighbour")
 
-    n = len(table)
-    if not (EXPECTED_ROW_COUNT_MIN <= n <= EXPECTED_ROW_COUNT_MAX):
-        raise SystemExit(
-            f"{SCRIPT_NAME}: row count {n} outside expected "
-            f"[{EXPECTED_ROW_COUNT_MIN}, {EXPECTED_ROW_COUNT_MAX}] — "
-            f"upstream schema or selection has changed; investigate before re-pinning."
-        )
+    rl.assert_row_count(
+        len(table), EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, SCRIPT_NAME
+    )
 
     rows_by_hip = {int(r["hip"]): r for r in table}
-    for spec in SPOT_CHECKS:
-        if not rl.check_spot_row(
-            rows_by_hip, spec, script_name=SCRIPT_NAME, key_field="hip",
-        ):
-            raise SystemExit(
-                f"{SCRIPT_NAME}: pinned hip={spec['hip']} missing from "
-                f"xmatch — Gaia DR3 has dropped this row; investigate "
-                f"before re-pinning."
-            )
+    rl.validate_spot_rows(
+        rows_by_hip, SPOT_CHECKS, script_name=SCRIPT_NAME, key_field="hip",
+        missing_hint="missing from xmatch — Gaia DR3 has dropped this row; "
+        "investigate before re-pinning.",
+    )
 
     rows = ({col: row[col] for col in TSV_COLUMNS} for row in table)
     written = rl.write_tsv(

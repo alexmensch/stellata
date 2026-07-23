@@ -199,22 +199,16 @@ def run_pull(
         retry_kwargs={"max_attempts": 5, "base_delay_s": 2.0},
     )
     rows_by_id: dict[int, Any] = {}
-    start = time.time()
-    for batch_idx, offset in enumerate(range(0, total, BATCH_SIZE), start=1):
-        batch = source_ids[offset : offset + BATCH_SIZE]
-        t0 = time.time()
-        table = query_batch(client, batch)
-        if batch_idx == 1:
-            rl.validate_schema(table, EXPECTED_SCHEMA, label="gaiadr3.gaia_source")
+
+    def collect(table: Any) -> None:
         for row in table:
             rows_by_id[int(row["source_id"])] = row
-        elapsed = time.time() - t0
-        cum = time.time() - start
-        print(
-            f"  batch {batch_idx}/{n_batches}: "
-            f"{len(table):4d} rows in {elapsed:5.1f}s "
-            f"(cum {cum/60:.1f}m, total rows {len(rows_by_id)})"
-        )
+
+    start = time.time()
+    rl.run_in_batches(
+        source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
+        schema=EXPECTED_SCHEMA, schema_label="gaiadr3.gaia_source",
+    )
 
     matched = len(rows_by_id)
     coverage = matched / total
