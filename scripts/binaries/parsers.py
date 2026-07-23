@@ -562,7 +562,7 @@ def parse_gaia_hip_xmatch(path: Path) -> dict[int, int]:
         for r in reader:
             hip = safe_int(r.get("hip") or "")
             src = safe_int(r.get("gaia_source_id") or "")
-            if hip is None or src is None:
+            if hip is None or hip <= 0 or src is None or src <= 0:
                 continue
             ang = safe_float(r.get("angular_distance") or "")
             if ang is None:
@@ -583,7 +583,7 @@ def parse_gaia_tyc_xmatch(path: Path) -> dict[str, int]:
         for r in reader:
             tyc = (r.get("tyc") or "").strip()
             src = safe_int(r.get("gaia_source_id") or "")
-            if not tyc or src is None:
+            if not tyc or src is None or src <= 0:
                 continue
             ang = safe_float(r.get("angular_distance") or "")
             if ang is None:
