@@ -7,13 +7,10 @@ from __future__ import annotations
 
 import csv
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE.parent / "refresh"))
-from refresh_lib import (  # noqa: E402
+from scripts.refresh.refresh_lib import (
     athyg_int_or_none,
     athyg_str_or_none,
 )

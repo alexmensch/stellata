@@ -5,22 +5,19 @@ Routes between Gaia 5p, Gaia NSS-systemic, and HIP2 long-baseline.
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import (  # noqa: E402
+from .parsers import (
     AthygRow,
     GaiaAstrometryRow,
     Hip2Row,
     WdsPair,
 )
-from indices import (  # noqa: E402
+from .indices import (
     ATHYG_REFERENCE_EPOCH,
     IdentifierIndices,
 )
-from stage2_resolve import (  # noqa: E402
+from .stage2_resolve import (
     ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC,
     ResolvedComponent,
     build_pair_by_wds_disc,

@@ -5,28 +5,25 @@ row. See ``scripts/binaries/README.md`` § Sub-pair synthesis."""
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import Orb6Entry, WdsPair  # noqa: E402
-from indices import IdentifierIndices  # noqa: E402
-from component_tokens import (  # noqa: E402
+from .parsers import Orb6Entry, WdsPair
+from .indices import IdentifierIndices
+from .component_tokens import (
     child_component_tokens,
     expand_wds_truncated_secondary,
     is_component_token,
     parent_component_token,
     token_letters,
 )
-from msc_map import MscLookup  # noqa: E402
-from stage2_resolve import (  # noqa: E402
+from .msc_map import MscLookup
+from .stage2_resolve import (
     ResolvedComponent,
     build_pair_by_wds_disc,
     find_owning_pair,
     split_components,
 )
-from stage3_astrometry import ComponentAstrometry  # noqa: E402
-from stage4_orbits import (  # noqa: E402
+from .stage3_astrometry import ComponentAstrometry
+from .stage4_orbits import (
     _nss_in_regime,
     iter_decomposing_pairs,
     msc_renderable,

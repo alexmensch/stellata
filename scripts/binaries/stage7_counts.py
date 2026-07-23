@@ -7,40 +7,37 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
-from parsers import WdsPair  # noqa: E402
-from stage2_resolve import (  # noqa: E402
+from .parsers import WdsPair
+from .stage2_resolve import (
     BINDING_INTEGRITY_COUNT_KEYS,
     RESOLVE_VIA_VALUES,
     ResolvedComponent,
     resolution_counts,
 )
-from stage3_astrometry import (  # noqa: E402
+from .stage3_astrometry import (
     ASTROMETRY_VIA_VALUES,
     ComponentAstrometry,
     astrometry_counts,
 )
-from stage4_orbits import (  # noqa: E402
+from .stage4_orbits import (
     ORBIT_VIA_VALUES,
     OrbitElements,
     orbit_counts,
 )
-from stage5_optical import (  # noqa: E402
+from .stage5_optical import (
     OPTICAL_VIA_VALUES,
     OpticalClassification,
     optical_counts,
 )
-from stage6_multiples import (  # noqa: E402
+from .stage6_multiples import (
     ASTROMETRY_VIA_SYSTEM_INHERITED, A_VIA_VALUES, ORBIT_ROLE_STANDALONE,
     SPECT_VIA_VALUES, MultiplesRow,
 )
-from paths import REPO_ROOT  # noqa: E402
+from scripts.util.paths import REPO_ROOT
 
 # Stage 7 logs from inside ``assert_or_update_counts``; defining a
 # local ``log`` keeps the module standalone (no back-import from

@@ -7,26 +7,24 @@ from __future__ import annotations
 
 import math
 import re
-import sys
 from collections import deque
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import (  # noqa: E402
+from .parsers import (
     AthygRow,
     GaiaAstrometryRow,
     Orb6Entry,
     SimbadWdsXid,
     WdsPair,
 )
-from indices import (  # noqa: E402
+from .indices import (
     ATHYG_REFERENCE_EPOCH,
     IdentifierIndices,
     WDS_PRECISE_COORD_EPOCH,
 )
-from component_tokens import (  # noqa: E402
+from .component_tokens import (
     compound_contains,
     expand_wds_truncated_secondary,
     is_component_token,

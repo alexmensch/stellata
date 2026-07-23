@@ -5,7 +5,6 @@ for components SIMBAD stores under non-WDS-J idents)."""
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 import time
 from pathlib import Path
@@ -13,9 +12,12 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
+from scripts.binaries.parsers import parse_wds_summ  # noqa: E402
+from scripts.binaries.stage2_resolve import split_components  # noqa: E402
 from simbad.specs import GAIA_DR3, HIP  # noqa: E402
 from wds_xids_cascade import (  # noqa: E402
     build_cascade_candidates,
@@ -26,22 +28,9 @@ from wds_xids_cascade import (  # noqa: E402
 from wds_xids_overrides import load_overrides, validate_against_components  # noqa: E402
 
 ROOT = REPO_ROOT
-SCRIPT_DIR = Path(__file__).resolve().parent
 SRC_WDS_SUMM = ROOT / "data" / "wds" / "wds_summ.txt"
 SRC_OVERRIDES = ROOT / "data" / "simbad" / "wds_xids_overrides.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
-
-# Reuse build-binaries.py's WDS parser + split_components so the input
-# universe is byte-identical to what Stage 2 will look up. spec_from_file
-# is required because the script filename contains a hyphen, which
-# `import build_binaries` cannot resolve. Mirrors the test file's loader.
-_SPEC = importlib.util.spec_from_file_location(
-    "build_binaries", SCRIPT_DIR.parent / "binaries" / "build-binaries.py",
-)
-assert _SPEC and _SPEC.loader
-_bb = importlib.util.module_from_spec(_SPEC)
-sys.modules["build_binaries"] = _bb
-_SPEC.loader.exec_module(_bb)
 
 # Per-batch IN-clause size for SIMBAD's TAP. 1000 ``WDS J…`` idents ≈ 17
 # chars each + quoting + commas → ~20 KB POST body, well under SIMBAD's
@@ -75,14 +64,14 @@ XREF_SCHEMA: dict[str, type | tuple[type, ...]] = {
 
 
 def collect_unique_components() -> list[tuple[str, str]]:
-    """Read SRC_WDS_SUMM via build-binaries' parser + split_components,
-    return the deduped sorted list of (wds_id, component) tuples. System-
-    level rows (empty components) and ambiguous-component rows are skipped
-    so the input universe matches Stage 2's exactly."""
-    pairs = _bb.parse_wds_summ(SRC_WDS_SUMM)
+    """Read SRC_WDS_SUMM via the pipeline's own parse_wds_summ +
+    split_components, return the deduped sorted list of (wds_id, component)
+    tuples. System-level rows (empty components) and ambiguous-component rows
+    are skipped so the input universe matches Stage 2's exactly."""
+    pairs = parse_wds_summ(SRC_WDS_SUMM)
     seen: set[tuple[str, str]] = set()
     for p in pairs:
-        split = _bb.split_components(p.components)
+        split = split_components(p.components)
         if split is None:
             continue
         seen.add((p.wds_id, split[0]))
