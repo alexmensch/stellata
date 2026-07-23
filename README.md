@@ -21,12 +21,12 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 ## Highlights
 
-- **Everything is rendered live, from where you are.** Stars (more than
-  329,000 in the catalogue), planets, the volumetric Milky Way, the
-  Local Group dwarf galaxies, and the 3D dust between them: every
-  object continually re-renders against the current camera each frame.
-  Fly halfway to Sirius and the sky changes: parallax, reddening, and 
-  occlusion are all real, not fabricated.
+- **Everything is rendered live, from where you are.** Over 330,000
+  real stars and objects — planets and moons, multiple-star systems,
+  the volumetric Milky Way, the Local Group dwarf galaxies, and the 3D
+  dust between them continually re-render against the current camera
+  position each frame. Fly halfway to Sirius and the sky changes:
+  parallax, reddening, and occlusion are all real, not fabricated.
 
 - **Close-up stars resolve as physical objects.** Approach a star and
   it stops being a dot: its disc grows to its actual radius (from
@@ -188,7 +188,7 @@ anchor. From there:
 
 ### Watch the dust shape the sky
 
-Set the magnitude limit to "All" (showing all ~329,000 stars) and
+Set the magnitude limit to "All" (showing all ~330,000 stars) and
 pull the camera out to ~3 kpc from Sol, then orbit around. The
 Edenhofer 2023 3D dust grid is real volumetric structure, not an
 analytical shell — as you move, extinction patterns paint
