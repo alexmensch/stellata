@@ -6714,6 +6714,36 @@ class Stage6QFallbackTests(unittest.TestCase):
         self.assertEqual(rows[0].q, 0.85)
         self.assertEqual(rows[1].q, 0.85)
 
+    def test_orbit_q_present_short_circuits_fallback(self) -> None:
+        # The spectral fallback fires only when orbit.q is None: a set
+        # orbit.q wins on both rows even though these spectral classes
+        # would estimate a DIFFERENT q if the fallback ran.
+        nss_orbit = bb.OrbitElements(
+            P_days=1.0, T_jd=2451545.0, e=0.1,
+            a_AU=0.1, i_rad=1.0,
+            omega_rad=0.2, Omega_rad=0.3,
+            q=0.85,
+            distance_pc=26.2,
+        )
+        estimated = me.mass_ratio_from_components("F0V", "A5V")
+        self.assertIsNotNone(estimated)
+        assert estimated is not None
+        self.assertNotAlmostEqual(estimated, 0.85, places=2)
+        pair, components, astrometry, orbits, classifications, indices = (
+            self._make_pair_fixture(
+                primary_spect="F0V", secondary_spect="A5V",
+                primary_absmag=2.088, secondary_absmag=1.048,
+                wds_id="22150+5703", orbit=(nss_orbit, "gaia_nss"),
+            )
+        )
+        rows = bb.build_multiples_rows(
+            pairs=[pair], components=components, astrometry=astrometry,
+            orbits=orbits, classifications=classifications,
+            indices=indices,
+        )
+        self.assertEqual(rows[0].q, 0.85)
+        self.assertEqual(rows[1].q, 0.85)
+
     def test_no_q_default_for_orb6_visual_when_spect_missing(self) -> None:
         # ORB6 VISUAL orbit with an unclassifiable secondary: the
         # spectral backfill yields None and the estimated-q backstop
