@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import {
   applyVariability,
@@ -106,6 +106,31 @@ describe('gcvs-parse / bridgeGcvsByGaia', () => {
     bridgeGcvsByGaia(xref, new Map([[1, '11111111']]));
     expect(xref.byGaia.has('stale')).toBe(false);
     expect(xref.byGaia.get('11111111')).toBe('R And');
+  });
+
+  it('keeps the lowest HIP and warns when two HIPs share a gaia_source_id', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // Insert the higher HIP first so a nondeterministic insertion-order
+    // walk would keep the wrong name.
+    const xref: VarStarXref = {
+      byHip: new Map([
+        [67890, 'S Aql'],
+        [12345, 'R And'],
+      ]),
+      byHd: new Map(),
+      byGaia: new Map(),
+    };
+    const hipToGaia = new Map<number, string>([
+      [67890, '99999999'],
+      [12345, '99999999'],
+    ]);
+    bridgeGcvsByGaia(xref, hipToGaia);
+    expect(xref.byGaia.size).toBe(1);
+    expect(xref.byGaia.get('99999999')).toBe('R And');
+    expect(warn).toHaveBeenCalledWith(
+      'GCVS bridge: gaia_source_id 99999999 reached from HIPs [12345, 67890] — keeping first.',
+    );
+    warn.mockRestore();
   });
 });
 
