@@ -2,7 +2,8 @@
 
 Zucker 2020 + Zucker 2021 cloud distance / geometry tables, consumed
 at build time by `scripts/clouds/build-clouds.py` →
-`public/clouds.json` (renderer currently shelved).
+`public/clouds.json`, rendered by `src/client/molecular-clouds/`
+(see that folder's README).
 
 ```
 zucker2020-tablea1.tsv   Zucker 2020 cloud distances (~88 KB,
