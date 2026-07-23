@@ -6,22 +6,19 @@ Column order is ``MULTIPLES_TSV_COLUMNS``.
 from __future__ import annotations
 
 import math
-import sys
 from collections import deque
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
-from parsers import (  # noqa: E402
+from .parsers import (
     AthygRow, GaiaAstrometryRow, SimbadWdsXid, WdsPair,
 )
-from indices import IdentifierIndices  # noqa: E402
-from component_tokens import (  # noqa: E402
+from .indices import IdentifierIndices
+from .component_tokens import (
     expand_wds_truncated_secondary,
     token_letters,
 )
-from stage2_resolve import (  # noqa: E402
+from .stage2_resolve import (
     ResolvedComponent,
     _add_edge,
     _propagate_position,
@@ -29,25 +26,25 @@ from stage2_resolve import (  # noqa: E402
     iter_decomposing_pair_components,
     split_components,
 )
-from stage3_astrometry import (  # noqa: E402
+from .stage3_astrometry import (
     ComponentAstrometry,
     SystemAnchor,
 )
-from stage4_orbits import (  # noqa: E402
+from .stage4_orbits import (
     OrbitElements, first_astrometry_field_per_system,
     iter_decomposing_pairs, kepler_semimajor_axis_au,
 )
-from stage5_optical import (  # noqa: E402
+from .stage5_optical import (
     ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
     OpticalClassification,
 )
-from mass_estimate import (  # noqa: E402
+from .mass_estimate import (
     DEFAULT_PRIMARY_MASS_MSUN,
     UNKNOWN_COMPANION_MASS_RATIO_Q,
     mass_from_spectral_class,
     mass_ratio_from_components,
 )
-from astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR  # noqa: E402
+from scripts.util.astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR
 
 
 # ─── Stage 6: multiples.tsv emit ─────────────────────────────────────

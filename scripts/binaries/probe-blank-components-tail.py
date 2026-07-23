@@ -10,10 +10,9 @@ from collections import Counter
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
-sys.path.insert(0, str(SCRIPT.parent.parent))
-sys.path.insert(0, str(SCRIPT.parent))
-from test_helpers import load_kebab_sibling  # noqa: E402
-from stage2_resolve import IMPLIED_AB_COMPONENTS  # noqa: E402
+sys.path.insert(0, str(SCRIPT.parents[2]))
+from scripts.test_helpers import load_kebab_sibling  # noqa: E402
+from scripts.binaries.stage2_resolve import IMPLIED_AB_COMPONENTS  # noqa: E402
 
 bb = load_kebab_sibling(str(SCRIPT), "build_binaries", "build-binaries.py")
 

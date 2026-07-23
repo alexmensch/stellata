@@ -15,19 +15,19 @@ from pathlib import Path
 from typing import Iterator
 
 SCRIPT = Path(__file__).resolve()
-sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
-sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
-sys.path.insert(0, str(SCRIPT.parent))
+# Direct execution puts this folder on sys.path, not the repo root;
+# add the root so the absolute ``scripts.*`` imports below resolve.
+sys.path.insert(0, str(SCRIPT.parents[2]))
 
-from refresh_lib import is_up_to_date  # noqa: E402
-from astronomy_constants import J2000_JD  # noqa: E402
-from component_tokens import (  # noqa: E402
+from scripts.refresh.refresh_lib import is_up_to_date  # noqa: E402
+from scripts.util.astronomy_constants import J2000_JD  # noqa: E402
+from scripts.binaries.component_tokens import (  # noqa: E402
     compound_contains,
     expand_wds_truncated_secondary,
     parent_component_token,
     related_hier,
 )
-from paths import REPO_ROOT  # noqa: E402
+from scripts.util.paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
 SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"

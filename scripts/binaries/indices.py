@@ -5,18 +5,15 @@ Builds the ``IdentifierIndices`` lookup tables every later stage reads.
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import (  # noqa: E402
+from .parsers import (
     AthygRow,
     CcdmRow,
     GaiaAstrometryRow,
     Hip2Row,
 )
-from msc_map import MscLookup  # noqa: E402
+from .msc_map import MscLookup
 
 
 # ─── Identifier indices ──────────────────────────────────────────────

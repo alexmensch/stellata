@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
-sys.path.insert(0, str(SCRIPT.parent.parent))
-from test_helpers import load_kebab_sibling  # noqa: E402
+sys.path.insert(0, str(SCRIPT.parents[2]))
+from scripts.test_helpers import load_kebab_sibling  # noqa: E402
 
 bb = load_kebab_sibling(str(SCRIPT), "build_binaries", "build-binaries.py")
 

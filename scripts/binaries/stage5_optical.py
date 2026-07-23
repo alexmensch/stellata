@@ -6,28 +6,25 @@ each verdict carries the deciding tier as provenance."""
 from __future__ import annotations
 
 import math
-import sys
 from dataclasses import dataclass
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import (  # noqa: E402
+from .parsers import (
     GaiaAstrometryRow,
     WdsPair,
 )
-from component_tokens import (  # noqa: E402
+from .component_tokens import (
     compound_contains,
     expand_wds_truncated_secondary,
     related_hier,
 )
-from indices import IdentifierIndices  # noqa: E402
-from stage2_resolve import (  # noqa: E402
+from .indices import IdentifierIndices
+from .stage2_resolve import (
     ResolvedComponent,
     iter_decomposing_pair_cursor,
     split_components,
 )
-from stage3_astrometry import ComponentAstrometry  # noqa: E402
-from stage4_orbits import OrbitElements  # noqa: E402
+from .stage3_astrometry import ComponentAstrometry
+from .stage4_orbits import OrbitElements
 
 
 # ─── Stage 5: optical-pair filter cascade ────────────────────────────

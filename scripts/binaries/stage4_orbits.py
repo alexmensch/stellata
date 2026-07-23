@@ -6,22 +6,19 @@ ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Pulkovo MSC orbits.
 from __future__ import annotations
 
 import math
-import sys
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Callable, Iterator, TypeVar
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import MscOrbitRow, Orb6Entry, WdsPair, safe_float  # noqa: E402
-from indices import IdentifierIndices  # noqa: E402
-from component_tokens import expand_wds_truncated_secondary  # noqa: E402
-from stage2_resolve import (  # noqa: E402
+from .parsers import MscOrbitRow, Orb6Entry, WdsPair, safe_float
+from .indices import IdentifierIndices
+from .component_tokens import expand_wds_truncated_secondary
+from .stage2_resolve import (
     ResolvedComponent,
     group_orb6_by_pair,
     iter_decomposing_pair_cursor,
     split_components,
 )
-from stage3_astrometry import ComponentAstrometry  # noqa: E402
+from .stage3_astrometry import ComponentAstrometry
 
 
 # ─── Stage 4: orbital-element selection ──────────────────────────────

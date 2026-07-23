@@ -13,17 +13,12 @@ from typing import Iterator
 
 SCRIPT = Path(__file__).resolve()
 
-# Make this folder (so sibling stage modules find each other),
-# scripts/refresh/ (so refresh_lib resolves), and scripts/util/ (so
-# paths resolves) reachable from any caller — direct invocation,
-# ``pnpm run build:binaries``, or the test loader's
-# spec_from_file_location.
-sys.path.insert(0, str(SCRIPT.parent.parent / "refresh"))
-sys.path.insert(0, str(SCRIPT.parent.parent / "util"))
-sys.path.insert(0, str(SCRIPT.parent))
+# Direct execution puts this folder on sys.path, not the repo root;
+# add the root so the absolute ``scripts.*`` imports below resolve.
+sys.path.insert(0, str(SCRIPT.parents[2]))
 
-from refresh_lib import is_up_to_date  # noqa: E402
-from paths import REPO_ROOT  # noqa: E402
+from scripts.refresh.refresh_lib import is_up_to_date  # noqa: E402
+from scripts.util.paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
 DATA = ROOT / "data"
@@ -36,7 +31,7 @@ DATA = ROOT / "data"
 # ``parse_wds_summ`` + ``split_components``). ``run()`` below also
 # consumes these names directly.
 
-from parsers import (  # noqa: E402, F401
+from scripts.binaries.parsers import (  # noqa: E402, F401
     AthygRow, CCDM_ROW_COUNT_BOUNDS, CcdmRow, GaiaAstrometryRow, Hip2Row,
     MscComponentRow, MscOrbitRow, MscSystemRow, Orb6Entry,
     SimbadWdsXid, WdsPair,
@@ -50,20 +45,20 @@ from parsers import (  # noqa: E402, F401
     parse_simbad_wds_spectra, parse_simbad_wds_xids,
     dedup_wds_pair_rows, parse_wds_summ,
 )
-from msc_map import (  # noqa: E402, F401
+from scripts.binaries.msc_map import (  # noqa: E402, F401
     MscLookup, build_msc_lookup, map_msc_labels,
 )
-from indices import (  # noqa: E402, F401
+from scripts.binaries.indices import (  # noqa: E402, F401
     GAIA_BINDING_G_MINUS_V_REJECT_MAG, IdentifierIndices,
     WDS_PRECISE_COORD_EPOCH, build_indices,
 )
-from component_tokens import (  # noqa: E402, F401
+from scripts.binaries.component_tokens import (  # noqa: E402, F401
     child_component_tokens, compound_contains,
     expand_wds_truncated_secondary,
     is_component_token, is_hier_ancestor, parent_component_token,
     related_hier, token_letters,
 )
-from subdivide import (  # noqa: E402, F401
+from scripts.binaries.subdivide import (  # noqa: E402, F401
     SYNTH_MSC_DISCOVERER, SYNTH_NSS_DISCOVERER,
     apply_orb6_component_overrides,
     seed_synthesized_component_bindings,
@@ -71,7 +66,7 @@ from subdivide import (  # noqa: E402, F401
     synthesize_nss_inner_pairs,
     synthesize_orb6_orphan_pairs,
 )
-from stage2_resolve import (  # noqa: E402, F401
+from scripts.binaries.stage2_resolve import (  # noqa: E402, F401
     BINDING_INTEGRITY_COUNT_KEYS, BINDING_VERDICT_VALUES, BindingVerdict,
     RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
     _athyg_position_at_epoch, _propagate_position, _spherical_to_unit_vec,
@@ -89,12 +84,12 @@ from stage2_resolve import (  # noqa: E402, F401
     split_components, write_astrometry_request,
     write_binding_verdicts_tsv,
 )
-from stage3_astrometry import (  # noqa: E402, F401
+from scripts.binaries.stage3_astrometry import (  # noqa: E402, F401
     ASTROMETRY_VIA_VALUES, ComponentAstrometry, SystemAnchor,
     astrometry_counts, attach_astrometry, attach_astrometry_all,
     compute_min_rho_per_source, gaia_5p_unreliable,
 )
-from stage4_orbits import (  # noqa: E402, F401
+from scripts.binaries.stage4_orbits import (  # noqa: E402, F401
     GAIA_DR3_REF_EPOCH_JD, J2000_REF_EPOCH_JD, MJD_TO_JD_OFFSET,
     TRUNCATED_JD_TO_JD_OFFSET, T0_MIN_PLAUSIBLE_JD, T0_MAX_PLAUSIBLE_JD,
     ORBIT_VIA_VALUES, OrbitElements,
@@ -112,7 +107,7 @@ from stage4_orbits import (  # noqa: E402, F401
     pair_component_tokens,
     select_orbit, select_orbits_all,
 )
-from stage5_optical import (  # noqa: E402, F401
+from scripts.binaries.stage5_optical import (  # noqa: E402, F401
     AU_PER_PC, SEPARATION_LIMIT_PC, SEPARATION_POE_MIN,
     RADIAL_SEPARATION_SIGMA, BOTH_GAIA_PLX_GATE_SIGMA, ASYMM_PLX_GATE_SIGMA,
     ESCAPE_VELOCITY_SAFETY_FACTOR, ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
@@ -129,7 +124,7 @@ from stage5_optical import (  # noqa: E402, F401
     classify_all_pairs, classify_pair_optical, cpm_baseline_verdict,
     optical_counts,
 )
-from stage6_multiples import (  # noqa: E402, F401
+from scripts.binaries.stage6_multiples import (  # noqa: E402, F401
     ASTROMETRY_VIA_SYSTEM_INHERITED, CATALOG_SCENE_EPOCH,
     CIRCULAR_ORBIT_OMEGA_RAD, _position_pc,
     ESTIMATED_ELEMENT_ORBIT_VIAS, MULTIPLES_TSV_COLUMNS,
@@ -144,7 +139,7 @@ from stage6_multiples import (  # noqa: E402, F401
     gaia_photometry_absmag_ci,
     wds_dmag, wds_year_to_jd, write_multiples_tsv,
 )
-from stage7_counts import (  # noqa: E402, F401
+from scripts.binaries.stage7_counts import (  # noqa: E402, F401
     DEFAULT_RATE_TOLERANCE, UPDATE_COUNTS_ENV_VAR,
     assert_or_update_counts, assert_or_update_rates,
     build_binaries_counts, build_binaries_rates, compare_build_counts,

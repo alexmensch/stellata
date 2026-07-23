@@ -4,15 +4,12 @@ tables for Stages 2/4/6. Label convention: data/msc/README.md."""
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from parsers import (  # noqa: E402
+from .parsers import (
     MscComponentRow, MscOrbitRow, MscSystemRow,
 )
-from component_tokens import (  # noqa: E402
+from .component_tokens import (
     child_component_tokens,
     is_component_token,
     token_letters,

@@ -11,15 +11,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from test_helpers import load_kebab_sibling  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.test_helpers import load_kebab_sibling  # noqa: E402
 
 bb = load_kebab_sibling(__file__, "build_binaries", "build-binaries.py")
 
-# build-binaries.py re-exports the parser entry points but not the
-# private sanity-net helper or its floor constants. Import them
-# directly for the helper-level tests below.
-import parsers as _parsers_mod  # noqa: E402
+from scripts.binaries import parsers as _parsers_mod  # noqa: E402
 
 
 def _write(dirpath: Path, name: str, body: str) -> Path:
@@ -831,7 +828,7 @@ class ComponentSptypeOverridesTests(unittest.TestCase):
         self.assertEqual(out[("03082+4057", "2")], "K0IV")
 
     def test_resolve_spect_curated_tier_wins(self) -> None:
-        import stage6_multiples as s6
+        from scripts.binaries import stage6_multiples as s6
         indices = bb.build_indices(
             [], [], {}, {}, {},
             simbad_wds_spectra={("W", "B"): "G5V"},
@@ -6425,7 +6422,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
 # ─── mass_estimate (Phase 5 — spectral-class-aware mass-ratio q) ─────
 
 
-import mass_estimate as me  # noqa: E402
+from scripts.binaries import mass_estimate as me  # noqa: E402
 
 
 class ParseSpectralTypeTests(unittest.TestCase):
@@ -7335,7 +7332,7 @@ class FinalizeRenderableElementsTests(unittest.TestCase):
 
 # ─── Stage-2 binding-integrity detector ──────────────────────────────
 
-import stage2_resolve as _s2  # noqa: E402
+from scripts.binaries import stage2_resolve as _s2  # noqa: E402
 
 
 def _bi_pair(
@@ -8355,7 +8352,7 @@ class MscStage6Tests(unittest.TestCase):
         return bb.build_indices([], [], {}, {}, {}, msc=lk)
 
     def test_resolve_spect_msc_between_simbad_and_athyg(self) -> None:
-        import stage6_multiples as s6
+        from scripts.binaries import stage6_multiples as s6
         lk = bb.MscLookup()
         lk.spect_by_comp[("W", "Ab")] = "A6"
         lk.spect_by_comp[("W", "B")] = "K1V"
