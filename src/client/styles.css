@@ -29,11 +29,14 @@ html, body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 /* UI chrome opts back into normal text selection; the main view (canvas,
    SVG overlay, hover tooltip) inherits the body-level user-select: none
-   above. */
+   above. Safari doesn't reliably carry an inherited user-select across
+   the HTML/SVG boundary onto <text>, so the overlay and its text need
+   the prefixed property set directly rather than relying on inheritance. */
 .modal-card,
 .kb-modal-card,
 #find-home,
@@ -41,6 +44,14 @@ html, body {
 .ui-top,
 .ui-bottom {
   user-select: text;
+  -webkit-user-select: text;
+}
+
+.overlay,
+.overlay text,
+#tooltip {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #scene {
