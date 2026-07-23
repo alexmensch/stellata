@@ -4,13 +4,18 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
-# Add scripts/refresh/ so package-relative imports inside simbad/ resolve.
+# Add scripts/refresh/ so package-relative imports inside simbad/ resolve,
+# and scripts/ so test_helpers (kebab-sibling loader) imports.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from simbad import query, tsv  # noqa: E402
+from test_helpers import load_kebab_sibling  # noqa: E402
+from simbad import inputs, query, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, HIP, GAIA_DR3,
     ColumnSpec, IdentLookup,
@@ -211,7 +216,6 @@ class TsvShapeTests(unittest.TestCase):
 class TsvRoundtripTests(unittest.TestCase):
 
     def test_minimal_pull_produces_expected_tsv(self):
-        import tempfile
         cols = [OID, SP_TYPE]
         idents = [HIP]
         with tempfile.TemporaryDirectory() as d:
@@ -236,7 +240,6 @@ class TsvRoundtripTests(unittest.TestCase):
     def test_appending_column_to_spec_adds_tsv_column(self):
         """Spec extensibility: appending OTYPE to the column list extends
         the TSV with no other code change."""
-        import tempfile
         cols = [OID, SP_TYPE, OTYPE]
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "sptype.tsv"
@@ -251,6 +254,68 @@ class TsvRoundtripTests(unittest.TestCase):
             text = out.read_text().splitlines()
             self.assertEqual(text[0], "simbad_oid\tsp_type\totype")
             self.assertEqual(text[1], "1\tG2V\t*")
+
+
+class IterAthygHipForNoGaiaTests(unittest.TestCase):
+
+    def _write_csv(self, rows: str) -> Path:
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        p = Path(d) / "athyg.csv"
+        p.write_text(rows)
+        return p
+
+    def test_yields_hip_only_for_gaialess_rows(self):
+        # gaia present (incl. sentinel-'0' → treated as absent), hip
+        # sentinels '' / '0', and gaia-absent+hip-present all exercised.
+        csv_path = self._write_csv(
+            "hip,gaia\n"
+            "100,\n"       # no gaia, hip 100 → yield
+            "200,4567\n"   # gaia present → skip
+            ",8888\n"      # gaia present, hip blank → skip
+            "300,0\n"      # gaia sentinel '0' → absent; hip 300 → yield
+            ",\n"          # no gaia, no hip → skip
+            "0,\n"         # no gaia, hip sentinel '0' → skip
+            "400,0\n"      # gaia sentinel; hip 400 → yield
+        )
+        self.assertEqual(list(inputs.iter_athyg_hip_for_no_gaia(csv_path)), [100, 300, 400])
+
+
+class IterWdsXidsOidsTests(unittest.TestCase):
+
+    def test_skips_blank_and_non_integer_cells(self):
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        p = Path(d) / "wds.tsv"
+        p.write_text(
+            "simbad_oid\tother\n"
+            "100\tx\n"       # → 100
+            "\ty\n"          # blank → skip
+            "abc\tz\n"       # non-integer → skip
+            " 200 \tw\n"     # whitespace-padded → 200
+        )
+        self.assertEqual(list(inputs.iter_wds_xids_oids(p)), [100, 200])
+
+
+class CollectOidRequestsTests(unittest.TestCase):
+
+    def test_unions_and_sorts_three_sources(self):
+        sptype = load_kebab_sibling(
+            __file__, "refresh_simbad_sptype", "../refresh-simbad-sptype.py",
+        )
+        gaia_table = FakeTable(
+            colnames=["oidref", "id"], dtypes={"oidref": int, "id": str},
+            rows=[{"oidref": 100, "id": "Gaia DR3 12345"}],
+        )
+        hip_table = FakeTable(
+            colnames=["oidref", "id"], dtypes={"oidref": int, "id": str},
+            rows=[{"oidref": 300, "id": "HIP 777"}],
+        )
+        backend = FakeBackend([("Gaia DR3 12345", gaia_table), ("HIP 777", hip_table)])
+        with mock.patch.object(sptype.rl, "read_athyg_source_ids", return_value=[12345]), \
+             mock.patch.object(sptype.inputs, "iter_athyg_hip_for_no_gaia", return_value=iter([777])), \
+             mock.patch.object(sptype.inputs, "iter_wds_xids_oids", return_value=iter([200, 100])):
+            oids = sptype.collect_oid_requests(FakeClient(backend))
+        # gaia oid 100 ∪ hip oid 300 ∪ wds {200, 100} → deduped + sorted.
+        self.assertEqual(oids, [100, 200, 300])
 
 
 class FakeTable:

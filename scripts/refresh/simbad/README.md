@@ -21,7 +21,8 @@ query.py     ADQL builders + batched TAP executor. Wraps each
 tsv.py       Spec-driven TSV writer — schema, header row, atomic
              rename via the shared refresh_lib path.
 simbad.test.py   stdlib unittest pins covering spec definitions,
-                 input iterators, query builders, and TSV emit.
+                 input iterators, query builders, TSV emit, and the
+                 refresh-simbad-sptype oid-request composition.
 __init__.py      Package marker.
 ```
 
