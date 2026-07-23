@@ -153,29 +153,99 @@ class RetryTests(unittest.TestCase):
             rl.retry(lambda: None, max_attempts=0)
 
 
-# ─── run_batched ──────────────────────────────────────────────────────
+# ─── run_in_batches ───────────────────────────────────────────────────
 
-class BatchedTests(unittest.TestCase):
-    def test_chunks_input(self) -> None:
-        batches: list[list[int]] = []
+class RunInBatchesTests(unittest.TestCase):
+    def test_batches_feed_collect_in_order(self) -> None:
+        seen_batches: list[list[int]] = []
+        collected: list[int] = []
         def q(batch):
-            batches.append(list(batch))
+            seen_batches.append(list(batch))
             return [x * 10 for x in batch]
-        out = rl.run_batched([1, 2, 3, 4, 5], batch_size=2, query_fn=q)
-        self.assertEqual(batches, [[1, 2], [3, 4], [5]])
-        self.assertEqual(out, [10, 20, 30, 40, 50])
+        rl.run_in_batches(
+            [1, 2, 3, 4, 5], 2, q, collected.extend, log=lambda _: None
+        )
+        self.assertEqual(seen_batches, [[1, 2], [3, 4], [5]])
+        self.assertEqual(collected, [10, 20, 30, 40, 50])
 
-    def test_empty_input(self) -> None:
-        calls = []
-        def q(batch):
-            calls.append(batch)
-            return []
-        self.assertEqual(rl.run_batched([], batch_size=10, query_fn=q), [])
+    def test_empty_input_never_queries(self) -> None:
+        calls: list = []
+        rl.run_in_batches(
+            [], 10, lambda b: calls.append(b) or [], lambda t: None,
+            log=lambda _: None,
+        )
         self.assertEqual(calls, [])
 
     def test_invalid_batch_size(self) -> None:
         with self.assertRaises(ValueError):
-            rl.run_batched([1], batch_size=0, query_fn=lambda b: [])
+            rl.run_in_batches([1], 0, lambda b: [], lambda t: None)
+
+    def test_schema_validated_first_batch_only(self) -> None:
+        # Only batch 1 is validated; a schema-violating batch 2 must pass
+        # unchecked (every batch shares one ADQL projection, so one check
+        # suffices — and re-validating each batch would be wasted work).
+        tables = iter([{"a": _FakeColumn(int)}, {"b": _FakeColumn(int)}])
+        collected: list = []
+        rl.run_in_batches(
+            [1, 2], 1, lambda b: next(tables), collected.append,
+            schema={"a": int}, schema_label="x", log=lambda _: None,
+        )
+        self.assertEqual(len(collected), 2)
+
+    def test_first_batch_schema_violation_raises(self) -> None:
+        with self.assertRaises(rl.SchemaError):
+            rl.run_in_batches(
+                [1], 1, lambda b: {"b": _FakeColumn(int)}, lambda t: None,
+                schema={"a": int}, log=lambda _: None,
+            )
+
+    def test_logs_cumulative_progress(self) -> None:
+        logs: list[str] = []
+        rl.run_in_batches(
+            [1, 2, 3, 4, 5], 2, lambda b: [0] * len(b), lambda t: None,
+            log=logs.append,
+        )
+        self.assertEqual(len(logs), 3)
+        self.assertIn("batch 1/3", logs[0])
+        self.assertIn("total rows 2", logs[0])
+        self.assertIn("batch 3/3", logs[2])
+        self.assertIn("total rows 5", logs[2])
+
+
+# ─── assert_row_count ─────────────────────────────────────────────────
+
+class AssertRowCountTests(unittest.TestCase):
+    def test_passes_inside_band(self) -> None:
+        rl.assert_row_count(100, 90, 110, "test")
+
+    def test_passes_at_both_boundaries(self) -> None:
+        # Inclusive both ends — the guard the inline `not (LOW <= n <= MAX)`
+        # copies expressed; a `<` typo would have failed these.
+        rl.assert_row_count(90, 90, 110, "test")
+        rl.assert_row_count(110, 90, 110, "test")
+
+    def test_raises_below_floor(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.assert_row_count(89, 90, 110, "my-script")
+        msg = str(cm.exception)
+        self.assertIn("my-script", msg)
+        self.assertIn("row count 89", msg)
+        self.assertIn("[90, 110]", msg)
+        self.assertIn(rl._ROW_COUNT_DEFAULT_HINT, msg)
+
+    def test_raises_above_ceiling(self) -> None:
+        with self.assertRaises(SystemExit):
+            rl.assert_row_count(111, 90, 110, "test")
+
+    def test_custom_hint_tails_message(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.assert_row_count(
+                5, 90, 110, "refresh-msc: J/ApJS/235/6/table",
+                hint="upstream drift; investigate before re-pinning.",
+            )
+        msg = str(cm.exception)
+        self.assertIn("refresh-msc: J/ApJS/235/6/table", msg)
+        self.assertIn("upstream drift", msg)
 
 
 # ─── validate_schema ──────────────────────────────────────────────────
@@ -438,6 +508,23 @@ class CoerceMaskedTests(unittest.TestCase):
         self.assertIsNone(rl.coerce_masked(arr[1]))
         self.assertEqual(rl.coerce_masked(arr[2]), 3.0)
 
+    def test_converts_zero_d_masked_array_to_none(self) -> None:
+        # A 0-d masked array is NOT the np.ma.masked singleton and NOT a
+        # MaskedConstant, so the two identity/isinstance checks miss it;
+        # the .mask fallback catches it. Without it this coerces to the
+        # literal "--" string in the TSV.
+        import numpy as np
+        self.assertIsNone(rl.coerce_masked(np.ma.array(5.0, mask=True)))
+        self.assertEqual(rl.coerce_masked(np.ma.array(5.0, mask=False)), 5.0)
+
+    def test_non_scalar_mask_is_left_alone(self) -> None:
+        # A whole masked column passed by mistake has an array-valued .mask;
+        # bool() on it raises, so coerce_masked must pass it through rather
+        # than crash on the ambiguous truth value.
+        import numpy as np
+        col = np.ma.array([1.0, 2.0], mask=[True, False])
+        self.assertIs(rl.coerce_masked(col), col)
+
     def test_round_trips_through_write_tsv(self) -> None:
         # Integration with write_tsv — the masked-to-None round trip is the
         # whole point of coerce_masked, so pin it as a single assertion.
@@ -659,6 +746,133 @@ class CheckSpotRowTests(unittest.TestCase):
             script_name="test", key_field="id",
         )
         self.assertTrue(ok)
+
+
+class ValidateSpotRowsTests(unittest.TestCase):
+    """Plural hard-fail loop over check_spot_row — all pinned rows present
+    passes; an absent row raises with the missing_hint; a drifted row
+    raises the per-field delta from check_spot_row."""
+
+    def test_passes_when_all_present_and_matching(self) -> None:
+        rows = {1: {"a": 1}, 2: {"a": 2}}
+        rl.validate_spot_rows(
+            rows, [{"id": 1, "a": 1}, {"id": 2, "a": 2}],
+            script_name="test", key_field="id",
+        )
+
+    def test_raises_on_absent_row_with_hint(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.validate_spot_rows(
+                {1: {"a": 1}}, [{"id": 999, "a": 1}],
+                script_name="my-script", key_field="id",
+                missing_hint="missing from xmatch — dropped.",
+            )
+        msg = str(cm.exception)
+        self.assertIn("my-script", msg)
+        self.assertIn("pinned id=999", msg)
+        self.assertIn("missing from xmatch — dropped.", msg)
+
+    def test_propagates_drift_from_check_spot_row(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.validate_spot_rows(
+                {1: {"a": 99}}, [{"id": 1, "a": 1}],
+                script_name="test", key_field="id",
+            )
+        # The drift path is check_spot_row's, not the missing branch.
+        self.assertIn("field(s) outside tolerance", str(cm.exception))
+
+    def test_default_key_field_and_hint(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.validate_spot_rows(
+                {}, [{"source_id": 42}], script_name="test",
+            )
+        msg = str(cm.exception)
+        self.assertIn("pinned source_id=42", msg)
+        self.assertIn("upstream selection has changed", msg)
+
+
+class CheckSpotRowsTolerantTests(unittest.TestCase):
+    """Soft-tolerance retirement tier (Bailer-Jones): 0 missing silent,
+    ≤max_missing warns without failing, >max_missing hard-fails."""
+
+    _KW = dict(
+        script_name="refresh-bailer-jones",
+        max_missing=1,
+        warn_template="  WARNING: pinned source_id {key} not in result",
+        fail_hint="VizieR I/352 has dropped more rows than expected.",
+    )
+
+    def test_zero_missing_no_warn_no_exit(self) -> None:
+        logs: list[str] = []
+        out = rl.check_spot_rows_tolerant(
+            {1: {"a": 1}, 2: {"a": 2}},
+            [{"source_id": 1, "a": 1}, {"source_id": 2, "a": 2}],
+            log=logs.append, **self._KW,
+        )
+        self.assertEqual(out, [])
+        self.assertEqual(logs, [])
+
+    def test_one_missing_warns_but_does_not_exit(self) -> None:
+        logs: list[str] = []
+        out = rl.check_spot_rows_tolerant(
+            {1: {"a": 1}},
+            [{"source_id": 1, "a": 1}, {"source_id": 999, "a": 1}],
+            log=logs.append, **self._KW,
+        )
+        self.assertEqual(out, [999])
+        self.assertEqual(len(logs), 1)
+        self.assertIn("pinned source_id 999 not in result", logs[0])
+
+    def test_two_missing_over_tolerance_exits(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.check_spot_rows_tolerant(
+                {},
+                [{"source_id": 111, "a": 1}, {"source_id": 222, "a": 1}],
+                log=lambda _: None, **self._KW,
+            )
+        msg = str(cm.exception)
+        self.assertIn("2 pinned source_ids missing", msg)
+        self.assertIn("tolerance 1", msg)
+        self.assertIn("111", msg)
+        self.assertIn("222", msg)
+
+    def test_present_but_drifted_still_hard_fails(self) -> None:
+        # A drift (present row, wrong value) is NOT a retirement — it must
+        # hard-fail via check_spot_row regardless of the missing tolerance.
+        with self.assertRaises(SystemExit) as cm:
+            rl.check_spot_rows_tolerant(
+                {1: {"a": 99}}, [{"source_id": 1, "a": 1}],
+                log=lambda _: None, **self._KW,
+            )
+        self.assertIn("field(s) outside tolerance", str(cm.exception))
+
+
+class ReportCoverageTests(unittest.TestCase):
+    def test_union_fraction_and_lines(self) -> None:
+        rows = [
+            {"a": 1, "b": None},     # group A only
+            {"a": None, "b": 2},     # group B only
+            {"a": 1, "b": 2},        # both
+            {"a": None, "b": None},  # neither
+        ]
+        logs: list[str] = []
+        frac = rl.report_coverage(
+            rows, 4,
+            [("A", lambda r: r["a"] is not None),
+             ("B", lambda r: r["b"] is not None)],
+            log=logs.append,
+        )
+        self.assertAlmostEqual(frac, 3 / 4)  # union = A or B = 3 of 4
+        text = logs[0]
+        self.assertIn("coverage of 4 source_ids", text)
+        self.assertIn("row present", text)
+        self.assertIn("union", text)
+        self.assertIn("(75.0%)", text)  # union line
+        self.assertIn("(50.0%)", text)  # each group is 2/4
+
+    def test_empty_groups_union_zero(self) -> None:
+        frac = rl.report_coverage([{"a": 1}], 1, [], log=lambda _: None)
+        self.assertEqual(frac, 0.0)
 
 
 if __name__ == "__main__":
