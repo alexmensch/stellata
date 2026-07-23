@@ -1009,12 +1009,7 @@ def build_multiples_rows(
             partner_gaia_source_id=primary.gaia_source_id,
             partner_has_athyg=primary_athyg is not None,
         )
-        if (
-            orbit is not None
-            and orbit.q is None
-            and primary_row.q is None
-            and secondary_row.q is None
-        ):
+        if orbit is not None and orbit.q is None:
             estimated_q = mass_ratio_from_components(
                 primary_row.spect, secondary_row.spect,
             )
