@@ -23,127 +23,94 @@ from scripts.util.paths import REPO_ROOT  # noqa: E402
 ROOT = REPO_ROOT
 DATA = ROOT / "data"
 
-# Explicit per-stage re-exports. Two consumers load this file via
-# ``spec_from_file_location("build_binaries", …)`` and reach stage
-# symbols as ``bb.<name>``: ``scripts/binaries/build-binaries.test.py``
-# (including the four underscore-prefixed internals listed below), and
-# ``scripts/refresh/refresh-simbad-wds-xids.py`` (reuses
-# ``parse_wds_summ`` + ``split_components``). ``run()`` below also
-# consumes these names directly.
-
-from scripts.binaries.parsers import (  # noqa: E402, F401
-    AthygRow, CCDM_ROW_COUNT_BOUNDS, CcdmRow, GaiaAstrometryRow, Hip2Row,
-    MscComponentRow, MscOrbitRow, MscSystemRow, Orb6Entry,
-    SimbadWdsXid, WdsPair,
+from scripts.binaries.parsers import (  # noqa: E402
+    AthygRow,
+    CCDM_ROW_COUNT_BOUNDS,
+    Orb6Entry,
+    SimbadWdsXid,
+    WdsPair,
+    dedup_wds_pair_rows,
     parse_astrometry_exclusions,
-    parse_athyg, parse_ccdm, parse_gaia_astrometry,
-    parse_gaia_hip_xmatch, parse_gaia_nss, parse_gaia_tyc_xmatch,
-    parse_gcvs, parse_gcvs_crossid, parse_hip2,
-    parse_component_sptype_overrides, parse_orb6,
+    parse_athyg,
+    parse_ccdm,
+    parse_component_sptype_overrides,
+    parse_gaia_astrometry,
+    parse_gaia_hip_xmatch,
+    parse_gaia_nss,
+    parse_gaia_tyc_xmatch,
+    parse_gcvs,
+    parse_gcvs_crossid,
+    parse_hip2,
+    parse_msc_components,
+    parse_msc_orbits,
+    parse_msc_systems,
+    parse_orb6,
     parse_orb6_component_overrides,
-    parse_msc_components, parse_msc_orbits, parse_msc_systems,
-    parse_simbad_wds_spectra, parse_simbad_wds_xids,
-    dedup_wds_pair_rows, parse_wds_summ,
+    parse_simbad_wds_spectra,
+    parse_simbad_wds_xids,
+    parse_wds_summ,
 )
-from scripts.binaries.msc_map import (  # noqa: E402, F401
-    MscLookup, build_msc_lookup, map_msc_labels,
+from scripts.binaries.msc_map import (  # noqa: E402
+    build_msc_lookup,
 )
-from scripts.binaries.indices import (  # noqa: E402, F401
-    GAIA_BINDING_G_MINUS_V_REJECT_MAG, IdentifierIndices,
-    WDS_PRECISE_COORD_EPOCH, build_indices,
+from scripts.binaries.indices import (  # noqa: E402
+    GAIA_BINDING_G_MINUS_V_REJECT_MAG,
+    IdentifierIndices,
+    build_indices,
 )
-from scripts.binaries.component_tokens import (  # noqa: E402, F401
-    child_component_tokens, compound_contains,
-    expand_wds_truncated_secondary,
-    is_component_token, is_hier_ancestor, parent_component_token,
-    related_hier, token_letters,
-)
-from scripts.binaries.subdivide import (  # noqa: E402, F401
-    SYNTH_MSC_DISCOVERER, SYNTH_NSS_DISCOVERER,
+from scripts.binaries.subdivide import (  # noqa: E402
     apply_orb6_component_overrides,
     seed_synthesized_component_bindings,
     synthesize_msc_inner_pairs,
     synthesize_nss_inner_pairs,
     synthesize_orb6_orphan_pairs,
 )
-from scripts.binaries.stage2_resolve import (  # noqa: E402, F401
-    BINDING_INTEGRITY_COUNT_KEYS, BINDING_VERDICT_VALUES, BindingVerdict,
-    RESOLVE_VIA_PRIORITY, RESOLVE_VIA_VALUES, ResolvedComponent,
-    _athyg_position_at_epoch, _propagate_position, _spherical_to_unit_vec,
-    audit_binding_integrity, binding_integrity_counts,
-    build_athyg_position_grid, build_pair_by_wds_disc,
-    build_system_contexts, build_system_hip_claims,
-    build_system_letter_positions,
-    find_nearest_athyg_at_position,
-    group_orb6_by_pair, inherit_downward_parent_bindings,
+from scripts.binaries.stage2_resolve import (  # noqa: E402
+    BINDING_INTEGRITY_COUNT_KEYS,
+    BindingVerdict,
+    RESOLVE_VIA_VALUES,
+    ResolvedComponent,
+    audit_binding_integrity,
+    binding_integrity_counts,
     iter_decomposing_pair_components,
-    predict_secondary_position, propagate_blend_identity,
-    propagate_within_system, rescue_blank_components_pairs,
-    resolution_counts, resolve_all_pairs, resolve_component,
-    resolve_via_ccdm, resolve_via_position, resolve_via_simbad,
-    split_components, write_astrometry_request,
+    rescue_blank_components_pairs,
+    resolution_counts,
+    resolve_all_pairs,
+    split_components,
+    write_astrometry_request,
     write_binding_verdicts_tsv,
 )
-from scripts.binaries.stage3_astrometry import (  # noqa: E402, F401
-    ASTROMETRY_VIA_VALUES, ComponentAstrometry, SystemAnchor,
-    astrometry_counts, attach_astrometry, attach_astrometry_all,
-    compute_min_rho_per_source, gaia_5p_unreliable,
+from scripts.binaries.stage3_astrometry import (  # noqa: E402
+    ASTROMETRY_VIA_VALUES,
+    astrometry_counts,
+    attach_astrometry_all,
 )
-from scripts.binaries.stage4_orbits import (  # noqa: E402, F401
-    GAIA_DR3_REF_EPOCH_JD, J2000_REF_EPOCH_JD, MJD_TO_JD_OFFSET,
-    TRUNCATED_JD_TO_JD_OFFSET, T0_MIN_PLAUSIBLE_JD, T0_MAX_PLAUSIBLE_JD,
-    ORBIT_VIA_VALUES, OrbitElements,
-    NSS_MAX_SYSTEM_MASS_MSUN, NSS_SEPARATION_SANITY_RATIO,
-    _nss_separation_consistent,
-    compute_system_parallaxes, compute_system_parallax_anchors,
+from scripts.binaries.stage4_orbits import (  # noqa: E402
+    ORBIT_VIA_VALUES,
+    compute_system_parallax_anchors,
     compute_system_pm_anchors,
-    first_astrometry_field_per_system,
-    _msc_period_days, _pick_best_msc,
-    _pick_best_orb6, _system_parallax_mas, _thiele_innes_to_campbell,
-    iter_decomposing_pairs, kepler_semimajor_axis_au,
-    msc_T0_jd, msc_renderable, msc_to_canonical_elements,
-    nss_to_canonical_elements,
-    orb6_to_canonical_elements, orbit_counts,
-    pair_component_tokens,
-    select_orbit, select_orbits_all,
+    orbit_counts,
+    select_orbits_all,
 )
-from scripts.binaries.stage5_optical import (  # noqa: E402, F401
-    AU_PER_PC, SEPARATION_LIMIT_PC, SEPARATION_POE_MIN,
-    RADIAL_SEPARATION_SIGMA, BOTH_GAIA_PLX_GATE_SIGMA, ASYMM_PLX_GATE_SIGMA,
-    ESCAPE_VELOCITY_SAFETY_FACTOR, ESCAPE_GATE_DEFAULT_COMPONENT_MASS_MSUN,
-    ESCAPE_GATE_DEFAULT_TOTAL_MASS_MSUN, KM_S_PER_AU_YR,
-    ESCAPE_GATE_PM_AVERAGING_PERIOD_DAYS, ESCAPE_GATE_SUBSYSTEM_FLOOR_SEP_AU,
-    CPM_SLIP_MIN_ARCSEC, CPM_DRIFT_REJECT_FRACTION,
-    CPM_DRIFT_KEEP_FLOOR_ARCSEC, INHERITED_SECONDARY_ASTROMETRY_VIAS,
-    OPTICAL_VIA_VALUES, OpticalClassification,
-    _asymm_gaia_consistent, _both_gaia_consistent,
-    _orbital_pm_budget_km_s,
-    _pair_beyond_separation_limit, _component_parallax_with_error,
-    _escape_velocity_km_s, _separation_au, _separation_exceeds_limit,
-    _transverse_velocity_km_s,
-    classify_all_pairs, classify_pair_optical, cpm_baseline_verdict,
+from scripts.binaries.stage5_optical import (  # noqa: E402
+    OPTICAL_VIA_VALUES,
+    classify_all_pairs,
     optical_counts,
 )
-from scripts.binaries.stage6_multiples import (  # noqa: E402, F401
-    ASTROMETRY_VIA_SYSTEM_INHERITED, CATALOG_SCENE_EPOCH,
-    CIRCULAR_ORBIT_OMEGA_RAD, _position_pc,
-    ESTIMATED_ELEMENT_ORBIT_VIAS, MULTIPLES_TSV_COLUMNS,
-    ORBIT_ROLE_STANDALONE, SPECT_VIA_VALUES,
-    A_VIA_CATALOG, A_VIA_KEPLER_MASS_ESTIMATE, A_VIA_NONE, A_VIA_VALUES,
-    PHOTOMETRY_VIA_GAIA, PHOTOMETRY_VIA_NONE, PHOTOMETRY_VIA_OWN,
-    PHOTOMETRY_VIA_SYSTEM_INHERITED, PHOTOMETRY_VIA_VALUES,
-    MultiplesRow,
-    ballesteros_bv_from_teff, build_multiples_rows, build_standalone_rows,
-    compute_anchor_offsets, compute_pair_masses, compute_system_anchors,
-    finalize_renderable_elements,
-    gaia_photometry_absmag_ci,
-    wds_dmag, wds_year_to_jd, write_multiples_tsv,
+from scripts.binaries.stage6_multiples import (  # noqa: E402
+    ORBIT_ROLE_STANDALONE,
+    SPECT_VIA_VALUES,
+    build_multiples_rows,
+    compute_pair_masses,
+    compute_system_anchors,
+    write_multiples_tsv,
 )
-from scripts.binaries.stage7_counts import (  # noqa: E402, F401
-    DEFAULT_RATE_TOLERANCE, UPDATE_COUNTS_ENV_VAR,
-    assert_or_update_counts, assert_or_update_rates,
-    build_binaries_counts, build_binaries_rates, compare_build_counts,
-    compare_build_rates,
+from scripts.binaries.stage7_counts import (  # noqa: E402
+    UPDATE_COUNTS_ENV_VAR,
+    assert_or_update_counts,
+    assert_or_update_rates,
+    build_binaries_counts,
+    build_binaries_rates,
 )
 
 SRC_WDS_SUMM = DATA / "wds" / "wds_summ.txt"

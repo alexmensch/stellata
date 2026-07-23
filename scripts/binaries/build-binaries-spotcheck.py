@@ -13,6 +13,13 @@ SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parents[2]))
 from scripts.test_helpers import load_kebab_sibling  # noqa: E402
 
+from scripts.binaries.stage2_resolve import (  # noqa: E402
+    RESOLVE_VIA_PRIORITY,
+    RESOLVE_VIA_VALUES,
+)
+
+# resolve_through_stage2 + DATA live only on the orchestration shell, so the
+# spot-check still loads it; the resolution-tier tables come from the stage.
 bb = load_kebab_sibling(str(SCRIPT), "build_binaries", "build-binaries.py")
 
 GROUND_TRUTH = bb.DATA / "binaries" / "spot_check_ground_truth.tsv"
@@ -41,7 +48,7 @@ def read_ground_truth(path: Path) -> list[TruthRow]:
     with path.open(newline="") as fh:
         for r in csv.DictReader(fh, delimiter="\t"):
             via = r["expected_resolve_via"].strip()
-            if via != EXPECTED_ABSENT and via not in bb.RESOLVE_VIA_VALUES:
+            if via != EXPECTED_ABSENT and via not in RESOLVE_VIA_VALUES:
                 raise ValueError(
                     f"{r['name']}: expected_resolve_via '{via}' is neither "
                     f"'{EXPECTED_ABSENT}' nor a RESOLVE_VIA_VALUES member"
@@ -70,8 +77,8 @@ def strongest_components(
         key = (c.wds_id, c.component)
         prev = best.get(key)
         if prev is None or (
-            bb.RESOLVE_VIA_PRIORITY[c.resolve_via]
-            < bb.RESOLVE_VIA_PRIORITY[prev.resolve_via]
+            RESOLVE_VIA_PRIORITY[c.resolve_via]
+            < RESOLVE_VIA_PRIORITY[prev.resolve_via]
         ):
             best[key] = c
     return best

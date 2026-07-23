@@ -12,8 +12,13 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parents[2]))
 from scripts.test_helpers import load_kebab_sibling  # noqa: E402
-from scripts.binaries.stage2_resolve import IMPLIED_AB_COMPONENTS  # noqa: E402
+from scripts.binaries.stage2_resolve import (  # noqa: E402
+    IMPLIED_AB_COMPONENTS,
+    iter_decomposing_pair_components,
+    resolve_all_pairs,
+)
 
+# resolve_through_stage2 + log live only on the orchestration shell.
 bb = load_kebab_sibling(str(SCRIPT), "build_binaries", "build-binaries.py")
 
 
@@ -49,7 +54,7 @@ def main() -> int:
 
     for p in deferred:
         p.components = IMPLIED_AB_COMPONENTS
-    components = bb.resolve_all_pairs(
+    components = resolve_all_pairs(
         pairs=deferred, orb6=s2.orb6,
         indices=s2.indices, athyg=s2.athyg,
         simbad_xids=s2.simbad_wds_xids,
@@ -59,7 +64,7 @@ def main() -> int:
     pri_via: Counter[str] = Counter()
     sec_via: Counter[str] = Counter()
     n_pri = n_sec = n_any = n_both = n_distinct_gaia = n_sub_resolution = 0
-    for pair, pri, sec in bb.iter_decomposing_pair_components(
+    for pair, pri, sec in iter_decomposing_pair_components(
         deferred, components,
     ):
         n_pairs += 1
