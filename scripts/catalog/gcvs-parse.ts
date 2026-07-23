@@ -109,15 +109,34 @@ export function parseGcvsCrossref(srcPath: string): VarStarXref {
 
 // Bridge the HIP-keyed half of the crossref onto gaia_source_id via the
 // canonical Gaia DR3 ↔ HIP cross-walk. Mutates xref.byGaia in place.
+//
+// Two HIPs can resolve to the same gaia_source_id (Gaia fit only the
+// primary of a close visual pair, so the secondary's HIP cross-walks to
+// the primary's source). Resolution is lowest-HIP-wins — deterministic
+// across refreshes rather than crossid.txt insertion order — and each
+// collision is logged so a future gaia_dr3_hip_xmatch refresh surfaces
+// as a warning, not a silent overwrite.
 export function bridgeGcvsByGaia(
   xref: VarStarXref,
   hipToGaia: Map<number, string>,
 ): void {
   xref.byGaia.clear();
-  for (const [hip, gcvsName] of xref.byHip) {
+  const hipsByGaia = new Map<string, number[]>();
+  for (const [hip] of xref.byHip) {
     const gaia = hipToGaia.get(hip);
     if (!gaia) continue;
-    xref.byGaia.set(gaia, gcvsName);
+    const hips = hipsByGaia.get(gaia);
+    if (hips) hips.push(hip);
+    else hipsByGaia.set(gaia, [hip]);
+  }
+  for (const [gaia, hips] of hipsByGaia) {
+    hips.sort((a, b) => a - b);
+    if (hips.length > 1) {
+      console.warn(
+        `GCVS bridge: gaia_source_id ${gaia} reached from HIPs [${hips.join(', ')}] — keeping first.`,
+      );
+    }
+    xref.byGaia.set(gaia, xref.byHip.get(hips[0])!);
   }
 }
 

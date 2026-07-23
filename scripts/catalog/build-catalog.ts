@@ -101,7 +101,7 @@ import {
 } from './direction-cascade';
 import { readStars, type Star } from './stars-parse';
 import { loadDustGrid } from './dust-deextinction';
-import { REPO_ROOT as ROOT, mtimeIfExists } from '../util/paths';
+import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
 import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
 import {
   HEAD_PATH,
@@ -145,67 +145,30 @@ function isUpToDate(): boolean {
   if (!existsSync(resolve(PUBLIC_DIR, catalogChunkFilename(0)))) return false;
   if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
-  const srcMtime = statSync(SRC_CSV).mtimeMs;
-  const stellariumMtime = mtimeIfExists(SRC_STELLARIUM);
-  const gcvsMtime = mtimeIfExists(SRC_GCVS);
-  const xrefMtime = mtimeIfExists(SRC_GCVS_XREF);
-  const hipCcdmMtime = mtimeIfExists(SRC_HIP_CCDM);
-  const bjMtime = mtimeIfExists(SRC_BAILER_JONES);
-  const gaiaHipXmatchMtime = mtimeIfExists(SRC_GAIA_HIP_XMATCH);
-  const apsisMtime = mtimeIfExists(SRC_GAIA_APSIS);
-  const gaiaAstrometryMtime = mtimeIfExists(SRC_GAIA_ASTROMETRY);
-  const gaiaNssMtime = mtimeIfExists(SRC_GAIA_NSS);
-  const hip2Mtime = mtimeIfExists(SRC_HIP2);
-  const simbadMtime = mtimeIfExists(SRC_SIMBAD_SPTYPE);
-  const simbadWdsXidsMtime = mtimeIfExists(SRC_SIMBAD_WDS_XIDS);
-  const simbadSampleMtime = mtimeIfExists(SRC_SIMBAD_SAMPLE);
-  const multiplesMtime = mtimeIfExists(SRC_MULTIPLES);
-  const dustMtime = mtimeIfExists(SRC_DUST_MANIFEST);
-  // The SID registry is a build input: a fresh sid:allocate mint (or an
-  // overrides edit) must invalidate a catalog.bin written with NO_SID
-  // placeholders, or the documented build → allocate → rebuild bootstrap
-  // silently skips its final step.
-  const ledgerMtime = mtimeIfExists(LEDGER_PATH);
-  const ledgerHeadMtime = mtimeIfExists(HEAD_PATH);
-  const sidOverridesMtime = mtimeIfExists(OVERRIDES_PATH);
-  // Retirements/reinstatements feed the manifest's sidSuccessors field, so
-  // an appended row must invalidate an otherwise-fresh artifact.
-  const retirementsMtime = mtimeIfExists(RETIREMENTS_PATH);
-  const reinstatementsMtime = mtimeIfExists(REINSTATEMENTS_PATH);
   // This file is an orchestration shell — the build logic lives in the
   // sibling scripts/catalog modules plus scripts/util and scripts/sid,
   // so any of them must invalidate the artifact.
-  let scriptMtime = 0;
+  const scriptFiles: string[] = [];
   for (const dir of [__dirname, resolve(__dirname, '../util'), resolve(__dirname, '../sid')]) {
     for (const name of readdirSync(dir)) {
       if (!name.endsWith('.ts') || name.endsWith('.test.ts')) continue;
-      scriptMtime = Math.max(scriptMtime, statSync(resolve(dir, name)).mtimeMs);
+      scriptFiles.push(resolve(dir, name));
     }
   }
-  return (
-    binMtime > srcMtime &&
-    binMtime > scriptMtime &&
-    binMtime > stellariumMtime &&
-    binMtime > gcvsMtime &&
-    binMtime > xrefMtime &&
-    binMtime > hipCcdmMtime &&
-    binMtime > bjMtime &&
-    binMtime > gaiaHipXmatchMtime &&
-    binMtime > apsisMtime &&
-    binMtime > gaiaAstrometryMtime &&
-    binMtime > gaiaNssMtime &&
-    binMtime > hip2Mtime &&
-    binMtime > simbadMtime &&
-    binMtime > simbadWdsXidsMtime &&
-    binMtime > simbadSampleMtime &&
-    binMtime > multiplesMtime &&
-    binMtime > dustMtime &&
-    binMtime > ledgerMtime &&
-    binMtime > ledgerHeadMtime &&
-    binMtime > sidOverridesMtime &&
-    binMtime > retirementsMtime &&
-    binMtime > reinstatementsMtime
-  );
+  // Every build input: source catalogues, the dust manifest, and the SID
+  // registry (a fresh sid:allocate mint or overrides/retirements edit must
+  // invalidate a catalog.bin written with NO_SID placeholders, or the
+  // documented build → allocate → rebuild bootstrap skips its final step).
+  // Adding a new source is one array entry.
+  const newest = maxMtimeOfSources([
+    SRC_CSV, SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM,
+    SRC_BAILER_JONES, SRC_GAIA_HIP_XMATCH, SRC_GAIA_APSIS, SRC_GAIA_ASTROMETRY,
+    SRC_GAIA_NSS, SRC_HIP2, SRC_SIMBAD_SPTYPE, SRC_SIMBAD_WDS_XIDS,
+    SRC_SIMBAD_SAMPLE, SRC_MULTIPLES, SRC_DUST_MANIFEST,
+    LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
+    ...scriptFiles,
+  ]);
+  return binMtime > newest;
 }
 
 // Clear a prior build's chunk set so a shrunk chunk count can't strand stale

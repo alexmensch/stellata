@@ -58,6 +58,18 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
     expect(m.get(10)).toBe('777');
   });
 
+  it('skips partial-numeric hip and all-zero gaia_source_id', () => {
+    const text = [
+      'hip\tgaia_source_id\tangular_distance',
+      '12abc\t111\t0.1', // partial-numeric hip: parseInt would keep 12
+      '13\t000\t0.1', // all-zero gaia_source_id is the "none" sentinel
+      '14\t222\t0.1',
+    ].join('\n');
+    const m = parseGaiaHipXmatchTsv(text);
+    expect(m.size).toBe(1);
+    expect(m.get(14)).toBe('222');
+  });
+
   it('returns an empty map for a header-only file', () => {
     const text = 'hip\tgaia_source_id\tangular_distance';
     expect(parseGaiaHipXmatchTsv(text).size).toBe(0);

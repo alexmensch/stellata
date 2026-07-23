@@ -27,9 +27,14 @@ export function parseGaiaHipXmatchTsv(text: string): Map<number, string> {
     const hipRaw = fields[hipIdx];
     const gaiaRaw = fields[gaiaIdx];
     if (!hipRaw || !gaiaRaw) continue;
+    // Both keys are positive integers; require pure-digit strings so a
+    // partial-numeric hip ("12abc") or all-zero gaia can't slip through
+    // and diverge from the Python parser (parity pinned in
+    // gaia-hip-xmatch-parity.test.ts).
+    if (!/^\d+$/.test(hipRaw)) continue;
     const hip = Number.parseInt(hipRaw, 10);
-    if (!Number.isFinite(hip) || hip <= 0) continue;
-    if (!/^\d+$/.test(gaiaRaw)) continue;
+    if (hip <= 0) continue;
+    if (!/^\d+$/.test(gaiaRaw) || /^0+$/.test(gaiaRaw)) continue;
     let ang = Number.POSITIVE_INFINITY;
     if (angIdx >= 0 && fields[angIdx]) {
       const parsed = Number.parseFloat(fields[angIdx]);

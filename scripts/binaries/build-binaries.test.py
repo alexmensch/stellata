@@ -612,6 +612,23 @@ class GaiaXmatchTests(unittest.TestCase):
         self.assertEqual(m[42], 2222222222222222222)
         self.assertEqual(m[43], 4444444444444444444)
 
+    def test_hip_xmatch_skips_nonpositive_keys(self) -> None:
+        # hip and gaia_source_id are positive integers; hip <= 0, negative
+        # gaia, and partial-numeric hip must all drop (parity with the TS
+        # parseGaiaHipXmatchTsv guards).
+        body = (
+            "hip\tgaia_source_id\tangular_distance\n"
+            "0\t1111111111111111111\t0.1\n"     # hip 0
+            "-4\t2222222222222222222\t0.1\n"    # negative hip
+            "12abc\t3333333333333333333\t0.1\n"  # partial-numeric hip
+            "20\t-8888888888888888888\t0.1\n"   # negative gaia
+            "21\t4444444444444444444\t0.1\n"    # the one valid row
+        )
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "xm.tsv", body)
+            m = bb.parse_gaia_hip_xmatch(p)
+        self.assertEqual(m, {21: 4444444444444444444})
+
     def test_tyc_xmatch(self) -> None:
         body = (
             "tyc\tgaia_source_id\tangular_distance\tnumber_of_neighbours\txm_flag\n"
