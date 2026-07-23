@@ -27,7 +27,13 @@ numeric thresholds, provenance fields.
 ## Files in this area
 
 The binary-system pipeline. `scripts/binaries/` is the orchestration
-shell + per-stage modules; `data/wds/` + `data/binaries/` carry the
+shell + per-stage modules, and an importable Python package
+(`from scripts.binaries import parsers, stage4_orbits, …`): stage
+modules import their siblings relatively (`from .parsers import …`),
+while the hyphenated entry scripts (`build-binaries.py`,
+`build-runtime-binaries.py`) run as `__main__` so they bootstrap the
+repo root onto `sys.path` and use absolute `scripts.*` imports.
+`data/wds/` + `data/binaries/` carry the
 inputs and pipeline output. The single-star catalog build under
 `scripts/catalog/` and its data inputs (Gaia / B-J / SIMBAD sample /
 AT-HYG / GCVS / Hipparcos / Stellarium) live in
@@ -131,7 +137,19 @@ scripts/binaries/
                                   blank_components_deferred tail and
                                   reports per-end resolution yield.
                                   Touches nothing.
-  build-binaries.test.py          stdlib unittest pins for Stages 1-7.
+  <module>.test.py                stdlib unittest pins co-located per
+                                  source module (parsers, indices, msc_map,
+                                  component_tokens, subdivide, mass_estimate,
+                                  stage2_resolve … stage7_counts). Each
+                                  imports its subject module's symbols
+                                  directly — no orchestration-shell load.
+                                  Run directly: python3 <module>.test.py.
+  pipeline_test_fixtures.py       Shared unittest fixture builders +
+                                  committed-data path constants imported by
+                                  the <module>.test.py siblings, so no
+                                  fixture logic duplicates across them.
+  __init__.py                     Package marker — scripts/binaries/ is an
+                                  importable package (see intro above).
   build-runtime-binaries.test.py  stdlib unittest pins for the pure
                                   helpers (_split_components,
                                   _parent_token, assign_parent_relations,
