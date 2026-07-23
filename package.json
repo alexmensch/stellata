@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "2.49.1",
+  "version": "2.49.2",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.15.1",
@@ -9,6 +9,8 @@
   "scripts": {
     "build:catalog": "tsx scripts/catalog/build-catalog.ts",
     "build:lut": "tsx scripts/colour/blackbody-lut.ts",
+    "build:icons": "python3 scripts/icons/build-icons.py",
+    "build:og": "python3 scripts/og/build-og.py",
     "build:binaries": "python3 scripts/binaries/build-binaries.py",
     "build:binaries-runtime": "python3 scripts/binaries/build-runtime-binaries.py",
     "build:clouds": "python3 scripts/clouds/build-clouds.py && tsx scripts/sid/stamp-sibling-sids.ts clouds",

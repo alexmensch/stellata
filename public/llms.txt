@@ -1,0 +1,58 @@
+# Stellata
+
+> Stellata is a browser-based 3D model of the real universe that you fly through. It places over 330,000 real stars and objects: the Solar System's planets and moons, hundreds of thousands of nearby stars and multiple-star systems, the interstellar dust and molecular clouds between them, the Milky Way, and the nearest galaxies. Every object is placed from published astronomical observation; nothing is invented or procedurally generated. Everything is shown in true colour and at the apparent brightness your eyes would actually see from any point in space: no infrared, radio, or false-colour imagery. It runs in the browser with no install (WebGL2), and its scope grows toward everything astronomy has measured.
+
+Stellata simulates what it would actually look like to move through the universe. Variable stars pulsate at their catalogue periods, close binaries orbit on their measured elements, and every star advances from its catalogue epoch to the present along its measured motion in space. It is not a theoretical or artistic rendering: every object comes from published astronomical observation and direct, empirical measurement.
+
+## About
+
+- [Stellata](https://stellata.xyz/): the live WebGL application.
+- [Source on GitHub](https://github.com/alexmensch/stellata): full source, released under AGPL-3.0-only.
+- [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md): data sources, modelling notes, and project scope.
+
+## Data sources
+
+Every object is placed from a published observational catalogue or direct measurement. Full citations, DOIs, and modelling notes are in [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md).
+
+### Stars
+
+- [Gaia DR3](https://gea.esac.esa.int/archive/): ESA / DPAC — raw astrometry, astrophysical parameters (Teff, log g, [M/H]), and non-single-star orbits.
+- [AT-HYG v3.3](https://codeberg.org/astronexus/athyg): David Nash's combined Tycho-2 / Hipparcos / Gaia catalogue — the star backbone.
+- [SIMBAD](https://simbad.cds.unistra.fr/simbad/): CDS Strasbourg — cross-identifications and catalogue validation.
+- [Bailer-Jones et al. 2021](https://doi.org/10.3847/1538-3881/abd806): geometric distances from Gaia DR3 parallaxes.
+- [GCVS 5.1](http://www.sai.msu.su/gcvs/gcvs/): Samus et al. — variable-star periods.
+- [Stellarium](https://github.com/Stellarium/stellarium): constellation lines.
+
+### Double & multiple stars
+
+- [Washington Double Star Catalog](http://www.astro.gsu.edu/wds/): USNO — resolved pair geometry.
+- [Sixth Orbit Catalog (ORB6)](http://www.astro.gsu.edu/wds/orb6.html): USNO — computed visual orbits.
+- [Multiple Star Catalog](https://doi.org/10.3847/1538-4365/aaa7d9): Tokovinin 2018 (Pulkovo) — hierarchical subsystem orbits.
+- [Hipparcos CCDM](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA — HIP double-star cross-match.
+
+### Interstellar medium
+
+- [Edenhofer et al. 2024](https://doi.org/10.5281/zenodo.8187943): 3D dust extinction map of the local Milky Way.
+- [Zucker et al. 2020 & 2021](https://doi.org/10.3847/1538-4357/ac1f96): molecular-cloud distances, 3D bounding boxes, and density profiles.
+
+### Planets & moons
+
+- [JPL Standish 1992](https://ssd.jpl.nasa.gov/planets/approx_pos.html): planet positions (Keplerian elements).
+- [JPL Solar System Dynamics](https://ssd.jpl.nasa.gov/sats/elem/): mean orbital elements for the 18 major moons.
+- [NASA planetary fact sheets](https://nssdc.gsfc.nasa.gov/planetary/factsheet/): radii and mean elements; Pluto from New Horizons 2015.
+- [IAU WGCCRE (Archinal et al. 2018)](https://doi.org/10.1007/s10569-017-9805-5): planet and moon axial tilt and rotation.
+- [Mallama, Krobusek & Pavlov 2018](https://doi.org/10.1016/j.icarus.2016.09.023): V-band albedos and phase curves.
+
+### Heliopause boundary
+
+- [Voyager 1 & 2](https://voyager.jpl.nasa.gov/): boundary crossings (2012, 2018), plus IBEX / Cassini ENA heliotail estimates.
+- [Frisch & Slavin 2013](https://doi.org/10.1146/annurev-astro-082312-140843): solar apex direction through the local ISM.
+
+### Nearby galaxies
+
+- [McConnachie 2012](https://doi.org/10.1088/0004-6256/144/1/4): Local Group positions, distances, and luminosities.
+- Local Volume Database (Pace 2024): dwarf-galaxy parameters.
+
+## License
+
+Stellata is released under AGPL-3.0-only. Created by [Alex Marshall](https://alxm.me).

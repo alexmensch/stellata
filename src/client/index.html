@@ -3,11 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stellata — Observational 3D Model of our Galaxy</title>
+    <title>Stellata — Explore the Universe in 3D</title>
+
+    <meta
+      name="description"
+      content="A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented."
+    />
+    <link rel="canonical" href="https://stellata.xyz/" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="author" content="Alex Marshall" />
+    <meta name="theme-color" content="#000000" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Stellata" />
+    <meta property="og:title" content="Stellata — Explore the Universe in 3D" />
+    <meta
+      property="og:description"
+      content="A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented."
+    />
+    <meta property="og:url" content="https://stellata.xyz/" />
+    <meta property="og:image" content="https://stellata.xyz/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Stellata — a 3D model of the real universe, shown in true colour." />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Stellata — Explore the Universe in 3D" />
+    <meta
+      name="twitter:description"
+      content="A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented."
+    />
+    <meta name="twitter:image" content="https://stellata.xyz/og-image.jpg" />
+    <meta name="twitter:image:alt" content="Stellata — a 3D model of the real universe, shown in true colour." />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Person",
+            "@id": "https://alxm.me/#person",
+            "name": "Alex Marshall",
+            "url": "https://alxm.me",
+            "sameAs": [
+              "https://github.com/alexmensch",
+              "https://www.linkedin.com/in/awmars"
+            ]
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://stellata.xyz/#webapp",
+            "name": "Stellata",
+            "alternateName": "Stellata Star Catalog",
+            "url": "https://stellata.xyz/",
+            "image": "https://stellata.xyz/og-image.jpg",
+            "description": "A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented.",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Any (WebGL2-capable browser)",
+            "browserRequirements": "Requires WebGL2",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "author": { "@id": "https://alxm.me/#person" },
+            "creator": { "@id": "https://alxm.me/#person" },
+            "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        ]
+      }
+    </script>
+
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <canvas id="scene"></canvas>
+
+    <noscript>
+      <style>
+        #scene { display: none; }
+        .noscript-fallback {
+          max-width: 46rem;
+          margin: 0 auto;
+          padding: 3rem 1.5rem;
+          color: #cdd6e4;
+          font: 16px/1.6 system-ui, sans-serif;
+        }
+        .noscript-fallback h1 { color: #fff; font-weight: 600; }
+        .noscript-fallback a { color: #9fbcff; }
+      </style>
+      <main class="noscript-fallback">
+        <h1>Stellata — the real universe in true colour, in 3D</h1>
+        <p>
+          Stellata is a browser-based 3D model of the real universe that you
+          fly through, simulating what it would actually look like to move
+          through space. It places over 330,000 real stars and objects — the
+          Solar System's planets and moons, hundreds of thousands of nearby
+          stars and multiple-star systems, the Sun's heliopause, the
+          interstellar dust and molecular clouds between the stars, the Milky
+          Way disc, and the nearest galaxies. Every object is placed from
+          published astronomical observation; nothing is invented or
+          procedurally generated.
+        </p>
+        <p>
+          Everything is shown in true colour and at the apparent brightness
+          your eyes would actually see from any point in space (no infrared,
+          radio, or false-colour imagery), including dust extinction and
+          reddening. Variable stars pulsate at their catalogue periods, close
+          binaries orbit on their measured elements, and every star advances
+          from its catalogue epoch to the present along its measured motion in
+          space. Its scope grows toward everything astronomy has measured.
+        </p>
+        <p>
+          Stellata requires a modern browser with WebGL2 and JavaScript
+          enabled. The source code is available on
+          <a href="https://github.com/alexmensch/stellata">GitHub</a> under the
+          AGPL-3.0 licence; data sources and modelling notes are documented in
+          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>.
+        </p>
+      </main>
+    </noscript>
 
     <svg id="overlay" class="overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
       <!-- Galactic coordinate sphere l/b labels. Pooled <text> positioned +
