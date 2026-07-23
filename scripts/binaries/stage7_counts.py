@@ -10,6 +10,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
@@ -191,97 +192,154 @@ def build_binaries_counts(
 
 
 @dataclass
-class CountDiff:
-    """One row of the snapshot diff. ``status`` is ``"match"``,
-    ``"mismatch"``, ``"missing_actual"`` (key in expected but not in
-    actual), or ``"missing_expected"`` (key in actual but not in
-    expected — typically a newly-introduced counter)."""
+class SnapshotDiff:
+    """One row of a snapshot diff. ``status`` is ``"match"``,
+    ``"missing_actual"`` (key in expected but not in actual),
+    ``"missing_expected"`` (key in actual but not in expected — typically
+    a newly-introduced entry), or the snapshot-specific mismatch status
+    (``"mismatch"`` for exact-match counts, ``"drift"`` for
+    tolerance-checked rates). ``tolerance`` is populated only for the
+    tolerance-checked snapshot; ``None`` for exact-match counts."""
 
     key: str
     status: str
-    expected: int | None
-    actual: int | None
+    expected: float | None
+    actual: float | None
+    tolerance: float | None = None
 
 
-def compare_build_counts(
-    expected: dict[str, int], actual: dict[str, int],
-) -> list[CountDiff]:
-    """Per-key diff between two flat count dicts. The union of keys is
-    walked so newly-added or newly-removed counters surface explicitly
-    rather than disappearing into the matched set."""
-    out: list[CountDiff] = []
+def _compare_snapshot(
+    expected: dict[str, Any],
+    actual: dict[str, float],
+    *,
+    expected_value: Callable[[Any], float],
+    tolerance_of: Callable[[Any], float | None],
+    matches: Callable[[float, float, float | None], bool],
+    mismatch_status: str,
+) -> list[SnapshotDiff]:
+    """Per-key diff walking the union of keys so newly-added or removed
+    entries surface explicitly rather than disappearing into the matched
+    set. ``expected_value`` / ``tolerance_of`` unwrap the expected
+    payload (a bare int for counts, a ``{value, tolerance}`` dict for
+    rates); ``matches`` decides ``"match"`` vs ``mismatch_status``."""
+    out: list[SnapshotDiff] = []
     for key in sorted(expected.keys() | actual.keys()):
-        e = expected.get(key)
-        a = actual.get(key)
         if key not in actual:
-            out.append(CountDiff(key, "missing_actual", e, None))
+            out.append(SnapshotDiff(
+                key, "missing_actual",
+                expected_value(expected[key]), None, tolerance_of(expected[key]),
+            ))
         elif key not in expected:
-            out.append(CountDiff(key, "missing_expected", None, a))
-        elif e == a:
-            out.append(CountDiff(key, "match", e, a))
+            out.append(SnapshotDiff(key, "missing_expected", None, actual[key], None))
         else:
-            out.append(CountDiff(key, "mismatch", e, a))
+            ev = expected_value(expected[key])
+            av = actual[key]
+            tol = tolerance_of(expected[key])
+            status = "match" if matches(ev, av, tol) else mismatch_status
+            out.append(SnapshotDiff(key, status, ev, av, tol))
     return out
 
 
-def format_count_diff(diff: list[CountDiff]) -> str:
-    """Pretty-printer matching ``build-counts.ts``'s ``formatCountDiff``
-    shape — single match line when everything passes, otherwise the
-    mismatches listed first (each with signed delta), then any new /
-    removed keys."""
-    mismatches = [d for d in diff if d.status == "mismatch"]
+def _format_diff(
+    diff: list[SnapshotDiff],
+    *,
+    noun: str,
+    ok_suffix: str,
+    diff_verb: str,
+    mismatch_status: str,
+    render_mismatch: Callable[[SnapshotDiff], str],
+    render_missing_actual: Callable[[SnapshotDiff], str],
+    render_missing_expected: Callable[[SnapshotDiff], str],
+) -> str:
+    """Pretty-printer skeleton mirroring ``build-counts.ts``'s
+    ``formatCountDiff`` — single match line when everything passes,
+    otherwise the mismatches first, then new / removed keys. Per-row
+    rendering is delegated so counts (signed int delta) and rates
+    (float ± tolerance) format their own lines."""
+    mismatches = [d for d in diff if d.status == mismatch_status]
     missing_actual = [d for d in diff if d.status == "missing_actual"]
     missing_expected = [d for d in diff if d.status == "missing_expected"]
     total_diffs = len(mismatches) + len(missing_actual) + len(missing_expected)
-    lines: list[str] = []
     if total_diffs == 0:
-        lines.append(f"build-binaries counts: all {len(diff)} counts match")
-        return "\n".join(lines)
-    lines.append(
-        f"build-binaries counts: {total_diffs} of {len(diff)} counts differ"
-    )
-    for m in mismatches:
-        delta = (m.actual or 0) - (m.expected or 0)
-        sign = "+" if delta > 0 else ""
-        lines.append(
-            f"  {m.key:<40} expected {m.expected}, got {m.actual} ({sign}{delta})"
-        )
-    for m in missing_actual:
-        lines.append(f"  {m.key:<40} expected {m.expected}, missing in actual")
-    for m in missing_expected:
-        lines.append(f"  {m.key:<40} new key, got {m.actual} (no snapshot)")
+        return f"build-binaries {noun}: all {len(diff)} {ok_suffix}"
+    lines = [f"build-binaries {noun}: {total_diffs} of {len(diff)} {diff_verb}"]
+    lines += [render_mismatch(d) for d in mismatches]
+    lines += [render_missing_actual(d) for d in missing_actual]
+    lines += [render_missing_expected(d) for d in missing_expected]
     return "\n".join(lines)
 
 
-def assert_or_update_counts(actual: dict[str, int], expected_path: Path) -> bool:
+def _assert_or_update_snapshot(
+    actual: dict[str, float],
+    expected_path: Path,
+    *,
+    build_payload: Callable[[dict[str, float], Path], dict[str, Any]],
+    compare: Callable[[dict[str, Any], dict[str, float]], list[SnapshotDiff]],
+    format_diff: Callable[[list[SnapshotDiff]], str],
+) -> bool:
     """Compare ``actual`` against the committed snapshot at
-    ``expected_path``. Returns ``True`` on full match, ``False``
-    otherwise. Side effect: when the env var ``UPDATE_BUILD_COUNTS=1``
-    is set OR the snapshot file is missing, write ``actual`` to disk
-    and return ``True``.
+    ``expected_path``. Returns ``True`` on full match. Side effect: when
+    ``UPDATE_BUILD_COUNTS=1`` is set OR the snapshot is missing, write
+    ``build_payload(actual, expected_path)`` and return ``True``.
 
     Mirrors ``build-catalog.ts``'s ``assertOrUpdateBuildCounts`` so a
     single ``UPDATE_BUILD_COUNTS=1`` refresh covers both the TS and
-    Python sides of the pipeline.
-    """
+    Python sides of the pipeline."""
     should_update = os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1"
 
     if should_update or not expected_path.exists():
-        expected_path.write_text(json.dumps(actual, indent=2) + "\n")
+        expected_path.write_text(json.dumps(build_payload(actual, expected_path), indent=2) + "\n")
         try:
             shown = expected_path.relative_to(ROOT)
         except ValueError:
             shown = expected_path
-        log(
-            f"{'Updated' if should_update else 'Wrote initial'} {shown}"
-        )
+        log(f"{'Updated' if should_update else 'Wrote initial'} {shown}")
         return True
 
     expected = json.loads(expected_path.read_text())
-    diff = compare_build_counts(expected, actual)
-    report = format_count_diff(diff)
-    log(report)
+    diff = compare(expected, actual)
+    log(format_diff(diff))
     return all(d.status == "match" for d in diff)
+
+
+def compare_build_counts(
+    expected: dict[str, int], actual: dict[str, int],
+) -> list[SnapshotDiff]:
+    """Exact-match per-key diff between two flat count dicts."""
+    return _compare_snapshot(
+        expected, actual,
+        expected_value=lambda e: e,
+        tolerance_of=lambda e: None,
+        matches=lambda ev, av, tol: ev == av,
+        mismatch_status="mismatch",
+    )
+
+
+def format_count_diff(diff: list[SnapshotDiff]) -> str:
+    """Count-snapshot formatter — mismatches carry a signed int delta."""
+    def mismatch(d: SnapshotDiff) -> str:
+        delta = (d.actual or 0) - (d.expected or 0)
+        sign = "+" if delta > 0 else ""
+        return f"  {d.key:<40} expected {d.expected}, got {d.actual} ({sign}{delta})"
+
+    return _format_diff(
+        diff,
+        noun="counts", ok_suffix="counts match", diff_verb="counts differ",
+        mismatch_status="mismatch",
+        render_mismatch=mismatch,
+        render_missing_actual=lambda d: f"  {d.key:<40} expected {d.expected}, missing in actual",
+        render_missing_expected=lambda d: f"  {d.key:<40} new key, got {d.actual} (no snapshot)",
+    )
+
+
+def assert_or_update_counts(actual: dict[str, int], expected_path: Path) -> bool:
+    """Exact-match snapshot assert/refresh for the int-count JSON."""
+    return _assert_or_update_snapshot(
+        actual, expected_path,
+        build_payload=lambda a, _path: a,
+        compare=compare_build_counts,
+        format_diff=format_count_diff,
+    )
 
 
 # ─── Stage 7B — derived rate snapshot ────────────────────────────────
@@ -356,113 +414,78 @@ def build_binaries_rates(counts: dict[str, int]) -> dict[str, float]:
     }
 
 
-@dataclass
-class RateDiff:
-    """One row of the rates snapshot diff. ``status`` is ``"match"``,
-    ``"drift"`` (relative deviation > tolerance), ``"missing_actual"``,
-    or ``"missing_expected"`` (newly-introduced rate)."""
-
-    key: str
-    status: str
-    expected: float | None
-    actual: float | None
-    tolerance: float | None
-
-
 def compare_build_rates(
     expected: dict[str, dict[str, float]], actual: dict[str, float],
-) -> list[RateDiff]:
+) -> list[SnapshotDiff]:
     """Per-rate tolerance-based diff. Expected entries carry a ``value``
     + ``tolerance``; pass window is ``|actual - value| / max(|value|,
-    1e-9) <= tolerance``. Missing-on-either-side rates surface as their
-    own statuses so a forgotten snapshot refresh doesn't mask a new key.
-    Pure — no I/O."""
-    out: list[RateDiff] = []
-    for key in sorted(set(expected.keys()) | set(actual.keys())):
-        if key not in actual:
-            exp = expected.get(key, {})
-            out.append(RateDiff(
-                key, "missing_actual",
-                exp.get("value"), None, exp.get("tolerance"),
-            ))
-            continue
-        if key not in expected:
-            out.append(RateDiff(key, "missing_expected", None, actual[key], None))
-            continue
-        e = expected[key]
-        ev = float(e["value"])
-        tol = float(e["tolerance"])
-        av = actual[key]
-        denom = max(abs(ev), 1e-9)
-        if abs(av - ev) / denom <= tol:
-            out.append(RateDiff(key, "match", ev, av, tol))
-        else:
-            out.append(RateDiff(key, "drift", ev, av, tol))
-    return out
+    1e-9) <= tolerance``. Pure — no I/O."""
+    return _compare_snapshot(
+        expected, actual,
+        expected_value=lambda e: float(e["value"]),
+        tolerance_of=lambda e: float(e["tolerance"]),
+        matches=lambda ev, av, tol: abs(av - ev) / max(abs(ev), 1e-9) <= tol,
+        mismatch_status="drift",
+    )
 
 
-def format_rate_diff(diff: list[RateDiff]) -> str:
-    """Pretty-printer mirroring ``format_count_diff`` shape — single
-    match line when everything passes, otherwise drift / missing rows
-    listed."""
-    drift = [d for d in diff if d.status == "drift"]
-    missing_actual = [d for d in diff if d.status == "missing_actual"]
-    missing_expected = [d for d in diff if d.status == "missing_expected"]
-    total_diffs = len(drift) + len(missing_actual) + len(missing_expected)
-    if total_diffs == 0:
-        return f"build-binaries rates: all {len(diff)} rates within tolerance"
-    lines = [f"build-binaries rates: {total_diffs} of {len(diff)} rates drifted"]
-    for d in drift:
+def format_rate_diff(diff: list[SnapshotDiff]) -> str:
+    """Rate-snapshot formatter — drifted rows carry the ± tolerance."""
+    def drift(d: SnapshotDiff) -> str:
         ev = d.expected if d.expected is not None else 0.0
         av = d.actual if d.actual is not None else 0.0
         tol = d.tolerance if d.tolerance is not None else 0.0
-        lines.append(
-            f"  {d.key:<28} expected {ev:.4f} ± {tol:.0%}, got {av:.4f}"
-        )
-    for d in missing_actual:
+        return f"  {d.key:<28} expected {ev:.4f} ± {tol:.0%}, got {av:.4f}"
+
+    def missing_actual(d: SnapshotDiff) -> str:
         ev = d.expected if d.expected is not None else 0.0
-        lines.append(f"  {d.key:<28} expected {ev:.4f}, missing in actual")
-    for d in missing_expected:
+        return f"  {d.key:<28} expected {ev:.4f}, missing in actual"
+
+    def missing_expected(d: SnapshotDiff) -> str:
         av = d.actual if d.actual is not None else 0.0
-        lines.append(f"  {d.key:<28} new rate, got {av:.4f} (no snapshot)")
-    return "\n".join(lines)
+        return f"  {d.key:<28} new rate, got {av:.4f} (no snapshot)"
+
+    return _format_diff(
+        diff,
+        noun="rates", ok_suffix="rates within tolerance", diff_verb="rates drifted",
+        mismatch_status="drift",
+        render_mismatch=drift,
+        render_missing_actual=missing_actual,
+        render_missing_expected=missing_expected,
+    )
+
+
+def _rates_snapshot_payload(
+    actual: dict[str, float], expected_path: Path,
+) -> dict[str, dict[str, float]]:
+    """Rate snapshot serialisation — values rounded to 6 decimals for
+    stable diffs across float round-trips; per-key ``tolerance`` overrides
+    preserved from the existing snapshot so a refresh never silently
+    resets a hand-edited tolerance."""
+    existing: dict[str, dict[str, float]] = {}
+    if expected_path.exists():
+        existing = json.loads(expected_path.read_text())
+    return {
+        k: {
+            "value": round(v, 6),
+            "tolerance": float(
+                existing.get(k, {}).get("tolerance", DEFAULT_RATE_TOLERANCE),
+            ),
+        }
+        for k, v in actual.items()
+    }
 
 
 def assert_or_update_rates(
     actual: dict[str, float], expected_path: Path,
 ) -> bool:
-    """Tolerance-aware sibling of ``assert_or_update_counts``. Refresh
-    preserves per-key ``tolerance`` overrides from the existing snapshot
-    so an explicit ``UPDATE_BUILD_COUNTS=1`` doesn't silently reset them.
-    Snapshot values are rounded to 6 decimals for stable diffs across
-    floating-point round-trips."""
-    should_update = os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1"
-
-    if should_update or not expected_path.exists():
-        existing: dict[str, dict[str, float]] = {}
-        if expected_path.exists():
-            existing = json.loads(expected_path.read_text())
-        merged = {
-            k: {
-                "value": round(v, 6),
-                "tolerance": float(
-                    existing.get(k, {}).get("tolerance", DEFAULT_RATE_TOLERANCE),
-                ),
-            }
-            for k, v in actual.items()
-        }
-        expected_path.write_text(json.dumps(merged, indent=2) + "\n")
-        try:
-            shown = expected_path.relative_to(ROOT)
-        except ValueError:
-            shown = expected_path
-        log(f"{'Updated' if should_update else 'Wrote initial'} {shown}")
-        return True
-
-    expected = json.loads(expected_path.read_text())
-    diff = compare_build_rates(expected, actual)
-    log(format_rate_diff(diff))
-    return all(d.status == "match" for d in diff)
+    """Tolerance-aware sibling of ``assert_or_update_counts``."""
+    return _assert_or_update_snapshot(
+        actual, expected_path,
+        build_payload=_rates_snapshot_payload,
+        compare=compare_build_rates,
+        format_diff=format_rate_diff,
+    )
 
 
 # ─── Driver ──────────────────────────────────────────────────────────
