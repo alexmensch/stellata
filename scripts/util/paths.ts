@@ -14,3 +14,12 @@ export const REPO_ROOT = resolve(__dirname, '..', '..');
 export function mtimeIfExists(path: string): number {
   return existsSync(path) ? statSync(path).mtimeMs : 0;
 }
+
+export function maxMtimeOfSources(paths: string[]): number {
+  let newest = 0;
+  for (const p of paths) {
+    const m = mtimeIfExists(p);
+    if (m > newest) newest = m;
+  }
+  return newest;
+}

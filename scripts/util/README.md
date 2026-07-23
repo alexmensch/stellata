@@ -15,5 +15,7 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/refresh/` imports instead of independently walking
   `Path(__file__).resolve().parent...`.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
-  `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` for
-  build-idempotency checks against optional inputs.
+  `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` and
+  `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
+  missing) for build-idempotency checks against optional inputs.
+  `paths.test.ts` pins the `maxMtimeOfSources` cases.
