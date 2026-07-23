@@ -28,6 +28,19 @@ html, body {
   font-size: 12px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* UI chrome opts back into normal text selection; the main view (canvas,
+   SVG overlay, hover tooltip) inherits the body-level user-select: none
+   above. */
+.modal-card,
+.kb-modal-card,
+#find-home,
+.ui-top-left,
+.ui-top,
+.ui-bottom {
+  user-select: text;
 }
 
 #scene {
