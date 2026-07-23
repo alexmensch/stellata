@@ -151,28 +151,29 @@ def main() -> None:
 
     client = rl.TapClient(backends=[rl.cds_backend()])
     rows: list[dict[str, object]] = []
-    start = time.time()
-    for batch_idx, offset in enumerate(range(0, total, BATCH_SIZE), start=1):
-        batch = source_ids[offset : offset + BATCH_SIZE]
-        t0 = time.time()
-        table = query_batch(client, batch)
-        if batch_idx == 1:
-            rl.validate_schema(table, EXPECTED_SCHEMA, label="bailer-jones I/352/gedr3dis")
+
+    def collect(table: Any) -> None:
         for row in table:
             rows.append(rename_row(row, VIZIER_TO_PAPER))
-        elapsed = time.time() - t0
-        cum = time.time() - start
-        print(
-            f"  batch {batch_idx}/{n_batches}: "
-            f"{len(table):4d} rows in {elapsed:5.1f}s "
-            f"(cum {cum/60:.1f}m, total rows {len(rows)})"
-        )
+
+    start = time.time()
+    rl.run_in_batches(
+        source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
+        schema=EXPECTED_SCHEMA, schema_label="bailer-jones I/352/gedr3dis",
+    )
 
     matched = len(rows)
     coverage = matched / total
-    print(
-        f"matched {matched}/{total} = {coverage*100:.1f}% in "
-        f"{(time.time()-start)/60:.1f}m"
+    print(f"matched in {(time.time()-start)/60:.1f}m")
+    rl.report_coverage(
+        rows, total,
+        [
+            ("r_med_geo",
+             lambda r: rl.coerce_masked(r["r_med_geo"]) is not None),
+            ("r_med_photogeo",
+             lambda r: rl.coerce_masked(r["r_med_photogeo"]) is not None),
+        ],
+        label="AT-HYG source_ids",
     )
     if coverage < EXPECTED_COVERAGE_MIN:
         raise SystemExit(
@@ -188,21 +189,14 @@ def main() -> None:
         )
 
     rows_by_id = {int(r["source_id"]): r for r in rows}
-    missing: list[int] = []
-    for spec in SPOT_CHECKS:
-        if not rl.check_spot_row(rows_by_id, spec, script_name=SCRIPT_NAME):
-            missing.append(spec["source_id"])
-            print(
-                f"  WARNING: pinned source_id {spec['source_id']} not in "
-                f"result (a DR4 maintenance reload may have retired this ID)"
-            )
-    if len(missing) > MAX_MISSING_PINS:
-        raise SystemExit(
-            f"{SCRIPT_NAME}: {len(missing)} pinned source_ids missing "
-            f"(tolerance {MAX_MISSING_PINS}): {missing} — VizieR I/352 "
-            f"has dropped more rows than expected; investigate before "
-            f"re-pinning."
-        )
+    rl.check_spot_rows_tolerant(
+        rows_by_id, SPOT_CHECKS, script_name=SCRIPT_NAME,
+        max_missing=MAX_MISSING_PINS,
+        warn_template="  WARNING: pinned source_id {key} not in result "
+        "(a DR4 maintenance reload may have retired this ID)",
+        fail_hint="VizieR I/352 has dropped more rows than expected; "
+        "investigate before re-pinning.",
+    )
 
     written = rl.write_tsv(
         rows,

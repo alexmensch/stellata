@@ -171,20 +171,10 @@ def main() -> None:
 
     n = len(table)
     print(f"  {n} rows in {elapsed:.1f}s")
-    if not (EXPECTED_ROW_COUNT_MIN <= n <= EXPECTED_ROW_COUNT_MAX):
-        raise SystemExit(
-            f"refresh-gaia-nss: row count {n} outside expected "
-            f"[{EXPECTED_ROW_COUNT_MIN}, {EXPECTED_ROW_COUNT_MAX}] — "
-            f"upstream schema or selection has changed; investigate before re-pinning."
-        )
+    rl.assert_row_count(n, EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, SCRIPT_NAME)
 
     rows_by_id = {int(r["source_id"]): r for r in table}
-    for spec in SPOT_CHECKS:
-        if not rl.check_spot_row(rows_by_id, spec, script_name=SCRIPT_NAME):
-            raise SystemExit(
-                f"{SCRIPT_NAME}: spot-check source_id {spec['source_id']} "
-                f"missing from query result — upstream selection has changed."
-            )
+    rl.validate_spot_rows(rows_by_id, SPOT_CHECKS, script_name=SCRIPT_NAME)
 
     rows = (
         {col: rl.coerce_masked(row[col]) for col in TSV_COLUMNS}

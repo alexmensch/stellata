@@ -66,12 +66,16 @@ BATCH_SIZE = 5_000
 # input). AT-HYG.gaia has 314,865 source_ids, so ~314,550 ± 5% is the
 # expected count. The earlier draft of the bead spec quoted ~266k; that
 # is the UNION-(teff+logg) coverage projection (~84.8%), not the query's
-# row count. The unfiltered TAP query returns all matched rows including
-# all-NULL Apsis rows.
+# Matched-row count (unfiltered TAP returns all matched rows, incl. all-NULL
+# Apsis rows). Wider slack than the frozen-cross-walk pulls because this
+# count tracks the AT-HYG.gaia subset size, which shifts with each AT-HYG
+# release, not just archive re-indexing.
 EXPECTED_ROW_COUNT_MIN = 298_000
 EXPECTED_ROW_COUNT_MAX = 330_000
 
-# Union-(teff+logg) coverage projection — the actual ingestable bucket.
+# Union-(teff+logg) coverage — the actual ingestable bucket. Floor sits
+# ~5 pts below the ~84.8% observed at last probe, absorbing Apsis
+# pipeline-version variation without false-failing.
 EXPECTED_UNION_COVERAGE_MIN = 0.80
 
 # ESP-HS spectral-type enum coverage floor. ESP-HS is the hottest-star
@@ -146,40 +150,15 @@ def query_batch(client: rl.TapClient, ids: list[int]):
 SCRIPT_NAME = "refresh-gaia-apsis"
 
 
-def report_coverage(rows_by_id: dict[int, Any], total_input: int) -> float:
-    """Log per-pipeline and union (Teff AND logg) coverage; return union %.
-    Union coverage is the headline number motivating Apsis ingest — see
-    research/star-spectral-rendition/README.md § Tier 2.
+def _has_teff_logg(row: Any, teff: str, logg: str) -> bool:
+    """A pipeline covers a row when both its Teff and log g are non-null.
+    Union coverage across pipelines is the headline number motivating Apsis
+    ingest — see research/star-spectral-rendition/README.md § Tier 2.
     """
-    n = len(rows_by_id)
-    phot = sum(
-        1 for r in rows_by_id.values()
-        if rl.coerce_masked(r["teff_gspphot"]) is not None
-        and rl.coerce_masked(r["logg_gspphot"]) is not None
+    return (
+        rl.coerce_masked(row[teff]) is not None
+        and rl.coerce_masked(row[logg]) is not None
     )
-    spec = sum(
-        1 for r in rows_by_id.values()
-        if rl.coerce_masked(r["teff_gspspec"]) is not None
-        and rl.coerce_masked(r["logg_gspspec"]) is not None
-    )
-    union = sum(
-        1 for r in rows_by_id.values()
-        if (
-            rl.coerce_masked(r["teff_gspphot"]) is not None
-            and rl.coerce_masked(r["logg_gspphot"]) is not None
-        ) or (
-            rl.coerce_masked(r["teff_gspspec"]) is not None
-            and rl.coerce_masked(r["logg_gspspec"]) is not None
-        )
-    )
-    print(
-        f"coverage of {total_input} AT-HYG source_ids:\n"
-        f"  astrophysical_parameters row:  {n:>6} ({100*n/total_input:.1f}%)\n"
-        f"  (teff_gspphot AND logg_gspphot): {phot:>6} ({100*phot/total_input:.1f}%)\n"
-        f"  (teff_gspspec AND logg_gspspec): {spec:>6} ({100*spec/total_input:.1f}%)\n"
-        f"  union (teff+logg, either):       {union:>6} ({100*union/total_input:.1f}%)"
-    )
-    return union / total_input
 
 
 def write_row(row: Any) -> dict[str, Any]:
@@ -220,37 +199,36 @@ def main() -> None:
 
     client = rl.TapClient()
     rows_by_id: dict[int, Any] = {}
-    start = time.time()
-    for batch_idx, offset in enumerate(range(0, total, BATCH_SIZE), start=1):
-        batch = source_ids[offset : offset + BATCH_SIZE]
-        t0 = time.time()
-        table = query_batch(client, batch)
-        if batch_idx == 1:
-            rl.validate_schema(
-                table, EXPECTED_SCHEMA, label="gaiadr3.astrophysical_parameters"
-            )
+
+    def collect(table: Any) -> None:
         for row in table:
             rows_by_id[int(row["source_id"])] = row
-        elapsed = time.time() - t0
-        cum = time.time() - start
-        print(
-            f"  batch {batch_idx}/{n_batches}: "
-            f"{len(table):4d} rows in {elapsed:5.1f}s "
-            f"(cum {cum/60:.1f}m, total rows {len(rows_by_id)})"
-        )
+
+    start = time.time()
+    rl.run_in_batches(
+        source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
+        schema=EXPECTED_SCHEMA, schema_label="gaiadr3.astrophysical_parameters",
+    )
 
     matched = len(rows_by_id)
     print(f"matched {matched}/{total} in {(time.time()-start)/60:.1f}m")
 
-    if not (EXPECTED_ROW_COUNT_MIN <= matched <= EXPECTED_ROW_COUNT_MAX):
-        raise SystemExit(
-            f"refresh-gaia-apsis: row count {matched} outside expected "
-            f"[{EXPECTED_ROW_COUNT_MIN}, {EXPECTED_ROW_COUNT_MAX}] — "
-            f"upstream selection or AT-HYG.gaia subset has changed; "
-            f"investigate before re-pinning."
-        )
+    rl.assert_row_count(
+        matched, EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, SCRIPT_NAME,
+        hint="upstream selection or AT-HYG.gaia subset has changed; "
+        "investigate before re-pinning.",
+    )
 
-    union_coverage = report_coverage(rows_by_id, total)
+    union_coverage = rl.report_coverage(
+        rows_by_id.values(), total,
+        [
+            ("(teff_gspphot AND logg_gspphot)",
+             lambda r: _has_teff_logg(r, "teff_gspphot", "logg_gspphot")),
+            ("(teff_gspspec AND logg_gspspec)",
+             lambda r: _has_teff_logg(r, "teff_gspspec", "logg_gspspec")),
+        ],
+        label="AT-HYG source_ids",
+    )
     if union_coverage < EXPECTED_UNION_COVERAGE_MIN:
         raise SystemExit(
             f"refresh-gaia-apsis: union (teff+logg) coverage "
@@ -277,12 +255,7 @@ def main() -> None:
             f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
 
-    for spec in SPOT_CHECKS:
-        if not rl.check_spot_row(rows_by_id, spec, script_name=SCRIPT_NAME):
-            raise SystemExit(
-                f"{SCRIPT_NAME}: spot-check source_id {spec['source_id']} "
-                f"missing from query result — upstream selection has changed."
-            )
+    rl.validate_spot_rows(rows_by_id, SPOT_CHECKS, script_name=SCRIPT_NAME)
 
     # Emit sorted by source_id so re-runs are byte-identical.
     rows = (write_row(rows_by_id[sid]) for sid in sorted(rows_by_id))

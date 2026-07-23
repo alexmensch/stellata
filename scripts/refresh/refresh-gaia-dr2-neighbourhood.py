@@ -119,13 +119,13 @@ def main() -> None:
     )
 
     rows: list[dict[str, Any]] = []
-    start = time.time()
-    for batch_idx, offset in enumerate(range(0, total, BATCH_SIZE), start=1):
-        batch = dr3_ids[offset : offset + BATCH_SIZE]
-        t0 = time.time()
-        table = client.run(ADQL_TEMPLATE.format(inlist=",".join(str(i) for i in batch)))
-        if batch_idx == 1:
-            rl.validate_schema(table, EXPECTED_SCHEMA, label="gaiadr3.dr2_neighbourhood")
+
+    def query(batch: Any) -> Any:
+        return client.run(
+            ADQL_TEMPLATE.format(inlist=",".join(str(i) for i in batch))
+        )
+
+    def collect(table: Any) -> None:
         for r in table:
             dmag = rl.coerce_masked(r["magnitude_difference"])
             rows.append({
@@ -135,18 +135,18 @@ def main() -> None:
                 "magnitude_difference": None if dmag is None else float(dmag),
                 "proper_motion_propagation": int(r["proper_motion_propagation"]),
             })
-        print(
-            f"  batch {batch_idx}/{n_batches}: {len(table):4d} rows "
-            f"in {time.time()-t0:5.1f}s (total rows {len(rows)})"
-        )
+
+    start = time.time()
+    rl.run_in_batches(
+        dr3_ids, BATCH_SIZE, query, collect,
+        schema=EXPECTED_SCHEMA, schema_label="gaiadr3.dr2_neighbourhood",
+    )
 
     n = len(rows)
-    if not (EXPECTED_ROW_COUNT_MIN <= n <= EXPECTED_ROW_COUNT_MAX):
-        raise SystemExit(
-            f"{SCRIPT_NAME}: row count {n} outside expected "
-            f"[{EXPECTED_ROW_COUNT_MIN}, {EXPECTED_ROW_COUNT_MAX}] — "
-            f"request file or upstream table changed; investigate before re-pinning."
-        )
+    rl.assert_row_count(
+        n, EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, SCRIPT_NAME,
+        hint="request file or upstream table changed; investigate before re-pinning.",
+    )
     covered = len({r["dr3_source_id"] for r in rows})
     coverage = covered / total
     print(f"{covered}/{total} dr3 ids with ≥1 row ({coverage*100:.1f}%) in {time.time()-start:.1f}s")
@@ -157,14 +157,11 @@ def main() -> None:
         )
 
     rows_by_pair = {(r["dr2_source_id"], r["dr3_source_id"]): r for r in rows}
-    for spec in SPOT_CHECKS:
-        if not rl.check_spot_row(
-            rows_by_pair, spec, script_name=SCRIPT_NAME, key_field="pair",
-        ):
-            raise SystemExit(
-                f"{SCRIPT_NAME}: pinned pair {spec['pair']} missing from pull — "
-                f"upstream cross-match changed; investigate before re-pinning."
-            )
+    rl.validate_spot_rows(
+        rows_by_pair, SPOT_CHECKS, script_name=SCRIPT_NAME, key_field="pair",
+        missing_hint="missing from pull — upstream cross-match changed; "
+        "investigate before re-pinning.",
+    )
 
     rows.sort(key=lambda r: (r["dr3_source_id"], r["angular_distance"]))
     written = rl.write_tsv(

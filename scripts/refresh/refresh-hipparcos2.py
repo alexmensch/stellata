@@ -93,12 +93,9 @@ def main() -> None:
 
     n = len(table)
     print(f"  {n} rows in {elapsed:.1f}s")
-    if not (EXPECTED_ROW_COUNT_MIN <= n <= EXPECTED_ROW_COUNT_MAX):
-        raise SystemExit(
-            f"refresh-hipparcos2: row count {n} outside expected "
-            f"[{EXPECTED_ROW_COUNT_MIN}, {EXPECTED_ROW_COUNT_MAX}] — "
-            f"upstream schema or selection has changed; investigate before re-pinning."
-        )
+    rl.assert_row_count(
+        n, EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, "refresh-hipparcos2"
+    )
 
     sirius = [r for r in table if int(r["HIP"]) == SPOT_HIP]
     if not sirius:
