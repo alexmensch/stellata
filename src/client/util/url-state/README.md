@@ -1,24 +1,49 @@
 # URL state
 
 All Stellata UI state — camera pose, focus, magnitude settings, overlay
-toggles, observe-mode flag, POIs — lives in a single opaque URL param:
-`?v=<base64url>`. The blob is a binary, versioned envelope —
+toggles, observe-mode flag, POIs — is a single opaque base64url blob.
+The blob is a binary, versioned envelope —
 `[1 byte version] [LEB128 presence mask, 1–4 bytes] [payload]` in
 v3/v4 — and only the fields that diverge from canonical defaults
-occupy bytes. A fully-default state has no `?v=` at all, a typical
-share lands at ~10–25 chars, and worst-case (every field overridden)
-tops out around 70 chars. See `url-state.ts` for the format and the
-`FIELDS_V4` table.
+occupy bytes. A typical share lands at ~10–25 chars, and worst-case
+(every field overridden) tops out around 70 chars. See `url-state.ts`
+for the format and the `FIELDS_V4` table.
+
+## Transport — canonical path vs. legacy query
+
+The blob rides a **`/v/<blob>/` path segment** (canonical). base64url's
+alphabet (`A-Za-z0-9-_`) has no `/`, so it drops into one segment with
+no escaping; the trailing slash is optional on parse. A fully-default
+state has no segment at all — the URL is bare `/`.
+
+The **legacy `?v=<blob>` query form** is decoded forever: old shared
+links are baked into YouTube comments and can never break. On load,
+`applyFromUrl` rewrites both a legacy query-form link and a superseded
+schema version to the canonical path (address-bar only, via the same
+post-apply debounce as routine writes). The query form was retired
+because platforms auto-filter comments carrying a `?…=` link.
+
+Production serves `/v/<blob>/` via `wrangler.toml`'s `[assets]
+not_found_handling = "single-page-application"` (any unmatched path →
+`index.html`, 200); see `src/README.md`. Because that serves `index.html`
+for *any* path, `applyFromUrl` strips the address bar back to bare `/`
+when the URL carries nothing decodable — a bogus path, a stray query, or
+a `/v/<blob>/` whose blob won't decode — so the bar never lingers on junk.
 
 ## Files in this area
 
 ```
 src/client/util/url-state/
-  url-state.ts (+ test)           ?v= encode / decode (v1–v4 formats),
+  share-path-pure.ts (+ test)     build / parse the /v/<blob>/ path form.
+                                  Pure string helpers, split out so the
+                                  path regex is unit-testable without
+                                  url-state.ts's location/history writes.
+  url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
-                                  applyFromUrl entry point + post-debounce
-                                  legacy→v4 rewrite, startUrlSync
+                                  applyFromUrl entry point (path + legacy
+                                  query parse) + post-debounce legacy→v4
+                                  / query→path rewrite, startUrlSync
                                   subscription. The test file carries the
                                   golden-blob corpus pinning the frozen
                                   v1/v2/v3 decoders byte-for-byte.
@@ -72,22 +97,26 @@ bit order, so mode isn't known until the field loop completes).
 - Default-compression: a field is encoded only when its value differs
   from the canonical default. Encoder pre-computes the presence mask
   in one walk, then writes only the bytes for set bits. Default state
-  produces no `?v=` at all (clean URL).
+  produces no blob at all (bare `/`).
 - Focus is encoded as the object's SID, which survives any catalog
   reordering for every object (not just the ~37% with a HIP, which is
   all v1–v3 could protect). Sol is the canonical default focus and is
   encoded by *omitting* the field; "explicitly unfocused" uses a
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
-- If `?v=` carries a focus without camera params (a hand-typed share),
+- If the blob carries a focus without camera params (a hand-typed share),
   `applyDecodedView` calls `focusStar(idx, { animate: false })` which
   snaps the camera to the park pose — URL restore must not surface as a
   2 s glide on page load. If camera params are also present, it uses
   `setOrbitTarget` so the explicit camera wins.
-- Camera changes are tracked via the `'frame'` event with a stringified-coord hash
-  and a 300 ms debounced writer. The hash covers position, target,
-  **and** `camera.up` — so two-finger roll (which only mutates `up`)
-  still triggers a URL update.
+- Camera changes are tracked via the `'frame'` event with a per-component
+  epsilon comparison (no per-frame allocations) feeding a 1 s debounced
+  writer. The comparison covers position, target, **and** `camera.up` — so
+  two-finger roll (which only mutates `up`) still triggers a URL update.
+  The same frame check also watches the **pinned `t`** (`isLive(t) ? null
+  : t`, mirroring `currentStateOf`'s encode gate): the scrubber drives
+  `getT()` directly without a `'state'` event, so without this a time
+  scrub on a still camera would never reach the URL.
 - `camera.up` round-trips when it differs from `(0, 1, 0)` and is
   applied **before** focus/orbit dispatch because `focusStar` /
   `setOrbitTarget` call `controls.update()` which reads `camera.up` to
@@ -96,10 +125,10 @@ bit order, so mode isn't known until the field loop completes).
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
   a hard-kind focus (star / planet) exists. Default-omitted (navigate).
-- The URL writer skips frame-hash updates while
-  `isObserveTransitionActive()` is true, mirroring the warp guard — the
-  observe enter/exit translate animates camera position and would
-  otherwise flood history with intermediate poses.
+- The URL writer skips frame-triggered updates while
+  `isCameraTransitionActive()` is true (warp, observe enter/exit, or the
+  navigate-mode unfocus zoom-out) — those animate camera position and
+  would otherwise flood history with intermediate poses.
 
 Cloud-related state (cloud focus, cloud measurement vector) rides the
 same universal `focus` / `to` SID refs; the shelved MC overlay toggle's
@@ -123,7 +152,7 @@ bits (16/17) for ~6 months of deploy overlap. Breaking-shape changes
 `SCHEMA_VERSION` and a new standalone `FIELDS_V<n>` table; the old
 one is already frozen (add corpus entries for any shape the corpus
 doesn't yet pin), and `applyFromUrl` will auto-upgrade legacy URLs to
-the new schema after the same 300 ms debounce as routine URL writes.
+the new schema after the same 1 s debounce as routine URL writes.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new

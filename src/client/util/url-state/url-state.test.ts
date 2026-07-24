@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   encodeBlob,
   decodeBlob,
   currentStateOf,
   applyDecodedView,
+  applyFromUrl,
+  startUrlSync,
   writeVarint,
   readVarint,
   varintLen,
@@ -1565,6 +1567,208 @@ describe('url-state', () => {
       // At least 1000× tighter than the prior 258 AU — exact value
       // here is ~0.0626 AU.
       expect(tripDistanceAU).toBeLessThan(0.1);
+    });
+  });
+});
+
+// Wiring around the pure path helpers (share-path-pure.test.ts covers the
+// parsing itself): the load-time junk-URL reset, the legacy query→path
+// rewrite, and the per-frame pinned-`t` detector — the 4bq1 fix, which a
+// scrub on a still camera exercises. Needs mocked location/history/window
+// because url-state.ts reads/writes them directly in the node test env.
+describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () => {
+  function vec3(x = 0, y = 0, z = 0) {
+    return {
+      x, y, z,
+      set(nx: number, ny: number, nz: number) { this.x = nx; this.y = ny; this.z = nz; return this; },
+      normalize() { return this; },
+    };
+  }
+
+  function makeIdMaps(): IdMaps {
+    const sidResolver = new SidResolver(['star']);
+    sidResolver.attach('star', arrayDomain([100]));
+    return {
+      hipToIndex: new Map(),
+      indexToHip: new Uint32Array([0]),
+      starCount: 1,
+      solIndex: 0,
+      sidResolver,
+      planetDomainIndexOf: () => null,
+      planetTargetIndexOf: () => null,
+    };
+  }
+
+  // Live wall-clock t (isLive ⇒ omitted from the blob); a scrubbed t sits
+  // well outside the 1 s live tolerance.
+  const liveT = () => Date.now() / 1000;
+  const scrubbedT = () => Date.now() / 1000 - 100_000;
+
+  function makeSyncStellata() {
+    const state = {
+      fov: DEFAULT_FOV,
+      t: liveT(),
+      focusedStar: 0 as number | null, // Sol → default focus, omitted
+      mode: 'navigate' as 'navigate' | 'observe',
+      pois: [] as Target[],
+      transition: false,
+    };
+    const cam = { position: vec3(0, 0, 30), up: vec3(0, 1, 0) };
+    const controls = { target: vec3(0, 0, 0), update() {} };
+    const handlers: Record<string, Array<(p: unknown) => void>> = { frame: [], state: [] };
+    const stub: Partial<Stellata> = {
+      getFilter: () => ({ ...DEFAULT_FILTER }),
+      setFilter: () => {},
+      applyMagnitudePreset: () => {},
+      getCameraFov: () => state.fov,
+      setCameraFov: (f) => { state.fov = f; },
+      getT: () => state.t,
+      setT: (t) => { if (t !== null) state.t = t; },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      getWorldOffset: () => vec3() as any,
+      setWorldOffset: () => {},
+      getFocusedStar: () => state.focusedStar,
+      getFocusedTarget: () => (state.focusedStar !== null ? { kind: 'star', idx: state.focusedStar } : null),
+      getVectorTarget: () => null,
+      getPois: () => state.pois,
+      setPois: (l) => { state.pois = [...l]; },
+      getCameraMode: () => state.mode,
+      setCameraMode: (m) => { state.mode = m; },
+      focusStar: (idx) => { state.focusedStar = idx; },
+      setOrbitTarget: () => {},
+      unfocus: () => { state.focusedStar = null; },
+      flyTo: () => {},
+      setVector: () => {},
+      isCameraTransitionActive: () => state.transition,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      camera: cam as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      controls: controls as any,
+    };
+    stub.on = ((name: string, h: (p: unknown) => void) => {
+      handlers[name].push(h);
+      return () => {};
+    }) as unknown as Stellata['on'];
+    return {
+      stellata: stub as Stellata,
+      state, cam, controls,
+      frame: () => handlers.frame.forEach((h) => h(undefined)),
+    };
+  }
+
+  // history.replaceState mutates the mocked location so writeUrl's
+  // "already at this URL?" idempotence check observes the rewrite.
+  function installUrl(initial: string) {
+    const loc = { pathname: '/', search: '' };
+    const set = (url: string) => {
+      const q = url.indexOf('?');
+      if (q === -1) { loc.pathname = url; loc.search = ''; }
+      else { loc.pathname = url.slice(0, q); loc.search = url.slice(q); }
+    };
+    set(initial);
+    const replaceState = vi.fn((_s: unknown, _t: unknown, url: string) => set(url));
+    vi.stubGlobal('location', loc);
+    vi.stubGlobal('history', { replaceState });
+    vi.stubGlobal('window', {
+      setTimeout: (fn: () => void, ms?: number) => setTimeout(fn, ms),
+      clearTimeout: (id: number) => clearTimeout(id),
+    });
+    return { loc, replaceState };
+  }
+
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+  describe('applyFromUrl junk reset', () => {
+    it('strips a bogus non-share path back to bare /', () => {
+      const { loc, replaceState } = installUrl('/garbage');
+      const { stellata } = makeSyncStellata();
+      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+      expect(loc.pathname).toBe('/');
+    });
+
+    it('strips a /v/<blob>/ whose blob will not decode', () => {
+      // Single byte 0xFF → version 255, an unknown schema decodeBlob rejects.
+      const { loc } = installUrl('/v/_w/');
+      const { stellata } = makeSyncStellata();
+      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(loc.pathname).toBe('/');
+      expect(loc.search).toBe('');
+    });
+
+    it('strips a stray/undecodable ?v= query', () => {
+      const { loc } = installUrl('/?v=_w');
+      const { stellata } = makeSyncStellata();
+      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(loc.pathname).toBe('/');
+      expect(loc.search).toBe('');
+    });
+
+    it('leaves a clean / untouched (no history write)', () => {
+      const { replaceState } = installUrl('/');
+      const { stellata } = makeSyncStellata();
+      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(replaceState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('legacy ?v= → canonical /v/<blob>/ rewrite', () => {
+    it('rewrites a current-schema query link to the path form after the debounce', () => {
+      const blob = encodeBlob({ fov: 90 }); // non-default (DEFAULT_FOV = 50)
+      const { loc, replaceState } = installUrl(`/?v=${blob}`);
+      const { stellata, state } = makeSyncStellata();
+      expect(applyFromUrl(stellata, makeIdMaps())).toBe(true);
+      expect(state.fov).toBe(90);
+      // Address-bar rewrite is deferred to the shared debounce window.
+      expect(replaceState).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.search).toBe('');
+      expect(decodeBlob(loc.pathname.slice(3, -1)).view.fov).toBe(90);
+    });
+  });
+
+  describe('startUrlSync pinned-t detector (4bq1)', () => {
+    it('writes a /v/<blob>/ when time is scrubbed on a still camera', () => {
+      const { loc } = installUrl('/');
+      const { stellata, state, frame } = makeSyncStellata();
+      startUrlSync(stellata, makeIdMaps());
+      state.t = scrubbedT();        // scrub without moving the camera
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
+    });
+
+    it('does not write while the live clock advances (t stays live)', () => {
+      const { replaceState } = installUrl('/');
+      const { stellata, state, frame } = makeSyncStellata();
+      startUrlSync(stellata, makeIdMaps());
+      state.t = liveT();            // still within the 1 s live tolerance
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+    });
+
+    it('does not write scrubbed time while a camera transition is active', () => {
+      const { replaceState } = installUrl('/');
+      const { stellata, state, frame } = makeSyncStellata();
+      startUrlSync(stellata, makeIdMaps());
+      state.transition = true;
+      state.t = scrubbedT();
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+    });
+
+    it('still writes on a camera move (detector refactor intact)', () => {
+      const { loc } = installUrl('/');
+      const { stellata, cam, frame } = makeSyncStellata();
+      startUrlSync(stellata, makeIdMaps());
+      cam.position.set(0, 0, 0);    // off the [0,0,30] navigate default
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
     });
   });
 });
