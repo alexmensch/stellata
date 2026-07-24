@@ -19,6 +19,10 @@ routes = [
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+# /v/<blob>/ share URLs aren't real asset files — serve index.html (200)
+# for any unmatched path so the client decodes the blob. Without this the
+# static-assets layer 404s every share link. Honored by env.ASSETS.fetch().
+not_found_handling = "single-page-application"
 
 # [observability] top-level: `head_sampling_rate` MUST stay defined
 # even with enabled = false, otherwise the nested sub-sections below
