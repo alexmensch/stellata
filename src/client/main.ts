@@ -263,7 +263,7 @@ async function main() {
     // Bottom-right meta: catalog count + (when focused on a planet host)
     // the live UTC timestamp the planet positions correspond to. The
     // focused-object identity lives in the focus card.
-    const countLabel = `${catalog.count.toLocaleString()} stars`;
+    const countLabel = `${catalog.count.toLocaleString()} stars and objects`;
     const timeScrubber = createTimeScrubberWidget({ meta, stellata, countLabel });
 
     // Each hover provider mirrors the renderer's "is this drawn?"

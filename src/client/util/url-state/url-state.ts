@@ -13,10 +13,14 @@ import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
+import { buildSharePath, pickShareBlob } from './share-path-pure';
 
-// URL state lives in a single opaque `?v=<base64url>` param. Four wire
-// formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
-// per the migration table in docs/sid.md § 9.4. See
+// URL state is a single opaque base64url blob carried in a `/v/<blob>/`
+// path segment (canonical) or a legacy `?v=<blob>` query param (still
+// decoded forever — old shared links are baked into YouTube comments).
+// Four wire formats coexist (v1–v4); on load, legacy query-form links
+// and superseded schema versions both rewrite to the canonical path per
+// the migration table in docs/sid.md § 9.4. See
 // src/client/util/url-state/README.md for the wire format and the
 // "adding a field" recipe.
 //
@@ -24,12 +28,15 @@ import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/f
 // order in applyDecodedView. Both are load-bearing — see the inline
 // comments at each apply step.
 
-const DEBOUNCE_MS = 300;
+// Trailing-debounce window for address-bar writes. 1s keeps the URL calm
+// during continuous scrub/drag (writes fire once state settles, not
+// mid-motion) and stays clear of browsers' history.replaceState rate
+// limits. Shared with applyFromUrl's one-shot legacy-upgrade rewrite.
+const DEBOUNCE_MS = 1000;
 const SCHEMA_VERSION_V1 = 1;
 const SCHEMA_VERSION_V2 = 2;
 const SCHEMA_VERSION_V3 = 3;
 const SCHEMA_VERSION = 4;
-const PARAM_NAME = 'v';
 const EPS = 1e-3;
 // Per-frame URL-write change detector: 1% of vector magnitude, capped
 // at EPS (1e-3 pc) and floored at EPS_FLOOR (well below float32 ULP at
@@ -1354,42 +1361,57 @@ export function applyDecodedView(
 
 function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   const view = currentStateOf(stellata, idMaps);
-  // Single computePresence pass — the mask gates the `?v=` param itself
+  // Single computePresence pass — the mask gates the path segment itself
   // and is also passed to encodeBlobWithMask so the encoder doesn't
   // re-walk FIELDS_V4.
   const mask = computePresence(view);
-  const qs = mask === 0 ? '' : `${PARAM_NAME}=${encodeBlobWithMask(view, mask)}`;
-  const url = location.pathname + (qs ? '?' + qs : '');
-  if (url !== location.pathname + location.search) {
-    history.replaceState(null, '', url);
+  const path = mask === 0 ? '/' : buildSharePath(encodeBlobWithMask(view, mask));
+  if (path !== location.pathname + location.search) {
+    history.replaceState(null, '', path);
   }
 }
 
-// Returns true when a `?v=` blob was present and applied (regardless of
-// schema version). The caller uses the false branch to fall back to the
-// canonical first-load view. A malformed blob also
-// returns false so the user lands on the framed default rather than the
-// unframed canvas-default pose.
+// Nothing decodable in the URL (bogus path, stray query, or a `/v/<blob>/`
+// whose blob won't decode) → strip the address bar back to bare `/`. The
+// SPA not_found_handling already served index.html for any path; this is
+// the client half that keeps the bar off junk the user can't act on,
+// rather than leaving the unmatched path sitting there.
+function resetJunkUrl(): void {
+  if (location.pathname !== '/' || location.search !== '') {
+    history.replaceState(null, '', '/');
+  }
+}
+
+// Returns true when a state blob was present and applied — from the
+// canonical `/v/<blob>/` path or the legacy `?v=` query param, any schema
+// version. The caller uses the false branch to fall back to the canonical
+// first-load view. A malformed blob also returns false so the user lands
+// on the framed default rather than the unframed canvas-default pose.
 export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
-  const params = new URLSearchParams(location.search);
-  const blob = params.get(PARAM_NAME);
-  if (!blob) return false;
+  const { blob, legacyQueryForm } = pickShareBlob(location.pathname, location.search);
+  if (!blob) {
+    resetJunkUrl();
+    return false;
+  }
   let decoded: DecodedBlob;
   try {
     decoded = decodeBlob(blob);
   } catch (err) {
-    console.warn('Failed to decode ?v= URL state:', err);
+    console.warn('Failed to decode URL state:', err);
+    resetJunkUrl();
     return false;
   }
   applyDecodedView(stellata, decoded.view, idMaps);
-  // Auto-upgrade legacy URLs: after the same debounce we already use for
-  // routine URL writes, re-encode the current state as the latest
-  // schema, implementing the docs/sid.md § 9.4 migration table: HIP
-  // refs land exactly (hip → index → sid), index/cloud refs freeze to
-  // whatever they resolve to in the current build, unresolvable refs
-  // drop. Defers past any state-change events triggered by the apply
-  // itself, which would otherwise schedule their own write on top.
-  if (decoded.version !== SCHEMA_VERSION) {
+  // After the same debounce as routine writes, rewrite the address bar to
+  // the canonical path form when the link arrived in legacy query form OR
+  // in a superseded schema (the docs/sid.md § 9.4 migration: HIP refs land
+  // exactly, index/cloud refs freeze to the current build, unresolvable
+  // refs drop). Both conditions must stay — a current-schema `?v=` link
+  // needs the query→path rewrite even though its bytes wouldn't change.
+  // The rewrite is address-bar only; already-posted `?v=` links keep
+  // decoding forever. Defers past state-change events the apply itself
+  // triggers, which would otherwise schedule their own write on top.
+  if (legacyQueryForm || decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
   return true;
@@ -1409,15 +1431,28 @@ function snapshotCam(stellata: Stellata, out: Float64Array): void {
   out[6] = u.x; out[7] = u.y; out[8] = u.z;
 }
 
+// Effective persisted `t` for the per-frame change detector. Mirrors
+// currentStateOf's encode gate (`!isLive` ⇒ emit t) exactly, so the
+// detector schedules a write precisely when the blob's t would change:
+// null = live (t omitted from the blob and tracks the receiver's clock),
+// otherwise the pinned value. A live clock advances every frame but must
+// NOT trigger writes — the scrubber drives getT() directly without any
+// 'state' event, so t is invisible to the detector otherwise.
+function persistedT(stellata: Stellata): number | null {
+  const t = stellata.getT();
+  return isLive(t) ? null : t;
+}
+
 export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
   let timer: number | undefined;
-  // Per-frame camera/target/up change detector. Seeded from the live
-  // camera state at registration time so the first frame doesn't
+  // Per-frame camera/target/up + pinned-t change detector. Seeded from
+  // the live state at registration time so the first frame doesn't
   // trigger a write — the URL stays empty (or in sync with whatever
   // applyFromUrl/applyFirstLoadView just applied) until the user
-  // actually moves the camera or changes a setting.
+  // actually moves the camera, scrubs time, or changes a setting.
   const lastCam = new Float64Array(9);
   snapshotCam(stellata, lastCam);
+  let lastT = persistedT(stellata);
 
   const schedule = () => {
     if (timer !== undefined) clearTimeout(timer);
@@ -1433,8 +1468,20 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     // the camera mutates every frame and we don't want intermediate
     // poses in the URL. End-of-animation events flush the final pose.
     if (stellata.isCameraTransitionActive()) return;
+    let changed = false;
+
+    // Scrubbed time: the scrubber mutates getT() without a 'state' event,
+    // so watch it here. During live playback t evolves every frame and
+    // schedule() coalesces via the debounce — one write once the clock
+    // settles.
+    const t = persistedT(stellata);
+    if (t !== lastT) {
+      lastT = t;
+      changed = true;
+    }
+
     const c = stellata.camera.position;
-    const t = stellata.controls.target;
+    const tg = stellata.controls.target;
     const u = stellata.camera.up;
     // Component-wise epsilon comparison on the steady-state path. The
     // per-vector threshold scales with magnitude (frameTriggerEps) so
@@ -1444,17 +1491,18 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     // original behaviour. No allocations on the no-change path — used
     // to be 10+ string allocations per frame from a toFixed(3)×9 hash.
     const cEps = frameTriggerEps(Math.hypot(c.x, c.y, c.z));
-    const tEps = frameTriggerEps(Math.hypot(t.x, t.y, t.z));
+    const tEps = frameTriggerEps(Math.hypot(tg.x, tg.y, tg.z));
     const uEps = frameTriggerEps(Math.hypot(u.x, u.y, u.z));
-    if (
-      Math.abs(c.x - lastCam[0]) < cEps && Math.abs(c.y - lastCam[1]) < cEps && Math.abs(c.z - lastCam[2]) < cEps &&
-      Math.abs(t.x - lastCam[3]) < tEps && Math.abs(t.y - lastCam[4]) < tEps && Math.abs(t.z - lastCam[5]) < tEps &&
-      Math.abs(u.x - lastCam[6]) < uEps && Math.abs(u.y - lastCam[7]) < uEps && Math.abs(u.z - lastCam[8]) < uEps
-    ) {
-      return;
+    const camMoved =
+      Math.abs(c.x - lastCam[0]) >= cEps || Math.abs(c.y - lastCam[1]) >= cEps || Math.abs(c.z - lastCam[2]) >= cEps ||
+      Math.abs(tg.x - lastCam[3]) >= tEps || Math.abs(tg.y - lastCam[4]) >= tEps || Math.abs(tg.z - lastCam[5]) >= tEps ||
+      Math.abs(u.x - lastCam[6]) >= uEps || Math.abs(u.y - lastCam[7]) >= uEps || Math.abs(u.z - lastCam[8]) >= uEps;
+    if (camMoved) {
+      snapshotCam(stellata, lastCam);
+      changed = true;
     }
-    snapshotCam(stellata, lastCam);
-    schedule();
+
+    if (changed) schedule();
   });
 }
 
