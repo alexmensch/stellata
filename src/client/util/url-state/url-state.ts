@@ -28,7 +28,11 @@ import { buildSharePath, parseSharePath } from './share-path-pure';
 // order in applyDecodedView. Both are load-bearing — see the inline
 // comments at each apply step.
 
-const DEBOUNCE_MS = 300;
+// Trailing-debounce window for address-bar writes. 1s keeps the URL calm
+// during continuous scrub/drag (writes fire once state settles, not
+// mid-motion) and stays clear of browsers' history.replaceState rate
+// limits. Shared with applyFromUrl's one-shot legacy-upgrade rewrite.
+const DEBOUNCE_MS = 1000;
 const SCHEMA_VERSION_V1 = 1;
 const SCHEMA_VERSION_V2 = 2;
 const SCHEMA_VERSION_V3 = 3;

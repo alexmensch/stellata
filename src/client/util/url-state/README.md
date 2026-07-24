@@ -106,10 +106,10 @@ bit order, so mode isn't known until the field loop completes).
   snaps the camera to the park pose — URL restore must not surface as a
   2 s glide on page load. If camera params are also present, it uses
   `setOrbitTarget` so the explicit camera wins.
-- Camera changes are tracked via the `'frame'` event with a stringified-coord hash
-  and a 300 ms debounced writer. The hash covers position, target,
-  **and** `camera.up` — so two-finger roll (which only mutates `up`)
-  still triggers a URL update.
+- Camera changes are tracked via the `'frame'` event with a per-component
+  epsilon comparison (no per-frame allocations) feeding a 1 s debounced
+  writer. The comparison covers position, target, **and** `camera.up` — so
+  two-finger roll (which only mutates `up`) still triggers a URL update.
 - `camera.up` round-trips when it differs from `(0, 1, 0)` and is
   applied **before** focus/orbit dispatch because `focusStar` /
   `setOrbitTarget` call `controls.update()` which reads `camera.up` to
@@ -118,7 +118,7 @@ bit order, so mode isn't known until the field loop completes).
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
   a hard-kind focus (star / planet) exists. Default-omitted (navigate).
-- The URL writer skips frame-hash updates while
+- The URL writer skips frame-triggered updates while
   `isObserveTransitionActive()` is true, mirroring the warp guard — the
   observe enter/exit translate animates camera position and would
   otherwise flood history with intermediate poses.
@@ -145,7 +145,7 @@ bits (16/17) for ~6 months of deploy overlap. Breaking-shape changes
 `SCHEMA_VERSION` and a new standalone `FIELDS_V<n>` table; the old
 one is already frozen (add corpus entries for any shape the corpus
 doesn't yet pin), and `applyFromUrl` will auto-upgrade legacy URLs to
-the new schema after the same 300 ms debounce as routine URL writes.
+the new schema after the same 1 s debounce as routine URL writes.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new
