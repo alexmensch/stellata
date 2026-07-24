@@ -23,9 +23,9 @@ export function createPlanetHoverProvider(
     pick: (x, y, pxThreshold) => stellata.picker.pickPlanetHit(x, y, pxThreshold),
     format: (hit) => {
       const hostStarIdx = hit.hostStarIdx;
-      if (hostStarIdx === undefined) return { name: '', lines: [] };
+      if (hostStarIdx === undefined) return null;
       const ps = stellata.getAttachedPlanetSystem(hostStarIdx);
-      if (!ps) return { name: '', lines: [] };
+      if (!ps) return null;
       // The cached PlanetSystem is the source of truth for `planets`;
       // apparent V mag comes from the renderer's PlanetBodyField via a
       // Stellata accessor so it tracks the current camera + ephemeris.

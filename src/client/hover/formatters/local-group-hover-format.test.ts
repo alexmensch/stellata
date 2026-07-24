@@ -63,7 +63,7 @@ describe('formatLocalGroupHover', () => {
     // suffix so the magnitude gap reads clearly.
     const out = formatLocalGroupHover(0, 776_000, buildCtx([
       lg('M31', 'disc', [25_000, 25_000, 8_000], 776_000),
-    ]));
+    ]))!;
     expect(out.name).toBe('M31');
     expect(out.lines).toEqual([
       '776k pc',
@@ -79,7 +79,7 @@ describe('formatLocalGroupHover', () => {
     // (< 10,000 pc), no "k" suffix.
     const out = formatLocalGroupHover(0, 50_000, buildCtx([
       lg('Large Magellanic Cloud', 'disc', [5000, 5000, 1500], 50_000),
-    ]));
+    ]))!;
     expect(out.name).toBe('Large Magellanic Cloud');
     expect(out.lines).toEqual([
       '50k pc',
@@ -95,7 +95,7 @@ describe('formatLocalGroupHover', () => {
     // alone, and the LVDB key is not a catalog designation).
     const out = formatLocalGroupHover(0, 20_000, buildCtx([
       lg('Sagittarius Dwarf Spheroidal', 'ellipsoid', [1500, 800, 800], 20_000),
-    ]));
+    ]))!;
     expect(out.name).toBe('Sagittarius Dwarf Spheroidal');
     expect(out.lines).toEqual([
       '20k pc',
@@ -113,7 +113,7 @@ describe('formatLocalGroupHover', () => {
     // HUD), so the hover label inherits it for consistency.
     const out = formatLocalGroupHover(0, 30_000, buildCtx([
       lg('Reticulum II Dwarf Spheroidal', 'ellipsoid', [55, 45, 45], 30_000),
-    ]));
+    ]))!;
     expect(out.name).toBe('Reticulum II Dwarf Spheroidal');
     expect(out.lines).toEqual([
       '30k pc',
@@ -122,8 +122,8 @@ describe('formatLocalGroupHover', () => {
     ]);
   });
 
-  it('returns empty payload for out-of-range index', () => {
+  it('returns null for out-of-range index', () => {
     const out = formatLocalGroupHover(99, 100, buildCtx([]));
-    expect(out).toEqual({ name: '', lines: [] });
+    expect(out).toBeNull();
   });
 });

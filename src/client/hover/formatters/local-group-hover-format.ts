@@ -18,9 +18,9 @@ export function formatLocalGroupHover(
   idx: number,
   cameraDistancePc: number,
   ctx: LocalGroupHoverFormatContext,
-): HoverPayload {
+): HoverPayload | null {
   const obj = ctx.objects[idx];
-  if (!obj) return { name: '', lines: [] };
+  if (!obj) return null;
   const lines: string[] = [
     fmtDistAuto(cameraDistancePc),
     obj.kind === 'disc' ? 'Disc' : 'Ellipsoid',

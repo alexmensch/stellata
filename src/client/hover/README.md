@@ -31,7 +31,12 @@ lives entirely under `src/client/hover/`:
   pulled out of the prior `bindHoverTooltip` so future layers wire in
   without engine edits.
 - **`hover-types.ts`** — the `HoverProvider` contract:
-  `pick(event) → HoverHit | null` and `format(hit) → HoverPayload`.
+  `pick(event) → HoverHit | null` and
+  `format(hit) → HoverPayload | null`. Both halves signal "nothing
+  here" with `null`, and the engine skips the render on either — a
+  formatter whose state moved between pick and format must return
+  `null`, never `{ name: '', lines: [] }`, which would paint a blank
+  card at the cursor.
   `HoverPayload` is `{ name, lines: string[] }` — at most ~5 sub-lines
   per the design gate so the card stays glanceable. `HoverHit`'s
   optional `hostStarIdx` sub-key is deliberate and stays: a planet is

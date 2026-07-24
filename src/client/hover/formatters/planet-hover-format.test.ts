@@ -51,7 +51,7 @@ describe('formatPlanetHover', () => {
     // ("1.0 AU"), and ≥100 AU floor-rounds. Test pins each tier.
     const out = formatPlanetHover(0, 0.31 / 206264.80624709636, buildCtx({
       Mercury: { appMag: -2.5 },
-    }));
+    }))!;
     expect(out.name).toBe('Mercury');
     expect(out.lines).toEqual([
       '0.310 AU · Vmag -2.5',
@@ -65,7 +65,7 @@ describe('formatPlanetHover', () => {
     // stability; the live hover path reads the pick's camera distance.
     const out = formatPlanetHover(2, 1 / 206264.80624709636, buildCtx({
       Earth: { appMag: -3.99 },
-    }));
+    }))!;
     expect(out.name).toBe('Earth');
     expect(out.lines).toEqual([
       '1.0 AU · Vmag -4.0',
@@ -79,7 +79,7 @@ describe('formatPlanetHover', () => {
     // opposition (sign explicit when negative).
     const out = formatPlanetHover(4, 5.2 / 206264.80624709636, buildCtx({
       Jupiter: { appMag: -2.7 },
-    }));
+    }))!;
     expect(out.name).toBe('Jupiter');
     // Kepler 3rd law: 5.203^1.5 ≈ 11.86 → rounds to 12 (>= 10 tier).
     expect(out.lines).toEqual([
@@ -92,7 +92,7 @@ describe('formatPlanetHover', () => {
   it('positive-mag planet renders an explicit + sign', () => {
     const out = formatPlanetHover(8, 39 / 206264.80624709636, buildCtx({
       Pluto: { appMag: 14.3 },
-    }));
+    }))!;
     expect(out.name).toBe('Pluto');
     expect(out.lines[0]).toBe('39.0 AU · Vmag +14.3');
   });
@@ -104,7 +104,7 @@ describe('formatPlanetHover', () => {
     // distance still renders.
     const out = formatPlanetHover(2, 1 / 206264.80624709636, buildCtx({
       Earth: { appMag: null },
-    }));
+    }))!;
     expect(out.name).toBe('Earth');
     expect(out.lines).toEqual([
       '1.0 AU',
@@ -122,20 +122,20 @@ describe('formatPlanetHover', () => {
       europaIdx,
       671100 / 1.495978707e8 / 206264.80624709636,
       buildCtx({ Europa: { appMag: 5.3 } }, SOL_BODIES),
-    );
+    )!;
     expect(out.name).toBe('Europa');
     expect(out.lines[1]).toBe('Period 3.55 d');
   });
 
-  it('returns empty payload for out-of-range index', () => {
+  it('returns null for out-of-range index', () => {
     const out = formatPlanetHover(99, 1, buildCtx({}));
-    expect(out).toEqual({ name: '', lines: [] });
+    expect(out).toBeNull();
   });
 
   it('a moon-parenting planet lists its moons; four Galileans fit uncapped', () => {
     const jupiter = SOL_BODIES.findIndex((p) => p.name === 'Jupiter');
     const out = formatPlanetHover(
-      jupiter, 1, buildCtx({ Jupiter: { appMag: -2.7 } }, SOL_BODIES));
+      jupiter, 1, buildCtx({ Jupiter: { appMag: -2.7 } }, SOL_BODIES))!;
     expect(out.lines[out.lines.length - 1])
       .toBe('Moons Io, Europa, Ganymede, Callisto');
   });
@@ -143,7 +143,7 @@ describe('formatPlanetHover', () => {
   it("Saturn's seven moons truncate to the hover name cap", () => {
     const saturn = SOL_BODIES.findIndex((p) => p.name === 'Saturn');
     const out = formatPlanetHover(
-      saturn, 1, buildCtx({ Saturn: { appMag: 0.5 } }, SOL_BODIES));
+      saturn, 1, buildCtx({ Saturn: { appMag: 0.5 } }, SOL_BODIES))!;
     expect(out.lines[out.lines.length - 1])
       .toBe('Moons Mimas, Enceladus, Tethys +4 more');
   });
@@ -151,7 +151,7 @@ describe('formatPlanetHover', () => {
   it('moonless bodies and moons themselves carry no roster line', () => {
     for (const name of ['Mercury', 'Europa']) {
       const idx = SOL_BODIES.findIndex((p) => p.name === name);
-      const out = formatPlanetHover(idx, 1, buildCtx({}, SOL_BODIES));
+      const out = formatPlanetHover(idx, 1, buildCtx({}, SOL_BODIES))!;
       expect(out.lines.some((l) => l.startsWith('Moons'))).toBe(false);
     }
   });
@@ -173,7 +173,7 @@ describe('formatPlanetHover', () => {
       collapsedClusterOf: (t) =>
         t.kind === 'planet' && t.idx === 4 ? [jupiter, moons[0], moons[1]] : [],
     };
-    const out = formatPlanetHover(4, 5.2 / 206264.80624709636, ctx);
+    const out = formatPlanetHover(4, 5.2 / 206264.80624709636, ctx)!;
     expect(out.name).toBe('Jupiter system');
     expect(out.lines).toEqual([
       '5.2 AU',
@@ -186,6 +186,6 @@ describe('formatPlanetHover', () => {
     const ctx = buildCtx({ Jupiter: { appMag: -2.7 } });
     ctx.targetOf = (i) => ({ kind: 'planet', idx: i });
     ctx.membership = { membersOf: () => [], collapsedClusterOf: () => [] };
-    expect(formatPlanetHover(4, 5.2 / 206264.80624709636, ctx).name).toBe('Jupiter');
+    expect(formatPlanetHover(4, 5.2 / 206264.80624709636, ctx)!.name).toBe('Jupiter');
   });
 });
