@@ -4,7 +4,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import {
   FocusController,
   type FocusControllerDeps,
@@ -12,8 +11,7 @@ import {
   GLOBAL_MIN_DIST_PC,
   PIN_ENGAGE_THRESHOLD_SQ_PC,
 } from './focus-controller';
-import type { AimController } from '../controls/aim-controller';
-import type { ObserveControls } from '../observe/observe-controls';
+import { makeAimStub, makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
@@ -31,43 +29,6 @@ import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
-
-function makeControlsStub(): TrackballControls & {
-  update: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enabled: true,
-    target: new THREE.Vector3(0, 0, 0),
-    minDistance: 0,
-    update: vi.fn(),
-  } as unknown as TrackballControls & { update: ReturnType<typeof vi.fn> };
-}
-
-function makeObserveControlsStub(): ObserveControls & {
-  enable: ReturnType<typeof vi.fn>;
-  disable: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enable: vi.fn(),
-    disable: vi.fn(),
-  } as unknown as ObserveControls & {
-    enable: ReturnType<typeof vi.fn>;
-    disable: ReturnType<typeof vi.fn>;
-  };
-}
-
-function makeAimStub(): AimController & {
-  cancel: ReturnType<typeof vi.fn>;
-  isActive: ReturnType<typeof vi.fn>;
-} {
-  return {
-    cancel: vi.fn(),
-    isActive: vi.fn(() => false),
-  } as unknown as AimController & {
-    cancel: ReturnType<typeof vi.fn>;
-    isActive: ReturnType<typeof vi.fn>;
-  };
-}
 
 interface WarpStub {
   isActive: ReturnType<typeof vi.fn>;

@@ -3,47 +3,15 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import {
   ObserveTransition,
   type ObserveFocusOps,
   type ObserveTransitionDeps,
 } from './observe-transition';
-import type { AimController } from '../controls/aim-controller';
-import type { ObserveControls } from './observe-controls';
+import { makeAimStub, makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { OBSERVE_TRANSITION_MS } from '../timing';
-
-function makeControlsStub(): TrackballControls & {
-  update: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enabled: true,
-    target: new THREE.Vector3(0, 0, 0),
-    minDistance: 0,
-    update: vi.fn(),
-  } as unknown as TrackballControls & { update: ReturnType<typeof vi.fn> };
-}
-
-function makeObserveControlsStub(): ObserveControls & {
-  enable: ReturnType<typeof vi.fn>;
-  disable: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enable: vi.fn(),
-    disable: vi.fn(),
-  } as unknown as ObserveControls & {
-    enable: ReturnType<typeof vi.fn>;
-    disable: ReturnType<typeof vi.fn>;
-  };
-}
-
-function makeAimStub(): AimController & { cancel: ReturnType<typeof vi.fn> } {
-  return {
-    cancel: vi.fn(),
-  } as unknown as AimController & { cancel: ReturnType<typeof vi.fn> };
-}
 
 interface FocusFixture {
   ops: ObserveFocusOps;
