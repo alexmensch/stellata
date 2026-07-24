@@ -35,7 +35,10 @@ lives entirely under `src/client/hover/`:
   tooltip padding / line-height edits can't drift the clamp.
   Measurement runs with the card parked at the origin: it's
   shrink-to-fit, so measuring at its previous position would size it
-  against the viewport space left over there.
+  against the viewport space left over there. Both clamps then inset by
+  the shared page margins (`../ui/page-margins.ts`), so a cornered card
+  lines up with the panel and scale bar rather than sitting flush to the
+  viewport edge.
 
   Only `pick` receives the pixel threshold. Providers whose pick surface
   is a whole silhouette (boundary shells, clouds) ignore it, and their

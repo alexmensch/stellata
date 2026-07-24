@@ -4,6 +4,9 @@ import type { HoverHit, HoverKind, HoverPayload, HoverProvider } from './hover-t
 
 const DELAY_MS = 280;
 const VIEWPORT = { innerWidth: 1000, innerHeight: 800 };
+// Mirrors the `--page-margin-*` values the stubbed root reports below.
+const MARGIN_X = 14;
+const MARGIN_BOTTOM = 16;
 
 // Minimal DOM stubs — vitest runs the node environment for this project,
 // so `window`, canvas, and the tooltip element are all hand-rolled
@@ -71,12 +74,24 @@ describe('hover-engine', () => {
       setTimeout: (fn: () => void, ms: number) => setTimeout(fn, ms),
       clearTimeout: (id: number) => clearTimeout(id),
     };
+    const rootStyle = {
+      getPropertyValue: (name: string) =>
+        ({
+          '--page-margin-x': `${MARGIN_X}px`,
+          '--page-margin-top': '10px',
+          '--page-margin-bottom': `${MARGIN_BOTTOM}px`,
+        })[name] ?? '',
+    };
+    (globalThis as { document?: unknown }).document = { documentElement: {} };
+    (globalThis as { getComputedStyle?: unknown }).getComputedStyle = () => rootStyle;
   });
 
   afterEach(() => {
     clearTimeoutSpy.mockRestore();
     vi.useRealTimers();
     delete (globalThis as { window?: unknown }).window;
+    delete (globalThis as { document?: unknown }).document;
+    delete (globalThis as { getComputedStyle?: unknown }).getComputedStyle;
   });
 
   it('walks providers after the dwell delay and shows the card', () => {
@@ -229,7 +244,7 @@ describe('hover-engine', () => {
     expect(style.top).toBe('214px');
   });
 
-  it('clamps the card to the measured size at the bottom-right corner', () => {
+  it('clamps to the measured size inset by the shared page margins', () => {
     const { canvas, fire } = makeCanvas();
     const { tooltip, style } = makeTooltip((left) => ({
       width: 200,
@@ -239,12 +254,14 @@ describe('hover-engine', () => {
 
     // Twice: the second show is the one that matters. Its measure has a
     // leftover `left` from the first, and an engine that measured in
-    // place would read the 300px wrapped height and clamp `top` to 500.
+    // place would read the 300px wrapped height and clamp against that.
     fire('pointermove', { clientX: 990, clientY: 790 });
     vi.advanceTimersByTime(DELAY_MS);
     fire('pointermove', { clientX: 990, clientY: 790 });
     vi.advanceTimersByTime(DELAY_MS);
-    expect(style.left).toBe('800px');
-    expect(style.top).toBe('740px');
+    // The card lands at the same inset the fixed chrome containers use,
+    // not flush against the viewport edge.
+    expect(style.left).toBe(`${1000 - 200 - MARGIN_X}px`);
+    expect(style.top).toBe(`${800 - 60 - MARGIN_BOTTOM}px`);
   });
 });
