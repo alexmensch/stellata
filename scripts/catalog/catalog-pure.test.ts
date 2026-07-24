@@ -72,6 +72,21 @@ import {
   NO_APSIS,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
+  AMP_MAG_PER_UNIT,
+  PERIOD_DAYS_PER_UNIT,
+  RECORD_FIELD_KINDS,
+  encodeAmpUnits,
+  encodePeriodUnits,
+  decodeRecordColumn,
+  decodeRecordColumnBig,
+  readCatalogHeader,
+  readNameTable,
+  readRecordField,
+  readRecordFieldBig,
+  writeCatalogHeader,
+  writeStarRecord,
+  type NumericRecordField,
+  type WireStarRecord,
   planCatalogChunks,
   assembleCatalogChunks,
   type CatalogManifest,
@@ -1598,7 +1613,6 @@ describe('catalog-pure / binary-format constants', () => {
     // pointer-walk lands on the right names. Pins the contract without
     // depending on build-catalog.ts or catalog-loader.ts.
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder('utf-8');
     const names = ['Sol', 'α Cen', '日本']; // ascii + 2-byte + 3-byte UTF-8
     const chunks: Uint8Array[] = [new Uint8Array(NAME_TABLE_PADDING)];
     let len = NAME_TABLE_PADDING;
@@ -1617,19 +1631,147 @@ describe('catalog-pure / binary-format constants', () => {
     for (const c of chunks) { table.set(c, p); p += c.length; }
     // Sentinel padding is zero.
     for (let i = 0; i < NAME_TABLE_PADDING; i++) expect(table[i]).toBe(0);
-    // Reader walk.
-    const view = new DataView(table.buffer);
-    let q = NAME_TABLE_PADDING;
-    const recovered: { offset: number; name: string }[] = [];
-    while (q < len) {
-      const byteLen = view.getUint16(q, true);
-      const offset = q;
-      q += NAME_LENGTH_PREFIX_BYTES;
-      recovered.push({ offset, name: decoder.decode(table.subarray(q, q + byteLen)) });
-      q += byteLen;
+    // Reader walk — the shared decode both readers use.
+    const recovered = readNameTable(table.buffer, 0, len);
+    expect([...recovered.values()]).toEqual(names);
+    expect([...recovered.keys()]).toEqual(expectedOffsets);
+    expect(recovered.has(0)).toBe(false); // offset 0 stays the no-name sentinel
+  });
+});
+
+describe('catalog-pure / record reader surface', () => {
+  const DISTINCT: WireStarRecord = {
+    x: 1.5, y: -2.25, z: 3.125,
+    vx: 1e-5, vy: -2e-5, vz: 3e-5,
+    absmag: -1.75, ci: 0.5, physRadius: 12.5,
+    companionIdx: 4242, nameOffset: 18,
+    spectClass: 3, lumClass: 4, conIndex: 87, flags: 0x15,
+    ampUnits: 200, periodUnits: 40_000, varType: VAR_TYPE_ECLIPSING,
+    hip: 120_404, gaiaSourceId: 4_658_107_884_688_023_040n,
+    apsis: {
+      teffGspphot: 5772, loggGspphot: 4.44, mhGspphot: -0.5, azeroGspphot: 0.25,
+      teffGspspec: 5800, loggGspspec: 4.5, mhGspspec: 0.1,
+    },
+    sid: 99_999,
+    multiplicityStatus: MULTIPLICITY_RESOLVED,
+  };
+
+  function writeOne(record: WireStarRecord, count = 1): DataView {
+    const view = new DataView(new ArrayBuffer(HEADER_SIZE + count * RECORD_SIZE));
+    for (let i = 0; i < count; i++) writeStarRecord(view, HEADER_SIZE + i * RECORD_SIZE, record);
+    return view;
+  }
+
+  it('reads back every field writeStarRecord emits', () => {
+    const view = writeOne(DISTINCT);
+    const off = HEADER_SIZE;
+    expect(readRecordField(view, off, 'x')).toBeCloseTo(DISTINCT.x, 5);
+    expect(readRecordField(view, off, 'vy')).toBeCloseTo(DISTINCT.vy, 10);
+    expect(readRecordField(view, off, 'absmag')).toBeCloseTo(DISTINCT.absmag, 5);
+    expect(readRecordField(view, off, 'companion')).toBe(DISTINCT.companionIdx);
+    expect(readRecordField(view, off, 'nameOffset')).toBe(DISTINCT.nameOffset);
+    expect(readRecordField(view, off, 'conIndex')).toBe(DISTINCT.conIndex);
+    expect(readRecordField(view, off, 'flags')).toBe(DISTINCT.flags);
+    expect(readRecordField(view, off, 'ampUnits')).toBe(DISTINCT.ampUnits);
+    expect(readRecordField(view, off, 'period')).toBe(DISTINCT.periodUnits);
+    expect(readRecordField(view, off, 'varType')).toBe(DISTINCT.varType);
+    expect(readRecordField(view, off, 'hip')).toBe(DISTINCT.hip);
+    expect(readRecordField(view, off, 'sid')).toBe(DISTINCT.sid);
+    expect(readRecordField(view, off, 'multiplicityStatus')).toBe(DISTINCT.multiplicityStatus);
+    expect(readRecordFieldBig(view, off, 'gaiaSourceId')).toBe(DISTINCT.gaiaSourceId);
+  });
+
+  it('every numeric field reads through the getter its declared kind implies', () => {
+    // A u8 field read as u16 (or an f32 read as u32) would return a value
+    // outside the kind's range or a NaN-shaped float; walking every field
+    // catches a LAYOUT/KINDS pair that drifted apart.
+    const view = writeOne(DISTINCT);
+    for (const [field, kind] of Object.entries(RECORD_FIELD_KINDS)) {
+      if (kind === 'u64') continue;
+      const v = readRecordField(view, HEADER_SIZE, field as NumericRecordField);
+      expect(Number.isFinite(v), `${field} decoded as ${v}`).toBe(true);
+      if (kind === 'u8') expect(v, field).toBeLessThanOrEqual(0xff);
+      if (kind === 'u16') expect(v, field).toBeLessThanOrEqual(0xffff);
+      if (kind === 'u32') expect(v, field).toBeLessThanOrEqual(0xffffffff);
     }
-    expect(recovered.map((r) => r.name)).toEqual(names);
-    expect(recovered.map((r) => r.offset)).toEqual(expectedOffsets);
+  });
+
+  it('decodeRecordColumn agrees with readRecordField field for field', () => {
+    const count = 4;
+    const view = writeOne(DISTINCT, count);
+    for (const [field, kind] of Object.entries(RECORD_FIELD_KINDS)) {
+      if (kind === 'u64') continue;
+      const out = new Float32Array(count);
+      decodeRecordColumn(view, count, field as NumericRecordField, out);
+      for (let i = 0; i < count; i++) {
+        const scalar = readRecordField(view, HEADER_SIZE + i * RECORD_SIZE, field as NumericRecordField);
+        expect(out[i], `${field}[${i}]`).toBe(Math.fround(scalar));
+      }
+    }
+    const big = new BigUint64Array(count);
+    decodeRecordColumnBig(view, count, 'gaiaSourceId', big);
+    expect([...big]).toEqual(Array(count).fill(DISTINCT.gaiaSourceId));
+  });
+
+  it('decodeRecordColumn interleaves a triple at the given stride + component', () => {
+    const count = 3;
+    const view = writeOne(DISTINCT, count);
+    const positions = new Float32Array(count * 3);
+    decodeRecordColumn(view, count, 'x', positions, { stride: 3, component: 0 });
+    decodeRecordColumn(view, count, 'y', positions, { stride: 3, component: 1 });
+    decodeRecordColumn(view, count, 'z', positions, { stride: 3, component: 2 });
+    for (let i = 0; i < count; i++) {
+      expect(positions[i * 3 + 0]).toBeCloseTo(DISTINCT.x, 5);
+      expect(positions[i * 3 + 1]).toBeCloseTo(DISTINCT.y, 5);
+      expect(positions[i * 3 + 2]).toBeCloseTo(DISTINCT.z, 5);
+    }
+  });
+
+  it('scale de-quantises the amplitude + period bytes back to physical units', () => {
+    const view = writeOne(DISTINCT);
+    const amp = new Float32Array(1);
+    const period = new Float32Array(1);
+    decodeRecordColumn(view, 1, 'ampUnits', amp, { scale: AMP_MAG_PER_UNIT });
+    decodeRecordColumn(view, 1, 'period', period, { scale: PERIOD_DAYS_PER_UNIT });
+    expect(amp[0]).toBeCloseTo(10, 6);      // 200 × 0.05 mag
+    expect(period[0]).toBeCloseTo(4000, 3); // 40000 × 0.1 d
+  });
+
+  it('the quantisation steps are the exact inverse of the encoders', () => {
+    // AMP_MAG_PER_UNIT / PERIOD_DAYS_PER_UNIT are the decode-side spelling
+    // of encodeAmpUnits / encodePeriodUnits' factors; a drift in either
+    // silently rescales every shipped variability value.
+    for (const mag of [0, 0.05, 0.35, 1.2, 9.4, 12.75]) {
+      expect(encodeAmpUnits(mag) * AMP_MAG_PER_UNIT).toBeCloseTo(mag, 10);
+    }
+    for (const days of [0, 0.1, 4.4, 146.5, 409.2, 6553.5]) {
+      expect(encodePeriodUnits(days) * PERIOD_DAYS_PER_UNIT).toBeCloseTo(days, 10);
+    }
+  });
+
+  it('readCatalogHeader returns the written header and rejects foreign buffers', () => {
+    const buffer = new ArrayBuffer(HEADER_SIZE);
+    writeCatalogHeader(new DataView(buffer), {
+      count: 7, nameTableOffset: 32, nameTableLength: 2,
+    });
+    expect(readCatalogHeader(buffer)).toEqual({
+      magic: MAGIC,
+      version: BINARY_VERSION,
+      count: 7,
+      nameTableOffset: 32,
+      nameTableLength: 2,
+    });
+
+    const badMagic = new ArrayBuffer(HEADER_SIZE);
+    new Uint8Array(badMagic).set([0x4e, 0x4f, 0x50, 0x45]); // "NOPE"
+    expect(() => readCatalogHeader(badMagic)).toThrow(/Bad magic/);
+
+    const oldVersion = new ArrayBuffer(HEADER_SIZE);
+    writeCatalogHeader(new DataView(oldVersion), {
+      count: 1, nameTableOffset: 32, nameTableLength: 0,
+    });
+    new DataView(oldVersion).setUint32(HEADER_LAYOUT.version, BINARY_VERSION - 1, true);
+    expect(() => readCatalogHeader(oldVersion)).toThrow(/Unsupported catalog version/);
   });
 });
 

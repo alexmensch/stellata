@@ -9,20 +9,22 @@ import {
   HIP2_REF_EPOCH,
   KM_S_TO_PC_YR,
   directionAtEpoch,
-  equatorialTangentBasis,
   gaia5pUnreliable,
   hip2PmDisagrees,
   parseGaiaAstrometryCatalogTsv,
   parseHip2Tsv,
   parseNssSourceIdSet,
   resolveDirection,
-  unitVectorFromRaDec,
   velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
   type Hip2AstrometryRow,
-  type UnitVector,
 } from './direction-cascade';
+import {
+  equatorialTangentBasis,
+  unitVectorFromRaDec,
+  type UnitVector,
+} from '../../src/client/util/equatorial-basis';
 
 const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
 

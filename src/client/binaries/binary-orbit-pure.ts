@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { AU_PC } from '../util/astronomy-constants';
 import { solveKepler } from '../util/kepler-solver';
+import { equatorialTangentBasisAt } from '../util/equatorial-basis';
 import { GAL_TO_ICRS } from '../galactic/galactic-coords';
 
 export interface Vec3 { x: number; y: number; z: number; }
@@ -93,16 +94,13 @@ export function projectSkyToICRS(
   eastPc: number,
   radialPc = 0,
 ): Vec3 {
-  const r = Math.hypot(systemXyzPc.x, systemXyzPc.y, systemXyzPc.z);
-  if (r === 0) return { x: 0, y: 0, z: 0 };
-  const dec = Math.asin(systemXyzPc.z / r);
-  const ra = Math.atan2(systemXyzPc.y, systemXyzPc.x);
-  const sinRa = Math.sin(ra), cosRa = Math.cos(ra);
-  const sinDec = Math.sin(dec), cosDec = Math.cos(dec);
+  const at = equatorialTangentBasisAt(systemXyzPc.x, systemXyzPc.y, systemXyzPc.z);
+  if (at === null) return { x: 0, y: 0, z: 0 };
+  const { u, east, north } = at.basis;
   return {
-    x: northPc * (-sinDec * cosRa) + eastPc * (-sinRa) + radialPc * (cosDec * cosRa),
-    y: northPc * (-sinDec * sinRa) + eastPc * cosRa + radialPc * (cosDec * sinRa),
-    z: northPc * cosDec + radialPc * sinDec,
+    x: northPc * north.x + eastPc * east.x + radialPc * u.x,
+    y: northPc * north.y + eastPc * east.y + radialPc * u.y,
+    z: northPc * north.z + eastPc * east.z + radialPc * u.z,
   };
 }
 

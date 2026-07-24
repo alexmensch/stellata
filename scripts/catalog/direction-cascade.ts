@@ -2,6 +2,12 @@
 // HIP2 → AT-HYG printed ra/dec, with proper-motion propagation to the
 // J2016.0 scene epoch. See scripts/catalog/README.md § Direction resolution.
 
+import {
+  equatorialTangentBasis,
+  unitVectorFromRaDec,
+  type UnitVector,
+} from '../../src/client/util/equatorial-basis';
+
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
 // Gaia DR3's native epoch: the catalogue-wide scene epoch every position
@@ -21,7 +27,6 @@ export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0;
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 const MAS_TO_RAD = Math.PI / (180 * 3600 * 1000);
-const DEG_TO_RAD = Math.PI / 180;
 
 /** 5p astrometry row from `data/gaia/gaia_dr3_astrometry_catalog.tsv`.
  *  ra/dec are at J2016.0. `parallaxMas === null` marks a 2p
@@ -83,12 +88,6 @@ export const VELOCITY_VIA_VALUES = [
 
 export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
 
-export interface UnitVector {
-  x: number;
-  y: number;
-  z: number;
-}
-
 export interface DirectionResolution {
   via: DirectionVia;
   dir: UnitVector;
@@ -103,41 +102,6 @@ export interface DirectionResolution {
   velVia: VelocityVia;
 }
 
-/** ICRS (ra, dec) in degrees → unit vector in the equatorial Cartesian
- *  basis catalog.bin uses (x toward RA 0h, z toward the north celestial
- *  pole). Multiplying by distance in pc yields the record xyz. */
-export function unitVectorFromRaDec(raDeg: number, decDeg: number): UnitVector {
-  const ra = raDeg * DEG_TO_RAD;
-  const dec = decDeg * DEG_TO_RAD;
-  const cosDec = Math.cos(dec);
-  return {
-    x: cosDec * Math.cos(ra),
-    y: cosDec * Math.sin(ra),
-    z: Math.sin(dec),
-  };
-}
-
-/** Radial unit vector `u` plus the local east/north tangent unit vectors
- *  at (ra, dec): east = ∂u/∂α / cos δ, north = ∂u/∂δ. The two directions
- *  μ_α* and μ_δ act along — the same basis PM propagation and space-motion
- *  velocity assembly both need. Stable through the poles (east never
- *  divides by cos δ). */
-export function equatorialTangentBasis(
-  raDeg: number,
-  decDeg: number,
-): { u: UnitVector; east: UnitVector; north: UnitVector } {
-  const ra = raDeg * DEG_TO_RAD;
-  const dec = decDeg * DEG_TO_RAD;
-  const sinRa = Math.sin(ra);
-  const cosRa = Math.cos(ra);
-  const sinDec = Math.sin(dec);
-  const cosDec = Math.cos(dec);
-  return {
-    u: { x: cosDec * cosRa, y: cosDec * sinRa, z: sinDec },
-    east: { x: -sinRa, y: cosRa, z: 0 },
-    north: { x: -sinDec * cosRa, y: -sinDec * sinRa, z: cosDec },
-  };
-}
 
 /** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
  *  RV-free linear space-motion form (accuracy budget + the

@@ -115,8 +115,20 @@ interface CorpusRow {
   varType: keyof typeof VAR_TYPE_TOKENS | null;
   varPeriodDays: number | null;
   varAmpMag: number | null;
+  tier: CorpusTier;
   notesSource: string;
 }
+
+// Which distance-refinement layer a row regression-guards. Enum-constrained
+// in the TSV and rejected at load on an unknown value, so a mistyped tag
+// can't silently drop a row out of its partition.
+const CORPUS_TIERS = [
+  'standard',
+  'bj-override',
+  'bj-no-degradation',
+  'lmc-kinematic-snap',
+] as const;
+type CorpusTier = (typeof CORPUS_TIERS)[number];
 
 const VAR_TYPE_TOKENS = {
   none: VAR_TYPE_UNKNOWN,
@@ -184,8 +196,7 @@ function parseCompanions(cell: string): CorpusCompanion[] {
   });
 }
 
-function loadCorpusSync(): CorpusRow[] {
-  const text = readFileSync(KNOWN_STARS_TSV, 'utf-8');
+function parseCorpusRows(text: string): CorpusRow[] {
   const rows = parse(text, {
     delimiter: '\t',
     columns: true,
@@ -209,6 +220,12 @@ function loadCorpusSync(): CorpusRow[] {
         `row ${i + 1} (${name}): var_type "${varTypeRaw}" — expected one of ${Object.keys(VAR_TYPE_TOKENS).join(' / ')}`,
       );
     }
+    const tierRaw = nonEmpty(row.tier);
+    if (tierRaw === null || !(CORPUS_TIERS as readonly string[]).includes(tierRaw)) {
+      throw new Error(
+        `row ${i + 1} (${name}): tier "${row.tier ?? ''}" — expected one of ${CORPUS_TIERS.join(' / ')}`,
+      );
+    }
     return {
       wdsId: nonEmpty(row.wds_id),
       systemName: name,
@@ -226,6 +243,7 @@ function loadCorpusSync(): CorpusRow[] {
       varType: varTypeRaw as CorpusRow['varType'],
       varPeriodDays: parseFloatOrNull(row.var_period_days),
       varAmpMag: parseFloatOrNull(row.var_amp_mag),
+      tier: tierRaw as CorpusTier,
       notesSource: (row.notes_source ?? '').trim(),
     };
   });
@@ -335,36 +353,31 @@ function spectralStringIsBareClass(s: string): boolean {
 // is LFS-tracked and gated by FIXTURES_READY. catalog.bin stays async
 // because it's a 24 MB binary read.
 
-const CORPUS: CorpusRow[] = loadCorpusSync();
+const CORPUS: CorpusRow[] = parseCorpusRows(readFileSync(KNOWN_STARS_TSV, 'utf-8'));
 const TOPOLOGY: TopologyRow[] = loadTopologySync();
 const MULTIPLES_BY_WDS: Map<string, MultiplesRow[]> = FIXTURES_READY
   ? loadMultiplesIndexSync()
   : new Map();
 
-// Sentinel substrings in notes_source carry the regression-case tag.
-// Authors mark a row by prefixing its notes_source with one of these.
-function isDistanceRefinementCase(row: CorpusRow): boolean {
-  const n = row.notesSource;
-  return n.startsWith('B-J override:')
-    || n.startsWith('B-J no-degradation guard:')
-    || n.startsWith('LMC kinematic snap:');
-}
+const ofTier = (tier: CorpusTier): CorpusRow[] => CORPUS.filter(r => r.tier === tier);
 
-const SINGLES = CORPUS.filter(r => r.companions.length === 0 && !isDistanceRefinementCase(r));
+const SINGLES = CORPUS.filter(r => r.companions.length === 0 && r.tier === 'standard');
 const BINARIES = CORPUS.filter(r => r.companions.length > 0);
 const ORBITED = CORPUS.filter(r => r.orbitalPeriodDays !== null);
 const VAR_PINNED = CORPUS.filter(
   r => r.varType !== null || r.varPeriodDays !== null || r.varAmpMag !== null,
 );
-const BJ_OVERRIDES = CORPUS.filter(r => r.notesSource.startsWith('B-J override:'));
-const BJ_GUARDS = CORPUS.filter(r => r.notesSource.startsWith('B-J no-degradation guard:'));
-const LMC_SNAPS = CORPUS.filter(r => r.notesSource.startsWith('LMC kinematic snap:'));
+const BJ_OVERRIDES = ofTier('bj-override');
+const BJ_GUARDS = ofTier('bj-no-degradation');
+const LMC_SNAPS = ofTier('lmc-kinematic-snap');
 
 let catalog: Catalog;
 const multiplesByWds = MULTIPLES_BY_WDS;
 
 beforeAll(async () => {
-  catalog = await loadCatalog();
+  // The tier-column cases below run fixture-free; only the corpus
+  // assertions need catalog.bin, so loading it must stay gated too.
+  if (FIXTURES_READY) catalog = await loadCatalog();
 });
 
 // ---- Per-row assertions -------------------------------------------------
@@ -561,9 +574,42 @@ function lookupPrimary(row: CorpusRow): CatalogRecord {
 
 // ---- Test driver --------------------------------------------------------
 
+describe('corpus tier column', () => {
+  // Fixture is the real header + first data row with the tier cell
+  // swapped, so the column set can't drift out from under these cases.
+  function withTier(tier: string): string {
+    const lines = readFileSync(KNOWN_STARS_TSV, 'utf-8')
+      .split('\n')
+      .filter(l => l.length > 0 && !l.startsWith('#'));
+    const cells = lines[1].split('\t');
+    cells[lines[0].split('\t').indexOf('tier')] = tier;
+    return `${lines[0]}\n${cells.join('\t')}\n`;
+  }
+
+  it('accepts every declared tier token', () => {
+    for (const tier of CORPUS_TIERS) {
+      expect(parseCorpusRows(withTier(tier))[0].tier).toBe(tier);
+    }
+  });
+
+  it('rejects a mistyped tier rather than dropping the row from its partition', () => {
+    expect(() => parseCorpusRows(withTier('B-J Override'))).toThrow(/tier "B-J Override"/);
+  });
+
+  it('rejects a blank tier', () => {
+    expect(() => parseCorpusRows(withTier(''))).toThrow(/tier ""/);
+  });
+});
+
 describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   it('contains at least one row', () => {
     expect(CORPUS.length).toBeGreaterThan(0);
+  });
+
+  it('every distance-refinement tier has at least one row', () => {
+    for (const tier of CORPUS_TIERS) {
+      expect(ofTier(tier).length, `no corpus row carries tier=${tier}`).toBeGreaterThan(0);
+    }
   });
 
   it('every row has a notes_source', () => {
@@ -653,9 +699,6 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   });
 
   describe('distance-refinement: B-J override re-anchored from catastrophic AT-HYG distance', () => {
-    it('corpus has ≥1 case', () => {
-      expect(BJ_OVERRIDES.length, 'expected ≥1 B-J override regression case').toBeGreaterThan(0);
-    });
     it.each(BJ_OVERRIDES)('$systemName', (row) => {
       const record = lookupPrimary(row);
       assertPrimary(row, record);
@@ -663,9 +706,6 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   });
 
   describe('distance-refinement: B-J no-degradation guard (well-measured nearby)', () => {
-    it('corpus has ≥1 case', () => {
-      expect(BJ_GUARDS.length, 'expected ≥1 B-J no-degradation guard').toBeGreaterThan(0);
-    });
     it.each(BJ_GUARDS)('$systemName', (row) => {
       const record = lookupPrimary(row);
       assertPrimary(row, record);
@@ -673,9 +713,6 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
   });
 
   describe('distance-refinement: LMC kinematic snap to Pietrzyński 2019 49.594 kpc', () => {
-    it('corpus has ≥1 case', () => {
-      expect(LMC_SNAPS.length, 'expected ≥1 LMC kinematic snap row').toBeGreaterThan(0);
-    });
     it.each(LMC_SNAPS)('$systemName', (row) => {
       const record = lookupPrimary(row);
       assertPrimary(row, record);

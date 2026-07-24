@@ -23,6 +23,7 @@ import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
 } from './direction-cascade';
+import { equatorialTangentBasisAt } from '../../src/client/util/equatorial-basis';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
@@ -287,17 +288,15 @@ function skySeparationAtPrimary(
   primary: CatalogRecord,
   secondary: CatalogRecord,
 ): { sepAu: number; paDeg: number; radialAu: number } {
-  const d = distancePc(primary);
-  const ra = Math.atan2(primary.y, primary.x);
-  const dec = Math.asin(primary.z / d);
-  const sinRa = Math.sin(ra), cosRa = Math.cos(ra);
-  const sinDec = Math.sin(dec), cosDec = Math.cos(dec);
+  const at = equatorialTangentBasisAt(primary.x, primary.y, primary.z);
+  if (at === null) throw new Error('primary sits at the origin — no sky frame');
+  const { u, east: e, north: n } = at.basis;
   const dx = secondary.x - primary.x;
   const dy = secondary.y - primary.y;
   const dz = secondary.z - primary.z;
-  const north = dx * (-sinDec * cosRa) + dy * (-sinDec * sinRa) + dz * cosDec;
-  const east = dx * -sinRa + dy * cosRa;
-  const radial = dx * (cosDec * cosRa) + dy * (cosDec * sinRa) + dz * sinDec;
+  const north = dx * n.x + dy * n.y + dz * n.z;
+  const east = dx * e.x + dy * e.y + dz * e.z;
+  const radial = dx * u.x + dy * u.y + dz * u.z;
   return {
     sepAu: Math.hypot(north, east) * AU_PER_PC,
     paDeg: (Math.atan2(east, north) * (180 / Math.PI) + 360) % 360,

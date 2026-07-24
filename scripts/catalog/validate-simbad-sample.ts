@@ -17,7 +17,7 @@ import {
 import {
   parseSimbadSampleRows,
   type SimbadSampleRow,
-} from './distance-regression-check';
+} from './simbad-sample-parse';
 import { REPO_ROOT } from '../util/paths';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +37,7 @@ export const RESIDUAL_THRESHOLDS = {
   outlierFractionWarn: 0.01, // surfaced in report, not gate
 } as const;
 
-// Per-star outlier criteria (bead spec): a star is flagged when either
+// Per-star outlier criteria: a star is flagged when either
 // its absmag residual exceeds half a magnitude OR its parallax residual
 // is beyond 3-sigma of SIMBAD's published plx_err. Either failure mode
 // is suspicious independent of the other.

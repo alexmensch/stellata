@@ -3,17 +3,16 @@ import {
   type ApsisField,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
-  HEADER_LAYOUT,
-  RECORD_LAYOUT,
-  HEADER_SIZE,
-  RECORD_SIZE,
-  BINARY_VERSION,
-  MAGIC,
   NO_COMPANION,
-  NAME_TABLE_PADDING,
-  NAME_LENGTH_PREFIX_BYTES,
   catalogChunkFilename,
   assembleCatalogChunks,
+  decodeRecordColumn,
+  decodeRecordColumnBig,
+  readCatalogHeader,
+  readNameTable,
+  AMP_MAG_PER_UNIT,
+  PERIOD_DAYS_PER_UNIT,
+  type DecodeRecordColumnOptions,
   type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
 import { buildPulsationParams } from '../star-pipeline/pulsation-params-pure';
@@ -176,15 +175,7 @@ export function parseBinary(
   sidSuccessorPairs: readonly [number, number][] = [],
 ): Catalog {
   const view = new DataView(ab);
-  const magic = new TextDecoder().decode(new Uint8Array(ab, HEADER_LAYOUT.magic, 4));
-  if (magic !== MAGIC) throw new Error(`Bad magic: ${magic}`);
-  const version = view.getUint32(HEADER_LAYOUT.version, true);
-  if (version !== BINARY_VERSION) {
-    throw new Error(`Unsupported catalog version: ${version} (expected ${BINARY_VERSION})`);
-  }
-  const count = view.getUint32(HEADER_LAYOUT.count, true);
-  const nameTableOffset = view.getUint32(HEADER_LAYOUT.nameTableOffset, true);
-  const nameTableLength = view.getUint32(HEADER_LAYOUT.nameTableLength, true);
+  const { count, nameTableOffset, nameTableLength } = readCatalogHeader(ab);
 
   const positions = new Float32Array(count * 3);
   const velocities = new Float32Array(count * 3);
@@ -205,66 +196,55 @@ export function parseBinary(
   const multiplicityStatus = new Uint8Array(count);
   const apsis = {} as Record<ApsisField, Float32Array>;
   for (const name of APSIS_FIELDS) apsis[name] = new Float32Array(count);
-  // Hoisted (array, offset) pairs keep the 313k-record decode loop free of
-  // per-iteration RECORD_LAYOUT property lookups.
-  const apsisCols = APSIS_FIELDS.map((name) => ({ arr: apsis[name], fieldOff: RECORD_LAYOUT[name] }));
+  // Name resolution needs the table, which sits past the records, so the
+  // per-record offsets are parked here and joined after the columns land.
   const nameOffsetArr = new Uint32Array(count);
+  const companionRaw = new Uint32Array(count);
+
+  const column = (
+    field: Parameters<typeof decodeRecordColumn>[2],
+    out: Parameters<typeof decodeRecordColumn>[3],
+    opts?: DecodeRecordColumnOptions,
+  ) => decodeRecordColumn(view, count, field, out, opts);
+
+  column('x', positions, { stride: 3, component: 0 });
+  column('y', positions, { stride: 3, component: 1 });
+  column('z', positions, { stride: 3, component: 2 });
+  column('vx', velocities, { stride: 3, component: 0 });
+  column('vy', velocities, { stride: 3, component: 1 });
+  column('vz', velocities, { stride: 3, component: 2 });
+  column('absmag', absmag);
+  column('ci', ci);
+  column('physRadius', physicalRadius);
+  column('companion', companionRaw);
+  column('nameOffset', nameOffsetArr);
+  column('spectClass', spectClass);
+  column('lumClass', luminosityClass);
+  column('conIndex', constellation);
+  column('flags', flags);
+  column('varType', varType);
+  column('ampUnits', amplitudeMag, { scale: AMP_MAG_PER_UNIT });
+  column('period', periodDays, { scale: PERIOD_DAYS_PER_UNIT });
+  column('hip', hip);
+  column('sid', sid);
+  column('multiplicityStatus', multiplicityStatus);
+  for (const name of APSIS_FIELDS) column(name, apsis[name]);
+  decodeRecordColumnBig(view, count, 'gaiaSourceId', gaiaSourceId);
 
   let solIndex = -1;
   for (let i = 0; i < count; i++) {
-    const off = HEADER_SIZE + i * RECORD_SIZE;
-    positions[i * 3 + 0] = view.getFloat32(off + RECORD_LAYOUT.x, true);
-    positions[i * 3 + 1] = view.getFloat32(off + RECORD_LAYOUT.y, true);
-    positions[i * 3 + 2] = view.getFloat32(off + RECORD_LAYOUT.z, true);
-    velocities[i * 3 + 0] = view.getFloat32(off + RECORD_LAYOUT.vx, true);
-    velocities[i * 3 + 1] = view.getFloat32(off + RECORD_LAYOUT.vy, true);
-    velocities[i * 3 + 2] = view.getFloat32(off + RECORD_LAYOUT.vz, true);
-    absmag[i] = view.getFloat32(off + RECORD_LAYOUT.absmag, true);
-    ci[i] = view.getFloat32(off + RECORD_LAYOUT.ci, true);
-    physicalRadius[i] = view.getFloat32(off + RECORD_LAYOUT.physRadius, true);
-    const comp = view.getUint32(off + RECORD_LAYOUT.companion, true);
-    companion[i] = comp === NO_COMPANION ? -1 : comp;
-    nameOffsetArr[i] = view.getUint32(off + RECORD_LAYOUT.nameOffset, true);
-    spectClass[i] = view.getUint8(off + RECORD_LAYOUT.spectClass);
-    luminosityClass[i] = view.getUint8(off + RECORD_LAYOUT.lumClass);
-    constellation[i] = view.getUint8(off + RECORD_LAYOUT.conIndex);
-    flags[i] = view.getUint8(off + RECORD_LAYOUT.flags);
-    amplitudeMag[i] = view.getUint8(off + RECORD_LAYOUT.ampUnits) * 0.05;
-    varType[i] = view.getUint8(off + RECORD_LAYOUT.varType);
-    periodDays[i] = view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1;
-    hip[i] = view.getUint32(off + RECORD_LAYOUT.hip, true);
-    sid[i] = view.getUint32(off + RECORD_LAYOUT.sid, true);
-    gaiaSourceId[i] = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
-    multiplicityStatus[i] = view.getUint8(off + RECORD_LAYOUT.multiplicityStatus);
-    for (const c of apsisCols) c.arr[i] = view.getFloat32(off + c.fieldOff, true);
+    companion[i] = companionRaw[i] === NO_COMPANION ? -1 : companionRaw[i];
     if (flags[i] & FLAG_IS_SOL) solIndex = i;
   }
 
   const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
 
   const names = new Map<number, string>();
-  if (nameTableLength > 0) {
-    const td = new TextDecoder('utf-8');
-    const nameData = new Uint8Array(ab, nameTableOffset, nameTableLength);
-    const ntView = new DataView(ab, nameTableOffset, nameTableLength);
-    const offsetToName = new Map<number, string>();
-    // Offset 0 is reserved as the "no name" sentinel — skip past the
-    // leading padding bytes. (Allows nameOffset=0 to mean "no name"
-    // without colliding with a real entry stored at byte 0.)
-    let p = NAME_TABLE_PADDING;
-    while (p < nameTableLength) {
-      const len = ntView.getUint16(p, true);
-      const nameOffset = p;
-      p += NAME_LENGTH_PREFIX_BYTES;
-      const name = td.decode(nameData.subarray(p, p + len));
-      offsetToName.set(nameOffset, name);
-      p += len;
-    }
-    for (let i = 0; i < count; i++) {
-      if (flags[i] & FLAG_HAS_NAME) {
-        const name = offsetToName.get(nameOffsetArr[i]);
-        if (name) names.set(i, name);
-      }
+  const offsetToName = readNameTable(ab, nameTableOffset, nameTableLength);
+  for (let i = 0; i < count; i++) {
+    if (flags[i] & FLAG_HAS_NAME) {
+      const name = offsetToName.get(nameOffsetArr[i]);
+      if (name) names.set(i, name);
     }
   }
 
