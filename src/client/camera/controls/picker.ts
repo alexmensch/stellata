@@ -152,7 +152,7 @@ export class Picker {
   // shell whose silhouette / label bbox is under the cursor. Fallback tier
   // — stars / planets / LG win any overlap. Only visible (drawn) shells
   // pick, so a decluttered or camera-inside shell isn't hoverable.
-  pickShellHit(clientX: number, clientY: number, _pixelThreshold = 14): HoverHit | null {
+  pickShellHit(clientX: number, clientY: number): HoverHit | null {
     const shells = this.deps.getShells();
     const rect = this.deps.domElement.getBoundingClientRect();
     const worldOffset = this.deps.getWorldOffset() as THREE.Vector3;
@@ -179,7 +179,7 @@ export class Picker {
 
   // Fallback-only tier. Decoupled from warp state (the click-focus
   // pickCloud keeps its warp gate; hover doesn't need one).
-  pickCloudHit(clientX: number, clientY: number, _pixelThreshold = 14): HoverHit | null {
+  pickCloudHit(clientX: number, clientY: number): HoverHit | null {
     const clouds = this.deps.getClouds();
     if (!clouds || !clouds.group.visible) return null;
     const rect = this.deps.domElement.getBoundingClientRect();

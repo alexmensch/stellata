@@ -29,7 +29,18 @@ lives entirely under `src/client/hover/`:
   pick threshold, hide-on-drag / hide-on-leave / hide-on-pointermove
   gating, tooltip placement and on-screen clamping. Provider-agnostic;
   pulled out of the prior `bindHoverTooltip` so future layers wire in
-  without engine edits.
+  without engine edits. The bottom/right clamps come from a
+  `getBoundingClientRect()` measure of the rendered card — never from a
+  copy of the CSS `max-width` or a hand-calibrated worst-case height, so
+  tooltip padding / line-height edits can't drift the clamp.
+  Measurement runs with the card parked at the origin: it's
+  shrink-to-fit, so measuring at its previous position would size it
+  against the viewport space left over there.
+
+  Only `pick` receives the pixel threshold. Providers whose pick surface
+  is a whole silhouette (boundary shells, clouds) ignore it, and their
+  `Picker` methods don't accept it — the parameter belongs to
+  centroid-plus-radius pick surfaces only.
 - **`hover-types.ts`** — the `HoverProvider` contract:
   `pick(event) → HoverHit | null` and
   `format(hit) → HoverPayload | null`. Both halves signal "nothing

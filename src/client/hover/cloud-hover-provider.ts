@@ -20,7 +20,7 @@ export function createCloudHoverProvider(
   const { stellata, context } = config;
   return {
     kind: 'cloud',
-    pick: (x, y, pxThreshold) => stellata.picker.pickCloudHit(x, y, pxThreshold),
+    pick: (x, y) => stellata.picker.pickCloudHit(x, y),
     // Cloud objects are identified by catalog idx alone — sub-layer
     // host identity (hit.hostStarIdx) is unused for this layer.
     format: (hit) => formatCloudHover(hit.idx, hit.cameraDistancePc, context),
