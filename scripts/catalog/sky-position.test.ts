@@ -15,7 +15,7 @@ import {
   lookupByHip,
   lookupByName,
 } from './catalog-lookup';
-import { unitVectorFromRaDec, type UnitVector } from './direction-cascade';
+import { unitVectorFromRaDec, type UnitVector } from '../../src/client/util/equatorial-basis';
 import {
   CATALOG_SCENE_EPOCH_JYR,
   advancePositionsToEpoch,

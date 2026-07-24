@@ -10,6 +10,20 @@ build scripts, tests, and shader uniforms.
   `J2000_JD` / `J2000_OBLIQUITY_RAD` / `DAYS_PER_JULIAN_YEAR`. Import from here
   rather than re-derive — drift between sites is the failure mode this module
   is designed to prevent.
+- `equatorial-basis.ts` — the ICRS tangent basis every sky-frame
+  projection resolves against: `equatorialTangentBasisRad` (core) /
+  `equatorialTangentBasis` (degrees) / `equatorialTangentBasisAt(x, y, z)`
+  (from an equatorial Cartesian position, `null` at the origin) return
+  `{u, east, north}` with east = ∂u/∂α / cos δ — never divided by cos δ,
+  so it stays a unit vector through the poles. `unitVectorFromRaDec` is
+  the `u` component alone. Shared by the catalog build's PM propagation +
+  space-motion velocity (`scripts/catalog/direction-cascade.ts`), the
+  companion tangent-projection (`scripts/catalog/companion-promotion.ts`),
+  and the runtime Tier-1 sky→ICRS orbit projection
+  (`../binaries/binary-orbit-pure.ts`). `scripts/local-group/`'s
+  `skyBasis` deliberately does NOT ride this: it seeds a rotation
+  quaternion and picks a canonical orientation at the pole, which this
+  helper leaves to the caller's ra.
 - `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.

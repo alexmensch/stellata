@@ -134,8 +134,10 @@ propagate every position to `getT()`. Full design:
 `v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the SAME tier solution
 `resolveDirection` selected (`DirectionResolution.src*` fields), so
 position and velocity always come from one astrometric solution. The
-east/north tangent basis is the shared `equatorialTangentBasis` helper
-`directionAtEpoch` also uses. μ_α* is cos δ-applied — never divide by cos δ.
+east/north tangent basis is `equatorialTangentBasis`
+(`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
+`companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
+sky→ICRS orbit projection. μ_α* is cos δ-applied — never divide by cos δ.
 
 Velocity source per row (pinned in build-counts as `velocity*`):
 

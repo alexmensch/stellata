@@ -23,6 +23,7 @@ import {
 } from './catalog-pure';
 import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
 import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
+import { equatorialTangentBasisAt } from '../../src/client/util/equatorial-basis';
 import type { Star } from './stars-parse';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
@@ -242,14 +243,9 @@ export interface CompanionPlacement {
 }
 
 // Project a secondary's xyz from the primary's ICRS xyz + WDS (rho, theta)
-// at the primary's distance. The maths is identical to what the runtime
-// BinaryOrbitField will use for its Tier-3 placement — keep both call sites
-// reading the same helper so a coordinate-convention drift here surfaces
-// in both places.
-//
-// theta is WDS position angle: degrees east of north, measured at the
-// primary. east_hat / north_hat are the ICRS tangent basis at the primary's
-// sky position.
+// at the primary's distance. theta is WDS position angle: degrees east of
+// north, measured at the primary, resolved against the shared ICRS tangent
+// basis the runtime's sky→ICRS orbit projection also rides.
 export function projectFromSepPa(
   primaryX: number,
   primaryY: number,
@@ -257,31 +253,17 @@ export function projectFromSepPa(
   sepArcsec: number,
   paDeg: number,
 ): CompanionPlacement | null {
-  const distPc = Math.sqrt(
-    primaryX * primaryX + primaryY * primaryY + primaryZ * primaryZ,
-  );
-  if (!(distPc > 0)) return null;
-  const ra = Math.atan2(primaryY, primaryX);
-  const dec = Math.asin(primaryZ / distPc);
-  const sinRa = Math.sin(ra), cosRa = Math.cos(ra);
-  const sinDec = Math.sin(dec), cosDec = Math.cos(dec);
-  // East at the primary: direction of increasing RA on the celestial sphere.
-  const eastX = -sinRa, eastY = cosRa, eastZ = 0;
-  // North at the primary: direction of increasing Dec.
-  const northX = -sinDec * cosRa;
-  const northY = -sinDec * sinRa;
-  const northZ = cosDec;
+  const at = equatorialTangentBasisAt(primaryX, primaryY, primaryZ);
+  if (at === null) return null;
+  const { basis: { east, north }, rPc: distPc } = at;
   const paRad = paDeg * (Math.PI / 180.0);
   const sepRad = sepArcsec * ARCSEC_TO_RAD;
   const offsetN = sepRad * Math.cos(paRad);  // north component (rad)
   const offsetE = sepRad * Math.sin(paRad);  // east component (rad)
   // Small-angle: linear in parsecs at the primary's distance.
-  const dxPc = (offsetN * northX + offsetE * eastX) * distPc;
-  const dyPc = (offsetN * northY + offsetE * eastY) * distPc;
-  const dzPc = (offsetN * northZ + offsetE * eastZ) * distPc;
-  const cx = primaryX + dxPc;
-  const cy = primaryY + dyPc;
-  const cz = primaryZ + dzPc;
+  const cx = primaryX + (offsetN * north.x + offsetE * east.x) * distPc;
+  const cy = primaryY + (offsetN * north.y + offsetE * east.y) * distPc;
+  const cz = primaryZ + (offsetN * north.z + offsetE * east.z) * distPc;
   return {
     x: cx,
     y: cy,
