@@ -13,10 +13,14 @@ import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
+import { buildSharePath, parseSharePath } from './share-path-pure';
 
-// URL state lives in a single opaque `?v=<base64url>` param. Four wire
-// formats coexist (v1–v4); old shared URLs auto-upgrade to v4 on load
-// per the migration table in docs/sid.md § 9.4. See
+// URL state is a single opaque base64url blob carried in a `/v/<blob>/`
+// path segment (canonical) or a legacy `?v=<blob>` query param (still
+// decoded forever — old shared links are baked into YouTube comments).
+// Four wire formats coexist (v1–v4); on load, legacy query-form links
+// and superseded schema versions both rewrite to the canonical path per
+// the migration table in docs/sid.md § 9.4. See
 // src/client/util/url-state/README.md for the wire format and the
 // "adding a field" recipe.
 //
@@ -1354,42 +1358,44 @@ export function applyDecodedView(
 
 function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   const view = currentStateOf(stellata, idMaps);
-  // Single computePresence pass — the mask gates the `?v=` param itself
+  // Single computePresence pass — the mask gates the path segment itself
   // and is also passed to encodeBlobWithMask so the encoder doesn't
   // re-walk FIELDS_V4.
   const mask = computePresence(view);
-  const qs = mask === 0 ? '' : `${PARAM_NAME}=${encodeBlobWithMask(view, mask)}`;
-  const url = location.pathname + (qs ? '?' + qs : '');
-  if (url !== location.pathname + location.search) {
-    history.replaceState(null, '', url);
+  const path = mask === 0 ? '/' : buildSharePath(encodeBlobWithMask(view, mask));
+  if (path !== location.pathname + location.search) {
+    history.replaceState(null, '', path);
   }
 }
 
-// Returns true when a `?v=` blob was present and applied (regardless of
-// schema version). The caller uses the false branch to fall back to the
-// canonical first-load view. A malformed blob also
-// returns false so the user lands on the framed default rather than the
-// unframed canvas-default pose.
+// Returns true when a state blob was present and applied — from the
+// canonical `/v/<blob>/` path or the legacy `?v=` query param, any schema
+// version. The caller uses the false branch to fall back to the canonical
+// first-load view. A malformed blob also returns false so the user lands
+// on the framed default rather than the unframed canvas-default pose.
 export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
-  const params = new URLSearchParams(location.search);
-  const blob = params.get(PARAM_NAME);
+  const fromPath = parseSharePath(location.pathname);
+  const blob = fromPath ?? new URLSearchParams(location.search).get(PARAM_NAME);
   if (!blob) return false;
   let decoded: DecodedBlob;
   try {
     decoded = decodeBlob(blob);
   } catch (err) {
-    console.warn('Failed to decode ?v= URL state:', err);
+    console.warn('Failed to decode URL state:', err);
     return false;
   }
   applyDecodedView(stellata, decoded.view, idMaps);
-  // Auto-upgrade legacy URLs: after the same debounce we already use for
-  // routine URL writes, re-encode the current state as the latest
-  // schema, implementing the docs/sid.md § 9.4 migration table: HIP
-  // refs land exactly (hip → index → sid), index/cloud refs freeze to
-  // whatever they resolve to in the current build, unresolvable refs
-  // drop. Defers past any state-change events triggered by the apply
-  // itself, which would otherwise schedule their own write on top.
-  if (decoded.version !== SCHEMA_VERSION) {
+  // After the same debounce as routine writes, rewrite the address bar to
+  // the canonical path form when the link arrived in legacy query form OR
+  // in a superseded schema (the docs/sid.md § 9.4 migration: HIP refs land
+  // exactly, index/cloud refs freeze to the current build, unresolvable
+  // refs drop). Both conditions must stay — a current-schema `?v=` link
+  // needs the query→path rewrite even though its bytes wouldn't change.
+  // The rewrite is address-bar only; already-posted `?v=` links keep
+  // decoding forever. Defers past state-change events the apply itself
+  // triggers, which would otherwise schedule their own write on top.
+  const legacyQueryForm = fromPath === null;
+  if (legacyQueryForm || decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
   return true;
