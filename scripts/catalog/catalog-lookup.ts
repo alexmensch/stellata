@@ -1,26 +1,27 @@
-// AoS reader + per-key indexes for the v8 binary catalogue, used by
-// test-time corpus iteration. Shares LAYOUT constants with
-// catalog-pure.ts.
+// AoS reader + per-key indexes for the binary catalogue, used by
+// test-time corpus iteration. Decodes through catalog-pure.ts's reader
+// surface, same as the runtime SoA loader.
 
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import {
+  AMP_MAG_PER_UNIT,
   APSIS_FIELDS,
   type ApsisField,
-  BINARY_VERSION,
   FLAG_HAS_NAME,
-  HEADER_LAYOUT,
-  MAGIC,
-  NAME_LENGTH_PREFIX_BYTES,
-  NAME_TABLE_PADDING,
   NO_COMPANION,
   NO_CONSTELLATION_INDEX,
-  RECORD_LAYOUT,
+  PERIOD_DAYS_PER_UNIT,
   HEADER_SIZE,
   RECORD_SIZE,
   CATALOG_MANIFEST_FILENAME,
   catalogChunkFilename,
   assembleCatalogChunks,
+  readCatalogHeader,
+  readNameTable,
+  readRecordField,
+  readRecordFieldBig,
+  type CatalogHeaderFields,
   type CatalogManifest,
 } from './catalog-pure';
 import { REPO_ROOT } from '../util/paths';
@@ -76,16 +77,8 @@ export interface CatalogRecord {
   conCode: string | null;
 }
 
-export interface CatalogHeader {
-  magic: string;
-  version: number;
-  count: number;
-  nameTableOffset: number;
-  nameTableLength: number;
-}
-
 export interface Catalog {
-  readonly header: CatalogHeader;
+  readonly header: CatalogHeaderFields;
   readonly count: number;
   record(i: number): CatalogRecord;
   records(): IterableIterator<CatalogRecord>;
@@ -107,69 +100,48 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
     readFile(conPath, 'utf-8'),
   ]);
   const view = new DataView(ab);
-
-  const magic = new TextDecoder().decode(new Uint8Array(ab, HEADER_LAYOUT.magic, 4));
-  if (magic !== MAGIC) throw new Error(`Bad magic: ${magic}`);
-  const version = view.getUint32(HEADER_LAYOUT.version, true);
-  if (version !== BINARY_VERSION) {
-    throw new Error(`Unsupported catalog version: ${version} (expected ${BINARY_VERSION})`);
-  }
-  const count = view.getUint32(HEADER_LAYOUT.count, true);
-  const nameTableOffset = view.getUint32(HEADER_LAYOUT.nameTableOffset, true);
-  const nameTableLength = view.getUint32(HEADER_LAYOUT.nameTableLength, true);
+  const header = readCatalogHeader(ab);
+  const { count, nameTableOffset, nameTableLength } = header;
 
   const constellations: ConstellationEntry[] = JSON.parse(conText);
-
-  const nameAt = new Map<number, string>();
-  {
-    const td = new TextDecoder('utf-8');
-    let p = nameTableOffset + NAME_TABLE_PADDING;
-    const end = nameTableOffset + nameTableLength;
-    while (p < end) {
-      const relOff = p - nameTableOffset;
-      const len = view.getUint16(p, true);
-      p += NAME_LENGTH_PREFIX_BYTES;
-      nameAt.set(relOff, td.decode(new Uint8Array(ab, p, len)));
-      p += len;
-    }
-  }
+  const nameAt = readNameTable(ab, nameTableOffset, nameTableLength);
 
   function readRecord(i: number): CatalogRecord {
     const off = HEADER_SIZE + i * RECORD_SIZE;
-    const flags = view.getUint8(off + RECORD_LAYOUT.flags);
-    const nameOffset = view.getUint32(off + RECORD_LAYOUT.nameOffset, true);
+    const flags = readRecordField(view, off, 'flags');
+    const nameOffset = readRecordField(view, off, 'nameOffset');
     const name = flags & FLAG_HAS_NAME ? nameAt.get(nameOffset) ?? null : null;
-    const comp = view.getUint32(off + RECORD_LAYOUT.companion, true);
-    const conIdx = view.getUint8(off + RECORD_LAYOUT.conIndex);
-    const hip = view.getUint32(off + RECORD_LAYOUT.hip, true);
-    const gaiaSourceId = view.getBigUint64(off + RECORD_LAYOUT.gaiaSourceId, true);
+    const comp = readRecordField(view, off, 'companion');
+    const conIdx = readRecordField(view, off, 'conIndex');
+    const hip = readRecordField(view, off, 'hip');
+    const gaiaSourceId = readRecordFieldBig(view, off, 'gaiaSourceId');
     const apsis = {} as Record<ApsisField, number | null>;
     for (const name of APSIS_FIELDS) {
-      const v = view.getFloat32(off + RECORD_LAYOUT[name], true);
+      const v = readRecordField(view, off, name);
       apsis[name] = Number.isNaN(v) ? null : v;
     }
     return {
       i,
-      x: view.getFloat32(off + RECORD_LAYOUT.x, true),
-      y: view.getFloat32(off + RECORD_LAYOUT.y, true),
-      z: view.getFloat32(off + RECORD_LAYOUT.z, true),
-      vx: view.getFloat32(off + RECORD_LAYOUT.vx, true),
-      vy: view.getFloat32(off + RECORD_LAYOUT.vy, true),
-      vz: view.getFloat32(off + RECORD_LAYOUT.vz, true),
-      absmag: view.getFloat32(off + RECORD_LAYOUT.absmag, true),
-      ci: view.getFloat32(off + RECORD_LAYOUT.ci, true),
-      physicalRadius: view.getFloat32(off + RECORD_LAYOUT.physRadius, true),
+      x: readRecordField(view, off, 'x'),
+      y: readRecordField(view, off, 'y'),
+      z: readRecordField(view, off, 'z'),
+      vx: readRecordField(view, off, 'vx'),
+      vy: readRecordField(view, off, 'vy'),
+      vz: readRecordField(view, off, 'vz'),
+      absmag: readRecordField(view, off, 'absmag'),
+      ci: readRecordField(view, off, 'ci'),
+      physicalRadius: readRecordField(view, off, 'physRadius'),
       companion: comp === NO_COMPANION ? null : comp,
-      spectClass: view.getUint8(off + RECORD_LAYOUT.spectClass),
-      lumClass: view.getUint8(off + RECORD_LAYOUT.lumClass),
+      spectClass: readRecordField(view, off, 'spectClass'),
+      lumClass: readRecordField(view, off, 'lumClass'),
       conIndex: conIdx,
       flags,
-      amplitudeMag: view.getUint8(off + RECORD_LAYOUT.ampUnits) * 0.05,
-      periodDays: view.getUint16(off + RECORD_LAYOUT.period, true) * 0.1,
-      varType: view.getUint8(off + RECORD_LAYOUT.varType),
+      amplitudeMag: readRecordField(view, off, 'ampUnits') * AMP_MAG_PER_UNIT,
+      periodDays: readRecordField(view, off, 'period') * PERIOD_DAYS_PER_UNIT,
+      varType: readRecordField(view, off, 'varType'),
       hip: hip === 0 ? null : hip,
       gaiaSourceId: gaiaSourceId === 0n ? null : gaiaSourceId,
-      multiplicityStatus: view.getUint8(off + RECORD_LAYOUT.multiplicityStatus),
+      multiplicityStatus: readRecordField(view, off, 'multiplicityStatus'),
       ...apsis,
       name,
       conCode: conIdx === NO_CONSTELLATION_INDEX ? null : constellations[conIdx]?.code ?? null,
@@ -177,7 +149,7 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
   }
 
   return {
-    header: { magic, version, count, nameTableOffset, nameTableLength },
+    header,
     count,
     record: readRecord,
     *records() {

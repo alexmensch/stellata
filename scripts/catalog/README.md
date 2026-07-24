@@ -332,14 +332,34 @@ majority of real variables (a few multi-decade symbiotics and extreme
 eclipsers clip but those render imperceptibly slowly anyway).
 
 The byte plan above is encoded once in `scripts/catalog/catalog-pure.ts` as
-`HEADER_LAYOUT`, `RECORD_LAYOUT`, `HEADER_SIZE`, `RECORD_SIZE`, `MAGIC`,
-`BINARY_VERSION`, `NO_COMPANION`, and `NO_APSIS`. Writer
-(`scripts/catalog/build-catalog.ts`), runtime reader
+`HEADER_LAYOUT`, `RECORD_LAYOUT`, `RECORD_FIELD_KINDS`, `HEADER_SIZE`,
+`RECORD_SIZE`, `MAGIC`, `BINARY_VERSION`, `NO_COMPANION`, and `NO_APSIS`.
+Writer (`scripts/catalog/build-catalog.ts`), runtime reader
 (`src/client/loaders/catalog-loader.ts`), and the verify tool
 (`scripts/catalog/verify-catalog.ts`) all index off those constants —
 there are no inline byte offsets to drift apart. If you add fields,
-extend `RECORD_LAYOUT` and **bump `BINARY_VERSION` + `MAGIC`** in
-`catalog-pure.ts`. Free flag bits today are `0x40`, `0x80` (see
+extend `RECORD_LAYOUT` + `RECORD_FIELD_KINDS` and **bump
+`BINARY_VERSION` + `MAGIC`** in `catalog-pure.ts`.
+
+**Both directions of the record codec live in `catalog-pure.ts`**, so no
+consumer spells out a `view.get*` / `view.set*` byte read of its own:
+
+| Direction | Surface | Consumers |
+| --- | --- | --- |
+| write | `writeStarRecord`, `writeCatalogHeader` | `build-catalog.ts`, loader round-trip tests |
+| read, one record | `readRecordField`, `readRecordFieldBig` | `catalog-lookup.ts` (AoS) |
+| read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA) |
+| read, header / name table | `readCatalogHeader`, `readNameTable` | both readers |
+
+Each picks its `view.get*` call from `RECORD_FIELD_KINDS`, so a field's
+declared wire type and the bytes a reader pulls cannot disagree. The two
+read shapes exist because the sinks differ, not the bytes: the AoS reader
+yields one `CatalogRecord` object per call, while the SoA loader fills
+parallel typed arrays and does so **column-at-a-time** — one kind
+dispatch per column, then a tight constant-getter loop, which decodes the
+313k-record catalog ~35% faster than a per-record pass over every field.
+`scripts/catalog/catalog-pure.test.ts` § record reader surface pins the
+two read shapes against each other and against the writer. Free flag bits today are `0x40`, `0x80` (see
 `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` — set on
 records added by `companion-promotion.ts`. `0x20` is
 `FLAG_BINARY_COMPANION_SYNTHETIC` — set additionally when the

@@ -649,6 +649,15 @@ export const MULTIPLICITY_UNRESOLVED = 2;
 // otype value that marks a record `unresolved` when nothing resolves.
 export const SIMBAD_OTYPE_MULTIPLE = '**';
 
+// Decode steps of the two quantised variability fields — the multipliers
+// both readers apply to the stored unit. Kept as the decode-side spelling
+// of the encoders below (0.05 = 1/20, 0.1 = 1/10) rather than dividing by
+// the encoder's factor: `n * 0.05` and `n / 20` disagree in the last bit,
+// and the shipped amplitudes are the multiplied form. The round-trip
+// through both is pinned in catalog-pure.test.ts.
+export const AMP_MAG_PER_UNIT = 0.05;
+export const PERIOD_DAYS_PER_UNIT = 0.1;
+
 /** Amplitude byte: 0.05 mag quanta, saturating at 12.75 mag. */
 export function encodeAmpUnits(amplitudeMag: number): number {
   return Math.min(255, Math.max(0, Math.round(amplitudeMag * 20)));
@@ -942,8 +951,9 @@ export const RECORD_LAYOUT = {
 
 /** Wire type per RECORD_LAYOUT field. As with HEADER_FIELD_KINDS the test
  *  suite derives non-overlap + bound checks from this map so any new field
- *  gets coverage by extending one place. */
-export const RECORD_FIELD_KINDS: Record<keyof typeof RECORD_LAYOUT, FieldKind> = {
+ *  gets coverage by extending one place. Literal (`as const`) so
+ *  `readRecordField` can reject a u64 field at compile time. */
+export const RECORD_FIELD_KINDS = {
   x: 'f32', y: 'f32', z: 'f32', absmag: 'f32', ci: 'f32', physRadius: 'f32',
   companion: 'u32', nameOffset: 'u32',
   spectClass: 'u8', lumClass: 'u8', conIndex: 'u8', flags: 'u8', ampUnits: 'u8',
@@ -952,7 +962,18 @@ export const RECORD_FIELD_KINDS: Record<keyof typeof RECORD_LAYOUT, FieldKind> =
   teffGspspec: 'f32', loggGspspec: 'f32', mhGspspec: 'f32', sid: 'u32',
   vx: 'f32', vy: 'f32', vz: 'f32',
   multiplicityStatus: 'u8',
-};
+} as const satisfies Record<keyof typeof RECORD_LAYOUT, FieldKind>;
+
+export type RecordField = keyof typeof RECORD_LAYOUT;
+
+type RecordFieldOfKind<K extends FieldKind> = {
+  [F in RecordField]: (typeof RECORD_FIELD_KINDS)[F] extends K ? F : never;
+}[RecordField];
+
+/** Every record field except the u64 `gaiaSourceId` — the ones whose value
+ *  fits a JS number. */
+export type NumericRecordField = RecordFieldOfKind<'f32' | 'u8' | 'u16' | 'u32'>;
+export type BigRecordField = RecordFieldOfKind<'u64'>;
 
 export const RECORD_FIELD_SIZES = fieldSizes(RECORD_FIELD_KINDS);
 
@@ -1038,11 +1059,163 @@ export function writeCatalogHeader(
   view.setUint32(HEADER_LAYOUT.nameTableLength, fields.nameTableLength, true);
 }
 
+/** Read one field of the record starting at `recordOff` — the reader side
+ *  of the layout contract, shared by the SoA runtime loader
+ *  (src/client/loaders/catalog-loader.ts) and the AoS Node reader
+ *  (catalog-lookup.ts). The `view.get*` call is chosen from
+ *  RECORD_FIELD_KINDS, so a field's declared wire type and the bytes a
+ *  reader actually pulls can never disagree. */
+export function readRecordField(
+  view: DataView,
+  recordOff: number,
+  field: NumericRecordField,
+): number {
+  const off = recordOff + RECORD_LAYOUT[field];
+  const kind: FieldKind = RECORD_FIELD_KINDS[field];
+  switch (kind) {
+    case 'f32': return view.getFloat32(off, true);
+    case 'u8': return view.getUint8(off);
+    case 'u16': return view.getUint16(off, true);
+    case 'u32': return view.getUint32(off, true);
+    default: throw new Error(`readRecordField: ${field} is ${kind}, not a numeric field`);
+  }
+}
+
+/** `readRecordField` for the u64 fields, whose values exceed 2^53 and so
+ *  must stay BigInt. */
+export function readRecordFieldBig(
+  view: DataView,
+  recordOff: number,
+  field: BigRecordField,
+): bigint {
+  return view.getBigUint64(recordOff + RECORD_LAYOUT[field], true);
+}
+
+/** Numeric sinks a decoded column can land in. */
+export type RecordColumnSink = Float32Array | Uint8Array | Uint16Array | Uint32Array;
+
+export interface DecodeRecordColumnOptions {
+  /** Elements per record in `out` — 3 for the xyz / velocity triples. */
+  stride?: number;
+  /** Which element of the stride this field fills. */
+  component?: number;
+  /** Multiplier applied on read: the quantisation step of a scaled field
+   *  (AMP_MAG_PER_UNIT, PERIOD_DAYS_PER_UNIT). */
+  scale?: number;
+}
+
+/** Decode one field across all `count` records into a parallel array — the
+ *  bulk counterpart of `readRecordField` for the SoA runtime loader.
+ *  Column-at-a-time (one kind dispatch per column, then a tight
+ *  constant-getter loop) decodes the 313k-record catalog measurably faster
+ *  than a per-record pass over every field. */
+export function decodeRecordColumn(
+  view: DataView,
+  count: number,
+  field: NumericRecordField,
+  out: RecordColumnSink,
+  { stride = 1, component = 0, scale = 1 }: DecodeRecordColumnOptions = {},
+): void {
+  const base = HEADER_SIZE + RECORD_LAYOUT[field];
+  const kind: FieldKind = RECORD_FIELD_KINDS[field];
+  switch (kind) {
+    case 'f32':
+      for (let i = 0; i < count; i++) {
+        out[i * stride + component] = view.getFloat32(base + i * RECORD_SIZE, true) * scale;
+      }
+      return;
+    case 'u8':
+      for (let i = 0; i < count; i++) {
+        out[i * stride + component] = view.getUint8(base + i * RECORD_SIZE) * scale;
+      }
+      return;
+    case 'u16':
+      for (let i = 0; i < count; i++) {
+        out[i * stride + component] = view.getUint16(base + i * RECORD_SIZE, true) * scale;
+      }
+      return;
+    case 'u32':
+      for (let i = 0; i < count; i++) {
+        out[i * stride + component] = view.getUint32(base + i * RECORD_SIZE, true) * scale;
+      }
+      return;
+    default:
+      throw new Error(`decodeRecordColumn: ${field} is ${kind}, not a numeric field`);
+  }
+}
+
+/** `decodeRecordColumn` for the u64 fields. */
+export function decodeRecordColumnBig(
+  view: DataView,
+  count: number,
+  field: BigRecordField,
+  out: BigUint64Array,
+): void {
+  const base = HEADER_SIZE + RECORD_LAYOUT[field];
+  for (let i = 0; i < count; i++) {
+    out[i] = view.getBigUint64(base + i * RECORD_SIZE, true);
+  }
+}
+
+export interface CatalogHeaderFields {
+  magic: string;
+  version: number;
+  count: number;
+  nameTableOffset: number;
+  nameTableLength: number;
+}
+
+/** Decode + validate the fixed-size header. Both readers reject a foreign
+ *  magic or an off-version binary here rather than misreading records
+ *  against the wrong layout. */
+export function readCatalogHeader(buffer: ArrayBuffer): CatalogHeaderFields {
+  const view = new DataView(buffer);
+  const magic = new TextDecoder().decode(
+    new Uint8Array(buffer, HEADER_LAYOUT.magic, HEADER_FIELD_SIZES.magic),
+  );
+  if (magic !== MAGIC) throw new Error(`Bad magic: ${magic}`);
+  const version = view.getUint32(HEADER_LAYOUT.version, true);
+  if (version !== BINARY_VERSION) {
+    throw new Error(`Unsupported catalog version: ${version} (expected ${BINARY_VERSION})`);
+  }
+  return {
+    magic,
+    version,
+    count: view.getUint32(HEADER_LAYOUT.count, true),
+    nameTableOffset: view.getUint32(HEADER_LAYOUT.nameTableOffset, true),
+    nameTableLength: view.getUint32(HEADER_LAYOUT.nameTableLength, true),
+  };
+}
+
 // Name table layout: two zero bytes of padding so name offset 0 reads as
 // the "no name" sentinel, followed by length-prefixed UTF-8 strings:
 // uint16 byteLen, then byteLen bytes.
 export const NAME_TABLE_PADDING = 2;
 export const NAME_LENGTH_PREFIX_BYTES = 2;
+
+/** Decode the name table into `nameOffset` → name, keyed by the offset
+ *  RECORD_LAYOUT.nameOffset stores (relative to the table start). The
+ *  reader side of the writer's table emit, shared by both readers. */
+export function readNameTable(
+  buffer: ArrayBuffer,
+  nameTableOffset: number,
+  nameTableLength: number,
+): Map<number, string> {
+  const out = new Map<number, string>();
+  if (nameTableLength <= 0) return out;
+  const decoder = new TextDecoder('utf-8');
+  const bytes = new Uint8Array(buffer, nameTableOffset, nameTableLength);
+  const view = new DataView(buffer, nameTableOffset, nameTableLength);
+  let p = NAME_TABLE_PADDING;
+  while (p < nameTableLength) {
+    const len = view.getUint16(p, true);
+    const entryOffset = p;
+    p += NAME_LENGTH_PREFIX_BYTES;
+    out.set(entryOffset, decoder.decode(bytes.subarray(p, p + len)));
+    p += len;
+  }
+  return out;
+}
 
 // ---- search-index.json wire contract ------------------------------------
 

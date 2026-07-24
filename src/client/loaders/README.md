@@ -14,9 +14,14 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          decoding (byte-range chunking clears Cloudflare
                          Workers' 25 MiB per-asset limit — see
                          scripts/catalog/README.md § On-disk transport
-                         chunking). Layout + chunk helpers imported from
+                         chunking). Layout, chunk and record-decode
+                         helpers imported from
                          scripts/catalog/catalog-pure.ts — single source
-                         of truth shared with the writer. Exposes
+                         of truth shared with the writer and the Node
+                         AoS reader; the per-record decode is
+                         column-at-a-time via decodeRecordColumn (see
+                         scripts/catalog/README.md § Binary catalog
+                         format). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
                          `../binaries/README.md` § Eclipse photometry) plus
