@@ -1,24 +1,46 @@
 # URL state
 
 All Stellata UI state — camera pose, focus, magnitude settings, overlay
-toggles, observe-mode flag, POIs — lives in a single opaque URL param:
-`?v=<base64url>`. The blob is a binary, versioned envelope —
+toggles, observe-mode flag, POIs — is a single opaque base64url blob.
+The blob is a binary, versioned envelope —
 `[1 byte version] [LEB128 presence mask, 1–4 bytes] [payload]` in
 v3/v4 — and only the fields that diverge from canonical defaults
-occupy bytes. A fully-default state has no `?v=` at all, a typical
-share lands at ~10–25 chars, and worst-case (every field overridden)
-tops out around 70 chars. See `url-state.ts` for the format and the
-`FIELDS_V4` table.
+occupy bytes. A typical share lands at ~10–25 chars, and worst-case
+(every field overridden) tops out around 70 chars. See `url-state.ts`
+for the format and the `FIELDS_V4` table.
+
+## Transport — canonical path vs. legacy query
+
+The blob rides a **`/v/<blob>/` path segment** (canonical). base64url's
+alphabet (`A-Za-z0-9-_`) has no `/`, so it drops into one segment with
+no escaping; the trailing slash is optional on parse. A fully-default
+state has no segment at all — the URL is bare `/`.
+
+The **legacy `?v=<blob>` query form** is decoded forever: old shared
+links are baked into YouTube comments and can never break. On load,
+`applyFromUrl` rewrites both a legacy query-form link and a superseded
+schema version to the canonical path (address-bar only, via the same
+post-apply debounce as routine writes). The query form was retired
+because platforms auto-filter comments carrying a `?…=` link.
+
+Production serves `/v/<blob>/` via `wrangler.toml`'s `[assets]
+not_found_handling = "single-page-application"` (any unmatched path →
+`index.html`, 200); see `src/README.md`.
 
 ## Files in this area
 
 ```
 src/client/util/url-state/
-  url-state.ts (+ test)           ?v= encode / decode (v1–v4 formats),
+  share-path-pure.ts (+ test)     build / parse the /v/<blob>/ path form.
+                                  Pure string helpers, split out so the
+                                  path regex is unit-testable without
+                                  url-state.ts's location/history writes.
+  url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
-                                  applyFromUrl entry point + post-debounce
-                                  legacy→v4 rewrite, startUrlSync
+                                  applyFromUrl entry point (path + legacy
+                                  query parse) + post-debounce legacy→v4
+                                  / query→path rewrite, startUrlSync
                                   subscription. The test file carries the
                                   golden-blob corpus pinning the frozen
                                   v1/v2/v3 decoders byte-for-byte.
@@ -72,14 +94,14 @@ bit order, so mode isn't known until the field loop completes).
 - Default-compression: a field is encoded only when its value differs
   from the canonical default. Encoder pre-computes the presence mask
   in one walk, then writes only the bytes for set bits. Default state
-  produces no `?v=` at all (clean URL).
+  produces no blob at all (bare `/`).
 - Focus is encoded as the object's SID, which survives any catalog
   reordering for every object (not just the ~37% with a HIP, which is
   all v1–v3 could protect). Sol is the canonical default focus and is
   encoded by *omitting* the field; "explicitly unfocused" uses a
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
-- If `?v=` carries a focus without camera params (a hand-typed share),
+- If the blob carries a focus without camera params (a hand-typed share),
   `applyDecodedView` calls `focusStar(idx, { animate: false })` which
   snaps the camera to the park pose — URL restore must not surface as a
   2 s glide on page load. If camera params are also present, it uses
