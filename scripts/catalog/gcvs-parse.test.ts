@@ -151,6 +151,25 @@ describe('gcvs-parse / applyVariability priority', () => {
     expect(star.periodDays).toBe(409.2);
   });
 
+  it('applies the gaia-named entry when all three xref maps name the star differently', () => {
+    // True triple match: every map resolves, each to a DIFFERENT GCVS
+    // designation. Pins that the gaia name's period/amplitude is what
+    // lands — swapping the lookup order in applyVariability fails here.
+    const star = makeStar({ gaiaSourceId: '11111111', hip: 99, hd: 88 });
+    const xref: VarStarXref = {
+      byHip: new Map([[99, 'S Aql']]),
+      byHd: new Map([[88, 'T Vul']]),
+      byGaia: new Map([['11111111', 'R And']]),
+    };
+    const r = applyVariability([star], GCVS, xref);
+    expect(r.matchedByGaia).toBe(1);
+    expect(r.matchedByHip).toBe(0);
+    expect(r.matchedByHd).toBe(0);
+    expect(star.gcvsName).toBe('R And');
+    expect(star.periodDays).toBe(409.2);
+    expect(star.amplitudeMag).toBe(9.4);
+  });
+
   it('falls back to hip when gaia is absent', () => {
     const star = makeStar({ hip: 99, hd: 88 });
     const xref: VarStarXref = {
