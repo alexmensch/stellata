@@ -29,6 +29,14 @@ describe('EventBus', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects a payload on a void event and a missing payload on a typed one', () => {
+    const bus = new EventBus<TestMap>();
+    // @ts-expect-error
+    bus.emit('tick', 1);
+    // @ts-expect-error
+    bus.emit('num');
+  });
+
   it('returns an unsubscribe that detaches the handler', () => {
     const bus = new EventBus<TestMap>();
     const fn = vi.fn();

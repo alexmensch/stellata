@@ -45,9 +45,9 @@ export function formatPlanetHover(
   planetIdx: number,
   cameraDistancePc: number,
   ctx: PlanetHoverFormatContext,
-): HoverPayload {
+): HoverPayload | null {
   const planet = ctx.planets[planetIdx];
-  if (!planet) return { name: '', lines: [] };
+  if (!planet) return null;
 
   const target = ctx.membership && ctx.targetOf ? ctx.targetOf(planetIdx) : null;
   const system =

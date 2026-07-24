@@ -15,10 +15,10 @@ export function createShellHoverProvider(
   const { stellata } = config;
   return {
     kind: 'shell',
-    pick: (x, y, pxThreshold) => stellata.picker.pickShellHit(x, y, pxThreshold),
-    format: (hit): HoverPayload => {
+    pick: (x, y) => stellata.picker.pickShellHit(x, y),
+    format: (hit): HoverPayload | null => {
       const shell = stellata.shells.at(hit.idx);
-      if (!shell) return { name: '', lines: [] };
+      if (!shell) return null;
       return formatShellHover(shell, hit.cameraDistancePc);
     },
   };

@@ -233,6 +233,23 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
 - Both containers set `pointer-events: none` on themselves and `auto` on
   direct children, so clicks fall through empty regions to the canvas.
 
+### Page margins
+
+The inset every fixed container sits at is three `:root` custom
+properties in `styles.css` — `--page-margin-x` (14px),
+`--page-margin-top` (10px), `--page-margin-bottom` (16px). Position new
+fixed chrome with those, never a fresh literal.
+
+Overlays that place themselves in JS read the same values through
+`page-margins.ts` (`readPageMargins()`), so a margin change moves them
+with the CSS-positioned chrome. The hover tooltip is the current
+consumer — its bottom/right clamps inset by the same margin so a card
+near the corner lines up with the panel and scale bar instead of sitting
+flush to the viewport edge. The reader returns 0 for a missing property
+rather than a hardcoded default: the stylesheet stays the single source,
+and a document without it degrades to flush placement instead of `NaN`
+offsets.
+
 ## Bottom-left widget: scene-scale bar
 
 `scale-bar.ts` is a single SVG. Targets ~20% of viewport width;

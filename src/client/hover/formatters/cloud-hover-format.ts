@@ -14,9 +14,9 @@ export function formatCloudHover(
   idx: number,
   cameraDistancePc: number,
   ctx: CloudHoverFormatContext,
-): HoverPayload {
+): HoverPayload | null {
   const cloud = ctx.clouds[idx];
-  if (!cloud) return { name: '', lines: [] };
+  if (!cloud) return null;
   const [ax, ay, az] = cloud.axes;
   const major = Math.max(ax, ay, az);
   const minor = Math.min(ax, ay, az);

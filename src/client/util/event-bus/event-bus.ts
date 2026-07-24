@@ -2,6 +2,11 @@
 // compiler enforces handler/payload alignment per event.
 // See src/client/util/event-bus/README.md.
 
+type NoPayloadKeys<M> = {
+  [K in keyof M]: M[K] extends void ? K : never;
+}[keyof M];
+type WithPayloadKeys<M> = Exclude<keyof M, NoPayloadKeys<M>>;
+
 export class EventBus<M extends Record<string, unknown>> {
   private handlers = new Map<keyof M, Set<(payload: never) => void>>();
 
@@ -18,20 +23,15 @@ export class EventBus<M extends Record<string, unknown>> {
     };
   }
 
-  // Conditional rest tuple omits the payload arg entirely for `void` events,
-  // so `bus.emit('frame')` and `bus.emit('focus', idx)` both type-check
-  // against the same signature. Consequence for the map: a payload type
-  // must never include `void` in a union — `void | T` matches the
-  // no-payload branch and the compiler then refuses the payload arg.
-  // Model an optional payload as `T | undefined` instead.
-  emit<K extends keyof M>(
-    name: K,
-    ...rest: M[K] extends void ? [] : [M[K]]
-  ): void {
-    const payload = rest[0] as M[K];
+  // Split overloads, not a conditional rest tuple: `frame` emits once per
+  // render at 60–120 Hz and a rest parameter allocates an array per call.
+  // Map-authoring constraint (no `void` in a payload union) in ./README.md.
+  emit<K extends NoPayloadKeys<M>>(name: K): void;
+  emit<K extends WithPayloadKeys<M>>(name: K, payload: M[K]): void;
+  emit(name: keyof M, payload?: unknown): void {
     const set = this.handlers.get(name);
     if (!set) return;
-    for (const h of set) (h as (p: M[K]) => void)(payload);
+    for (const h of set) (h as (p: unknown) => void)(payload);
   }
 
   // Detach every subscriber across every event. Called from

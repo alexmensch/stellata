@@ -2,6 +2,7 @@
 // registry, #tooltip render. See ./README.md.
 
 import { escapeHtml } from '../ui/dom-util';
+import { readPageMargins } from '../ui/page-margins';
 import {
   disambiguateHits,
   type HoverProviderHit,
@@ -14,13 +15,6 @@ import type { HoverProvider } from './hover-types';
 const DEFAULT_DELAY_MS = 280;
 const DEFAULT_PX_THRESHOLD = 14;
 
-// Tooltip placement clamps. `MAX_WIDTH_PX` keeps the right-edge clamp
-// in sync with the tooltip's CSS `max-width: 300px`; `MAX_HEIGHT_PX`
-// matches the styled tooltip's worst-case height for 5 lines + name.
-// Both keep the tooltip on-screen when the cursor approaches the
-// bottom-right corner.
-const TOOLTIP_MAX_WIDTH_PX = 300;
-const TOOLTIP_MAX_HEIGHT_PX = 96;
 // Near-cursor offset — far enough that the cursor doesn't sit on the
 // tooltip and trigger pointerleave on the canvas, close enough that
 // the tooltip reads as attached to the cursor.
@@ -50,6 +44,7 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
   } = config;
 
   const providers: HoverProvider[] = [...initialProviders];
+  const margins = readPageMargins();
   let timer: number | undefined;
   let dragging = false;
   // Scratch array reused per tick so the disambiguator doesn't allocate
@@ -66,16 +61,26 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
   };
 
   const renderPayload = (clientX: number, clientY: number, winner: HoverProviderHit) => {
-    const { name, lines } = winner.provider.format(winner.hit);
+    const payload = winner.provider.format(winner.hit);
+    if (payload === null) return;
+    const { name, lines } = payload;
     const subLines = lines
       .map((l) => `<div class="tt-sub">${escapeHtml(l)}</div>`)
       .join('');
     tooltip.innerHTML = `<div class="tt-name">${escapeHtml(name)}</div>${subLines}`;
-    const maxLeft = window.innerWidth - TOOLTIP_MAX_WIDTH_PX;
-    const maxTop = window.innerHeight - TOOLTIP_MAX_HEIGHT_PX;
+    // Measure the laid-out card rather than clamping against hand-copied
+    // CSS numbers. The origin park is load-bearing: the card is
+    // shrink-to-fit, so measuring at the previous position would size it
+    // against whatever viewport space remained there and read a taller
+    // box than it will occupy once clamped.
+    tooltip.style.left = '0px';
+    tooltip.style.top = '0px';
+    tooltip.hidden = false;
+    const { width, height } = tooltip.getBoundingClientRect();
+    const maxLeft = window.innerWidth - width - margins.x;
+    const maxTop = window.innerHeight - height - margins.bottom;
     tooltip.style.left = Math.min(clientX + TOOLTIP_CURSOR_OFFSET_PX, maxLeft) + 'px';
     tooltip.style.top = Math.min(clientY + TOOLTIP_CURSOR_OFFSET_PX, maxTop) + 'px';
-    tooltip.hidden = false;
   };
 
   const onPointerDown = () => {

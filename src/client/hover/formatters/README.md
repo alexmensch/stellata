@@ -2,7 +2,8 @@
 
 One pure formatter per hoverable layer. Each is a thin function from
 the layer's `HoverHit` payload to the engine's `{ name, lines: string[] }`
-contract. Vitest-pinned because the on-screen text is user-visible
+contract, or `null` when the hit no longer resolves to an object.
+Vitest-pinned because the on-screen text is user-visible
 and the format conventions (units spelled out in full, two-decimal
 distances, etc.) are easy to drift.
 

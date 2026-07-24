@@ -29,9 +29,28 @@ lives entirely under `src/client/hover/`:
   pick threshold, hide-on-drag / hide-on-leave / hide-on-pointermove
   gating, tooltip placement and on-screen clamping. Provider-agnostic;
   pulled out of the prior `bindHoverTooltip` so future layers wire in
-  without engine edits.
+  without engine edits. The bottom/right clamps come from a
+  `getBoundingClientRect()` measure of the rendered card — never from a
+  copy of the CSS `max-width` or a hand-calibrated worst-case height, so
+  tooltip padding / line-height edits can't drift the clamp.
+  Measurement runs with the card parked at the origin: it's
+  shrink-to-fit, so measuring at its previous position would size it
+  against the viewport space left over there. Both clamps then inset by
+  the shared page margins (`../ui/page-margins.ts`), so a cornered card
+  lines up with the panel and scale bar rather than sitting flush to the
+  viewport edge.
+
+  Only `pick` receives the pixel threshold. Providers whose pick surface
+  is a whole silhouette (boundary shells, clouds) ignore it, and their
+  `Picker` methods don't accept it — the parameter belongs to
+  centroid-plus-radius pick surfaces only.
 - **`hover-types.ts`** — the `HoverProvider` contract:
-  `pick(event) → HoverHit | null` and `format(hit) → HoverPayload`.
+  `pick(event) → HoverHit | null` and
+  `format(hit) → HoverPayload | null`. Both halves signal "nothing
+  here" with `null`, and the engine skips the render on either — a
+  formatter whose state moved between pick and format must return
+  `null`, never `{ name: '', lines: [] }`, which would paint a blank
+  card at the cursor.
   `HoverPayload` is `{ name, lines: string[] }` — at most ~5 sub-lines
   per the design gate so the card stays glanceable. `HoverHit`'s
   optional `hostStarIdx` sub-key is deliberate and stays: a planet is

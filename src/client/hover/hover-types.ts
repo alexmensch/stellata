@@ -44,7 +44,12 @@ export interface HoverProvider<TKind extends HoverKind = HoverKind> {
   // can decode the winning pick without re-querying state. Star /
   // Local Group / cloud / heliopause providers ignore everything but
   // `hit.idx`.
-  format(hit: HoverHit): HoverPayload;
+  //
+  // `null` means "no card warranted" — the engine renders nothing. A
+  // provider whose state moved between `pick` and `format` returns null
+  // rather than an empty payload; an empty payload would render a blank
+  // card at the cursor.
+  format(hit: HoverHit): HoverPayload | null;
 }
 
 export type HoverKind =

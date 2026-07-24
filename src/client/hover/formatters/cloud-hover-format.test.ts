@@ -45,7 +45,7 @@ describe('formatCloudHover', () => {
     // one-decimal tier (≥ 1 pc, < 100 pc).
     const out = formatCloudHover(0, 150.4, buildCtx([
       cloud('Taurus', [22.0, 19.0, 9.5], 150.4),
-    ]));
+    ]))!;
     expect(out.name).toBe('Taurus');
     expect(out.lines).toEqual([
       '150 pc',
@@ -60,7 +60,7 @@ describe('formatCloudHover', () => {
     // (vs Taurus where axes[0] is the longest).
     const out = formatCloudHover(0, 414.4, buildCtx([
       cloud('Orion A', [17.0, 32.0, 15.5], 414.4),
-    ]));
+    ]))!;
     expect(out.name).toBe('Orion A');
     expect(out.lines).toEqual([
       '414 pc',
@@ -75,7 +75,7 @@ describe('formatCloudHover', () => {
     // rounding; the size line still reads naturally.
     const out = formatCloudHover(0, 236.2, buildCtx([
       cloud('Aquila Rift', [75.73, 75.73, 75.73], 236.2, 'Z2020'),
-    ]));
+    ]))!;
     expect(out.name).toBe('Aquila Rift');
     expect(out.lines).toEqual([
       '236 pc',
@@ -83,8 +83,8 @@ describe('formatCloudHover', () => {
     ]);
   });
 
-  it('returns empty payload for out-of-range index', () => {
+  it('returns null for out-of-range index', () => {
     const out = formatCloudHover(99, 100, buildCtx([]));
-    expect(out).toEqual({ name: '', lines: [] });
+    expect(out).toBeNull();
   });
 });

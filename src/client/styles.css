@@ -8,6 +8,13 @@
   --accent: #7dd3fc;
   --warm: #fde68a;
   --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+
+  /* Page margins every fixed chrome container sits at. The hover engine
+     reads these to clamp the tooltip to the same inset, so a change here
+     moves the cards with the chrome — see hover/README.md. */
+  --page-margin-x: 14px;
+  --page-margin-top: 10px;
+  --page-margin-bottom: 16px;
 }
 
 * { box-sizing: border-box; }
@@ -108,11 +115,11 @@ html, body {
  * column. Browser handles wrapping/shrinking; no JS layout. */
 .ui-top {
   position: fixed;
-  top: 10px;
-  right: 14px;
-  bottom: 16px;
+  top: var(--page-margin-top);
+  right: var(--page-margin-x);
+  bottom: var(--page-margin-bottom);
   width: 280px;
-  max-width: calc(100vw - 28px);
+  max-width: calc(100vw - 2 * var(--page-margin-x));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -142,8 +149,8 @@ html, body {
  * topbar/panel. */
 .ui-top-left {
   position: fixed;
-  top: 10px;
-  left: 14px;
+  top: var(--page-margin-top);
+  left: var(--page-margin-x);
   z-index: 10;
   pointer-events: none;
 }
@@ -188,9 +195,9 @@ html, body {
 
 .ui-bottom {
   position: fixed;
-  left: 14px;
-  right: 14px;
-  bottom: 16px;
+  left: var(--page-margin-x);
+  right: var(--page-margin-x);
+  bottom: var(--page-margin-bottom);
   z-index: 7;
   display: flex;
   flex-wrap: wrap;
@@ -212,8 +219,8 @@ body[data-controls-hidden] #card-stack {
 .controls-restore-btn {
   display: none;
   position: fixed;
-  top: 10px;
-  right: 14px;
+  top: var(--page-margin-top);
+  right: var(--page-margin-x);
   z-index: 12;
   align-items: center;
   padding: 6px 10px;
