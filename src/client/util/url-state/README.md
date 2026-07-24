@@ -25,7 +25,10 @@ because platforms auto-filter comments carrying a `?…=` link.
 
 Production serves `/v/<blob>/` via `wrangler.toml`'s `[assets]
 not_found_handling = "single-page-application"` (any unmatched path →
-`index.html`, 200); see `src/README.md`.
+`index.html`, 200); see `src/README.md`. Because that serves `index.html`
+for *any* path, `applyFromUrl` strips the address bar back to bare `/`
+when the URL carries nothing decodable — a bogus path, a stray query, or
+a `/v/<blob>/` whose blob won't decode — so the bar never lingers on junk.
 
 ## Files in this area
 
@@ -123,9 +126,9 @@ bit order, so mode isn't known until the field loop completes).
   `setCameraMode('observe', { animate: false })` if the bit is set and
   a hard-kind focus (star / planet) exists. Default-omitted (navigate).
 - The URL writer skips frame-triggered updates while
-  `isObserveTransitionActive()` is true, mirroring the warp guard — the
-  observe enter/exit translate animates camera position and would
-  otherwise flood history with intermediate poses.
+  `isCameraTransitionActive()` is true (warp, observe enter/exit, or the
+  navigate-mode unfocus zoom-out) — those animate camera position and
+  would otherwise flood history with intermediate poses.
 
 Cloud-related state (cloud focus, cloud measurement vector) rides the
 same universal `focus` / `to` SID refs; the shelved MC overlay toggle's
