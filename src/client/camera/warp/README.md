@@ -24,8 +24,13 @@ The warp consumes focusable objects through the `FocusTarget` contract
   recentre predicate). Floating-origin migration of in-flight
   `WarpState` waypoints lives here as `shiftWarpWaypoints`; the
   sibling `shiftArrivalWaypoints` lives in `../arrival/camera-motion.ts`.
-- `warp-tuning.ts` — tuning section in the debug panel; resolves the
-  `warpArrivalEaseFn(ctx)` curve at warp-start.
+- `warp-tuning.ts` — tuning section in the debug panel. Sliders write
+  into `../camera-config.ts`; the panel is the only writer and no
+  shipped path imports it. See `../README.md` § Shipping config vs
+  debug panel.
+- `warp-telemetry.ts` — last-warp summary slot, written by
+  `finishWarp`, read by the tuning readout. Debug observability only;
+  nothing in the warp path reads it back.
 - `warp-button.ts` — W-key warp trigger, the in-flight "Skip" pill,
   and the `body.warping` CSS class.
 
@@ -143,6 +148,13 @@ before the floating-origin shift cleans up the projection chain.
 Clouds return `null` from `chartPlateauDistance` — chart mode
 renders them as isobar contours rather than discs, no plateau to
 detect.
+
+Two settled constants shape the cue, both in `warp-controller.ts`:
+`CHART_PLATEAU_MARGIN` (0.7) scales the trigger radius — below 1 the
+pivot fires deeper into the plateau; and `CHART_PHASE3_ALPHA` (0.2)
+stretches phase 3 by `1 + α·log10(d_trigger / endOffset)`, so a long
+plateau-to-park haul gets proportionally more parallax time instead of
+sweeping the whole distance in a flat 1.8 s.
 
 ### 3. Post-arrival reorient (`returnToObserve` only, `OBSERVE_TRANSITION_MS` = 1800)
 

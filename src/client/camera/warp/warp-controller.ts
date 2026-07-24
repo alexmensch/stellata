@@ -24,26 +24,19 @@ import {
 } from '../arrival/camera-motion';
 import { shiftWarpWaypoints } from './warp-pure';
 import { WARP_BASE_DIR } from '../timing';
-import {
-  recordLastWarp,
-  warpArrivalEaseFn,
-  warpArrivalHybridSeamK,
-  warpChartPhase3Alpha,
-  warpChartPhase3ScalingEnabled,
-  warpChartPlateauMargin,
-  warpFlyTKMs,
-  warpFlyTMaxMs,
-  warpFlyTMinMs,
-  warpMidFlyRecentreFrac,
-  warpObserveTransitionMs,
-  warpReorientMs,
-} from './warp-tuning';
+import { arrivalEaseFn, cameraConfig } from '../camera-config';
+import { recordLastWarp } from './warp-telemetry';
 import { hybridUSeam } from '../arrival/arrival-curves';
 
 // Source→dest separations below this have no reliable travel direction —
 // AB/distPc is float32 noise (coincident catalog baselines / orbit
 // crossing). See README § OBSERVE mode and the warp state machine.
 const WARP_DEGENERATE_DIST_PC = 1e-9;
+
+// Settled plateau-trigger shape — see README § Chart-mode
+// plateau-trigger for what each value does to the cue.
+const CHART_PLATEAU_MARGIN = 0.7;
+const CHART_PHASE3_ALPHA = 0.2;
 
 export type WarpPhaseKind = 'reorient' | 'fly' | 'post-arrival';
 
@@ -112,7 +105,6 @@ interface WarpState {
   flyArrivalUSeam: number;
   chartPlateauDist: number | null;
   chartPlateauTriggered: boolean;
-  chartPhase3Scaled: boolean;
 }
 
 export class WarpController {
@@ -304,26 +296,23 @@ export class WarpController {
     // still runs instead of NaN-ing out.
     const dir0 = mag0 > 1e-9 ? radial.divideScalar(mag0) : dirBack.clone();
 
-    // Warp duration / phase-3 / reorient durations + arrival curve are
-    // read from the warp-tuning module so the debug panel can override
-    // them live (next warp picks up the change). When the panel is
-    // closed or its sliders untouched, the getters return the shipped
-    // defaults (`WARP_T_*`, `WARP_REORIENT_MS`, `OBSERVE_TRANSITION_MS`,
-    // hybrid arrival), so behaviour is identical to a build without
-    // the panel.
-    const reorientMs = warpReorientMs();
+    // Durations + arrival curve resolve once per warp against the live
+    // camera config, so a debug-panel edit takes effect on the next warp
+    // without disturbing this one.
+    const cfg = cameraConfig();
+    const reorientMs = cfg.reorientMs;
     const durationMs = Math.min(
-      warpFlyTMaxMs(),
-      warpFlyTMinMs() + warpFlyTKMs() * Math.log10(1 + distPc),
+      cfg.flyTMaxMs,
+      cfg.flyTMinMs + cfg.flyTKMs * Math.log10(1 + distPc),
     );
-    const postArrivalMs = returnToObserve ? warpObserveTransitionMs() : 0;
+    const postArrivalMs = returnToObserve ? cfg.observeTransitionMs : 0;
     // Resolve the arrival curve with per-warp context. The hybrid curve
     // consumes `{ d0, dEnd, targetRadius }`; missing R or outbound
     // trajectory triggers the cubic-Hermite log-d fallback inside the
     // closure (clouds, future kinds without a geometric radius).
     const flyD0 = pStart.distanceTo(B);
     const flyDestR = dest.physicalRadius();
-    const arrivalEaseFn = warpArrivalEaseFn({
+    const easeUFn = arrivalEaseFn({
       d0: flyD0,
       dEnd: endOffset,
       targetRadius: flyDestR,
@@ -336,7 +325,7 @@ export class WarpController {
       flyD0,
       endOffset,
       flyDestR,
-      warpArrivalHybridSeamK(),
+      cfg.arrivalHybridSeamK,
     );
 
     this.deps.controls.enabled = false;
@@ -363,15 +352,13 @@ export class WarpController {
     // (chart-mode.ts auto-clears on observe→navigate), and the plateau
     // only matters when the destination disc is magnitude-driven — both
     // conditions captured here so the Fly phase doesn't have to
-    // re-derive them per frame. `warpChartPlateauMargin()` lets the
-    // debug panel scale the trigger distance — >1 fires earlier
-    // (farther out), <1 fires later (deeper into the plateau).
+    // re-derive them per frame.
     const rawPlateauDist =
       returnToObserve && this.deps.isChartMode()
         ? dest.chartPlateauDistance(this.deps.getChartMagBright())
         : null;
     const chartPlateauDist =
-      rawPlateauDist !== null ? rawPlateauDist * warpChartPlateauMargin() : null;
+      rawPlateauDist !== null ? rawPlateauDist * CHART_PLATEAU_MARGIN : null;
     const warpStartMs = performance.now();
     this.state = {
       startTimeMs: warpStartMs,
@@ -406,12 +393,11 @@ export class WarpController {
         target: { center: B, parkDist: endOffset },
         startMs: warpStartMs + reorientMs,
         durationMs,
-        easeUFn: arrivalEaseFn,
+        easeUFn,
       }),
       flyArrivalUSeam,
       chartPlateauDist,
       chartPlateauTriggered: false,
-      chartPhase3Scaled: false,
     };
     this.deps.bus.emit('warp', true);
     this.deps.bus.emit('state');
@@ -431,7 +417,6 @@ export class WarpController {
       destIdx: state.dest.idx,
       totalMs: performance.now() - state.startTimeMs,
       plateauFired: state.chartPlateauTriggered,
-      plateauScaledPhase3: state.chartPhase3Scaled,
       plateauDistPc: state.chartPlateauDist,
     });
     const Bout = this.tmpLocal;
@@ -584,10 +569,9 @@ export class WarpController {
     const ax = tmp.x - state.A.x, ay = tmp.y - state.A.y, az = tmp.z - state.A.z;
     const abDist2 = ax * ax + ay * ay + az * az;
     // Past trajectory midpoint? Fall through to the recentre; else bail.
-    // The fraction (0.25 = midpoint by default) is tunable via the warp
-    // debug panel — lower fires the recentre later (less of Fly in the
-    // dest-local frame), higher fires it earlier.
-    const frac = warpMidFlyRecentreFrac();
+    // Squared here so the config value reads as a plain trajectory
+    // fraction; lower fires the recentre later.
+    const frac = cameraConfig().midFlyRecentreFrac;
     if (cbDist2 >= frac * frac * abDist2) return;
     // `anchorInto` overwrites `tmp` from local-frame to absolute-frame.
     if (!state.dest.anchorInto(tmp)) return;
@@ -715,22 +699,12 @@ export class WarpController {
         state.pEnd.copy(this.deps.camera.position);
         state.durationMs = flyElapsed;
         state.chartPlateauTriggered = true;
-        // Optional chart phase-3 duration scaling (debug-panel knob).
-        // For long warps where the plateau distance is large compared
-        // to endOffset, the default fixed-duration phase 3 sweeps a
-        // lot of distance in 1200 ms which can feel too fast. Scale by
-        // 1 + α·log10(d_trigger / endOffset) so longer plateau-to-park
-        // hauls get proportionally more time. Default-off; the knob
-        // reads from warp-tuning at the trigger moment so the user can
-        // dial it in across smoke warps.
-        if (warpChartPhase3ScalingEnabled()) {
-          const dTrigger = this.deps.camera.position.distanceTo(out);
-          if (dTrigger > state.endOffset && state.endOffset > 0) {
-            const alpha = warpChartPhase3Alpha();
-            const scale = 1 + alpha * Math.log10(dTrigger / state.endOffset);
-            state.postArrivalMs *= Math.max(1, scale);
-            state.chartPhase3Scaled = true;
-          }
+        // Stretch phase 3 so a long plateau-to-park haul isn't swept at
+        // the same fixed duration as a short one.
+        const dTrigger = this.deps.camera.position.distanceTo(out);
+        if (dTrigger > state.endOffset && state.endOffset > 0) {
+          const scale = 1 + CHART_PHASE3_ALPHA * Math.log10(dTrigger / state.endOffset);
+          state.postArrivalMs *= Math.max(1, scale);
         }
       }
       return;
