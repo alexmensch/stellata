@@ -1419,15 +1419,28 @@ function snapshotCam(stellata: Stellata, out: Float64Array): void {
   out[6] = u.x; out[7] = u.y; out[8] = u.z;
 }
 
+// Effective persisted `t` for the per-frame change detector. Mirrors
+// currentStateOf's encode gate (`!isLive` ⇒ emit t) exactly, so the
+// detector schedules a write precisely when the blob's t would change:
+// null = live (t omitted from the blob and tracks the receiver's clock),
+// otherwise the pinned value. A live clock advances every frame but must
+// NOT trigger writes — the scrubber drives getT() directly without any
+// 'state' event, so t is invisible to the detector otherwise.
+function persistedT(stellata: Stellata): number | null {
+  const t = stellata.getT();
+  return isLive(t) ? null : t;
+}
+
 export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
   let timer: number | undefined;
-  // Per-frame camera/target/up change detector. Seeded from the live
-  // camera state at registration time so the first frame doesn't
+  // Per-frame camera/target/up + pinned-t change detector. Seeded from
+  // the live state at registration time so the first frame doesn't
   // trigger a write — the URL stays empty (or in sync with whatever
   // applyFromUrl/applyFirstLoadView just applied) until the user
-  // actually moves the camera or changes a setting.
+  // actually moves the camera, scrubs time, or changes a setting.
   const lastCam = new Float64Array(9);
   snapshotCam(stellata, lastCam);
+  let lastT = persistedT(stellata);
 
   const schedule = () => {
     if (timer !== undefined) clearTimeout(timer);
@@ -1443,8 +1456,20 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     // the camera mutates every frame and we don't want intermediate
     // poses in the URL. End-of-animation events flush the final pose.
     if (stellata.isCameraTransitionActive()) return;
+    let changed = false;
+
+    // Scrubbed time: the scrubber mutates getT() without a 'state' event,
+    // so watch it here. During live playback t evolves every frame and
+    // schedule() coalesces via the debounce — one write once the clock
+    // settles.
+    const t = persistedT(stellata);
+    if (t !== lastT) {
+      lastT = t;
+      changed = true;
+    }
+
     const c = stellata.camera.position;
-    const t = stellata.controls.target;
+    const tg = stellata.controls.target;
     const u = stellata.camera.up;
     // Component-wise epsilon comparison on the steady-state path. The
     // per-vector threshold scales with magnitude (frameTriggerEps) so
@@ -1454,17 +1479,18 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     // original behaviour. No allocations on the no-change path — used
     // to be 10+ string allocations per frame from a toFixed(3)×9 hash.
     const cEps = frameTriggerEps(Math.hypot(c.x, c.y, c.z));
-    const tEps = frameTriggerEps(Math.hypot(t.x, t.y, t.z));
+    const tEps = frameTriggerEps(Math.hypot(tg.x, tg.y, tg.z));
     const uEps = frameTriggerEps(Math.hypot(u.x, u.y, u.z));
-    if (
-      Math.abs(c.x - lastCam[0]) < cEps && Math.abs(c.y - lastCam[1]) < cEps && Math.abs(c.z - lastCam[2]) < cEps &&
-      Math.abs(t.x - lastCam[3]) < tEps && Math.abs(t.y - lastCam[4]) < tEps && Math.abs(t.z - lastCam[5]) < tEps &&
-      Math.abs(u.x - lastCam[6]) < uEps && Math.abs(u.y - lastCam[7]) < uEps && Math.abs(u.z - lastCam[8]) < uEps
-    ) {
-      return;
+    const camMoved =
+      Math.abs(c.x - lastCam[0]) >= cEps || Math.abs(c.y - lastCam[1]) >= cEps || Math.abs(c.z - lastCam[2]) >= cEps ||
+      Math.abs(tg.x - lastCam[3]) >= tEps || Math.abs(tg.y - lastCam[4]) >= tEps || Math.abs(tg.z - lastCam[5]) >= tEps ||
+      Math.abs(u.x - lastCam[6]) >= uEps || Math.abs(u.y - lastCam[7]) >= uEps || Math.abs(u.z - lastCam[8]) >= uEps;
+    if (camMoved) {
+      snapshotCam(stellata, lastCam);
+      changed = true;
     }
-    snapshotCam(stellata, lastCam);
-    schedule();
+
+    if (changed) schedule();
   });
 }
 

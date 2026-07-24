@@ -110,6 +110,10 @@ bit order, so mode isn't known until the field loop completes).
   epsilon comparison (no per-frame allocations) feeding a 1 s debounced
   writer. The comparison covers position, target, **and** `camera.up` — so
   two-finger roll (which only mutates `up`) still triggers a URL update.
+  The same frame check also watches the **pinned `t`** (`isLive(t) ? null
+  : t`, mirroring `currentStateOf`'s encode gate): the scrubber drives
+  `getT()` directly without a `'state'` event, so without this a time
+  scrub on a still camera would never reach the URL.
 - `camera.up` round-trips when it differs from `(0, 1, 0)` and is
   applied **before** focus/orbit dispatch because `focusStar` /
   `setOrbitTarget` call `controls.update()` which reads `camera.up` to
