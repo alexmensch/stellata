@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSharePath, parseSharePath } from './share-path-pure';
+import { buildSharePath, parseSharePath, pickShareBlob } from './share-path-pure';
 
 describe('buildSharePath', () => {
   it('wraps the blob in /v/<blob>/ with a trailing slash', () => {
@@ -35,5 +35,28 @@ describe('parseSharePath', () => {
     ['/prefix/v/AQAA/'],
   ])('returns null for non-share path %s', (pathname) => {
     expect(parseSharePath(pathname)).toBeNull();
+  });
+});
+
+describe('pickShareBlob', () => {
+  it('reads the canonical path form (not a legacy query)', () => {
+    expect(pickShareBlob('/v/AQAA/', '')).toEqual({ blob: 'AQAA', legacyQueryForm: false });
+  });
+
+  it('reads the legacy ?v= query and flags it', () => {
+    expect(pickShareBlob('/', '?v=AQAA')).toEqual({ blob: 'AQAA', legacyQueryForm: true });
+  });
+
+  it('prefers the path over a query when both are present', () => {
+    expect(pickShareBlob('/v/PATH/', '?v=QUERY')).toEqual({ blob: 'PATH', legacyQueryForm: false });
+  });
+
+  it('falls back to the query when the path is not a share path', () => {
+    expect(pickShareBlob('/garbage', '?v=AQAA')).toEqual({ blob: 'AQAA', legacyQueryForm: true });
+  });
+
+  it('returns a null blob when neither carries state', () => {
+    expect(pickShareBlob('/garbage', '')).toEqual({ blob: null, legacyQueryForm: false });
+    expect(pickShareBlob('/', '')).toEqual({ blob: null, legacyQueryForm: false });
   });
 });

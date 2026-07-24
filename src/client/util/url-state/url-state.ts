@@ -13,7 +13,7 @@ import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
-import { buildSharePath, parseSharePath } from './share-path-pure';
+import { buildSharePath, pickShareBlob } from './share-path-pure';
 
 // URL state is a single opaque base64url blob carried in a `/v/<blob>/`
 // path segment (canonical) or a legacy `?v=<blob>` query param (still
@@ -37,7 +37,6 @@ const SCHEMA_VERSION_V1 = 1;
 const SCHEMA_VERSION_V2 = 2;
 const SCHEMA_VERSION_V3 = 3;
 const SCHEMA_VERSION = 4;
-const PARAM_NAME = 'v';
 const EPS = 1e-3;
 // Per-frame URL-write change detector: 1% of vector magnitude, capped
 // at EPS (1e-3 pc) and floored at EPS_FLOOR (well below float32 ULP at
@@ -1372,20 +1371,34 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   }
 }
 
+// Nothing decodable in the URL (bogus path, stray query, or a `/v/<blob>/`
+// whose blob won't decode) → strip the address bar back to bare `/`. The
+// SPA not_found_handling already served index.html for any path; this is
+// the client half that keeps the bar off junk the user can't act on,
+// rather than leaving the unmatched path sitting there.
+function resetJunkUrl(): void {
+  if (location.pathname !== '/' || location.search !== '') {
+    history.replaceState(null, '', '/');
+  }
+}
+
 // Returns true when a state blob was present and applied — from the
 // canonical `/v/<blob>/` path or the legacy `?v=` query param, any schema
 // version. The caller uses the false branch to fall back to the canonical
 // first-load view. A malformed blob also returns false so the user lands
 // on the framed default rather than the unframed canvas-default pose.
 export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
-  const fromPath = parseSharePath(location.pathname);
-  const blob = fromPath ?? new URLSearchParams(location.search).get(PARAM_NAME);
-  if (!blob) return false;
+  const { blob, legacyQueryForm } = pickShareBlob(location.pathname, location.search);
+  if (!blob) {
+    resetJunkUrl();
+    return false;
+  }
   let decoded: DecodedBlob;
   try {
     decoded = decodeBlob(blob);
   } catch (err) {
     console.warn('Failed to decode URL state:', err);
+    resetJunkUrl();
     return false;
   }
   applyDecodedView(stellata, decoded.view, idMaps);
@@ -1398,7 +1411,6 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
   // The rewrite is address-bar only; already-posted `?v=` links keep
   // decoding forever. Defers past state-change events the apply itself
   // triggers, which would otherwise schedule their own write on top.
-  const legacyQueryForm = fromPath === null;
   if (legacyQueryForm || decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
