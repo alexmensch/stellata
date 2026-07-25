@@ -93,3 +93,89 @@ file — they mirror real coupling and don't generalise.
   `focus/focus-transition.ts` (focus-park lerp),
   `warp/warp-controller.ts` (warp Fly phase), and
   `observe/observe-transition.ts` (close-zoom unfocus).
+
+## Camera-activity predicates
+
+Six overlapping "is the camera doing something" predicates exist, and
+picking the wrong one is the standing risk every new camera feature
+runs. There are **four independent animation sources** — warp, aim
+slerp, focus-park lerp, and the `ObserveTransition` slot (which itself
+carries three kinds: `enter` / `exit` / `unfocus`, see
+`observe/README.md` § ObserveTransition kinds). Each predicate is a
+different subset:
+
+| Predicate | Warp | Aim | Focus-park lerp | Observe `enter`/`exit` | Observe `unfocus` |
+|---|:-:|:-:|:-:|:-:|:-:|
+| `ObserveTransition.isActive` | – | – | – | ✓ | – |
+| `ObserveTransition.isAnyActive` | – | – | – | ✓ | ✓ |
+| `Stellata.isAimActive` | – | ✓ | – | – | – |
+| `Stellata.isObserveTransitionActive` | – | – | – | ✓ | – |
+| `Stellata.isCameraTransitionActive` | ✓ | – | – | ✓ | ✓ |
+| `FocusController.isCameraBusy` | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Why each one exists, and who reads it:
+
+- **`isCameraBusy`** — the full union; the only "camera is animating at
+  all" gate. Read by `ObserveTransition.setMode` (through
+  `ObserveFocusOps`) before it claims the camera.
+- **`isCameraTransitionActive`** — warp + every observe kind, but
+  **not** aim or focus-park. It gates *position* serialisation: the
+  `url-state` frame-hash writer skips writes while a camera
+  **translation** is in flight so a transient mid-lerp pose is never
+  written to `?v=`. Aim and focus-park are excluded because both settle
+  on a pose the writer should capture.
+- **`isObserveTransitionActive`** — observe `enter`/`exit` only.
+  Consumed by anything gating on *observe-mode visibility*
+  (`poi-overlay`, `setVectorSlot`, `warp-controller`): the `unfocus`
+  kind is a navigate-mode lerp borrowing the same state slot, so
+  including it would blank observe-gated UI during an ordinary
+  close-zoom unfocus.
+- **`isAnyActive` vs `isActive`** on `ObserveTransition` — the union vs
+  the observe-mode-only pair, for exactly the reason above.
+- **`isAimActive`** — the aim slerp alone; a focus change may interrupt
+  an aim but not a warp.
+
+### The claim-the-camera sequence
+
+Three sites run the same four-step sequence when a *new user action*
+wants the camera:
+
+1. bail if warp or aim is animating (those own the camera outright),
+2. `cancelUnfocusLerp()`,
+3. `cancelFocusLerp()`,
+4. bail if an observe transition is animating.
+
+Sites: `controls/input-controller.ts` `onPointerUp`, `Stellata.aimAt`,
+and `Stellata.aimAtConstellation` (steps 2–4 only — it has no
+warp/aim bail).
+
+**The step order is load-bearing.** Steps 2–3 sit *between* the two
+bails, so the sequence cannot collapse into a single predicate call:
+the focus-park and unfocus lerps are **cancelled** by the incoming
+action, not blocked by it. A gate that folded them in — i.e.
+`isCameraBusy()` — would make every click self-block whenever a
+focus-park lerp happened to be in flight.
+
+Consolidating this sequence behind one entry point is the job of the
+intent-API seam (`focusOn` / `warpTo` / `observeFrom` / `aimAt`), not
+of the individual call sites; it is deliberately left duplicated until
+that seam lands.
+
+### Verdict per input-controller gate
+
+`InputController` re-checks the volatile gates twice — once at
+`onPointerUp`, once when a deferred click fires `DBL_CLICK_MS` later:
+
+| Site | Shape | Verdict |
+|---|---|---|
+| `onPointerUp` | steps 1–4 above | **narrower, deliberate** — the interleaved cancels are the whole point |
+| `dispatchSingleClick` | `blocksClick()` | 3-term; focus-park already cancelled at pointer-up |
+| `dispatchDoubleClick` | `blocksClick()` | same 3 terms — shares the one predicate |
+
+**No site is strict-equivalent to `isCameraBusy()`.** Every one is
+narrower on two axes at once: it excludes the focus-park lerp (which
+the click cancels) and excludes the observe `unfocus` kind (a
+navigate-mode lerp a click should be free to interrupt). `blocksClick()`
+is therefore a pure de-duplication of the two deferred-dispatch gates,
+not a widening — the deliberate narrowness is the reason the shared
+helper is local to `InputController` rather than a `Stellata` method.
