@@ -20,6 +20,10 @@ cross-script policy and pointers.
 - `distance-validation/` — Vaidman 2025 BA-supergiant cross-check.
 - `refresh/` — Layer 2 external-catalogue refresh (manual,
   infrequent).
+- `probes/` — JPL Horizons fetch for the five Sun-escape deep-space
+  probes → `data/probes/*.json`, plus the `public/probes/` mirror.
+  Fetch is manual (`pnpm run fetch:probes`); only the mirror runs in
+  the build.
 - `colour/` — blackbody → sRGB LUT generator.
 - `sid/` — SID registry tools: `sid:allocate` (the only writer of
   `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation

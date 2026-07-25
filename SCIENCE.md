@@ -241,6 +241,18 @@ enough to see it.
   tidally locked — its Ẇ equals the orbital mean motion, test-pinned
   against the JPL mean elements. Tables in
   `src/client/solar-system/planets/rotation-elements-pure.ts`.
+- **Deep-space probe trajectories** (the five Sun-escape probes —
+  Pioneer 10/11, Voyager 1/2, New Horizons; retrieved 2026-07-25):
+  JPL Horizons API (https://ssd.jpl.nasa.gov/api/horizons.api),
+  `EPHEM_TYPE=VECTORS` heliocentric state vectors on ICRS equatorial
+  axes (`REF_PLANE=FRAME`, `CENTER='500@10'`), 30-day steps from each
+  spacecraft SPK's first epoch to 2050. Committed as
+  `data/probes/{id}.json` (~450 KB plain text); refresh via
+  `pnpm run fetch:probes`, never at build time. Linear interpolation
+  between 30-day samples is a visualisation, not an ephemeris — it is
+  pinned only at the ~0.3 AU coherence level against the planet
+  ephemerides at each probe's known closest-approach epochs.
+  Public-domain (U.S. Government work).
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the
