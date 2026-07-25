@@ -63,8 +63,9 @@ Three contracts the code alone won't tell you:
   in seconds. Nothing downstream should touch the wire fields.
 
 The stored velocity is also why the sampler reports velocity rather than
-finite-differencing: across a 30-day step near launch the trajectory still
-curves through the inner system, and the difference is percent-level.
+finite-differencing: sample spacing runs from 88 s to six months
+(`../../../../data/probes/README.md` § Sampling), so a difference quotient
+would be a different quantity in each part of a trajectory.
 
 ## Marker field
 
@@ -103,8 +104,8 @@ from here on purpose.
 `position(t)`, never ahead of the probe. The data runs to 2050 so scrubbing
 forward is defined; the trail simply ends wherever `t` puts the probe.
 
-- **Body-plus-tip construction.** Vertices `0…k` are the raw 30-day samples
-  and only re-fill when `t` crosses one; vertex `k+1` is rewritten every
+- **Body-plus-tip construction.** Vertices `0…k` are the raw trajectory
+  samples and only re-fill when `t` crosses one; vertex `k+1` is rewritten every
   frame from the field's interpolated position. The tip therefore sits
   exactly on the marker at any scrub rate, with no rebuild cadence to tune
   (the orbit rings' sim-day geometry bucket has no analogue here).
@@ -153,21 +154,26 @@ realistic-style diamond onto the paper aesthetic.
 
 `probe-encounter-coherence.test.ts` samples each probe at its known
 closest-approach epochs and compares against the production planet
-ephemeris, within 0.5 AU. That bound is **sampling-dominated** and it is a
-coherence claim: right probe, right planet, right frame, right units. Do not
-tighten it against the current data; it is a visualisation, not an ephemeris.
+ephemeris, within 0.05 AU. It is a coherence claim: right probe, right
+planet, right frame, right units.
 
-The 30-day grid is why: a swing-by's curvature is concentrated in about a day
-inside a 30-day interval, so the rendered track replaces the turn with a
-chord 0.2–0.4 AU long and its closest approach to the planet lands 0.003–0.07
-AU out, against true flyby distances of 0.00003–0.005 AU. That error tracks
-how hard the trajectory **bends**, not distance from Sol — New Horizons'
-nearly-straight Pluto pass is the most accurate of the ten despite having the
-worst planet ephemeris behind it — so the ephemeris is a minor contributor
-(Standish is ~0.0015 AU at Jupiter) and a better interpolant is not the fix
-either (cubic Hermite off the stored velocities measures only 2–3× better).
-Denser sampling through the encounter windows is; it needs a re-fetch, and
-the tolerance tightens with it.
+**That bound is set by the planet side, not the probe side.** The trajectory
+grid holds 1e-5 AU (`../../../../data/probes/README.md` § Sampling), while
+`../ephemerides/` sits 0.002–0.043 AU off Horizons across these epochs —
+Saturn ~0.025, Uranus ~0.043 — and the corpus's epochs are calendar dates
+rather than the true closest-approach instants, worth another ~0.01 AU at
+flyby speeds. Tightening past 0.05 AU would therefore be a claim about
+`../ephemerides/`, and no re-fetch of the probe data can move it.
+
+Two assertions in the file do pin the probe side, and neither touches the
+ephemeris: each grid's finest gap is minutes and its coarsest is months
+(no uniform step of any size passes both), and each gravity assist is
+resolved finely enough that no single rendered segment turns more than 20°
+— the geometric form of "the trail bends at the planet, not near it",
+since a uniform 30-day step draws a 50–220° deflection as one chord. New
+Horizons' Pluto flyby is the deliberate counterexample: it bent the
+trajectory by 0.03° in a month, so the grid stays coarse across it, which
+is what shows the spacing follows curvature rather than a list of dates.
 
 The trap the corpus exists to catch: the probe samples are ICRS while the
 ephemeris is heliocentric **ecliptic**, so the planet side has to rotate

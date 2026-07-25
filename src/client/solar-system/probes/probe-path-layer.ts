@@ -34,7 +34,7 @@ interface Trail {
 
 /**
  * The traversed segment of each probe's trajectory. The body of the line
- * is the raw 30-day samples and only re-fills when `t` crosses one; the
+ * is the raw trajectory samples and only re-fills when `t` crosses one; the
  * final vertex is rewritten every frame from the field's interpolated
  * position, so the trail ends exactly on the marker at any scrub rate
  * without a rebuild cadence to tune.

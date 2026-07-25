@@ -95,11 +95,12 @@ export function probeSampleIndexAt(sampleT: Float64Array, t: number): number {
  * Heliocentric ICRS state at model time `t` into `out`; false (and `out`
  * untouched) before the first sample, which is the visibility gate.
  *
- * Linear interpolation between the 30-day samples, and linear coasting on
- * the final sample's velocity past the ephemeris end (2050). Coasting is
- * why the whole clamp range stays defined: past Neptune the trajectory is
- * a straight line to well under the ~0.3 AU coherence budget, and freezing
- * the probe instead would strand it while the planets kept moving.
+ * Linear interpolation between samples, and linear coasting on the final
+ * sample's velocity past the ephemeris end (2050). The sample grid is
+ * spaced so that this interpolation holds the file's `chordToleranceAu`.
+ * Coasting is why the whole clamp range stays defined: past Neptune the
+ * trajectory is a straight line to well inside that same bound, and
+ * freezing the probe instead would strand it while the planets kept moving.
  */
 export function probeStateAt(traj: ProbeTrajectory, t: number, out: ProbeState): boolean {
   const k = probeSampleIndexAt(traj.sampleT, t);

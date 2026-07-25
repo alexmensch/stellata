@@ -3,7 +3,7 @@
 Heliocentric state vectors for the five **Sun-escape** probes —
 Pioneer 10, Pioneer 11, Voyager 1, Voyager 2, New Horizons — from
 launch out to 2050, plus each mission's launch / last-contact facts.
-One JSON per probe, committed plain text (~450 KB total, no LFS).
+One JSON per probe, committed plain text (~1.2 MB total, no LFS).
 
 Consumed at runtime by `src/client/solar-system/probes/`, which
 samples `position(t)` for the probe billboard and its trailing path.
@@ -38,8 +38,9 @@ they are deliberately excluded.
   of `pnpm run build` (`../README.md` § Frozen external data).
 - Query shape per probe: `EPHEM_TYPE=VECTORS`, `CENTER='500@10'`
   (Sun centre), `REF_PLANE=FRAME`, `VEC_TABLE='2'` (position +
-  velocity), `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`, `STEP_SIZE='30d'`,
-  `START_TIME` = the probe's SPK start, `STOP_TIME='2050-01-01'`.
+  velocity), `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`, spanning the probe's
+  SPK start to `2050-01-01`. Epochs are requested rather than stepped
+  through — see § Sampling.
 - Horizons targets: `-23` Pioneer 10, `-24` Pioneer 11, `-31`
   Voyager 1, `-32` Voyager 2, `-98` New Horizons.
 
@@ -61,6 +62,7 @@ tests. No overlap with this folder.
   "lastContactUnixMs": null,
   "source": { "frame": "ICRF", "center": "Sun (10) …", "units": "AU-D",
               "targetBody": "…", "retrievedUtc": "…" },
+  "chordToleranceAu": 0.00001,
   "columns": ["jd", "x", "y", "z", "vx", "vy", "vz"],
   "samples": [[2443392.5, 0.96793185112, …], …]
 }
@@ -69,7 +71,7 @@ tests. No overlap with this folder.
 `columns` names the row layout; the TypeScript contract is
 `ProbeTrajectoryFile` in `scripts/probes/probe-trajectory-schema.ts`,
 imported by both the emitter and the runtime loader. One flat array per
-sample rather than an object: no repeated keys across ~4,200 rows, and
+sample rather than an object: no repeated keys across ~11,200 rows, and
 a refresh still diffs sample-by-sample in git.
 
 - `launchUnixMs` / `lastContactUnixMs` — `Date.parse` output, Unix
@@ -86,9 +88,12 @@ a refresh still diffs sample-by-sample in git.
   `src/client/solar-system/ephemerides/` resolves planets in.
 - `vx, vy, vz` — velocity, **AU/day**, same axes. Carried so the focus
   card's speed row reads a real velocity rather than finite-differencing
-  30-day samples (which is several percent off near launch, where the
-  trajectory still curves through the inner system).
-- `samples` is ascending in `jd` and starts at the SPK's first epoch —
+  the samples, and because the fetch pipeline uses the endpoint
+  velocities to decide where the grid needs refining.
+- `chordToleranceAu` — the accuracy the grid was built to and measured
+  against; see § Sampling.
+- `samples` is ascending in `jd`, **non-uniformly spaced**, and starts
+  at the SPK's first epoch —
   which for Voyager 1 is 1977-09-06, *after* its 1977-09-05 launch.
   Runtime visibility gates on the first sample, not `launchUnix`, so
   there is never a `t` at which a probe is visible but its position
@@ -96,16 +101,45 @@ a refresh still diffs sample-by-sample in git.
 - Rounded to 11 significant digits (~150 m at 200 AU) from Horizons'
   16 — rationale in `scripts/probes/fetch-probe-trajectories.ts`.
 
-Uniform 30-day sampling with linear interpolation is a **visualisation,
-not an ephemeris**, and `STEP_SIZE` is a free Horizons parameter — the
-spacecraft SPKs are far denser, so this grid is purely a file-size
-choice. The cost shows up at the gravity assists: the rendered track
-replaces each swing-by with a chord 0.2–0.4 AU long, and its closest
-approach to the planet lands 0.003–0.07 AU out (true flyby distances are
-0.00003–0.005 AU), so a trail visibly bends *near* rather than *at* the
-planet. `src/client/solar-system/probes/probe-encounter-coherence.test.ts`
-pins the ~0.5 AU coherence bound that follows; a piecewise grid with dense
-encounter windows is the fix, not a better interpolant.
+## Sampling
+
+Sample spacing tracks how hard each trajectory is turning rather than a
+clock. Every file is built to one guarantee — **linear interpolation
+between its samples stays within `chordToleranceAu` (1e-5 AU, 1,496 km)
+of the real trajectory** — and the spacing needed to hold that is what
+the grid is. How the pipeline finds it is `scripts/probes/README.md`
+§ Adaptive grid.
+
+| File | Rows | Size | Finest gap | Coarsest gap |
+|---|---|---|---|---|
+| `pioneer10.json` | 2,264 | 245 KB | 88 s | 168 d |
+| `pioneer11.json` | 3,122 | 343 KB | 88 s | 178 d |
+| `voyager1.json` | 1,963 | 214 KB | 88 s | 101 d |
+| `voyager2.json` | 2,367 | 260 KB | 88 s | 101 d |
+| `newhorizons.json` | 1,514 | 168 KB | 88 s | 101 d |
+
+1,496 km sits under every closest-approach distance the fleet flew —
+the tightest being Voyager 2's 4,950 km at Neptune — so a rendered
+swing-by bends *at* the planet rather than near it. The previous uniform
+30-day grid replaced each swing-by with a chord 0.2–0.4 AU long and
+missed by 0.003–0.07 AU.
+
+Two consequences worth knowing before reading a number off this data:
+
+- **The planet ephemeris is now the larger error.** Across the ten
+  encounter epochs, `src/client/solar-system/ephemerides/` sits
+  0.002–0.043 AU from Horizons (Saturn ~0.025, Uranus ~0.043) — three
+  orders above the probe grid. Any probe-vs-planet distance measured in
+  this codebase is a statement about the ephemeris, not about these
+  files. It is what sets the coherence test's tolerance.
+- **Fourteen SPK discontinuities.** JPL splices cruise and encounter
+  solutions, and the seam steps sideways: 88 s of model time carries the
+  probe 2e-5 to 1.5e-3 AU (3,000–230,000 km) at Pioneer 10 ×4,
+  Pioneer 11 ×7, Voyager 1 ×1 (JD 2444605.5003, at Saturn),
+  Voyager 2 ×1, New Horizons ×1. The grid brackets each as tightly as
+  the 88 s floor allows; no sampling choice can remove it, and
+  `fetch:probes` reports them individually rather than folding them into
+  the tolerance.
 
 ## Date caveats
 
