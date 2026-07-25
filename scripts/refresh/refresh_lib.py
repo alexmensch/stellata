@@ -5,6 +5,7 @@ scripts. See scripts/refresh/README.md."""
 from __future__ import annotations
 
 import csv
+import hashlib
 import os
 import random
 import re
@@ -183,6 +184,111 @@ def retry(
     raise RuntimeError("retry: unreachable — loop must return or raise")
 
 
+# ─── Batch checkpoint ─────────────────────────────────────────────────
+
+_CHECKPOINT_FINGERPRINT = "fingerprint"
+
+
+def _votable_encode(table: Any, path: Path) -> None:
+    import warnings
+    from astropy.io.votable import from_table, writeto
+    from astropy.io.votable.exceptions import VOWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", VOWarning)
+        writeto(from_table(table), str(path))
+
+
+def _votable_decode(path: Path) -> Any:
+    from astropy.io.votable import parse
+    return parse(str(path)).get_first_table().to_table(use_names_over_ids=True)
+
+
+def _batch_fingerprint(items: Sequence[Any], batch_size: int) -> str:
+    h = hashlib.sha256()
+    h.update(f"{batch_size}\n{len(items)}\n".encode())
+    for item in items:
+        h.update(f"{item}\n".encode())
+    return h.hexdigest()
+
+
+class BatchCheckpoint:
+    """Per-batch resume cache for ``run_in_batches``.
+
+    A completed batch's result table is serialised under ``directory`` as
+    ``batch-NNNN`` + ``suffix``; a re-run replays the cached batches and
+    queries only the ones still missing, so a network drop on batch 65 of
+    70 costs one batch rather than the whole pull. ``run_in_batches``
+    deletes the directory once every batch has landed — a surviving
+    directory means the previous run did not finish.
+
+    The cache key is the fingerprint of ``(items, batch_size)``, recorded
+    on ``begin``. A mismatch discards every cached batch: batch N covers a
+    different slice of a changed request set, so replaying it would attribute
+    one source_id's row to another.
+
+    The default codec round-trips astropy tables through VOTable. Numeric
+    dtypes and their masks survive exactly. A masked STRING cell decodes as
+    an empty string instead — VOTable char fields carry no null marker —
+    which costs nothing here: ``write_tsv`` emits an empty cell either way,
+    and the Gaia archive already reports a null string column as "" rather
+    than masking it. ``encode`` / ``decode`` are injectable for callers (and
+    tests) whose result tables are not astropy tables.
+    """
+
+    def __init__(
+        self,
+        directory: Path,
+        *,
+        encode: Callable[[Any, Path], None] | None = None,
+        decode: Callable[[Path], Any] | None = None,
+        suffix: str = ".vot",
+        log: Callable[[str], None] = print,
+    ) -> None:
+        self.directory = directory
+        self.encode = encode or _votable_encode
+        self.decode = decode or _votable_decode
+        self.suffix = suffix
+        self.log = log
+
+    def _path(self, batch_idx: int) -> Path:
+        return self.directory / f"batch-{batch_idx:04d}{self.suffix}"
+
+    def begin(self, items: Sequence[Any], batch_size: int) -> None:
+        """Establish (or re-validate) the fingerprint for this request set,
+        discarding a cache left by a run over different items."""
+        want = _batch_fingerprint(items, batch_size)
+        marker = self.directory / _CHECKPOINT_FINGERPRINT
+        if marker.exists() and marker.read_text() != want:
+            self.log(
+                f"  checkpoint: request set changed since the cached run — "
+                f"discarding {self.directory.name}"
+            )
+            self.clear()
+        self.directory.mkdir(parents=True, exist_ok=True)
+        marker.write_text(want)
+
+    def load(self, batch_idx: int) -> Any | None:
+        path = self._path(batch_idx)
+        return self.decode(path) if path.exists() else None
+
+    def save(self, batch_idx: int, table: Any) -> None:
+        path = self._path(batch_idx)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        try:
+            self.encode(table, tmp)
+        except BaseException:
+            tmp.unlink(missing_ok=True)
+            raise
+        os.replace(tmp, path)
+
+    def clear(self) -> None:
+        if not self.directory.exists():
+            return
+        for child in sorted(self.directory.iterdir()):
+            child.unlink()
+        self.directory.rmdir()
+
+
 # ─── Batched query ────────────────────────────────────────────────────
 
 def run_in_batches(
@@ -193,6 +299,7 @@ def run_in_batches(
     *,
     schema: Mapping[str, type | tuple[type, ...]] | None = None,
     schema_label: str = "batch",
+    checkpoint: BatchCheckpoint | None = None,
     log: Callable[[str], None] = print,
 ) -> None:
     """Split `items` into `batch_size` chunks, query each, feed the result
@@ -204,27 +311,44 @@ def run_in_batches(
     `schema` (labelled `schema_label`) when given; the batched pulls all
     validate exactly once, on batch 1, since every batch shares one ADQL
     projection. `collect=rows.extend` recovers a plain concatenating pull.
+
+    Pass `checkpoint` to make the pull resumable: each batch is cached as
+    it lands and a re-run skips the batches already cached, feeding the
+    cached tables to `collect` in the same order. The cache is deleted only
+    when every batch has landed, so it survives the failure it exists for.
+    Batch 1's schema check runs against the cached table too — a cache
+    written by an incompatible projection fails there rather than
+    downstream.
     """
     if batch_size <= 0:
         raise ValueError(f"batch_size must be positive, got {batch_size}")
     total = len(items)
     n_batches = (total + batch_size - 1) // batch_size
+    if checkpoint is not None and total:
+        checkpoint.begin(items, batch_size)
     start = time.time()
     seen = 0
     for batch_idx, offset in enumerate(range(0, total, batch_size), start=1):
         batch = items[offset : offset + batch_size]
         t0 = time.time()
-        table = query_fn(batch)
+        table = checkpoint.load(batch_idx) if checkpoint is not None else None
+        resumed = table is not None
+        if not resumed:
+            table = query_fn(batch)
+            if checkpoint is not None:
+                checkpoint.save(batch_idx, table)
         if batch_idx == 1 and schema is not None:
             validate_schema(table, schema, label=schema_label)
         collect(table)
         seen += len(table)
-        elapsed = time.time() - t0
+        origin = "from checkpoint" if resumed else f"in {time.time() - t0:5.1f}s"
         cum = time.time() - start
         log(
-            f"  batch {batch_idx}/{n_batches}: {len(table):4d} rows in "
-            f"{elapsed:5.1f}s (cum {cum/60:.1f}m, total rows {seen})"
+            f"  batch {batch_idx}/{n_batches}: {len(table):4d} rows "
+            f"{origin} (cum {cum/60:.1f}m, total rows {seen})"
         )
+    if checkpoint is not None:
+        checkpoint.clear()
 
 
 # ─── Row-count guard ──────────────────────────────────────────────────
@@ -353,11 +477,13 @@ class TapClient:
     backends share the same ADQL grammar so a syntax error fails the
     same way on either.
 
-    Default backends:
-      1. ESA Gaia archive via astroquery.gaia (best Gaia coverage)
-      2. CDS TAP (tapvizier.u-strasbg.fr) via pyvo
-
-    Override via `backends=` for SIMBAD-only or VizieR-only tables.
+    Every caller passes `backends=` explicitly. The implicit default list
+    (ESA async via astroquery.gaia, then CDS) is retained only for
+    construction without arguments and should NOT be used by new pulls:
+    its ESA leg is the async result-retrieval path that intermittently
+    500s. Gaia-keyed pulls want `gaia_sync_client()`; VizieR-only and
+    SIMBAD-only tables want `backends=[cds_backend()]` /
+    `[simbad_backend()]`.
     """
 
     def __init__(
@@ -390,9 +516,16 @@ SIMBAD_TAP_URL = "https://simbad.cds.unistra.fr/simbad/sim-tap"
 # Synchronous Gaia DR3 TAP endpoints. The ESA archive's ASYNC path
 # (astroquery.gaia.launch_job_async) intermittently 500s on result
 # retrieval while its SYNC endpoint stays healthy; ARI Heidelberg hosts
-# the identical `gaiadr3.gaia_source` schema as a same-query fallback.
+# the identical `gaiadr3.*` schema as a same-query fallback.
 GAIA_ESA_SYNC_TAP_URL = "https://gea.esac.esa.int/tap-server/tap"
 GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
+
+# ESA caps TAP output at 3,000,000 rows (hard == default, per its
+# /capabilities); ARI's hard cap is 10,000,000. A whole-table sync pull
+# has to fit the smaller of the two, since either mirror may serve it.
+GAIA_SYNC_MAX_ROWS = 3_000_000
+
+GAIA_SYNC_RETRY_KWARGS: Mapping[str, Any] = {"max_attempts": 5, "base_delay_s": 2.0}
 
 
 def _esa_run(query: str) -> Any:
@@ -456,13 +589,25 @@ def votable_query_status(votable: Any) -> tuple[bool, str]:
     return True, ""
 
 
+class SyncOverflowError(Exception):
+    """MAXREC truncated a sync TAP result. Permanent for a fixed MAXREC —
+    retrying, or falling back to another mirror, truncates identically — so
+    this must NOT be classified transient: the retry would burn the backoff
+    schedule and then report a truncation as a network fault."""
+
+
+_SYNC_OVERFLOW = re.compile(r"overflow", re.I)
+_SYNC_PERMANENT_FAULT = re.compile(r"unknown column|not found|syntax|invalid", re.I)
+
+
 def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
     """Run one synchronous ADQL query over HTTP POST and parse the VOTable
     result into an astropy Table. Sync avoids astroquery's async
     result-storage path; POST keeps a long IN-list out of the URL. MAXREC
-    is raised above the batch size so a full batch never trips the
+    is raised above the pull's row count so a full result never trips the
     overflow truncation. A query-level error in the VOTable is re-raised
-    as transient unless its text looks like a permanent ADQL fault."""
+    as transient unless it is an overflow or looks like a permanent ADQL
+    fault."""
     import io
     import requests
     from astropy.io.votable import parse as parse_votable
@@ -482,7 +627,12 @@ def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
     votable = parse_votable(io.BytesIO(resp.content))
     ok, msg = votable_query_status(votable)
     if not ok:
-        if re.search(r"unknown column|not found|syntax|invalid", msg, re.I):
+        if _SYNC_OVERFLOW.search(msg):
+            raise SyncOverflowError(
+                f"sync TAP truncated the result at MAXREC={maxrec} ({msg}) — "
+                f"raise the caller's maxrec above the pull's row count."
+            )
+        if _SYNC_PERMANENT_FAULT.search(msg):
             raise RuntimeError(f"sync TAP query error: {msg}")
         raise TransientError(f"sync TAP transient error: {msg}")
     return votable.get_first_table().to_table(use_names_over_ids=True)
@@ -500,6 +650,51 @@ def gaia_sync_backend(
     mirror (`GAIA_ARI_SYNC_TAP_URL`), a same-schema fallback for when ESA
     is degraded. `maxrec` must exceed the per-query row count."""
     return TapBackend(name=name, run=lambda q: _sync_tap_run(base_url, q, maxrec))
+
+
+def gaia_sync_client(
+    maxrec: int,
+    *,
+    retry_kwargs: Mapping[str, Any] | None = None,
+) -> TapClient:
+    """TapClient over the Gaia sync endpoints: ESA primary → ARI Heidelberg
+    fallback, both at `maxrec`. Every Gaia-keyed pull shares this pair. The
+    default ESA→CDS fallback list is wrong for `gaiadr3.*`: CDS VizieR does
+    not host those tables and would fail a fallback attempt with a
+    misleading "table not found"."""
+    return TapClient(
+        backends=[
+            gaia_sync_backend(
+                "ESA-sync", base_url=GAIA_ESA_SYNC_TAP_URL, maxrec=maxrec
+            ),
+            gaia_sync_backend(
+                "ARI-sync", base_url=GAIA_ARI_SYNC_TAP_URL, maxrec=maxrec
+            ),
+        ],
+        retry_kwargs=GAIA_SYNC_RETRY_KWARGS if retry_kwargs is None else retry_kwargs,
+    )
+
+
+def whole_table_sync_maxrec(
+    expected_row_count_max: int, *, cap: int = GAIA_SYNC_MAX_ROWS
+) -> int:
+    """MAXREC for a pull that fetches a whole table in ONE sync query:
+    double the pinned row-count ceiling, clamped to the mirrors' output
+    cap. Doubling keeps an upstream re-index from silently overflowing
+    before the row-count guard can report it.
+
+    Raises SystemExit when the ceiling itself exceeds the cap — that pull
+    no longer fits one sync query and needs batching, which is a code
+    change rather than a re-pin. Batched pulls size MAXREC off their batch
+    size instead and don't use this.
+    """
+    if expected_row_count_max > cap:
+        raise SystemExit(
+            f"whole_table_sync_maxrec: pinned ceiling {expected_row_count_max} "
+            f"exceeds the sync output cap {cap} — this pull can no longer be "
+            f"served in one sync query; batch it (see run_in_batches)."
+        )
+    return min(expected_row_count_max * 2, cap)
 
 
 def _default_backends() -> list[TapBackend]:
