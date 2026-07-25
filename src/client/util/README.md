@@ -29,8 +29,10 @@ build scripts, tests, and shader uniforms.
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
 - `orbit-line.ts` — shared bits of the line overlays
   (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
+  `solar-system/probes/probe-path-layer.ts`,
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
-  primitives `makeOrbitLineLoop` / `makeOrbitLineSegments` +
+  primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
+  traversed path with two ends) / `makeOrbitLineSegments` +
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and
   the on-screen-size helpers `pixelsPerRadian` (+ `pixelsPerRadianFromFovRad`
   for callers holding the FOV in radians) / `angularRadiusPx` the orbit
