@@ -198,8 +198,9 @@ function orbitCompanionOfLines(
   const period = formatOrbitalPeriod(rel.pDays);
   const head = `Orbits ${primaryName}`;
   if ((rel.flags & FLAG_HAS_INCLINATION) === 0) {
-    // Tier 2 — period known, inclination not.
-    return [head, `P = ${period} (unknown orbit)`];
+    // Tier 2 — e is finite whenever has_orbit is set (build-runtime-
+    // binaries.py requires it); only the plane orientation is unknown.
+    return [head, `P = ${period} · e = ${rel.e.toFixed(2)} (unknown orbital plane)`];
   }
 
   // Tier 1 — full Kepler: ρ is the live 3D separation at the current time,
