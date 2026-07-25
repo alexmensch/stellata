@@ -145,16 +145,18 @@ by a few pixels.
 Fix: the renderer runs in a **floating local frame** whose origin tracks
 the currently focused star.
 
-- `Stellata.worldOffset` is the absolute-space coordinate that
-  currently sits at the renderer's (0,0,0). Starts at Sol.
-- `Stellata._localPositions` (exposed via `stellata.localPositions`)
-  is a `Float32Array` of `catalog.positions − worldOffset`. It's bound
-  to the `iPosition` instance attribute and is what every overlay and
-  pick path projects through.
+- The buffers themselves live on `StarFrame`
+  (`star-pipeline/README.md` § The star frame): `worldOffset`, the
+  absolute-space coordinate currently sitting at the renderer's
+  (0,0,0) — starts at Sol — and `localPositions` (exposed via
+  `stellata.localPositions`), a `Float32Array` of
+  `catalog.positions − worldOffset` bound to the `iPosition` instance
+  attribute, which is what every overlay and pick path projects
+  through.
 - `Stellata.recenterOrigin(newOrigin)` (exposed via the `FrameAnchor`
-  seam) rewrites the local-positions buffer using JS Number (= float64)
-  subtraction and shifts `camera.position` and `controls.target` by the
-  same delta so the user sees no jump. The two callers are
+  seam) has `StarFrame` rewrite that buffer using JS Number (= float64)
+  subtraction, then shifts `camera.position` and `controls.target` by
+  the same delta so the user sees no jump. The two callers are
   `FocusController.recenterFocusToStar` (focus mutations) and
   `WarpController.tryMidFlyRecentre` (mid-flight pivot onto the
   destination).

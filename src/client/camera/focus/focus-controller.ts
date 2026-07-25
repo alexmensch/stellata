@@ -56,10 +56,9 @@ export const GLOBAL_MIN_DIST_PC = 5e-3;
  *  — under this, the geometric pin is the right answer. */
 export const PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12;
 
-/** Floating-origin primitive — stays on the integration shell so the
- *  star-pipeline buffer rewrite + `iPositionAttr.needsUpdate` happen
- *  next to the resources they touch. Cleaner extraction is coupled to
- * the StarPipeline extract. */
+/** Floating-origin primitive. Implemented by the integration shell,
+ *  which owns the camera / orbit-target / scene-layer half of a
+ *  recentre and delegates the position-buffer half to `StarFrame`. */
 export interface FrameAnchor {
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
   getWorldOffset(): Readonly<THREE.Vector3>;

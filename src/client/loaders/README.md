@@ -46,9 +46,10 @@ epoch-advance-pure.ts    space-motion propagation:
                          `advancePositionsToEpoch(base, velocities,
                          epochJyr, out)` writes `p(J2016) + v·(t − 2016)`
                          (float64 math, float32 write-back) into `out`
-                         from an immutable J2016.0 baseline. The Stellata
-                         constructor snapshots that baseline and advances
-                         catalog.positions before `_localPositions` is
+                         from an immutable J2016.0 baseline. `StarFrame`
+                         (`../star-pipeline/README.md` § The star frame)
+                         snapshots that baseline and advances
+                         catalog.positions before `localPositions` is
                          derived, so every downstream consumer inherits
                          current-epoch positions by construction; the
                          per-frame `maybeReAdvanceEpoch` re-runs the same
