@@ -18,7 +18,7 @@ the file Stage 2 writes), and atomically replaces its output TSV under
 
 ### One-time setup
 
-The refresh scripts use astroquery + astropy + numpy. Pin them to a
+The refresh scripts use astropy + numpy + pyvo + requests. Pin them to a
 local virtualenv so the system Python stays clean:
 
 ```bash
@@ -65,6 +65,56 @@ pinning (`validate_spot_rows`, `check_spot_rows_tolerant`), and
 partial-write protection so a mid-run failure never leaves a
 half-written TSV under `data/`. `assert_row_count` is also imported by
 `scripts/binaries/build-binaries.py` for its Stage-1 parser bounds.
+
+### Gaia TAP: synchronous endpoints only
+
+Every `gaiadr3.*` pull goes through `refresh_lib.gaia_sync_client()` —
+ESA `/sync` primary, ARI Heidelberg `/sync` fallback, both hosting the
+identical `gaiadr3.*` schema. The ESA archive's ASYNC path intermittently
+500s on result retrieval while its sync endpoint stays healthy, so
+nothing reaches Gaia any other way: the async client is gone, and with
+it the `astroquery` dependency.
+
+`TapClient` takes `backends=` as a required argument — there is no
+default list, because which service can serve a query is a property of
+the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
+would fail with a misleading "table not found";
+`refresh-bailer-jones.py` and `refresh-hipparcos2.py` go the other way
+and pass `backends=[cds_backend()]` because their tables are
+VizieR-only. SIMBAD gets `[simbad_backend()]` for its divergent dialect.
+
+**MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
+truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
+MAXREC below the result size would silently short a pull. Two sizing
+rules, and neither may be replaced with a bare literal:
+
+- Whole-table pulls (hip-xmatch, tyc-xmatch, nss) call
+  `whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)` — double the pinned
+  ceiling, clamped to the mirrors' 3 M-row output cap. It exits rather
+  than clamp below the ceiling, so a table that outgrows one sync query
+  demands batching instead of failing quietly. tyc-xmatch is the pull
+  that clamps: 2.52 M rows leaves ~19% headroom, not 2x.
+- Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`),
+  except `refresh-gaia-dr2-neighbourhood.py`, where one requested id can
+  return several rows.
+
+`SyncOverflowError` covers the truncation case and is deliberately NOT
+classified transient — retrying or switching mirrors at the same MAXREC
+truncates identically, so it fails fast naming the MAXREC to raise.
+
+### Resuming a long pull
+
+`run_in_batches(..., checkpoint=rl.BatchCheckpoint(out.with_suffix(
+out.suffix + '.ckpt')))` makes a batched pull resumable: each batch is
+cached under `<output>.tsv.ckpt/` as it lands, and a re-run replays the
+cached batches and queries only what's missing. Apsis and Bailer-Jones
+run ~63 batches each, so a drop on batch 60 used to cost the whole pull.
+The directory is removed only once every batch has landed — **a
+surviving `.tsv.ckpt/` directory means the previous run did not finish**.
+It's gitignored, and discarded automatically when the request set or
+batch size changes (the cache is fingerprinted on both, since batch N of
+a different request set covers different source_ids). Deleting it by
+hand is always safe — it only forces a full re-pull.
 
 `scripts/refresh/gaia_astrometry_pull.py` is the shared 5p-astrometry
 pull (schema, ADQL, batching, coverage + spot-check gates, atomic

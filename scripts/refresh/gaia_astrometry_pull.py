@@ -182,22 +182,7 @@ def run_pull(
         f"{BATCH_SIZE} on Gaia TAP (gaiadr3.gaia_source)"
     )
 
-    # Synchronous TAP, ESA primary → ARI Heidelberg fallback. The ESA
-    # archive's async path (astroquery launch_job_async) intermittently
-    # 500s on result retrieval while its sync endpoint stays healthy; ARI
-    # hosts the identical gaiadr3.gaia_source schema. MAXREC is set above
-    # the batch size so a full 5000-row batch never trips overflow. The
-    # default ESA→CDS fallback is avoided: CDS VizieR doesn't host
-    # gaiadr3.gaia_source and would fail with a misleading "table not
-    # found".
-    sync_maxrec = BATCH_SIZE * 2
-    client = rl.TapClient(
-        backends=[
-            rl.gaia_sync_backend("ESA-sync", base_url=rl.GAIA_ESA_SYNC_TAP_URL, maxrec=sync_maxrec),
-            rl.gaia_sync_backend("ARI-sync", base_url=rl.GAIA_ARI_SYNC_TAP_URL, maxrec=sync_maxrec),
-        ],
-        retry_kwargs={"max_attempts": 5, "base_delay_s": 2.0},
-    )
+    client = rl.gaia_sync_client(BATCH_SIZE * 2)
     rows_by_id: dict[int, Any] = {}
 
     def collect(table: Any) -> None:
@@ -208,6 +193,7 @@ def run_pull(
     rl.run_in_batches(
         source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
         schema=EXPECTED_SCHEMA, schema_label="gaiadr3.gaia_source",
+        checkpoint=rl.BatchCheckpoint(out.with_suffix(out.suffix + ".ckpt")),
     )
 
     matched = len(rows_by_id)
