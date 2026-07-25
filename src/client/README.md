@@ -146,7 +146,7 @@ Fix: the renderer runs in a **floating local frame** whose origin tracks
 the currently focused star.
 
 - The buffers themselves live on `StarFrame`
-  (`star-pipeline/README.md` § The star frame): `worldOffset`, the
+  (`star-pipeline/frame/README.md`): `worldOffset`, the
   absolute-space coordinate currently sitting at the renderer's
   (0,0,0) — starts at Sol — and `localPositions` (exposed via
   `stellata.localPositions`), a `Float32Array` of

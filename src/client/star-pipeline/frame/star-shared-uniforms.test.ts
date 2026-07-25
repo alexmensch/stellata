@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILTER } from '../filters/filter-state';
+import { DEFAULT_FILTER } from '../../filters/filter-state';
 import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
   pickPerceptualDiscUniforms,
-} from './perceptual-disc-uniforms';
-import { MIRROR_CAPACITY } from './star-local-mirror';
+} from '../perceptual-disc-uniforms';
+import { MIRROR_CAPACITY } from '../star-local-mirror';
 import { buildStarSharedUniforms } from './star-shared-uniforms';
 
 function build() {

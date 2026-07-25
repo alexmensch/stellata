@@ -47,7 +47,7 @@ epoch-advance-pure.ts    space-motion propagation:
                          epochJyr, out)` writes `p(J2016) + v·(t − 2016)`
                          (float64 math, float32 write-back) into `out`
                          from an immutable J2016.0 baseline. `StarFrame`
-                         (`../star-pipeline/README.md` § The star frame)
+                         (`../star-pipeline/frame/README.md`)
                          snapshots that baseline and advances
                          catalog.positions before `localPositions` is
                          derived, so every downstream consumer inherits

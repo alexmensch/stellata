@@ -7,6 +7,9 @@ subfolders.
 
 ## Subfolders
 
+- `frame/` — `StarFrame` (the CPU star position frame: floating
+  origin, epoch advance, derived buffers, proximity queries) and the
+  shared uniform map every pass holds by reference.
 - `extinction/` — the per-star camera→star A_V raymarch and its prepass
   cache, plus the build-time de-extinction cancellation invariant.
 - `pulsation/` — the per-type variable-star {ρ, ΔB−V} tables and the
@@ -18,13 +21,6 @@ subfolders.
   coreMask `ShaderMaterial`s + meshes. Owns
   `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
   local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
-- `star-shared-uniforms.ts` — `buildStarSharedUniforms`: the one
-  uniform map all three passes (and the planet body field + Milky Way
-  pass) share by reference. § Shared uniforms.
-- `star-frame.ts` — `StarFrame`: the CPU-side star position frame —
-  floating origin, epoch advance, the per-instance buffers derived at
-  load, and the Sol-distance proximity queries including the core-mask
-  gate. § The star frame.
 - `star-local-mirror.ts` — `StarLocalMirror`: the local-depth-pass
   mirror draw for cluster-member stars. See § Depth encoding and
   `../local-depth/README.md` § Full membership.
@@ -58,10 +54,6 @@ subfolders.
   via `pnpm run build:lut`.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
-- `star-frame.test.ts` — origin recentre, epoch re-advance + focal
-  delta, and the proximity / core-mask window.
-- `star-shared-uniforms.test.ts` — seeding + the perceptual-disc slot
-  identities the planet pipeline picks out.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
 - `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-local-cluster.test.ts` (+ `-pure.test.ts`) — membership pins.
@@ -74,77 +66,6 @@ intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
 `spectralClassCi` bakes in `scripts/catalog/catalog-pure.ts`).
 `bestApsisTeff` decides which Apsis Teff feeds `iTeffApsis`.
 `extinction/` reddens whichever tier wins.
-
-## Shared uniforms
-
-`buildStarSharedUniforms` (`star-shared-uniforms.ts`) returns the one
-uniform map the disc, glow, and core-mask passes spread into their
-materials — `uRenderMode` is the only divergent slot, bound per
-material by `StarPipeline`. Every other consumer picks slots out of the
-same object **by reference**, so a single write reaches all of them
-with no bookkeeping: `FilterController` (the filter / preset / render
-knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
-`pickChartDiscUniforms`), `MilkyWay` (`uMaxAppMag` / `uSizeSpan`, so
-the magnitude filter applies identically to discrete stars and the
-diffuse glow), `StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
-(`uWorldOffset`, and `uFovYRad` / `uViewport` for its windows), and
-`Picker`. Only the three renderer-derived seeds (pixel ratio, FOV,
-viewport) are arguments; the rest come from `DEFAULT_FILTER` /
-`STAR_RENDER_DEFAULTS` and the pipeline's own constants.
-
-The integration shell builds the map once and keeps writing through
-`starPipeline.discMaterial.uniforms` per frame — the encapsulation is
-construction, not access discipline.
-
-## The star frame
-
-`StarFrame` (`star-frame.ts`) owns `catalog.positions` in the
-renderer's frame — everything CPU-side that depends on where the stars
-actually are:
-
-- **Floating origin.** `worldOffset` (the absolute coordinate at local
-  `(0,0,0)`) and `localPositions` (`catalog.positions − worldOffset`,
-  the buffer bound to the dynamic `iPosition` attribute). `recenterTo`
-  rewrites the buffer in float64 per axis before the float32
-  write-back, moves `worldOffset`, and mirrors the new origin into
-  `uWorldOffset` for the shader's absolute-position reconstruction. The
-  camera / orbit-target shift and the scene-layer recenter fan-out stay
-  on the integration shell's `recenterOrigin`, which wraps this — see
-  `../README.md` § Floating origin.
-- **Epoch advance.** The immutable J2016.0 `basePositions` snapshot and
-  `advanceEpochTo(t, focalIdx, outDelta)`, which re-runs the
-  space-motion pass whenever the model clock crosses a
-  `bucketEpochJyr` bucket and reports the focal star's space-motion
-  delta so the shell can translate the camera by it.
-- **Derived per-instance buffers.** `logRadii`, `lumClassF32`,
-  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed once
-  off the *advanced* positions, so `StarPipeline`'s attributes and
-  every downstream consumer inherit current-epoch positions by
-  construction.
-- **Proximity queries.** The Sol-distance-sorted index and
-  `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
-  built on it (§ Star rendering, core depth-mask). `Picker` slices the
-  same index for its distSol-filter window.
-
-Anything that writes `onLocalPositionsWritten` side effects — the GPU
-re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
-passed in by the shell, which is the only thing that knows the
-attribute and the lazily-attached binary field.
-
-**One rewrite per frame.** Rewriting the 313k-star local buffer costs
-a full pass plus a GPU re-upload, and two of them can be provoked in
-the same frame: a fast time-scrub crosses an epoch bucket while a hard
-focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch
-re-advance and the origin recentre both invalidate it. So
-`advanceEpochTo` only marks the buffer stale and
-`flushLocalPositions` — called by `animate()` right after the
-re-advance / recentre pair — does the single rewrite at whatever the
-origin ended up being; a recentre in between rewrites it directly and
-clears the flag. That leaves exactly one window where
-`localPositions` trails `catalog.positions`: between `advanceEpochTo`
-and the flush. Nothing may read the buffer inside it (the focal-drift
-recentre in that gap reads only camera + orbit target), and anything
-new landing there has to sit after the flush instead.
 
 ## Star rendering: instanced quads, three passes
 
@@ -345,7 +266,7 @@ over-painted — and a camera-window scan for any resolved-disc star
 (`isResolvedDiscStar`: disc-pass split × `RESOLVED_DISC_MIN_PX`,
 evaluated on the `renderedSizeComponents` CPU mirror). The scan
 window reuses the core-mask gate's sorted-distance walk
-(`StarFrame.forEachStarNearCamera` — § The star frame).
+(`StarFrame.forEachStarNearCamera` — `frame/README.md`).
 
 **Core opacity is depth-gated, never paint-over.** The disc pass
 blends with per-channel MaxEquation, which cannot cover anything
@@ -430,26 +351,16 @@ because the population mix changes with the magnitude limit — wider
 catalogs use a smaller K so the denser star population doesn't wash
 out into a solid field.
 
-`computePresetPxSizes(name)` converts arcsec → pixels via
-`arcsecPerPx = (camera.fov × 3600) / max(window.innerWidth, innerHeight)`.
-Using `max(w, h)` instead of just height gives consistent absolute
-star sizes across portrait/landscape orientations and ultrawide
-monitors. `applyMagnitudePreset(name)` (preset-button click) writes
-activePreset + maxAppMag + sizeSpan + sizeMin/Max, respecting
-per-field override flags. `recomputePresetPxSizes()` (viewport resize /
-FOV change / K change) only updates non-overridden sizeMin/Max —
-manual maxAppMag and sizeSpan tweaks survive resizes.
+The arcsec → pixel conversion divides by
+`max(window.innerWidth, innerHeight)`, not by height alone: that keeps
+absolute star sizes consistent across portrait/landscape and ultrawide
+monitors. The preset plumbing that calls it — `applyMagnitudePreset`,
+`recomputePresetPxSizes`, `setCameraFov`, and their override / resize
+semantics — belongs to `../filters/README.md`; this section is only the
+perception model those knobs feed.
 
-**Camera FOV** defaults to `DEFAULT_FOV` = 50° vertical and is
-user-tunable via the FOV slider in the panel (`#fov`, range 10°–120°).
-`setCameraFov(fov)` updates `camera.fov`, calls
-`updateProjectionMatrix()`, mirrors the new value into `uFovYRad` (the
-shader's angular-diameter scale), recomputes the focused star's orbit
-floor (which depends on FOV), and triggers `recomputePresetPxSizes()`
-so non-overridden star sizes scale appropriately. URL `fov=` carries
-the value when diverged from default.
-
-`uFovYRad` is the only viewport-derived shader uniform that drives
+`uFovYRad` (mirrored from `camera.fov` on every FOV change) is the only
+viewport-derived shader uniform that drives
 `physSize`. There is no per-pixel-range cap — a max-radius supergiant
 at the orbit floor fills `ZOOM_FLOOR_FRACTION` (= 0.9) of the
 viewport's minor axis purely because `minOrbitDistForStar` solves for

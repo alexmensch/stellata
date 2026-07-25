@@ -1,13 +1,13 @@
 // The uniform map shared by the star disc / glow / core-mask passes.
-// See star-pipeline/README.md § Shared uniforms.
+// See ./README.md.
 
 import * as THREE from 'three';
-import { ZOOM_FLOOR_FRACTION } from '../camera/controls/star-physics';
-import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../filters/filter-state';
-import { R_SUN_PC } from '../util/astronomy-constants';
-import { makeColorLutTexture } from './blackbody-lut';
-import type { PerceptualDiscUniforms } from './perceptual-disc-uniforms';
-import { MIRROR_CAPACITY } from './star-local-mirror';
+import { ZOOM_FLOOR_FRACTION } from '../../camera/controls/star-physics';
+import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
+import { R_SUN_PC } from '../../util/astronomy-constants';
+import { makeColorLutTexture } from '../blackbody-lut';
+import type { PerceptualDiscUniforms } from '../perceptual-disc-uniforms';
+import { MIRROR_CAPACITY } from '../star-local-mirror';
 
 export interface StarSharedUniformsOptions {
   pixelRatio: number;
