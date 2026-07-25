@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   attachFontsReadyInvalidation,
   makeLabelWidthCache,
+  makeProjectScratch,
   projectWithNearClip,
   viewportSegmentExit,
 } from './distance-vector-overlay';
@@ -126,6 +127,35 @@ describe('distance-vector-overlay / projectWithNearClip', () => {
     // Direction (sign of dx, dy) preserved post-clamp.
     expect(out.pB[0] - out.pA[0]).toBeGreaterThan(0);
     expect(out.pB[1] - out.pA[1]).toBeLessThan(0); // SVG y inverted
+  });
+
+  it('leaves the caller-owned endpoint vectors unmutated', () => {
+    // The view-space and NDC transforms run in-place on the scratch tuple,
+    // so the implementation must copy the inputs in. Callers pass live
+    // buffers — `localPositions` slices and the focal-star position — and a
+    // future refactor that drops the `.copy()` would silently rewrite the
+    // focal star's local position into view space, which every other
+    // overlay and pick path then reads. Cheap invariant, expensive miss.
+    const cam = makeCamera();
+    const a = new THREE.Vector3(1, 2, -10);
+    const b = new THREE.Vector3(3, -4, -30);
+    const scratch = makeProjectScratch();
+    for (const s of [undefined, scratch]) {
+      projectWithNearClip(a, b, cam, W, H, s);
+      expect(a.toArray()).toEqual([1, 2, -10]);
+      expect(b.toArray()).toEqual([3, -4, -30]);
+    }
+  });
+
+  it('leaves the endpoints unmutated on the near-plane clip path', () => {
+    // The behind-camera branch lerps into a third scratch slot; same
+    // contract on the path that does the extra work.
+    const cam = makeCamera({ near: 0.5 });
+    const a = new THREE.Vector3(0, 0, -10);
+    const b = new THREE.Vector3(2, 1, 5); // behind the camera → clip
+    projectWithNearClip(a, b, cam, W, H);
+    expect(a.toArray()).toEqual([0, 0, -10]);
+    expect(b.toArray()).toEqual([2, 1, 5]);
   });
 });
 
