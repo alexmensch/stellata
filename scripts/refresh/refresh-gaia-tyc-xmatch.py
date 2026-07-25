@@ -56,6 +56,11 @@ ANGULAR_DISTANCE_DECIMALS = 6
 
 SCRIPT_NAME = "refresh-gaia-tyc-xmatch"
 
+# The largest whole-table pull in the set — 2.52 M rows clamps to the
+# mirrors' 3 M output cap, so headroom over the pinned ceiling is ~19%
+# rather than the 2x the other pulls get.
+SYNC_MAXREC = rl.whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
+
 # Pinned tyc → gaia_source_id rows. Tycho-2 identifiers are the
 # external anchor (stable across Gaia releases), so absence of a
 # pinned row is a real signal — hard-fail rather than pin-with-
@@ -93,8 +98,8 @@ def main() -> None:
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    client = rl.TapClient()
-    print("querying ESA Gaia TAP (fallback: CDS) — gaiadr3.tycho2tdsc_merge_best_neighbour …")
+    client = rl.gaia_sync_client(SYNC_MAXREC)
+    print("querying Gaia sync TAP (ESA → ARI) — gaiadr3.tycho2tdsc_merge_best_neighbour …")
     table = client.run(ADQL)
 
     rl.validate_schema(table, EXPECTED_SCHEMA, label="tycho2tdsc_merge_best_neighbour")

@@ -4,6 +4,7 @@ in-memory backends). Run via `python3 scripts/refresh/refresh_lib.test.py`."""
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import time
@@ -77,9 +78,9 @@ class RetryTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
     def test_classifies_responseless_500_message_as_transient(self) -> None:
-        # astroquery raises HTTPError with no `response`; the status lives
-        # only in the message. Parsing it out is what keeps a long pull
-        # alive through the ESA result-storage race.
+        # A TAP layer can raise HTTPError with no `response`, leaving the
+        # status only in the message. Parsing it out is what keeps a long
+        # pull alive through a server-side 5xx.
         try:
             import requests
         except ImportError:
@@ -210,6 +211,202 @@ class RunInBatchesTests(unittest.TestCase):
         self.assertIn("total rows 2", logs[0])
         self.assertIn("batch 3/3", logs[2])
         self.assertIn("total rows 5", logs[2])
+
+
+# ─── BatchCheckpoint ──────────────────────────────────────────────────
+
+def _rows(batch) -> list[dict]:
+    return [{"id": i} for i in batch]
+
+
+class BatchCheckpointTests(unittest.TestCase):
+    """A JSON codec over lists-of-dicts stands in for the default VOTable
+    codec so these run without astropy; the default codec has its own
+    round-trip test below."""
+
+    def _ckpt(self, directory: Path, **kw) -> rl.BatchCheckpoint:
+        return rl.BatchCheckpoint(
+            directory,
+            encode=lambda table, path: path.write_text(json.dumps(table)),
+            decode=lambda path: json.loads(path.read_text()),
+            suffix=".json",
+            log=lambda _: None,
+            **kw,
+        )
+
+    def test_cache_removed_once_every_batch_lands(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            collected: list = []
+            rl.run_in_batches(
+                [1, 2, 3, 4, 5], 2, _rows, collected.extend,
+                checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
+            )
+            self.assertEqual([r["id"] for r in collected], [1, 2, 3, 4, 5])
+            self.assertFalse(ckpt_dir.exists())
+
+    def test_resumes_from_the_batch_that_failed(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            items = [1, 2, 3, 4, 5, 6]
+
+            def drops_on_batch_3(batch):
+                if batch[0] == 5:
+                    raise rl.TransientError("network drop")
+                return _rows(batch)
+
+            with self.assertRaises(rl.TransientError):
+                rl.run_in_batches(
+                    items, 2, drops_on_batch_3, lambda t: None,
+                    checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
+                )
+            self.assertEqual(
+                sorted(p.name for p in ckpt_dir.glob("batch-*")),
+                ["batch-0001.json", "batch-0002.json"],
+            )
+
+            queried: list[list[int]] = []
+            collected: list = []
+
+            def second_run(batch):
+                queried.append(list(batch))
+                return _rows(batch)
+
+            rl.run_in_batches(
+                items, 2, second_run, collected.extend,
+                checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
+            )
+            # Only the un-cached tail is re-queried, and collect still sees
+            # every row in item order — cached batches replay in position.
+            self.assertEqual(queried, [[5, 6]])
+            self.assertEqual([r["id"] for r in collected], [1, 2, 3, 4, 5, 6])
+            self.assertFalse(ckpt_dir.exists())
+
+    def test_changed_items_discard_cached_batches(self) -> None:
+        # Batch 1 of a different request set covers different ids; replaying
+        # it would attribute one source_id's row to another.
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            ckpt = self._ckpt(ckpt_dir)
+            ckpt.begin([1, 2, 3, 4], 2)
+            ckpt.save(1, _rows([1, 2]))
+            self.assertIsNotNone(ckpt.load(1))
+            self._ckpt(ckpt_dir).begin([9, 1, 2, 3], 2)
+            self.assertIsNone(self._ckpt(ckpt_dir).load(1))
+
+    def test_changed_batch_size_discards_cached_batches(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            ckpt = self._ckpt(ckpt_dir)
+            ckpt.begin([1, 2, 3, 4], 2)
+            ckpt.save(1, _rows([1, 2]))
+            self._ckpt(ckpt_dir).begin([1, 2, 3, 4], 4)
+            self.assertIsNone(self._ckpt(ckpt_dir).load(1))
+
+    def test_unchanged_request_set_keeps_cached_batches(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            ckpt = self._ckpt(ckpt_dir)
+            ckpt.begin([1, 2, 3, 4], 2)
+            ckpt.save(1, _rows([1, 2]))
+            self._ckpt(ckpt_dir).begin([1, 2, 3, 4], 2)
+            self.assertEqual(self._ckpt(ckpt_dir).load(1), [{"id": 1}, {"id": 2}])
+
+    def test_cached_first_batch_still_faces_the_schema_gate(self) -> None:
+        # A cache written by an older ADQL projection must fail the schema
+        # check rather than flow into collect.
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            ckpt = self._ckpt(ckpt_dir)
+            ckpt.begin([1, 2], 1)
+            ckpt.save(1, {"b": "stale-projection"})
+            with self.assertRaises(rl.SchemaError):
+                rl.run_in_batches(
+                    [1, 2], 1, lambda b: {"a": _FakeColumn(int)}, lambda t: None,
+                    schema={"a": int}, checkpoint=self._ckpt(ckpt_dir),
+                    log=lambda _: None,
+                )
+
+    def test_log_marks_resumed_batches(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            ckpt = self._ckpt(ckpt_dir)
+            ckpt.begin([1, 2], 1)
+            ckpt.save(1, _rows([1]))
+            logs: list[str] = []
+            rl.run_in_batches(
+                [1, 2], 1, _rows, lambda t: None,
+                checkpoint=self._ckpt(ckpt_dir), log=logs.append,
+            )
+            self.assertIn("batch 1/2", logs[0])
+            self.assertIn("from checkpoint", logs[0])
+            self.assertNotIn("from checkpoint", logs[1])
+
+    def test_encode_failure_leaves_no_partial_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            def boom(_table, path: Path) -> None:
+                path.write_text("half")
+                raise OSError("disk full")
+            ckpt = rl.BatchCheckpoint(
+                ckpt_dir, encode=boom, decode=lambda p: None,
+                suffix=".json", log=lambda _: None,
+            )
+            ckpt.begin([1], 1)
+            with self.assertRaises(OSError):
+                ckpt.save(1, _rows([1]))
+            self.assertEqual(list(ckpt_dir.glob("batch-*")), [])
+
+    def test_empty_input_creates_no_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_dir = Path(d) / "out.tsv.ckpt"
+            rl.run_in_batches(
+                [], 10, _rows, lambda t: None,
+                checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
+            )
+            self.assertFalse(ckpt_dir.exists())
+
+    def _round_trip_default_codec(self, table):
+        with tempfile.TemporaryDirectory() as d:
+            ckpt = rl.BatchCheckpoint(Path(d) / "out.tsv.ckpt", log=lambda _: None)
+            ckpt.begin([1, 2], 2)
+            ckpt.save(1, table)
+            return ckpt.load(1)
+
+    def _gaia_shaped_table(self):
+        try:
+            import numpy as np
+            from astropy.table import Table
+        except ImportError:
+            self.skipTest("astropy/numpy not installed")
+        return Table(
+            {
+                "source_id": np.ma.array([1, 2], mask=[False, False]),
+                "teff": np.ma.array([5772.0, 0.0], mask=[False, True]),
+                "sptype": np.ma.array(
+                    np.array(["G2V", ""], dtype=object), mask=[False, True]
+                ),
+            },
+            masked=True,
+        )
+
+    def test_default_codec_preserves_values_and_numeric_masks(self) -> None:
+        # The production codec. A masked numeric cell must survive, or a
+        # resumed batch rewrites a null as 0.0.
+        back = self._round_trip_default_codec(self._gaia_shaped_table())
+        self.assertEqual(len(back), 2)
+        self.assertEqual(int(rl.coerce_masked(back["source_id"][0])), 1)
+        self.assertEqual(float(rl.coerce_masked(back["teff"][0])), 5772.0)
+        self.assertEqual(str(rl.coerce_masked(back["sptype"][0])), "G2V")
+        self.assertIsNone(rl.coerce_masked(back["teff"][1]))
+
+    def test_default_codec_decodes_masked_strings_as_empty(self) -> None:
+        # VOTable char fields carry no null marker, so a masked string cell
+        # comes back as "". Costs nothing downstream: write_tsv emits an
+        # empty cell for both, and the Gaia archive reports a null string
+        # column as "" rather than masking it in the first place.
+        back = self._round_trip_default_codec(self._gaia_shaped_table())
+        self.assertEqual(str(rl.coerce_masked(back["sptype"][1])), "")
 
 
 # ─── assert_row_count ─────────────────────────────────────────────────
@@ -468,21 +665,98 @@ class TapClientTests(unittest.TestCase):
         # Single-backend scripts (e.g. refresh-bailer-jones.py for VizieR-only
         # tables, refresh-simbad-sample.py for SIMBAD's divergent dialect)
         # pass `backends=[rl.<x>_backend()]` to TapClient. The factories must
-        # return valid TapBackend instances without importing astroquery/pyvo
-        # at module load time.
-        esa = rl.esa_backend()
+        # return valid TapBackend instances without importing pyvo at module
+        # load time.
         cds = rl.cds_backend()
         simbad = rl.simbad_backend()
-        self.assertIsInstance(esa, rl.TapBackend)
         self.assertIsInstance(cds, rl.TapBackend)
         self.assertIsInstance(simbad, rl.TapBackend)
-        self.assertEqual(esa.name, "ESA")
         self.assertEqual(cds.name, "CDS")
         self.assertEqual(simbad.name, "SIMBAD")
-        # Default list composes ESA + CDS in fallback order. SIMBAD is NOT
-        # in the default list — it's an explicit override per its caller.
-        defaults = rl._default_backends()
-        self.assertEqual([b.name for b in defaults], ["ESA", "CDS"])
+
+    def test_backends_is_required(self) -> None:
+        # No default list: which service can serve a query is a property of
+        # the table. A bare TapClient() used to hand back the ESA async path
+        # that every pull has now migrated off.
+        with self.assertRaises(TypeError):
+            rl.TapClient()
+        self.assertFalse(hasattr(rl, "esa_backend"))
+        self.assertFalse(hasattr(rl, "_default_backends"))
+
+
+# ─── Gaia sync client ─────────────────────────────────────────────────
+
+class GaiaSyncClientTests(unittest.TestCase):
+    def test_composes_esa_primary_then_ari_fallback(self) -> None:
+        client = rl.gaia_sync_client(12_345)
+        self.assertEqual(
+            [b.name for b in client.backends], ["ESA-sync", "ARI-sync"]
+        )
+        self.assertEqual(client.retry_kwargs, dict(rl.GAIA_SYNC_RETRY_KWARGS))
+
+    def test_one_maxrec_reaches_both_endpoints(self) -> None:
+        seen: list[tuple[str, int]] = []
+        original = rl._sync_tap_run
+        rl._sync_tap_run = lambda url, _q, maxrec: seen.append((url, maxrec))
+        try:
+            for backend in rl.gaia_sync_client(7_000).backends:
+                backend.run("SELECT 1")
+        finally:
+            rl._sync_tap_run = original
+        self.assertEqual(
+            seen,
+            [
+                (rl.GAIA_ESA_SYNC_TAP_URL, 7_000),
+                (rl.GAIA_ARI_SYNC_TAP_URL, 7_000),
+            ],
+        )
+
+
+class SyncOverflowTests(unittest.TestCase):
+    def test_overflow_is_not_classified_transient(self) -> None:
+        self.assertFalse(
+            rl.is_transient_http_error(rl.SyncOverflowError("truncated"))
+        )
+
+    def test_no_retry_and_no_mirror_fallback_on_overflow(self) -> None:
+        # A mirror at the same MAXREC truncates identically, so falling back
+        # would trade a loud truncation for a silent one.
+        calls: list[str] = []
+        def esa(_q: str) -> None:
+            calls.append("esa")
+            raise rl.SyncOverflowError("MAXREC=10")
+        def ari(_q: str) -> str:
+            calls.append("ari")
+            return "ari-result"
+        client = rl.TapClient(
+            [rl.TapBackend("ESA-sync", esa), rl.TapBackend("ARI-sync", ari)],
+            retry_kwargs={"sleep": lambda _: None},
+        )
+        with self.assertRaises(rl.SyncOverflowError):
+            client.run("SELECT 1")
+        self.assertEqual(calls, ["esa"])
+
+
+class WholeTableSyncMaxrecTests(unittest.TestCase):
+    def test_doubles_the_pinned_ceiling(self) -> None:
+        self.assertEqual(rl.whole_table_sync_maxrec(99_600), 199_200)
+
+    def test_clamps_to_the_output_cap(self) -> None:
+        self.assertEqual(
+            rl.whole_table_sync_maxrec(2_530_000), rl.GAIA_SYNC_MAX_ROWS
+        )
+
+    def test_always_leaves_headroom_over_the_live_ceilings(self) -> None:
+        # hip-xmatch, nss, tyc-xmatch pinned ceilings. MAXREC at or below a
+        # ceiling would overflow exactly when the row-count guard should be
+        # the one reporting.
+        for ceiling in (99_600, 446_000, 2_530_000):
+            self.assertGreater(rl.whole_table_sync_maxrec(ceiling), ceiling)
+
+    def test_ceiling_past_the_cap_demands_batching(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.whole_table_sync_maxrec(rl.GAIA_SYNC_MAX_ROWS + 1)
+        self.assertIn("batch it", str(cm.exception))
 
 
 # ─── coerce_masked ────────────────────────────────────────────────────
@@ -569,7 +843,7 @@ class WriteTsvTests(unittest.TestCase):
         self.assertEqual(self.path.read_text(), "ra\n1.235\n")
 
     def test_rounds_numpy_float32(self) -> None:
-        # astroquery returns float32 columns; numpy 2.x stopped treating them
+        # The archives return float32 columns; numpy 2.x stopped treating them
         # as Python-float subclasses so the round_floats path used to skip
         # them and emit full-precision repr() output instead.
         import numpy as np

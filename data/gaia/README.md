@@ -44,7 +44,8 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 - **Upstream tables**: ESA Gaia Archive at
   https://gea.esac.esa.int/archive/.
 - **Licence**: CC-BY-4.0 (Gaia data release policy).
-- **Source tables** (queried via ADQL through astroquery):
+- **Source tables** (queried via ADQL over the synchronous Gaia TAP
+  endpoints — `scripts/refresh/README.md` § Gaia TAP):
   - `gaia_dr3_hip_xmatch.tsv` ← `hipparcos2_best_neighbour`.
   - `gaia_dr3_tyc_xmatch.tsv` ← `tyco2tdsc_merge_best_neighbour`.
   - `gaia_dr3_astrometry.tsv` ← `gaia_source` (binaries subset queried

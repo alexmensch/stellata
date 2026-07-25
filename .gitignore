@@ -38,6 +38,10 @@ docs/validation-residuals.md
 # re-encode without re-running the 10-minute query phase. Local-only.
 data/dust/.voxels.npy
 
+# Per-batch resume cache written by refresh_lib.BatchCheckpoint. Survives a
+# failed run on purpose so a re-run resumes; deleted once the pull completes.
+data/**/*.tsv.ckpt/
+
 # Python venv for scripts/dust/build-dust.py and refresh scripts
 .venv/
 

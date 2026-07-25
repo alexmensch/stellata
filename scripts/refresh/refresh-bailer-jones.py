@@ -160,6 +160,7 @@ def main() -> None:
     rl.run_in_batches(
         source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
         schema=EXPECTED_SCHEMA, schema_label="bailer-jones I/352/gedr3dis",
+        checkpoint=rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
     )
 
     matched = len(rows)

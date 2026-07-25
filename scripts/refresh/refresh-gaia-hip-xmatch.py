@@ -57,6 +57,8 @@ ANGULAR_DISTANCE_DECIMALS = 6
 
 SCRIPT_NAME = "refresh-gaia-hip-xmatch"
 
+SYNC_MAXREC = rl.whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
+
 # Pinned HIP → gaia_source_id rows. HIP identifiers are the external
 # anchor — they don't retire across Gaia releases, so absence of a
 # pinned row is a real signal that warrants a hard fail (no
@@ -95,8 +97,8 @@ def main() -> None:
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    client = rl.TapClient()
-    print(f"querying ESA Gaia TAP (fallback: CDS) — gaiadr3.hipparcos2_best_neighbour …")
+    client = rl.gaia_sync_client(SYNC_MAXREC)
+    print("querying Gaia sync TAP (ESA → ARI) — gaiadr3.hipparcos2_best_neighbour …")
     table = client.run(ADQL)
 
     rl.validate_schema(table, EXPECTED_SCHEMA, label="hipparcos2_best_neighbour")
