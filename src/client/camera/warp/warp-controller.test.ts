@@ -2,16 +2,15 @@
 // variants, mid-Fly recentre, skip / coincident-source / no-focus
 // bails, per-phase getWarpPhase / getWarpInfo outputs.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import {
   WarpController,
   type FocusOps,
   type WarpControllerDeps,
 } from './warp-controller';
 import type { FocusTarget } from '../focus/focus-target';
-import type { ObserveControls } from '../observe/observe-controls';
+import { makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import {
@@ -33,29 +32,6 @@ function flyDurMs(distPc: number): number {
   );
 }
 
-function makeControlsStub(): TrackballControls & {
-  update: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enabled: true,
-    target: new THREE.Vector3(0, 0, 0),
-    update: vi.fn(),
-  } as unknown as TrackballControls & { update: ReturnType<typeof vi.fn> };
-}
-
-function makeObserveControlsStub(): ObserveControls & {
-  enable: ReturnType<typeof vi.fn>;
-  disable: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enable: vi.fn(),
-    disable: vi.fn(),
-  } as unknown as ObserveControls & {
-    enable: ReturnType<typeof vi.fn>;
-    disable: ReturnType<typeof vi.fn>;
-  };
-}
-
 // FocusOps double — backed by simple per-kind position tables so the
 // controller can resolve `dest.localPositionInto` / `anchorInto` /
 // `parkRadius` / `physicalRadius` deterministically. The mutating side
@@ -65,6 +41,7 @@ interface StarRow {
   abs: THREE.Vector3;
   parkRadius: number;
   physicalRadius: number | null;
+  plateauDist?: number | null;
 }
 interface CloudRow {
   abs: THREE.Vector3;
@@ -126,7 +103,7 @@ function makeFocus(): FocusFixture {
         calls.emitFocusEvents.push({ kind: 'star', idx });
       },
       physicalRadius: () => row.physicalRadius,
-      chartPlateauDistance: () => null,
+      chartPlateauDistance: () => row.plateauDist ?? null,
     };
   }
   function makePlanetTarget(idx: number): FocusTarget | null {
@@ -304,7 +281,13 @@ function seedStarStar(
   h: Harness,
   A: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
   B: THREE.Vector3 = new THREE.Vector3(100, 0, 0),
-  opts: { destR?: number | null; sourceR?: number; destPark?: number; sourcePark?: number } = {},
+  opts: {
+    destR?: number | null;
+    sourceR?: number;
+    destPark?: number;
+    sourcePark?: number;
+    destPlateau?: number;
+  } = {},
 ) {
   h.focus.stars.set(0, {
     abs: A.clone(),
@@ -315,6 +298,7 @@ function seedStarStar(
     abs: B.clone(),
     parkRadius: opts.destPark ?? 0.001,
     physicalRadius: opts.destR ?? null,
+    plateauDist: opts.destPlateau ?? null,
   });
   h.focus.setFocusedStar(0);
   // Seed camera at the source-parked pose: just behind A on the +Z axis.
@@ -732,6 +716,73 @@ describe('WarpController — mid-Fly recentre + isRecenteredToDest', () => {
     h.warp.skip();
     expect(h.focus.calls.emitFocusEvents.some((c) => c.kind === 'star' && c.idx === 1)).toBe(true);
     expect(h.focus.calls.setFocus).not.toContain(1);
+  });
+});
+
+describe('WarpController — chart-mode plateau trigger', () => {
+  const DEST_PARK = 0.001;
+  const RAW_PLATEAU = 1.0;
+
+  function driveToPlateauTrigger(h: Harness): { nowMs: number; dTriggerPc: number } {
+    const t0 = performance.now();
+    for (let dt = WARP_REORIENT_MS + 10; dt < WARP_REORIENT_MS + WARP_T_MAX_MS; dt += 10) {
+      const nowMs = t0 + dt;
+      h.warp.tick(nowMs);
+      if (h.warp.getWarpPhase(nowMs)?.chartPlateauTriggered) {
+        // Post-recentre the destination sits at local (0,0,0), so the
+        // camera's distance from the origin IS the trigger distance the
+        // controller measured on this tick.
+        return { nowMs, dTriggerPc: h.camera.position.length() };
+      }
+    }
+    throw new Error('plateau never triggered');
+  }
+
+  it('caches no plateau distance outside chart mode', () => {
+    const h = makeHarness({ mode: 'observe' });
+    seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0), {
+      destPlateau: RAW_PLATEAU,
+    });
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    expect(h.warp.getWarpPhase()!.chartPlateauDist).toBeNull();
+  });
+
+  it('scales the destination plateau distance by the baked 0.7 margin', () => {
+    const h = makeHarness({ mode: 'observe', isChart: true });
+    seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0), {
+      destPlateau: RAW_PLATEAU,
+    });
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    expect(h.warp.getWarpPhase()!.chartPlateauDist).toBeCloseTo(0.7 * RAW_PLATEAU, 12);
+  });
+
+  it('pivots Fly → phase 3 once the camera is inside the scaled plateau radius', () => {
+    const h = makeHarness({ mode: 'observe', isChart: true });
+    seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0), {
+      destPark: DEST_PARK,
+      destPlateau: RAW_PLATEAU,
+    });
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    const { nowMs, dTriggerPc } = driveToPlateauTrigger(h);
+    expect(dTriggerPc).toBeLessThanOrEqual(0.7 * RAW_PLATEAU);
+    // The trigger shortens Fly to the elapsed time, so the same tick
+    // already reads as post-arrival.
+    expect(h.warp.getWarpPhase(nowMs)!.kind).toBe('post-arrival');
+  });
+
+  it('stretches phase 3 by 1 + 0.2·log10(d_trigger / endOffset)', () => {
+    const h = makeHarness({ mode: 'observe', isChart: true });
+    seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0), {
+      destPark: DEST_PARK,
+      destPlateau: RAW_PLATEAU,
+    });
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    const { nowMs, dTriggerPc } = driveToPlateauTrigger(h);
+    const expectedMs =
+      OBSERVE_TRANSITION_MS * (1 + 0.2 * Math.log10(dTriggerPc / DEST_PARK));
+    expect(h.warp.getWarpPhase(nowMs)!.totalMs).toBeCloseTo(expectedMs, 6);
+    // Sanity that the scaling is doing real work at these distances.
+    expect(expectedMs).toBeGreaterThan(OBSERVE_TRANSITION_MS * 1.4);
   });
 });
 

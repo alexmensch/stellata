@@ -36,7 +36,7 @@ import {
   tickFocusLerp,
 } from './focus-transition';
 import { shiftArrivalWaypoints } from '../arrival/camera-motion';
-import { warpArrivalEaseFn } from '../warp/warp-tuning';
+import { arrivalEaseFn } from '../camera-config';
 import { FOCUS_LERP_MS } from '../timing';
 import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
@@ -624,7 +624,7 @@ export class FocusController implements FocusOps {
         parkDist,
         FOCUS_LERP_MS,
         performance.now(),
-        warpArrivalEaseFn({
+        arrivalEaseFn({
           d0: eyeDist,
           dEnd: parkDist,
           targetRadius:
@@ -701,7 +701,7 @@ export class FocusController implements FocusOps {
         parkDist,
         FOCUS_LERP_MS,
         performance.now(),
-        warpArrivalEaseFn({ d0: eyeDist, dEnd: parkDist, targetRadius: radiusPc }),
+        arrivalEaseFn({ d0: eyeDist, dEnd: parkDist, targetRadius: radiusPc }),
       ));
       // controls.enabled stays true — see focusStar's comment.
     } else if (eyeDist > parkDist) {
@@ -801,7 +801,7 @@ export class FocusController implements FocusOps {
           parkDist,
           FOCUS_LERP_MS,
           performance.now(),
-          warpArrivalEaseFn({
+          arrivalEaseFn({
             d0: eyeDist,
             dEnd: parkDist,
             targetRadius: provider.arrivalRadiusPc(target.idx),

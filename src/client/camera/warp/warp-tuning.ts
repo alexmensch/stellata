@@ -1,113 +1,10 @@
+// Warp-curve tuning section for the unified debug panel. Sliders write
+// into `camera-config.ts`; the readout reads `warp-telemetry.ts`.
+
 import type { Stellata } from '../../stellata';
 import type { DebugSection } from '../../debug/debug-panel';
-import {
-  type ArrivalCurveContext,
-  resolveHybridCurve,
-} from '../arrival/arrival-curves';
-
-// Warp-curve tuning section for the unified debug panel. Module-level
-// mutable knobs read at startWarp time (changes take effect on the
-// next warp, not retroactively — captured behaviour stays
-// frame-coherent). Defaults match the shipped constants so until the
-// user drags a slider, behaviour is identical to a build without this
-// module loaded.
-//
-// Per-frame readouts early-return when the section is collapsed, and
-// dispose fully detaches the subscription — no compute survives close.
-
-import {
-  WARP_REORIENT_MS,
-  WARP_T_MIN_MS,
-  WARP_T_MAX_MS,
-  WARP_T_K_MS,
-  OBSERVE_TRANSITION_MS,
-} from '../timing';
-
-/** Linear |camera−B| / |A−B| threshold at which the mid-Fly recentre
- *  fires (0.5 = midpoint, matching the shipped `0.25` squared-form in
- *  `tryMidFlyRecentre`). The squaring happens at the comparison site so
- *  the knob reads as the natural "fraction of the way along the
- *  trajectory" the user expects. */
-export const DEFAULT_MID_FLY_RECENTRE_FRAC = 0.5;
-export const DEFAULT_CHART_PLATEAU_MARGIN = 0.7;
-export const DEFAULT_CHART_PHASE3_SCALING_ENABLED = true;
-export const DEFAULT_CHART_PHASE3_ALPHA = 0.2;
-// Hybrid-curve seam distance multiplier: d_seam = seam_k · parkDist.
-// The hybrid switches from a linear-d piecewise-quad outer regime to
-// a quintic-smootherstep on θ inner regime at d_seam from the
-// destination. seam_k ≤ 1 degenerates to pure outer (matches the
-// pre- main-branch warp's piecewise-quad on linear-d) — useful
-// at the low end of the slider for direct comparison.
-export const DEFAULT_ARRIVAL_HYBRID_SEAM_K = 100;
-
-interface Knobs {
-  reorientMs: number;
-  flyTMinMs: number;
-  flyTMaxMs: number;
-  flyTKMs: number;
-  observeTransitionMs: number;
-  arrivalHybridSeamK: number;
-  midFlyRecentreFrac: number;
-  chartPlateauMargin: number;
-  chartPhase3ScalingEnabled: boolean;
-  chartPhase3Alpha: number;
-}
-
-const knobs: Knobs = {
-  reorientMs: WARP_REORIENT_MS,
-  flyTMinMs: WARP_T_MIN_MS,
-  flyTMaxMs: WARP_T_MAX_MS,
-  flyTKMs: WARP_T_K_MS,
-  observeTransitionMs: OBSERVE_TRANSITION_MS,
-  arrivalHybridSeamK: DEFAULT_ARRIVAL_HYBRID_SEAM_K,
-  midFlyRecentreFrac: DEFAULT_MID_FLY_RECENTRE_FRAC,
-  chartPlateauMargin: DEFAULT_CHART_PLATEAU_MARGIN,
-  chartPhase3ScalingEnabled: DEFAULT_CHART_PHASE3_SCALING_ENABLED,
-  chartPhase3Alpha: DEFAULT_CHART_PHASE3_ALPHA,
-};
-
-// Read-at-warp-start getters consumed by stellata.ts. Each returns the
-// live knob value, so the next warp picks up the latest slider state.
-// Importers should read inside `startWarp` / `tryMidFlyRecentre` /
-// `chartPlateauTrigger`, NEVER cache the value module-side — the whole
-// point of the tuning surface is that the next warp reflects the latest
-// edit.
-export function warpReorientMs(): number { return knobs.reorientMs; }
-export function warpFlyTMinMs(): number { return knobs.flyTMinMs; }
-export function warpFlyTMaxMs(): number { return knobs.flyTMaxMs; }
-export function warpFlyTKMs(): number { return knobs.flyTKMs; }
-export function warpObserveTransitionMs(): number { return knobs.observeTransitionMs; }
-export function warpArrivalEaseFn(ctx?: ArrivalCurveContext): (u: number) => number {
-  return resolveHybridCurve(knobs.arrivalHybridSeamK, ctx);
-}
-export function warpArrivalHybridSeamK(): number {
-  return knobs.arrivalHybridSeamK;
-}
-export function warpMidFlyRecentreFrac(): number { return knobs.midFlyRecentreFrac; }
-export function warpChartPlateauMargin(): number { return knobs.chartPlateauMargin; }
-export function warpChartPhase3ScalingEnabled(): boolean {
-  return knobs.chartPhase3ScalingEnabled;
-}
-export function warpChartPhase3Alpha(): number { return knobs.chartPhase3Alpha; }
-
-// Last-warp summary surface, populated from stellata.ts at finishWarp
-// time. Kept inside this module so the readout DOM is the only consumer;
-// nothing in the shipped warp path reads from here.
-interface LastWarpSummary {
-  sourceKind: string;
-  sourceIdx: number;
-  destKind: string;
-  destIdx: number;
-  totalMs: number;
-  plateauFired: boolean;
-  plateauScaledPhase3: boolean;
-  plateauDistPc: number | null;
-}
-let lastWarp: LastWarpSummary | null = null;
-
-export function recordLastWarp(summary: LastWarpSummary): void {
-  lastWarp = summary;
-}
+import { cameraConfig, setCameraConfig } from '../camera-config';
+import { getLastWarp } from './warp-telemetry';
 
 export function buildWarpSection(stellata: Stellata): DebugSection {
   let visible = true;
@@ -160,94 +57,60 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
 
   const fmtMs = (v: number) => `${v.toFixed(0)} ms`;
   const fmtFrac = (v: number) => v.toFixed(2);
+  const cfg = cameraConfig();
 
   addSlider({
     label: 'reorient',
     min: 200, max: 2000, step: 50,
-    initial: knobs.reorientMs,
-    onChange: (v) => { knobs.reorientMs = v; },
+    initial: cfg.reorientMs,
+    onChange: (v) => setCameraConfig('reorientMs', v),
     fmt: fmtMs,
   });
   addSlider({
     label: 'fly t-min',
     min: 200, max: 8000, step: 100,
-    initial: knobs.flyTMinMs,
-    onChange: (v) => { knobs.flyTMinMs = v; },
+    initial: cfg.flyTMinMs,
+    onChange: (v) => setCameraConfig('flyTMinMs', v),
     fmt: fmtMs,
   });
   addSlider({
     label: 'fly t-max',
     min: 1000, max: 20000, step: 200,
-    initial: knobs.flyTMaxMs,
-    onChange: (v) => { knobs.flyTMaxMs = v; },
+    initial: cfg.flyTMaxMs,
+    onChange: (v) => setCameraConfig('flyTMaxMs', v),
     fmt: fmtMs,
   });
   addSlider({
     label: 'fly k',
     min: 0, max: 6000, step: 100,
-    initial: knobs.flyTKMs,
-    onChange: (v) => { knobs.flyTKMs = v; },
+    initial: cfg.flyTKMs,
+    onChange: (v) => setCameraConfig('flyTKMs', v),
     fmt: fmtMs,
   });
   addSlider({
     label: 'phase 3',
     min: 200, max: 3000, step: 50,
-    initial: knobs.observeTransitionMs,
-    onChange: (v) => { knobs.observeTransitionMs = v; },
+    initial: cfg.observeTransitionMs,
+    onChange: (v) => setCameraConfig('observeTransitionMs', v),
     fmt: fmtMs,
   });
 
-  // Hybrid-curve seam distance multiplier: d_seam = seam_k · parkDist.
-  // Default 100. Range starts at 0 — values ≤ 1 degenerate to pure
- // linear-d piecewise-quad (matches the pre- main-branch warp
-  // exactly) and are useful for direct A/B comparison. Step 10 keeps
-  // the slider granular at the low end where the perceptual difference
-  // is largest.
+  // Step 10 keeps the seam slider granular at the low end, where values
+  // ≤ 1 degenerate to pure linear-d piecewise-quad and the perceptual
+  // difference between neighbouring values is largest.
   addSlider({
     label: 'seam k',
     min: 0, max: 2000, step: 10,
-    initial: knobs.arrivalHybridSeamK,
-    onChange: (v) => { knobs.arrivalHybridSeamK = v; },
+    initial: cfg.arrivalHybridSeamK,
+    onChange: (v) => setCameraConfig('arrivalHybridSeamK', v),
     fmt: (v) => v.toFixed(0),
   });
 
   addSlider({
     label: 'recentre',
     min: 0.1, max: 0.9, step: 0.01,
-    initial: knobs.midFlyRecentreFrac,
-    onChange: (v) => { knobs.midFlyRecentreFrac = v; },
-    fmt: fmtFrac,
-  });
-  addSlider({
-    label: 'plateau ×',
-    min: 0.25, max: 3.0, step: 0.05,
-    initial: knobs.chartPlateauMargin,
-    onChange: (v) => { knobs.chartPlateauMargin = v; },
-    fmt: fmtFrac,
-  });
-
-  // Phase-3 scaling toggle + alpha.
-  {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:3px;';
-    const label = document.createElement('span');
-    label.style.cssText = 'flex:0 0 90px;color:#aaa;';
-    label.textContent = 'p3 scale';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = knobs.chartPhase3ScalingEnabled;
-    cb.addEventListener('change', () => {
-      knobs.chartPhase3ScalingEnabled = cb.checked;
-    });
-    row.appendChild(label);
-    row.appendChild(cb);
-    slidersBox.appendChild(row);
-  }
-  addSlider({
-    label: 'p3 α',
-    min: 0, max: 1, step: 0.05,
-    initial: knobs.chartPhase3Alpha,
-    onChange: (v) => { knobs.chartPhase3Alpha = v; },
+    initial: cfg.midFlyRecentreFrac,
+    onChange: (v) => setCameraConfig('midFlyRecentreFrac', v),
     fmt: fmtFrac,
   });
 
@@ -280,17 +143,15 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
   root.appendChild(summaryBox);
 
   function renderSummary() {
+    const c = cameraConfig();
     summaryBox.textContent =
-      `WARP_REORIENT_MS = ${knobs.reorientMs}\n` +
-      `WARP_T_MIN_MS = ${knobs.flyTMinMs}\n` +
-      `WARP_T_MAX_MS = ${knobs.flyTMaxMs}\n` +
-      `WARP_T_K_MS = ${knobs.flyTKMs}\n` +
-      `OBSERVE_TRANSITION_MS = ${knobs.observeTransitionMs}\n` +
-      `DEFAULT_ARRIVAL_HYBRID_SEAM_K = ${knobs.arrivalHybridSeamK.toFixed(0)}\n` +
-      `midFlyRecentreFrac = ${knobs.midFlyRecentreFrac.toFixed(2)}\n` +
-      `chartPlateauMargin = ${knobs.chartPlateauMargin.toFixed(2)}\n` +
-      `chartPhase3Scaling = ${knobs.chartPhase3ScalingEnabled}` +
-      (knobs.chartPhase3ScalingEnabled ? ` (α=${knobs.chartPhase3Alpha.toFixed(2)})` : '');
+      `WARP_REORIENT_MS = ${c.reorientMs}\n` +
+      `WARP_T_MIN_MS = ${c.flyTMinMs}\n` +
+      `WARP_T_MAX_MS = ${c.flyTMaxMs}\n` +
+      `WARP_T_K_MS = ${c.flyTKMs}\n` +
+      `OBSERVE_TRANSITION_MS = ${c.observeTransitionMs}\n` +
+      `ARRIVAL_HYBRID_SEAM_K = ${c.arrivalHybridSeamK.toFixed(0)}\n` +
+      `MID_FLY_RECENTRE_FRAC = ${c.midFlyRecentreFrac.toFixed(2)}`;
   }
   renderSummary();
   // Re-render summary on any slider change. Cheaper than per-tick
@@ -305,6 +166,7 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
     if (!visible) return;
     const w = stellata.getWarpInfo();
     if (!w) {
+      const lastWarp = getLastWarp();
       const lastBlock = lastWarp
         ? `\n\nlast warp: ${lastWarp.sourceKind}#${lastWarp.sourceIdx} → ` +
           `${lastWarp.destKind}#${lastWarp.destIdx}\n` +
@@ -312,8 +174,7 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
           `plateau ${lastWarp.plateauFired ? 'Y' : 'N'}` +
           (lastWarp.plateauFired
             ? ` (d=${(lastWarp.plateauDistPc ?? 0).toFixed(3)} pc)`
-            : '') +
-          (lastWarp.plateauScaledPhase3 ? ' · p3 scaled' : '')
+            : '')
         : '';
       const text = '(idle)' + lastBlock;
       if (text !== lastReadoutText) {

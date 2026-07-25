@@ -47,9 +47,9 @@ place and the helper owns both the time and the distance profile.
 
 | Path | Location | Duration | Endpoint |
 |---|---|---|---|
-| Focus-park lerp (star, cloud) | `focus-transition.ts:tickFocusLerp` | `FOCUS_LERP_MS = 2000` ms | `parkDist` |
-| Warp Fly phase | `stellata.ts:updateWarp` | `WARP_T_MIN_MS … WARP_T_MAX_MS` (3–20 s) | `endOffset` (≈ destination `parkDist`) |
-| Navigate-mode unfocus | `stellata.ts:unfocus` | `OBSERVE_TRANSITION_MS = 1800` ms | `parkDist` (outbound) |
+| Focus-park lerp (star, cloud) | `../focus/focus-transition.ts:tickFocusLerp` | `FOCUS_LERP_MS = 2000` ms | `parkDist` |
+| Warp Fly phase | `../warp/warp-controller.ts:updateWarp` | `WARP_T_MIN_MS … WARP_T_MAX_MS` (3–20 s) | `endOffset` (≈ destination `parkDist`) |
+| Navigate-mode unfocus | `../observe/observe-transition.ts` (`kind: 'unfocus'`) | `OBSERVE_TRANSITION_MS = 1800` ms | `parkDist` (outbound) |
 
 **Excluded: Warp Phase 3 (observe→observe arrivals).** Phase 3's
 position track lerps `pEnd → (0,0,0)` over `OBSERVE_TRANSITION_MS` and
@@ -201,10 +201,11 @@ clouds, navigate-mode unfocus) pass an `ArrivalCurveContext` carrying
 `{ d_0, d_end, targetRadius }`. `FocusTarget.physicalRadius()`
 provides `R`; stars read it from the catalog, clouds return `null`.
 
-The warp-tuning debug panel exposes a single `seam k` slider.
-Capture-at-warp-start semantics in `warpArrivalEaseFn(ctx)` mean
-live-tuning the slider mid-flight doesn't mutate an in-flight warp —
-the next warp picks up the new value.
+`seam_k` lives in `../camera-config.ts` as `arrivalHybridSeamK`; the
+warp-tuning debug panel exposes it as a single `seam k` slider.
+Capture-at-resolve-time semantics in `arrivalEaseFn(ctx)` mean
+live-tuning the slider mid-flight doesn't mutate an in-flight
+animation — the next one picks up the new value.
 
 ## What about a two-region split at `dWindow`?
 
@@ -352,7 +353,7 @@ lerp (~820 ms) spans those last ~2.5 decades — matches the user's
 ## Helper API
 
 ```ts
-// src/client/camera-motion.ts
+// src/client/camera/arrival/camera-motion.ts
 
 export interface ArrivalTarget {
   center: THREE.Vector3;
@@ -399,8 +400,8 @@ export function shiftArrivalWaypoints(
 present) `camera.quaternion`. Returns `done: true` once
 `nowMs ≥ startMs + durationMs`, mirroring `tickFocusLerp`'s contract.
 
-`parkDistance(...)` stays in `focus-transition.ts` (under `../warp/`)
-— it computes a per-object property and isn't a motion concern. The
+`parkDistance(...)` stays in `../focus/focus-transition.ts` — it
+computes a per-object property and isn't a motion concern. The
 per-object geometry that warp / arrival reads (anchor, local
 position, park radius) flows through the `FocusTarget` contract
 declared in `../focus/focus-target.ts`.

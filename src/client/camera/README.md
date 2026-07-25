@@ -22,6 +22,8 @@ across all five.
 - `arrival/` — log-distance smoothstep math shared by focus-park, warp
   Fly, and unfocus. Pure helpers + the per-frame `tickArrival` driver.
 
+`camera-config.ts` and `timing.ts` sit at this level — see § Shared.
+
 ## Shared
 
 `timing.ts` is the single source of truth for camera-wide constants:
@@ -31,13 +33,44 @@ phase boundaries stay aligned across controllers.
 
 The constants live in their own module specifically to break the
 import cycle between `stellata.ts` (the warp state machine + camera-
-lerp consumer) and `warp/warp-tuning.ts` (the debug-panel surface that
-exposes them as live-tunable knobs). When the constants lived on
-`stellata.ts`, `warp-tuning.ts`'s top-level `const knobs = { ... }`
-initializer ran before stellata's `export const WARP_REORIENT_MS = ...`
-line was evaluated, leaving the values in the temporal dead zone at
-module-load time — the catalogue (and the rest of the app) never got
-to boot. New camera / lerp / numeric-floor knobs land here.
+lerp consumer) and the modules that read them at animation start.
+When the constants lived on `stellata.ts`, a top-level
+`const knobs = { ... }` initializer ran before stellata's
+`export const WARP_REORIENT_MS = ...` line was evaluated, leaving the
+values in the temporal dead zone at module-load time — the catalogue
+(and the rest of the app) never got to boot. New camera / lerp /
+numeric-floor constants land here.
+
+### Shipping config vs debug panel
+
+`camera-config.ts` holds the live camera-motion config — durations,
+the arrival seam multiplier, the mid-Fly recentre fraction — seeded
+from `timing.ts`. Production controllers read it through
+`cameraConfig()` / `arrivalEaseFn(ctx)`; `warp/warp-tuning.ts` (the
+debug panel) writes into it through `setCameraConfig`. The direction
+is load-bearing: a shipped camera path must never import a debug
+module, and a build that never opens the panel behaves exactly as the
+`timing.ts` constants describe.
+
+Reads happen once per animation — at `startWarp`, at the focus-park /
+unfocus entry points, inside `tryMidFlyRecentre`. Never cache a config
+value module-side: a slider edit has to reach the next warp, and an
+in-flight one must keep the values it launched with.
+
+Values that stopped being tuned graduate out of the config into a
+`const` beside their consumer (`CHART_PLATEAU_MARGIN` and
+`CHART_PHASE3_ALPHA` in `warp/warp-controller.ts`) — a slider whose
+value has settled is complexity without payoff.
+
+### Test stubs
+
+`camera-test-stubs.ts` carries the `TrackballControls` /
+`ObserveControls` / `AimController` doubles every controller suite
+needs. Each stub holds the union of the fields the five controllers
+touch, so a suite that starts asserting on a new field extends the
+shared builder rather than forking a local copy. Per-controller
+harnesses (deps assembly, `FocusOps` fixtures) stay in their own test
+file — they mirror real coupling and don't generalise.
 
 ## Cross-controller seams
 

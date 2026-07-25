@@ -15,7 +15,7 @@ import {
   tickArrival,
 } from '../arrival/camera-motion';
 import { OBSERVE_TRANSITION_MS } from '../timing';
-import { warpArrivalEaseFn } from '../warp/warp-tuning';
+import { arrivalEaseFn } from '../camera-config';
 import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
 /** Cross-controller seam consumed by ObserveTransition; implemented by
@@ -311,7 +311,7 @@ export class ObserveTransition {
         // falls back to cubic-Hermite; passing `targetRadius: null`
         // enforces the same path even if a future curve cared about
         // direction.
-        easeUFn: warpArrivalEaseFn({
+        easeUFn: arrivalEaseFn({
           d0: eye,
           dEnd: finalMinDist,
           targetRadius: null,

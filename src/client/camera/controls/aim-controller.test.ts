@@ -1,9 +1,8 @@
 // AimController tests — slerp lifecycle, cancel(), dispose, navigate vs
 // observe branches.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import {
   AIM_DEGENERATE_DIST_PC,
   AimController,
@@ -11,30 +10,7 @@ import {
   type AimControllerDeps,
 } from './aim-controller';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS } from '../timing';
-import type { ObserveControls } from '../observe/observe-controls';
-
-// Minimal stub for TrackballControls — only `enabled`, `target`, and
-// `update()` are touched by the controller.
-function makeControlsStub(): TrackballControls & { update: ReturnType<typeof vi.fn> } {
-  return {
-    enabled: true,
-    target: new THREE.Vector3(0, 0, 0),
-    update: vi.fn(),
-  } as unknown as TrackballControls & { update: ReturnType<typeof vi.fn> };
-}
-
-function makeObserveControlsStub(): ObserveControls & {
-  enable: ReturnType<typeof vi.fn>;
-  disable: ReturnType<typeof vi.fn>;
-} {
-  return {
-    enable: vi.fn(),
-    disable: vi.fn(),
-  } as unknown as ObserveControls & {
-    enable: ReturnType<typeof vi.fn>;
-    disable: ReturnType<typeof vi.fn>;
-  };
-}
+import { makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 
 function makeHarness(mode: 'navigate' | 'observe' = 'navigate') {
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
