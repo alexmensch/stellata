@@ -106,7 +106,9 @@ many-providers pattern (`../hover/README.md`).
 Adding a layer = constructing it + one `register(...)` call. Hooks
 are optional except `dispose`; a layer that doesn't participate in a
 fan-out simply omits the hook (e.g. the heliopause has no per-frame
-update — its visibility is event-driven).
+update — its visibility is event-driven, and `chart-labels` registers
+`dispose` alone because its per-frame work rides the `'frame'` event
+under `chart-mode.ts`'s start/stop gate).
 
 Not in the registry: camera controllers, the star pipeline, and the
 extinction prepass — they aren't scene layers and keep explicit

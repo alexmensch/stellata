@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import * as THREE from 'three';
 import {
+  ChartLabels,
   computeAppMag,
   collides,
   measureCandidate,
@@ -9,6 +10,8 @@ import {
   starLabelOffsetPx,
   type Candidate,
 } from './chart-labels';
+import type { Stellata } from '../stellata';
+import type { ChartModeContext } from './chart-mode';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -382,5 +385,203 @@ describe('chart-labels / starLabelOffsetPx', () => {
     const cornerDist = Math.hypot(cornerX, cornerY);
     expect(cornerDist).toBeCloseTo(9.219544457292887, 12);
     expect(cornerDist - FLOOR_FORMULA_CROSSOVER_PX / 2).toBeCloseTo(4.219544457292887, 12);
+  });
+});
+
+describe('chart-labels / ChartLabels lifecycle', () => {
+  // Minimal SVG-group stand-in: chart-labels only ever touches style,
+  // appendChild, and the firstChild / removeChild drain loop.
+  function makeGroup() {
+    const children: unknown[] = [];
+    return {
+      children,
+      style: {} as Record<string, string>,
+      setAttribute: () => {},
+      appendChild: (c: unknown) => { children.push(c); },
+      removeChild: (c: unknown) => { children.splice(children.indexOf(c), 1); },
+      get firstChild() { return children.length > 0 ? children[0] : null; },
+    };
+  }
+
+  interface Harness {
+    stellata: Stellata;
+    ctx: ChartModeContext;
+    emit: (name: 'frame' | 'filter') => void;
+    handlerCount: () => number;
+    ticks: () => number;
+    positionsReads: () => number;
+  }
+
+  function makeHarness(): Harness {
+    const handlers = new Map<string, Set<() => void>>();
+    let ticks = 0;
+    let positionsReads = 0;
+    const positions = new Float32Array(0);
+    const catalog = {
+      count: 0,
+      names: new Map<number, string>(),
+      constellations: [] as unknown[],
+      constellation: new Uint8Array(0),
+      absmag: new Float32Array(0),
+      spectClass: new Uint8Array(0),
+      periodDays: new Float32Array(0),
+      amplitudeMag: new Float32Array(0),
+      varType: new Uint8Array(0),
+      flags: new Uint8Array(0),
+      get positions() { positionsReads++; return positions; },
+    };
+    const camera = new THREE.PerspectiveCamera(50, 4 / 3, 0.01, 1000);
+    camera.updateMatrixWorld(true);
+    const stellata = {
+      catalog,
+      camera,
+      localPositions: positions,
+      // Read exactly once per tick (the full-tick skip key), so it doubles
+      // as the tick counter.
+      get advancedEpochJyr() { ticks++; return 2016; },
+      uniforms: {
+        uChartDiscMaxPx: { value: 28 },
+        uChartDiscMinPx: { value: 1.5 },
+        uChartMagBright: { value: -2 },
+      },
+      getT: () => 0,
+      getFilter: () => ({
+        maxAppMag: 6.5, minDistSol: 0, maxDistSol: 1e9,
+        spectMask: 0xff, showConstellation: true,
+      }),
+      detailPermits: () => true,
+      getCloudCatalog: () => null,
+      planetField: { liveInstanceCount: 0 },
+      on: (name: string, fn: () => void) => {
+        let set = handlers.get(name);
+        if (!set) { set = new Set(); handlers.set(name, set); }
+        set.add(fn);
+        return () => { set!.delete(fn); };
+      },
+    } as unknown as Stellata;
+    return {
+      stellata,
+      ctx: { bayerMap: new Map(), starLabels: new Map() },
+      emit: (name) => { for (const fn of handlers.get(name) ?? []) fn(); },
+      handlerCount: () => [...handlers.values()].reduce((n, s) => n + s.size, 0),
+      ticks: () => ticks,
+      positionsReads: () => positionsReads,
+    };
+  }
+
+  const realDocument = globalThis.document;
+  const realWindow = globalThis.window;
+
+  function installDomStubs() {
+    const groups = new Map<string, ReturnType<typeof makeGroup>>();
+    (globalThis as { document?: unknown }).document = {
+      getElementById: (id: string) => {
+        let g = groups.get(id);
+        if (!g) { g = makeGroup(); groups.set(id, g); }
+        return g;
+      },
+      createElementNS: () => makeGroup(),
+    };
+    (globalThis as { window?: unknown }).window = { innerWidth: 800, innerHeight: 600 };
+    return groups;
+  }
+
+  afterEach(() => {
+    (globalThis as { document?: unknown }).document = realDocument;
+    (globalThis as { window?: unknown }).window = realWindow;
+  });
+
+  it('start subscribes, stop unsubscribes, and both are idempotent', () => {
+    installDomStubs();
+    const h = makeHarness();
+    const labels = new ChartLabels(h.stellata);
+    expect(labels.running).toBe(false);
+    expect(h.handlerCount()).toBe(0);
+
+    labels.start(h.ctx);
+    expect(labels.running).toBe(true);
+    const subscribed = h.handlerCount();
+    expect(subscribed).toBe(2); // 'frame' + 'filter'
+
+    // A second start must not double-subscribe — the engine would then
+    // tick twice per frame and double-count the filter version.
+    labels.start(h.ctx);
+    expect(h.handlerCount()).toBe(subscribed);
+
+    labels.stop();
+    expect(labels.running).toBe(false);
+    expect(h.handlerCount()).toBe(0);
+    labels.stop();
+    expect(h.handlerCount()).toBe(0);
+  });
+
+  it('ticks on frame while running and not after stop', () => {
+    installDomStubs();
+    const h = makeHarness();
+    const labels = new ChartLabels(h.stellata);
+
+    labels.start(h.ctx);
+    h.emit('frame');
+    expect(h.ticks()).toBe(1);
+
+    labels.stop();
+    h.emit('frame');
+    expect(h.ticks()).toBe(1);
+  });
+
+  it('hides both SVG layers and drains their pooled children on stop', () => {
+    const groups = installDomStubs();
+    const h = makeHarness();
+    const labels = new ChartLabels(h.stellata);
+
+    labels.start(h.ctx);
+    const labelLayer = groups.get('chart-labels')!;
+    const glyphLayer = groups.get('chart-glyphs')!;
+    expect(labelLayer.style.display).toBe('');
+    expect(glyphLayer.style.display).toBe('');
+    // Stand in for pooled <text> / <circle> entries from a prior frame.
+    labelLayer.appendChild({});
+    glyphLayer.appendChild({});
+
+    labels.stop();
+    expect(labelLayer.style.display).toBe('none');
+    expect(glyphLayer.style.display).toBe('none');
+    expect(labelLayer.children).toHaveLength(0);
+    expect(glyphLayer.children).toHaveLength(0);
+  });
+
+  it('stop keeps the catalog-derived caches; dispose drops them', () => {
+    installDomStubs();
+    const h = makeHarness();
+    const labels = new ChartLabels(h.stellata);
+
+    labels.start(h.ctx);
+    const afterFirstStart = h.positionsReads();
+    expect(afterFirstStart).toBeGreaterThan(0);
+
+    // Chart re-entry reuses the distSol mirror + membership map — walking
+    // the catalog again per toggle is the cost the cache exists to avoid.
+    labels.stop();
+    labels.start(h.ctx);
+    expect(h.positionsReads()).toBe(afterFirstStart);
+
+    // dispose is the teardown boundary: the next start rebuilds from the
+    // catalog rather than inheriting a prior instance's arrays.
+    labels.dispose();
+    expect(labels.running).toBe(false);
+    labels.start(h.ctx);
+    expect(h.positionsReads()).toBeGreaterThan(afterFirstStart);
+  });
+
+  it('dispose from a running engine releases the subscriptions', () => {
+    installDomStubs();
+    const h = makeHarness();
+    const labels = new ChartLabels(h.stellata);
+
+    labels.start(h.ctx);
+    labels.dispose();
+    expect(h.handlerCount()).toBe(0);
+    h.emit('frame');
+    expect(h.ticks()).toBe(0);
   });
 });

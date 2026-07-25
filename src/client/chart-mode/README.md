@@ -16,11 +16,11 @@ src/client/chart-mode/
                                   chart-labels engine, and the
                                   constellation figure's
                                   draw-all-asterisms mode.
-  chart-labels.ts                 Per-frame label engine: proper names,
-                                  Bayer Greek glyphs, constellation
-                                  Latin labels, cloud labels. Dirty-tracked
-                                  SVG writes + centroid cache + sorted
-                                  apparent-size top-N — see
+  chart-labels.ts (+ test)        `ChartLabels` — per-frame label engine:
+                                  proper names, Bayer Greek glyphs,
+                                  constellation Latin labels, cloud labels.
+                                  Dirty-tracked SVG writes + centroid cache
+                                  + sorted apparent-size top-N — see
                                   src/client/debug/README.md § What got
                                   optimised.
   chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
@@ -41,7 +41,7 @@ src/client/chart-mode/
    from the chart floor column (see `../scene/README.md` § Detail-level
    declutter cycle). Drives the MW isobar swap, hides realistic-only
    structure, and gates the label tiers in step 4.
-4. `startChartLabels()` — registers the per-frame label engine
+4. `stellata.chartLabels.start(ctx)` — spins up the per-frame label engine
    (`chart-labels.ts`), whose tiers are gated by the detail cycle.
 5. Constellation figure flips to "always draw every constellation"
    (vs. only the highlighted one) so the chart shows the full asterism
@@ -50,7 +50,10 @@ src/client/chart-mode/
    here. Subject to the master `showConstellation` toggle — when off, no
    asterism lines or constellation Latin labels render.
 
-Exit reverses each step.
+Exit reverses each step — `stop()` detaches the engine's bus
+subscriptions and drains its SVG pools while keeping the catalog-derived
+caches for the next entry; `dispose()` (the shell's teardown leg) drops
+those too.
 
 > **Shelved layer.** The Milky Way isobar is disabled —
 > `Milkyway.setIsobar(true)` hard-hides the disc + bulge meshes

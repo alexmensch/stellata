@@ -1,6 +1,6 @@
-// Camera-wide timing constants. Single source of truth for
-// `CAMERA_LERP_MS`, `WARP_*_MS`, `AIM_*_MS`, `OBSERVE_TRANSITION_MS`,
-// `DCAM_LOG_FLOOR_PC`, `WARP_BASE_DIR`. See src/client/camera/README.md.
+// Camera-wide timing constants, angular bounds, and numeric floors.
+// Single source of truth for every constant listed in
+// src/client/camera/README.md § Shared.
 
 import * as THREE from 'three';
 
@@ -26,6 +26,27 @@ export const AIM_T_MIN_MS = 250;
 // parkDistForStar (sub-parsec) so a fixed duration reads as a brief glide
 // rather than a warp.
 export const OBSERVE_TRANSITION_MS = 1800;
+
+// Vertical-FOV bounds in degrees. The OBSERVE wheel-zoom clamps to this
+// range, and it is the widest FOV any entry point can produce — the URL
+// blob quantises its `fov` field over the same interval (that field table
+// is frozen per schema version, so it carries the bounds as literals by
+// design and must not be rewired to these constants). A wider FOV lowers
+// every angular zoom floor, so `CAMERA_NEAR_PC` is validated against
+// `FOV_MAX_DEG`.
+export const FOV_MIN_DEG = 10;
+export const FOV_MAX_DEG = 120;
+
+// Perspective near plane, in parsecs. Must stay strictly below every
+// orbit distance the camera can reach, or a maximally-zoomed-in body
+// lands on the clip plane and disappears. The binding floor is a focused
+// small moon: minOrbitDistForPlanet(Mimas, R ≈ 198 km) ≈ 1.5e-11 pc — a
+// larger 1e-10 pc near plane clipped every sub-Pluto moon at its park
+// distance. `logarithmicDepthBuffer` on the renderer is what keeps depth
+// precision intact across the resulting near→far range; the pairing is
+// load-bearing (controls/README.md § Camera near plane vs controls
+// minDistance) and pinned by depth-range.test.ts.
+export const CAMERA_NEAR_PC = 1e-12;
 
 // Camera-distance floor used by sites that need a finite log10(dCam) or
 // atan(R/dCam) at close approach. 1e-30 pc is well below any orbit the

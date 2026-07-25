@@ -68,7 +68,7 @@ export interface WarpControllerDeps {
    *  observe-launch reorient (it was hidden at observe entry), so the
    *  controller only unhides on navigate-mode arrival and swaps the
    *  hide to the destination on observe→observe arrival via
-   *  swapObserveAnchor. */
+   *  finishObserveAnchorSwap. */
   setFocalBodyHidden: (target: Target | null) => void;
   bus: EventBus<StellataEventMap>;
   getCameraMode: () => CameraMode;
@@ -436,7 +436,7 @@ export class WarpController {
     //            post-arrival phase already lerped position pEnd → B, so
     //            this is a no-op match against the last animation frame.
     //            For observe→observe arrivals the floating origin was
-    //            already moved onto B at phase-3 start; swapObserveAnchor's
+    //            already moved onto B at phase-3 start; finishObserveAnchorSwap's
     //            geometric half is a no-op here, only its observe-tail
     //            (uHide + camera snap) runs.
     //   navigate: camera at B − endOffset · forward (orbit radius matches
@@ -456,15 +456,10 @@ export class WarpController {
     // Clear the vector slot (any kind) — the destination has been reached.
     this.deps.focus.clearVector();
     if (state.returnToObserve) {
-      // observe→observe arrival (hard-kind destination by
-      // construction). swapObserveAnchor finalises the anchor swap —
-      // moves the focal-body hide to the destination, snaps the camera
-      // to its live local position, and (if it hasn't already been
-      // done at phase-3 start for jitter mitigation) recentres the
-      // floating origin and updates focus state. No cameraMode flip
-      // through navigate (which is what setFocus would do, triggering
-      // a 'cameraMode' event flicker).
-      this.swapObserveAnchor(state.dest);
+      // observe→observe arrival (hard-kind destination by construction).
+      // No cameraMode flip through navigate (which is what setFocus would
+      // do, triggering a 'cameraMode' event flicker).
+      this.finishObserveAnchorSwap(state.dest);
       this.deps.observeControls.enable();
       // controls.enabled stays false — observe owns the camera now.
     } else {
@@ -515,15 +510,17 @@ export class WarpController {
     this.deps.bus.emit('warp', false);
   }
 
-  // Swap the OBSERVE anchor to a new star without going through setFocus's
-  // observe-cleanup branch (which would flip cameraMode to navigate and
-  // emit a 'cameraMode' event, briefly flickering UI bound to mode).
-  // Used by finishWarp on observe→observe arrival. Idempotent on the
-  // geometric half: if the phase-3 recentre already landed focusedStar
-  // on newIdx, only the observe-specific tail runs (anchor hide + camera
-  // snap to local origin). The 'focus' event fires unconditionally so
-  // the deferred-from-phase-3 case still emits in lockstep with arrival.
-  private swapObserveAnchor(dest: FocusTarget): void {
+  // Finaliser for the OBSERVE anchor swap, run once from finishWarp on an
+  // observe→observe arrival. Deliberately not setFocus: that would take
+  // its observe-cleanup branch and flip cameraMode to navigate, emitting
+  // a 'cameraMode' event that flickers every mode-bound UI element.
+  //
+  // The geometric half (recentre + focus mutation) may ALREADY have run at
+  // phase-3 start; this method completes whatever is left, so the two
+  // callers' paths converge here rather than each finishing the swap
+  // themselves. The 'focus' event fires unconditionally so the
+  // deferred-from-phase-3 case still emits in lockstep with arrival.
+  private finishObserveAnchorSwap(dest: FocusTarget): void {
     const target: Target = { kind: dest.kind, idx: dest.idx };
     if (!targetsEqual(this.deps.focus.getFocusedTarget(), target)) {
       // Late anchor swap — the mid-Fly recentre didn't fire (collocated
@@ -716,7 +713,7 @@ export class WarpController {
     // position from pEnd → B so the parallax view ends with the
     // camera exactly at the destination star (rather than offset by
     // endOffset, which would leave a hidden teleport for
-    // swapObserveAnchor to absorb at finishWarp). The user sees the
+    // finishObserveAnchorSwap to absorb at finishWarp). The user sees the
     // same celestial direction they had at warp start, now from the
     // new vantage — foreground stars shift via parallax, distant Milky
     // Way stays roughly fixed.
@@ -741,7 +738,7 @@ export class WarpController {
         // the camera lerps in from a small offset, so the projection
         // chain stays clean for the entire phase 3. uHideFocusIdx still
         // points at the source for the duration so the destination
-        // remains visible during the parallax slerp; swapObserveAnchor
+        // remains visible during the parallax slerp; finishObserveAnchorSwap
         // at finishWarp re-points it to the destination on landing.
         //
  // After this is just tryMidFlyRecentre invoked at a
@@ -755,11 +752,11 @@ export class WarpController {
         }
       }
       // Destination star stays visible across post-arrival so the user
-      // sees it throughout the parallax slerp; swapObserveAnchor at
+      // sees it throughout the parallax slerp; finishObserveAnchorSwap at
       // finishWarp hides it on landing. uHideFocusIdx still points at
       // the source for this whole window (set at warp start, by
       // setCameraMode('observe')'s entry-end hide or a prior
-      // swapObserveAnchor) — source is far away by post-arrival so its
+      // finishObserveAnchorSwap) — source is far away by post-arrival so its
       // hidden state is invisible.
       const u = postElapsed / state.postArrivalMs;
       const f = u * u * (3 - 2 * u);
