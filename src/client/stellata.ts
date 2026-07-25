@@ -8,7 +8,7 @@ import type { DustField, DustParticleData } from './loaders/dust-loader';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
-import dustRaymarchChunk from './star-pipeline/dust-raymarch.glsl?raw';
+import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
 import {
   DustParticleLayer,
   type DustParticleSharedUniforms,
@@ -122,16 +122,16 @@ import { buildStarSharedUniforms } from './star-pipeline/star-shared-uniforms';
 import {
   ExtinctionPrepass,
   type ExtinctionPrepassUniforms,
-} from './star-pipeline/extinction-prepass';
+} from './star-pipeline/extinction/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
-} from './binaries/eclipse-photometry';
+} from './binaries/eclipse/eclipse-photometry';
 import { type BinariesData } from './binaries/binaries-loader';
-import { buildPulsationSuppressMask } from './star-pipeline/pulsation-suppress-pure';
+import { buildPulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
@@ -184,7 +184,7 @@ export class Stellata implements FrameAnchor {
   // from this file; the encapsulation is resource ownership only.
   private starPipeline!: StarPipeline;
   // Dust-particle render layer. Currently shelved — see
-  // src/client/star-pipeline/README.md § "Dust extinction + the shelved particle layer".
+  // src/client/star-pipeline/extinction/README.md.
   private dustParticles!: DustParticleLayer;
 
   // Floating origin, epoch advance, the derived per-instance buffers,
@@ -207,7 +207,7 @@ export class Stellata implements FrameAnchor {
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for every eclipsing binary
   // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
-  // See src/client/binaries/README.md § Pulsation gate for eclipsing binaries.
+  // See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing binaries.
   private _suppressPulsation: Float32Array;
   // Lazily attached when main.ts loads public/binaries.bin. Null until
   // then — the renderer functions identically with the static catalog
@@ -1503,7 +1503,7 @@ export class Stellata implements FrameAnchor {
     // Runs after the orbit walk so the camera→primary line of sight
     // reads post-perturbation positions; the pair-relative geometry is
     // evaluated independently in float64. See
-    // src/client/binaries/README.md § Eclipse photometry.
+    // src/client/binaries/eclipse/README.md.
     this.eclipsePhotometryField?.update(
       this.getT(),
       this.camera.position,

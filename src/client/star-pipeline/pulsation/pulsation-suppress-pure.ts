@@ -1,7 +1,7 @@
 // Pulsation-suppress mask for the star vertex shader's iSuppressPulsation
-// attribute. See src/client/binaries/README.md § Pulsation gate for
+// attribute. See src/client/binaries/eclipse/README.md § Pulsation gate for
 // eclipsing binaries.
-import { VAR_TYPE_ECLIPSING } from '../../../scripts/catalog/catalog-pure';
+import { VAR_TYPE_ECLIPSING } from '../../../../scripts/catalog/catalog-pure';
 
 /** Per-instance pulsation-suppress mask: 1.0 on every eclipsing binary
  *  (varType == ECLIPSING), 0.0 elsewhere. Eclipsers are extrinsically

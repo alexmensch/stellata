@@ -8,8 +8,8 @@ import {
   DIM_FLOOR,
   type EclipseResult,
 } from './eclipse-photometry-pure';
-import { type OrbitalElements } from './binary-orbit-pure';
-import { ECLIPSE_DIM_TAU_S } from './binary-tuning';
+import { type OrbitalElements } from '../binary-orbit-pure';
+import { ECLIPSE_DIM_TAU_S } from '../binary-tuning';
 
 describe('circleCircleLensArea', () => {
   it('disjoint circles return zero', () => {

@@ -81,7 +81,7 @@ cosmetic `uTime` real-seconds clock, deliberately decoupled from `t`; that
 decision is now reversed. Pulsation phase reads the model clock through
 `uModelDays` (= days since J2000 from `getT()`) at real GCVS periods, so it
 responds to the time-warp exactly like binary orbital motion — see
-`../../star-pipeline/README.md` § Variable star rendering. The old `uTime` /
+`../../star-pipeline/pulsation/README.md`. The old `uTime` /
 `uSecondsPerDay` uniforms are gone.
 
 ## Time scrubber widget

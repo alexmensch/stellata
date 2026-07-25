@@ -92,7 +92,7 @@ distribution. Voxels stay in use for short per-star sightlines.
 
 Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
 `src/client/milkyway/milkyway.frag.glsl` (volumetric); see
-`src/client/star-pipeline/README.md` §Dust extinction + the shelved particle layer and
+`src/client/star-pipeline/extinction/README.md` + the shelved particle layer and
 `src/client/milkyway/README.md`.
 
 

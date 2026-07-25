@@ -2,7 +2,7 @@
 // (extinction-prepass.frag.glsl) and star.vert.glsl's fallback path.
 // Returns raw physical A_V; callers apply uDustEnabled /
 // uExtinctionStrength gating. Step-count calibration rationale in
-// star-pipeline/README.md § Dust extinction. CPU mirror for tests:
+// ./README.md. CPU mirror for tests:
 // dust-raymarch-pure.ts — keep the decode + integration in sync.
 
 uniform highp sampler3D uDustTexture;

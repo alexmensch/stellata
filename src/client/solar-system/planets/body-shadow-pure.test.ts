@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { casterShadowFactor, MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { getPlanetPositions, _resetCacheForTests } from '../ephemerides/ephemeris';
 import { earthMoonSplit, MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
-import { eclipseDimFromOffsets } from '../../binaries/eclipse-photometry-pure';
+import { eclipseDimFromOffsets } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 
 const J2000_UNIX = 946728000;

@@ -47,7 +47,7 @@ import {
   blendDimBuffer,
   dimBlendFactor,
   eclipseDimFromOffsets,
-} from '../../binaries/eclipse-photometry-pure';
+} from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { parentIndexOf } from '../ephemerides/orbit-descriptor';
 import planetVert from './planet.vert.glsl?raw';

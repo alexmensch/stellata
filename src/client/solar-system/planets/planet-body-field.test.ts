@@ -24,7 +24,7 @@ import {
   MESH_FADE_MIN_PX,
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
-import { DIM_FLOOR } from '../../binaries/eclipse-photometry-pure';
+import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
 
 function makeSharedUniforms(
   maxAppMag = 6.5,

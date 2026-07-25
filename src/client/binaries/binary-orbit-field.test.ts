@@ -226,7 +226,7 @@ describe('BinaryOrbitField.update — Tier 1 perturbation', () => {
   // float32 grid quantum (~1.2e-7 pc per axis at the fixture's 2 pc) —
   // fine for asserting AU-scale orbit shape, so the sweeps below use a
   // 0.05 AU tolerance. Production consumers needing better re-evaluate
-  // in float64 (see README § Eclipse photometry).
+  // in float64 (see eclipse/README.md).
   const F32_TOL_AU = 0.05;
 
   // Rendered relative offset (secondary − primary) is the contract now:

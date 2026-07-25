@@ -2,7 +2,7 @@
 // companion=-1, lumClass=255 (unknown), Apsis fields=NaN (NO_APSIS).
 
 import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/catalog-pure';
-import { buildPulsationParams } from '../star-pipeline/pulsation-params-pure';
+import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 import type { Catalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {

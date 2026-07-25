@@ -1,6 +1,6 @@
 // Per-star A_V prepass: one texel per star, one camera→star raymarch
 // per texel. star.vert.glsl consumes the R channel via texelFetch.
-// See star-pipeline/README.md § Dust extinction.
+// See ./README.md.
 precision highp float;
 precision highp int;
 

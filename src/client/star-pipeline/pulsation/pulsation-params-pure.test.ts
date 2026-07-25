@@ -14,7 +14,7 @@ import {
   VAR_TYPE_CEPHEID,
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../../scripts/catalog/catalog-pure';
 
 describe('pulsationParamsForType', () => {
   it('maps each pulsator family to its {ρ, ΔB−V}', () => {

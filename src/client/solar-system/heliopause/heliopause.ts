@@ -127,8 +127,7 @@ export class Heliopause extends FresnelShell {
 
   constructor() {
     // renderOrder = 1: shares the slot with star glow (both are dim
-    // chrome). See src/client/star-pipeline/README.md §RenderOrder ladder
-    // for the full cross-layer hierarchy.
+    // chrome). src/client/README.md carries the full cross-layer ladder.
     super(createFresnelShellMaterial({ colour: COLOUR, alphaLimb: ALPHA_LIMB }), 1);
     // Rotate the entire group so its local +Z aligns with the antiapex
     // direction in ICRS. The mesh inside scales + translates within

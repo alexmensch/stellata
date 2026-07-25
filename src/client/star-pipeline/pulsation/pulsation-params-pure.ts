@@ -7,7 +7,7 @@ import {
   VAR_TYPE_CEPHEID,
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../../scripts/catalog/catalog-pure';
 
 /** Per-type pulsation parameters:
  *  - `rho` is the peak-to-peak physical-radius ratio (interferometric

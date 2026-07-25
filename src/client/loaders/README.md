@@ -24,7 +24,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          format). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
-                         `../binaries/README.md` § Eclipse photometry) plus
+                         `../binaries/eclipse/README.md`) plus
                          the derived `pulsRho` / `pulsColorSwing`
                          (buildPulsationParams from varType — the per-type
                          radius/colour swing the star shader + disc mirror

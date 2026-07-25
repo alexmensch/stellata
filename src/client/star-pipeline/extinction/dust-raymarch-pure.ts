@@ -1,6 +1,6 @@
 // CPU mirror of the Edenhofer dust raymarch + reddening in
 // dust-raymarch.glsl / star.vert.glsl. Test-only; pins the shader math.
-// See src/client/star-pipeline/README.md § Dust extinction.
+// See src/client/star-pipeline/extinction/README.md.
 
 export const DUST_STEPS = 48;
 

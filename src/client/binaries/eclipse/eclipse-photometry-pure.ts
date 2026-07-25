@@ -1,6 +1,6 @@
 // Pure math for camera-anywhere geometric eclipse photometry on
 // binary pairs with orbital elements. See
-// src/client/binaries/README.md § Eclipse photometry.
+// ./README.md.
 
 import {
   evaluateOrbitSkyAU,
@@ -8,7 +8,7 @@ import {
   projectGalacticPlaneToICRS,
   type OrbitalElements,
   type Vec3,
-} from './binary-orbit-pure';
+} from '../binary-orbit-pure';
 
 /** Positive lower bound for a PARTIAL-occlusion dim — keeps
  *  `-2.5·log10(dim)` finite as the overlap approaches totality. A FULL
@@ -16,7 +16,7 @@ import {
  *  (+7.5 mag) is still visible on a bright close-range body (Mercury
  *  behind Sol's disc), so the glow shaders collapse the quad at 0
  *  before the log ever runs. See
- *  `src/client/binaries/README.md` § Eclipse photometry. */
+ *  `./README.md`. */
 export const DIM_FLOOR = 0.001;
 
 /** A slot whose dim has decayed above this snaps to exactly 1 and
@@ -26,7 +26,7 @@ export const DIM_SETTLED = 0.999;
 /** Anti-strobe blend factor for this frame's dim writes: 1 on the
  *  first frame (snap to target), else `1 − e^(−dt/τ)` with dt clamped
  *  to [0, 0.25] s. `nowMs` is wall-clock (a render filter, not sim
- *  time). See src/client/binaries/README.md § Anti-strobe smoothing. */
+ *  time). See ./README.md § Anti-strobe smoothing. */
 export function dimBlendFactor(
   nowMs: number,
   lastNowMs: number | null,

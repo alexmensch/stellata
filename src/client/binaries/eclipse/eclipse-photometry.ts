@@ -1,8 +1,8 @@
 // Per-frame eclipse photometry field. See
-// src/client/binaries/README.md § Eclipse photometry.
+// ./README.md.
 
 import * as THREE from 'three';
-import { type BinariesData } from './binaries-loader';
+import { type BinariesData } from '../binaries-loader';
 import {
   blendDimBuffer,
   dimBlendFactor,
@@ -14,14 +14,14 @@ import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
   type OrbitRelationCache,
-} from './orbit-relation-cache';
-import { AU_PC, R_SUN_PC } from '../util/astronomy-constants';
-import { tToJDE } from '../solar-system/time/time';
+} from '../orbit-relation-cache';
+import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { tToJDE } from '../../solar-system/time/time';
 import {
   VISIBILITY_HORIZON_PC,
   ECLIPSE_DIM_TAU_S,
-} from './binary-tuning';
-import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
+} from '../binary-tuning';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 
 export interface EclipsePhotometryFieldOptions {
   binaries: BinariesData;

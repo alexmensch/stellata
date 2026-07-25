@@ -624,7 +624,7 @@ export function parseGcvsNumber(s: string): number | null {
 // swing table (docs/science-stellar-modelling.md § Variable-star
 // pulsation). VAR_TYPE_PULSATING (1) remains the fallback for a pulsator
 // family with no dedicated bucket (RV Tauri). buildPulsationParams
-// (src/client/star-pipeline/pulsation-params-pure.ts) maps every code to
+// (src/client/star-pipeline/pulsation/pulsation-params-pure.ts) maps every code to
 // its {ρ, ΔB−V}; a non-pulsator or unbucketed code takes the default row.
 export const VAR_TYPE_UNKNOWN = 0;
 export const VAR_TYPE_PULSATING = 1;

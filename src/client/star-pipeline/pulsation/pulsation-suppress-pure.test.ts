@@ -5,7 +5,7 @@ import {
   VAR_TYPE_PULSATING,
   VAR_TYPE_ECLIPSING,
   VAR_TYPE_OTHER,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../../scripts/catalog/catalog-pure';
 
 describe('buildPulsationSuppressMask', () => {
   it('suppresses every eclipsing binary, regardless of orbit, and nothing else', () => {
