@@ -35,6 +35,7 @@ function makeFile(lastContactUnixMs: number | null = null): ProbeTrajectoryFile 
       frame: 'ICRF', center: 'Sun (10)', units: 'AU-D',
       targetBody: 'Test', retrievedUtc: '2026-07-25T00:00:00Z',
     },
+    chordToleranceAu: 1e-5,
     columns: ['jd', 'x', 'y', 'z', 'vx', 'vy', 'vz'],
     samples: [0, 1, 2].map((i) => [
       FIRST_JD + i * STEP_DAYS, i, 0, 0, vxAuPerDay, 0, 0,

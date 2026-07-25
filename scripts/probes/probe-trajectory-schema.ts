@@ -27,7 +27,12 @@ export type ProbeTrajectoryFile = {
     targetBody: string;
     retrievedUtc: string;
   };
+  /** Largest distance, AU, the sample grid's linear interpolation may sit
+   *  from the real trajectory — the bound the non-uniform spacing was
+   *  built to and measured against. */
+  chordToleranceAu: number;
   columns: readonly string[];
-  /** Ascending in `jd`; positions AU, velocities AU/day, both ICRS. */
+  /** Ascending in `jd`, non-uniformly spaced; positions AU, velocities
+   *  AU/day, both ICRS. */
   samples: ProbeSampleRow[];
 };
