@@ -2,14 +2,14 @@
 // brightest/dimmest rows, named-star sanity checks, Apsis coverage,
 // variable-star samples, space-motion velocity coverage.
 
-import { HEADER_SIZE, RECORD_SIZE } from './catalog-pure';
-import { KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_KM_S } from './direction-cascade';
+import { HEADER_SIZE, RECORD_SIZE } from '../catalog-pure';
+import { KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_KM_S } from '../distance/direction-cascade';
 import {
   type CatalogRecord,
   distancePc,
   loadCatalog,
   lookupByName,
-} from './catalog-lookup';
+} from '../catalog-lookup';
 
 const catalog = await loadCatalog();
 const { magic, version, count, nameTableOffset, nameTableLength } = catalog.header;

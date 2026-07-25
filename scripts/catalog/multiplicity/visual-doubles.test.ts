@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { collectPhysicalPairKeys } from './visual-doubles';
-import { multiplesRow } from './companion-promotion.test';
+import { multiplesRow } from '../companions/companion-promotion.test';
 
 describe('visual-doubles / collectPhysicalPairKeys', () => {
   it('returns empty sets for null rows', () => {

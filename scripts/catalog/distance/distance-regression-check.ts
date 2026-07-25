@@ -2,8 +2,8 @@
 // pipeline distance has drifted from its AT-HYG input or from SIMBAD's
 // parallax-derived value. Snapshot-pinned by build-catalog.ts.
 
-import { parseSimbadSampleRows } from './simbad-sample-parse';
-import type { Star } from './stars-parse';
+import { parseSimbadSampleRows } from '../validate/simbad-sample-parse';
+import type { Star } from '../parse/stars-parse';
 
 // HIP/GJ/N are parallax-anchored ground truth — a 3× shift signals an
 // override misfire. G_R3/G_R2 are Gaia inverse parallaxes whose low-S/N

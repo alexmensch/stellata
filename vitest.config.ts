@@ -16,7 +16,7 @@ export default defineConfig({
         '**/*.test.ts',
         '**/*.d.ts',
         'scripts/dust/sync-dust.ts',
-        'scripts/catalog/verify-catalog.ts',
+        'scripts/catalog/validate/verify-catalog.ts',
       ],
     },
   },

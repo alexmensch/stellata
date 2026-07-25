@@ -17,8 +17,8 @@ build scripts, tests, and shader uniforms.
   `{u, east, north}` with east = ∂u/∂α / cos δ — never divided by cos δ,
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone. Shared by the catalog build's PM propagation +
-  space-motion velocity (`scripts/catalog/direction-cascade.ts`), the
-  companion tangent-projection (`scripts/catalog/companion-promotion.ts`),
+  space-motion velocity (`scripts/catalog/distance/direction-cascade.ts`), the
+  companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection
   (`../binaries/binary-orbit-pure.ts`). `scripts/local-group/`'s
   `skyBasis` deliberately does NOT ride this: it seeds a rotation

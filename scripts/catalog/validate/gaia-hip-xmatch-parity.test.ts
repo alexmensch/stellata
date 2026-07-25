@@ -7,10 +7,13 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
-import { parseGaiaHipXmatchTsv } from './gaia-xmatch';
-import { REPO_ROOT } from '../util/paths';
+import { parseGaiaHipXmatchTsv } from '../parse/gaia-xmatch';
+import { REPO_ROOT } from '../../util/paths';
 
-const FIXTURE = resolve(REPO_ROOT, 'scripts/catalog/gaia-hip-xmatch-parity.tsv');
+const FIXTURE = resolve(
+  REPO_ROOT,
+  'scripts/catalog/validate/gaia-hip-xmatch-parity.tsv',
+);
 
 // gaia_source_id is compared as a decimal string on both sides: the TS
 // parser keeps strings to preserve bits beyond 2^53, and Python's

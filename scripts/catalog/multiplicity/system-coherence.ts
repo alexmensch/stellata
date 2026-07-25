@@ -2,14 +2,14 @@
  *  system move to the system's best-tier distance anchor. See
  *  scripts/catalog/README.md § System distance coherence. */
 
-import type { Star } from './stars-parse';
+import type { Star } from '../parse/stars-parse';
 import type {
   GaiaAstrometryCatalogRow,
   Hip2AstrometryRow,
-} from './direction-cascade';
-import { GAIA_RUWE_UNRELIABLE_THRESHOLD } from './direction-cascade';
-import type { MultiplesTsvRow } from './companion-promotion';
-import { wdsRootOf } from './companion-promotion';
+} from '../distance/direction-cascade';
+import { GAIA_RUWE_UNRELIABLE_THRESHOLD } from '../distance/direction-cascade';
+import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import { wdsRootOf } from '../companions/companion-promotion';
 
 /** Gaia saturates brighter than G ≈ 3; a brighter source's 5p parallax
  *  is not trustworthy enough to anchor a system's distance. */

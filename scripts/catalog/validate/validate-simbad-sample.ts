@@ -13,12 +13,12 @@ import {
   distancePc,
   type Catalog,
   type CatalogRecord,
-} from './catalog-lookup';
+} from '../catalog-lookup';
 import {
   parseSimbadSampleRows,
   type SimbadSampleRow,
 } from './simbad-sample-parse';
-import { REPO_ROOT } from '../util/paths';
+import { REPO_ROOT } from '../../util/paths';
 
 const __filename = fileURLToPath(import.meta.url);
 const DEFAULT_SAMPLE_PATH = resolve(REPO_ROOT, 'data/simbad/simbad_sample.tsv');

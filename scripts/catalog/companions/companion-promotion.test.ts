@@ -29,10 +29,10 @@ import {
   SOLAR_BV_FALLBACK,
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,
-} from './catalog-pure';
-import { CONSTELLATIONS } from './constellations';
-import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
-import type { Star } from './stars-parse';
+} from '../catalog-pure';
+import { CONSTELLATIONS } from '../parse/constellations';
+import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import type { Star } from '../parse/stars-parse';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return {

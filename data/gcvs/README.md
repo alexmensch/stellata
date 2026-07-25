@@ -22,7 +22,7 @@ crossid.txt    ~12 MB, LFS. Hip/HD/Tyc/etc. → GCVS name mappings.
 
 ## Ingest
 
-`scripts/catalog/gcvs-parse.ts`:
+`scripts/catalog/parse/gcvs-parse.ts`:
 
 - `parseGcvsMain` extracts GCVS designation, period (days), and
   magnitude amplitude (max-mag → min-mag-I) per row.

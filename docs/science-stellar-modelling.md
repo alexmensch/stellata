@@ -43,12 +43,12 @@ doesn't translate reliably for them) and Wolf-Rayets to their own
 Teff/BC ramps — gspphot models neither atmosphere, so a published
 Apsis value there is the companion's light or a misfit and is ignored.
 The famous-star radius and colour claims are pinned end-to-end against
-`public/catalog.bin` by `scripts/catalog/known-stars.test.ts`
+`public/catalog.bin` by `scripts/catalog/validate/known-stars.test.ts`
 (`primary_radius_rsun` / `primary_ci` corpus columns).
 
 Implementation: `physicalRadius` / `resolveApsisTeff` in
 `scripts/catalog/catalog-pure.ts`, wired in `stars-parse.ts`; see
-`scripts/catalog/README.md` § Physical radius and spectral parsing for
+`scripts/catalog/parse/README.md` § Physical radius and spectral parsing for
 the spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model
@@ -281,6 +281,6 @@ irregular variables. Typical match rate: ~4.1k of ~313k catalog stars.
 Implementation: `src/client/star-pipeline/star.vert.glsl` (the `iPuls`
 attribute) and `src/client/camera/controls/star-physics.ts` (CPU-side
 `renderedSizePx` mirror); see `src/client/star-pipeline/README.md`
-§Variable star rendering, and `scripts/catalog/README.md` §GCVS
+§Variable star rendering, and `scripts/catalog/parse/README.md` §GCVS
 variability cross-match for the build-time matching rules.
 

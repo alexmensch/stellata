@@ -4,8 +4,8 @@ import { join } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { SOLAR_BV_FALLBACK } from './catalog-pure';
-import { avSolToStar, R_V, type DustGrid } from './dust-deextinction-pure';
+import { SOLAR_BV_FALLBACK } from '../catalog-pure';
+import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
 import { readStars } from './stars-parse';
 
 const ATHYG_HEADER =

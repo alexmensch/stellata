@@ -57,7 +57,7 @@ clipped molecular-cloud cores 25× — peak cloud columns encoded at
 (`docs/science-molecular-clouds.md` § 2.2). Changing the ceiling re-scales
 the decode of every voxel, so a rebuild ships with a catalog rebuild
 (build-time de-extinction integrates the same encoded grid —
-`scripts/catalog/README.md` § Build-time de-extinction).
+`scripts/catalog/distance/README.md` § Build-time de-extinction).
 
 The build also runs a per-cloud column check (`zucker` block in the
 manifest): peak A_V columns through each Zucker 2021 profiled cloud

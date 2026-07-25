@@ -348,7 +348,7 @@ viewpoint, not Sol — a camera can sit inside any of these systems):
 
 **Decision — re-source the direction, keep AT-HYG as the driver,
 keep the distance stack. Implemented in
-`scripts/catalog/direction-cascade.ts`.** AT-HYG remains the
+`scripts/catalog/distance/direction-cascade.ts`.** AT-HYG remains the
 membership, identifier, name, and magnitude driver (its curated
 classical-ID merge is the value; replacing it wholesale re-litigates
 membership for no gain — the deep-tier driver question is separate
@@ -395,7 +395,7 @@ current-epoch propagation, which consumes the same resolved (position,
 PM, RV, parallax) tuple and composes on top of this cascade.
 
 The sky-position regression corpus
-(`scripts/catalog/sky-position-corpus.tsv`) pins Barnard's,
+(`scripts/catalog/validate/sky-position-corpus.tsv`) pins Barnard's,
 Kapteyn's, Groombridge 1830, 61 Cyg A/B, and Keid (Gaia tier-1) plus
 Sirius and Vega (tier 2, HIP2-propagated 24.75 yr) against their
 J2016.0 positions, and ξ UMa's tier-3 printed position. At the J2016.0
@@ -467,7 +467,7 @@ p(t) = p(J2016) + v·(t − 2016.0)                  [pc, t in Julian yr]
 
 with `û` the unit direction, `ê`/`n̂` the local east/north tangent
 basis (the same basis `directionAtEpoch` in
-`scripts/catalog/direction-cascade.ts` assembles — second usage,
+`scripts/catalog/distance/direction-cascade.ts` assembles — second usage,
 so the basis math extracts into a shared helper), `d` the final
 stack distance, and `v_r` in pc/yr via 1 km/s = 1.0227×10⁻⁶ pc/yr.
 μ_α* is the cos δ-applied rate — never divide by cos δ. This is the
@@ -597,7 +597,7 @@ escalation.)
   pinned ≤1″ against published positions (SIMBAD/Gaia propagated
   to the same epoch), driving the same pure advance function the
   runtime uses — the natural extension of the sky-position corpus
-  (`scripts/catalog/sky-position-corpus.tsv`) to a second epoch.
+  (`scripts/catalog/validate/sky-position-corpus.tsv`) to a second epoch.
 - Systemic-velocity invariant: for every `has_orbit` pair,
   `v_primary === v_secondary` exactly.
 - `build-counts`: per-tier velocity-source routing counts pinned.

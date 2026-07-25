@@ -147,7 +147,7 @@ jobs:
           name: public-artifacts
           path: public/
       - run: pnpm run build:binaries-runtime
-      - run: pnpm exec vitest run scripts/catalog/known-stars.test.ts scripts/catalog/multi-star-regression.test.ts scripts/catalog/sky-position.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts
+      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts
 
   # Append-only ledger guard (needs full history for the merge-base
   # read) + the DR-reconciliation classifier against its committed

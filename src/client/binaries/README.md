@@ -159,7 +159,7 @@ the per-pair flags):
 - **Tier 3** (`!has_orbit`) — no per-frame Kepler eval. The companion's
   static placement is already baked into `catalog.bin` by the
   build-time companion-promotion pass (see
-  `scripts/catalog/companion-promotion.ts`), so the runtime layer can
+  `scripts/catalog/companions/companion-promotion.ts`), so the runtime layer can
   skip these records entirely.
 
 For Tier 1 and Tier 2 the offset is split q : (1−q) between primary
@@ -196,7 +196,7 @@ owned by this Kepler layer with no double-counting. The velocity coherence
 therefore matters only for **Tier-3 static** companions (skipped here): they
 ride their baked velocity directly, so a promoted companion with no own PM
 inherits its primary's systemic velocity at build time
-(`scripts/catalog/companion-promotion.ts`) or it would freeze at `v=0` and
+(`scripts/catalog/companions/companion-promotion.ts`) or it would freeze at `v=0` and
 shear from a drifting primary. Full systemic coherence for *every*
 binaries.bin pair — keyed on this file's authoritative resolved pairing,
 which the catalog build can't replicate — is `stellata-zau1`; until it

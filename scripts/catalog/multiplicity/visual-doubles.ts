@@ -8,9 +8,9 @@ import {
   isOpticalDoublePrimary,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
-} from './catalog-pure';
-import type { MultiplesTsvRow } from './companion-promotion';
-import type { Star } from './stars-parse';
+} from '../catalog-pure';
+import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import type { Star } from '../parse/stars-parse';
 
 // Curated visual-double systems that the CCDM+MultFlag filter (see
 // parseHipCcdm) drops because Hipparcos's main catalogue modelled

@@ -5,8 +5,8 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { classifyFromSimbad } from './catalog-pure';
-import { REPO_ROOT } from '../util/paths';
+import { classifyFromSimbad } from '../catalog-pure';
+import { REPO_ROOT } from '../../util/paths';
 
 // The parse surface both sides document handling: plain MK across every
 // class letter and luminosity code, white dwarfs, subdwarfs, Yerkes

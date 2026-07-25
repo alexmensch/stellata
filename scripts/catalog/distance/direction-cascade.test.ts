@@ -24,7 +24,7 @@ import {
   equatorialTangentBasis,
   unitVectorFromRaDec,
   type UnitVector,
-} from '../../src/client/util/equatorial-basis';
+} from '../../../src/client/util/equatorial-basis';
 
 const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
 

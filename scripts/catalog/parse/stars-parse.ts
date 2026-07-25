@@ -30,7 +30,7 @@ import {
   type DistSrcPartition,
   type SimbadSpectralIndex,
   type SimbadWdsXidIndex,
-} from './catalog-pure';
+} from '../catalog-pure';
 import {
   resolveDirection,
   velocityPcPerYr,
@@ -40,8 +40,8 @@ import {
   type DirectionSources,
   type DirectionVia,
   type VelocityVia,
-} from './direction-cascade';
-import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
+} from '../distance/direction-cascade';
+import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few

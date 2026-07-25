@@ -66,7 +66,7 @@ parsec; the conversion `A_V / E_ZGR ≈ 2.742` at V band is baked in.
 
 Catalog `absmag` and `ci` are stored **intrinsic** — the build subtracts
 the Sol→star integral through this same voxel grid at write time (see
-`scripts/catalog/README.md` § Build-time de-extinction), so this
+`scripts/catalog/distance/README.md` § Build-time de-extinction), so this
 raymarch *restores* the observer-relative extinction instead of adding
 it a second time. Because both sides integrate the same model, at
 camera=Sol the build subtraction and the runtime addition cancel and a

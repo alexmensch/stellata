@@ -9,7 +9,7 @@ import {
   parseGcvsNumber,
   splitPipeDelimited,
   VAR_TYPE_UNKNOWN,
-} from './catalog-pure';
+} from '../catalog-pure';
 import type { Star } from './stars-parse';
 
 export interface VarStarData {

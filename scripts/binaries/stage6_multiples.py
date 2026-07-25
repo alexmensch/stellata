@@ -53,7 +53,7 @@ from scripts.util.astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR
 # The one epoch every emitted position is normalised onto, so a
 # promoted secondary's baked xyz shares its primary's epoch and the
 # static relative geometry is correct. Mirror of
-# scripts/catalog/direction-cascade.ts CATALOG_SCENE_EPOCH — keep the
+# scripts/catalog/distance/direction-cascade.ts CATALOG_SCENE_EPOCH — keep the
 # two in sync (see data/README.md § Reference epoch and proper motion).
 CATALOG_SCENE_EPOCH = 2016.0
 

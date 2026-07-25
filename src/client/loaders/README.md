@@ -37,7 +37,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          wire both key off it. Exposes
                          `multiplicityStatus: Uint8Array` (v9:
                          single/resolved/unresolved — see
-                         scripts/catalog/README.md § Multiplicity status).
+                         scripts/catalog/multiplicity/README.md § Multiplicity status).
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader

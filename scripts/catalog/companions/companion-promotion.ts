@@ -20,11 +20,11 @@ import {
   physicalRadius,
   resolveSpectDisplay,
   type SpectralInfo,
-} from './catalog-pure';
-import { R_V, avSolToStar, type DustGrid } from './dust-deextinction-pure';
-import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
-import { equatorialTangentBasisAt } from '../../src/client/util/equatorial-basis';
-import type { Star } from './stars-parse';
+} from '../catalog-pure';
+import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
+import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
+import type { Star } from '../parse/stars-parse';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.

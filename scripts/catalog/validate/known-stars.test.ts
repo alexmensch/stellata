@@ -25,7 +25,7 @@ import {
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
   type SpectralInfo,
-} from './catalog-pure';
+} from '../catalog-pure';
 import {
   DEFAULT_CATALOG_MANIFEST,
   type Catalog,
@@ -36,16 +36,16 @@ import {
   lookupByGaiaSourceId,
   lookupByName,
   lookupByRef,
-} from './catalog-lookup';
+} from '../catalog-lookup';
 import {
   nonEmpty,
   parseFloatOrNull,
   parseIntOrNull,
   parseOptionalRef,
   type RecordRef,
-} from './corpus-tsv';
-import { AU_PER_PC } from '../../src/client/util/astronomy-constants';
-import { REPO_ROOT } from '../util/paths';
+} from '../parse/corpus-tsv';
+import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
+import { REPO_ROOT } from '../../util/paths';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KNOWN_STARS_TSV = resolve(__dirname, 'known-stars.tsv');
@@ -495,7 +495,7 @@ function assertSynthPromotedCompanion(
   companion: CorpusCompanion,
   primary: CatalogRecord,
 ): void {
-  // composeCompanionName in scripts/catalog/companion-promotion.ts emits
+  // composeCompanionName in scripts/catalog/companions/companion-promotion.ts emits
   // `${base} ${canonicalComp}` where base is the primary's name cell or
   // resolveCompanionNameBase's `HIP <n>` fallback for name-less primaries
   // (AR Cas) — reconstruct the same shape so a naming drift on either

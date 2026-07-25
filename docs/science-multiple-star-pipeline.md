@@ -251,7 +251,7 @@ astronomer-relevant summary:
 
 **Layer 4 — validation harness.** Three tiers covered in
 `scripts/binaries/README.md`: a hand-curated Tier A known-stars corpus
-(`scripts/catalog/known-stars.tsv`) the binary catalogue must
+(`scripts/catalog/validate/known-stars.tsv`) the binary catalogue must
 reproduce; population-statistic Tier B snapshots
 (`build-binaries-expected.json` +
 `build-binaries-rates-expected.json`); a stratified random 10k SIMBAD sample
@@ -372,7 +372,7 @@ permissive — it tags wide line-of-sight optical pairs Hipparcos
 didn't confirm — so the build script gates it with `MultFlag`,
 keeping only `C` (component), `G` (resolved-in-field), and `O`
 (orbit known) entries. A small curated `KNOWN_VISUAL_DOUBLES` set
-in `scripts/catalog/visual-doubles.ts` recovers canonical visual
+in `scripts/catalog/multiplicity/visual-doubles.ts` recovers canonical visual
 doubles Hipparcos modelled as single stars (Polaris, ε¹ Lyr,
 61 Cyg A/B). Together with the CCDM pass this surfaces Sirius,
 Mizar, Castor, α Cen, Albireo, γ And, ε Lyr, 70 Oph, Procyon,
@@ -385,7 +385,7 @@ The full WDS+ORB6 pipeline above (multiples.tsv) is the source of
 truth for per-system orbital geometry. The catalog-side passes
 consume it in two complementary ways:
 
-1. **Companion promotion.** `scripts/catalog/companion-promotion.ts`
+1. **Companion promotion.** `scripts/catalog/companions/companion-promotion.ts`
    reads multiples.tsv and promotes the secondary of every physical
    pair whose identifier isn't already in AT-HYG into a first-class
    catalog.bin record. Position comes from the row's own Gaia 5p
@@ -538,7 +538,7 @@ system (the camera-anywhere principle in `SCIENCE.md` § Scope principles).
 
 The catalog build therefore snaps the members of every kept-physical
 WDS system to a per-system distance anchor
-(`scripts/catalog/system-coherence.ts`). The anchor pick is
+(`scripts/catalog/multiplicity/system-coherence.ts`). The anchor pick is
 **purpose-aware parallax tiering**, not recency: a clean unsaturated
 Gaia 5p parallax (RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2%, G ≥ 3) beats
 HIP2 everywhere except where Gaia is saturated or binarity-corrupted —
@@ -555,6 +555,6 @@ the whole system — members keep their own distances rather than
 following a bogus anchor. Direction is untouched (mas-accurate
 regardless of parallax quality), and absmag + Stefan-Boltzmann radius
 follow the distance change so apparent brightness is invariant.
-Engineering detail: `scripts/catalog/README.md` § System distance
+Engineering detail: `scripts/catalog/multiplicity/README.md` § System distance
 coherence.
 

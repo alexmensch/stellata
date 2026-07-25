@@ -66,7 +66,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   `spectraltype_esphs` for the six-tier spectral resolver;
   `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
   the NSS source_id set for the `gaia_nss_systemic` routing tag
-  (`scripts/catalog/README.md` § Direction resolution).
+  (`scripts/catalog/distance/README.md` § Direction resolution).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
 - `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
-import type { Star } from './stars-parse';
-import { makeStar } from './star-fixture';
+import type { Star } from '../parse/stars-parse';
+import { makeStar } from '../parse/star-fixture';
 import {
   SELF_CONSISTENCY_THRESHOLDS,
   SIMBAD_DISTANCE_THRESHOLD,

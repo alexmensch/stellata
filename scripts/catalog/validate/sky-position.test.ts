@@ -14,12 +14,12 @@ import {
   loadCatalog,
   lookupByHip,
   lookupByName,
-} from './catalog-lookup';
-import { unitVectorFromRaDec, type UnitVector } from '../../src/client/util/equatorial-basis';
+} from '../catalog-lookup';
+import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import {
   CATALOG_SCENE_EPOCH_JYR,
   advancePositionsToEpoch,
-} from '../../src/client/loaders/epoch-advance-pure';
+} from '../../../src/client/loaders/epoch-advance-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'sky-position-corpus.tsv');

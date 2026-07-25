@@ -138,11 +138,11 @@ the seven-stage pipeline + per-stage modules.
 
 ## Consumed by
 
-- `scripts/catalog/companion-promotion.ts` (build-time — surfaces pair
+- `scripts/catalog/companions/companion-promotion.ts` (build-time — surfaces pair
   secondaries as catalog.bin records).
 - `scripts/binaries/build-runtime-binaries.py` (emits
   `public/binaries.bin` for the per-frame
   [`src/client/binaries/`](../../src/client/binaries/README.md) layer).
-- `scripts/catalog/known-stars.test.ts` +
+- `scripts/catalog/validate/known-stars.test.ts` +
   `multi-star-regression.test.ts` (Tier A validation harnesses).
 - Ad-hoc debugging of cross-match decisions.

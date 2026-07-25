@@ -17,7 +17,7 @@ numeric thresholds, provenance fields.
   new release, B-J republished posteriors, SIMBAD updated sp_type
   bibcodes. See § Refreshing data below.
 - You're adding a star to the Tier-A validation corpus
-  (`scripts/catalog/known-stars.tsv`).
+  (`scripts/catalog/validate/known-stars.tsv`).
 - You're debugging why a specific star doesn't render at its expected
   position, distance, or spectral colour. See § Debug recipes.
 - You're extending the multi-star pipeline — adding a new astrometry
@@ -190,7 +190,7 @@ data/binaries/
                                   sep_arcsec, pa_deg, sep_pa_epoch_jd,
                                   dmag for the static-placement and
                                   Δmag-imputation paths. Consumed by
-                                  scripts/catalog/companion-promotion.ts
+                                  scripts/catalog/companions/companion-promotion.ts
                                   (build-time, surfaces companions in
                                   catalog.bin), build-runtime-binaries.py
                                   (emits public/binaries.bin), and the
@@ -232,13 +232,13 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    `companion-promotion.ts`).
 
    Companion promotion is the build-catalog seam that reads
-   multiples.tsv: `scripts/catalog/companion-promotion.ts` adds
+   multiples.tsv: `scripts/catalog/companions/companion-promotion.ts` adds
    first-class catalog records for the secondary of every physical
    pair whose identifier isn't already in AT-HYG. Promoted records
    carry `FLAG_BINARY_COMPANION_ONLY`, plus
    `FLAG_BINARY_COMPANION_SYNTHETIC` when the row carries no own
    gaia and no non-inherited HIP (Algol Ab and friends — see
-   `scripts/catalog/README.md` § Companion promotion for the
+   `scripts/catalog/companions/README.md` § Companion promotion for the
    identifier gate). Positions come from the row's own Gaia 5p
    astrometry when distinct from the primary's, otherwise from a
    sky-tangent projection of the EXISTING catalog primary's xyz at
@@ -265,7 +265,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    Loaded by `src/client/binaries/binaries-loader.ts`; consumed
    per-frame by the BinaryOrbitField runtime layer.
 
-The Tier A validation harness (`scripts/catalog/known-stars.test.ts`)
+The Tier A validation harness (`scripts/catalog/validate/known-stars.test.ts`)
 reads multiples.tsv directly for per-component sanity checks
 (SIMBAD spectral type, absmag-from-Δmag).
 
@@ -579,7 +579,7 @@ picks the *bound* parent (has-orbit, then tightest sep) over a
 coincidental element-less wide pair, and `override_inner_primary_indices`
 re-homes each inner pair's primary onto that parent's member slot.
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
-agree (see `scripts/catalog/README.md` § Companion promotion).
+agree (see `scripts/catalog/companions/README.md` § Companion promotion).
 
 A blended primary the synth re-home can't reach (its component was dropped
 by promotion, or it's a compound / secondary-side collapse) still resolves
@@ -690,7 +690,7 @@ proper-motion propagation. catalog.bin bakes a per-star space-motion
 velocity (`docs/science-catalog-ingestion.md` § Current-epoch star
 positions); a bound pair's
 members must share one systemic velocity or the runtime epoch-advance
-shears a static (Tier-3) pair. `scripts/catalog/companion-promotion.ts`
+shears a static (Tier-3) pair. `scripts/catalog/companions/companion-promotion.ts`
 uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
 lone renderable-orbit pair, and a promoted companion with no own PM
 inherits its primary's velocity. **Full** systemic coherence for every
@@ -770,7 +770,7 @@ anchor_sep_arcsec, anchor_pa_deg, mag_pri, mag_sec
 `_position_pc` PM-propagates each component's direction from its native
 epoch (`ComponentAstrometry.ref_epoch` — Gaia J2016.0, HIP2 J1991.25,
 AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH`, mirroring the single-star
-cascade in `scripts/catalog/direction-cascade.ts`. This keeps a promoted
+cascade in `scripts/catalog/distance/direction-cascade.ts`. This keeps a promoted
 secondary's baked xyz on the same epoch as its primary so the static
 relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 (epoch gap × systemic PM). See `data/README.md` § Reference epoch.
@@ -779,7 +779,7 @@ relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 pair primary falling back to the coord-validated ORB6 entry's HD
 (stashed on the Stage-2 `ResolvedComponent`). It is the join key for
 `build-catalog.ts`'s identifier backfill on HD-only AT-HYG systems
-(ξ UMa — see `scripts/catalog/README.md` § Companion promotion);
+(ξ UMa — see `scripts/catalog/companions/README.md` § Companion promotion);
 counted `multiples_hd_populated`. Two other Stage-6 accounting
 mechanisms guard silent drops: WDS summary rows duplicated on
 (wds_id, discoverer, components) are collapsed at the parse boundary
@@ -831,7 +831,7 @@ contribute geometry only — the pair itself stays dropped; a sep+PA
 measurement is real astrometry regardless of boundness
 classification. Blank when no chain reaches the component. Consumed
 by companion promotion's pair-row-primary escape (see
-`scripts/catalog/README.md` § Companion promotion).
+`scripts/catalog/companions/README.md` § Companion promotion).
 
 Three system-level mechanisms run at emit time:
 
@@ -915,7 +915,7 @@ the derivation is suppressed — the partner already carries the system
 light, so deriving here would mint a twin. A symmetric blend (neither
 component in AT-HYG) still derives the source's COMBINED magnitude;
 companion promotion's blend-split post-pass divides it across the
-collocated records the source backs (see `scripts/catalog/README.md`
+collocated records the source backs (see `scripts/catalog/companions/README.md`
 § Companion promotion). It recovers the ~3.5k own-DR3 companions that
 would otherwise drop at promotion for a blank absmag; see
 `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline

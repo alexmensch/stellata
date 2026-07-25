@@ -11,7 +11,7 @@ import {
   type VarStarData,
   type VarStarXref,
 } from './gcvs-parse';
-import { VAR_TYPE_DSCT, VAR_TYPE_MIRA } from './catalog-pure';
+import { VAR_TYPE_DSCT, VAR_TYPE_MIRA } from '../catalog-pure';
 import { makeStar } from './star-fixture';
 
 const GCVS: Map<string, VarStarData> = new Map([

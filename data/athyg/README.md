@@ -27,7 +27,7 @@ athyg_33_classic_ids.csv   ~64 MB, LFS. ~313k stars.
 ## Consumed by
 
 `scripts/catalog/build-catalog.ts` (`readStars` in
-`scripts/catalog/stars-parse.ts`). The build does NOT consult the
+`scripts/catalog/parse/stars-parse.ts`). The build does NOT consult the
 network — refresh of this file is a manual swap, see
 [`scripts/refresh/`](../../scripts/refresh/README.md) when a new
 AT-HYG release lands. Reference epoch J2000.0; proper-motion columns

@@ -15,7 +15,7 @@ import {
   type MatchStats,
   type ResidualRow,
 } from './validate-simbad-sample';
-import type { CatalogRecord } from './catalog-lookup';
+import type { CatalogRecord } from '../catalog-lookup';
 import type { SimbadSampleRow } from './simbad-sample-parse';
 
 function makeRecord(over: Partial<CatalogRecord>): CatalogRecord {

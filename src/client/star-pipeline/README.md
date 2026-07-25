@@ -641,7 +641,7 @@ strength changes never invalidate the cache.
 
 Catalog `absmag` and `ci` are stored **intrinsic** (de-extincted at
 build against the same voxel grid — see
-`scripts/catalog/README.md` § Build-time de-extinction), so this
+`scripts/catalog/distance/README.md` § Build-time de-extinction), so this
 runtime extinction *restores* the observer-relative extinction rather
 than double-applying it: at camera=Sol the build subtraction and this
 addition cancel, so a dusty-sightline star renders at its AT-HYG

@@ -17,36 +17,36 @@ import {
   lookupByHip,
   lookupByName,
   lookupByRef,
-} from './catalog-lookup';
-import { parseFloatOrNull, parseRef, type RecordRef } from './corpus-tsv';
+} from '../catalog-lookup';
+import { parseFloatOrNull, parseRef, type RecordRef } from '../parse/corpus-tsv';
 import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
-} from './direction-cascade';
-import { equatorialTangentBasisAt } from '../../src/client/util/equatorial-basis';
+} from '../distance/direction-cascade';
+import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
-} from './catalog-pure';
+} from '../catalog-pure';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
   parseBinaries,
   type BinariesData,
   type BinaryRelation,
-} from '../../src/client/binaries/binaries-loader';
+} from '../../../src/client/binaries/binaries-loader';
 import * as THREE from 'three';
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
   relationToElements,
-} from '../../src/client/binaries/orbit-relation-cache';
-import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
-import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
-import { AU_PC, AU_PER_PC } from '../../src/client/util/astronomy-constants';
+} from '../../../src/client/binaries/orbit-relation-cache';
+import { evaluateOrbitSkyAU } from '../../../src/client/binaries/binary-orbit-pure';
+import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-field';
+import { AU_PC, AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
-import { REPO_ROOT } from '../util/paths';
+import { REPO_ROOT } from '../../util/paths';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');

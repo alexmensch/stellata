@@ -6,7 +6,7 @@ import {
   equatorialTangentBasis,
   unitVectorFromRaDec,
   type UnitVector,
-} from '../../src/client/util/equatorial-basis';
+} from '../../../src/client/util/equatorial-basis';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;

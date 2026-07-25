@@ -760,7 +760,7 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 // Single source of truth for the catalog.bin file layout, shared by the
 // writer (scripts/catalog/build-catalog), the runtime reader
 // (src/client/loaders/catalog-loader), and the verify tool
-// (scripts/catalog/verify-catalog).
+// (scripts/catalog/validate/verify-catalog).
 //
 // File structure:
 //   [0,                       HEADER_SIZE)                              header

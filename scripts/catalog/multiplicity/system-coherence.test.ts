@@ -4,12 +4,12 @@ import {
   COHERENCE_RADIAL_SIGMA,
   type CoherenceSources,
 } from './system-coherence';
-import type { Star } from './stars-parse';
+import type { Star } from '../parse/stars-parse';
 import type {
   GaiaAstrometryCatalogRow,
   Hip2AstrometryRow,
-} from './direction-cascade';
-import type { MultiplesTsvRow } from './companion-promotion';
+} from '../distance/direction-cascade';
+import type { MultiplesTsvRow } from '../companions/companion-promotion';
 
 function star(overrides: Partial<Star>): Star {
   return {
