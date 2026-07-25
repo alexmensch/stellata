@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   compareBuildCounts,
   formatCountDiff,
+  formatDistSrcPartition,
   type BuildCounts,
 } from './build-counts';
 
@@ -36,8 +37,14 @@ function baseCounts(): BuildCounts {
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,
+    bjOverriddenByDistSrc: {
+      G_R3: 303200, G_R2: 800, HIP: 0, GJ: 0, N: 0, OTHER: 0, UNRECOGNISED: 0,
+    },
     lmcCandidates: 1200,
     lmcOverridden: 60,
+    lmcOverriddenByDistSrc: {
+      G_R3: 58, G_R2: 2, HIP: 0, GJ: 0, N: 0, OTHER: 0, UNRECOGNISED: 0,
+    },
     nameTableEntries: 350,
     variableCount: 3677,
     searchEntries: 290000,
@@ -101,11 +108,20 @@ function baseCounts(): BuildCounts {
   };
 }
 
+// Scalar keys contribute one diff row; a partition key contributes one per
+// bucket.
+function expectedDiffRows(counts: BuildCounts): number {
+  return Object.values(counts).reduce<number>(
+    (n, v) => n + (typeof v === 'number' ? 1 : Object.keys(v).length),
+    0,
+  );
+}
+
 describe('compareBuildCounts', () => {
   it('reports every key as match when expected === actual', () => {
     const counts = baseCounts();
     const diff = compareBuildCounts(counts, counts);
-    expect(diff).toHaveLength(Object.keys(counts).length);
+    expect(diff).toHaveLength(expectedDiffRows(counts));
     expect(diff.every((d) => d.status === 'match')).toBe(true);
   });
 
@@ -116,22 +132,45 @@ describe('compareBuildCounts', () => {
     actual.gcvsMatched = 3678;
     const diff = compareBuildCounts(expected, actual);
     const mismatches = diff.filter((d) => d.status === 'mismatch');
-    expect(mismatches.map((m) => m.key).sort()).toEqual(
-      ['gcvsMatched', 'recordCount'].sort(),
-    );
-    for (const m of mismatches) {
-      if (m.status === 'mismatch') {
-        expect(m.expected).toBe(expected[m.key]);
-        expect(m.actual).toBe(actual[m.key]);
-      }
-    }
+    expect(mismatches).toEqual([
+      { key: 'recordCount', status: 'mismatch', expected: 313242, actual: 313243 },
+      { key: 'gcvsMatched', status: 'mismatch', expected: 3677, actual: 3678 },
+    ]);
   });
 
-  it('preserves the key order of the actual object', () => {
+  it('names the drifting bucket of a partition, not the whole partition', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    const diff = compareBuildCounts(expected, actual);
-    expect(diff.map((d) => d.key)).toEqual(Object.keys(actual));
+    actual.bjOverriddenByDistSrc.HIP = 11;
+    const mismatches = compareBuildCounts(expected, actual)
+      .filter((d) => d.status === 'mismatch');
+    expect(mismatches).toEqual([{
+      key: 'bjOverriddenByDistSrc.HIP',
+      status: 'mismatch',
+      expected: 0,
+      actual: 11,
+    }]);
+  });
+
+  it('flags a partition bucket the snapshot has no entry for', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (expected.bjOverriddenByDistSrc as Partial<Record<string, number>>).G_R2;
+    const mismatches = compareBuildCounts(expected, actual)
+      .filter((d) => d.status === 'mismatch');
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0].key).toBe('bjOverriddenByDistSrc.G_R2');
+    expect(mismatches[0].status === 'mismatch'
+      && Number.isNaN(mismatches[0].expected)).toBe(true);
+  });
+
+  it('preserves the key order of the actual object, partitions expanded', () => {
+    const actual = baseCounts();
+    const diff = compareBuildCounts(baseCounts(), actual);
+    const flatKeys = Object.entries(actual).flatMap(([k, v]) => (
+      typeof v === 'number' ? [k] : Object.keys(v).map((b) => `${k}.${b}`)
+    ));
+    expect(diff.map((d) => d.key)).toEqual(flatKeys);
   });
 });
 
@@ -160,5 +199,34 @@ describe('formatCountDiff', () => {
     actual.solIndex = 99999;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(/1 of \d+ counts differ/);
+  });
+
+  it('labels a partition mismatch with its dotted bucket key', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    actual.lmcOverriddenByDistSrc.N = 3;
+    const out = formatCountDiff(compareBuildCounts(expected, actual));
+    expect(out).toMatch(
+      /lmcOverriddenByDistSrc\.N\s+expected 0, got 3 \(\+3\)/,
+    );
+  });
+
+  it('says "absent from snapshot" rather than printing a NaN delta', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (expected.lmcOverriddenByDistSrc as Partial<Record<string, number>>).G_R3;
+    const out = formatCountDiff(compareBuildCounts(expected, actual));
+    expect(out).toMatch(
+      /lmcOverriddenByDistSrc\.G_R3\s+absent from snapshot, got 58/,
+    );
+    expect(out).not.toMatch(/NaN/);
+  });
+});
+
+describe('formatDistSrcPartition', () => {
+  it('lists every bucket including the zeros', () => {
+    expect(formatDistSrcPartition(baseCounts().lmcOverriddenByDistSrc)).toBe(
+      'G_R3=58, G_R2=2, HIP=0, GJ=0, N=0, OTHER=0, UNRECOGNISED=0',
+    );
   });
 });
