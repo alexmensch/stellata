@@ -32,6 +32,7 @@ import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { GalacticGrid } from './galactic/galactic-grid';
 import { HudOverlay } from './overlays/hud-overlay';
+import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
 import { MolecularClouds } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
@@ -358,6 +359,9 @@ export class Stellata implements FrameAnchor {
   readonly shells = new ShellRegistry();
   private galacticGrid: GalacticGrid;
   private hudOverlay: HudOverlay;
+  /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
+   *  the chart activation predicate; the shell owns its lifetime. */
+  readonly chartLabels = new ChartLabels(this);
 
   // null until attachLocalGroup() runs; absent layer is a no-op
   // everywhere. Shares the MW disc's FADE_INNER_PC / FADE_OUTER_PC
@@ -1271,6 +1275,12 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       dispose: () => this.dustParticles.dispose(),
+    });
+    this.layers.register({
+      // Per-frame work rides the 'frame' event (chart-mode.ts drives
+      // start / stop on the activation predicate), so only the teardown
+      // leg registers here.
+      dispose: () => this.chartLabels.dispose(),
     });
   }
 

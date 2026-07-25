@@ -1,7 +1,6 @@
 import type { Stellata } from '../stellata';
 import type { BayerInfo } from '../typeahead/search';
 import { applyTheme } from '../ui/theme-toggle';
-import { startChartLabels, stopChartLabels } from './chart-labels';
 
 // Star chart mode orchestrator.
 //
@@ -54,12 +53,12 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
       document.body.classList.add('chart');
       applyTheme('mono');
       stellata.applyDetailPreset(stellata.getDetailLevel(), false);
-      startChartLabels(stellata, ctx);
+      stellata.chartLabels.start(ctx);
     } else {
       document.body.classList.remove('chart');
       applyTheme('dark');
       stellata.applyDetailPreset(stellata.getDetailLevel(), false);
-      stopChartLabels();
+      stellata.chartLabels.stop();
     }
   };
 
