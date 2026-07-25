@@ -197,7 +197,7 @@ def main() -> None:
         f"{BATCH_SIZE} on Gaia TAP (gaiadr3.astrophysical_parameters)"
     )
 
-    client = rl.TapClient()
+    client = rl.gaia_sync_client(BATCH_SIZE * 2)
     rows_by_id: dict[int, Any] = {}
 
     def collect(table: Any) -> None:
@@ -208,6 +208,7 @@ def main() -> None:
     rl.run_in_batches(
         source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
         schema=EXPECTED_SCHEMA, schema_label="gaiadr3.astrophysical_parameters",
+        checkpoint=rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
     )
 
     matched = len(rows_by_id)

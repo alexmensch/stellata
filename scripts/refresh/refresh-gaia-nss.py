@@ -153,6 +153,8 @@ SPOT_CHECKS: list[dict[str, Any]] = [
 
 SCRIPT_NAME = "refresh-gaia-nss"
 
+SYNC_MAXREC = rl.whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
+
 
 def main() -> None:
     force = "--force" in sys.argv
@@ -161,8 +163,8 @@ def main() -> None:
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    client = rl.TapClient()
-    print("querying ESA Gaia TAP (fallback: CDS) — gaiadr3.nss_two_body_orbit (~443 k rows) …")
+    client = rl.gaia_sync_client(SYNC_MAXREC)
+    print("querying Gaia sync TAP (ESA → ARI) — gaiadr3.nss_two_body_orbit (~443 k rows) …")
     t0 = time.time()
     table = client.run(ADQL)
     elapsed = time.time() - t0

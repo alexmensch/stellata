@@ -109,14 +109,9 @@ def main() -> None:
         f"{BATCH_SIZE} on Gaia TAP (gaiadr3.dr2_neighbourhood)"
     )
 
-    sync_maxrec = 50_000
-    client = rl.TapClient(
-        backends=[
-            rl.gaia_sync_backend("ESA-sync", base_url=rl.GAIA_ESA_SYNC_TAP_URL, maxrec=sync_maxrec),
-            rl.gaia_sync_backend("ARI-sync", base_url=rl.GAIA_ARI_SYNC_TAP_URL, maxrec=sync_maxrec),
-        ],
-        retry_kwargs={"max_attempts": 5, "base_delay_s": 2.0},
-    )
+    # A dr3_source_id can return several rows, so MAXREC is sized well above
+    # BATCH_SIZE rather than at a small multiple of it.
+    client = rl.gaia_sync_client(50_000)
 
     rows: list[dict[str, Any]] = []
 
@@ -140,6 +135,7 @@ def main() -> None:
     rl.run_in_batches(
         dr3_ids, BATCH_SIZE, query, collect,
         schema=EXPECTED_SCHEMA, schema_label="gaiadr3.dr2_neighbourhood",
+        checkpoint=rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
     )
 
     n = len(rows)
