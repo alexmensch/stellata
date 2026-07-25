@@ -18,7 +18,11 @@ in both navigate and observe modes.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
   stars / clouds / planets / Local Group / heliopause / boundary shells
-  (`pickShellHit`, shared silhouette helper in `fresnel-shell/`). Both star pick
+  (`pickShellHit`, shared silhouette helper in `fresnel-shell/`). The two
+  cloud surfaces (`pickCloud` / `pickCloudHit`) hold only their own gates
+  — warp and `group.visible` respectively — and delegate the winner to
+  `MolecularClouds.pick` so click and hover can't disagree
+  (`../../molecular-clouds/README.md` § Picking + hover). Both star pick
   surfaces route the winner through `resolveCollapsedLead` (backed by
   the system-membership registry — `src/client/system-membership/`):
   a member of a collapsed cluster resolves to the cluster's primary, so

@@ -176,8 +176,10 @@ Different layers have different natural pick mechanisms — reuse the
 existing one rather than rolling a new pickbox:
 
 - **Three.js raycast against the rendered mesh** (clouds, via
-  `MolecularClouds.raycast`) — naturally hits the whole ellipsoid
-  silhouette.
+  `MolecularClouds.pick`) — naturally hits the whole rim-shell
+  silhouette. The raycast is only the hit-vs-miss gate: overlapping
+  clouds are tiebroken by proportional centrality, never by ray
+  distance (`../molecular-clouds/README.md` § Picking + hover).
 - **Projected sample-point AABB** (boundary shells, via the shared
   `pickShellSilhouette` helper — each shell exposes a `ShellPickSurface`
   of the same silhouette samples its label engine projects, so the hover

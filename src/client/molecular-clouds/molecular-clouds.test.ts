@@ -246,11 +246,39 @@ describe('MolecularClouds / picking geometry', () => {
     makeMockCloud({ name: 'A', id: 'a', sid: 1, axes: [10, 10, 10] }),
   ]);
 
-  function raycastAt(c: MolecularClouds, origin: THREE.Vector3, dir: THREE.Vector3) {
+  const VIEWPORT_W = 800;
+  const VIEWPORT_H = 600;
+  const FOV_DEG = 60;
+  const rect = { left: 0, top: 0, width: VIEWPORT_W, height: VIEWPORT_H } as DOMRect;
+  const pxPerRad = VIEWPORT_H / ((FOV_DEG * Math.PI) / 180);
+  const ORIGIN = new THREE.Vector3();
+
+  function cameraAt(position: THREE.Vector3, lookAt: THREE.Vector3): THREE.PerspectiveCamera {
+    const cam = new THREE.PerspectiveCamera(FOV_DEG, VIEWPORT_W / VIEWPORT_H, 1e-6, 1e6);
+    cam.position.copy(position);
+    cam.lookAt(lookAt);
+    cam.updateMatrixWorld();
+    return cam;
+  }
+
+  // Cursor at the exact viewport centre, so the pick ray is the camera's
+  // forward axis — the direct analogue of the raycaster the pick path
+  // builds in the app.
+  function pickAlongForward(
+    c: MolecularClouds,
+    origin: THREE.Vector3,
+    dir: THREE.Vector3,
+  ): number | null {
     c.group.updateMatrixWorld(true);
-    const rc = new THREE.Raycaster();
-    rc.set(origin, dir.clone().normalize());
-    return c.raycast(rc);
+    const cam = cameraAt(origin, origin.clone().add(dir));
+    const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
+    return hit?.idx ?? null;
+  }
+
+  // Screen-pixel position a world point projects to under `cam`.
+  function screenOf(p: THREE.Vector3, cam: THREE.PerspectiveCamera): [number, number] {
+    const v = p.clone().project(cam);
+    return [(v.x + 1) * 0.5 * VIEWPORT_W, (1 - v.y) * 0.5 * VIEWPORT_H];
   }
 
   const down = new THREE.Vector3(0, 0, -1);
@@ -259,18 +287,79 @@ describe('MolecularClouds / picking geometry', () => {
     // makeSurface is a ~1 pc triangle (0,0,0)-(1,0,0)-(0,1,0) in a radius-10 bbox.
     const c = new MolecularClouds(catalog, new Map([[1, makeSurface()]]));
     // Through the triangle (x + y < 1): a hit.
-    expect(raycastAt(c, new THREE.Vector3(0.25, 0.25, 5), down)).toBe(0);
+    expect(pickAlongForward(c, new THREE.Vector3(0.25, 0.25, 5), down)).toBe(0);
     // Well inside the radius-10 ellipsoid but clear of the triangle: a miss.
     // The former ellipsoid hitbox would have returned 0 here.
-    expect(raycastAt(c, new THREE.Vector3(5, 5, 5), down)).toBeNull();
+    expect(pickAlongForward(c, new THREE.Vector3(5, 5, 5), down)).toBeNull();
   });
 
   it('falls back to the u = uEnv ellipsoid for clouds with no traced surface', () => {
     const c = new MolecularClouds(catalog); // no surfaces
     // Origins sit outside the radius-10 sphere; the FrontSide rim is a
     // hide-when-inside shell, so a ray must enter through a front face.
-    expect(raycastAt(c, new THREE.Vector3(5, 5, 20), down)).toBe(0); // crosses r = 10
-    expect(raycastAt(c, new THREE.Vector3(20, 0, 20), down)).toBeNull(); // clears it
+    expect(pickAlongForward(c, new THREE.Vector3(5, 5, 20), down)).toBe(0); // crosses r = 10
+    expect(pickAlongForward(c, new THREE.Vector3(20, 0, 20), down)).toBeNull(); // clears it
+  });
+
+  it('reports the effective-centre camera distance at the fallback hover tier', () => {
+    const c = new MolecularClouds(catalog);
+    c.group.updateMatrixWorld(true);
+    const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
+    const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
+    expect(hit?.idx).toBe(0);
+    expect(hit?.tier).toBe('fallback');
+    expect(hit?.cameraDistancePc).toBeCloseTo(30, 6);
+  });
+
+  it('projects against the floating-origin-shifted centre', () => {
+    const c = new MolecularClouds(makeMockCatalog([
+      makeMockCloud({ centerAbs: new THREE.Vector3(1000, 0, 0), axes: [10, 10, 10] }),
+    ]));
+    const worldOffset = new THREE.Vector3(1000, 0, 0);
+    c.update(worldOffset, true);
+    c.group.updateMatrixWorld(true);
+    const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
+    const hit = c.pick(cam, worldOffset, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
+    expect(hit?.idx).toBe(0);
+    expect(hit?.cameraDistancePc).toBeCloseTo(30, 6);
+  });
+
+  // Both clouds enclose the cursor in each case below: a small cloud
+  // 200 pc from the camera, nested on screen inside a 10× bigger complex
+  // twice as far away. "Closest to camera wins" made the big complex
+  // unreachable through the small one's silhouette.
+  describe('overlapping clouds — proportionally deepest inside wins', () => {
+    const overlapping = makeMockCatalog([
+      makeMockCloud({ name: 'big', id: 'big', sid: 1, axes: [100, 100, 100] }),
+      makeMockCloud({
+        name: 'small', id: 'small', sid: 2, axes: [10, 10, 10],
+        centerAbs: new THREE.Vector3(9, 0, 200),
+      }),
+    ]);
+
+    function pickThrough(target: THREE.Vector3, catalog = overlapping): number | null {
+      const c = new MolecularClouds(catalog);
+      c.group.updateMatrixWorld(true);
+      const cam = cameraAt(new THREE.Vector3(0, 0, 400), ORIGIN);
+      const [x, y] = screenOf(target, cam);
+      return c.pick(cam, ORIGIN, rect, x, y, pxPerRad)?.idx ?? null;
+    }
+
+    it('the small foreground cloud wins at its own centre', () => {
+      expect(pickThrough(new THREE.Vector3(9, 0, 200))).toBe(1);
+    });
+
+    it('the big complex wins near the small cloud edge, despite being further away', () => {
+      // 85 % of the way to the small cloud edge (score ≈ 0.85) while
+      // still only ~35 % of the way out of the big complex.
+      const edgeOfSmall = new THREE.Vector3(17.5, 0, 200);
+      expect(pickThrough(edgeOfSmall)).toBe(0);
+      // The small cloud really is under the cursor there — on its own it
+      // takes the pick, so the big complex won an overlap rather than a
+      // walkover.
+      const smallOnly = makeMockCatalog([overlapping.clouds[1]]);
+      expect(pickThrough(edgeOfSmall, smallOnly)).toBe(0);
+    });
   });
 });
 
@@ -328,6 +417,15 @@ describe('renderedCloudSizePx', () => {
     // ...specifically matching 2·atan(1/100)·angularToPx.
     const expectedEndOn = 2 * Math.atan(1 / dCam) * angularToPx;
     expect(endOnPx).toBeCloseTo(expectedEndOn, 9);
+  });
+
+  it('sizes the depicted u = uEnv envelope, not the bare Zucker axes', () => {
+    const angularToPx = 1000;
+    const dCam = 100;
+    const uEnv = 0.25;
+    const tightened = renderedCloudSizePx(
+      makeMockCloud({ axes: [8, 8, 8], uEnv }), dCam, angularToPx);
+    expect(tightened).toBeCloseTo(2 * Math.atan((8 * uEnv) / dCam) * angularToPx, 12);
   });
 
   it('reduces to the legacy max-axis when the cloud is a sphere', () => {

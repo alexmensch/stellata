@@ -14,6 +14,7 @@ import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/per
 import { projectToScreen } from '../../overlays/overlay-project';
 import {
   MIN_DISC_HIT_RADIUS_PX,
+  angularToPx,
   pickFromCandidates,
   pickScore,
   sortedDistRange,
@@ -51,8 +52,10 @@ export interface PickerDeps {
   // POI pin, vector, and focus must all act on the same object the
   // user sees as "the point". Identity for unsuppressed stars.
   resolveCollapsedLead: (idx: number) => number;
-  // Currently unused by Picker — held on the deps struct for the
-  // eventual hand-off when Picker computes physSizePx itself.
+  // The shader-side FOV / viewport pair, live by reference — the
+  // canonical pixels-per-radian source for pick paths that size a
+  // target on screen (the cloud silhouette today; physSizePx when
+  // Picker takes that over from stellata.ts).
   fovYRadRef: { value: number };
   viewportRef: { value: THREE.Vector2 };
 }
@@ -62,8 +65,6 @@ export class Picker {
 
   // Per-instance scratch state. Reused per call to avoid re-allocating
   // Three.js objects on the hot pick path.
-  private readonly cloudRaycaster = new THREE.Raycaster();
-  private readonly tmpNdc = new THREE.Vector2();
   private readonly tmpV3 = new THREE.Vector3();
 
   constructor(deps: PickerDeps) {
@@ -80,19 +81,11 @@ export class Picker {
   }
 
   /** Hit-test a screen-space cursor against the cloud layer. Returns
-   *  the cloud index of the nearest hit, or null if no cloud is under
-   *  the cursor. Always returns null when the layer is hidden by the
-   *  toggle or warping. */
+   *  the winning cloud index, or null if no cloud is under the cursor.
+   *  Always returns null when no layer is attached or while warping. */
   pickCloud(clientX: number, clientY: number): number | null {
-    const clouds = this.deps.getClouds();
-    if (!clouds || this.deps.getWarpActive()) return null;
-    const rect = this.deps.domElement.getBoundingClientRect();
-    const ndc = this.tmpNdc.set(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -(((clientY - rect.top) / rect.height) * 2 - 1),
-    );
-    this.cloudRaycaster.setFromCamera(ndc, this.deps.camera);
-    return clouds.raycast(this.cloudRaycaster);
+    if (this.deps.getWarpActive()) return null;
+    return this.cloudHit(clientX, clientY)?.idx ?? null;
   }
 
   // ─── Hover picks ──────────────────────────────────────────────────
@@ -180,28 +173,27 @@ export class Picker {
   // Fallback-only tier. Decoupled from warp state (the click-focus
   // pickCloud keeps its warp gate; hover doesn't need one).
   pickCloudHit(clientX: number, clientY: number): HoverHit | null {
-    const clouds = this.deps.getClouds();
-    if (!clouds || !clouds.group.visible) return null;
-    const rect = this.deps.domElement.getBoundingClientRect();
-    const ndc = this.tmpNdc.set(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -(((clientY - rect.top) / rect.height) * 2 - 1),
-    );
-    this.cloudRaycaster.setFromCamera(ndc, this.deps.camera);
-    const idx = clouds.raycast(this.cloudRaycaster);
-    if (idx === null) return null;
-
-    const cloud = clouds.clouds[idx];
-    const cam = this.deps.camera.position;
-    const worldOffset = this.deps.getWorldOffset();
-    const cx = cloud.centerAbs.x - worldOffset.x - cam.x;
-    const cy = cloud.centerAbs.y - worldOffset.y - cam.y;
-    const cz = cloud.centerAbs.z - worldOffset.z - cam.z;
-    const cameraDistancePc = Math.sqrt(cx * cx + cy * cy + cz * cz);
-    return { idx, cameraDistancePc, tier: 'fallback' };
+    if (!this.deps.getClouds()?.group.visible) return null;
+    return this.cloudHit(clientX, clientY);
   }
 
   // ─── Internal ─────────────────────────────────────────────────────
+
+  // Both cloud surfaces resolve their winner in the layer, so click and
+  // hover can never disagree on which of two overlapping clouds wins
+  // (molecular-clouds/README.md § Picking + hover).
+  private cloudHit(clientX: number, clientY: number): HoverHit | null {
+    const clouds = this.deps.getClouds();
+    if (!clouds) return null;
+    return clouds.pick(
+      this.deps.camera,
+      this.deps.getWorldOffset(),
+      this.deps.domElement.getBoundingClientRect(),
+      clientX,
+      clientY,
+      angularToPx(this.deps.viewportRef.value.y, this.deps.fovYRadRef.value),
+    );
+  }
 
   // Two-tier star pick (project + filter + collect; reducer in
   // star-geometry.ts). Camera distance is deliberately ignored — see
