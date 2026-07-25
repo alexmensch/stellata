@@ -28,8 +28,17 @@ across all five.
 
 `timing.ts` is the single source of truth for camera-wide constants:
 `CAMERA_LERP_MS`, `WARP_*_MS`, `AIM_*_MS`, `OBSERVE_TRANSITION_MS`,
-`DCAM_LOG_FLOOR_PC`, `WARP_BASE_DIR`. Imported by every subsystem so
-phase boundaries stay aligned across controllers.
+`FOV_MIN_DEG` / `FOV_MAX_DEG`, `CAMERA_NEAR_PC`, `DCAM_LOG_FLOOR_PC`,
+`WARP_BASE_DIR`. Imported by every subsystem so phase boundaries stay
+aligned across controllers.
+
+`depth-range.test.ts` pins the near/far configuration — a numeric
+invariant no formula enforces. The binding constraint is the **smallest
+focusable body**: Mimas parks only ~4.7× above `CAMERA_NEAR_PC` at
+`FOV_MAX_DEG`. A moon ~4× smaller, or a wider `FOV_MAX_DEG`, puts a
+focused body on the clip plane where it vanishes at max zoom. That
+margin is thinner than the `1e-12` value suggests — check the test
+before moving either constant.
 
 The constants live in their own module specifically to break the
 import cycle between `stellata.ts` (the warp state machine + camera-

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../timing';
 
 // Direct-manipulation look-around for OBSERVE mode. Premultiply
 // camera.quaternion by the shortest rotation that takes the
@@ -10,8 +11,6 @@ import * as THREE from 'three';
 // See src/client/camera/observe/README.md.
 export class ObserveControls {
   private static FOV_STEP_PER_WHEEL = 1.5; // degrees per typical wheel notch
-  private static FOV_MIN = 10;
-  private static FOV_MAX = 120;
 
   // Momentum / inertia after release. Time constant of the exponential
   // decay (e-fold time) — at 0.4 s the rotation falls to ~37% of its
@@ -275,8 +274,8 @@ export class ObserveControls {
     if (sign === 0) return;
     const next = clamp(
       this.getFov() + sign * ObserveControls.FOV_STEP_PER_WHEEL,
-      ObserveControls.FOV_MIN,
-      ObserveControls.FOV_MAX,
+      FOV_MIN_DEG,
+      FOV_MAX_DEG,
     );
     this.setFov(next);
   };

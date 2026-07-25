@@ -128,9 +128,12 @@ to.
   as screen-up and unwinds any roll the user had applied. Acceptable
   trade-off — aim-at is an explicit "take me there" command, not a
   drag, and re-twisting after arrival is cheap.
-- Wheel adjusts `camera.fov` (1.5° per notch, clamped 10–120°) instead
+- Wheel adjusts `camera.fov` (1.5° per notch, clamped to
+  `FOV_MIN_DEG`–`FOV_MAX_DEG` = 10–120° from `../timing.ts`) instead
   of camera distance. Distance has no meaning when the camera is
-  parked.
+  parked. `FOV_MAX_DEG` is load-bearing beyond this controller — it is
+  the worst case the camera near plane is validated against
+  (`../README.md` § Shared).
 - In navigate-mode, `rollCamera` mutates only `camera.up`
   (TrackballControls picks up the rolled vertical on every `update()`
   and rebuilds the quaternion from it). In observe-mode `rollCamera`
