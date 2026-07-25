@@ -18,7 +18,7 @@ the file Stage 2 writes), and atomically replaces its output TSV under
 
 ### One-time setup
 
-The refresh scripts use astroquery + astropy + numpy. Pin them to a
+The refresh scripts use astropy + numpy + pyvo + requests. Pin them to a
 local virtualenv so the system Python stays clean:
 
 ```bash
@@ -70,14 +70,18 @@ half-written TSV under `data/`. `assert_row_count` is also imported by
 
 Every `gaiadr3.*` pull goes through `refresh_lib.gaia_sync_client()` —
 ESA `/sync` primary, ARI Heidelberg `/sync` fallback, both hosting the
-identical `gaiadr3.*` schema. The ESA archive's ASYNC path
-(`astroquery.gaia.launch_job_async`) intermittently 500s on result
-retrieval while its sync endpoint stays healthy, so no pull uses it.
-The default `TapClient()` ESA→CDS fallback list is wrong for these
-tables — CDS VizieR doesn't host `gaiadr3.*` and a fallback attempt
-fails with a misleading "table not found". `refresh-bailer-jones.py`
-and `refresh-hipparcos2.py` are the exceptions by design: their tables
-are VizieR-only, so they pass `backends=[cds_backend()]`.
+identical `gaiadr3.*` schema. The ESA archive's ASYNC path intermittently
+500s on result retrieval while its sync endpoint stays healthy, so
+nothing reaches Gaia any other way: the async client is gone, and with
+it the `astroquery` dependency.
+
+`TapClient` takes `backends=` as a required argument — there is no
+default list, because which service can serve a query is a property of
+the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
+would fail with a misleading "table not found";
+`refresh-bailer-jones.py` and `refresh-hipparcos2.py` go the other way
+and pass `backends=[cds_backend()]` because their tables are
+VizieR-only. SIMBAD gets `[simbad_backend()]` for its divergent dialect.
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a

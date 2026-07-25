@@ -11,6 +11,5 @@
 
 numpy>=1.26
 astropy>=6.0
-astroquery>=0.4.7
 pyvo>=1.5
 requests>=2.31

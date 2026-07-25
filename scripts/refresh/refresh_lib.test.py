@@ -78,9 +78,9 @@ class RetryTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
     def test_classifies_responseless_500_message_as_transient(self) -> None:
-        # astroquery raises HTTPError with no `response`; the status lives
-        # only in the message. Parsing it out is what keeps a long pull
-        # alive through the ESA result-storage race.
+        # A TAP layer can raise HTTPError with no `response`, leaving the
+        # status only in the message. Parsing it out is what keeps a long
+        # pull alive through a server-side 5xx.
         try:
             import requests
         except ImportError:
@@ -665,21 +665,23 @@ class TapClientTests(unittest.TestCase):
         # Single-backend scripts (e.g. refresh-bailer-jones.py for VizieR-only
         # tables, refresh-simbad-sample.py for SIMBAD's divergent dialect)
         # pass `backends=[rl.<x>_backend()]` to TapClient. The factories must
-        # return valid TapBackend instances without importing astroquery/pyvo
-        # at module load time.
-        esa = rl.esa_backend()
+        # return valid TapBackend instances without importing pyvo at module
+        # load time.
         cds = rl.cds_backend()
         simbad = rl.simbad_backend()
-        self.assertIsInstance(esa, rl.TapBackend)
         self.assertIsInstance(cds, rl.TapBackend)
         self.assertIsInstance(simbad, rl.TapBackend)
-        self.assertEqual(esa.name, "ESA")
         self.assertEqual(cds.name, "CDS")
         self.assertEqual(simbad.name, "SIMBAD")
-        # Default list composes ESA + CDS in fallback order. SIMBAD is NOT
-        # in the default list — it's an explicit override per its caller.
-        defaults = rl._default_backends()
-        self.assertEqual([b.name for b in defaults], ["ESA", "CDS"])
+
+    def test_backends_is_required(self) -> None:
+        # No default list: which service can serve a query is a property of
+        # the table. A bare TapClient() used to hand back the ESA async path
+        # that every pull has now migrated off.
+        with self.assertRaises(TypeError):
+            rl.TapClient()
+        self.assertFalse(hasattr(rl, "esa_backend"))
+        self.assertFalse(hasattr(rl, "_default_backends"))
 
 
 # ─── Gaia sync client ─────────────────────────────────────────────────
@@ -841,7 +843,7 @@ class WriteTsvTests(unittest.TestCase):
         self.assertEqual(self.path.read_text(), "ra\n1.235\n")
 
     def test_rounds_numpy_float32(self) -> None:
-        # astroquery returns float32 columns; numpy 2.x stopped treating them
+        # The archives return float32 columns; numpy 2.x stopped treating them
         # as Python-float subclasses so the round_floats path used to skip
         # them and emit full-precision repr() output instead.
         import numpy as np

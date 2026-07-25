@@ -125,11 +125,11 @@ def is_transient_http_error(exc: BaseException) -> bool:
         if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
             return True
         if isinstance(exc, requests.HTTPError):
-            # astroquery's TAP layer raises HTTPError with no `response`
-            # attached — the status is only in the message ("Error 500:
-            # Cannot find result ... for job ..."), a server-side result-
-            # storage race that clears on a re-launched job. Fall back to
-            # parsing the code out of the message when `response` is absent.
+            # `raise_for_status` attaches `response`, but a TAP layer can
+            # raise HTTPError without one, leaving the status only in the
+            # message ("Error 500: ..."). Fall back to parsing the code out
+            # of the message so such an error still classifies as transient
+            # rather than escaping the retry as a permanent fault.
             if exc.response is not None:
                 return 500 <= exc.response.status_code < 600
             m = _HTTP_STATUS_IN_MESSAGE.search(str(exc))
@@ -475,22 +475,20 @@ class TapClient:
     backends share the same ADQL grammar so a syntax error fails the
     same way on either.
 
-    Every caller passes `backends=` explicitly. The implicit default list
-    (ESA async via astroquery.gaia, then CDS) is retained only for
-    construction without arguments and should NOT be used by new pulls:
-    its ESA leg is the async result-retrieval path that intermittently
-    500s. Gaia-keyed pulls want `gaia_sync_client()`; VizieR-only and
-    SIMBAD-only tables want `backends=[cds_backend()]` /
-    `[simbad_backend()]`.
+    `backends` is required — there is no default list. Which service can
+    serve a query is a property of the table, not of TAP, so picking for
+    the caller only ever picks wrong: Gaia-keyed pulls want
+    `gaia_sync_client()`, VizieR-only tables want `[cds_backend()]`, and
+    SIMBAD's divergent dialect wants `[simbad_backend()]`.
     """
 
     def __init__(
         self,
-        backends: Sequence[TapBackend] | None = None,
+        backends: Sequence[TapBackend],
         *,
         retry_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
-        self.backends = list(backends) if backends is not None else _default_backends()
+        self.backends = list(backends)
         if not self.backends:
             raise ValueError("TapClient requires at least one backend")
         self.retry_kwargs = dict(retry_kwargs or {})
@@ -511,10 +509,10 @@ class TapClient:
 CDS_TAP_URL = "https://tapvizier.u-strasbg.fr/TAPVizieR/tap"
 SIMBAD_TAP_URL = "https://simbad.cds.unistra.fr/simbad/sim-tap"
 
-# Synchronous Gaia DR3 TAP endpoints. The ESA archive's ASYNC path
-# (astroquery.gaia.launch_job_async) intermittently 500s on result
-# retrieval while its SYNC endpoint stays healthy; ARI Heidelberg hosts
-# the identical `gaiadr3.*` schema as a same-query fallback.
+# Synchronous Gaia DR3 TAP endpoints — the only way this lib reaches Gaia.
+# The ESA archive's ASYNC path intermittently 500s on result retrieval
+# while its SYNC endpoint stays healthy; ARI Heidelberg hosts the
+# identical `gaiadr3.*` schema as a same-query fallback.
 GAIA_ESA_SYNC_TAP_URL = "https://gea.esac.esa.int/tap-server/tap"
 GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 
@@ -524,11 +522,6 @@ GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 GAIA_SYNC_MAX_ROWS = 3_000_000
 
 GAIA_SYNC_RETRY_KWARGS: Mapping[str, Any] = {"max_attempts": 5, "base_delay_s": 2.0}
-
-
-def _esa_run(query: str) -> Any:
-    from astroquery.gaia import Gaia
-    return Gaia.launch_job_async(query).get_results()
 
 
 def _cds_run(query: str) -> Any:
@@ -541,11 +534,6 @@ def _simbad_run(query: str) -> Any:
     import pyvo
     service = pyvo.dal.TAPService(SIMBAD_TAP_URL)
     return service.search(query).to_table()
-
-
-def esa_backend() -> TapBackend:
-    """ESA Gaia archive backend (gaiadr3.* tables, full DR3 catalogue)."""
-    return TapBackend(name="ESA", run=_esa_run)
 
 
 def cds_backend() -> TapBackend:
@@ -600,7 +588,7 @@ _SYNC_PERMANENT_FAULT = re.compile(r"unknown column|not found|syntax|invalid", r
 
 def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
     """Run one synchronous ADQL query over HTTP POST and parse the VOTable
-    result into an astropy Table. Sync avoids astroquery's async
+    result into an astropy Table. Sync avoids the archive's async
     result-storage path; POST keeps a long IN-list out of the URL. MAXREC
     is raised above the pull's row count so a full result never trips the
     overflow truncation. A query-level error in the VOTable is re-raised
@@ -693,12 +681,6 @@ def whole_table_sync_maxrec(
             f"served in one sync query; batch it (see run_in_batches)."
         )
     return min(expected_row_count_max * 2, cap)
-
-
-def _default_backends() -> list[TapBackend]:
-    """Default ESA → CDS fallback list. Lazy imports keep this lib
-    importable without astroquery/pyvo installed."""
-    return [esa_backend(), cds_backend()]
 
 
 # ─── Spot-check pin helper ────────────────────────────────────────────
@@ -943,7 +925,8 @@ def write_tsv(
 def _is_float(v: Any) -> bool:
     """True for Python float or any numpy floating width. NumPy 2.x stopped
     treating np.float32 as a Python-float subclass, so a plain isinstance
-    check would miss astroquery's float32 columns."""
+    check would miss the archives' float32 columns (Gaia serves the Apsis
+    parameters at float32)."""
     if isinstance(v, float):
         return True
     try:
