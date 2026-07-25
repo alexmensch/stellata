@@ -140,8 +140,49 @@ describe('StarFrame.advanceEpochTo', () => {
     frame.recenterTo(new THREE.Vector3(100, 0, 0));
 
     frame.advanceEpochTo(julianEpochYearToT(2036.0), null, new THREE.Vector3());
+    frame.flushLocalPositions();
 
     expect(frame.localPositions[0]).toBeCloseTo(-80, 3);
+  });
+});
+
+describe('StarFrame local-position rewrite coalescing', () => {
+  it('rewrites once when only the epoch advanced', () => {
+    const catalog = makeCatalog([[0, 0, 0]]);
+    catalog.velocities[0] = 1;
+    const { frame, writeCount } = makeFrame(catalog);
+
+    frame.advanceEpochTo(julianEpochYearToT(2036.0), null, new THREE.Vector3());
+    expect(writeCount()).toBe(0);
+    frame.flushLocalPositions();
+    expect(writeCount()).toBe(1);
+    expect(frame.localPositions[0]).toBeCloseTo(20, 3);
+  });
+
+  it('rewrites once when an epoch advance and a recentre fire the same frame', () => {
+    const catalog = makeCatalog([[0, 0, 0]]);
+    catalog.velocities[0] = 1;
+    const { frame, writeCount } = makeFrame(catalog);
+
+    frame.advanceEpochTo(julianEpochYearToT(2036.0), null, new THREE.Vector3());
+    frame.recenterTo(new THREE.Vector3(20, 0, 0));
+    frame.flushLocalPositions();
+
+    expect(writeCount()).toBe(1);
+    // Identical to the two-pass result: the recentre's rewrite already
+    // read the freshly advanced absolute positions.
+    expect(frame.localPositions[0]).toBeCloseTo(0, 6);
+  });
+
+  it('leaves the buffer alone on a frame with neither', () => {
+    const catalog = makeCatalog([[0, 0, 0]]);
+    const { frame, writeCount } = makeFrame(catalog);
+
+    frame.advanceEpochTo(T_LOAD, null, new THREE.Vector3());
+    frame.flushLocalPositions();
+    frame.flushLocalPositions();
+
+    expect(writeCount()).toBe(0);
   });
 });
 

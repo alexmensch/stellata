@@ -146,6 +146,21 @@ re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
 passed in by the shell, which is the only thing that knows the
 attribute and the lazily-attached binary field.
 
+**One rewrite per frame.** Rewriting the 313k-star local buffer costs
+a full pass plus a GPU re-upload, and two of them can be provoked in
+the same frame: a fast time-scrub crosses an epoch bucket while a hard
+focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch
+re-advance and the origin recentre both invalidate it. So
+`advanceEpochTo` only marks the buffer stale and
+`flushLocalPositions` — called by `animate()` right after the
+re-advance / recentre pair — does the single rewrite at whatever the
+origin ended up being; a recentre in between rewrites it directly and
+clears the flag. That leaves exactly one window where
+`localPositions` trails `catalog.positions`: between `advanceEpochTo`
+and the flush. Nothing may read the buffer inside it (the focal-drift
+recentre in that gap reads only camera + orbit target), and anything
+new landing there has to sit after the flush instead.
+
 ## Star rendering: instanced quads, three passes
 
 Stars are rendered as **instanced unit-quads**, not `THREE.Points`.

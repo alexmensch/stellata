@@ -40,6 +40,11 @@ export interface StarFrameOptions {
  *    luminosity class, Sol distance, Apsis Teff),
  *  - the Sol-distance-sorted index and the proximity queries built on
  *    it (near-camera walk, core-mask gate).
+ *
+ * Local-position rewrites coalesce: `advanceEpochTo` only marks the
+ * buffer stale, and `flushLocalPositions` does the single rewrite, so
+ * a frame where an epoch re-advance and an origin recentre both fire
+ * pays one pass over the catalog instead of two.
  */
 export class StarFrame {
   /** Per-star log10(physicalRadius_solar) for the `iLogRadius` attribute. */
@@ -85,6 +90,7 @@ export class StarFrame {
 
   private _advancedEpochJyr: number;
   private readonly maxEpochDriftPc: number;
+  private localPositionsStale = false;
 
   private readonly recenterDelta = new THREE.Vector3();
 
@@ -188,7 +194,8 @@ export class StarFrame {
    *
    * `focalIdx`'s space-motion delta lands in `outDelta` so the caller
    * can translate the camera by it and keep the focal star under the
-   * pin; zero when nothing is focused.
+   * pin; zero when nothing is focused. The local-position buffer is
+   * left stale for `flushLocalPositions`.
    */
   advanceEpochTo(
     t: number,
@@ -208,13 +215,23 @@ export class StarFrame {
       abs,
     );
     this._advancedEpochJyr = targetJyr;
-    this.writeLocalPositions(this.worldOffset.x, this.worldOffset.y, this.worldOffset.z);
+    this.localPositionsStale = true;
     outDelta.set(
       focalIdx === null ? 0 : abs[focalIdx * 3] - fx,
       focalIdx === null ? 0 : abs[focalIdx * 3 + 1] - fy,
       focalIdx === null ? 0 : abs[focalIdx * 3 + 2] - fz,
     );
     return true;
+  }
+
+  /** Rewrite the local buffer if an epoch advance left it stale and no
+   *  recentre has since rewritten it at the current origin. Callers
+   *  must run this before anything reads `localPositions` again — the
+   *  only window where the buffer trails `catalog.positions` is
+   *  between `advanceEpochTo` and this call. */
+  flushLocalPositions(): void {
+    if (!this.localPositionsStale) return;
+    this.writeLocalPositions(this.worldOffset.x, this.worldOffset.y, this.worldOffset.z);
   }
 
   private writeLocalPositions(ox: number, oy: number, oz: number): void {
@@ -227,6 +244,7 @@ export class StarFrame {
       loc[j + 1] = abs[j + 1] - oy;
       loc[j + 2] = abs[j + 2] - oz;
     }
+    this.localPositionsStale = false;
     this.onLocalPositionsWritten();
   }
 

@@ -2262,6 +2262,10 @@ export class Stellata implements FrameAnchor {
     perfMark('frame.total');
     this.maybeReAdvanceEpoch();
     this.maybeRecenterOnFocalDrift();
+    // Both can invalidate the local-position buffer; StarFrame
+    // coalesces them into a single rewrite. Must run before anything
+    // downstream reads localPositions.
+    this.starFrame.flushLocalPositions();
     perfMark('controls.update');
     if (this.warp.isActive()) {
       this.warp.tick(performance.now());
