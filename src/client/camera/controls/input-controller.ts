@@ -137,9 +137,18 @@ export class InputController {
     this.clickDispatcher.click(e.clientX, e.clientY);
   };
 
+  /** Deliberately narrower than `Stellata.isCameraBusy()`: the focus-park
+   *  and unfocus lerps are *cancelled* by a click, not blocked by it, so
+   *  including them here would make every click self-block. See
+   *  `../README.md` § Camera-activity predicates. */
+  private blocksClick(): boolean {
+    return this.deps.isWarpActive()
+      || this.deps.isAimActive()
+      || this.deps.isObserveTransitionActive();
+  }
+
   private dispatchSingleClick(x: number, y: number) {
-    if (this.deps.isWarpActive() || this.deps.isAimActive()
-      || this.deps.isObserveTransitionActive()) return;
+    if (this.blocksClick()) return;
     const did = this.deps.getCameraMode() === 'observe'
       ? this.observeSingleClick(x, y)
       : this.navigateSingleClick(x, y);
@@ -150,8 +159,7 @@ export class InputController {
   }
 
   private dispatchDoubleClick(x: number, y: number) {
-    if (this.deps.isWarpActive() || this.deps.isAimActive()
-      || this.deps.isObserveTransitionActive()) return;
+    if (this.blocksClick()) return;
     if (this.deps.getCameraMode() === 'observe') {
       this.observeDoubleClick(x, y);
       return;

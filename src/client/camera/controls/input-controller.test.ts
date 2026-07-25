@@ -39,7 +39,11 @@ interface Harness {
     pickLgResult: number | null;
     pickLgDistancePc: number;
     pickLgTier: 'prime' | 'fallback';
+    warpActive: boolean;
+    aimActive: boolean;
+    observeTransitionActive: boolean;
   };
+  cancelled: string[];
   emitted: string[];
   camera: THREE.PerspectiveCamera;
   canvas: {
@@ -65,8 +69,12 @@ function makeHarness(): Harness {
     pickLgResult: null as number | null,
     pickLgDistancePc: 1,
     pickLgTier: 'prime' as 'prime' | 'fallback',
+    warpActive: false,
+    aimActive: false,
+    observeTransitionActive: false,
   };
   const emitted: string[] = [];
+  const cancelled: string[] = [];
   const canvasMock = {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -129,22 +137,23 @@ function makeHarness(): Harness {
     getFocusedTarget: () => state.focused,
     getVectorTarget: () => state.vector,
     setVector: deps.setVector,
-    isWarpActive: () => false,
-    isAimActive: () => false,
-    isObserveTransitionActive: () => false,
-    cancelUnfocusLerp: () => {},
-    cancelFocusLerp: () => {},
+    isWarpActive: () => state.warpActive,
+    isAimActive: () => state.aimActive,
+    isObserveTransitionActive: () => state.observeTransitionActive,
+    cancelUnfocusLerp: () => { cancelled.push('unfocus'); },
+    cancelFocusLerp: () => { cancelled.push('focus'); },
     flyTo: deps.flyTo,
     setOrbitTarget: deps.setOrbitTarget,
     unfocus: deps.unfocus,
     togglePoi: deps.togglePoi,
     aimAt: deps.aimAt,
   } satisfies InputControllerDeps);
-  return { input, deps, state, emitted, camera, canvas: canvasMock };
+  return { input, deps, state, emitted, cancelled, camera, canvas: canvasMock };
 }
 
 type WithPrivates = {
   dispatchSingleClick(x: number, y: number): void;
+  dispatchDoubleClick(x: number, y: number): void;
   rollCamera(angle: number): void;
 };
 
@@ -347,6 +356,77 @@ describe('InputController click dispatch', () => {
     state.pickCloudResult = 2;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
     expect(deps.setOrbitTarget).toHaveBeenCalledWith({ kind: 'cloud', idx: 2 });
+  });
+});
+
+// The deferred-dispatch gate (`blocksClick`). Both handlers share one
+// predicate, so each term is pinned on both to catch a one-sided edit.
+describe('InputController deferred-click gate', () => {
+  const gates = ['warpActive', 'aimActive', 'observeTransitionActive'] as const;
+
+  for (const gate of gates) {
+    it(`drops a single click while ${gate}`, () => {
+      const { input, state, deps, emitted } = makeHarness();
+      state.pickStarResult = 5;
+      state[gate] = true;
+      (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+      expect(deps.flyTo).not.toHaveBeenCalled();
+      expect(emitted).toEqual([]);
+    });
+
+    it(`drops a double click while ${gate}`, () => {
+      const { input, state, deps, emitted } = makeHarness();
+      state.pickStarResult = 5;
+      state[gate] = true;
+      (input as unknown as WithPrivates).dispatchDoubleClick(10, 20);
+      expect(deps.flyTo).not.toHaveBeenCalled();
+      expect(emitted).toEqual([]);
+    });
+  }
+
+  it('dispatches normally when no gate is set', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickStarResult = 5;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(star(5));
+  });
+});
+
+// Hoisting the observe bail above the cancels is the refactor these pin against.
+describe('InputController.onPointerUp — claim-the-camera order', () => {
+  function pointerClick(canvas: Harness['canvas']) {
+    const handlerFor = (name: string) => canvas.addEventListener.mock.calls
+      .find((c: unknown[]) => c[0] === name)?.[1] as (e: PointerEvent) => void;
+    const at = { button: 0, clientX: 10, clientY: 20 } as PointerEvent;
+    handlerFor('pointerdown')(at);
+    handlerFor('pointerup')(at);
+  }
+
+  it('cancels both lerps before bailing on an observe transition', () => {
+    const { canvas, state, cancelled } = makeHarness();
+    state.observeTransitionActive = true;
+    pointerClick(canvas);
+    expect(cancelled).toEqual(['unfocus', 'focus']);
+  });
+
+  it('bails on warp WITHOUT cancelling — the warp owns the camera outright', () => {
+    const { canvas, state, cancelled } = makeHarness();
+    state.warpActive = true;
+    pointerClick(canvas);
+    expect(cancelled).toEqual([]);
+  });
+
+  it('bails on aim WITHOUT cancelling', () => {
+    const { canvas, state, cancelled } = makeHarness();
+    state.aimActive = true;
+    pointerClick(canvas);
+    expect(cancelled).toEqual([]);
+  });
+
+  it('cancels both lerps on an ordinary click', () => {
+    const { canvas, cancelled } = makeHarness();
+    pointerClick(canvas);
+    expect(cancelled).toEqual(['unfocus', 'focus']);
   });
 });
 
