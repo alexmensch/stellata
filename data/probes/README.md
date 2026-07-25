@@ -96,11 +96,16 @@ a refresh still diffs sample-by-sample in git.
 - Rounded to 11 significant digits (~150 m at 200 AU) from Horizons'
   16 — rationale in `scripts/probes/fetch-probe-trajectories.ts`.
 
-30-day sampling with linear interpolation is a **visualisation, not an
-ephemeris**. It is coherent at the ~0.3 AU level near planet
-encounters, which is what
-`src/client/solar-system/probes/probe-encounter-coherence.test.ts`
-pins; sub-AU precision is out of scope.
+Uniform 30-day sampling with linear interpolation is a **visualisation,
+not an ephemeris**, and `STEP_SIZE` is a free Horizons parameter — the
+spacecraft SPKs are far denser, so this grid is purely a file-size
+choice. The cost shows up at the gravity assists: the rendered track
+replaces each swing-by with a chord 0.2–0.4 AU long, and its closest
+approach to the planet lands 0.003–0.07 AU out (true flyby distances are
+0.00003–0.005 AU), so a trail visibly bends *near* rather than *at* the
+planet. `src/client/solar-system/probes/probe-encounter-coherence.test.ts`
+pins the ~0.5 AU coherence bound that follows; a piecewise grid with dense
+encounter windows is the fix, not a better interpolant.
 
 ## Date caveats
 

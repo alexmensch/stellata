@@ -122,10 +122,14 @@ forward is defined; the trail simply ends wherever `t` puts the probe.
   probe's own heliocentric distance clears the legibility floor at the
   camera's distance to the marker — days after launch the traversed path is
   a fraction of an AU and would be a sub-pixel smudge.
-- **Not focus-gated.** Unlike the binary orbit paths (`representational`
-  annotations that hide on unfocus), the trail IS the point of the layer —
-  "how far they have gotten" — so it rides the declutter cycle and the size
-  gate alone.
+- **Not focus-gated yet — an interim state, not the design.** There is no
+  probe focus to gate on until the focus surface lands, so today a trail
+  draws whenever its marker does. The end state is the binary-orbit-path rule
+  narrowed one step further: a trail renders only while **that probe** is the
+  focused object, hidden under every other focus including Sol (Sol is the
+  default first-load focus, so a Sol-focus gate would declutter nothing).
+  Markers stay unconditional either way — they are physical objects, like
+  planet bodies; only the trails gate.
 
 ## Labels
 
@@ -149,11 +153,21 @@ realistic-style diamond onto the paper aesthetic.
 
 `probe-encounter-coherence.test.ts` samples each probe at its known
 closest-approach epochs and compares against the production planet
-ephemeris, within 0.5 AU. That bound is **interpolation-dominated** — the
-chord across a curving flyby cuts the corner by a few tenths of an AU at
-30-day sampling — and it is a coherence claim: right probe, right planet,
-right frame, right units. Do not tighten it into a precision claim; the
-committed data is a visualisation, not an ephemeris.
+ephemeris, within 0.5 AU. That bound is **sampling-dominated** and it is a
+coherence claim: right probe, right planet, right frame, right units. Do not
+tighten it against the current data; it is a visualisation, not an ephemeris.
+
+The 30-day grid is why: a swing-by's curvature is concentrated in about a day
+inside a 30-day interval, so the rendered track replaces the turn with a
+chord 0.2–0.4 AU long and its closest approach to the planet lands 0.003–0.07
+AU out, against true flyby distances of 0.00003–0.005 AU. That error tracks
+how hard the trajectory **bends**, not distance from Sol — New Horizons'
+nearly-straight Pluto pass is the most accurate of the ten despite having the
+worst planet ephemeris behind it — so the ephemeris is a minor contributor
+(Standish is ~0.0015 AU at Jupiter) and a better interpolant is not the fix
+either (cubic Hermite off the stored velocities measures only 2–3× better).
+Denser sampling through the encounter windows is; it needs a re-fetch, and
+the tolerance tightens with it.
 
 The trap the corpus exists to catch: the probe samples are ICRS while the
 ephemeris is heliocentric **ecliptic**, so the planet side has to rotate
