@@ -256,6 +256,7 @@ SVG mask (`constellation-figure/README.md`).
 | Local Bubble label                               | SVG     | source order                                       |       | [local-bubble/](local-bubble/README.md) |
 | Molecular cloud labels                           | SVG     | source order                                       |       | [molecular-clouds/](molecular-clouds/README.md) |
 | Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/](solar-system/planets/README.md) |
+| Probe labels                                     | SVG     | source order                                       |       | [solar-system/probes/](solar-system/probes/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI rings                                        | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI arrows                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
@@ -278,6 +279,8 @@ SVG mask (`constellation-figure/README.md`).
 | Member-star core mask (depth-only)               | WebGL   | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
 | Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/planets/](solar-system/planets/README.md) |
+| Probe markers                                    | WebGL   | `renderOrder: 3.5`                                 |       | [solar-system/probes/](solar-system/probes/README.md) |
+| Probe trails                                     | WebGL   | `renderOrder: 3.4`                                 |       | [solar-system/probes/](solar-system/probes/README.md) |
 | Planet disc (inactive-cluster hosts)             | WebGL   | `renderOrder: 3`                                   |       | [solar-system/planets/](solar-system/planets/README.md) |
 | Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       | [dust/](dust/README.md) |
 | Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/heliopause/](solar-system/heliopause/README.md) |

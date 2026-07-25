@@ -26,6 +26,7 @@ export type SceneElementId =
   // Physical tier.
   | 'stars'
   | 'planetBodies'
+  | 'probeMarkers'
   | 'milkyWayBand'
   | 'milkyWayIsobar'
   | 'lgEmissionGlow'
@@ -34,6 +35,7 @@ export type SceneElementId =
   | 'lgWireframes'
   | 'orbitRings'
   | 'binaryOrbitRings'
+  | 'probeTrails'
   | 'heliopauseShell'
   | 'localBubbleShell'
   | 'constellationFigures'
@@ -41,6 +43,7 @@ export type SceneElementId =
   | 'dustParticles'
   // Labels tier.
   | 'planetLabels'
+  | 'probeLabels'
   | 'heliopauseLabel'
   | 'localBubbleLabel'
   | 'molecularCloudLabels'
@@ -65,6 +68,7 @@ export interface ElementFloors {
 export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   stars:                     { realistic: 'physical',         chart: 'physical' },
   planetBodies:              { realistic: 'physical',         chart: 'physical' },
+  probeMarkers:              { realistic: 'physical',         chart: 'never' },
   milkyWayBand:              { realistic: 'physical',         chart: 'never' },
   milkyWayIsobar:            { realistic: 'never',            chart: 'physical' },
   lgEmissionGlow:            { realistic: 'physical',         chart: 'never' },
@@ -72,12 +76,14 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   lgWireframes:              { realistic: 'representational', chart: 'never' },
   orbitRings:                { realistic: 'representational', chart: 'never' },
   binaryOrbitRings:          { realistic: 'representational', chart: 'never' },
+  probeTrails:               { realistic: 'representational', chart: 'never' },
   heliopauseShell:           { realistic: 'representational', chart: 'never' },
   localBubbleShell:          { realistic: 'representational', chart: 'never' },
   constellationFigures:      { realistic: 'representational', chart: 'representational' },
   molecularCloudEllipsoids:  { realistic: 'representational', chart: 'representational' },
   dustParticles:             { realistic: 'representational', chart: 'never' },
   planetLabels:              { realistic: 'all',              chart: 'never' },
+  probeLabels:               { realistic: 'all',              chart: 'never' },
   heliopauseLabel:           { realistic: 'all',              chart: 'never' },
   localBubbleLabel:          { realistic: 'all',              chart: 'never' },
   molecularCloudLabels:      { realistic: 'all',              chart: 'never' },

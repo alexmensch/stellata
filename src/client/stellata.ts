@@ -61,6 +61,9 @@ import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-r
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planets/planet-body-field';
+import { ProbeField } from './solar-system/probes/probe-field';
+import { ProbePathLayer } from './solar-system/probes/probe-path-layer';
+import type { ProbeTrajectory } from './solar-system/probes/probe-trajectory';
 import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
@@ -305,6 +308,10 @@ export class Stellata implements FrameAnchor {
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
   private planetMeshLayer: PlanetMeshLayer;
+  // Physical layer, Sol-anchored — the five Sun-escape probes at their
+  // position for the model clock, plus each one's traversed trail.
+  private probeMarkerField: ProbeField;
+  private probePathLayer: ProbePathLayer;
   private readonly localDepthPass = new LocalDepthPass();
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -509,6 +516,10 @@ export class Stellata implements FrameAnchor {
       this.planetBodyField,
       import.meta.env.BASE_URL,
     );
+    this.probeMarkerField = new ProbeField(sharedUniforms);
+    this.scene.add(this.probeMarkerField.group);
+    this.probePathLayer = new ProbePathLayer(sharedUniforms);
+    this.scene.add(this.probePathLayer.group);
     this.solarCluster = new SolarSystemCluster(
       this.planetBodyField,
       this.planetMeshLayer,
@@ -970,6 +981,23 @@ export class Stellata implements FrameAnchor {
       },
       setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
       dispose: () => this.orbitRingsLayer.dispose(),
+    });
+    this.layers.register({
+      update: (ctx) => {
+        this.probeMarkerField.update(ctx.t, ctx.camera);
+        // After the field wrote this frame's samples: each trail's last
+        // vertex IS the marker position it just resolved.
+        this.probePathLayer.update(this.probeMarkerField, ctx.t, ctx.camera);
+      },
+      setMonochrome: (on) => {
+        this.probeMarkerField.setMonochrome(on);
+        this.probePathLayer.setMonochrome(on);
+      },
+      recenter: (newOrigin) => this.probeMarkerField.recenter(newOrigin),
+      dispose: () => {
+        this.probeMarkerField.dispose();
+        this.probePathLayer.dispose();
+      },
     });
     this.layers.register({
       // After the field + rings updates it reads; before the main
@@ -1718,6 +1746,22 @@ export class Stellata implements FrameAnchor {
     });
   }
 
+  /** Attach the loaded probe trajectories. Both layers are constructed in
+   *  the ctor and already in the scene (Sol-anchored, like the heliopause);
+   *  this binds the roster once the async load resolves. An empty roster
+   *  leaves both layers inert. */
+  attachProbes(trajectories: readonly ProbeTrajectory[]): void {
+    this.probeMarkerField.attach(trajectories);
+    this.probeMarkerField.recenter(this.worldOffset);
+    this.probeMarkerField.setMonochrome(this.monochrome);
+    this.probePathLayer.attach(trajectories);
+    this.probePathLayer.setMonochrome(this.monochrome);
+  }
+
+  /** The probe marker field — read by the probe labels for each marker's
+   *  live position and visibility. */
+  get probeField(): ProbeField { return this.probeMarkerField; }
+
   /** The Local Bubble shell layer — read by its silhouette label for the
    *  surface samples + attach state. */
   getLocalBubbleShell(): LocalBubbleShell { return this.localBubbleShell; }
@@ -1901,6 +1945,7 @@ export class Stellata implements FrameAnchor {
     return {
       stars: set('stars'),
       planetBodies: set('planetBodies'),
+      probeMarkers: set('probeMarkers', (on) => this.probeMarkerField.setPermitted(on)),
       milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
       milkyWayIsobar: set('milkyWayIsobar', (on) => {
         this.setMilkywayIsobar(on);
@@ -1911,12 +1956,14 @@ export class Stellata implements FrameAnchor {
       lgWireframes: set('lgWireframes'),
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
       binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
+      probeTrails: set('probeTrails', (on) => this.probePathLayer.setPermitted(on)),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
       localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
       constellationFigures: set('constellationFigures', (on) => this.constellationFigureLayer.setPermitted(on)),
       molecularCloudEllipsoids: set('molecularCloudEllipsoids'),
       dustParticles: set('dustParticles'),
       planetLabels: set('planetLabels'),
+      probeLabels: set('probeLabels'),
       heliopauseLabel: set('heliopauseLabel'),
       localBubbleLabel: set('localBubbleLabel'),
       molecularCloudLabels: set('molecularCloudLabels'),

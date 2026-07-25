@@ -17,6 +17,8 @@ import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
+import { createProbeLabels } from './solar-system/probes/probe-labels';
+import { loadProbes } from './solar-system/probes/probe-loader';
 import { createHeliopauseLabel } from './solar-system/heliopause/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
@@ -68,7 +70,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, probes] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -102,6 +104,10 @@ async function main() {
       // missing (fresh checkout without `pnpm run build:local-bubble`).
       // The scene renders fine without it — the shell simply doesn't draw.
       loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
+      // Deep-space probe trajectories. ~450 KB of JSON across the five
+      // Sun-escape probes; each one that's missing (a checkout that never
+      // ran the public/ sync) simply drops its marker and trail.
+      loadProbes(import.meta.env.BASE_URL),
     ]);
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
@@ -132,6 +138,9 @@ async function main() {
     // Local Bubble shell — the dust-wall cavity the Sun sits inside.
     // A representational declutter element; absent artifact = no shell.
     if (localBubble) stellata.attachLocalBubble(localBubble);
+
+    // Deep-space probes — markers + traversed trails on the model clock.
+    stellata.attachProbes(probes);
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.
@@ -224,6 +233,7 @@ async function main() {
     createClickRipple(stellata);
     createGalacticGridLabels(stellata);
     createPlanetLabels(stellata);
+    createProbeLabels(stellata);
     createHeliopauseLabel(stellata);
     createLocalBubbleLabel(stellata);
     // Per-cloud molecular-cloud labels. Mints SVG <text> children under

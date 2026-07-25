@@ -16,7 +16,7 @@ describe('SCENE_ELEMENT_FLOORS contract', () => {
       stars: { realistic: 'physical', chart: 'physical' },
     };
     expect(partial).toBeDefined();
-    expect(SCENE_ELEMENT_IDS.length).toBe(25);
+    expect(SCENE_ELEMENT_IDS.length).toBe(28);
   });
 
   it('SCENE_ELEMENT_IDS matches the floor-table keys exactly', () => {
@@ -41,9 +41,9 @@ describe('floorPermits', () => {
 
 describe('visibleSet — cumulative floor derivation', () => {
   it('realistic cumulative sizes are pinned', () => {
-    expect(visibleSet('physical', 'realistic').size).toBe(4);
-    expect(visibleSet('representational', 'realistic').size).toBe(13);
-    expect(visibleSet('all', 'realistic').size).toBe(19);
+    expect(visibleSet('physical', 'realistic').size).toBe(5);
+    expect(visibleSet('representational', 'realistic').size).toBe(15);
+    expect(visibleSet('all', 'realistic').size).toBe(22);
   });
 
   it('chart cumulative sizes are pinned', () => {
@@ -71,6 +71,18 @@ describe('visibleSet — cumulative floor derivation', () => {
     expect(visibleSet('representational', 'realistic').has('constellationFigures')).toBe(true);
     expect(visibleSet('representational', 'realistic').has('planetLabels')).toBe(false);
     expect(visibleSet('all', 'realistic').has('planetLabels')).toBe(true);
+  });
+
+  it('probe markers are physical, their trails representational, names labels', () => {
+    const phys = visibleSet('physical', 'realistic');
+    expect(phys.has('probeMarkers')).toBe(true);
+    expect(phys.has('probeTrails')).toBe(false);
+    expect(visibleSet('representational', 'realistic').has('probeTrails')).toBe(true);
+    expect(visibleSet('representational', 'realistic').has('probeLabels')).toBe(false);
+    expect(visibleSet('all', 'realistic').has('probeLabels')).toBe(true);
+    for (const id of ['probeMarkers', 'probeTrails', 'probeLabels'] as const) {
+      expect(elementPermitted(id, 'all', 'chart')).toBe(false);
+    }
   });
 
   it('chart floors exclude realistic-only chrome and vice versa', () => {

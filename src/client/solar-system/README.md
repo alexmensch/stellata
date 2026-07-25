@@ -26,6 +26,10 @@ Rendering, ephemerides, and the clock live in the subfolders.
   breadcrumbs, the orbit-ring layer, and the frozen JPL Horizons truth
   corpora.
 - `heliopause/` — Sol's heliopause boundary shell.
+- `probes/` — the five Sun-escape deep-space probes: trajectory sampler,
+  fixed-size markers, traversed trails, labels. Sol-anchored and ICRS
+  throughout — deliberately not funnelled through the planets' ecliptic-
+  local pipeline or their reflected-light magnitude model.
 
 ## Files in this area
 
