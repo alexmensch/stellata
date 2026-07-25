@@ -15,266 +15,157 @@ numeric thresholds, provenance fields.
 
 - You're refreshing external catalogues — Gaia DR4 landed, AT-HYG cut a
   new release, B-J republished posteriors, SIMBAD updated sp_type
-  bibcodes. See § Refreshing data below.
+  bibcodes. See `scripts/refresh/README.md` § Refreshing data when
+  DR4 / new AT-HYG lands.
 - You're adding a star to the Tier-A validation corpus
   (`scripts/catalog/validate/known-stars.tsv`).
 - You're debugging why a specific star doesn't render at its expected
-  position, distance, or spectral colour. See § Debug recipes.
+  position, distance, or spectral colour. Start at
+  `scripts/catalog/validate/README.md` — the harness localises which
+  stage produced the wrong value before you read any stage below.
 - You're extending the multi-star pipeline — adding a new astrometry
   route, a new optical-pair filter tier, or a new SIMBAD-anchored
   cross-ID side-file.
 
 ## Files in this area
 
-The binary-system pipeline. `scripts/binaries/` is the orchestration
-shell + per-stage modules, and an importable Python package
-(`from scripts.binaries import parsers, stage4_orbits, …`): stage
-modules import their siblings relatively (`from .parsers import …`),
-while the hyphenated entry scripts (`build-binaries.py`,
-`build-runtime-binaries.py`) run as `__main__` so they bootstrap the
-repo root onto `sys.path` and use absolute `scripts.*` imports.
-`data/wds/` + `data/binaries/` carry the
-inputs and pipeline output. The single-star catalog build under
-`scripts/catalog/` and its data inputs (Gaia / B-J / SIMBAD sample /
-AT-HYG / GCVS / Hipparcos / Stellarium) live in
-`scripts/README.md`.
+`scripts/binaries/` is the orchestration shell + per-stage modules, and
+an importable Python package (`from scripts.binaries import parsers,
+stage4_orbits, …`): stage modules import their siblings relatively
+(`from .parsers import …`), while the hyphenated entry scripts
+(`build-binaries.py`, `build-runtime-binaries.py`) run as `__main__`, so
+they bootstrap the repo root onto `sys.path` and use absolute `scripts.*`
+imports.
+
+The seven stages form a strictly linear chain — stage N consumes every
+earlier stage — which is why they share one folder rather than splitting
+into per-stage subfolders.
 
 ```
 scripts/binaries/
-  build-binaries.py               WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2
-                                  + Gaia (HIP/Tyc xwalks, NSS, 5p
-                                  astrometry) + SIMBAD WDS xids + SIMBAD
-                                  per-component sp_type + Pulkovo MSC →
+  build-binaries.py               Orchestration shell for Stages 1-7 →
                                   data/binaries/multiples.tsv.
-                                  Orchestration shell; per-stage logic in
-                                  stage{2..7}_*.py.
-  parsers.py                      Row dataclasses + parse functions for
-                                  every reference catalogue (Stage 1).
-  indices.py                      IdentifierIndices builder (HIP/Tyc →
-                                  Gaia, src_id → astrometry / NSS / AT-HYG,
-                                  HIP → HIP2 / CCDM, CCDM → HIP-list,
-                                  etc.). Built once at Stage 1; every
-                                  Stage 2-7 lookup is O(1).
+  parsers.py                      Row dataclasses + parse functions for every
+                                  reference catalogue (Stage 1).
+  indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
+                                  src_id → astrometry / NSS / AT-HYG, HIP →
+                                  HIP2 / CCDM, CCDM → HIP-list). Built once at
+                                  Stage 1; every Stage 2-7 lookup is O(1).
   component_tokens.py             WDS component-letter token helpers
-                                  (truncated-form expansion, parent /
-                                  child tokens) shared by subdivide.py
-                                  and build-runtime-binaries.py.
-  msc_map.py                      Pulkovo MSC hierarchy-label → WDS
-                                  component-token mapping + the
-                                  MscLookup tables (orbits by pair,
-                                  pair mags, per-component sp_type)
-                                  Stages 2/4/6 consume. Label
-                                  convention: data/msc/README.md.
-  subdivide.py                    Synthesized sub-pair injection — ORB6
-                                  orphan pairs + curated component
-                                  overrides (pre-Stage-2), MSC inner
-                                  pairs (pre-Stage-2, post-rescue),
-                                  binding seeds (post-Stage-2),
-                                  Gaia-NSS inner pairs (post-Stage-3).
-                                  See § Sub-pair synthesis.
-  stage2_resolve.py               WDS-component → Gaia DR3 source_id
-                                  cascade (orb6_hip → athyg_gaia_native →
-                                  simbad_xid → ccdm_hip → AT-HYG
-                                  position-match), with same-letter +
-                                  Aa→A propagation. Also hosts the
-                                  binding-integrity audit + enforcement
-                                  (audit_binding_integrity) — see
-                                  § Binding-integrity audit.
-  stage3_astrometry.py            Per-component astrometry routing
-                                  (gaia_5p / gaia_nss_systemic /
-                                  hip2_long_baseline / unresolved).
-                                  HIP2 is the Gaia-saturated
+                                  (truncated-form expansion, parent / child
+                                  tokens).
+  msc_map.py                      Pulkovo MSC hierarchy-label → WDS token
+                                  mapping + the MscLookup tables Stages 2/4/6
+                                  consume. Label convention: data/msc/README.md.
+  subdivide.py                    Synthesized sub-pair injection — ORB6 orphans
+                                  + curated overrides, MSC inner pairs, binding
+                                  seeds, Gaia-NSS inner pairs. See § Sub-pair
+                                  synthesis.
+  stage2_resolve.py               WDS component → Gaia DR3 source_id cascade,
+                                  with same-letter + Aa→A propagation. Also
+                                  hosts the binding-integrity audit.
+  stage3_astrometry.py            Per-component astrometry routing (gaia_5p /
+                                  gaia_nss_systemic / hip2_long_baseline /
+                                  unresolved). HIP2 is the Gaia-saturated
                                   bright-primary fallback.
-  stage4_orbits.py                Per-pair orbital-element selection
-                                  (gaia_nss / orb6 / orb6_spectroscopic /
-                                  none). Inline Heintz 1978 /
-                                  Halbwachs+ 2023 Thiele-Innes → Campbell
-                                  algebra.
-  stage5_optical.py               Tiered physical-vs-optical
-                                  classification (WDS-notes → orbit-on-
-                                  file → separation-limit → both-Gaia
-                                  (+escape velocity) → asymmetric-Gaia →
-                                  CPM epoch-baseline → mag-gap).
-                                  Physical-boundness gates reuse
-                                  Stage 4's Kepler / parallax-anchor
-                                  helpers.
-  stage6_multiples.py             Emit data/binaries/multiples.tsv with
-                                  per-component provenance columns +
-                                  per-pair WDS sep+PA+epoch+Δmag columns
-                                  + system-anchor inheritance for tight
-                                  inner binaries + SIMBAD standalone
-                                  augmentation.
-  stage7_counts.py                Build-counts + build-rates snapshot
-                                  writer (mirrors
-                                  scripts/catalog/build-counts.ts).
-  mass_estimate.py                Spectral-class-aware mass-ratio q
-                                  backfill from Cox 2000 §15.2 /
-                                  Pecaut & Mamajek 2013 tables.
-  build-runtime-binaries.py       Read multiples.tsv +
-                                  public/catalog-row-index-map.json,
-                                  emit public/binaries.bin (v1 BIN1,
-                                  72-byte records, one per physical
-                                  pair). Detects hierarchical chains
-                                  (Algol Aa1,Aa2 inside Aa,Ab) via
-                                  WDS component-letter prefix
-                                  matching, writes records in
-                                  topological outer-before-inner
-                                  order. Run via
-                                  pnpm run build:binaries-runtime.
-  build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2
-                                  (resolve_through_stage2) and asserts the
-                                  strongest-priority resolution per
-                                  (wds_id, component) against the curated
-                                  data/binaries/spot_check_ground_truth.tsv
-                                  (contract in data/binaries/README.md
-                                  § Spot-check ground truth). Its own CI
-                                  check; also run locally before merging
-                                  any Stage 2-7 change (~20 s).
-  probe-blank-components-tail.py  Read-only instrumentation for the
-                                  full blank→AB ingest decision
-                                  (stellata-tracked): runs the Stage-2
-                                  cascade over the
-                                  blank_components_deferred tail and
-                                  reports per-end resolution yield.
-                                  Touches nothing.
-  <module>.test.py                stdlib unittest pins co-located per
-                                  source module (parsers, indices, msc_map,
-                                  component_tokens, subdivide, mass_estimate,
-                                  stage2_resolve … stage7_counts). Each
-                                  imports its subject module's symbols
-                                  directly — no orchestration-shell load.
-                                  Run directly: python3 <module>.test.py.
-  pipeline_test_fixtures.py       Shared unittest fixture builders +
-                                  committed-data path constants imported by
-                                  the <module>.test.py siblings, so no
-                                  fixture logic duplicates across them.
-  __init__.py                     Package marker — scripts/binaries/ is an
-                                  importable package (see intro above).
-  build-runtime-binaries.test.py  stdlib unittest pins for the pure
-                                  helpers (_split_components,
-                                  _parent_token, assign_parent_relations,
-                                  topological_walk_order) and the
-                                  write_binary parent-index remapping.
-  build-binaries-expected.json    per-strategy / per-tier count snapshot
-                                  (UPDATE_BUILD_COUNTS=1).
-  build-binaries-rates-expected.json
-                                  per-strategy rate snapshot — catches
-                                  population-mix shifts that don't move
-                                  absolute counts.
-  build-runtime-binaries-expected.json
-                                  pair-emission count snapshot for
-                                  build-runtime-binaries.py.
-
-data/wds/
-  wds_summ.txt                    Washington Double Star summary
-                                  (~20 MB, LFS).
-  wds_notes.txt                   Per-pair WDS notes prose (LFS).
-  wds_refs.txt                    WDS reference list (LFS).
-  orb6_orbits.txt                 ORB6 sixth catalog of visual binary
-                                  orbits (LFS).
-
-data/msc/
-  msc_systems.tsv                 Pulkovo MSC (Tokovinin, VizieR
-  msc_orbits.tsv                  J/ApJS/235/6) hierarchy / orbit /
-  msc_components.tsv              per-component tables. Column detail,
-                                  label convention, provenance:
-                                  data/msc/README.md. Refresh:
-                                  scripts/refresh/refresh-msc.py.
-
-data/binaries/
-  multiples.tsv                   build-binaries.py output — two rows
-                                  per kept WDS pair (incl. synthesized
-                                  sub-pairs), plus standalone rows for
-                                  SIMBAD-known components the pair
-                                  walk didn't reach. Carries per-pair
-                                  sep_arcsec, pa_deg, sep_pa_epoch_jd,
-                                  dmag for the static-placement and
-                                  Δmag-imputation paths. Consumed by
-                                  scripts/catalog/companions/companion-promotion.ts
-                                  (build-time, surfaces companions in
-                                  catalog.bin), build-runtime-binaries.py
-                                  (emits public/binaries.bin), and the
-                                  Tier A validation harness. (LFS)
-  component_sptype_overrides.tsv  Hand-curated per-component MK types —
-                                  Stage 6's top spectral tier
-                                  (spect_via=curated). See
-                                  data/binaries/README.md.
-  orb6_component_overrides.tsv    Hand-curated WDS component letters for
-                                  ORB6 rows with a blank components
-                                  field (YY Gem → Ca,Cb). Applied before
-                                  orphan sub-pair synthesis. See
-                                  data/binaries/README.md.
+  stage4_orbits.py                Per-pair orbital-element selection, with the
+                                  inline Thiele-Innes → Campbell algebra.
+  stage5_optical.py               Tiered physical-vs-optical classification.
+                                  Boundness gates reuse Stage 4's Kepler /
+                                  parallax-anchor helpers.
+  stage6_multiples.py             Emit multiples.tsv — per-component provenance
+                                  columns + per-pair WDS sep/PA/epoch/Δmag +
+                                  system-anchor inheritance for tight inner
+                                  binaries + SIMBAD standalone augmentation.
+  stage7_counts.py                Build-counts + build-rates snapshot writer
+                                  (mirrors scripts/catalog/build-counts.ts).
+  mass_estimate.py                Spectral-class-aware mass-ratio q backfill
+                                  (Cox 2000 §15.2 / Pecaut & Mamajek 2013).
+  build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
+                                  public/binaries.bin. Detects hierarchical
+                                  chains via component-letter prefix matching
+                                  and writes outer-before-inner. See
+                                  § Pipeline at a glance, step 3.
+  build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
+                                  asserts the strongest-priority resolution per
+                                  (wds_id, component) against
+                                  data/binaries/spot_check_ground_truth.tsv.
+                                  Its own CI check; also run locally before
+                                  merging any Stage 2-7 change (~20 s).
+  probe-blank-components-tail.py  Read-only instrumentation for the blank→AB
+                                  ingest decision. Touches nothing.
+  <module>.test.py                stdlib unittest pins co-located per source
+                                  module. Each imports its subject module's
+                                  symbols directly — no orchestration-shell
+                                  load. Run directly: python3 <module>.test.py.
+  pipeline_test_fixtures.py       Shared unittest fixture builders + committed-
+                                  data path constants imported by the
+                                  .test.py siblings, so no fixture logic
+                                  duplicates across them.
+  __init__.py                     Package marker (see above).
+  *-expected.json                 Snapshot pins refreshed with
+                                  UPDATE_BUILD_COUNTS=1: build-binaries
+                                  (per-strategy / per-tier counts),
+                                  build-binaries-rates (per-strategy rates —
+                                  catches population-mix shifts that don't move
+                                  absolute counts), build-runtime-binaries
+                                  (pair-emission counts).
 ```
+
+Inputs and outputs live in their own folders, each with its own README
+this file does not restate: `data/wds/` (WDS summary / notes / refs +
+ORB6 orbits), `data/msc/` (Pulkovo MSC hierarchy / orbit / component
+tables), `data/binaries/` (the `multiples.tsv` output plus the curated
+`component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
 
 ## Pipeline at a glance
 
 Three build steps in order, with `data/binaries/multiples.tsv` and
 `public/catalog-row-index-map.json` as hand-offs:
 
-1. **Binary-system pipeline** (`scripts/binaries/build-binaries.py`).
-   Reads WDS + ORB6 + AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS,
-   5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD per-component
-   spectra + the Pulkovo MSC (`data/msc/`, mapped through
-   `msc_map.py`). Emits `data/binaries/multiples.tsv` — two rows per kept
-   physical pair, plus standalone rows for SIMBAD-known WDS components
-   the pair walk didn't reach. Run via `pnpm run build:binaries`. Seven
-   stages, one module per stage under `scripts/binaries/`.
+1. **Binary-system pipeline** (`build-binaries.py`). Reads WDS + ORB6 +
+   AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) +
+   SIMBAD WDS cross-IDs + SIMBAD per-component spectra + the Pulkovo MSC
+   (`data/msc/`, mapped through `msc_map.py`). Emits
+   `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
+   standalone rows for SIMBAD-known WDS components the pair walk didn't
+   reach. Seven stages, one module per stage. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
-   Reads AT-HYG + multiples.tsv (companion promotion) + the SIMBAD
-   sp_type / Gaia Apsis / Bailer-Jones / Gaia HIP-xmatch side-files +
-   Stellarium constellations + GCVS + Hipparcos CCDM. Emits
-   `public/catalog.bin` (v6, 80-byte records), `public/constellations.json`,
-   `public/search-index.json`, `public/catalog-row-index-map.json`.
-   Run via
-   `pnpm run build:catalog`. Per-stage logic lives in sibling modules
-   (`stars-parse.ts`, `catalog-pure.ts`, `gcvs-parse.ts`,
-   `visual-doubles.ts`, `gaia-xmatch.ts`, `constellations.ts`,
-   `companion-promotion.ts`).
+   Reads AT-HYG + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
+   Bailer-Jones / Gaia HIP-xmatch side-files + Stellarium + GCVS + CCDM.
+   Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
+   `constellations.json`, `search-index.json`, and
+   `catalog-row-index-map.json`. `pnpm run build:catalog`.
 
-   Companion promotion is the build-catalog seam that reads
-   multiples.tsv: `scripts/catalog/companions/companion-promotion.ts` adds
-   first-class catalog records for the secondary of every physical
-   pair whose identifier isn't already in AT-HYG. Promoted records
-   carry `FLAG_BINARY_COMPANION_ONLY`, plus
-   `FLAG_BINARY_COMPANION_SYNTHETIC` when the row carries no own
-   gaia and no non-inherited HIP (Algol Ab and friends — see
-   `scripts/catalog/companions/README.md` § Companion promotion for the
-   identifier gate). Positions come from the row's own Gaia 5p
-   astrometry when distinct from the primary's, otherwise from a
-   sky-tangent projection of the EXISTING catalog primary's xyz at
-   the published WDS sep+PA. Absmag is imputed from primary + WDS
-   Δmag when the row inherits its parent's AT-HYG photometry. The
-   renderer / picker / hover / focus stack picks companions up
-   with zero code change. ~14.2k companions promoted into the
-   current build (~36% via real Gaia/HIP keys, ~64% via synthetic).
-3. **Runtime side artifact** (`scripts/binaries/build-runtime-binaries.py`).
-   Reads multiples.tsv + `public/catalog-row-index-map.json`
-   (which now carries a `bySynth` section alongside `byGaia` and
-   `byHip`), emits `public/binaries.bin` — one fixed-size record
-   per physical pair carrying Kepler elements + sep+PA +
-   hierarchical parent-relation index. The Python `resolve_idx`
-   walks gaia → hip → synth in priority order; the synth key is
-   composed from the pair's expanded `comp` tokens (WDS-truncated
-   forms like `Aa1,2` resolve through the same `synth-…-Aa2` key
-   the catalog minted). Both pair ends then prefer a distinct synth
-   slot over their id-first resolve: promotion mints a synth record
-   only after judging a row's ids inherited and stripping them, so
-   when one exists it is always the truer target than the blended
-   member row the inherited id lands on.
-   Run via `pnpm run build:binaries-runtime`.
-   Loaded by `src/client/binaries/binaries-loader.ts`; consumed
-   per-frame by the BinaryOrbitField runtime layer.
+   The seam that consumes this pipeline's output is companion promotion
+   — it adds first-class catalog records for the secondary of every
+   physical pair whose identifier isn't already in AT-HYG, so the
+   renderer / picker / hover / focus stack picks companions up with zero
+   code change. Gates, identifier minting, placement, and the
+   field-inheritance contract:
+   `scripts/catalog/companions/README.md` § Companion promotion.
+3. **Runtime side artifact** (`build-runtime-binaries.py`). Reads
+   multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
+   sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
+   fixed-size record per physical pair carrying Kepler elements + sep/PA
+   + a hierarchical parent-relation index. `resolve_idx` walks
+   gaia → hip → synth; the synth key composes from the pair's expanded
+   `comp` tokens (`Aa1,2` resolves through the same `synth-…-Aa2` key the
+   catalog minted). Both pair ends then prefer a distinct synth slot over
+   their id-first resolve: promotion mints a synth record only after
+   judging a row's ids inherited and stripping them, so when one exists
+   it is always the truer target than the blended member row the
+   inherited id lands on. `pnpm run build:binaries-runtime`; loaded by
+   `src/client/binaries/binaries-loader.ts`.
 
-The Tier A validation harness (`scripts/catalog/validate/known-stars.test.ts`)
-reads multiples.tsv directly for per-component sanity checks
-(SIMBAD spectral type, absmag-from-Δmag).
+The Tier A validation harness
+(`scripts/catalog/validate/known-stars.test.ts`) reads multiples.tsv
+directly for per-component sanity checks (SIMBAD spectral type,
+absmag-from-Δmag).
 
-Build-time statistics for every phase land in snapshot JSONs:
-`build-binaries-{expected,rates-expected}.json`,
-`build-runtime-binaries-expected.json`,
-`build-catalog-expected.json`,
-`build-distance-outliers-expected.json` — each gates the next
-build via `UPDATE_BUILD_COUNTS=1` refresh.
+Build-time statistics for every phase land in snapshot JSONs, each
+gating the next build via an `UPDATE_BUILD_COUNTS=1` refresh.
+
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
 

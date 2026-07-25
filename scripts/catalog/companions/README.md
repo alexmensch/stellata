@@ -42,7 +42,7 @@ id of its own, no id duplicated from another record. Counted
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-in AT-HYG. ~14.2k companions promoted into the current build
+in AT-HYG. ~16.4k companions promoted into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 (see the identifier gate below).
@@ -262,7 +262,7 @@ Per-row gates and resolution:
   evolved companions but strictly less wrong than the primary's type;
   curated overrides / SIMBAD per-component types take precedence, and
   no `spectDisplay` is claimed for the estimate. Counted
-  `companionSpectMsFromOwnAbsmag` (~12.6k of 14.2k promoted). Rows
+  `companionSpectMsFromOwnAbsmag` (~14.5k of 16.4k promoted). Rows
   with neither fall back to `SPECTRAL_UNKNOWN`.
 - **HIP inheritance gate.** When the row's HIP equals the primary
   row's HIP, set `hip = null` on the promoted record. Hipparcos
