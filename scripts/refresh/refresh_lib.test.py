@@ -260,7 +260,6 @@ class BatchCheckpointTests(unittest.TestCase):
                     items, 2, drops_on_batch_3, lambda t: None,
                     checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
                 )
-            # The cache survives the failure it exists for.
             self.assertEqual(
                 sorted(p.name for p in ckpt_dir.glob("batch-*")),
                 ["batch-0001.json", "batch-0002.json"],

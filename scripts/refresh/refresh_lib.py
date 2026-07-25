@@ -312,13 +312,11 @@ def run_in_batches(
     validate exactly once, on batch 1, since every batch shares one ADQL
     projection. `collect=rows.extend` recovers a plain concatenating pull.
 
-    Pass `checkpoint` to make the pull resumable: each batch is cached as
-    it lands and a re-run skips the batches already cached, feeding the
-    cached tables to `collect` in the same order. The cache is deleted only
-    when every batch has landed, so it survives the failure it exists for.
-    Batch 1's schema check runs against the cached table too — a cache
-    written by an incompatible projection fails there rather than
-    downstream.
+    Pass `checkpoint` to make the pull resumable — see `BatchCheckpoint`.
+    Cached batches feed `collect` in their original position, so ordering
+    is identical whether a batch was queried or replayed, and batch 1's
+    schema check runs against the cached table too: a cache written by an
+    incompatible projection fails there rather than downstream.
     """
     if batch_size <= 0:
         raise ValueError(f"batch_size must be positive, got {batch_size}")
