@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { applyFade } from './dirty-attr';
-import { emptyArrowState, resetArrowSentinels, HudOverlay, type ArrowState } from './hud-overlay';
+import {
+  computeShaftStartRadius,
+  emptyArrowState,
+  resetArrowSentinels,
+  HudOverlay,
+  type ArrowState,
+} from './hud-overlay';
+import { discCoverageAlpha } from './arrow-fade';
+import { ARROW_PIXEL_LENGTH } from './arrow-path';
+import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 import { fmtDistAuto } from '../ui/distance-util';
 import { AU_PC } from '../util/astronomy-constants';
 
@@ -12,6 +21,16 @@ function makeFadeEls() {
     setAttribute: vi.fn(),
   } as unknown as SVGPathElement & SVGTextElement;
   return { el, style };
+}
+
+function makeSvgStub() {
+  return {
+    style: {} as Record<string, string>,
+    setAttribute: vi.fn(),
+    textContent: null as string | null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  };
 }
 
 describe('hud-overlay applyFade', () => {
@@ -110,16 +129,6 @@ describe('hud-overlay applyFade', () => {
 });
 
 describe('HudOverlay.update distance labels', () => {
-  function makeSvgStub() {
-    return {
-      style: {} as Record<string, string>,
-      setAttribute: vi.fn(),
-      textContent: null as string | null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    };
-  }
-
   it('Sol label reads in AU when observing 1 AU from Sol (planet-anchored observe)', () => {
     // Regression pair from the planet-as-object smoke: (a) the caller
     // must feed the focal object's position as the measurement origin —
@@ -174,5 +183,117 @@ describe('HudOverlay.update distance labels', () => {
     expect(solLabel.textContent).toBe(`Sol · ${fmtDistAuto(AU_PC)}`);
     expect(solLabel.textContent).toContain('AU');
     expect(solLabel.textContent).not.toContain('ly');
+  });
+});
+
+describe('HudOverlay two-pass alpha sequencing', () => {
+  function makeHud() {
+    const els = {
+      ring: makeSvgStub(),
+      solPath: makeSvgStub(),
+      solBg: makeSvgStub(),
+      gcPath: makeSvgStub(),
+      gcBg: makeSvgStub(),
+      solLabel: makeSvgStub(),
+      gcLabel: makeSvgStub(),
+    };
+    const hud = new HudOverlay(
+      els.ring as unknown as SVGCircleElement,
+      els.solPath as unknown as SVGPathElement,
+      els.solBg as unknown as SVGPathElement,
+      els.gcPath as unknown as SVGPathElement,
+      els.gcBg as unknown as SVGPathElement,
+      els.solLabel as unknown as SVGTextElement,
+      els.gcLabel as unknown as SVGTextElement,
+      () => {},
+      () => {},
+    );
+    return { hud, els };
+  }
+
+  const W = 800;
+  const H = 600;
+  // Navigate steady state: the shaft starts at the focus-ring rim + halo gap.
+  const SHAFT_START_PX = computeShaftStartRadius('navigate', null, 0);
+  // Disc radius landing coverage mid-band (0.5 → 0.75 fades 1 → 0), so the
+  // expected alpha is strictly between 0 and 1 — a stale-geometry alpha of
+  // exactly 1 is then unambiguously distinguishable.
+  const MID_BAND_COVERAGE = 0.625;
+  const DISC_RADIUS_PX = SHAFT_START_PX + MID_BAND_COVERAGE * ARROW_PIXEL_LENGTH;
+
+  // Camera at the local origin looking down −Z; the focal object sits
+  // ahead of it, and Sol sits behind-and-off-axis so its arrow draws at
+  // full ARROW_PIXEL_LENGTH (no shrink-to-target).
+  function navigateUpdateOpts() {
+    const camera = new THREE.PerspectiveCamera(60, W / H, 1e-10, 1000);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    return {
+      enabled: true,
+      camera,
+      target: new THREE.Vector3(0, 0, -5),
+      worldOffset: new THREE.Vector3(-10, 0, -5), // → Sol local = (10, 0, 5)
+      focusedLocal: new THREE.Vector3(0, 0, -5),
+      hideSolArrow: false,
+      sizeMaxPx: 0,
+      cameraMode: 'navigate' as const,
+      transition: null,
+      focusedDiscRadiusPx: DISC_RADIUS_PX,
+      w: W,
+      h: H,
+    };
+  }
+
+  it('pins the navigate shaft start to the focus-ring rim plus halo gap', () => {
+    // The disc-coverage fixture below is keyed on this radius; if the ring
+    // geometry moves, the coverage fractions move with it.
+    expect(SHAFT_START_PX).toBeGreaterThan(FOCUS_RING_RADIUS_PX);
+  });
+
+  it('computes the fade alpha from THIS frame geometry on the first frame after a hide', () => {
+    // ml8 symptom 1: the pre-#70 design computed the shared Sol/GC alpha
+    // BEFORE committing arrow geometry, reading last frame's
+    // getDrawnLengths(). On the first frame after a toggle-off (both
+    // lengths latched to 0) discCoverageAlpha's `shaftLengthPx <= 0` guard
+    // returned 1 — the chevrons flashed fully opaque for one frame even
+    // though the focal disc already covered the shaft. The two-pass order
+    // (commit geometry, then derive alpha) is what fixes it, and only an
+    // integration assertion over update() can catch a regression: the
+    // pure-helper guard test passes either way.
+    const { hud } = makeHud();
+
+    hud.setVisible(false); // toggle-off: latches solDrawnLen = gcDrawnLen = 0
+    expect(hud.getDrawnLengths()).toEqual({ sol: 0, gc: 0 });
+    expect(hud.getCurrentFadeAlpha()).toBe(1);
+
+    hud.update(navigateUpdateOpts());
+
+    const { sol, gc } = hud.getDrawnLengths();
+    const refLen = Math.max(sol, gc);
+    expect(refLen).toBeGreaterThan(0);
+
+    const alpha = hud.getCurrentFadeAlpha();
+    expect(alpha).toBe(discCoverageAlpha(DISC_RADIUS_PX, refLen, hud.getShaftStartPx()));
+    // The regression's signature: reading the stale zero-length state
+    // yields exactly 1, while this-frame geometry yields a partial fade.
+    expect(discCoverageAlpha(DISC_RADIUS_PX, 0, hud.getShaftStartPx())).toBe(1);
+    expect(alpha).toBeGreaterThan(0);
+    expect(alpha).toBeLessThan(1);
+  });
+
+  it('applies the shared alpha to both arrows through the fade gate', () => {
+    // Sol and GC share one alpha so the chevron pair fades together; the
+    // opacity actually painted must be the alpha update() derived, not a
+    // per-arrow re-derivation.
+    const { hud, els } = makeHud();
+    hud.setVisible(false);
+    hud.update(navigateUpdateOpts());
+
+    const alpha = hud.getCurrentFadeAlpha();
+    const painted = alpha.toFixed(3);
+    expect(els.solPath.style.opacity).toBe(painted);
+    expect(els.solBg.style.opacity).toBe(painted);
+    expect(els.solLabel.style.opacity).toBe(painted);
   });
 });
