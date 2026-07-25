@@ -47,12 +47,14 @@ import {
   buildSearchEntry,
   type ApsisRow,
   type SearchEntry,
+  emptyDistSrcPartition,
   type SimbadSpectralIndex,
   type CatalogManifest,
 } from './catalog-pure';
 import {
   compareBuildCounts,
   formatCountDiff,
+  formatDistSrcPartition,
   type BuildCounts,
 } from './build-counts';
 import {
@@ -231,8 +233,10 @@ async function main() {
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
+    bjOverriddenByDistSrc: emptyDistSrcPartition(),
     lmcCandidates: 0,
     lmcOverridden: 0,
+    lmcOverriddenByDistSrc: emptyDistSrcPartition(),
     nameTableEntries: 0,
     variableCount: 0,
     searchEntries: 0,
@@ -452,12 +456,18 @@ async function main() {
       `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
         `Gaia-inverse-distance stars (${pct}%)`,
     );
+    console.log(
+      `    by dist_src: ${formatDistSrcPartition(stats.bjOverriddenByDistSrc)}`,
+    );
   }
   if (stats.lmcCandidates > 0) {
     const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
     console.log(
       `  LMC kinematic override: ${stats.lmcOverridden} / ${stats.lmcCandidates} ` +
         `LMC-cone stars (${pct}%)`,
+    );
+    console.log(
+      `    by dist_src: ${formatDistSrcPartition(stats.lmcOverriddenByDistSrc)}`,
     );
   }
   if (stats.gaiaSourceIdBackfilled > 0) {
@@ -497,9 +507,11 @@ async function main() {
   // companion-promotion pass below.
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
+  counts.bjOverriddenByDistSrc = stats.bjOverriddenByDistSrc;
   counts.hipDistFullPrecision = stats.hipDistFullPrecision;
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
+  counts.lmcOverriddenByDistSrc = stats.lmcOverriddenByDistSrc;
   counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
   counts.gaiaBindingMagRejected = stats.gaiaBindingMagRejected;
   counts.gaiaBindingSiblingRejected = stats.gaiaBindingSiblingRejected;

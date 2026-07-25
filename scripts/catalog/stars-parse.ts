@@ -15,6 +15,9 @@ import {
   applyLmcKinematicOverride,
   apparentToAbsoluteMagnitude,
   isInLmcCone,
+  emptyDistSrcPartition,
+  tallyDistSrc,
+  DIST_SRC_HIP,
   resolveGaiaSourceId,
   parseGaiaSourceIdStr,
   spectralClassCi,
@@ -24,6 +27,7 @@ import {
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   type ApsisRow,
+  type DistSrcPartition,
   type SimbadSpectralIndex,
   type SimbadWdsXidIndex,
 } from './catalog-pure';
@@ -132,8 +136,6 @@ export interface AthygRow {
   rv: string;
 }
 
-const DIST_SRC_HIP = 'HIP';
-
 // A gap beyond 4-dp print rounding (≤ 5e-5 pc) means AT-HYG's HIP
 // distance is NOT this HIP2 parallax and the curated value wins —
 // see scripts/catalog/README.md § Per-row pipeline (HIP 57146).
@@ -160,9 +162,11 @@ export async function readStars(
     dropped: Record<string, number>;
     bjEligible: number;            // rows with a Gaia DR3 source_id
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
+    bjOverriddenByDistSrc: DistSrcPartition;   // bjOverridden split by AT-HYG dist_src
     hipDistFullPrecision: number;  // dist_src=HIP rows re-derived from HIP2 parallax
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
+    lmcOverriddenByDistSrc: DistSrcPartition;  // lmcOverridden split by AT-HYG dist_src
     gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
     gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
     gaiaBindingSiblingRejected: number; // rows whose binding SIMBAD attributes to a sibling WDS letter
@@ -196,9 +200,11 @@ export async function readStars(
   let total = 0;
   let bjEligible = 0;
   let bjOverridden = 0;
+  const bjOverriddenByDistSrc = emptyDistSrcPartition();
   let hipDistFullPrecision = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
+  const lmcOverriddenByDistSrc = emptyDistSrcPartition();
   let gaiaSourceIdBackfilled = 0;
   let gaiaBindingMagRejected = 0;
   let gaiaBindingSiblingRejected = 0;
@@ -286,6 +292,7 @@ export async function readStars(
         absmag = ovr.absmag;
         dist = ovr.dist;
         bjOverridden++;
+        tallyDistSrc(bjOverriddenByDistSrc, athygDistSrc);
       }
     }
 
@@ -310,11 +317,12 @@ export async function readStars(
     // mis-anchored value on the same rows.
     if (mag !== null && isInLmcCone(ra, dec)) {
       lmcCandidates++;
-      const ovr = applyLmcKinematicOverride(mag, athygPmRa, athygPmDec);
+      const ovr = applyLmcKinematicOverride(ra, dec, mag, athygPmRa, athygPmDec);
       if (ovr) {
         absmag = ovr.absmag;
         dist = ovr.dist;
         lmcOverridden++;
+        tallyDistSrc(lmcOverriddenByDistSrc, athygDistSrc);
       }
     }
 
@@ -480,9 +488,11 @@ export async function readStars(
       dropped,
       bjEligible,
       bjOverridden,
+      bjOverriddenByDistSrc,
       hipDistFullPrecision,
       lmcCandidates,
       lmcOverridden,
+      lmcOverriddenByDistSrc,
       gaiaSourceIdBackfilled,
       gaiaBindingMagRejected,
       gaiaBindingSiblingRejected,

@@ -1664,7 +1664,52 @@ export function inferBinaries(
 // non-Gaia parallax or canonical distance; overriding them with B-J
 // regresses them onto B-J's Galactic-density prior tail (~10–40 kpc
 // at mid-latitudes), which is a strict loss of information.
-export const BJ_ELIGIBLE_DIST_SRCS: ReadonlySet<string> = new Set(['G_R3', 'G_R2']);
+export const DIST_SRC_GAIA_DR3 = 'G_R3';
+export const DIST_SRC_GAIA_DR2 = 'G_R2';
+export const DIST_SRC_HIP = 'HIP';
+
+export const BJ_ELIGIBLE_DIST_SRCS: ReadonlySet<string> = new Set([
+  DIST_SRC_GAIA_DR3, DIST_SRC_GAIA_DR2,
+]);
+
+/** AT-HYG's `dist_src` vocabulary, plus an `UNRECOGNISED` catch-all for a
+ *  value the column has never carried. Every distance-override layer states
+ *  an outcome for each bucket — see scripts/catalog/README.md
+ *  § Override-layer authoring discipline. */
+export const DIST_SRC_BUCKETS = [
+  DIST_SRC_GAIA_DR3, DIST_SRC_GAIA_DR2, DIST_SRC_HIP,
+  'GJ', 'N', 'OTHER', 'UNRECOGNISED',
+] as const;
+
+export type DistSrcBucket = (typeof DIST_SRC_BUCKETS)[number];
+
+/** Per-`dist_src` row counts for one override layer. */
+export type DistSrcPartition = Record<DistSrcBucket, number>;
+
+export const DIST_SRC_UNRECOGNISED: DistSrcBucket = 'UNRECOGNISED';
+
+const ATHYG_DIST_SRCS: ReadonlySet<string> = new Set(
+  DIST_SRC_BUCKETS.filter((b) => b !== DIST_SRC_UNRECOGNISED),
+);
+
+export function distSrcBucket(distSrc: string | null): DistSrcBucket {
+  return distSrc !== null && ATHYG_DIST_SRCS.has(distSrc)
+    ? (distSrc as DistSrcBucket)
+    : DIST_SRC_UNRECOGNISED;
+}
+
+export function emptyDistSrcPartition(): DistSrcPartition {
+  return Object.fromEntries(
+    DIST_SRC_BUCKETS.map((b) => [b, 0]),
+  ) as DistSrcPartition;
+}
+
+export function tallyDistSrc(
+  partition: DistSrcPartition,
+  distSrc: string | null,
+): void {
+  partition[distSrcBucket(distSrc)]++;
+}
 
 /** Whether an AT-HYG row is eligible for the Bailer-Jones override:
  *  has a Gaia DR3 source_id AND its AT-HYG dist_src marks the
@@ -2175,11 +2220,7 @@ export function angularSeparationDeg(
 }
 
 /** Whether (raHours, decDegrees) falls within the LMC sky cone — the
- *  per-row eligibility predicate shared by the LMC kinematic override
- *  and the `lmcCandidates` build-counter. Hoisted out of
- *  `applyLmcKinematicOverride` so callers can evaluate the cone once
- *  per row and reuse the result for both the counter and the override
- *  call, avoiding ~313k redundant `angularSeparationDeg` evaluations. */
+ *  population predicate behind the `lmcCandidates` build-counter. */
 export function isInLmcCone(raHours: number, decDegrees: number): boolean {
   const sep = angularSeparationDeg(
     raHours, decDegrees,
@@ -2188,19 +2229,21 @@ export function isInLmcCone(raHours: number, decDegrees: number): boolean {
   return sep <= LMC_CONE_HALF_ANGLE_DEG;
 }
 
-/** PRECONDITION: caller has already verified `isInLmcCone(raHours,
- *  decDegrees)`. When (pmRa, pmDec) lies within tolerance of the LMC
- *  bulk-PM centre, returns the override snapped to Pietrzyński 2019's
- *  distance. Otherwise null — caller leaves the row's existing values
- *  in place (which after B-J is either the B-J posterior or AT-HYG's
- *  1/π). The cone check is the caller's responsibility so the
- *  `lmcCandidates` counter and this gate share a single evaluation. */
+/** When (raHours, decDegrees) is inside the LMC sky cone AND (pmRa, pmDec)
+ *  lies within tolerance of the LMC bulk-PM centre, returns the override
+ *  snapped to Pietrzyński 2019's distance. Otherwise null — the caller
+ *  leaves the row's existing values in place (which after B-J is either the
+ *  B-J posterior or AT-HYG's 1/π). Every gate is evaluated here, so no
+ *  caller can produce an override by forgetting one. */
 export function applyLmcKinematicOverride(
+  raHours: number,
+  decDegrees: number,
   mag: number,
   pmRa: number | null,
   pmDec: number | null,
 ): DistanceOverride | null {
   if (pmRa === null || pmDec === null) return null;
+  if (!isInLmcCone(raHours, decDegrees)) return null;
   if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return null;
   if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return null;
   return buildDistanceOverride(mag, LMC_DISTANCE_PC);

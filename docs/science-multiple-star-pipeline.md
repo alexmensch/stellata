@@ -253,7 +253,8 @@ astronomer-relevant summary:
 `scripts/binaries/README.md`: a hand-curated Tier A known-stars corpus
 (`scripts/catalog/known-stars.tsv`) the binary catalogue must
 reproduce; population-statistic Tier B snapshots
-(`build-counts-expected.json`); a stratified random 10k SIMBAD sample
+(`build-binaries-expected.json` +
+`build-binaries-rates-expected.json`); a stratified random 10k SIMBAD sample
 Tier C cross-checker (`validate-simbad-sample.ts` + the
 `distance-regression-check.ts` build-time subset that surfaces in
 `build-distance-outliers-expected.json` with hand-edited reasons).

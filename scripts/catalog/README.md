@@ -1307,6 +1307,53 @@ no xyz. Both override helpers (`applyBailerJonesOverride`,
 `applyLmcKinematicOverride`) live in `catalog-pure.ts` so the algebra
 is testable in isolation (`catalog-pure.test.ts`).
 
+**Every `apply*Override` evaluates its own full eligibility.** B-J
+self-gates on its map lookup; the LMC layer checks its own sky cone as
+well as the PM window. A caller cannot produce an override by forgetting
+a gate, so the next layer can be written to either sibling's shape
+without inheriting a footgun. Predicates a build-counter also needs
+(`isInLmcCone`) stay separately exported — the counter evaluates once per
+row, the override re-checks on the handful of rows that reach it.
+
+### Override-layer authoring discipline
+
+An override layer fires on a population keyed by one column and is
+*gated* by others. The failure mode is a partition nobody enumerated:
+a set of rows the transform reroutes onto a prior whose semantics were
+never validated for them. That is how the B-J override shipped without
+a `dist_src` filter and moved ~11 stars carrying a canonical HIP / GJ
+distance onto B-J's Galactic-density prior tail (~10–40 kpc at
+mid-latitudes).
+
+Any new or changed override layer states, **in the PR description**, an
+outcome for every `dist_src` bucket in `DIST_SRC_BUCKETS` — overridden /
+preserved / dropped — with the per-bucket count from a dry run. The
+build prints exactly that line per layer:
+
+```
+  Bailer-Jones override: 310157 / 310849 Gaia-inverse-distance stars (99.8%)
+    by dist_src: G_R3=310110, G_R2=47, HIP=0, GJ=0, N=0, OTHER=0, UNRECOGNISED=0
+```
+
+The matching assertion lands in the same PR: a `DistSrcPartition` field
+on `BuildCounts` (`bjOverriddenByDistSrc`, `lmcOverriddenByDistSrc`),
+refreshed into `build-catalog-expected.json`. Buckets the layer's gate is
+supposed to exclude are pinned at **0** — that is the assertion with
+teeth, because it reads as a stated invariant rather than whatever the
+last build produced. `UNRECOGNISED` is pinned at 0 on every layer: a
+`dist_src` value AT-HYG has never carried must not slip in under the
+literal `OTHER` bucket, where no layer has reasoned about it.
+
+`dist_src` is the partition that has bitten us. It is not necessarily
+the only one a given layer needs — a layer keyed on proper motion or
+cross-match coverage enumerates that dimension too. The rule is to name
+the dimensions the gate depends on and count them, not to stop at
+`dist_src`.
+
+`distance-regression-check.ts` (§ Post-build distance-regression check)
+is the after-the-fact detector for the same class of bug; this section is
+the write-time complement.
+
 ### Layer 1 — Bailer-Jones (DR3) override
 
 `scripts/catalog/build-catalog.ts` swaps AT-HYG's naive `1 / π`
@@ -1362,7 +1409,7 @@ Constants in `catalog-pure.ts`:
 
 `isInLmcCone(raHours, decDegrees)` evaluates the cone independently
 of the PM gate so `readStars` can count cone-membership candidates
-(`lmcCandidates` in `build-counts-expected.json`) separately from
+(`lmcCandidates` in `build-catalog-expected.json`) separately from
 PM-passing overrides (`lmcOverridden`). The override fires for ~54
 of ~60 candidates each build; the residual ~6 fail the PM tolerance
 (MW halo / runaway stars whose PMs sit far from the LMC bulk
@@ -1580,7 +1627,10 @@ Three tiers, all snapshot-pinned:
   emits. The diff format in `formatCountDiff` is the same in both Phase
   2 and Phase 3 — `scripts/binaries/stage7_counts.py` mirrors
   `scripts/catalog/build-counts.ts` so the per-strategy assertion shape
-  reads identically across the two builds.
+  reads identically across the two builds. A `BuildCounts` entry is
+  either a scalar or a `DistSrcPartition`; the latter diffs as one
+  `parent.bucket` row per bucket, so a single drifting population names
+  itself (§ Override-layer authoring discipline).
 - **Tier C — SIMBAD random sample.**
   `scripts/catalog/validate-simbad-sample.ts` cross-checks the built
   `public/catalog.bin` against a stratified random 10k SIMBAD sample
