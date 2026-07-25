@@ -51,6 +51,14 @@ star-companion-format.ts  Binary-role card lines, read from
                           label), and the hover-composed companionLines.
                           Hover and focus card call the same functions
                           so the visual-vs-orbit tiering never forks.
+                          Tier 1 and Tier 2 share one block shape (ρ on
+                          the heading, "P = … · e = …" below); Tier 2
+                          appends "(unknown orbital plane)" because its
+                          plane ORIENTATION is the only fallback. Tier
+                          comes from ../binaries/ keplerRelationParams,
+                          never a raw flag test, so a record the orbit
+                          walk skips reads as a visual companion here
+                          too.
 *.test.ts                 vitest pin per module.
 ```
 
