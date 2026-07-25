@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   evaluateOrbitSkyAU,
   evaluateOrbitInPlaneAU,
+  evaluateOrbitSeparationAU,
   evaluateOrbitDeltaPcTier1,
   evaluateOrbitDeltaPcTier2,
   evaluateBinaryOffsetTier1,
@@ -160,6 +161,39 @@ describe('evaluateOrbitInPlaneAU', () => {
       expect(r).toBeGreaterThanOrEqual(elements.a * (1 - elements.e) - 1e-6);
       expect(r).toBeLessThanOrEqual(elements.a * (1 + elements.e) + 1e-6);
     }
+  });
+});
+
+describe('evaluateOrbitSeparationAU', () => {
+  // The card formatters quote this as ρ for BOTH tiers, which is only
+  // honest if the orbit's orientation can't move it.
+  it('equals the Tier-1 3D magnitude at any inclination and node', () => {
+    const elements = elt({ e: 0.45, a: 3.2, omega: 0.7, i: 1.02, Omega: 2.4 });
+    for (let k = 0; k < 8; k++) {
+      const t = J2000_JD + (k / 8) * elements.P;
+      const sky = evaluateOrbitSkyAU(elements, t);
+      expect(evaluateOrbitSeparationAU(elements, t)).toBeCloseTo(
+        Math.hypot(sky.northAU, sky.eastAU, sky.radialAU), 10,
+      );
+    }
+  });
+
+  it('equals the Tier-2 in-plane magnitude for the same elements', () => {
+    const elements = elt({ e: 0.45, a: 3.2, omega: 0.7, i: 1.02, Omega: 2.4 });
+    for (let k = 0; k < 8; k++) {
+      const t = J2000_JD + (k / 8) * elements.P;
+      const p = evaluateOrbitInPlaneAU(elements, t);
+      expect(evaluateOrbitSeparationAU(elements, t)).toBeCloseTo(
+        Math.hypot(p.xAU, p.yAU), 10,
+      );
+    }
+  });
+
+  it('spans periapsis a(1−e) to apoapsis a(1+e)', () => {
+    const elements = elt({ e: 0.52, a: 10, omega: 0.3, i: 0.9 });
+    expect(evaluateOrbitSeparationAU(elements, elements.T)).toBeCloseTo(4.8, 10);
+    expect(evaluateOrbitSeparationAU(elements, elements.T + elements.P / 2))
+      .toBeCloseTo(15.2, 10);
   });
 });
 

@@ -53,15 +53,23 @@ export function relationToElements(r: BinaryRelation): OrbitalElements {
   };
 }
 
+/** Tier + elements of a Kepler-evaluable relation. */
+export interface KeplerRelationParams {
+  tier: 1 | 2;
+  elements: OrbitalElements;
+}
+
 /** Tier + elements for a Kepler-evaluable relation, or null for a Tier-3
  *  (no has_orbit) or malformed record whose ΔR(t) would go NaN. The
  *  has_orbit + finite gate: `has_orbit=1` should imply P, T, e, a, ω, q
  *  finite, so a violating record is skipped rather than poisoning every
- *  downstream consumer. Shared by the per-frame cache builder and the
- *  focus-gated orbit-path layer. */
+ *  downstream consumer. Every surface that reads a pair as an orbit goes
+ *  through here — the per-frame cache builder, the focus-gated orbit-path
+ *  layer, and the card formatters — so no surface can claim an orbit the
+ *  renderer refuses to animate. */
 export function keplerRelationParams(
   r: BinaryRelation,
-): { tier: 1 | 2; elements: OrbitalElements } | null {
+): KeplerRelationParams | null {
   if ((r.flags & FLAG_HAS_ORBIT) === 0) return null;
   if (
     !Number.isFinite(r.q) || !Number.isFinite(r.aAU)
