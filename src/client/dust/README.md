@@ -11,7 +11,7 @@ when the dust manifest lists particles). Machinery preserved here so
 the layer can be re-enabled with a one-knob flip once the visual
 treatment is refined. The voxel-extinction component of the dust map
 remains live in the star pipeline (see
-`../star-pipeline/README.md` § Dust extinction), independent of this
+`../star-pipeline/extinction/README.md`), independent of this
 particle-render layer.
 
 The declutter cycle reserves a floor slot (`dustParticles`, floor

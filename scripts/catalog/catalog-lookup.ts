@@ -25,7 +25,7 @@ import {
   type CatalogManifest,
 } from './catalog-pure';
 import { REPO_ROOT } from '../util/paths';
-import type { RecordRef } from './corpus-tsv';
+import type { RecordRef } from './parse/corpus-tsv';
 
 export const DEFAULT_CATALOG_MANIFEST = resolve(REPO_ROOT, 'public', CATALOG_MANIFEST_FILENAME);
 export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');

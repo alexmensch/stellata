@@ -65,7 +65,7 @@ export interface StarPipelineOptions {
   /** Per-instance pulsation-suppress flag. 1.0 zeros the GCVS-amplitude
    *  radial pulsation in the vertex shader. Built once at catalog-load
    *  from `varType` alone (binary-independent); not rewritten per-frame.
-   *  See src/client/binaries/README.md § Pulsation gate for eclipsing
+   *  See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing
    *  binaries. */
   suppressPulsation: Float32Array;
   vertexShader: string;

@@ -24,7 +24,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          format). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
-                         `../binaries/README.md` § Eclipse photometry) plus
+                         `../binaries/eclipse/README.md`) plus
                          the derived `pulsRho` / `pulsColorSwing`
                          (buildPulsationParams from varType — the per-type
                          radius/colour swing the star shader + disc mirror
@@ -37,7 +37,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          wire both key off it. Exposes
                          `multiplicityStatus: Uint8Array` (v9:
                          single/resolved/unresolved — see
-                         scripts/catalog/README.md § Multiplicity status).
+                         scripts/catalog/multiplicity/README.md § Multiplicity status).
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader
@@ -47,7 +47,7 @@ epoch-advance-pure.ts    space-motion propagation:
                          epochJyr, out)` writes `p(J2016) + v·(t − 2016)`
                          (float64 math, float32 write-back) into `out`
                          from an immutable J2016.0 baseline. `StarFrame`
-                         (`../star-pipeline/README.md` § The star frame)
+                         (`../star-pipeline/frame/README.md`)
                          snapshots that baseline and advances
                          catalog.positions before `localPositions` is
                          derived, so every downstream consumer inherits

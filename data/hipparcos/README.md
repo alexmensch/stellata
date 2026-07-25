@@ -52,7 +52,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
      window of the orbit.
 
   The catalog build mirrors both paths as direction-cascade tier 2
-  (`scripts/catalog/README.md` § Direction resolution), and
+  (`scripts/catalog/distance/README.md` § Direction resolution), and
   re-derives `dist_src=HIP` rows' distances as 1000/plx at full
   precision when HIP2 reproduces AT-HYG's printed value.
 

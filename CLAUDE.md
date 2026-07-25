@@ -107,7 +107,13 @@ here is the always-loaded hook pointing to which section to open.
 **Law.** Every folder under `src/`, `scripts/`, `data/`, `docs/` has a
 `README.md` — a folder without one is a bug; file it or write it
 before continuing past that folder. CI
-(`tests/folder-readme-coverage.test.ts`) enforces this invariant.
+(`tests/folder-readme-coverage.test.ts`) enforces this invariant, and
+`tests/readme-size.test.ts` caps each at **450 lines** — `readme-guard`
+charges the nearest README before any code read, so length is a tax on
+every future session. Over the cap, **split the folder** (a subfolder
+README replaces the parent for reads inside it); never delete
+invariants to fit. Check the seam first — a subfolder whose files all
+import back into the parent saves nothing.
 
 The codebase is a wiki by **progressive disclosure**: folder name
 signals the topic, README carries the load-bearing context —

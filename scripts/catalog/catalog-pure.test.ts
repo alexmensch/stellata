@@ -122,7 +122,7 @@ import {
   LMC_PM_DEC_CENTRE,
   LMC_PM_TOLERANCE,
 } from './catalog-pure';
-import { MAX_DIST_PC } from './stars-parse';
+import { MAX_DIST_PC } from './parse/stars-parse';
 
 describe('catalog-pure / spectClassIndex', () => {
   it('maps the seven main MK classes to indices 0..6', () => {

@@ -100,7 +100,7 @@ so the whole unit stays card-sized regardless of pin count.
   type descriptor as identity lines, radius (R⊕ + km), live camera
   distance, live apparent mag (shader mirror), orbital period, and
   semi-major axis. Period/orbit and the breadcrumb parent come from the
-  `OrbitDescriptor` (`../solar-system/orbit-descriptor.ts`): a planet
+  `OrbitDescriptor` (`../solar-system/ephemerides/orbit-descriptor.ts`): a planet
   reads its host star + solar-mass period (AU / years); a moon reads its
   parent planet + parent-GM period (km / days) and labels as a moon —
   no host-star reach or solar-mass assumption in the provider. A

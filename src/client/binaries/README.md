@@ -6,87 +6,64 @@ parses `public/binaries.bin` (written by
 that `BinaryOrbitField` walks per frame to apply orbital motion to
 star catalog records.
 
+## Subfolders
+
+- `eclipse/` — the per-frame geometric-occlusion dim on a binary's back
+  component. Depends one-directionally on the loader and relation cache
+  here; nothing in this folder imports it back.
+
 ## Files
 
-- `binaries-loader.ts` — parses the v1 `BIN1` binary format into a
-  `BinariesData` struct: per-pair Kepler elements + `sep_arcsec` /
-  `pa_deg` for the static-placement fallback, plus index maps
-  (`primaryIdxToRelations`, `secondaryIdxToRelations` — both
-  one-to-many; a star can be the measured secondary of several
-  primaries, e.g. α Cru C off both A and B) for runtime lookups.
-  Round-trip + fail-mode coverage in `binaries-loader.test.ts`.
-- `binary-orbit-pure.ts` — Kepler / Thiele-Innes math. Tier 1 path
-  (`evaluateOrbitSkyAU` + `projectSkyToICRS`) produces the full 3D
-  offset — sky tangent (north, east) plus the line-of-sight radial
-  component `Z = r·sin(ν+ω)·sin i` — so orbits have real depth from
-  any camera vantage. Tier 2 galactic-plane fallback
-  (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`).
-  `evaluateOrbitSeparationAU` is the scalar `|R(t)| = a(1 − e·cos E)`:
-  a rotation of the orbit plane cannot change a magnitude, so the
-  separation is as measured in Tier 2 as in Tier 1 and both card tiers
-  quote it as ρ — the fallback costs the offset's DIRECTION only. No state.
+- `binaries-loader.ts` — parses the v1 `BIN1` format (§ Format contract)
+  into a `BinariesData` struct: per-pair Kepler elements + `sep_arcsec` /
+  `pa_deg` for the static-placement fallback, plus the index maps
+  `primaryIdxToRelations` / `secondaryIdxToRelations`. Both are
+  **one-to-many** — a star can be the measured secondary of several
+  primaries (α Cru C off both A and B).
+- `binary-orbit-pure.ts` — Kepler / Thiele-Innes math, no state. Tier 1
+  (`evaluateOrbitSkyAU` + `projectSkyToICRS`) gives the full 3D offset
+  including the line-of-sight component, so orbits have real depth from
+  any vantage; Tier 2 is the galactic-plane fallback
+  (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`). See
+  § Tier mapping for why the fallback costs only the offset's
+  *direction*.
 - `orbit-relation-cache.ts` — `keplerRelationParams` (the has_orbit +
   finite-elements gate → tier + elements), the per-attach cache builder
-  (`buildOrbitRelationCaches`: adds baseline `R(sep_pa_epoch_jd)`), and
-  the per-frame `evaluateOrbitRelationDeltaPc` dispatch. Both runtime
-  fields consume it, and so do the hover / focus card formatters
+  (`buildOrbitRelationCaches`, which adds the baseline
+  `R(sep_pa_epoch_jd)`), and the per-frame
+  `evaluateOrbitRelationDeltaPc` dispatch. Both runtime fields consume
+  it, and so do the hover / focus card formatters
   (`../format/star-companion-format.ts`) — the gate is what stops a card
   advertising Kepler elements for a record the walk refuses to animate.
-- `binary-orbit-field.ts` — per-frame position field. `update(t,
-  camera, …)` walks `BinariesData.relations` in topological order,
-  applies the LOD cascade described below, and rewrites the active
-  slots of `localPositions` plus `compositeSuppress`.
-  `recenter(newOrigin)` updates the cached world offset.
-  **Static-frame skip:** when the previous `update()` evaluated zero
-  Kepler relations (everything gated out or sub-pixel-suppressed —
-  the shipping idle state at any wide view), every buffer write is a
-  pure function of (camera, slider, viewport, fov, focal), so an
-  `update()` with identical inputs skips the walk AND both
-  `needsUpdate` flags — without it three.js re-uploads the full
-  ~5 MB backing arrays every idle frame. Focal-chain relations are
-  always Kepler-active (they bypass the gates), so a focused orbit
-  never skips. `recenter()` and `markBaselinesDirty()` (called by the
-  shell whenever it rewrites `localPositions` wholesale — epoch
-  re-advance, origin recentre) force the next walk so suppressed
-  secondaries get their `baseDiffPc` placement re-applied on top of
-  the fresh baselines.
+- `binary-orbit-field.ts` — per-frame position field. `update(t, camera,
+  …)` walks `BinariesData.relations` in topological order, applies the
+  LOD cascade, and rewrites the active slots of `localPositions` plus
+  `compositeSuppress`; `recenter(newOrigin)` updates the cached world
+  offset. The static-frame skip and the `markBaselinesDirty()` contract
+  are in § Walk-active LOD.
 - `focal-chain.ts` — `focalChainRelationSet(binaries, focalIdx)`: the
   relation-index set on a focal star's slot-chain (focal as primary or
   secondary, plus `parentRelation` ancestors). Shared by
   `BinaryOrbitField`'s LOD-exemption walk and the orbit-path layer.
-- `binary-orbit-path-pure.ts` — `keplerChainRelationIdxs` (the focal
-  chain filtered to `has_orbit` pairs) + `buildBinaryOrbitRingPoints`
-  (one pair sampled into the two members' barycentric ellipses). See
-  § Binary orbit paths.
+- `binary-orbit-path-pure.ts` — `keplerChainRelationIdxs` +
+  `buildBinaryOrbitRingPoints`. See § Binary orbit paths.
 - `binary-orbit-path-layer.ts` — `BinaryOrbitPathLayer`, the orbit-path
   render layer. See § Binary orbit paths.
-- `binary-relation-fixture.ts` — `makeRelation(overrides)` +
-  `makeBinaries(relations)`, the shared test builders.
 - `binary-system-membership.ts` — the multi-star implementation of the
   kind-generic system-membership contract
   (`../system-membership/README.md`): the star-companion graph walk +
   the orbit walk's live composite-suppress verdict, wrapped as
   `membersOf` / `collapsedClusterOf` for the hover roster card and the
   Picker's collapsed-lead resolution.
-- `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`, `SUB_PIXEL_THRESHOLD_PX`,
-  `ECLIPSE_DIM_TAU_S` named constants the fields read and tests pin.
-- `eclipse-photometry-pure.ts` — pure math for camera-anywhere
-  geometric occlusion: `eclipseDimFromOffsets` (angular separation via
-  atan2 of unit view vectors, closed-form circle-circle lens area,
-  geometric dim factor on the back component's flux),
-  `orbitPlaneNormalICRS` (the view-direction prefilter's normal,
-  sampled from the same eval path the renderer uses), and the shared
-  anti-strobe helpers `dimBlendFactor` + `blendDimBuffer` (+
-  `DIM_SETTLED`). Second consumer: the planet field's true-eclipse
-  dim (`solar-system/README.md` § Planet rendering) reuses all of
-  these for planet-behind-host-disc occlusion.
-  `eclipse-photometry-pure.test.ts` pins the degenerate cases and the
-  float32-line-of-sight immunity.
-- `eclipse-photometry.ts` — per-frame field over the same relation
-  caches. Evaluates each pair's offset in float64 and writes
-  per-instance `iEclipseDim` for the back component when discs
-  overlap. Runs AFTER `BinaryOrbitField` in the per-frame loop. See
-  § Eclipse photometry.
+- `binary-tuning.ts` — `VISIBILITY_HORIZON_PC`,
+  `SUB_PIXEL_THRESHOLD_PX`, `ECLIPSE_DIM_TAU_S` named constants the
+  fields read and tests pin.
+- `binary-relation-fixture.ts` — `makeRelation` / `makeBinaries`, the
+  shared test builders.
+
+`ECLIPSE_DIM_TAU_S` lives in `binary-tuning.ts` rather than `eclipse/`
+because the tuning module is the one place every runtime constant this
+layer reads is pinned by tests.
 
 ## Format contract
 
@@ -159,7 +136,7 @@ the per-pair flags):
 - **Tier 3** (`!has_orbit`) — no per-frame Kepler eval. The companion's
   static placement is already baked into `catalog.bin` by the
   build-time companion-promotion pass (see
-  `scripts/catalog/companion-promotion.ts`), so the runtime layer can
+  `scripts/catalog/companions/companion-promotion.ts`), so the runtime layer can
   skip these records entirely.
 
 For Tier 1 and Tier 2 the offset is split q : (1−q) between primary
@@ -196,7 +173,7 @@ owned by this Kepler layer with no double-counting. The velocity coherence
 therefore matters only for **Tier-3 static** companions (skipped here): they
 ride their baked velocity directly, so a promoted companion with no own PM
 inherits its primary's systemic velocity at build time
-(`scripts/catalog/companion-promotion.ts`) or it would freeze at `v=0` and
+(`scripts/catalog/companions/companion-promotion.ts`) or it would freeze at `v=0` and
 shear from a drifting primary. Full systemic coherence for *every*
 binaries.bin pair — keyed on this file's authoritative resolved pairing,
 which the catalog build can't replicate — is `stellata-zau1`; until it
@@ -315,6 +292,19 @@ Beyond that, the screen-separation gate fires before Kepler runs:
    Kepler solves are cheap. Non-chain relations gate freely — they can't
    touch the focal's slot.
 
+**Static-frame skip.** When the previous `update()` evaluated zero
+Kepler relations (everything gated out or sub-pixel-suppressed — the
+shipping idle state at any wide view), every buffer write is a pure
+function of (camera, slider, viewport, fov, focal), so an `update()`
+with identical inputs skips the walk AND both `needsUpdate` flags.
+Without it three.js re-uploads the full ~5 MB backing arrays every idle
+frame. Focal-chain relations are always Kepler-active (they bypass the
+gates above), so a focused orbit never skips. `recenter()` and
+`markBaselinesDirty()` — the latter called by the shell whenever it
+rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
+— force the next walk, so suppressed secondaries get their `baseDiffPc`
+placement re-applied on top of the fresh baselines.
+
 ## Hierarchical walk
 
 Inner pairs (Algol Aa1↔Aa2 inside Aa↔Ab) walk after their parent in
@@ -403,104 +393,3 @@ system draws, never every catalog pair.
   the drawn orbit already marks the focal star, so the ring would read as a
   spurious inner orbital. Zoom out until the paths fall below the gate and
   the focus ring returns (`../overlays/README.md`).
-
-## Eclipse photometry
-
-`EclipsePhotometryField` runs after `BinaryOrbitField` each frame
-and writes a per-instance dim multiplier on the back component's
-flux whenever discs overlap from the camera's viewpoint. The math
-is camera-anywhere by construction — EA/EB/EW labels are Earth's-
-viewpoint facts; any system can eclipse from any viewpoint when its
-geometry aligns. Each pair's offset is evaluated per frame in
-**float64** as `baseDiffPc + ΔR(t) = R(t)` (the elements-alone epoch
-baseline plus the orbital delta — exactly the offset the position walk
-renders: the barycentric split and hierarchical anchor both preserve
-`sCoeff − pCoeff = 1`). The pure helper decomposes that
-offset against the camera→primary line of sight, computes each
-disc's angular radius, and runs the closed-form circle-circle lens
-area; the dim is `1 − occluded_area / back_disc_area`.
-
-**Never derive pair geometry from `localPositions`** — the float32
-position quantum is `d_origin · 2⁻²³` (≈0.6 AU for a star 25 pc from
-the local origin), larger than most orbital separations, so a
-subtraction of two buffer positions reads pure grid noise where the
-eclipse test needs nano-radian resolution. The buffer is only read
-for the line of sight, whose float32 error cancels between the two
-unit view vectors.
-
-The Kepler eval here is deliberately NOT gated on the orbit walk's
-screen-pixel LOD: the photometric dip is exactly the signal that
-remains when the pair is sub-pixel. Instead each relation carries a
-**view-direction prefilter** — the rendered offset always lies in
-the orbit plane, so lines of sight steeper against that plane than
-`(r_pri + r_sec) / min_separation` can never bring the discs into
-overlap and skip the Kepler solve (the vast majority of (camera,
-pair) combinations each frame). The minimum separation is closed-form
-periapsis `a(1−e)` — the rendered offset is `R(t)` exactly, no
-sampling.
-
-Surface-brightness ratios stay implicit: each star is its own
-instance with its own absmag, and dimming the back's flux by the
-geometric area fraction gives the right composite when the two
-sum additively in the glow pass. Limb darkening is not modelled
-(uniform disc surface brightness).
-
-### Anti-strobe smoothing
-
-Under heavy time-warp an eclipse can last less than a frame; raw
-per-frame geometry would strobe the composite at frame rate. Written
-dims blend toward each frame's geometric target with time constant
-`ECLIPSE_DIM_TAU_S` (real seconds — a render filter, not sim time),
-so sub-frame events read as a soft shimmer while real-time dips
-(hours long) pass through visually untouched. Slots decay back to
-exactly 1.0 after occlusion ends and leave the field's active set;
-frames that write nothing skip the attribute re-upload entirely.
-
-### Shader-side wiring
-
-`iEclipseDim` is folded into appMag in the **glow pass only**
-(`uRenderMode == 0`) — applying the dim in the disc pass would also
-dim the back disc's non-occluded fragments. The integration shell
-initialises the buffer to 1.0 at allocation and on every re-attach.
-
-A resolved pair's overlapping disc cores order **geometrically in the
-local depth pass**: both members mirror into the bracketed pass
-(chain membership — `star-pipeline/README.md` § Local-pass mirror
-draw), whose standard-depth bracket resolves the pair's sub-AU
-line-of-sight separation natively. The main pass never has to order
-them — the retired `iDepthBias` mechanism did that with a per-frame
-float64 front/back nudge before the pass existed.
-
-`eclipse-photometry-pure` floors PARTIAL dims at `DIM_FLOOR = 0.001`
-(a numeric-domain guard so `-2.5·log10(dim)` stays finite as overlap
-approaches totality) but returns **exactly 0 for a full geometric
-eclipse**, and both glow shaders collapse the quad at 0 (the star
-pipeline's off-screen-sentinel pattern). A floored +7.5 mag residual
-is invisible for typical binary flux levels but NOT for a bright
-close-range back body — Mercury (mag ≈ −1) behind Sol's disc stayed a
-visible glow point — and the depth buffer can't hide it either (the
-pair's line-of-sight separation sits inside one log-depth bucket).
-`blendDimBuffer` snaps a decaying totality slot to exact 0 once it
-drops below the floor, since the exponential smoothing alone never
-reaches the shader's `<= 0` gate.
-
-### Pulsation gate for eclipsing binaries
-
-`iSuppressPulsation` is a per-instance flag built once at
-catalog-load time from `catalog.varType` alone: 1.0 on every
-record whose GCVS variability type is `VAR_TYPE_ECLIPSING`,
-independent of the binaries data. Eclipsers are extrinsically
-variable — the brightness dip is a line-of-sight occlusion, not
-the star's own output — so the GCVS-amplitude radial pulsation is
-always a fabrication and is gated off unconditionally.
-
-For an EA/EB/EW primary WITH orbital elements, the honest signal
-comes from `EclipsePhotometryField`'s geometric dip. For one with
-NO elements (no NSS or ORB6 entry) there is no phase to animate, so
-the star simply renders static — we don't invent a pulsation cycle
-we can't derive.
-
-`star-physics.ts`'s `renderedSizePx` reads the same suppress mask
-(via the optional `suppressPulsation` arg) so the SVG focus ring +
-distance-vector tip track the rendered (un-modulated)
-disc on suppressed primaries.

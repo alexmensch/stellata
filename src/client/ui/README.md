@@ -27,7 +27,7 @@ registry only describes what to display.
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
 | `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
 | `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
-| `T` | Toggle the time scrubber (`../solar-system/time-scrubber-widget.ts`) |
+| `T` | Toggle the time scrubber (`../solar-system/time/time-scrubber-widget.ts`) |
 | `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |

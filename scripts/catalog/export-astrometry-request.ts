@@ -6,8 +6,8 @@ import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 
 import { resolveGaiaSourceId, parseGaiaSourceIdStr } from './catalog-pure';
-import { readGaiaHipXmatch } from './gaia-xmatch';
-import { parseIntOrNull } from './stars-parse';
+import { readGaiaHipXmatch } from './parse/gaia-xmatch';
+import { parseIntOrNull } from './parse/stars-parse';
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
 import { REPO_ROOT as ROOT } from '../util/paths';
 

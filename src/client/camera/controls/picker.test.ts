@@ -9,7 +9,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
-import type { PlanetBodyField } from '../../solar-system/planet-body-field';
+import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on

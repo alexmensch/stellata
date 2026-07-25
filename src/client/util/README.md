@@ -17,8 +17,8 @@ build scripts, tests, and shader uniforms.
   `{u, east, north}` with east = ∂u/∂α / cos δ — never divided by cos δ,
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone. Shared by the catalog build's PM propagation +
-  space-motion velocity (`scripts/catalog/direction-cascade.ts`), the
-  companion tangent-projection (`scripts/catalog/companion-promotion.ts`),
+  space-motion velocity (`scripts/catalog/distance/direction-cascade.ts`), the
+  companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection
   (`../binaries/binary-orbit-pure.ts`). `scripts/local-group/`'s
   `skyBasis` deliberately does NOT ride this: it seeds a rotation
@@ -28,7 +28,7 @@ build scripts, tests, and shader uniforms.
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
 - `orbit-line.ts` — shared bits of the line overlays
-  (`solar-system/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
+  (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLineSegments` +
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and

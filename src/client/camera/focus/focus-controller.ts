@@ -26,7 +26,7 @@ import {
   getPlanetSystem,
   hasPlanets,
 } from '../../solar-system/planet-system';
-import type { PlanetBodyField } from '../../solar-system/planet-body-field';
+import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { chartPlateauDistancePc } from '../../chart-mode/chart-disc-pure';
 import * as starPhysics from '../controls/star-physics';

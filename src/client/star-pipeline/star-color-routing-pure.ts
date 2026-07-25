@@ -1,6 +1,6 @@
 // Shader-side Apsis-Teff bridge (`bestApsisTeff`) for the two-tier
 // star-colour LUT input. See src/client/star-pipeline/README.md
-// § Dust extinction.
+// extinction/README.md.
 
 /** Sentinel float written to the per-instance Apsis Teff attribute when
  *  no Apsis Teff is available. 0.0 is unambiguous — Apsis Teff is always

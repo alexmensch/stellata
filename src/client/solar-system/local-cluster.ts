@@ -10,9 +10,9 @@ import {
   moonRingExtentsPc,
   ringExtentRadiusPc,
 } from './local-cluster-pure';
-import type { OrbitRingsLayer } from './orbit-rings-layer';
-import type { PlanetBodyField } from './planet-body-field';
-import type { PlanetMeshLayer } from './planet-mesh-layer';
+import type { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
+import type { PlanetBodyField } from './planets/planet-body-field';
+import type { PlanetMeshLayer } from './planets/planet-mesh-layer';
 
 /** The seam to the star cluster: the active host's star mirrors there
  *  (full membership — the host's billboard renders in the pass with its

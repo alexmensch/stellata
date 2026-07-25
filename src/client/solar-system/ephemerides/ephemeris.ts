@@ -1,0 +1,262 @@
+// Heliocentric ecliptic positions for the eight planets at any wall-clock
+// `t` (Unix-seconds). See src/client/solar-system/README.md § Ephemerides.
+
+import { AU_PC, J2000_JD } from '../../util/astronomy-constants';
+import { orbitalStateToCartesian } from '../../util/kepler-solver';
+import { tToJDE } from '../time/time';
+
+const DEG = Math.PI / 180;
+
+// JPL Table 2a — J2000 mean elements + Julian-century rates. Angles in
+// degrees / deg-per-century; semi-major axis in AU. EM Bary stands in
+// for Earth at this approximation level (sub-arcsec offset between Earth
+// and EM-Bary is irrelevant at pixel scale).
+interface ElementSet {
+  a: number;  aDot: number;  // semi-major axis (AU)
+  e: number;  eDot: number;  // eccentricity
+  I: number;  IDot: number;  // inclination (deg)
+  L: number;  LDot: number;  // mean longitude (deg)
+  // longitude of perihelion ϖ = ω + Ω (deg)
+  longperi: number;  longperiDot: number;
+  // longitude of ascending node Ω (deg)
+  longnode: number;  longnodeDot: number;
+  // Cubic Jupiter–Neptune perturbation terms for the mean anomaly. Zero
+  // for inner planets — the (b·T² + c·cos(fT) + s·sin(fT)) correction is
+  // a numerical patch for the linear-elements model's blind spots near
+  // mean-motion resonances (Jupiter–Saturn, Uranus–Neptune).
+  b: number; c: number; s: number; f: number;
+}
+
+// Order matches PlanetName below — getPlanetPositions returns a same-
+// order tuple so the renderer (planet-body-field.ts) can iterate without a
+// per-frame name lookup.
+const ELEMENTS: ElementSet[] = [
+  // Mercury
+  {
+    a: 0.38709843,    aDot:  0.00000000,
+    e: 0.20563661,    eDot:  0.00002123,
+    I: 7.00559432,    IDot: -0.00590158,
+    L: 252.25166724,  LDot:  149472.67486623,
+    longperi: 77.45771895,    longperiDot: 0.15940013,
+    longnode: 48.33961819,    longnodeDot: -0.12214182,
+    b: 0, c: 0, s: 0, f: 0,
+  },
+  // Venus
+  {
+    a: 0.72332102,    aDot: -0.00000026,
+    e: 0.00676399,    eDot: -0.00005107,
+    I: 3.39777545,    IDot:  0.00043494,
+    L: 181.97970850,  LDot:  58517.81560260,
+    longperi: 131.76755713,   longperiDot: 0.05679648,
+    longnode: 76.67261496,    longnodeDot: -0.27274174,
+    b: 0, c: 0, s: 0, f: 0,
+  },
+  // Earth (EM Bary)
+  {
+    a: 1.00000018,    aDot: -0.00000003,
+    e: 0.01673163,    eDot: -0.00003661,
+    I: -0.00054346,   IDot: -0.01337178,
+    L: 100.46691572,  LDot:  35999.37306329,
+    longperi: 102.93005885,   longperiDot: 0.31795260,
+    longnode: -5.11260389,    longnodeDot: -0.24123856,
+    b: 0, c: 0, s: 0, f: 0,
+  },
+  // Mars
+  {
+    a: 1.52371243,    aDot:  0.00000097,
+    e: 0.09336511,    eDot:  0.00009149,
+    I: 1.85181869,    IDot: -0.00724757,
+    L: -4.56813164,   LDot:  19140.29934243,
+    longperi: -23.91744784,   longperiDot: 0.45223625,
+    longnode: 49.71320984,    longnodeDot: -0.26852431,
+    b: 0, c: 0, s: 0, f: 0,
+  },
+  // Jupiter
+  {
+    a: 5.20248019,    aDot: -0.00002864,
+    e: 0.04853590,    eDot:  0.00018026,
+    I: 1.29861416,    IDot: -0.00322699,
+    L: 34.33479152,   LDot:  3034.90371757,
+    longperi: 14.27495244,    longperiDot: 0.18199196,
+    longnode: 100.29282654,   longnodeDot: 0.13024619,
+    b: -0.00012452, c: 0.06064060, s: -0.35635438, f: 38.35125000,
+  },
+  // Saturn
+  {
+    a: 9.54149883,    aDot: -0.00003065,
+    e: 0.05550825,    eDot: -0.00032044,
+    I: 2.49424102,    IDot:  0.00451969,
+    L: 50.07571329,   LDot:  1222.11494724,
+    longperi: 92.86136063,    longperiDot: 0.54179478,
+    longnode: 113.63998702,   longnodeDot: -0.25015002,
+    b: 0.00025899, c: -0.13434469, s: 0.87320147, f: 38.35125000,
+  },
+  // Uranus
+  {
+    a: 19.18797948,   aDot: -0.00020455,
+    e: 0.04685740,    eDot: -0.00001550,
+    I: 0.77298127,    IDot: -0.00180155,
+    L: 314.20276625,  LDot:  428.49512595,
+    longperi: 172.43404441,   longperiDot: 0.09266985,
+    longnode: 73.96250215,    longnodeDot: 0.05739699,
+    b: 0.00058331, c: -0.97731848, s: 0.17689245, f: 7.67025000,
+  },
+  // Neptune
+  {
+    a: 30.06952752,   aDot:  0.00006447,
+    e: 0.00895439,    eDot:  0.00000818,
+    I: 1.77005520,    IDot:  0.00022400,
+    L: 304.22289287,  LDot:  218.46515314,
+    longperi: 46.68158724,    longperiDot: 0.01009938,
+    longnode: 131.78635853,   longnodeDot: -0.00606302,
+    b: -0.00041348, c: 0.68346318, s: -0.10162547, f: 7.67025000,
+  },
+  // Pluto. Standish & Williams 2010 J2000 mean elements + linear rates.
+  // JPL removed Pluto from its approx_pos.html table when the IAU
+  // reclassified it; values below are the canonical pre-removal row,
+  // also reproduced in NASA's planetary fact sheet derivation. We
+  // accept linear-element validity (~few centuries of arcsec accuracy)
+  // and skip the Standish 1992 cubic 3:2-resonance correction — at
+  // billboarded-disc render scale the residual is invisible.
+  {
+    a: 39.48211675,   aDot: -0.00031596,
+    e: 0.24882730,    eDot:  0.00005170,
+    I: 17.14001206,   IDot:  0.00004818,
+    L: 238.92903833,  LDot:  145.20780515,
+    longperi: 224.06891629,   longperiDot: -0.04062942,
+    longnode: 110.30393684,   longnodeDot: -0.01183482,
+    b: 0, c: 0, s: 0, f: 0,
+  },
+];
+
+export type PlanetName =
+  | 'mercury' | 'venus' | 'earth' | 'mars'
+  | 'jupiter' | 'saturn' | 'uranus' | 'neptune'
+  | 'pluto';
+
+export const PLANET_ORDER: readonly PlanetName[] = [
+  'mercury', 'venus', 'earth', 'mars',
+  'jupiter', 'saturn', 'uranus', 'neptune',
+  'pluto',
+];
+
+export interface Vec3 { x: number; y: number; z: number; }
+
+export type PlanetPositions = Record<PlanetName, Vec3>;
+
+// Cache: keyed on exact `t`, holds the same PlanetPositions object
+// reference across same-`t` calls. Single-slot — planet positions are
+// only ever queried for one `t` per frame, so this collapses the
+// several per-frame consumers (body field, focal ride, overlays) into
+// one Kepler solve without quantising motion across frames. The former
+// 60-second bucket was reasoned against billboarded-disc pixel scale;
+// mesh-LOD close viewing (resolved discs at planet zoom) made the
+// bucket's position snap visible, so recompute follows `t` exactly.
+let cachedT: number | null = null;
+let cachedPositions: PlanetPositions | null = null;
+
+/** Heliocentric ecliptic position (AU) of a single planet at centuries-
+ *  past-J2000 `T`. Pure helper exposed for tests; the public API is
+ *  `getPlanetPositions(t)`. */
+export function planetEclipticAU(elem: ElementSet, T: number, out: Vec3): void {
+  const a = elem.a + elem.aDot * T;
+  const e = elem.e + elem.eDot * T;
+  const I = (elem.I + elem.IDot * T) * DEG;
+  const L = (elem.L + elem.LDot * T) * DEG;
+  const longperi = (elem.longperi + elem.longperiDot * T) * DEG;
+  const longnode = (elem.longnode + elem.longnodeDot * T) * DEG;
+
+  // Argument of perihelion ω = ϖ − Ω.
+  const omega = longperi - longnode;
+
+  // Mean anomaly with the cubic Jupiter–Neptune correction. For inner
+  // planets the b/c/s/f terms are zero so this reduces to M = L − ϖ.
+  const fT = elem.f * T * DEG;
+  const M = L - longperi
+    + elem.b * T * T * DEG
+    + elem.c * DEG * Math.cos(fT)
+    + elem.s * DEG * Math.sin(fT);
+
+  orbitalStateToCartesian(a, e, I, longnode, omega, M, out);
+}
+
+/** Heliocentric ecliptic positions (parsecs) of the eight planets at
+ *  Unix-seconds `t`. Returned object is cached per exact `t` — repeat
+ *  calls within a frame get the same reference; any `t` advance
+ *  recomputes. */
+export function getPlanetPositions(t: number): PlanetPositions {
+  if (cachedT === t && cachedPositions !== null) {
+    return cachedPositions;
+  }
+  const T = (tToJDE(t) - J2000_JD) / 36525;
+  const out = {} as PlanetPositions;
+  const tmp: Vec3 = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i < ELEMENTS.length; i++) {
+    planetEclipticAU(ELEMENTS[i], T, tmp);
+    out[PLANET_ORDER[i]] = {
+      x: tmp.x * AU_PC,
+      y: tmp.y * AU_PC,
+      z: tmp.z * AU_PC,
+    };
+  }
+  cachedT = t;
+  cachedPositions = out;
+  return out;
+}
+
+/** Per-planet orbital-frame orientation, expressed as the three Euler
+ *  angles that rotate the canonical in-plane ellipse (perihelion at +x,
+ *  z=0) into the ecliptic frame. The composition is Rz(Ω)·Rx(I)·Rz(ω)
+ *  — same as `planetEclipticAU` applies to the in-plane (x', y'). */
+export interface OrbitOrientationRad {
+  /** Inclination from the ecliptic (radians). */
+  inclination: number;
+  /** Longitude of ascending node Ω (radians). */
+  longAscNode: number;
+  /** Argument of perihelion ω = ϖ − Ω (radians). */
+  argPerihelion: number;
+}
+
+/** One planet's orbit-ring geometry: secular-rate-applied a/e plus the
+ *  Rz(Ω)·Rx(I)·Rz(ω) orientation. */
+export interface PlanetOrbitShape {
+  readonly aAu: number;
+  readonly e: number;
+  readonly orientation: OrbitOrientationRad;
+}
+
+/** Per-planet orbit shapes at Unix-seconds `t`, in PLANET_ORDER — the
+ *  SAME evaluated elements `planetEclipticAU` positions the body with
+ *  (a/e with aDot/eDot applied, live-`t` node/inclination/perihelion),
+ *  so a ring built from a shape passes through its body by construction
+ *  at every `t`. The former attach-time snapshot desynced under time
+ *  scrubbing, and its ring a/e came from a second, rounded table. */
+export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
+  const T = (tToJDE(t) - J2000_JD) / 36525;
+  const out: PlanetOrbitShape[] = [];
+  for (let i = 0; i < ELEMENTS.length; i++) {
+    const e = ELEMENTS[i];
+    const longnode = (e.longnode + e.longnodeDot * T) * DEG;
+    const longperi = (e.longperi + e.longperiDot * T) * DEG;
+    out.push({
+      aAu: e.a + e.aDot * T,
+      e: e.e + e.eDot * T,
+      orientation: {
+        inclination: (e.I + e.IDot * T) * DEG,
+        longAscNode: longnode,
+        argPerihelion: longperi - longnode,
+      },
+    });
+  }
+  return out;
+}
+
+/** Reset the per-`t` cache. Test-only — production callers never need
+ *  this; the cache invalidates naturally as `t` advances. */
+export function _resetCacheForTests(): void {
+  cachedT = null;
+  cachedPositions = null;
+}
+
+export type { ElementSet };
+export { ELEMENTS, J2000_JD };

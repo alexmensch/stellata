@@ -108,7 +108,7 @@ shader decodes from manifest constants, so no client change beyond the
 regenerated data. Encoding mechanics: `scripts/dust/README.md`
 § Encoding.
 
-The de-extinction invariant (`scripts/catalog/README.md` § Build-time
+The de-extinction invariant (`scripts/catalog/distance/README.md` § Build-time
 de-extinction) means the catalog rebuild ships with the re-encoded
 grid: intrinsic absmags of stars behind dense dust brightened by up to
 ~1.8 mag. Because extinction only dims (A_V ≥ 0), the `star.vert.glsl`

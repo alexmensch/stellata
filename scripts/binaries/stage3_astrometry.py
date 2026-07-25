@@ -56,7 +56,7 @@ ASTROMETRY_VIA_VALUES: tuple[str, ...] = (
 GAIA_RUWE_UNRELIABLE_THRESHOLD = 1.4
 # ipd_frac_multi_peak is a PERCENTAGE (0-100) in Gaia DR3; the gate
 # fires above 2%, matching ANCHOR_IPD_MAX_PERCENT in
-# scripts/catalog/system-coherence.ts.
+# scripts/catalog/multiplicity/system-coherence.ts.
 GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0
 
 # HIP2 long-baseline fallback thresholds. The separation gate is

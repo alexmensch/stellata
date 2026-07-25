@@ -1,0 +1,708 @@
+// Close-range spheroid mesh LOD for planet bodies. See README.md
+// § Planet mesh LOD for the crossfade + lazy-texture contract.
+
+import * as THREE from 'three';
+import type { MemberSphere } from '../../local-depth/slice-pure';
+import { KM_PC } from '../../util/astronomy-constants';
+import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
+import { litIntensity } from '../perceptual-magnitude';
+import { phaseAngleFor, phaseRatioToLambert } from '../phase-function';
+import type { PlanetBodyField } from './planet-body-field';
+import {
+  systemFamily,
+  type Planet,
+  type PlanetAtmosphere,
+  type PlanetRings,
+} from '../planet-system';
+import { meshFadeFromPhysPx, TEXTURE_PREFETCH_PX } from './mesh-crossfade';
+import {
+  poleRaDecDegAt,
+  type RotationElements,
+  spinDegAt,
+} from './rotation-elements-pure';
+import meshVert from './planet-mesh.vert.glsl?raw';
+import meshFrag from './planet-mesh.frag.glsl?raw';
+import ringsVert from './planet-rings.vert.glsl?raw';
+import ringsFrag from './planet-rings.frag.glsl?raw';
+import atmoVert from '../atmosphere/planet-atmosphere.vert.glsl?raw';
+import atmoFrag from '../atmosphere/planet-atmosphere.frag.glsl?raw';
+import atmoScatterChunk from '../atmosphere/atmosphere-scatter.glsl?raw';
+import atmoUniformsChunk from '../atmosphere/atmosphere-uniforms.glsl?raw';
+import {
+  ATMO_N_LIGHT,
+  ATMO_N_VIEW,
+  MIE_G_DEFAULT,
+  SUN_COLOUR,
+} from '../atmosphere/atmosphere-scattering-pure';
+
+// Splice the shared atmosphere GLSL — the uniform contract and the
+// single-scattering integrator — into both the mesh disc and the shell
+// fragment sources; the sample-count #defines ride each material so the GLSL
+// loop bounds track atmosphere-scattering-pure.ts.
+const ATMO_CHUNKS: Record<string, string> = {
+  '#include <stellata_atmosphere_uniforms>': atmoUniformsChunk,
+  '#include <stellata_atmosphere_scatter>': atmoScatterChunk,
+};
+const withAtmoChunks = (frag: string): string =>
+  Object.entries(ATMO_CHUNKS).reduce((src, [inc, chunk]) => src.replace(inc, chunk), frag);
+const MESH_FRAG = withAtmoChunks(meshFrag);
+const ATMO_FRAG = withAtmoChunks(atmoFrag);
+const ATMO_DEFINES = { ATMO_N_VIEW, ATMO_N_LIGHT } as const;
+
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
+
+/** Live-tunable global atmosphere multipliers (debug 'Atmosphere' panel).
+ *  Applied on top of every body's calibrated base params. */
+export interface AtmosphereTuning {
+  /** Scales total optical depth (scatter + absorb) — the 'dial Titan down'. */
+  densityMul: number;
+  /** 0 = pure Rayleigh, 0.5 = per-body balance, 1 = pure Mie. */
+  rayleighMieBalance: number;
+  /** Multiplies both scale heights. */
+  scaleHeightMul: number;
+  /** Illuminant strength. */
+  sunIntensity: number;
+}
+
+const DEFAULT_ATMO_TUNING: AtmosphereTuning = {
+  densityMul: 1,
+  rayleighMieBalance: 0.5,
+  scaleHeightMul: 1,
+  sunIntensity: 1,
+};
+
+/** Per-body scattering constants in planet-radius units, derived once from
+ *  the PlanetAtmosphere vertical optical depths. */
+interface AtmoBase {
+  rAtmo: number;
+  hR0: number;
+  hM0: number;
+  betaRs0: readonly [number, number, number];
+  betaMs0: number;
+  betaA0: readonly [number, number, number];
+  g: number;
+  sunColour: readonly [number, number, number];
+}
+
+function computeAtmoBase(radiusKm: number, atmo: PlanetAtmosphere): AtmoBase {
+  const hR0 = atmo.rayleighHeightKm / radiusKm;
+  const hM0 = atmo.mieHeightKm / radiusKm;
+  return {
+    rAtmo: (radiusKm + atmo.heightKm) / radiusKm,
+    hR0,
+    hM0,
+    betaRs0: [atmo.rayleighCoeff[0] / hR0, atmo.rayleighCoeff[1] / hR0, atmo.rayleighCoeff[2] / hR0],
+    betaMs0: atmo.mieCoeff / hM0,
+    betaA0: [atmo.absorbCoeff[0] / hM0, atmo.absorbCoeff[1] / hM0, atmo.absorbCoeff[2] / hM0],
+    g: atmo.mieG ?? MIE_G_DEFAULT,
+    sunColour: atmo.sunColour ?? SUN_COLOUR,
+  };
+}
+
+/** The atmosphere-scatter uniforms shared by the mesh disc airlight and the
+ *  atmosphere shell (values filled per frame by applyAtmoUniforms). */
+function sharedAtmoUniforms(): Record<string, THREE.IUniform> {
+  return {
+    uCenterView: { value: new THREE.Vector3() },
+    uRadiusPc: { value: 1 },
+    uAtmoRadius: { value: 1.02 },
+    uScaleHeightR: { value: 0.01 },
+    uScaleHeightM: { value: 0.01 },
+    uBetaRayleigh: { value: new THREE.Vector3() },
+    uBetaMie: { value: 0 },
+    uBetaAbsorb: { value: new THREE.Vector3() },
+    uMieG: { value: MIE_G_DEFAULT },
+    uSunColour: { value: new THREE.Vector3(SUN_COLOUR[0], SUN_COLOUR[1], SUN_COLOUR[2]) },
+  };
+}
+
+/** Geometry pole tilt: SphereGeometry's +Y pole (texture v = 1, the
+ *  image top) onto the body-frame +z the IAU chain treats as north. */
+export const POLE_TILT = new THREE.Quaternion().setFromAxisAngle(
+  X_AXIS,
+  Math.PI / 2,
+);
+
+const _iauTmpA = new THREE.Quaternion();
+const _iauTmpB = new THREE.Quaternion();
+
+/** IAU pole frame `Rz(90°+α0)·Rx(90°−δ0)` at model time `t` → `out`. */
+export function iauPoleQuat(
+  rot: RotationElements,
+  t: number,
+  out: THREE.Quaternion,
+): THREE.Quaternion {
+  const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
+  return out
+    .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
+    .multiply(_iauTmpA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)));
+}
+
+/** Full mesh orientation: the IAU body→ICRS composition
+ *  `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`, then POLE_TILT. The map-centre
+ *  offset rides the spin term so texture features land on their true
+ *  longitudes. Exported so tests pin the exact rendered composition
+ *  against external ephemeris truth. */
+export function iauMeshOrientationQuat(
+  rot: RotationElements,
+  t: number,
+  out: THREE.Quaternion,
+): THREE.Quaternion {
+  const spinDeg = spinDegAt(rot, t) + (rot.mapCenterLonDeg ?? 0);
+  return iauPoleQuat(rot, t, out)
+    .multiply(_iauTmpB.setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(spinDeg)))
+    .multiply(POLE_TILT);
+}
+
+interface RingEntry {
+  mesh: THREE.Mesh;
+  material: THREE.ShaderMaterial;
+  geometry: THREE.RingGeometry;
+}
+
+interface AtmosphereEntry {
+  mesh: THREE.Mesh;
+  material: THREE.ShaderMaterial;
+  shellRadiusPc: number;
+}
+
+interface MeshEntry {
+  mesh: THREE.Mesh;
+  material: THREE.ShaderMaterial;
+  /** Body radius, extended to the ring outer edge / atmosphere shell
+   *  when present — the local-depth-pass bounding sphere. */
+  boundRadiusPc: number;
+  radiusPc: number;
+  ring?: RingEntry;
+  atmosphere?: AtmosphereEntry;
+  /** Present iff the body has an atmosphere; shared by the mesh disc
+   *  airlight and the shell limb halo. */
+  atmoBase?: AtmoBase;
+}
+
+type TextureState =
+  | { state: 'loading' }
+  | { state: 'ready'; tex: THREE.Texture }
+  | { state: 'missing' };
+
+export class PlanetMeshLayer {
+  readonly group: THREE.Group;
+
+  private readonly field: PlanetBodyField;
+  private readonly textureBaseUrl: string;
+  private readonly geometry: THREE.SphereGeometry;
+  private readonly placeholder: THREE.DataTexture;
+  private readonly loader = new THREE.TextureLoader();
+  private readonly entries = new Map<number, MeshEntry>();
+  private readonly textures = new Map<string, TextureState>();
+
+  private readonly tmpPlanet = new THREE.Vector3();
+  private readonly tmpHost = new THREE.Vector3();
+  private readonly tmpSun = new THREE.Vector3();
+  private readonly tmpSunView = new THREE.Vector3();
+  private readonly tmpCenterView = new THREE.Vector3();
+  private readonly tmpCaster = new THREE.Vector3();
+  private readonly viewInverse = new THREE.Matrix4();
+  private readonly tmpQuatRing = new THREE.Quaternion();
+  private readonly tmpQuatInv = new THREE.Quaternion();
+  private readonly atmoTuning: AtmosphereTuning = { ...DEFAULT_ATMO_TUNING };
+
+  constructor(field: PlanetBodyField, textureBaseUrl: string) {
+    this.field = field;
+    this.textureBaseUrl = textureBaseUrl;
+    this.group = new THREE.Group();
+    this.group.name = 'planet-meshes';
+    this.geometry = new THREE.SphereGeometry(1, 128, 64);
+    this.placeholder = new THREE.DataTexture(
+      new Uint8Array([255, 255, 255, 255]), 1, 1,
+    );
+    this.placeholder.needsUpdate = true;
+  }
+
+  /** Append camera-relative bounding spheres for every mesh-visible
+   *  body (ring annulus included via the stored bound). The
+   *  local-depth-pass bracket input; empty while the layer is hidden. */
+  collectSpheres(camera: THREE.PerspectiveCamera, out: MemberSphere[]): void {
+    if (!this.group.visible) return;
+    for (const entry of this.entries.values()) {
+      if (!entry.mesh.visible) continue;
+      out.push({
+        distPc: entry.mesh.position.distanceTo(camera.position),
+        radiusPc: entry.boundRadiusPc,
+      });
+    }
+  }
+
+  /** Per-frame: show/scale/light every body inside the crossfade band.
+   *  Reads the body field's live buffers, so recentres and scrubber
+   *  motion need no extra hooks. `t` is the model clock (getT()) —
+   *  IAU spin runs on it like binary orbits. */
+  update(camera: THREE.PerspectiveCamera, t: number): void {
+    // Chart mode inks the bodies as flat discs (chart-mode/README.md);
+    // a lit photographic sphere has no place on paper.
+    this.group.visible = this.field.group.visible && !this.field.monochrome;
+    if (!this.group.visible) return;
+
+    // camera.matrixWorldInverse is refreshed inside render(), AFTER
+    // this update — the stored value is one frame stale, so view-space
+    // sun and caster uniforms built from it swim against the surface
+    // under camera motion. Derive a fresh inverse here.
+    camera.updateMatrixWorld();
+    this.viewInverse.copy(camera.matrixWorld).invert();
+
+    const shown = new Set<number>();
+    const n = this.field.liveInstanceCount;
+    for (let idx = 0; idx < n; idx++) {
+      if (idx === this.field.hiddenInstanceIdx) continue;
+      const planet = this.field.planetAt(idx);
+      if (!planet) continue;
+      if (!this.field.planetLocalPositionInto(idx, this.tmpPlanet)) continue;
+
+      const radiusPc = planet.radiusKm * KM_PC;
+      const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
+      if (physPx >= TEXTURE_PREFETCH_PX) {
+        this.ensureTexture(planet.name);
+        if (planet.rings) this.ensureTexture(`${planet.name}-rings`, 'png');
+      }
+      const fade = meshFadeFromPhysPx(physPx);
+      if (fade <= 0) continue;
+
+      const entry = this.entries.get(idx) ?? this.createEntry(idx, planet);
+      shown.add(idx);
+      const { mesh, material } = entry;
+      mesh.visible = true;
+      mesh.position.copy(this.tmpPlanet);
+      const polar = radiusPc * (1 - (planet.flattening ?? 0));
+      mesh.scale.set(radiusPc, polar, radiusPc);
+
+      const hp = this.field.hostPlanetOf(idx);
+      if (planet.rotation) {
+        iauMeshOrientationQuat(planet.rotation, t, mesh.quaternion);
+      } else {
+        // Fallback for bodies without published elements: geometry
+        // pole (+Y) → orbital-plane normal (host frame +Z) → ICRS via
+        // the host orientation; prime meridian arbitrary but fixed.
+        const orientation = hp === null
+          ? null
+          : this.field.hostOrientationOf(hp.hostStarIdx);
+        if (orientation) {
+          mesh.quaternion.copy(orientation).multiply(POLE_TILT);
+        }
+      }
+
+      // Host-star direction: world frame (the ring + phase lighting frame),
+      // with a view-space copy for the terminator, disc airlight, and shell.
+      let hasSun = false;
+      let dHpPc = 0;
+      if (hp && this.field.getHostLocalPositionInto(hp.hostStarIdx, this.tmpHost)) {
+        this.tmpSun.subVectors(this.tmpHost, this.tmpPlanet);
+        dHpPc = this.tmpSun.length();
+        if (dHpPc > 0) {
+          this.tmpSun.divideScalar(dHpPc);
+          hasSun = true;
+        }
+      }
+      const lit = hasSun
+        ? litIntensity(
+            this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0,
+            dHpPc,
+            this.field.getMaxAppMag(),
+          )
+        : 1;
+      if (hasSun) this.tmpSunView.copy(this.tmpSun).transformDirection(this.viewInverse);
+      this.tmpCenterView.copy(this.tmpPlanet).applyMatrix4(this.viewInverse);
+
+      if (entry.ring) {
+        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, lit);
+      }
+
+      material.uniforms.uLitIntensity.value = lit;
+      material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
+        ? phaseRatioToLambert(
+            planet.phaseCoefficients,
+            phaseAngleFor(
+              this.tmpPlanet.x - camera.position.x,
+              this.tmpPlanet.y - camera.position.y,
+              this.tmpPlanet.z - camera.position.z,
+              this.tmpHost.x - camera.position.x,
+              this.tmpHost.y - camera.position.y,
+              this.tmpHost.z - camera.position.z,
+            ),
+          )
+        : 1;
+      material.uniforms.uCasterCount.value =
+        hasSun && hp ? this.writeCasters(material, hp) : 0;
+
+      if (hasSun) {
+        (material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
+        const hostRadiusPc = this.field.hostRadiusOf(hp!.hostStarIdx);
+        material.uniforms.uSunAngRad.value =
+          hostRadiusPc !== null ? hostRadiusPc / dHpPc : 0;
+      }
+
+      // Atmosphere: the mesh disc airlight and the shell limb halo share the
+      // per-body base params + the global tuning; both gate on host light.
+      if (entry.atmoBase) {
+        material.uniforms.uHasAtmosphere.value = hasSun ? 1 : 0;
+        if (hasSun) {
+          this.applyAtmoUniforms(material.uniforms, entry.atmoBase, radiusPc);
+        }
+        if (entry.atmosphere) {
+          this.updateAtmosphere(entry.atmosphere, entry.atmoBase, radiusPc, hasSun, lit, fade);
+        }
+      }
+
+      material.uniforms.uFade.value = fade;
+      const texState = this.textures.get(planet.name.toLowerCase());
+      if (texState?.state === 'ready') {
+        material.uniforms.uMap.value = texState.tex;
+        material.uniforms.uHasMap.value = 1;
+      } else {
+        material.uniforms.uMap.value = this.placeholder;
+        material.uniforms.uHasMap.value = 0;
+        (material.uniforms.uColour.value as THREE.Color).setRGB(
+          planet.colour[0], planet.colour[1], planet.colour[2],
+        );
+      }
+    }
+
+    for (const [idx, entry] of this.entries) {
+      if (!shown.has(idx)) {
+        entry.mesh.visible = false;
+        if (entry.ring) entry.ring.mesh.visible = false;
+        if (entry.atmosphere) entry.atmosphere.mesh.visible = false;
+      }
+    }
+  }
+
+  /** Fill the material's uCasters array with view-space shadow spheres
+   *  for one drawn body — its parent when it is a moon, its moons when
+   *  it is a parent (moon-on-moon events are out of scope). Returns the
+   *  caster count. */
+  private writeCasters(
+    material: THREE.ShaderMaterial,
+    hp: { hostStarIdx: number; planetIdx: number },
+  ): number {
+    const ps = this.field.getAttachedPlanetSystem(hp.hostStarIdx);
+    if (!ps) return 0;
+    const family = systemFamily(ps.planets);
+    const casters = material.uniforms.uCasters.value as THREE.Vector4[];
+    const parentIdx = family.parentIdx[hp.planetIdx];
+    let count = 0;
+    if (parentIdx >= 0) {
+      count += this.writeCaster(casters, count, hp.hostStarIdx, parentIdx);
+    } else {
+      const children = family.childIdxs[hp.planetIdx];
+      for (let c = 0; c < children.length && count < MAX_SHADOW_CASTERS; c++) {
+        count += this.writeCaster(casters, count, hp.hostStarIdx, children[c]);
+      }
+    }
+    return count;
+  }
+
+  /** Write one caster's view-space sphere into `casters[slot]`; returns
+   *  1 on success, 0 when the body isn't resolvable. */
+  private writeCaster(
+    casters: THREE.Vector4[],
+    slot: number,
+    hostStarIdx: number,
+    planetIdx: number,
+  ): number {
+    const flat = this.field.instanceIndexOf(hostStarIdx, planetIdx);
+    if (flat === null) return 0;
+    const body = this.field.planetAt(flat);
+    if (!body || !this.field.planetLocalPositionInto(flat, this.tmpCaster)) return 0;
+    this.tmpCaster.applyMatrix4(this.viewInverse);
+    casters[slot].set(
+      this.tmpCaster.x,
+      this.tmpCaster.y,
+      this.tmpCaster.z,
+      body.radiusKm * KM_PC,
+    );
+    return 1;
+  }
+
+  /** `out` ← Rz(90°+α0)·Rx(90°−δ0): local +z lands on the body's IAU
+   *  pole in ICRS. */
+
+  /** Pose + light the ring annulus: equatorial plane from the IAU
+   *  pole (host orbital plane when elements are absent), sun and
+   *  camera rotated into the ring-local frame for the fragment
+   *  shader's lit-face / shadow tests. Hidden until the radial strip
+   *  texture arrives — rings have no representative-colour fallback. */
+  private updateRing(
+    ring: RingEntry,
+    planet: Planet,
+    hp: { hostStarIdx: number; planetIdx: number } | null,
+    t: number,
+    camera: THREE.PerspectiveCamera,
+    hasSun: boolean,
+    fade: number,
+    litIntensity: number,
+  ): void {
+    const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
+    if (texState?.state !== 'ready' || !hasSun) {
+      ring.mesh.visible = false;
+      return;
+    }
+    if (planet.rotation) {
+      iauPoleQuat(planet.rotation, t, this.tmpQuatRing);
+    } else {
+      const orientation = hp === null
+        ? null
+        : this.field.hostOrientationOf(hp.hostStarIdx);
+      if (!orientation) {
+        ring.mesh.visible = false;
+        return;
+      }
+      this.tmpQuatRing.copy(orientation);
+    }
+    ring.mesh.visible = true;
+    ring.material.uniforms.uRingMap.value = texState.tex;
+    ring.material.uniforms.uFade.value = fade;
+    ring.material.uniforms.uLitIntensity.value = litIntensity;
+    ring.mesh.position.copy(this.tmpPlanet);
+    ring.mesh.quaternion.copy(this.tmpQuatRing);
+
+    this.tmpQuatInv.copy(this.tmpQuatRing).invert();
+    (ring.material.uniforms.uSunDirLocal.value as THREE.Vector3)
+      .copy(this.tmpSun)
+      .applyQuaternion(this.tmpQuatInv);
+    (ring.material.uniforms.uCamPosLocal.value as THREE.Vector3)
+      .copy(camera.position)
+      .sub(this.tmpPlanet)
+      .applyQuaternion(this.tmpQuatInv);
+  }
+
+  /** Write the shared single-scattering uniforms (planet-radius-unit base
+   *  params × the global debug tuning) onto a mesh or shell material.
+   *  `tmpCenterView` must already hold the body's view-space centre. */
+  private applyAtmoUniforms(
+    u: Record<string, THREE.IUniform>,
+    base: AtmoBase,
+    radiusPc: number,
+  ): void {
+    const t = this.atmoTuning;
+    const rayMul = t.densityMul * 2 * (1 - t.rayleighMieBalance);
+    const mieMul = t.densityMul * 2 * t.rayleighMieBalance;
+    (u.uCenterView.value as THREE.Vector3).copy(this.tmpCenterView);
+    u.uRadiusPc.value = radiusPc;
+    u.uAtmoRadius.value = base.rAtmo;
+    u.uScaleHeightR.value = base.hR0 * t.scaleHeightMul;
+    u.uScaleHeightM.value = base.hM0 * t.scaleHeightMul;
+    (u.uBetaRayleigh.value as THREE.Vector3).set(
+      base.betaRs0[0] * rayMul, base.betaRs0[1] * rayMul, base.betaRs0[2] * rayMul);
+    u.uBetaMie.value = base.betaMs0 * mieMul;
+    (u.uBetaAbsorb.value as THREE.Vector3).set(
+      base.betaA0[0] * mieMul, base.betaA0[1] * mieMul, base.betaA0[2] * mieMul);
+    u.uMieG.value = base.g;
+    (u.uSunColour.value as THREE.Vector3).set(
+      base.sunColour[0] * t.sunIntensity,
+      base.sunColour[1] * t.sunIntensity,
+      base.sunColour[2] * t.sunIntensity);
+  }
+
+  /** Pose the limb-halo shell on the body and feed it the shared scatter
+   *  uniforms plus its view-space sun direction, exposure, and fade. */
+  private updateAtmosphere(
+    atmo: AtmosphereEntry,
+    base: AtmoBase,
+    radiusPc: number,
+    hasSun: boolean,
+    lit: number,
+    fade: number,
+  ): void {
+    if (!hasSun) {
+      atmo.mesh.visible = false;
+      return;
+    }
+    atmo.mesh.visible = true;
+    atmo.mesh.position.copy(this.tmpPlanet);
+    this.applyAtmoUniforms(atmo.material.uniforms, base, radiusPc);
+    (atmo.material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
+    atmo.material.uniforms.uLitIntensity.value = lit;
+    atmo.material.uniforms.uFade.value = fade;
+  }
+
+  getAtmosphereTuning(): AtmosphereTuning {
+    return { ...this.atmoTuning };
+  }
+
+  setAtmosphereTuning(patch: Partial<AtmosphereTuning>): void {
+    Object.assign(this.atmoTuning, patch);
+  }
+
+  private createEntry(idx: number, planet: Planet): MeshEntry {
+    const material = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: meshVert,
+      fragmentShader: MESH_FRAG,
+      uniforms: {
+        uMap: { value: this.placeholder },
+        uHasMap: { value: 0 },
+        uColour: { value: new THREE.Color(1, 1, 1) },
+        uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
+        uFade: { value: 0 },
+        uPhaseScale: { value: 1 },
+        uLitIntensity: { value: 1 },
+        uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
+        uCasters: {
+          value: Array.from({ length: MAX_SHADOW_CASTERS }, () => new THREE.Vector4()),
+        },
+        uCasterCount: { value: 0 },
+        uSunAngRad: { value: 0 },
+        uHasAtmosphere: { value: 0 },
+        ...sharedAtmoUniforms(),
+      },
+      defines: { ...ATMO_DEFINES },
+      transparent: true,
+      depthWrite: true,
+      depthTest: true,
+    });
+    const mesh = new THREE.Mesh(this.geometry, material);
+    mesh.name = 'planet-mesh';
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 2.8;
+    this.group.add(mesh);
+    const radiusPc = planet.radiusKm * KM_PC;
+    const boundRadiusPc = Math.max(
+      planet.rings ? planet.rings.outerRadiusKm : 0,
+      planet.radiusKm + (planet.atmosphere?.heightKm ?? 0),
+    ) * KM_PC;
+    const entry: MeshEntry = { mesh, material, boundRadiusPc, radiusPc };
+    if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
+    if (planet.atmosphere) {
+      entry.atmoBase = computeAtmoBase(planet.radiusKm, planet.atmosphere);
+      entry.atmosphere = this.createAtmosphere(planet, planet.atmosphere);
+    }
+    this.entries.set(idx, entry);
+    return entry;
+  }
+
+  // Slightly-larger spherical shell over the shared unit sphere. The
+  // fragment shader integrates the view ray's single-scattered airlight
+  // through the atmosphere analytically, so no per-body geometry is needed;
+  // flattening is ignored (≤ 0.6 % for the atmosphere bodies, far below the
+  // shell thickness).
+  private createAtmosphere(planet: Planet, atmo: PlanetAtmosphere): AtmosphereEntry {
+    const shellRadiusPc = (planet.radiusKm + atmo.heightKm) * KM_PC;
+    const material = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: atmoVert,
+      fragmentShader: ATMO_FRAG,
+      uniforms: {
+        ...sharedAtmoUniforms(),
+        uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
+        uLitIntensity: { value: 1 },
+        uFade: { value: 0 },
+      },
+      defines: { ...ATMO_DEFINES },
+      transparent: true,
+      // Premultiplied over (not additive): the shell adds airlight AND
+      // occludes the background by its opacity (frag alpha = 1 − view-path
+      // transmittance), so a dense limb chord that scatters no light toward
+      // the eye still extincts the stars behind it. Additive left the
+      // shadowed base transparent and leaked stars through the ring gap.
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      depthWrite: false,
+      depthTest: true,
+    });
+    const mesh = new THREE.Mesh(this.geometry, material);
+    mesh.name = 'planet-atmosphere';
+    mesh.frustumCulled = false;
+    // After the body mesh (2.8) and rings (2.81), depth-tested so the body
+    // occludes the far hemisphere.
+    mesh.renderOrder = 2.82;
+    mesh.scale.setScalar(shellRadiusPc);
+    mesh.visible = false;
+    this.group.add(mesh);
+    return { mesh, material, shellRadiusPc };
+  }
+
+  private createRing(planet: Planet, rings: PlanetRings): RingEntry {
+    const outerPc = rings.outerRadiusKm * KM_PC;
+    const innerRatio = rings.innerRadiusKm / rings.outerRadiusKm;
+    const geometry = new THREE.RingGeometry(innerRatio, 1, 128, 1);
+    const material = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: ringsVert,
+      fragmentShader: ringsFrag,
+      uniforms: {
+        uRingMap: { value: this.placeholder },
+        uInnerRatio: { value: innerRatio },
+        uOuterPc: { value: outerPc },
+        uEqRadiusPc: { value: planet.radiusKm * KM_PC },
+        uPolarRadiusPc: { value: planet.radiusKm * KM_PC * (1 - (planet.flattening ?? 0)) },
+        uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
+        uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
+        uFade: { value: 0 },
+        uLitIntensity: { value: 1 },
+      },
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = 'planet-rings';
+    mesh.frustumCulled = false;
+    // After the body mesh (2.8) so the near-side ring segment draws
+    // over the depth the body just wrote; far side depth-fails.
+    mesh.renderOrder = 2.81;
+    mesh.scale.setScalar(outerPc);
+    mesh.visible = false;
+    this.group.add(mesh);
+    return { mesh, material, geometry };
+  }
+
+  private ensureTexture(name: string, ext: 'jpg' | 'png' = 'jpg'): void {
+    const key = name.toLowerCase();
+    if (this.textures.has(key)) return;
+    this.textures.set(key, { state: 'loading' });
+    this.loader.load(
+      `${this.textureBaseUrl}textures/${key}.${ext}`,
+      (tex) => {
+        // Raw sRGB values, matching the pipeline's convention of
+        // writing colours to the framebuffer without a colorspace
+        // transform (star/planet shaders do the same).
+        tex.colorSpace = THREE.NoColorSpace;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.anisotropy = 4;
+        this.textures.set(key, { state: 'ready', tex });
+      },
+      undefined,
+      () => {
+        // Texture-less bodies (Uranus, future exoplanets) take the
+        // representative-colour base path — a 404 is expected data.
+        this.textures.set(key, { state: 'missing' });
+      },
+    );
+  }
+
+  dispose(): void {
+    for (const { mesh, material, ring, atmosphere } of this.entries.values()) {
+      this.group.remove(mesh);
+      material.dispose();
+      if (ring) {
+        this.group.remove(ring.mesh);
+        ring.material.dispose();
+        ring.geometry.dispose();
+      }
+      if (atmosphere) {
+        this.group.remove(atmosphere.mesh);
+        atmosphere.material.dispose();
+      }
+    }
+    this.entries.clear();
+    for (const t of this.textures.values()) {
+      if (t.state === 'ready') t.tex.dispose();
+    }
+    this.textures.clear();
+    this.geometry.dispose();
+    this.placeholder.dispose();
+  }
+}

@@ -6,7 +6,7 @@ import {
   formatOrbitDistance,
   formatOrbitPeriod,
   type OrbitDescriptor,
-} from '../solar-system/orbit-descriptor';
+} from '../solar-system/ephemerides/orbit-descriptor';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatEarthRadii, formatMagnitude } from '../format/physical-format';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';

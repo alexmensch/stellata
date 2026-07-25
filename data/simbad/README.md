@@ -38,19 +38,19 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
 
 ## Consumed by
 
-- `simbad_sample.tsv` → `scripts/catalog/distance-regression-check.ts`
-  (Tier-C build-time subset) + `scripts/catalog/validate-simbad-sample.ts`
+- `simbad_sample.tsv` → `scripts/catalog/distance/distance-regression-check.ts`
+  (Tier-C build-time subset) + `scripts/catalog/validate/validate-simbad-sample.ts`
   (Tier-C manual full run, `pnpm run validate:simbad`).
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1
   spectral classifier + the `otype = '**'` unresolved-multiplicity
-  flag, scripts/catalog/README.md § Multiplicity status) +
+  flag, scripts/catalog/multiplicity/README.md § Multiplicity status) +
   `scripts/binaries/build-binaries.py` Stage 6 (per-component sp_type,
   beats AT-HYG's system-inherited string).
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/build-catalog.ts` (sibling-letter
   attribution gate on AT-HYG gaia bindings — see
-  `scripts/catalog/README.md` § Per-row pipeline).
+  `scripts/catalog/parse/README.md` § Per-row pipeline).
 
 ## Refresh
 

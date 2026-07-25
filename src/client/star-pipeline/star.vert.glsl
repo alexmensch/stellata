@@ -131,7 +131,7 @@ in float iAmplitudeMag; // 0 = not a variable (V-band magnitude amplitude)
 // iPuls.x = ρ (peak-to-peak physical-radius ratio); iPuls.y = ΔB−V
 // (peak-to-peak colour swing). Miras carry a small ρ (their V-band
 // amplitude is dominated by a temperature swing, not radius) and a large
-// colour swing. See src/client/star-pipeline/README.md § Variable star rendering.
+// colour swing. See src/client/star-pipeline/pulsation/README.md.
 in vec2 iPuls;
 in float iLumClass;     // 0=WD, 2=V, 4=III, 6-9=supergiant/hypergiant, 255=?
 in float iDistSol;      // |absolute position| — precomputed at load
@@ -151,12 +151,12 @@ in float iCompositeSuppress;
 // glow pass only (the disc pass at close range resolves the occlusion
 // geometrically via the depth buffer; double-applying here would dim
 // the back disc's non-occluded fragments too). See
-// src/client/binaries/README.md § Eclipse photometry.
+// src/client/binaries/eclipse/README.md.
 in float iEclipseDim;
 // Pulsation-suppress flag. 1.0 disables the GCVS-amplitude radial
 // pulsation block below. Built once at catalog-load from
 // `catalog.varType` alone (binary-independent), not rewritten per frame.
-// See src/client/binaries/README.md § Pulsation gate for eclipsing
+// See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing
 // binaries.
 in float iSuppressPulsation;
 #ifdef LOCAL_DEPTH_PASS

@@ -64,17 +64,17 @@ import {
   mergeReasonsFromSnapshot,
   parseSimbadSampleTsv,
   type RegressionReport,
-} from './distance-regression-check';
+} from './distance/distance-regression-check';
 import {
   CONSTELLATIONS,
   CON_INDEX,
   buildFigureLines,
-} from './constellations';
+} from './parse/constellations';
 import {
   parseHipCcdm,
   applyDoublesFlag,
   collectPhysicalPairKeys,
-} from './visual-doubles';
+} from './multiplicity/visual-doubles';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -84,15 +84,15 @@ import {
   stampComponentLetters,
   wingRenderablePrimaries,
   type ComponentDesignation,
-} from './companion-promotion';
-import { applySystemDistanceCoherence } from './system-coherence';
+} from './companions/companion-promotion';
+import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
 import {
   parseGcvsMain,
   parseGcvsCrossref,
   bridgeGcvsByGaia,
   applyVariability,
-} from './gcvs-parse';
-import { readGaiaHipXmatch } from './gaia-xmatch';
+} from './parse/gcvs-parse';
+import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import {
   parseGaiaAstrometryCatalogTsv,
   parseHip2Tsv,
@@ -100,9 +100,9 @@ import {
   VELOCITY_SANITY_CEILING_KM_S,
   GALACTIC_ESCAPE_VELOCITY_KM_S,
   type DirectionSources,
-} from './direction-cascade';
-import { readStars, type Star } from './stars-parse';
-import { loadDustGrid } from './dust-deextinction';
+} from './distance/direction-cascade';
+import { readStars, type Star } from './parse/stars-parse';
+import { loadDustGrid } from './distance/dust-deextinction';
 import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
 import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
 import {
@@ -140,7 +140,10 @@ const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
 const OUT_ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
 const EXPECTED_COUNTS = resolve(__dirname, 'build-catalog-expected.json');
-const EXPECTED_OUTLIERS = resolve(__dirname, 'build-distance-outliers-expected.json');
+const EXPECTED_OUTLIERS = resolve(
+  __dirname,
+  'distance/build-distance-outliers-expected.json',
+);
 
 function isUpToDate(): boolean {
   if (!existsSync(OUT_MANIFEST) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;

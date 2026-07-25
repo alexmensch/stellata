@@ -16,7 +16,7 @@ import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
 import { ShellRegistry, type ShellInstance } from '../../fresnel-shell/shell-registry';
-import { PlanetBodyField } from '../../solar-system/planet-body-field';
+import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import {

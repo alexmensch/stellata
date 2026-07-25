@@ -1,9 +1,19 @@
 # Star pipeline
 
 The WebGL star renderer — instanced quads, three passes, physical-size
-scaling, the super-Gaussian intensity profile, luminosity-class
-softness, variable-star pulsation, and the per-star dust-extinction
-read.
+scaling, the super-Gaussian intensity profile, and luminosity-class
+softness. Pulsation and the dust-extinction read live in the
+subfolders.
+
+## Subfolders
+
+- `frame/` — `StarFrame` (the CPU star position frame: floating
+  origin, epoch advance, derived buffers, proximity queries) and the
+  shared uniform map every pass holds by reference.
+- `extinction/` — the per-star camera→star A_V raymarch and its prepass
+  cache, plus the build-time de-extinction cancellation invariant.
+- `pulsation/` — the per-type variable-star {ρ, ΔB−V} tables and the
+  eclipsing-binary suppress mask.
 
 ## Files
 
@@ -11,13 +21,6 @@ read.
   coreMask `ShaderMaterial`s + meshes. Owns
   `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
   local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
-- `star-shared-uniforms.ts` — `buildStarSharedUniforms`: the one
-  uniform map all three passes (and the planet body field + Milky Way
-  pass) share by reference. § Shared uniforms.
-- `star-frame.ts` — `StarFrame`: the CPU-side star position frame —
-  floating origin, epoch advance, the per-instance buffers derived at
-  load, and the Sol-distance proximity queries including the core-mask
-  gate. § The star frame.
 - `star-local-mirror.ts` — `StarLocalMirror`: the local-depth-pass
   mirror draw for cluster-member stars. See § Depth encoding and
   `../local-depth/README.md` § Full membership.
@@ -28,138 +31,41 @@ read.
   `star-local-cluster-pure.ts` (vitest-pinned) — shared with the
   core-mask gate via `RESOLVED_DISC_MIN_PX` / `discWindowPc`.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
-- `dust-raymarch.glsl` — shared camera→star Edenhofer raymarch chunk
-  (`stellata_dust_raymarch`), included by the extinction prepass and by
-  `star.vert.glsl`'s fallback path.
-- `dust-raymarch-pure.ts` — CPU mirror of the raymarch decode +
-  trapezoidal integration and the `E(B−V) = A_V / R_V` reddening.
-  Test-only; pins the shader math against synthetic-cloud fixtures.
-  Vitest-pinned.
-- `extinction-prepass.ts`, `extinction-prepass.vert.glsl`,
-  `extinction-prepass.frag.glsl` — per-star A_V cache; see § Dust
-  extinction.
-- `extinction-prepass-pure.ts` — texture geometry, position packing,
-  and the ε-displacement predicate. Vitest-pinned.
-- `perceptual-disc.glsl` — super-Gaussian disc/glow chunk. Imported by
-  `star.frag.glsl` and (via relative `?raw` import) by
-  `../solar-system/planet.frag.glsl` so stars and planet bodies share
-  the same brightness-PSF saturation physics. Stars use the full
+- `perceptual-disc.glsl` — super-Gaussian disc/glow chunk, shared with
+  `../solar-system/planets/planet.frag.glsl` so stars and planet bodies
+  run the same brightness-PSF saturation physics. Stars use the full
   disc + glow + core-mask trio; planet bodies use the **glow profile
-  only** (their resolved surface is the spheroid mesh, so the billboard
-  is reflected glare, never an opaque disc). A planet's glare IS this
-  star-perceptual point verbatim (`perceptualAppSizePx` from its reflected
-  `appMag`, peak ≈ 1), so a planet reads exactly like a star of its
-  magnitude and its visibility matches the star field — see
-  `../solar-system/README.md` § Planet mesh LOD.
+  only**. See `../solar-system/planets/README.md` § Planet mesh LOD.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
   the chunk consumes. `buildStarSharedUniforms` `satisfies` this
   interface, and
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
   `pickPerceptualDiscUniforms`. Single source of truth so the two
   pipelines can't drift at the chunk's interface.
-- `star-color-routing-pure.ts` — `bestApsisTeff`: the shader-side bridge
-  that picks gspphot over gspspec for the per-instance `iTeffApsis`
-  attribute. Runtime colour routing is **two-tier** —
-  `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` in `star.vert.glsl` —
-  where `iCi` is the build-time-baked intrinsic B–V (observed AT-HYG
-  cell, or the spectral-class colour `spectralClassCi` bakes in
-  `scripts/catalog/catalog-pure.ts`). Vitest-pinned.
-- `pulsation-suppress-pure.ts` — `buildPulsationSuppressMask(varType)`:
-  the per-instance `iSuppressPulsation` mask (1 on every eclipsing
-  binary). Vitest-pinned.
-- `pulsation-params-pure.ts` — `buildPulsationParams(varType)`: the
-  per-instance {ρ radius-swing, ΔB−V colour-swing} table driving the
-  `iPuls` attribute + the CPU disc mirror. Called at catalog load
-  (`catalog.pulsRho` / `catalog.pulsColorSwing`). Vitest-pinned.
+- `star-color-routing-pure.ts` (+ test) — `bestApsisTeff`: picks
+  gspphot over gspspec for the per-instance `iTeffApsis` attribute.
+  See § Colour routing.
 - `blackbody-lut.ts` — hand-written runtime wrapper. Re-exports the
   generated bytes + constants and owns the three.js `DataTexture`
-  construction. Imported by the integration shell.
+  construction.
 - `blackbody-lut-data.ts` — **AUTO-GENERATED** by
   `scripts/colour/blackbody-lut.ts`. Do not edit by hand. 256-entry
   blackbody → sRGB lookup indexed by B–V over [-0.4, 2]. Regenerate
   via `pnpm run build:lut`.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
-- `star-frame.test.ts` — origin recentre, epoch re-advance + focal
-  delta, and the proximity / core-mask window.
-- `star-shared-uniforms.test.ts` — seeding + the perceptual-disc slot
-  identities the planet pipeline picks out.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
 - `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
-- `star-color-routing-pure.test.ts` — six-tier routing pin.
-- `pulsation-suppress-pure.test.ts` — suppress-mask build pin.
-- `dust-raymarch-pure.test.ts` — decode + integration + reddening pin.
+- `star-local-cluster.test.ts` (+ `-pure.test.ts`) — membership pins.
 
-## Shared uniforms
+## Colour routing
 
-`buildStarSharedUniforms` (`star-shared-uniforms.ts`) returns the one
-uniform map the disc, glow, and core-mask passes spread into their
-materials — `uRenderMode` is the only divergent slot, bound per
-material by `StarPipeline`. Every other consumer picks slots out of the
-same object **by reference**, so a single write reaches all of them
-with no bookkeeping: `FilterController` (the filter / preset / render
-knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
-`pickChartDiscUniforms`), `MilkyWay` (`uMaxAppMag` / `uSizeSpan`, so
-the magnitude filter applies identically to discrete stars and the
-diffuse glow), `StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
-(`uWorldOffset`, and `uFovYRad` / `uViewport` for its windows), and
-`Picker`. Only the three renderer-derived seeds (pixel ratio, FOV,
-viewport) are arguments; the rest come from `DEFAULT_FILTER` /
-`STAR_RENDER_DEFAULTS` and the pipeline's own constants.
-
-The integration shell builds the map once and keeps writing through
-`starPipeline.discMaterial.uniforms` per frame — the encapsulation is
-construction, not access discipline.
-
-## The star frame
-
-`StarFrame` (`star-frame.ts`) owns `catalog.positions` in the
-renderer's frame — everything CPU-side that depends on where the stars
-actually are:
-
-- **Floating origin.** `worldOffset` (the absolute coordinate at local
-  `(0,0,0)`) and `localPositions` (`catalog.positions − worldOffset`,
-  the buffer bound to the dynamic `iPosition` attribute). `recenterTo`
-  rewrites the buffer in float64 per axis before the float32
-  write-back, moves `worldOffset`, and mirrors the new origin into
-  `uWorldOffset` for the shader's absolute-position reconstruction. The
-  camera / orbit-target shift and the scene-layer recenter fan-out stay
-  on the integration shell's `recenterOrigin`, which wraps this — see
-  `../README.md` § Floating origin.
-- **Epoch advance.** The immutable J2016.0 `basePositions` snapshot and
-  `advanceEpochTo(t, focalIdx, outDelta)`, which re-runs the
-  space-motion pass whenever the model clock crosses a
-  `bucketEpochJyr` bucket and reports the focal star's space-motion
-  delta so the shell can translate the camera by it.
-- **Derived per-instance buffers.** `logRadii`, `lumClassF32`,
-  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed once
-  off the *advanced* positions, so `StarPipeline`'s attributes and
-  every downstream consumer inherit current-epoch positions by
-  construction.
-- **Proximity queries.** The Sol-distance-sorted index and
-  `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
-  built on it (§ Star rendering, core depth-mask). `Picker` slices the
-  same index for its distSol-filter window.
-
-Anything that writes `onLocalPositionsWritten` side effects — the GPU
-re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
-passed in by the shell, which is the only thing that knows the
-attribute and the lazily-attached binary field.
-
-**One rewrite per frame.** Rewriting the 313k-star local buffer costs
-a full pass plus a GPU re-upload, and two of them can be provoked in
-the same frame: a fast time-scrub crosses an epoch bucket while a hard
-focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch
-re-advance and the origin recentre both invalidate it. So
-`advanceEpochTo` only marks the buffer stale and
-`flushLocalPositions` — called by `animate()` right after the
-re-advance / recentre pair — does the single rewrite at whatever the
-origin ended up being; a recentre in between rewrites it directly and
-clears the flag. That leaves exactly one window where
-`localPositions` trails `catalog.positions`: between `advanceEpochTo`
-and the flush. Nothing may read the buffer inside it (the focal-drift
-recentre in that gap reads only camera + orbit target), and anything
-new landing there has to sit after the flush instead.
+Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)
+: iCi` in `star.vert.glsl` — where `iCi` is the build-time-baked
+intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
+`spectralClassCi` bakes in `scripts/catalog/catalog-pure.ts`).
+`bestApsisTeff` decides which Apsis Teff feeds `iTeffApsis`.
+`extinction/` reddens whichever tier wins.
 
 ## Star rendering: instanced quads, three passes
 
@@ -237,7 +143,7 @@ under AdditiveBlending in the glow pass, and dropping the opaque disc
 `iEclipseDim` (float, per-instance, default 1.0) multiplies the back
 component's flux when an orbital pair's discs overlap from the camera
 viewpoint. Written by `EclipsePhotometryField` (see
-`../binaries/README.md` § Eclipse photometry) with real-time
+`../binaries/eclipse/README.md`) with real-time
 smoothing, and re-uploaded only on frames with active dims. Folded
 into `appMag` in the **glow pass only** — a resolved pair's disc
 overlap orders geometrically in the local depth pass instead
@@ -360,7 +266,7 @@ over-painted — and a camera-window scan for any resolved-disc star
 (`isResolvedDiscStar`: disc-pass split × `RESOLVED_DISC_MIN_PX`,
 evaluated on the `renderedSizeComponents` CPU mirror). The scan
 window reuses the core-mask gate's sorted-distance walk
-(`StarFrame.forEachStarNearCamera` — § The star frame).
+(`StarFrame.forEachStarNearCamera` — `frame/README.md`).
 
 **Core opacity is depth-gated, never paint-over.** The disc pass
 blends with per-channel MaxEquation, which cannot cover anything
@@ -445,26 +351,16 @@ because the population mix changes with the magnitude limit — wider
 catalogs use a smaller K so the denser star population doesn't wash
 out into a solid field.
 
-`computePresetPxSizes(name)` converts arcsec → pixels via
-`arcsecPerPx = (camera.fov × 3600) / max(window.innerWidth, innerHeight)`.
-Using `max(w, h)` instead of just height gives consistent absolute
-star sizes across portrait/landscape orientations and ultrawide
-monitors. `applyMagnitudePreset(name)` (preset-button click) writes
-activePreset + maxAppMag + sizeSpan + sizeMin/Max, respecting
-per-field override flags. `recomputePresetPxSizes()` (viewport resize /
-FOV change / K change) only updates non-overridden sizeMin/Max —
-manual maxAppMag and sizeSpan tweaks survive resizes.
+The arcsec → pixel conversion divides by
+`max(window.innerWidth, innerHeight)`, not by height alone: that keeps
+absolute star sizes consistent across portrait/landscape and ultrawide
+monitors. The preset plumbing that calls it — `applyMagnitudePreset`,
+`recomputePresetPxSizes`, `setCameraFov`, and their override / resize
+semantics — belongs to `../filters/README.md`; this section is only the
+perception model those knobs feed.
 
-**Camera FOV** defaults to `DEFAULT_FOV` = 50° vertical and is
-user-tunable via the FOV slider in the panel (`#fov`, range 10°–120°).
-`setCameraFov(fov)` updates `camera.fov`, calls
-`updateProjectionMatrix()`, mirrors the new value into `uFovYRad` (the
-shader's angular-diameter scale), recomputes the focused star's orbit
-floor (which depends on FOV), and triggers `recomputePresetPxSizes()`
-so non-overridden star sizes scale appropriately. URL `fov=` carries
-the value when diverged from default.
-
-`uFovYRad` is the only viewport-derived shader uniform that drives
+`uFovYRad` (mirrored from `camera.fov` on every FOV change) is the only
+viewport-derived shader uniform that drives
 `physSize`. There is no per-pixel-range cap — a max-radius supergiant
 at the orbit floor fills `ZOOM_FLOOR_FRACTION` (= 0.9) of the
 viewport's minor axis purely because `minOrbitDistForStar` solves for
@@ -541,116 +437,3 @@ All eight knobs are live-tunable from the debug panel
 extent above). See `STAR_RENDER_DEFAULTS` in
 `../filters/filter-state.ts` for shipping values;
 `setStarRenderParams(patch)` is the programmatic setter.
-
-## Variable star rendering
-
-Per-instance `iPeriodDays` + `iAmplitudeMag` (0 = not variable).
-Pulsation runs on the **model clock** (`getT()`), at real GCVS periods —
-like binary orbital motion, and responding to the same time-warp.
-`uModelDays` is model time in days since J2000; `phase = uModelDays /
-periodDaysEff`. The consequence is deliberate: at 1× a real period is far
-longer than a frame, so long-period variables (Miras, hundreds of days)
-are imperceptible until the time-scrubber engages — exactly how binary
-orbits behave. `uMinPeriodSec` survives ONLY as an anti-strobe guard:
-`periodDaysEff = max(iPeriodDays, uModelDaysPerRealSec × uMinPeriodSec)`
-floors the effective period so no cycle completes faster than
-`uMinPeriodSec` in real time under heavy warp (at 1× the floor is a few
-seconds of model time, below every real period, so it never bites).
-`uSecondsPerDay` and the old real-seconds `uTime` clock are gone.
-
-Shader applies three phase-locked modulations (`φ = 0 = maximum light`,
-cos convention — the convention the GCVS M0 absolute-phase anchoring
-folds onto later as `phase = (uModelDays − iEpochDays) / periodDaysEff`)
-— the R+T amplitude split. Full physics + per-type table + interferometry
-citations in `docs/science-stellar-modelling.md` § Variable-star
-pulsation:
-
-- `magMod = −0.5 × iAmplitudeMag × cos(2π × phase)` adjusts `appMag` —
-  the **full** GCVS V-band amplitude, affecting point-glow size for
-  distant stars (a Mira still fades toward invisibility at minimum).
-- `radiusFactor = pow(iPuls.x, −0.5 × cos(2π × phase))` applies to
-  `physSize`. `iPuls.x` = ρ, the **per-type peak-to-peak radius ratio**
-  (interferometry, not V-band): the disc spans `[ρ^−0.5, ρ^+0.5]` with
-  its **minimum at maximum light** (negative exponent — matches
-  interferometry). Miras carry a small ρ (≈1.4) because their V-band
-  amplitude is almost all temperature, not radius.
-- the LUT-input B−V is shifted by `−0.5 × iPuls.y × cos(2π × phase)`
-  (`iPuls.y` = ΔB−V, per-type colour swing) so the disc runs
-  bluer/hotter at maximum light and reddens toward minimum.
-
-`iPuls` is a per-instance `vec2` built by `buildPulsationParams`
-(`pulsation-params-pure.ts`) from `catalog.varType`; ρ + ΔB−V are packed
-into one attribute to stay under the WebGL2 16-attribute budget. The
-ρ-bounded swing (≤1.4) replaces the old per-frame amplitude-compression
-machinery; a single up-clamp (`physSize ≤ uMaxPhysFrac × min(viewport)`)
-keeps a supergiant at the orbit floor inside the viewport.
-
-`renderedSizePx` in `../camera/controls/star-physics.ts` replicates this
-whole shader pipeline on the CPU (reading `catalog.pulsRho`) so the SVG
-focus-ring and distance-vector overlays follow the pulsating disc size
-exactly frame-by-frame.
-
-## Dust extinction
-
-Each star is dimmed by the V-band extinction A_V integrated through
-the Edenhofer 3D dust texture along the camera→star sightline, and
-reddened by E(B−V) = A_V/3.1 on the intrinsic LUT-input B–V. That input
-is the shader's two-tier routing: `Ballesteros(iTeffApsis)` when an
-Apsis Teff is present, else the baked intrinsic `iCi` (observed AT-HYG
-B–V or the spectral-class colour baked at build). Looking through dust
-dims and reddens stars behind it, which is what you'd actually see.
-
-**Where A_V comes from — the prepass cache.** `ExtinctionPrepass`
-(`extinction-prepass.ts`) renders one raymarch per *star* into a
-star-indexed R32F render target (1024 × ⌈count/1024⌉; star *i* at
-texel `(i % 1024, i / 1024)`); `star.vert.glsl` consumes it with a
-single `texelFetch`. Without the cache the identical integral ran in
-the vertex shader once per vertex (×4) per pass (×2–3) — 8–12
-recomputations per visible star per frame.
-
-- **Invalidation** is camera-displacement-based: the target is
-  recomputed when the absolute camera position moves more than
-  `RECOMPUTE_EPSILON_PC` (1 pc) from the last-computed position, when
-  a dust voxel chunk lands on the GPU (progressive load), or on
-  (re-)attach. Between recomputes the cached values are served
-  **stale-while-moving** — extinction varies on ~5 pc voxel scales,
-  so worst-case drift at ε is ~0.003 mag. Close-range orbiting
-  (AU-scale motion) never recomputes; a fast warp recomputes per
-  frame, which still costs ~1/10th of the old per-vertex-per-pass
-  scheme.
-- **Positions are the catalog baseline** (`catalog.positions`, packed
-  once into an RGBA float texture) — binary-orbit perturbations
-  (sub-AU) are ignored, as is the floating origin (both the prepass
-  march and the fallback run in absolute heliocentric space).
-- **Fallback:** on contexts without `EXT_color_buffer_float` (no
-  float-renderable target) the prepass is inert and the vertex shader
-  runs the in-vertex camera→star raymarch, gated by the visibility
-  prefilter. Both paths share the `stellata_dust_raymarch` chunk
-  (`dust-raymarch.glsl`). The march's 48 fixed samples are a
-  pragmatic trapezoidal integration: at 1.25 kpc that's 26 pc per
-  step ≈ 5 voxels of the texture's native ~5 pc resolution; more
-  samples cost proportionally with marginal quality gain.
-- **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
-  console) parks the shader on the fallback path — the honest way to
-  measure the prepass win on identical scenes; `true` restores the
-  cache.
-
-The prepass stores raw physical A_V; `uDustEnabled ×
-uExtinctionStrength` scales it at the point of consumption, so
-strength changes never invalidate the cache.
-
-Catalog `absmag` and `ci` are stored **intrinsic** (de-extincted at
-build against the same voxel grid — see
-`scripts/catalog/README.md` § Build-time de-extinction), so this
-runtime extinction *restores* the observer-relative extinction rather
-than double-applying it: at camera=Sol the build subtraction and this
-addition cancel, so a dusty-sightline star renders at its AT-HYG
-observed magnitude. **Invariant:** any change to this runtime stack
-(map, slab) must ship with the mirrored build-side integral + catalog
-rebuild, or the cancellation breaks.
-
-`stellata.setExtinctionStrength(x)` (dev console) scales the re-added
-A_V: default 1 = physical realism; **0 = a dust-free universe** (every
-star at its intrinsic brightness/colour everywhere, since nothing is
-re-added on top of the de-extincted catalog); >1 amplifies dust
-visually.

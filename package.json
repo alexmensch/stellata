@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "2.51.3",
+  "version": "2.51.4",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.15.1",
@@ -34,7 +34,7 @@
     "sid:dr-reconcile": "tsx scripts/sid/dr-reconcile.ts",
     "refresh:hip2": "python3 scripts/refresh/refresh-hipparcos2.py",
     "refresh:simbad": "python3 scripts/refresh/refresh-simbad-sample.py",
-    "validate:simbad": "tsx scripts/catalog/validate-simbad-sample.ts",
+    "validate:simbad": "tsx scripts/catalog/validate/validate-simbad-sample.ts",
     "build:local-group": "tsx scripts/local-group/build-local-group.ts && tsx scripts/sid/stamp-sibling-sids.ts local-group",
     "build:dust-sync": "tsx scripts/dust/sync-dust.ts",
     "build:textures": "python3 scripts/textures/build-textures.py",

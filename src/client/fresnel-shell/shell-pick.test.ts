@@ -4,7 +4,7 @@ import {
   HELIOPAUSE_APEX_SOL_PC,
   HELIOPAUSE_LABEL_ELEMENT_ID,
   HELIOPAUSE_SAMPLE_POINTS_SOL,
-} from '../solar-system/heliopause';
+} from '../solar-system/heliopause/heliopause';
 import { pickShellSilhouette } from './shell-pick';
 import type { ShellPickSurface } from './shell-registry';
 

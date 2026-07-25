@@ -66,7 +66,7 @@ parsec; the conversion `A_V / E_ZGR ≈ 2.742` at V band is baked in.
 
 Catalog `absmag` and `ci` are stored **intrinsic** — the build subtracts
 the Sol→star integral through this same voxel grid at write time (see
-`scripts/catalog/README.md` § Build-time de-extinction), so this
+`scripts/catalog/distance/README.md` § Build-time de-extinction), so this
 raymarch *restores* the observer-relative extinction instead of adding
 it a second time. Because both sides integrate the same model, at
 camera=Sol the build subtraction and the runtime addition cancel and a
@@ -92,7 +92,7 @@ distribution. Voxels stay in use for short per-star sightlines.
 
 Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
 `src/client/milkyway/milkyway.frag.glsl` (volumetric); see
-`src/client/star-pipeline/README.md` §Dust extinction + the shelved particle layer and
+`src/client/star-pipeline/extinction/README.md` + the shelved particle layer and
 `src/client/milkyway/README.md`.
 
 

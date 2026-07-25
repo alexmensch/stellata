@@ -3,14 +3,14 @@
 Frozen geocentric astrometric RA/Dec for the eight major planets,
 Pluto, and the Sun at three fixed epochs, fetched once from the JPL
 Horizons API. Consumed only by the sky-truth regression corpus
-(`src/client/solar-system/sky-truth.test.ts`), which asserts the
+(`src/client/solar-system/ephemerides/sky-truth.test.ts`), which asserts the
 production Standish-ephemeris → ecliptic→ICRS chain lands each body
 within tolerance of these positions. Never read at build time.
 
 A second table, `sub-observer-truth.tsv`, freezes geocentric
 sub-observer and sub-solar lon/lat for Mars, Ganymede, and Io at the
 same three epochs (`QUANTITIES='14,15'`, retrieved 2026-07-19).
-Consumed by `src/client/solar-system/texture-orientation.test.ts`,
+Consumed by `src/client/solar-system/planets/texture-orientation.test.ts`,
 which pins the full IAU-orientation → texture-UV chain. Columns:
 `body`, `jd_ut`, then `ob_lon_west_deg` / `ob_lat_deg` (quantity 14)
 and `subsol_lon_west_deg` / `subsol_lat_deg` (quantity 15). All three
@@ -28,7 +28,7 @@ plus their outer-parent planets (Jupiter, Saturn, Uranus, Neptune) at
 the three epochs above **plus JD 2461240.5** (2026-07-19 00:00 UT) —
 the extra epoch exists because satellite mean-anomaly drift grows with
 time from J2000, so a present-day sample is the sensitive one.
-Consumed by `src/client/solar-system/moon-sky-truth.test.ts`, which
+Consumed by `src/client/solar-system/ephemerides/moon-sky-truth.test.ts`, which
 pins each moon's parent-relative on-sky position angle + separation
 through the production chain (the defect class it exists to catch:
 truncated mean motions scrambling orbital phase).

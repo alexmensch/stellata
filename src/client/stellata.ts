@@ -8,7 +8,7 @@ import type { DustField, DustParticleData } from './loaders/dust-loader';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
-import dustRaymarchChunk from './star-pipeline/dust-raymarch.glsl?raw';
+import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
 import {
   DustParticleLayer,
   type DustParticleSharedUniforms,
@@ -59,9 +59,9 @@ import type { FocusableProviders, Target } from './camera/focus/focus-target';
 import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
-import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
-import { PlanetBodyField } from './solar-system/planet-body-field';
-import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planet-mesh-layer';
+import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
+import { PlanetBodyField } from './solar-system/planets/planet-body-field';
+import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { StarLocalMirror } from './star-pipeline/star-local-mirror';
@@ -75,7 +75,7 @@ import {
   HELIOPAUSE_LABEL,
   HELIOPAUSE_CARD,
   HELIOPAUSE_EXTENT_PC,
-} from './solar-system/heliopause';
+} from './solar-system/heliopause/heliopause';
 import {
   LocalBubbleShell,
   LOCAL_BUBBLE_LABEL,
@@ -84,7 +84,7 @@ import {
 import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
 import { ShellRegistry } from './fresnel-shell/shell-registry';
 import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
-import { VirtualClock, tToJDE } from './solar-system/time';
+import { VirtualClock, tToJDE } from './solar-system/time/time';
 import { J2000_JD, KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
@@ -117,21 +117,21 @@ import {
   SCENE_ELEMENT_IDS,
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
-import { StarFrame } from './star-pipeline/star-frame';
-import { buildStarSharedUniforms } from './star-pipeline/star-shared-uniforms';
+import { StarFrame } from './star-pipeline/frame/star-frame';
+import { buildStarSharedUniforms } from './star-pipeline/frame/star-shared-uniforms';
 import {
   ExtinctionPrepass,
   type ExtinctionPrepassUniforms,
-} from './star-pipeline/extinction-prepass';
+} from './star-pipeline/extinction/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
-} from './binaries/eclipse-photometry';
+} from './binaries/eclipse/eclipse-photometry';
 import { type BinariesData } from './binaries/binaries-loader';
-import { buildPulsationSuppressMask } from './star-pipeline/pulsation-suppress-pure';
+import { buildPulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
@@ -184,12 +184,12 @@ export class Stellata implements FrameAnchor {
   // from this file; the encapsulation is resource ownership only.
   private starPipeline!: StarPipeline;
   // Dust-particle render layer. Currently shelved — see
-  // src/client/star-pipeline/README.md § "Dust extinction + the shelved particle layer".
+  // src/client/star-pipeline/extinction/README.md.
   private dustParticles!: DustParticleLayer;
 
   // Floating origin, epoch advance, the derived per-instance buffers,
   // and the Sol-distance proximity queries — see
-  // star-pipeline/README.md § The star frame. The shell reads
+  // star-pipeline/frame/README.md. The shell reads
   // `worldOffset` / `localPositions` through it and drives the
   // per-frame calls.
   private starFrame!: StarFrame;
@@ -207,7 +207,7 @@ export class Stellata implements FrameAnchor {
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for every eclipsing binary
   // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
-  // See src/client/binaries/README.md § Pulsation gate for eclipsing binaries.
+  // See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing binaries.
   private _suppressPulsation: Float32Array;
   // Lazily attached when main.ts loads public/binaries.bin. Null until
   // then — the renderer functions identically with the static catalog
@@ -1503,7 +1503,7 @@ export class Stellata implements FrameAnchor {
     // Runs after the orbit walk so the camera→primary line of sight
     // reads post-perturbation positions; the pair-relative geometry is
     // evaluated independently in float64. See
-    // src/client/binaries/README.md § Eclipse photometry.
+    // src/client/binaries/eclipse/README.md.
     this.eclipsePhotometryField?.update(
       this.getT(),
       this.camera.position,

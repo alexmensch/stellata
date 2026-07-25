@@ -8,7 +8,7 @@ import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import type { LocalGroupLayer } from '../../local-group/local-group';
 import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import { pickShellSilhouette } from '../../fresnel-shell/shell-pick';
-import type { PlanetBodyField } from '../../solar-system/planet-body-field';
+import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';

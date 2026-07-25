@@ -146,7 +146,7 @@ Fix: the renderer runs in a **floating local frame** whose origin tracks
 the currently focused star.
 
 - The buffers themselves live on `StarFrame`
-  (`star-pipeline/README.md` § The star frame): `worldOffset`, the
+  (`star-pipeline/frame/README.md`): `worldOffset`, the
   absolute-space coordinate currently sitting at the renderer's
   (0,0,0) — starts at Sol — and `localPositions` (exposed via
   `stellata.localPositions`), a `Float32Array` of
@@ -252,10 +252,10 @@ SVG mask (`constellation-figure/README.md`).
 | ------------------------------------------------ | ------- | -------------------------------------------------- | :---: | ----- |
 | Focus ring                                       | SVG     | source order (last child)                          | front | [overlays/](overlays/README.md) |
 | Click ripple                                     | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
-| Heliopause label                                 | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
+| Heliopause label                                 | SVG     | source order                                       |       | [solar-system/heliopause/](solar-system/heliopause/README.md) |
 | Local Bubble label                               | SVG     | source order                                       |       | [local-bubble/](local-bubble/README.md) |
 | Molecular cloud labels                           | SVG     | source order                                       |       | [molecular-clouds/](molecular-clouds/README.md) |
-| Planet labels                                    | SVG     | source order                                       |       | [solar-system/](solar-system/README.md) |
+| Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/](solar-system/planets/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI rings                                        | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI arrows                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
@@ -266,21 +266,21 @@ SVG mask (`constellation-figure/README.md`).
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | Galactic grid l/b labels                         | SVG     | source order (first SVG child)                     |       | [galactic/](galactic/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
-| Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
 | Member-star glow mirror                          | WebGL   | local depth pass (3.5 in-pass)                     |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
-| Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/ephemerides/](solar-system/ephemerides/README.md), [local-depth/](local-depth/README.md) |
 | Binary orbit paths                               | WebGL   | local depth pass (3.2 in-pass)                     |       | [binaries/](binaries/README.md), [local-depth/](local-depth/README.md) |
-| Planet disc mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (3 in-pass)     |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
-| Planet atmosphere shell (Venus/Earth/Mars/Titan) | WebGL   | local depth pass; additive (2.82 in-pass)          |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
-| Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
-| Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/](solar-system/README.md), [local-depth/](local-depth/README.md) |
+| Planet disc mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (3 in-pass)     |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
+| Planet atmosphere shell (Venus/Earth/Mars/Titan) | WebGL   | local depth pass; additive (2.82 in-pass)          |       | [solar-system/atmosphere/](solar-system/atmosphere/README.md), [local-depth/](local-depth/README.md) |
+| Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
+| Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
 | Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | Member-star core mask (depth-only)               | WebGL   | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
 | *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
-| Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/](solar-system/README.md) |
-| Planet disc (inactive-cluster hosts)             | WebGL   | `renderOrder: 3`                                   |       | [solar-system/](solar-system/README.md) |
+| Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/planets/](solar-system/planets/README.md) |
+| Planet disc (inactive-cluster hosts)             | WebGL   | `renderOrder: 3`                                   |       | [solar-system/planets/](solar-system/planets/README.md) |
 | Dust particles                                   | WebGL   | `renderOrder: 2`                                   |       | [dust/](dust/README.md) |
-| Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
+| Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/heliopause/](solar-system/heliopause/README.md) |
 | Star disc                                        | WebGL   | `renderOrder: 0`                                   |       | [star-pipeline/](star-pipeline/README.md) |
 | Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
 | Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
@@ -288,7 +288,7 @@ SVG mask (`constellation-figure/README.md`).
 | Molecular cloud rim shells                       | WebGL   | `renderOrder: -1`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
 | Molecular cloud absorption                       | WebGL   | `renderOrder: -2`                                  | back  | [molecular-clouds/](molecular-clouds/README.md) |
 | Milky Way volume + Local Group emission          | WebGL   | `renderOrder: -3`                                  |       | [milkyway/](milkyway/README.md), [local-group/](local-group/README.md) |
-| Star core depth-mask + planet core (depth-only)  | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](star-pipeline/README.md), [solar-system/](solar-system/README.md) |
+| Star core depth-mask + planet core (depth-only)  | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](star-pipeline/README.md), [solar-system/planets/](solar-system/planets/README.md) |
 
 ### Per-layer visibility gates and tuning
 

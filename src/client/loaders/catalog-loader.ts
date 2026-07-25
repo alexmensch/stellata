@@ -15,7 +15,7 @@ import {
   type DecodeRecordColumnOptions,
   type CatalogManifest,
 } from '../../../scripts/catalog/catalog-pure';
-import { buildPulsationParams } from '../star-pipeline/pulsation-params-pure';
+import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 
 export interface Constellation {
   code: string;

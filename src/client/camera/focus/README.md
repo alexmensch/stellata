@@ -33,7 +33,7 @@ close-approach focused star sitting at exactly NDC origin.
 `FrameAnchor` (recenterOrigin / worldOffset / starLocalPosition) is
 implemented by `stellata.ts`, but only as the camera / orbit-target /
 scene-layer half of a recentre: the buffer itself belongs to
-`StarFrame` (`../../star-pipeline/README.md` § The star frame), which
+`StarFrame` (`../../star-pipeline/frame/README.md`), which
 the shell delegates to.
 
 ## Focus state

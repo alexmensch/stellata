@@ -6,7 +6,7 @@ import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../util/astronomy-constants';
 
 // catalog.bin positions ship at this fixed scene epoch (Julian year);
 // velocities are pc/yr, so the advance is p(t) = p(J2016) + v·(t − 2016).
-// Mirrors CATALOG_SCENE_EPOCH in scripts/catalog/direction-cascade.ts.
+// Mirrors CATALOG_SCENE_EPOCH in scripts/catalog/distance/direction-cascade.ts.
 export const CATALOG_SCENE_EPOCH_JYR = 2016.0;
 
 /** Julian Date → Julian epoch year (e.g. 2451545.0 → 2000.0). The time
