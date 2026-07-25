@@ -83,6 +83,18 @@ export function evaluateOrbitInPlaneAU(
   };
 }
 
+/** Instantaneous relative separation |R(t)| in AU — r = a(1 − e·cos E).
+ *  Orientation-free, so Tier 2's fallback plane cannot skew it (README
+ *  § Tier mapping). One Kepler solve, no projection. */
+export function evaluateOrbitSeparationAU(
+  elements: OrbitalElements,
+  tJd: number,
+): number {
+  const { P, T, e, a } = elements;
+  const E = solveKepler((2 * Math.PI * (tJd - T)) / P, e);
+  return a * (1 - e * Math.cos(E));
+}
+
 /** Convert a sky-frame separation (north, east, radial) in pc at a
  *  system whose ICRS position is `systemXyzPc` into an ICRS Δxyz in pc.
  *  Tangent-plane projection for the sky components; the radial component

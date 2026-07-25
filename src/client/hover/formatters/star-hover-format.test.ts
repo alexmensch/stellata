@@ -233,14 +233,24 @@ describe('formatStarHover — binary companions', () => {
     expect(out.lines).toContain('P = 79.91 yr · e = 0.52');
   });
 
-  it('Tier 2: secondary card flags the unknown orbit', () => {
+  it('Tier 2: secondary card flags the unknown plane, and still quotes ρ, P and e', () => {
+    // T = nowJd = J2000 → E = 0 → ρ = a(1 − e) = 6.5 AU. Orientation-free,
+    // so the fallback plane leaves the separation as measured as Tier 1's.
     const ctx = binaryCtx([
-      makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 * 365.25 }),
+      makeRelation({
+        flags: FLAG_HAS_ORBIT,
+        pDays: 9.21 * 365.25,
+        tJd: J2000_JD,
+        e: 0.35,
+        aAU: 10,
+        omegaRad: 0,
+        q: 0.5,
+      }),
     ]);
     const out = formatStarHover(1, D_CAM, ctx);
     expect(out.name).toBe('Sirius B');
-    expect(out.lines).toContain('Orbits Sirius A');
-    expect(out.lines).toContain('P = 9.21 yr (unknown orbit)');
+    expect(out.lines).toContain('Orbits Sirius A · ρ = 6.5 AU');
+    expect(out.lines).toContain('P = 9.21 yr · e = 0.35 (unknown orbital plane)');
   });
 
   it('Tier 3: secondary card quotes the static sep + PA at its epoch', () => {
@@ -254,9 +264,17 @@ describe('formatStarHover — binary companions', () => {
 
   it('renders a sub-year period in days (spectroscopic pair)', () => {
     const ctx = binaryCtx([
-      makeRelation({ flags: FLAG_HAS_ORBIT, pDays: 9.21 }),
+      makeRelation({
+        flags: FLAG_HAS_ORBIT,
+        pDays: 9.21,
+        tJd: J2000_JD,
+        e: 0,
+        aAU: 0.1,
+        omegaRad: 0,
+        q: 0.5,
+      }),
     ]);
-    expect(formatStarHover(1, D_CAM, ctx).lines).toContain('P = 9.21 d (unknown orbit)');
+    expect(formatStarHover(1, D_CAM, ctx).lines).toContain('P = 9.21 d · e = 0.00 (unknown orbital plane)');
   });
 
   it('primary card lists the sole companion under the shared heading', () => {

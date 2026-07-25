@@ -3,13 +3,14 @@
 
 import { J2000_JD } from '../util/astronomy-constants';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
   type BinariesData,
   type BinaryRelation,
 } from '../binaries/binaries-loader';
-import { evaluateOrbitSkyAU } from '../binaries/binary-orbit-pure';
-import { relationToElements } from '../binaries/orbit-relation-cache';
+import { evaluateOrbitSeparationAU } from '../binaries/binary-orbit-pure';
+import {
+  keplerRelationParams,
+  type KeplerRelationParams,
+} from '../binaries/orbit-relation-cache';
 
 export interface StarNameContext {
   starLabels: Map<number, string>;
@@ -148,8 +149,9 @@ function companionOfAllLines(
   for (let i = 0; i < rels.length; i++) {
     if (consumed.has(i)) continue;
     const rel = rels[i];
-    if ((rel.flags & FLAG_HAS_ORBIT) !== 0) {
-      out.push(...orbitCompanionOfLines(rel, ctx));
+    const kepler = keplerRelationParams(rel);
+    if (kepler !== null) {
+      out.push(...orbitCompanionOfLines(rel, kepler, ctx));
       continue;
     }
     const detail = tier3DetailLine(rel);
@@ -157,7 +159,7 @@ function companionOfAllLines(
     for (let j = i + 1; j < rels.length; j++) {
       if (consumed.has(j)) continue;
       const other = rels[j];
-      if ((other.flags & FLAG_HAS_ORBIT) === 0 && tier3DetailLine(other) === detail) {
+      if (keplerRelationParams(other) === null && tier3DetailLine(other) === detail) {
         consumed.add(j);
         names.push(resolveStarName(ctx, other.primaryIdx));
       }
@@ -187,28 +189,19 @@ function joinNames(names: string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-// The star is the secondary of an orbit-bearing (tier 1/2) relation.
-// A heading line names the primary; the detail line is per-tier, keyed
-// on the relation flags (see ../binaries/README.md § Tier mapping).
+// Tier 2's fallback is the plane ORIENTATION only — every field quoted here
+// is measured in both tiers (../binaries/README.md § Tier mapping).
 function orbitCompanionOfLines(
   rel: BinaryRelation,
+  kepler: KeplerRelationParams,
   ctx: CompanionFormatContext,
 ): string[] {
-  const primaryName = resolveStarName(ctx, rel.primaryIdx);
-  const period = formatOrbitalPeriod(rel.pDays);
-  const head = `Orbits ${primaryName}`;
-  if ((rel.flags & FLAG_HAS_INCLINATION) === 0) {
-    // Tier 2 — period known, inclination not.
-    return [head, `P = ${period} (unknown orbit)`];
-  }
-
-  // Tier 1 — full Kepler: ρ is the live 3D separation at the current time,
-  // shown on the heading beside the primary.
-  const now = evaluateOrbitSkyAU(relationToElements(rel), ctx.nowJd);
-  const sepAU = Math.hypot(now.northAU, now.eastAU, now.radialAU);
+  const { tier, elements } = kepler;
+  const sepAU = evaluateOrbitSeparationAU(elements, ctx.nowJd);
+  const orbit = `P = ${formatOrbitalPeriod(elements.P)} · e = ${elements.e.toFixed(2)}`;
   return [
-    `${head} · ρ = ${sepAU.toFixed(1)} AU`,
-    `P = ${period} · e = ${rel.e.toFixed(2)}`,
+    `Orbits ${resolveStarName(ctx, rel.primaryIdx)} · ρ = ${sepAU.toFixed(1)} AU`,
+    tier === 2 ? `${orbit} (unknown orbital plane)` : orbit,
   ];
 }
 

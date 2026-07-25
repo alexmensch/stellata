@@ -90,6 +90,15 @@ free-form location strings. The bare distance-and-context first line
 is fine without a label when it reads as a location (`Lyra · 7.1 pc`,
 `0.310 AU · Vmag -2.5`).
 
+**The one exception: standard orbital-element symbols.** The binary
+companion lines (`../format/star-companion-format.ts`) label with
+`P` / `e` / `ρ` / `PA`, and new orbital fields should too. These are how
+every source catalogue names the elements (WDS, ORB6, Gaia NSS), the
+symbols read as a set on one line (`P = 79.91 yr · e = 0.52`), and
+spelling them out (`Eccentricity 0.52`) is *less* legible to anyone
+reading an orbit — the opposite of what the rule is for. The exception is
+this symbol set only; every other quantity spells its name out.
+
 ### Rule 1a — Line ordering for object cards
 
 The planet/moon hover card layout:

@@ -20,12 +20,18 @@ star catalog records.
   offset — sky tangent (north, east) plus the line-of-sight radial
   component `Z = r·sin(ν+ω)·sin i` — so orbits have real depth from
   any camera vantage. Tier 2 galactic-plane fallback
-  (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`). No state.
+  (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`).
+  `evaluateOrbitSeparationAU` is the scalar `|R(t)| = a(1 − e·cos E)`:
+  a rotation of the orbit plane cannot change a magnitude, so the
+  separation is as measured in Tier 2 as in Tier 1 and both card tiers
+  quote it as ρ — the fallback costs the offset's DIRECTION only. No state.
 - `orbit-relation-cache.ts` — `keplerRelationParams` (the has_orbit +
-  finite-elements gate → tier + elements, shared with the orbit-path
-  layer), the per-attach cache builder (`buildOrbitRelationCaches`:
-  adds baseline `R(sep_pa_epoch_jd)`), and the per-frame
-  `evaluateOrbitRelationDeltaPc` dispatch. Both runtime fields consume it.
+  finite-elements gate → tier + elements), the per-attach cache builder
+  (`buildOrbitRelationCaches`: adds baseline `R(sep_pa_epoch_jd)`), and
+  the per-frame `evaluateOrbitRelationDeltaPc` dispatch. Both runtime
+  fields consume it, and so do the hover / focus card formatters
+  (`../format/star-companion-format.ts`) — the gate is what stops a card
+  advertising Kepler elements for a record the walk refuses to animate.
 - `binary-orbit-field.ts` — per-frame position field. `update(t,
   camera, …)` walks `BinariesData.relations` in topological order,
   applies the LOD cascade described below, and rewrites the active
@@ -145,7 +151,11 @@ the per-pair flags):
 - **Tier 2** (`has_orbit & !has_inclination`) — Kepler eval with the
   orbit normal forced to the galactic Z axis. The in-plane (x, y) AU
   position rides directly into the galactic XY basis, which
-  `GAL_TO_ICRS` then rotates into ICRS Δxyz.
+  `GAL_TO_ICRS` then rotates into ICRS Δxyz. Everything except the plane
+  is measured: P, T, e, a, ω, q all come off the record, so the period,
+  eccentricity and instantaneous separation are real and the cards quote
+  them — only the offset's direction is a convention, which is why the
+  companion line reads "unknown orbital plane" and not "unknown orbit".
 - **Tier 3** (`!has_orbit`) — no per-frame Kepler eval. The companion's
   static placement is already baked into `catalog.bin` by the
   build-time companion-promotion pass (see
