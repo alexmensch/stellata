@@ -11,6 +11,13 @@ read.
   coreMask `ShaderMaterial`s + meshes. Owns
   `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
   local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
+- `star-shared-uniforms.ts` — `buildStarSharedUniforms`: the one
+  uniform map all three passes (and the planet body field + Milky Way
+  pass) share by reference. § Shared uniforms.
+- `star-frame.ts` — `StarFrame`: the CPU-side star position frame —
+  floating origin, epoch advance, the per-instance buffers derived at
+  load, and the Sol-distance proximity queries including the core-mask
+  gate. § The star frame.
 - `star-local-mirror.ts` — `StarLocalMirror`: the local-depth-pass
   mirror draw for cluster-member stars. See § Depth encoding and
   `../local-depth/README.md` § Full membership.
@@ -45,8 +52,8 @@ read.
   magnitude and its visibility matches the star field — see
   `../solar-system/README.md` § Planet mesh LOD.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
-  the chunk consumes. The star pipeline's `sharedUniforms` map in
-  `stellata.ts` `satisfies` this interface, and
+  the chunk consumes. `buildStarSharedUniforms` `satisfies` this
+  interface, and
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
   `pickPerceptualDiscUniforms`. Single source of truth so the two
   pipelines can't drift at the chunk's interface.
@@ -73,11 +80,71 @@ read.
   via `pnpm run build:lut`.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
+- `star-frame.test.ts` — origin recentre, epoch re-advance + focal
+  delta, and the proximity / core-mask window.
+- `star-shared-uniforms.test.ts` — seeding + the perceptual-disc slot
+  identities the planet pipeline picks out.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
 - `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-color-routing-pure.test.ts` — six-tier routing pin.
 - `pulsation-suppress-pure.test.ts` — suppress-mask build pin.
 - `dust-raymarch-pure.test.ts` — decode + integration + reddening pin.
+
+## Shared uniforms
+
+`buildStarSharedUniforms` (`star-shared-uniforms.ts`) returns the one
+uniform map the disc, glow, and core-mask passes spread into their
+materials — `uRenderMode` is the only divergent slot, bound per
+material by `StarPipeline`. Every other consumer picks slots out of the
+same object **by reference**, so a single write reaches all of them
+with no bookkeeping: `FilterController` (the filter / preset / render
+knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
+`pickChartDiscUniforms`), `MilkyWay` (`uMaxAppMag` / `uSizeSpan`, so
+the magnitude filter applies identically to discrete stars and the
+diffuse glow), `StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
+(`uWorldOffset`, and `uFovYRad` / `uViewport` for its windows), and
+`Picker`. Only the three renderer-derived seeds (pixel ratio, FOV,
+viewport) are arguments; the rest come from `DEFAULT_FILTER` /
+`STAR_RENDER_DEFAULTS` and the pipeline's own constants.
+
+The integration shell builds the map once and keeps writing through
+`starPipeline.discMaterial.uniforms` per frame — the encapsulation is
+construction, not access discipline.
+
+## The star frame
+
+`StarFrame` (`star-frame.ts`) owns `catalog.positions` in the
+renderer's frame — everything CPU-side that depends on where the stars
+actually are:
+
+- **Floating origin.** `worldOffset` (the absolute coordinate at local
+  `(0,0,0)`) and `localPositions` (`catalog.positions − worldOffset`,
+  the buffer bound to the dynamic `iPosition` attribute). `recenterTo`
+  rewrites the buffer in float64 per axis before the float32
+  write-back, moves `worldOffset`, and mirrors the new origin into
+  `uWorldOffset` for the shader's absolute-position reconstruction. The
+  camera / orbit-target shift and the scene-layer recenter fan-out stay
+  on the integration shell's `recenterOrigin`, which wraps this — see
+  `../README.md` § Floating origin.
+- **Epoch advance.** The immutable J2016.0 `basePositions` snapshot and
+  `advanceEpochTo(t, focalIdx, outDelta)`, which re-runs the
+  space-motion pass whenever the model clock crosses a
+  `bucketEpochJyr` bucket and reports the focal star's space-motion
+  delta so the shell can translate the camera by it.
+- **Derived per-instance buffers.** `logRadii`, `lumClassF32`,
+  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed once
+  off the *advanced* positions, so `StarPipeline`'s attributes and
+  every downstream consumer inherit current-epoch positions by
+  construction.
+- **Proximity queries.** The Sol-distance-sorted index and
+  `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
+  built on it (§ Star rendering, core depth-mask). `Picker` slices the
+  same index for its distSol-filter window.
+
+Anything that writes `onLocalPositionsWritten` side effects — the GPU
+re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
+passed in by the shell, which is the only thing that knows the
+attribute and the lazily-attached binary field.
 
 ## Star rendering: instanced quads, three passes
 
@@ -100,7 +167,7 @@ Rendering is **three passes over the same instanced geometry**:
   Way, molecular clouds, galactic disc, and galactic grid (all
   `depthTest: true`) to depth-fail behind close-range disc cores
   rather than bleeding through. Mesh `visible` is gated CPU-side each
-  frame by `starLocalCluster.hasMembers() || shouldEnableCoreMask()`
+  frame by `starLocalCluster.hasMembers() || starFrame.shouldEnableCoreMask()`
   (members stamp regardless of the physSize window — § Local-pass
   mirror draw). `shouldEnableCoreMask()` is a binary-search over the
   Sol-distance-sorted index (built once at construction) that walks
@@ -278,7 +345,7 @@ over-painted — and a camera-window scan for any resolved-disc star
 (`isResolvedDiscStar`: disc-pass split × `RESOLVED_DISC_MIN_PX`,
 evaluated on the `renderedSizeComponents` CPU mirror). The scan
 window reuses the core-mask gate's sorted-distance walk
-(`forEachStarNearCamera` in `stellata.ts`).
+(`StarFrame.forEachStarNearCamera` — § The star frame).
 
 **Core opacity is depth-gated, never paint-over.** The disc pass
 blends with per-channel MaxEquation, which cannot cover anything
@@ -456,9 +523,9 @@ All eight knobs are live-tunable from the debug panel
 (`debug.panel()`) under "Star disc": `visibleThreshold`,
 `coreThreshold`, `discardThreshold`, `distN min/max`,
 `lumBias dwarf/hypergiant`, `sizeKnee` (the soft-knee saturation
-extent above). See `STAR_RENDER_DEFAULTS` in `stellata.ts` for
-shipping values; `setStarRenderParams(patch)` is the programmatic
-setter.
+extent above). See `STAR_RENDER_DEFAULTS` in
+`../filters/filter-state.ts` for shipping values;
+`setStarRenderParams(patch)` is the programmatic setter.
 
 ## Variable star rendering
 

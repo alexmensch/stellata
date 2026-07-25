@@ -9,8 +9,6 @@ import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
 import dustRaymarchChunk from './star-pipeline/dust-raymarch.glsl?raw';
-import { makeColorLutTexture } from './star-pipeline/blackbody-lut';
-import { bestApsisTeff } from './star-pipeline/star-color-routing-pure';
 import {
   DustParticleLayer,
   type DustParticleSharedUniforms,
@@ -40,12 +38,8 @@ import type { CloudSurface } from './molecular-clouds/cloud-surfaces-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import { mark as perfMark, measure as perfMeasure, frame as perfFrame } from './debug/perf-hud';
-import {
-  angularToPx as angularToPxPure,
-  sortedDistRange,
-} from './camera/controls/star-geometry';
+import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
-import { ZOOM_FLOOR_FRACTION } from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import {
@@ -70,14 +64,12 @@ import { PlanetBodyField } from './solar-system/planet-body-field';
 import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
-import { MIRROR_CAPACITY, StarLocalMirror } from './star-pipeline/star-local-mirror';
+import { StarLocalMirror } from './star-pipeline/star-local-mirror';
 import { StarLocalCluster } from './star-pipeline/star-local-cluster';
 import {
-  discWindowPc,
   PHYS_RATIO_THRESHOLD,
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/star-local-cluster-pure';
-import type { PerceptualDiscUniforms } from './star-pipeline/perceptual-disc-uniforms';
 import {
   Heliopause,
   HELIOPAUSE_LABEL,
@@ -92,18 +84,7 @@ import {
 import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
 import { ShellRegistry } from './fresnel-shell/shell-registry';
 import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
-import {
-  T_CLAMP_MAX_S,
-  T_CLAMP_MIN_S,
-  VirtualClock,
-  tToJDE,
-} from './solar-system/time';
-import {
-  advancePositionsToEpoch,
-  bucketEpochJyr,
-  jdeToJulianEpochYear,
-  maxSpeedPcPerYr,
-} from './loaders/epoch-advance-pure';
+import { VirtualClock, tToJDE } from './solar-system/time';
 import { J2000_JD, KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
@@ -122,11 +103,9 @@ export {
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import {
-  DEFAULT_FILTER,
   DEFAULT_FOV,
   type FilterState,
   type MagPresetName,
-  STAR_RENDER_DEFAULTS,
   type StarRenderParams,
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
@@ -138,6 +117,8 @@ import {
   SCENE_ELEMENT_IDS,
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
+import { StarFrame } from './star-pipeline/star-frame';
+import { buildStarSharedUniforms } from './star-pipeline/star-shared-uniforms';
 import {
   ExtinctionPrepass,
   type ExtinctionPrepassUniforms,
@@ -206,19 +187,13 @@ export class Stellata implements FrameAnchor {
   // src/client/star-pipeline/README.md § "Dust extinction + the shelved particle layer".
   private dustParticles!: DustParticleLayer;
 
-  // Floating origin to dodge float32 cancellation when zoomed close to
-  // distant stars. worldOffset is the absolute coord that sits at
-  // local (0,0,0); _localPositions = catalog.positions − worldOffset
-  // bound to the iPosition attribute. Overlays project via the
-  // `localPositions` getter so every path stays in the camera's frame.
-  private worldOffset = new THREE.Vector3();
-  private _localPositions: Float32Array;
-  // Pristine J2016.0 catalog positions — the immutable baseline every
-  // epoch (re-)advance writes catalog.positions from. Never mutate.
-  private readonly _basePositions: Float32Array;
-  // Bucketised Julian epoch year catalog.positions currently sits at.
-  private _advancedEpochJyr: number;
-  private readonly _maxEpochDriftPc: number;
+  // Floating origin, epoch advance, the derived per-instance buffers,
+  // and the Sol-distance proximity queries — see
+  // star-pipeline/README.md § The star frame. The shell reads
+  // `worldOffset` / `localPositions` through it and drives the
+  // per-frame calls.
+  private starFrame!: StarFrame;
+  private get worldOffset(): THREE.Vector3 { return this.starFrame.worldOffset; }
   // Scratch for the focused star's per-re-advance space-motion delta.
   private readonly _epochFollowDelta = new THREE.Vector3();
   // Composite-suppress flag per catalog instance. 0 = render normally;
@@ -271,21 +246,6 @@ export class Stellata implements FrameAnchor {
   private readonly _planetRideLive = new THREE.Vector3();
   private readonly _planetRideDelta = new THREE.Vector3();
   private _planetRideIdx: number | null = null;
-
-  // Sorted-by-distance-from-Sol index for the core-mask query. Distance
-  // from Sol is intrinsic (computed from absolute catalog positions) and
-  // therefore stable across floating-origin recenters, so this index is
-  // built once at construction. Each frame we slice a window via triangle
-  // inequality on the camera's distance-from-Sol, turning a 313k linear
-  // scan into a few-hundred-element check.
-  private sortedDistFromSol!: Float32Array;
-  private sortedByDistFromSol!: Uint32Array;
-
-  // Largest physicalRadius in the catalog, in pc. Drives shouldEnableCoreMask:
-  // the core depth-mask only matters when at least one star's angular disc
-  // crosses the visibility threshold, and the largest star at the closest
-  // approach is the worst case.
-  private maxPhysicalRadiusPc!: number;
 
   // Filter / preset / render-knob state + mutations live in
   // FilterController (filters/README.md); the shell reads the live
@@ -411,34 +371,6 @@ export class Stellata implements FrameAnchor {
   constructor({ canvas, catalog }: StellataOptions) {
     this.catalog = catalog;
 
-    // Space-motion propagation: advance catalog.positions off the pristine
-    // J2016.0 baseline (snapshotted here, kept immutable) to the model clock
-    // (getT() — live-now on a bare load; the clock field is initialised
-    // before the body runs) before any consumer reads a position.
-    // _localPositions, iDistSol, hover/focus/warp targets, constellation
-    // lines, binaries baselines, and eclipse photometry all inherit
-    // current-epoch positions by construction. maybeReAdvanceEpoch() re-runs
-    // the same pass from the same baseline whenever the scrubbed clock
-    // crosses a bucket. See docs/science-catalog-ingestion.md
-    // § Current-epoch star positions.
-    this._basePositions = new Float32Array(catalog.positions);
-    this._advancedEpochJyr = bucketEpochJyr(
-      jdeToJulianEpochYear(tToJDE(this.getT())),
-    );
-    advancePositionsToEpoch(
-      this._basePositions,
-      catalog.velocities,
-      this._advancedEpochJyr,
-      catalog.positions,
-    );
-    // How far any star can sit from its load-epoch position over the full
-    // clamped scrub range — the widening the load-time sortedDistFromSol
-    // windows need to stay correct at any scrubbed t.
-    this._maxEpochDriftPc = maxSpeedPcPerYr(catalog.velocities) * Math.max(
-      this._advancedEpochJyr - jdeToJulianEpochYear(tToJDE(T_CLAMP_MIN_S)),
-      jdeToJulianEpochYear(tToJDE(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
-    );
-
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
@@ -486,170 +418,40 @@ export class Stellata implements FrameAnchor {
       () => this.camera.fov,
     );
 
-    // Precompute log10(physicalRadius) per star for the shader (vertex
-    // attribute decode: pow(10, iLogRadius) → physical radius in pc),
-    // and track the catalog-wide max so shouldEnableCoreMask can reason
-    // about the largest disc that could appear at close range.
-    // Luminosity class is converted from Uint8 to Float32 since the
-    // vertex attribute is a float; 255 (unknown) survives the conversion
-    // and is handled inside the shader.
-    const logRadii = new Float32Array(catalog.count);
-    const lumClassF32 = new Float32Array(catalog.count);
-    const distSol = new Float32Array(catalog.count);
-    const teffApsis = new Float32Array(catalog.count);
-    let maxPhysicalRadius = 0;
-    for (let i = 0; i < catalog.count; i++) {
-      const r = Math.max(catalog.physicalRadius[i], MIN_PHYSICAL_RADIUS_R_SUN);
-      logRadii[i] = Math.log10(r);
-      if (r > maxPhysicalRadius) maxPhysicalRadius = r;
-      lumClassF32[i] = catalog.luminosityClass[i];
-      const x = catalog.positions[i * 3];
-      const y = catalog.positions[i * 3 + 1];
-      const z = catalog.positions[i * 3 + 2];
-      distSol[i] = Math.sqrt(x * x + y * y + z * z);
-      teffApsis[i] = bestApsisTeff(catalog.teffGspphot[i], catalog.teffGspspec[i]);
-    }
-    this.maxPhysicalRadiusPc = maxPhysicalRadius * R_SUN_PC;
-    // Local-frame position buffer — starts identical to catalog.positions
-    // since worldOffset is (0,0,0) at construction. Recenter rewrites this
-    // in place.
-    this._localPositions = new Float32Array(catalog.positions);
+    const sharedUniforms = buildStarSharedUniforms({
+      pixelRatio: this.renderer.getPixelRatio(),
+      fovYRad: (this.camera.fov * Math.PI) / 180,
+      viewportW: window.innerWidth,
+      viewportH: window.innerHeight,
+    });
+    // Advances catalog.positions to the model clock and derives every
+    // per-instance buffer off the result, so the pipeline attributes
+    // below and every consumer downstream read current-epoch positions
+    // by construction.
+    this.starFrame = new StarFrame({
+      catalog,
+      uniforms: sharedUniforms,
+      cameraPosition: this.camera.position,
+      t: this.getT(),
+      onLocalPositionsWritten: () => {
+        this.starPipeline.iPositionAttr.needsUpdate = true;
+        this.binaryOrbitField?.markBaselinesDirty();
+      },
+    });
     this._compositeSuppress = new Float32Array(catalog.count);
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
     // Built here (not attachBinaries) because the gate is varType-driven
     // and binary-independent; see the field declaration for the rationale.
     this._suppressPulsation = buildPulsationSuppressMask(catalog.varType);
-    // Sort indices by distance from Sol (ascending). The sorted view lets
-    // shouldEnableCoreMask() walk only stars whose Sol-distance falls
-    // within `[camDistFromSol - dThresh, camDistFromSol + dThresh]` —
-    // typically a few-hundred-element window instead of the full catalog.
-    this.sortedByDistFromSol = new Uint32Array(catalog.count);
-    for (let i = 0; i < catalog.count; i++) this.sortedByDistFromSol[i] = i;
-    this.sortedByDistFromSol.sort((a, b) => distSol[a] - distSol[b]);
-    this.sortedDistFromSol = new Float32Array(catalog.count);
-    for (let i = 0; i < catalog.count; i++) {
-      this.sortedDistFromSol[i] = distSol[this.sortedByDistFromSol[i]];
-    }
-    // Shared uniforms — all three star passes point at the same value
-    // objects, so any setFilter / theme / resize update propagates to
-    // every pass without duplicate bookkeeping. uRenderMode is the only
-    // divergent uniform; StarPipeline binds it per material.
-    const sharedUniforms = {
-      uCameraPos: { value: new THREE.Vector3() },
-      // Seeded from DEFAULT_FILTER; FilterController owns every later
-      // write (constructed below, after the layers its side-effect hook
-      // touches exist).
-      uMaxAppMag: { value: DEFAULT_FILTER.maxAppMag },
-      uMinDistSol: { value: DEFAULT_FILTER.minDistSol },
-      uMaxDistSol: { value: DEFAULT_FILTER.maxDistSol },
-      uSpectMask: { value: DEFAULT_FILTER.spectMask },
-      uPixelRatio: { value: this.renderer.getPixelRatio() },
-      uSizeMin: { value: DEFAULT_FILTER.sizeMin },
-      uSizeMax: { value: DEFAULT_FILTER.sizeMax },
-      uSizeSpan: { value: DEFAULT_FILTER.sizeSpan },
-      uMonochrome: { value: 0 },
-      // Chart-mode disc sizing. Pixel range + bright-end
-      // magnitude reference; vertex shader uses these only when
-      // uMonochrome > 0.5. The same constants are read JS-side by
-      // chart-labels.ts to size variable rings + binary wings.
-      uChartDiscMaxPx: { value: 28.0 },
-      uChartDiscMinPx: { value: 1.5 },
-      uChartMagBright: { value: -2.0 },
-      // Camera vertical FOV in radians, mirrored from camera.fov whenever
-      // setCameraFov runs. The shader needs it to convert a star's angular
-      // diameter (2·atan(R/d)) into pixels.
-      uFovYRad: { value: (this.camera.fov * Math.PI) / 180 },
-      // Solar-radii → parsecs conversion for the physical-size formula.
-      // catalog.physicalRadius is in solar radii; iLogRadius decodes back
-      // to solar radii via pow(10, x); multiply by uRSunPc to get pc.
-      uRSunPc: { value: R_SUN_PC },
-      uViewport: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-      // Peak-disc cap (mirrored to GLSL); single source of truth in the
-      // TS-side ZOOM_FLOOR_FRACTION so the shader and the renderedSizePx
-      // mirror clamp resolved discs to the same viewport fraction.
-      uMaxPhysFrac: { value: ZOOM_FLOOR_FRACTION },
-      // Variability clock. Pulsation runs on the model clock (getT()) at
-      // real GCVS periods, so it responds to time-warp like binary orbits.
-      // uModelDays is model time in days since J2000; uModelDaysPerRealSec
-      // is the warp rate (model days per real second), which floors the
-      // effective period via uMinPeriodSec so short-period variables can't
-      // strobe under heavy warp. Updated per frame from getT() + the clock
-      // rate.
-      uModelDays: { value: 0 },
-      uModelDaysPerRealSec: { value: 1 / 86400 },
-      uMinPeriodSec: { value: 4.0 },
-
-      // Star-disc rendering knobs (debug-panel tunable). See star.frag.glsl
-      // for what each parameter shapes; defaults here are the calibrated
-      // baseline that ships in production.
-      uVisibleThreshold: { value: STAR_RENDER_DEFAULTS.visibleThreshold },
-      uVisibleK: { value: -Math.log(STAR_RENDER_DEFAULTS.visibleThreshold) },
-      uCoreThreshold: { value: STAR_RENDER_DEFAULTS.coreThreshold },
-      uDiscardThreshold: { value: STAR_RENDER_DEFAULTS.discardThreshold },
-      uDistNMin: { value: STAR_RENDER_DEFAULTS.distNMin },
-      uDistNMax: { value: STAR_RENDER_DEFAULTS.distNMax },
-      uLumBiasMin: { value: STAR_RENDER_DEFAULTS.lumBiasMin },
-      uLumBiasMax: { value: STAR_RENDER_DEFAULTS.lumBiasMax },
-      uSizeKnee: { value: STAR_RENDER_DEFAULTS.sizeKnee },
-
-      // Interstellar-dust extinction. Off by default (uDustEnabled = 0) —
-      // attachDust() wires in the Data3DTexture progressively as chunks
-      // arrive from the network and bumps uDustEnabled to 1 once the
-      // texture is GPU-resident. A separate uExtinctionStrength is a
-      // user-facing knob (0 = off, 1 = realism, >1 = amplified).
-      //
-      // The shader reconstructs absolute positions via iPosition +
-      // uWorldOffset / uCameraPos + uWorldOffset, then raymarches through
-      // the dust texture in ICRS heliocentric pc to integrate A_V.
-      uDustTexture: { value: null as THREE.Data3DTexture | null },
-      uDustBoundsPc: { value: 1250.0 },
-      // Log-window decode: density = uDustDensityMin * exp(sample * uDustLogRatio).
-      // Defaults are overwritten by attachDust() with the manifest's
-      // autotuned range; this placeholder avoids divide-by-zero if the
-      // shader runs before dust attaches.
-      uDustDensityMin: { value: 1e-7 },
-      uDustLogRatio: { value: Math.log(1e3) },
-      uDustAvPerDensityPc: { value: 2.742 },
-      uDustEnabled: { value: 0.0 },
-      uExtinctionStrength: { value: 1.0 },
-      uWorldOffset: { value: new THREE.Vector3() },
-      // Per-star A_V prepass consumers — owned by ExtinctionPrepass
-      // (constructed on attachDust); the vertex shader falls back to the
-      // in-vertex raymarch while uAvPrepassEnabled is 0.
-      uAvPrepassTex: { value: null as THREE.Texture | null },
-      uAvPrepassEnabled: { value: 0.0 },
-      // OBSERVE-mode focal-star suppression. Set to the focused-star catalog
-      // index when the camera is parked on it; -1 disables the gate. All
-      // three star passes (disc, glow, core mask) share these uniforms so
-      // the suppression fires uniformly.
-      uHideFocusIdx: { value: -1 },
-      // Member stars of the active local-depth clusters; a member's
-      // main-pass instance collapses and the pass's mirror draws render
-      // it. Written per frame by StarLocalCluster.update. -1 = empty slot.
-      uLocalMemberIdx: { value: new Int32Array(MIRROR_CAPACITY).fill(-1) },
-      // Blackbody → sRGB lookup for the star vertex shader's ciToColor.
-      // See docs/science-stellar-modelling.md § "Star colour calibration".
-      uColorLut: { value: makeColorLutTexture() },
-      // Force-center the focused star at NDC (0,0). At the close-approach
-      // orbit floor (~5×10⁻⁸ pc for Sol-class stars), float32 cancellation
-      // in projectionMatrix * modelViewMatrix * (0,0,0,1) can drift the
-      // projected center by visible pixels even though the star is
-      // mathematically at view-origin (controls.target = star, lookAt
-      // aligns -Z with target). This uniform names the instance to pin;
-      // the shader replaces its centreClip with projectionMatrix *
-      // (0, 0, -distCam, 1) to bypass the cancellation. -1 disables.
-      // Updated each frame in animate() since pan can move target away.
-      uPinFocusToCenter: { value: -1 },
-    } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 
     this.starPipeline = new StarPipeline({
       scene: this.scene,
       catalog,
-      logRadii,
-      lumClassF32,
-      distSol,
-      teffApsis,
-      localPositions: this._localPositions,
+      logRadii: this.starFrame.logRadii,
+      lumClassF32: this.starFrame.lumClassF32,
+      distSol: this.starFrame.distSol,
+      teffApsis: this.starFrame.teffApsis,
+      localPositions: this.starFrame.localPositions,
       compositeSuppress: this._compositeSuppress,
       eclipseDim: this._eclipseDim,
       suppressPulsation: this._suppressPulsation,
@@ -688,14 +490,14 @@ export class Stellata implements FrameAnchor {
       sharedUniforms.uLocalMemberIdx as { value: Int32Array },
       {
         catalog,
-        localPositions: () => this._localPositions,
+        localPositions: () => this.localPositions,
         renderedSizeComponents: (idx, out) => this.renderedSizeComponentsFor(idx, out),
-        forEachStarNearCamera: (d, cb) => this.forEachStarNearCamera(d, cb),
+        forEachStarNearCamera: (d, cb) => this.starFrame.forEachStarNearCamera(d, cb),
         // Membership needs physSize ≥ PHYS_RATIO_THRESHOLD × pxSize with
         // pxSize ≥ RESOLVED_DISC_MIN_PX, so the widest useful window is
         // where the largest star's disc crosses the product.
         scanWindowPc: () =>
-          this.discWindowFromUniformsPc(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
+          this.starFrame.discWindowPcFor(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
       },
     );
     this.localDepthPass.register(this.starLocalCluster);
@@ -769,9 +571,9 @@ export class Stellata implements FrameAnchor {
       domElement: this.renderer.domElement,
       camera: this.camera,
       catalog: this.catalog,
-      sortedByDistFromSol: this.sortedByDistFromSol,
-      sortedDistFromSol: this.sortedDistFromSol,
-      getLocalPositions: () => this._localPositions,
+      sortedByDistFromSol: this.starFrame.sortedByDistFromSol,
+      sortedDistFromSol: this.starFrame.sortedDistFromSol,
+      getLocalPositions: () => this.localPositions,
       getFilter: () => this.filter,
       getClouds: () => this.clouds,
       getLocalGroupLayer: () => this.localGroupLayer,
@@ -1115,7 +917,7 @@ export class Stellata implements FrameAnchor {
       indices = [];
     }
     this.constellationFigureLayer.setFigures(
-      this.catalog.constellations, indices, this._localPositions);
+      this.catalog.constellations, indices, this.localPositions);
   }
 
   // One adapter entry per scene layer; registration order is per-frame
@@ -1181,7 +983,7 @@ export class Stellata implements FrameAnchor {
         this.updateBinaryOrbits();
         // After the walk wrote this frame's slots, so each path rides its
         // pair's live barycentre drift.
-        this.binaryOrbitPathLayer.update(this._localPositions, ctx.camera, window.innerHeight);
+        this.binaryOrbitPathLayer.update(this.localPositions, ctx.camera, window.innerHeight);
       },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
@@ -1205,7 +1007,7 @@ export class Stellata implements FrameAnchor {
       // After the binary + planet walks so a figure vertex that is a binary
       // member re-copies its live slot (orbital motion under scrub, epoch
       // advance, recentre — all land in localPositions with no separate signal).
-      update: () => this.constellationFigureLayer.update(this._localPositions),
+      update: () => this.constellationFigureLayer.update(this.localPositions),
       setMonochrome: (on) => this.constellationFigureLayer.setMonochrome(on),
       dispose: () => this.constellationFigureLayer.dispose(),
     });
@@ -1354,7 +1156,7 @@ export class Stellata implements FrameAnchor {
         catalog: this.catalog,
         idx: t.idx,
         camPos: this.camera.position,
-        localPositions: this._localPositions,
+        localPositions: this.localPositions,
         uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
       }) * 0.5;
     }
@@ -1506,21 +1308,11 @@ export class Stellata implements FrameAnchor {
   setFocus(idx: number | null) { this.focus.setFocus(idx); }
 
   private tmpRecenter = new THREE.Vector3();
-  // Scratch Vector3 reused for `recenterOrigin`'s return value (the
-  // applied delta). Caller-visible only between successive
-  // `recenterOrigin` calls; never read outside the synchronous
-  // callsite. Avoids a per-recentre allocation on the warp arrival
-  // path.
-  private _recenterDelta = new THREE.Vector3();
 
   // Shift the renderer's local origin to `newOrigin` (an absolute-space
-  // coordinate). The instance-position buffer is rewritten as `absolute −
-  // newOrigin` in JS Number precision (= float64) before being truncated to
-  // float32 — the per-axis subtractions happen in high precision first, so
-  // the resulting local coordinates near the new origin retain full float32
-  // resolution (~10⁻³⁸ near zero). Camera position and orbit target are
-  // shifted by the same delta so the user sees no visible jump; only
-  // numerical precision improves.
+  // coordinate). StarFrame rewrites the instance-position buffer; camera
+  // position and orbit target are shifted by the same delta so the user
+  // sees no visible jump, only numerical precision improves.
   //
   // Triggered automatically from FocusController.setFocus() and
   // WarpController.tryMidFlyRecentre. Don't call externally — it
@@ -1539,90 +1331,35 @@ export class Stellata implements FrameAnchor {
   // externally" rule still applies to non-warp/non-focus callers; the
   // recentre is a state-mutation primitive, not a routine API.
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    const dx = newOrigin.x - this.worldOffset.x;
-    const dy = newOrigin.y - this.worldOffset.y;
-    const dz = newOrigin.z - this.worldOffset.z;
-    if (dx === 0 && dy === 0 && dz === 0) return null;
-
-    this.writeLocalPositions(newOrigin.x, newOrigin.y, newOrigin.z);
-
-    this.camera.position.x -= dx;
-    this.camera.position.y -= dy;
-    this.camera.position.z -= dz;
-    this.controls.target.x -= dx;
-    this.controls.target.y -= dy;
-    this.controls.target.z -= dz;
-
-    this.worldOffset.copy(newOrigin);
-    // Shader needs the world offset to reconstruct absolute positions for
-    // dust-texture sampling (local-frame iPosition + uWorldOffset).
-    (this.starPipeline.discMaterial.uniforms.uWorldOffset.value as THREE.Vector3).copy(newOrigin);
+    const delta = this.starFrame.recenterTo(newOrigin);
+    if (delta === null) return null;
+    this.camera.position.sub(delta);
+    this.controls.target.sub(delta);
     // Layers holding local-frame positions (planet hosts, binary
     // baselines) re-derive them through the registry's recenter hooks.
     this.layers.recenterAll(newOrigin);
-    return this._recenterDelta.set(dx, dy, dz);
-  }
-
-  // Rewrite _localPositions = catalog.positions − (ox, oy, oz) in float64
-  // per axis (float32 write-back) and flag the instance buffer for
-  // re-upload. Shared by recenterOrigin (origin moved) and
-  // maybeReAdvanceEpoch (absolute positions moved).
-  private writeLocalPositions(ox: number, oy: number, oz: number): void {
-    const abs = this.catalog.positions;
-    const loc = this._localPositions;
-    const n = this.catalog.count;
-    for (let i = 0; i < n; i++) {
-      const j = i * 3;
-      loc[j] = abs[j] - ox;
-      loc[j + 1] = abs[j + 1] - oy;
-      loc[j + 2] = abs[j + 2] - oz;
-    }
-    this.starPipeline.iPositionAttr.needsUpdate = true;
-    this.binaryOrbitField?.markBaselinesDirty();
+    return delta;
   }
 
   // Scrubber-time star motion: when the model clock crosses a re-advance
-  // bucket, re-run the epoch-advance pass off the immutable J2016.0
-  // baseline and rebuild the local frame. Runs at the top of animate() so
-  // BinaryOrbitField / eclipse photometry rewrite their active slots on
-  // top of the fresh baselines in the same frame. When a star is focused,
-  // the camera + orbit target (+ any in-flight transition pose caches)
-  // translate by the focal's space-motion delta — the same follow contract
+  // bucket, StarFrame re-runs the epoch-advance pass off the immutable
+  // J2016.0 baseline. Runs at the top of animate() so BinaryOrbitField /
+  // eclipse photometry rewrite their active slots on top of the fresh
+  // baselines in the same frame. When a star is focused, the camera +
+  // orbit target (+ any in-flight transition pose caches) translate by
+  // the focal's space-motion delta — the same follow contract
   // applyFocalFrameRide implements for orbital drift — so the pin
   // invariant (target === focal live position) survives the move. Skipped
   // during warp: the warp owns the camera and re-snaps on arrival.
   private maybeReAdvanceEpoch(): void {
-    const targetJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJDE(this.getT())));
-    if (targetJyr === this._advancedEpochJyr) return;
-    const abs = this.catalog.positions;
     const focal = this.focus.getFocusedStar();
-    let fx = 0, fy = 0, fz = 0;
-    if (focal !== null) {
-      fx = abs[focal * 3];
-      fy = abs[focal * 3 + 1];
-      fz = abs[focal * 3 + 2];
-    }
-    advancePositionsToEpoch(
-      this._basePositions,
-      this.catalog.velocities,
-      targetJyr,
-      abs,
-    );
-    this._advancedEpochJyr = targetJyr;
-    this.writeLocalPositions(this.worldOffset.x, this.worldOffset.y, this.worldOffset.z);
-    if (focal !== null && !this.warp.isActive()) {
-      const d = this._epochFollowDelta.set(
-        abs[focal * 3] - fx,
-        abs[focal * 3 + 1] - fy,
-        abs[focal * 3 + 2] - fz,
-      );
-      if (d.lengthSq() > 0) {
-        this.camera.position.add(d);
-        this.controls.target.add(d);
-        this.focus.translateFocusFrame(d);
-        this.observe.translateFocusFrame(d);
-      }
-    }
+    const d = this._epochFollowDelta;
+    if (!this.starFrame.advanceEpochTo(this.getT(), focal, d)) return;
+    if (this.warp.isActive() || d.lengthSq() === 0) return;
+    this.camera.position.add(d);
+    this.controls.target.add(d);
+    this.focus.translateFocusFrame(d);
+    this.observe.translateFocusFrame(d);
   }
 
   // Keep the floating origin locked to the focal object as it moves under
@@ -1723,10 +1460,10 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField = new BinaryOrbitField({
       binaries,
       absolutePositions: this.catalog.positions,
-      basePositions: this._basePositions,
+      basePositions: this.starFrame.basePositions,
       velocities: this.catalog.velocities,
       absoluteMags: this.catalog.absmag,
-      localPositions: this._localPositions,
+      localPositions: this.localPositions,
       compositeSuppress: this._compositeSuppress,
       iPositionAttr: this.starPipeline.iPositionAttr,
       iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
@@ -1741,7 +1478,7 @@ export class Stellata implements FrameAnchor {
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
       absolutePositions: this.catalog.positions,
-      localPositions: this._localPositions,
+      localPositions: this.localPositions,
       absoluteMags: this.catalog.absmag,
       physicalRadiusSolar: this.catalog.physicalRadius,
       eclipseDimBuffer: this._eclipseDim,
@@ -1881,7 +1618,7 @@ export class Stellata implements FrameAnchor {
       catalog: this.catalog,
       idx,
       camPos: this.camera.position,
-      localPositions: this._localPositions,
+      localPositions: this.localPositions,
       uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
@@ -1898,7 +1635,7 @@ export class Stellata implements FrameAnchor {
       catalog: this.catalog,
       idx,
       camPos: this.camera.position,
-      localPositions: this._localPositions,
+      localPositions: this.localPositions,
       uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
@@ -2074,13 +1811,13 @@ export class Stellata implements FrameAnchor {
   // Read-only view of the local-frame star positions, bound to the GPU
   // iPosition attribute. Overlays should project through this rather than
   // catalog.positions so their math runs in the same frame as the camera.
-  get localPositions(): Float32Array { return this._localPositions; }
+  get localPositions(): Float32Array { return this.starFrame.localPositions; }
 
   /** Bucketised Julian epoch year the catalog positions currently sit at.
    *  Changes exactly when a re-advance rewrote the positions buffers —
    *  overlays that skip stationary frames must key on it alongside the
    *  camera transform. */
-  get advancedEpochJyr(): number { return this._advancedEpochJyr; }
+  get advancedEpochJyr(): number { return this.starFrame.advancedEpochJyr; }
 
   // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
   // distance vector tip) thread this through renderedSizePx so
@@ -2267,7 +2004,7 @@ export class Stellata implements FrameAnchor {
 
     // Project in local frame so camera/target math stays internally
     // consistent under the floating origin.
-    const positions = this._localPositions;
+    const positions = this.localPositions;
     const absmag = this.catalog.absmag;
     const t = this.controls.target;
 
@@ -2348,8 +2085,7 @@ export class Stellata implements FrameAnchor {
    *  callers (animate, updateWarp, overlay updates); the allocating shim
    *  above stays for cold paths and external API. */
   starLocalPositionInto(i: number, out: THREE.Vector3): THREE.Vector3 {
-    const p = this._localPositions;
-    return out.set(p[i * 3 + 0], p[i * 3 + 1], p[i * 3 + 2]);
+    return this.starFrame.localPositionInto(i, out);
   }
 
   /** Lead (first-seen outermost primary) of `idx`'s collapsed cluster,
@@ -2521,70 +2257,6 @@ export class Stellata implements FrameAnchor {
    *  clicks. See InputController.applyObjectClick. */
   applyObjectClick(target: Target): boolean { return this.input.applyObjectClick(target); }
 
-  // Camera-distance bound at which the catalog's largest star subtends
-  // `px` pixels under the live FOV / viewport uniforms, so changing
-  // exaggeration K, FOV, or viewport keeps the dependent gates honest.
-  private discWindowFromUniformsPc(px: number): number {
-    const u = this.starPipeline.discMaterial.uniforms;
-    return discWindowPc(
-      this.maxPhysicalRadiusPc,
-      px,
-      u.uFovYRad.value as number,
-      (u.uViewport.value as THREE.Vector2).y,
-    );
-  }
-
-  // Walk stars within `dThreshPc` of the camera. Uses the sorted-by-
-  // distance-from-Sol index plus the triangle inequality: any star within
-  // `dThreshPc` of the camera must have |distFromSol(star) −
-  // distFromSol(camera)| ≤ dThreshPc. We binary-search that window in the
-  // sorted array (typically tens to hundreds of candidates) and only do
-  // the squared-distance check on those — replaces a full 313k-element
-  // linear scan per frame. `cb` returns true to stop the walk early.
-  private forEachStarNearCamera(dThreshPc: number, cb: (idx: number) => boolean): void {
-    const dThreshSq = dThreshPc * dThreshPc;
-
-    // Camera distance from Sol in absolute space (catalog frame).
-    const camAbsX = this.camera.position.x + this.worldOffset.x;
-    const camAbsY = this.camera.position.y + this.worldOffset.y;
-    const camAbsZ = this.camera.position.z + this.worldOffset.z;
-    const camDistFromSol = Math.sqrt(
-      camAbsX * camAbsX + camAbsY * camAbsY + camAbsZ * camAbsZ,
-    );
-    // sortedDistFromSol holds load-epoch Sol distances; a scrubbed star can
-    // sit up to _maxEpochDriftPc away from its sorted value, so the window
-    // widens by that bound. The in-window test below reads live positions.
-    const lo = camDistFromSol - dThreshPc - this._maxEpochDriftPc;
-    const hi = camDistFromSol + dThreshPc + this._maxEpochDriftPc;
-
-    const sortedIdx = this.sortedByDistFromSol;
-    const { start, end } = sortedDistRange(this.sortedDistFromSol, lo, hi);
-
-    const positions = this._localPositions;
-    const cx = this.camera.position.x;
-    const cy = this.camera.position.y;
-    const cz = this.camera.position.z;
-    for (let k = start; k < end; k++) {
-      const i = sortedIdx[k];
-      const dx = positions[i * 3] - cx;
-      const dy = positions[i * 3 + 1] - cy;
-      const dz = positions[i * 3 + 2] - cz;
-      if (dx * dx + dy * dy + dz * dz < dThreshSq && cb(i)) return;
-    }
-  }
-
-  // Should the core depth-mask render this frame? True iff at least one
-  // star is close enough that its disc could reach RESOLVED_DISC_MIN_PX —
-  // below that, bleed-through is too small to see.
-  private shouldEnableCoreMask(): boolean {
-    let found = false;
-    this.forEachStarNearCamera(
-      this.discWindowFromUniformsPc(RESOLVED_DISC_MIN_PX),
-      () => { found = true; return true; },
-    );
-    return found;
-  }
-
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
@@ -2661,7 +2333,7 @@ export class Stellata implements FrameAnchor {
     // the physSize-only window misses an appSize-driven member disc.
     perfMark('coreMask');
     this.starPipeline.coreMaskMesh.visible =
-      this.starLocalCluster.hasMembers() || this.shouldEnableCoreMask();
+      this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask();
     perfMeasure('coreMask');
     perfMeasure('pre-render');
     perfMark('gpu.render');

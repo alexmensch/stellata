@@ -30,9 +30,11 @@ close-approach focused star sitting at exactly NDC origin.
   cloud-, and future-focusable-park-arrivals all compose these. The
   per-frame motion delegates to `../arrival/camera-motion.ts`.
 
-`FrameAnchor` (recenterOrigin / worldOffset / starLocalPosition)
-stays on `stellata.ts` — those primitives rewrite the star-pipeline
-`_localPositions` buffer alongside the ShaderMaterial it feeds.
+`FrameAnchor` (recenterOrigin / worldOffset / starLocalPosition) is
+implemented by `stellata.ts`, but only as the camera / orbit-target /
+scene-layer half of a recentre: the buffer itself belongs to
+`StarFrame` (`../../star-pipeline/README.md` § The star frame), which
+the shell delegates to.
 
 ## Focus state
 
@@ -322,7 +324,8 @@ silently disengages the pin. Residual sources that have bitten this:
    per-frame perturbation so target stays on the star.
 5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
    re-runs the epoch-advance pass, moving the focal star's baseline
-   mid-focus. `maybeReAdvanceEpoch` (`stellata.ts`) translates camera,
+   mid-focus. `maybeReAdvanceEpoch` (`stellata.ts`, over
+   `StarFrame.advanceEpochTo`) translates camera,
    target, and the in-flight transition pose caches by the focal's
    exact space-motion delta in the same step — the ride's follow
    contract applied to proper motion (skipped during warp, like the
