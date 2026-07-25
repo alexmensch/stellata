@@ -107,6 +107,10 @@ import {
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
   BJ_ELIGIBLE_DIST_SRCS,
+  DIST_SRC_BUCKETS,
+  distSrcBucket,
+  emptyDistSrcPartition,
+  tallyDistSrc,
   applyLmcKinematicOverride,
   isInLmcCone,
   angularSeparationDeg,
@@ -2072,6 +2076,52 @@ describe('catalog-pure / isBailerJonesEligible', () => {
   });
 });
 
+describe('catalog-pure / dist_src partition', () => {
+  it('DIST_SRC_BUCKETS covers AT-HYG v3.3 dist_src plus the catch-all', () => {
+    expect([...DIST_SRC_BUCKETS]).toEqual([
+      'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', 'UNRECOGNISED',
+    ]);
+    expect([...BJ_ELIGIBLE_DIST_SRCS].every(
+      (s) => (DIST_SRC_BUCKETS as readonly string[]).includes(s),
+    )).toBe(true);
+  });
+
+  it('buckets each AT-HYG dist_src under its own name', () => {
+    for (const src of ['G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER']) {
+      expect(distSrcBucket(src), src).toBe(src);
+    }
+  });
+
+  it('routes a null, blank, or never-seen dist_src to UNRECOGNISED', () => {
+    // Keeps a newly-introduced AT-HYG dist_src from hiding inside the
+    // literal 'OTHER' bucket, where no override layer has reasoned about it.
+    expect(distSrcBucket(null)).toBe('UNRECOGNISED');
+    expect(distSrcBucket('')).toBe('UNRECOGNISED');
+    expect(distSrcBucket('G_R4')).toBe('UNRECOGNISED');
+  });
+
+  it('emptyDistSrcPartition zeroes every bucket', () => {
+    const p = emptyDistSrcPartition();
+    expect(Object.keys(p)).toEqual([...DIST_SRC_BUCKETS]);
+    expect(Object.values(p).every((n) => n === 0)).toBe(true);
+  });
+
+  it('tallyDistSrc accumulates per bucket and leaves the rest at zero', () => {
+    const p = emptyDistSrcPartition();
+    tallyDistSrc(p, 'G_R3');
+    tallyDistSrc(p, 'G_R3');
+    tallyDistSrc(p, 'HIP');
+    tallyDistSrc(p, 'G_R4');
+    expect(p.G_R3).toBe(2);
+    expect(p.HIP).toBe(1);
+    expect(p.UNRECOGNISED).toBe(1);
+    expect(p.G_R2).toBe(0);
+    expect(p.GJ).toBe(0);
+    expect(p.N).toBe(0);
+    expect(p.OTHER).toBe(0);
+  });
+});
+
 describe('catalog-pure / parseGaiaSourceIdStr', () => {
   it('returns the trimmed decimal string for a valid Gaia source_id', () => {
     expect(parseGaiaSourceIdStr('5877748442128924544')).toBe('5877748442128924544');
@@ -2468,10 +2518,9 @@ describe('catalog-pure / LMC distance vs MAX_DIST_PC invariant', () => {
 
 describe('catalog-pure / applyLmcKinematicOverride', () => {
   // Tier-A fixtures from AT-HYG / Gaia DR3 — three real LMC supergiants
-  // (HDE 268xxx range) and one halo-PM outlier inside the LMC cone. All
-  // fixtures here are in-cone; the function's contract requires the
-  // caller to have gated on `isInLmcCone` first. AT-HYG distances are
-  // the pre-override values that get smeared 5-200 kpc by 1/π inversion.
+  // (HDE 268xxx range) and one halo-PM outlier inside the LMC cone.
+  // AT-HYG distances are the pre-override values that get smeared
+  // 5-200 kpc by 1/π inversion.
   interface Fixture {
     label: string;
     ra: number; dec: number; mag: number;
@@ -2491,7 +2540,7 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
 
   it('LMC-direction + LMC-PM star is snapped to 49.594 kpc', () => {
     for (const f of LMC_HITS) {
-      const out = applyLmcKinematicOverride(f.mag, f.pmRa, f.pmDec);
+      const out = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
       expect(out, f.label).not.toBeNull();
       expect(out!.dist, f.label).toBe(LMC_DISTANCE_PC);
       // Absolute magnitude recomputed at the new distance.
@@ -2501,17 +2550,31 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
 
   it('LMC-direction + non-LMC-PM star is unchanged (null override)', () => {
     for (const f of LMC_PM_NON_HITS) {
-      const out = applyLmcKinematicOverride(f.mag, f.pmRa, f.pmDec);
+      const out = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
       expect(out, f.label).toBeNull();
     }
+  });
+
+  it('off-cone star with textbook LMC bulk PM is not overridden', () => {
+    // The gate the function owns rather than delegates: a star whose PM
+    // sits exactly on the LMC bulk centre but which lies nowhere near the
+    // LMC gets no override. Snapping it would teleport a Galactic star to
+    // 49.6 kpc.
+    expect(applyLmcKinematicOverride(
+      12, 0, 8, LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE,
+    )).toBeNull();
   });
 
   it('returns null when pm_ra or pm_dec is missing', () => {
     // A star in the LMC cone with null proper motion — should NOT be
     // overridden. AT-HYG carries blank pm_ra/pm_dec for pre-Hipparcos
     // entries; treat them as ineligible for the kinematic gate.
-    expect(applyLmcKinematicOverride(10, null, 0)).toBeNull();
-    expect(applyLmcKinematicOverride(10, 0, null)).toBeNull();
+    expect(applyLmcKinematicOverride(
+      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10, null, 0,
+    )).toBeNull();
+    expect(applyLmcKinematicOverride(
+      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10, 0, null,
+    )).toBeNull();
   });
 
   it('ordering: LMC_KIN wins over BJ for an LMC-cone star with both', () => {
@@ -2524,7 +2587,7 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     const bjMap = new Map([[sourceId, 8000]]); // arbitrary B-J posterior ≠ LMC distance
     const bj = applyBailerJonesOverride(f.mag, sourceId, bjMap);
     expect(bj!.dist).toBe(8000);
-    const lmc = applyLmcKinematicOverride(f.mag, f.pmRa, f.pmDec);
+    const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
     expect(lmc!.dist).toBe(LMC_DISTANCE_PC);
     // Final state mirrors what build-catalog.ts ends up with.
     expect(lmc!.dist).not.toBe(bj!.dist);
@@ -2534,16 +2597,19 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     // |Δpm_ra| at the tolerance, |Δpm_dec| at 0 → pass. Mirror case → pass.
     // Both at the tolerance → still pass (per-component, not Euclidean).
     const eps = 1e-9;
+    const atCentre = [LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10] as const;
     const passEdgeRa = applyLmcKinematicOverride(
-      10, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
+      ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
     );
     expect(passEdgeRa).not.toBeNull();
     const passBothEdges = applyLmcKinematicOverride(
-      10, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE - LMC_PM_TOLERANCE + eps,
+      ...atCentre,
+      LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps,
+      LMC_PM_DEC_CENTRE - LMC_PM_TOLERANCE + eps,
     );
     expect(passBothEdges).not.toBeNull();
     const failJustOver = applyLmcKinematicOverride(
-      10, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
+      ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
     );
     expect(failJustOver).toBeNull();
   });

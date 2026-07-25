@@ -23,8 +23,26 @@
   "bjEntries": 310952,
   "bjEligible": 310849,
   "bjOverridden": 310157,
+  "bjOverriddenByDistSrc": {
+    "G_R3": 310110,
+    "G_R2": 47,
+    "HIP": 0,
+    "GJ": 0,
+    "N": 0,
+    "OTHER": 0,
+    "UNRECOGNISED": 0
+  },
   "lmcCandidates": 4727,
   "lmcOverridden": 54,
+  "lmcOverriddenByDistSrc": {
+    "G_R3": 54,
+    "G_R2": 0,
+    "HIP": 0,
+    "GJ": 0,
+    "N": 0,
+    "OTHER": 0,
+    "UNRECOGNISED": 0
+  },
   "nameTableEntries": 12071,
   "variableCount": 3929,
   "searchEntries": 324693,

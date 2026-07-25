@@ -1,6 +1,7 @@
 // Pure helpers for the build-catalog count assertion — diff a
 // BuildCounts record against the committed snapshot. See
 // scripts/catalog/README.md § Validation harness.
+import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
 
 export interface BuildCounts {
   /** Records written to catalog.bin after filtering and sort. */
@@ -70,12 +71,23 @@ export interface BuildCounts {
   /** bjEligible rows whose source_id was also in the B-J catalogue —
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
+  /** bjOverridden split by the row's AT-HYG dist_src. HIP / GJ / N /
+   *  OTHER must stay 0: a non-zero entry means the eligibility gate
+   *  stopped holding and non-Gaia distances are being regressed onto
+   *  B-J's Galactic-density prior. UNRECOGNISED must stay 0 too — a
+   *  dist_src value no override layer has reasoned about. */
+  bjOverriddenByDistSrc: DistSrcPartition;
   /** AT-HYG rows whose (ra, dec) falls inside the LMC sky cone — the
    *  population the LMC kinematic PM gate is evaluated against. */
   lmcCandidates: number;
   /** Rows that ALSO pass the LMC bulk-PM gate; their dist/x/y/z/absmag
    *  were snapped to Pietrzyński 2019's eclipsing-binary distance. */
   lmcOverridden: number;
+  /** lmcOverridden split by the row's AT-HYG dist_src. Unlike B-J this
+   *  layer gates on sky cone + PM, not on dist_src, so every bucket is
+   *  legitimately reachable — the split states which catalogued-distance
+   *  populations the snap actually displaces. */
+  lmcOverriddenByDistSrc: DistSrcPartition;
   /** Stars with a proper name written into the name table. */
   nameTableEntries: number;
   /** Stars with both nonzero amplitude and period after quantisation —
@@ -325,32 +337,56 @@ export interface BuildCounts {
 }
 
 export type CountDiff =
-  | { key: keyof BuildCounts; status: 'match'; value: number }
+  | { key: string; status: 'match'; value: number }
   | {
-      key: keyof BuildCounts;
+      key: string;
       status: 'mismatch';
       expected: number;
       actual: number;
     };
 
 /** Compare actual counts against an expected manifest and emit a per-key
- *  diff. Pure — no I/O. The caller decides whether mismatches are fatal. */
+ *  diff. Partition-valued entries (a `DistSrcPartition`) expand to one
+ *  `parent.bucket` row each, so a single drifting bucket names itself.
+ *  Pure — no I/O. The caller decides whether mismatches are fatal. */
 export function compareBuildCounts(
   expected: BuildCounts,
   actual: BuildCounts,
 ): CountDiff[] {
-  const keys = Object.keys(actual) as (keyof BuildCounts)[];
-  return keys.map((key) => {
+  const diff: CountDiff[] = [];
+  for (const key of Object.keys(actual) as (keyof BuildCounts)[]) {
     const a = actual[key];
     const e = expected[key];
-    if (a === e) return { key, status: 'match' as const, value: a };
-    return { key, status: 'mismatch' as const, expected: e, actual: a };
-  });
+    if (typeof a === 'number') {
+      diff.push(compareOne(key, typeof e === 'number' ? e : NaN, a));
+      continue;
+    }
+    for (const bucket of Object.keys(a)) {
+      const ea = (e ?? {}) as Partial<Record<string, number>>;
+      diff.push(compareOne(
+        `${key}.${bucket}`,
+        ea[bucket] ?? NaN,
+        (a as Record<string, number>)[bucket],
+      ));
+    }
+  }
+  return diff;
+}
+
+function compareOne(key: string, expected: number, actual: number): CountDiff {
+  if (actual === expected) return { key, status: 'match', value: actual };
+  return { key, status: 'mismatch', expected, actual };
+}
+
+/** One-line `bucket=n` rundown of an override layer's row partition, zeros
+ *  included — the per-partition dry-run figure an override PR quotes. */
+export function formatDistSrcPartition(partition: DistSrcPartition): string {
+  return DIST_SRC_BUCKETS.map((b) => `${b}=${partition[b]}`).join(', ');
 }
 
 /** Pretty-printer for the diff. Used by the build script and any future
- *  CLI consumer. Lines are sorted with mismatches first so a fatal exit
- *  doesn't scroll the actionable rows off-screen. */
+ *  CLI consumer. Only mismatching rows are listed, so a fatal exit doesn't
+ *  scroll the actionable ones off-screen. */
 export function formatCountDiff(diff: CountDiff[]): string {
   const mismatches = diff.filter((d) => d.status === 'mismatch');
   const lines: string[] = [];
@@ -360,12 +396,18 @@ export function formatCountDiff(diff: CountDiff[]): string {
     lines.push(
       `build-counts: ${mismatches.length} of ${diff.length} counts differ`,
     );
+    const width = Math.max(...mismatches.map((m) => m.key.length));
     for (const m of mismatches) {
       if (m.status !== 'mismatch') continue;
+      const label = `  ${m.key.padEnd(width)}`;
+      if (Number.isNaN(m.expected)) {
+        lines.push(`${label} absent from snapshot, got ${m.actual}`);
+        continue;
+      }
       const delta = m.actual - m.expected;
       const sign = delta > 0 ? '+' : '';
       lines.push(
-        `  ${m.key.padEnd(22)} expected ${m.expected}, got ${m.actual} (${sign}${delta})`,
+        `${label} expected ${m.expected}, got ${m.actual} (${sign}${delta})`,
       );
     }
   }
