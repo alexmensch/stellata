@@ -12,7 +12,7 @@ The warp consumes focusable objects through the `FocusTarget` contract
 
 - `warp-controller.ts` (+ test) — the 3-phase FSM (reorient → fly →
   post-arrival). Owns `WarpState`, `startWarp` / `finishWarp` /
-  `updateWarp` / `tryMidFlyRecentre` / `swapObserveAnchor`, plus the
+  `updateWarp` / `tryMidFlyRecentre` / `finishObserveAnchorSwap`, plus the
   warp-only scratch state. The integration shell composes the
   controller alongside Picker / AimController and delegates the
   animate-loop tick when `warp.isActive()` returns true. Cross-
@@ -166,11 +166,11 @@ parallax, distant Milky Way stays roughly fixed.
 
 Camera position **also lerps from `pEnd` to `B`** across this phase,
 so the parallax view ends with the camera exactly at the destination
-star. Without this, `swapObserveAnchor` would absorb an
+star. Without this, `finishObserveAnchorSwap` would absorb an
 `endOffset`-sized hidden teleport at `finishWarp` (its `set(0,0,0)`
 snap), leaving the user with the impression that the slerp happened
 from the wrong vantage. The destination disc stays visible across
-the entire post-arrival window — `swapObserveAnchor` pins
+the entire post-arrival window — `finishObserveAnchorSwap` pins
 `uHideFocusIdx` to the destination only at `finishWarp`, so the user
 sees the star they're arriving at right up until the camera parks
 inside it. Hiding it earlier would feel like the star pops out
@@ -192,7 +192,7 @@ visible as the destination star jittering as the quaternion rotates.
 After the recentre B is at local `(0,0,0)` and the camera lerps in
 from a small offset; the projection chain stays clean. `uHideFocusIdx`
 still points at the source for the rest of phase 3 so the destination
-remains visible throughout the parallax slerp; `swapObserveAnchor` at
+remains visible throughout the parallax slerp; `finishObserveAnchorSwap` at
 `finishWarp` re-points it to the destination on landing. Mirrors the
 navigate-mode path (`setFocus(destIdx)` recentre at `finishWarp`),
 pulled forward by `postArrivalMs`.
@@ -230,11 +230,11 @@ value is purely cosmetic). Two gotchas worth noting up front:
    `'cameraMode'` (mode toggle, search-row label, etc.) stays
    settled. Without this, observe→observe arrival visibly flickers
    through navigate mid-warp.
-2. **`finishWarp` re-anchors via `swapObserveAnchor`**, not
+2. **`finishWarp` re-anchors via `finishObserveAnchorSwap`**, not
    `setFocus`, when `returnToObserve` is true. `setFocus` would see
    `cameraMode === 'observe'` and run its observe-cleanup branch
    (`uHideFocusIdx = -1`, emit `'cameraMode'`), recreating the
-   flicker. `swapObserveAnchor` recentres the floating origin,
+   flicker. `finishObserveAnchorSwap` recentres the floating origin,
    updates `focusedStar`, repoints `uHideFocusIdx` to the new
    anchor, and snaps the camera to `(0, 0, 0)` local without
    touching `cameraMode`.
@@ -249,11 +249,11 @@ baseline) and ρ=0 inner pairs on their parent (Castor Bb→B) fly the
 normal warp. Their `distPc` sits below `WARP_DEGENERATE_DIST_PC`, where
 `AB/distPc` is float32 noise, so `startWarp` takes the travel direction
 from `camera.getWorldDirection` instead; the reorient is minimal and the
-near-zero flight lands via `finishWarp` → `swapObserveAnchor` (observe)
+near-zero flight lands via `finishWarp` → `finishObserveAnchorSwap` (observe)
 or `setFocus` (navigate). Mid-Fly recentre never fires (the camera stays
 farther from the destination than ¼·|AB| the whole flight), exactly as
 for any two very-close stars, so the arrival is identical to the proven
-close-pair path. Do **not** re-add a degenerate `setFocus`/`swapObserveAnchor`
+close-pair path. Do **not** re-add a degenerate `setFocus`/`finishObserveAnchorSwap`
 shortcut: changing focus outside `finishWarp` leaves `controls.target`
 stale and jolts the focal-frame ride.
 
@@ -266,8 +266,8 @@ stale and jolts the focal-frame ride.
 
 Bus events emitted from the controller:
 - `'warp'` (boolean) — true at startWarp, false at finishWarp.
-- `'state'` — at startWarp, at finishWarp (via swapObserveAnchor on
+- `'state'` — at startWarp, at finishWarp (via finishObserveAnchorSwap on
   observe→observe arrivals, via `setFocus` on navigate star arrivals,
   or via the dest FocusTarget's `emitFocusEvents` on soft-kind
   arrivals).
-- `'focus'` (Target | null) — only from `swapObserveAnchor`.
+- `'focus'` (Target | null) — only from `finishObserveAnchorSwap`.

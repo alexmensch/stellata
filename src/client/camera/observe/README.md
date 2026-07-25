@@ -169,7 +169,7 @@ the same path — there is no degenerate shortcut. Their A→B separation is
 too small to give a reliable travel direction, so `startWarp` falls back
 to the camera's current view direction (`WARP_DEGENERATE_DIST_PC`); the
 near-zero flight then lands through the normal `finishWarp` →
-`swapObserveAnchor` re-anchor, keeping observe engaged with
+`finishObserveAnchorSwap` re-anchor, keeping observe engaged with
 `controls.target` correctly on the new star. A bespoke in-place re-anchor
 was tried and reverted: it bypasses `finishWarp`'s `controls.target` setup
 and desyncs the focal-frame ride.

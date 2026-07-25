@@ -419,7 +419,7 @@ describe('WarpController — lifecycle + idempotency', () => {
     expect(h.focus.calls.emitFocusEvents).toContainEqual({ kind: 'cloud', idx: 5 });
   });
 
-  it('coincident source/destination in OBSERVE flies and lands via swapObserveAnchor, stays in observe', () => {
+  it('coincident source/destination in OBSERVE flies and lands via finishObserveAnchorSwap, stays in observe', () => {
     const h = makeHarness({ mode: 'observe' });
     // Collocated stars — the ρ=0 inner-pair-on-parent case (Castor Bb → B).
     // No degenerate shortcut: it runs the full warp and re-anchors through
@@ -429,7 +429,7 @@ describe('WarpController — lifecycle + idempotency', () => {
     expect(h.warp.isActive()).toBe(true);
     h.warp.skip();
     expect(h.warp.isActive()).toBe(false);
-    // swapObserveAnchor re-anchors onto the destination through the
+    // finishObserveAnchorSwap re-anchors onto the destination through the
     // kind-agnostic FocusTarget contract (recentre + applyFocus),
     // without a setFocus navigate flip.
     expect(h.focus.calls.applyFocus).toContainEqual({ kind: 'star', idx: 1 });
@@ -562,7 +562,7 @@ describe('WarpController — 3-phase FSM transitions', () => {
     expect(phase!.totalMs).toBeCloseTo(OBSERVE_TRANSITION_MS, 0);
   });
 
-  it('observe→observe arrival emits focus at swapObserveAnchor and re-enables observeControls', () => {
+  it('observe→observe arrival emits focus at finishObserveAnchorSwap and re-enables observeControls', () => {
     const h = makeHarness({ mode: 'observe' });
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0));
     h.warp.warpTo({ kind: 'star', idx: 1 });
