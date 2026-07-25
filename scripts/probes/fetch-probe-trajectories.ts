@@ -82,9 +82,9 @@ async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<nu
     mission: probe.mission,
     horizonsId: probe.horizonsId,
     launchUtc: probe.launchUtc,
-    launchUnix: unixMs(probe.launchUtc),
+    launchUnixMs: unixMs(probe.launchUtc),
     lastContactUtc: probe.lastContactUtc,
-    lastContactUnix: probe.lastContactUtc === null ? null : unixMs(probe.lastContactUtc),
+    lastContactUnixMs: probe.lastContactUtc === null ? null : unixMs(probe.lastContactUtc),
     source: {
       frame: header.frame,
       center: header.centerBody,

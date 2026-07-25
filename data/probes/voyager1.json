@@ -4,9 +4,9 @@
   "mission": "Jupiter and Saturn flybys; crossed the heliopause in 2012.",
   "horizonsId": "-31",
   "launchUtc": "1977-09-05T12:56:00Z",
-  "launchUnix": 242312160000,
+  "launchUnixMs": 242312160000,
   "lastContactUtc": null,
-  "lastContactUnix": null,
+  "lastContactUnixMs": null,
   "source": {
     "frame": "ICRF",
     "center": "Sun (10)                        {source: Voyager_1_ST+refit2022_m}",

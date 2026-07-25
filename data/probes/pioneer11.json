@@ -4,9 +4,9 @@
   "mission": "First probe to Saturn (1979), via a Jupiter gravity assist.",
   "horizonsId": "-24",
   "launchUtc": "1973-04-06T02:11:00Z",
-  "launchUnix": 102910260000,
+  "launchUnixMs": 102910260000,
   "lastContactUtc": "1995-09-30T00:00:00Z",
-  "lastContactUnix": 812419200000,
+  "lastContactUnixMs": 812419200000,
   "source": {
     "frame": "ICRF",
     "center": "Sun (10)                        {source: pioneer_11_merged}",

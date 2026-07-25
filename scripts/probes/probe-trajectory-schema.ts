@@ -14,9 +14,11 @@ export type ProbeTrajectoryFile = {
   mission: string;
   horizonsId: string;
   launchUtc: string;
-  launchUnix: number;
+  /** `Date.parse(launchUtc)` — Unix **milliseconds**, not the Unix seconds
+   *  the model clock `t` runs in. */
+  launchUnixMs: number;
   lastContactUtc: string | null;
-  lastContactUnix: number | null;
+  lastContactUnixMs: number | null;
   /** Free-text provenance echoed from the HORIZONS response header. */
   source: {
     frame: string;

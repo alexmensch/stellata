@@ -56,9 +56,9 @@ tests. No overlap with this folder.
   "mission": "Jupiter and Saturn flybys; crossed the heliopause in 2012.",
   "horizonsId": "-31",
   "launchUtc": "1977-09-05T12:56:00Z",
-  "launchUnix": 242312160000,
+  "launchUnixMs": 242312160000,
   "lastContactUtc": null,
-  "lastContactUnix": null,
+  "lastContactUnixMs": null,
   "source": { "frame": "ICRF", "center": "Sun (10) …", "units": "AU-D",
               "targetBody": "…", "retrievedUtc": "…" },
   "columns": ["jd", "x", "y", "z", "vx", "vy", "vz"],
@@ -72,6 +72,10 @@ imported by both the emitter and the runtime loader. One flat array per
 sample rather than an object: no repeated keys across ~4,200 rows, and
 a refresh still diffs sample-by-sample in git.
 
+- `launchUnixMs` / `lastContactUnixMs` — `Date.parse` output, Unix
+  **milliseconds**. The model clock `t` is Unix *seconds*; the runtime
+  loader divides. The `Ms` suffix is load-bearing — an undecorated
+  `launchUnix` reads as seconds and is off by 1000×.
 - `jd` — Julian Date, **TDB**. The runtime's clock is UTC; the offset
   is ~69 s, which at 17 km/s is 1200 km ≈ 8e-6 AU — five orders of
   magnitude below anything visible, so no conversion is applied.

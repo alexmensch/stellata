@@ -4,9 +4,9 @@
   "mission": "Only probe to visit Uranus and Neptune; heliopause in 2018.",
   "horizonsId": "-32",
   "launchUtc": "1977-08-20T14:29:00Z",
-  "launchUnix": 240935340000,
+  "launchUnixMs": 240935340000,
   "lastContactUtc": null,
-  "lastContactUnix": null,
+  "lastContactUnixMs": null,
   "source": {
     "frame": "ICRF",
     "center": "Sun (10)                        {source: Voyager_2_ST+refit2022_m}",

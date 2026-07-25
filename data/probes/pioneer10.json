@@ -4,9 +4,9 @@
   "mission": "First probe to Jupiter (1973) and first on a Sun-escape trajectory.",
   "horizonsId": "-23",
   "launchUtc": "1972-03-03T01:49:00Z",
-  "launchUnix": 68435340000,
+  "launchUnixMs": 68435340000,
   "lastContactUtc": "2003-01-23T00:00:00Z",
-  "lastContactUnix": 1043280000000,
+  "lastContactUnixMs": 1043280000000,
   "source": {
     "frame": "ICRF",
     "center": "Sun (10)                        {source: pioneer_10_merged}",

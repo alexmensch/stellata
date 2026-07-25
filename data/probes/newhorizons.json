@@ -4,9 +4,9 @@
   "mission": "Pluto flyby 2015, Arrokoth 2019; now surveying the Kuiper Belt.",
   "horizonsId": "-98",
   "launchUtc": "2006-01-19T19:00:00Z",
-  "launchUnix": 1137697200000,
+  "launchUnixMs": 1137697200000,
   "lastContactUtc": null,
-  "lastContactUnix": null,
+  "lastContactUnixMs": null,
   "source": {
     "frame": "ICRF",
     "center": "Sun (10)                        {source: NH_merged}",
