@@ -42,6 +42,8 @@ when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
   (format: `scripts/cloud-surfaces/README.md`).
 - `cloud-presence-pure.ts` — CPU mirror of the absorption math (Plummer
   density, absorption alpha). Vitest-pinned.
+- `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
+  resolution (§ Picking + hover).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.
 - `cloud-absorption.vert.glsl`, `cloud-absorption.frag.glsl` — the
   absorption raymarch pair.
@@ -165,12 +167,51 @@ geometry behind the fresnel rim and the chart stipple outline — so the
 hitbox matches the silhouette in both modes rather than the far-larger
 absorption ellipsoid (its `SphereGeometry` is only the raymarch domain).
 Raycasting ignores mesh visibility, so picking works while the rim is
-decluttered or in chart mode. `Picker.pickCloud` does the raycast; the click
-handler in `onPointerUp` falls back to a cloud pick when no star is hit
-(stars take priority because they're the smaller, more precise target),
-and the hover engine's `cloud-hover-provider` calls `Picker.pickCloudHit`
-so hovering over a cloud's body shows its name + distance + axes in the
-existing tooltip element.
+decluttered or in chart mode. The click handler in `onPointerUp` falls
+back to a cloud pick when no star is hit (stars take priority because
+they're the smaller, more precise target), and the hover engine's
+`cloud-hover-provider` calls `Picker.pickCloudHit` so hovering over a
+cloud's body shows its name + distance + axes in the existing tooltip
+element.
+
+**One winner resolver, in the layer.** `MolecularClouds.pick` is the
+single entry point behind both pick surfaces — `Picker.pickCloud`
+(click, keeps its warp gate) and `Picker.pickCloudHit` (hover, keeps the
+`group.visible` gate) each delegate, so the two can never disagree on
+which of two overlapping clouds the cursor is on. A tiebreak living in
+the click handler instead would drift the moment either surface changes.
+Hover tier is always `fallback`: stars, planets, LG objects and shells
+win any overlap with a cloud body.
+
+**Proportionally-deepest-inside wins.** The raycast is *only* the
+hit-vs-miss gate (every hit means the cursor is genuinely inside that
+cloud's outline). Among the hits, the winner is the lowest
+
+    score = pxDistFromProjectedCentre / (renderedSizePx / 2)
+
+— the cursor's offset from the cloud's projected centre as a fraction of
+that cloud's *own* projected radius (0 = dead centre, 1 = at the edge),
+via `cloud-pick-pure.ts`. Ray distance is deliberately not a tiebreak:
+"closest to camera wins" (Three.js `intersectObjects` order) makes the
+background cloud unreachable wherever a foreground one overlaps it — the
+same failure the star picker's `pickScore` rejected. Raw pixel distance
+to the nearest centre is equally wrong in the other direction: clouds
+span a ~10× on-screen size range, so a small cloud is within a few dozen
+px of its own centre almost everywhere inside itself and would take the
+whole overlap region. Scale-invariance is the property that keeps both
+reachable. Accepted trade: near the edge of a big complex, an
+overlapping small cloud takes the pick — that is what makes the small
+cloud reachable at all.
+
+Projection is against the **effective centre** (§ Effective focus
+geometry), and the denominator is the layer's `renderedSizePx` — the
+extent sphere for traced clouds, the tight ellipsoid quadric otherwise,
+both at the depicted `u = uEnv` envelope, keyed off the canonical
+shader-side pixels-per-radian (`PickerDeps.fovYRadRef` / `viewportRef`)
+so the score matches the silhouette the user actually clicked inside.
+Every hit enters the shared `pickFromCandidates` reducer as a prime-tier
+candidate with `hitRadius: Infinity` — see `cloudPickCandidate` for why a
+real radius would misclassify near-lobe hits.
 
 ## Search
 

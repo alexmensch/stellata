@@ -7,6 +7,13 @@ import rimFrag from './cloud-rim.frag.glsl?raw';
 import rimVert from '../fresnel-shell/fresnel-shell.vert.glsl?raw';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { angularDiameterPx } from '../camera/controls/star-geometry';
+import { projectToScreenInto } from '../overlays/overlay-project';
+import {
+  cloudPickCandidate,
+  resolveCloudPick,
+  type CloudPickCandidate,
+} from './cloud-pick-pure';
+import type { HoverHit } from '../hover/hover-types';
 // Registers the stellata_fresnel_rim chunk the rim shader includes —
 // removing this import breaks the shader compile at first render.
 import {
@@ -113,6 +120,13 @@ export class MolecularClouds {
    *  NOT pick — their ellipsoid is only the raymarch domain, far larger than
    *  the shell for complex clouds (Aquila Rift). */
   private pickMeshes: THREE.Mesh[] = [];
+
+  // Pick-path scratch — valid only inside one `pick()` call.
+  private readonly pickRaycaster = new THREE.Raycaster();
+  private readonly pickNdc = new THREE.Vector2();
+  private readonly pickCentreLocal = new THREE.Vector3();
+  private readonly pickViewDir = new THREE.Vector3();
+  private readonly pickScreen: [number, number] = [0, 0];
 
   // User-tunable from the dev console via `stellata.cloudLayer.set*()`.
   private rimGain = RIM_GAIN_DEFAULT;
@@ -257,7 +271,11 @@ export class MolecularClouds {
    *  local-frame effective focus centre into `out` when the cloud
    *  exists, returns `true`. Returns `false` (and leaves `out`
    *  untouched) when the index is out of range. */
-  cloudLocalPositionInto(cloudIdx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
+  cloudLocalPositionInto(
+    cloudIdx: number,
+    worldOffset: Readonly<THREE.Vector3>,
+    out: THREE.Vector3,
+  ): boolean {
     const c = this.focusCenters[cloudIdx];
     if (!c) return false;
     out.copy(c).sub(worldOffset);
@@ -314,19 +332,68 @@ export class MolecularClouds {
   }
 
   /**
-   * Return the index of the cloud the ray hits closest to its origin, or
-   * null if no cloud is hit. The renderer's depth-test means foreground
-   * stars block clicks from reaching clouds behind them, but we don't
-   * test against star geometry here — that's a star pick, handled by
-   * `Picker.pickStar` in camera/picker.ts. Caller should pick the star
-   * first and fall back to a cloud pick when no star is hit.
+   * Resolve the cloud under the cursor — the single winner-resolving
+   * entry point behind both `Picker.pickCloud` (click) and
+   * `Picker.pickCloudHit` (hover), so the two can never disagree.
+   * Rim-mesh raycast gates hit-vs-miss; `resolveCloudPick` picks the
+   * cloud the cursor sits proportionally deepest inside (README
+   * § Picking + hover). Tier is always `fallback` — stars, planets, LG
+   * objects and shells win any overlap with a cloud body.
+   *
+   * Only cloud geometry is tested: foreground stars don't block a cloud
+   * pick here, the caller picks those first and falls back to a cloud.
    */
-  raycast(raycaster: THREE.Raycaster): number | null {
-    const hits = raycaster.intersectObjects(this.pickMeshes, false);
+  pick(
+    camera: THREE.PerspectiveCamera,
+    worldOffset: Readonly<THREE.Vector3>,
+    rect: DOMRect,
+    clientX: number,
+    clientY: number,
+    angularToPx: number,
+  ): HoverHit | null {
+    const cursorX = clientX - rect.left;
+    const cursorY = clientY - rect.top;
+    this.pickNdc.set(
+      (cursorX / rect.width) * 2 - 1,
+      -((cursorY / rect.height) * 2 - 1),
+    );
+    this.pickRaycaster.setFromCamera(this.pickNdc, camera);
+    const hits = this.pickRaycaster.intersectObjects(this.pickMeshes, false);
     if (hits.length === 0) return null;
-    // intersectObjects sorts by distance ascending, so first hit wins.
-    const idx = hits[0].object.userData.cloudIdx;
-    return typeof idx === 'number' ? idx : null;
+
+    const centre = this.pickCentreLocal;
+    const candidates: CloudPickCandidate[] = [];
+    const seen = new Set<number>();
+    for (const hit of hits) {
+      const idx = hit.object.userData.cloudIdx;
+      // A traced isosurface can present several front faces along one
+      // ray; every hit on the same cloud scores identically.
+      if (typeof idx !== 'number' || seen.has(idx)) continue;
+      seen.add(idx);
+      if (!this.cloudLocalPositionInto(idx, worldOffset, centre)) continue;
+      const cameraDistancePc = centre.distanceTo(camera.position);
+      const viewDir = this.pickViewDir
+        .subVectors(camera.position, centre)
+        .multiplyScalar(1 / Math.max(cameraDistancePc, 1e-30));
+      const silhouetteDiameterPx = this.renderedSizePx(
+        idx, cameraDistancePc, angularToPx, viewDir);
+      // An unprojectable centre (behind the near plane, the camera deep
+      // inside a concave complex) scores as an edge hit: it loses to any
+      // cloud the cursor is genuinely inside, still wins when alone.
+      const pxDist = projectToScreenInto(centre, camera, rect.width, rect.height, this.pickScreen)
+        ? Math.hypot(cursorX - this.pickScreen[0], cursorY - this.pickScreen[1])
+        : silhouetteDiameterPx * 0.5;
+      candidates.push(
+        cloudPickCandidate(idx, pxDist, cameraDistancePc, silhouetteDiameterPx));
+    }
+
+    const winner = resolveCloudPick(candidates);
+    if (winner === null) return null;
+    return {
+      idx: winner.candidate.idx,
+      cameraDistancePc: winner.candidate.cameraDistancePc,
+      tier: 'fallback',
+    };
   }
 
   dispose() {
@@ -521,6 +588,8 @@ const scratchQuatInv = /*@__PURE__*/ new THREE.Quaternion();
 /**
  * Pixel diameter the cloud's silhouette spans on screen at the current
  * camera distance — the per-cloud analogue of `Stellata.renderedSizePx`.
+ * Semi-axes are the depicted `u = uEnv` envelope (where the rim shell
+ * sits and the absorption march clips), not the bare Zucker axes.
  *
  * When `viewDir` is supplied (a world-space unit vector from the cloud
  * centroid toward the camera), the silhouette diameter is the silhouette
@@ -581,5 +650,5 @@ export function renderedCloudSizePx(
   } else {
     R = Math.max(cloud.axes[0], cloud.axes[1], cloud.axes[2]);
   }
-  return angularDiameterPx(R, Math.max(dCamPc, 1e-30), angularToPx);
+  return angularDiameterPx(R * cloud.uEnv, Math.max(dCamPc, 1e-30), angularToPx);
 }

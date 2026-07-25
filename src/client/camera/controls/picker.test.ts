@@ -7,8 +7,8 @@ import { Picker, type PickerDeps } from './picker';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
-import type { Cloud } from '../../molecular-clouds/cloud-loader';
-import type { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
+import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
+import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
 import type { PlanetBodyField } from '../../solar-system/planet-body-field';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
@@ -413,60 +413,30 @@ describe('Picker / pickStarHit', () => {
   });
 });
 
-describe('Picker / pickCloud', () => {
-  // pickCloud delegates to MolecularClouds.raycast; tests just exercise
-  // the null-on-no-layer + null-on-warp gates the click FSM relies on.
-
-  it('returns null when the cloud layer is not attached', () => {
-    const data = makeCatalog([]);
-    const { picker } = makePicker(data, defaultFilter());
-    expect(picker.pickCloud(100, 100)).toBeNull();
-  });
-
-  it('returns null while warping, even if a cloud is registered', () => {
-    const data = makeCatalog([]);
-    // Stub clouds that would otherwise return idx 0.
-    const stubClouds = {
-      raycast: () => 0,
-      group: { visible: true },
-      clouds: [],
-    } as unknown as MolecularClouds;
-    const dom = makeDomElementStub();
-    const camera = makeCamera();
-    const picker = new Picker({
-      domElement: dom,
-      camera,
-      catalog: data.catalog,
-      sortedByDistFromSol: data.sortedByDistFromSol,
-      sortedDistFromSol: data.sortedDistFromSol,
-      getLocalPositions: () => data.localPositions,
-      getFilter: () => defaultFilter(),
-      getClouds: () => stubClouds,
-      getLocalGroupLayer: () => null,
-      getShells: () => new ShellRegistry(),
-      getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-      getWorldOffset: () => new THREE.Vector3(),
-      getWarpActive: () => true, // warp gate active
-      renderedSizePxFn: () => 20,
-      resolveCollapsedLead: (idx) => idx,
-      fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
-      viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
-    });
-    expect(picker.pickCloud(100, 100)).toBeNull();
-  });
-});
-
-describe('Picker / pickCloudHit', () => {
-  // Fallback-only tier — the click gate (pickCloud's warp check) doesn't
-  // apply to hover, so these only cover the layer/visibility/raycast gates.
+// Both cloud surfaces delegate their winner to MolecularClouds.pick, so
+// these cover the per-surface gates plus the click/hover agreement the
+// delegation buys.
+describe('Picker / cloud picks', () => {
+  // A 10 pc sphere at the origin, plus a 3 pc sphere between it and the
+  // camera at (0,0,30) whose silhouette nests inside the big one.
+  function makeCloudLayer(): MolecularClouds {
+    const layer = new MolecularClouds(makeMockCatalog([
+      makeMockCloud({ name: 'big', id: 'big', sid: 1, axes: [10, 10, 10] }),
+      makeMockCloud({
+        name: 'small', id: 'small', sid: 2, axes: [3, 3, 3],
+        centerAbs: new THREE.Vector3(2.4, 0, 12),
+      }),
+    ]));
+    layer.group.updateMatrixWorld(true);
+    return layer;
+  }
 
   function makeCloudPicker(opts: {
     clouds: MolecularClouds | null;
-    camera?: THREE.PerspectiveCamera;
-    worldOffset?: THREE.Vector3;
+    warpActive?: boolean;
   }): { picker: Picker; camera: THREE.PerspectiveCamera } {
     const data = makeCatalog([]);
-    const camera = opts.camera ?? makeCamera();
+    const camera = makeCamera();
     const deps: PickerDeps = {
       domElement: makeDomElementStub(),
       camera,
@@ -479,8 +449,8 @@ describe('Picker / pickCloudHit', () => {
       getLocalGroupLayer: () => null,
       getShells: () => new ShellRegistry(),
       getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-      getWorldOffset: () => opts.worldOffset ?? new THREE.Vector3(),
-      getWarpActive: () => false,
+      getWorldOffset: () => new THREE.Vector3(),
+      getWarpActive: () => opts.warpActive ?? false,
       renderedSizePxFn: () => 20,
       resolveCollapsedLead: (idx) => idx,
       fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
@@ -489,45 +459,52 @@ describe('Picker / pickCloudHit', () => {
     return { picker: new Picker(deps), camera };
   }
 
-  it('returns null when no cloud layer is attached', () => {
+  it('both surfaces return null when no cloud layer is attached', () => {
     const { picker } = makeCloudPicker({ clouds: null });
+    expect(picker.pickCloud(400, 300)).toBeNull();
     expect(picker.pickCloudHit(400, 300)).toBeNull();
   });
 
-  it('returns null when the cloud group is not visible', () => {
-    const stubClouds = {
-      raycast: () => 0,
-      group: { visible: false },
-      clouds: [],
-    } as unknown as MolecularClouds;
-    const { picker } = makeCloudPicker({ clouds: stubClouds });
+  it('pickCloud returns null while warping; hover is not warp-gated', () => {
+    const { picker } = makeCloudPicker({ clouds: makeCloudLayer(), warpActive: true });
+    expect(picker.pickCloud(400, 300)).toBeNull();
+    expect(picker.pickCloudHit(400, 300)?.idx).toBe(0);
+  });
+
+  it('pickCloudHit returns null when the cloud group is not visible', () => {
+    const clouds = makeCloudLayer();
+    clouds.group.visible = false;
+    const { picker } = makeCloudPicker({ clouds });
     expect(picker.pickCloudHit(400, 300)).toBeNull();
   });
 
-  it('returns a fallback hit with the right cameraDistancePc when the raycast hits a cloud', () => {
-    const cloud = { centerAbs: new THREE.Vector3(0, 0, 0) } as Cloud;
-    const stubClouds = {
-      raycast: () => 0,
-      group: { visible: true },
-      clouds: [cloud],
-    } as unknown as MolecularClouds;
-    // Camera at (0,0,30) (the shared makeCamera fixture) → distance to a
-    // cloud centred at the origin is exactly 30 pc.
-    const { picker } = makeCloudPicker({ clouds: stubClouds });
+  it('pickCloudHit carries the fallback tier and the camera distance', () => {
+    const { picker } = makeCloudPicker({ clouds: makeCloudLayer() });
     const hit = picker.pickCloudHit(400, 300);
     expect(hit).not.toBeNull();
     expect(hit!.idx).toBe(0);
     expect(hit!.tier).toBe('fallback');
+    // Camera at (0,0,30) → 30 pc to the big cloud centred at the origin.
     expect(hit!.cameraDistancePc).toBeCloseTo(30, 5);
   });
 
-  it('returns null when the raycast misses every cloud', () => {
-    const stubClouds = {
-      raycast: () => null,
-      group: { visible: true },
-      clouds: [],
-    } as unknown as MolecularClouds;
-    const { picker } = makeCloudPicker({ clouds: stubClouds });
-    expect(picker.pickCloudHit(400, 300)).toBeNull();
+  it('both surfaces return null off the cloud silhouettes', () => {
+    const { picker } = makeCloudPicker({ clouds: makeCloudLayer() });
+    expect(picker.pickCloud(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBeNull();
+    expect(picker.pickCloudHit(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBeNull();
+  });
+
+  it('click and hover agree on which of two overlapping clouds wins', () => {
+    const { picker, camera } = makeCloudPicker({ clouds: makeCloudLayer() });
+    // Sweep the overlap region: the winner flips from the big complex to
+    // the small foreground cloud, and both surfaces must flip together.
+    const winners = new Set<number | null>();
+    for (let x = 0; x <= 3.4; x += 0.2) {
+      const screen = projectToScreen(new THREE.Vector3(x, 0, 12), camera);
+      const click = picker.pickCloud(screen.x, screen.y);
+      expect(picker.pickCloudHit(screen.x, screen.y)?.idx ?? null).toBe(click);
+      winners.add(click);
+    }
+    expect(winners).toEqual(new Set([0, 1]));
   });
 });
