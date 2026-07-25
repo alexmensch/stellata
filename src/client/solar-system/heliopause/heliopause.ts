@@ -2,16 +2,16 @@
 // src/client/solar-system/README.md § Heliopause boundary.
 
 import * as THREE from 'three';
-import type { Stellata } from '../stellata';
-import { AU_PC } from '../util/astronomy-constants';
-import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
+import type { Stellata } from '../../stellata';
+import { AU_PC } from '../../util/astronomy-constants';
+import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import {
   FresnelShell,
   createFresnelShellMaterial,
   createShellSilhouetteLabel,
   isShellLabelResolvable,
-} from '../fresnel-shell/fresnel-shell';
-import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../fresnel-shell/shell-registry';
+} from '../../fresnel-shell/fresnel-shell';
+import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../../fresnel-shell/shell-registry';
 
 const HELIOPAUSE_SHELL_IDX = SHELL_KEYS.indexOf('heliopause');
 

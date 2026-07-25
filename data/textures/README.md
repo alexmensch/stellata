@@ -21,7 +21,7 @@ folder:
   at the left edge or map centre per source convention — the
   renderer's prime-meridian offset is a per-body concern
   (`mapCenterLonDeg` in
-  `src/client/solar-system/rotation-elements-pure.ts`), not baked
+  `src/client/solar-system/planets/rotation-elements-pure.ts`), not baked
   here. Planets are centred on 0° except Pluto (~180°E, Sputnik
   Planitia at map centre); moon maps are centred on 180° except the
   Moon and Io (0°).

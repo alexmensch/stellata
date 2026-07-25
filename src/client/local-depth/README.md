@@ -232,7 +232,7 @@ pass solves.
   a planet reads as a star of its apparent magnitude (visibility matches
   chart mode) — identical in both compile variants; `LOCAL_DEPTH_PASS`
   gates only member suppression + the log-depth chunk here, never
-  brightness (`../solar-system/README.md` § Planet mesh LOD). There is no
+  brightness (`../solar-system/planets/README.md` § Planet mesh LOD). There is no
   opaque planet disc to composite across the pass boundary.
 - **Chart mode** — inert. Chart flattens bodies to ink discs with
   depth disabled; the mesh layer already hides in monochrome and

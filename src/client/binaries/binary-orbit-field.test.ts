@@ -10,7 +10,7 @@ import {
   type BinaryRelation,
 } from './binaries-loader';
 import { AU_PC, J2000_JD } from '../util/astronomy-constants';
-import { tToJDE } from '../solar-system/time';
+import { tToJDE } from '../solar-system/time/time';
 import { advancePositionsToEpoch, jdeToJulianEpochYear } from '../loaders/epoch-advance-pure';
 import { SUB_PIXEL_THRESHOLD_PX } from './binary-tuning';
 import {

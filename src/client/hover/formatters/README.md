@@ -52,7 +52,8 @@ planet-hover-format.ts           Planet / moon — camera distance ·
                                  apparent V mag, orbital period, radius
                                  (R⊕ + km). Period comes from the shared
                                  OrbitDescriptor (../../solar-system/
-                                 orbit-descriptor.ts) so it matches the
+                                 ephemerides/orbit-descriptor.ts) so it
+                                 matches the
                                  focus card: years for a planet, days for
                                  a moon (whose period is set by its parent
                                  planet's mass, not the Sun's). Swaps to

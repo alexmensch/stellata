@@ -14,9 +14,9 @@ import {
   solidityForType,
   writeRingVerts,
 } from './orbit-rings-layer';
-import { LINE_ANCHOR_MAX_DRIFT_PC, ORBIT_LINE_SEGMENTS } from '../util/orbit-line';
-import { AU_KM, AU_PC, KM_PC } from '../util/astronomy-constants';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
+import { LINE_ANCHOR_MAX_DRIFT_PC, ORBIT_LINE_SEGMENTS } from '../../util/orbit-line';
+import { AU_KM, AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import {
@@ -24,7 +24,7 @@ import {
   solOrbitGeometryAt,
   type Planet,
   type PlanetSystem,
-} from './planet-system';
+} from '../planet-system';
 
 // J2000.0 in Unix-seconds — the model time every static-geometry test
 // builds rings at.

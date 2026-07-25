@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { Heliopause, HELIOPAUSE_APEX_SOL_PC, createHeliopauseLabel } from './heliopause';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../util/astronomy-constants';
 
 describe('HELIOPAUSE_APEX_SOL_PC', () => {
   it('lies 122 AU from Sol (the upwind heliopause boundary distance)', () => {

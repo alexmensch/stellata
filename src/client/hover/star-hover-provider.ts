@@ -2,7 +2,7 @@
 // `formatStarHover`. See ./README.md.
 
 import type { Stellata } from '../stellata';
-import { tToJDE } from '../solar-system/time';
+import { tToJDE } from '../solar-system/time/time';
 import { formatStarHover, type StarHoverFormatContext } from './formatters/star-hover-format';
 import type { HoverProvider } from './hover-types';
 

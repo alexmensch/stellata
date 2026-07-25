@@ -2,9 +2,9 @@
 // orbit distance, and period derived from its parent (planet ← host star;
 // moon ← parent planet), with no solar-mass assumption. See README.md § Moons.
 
-import { AU_KM } from '../util/astronomy-constants';
-import { formatKm, planetPeriodYears } from '../format/physical-format';
-import type { Planet, PlanetSystem } from './planet-system';
+import { AU_KM } from '../../util/astronomy-constants';
+import { formatKm, planetPeriodYears } from '../../format/physical-format';
+import type { Planet, PlanetSystem } from '../planet-system';
 
 export interface OrbitDescriptor {
   // Parent body's display name — the host star for a planet ("Sol"), the

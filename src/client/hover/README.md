@@ -120,7 +120,7 @@ both are camera-relative quantities that change as the camera moves
 principle; Sol-centred values are tier-3 territory). Period sits on its
 own line as the user's first "is this a fast inner planet or a slow
 outer one?" tell — sourced from the shared `OrbitDescriptor`
-(`../solar-system/orbit-descriptor.ts`) so it matches the focus card
+(`../solar-system/ephemerides/orbit-descriptor.ts`) so it matches the focus card
 exactly and a moon's period derives from its parent planet's mass (in
 days), not the solar-mass years a planet uses. Radius sits on the bottom as the physical-body fact
 that doesn't change with viewpoint.

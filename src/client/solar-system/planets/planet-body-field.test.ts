@@ -7,24 +7,24 @@ import {
 import type {
   ChartDiscUniforms,
   PerceptualDiscUniforms,
-} from '../star-pipeline/perceptual-disc-uniforms';
-import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
-import { AU_PC, KM_PC, R_SUN_PC } from '../util/astronomy-constants';
-import type { PlanetSystem, Planet } from './planet-system';
+} from '../../star-pipeline/perceptual-disc-uniforms';
+import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import type { PlanetSystem, Planet } from '../planet-system';
 import {
   MERCURY_PHASE,
   SATURN_PHASE,
   VENUS_PHASE,
   alphaZeroPhaseFactor,
   phaseFactorFor,
-} from './phase-function';
-import { planetApparentMagnitude } from './perceptual-magnitude';
+} from '../phase-function';
+import { planetApparentMagnitude } from '../perceptual-magnitude';
 import {
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
-import { DIM_FLOOR } from '../binaries/eclipse-photometry-pure';
+import { DIM_FLOOR } from '../../binaries/eclipse-photometry-pure';
 
 function makeSharedUniforms(
   maxAppMag = 6.5,

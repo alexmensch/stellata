@@ -16,7 +16,7 @@ import {
   type OrbitRelationCache,
 } from './orbit-relation-cache';
 import { AU_PC, R_SUN_PC } from '../util/astronomy-constants';
-import { tToJDE } from '../solar-system/time';
+import { tToJDE } from '../solar-system/time/time';
 import {
   VISIBILITY_HORIZON_PC,
   ECLIPSE_DIM_TAU_S,

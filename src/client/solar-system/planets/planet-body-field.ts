@@ -2,20 +2,20 @@
 // src/client/solar-system/README.md § Planet rendering.
 
 import * as THREE from 'three';
-import { systemFamily, type Planet, type PlanetSystem } from './planet-system';
+import { systemFamily, type Planet, type PlanetSystem } from '../planet-system';
 import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
-} from './phase-function';
-import { applyGlowBlendDefaults } from '../star-pipeline/star-pipeline';
+} from '../phase-function';
+import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
 import {
   pickChartDiscUniforms,
   pickPerceptualDiscUniforms,
   type ChartDiscUniforms,
   type PerceptualDiscUniforms,
-} from '../star-pipeline/perceptual-disc-uniforms';
-import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
-import { AU_PC, KM_PC } from '../util/astronomy-constants';
+} from '../../star-pipeline/perceptual-disc-uniforms';
+import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
+import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
   DEFAULT_GLARE_GAIN,
   GLARE_PHOTOCENTRE_SHIFT,
@@ -27,29 +27,29 @@ import {
   placeholderEccentricAnomaly,
   planetLocalPosition,
   solidityForType,
-} from './orbit-rings-layer';
+} from '../ephemerides/orbit-rings-layer';
 import {
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
   SOFT_TAPER_MARGIN_MAG,
-} from './perceptual-magnitude';
-import { pixelsPerRadianFromFovRad } from '../util/orbit-line';
+} from '../perceptual-magnitude';
+import { pixelsPerRadianFromFovRad } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
   physSizePx,
   type PickCandidate,
-} from '../camera/controls/star-geometry';
-import type { HoverHit } from '../hover/hover-types';
-import { projectToScreen } from '../overlays/overlay-project';
+} from '../../camera/controls/star-geometry';
+import type { HoverHit } from '../../hover/hover-types';
+import { projectToScreen } from '../../overlays/overlay-project';
 import {
   blendDimBuffer,
   dimBlendFactor,
   eclipseDimFromOffsets,
-} from '../binaries/eclipse-photometry-pure';
-import { ECLIPSE_DIM_TAU_S } from '../binaries/binary-tuning';
-import { parentIndexOf } from './orbit-descriptor';
+} from '../../binaries/eclipse-photometry-pure';
+import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
+import { parentIndexOf } from '../ephemerides/orbit-descriptor';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 

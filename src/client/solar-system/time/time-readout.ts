@@ -1,7 +1,7 @@
 // UTC timestamp readout for the current `t`. See
 // src/client/solar-system/README.md § Time.
 
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 
 
 const MONTHS = [

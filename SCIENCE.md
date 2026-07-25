@@ -240,7 +240,7 @@ enough to see it.
   `docs/science-solar-system.md` § Planet rotation). Every moon is
   tidally locked — its Ẇ equals the orbital mean motion, test-pinned
   against the JPL mean elements. Tables in
-  `src/client/solar-system/rotation-elements-pure.ts`.
+  `src/client/solar-system/planets/rotation-elements-pure.ts`.
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the

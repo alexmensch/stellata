@@ -42,7 +42,7 @@ read.
   and the ε-displacement predicate. Vitest-pinned.
 - `perceptual-disc.glsl` — super-Gaussian disc/glow chunk. Imported by
   `star.frag.glsl` and (via relative `?raw` import) by
-  `../solar-system/planet.frag.glsl` so stars and planet bodies share
+  `../solar-system/planets/planet.frag.glsl` so stars and planet bodies share
   the same brightness-PSF saturation physics. Stars use the full
   disc + glow + core-mask trio; planet bodies use the **glow profile
   only** (their resolved surface is the spheroid mesh, so the billboard
@@ -50,7 +50,7 @@ read.
   star-perceptual point verbatim (`perceptualAppSizePx` from its reflected
   `appMag`, peak ≈ 1), so a planet reads exactly like a star of its
   magnitude and its visibility matches the star field — see
-  `../solar-system/README.md` § Planet mesh LOD.
+  `../solar-system/planets/README.md` § Planet mesh LOD.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
   the chunk consumes. `buildStarSharedUniforms` `satisfies` this
   interface, and

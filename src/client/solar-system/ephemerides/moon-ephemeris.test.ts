@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AU_KM, J2000_OBLIQUITY_RAD, KM_PC } from '../util/astronomy-constants';
+import { AU_KM, J2000_OBLIQUITY_RAD, KM_PC } from '../../util/astronomy-constants';
 import {
   earthMoonSplit,
   MOON_ELEMENTS,
@@ -9,8 +9,8 @@ import {
   type MoonElements,
 } from './moon-ephemeris';
 import type { Vec3 } from './ephemeris';
-import { SOL_MOONS } from './planet-system';
-import { julianEpochYearToT } from './time';
+import { SOL_MOONS } from '../planet-system';
+import { julianEpochYearToT } from '../time/time';
 
 const DEG = Math.PI / 180;
 const elem = (name: string): MoonElements =>

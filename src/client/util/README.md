@@ -28,7 +28,7 @@ build scripts, tests, and shader uniforms.
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
 - `orbit-line.ts` — shared bits of the line overlays
-  (`solar-system/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
+  (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLineSegments` +
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and

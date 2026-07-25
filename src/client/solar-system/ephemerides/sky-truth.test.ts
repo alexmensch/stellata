@@ -14,11 +14,11 @@ import {
   type Vec3,
 } from './ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
-import { HELIOPAUSE_APEX_SOL_PC } from './heliopause';
-import { jdeToT } from './time';
+import { HELIOPAUSE_APEX_SOL_PC } from '../heliopause/heliopause';
+import { jdeToT } from '../time/time';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TRUTH_TSV = resolve(__dirname, '../../../data/horizons/planet-radec-truth.tsv');
+const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/planet-radec-truth.tsv');
 
 interface TruthRow {
   body: PlanetName | 'sun';

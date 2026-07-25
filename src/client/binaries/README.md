@@ -78,7 +78,7 @@ star catalog records.
   sampled from the same eval path the renderer uses), and the shared
   anti-strobe helpers `dimBlendFactor` + `blendDimBuffer` (+
   `DIM_SETTLED`). Second consumer: the planet field's true-eclipse
-  dim (`solar-system/README.md` § Planet rendering) reuses all of
+  dim (`solar-system/planets/README.md` § True-eclipse dim) reuses all of
   these for planet-behind-host-disc occlusion.
   `eclipse-photometry-pure.test.ts` pins the degenerate cases and the
   float32-line-of-sight immunity.

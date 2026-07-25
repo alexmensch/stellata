@@ -1,7 +1,7 @@
 // Simulation time `t` (Unix-seconds double) + UTC ↔ Julian-day helpers.
 // See src/client/solar-system/README.md § Time.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../util/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 
 // Julian Date of the Unix epoch (1970-01-01T00:00:00Z). Subtracting
 // from any JD gives Unix-seconds × 86400.

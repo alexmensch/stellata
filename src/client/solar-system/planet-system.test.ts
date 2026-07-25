@@ -11,7 +11,7 @@ import {
   type Planet,
   type PlanetType,
 } from './planet-system';
-import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
+import { getPlanetPositions, PLANET_ORDER } from './ephemerides/ephemeris';
 import { AU_KM, KM_PC } from '../util/astronomy-constants';
 import {
   EARTH_PHASE,

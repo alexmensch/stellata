@@ -6,10 +6,10 @@ import {
   J2000_JD,
   J2000_OBLIQUITY_RAD,
   KM_PC,
-} from '../util/astronomy-constants';
-import { orbitalStateToCartesian } from '../util/kepler-solver';
+} from '../../util/astronomy-constants';
+import { orbitalStateToCartesian } from '../../util/kepler-solver';
 import type { Vec3 } from './ephemeris';
-import { tToJDE } from './time';
+import { tToJDE } from '../time/time';
 
 const DEG = Math.PI / 180;
 const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);

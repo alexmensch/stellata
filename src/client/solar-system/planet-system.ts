@@ -11,13 +11,13 @@ import {
   type OrbitOrientationRad,
   type PlanetName,
   type Vec3,
-} from './ephemeris';
+} from './ephemerides/ephemeris';
 import {
   earthMoonSplit,
   MOON_ELEMENTS,
   moonOffsetEcliptic,
   type MoonElements,
-} from './moon-ephemeris';
+} from './ephemerides/moon-ephemeris';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,
@@ -39,7 +39,7 @@ import {
   SATURN_ROTATION,
   URANUS_ROTATION,
   VENUS_ROTATION,
-} from './rotation-elements-pure';
+} from './planets/rotation-elements-pure';
 
 export type PlanetType = 'rocky' | 'gas_giant' | 'ice_giant' | 'icy';
 

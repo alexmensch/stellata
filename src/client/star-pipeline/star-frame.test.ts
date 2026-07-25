@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
-import { julianEpochYearToT } from '../solar-system/time';
+import { julianEpochYearToT } from '../solar-system/time/time';
 import { R_SUN_PC } from '../util/astronomy-constants';
 import { StarFrame } from './star-frame';
 import { buildStarSharedUniforms } from './star-shared-uniforms';

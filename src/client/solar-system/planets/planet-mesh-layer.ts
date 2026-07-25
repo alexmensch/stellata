@@ -2,18 +2,18 @@
 // § Planet mesh LOD for the crossfade + lazy-texture contract.
 
 import * as THREE from 'three';
-import type { MemberSphere } from '../local-depth/slice-pure';
-import { KM_PC } from '../util/astronomy-constants';
+import type { MemberSphere } from '../../local-depth/slice-pure';
+import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
-import { litIntensity } from './perceptual-magnitude';
-import { phaseAngleFor, phaseRatioToLambert } from './phase-function';
+import { litIntensity } from '../perceptual-magnitude';
+import { phaseAngleFor, phaseRatioToLambert } from '../phase-function';
 import type { PlanetBodyField } from './planet-body-field';
 import {
   systemFamily,
   type Planet,
   type PlanetAtmosphere,
   type PlanetRings,
-} from './planet-system';
+} from '../planet-system';
 import { meshFadeFromPhysPx, TEXTURE_PREFETCH_PX } from './mesh-crossfade';
 import {
   poleRaDecDegAt,
@@ -24,16 +24,16 @@ import meshVert from './planet-mesh.vert.glsl?raw';
 import meshFrag from './planet-mesh.frag.glsl?raw';
 import ringsVert from './planet-rings.vert.glsl?raw';
 import ringsFrag from './planet-rings.frag.glsl?raw';
-import atmoVert from './planet-atmosphere.vert.glsl?raw';
-import atmoFrag from './planet-atmosphere.frag.glsl?raw';
-import atmoScatterChunk from './atmosphere-scatter.glsl?raw';
-import atmoUniformsChunk from './atmosphere-uniforms.glsl?raw';
+import atmoVert from '../atmosphere/planet-atmosphere.vert.glsl?raw';
+import atmoFrag from '../atmosphere/planet-atmosphere.frag.glsl?raw';
+import atmoScatterChunk from '../atmosphere/atmosphere-scatter.glsl?raw';
+import atmoUniformsChunk from '../atmosphere/atmosphere-uniforms.glsl?raw';
 import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
   MIE_G_DEFAULT,
   SUN_COLOUR,
-} from './atmosphere-scattering-pure';
+} from '../atmosphere/atmosphere-scattering-pure';
 
 // Splice the shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — into both the mesh disc and the shell

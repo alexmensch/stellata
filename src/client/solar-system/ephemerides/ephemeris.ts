@@ -1,9 +1,9 @@
 // Heliocentric ecliptic positions for the eight planets at any wall-clock
 // `t` (Unix-seconds). See src/client/solar-system/README.md § Ephemerides.
 
-import { AU_PC, J2000_JD } from '../util/astronomy-constants';
-import { orbitalStateToCartesian } from '../util/kepler-solver';
-import { tToJDE } from './time';
+import { AU_PC, J2000_JD } from '../../util/astronomy-constants';
+import { orbitalStateToCartesian } from '../../util/kepler-solver';
+import { tToJDE } from '../time/time';
 
 const DEG = Math.PI / 180;
 

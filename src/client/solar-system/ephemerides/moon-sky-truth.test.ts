@@ -10,11 +10,11 @@ import * as THREE from 'three';
 import { getPlanetPositions, _resetCacheForTests, type Vec3 } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
-import { jdeToT } from './time';
-import { KM_PC } from '../util/astronomy-constants';
+import { jdeToT } from '../time/time';
+import { KM_PC } from '../../util/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TRUTH_TSV = resolve(__dirname, '../../../data/horizons/moon-radec-truth.tsv');
+const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/moon-radec-truth.tsv');
 const C_KM_S = 299792.458;
 const DEG = Math.PI / 180;
 

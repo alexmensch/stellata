@@ -6,7 +6,7 @@ import {
   SOL_PLANETS,
   type PlanetSystem,
 } from '../../solar-system/planet-system';
-import { orbitDescriptorFor } from '../../solar-system/orbit-descriptor';
+import { orbitDescriptorFor } from '../../solar-system/ephemerides/orbit-descriptor';
 import {
   formatPlanetHover,
   type PlanetHoverFormatContext,

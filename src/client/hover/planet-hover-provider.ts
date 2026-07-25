@@ -6,7 +6,7 @@ import {
   formatPlanetHover,
   type PlanetHoverFormatContext,
 } from './formatters/planet-hover-format';
-import { orbitDescriptorFor } from '../solar-system/orbit-descriptor';
+import { orbitDescriptorFor } from '../solar-system/ephemerides/orbit-descriptor';
 import { moonNamesOf } from '../solar-system/planet-system';
 import type { HoverProvider } from './hover-types';
 

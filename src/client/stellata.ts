@@ -59,9 +59,9 @@ import type { FocusableProviders, Target } from './camera/focus/focus-target';
 import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
-import { OrbitRingsLayer } from './solar-system/orbit-rings-layer';
-import { PlanetBodyField } from './solar-system/planet-body-field';
-import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planet-mesh-layer';
+import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
+import { PlanetBodyField } from './solar-system/planets/planet-body-field';
+import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { StarLocalMirror } from './star-pipeline/star-local-mirror';
@@ -75,7 +75,7 @@ import {
   HELIOPAUSE_LABEL,
   HELIOPAUSE_CARD,
   HELIOPAUSE_EXTENT_PC,
-} from './solar-system/heliopause';
+} from './solar-system/heliopause/heliopause';
 import {
   LocalBubbleShell,
   LOCAL_BUBBLE_LABEL,
@@ -84,7 +84,7 @@ import {
 import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
 import { ShellRegistry } from './fresnel-shell/shell-registry';
 import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
-import { VirtualClock, tToJDE } from './solar-system/time';
+import { VirtualClock, tToJDE } from './solar-system/time/time';
 import { J2000_JD, KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { keplerPeriodDays, orbitDescriptorFor } from './orbit-descriptor';
-import { SOL_BODIES, SOL_PLANETS, type PlanetSystem } from './planet-system';
-import { AU_KM } from '../util/astronomy-constants';
+import { SOL_BODIES, SOL_PLANETS, type PlanetSystem } from '../planet-system';
+import { AU_KM } from '../../util/astronomy-constants';
 
 const SYSTEM: PlanetSystem = { hostStarIdx: 0, planets: SOL_BODIES };
 const bodyNamed = (name: string) => SOL_BODIES.find((p) => p.name === name)!;

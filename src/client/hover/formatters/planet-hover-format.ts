@@ -7,7 +7,7 @@ import { moonRosterText } from '../../format/moon-list-format';
 import {
   formatOrbitPeriod,
   type OrbitDescriptor,
-} from '../../solar-system/orbit-descriptor';
+} from '../../solar-system/ephemerides/orbit-descriptor';
 import type { Planet } from '../../solar-system/planet-system';
 import type { Target } from '../../camera/focus/focus-target';
 import type { SystemMembershipProvider } from '../../system-membership/system-membership';

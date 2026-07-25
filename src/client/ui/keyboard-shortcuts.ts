@@ -2,7 +2,7 @@ import type { Stellata } from '../stellata';
 import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { DETAIL_LEVELS } from '../scene/scene-elements';
-import type { TimeScrubberWidget } from '../solar-system/time-scrubber-widget';
+import type { TimeScrubberWidget } from '../solar-system/time/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import {
   pushTapAndCheckTriple,

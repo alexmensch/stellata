@@ -14,7 +14,7 @@ from the **JPL Standish 1992 Keplerian-elements approximation**
 (https://ssd.jpl.nasa.gov/planets/approx_pos.html), with the cubic
 correction terms for Jupiter through Neptune that extend the validity
 window to 3000 BC – 3000 AD at sub-arcminute accuracy. Implementation
-in `src/client/solar-system/ephemeris.ts` works directly from the
+in `src/client/solar-system/ephemerides/ephemeris.ts` works directly from the
 published JPL Table 2a/2b values — no external library, no network
 fetch.
 
@@ -23,7 +23,7 @@ is pinned against external sky truth: geocentric RA/Dec for all nine
 bodies plus the Sun at three fixed epochs, fetched once from the JPL
 Horizons API (ephemeris DE441, retrieved 2026-07-02) and frozen in
 `data/horizons/` (provenance + schema in that folder's README). The
-regression corpus (`src/client/solar-system/sky-truth.test.ts`) holds
+regression corpus (`src/client/solar-system/ephemerides/sky-truth.test.ts`) holds
 every body within 0.5° of Horizons — the empirical worst case is
 Saturn at 0.35°, a known Standish linear-elements residual near the
 Jupiter–Saturn great inequality — and the Sun within 0.1°, including
@@ -39,7 +39,7 @@ an 8-row element table, with no dependency cost. **Decision (closes
 the deep-time question):** rather than adopting a heavier ephemeris,
 the model clock itself clamps to the Standish validity window
 (3000 BC – 3000 AD; `T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
-`src/client/solar-system/time.ts`) — the same window at which linear
+`src/client/solar-system/time/time.ts`) — the same window at which linear
 star propagation and the static background layers stop being honest
 (`docs/science-catalog-ingestion.md` § Current-epoch star positions).
 No scrubbable epoch can leave the window, so no higher-precision
@@ -86,13 +86,13 @@ scatter ring that appears as the phase angle approaches 180° — the
 back-lit halo Cassini photographed at Titan and telescopes see at
 Venus's inferior conjunction. Gas giants carry no shell: no detached
 haze exists distinct from their cloud decks at render scale.
-Implementation in `src/client/solar-system/README.md` § Atmospheres.
+Implementation in `src/client/solar-system/atmosphere/README.md`.
 
 **Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
 Rhea, Titan, Iapetus; Uranus's Miranda, Ariel, Umbriel, Titania,
 Oberon; and Neptune's Triton — carry J2000 osculating orbital elements
-in `src/client/solar-system/moon-ephemeris.ts`, from two sources: the
+in `src/client/solar-system/ephemerides/moon-ephemeris.ts`, from two sources: the
 Moon and the Galileans from the JPL Solar System Dynamics
 planetary-satellite mean-elements table
 (https://ssd.jpl.nasa.gov/sats/elem/); the Saturnians and Triton
@@ -118,7 +118,7 @@ carries the ±43° / 71.8-yr Mimas–Tethys 4:2 resonance libration of
 its mean longitude (both fitted to the corpus and consistent with
 published values). Elsewhere the frozen-J2000 orientation reads
 correctly over the model-clock window;
-`src/client/solar-system/moon-sky-truth.test.ts` pins every moon's
+`src/client/solar-system/ephemerides/moon-sky-truth.test.ts` pins every moon's
 geocentric parent-relative position angle and separation against
 frozen Horizons truth at four epochs (data/horizons/). Mean radii from NASA/JPL fact sheets; geometric albedos span
 the near-unity icy surfaces (Enceladus ≈ 0.99, Mimas ≈ 0.96) to the
@@ -145,7 +145,7 @@ model-clock window). `t` is treated as TDB — the ~69 s UTC↔TDB gap is
 ~0.3° of Earth spin, consistent with the Standish accuracy budget. The
 regression corpus pins Earth's sub-solar longitude at an
 equation-of-time zero crossing (Greenwich noon → ~0° lon).
-Implementation: `src/client/solar-system/rotation-elements-pure.ts`.
+Implementation: `src/client/solar-system/planets/rotation-elements-pure.ts`.
 
 **Ring systems.** Each ringed body renders an annulus in its
 equatorial (IAU-pole) plane textured by a 2048×1 radial strip.
@@ -226,9 +226,9 @@ and aligning to the galactic plane gives the user a consistent visual
 cue that a focused star has planets without implying a measured
 orientation we don't have. The per-host-plane →
 ICRS rotation is composed once at attach and reused by the orbit-ring
-and planet-body renderers (`src/client/solar-system/orbit-rings-layer.ts`
+and planet-body renderers (`src/client/solar-system/ephemerides/orbit-rings-layer.ts`
 for the focus-only ring layer;
-`src/client/solar-system/planet-body-field.ts` for the global,
+`src/client/solar-system/planets/planet-body-field.ts` for the global,
 focus-independent body field). The rotation is anchored on the north
 ecliptic pole in ICRS, `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°;
 the y-component is negative.
@@ -275,8 +275,8 @@ variations in the upwind distance are at the few-AU level across the
 the boundary.
 
 Construction details (sphere scale, offset, rotation), rendering, and
-label anchoring: see `src/client/solar-system/README.md` § Heliopause boundary.
+label anchoring: see `src/client/solar-system/heliopause/README.md`.
 
-Implementation: `src/client/solar-system/heliopause.ts` and
-`src/client/solar-system/heliopause.{vert,frag}.glsl`.
+Implementation: `src/client/solar-system/heliopause/heliopause.ts` and
+`src/client/fresnel-shell/fresnel-shell.{vert,frag}.glsl`.
 

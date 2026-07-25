@@ -2,7 +2,7 @@
 // star-count + live-UTC readout ⇄ app-styled transport controls (T key /
 // click the readout). See src/client/solar-system/README.md § Time scrubber widget.
 
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 import { createTimeReadout, formatTimeReadout } from './time-readout';
 import {
   TRANSPORT_BUTTONS,

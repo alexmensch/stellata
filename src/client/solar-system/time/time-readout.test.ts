@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createTimeReadout, formatTimeReadout } from './time-readout';
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 
 describe('formatTimeReadout', () => {
   it('formats a known Unix-seconds value as plain-English UTC', () => {

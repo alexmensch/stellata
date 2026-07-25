@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { tToJDE } from '../solar-system/time';
+import { tToJDE } from '../solar-system/time/time';
 import { jdeToJulianEpochYear, writeAdvancedLocal } from '../loaders/epoch-advance-pure';
 import { type BinariesData, type BinaryRelation } from './binaries-loader';
 import { focalChainRelationSet } from './focal-chain';

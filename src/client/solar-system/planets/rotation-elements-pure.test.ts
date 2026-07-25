@@ -12,12 +12,12 @@ import {
   URANUS_ROTATION,
   VENUS_ROTATION,
 } from './rotation-elements-pure';
-import { getPlanetPositions } from './ephemeris';
-import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
-import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
-import { SOL_MOONS } from './planet-system';
-import { jdeToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from './time';
-import { J2000_JD, J2000_OBLIQUITY_RAD } from '../util/astronomy-constants';
+import { getPlanetPositions } from '../ephemerides/ephemeris';
+import { MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
+import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
+import { SOL_MOONS } from '../planet-system';
+import { jdeToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../time/time';
+import { J2000_JD, J2000_OBLIQUITY_RAD } from '../../util/astronomy-constants';
 
 const T_J2000 = jdeToT(J2000_JD);
 

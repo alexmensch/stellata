@@ -8,10 +8,10 @@ import {
   type Planet,
   type PlanetSystem,
   type PlanetType,
-} from './planet-system';
-import { AU_PC, J2000_OBLIQUITY_RAD } from '../util/astronomy-constants';
+} from '../planet-system';
+import { AU_PC, J2000_OBLIQUITY_RAD } from '../../util/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
@@ -22,7 +22,7 @@ import {
   pixelsPerRadian,
   angularRadiusPx,
   FEATURE_LEGIBILITY_MIN_PX,
-} from '../util/orbit-line';
+} from '../../util/orbit-line';
 
 /**
  * North ecliptic pole expressed in ICRS — the normal to Sol's orbital

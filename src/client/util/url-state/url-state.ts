@@ -10,7 +10,7 @@ import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/scene-
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
-import { isLive } from '../../solar-system/time';
+import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
