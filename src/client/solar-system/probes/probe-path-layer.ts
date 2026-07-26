@@ -83,8 +83,16 @@ export class ProbePathLayer {
    * Extend / reposition every trail. Must run AFTER `ProbeField.update`
    * wrote this frame's samples — the tip vertex IS the field's marker
    * position, so a stale read would detach the two.
+   *
+   * `focusedIdx` is the roster index of the focused probe, or -1: only
+   * that probe's trail draws. See README.md § Trails.
    */
-  update(field: ProbeField, t: number, camera: THREE.PerspectiveCamera): void {
+  update(
+    field: ProbeField,
+    t: number,
+    camera: THREE.PerspectiveCamera,
+    focusedIdx: number,
+  ): void {
     if (this.trails.length === 0) {
       this.group.visible = false;
       return;
@@ -98,7 +106,7 @@ export class ProbePathLayer {
     for (let i = 0; i < this.trails.length; i++) {
       const trail = this.trails[i];
       const sample = field.sampleFor(i);
-      if (sample === null || !sample.visible) {
+      if (i !== focusedIdx || sample === null || !sample.visible) {
         trail.line.visible = false;
         continue;
       }

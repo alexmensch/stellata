@@ -36,19 +36,25 @@ const MARKER_RENDER_ORDER = 3.5;
 export type ProbeSharedUniforms =
   Pick<PerceptualDiscUniforms, 'uViewport' | 'uPixelRatio' | 'uFovYRad'>;
 
-/** Per-probe geometry for this frame, shared with the trail layer and the
- *  label overlay so all three agree on one sampler evaluation. */
+/** Per-probe geometry for this frame, shared with the trail layer, the
+ *  label overlay, and every interaction surface so all of them agree on
+ *  one sampler evaluation. */
 export interface ProbeFrameSample {
-  /** The trajectory covers this `t` — false before the first sample. */
+  /** The trajectory covers this `t` — false before the first sample.
+   *  `solRelPc` / `localPc` / `velPcPerSec` are meaningful only here. */
   sampled: boolean;
-  /** Marker drawn: sampled AND inside the fleet distance cull AND
-   *  permitted by the declutter cycle / render style. */
+  /** Marker drawn: sampled AND inside the fleet distance cull AND not the
+   *  observe-hidden instance AND permitted by the declutter cycle /
+   *  render style. */
   visible: boolean;
   signalLost: boolean;
   /** Heliocentric ICRS offset from Sol, pc. */
   solRelPc: THREE.Vector3;
   /** Renderer-local marker position. */
   localPc: THREE.Vector3;
+  /** Heliocentric ICRS velocity, pc per second — the sampler's own
+   *  interpolated value, never a finite difference across frames. */
+  velPcPerSec: THREE.Vector3;
 }
 
 /**
@@ -62,6 +68,7 @@ export class ProbeField {
   private samples: ProbeFrameSample[] = [];
   private permitted = true;
   private mono = false;
+  private hiddenIdx = -1;
   private worldOffset = new THREE.Vector3();
   /** Sol's renderer-local position. Sol is the catalog origin, so this is
    *  just the negated floating-origin offset — non-zero under any focus
@@ -122,6 +129,7 @@ export class ProbeField {
       signalLost: false,
       solRelPc: new THREE.Vector3(),
       localPc: new THREE.Vector3(),
+      velPcPerSec: new THREE.Vector3(),
     }));
     const posAttr = new THREE.InstancedBufferAttribute(this.localPos, 3);
     posAttr.setUsage(THREE.DynamicDrawUsage);
@@ -156,10 +164,11 @@ export class ProbeField {
       const s = this.samples[i];
       s.sampled = probeStateAt(traj, t, this.state);
       s.signalLost = s.sampled && probeSignalLost(traj, t);
-      s.visible = s.sampled && fleetLegible && drawn;
+      s.visible = s.sampled && fleetLegible && drawn && i !== this.hiddenIdx;
       if (s.sampled) {
         s.solRelPc.set(this.state.x, this.state.y, this.state.z);
         s.localPc.copy(this.solLocal).add(s.solRelPc);
+        s.velPcPerSec.set(this.state.vx, this.state.vy, this.state.vz);
       }
       const base = i * 3;
       this.localPos[base] = s.localPc.x;
@@ -197,11 +206,14 @@ export class ProbeField {
     return this.samples[idx] ?? null;
   }
 
-  /** Renderer-local marker position into `out`; false when the probe isn't
-   *  drawn this frame (pre-launch, culled, or hidden). */
+  /** Renderer-local probe position into `out`; false only when the
+   *  trajectory doesn't cover this frame's `t`. Gated on `sampled`, NOT
+   *  on `visible`: focus, the focal ride, and overlay projection need the
+   *  probe's position while it is decluttered, chart-hidden, or hidden as
+   *  the observe anchor. Draw-predicate consumers read `sampleFor`. */
   localPositionInto(idx: number, out: THREE.Vector3): boolean {
     const s = this.samples[idx];
-    if (!s || !s.visible) return false;
+    if (!s || !s.sampled) return false;
     out.copy(s.localPc);
     return true;
   }
@@ -209,6 +221,13 @@ export class ProbeField {
   setPermitted(on: boolean): void {
     this.permitted = on;
     if (!on) this.group.visible = false;
+  }
+
+  /** Suppress one probe's marker (and, through `visible`, its label and
+   *  trail) — the observe-anchor hide, since the camera parks exactly on
+   *  the marker. -1 unhides. */
+  setHiddenInstance(idx: number): void {
+    this.hiddenIdx = idx;
   }
 
   /** Chart mode has no probe glyph — the markers hide rather than render

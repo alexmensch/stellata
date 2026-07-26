@@ -53,15 +53,13 @@ export function createProbeLabels(stellata: Stellata): void {
       // Always-on while the marker is drawn: a probe is a discovery
       // affordance and its glyph carries no name of its own, so there is
       // no resolvability gate beyond the marker's own visibility.
-      if (!stellata.probeField.localPositionInto(i, tmp)) {
-        el.style.display = 'none';
-        continue;
-      }
+      const sample = stellata.probeField.sampleFor(i);
       const traj = stellata.probeField.probeAt(i);
-      if (traj === null) {
+      if (sample === null || !sample.visible || traj === null) {
         el.style.display = 'none';
         continue;
       }
+      tmp.copy(sample.localPc);
       const label = probeLabelText(traj, stellata.getT());
       if (el.textContent !== label) el.textContent = label;
       tmp.applyMatrix4(camera.matrixWorldInverse);
