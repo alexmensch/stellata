@@ -52,6 +52,13 @@ function mountSection(
   return module.dispose;
 }
 
+/** The live WebGL2 context, or null on a WebGL1 fallback context — the
+ *  Perf section needs it to feature-detect the GPU timer query. */
+function perfGlContext(stellata: Stellata): WebGL2RenderingContext | null {
+  const gl = stellata.renderer.getContext();
+  return gl instanceof WebGL2RenderingContext ? gl : null;
+}
+
 export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   let panel: HTMLDivElement | null = null;
   let disposers: Array<() => void> = [];
@@ -76,7 +83,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       { title: 'Atmosphere', storageKey: 'atmosphere', build: () => buildAtmosphereSection(stellata) },
       { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkywayLayer) },
       { title: 'Deep field', storageKey: 'deep-field', build: () => buildDeepFieldSection(() => stellata.localGroupEmission) },
-      { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection() },
+      { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection(perfGlContext(stellata)) },
       { title: 'Pin',        storageKey: 'pin',        build: () => buildPinSection(stellata) },
       { title: 'Arrows',     storageKey: 'arrows',     build: () => buildArrowSection(stellata) },
       { title: 'Warp',       storageKey: 'warp',       build: () => buildWarpSection(stellata) },

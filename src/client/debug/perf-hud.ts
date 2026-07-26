@@ -8,8 +8,10 @@ import {
   fmtMs,
   insertSorted,
   summarize,
+  type RingStats,
   type RowDatum,
 } from './perf-hud-pure';
+import { GpuTimer } from './gpu-timer';
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
@@ -36,6 +38,14 @@ interface SectionStats {
 const sections = new Map<string, SectionStats>();
 const starts = new Map<string, number>();
 let frameCounter = 0;
+
+// True displayed frame rate, from rAF-to-rAF deltas. NOT derived from
+// frame.total: that measures how much work a frame does, and inverting it
+// reports e.g. "347 FPS" on a 60 Hz display whenever the work is cheap.
+const frameDeltas: RingStats = { ring: new Float32Array(RING_SIZE), idx: 0, count: 0 };
+let lastFrameNowMs = 0;
+
+let gpuTimer: GpuTimer | null = null;
 
 let installed = false;
 let visible = false;
@@ -85,12 +95,7 @@ function realMark(label: string): void {
 function realMeasure(label: string): void {
   const start = starts.get(label);
   if (start === undefined) return;
-  const dt = performance.now() - start;
-  const s = ensureSection(label);
-  s.ring[s.idx] = dt;
-  s.idx = (s.idx + 1) % RING_SIZE;
-  if (s.count < RING_SIZE) s.count++;
-  s.lastFrame = frameCounter;
+  recordSample(label, performance.now() - start);
 }
 
 // Exported for vitest only — lets the GC behaviour be observed without
@@ -99,8 +104,28 @@ export function _sectionsForTest(): ReadonlyMap<string, SectionStats> {
   return sections;
 }
 
+function recordSample(label: string, ms: number): void {
+  const s = ensureSection(label);
+  s.ring[s.idx] = ms;
+  s.idx = (s.idx + 1) % RING_SIZE;
+  if (s.count < RING_SIZE) s.count++;
+  s.lastFrame = frameCounter;
+}
+
+function recordGpuSample(label: string, ms: number): void {
+  recordSample(`gpu.${label}`, ms);
+}
+
 function realFrame(): void {
   frameCounter++;
+  const nowMs = performance.now();
+  if (lastFrameNowMs > 0) {
+    frameDeltas.ring[frameDeltas.idx] = nowMs - lastFrameNowMs;
+    frameDeltas.idx = (frameDeltas.idx + 1) % RING_SIZE;
+    if (frameDeltas.count < RING_SIZE) frameDeltas.count++;
+  }
+  lastFrameNowMs = nowMs;
+  gpuTimer?.advanceFrame(recordGpuSample);
   // Drop sections that haven't reported in a full ring-window. Without
   // this, the HUD averages stale data forever (chart.* entries persisted
   // in navigate mode after exiting chart mode).
@@ -114,22 +139,38 @@ function realFrame(): void {
   renderPanel();
 }
 
+function realGpuBegin(label: string): void { gpuTimer?.begin(label); }
+function realGpuEnd(label: string): void { gpuTimer?.end(label); }
+
 let _mark: (l: string) => void = () => {};
 let _measure: (l: string) => void = () => {};
 let _frame: () => void = () => {};
+let _gpuBegin: (l: string) => void = () => {};
+let _gpuEnd: (l: string) => void = () => {};
 
 export function mark(label: string): void { _mark(label); }
 export function measure(label: string): void { _measure(label); }
 export function frame(): void { _frame(); }
 
+/** Bracket a GPU scope. Records under `gpu.<label>` when the driver
+ *  exposes a timer query; otherwise nothing is recorded and the CPU-side
+ *  `submit.<label>` measure is all the HUD shows. */
+export function gpuBegin(label: string): void { _gpuBegin(label); }
+export function gpuEnd(label: string): void { _gpuEnd(label); }
+
 import type { DebugSection } from './debug-panel';
 
-export function buildPerfSection(): DebugSection {
+export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSection {
   if (!installed) {
     installed = true;
     _mark = realMark;
     _measure = realMeasure;
     _frame = realFrame;
+    gpuTimer = gl ? GpuTimer.create(gl) : null;
+    if (gpuTimer) {
+      _gpuBegin = realGpuBegin;
+      _gpuEnd = realGpuEnd;
+    }
   }
 
   // Reset DOM handles & per-bar caches so a re-open gets a fresh build.
@@ -256,10 +297,18 @@ export function buildPerfSection(): DebugSection {
       _mark = () => {};
       _measure = () => {};
       _frame = () => {};
+      _gpuBegin = () => {};
+      _gpuEnd = () => {};
       installed = false;
+      gpuTimer?.dispose();
+      gpuTimer = null;
       sections.clear();
       starts.clear();
       frameCounter = 0;
+      frameDeltas.ring.fill(0);
+      frameDeltas.idx = 0;
+      frameDeltas.count = 0;
+      lastFrameNowMs = 0;
       lastDomUpdateMs = 0;
       visible = false;
       panelEl = null;
@@ -279,16 +328,33 @@ function renderPanel(): void {
   if (!panelEl || !headlineFpsText || !headlineLowSpan || !headlineGpuSpan) return;
 
   const total = sections.get('frame.total');
-  const totalStats = total ? summarize(total) : { avg: 0, max: 0 };
-  const fpsAvg = totalStats.avg > 0 ? 1000 / totalStats.avg : 0;
-  const fpsLow = totalStats.max > 0 ? 1000 / totalStats.max : 0;
 
-  const gpu = sections.get('gpu.render');
-  const gpuAvg = gpu ? summarize(gpu).avg : 0;
+  // Displayed rate from real rAF deltas; `low` is the slowest frame in
+  // the window, so it is the inverse of the MAX delta.
+  const deltaStats = summarize(frameDeltas);
+  const fpsAvg = deltaStats.avg > 0 ? 1000 / deltaStats.avg : 0;
+  const fpsLow = deltaStats.max > 0 ? 1000 / deltaStats.max : 0;
+
+  // With a timer query the headline is real GPU execution summed over
+  // the rotating scopes; without one it can only be CPU submission
+  // wall-time, and says so.
+  let busyLabel = 'submit';
+  let busyMs = 0;
+  if (gpuTimer) {
+    busyLabel = 'gpu';
+    for (const scope of gpuTimer.scopeLabels()) {
+      const s = sections.get(`gpu.${scope}`);
+      if (s) busyMs += summarize(s).avg;
+    }
+  } else {
+    for (const [label, s] of sections) {
+      if (label.startsWith('submit.')) busyMs += summarize(s).avg;
+    }
+  }
 
   headlineFpsText.nodeValue = `FPS ${fpsAvg.toFixed(0)} `;
   headlineLowSpan.firstChild!.nodeValue = `low ${fpsLow.toFixed(0)}`;
-  headlineGpuSpan.firstChild!.nodeValue = `gpu ${fmtMs(gpuAvg)}ms`;
+  headlineGpuSpan.firstChild!.nodeValue = `${busyLabel} ${fmtMs(busyMs)}ms`;
 
   // Single-pass row build: walk the sections map once, summarise, and
   // insertion-sort into rowScratch (only need the top MAX_TABLE_ROWS so

@@ -21,7 +21,7 @@ describe('perf-hud / no-op API', () => {
   });
 });
 
-// Minimal DOM stub for buildPerfSection() — it creates ~150 nodes
+// Minimal DOM stub for buildPerfSection(null) — it creates ~150 nodes
 // (headline, table header, row pool, histogram bars, caption) but the
 // teardown tests only need the build to complete; nothing is inspected.
 // vitest runs in the node environment for this project, so document is
@@ -81,7 +81,7 @@ describe('perf-hud / install → dispose teardown', () => {
   });
 
   it('dispose restores the no-op contract — mark/measure/frame stop calling performance.now', () => {
-    const section = buildPerfSection();
+    const section = buildPerfSection(null);
 
     // While installed, realMark/realMeasure both call performance.now —
     // mark stores the start timestamp, measure subtracts it. Confirm
@@ -107,7 +107,7 @@ describe('perf-hud / install → dispose teardown', () => {
     // Silent-section GC is the mechanism that lets `chart.*` entries fall
     // off the HUD after exiting chart mode. Without it the HUD averages
     // stale ring data forever.
-    const section = buildPerfSection();
+    const section = buildPerfSection(null);
 
     mark('test.gc');
     measure('test.gc');
@@ -125,7 +125,7 @@ describe('perf-hud / install → dispose teardown', () => {
     // `installed = false` so the second buildPerfSection takes the
     // install branch again rather than skipping it (which would leave
     // _mark/_measure/_frame as no-ops despite a panel being visible).
-    const first = buildPerfSection();
+    const first = buildPerfSection(null);
     first.dispose();
 
     // Confirm the dispose actually un-installed by checking mark is a
@@ -136,7 +136,7 @@ describe('perf-hud / install → dispose teardown', () => {
     expect(perfNowSpy.mock.calls.length).toBe(0);
 
     // Second build re-runs the install branch and rewires the reals.
-    const second = buildPerfSection();
+    const second = buildPerfSection(null);
     perfNowSpy.mockClear();
     mark('test.second');
     measure('test.second');

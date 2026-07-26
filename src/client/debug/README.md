@@ -14,8 +14,12 @@ src/client/debug/
                                   readout helpers).
   perf-hud.ts                     Ring-buffer instrumentation +
                                   histogram + per-label table. Module-
-                                  level mark/measure/frame swapped from
-                                  no-op to real on panel open.
+                                  level mark/measure/frame/gpuBegin/
+                                  gpuEnd swapped from no-op to real on
+                                  panel open.
+  gpu-timer.ts (+ test)           EXT_disjoint_timer_query_webgl2 wrapper
+                                  — real GPU execution time, one rotating
+                                  scope per frame. See § GPU timing.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
@@ -53,10 +57,25 @@ end users could land on the HUD by accident, and the data is only
 useful to a developer who can read the section labels.
 
 The Perf section shows three rolling-window stats up top
-(`FPS avg`, `low`, `gpu Xms`) over a sortable section table
+(`FPS avg`, `low`, `gpu`/`submit Xms`) over a sortable section table
 (top 8 by avg ms, descending) and a 60-frame `frame.total`
 histogram. The DOM updates at ~5 Hz so the panel itself doesn't show
 up as a hot path in its own measurements.
+
+**Read the headline literally — the two numbers mean different things.**
+
+- **`FPS` / `low`** are the real displayed rate, from rAF-to-rAF deltas
+  (`low` inverts the *slowest* frame in the window). They are NOT
+  `1000 / frame.total`: that inverts how much work a frame does, which
+  reported "347 FPS" on a 60 Hz display whenever the work was cheap and
+  invited nonsense cross-browser comparisons.
+- **`gpu Xms`** is real GPU execution summed over the timed scopes, and
+  appears only where the driver exposes a timer query. Where it doesn't
+  (Safari exposes none), the headline says **`submit Xms`** instead and
+  reports CPU wall-time around the render calls. Submission is
+  asynchronous, so a large `submit` means the main thread is *blocking*
+  on the driver — a real symptom, but not a measure of GPU work. Never
+  compare a `submit` number against a `gpu` one.
 
 ## Instrumented sections
 
@@ -73,9 +92,14 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
-| `gpu.render`            | `stellata.ts` `animate()`       | The `renderer.render()` call — three-pass star draw + overlays. |
-| `gpu.localDepth`        | `stellata.ts` `animate()`       | The local depth pass's per-slice renders (near-zero when no cluster is active). |
+| `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
+| `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
+| `gpu.main`              | timer query                      | Real GPU ms for the main pass. Absent without the extension. |
+| `gpu.localDepth`        | timer query                      | Real GPU ms for the local depth pass. Absent without the extension. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
+| `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
+| `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |
+| `solar.rings`           | `orbit-rings-layer.ts` `update()` | Geometry drift check, pixel-gap visibility, anchored-line rebake. |
 | `chart.names`           | `chart-labels.ts` `tick()`       | Proper-name label projection + culling. |
 | `chart.bayer`           | `chart-labels.ts` `tick()`       | Bayer-letter Greek-glyph pass. |
 | `chart.constellations`  | `chart-labels.ts` `tick()`       | Constellation centroid recompute + label placement. |
@@ -84,6 +108,32 @@ after exiting chart mode (otherwise the average would lag forever).
 | `chart.dom`             | `chart-labels.ts` `tick()`       | SVG attribute writes for surviving labels. |
 | `chart.glyphs.var`      | `chart-labels.ts` `tick()`       | Variable-ring `<circle>` projection + emission. |
 | `chart.glyphs.bin`      | `chart-labels.ts` `tick()`       | Binary-wing `<line>` projection + emission. |
+
+## GPU timing
+
+`gpu-timer.ts` wraps `EXT_disjoint_timer_query_webgl2`. The extension is
+feature-detected at panel open; absent it, `gpuBegin`/`gpuEnd` stay
+no-ops and no `gpu.*` rows appear at all.
+
+**One query at a time — this shapes everything.** WebGL2 permits exactly
+one active `TIME_ELAPSED` query per context and exposes no timestamp
+queries, so timed scopes cannot nest or overlap within a frame. Each
+frame times a single scope and rotates to the next, so **N scopes sample
+at 1/N the frame rate**. The ring-buffer averages stay meaningful; the
+per-frame histogram is still driven by `frame.total`, never by these.
+
+Two further properties a reader will otherwise get wrong:
+
+- **Results are async** — a query resolves some frames after submission,
+  so `gpu.*` rows lag the scene by a frame or two.
+- **A disjoint event invalidates everything in flight.** Reading
+  `GPU_DISJOINT_EXT` clears it, so it is read exactly once per drain and
+  applied to every result in that pass; those samples are dropped, not
+  reported low.
+
+Adding a GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
+The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so
+the two are comparable when the extension is missing.
 
 Adding a measurement: import `mark`/`measure` from `perf-hud.ts` and
 wrap the block. Both functions are unconditional — when
