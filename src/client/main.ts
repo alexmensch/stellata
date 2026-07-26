@@ -18,6 +18,7 @@ import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
 import { createProbeLabels } from './solar-system/probes/probe-labels';
+import { loadPlanetElementTables } from './solar-system/ephemerides/element-table-loader';
 import { loadProbes } from './solar-system/probes/probe-loader';
 import { createHeliopauseLabel } from './solar-system/heliopause/heliopause';
 import { createScaleBar } from './ui/scale-bar';
@@ -143,6 +144,13 @@ async function main() {
 
     // Deep-space probes — markers + traversed trails on the model clock.
     stellata.attachProbes(probes);
+
+    // Horizons planet element tables — 1.5 MB that upgrades the planet
+    // ephemeris from the Standish series' 0.06 AU to ~5e-6 AU across
+    // 1900–2100. Deliberately not awaited: the first frame is Sol-focused,
+    // where the outer planets the tables move are sub-pixel discs, so paying
+    // for it before first paint would buy nothing visible.
+    void loadPlanetElementTables(import.meta.env.BASE_URL);
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.

@@ -10,10 +10,22 @@ per-host orbital-plane quaternion.
 
 ```
 src/client/solar-system/ephemerides/
-  ephemeris.ts (+ test)           JPL Standish 1992 Keplerian-elements
-                                  approximation + cubic Jupiter–Neptune
-                                  correction terms. Heliocentric ecliptic
-                                  parsecs out.
+  ephemeris.ts (+ test)           The two element sources and the seam
+                                  between them: JPL Standish 1992
+                                  Keplerian elements + cubic Jupiter–Pluto
+                                  correction terms, plus the frozen
+                                  Horizons tables where they reach.
+                                  Heliocentric ecliptic parsecs out.
+  equinoctial-pure.ts (+ test)    The non-singular element representation
+                                  every source is expressed in, and the
+                                  blend. See § Equinoctial elements.
+  element-table.ts (+ test)       One planet's uniform-cadence table of
+                                  equinoctial elements + the Catmull–Rom
+                                  sampler. See § Horizons element tables.
+  element-table-loader.ts         Parallel fetch of the nine tables from
+                                  public/ephemerides/. A missing file
+                                  drops that planet onto Standish; it is
+                                  never an error.
   moon-ephemeris.ts (+ test)      MOON_ELEMENTS — J2000 osculating orbital
                                   elements for the 18 major moons, each
                                   with its reference-plane pole — plus the
@@ -36,12 +48,12 @@ src/client/solar-system/ephemerides/
                                   RA/Dec frozen in data/horizons/, plus
                                   solstice/equinox mirror detectors.
   vector-truth.test.ts            Heliocentric ecliptic positions vs frozen
-                                  Horizons state vectors at deep epochs
-                                  outside the clock's populated window —
-                                  the only corpus that reaches the clamp
-                                  bounds. Epochs are JD TDB fed straight to
-                                  the element evaluation, so neither the
-                                  clock nor a frame rotation enters.
+                                  Horizons state vectors: both element
+                                  sources, the seam between them, and the
+                                  only epochs in the suite that reach the
+                                  clock's clamp bounds. Epochs are JD TDB,
+                                  so neither the clock nor a frame
+                                  rotation enters.
   moon-sky-truth.test.ts          Moon half of the corpus: every major
                                   moon's parent-relative on-sky position
                                   angle + separation vs Horizons at four
@@ -51,21 +63,34 @@ src/client/solar-system/ephemerides/
 
 ## Planet ephemeris
 
-`ephemeris.ts` implements the **JPL Standish 1992 Keplerian-elements
-approximation** with the cubic Jupiter–Pluto correction terms
-(Table 2a/2b inlined), valid over the whole 3000 BC – 3000 AD span the
-model clock clamps to (`../time/README.md`).
+`ephemeris.ts` positions the nine planets from **two element sources**,
+picked by epoch:
 
-**It is not sub-arcminute, and the error is not invisible.** Standish's
-published budget for the Table 2a elements
+- **Frozen Horizons element tables** across 1900–2100, ~5e-6 AU
+  (§ Horizons element tables).
+- **The JPL Standish 1992 Keplerian-elements approximation** with the
+  cubic Jupiter–Pluto correction terms (Table 2a/2b inlined) everywhere
+  else — the whole 3000 BC – 3000 AD span the model clock clamps to
+  (`../time/README.md`).
+
+Both are evaluated into equinoctial elements and go through one
+`orbitalStateToCartesian`; there is no second Kepler solve and no second
+element-to-position path. `getPlanetPositions` and
+`getPlanetOrbitShapes` read the *same* evaluation, so a ring cannot
+drift off its body — including through the seam.
+
+### The Standish series is not sub-arcminute, and its error is not invisible
+
+Standish's published budget for the Table 2a elements
 (`ssd.jpl.nasa.gov/planets/approx_pos.html` § Accuracy) reaches
 λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at Uranus;
 measured against DE441 the giants sit at 0.05–0.14 AU across the clamp
-and 0.05–0.06 AU in 1900–2100. Whether that shows depends on viewing
+and 0.05 AU in 1900–2100. Whether that shows depends on viewing
 distance, not on eye discrimination from Sol (CLAUDE.md § Camera-anywhere):
-at Uranus focus the camera stands well inside 0.06 AU of the planet.
-`vector-truth.test.ts` holds each body to that published budget at both
-clamp bounds.
+under a Voyager 2 flythrough the camera rides within the true 0.0007 AU
+Uranus approach while the series puts the planet 0.05 AU away, so the
+swing-by reads as a distant pass. That is what the tables are for, and it
+is why they cover only the epochs a mission actually happened in.
 
 Pluto's row is the pre-removal Table 2a one **plus** its Table 2b `b`
 term. The widely reproduced linear-elements row is Standish's Table 1
@@ -75,6 +100,66 @@ model clock reaches there.
 
 VSOP87 was rejected as a runtime dependency: ~500 KB of coefficients
 plus a new solver, for accuracy a frozen table gets more cheaply.
+
+## Horizons element tables
+
+`data/ephemerides/{planet}.json` — one uniform-cadence table of
+osculating elements per planet across 1900–2100. Provenance, units and
+the measured per-planet accuracy are in
+`../../../../data/ephemerides/README.md`; the fetch pipeline is
+`../../../../scripts/ephemerides/README.md`. What matters on this side:
+
+- **Lazy, and not on the critical path.** `main.ts` fires
+  `loadPlanetElementTables` without awaiting it. 1.5 MB behind first
+  paint would buy nothing: the first frame is Sol-focused, where the
+  outer planets the tables move are sub-pixel discs. Until it lands,
+  every planet is on Standish and the scene is simply the old one.
+- **A missing artifact is not an error.** A checkout that never ran the
+  `public/` sync gets nine null table slots and the series everywhere.
+- **`installPlanetElementTables` resets the per-`t` cache.** The swap
+  moves the outer planets by up to 0.05 AU; a live cache entry would
+  hold the pre-table position for the rest of the frame it landed in.
+- **Sampling is Catmull–Rom, float64, indexed by arithmetic.** The
+  cadence is uniform, so there is no search and no cursor to invalidate
+  when a scrub jumps decades between frames. The reasons for cubic over
+  linear and for extrapolating the boundary control point are measured
+  and live in `element-table.ts`.
+
+### The seam
+
+The two models disagree by up to 0.05 AU at the window edges, so the
+table's weight ramps over **one Julian year** at each end instead of
+switching. Under planet focus a hard switch would pop, and the ramp is a
+labelled interpolation between two published models — not a tuned
+constant.
+
+Blending happens in **element** space, not position space. That is what
+keeps rings on their bodies through the seam: one evaluation feeds both,
+so there is no way for a blended position and an unblended ring to
+disagree. `vector-truth.test.ts` pins continuity at both edges and the
+monotone ramp between them.
+
+## Equinoctial elements
+
+`equinoctial-pure.ts` is the representation both sources are expressed
+in: `h/k` = `e·(sin ϖ, cos ϖ)`, `p/q` = `tan(i/2)·(sin Ω, cos Ω)`, and
+the mean longitude λ = M + ϖ.
+
+**This is not a stylistic choice — the classical set is singular for
+bodies in this system.** The Earth/Moon barycentre's osculating
+inclination to the ecliptic of J2000 passes through 0.0001°, and across
+one Horizons sample its Ω jumps 215° while the orbit does not move at
+all. Interpolating Ω and ω separately — in the tables or in the seam
+blend — puts Earth on the wrong side of the Sun.
+
+The cost is one convention: `equinoctialToClassical` returns the
+canonical `i ≥ 0` form, so a **negative tabulated inclination comes back
+as `(|i|, Ω + 180°, ω + 180°)`**. That is the same rotation
+(`Rz(π)·Rx(i)·Rz(π) = Rx(−i)`), so positions and rings are unaffected —
+but Standish's EM Bary row carries `I = −0.00054346°`, and a test reading
+`getPlanetOrbitShapes(...).orientation.longAscNode` back for Earth sees
+the shifted pair, not the table's. `ephemeris.test.ts` pins exactly
+that.
 
 Returned positions are heliocentric **ecliptic** parsecs, not ICRS —
 the rotation onto ICRS happens in the caller via the per-host

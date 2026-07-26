@@ -257,12 +257,46 @@ describe('getPlanetOrbitShapes', () => {
     expect(o[mercIdx].orientation.inclination * 180 / Math.PI).toBeCloseTo(7.0056, 3);
   });
 
-  it("argPerihelion = ϖ − Ω matches the JPL element table", () => {
+  it('Ω + ω reproduces the JPL table ϖ for every planet', () => {
     const o = getPlanetOrbitShapes(J2000_UNIX);
     for (let i = 0; i < ELEMENTS.length; i++) {
-      const expectedDeg = ELEMENTS[i].longperi - ELEMENTS[i].longnode;
-      expect(o[i].orientation.argPerihelion * 180 / Math.PI).toBeCloseTo(expectedDeg, 6);
+      const { longAscNode, argPerihelion } = o[i].orientation;
+      expect(degreeDrift((longAscNode + argPerihelion) * 180 / Math.PI, ELEMENTS[i].longperi))
+        .toBeCloseTo(0, 6);
     }
+  });
+
+  it('Ω and ω match the table directly for the eight rows with I > 0', () => {
+    const o = getPlanetOrbitShapes(J2000_UNIX);
+    for (let i = 0; i < ELEMENTS.length; i++) {
+      if (ELEMENTS[i].I < 0) continue;
+      const expectedDeg = ELEMENTS[i].longperi - ELEMENTS[i].longnode;
+      expect(degreeDrift(o[i].orientation.argPerihelion * 180 / Math.PI, expectedDeg))
+        .toBeCloseTo(0, 6);
+      expect(degreeDrift(o[i].orientation.longAscNode * 180 / Math.PI, ELEMENTS[i].longnode))
+        .toBeCloseTo(0, 6);
+    }
+  });
+
+  /** Signed difference between two angles in degrees, folded into (−180, 180]:
+   *  `atan2` returns the node and argument on its own branch, so a raw
+   *  comparison against the table can be a whole turn out. */
+  function degreeDrift(gotDeg: number, wantDeg: number): number {
+    return ((gotDeg - wantDeg + 540) % 360) - 180;
+  }
+
+  it("Earth's negative tabulated I returns as the canonical i ≥ 0 pair", () => {
+    // EM Bary is the one row with I < 0, and the equinoctial round trip has no
+    // way to give it back: it returns (|i|, Ω + 180°, ω + 180°), the same
+    // rotation. A ring or body reading the pair is unaffected; a test reading
+    // Ω back is, which is why the assertion above skips this row.
+    const o = getPlanetOrbitShapes(J2000_UNIX);
+    const earth = ELEMENTS[PLANET_ORDER.indexOf('earth')];
+    const { inclination, longAscNode } = o[PLANET_ORDER.indexOf('earth')].orientation;
+    expect(earth.I).toBeLessThan(0);
+    expect(inclination * 180 / Math.PI).toBeCloseTo(-earth.I, 6);
+    const nodeDrift = ((longAscNode * 180 / Math.PI - earth.longnode - 180 + 540) % 360) - 180;
+    expect(nodeDrift).toBeCloseTo(0, 6);
   });
 
   it('orientation reproduces planetEclipticAU rotation: a synthesised perihelion point matches the body position at perihelion phase', () => {
