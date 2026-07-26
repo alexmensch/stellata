@@ -51,3 +51,8 @@ export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
 // Days in a Julian year (used by WDS year-of-observation → JD conversion).
 export const DAYS_PER_JULIAN_YEAR = 365.25;
+
+// Light travel time over one AU, seconds (IAU 2009). Two consumers: the
+// light-time correction any comparison against an observer-frame astrometric
+// position needs (0.03° at Mercury), and the probe card's signal round-trip.
+export const LIGHT_TIME_PER_AU_S = 499.004783836;

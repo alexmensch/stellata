@@ -35,6 +35,23 @@ velocity-format.ts        spaceVelocity(vx, vy, vz) → { kms, lDeg,
                           ../galactic/galactic-coords.ts). The
                           formatter puts the heading on its own line
                           (consumers use white-space: pre-line).
+probe-format.ts           Deep-space-probe mission stats:
+                          formatSolDistance (AU + light-hours — the
+                          light-time is what makes the AU figure mean
+                          something), formatProbeSpeed (the sampler's
+                          interpolated pc/s → km/s), formatProbeLaunch
+                          + formatProbeSignal. Both dates render through
+                          one UTC convention with the month NAMED —
+                          "1977-Aug-20", because a numeric month reads
+                          day-first or day-last by country and a
+                          misreadable mission date is worse than none.
+                          The order lives in a format string and the
+                          part values come from a pinned-locale Intl
+                          formatter, so neither is spelled out at a call
+                          site. The distance and speed are the
+                          card tiers' one Sol-relative pair — see
+                          ../focus-card/README.md § Frame-of-reference
+                          principle for why they're admitted.
 moon-list-format.ts       moonRosterText(names, maxNames?) → capped
                           comma roster for the hover card's "Moons …"
                           line (truncating to "+N more"). The focus

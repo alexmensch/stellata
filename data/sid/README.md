@@ -38,7 +38,11 @@ sameas-overrides.tsv    Curated same-as edges (a → b → note):
                         Regular git, hand-edited.
 sol-objects.tsv         The sol: namespace mint list (key → kind):
                         sun + eight majors + Pluto + the 18 major moons
-                        (moons reuse kind=planet).
+                        (moons reuse kind=planet) + the five deep-space
+                        probes (kind=probe). Scoped by system
+                        membership, not object class — docs/sid.md § 3.
+                        Client pin in
+                        src/client/solar-system/sol-object-sids.ts.
 shell-objects.tsv       The shell: namespace mint list (key → kind):
                         local_bubble + heliopause (kind=shell). Boundary
                         shells Stellata generates/curates; client pin in

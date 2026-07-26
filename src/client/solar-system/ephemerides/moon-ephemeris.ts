@@ -9,7 +9,7 @@ import {
 } from '../../util/astronomy-constants';
 import { orbitalStateToCartesian } from '../../util/kepler-solver';
 import type { Vec3 } from './ephemeris';
-import { tToJDE } from '../time/time';
+import { tToJdTdb } from '../time/time';
 
 const DEG = Math.PI / 180;
 const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
@@ -219,7 +219,7 @@ export const MOON_MASS_FRACTION = 0.0123000371 / (1 + 0.0123000371);
  *  onto the parent's ecliptic position). Kepler solve in the moon's
  *  reference plane, then reference-plane → ecliptic. */
 export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): void {
-  const days = tToJDE(t) - J2000_JD;
+  const days = tToJdTdb(t) - J2000_JD;
   const nodeRate = elem.nodeDegPerDay ?? 0;
   let mDeg = elem.m0Deg
     + (360 / elem.periodDays - nodeRate * Math.cos(elem.incDeg * DEG)) * days;

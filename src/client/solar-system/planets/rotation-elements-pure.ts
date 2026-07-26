@@ -3,7 +3,7 @@
 // rationale in README.md § Planet rotation.
 
 import { J2000_JD } from '../../util/astronomy-constants';
-import { tToJDE } from '../time/time';
+import { tToJdTdb } from '../time/time';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;
@@ -209,7 +209,7 @@ export function poleRaDecDegAt(
   rot: RotationElements,
   t: number,
 ): { raDeg: number; decDeg: number } {
-  const T = (tToJDE(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
+  const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
   return {
     raDeg: rot.poleRaDeg + rot.poleRaDegPerCty * T,
     decDeg: rot.poleDecDeg + rot.poleDecDegPerCty * T,
@@ -221,7 +221,7 @@ export function poleRaDecDegAt(
  *  model-clock bounds, where an unwrapped float64 radian value has
  *  degraded precision. */
 export function spinDegAt(rot: RotationElements, t: number): number {
-  const d = tToJDE(t) - J2000_JD;
+  const d = tToJdTdb(t) - J2000_JD;
   const w = (rot.w0Deg + rot.wDegPerDay * d) % 360;
   return w < 0 ? w + 360 : w;
 }

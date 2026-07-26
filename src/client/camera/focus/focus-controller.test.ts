@@ -17,9 +17,11 @@ import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
 import { ShellRegistry, type ShellInstance } from '../../fresnel-shell/shell-registry';
 import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
+import { PROBE_MARKER_PX, ProbeField } from '../../solar-system/probes/probe-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import {
+  PROBE_PARK_DIST_PC,
   fovMinorRad,
   minOrbitDistForPlanet,
   parkDistForPlanet,
@@ -183,7 +185,10 @@ function makeHarness(opts: {
 
   // Stub geometry registry: the star leg mirrors the frame anchor; the
   // soft kinds report a fixed position so setOrbitTarget / flyTo have
-  // something to aim at without a real layer.
+  // something to aim at without a real layer. The two moving hard kinds
+  // (planet, probe) must mirror production exactly — the controller reads
+  // its focal position and park distance through this registry for every
+  // non-star kind, so a stubbed leg would silently answer for the field.
   const softProvider: FocusableProvider = {
     localPositionInto: (_idx, out) => { out.set(1, 2, 3); return true; },
     focusParkDistance: () => 1,
@@ -202,9 +207,33 @@ function makeHarness(opts: {
     },
     cloud: softProvider,
     lg: softProvider,
-    planet: softProvider,
+    planet: {
+      localPositionInto: (idx, out) => planetField.planetLocalPositionInto(idx, out),
+      focusParkDistance: (idx) => {
+        const p = planetField.planetAt(idx);
+        return p === null ? 0 : parkDistForPlanet(p.radiusKm * KM_PC, fovMinorRad(camera));
+      },
+      arrivalRadiusPc: (idx) => {
+        const p = planetField.planetAt(idx);
+        return p === null ? null : p.radiusKm * KM_PC;
+      },
+      renderedSizePx: () => 10,
+    },
     shell: softProvider,
+    probe: {
+      localPositionInto: (idx, out) => probeField.localPositionInto(idx, out),
+      focusParkDistance: () => PROBE_PARK_DIST_PC,
+      arrivalRadiusPc: () => null,
+      renderedSizePx: () => PROBE_MARKER_PX,
+    },
   };
+
+  // Empty probe roster — probe-kind paths no-op (probeAt returns null).
+  const probeField = new ProbeField({
+    uViewport: { value: new THREE.Vector2(800, 600) },
+    uPixelRatio: { value: 1 },
+    uFovYRad: { value: (60 * Math.PI) / 180 },
+  });
 
   // Body field stub with no attached hosts — planet-kind paths no-op
   // (planetAt returns null). Tests exercising planet focus construct a
@@ -258,6 +287,7 @@ function makeHarness(opts: {
     getLocalGroup: () => null,
     getShells: () => shells,
     getPlanetField: () => planetField,
+    getProbeField: () => probeField,
     getWarp: () => warp,
     getObserve: () => observe,
     getFocusables: () => focusables,

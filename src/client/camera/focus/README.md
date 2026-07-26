@@ -17,14 +17,15 @@ close-approach focused star sitting at exactly NDC origin.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
 - `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
-  kind = `'star' | 'cloud' | 'lg' | 'planet' | 'shell'`), the `FocusTarget`
-  contract, and the `FocusableProviders` registry contract
+  kind = `'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe'`), the
+  `FocusTarget` contract, and the `FocusableProviders` registry contract
   (§ FocusableProviders). Per-kind factories return objects closing
   over the current focus state + controller deps so warp / overlays /
   arrival math can read positions and emit events without knowing the
   kind. A planet Target's idx is the PlanetBodyField flat global
   instance index; (host, planet-within-host) resolve through the
-  field's attach table.
+  field's attach table. A probe Target's idx is the ProbeField
+  loaded-roster index.
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The
@@ -40,7 +41,8 @@ the shell delegates to.
 
 - `focused: Target | null` and `vector: Target | null` — one sum-type
   slot per family, so cross-kind mutual exclusion (star ↔ cloud ↔ LG
-  ↔ planet ↔ shell) is structural rather than enforced by pairwise clears.
+  ↔ planet ↔ shell ↔ probe) is structural rather than enforced by
+  pairwise clears.
   The `'focus'` and `'vector'` events carry the kind-tagged
   `Target | null` payload, so a kind change is a single emit — no
   clearing emit for the displaced kind precedes it; subscribers
@@ -164,44 +166,86 @@ review-blocking defect, whatever the kind.
 binary orbital ride and `uPinFocusToCenter` guard on
 `getFocusedStar()`, which returns null for every non-star kind — so
 kind N+1 passes through them untouched. A mechanism gains an optional
-provider member only when a second kind actually implements it (the
-planet-focal ride is the planet analogue of the binary ride); don't
-add speculative capability methods before then.
+provider member only when a second kind actually implements it; the
+moving-focal ride is the worked example — added for planets as the
+analogue of the binary ride, and when probes arrived they needed only
+a provider leg and a `MOVING_FOCUS_KINDS` entry, no ride of their own.
+Don't add speculative capability methods before the second kind.
 
-## Planet focus — the second hard kind
+## Hard kinds — star, planet, probe
 
-Star and planet are the two **hard** focus kinds: both recentre the
-floating origin onto the object and drop `controls.minDistance` to a
-per-body physical floor; clouds, LG objects, and boundary shells stay
-**soft** (no recentre, no floor change). `focusPlanet` mirrors `focusStar`;
-`setPlanetFocus` is the setFocus-analogue (observe bail-out, recentre
-onto the planet's absolute position, floor drop, pose-preserving
-target snap). Displacing a planet focus — `setFocus(null)`, a soft
-kind, or Esc — runs the same detach side effects a star unfocus does
-(floor clamp to `min(GLOBAL_MIN_DIST_PC, eye)`, planet-system detach).
+The three **hard** focus kinds all recentre the floating origin onto the
+object and drop `controls.minDistance` to a per-object physical floor;
+clouds, LG objects, and boundary shells stay **soft** (no recentre, no
+floor change). `isHardTarget` is the single predicate — never spell the
+membership out at a call site.
 
-- Floors/parks come from `star-physics.ts`: `minOrbitDistForPlanet`
-  (the same 90 %-fill solve stars use) and `parkDistForPlanet` (a
-  30 %-fill solve — purely angular, no 1 AU term, because a planet is
-  a dim reflected-light body whose park has to actually show the disc).
-- **Host-derived state stays alive.** The planet kind's applyFocus /
-  setPlanetFocus attach the HOST's planet system (orbit rings,
-  heliopause, labels) exactly as the host's own star focus would.
-- **Observe anchors.** Star and planet are both valid observe
-  anchors (`getFocusedHardTarget`); the focal-body hide dispatches per
-  kind through `setFocalBodyHidden` in `stellata.ts`.
-- **No shader pin.** `uPinFocusToCenter` is a star-instance pin; a
-  focused planet is kept under the camera by the planet-focal ride in
-  `stellata.ts` (`applyPlanetFocalRide`, the planet sibling of the
-  binary focal-frame ride): camera + target + in-flight pose caches
-  translate by the body's per-frame local-position delta read from the
-  body-field buffers, so pan offsets survive and the rendered body
-  stays glued to the orbit target under scrubber fast-forward. The
-  ride reseeds on every `'focus'` event (each planet focus recentres
-  the origin, staleing the cached last position). Float32 precision as
-  the body orbits far from the focus-time origin is held generically by
-  the origin-follow recentre (`../../binaries/README.md` § Focal-frame
-  ride — kind-agnostic, no planet pin).
+`focusPlanet` / `focusProbe` mirror `focusStar`, and `setPlanetFocus` /
+`setProbeFocus` are the setFocus-analogues (observe bail-out, recentre
+onto the object's absolute position, floor drop, pose-preserving target
+snap). All three entry points share `parkOnFocalTarget` for the
+lerp-in / snap / stay-put tail, so a fourth hard kind supplies only its
+park distance, arrival radius, and recentring mutation. Displacing a
+non-star hard focus — `setFocus(null)`, a soft kind, or Esc — runs the
+same detach side effects a star unfocus does (floor clamp to
+`min(GLOBAL_MIN_DIST_PC, eye)`, planet-system detach).
+
+Everything the controller reads for a non-star hard focus — focal local
+position, park distance — dispatches through `FocusableProviders`, not
+through a per-kind field reference. A test harness that stubs one of
+those legs is therefore answering for the field, which is exactly the
+bug `focus-controller.test.ts` wires its planet + probe legs to real
+fields to avoid.
+
+- **Planet floors/parks** come from `star-physics.ts`:
+  `minOrbitDistForPlanet` (the same 90 %-fill solve stars use) and
+  `parkDistForPlanet` (a 30 %-fill solve — purely angular, no 1 AU term,
+  because a planet is a dim reflected-light body whose park has to
+  actually show the disc).
+- **Probe floors/parks are fixed distances, not solves.** A probe marker
+  is a fixed-pixel glyph with no disc to fill, and a metre-scale
+  spacecraft solve lands inside the near plane — see
+  `../../solar-system/probes/README.md` § Park distance is set by the
+  near plane.
+- **Host-derived state stays alive.** The planet kind attaches the
+  HOST's planet system (orbit rings, heliopause, labels) exactly as the
+  host's own star focus would; probe focus attaches Sol's for the same
+  reason (the rings are what make a flythrough planet pass legible).
+- **Observe anchors.** All three hard kinds are valid observe anchors
+  (`getFocusedHardTarget`); the focal-body hide dispatches per kind
+  through `setFocalBodyHidden` in `stellata.ts`.
+- **No shader pin.** `uPinFocusToCenter` is a star-instance pin; the
+  moving kinds are kept under the camera by the ride below instead.
+
+## Moving-focal ride
+
+A focused planet sweeps its orbit and a focused probe runs its
+trajectory, both fast under scrubber fast-forward. `applyMovingFocalRide`
+in `stellata.ts` — the sibling of the binary focal-frame ride, over the
+shared `focalRideStep` — translates camera + orbit target + in-flight
+pose caches by the object's per-frame local-position delta, so pan
+offsets survive and the object stays glued to `controls.target` at any
+rate. That is what makes the probe flythrough hold.
+
+It is one slot for both kinds, read through
+`focusables[kind].localPositionInto`, with membership in
+`MOVING_FOCUS_KINDS`. Two things keep it correct:
+
+- **The ride reseeds on every `'focus'` event.** Each hard focus
+  recentres the origin, staleing the cached last position — and it is
+  also what makes the shared slot safe when the kind changes but the
+  index collides (planet 3 → probe 3), since the slot is keyed on index
+  alone.
+- **It must run after every moving-body field has written this frame's
+  positions.** The probe layer is registered ahead of the planet layer
+  for exactly this: the ride call sits in the planet layer's update, so
+  both fields are fresh when it fires. One frame of lag is invisible at
+  1× and a visible offset at high fast-forward.
+
+Float32 precision as the object travels far from the focus-time origin
+is held generically by the origin-follow recentre
+(`../../binaries/README.md` § Focal-frame ride — kind-agnostic, no
+per-kind pin), which reseeds the ride when it fires.
 
 ## Focus-park lerp
 

@@ -1133,13 +1133,15 @@ body.monochrome .hud-ring {
   pointer-events: auto;
   cursor: pointer;
 }
-/* Per-planet body labels for the focused host's planet system. Cool
+/* Object labels for solar-system bodies: the focused host's planets and
+   the deep-space probes. Cool
    blue-white tone matches the orbit-ring family without competing with
    the warm amber galactic-disc reference. Same halo treatment as the
    POI label for legibility against bright stars and Milky Way regions.
    No click target so pointer-events stays off — clicks pass through
    to the underlying canvas. */
-.planet-label {
+.planet-label,
+.probe-label {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.05em;

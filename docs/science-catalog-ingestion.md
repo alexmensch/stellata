@@ -535,7 +535,9 @@ The model clock is clamped to the Standish ephemeris window
 (3000 BC – 3000 AD, `docs/science-solar-system.md`); the scrubber
 pins at the bound with its rate intact.
 Within that window every layer is honest without hide/fade machinery:
-planets are sub-arcminute by construction; stars carry real 3D space
+planets are arcsecond-faithful inside 1900–2100 and within Standish's
+published budget outside it (`docs/science-solar-system.md`
+§ Planet positions); stars carry real 3D space
 motion (linear propagation degrades gracefully — arcminute-faithful
 to ~±1 kyr, worst-case ~1° for Barnard's-class PM at the window
 edges); constellation figures and chart mode read the live positions

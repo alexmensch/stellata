@@ -17,8 +17,11 @@ in both navigate and observe modes.
   Shift key is held (see § Shift-drag panning).
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
-  stars / clouds / planets / Local Group / heliopause / boundary shells
-  (`pickShellHit`, shared silhouette helper in `fresnel-shell/`). The two
+  stars / clouds / planets / probes / Local Group / heliopause /
+  boundary shells (`pickShellHit`, shared silhouette helper in
+  `fresnel-shell/`). `pickProbeHit` reduces through the same
+  `pickFromCandidates` two-tier contract as every other layer, with
+  `PROBE_MARKER_PX` as its fixed prime hit radius. The two
   cloud surfaces (`pickCloud` / `pickCloudHit`) hold only their own gates
   — warp and `group.visible` respectively — and delegate the winner to
   `MolecularClouds.pick` so click and hover can't disagree
@@ -48,7 +51,13 @@ in both navigate and observe modes.
   canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
   planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
   (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular
-  solves, keyed on the body radius directly.
+  solves, keyed on the body radius directly. `PROBE_ORBIT_FLOOR_PC` /
+  `PROBE_PARK_DIST_PC` break that pattern deliberately: they are fixed
+  distances, not solves, because a probe marker is a fixed-pixel glyph
+  with no disc to fill and its metre-scale hull would solve to a park
+  inside `CAMERA_NEAR_PC` (`../depth-range.test.ts` pins the margin;
+  `../../solar-system/probes/README.md` § Park distance carries the
+  derivation).
 
 ### star-geometry vs star-physics vs stellata.ts
 

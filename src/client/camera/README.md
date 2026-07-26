@@ -40,6 +40,12 @@ focused body on the clip plane where it vanishes at max zoom. That
 margin is thinner than the `1e-12` value suggests — check the test
 before moving either constant.
 
+The near plane also **decides** one focus kind's park outright rather
+than merely bounding it: a probe has no disc to solve against, so its
+fixed park / floor pair is chosen for near-plane margin
+(`controls/README.md` § star-physics). Any future fixed-pixel focusable
+lands in the same regime.
+
 The constants live in their own module specifically to break the
 import cycle between `stellata.ts` (the warp state machine + camera-
 lerp consumer) and the modules that read them at animation start.

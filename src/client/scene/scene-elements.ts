@@ -34,6 +34,8 @@ export type SceneElementId =
   | 'lgWireframes'
   | 'orbitRings'
   | 'binaryOrbitRings'
+  | 'probeMarkers'
+  | 'probeTrails'
   | 'heliopauseShell'
   | 'localBubbleShell'
   | 'constellationFigures'
@@ -41,6 +43,7 @@ export type SceneElementId =
   | 'dustParticles'
   // Labels tier.
   | 'planetLabels'
+  | 'probeLabels'
   | 'heliopauseLabel'
   | 'localBubbleLabel'
   | 'molecularCloudLabels'
@@ -72,12 +75,15 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   lgWireframes:              { realistic: 'representational', chart: 'never' },
   orbitRings:                { realistic: 'representational', chart: 'never' },
   binaryOrbitRings:          { realistic: 'representational', chart: 'never' },
+  probeMarkers:              { realistic: 'representational', chart: 'never' },
+  probeTrails:               { realistic: 'representational', chart: 'never' },
   heliopauseShell:           { realistic: 'representational', chart: 'never' },
   localBubbleShell:          { realistic: 'representational', chart: 'never' },
   constellationFigures:      { realistic: 'representational', chart: 'representational' },
   molecularCloudEllipsoids:  { realistic: 'representational', chart: 'representational' },
   dustParticles:             { realistic: 'representational', chart: 'never' },
   planetLabels:              { realistic: 'all',              chart: 'never' },
+  probeLabels:               { realistic: 'all',              chart: 'never' },
   heliopauseLabel:           { realistic: 'all',              chart: 'never' },
   localBubbleLabel:          { realistic: 'all',              chart: 'never' },
   molecularCloudLabels:      { realistic: 'all',              chart: 'never' },

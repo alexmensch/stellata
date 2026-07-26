@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { casterShadowFactor, MAX_SHADOW_CASTERS } from './body-shadow-pure';
-import { getPlanetPositions, _resetCacheForTests } from '../ephemerides/ephemeris';
+import { getPlanetPositions, resetPositionCache } from '../ephemerides/ephemeris';
 import { earthMoonSplit, MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
 import { eclipseDimFromOffsets } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
@@ -8,7 +8,7 @@ import { KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 const J2000_UNIX = 946728000;
 
 beforeEach(() => {
-  _resetCacheForTests();
+  resetPositionCache();
 });
 
 describe('casterShadowFactor', () => {
@@ -72,7 +72,7 @@ describe('shadow events on the real ephemeris', () => {
     let minShadow = 1;
     const periodS = io.periodDays * 86400;
     for (let k = 0; k < 720; k++) {
-      _resetCacheForTests();
+      resetPositionCache();
       const t = J2000_UNIX + (k / 720) * periodS;
       const J = getPlanetPositions(t).jupiter;
       moonOffsetEcliptic(io, t, off);
@@ -115,7 +115,7 @@ describe('shadow events on the real ephemeris', () => {
     const moon = { x: 0, y: 0, z: 0 };
     let minDim = 1;
     for (let k = 0; k < 17520; k++) {
-      _resetCacheForTests();
+      resetPositionCache();
       const t = J2000_UNIX + k * 1800;
       const bary = getPlanetPositions(t).earth;
       moonOffsetEcliptic(moonEl, t, geo);

@@ -15,7 +15,7 @@ src/client/overlays/
                                   distance label (click = aim at the
                                   destination; warp stays on W).
   focus-ring-overlay.ts           SVG ring around the focused object
-                                  (star or planet — kind-generic).
+                                  (any hard kind — kind-generic).
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
                                   src/client/galactic/README.md.
   poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows
@@ -37,6 +37,15 @@ src/client/overlays/
                                   projectToScreenInto writes into a
                                   caller-owned tuple for per-frame hot
                                   paths (focus ring, HUD).
+  anchored-label.ts (+ test)      placeAnchoredLabel — position an SVG
+                                  label at its anchor's projected point
+                                  plus an offset, or hide it when the
+                                  anchor is at/behind the near plane.
+                                  The per-entry half of the object-label
+                                  families (planets, probes); the
+                                  offset is a parameter, since each
+                                  family owns its own gap from its
+                                  referent.
   arrow-fade.ts (+ test)          Shared shaft-fade curve for Sol/GC
                                   arrows + future arrow consumers.
   arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)

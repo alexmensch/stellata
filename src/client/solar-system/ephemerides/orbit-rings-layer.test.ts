@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
-  RING_GEOMETRY_MAX_AGE_S,
+  RING_GEOMETRY_DRIFT_TOLERANCE,
+  ringGeometryDrifted,
   RING_VISIBILITY_THRESHOLD_PX,
   OrbitRingsLayer,
   buildEllipsePoints,
@@ -824,16 +825,14 @@ describe('OrbitRingsLayer moon rings', () => {
     ss.dispose();
   });
 
-  it('re-derives host-centred geometry once builtT ages past RING_GEOMETRY_MAX_AGE_S', () => {
+  it('re-derives host-centred geometry on resolvable element drift, not on elapsed t', () => {
     const ss = new OrbitRingsLayer();
+    let aAu = 1;
     const ps: PlanetSystem = {
       hostStarIdx: 1,
       planets: [makePlanet({ semiMajorAxisAu: 1 })],
-      orbitGeometryAt: (t) => [{
-        aAu: t === T0 ? 1 : 2,
-        e: 0,
-        orientation: zeroOrientation,
-        parentIdx: null,
+      orbitGeometryAt: () => [{
+        aAu, e: 0, orientation: zeroOrientation, parentIdx: null,
       }],
     };
     ss.setPlanetSystem(ps, 0, T0);
@@ -842,12 +841,51 @@ describe('OrbitRingsLayer moon rings', () => {
     const radiusAu = () => Math.hypot(verts[0], verts[1], verts[2]) / AU_PC;
     expect(radiusAu()).toBeCloseTo(1, 6);
     const cam = makeCamera(5 * AU_PC);
-    // Within the age budget: geometry holds.
-    ss.update(cam, 800, null, T0 + RING_GEOMETRY_MAX_AGE_S - 1);
+
+    // A century of sim time with the elements standing still costs nothing:
+    // the old sim-time gate rebuilt here, which is what degenerated into a
+    // per-frame 8192-vertex rewrite under fast-forward.
+    ss.update(cam, 800, null, T0 + 100 * 365 * 86400);
     expect(radiusAu()).toBeCloseTo(1, 6);
-    // Past it: geometry re-derives at the live t.
-    ss.update(cam, 800, null, T0 + RING_GEOMETRY_MAX_AGE_S + 1);
+
+    // Drift under the polyline's own resolution stays unwritten — rewriting
+    // it would only redraw discretisation noise.
+    aAu = 1 + RING_GEOMETRY_DRIFT_TOLERANCE * 0.5;
+    ss.update(cam, 800, null, T0 + 1);
+    expect(radiusAu()).toBeCloseTo(1, 6);
+
+    // Past it, the geometry re-derives at the live elements.
+    aAu = 2;
+    ss.update(cam, 800, null, T0 + 2);
     expect(radiusAu()).toBeCloseTo(2, 6);
     ss.dispose();
+  });
+});
+
+describe('ringGeometryDrifted', () => {
+  const zeroOrientation = { inclination: 0, longAscNode: 0, argPerihelion: 0 };
+  const base = { aAu: 10, e: 0.1, orientation: zeroOrientation, parentIdx: null };
+
+  it('is false for identical elements', () => {
+    expect(ringGeometryDrifted(base, { ...base })).toBe(false);
+  });
+
+  it('scales the semi-major-axis leg with the orbit, so one tolerance fits all rings', () => {
+    // The same absolute drift is resolvable on Mercury's ring and not on
+    // Pluto's; the test would pass either way under an absolute tolerance.
+    const dAu = 10 * RING_GEOMETRY_DRIFT_TOLERANCE * 2;
+    expect(ringGeometryDrifted(base, { ...base, aAu: 10 + dAu })).toBe(true);
+    const wide = { ...base, aAu: 1000 };
+    expect(ringGeometryDrifted(wide, { ...wide, aAu: 1000 + dAu })).toBe(false);
+  });
+
+  it('catches drift in each angle independently', () => {
+    const past = RING_GEOMETRY_DRIFT_TOLERANCE * 2;
+    for (const key of ['inclination', 'longAscNode', 'argPerihelion'] as const) {
+      expect(ringGeometryDrifted(base, {
+        ...base,
+        orientation: { ...zeroOrientation, [key]: past },
+      })).toBe(true);
+    }
   });
 });

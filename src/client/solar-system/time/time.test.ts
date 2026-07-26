@@ -1,15 +1,18 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   MAX_RATE,
+  TT_MINUS_UTC_S,
   T_CLAMP_MAX_S,
   T_CLAMP_MIN_S,
   VirtualClock,
   isLive,
+  jdTdbToT,
   julianEpochYearToT,
   nextFastForwardRate,
   nextRewindRate,
   parseLocalDatetimeValue,
   tToJDE,
+  tToJdTdb,
   toLocalDatetimeValue,
 } from './time';
 
@@ -18,12 +21,8 @@ describe('tToJDE', () => {
     expect(tToJDE(0)).toBe(2440587.5);
   });
 
-  it('maps J2000.0 (2000-01-01T12:00:00 TT) to JD 2451545.0 within sub-second tolerance', () => {
-    // J2000 in Unix-seconds is 946728000 (2000-01-01T12:00:00Z).
-    // TT-UTC offset (~64.184s in 2000) is intentionally ignored — VSOP87D
-    // is a TDB-scale theory and the helper documents the approximation.
-    const jd = tToJDE(946728000);
-    expect(Math.abs(jd - 2451545.0)).toBeLessThan(1 / 86400);
+  it('maps the UTC instant 2000-01-01T12:00:00Z to JD 2451545.0 exactly', () => {
+    expect(tToJDE(946728000)).toBe(2451545.0);
   });
 
   it('round-trips a JD back to seconds within sub-millisecond float64 noise for typical scrubber values', () => {
@@ -39,6 +38,25 @@ describe('tToJDE', () => {
 
   it('advances by exactly one day for a 86400-second delta', () => {
     expect(tToJDE(86400) - tToJDE(0)).toBe(1);
+  });
+});
+
+describe('tToJdTdb', () => {
+  it('runs TT_MINUS_UTC_S ahead of the UTC-scale sibling', () => {
+    // Differencing two ~2.44e6 Julian Dates leaves ~1e-5 s of float64 noise.
+    expect((tToJdTdb(0) - tToJDE(0)) * 86400).toBeCloseTo(TT_MINUS_UTC_S, 4);
+  });
+
+  it('lands J2000.0 on JD 2451545.0 — the epoch the element tables count from', () => {
+    // The UTC instant is 12:00:00Z; J2000.0 is 12:00:00 TT, 69.184 s later on
+    // this clock. Feeding the UTC-scale JD to the ephemeris instead moves
+    // Mercury by 2.2e-5 AU.
+    expect(tToJdTdb(946728000 - TT_MINUS_UTC_S)).toBeCloseTo(2451545.0, 12);
+  });
+
+  it('round-trips through jdTdbToT', () => {
+    const t = 1.78e9;
+    expect(Math.abs(jdTdbToT(tToJdTdb(t)) - t)).toBeLessThan(1e-3);
   });
 });
 

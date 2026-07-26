@@ -17,6 +17,9 @@ import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
+import { createProbeLabels } from './solar-system/probes/probe-labels';
+import { loadPlanetElementTables } from './solar-system/ephemerides/element-table-loader';
+import { loadProbes } from './solar-system/probes/probe-loader';
 import { createHeliopauseLabel } from './solar-system/heliopause/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
@@ -43,6 +46,7 @@ import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
+import { createProbeFocusProvider } from './focus-card/probe-focus-provider';
 import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createLgFocusProvider } from './focus-card/lg-focus-provider';
@@ -51,6 +55,7 @@ import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
 import { SHELL_KEYS } from './fresnel-shell/shell-registry';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
+import { createProbeHoverProvider } from './hover/probe-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
 import { createShellHoverProvider } from './hover/shell-hover-provider';
 import { createCloudHoverProvider } from './hover/cloud-hover-provider';
@@ -68,7 +73,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, probes] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -102,6 +107,10 @@ async function main() {
       // missing (fresh checkout without `pnpm run build:local-bubble`).
       // The scene renders fine without it — the shell simply doesn't draw.
       loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
+      // Deep-space probe trajectories. ~450 KB of JSON across the five
+      // Sun-escape probes; each one that's missing (a checkout that never
+      // ran the public/ sync) simply drops its marker and trail.
+      loadProbes(import.meta.env.BASE_URL),
     ]);
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
@@ -133,6 +142,16 @@ async function main() {
     // A representational declutter element; absent artifact = no shell.
     if (localBubble) stellata.attachLocalBubble(localBubble);
 
+    // Deep-space probes — markers + traversed trails on the model clock.
+    stellata.attachProbes(probes);
+
+    // Horizons planet element tables — 1.5 MB that upgrades the planet
+    // ephemeris from the Standish series' 0.06 AU to ~5e-6 AU across
+    // 1900–2100. Deliberately not awaited: the first frame is Sol-focused,
+    // where the outer planets the tables move are sub-pixel discs, so paying
+    // for it before first paint would buy nothing visible.
+    void loadPlanetElementTables(import.meta.env.BASE_URL);
+
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.
     // Built once over `catalog.hip` (uint32 per row, 0 = no HIP). First-
@@ -150,7 +169,7 @@ async function main() {
     // keyed body-within-host over SOL_BODIES (planets then moons), so a
     // moon's sid sits at its body index and resolves like any planet.
     const sidResolver = new SidResolver(
-      ['star', 'planet', 'cloud', 'lg', 'shell'],
+      ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
     );
     sidResolver.attach('star', arrayDomain(catalog.sid));
@@ -168,6 +187,15 @@ async function main() {
     // layer is absent still resolves its sid, then focus/pin fall through
     // to null via makeShellFocusTarget (same graceful path as lg).
     sidResolver.attach('shell', arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])));
+    // Probes are `sol:` objects like the planets, but their domain is keyed
+    // over the LOADED roster, not PROBE_MISSIONS: `loadProbes` drops a probe
+    // whose artifact is missing, and localIndex must equal the Target idx.
+    // A dropped probe's sid then resolves `unknown` (its own URL ref drops)
+    // while every other probe still resolves — no index shift.
+    sidResolver.attach(
+      'probe',
+      arrayDomain(probes.map((p) => SOL_OBJECT_SIDS[p.id] ?? 0)),
+    );
 
     const idMaps: IdMaps = {
       hipToIndex,
@@ -224,6 +252,7 @@ async function main() {
     createClickRipple(stellata);
     createGalacticGridLabels(stellata);
     createPlanetLabels(stellata);
+    createProbeLabels(stellata);
     createHeliopauseLabel(stellata);
     createLocalBubbleLabel(stellata);
     // Per-cloud molecular-cloud labels. Mints SVG <text> children under
@@ -293,6 +322,7 @@ async function main() {
     const hoverProviders: HoverProvider[] = [
       starHoverProvider,
       planetHoverProvider,
+      createProbeHoverProvider({ stellata }),
       shellHoverProvider,
     ];
     // LG provider only registers when the build artifact loaded — fresh
@@ -359,6 +389,22 @@ async function main() {
               : null;
             return ps ? moonNamesOf(ps.planets, host!.planetIdx) : [];
           },
+        }),
+        // Every probe row reads the field's one per-frame sample, so the
+        // card can never disagree with the marker about where the probe
+        // is or how fast it is going.
+        probe: createProbeFocusProvider({
+          probeAt: (idx) => stellata.probeField.probeAt(idx),
+          cameraDistancePc: (idx) => stellata.probeCameraDistancePc(idx),
+          solDistancePc: (idx) => {
+            const s = stellata.probeField.sampleFor(idx);
+            return s === null || !s.sampled ? null : s.solRelPc.length();
+          },
+          speedPcPerSec: (idx) => {
+            const s = stellata.probeField.sampleFor(idx);
+            return s === null || !s.sampled ? null : s.velPcPerSec.length();
+          },
+          signalLost: (idx) => stellata.probeField.sampleFor(idx)?.signalLost ?? false,
         }),
         cloud: createCloudFocusProvider({
           clouds: cloudCatalog?.clouds ?? null,

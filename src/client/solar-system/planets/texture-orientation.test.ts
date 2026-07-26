@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { getPlanetPositions, _resetCacheForTests } from '../ephemerides/ephemeris';
+import { getPlanetPositions, resetPositionCache } from '../ephemerides/ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import { iauMeshOrientationQuat } from './planet-mesh-layer';
@@ -61,7 +61,7 @@ function bodyToEarthIcrs(
   body: TruthRow['body'],
   t: number,
 ): { dir: THREE.Vector3; distPc: number } {
-  _resetCacheForTests();
+  resetPositionCache();
   const pos = getPlanetPositions(t);
   const p = { ...(body === 'mars' ? pos.mars : pos.jupiter) };
   if (body !== 'mars') {

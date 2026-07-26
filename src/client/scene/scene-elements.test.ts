@@ -16,7 +16,7 @@ describe('SCENE_ELEMENT_FLOORS contract', () => {
       stars: { realistic: 'physical', chart: 'physical' },
     };
     expect(partial).toBeDefined();
-    expect(SCENE_ELEMENT_IDS.length).toBe(25);
+    expect(SCENE_ELEMENT_IDS.length).toBe(28);
   });
 
   it('SCENE_ELEMENT_IDS matches the floor-table keys exactly', () => {
@@ -41,9 +41,11 @@ describe('floorPermits', () => {
 
 describe('visibleSet — cumulative floor derivation', () => {
   it('realistic cumulative sizes are pinned', () => {
+    // 'physical' is the naked-eye tier: stars, planet bodies, the MW band,
+    // LG emission. Nothing else an unaided eye at the camera would see.
     expect(visibleSet('physical', 'realistic').size).toBe(4);
-    expect(visibleSet('representational', 'realistic').size).toBe(13);
-    expect(visibleSet('all', 'realistic').size).toBe(19);
+    expect(visibleSet('representational', 'realistic').size).toBe(15);
+    expect(visibleSet('all', 'realistic').size).toBe(22);
   });
 
   it('chart cumulative sizes are pinned', () => {
@@ -71,6 +73,24 @@ describe('visibleSet — cumulative floor derivation', () => {
     expect(visibleSet('representational', 'realistic').has('constellationFigures')).toBe(true);
     expect(visibleSet('representational', 'realistic').has('planetLabels')).toBe(false);
     expect(visibleSet('all', 'realistic').has('planetLabels')).toBe(true);
+  });
+
+  // The naked-eye tier holds only what an unaided eye at the camera would
+  // actually see. A metre-scale spacecraft subtends nothing at any range,
+  // so its glyph is a representation of an object rather than the object —
+  // markers enter with their trails, one tier above the bodies.
+  it('probe markers and trails are both representational, names labels', () => {
+    const phys = visibleSet('physical', 'realistic');
+    expect(phys.has('probeMarkers')).toBe(false);
+    expect(phys.has('probeTrails')).toBe(false);
+    const rep = visibleSet('representational', 'realistic');
+    expect(rep.has('probeMarkers')).toBe(true);
+    expect(rep.has('probeTrails')).toBe(true);
+    expect(rep.has('probeLabels')).toBe(false);
+    expect(visibleSet('all', 'realistic').has('probeLabels')).toBe(true);
+    for (const id of ['probeMarkers', 'probeTrails', 'probeLabels'] as const) {
+      expect(elementPermitted(id, 'all', 'chart')).toBe(false);
+    }
   });
 
   it('chart floors exclude realistic-only chrome and vice versa', () => {

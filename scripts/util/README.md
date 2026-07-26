@@ -19,3 +19,23 @@ need the same thing — single-use helpers stay with their consumer.
   `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
   missing) for build-idempotency checks against optional inputs.
   `paths.test.ts` pins the `maxMtimeOfSources` cases.
+- `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
+  (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
+  `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed
+  per-ephemeris-type parsers sit on top: `scripts/probes/horizons-vectors.ts`
+  and `scripts/ephemerides/horizons-elements.ts`. `rangeChunks` splits a
+  uniform-cadence span into range queries whose endpoints land on grid
+  epochs.
+- `frozen-json.ts` — `serializeRowFile` (one sample array per line, so a
+  thousand-row artifact still diffs sample-by-sample in git) and
+  `roundSignificant`, shared by the probe-trajectory and planet-element
+  emitters.
+- `mirror-to-public.ts` — `mirrorDataFolder(spec)`, the one
+  `data/<folder>/` → `public/<folder>/` copy used by
+  `scripts/{dust,textures,probes}/sync-*.ts`. Mtime+size skip for
+  up-to-date files; **allowlist**, never denylist, because Vite copies
+  `public/` wholesale — anything left in the destination ships, so the
+  mirror also purges non-allowlisted strays a previous sync left behind.
+  `tests/bundle-content.test.ts` asserts the built tree against the same
+  predicates. The single-file copies (`sync-local-bubble.ts`,
+  `sync-cloud-surfaces.ts`) are a different shape and stay standalone.

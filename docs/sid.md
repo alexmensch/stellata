@@ -68,13 +68,19 @@ Current namespaces:
 | `synth` | `<wds_id>-<comp>` (the runtime synth key minus its `synth-` prefix) | companion promotion | synthetic; churns under WDS re-pairing (§ 5) |
 | `cloud` | `clouds.json` `id` slug | clouds pipeline | slug — rename requires a bridge (§ 4.1) |
 | `lg` | `local-group.json` `id` slug | LVDB pipeline | slug — rename requires a bridge |
-| `sol` | `sun`, `mercury` … `pluto` | committed list | frozen by us |
+| `sol` | Every Sol-system object carrying no catalog record: `sun`, `mercury` … `pluto`, the 18 major moons, the five deep-space probes | committed list (`sol-objects.tsv`) | frozen by us |
 | `shell` | `local_bubble`, `heliopause` | committed list (`shell-objects.tsv`) | frozen by us |
+
+The `sol` namespace is scoped by **system membership, not object
+class** — moons and probes key on it rather than on namespaces of their
+own, and their ledger `kind` (`planet` / `probe`) carries the class.
+The separate `moon:` / `probe:` namespaces once reserved here are
+therefore retired unclaimed; nothing keys on them.
 
 Reserved for future layers (see § 10): `pgc`, `ngc`, `ic`, `ugc`,
 `messier` (extragalactic tiers — PGC runs past 3 million, which is
-why the wire is LEB128 from day 1), `exo` (exoplanets), `moon`,
-`probe`.
+why the wire is LEB128 from day 1) and `exo` (exoplanets, whose hosts
+are catalog stars, not the Sol system).
 
 ## 4. Registry — same-as graph + frozen ledger
 
@@ -419,10 +425,11 @@ In-record, not a runtime sidecar:
   together, and each loader hard-asserts sid presence + uniqueness at
   parse.
 - **Sol system (B3):** ledger rows minted from the committed
-  `data/sid/sol-objects.tsv` list (`sol:sun` + the `SOL_PLANETS`
-  bodies — eight majors + Pluto). Client-side, a hand-written
-  `SOL_OBJECT_SIDS` table in `src/client/solar-system/` pins
-  body → sid, with a vitest that imports the ledger and asserts the
+  `data/sid/sol-objects.tsv` list — `sol:sun`, the `SOL_BODIES` bodies
+  (eight majors + Pluto, then the 18 major moons, all `kind=planet`),
+  and the five deep-space probes (`kind=probe`). Client-side, a
+  hand-written `SOL_OBJECT_SIDS` table in `src/client/solar-system/`
+  pins key → sid, with a vitest that imports the ledger and asserts the
   table matches (tests import, never redefine). `sol:sun` is minted
   for the ledger's completeness; Sol's catalog record resolves to the
   same SID through the same-as edge, not a second allocation.
@@ -449,9 +456,11 @@ One global resolver built at boot from whatever artifacts attach:
   over `catalog.sid` at catalog load, planets from `SOL_OBJECT_SIDS`
   at boot, boundary shells from `SHELL_OBJECT_SIDS` at boot (both sids
   always known — a shell whose layer is absent still resolves, then
-  focus/pin fall through to null), Local Group and clouds when their
-  fetches resolve (concluded when the artifact is missing)
-  (`src/client/util/sid-resolver/README.md`).
+  focus/pin fall through to null), probes over the LOADED roster (a
+  probe whose artifact is missing is simply absent from its domain, so
+  the remaining probes keep resolving without an index shift), Local
+  Group and clouds when their fetches resolve (concluded when the
+  artifact is missing) (`src/client/util/sid-resolver/README.md`).
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
   registered-but-unattached domain remains, or `unknown` once all
   attached domains have disclaimed it.

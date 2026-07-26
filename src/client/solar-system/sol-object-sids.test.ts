@@ -9,6 +9,7 @@ import {
   loadRegistry,
   type Registry,
 } from '../../../scripts/sid/registry-io';
+import { PROBE_MISSIONS } from '../../../scripts/probes/probe-roster';
 import { SOL_BODIES } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
 
@@ -49,6 +50,18 @@ suite('SOL_OBJECT_SIDS pins against the ledger', () => {
     expect(SOL_OBJECT_SIDS.sun).toBeGreaterThan(0);
     for (const p of SOL_BODIES) {
       expect(SOL_OBJECT_SIDS[p.name.toLowerCase()], `no SID for ${p.name}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('carries a SID for every probe, keyed by roster id', () => {
+    for (const m of PROBE_MISSIONS) {
+      expect(SOL_OBJECT_SIDS[m.id], `no SID for ${m.label}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('mints the probes with ledger kind probe, not planet', () => {
+    for (const m of PROBE_MISSIONS) {
+      expect(bySid.get(SOL_OBJECT_SIDS[m.id])!.kind).toBe('probe');
     }
   });
 });

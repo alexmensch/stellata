@@ -30,6 +30,14 @@ public/dust/
 # copies the built per-body maps here so Vite's publicDir serves them.
 public/textures/
 
+# Mirror of data/probes/ — scripts/probes/sync-probes.ts copies the
+# committed trajectory JSONs here so Vite's publicDir serves them.
+public/probes/
+
+# Mirror of data/ephemerides/ — scripts/ephemerides/sync-ephemerides.ts copies
+# the committed planet element tables here so Vite's publicDir serves them.
+public/ephemerides/
+
 # Manual-run validation report emitted by `pnpm run validate:simbad`.
 # Local-only — re-run when investigating drift.
 docs/validation-residuals.md

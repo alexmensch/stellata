@@ -9,41 +9,67 @@ local frame around the host. Sol is the only populated host so far; the
 machinery is generic so future exoplanet-host work can plug in
 without changing the renderer.
 
-**Planet positions.** Heliocentric ecliptic positions are computed
-from the **JPL Standish 1992 Keplerian-elements approximation**
-(https://ssd.jpl.nasa.gov/planets/approx_pos.html), with the cubic
-correction terms for Jupiter through Neptune that extend the validity
-window to 3000 BC – 3000 AD at sub-arcminute accuracy. Implementation
-in `src/client/solar-system/ephemerides/ephemeris.ts` works directly from the
-published JPL Table 2a/2b values — no external library, no network
-fetch.
+**Planet positions.** Two sources, picked by epoch, both resolved into
+non-singular equinoctial elements and solved through one Kepler solve
+(`src/client/solar-system/ephemerides/README.md`).
 
-The full position chain (Standish ephemeris → ecliptic→ICRS rotation)
-is pinned against external sky truth: geocentric RA/Dec for all nine
-bodies plus the Sun at three fixed epochs, fetched once from the JPL
-Horizons API (ephemeris DE441, retrieved 2026-07-02) and frozen in
-`data/horizons/` (provenance + schema in that folder's README). The
-regression corpus (`src/client/solar-system/ephemerides/sky-truth.test.ts`) holds
-every body within 0.5° of Horizons — the empirical worst case is
-Saturn at 0.35°, a known Standish linear-elements residual near the
-Jupiter–Saturn great inequality — and the Sun within 0.1°, including
+*Across 1900–2100:* frozen **JPL Horizons osculating-element tables**,
+one uniform-cadence file per planet in `data/ephemerides/` (~1.5 MB,
+lazily loaded, no bundle cost). A position reconstructed from the
+interpolated elements sits **within 1e-5 AU (1,500 km) of Horizons**,
+measured at epochs off the sample grid; the fetch pipeline re-reads its
+own output and fails rather than ship a table that misses its claim
+(`scripts/ephemerides/README.md` § Cadence). Elements rather than
+positions because the Kepler solve already carries the orbital motion,
+so the table only has to resolve the slow perturbation on top — some
+fifty times more compact at equal accuracy — and because the orbit-ring
+layer consumes elements natively, which is what keeps a ring on its body.
+
+*Outside it, to the 3000 BC – 3000 AD clamp:* the **JPL Standish 1992
+Keplerian-elements approximation**
+(https://ssd.jpl.nasa.gov/planets/approx_pos.html) with the cubic
+correction terms for Jupiter through Pluto, working directly from the
+published Table 2a/2b values — no external library, no network fetch.
+Its accuracy is **not** sub-arcminute: Standish's published budget
+reaches λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at
+Uranus, and measured against DE441 the giants sit at 0.05–0.14 AU. The
+tables exist because that error is not invisible — under a Voyager 2
+flythrough the camera rides inside the true 0.0007 AU Uranus approach
+while the series puts the planet 0.05 AU away.
+
+The table's weight ramps over one Julian year at each window edge rather
+than switching, so scrubbing across 1900 or 2100 under planet focus does
+not pop the outer planets by 0.05 AU.
+
+Both sources evaluate against **TDB**, not the UTC clock `t` runs in
+(`src/client/solar-system/time/README.md` § Timescales); the 69.184 s
+offset is 2.2e-5 AU at Mercury.
+
+The full position chain (elements → ecliptic→ICRS rotation) is pinned
+against external sky truth: geocentric RA/Dec for all nine bodies plus
+the Sun at three fixed epochs, plus heliocentric ecliptic state vectors
+at five in-window epochs and one near each clamp bound, all fetched once
+from the JPL Horizons API (DE441) and frozen in `data/horizons/`. The
+RA/Dec corpus (`sky-truth.test.ts`) holds every body within **4e-4°**
+— measured worst case 1.17″ at Pluto — with light-time retardation and
+Earth's own centre rather than the Earth/Moon barycentre, and includes
 solstice/equinox declination checks that would fail by ~47° on any
-mirror-image error in the ecliptic→ICRS rotation.
+mirror-image error in the ecliptic→ICRS rotation. The vector corpus
+(`vector-truth.test.ts`) pins the tables against their own tolerance
+in-window, the Standish fallback against its published budget at the
+clamp bounds, and the continuity of the seam between them.
 
-VSOP87 was the originally-planned ephemeris model and would offer
-sub-arcsecond accuracy ±4000 years from J2000. We dropped it during
-implementation: planets render as billboarded discs at a pixel-size
-floor, and sub-arcminute precision is invisible at every zoom the
-user can reach. The Standish approximation is ~50 lines of code over
-an 8-row element table, with no dependency cost. **Decision (closes
-the deep-time question):** rather than adopting a heavier ephemeris,
-the model clock itself clamps to the Standish validity window
-(3000 BC – 3000 AD; `T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
-`src/client/solar-system/time/time.ts`) — the same window at which linear
-star propagation and the static background layers stop being honest
-(`docs/science-catalog-ingestion.md` § Current-epoch star positions).
-No scrubbable epoch can leave the window, so no higher-precision
-model is needed.
+VSOP87 was the originally-planned model and offers sub-arcsecond
+accuracy ±4000 years from J2000. It stays rejected as a *runtime*
+dependency — ~500 KB of coefficients plus a new solver, for accuracy a
+frozen table gets more cheaply, and its own Pluto is valid 1885–2099
+only. **Decision (closes the deep-time question):** the model clock
+clamps to the Standish validity window (3000 BC – 3000 AD;
+`T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
+`src/client/solar-system/time/time.ts`) — the same window at which
+linear star propagation and the static background layers stop being
+honest (`docs/science-catalog-ingestion.md` § Current-epoch star
+positions). No scrubbable epoch can leave it.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major
@@ -141,8 +167,10 @@ terms ship: the periodic nutation/precession corrections are sub-degree
 (largest: Neptune's ±0.7° pole nod) and invisible at render scale,
 while the linear pole rates keep the visually meaningful long-term
 behaviour (Earth's axial precession moves the pole ~30° across the
-model-clock window). `t` is treated as TDB — the ~69 s UTC↔TDB gap is
-~0.3° of Earth spin, consistent with the Standish accuracy budget. The
+model-clock window). The elements evaluate against **TDB** like the
+ephemerides do (`src/client/solar-system/time/README.md` § Timescales);
+reading the UTC clock directly instead is 0.29° of Earth spin, which is
+resolvable on a textured globe. The
 regression corpus pins Earth's sub-solar longitude at an
 equation-of-time zero crossing (Greenwich noon → ~0° lon).
 Implementation: `src/client/solar-system/planets/rotation-elements-pure.ts`.

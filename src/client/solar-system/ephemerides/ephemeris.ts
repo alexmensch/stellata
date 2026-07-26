@@ -1,11 +1,22 @@
-// Heliocentric ecliptic positions for the eight planets at any wall-clock
-// `t` (Unix-seconds). See src/client/solar-system/README.md § Ephemerides.
+// Heliocentric ecliptic positions for the nine planets at any wall-clock
+// `t` (Unix-seconds), from the frozen Horizons element tables where they
+// reach and the Standish series elsewhere. See README.md § Planet ephemeris.
 
-import { AU_PC, J2000_JD } from '../../util/astronomy-constants';
+import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 import { orbitalStateToCartesian } from '../../util/kepler-solver';
-import { tToJDE } from '../time/time';
+import { tToJdTdb } from '../time/time';
+import { elementTableSampleAt, type PlanetElementTable } from './element-table';
+import {
+  blendEquinoctialInto,
+  equinoctialFromAngles,
+  equinoctialToClassical,
+  makeClassical,
+  makeEquinoctial,
+  type EquinoctialElements,
+} from './equinoctial-pure';
 
 const DEG = Math.PI / 180;
+const DAYS_PER_JULIAN_CENTURY = 36525;
 
 // JPL Table 2a — J2000 mean elements + Julian-century rates. Angles in
 // degrees / deg-per-century; semi-major axis in AU. EM Bary stands in
@@ -20,10 +31,10 @@ interface ElementSet {
   longperi: number;  longperiDot: number;
   // longitude of ascending node Ω (deg)
   longnode: number;  longnodeDot: number;
-  // Cubic Jupiter–Neptune perturbation terms for the mean anomaly. Zero
+  // Cubic Jupiter–Pluto perturbation terms for the mean anomaly. Zero
   // for inner planets — the (b·T² + c·cos(fT) + s·sin(fT)) correction is
   // a numerical patch for the linear-elements model's blind spots near
-  // mean-motion resonances (Jupiter–Saturn, Uranus–Neptune).
+  // mean-motion resonances (Jupiter–Saturn, Uranus–Neptune, Neptune–Pluto).
   b: number; c: number; s: number; f: number;
 }
 
@@ -111,21 +122,20 @@ const ELEMENTS: ElementSet[] = [
     longnode: 131.78635853,   longnodeDot: -0.00606302,
     b: -0.00041348, c: 0.68346318, s: -0.10162547, f: 7.67025000,
   },
-  // Pluto. Standish & Williams 2010 J2000 mean elements + linear rates.
-  // JPL removed Pluto from its approx_pos.html table when the IAU
-  // reclassified it; values below are the canonical pre-removal row,
-  // also reproduced in NASA's planetary fact sheet derivation. We
-  // accept linear-element validity (~few centuries of arcsec accuracy)
-  // and skip the Standish 1992 cubic 3:2-resonance correction — at
-  // billboarded-disc render scale the residual is invisible.
+  // Pluto. JPL removed Pluto from approx_pos.html at the IAU
+  // reclassification; this is the pre-removal Table 2a row plus its
+  // Table 2b b term, valid over the same 3000 BC – 3000 AD window the
+  // model clock spans. The widely reproduced Standish & Williams
+  // linear-elements row is a few-centuries fit that reaches tens of AU
+  // of error at the clamp bound — do not substitute it.
   {
-    a: 39.48211675,   aDot: -0.00031596,
-    e: 0.24882730,    eDot:  0.00005170,
-    I: 17.14001206,   IDot:  0.00004818,
-    L: 238.92903833,  LDot:  145.20780515,
-    longperi: 224.06891629,   longperiDot: -0.04062942,
-    longnode: 110.30393684,   longnodeDot: -0.01183482,
-    b: 0, c: 0, s: 0, f: 0,
+    a: 39.48686035,   aDot:  0.00449751,
+    e: 0.24885238,    eDot:  0.00006016,
+    I: 17.14104260,   IDot:  0.00000501,
+    L: 238.96535011,  LDot:  145.18042903,
+    longperi: 224.09702598,   longperiDot: -0.00968827,
+    longnode: 110.30167986,   longnodeDot: -0.00809981,
+    b: -0.01262724, c: 0, s: 0, f: 0,
   },
 ];
 
@@ -154,33 +164,118 @@ export type PlanetPositions = Record<PlanetName, Vec3>;
 // bucket's position snap visible, so recompute follows `t` exactly.
 let cachedT: number | null = null;
 let cachedPositions: PlanetPositions | null = null;
+// Same single-slot contract for the ring shapes, which read the same
+// evaluation: the ring layer now checks the live elements every frame, so
+// without this the nine solves ran twice per frame instead of once.
+let cachedShapesT: number | null = null;
+let cachedShapes: PlanetOrbitShape[] | null = null;
 
-/** Heliocentric ecliptic position (AU) of a single planet at centuries-
- *  past-J2000 `T`. Pure helper exposed for tests; the public API is
- *  `getPlanetPositions(t)`. */
-export function planetEclipticAU(elem: ElementSet, T: number, out: Vec3): void {
-  const a = elem.a + elem.aDot * T;
-  const e = elem.e + elem.eDot * T;
-  const I = (elem.I + elem.IDot * T) * DEG;
-  const L = (elem.L + elem.LDot * T) * DEG;
-  const longperi = (elem.longperi + elem.longperiDot * T) * DEG;
-  const longnode = (elem.longnode + elem.longnodeDot * T) * DEG;
-
-  // Argument of perihelion ω = ϖ − Ω.
-  const omega = longperi - longnode;
-
-  // Mean anomaly with the cubic Jupiter–Neptune correction. For inner
-  // planets the b/c/s/f terms are zero so this reduces to M = L − ϖ.
+/** Standish elements at centuries-past-J2000 `T`, in the equinoctial form
+ *  every element source here is expressed in. The b/c/s/f correction lands on
+ *  the mean longitude directly: Standish's M = L − ϖ + (b·T² + c·cos fT +
+ *  s·sin fT), so λ = M + ϖ is L plus the same correction. */
+export function standishEquinoctialAt(
+  elem: ElementSet,
+  T: number,
+  out: EquinoctialElements,
+): void {
   const fT = elem.f * T * DEG;
-  const M = L - longperi
-    + elem.b * T * T * DEG
-    + elem.c * DEG * Math.cos(fT)
-    + elem.s * DEG * Math.sin(fT);
-
-  orbitalStateToCartesian(a, e, I, longnode, omega, M, out);
+  equinoctialFromAngles(
+    elem.a + elem.aDot * T,
+    elem.e + elem.eDot * T,
+    elem.I + elem.IDot * T,
+    elem.longnode + elem.longnodeDot * T,
+    elem.longperi + elem.longperiDot * T,
+    elem.L + elem.LDot * T
+      + elem.b * T * T
+      + elem.c * Math.cos(fT)
+      + elem.s * Math.sin(fT),
+    out,
+  );
 }
 
-/** Heliocentric ecliptic positions (parsecs) of the eight planets at
+/** Heliocentric ecliptic position (AU) of a single planet from its Standish
+ *  row alone at centuries-past-J2000 `T`, with no element table and no seam.
+ *  Pure helper exposed for tests; the public API is `getPlanetPositions(t)`. */
+export function planetEclipticAU(elem: ElementSet, T: number, out: Vec3): void {
+  standishEquinoctialAt(elem, T, scratchEq);
+  positionFromEquinoctial(scratchEq, out);
+}
+
+function positionFromEquinoctial(eq: EquinoctialElements, out: Vec3): void {
+  equinoctialToClassical(eq, scratchClassical);
+  orbitalStateToCartesian(
+    scratchClassical.aAu,
+    scratchClassical.e,
+    scratchClassical.incRad,
+    scratchClassical.nodeRad,
+    scratchClassical.argPeriRad,
+    scratchClassical.mRad,
+    out,
+  );
+}
+
+/** Element tables in PLANET_ORDER; a null slot rides the Standish series at
+ *  every epoch. Populated once by `element-table-loader.ts` — until then, and
+ *  in a checkout that never ran the `public/` sync, every slot is null and the
+ *  ephemeris behaves exactly as it did before the tables existed. */
+const tables: Array<PlanetElementTable | null> = PLANET_ORDER.map(() => null);
+
+/** Width of the crossfade at each end of a table's span. One Julian year is
+ *  long enough that scrubbing across 1900 or 2100 under planet focus never
+ *  shows the 0.03–0.06 AU step between the two models, and short enough that
+ *  the blend is a negligible slice of either model's validity. */
+const SEAM_DAYS = DAYS_PER_JULIAN_YEAR;
+
+/** How much of the element table to mix in at `jdTdb`: 1 through the interior,
+ *  ramping to 0 at each edge of the table's span, 0 outside it. */
+function tableWeight(table: PlanetElementTable, jdTdb: number): number {
+  if (jdTdb <= table.jd0 || jdTdb >= table.jdLast) return 0;
+  return Math.min(1, (jdTdb - table.jd0) / SEAM_DAYS, (table.jdLast - jdTdb) / SEAM_DAYS);
+}
+
+/**
+ * The elements one planet is positioned from at `jdTdb`: the frozen Horizons
+ * table inside its span, the Standish series outside it, and a blend of the
+ * two across `SEAM_DAYS` at each edge.
+ *
+ * Blending in equinoctial space rather than blending two positions is what
+ * keeps `getPlanetPositions` and `getPlanetOrbitShapes` consistent through the
+ * seam by construction — both read this one evaluation, so a ring cannot
+ * drift off its body there.
+ */
+function planetEquinoctialAt(
+  index: number,
+  jdTdb: number,
+  out: EquinoctialElements,
+): void {
+  const T = (jdTdb - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
+  standishEquinoctialAt(ELEMENTS[index], T, out);
+  const table = tables[index];
+  if (table === null) return;
+  const w = tableWeight(table, jdTdb);
+  if (w === 0) return;
+  if (!elementTableSampleAt(table, jdTdb, scratchTableEq)) return;
+  blendEquinoctialInto(out, scratchTableEq, w, out);
+}
+
+/** Install the loaded element tables. */
+export function installPlanetElementTables(
+  loaded: ReadonlyMap<PlanetName, PlanetElementTable>,
+): void {
+  PLANET_ORDER.forEach((name, i) => {
+    tables[i] = loaded.get(name) ?? null;
+  });
+  // The swap moves the outer planets by up to 0.06 AU; a live cache entry
+  // would hold the pre-table position for the rest of this frame.
+  resetPositionCache();
+}
+
+const scratchEq = makeEquinoctial();
+const scratchTableEq = makeEquinoctial();
+const scratchClassical = makeClassical();
+
+/** Heliocentric ecliptic positions (parsecs) of the nine planets at
  *  Unix-seconds `t`. Returned object is cached per exact `t` — repeat
  *  calls within a frame get the same reference; any `t` advance
  *  recomputes. */
@@ -188,11 +283,12 @@ export function getPlanetPositions(t: number): PlanetPositions {
   if (cachedT === t && cachedPositions !== null) {
     return cachedPositions;
   }
-  const T = (tToJDE(t) - J2000_JD) / 36525;
+  const jdTdb = tToJdTdb(t);
   const out = {} as PlanetPositions;
   const tmp: Vec3 = { x: 0, y: 0, z: 0 };
   for (let i = 0; i < ELEMENTS.length; i++) {
-    planetEclipticAU(ELEMENTS[i], T, tmp);
+    planetEquinoctialAt(i, jdTdb, scratchEq);
+    positionFromEquinoctial(scratchEq, tmp);
     out[PLANET_ORDER[i]] = {
       x: tmp.x * AU_PC,
       y: tmp.y * AU_PC,
@@ -209,7 +305,8 @@ export function getPlanetPositions(t: number): PlanetPositions {
  *  z=0) into the ecliptic frame. The composition is Rz(Ω)·Rx(I)·Rz(ω)
  *  — same as `planetEclipticAU` applies to the in-plane (x', y'). */
 export interface OrbitOrientationRad {
-  /** Inclination from the ecliptic (radians). */
+  /** Inclination from the ecliptic (radians), always ≥ 0 — see
+   *  `equinoctialToClassical` on what that costs a near-coplanar orbit. */
   inclination: number;
   /** Longitude of ascending node Ω (radians). */
   longAscNode: number;
@@ -225,37 +322,46 @@ export interface PlanetOrbitShape {
   readonly orientation: OrbitOrientationRad;
 }
 
-/** Per-planet orbit shapes at Unix-seconds `t`, in PLANET_ORDER — the
- *  SAME evaluated elements `planetEclipticAU` positions the body with
- *  (a/e with aDot/eDot applied, live-`t` node/inclination/perihelion),
- *  so a ring built from a shape passes through its body by construction
- *  at every `t`. The former attach-time snapshot desynced under time
- *  scrubbing, and its ring a/e came from a second, rounded table. */
+/** Per-planet orbit shapes at Unix-seconds `t`, in PLANET_ORDER — from the
+ *  SAME evaluated elements `getPlanetPositions` positions the body with,
+ *  element table and seam blend included, so a ring built from a shape passes
+ *  through its body by construction at every `t`. The former attach-time
+ *  snapshot desynced under time scrubbing, and its ring a/e came from a
+ *  second, rounded table. */
 export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
-  const T = (tToJDE(t) - J2000_JD) / 36525;
+  if (cachedShapesT === t && cachedShapes !== null) {
+    return cachedShapes;
+  }
+  const jdTdb = tToJdTdb(t);
   const out: PlanetOrbitShape[] = [];
   for (let i = 0; i < ELEMENTS.length; i++) {
-    const e = ELEMENTS[i];
-    const longnode = (e.longnode + e.longnodeDot * T) * DEG;
-    const longperi = (e.longperi + e.longperiDot * T) * DEG;
+    planetEquinoctialAt(i, jdTdb, scratchEq);
+    equinoctialToClassical(scratchEq, scratchClassical);
     out.push({
-      aAu: e.a + e.aDot * T,
-      e: e.e + e.eDot * T,
+      aAu: scratchClassical.aAu,
+      e: scratchClassical.e,
       orientation: {
-        inclination: (e.I + e.IDot * T) * DEG,
-        longAscNode: longnode,
-        argPerihelion: longperi - longnode,
+        inclination: scratchClassical.incRad,
+        longAscNode: scratchClassical.nodeRad,
+        argPerihelion: scratchClassical.argPeriRad,
       },
     });
   }
+  cachedShapesT = t;
+  cachedShapes = out;
   return out;
 }
 
-/** Reset the per-`t` cache. Test-only — production callers never need
- *  this; the cache invalidates naturally as `t` advances. */
-export function _resetCacheForTests(): void {
+/** Drop the per-`t` cache entry. `installPlanetElementTables` needs it — the
+ *  swap moves the outer planets by up to 0.06 AU and a live entry would hold
+ *  the pre-table position for the rest of the frame the tables landed in.
+ *  Tests use it to isolate epochs; nothing else has to, since the cache
+ *  invalidates naturally as `t` advances. */
+export function resetPositionCache(): void {
   cachedT = null;
   cachedPositions = null;
+  cachedShapesT = null;
+  cachedShapes = null;
 }
 
 export type { ElementSet };

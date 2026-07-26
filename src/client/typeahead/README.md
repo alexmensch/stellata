@@ -14,7 +14,7 @@ observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
 tier re-rank + within-kind dedup over stars + clouds + Local Group
-objects + Sol's planets + boundary shells). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
+objects + Sol's planets + boundary shells + the deep-space probes). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
 label > query-is-prefix > plain name/alias > constellation-expansion
 label ("Gamma Andromeda" — fuzzy-searchable but never outranking the
 Andromeda Galaxy for the bare constellation-name query), then shorter
@@ -37,10 +37,15 @@ by name (secondary line "Planet · Sol system" or "Moon · <parent>") —
 deliberately Sol-only, since bk5 exoplanets are visit-to-discover. A
 planet entry carries the SOL_BODIES body-within-host index (planets then
 moons); `resolveEntryTarget` translates it to the body field's flat
-Target index at pick time (the field attaches on a microtask after boot). Focus-box select dispatches to
+Target index at pick time (the field attaches on a microtask after boot).
+The five deep-space probes enter by mission label, secondary line
+"Probe · Interstellar", index = the LOADED-roster index, which is the
+Target idx directly (no translation) — so a probe whose artifact is
+missing is absent from the corpus rather than shifting the others.
+Focus-box select dispatches to
 `flyTo` and the To box to `setVector`, each with the entry's
-kind-tagged Target; observe mode filters non-star kinds out of the
-location picker. Both the topbar boxes
+kind-tagged Target; observe mode filters SOFT kinds out of the location
+picker through `isHardTarget`, never a spelled-out kind list. Both the topbar boxes
 (`bindSearch`) and the `F` find picker (`bindFindSearch`) run it, so
 ranking never diverges between them. The find picker differs only in its
 `onSelect`: it resolves the pick to a local position and calls

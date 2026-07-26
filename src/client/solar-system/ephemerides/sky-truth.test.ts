@@ -2,23 +2,42 @@
 // ephemeris → ecliptic→ICRS chain vs JPL Horizons geocentric RA/Dec
 // frozen in data/horizons/. See data/horizons/README.md for provenance.
 
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
+import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
+import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
+import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../util/astronomy-constants';
+import { buildElementTable, type PlanetElementTable } from './element-table';
 import {
   getPlanetPositions,
-  _resetCacheForTests,
+  installPlanetElementTables,
+  resetPositionCache,
   type PlanetName,
   type Vec3,
 } from './ephemeris';
+import { MOON_ELEMENTS, earthMoonSplit, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
 import { HELIOPAUSE_APEX_SOL_PC } from '../heliopause/heliopause';
 import { jdeToT } from '../time/time';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/planet-radec-truth.tsv');
+const TABLE_DIR = resolve(__dirname, '../../../../data/ephemerides');
+
+// All three corpus epochs sit inside the element tables' window, so this is
+// the production configuration.
+beforeAll(() => {
+  const tables = new Map<PlanetName, PlanetElementTable>();
+  for (const target of ELEMENT_TARGETS) {
+    tables.set(target.id, buildElementTable(
+      JSON.parse(readFileSync(resolve(TABLE_DIR, `${target.id}.json`), 'utf-8')) as PlanetElementTableFile,
+    ));
+  }
+  installPlanetElementTables(tables);
+});
 
 interface TruthRow {
   body: PlanetName | 'sun';
@@ -48,18 +67,52 @@ const ECL_TO_ICRS = new THREE.Quaternion().setFromUnitVectors(
   ECLIPTIC_NORTH_POLE_ICRS.clone(),
 );
 
-/** Geocentric ICRS direction of `body` at Julian Date `jdUt` through the
- *  production chain: Standish ephemeris → heliocentric ecliptic →
- *  subtract Earth → ecliptic→ICRS quaternion. */
+const MOON = MOON_ELEMENTS.find((m) => m.name === 'Moon')!;
+const moonOffset: Vec3 = { x: 0, y: 0, z: 0 };
+const earthCentre: Vec3 = { x: 0, y: 0, z: 0 };
+const moonCentre: Vec3 = { x: 0, y: 0, z: 0 };
+
+/** Earth's **centre**, heliocentric ecliptic parsecs, at model time `t`. The
+ *  ephemeris resolves the Earth/Moon barycentre, and Earth sits ~4,700 km off
+ *  it — 11″ of Mercury's geocentric direction. */
+function earthCentreAt(t: number): Vec3 {
+  resetPositionCache();
+  const bary = getPlanetPositions(t).earth;
+  moonOffsetEcliptic(MOON, t, moonOffset);
+  earthMoonSplit(bary, moonOffset, earthCentre, moonCentre);
+  return { ...earthCentre };
+}
+
+function heliocentricAt(body: TruthRow['body'], t: number): Vec3 {
+  if (body === 'sun') return { x: 0, y: 0, z: 0 };
+  if (body === 'earth') return earthCentreAt(t);
+  resetPositionCache();
+  return getPlanetPositions(t)[body];
+}
+
+/**
+ * Geocentric ICRS direction of `body` at Julian Date `jdUt` through the
+ * production chain: ephemeris → heliocentric ecliptic → subtract Earth's
+ * centre → ecliptic→ICRS quaternion.
+ *
+ * The truth rows are **astrometric**, so the target is evaluated one light
+ * time before the observer. One iteration suffices — the range moves by under
+ * 1e-4 AU over a light time, three orders below what the tolerance resolves.
+ */
 function geocentricIcrsDir(body: TruthRow['body'], jdUt: number): THREE.Vector3 {
-  _resetCacheForTests();
-  const pos = getPlanetPositions(jdeToT(jdUt));
-  const earth = pos.earth;
-  const target: Vec3 = body === 'sun' ? { x: 0, y: 0, z: 0 } : pos[body];
+  const t = jdeToT(jdUt);
+  const observer = earthCentreAt(t);
+  const geometric = heliocentricAt(body, t);
+  const rangeAu = Math.hypot(
+    geometric.x - observer.x,
+    geometric.y - observer.y,
+    geometric.z - observer.z,
+  ) * AU_PER_PC;
+  const retarded = heliocentricAt(body, t - rangeAu * LIGHT_TIME_PER_AU_S);
   return new THREE.Vector3(
-    target.x - earth.x,
-    target.y - earth.y,
-    target.z - earth.z,
+    retarded.x - observer.x,
+    retarded.y - observer.y,
+    retarded.z - observer.z,
   ).normalize().applyQuaternion(ECL_TO_ICRS);
 }
 
@@ -77,14 +130,16 @@ function separationDeg(a: THREE.Vector3, b: THREE.Vector3): number {
   return (a.angleTo(b) * 180) / Math.PI;
 }
 
-// Empirical worst case across the corpus is Saturn at 0.35° (Standish
-// linear-elements residual near the Jupiter–Saturn great inequality);
-// everything else sits under 0.15°, the Sun under 0.005°. Our chain's
-// own approximations (EM-Bary for Earth, no light-time, UT-as-TDB) are
-// all well under 0.05°. Any pole mirror, quaternion-order, or deg/rad
-// regression produces tens of degrees — far past either bound.
-const TOL_DEG = 0.5;
-const TOL_SUN_DEG = 0.1;
+// Empirical worst case across the corpus is 1.17″ (Pluto); the median is
+// ~0.05″ and the Sun sits under 0.72″. What remains at that scale is the
+// element tables' own few-1e-6 AU residual plus the second light-time
+// iteration this chain does not do — everything coarser has been removed:
+// the epochs go in as TDB, Earth is its own centre rather than the
+// Earth/Moon barycentre, and the target is retarded by one light time.
+// Any pole mirror, quaternion-order, or deg/rad regression still produces
+// tens of degrees — five orders past either bound.
+const TOL_DEG = 4e-4;
+const TOL_SUN_DEG = 2.5e-4;
 
 describe('sky-truth: planets vs JPL Horizons (DE441)', () => {
   const rows = loadTruth();
