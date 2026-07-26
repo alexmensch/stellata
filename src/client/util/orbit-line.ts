@@ -100,6 +100,19 @@ export function makeOrbitLine(
     new THREE.Line(orbitLineGeometry(points), material), renderOrder);
 }
 
+/** A second draw of an existing line's geometry — the local-depth-pass
+ *  mirror. Sharing the geometry outright means the drawn prefix and every
+ *  vertex rewrite reach both draws with no bookkeeping; the caller still owns
+ *  mirroring `position` (anchor drift) and `visible`. */
+export function mirrorOrbitLine(
+  source: THREE.Line,
+  material: THREE.LineBasicMaterial,
+  renderOrder: number,
+): THREE.Line {
+  return configureLinePrimitive(
+    new THREE.Line(source.geometry, material), renderOrder);
+}
+
 export function makeOrbitLineSegments(
   points: Float32Array,
   material: THREE.LineBasicMaterial,

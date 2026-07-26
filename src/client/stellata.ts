@@ -531,6 +531,8 @@ export class Stellata implements FrameAnchor {
       this.planetBodyField,
       this.planetMeshLayer,
       this.orbitRingsLayer,
+      this.probeMarkerField,
+      this.probePathLayer,
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);

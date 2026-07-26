@@ -8,6 +8,7 @@ import {
   isFeatureLegible,
   makeOrbitLine,
   makeOrbitLineMaterial,
+  mirrorOrbitLine,
   pixelsPerRadianFromFovRad,
   trackAnchoredLine,
   ORBIT_LINE_OPACITY,
@@ -17,8 +18,9 @@ import { probeSampleIndexAt, type ProbeTrajectory } from './probe-trajectory';
 
 const TRAIL_COLOUR = 0xa8c4dc;
 // Just under the marker so a marker sitting on its own trail paints over
-// the line rather than being cut by it.
+// the line rather than being cut by it — in either pass.
 const TRAIL_RENDER_ORDER = 3.4;
+const TRAIL_LOCAL_RENDER_ORDER = 3.25;
 
 interface Trail {
   readonly traj: ProbeTrajectory;
@@ -27,6 +29,8 @@ interface Trail {
   readonly master: Float64Array;
   readonly verts: Float32Array;
   readonly line: THREE.Line;
+  /** Local-depth-pass mirror of `line`, sharing its geometry. */
+  readonly localLine: THREE.Line;
   readonly bakedAnchor: THREE.Vector3;
   /** Sample index the body is filled to; -1 before the first build. */
   builtIndex: number;
@@ -41,10 +45,15 @@ interface Trail {
  */
 export class ProbePathLayer {
   readonly group: THREE.Group;
+  /** Local-depth-pass mirror. The solar-system cluster parents this into the
+   *  pass scene; exactly one of the two groups is ever visible. */
+  readonly localGroup: THREE.Group;
   private material: THREE.LineBasicMaterial;
+  private localMaterial: THREE.LineBasicMaterial;
   private trails: Trail[] = [];
   private permitted = true;
   private mono = false;
+  private localPassActive = false;
   private shared: ProbeSharedUniforms;
   private solLocal = new THREE.Vector3();
 
@@ -53,10 +62,17 @@ export class ProbePathLayer {
     this.group = new THREE.Group();
     this.group.renderOrder = TRAIL_RENDER_ORDER;
     this.group.visible = false;
+    this.localGroup = new THREE.Group();
+    this.localGroup.renderOrder = TRAIL_LOCAL_RENDER_ORDER;
+    this.localGroup.visible = false;
     this.material = makeOrbitLineMaterial(TRAIL_COLOUR, ORBIT_LINE_OPACITY);
+    // The local-pass variant strips the log-depth chunks so fragments keep
+    // standard bracket depth.
+    this.localMaterial = makeOrbitLineMaterial(TRAIL_COLOUR, ORBIT_LINE_OPACITY, true);
   }
 
-  /** Allocate one full-capacity trail per probe. One-shot at load. */
+  /** Allocate one full-capacity trail per probe, plus its local-pass mirror.
+   *  One-shot at load. */
   attach(trajectories: readonly ProbeTrajectory[]): void {
     this.disposeTrails();
     for (const traj of trajectories) {
@@ -67,12 +83,16 @@ export class ProbePathLayer {
       (line.geometry.getAttribute('position') as THREE.BufferAttribute)
         .setUsage(THREE.DynamicDrawUsage);
       line.visible = false;
+      const localLine = mirrorOrbitLine(line, this.localMaterial, TRAIL_LOCAL_RENDER_ORDER);
+      localLine.visible = false;
       this.group.add(line);
+      this.localGroup.add(localLine);
       this.trails.push({
         traj,
         master: new Float64Array(capacity),
         verts,
         line,
+        localLine,
         bakedAnchor: new THREE.Vector3(),
         builtIndex: -1,
       });
@@ -94,11 +114,11 @@ export class ProbePathLayer {
     focusedIdx: number,
   ): void {
     if (this.trails.length === 0) {
-      this.group.visible = false;
+      this.setDrawn(false);
       return;
     }
     const drawn = this.permitted && !this.mono;
-    this.group.visible = drawn;
+    this.setDrawn(drawn);
     if (!drawn) return;
     field.solLocalInto(this.solLocal);
     const pxPerRad = pixelsPerRadianFromFovRad(
@@ -107,7 +127,7 @@ export class ProbePathLayer {
       const trail = this.trails[i];
       const sample = field.sampleFor(i);
       if (i !== focusedIdx || sample === null || !sample.visible) {
-        trail.line.visible = false;
+        setTrailVisible(trail, false);
         continue;
       }
       // A trail whose span still reads as a line — a probe days after
@@ -115,7 +135,7 @@ export class ProbePathLayer {
       // marker is visible.
       const legible = isFeatureLegible(
         sample.solRelPc.length(), camera.position.distanceTo(sample.localPc), pxPerRad);
-      trail.line.visible = legible;
+      setTrailVisible(trail, legible);
       if (!legible) continue;
 
       const k = probeSampleIndexAt(trail.traj.sampleT, t);
@@ -141,29 +161,59 @@ export class ProbePathLayer {
       trail.verts[tip + 2] = trail.master[tip + 2] + trail.bakedAnchor.z;
       (trail.line.geometry.getAttribute('position') as THREE.BufferAttribute)
         .needsUpdate = true;
+      // The mirror shares the geometry but not the transform, and
+      // trackAnchoredLine writes the anchor drift into `position`.
+      trail.localLine.position.copy(trail.line.position);
     }
+  }
+
+  /** Route the trails through the local depth pass instead of the main pass
+   *  — the marker field's sibling; see its `setLocalPassActive`. */
+  setLocalPassActive(on: boolean): void {
+    this.localPassActive = on;
+    this.setDrawn(this.group.visible || this.localGroup.visible);
+  }
+
+  private setDrawn(drawn: boolean): void {
+    this.group.visible = drawn && !this.localPassActive;
+    this.localGroup.visible = drawn && this.localPassActive;
+  }
+
+  /** Whether one probe's trail is drawn this frame — the cluster's gate on
+   *  contributing its extent to the depth bracket. */
+  trailVisible(idx: number): boolean {
+    return this.trails[idx]?.line.visible ?? false;
   }
 
   setPermitted(on: boolean): void {
     this.permitted = on;
-    if (!on) this.group.visible = false;
+    if (!on) this.setDrawn(false);
   }
 
   setMonochrome(on: boolean): void {
     this.mono = on;
-    if (on) this.group.visible = false;
+    if (on) this.setDrawn(false);
   }
 
   dispose(): void {
     this.disposeTrails();
     this.material.dispose();
+    this.localMaterial.dispose();
   }
 
   private disposeTrails(): void {
     for (const trail of this.trails) {
       this.group.remove(trail.line);
+      this.localGroup.remove(trail.localLine);
       trail.line.geometry.dispose();
     }
     this.trails = [];
   }
+}
+
+/** Both draws of one trail, in lockstep — the mirror carries no state of its
+ *  own beyond `visible` and `position`. */
+function setTrailVisible(trail: Trail, on: boolean): void {
+  trail.line.visible = on;
+  trail.localLine.visible = on;
 }

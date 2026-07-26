@@ -206,6 +206,9 @@ the local depth pass's near/far range. While active, the planet
 layers collapse their main-pass instances and render through the
 mirror draw inside the bracketed pass, where the mesh writes depth —
 see `../local-depth/README.md` and `planets/README.md` § Planet mesh LOD.
+The probe marker field and trail layer follow the same flip
+(`probes/README.md` § Which pass draws them); everything a body could
+occlude has to be inside the pass, because the pass clears depth.
 The activation predicate and the orbit-ring extent radius are pure and
 vitest-pinned in `local-cluster-pure.ts`; `RING_EXTENT_MARGIN` is also
 read by `../binaries/binary-orbit-path-layer.ts`.

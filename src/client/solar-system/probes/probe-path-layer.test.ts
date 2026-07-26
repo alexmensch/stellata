@@ -146,6 +146,70 @@ describe('ProbeField out-of-frame reads', () => {
   });
 });
 
+describe('local depth pass membership', () => {
+  // While the solar system is locally active every one of its bodies renders
+  // in the bracketed pass with depth CLEARED, so a main-pass probe row is
+  // painted over by any planet disc regardless of true depth. Exactly one of
+  // the two groups draws.
+  it('moves the marker and its trail between passes, never drawing both', () => {
+    const h = makeHarness();
+    h.draw(0);
+    expect([h.field.group.visible, h.field.localGroup.visible]).toEqual([true, false]);
+    expect([h.layer.group.visible, h.layer.localGroup.visible]).toEqual([true, false]);
+
+    h.field.setLocalPassActive(true);
+    h.layer.setLocalPassActive(true);
+    expect([h.field.group.visible, h.field.localGroup.visible]).toEqual([false, true]);
+    expect([h.layer.group.visible, h.layer.localGroup.visible]).toEqual([false, true]);
+
+    h.field.setLocalPassActive(false);
+    h.layer.setLocalPassActive(false);
+    expect([h.field.group.visible, h.field.localGroup.visible]).toEqual([true, false]);
+  });
+
+  it('keeps a decluttered layer hidden in both passes', () => {
+    const h = makeHarness();
+    h.field.setPermitted(false);
+    h.layer.setPermitted(false);
+    h.draw(0);
+    h.field.setLocalPassActive(true);
+    h.layer.setLocalPassActive(true);
+    expect(h.field.localGroup.visible).toBe(false);
+    expect(h.layer.localGroup.visible).toBe(false);
+  });
+
+  it('mirrors each trail\'s visibility and anchor drift onto its local twin', () => {
+    // The mirror shares the geometry but not the transform, so a missed
+    // position copy detaches the local-pass trail from its marker.
+    const h = makeHarness();
+    h.draw(0);
+    const [line, localLine] = [h.layer.group.children[0], h.layer.localGroup.children[0]];
+    expect([line.visible, localLine.visible]).toEqual([true, true]);
+    expect(localLine.position.toArray()).toEqual(line.position.toArray());
+    expect((localLine as THREE.Line).geometry).toBe((line as THREE.Line).geometry);
+    h.draw(1);
+    expect([line.visible, localLine.visible]).toEqual([false, false]);
+  });
+
+  it('pins the probe rows\' render order in both passes', () => {
+    // Main pass: above the star discs, below the planet glare (4) so a
+    // marker over a bright body doesn't paint out its disc. Local pass:
+    // after the planet disc mirrors (3) and the orbit rings (3.2) so the
+    // marker depth-tests against real body depth, below the star glow
+    // mirror (3.5). Trails sit just under their marker in either pass.
+    // See src/client/local-depth/README.md.
+    const h = makeHarness();
+    const orderByName = new Map(
+      [...h.field.group.children, ...h.field.localGroup.children]
+        .map((m) => [m.name, m.renderOrder]),
+    );
+    expect(orderByName.get('probe-marker')).toBe(3.5);
+    expect(orderByName.get('probe-marker-local')).toBe(3.3);
+    expect(h.layer.group.renderOrder).toBe(3.4);
+    expect(h.layer.localGroup.renderOrder).toBe(3.25);
+  });
+});
+
 describe('PROBE_MARKER_PX', () => {
   it('is the shared basis for the marker glyph and its hit radius', () => {
     expect(PROBE_MARKER_PX).toBe(9);

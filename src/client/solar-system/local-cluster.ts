@@ -13,6 +13,8 @@ import {
 import type { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './planets/planet-body-field';
 import type { PlanetMeshLayer } from './planets/planet-mesh-layer';
+import type { ProbeField } from './probes/probe-field';
+import type { ProbePathLayer } from './probes/probe-path-layer';
 
 /** The seam to the star cluster: the active host's star mirrors there
  *  (full membership — the host's billboard renders in the pass with its
@@ -35,25 +37,34 @@ export class SolarSystemCluster implements LocalCluster {
   private readonly field: PlanetBodyField;
   private readonly meshLayer: PlanetMeshLayer;
   private readonly orbitRings: OrbitRingsLayer;
+  private readonly probeField: ProbeField;
+  private readonly probeTrails: ProbePathLayer;
   private readonly starCluster: HostStarMemberSink;
   private readonly spheres: MemberSphere[] = [];
   private readonly tmpBody = new THREE.Vector3();
+  private readonly tmpSol = new THREE.Vector3();
 
   constructor(
     field: PlanetBodyField,
     meshLayer: PlanetMeshLayer,
     orbitRings: OrbitRingsLayer,
+    probeField: ProbeField,
+    probeTrails: ProbePathLayer,
     starCluster: HostStarMemberSink,
   ) {
     this.field = field;
     this.meshLayer = meshLayer;
     this.orbitRings = orbitRings;
+    this.probeField = probeField;
+    this.probeTrails = probeTrails;
     this.starCluster = starCluster;
     this.group = new THREE.Group();
     this.group.name = 'solar-system-cluster';
     this.group.add(meshLayer.group);
     this.group.add(orbitRings.group);
     this.group.add(field.localGroup);
+    this.group.add(probeField.localGroup);
+    this.group.add(probeTrails.localGroup);
   }
 
   /** Runs in the scene-layer registry AFTER the field + rings updates
@@ -109,6 +120,31 @@ export class SolarSystemCluster implements LocalCluster {
     if (hostMember === null) this.field.setLocalPassRange(-1, 0);
     this.starCluster.setHostMember(hostMember);
     this.meshLayer.collectSpheres(camera, this.spheres);
+    this.collectProbes(camera, hostMember !== null);
+  }
+
+  /**
+   * Probe markers and trails follow the bodies between passes. A metre-scale
+   * glyph has no radius of its own, so a marker contributes only its distance;
+   * a trail spans Sol to the probe, so it contributes a Sol-centred sphere of
+   * the probe's heliocentric radius. Voyager 1 at 167 AU widens the bracket
+   * to 8e13 — still four slices at the default `maxSliceRatio`, the same count
+   * the planet members already need (../local-depth/README.md § Depth slices).
+   */
+  private collectProbes(camera: THREE.PerspectiveCamera, active: boolean): void {
+    this.probeField.setLocalPassActive(active);
+    this.probeTrails.setLocalPassActive(active);
+    if (!active) return;
+    this.probeField.solLocalInto(this.tmpSol);
+    const dSol = this.tmpSol.distanceTo(camera.position);
+    for (let i = 0; i < this.probeField.probeCount(); i++) {
+      const s = this.probeField.sampleFor(i);
+      if (s === null || !s.visible) continue;
+      this.spheres.push({ distPc: s.localPc.distanceTo(camera.position), radiusPc: 0 });
+      if (this.probeTrails.trailVisible(i)) {
+        this.spheres.push({ distPc: dSol, radiusPc: s.solRelPc.length() });
+      }
+    }
   }
 
   /** Replays the spheres `update()` computed this frame — the scene-

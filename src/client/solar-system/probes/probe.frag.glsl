@@ -1,7 +1,9 @@
 precision highp float;
 
 #include <common>
+#ifndef LOCAL_DEPTH_PASS
 #include <logdepthbuf_pars_fragment>
+#endif
 
 in vec2 vUv;
 in float vAlpha;
@@ -21,7 +23,9 @@ void main() {
   if (mask <= 0.0 || vAlpha <= 0.0) discard;
 
   gl_FragDepth = gl_FragCoord.z;
+  #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_fragment>
+  #endif
 
   outColor = vec4(uColour, vAlpha * mask);
 }

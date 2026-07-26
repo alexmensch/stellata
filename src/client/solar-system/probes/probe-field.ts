@@ -30,6 +30,12 @@ const SIGNAL_LOST_ALPHA = 0.4;
 // overlapping a bright body doesn't paint over its disc.
 const MARKER_RENDER_ORDER = 3.5;
 
+// Local-depth-pass in-pass order: after the planet disc mirrors (3) and the
+// orbit rings (3.2) so the marker depth-tests against real body depth, and
+// below the star glow mirror (3.5) — the same slot ordering the ring layer
+// documents. See src/client/local-depth/README.md.
+const MARKER_LOCAL_RENDER_ORDER = 3.3;
+
 /** The star pipeline's viewport / FOV slots, by reference, so a resize or
  *  FOV change reaches the marker material and the on-screen gates with no
  *  bookkeeping here. */
@@ -64,10 +70,14 @@ export interface ProbeFrameSample {
  */
 export class ProbeField {
   readonly group: THREE.Group;
+  /** Local-depth-pass mirror. The solar-system cluster parents this into the
+   *  pass scene; exactly one of the two groups is ever visible. */
+  readonly localGroup: THREE.Group;
   private trajectories: readonly ProbeTrajectory[] = [];
   private samples: ProbeFrameSample[] = [];
   private permitted = true;
   private mono = false;
+  private localPassActive = false;
   private hiddenIdx = -1;
   private worldOffset = new THREE.Vector3();
   /** Sol's renderer-local position. Sol is the catalog origin, so this is
@@ -78,7 +88,9 @@ export class ProbeField {
   private alpha = new Float32Array(0);
   private geometry: THREE.InstancedBufferGeometry;
   private material: THREE.ShaderMaterial;
+  private localMaterial: THREE.ShaderMaterial;
   private mesh: THREE.Mesh;
+  private localMesh: THREE.Mesh;
   private state: ProbeState = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
   private shared: ProbeSharedUniforms;
 
@@ -86,6 +98,8 @@ export class ProbeField {
     this.shared = shared;
     this.group = new THREE.Group();
     this.group.visible = false;
+    this.localGroup = new THREE.Group();
+    this.localGroup.visible = false;
     this.geometry = new THREE.InstancedBufferGeometry();
     this.geometry.setAttribute(
       'aCorner',
@@ -96,25 +110,40 @@ export class ProbeField {
     );
     this.geometry.setIndex([0, 1, 2, 1, 3, 2]);
     this.geometry.instanceCount = 0;
-    this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
-    this.material = new THREE.ShaderMaterial({
+    // One uniform block, two compile variants. The mirror shares the
+    // geometry outright — the instance buffers this.update writes are the
+    // same ones it draws, so there is no attribute copy and no way for the
+    // two passes to disagree about where a probe is.
+    const sharedProbeUniforms = {
+      uViewport: shared.uViewport,
+      uPixelRatio: shared.uPixelRatio,
+      uSizePx: { value: PROBE_MARKER_PX },
+      uColour: { value: new THREE.Color(PROBE_COLOUR) },
+    };
+    const makeMat = (localPass = false) => new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
       vertexShader: probeVert,
       fragmentShader: probeFrag,
+      ...(localPass ? { defines: { LOCAL_DEPTH_PASS: '' } } : {}),
       transparent: true,
       depthTest: true,
       depthWrite: false,
-      uniforms: {
-        uViewport: shared.uViewport,
-        uPixelRatio: shared.uPixelRatio,
-        uSizePx: { value: PROBE_MARKER_PX },
-        uColour: { value: new THREE.Color(PROBE_COLOUR) },
-      },
+      uniforms: sharedProbeUniforms,
     });
-    this.mesh = new THREE.Mesh(this.geometry, this.material);
-    this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = MARKER_RENDER_ORDER;
+    const makeMesh = (name: string, material: THREE.ShaderMaterial, renderOrder: number) => {
+      const mesh = new THREE.Mesh(this.geometry, material);
+      mesh.name = name;
+      mesh.frustumCulled = false;
+      mesh.renderOrder = renderOrder;
+      return mesh;
+    };
+    this.material = makeMat();
+    this.localMaterial = makeMat(true);
+    this.mesh = makeMesh('probe-marker', this.material, MARKER_RENDER_ORDER);
+    this.localMesh = makeMesh(
+      'probe-marker-local', this.localMaterial, MARKER_LOCAL_RENDER_ORDER);
     this.group.add(this.mesh);
+    this.localGroup.add(this.localMesh);
   }
 
   /** Bind the loaded roster and resolve `t`'s samples immediately. One-shot
@@ -174,12 +203,12 @@ export class ProbeField {
    */
   update(t: number, camera: THREE.PerspectiveCamera): void {
     if (this.trajectories.length === 0) {
-      this.group.visible = false;
+      this.setDrawn(false);
       return;
     }
     this.resampleAt(t);
     const drawn = this.permitted && !this.mono;
-    this.group.visible = drawn;
+    this.setDrawn(drawn);
     const pxPerRad = pixelsPerRadianFromFovRad(
       this.shared.uFovYRad.value, this.shared.uViewport.value.y);
     const fleetLegible = isFeatureLegible(
@@ -244,9 +273,24 @@ export class ProbeField {
     return true;
   }
 
+  /** Route the markers through the local depth pass instead of the main
+   *  pass. Set by `SolarSystemCluster` each frame: while the solar system is
+   *  locally active every one of its bodies renders in the bracketed pass
+   *  with depth cleared, so a main-pass marker is painted over by any planet
+   *  disc regardless of true depth. */
+  setLocalPassActive(on: boolean): void {
+    this.localPassActive = on;
+    this.setDrawn(this.group.visible || this.localGroup.visible);
+  }
+
+  private setDrawn(drawn: boolean): void {
+    this.group.visible = drawn && !this.localPassActive;
+    this.localGroup.visible = drawn && this.localPassActive;
+  }
+
   setPermitted(on: boolean): void {
     this.permitted = on;
-    if (!on) this.group.visible = false;
+    if (!on) this.setDrawn(false);
   }
 
   /** Suppress one probe's marker (and, through `visible`, its label and
@@ -260,11 +304,12 @@ export class ProbeField {
    *  their realistic-style diamond over the paper aesthetic. */
   setMonochrome(on: boolean): void {
     this.mono = on;
-    if (on) this.group.visible = false;
+    if (on) this.setDrawn(false);
   }
 
   dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
+    this.localMaterial.dispose();
   }
 }

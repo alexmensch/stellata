@@ -146,6 +146,41 @@ from here on purpose.
   its label, and its trail all go with it, the planet field's `uHideIdx`
   analogue.
 
+### Which pass draws them
+
+Markers and trails each carry a **local-depth-pass mirror** (`localGroup`)
+alongside their main-pass draw, and `SolarSystemCluster.setLocalPassActive`
+flips which one is visible each frame — exactly one ever is. While the
+solar system is locally active every one of its bodies renders in the
+bracketed pass with **depth cleared**, so a main-pass probe is painted over
+by any planet disc, mesh, ring or atmosphere shell regardless of true
+depth, and a probe behind a planet shows through. No `renderOrder` reaches
+across that boundary; the mirror is the only fix
+(`../../local-depth/README.md`).
+
+Two things make the mirror cheap where `star-local-mirror.ts` needed real
+machinery:
+
+- **It shares its source's geometry outright.** The instance buffers
+  `ProbeField.update` writes and the trail's `setDrawRange` prefix are the
+  same objects both draws read, so nothing can desync. What the mirror does
+  NOT inherit is the object transform: `trackAnchoredLine` writes anchor
+  drift into `line.position`, so the trail mirror copies it each frame.
+- **No per-instance suppression range.** The whole fleet moves together —
+  a probe is a Sol-system object whenever the cluster is active — so
+  `uLocalPassRange`'s per-slot machinery has no analogue here.
+
+The bracket has to reach the probe or it clips: the cluster contributes one
+sphere per drawn marker (distance only — a metre-scale glyph has no radius)
+and, for a drawn trail, a Sol-centred sphere of the probe's heliocentric
+radius. Voyager 1 at 167 AU widens the range to ~8e13, still the same four
+slices the planet members already need.
+
+`probe.vert.glsl` / `probe.frag.glsl` wrap their log-depth chunks in
+`#ifndef LOCAL_DEPTH_PASS`, and the trail's mirror material takes
+`makeOrbitLineMaterial`'s `localPass` flag — the repo-wide requirement for
+anything rendering in both passes.
+
 ## Trails
 
 `ProbePathLayer` draws the **traversed** segment only — first sample to

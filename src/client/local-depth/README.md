@@ -1,7 +1,7 @@
 # Local depth pass — close-range inter-body occlusion
 
 A camera-relative second render pass that gives close bodies (moons,
-planets, rings, close binary pairs, future probes) true z-buffer
+planets, rings, close binary pairs, deep-space probes) true z-buffer
 occlusion the main pass cannot provide. The main pass keeps its
 whole-universe depth encodings; this pass re-renders the active
 local system over the finished frame in tight standard-depth brackets
@@ -202,9 +202,14 @@ localDepthPass.render(renderer, camera)        // after the main render
 Live providers:
 
 - **solar-system** (`SolarSystemCluster`) — the planet/moon mesh LOD +
-  ring annuli, billboard members, planet + moon orbit rings. Reports
+  ring annuli, billboard members, planet + moon orbit rings, and the
+  deep-space probe markers + trails. Reports
   the active host's star to the star cluster (`setHostMember`) instead
-  of mirroring it itself.
+  of mirroring it itself. The probe mirrors share their source's
+  geometry rather than re-copying attributes, and the whole fleet flips
+  passes together — a probe is a Sol-system object whenever the cluster
+  is active, so there is no per-instance suppression range
+  (`../solar-system/probes/README.md` § Which pass draws them).
 - **star cluster** (`../star-pipeline/star-local-cluster.ts`) — star
   mirror draws for the active host, the focal star's Kepler chain
   (engaged by drawn orbit paths or any member resolving as a disc),

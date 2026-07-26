@@ -1,7 +1,11 @@
 precision highp float;
 
 #include <common>
+// Standard bracket depth in the local pass — the log encoding is against
+// the renderer-wide far plane. See src/client/local-depth/README.md.
+#ifndef LOCAL_DEPTH_PASS
 #include <logdepthbuf_pars_vertex>
+#endif
 
 // Per-vertex (quad corner): xy in [-0.5, 0.5].
 in vec2 aCorner;
@@ -39,5 +43,7 @@ void main() {
   vec2 ndcOffset = pixelOffset / (uViewport * uPixelRatio) * 2.0;
   gl_Position = centreClip + vec4(ndcOffset * centreClip.w, 0.0, 0.0);
 
+  #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_vertex>
+  #endif
 }
