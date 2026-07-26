@@ -14,9 +14,32 @@ const UNIX_EPOCH_JD = 2440587.5;
 // reads as live, large enough to absorb scheduler jitter.
 const LIVE_TOLERANCE_SEC = 1;
 
-/** Unix-seconds → Julian Date (TDB scale, accurate enough for VSOP87D). */
+/** Unix-seconds → Julian Date, **UTC** scale — the scale `t` itself runs in. */
 export function tToJDE(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
+}
+
+/**
+ * TT − UTC, seconds: 32.184 s (TT − TAI) plus the 37 leap seconds in force
+ * since 2017-01-01. TDB departs from TT by under 2 ms, which no ephemeris here
+ * resolves.
+ *
+ * Held constant across the whole clock rather than tabulated: leap seconds
+ * only ever accrued at a few seconds per decade, and ±5 s of drift moves
+ * Mercury by 1.6e-6 AU — three orders under the element tables' bound.
+ */
+export const TT_MINUS_UTC_S = 69.184;
+
+/** Unix-seconds → Julian Date in the **TDB** scale the JPL element tables and
+ *  the Standish series are both defined against. Every ephemeris evaluation
+ *  reads through here; `tToJDE` is the UTC-scale sibling and is 69 s earlier. */
+export function tToJdTdb(t: number): number {
+  return tToJDE(t) + TT_MINUS_UTC_S / 86400;
+}
+
+/** Julian Date TDB → Unix-seconds. Inverse of `tToJdTdb`. */
+export function jdTdbToT(jdTdb: number): number {
+  return jdeToT(jdTdb - TT_MINUS_UTC_S / 86400);
 }
 
 /** Julian Date → Unix-seconds. Inverse of `tToJDE`. */

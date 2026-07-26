@@ -9,12 +9,13 @@ codebase reads `Date.now()` for the model clock.
 
 ```
 src/client/solar-system/time/
-  time.ts (+ test)                Simulation time `t` + UTC ↔ Julian-day
-                                  helpers. Owns VirtualClock, the clock
-                                  behind Stellata.getT(), plus the
-                                  FF/RW rate transitions, rate label, and
-                                  the TRANSPORT_BUTTONS action spec.
-                                  Single source of truth for the scrubber.
+  time.ts (+ test)                Simulation time `t` + the UTC ↔ Julian-day
+                                  and TDB helpers (§ Timescales). Owns
+                                  VirtualClock, the clock behind
+                                  Stellata.getT(), plus the FF/RW rate
+                                  transitions, rate label, and the
+                                  TRANSPORT_BUTTONS action spec. Single
+                                  source of truth for the scrubber.
   time-readout.ts (+ test)        UTC readout display next to the time
                                   scrubber.
   time-scrubber-widget.ts         First-class scrubber in the bottom-right
@@ -53,6 +54,24 @@ running clock **pins at the bound** with its rate intact: the readout
 freezes there, no invisible overshoot accrues (the clock re-anchors at
 the bound), and the first opposite-direction transport step moves off
 it immediately. See SCIENCE.md § Solar system for the decision record.
+
+## Timescales
+
+`t` runs in **UTC**, and `tToJDE` / `jdeToT` are the exact inverse pair
+that carry it to and from a Julian Date in that same scale. Everything
+whose epoch argument is a wall-clock instant — the readout, the scrubber,
+the star-catalogue epoch advance, binary orbits — reads that pair.
+
+**The ephemerides do not.** JPL's element tables and the Standish series
+are both defined against **TDB**, which runs `TT_MINUS_UTC_S` = 69.184 s
+ahead of UTC (32.184 s of TT − TAI plus the 37 leap seconds in force
+since 2017). `tToJdTdb` / `jdTdbToT` add and remove that offset, and
+`../ephemerides/` reads through them exclusively — planets and moons
+alike. Feeding a UTC-scale JD to the element evaluation instead moves
+Mercury by 2.2e-5 AU, which was the dominant term left once the element
+tables landed. The offset is held constant rather than tabulated:
+leap seconds accrued at a few seconds per decade, and ±5 s of drift is
+1.6e-6 AU at Mercury, three orders under the tables' own bound.
 
 Jump-to-date is a native `datetime-local` input whose value is
 read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
