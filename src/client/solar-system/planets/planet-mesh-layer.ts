@@ -34,6 +34,7 @@ import {
   MIE_G_DEFAULT,
   SUN_COLOUR,
 } from '../atmosphere/atmosphere-scattering-pure';
+import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 
 // Splice the shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — into both the mesh disc and the shell
@@ -243,6 +244,7 @@ export class PlanetMeshLayer {
     // a lit photographic sphere has no place on paper.
     this.group.visible = this.field.group.visible && !this.field.monochrome;
     if (!this.group.visible) return;
+    perfMark('solar.mesh');
 
     // camera.matrixWorldInverse is refreshed inside render(), AFTER
     // this update — the stored value is one frame stale, so view-space
@@ -374,6 +376,7 @@ export class PlanetMeshLayer {
         if (entry.atmosphere) entry.atmosphere.mesh.visible = false;
       }
     }
+    perfMeasure('solar.mesh');
   }
 
   /** Fill the material's uCasters array with view-space shadow spheres

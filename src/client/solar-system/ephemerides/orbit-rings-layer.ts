@@ -12,6 +12,7 @@ import {
 import { AU_PC, J2000_OBLIQUITY_RAD } from '../../util/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import {
   makeOrbitLineMaterial,
   makeOrbitLineLoop,
@@ -444,6 +445,7 @@ export class OrbitRingsLayer {
       return;
     }
     this.group.visible = true;
+    perfMark('solar.rings');
     if (hostLocalPos) this.hostLocal.copy(hostLocalPos);
     this.refreshGeometry(t);
 
@@ -486,6 +488,7 @@ export class OrbitRingsLayer {
       if (!r.line.visible) continue;
       trackAnchoredLine(r.line, r.master, r.bakedCentre, r.centre);
     }
+    perfMeasure('solar.rings');
   }
 
   /**
