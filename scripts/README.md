@@ -24,6 +24,10 @@ cross-script policy and pointers.
   probes → `data/probes/*.json`, plus the `public/probes/` mirror.
   Fetch is manual (`pnpm run fetch:probes`); only the mirror runs in
   the build.
+- `ephemerides/` — JPL Horizons fetch for the nine planet
+  osculating-element tables → `data/ephemerides/*.json`, plus the
+  `public/ephemerides/` mirror. Fetch is manual
+  (`pnpm run fetch:ephemerides`); only the mirror runs in the build.
 - `colour/` — blackbody → sRGB LUT generator.
 - `sid/` — SID registry tools: `sid:allocate` (the only writer of
   `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation

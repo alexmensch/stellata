@@ -1,5 +1,8 @@
-// Horizons VECTORS queries for a set of epochs: URL shape, retry, and the
-// per-request row-count checks. Parsing is horizons-vectors.ts.
+// Horizons VECTORS queries for a set of epochs: URL shape and the per-request
+// row-count checks. Transport is ../util/horizons-response.ts; parsing is
+// horizons-vectors.ts.
+
+import { fetchHorizonsText } from '../util/horizons-response';
 
 import { parseHorizonsVectors, type HorizonsVectors } from './horizons-vectors';
 import {
@@ -9,19 +12,7 @@ import {
   type VectorRow,
 } from './adaptive-grid-pure';
 
-const HORIZONS_API = 'https://ssd.jpl.nasa.gov/api/horizons.api';
-
-/** A `TLIST` longer than this is truncated with no error reported. */
-export const MAX_LIST_EPOCHS = 70;
-
-/** Self-imposed, well under anything Horizons has refused. */
-export const MAX_RANGE_ROWS = 2000;
-
-const RETRY_DELAY_MS = [1_000, 4_000, 12_000];
-
-/** Horizons asks for considerate use and a refinement run issues on the
- *  order of a hundred queries. */
-const PACING_MS = 250;
+export { MAX_LIST_EPOCHS, MAX_RANGE_ROWS } from '../util/horizons-response';
 
 /** Calendar time strings are read in the same TDB scale the JDTDB column
  *  reports, so a `JD…` epoch round-trips to itself and nothing here has
@@ -66,11 +57,10 @@ export async function fetchSpanEndpoints(
   const params = requestParams(horizonsId, { kind: 'range', startMu: 0, stopMu: 0, intervals: 1 });
   params.set('START_TIME', `'${startIso}'`);
   params.set('STOP_TIME', `'${stopIso}'`);
-  const { samples } = parseHorizonsVectors(await fetchText(`${HORIZONS_API}?${params}`));
+  const { samples } = parseHorizonsVectors(await fetchHorizonsText(params));
   if (samples.length !== 2) {
     throw new Error(`Horizons returned ${samples.length} rows for the span probe, expected 2`);
   }
-  await sleep(PACING_MS);
   return { startMu: microdaysOf(samples[0][0]), stopMu: microdaysOf(samples[1][0]) };
 }
 
@@ -80,19 +70,6 @@ export function requestedEpochs(request: EpochRequest): number[] {
   return Array.from({ length: request.intervals + 1 }, (_, i) =>
     Math.round(request.startMu + i * step),
   );
-}
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
-async function fetchText(url: string): Promise<string> {
-  for (let attempt = 0; ; attempt++) {
-    const response = await fetch(url);
-    if (response.ok) return response.text();
-    if (attempt >= RETRY_DELAY_MS.length || response.status < 500) {
-      throw new Error(`Horizons HTTP ${response.status}`);
-    }
-    await sleep(RETRY_DELAY_MS[attempt]);
-  }
 }
 
 /**
@@ -110,7 +87,7 @@ export async function fetchVectorRows(
 ): Promise<{ header: HorizonsVectors['header']; rows: VectorRow[] }> {
   const wanted = requestedEpochs(request);
   const { header, samples } = parseHorizonsVectors(
-    await fetchText(`${HORIZONS_API}?${requestParams(horizonsId, request)}`),
+    await fetchHorizonsText(requestParams(horizonsId, request)),
   );
   if (samples.length !== wanted.length) {
     throw new Error(
@@ -126,6 +103,5 @@ export async function fetchVectorRows(
     }
     return [jdOfMicrodays(wanted[i]), ...row.slice(1)];
   });
-  await sleep(PACING_MS);
   return { header, rows };
 }

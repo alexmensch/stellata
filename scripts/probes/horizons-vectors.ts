@@ -1,6 +1,12 @@
 // Pure parser for a JPL Horizons VECTORS response (format=text,
 // CSV_FORMAT=YES, VEC_TABLE=2). Drift guards: scripts/probes/README.md.
 
+import {
+  assertAscendingJd,
+  readHeaderField,
+  splitDataBlock,
+} from '../util/horizons-response';
+
 import { PROBE_SAMPLE_STRIDE } from './probe-trajectory-schema';
 
 export type HorizonsVectorsHeader = {
@@ -18,6 +24,9 @@ export type HorizonsVectors = {
 
 export const EXPECTED_UNITS = 'AU-D';
 export const EXPECTED_FRAME = 'ICRF';
+/** `REF_PLANE=ECLIPTIC` reports this instead — the frame the planet element
+ *  tables and their verification vectors are fetched in. */
+export const EXPECTED_FRAME_ECLIPTIC = 'Ecliptic of J2000.0';
 export const EXPECTED_CENTER_PREFIX = 'Sun (10)';
 
 const HEADER_FIELDS: Array<[keyof HorizonsVectorsHeader, string]> = [
@@ -27,21 +36,15 @@ const HEADER_FIELDS: Array<[keyof HorizonsVectorsHeader, string]> = [
   ['frame', 'Reference frame'],
 ];
 
-function readHeaderField(text: string, label: string): string {
-  const match = new RegExp(`^${label}\\s*:\\s*(.+)$`, 'm').exec(text);
-  if (!match) throw new Error(`Horizons response has no "${label}" header line`);
-  return match[1].trim().replace(/\s{2,}/g, ' ');
-}
-
-function parseHeader(text: string): HorizonsVectorsHeader {
+function parseHeader(text: string, expectedFrame: string): HorizonsVectorsHeader {
   const header = {} as HorizonsVectorsHeader;
   for (const [key, label] of HEADER_FIELDS) header[key] = readHeaderField(text, label);
 
   if (header.units !== EXPECTED_UNITS) {
     throw new Error(`Horizons returned units "${header.units}", expected "${EXPECTED_UNITS}"`);
   }
-  if (header.frame !== EXPECTED_FRAME) {
-    throw new Error(`Horizons returned frame "${header.frame}", expected "${EXPECTED_FRAME}"`);
+  if (header.frame !== expectedFrame) {
+    throw new Error(`Horizons returned frame "${header.frame}", expected "${expectedFrame}"`);
   }
   if (!header.centerBody.startsWith(EXPECTED_CENTER_PREFIX)) {
     throw new Error(
@@ -67,27 +70,13 @@ function parseSampleRow(line: string, lineNo: number): number[] {
   return numeric;
 }
 
-export function parseHorizonsVectors(text: string): HorizonsVectors {
-  const start = text.indexOf('$$SOE');
-  const end = text.indexOf('$$EOE');
-  if (start < 0 || end < 0 || end < start) {
-    const signature = text.slice(0, 400).replace(/\s+/g, ' ');
-    throw new Error(`Horizons response has no $$SOE/$$EOE data block. Starts: ${signature}`);
-  }
-
-  const header = parseHeader(text.slice(0, start));
-  const lines = text
-    .slice(start + '$$SOE'.length, end)
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-  if (lines.length === 0) throw new Error('Horizons data block is empty');
-
+export function parseHorizonsVectors(
+  text: string,
+  expectedFrame: string = EXPECTED_FRAME,
+): HorizonsVectors {
+  const { headerText, lines } = splitDataBlock(text);
+  const header = parseHeader(headerText, expectedFrame);
   const samples = lines.map(parseSampleRow);
-  for (let i = 1; i < samples.length; i++) {
-    if (samples[i][0] <= samples[i - 1][0]) {
-      throw new Error(`Horizons jd column is not ascending at row ${i}: ${samples[i][0]}`);
-    }
-  }
+  assertAscendingJd(samples.map((s) => s[0]));
   return { header, samples };
 }

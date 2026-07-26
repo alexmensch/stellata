@@ -8,6 +8,7 @@ import { basename, join, resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 import { isDustPublicAsset } from '../scripts/dust/sync-dust-pure';
+import { isPlanetElementPublicAsset } from '../scripts/ephemerides/sync-ephemerides-pure';
 import { isProbePublicAsset } from '../scripts/probes/sync-probes-pure';
 import { isTexturePublicAsset } from '../scripts/textures/sync-textures-pure';
 
@@ -18,6 +19,7 @@ const MIRRORED_FOLDERS: Array<[string, (name: string) => boolean]> = [
   ['dust', isDustPublicAsset],
   ['textures', isTexturePublicAsset],
   ['probes', isProbePublicAsset],
+  ['ephemerides', isPlanetElementPublicAsset],
 ];
 const FORBIDDEN_EXTENSIONS = ['.md', '.txt', '.py', '.ts'];
 // Committed .txt assets that are meant to ship (crawler + AI-agent signals).

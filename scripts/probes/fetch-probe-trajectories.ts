@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../util/paths';
+import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 
 import {
   BASE_STEP_MICRODAYS,
@@ -63,25 +64,13 @@ const OUTPUT_PRECISION = 11;
 const JD_DECIMALS = 6;
 
 function round(v: number): number {
-  return Number(v.toPrecision(OUTPUT_PRECISION));
+  return roundSignificant(v, OUTPUT_PRECISION);
 }
 
 function unixMs(iso: string): number {
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) throw new Error(`Unparseable roster date: ${iso}`);
   return ms;
-}
-
-/**
- * One array per sample on its own line: no repeated keys (the file is
- * thousands of rows) while a refresh still diffs sample-by-sample.
- */
-function serialize(file: ProbeTrajectoryFile): string {
-  const { samples, ...head } = file;
-  const token = '__SAMPLES__';
-  const scaffold = JSON.stringify({ ...head, samples: token }, null, 2);
-  const rows = samples.map((row) => `    ${JSON.stringify(row)}`).join(',\n');
-  return `${scaffold.replace(`"${token}"`, `[\n${rows}\n  ]`)}\n`;
 }
 
 /** Accumulates every epoch fetched for one probe, keyed by microday. */
@@ -248,7 +237,7 @@ async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<vo
     ]),
   };
 
-  writeFileSync(resolve(OUT_DIR, probeTrajectoryFilename(probe.id)), serialize(file));
+  writeFileSync(resolve(OUT_DIR, probeTrajectoryFilename(probe.id)), serializeRowFile(file));
   const spanDays = jdOfMicrodays(endMu - startMu);
   console.log(
     `    ${samples.requests} requests, ${samples.fetched} epochs fetched → ` +
