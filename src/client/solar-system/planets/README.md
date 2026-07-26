@@ -103,6 +103,41 @@ The orbit-ring layer is a sibling concern and lives in
 `../ephemerides/orbit-rings-layer.ts` — it reads live centres from
 `PlanetBodyField.getHostLocalPositionInto`.
 
+## Position precision — float64 master, float32 GPU bake
+
+`PlanetBodyField.localRel64` is the **master** host-relative position
+buffer; `bufs.localRel` is its float32 bake, and exists only to feed the
+`iLocalRel` GPU attribute. Every CPU consumer —
+`planetLocalPositionInto`, `planetAbsolutePositionInto`,
+`planetHostRelPositionInto`, `getHostLocalPositions`, `evalPlanetView`,
+the eclipse-dim walk — reads the float64 master. `PlanetSystem.positionsAt`
+writes a `Float64Array` for the same reason; moons compose
+`parent_ecliptic + moonOffsetEcliptic` through the same buffer and
+inherit it.
+
+**Why it has to be float64.** A float32 parsec at 39.5 AU quantises to
+**449 km**. Neptune and Pluto sit in the same float32 binade, so their
+absolute step is identical — what differs is the body: 449 km is 1.8 % of
+Neptune's radius and **38 % of Pluto's**. The CPU path feeds the mesh
+LOD, the focus path, the moving-focal ride, and the overlay projections,
+so the whole close-range chain inherited the quantum and Pluto visibly
+stepped along its own orbit ring — the ring being smooth (float64 master
+verts, `../../util/orbit-line.ts`) is what made the stepping legible.
+That is the same split `StarFrame` uses: float64 recentre math, float32
+write-back.
+
+**The GPU attribute keeps the 449 km quantum, deliberately.** `iLocalRel`
+drives the reflected-glare billboard only. The resolved surface is the
+spheroid mesh, positioned from the float64 master via
+`planetLocalPositionInto` — so at any zoom where a step would be visible
+the mesh owns the pixels, and at billboard-dominant distances 449 km is
+far below one pixel. Widening the attribute would double the per-frame
+upload for nothing.
+
+`planet-body-field.test.ts` pins the CPU path against a
+deliberately-not-float32-representable Pluto-distance value; narrowing
+any link back to `Float32Array` fails CI.
+
 Bodies render as the spheroid mesh (resolved surface) plus **one
 additive reflected-glare billboard** — no opaque disc / core-mask
 pass. Apparent magnitude is computed in the vertex shader from

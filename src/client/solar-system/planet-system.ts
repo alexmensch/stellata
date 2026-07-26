@@ -153,13 +153,19 @@ export interface PlanetSystem {
    *  positions; when absent, the renderer falls back to the static
    *  placeholder eccentric-anomaly layout from `placeholderEccentricAnomaly`.
    *
-   *  Writes 3 floats per planet (xyz triples in the host's local
+   *  Writes 3 doubles per planet (xyz triples in the host's local
    *  orbital-plane frame: x/y in-plane, z perpendicular) into `out`,
    *  in `planets` array order. Units: parsecs. The renderer applies
    *  the per-host orbital-plane orientation quaternion downstream to
    *  rotate into ICRS — Sol's ecliptic frame becomes ICRS via the
- * same quaternion that orients its orbit rings. */
-  positionsAt?: (t: number, out: Float32Array) => void;
+   *  same quaternion that orients its orbit rings.
+   *
+   *  Float64Array, not Float32Array: at Pluto's 39.5 AU a float32
+   *  parsec quantises to 449 km — 0.38 of Pluto's own radius, and this
+   *  buffer feeds the mesh LOD, focus ride, and overlay projections,
+   *  not just the GPU attribute. See `planets/README.md` § Position
+   *  precision. */
+  positionsAt?: (t: number, out: Float64Array) => void;
   /** Optional live orbit-ring geometry, indexed parallel to `planets`,
    *  from the SAME element source `positionsAt` evaluates — so a ring
    *  built from it passes through its body at every model time. When
@@ -221,7 +227,7 @@ export function defaultOrbitGeometry(
  *  offset in the ecliptic frame here lands the moon at parent+offset in
  *  ICRS. Planet and moon Kepler solves both run at every distinct `t`
  *  (getPlanetPositions memoises same-`t` repeat calls only). */
-function solPositionsAt(t: number, out: Float32Array): void {
+function solPositionsAt(t: number, out: Float64Array): void {
   const positions = getPlanetPositions(t);
   const planetCount = PLANET_ORDER.length;
   for (let i = 0; i < planetCount; i++) {

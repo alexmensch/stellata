@@ -169,8 +169,8 @@ interface AttachedHost {
   hostLocalPos: THREE.Vector3;
   /** ICRS-aligned orbital-plane orientation for this host. */
   orientation: THREE.Quaternion;
-  positionsAt: ((t: number, out: Float32Array) => void) | null;
-  positionsScratch: Float32Array | null;
+  positionsAt: ((t: number, out: Float64Array) => void) | null;
+  positionsScratch: Float64Array | null;
   /** max over planets of `p · (R / a)² · alphaZeroPhaseFactor(coefs)`
    *  — the geometry-independent reflectance proxy folded with each
    *  planet's α=0 phase boost. Drives cullDistancePc. Saturn's ring
@@ -212,6 +212,11 @@ export class PlanetBodyField {
   // Per-instance attribute buffers keyed per INSTANCE_ATTR_SPECS.
   // Re-allocated on capacity grow.
   private bufs!: Record<InstanceBufKey, Float32Array>;
+  // Float64 master for host-relative body positions; `bufs.localRel` is
+  // its float32 bake for the GPU attribute. Every CPU consumer reads
+  // THIS — a float32 parsec quantises to 449 km at Pluto's distance.
+  // Grown, shifted, and written in lockstep with bufs.localRel.
+  private localRel64!: Float64Array;
   private dimTargets = new Map<number, number>();
   private dimActive = new Set<number>();
   private lastDimNowMs: number | null = null;
@@ -307,7 +312,7 @@ export class PlanetBodyField {
       hostLocalPos: new THREE.Vector3().copy(hostAbsPos).sub(this.worldOffset),
       orientation,
       positionsAt: ps.positionsAt ?? null,
-      positionsScratch: ps.positionsAt ? new Float32Array(n * 3) : null,
+      positionsScratch: ps.positionsAt ? new Float64Array(n * 3) : null,
       brightestReflectance,
       cullDistance: cullDistancePc(hostAbsmag, brightestReflectance, this.maxAppMag),
       startInstance: this.liveCount,
@@ -459,9 +464,9 @@ export class PlanetBodyField {
    *  math). Glow through the host's perceptual halo is physically
    *  correct and stays undimmed; a planet in FRONT (transit) dims the
    *  host by (R_p/R_host)² — negligible, and the host is a star-pipeline
-   *  instance this field doesn't own. The pair-relative offset is
-   *  iLocalRel itself (small values, not a large-position difference),
-   *  so float32 carries it fine.
+   *  instance this field doesn't own. The pair-relative offset is the
+   *  body's own host-relative position — small values, not a
+   *  large-position difference.
    *
    *  A moon additionally dims by its parent's shadow — the same lens
    *  math evaluated from the MOON's viewpoint (primary = host, secondary
@@ -483,9 +488,9 @@ export class PlanetBodyField {
       let dim = 1;
       const result = eclipseDimFromOffsets(
         losX, losY, losZ,
-        this.bufs.localRel[base + 0],
-        this.bufs.localRel[base + 1],
-        this.bufs.localRel[base + 2],
+        this.localRel64[base + 0],
+        this.localRel64[base + 1],
+        this.localRel64[base + 2],
         host.hostRadiusPc,
         this.bufs.radius[idx],
       );
@@ -496,12 +501,12 @@ export class PlanetBodyField {
       if (parentIdx >= 0) {
         const pBase = (host.startInstance + parentIdx) * 3;
         const shadow = eclipseDimFromOffsets(
-          -this.bufs.localRel[base + 0],
-          -this.bufs.localRel[base + 1],
-          -this.bufs.localRel[base + 2],
-          this.bufs.localRel[pBase + 0],
-          this.bufs.localRel[pBase + 1],
-          this.bufs.localRel[pBase + 2],
+          -this.localRel64[base + 0],
+          -this.localRel64[base + 1],
+          -this.localRel64[base + 2],
+          this.localRel64[pBase + 0],
+          this.localRel64[pBase + 1],
+          this.localRel64[pBase + 2],
           host.hostRadiusPc,
           this.bufs.radius[host.startInstance + parentIdx],
         );
@@ -522,27 +527,27 @@ export class PlanetBodyField {
 
   /**
    * Fresh-copy snapshot of a host's planet positions RELATIVE TO THE
-   * HOST (the shader's iLocalRel — renderer-local only after adding
-   * `getHostLocalPositionInto`). Layout: 3 floats per planet, ordering
+   * HOST (renderer-local only after adding
+   * `getHostLocalPositionInto`). Layout: 3 doubles per planet, ordering
    * matches PlanetSystem.planets. Returns null when the host isn't
    * attached.
    *
    * The planet-labels overlay reads this (host offset re-added by
    * `Stellata.getFocusedPlanetLocalPositions`) so labels project to
-   * the same positions the body shader renders at, without re-running
+   * the same positions the body mesh renders at, without re-running
    * the Keplerian math itself.
    *
-   * Returns a Float32Array `.slice()` (copy), not a `.subarray()`
+   * Returns a Float64Array `.slice()` (copy), not a `.subarray()`
    * view — the copy survives attach-driven capacity grow and
    * detach-driven tail-shift, so callers can hold a cached reference
    * without silently reading stale data the next frame. The allocation
-   * cost is ~3·count·4 bytes per call (108 B at Sol scale), dwarfed by
+   * cost is ~3·count·8 bytes per call (216 B at Sol scale), dwarfed by
    * the projection math that follows.
    */
-  getHostLocalPositions(hostStarIdx: number): Float32Array | null {
+  getHostLocalPositions(hostStarIdx: number): Float64Array | null {
     const host = this.hosts.get(hostStarIdx);
     if (!host) return null;
-    return this.bufs.localRel.slice(
+    return this.localRel64.slice(
       host.startInstance * 3,
       (host.startInstance + host.count) * 3,
     );
@@ -605,9 +610,9 @@ export class PlanetBodyField {
   ): PlanetView {
     const planet = host.ps.planets[planetIdx];
     const base = (host.startInstance + planetIdx) * 3;
-    const planetX = host.hostLocalPos.x + this.bufs.localRel[base + 0];
-    const planetY = host.hostLocalPos.y + this.bufs.localRel[base + 1];
-    const planetZ = host.hostLocalPos.z + this.bufs.localRel[base + 2];
+    const planetX = host.hostLocalPos.x + this.localRel64[base + 0];
+    const planetY = host.hostLocalPos.y + this.localRel64[base + 1];
+    const planetZ = host.hostLocalPos.z + this.localRel64[base + 2];
     const dvx = planetX - cameraPosLocal.x;
     const dvy = planetY - cameraPosLocal.y;
     const dvz = planetZ - cameraPosLocal.z;
@@ -617,9 +622,9 @@ export class PlanetBodyField {
     const dhz = host.hostLocalPos.z - cameraPosLocal.z;
     // Planet→host distance is just the iLocalRel magnitude.
     const dHp = Math.sqrt(
-      this.bufs.localRel[base + 0] ** 2 +
-        this.bufs.localRel[base + 1] ** 2 +
-        this.bufs.localRel[base + 2] ** 2,
+      this.localRel64[base + 0] ** 2 +
+        this.localRel64[base + 1] ** 2 +
+        this.localRel64[base + 2] ** 2,
     );
     const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, planet.phaseCoefficients);
     const radiusPc = planet.radiusKm * KM_PC;
@@ -710,9 +715,9 @@ export class PlanetBodyField {
     if (!host) return false;
     const base = instanceIdx * 3;
     out.set(
-      this.bufs.localRel[base + 0],
-      this.bufs.localRel[base + 1],
-      this.bufs.localRel[base + 2],
+      this.localRel64[base + 0],
+      this.localRel64[base + 1],
+      this.localRel64[base + 2],
     );
     return true;
   }
@@ -724,9 +729,9 @@ export class PlanetBodyField {
     if (!host) return false;
     const base = instanceIdx * 3;
     out.set(
-      host.hostLocalPos.x + this.bufs.localRel[base + 0],
-      host.hostLocalPos.y + this.bufs.localRel[base + 1],
-      host.hostLocalPos.z + this.bufs.localRel[base + 2],
+      host.hostLocalPos.x + this.localRel64[base + 0],
+      host.hostLocalPos.y + this.localRel64[base + 1],
+      host.hostLocalPos.z + this.localRel64[base + 2],
     );
     return true;
   }
@@ -738,9 +743,9 @@ export class PlanetBodyField {
     if (!host) return false;
     const base = instanceIdx * 3;
     out.set(
-      host.hostAbsPos.x + this.bufs.localRel[base + 0],
-      host.hostAbsPos.y + this.bufs.localRel[base + 1],
-      host.hostAbsPos.z + this.bufs.localRel[base + 2],
+      host.hostAbsPos.x + this.localRel64[base + 0],
+      host.hostAbsPos.y + this.localRel64[base + 1],
+      host.hostAbsPos.z + this.localRel64[base + 2],
     );
     return true;
   }
@@ -818,9 +823,9 @@ export class PlanetBodyField {
     let pz = host.hostLocalPos.z;
     if (pi >= 0) {
       const base = (host.startInstance + pi) * 3;
-      px += this.bufs.localRel[base + 0];
-      py += this.bufs.localRel[base + 1];
-      pz += this.bufs.localRel[base + 2];
+      px += this.localRel64[base + 0];
+      py += this.localRel64[base + 1];
+      pz += this.localRel64[base + 2];
     }
 
     const ux = planetX - camPos.x;
@@ -1089,15 +1094,18 @@ export class PlanetBodyField {
       if (spec.fill !== undefined) bufs[key].fill(spec.fill);
     }
     this.bufs = bufs;
+    this.localRel64 = new Float64Array(capacity * INSTANCE_ATTR_SPECS.localRel.dims);
     this.instanceHost = new Int32Array(capacity).fill(-1);
   }
 
   private growCapacity(): void {
     const oldBufs = this.bufs;
+    const oldLocalRel64 = this.localRel64;
     this.allocateBuffers(this.capacity * 2);
     for (const [key] of SPEC_ENTRIES) {
       this.bufs[key].set(oldBufs[key]);
     }
+    this.localRel64.set(oldLocalRel64);
     this.capacity *= 2;
     // Replace the geometry with a fresh one over the new buffers.
     // Materials and meshes are re-bound via three.js's normal
@@ -1233,17 +1241,17 @@ export class PlanetBodyField {
     }
   }
 
-  /** Resolve planet positions at time `t` and write them to the
-   *  host's iLocalRel slots. Uses the host's positionsAt resolver
-   *  when present (Sol via JPL Standish), else the placeholder
-   *  eccentric-anomaly layout. */
+  /** Resolve planet positions at time `t` into the host's `localRel64`
+   *  slots, then bake the float32 iLocalRel attribute from them. Uses
+   *  the host's positionsAt resolver when present (Sol via JPL
+   *  Standish), else the placeholder eccentric-anomaly layout. */
   private writeHostPositions(host: AttachedHost, t: number): void {
     const base = host.startInstance * 3;
     if (host.positionsAt && host.positionsScratch) {
       host.positionsAt(t, host.positionsScratch);
       this.rotateInto(
         host.positionsScratch,
-        this.bufs.localRel,
+        this.localRel64,
         base,
         host.orientation,
       );
@@ -1253,18 +1261,22 @@ export class PlanetBodyField {
         const p = host.ps.planets[i];
         const ea = placeholderEccentricAnomaly(i, host.count);
         planetLocalPosition(p.semiMajorAxisAu, p.eccentricity, ea, host.orientation, tmp);
-        this.bufs.localRel[base + i * 3 + 0] = tmp.x;
-        this.bufs.localRel[base + i * 3 + 1] = tmp.y;
-        this.bufs.localRel[base + i * 3 + 2] = tmp.z;
+        this.localRel64[base + i * 3 + 0] = tmp.x;
+        this.localRel64[base + i * 3 + 1] = tmp.y;
+        this.localRel64[base + i * 3 + 2] = tmp.z;
       }
+    }
+    const end = base + host.count * 3;
+    for (let i = base; i < end; i++) {
+      this.bufs.localRel[i] = this.localRel64[i];
     }
   }
 
   /** Rotate a flat plane-frame xyz buffer into ICRS-aligned local frame
    *  and write it at `dstStart` in `dst`. */
   private rotateInto(
-    src: Float32Array,
-    dst: Float32Array,
+    src: Float64Array,
+    dst: Float64Array,
     dstStart: number,
     orientation: THREE.Quaternion,
   ): void {
@@ -1317,5 +1329,12 @@ export class PlanetBodyField {
       const tailEnd = tailBase + tailCount * spec.dims;
       this.bufs[key].copyWithin(tailBase - gap * spec.dims, tailBase, tailEnd);
     }
+    const dims = INSTANCE_ATTR_SPECS.localRel.dims;
+    const tailBase = tailStart * dims;
+    this.localRel64.copyWithin(
+      tailBase - gap * dims,
+      tailBase,
+      tailBase + tailCount * dims,
+    );
   }
 }

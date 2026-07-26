@@ -89,7 +89,7 @@ satisfies:
   `gravParamGM` (km³/s²) is carried by moon parents so a moon's period
   derives from its parent's mass, not the host star's.
 - `PlanetSystem` — host star catalog index, `planets` array,
-  optional `positionsAt(t, out)` resolver writing 3 floats per planet
+  optional `positionsAt(t, out)` resolver writing 3 doubles per planet
   in the host's local orbital-plane frame, optional
   `orbitGeometryAt(t)` (live per-body ring geometry) for the
   orbit-ring renderer.

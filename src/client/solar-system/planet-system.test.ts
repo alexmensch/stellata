@@ -74,16 +74,16 @@ describe('solPositionsAt moon composition', () => {
   const T_UNIX = 1_700_000_000;
   const planetCount = PLANET_ORDER.length;
 
-  async function positions(): Promise<Float32Array> {
+  async function positions(): Promise<Float64Array> {
     const cat = stubCatalog(3);
     const ps = await getPlanetSystem(cat, 3);
-    const out = new Float32Array(ps!.planets.length * 3);
+    const out = new Float64Array(ps!.planets.length * 3);
     ps!.positionsAt!(T_UNIX, out);
     return out;
   }
 
   const bodyIdx = (name: string) => SOL_BODIES.findIndex((b) => b.name === name);
-  const distPc = (out: Float32Array, a: number, b: number) =>
+  const distPc = (out: Float64Array, a: number, b: number) =>
     Math.hypot(
       out[a * 3] - out[b * 3],
       out[a * 3 + 1] - out[b * 3 + 1],
