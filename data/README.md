@@ -88,7 +88,7 @@ measured moved to J2016.0.
 | Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever the catalogue places the figure stars, so the line endpoints inherit J2016.0 transitively. |
 | Local Group dwarfs | J2000.0 | Pace 2024 LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible, so the 16 yr offset from the stellar scene epoch is immaterial. |
 | Edenhofer 2023 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
-| Solar system | Live UTC each frame | JPL Standish 1992 Keplerian elements evaluated at the current Julian Date — no committed positions; the planet renderer evaluates ephemerides per frame. |
+| Solar system | Live UTC each frame | No committed positions — the renderer evaluates elements per frame at the model clock, converted to TDB. Frozen JPL Horizons element tables ([`ephemerides/`](ephemerides/README.md)) across 1900–2100; the inlined Standish 1992 series outside them. |
 
 ### J2016.0 is the wire epoch; the runtime advances to `t`
 

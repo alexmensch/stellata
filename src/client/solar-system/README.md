@@ -22,9 +22,10 @@ Rendering, ephemerides, and the clock live in the subfolders.
   Earth, Mars, and Titan; the integrator and its CPU mirror.
 - `time/` — simulation time `t`, the `VirtualClock` behind
   `Stellata.getT()`, the UTC readout, and the transport scrubber widget.
-- `ephemerides/` — planet + moon position resolvers, orbit-descriptor
-  breadcrumbs, the orbit-ring layer, and the frozen JPL Horizons truth
-  corpora.
+- `ephemerides/` — planet + moon position resolvers (frozen JPL Horizons
+  element tables across 1900–2100, the Standish series outside them),
+  orbit-descriptor breadcrumbs, the orbit-ring layer, and the frozen
+  Horizons truth corpora.
 - `heliopause/` — Sol's heliopause boundary shell.
 - `probes/` — the five Sun-escape deep-space probes: trajectory sampler,
   fixed-size markers, traversed trails, labels, and the `probe` focus

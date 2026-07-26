@@ -49,7 +49,10 @@ live.
 `t` itself is clamped to the Standish ephemeris validity window
 (3000 BC – 3000 AD; `T_CLAMP_MIN_S` / `T_CLAMP_MAX_S`) — every clock
 mutation and `getT()` read clamps, so no consumer ever sees an epoch
-where planet positions (or linear star propagation) are garbage. A
+where planet positions (or linear star propagation) are garbage. The
+Horizons element tables span a much narrower 1900–2100 and do not move
+this bound: outside them the ephemeris falls back to the series the
+clamp is named for (`../ephemerides/README.md`). A
 running clock **pins at the bound** with its rate intact: the readout
 freezes there, no invisible overshoot accrues (the clock re-anchors at
 the bound), and the first opposite-direction transport step moves off

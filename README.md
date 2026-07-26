@@ -52,8 +52,9 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 - **The solar system at live planetary positions.** Around Sol, the
   eight planets and Pluto render at their current heliocentric
-  positions (JPL Standish ephemerides, sub-arcminute accurate
-  3000 BC – 3000 AD), with their major moons, atmospheres, and axial
+  positions — frozen JPL Horizons element tables across 1900–2100
+  (~1,000 km) and the Standish series out to the 3000 BC – 3000 AD
+  clamp — with their major moons, atmospheres, and axial
   rotation, inside the asymmetric heliopause shell measured by Voyager
   and IBEX. A small clock in the corner shows the UTC time the
   positions correspond to.
