@@ -1,7 +1,7 @@
 # OBSERVE camera mode
 
 A second camera mode that parks the camera at the focused hard-kind
-object — star or planet, one path for both — and swaps
+object — star, planet, or probe, one path for all three — and swaps
 `TrackballControls` for a custom look-around controller. Drag
 mechanics, momentum, FOV-on-wheel, aim slerps, POI dispatch, and the
 click handlers (single = pin a POI, double = aim-at).
@@ -38,7 +38,7 @@ Public surface of `ObserveTransition`:
 Toggled
 via the navigate / observe pill in the top-right card (`#mode-toggle`,
 wired in `mode-toggle.ts`). The OBSERVE button is disabled until a
-hard-kind object (star or planet) is focused — the underlying
+hard-kind object (star / planet / probe) is focused — the underlying
 `setCameraMode('observe')` no-ops without an anchor, but disabling the
 button advertises the affordance up-front. Soft kinds (cloud / LG)
 can't anchor observe: their focus doesn't recentre the floating
@@ -56,7 +56,8 @@ parked on top of it. Hiding it at transition start would feel like the
 object vanishes before the camera arrives. The hide dispatches per
 kind in `stellata.ts` (star → the star pipeline's `uHideFocusIdx`;
 planet → the body field's `uHideIdx`, which also drops the body's
-label). `controls.enabled = false`; `observeControls.enable()` after
+label; probe → the marker field's hidden slot, which drops the marker,
+its label, and its trail together). `controls.enabled = false`; `observeControls.enable()` after
 the transition completes. The `animate=false` URL-restore path skips
 the transition and hides immediately, since there's no glide to defer
 to.
@@ -160,10 +161,10 @@ math is degenerate at observe range.
 **Search row labels:** the search-tag swaps "Focus" → "Location" via
 `syncFocusUI` reading `getCameraMode()` on every focus / mode change.
 Soft-kind entries are filtered out of the location picker
-(`focusRunQuery` in `search.ts` keeps stars + planets when in observe)
-— observe anchors are hard kinds only.
+(`focusRunQuery` in `search.ts` filters on `isHardTarget`, never on a
+spelled-out kind list) — observe anchors are hard kinds only.
 
-**Picking a new location** (star or planet alike) routes through
+**Picking a new location** (any hard kind alike) routes through
 `warpTo(target)` instead of `flyTo(target)`. The warp animation flies between anchors and the
 post-arrival slerp leaves the camera pointing in the original celestial
 direction from the new vantage. Collocated locations (α Cen A/B at one

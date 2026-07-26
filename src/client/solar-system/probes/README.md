@@ -7,10 +7,12 @@ contract, provenance, and the frame/unit facts live in
 `../../../../data/probes/README.md`; the fetch pipeline in
 `../../../../scripts/probes/README.md`.
 
-Probes are **physical objects, not annotations**: they render regardless of
-which object the camera is focused on, exactly like planet bodies, and their
-motion comes wholly from a `t` sampler. Interactivity (focus, search, click,
-hover, cards) is not here yet.
+Probes are **physical objects, not annotations**: markers render
+regardless of which object the camera is focused on, exactly like planet
+bodies, and their motion comes wholly from a `t` sampler. They are full
+interaction citizens — a third hard focus kind alongside stars and
+planets (§ Focus), searchable, hoverable, clickable, pinnable, and valid
+observe anchors.
 
 ## Files in this area
 
@@ -25,16 +27,27 @@ src/client/solar-system/probes/
                                   probe; it is never an error.
   probe-field.ts                  ProbeField — the instanced marker quads,
                                   the per-frame sampler pass, and the
-                                  ProbeFrameSample record the trail layer
-                                  and labels both read. See § Marker field.
+                                  ProbeFrameSample record every other
+                                  consumer reads. See § Marker field.
   probe-path-layer.ts             ProbePathLayer — one open polyline per
                                   probe, launch → position(t). See § Trails.
+  probe-path-layer.test.ts        Trail focus gate + the field's
+                                  visible-vs-sampled split.
   probe-labels.ts                 Per-probe SVG labels. See § Labels.
   probe.vert.glsl,
   probe.frag.glsl                 Fixed-pixel-size diamond glyph.
   probe-encounter-coherence.test  Planet-encounter + heliopause-crossing
     .ts                           corpus. See § Coherence, not precision.
 ```
+
+The interaction surfaces live with their subsystems, not here:
+`../../camera/focus/` (focus paths + park geometry),
+`../../camera/controls/picker.ts` (`pickProbeHit`),
+`../../hover/probe-hover-provider.ts`,
+`../../focus-card/probe-focus-provider.ts`,
+`../../format/probe-format.ts` (the mission-stat formatters both card
+tiers share), `../../typeahead/search.ts` (corpus entries), and
+`../sol-object-sids.ts` (the frozen SIDs).
 
 ## Sampler
 
@@ -91,12 +104,29 @@ from here on purpose.
   keeps a *just-launched* probe inside 1 AU visible while the camera is in
   the inner system.
 - **`ProbeFrameSample` is the single per-frame evaluation.** The field
-  samples each trajectory once per frame and both the trail layer and the
-  label overlay read that record — they never re-sample, so the three can't
-  disagree about where a probe is or whether it is drawn.
+  samples each trajectory once per frame and the trail layer, the label
+  overlay, the picker, the hover card, and the focus card all read that
+  record — nobody re-samples, so none of them can disagree about where a
+  probe is, how fast it is going, or whether it is drawn. The card's
+  speed row is the sampler's own interpolated velocity for exactly this
+  reason; a finite difference across frames would be a different
+  quantity in each part of a trajectory (§ Sampler).
+- **`sampled` and `visible` are different questions, and the split is
+  load-bearing.** `sampled` means the trajectory covers this `t`, so a
+  position exists; `visible` means the glyph is drawn. `localPositionInto`
+  gates on `sampled` alone — focus, the moving-focal ride, and overlay
+  projection must keep working while the marker is decluttered,
+  chart-hidden, or hidden as the observe anchor, or a focused camera
+  would be stranded mid-flythrough the moment the user cycled declutter.
+  Draw-predicate consumers (labels, trails, the picker) read
+  `sampleFor(...).visible` instead.
 - **Signal-lost is opacity, not a separate pass.** Past `lastContactT` the
   marker's alpha drops and the label gains a `(signal lost)` suffix; the
   probe keeps moving, because it does.
+- **One observe-hide slot.** `setHiddenInstance` drops the focused
+  probe's `visible` while observe parks the camera on it — the marker,
+  its label, and its trail all go with it, the planet field's `uHideIdx`
+  analogue.
 
 ## Trails
 
@@ -118,19 +148,30 @@ forward is defined; the trail simply ends wherever `t` puts the probe.
   tens of AU away, so Sol-relative float32 vertices would jitter under
   camera motion. Extending the trail forces a rebake; otherwise the
   per-frame drift check owns it.
-- **Two gates, one job each.** A trail draws only when its probe's marker
-  is drawn (a trail with no probe at its end reads as a bug), AND when the
-  probe's own heliocentric distance clears the legibility floor at the
-  camera's distance to the marker — days after launch the traversed path is
-  a fraction of an AU and would be a sub-pixel smudge.
-- **Not focus-gated yet — an interim state, not the design.** There is no
-  probe focus to gate on until the focus surface lands, so today a trail
-  draws whenever its marker does. The end state is the binary-orbit-path rule
-  narrowed one step further: a trail renders only while **that probe** is the
-  focused object, hidden under every other focus including Sol (Sol is the
-  default first-load focus, so a Sol-focus gate would declutter nothing).
-  Markers stay unconditional either way — they are physical objects, like
-  planet bodies; only the trails gate.
+- **Three gates, one job each.** A trail draws only when **that probe is
+  the focused object** (§ Focus gate), AND when its marker is drawn (a
+  trail with no probe at its end reads as a bug), AND when the probe's own
+  heliocentric distance clears the legibility floor at the camera's
+  distance to the marker — days after launch the traversed path is a
+  fraction of an AU and would be a sub-pixel smudge.
+
+### Focus gate
+
+A trail renders only while **that probe** is the focused object —
+hidden under every other focus **including Sol**. Sol is the default
+first-load focus, so a Sol-focus gate would be a near no-op and would
+declutter nothing; five trails crossing the system is real line clutter
+at planet framings. This is the binary-orbit-path rule narrowed one step
+further.
+
+Markers stay unconditional either way — they are physical objects, like
+planet bodies; only the trails gate. The declutter element
+(`probeTrails`, representational) and the pixel-extent gate both stay;
+focus ANDs on top of them.
+
+The layer takes the focused index as an `update` argument rather than
+reading focus state itself, so the gate is a pure function of the frame
+and `probe-path-layer.test.ts` can pin it without a focus controller.
 
 ## Labels
 
@@ -187,12 +228,73 @@ Voyager 2's measured crossing distances (121.60 AU / 119.02 AU) and
 off-nose angles must land back inside the shell's 115–122 AU band, because
 those two crossings are what `../heliopause/` derived its geometry from.
 
+## Focus
+
+`probe` is the third **hard** focus kind (`../../camera/focus/README.md`
+§ FocusTarget contract): focusing one recentres the floating origin onto
+the probe, drops the orbit floor, and makes it a valid observe anchor.
+Its `Target` idx is the **loaded-roster index** — a missing artifact
+drops that probe from the roster, from the SID domain, and from the
+search corpus together, so no index ever shifts under a surviving probe.
+
+### Park distance is set by the near plane, not by the spacecraft
+
+Every other focusable kind solves its park and manual-zoom floor from a
+screen-fill fraction of the object's disc. A probe has no disc: the
+marker is a fixed-pixel glyph, and the spacecraft's own metre scale
+would solve to a park ~1e-17 pc — five orders of magnitude **inside**
+`CAMERA_NEAR_PC` (~31 km), where the very marker the camera flew to gets
+clipped. `PROBE_ORBIT_FLOOR_PC` / `PROBE_PARK_DIST_PC`
+(`../../camera/controls/star-physics.ts`) are therefore fixed distances,
+1000 km and 10 000 km, pinned against the near plane in
+`../../camera/depth-range.test.ts`.
+
+Both are negligible against the encounter distances the flythrough shows
+(Voyager 2 passed Jupiter at 570 000 km), so parking at 10 000 km IS
+riding with the probe: the planet geometry from there is the probe's own.
+Arrival uses the log-d ease, not the angular-size one — there is no
+radius to key on.
+
+### The flythrough
+
+Under focus the camera follows the probe along its **whole** trajectory
+as `t` advances, at any fast-forward rate: focus Voyager 2, scrub from
+1977, and the camera rides past Jupiter, Saturn, Uranus, Neptune, and out
+through the heliopause. That is the kind-generic moving-focal ride in
+`../../stellata.ts` (`../../camera/focus/README.md` § Moving-focal ride),
+shared with planet focus — a probe needed no ride of its own, only a
+provider leg. Sol's planet system stays attached under probe focus, the
+same way a planet focus keeps its host's: the orbit rings and planet
+labels are what make a flythrough planet pass legible.
+
+## Identity surfaces
+
+Probes join every kind-generic contract without a special case anywhere
+in the interaction layer:
+
+- **SID** — `sol:<roster id>`, `kind=probe` in the ledger, pinned
+  client-side in `../sol-object-sids.ts` (§ Sol-system SID pins in
+  `../README.md`). The URL wire needs no probe-specific work: focus, the
+  distance vector, and POIs already carry any-kind SIDs, and unlike the
+  planet domain there is no index translation — the resolver's
+  localIndex IS the Target idx.
+- **Hover** — `pickProbeHit` mirrors the marker draw predicate exactly
+  (`visible`), with `PROBE_MARKER_PX` as the hit-radius basis. No
+  focus gate on the pick side, unlike the trail (hover Rule 2).
+- **Cards** — tier 1 and tier 2 share the mission-stat formatters in
+  `../../format/probe-format.ts`, so the two tiers can never print
+  different numbers. The heliocentric distance and speed rows are
+  labelled **"From Sol"** and are the one deliberate exception to the
+  camera-relative card frame: they are intrinsic mission facts, and they
+  sit beside a live camera-frame `Distance` row that keeps the
+  distinction visible.
+- **Search** — one corpus entry per loaded probe, secondary line
+  "Probe · Interstellar".
+
 ## Not here yet
 
-Focus / search / click / hover / POI / observe / URL identity, the focus
-card's distance-speed-mission rows, and the close-approach glTF model are
-separate work; nothing in this folder registers a `Target` kind. Probes are
-also exempt from stellar proper motion by construction — they are
-heliocentric Sol-frame bodies and all their motion is in the sampler, so
-wiring them into the catalog's epoch-advance path would double-count Sol's
-own motion.
+The close-approach glTF model is separate work. Probes are also exempt
+from stellar proper motion by construction — they are heliocentric
+Sol-frame bodies and all their motion is in the sampler, so wiring them
+into the catalog's epoch-advance path would double-count Sol's own
+motion.

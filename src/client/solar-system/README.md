@@ -27,9 +27,10 @@ Rendering, ephemerides, and the clock live in the subfolders.
   corpora.
 - `heliopause/` — Sol's heliopause boundary shell.
 - `probes/` — the five Sun-escape deep-space probes: trajectory sampler,
-  fixed-size markers, traversed trails, labels. Sol-anchored and ICRS
-  throughout — deliberately not funnelled through the planets' ecliptic-
-  local pipeline or their reflected-light magnitude model.
+  fixed-size markers, traversed trails, labels, and the `probe` focus
+  kind's geometry. Sol-anchored and ICRS throughout — deliberately not
+  funnelled through the planets' ecliptic-local pipeline or their
+  reflected-light magnitude model.
 
 ## Files in this area
 
@@ -41,9 +42,10 @@ src/client/solar-system/
                                   table (18 major moons) + the SOL_BODIES
                                   concatenation. Also carries the
                                   PlanetAtmosphere rows (atmosphere/README.md).
-  sol-object-sids.ts              SOL_OBJECT_SIDS — hand-written body →
+  sol-object-sids.ts              SOL_OBJECT_SIDS — hand-written key →
                                   frozen Stellata ID pins (Sun + planets +
-                                  moons). See § Sol-system SID pins.
+                                  moons + probes). See § Sol-system SID
+                                  pins.
   planet-system-membership.ts     Planet-system implementation of the
                                   kind-generic system-membership contract
                                   (../system-membership/README.md), one
@@ -123,19 +125,22 @@ against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 
 ## Sol-system SID pins
 
-`sol-object-sids.ts` maps each Sol body (`sun`, `mercury` … `pluto`, then
-the 18 moons `moon`, `io` … `triton`) to its frozen Stellata ID
-(docs/sid.md § 7). These bodies carry no catalog record or artifact of
-their own, so this hand-written table is their runtime SID source — the
-B4 resolver (`stellata-efju.5`) will register a `planet` domain over it
-(moons reuse the `planet` kind; a moon is a planet-domain object under
-the resolver). The values are frozen ledger sids minted from
-`data/sid/sol-objects.tsv`; `sol-object-sids.test.ts` imports the ledger
-and asserts each entry matches (tests import, never redefine), covers
-exactly the mint list, and pins a sid for every `SOL_BODIES` runtime body
-(planets + moons). `sol:sun` rides the Sol **catalog** record via a
-same-as edge, so that record's in-record sid and `SOL_OBJECT_SIDS.sun`
-are the same integer by construction.
+`sol-object-sids.ts` maps each Sol-system object that carries no catalog
+record or artifact of its own — `sun`, `mercury` … `pluto`, the 18 moons
+`moon`, `io` … `triton`, and the five probes `pioneer10` …
+`newhorizons` — to its frozen Stellata ID (docs/sid.md § 7). This
+hand-written table is their runtime SID source, feeding two resolver
+domains: `planet` (moons reuse the `planet` kind — a moon is a
+planet-domain object under the resolver) and `probe` (`kind=probe` in
+the ledger, keyed on the mission roster id). The values are frozen
+ledger sids minted from `data/sid/sol-objects.tsv`;
+`sol-object-sids.test.ts` imports the ledger and asserts each entry
+matches (tests import, never redefine), covers exactly the mint list,
+pins a sid for every `SOL_BODIES` runtime body and every
+`PROBE_MISSIONS` entry, and asserts the probe rows carry ledger kind
+`probe` rather than `planet`. `sol:sun` rides the Sol **catalog** record
+via a same-as edge, so that record's in-record sid and
+`SOL_OBJECT_SIDS.sun` are the same integer by construction.
 
 ## Reflected-light magnitude model
 
@@ -241,10 +246,15 @@ URL) recentres the floating origin onto the planet itself and drops
 the floor to `minOrbitDistForPlanet` (the same 90 %-fill angular
 solve, ~2.4 body radii); arrival parks at `parkDistForPlanet` (a
 30 %-fill solve). The camera follows the orbiting body via the
-planet-focal ride — see `../camera/focus/README.md` § Planet focus.
+moving-focal ride — see `../camera/focus/README.md` § Hard kinds.
 A focused planet is a full observe anchor: entering observe parks the
 camera on the body and hides it via `uHideIdx`
 (`../camera/observe/README.md`).
+
+Focusing a probe (`{kind:'probe'}` Targets) is the third hard kind and
+takes the same shape, with fixed park / floor distances in place of the
+angular solves and the same ride carrying the camera along the whole
+trajectory under scrub — `probes/README.md` § Focus.
 
 `camera.near` is at `1e-12 pc` — well below `minOrbitDistForStar` and
 below the tightest planet/moon floor (`minOrbitDistForPlanet` for a

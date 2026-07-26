@@ -15,7 +15,7 @@ src/client/overlays/
                                   distance label (click = aim at the
                                   destination; warp stays on W).
   focus-ring-overlay.ts           SVG ring around the focused object
-                                  (star or planet — kind-generic).
+                                  (any hard kind — kind-generic).
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
                                   src/client/galactic/README.md.
   poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows

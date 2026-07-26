@@ -122,7 +122,7 @@ as **SVG** paths inside `#overlay`, not 3D meshes. Geometry is computed
 entirely in screen space:
 
 1. Project the origin (the focused object's live local position — any
-   hard kind, star or planet, via `focalLocalPositionInto` — else
+   hard kind (star / planet / probe) via `focalLocalPositionInto` — else
    `controls.target`) into screen pixels. In the OBSERVE steady state the
    anchor is **forced** to screen centre by mode rather than detected: the
    camera is parked at the focal star only within the float32 position

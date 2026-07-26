@@ -61,6 +61,18 @@ planet-hover-format.ts           Planet / moon — camera distance ·
                                  body has its own collapsed cluster (a
                                  planet whose moons read as one point
                                  with it).
+probe-hover-format.ts            Deep-space probe — camera distance, then
+                                 the Sol-relative mission stats the focus
+                                 card shows: "From Sol <AU> (<lt-hr>)" and
+                                 "Speed <km/s>", both through
+                                 ../../format/probe-format.ts so the two
+                                 tiers can't print different numbers. A
+                                 probe has no magnitude, so the first line
+                                 stands alone rather than pairing with a
+                                 Vmag. The signal line appears only once
+                                 the clock has passed last contact —
+                                 "Signal Active" on a live probe is noise
+                                 on a ≤5-line card.
 cloud-hover-format.ts            Cloud — camera distance + major × minor
                                  span. Z2020 spheres collapse to
                                  "<r> × <r>".

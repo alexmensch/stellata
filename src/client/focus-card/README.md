@@ -16,8 +16,18 @@ Vantage-dependent values (distance, apparent magnitude) use the CAMERA
 and update live as it moves; intrinsic properties (radius, temperature,
 absolute magnitude, designations, provenance) are frame-free.
 Sol-centred quantities (distance-from-Sol, apparent-mag-from-Sol)
-belong to tier 3 only. Constellation is the one deliberate exception —
-an Earth-vantage catalog tag kept for familiarity.
+belong to tier 3 only. Two deliberate exceptions: constellation (an
+Earth-vantage catalog tag kept for familiarity), and a probe's
+heliocentric distance + speed.
+
+**The probe carve-out.** "165.3 AU, 17.0 km/s" is not a vantage-
+dependent measurement of a probe — it is the mission's defining fact,
+the thing the object is *for*, and it is intrinsic in the same sense a
+radius is. It is admitted on that basis only, under an explicit
+**"From Sol"** label, and only while the live camera-frame `Distance`
+row sits beside it so the two frames stay visibly distinct. This is not
+a general licence to add Sol-relative rows: a new one needs the same
+argument, not this precedent.
 
 ## Rolodex behaviour
 
@@ -63,7 +73,8 @@ so the whole unit stays card-sized regardless of pin count.
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
-  `FocusKind` union (`'star' | 'cloud' | 'lg' | 'planet' | 'shell'`).
+  `FocusKind` union
+  (`'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe'`).
   `FocusCardProviders` is a
   mapped type EXHAUSTIVE over the union: **adding a focusable kind
   without a focus-card provider fails `tsc`** — that compile-time
@@ -116,6 +127,15 @@ so the whole unit stays card-sized regardless of pin count.
   heliopause): type identity line, live camera distance, size, and
   provenance, read from the registered `ShellInstance`
   (`../fresnel-shell/README.md`). Non-luminous, so no magnitude rows.
+- `probe-focus-provider.ts` — tier-2 deep-space-probe rows: "Deep-space
+  probe" identity line, live camera distance, heliocentric distance
+  (AU + light-hours), heliocentric speed, launch date, signal state, and
+  the mission summary as a full-width line. Non-luminous, so no
+  magnitude row. Every clock- or camera-driven row is LIVE — including
+  Signal, since scrubbing back before last contact restores it. Rows
+  read the marker field's single per-frame sample, and the two
+  Sol-relative figures share `../format/probe-format.ts` with the hover
+  card. See the frame carve-out below.
 
 ## Placement
 

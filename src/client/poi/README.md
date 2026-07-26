@@ -1,7 +1,8 @@
 # Points of interest (POIs)
 
 User-pinned objects — any pinnable Target kind (stars, planets,
-Local Group objects, and boundary shells today) in one list. This folder owns the pin **state**; the SVG
+deep-space probes, Local Group objects, and boundary shells today) in
+one list. This folder owns the pin **state**; the SVG
 rendering (rings, labels, off-screen arrows) lives in
 `../overlays/poi-overlay.ts`, and the per-POI info cards are members of
 the card rolodex (`../focus-card/README.md` § Rolodex behaviour).
@@ -56,7 +57,10 @@ apart.
   the body field; URL round-trip additionally needs the planet SID to
   resolve, wired for Sol's domain only today (`main.ts`
   `planetDomainIndexOf`) — a future non-Sol host's pin would work
-  in-session but silently drop from a shared `?v=`. Local Group
+  in-session but silently drop from a shared `?v=`. Every LOADED probe
+  pins and round-trips with no translation step — its SID domain is
+  built over the loaded roster, so the resolver's localIndex IS the
+  Target idx. Local Group
   objects pin like stars (their SID domain attaches at boot); clouds
   stay unpinnable while the MC layer is shelved — their rule returns
   false and the ladder steps only its vector rungs for them.
