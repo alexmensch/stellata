@@ -50,6 +50,7 @@ import {
 } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { parentIndexOf } from '../ephemerides/orbit-descriptor';
+import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import planetVert from './planet.vert.glsl?raw';
 import planetFrag from './planet.frag.glsl?raw';
 
@@ -435,6 +436,7 @@ export class PlanetBodyField {
     // drawn — chart mode observes from a planet, so freezing the walk
     // there strands the anchor's orbital motion. Only the GPU upload is
     // skipped while invisible (the CPU buffer still advances).
+    perfMark('solar.bodies');
     const render = !this.hidden;
     this.group.visible = render;
     let touched = false;
@@ -456,6 +458,7 @@ export class PlanetBodyField {
         .needsUpdate = true;
     }
     this.dimTargets.clear();
+    perfMeasure('solar.bodies');
   }
 
   /** True-eclipse targets for one host's planets: a planet whose disc

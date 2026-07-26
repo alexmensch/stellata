@@ -311,7 +311,9 @@ path spheres. Both `update`s run in the scene-layer registry — the
 star cluster's after the binary orbit walk + eclipse photometry whose
 per-instance writes its mirror re-copies; `localDepthPass.render`
 runs after every main render — a no-op frame when no cluster is
-active (deep field, chart mode). Perf label: `gpu.localDepth`.
+active (deep field, chart mode). Perf labels: `submit.localDepth` (CPU
+submission wall-time) and, where the driver exposes a timer query,
+`gpu.localDepth` (real GPU ms) — see `../debug/README.md` § GPU timing.
 
 Smoke (Saturn + moons): focus Saturn, scrub time; check ring↔body
 occlusion incl. the oblate limb, a sub-pixel moon transiting IN FRONT

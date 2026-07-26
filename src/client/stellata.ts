@@ -37,7 +37,13 @@ import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import type { CloudSurface } from './molecular-clouds/cloud-surfaces-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
-import { mark as perfMark, measure as perfMeasure, frame as perfFrame } from './debug/perf-hud';
+import {
+  mark as perfMark,
+  measure as perfMeasure,
+  frame as perfFrame,
+  gpuBegin as perfGpuBegin,
+  gpuEnd as perfGpuEnd,
+} from './debug/perf-hud';
 import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
@@ -2443,12 +2449,16 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask();
     perfMeasure('coreMask');
     perfMeasure('pre-render');
-    perfMark('gpu.render');
+    perfMark('submit.main');
+    perfGpuBegin('main');
     this.renderer.render(this.scene, this.camera);
-    perfMeasure('gpu.render');
-    perfMark('gpu.localDepth');
+    perfGpuEnd('main');
+    perfMeasure('submit.main');
+    perfMark('submit.localDepth');
+    perfGpuBegin('localDepth');
     this.localDepthPass.render(this.renderer, this.camera);
-    perfMeasure('gpu.localDepth');
+    perfGpuEnd('localDepth');
+    perfMeasure('submit.localDepth');
     perfMark('frame.handlers');
     this.bus.emit('frame');
     perfMeasure('frame.handlers');
