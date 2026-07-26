@@ -1,10 +1,8 @@
 // Deep-space-probe mission stats shared by the hover and focus cards.
 // See ./README.md.
 
-import { AU_PER_PC, KM_PC } from '../util/astronomy-constants';
+import { AU_PER_PC, KM_PC, LIGHT_TIME_PER_AU_S } from '../util/astronomy-constants';
 
-/** Speed of light, km/s (exact by the SI definition of the metre). */
-const C_KM_S = 299_792.458;
 const SECONDS_PER_HOUR = 3600;
 
 /**
@@ -20,7 +18,7 @@ const SECONDS_PER_HOUR = 3600;
  */
 export function formatSolDistance(distPc: number): string {
   const au = distPc * AU_PER_PC;
-  const lightHours = distPc / KM_PC / C_KM_S / SECONDS_PER_HOUR;
+  const lightHours = (au * LIGHT_TIME_PER_AU_S) / SECONDS_PER_HOUR;
   return `${au.toFixed(1)} AU (${lightHours.toFixed(1)} lt-hr)`;
 }
 

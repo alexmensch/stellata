@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
 import { setStyle } from '../../overlays/dirty-attr';
+import { placeAnchoredLabel } from '../../overlays/anchored-label';
 
 // Pixel offset from the projected planet centre to the label baseline,
 // applied as both the x and y component (so the diagonal magnitude is
@@ -126,20 +127,7 @@ export function createPlanetLabels(stellata: Stellata): void {
         continue;
       }
       tmp.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-      tmp.applyMatrix4(camera.matrixWorldInverse);
-      // Behind-or-at-near-plane points have no meaningful screen
-      // projection; hide the label rather than smearing it across the
-      // viewport edge from the divide-by-near-zero artefact.
-      if (tmp.z >= -camera.near) {
-        e.el.style.display = 'none';
-        continue;
-      }
-      tmp.applyMatrix4(camera.projectionMatrix);
-      const sx = (tmp.x + 1) * 0.5 * w;
-      const sy = (1 - tmp.y) * 0.5 * h;
-      e.el.style.display = '';
-      e.el.setAttribute('x', (sx + LABEL_OFFSET_PX).toFixed(1));
-      e.el.setAttribute('y', (sy + LABEL_OFFSET_PX).toFixed(1));
+      placeAnchoredLabel(e.el, tmp, camera, w, h, LABEL_OFFSET_PX);
     }
   });
 }

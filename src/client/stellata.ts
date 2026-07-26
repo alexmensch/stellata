@@ -1635,11 +1635,11 @@ export class Stellata implements FrameAnchor {
   // target is the parsec-ahead look pin rather than on the object.
   private applyMovingFocalRide(): void {
     const focused = this.focus.getFocusedTarget();
-    const idx = focused !== null && MOVING_FOCUS_KINDS.has(focused.kind) ? focused.idx : null;
-    if (focused === null || idx === null) {
+    if (focused === null || !MOVING_FOCUS_KINDS.has(focused.kind)) {
       this._movingRideIdx = null;
       return;
     }
+    const idx = focused.idx;
     const live = this._movingRideLive;
     if (!this.focusables[focused.kind].localPositionInto(idx, live)) {
       this._movingRideIdx = null;

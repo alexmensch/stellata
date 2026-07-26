@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
 import { setStyle } from '../../overlays/dirty-attr';
+import { placeAnchoredLabel } from '../../overlays/anchored-label';
 import { LABEL_OFFSET_PX } from '../planets/planet-labels';
 import { probeLabelText } from './probe-trajectory';
 
@@ -62,15 +63,7 @@ export function createProbeLabels(stellata: Stellata): void {
       tmp.copy(sample.localPc);
       const label = probeLabelText(traj, stellata.getT());
       if (el.textContent !== label) el.textContent = label;
-      tmp.applyMatrix4(camera.matrixWorldInverse);
-      if (tmp.z >= -camera.near) {
-        el.style.display = 'none';
-        continue;
-      }
-      tmp.applyMatrix4(camera.projectionMatrix);
-      el.style.display = '';
-      el.setAttribute('x', ((tmp.x + 1) * 0.5 * w + LABEL_OFFSET_PX).toFixed(1));
-      el.setAttribute('y', ((1 - tmp.y) * 0.5 * h + LABEL_OFFSET_PX).toFixed(1));
+      placeAnchoredLabel(el, tmp, camera, w, h, LABEL_OFFSET_PX);
     }
   });
 }
