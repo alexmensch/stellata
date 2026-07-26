@@ -20,10 +20,10 @@ interface ElementSet {
   longperi: number;  longperiDot: number;
   // longitude of ascending node Ω (deg)
   longnode: number;  longnodeDot: number;
-  // Cubic Jupiter–Neptune perturbation terms for the mean anomaly. Zero
+  // Cubic Jupiter–Pluto perturbation terms for the mean anomaly. Zero
   // for inner planets — the (b·T² + c·cos(fT) + s·sin(fT)) correction is
   // a numerical patch for the linear-elements model's blind spots near
-  // mean-motion resonances (Jupiter–Saturn, Uranus–Neptune).
+  // mean-motion resonances (Jupiter–Saturn, Uranus–Neptune, Neptune–Pluto).
   b: number; c: number; s: number; f: number;
 }
 
@@ -111,21 +111,20 @@ const ELEMENTS: ElementSet[] = [
     longnode: 131.78635853,   longnodeDot: -0.00606302,
     b: -0.00041348, c: 0.68346318, s: -0.10162547, f: 7.67025000,
   },
-  // Pluto. Standish & Williams 2010 J2000 mean elements + linear rates.
-  // JPL removed Pluto from its approx_pos.html table when the IAU
-  // reclassified it; values below are the canonical pre-removal row,
-  // also reproduced in NASA's planetary fact sheet derivation. We
-  // accept linear-element validity (~few centuries of arcsec accuracy)
-  // and skip the Standish 1992 cubic 3:2-resonance correction — at
-  // billboarded-disc render scale the residual is invisible.
+  // Pluto. JPL removed Pluto from approx_pos.html at the IAU
+  // reclassification; this is the pre-removal Table 2a row plus its
+  // Table 2b b term, valid over the same 3000 BC – 3000 AD window the
+  // model clock spans. The widely reproduced Standish & Williams
+  // linear-elements row is a few-centuries fit that reaches tens of AU
+  // of error at the clamp bound — do not substitute it.
   {
-    a: 39.48211675,   aDot: -0.00031596,
-    e: 0.24882730,    eDot:  0.00005170,
-    I: 17.14001206,   IDot:  0.00004818,
-    L: 238.92903833,  LDot:  145.20780515,
-    longperi: 224.06891629,   longperiDot: -0.04062942,
-    longnode: 110.30393684,   longnodeDot: -0.01183482,
-    b: 0, c: 0, s: 0, f: 0,
+    a: 39.48686035,   aDot:  0.00449751,
+    e: 0.24885238,    eDot:  0.00006016,
+    I: 17.14104260,   IDot:  0.00000501,
+    L: 238.96535011,  LDot:  145.18042903,
+    longperi: 224.09702598,   longperiDot: -0.00968827,
+    longnode: 110.30167986,   longnodeDot: -0.00809981,
+    b: -0.01262724, c: 0, s: 0, f: 0,
   },
 ];
 

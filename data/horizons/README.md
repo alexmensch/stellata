@@ -33,11 +33,17 @@ pins each moon's parent-relative on-sky position angle + separation
 through the production chain (the defect class it exists to catch:
 truncated mean motions scrambling orbital phase).
 
+A fourth table, `planet-vector-truth.tsv`, freezes **heliocentric
+ecliptic state vectors** rather than an on-sky direction — see its own
+section below. It is the only table here that reaches outside the
+1800–2050 window the RA/Dec epochs sit in.
+
 ## Provenance
 
 - Source: JPL Horizons API (`https://ssd.jpl.nasa.gov/api/horizons.api`),
   ephemeris DE441.
-- Retrieved: 2026-07-02.
+- Retrieved: 2026-07-02 (RA/Dec + sub-observer tables), 2026-07-26
+  (`planet-vector-truth.tsv`).
 - Query shape per body: `EPHEM_TYPE=OBSERVER`, `CENTER='500@399'`
   (geocentric), `QUANTITIES='1'` (astrometric ICRF RA/Dec),
   `ANG_FORMAT='DEG'`, `TLIST` = the three JDs below, `TLIST_TYPE='JD'`.
@@ -62,6 +68,37 @@ Astrometric (light-time-corrected) rather than geometric positions:
 the difference is bounded by ~0.03° (Mercury), far under the corpus
 tolerance, and astrometric is Horizons' default high-fidelity
 observer quantity.
+
+## `planet-vector-truth.tsv`
+
+| Column | Meaning |
+|---|---|
+| `body` | Lowercase name matching `PlanetName` in `ephemeris.ts`. |
+| `jd_tdb` | Julian Date, **TDB**. |
+| `x_au` / `y_au` / `z_au` | Heliocentric position, AU, **J2000 ecliptic** axes. |
+
+Consumed by
+`src/client/solar-system/ephemerides/vector-truth.test.ts`, which pins
+the element evaluation against these vectors directly — no clock, no
+ecliptic→ICRS rotation, no light-time. Three deliberate differences
+from the RA/Dec tables:
+
+- **Barycentre targets, not body centres** (`1`…`9`). Standish's
+  elements fit the barycentric orbits, and `earth` is the Earth/Moon
+  barycentre the ephemeris actually resolves. The body-vs-barycentre
+  offset is ≤1.4e-5 AU (Pluto, the largest), three orders under the
+  corpus tolerance.
+- **`jd_tdb`, and the consumer feeds it straight in** as
+  `T = (jd − 2451545.0)/36525`. The RA/Dec corpus goes through the
+  clock; this one deliberately does not, so a timescale change can
+  never move these rows.
+- **Geometric, not astrometric.** There is no observer.
+
+Epochs: JD 807920.0 (Julian year −2500) and JD 2780270.0 (year 2900) —
+one near each end of the model clock's 3000 BC – 3000 AD clamp, which
+no other corpus here reaches. Query shape: `EPHEM_TYPE=VECTORS`,
+`CENTER='500@10'`, `REF_PLANE='ECLIPTIC'`, `VEC_TABLE='1'`,
+`OUT_UNITS='AU-D'`, `CSV_FORMAT='YES'`, `TLIST` = the two JDs.
 
 ## Refresh
 

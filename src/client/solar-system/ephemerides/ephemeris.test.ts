@@ -36,8 +36,8 @@ describe('ELEMENTS table', () => {
     }
   });
 
-  it('inner planets + Pluto have zero perturbation terms (b/c/s/f)', () => {
-    for (const i of [0, 1, 2, 3, 8]) {
+  it('inner planets have zero perturbation terms (b/c/s/f)', () => {
+    for (const i of [0, 1, 2, 3]) {
       expect(ELEMENTS[i].b).toBe(0);
       expect(ELEMENTS[i].c).toBe(0);
       expect(ELEMENTS[i].s).toBe(0);
@@ -51,6 +51,14 @@ describe('ELEMENTS table', () => {
       // outer from inner planets in the table.
       expect(ELEMENTS[i].f).not.toBe(0);
     }
+  });
+
+  it('Pluto carries the quadratic term alone — Table 2b gives it no c/s/f', () => {
+    const pluto = ELEMENTS[PLANET_ORDER.indexOf('pluto')];
+    expect(pluto.b).toBe(-0.01262724);
+    expect(pluto.c).toBe(0);
+    expect(pluto.s).toBe(0);
+    expect(pluto.f).toBe(0);
   });
 });
 

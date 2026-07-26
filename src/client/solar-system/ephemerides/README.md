@@ -35,6 +35,13 @@ src/client/solar-system/ephemerides/
                                   ecliptic→ICRS chain vs JPL Horizons
                                   RA/Dec frozen in data/horizons/, plus
                                   solstice/equinox mirror detectors.
+  vector-truth.test.ts            Heliocentric ecliptic positions vs frozen
+                                  Horizons state vectors at deep epochs
+                                  outside the clock's populated window —
+                                  the only corpus that reaches the clamp
+                                  bounds. Epochs are JD TDB fed straight to
+                                  the element evaluation, so neither the
+                                  clock nor a frame rotation enters.
   moon-sky-truth.test.ts          Moon half of the corpus: every major
                                   moon's parent-relative on-sky position
                                   angle + separation vs Horizons at four
@@ -45,14 +52,29 @@ src/client/solar-system/ephemerides/
 ## Planet ephemeris
 
 `ephemeris.ts` implements the **JPL Standish 1992 Keplerian-elements
-approximation** with the cubic Jupiter–Neptune correction terms
-(Table 2a/2b inlined). Sub-arcminute accuracy 3000 BC – 3000 AD,
-which is overkill for billboarded discs that floor at ~2 px regardless
-of zoom. VSOP87 was rejected: the precision difference is invisible at
-user-reachable framings and the dependency cost was not worth it.
-Deep-time never arises — the model clock clamps to the Standish window
-(`../time/README.md`), so no reachable `t` needs a
-higher-precision ephemeris.
+approximation** with the cubic Jupiter–Pluto correction terms
+(Table 2a/2b inlined), valid over the whole 3000 BC – 3000 AD span the
+model clock clamps to (`../time/README.md`).
+
+**It is not sub-arcminute, and the error is not invisible.** Standish's
+published budget for the Table 2a elements
+(`ssd.jpl.nasa.gov/planets/approx_pos.html` § Accuracy) reaches
+λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at Uranus;
+measured against DE441 the giants sit at 0.05–0.14 AU across the clamp
+and 0.05–0.06 AU in 1900–2100. Whether that shows depends on viewing
+distance, not on eye discrimination from Sol (CLAUDE.md § Camera-anywhere):
+at Uranus focus the camera stands well inside 0.06 AU of the planet.
+`vector-truth.test.ts` holds each body to that published budget at both
+clamp bounds.
+
+Pluto's row is the pre-removal Table 2a one **plus** its Table 2b `b`
+term. The widely reproduced linear-elements row is Standish's Table 1
+(1800–2050) — it holds 0.016 AU near now but grows quadratically to
+~25 AU at the clamp bound, on the wrong side of the orbit, and the
+model clock reaches there.
+
+VSOP87 was rejected as a runtime dependency: ~500 KB of coefficients
+plus a new solver, for accuracy a frozen table gets more cheaply.
 
 Returned positions are heliocentric **ecliptic** parsecs, not ICRS —
 the rotation onto ICRS happens in the caller via the per-host
