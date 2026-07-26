@@ -33,6 +33,6 @@ describe('formatProbeHover', () => {
       signalLost: true,
       lastContactT: Date.UTC(2003, 0, 23) / 1000,
     });
-    expect(p.lines[3]).toBe('Signal Lost 2003-01-23');
+    expect(p.lines[3]).toBe('Signal Lost 2003-Jan-23');
   });
 });

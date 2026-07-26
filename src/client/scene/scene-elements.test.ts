@@ -41,7 +41,9 @@ describe('floorPermits', () => {
 
 describe('visibleSet — cumulative floor derivation', () => {
   it('realistic cumulative sizes are pinned', () => {
-    expect(visibleSet('physical', 'realistic').size).toBe(5);
+    // 'physical' is the naked-eye tier: stars, planet bodies, the MW band,
+    // LG emission. Nothing else an unaided eye at the camera would see.
+    expect(visibleSet('physical', 'realistic').size).toBe(4);
     expect(visibleSet('representational', 'realistic').size).toBe(15);
     expect(visibleSet('all', 'realistic').size).toBe(22);
   });
@@ -73,12 +75,18 @@ describe('visibleSet — cumulative floor derivation', () => {
     expect(visibleSet('all', 'realistic').has('planetLabels')).toBe(true);
   });
 
-  it('probe markers are physical, their trails representational, names labels', () => {
+  // The naked-eye tier holds only what an unaided eye at the camera would
+  // actually see. A metre-scale spacecraft subtends nothing at any range,
+  // so its glyph is a representation of an object rather than the object —
+  // markers enter with their trails, one tier above the bodies.
+  it('probe markers and trails are both representational, names labels', () => {
     const phys = visibleSet('physical', 'realistic');
-    expect(phys.has('probeMarkers')).toBe(true);
+    expect(phys.has('probeMarkers')).toBe(false);
     expect(phys.has('probeTrails')).toBe(false);
-    expect(visibleSet('representational', 'realistic').has('probeTrails')).toBe(true);
-    expect(visibleSet('representational', 'realistic').has('probeLabels')).toBe(false);
+    const rep = visibleSet('representational', 'realistic');
+    expect(rep.has('probeMarkers')).toBe(true);
+    expect(rep.has('probeTrails')).toBe(true);
+    expect(rep.has('probeLabels')).toBe(false);
     expect(visibleSet('all', 'realistic').has('probeLabels')).toBe(true);
     for (const id of ['probeMarkers', 'probeTrails', 'probeLabels'] as const) {
       expect(elementPermitted(id, 'all', 'chart')).toBe(false);

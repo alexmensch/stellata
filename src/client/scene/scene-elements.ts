@@ -26,7 +26,6 @@ export type SceneElementId =
   // Physical tier.
   | 'stars'
   | 'planetBodies'
-  | 'probeMarkers'
   | 'milkyWayBand'
   | 'milkyWayIsobar'
   | 'lgEmissionGlow'
@@ -35,6 +34,7 @@ export type SceneElementId =
   | 'lgWireframes'
   | 'orbitRings'
   | 'binaryOrbitRings'
+  | 'probeMarkers'
   | 'probeTrails'
   | 'heliopauseShell'
   | 'localBubbleShell'
@@ -68,7 +68,6 @@ export interface ElementFloors {
 export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   stars:                     { realistic: 'physical',         chart: 'physical' },
   planetBodies:              { realistic: 'physical',         chart: 'physical' },
-  probeMarkers:              { realistic: 'physical',         chart: 'never' },
   milkyWayBand:              { realistic: 'physical',         chart: 'never' },
   milkyWayIsobar:            { realistic: 'never',            chart: 'physical' },
   lgEmissionGlow:            { realistic: 'physical',         chart: 'never' },
@@ -76,6 +75,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   lgWireframes:              { realistic: 'representational', chart: 'never' },
   orbitRings:                { realistic: 'representational', chart: 'never' },
   binaryOrbitRings:          { realistic: 'representational', chart: 'never' },
+  probeMarkers:              { realistic: 'representational', chart: 'never' },
   probeTrails:               { realistic: 'representational', chart: 'never' },
   heliopauseShell:           { realistic: 'representational', chart: 'never' },
   localBubbleShell:          { realistic: 'representational', chart: 'never' },

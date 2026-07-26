@@ -35,11 +35,14 @@ const valueOf = (v: string | (() => string) | undefined): string =>
 describe('createProbeFocusProvider', () => {
   beforeEach(() => setUnit('pc'));
 
-  it('leads with the identity line and the mission summary line', () => {
+  // The card is rows only — no mission narrative. Prose doesn't earn space
+  // on a card sized for glanceable measurements, and the roster's mission
+  // summary is a sentence, not a field.
+  it('leads with the identity line and carries no narrative', () => {
     const card = makeProvider().format(0);
     expect(card.name).toBe('Pioneer 10');
     expect(card.identityLines).toEqual(['Deep-space probe']);
-    expect(card.lines).toEqual([PIONEER_10.mission]);
+    expect(card.lines).toEqual([]);
   });
 
   it('keeps the camera-frame Distance row distinct from the Sol-relative one', () => {
@@ -53,8 +56,8 @@ describe('createProbeFocusProvider', () => {
   it('reads speed from the sampler velocity, and dates a lost signal', () => {
     const rows = rowsOf(makeProvider());
     expect(valueOf(rows.get('Speed'))).toBe('11.94 km/s');
-    expect(valueOf(rows.get('Launched'))).toBe('1972-03-03');
-    expect(valueOf(rows.get('Signal'))).toBe('Lost 2003-01-23');
+    expect(valueOf(rows.get('Launched'))).toBe('1972-Mar-03');
+    expect(valueOf(rows.get('Signal'))).toBe('Lost 2003-Jan-23');
   });
 
   // Distance / From Sol / Speed / Signal are all functions of the model

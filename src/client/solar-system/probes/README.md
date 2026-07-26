@@ -7,12 +7,17 @@ contract, provenance, and the frame/unit facts live in
 `../../../../data/probes/README.md`; the fetch pipeline in
 `../../../../scripts/probes/README.md`.
 
-Probes are **physical objects, not annotations**: markers render
-regardless of which object the camera is focused on, exactly like planet
-bodies, and their motion comes wholly from a `t` sampler. They are full
-interaction citizens — a third hard focus kind alongside stars and
-planets (§ Focus), searchable, hoverable, clickable, pinnable, and valid
-observe anchors.
+A probe is a real object rendered by a **representation** of one: the
+spacecraft subtends no angle at any range, so what draws is a glyph
+standing in for it, and the declutter cycle classes markers accordingly
+(§ Declutter and chart mode). What the marker inherits from a physical
+body is that it is **not focus-gated** — it draws regardless of which
+object the camera is focused on, and its motion comes wholly from a `t`
+sampler. Only the trail gates on focus.
+
+Probes are full interaction citizens — a third hard focus kind alongside
+stars and planets (§ Focus), searchable, hoverable, clickable, pinnable,
+and valid observe anchors.
 
 ## Files in this area
 
@@ -184,12 +189,20 @@ an unidentifiable dot. Labels show whenever the marker is drawn and the
 
 ## Declutter and chart mode
 
-Three elements in `../../scene/scene-elements.ts`: `probeMarkers`
-(`physical`), `probeTrails` (`representational`), `probeLabels` (`all`) —
-the same tiering as planet bodies / orbit rings / planet labels. All three
-are `never` in **chart mode**: the chart style has its own glyph vocabulary
-and there is no probe glyph in it, so both layers hide rather than paint a
-realistic-style diamond onto the paper aesthetic.
+Three elements in `../../scene/scene-elements.ts`: `probeMarkers` and
+`probeTrails` both `representational`, `probeLabels` `all`.
+
+**Markers are not in the `physical` tier, unlike planet bodies.** That
+tier is the naked-eye scene — what an unaided eye at the camera would
+actually see — and a metre-scale spacecraft is below it at every range in
+the model. The diamond is a representation of an object, not the object,
+so it enters with its trail. The consequence to know: one step down the
+declutter cycle takes markers, trails, and labels all away, where a
+planet body would have survived to the bottom.
+
+All three are `never` in **chart mode**: the chart style has its own
+glyph vocabulary and there is no probe glyph in it, so the layers hide
+rather than paint a realistic-style diamond onto the paper aesthetic.
 
 ## Coherence, not precision
 

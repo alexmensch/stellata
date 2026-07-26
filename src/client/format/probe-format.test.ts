@@ -26,8 +26,17 @@ describe('formatProbeSpeed', () => {
 });
 
 describe('formatProbeLaunch', () => {
-  it('keeps the date part of the roster launch instant', () => {
-    expect(formatProbeLaunch('1977-09-05T12:56:00Z')).toBe('1977-09-05');
+  // A numeric month reads day-first or day-last depending on the reader's
+  // convention; the 3-letter name can't be misread either way.
+  it('names the month between ISO year and day', () => {
+    expect(formatProbeLaunch('1977-09-05T12:56:00Z')).toBe('1977-Sep-05');
+    expect(formatProbeLaunch('1977-08-20T14:29:00Z')).toBe('1977-Aug-20');
+  });
+
+  it('reads the launch instant in UTC, not the runner\'s zone', () => {
+    // 1972-03-03T01:49Z is still 1972-03-02 in the Americas — a local-zone
+    // read would date Pioneer 10's launch a day early west of Greenwich.
+    expect(formatProbeLaunch('1972-03-03T01:49:00Z')).toBe('1972-Mar-03');
   });
 });
 
@@ -43,6 +52,6 @@ describe('formatProbeSignal', () => {
   });
 
   it('dates the loss once the clock has passed it', () => {
-    expect(formatProbeSignal(true, Date.UTC(2003, 0, 23) / 1000)).toBe('Lost 2003-01-23');
+    expect(formatProbeSignal(true, Date.UTC(2003, 0, 23) / 1000)).toBe('Lost 2003-Jan-23');
   });
 });

@@ -128,14 +128,16 @@ so the whole unit stays card-sized regardless of pin count.
   provenance, read from the registered `ShellInstance`
   (`../fresnel-shell/README.md`). Non-luminous, so no magnitude rows.
 - `probe-focus-provider.ts` — tier-2 deep-space-probe rows: "Deep-space
-  probe" identity line, live camera distance, heliocentric distance
-  (AU + light-hours), heliocentric speed, launch date, signal state, and
-  the mission summary as a full-width line. Non-luminous, so no
-  magnitude row. Every clock- or camera-driven row is LIVE — including
-  Signal, since scrubbing back before last contact restores it. Rows
-  read the marker field's single per-frame sample, and the two
-  Sol-relative figures share `../format/probe-format.ts` with the hover
-  card. See the frame carve-out below.
+  probe" identity line, then live camera distance, heliocentric distance
+  (AU + light-hours), heliocentric speed, launch date, signal state.
+  Non-luminous, so no magnitude row; **rows only, no narrative** — the
+  roster's mission summary is a sentence, and prose doesn't earn space
+  on a card sized for glanceable measurements. Every clock- or
+  camera-driven row is LIVE — including Signal, since scrubbing back
+  before last contact restores it. Rows read the marker field's single
+  per-frame sample, and the two Sol-relative figures share
+  `../format/probe-format.ts` with the hover card. See the frame
+  carve-out below.
 
 ## Placement
 

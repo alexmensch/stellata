@@ -66,7 +66,7 @@ export function createProbeFocusProvider(
         name: traj.label,
         identityLines: ['Deep-space probe'],
         rows,
-        lines: [traj.mission],
+        lines: [],
       };
     },
   };
