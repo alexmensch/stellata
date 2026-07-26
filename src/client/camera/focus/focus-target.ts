@@ -8,8 +8,9 @@ import * as THREE from 'three';
  *  target's idx is the PlanetBodyField flat global instance index;
  *  (host, planet-within-host) resolve through the field's attach
  *  table. A shell target's idx is the `SHELL_KEYS` index
- *  (`fresnel-shell/shell-registry.ts`). */
-export type TargetKind = 'star' | 'cloud' | 'lg' | 'planet' | 'shell';
+ *  (`fresnel-shell/shell-registry.ts`). A probe target's idx is the
+ *  ProbeField roster index (`solar-system/probes/probe-field.ts`). */
+export type TargetKind = 'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe';
 
 /** A (kind, index) reference to one focusable object. The focus and
  *  distance-vector slots on FocusController each hold one of these —
@@ -25,13 +26,13 @@ export function targetsEqual(a: Target | null, b: Target | null): boolean {
   return a.kind === b.kind && a.idx === b.idx;
 }
 
-/** Hard focus kinds (star / planet) recentre the floating origin onto
- *  the object and drop the orbit floor to a per-body physical solve;
- *  they're also the only valid observe anchors (the camera parks
+/** Hard focus kinds (star / planet / probe) recentre the floating origin
+ *  onto the object and drop the orbit floor to a per-object physical
+ *  solve; they're also the only valid observe anchors (the camera parks
  *  exactly at the object, which needs the float32-clean local frame a
- *  recentre establishes). Soft kinds (cloud / LG) do neither. */
+ *  recentre establishes). Soft kinds (cloud / LG / shell) do neither. */
 export function isHardTarget(t: Target | null): boolean {
-  return t !== null && (t.kind === 'star' || t.kind === 'planet');
+  return t !== null && (t.kind === 'star' || t.kind === 'planet' || t.kind === 'probe');
 }
 
 /** Per-kind geometry legs the kind-agnostic shell surface dispatches

@@ -57,4 +57,5 @@ export type HoverKind =
   | 'planet'
   | 'local-group'
   | 'cloud'
-  | 'shell';
+  | 'shell'
+  | 'probe';
