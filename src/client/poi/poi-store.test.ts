@@ -21,6 +21,7 @@ function makeStore() {
       planet: (idx) => idx >= 0 && idx < ATTACHED_PLANETS,
       lg: (idx) => idx >= 0 && idx < LG_COUNT,
       shell: () => false,
+      probe: () => false,
       cloud: () => false,
     },
     onChange,

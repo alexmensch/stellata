@@ -9,6 +9,7 @@ import type { LocalGroupLayer } from '../../local-group/local-group';
 import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import { pickShellSilhouette } from '../../fresnel-shell/shell-pick';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
+import { PROBE_MARKER_PX, type ProbeField } from '../../solar-system/probes/probe-field';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';
@@ -18,6 +19,7 @@ import {
   pickFromCandidates,
   pickScore,
   sortedDistRange,
+  type PickCandidate,
   type PickResult,
   type StarPickCandidate,
 } from './star-geometry';
@@ -38,6 +40,7 @@ export interface PickerDeps {
   getLocalGroupLayer: () => LocalGroupLayer | null;
   getShells: () => ShellRegistry;
   getPlanetBodyField: () => PlanetBodyField;
+  getProbeField: () => ProbeField;
   // Floating-origin offset — picks for objects in absolute (catalog)
   // space (clouds, Local Group) need to project into the local frame
   // the camera lives in. Read each call; recentre mutates it in-place.
@@ -123,6 +126,41 @@ export class Picker {
     const flat = this.deps.getPlanetBodyField().instanceIndexOf(hit.hostStarIdx, hit.idx);
     if (flat === null) return null;
     return { ...hit, idx: flat };
+  }
+
+  /** Deep-space probe hit: the nearest-to-cursor marker whose glyph is
+   *  drawn this frame. Mirrors the marker draw predicate exactly (the
+   *  field's own per-frame `visible` verdict) and takes its hit radius
+   *  from the glyph's fixed pixel size — a probe is never focus-gated on
+   *  the pick side, unlike its trail. Prime tier when the cursor is
+   *  inside the glyph, fallback within the threshold. */
+  pickProbeHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
+    const field = this.deps.getProbeField();
+    const rect = this.deps.domElement.getBoundingClientRect();
+    const cursorX = clientX - rect.left;
+    const cursorY = clientY - rect.top;
+    const camPos = this.deps.camera.position;
+    const hitRadius = Math.max(PROBE_MARKER_PX * 0.5, MIN_DISC_HIT_RADIUS_PX);
+    const candidates: Array<PickCandidate & { cameraDistancePc: number }> = [];
+    for (let idx = 0; idx < field.probeCount(); idx++) {
+      const sample = field.sampleFor(idx);
+      if (sample === null || !sample.visible) continue;
+      const screen = projectToScreen(sample.localPc, this.deps.camera, rect.width, rect.height);
+      if (!screen) continue;
+      candidates.push({
+        idx,
+        pxDist: Math.hypot(cursorX - screen[0], cursorY - screen[1]),
+        hitRadius,
+        cameraDistancePc: camPos.distanceTo(sample.localPc),
+      });
+    }
+    const r = pickFromCandidates(candidates, pixelThreshold);
+    if (r === null) return null;
+    return {
+      idx: r.candidate.idx,
+      cameraDistancePc: r.candidate.cameraDistancePc,
+      tier: r.tier,
+    };
   }
 
   // Returns null when the LG layer isn't attached (fresh checkout

@@ -12,6 +12,7 @@ import type { EventBus } from '../../util/event-bus';
 const star = (idx: number): Target => ({ kind: 'star', idx });
 const planet = (idx: number): Target => ({ kind: 'planet', idx });
 const lg = (idx: number): Target => ({ kind: 'lg', idx });
+const probe = (idx: number): Target => ({ kind: 'probe', idx });
 
 interface Harness {
   input: InputController;
@@ -39,6 +40,9 @@ interface Harness {
     pickLgResult: number | null;
     pickLgDistancePc: number;
     pickLgTier: 'prime' | 'fallback';
+    pickProbeResult: number | null;
+    pickProbeDistancePc: number;
+    pickProbeTier: 'prime' | 'fallback';
     warpActive: boolean;
     aimActive: boolean;
     observeTransitionActive: boolean;
@@ -69,6 +73,9 @@ function makeHarness(): Harness {
     pickLgResult: null as number | null,
     pickLgDistancePc: 1,
     pickLgTier: 'prime' as 'prime' | 'fallback',
+    pickProbeResult: null as number | null,
+    pickProbeDistancePc: 1,
+    pickProbeTier: 'prime' as 'prime' | 'fallback',
     warpActive: false,
     aimActive: false,
     observeTransitionActive: false,
@@ -120,6 +127,13 @@ function makeHarness(): Harness {
             idx: state.pickLgResult,
             cameraDistancePc: state.pickLgDistancePc,
             tier: state.pickLgTier,
+          }
+        : null),
+      pickProbeHit: () => (state.pickProbeResult !== null
+        ? {
+            idx: state.pickProbeResult,
+            cameraDistancePc: state.pickProbeDistancePc,
+            tier: state.pickProbeTier,
           }
         : null),
       pickShellHit: () => null,
@@ -263,6 +277,7 @@ describe('InputController.applyObjectClick × real PoiStore — full ladder walk
         planet: (idx) => idx >= 0 && idx < 9,
         lg: (idx) => idx >= 0 && idx < 4,
         shell: () => false,
+        probe: () => false,
         cloud: () => false,
       },
       onChange: () => {},
@@ -532,6 +547,45 @@ describe('InputController Local Group clicks — navigate mode', () => {
     (input as unknown as { dispatchDoubleClick(x: number, y: number): void })
       .dispatchDoubleClick(10, 20);
     expect(deps.flyTo).toHaveBeenCalledWith(lg(2));
+  });
+});
+
+describe('InputController probe clicks — navigate mode', () => {
+  it('single click on a probe with nothing focused travels to it', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickProbeResult = 3;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(probe(3));
+    expect(emitted).toEqual([]);
+  });
+
+  it('single click on a probe while a star is focused PINS it', () => {
+    const { input, state, deps } = makeHarness();
+    state.focused = star(0);
+    state.pickProbeResult = 3;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.togglePoi).toHaveBeenCalledWith(probe(3));
+    expect(deps.flyTo).not.toHaveBeenCalled();
+  });
+
+  // The probe marker draws over the planet glare it overlaps, so the
+  // ladder has to resolve the same way the eye does.
+  it('probe vs planet overlap: the nearer prime hit wins', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickPlanetResult = 4;
+    state.pickPlanetDistancePc = 100;
+    state.pickProbeResult = 3;
+    state.pickProbeDistancePc = 1;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(probe(3));
+  });
+
+  it('double click on a probe travels to it', () => {
+    const { input, state, deps } = makeHarness();
+    state.pickProbeResult = 3;
+    (input as unknown as { dispatchDoubleClick(x: number, y: number): void })
+      .dispatchDoubleClick(10, 20);
+    expect(deps.flyTo).toHaveBeenCalledWith(probe(3));
   });
 });
 
