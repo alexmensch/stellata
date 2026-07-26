@@ -7,7 +7,8 @@ build scripts, tests, and shader uniforms.
 
 - `astronomy-constants.ts` — `AU_PER_PC` / `AU_PC` / `AU_KM` / `KM_PC` /
   `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` / `ARCSEC_TO_RAD` /
-  `J2000_JD` / `J2000_OBLIQUITY_RAD` / `DAYS_PER_JULIAN_YEAR`. Import from here
+  `J2000_JD` / `J2000_OBLIQUITY_RAD` / `DAYS_PER_JULIAN_YEAR` /
+  `LIGHT_TIME_PER_AU_S`. Import from here
   rather than re-derive — drift between sites is the failure mode this module
   is designed to prevent.
 - `equatorial-basis.ts` — the ICRS tangent basis every sky-frame

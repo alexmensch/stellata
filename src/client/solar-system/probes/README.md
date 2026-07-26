@@ -208,16 +208,28 @@ rather than paint a realistic-style diamond onto the paper aesthetic.
 
 `probe-encounter-coherence.test.ts` samples each probe at its known
 closest-approach epochs and compares against the production planet
-ephemeris, within 0.05 AU. It is a coherence claim: right probe, right
+ephemeris, within 0.011 AU. It is a coherence claim: right probe, right
 planet, right frame, right units.
 
-**That bound is set by the planet side, not the probe side.** The trajectory
-grid holds 1e-5 AU (`../../../../data/probes/README.md` § Sampling), while
-`../ephemerides/` sits 0.002–0.043 AU off Horizons across these epochs —
-Saturn ~0.025, Uranus ~0.043 — and the corpus's epochs are calendar dates
-rather than the true closest-approach instants, worth another ~0.01 AU at
-flyby speeds. Tightening past 0.05 AU would therefore be a claim about
-`../ephemerides/`, and no re-fetch of the probe data can move it.
+**That bound is now set by the corpus's own epochs, not by either dataset.**
+Both sides sit near 1e-5 AU — the trajectory grid
+(`../../../../data/probes/README.md` § Sampling) and, since the Horizons
+element tables landed, `../ephemerides/` too — but the corpus's epochs are
+calendar midnights rather than the true closest-approach instants, and at
+flyby speeds the intervening 0–12 h is 0.002–0.010 AU of real motion.
+Tightening past 0.011 AU would only pin where midnight falls.
+
+**The corpus's one tie to a real observation** is the other assertion: the
+minimum rendered separation over ±2 days, against the closest approach JPL
+Horizons itself reports with the spacecraft centred on the planet — which
+reproduces each mission's published above-cloud-tops figure to under a
+percent. The spacecraft SPKs and the DE441 planetary ephemeris are
+independent fits to radio tracking, so agreement there checks both datasets
+against reality rather than against each other. Nine of the ten land within
+5%; Voyager 2 at Neptune is 15%, which sets the bound, because its SPK
+before 1989-Aug-29 is a **patched-conic mission-design trajectory** (the
+Horizons `-32` header says so in as many words) and the Neptune pass sits
+four days inside that section's end.
 
 Two assertions in the file do pin the probe side, and neither touches the
 ephemeris: each grid's finest gap is minutes and its coarsest is months

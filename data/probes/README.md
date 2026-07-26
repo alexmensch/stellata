@@ -78,9 +78,11 @@ a refresh still diffs sample-by-sample in git.
   **milliseconds**. The model clock `t` is Unix *seconds*; the runtime
   loader divides. The `Ms` suffix is load-bearing — an undecorated
   `launchUnix` reads as seconds and is off by 1000×.
-- `jd` — Julian Date, **TDB**. The runtime's clock is UTC; the offset
-  is ~69 s, which at 17 km/s is 1200 km ≈ 8e-6 AU — five orders of
-  magnitude below anything visible, so no conversion is applied.
+- `jd` — Julian Date, **TDB**. The runtime's clock is UTC, so the loader
+  converts through `jdTdbToT` (`src/client/solar-system/time/README.md`
+  § Timescales). At 17 km/s the 69 s offset is 1,200 km ≈ 8e-6 AU: below
+  anything visible, but no longer below the planet ephemeris it gets
+  compared against.
 - `x, y, z` — heliocentric position, **AU**, **ICRS equatorial** axes
   (`REF_PLANE=FRAME`). Same axes as `catalog.bin`, so the runtime
   converts AU → pc and adds Sol's position with **no rotation**. This
@@ -126,12 +128,14 @@ missed by 0.003–0.07 AU.
 
 Two consequences worth knowing before reading a number off this data:
 
-- **The planet ephemeris is now the larger error.** Across the ten
-  encounter epochs, `src/client/solar-system/ephemerides/` sits
-  0.002–0.043 AU from Horizons (Saturn ~0.025, Uranus ~0.043) — three
-  orders above the probe grid. Any probe-vs-planet distance measured in
-  this codebase is a statement about the ephemeris, not about these
-  files. It is what sets the coherence test's tolerance.
+- **The planet ephemeris is no longer the larger error.** It was
+  0.002–0.06 AU from Horizons across the encounter epochs; the frozen
+  element tables in `data/ephemerides/` brought it to ~5e-6 AU there, at
+  parity with this grid. What limits a probe-vs-planet distance now is
+  these files: the Voyager SPKs before 1989-Aug-29 are **patched-conic
+  mission-design trajectories** rather than reconstructions (each
+  Horizons header says so), and the rendered closest approaches sit
+  0.2–15% off the published ones as a result.
 - **Fourteen SPK discontinuities.** JPL splices cruise and encounter
   solutions, and the seam steps sideways: 88 s of model time carries the
   probe 2e-5 to 1.5e-3 AU (3,000–230,000 km) at Pioneer 10 ×4,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AU_PC } from '../../util/astronomy-constants';
-import { jdeToT, T_CLAMP_MAX_S, tToJDE } from '../time/time';
+import { jdTdbToT, T_CLAMP_MAX_S, tToJDE } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import {
   buildProbeTrajectory,
@@ -50,7 +50,7 @@ describe('buildProbeTrajectory', () => {
     const traj = buildProbeTrajectory(makeFile());
     expect(traj.posPc[3]).toBeCloseTo(AU_PC, 12);
     expect(traj.velPcPerSec[0]).toBeCloseTo(AU_PC / STEP_DAYS / 86400, 20);
-    expect(traj.sampleT[0]).toBe(jdeToT(FIRST_JD));
+    expect(traj.sampleT[0]).toBe(jdTdbToT(FIRST_JD));
   });
 
   it('reads lastContact as seconds from the wire file milliseconds', () => {
@@ -87,7 +87,7 @@ describe('probeStateAt', () => {
   const traj = buildProbeTrajectory(makeFile());
 
   it('gates on the first sample, not the launch instant', () => {
-    expect(probeStateAt(traj, jdeToT(LAUNCH_JD), out)).toBe(false);
+    expect(probeStateAt(traj, jdTdbToT(LAUNCH_JD), out)).toBe(false);
     expect(probeStateAt(traj, traj.sampleT[0] - 1, out)).toBe(false);
     expect(probeStateAt(traj, traj.sampleT[0], out)).toBe(true);
   });

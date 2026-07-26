@@ -3,7 +3,7 @@
 
 import { PROBE_SAMPLE_STRIDE, type ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import { AU_PC } from '../../util/astronomy-constants';
-import { jdeToT } from '../time/time';
+import { jdTdbToT } from '../time/time';
 
 const SECONDS_PER_DAY = 86400;
 
@@ -43,7 +43,9 @@ export function probeSampleCount(traj: ProbeTrajectory): number {
 }
 
 /** Parse one wire file into typed arrays, converting AU → pc and AU/day →
- *  pc/s at load so every downstream reader works in scene units. */
+ *  pc/s at load so every downstream reader works in scene units. The wire
+ *  `jd` is TDB; at 17 km/s reading it as the UTC clock's own scale would
+ *  place each sample 1,200 km late. */
 export function buildProbeTrajectory(file: ProbeTrajectoryFile): ProbeTrajectory {
   const n = file.samples.length;
   if (n === 0) throw new Error(`Probe ${file.id} carries no samples`);
@@ -55,7 +57,7 @@ export function buildProbeTrajectory(file: ProbeTrajectoryFile): ProbeTrajectory
     if (row.length !== PROBE_SAMPLE_STRIDE) {
       throw new Error(`Probe ${file.id} sample ${i} has ${row.length} columns`);
     }
-    sampleT[i] = jdeToT(row[0]);
+    sampleT[i] = jdTdbToT(row[0]);
     for (let c = 0; c < 3; c++) {
       posPc[i * 3 + c] = row[1 + c] * AU_PC;
       velPcPerSec[i * 3 + c] = (row[4 + c] * AU_PC) / SECONDS_PER_DAY;

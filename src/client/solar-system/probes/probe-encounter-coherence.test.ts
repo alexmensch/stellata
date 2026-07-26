@@ -2,13 +2,21 @@
 // vs the planet ephemeris at each closest approach, and vs the heliopause
 // boundary at the Voyager crossings. README.md § Coherence, not precision.
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { AU_PER_PC } from '../../util/astronomy-constants';
-import { getPlanetPositions, _resetCacheForTests, type PlanetName } from '../ephemerides/ephemeris';
+import { AU_PER_PC, KM_PC } from '../../util/astronomy-constants';
+import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
+import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
+import { buildElementTable, type PlanetElementTable } from '../ephemerides/element-table';
+import {
+  getPlanetPositions,
+  installPlanetElementTables,
+  _resetCacheForTests,
+  type PlanetName,
+} from '../ephemerides/ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import { HELIOPAUSE_APEX_SOL_PC } from '../heliopause/heliopause';
 import { probeTrajectoryFilename } from '../../../../scripts/probes/sync-probes-pure';
@@ -22,6 +30,20 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROBE_DIR = resolve(__dirname, '../../../../data/probes');
+const TABLE_DIR = resolve(__dirname, '../../../../data/ephemerides');
+
+// The runtime loads these lazily from public/; the corpus reads them off disk,
+// because every encounter epoch lands inside their window and it is the
+// production configuration the flythrough actually renders.
+beforeAll(() => {
+  const tables = new Map<PlanetName, PlanetElementTable>();
+  for (const target of ELEMENT_TARGETS) {
+    tables.set(target.id, buildElementTable(
+      JSON.parse(readFileSync(resolve(TABLE_DIR, `${target.id}.json`), 'utf-8')) as PlanetElementTableFile,
+    ));
+  }
+  installPlanetElementTables(tables);
+});
 
 // The same quaternion construction planet-body-field.attachHost and
 // OrbitRingsLayer build for Sol. The probe samples are already ICRS
@@ -33,15 +55,23 @@ const ECL_TO_ICRS = new THREE.Quaternion().setFromUnitVectors(
   ECLIPTIC_NORTH_POLE_ICRS.clone(),
 );
 
-// Closest-approach tolerance, AU. Set by the PLANET side: the ephemeris
-// series in ../ephemerides/ sits 0.002–0.043 AU off Horizons across these
-// epochs (Saturn ~0.025, Uranus ~0.043), while the probe grid holds 1e-5 AU.
-// The sampled epochs are also calendar dates rather than the true
-// closest-approach instants, which at flyby speeds is another ~0.01 AU.
-// This is a COHERENCE bound (right probe, right planet, right frame, right
-// units) — a frame or unit error blows it by tens of AU. Tightening it
-// further would be a claim about the planet ephemeris, not about probes.
-const ENCOUNTER_TOLERANCE_AU = 0.05;
+// Separation tolerance, AU, at the CALENDAR encounter dates below. Now set by
+// the epochs themselves rather than by either dataset: these are midnights,
+// the true closest approaches fall up to 12 h away, and at flyby speeds that
+// is 0.002–0.010 AU of real motion. Both sides sit near 1e-5 AU
+// (../ephemerides/README.md § Horizons element tables; data/probes/README.md
+// § Sampling), so tightening past this would only be pinning where midnight
+// happens to fall. Still a COHERENCE bound — right probe, right planet, right
+// frame, right units — and a frame error blows it by tens of AU.
+const ENCOUNTER_TOLERANCE_AU = 0.011;
+
+// Fractional agreement between the rendered closest approach and the SPK's
+// own, over a ±2-day scan. Set by Voyager 2 at Neptune, at 15%: its SPK before
+// 1989-Aug-29 is a **patched-conic mission-design trajectory** (the Horizons
+// -32 header says so), and the Neptune pass sits four days inside that
+// section's end, next to one of the fourteen splices data/probes/README.md
+// § Sampling lists. The other nine land within 5%.
+const CLOSEST_APPROACH_TOLERANCE = 0.16;
 
 /** What the fetch pipeline built each grid to hold, AU. */
 const CHORD_TOLERANCE_AU = 1e-5;
@@ -61,20 +91,29 @@ interface Encounter {
   /** Whether the pass bent the trajectory. New Horizons' Pluto flyby did
    *  not, and that is why its grid stays coarse there. */
   assist: boolean;
+  /** Closest approach to the planet's **centre**, km, as JPL Horizons itself
+   *  reports it with the spacecraft's SPK centred on the planet
+   *  (`CENTER='500@<planet>'`, scanned at 2 min). Each reproduces the mission
+   *  record's above-cloud-tops figure to under a percent, so this is a tie to
+   *  a real observation: the spacecraft SPKs and the DE441 planetary ephemeris
+   *  are independent fits to radio tracking, and the rendered minimum landing
+   *  on the published one checks both against reality rather than against each
+   *  other. See § Coherence in README.md. */
+  closestApproachKm: number;
 }
 
 // Epochs from each probe's Horizons header TIMELINE block.
 const ENCOUNTERS: readonly Encounter[] = [
-  { probe: 'pioneer10', planet: 'jupiter', utc: '1973-12-04T00:00:00Z', assist: true },
-  { probe: 'pioneer11', planet: 'jupiter', utc: '1974-12-03T00:00:00Z', assist: true },
-  { probe: 'pioneer11', planet: 'saturn', utc: '1979-09-01T00:00:00Z', assist: true },
-  { probe: 'voyager1', planet: 'jupiter', utc: '1979-03-05T00:00:00Z', assist: true },
-  { probe: 'voyager1', planet: 'saturn', utc: '1980-11-12T00:00:00Z', assist: true },
-  { probe: 'voyager2', planet: 'jupiter', utc: '1979-07-09T00:00:00Z', assist: true },
-  { probe: 'voyager2', planet: 'saturn', utc: '1981-08-25T00:00:00Z', assist: true },
-  { probe: 'voyager2', planet: 'uranus', utc: '1986-01-24T00:00:00Z', assist: true },
-  { probe: 'voyager2', planet: 'neptune', utc: '1989-08-25T00:00:00Z', assist: true },
-  { probe: 'newhorizons', planet: 'pluto', utc: '2015-07-14T00:00:00Z', assist: false },
+  { probe: 'pioneer10', planet: 'jupiter', utc: '1973-12-04T00:00:00Z', assist: true, closestApproachKm: 203122 },
+  { probe: 'pioneer11', planet: 'jupiter', utc: '1974-12-03T00:00:00Z', assist: true, closestApproachKm: 113514 },
+  { probe: 'pioneer11', planet: 'saturn', utc: '1979-09-01T00:00:00Z', assist: true, closestApproachKm: 80861 },
+  { probe: 'voyager1', planet: 'jupiter', utc: '1979-03-05T00:00:00Z', assist: true, closestApproachKm: 348436 },
+  { probe: 'voyager1', planet: 'saturn', utc: '1980-11-12T00:00:00Z', assist: true, closestApproachKm: 184031 },
+  { probe: 'voyager2', planet: 'jupiter', utc: '1979-07-09T00:00:00Z', assist: true, closestApproachKm: 721375 },
+  { probe: 'voyager2', planet: 'saturn', utc: '1981-08-25T00:00:00Z', assist: true, closestApproachKm: 160695 },
+  { probe: 'voyager2', planet: 'uranus', utc: '1986-01-24T00:00:00Z', assist: true, closestApproachKm: 107154 },
+  { probe: 'voyager2', planet: 'neptune', utc: '1989-08-25T00:00:00Z', assist: true, closestApproachKm: 29248 },
+  { probe: 'newhorizons', planet: 'pluto', utc: '2015-07-14T00:00:00Z', assist: false, closestApproachKm: 13680 },
 ];
 
 // Heliopause crossing epochs (Gurnett & Kurth 2013 / 2019) with the
@@ -121,12 +160,52 @@ function planetPositionAt(planet: PlanetName, utc: string): THREE.Vector3 {
   return new THREE.Vector3(p.x, p.y, p.z).applyQuaternion(ECL_TO_ICRS);
 }
 
+/** Rendered probe–planet separation, parsecs, at model time `t`. */
+function separationAt(traj: ProbeTrajectory, planet: PlanetName, t: number): number {
+  expect(probeStateAt(traj, t, state)).toBe(true);
+  _resetCacheForTests();
+  const p = getPlanetPositions(t)[planet];
+  return new THREE.Vector3(p.x, p.y, p.z)
+    .applyQuaternion(ECL_TO_ICRS)
+    .distanceTo(new THREE.Vector3(state.x, state.y, state.z));
+}
+
+/**
+ * Smallest rendered probe–planet separation, km, over ±2 days around the
+ * calendar encounter date. Coarse 10-minute sweep, then a 10-second sweep
+ * either side of the coarse winner — the encounters are single smooth minima
+ * at this scale, so refining once lands the minimum to well inside what
+ * either dataset resolves, for a fifteenth of a flat 30-second scan.
+ */
+function minSeparationKm(probeId: string, planet: PlanetName, utc: string): number {
+  const traj = TRAJECTORIES.get(probeId)!;
+  const centre = Date.parse(utc) / 1000;
+  let bestDt = 0;
+  let best = Infinity;
+  const sweep = (from: number, to: number, step: number): void => {
+    for (let dt = from; dt <= to; dt += step) {
+      const d = separationAt(traj, planet, centre + dt);
+      if (d < best) { best = d; bestDt = dt; }
+    }
+  };
+  sweep(-2 * 86400, 2 * 86400, 600);
+  sweep(bestDt - 600, bestDt + 600, 10);
+  return best / KM_PC;
+}
+
 describe('probe planet encounters', () => {
   for (const { probe, planet, utc } of ENCOUNTERS) {
     it(`${probe} is at ${planet} on ${utc.slice(0, 10)}`, () => {
       const missAu = probePositionAt(probe, utc)
         .sub(planetPositionAt(planet, utc)).length() * AU_PER_PC;
       expect(missAu).toBeLessThan(ENCOUNTER_TOLERANCE_AU);
+    });
+  }
+
+  for (const { probe, planet, utc, closestApproachKm } of ENCOUNTERS) {
+    it(`${probe} skims ${planet} at the published ${closestApproachKm} km`, () => {
+      const found = minSeparationKm(probe, planet, utc);
+      expect(Math.abs(found / closestApproachKm - 1)).toBeLessThan(CLOSEST_APPROACH_TOLERANCE);
     });
   }
 
