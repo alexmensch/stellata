@@ -117,8 +117,12 @@ export class ProbeField {
     this.group.add(this.mesh);
   }
 
-  /** Bind the loaded roster. One-shot — the roster is fixed at load. */
-  attach(trajectories: readonly ProbeTrajectory[]): void {
+  /** Bind the loaded roster and resolve `t`'s samples immediately. One-shot
+   *  — the roster is fixed at load. The seed pass is what `PlanetBodyField`
+   *  does at `attachHost`, and for the same reason: focus resolves before
+   *  the first frame, so a record only `update` had written would leave
+   *  `localPositionInto` false and drop the focus. */
+  attach(trajectories: readonly ProbeTrajectory[], t: number): void {
     this.trajectories = trajectories;
     const n = trajectories.length;
     this.localPos = new Float32Array(n * 3);
@@ -138,6 +142,26 @@ export class ProbeField {
     this.geometry.setAttribute('iLocalPos', posAttr);
     this.geometry.setAttribute('iAlpha', alphaAttr);
     this.geometry.instanceCount = n;
+    this.resampleAt(t);
+  }
+
+  /**
+   * Resolve every trajectory at `t` into its `ProbeFrameSample`. Camera-
+   * independent, so it is also the out-of-frame seed: `attach` and a clock
+   * jump both land before the next `update`, and the focus path reads these
+   * records rather than waiting for one.
+   */
+  resampleAt(t: number): void {
+    for (let i = 0; i < this.trajectories.length; i++) {
+      const traj = this.trajectories[i];
+      const s = this.samples[i];
+      s.sampled = probeStateAt(traj, t, this.state);
+      s.signalLost = s.sampled && probeSignalLost(traj, t);
+      if (!s.sampled) continue;
+      s.solRelPc.set(this.state.x, this.state.y, this.state.z);
+      s.localPc.copy(this.solLocal).add(s.solRelPc);
+      s.velPcPerSec.set(this.state.vx, this.state.vy, this.state.vz);
+    }
   }
 
   /**
@@ -153,6 +177,7 @@ export class ProbeField {
       this.group.visible = false;
       return;
     }
+    this.resampleAt(t);
     const drawn = this.permitted && !this.mono;
     this.group.visible = drawn;
     const pxPerRad = pixelsPerRadianFromFovRad(
@@ -160,20 +185,14 @@ export class ProbeField {
     const fleetLegible = isFeatureLegible(
       HELIOPAUSE_EXTENT_PC, camera.position.distanceTo(this.solLocal), pxPerRad);
     for (let i = 0; i < this.trajectories.length; i++) {
-      const traj = this.trajectories[i];
       const s = this.samples[i];
-      s.sampled = probeStateAt(traj, t, this.state);
-      s.signalLost = s.sampled && probeSignalLost(traj, t);
       s.visible = s.sampled && fleetLegible && drawn && i !== this.hiddenIdx;
       if (s.sampled) {
-        s.solRelPc.set(this.state.x, this.state.y, this.state.z);
-        s.localPc.copy(this.solLocal).add(s.solRelPc);
-        s.velPcPerSec.set(this.state.vx, this.state.vy, this.state.vz);
+        const base = i * 3;
+        this.localPos[base] = s.localPc.x;
+        this.localPos[base + 1] = s.localPc.y;
+        this.localPos[base + 2] = s.localPc.z;
       }
-      const base = i * 3;
-      this.localPos[base] = s.localPc.x;
-      this.localPos[base + 1] = s.localPc.y;
-      this.localPos[base + 2] = s.localPc.z;
       this.alpha[i] = s.visible
         ? (s.signalLost ? SIGNAL_LOST_ALPHA : MARKER_ALPHA)
         : 0;
@@ -182,9 +201,16 @@ export class ProbeField {
     (this.geometry.attributes.iAlpha as THREE.InstancedBufferAttribute).needsUpdate = true;
   }
 
+  /** Rebase onto a new floating origin. Every sample's `localPc` moves with
+   *  it: `setProbeFocus` reads `localPositionInto` immediately after the
+   *  recentre it just triggered, so leaving them in the old frame would
+   *  shift the camera by the whole recentre delta. */
   recenter(newWorldOffset: Readonly<THREE.Vector3>): void {
     this.worldOffset.copy(newWorldOffset);
     this.solLocal.copy(this.worldOffset).negate();
+    for (const s of this.samples) {
+      if (s.sampled) s.localPc.copy(this.solLocal).add(s.solRelPc);
+    }
   }
 
   /** Sol's renderer-local position into `out` — the anchor the trail layer

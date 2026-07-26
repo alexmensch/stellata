@@ -116,6 +116,19 @@ from here on purpose.
   speed row is the sampler's own interpolated velocity for exactly this
   reason; a finite difference across frames would be a different
   quantity in each part of a trajectory (§ Sampler).
+- **`resampleAt` is the out-of-frame seed, and focus needs it.** A URL
+  restore attaches the roster, jumps the clock, and applies its focus all
+  before the first frame runs, and `focusProbe` bails on a false
+  `localPositionInto` — so a record only `update` had written would drop
+  every shared probe link back to Sol. `attach` seeds at the current `t`
+  and `Stellata.setT` reseeds at the new one, which is the same immediate
+  fill `PlanetBodyField.attachHost` does. `update` then owns only the
+  camera-dependent half (visibility, alpha, the instance buffers).
+- **`recenter` rebases every `localPc`, not just Sol's.** `setProbeFocus`
+  reads `localPositionInto` immediately after the recentre it triggered;
+  samples left in the pre-recentre frame would shift the camera by the
+  whole recentre delta. This is what `hostLocalPos` does for the planet
+  field.
 - **`sampled` and `visible` are different questions, and the split is
   load-bearing.** `sampled` means the trajectory covers this `t`, so a
   position exists; `visible` means the glyph is drawn. `localPositionInto`

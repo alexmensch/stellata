@@ -1236,10 +1236,23 @@ describe('url-state', () => {
         focusedStar: 0 as number | null, // Sol default focus
         focusedCloud: null as number | null,
         focusedPlanet: null as number | null,
+        focusedProbe: null as number | null,
         vectorTo: null as number | null,
         vectorToCloud: null as number | null,
         pois: [] as Target[],
         mode: 'navigate' as 'navigate' | 'observe',
+      };
+      const clearFocus = () => {
+        state.focusedStar = null;
+        state.focusedCloud = null;
+        state.focusedPlanet = null;
+        state.focusedProbe = null;
+      };
+      const setFocusSlot = (t: Target) => {
+        if (t.kind === 'star') state.focusedStar = t.idx;
+        else if (t.kind === 'planet') state.focusedPlanet = t.idx;
+        else if (t.kind === 'probe') state.focusedProbe = t.idx;
+        else state.focusedCloud = t.idx;
       };
       const stub: Partial<Stellata> = {
         getFilter: () => ({ ...DEFAULT_FILTER }),
@@ -1256,6 +1269,7 @@ describe('url-state', () => {
         getFocusedTarget: () => {
           if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
           if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
+          if (state.focusedProbe !== null) return { kind: 'probe', idx: state.focusedProbe };
           if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
           return null;
         },
@@ -1267,22 +1281,12 @@ describe('url-state', () => {
         getPois: () => state.pois,
         getCameraMode: () => state.mode,
         setCameraMode: (m) => { state.mode = m; },
-        focusStar: (idx) => {
-          state.focusedStar = idx; state.focusedCloud = null; state.focusedPlanet = null;
+        focusStar: (idx) => { clearFocus(); state.focusedStar = idx; },
+        setOrbitTarget: (t) => { clearFocus(); setFocusSlot(t); },
+        unfocus: () => {
+          state.focusedStar = null; state.focusedPlanet = null; state.focusedProbe = null;
         },
-        setOrbitTarget: (t) => {
-          state.focusedStar = null; state.focusedCloud = null; state.focusedPlanet = null;
-          if (t.kind === 'star') state.focusedStar = t.idx;
-          else if (t.kind === 'planet') state.focusedPlanet = t.idx;
-          else state.focusedCloud = t.idx;
-        },
-        unfocus: () => { state.focusedStar = null; state.focusedPlanet = null; },
-        flyTo: (t) => {
-          state.focusedStar = null; state.focusedCloud = null; state.focusedPlanet = null;
-          if (t.kind === 'star') state.focusedStar = t.idx;
-          else if (t.kind === 'planet') state.focusedPlanet = t.idx;
-          else state.focusedCloud = t.idx;
-        },
+        flyTo: (t) => { clearFocus(); setFocusSlot(t); },
         setVector: (t) => {
           if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
           else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
@@ -1452,6 +1456,46 @@ describe('url-state', () => {
       applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
       expect(rx.state.focusedPlanet).toBe(7);
       expect(rx.state.focusedStar).toBeNull();
+    });
+
+    it('probe focus round-trips with no index translation, on both decode branches', () => {
+      // Unlike the planet domain, a probe's resolver localIndex IS its
+      // Target idx — so the translation legs stay null here and a miss in
+      // them can't be what carries the focus.
+      const PROBE_SIDS = [330277, 330278];
+      const sidResolver = new SidResolver(['star', 'probe']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      sidResolver.attach('probe', arrayDomain(PROBE_SIDS));
+      const idMaps: IdMaps = {
+        hipToIndex: new Map(),
+        indexToHip: new Uint32Array(STAR_SIDS.length),
+        starCount: STAR_SIDS.length,
+        solIndex: 0,
+        sidResolver,
+        planetDomainIndexOf: () => null,
+        planetTargetIndexOf: () => null,
+      };
+      const tx = makeStatefulStellata();
+      tx.state.focusedStar = null;
+      tx.state.focusedProbe = 1;
+      const view = currentStateOf(tx.stellata, idMaps);
+      expect(view.focus).toEqual({ kind: 'sid', id: 330278 });
+
+      // No camera params on the wire → the flyTo branch.
+      const flyRx = makeStatefulStellata();
+      applyDecodedView(flyRx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      expect(flyRx.state.focusedProbe).toBe(1);
+      expect(flyRx.state.focusedStar).toBeNull();
+
+      // With a scrubbed pose the decoder takes setOrbitTarget instead, so
+      // both branches need pinning.
+      const snapRx = makeStatefulStellata();
+      applyDecodedView(
+        snapRx.stellata,
+        decodeBlob(encodeBlob({ ...view, cam: [1, 2, 3] })).view,
+        idMaps,
+      );
+      expect(snapRx.state.focusedProbe).toBe(1);
     });
 
     it('mixed star + planet POIs round-trip through the untagged SID list', () => {

@@ -48,13 +48,13 @@ function makeHarness() {
   };
   const field = new ProbeField(shared);
   const layer = new ProbePathLayer(shared);
-  field.attach(ROSTER);
+  const t = ROSTER[0].sampleT[2];
+  field.attach(ROSTER, t);
   layer.attach(ROSTER);
   const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
   // Just off the first probe, inside the inner system where the
   // heliosphere subtends the whole view — both markers stay drawn.
   camera.position.set(41 * AU_PC, 0, 0);
-  const t = ROSTER[0].sampleT[2];
   const draw = (focusedIdx: number) => {
     field.update(t, camera);
     layer.update(field, t, camera, focusedIdx);
@@ -106,6 +106,43 @@ describe('ProbeField visible vs sampled', () => {
     const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
     h.field.update(ROSTER[0].sampleT[0] - 1, camera);
     expect(h.field.localPositionInto(0, new THREE.Vector3())).toBe(false);
+  });
+});
+
+describe('ProbeField out-of-frame reads', () => {
+  it('resolves a position from attach alone, before any update', () => {
+    // Probe focus applies from a URL before the first frame runs, and it
+    // bails on a false localPositionInto — so the attach seed is what keeps
+    // a shared probe link from decoding to Sol.
+    const field = new ProbeField({
+      uViewport: { value: new THREE.Vector2(800, 600) },
+      uPixelRatio: { value: 1 },
+      uFovYRad: { value: (50 * Math.PI) / 180 },
+    });
+    field.attach(ROSTER, ROSTER[0].sampleT[2]);
+    const out = new THREE.Vector3();
+    expect(field.localPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(42 * AU_PC, 12);
+  });
+
+  it('resamples to a jumped clock without a frame in between', () => {
+    const h = makeHarness();
+    const out = new THREE.Vector3();
+    h.field.resampleAt(ROSTER[0].sampleT[0]);
+    expect(h.field.localPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(40 * AU_PC, 12);
+  });
+
+  it('rebases localPc onto a new origin, so a focus recentre reads the new frame', () => {
+    // setProbeFocus calls localPositionInto immediately after the recentre
+    // it triggered; a stale localPc would shift the camera by the delta.
+    const h = makeHarness();
+    h.draw(0);
+    const shift = new THREE.Vector3(5 * AU_PC, 0, 0);
+    h.field.recenter(shift);
+    const out = new THREE.Vector3();
+    expect(h.field.localPositionInto(0, out)).toBe(true);
+    expect(out.x).toBeCloseTo(42 * AU_PC - shift.x, 12);
   });
 });
 

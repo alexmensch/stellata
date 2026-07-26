@@ -1260,6 +1260,11 @@ export class Stellata implements FrameAnchor {
       this.clock.setRate(0);
       this.clock.setTimeAbsolute(t);
     }
+    // A URL restore jumps the clock and then applies its focus, both before
+    // the next frame. Probe focus reads the marker field's sample record, so
+    // it has to be resolved at the NEW `t` — seeding only at attach would
+    // recentre onto where the probe was when the page loaded.
+    this.probeMarkerField.resampleAt(this.getT());
     this.bus.emit('state');
   }
   getMonochrome(): boolean { return this.monochrome; }
@@ -1787,8 +1792,8 @@ export class Stellata implements FrameAnchor {
    *  this binds the roster once the async load resolves. An empty roster
    *  leaves both layers inert. */
   attachProbes(trajectories: readonly ProbeTrajectory[]): void {
-    this.probeMarkerField.attach(trajectories);
     this.probeMarkerField.recenter(this.worldOffset);
+    this.probeMarkerField.attach(trajectories, this.getT());
     this.probeMarkerField.setMonochrome(this.monochrome);
     this.probePathLayer.attach(trajectories);
     this.probePathLayer.setMonochrome(this.monochrome);
