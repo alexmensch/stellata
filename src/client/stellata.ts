@@ -55,13 +55,13 @@ import {
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
-import type { FocusableProviders, Target } from './camera/focus/focus-target';
+import type { FocusableProviders, Target, TargetKind } from './camera/focus/focus-target';
 import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planets/planet-body-field';
-import { ProbeField } from './solar-system/probes/probe-field';
+import { PROBE_MARKER_PX, ProbeField } from './solar-system/probes/probe-field';
 import { ProbePathLayer } from './solar-system/probes/probe-path-layer';
 import type { ProbeTrajectory } from './solar-system/probes/probe-trajectory';
 import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
@@ -173,6 +173,12 @@ export type StellataEventMap = {
   frame: void;
 };
 
+/** Hard focus kinds whose object moves in the local frame as `t`
+ *  advances, so the camera has to ride it — see § Moving-focal ride in
+ *  camera/focus/README.md. A star's motion is orbital perturbation and
+ *  rides its own path (`applyFocalFrameRide`). */
+const MOVING_FOCUS_KINDS: ReadonlySet<TargetKind> = new Set(['planet', 'probe']);
+
 export class Stellata implements FrameAnchor {
   readonly catalog: Catalog;
   readonly renderer: THREE.WebGLRenderer;
@@ -238,17 +244,18 @@ export class Stellata implements FrameAnchor {
   private readonly _rideLive = new THREE.Vector3();
   private _rideFocalIdx: number | null = null;
 
-  // Planet-focal ride state — the planet sibling of the binary ride
-  // above. A focused planet sweeps its orbit with `t` (fast under
-  // scrubber FF); the camera + orbit target translate by its per-frame
-  // local-position delta so the body stays under the camera and user
-  // pan offsets survive. `_planetRideIdx` reseeds on every 'focus'
-  // event (focus change or same-planet refocus both recentre the
-  // origin, staleing the cached last position).
-  private readonly _planetRideLast = new THREE.Vector3();
-  private readonly _planetRideLive = new THREE.Vector3();
-  private readonly _planetRideDelta = new THREE.Vector3();
-  private _planetRideIdx: number | null = null;
+  // Moving-focal ride state — the sibling of the binary ride above for
+  // hard focus kinds whose object moves with `t` (a planet sweeping its
+  // orbit, a probe running its trajectory; both fast under scrubber FF).
+  // The camera + orbit target translate by the object's per-frame
+  // local-position delta so it stays under the camera and user pan
+  // offsets survive. `_movingRideIdx` reseeds on every 'focus' event,
+  // which is what makes the shared slot safe across kinds — see
+  // camera/focus/README.md § Moving-focal ride.
+  private readonly _movingRideLast = new THREE.Vector3();
+  private readonly _movingRideLive = new THREE.Vector3();
+  private readonly _movingRideDelta = new THREE.Vector3();
+  private _movingRideIdx: number | null = null;
 
   // Filter / preset / render-knob state + mutations live in
   // FilterController (filters/README.md); the shell reads the live
@@ -590,6 +597,7 @@ export class Stellata implements FrameAnchor {
       getLocalGroupLayer: () => this.localGroupLayer,
       getShells: () => this.shells,
       getPlanetBodyField: () => this.planetBodyField,
+      getProbeField: () => this.probeMarkerField,
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
@@ -624,6 +632,7 @@ export class Stellata implements FrameAnchor {
       getLocalGroup: () => this.localGroupLayer,
       getShells: () => this.shells,
       getPlanetField: () => this.planetBodyField,
+      getProbeField: () => this.probeMarkerField,
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       getFocusables: () => this.focusables,
@@ -684,6 +693,12 @@ export class Stellata implements FrameAnchor {
         renderedSizePx: (idx) =>
           this.shells.renderedSizePx(idx, this.worldOffset, this.camera.position, this.angularToPx()),
       },
+      probe: {
+        localPositionInto: (idx, out) => this.probeMarkerField.localPositionInto(idx, out),
+        focusParkDistance: () => starPhysics.PROBE_PARK_DIST_PC,
+        arrivalRadiusPc: () => null,
+        renderedSizePx: () => PROBE_MARKER_PX,
+      },
       planet: {
         localPositionInto: (idx, out) =>
           this.planetBodyField.planetLocalPositionInto(idx, out),
@@ -743,11 +758,13 @@ export class Stellata implements FrameAnchor {
         this.catalog.positions,
       );
     });
-    // Reseed the planet-focal ride on every focus mutation: focus
-    // change AND same-planet refocus both recentre the floating origin,
-    // which stales the ride's cached last position (hostLocalPos moved
-    // under it). The seed frame re-snaps against the fresh frame.
-    this.on('focus', () => { this._planetRideIdx = null; });
+    // Reseed the moving-focal ride on every focus mutation: a focus
+    // change AND a same-object refocus both recentre the floating
+    // origin, which stales the ride's cached last position. The seed
+    // frame re-snaps against the fresh frame. This is also what keeps
+    // the shared ride slot safe when the kind changes but the index
+    // collides (planet 3 → probe 3).
+    this.on('focus', () => { this._movingRideIdx = null; });
     // Constellation figure lines rebuild when the active set changes: the
     // highlighted figure, chart ↔ navigate (chart draws all 88), or the
     // showConstellation master toggle. Detail-cycle permission is a separate
@@ -865,6 +882,10 @@ export class Stellata implements FrameAnchor {
         // so a future non-Sol host's pin works live yet won't round-trip
         // through ?v=.
         planet: (idx) => this.planetBodyField.planetAt(idx) !== null,
+        // Every loaded probe pins and round-trips: its SID domain is
+        // built over the loaded roster, so localIndex IS the Target idx
+        // with no translation step (main.ts).
+        probe: (idx) => this.probeMarkerField.probeAt(idx) !== null,
         lg: (idx) => (this.localGroupLayer?.objects[idx]?.sid ?? 0) !== 0,
         shell: (idx) => (this.shells.at(idx)?.sid ?? 0) !== 0,
         cloud: () => false,
@@ -938,12 +959,38 @@ export class Stellata implements FrameAnchor {
   // keep ticking (clouds stay visible during warp by design — flying
   // past Taurus is a feature). See scene/README.md.
   private registerSceneLayers(): void {
+    // Registered before the planet layer so the moving-focal ride there
+    // reads this frame's probe sample, not last frame's: at high
+    // fast-forward one frame of a probe's motion is a visible offset.
+    // Sample positions are camera-independent, so the ride's camera
+    // translation landing after this entry changes nothing here.
+    this.layers.register({
+      update: (ctx) => {
+        this.probeMarkerField.update(ctx.t, ctx.camera);
+        // After the field wrote this frame's samples: each trail's last
+        // vertex IS the marker position it just resolved. Only the
+        // focused probe's trail draws.
+        this.probePathLayer.update(
+          this.probeMarkerField, ctx.t, ctx.camera, this.focusedProbeIdx(),
+        );
+      },
+      setMonochrome: (on) => {
+        this.probeMarkerField.setMonochrome(on);
+        this.probePathLayer.setMonochrome(on);
+      },
+      recenter: (newOrigin) => this.probeMarkerField.recenter(newOrigin),
+      dispose: () => {
+        this.probeMarkerField.dispose();
+        this.probePathLayer.dispose();
+      },
+    });
     this.layers.register({
       update: (ctx) => {
         this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
-        // Ride runs right after the field wrote this frame's positions,
-        // mirroring the binary ride's placement after its orbit walk.
-        this.applyPlanetFocalRide();
+        // Ride runs right after every moving-body field wrote this
+        // frame's positions, mirroring the binary ride's placement after
+        // its orbit walk.
+        this.applyMovingFocalRide();
         // Mesh LOD reads the field's freshly-written positions; its
         // group mirrors the field's visibility, so monochrome/hidden
         // need no second hook here.
@@ -981,23 +1028,6 @@ export class Stellata implements FrameAnchor {
       },
       setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
       dispose: () => this.orbitRingsLayer.dispose(),
-    });
-    this.layers.register({
-      update: (ctx) => {
-        this.probeMarkerField.update(ctx.t, ctx.camera);
-        // After the field wrote this frame's samples: each trail's last
-        // vertex IS the marker position it just resolved.
-        this.probePathLayer.update(this.probeMarkerField, ctx.t, ctx.camera);
-      },
-      setMonochrome: (on) => {
-        this.probeMarkerField.setMonochrome(on);
-        this.probePathLayer.setMonochrome(on);
-      },
-      recenter: (newOrigin) => this.probeMarkerField.recenter(newOrigin),
-      dispose: () => {
-        this.probeMarkerField.dispose();
-        this.probePathLayer.dispose();
-      },
     });
     this.layers.register({
       // After the field + rings updates it reads; before the main
@@ -1191,6 +1221,7 @@ export class Stellata implements FrameAnchor {
     if (t?.kind === 'planet') {
       return this.planetBodyField.renderedPlanetSizePx(t.idx, this.camera.position) * 0.5;
     }
+    if (t?.kind === 'probe') return PROBE_MARKER_PX * 0.5;
     return 0;
   }
   /** Absolute-space coordinate of the renderer's current local origin.
@@ -1308,12 +1339,14 @@ export class Stellata implements FrameAnchor {
   /** Hide/unhide the rendered body of a hard-focus target — observe
    *  parks the camera AT the object, whose disc would render from the
    *  interior. One choke point dispatching per kind: star → the
-   *  uHideFocusIdx shader pin, planet → the body field's uHideIdx.
-   *  Passing null (or a kind switch) unhides the other kind's slot. */
+   *  uHideFocusIdx shader pin, planet → the body field's uHideIdx,
+   *  probe → the marker field's hidden slot. Passing null (or a kind
+   *  switch) unhides the other kinds' slots. */
   private setFocalBodyHidden(target: Target | null): void {
     this.starPipeline.discMaterial.uniforms.uHideFocusIdx.value =
       target?.kind === 'star' ? target.idx : -1;
     this.planetBodyField.setHiddenInstance(target?.kind === 'planet' ? target.idx : -1);
+    this.probeMarkerField.setHiddenInstance(target?.kind === 'probe' ? target.idx : -1);
   }
 
   getPois(): readonly Target[] { return this.poiStore.get(); }
@@ -1413,11 +1446,11 @@ export class Stellata implements FrameAnchor {
     if (!shouldRecenterFocalOrigin(this.camera.position.length(), eye)) return;
     this.tmpRecenter.copy(this.controls.target).add(this.worldOffset);
     if (this.recenterOrigin(this.tmpRecenter) !== null) {
-      // The planet ride caches the focal's full local position; the recentre
-      // shifted the frame under it, so reseed to skip a one-frame jump. The
-      // binary ride tracks baseline-relative perturbation (frame-invariant)
-      // and needs none.
-      this._planetRideIdx = null;
+      // The moving-focal ride caches the focal's full local position; the
+      // recentre shifted the frame under it, so reseed to skip a one-frame
+      // jump. The binary ride tracks baseline-relative perturbation
+      // (frame-invariant) and needs none.
+      this._movingRideIdx = null;
     }
   }
 
@@ -1582,44 +1615,47 @@ export class Stellata implements FrameAnchor {
     this.observe.translateFocusFrame(this._rideDelta);
   }
 
-  // Planet sibling of applyFocalFrameRide, over the shared focalRideStep.
-  // The planet's full live local position plays the role the star ride's
-  // perturbation does — its frame-to-frame delta is what the camera /
-  // target / transition caches translate by, so the body stays glued to
-  // controls.target and pan offsets survive. Seed frames (focus change,
-  // warp) resync the baseline; the observe-mode guard in focalRideStep
-  // suppresses the seed target re-snap, where target is the parsec-ahead
-  // look pin rather than on the body.
-  private applyPlanetFocalRide(): void {
+  // Moving-body sibling of applyFocalFrameRide, over the shared
+  // focalRideStep. For every hard focus kind whose object MOVES in the
+  // local frame as `t` advances — a planet sweeping its orbit, a probe
+  // running its trajectory — the object's full live local position plays
+  // the role the star ride's perturbation does: its frame-to-frame delta
+  // is what the camera / target / transition caches translate by, so the
+  // object stays glued to controls.target, pan offsets survive, and the
+  // camera rides the whole trajectory at any fast-forward rate. Seed
+  // frames (focus change, warp) resync the baseline; the observe-mode
+  // guard in focalRideStep suppresses the seed target re-snap, where
+  // target is the parsec-ahead look pin rather than on the object.
+  private applyMovingFocalRide(): void {
     const focused = this.focus.getFocusedTarget();
-    const idx = focused?.kind === 'planet' ? focused.idx : null;
-    if (idx === null) {
-      this._planetRideIdx = null;
+    const idx = focused !== null && MOVING_FOCUS_KINDS.has(focused.kind) ? focused.idx : null;
+    if (focused === null || idx === null) {
+      this._movingRideIdx = null;
       return;
     }
-    const live = this._planetRideLive;
-    if (!this.planetBodyField.planetLocalPositionInto(idx, live)) {
-      this._planetRideIdx = null;
+    const live = this._movingRideLive;
+    if (!this.focusables[focused.kind].localPositionInto(idx, live)) {
+      this._movingRideIdx = null;
       return;
     }
     const step = focalRideStep({
       focal: idx,
-      rideFocalIdx: this._planetRideIdx,
+      rideFocalIdx: this._movingRideIdx,
       warpActive: this.warp.isActive(),
       focalPert: live,
-      lastAppliedPert: this._planetRideLast,
+      lastAppliedPert: this._movingRideLast,
       liveLocal: live,
       target: this.controls.target,
       observeMode: this.focus.getCameraMode() === 'observe',
     });
-    this._planetRideIdx = step.rideFocalIdx;
-    this._planetRideLast.set(step.px, step.py, step.pz);
-    this._planetRideDelta.set(step.dx, step.dy, step.dz);
-    if (this._planetRideDelta.lengthSq() === 0) return;
-    this.camera.position.add(this._planetRideDelta);
-    this.controls.target.add(this._planetRideDelta);
-    this.focus.translateFocusFrame(this._planetRideDelta);
-    this.observe.translateFocusFrame(this._planetRideDelta);
+    this._movingRideIdx = step.rideFocalIdx;
+    this._movingRideLast.set(step.px, step.py, step.pz);
+    this._movingRideDelta.set(step.dx, step.dy, step.dz);
+    if (this._movingRideDelta.lengthSq() === 0) return;
+    this.camera.position.add(this._movingRideDelta);
+    this.controls.target.add(this._movingRideDelta);
+    this.focus.translateFocusFrame(this._movingRideDelta);
+    this.observe.translateFocusFrame(this._movingRideDelta);
   }
 
   /** Debug-HUD view into the eclipse field's per-relation walk for the
@@ -1758,9 +1794,22 @@ export class Stellata implements FrameAnchor {
     this.probePathLayer.setMonochrome(this.monochrome);
   }
 
-  /** The probe marker field — read by the probe labels for each marker's
-   *  live position and visibility. */
+  /** The probe marker field — read by the probe labels, the hover
+   *  provider, and the focus card for each marker's per-frame sample. */
   get probeField(): ProbeField { return this.probeMarkerField; }
+
+  /** Roster index of the focused probe, or -1. The trail focus gate. */
+  private focusedProbeIdx(): number {
+    const t = this.focus.getFocusedTarget();
+    return t?.kind === 'probe' ? t.idx : -1;
+  }
+
+  /** Camera→probe distance in the local frame (pc); null when the
+   *  trajectory doesn't cover the current `t`. */
+  probeCameraDistancePc(idx: number): number | null {
+    const s = this.probeMarkerField.sampleFor(idx);
+    return s === null || !s.sampled ? null : this.camera.position.distanceTo(s.localPc);
+  }
 
   /** The Local Bubble shell layer — read by its silhouette label for the
    *  surface samples + attach state. */
