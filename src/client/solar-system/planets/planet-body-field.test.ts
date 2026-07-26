@@ -434,7 +434,7 @@ describe('PlanetBodyField lifecycle', () => {
     // counter increments per update; past cullDistance it stays frozen.
     const f = new PlanetBodyField(makeSharedUniforms(6.5));
     let calls = 0;
-    const positionsAt = (_t: number, out: Float32Array): void => {
+    const positionsAt = (_t: number, out: Float64Array): void => {
       calls++;
       for (let i = 0; i < out.length; i++) out[i] = 0;
     };
@@ -486,7 +486,7 @@ describe('PlanetBodyField lifecycle', () => {
     // anchor (Sol + planets appear static while catalog stars still move).
     const f = new PlanetBodyField(makeSharedUniforms(6.5));
     let calls = 0;
-    const positionsAt = (_t: number, out: Float32Array): void => {
+    const positionsAt = (_t: number, out: Float64Array): void => {
       calls++;
       for (let i = 0; i < out.length; i++) out[i] = 0;
     };
@@ -526,7 +526,7 @@ describe('PlanetBodyField lifecycle', () => {
     // +x in plane frame), orientation rotates +x → +y (90° about z),
     // expect bufLocalRel slot to read [0, 1, 0].
     const f = new PlanetBodyField(makeSharedUniforms(20));
-    const positionsAt = (_t: number, out: Float32Array): void => {
+    const positionsAt = (_t: number, out: Float64Array): void => {
       out[0] = 1; out[1] = 0; out[2] = 0;
     };
     const ps: PlanetSystem = {
@@ -551,6 +551,54 @@ describe('PlanetBodyField lifecycle', () => {
     expect(slice[0]).toBeCloseTo(0, 6);
     expect(slice[1]).toBeCloseTo(1, 6);
     expect(slice[2]).toBeCloseTo(0, 6);
+    f.dispose();
+  });
+
+  it('carries CPU-side body positions in float64, not the GPU attribute float32', () => {
+    // At Pluto's 39.5 AU one float32 parsec step is ~449 km — 0.38 of
+    // Pluto's own radius, and the CPU path feeds the mesh LOD, the
+    // focus ride, and the overlay projections, so the body visibly
+    // stepped against its own float64 orbit ring. Narrowing any of
+    // positionsAt / localRel64 / the accessors back to Float32Array
+    // must fail here.
+    const plutoAPc = 39.48 * AU_PC;
+    // Deliberately off a float32-representable value so the round-trip
+    // has something to lose.
+    const target = plutoAPc * (1 + 1e-7);
+    const float32ErrorKm = Math.abs(Math.fround(target) - target) / KM_PC;
+    // Premise check: float32 really would mangle this by hundreds of km.
+    expect(float32ErrorKm).toBeGreaterThan(50);
+
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [makePlanet({ semiMajorAxisAu: 39.48, radiusKm: 1188 })],
+      positionsAt: (_t: number, out: Float64Array): void => {
+        out[0] = target; out[1] = 0; out[2] = 0;
+      },
+    };
+    f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 0, 0);
+    f.update(camera, 0, 0);
+
+    // Magnitude, so the assertion is independent of the host
+    // orientation quaternion the field applies.
+    const hostRel = new THREE.Vector3();
+    expect(f.planetHostRelPositionInto(0, hostRel)).toBe(true);
+    expect(Math.abs(hostRel.length() - target) / KM_PC).toBeLessThan(1);
+
+    const local = new THREE.Vector3();
+    expect(f.planetLocalPositionInto(0, local)).toBe(true);
+    expect(Math.abs(local.length() - target) / KM_PC).toBeLessThan(1);
+
+    const abs = new THREE.Vector3();
+    expect(f.planetAbsolutePositionInto(0, abs)).toBe(true);
+    expect(Math.abs(abs.length() - target) / KM_PC).toBeLessThan(1);
+
+    const slice = f.getHostLocalPositions(0)!;
+    const sliceLen = Math.sqrt(slice[0] ** 2 + slice[1] ** 2 + slice[2] ** 2);
+    expect(Math.abs(sliceLen - target) / KM_PC).toBeLessThan(1);
     f.dispose();
   });
 

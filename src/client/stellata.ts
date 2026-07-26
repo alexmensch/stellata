@@ -1181,10 +1181,10 @@ export class Stellata implements FrameAnchor {
   /** Renderer-local positions of the focused host's planets (xyz
    *  triples, length 3·N), or null if no system is attached. Host
    *  offset is applied — under planet focus the host is not at the
-   *  local origin. Returns a fresh Float32Array copy each call (see
+   *  local origin. Returns a fresh Float64Array copy each call (see
    *  `PlanetBodyField.getHostLocalPositions`) — safe to cache across
    *  frames; the value semantics survive attach grow / detach shift. */
-  getFocusedPlanetLocalPositions(): Float32Array | null {
+  getFocusedPlanetLocalPositions(): Float64Array | null {
     const ps = this.focus.getFocusedPlanetSystem();
     if (!ps) return null;
     const rel = this.planetBodyField.getHostLocalPositions(ps.hostStarIdx);
