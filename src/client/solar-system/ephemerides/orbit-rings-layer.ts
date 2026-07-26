@@ -47,11 +47,21 @@ export const RING_VISIBILITY_THRESHOLD_PX = FEATURE_LEGIBILITY_MIN_PX;
 // additive Milky Way disc without competing with point-source stars.
 const RING_COLOUR = 0x88aacc;
 
-// Sim-seconds a built ring geometry may age before update() re-derives it
-// from the live element source. One sim-day keeps secular orientation
-// drift (rates ≤ 0.5°/century) below any resolvable body-to-ring offset
-// while costing at most one 27-ring rebuild per frame under fast scrub.
-export const RING_GEOMETRY_MAX_AGE_S = 86400;
+/**
+ * Relative element drift a built ring may carry before update() rewrites its
+ * vertices — the polyline's OWN resolution, so a skipped rebuild is provably
+ * invisible: an `ORBIT_LINE_SEGMENTS`-gon inscribed in the ellipse already
+ * departs from it by `a·(π/N)²/2`, and re-deriving before the elements have
+ * moved that far only redraws discretisation noise.
+ *
+ * Self-referential on purpose. The previous gate was elapsed **sim time**
+ * (one sim-day), which is not rate-limited by anything: one frame at high
+ * fast-forward advances decades, so it degenerated into a full 9-ring,
+ * 8192-vertex re-derive plus GPU re-upload every frame while the elements
+ * had moved by nothing an eye could resolve.
+ */
+export const RING_GEOMETRY_DRIFT_TOLERANCE =
+  (Math.PI / ORBIT_LINE_SEGMENTS) ** 2 / 2;
 
 const DEG = Math.PI / 180;
 
@@ -77,6 +87,30 @@ interface PlanetRing {
   // angle, so we use it as the per-ring "characteristic size" the
   // pixel-gap test compares.
   semiMajorPc: number;
+  // The geometry `master` was written from. update() compares the live
+  // elements against it and rewrites only on resolvable drift.
+  built: BodyOrbitGeometry;
+}
+
+/**
+ * Whether the live elements have moved far enough from the ones a ring's
+ * vertices were written from to be worth rewriting them. Every leg is
+ * relative to the semi-major axis, so one tolerance covers a 0.4 AU Mercury
+ * ring and a 39 AU Pluto one: `a` and `e` compare directly (`e` scales the
+ * radius by `a·Δe`), and each angle contributes its own arc `a·Δθ`.
+ */
+export function ringGeometryDrifted(
+  built: BodyOrbitGeometry,
+  live: BodyOrbitGeometry,
+  tolerance = RING_GEOMETRY_DRIFT_TOLERANCE,
+): boolean {
+  if (Math.abs(live.aAu - built.aAu) > tolerance * built.aAu) return true;
+  if (Math.abs(live.e - built.e) > tolerance) return true;
+  const a = built.orientation;
+  const b = live.orientation;
+  return Math.abs(b.inclination - a.inclination) > tolerance
+    || Math.abs(b.longAscNode - a.longAscNode) > tolerance
+    || Math.abs(b.argPerihelion - a.argPerihelion) > tolerance;
 }
 
 /**
@@ -286,7 +320,6 @@ export class OrbitRingsLayer {
   private rings: PlanetRing[] = [];
   private ps: PlanetSystem | null = null;
   private hostQuat = new THREE.Quaternion();
-  private builtT = 0;
   private mono = false;
   private hidden = false;
   // Detail-cycle permission (floor 'representational'). AND'd with the
@@ -314,8 +347,9 @@ export class OrbitRingsLayer {
    * (e.g. when focus clears or moves to a host without planets).
    * Geometry and materials are disposed eagerly — Three.js doesn't
    * reclaim them otherwise. `t` is the model clock — ring geometry
-   * derives from the system's live element source at `t` and re-derives
-   * in update() once it ages past RING_GEOMETRY_MAX_AGE_S.
+   * derives from the system's live element source at `t`, and update()
+   * rewrites it once the elements drift past what the polyline resolves
+   * (`RING_GEOMETRY_DRIFT_TOLERANCE`).
    */
   setPlanetSystem(ps: PlanetSystem | null, solIndex: number, t: number): void {
     this.disposeRings();
@@ -352,24 +386,33 @@ export class OrbitRingsLayer {
         centre: new THREE.Vector3(),
         parentIdx: g.parentIdx,
         semiMajorPc,
+        built: g,
       });
     }
-    this.builtT = t;
 
     this.group.visible = !this.hidden && !this.mono && this.permitted;
   }
 
-  /** Re-derive host-centred ring geometry from the live element source
-   *  (secular a/e + orientation move planet rings; moon elements carry
-   *  no secular terms, so parent-centred rings are constant in `t`). */
+  /**
+   * Re-derive host-centred ring geometry from the live element source
+   * (secular a/e + orientation move planet rings; moon elements carry no
+   * secular terms, so parent-centred rings are constant in `t`).
+   *
+   * Evaluating the elements is nine cheap solves the same `t` already pays
+   * for the body positions; rewriting 8192 vertices and re-uploading the
+   * buffer is what costs, so only a ring whose elements actually moved gets
+   * rewritten. That is what keeps the cost bounded at any scrub rate, where
+   * keying on elapsed sim time did not.
+   */
   private refreshGeometry(t: number): void {
-    this.builtT = t;
     const geoms = this.ps?.orbitGeometryAt?.(t);
     if (!geoms) return;
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
       if (r.parentIdx !== null) continue;
+      if (!ringGeometryDrifted(r.built, geoms[i])) continue;
       r.semiMajorPc = writeRingVerts(r.master, geoms[i], this.hostQuat);
+      r.built = geoms[i];
       bakeAnchoredLineVerts(r.master, r.bakedCentre, r.verts);
       (r.line.geometry.getAttribute('position') as THREE.BufferAttribute)
         .needsUpdate = true;
@@ -402,9 +445,7 @@ export class OrbitRingsLayer {
     }
     this.group.visible = true;
     if (hostLocalPos) this.hostLocal.copy(hostLocalPos);
-    if (Math.abs(t - this.builtT) > RING_GEOMETRY_MAX_AGE_S) {
-      this.refreshGeometry(t);
-    }
+    this.refreshGeometry(t);
 
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dHost = camera.position.distanceTo(this.hostLocal);

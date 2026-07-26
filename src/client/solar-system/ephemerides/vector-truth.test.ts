@@ -19,7 +19,7 @@ import {
   ELEMENTS,
   J2000_JD,
   PLANET_ORDER,
-  _resetCacheForTests,
+  resetPositionCache,
   getPlanetPositions,
   installPlanetElementTables,
   planetEclipticAU,
@@ -113,7 +113,7 @@ function standishAu(body: PlanetName, jdTdb: number): Vec3 {
 
 /** The production chain at a TDB epoch, back in AU. */
 function productionAu(body: PlanetName, jdTdb: number): Vec3 {
-  _resetCacheForTests();
+  resetPositionCache();
   const pc = getPlanetPositions(jdTdbToT(jdTdb))[body];
   return { x: pc.x * AU_PER_PC, y: pc.y * AU_PER_PC, z: pc.z * AU_PER_PC };
 }

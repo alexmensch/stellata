@@ -14,7 +14,7 @@ import { buildElementTable, type PlanetElementTable } from '../ephemerides/eleme
 import {
   getPlanetPositions,
   installPlanetElementTables,
-  _resetCacheForTests,
+  resetPositionCache,
   type PlanetName,
 } from '../ephemerides/ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
@@ -155,7 +155,7 @@ function probePositionAt(id: string, utc: string): THREE.Vector3 {
 /** Heliocentric ICRS planet position (pc) at `utc`, through the production
  *  ephemeris → ecliptic→ICRS chain. */
 function planetPositionAt(planet: PlanetName, utc: string): THREE.Vector3 {
-  _resetCacheForTests();
+  resetPositionCache();
   const p = getPlanetPositions(Date.parse(utc) / 1000)[planet];
   return new THREE.Vector3(p.x, p.y, p.z).applyQuaternion(ECL_TO_ICRS);
 }
@@ -163,7 +163,7 @@ function planetPositionAt(planet: PlanetName, utc: string): THREE.Vector3 {
 /** Rendered probe–planet separation, parsecs, at model time `t`. */
 function separationAt(traj: ProbeTrajectory, planet: PlanetName, t: number): number {
   expect(probeStateAt(traj, t, state)).toBe(true);
-  _resetCacheForTests();
+  resetPositionCache();
   const p = getPlanetPositions(t)[planet];
   return new THREE.Vector3(p.x, p.y, p.z)
     .applyQuaternion(ECL_TO_ICRS)
@@ -214,7 +214,7 @@ describe('probe planet encounters', () => {
     // ecliptic-vs-ICRS trap can't slip through unnoticed — two hundred
     // times the encounter tolerance, so there is no reading of the data
     // under which the two could be confused.
-    _resetCacheForTests();
+    resetPositionCache();
     const utc = '1989-08-25T00:00:00Z';
     const unrotated = getPlanetPositions(Date.parse(utc) / 1000).neptune;
     const missAu = probePositionAt('voyager2', utc)

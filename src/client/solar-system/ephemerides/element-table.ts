@@ -63,6 +63,26 @@ function catmullRom(p0: number, p1: number, p2: number, p3: number, f: number): 
   );
 }
 
+/** One column of `elementTableSampleAt`'s spline, from the four row offsets
+ *  it resolved. `b0`/`b3` are -1 in the boundary intervals, where the missing
+ *  outer control point is extrapolated rather than clamped. */
+function splineColumn(
+  s: Float64Array,
+  b0: number, b1: number, b2: number, b3: number,
+  c: number,
+  f: number,
+): number {
+  const p1 = s[b1 + c];
+  const p2 = s[b2 + c];
+  return catmullRom(
+    b0 >= 0 ? s[b0 + c] : 2 * p1 - p2,
+    p1,
+    p2,
+    b3 >= 0 ? s[b3 + c] : 2 * p2 - p1,
+    f,
+  );
+}
+
 /**
  * Interpolated elements at Julian Date TDB `jd` into `out`; false (and `out`
  * untouched) outside the table's span.
@@ -95,24 +115,11 @@ export function elementTableSampleAt(
   const b2 = b1 + ELEMENT_STRIDE;
   const b0 = i > 0 ? b1 - ELEMENT_STRIDE : -1;
   const b3 = i + 2 < table.count ? b2 + ELEMENT_STRIDE : -1;
-  for (let c = 0; c < ELEMENT_STRIDE; c++) {
-    const p1 = s[b1 + c];
-    const p2 = s[b2 + c];
-    ELEMENT_SCRATCH[c] = catmullRom(
-      b0 >= 0 ? s[b0 + c] : 2 * p1 - p2,
-      p1,
-      p2,
-      b3 >= 0 ? s[b3 + c] : 2 * p2 - p1,
-      f,
-    );
-  }
-  out.aAu = ELEMENT_SCRATCH[0];
-  out.h = ELEMENT_SCRATCH[1];
-  out.k = ELEMENT_SCRATCH[2];
-  out.p = ELEMENT_SCRATCH[3];
-  out.q = ELEMENT_SCRATCH[4];
-  out.lambdaDeg = ELEMENT_SCRATCH[5];
+  out.aAu = splineColumn(s, b0, b1, b2, b3, 0, f);
+  out.h = splineColumn(s, b0, b1, b2, b3, 1, f);
+  out.k = splineColumn(s, b0, b1, b2, b3, 2, f);
+  out.p = splineColumn(s, b0, b1, b2, b3, 3, f);
+  out.q = splineColumn(s, b0, b1, b2, b3, 4, f);
+  out.lambdaDeg = splineColumn(s, b0, b1, b2, b3, 5, f);
   return true;
 }
-
-const ELEMENT_SCRATCH = new Float64Array(ELEMENT_STRIDE);

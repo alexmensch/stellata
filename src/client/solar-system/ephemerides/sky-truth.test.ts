@@ -14,7 +14,7 @@ import { buildElementTable, type PlanetElementTable } from './element-table';
 import {
   getPlanetPositions,
   installPlanetElementTables,
-  _resetCacheForTests,
+  resetPositionCache,
   type PlanetName,
   type Vec3,
 } from './ephemeris';
@@ -76,7 +76,7 @@ const moonCentre: Vec3 = { x: 0, y: 0, z: 0 };
  *  ephemeris resolves the Earth/Moon barycentre, and Earth sits ~4,700 km off
  *  it — 11″ of Mercury's geocentric direction. */
 function earthCentreAt(t: number): Vec3 {
-  _resetCacheForTests();
+  resetPositionCache();
   const bary = getPlanetPositions(t).earth;
   moonOffsetEcliptic(MOON, t, moonOffset);
   earthMoonSplit(bary, moonOffset, earthCentre, moonCentre);
@@ -86,7 +86,7 @@ function earthCentreAt(t: number): Vec3 {
 function heliocentricAt(body: TruthRow['body'], t: number): Vec3 {
   if (body === 'sun') return { x: 0, y: 0, z: 0 };
   if (body === 'earth') return earthCentreAt(t);
-  _resetCacheForTests();
+  resetPositionCache();
   return getPlanetPositions(t)[body];
 }
 

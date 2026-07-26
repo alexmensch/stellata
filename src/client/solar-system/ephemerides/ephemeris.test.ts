@@ -6,7 +6,7 @@ import {
   getPlanetOrbitShapes,
   getPlanetPositions,
   planetEclipticAU,
-  _resetCacheForTests,
+  resetPositionCache,
   type Vec3,
 } from './ephemeris';
 import { AU_PC } from '../../util/astronomy-constants';
@@ -17,7 +17,7 @@ import { composeOrbitOrientationQuat } from './orbit-rings-layer';
 const J2000_UNIX = 946728000;
 
 beforeEach(() => {
-  _resetCacheForTests();
+  resetPositionCache();
 });
 
 describe('ELEMENTS table', () => {
@@ -177,10 +177,10 @@ describe('getPlanetPositions', () => {
   it('Mercury moves measurably over a quarter-orbit (~22 days)', () => {
     const t0 = J2000_UNIX;
     const t1 = J2000_UNIX + 22 * 86400;
-    _resetCacheForTests();
+    resetPositionCache();
     const a = getPlanetPositions(t0);
     const aMercury = { ...a.mercury };
-    _resetCacheForTests();
+    resetPositionCache();
     const b = getPlanetPositions(t1);
     const d = Math.hypot(
       b.mercury.x - aMercury.x,
@@ -197,10 +197,10 @@ describe('getPlanetPositions', () => {
   it('Mercury returns near its starting position after one full orbit (~88 days)', () => {
     const t0 = J2000_UNIX;
     const t1 = J2000_UNIX + 88 * 86400;
-    _resetCacheForTests();
+    resetPositionCache();
     const a = getPlanetPositions(t0);
     const aMercury = { ...a.mercury };
-    _resetCacheForTests();
+    resetPositionCache();
     const b = getPlanetPositions(t1);
     const d = Math.hypot(
       b.mercury.x - aMercury.x,

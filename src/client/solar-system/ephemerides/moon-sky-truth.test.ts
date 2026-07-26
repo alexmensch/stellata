@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { getPlanetPositions, _resetCacheForTests, type Vec3 } from './ephemeris';
+import { getPlanetPositions, resetPositionCache, type Vec3 } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
 import { jdeToT } from '../time/time';
@@ -114,7 +114,7 @@ describe('moon sky truth vs Horizons (parent-relative position)', () => {
 
     for (const row of rows ?? []) {
       it(`${elem.name} @ JD ${row.jdUt}: on-sky position angle + separation match`, () => {
-        _resetCacheForTests();
+        resetPositionCache();
         const t = jdeToT(row.jdUt);
         const pos = getPlanetPositions(t);
         const isEarthMoon = elem.parent === 'Earth';

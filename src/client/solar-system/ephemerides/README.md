@@ -224,10 +224,17 @@ element source that positions the bodies** (Sol: live Standish
 elements for planets, `MOON_ELEMENTS` for moons), never the
 display-only `Planet.semiMajorAxisAu`/`.eccentricity` fields. The two
 tables were once unreconciled and rings visibly missed their bodies.
-Host-centred geometry re-derives whenever its build `t` ages past
-`RING_GEOMETRY_MAX_AGE_S` (one sim-day), so time scrubbing keeps ring
-orientation locked to the secular element drift the body positions
-follow; there is no attach-time wall-clock snapshot. Hosts without an
+Host-centred geometry is checked against the live elements every frame and
+rewritten only when they have drifted past `RING_GEOMETRY_DRIFT_TOLERANCE`
+— **the polyline's own resolution**, so a skipped rewrite is provably
+invisible. Evaluating nine sets of elements is the cheap half (and shares
+`getPlanetOrbitShapes`' per-`t` cache with the body positions); rewriting
+8192 vertices and re-uploading the buffer is what costs. Keying the rewrite
+on elapsed *sim* time is what this replaced, and it had no rate limit at
+all: one frame at high fast-forward advances decades, so it degenerated
+into a full nine-ring re-derive every frame. Ring orientation still tracks
+secular drift under scrubbing, and there is no attach-time wall-clock
+snapshot. Hosts without an
 element source fall back to `defaultOrbitGeometry` (static a/e, flat
 on the host plane).
 

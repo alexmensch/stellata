@@ -164,6 +164,11 @@ export type PlanetPositions = Record<PlanetName, Vec3>;
 // bucket's position snap visible, so recompute follows `t` exactly.
 let cachedT: number | null = null;
 let cachedPositions: PlanetPositions | null = null;
+// Same single-slot contract for the ring shapes, which read the same
+// evaluation: the ring layer now checks the live elements every frame, so
+// without this the nine solves ran twice per frame instead of once.
+let cachedShapesT: number | null = null;
+let cachedShapes: PlanetOrbitShape[] | null = null;
 
 /** Standish elements at centuries-past-J2000 `T`, in the equinoctial form
  *  every element source here is expressed in. The b/c/s/f correction lands on
@@ -254,16 +259,16 @@ function planetEquinoctialAt(
   blendEquinoctialInto(out, scratchTableEq, w, out);
 }
 
-/** Install the loaded element tables. Resets the per-`t` cache: the swap moves
- *  the outer planets by up to 0.06 AU and a stale entry would hold the
- *  pre-table position for the rest of the frame it landed in. */
+/** Install the loaded element tables. */
 export function installPlanetElementTables(
   loaded: ReadonlyMap<PlanetName, PlanetElementTable>,
 ): void {
   PLANET_ORDER.forEach((name, i) => {
     tables[i] = loaded.get(name) ?? null;
   });
-  _resetCacheForTests();
+  // The swap moves the outer planets by up to 0.06 AU; a live cache entry
+  // would hold the pre-table position for the rest of this frame.
+  resetPositionCache();
 }
 
 const scratchEq = makeEquinoctial();
@@ -324,6 +329,9 @@ export interface PlanetOrbitShape {
  *  snapshot desynced under time scrubbing, and its ring a/e came from a
  *  second, rounded table. */
 export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
+  if (cachedShapesT === t && cachedShapes !== null) {
+    return cachedShapes;
+  }
   const jdTdb = tToJdTdb(t);
   const out: PlanetOrbitShape[] = [];
   for (let i = 0; i < ELEMENTS.length; i++) {
@@ -339,14 +347,21 @@ export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
       },
     });
   }
+  cachedShapesT = t;
+  cachedShapes = out;
   return out;
 }
 
-/** Reset the per-`t` cache. Test-only — production callers never need
- *  this; the cache invalidates naturally as `t` advances. */
-export function _resetCacheForTests(): void {
+/** Drop the per-`t` cache entry. `installPlanetElementTables` needs it — the
+ *  swap moves the outer planets by up to 0.06 AU and a live entry would hold
+ *  the pre-table position for the rest of the frame the tables landed in.
+ *  Tests use it to isolate epochs; nothing else has to, since the cache
+ *  invalidates naturally as `t` advances. */
+export function resetPositionCache(): void {
   cachedT = null;
   cachedPositions = null;
+  cachedShapesT = null;
+  cachedShapes = null;
 }
 
 export type { ElementSet };
