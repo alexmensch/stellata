@@ -132,7 +132,7 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
 
 // ---- Ledger / retirements codecs (docs/sid.md § 4.3) ---------------------
 
-export const SID_KINDS = ['star', 'cloud', 'galaxy', 'planet', 'shell'] as const;
+export const SID_KINDS = ['star', 'cloud', 'galaxy', 'planet', 'shell', 'probe'] as const;
 export type SidKind = (typeof SID_KINDS)[number];
 
 export const LEDGER_HEADER = 'sid\tcanonical_key\tkind\tfirst_seen';

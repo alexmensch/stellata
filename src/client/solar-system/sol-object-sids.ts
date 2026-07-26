@@ -1,6 +1,6 @@
-// Hand-written body → frozen Stellata ID pins for the Sol system (Sun,
-// planets, and the 18 major moons), minted from data/sid/sol-objects.tsv.
-// See src/client/solar-system/README.md § Sol-system SID pins.
+// Hand-written key → frozen Stellata ID pins for the Sol-system objects
+// carrying no catalog record: Sun, planets, moons, probes. Minted from
+// data/sid/sol-objects.tsv. See ./README.md § Sol-system SID pins.
 
 export const SOL_OBJECT_SIDS: Readonly<Record<string, number>> = {
   sun: 306055,
@@ -31,4 +31,9 @@ export const SOL_OBJECT_SIDS: Readonly<Record<string, number>> = {
   titania: 330270,
   oberon: 330271,
   triton: 330272,
+  pioneer10: 330275,
+  pioneer11: 330276,
+  voyager1: 330277,
+  voyager2: 330278,
+  newhorizons: 330279,
 };

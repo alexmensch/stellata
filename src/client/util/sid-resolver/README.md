@@ -19,8 +19,8 @@ index.ts                   Re-export.
 ## Domain lifecycle
 
 The resolver is constructed with a **roster** — every domain kind this
-client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`). Each
-domain then reaches exactly one terminal state:
+client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`,
+`probe`). Each domain then reaches exactly one terminal state:
 
 - **attached** — its artifact loaded; `attach(kind, domain)` wires a
   `{ localIndexOf, sidOf }` pair over the artifact's sid column.
@@ -64,7 +64,8 @@ layer:
 | kind | attach point | sid source | localIndex meaning |
 | --- | --- | --- | --- |
 | `star` | after catalog load | `catalog.sid` column (`arrayDomain`) | catalog record index |
-| `planet` | boot | `SOL_OBJECT_SIDS` in `SOL_PLANETS` order | index into `SOL_PLANETS` |
+| `planet` | boot | `SOL_OBJECT_SIDS` in `SOL_BODIES` order | index into `SOL_BODIES` (planets then moons) |
+| `probe` | boot, after `loadProbes` resolves | `SOL_OBJECT_SIDS` in LOADED-roster order | ProbeField roster index = Target `{kind:'probe'}` idx |
 | `lg` | after `loadLocalGroup` resolves (concluded when the artifact is missing) | `local-group.json` per-object `sid` | `LgCatalog.objects` index |
 | `cloud` | after `loadClouds` resolves (concluded when the artifact is missing) | `clouds.json` per-object `sid` | `CloudCatalog.clouds` index |
 | `shell` | boot (both sids static) | `SHELL_OBJECT_SIDS` in `SHELL_KEYS` order | `SHELL_KEYS` index = Target `{kind:'shell'}` idx |
@@ -72,6 +73,15 @@ layer:
 `SOL_OBJECT_SIDS.sun` is deliberately NOT in the planet domain: Sol's
 catalog record carries the same sid (same-as edge, docs/sid.md § 7), so
 the star domain claims it and a "sun" focus resolves to the Sol record.
+
+One table, two domains: `SOL_OBJECT_SIDS` backs both `planet` and
+`probe` because both mint from `sol-objects.tsv`. They stay separate
+domains because their localIndex spaces are different arrays — a probe
+is not a `SOL_BODIES` row. The probe domain is keyed over the LOADED
+roster rather than `PROBE_MISSIONS`: `loadProbes` drops a probe whose
+artifact is missing, and localIndex must equal the Target idx. A
+dropped probe's sid then resolves `unknown` while the survivors keep
+resolving — no index shift.
 
 ## Scope
 

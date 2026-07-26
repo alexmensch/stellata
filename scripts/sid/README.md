@@ -71,9 +71,11 @@ Per catalog record: `hip:` + `gaia_dr3:` from the record fields,
 `hd:`/`hr:`/`gl:` from its `search-index.json` entry, `synth:` from
 `catalog-row-index-map.json` `bySynth` (runtime `synth-` prefix
 stripped), `sol:sun` from `FLAG_IS_SOL`. Clouds and Local Group carry
-their artifact `id` slugs; planets come from `data/sid/sol-objects.tsv`
-(the `sun` row is not a second object — it rides the Sol record,
-realising the § 7 same-as edge); boundary shells come from
+their artifact `id` slugs; planets, moons, and probes all come from
+`data/sid/sol-objects.tsv`, which is scoped by system membership rather
+than object class — the row's `kind` column carries the class (the
+`sun` row is not a second object: it rides the Sol record, realising
+the § 7 same-as edge). Boundary shells come from
 `data/sid/shell-objects.tsv` (same `key\tkind` format, `shell:` ns).
 `gl:` keys have whitespace collapsed
 to `_` (`gl:Gl_804`) to satisfy the § 3 no-whitespace grammar.
