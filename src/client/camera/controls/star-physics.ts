@@ -11,7 +11,7 @@ import {
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
 import { parkDistance } from '../focus/focus-transition';
-import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
+import { KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import {
   apparentMagnitude,
@@ -124,6 +124,20 @@ export function minOrbitDistForPlanet(radiusPc: number, fovMinorRad: number): nu
 export function parkDistForPlanet(radiusPc: number, fovMinorRad: number): number {
   return distAtFillFraction(radiusPc, fovMinorRad, PLANET_PARK_FILL_FRACTION);
 }
+
+// Manual-zoom floor and auto-park distance for a focused deep-space probe.
+// Fixed distances rather than a fill-fraction solve: a probe renders as a
+// fixed-pixel marker with no angular diameter to fill, and its own
+// metre-scale hull would solve to a park far INSIDE `CAMERA_NEAR_PC`
+// (~31 km), clipping the very marker the camera flew to. The pair is
+// therefore set by the near plane at one end and by "still riding with the
+// probe" at the other — 1000 km sits ~32× above the near plane (the
+// smallest moon's floor sits 4.7× above it at the widest FOV), and 10 000 km
+// is under 2 % of Voyager 2's 570 000 km Jupiter closest approach, so the
+// encounter geometry the flythrough shows is the probe's own.
+// See src/client/solar-system/probes/README.md § Focus.
+export const PROBE_ORBIT_FLOOR_PC = 1_000 * KM_PC;
+export const PROBE_PARK_DIST_PC = 10_000 * KM_PC;
 
 export interface RenderedSizeArgs {
   catalog: Catalog;

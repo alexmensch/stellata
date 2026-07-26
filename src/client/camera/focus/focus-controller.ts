@@ -27,6 +27,7 @@ import {
   hasPlanets,
 } from '../../solar-system/planet-system';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
+import type { ProbeField } from '../../solar-system/probes/probe-field';
 import { KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { chartPlateauDistancePc } from '../../chart-mode/chart-disc-pure';
 import * as starPhysics from '../controls/star-physics';
@@ -122,6 +123,9 @@ export interface FocusControllerDeps {
    *  Eagerly constructed by the shell, so not a lazy attach getter;
    *  the closure just breaks the construction-order dependency. */
   getPlanetField: () => PlanetBodyField;
+  /** Deep-space probe marker field — Target {kind:'probe'} identity +
+   *  geometry. Eagerly constructed like the planet field. */
+  getProbeField: () => ProbeField;
   /** Lazy refs due to circular construction: warp + observe consume
    *  FocusOps from this controller, so they're built after. Resolved
    *  at request time. */
@@ -322,18 +326,17 @@ export class FocusController implements FocusOps {
 
   /** Focal object's live local position into `out`; false when no
    *  hard-kind focus is set. A star's is its baseline + orbital
-   *  perturbation; a planet's is its body-field position. Consumed by
-   *  ObserveTransition and WarpController to park the camera on the
-   *  object. */
+   *  perturbation; every other hard kind reads its provider leg.
+   *  Consumed by ObserveTransition and WarpController to park the camera
+   *  on the object. */
   focalLocalPositionInto(out: THREE.Vector3): boolean {
     if (this.focusedStar !== null) {
       this.starLivePositionInto(this.focusedStar, out);
       return true;
     }
-    if (this.focused?.kind === 'planet') {
-      return this.deps.getPlanetField().planetLocalPositionInto(this.focused.idx, out);
-    }
-    return false;
+    const t = this.focused;
+    if (t === null || !isHardTarget(t)) return false;
+    return this.deps.getFocusables()[t.kind].localPositionInto(t.idx, out);
   }
 
   /** The focused hard-kind (star / planet) Target, or null when the
@@ -353,16 +356,16 @@ export class FocusController implements FocusOps {
   setFocus(idx: number | null): void {
     // Every kind's focus shares the one Target slot, so a non-star
     // focus is displaced here structurally; the single 'focus' emit at
-    // the end carries the whole transition. A displaced PLANET focus is
-    // a hard focus like a star's — it set the orbit floor and attached
-    // the host's planet system on entry, so displacing it to null must
-    // run the same detach side effects a star unfocus does.
-    const wasPlanet = this.focused?.kind === 'planet';
+    // the end carries the whole transition. A displaced PLANET / PROBE
+    // focus is a hard focus like a star's — it set the orbit floor and
+    // attached the host's planet system on entry, so displacing it to
+    // null must run the same detach side effects a star unfocus does.
+    const wasHardNonStar = isHardTarget(this.focused) && this.focused!.kind !== 'star';
     const displaced = this.focused !== null && this.focused.kind !== 'star';
     if (displaced) this.focused = null;
     if (this.focusedStar === idx) {
       if (displaced) {
-        if (wasPlanet) {
+        if (wasHardNonStar) {
           const eye = this.deps.camera.position.distanceTo(this.deps.controls.target);
           this.deps.controls.minDistance = Math.min(GLOBAL_MIN_DIST_PC, eye);
           this.refreshPlanetSystem(null);
@@ -436,8 +439,8 @@ export class FocusController implements FocusOps {
     this.deps.bus.emit('cameraMode', 'navigate');
   }
 
-  /** Shared setter for the soft-focus kinds (cloud / LG). A hard focus
-   *  (star or planet) is displaced through the full setFocus(null) path
+  /** Shared setter for the soft-focus kinds (cloud / LG / shell). A hard
+   *  focus is displaced through the full setFocus(null) path
    *  (orbit floor clamp + planet-system detach + observe bail-out);
    *  another soft kind is displaced structurally by the slot write.
    *  Passing null clears only the named kind's focus. */
@@ -611,7 +614,32 @@ export class FocusController implements FocusOps {
     // From here on: the new star sits at local (0,0,0); camera.position
     // is already translated into the new frame.
 
-    const target = this.deps.controls.target; // focal live pos post-recentre
+    this.parkOnFocalTarget(
+      startQuat,
+      startUp,
+      parkDist,
+      Math.max(this.deps.catalog.physicalRadius[starIndex], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
+      animate,
+    );
+  }
+
+  /**
+   * Park-or-stay camera motion, shared by every hard-focus entry point.
+   * Runs AFTER the kind's recentring focus mutation, so `controls.target`
+   * is the object's live position in the post-recentre frame and the
+   * lerp's fromPos / toPos live in that same frame.
+   *
+   * `arrivalRadiusPc` is the object's geometric radius for the
+   * angular-size arrival ease; null falls back to the log-d profile.
+   */
+  private parkOnFocalTarget(
+    startQuat: THREE.Quaternion,
+    startUp: THREE.Vector3,
+    parkDist: number,
+    arrivalRadiusPc: number | null,
+    animate: boolean,
+  ): void {
+    const target = this.deps.controls.target;
     const eyeDist = this.deps.camera.position.distanceTo(target);
 
     if (animate && eyeDist > parkDist) {
@@ -623,12 +651,7 @@ export class FocusController implements FocusOps {
         parkDist,
         FOCUS_LERP_MS,
         performance.now(),
-        arrivalEaseFn({
-          d0: eyeDist,
-          dEnd: parkDist,
-          targetRadius:
-            Math.max(this.deps.catalog.physicalRadius[starIndex], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
-        }),
+        arrivalEaseFn({ d0: eyeDist, dEnd: parkDist, targetRadius: arrivalRadiusPc }),
       ));
       // Deliberately do NOT toggle controls.enabled. The animate-loop
       // dispatcher routes through tick() before controls.update(), so
@@ -688,30 +711,77 @@ export class FocusController implements FocusOps {
     // planet-anchored local frame; camera.position is already
     // translated into it.
 
-    const target = this.deps.controls.target;
-    const eyeDist = this.deps.camera.position.distanceTo(target);
+    this.parkOnFocalTarget(startQuat, startUp, parkDist, radiusPc, animate);
+  }
 
-    if (animate && eyeDist > parkDist) {
-      this.startFocusLerp(newFocusLerpFrom(
-        this.deps.camera.position,
-        startQuat,
-        startUp,
-        target,
-        parkDist,
-        FOCUS_LERP_MS,
-        performance.now(),
-        arrivalEaseFn({ d0: eyeDist, dEnd: parkDist, targetRadius: radiusPc }),
-      ));
-      // controls.enabled stays true — see focusStar's comment.
-    } else if (eyeDist > parkDist) {
-      const dir = this.deps.camera.position.clone().sub(target).normalize();
-      if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-      this.deps.camera.position.copy(target).addScaledVector(dir, parkDist);
-      this.deps.camera.lookAt(target);
-      this.deps.controls.update();
-    } else {
-      this.deps.controls.update();
+  /**
+   * Focus a deep-space probe — the third hard-focus kind. Mirrors
+   * `focusPlanet`, with the fixed `PROBE_PARK_DIST_PC` /
+   * `PROBE_ORBIT_FLOOR_PC` pair in place of the body's angular solves
+   * (a probe marker is a fixed-pixel glyph — see `star-physics.ts`), and
+   * a null arrival radius so the ease falls back to its log-d profile.
+   * The camera then rides the probe along its whole trajectory under
+   * scrub via the moving-focal ride in `stellata.ts`.
+   */
+  focusProbe(idx: number, opts: { animate?: boolean } = {}): void {
+    const field = this.deps.getProbeField();
+    if (field.probeAt(idx) === null) return;
+    if (this.deps.getWarp().isActive()) return;
+    this.cancelUnfocusLerp();
+    this.cancelFocusLerp();
+
+    const startQuat = this.deps.camera.quaternion.clone();
+    const startUp = this.deps.camera.up.clone();
+
+    // setProbeFocus's contract matches setPlanetFocus's: seed
+    // controls.target in the CURRENT (pre-recentre) frame.
+    if (!field.localPositionInto(idx, this.tmpLive)) return;
+    this.deps.controls.target.copy(this.tmpLive);
+    this.setVectorTo(null);
+    this.setProbeFocus(idx);
+
+    this.parkOnFocalTarget(startQuat, startUp, starPhysics.PROBE_PARK_DIST_PC, null,
+      opts.animate ?? true);
+  }
+
+  /** setFocus-analogue for the probe kind: observe bail-out, floating-
+   *  origin recentre onto the probe's absolute position, orbit-floor
+   *  drop, Sol planet-system attach, and the pose-preserving snap of
+   *  controls.target onto the probe's live local position. Emits the
+   *  'focus' + 'state' pair. */
+  private setProbeFocus(idx: number): void {
+    const field = this.deps.getProbeField();
+    if (this.cameraMode === 'observe') {
+      this.exitObserveForFocusChange();
     }
+    if (!this.probeAbsolutePositionInto(idx, this.tmpRecenter)) return;
+    this.deps.frameAnchor.recenterOrigin(this.tmpRecenter);
+    this.focused = { kind: 'probe', idx };
+    this.deps.controls.minDistance = starPhysics.PROBE_ORBIT_FLOOR_PC;
+    // A probe is a Sol-system object by construction, so Sol's system —
+    // orbit rings, planet labels — stays attached exactly as a planet
+    // focus keeps its host's: those rings are what makes a flythrough
+    // planet pass legible.
+    this.refreshPlanetSystem(this.deps.catalog.solIndex);
+    const live = this.tmpLive;
+    field.localPositionInto(idx, live);
+    const t = this.deps.controls.target;
+    this.deps.camera.position.x += live.x - t.x;
+    this.deps.camera.position.y += live.y - t.y;
+    this.deps.camera.position.z += live.z - t.z;
+    t.copy(live);
+    this.deps.bus.emit('focus', this.focused);
+    this.deps.bus.emit('state');
+  }
+
+  /** Probe's absolute (catalog-frame) position — the recentre anchor.
+   *  The field only knows renderer-local coordinates, so the current
+   *  floating-origin offset converts back. False when the trajectory
+   *  doesn't cover the current `t`. */
+  private probeAbsolutePositionInto(idx: number, out: THREE.Vector3): boolean {
+    if (!this.deps.getProbeField().localPositionInto(idx, out)) return false;
+    out.add(this.deps.frameAnchor.getWorldOffset());
+    return true;
   }
 
   /** setFocus-analogue for the planet kind: observe bail-out, floating-
@@ -750,8 +820,8 @@ export class FocusController implements FocusOps {
   }
 
   /** Kind-agnostic travel entry point — search-select, canvas clicks,
-   *  URL restore. Hard kinds (star / planet) route through their
-   *  recentring focus paths; soft kinds (cloud / LG) share the
+   *  URL restore. Hard kinds (star / planet / probe) route through their
+   *  recentring focus paths; soft kinds (cloud / LG / shell) share the
    *  focus-park path below, reading their geometry through the
    *  FocusableProviders registry. No-op when the target's layer hasn't
    *  loaded. */
@@ -762,6 +832,10 @@ export class FocusController implements FocusOps {
     }
     if (target.kind === 'planet') {
       this.focusPlanet(target.idx, opts);
+      return;
+    }
+    if (target.kind === 'probe') {
+      this.focusProbe(target.idx, opts);
       return;
     }
     // setFocus(null) below leaves worldOffset alone, so no frame-shift
@@ -851,6 +925,14 @@ export class FocusController implements FocusOps {
       );
       return;
     }
+    if (target.kind === 'probe') {
+      const field = this.deps.getProbeField();
+      if (!field.localPositionInto(target.idx, this.tmpLive)) return;
+      this.deps.controls.target.copy(this.tmpLive);
+      this.deps.controls.update();
+      this.setProbeFocus(target.idx);
+      return;
+    }
     const provider = this.deps.getFocusables()[target.kind];
     if (!provider.localPositionInto(target.idx, this.tmpLive)) return;
     this.setSoftFocus(target.kind, target.idx);
@@ -927,21 +1009,14 @@ export class FocusController implements FocusOps {
     this.setFocus(null);
   }
 
-  /** Park distance of the current hard-kind focus (star / planet), or
-   *  null for soft kinds / no focus — the unfocus zoom-out anchor and
-   *  the observe exit's pull-back distance. */
+  /** Park distance of the current hard-kind focus (star / planet /
+   *  probe), or null for soft kinds / no focus — the unfocus zoom-out
+   *  anchor and the observe exit's pull-back distance. */
   hardFocusParkDist(): number | null {
-    if (this.focused === null) return null;
-    if (this.focused.kind === 'star') return this.parkDistForStar(this.focused.idx);
-    if (this.focused.kind === 'planet') {
-      const planet = this.deps.getPlanetField().planetAt(this.focused.idx);
-      if (!planet) return null;
-      return starPhysics.parkDistForPlanet(
-        planet.radiusKm * KM_PC,
-        starPhysics.fovMinorRad(this.deps.camera),
-      );
-    }
-    return null;
+    const t = this.focused;
+    if (t === null || !isHardTarget(t)) return null;
+    if (t.kind === 'star') return this.parkDistForStar(t.idx);
+    return this.deps.getFocusables()[t.kind].focusParkDistance(t.idx);
   }
 
   // ─── FocusTarget factories ─────────────────────────────────────────
@@ -1068,6 +1143,35 @@ export class FocusController implements FocusOps {
     };
   }
 
+  /** Build a FocusTarget for the probe at roster index `idx`. Returns
+   *  null when no probe occupies the index (a missing artifact drops it
+   *  from the roster). */
+  private makeProbeFocusTarget(idx: number): FocusTarget | null {
+    const field = this.deps.getProbeField();
+    if (field.probeAt(idx) === null) return null;
+    return {
+      kind: 'probe',
+      idx,
+      anchorInto: (out) => this.probeAbsolutePositionInto(idx, out),
+      localPositionInto: (out) => field.localPositionInto(idx, out),
+      parkRadius: () => starPhysics.PROBE_PARK_DIST_PC,
+      applyFocus: () => {
+        this.applyFocusState({ kind: 'probe', idx });
+        this.deps.controls.minDistance = starPhysics.PROBE_ORBIT_FLOOR_PC;
+        this.refreshPlanetSystem(this.deps.catalog.solIndex);
+      },
+      emitFocusEvents: () => {
+        this.deps.bus.emit('focus', { kind: 'probe', idx });
+        this.deps.bus.emit('state');
+      },
+      // A fixed-pixel marker has no geometric radius, so the arrival ease
+      // falls back to its log-d profile; chart mode draws no probe glyph
+      // at all, so there is no disc plateau to pivot on either.
+      physicalRadius: () => null,
+      chartPlateauDistance: () => null,
+    };
+  }
+
   /** Build a FocusTarget for the LG object at index `idx`. Returns null
    *  when the layer hasn't loaded or the index is out of range. */
   private makeLgFocusTarget(idx: number): FocusTarget | null {
@@ -1140,6 +1244,7 @@ export class FocusController implements FocusOps {
   makeFocusTarget(target: Target): FocusTarget | null {
     if (target.kind === 'star') return this.makeStarFocusTarget(target.idx);
     if (target.kind === 'planet') return this.makePlanetFocusTarget(target.idx);
+    if (target.kind === 'probe') return this.makeProbeFocusTarget(target.idx);
     if (target.kind === 'cloud') return this.makeCloudFocusTarget(target.idx);
     if (target.kind === 'shell') return this.makeShellFocusTarget(target.idx);
     return this.makeLgFocusTarget(target.idx);

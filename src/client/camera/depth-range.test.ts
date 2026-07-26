@@ -3,7 +3,12 @@ import * as THREE from 'three';
 import { CAMERA_NEAR_PC, FOV_MAX_DEG } from './timing';
 import { CAMERA_FAR_PC, MAX_DISTANCE_PC } from '../../../scripts/local-group/build-local-group-pure';
 import { GLOBAL_MIN_DIST_PC } from './focus/focus-controller';
-import { fovMinorRad, minOrbitDistForPlanet } from './controls/star-physics';
+import {
+  PROBE_ORBIT_FLOOR_PC,
+  PROBE_PARK_DIST_PC,
+  fovMinorRad,
+  minOrbitDistForPlanet,
+} from './controls/star-physics';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { KM_PC } from '../util/astronomy-constants';
@@ -53,6 +58,16 @@ describe('camera depth range / near-plane configuration', () => {
     expect(marginAtWidest).toBeLessThan(5);
     // At the default FOV the same body sits ~15.5× up.
     expect(tightestZoomFloorPc(DEFAULT_FOV) / CAMERA_NEAR_PC).toBeGreaterThan(15);
+  });
+
+  it('keeps the probe orbit floor clear of the near plane, park above it', () => {
+    // The probe pair is FOV-independent (a fixed-pixel marker has no disc
+    // to fill), so one margin covers every FOV — unlike the body floors
+    // above, whose worst case is FOV_MAX_DEG. A metre-scale solve on the
+    // spacecraft hull is what this replaces: it would land ~1e-17 pc,
+    // five orders of magnitude inside the clip plane.
+    expect(PROBE_ORBIT_FLOOR_PC / CAMERA_NEAR_PC).toBeGreaterThan(30);
+    expect(PROBE_PARK_DIST_PC).toBeGreaterThan(PROBE_ORBIT_FLOOR_PC);
   });
 
   it('covers the whole catalog out to the far plane', () => {
