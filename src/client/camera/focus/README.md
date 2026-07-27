@@ -264,7 +264,11 @@ Branch in `focusStar` / the soft-kind leg of `flyTo`:
 - **`eyeDist > parkDist` → lerp.** Camera position lerps from
   `fromPos` to `toPos = target + (eye-direction × parkDist)` and
   camera orientation slerps in parallel from `fromQuat` to a
-  quaternion that looks at the target from `toPos`. Both
+  quaternion that looks at the target from `toPos` **with the reference
+  up axis as up, not the live `camera.up`** — the end pose looks down a
+  different axis than the start, so resolving roll against the start-pose
+  up lands on a roll the per-frame correction undoes one frame later, as
+  a visible pop (`../controls/input/README.md` § Reference up axis). Both
   interpolations are driven by the same smoothstep, so the camera
   continuously rotates toward the new target as it flies in. Builds
   the lerp **after** `setFocus` recentres the floating origin so

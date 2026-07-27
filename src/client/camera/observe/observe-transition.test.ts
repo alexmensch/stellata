@@ -12,6 +12,7 @@ import { makeAimStub, makeControlsStub, makeObserveControlsStub } from '../camer
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { OBSERVE_TRANSITION_MS } from '../timing';
+import { ReferenceUpController } from '../controls/input/reference-up';
 
 interface FocusFixture {
   ops: ObserveFocusOps;
@@ -108,6 +109,7 @@ function makeHarness(opts: { mode?: CameraMode } = {}): Harness {
     controls,
     observeControls,
     aim,
+    referenceUp: new ReferenceUpController(),
     setFocalBodyHidden: (target) => {
       hidden.target = target;
       uHide.value = target?.kind === 'star' ? target.idx : -1;

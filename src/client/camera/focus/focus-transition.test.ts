@@ -12,6 +12,7 @@ import {
   FOCUS_LERP_MS,
   WARP_REORIENT_MS,
 } from '../../stellata';
+import { ReferenceUpController } from '../controls/input/reference-up';
 
 describe('camera-lerp duration consolidation)', () => {
   it('routes AIM_T_MAX_MS / FOCUS_LERP_MS through CAMERA_LERP_MS', () => {
@@ -104,6 +105,51 @@ describe('newFocusLerpFrom', () => {
     expect(fwd.x).toBeCloseTo(expected.x, 12);
     expect(fwd.y).toBeCloseTo(expected.y, 12);
     expect(fwd.z).toBeCloseTo(expected.z, 12);
+  });
+
+  // No pop at the seam: the frame after the lerp settles, TrackballControls
+  // re-derives orientation from the corrected camera.up. That has to
+  // reproduce the roll the slerp just landed on.
+  it('lands on a roll the steady-state orientation source reproduces', () => {
+    const refUp = new ReferenceUpController();
+    const camera = new THREE.PerspectiveCamera(50, 1.5, 1e-12, 1000);
+    // Looking somewhere other than the new focal target, so the end pose's
+    // view axis genuinely differs from the start's.
+    camera.position.set(3, 4, 5);
+    camera.lookAt(new THREE.Vector3(20, -8, 3));
+    refUp.correct(camera);
+    const target = new THREE.Vector3(0, 0, 0);
+
+    const state = newFocusLerpFrom(
+      camera.position, camera.quaternion, refUp.get(), target, AU_PC, 2000, 0,
+    );
+    tickFocusLerp(state, 2000, camera);
+    const landed = camera.quaternion.clone();
+
+    refUp.correct(camera);
+    camera.lookAt(target);
+
+    expect(camera.quaternion.angleTo(landed)).toBeCloseTo(0, 6);
+  });
+
+  it('would pop the roll if the endpoint resolved against the start-pose up', () => {
+    const refUp = new ReferenceUpController();
+    const camera = new THREE.PerspectiveCamera(50, 1.5, 1e-12, 1000);
+    camera.position.set(3, 4, 5);
+    camera.lookAt(new THREE.Vector3(20, -8, 3));
+    refUp.correct(camera);
+    const target = new THREE.Vector3(0, 0, 0);
+
+    const state = newFocusLerpFrom(
+      camera.position, camera.quaternion, camera.up, target, AU_PC, 2000, 0,
+    );
+    tickFocusLerp(state, 2000, camera);
+    const landed = camera.quaternion.clone();
+
+    refUp.correct(camera);
+    camera.lookAt(target);
+
+    expect(camera.quaternion.angleTo(landed)).toBeGreaterThan(0.01);
   });
 });
 

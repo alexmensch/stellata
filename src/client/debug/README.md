@@ -76,9 +76,9 @@ up as a hot path in its own measurements.
   invited nonsense cross-browser comparisons.
 - **`gpu Xms`** is one query's measurement of a whole frame (the
   `gpu.frame` scope), and appears only where the driver exposes a timer
-  query. It is **not** the sum of the `gpu.*` rows: those rotate one scope
-  per frame, so their averages cover disjoint frame sets and adding them
-  yields a total that can exceed the frame period. Where the extension is
+  query. It is **not** the sum of the `gpu.*` rows — those both rotate
+  across frames and over-attribute, so their total runs well above the
+  frame period (§ GPU timing). Where the extension is
   absent (Safari exposes none), the headline says **`submit Xms`** instead
   and reports CPU wall-time around the render calls. Submission is
   asynchronous, so a large `submit` means the main thread is *blocking*
@@ -102,9 +102,9 @@ after exiting chart mode (otherwise the average would lag forever).
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
-| `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning both passes. The headline's source. |
-| `gpu.main`              | timer query                      | Real GPU ms for the main pass. Absent without the extension. |
-| `gpu.localDepth`        | timer query                      | Real GPU ms for the local depth pass. Absent without the extension. |
+| `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning both passes. The headline's source, and the only row that prices anything. |
+| `gpu.main`              | timer query                      | Main-pass timer scope. Over-attributes — a relative signal, not a cost. See § GPU timing. |
+| `gpu.localDepth`        | timer query                      | Local-depth-pass timer scope. Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |
@@ -131,13 +131,22 @@ frame times a single scope and rotates to the next, so **N scopes sample
 at 1/N the frame rate**. The ring-buffer averages stay meaningful; the
 per-frame histogram is still driven by `frame.total`, never by these.
 
-**Never add the `gpu.*` rows together.** Rotation is what makes the sum
-invalid: two scopes never sample the same frame, so their averages
-describe different work and their total can exceed the frame period
-outright. `GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) exists for this — it
-brackets the entire frame's GL in a single query, and it is what the
-headline reads. The per-pass rows are a breakdown to compare *against*
-it, never a decomposition to reconstruct it from.
+**Never add the `gpu.*` rows together, and never ratio one against
+`gpu.frame`.** Two problems compound. Rotation means two scopes never
+sample the same frame, so their averages describe different work.
+Worse, the per-pass scopes **over-attribute** on ANGLE/Metal: measured
+on an M4, `gpu.main` came within 1% of `gpu.frame` while
+`gpu.localDepth` was a further 83% of the frame on top of it — a sum of
+42.7 ms against a measured frame of 23.4 ms. WebGL2 exposes no timestamp
+queries, so elapsed time is derived from pass boundaries, and on a
+tile-based deferred renderer a pass's fragment work executes when that
+pass is finalised — not necessarily inside the query that encoded it.
+
+`GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) is the only figure that prices a
+frame: one query, no cross-scope arithmetic. **To price a single pass,
+disable it and difference `gpu.frame`.** The per-pass rows are a
+relative signal — does this scope respond to this change — and nothing
+more.
 
 Because `gpu.frame` encloses the inner scopes, `begin()` refuses the
 inner ones on its turn and their `end()` calls must leave the enclosing

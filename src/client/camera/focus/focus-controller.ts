@@ -7,6 +7,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
+import type { ReferenceUpController } from '../controls/input/reference-up';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
@@ -39,7 +40,6 @@ import {
 import { shiftArrivalWaypoints } from '../arrival/camera-motion';
 import { arrivalEaseFn } from '../camera-config';
 import { FOCUS_LERP_MS } from '../timing';
-import { alignCameraUpToQuaternion } from '../controls/up-align-pure';
 
 /** Fallback orbit-controls floor when no star is focused. Sized to keep
  *  the camera comfortably outside any single star's physical envelope
@@ -109,6 +109,7 @@ export interface FocusControllerDeps {
   bus: EventBus<StellataEventMap>;
   frameAnchor: FrameAnchor;
   aim: AimController;
+  referenceUp: ReferenceUpController;
   /** Hide/unhide the rendered body of a hard-focus target (star: the
    *  uHideFocusIdx shader pin; planet: the body field's uHideIdx).
    *  null unhides. The shell owns the per-kind dispatch. */
@@ -434,7 +435,7 @@ export class FocusController implements FocusOps {
     this.cameraMode = 'navigate';
     this.deps.setFocalBodyHidden(null);
     this.deps.observeControls.disable();
-    alignCameraUpToQuaternion(this.deps.camera);
+    this.deps.referenceUp.adoptFromCamera(this.deps.camera);
     this.deps.controls.enabled = true;
     this.deps.bus.emit('cameraMode', 'navigate');
   }
@@ -592,7 +593,7 @@ export class FocusController implements FocusOps {
     // Orientation is frame-shift-invariant; capture once. After setFocus
     // we still want `fromQuat` to be the user's pre-click camera view.
     const startQuat = this.deps.camera.quaternion.clone();
-    const startUp = this.deps.camera.up.clone();
+    const referenceUp = this.deps.referenceUp.get();
 
     const fovMinor = starPhysics.fovMinorRad(this.deps.camera);
     const parkDist = starPhysics.parkDistForStar({
@@ -616,7 +617,7 @@ export class FocusController implements FocusOps {
 
     this.parkOnFocalTarget(
       startQuat,
-      startUp,
+      referenceUp,
       parkDist,
       Math.max(this.deps.catalog.physicalRadius[starIndex], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
       animate,
@@ -634,7 +635,7 @@ export class FocusController implements FocusOps {
    */
   private parkOnFocalTarget(
     startQuat: THREE.Quaternion,
-    startUp: THREE.Vector3,
+    referenceUp: THREE.Vector3,
     parkDist: number,
     arrivalRadiusPc: number | null,
     animate: boolean,
@@ -646,7 +647,7 @@ export class FocusController implements FocusOps {
       this.startFocusLerp(newFocusLerpFrom(
         this.deps.camera.position,
         startQuat,
-        startUp,
+        referenceUp,
         target,
         parkDist,
         FOCUS_LERP_MS,
@@ -693,7 +694,7 @@ export class FocusController implements FocusOps {
     const animate = opts.animate ?? true;
 
     const startQuat = this.deps.camera.quaternion.clone();
-    const startUp = this.deps.camera.up.clone();
+    const referenceUp = this.deps.referenceUp.get();
 
     const radiusPc = planet.radiusKm * KM_PC;
     const fovMinor = starPhysics.fovMinorRad(this.deps.camera);
@@ -711,7 +712,7 @@ export class FocusController implements FocusOps {
     // planet-anchored local frame; camera.position is already
     // translated into it.
 
-    this.parkOnFocalTarget(startQuat, startUp, parkDist, radiusPc, animate);
+    this.parkOnFocalTarget(startQuat, referenceUp, parkDist, radiusPc, animate);
   }
 
   /**
@@ -731,7 +732,7 @@ export class FocusController implements FocusOps {
     this.cancelFocusLerp();
 
     const startQuat = this.deps.camera.quaternion.clone();
-    const startUp = this.deps.camera.up.clone();
+    const referenceUp = this.deps.referenceUp.get();
 
     // setProbeFocus's contract matches setPlanetFocus's: seed
     // controls.target in the CURRENT (pre-recentre) frame.
@@ -740,7 +741,7 @@ export class FocusController implements FocusOps {
     this.setVectorTo(null);
     this.setProbeFocus(idx);
 
-    this.parkOnFocalTarget(startQuat, startUp, starPhysics.PROBE_PARK_DIST_PC, null,
+    this.parkOnFocalTarget(startQuat, referenceUp, starPhysics.PROBE_PARK_DIST_PC, null,
       opts.animate ?? true);
   }
 
@@ -853,7 +854,7 @@ export class FocusController implements FocusOps {
 
     const animate = opts.animate ?? true;
     const startQuat = this.deps.camera.quaternion.clone();
-    const startUp = this.deps.camera.up.clone();
+    const referenceUp = this.deps.referenceUp.get();
 
     this.deps.controls.target.copy(dest);
     const parkDist = provider.focusParkDistance(target.idx);
@@ -869,7 +870,7 @@ export class FocusController implements FocusOps {
         this.startFocusLerp(newFocusLerpFrom(
           this.deps.camera.position,
           startQuat,
-          startUp,
+          referenceUp,
           dest,
           parkDist,
           FOCUS_LERP_MS,
