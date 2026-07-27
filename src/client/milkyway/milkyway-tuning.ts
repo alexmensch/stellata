@@ -17,7 +17,7 @@ export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   const v = layer.getValues();
 
   // Surface-brightness anchor, in mag/arcsec². Range straddles the
-  // provisional value; H7 lands the shipped one.
+  // derived value; H7 lands the shipped anchor.
   body.appendChild(makeSlider({
     label: 'glowMagOffset',
     min: 26,

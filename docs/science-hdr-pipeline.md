@@ -249,7 +249,7 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | --- | --- | --- |
 | Star glow + disc (`star.frag.glsl`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
-| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; `Ω_px` = pixel solid angle in arcsec², so **surface brightness** rather than per-pixel luminance is the FOV-invariant (zooming dims the band exactly as it dims a resolved stellar disc). `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` is provisionally **31.3** — the GC sightline at S ≈ 20.2 mag/arcsec², the § 1 band reference — pending H7's per-sightline re-derivation (§ 8) |
+| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; `Ω_px` = pixel solid angle in arcsec², so **surface brightness** rather than per-pixel luminance is the FOV-invariant (zooming dims the band exactly as it dims a resolved stellar disc). `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` is **derived** (≈ 31.054) from a declarative single-point anchor — the GC sightline at S = 20.0 mag/arcsec², the § 1 band reference — pending H7's per-sightline re-derivation (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
 | LG emission (shelved) | same gate + exp squash, magnitude-domain | identical mapping as MW when unshelved — it already computes a per-pixel magnitude, so it lands on the unit for free; no new bead until unshelve |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | identical point-source rule as stars, `m` from `planetApparentMagnitude` — mesh↔glare continuity by construction |
 | Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | true surface brightness: per-px `L` such that the disc-integral equals `L(m_planet)`; Lambert/phase/limb shading redistributes within the disc at unit mean; `HOST_IRRADIANCE_DISPLAY_EXPONENT`, `HOST_INTENSITY_MIN/MAX`, and the litIntensity slider-composition are deleted (tone-map does the compression; uExposure does the slider) |
@@ -371,11 +371,12 @@ day one — the fullscreen pass and the inline path can never drift.
 - **MW anchor:** re-derive `uGlowMagOffset` so a chosen sightline
   matches published V-band surface photometry (GC bulge / Baade's
   window and an anticentre point), then confirm against eso0932a
-  stretches per preset. H4 shipped **31.3** as a provisional single-point
-  anchor (GC sightline → S ≈ 20.2); the known gap it leaves is a
-  latitude gradient steeper than the real sky's — the model puts NGP near
-  25.3 mag/arcsec² against a real ~23.5–24. Fixing that is a density-
-  profile question, not an offset one.
+  stretches per preset. The offset is **derived** from a single-point
+  anchor (`GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0` → `uGlowMagOffset ≈
+  31.054`), so H7's job is to replace the *anchor*, not to tune the
+  offset. The known gap it leaves is a latitude gradient steeper than the
+  real sky's — the model puts NGP near 25.1 mag/arcsec² against a real
+  ~23.5–24. Fixing that is a density-profile question, not an offset one.
 - **`DR_MAG` is the tunable** reconciling strict physicality with the
   panorama's long-exposure look; land its shipped default in H7 and
   record the chosen value here.
