@@ -11,7 +11,7 @@ import {
   type RingStats,
   type RowDatum,
 } from './perf-hud-pure';
-import { GpuTimer } from './gpu-timer';
+import { GPU_WHOLE_FRAME_SCOPE, GpuTimer } from './gpu-timer';
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
@@ -335,16 +335,23 @@ function renderPanel(): void {
   const fpsAvg = deltaStats.avg > 0 ? 1000 / deltaStats.avg : 0;
   const fpsLow = deltaStats.max > 0 ? 1000 / deltaStats.max : 0;
 
-  // With a timer query the headline is real GPU execution summed over
-  // the rotating scopes; without one it can only be CPU submission
-  // wall-time, and says so.
+  // The headline is one query's measurement of a whole frame, never a sum
+  // of the per-scope rows: scopes rotate one per frame, so their averages
+  // describe disjoint frame sets and adding them yields a total that can
+  // exceed the frame period. Summing is the fallback only when nothing has
+  // registered the whole-frame scope at all.
   let busyLabel = 'submit';
   let busyMs = 0;
   if (gpuTimer) {
     busyLabel = 'gpu';
-    for (const scope of gpuTimer.scopeLabels()) {
-      const s = sections.get(`gpu.${scope}`);
-      if (s) busyMs += summarize(s).avg;
+    if (gpuTimer.scopeLabels().includes(GPU_WHOLE_FRAME_SCOPE)) {
+      const whole = sections.get(`gpu.${GPU_WHOLE_FRAME_SCOPE}`);
+      busyMs = whole ? summarize(whole).avg : 0;
+    } else {
+      for (const scope of gpuTimer.scopeLabels()) {
+        const s = sections.get(`gpu.${scope}`);
+        if (s) busyMs += summarize(s).avg;
+      }
     }
   } else {
     for (const [label, s] of sections) {

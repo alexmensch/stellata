@@ -20,6 +20,8 @@ src/client/debug/
   gpu-timer.ts (+ test)           EXT_disjoint_timer_query_webgl2 wrapper
                                   — real GPU execution time, one rotating
                                   scope per frame. See § GPU timing.
+  fake-gl.ts                      Test-only WebGL2 timer-query stub,
+                                  shared by gpu-timer + perf-hud tests.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
@@ -50,6 +52,9 @@ The HUD is an opt-in dev tool, not a user feature. Activation paths:
   stubs and clears the ring buffers, so a re-open starts fresh with an
   empty histogram. While the panel stays open, collapsing the Perf
   section gates per-tick DOM writes but not the ring-buffer fills.
+  **Every section opens collapsed** and each remembers its own state in
+  `sessionStorage` (`stellata.debug.collapsed.<key>`), so expand what you
+  need once and it stays expanded for the tab's lifetime.
 
 There is **no URL param and no keyboard shortcut.** Both paths existed
 during the original profiling work and were removed deliberately —
@@ -69,10 +74,13 @@ up as a hot path in its own measurements.
   `1000 / frame.total`: that inverts how much work a frame does, which
   reported "347 FPS" on a 60 Hz display whenever the work was cheap and
   invited nonsense cross-browser comparisons.
-- **`gpu Xms`** is real GPU execution summed over the timed scopes, and
-  appears only where the driver exposes a timer query. Where it doesn't
-  (Safari exposes none), the headline says **`submit Xms`** instead and
-  reports CPU wall-time around the render calls. Submission is
+- **`gpu Xms`** is one query's measurement of a whole frame (the
+  `gpu.frame` scope), and appears only where the driver exposes a timer
+  query. It is **not** the sum of the `gpu.*` rows: those rotate one scope
+  per frame, so their averages cover disjoint frame sets and adding them
+  yields a total that can exceed the frame period. Where the extension is
+  absent (Safari exposes none), the headline says **`submit Xms`** instead
+  and reports CPU wall-time around the render calls. Submission is
   asynchronous, so a large `submit` means the main thread is *blocking*
   on the driver — a real symptom, but not a measure of GPU work. Never
   compare a `submit` number against a `gpu` one.
@@ -94,6 +102,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
+| `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning both passes. The headline's source. |
 | `gpu.main`              | timer query                      | Real GPU ms for the main pass. Absent without the extension. |
 | `gpu.localDepth`        | timer query                      | Real GPU ms for the local depth pass. Absent without the extension. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
@@ -121,6 +130,19 @@ queries, so timed scopes cannot nest or overlap within a frame. Each
 frame times a single scope and rotates to the next, so **N scopes sample
 at 1/N the frame rate**. The ring-buffer averages stay meaningful; the
 per-frame histogram is still driven by `frame.total`, never by these.
+
+**Never add the `gpu.*` rows together.** Rotation is what makes the sum
+invalid: two scopes never sample the same frame, so their averages
+describe different work and their total can exceed the frame period
+outright. `GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) exists for this — it
+brackets the entire frame's GL in a single query, and it is what the
+headline reads. The per-pass rows are a breakdown to compare *against*
+it, never a decomposition to reconstruct it from.
+
+Because `gpu.frame` encloses the inner scopes, `begin()` refuses the
+inner ones on its turn and their `end()` calls must leave the enclosing
+query running — `endQuery` takes no handle, so closing on a label
+mismatch would stop the clock early. Pinned in `gpu-timer.test.ts`.
 
 Two further properties a reader will otherwise get wrong:
 
