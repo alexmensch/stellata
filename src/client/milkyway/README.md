@@ -19,11 +19,17 @@ disables. Hidden in chart mode.
   hides the meshes when chart engages).
 - `milkyway.vert.glsl`, `milkyway.frag.glsl` — ray-sphere intersect +
   log-distributed raymarch, additive-blended.
+- `milkyway-column-pure.ts` — the density / dust profile constants the
+  shader receives as uniforms, plus a CPU mirror of its raymarch. The
+  calibration constants below are *derived* from this mirror rather than
+  hand-tuned, and the shader's step counts are pinned against it.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
-- `milkyway.test.ts` — HDR-seam uniform wiring + the surface-brightness
-  calibration pins.
+- `milkyway.test.ts` — HDR-seam uniform wiring, the surface-brightness
+  calibration pins, and the GLSL↔TS raymarch-parameter drift guard.
+- `milkyway-column-pure.test.ts` — quadrature convergence against dense
+  reference marches, and the blast radius of the foreground dust column.
 
 `galactic-coords.ts` (`GAL_TO_ICRS`, `GALACTIC_CENTRE_PC`) lives in
 `../galactic/` and is imported here for the GC-anchored mesh
@@ -100,16 +106,38 @@ naked-eye base epoch and the slider does not move the band).
 
 ### Calibration
 
-`GLOW_MAG_OFFSET = 31.3` is **provisional**. It is anchored so the
-Galactic-centre sightline (l = 0, b = 0), whose luminance-weighted
-column integrates to `GC_SIGHTLINE_COLUMN = 2.85e4` at the shipped
-densities and 0.45 dust strength, lands on S ≈ 20.2 mag/arcsec² — the
-band-pixel reference in `docs/science-hdr-pipeline.md` § 1. The same
-constant puts the anticentre plane near 22.8 and the NGP near 25.3,
-i.e. the model's latitude gradient is steeper than the real sky's.
-H7 re-derives it per sightline against published V photometry and tunes
-`DR_MAG` (`../hdr/README.md` § Operator), which is the lever that lifts
-the band and the star field **together**.
+`GLOW_MAG_OFFSET` is **derived, not tuned**. The anchor is declarative —
+`GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0`, the band-pixel reference in
+`docs/science-hdr-pipeline.md` § 1 — and the offset is whatever puts the
+Galactic-centre sightline (l = 0, b = 0) there:
+
+```
+GC_SIGHTLINE_COLUMN = sightlineColumn(Sol, l=0, b=0)   ≈ 2.640e4
+GLOW_MAG_OFFSET     = 20.0 + 2.5·log10(column)         ≈ 31.054
+```
+
+`GC_SIGHTLINE_COLUMN` comes from the CPU mirror at the shipped densities
+and 0.45 dust strength, so a profile edit moves both numbers together
+instead of leaving a hand-pinned pair to disagree. Both are pinned in
+`milkyway.test.ts`. **Change the anchor, not the offset** — H7 replaces
+the single-point anchor with per-sightline published V photometry.
+
+The gradient this implies: GC 20.0, anticentre plane 22.55, NGP 25.08.
+Steeper than the real sky (NGP integrated starlight is ~23.5–24), and no
+offset fixes that — it is a density-profile question (the disc's 300 pc
+scale height, the single-component simplification). H7 also tunes
+`DR_MAG` (`../hdr/README.md` § Operator), the lever that lifts the band
+and the star field **together**.
+
+Two facts worth having before touching the calibration:
+
+- **The disc, not the bulge, dominates toward the Galactic centre** —
+  ~77 % of the luminance-weighted column. The disc's
+  `exp(−(R−R₀)/3000)` rise over a 23 kpc path to its back face outweighs
+  the bulge's `density0 = 18` concentration over 10 kpc.
+- **The 32-step in-volume march under-counts the GC column by 1.7 %**
+  against a converged march (pinned). Deliberately left: `STEPS` is a
+  visual + perf decision, and it biases the anchor H7 re-derives anyway.
 
 At strict physicality the band is faint: the GC sightline resolves to
 ~0.035 of full scale at the base epoch and a 50° / 900 px viewport,
@@ -137,11 +165,38 @@ to world parsec step size for dust optical-depth maths.
 ## Analytical-only dust (no voxel sampling here)
 
 Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — Drimmel &
-Spergel-style thin-disc dust. Per step, opacity converts to per-channel
-optical depth via CCM-derived reddening multipliers `(0.76, 1.0, 1.35)`
-— red transmits most, blue extincts away — applied with Beer-Lambert
-running attenuation including a half-step self-shielding term.
-`setExtinctionStrength(x)` scales the dust globally; default 0.45.
+Spergel-style thin-disc dust, `norm` set so `density × av_factor` at
+(R₀, z = 0) is ≈ 0.15 mag/kpc, the canonical local extinction rate
+(Schlegel/Finkbeiner/Davis 1998). Per step, opacity converts to
+per-channel optical depth via CCM-derived reddening multipliers
+`(0.76, 1.0, 1.35)` — red transmits most, blue extincts away — applied
+with Beer-Lambert running attenuation including a half-step
+self-shielding term. `setExtinctionStrength(x)` scales the dust
+globally; default 0.45.
+
+### Foreground dust — τ starts at the camera, not at the mesh
+
+Each mesh's *emission* integration begins at its own front face, but the
+dust slab does not begin there. For the disc from Sol this costs nothing
+(the camera is inside it, so the march starts 1 pc out), but the camera
+sits **outside the bulge proxy** — 3122 pc outside, along the sightline
+where most of the extinction toward the Galactic centre lives. Seeding
+`tauAccum` at the bulge boundary therefore emitted the bulge through no
+foreground extinction at all.
+
+`foregroundDustTau` pre-marches that span and seeds the accumulator.
+It is **linear-midpoint, 16 steps**, not log-distributed like the
+in-volume march: this integrand rises monotonically toward the *far* end
+(the boundary), so log spacing would spend its samples at the wrong end
+— 8 log steps under-count the in-plane column by 6 %, 16 linear steps by
+0.01 %. Both that case and a grazing slab crossing outside the proxy are
+pinned against dense reference marches in
+`milkyway-column-pure.test.ts`.
+
+Blast radius is narrow by construction: only a component the camera is
+outside of pays anything, so sightlines that miss the bulge proxy
+(anticentre, NGP) are bit-identical. The GC sightline dims 0.083 mag,
+tapering to 0.017 mag by l = 30°.
 
 The Edenhofer dust voxel grid is **intentionally not sampled here**.
 Voxels have ~5 pc native structure designed for short per-star
