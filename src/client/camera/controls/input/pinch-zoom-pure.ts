@@ -7,16 +7,18 @@
  *  second zoom rate to keep in sync. */
 export const WHEEL_NOTCH_DELTA_PX = 100;
 
-/** Pinch-delta amplification. A trackpad pinch reports single-digit `deltaY`
- *  per event where a wheel notch reports 100, so unamplified it registers as
- *  ~1/30th of a notch and reads as "pinch does nothing". Sets how many notches
- *  a full two-finger pinch is worth; the one knob for pinch-zoom feel. */
+/** Pinch-delta amplification, applied to BOTH browser pinch paths. A trackpad
+ *  pinch reports single-digit `deltaY` per event where a wheel notch reports
+ *  100, so unamplified it registers as ~1/30th of a notch and reads as "pinch
+ *  does nothing". Sets how many notches a full two-finger pinch is worth. */
 export const PINCH_NOTCH_GAIN = 12;
 
-/** Wheel-pixel delta per unit of `ln(scale)`, for the WebKit gesture path.
- *  Sized so a pinch that doubles the finger span is worth a comparable
- *  delta to the same gesture's `ctrlKey`-wheel report on Blink, letting both
- *  platforms share `PINCH_NOTCH_GAIN` as the single feel knob. */
+/** Wheel-pixel delta per unit of `ln(scale)`, for the WebKit gesture path —
+ *  the balance knob between the two browser pinch reports, since WebKit's
+ *  `scale` runs hotter than Blink's wheel delta for the same physical
+ *  gesture. Zoom-per-pinch on WebKit is exactly linear in this; Blink is
+ *  untouched by it. Set the balance here once, then move `PINCH_NOTCH_GAIN`
+ *  to change overall feel without disturbing it. */
 export const PINCH_SCALE_DELTA_PX = 200;
 
 /** One step of WebKit's cumulative `GestureEvent.scale`, expressed as the

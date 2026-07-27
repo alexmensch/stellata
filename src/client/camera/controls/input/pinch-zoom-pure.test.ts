@@ -1,16 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   PINCH_NOTCH_GAIN,
-  PINCH_SCALE_DELTA_PX,
   WHEEL_NOTCH_DELTA_PX,
   pinchStep,
   scaleStepDeltaPx,
 } from './pinch-zoom-pure';
 
 describe('pinchStep', () => {
-  it('pins the notch unit and the pinch gain', () => {
+  it('pins the wheel-notch unit — a protocol constant, not a feel knob', () => {
     expect(WHEEL_NOTCH_DELTA_PX).toBe(100);
-    expect(PINCH_NOTCH_GAIN).toBe(12);
   });
 
   it('carries a sub-notch pinch delta instead of dropping it', () => {
@@ -65,9 +63,7 @@ describe('pinchStep', () => {
 });
 
 describe('scaleStepDeltaPx', () => {
-  it('pins the scale conversion', () => {
-    expect(PINCH_SCALE_DELTA_PX).toBe(200);
-  });
+
 
   it('reads a spreading pinch as zoom-in, matching a negative wheel delta', () => {
     expect(scaleStepDeltaPx(1, 1.2)).toBeLessThan(0);
@@ -85,12 +81,14 @@ describe('scaleStepDeltaPx', () => {
     expect(stepped).toBeCloseTo(scaleStepDeltaPx(1, 2), 12);
   });
 
-  it('is worth a usable number of notches for a span-doubling pinch', () => {
-    // A full pinch has to move the camera perceptibly or the gesture reads
-    // as dead — the failure this whole path exists to fix.
+  it('keeps a span-doubling pinch perceptible without being absurd', () => {
+    // Deliberately wide: both gains are feel knobs tuned against real
+    // trackpads, and the two browser paths need different balance. What must
+    // not regress is the original bug (a full pinch that does nothing) and
+    // its opposite (a flick that crosses the whole zoom range).
     const notches = Math.abs(scaleStepDeltaPx(1, 2)) * PINCH_NOTCH_GAIN / WHEEL_NOTCH_DELTA_PX;
-    expect(notches).toBeGreaterThan(10);
-    expect(notches).toBeLessThan(30);
+    expect(notches).toBeGreaterThan(3);
+    expect(notches).toBeLessThan(60);
   });
 
   it('guards against a zero or negative scale', () => {
