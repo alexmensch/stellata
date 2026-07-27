@@ -14,6 +14,13 @@ authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.
+bd-workflow.md          Long-form bd procedures that fire on a trigger
+                        rather than in every session: memory + bead
+                        grooming passes, the bug-sweep handoff format,
+                        and label/metadata/external-ref conventions.
+                        Reached from the routing hooks in the matching
+                        bd memories; everyday bd facts stay in the
+                        stellata-bd-operations memory.
 extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         epic: per-tier data inventory (Local Volume →
                         CMB), cosmology bake, manifest schema, naming
