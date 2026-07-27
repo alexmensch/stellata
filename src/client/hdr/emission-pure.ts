@@ -3,6 +3,7 @@
 // mirror of emission.glsl — see README.md § Unit.
 
 import { NAKED_EYE_LIMIT_MAG } from '../filters/filter-state';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { L_THRESH } from './tonemap-pure';
 
 /** Every emission clamps here before the write. Extended Reinhard maps
@@ -48,4 +49,39 @@ export function pointSourcePeakLuminance(
   const flux = luminanceForMagnitude(exposure, m);
   const spread = Math.max(1, Math.PI * physRadiusPx * physRadiusPx);
   return Math.min(flux / spread, LUMA_CEIL);
+}
+
+/**
+ * Solid angle one **CSS** pixel subtends, in arcsec² — what converts a
+ * surface brightness (mag/arcsec²) into the flux inside one pixel.
+ *
+ * `pxPerRadian` is `angularToPx(viewportHeightCssPx, fovYRad)`. CSS rather
+ * than device pixels for the reason `pointSourcePeakLuminance` uses them:
+ * the scene must not change brightness with `devicePixelRatio`. Zooming in
+ * shrinks it quadratically, so an extended source dims per-pixel exactly
+ * as a resolved disc does under the point-source rule — the physical
+ * magnification loss an aperture gain has to pay for.
+ */
+export function pixelSolidAngleArcsec2(pxPerRadian: number): number {
+  const arcsecPerPx = 1 / (ARCSEC_TO_RAD * Math.max(pxPerRadian, 1e-9));
+  return arcsecPerPx * arcsecPerPx;
+}
+
+/**
+ * Luminance one pixel receives from an extended source of surface
+ * brightness `magPerArcsec2`. The pixel's flux magnitude is
+ * `magPerArcsec2 − 2.5·log10(omegaPxArcsec2)`; feeding that through
+ * `luminanceForMagnitude` collapses the log round-trip to this product,
+ * which is why a layer can apply it as a single scalar gain and keep its
+ * chromaticity.
+ *
+ * Unclamped — a layer scaling a per-channel column by this must clamp the
+ * product against `LUMA_CEIL`, not the factor.
+ */
+export function surfaceBrightnessLuminance(
+  exposure: number,
+  magPerArcsec2: number,
+  omegaPxArcsec2: number,
+): number {
+  return luminanceForMagnitude(exposure, magPerArcsec2) * omegaPxArcsec2;
 }

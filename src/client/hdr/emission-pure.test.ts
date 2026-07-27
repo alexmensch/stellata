@@ -4,8 +4,11 @@ import {
   LUMA_CEIL,
   exposureForMagLimit,
   luminanceForMagnitude,
+  pixelSolidAngleArcsec2,
   pointSourcePeakLuminance,
+  surfaceBrightnessLuminance,
 } from './emission-pure';
+import { angularToPx } from '../camera/controls/star-geometry';
 import { L_THRESH, reinhardExtended, tonemapWhitePoint } from './tonemap-pure';
 
 describe('exposureForMagLimit', () => {
@@ -94,5 +97,52 @@ describe('pointSourcePeakLuminance', () => {
   it('leaves fp16 headroom above the ceiling for additive accumulation', () => {
     const FP16_MAX = 65504;
     expect(FP16_MAX / LUMA_CEIL).toBeGreaterThan(15);
+  });
+});
+
+const fovYRad = (deg: number) => (deg * Math.PI) / 180;
+
+describe('pixelSolidAngleArcsec2', () => {
+  it('is the square of vertical-FOV arcsec over viewport height', () => {
+    expect(pixelSolidAngleArcsec2(angularToPx(900, fovYRad(50)))).toBeCloseTo(
+      ((50 * 3600) / 900) ** 2,
+      6,
+    );
+  });
+
+  it('shrinks quadratically with FOV — zooming 10x dims an extended source 100x', () => {
+    const wide = pixelSolidAngleArcsec2(angularToPx(900, fovYRad(50)));
+    const zoomed = pixelSolidAngleArcsec2(angularToPx(900, fovYRad(5)));
+    expect(wide / zoomed).toBeCloseTo(100, 6);
+  });
+
+  it('is finite at the zero-FOV singularity a transition can pass through', () => {
+    expect(Number.isFinite(pixelSolidAngleArcsec2(angularToPx(900, 0)))).toBe(true);
+  });
+});
+
+// The § 1 range-budget row for the Milky Way band: a 20 mag/arcsec²
+// sightline at 94 arcsec/px lands on L ≈ 7e-4 at the base epoch.
+describe('surfaceBrightnessLuminance', () => {
+  it('matches the design gate’s MW band-pixel budget row', () => {
+    expect(surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 20, 94 ** 2)).toBeCloseTo(
+      7e-4,
+      5,
+    );
+  });
+
+  it('agrees with the explicit per-pixel magnitude it collapses', () => {
+    const omega = 94 ** 2;
+    const magPx = 20 - 2.5 * Math.log10(omega);
+    expect(surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 20, omega)).toBeCloseTo(
+      luminanceForMagnitude(BASE_EPOCH_EXPOSURE, magPx),
+      12,
+    );
+  });
+
+  it('is linear in pixel solid angle — surface brightness is the invariant', () => {
+    const a = surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 21, 1000);
+    const b = surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 21, 4000);
+    expect(b / a).toBeCloseTo(4, 12);
   });
 });

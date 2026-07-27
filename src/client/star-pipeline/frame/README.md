@@ -41,18 +41,18 @@ material by `StarPipeline`. Every other consumer picks slots out of the
 same object **by reference**, so a single write reaches all of them
 with no bookkeeping: `FilterController` (the filter / preset / render
 knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
-`pickChartDiscUniforms`), `MilkyWay` (`uMaxAppMag` / `uSizeSpan`, so
-the magnitude filter applies identically to discrete stars and the
-diffuse glow), `StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
+`pickChartDiscUniforms`), `MilkyWay` (`uMaxAppMag`, for its chart-mode
+isobar contour only — the band's own brightness is photometric),
+`StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
 (`uWorldOffset`, and `uFovYRad` / `uViewport` for its windows), and
 `Picker`. The three renderer-derived seeds (pixel ratio, FOV, viewport)
 are arguments; the rest come from `DEFAULT_FILTER` /
 `STAR_RENDER_DEFAULTS` and the pipeline's own constants.
 
 The one set of slots this map does **not** own is
-`HdrPipeline.emitterUniforms` — `uExposure`, `uWhitePoint`,
-`uHighlightDesat`, `uHdrTarget` — passed in as the `hdr` option and
-spread in by reference. `HdrPipeline` rewrites `uHdrTarget` on every
+`HdrPipeline.emitterUniforms` — `uExposure`, `uOmegaPxArcsec2`,
+`uWhitePoint`, `uHighlightDesat`, `uHdrTarget` — passed in as the `hdr`
+option and spread in by reference. `HdrPipeline` rewrites `uHdrTarget` on every
 seam / resolve / chart-mode change, so copying the values instead of
 sharing the objects would leave the star passes tone-mapping inline into
 an already-tone-mapped target. Pinned in the test; see
