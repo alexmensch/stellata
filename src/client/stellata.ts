@@ -44,6 +44,7 @@ import {
   gpuBegin as perfGpuBegin,
   gpuEnd as perfGpuEnd,
 } from './debug/perf-hud';
+import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
 import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
@@ -2467,6 +2468,7 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask();
     perfMeasure('coreMask');
     perfMeasure('pre-render');
+    perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');
     perfGpuBegin('main');
     this.renderer.render(this.scene, this.camera);
@@ -2477,6 +2479,7 @@ export class Stellata implements FrameAnchor {
     this.localDepthPass.render(this.renderer, this.camera);
     perfGpuEnd('localDepth');
     perfMeasure('submit.localDepth');
+    perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     perfMark('frame.handlers');
     this.bus.emit('frame');
     perfMeasure('frame.handlers');

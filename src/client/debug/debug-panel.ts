@@ -25,8 +25,11 @@ function savePosition(p: Pos): void {
   try { sessionStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ }
 }
 
+// Collapsed is the default: the panel has ten sections and several drive
+// per-frame work while open, so an unseeded panel opens as a section list
+// rather than a wall. Only an explicit stored '0' expands one.
 function loadCollapsed(key: string): boolean {
-  try { return sessionStorage.getItem(collapsedKey(key)) === '1'; } catch { return false; }
+  try { return sessionStorage.getItem(collapsedKey(key)) !== '0'; } catch { return true; }
 }
 
 function saveCollapsed(key: string, collapsed: boolean): void {

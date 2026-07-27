@@ -1,67 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { GpuTimer } from './gpu-timer';
-
-const TIME_ELAPSED_EXT = 0x88bf;
-const GPU_DISJOINT_EXT = 0x8fbb;
-const QUERY_RESULT = 0x8866;
-const QUERY_RESULT_AVAILABLE = 0x8867;
-
-/** Records the begin/end/delete traffic a real driver would see, and lets
- *  a test decide when each query resolves and whether the GPU reported a
- *  disjoint event. */
-class FakeGl {
-  readonly QUERY_RESULT = QUERY_RESULT;
-  readonly QUERY_RESULT_AVAILABLE = QUERY_RESULT_AVAILABLE;
-
-  hasExtension = true;
-  disjoint = false;
-  created = 0;
-  deleted: object[] = [];
-  activeQuery: object | null = null;
-  /** Query → elapsed ns once resolved; absent means still in flight. */
-  results = new Map<object, number>();
-
-  getExtension(name: string): object | null {
-    if (name !== 'EXT_disjoint_timer_query_webgl2' || !this.hasExtension) return null;
-    return { TIME_ELAPSED_EXT, GPU_DISJOINT_EXT };
-  }
-
-  createQuery(): object {
-    this.created++;
-    return { id: this.created };
-  }
-
-  beginQuery(target: number, query: object): void {
-    expect(target).toBe(TIME_ELAPSED_EXT);
-    expect(this.activeQuery).toBeNull();
-    this.activeQuery = query;
-  }
-
-  endQuery(target: number): void {
-    expect(target).toBe(TIME_ELAPSED_EXT);
-    this.activeQuery = null;
-  }
-
-  getQueryParameter(query: object, pname: number): boolean | number {
-    if (pname === QUERY_RESULT_AVAILABLE) return this.results.has(query);
-    return this.results.get(query) ?? 0;
-  }
-
-  getParameter(pname: number): boolean {
-    expect(pname).toBe(GPU_DISJOINT_EXT);
-    const was = this.disjoint;
-    // The real flag clears on read.
-    this.disjoint = false;
-    return was;
-  }
-
-  deleteQuery(query: object): void {
-    this.deleted.push(query);
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const asGl = (f: FakeGl) => f as any as WebGL2RenderingContext;
+import { GPU_WHOLE_FRAME_SCOPE, GpuTimer } from './gpu-timer';
+import { FakeGl, asGl } from './fake-gl';
 
 function drain(t: GpuTimer): { label: string; ms: number }[] {
   const out: { label: string; ms: number }[] = [];
@@ -141,6 +80,52 @@ describe('GpuTimer', () => {
       drain(t);
     }
     expect(gl.created).toBe(1);
+  });
+
+  it('an enclosing whole-frame scope is not retired by the inner scopes ending inside it', () => {
+    const gl = new FakeGl();
+    const t = GpuTimer.create(asGl(gl))!;
+
+    // Mirrors the animate() call order: the whole-frame scope brackets
+    // both inner scopes. endQuery takes no query handle, so an inner end
+    // that closed on a label mismatch would stop the enclosing clock early
+    // and the headline would report a fraction of the frame.
+    expect(t.begin(GPU_WHOLE_FRAME_SCOPE)).toBe(true);
+    const wholeFrame = gl.activeQuery!;
+    expect(t.begin('main')).toBe(false);
+    t.end('main');
+    expect(gl.activeQuery).toBe(wholeFrame);
+    expect(t.begin('localDepth')).toBe(false);
+    t.end('localDepth');
+    expect(gl.activeQuery).toBe(wholeFrame);
+    t.end(GPU_WHOLE_FRAME_SCOPE);
+    expect(gl.activeQuery).toBeNull();
+
+    gl.results.set(wholeFrame, 12_000_000);
+    expect(drain(t)).toEqual([{ label: GPU_WHOLE_FRAME_SCOPE, ms: 12 }]);
+  });
+
+  it('rotates through all three scopes, each sampling once per three frames', () => {
+    const gl = new FakeGl();
+    const t = GpuTimer.create(asGl(gl))!;
+    const sampled: string[] = [];
+
+    for (let f = 0; f < 3; f++) {
+      const started = (label: string): void => {
+        if (!t.begin(label)) return;
+        sampled.push(label);
+        gl.results.set(gl.activeQuery!, 1_000_000);
+      };
+      started(GPU_WHOLE_FRAME_SCOPE);
+      started('main');
+      t.end('main');
+      started('localDepth');
+      t.end('localDepth');
+      t.end(GPU_WHOLE_FRAME_SCOPE);
+      drain(t);
+    }
+
+    expect(sampled).toEqual([GPU_WHOLE_FRAME_SCOPE, 'main', 'localDepth']);
   });
 
   it('dispose deletes in-flight, pooled, and active queries', () => {

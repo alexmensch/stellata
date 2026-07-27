@@ -1,5 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mark, measure, frame, buildPerfSection, _sectionsForTest } from './perf-hud';
+import {
+  mark,
+  measure,
+  frame,
+  gpuBegin,
+  gpuEnd,
+  buildPerfSection,
+  _sectionsForTest,
+} from './perf-hud';
+import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timer';
+import { FakeGl, asGl } from './fake-gl';
 
 describe('perf-hud / no-op API', () => {
   it('mark/measure/frame are safe to call without installing the HUD', () => {
@@ -116,6 +126,43 @@ describe('perf-hud / install → dispose teardown', () => {
     // RING_SIZE = 60. After RING_SIZE+1 silent frames the section drops.
     for (let i = 0; i < 62; i++) frame();
     expect(_sectionsForTest().has('test.gc')).toBe(false);
+
+    section.dispose();
+  });
+
+  it('headline reports the whole-frame scope, never the sum of the rotating scopes', () => {
+    // The defect this pins: scopes rotate one per frame, so their averages
+    // describe disjoint frame sets. Adding them produced a headline larger
+    // than the frame period itself (85 ms claimed inside a 62.5 ms frame).
+    const gl = new FakeGl();
+    let clock = 0;
+    perfNowSpy.mockImplementation(() => (clock += 100));
+    const section = buildPerfSection(asGl(gl));
+
+    // animate()'s call order, with every query resolving in-frame. Only a
+    // begin that actually opened a NEW query gets a result written — the
+    // enclosing scope stays active across the inner begins.
+    const openScope = (label: string, ms: number): void => {
+      const before = gl.activeQuery;
+      gpuBegin(label);
+      if (gl.activeQuery && gl.activeQuery !== before) {
+        gl.results.set(gl.activeQuery, ms * 1e6);
+      }
+    };
+    for (let f = 0; f < 6; f++) {
+      openScope(GPU_WHOLE_FRAME_SCOPE, 20);
+      openScope('main', 17);
+      gpuEnd('main');
+      openScope('localDepth', 11);
+      gpuEnd('localDepth');
+      gpuEnd(GPU_WHOLE_FRAME_SCOPE);
+      frame();
+    }
+
+    type StubNode = { children: StubNode[]; firstChild: { nodeValue: string } };
+    const headline = (section.element as unknown as StubNode).children[0];
+    // Headline children: [FPS text, low span, ' ', gpu span].
+    expect(headline.children[3].firstChild.nodeValue).toBe('gpu 20.0ms');
 
     section.dispose();
   });
