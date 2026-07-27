@@ -41,7 +41,9 @@ export function srgbDecode(c: number): number {
   return v < SRGB_DECODE_KNEE ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 }
 
-/** Linear HDR luminance → display sRGB, hue-preserving. */
+/** Linear HDR luminance → display sRGB, hue-preserving. Mirrors
+ *  `stellataTonemapUndithered`: the dither is 8-bit quantisation noise
+ *  applied after the operator, not part of it. */
 export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): Rgb {
   const y = relativeLuminance(hdr);
   if (y <= 0) return [0, 0, 0];

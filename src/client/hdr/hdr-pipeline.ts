@@ -6,10 +6,13 @@ import { fullscreenTriangleGeometry } from '../util/fullscreen-pass';
 import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
+import emissionChunk from './emission.glsl?raw';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
+import { BASE_EPOCH_EXPOSURE } from './emission-pure';
 import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
+(THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
 
 /** Ship gate for the HDR epic. The seam is inert until the emitting
  *  layers actually carry physical luminance (H3 stars, H4 Milky Way,
@@ -20,11 +23,39 @@ import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
  *  it on at runtime for development in the meantime. */
 export const HDR_DEFAULT_ENABLED = false;
 
+/** The uniforms every physical emitter binds **by reference**, so the
+ *  seam's state reaches all of them with one write. `uHdrTarget` is the
+ *  branch: 0 means the fragment lands straight on the canvas and the
+ *  emitter must apply `stellata_tonemap` itself (README.md § Fallback).
+ *  The resolve pass shares the same white-point and desaturation objects,
+ *  so the inline path and the fullscreen path can never disagree. */
+export interface HdrEmitterUniforms {
+  uHdrTarget: THREE.IUniform<number>;
+  uWhitePoint: THREE.IUniform<number>;
+  uHighlightDesat: THREE.IUniform<number>;
+  uExposure: THREE.IUniform<number>;
+}
+
+/** `uHdrTarget` seeds to 0 — the shipped path while the ship gate is
+ *  false — and `HdrPipeline` owns every write after that. `uExposure` is
+ *  pinned to the base epoch until H6 routes the slider through it. */
+export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
+  return {
+    uHdrTarget: { value: 0 },
+    uWhitePoint: { value: tonemapWhitePoint() },
+    uHighlightDesat: { value: HIGHLIGHT_DESAT },
+    uExposure: { value: BASE_EPOCH_EXPOSURE },
+  };
+}
+
 export class HdrPipeline {
   /** False when no float-renderable colour buffer exists. The instance
    *  is inert and every layer renders straight to the canvas —
    *  README.md § Fallback. */
   readonly supported: boolean;
+
+  /** Bound by reference into every physical emitter's uniform map. */
+  readonly emitterUniforms: HdrEmitterUniforms = makeHdrEmitterUniforms();
 
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -44,8 +75,9 @@ export class HdrPipeline {
       gl.getExtension('EXT_color_buffer_float') !== null ||
       gl.getExtension('EXT_color_buffer_half_float') !== null;
     // Before any layer is constructed, so chrome registers its colours
-    // against the right mode on a context that can't take the target.
-    this.syncChrome();
+    // and emitters seed their branch against the right mode on a context
+    // that can't take the target.
+    this.syncMode();
   }
 
   /** The target is a full drawing-buffer RGBA16F plus a 24-bit depth
@@ -73,8 +105,8 @@ export class HdrPipeline {
       glslVersion: THREE.GLSL3,
       uniforms: {
         uHdrTexture: { value: this.rt.texture },
-        uWhitePoint: { value: tonemapWhitePoint() },
-        uHighlightDesat: { value: HIGHLIGHT_DESAT },
+        uWhitePoint: this.emitterUniforms.uWhitePoint,
+        uHighlightDesat: this.emitterUniforms.uHighlightDesat,
         uTonemapEnabled: { value: this.tonemapOn ? 1 : 0 },
       },
       vertexShader: fullscreenVert,
@@ -116,11 +148,12 @@ export class HdrPipeline {
    *  chart output stays pixel-identical across the HDR epic. */
   setChartMode(on: boolean): void {
     this.chart = on;
+    this.syncMode();
   }
 
   setEnabled(on: boolean): void {
     this.enabled = on;
-    this.syncChrome();
+    this.syncMode();
   }
 
   /** Park the resolve on straight pass-through, keeping the target. The
@@ -132,7 +165,7 @@ export class HdrPipeline {
     if (this.material !== null) {
       this.material.uniforms.uTonemapEnabled.value = on ? 1 : 0;
     }
-    this.syncChrome();
+    this.syncMode();
   }
 
   /** Whether the scene should render into the target this frame. Does not
@@ -141,10 +174,15 @@ export class HdrPipeline {
     return this.supported && this.enabled && !this.chart;
   }
 
-  /** Chrome's inverse mapping is only correct while the operator it
-   *  inverts is running. */
-  private syncChrome(): void {
-    setChromeOperatorActive(this.supported && this.enabled && this.tonemapOn);
+  /** Fan the seam's state out to the two things outside this class that
+   *  depend on it: chrome's inverse mapping, which is only correct while
+   *  the operator it inverts is running, and the physical emitters, which
+   *  tone-map inline whenever the target isn't bound. Both read the same
+   *  `wantsTarget()`, so the chart bypass reaches them for free. */
+  private syncMode(): void {
+    const targetActive = this.wantsTarget();
+    this.emitterUniforms.uHdrTarget.value = targetActive ? 1 : 0;
+    setChromeOperatorActive(targetActive && this.tonemapOn);
   }
 
   dispose(): void {
@@ -158,6 +196,7 @@ export class HdrPipeline {
     this.enabled = HDR_DEFAULT_ENABLED;
     this.tonemapOn = true;
     this.chart = false;
+    this.syncMode();
     clearChromeBindings();
   }
 }

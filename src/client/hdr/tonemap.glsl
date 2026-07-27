@@ -1,8 +1,19 @@
 // Luminance-domain extended Reinhard + highlight desaturation + sRGB
 // encode + dither, in one call. Registered as stellata_tonemap; CPU
 // mirror in tonemap-pure.ts. See README.md § Operator.
+//
+// Guarded so this chunk and stellata_hdr_emission can land in the same
+// stage in either order — three pastes each #include textually wherever
+// it appears. Both declare the luma weights behind a shared guard rather
+// than one depending on the other; `chunk-constant-drift.test.ts` pins
+// the declarations against LUMA_WEIGHTS in tonemap-pure.ts.
+#ifndef STELLATA_TONEMAP
+#define STELLATA_TONEMAP
 
+#ifndef STELLATA_LUMA_WEIGHTS_DECLARED
+#define STELLATA_LUMA_WEIGHTS_DECLARED
 const vec3 STELLATA_LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);
+#endif
 
 float stellataReinhardExtended(float y, float whitePoint) {
     return y * (1.0 + y / (whitePoint * whitePoint)) / (1.0 + y);
@@ -20,11 +31,24 @@ float stellataDither(vec2 fragCoord) {
     return (n - 0.5) / 255.0;
 }
 
-vec3 stellataTonemap(vec3 hdr, float whitePoint, float desat, vec2 fragCoord) {
+/** The operator without the dither. What an emitter applying the
+ *  operator inline must call when more than one of its fragments can
+ *  land on the same pixel: the dither is a function of fragCoord alone,
+ *  so N additively-blended fragments would add the SAME offset N times —
+ *  a coherent brightness bias over dense fields, not noise that cancels.
+ *  Anything that covers each pixel once (the resolve pass, a fullscreen
+ *  volume) wants `stellataTonemap`. */
+vec3 stellataTonemapUndithered(vec3 hdr, float whitePoint, float desat) {
     float y = dot(hdr, STELLATA_LUMA_WEIGHTS);
     if (y <= 0.0) return vec3(0.0);
     float yd = stellataReinhardExtended(y, whitePoint);
     float white = 1.0 - exp(-desat * max(y / whitePoint - 1.0, 0.0));
     vec3 desaturated = mix(hdr * (yd / y), vec3(yd), white);
-    return stellataSrgbEncode(desaturated) + stellataDither(fragCoord);
+    return stellataSrgbEncode(desaturated);
 }
+
+vec3 stellataTonemap(vec3 hdr, float whitePoint, float desat, vec2 fragCoord) {
+    return stellataTonemapUndithered(hdr, whitePoint, desat) + stellataDither(fragCoord);
+}
+
+#endif
