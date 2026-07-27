@@ -42,6 +42,30 @@ export interface HdrEmitterUniforms {
   uOmegaPxArcsec2: THREE.IUniform<number>;
 }
 
+export const HDR_EMITTER_UNIFORM_KEYS = [
+  'uHdrTarget',
+  'uWhitePoint',
+  'uHighlightDesat',
+  'uExposure',
+  'uOmegaPxArcsec2',
+] as const satisfies readonly (keyof HdrEmitterUniforms)[];
+
+/** Pick the seam's slots out of a wider shared-uniforms object, keeping
+ *  each `{ value }` slot's identity — an emitter that copied the values
+ *  would tone-map inline into an already-tone-mapped target the moment
+ *  `HdrPipeline` rewrote `uHdrTarget`. Mirrors
+ *  `pickPerceptualDiscUniforms`; used by the planet layers, which read the
+ *  star pipeline's map rather than holding the pipeline. */
+export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
+  src: T,
+): HdrEmitterUniforms {
+  const out: Record<string, THREE.IUniform> = {};
+  for (const key of HDR_EMITTER_UNIFORM_KEYS) {
+    out[key] = src[key];
+  }
+  return out as unknown as HdrEmitterUniforms;
+}
+
 /** `uHdrTarget` seeds to 0 — the shipped path while the ship gate is
  *  false — and `HdrPipeline` owns every write after that. `uExposure`
  *  seeds at the base epoch, which is `DEFAULT_FILTER.maxAppMag`'s epoch;
