@@ -14,6 +14,10 @@ import {
   type ChartDiscUniforms,
   type PerceptualDiscUniforms,
 } from '../../star-pipeline/perceptual-disc-uniforms';
+import {
+  pickHdrEmitterUniforms,
+  type HdrEmitterUniforms,
+} from '../../hdr/hdr-pipeline';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
@@ -246,7 +250,9 @@ export class PlanetBodyField {
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
 
-  constructor(magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms) {
+  constructor(
+    magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
+  ) {
     this.magShared = magnitudeShared;
     this.maxAppMag = magnitudeShared.uMaxAppMag.value;
     this.group = new THREE.Group();
@@ -1132,10 +1138,13 @@ export class PlanetBodyField {
     this.geometry = geom;
   }
 
-  private buildMaterials(sm: PerceptualDiscUniforms & ChartDiscUniforms): void {
+  private buildMaterials(
+    sm: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
+  ): void {
     const sharedPlanetUniforms = {
       ...pickPerceptualDiscUniforms(sm),
       ...pickChartDiscUniforms(sm),
+      ...pickHdrEmitterUniforms(sm),
     };
 
     const makeMat = (localPass = false) =>

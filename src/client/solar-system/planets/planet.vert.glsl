@@ -7,6 +7,10 @@ precision highp float;
 // Shared apparent-magnitude → disc-pixel-size mapping. Stars and
 // planets use the same chunk; see its header for the rationale.
 #include <stellata_perceptual_disc>
+// Shared magnitude → linear-luminance unit (stellataPointSourcePeak) —
+// the same rule stars emit under, which is what makes a planet read as a
+// star of its magnitude and makes the mesh↔glare handoff continuous.
+#include <stellata_hdr_emission>
 
 // Per-vertex (quad corner): xy in [-0.5, 0.5].
 in vec2 aCorner;
@@ -52,6 +56,10 @@ uniform float uFovYRad;
 // Visibility cutoff (mag slider); shared with stars.
 uniform float uMaxAppMag;
 
+// The one exposure control, bound by reference from
+// HdrPipeline.emitterUniforms (../../hdr/README.md § Exposure epochs).
+uniform float uExposure;
+
 // Flat instance index to hide (-1 = none). The planet sibling of the
 // star pipeline's uHideFocusIdx: observe mode parks the camera AT the
 // focal body, whose glare would otherwise render from the interior.
@@ -93,7 +101,7 @@ out vec3 vColor;
 out vec2 vUv;
 out float vAppMag;
 out float vSoftness;
-out float vGlareIntensity;
+out float vPeakL;
 out float vAaWidth;
 
 const float LOG10 = 2.302585093;
@@ -146,7 +154,7 @@ void main() {
     vColor = vec3(0.0);
     vUv = aCorner;
     vSoftness = 0.0;
-    vGlareIntensity = 0.0;
+    vPeakL = 0.0;
     vAaWidth = 0.0;
     return;
   }
@@ -222,7 +230,7 @@ void main() {
       vColor = vec3(0.0);
       vUv = aCorner;
       vSoftness = 0.0;
-      vGlareIntensity = 0.0;
+      vPeakL = 0.0;
       vAaWidth = 0.0;
       return;
     }
@@ -238,7 +246,7 @@ void main() {
     vColor = vec3(0.0);
     vUv = aCorner;
     vSoftness = 1.0 - iSolidity;
-    vGlareIntensity = 0.0;
+    vPeakL = 0.0;
     vAaWidth = 0.0;
     return;
   }
@@ -259,18 +267,26 @@ void main() {
             / max(uMaxAppMag - uChartMagBright, 0.001),
         0.0, 1.0);
     pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
-    vGlareIntensity = 1.0;
+    // Chart is deliberately non-photometric and the frag returns before it
+    // touches luminance; the assignment only keeps the varying defined.
+    vPeakL = 0.0;
   } else {
     // Reflected glare = the shared star-perceptual point. A planet reads
-    // EXACTLY like a star of its apparent magnitude — size = appSize(appMag),
-    // peak = uGlareGain (≈1) — so a body visible in chart mode is equally
-    // visible here (a naked-eye planet is a naked-eye point). appMag
+    // EXACTLY like a star of its apparent magnitude — same footprint curve,
+    // same point-source emission rule — so a body visible in chart mode is
+    // equally visible here (a naked-eye planet is a naked-eye point). appMag
     // already folds the phase factor φ(α), so brightness needs no
     // illumFrac. The mesh, when resolved, writes depth and occludes the
     // glare core to a lit-limb halo. See README § Planet mesh LOD.
     float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
     pxSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
-    vGlareIntensity = uGlareGain * eclipseFactor;
+    // Emitted luminance in the scene-wide unit. The radius is the body's
+    // TRUE angular radius in CSS px — unclamped, and the same quantity the
+    // mesh anchors its surface brightness on, which is what makes the
+    // resolve step continuous: past 1 px both sides are the disc's mean
+    // surface brightness rather than two unrelated peak-1 encodings.
+    vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
+        * uGlareGain * eclipseFactor;
 
     // Photocentre shift toward the lit limb on a resolved crescent —
     // SHAPE only (brightness stays appMag-driven), scaled by crescentness

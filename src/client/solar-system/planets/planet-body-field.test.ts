@@ -25,11 +25,16 @@ import {
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
 import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
+import {
+  makeHdrEmitterUniforms,
+  type HdrEmitterUniforms,
+} from '../../hdr/hdr-pipeline';
 
 function makeSharedUniforms(
   maxAppMag = 6.5,
-): PerceptualDiscUniforms & ChartDiscUniforms {
+): PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms {
   return {
+    ...makeHdrEmitterUniforms(),
     uMonochrome: { value: 0 },
     uChartDiscMaxPx: { value: 28 },
     uChartDiscMinPx: { value: 1.5 },

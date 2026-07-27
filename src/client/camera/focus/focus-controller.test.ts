@@ -32,6 +32,7 @@ import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
 import { ReferenceUpController } from '../controls/input/reference-up';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 
 interface WarpStub {
   isActive: ReturnType<typeof vi.fn>;
@@ -240,6 +241,7 @@ function makeHarness(opts: {
   // (planetAt returns null). Tests exercising planet focus construct a
   // real PlanetBodyField instead.
   const planetField = new PlanetBodyField({
+    ...makeHdrEmitterUniforms(),
     uMonochrome: { value: 0 },
     uChartDiscMaxPx: { value: 28 },
     uChartDiscMinPx: { value: 1.5 },
