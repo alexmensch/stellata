@@ -24,6 +24,12 @@ describe('first-load', () => {
       }
     });
 
+    it('carries no up override, so the galactic plane renders level', () => {
+      // Omitting the slot leaves the reference axis at galactic north,
+      // the canonical default the encoder elides against.
+      expect(FIRST_LOAD_VIEW.up).toBeUndefined();
+    });
+
     it('does not highlight any constellation', () => {
       // Was Orion in an earlier draft; user dropped the highlight to
       // keep the first-paint screen quieter.

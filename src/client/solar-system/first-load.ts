@@ -1,5 +1,5 @@
 // Canonical no-URL first-load view: camera parked 5 AU from Sol aimed at
-// the galactic centre with the HUD on. See
+// the galactic centre, galactic-level, with the HUD on. See
 // src/client/solar-system/README.md § First-load default.
 
 import { applyDecodedView, type DecodedView, type IdMaps } from '../util/url-state';
@@ -24,7 +24,6 @@ function rescale(v: [number, number, number], r: number): [number, number, numbe
 
 export const FIRST_LOAD_VIEW: DecodedView = {
   cam: rescale(RAW_CAM, PARK_DIST_PC),
-  up: [-0.32679325342178345, -0.5857065320014954, 0.7417236566543579],
   showHud: true,
 };
 
