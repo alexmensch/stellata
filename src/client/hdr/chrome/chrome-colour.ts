@@ -7,7 +7,7 @@ import {
   srgbDecode,
   tonemapWhitePoint,
   type Rgb,
-} from './tonemap-pure';
+} from '../tonemap-pure';
 
 const WHITE_POINT = tonemapWhitePoint();
 

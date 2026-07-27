@@ -3,7 +3,7 @@
 // constellation figure layer.
 
 import * as THREE from 'three';
-import { setBuiltinChromeColour } from '../hdr/chrome-colour';
+import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 
 // Vertices per ellipse. The binding requirement is body-on-the-line at
 // resolved-disc zoom under fast scrub: the polyline's max sagitta is

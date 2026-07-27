@@ -9,7 +9,7 @@ import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
-import { setBuiltinChromeColour } from '../hdr/chrome-colour';
+import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   angularDiameterPx,

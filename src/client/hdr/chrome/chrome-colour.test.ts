@@ -6,7 +6,7 @@ import {
   setChromeOperatorActive,
   setRawChromeColour,
 } from './chrome-colour';
-import { srgbDecode, tonemap, tonemapWhitePoint, type Rgb } from './tonemap-pure';
+import { srgbDecode, tonemap, tonemapWhitePoint, type Rgb } from '../tonemap-pure';
 
 const LW = tonemapWhitePoint();
 const HEXES = [0x5a7a9c, 0xc8d6ff, 0x223344, 0xffffff, 0x000000];

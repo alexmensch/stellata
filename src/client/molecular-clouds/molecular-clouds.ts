@@ -22,7 +22,7 @@ import {
   SHELL_RIM_BLUE,
   SHELL_RIM_ALPHA_LIMB,
 } from '../fresnel-shell/fresnel-shell';
-import { setRawChromeColour } from '../hdr/chrome-colour';
+import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
 // (1.03) to cover tessellation sag — its raymarch clips to the analytic

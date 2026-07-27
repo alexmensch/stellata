@@ -9,7 +9,7 @@ import type {
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
-import { setBuiltinChromeColour } from '../hdr/chrome-colour';
+import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import {
   makeDashedOrbitLineMaterial,
   makeOrbitLineSegments,

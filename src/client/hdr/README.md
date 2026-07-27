@@ -41,8 +41,8 @@ src/client/hdr/
                              pair, and the base epoch (§ Exposure
                              epochs). No GLSL side — the shader only
                              ever reads the resulting scalar.
-  chrome-colour.ts (+ test)  Authored chrome colours pre-mapped through
-                             the inverse (§ Chrome).
+  chrome/                    Authored chrome colours pre-mapped through
+                             the inverse — its own README (§ Chrome).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
                              from TypeScript, and the include guards.
 ```
@@ -229,74 +229,20 @@ gamut matrix, nowhere else.
 
 ## Chrome — non-physical layers keep their authored look
 
-Galactic disc + grid, LG wireframes, the constellation figure, orbit
-rings, binary orbit paths, probe trails and markers, the heliopause and
-Local Bubble fresnel shells, and the cloud rim shells all render **into
-the target** (they must depth-test against the scene) but **never
-multiply exposure**. Their authored colours are mapped through
-`inverseTonemapConstant` at material set-time, so the resolve pass
-returns them at their authored appearance at any exposure.
+Authored, non-photometric layers (galactic disc, the coordinate spheres,
+LG wireframes, the constellation figure and boundaries, orbit rings,
+binary orbit paths, probe markers and trails, the fresnel shells, cloud
+rim shells) render into the target
+but never multiply exposure: their colours are pre-mapped through the
+operator's inverse so the resolve returns them as authored.
+**`chrome/README.md` is the contract** — which of the two setters a call
+site wants depends on how its shader emits colour, and the mapping is
+only correct while the operator it inverts is running.
 
-A probe marker counts as chrome for the same reason its own README gives
-for the glyph — the spacecraft subtends no angle at any range, so the
-marker stands in for it rather than depicting its light. The
-dust-particle layer is the one chrome layer left unmapped: it is shelved
-at strength 0 and carries no colour uniform to map, so unshelving it
-owes this pass a look.
-
-`chrome-colour.ts` exposes two setters, and **which one a call site
-wants depends on how its shader emits colour** — this is the one part
-of the mapping that is easy to get silently wrong:
-
-- `setBuiltinChromeColour` — for three's built-in materials
-  (`LineBasicMaterial`, `LineMaterial`, `MeshBasicMaterial`). Their
-  fragment shader carries `colorspace_fragment`, whose linear→sRGB
-  encode is what put the authored hex on screen. Rendering to a
-  non-XR render target makes three pick `LinearSRGBColorSpace` for the
-  output, which switches that encode **off** — so these materials emit
-  linear into the target and the mapped value goes in as linear
-  working-space components.
-- `setRawChromeColour` — for custom `ShaderMaterial` /
-  `RawShaderMaterial` chrome that writes a colour uniform straight out.
-  `new THREE.Color(hex)` linearises on construction (ColorManagement is
-  on by default) and the shader then emitted that linear number *as a
-  display value*, so what these layers have always shown is the hex
-  decoded twice. That doubly-darkened appearance is what they were
-  tuned against, so it is what this setter preserves — it is not a bug
-  being carried forward blindly, it is the tuned look. Correcting it is
-  a deliberate visual change, not part of the HDR seam.
-
-Both setters write via `Color.setRGB(..., LinearSRGBColorSpace)` so
-ColorManagement doesn't convert the mapped value a second time.
-
-**The mapping is only correct paired with the operator it inverts.** Left
-in place with the operator off, chrome renders badly wrong — a rim shell
-drops to a tenth of its authored brightness, a near-white probe marker
-clips to flat white. So every call is recorded in a module-level registry
-and `setChromeOperatorActive(false)` re-authors all of it back to plain
-`setHex`, which is exactly the pre-HDR Color state for both variants.
-`HdrPipeline.syncMode` drives that flag, and every state change routes
-through it: the float-support check in the constructor (**before any
-layer is built**, so a context without a float-renderable target never
-registers a mapped colour), both dev switches, and the chart flip.
-Getting this wrong is not a dev-only concern — the float-support path is
-what real fallback hardware takes, and chart parks the operator too.
-
-The registry is keyed by the live `Color`, so a re-attachable layer
-(clouds, Local Group) adds an entry per attach; `HdrPipeline.dispose`
-clears it.
-
-Two consequences worth knowing before touching this:
-
-- **Chrome blending is now linear.** Additive and alpha-blended chrome
-  composite in linear light instead of display space, so a translucent
-  line over a non-black background lands slightly differently even
-  though the line-over-black case is exact. Accepted by the design gate.
-- **The mapping is baked at set-time against the default white point.**
-  When H8 makes `DR_MAG` live on the debug panel, every chrome colour
-  must be re-mapped on change or chrome will drift while the physical
-  layers track. That re-application is H8's, not something this module
-  does today.
+`HdrPipeline.syncMode` is what drives that second point: every state
+change (the constructor's float-support check, both dev switches, the
+chart flip) routes through it, and it re-authors every registered colour
+when the operator parks.
 
 ## Chart mode — full bypass
 
@@ -407,14 +353,9 @@ reasons worth knowing before chasing a diff:
   region that additively saturated to white *before* a later
   alpha-blended draw composites differently.
 
-One more inherent limit on the chrome mapping: it is exact for a chrome
-fragment landing alone at full alpha over black. Translucent and additive
-chrome contributes `L · α` into the target, and the operator is
-non-linear, so `tonemap(L·α) ≠ α · tonemap(L)`. Dim chrome sits in the
-toe where the operator is ~linear and the error is negligible; bright
-near-white chrome (the heliopause limb) shifts visibly. This is the
-linear-space-blending trade the design gate accepted
-(`docs/science-hdr-pipeline.md` § 4).
+Two inherent limits on the chrome mapping — exactness only for a lone
+full-alpha fragment over black, and linear-space blending — are
+`chrome/README.md`'s.
 
 Perf rows: `submit.tonemap` (CPU submission) and, where the driver
 exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
@@ -424,7 +365,7 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 
 `DR_MAG`, `L_THRESH` and the desaturation strength become live panel
 knobs in H8, which then has to re-apply the chrome mapping on every
-change (§ Chrome). `DR_MAG` is also the faint-end lever H7 tunes against
+change (`chrome/README.md`). `DR_MAG` is also the faint-end lever H7 tunes against
 the eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 

@@ -15,7 +15,7 @@ import {
   type ProbeState,
   type ProbeTrajectory,
 } from './probe-trajectory';
-import { setRawChromeColour } from '../../hdr/chrome-colour';
+import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 import probeVert from './probe.vert.glsl?raw';
 import probeFrag from './probe.frag.glsl?raw';
 

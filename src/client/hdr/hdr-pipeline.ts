@@ -12,7 +12,7 @@ import { DEFAULT_FOV } from '../filters/filter-state';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
 import { pixelSolidAngleArcsec2 } from './emission-pure';
 import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
-import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
+import { clearChromeBindings, setChromeOperatorActive } from './chrome/chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
