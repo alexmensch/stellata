@@ -31,10 +31,12 @@ src/client/hdr/
   tonemap-pure.ts (+ test)   CPU mirror of tonemap.glsl plus the exact
                              inverse. Vitest-pinned against the design
                              doc's worked values.
-  emission.glsl              The unit: magnitude → linear luminance and
-                             the point-source peak rule (§ Unit).
+  emission.glsl              The unit: magnitude → linear luminance, the
+                             point-source peak rule, and the extended-
+                             source surface-brightness rule (§ Unit).
   emission-pure.ts (+ test)  CPU mirror, plus the exposure-from-
-                             magnitude-limit helper and LUMA_CEIL.
+                             magnitude-limit helper, the pixel-solid-angle
+                             derivation, and LUMA_CEIL.
   chrome-colour.ts (+ test)  Authored chrome colours pre-mapped through
                              the inverse (§ Chrome).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
@@ -59,15 +61,46 @@ pixels so a resolved disc's surface brightness doesn't shift with
 `devicePixelRatio`. Below 1 px the whole flux lands on the peak; above
 it the emission is true surface brightness.
 
-`HdrPipeline.emitterUniforms` is how a layer binds to this. Four
+A layer that draws an **extended source** instead of a kernel takes
+`stellataSurfaceBrightnessLuminance` — the pixel's flux magnitude is
+`S − 2.5·log10(Ω_px)` for a surface brightness `S` in mag/arcsec², and
+the log round-trip through `L(m)` collapses to one scalar gain:
+
+```
+L_px = uExposure · 10^(−0.4·S) · uOmegaPxArcsec2
+```
+
+Being a single scalar is what lets a layer apply it to a coloured column
+without touching chromaticity. It is **unclamped** — the caller clamps
+the product against `LUMA_CEIL`, not the factor.
+
+`uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
+arcsec² (`pixelSolidAngleArcsec2`), written by
+`HdrPipeline.setPixelSolidAngle` from `angularToPx(viewportHeightCssPx,
+fovYRad)`. CSS again so brightness is `devicePixelRatio`-independent, and
+**height** rather than the `max(w, h)` reference dimension the preset
+arcsec→px conversion uses, because that is the axis the vertical FOV
+maps to and the axis `physSize` projects through. Every FOV change and
+every resize has to reach it; the integration shell's
+`syncPixelSolidAngle` is the only caller.
+
+**Zooming dims an extended source.** Ω_px falls quadratically with FOV,
+so surface brightness — not per-pixel luminance — is the invariant. That
+matches the point-source rule exactly (a resolved disc's `r_phys_px`
+grows as FOV shrinks, dimming its peak by the same factor) and it is the
+magnification loss the epoch model's aperture multiplier pays for
+(`docs/science-hdr-pipeline.md` § 3). An unresolved point keeps its peak
+at any FOV, which is also correct.
+
+`HdrPipeline.emitterUniforms` is how a layer binds to this. Five
 uniforms, held **by reference** so one write reaches every pass:
-`uExposure`, `uWhitePoint`, `uHighlightDesat`, and `uHdrTarget` — the
-0/1 branch telling the shader whether to emit raw `L` or run the
-operator itself. `HdrPipeline` owns every write to `uHdrTarget` (via
-the same `wantsTarget()` the chrome mapping reads, so the chart bypass
-reaches emitters for free); layers only read. The resolve pass shares
-the white-point and desaturation objects, so inline and fullscreen can
-never disagree.
+`uExposure`, `uOmegaPxArcsec2`, `uWhitePoint`, `uHighlightDesat`, and
+`uHdrTarget` — the 0/1 branch telling the shader whether to emit raw `L`
+or run the operator itself. `HdrPipeline` owns every write to
+`uHdrTarget` (via the same `wantsTarget()` the chrome mapping reads, so
+the chart bypass reaches emitters for free); layers only read. The
+resolve pass shares the white-point and desaturation objects, so inline
+and fullscreen can never disagree.
 
 `uExposure` is pinned to the naked-eye base epoch (≈ 7.96) until H6
 routes the slider and the instrument multipliers through it.
@@ -281,8 +314,8 @@ differently-calibrated.
 
 ## Ship gate — the seam is off by default
 
-`HDR_DEFAULT_ENABLED` is **false**. Stars are converted (H3); the Milky
-Way (H4) and planets (H5) still write their old display-encoded values,
+`HDR_DEFAULT_ENABLED` is **false**. Stars (H3) and the Milky Way (H4)
+are converted; planets (H5) still write their old display-encoded values,
 so turning the seam on today changes their brightness for no gain. The
 shipped default path stays the canvas one and the seam rides along
 dormant.
@@ -353,10 +386,10 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 
 ## Not here yet
 
-`Ω_px` / `arcsecPerPx` — the pixel-solid-angle uniforms that make a
-surface-brightness layer FOV-invariant — land with the Milky Way (H4),
-alongside their resize + FOV bookkeeping. Exposure is still a pinned
-constant: H6 owns the slider, the preset table, and the epoch
-multipliers (`docs/science-hdr-pipeline.md` § 3). `DR_MAG`,
-`L_THRESH` and the desaturation strength become live panel knobs in H8,
-which then has to re-apply the chrome mapping on every change (§ Chrome).
+Exposure is still a pinned constant: H6 owns the slider, the preset
+table, and the epoch multipliers (`docs/science-hdr-pipeline.md` § 3).
+`DR_MAG`, `L_THRESH` and the desaturation strength become live panel
+knobs in H8, which then has to re-apply the chrome mapping on every
+change (§ Chrome). `DR_MAG` is also the faint-end lever H7 tunes against
+the eso0932a panorama — it moves the star field and the Milky Way band
+together, which is the point of it.

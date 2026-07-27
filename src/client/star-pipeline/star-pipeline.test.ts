@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
-import { MIRROR_CAPACITY } from './star-local-mirror';
+import { MIRROR_CAPACITY } from './local-pass/star-local-mirror';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 
 function makeOpts(count = 4) {

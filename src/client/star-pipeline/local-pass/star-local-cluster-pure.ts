@@ -1,7 +1,7 @@
 // Membership predicate + camera-window bound for the star local-depth
 // cluster and the core depth-mask gate. Vitest-pinned.
 
-import { DCAM_LOG_FLOOR_PC } from '../camera/timing';
+import { DCAM_LOG_FLOOR_PC } from '../../camera/timing';
 
 /** Rendered-disc pixel size below which a disc-pass star's main-pass
  *  depth artefacts (background bleed-through, close-pair z-fights) are

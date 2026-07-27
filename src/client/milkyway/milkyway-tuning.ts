@@ -1,39 +1,27 @@
 import type { MilkyWay } from './milkyway';
-import { type DebugSection, logScale, makeColor, makeSlider } from '../debug/debug-panel';
+import { type DebugSection, makeColor, makeSlider } from '../debug/debug-panel';
 
 // Dev-only tuning section for the volumetric Milky Way layer. Builds a
 // labelled section with sliders + colour pickers wired to the layer's
 // setters. Designed to be appended into the shared debug panel root.
 //
-// Brightness uses a log-scale slider because the useful range spans
-// ~7 orders of magnitude (1e-7 to ~10). Reddening uses linear sliders
-// since the CCM default has channels above 1.0 (1.32 in blue), which
-// rules out an HTML colour picker. Disc/bulge palette colours use
-// `<input type="color">` since their channels are bounded to [0,1].
+// Reddening uses linear sliders since the CCM default has channels above
+// 1.0 (1.32 in blue), which rules out an HTML colour picker. Disc/bulge
+// palette colours use `<input type="color">` since their channels are
+// bounded to [0,1].
 //
 // No reverse sync — see `SliderOpts.initial` in debug-panel.ts.
-
-const { toSlider: brightnessToSlider, fromSlider: sliderToBrightness } = logScale(-7, 1);
 
 export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   const body = document.createElement('div');
   const v = layer.getValues();
 
-  // Brightness — log-scale slider over [1e-7, 1e1]
-  body.appendChild(makeSlider({
-    label: 'brightness',
-    min: 0,
-    max: 1,
-    step: 0.001,
-    initial: brightnessToSlider(v.brightness),
-    format: (s) => sliderToBrightness(s).toExponential(2),
-    onChange: (s) => layer.setBrightness(sliderToBrightness(s)),
-  }));
-
+  // Surface-brightness anchor, in mag/arcsec². Range straddles the
+  // provisional value; H7 lands the shipped one.
   body.appendChild(makeSlider({
     label: 'glowMagOffset',
-    min: 5,
-    max: 25,
+    min: 26,
+    max: 36,
     step: 0.1,
     initial: v.glowMagOffset,
     format: (x) => x.toFixed(1),

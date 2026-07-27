@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { makeEmptyCatalog } from '../loaders/catalog-mock';
-import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries/binaries-loader';
-import { makeRelation } from '../binaries/binary-relation-fixture';
-import type { BinaryOrbitPathLayer } from '../binaries/binary-orbit-path-layer';
-import type { RenderedSizeComponents } from '../camera/controls/star-physics';
-import type { MemberSphere } from '../local-depth/slice-pure';
+import { makeEmptyCatalog } from '../../loaders/catalog-mock';
+import { FLAG_HAS_ORBIT, type BinariesData } from '../../binaries/binaries-loader';
+import { makeRelation } from '../../binaries/binary-relation-fixture';
+import type { BinaryOrbitPathLayer } from '../../binaries/binary-orbit-path-layer';
+import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
+import type { MemberSphere } from '../../local-depth/slice-pure';
 import { MIRROR_CAPACITY, StarLocalMirror } from './star-local-mirror';
 import { StarLocalCluster } from './star-local-cluster';
 import { RESOLVED_DISC_MIN_PX } from './star-local-cluster-pure';

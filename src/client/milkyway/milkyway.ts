@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
+import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import type { DustField } from '../loaders/dust-loader';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
@@ -60,26 +61,25 @@ const ANALYTICAL_DUST_NORM_PER_PC = 5.5e-5;
 // exp(-τ_V × these). Red transmits most, blue extincts away.
 const REDDENING_RGB = new THREE.Vector3(0.76, 1.0, 1.35);
 
-// --- Output controls ---------------------------------------------------
+// --- Output calibration ------------------------------------------------
 
-// Tone-map gain on the integrated emission. The volumetric raymarch
-// produces colorAccum values in "density × pc" units summed over ~32
-// log-distributed steps spanning kpc-scale path lengths, so the raw
-// numbers are large (10⁴-10⁵ along the GC sightline). The tone map is
-// `result = 1 - exp(-colorAccum × brightness)`, so brightness ~5e-6
-// puts a peak GC sightline near saturation while keeping NGP visibly
-// dim. Empirically tuned alongside GLOW_MAG_OFFSET.
-const DEFAULT_BRIGHTNESS = 5.35e-6;
+// The V surface brightness, in mag/arcsec², of a sightline whose
+// luminance-weighted emission column integrates to 1. The shader turns
+// that into per-pixel luminance in the scene-wide HDR unit — see
+// ./README.md § Surface-brightness emission. This is the layer's single
+// photometric constant, not a user knob.
+//
+// Provisional: anchored so the Galactic-centre sightline lands near
+// 20 mag/arcsec², the design gate's band-pixel reference
+// (docs/science-hdr-pipeline.md § 1). H7 re-derives it per sightline
+// against published V photometry.
+export const GLOW_MAG_OFFSET = 31.3;
 
-// Magnitude calibration. `appMag = uGlowMagOffset - 2.5×log10(intensity)`
-// converts integrated emission into an effective apparent magnitude,
-// which is then gated through the same brightnessClamp curve as the
-// star pipeline so the user's max-mag slider attenuates stars + glow
-// together. Lower values lift the layer through the gate sooner;
-// higher values demand a brighter slider setting to reveal it. Tuned
-// against DEFAULT_BRIGHTNESS so the GC bulge sits near naked-eye
-// visibility and NGP stays faint.
-const GLOW_MAG_OFFSET = 15.0;
+/** Luminance-weighted emission column the Galactic-centre sightline
+ *  (l = 0, b = 0) integrates to at the densities above, with dust at the
+ *  shipped 0.45 strength. The number `GLOW_MAG_OFFSET` is anchored
+ *  against — see ./README.md § Surface-brightness emission. */
+export const GC_SIGHTLINE_COLUMN = 2.85e4;
 
 // Default analytical-dust strength applied at construction. < 1 reads
 // as the (faintly under-extincted) disc band the user calibrated
@@ -94,12 +94,15 @@ const DEFAULT_EXTINCTION_STRENGTH = 0.45;
 
 const GAL_QUAT = new THREE.Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
 
-/** Uniforms shared with the star shader. The MilkyWay layer references
- *  uMaxAppMag and uSizeSpan from this map directly so the magnitude
- *  filter applies uniformly to discrete stars and diffuse glow. */
-export interface MilkywaySharedUniforms {
+export interface MilkywayDeps {
+  /** The star pipeline's `uMaxAppMag`, by reference. Only the chart-mode
+   *  isobar contour reads it — the band's brightness is photometric now,
+   *  so the magnitude slider reaches it through `uExposure` instead. */
   uMaxAppMag: { value: number };
-  uSizeSpan: { value: number };
+  /** `HdrPipeline.emitterUniforms`, spread in by reference so exposure,
+   *  pixel solid angle and the inline-operator branch reach both
+   *  components with one write. */
+  hdr: HdrEmitterUniforms;
 }
 
 /** Per-component density / colour / scale parameters. Exposed as an
@@ -142,7 +145,6 @@ export class MilkyWay {
     uR0Pc: { value: number };
   };
   private sharedTone: {
-    uBrightnessScale: { value: number };
     uGlowMagOffset: { value: number };
   };
   // Chart-mode isobar uniforms — shared between disc + bulge so the
@@ -156,7 +158,7 @@ export class MilkyWay {
   private enabled = true;
   private isobar = false;
 
-  constructor(shared: MilkywaySharedUniforms) {
+  constructor(deps: MilkywayDeps) {
     this.sharedDust = {
       uDustAvPerDensityPc: { value: 2.742 },
       uDustEnabled: { value: 0 },
@@ -173,7 +175,6 @@ export class MilkyWay {
       uR0Pc: { value: R0_PC },
     };
     this.sharedTone = {
-      uBrightnessScale: { value: DEFAULT_BRIGHTNESS },
       uGlowMagOffset: { value: GLOW_MAG_OFFSET },
     };
     this.sharedChart = {
@@ -192,7 +193,7 @@ export class MilkyWay {
       ),
       density0: DISC_DENSITY0,
       color: DISC_COLOR.clone(),
-      magnitudeShared: shared,
+      deps,
     });
     this.discMesh = this.buildMesh(discGeom, this.disc);
 
@@ -207,7 +208,7 @@ export class MilkyWay {
       ),
       density0: BULGE_DENSITY0,
       color: BULGE_COLOR.clone(),
-      magnitudeShared: shared,
+      deps,
     });
     this.bulgeMesh = this.buildMesh(bulgeGeom, this.bulge);
 
@@ -221,7 +222,7 @@ export class MilkyWay {
     meshScale: THREE.Vector3;
     density0: number;
     color: THREE.Color;
-    magnitudeShared: MilkywaySharedUniforms;
+    deps: MilkywayDeps;
   }): ComponentMaterials {
     const density0 = { value: opts.density0 };
     const color = { value: opts.color };
@@ -251,8 +252,10 @@ export class MilkyWay {
         ...this.sharedFrame,
         ...this.sharedTone,
         ...this.sharedChart,
-        uMaxAppMag: opts.magnitudeShared.uMaxAppMag,
-        uSizeSpan: opts.magnitudeShared.uSizeSpan,
+        // Exposure, pixel solid angle, and the inline-operator branch.
+        // Owned by HdrPipeline; this layer only reads them.
+        ...opts.deps.hdr,
+        uMaxAppMag: opts.deps.uMaxAppMag,
 
         // Per-component.
         uIsBulge: { value: opts.isBulge },
@@ -332,10 +335,6 @@ export class MilkyWay {
     this.bulgeMesh.visible = !on;
   }
 
-  setBrightness(x: number) {
-    this.sharedTone.uBrightnessScale.value = Math.max(0, x);
-  }
-
   setGlowMagOffset(x: number) {
     this.sharedTone.uGlowMagOffset.value = x;
   }
@@ -366,7 +365,6 @@ export class MilkyWay {
   getValues() {
     const c = this.sharedDust.uReddeningRGB.value;
     return {
-      brightness: this.sharedTone.uBrightnessScale.value,
       glowMagOffset: this.sharedTone.uGlowMagOffset.value,
       discDensity: this.disc.density0.value,
       bulgeDensity: this.bulge.density0.value,

@@ -7,8 +7,10 @@ import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
 import emissionChunk from './emission.glsl?raw';
+import { angularToPx } from '../camera/controls/star-geometry';
+import { DEFAULT_FOV } from '../filters/filter-state';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
-import { BASE_EPOCH_EXPOSURE } from './emission-pure';
+import { BASE_EPOCH_EXPOSURE, pixelSolidAngleArcsec2 } from './emission-pure';
 import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
@@ -34,17 +36,23 @@ export interface HdrEmitterUniforms {
   uWhitePoint: THREE.IUniform<number>;
   uHighlightDesat: THREE.IUniform<number>;
   uExposure: THREE.IUniform<number>;
+  uOmegaPxArcsec2: THREE.IUniform<number>;
 }
 
 /** `uHdrTarget` seeds to 0 — the shipped path while the ship gate is
  *  false — and `HdrPipeline` owns every write after that. `uExposure` is
- *  pinned to the base epoch until H6 routes the slider through it. */
+ *  pinned to the base epoch until H6 routes the slider through it.
+ *  `uOmegaPxArcsec2` seeds at the default FOV over a 1000 px viewport and
+ *  is rewritten by `setPixelSolidAngle` on every FOV / resize change. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   return {
     uHdrTarget: { value: 0 },
     uWhitePoint: { value: tonemapWhitePoint() },
     uHighlightDesat: { value: HIGHLIGHT_DESAT },
     uExposure: { value: BASE_EPOCH_EXPOSURE },
+    uOmegaPxArcsec2: {
+      value: pixelSolidAngleArcsec2(angularToPx(1000, (DEFAULT_FOV * Math.PI) / 180)),
+    },
   };
 }
 
@@ -134,6 +142,14 @@ export class HdrPipeline {
     if (!this.wantsTarget() || this.rt === null) return;
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Pixel solid angle for surface-brightness emitters. `pxPerRadian` is
+   *  `angularToPx(viewportHeightCssPx, fovYRad)` — CSS pixels, so the
+   *  scene's brightness is `devicePixelRatio`-independent. Every FOV
+   *  change and every resize has to reach this. */
+  setPixelSolidAngle(pxPerRadian: number): void {
+    this.emitterUniforms.uOmegaPxArcsec2.value = pixelSolidAngleArcsec2(pxPerRadian);
   }
 
   /** Re-derives from the renderer's drawing-buffer size, so it covers

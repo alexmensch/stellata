@@ -2,6 +2,12 @@ precision highp float;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>
+// The HDR unit + the scene-wide operator. Both are needed in this one
+// stage: the layer derives a per-pixel magnitude from its column integral
+// and, whenever the frame is NOT rendering into the HDR target, applies
+// the operator itself. See src/client/hdr/README.md § Unit, § Fallback.
+#include <stellata_hdr_emission>
+#include <stellata_tonemap>
 
 // Bounded volumetric raymarch through proxy meshes.
 //
@@ -83,11 +89,16 @@ uniform float uExtinctionStrength;
 // amber tint emerges from behind heavy dust columns.
 uniform vec3 uReddeningRGB;
 
+// HDR seam, bound by reference from HdrPipeline.emitterUniforms.
+uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
+uniform float uWhitePoint;
+uniform float uHighlightDesat;
+uniform float uExposure;
+uniform float uOmegaPxArcsec2; // pixel solid angle, arcsec²
+
 // Output controls.
-uniform float uBrightnessScale;
-uniform float uMaxAppMag;     // shared with star pipeline
-uniform float uSizeSpan;      // shared with star pipeline
-uniform float uGlowMagOffset; // calibration: integrated density → appMag
+uniform float uMaxAppMag;     // shared with star pipeline (chart isobar)
+uniform float uGlowMagOffset; // V surface brightness at colorAccum = 1
 
 // Chart-mode isobar pass. When > 0.5 the fragment renders only a thin
 // outline at the iso-line where the integrated apparent magnitude crosses
@@ -228,36 +239,27 @@ void main() {
     tauAccum += dTauRGB;
   }
 
-  // --- Magnitude gate + tone mapping ----------------------------------
-  // Convert integrated raw intensity to an effective apparent magnitude
-  // and turn it into a slider-driven gain (`gate`) using the same
-  // brightnessClamp shape `star.vert.glsl` uses, so the max-mag slider
-  // attenuates stars + glow + (future) nebulae together.
-  //
-  // Gate is lower-bounded at 0 but NOT upper-clamped at 1: folded into
-  // the tone-map exponent below, this means raising the slider keeps
-  // lifting bright sightlines (toward saturation) instead of plateauing
-  // once a sightline first reaches "fully visible". The user's mental
-  // model — "stars and diffuse glow are the same thing" — needs the
-  // glow to keep brightening with depth, the way more stars become
-  // visible at higher max-mag.
-  //
-  // Tone map is Beer-Lambert: `result = 1 - exp(-x)`. Bright integrated
-  // columns saturate toward 1 (clipped to white in the framebuffer);
-  // dim ones stay close to linear. Multiplying gate into the exponent
-  // (rather than the post-mapped result) is what makes the slider
-  // continue affecting already-bright sightlines.
-  float intensity = max(colorAccum.r + colorAccum.g + colorAccum.b, 1e-12);
-  float appMag = uGlowMagOffset - 2.5 * log(intensity) / LOG10;
+  // --- Surface brightness → luminance in the HDR unit -----------------
+  // colorAccum is the emission column in "density × pc × colour" units.
+  // uGlowMagOffset states the V surface brightness a unit column carries,
+  // so this sightline's surface brightness is
+  //   S    = uGlowMagOffset - 2.5*log10(column)     [mag/arcsec²]
+  // and the flux magnitude inside one pixel is
+  //   m_px = S - 2.5*log10(Ω_px).
+  // Feeding m_px through the unit collapses the log round-trip to a single
+  // scalar gain, applied to all three channels — so the line-of-sight hue
+  // the raymarch built survives untouched.
+  float column = max(dot(colorAccum, STELLATA_LUMA_WEIGHTS), 1e-12);
+  float magPx = uGlowMagOffset - 2.5 * log(column * uOmegaPxArcsec2) / LOG10;
 
   if (uChartIsobar > 0.5) {
-    // Single solid contour line at the iso-magnitude where the
+    // Single solid contour line at the iso-magnitude where the pixel's
     // integrated brightness equals the user's threshold. Use fwidth on
-    // appMag so the line is a constant 1 px wide regardless of how
+    // magPx so the line is a constant 1 px wide regardless of how
     // steep the local gradient is — flat regions of the band would
     // otherwise paint a wide smudge and steep regions a hairline.
-    float fw = max(fwidth(appMag), 1e-5);
-    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(appMag - uMaxAppMag));
+    float fw = max(fwidth(magPx), 1e-5);
+    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uMaxAppMag));
     if (line <= 0.0) {
       fragColor = vec4(0.0);
       return;
@@ -266,9 +268,16 @@ void main() {
     return;
   }
 
-  float gate = max((uMaxAppMag - appMag) / max(uSizeSpan, 0.001), 0.0);
-  vec3 scaled = colorAccum * uBrightnessScale * gate;
-  vec3 result = vec3(1.0) - exp(-scaled);
+  float gain = stellataSurfaceBrightnessLuminance(
+    uExposure, uGlowMagOffset, uOmegaPxArcsec2);
+  vec3 emitted = min(colorAccum * gain, vec3(STELLATA_LUMA_CEIL));
 
-  fragColor = vec4(result, 1.0);
+  if (uHdrTarget > 0.5) {
+    fragColor = vec4(emitted, 1.0);
+    return;
+  }
+  // Undithered: the disc and bulge meshes both cover this pixel and blend
+  // additively, so a fragCoord-keyed offset would land twice.
+  fragColor = vec4(
+    stellataTonemapUndithered(emitted, uWhitePoint, uHighlightDesat), 1.0);
 }

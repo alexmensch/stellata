@@ -32,4 +32,21 @@ float stellataPointSourcePeak(float exposure, float appMag, float physRadiusPx) 
     return min(flux / spread, STELLATA_LUMA_CEIL);
 }
 
+/** Luminance one pixel receives from an extended source of surface
+ *  brightness `magPerArcsec2`. The pixel's flux magnitude is
+ *  `magPerArcsec2 - 2.5*log10(omegaPxArcsec2)`, and feeding that through
+ *  stellataLuminanceForMag collapses the log round-trip to this product —
+ *  which is why a layer can apply it as one scalar gain and keep its
+ *  chromaticity.
+ *
+ *  Unclamped: a layer scaling a per-channel column by this must clamp the
+ *  product against STELLATA_LUMA_CEIL, not the factor. */
+float stellataSurfaceBrightnessLuminance(
+    float exposure,
+    float magPerArcsec2,
+    float omegaPxArcsec2
+) {
+    return stellataLuminanceForMag(exposure, magPerArcsec2) * omegaPxArcsec2;
+}
+
 #endif

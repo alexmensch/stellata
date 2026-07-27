@@ -249,7 +249,7 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | --- | --- | --- |
 | Star glow + disc (`star.frag.glsl`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
-| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(colorAccum · Ω_px)`; `Ω_px` = pixel solid angle in arcsec² (new uniform, FOV/viewport-derived) so surface brightness is FOV-invariant; `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted; `uGlowMagOffset` re-anchors to published V surface photometry (§ 8) |
+| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; `Ω_px` = pixel solid angle in arcsec², so **surface brightness** rather than per-pixel luminance is the FOV-invariant (zooming dims the band exactly as it dims a resolved stellar disc). `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` is provisionally **31.3** — the GC sightline at S ≈ 20.2 mag/arcsec², the § 1 band reference — pending H7's per-sightline re-derivation (§ 8) |
 | LG emission (shelved) | same gate + exp squash, magnitude-domain | identical mapping as MW when unshelved — it already computes a per-pixel magnitude, so it lands on the unit for free; no new bead until unshelve |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | identical point-source rule as stars, `m` from `planetApparentMagnitude` — mesh↔glare continuity by construction |
 | Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | true surface brightness: per-px `L` such that the disc-integral equals `L(m_planet)`; Lambert/phase/limb shading redistributes within the disc at unit mean; `HOST_IRRADIANCE_DISPLAY_EXPONENT`, `HOST_INTENSITY_MIN/MAX`, and the litIntensity slider-composition are deleted (tone-map does the compression; uExposure does the slider) |
@@ -350,17 +350,18 @@ day one — the fullscreen pass and the inline path can never drift.
   concern and becomes a requirement of the *default* path. Every bead
   from H3 keeps both paths working.
 - **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and
-  `Ω_px` / `arcsecPerPx` land with their first consumer — stars (H3),
-  the Milky Way (H4), the exposure wiring (H6) — rather than in the
-  plumbing bead, where they would be uniforms and resize bookkeeping
-  with no reader. `Ω_px` / `arcsecPerPx` then update on resize + FOV
-  change alongside `uFovYRad` / `recomputePresetPxSizes`.
+  `Ω_px` land with their first consumer — stars (H3), the Milky Way (H4),
+  the exposure wiring (H6) — rather than in the plumbing bead, where they
+  would be uniforms and resize bookkeeping with no reader.
   H3 landed `uExposure` and `LUMA_CEIL` in `src/client/hdr/emission.glsl`
   + `emission-pure.ts`, reachable through
   `HdrPipeline.emitterUniforms` — the by-reference uniform seam H4 and
   H5 bind to as well. Both chunks are `#ifndef`-guarded because an
   emitter deriving a per-pixel magnitude (H4) needs the unit and the
   operator in one stage.
+  H4 added `uOmegaPxArcsec2` to the same seam, written by
+  `HdrPipeline.setPixelSolidAngle` from the CSS-pixel viewport **height**
+  and `fovYRad`; the shell drives it from `setCameraFov` and resize.
 
 ## 8. Validation contract (H7)
 
@@ -370,7 +371,11 @@ day one — the fullscreen pass and the inline path can never drift.
 - **MW anchor:** re-derive `uGlowMagOffset` so a chosen sightline
   matches published V-band surface photometry (GC bulge / Baade's
   window and an anticentre point), then confirm against eso0932a
-  stretches per preset.
+  stretches per preset. H4 shipped **31.3** as a provisional single-point
+  anchor (GC sightline → S ≈ 20.2); the known gap it leaves is a
+  latitude gradient steeper than the real sky's — the model puts NGP near
+  25.3 mag/arcsec² against a real ~23.5–24. Fixing that is a density-
+  profile question, not an offset one.
 - **`DR_MAG` is the tunable** reconciling strict physicality with the
   panorama's long-exposure look; land its shipped default in H7 and
   record the chosen value here.
@@ -392,9 +397,9 @@ day one — the fullscreen pass and the inline path can never drift.
   interim state (physical star emission, fixed exposure) is coherent
   and shippable.
 - **H8 retires the per-layer brightness knobs** — MW brightness scalar
-  + gate, planet-disc floor/exponent constants, dynamic-range exponent —
-  from the tuning surface entirely (they stop existing in code, not
-  just in the panel; H4/H5 delete them). The panel gains: operator
+  + gate (*deleted in H4*), planet-disc floor/exponent constants,
+  dynamic-range exponent — from the tuning surface entirely (they stop
+  existing in code, not just in the panel; H4/H5 delete them). The panel gains: operator
   params (`DR_MAG`, `L_THRESH`, desaturation), exposure + active-preset
   readout, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
   constant* set by H7, debug-visible but not a user knob.

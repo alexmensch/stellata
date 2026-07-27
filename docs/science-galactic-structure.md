@@ -45,11 +45,12 @@ ray. The density at each step is:
   in iteration.
 
 Each component multiplies a population colour pre-integration so the
-band's hue varies by line of sight. Defaults are visually calibrated;
-see `src/client/milkyway/README.md` for the calibrated values, the magnitude-
-consistency conversion that ties Milky Way brightness to the same
-magnitude slider as the discrete star catalog, and the full
-coordinate-handling chain.
+band's hue varies by line of sight. Densities and palette are visually
+calibrated; the emission column then converts to a V surface brightness
+and, through the scene-wide HDR unit, to per-pixel luminance — the same
+exposure the discrete star catalog emits against. See
+`src/client/milkyway/README.md` for the calibrated values, that
+conversion, and the full coordinate-handling chain.
 
 ## Interstellar dust extinction
 

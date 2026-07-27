@@ -1,19 +1,19 @@
 // The star LocalCluster: per-frame star membership + orbit-path
-// ellipses for the local depth pass. See ../local-depth/README.md
+// ellipses for the local depth pass. See ../../local-depth/README.md
 // § Full membership.
 
 import * as THREE from 'three';
-import type { BinariesData } from '../binaries/binaries-loader';
-import { keplerChainRelationIdxs } from '../binaries/binary-orbit-path-pure';
-import type { BinaryOrbitPathLayer } from '../binaries/binary-orbit-path-layer';
+import type { BinariesData } from '../../binaries/binaries-loader';
+import { keplerChainRelationIdxs } from '../../binaries/binary-orbit-path-pure';
+import type { BinaryOrbitPathLayer } from '../../binaries/binary-orbit-path-layer';
 import {
   peakAmplitudeFactor,
   type RenderedSizeComponents,
-} from '../camera/controls/star-physics';
-import type { LocalCluster } from '../local-depth/local-depth-pass';
-import type { MemberSphere } from '../local-depth/slice-pure';
-import type { Catalog } from '../loaders/catalog-loader';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+} from '../../camera/controls/star-physics';
+import type { LocalCluster } from '../../local-depth/local-depth-pass';
+import type { MemberSphere } from '../../local-depth/slice-pure';
+import type { Catalog } from '../../loaders/catalog-loader';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { MIRROR_CAPACITY, type StarLocalMirror } from './star-local-mirror';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
 
