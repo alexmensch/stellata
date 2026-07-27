@@ -4,87 +4,59 @@ import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import type { DustField } from '../loaders/dust-loader';
+import {
+  ANALYTICAL_DUST_NORM_PER_PC,
+  ANALYTICAL_DUST_SCALE_HEIGHT_PC,
+  ANALYTICAL_DUST_SCALE_LENGTH_PC,
+  BULGE_AXIS_RATIO,
+  BULGE_COLOR_RGB,
+  BULGE_DENSITY0,
+  BULGE_HALF_THICKNESS_PC,
+  BULGE_RADIUS_PC,
+  BULGE_SCALE_RADIUS_PC,
+  DEFAULT_DUST_AV_PER_DENSITY_PC,
+  DEFAULT_EXTINCTION_STRENGTH,
+  DISC_COLOR_RGB,
+  DISC_DENSITY0,
+  DISC_HALF_THICKNESS_PC,
+  DISC_RADIUS_PC,
+  DISC_SCALE_HEIGHT_PC,
+  DISC_SCALE_LENGTH_PC,
+  REDDENING_RGB,
+  SOL_GALACTOCENTRIC_PC,
+  galacticDirection,
+  sightlineColumn,
+} from './milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
 // bulge), AdditiveBlending. Analytical-only dust here — voxel sampling
 // along 8–15 kpc rays aliases into parallel streaks regardless of step
 // distribution. See src/client/milkyway/README.md.
 
-// --- Geometry / density parameters -------------------------------------
-
-// Disc proxy mesh extent. ~30 kpc total radial diameter, ~1.2 kpc total
-// vertical thickness — enough to encompass the visible disc with a
-// buffer past Jurić's exponential drop-off.
-const DISC_RADIUS_PC = 15_000;       // half-extent radial (xy)
-const DISC_HALF_THICKNESS_PC = 600;  // half-extent vertical (z)
-
-// Disc emission profile. Double-exponential thin disc (Jurić 2008
-// Table 10 / Robin 2003 acceptable range).
-const DISC_SCALE_LENGTH_PC = 3_000;  // radial scale length hR
-const DISC_SCALE_HEIGHT_PC = 300;    // vertical scale height hz
-const DISC_DENSITY0 = 1.5;           // peak density (relative units; tunable)
-// Pale lavender disc — empirically tuned. Combined with the warm
-// reddening law, the disc reads as a cool blue-grey band off the
-// galactic plane and shifts warmer through dust columns toward the GC.
-const DISC_COLOR = new THREE.Color(0.6706, 0.6588, 0.8745); // 171/168/223
-
-// Bulge proxy mesh extent. Encompasses 5× scale radius at the equator
-// and ~1.7× scale radius along z (axis ratio 0.6, oblate). The density
-// profile is exp(-r'/r_b), so the proxy boundary's actual density is
-// already negligible; the integration just terminates there.
-const BULGE_RADIUS_PC = 5_000;        // half-extent radial (xy)
-const BULGE_HALF_THICKNESS_PC = 3_000; // half-extent vertical (z)
-
-// Bulge emission profile.
-const BULGE_SCALE_RADIUS_PC = 1_000; // r_b
-const BULGE_AXIS_RATIO = 0.6;        // q (z'/r flattening, oblate)
-const BULGE_DENSITY0 = 18.0;         // peak density relative to disc
-// Near-white bulge with a faint warm bias — empirically tuned. The
-// reddening law warms the bulge further along high-extinction GC
-// sightlines without making it look uniformly orange off-dust.
-const BULGE_COLOR = new THREE.Color(1.0, 0.9647, 0.9294); // 255/246/237
-
-// --- Dust extinction parameters ---------------------------------------
-
-// Analytical disc dust profile. Thinner scale height than the stellar
-// disc (canonical thin-disc dust h ≈ 125 pc; Drimmel & Spergel 2001).
-// Normalisation tuned so density × av_factor at (R₀, z=0) ≈ 0.15 mag/kpc,
-// the canonical local extinction rate (Schlegel/Finkbeiner/Davis 1998).
-const ANALYTICAL_DUST_SCALE_LENGTH_PC = 3_500;
-const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
-const ANALYTICAL_DUST_NORM_PER_PC = 5.5e-5;
-
-// Wavelength-dependent extinction. CCM-derived per-channel τ multipliers
-// (relative to V band): A_R/A_V/A_B ≈ 0.751/1.0/1.32. Empirically nudged
-// to 0.76/1.0/1.35 — slightly stronger blue extinction reads more
-// naturally through the GC dust columns. Applied as transmission =
-// exp(-τ_V × these). Red transmits most, blue extincts away.
-const REDDENING_RGB = new THREE.Vector3(0.76, 1.0, 1.35);
-
 // --- Output calibration ------------------------------------------------
 
-// The V surface brightness, in mag/arcsec², of a sightline whose
-// luminance-weighted emission column integrates to 1. The shader turns
-// that into per-pixel luminance in the scene-wide HDR unit — see
-// ./README.md § Surface-brightness emission. This is the layer's single
-// photometric constant, not a user knob.
-//
-// Provisional: anchored so the Galactic-centre sightline lands near
-// 20 mag/arcsec², the design gate's band-pixel reference
-// (docs/science-hdr-pipeline.md § 1). H7 re-derives it per sightline
-// against published V photometry.
-export const GLOW_MAG_OFFSET = 31.3;
+/** V surface brightness the Galactic-centre sightline is anchored to —
+ *  the design gate's band-pixel reference
+ *  (docs/science-hdr-pipeline.md § 1). H7 replaces this single anchor
+ *  with per-sightline published V photometry. */
+export const GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0;
 
 /** Luminance-weighted emission column the Galactic-centre sightline
- *  (l = 0, b = 0) integrates to at the densities above, with dust at the
- *  shipped 0.45 strength. The number `GLOW_MAG_OFFSET` is anchored
- *  against — see ./README.md § Surface-brightness emission. */
-export const GC_SIGHTLINE_COLUMN = 2.85e4;
+ *  (l = 0, b = 0) integrates to at the shipped densities and 0.45 dust
+ *  strength, from the CPU mirror of the shader's raymarch. Pinned in
+ *  ./milkyway.test.ts so a profile or quadrature change is visible. */
+export const GC_SIGHTLINE_COLUMN = sightlineColumn(
+  SOL_GALACTOCENTRIC_PC,
+  galacticDirection(0, 0),
+);
 
-// Default analytical-dust strength applied at construction. < 1 reads
-// as the (faintly under-extincted) disc band the user calibrated
-// against; the per-frame Stellata knob still overrides this.
-const DEFAULT_EXTINCTION_STRENGTH = 0.45;
+/** The V surface brightness, in mag/arcsec², of a sightline whose
+ *  luminance-weighted emission column integrates to 1 — the layer's
+ *  single photometric constant, not a user knob. Derived rather than
+ *  tuned: it is whatever puts the GC sightline on the band reference.
+ *  See ./README.md § Surface-brightness emission. */
+export const GLOW_MAG_OFFSET =
+  GC_BAND_REFERENCE_MAG_ARCSEC2 + 2.5 * Math.log10(GC_SIGHTLINE_COLUMN);
 
 // Raymarch step count is fixed in the shader (32 steps). Performance
 // has been fine in practice even with two materials each running
@@ -160,13 +132,13 @@ export class MilkyWay {
 
   constructor(deps: MilkywayDeps) {
     this.sharedDust = {
-      uDustAvPerDensityPc: { value: 2.742 },
+      uDustAvPerDensityPc: { value: DEFAULT_DUST_AV_PER_DENSITY_PC },
       uDustEnabled: { value: 0 },
       uExtinctionStrength: { value: DEFAULT_EXTINCTION_STRENGTH },
       uAnalyticalDustScaleLengthPc: { value: ANALYTICAL_DUST_SCALE_LENGTH_PC },
       uAnalyticalDustScaleHeightPc: { value: ANALYTICAL_DUST_SCALE_HEIGHT_PC },
       uAnalyticalDustNormPerPc: { value: ANALYTICAL_DUST_NORM_PER_PC },
-      uReddeningRGB: { value: REDDENING_RGB.clone() },
+      uReddeningRGB: { value: new THREE.Vector3(...REDDENING_RGB) },
     };
     this.sharedFrame = {
       uWorldOffset: { value: new THREE.Vector3() },
@@ -192,7 +164,7 @@ export class MilkyWay {
         DISC_HALF_THICKNESS_PC,
       ),
       density0: DISC_DENSITY0,
-      color: DISC_COLOR.clone(),
+      color: new THREE.Color(...DISC_COLOR_RGB),
       deps,
     });
     this.discMesh = this.buildMesh(discGeom, this.disc);
@@ -207,7 +179,7 @@ export class MilkyWay {
         BULGE_HALF_THICKNESS_PC,
       ),
       density0: BULGE_DENSITY0,
-      color: BULGE_COLOR.clone(),
+      color: new THREE.Color(...BULGE_COLOR_RGB),
       deps,
     });
     this.bulgeMesh = this.buildMesh(bulgeGeom, this.bulge);

@@ -114,6 +114,12 @@ uniform vec3  uChartInkColor;
 const int   STEPS = 32;
 const float S_MIN_PC = 1.0;
 const float LOG10 = 2.302585093;
+const float MAG_PER_TAU = 1.0857;
+
+// Deliberately linear rather than log-distributed like the march below:
+// this span's integrand rises toward its FAR end. See README.md
+// § Foreground dust.
+const int FOREGROUND_DUST_STEPS = 16;
 
 // --- Density functions ----------------------------------------------
 
@@ -133,6 +139,30 @@ float analyticalDustDensity(float R, float zVal) {
   return uAnalyticalDustNormPerPc
        * exp(-(R - uR0Pc) / uAnalyticalDustScaleLengthPc)
        * exp(-abs(zVal) / uAnalyticalDustScaleHeightPc);
+}
+
+// Per-channel optical depth of one step, CCM reddening applied to τ_V.
+vec3 dustTauStepRGB(float R, float zVal, float dsPc, float dustEffective) {
+  if (dustEffective <= 0.0) return vec3(0.0);
+  float kappaPerPcV = analyticalDustDensity(R, zVal)
+                    * uDustAvPerDensityPc * dustEffective / MAG_PER_TAU;
+  return kappaPerPcV * uReddeningRGB * dsPc;
+}
+
+// The integration volume starts at the mesh front face; the dust slab
+// does not. A component the camera sits outside of — the bulge, from
+// anywhere in the disc — has to emit through this column first.
+vec3 foregroundDustTau(vec3 originGalCentric, vec3 dirGalCentric,
+                       float sStart, float worldPerT, float dustEffective) {
+  if (dustEffective <= 0.0 || sStart <= S_MIN_PC) return vec3(0.0);
+  vec3 tau = vec3(0.0);
+  float dsPc = (sStart - S_MIN_PC) / float(FOREGROUND_DUST_STEPS);
+  for (int i = 0; i < FOREGROUND_DUST_STEPS; i++) {
+    float sMid = S_MIN_PC + (float(i) + 0.5) * dsPc;
+    vec3 pos = originGalCentric + (sMid / worldPerT) * dirGalCentric;
+    tau += dustTauStepRGB(length(pos.xy), pos.z, dsPc, dustEffective);
+  }
+  return tau;
 }
 
 // --- Main -----------------------------------------------------------
@@ -199,10 +229,11 @@ void main() {
   //     correctly.
   //   - Accumulate τ for next step.
   vec3 colorAccum = vec3(0.0);
-  vec3 tauAccum = vec3(0.0);
   float prevS = sStart;
 
   float dustEffective = uDustEnabled * uExtinctionStrength;
+  vec3 tauAccum = foregroundDustTau(
+    camGalCentric, dirLocal * uMeshScalePc, sStart, worldPerT, dustEffective);
 
   for (int i = 0; i < STEPS; i++) {
     float sBoundary = exp(logMin + float(i + 1) * logStep);
@@ -225,13 +256,7 @@ void main() {
       ? bulgeDensityVal(R, zVal)
       : discDensityVal(R, zVal);
 
-    // Per-channel optical depth for this step (CCM reddening).
-    vec3 dTauRGB = vec3(0.0);
-    if (dustEffective > 0.0) {
-      float kappaPerPcV = analyticalDustDensity(R, zVal)
-                        * uDustAvPerDensityPc * dustEffective / 1.0857;
-      dTauRGB = kappaPerPcV * uReddeningRGB * dsPc;
-    }
+    vec3 dTauRGB = dustTauStepRGB(R, zVal, dsPc, dustEffective);
 
     // Beer-Lambert with half-step self-shielding for the slab approx.
     vec3 transmittance = exp(-tauAccum) * exp(-0.5 * dTauRGB);
