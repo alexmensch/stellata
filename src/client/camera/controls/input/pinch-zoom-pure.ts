@@ -11,7 +11,7 @@ export const WHEEL_NOTCH_DELTA_PX = 100;
  *  pinch reports single-digit `deltaY` per event where a wheel notch reports
  *  100, so unamplified it registers as ~1/30th of a notch and reads as "pinch
  *  does nothing". Sets how many notches a full two-finger pinch is worth. */
-export const PINCH_NOTCH_GAIN = 30;
+export const PINCH_NOTCH_GAIN = 20;
 
 /** Wheel-pixel delta per unit of `ln(scale)`, for the WebKit gesture path —
  *  the balance knob between the two browser pinch reports, since WebKit's
