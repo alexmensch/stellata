@@ -279,10 +279,13 @@ Per-row gates and resolution:
   `stripDoubledParentToken` for a base ending in the comp's parent /
   local-primary letter (Castor "C" + "Cb" → "Castor Cb"; AR Cas
   "HIP 115990 F" + "G" → "HIP 115990 G"), and `stripBlendedSiblingLetter`
-  when a blended top-level component inherited a SIBLING's composed name
+  when a blended component inherited a SIBLING's composed name
   — Acrab's WDS E shares β² Sco's (WDS C) Gaia source, so E's row name is
-  "Acrab B"; a top-level letter composes flat off the system base, so
-  "Acrab B" + "E" strips to "Acrab E", not "Acrab B E".
+  "Acrab B"; the canonical comp encodes the full path from the root, so
+  "Acrab B" + "E" strips to "Acrab E", not "Acrab B E". Sub-letters need
+  the sibling guard as well as the parent-token one: Eb's parent token is
+  "E", so nothing matched the inherited " B" and the name composed as
+  "Acrab B Eb".
 
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the

@@ -892,21 +892,23 @@ function composeCompanionName(
 }
 
 /** Strip a trailing single-letter component token when a blended
- *  top-level component inherited a SIBLING's composed name. Acrab's WDS
- *  E shares β² Sco's (WDS C) Gaia source, so Stage 6 stamps E's row name
- *  as "Acrab B" (β² Sco's own name); appending the canonical top-level
- *  letter would read "Acrab B E". A top-level letter composes flat off
- *  the system base, so strip the trailing " <letter>" when the prefix is
+ *  component inherited a SIBLING's composed name. Acrab's WDS E shares
+ *  β² Sco's (WDS C) Gaia source, so Stage 6 stamps E's row name as
+ *  "Acrab B" (β² Sco's own name); appending the canonical letter would
+ *  read "Acrab B E". The canonical comp already encodes the full path
+ *  from the root, so strip the trailing " <letter>" when the prefix is
  *  exactly the system's resolved base name — "Acrab B" → "Acrab" →
- *  "Acrab E". A real proper name ending in a capital-letter word never
- *  equals the system base, so it survives; and only a top-level canonical
- *  letter triggers it (sub-letters route through stripDoubledParentToken). */
+ *  "Acrab E", and the sub-letter "Eb" → "Acrab Eb". A real proper name
+ *  ending in a capital-letter word never equals the system base, so it
+ *  survives. Sub-letters need this too: stripDoubledParentToken only
+ *  matches the comp's OWN parent token ("E" for "Eb"), never a sibling's
+ *  inherited letter, so " B" would otherwise survive into "Acrab B Eb". */
 export function stripBlendedSiblingLetter(
   base: string,
   canonicalComp: string,
   systemBase: string | null,
 ): string {
-  if (systemBase === null || !/^[A-Z]$/.test(canonicalComp)) return base;
+  if (systemBase === null || !/^[A-Z]/.test(canonicalComp)) return base;
   const m = /^(.+) [A-Z]$/.exec(base);
   if (m && m[1] === systemBase) return m[1];
   return base;
