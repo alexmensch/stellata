@@ -102,9 +102,11 @@ after exiting chart mode (otherwise the average would lag forever).
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
-| `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning both passes. The headline's source, and the only row that prices anything. |
+| `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
+| `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning every pass. The headline's source, and the only row that prices anything. |
 | `gpu.main`              | timer query                      | Main-pass timer scope. Over-attributes — a relative signal, not a cost. See § GPU timing. |
 | `gpu.localDepth`        | timer query                      | Local-depth-pass timer scope. Same caveat. |
+| `gpu.tonemap`           | timer query                      | Fullscreen HDR resolve timer scope (`../hdr/README.md`). Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |

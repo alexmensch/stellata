@@ -11,6 +11,7 @@ import {
   type ProbeState,
   type ProbeTrajectory,
 } from './probe-trajectory';
+import { setRawChromeColour } from '../../hdr/chrome-colour';
 import probeVert from './probe.vert.glsl?raw';
 import probeFrag from './probe.frag.glsl?raw';
 
@@ -118,7 +119,7 @@ export class ProbeField {
       uViewport: shared.uViewport,
       uPixelRatio: shared.uPixelRatio,
       uSizePx: { value: PROBE_MARKER_PX },
-      uColour: { value: new THREE.Color(PROBE_COLOUR) },
+      uColour: { value: setRawChromeColour(new THREE.Color(), PROBE_COLOUR) },
     };
     const makeMat = (localPass = false) => new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,

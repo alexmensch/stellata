@@ -3,6 +3,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { galacticDirToIcrs } from './galactic-coords';
+import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 
 export const SPHERE_RADIUS_PC = 50_000;
 const EQUATOR_SEGMENTS = 256;
@@ -66,7 +67,6 @@ export class GalacticGrid {
     this.group.renderOrder = -1;
 
     this.equatorMaterial = new LineMaterial({
-      color: DARK_COLOUR,
       linewidth: EQUATOR_LINEWIDTH_PX,
       transparent: true,
       opacity: DARK_EQUATOR_OPACITY,
@@ -80,12 +80,13 @@ export class GalacticGrid {
     this.equatorMaterial.depthWrite = false;
 
     this.lineMaterial = new THREE.LineBasicMaterial({
-      color: DARK_COLOUR,
       transparent: true,
       opacity: DARK_LINE_OPACITY,
       depthTest: true,
       depthWrite: false,
     });
+    setBuiltinChromeColour(this.equatorMaterial.color, DARK_COLOUR);
+    setBuiltinChromeColour(this.lineMaterial.color, DARK_COLOUR);
 
     this.group.add(this.makeFatEquator());
     for (const bDeg of LATITUDES_DEG) {
@@ -121,8 +122,8 @@ export class GalacticGrid {
     this.mono = on;
     const colour = on ? MONO_COLOUR : DARK_COLOUR;
 
-    this.equatorMaterial.color.setHex(colour);
-    this.lineMaterial.color.setHex(colour);
+    setBuiltinChromeColour(this.equatorMaterial.color, colour, on);
+    setBuiltinChromeColour(this.lineMaterial.color, colour, on);
     if (on) {
       this.equatorMaterial.transparent = false;
       this.equatorMaterial.opacity = 1;

@@ -14,9 +14,10 @@ restores extinction rather than adding it twice.
 src/client/star-pipeline/extinction/
   extinction-prepass.ts           ExtinctionPrepass — the per-star A_V cache
                                   and its camera-displacement invalidation.
-  extinction-prepass.vert.glsl,
   extinction-prepass.frag.glsl    The prepass draw: one fragment per star,
-                                  writing raw physical A_V into R32F.
+                                  writing raw physical A_V into R32F. Rides
+                                  the shared fullscreen vertex stage +
+                                  geometry in ../../util/fullscreen-pass.
   extinction-prepass-pure.ts      Texture geometry, position packing, and the
     (+ test)                      ε-displacement predicate. Vitest-pinned.
   dust-raymarch.glsl              Shared camera→star Edenhofer raymarch chunk

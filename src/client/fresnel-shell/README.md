@@ -47,7 +47,11 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   camera sits inside it (the common near view). It appears only from
   beyond the boundary. Consumers also set `frustumCulled = false` on the
   mesh — bounding-sphere culling is unreliable with the camera interior.
-- **Uniforms.** `uColour`, `uAlphaLimb` (limb alpha, the peak),
+- **Uniforms.** `uColour` — set from the factory's `colourHex` option,
+  which is mapped through the tone-map inverse (`../hdr/README.md`
+  § Chrome) so the shell resolves at its tuned appearance; pass an
+  authored sRGB hex, never a pre-built `THREE.Color`. Then
+  `uAlphaLimb` (limb alpha, the peak),
   `uFaceOnFloor` (face-on multiplier — 0 = pure rim, 1 = flat shell;
   default 0.04), `uFresnelPower` (rim tightness — ~2 soft halo, ~5 thin
   edge; default 2.5). Pass `blending: AdditiveBlending` for a glow that
@@ -57,8 +61,20 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   declutter-governed (no focus coupling): the heliopause is always ready
   (mesh built in its ctor), the Local Bubble ready once its mesh attaches.
   `permitted` is the declutter floor (`heliopauseShell` / `localBubbleShell`,
-  both `representational`). Starts hidden until the declutter cycle permits
-  it. Camera-inside is handled separately by the back-face cull.
+  both `representational`). Camera-inside is handled separately by the
+  back-face cull.
+- **`mono` and `permitted` both start false, agreeing with
+  `group.visible`, so a shell renders nothing until the declutter cycle
+  pushes a permission.** `Stellata`'s constructor seeds that push
+  (`applyDetailPreset` at the end of construction). Without it a shell
+  whose `shellReady()` needs no attach step never appears at all:
+  `detailPermitted` is a per-frame *read* cache, and an imperative layer
+  never consults it. Don't "fix" a missing shell by defaulting `permitted`
+  true — that just lets an unrelated `refreshVisibility()` caller reveal a
+  shell nobody permitted, which is precisely how this failed before. The
+  Local Bubble's attach path calls `setMonochrome` and was accidentally
+  rescued by it; the heliopause has no attach step, so it stayed invisible
+  on every fresh load while its label (a per-frame reader) showed.
 - **Recenter.** Sol-anchored geometry (Sol = catalog origin), so the
   group parks at −worldOffset — non-zero under planet focus.
 

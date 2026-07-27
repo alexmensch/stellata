@@ -3,8 +3,9 @@
 // moves beyond RECOMPUTE_EPSILON_PC. See README.md § Dust extinction.
 
 import * as THREE from 'three';
-import prepassVert from './extinction-prepass.vert.glsl?raw';
+import prepassVert from '../../util/fullscreen-pass.vert.glsl?raw';
 import prepassFrag from './extinction-prepass.frag.glsl?raw';
+import { fullscreenTriangleGeometry } from '../../util/fullscreen-pass';
 import {
   AV_TEX_WIDTH,
   RECOMPUTE_EPSILON_PC,
@@ -33,20 +34,6 @@ export interface ExtinctionPrepassOptions {
   positions: Float32Array;
   count: number;
   uniforms: ExtinctionPrepassUniforms;
-}
-
-/** Index is load-bearing, not an optimisation: with no `position`
- *  attribute (the shader reads `aPosition`), the renderer derives its
- *  draw count from `index.count` — un-indexed, the count resolves to 0
- *  and the prepass silently draws nothing. */
-export function fullscreenTriangleGeometry(): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    'aPosition',
-    new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
-  );
-  geometry.setIndex([0, 1, 2]);
-  return geometry;
 }
 
 export class ExtinctionPrepass {

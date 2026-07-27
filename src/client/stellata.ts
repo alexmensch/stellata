@@ -45,6 +45,7 @@ import {
   gpuEnd as perfGpuEnd,
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
+import { HdrPipeline } from './hdr/hdr-pipeline';
 import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
@@ -192,6 +193,7 @@ export class Stellata implements FrameAnchor {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
+  readonly hdr: HdrPipeline;
   readonly referenceUp = new ReferenceUpController();
 
   private scene: THREE.Scene;
@@ -403,6 +405,7 @@ export class Stellata implements FrameAnchor {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
+    this.hdr = new HdrPipeline(this.renderer);
 
     this.scene = new THREE.Scene();
 
@@ -920,6 +923,15 @@ export class Stellata implements FrameAnchor {
       warpActive: false,
     };
     this.registerSceneLayers();
+    // Seed the declutter cycle so the imperative-push layers receive their
+    // initial permission. `detailPermitted` starts all-true for the
+    // per-frame readers, but a layer that only learns its permission from
+    // a bind (both boundary shells, the orbit/probe overlays) would sit at
+    // whatever its constructor guessed until the user cycled the level —
+    // which is how the heliopause shell rendered nothing on a fresh load
+    // while its label, a per-frame reader, showed. `resetOverrides: false`
+    // so a later `?v=` restore still owns the within-scene toggles.
+    this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
     this.attachEvents();
     this.animate();
   }
@@ -1748,6 +1760,25 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass?.setEnabled(on);
   }
 
+  /** The HDR seam, off by default until the emitting layers carry
+   *  physical luminance (src/client/hdr/README.md § Ship gate). false is
+   *  the pre-HDR path entirely — direct to canvas, no target, no
+   *  tone-map, chrome at authored colours — and the same path a context
+   *  without a float-renderable buffer takes. true allocates the target
+   *  on the next frame. */
+  setHdrEnabled(on: boolean) {
+    this.hdr.setEnabled(on);
+  }
+
+  /** Dev-console A/B switch for the tone-map operator alone, keeping the
+   *  HDR target bound, to isolate the target from the operator. Built-in
+   *  material chrome renders dark in this mode — the linear target, not
+   *  the resolve, is what drops its sRGB encode; use setHdrEnabled for a
+   *  whole-frame comparison. */
+  setTonemapEnabled(on: boolean) {
+    this.hdr.setTonemapEnabled(on);
+  }
+
   /** Direct access to the Milky Way layer for dev-console tuning
    *  (e.g. `stellata.milkywayLayer.setBrightness(0.4)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }
@@ -2064,6 +2095,7 @@ export class Stellata implements FrameAnchor {
     this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
+    this.hdr.setChartMode(on);
     // Per-layer palette swaps fan out through the registry. The milky-way
     // layer has no monochrome hook: chart mode re-purposes it as an isobar
     // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
@@ -2294,6 +2326,7 @@ export class Stellata implements FrameAnchor {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.hdr.syncSize();
     this.starPipeline.discMaterial.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.starPipeline.discMaterial.uniforms.uViewport.value.set(w, h);
     // Aspect change → fov_minor moves → orbit floor needs a refresh while
@@ -2471,6 +2504,7 @@ export class Stellata implements FrameAnchor {
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');
     perfGpuBegin('main');
+    this.hdr.bind();
     this.renderer.render(this.scene, this.camera);
     perfGpuEnd('main');
     perfMeasure('submit.main');
@@ -2479,6 +2513,11 @@ export class Stellata implements FrameAnchor {
     this.localDepthPass.render(this.renderer, this.camera);
     perfGpuEnd('localDepth');
     perfMeasure('submit.localDepth');
+    perfMark('submit.tonemap');
+    perfGpuBegin('tonemap');
+    this.hdr.resolve();
+    perfGpuEnd('tonemap');
+    perfMeasure('submit.tonemap');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     perfMark('frame.handlers');
     this.bus.emit('frame');
@@ -2562,6 +2601,7 @@ export class Stellata implements FrameAnchor {
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
     this.localDepthPass.dispose();
+    this.hdr.dispose();
     this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but

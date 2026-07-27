@@ -9,6 +9,7 @@ import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel } from '../ui/distance-gated-label';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
+import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   angularDiameterPx,
@@ -61,12 +62,12 @@ export class LocalGroupLayer {
     this.group.renderOrder = -1;
 
     this.material = new THREE.LineBasicMaterial({
-      color: DARK_COLOUR,
       transparent: true,
       opacity: 0,
       depthTest: true,
       depthWrite: false,
     });
+    setBuiltinChromeColour(this.material.color, DARK_COLOUR);
 
     this.absSamples = [];
     for (const obj of this.objects) {

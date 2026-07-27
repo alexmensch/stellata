@@ -25,6 +25,13 @@ build scripts, tests, and shader uniforms.
   `skyBasis` deliberately does NOT ride this: it seeds a rotation
   quaternion and picks a canonical orientation at the pole, which this
   helper leaves to the caller's ra.
+- `fullscreen-pass.ts` (+ test) + `fullscreen-pass.vert.glsl` —
+  `fullscreenTriangleGeometry()` and the matrix-free vertex stage every
+  fullscreen shader pass shares (the extinction A_V prepass, the HDR
+  tone-map resolve). The geometry carries `aPosition` and **must stay
+  indexed**: with no `position` attribute the renderer derives its draw
+  count from `index.count`, so an un-indexed geometry silently draws
+  nothing.
 - `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
@@ -34,7 +41,10 @@ build scripts, tests, and shader uniforms.
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
   traversed path with two ends) / `makeOrbitLineSegments` +
-  `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and
+  `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`;
+  `color` is an authored sRGB hex, mapped through the tone-map inverse so
+  the line resolves at that appearance out of the HDR pass —
+  `../hdr/README.md` § Chrome) and
   the on-screen-size helpers `pixelsPerRadian` (+ `pixelsPerRadianFromFovRad`
   for callers holding the FOV in radians) / `angularRadiusPx` the orbit
   layers use for their pixel-size visibility gate, plus the shared
