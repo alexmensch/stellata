@@ -48,6 +48,7 @@ import { angularToPx as angularToPxPure } from './camera/controls/star-geometry'
 import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
+import { ReferenceUpController } from './camera/controls/reference-up';
 import {
   WarpController,
   type WarpInfo,
@@ -190,6 +191,7 @@ export class Stellata implements FrameAnchor {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
+  readonly referenceUp = new ReferenceUpController();
 
   private scene: THREE.Scene;
   // Star render pipeline — one InstancedBufferGeometry feeds three
@@ -299,9 +301,8 @@ export class Stellata implements FrameAnchor {
   private aim!: AimController;
 
   private poiStore!: PoiStore;
-  // Canvas pointer input — click FSM (single/double, both modes),
-  // two-finger / gesture roll, shift-pan binding. See
-  // camera/controls/README.md § Input controller.
+  // Canvas pointer input — click FSM (single/double, both modes) and the
+  // roll gestures. See camera/controls/README.md § Input controller.
   private input!: InputController;
 
   // Galactic reference layers. Disc fades in by camera-distance
@@ -414,6 +415,7 @@ export class Stellata implements FrameAnchor {
       CAMERA_FAR_PC,
     );
     this.camera.position.set(0, 0, 30);
+    this.camera.up.copy(this.referenceUp.get());
 
     // TrackballControls (instead of OrbitControls) because we want
     // unconstrained rotation — no polar clamping at the zenith/nadir, so
@@ -421,12 +423,15 @@ export class Stellata implements FrameAnchor {
     this.controls = new TrackballControls(this.camera, canvas);
     this.controls.rotateSpeed = 3.0;
     this.controls.zoomSpeed = 1.1;
-    this.controls.panSpeed = 0.6;
     this.controls.staticMoving = false;
     this.controls.dynamicDampingFactor = 0.15;
     this.controls.minDistance = GLOBAL_MIN_DIST_PC;
     this.controls.maxDistance = MAX_DISTANCE_PC;
     this.controls.target.set(0, 0, 0);
+    this.controls.noPan = true;
+    // Empty drag-mode key slots: TrackballControls' A/S/D defaults would
+    // otherwise claim the S grid / D debug shortcuts.
+    this.controls.keys = ['', '', ''];
 
     // OBSERVE-mode look-around controller. Starts disabled; enable() runs
     // when the camera mode flips, with TrackballControls.enabled toggled
@@ -635,6 +640,7 @@ export class Stellata implements FrameAnchor {
       bus: this.bus,
       frameAnchor: this,
       aim: this.aim,
+      referenceUp: this.referenceUp,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       getClouds: () => this.clouds,
       getLocalGroup: () => this.localGroupLayer,
@@ -743,6 +749,7 @@ export class Stellata implements FrameAnchor {
       controls: this.controls,
       observeControls: this.observeControls,
       aim: this.aim,
+      referenceUp: this.referenceUp,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       bus: this.bus,
       focus: this.focus,
@@ -2261,6 +2268,7 @@ export class Stellata implements FrameAnchor {
       picker: this.picker,
       bus: this.bus,
       poiStore: this.poiStore,
+      referenceUp: this.referenceUp,
       getCameraMode: () => this.focus.getCameraMode(),
       getFilter: () => this.filter,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
@@ -2376,6 +2384,16 @@ export class Stellata implements FrameAnchor {
     // downstream reads localPositions.
     this.starFrame.flushLocalPositions();
     perfMark('controls.update');
+    // Roll bookkeeping, ahead of every orientation source: navigate-mode
+    // `lookAt`s read camera.up, so the correction has to land before the
+    // dispatch below. In observe the quaternion is the roll authority and
+    // the reference follows it instead. See camera/controls/README.md
+    // § Reference up axis.
+    if (this.focus.getCameraMode() === 'observe') {
+      this.referenceUp.adoptFromCamera(this.camera);
+    } else {
+      this.referenceUp.correct(this.camera);
+    }
     if (this.warp.isActive()) {
       this.warp.tick(performance.now());
     } else if (this.aim.isActive()) {

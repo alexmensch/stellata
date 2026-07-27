@@ -14,9 +14,11 @@ click handlers (single = pin a POI, double = aim-at).
 - `observe-transition.ts` — navigate↔observe FSM. `setMode`,
   `startExit`, `startUnfocusLerp`, the per-frame lerp, and the
   `ObserveFocusOps` cross-controller seam (implemented by
-  `FocusController` in `../focus/`). `alignCameraUpToQuaternion` —
-  the `camera.up` re-anchor consumed on the observe→navigate seam —
-  lives in `../controls/up-align-pure.ts`.
+  `FocusController` in `../focus/`). The observe→navigate seam hands roll
+  back through `ReferenceUpController.adoptFromCamera`
+  (`../controls/README.md` § Reference up axis) — writing `camera.up`
+  alone would be overwritten by the next frame's correction, restoring
+  the pitch-snap bug the re-anchor exists to prevent.
 
 Public surface of `ObserveTransition`:
 - `setMode(mode, opts)` — mode-pill toggle, keyboard O, URL restore.
@@ -84,16 +86,18 @@ to.
   motion. Shortest-path rotations are well-defined through ±90°, so a
   vertical drag passes straight over NGP and out the far side without
   the camera getting stuck.
-- **Roll-independent.** A two-finger Safari twist mutates
-  `camera.quaternion` (the live image roll) **and** `camera.up`. The
-  direct-manipulation controller doesn't read `camera.up`, but the URL
-  encoder does — leaving `up` stale would lose the roll on every
-  reload, since URL restore rebuilds the quaternion from cam/tgt/up
-  before observe is engaged. The twist changes which world point is
-  under each pixel, but pointer-down captures whatever's under the
-  cursor at that moment and pointer-move keeps it there. So the user
-  can rotate the screen image to match the sky overhead and dragging
-  still drags the world along intuitively.
+- **Roll-independent.** In observe the **quaternion is the roll
+  authority** — a direct-manipulation drag rotates about whatever
+  screen-relative axis matches the cursor, so it accumulates roll by
+  construction, and that is wanted here. The reference up axis therefore
+  *follows* the camera every frame (`adoptFromCamera`) instead of
+  correcting it: the URL encodes that axis, and a stale one would lose
+  the roll on reload, since URL restore rebuilds the quaternion from
+  cam/tgt/up before observe is engaged. A twist changes which world point
+  sits under each pixel, but pointer-down captures whatever's under the
+  cursor at that moment and pointer-move keeps it there — so the user can
+  rotate the screen image to match the sky overhead and dragging still
+  drags the world along intuitively.
 - **Drag teardown.** Four code paths reset `dragging` /
   `activePointerId` / `momentumSpeed` / `lastRotAngle` to known-clean
   state via the shared `cancelDrag()` helper: `disable()` (mode change),
@@ -122,24 +126,26 @@ to.
   drag has no "throw" of its own, so a longer glide (~2 s before fully
   stopped) gives flicks somewhere to land. A new `pointerdown` zeroes
   `momentumSpeed` so the user can grab and stop instantly.
-- **Aim-at slerps don't preserve roll.** `aimAt`'s OBSERVE branch
-  builds the target via `Matrix4.lookAt(pos, point, camera.up)` with
-  `camera.up = (0, 1, 0)`, so a slerp triggered by the constellation
-  typeahead, Sol/GC labels, or canvas double-click lands with ICRS Y
-  as screen-up and unwinds any roll the user had applied. Acceptable
-  trade-off — aim-at is an explicit "take me there" command, not a
-  drag, and re-twisting after arrival is cheap.
+- **Aim-at slerps preserve roll.** `aimAt`'s OBSERVE branch builds the
+  target via `Matrix4.lookAt(pos, point, camera.up)`, and the per-frame
+  adopt keeps `camera.up` equal to the rendered screen-up — so the
+  endpoint carries the user's current roll into the new view direction
+  instead of unwinding it. Before the reference-up axis landed, `up` was
+  only written by the twist gestures, so any direct-manipulation roll was
+  stale by the time an aim read it and the slerp snapped the image back
+  toward ICRS Y.
 - Wheel adjusts `camera.fov` (1.5° per notch, clamped to
   `FOV_MIN_DEG`–`FOV_MAX_DEG` = 10–120° from `../timing.ts`) instead
   of camera distance. Distance has no meaning when the camera is
   parked. `FOV_MAX_DEG` is load-bearing beyond this controller — it is
   the worst case the camera near plane is validated against
   (`../README.md` § Shared).
-- In navigate-mode, `rollCamera` mutates only `camera.up`
-  (TrackballControls picks up the rolled vertical on every `update()`
-  and rebuilds the quaternion from it). In observe-mode `rollCamera`
-  rotates both `camera.up` and `camera.quaternion` — `up` solely for
-  URL persistence, `quaternion` for the actual rendered roll.
+- In navigate-mode, `rollCamera` re-tilts the reference up axis, and the
+  per-frame correction derives `camera.up` from it (TrackballControls
+  rebuilds the quaternion from `camera.up` on every `update()`). In
+  observe-mode it rotates `camera.quaternion` — the rendered roll — and
+  the reference re-adopts from it. Shift+drag fires in both modes;
+  `../controls/README.md` § Roll gestures carries the input paths.
 
 **HUD locators:** Sol and Galactic-Centre arrows are part of the HUD
 (`hud-overlay.ts`, gated by `filter.showHud`). In observe their anchor

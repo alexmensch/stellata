@@ -11,10 +11,13 @@ in both navigate and observe modes.
   mapping (`sliderToDist` / `distToSlider`).
 - `input-controller.ts` (+ test) — canvas pointer input: the click FSM
   (single/double dispatch in both modes, the kind-generic click ladder,
-  cloud click semantics), two-finger / Safari-gesture roll, and the
-  shift-pan binding lifecycle (see § Input controller).
-- `shift-pan.ts` — orbit-first camera translation: pan only while a
-  Shift key is held (see § Shift-drag panning).
+  cloud click semantics) and every roll gesture — Shift-drag, two-finger
+  twist, Safari trackpad (see § Input controller, § Roll gestures).
+- `reference-up.ts` (+ test) — `ReferenceUpController`: the persistent
+  reference up axis and the per-frame `camera.up` correction (see
+  § Reference up axis).
+- `reference-up-pure.ts` (+ test) — the roll algebra: level-up
+  projection, pole-cone weight, signed roll angles, camera-local up.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
   stars / clouds / planets / probes / Local Group / heliopause /
@@ -39,8 +42,6 @@ in both navigate and observe modes.
   a moon) wins the point.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), shared `aimDurationMs` ramp.
-- `up-align-pure.ts` — `alignCameraUpToQuaternion` helper.
-  `camera-up-align.test.ts` is the algebra fixture.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
@@ -68,8 +69,8 @@ in both navigate and observe modes.
 ## Input controller
 
 `InputController` owns every canvas pointer listener: pointerdown /
-pointerup / pointercancel (the click FSM), touch + WebKit gesture
-events (two-finger roll), and the shift-pan key binding. Clicks in
+pointermove / pointerup / pointercancel (the click FSM + Shift-drag
+roll) and the touch + WebKit gesture events (two-finger roll). Clicks in
 both modes are held for `DBL_CLICK_MS` (280 ms) by a shared
 `PendingClickDispatcher` (`../../util/pending-click.ts`) so single and
 double clicks disambiguate; the deferred handlers re-check the
@@ -82,9 +83,8 @@ The controller sees the rest of the app only through its deps
 closures (busy gates, Target-keyed focus/vector reads, flyTo /
 setOrbitTarget / unfocus / togglePoi / aimAt) — it owns
 dispatch order and gesture math, never focus or camera-transition
-state. Roll math
-uses controller-owned scratch `Vector3`/`Quaternion` instances; the
-per-gesture-event path allocates nothing.
+state. Roll math delegates to `ReferenceUpController`, which owns the
+scratch vectors; the per-gesture-event path allocates nothing.
 
 ## Camera near plane vs controls minDistance
 
@@ -157,58 +157,11 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    FOV change (via `setCameraFov`), and viewport resize (since aspect
    changes shift `fov_minor`).
 
-## Focus-park lerp (r9q.2)
+## Focus-park lerp
 
-Click-focus on a star (or `flyTo` for the soft kinds) no longer
-teleports. The lerp lives in `../focus/focus-transition.ts` as the
-generic `parkDistance(...)` + `newFocusLerpFrom(...)` +
-`tickFocusLerp(...)` trio — stars consume it now; the soft kinds
-compose the same primitives; future focusable types (nebulae, etc.)
-plug in the same way.
-
-Branch in `focusStar` / the soft-kind leg of `flyTo`:
-
-- **`eyeDist <= parkDist` → stay put (`focusStar` only).** Camera
-  doesn't move; only `controls.target`, `controls.minDistance`, and
-  focus state update. (Soft-kind `flyTo` instead moves to `parkDist` in
-  both directions so it frames the whole extended object — it flies OUT
-  of a boundary shell the camera sits inside, not just in.)
-- **`eyeDist > parkDist` → lerp.** Camera position lerps from
-  `fromPos` to `toPos = target + (eye-direction × parkDist)` and
-  camera orientation slerps in parallel from `fromQuat` to a quaternion
-  that looks at the target from `toPos`. Both interpolations are
-  driven by the same smoothstep, so the camera continuously rotates
-  toward the new target as it flies in — "start view → pointing at
-  new star from same location → flying right up to it, still facing it"
-  as one continuous animation, not phased like the warp. Builds the
-  lerp **after** `setFocus` recentres the floating origin so
-  `fromPos` / `toPos` live in the post-recentre frame.
-- **`opts.animate === false`** (URL restore) bypasses the lerp and
-  snaps to the park pose. Matches the existing `unfocus({animate:false})`
-  contract for URL-driven state restoration.
-
-`controls.enabled` is **not** toggled during the lerp — the `animate()`
-dispatcher routes through `updateFocusLerp` before `controls.update()`,
-so user drag accumulates inside `TrackballControls` without visible
-effect until the lerp lands. Disabling explicitly would race
-`TrackballControls`' pointerup handler (Stellata's pointerup → focus
-click runs *before* TC's dynamically-added pointerup), leaving TC's
-`_state` stuck at `ROTATE` and the cursor "captured" until the next
-click. Same precedent as the unfocus lerp (`src/client/camera/observe/README.md`).
-
-The focus-star pin (`uPinFocusToCenter`) is suppressed while the lerp
-is in flight — `controls.target` is already `(0,0,0)` in the
-post-recentre frame, so the pin would otherwise snap the focal star
-to NDC origin while the camera is mid-rotation, making the star
-appear pasted at screen centre instead of following the rotation
-naturally.
-
-`#overlay` (HUD arrows + ring, focus ring, distance vector,
-constellation lines, POI labels, etc.) is hidden for the lerp's
-duration via a `body.focus-lerping` class — same mechanism the warp
-uses (`body.warping`), CSS rule shares the selector. Stellata fires
-the `'focusLerp'` event on start / end edges; `main.ts` toggles
-the body class.
+`../focus/README.md` § Focus-park lerp owns this — the stay-put/lerp
+branch, the `controls.enabled` contract, the pin suppression, and the
+overlay hide. Two things that belong here rather than there:
 
 `CAMERA_LERP_MS = 2000` is the canonical 2 s constant for non-warp
 camera lerps — `AIM_T_MAX_MS` and `FOCUS_LERP_MS` alias it so the
@@ -217,7 +170,7 @@ focus-park glide and aim animation read as the same family. The warp's
 moved it slightly under the canonical lerp — the reorient phase reads
 snappier than a generic camera glide. `WARP_T_K_MS = 3000` is a
 separate literal — a log-scale flight coefficient (see
-`src/client/camera/warp/README.md`), not a duration.
+`../warp/README.md`), not a duration.
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`, `startWarp`,
@@ -233,65 +186,138 @@ at the zenith/nadir — you'll see `cx=0` in the URL when it happens).
 Current settings:
 - `rotateSpeed = 3.0` (TBC defaults high; 3 feels natural)
 - `zoomSpeed = 1.1`
-- `panSpeed = 0.6`
 - `dynamicDampingFactor = 0.15` (this is the damping knob; not
   `enableDamping`/`dampingFactor` like OrbitControls)
 - `staticMoving = false` (keeps damping on)
-- `noPan` starts `true`; `shift-pan.ts` toggles it per-press (see
-  § Shift-drag panning). Right-drag no longer pans.
+- `noPan = true`, permanently — there is no camera-translate gesture at
+  all (orbit, dolly, roll). `panSpeed` is therefore unset: `update()`
+  never calls `panCamera`. Note `checkDistances` (the min/max-distance
+  clamp) only runs while `!noZoom || !noPan`, so it survives on `noZoom`.
+- `keys = ['', '', '']` — empty drag-mode slots retire TrackballControls'
+  A/S/D defaults, which otherwise swallow the `S` grid and `D` debug
+  shortcuts. Load-bearing; don't restore the defaults.
+- `noRotate` is toggled for the duration of a Shift-drag roll (see
+  § Roll gestures).
 - `minDistance = GLOBAL_MIN_DIST_PC = 5e-3` (when no star is focused;
   per-star `minOrbitDistForStar` overrides on focus). `maxDistance = 100_000`.
 
-## Shift-drag panning
+## Reference up axis
 
-Camera translation is deliberately orbit-first: a plain drag orbits;
-you pan only while holding either Shift key and dragging. `shift-pan.ts`
-(bound in `stellata.ts`) drives this through TrackballControls' own
-key-pan mechanism rather than a parallel input path:
+`camera.up` is **derived state**. The roll authority is
+`ReferenceUpController`'s single unit vector — the *reference axis*,
+galactic north (`GALACTIC_NORTH_POLE_ICRS`) by default, written only by
+an explicit roll gesture, the snap-to-level, or a URL restore. Every
+frame, ahead of the whole animation dispatch in `stellata.ts`'s
+`animate()`:
 
-- TrackballControls forces any active drag into a pan while
-  `keys[STATE.PAN]` (index 2 of the `keys` array) is the held key **and**
-  `noPan` is `false`. It reads both in its bubble-phase `keydown`.
-- We start `noPan = true` (so a plain drag orbits and the old implicit
-  right-drag pan is gone) and set `keys = ['', '', 'ShiftLeft']` — the
-  empty ROTATE/ZOOM slots also retire the default A/S/D drag-mode keys,
-  which otherwise collide with the `S` grid / `D` debug shortcuts.
-- A **capture-phase** window `keydown` (fires before TrackballControls'
-  bubble handler) retargets `keys[2]` to whichever Shift is down —
-  `ShiftLeft` or `ShiftRight` — and lifts `noPan`. `keyup` restores
-  `noPan = true`. Releasing Shift mid-drag hands the drag back to orbit.
+- **NAVIGATE** — `correct(camera)` rotates `camera.up` back toward the
+  reference about the view axis. Must run *before* `controls.update()`
+  and every animation tick, because every navigate-mode orientation
+  source is a `lookAt` reading `camera.up`.
+- **OBSERVE** — `adoptFromCamera(camera)` instead: there the quaternion
+  is the roll authority (direct-manipulation drag rolls by construction),
+  so the reference *follows* the camera. That keeps the axis truthful for
+  URL round-trip and makes the observe→navigate handover a no-op.
 
-## Two-finger roll gesture (platform-split)
+### Why the correction exists
 
-`stellata.ts` adds a two-finger rotate gesture that rolls the view around
-the center of the screen by rotating `camera.up` around the forward vector
-(`target - position`). TrackballControls reads `camera.up` every `update()`,
-so the new orientation persists through subsequent orbit/zoom without
-touching the controls' internals.
+Orbit drift is **parallel-transport holonomy**, not input noise. A single
+TrackballControls rotate step turns `_eye` and `camera.up` by the same
+quaternion about an axis ⊥ eye, injecting zero roll — but any closed drag
+loop returns with a net roll equal to the enclosed solid angle. A
+diagonal-drag filter can't fix that (an axis-aligned right/up/left/down
+loop encloses area too); only re-deriving the up from a reference can.
+TrackballControls also keeps rotating `up` through its damping tail after
+pointer-up, so the correction has to be per frame, not per input event.
 
-Implementation split:
+### The pole cone
 
-- **Mobile / touch** — listens for `touchstart`/`touchmove` with exactly two
-  touches, computes the `atan2` angle between them, and applies the delta
-  per move. Single-finger drags are ignored (TrackballControls handles them
-  via pointer events, separate from the touch event stream, so there is no
-  conflict).
-- **Desktop Safari** — listens for the non-standard `gesturestart` /
-  `gesturechange` events (WebKit only). `event.rotation` is degrees,
-  cumulative since `gesturestart`, positive clockwise. We `preventDefault`
-  to suppress Safari's page-level zoom; TrackballControls still receives
-  the accompanying wheel events for pinch-zoom.
-- **Chrome / Firefox on desktop** — no rotate gesture exists in those
-  browsers (two-finger trackpad is scroll-only, pinch fires wheel+ctrlKey
-  but no rotation). Roll is unavailable there by design. Do not spend
-  effort trying to polyfill it.
+`levelUpInto` (the reference projected into the image plane) is
+ill-conditioned when the view axis approaches the reference axis, and the
+180° flip there is *inherent*: "north stays up" from the far side of the
+pole IS the flipped image. So correction strength is
+`poleConeWeight(sin θ)` — a smoothstep that reaches 1 outside a
+`POLE_CONE_DEG` = 15° cone and eases to 0 on the axis. Outside the cone
+the view is exactly level in one frame; inside it, TrackballControls'
+transported up governs, so orbiting over the pole neither whips nor
+stalls (the freedom TrackballControls was chosen for), and the 180°
+re-level unwinds smoothly on the way out. Strength is a function of
+geometry, not of `dt` — no time constant to tune. Consequence to expect:
+because the correction reads the *previous* frame's view axis, a
+continuous drag leaves a sub-degree residual that settles as soon as the
+pointer stops.
 
-Sign convention: finger rotation CW on the screen → world rotates CW.
+### The slerp-endpoint rule
+
+Camera animations split into two classes, and only one needs care:
+
+| class | orientation source | sites |
+|---|---|---|
+| **A** | per-frame `lookAt`, reads `camera.up` | TrackballControls steady state, warp reorient (navigate launch), warp Fly, warp finish (navigate), the navigate aim tick (its `q0`/`q1` slerp drives *position*), observe exit's no-op `lookAt` |
+| **B** | a quaternion captured up-front, then slerped | focus-park lerp `qEnd`, warp reorient (observe launch), warp phase 3, observe aim `q1` |
+
+Class A inherits the correction for free. **Class B endpoints must
+resolve roll against the reference axis, never the live `camera.up`** —
+the end pose looks down a different axis than the start, so an endpoint
+built from the start-pose up lands on a roll the steady-state correction
+then has to undo, one frame after the animation settles. That is the pop
+`focus-transition.ts`'s `referenceUp` parameter exists to prevent
+(`focus-transition.test.ts` pins both directions). The observe-mode
+Class-B sites read `camera.up` and stay correct because the per-frame
+adopt keeps it equal to the rendered screen-up.
+
+Nothing has to suspend the correction during a Class-B slerp: it only
+writes `camera.up`, which no one reads while a slerp owns the quaternion,
+and the value it converges on at the end pose is exactly what the
+endpoint was built from.
+
+## Roll gestures
+
+Three input paths, one dispatch (`InputController.rollCamera`): NAVIGATE
+re-tilts the reference axis, OBSERVE rolls the quaternion. Both leave the
+tilt persistent through subsequent orbit / dolly.
+
+- **Shift+drag (desktop, both modes)** — the roll gesture that replaced
+  Shift-pan. Roll follows the pointer's *bearing about screen centre*, so
+  it reads as twisting the image; `ROLL_DEADZONE_PX` (40 px) suppresses
+  sampling near centre where the bearing is unstable. Shift is sampled at
+  **pointerdown** and holds for the whole gesture: TrackballControls
+  seeds its drag deltas on pointerdown and only advances them inside the
+  rotate step we suppress, so handing a drag back mid-gesture would
+  resume orbit against a stale delta. A roll gesture never sets
+  `pointerDownAt`, so it can't dispatch a click.
+- **Mobile / touch two-finger twist** — `atan2` angle between two
+  touches, delta applied per move. Single-finger drags are ignored
+  (TrackballControls handles them through pointer events, a separate
+  stream).
+- **Desktop Safari** — the non-standard `gesturestart` / `gesturechange`
+  pair (WebKit only). `event.rotation` is cumulative degrees since
+  gesture start, positive clockwise; we `preventDefault` to suppress
+  Safari's page zoom, and TrackballControls still gets the wheel events
+  for pinch-zoom. Chrome / Firefox expose no rotate gesture — Shift-drag
+  is the roll path there. Do not try to polyfill.
+
+Sign convention: pointer/finger rotation CW on screen → world rotates CW.
 `rollCamera(-delta)` achieves this because `applyAxisAngle(forward, θ)`
-rotates `camera.up` CCW when viewed from behind the forward vector
-(standard right-hand rule), and rotating `up` CCW in world space makes
-world content appear CW in the camera's view.
+rotates CCW viewed from behind the forward vector (right-hand rule), and
+rotating the reference CCW in world space makes content appear CW.
 
+### Snap-to-level
+
+Releasing a Shift-drag within `SNAP_TO_LEVEL_DEG` (1°) of galactic level
+snaps exactly level — the Keynote alignment-guide affordance. Evaluated
+**on release only**, which is why no hysteresis band is needed: a
+per-frame test is what would chatter at the boundary.
+
+The residual is measured differently per mode, and the split is
+load-bearing. NAVIGATE reads `referenceRollError` (reference vs galactic
+north, about the view axis) because there the quaternion trails
+`camera.up` by a frame — `lookAt` hasn't consumed the newest roll yet.
+OBSERVE reads `renderedRollError` (the quaternion's own screen-up),
+because that is what the user sees. The navigate snap then re-anchors the
+reference on north *exactly*, not by rolling back the residual: an axis
+merely rotated until it renders level from here is still off-north, and
+would drift as soon as the orbit moves.
 
 ## Aim controller (`camera/aim-controller.ts`)
 

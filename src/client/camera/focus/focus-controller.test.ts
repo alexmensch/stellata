@@ -31,6 +31,7 @@ import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
+import { ReferenceUpController } from '../controls/reference-up';
 
 interface WarpStub {
   isActive: ReturnType<typeof vi.fn>;
@@ -279,6 +280,7 @@ function makeHarness(opts: {
     catalog,
     bus,
     frameAnchor: frame.anchor,
+    referenceUp: new ReferenceUpController(),
     aim,
     setFocalBodyHidden: (target) => {
       uHide.value = target?.kind === 'star' ? target.idx : -1;

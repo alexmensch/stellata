@@ -128,8 +128,11 @@ In OBSERVE mode single-click is the pin/unpin toggle
 (`applyObjectClick`'s observe branch, gated on `showHud` — stars and
 planets alike) and
 double-click slerps the camera so the clicked direction lands at view
-centre; drags land on the custom look-around controller
-(direct-manipulation drag + wheel-FOV). The SVG-layer Sol/GC arrow
+centre; plain drags land on the custom look-around controller
+(direct-manipulation drag + wheel-FOV). A **Shift+drag** is the roll
+gesture in both modes and is claimed by `InputController` — the
+look-around controller and TrackballControls each bail out of that
+pointer stream (`camera/controls/README.md` § Roll gestures). The SVG-layer Sol/GC arrow
 labels remain clickable; they route through `aimAt(localPoint)`,
 which has its own observe-mode branch that slerps the camera
 quaternion in place.
