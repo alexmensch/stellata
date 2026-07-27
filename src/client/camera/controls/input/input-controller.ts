@@ -1,21 +1,21 @@
-// Mode-agnostic pointer input: the canvas click FSM (single/double
-// dispatch in both camera modes) and the roll gestures — Shift-drag,
-// two-finger twist, Safari trackpad. See README.md § Input controller.
+// Mode-agnostic canvas input: the click FSM, the roll gestures, and
+// pinch-to-zoom normalisation. See README.md § Input controller.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import type { EventBus } from '../../util/event-bus';
-import type { CameraMode, StellataEventMap } from '../../stellata';
-import { targetsEqual, type Target } from '../focus/focus-target';
-import type { FilterState } from '../../filters/filter-state';
-import type { PoiStore } from '../../poi/poi-store';
-import { clickLadderAction } from '../../poi/click-ladder-pure';
-import { PendingClickDispatcher } from '../../util/pending-click';
-import { bestHitBy } from '../../hover/hover-pick-disambiguator';
-import type { HoverHit } from '../../hover/hover-types';
-import type { Picker } from './picker';
+import type { EventBus } from '../../../util/event-bus';
+import type { CameraMode, StellataEventMap } from '../../../stellata';
+import { targetsEqual, type Target } from '../../focus/focus-target';
+import type { FilterState } from '../../../filters/filter-state';
+import type { PoiStore } from '../../../poi/poi-store';
+import { clickLadderAction } from '../../../poi/click-ladder-pure';
+import { PendingClickDispatcher } from '../../../util/pending-click';
+import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
+import type { HoverHit } from '../../../hover/hover-types';
+import type { Picker } from '../picker';
 import type { ReferenceUpController } from './reference-up';
 import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
+import { WHEEL_NOTCH_DELTA_PX, pinchStep } from './pinch-zoom-pure';
 
 export interface InputControllerDeps {
   canvas: HTMLCanvasElement;
@@ -64,6 +64,8 @@ export class InputController {
   // the band — tracking it separately is what stops the boundary chattering.
   private rollSnapped = false;
   private rollSnapExcursion = 0;
+  // Sub-notch pinch remainder, carried between wheel events.
+  private pinchCarryPx = 0;
 
   // Canvas clicks in BOTH modes are held for DBL_CLICK_MS so single
   // (per-mode click semantics) and double (aim-at in observe, travel in
@@ -112,6 +114,11 @@ export class InputController {
     // A Shift release that never reaches us (Cmd-Tab, app switcher) would
     // otherwise leave the roll latched and orbit dead — the sticky state.
     window.addEventListener('blur', this.onWindowBlur);
+    // Pinch-to-zoom. Capture phase on window so this runs before the canvas
+    // listeners TrackballControls and ObserveControls registered first —
+    // at the target phase, listener order is registration order regardless
+    // of the capture flag, so an ancestor is the only way to get ahead.
+    window.addEventListener('wheel', this.onWheelCapture, { capture: true, passive: false });
   }
 
   dispose(): void {
@@ -130,6 +137,7 @@ export class InputController {
     window.removeEventListener('keydown', this.onKeyDown, { capture: true });
     window.removeEventListener('keyup', this.onKeyUp, { capture: true });
     window.removeEventListener('blur', this.onWindowBlur);
+    window.removeEventListener('wheel', this.onWheelCapture, { capture: true });
     this.clickDispatcher.dispose();
     this.endRoll();
   }
@@ -449,6 +457,35 @@ export class InputController {
     this.shiftHeld = false;
     this.endRoll();
   };
+
+  /** Trackpad pinch arrives as a `ctrlKey` wheel event on every desktop
+   *  browser (and is what the browser would page-zoom on). Rather than add a
+   *  second zoom implementation, amplify it to whole notch-equivalents and
+   *  re-emit it as an ordinary wheel event on the canvas: navigate-mode zoom
+   *  (TrackballControls) and observe-mode FOV (ObserveControls) then handle
+   *  pinch through the exact path they already handle scrolling through.
+   *  See README.md § Pinch-to-zoom. */
+  private onWheelCapture = (e: Event) => {
+    const wheel = e as WheelEvent;
+    if (!wheel.ctrlKey) return;
+    if (!this.deps.canvas.contains(wheel.target as Node)) return;
+    // Suppress the browser's page zoom, and TrackballControls' own reading of
+    // this event — unamplified it would add a ~1/30th-notch nudge on top.
+    e.preventDefault();
+    e.stopPropagation();
+    const step = pinchStep(this.pinchCarryPx, wheel.deltaY);
+    this.pinchCarryPx = step.carriedPx;
+    if (step.notch === 0) return;
+    this.emitWheelNotch(step.notch * WHEEL_NOTCH_DELTA_PX);
+  };
+
+  /** `WheelEvent` is not constructible in the test environment, and the two
+   *  consumers read only `deltaY` / `deltaMode` and call `preventDefault`. */
+  private emitWheelNotch(deltaY: number): void {
+    const synthetic = new Event('wheel', { cancelable: true });
+    Object.assign(synthetic, { deltaY, deltaX: 0, deltaZ: 0, deltaMode: 0, ctrlKey: false });
+    this.deps.canvas.dispatchEvent(synthetic);
+  }
 
   /** Pointer bearing about screen centre, or null inside the dead-zone. */
   private screenBearing(x: number, y: number): number | null {

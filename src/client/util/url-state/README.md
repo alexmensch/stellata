@@ -119,7 +119,7 @@ bit order, so mode isn't known until the field loop completes).
   `getT()` directly without a `'state'` event, so without this a time
   scrub on a still camera would never reach the URL.
 - The `up` slot carries the camera's **reference up axis**
-  (`src/client/camera/controls/README.md` § Reference up axis), not the
+  (`src/client/camera/controls/input/README.md` § Reference up axis), not the
   live `camera.up` — the live vector is derived per frame, so serialising
   it would round-trip a value the next frame overwrites. It round-trips
   when it differs from **galactic north**, the canonical reference, so a

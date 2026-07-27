@@ -12,7 +12,7 @@ import { makeAimStub, makeControlsStub, makeObserveControlsStub } from '../camer
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { OBSERVE_TRANSITION_MS } from '../timing';
-import { ReferenceUpController } from '../controls/reference-up';
+import { ReferenceUpController } from '../controls/input/reference-up';
 
 interface FocusFixture {
   ops: ObserveFocusOps;

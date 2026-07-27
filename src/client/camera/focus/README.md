@@ -268,7 +268,7 @@ Branch in `focusStar` / the soft-kind leg of `flyTo`:
   up axis as up, not the live `camera.up`** — the end pose looks down a
   different axis than the start, so resolving roll against the start-pose
   up lands on a roll the per-frame correction undoes one frame later, as
-  a visible pop (`../controls/README.md` § Reference up axis). Both
+  a visible pop (`../controls/input/README.md` § Reference up axis). Both
   interpolations are driven by the same smoothstep, so the camera
   continuously rotates toward the new target as it flies in. Builds
   the lerp **after** `setFocus` recentres the floating origin so

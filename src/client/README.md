@@ -82,7 +82,7 @@ mutation without enumerating the fine-grained names. `'planetSystem'`
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
 state mutation), and the warp-end edge emit alone.
 
-## Click-state machine (`camera/controls/input-controller.ts`)
+## Click-state machine (`camera/controls/input/input-controller.ts`)
 
 Canvas clicks in BOTH modes are held for `DBL_CLICK_MS` (280 ms) by a
 shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
@@ -132,8 +132,8 @@ centre; plain drags land on the custom look-around controller
 (direct-manipulation drag + wheel-FOV). A **Shift+drag** is the roll
 gesture in both modes and is claimed by `InputController` — the
 look-around controller and TrackballControls each bail out of that
-pointer stream (`camera/controls/README.md` § Roll gestures). The SVG-layer Sol/GC arrow
-labels remain clickable; they route through `aimAt(localPoint)`,
+pointer stream (`camera/controls/input/README.md` § Roll gestures). The
+SVG-layer Sol/GC arrow labels remain clickable; they route through `aimAt(localPoint)`,
 which has its own observe-mode branch that slerps the camera
 quaternion in place.
 

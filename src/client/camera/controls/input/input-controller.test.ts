@@ -2,14 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { InputController, type InputControllerDeps } from './input-controller';
-import { DEFAULT_FILTER, type FilterState } from '../../filters/filter-state';
-import { targetsEqual, type Target } from '../focus/focus-target';
-import type { Picker } from './picker';
-import { PoiStore } from '../../poi/poi-store';
-import type { CameraMode, StellataEventMap } from '../../stellata';
-import type { EventBus } from '../../util/event-bus';
+import { DEFAULT_FILTER, type FilterState } from '../../../filters/filter-state';
+import { targetsEqual, type Target } from '../../focus/focus-target';
+import type { Picker } from '../picker';
+import { PoiStore } from '../../../poi/poi-store';
+import type { CameraMode, StellataEventMap } from '../../../stellata';
+import type { EventBus } from '../../../util/event-bus';
 import { ReferenceUpController } from './reference-up';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
+import { WHEEL_NOTCH_DELTA_PX } from './pinch-zoom-pure';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
 const planet = (idx: number): Target => ({ kind: 'planet', idx });
@@ -57,6 +59,8 @@ interface Harness {
   canvas: {
     addEventListener: ReturnType<typeof vi.fn>;
     removeEventListener: ReturnType<typeof vi.fn>;
+    dispatchEvent: ReturnType<typeof vi.fn>;
+    contains: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -89,6 +93,8 @@ function makeHarness(): Harness {
   const canvasMock = {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+    contains: vi.fn(() => true),
   };
   const canvas = canvasMock as unknown as HTMLCanvasElement;
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
@@ -697,28 +703,31 @@ describe('InputController Shift-drag roll', () => {
 
   // The alignment guide has to be felt DURING the drag — that's the whole
   // affordance. Sticking at level, holding through small further motion, then
-  // breaking out is the Keynote/PowerPoint behaviour.
+  // breaking out is the Keynote/PowerPoint behaviour. Every offset here is
+  // expressed in units of the band so widening it can't rot the assertions.
   it('sticks to galactic level mid-drag, holds, then releases past the band', () => {
     const { canvas, camera, referenceUp } = makeHarness();
     const h = handlers(canvas);
     referenceUp.correct(camera);
-    // 0.05 rad off level — outside the 1° (0.0175 rad) band.
-    referenceUp.roll(camera, 0.05);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(-0.05, 9);
+    // Start outside the band, so the first move has somewhere to snap from.
+    const tilt = SNAP_TO_LEVEL_RAD * 3;
+    referenceUp.roll(camera, tilt);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(-tilt, 9);
 
     h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
 
     // A move requesting exactly the residual roll lands on the guide.
-    h.get('pointermove')!(at(0.05) as unknown as Event);
+    h.get('pointermove')!(at(tilt) as unknown as Event);
     expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
 
     // Further motion inside the band is absorbed — the view stays level.
-    h.get('pointermove')!(at(0.06) as unknown as Event);
+    h.get('pointermove')!(at(tilt + SNAP_TO_LEVEL_RAD * 0.5) as unknown as Event);
     expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
 
     // Past the band the gesture resumes where the pointer actually is.
-    h.get('pointermove')!(at(0.08) as unknown as Event);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0.03, 6);
+    const beyond = SNAP_TO_LEVEL_RAD * 1.5;
+    h.get('pointermove')!(at(tilt + beyond) as unknown as Event);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(beyond, 6);
   });
 
   it('re-anchors the reference on north exactly when a snapped gesture ends', () => {
@@ -737,9 +746,10 @@ describe('InputController Shift-drag roll', () => {
     expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
     expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeGreaterThan(0.1);
 
+    const inside = SNAP_TO_LEVEL_RAD * 0.25;
     h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
-    h.get('pointermove')!(at(0.005) as unknown as Event);
-    h.get('pointerup')!(at(0.005) as unknown as Event);
+    h.get('pointermove')!(at(inside) as unknown as Event);
+    h.get('pointerup')!(at(inside) as unknown as Event);
 
     expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBe(0);
   });
@@ -764,11 +774,12 @@ describe('InputController Shift-drag roll', () => {
     // Land exactly level first, then tilt off it by more than the band.
     referenceUp.rollQuaternion(camera, referenceUp.renderedRollError(camera));
     const qLevel = camera.quaternion.clone();
-    referenceUp.rollQuaternion(camera, 0.05);
-    expect(camera.quaternion.angleTo(qLevel)).toBeGreaterThan(0.01);
+    const tilt = SNAP_TO_LEVEL_RAD * 3;
+    referenceUp.rollQuaternion(camera, tilt);
+    expect(camera.quaternion.angleTo(qLevel)).toBeGreaterThan(SNAP_TO_LEVEL_RAD);
 
     h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
-    h.get('pointermove')!(at(0.05) as unknown as Event);
+    h.get('pointermove')!(at(tilt) as unknown as Event);
 
     expect(camera.quaternion.angleTo(qLevel)).toBeCloseTo(0, 7);
   });
@@ -858,6 +869,77 @@ describe('InputController Shift as a live modifier', () => {
 
     window.dispatchEvent(new Event('blur'));
     expect(controls.noRotate).toBe(false);
+  });
+});
+
+describe('InputController pinch-to-zoom', () => {
+  function wheel(over: { ctrlKey?: boolean; deltaY?: number } = {}) {
+    const e = new Event('wheel', { cancelable: true });
+    Object.assign(e, { ctrlKey: true, deltaY: 0, ...over });
+    return e;
+  }
+
+  /** The pinch listener sits on window in the capture phase, ahead of the
+   *  canvas listeners TrackballControls / ObserveControls own. */
+  function pinch(e: Event) {
+    window.dispatchEvent(e);
+  }
+
+  it('re-emits an amplified pinch as one ordinary wheel notch on the canvas', () => {
+    const { canvas } = makeHarness();
+
+    // Two events of 5 px: 120 gained px, so the notch lands on the second.
+    pinch(wheel({ deltaY: 5 }));
+    expect(canvas.dispatchEvent).not.toHaveBeenCalled();
+
+    pinch(wheel({ deltaY: 5 }));
+    expect(canvas.dispatchEvent).toHaveBeenCalledTimes(1);
+    const emitted = canvas.dispatchEvent.mock.calls[0][0] as WheelEvent;
+    expect(emitted.type).toBe('wheel');
+    expect(emitted.deltaY).toBe(WHEEL_NOTCH_DELTA_PX);
+    expect(emitted.deltaMode).toBe(0);
+    // Re-emitted without ctrlKey, or the capture listener would re-enter.
+    expect(emitted.ctrlKey).toBe(false);
+  });
+
+  it('consumes the pinch so the browser cannot page-zoom and TC cannot double-count', () => {
+    const { canvas } = makeHarness();
+    const e = wheel({ deltaY: 40 });
+    const prevented = vi.spyOn(e, 'preventDefault');
+    const stopped = vi.spyOn(e, 'stopPropagation');
+
+    pinch(e);
+
+    expect(prevented).toHaveBeenCalled();
+    expect(stopped).toHaveBeenCalled();
+    expect(canvas.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a plain scroll alone — that path is already calibrated', () => {
+    const { canvas } = makeHarness();
+    const e = wheel({ ctrlKey: false, deltaY: 100 });
+    const prevented = vi.spyOn(e, 'preventDefault');
+
+    pinch(e);
+
+    expect(prevented).not.toHaveBeenCalled();
+    expect(canvas.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it('ignores a pinch that is not over the canvas', () => {
+    const { canvas } = makeHarness();
+    canvas.contains.mockReturnValue(false);
+
+    pinch(wheel({ deltaY: 100 }));
+
+    expect(canvas.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it('zooms out on the opposite pinch direction', () => {
+    const { canvas } = makeHarness();
+    pinch(wheel({ deltaY: -100 }));
+    const emitted = canvas.dispatchEvent.mock.calls[0][0] as WheelEvent;
+    expect(emitted.deltaY).toBe(-WHEEL_NOTCH_DELTA_PX);
   });
 });
 

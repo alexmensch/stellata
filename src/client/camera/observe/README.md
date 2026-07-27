@@ -16,7 +16,7 @@ click handlers (single = pin a POI, double = aim-at).
   `ObserveFocusOps` cross-controller seam (implemented by
   `FocusController` in `../focus/`). The observe→navigate seam hands roll
   back through `ReferenceUpController.adoptFromCamera`
-  (`../controls/README.md` § Reference up axis) — writing `camera.up`
+  (`../controls/input/README.md` § Reference up axis) — writing `camera.up`
   alone would be overwritten by the next frame's correction, restoring
   the pitch-snap bug the re-anchor exists to prevent.
 
@@ -139,7 +139,9 @@ to.
   of camera distance. Distance has no meaning when the camera is
   parked. `FOV_MAX_DEG` is load-bearing beyond this controller — it is
   the worst case the camera near plane is validated against
-  (`../README.md` § Shared).
+  (`../README.md` § Shared). Trackpad pinch reaches this same handler:
+  `InputController` normalises it to whole wheel notches rather than
+  forking a pinch→FOV path (`../controls/input/README.md` § Pinch-to-zoom).
 - In navigate-mode, `rollCamera` re-tilts the reference up axis, and the
   per-frame correction derives `camera.up` from it (TrackballControls
   rebuilds the quaternion from `camera.up` on every `update()`). In
@@ -147,7 +149,7 @@ to.
   the reference re-adopts from it. Shift+drag fires in both modes — armed
   and disarmed live by the Shift key, mid-drag — and the look-around drag
   bails out of a shifted pointerdown so the two never process the same
-  gesture. `../controls/README.md` § Roll gestures carries the input paths
+  gesture. `../controls/input/README.md` § Roll gestures carries the input paths
   and the mid-roll snap-to-level guide.
 
 **HUD locators:** Sol and Galactic-Centre arrows are part of the HUD

@@ -31,7 +31,7 @@ import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
-import { ReferenceUpController } from '../controls/reference-up';
+import { ReferenceUpController } from '../controls/input/reference-up';
 
 interface WarpStub {
   isActive: ReturnType<typeof vi.fn>;

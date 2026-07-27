@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
 import { ReferenceUpController } from './reference-up';
 
 // TrackballControls' rotate step, reproduced: a drag maps to an axis

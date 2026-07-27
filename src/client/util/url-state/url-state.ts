@@ -59,7 +59,7 @@ export function frameTriggerEps(magnitude: number): number {
 // Default values that the encoder uses to decide whether to omit a field.
 const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
 const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
-// The `up` slot carries the camera's REFERENCE axis (camera/controls/README.md
+// The `up` slot carries the camera's REFERENCE axis (camera/controls/input/README.md
 // § Reference up axis), whose canonical value is galactic north — so a share
 // from a level camera omits the field entirely.
 const DEFAULT_UP: [number, number, number] = [

@@ -168,7 +168,7 @@ export class ObserveControls {
   private onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     // Shift+drag is the roll gesture in both camera modes
-    // (`../controls/README.md` § Roll gestures). Without this bail the
+    // (`../controls/input/README.md` § Roll gestures). Without this bail the
     // look-around drag would run on the same pointer stream and fight it.
     if (e.shiftKey) return;
     this.dragging = true;

@@ -12,7 +12,7 @@ import {
   FOCUS_LERP_MS,
   WARP_REORIENT_MS,
 } from '../../stellata';
-import { ReferenceUpController } from '../controls/reference-up';
+import { ReferenceUpController } from '../controls/input/reference-up';
 
 describe('camera-lerp duration consolidation)', () => {
   it('routes AIM_T_MAX_MS / FOCUS_LERP_MS through CAMERA_LERP_MS', () => {

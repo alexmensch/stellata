@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   POLE_CONE_DEG,
   SNAP_TO_LEVEL_DEG,
+  SNAP_TO_LEVEL_RAD,
   cameraLocalUpInto,
   correctUpTowardReference,
   levelUpInto,
@@ -13,9 +14,10 @@ import {
 const deg = (d: number) => (d * Math.PI) / 180;
 
 describe('poleConeWeight', () => {
-  it('pins the cone half-width and the snap threshold', () => {
+  it('pins the cone half-width and the guide band', () => {
     expect(POLE_CONE_DEG).toBe(15);
-    expect(SNAP_TO_LEVEL_DEG).toBe(1);
+    expect(SNAP_TO_LEVEL_DEG).toBe(2);
+    expect(SNAP_TO_LEVEL_RAD).toBeCloseTo((2 * Math.PI) / 180, 15);
   });
 
   it('is 0 on the reference axis and 1 outside the cone', () => {

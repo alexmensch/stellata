@@ -16,6 +16,10 @@ for the surrounding context.
   `camera/controls/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it is
   the alignment-guide band the roll sticks inside mid-drag; roll dead-zone
   is `ROLL_DEADZONE_PX` in `input-controller.ts`.
+- **Pinch-zoom rate** — `PINCH_NOTCH_GAIN` in
+  `camera/controls/pinch-zoom-pure.ts`: how many scroll notches a full
+  two-finger pinch is worth. Scroll rate itself stays `zoomSpeed`
+  (navigate) / `FOV_STEP_PER_WHEEL` (observe).
 - **Chevron density** — `CHEVRON_SPACING_PX` / `_HALF_WIDTH` / `_DEPTH` in
   `distance-vector-overlay.ts`.
 - **Focus ring size** — `RADIUS_PX` in `focus-ring-overlay.ts`.

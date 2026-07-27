@@ -12,9 +12,11 @@ import type * as THREE from 'three';
 export const POLE_CONE_DEG = 15;
 const POLE_CONE_SIN = Math.sin((POLE_CONE_DEG * Math.PI) / 180);
 
-/** Roll residual at or below which an explicit roll gesture snaps exactly
- *  to the reference orientation on release. */
-export const SNAP_TO_LEVEL_DEG = 1;
+/** Half-width of the alignment-guide band: a roll gesture sticks to the
+ *  reference orientation while the roll it requests stays within this of it.
+ *  The only definition of the band — every consumer and test reads it from
+ *  here rather than restating a number. */
+export const SNAP_TO_LEVEL_DEG = 2;
 export const SNAP_TO_LEVEL_RAD = (SNAP_TO_LEVEL_DEG * Math.PI) / 180;
 
 /** Correction strength as a smoothstep over `sin θ`, θ = angle between the

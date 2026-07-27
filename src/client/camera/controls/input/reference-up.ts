@@ -2,7 +2,7 @@
 // by default. See README.md § Reference up axis.
 
 import * as THREE from 'three';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
 import {
   cameraLocalUpInto,
   correctUpTowardReference,

@@ -49,7 +49,7 @@ import { angularToPx as angularToPxPure } from './camera/controls/star-geometry'
 import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
-import { ReferenceUpController } from './camera/controls/reference-up';
+import { ReferenceUpController } from './camera/controls/input/reference-up';
 import {
   WarpController,
   type WarpInfo,
@@ -57,7 +57,7 @@ import {
 } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
 import { PoiStore } from './poi/poi-store';
-import { InputController } from './camera/controls/input-controller';
+import { InputController } from './camera/controls/input/input-controller';
 import {
   FocusController,
   type FrameAnchor,
@@ -303,7 +303,7 @@ export class Stellata implements FrameAnchor {
 
   private poiStore!: PoiStore;
   // Canvas pointer input — click FSM (single/double, both modes) and the
-  // roll gestures. See camera/controls/README.md § Input controller.
+  // roll gestures. See camera/controls/input/README.md § Input controller.
   private input!: InputController;
 
   // Galactic reference layers. Disc fades in by camera-distance
@@ -2388,7 +2388,7 @@ export class Stellata implements FrameAnchor {
     // Roll bookkeeping, ahead of every orientation source: navigate-mode
     // `lookAt`s read camera.up, so the correction has to land before the
     // dispatch below. In observe the quaternion is the roll authority and
-    // the reference follows it instead. See camera/controls/README.md
+    // the reference follows it instead. See camera/controls/input/README.md
     // § Reference up axis.
     if (this.focus.getCameraMode() === 'observe') {
       this.referenceUp.adoptFromCamera(this.camera);

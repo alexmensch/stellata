@@ -7,7 +7,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
-import type { ReferenceUpController } from '../controls/reference-up';
+import type { ReferenceUpController } from '../controls/input/reference-up';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';

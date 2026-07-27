@@ -71,7 +71,7 @@ Camera orientation during the reorient depends on launch mode:
   `mag0 > 0` this keeps A perfectly centred as the camera swings
   around it. Roll comes along for free: `lookAt` reads `camera.up`, which
   the reference-up correction has already levelled this frame
-  (`../controls/README.md` § Reference up axis), so a swing that crosses
+  (`../controls/input/README.md` § Reference up axis), so a swing that crosses
   the sky stays galactic-level throughout instead of inheriting whatever
   roll the pre-warp orbit had drifted to.
 - **Observe launch** (`returnToObserve`, `mag0 ≈ 0`): the
