@@ -4,6 +4,7 @@ import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { julianEpochYearToT } from '../../solar-system/time/time';
 import { R_SUN_PC } from '../../util/astronomy-constants';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { StarFrame } from './star-frame';
 import { buildStarSharedUniforms } from './star-shared-uniforms';
 
@@ -26,6 +27,7 @@ function makeFrame(catalog: Catalog, opts: { t?: number } = {}) {
     fovYRad: Math.PI / 4,
     viewportW: 1000,
     viewportH: 1000,
+    hdr: makeHdrEmitterUniforms(),
   });
   const cameraPosition = new THREE.Vector3();
   let writes = 0;

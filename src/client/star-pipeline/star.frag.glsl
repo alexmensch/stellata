@@ -7,6 +7,16 @@ precision highp int;
 // for any point of light — see the chunk header for the super-Gaussian
 // formula and the brightness-PSF-saturation rationale.
 #include <stellata_perceptual_disc>
+// The scene-wide operator. Applied inline here whenever the frame is
+// NOT rendering into the HDR target, which — while the ship gate stays
+// false — is the shipped path, not just fallback hardware. See
+// src/client/hdr/README.md § Fallback.
+#include <stellata_tonemap>
+
+// HDR seam, bound by reference from HdrPipeline.emitterUniforms.
+uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
+uniform float uWhitePoint;
+uniform float uHighlightDesat;
 
 uniform float uMonochrome; // 0 = colour, 1 = ink-on-paper (multiply)
 // Render mode:
@@ -60,10 +70,32 @@ in float vPhysRatio; // 1 = physical-size-driven (render as solid disc),
 in float vSoftness;  // 0 = crisp (WD) … 1 = fuzzy (hypergiant)
 in float vAaWidth;   // chart-mode disc edge width in vUv units (1 CSS px)
 in float vLocalMember; // 1 = local-depth-cluster member (main variant only)
+in float vPeakL;     // linear luminance at the kernel's centre
 
 out vec4 outColor;
 
 const float PHYS_RATIO_THRESHOLD = 0.5;
+
+// Colour a star fragment. `glow` is the unit-peak display kernel and
+// `vPeakL` the star's physical luminance, so the product is linear light
+// in the scene-wide unit — written straight into the target, or put
+// through the operator here when there isn't one.
+//
+// Alpha stays the kernel value, exactly as before HDR: the glow pass's
+// AdditiveBlending multiplies rgb by it, which is what gives that pass
+// its squared falloff. Peak luminance is identical on both paths, so
+// calibration matches; what differs off-target is that the operator runs
+// per-fragment before that multiply and before overlapping stars sum, so
+// saturated stars read slightly fatter and dense fields over-brighten.
+//
+// Undithered: star quads overlap, and the dither is a function of
+// fragCoord alone, so dithering here would bias each pixel by its own
+// offset once per overlapping star.
+vec4 starEmission(float glow) {
+    vec3 emitted = vColor * (vPeakL * glow);
+    if (uHdrTarget > 0.5) return vec4(emitted, glow);
+    return vec4(stellataTonemapUndithered(emitted, uWhitePoint, uHighlightDesat), glow);
+}
 
 void main() {
     float r = length(vUv);
@@ -138,11 +170,13 @@ void main() {
         // Glow pass — only point-dominated stars. Additive blending so
         // overlapping distant stars accumulate brightness.
         if (vPhysRatio >= PHYS_RATIO_THRESHOLD) discard;
-        // Soft taper: fade intensity to zero across the 0.5-mag band past
-        // the magnitude limit so stars don't pop in/out at the threshold.
+        // Soft taper: fade to zero across the 0.5-mag band past the
+        // magnitude limit so stars don't pop in/out at the threshold. It
+        // multiplies emitted luminance now, so the fade is photometric
+        // rather than profile-only.
         float tap = 1.0 - smoothstep(uMaxAppMag, uMaxAppMag + 0.5, vAppMag);
         glow *= tap;
-        outColor = vec4(vColor * glow, glow);
+        outColor = starEmission(glow);
     } else {
         // Disc pass — only disc-dominated stars. Per-channel MaxEquation
         // blending (see applyDiscBlendDefaults); depth handling below
@@ -161,6 +195,6 @@ void main() {
         // accumulate additively — the haze stays visible while distant
         // stars peek through it.
         if (glow < uCoreThreshold) gl_FragDepth = 1.0;
-        outColor = vec4(vColor * glow, glow);
+        outColor = starEmission(glow);
     }
 }

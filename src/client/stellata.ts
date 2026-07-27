@@ -452,6 +452,7 @@ export class Stellata implements FrameAnchor {
       fovYRad: (this.camera.fov * Math.PI) / 180,
       viewportW: window.innerWidth,
       viewportH: window.innerHeight,
+      hdr: this.hdr.emitterUniforms,
     });
     // Advances catalog.positions to the model clock and derives every
     // per-instance buffer off the result, so the pipeline attributes
