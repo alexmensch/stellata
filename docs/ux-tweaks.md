@@ -11,7 +11,11 @@ for the surrounding context.
 
 - **Orbit feel** — `rotateSpeed` / `dynamicDampingFactor` in
   `stellata.ts` constructor.
-- **Right-click pan on/off** — `noPan` flag.
+- **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
+- **Roll level-lock strength / pole cone** — `POLE_CONE_DEG` in
+  `camera/controls/reference-up-pure.ts`; snap threshold is
+  `SNAP_TO_LEVEL_DEG` beside it, roll dead-zone is `ROLL_DEADZONE_PX` in
+  `input-controller.ts`.
 - **Chevron density** — `CHEVRON_SPACING_PX` / `_HALF_WIDTH` / `_DEPTH` in
   `distance-vector-overlay.ts`.
 - **Focus ring size** — `RADIUS_PX` in `focus-ring-overlay.ts`.
