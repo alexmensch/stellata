@@ -45,9 +45,18 @@ knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
 the magnitude filter applies identically to discrete stars and the
 diffuse glow), `StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
 (`uWorldOffset`, and `uFovYRad` / `uViewport` for its windows), and
-`Picker`. Only the three renderer-derived seeds (pixel ratio, FOV,
-viewport) are arguments; the rest come from `DEFAULT_FILTER` /
+`Picker`. The three renderer-derived seeds (pixel ratio, FOV, viewport)
+are arguments; the rest come from `DEFAULT_FILTER` /
 `STAR_RENDER_DEFAULTS` and the pipeline's own constants.
+
+The one set of slots this map does **not** own is
+`HdrPipeline.emitterUniforms` — `uExposure`, `uWhitePoint`,
+`uHighlightDesat`, `uHdrTarget` — passed in as the `hdr` option and
+spread in by reference. `HdrPipeline` rewrites `uHdrTarget` on every
+seam / resolve / chart-mode change, so copying the values instead of
+sharing the objects would leave the star passes tone-mapping inline into
+an already-tone-mapped target. Pinned in the test; see
+`../../hdr/README.md` § Unit.
 
 The integration shell builds the map once and keeps writing through
 `starPipeline.discMaterial.uniforms` per frame — the encapsulation is

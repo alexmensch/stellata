@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FILTER } from '../../filters/filter-state';
+import { BASE_EPOCH_EXPOSURE } from '../../hdr/emission-pure';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
   pickPerceptualDiscUniforms,
@@ -7,12 +9,13 @@ import {
 import { MIRROR_CAPACITY } from '../star-local-mirror';
 import { buildStarSharedUniforms } from './star-shared-uniforms';
 
-function build() {
+function build(hdr = makeHdrEmitterUniforms()) {
   return buildStarSharedUniforms({
     pixelRatio: 2,
     fovYRad: 0.75,
     viewportW: 1600,
     viewportH: 900,
+    hdr,
   });
 }
 
@@ -48,5 +51,21 @@ describe('buildStarSharedUniforms', () => {
 
   it('returns a fresh map per call — two pipelines never share slots', () => {
     expect(build().uCameraPos).not.toBe(build().uCameraPos);
+  });
+
+  // HdrPipeline rewrites uHdrTarget on every seam / resolve / chart-mode
+  // change and owns uExposure from H6. A copied value would leave the
+  // star passes tone-mapping inline into an already-tone-mapped target.
+  it('holds the HDR emitter slots by reference, not by value', () => {
+    const hdr = makeHdrEmitterUniforms();
+    const u = build(hdr);
+    expect(u.uHdrTarget).toBe(hdr.uHdrTarget);
+    expect(u.uExposure).toBe(hdr.uExposure);
+    expect(u.uWhitePoint).toBe(hdr.uWhitePoint);
+    expect(u.uHighlightDesat).toBe(hdr.uHighlightDesat);
+  });
+
+  it('seeds exposure at the base epoch — H3 does not wire the slider', () => {
+    expect(build().uExposure.value).toBe(BASE_EPOCH_EXPOSURE);
   });
 });

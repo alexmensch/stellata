@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { ZOOM_FLOOR_FRACTION } from '../../camera/controls/star-physics';
 import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
+import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { makeColorLutTexture } from '../blackbody-lut';
 import type { PerceptualDiscUniforms } from '../perceptual-disc-uniforms';
@@ -16,6 +17,9 @@ export interface StarSharedUniformsOptions {
   fovYRad: number;
   viewportW: number;
   viewportH: number;
+  /** `HdrPipeline.emitterUniforms`, spread in by reference so the seam's
+   *  exposure and target state reach all three passes with one write. */
+  hdr: HdrEmitterUniforms;
 }
 
 export type StarSharedUniforms = ReturnType<typeof buildStarSharedUniforms>;
@@ -30,6 +34,10 @@ export type StarSharedUniforms = ReturnType<typeof buildStarSharedUniforms>;
  */
 export function buildStarSharedUniforms(opts: StarSharedUniformsOptions) {
   return {
+    // Exposure + the inline-operator branch. Owned by HdrPipeline, which
+    // rewrites uHdrTarget whenever the seam, the resolve, or chart mode
+    // changes; the star passes only read them.
+    ...opts.hdr,
     uCameraPos: { value: new THREE.Vector3() },
     // Seeded from DEFAULT_FILTER; FilterController owns every later write.
     uMaxAppMag: { value: DEFAULT_FILTER.maxAppMag },

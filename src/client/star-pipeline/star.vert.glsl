@@ -7,6 +7,13 @@ precision highp int;
 // for any point of light (stars, planets, ...). See the chunk header
 // for what perceptualDmEff / perceptualAppSizePx do.
 #include <stellata_perceptual_disc>
+// Shared magnitude → linear-luminance unit (stellataPointSourcePeak).
+#include <stellata_hdr_emission>
+
+// Exposure — the whole scene's single brightness anchor, shared with
+// every other physical layer. Pinned to the naked-eye base epoch until
+// H6 routes the magnitude slider through it.
+uniform float uExposure;
 
 uniform vec3 uCameraPos;
 uniform float uMaxAppMag;
@@ -187,6 +194,9 @@ out float vSoftness;   // 0 = crisp (white dwarf), 1 = fuzzy (hypergiant) —
 // inner disc faint or invisible.
 out float vAaWidth;
 out float vLocalMember; // 1 = local-depth-cluster member (main variant only)
+// Linear luminance at the centre of this star's display kernel. Constant
+// per instance, so the interpolation across the quad is exact.
+out float vPeakL;
 
 const float LOG10 = 2.302585093;
 
@@ -208,10 +218,30 @@ float ballesterosBvFromTeff(float teff) {
     return u / 0.92;
 }
 
-// Sample the dust-reddened-B-V → sRGB LUT.
+// Sample the dust-reddened-B-V → linear-sRGB LUT and renormalise to
+// relative luminance 1, so `vColor * vPeakL` has luminance exactly
+// vPeakL and chromaticity carries no brightness side-channel. The table
+// itself is peak-normalised (a Y=1 table runs to 1.88 at the blue end
+// and won't fit uint8) — scripts/colour/README.md.
 vec3 ciToColor(float bvVal) {
     float t = clamp((bvVal - BV_MIN) / (BV_MAX - BV_MIN), 0.0, 1.0);
-    return texture(uColorLut, vec2(t, 0.5)).rgb;
+    vec3 chroma = texture(uColorLut, vec2(t, 0.5)).rgb;
+    return chroma / max(dot(chroma, STELLATA_LUMA_WEIGHTS), 1e-6);
+}
+
+// The off-screen-sentinel varying payload, shared by every early return
+// below so a newly added varying can't be missed in one of them. The
+// quad lands fully outside NDC and is clipped before rasterization, so
+// the values only have to be defined, not meaningful.
+void emitOffscreenSentinel(float appMag, float softness) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vAppMag = appMag;
+    vColor = vec3(0.0);
+    vUv = aCorner;
+    vPhysRatio = 0.0;
+    vSoftness = softness;
+    vAaWidth = 0.0;
+    vPeakL = 0.0;
 }
 
 void main() {
@@ -237,13 +267,7 @@ void main() {
     bool suppressed = STAR_SELF_ID == uHideFocusIdx
         || (isLocalMember && uRenderMode != 2);
     if (suppressed) {
-        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-        vAppMag = 0.0;
-        vColor = vec3(0.0);
-        vUv = aCorner;
-        vPhysRatio = 0.0;
-        vSoftness = 0.0;
-        vAaWidth = 0.0;
+        emitOffscreenSentinel(0.0, 0.0);
         return;
     }
     // Sub-pixel binary secondaries: drop the opaque disc (mode 1) and
@@ -253,13 +277,7 @@ void main() {
     // hide above — see the comment block there for the vFragDepth
     // safety argument.
     if (iCompositeSuppress > 0.5 && (uRenderMode == 1 || uRenderMode == 2)) {
-        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-        vAppMag = 0.0;
-        vColor = vec3(0.0);
-        vUv = aCorner;
-        vPhysRatio = 0.0;
-        vSoftness = 0.0;
-        vAaWidth = 0.0;
+        emitOffscreenSentinel(0.0, 0.0);
         return;
     }
 
@@ -329,13 +347,7 @@ void main() {
     // pair's separation sits inside one log-depth bucket).
     if (uRenderMode == 0 && iEclipseDim < 1.0) {
         if (iEclipseDim <= 0.0) {
-            gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-            vAppMag = 0.0;
-            vColor = vec3(0.0);
-            vUv = aCorner;
-            vPhysRatio = 0.0;
-            vSoftness = 0.0;
-            vAaWidth = 0.0;
+            emitOffscreenSentinel(0.0, 0.0);
             return;
         }
         appMag += -2.5 * log(iEclipseDim) / LOG10;
@@ -361,13 +373,7 @@ void main() {
     float softness = clamp(lumClass / 9.0, 0.0, 1.0);
 
     if (!(spectOk && distOk && magOkPrelim)) {
-        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-        vAppMag = appMag;
-        vColor = vec3(0.0);
-        vUv = aCorner;
-        vPhysRatio = 0.0;
-        vSoftness = softness;
-        vAaWidth = 0.0;
+        emitOffscreenSentinel(appMag, softness);
         return;
     }
 
@@ -406,13 +412,7 @@ void main() {
     // glow pass at fading intensity (frag shader handles the smoothstep),
     // so the limit doesn't pop in/out as the slider moves.
     if (appMag > uMaxAppMag + 0.5) {
-        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-        vAppMag = appMag;
-        vColor = vec3(0.0);
-        vUv = aCorner;
-        vPhysRatio = 0.0;
-        vSoftness = softness;
-        vAaWidth = 0.0;
+        emitOffscreenSentinel(appMag, softness);
         return;
     }
 
@@ -437,6 +437,10 @@ void main() {
         // Force the frag shader's chart-mode disc path. (Outside chart
         // mode this is computed below from physSize/appSize.)
         vPhysRatio = 1.0;
+        // Chart is deliberately non-photometric and returns before the
+        // frag shader touches luminance; the assignment only keeps the
+        // varying defined.
+        vPeakL = 0.0;
     } else {
         // Apparent-magnitude size term — the perceptual-disc abstraction.
         // Same √Δm + soft-knee mapping a planet would use (3re.16); the
@@ -449,6 +453,20 @@ void main() {
         // multiplied by viewport.y/fov_y to convert radians to pixels.
         // radiusFactor is the per-type variability modulation (ρ-bounded).
         float physSize = 2.0 * atan(R_pc * radiusFactor / dPc) * angularToPx;
+
+        // Emitted luminance, in the scene-wide HDR unit. The footprint
+        // above is now purely a display kernel — brightness rides on the
+        // peak instead of the quad size. Two properties this line is
+        // load-bearing for:
+        //   · The divisor takes the star's TRUE angular radius, so it is
+        //     the unclamped physSize and it applies whichever term wins
+        //     max(appSize, physSize) below — no pop at the disc/glow
+        //     split, and no artificial brightening at the zoom floor
+        //     where the clamp bites.
+        //   · CSS pixels, not device pixels, so a resolved disc's
+        //     surface brightness doesn't change with devicePixelRatio.
+        vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize);
+
         // Up-clamp so a max-radius supergiant at the manual-zoom orbit
         // floor can't overflow the viewport (the ρ-bounded pulse no longer
         // needs the old per-frame amplitude compression). Mirrored in

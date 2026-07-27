@@ -4,7 +4,7 @@ import {
   BV_MIN,
   LUT_SIZE,
   ballesterosTeff,
-  blackbodyToSrgb,
+  blackbodyToLinearSrgb,
   buildLut,
   bvAtIndex,
   sampleLut,
@@ -15,6 +15,15 @@ import {
   BV_MIN as CONSUMER_BV_MIN,
   BV_MAX as CONSUMER_BV_MAX,
 } from '../../src/client/star-pipeline/blackbody-lut-data';
+import { srgbEncode } from '../../src/client/hdr/tonemap-pure';
+
+// The table stores linear light; the Python reference values every pin
+// below was derived from are display-encoded. Encoding on read keeps the
+// references literal, so a chromaticity change fails while the storage
+// change that motivated them does not.
+function displayByte(linear0to255: number): number {
+  return Math.round(srgbEncode(linear0to255 / 255) * 255);
+}
 
 // ---- Ballesteros parity ----------------------------------------------
 //
@@ -51,15 +60,23 @@ describe('LUT byte signature', () => {
     expect(Array.from(generated)).toEqual(Array.from(LUT_BYTES));
   });
 
-  it('endpoint bytes match Python reference', () => {
+  it('endpoint colours match Python reference', () => {
     // First entry (B-V = -0.4, T ≈ 21707 K): hot blue-white.
-    expect(LUT_BYTES[0]).toBe(169);
-    expect(LUT_BYTES[1]).toBe(192);
-    expect(LUT_BYTES[2]).toBe(255);
+    expect(displayByte(LUT_BYTES[0])).toBe(169);
+    expect(displayByte(LUT_BYTES[1])).toBe(192);
+    expect(displayByte(LUT_BYTES[2])).toBe(255);
     // Last entry (B-V = +2.0, T ≈ 3169 K): warm amber.
-    expect(LUT_BYTES[(LUT_SIZE - 1) * 3 + 0]).toBe(255);
-    expect(LUT_BYTES[(LUT_SIZE - 1) * 3 + 1]).toBe(190);
-    expect(LUT_BYTES[(LUT_SIZE - 1) * 3 + 2]).toBe(120);
+    expect(displayByte(LUT_BYTES[(LUT_SIZE - 1) * 3 + 0])).toBe(255);
+    expect(displayByte(LUT_BYTES[(LUT_SIZE - 1) * 3 + 1])).toBe(190);
+    expect(displayByte(LUT_BYTES[(LUT_SIZE - 1) * 3 + 2])).toBe(120);
+  });
+
+  it('stores linear light — no component sits at the gamma-encoded value', () => {
+    // Guards the storage contract itself: a re-introduced encode step
+    // would silently double-encode once the shader's Y-normalisation and
+    // the tone-map pass both run on these bytes.
+    expect(LUT_BYTES[0]).toBe(101);
+    expect(LUT_BYTES[2]).toBe(255);
   });
 
   it('consumer-module constants match the generator', () => {
@@ -117,37 +134,50 @@ describe('sampleLut at named-star B-V values', () => {
 
   it.each(cases)('%s (B-V=%f) renders as expected ±5 ΔE', (_name, bv, expected) => {
     const sampled = sampleLut(LUT_BYTES, bv);
-    const rounded: [number, number, number] = [
-      Math.round(sampled[0]),
-      Math.round(sampled[1]),
-      Math.round(sampled[2]),
+    const display: [number, number, number] = [
+      displayByte(sampled[0]),
+      displayByte(sampled[1]),
+      displayByte(sampled[2]),
     ];
-    expect(deltaE255(rounded, expected)).toBeLessThanOrEqual(5);
+    expect(deltaE255(display, expected)).toBeLessThanOrEqual(5);
   });
 });
 
-// ---- blackbodyToSrgb sanity ------------------------------------------
+// ---- blackbodyToLinearSrgb sanity ------------------------------------
 
-describe('blackbodyToSrgb', () => {
+describe('blackbodyToLinearSrgb', () => {
+  const displayTriplet = (tempK: number): [number, number, number] => {
+    const linear = blackbodyToLinearSrgb(tempK);
+    return [
+      Math.round(srgbEncode(linear[0]) * 255),
+      Math.round(srgbEncode(linear[1]) * 255),
+      Math.round(srgbEncode(linear[2]) * 255),
+    ];
+  };
+
   it('cool red 3000K reads warm orange', () => {
-    const [r, g, b] = blackbodyToSrgb(3000);
-    expect(Math.round(r * 255)).toBe(255);
-    expect(Math.round(g * 255)).toBeGreaterThan(150);
-    expect(Math.round(g * 255)).toBeLessThan(200);
-    expect(Math.round(b * 255)).toBeLessThan(120);
+    const [r, g, b] = displayTriplet(3000);
+    expect(r).toBe(255);
+    expect(g).toBeGreaterThan(150);
+    expect(g).toBeLessThan(200);
+    expect(b).toBeLessThan(120);
   });
 
   it('Sol-like 5778K reads near-white', () => {
-    const [r, g, b] = blackbodyToSrgb(5778);
-    expect(Math.round(r * 255)).toBe(255);
-    expect(Math.round(g * 255)).toBeGreaterThan(235);
-    expect(Math.round(b * 255)).toBeGreaterThan(225);
+    const [r, g, b] = displayTriplet(5778);
+    expect(r).toBe(255);
+    expect(g).toBeGreaterThan(235);
+    expect(b).toBeGreaterThan(225);
   });
 
   it('hot 30000K reads blue-white (Python parity)', () => {
-    const [r, g, b] = blackbodyToSrgb(30000);
-    expect(Math.round(r * 255)).toBe(162);
-    expect(Math.round(g * 255)).toBe(187);
-    expect(Math.round(b * 255)).toBe(255);
+    expect(displayTriplet(30000)).toEqual([162, 187, 255]);
+  });
+
+  it('peak-normalises rather than luminance-normalises', () => {
+    // The shader divides by Y; a Y-normalised table would run past 1 at
+    // the blue end and clip in the uint8 store.
+    const hot = blackbodyToLinearSrgb(21707);
+    expect(Math.max(...hot)).toBeCloseTo(1, 10);
   });
 });

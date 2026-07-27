@@ -99,6 +99,14 @@ peak_L = L(m) / max(1, π · r_phys_px²)
   disc/glow pass split (the split happens at footprints ≫ 1 px where
   the two rules would otherwise disagree by ~100×).
 
+`r_phys_px` is settled by H3 as the **unclamped** radius in **CSS**
+pixels: unclamped so a viewport-fraction cap on the drawn footprint
+can't report a higher-than-true surface brightness at the zoom floor,
+and CSS rather than device pixels so the same scene doesn't change
+brightness on a different `devicePixelRatio` — with device pixels the
+resolved branch would dim 4× at DPR 2 while the unresolved branch, whose
+peak is DPR-invariant, would not.
+
 **Accepted over-count:** because the drawn footprint is K-exaggerated
 (~5–12× the real PSF) while the peak is flux-anchored, a star's
 *integrated* frame flux over-counts its physical flux by roughly the
@@ -118,11 +126,18 @@ luminance (not just footprint), and the ±0.5-mag soft taper multiplies
 
 ### Colour — linear chromaticity, luminance-normalized
 
-The RT is linear-light. `vColor` today is an sRGB-encoded LUT sample;
-under HDR the blackbody LUT (`scripts/colour/blackbody-lut.ts`)
-regenerates as **linear RGB normalized to relative luminance Y = 1**,
-so `emitted = vColor_linear · peak_L` has luminance exactly `peak_L`
-and chromaticity carries no brightness side-channel. Same treatment for
+The RT is linear-light. `vColor` was an sRGB-encoded LUT sample; under
+HDR the blackbody LUT (`scripts/colour/blackbody-lut.ts`) regenerates as
+**linear RGB normalized to relative luminance Y = 1**, so
+`emitted = vColor_linear · peak_L` has luminance exactly `peak_L` and
+chromaticity carries no brightness side-channel.
+
+*As built (H3):* the table stores linear light **peak-normalized** and
+the shader divides each sample by `dot(rgb, LUMA_WEIGHTS)`. A
+Y-normalized triplet reaches 1.88 at the blue end, which a uint8 table
+cannot hold, and linear uint8 costs at most 0.91% on any component
+(smallest anywhere in the table: 0.189). Same result for `vColor`,
+no texture-format change. Same treatment for
 the MW / LG population colours (constants, converted once at
 definition) and planet representative colours. Planet day-map textures
 keep loading with `NoColorSpace` but the mesh shader decodes them to
@@ -180,6 +195,13 @@ The operator implementation lives in a **shared GLSL chunk**
 TS mirror) consumed by both the fullscreen pass and the no-float-RT
 fallback (§ 6) — the `dust-raymarch.glsl` two-consumers pattern.
 
+**The dither is not part of the operator for an overlapping emitter.**
+It is a function of `fragCoord` alone, so N additively-blended fragments
+on one pixel add the same offset N times — a coherent bias over dense
+fields, not noise that cancels. H3 split `stellataTonemapUndithered`
+out for emitters that overlap; the resolve and any single-coverage
+volume keep the dithered call.
+
 ## 3. Exposure model — slider and epochs
 
 **The magnitude slider is the single exposure control.** `m_lim` sets
@@ -188,9 +210,9 @@ uniform. The presets become exposure presets:
 
 | Preset | m_lim | uExposure | white-point mag (m_lim − DR_MAG) |
 | --- | --- | --- | --- |
-| naked-eye | 6.5 | ≈ 8.0 | −1.0 (Sirius just saturates) |
-| binoculars | 10.5 | ≈ 316 | 3.0 |
-| all | 15.0 | ≈ 2.0e4 | 7.5 |
+| naked-eye | 6.5 | ≈ 7.96 | −1.0 (Sirius just saturates) |
+| binoculars | 10.5 | ≈ 317 | 3.0 |
+| all | 15.0 | 2.0e4 | 7.5 |
 
 **Population cutoff and exposure agree by construction.** The vertex
 cull at `m_lim` (+ 0.5-mag taper) is retained — but as a *performance*
@@ -333,6 +355,12 @@ day one — the fullscreen pass and the inline path can never drift.
   plumbing bead, where they would be uniforms and resize bookkeeping
   with no reader. `Ω_px` / `arcsecPerPx` then update on resize + FOV
   change alongside `uFovYRad` / `recomputePresetPxSizes`.
+  H3 landed `uExposure` and `LUMA_CEIL` in `src/client/hdr/emission.glsl`
+  + `emission-pure.ts`, reachable through
+  `HdrPipeline.emitterUniforms` — the by-reference uniform seam H4 and
+  H5 bind to as well. Both chunks are `#ifndef`-guarded because an
+  emitter deriving a per-pixel magnitude (H4) needs the unit and the
+  operator in one stage.
 
 ## 8. Validation contract (H7)
 
@@ -354,7 +382,8 @@ day one — the fullscreen pass and the inline path can never drift.
 
 ## 9. Bead-shape decisions
 
-- **H3 (stars) and H6 (exposure wiring) stay separate beads.** H3
+- **H3 (stars) and H6 (exposure wiring) stay separate beads.** *Shipped
+  as designed.* H3
   converts star emission with `uExposure` pinned at the base epoch
   (slider keeps its current population-only semantics for that interim);
   H6 then routes slider + presets → `uExposure`, builds the epoch

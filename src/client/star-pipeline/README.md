@@ -50,13 +50,56 @@ subfolders.
   construction.
 - `blackbody-lut-data.ts` — **AUTO-GENERATED** by
   `scripts/colour/blackbody-lut.ts`. Do not edit by hand. 256-entry
-  blackbody → sRGB lookup indexed by B–V over [-0.4, 2]. Regenerate
-  via `pnpm run build:lut`.
+  blackbody → **linear**-sRGB lookup indexed by B–V over [-0.4, 2],
+  peak-normalised. Regenerate via `pnpm run build:lut`. The vertex
+  shader renormalises each sample to luminance 1 (§ Physical-luminance
+  emission).
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
 - `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-local-cluster.test.ts` (+ `-pure.test.ts`) — membership pins.
+
+## Physical-luminance emission
+
+Stars emit into the scene-wide HDR unit (`../hdr/README.md` § Unit).
+Brightness is the **peak** of the profile, `vPeakL`, computed per
+instance in the vertex shader from the star's apparent magnitude:
+
+```
+vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
+```
+
+The footprint math is untouched, but its *meaning* changed: the √Δm
+appSize curve and the per-preset exaggeration `K` are now purely a
+display kernel normalised to peak 1 (§ Star intensity profile) — they
+size the star, they no longer encode how bright it is. **`K` therefore
+stops being a calibration knob**, trading only legibility against how
+crowded a dense field looks.
+
+The radius argument is the **unclamped** `physSize` in **CSS** pixels;
+`../hdr/README.md` § Unit has why, and it applies whichever term wins
+`max(appSize, physSize)` so nothing pops at the disc/glow split.
+
+Two consequences specific to this pipeline:
+
+- **Every magnitude-domain modifier became photometric for free.**
+  A_V, `iEclipseDim`, the variability `magMod`, and the glow pass's
+  ±0.5-mag soft taper already worked in magnitudes, so they now modulate
+  real luminance rather than just footprint size.
+- **The profile thresholds did not.** `uCoreThreshold` and
+  `uDiscardThreshold` still compare against the unit-peak kernel, so a
+  bright and a faint star still split halo-from-core at the same radius.
+  The depth/halo decision is about shape, not brightness.
+
+`uExposure` is pinned to the naked-eye base epoch, so the magnitude
+slider keeps its population-cutoff semantics until H6. The two agree by
+construction — a star past the limit would emit below the floor the unit
+is anchored to — leaving the vertex cull as a pure performance cull.
+
+Validation compares **per-pixel** luminance, never integrals: the
+K-exaggerated footprint over-counts a star's frame flux by design
+(`docs/science-hdr-pipeline.md` § 1, § 8).
 
 ## Colour routing
 
@@ -66,6 +109,12 @@ intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
 `spectralClassCi` bakes in `scripts/catalog/catalog-pure.ts`).
 `bestApsisTeff` decides which Apsis Teff feeds `iTeffApsis`.
 `extinction/` reddens whichever tier wins.
+
+`ciToColor` then divides the LUT sample by its own relative luminance,
+so `vColor * vPeakL` has luminance exactly `vPeakL` and chromaticity
+carries no brightness side-channel. The table is stored peak-normalised
+instead of luminance-normalised because a Y=1 triplet reaches 1.88 at
+the blue end and will not fit uint8 — `scripts/colour/README.md`.
 
 ## Star rendering: instanced quads, three passes
 
@@ -90,16 +139,10 @@ Rendering is **three passes over the same instanced geometry**:
   rather than bleeding through. Mesh `visible` is gated CPU-side each
   frame by `starLocalCluster.hasMembers() || starFrame.shouldEnableCoreMask()`
   (members stamp regardless of the physSize window — § Local-pass
-  mirror draw). `shouldEnableCoreMask()` is a binary-search over the
-  Sol-distance-sorted index (built once at construction) that walks
-  only the `[camDistFromSol ± dThresh]` window (typically 50–500 of
-  313k candidates; triangle-inequality bounds it) and returns `true`
-  on the first star within
-  `dThresh = maxPhysicalRadiusPc / tan(CORE_MASK_MIN_PX × fov_y / 2 / viewport.y)`
-  (the camera distance at which the catalog's largest star subtends
-  `CORE_MASK_MIN_PX` pixels). When no star is that close, the entire
-  draw call is skipped. See `../debug/README.md`
-  § shouldEnableCoreMask for the window derivation.
+  mirror draw). The gate walks a bounded window of the
+  Sol-distance-sorted index and skips the whole draw call when no star
+  is close enough to subtend `CORE_MASK_MIN_PX`; the window derivation
+  is `../debug/README.md` § shouldEnableCoreMask.
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final
   `max(appSize, physSize)`. Per-channel `MaxEquation` blend
@@ -178,7 +221,8 @@ per-class bools.
 Chart mode swaps both star materials to `MultiplyBlending` + disables
 depth for an ink-on-paper look against the light canvas, and replaces
 the super-Gaussian profile with flat hard-edged discs sized linearly
-by magnitude.
+by magnitude. It is non-photometric and bypasses the HDR seam
+entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).
 
 ## Depth encoding
 
@@ -202,14 +246,12 @@ Why this de facto two-band split works in the main pass:
 - Background layers (MW, grids, clouds — log-encoded or at the far
   plane) land at or near 1.0 and lose the LessEqual test against a
   close-range core's `< 1.0` depth — the core depth-mask mechanism.
-- Planet billboards are the additive reflected glare only (no opaque
-  disc / core-mask), so in the main pass they never write depth — they
-  just add, order-independent like the star glow pass. A planet
-  *behind* the host's disc is handled photometrically (`iEclipseDim`),
-  not by depth; while a system is locally active the whole question
-  moves to the local depth pass, where the planet **mesh** writes depth
-  and member stars, meshes, and glare order natively
-  (`../local-depth/README.md`).
+- Planet billboards are additive reflected glare only (no opaque disc
+  or core-mask), so in the main pass they never write depth — they just
+  add, order-independent like the star glow pass. A planet *behind* its
+  host is handled photometrically (`iEclipseDim`), not by depth, and
+  while a system is locally active the question moves to the local
+  depth pass entirely (`../local-depth/README.md`).
 
 Per-pass depth rules:
 
@@ -237,9 +279,7 @@ lets everything through. Both problems move to the local depth pass:
 any disc-pass star mirrors into the bracketed pass (§ Local-pass
 mirror draw), whose standard-depth bracket resolves sub-AU pair
 separations natively and whose repaint over the finished frame
-occludes main-pass glow by construction. The retired alternative was
-`iDepthBias`, a per-instance nudge from EclipsePhotometryField's
-float64 front/back verdict.
+occludes main-pass glow by construction.
 
 ### Local-pass mirror draw
 
@@ -299,24 +339,16 @@ brighter stars peek through, dimmer ones wash into the glare.
 Each star's final pixel size is `max(appSize, physSize) × pixelRatio`
 in the vertex shader:
 
-- `appSize` is the brightness-based term. Below the visible-population
-  window (`Δm = uMaxAppMag − appMag ≤ uSizeSpan`) it's the canonical
-  `mix(uSizeMin, uSizeMax, sqrt(Δm / uSizeSpan))` Gaussian-PSF curve;
-  see `docs/science-stellar-modelling.md` §Stellar perception model for the √Δm derivation
-  (perceived radius ∝ √(magnitudes above threshold) because the
-  visible footprint of a star is where PSF intensity exceeds
-  detection). Above the window the size used to hard-clamp at
-  `uSizeMax`, but that broke ratios in the close-approach regime —
-  Sol and Barnard's Star at 5e-3 pc both pinned to the cap despite a
-  2300× flux ratio. **Soft-knee saturation** (`uSizeKnee`, default 16
-  mag, debug-tunable) replaces the clamp with a Michaelis–Menten
-  asymptote: `dMEff = uSizeSpan + uSizeKnee · over / (uSizeKnee + over)`
-  where `over = Δm − uSizeSpan`. Identity below `uSizeSpan`, smoothly
-  bending toward a ceiling of `uSizeSpan + uSizeKnee` as Δm → ∞.
-  `uSizeKnee = 0` recovers the old hard clamp. Endpoints
-  `uSizeMin/Max` are derived per-frame from the active magnitude
-  preset's angular targets converted to pixels (see § Magnitude
-  presets and angular-size calibration below).
+- `appSize` is the brightness-based term: the `√Δm` Gaussian-PSF curve
+  over the visible-population window `Δm = uMaxAppMag − appMag`, with
+  **soft-knee saturation** (`uSizeKnee`, default 16 mag, debug-tunable)
+  above it. The curve and the knee's Michaelis–Menten form live in
+  `perceptual-disc.glsl`'s header; the derivation is
+  `docs/science-stellar-modelling.md` § Stellar perception model.
+  `uSizeKnee = 0` recovers the hard clamp the knee replaced — which had
+  pinned Sol and Barnard's Star to the same cap at 5e-3 pc despite a
+  2300× flux ratio. Endpoints `uSizeMin/Max` are derived per-frame from
+  the active preset's angular targets (§ Magnitude presets below).
 - `physSize = 2·atan(R · radiusFactor / dPc) · viewport.y / uFovYRad`
   is the star's true angular diameter projected to pixels. `R` is the
   per-star physical radius in pc (decoded from the `iLogRadius` vertex
@@ -377,40 +409,18 @@ luminosity-class softness blending (below).
 Both the disc and glow passes share a single **super-Gaussian**
 falloff shape (`perceptualDiscProfile` in `perceptual-disc.glsl`),
 parameterised so the perceived bright disc fills the calibrated quad
-to its edge. The shader chunk is shared with the planet pipeline —
-same brightness-PSF saturation physics for any point of light:
+to its edge. It is a **unit-peak kernel**: it shapes the light,
+`vPeakL` scales it (§ Physical-luminance emission).
 
-```
-raw  = exp(-K · (2r)^n)            with K = -ln(uVisibleThreshold)
-glow = max(0, (raw − uVisibleThreshold) / (1 − uVisibleThreshold))
-```
-
-The threshold subtraction makes `glow = 0` exactly at `r = 0.5`, so
-the visible region matches the calibrated `sizeMaxArcsec` instead of
-fading into a long sub-perceptual tail. `uVisibleThreshold` controls
-fullness: higher → wider visible disc, sharper transition; lower →
-softer, longer tail. Default 0.2.
-
-`n` is driven by two inputs:
-
-- **Distance** via `vPhysRatio`: low values (distant unresolved
-  point) produce a soft Gaussian-like falloff (n ≈ 2–3); high values
-  (close-range resolving disc) produce a wide plateau with a sharp
-  edge (n ≈ 5–10). This replicates the "atmospheric blur" feel
-  without a separate blur pass — distant stars naturally read as
-  fuzzy, close stars read as resolved discs. Implementation:
-  `distN = mix(uDistNMin, uDistNMax, smoothstep(0, 0.5, vPhysRatio))`.
-- **Luminosity** via `vSoftness = clamp(iLumClass / 9, 0, 1)` from
-  per-instance `iLumClass` (0=WD, 2=V, 4=III, 6–9=supergiant classes,
-  255=unknown → V). Hypergiants stay fuzzier than dwarfs at
-  equivalent distance via a multiplicative bias:
-  `n = distN × mix(uLumBiasMin, uLumBiasMax, vSoftness)`. Default
-  range `1.0 → 0.6`.
-
-Physical radius already makes supergiants render much larger than
-dwarfs. The softness bias adds visual *character* at similar pixel
-sizes — a same-size WD and a Betelgeuse-like supergiant look
-materially different even at identical diameters.
+The formula, the threshold subtraction that lands `glow = 0` exactly at
+`r = 0.5`, and the two inputs that morph the exponent `n` — distance via
+`vPhysRatio` (Gaussian-fuzzy when distant, plateau-with-edge when
+resolving) and luminosity class via `vSoftness` — are derived in the
+chunk's own header. Star-specific bindings: `vSoftness =
+clamp(iLumClass / 9, 0, 1)` where `iLumClass` is 0=WD, 2=V, 4=III,
+6–9=supergiant, 255=unknown → V. Physical radius already makes
+supergiants render larger; the softness bias is what makes a same-size
+WD and a Betelgeuse-like supergiant still read differently.
 
 The disc pass adds two depth-handling rules on top of the shared
 profile:
@@ -421,11 +431,10 @@ profile:
   but writes `gl_FragDepth = 1.0` (far plane). The later glow pass's
   distant stars then pass the depth test and accumulate additively on
   top — the haze stays visible while background stars peek through.
-  Trade-off under `MaxEquation` (vs the prior premul-alpha additive):
-  faint halos against bright backgrounds wash out instead of summing,
-  but disc-edge artefacts in close binaries are eliminated. The core
-  mask handles the inverse problem (preventing MW/grid from bleeding
-  through the bright core).
+  `MaxEquation`'s trade-off: faint halos against bright backgrounds
+  wash out instead of summing, in exchange for no disc-edge artefacts
+  in close binaries. The core mask handles the inverse problem
+  (preventing MW/grid bleed through the bright core).
 - **Discard fringe.** `glow < uDiscardThreshold` (default 0.02) drops
   the fragment entirely so the imperceptible outer pixels don't cost
   a depth write or no-op blend.
