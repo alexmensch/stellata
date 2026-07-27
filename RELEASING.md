@@ -132,6 +132,32 @@ internals that don't change the live binary (refresh that lands
 data but doesn't wire it into `build-catalog.ts`) attach
 `skip-version-bump`.
 
+## Merge gating
+
+Merge gating for `main` lives in a repo **ruleset**, not in classic
+branch protection. `gh api repos/alexmensch/stellata/branches/main/protection`
+404s; the ruleset is at
+`gh api repos/alexmensch/stellata/rulesets/15843287`.
+
+**The gotcha:** a required status-check *context* in the ruleset matches
+a GitHub Actions job's display `name:`, not its job id. Renaming a job's
+`name:` orphans the old required context, which then sits at "Expected /
+Waiting for status to be reported" forever and blocks **all** merges,
+even with every check green. A workflow-only fix can't self-merge — the
+fix PR hits the same block.
+
+- Renaming a required job's `name:` means updating the ruleset's
+  required contexts in the same change. Fix the ruleset with `gh api
+  --method PUT repos/alexmensch/stellata/rulesets/15843287 --input
+  <payload>`, sending `name` / `target` / `enforcement` /
+  `bypass_actors` / `conditions` / `rules`. Providing `rules` REPLACES
+  the whole array, so preserve every existing rule type.
+- To diagnose a stuck merge, compare the ruleset's required contexts
+  against the reported CheckRun names: `gh pr view N --json
+  statusCheckRollup`. The required set is the `test.yml` pipeline job
+  display names plus `version-guard` — enumerate it live rather than
+  trusting a written-down list.
+
 ## What the deploy workflow does
 
 On every push to `main`, `deploy.yml`:
