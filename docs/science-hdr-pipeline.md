@@ -29,7 +29,7 @@ L(m) = L_THRESH · 10^(0.4 · (m_lim − m))
 
 - `L_THRESH` (default **0.02**) is the display value a threshold star
   lands on. The tone-map is ~linear in this toe, so after sRGB encode a
-  threshold star renders at ≈ 0.13 of full scale — dim but present,
+  threshold star renders at ≈ 0.15 of full scale — dim but present,
   matching the current soft-taper feel at the cutoff.
 - The exposure is *inside* the formula: the shared uniform is
   `uExposure = L_THRESH · 10^(0.4 · m_lim)`, and every emitting shader
@@ -158,10 +158,20 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   saturation — Sirius reads white-hot rather than pale blue-grey.
   Chromaticity below the knee is untouched.
 - **Output transfer:** linear → sRGB encode in the same pass, plus a
-  ±0.5/255 blue-noise dither before 8-bit quantisation (the faint MW
-  gradient toe will band without it). This pass is the single place the
+  ±0.5/255 dither after the encode, where 8-bit quantisation actually
+  happens (the faint MW gradient toe will band without it). Shipped as
+  interleaved-gradient noise rather than true blue noise — adequate
+  spectrally and it ships no texture. This pass is the single place the
   output transfer lives — the Display-P3 investigation (stellata-zsr.2)
   plugs in here as an alternate encode + gamut matrix, nowhere else.
+- **Hue survives the operator, but not the 8-bit clip.** Any
+  luminance-domain operator sends `Y = Lw` to output luminance 1, so a
+  *chromatic* source at the white point necessarily drives its brightest
+  channel past full scale and clips. Clipping — not the operator — is
+  what breaks hue at the top end, which is what highlight desaturation
+  is for. Corollary for H7: desaturation preserves luminance only
+  pre-clamp, so post-clamp luminance is not a testable invariant above
+  the knee.
 - Operator, `DR_MAG`, `L_THRESH`, desaturation strength, and exposure
   readout are all live on the debug panel (H8).
 
@@ -234,8 +244,10 @@ mapped through the CPU-side inverse of the tone-map
 (`inverseTonemapConstant(displayRGB)` at material set-time) so they
 come out of the pass at their authored appearance at any exposure.
 Additive/translucent chrome blending now happens in linear space — a
-slight look shift covered by H2's exposure-1 A/B smoke; per-material
-colour touch-ups are in-scope for H2. (Rejected alternative: render
+slight look shift accepted in H2, which is where the per-material
+mapping lands (`src/client/hdr/README.md` § Chrome; the mapping has two
+variants, because whether a material carries three's own output encode
+decides what "authored appearance" means for it). (Rejected alternative: render
 chrome after the tone-map via a depth blit — an extra full-res depth
 copy per frame to preserve exactness nobody will notice.)
 
@@ -293,12 +305,26 @@ day one — the fullscreen pass and the inline path can never drift.
   reason for the § 5 bypass); the RT clears to transparent black and
   the tone-map pass maps RGB, passes accumulated alpha through, so page
   background compositing is preserved.
-- At `uExposure` frozen to make `L` reproduce current shader outputs
-  and the operator near-identity in [0,1] (small `L` ⇒ toe-linear), H2
-  must show **no visible regression** — layers keep emitting their
-  current values until H3–H5 convert them.
-- `Ω_px` / `arcsecPerPx` uniforms update on resize + FOV change
-  alongside `uFovYRad` / `recomputePresetPxSizes`.
+- **H2 cannot be look-neutral, and must not pretend to be.** An earlier
+  draft of this section asked for "no visible regression at exposure 1"
+  on the theory that the operator is near-identity over `[0,1]`. It
+  isn't: at `Lw = 20` the operator sends 1.0 → 0.50 and 0.1 → 0.091,
+  and — decisively — *no shader in the repo performs an sRGB encode*
+  (there is no `colorspace_fragment` include anywhere; the star pass is
+  `RawShaderMaterial` and the blackbody LUT loads `NoColorSpace`), so
+  today's authored values are already display-encoded and the pass's
+  encode re-encodes them. The two effects are large and opposed. So H2
+  ships the operator live, the scene comes out uniformly mis-calibrated
+  until H3–H5 convert the emitters, and the *plumbing* is verified
+  separately by `stellata.setTonemapEnabled(false)` — a pass-through
+  resolve that should match a pre-HDR build. Acceptance is that
+  pass-through diff, not the operator-on frame.
+- **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and
+  `Ω_px` / `arcsecPerPx` land with their first consumer — stars (H3),
+  the Milky Way (H4), the exposure wiring (H6) — rather than in the
+  plumbing bead, where they would be uniforms and resize bookkeeping
+  with no reader. `Ω_px` / `arcsecPerPx` then update on resize + FOV
+  change alongside `uFovYRad` / `recomputePresetPxSizes`.
 
 ## 8. Validation contract (H7)
 
