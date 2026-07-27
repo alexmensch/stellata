@@ -220,7 +220,8 @@ canonical `FIRST_LOAD_VIEW`: camera parked at exactly **5 AU** from
 Sol aimed at the galactic centre, with the HUD ring on. Sol stays
 the default focus; no constellation highlight is set so the bulge
 shines through cleanly without an asterism layered over the brightest
-patch of sky. The view is applied via `applyDecodedView` from
+patch of sky. The view carries **no `up` override** — the reference
+axis stays at galactic north, so first paint is galactic-level. The view is applied via `applyDecodedView` from
 `url-state.ts` — the same pipeline used for `?v=` URL restores —
 which keeps the "first interaction is the first URL write" contract
 intact: `startUrlSync` seeds its frame-tracking baseline from the
