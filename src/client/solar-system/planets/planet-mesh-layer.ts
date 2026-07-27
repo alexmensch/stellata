@@ -5,7 +5,13 @@ import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
-import { hostIntensityScale } from '../perceptual-magnitude';
+import { hostIrradianceLuminance, meshSurfaceLuminance } from './mesh-surface-pure';
+import { measureMapMeanLuminance } from './map-mean-luminance';
+import {
+  pickHdrEmitterUniforms,
+  type HdrEmitterUniforms,
+} from '../../hdr/hdr-pipeline';
+import { relativeLuminance } from '../../hdr/tonemap-pure';
 import { phaseAngleFor, phaseRatioToLambert } from '../phase-function';
 import type { PlanetBodyField } from './planet-body-field';
 import {
@@ -19,7 +25,7 @@ import {
   poleRaDecDegAt,
   type RotationElements,
   spinDegAt,
-} from './rotation-elements-pure';
+} from './rotation/rotation-elements-pure';
 import meshVert from './planet-mesh.vert.glsl?raw';
 import meshFrag from './planet-mesh.frag.glsl?raw';
 import ringsVert from './planet-rings.vert.glsl?raw';
@@ -184,7 +190,12 @@ interface MeshEntry {
 
 type TextureState =
   | { state: 'loading' }
-  | { state: 'ready'; tex: THREE.Texture }
+  /** `meanLuminance` is the map's sphere-weighted mean LINEAR luminance,
+   *  measured once on load. It divides out of the surface scale so the
+   *  brightness-stretched mosaic supplies only the albedo pattern and the
+   *  level comes from the geometric albedo — null when the browser gave no
+   *  pixels back, which falls through to the representative colour. */
+  | { state: 'ready'; tex: THREE.Texture; meanLuminance: number | null }
   | { state: 'missing' };
 
 export class PlanetMeshLayer {
@@ -192,6 +203,10 @@ export class PlanetMeshLayer {
 
   private readonly field: PlanetBodyField;
   private readonly textureBaseUrl: string;
+  /** The seam's slots by reference — read per frame for the live exposure
+   *  and pixel solid angle, and spread into every material so the
+   *  inline-operator branch tracks `HdrPipeline`. */
+  private readonly hdr: HdrEmitterUniforms;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
   private readonly loader = new THREE.TextureLoader();
@@ -209,9 +224,14 @@ export class PlanetMeshLayer {
   private readonly tmpQuatInv = new THREE.Quaternion();
   private readonly atmoTuning: AtmosphereTuning = { ...DEFAULT_ATMO_TUNING };
 
-  constructor(field: PlanetBodyField, textureBaseUrl: string) {
+  constructor(
+    field: PlanetBodyField,
+    textureBaseUrl: string,
+    hdr: HdrEmitterUniforms,
+  ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
+    this.hdr = pickHdrEmitterUniforms(hdr);
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
     this.geometry = new THREE.SphereGeometry(1, 128, 64);
@@ -305,17 +325,32 @@ export class PlanetMeshLayer {
           hasSun = true;
         }
       }
-      const lit = hasSun
-        ? hostIntensityScale(this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0, dHpPc)
-        : 1;
+      // Emission into the scene-wide HDR unit. Both scalars fall to 0
+      // without a host: an unlit body reflects nothing, where the old
+      // display encoding fell back to a full-brightness 1.
+      const texState = this.textures.get(planet.name.toLowerCase());
+      const hostAbsmag = hasSun ? (this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0) : 0;
+      const exposure = this.hdr.uExposure.value;
+      const omegaPx = this.hdr.uOmegaPxArcsec2.value;
+      const airlightL = hasSun
+        ? hostIrradianceLuminance(exposure, omegaPx, hostAbsmag, dHpPc)
+        : 0;
+      const surfaceL = hasSun
+        ? meshSurfaceLuminance(
+            exposure, omegaPx, hostAbsmag, dHpPc, planet.albedo,
+            this.baseMeanLuminance(planet, texState),
+            entry.atmoBase !== undefined,
+          )
+        : 0;
       if (hasSun) this.tmpSunView.copy(this.tmpSun).transformDirection(this.viewInverse);
       this.tmpCenterView.copy(this.tmpPlanet).applyMatrix4(this.viewInverse);
 
       if (entry.ring) {
-        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, lit);
+        this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, airlightL);
       }
 
-      material.uniforms.uLitIntensity.value = lit;
+      material.uniforms.uSurfaceLuminance.value = surfaceL;
+      material.uniforms.uAirlightLuminance.value = airlightL;
       material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
         ? phaseRatioToLambert(
             planet.phaseCoefficients,
@@ -347,12 +382,13 @@ export class PlanetMeshLayer {
           this.applyAtmoUniforms(material.uniforms, entry.atmoBase, radiusPc);
         }
         if (entry.atmosphere) {
-          this.updateAtmosphere(entry.atmosphere, entry.atmoBase, radiusPc, hasSun, lit, fade);
+          this.updateAtmosphere(
+            entry.atmosphere, entry.atmoBase, radiusPc, hasSun, airlightL, fade,
+          );
         }
       }
 
       material.uniforms.uFade.value = fade;
-      const texState = this.textures.get(planet.name.toLowerCase());
       if (texState?.state === 'ready') {
         material.uniforms.uMap.value = texState.tex;
         material.uniforms.uHasMap.value = 1;
@@ -373,6 +409,18 @@ export class PlanetMeshLayer {
       }
     }
     perfMeasure('solar.mesh');
+  }
+
+  /** The disc mean `meshSurfaceLuminance` divides out, matching whichever
+   *  base the fragment shader is about to sample: the day map's measured
+   *  mean when one is bound, else the representative colour's own
+   *  luminance — which is exactly what the flat-colour branch emits, so
+   *  that path is exact. */
+  private baseMeanLuminance(planet: Planet, texState: TextureState | undefined): number {
+    if (texState?.state === 'ready' && texState.meanLuminance !== null) {
+      return texState.meanLuminance;
+    }
+    return relativeLuminance([planet.colour[0], planet.colour[1], planet.colour[2]]);
   }
 
   /** Fill the material's uCasters array with view-space shadow spheres
@@ -438,7 +486,7 @@ export class PlanetMeshLayer {
     camera: THREE.PerspectiveCamera,
     hasSun: boolean,
     fade: number,
-    lit: number,
+    airlightL: number,
   ): void {
     const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
     if (texState?.state !== 'ready' || !hasSun) {
@@ -460,7 +508,7 @@ export class PlanetMeshLayer {
     ring.mesh.visible = true;
     ring.material.uniforms.uRingMap.value = texState.tex;
     ring.material.uniforms.uFade.value = fade;
-    ring.material.uniforms.uLitIntensity.value = lit;
+    ring.material.uniforms.uAirlightLuminance.value = airlightL;
     ring.mesh.position.copy(this.tmpPlanet);
     ring.mesh.quaternion.copy(this.tmpQuatRing);
 
@@ -509,7 +557,7 @@ export class PlanetMeshLayer {
     base: AtmoBase,
     radiusPc: number,
     hasSun: boolean,
-    lit: number,
+    airlightL: number,
     fade: number,
   ): void {
     if (!hasSun) {
@@ -520,7 +568,7 @@ export class PlanetMeshLayer {
     atmo.mesh.position.copy(this.tmpPlanet);
     this.applyAtmoUniforms(atmo.material.uniforms, base, radiusPc);
     (atmo.material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
-    atmo.material.uniforms.uLitIntensity.value = lit;
+    atmo.material.uniforms.uAirlightLuminance.value = airlightL;
     atmo.material.uniforms.uFade.value = fade;
   }
 
@@ -538,13 +586,15 @@ export class PlanetMeshLayer {
       vertexShader: meshVert,
       fragmentShader: MESH_FRAG,
       uniforms: {
+        ...pickHdrEmitterUniforms(this.hdr),
         uMap: { value: this.placeholder },
         uHasMap: { value: 0 },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
         uPhaseScale: { value: 1 },
-        uLitIntensity: { value: 1 },
+        uSurfaceLuminance: { value: 0 },
+        uAirlightLuminance: { value: 0 },
         uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
         uCasters: {
           value: Array.from({ length: MAX_SHADOW_CASTERS }, () => new THREE.Vector4()),
@@ -591,9 +641,10 @@ export class PlanetMeshLayer {
       vertexShader: atmoVert,
       fragmentShader: ATMO_FRAG,
       uniforms: {
+        ...pickHdrEmitterUniforms(this.hdr),
         ...sharedAtmoUniforms(),
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
-        uLitIntensity: { value: 1 },
+        uAirlightLuminance: { value: 0 },
         uFade: { value: 0 },
       },
       defines: { ...ATMO_DEFINES },
@@ -631,6 +682,7 @@ export class PlanetMeshLayer {
       vertexShader: ringsVert,
       fragmentShader: ringsFrag,
       uniforms: {
+        ...pickHdrEmitterUniforms(this.hdr),
         uRingMap: { value: this.placeholder },
         uInnerRatio: { value: innerRatio },
         uOuterPc: { value: outerPc },
@@ -639,7 +691,7 @@ export class PlanetMeshLayer {
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
-        uLitIntensity: { value: 1 },
+        uAirlightLuminance: { value: 0 },
       },
       transparent: true,
       depthWrite: false,
@@ -671,7 +723,13 @@ export class PlanetMeshLayer {
         tex.colorSpace = THREE.NoColorSpace;
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
-        this.textures.set(key, { state: 'ready', tex });
+        // Ring strips are a 1-D radial profile, not an equirect albedo map,
+        // and the ring shader reads their RGB as reflectance directly — so
+        // only day maps get measured.
+        const meanLuminance = ext === 'jpg'
+          ? measureMapMeanLuminance(tex.image as TexImageSource)
+          : null;
+        this.textures.set(key, { state: 'ready', tex, meanLuminance });
       },
       undefined,
       () => {

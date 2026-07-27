@@ -3,6 +3,16 @@ precision highp float;
 #include <common>
 #include <stellata_atmosphere_uniforms>
 #include <stellata_atmosphere_scatter>
+// The scene-wide unit (STELLATA_LUMA_CEIL) and operator. The operator runs
+// inline here whenever the frame is not rendering into the HDR target —
+// see ../../hdr/README.md § Fallback.
+#include <stellata_hdr_emission>
+#include <stellata_tonemap>
+
+// HDR seam, bound by reference from HdrPipeline.emitterUniforms.
+uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
+uniform float uWhitePoint;
+uniform float uHighlightDesat;
 
 // uMap is always bound (1×1 white placeholder when the body has no texture)
 // — sampling an unbound texture is undefined in WebGL.
@@ -17,9 +27,15 @@ uniform float uFade;
 // (phaseRatioToLambert) and clamped there — corrects the Lambert
 // disc-integrated output to the body's measured phase curve.
 uniform float uPhaseScale;
-// Host-irradiance display intensity, CPU-computed via
-// perceptual-magnitude.ts (hostIntensityScale).
-uniform float uLitIntensity;
+// Surface luminance in the scene-wide HDR unit, CPU-computed via
+// mesh-surface-pure.ts (meshSurfaceLuminance): the disc's mean surface
+// brightness divided by the disc means of everything multiplied on top, so
+// the shaded, textured disc integrates to the body's true flux.
+uniform float uSurfaceLuminance;
+// Host irradiance on the same scale (hostIrradianceLuminance) — what
+// scattered sunlight rides, carrying no surface albedo. Separate from
+// uSurfaceLuminance so the airlight-to-surface ratio is fixed by physics.
+uniform float uAirlightLuminance;
 // Terminator softness half-width on dot(n, sunDir); 0 = airless hard
 // cut (Planet.terminatorSoftness).
 uniform float uTermSoftness;
@@ -46,6 +62,10 @@ out vec4 outColor;
 // Limb darkening: full brightness face-on, dimming toward the
 // silhouette. Carries the whole visual character of texture-less
 // bodies (Uranus) and reads subtly on textured ones.
+//
+// Changing either value here without mesh-surface-pure.ts changes the
+// disc mean uSurfaceLuminance divides out, which silently shifts every
+// body off its true flux. lambertLimbDiscMean is the closed form.
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
 
@@ -78,8 +98,11 @@ void main() {
   // surface limb-darkening is dropped (it double-darkened the disc edge into
   // a black rim). Airless bodies keep it as their whole limb character.
   float limb = uHasAtmosphere > 0.5 ? 1.0 : mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
-  vec3 base = mix(uColour, texture(uMap, vUvM).rgb, uHasMap);
-  vec3 col = base * dayside * limb * uPhaseScale * uLitIntensity * shadow;
+  // The day map is sRGB-authored imagery loaded raw, so it decodes to
+  // linear before it multiplies a physical luminance. uColour is already
+  // linear (Planet.colour), so only the sampled branch decodes.
+  vec3 base = mix(uColour, stellataSrgbDecode(texture(uMap, vUvM).rgb), uHasMap);
+  vec3 col = base * dayside * limb * uPhaseScale * uSurfaceLuminance * shadow;
 
   if (uHasAtmosphere > 0.5) {
     // Airlight in front of this surface fragment + the transmittance the
@@ -101,8 +124,15 @@ void main() {
       uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
       stellata_atmoJitter(gl_FragCoord.xy),
       inscatter, transmittance);
-    col = col * transmittance + inscatter * uSunColour * uLitIntensity;
+    col = col * transmittance + inscatter * uSunColour * uAirlightLuminance;
   }
 
+  col = min(col, vec3(STELLATA_LUMA_CEIL));
+  // Undithered: the ring annulus and the atmosphere shell alpha-blend over
+  // this surface, so a pixel can take more than one planet fragment and the
+  // fragCoord-keyed dither would bias it once per layer.
+  if (uHdrTarget < 0.5) {
+    col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
+  }
   outColor = vec4(col, uFade);
 }

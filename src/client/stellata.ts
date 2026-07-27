@@ -560,6 +560,7 @@ export class Stellata implements FrameAnchor {
     this.planetMeshLayer = new PlanetMeshLayer(
       this.planetBodyField,
       import.meta.env.BASE_URL,
+      this.hdr.emitterUniforms,
     );
     this.probeMarkerField = new ProbeField(sharedUniforms);
     this.scene.add(this.probeMarkerField.group);
