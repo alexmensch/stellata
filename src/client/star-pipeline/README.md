@@ -86,10 +86,10 @@ Two consequences specific to this pipeline:
   bright and a faint star still split halo-from-core at the same radius.
   The depth/halo decision is about shape, not brightness.
 
-`uExposure` is pinned to the naked-eye base epoch, so the magnitude
-slider keeps its population-cutoff semantics until H6. The two agree by
-construction — a star past the limit would emit below the floor the unit
-is anchored to — leaving the vertex cull as a pure performance cull.
+The magnitude slider drives `uExposure` (`../hdr/README.md` § Exposure
+epochs) *and* keeps its population cutoff. The two agree by construction
+— a star past the limit would emit below the floor the unit is anchored
+to — leaving the vertex cull as a pure performance cull.
 
 Validation compares **per-pixel** luminance, never integrals: the
 K-exaggerated footprint over-counts a star's frame flux by design

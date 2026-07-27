@@ -101,8 +101,9 @@ drives it from FOV changes and resize.
 `uMaxAppMag` still arrives by reference from the star pipeline's shared
 uniform map, but **only the chart-mode isobar reads it** — the band's
 brightness is photometric now, so the magnitude slider reaches it
-through `uExposure` (which H6 wires; until then it is pinned to the
-naked-eye base epoch and the slider does not move the band).
+through `uExposure` instead (`../hdr/README.md` § Exposure epochs). The
+band therefore brightens in lockstep with the star field across the
+preset range: ≈ 2500× more exposure at "all" than at naked-eye.
 
 ### Calibration
 
