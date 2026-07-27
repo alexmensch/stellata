@@ -78,6 +78,16 @@ Being a single scalar is what lets a layer apply it to a coloured column
 without touching chromaticity. It is **unclamped** — the caller clamps
 the product against `LUMA_CEIL`, not the factor.
 
+**A reflecting body uses both rules, and that is what closes the resolve
+step.** A planet's glare billboard takes `stellataPointSourcePeak` with
+the same `m` the star field would use, while its mesh takes the
+surface-brightness rule with the disc's mean `S` — and past 1 px the two
+are the *same quantity*, so a body crossing from point to resolved mesh
+does not change brightness. The disc-mean derivation and the two
+normalisers that make the shaded disc integrate back to `L(m)` are
+`../solar-system/planets/README.md` § Physical-luminance emission; the
+mesh reads `uOmegaPxArcsec2` for the same reason the Milky Way does.
+
 `uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
 arcsec² (`pixelSolidAngleArcsec2`), written by
 `HdrPipeline.setPixelSolidAngle` from `angularToPx(viewportHeightCssPx,
@@ -269,9 +279,10 @@ materials anyway.
 `bind()` binds the canvas and `resolve()` no-ops.
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
-0**, which is this path *and* the whole shipped path while the ship gate
-stays false — a physical luminance reaching the canvas with no operator
-would just blow out. It mirrors the extinction prepass's
+0** — a physical luminance reaching the canvas with no operator would just
+blow out. Since the ship gate went live this is genuinely the fallback
+path plus the `setHdrEnabled(false)` A/B, not the shipped default it was
+during H3–H5. It mirrors the extinction prepass's
 same-chunk-two-paths strategy
 (`../star-pipeline/extinction/README.md` § The prepass cache), and it is
 why the operator lives in a chunk rather than inside the fullscreen
@@ -294,44 +305,44 @@ everything downstream of the operator:
 Accepted: the result is approximately right rather than
 differently-calibrated.
 
-## Ship gate — the seam is off by default
+## Ship gate — the seam is live
 
-`HDR_DEFAULT_ENABLED` is **false**. Stars (H3) and the Milky Way (H4)
-are converted; planets (H5) still write their old display-encoded values,
-so turning the seam on today changes their brightness for no gain. The
-shipped default path stays the canvas one and the seam rides along
-dormant.
+`HDR_DEFAULT_ENABLED` is **true**. Every physical emitter carries
+luminance in the § Unit scale — stars (H3), the Milky Way (H4), and the
+planet mesh / rings / airlight / reflected glare (H5) — so the target is
+the default path and the operator runs once, at the resolve.
 
-- Flip the constant in the bead that lands the last conversion.
-  `hdr-pipeline.test.ts` pins the current value, so enabling it is a
-  deliberate two-line change.
-- `stellata.setHdrEnabled(true)` turns it on at runtime for development.
+- `hdr-pipeline.test.ts` pins the value, so changing it stays deliberate.
+- `stellata.setHdrEnabled(false)` is the whole-frame A/B (§ Dev switches).
+  It is no longer "what users get" — it is the comparison path.
 - **The target allocates lazily**, on first `bind()` that wants it — a
   full drawing-buffer RGBA16F plus its 24-bit depth attachment is a
-  couple of hundred MB of VRAM at 2× DPR on a large display, and a
-  dormant seam must not cost that. Don't move the allocation back into
-  the constructor.
-- Each intervening bead has to keep **both** paths working and smoke
-  both. A converted layer's inline `stellata_tonemap` (§ Fallback) is
-  not exotic-hardware insurance — it is what users are running.
+  couple of hundred MB of VRAM at 2x DPR on a large display. The gate
+  being live means it now allocates on the first frame in practice; keep
+  the laziness anyway, because `setHdrEnabled(false)` and chart mode both
+  want a build that never pays for it.
+- **An unconverted emitter must not join the scale.** The Local Group
+  emission pass still runs the pre-HDR `uMaxAppMag`/`uSizeSpan` gate and
+  `1 − exp` squash; it renders nowhere (`LG_EMISSION_SHELVED`), which is
+  the only reason it isn't already wrong. Convert it before un-shelving —
+  `../local-group/README.md`.
 
 ## Dev switches
 
-- `stellata.setHdrEnabled(true/false)` — the seam itself. False (the
-  shipped default, § Ship gate) is the pre-HDR path entirely: no target,
-  no tone-map, chrome back to authored colours. It is also the path
-  hardware without a float-renderable target takes. **This is the full
-  A/B**, and while the ship gate stays false it is what users get.
+- `stellata.setHdrEnabled(true/false)` — the seam itself. False is the
+  pre-HDR compositing path entirely: no target, no tone-map, chrome back
+  to authored colours, every emitter on its inline operator. It is also
+  the path hardware without a float-renderable target takes. **This is
+  the full A/B.**
 - `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through. Narrower: it isolates the target
   itself (depth, alpha, blend precision, pass order) from the operator.
 
-**Pass-through shows converted layers blown out, and that is the point
-of it** — `uHdrTarget` stays 1, so stars write raw linear `L` (tens to
+**Pass-through shows the scene blown out, and that is the point of it** —
+`uHdrTarget` stays 1, so every emitter writes raw linear `L` (tens to
 thousands) and the resolve hands it to an 8-bit canvas unchanged. The
 mode isolates the *target* (depth, alpha, blend precision, pass order)
-from the *operator*; it is not a look comparison. Unconverted emitters
-still write display-encoded values and are exact in it.
+from the *operator*; it is not a look comparison.
 
 **It also cannot reproduce built-in-material chrome, by construction.**
 What disables their `colorspace_fragment` encode is the target's linear
@@ -369,9 +380,5 @@ change (`chrome/README.md`). `DR_MAG` is also the faint-end lever H7 tunes again
 the eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 
-The planet layers are the exposure control's one blind spot until H5
-converts them: their mesh + glare are still on their own LDR encodings,
-so the slider changes the star field and the Milky Way band without
-touching a planet's brightness. Nothing double-counts — the alternative
-(the old quarter-power slider term in `litIntensity`) put planets on a
-*second* exposure curve, which is worse the moment they land on this one.
+The one emitter still outside the scale is the shelved Local Group
+emission pass (§ Ship gate).

@@ -17,14 +17,17 @@ import { clearChromeBindings, setChromeOperatorActive } from './chrome/chrome-co
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
 
-/** Ship gate for the HDR epic. The seam is inert until the emitting
- *  layers actually carry physical luminance (H3 stars, H4 Milky Way,
- *  H5 planets) — with them still on their old encodings, turning it on
- *  changes brightness for no gain. Flip to true in the bead that lands
- *  the last conversion; `hdr-pipeline.test.ts` pins the current value so
- *  the flip has to be deliberate. `stellata.setHdrEnabled(true)` turns
- *  it on at runtime for development in the meantime. */
-export const HDR_DEFAULT_ENABLED = false;
+/** Ship gate for the HDR epic — **live**. Stars, the Milky Way, and the
+ *  planet layers all emit physical luminance now, so the target is the
+ *  default path and the operator runs once at the resolve.
+ *  `stellata.setHdrEnabled(false)` is the A/B: it parks every emitter on
+ *  its inline operator and returns chrome to authored colours
+ *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value.
+ *
+ *  Un-shelving a layer that still carries a pre-HDR encoding — the Local
+ *  Group emission pass is the one left (`LG_EMISSION_SHELVED`) — puts a
+ *  mis-calibrated emitter on the shared scale. Convert first. */
+export const HDR_DEFAULT_ENABLED = true;
 
 /** The uniforms every physical emitter binds **by reference**, so the
  *  seam's state reaches all of them with one write. `uHdrTarget` is the

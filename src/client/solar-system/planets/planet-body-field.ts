@@ -682,9 +682,8 @@ export class PlanetBodyField {
   }
 
   /** Host star's absolute V-band magnitude, or null when unattached —
-   *  the luminosity input to the mesh's reflected-light intensity so
-   *  surface brightness scales with the host's class
-   *  (hostIntensityScale). */
+   *  the luminosity input to the mesh's surface brightness, so a body's
+   *  brightness scales with its host's class. */
   hostAbsmagOf(hostStarIdx: number): number | null {
     return this.hosts.get(hostStarIdx)?.hostAbsmag ?? null;
   }

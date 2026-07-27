@@ -255,10 +255,10 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
 | Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; `Ω_px` = pixel solid angle in arcsec², so **surface brightness** rather than per-pixel luminance is the FOV-invariant (zooming dims the band exactly as it dims a resolved stellar disc). `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` is **derived** (≈ 31.054) from a declarative single-point anchor — the GC sightline at S = 20.0 mag/arcsec², the § 1 band reference — pending H7's per-sightline re-derivation (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
 | LG emission (shelved) | same gate + exp squash, magnitude-domain | identical mapping as MW when unshelved — it already computes a per-pixel magnitude, so it lands on the unit for free; no new bead until unshelve |
-| Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | identical point-source rule as stars, `m` from `planetApparentMagnitude` — mesh↔glare continuity by construction |
-| Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | true surface brightness: per-px `L` such that the disc-integral equals `L(m_planet)`; Lambert/phase/limb shading redistributes within the disc at unit mean; `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted (tone-map does the compression). *The litIntensity slider composition is already deleted (H6) — `uExposure` does the slider, so the mesh is slider-invariant in the interim* |
-| Planet rings | multiply litIntensity | multiply the same surface-brightness scalar (host irradiance at the ring) — ring↔body contrast preserved |
-| Earth night lights | emissive add, tuned | stays a tuned emissive luminance constant (Black Marble radiometry out of scope) — pick the constant in HDR units in H5 |
+| Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | *Shipped as designed (H5).* Identical point-source rule as stars, `m` from `planetApparentMagnitude`; `uGlareGain` demoted to a debug multiplier. mesh↔glare continuity by construction — pinned to 1e-12 relative in `mesh-surface-pure.test.ts` |
+| Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
+| Planet rings | multiply litIntensity | *Shipped as designed (H5).* Multiply the same host-irradiance scalar the disc airlight and the atmosphere shell ride (`hostIrradianceLuminance`), so ring↔body contrast is fixed by the shared exposure. The strip's RGB is read as a LINEAR reflectance and deliberately not sRGB-decoded — it was authored as an albedo proxy, and decoding would darken the rings ~5x against the true-opacity alpha |
+| Earth night lights | **no codepath** | Nothing to convert: both the renderer path and the `earth-night` map were removed before H5, so this row described a layer that no longer existed. Re-adding city lights needs a radiometric calibration source (Black Marble) rather than a tuned constant, which is why H5 deliberately left it out — tracked separately |
 | Molecular-cloud absorption | premultiplied attenuation of background | **unchanged and now more correct**: transmittance is a multiplicative, exposure-invariant factor, and it attenuates linear luminance instead of squashed values. No exposure multiply — attenuation factors must never carry `uExposure` |
 
 Non-physical chrome (galactic disc + grid, LG wireframes, constellation
@@ -340,19 +340,20 @@ day one — the fullscreen pass and the inline path can never drift.
   `RawShaderMaterial` and the blackbody LUT loads `NoColorSpace`), so
   today's authored values are already display-encoded and the pass's
   encode re-encodes them. The two effects are large and opposed.
-- **So the seam ships dormant.** `HDR_DEFAULT_ENABLED` (in
-  `src/client/hdr/hdr-pipeline.ts`) is false: the default path stays the
-  pre-HDR one, and turning the seam on is a dev switch
-  (`stellata.setHdrEnabled(true)`) until H3–H5 have converted the
-  emitters. Enabling it earlier would only trade a correct-looking scene
-  for a mis-calibrated one. The render target allocates lazily so a
-  dormant seam costs no VRAM. Flip the constant in the bead that lands
-  the last conversion.
-  **Consequence for H3 onward:** with the seam off, an emitter's physical
-  luminance would reach the canvas with no operator, so the inline
-  `stellata_tonemap` fallback (§ 6) stops being an exotic-hardware
-  concern and becomes a requirement of the *default* path. Every bead
-  from H3 keeps both paths working.
+- **The seam shipped dormant through H3–H5 and is now live.**
+  `HDR_DEFAULT_ENABLED` (in `src/client/hdr/hdr-pipeline.ts`) was false
+  while emitters were still on their old encodings — enabling it earlier
+  would only have traded a correct-looking scene for a mis-calibrated
+  one — and H5 flipped it with the last conversion. The render target
+  allocates lazily, which is what made the dormant period cost no VRAM
+  and still serves `setHdrEnabled(false)` and chart mode.
+  **Consequence that outlives the flip:** with the seam off, an emitter's
+  physical luminance reaches the canvas with no operator, so the inline
+  `stellata_tonemap` fallback (§ 6) is not exotic-hardware insurance. It
+  was the default path throughout H3–H5 and remains the A/B and the
+  no-float-RT path, so every emitter keeps both paths working.
+  The one emitter still outside the scale is the shelved Local Group
+  emission pass (stellata-gxx.8) — convert before un-shelving.
 - **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and
   `Ω_px` land with their first consumer — stars (H3), the Milky Way (H4),
   the exposure wiring (H6) — rather than in the plumbing bead, where they
@@ -402,9 +403,9 @@ day one — the fullscreen pass and the inline path can never drift.
   interim state (physical star emission, fixed exposure) is coherent
   and shippable.
 - **H8 retires the per-layer brightness knobs** — MW brightness scalar
-  + gate (*deleted in H4*), planet-disc floor/exponent constants,
-  dynamic-range exponent — from the tuning surface entirely (they stop
-  existing in code, not just in the panel; H4/H5 delete them). The panel gains: operator
+  + gate (*deleted in H4*), planet-disc floor/exponent constants
+  (*deleted in H5*), dynamic-range exponent — from the tuning surface
+  entirely (they stop existing in code, not just in the panel). The panel gains: operator
   params (`DR_MAG`, `L_THRESH`, desaturation), exposure + active-preset
   readout, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
   constant* set by H7, debug-visible but not a user knob.
