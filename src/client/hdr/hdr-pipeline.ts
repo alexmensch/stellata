@@ -10,7 +10,8 @@ import emissionChunk from './emission.glsl?raw';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
-import { BASE_EPOCH_EXPOSURE, pixelSolidAngleArcsec2 } from './emission-pure';
+import { pixelSolidAngleArcsec2 } from './emission-pure';
+import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
 import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
@@ -29,6 +30,8 @@ export const HDR_DEFAULT_ENABLED = false;
  *  seam's state reaches all of them with one write. `uHdrTarget` is the
  *  branch: 0 means the fragment lands straight on the canvas and the
  *  emitter must apply `stellata_tonemap` itself (README.md § Fallback).
+ *  `uExposure` is the one exposure control, written by `FilterController`
+ *  from the magnitude limit; everything else here is `HdrPipeline`'s.
  *  The resolve pass shares the same white-point and desaturation objects,
  *  so the inline path and the fullscreen path can never disagree. */
 export interface HdrEmitterUniforms {
@@ -40,10 +43,12 @@ export interface HdrEmitterUniforms {
 }
 
 /** `uHdrTarget` seeds to 0 — the shipped path while the ship gate is
- *  false — and `HdrPipeline` owns every write after that. `uExposure` is
- *  pinned to the base epoch until H6 routes the slider through it.
- *  `uOmegaPxArcsec2` seeds at the default FOV over a 1000 px viewport and
- *  is rewritten by `setPixelSolidAngle` on every FOV / resize change. */
+ *  false — and `HdrPipeline` owns every write after that. `uExposure`
+ *  seeds at the base epoch, which is `DEFAULT_FILTER.maxAppMag`'s epoch;
+ *  `FilterController` owns every later write (README.md § Exposure
+ *  epochs). `uOmegaPxArcsec2` seeds at the default FOV over a 1000 px
+ *  viewport and is rewritten by `setPixelSolidAngle` on every FOV /
+ *  resize change. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   return {
     uHdrTarget: { value: 0 },

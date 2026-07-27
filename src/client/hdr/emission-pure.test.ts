@@ -1,42 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BASE_EPOCH_EXPOSURE,
   LUMA_CEIL,
-  exposureForMagLimit,
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   pointSourcePeakLuminance,
   surfaceBrightnessLuminance,
 } from './emission-pure';
+import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { L_THRESH, reinhardExtended, tonemapWhitePoint } from './tonemap-pure';
-
-describe('exposureForMagLimit', () => {
-  it('lands the base epoch on the design gate value', () => {
-    expect(BASE_EPOCH_EXPOSURE).toBeCloseTo(7.9621, 4);
-  });
-
-  it('puts a source at the limit exactly on L_THRESH', () => {
-    for (const mLim of [6.5, 10.5, 15]) {
-      expect(luminanceForMagnitude(exposureForMagLimit(mLim), mLim)).toBeCloseTo(
-        L_THRESH,
-        12,
-      );
-    }
-  });
-
-  it('matches the preset table in docs/science-hdr-pipeline.md § 3', () => {
-    expect(exposureForMagLimit(10.5)).toBeCloseTo(316.98, 2);
-    expect(exposureForMagLimit(15)).toBeCloseTo(20000, 6);
-  });
-
-  it('is one magnitude per 10^0.4 of exposure', () => {
-    expect(exposureForMagLimit(7.5) / exposureForMagLimit(6.5)).toBeCloseTo(
-      10 ** 0.4,
-      12,
-    );
-  });
-});
+import { reinhardExtended, tonemapWhitePoint } from './tonemap-pure';
 
 // The § 1 range budget, at the naked-eye epoch. These are the numbers
 // H7 validates the star field against, so they are pinned rather than
