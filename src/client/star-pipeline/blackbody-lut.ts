@@ -9,8 +9,9 @@ export { BV_MAX, BV_MIN, LUT_BYTES, LUT_SIZE };
 
 /** Build a 256×1 RGBA DataTexture for the star vertex shader's
  *  `uColorLut` sampler. RGBA padding because three.js dropped RGBFormat
- *  — the `.a` byte is unused. `NoColorSpace` keeps the GPU from
- *  re-applying gamma to bytes that are already sRGB-encoded. */
+ *  — the `.a` byte is unused. `NoColorSpace` because the bytes are
+ *  already linear light: any decode three applied here would be a second
+ *  one, and the tone-map pass owns the single encode. */
 export function makeColorLutTexture(): THREE.DataTexture {
   const rgba = new Uint8Array(LUT_SIZE * 4);
   for (let i = 0; i < LUT_SIZE; i++) {
