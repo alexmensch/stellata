@@ -57,8 +57,8 @@ src/client/solar-system/
                                   soon as bk5 attaches them.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
                                   (Lambertian + Mallama phase factors)
-                                  + hostIntensityScale / litIntensity
-                                  (mesh-regime host-distance lighting).
+                                  + hostIntensityScale (mesh-regime
+                                  host-irradiance lighting).
                                   Drives the body field's glare
                                   sizing/brightness and per-planet label
                                   gating. Also consumed by ../binaries/

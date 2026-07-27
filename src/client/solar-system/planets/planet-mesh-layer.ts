@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
-import { litIntensity } from '../perceptual-magnitude';
+import { hostIntensityScale } from '../perceptual-magnitude';
 import { phaseAngleFor, phaseRatioToLambert } from '../phase-function';
 import type { PlanetBodyField } from './planet-body-field';
 import {
@@ -306,11 +306,7 @@ export class PlanetMeshLayer {
         }
       }
       const lit = hasSun
-        ? litIntensity(
-            this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0,
-            dHpPc,
-            this.field.getMaxAppMag(),
-          )
+        ? hostIntensityScale(this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0, dHpPc)
         : 1;
       if (hasSun) this.tmpSunView.copy(this.tmpSun).transformDirection(this.viewInverse);
       this.tmpCenterView.copy(this.tmpPlanet).applyMatrix4(this.viewInverse);
@@ -442,7 +438,7 @@ export class PlanetMeshLayer {
     camera: THREE.PerspectiveCamera,
     hasSun: boolean,
     fade: number,
-    litIntensity: number,
+    lit: number,
   ): void {
     const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
     if (texState?.state !== 'ready' || !hasSun) {
@@ -464,7 +460,7 @@ export class PlanetMeshLayer {
     ring.mesh.visible = true;
     ring.material.uniforms.uRingMap.value = texState.tex;
     ring.material.uniforms.uFade.value = fade;
-    ring.material.uniforms.uLitIntensity.value = litIntensity;
+    ring.material.uniforms.uLitIntensity.value = lit;
     ring.mesh.position.copy(this.tmpPlanet);
     ring.mesh.quaternion.copy(this.tmpQuatRing);
 

@@ -398,12 +398,6 @@ export class PlanetBodyField {
     }
   }
 
-  /** Current magnitude-slider cutoff — the sensitivity the mesh
-   *  layer's lit-surface exposure tracks. */
-  getMaxAppMag(): number {
-    return this.maxAppMag;
-  }
-
   /** Reflected-glare gain — the flux-continuity calibration between the
    *  resolved bloom peak and the mesh surface it sits over. One shared
    *  uniform across the main- and local-pass glare materials; smoke-tuned
@@ -683,7 +677,8 @@ export class PlanetBodyField {
 
   /** Host star's absolute V-band magnitude, or null when unattached —
    *  the luminosity input to the mesh's reflected-light intensity so
-   *  surface brightness scales with the host's class (litIntensity). */
+   *  surface brightness scales with the host's class
+   *  (hostIntensityScale). */
   hostAbsmagOf(hostStarIdx: number): number | null {
     return this.hosts.get(hostStarIdx)?.hostAbsmag ?? null;
   }

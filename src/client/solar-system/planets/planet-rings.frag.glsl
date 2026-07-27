@@ -17,9 +17,9 @@ uniform float uPolarRadiusPc;
 uniform vec3 uSunDirLocal;
 uniform vec3 uCamPosLocal;
 uniform float uFade;
-// Host-distance × slider-sensitivity display intensity — same scalar
-// the body mesh applies (perceptual-magnitude.ts litIntensity), so
-// ring↔body contrast is preserved as both respond together.
+// Host-irradiance display intensity — same scalar the body mesh applies
+// (perceptual-magnitude.ts hostIntensityScale), so ring↔body contrast is
+// preserved as both respond together.
 uniform float uLitIntensity;
 
 in vec2 vLocalXY;

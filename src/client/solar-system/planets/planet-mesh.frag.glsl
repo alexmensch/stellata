@@ -17,8 +17,8 @@ uniform float uFade;
 // (phaseRatioToLambert) and clamped there — corrects the Lambert
 // disc-integrated output to the body's measured phase curve.
 uniform float uPhaseScale;
-// Host-distance × slider-sensitivity display intensity, CPU-computed
-// via perceptual-magnitude.ts (litIntensity).
+// Host-irradiance display intensity, CPU-computed via
+// perceptual-magnitude.ts (hostIntensityScale).
 uniform float uLitIntensity;
 // Terminator softness half-width on dot(n, sunDir); 0 = airless hard
 // cut (Planet.terminatorSoftness).

@@ -256,24 +256,24 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
     Venus's forward-scattered crescent brightens where the data says.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
-  - `uLitIntensity` (`../perceptual-magnitude.ts:litIntensity`) —
+  - `uLitIntensity` (`../perceptual-magnitude.ts:hostIntensityScale`) —
     **host irradiance at the body** on a quarter-power display
-    compression (`hostIntensityScale`), folding the host's absolute
-    magnitude so surface brightness scales with **star class**: the
-    ratio is `(E_body / E_ref)^0.25` where `E_body / E_ref =
+    compression, folding the host's absolute magnitude so surface
+    brightness scales with **star class**: the ratio is
+    `(E_body / E_ref)^0.25` where `E_body / E_ref =
     10^(0.4·(HOST_IRRADIANCE_REF_MAG − m_host@body))` and
     `m_host@body = M_host + 5·(log10(d_hp) − 1)`. For Sol it reduces
     exactly to the old `(d_AU)^(−0.5)` law (reference 1 AU ⇒ Earth = 1,
     Mercury ~1.6× clamped, Neptune ~0.18×); a body 1 AU from an O-class
-    host is far brighter, by star class alone. Composed with the
-    magnitude slider as a camera-sensitivity exposure — the threshold
-    flux ratio `10^((maxAppMag − naked-eye)/2.5)` under the same
-    quarter-power law, so turning sensitivity up brightens a dim
-    surface in step with the star field and exposure is exactly 1 at
-    the naked-eye default. The product keeps the 1.6 LDR ceiling but no
-    floor (low sensitivity fades surfaces toward black). Still no
-    viewer-distance term, so approach can't blow it out; the ring
-    annulus multiplies the same scalar so ring↔body contrast is
+    host is far brighter, by star class alone. Clamped to
+    `[0.12, 1.6]` — the LDR compression H5 replaces with true surface
+    brightness. **No sensitivity term**: the magnitude slider is the
+    tone-map exposure now (`../../hdr/README.md` § Exposure epochs), so
+    a second quarter-power slider composition here would put planets on
+    a rival exposure curve — the cost is that the slider does not move
+    a planet's brightness at all until H5 converts these layers.
+    No viewer-distance term either, so approach can't blow it out; the
+    ring annulus multiplies the same scalar so ring↔body contrast is
     preserved. Surface-only: the reflected glare is the star-perceptual
     point (driven by appMag, above), so `uLitIntensity` shades the mesh
     and ring, not the glare. Body-kind-agnostic: planets, moons, and
