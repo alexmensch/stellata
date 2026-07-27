@@ -15,6 +15,7 @@ import {
   getStarExaggerationK as readExaggerationK,
   setStarExaggerationK as patchExaggerationK,
 } from './filter-state';
+import { epochExposure } from '../hdr/exposure-epoch';
 import {
   type DetailLevel,
   type RenderStyle,
@@ -27,9 +28,12 @@ import {
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
- *  propagates to every pass. */
+ *  propagates to every pass. `uExposure` arrives from
+ *  `HdrPipeline.emitterUniforms` and reaches every physical emitter, not
+ *  just the star passes — see `../hdr/README.md` § Exposure epochs. */
 export interface FilterUniforms {
   uMaxAppMag: { value: number };
+  uExposure: { value: number };
   uMinDistSol: { value: number };
   uMaxDistSol: { value: number };
   uSpectMask: { value: number };
@@ -114,6 +118,7 @@ export class FilterController {
     Object.assign(this.filter, patch);
     const u = this.deps.uniforms;
     u.uMaxAppMag.value = this.filter.maxAppMag;
+    u.uExposure.value = epochExposure(this.filter.maxAppMag);
     u.uMinDistSol.value = this.filter.minDistSol;
     u.uMaxDistSol.value = this.filter.maxDistSol;
     u.uSpectMask.value = this.filter.spectMask;

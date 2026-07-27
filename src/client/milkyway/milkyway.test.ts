@@ -18,11 +18,8 @@ import {
   sightlineSurfaceBrightness,
 } from './milkyway-column-pure';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import {
-  BASE_EPOCH_EXPOSURE,
-  pixelSolidAngleArcsec2,
-  surfaceBrightnessLuminance,
-} from '../hdr/emission-pure';
+import { pixelSolidAngleArcsec2, surfaceBrightnessLuminance } from '../hdr/emission-pure';
+import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { srgbEncode, reinhardExtended, tonemapWhitePoint } from '../hdr/tonemap-pure';
 

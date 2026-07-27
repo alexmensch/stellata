@@ -36,6 +36,13 @@ per-frame copying. Side effects on *other* layers (planet-field cull
 distance, Milky Way / LG-emission enable) go through the shell's
 `onFilterApplied` hook — layer identity stays in `stellata.ts`.
 
+**`uExposure` is scene-wide, not star-local.** It arrives in the same map
+from `HdrPipeline.emitterUniforms`, and `setFilter` derives it from
+`maxAppMag` via `epochExposure` — so the magnitude slider is the single
+tone-map exposure for every physical emitter, not just the star passes.
+`../hdr/README.md` § Exposure epochs is the contract, including why the
+write lives here rather than on `HdrPipeline`.
+
 `setCameraFov` additionally drives `camera.updateProjectionMatrix()`,
 mirrors `uFovYRad`, and calls the `refreshOrbitFloor` dep
 (`FocusController.refreshOrbitFloor`) because the focused star's

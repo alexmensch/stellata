@@ -34,9 +34,13 @@ src/client/hdr/
   emission.glsl              The unit: magnitude → linear luminance, the
                              point-source peak rule, and the extended-
                              source surface-brightness rule (§ Unit).
-  emission-pure.ts (+ test)  CPU mirror, plus the exposure-from-
-                             magnitude-limit helper, the pixel-solid-angle
-                             derivation, and LUMA_CEIL.
+  emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
+                             derivation and LUMA_CEIL.
+  exposure-epoch.ts          The exposure control: magnitude limit →
+    (+ test)                 uExposure, the InstrumentEpoch multiplier
+                             pair, and the base epoch (§ Exposure
+                             epochs). No GLSL side — the shader only
+                             ever reads the resulting scalar.
   chrome-colour.ts (+ test)  Authored chrome colours pre-mapped through
                              the inverse (§ Chrome).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
@@ -102,8 +106,8 @@ the chart bypass reaches emitters for free); layers only read. The
 resolve pass shares the white-point and desaturation objects, so inline
 and fullscreen can never disagree.
 
-`uExposure` is pinned to the naked-eye base epoch (≈ 7.96) until H6
-routes the slider and the instrument multipliers through it.
+`uExposure` is the one slot this class does **not** write — § Exposure
+epochs.
 
 **Both chunks are `#ifndef`-guarded**, and each declares the Rec.709
 luma weights behind a *shared* `STELLATA_LUMA_WEIGHTS_DECLARED` guard.
@@ -111,6 +115,38 @@ An emitter that derives a per-pixel magnitude needs the unit and the
 operator in one stage, and three's `resolveIncludes` pastes each
 `#include` textually wherever it appears — without the guards that
 combination fails to compile.
+
+## Exposure epochs — the magnitude slider is the exposure control
+
+`uExposure = L_THRESH · 10^(0.4·m_lim)` (`exposure-epoch.ts`), so the
+"Max apparent magnitude" slider sets what the scene is exposed *for*:
+a source at the limit lands on the just-noticeable floor the unit is
+anchored to, and every emitter reading the shared uniform moves together.
+The three presets are just three points on that curve — naked-eye 6.5 →
+≈ 7.96, binoculars 10.5 → ≈ 317, all 15 → 2.0e4
+(`docs/science-hdr-pipeline.md` § 3).
+
+**`FilterController` owns the write, not `HdrPipeline`.** The magnitude
+limit is filter state (`../filters/filter-state.ts`), and `uExposure`
+already reaches the controller by reference inside the star pipeline's
+shared uniform map, so `setFilter` writes it next to `uMaxAppMag` and
+every path that moves the slider — preset button, `+`/`−` keys, URL
+restore, size-override reset — is covered by construction. This is the
+one exception to "`HdrPipeline` owns `emitterUniforms`"; the seed value
+in `makeHdrEmitterUniforms` is `DEFAULT_FILTER.maxAppMag`'s epoch, so
+the two cannot disagree before the first `setFilter`.
+
+**Population cull and exposure are the same number.** The slider keeps
+its vertex-cull semantics; that cull is now a *performance* cull
+coinciding with the visibility threshold, since a star past the limit
+would emit below the floor anyway. No second knob, no divergence.
+
+`InstrumentEpoch` is the accommodation the design gate mandates: an
+instrument is a pair of multipliers on the epoch — `exposureMul`
+(aperture gain, applied by `epochExposure`) and `angularMag` (resolution
+gain, which divides the PSF / exaggeration-K arcsec targets
+`../filters/filter-state.ts` derives). Only `UNAIDED_EYE` exists today,
+identity on both; instrument presets are a future epic.
 
 ## Pass ordering — one target, two passes into it
 
@@ -386,10 +422,15 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 
 ## Not here yet
 
-Exposure is still a pinned constant: H6 owns the slider, the preset
-table, and the epoch multipliers (`docs/science-hdr-pipeline.md` § 3).
 `DR_MAG`, `L_THRESH` and the desaturation strength become live panel
 knobs in H8, which then has to re-apply the chrome mapping on every
 change (§ Chrome). `DR_MAG` is also the faint-end lever H7 tunes against
 the eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
+
+The planet layers are the exposure control's one blind spot until H5
+converts them: their mesh + glare are still on their own LDR encodings,
+so the slider changes the star field and the Milky Way band without
+touching a planet's brightness. Nothing double-counts — the alternative
+(the old quarter-power slider term in `litIntensity`) put planets on a
+*second* exposure curve, which is worse the moment they land on this one.

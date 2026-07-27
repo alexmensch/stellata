@@ -2,28 +2,13 @@
 // luminance, and the peak a point source's display kernel carries. CPU
 // mirror of emission.glsl — see README.md § Unit.
 
-import { NAKED_EYE_LIMIT_MAG } from '../filters/filter-state';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { L_THRESH } from './tonemap-pure';
 
 /** Every emission clamps here before the write. Extended Reinhard maps
  *  anything past ~10× the white point to indistinguishable white, so the
  *  clamp loses nothing visible and leaves 16× additive-accumulation
  *  headroom under the fp16 max. */
 export const LUMA_CEIL = 4096;
-
-/** `uExposure` for a magnitude limit — the luminance a source at m = 0
- *  carries, fixed so a source at `magLimit` lands exactly on
- *  `L_THRESH`. */
-export function exposureForMagLimit(magLimit: number, lThresh = L_THRESH): number {
-  return lThresh * 10 ** (0.4 * magLimit);
-}
-
-/** The base exposure epoch: every light decision in the scene grounds on
- *  the naked-eye preset (docs/science-hdr-pipeline.md § 3). H6 routes the
- *  slider and the instrument multipliers through here; until then every
- *  emitter is pinned to this value. */
-export const BASE_EPOCH_EXPOSURE = exposureForMagLimit(NAKED_EYE_LIMIT_MAG);
 
 /** Linear luminance of a source at V-band apparent magnitude `m`.
  *  Unclamped — the ceiling belongs to whatever writes the fragment. */

@@ -7,6 +7,7 @@ import {
   resetStarExaggerationK,
   STAR_RENDER_DEFAULTS,
 } from './filter-state';
+import { BASE_EPOCH_EXPOSURE, epochExposure } from '../hdr/exposure-epoch';
 import {
   type SceneElementBinds,
   type SceneElementId,
@@ -33,6 +34,7 @@ function permittedSet(permitted: Record<SceneElementId, boolean>): Set<SceneElem
 function makeUniforms(): FilterUniforms {
   return {
     uMaxAppMag: { value: DEFAULT_FILTER.maxAppMag },
+    uExposure: { value: BASE_EPOCH_EXPOSURE },
     uMinDistSol: { value: DEFAULT_FILTER.minDistSol },
     uMaxDistSol: { value: DEFAULT_FILTER.maxDistSol },
     uSpectMask: { value: DEFAULT_FILTER.spectMask },
@@ -93,6 +95,38 @@ describe('FilterController', () => {
     expect(uniforms.uSizeMin.value).toBe(2.5);
     expect(onFilterApplied).toHaveBeenCalledWith(ctrl.getFilter());
     expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
+  });
+
+  it('the magnitude limit is the single tone-map exposure', () => {
+    const { ctrl, uniforms } = makeHarness();
+    expect(uniforms.uExposure.value).toBe(BASE_EPOCH_EXPOSURE);
+
+    ctrl.setFilter({ maxAppMag: 12 });
+    expect(uniforms.uExposure.value).toBe(epochExposure(12));
+
+    // Dragging the slider one magnitude fainter is 10^0.4 of exposure —
+    // the same step every emitter sees, since they share the object.
+    const before = uniforms.uExposure.value;
+    ctrl.setFilter({ maxAppMag: 13 });
+    expect(uniforms.uExposure.value / before).toBeCloseTo(10 ** 0.4, 9);
+  });
+
+  it('each magnitude preset lands its own documented exposure', () => {
+    const { ctrl, uniforms } = makeHarness();
+    const seen = new Set<number>();
+    for (const name of ['naked-eye', 'binoculars', 'all'] as const) {
+      ctrl.applyMagnitudePreset(name);
+      expect(uniforms.uExposure.value).toBe(epochExposure(MAG_PRESETS[name].maxAppMag));
+      seen.add(uniforms.uExposure.value);
+    }
+    expect(seen.size).toBe(3);
+  });
+
+  it('a size-override reset leaves the exposure on the manual magnitude', () => {
+    const { ctrl, uniforms } = makeHarness();
+    ctrl.setFilter({ maxAppMag: 9.25 });
+    ctrl.clearSizeOverrides(['sizeMin', 'sizeMax', 'sizeSpan']);
+    expect(uniforms.uExposure.value).toBe(epochExposure(9.25));
   });
 
   it('applyMagnitudePreset sets preset fields but respects override flags', () => {

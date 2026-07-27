@@ -5,8 +5,6 @@ import {
   HOST_INTENSITY_MIN,
   HOST_IRRADIANCE_DISPLAY_EXPONENT,
   hostIntensityScale,
-  LIT_EXPOSURE_REF_MAG,
-  litIntensity,
   perceptualDmEff,
   perceptualAppSizePx,
   planetApparentMagnitude,
@@ -292,45 +290,5 @@ describe('hostIntensityScale', () => {
     const a = hostIntensityScale(SUN_ABSMAG_V, 10 * AU_PC);
     const b = hostIntensityScale(SUN_ABSMAG_V + 5, 1 * AU_PC);
     expect(b).toBeCloseTo(a, 9);
-  });
-});
-
-describe('litIntensity', () => {
-  it('equals hostIntensityScale at the naked-eye reference — defaults unchanged', () => {
-    for (const dAu of [0.387, 1, 5.2, 30.069]) {
-      expect(litIntensity(SUN_ABSMAG_V, dAu * AU_PC, LIT_EXPOSURE_REF_MAG))
-        .toBe(hostIntensityScale(SUN_ABSMAG_V, dAu * AU_PC));
-    }
-  });
-
-  it('applies the display-compressed threshold flux ratio as exposure', () => {
-    // "all" preset (m_lim 15): Δ = 8.5 mag → exposure
-    // (10^(8.5/2.5))^0.25 = 10^0.85 ≈ 7.08. Neptune (0.182) lands at
-    // 1.29 — a dim surface brightening well past its default, still
-    // under the ceiling. Mercury (already at the ceiling) caps there.
-    const exposure = 10 ** (8.5 / 10);
-    const neptune = litIntensity(SUN_ABSMAG_V, 30.069 * AU_PC, LIT_EXPOSURE_REF_MAG + 8.5);
-    expect(neptune).toBeCloseTo(
-      hostIntensityScale(SUN_ABSMAG_V, 30.069 * AU_PC) * exposure, 9);
-    expect(neptune).toBeLessThan(HOST_INTENSITY_MAX);
-    expect(litIntensity(SUN_ABSMAG_V, 0.387 * AU_PC, LIT_EXPOSURE_REF_MAG + 8.5))
-      .toBe(HOST_INTENSITY_MAX);
-  });
-
-  it('turning sensitivity down dims below the hostIntensityScale floor', () => {
-    // The distance floor keeps a default-sensitivity Pluto readable;
-    // the composed exposure must still fade it toward black when the
-    // slider drops — no floor on the product.
-    const dim = litIntensity(SUN_ABSMAG_V, 39.482 * AU_PC, LIT_EXPOSURE_REF_MAG - 5);
-    expect(dim).toBeLessThan(HOST_INTENSITY_MIN);
-    expect(dim).toBeCloseTo(
-      hostIntensityScale(SUN_ABSMAG_V, 39.482 * AU_PC) * 10 ** (-0.5), 9);
-  });
-
-  it('never exceeds the LDR ceiling at any sensitivity', () => {
-    for (const dAu of [0.387, 1, 30.069]) {
-      expect(litIntensity(SUN_ABSMAG_V, dAu * AU_PC, LIT_EXPOSURE_REF_MAG + 20))
-        .toBeLessThanOrEqual(HOST_INTENSITY_MAX);
-    }
   });
 });
