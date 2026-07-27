@@ -492,11 +492,18 @@ export class InputController {
     this.applyPinchDelta(wheel.deltaY);
   };
 
-  /** Accumulate a pinch delta and re-emit whole notch-equivalents. */
+  /** Accumulate a pinch delta and re-emit whole notch-equivalents — one event
+   *  each, not one event of N notches: `ObserveControls.onWheel` reads only
+   *  the SIGN of a wheel delta (it has to, being deltaMode-agnostic), so a
+   *  combined delta would collapse to a single FOV step and cap the gain in
+   *  observe mode. */
   private applyPinchDelta(deltaYPx: number): void {
     const step = pinchStep(this.pinchCarryPx, deltaYPx);
     this.pinchCarryPx = step.carriedPx;
-    if (step.notch !== 0) this.emitWheelNotch(step.notch * WHEEL_NOTCH_DELTA_PX);
+    const direction = Math.sign(step.notches);
+    for (let i = 0; i < Math.abs(step.notches); i++) {
+      this.emitWheelNotch(direction * WHEEL_NOTCH_DELTA_PX);
+    }
   }
 
   /** `WheelEvent` is not constructible in the test environment, and the two

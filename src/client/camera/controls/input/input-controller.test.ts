@@ -10,7 +10,7 @@ import type { CameraMode, StellataEventMap } from '../../../stellata';
 import type { EventBus } from '../../../util/event-bus';
 import { ReferenceUpController } from './reference-up';
 import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
-import { WHEEL_NOTCH_DELTA_PX } from './pinch-zoom-pure';
+import { PINCH_NOTCH_GAIN, WHEEL_NOTCH_DELTA_PX } from './pinch-zoom-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
@@ -881,6 +881,10 @@ describe('InputController pinch-to-zoom', () => {
     return byType;
   }
 
+  /** Pinch deltaY worth `n` notches after amplification — written in these
+   *  units so tuning the gains can't rot the wiring cases. */
+  const notchUnits = (n: number) => (n * WHEEL_NOTCH_DELTA_PX) / PINCH_NOTCH_GAIN;
+
   function wheel(over: { ctrlKey?: boolean; deltaY?: number } = {}) {
     const e = new Event('wheel', { cancelable: true });
     Object.assign(e, { ctrlKey: true, deltaY: 0, ...over });
@@ -896,11 +900,11 @@ describe('InputController pinch-to-zoom', () => {
   it('re-emits an amplified pinch as one ordinary wheel notch on the canvas', () => {
     const { canvas } = makeHarness();
 
-    // Two events of 5 px: 120 gained px, so the notch lands on the second.
-    pinch(wheel({ deltaY: 5 }));
+    // Two events worth 0.6 notches each: the notch lands on the second.
+    pinch(wheel({ deltaY: notchUnits(0.6) }));
     expect(canvas.dispatchEvent).not.toHaveBeenCalled();
 
-    pinch(wheel({ deltaY: 5 }));
+    pinch(wheel({ deltaY: notchUnits(0.6) }));
     expect(canvas.dispatchEvent).toHaveBeenCalledTimes(1);
     const emitted = canvas.dispatchEvent.mock.calls[0][0] as WheelEvent;
     expect(emitted.type).toBe('wheel');
@@ -912,7 +916,7 @@ describe('InputController pinch-to-zoom', () => {
 
   it('consumes the pinch so the browser cannot page-zoom and TC cannot double-count', () => {
     const { canvas } = makeHarness();
-    const e = wheel({ deltaY: 40 });
+    const e = wheel({ deltaY: notchUnits(1) });
     const prevented = vi.spyOn(e, 'preventDefault');
     const stopped = vi.spyOn(e, 'stopPropagation');
 
@@ -988,7 +992,7 @@ describe('InputController pinch-to-zoom', () => {
 
   it('zooms out on the opposite pinch direction', () => {
     const { canvas } = makeHarness();
-    pinch(wheel({ deltaY: -100 }));
+    pinch(wheel({ deltaY: notchUnits(-1) }));
     const emitted = canvas.dispatchEvent.mock.calls[0][0] as WheelEvent;
     expect(emitted.deltaY).toBe(-WHEEL_NOTCH_DELTA_PX);
   });

@@ -246,10 +246,23 @@ zoom rate to keep in sync, and no mode branch here.
   way ahead of it. `stopPropagation` then stops TC adding its
   1/30th-notch nudge on top of the re-emitted notch.
 - **`pinchStep` carries the sub-notch remainder** between events so a slow
-  pinch accumulates instead of rounding to nothing, and caps each event at
-  one notch — a genuine `Ctrl`+wheel notch is indistinguishable from pinch
-  by design and must not zoom by the whole gain. The cap also stops the
-  carry building a backlog that fires after the fingers stop.
+  pinch accumulates instead of rounding to nothing, and returns a signed
+  *count* that may exceed one. Quantising it to ±1 is what left
+  `PINCH_NOTCH_GAIN` inert: ordinary pinch events already sat at that
+  ceiling, so raising the gain by orders of magnitude changed nothing.
+  `MAX_NOTCHES_PER_EVENT` bounds the count — a mistyped gain must not spin
+  a dispatch loop — but never binds at a sane one.
+- **A `Ctrl`+wheel tick must not be amplified**, being indistinguishable
+  from pinch at the event level, so deltas at or above
+  `NOTCH_SCALE_DELTA_PX` pass through unamplified. This couples the two
+  constants: if a notch of pinch input
+  (`WHEEL_NOTCH_DELTA_PX / PINCH_NOTCH_GAIN`) ever exceeded that threshold,
+  every pinch event would read as a wheel tick and the gain would go dead
+  again. `pinch-zoom-pure.test.ts` asserts it doesn't.
+- **Notches dispatch one event each**, not one event carrying N notches:
+  `ObserveControls.onWheel` reads only the *sign* of a wheel delta (it has
+  to, being `deltaMode`-agnostic), so a combined delta would collapse to a
+  single FOV step and cap the gain in observe mode.
 - **The re-emitted event drops `ctrlKey`**, or the capture listener
   re-enters on its own output.
 - **The two signals are mutually exclusive.** `gestureActive` (set between
@@ -260,8 +273,11 @@ zoom rate to keep in sync, and no mode branch here.
 
 `scaleStepDeltaPx` converts a step of WebKit's cumulative `scale` into the
 wheel-pixel delta the Blink path speaks (logarithmically, so equal ratios
-are equal deltas at any zoom), which is what lets both platforms share
-`PINCH_NOTCH_GAIN` as the single feel knob.
+are equal deltas at any zoom). The two knobs that fall out:
+`PINCH_NOTCH_GAIN` scales **both** paths, `PINCH_SCALE_DELTA_PX` scales
+**WebKit only** — set the cross-browser balance with the second, then move
+the first for overall feel. Both are linear, and neither is pinned to a
+value by a test.
 
 **Touch needs none of this** — TrackballControls' native two-finger
 `TOUCH_ZOOM_PAN` drives the same zoom, which is why pinch works on iPhone
