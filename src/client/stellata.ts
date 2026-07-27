@@ -45,6 +45,7 @@ import {
   gpuEnd as perfGpuEnd,
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
+import { HdrPipeline } from './hdr/hdr-pipeline';
 import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
@@ -191,6 +192,7 @@ export class Stellata implements FrameAnchor {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
+  readonly hdr: HdrPipeline;
 
   private scene: THREE.Scene;
   // Star render pipeline — one InstancedBufferGeometry feeds three
@@ -402,6 +404,7 @@ export class Stellata implements FrameAnchor {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
+    this.hdr = new HdrPipeline(this.renderer);
 
     this.scene = new THREE.Scene();
 
@@ -1741,6 +1744,21 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass?.setEnabled(on);
   }
 
+  /** Dev-console A/B switch for the HDR seam. false parks every layer on
+   *  the pre-HDR path (direct to canvas, no target, no tone-map) — the
+   *  same path a context without a float-renderable buffer takes.
+   *  See src/client/hdr/README.md § Dev switches. */
+  setHdrEnabled(on: boolean) {
+    this.hdr.setEnabled(on);
+  }
+
+  /** Dev-console A/B switch for the tone-map operator alone, keeping the
+   *  HDR target bound. false is straight pass-through, which isolates a
+   *  render-target regression from a calibration one. */
+  setTonemapEnabled(on: boolean) {
+    this.hdr.setTonemapEnabled(on);
+  }
+
   /** Direct access to the Milky Way layer for dev-console tuning
    *  (e.g. `stellata.milkywayLayer.setBrightness(0.4)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }
@@ -2057,6 +2075,7 @@ export class Stellata implements FrameAnchor {
     this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
+    this.hdr.setChartMode(on);
     // Per-layer palette swaps fan out through the registry. The milky-way
     // layer has no monochrome hook: chart mode re-purposes it as an isobar
     // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
@@ -2286,6 +2305,7 @@ export class Stellata implements FrameAnchor {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.hdr.syncSize();
     this.starPipeline.discMaterial.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.starPipeline.discMaterial.uniforms.uViewport.value.set(w, h);
     // Aspect change → fov_minor moves → orbit floor needs a refresh while
@@ -2453,6 +2473,7 @@ export class Stellata implements FrameAnchor {
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');
     perfGpuBegin('main');
+    this.hdr.bind();
     this.renderer.render(this.scene, this.camera);
     perfGpuEnd('main');
     perfMeasure('submit.main');
@@ -2461,6 +2482,11 @@ export class Stellata implements FrameAnchor {
     this.localDepthPass.render(this.renderer, this.camera);
     perfGpuEnd('localDepth');
     perfMeasure('submit.localDepth');
+    perfMark('submit.tonemap');
+    perfGpuBegin('tonemap');
+    this.hdr.resolve();
+    perfGpuEnd('tonemap');
+    perfMeasure('submit.tonemap');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     perfMark('frame.handlers');
     this.bus.emit('frame');
@@ -2544,6 +2570,7 @@ export class Stellata implements FrameAnchor {
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
     this.localDepthPass.dispose();
+    this.hdr.dispose();
     this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but

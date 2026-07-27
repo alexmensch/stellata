@@ -21,6 +21,10 @@ themselves.
   the `FilterController` that owns every mutation.
 - `scene/` — the `SceneLayer` contract + registry driving the
   per-layer update / monochrome / recenter / dispose fan-outs.
+- `hdr/` — the float render target every light-emitting layer draws
+  into and the fullscreen tone-map that resolves it to the canvas.
+  Owns the shared operator chunk, its CPU mirror, and the chrome
+  colour inverse-mapping. Chart mode bypasses it entirely.
 - `local-depth/` — the bracketed local depth pass: camera-relative
   depth slices giving close bodies (moons, rings, binary pairs) true
   z-buffer occlusion the main pass's log depth cannot. The planet
@@ -238,6 +242,13 @@ The full layer composition is something `stellata.ts` owns at the
 integration shell — each subsystem renders into the same scene, and
 which layer wins which pixel is the property that emerges here.
 Each row links to the README that owns the layer's implementation.
+
+Every WebGL row below renders into the HDR target, not the canvas —
+including the local depth pass, whose repaint lands in the same target.
+One fullscreen tone-map then resolves the target to the canvas, so
+nothing in the table composites against the canvas directly and the SVG
+layer sees only the resolved frame ([hdr/](hdr/README.md)). Chart mode
+bypasses the target and renders straight to the canvas as before.
 
 There is no z-ordering between WebGL and SVG. The WebGL canvas paints
 first; the SVG `#overlay` always sits above it (`z-index: 5`,
