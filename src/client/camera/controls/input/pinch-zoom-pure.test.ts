@@ -13,6 +13,11 @@ import {
  *  written in these units, so tuning either gain can't rot an assertion. */
 const notchUnits = (n: number) => (n * WHEEL_NOTCH_DELTA_PX) / PINCH_NOTCH_GAIN;
 
+/** Most notches one event can amplify to: at or above `NOTCH_SCALE_DELTA_PX`
+ *  the delta is a wheel tick and passes through unamplified instead. */
+const maxAmplifiedNotches =
+  Math.ceil((NOTCH_SCALE_DELTA_PX * PINCH_NOTCH_GAIN) / WHEEL_NOTCH_DELTA_PX) - 1;
+
 describe('pinchStep', () => {
   it('pins the wheel-notch unit — a protocol constant, not a feel knob', () => {
     expect(WHEEL_NOTCH_DELTA_PX).toBe(100);
@@ -50,9 +55,10 @@ describe('pinchStep', () => {
   // result to ±1 is what left it inert: ordinary pinch events already sat at
   // that ceiling, so raising the gain by orders of magnitude changed nothing.
   it('scales linearly with the gain instead of saturating at one notch', () => {
-    expect(pinchStep(0, notchUnits(1)).notches).toBe(1);
-    expect(pinchStep(0, notchUnits(4)).notches).toBe(4);
-    expect(pinchStep(0, notchUnits(9)).notches).toBe(9);
+    expect(maxAmplifiedNotches).toBeGreaterThan(1);
+    for (let n = 1; n <= maxAmplifiedNotches; n++) {
+      expect(pinchStep(0, notchUnits(n)).notches).toBe(n);
+    }
   });
 
   it('caps a mistyped gain rather than dispatching unboundedly', () => {
