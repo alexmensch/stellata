@@ -2180,6 +2180,107 @@ export function stampComponentLetters(
   return stats;
 }
 
+export interface NameCollisionStats {
+  /** Display names two+ records in one WDS root both claimed. */
+  collisionsResolved: number;
+  /** Records whose `proper` was recomposed from their own comp letter. */
+  recordsRenamed: number;
+  /** Collisions left alone — recomposing would have collided again. */
+  unresolved: number;
+}
+
+/** Enforce one display name per component within a WDS root. Two naming
+ *  schemes meet here: ours composes `<system base> <WDS comp>`, while
+ *  AT-HYG's `proper` column carries its own component labels for 9 systems
+ *  — and where the two letter the same system differently they collide.
+ *  β² Sco is AT-HYG's "Acrab B" but WDS component C, so it landed on the
+ *  same name as the WDS-B companion promotion mints, and a focus card
+ *  listed "Acrab B" twice.
+ *
+ *  Precedence: the record whose `proper` already equals its own letter
+ *  composition keeps the name; every other claimant is recomposed from its
+ *  own comp ("Acrab B" on the C component → "Acrab C"). Deterministic, so
+ *  no per-system curation — but it only settles claimants inside ONE root.
+ *  Cross-root collisions (the Trapezium spans 05353-0523 / 05353-0524 /
+ *  05354-0525, so two distinct stars are both "The-1 Ori Cb") and AT-HYG
+ *  naming two records alike (p Eridani) need a designation policy instead;
+ *  the ratchet in multi-star-regression.test.ts pins those.
+ *
+ *  Mutates `stars` in place, so it must run before the name-table /
+ *  search-index write. */
+export function resolveComponentNameCollisions(
+  groups: Map<string, PairCursor>,
+  stars: Star[],
+  constellations: { code: string; name: string }[],
+): NameCollisionStats {
+  const stats: NameCollisionStats = {
+    collisionsResolved: 0, recordsRenamed: 0, unresolved: 0,
+  };
+  const existing = buildExistingIndexes(stars);
+  const anchors = buildWdsRootAnchors(groups, existing, stars);
+  const synthIdx = new Map<string, number>();
+  for (let i = 0; i < stars.length; i++) {
+    const sid = stars[i].syntheticId;
+    if (sid && !synthIdx.has(sid)) synthIdx.set(sid, i);
+  }
+
+  // Per root: catalog index → canonical comp. A synth slot is consulted
+  // BEFORE the id indexes: it exists only for a row whose ids were
+  // inherited from the anchor then stripped, so it is always the truer
+  // target — resolving by the inherited id would attribute the anchor's
+  // own record to the companion's letter.
+  const compsByRoot = new Map<string, Map<number, string>>();
+  for (const cursor of groups.values()) {
+    const primaryRow = cursor.primary;
+    if (primaryRow === null) continue;
+    const root = wdsRootOf(primaryRow.systemId);
+    if (root === null) continue;
+    let comps = compsByRoot.get(root);
+    if (!comps) { comps = new Map(); compsByRoot.set(root, comps); }
+    const claim = (comp: string, idx: number | null) => {
+      const own = synthIdx.get(`synth-${root}-${comp}`) ?? idx;
+      if (own !== null && own !== undefined && !comps.has(own)) comps.set(own, comp);
+    };
+    claim(primaryRow.comp, findExistingPrimary(primaryRow, existing, stars));
+    for (const sec of cursor.secondaries) {
+      claim(canonicalCompLetter(primaryRow.comp, sec.comp), findExisting(sec, existing));
+    }
+  }
+
+  for (const [root, comps] of compsByRoot) {
+    const anchor = anchors.get(root);
+    if (anchor === undefined) continue;
+    const base = resolveCompanionNameBase(
+      anchor.primaryRow, anchor.primaryRow, anchor.star, constellations,
+    );
+    if (base === null) continue;
+    const claimants = new Map<string, number[]>();
+    for (const idx of comps.keys()) {
+      const proper = (stars[idx].proper ?? '').trim();
+      if (!proper) continue;
+      const b = claimants.get(proper);
+      if (b) b.push(idx); else claimants.set(proper, [idx]);
+    }
+    const taken = new Set(claimants.keys());
+    for (const [name, idxs] of claimants) {
+      if (idxs.length < 2) continue;
+      let resolved = false;
+      for (const idx of idxs) {
+        const composed = joinComponentName(base, comps.get(idx) as string);
+        if (composed === name) continue;
+        if (taken.has(composed)) { stats.unresolved++; continue; }
+        stars[idx].proper = composed;
+        stars[idx].flags |= FLAG_HAS_NAME;
+        taken.add(composed);
+        stats.recordsRenamed++;
+        resolved = true;
+      }
+      if (resolved) stats.collisionsResolved++;
+    }
+  }
+  return stats;
+}
+
 // ---- Catalog row-index map sidecar -------------------------------------
 
 export interface CatalogRowIndexMap {

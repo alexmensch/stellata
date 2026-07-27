@@ -97,6 +97,18 @@ const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 // non-anchor record IS that record, so no colliding twin is minted.
 const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 
+// Display names still claimed by two records after
+// resolveComponentNameCollisions. Same-WDS-root collisions are settled by
+// re-lettering (the test below pins that at zero); these are the two shapes
+// re-lettering cannot reach, both awaiting a naming-authority ladder:
+//  - Cross-root, one physical system. WDS splits the Trapezium across
+//    05353-0523 / 05353-0524 / 05354-0525, so two distinct stars are each
+//    the "Cb" of their own root and compose the identical name off the
+//    shared base ("The-1 Ori Cb", "The-1 Ori E").
+//  - AT-HYG naming two distinct records alike ("p Eridani" on both
+//    components of the pair) — an editorial-column defect, not ours.
+const KNOWN_DUPLICATE_DISPLAY_NAMES = 3;
+
 // Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
 // placement disagrees with the elements-alone R(epoch) by more than half
 // the semi-major axis. The runtime renders R(t) regardless of the baked
@@ -692,6 +704,50 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
   });
 });
 
+describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
+  it('no two records in one WDS root share a display name', () => {
+    // resolveComponentNameCollisions settles this class by re-lettering the
+    // claimant whose name isn't its own letter composition, so the invariant
+    // is exact — a failure is a system where re-lettering couldn't (both
+    // claimants owning their letter means one letter is wrong upstream).
+    const offenders: string[] = [];
+    for (const [root, idxs] of buildWdsRootToIndices()) {
+      const byName = new Map<string, Set<number>>();
+      for (const idx of idxs) {
+        const name = catalog.record(idx).name;
+        if (name === null || name === '') continue;
+        const b = byName.get(name);
+        if (b) b.add(idx); else byName.set(name, new Set([idx]));
+      }
+      for (const [name, claimants] of byName) {
+        if (claimants.size > 1) {
+          offenders.push(`${root}: "${name}" claimed by ${[...claimants].join(', ')}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `records in one WDS root sharing a display name — a focus card lists ` +
+      `the same name twice:\n${offenders.slice(0, 10).join('\n')}`,
+    ).toEqual([]);
+  });
+
+  it('catalog-wide duplicate display names stay at the known count (ratchet)', () => {
+    const byName = new Map<string, number[]>();
+    for (const r of catalog.records()) {
+      if (r.name === null || r.name === '') continue;
+      const b = byName.get(r.name);
+      if (b) b.push(r.i); else byName.set(r.name, [r.i]);
+    }
+    const duplicated = [...byName.entries()].filter(([, v]) => v.length > 1);
+    expect(
+      duplicated.map(([name, idxs]) => `"${name}" -> ${idxs.join(', ')}`),
+      `display names claimed by more than one record. Above the pin = a new ` +
+      `collision; below = one was resolved, drop the pin (target 0).`,
+    ).toHaveLength(KNOWN_DUPLICATE_DISPLAY_NAMES);
+  });
+});
+
 describe.runIf(FIXTURES_READY)('eclipsing-binary variability honesty', () => {
   it('every VAR_TYPE_ECLIPSING record carries FLAG_BINARY_PRIMARY (wings, not a ring)', () => {
     let eclipsers = 0;
@@ -810,25 +866,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
     // id (a blended secondary shares its primary's gaia) so they come from the
     // build's own bySynth artifact, whose `synth-<wds_root>-<comp>` key names
     // the root. Both are independent of the wings resolver under test.
-    const rootToIndices = new Map<string, number[]>();
-    const bindRoot = (root: string, idx: number) => {
-      const g = rootToIndices.get(root);
-      if (g) g.push(idx); else rootToIndices.set(root, [idx]);
-    };
-    for (const row of readMultiplesTsv(MULTIPLES_TSV)) {
-      const root = wdsRootOf(row.systemId);
-      if (root === null) continue;
-      let rec = row.gaiaSourceId ? lookupByGaiaSourceId(catalog, row.gaiaSourceId) : null;
-      if (rec === null && row.hip !== null && row.hip > 0) rec = lookupByHip(catalog, row.hip);
-      if (rec !== null) bindRoot(root, rec.i);
-    }
-    const bySynth = (JSON.parse(readFileSync(ROW_INDEX_MAP, 'utf-8')) as
-      { bySynth: Record<string, number> }).bySynth;
-    for (const [key, idx] of Object.entries(bySynth)) {
-      const body = key.slice('synth-'.length);
-      const dash = body.lastIndexOf('-');
-      if (dash > 0) bindRoot(body.slice(0, dash), idx);
-    }
+    const rootToIndices = buildWdsRootToIndices();
     for (const idxs of rootToIndices.values()) {
       for (let i = 1; i < idxs.length; i++) union(idxs[0], idxs[i]);
     }
@@ -855,6 +893,35 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
     ).toEqual([]);
   });
 });
+
+/** Catalog indices grouped by WDS root. Id-bearing rows resolve through
+ *  catalog.bin's own byGaia → byHip chain (a member's catalog gaia can
+ *  differ from the WDS-listed one, leaving HIP the only hit); promoted
+ *  companions carry no id (a blended secondary shares its primary's gaia)
+ *  so they come from the build's own bySynth artifact, whose
+ *  `synth-<wds_root>-<comp>` key names the root. */
+function buildWdsRootToIndices(): Map<string, number[]> {
+  const rootToIndices = new Map<string, number[]>();
+  const bindRoot = (root: string, idx: number) => {
+    const g = rootToIndices.get(root);
+    if (g) g.push(idx); else rootToIndices.set(root, [idx]);
+  };
+  for (const row of readMultiplesTsv(MULTIPLES_TSV)) {
+    const root = wdsRootOf(row.systemId);
+    if (root === null) continue;
+    let rec = row.gaiaSourceId ? lookupByGaiaSourceId(catalog, row.gaiaSourceId) : null;
+    if (rec === null && row.hip !== null && row.hip > 0) rec = lookupByHip(catalog, row.hip);
+    if (rec !== null) bindRoot(root, rec.i);
+  }
+  const bySynth = (JSON.parse(readFileSync(ROW_INDEX_MAP, 'utf-8')) as
+    { bySynth: Record<string, number> }).bySynth;
+  for (const [key, idx] of Object.entries(bySynth)) {
+    const body = key.slice('synth-'.length);
+    const dash = body.lastIndexOf('-');
+    if (dash > 0) bindRoot(body.slice(0, dash), idx);
+  }
+  return rootToIndices;
+}
 
 function buildFirstSeenHipIndex(): Map<number, number> {
   const m = new Map<number, number>();

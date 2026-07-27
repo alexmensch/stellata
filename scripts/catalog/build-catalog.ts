@@ -81,6 +81,7 @@ import {
   backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
+  resolveComponentNameCollisions,
   stampComponentLetters,
   wingRenderablePrimaries,
   type ComponentDesignation,
@@ -289,6 +290,8 @@ async function main() {
     companionRepositionedCollocatedDouble: 0,
     companionConstellationInherited: 0,
     componentLettersStamped: 0,
+    componentNameCollisionsResolved: 0,
+    componentNameCollisionsUnresolved: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     nssSourceIdEntries: 0,
@@ -660,6 +663,21 @@ async function main() {
       );
     }
     counts.componentLettersStamped = stampStats.rowsStamped;
+
+    // Last naming pass: settle records inside one WDS root that ended up
+    // claiming the same display name (AT-HYG's component letters vs ours).
+    const collisionStats = resolveComponentNameCollisions(
+      groups, stars, CONSTELLATIONS,
+    );
+    if (collisionStats.recordsRenamed > 0 || collisionStats.unresolved > 0) {
+      console.log(
+        `  re-lettered ${collisionStats.recordsRenamed} record(s) across ` +
+          `${collisionStats.collisionsResolved} same-system name collision(s)` +
+          `${collisionStats.unresolved > 0 ? `; ${collisionStats.unresolved} left unresolved` : ''}`,
+      );
+    }
+    counts.componentNameCollisionsResolved = collisionStats.collisionsResolved;
+    counts.componentNameCollisionsUnresolved = collisionStats.unresolved;
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');
   }

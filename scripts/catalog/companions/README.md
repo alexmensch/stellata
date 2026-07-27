@@ -410,3 +410,34 @@ mislabelled as its faint secondary. It also **skips** any system
 where a component already carries a real `proper` (never rename
 Sirius A → "Sirius A") or where the primary yields no usable base.
 `componentLettersStamped` counts the records renamed.
+
+### Display-name uniqueness
+
+`resolveComponentNameCollisions` is the last naming pass. Two schemes
+meet in a WDS system: ours composes `<system base> <WDS comp>`, while
+AT-HYG's `proper` column carries its own component labels for 9 of its
+495 names (`Acrab B`, `Albireo B`, `Alula Australis B`, `Cor Caroli B`,
+`Revati B`, `Alkalurops B`, `Marsic B`, `Dziban B`, `Alya B`). Where the
+two letter one system differently they collide: β² Sco is AT-HYG's
+"Acrab B" but WDS component **C**, so it landed on the same name as the
+WDS-B companion promotion mints and a focus card listed "Acrab B" twice.
+
+Precedence: the claimant whose `proper` already equals its own letter
+composition keeps the name; every other claimant is recomposed from its
+own comp ("Acrab B" on the C component → "Acrab C"). Deterministic — no
+per-system curation — and a synth slot is consulted before the id
+indexes when attributing a record to a letter, since a row whose ids were
+inherited then stripped would otherwise resolve onto the anchor's own
+record. Counted `componentNameCollisionsResolved`;
+`componentNameCollisionsUnresolved` ratchets down (nonzero means both
+claimants own their letter, so one letter is wrong upstream).
+
+Two collision shapes this pass deliberately cannot reach, both pinned by
+`KNOWN_DUPLICATE_DISPLAY_NAMES` in `multi-star-regression.test.ts`:
+**cross-root within one physical system** (WDS splits the Trapezium
+across `05353-0523` / `05353-0524` / `05354-0525`, so two distinct stars
+are each their own root's "Cb" and compose the identical name), and
+**AT-HYG naming two records alike** (`p Eridani` on both components).
+Both need a naming-authority ladder rather than a letter swap — the same
+work that owns the 536 display names composed off AT-HYG's ASCII-only
+`bayer` column (`The-1 Ori C` where an astronomer reads θ¹ Ori C).

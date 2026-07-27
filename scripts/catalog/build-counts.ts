@@ -272,6 +272,14 @@ export interface BuildCounts {
    *  stamp-component-letters pass — pairs AT-HYG left anonymous so both
    *  halves printed the same Bayer/Flamsteed label (61 Cyg A/B class). */
   componentLettersStamped: number;
+  /** Same-WDS-root display-name collisions settled by re-lettering the
+   *  claimant whose name wasn't its own letter composition (β² Sco's
+   *  AT-HYG "Acrab B" → "Acrab C"). */
+  componentNameCollisionsResolved: number;
+  /** Same-root collisions left in place because the re-lettered name was
+   *  itself already claimed. Ratchet DOWN — a nonzero value means a system
+   *  needs a designation policy, not a letter swap. */
+  componentNameCollisionsUnresolved: number;
   /** Catalog records carrying a multiples.tsv component designation
    *  (`cl`/`cp` on their SearchEntry) — the base for "<system> <letter>"
    *  search aliases (Alpha Centauri A/B/C). */
