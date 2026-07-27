@@ -843,12 +843,10 @@ export class Stellata implements FrameAnchor {
     // Milky Way volumetric disc. A flattened ellipsoid mesh anchored at
     // the galactic centre; the fragment shader does a bounded raymarch
     // through its volume. renderOrder = -3 keeps it behind every other
-    // layer. The shared uniforms map carries `uMaxAppMag` and `uSizeSpan`
-    // from the star pipeline so the magnitude filter applies identically
-    // to discrete stars and the diffuse glow.
+    // layer.
     this.milkyway = new MilkyWay({
       uMaxAppMag: sharedUniforms.uMaxAppMag,
-      uSizeSpan: sharedUniforms.uSizeSpan,
+      hdr: this.hdr.emitterUniforms,
     });
     this.scene.add(this.milkyway.group);
 
@@ -893,6 +891,7 @@ export class Stellata implements FrameAnchor {
     // viewport. DEFAULT_FILTER carries placeholder pixel values; this call
     // replaces them with the right numbers before the first frame.
     this.filters.recomputePresetPxSizes();
+    this.syncPixelSolidAngle();
 
     this.poiStore = new PoiStore({
       pinnable: {
@@ -1781,7 +1780,7 @@ export class Stellata implements FrameAnchor {
   }
 
   /** Direct access to the Milky Way layer for dev-console tuning
-   *  (e.g. `stellata.milkywayLayer.setBrightness(0.4)`). */
+   *  (e.g. `stellata.milkywayLayer.setGlowMagOffset(30)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }
 
   /** Attach (or replace, or detach with null) the Local Group wireframe
@@ -1995,7 +1994,10 @@ export class Stellata implements FrameAnchor {
   setFilter(patch: Partial<FilterState>) { this.filters.setFilter(patch); }
   getFilter(): Readonly<FilterState> { return this.filters.getFilter(); }
   applyMagnitudePreset(name: MagPresetName) { this.filters.applyMagnitudePreset(name); }
-  setCameraFov(fov: number) { this.filters.setCameraFov(fov); }
+  setCameraFov(fov: number) {
+    this.filters.setCameraFov(fov);
+    this.syncPixelSolidAngle();
+  }
   getCameraFov(): number { return this.filters.getCameraFov(); }
   setStarExaggerationK(k: number, preset?: MagPresetName) {
     this.filters.setStarExaggerationK(k, preset);
@@ -2334,10 +2336,9 @@ export class Stellata implements FrameAnchor {
     // a star is focused. (FOV-only changes go through setCameraFov, which
     // does its own recompute.)
     this.focus.refreshOrbitFloor();
+    this.syncPixelSolidAngle();
     // Line2 needs the canvas resolution for its screen-space line width.
     this.galacticGrid.setResolution(w, h);
-    // The Milky Way layer renders at native resolution via the main scene
-    // pass, so no per-resize bookkeeping is needed here.
     // Recompute pixel sizes from the active preset so non-overridden
     // fields stay proportional to the bulge across screen sizes and
     // orientation changes. maxAppMag/sizeSpan don't depend on viewport
@@ -2345,6 +2346,13 @@ export class Stellata implements FrameAnchor {
     // slider value survives a window resize.
     this.filters.recomputePresetPxSizes();
   };
+
+  // Every surface-brightness emitter scales by the pixel's solid angle,
+  // so both of its inputs — viewport height and FOV — have to reach the
+  // HDR seam. Resize and setCameraFov are the only writers of either.
+  private syncPixelSolidAngle(): void {
+    this.hdr.setPixelSolidAngle(this.angularToPx());
+  }
 
   // Pixel-per-radian conversion for the active viewport / FOV. Shared
   // by every screen-space size calc (star disc, cloud silhouette, peak-

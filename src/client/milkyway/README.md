@@ -20,7 +20,10 @@ disables. Hidden in chart mode.
 - `milkyway.vert.glsl`, `milkyway.frag.glsl` — ray-sphere intersect +
   log-distributed raymarch, additive-blended.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
-  (brightness, density, extinction, reddening RGB sliders).
+  (surface-brightness anchor, density, extinction, reddening RGB
+  sliders).
+- `milkyway.test.ts` — HDR-seam uniform wiring + the surface-brightness
+  calibration pins.
 
 `galactic-coords.ts` (`GAL_TO_ICRS`, `GALACTIC_CENTRE_PC`) lives in
 `../galactic/` and is imported here for the GC-anchored mesh
@@ -62,44 +65,59 @@ band's hue varies by line of sight. Defaults are visually calibrated:
 - `DISC_COLOR` pale-lavender (171,168,223), `DENSITY0 = 1.5`
 - `BULGE_COLOR` near-white-warm (255,246,237), `DENSITY0 = 18`
 
-## Magnitude consistency with stars
+## Surface-brightness emission
 
-Each fragment converts integrated emission to an effective apparent
-magnitude:
-
-```
-appMag = uGlowMagOffset - 2.5 × log10(integratedIntensity)
-```
-
-and derives a slider-driven gain:
+The band emits into the scene-wide HDR unit (`../hdr/README.md` § Unit).
+`colorAccum` is the raymarch's emission column in "density × pc ×
+colour" units; `uGlowMagOffset` states the **V surface brightness a unit
+column carries**, so the sightline's surface brightness and the flux
+magnitude inside one pixel are
 
 ```
-gate = max((uMaxAppMag - appMag) / uSizeSpan, 0)   // no upper clamp
+S    = uGlowMagOffset - 2.5·log10(column)      // mag/arcsec²
+m_px = S - 2.5·log10(uOmegaPxArcsec2)
 ```
 
-folded into the tone-map exponent:
+Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses
+the log round-trip to a **single scalar gain**
+(`stellataSurfaceBrightnessLuminance`), applied to all three channels —
+which is why the line-of-sight hue the raymarch built survives untouched.
+`column` is the luminance-weighted `dot(colorAccum, LUMA_WEIGHTS)`, so
+the magnitude means the same thing it does for a star.
 
-```
-result = 1 - exp(-colorAccum × brightness × gate)
-```
+**Surface brightness is the invariant, not per-pixel luminance.**
+Zooming in shrinks `uOmegaPxArcsec2` quadratically, so the band dims
+per pixel — the magnification loss a real aperture gain has to pay for,
+and exactly how a resolved stellar disc behaves under the point-source
+peak rule. `HdrPipeline.setPixelSolidAngle` owns the uniform; the shell
+drives it from FOV changes and resize.
 
-The lack of upper clamp on `gate` matters. An earlier version clamped
-it to [0, 1] and applied as a post-tone-map multiplier, which made
-bright sightlines plateau the moment they reached "fully visible".
-Folding gate into the exponent and removing the upper clamp lets the
-slider continuously lift every sightline — dim NGP brightens, GC
-saturates toward white.
+`uMaxAppMag` still arrives by reference from the star pipeline's shared
+uniform map, but **only the chart-mode isobar reads it** — the band's
+brightness is photometric now, so the magnitude slider reaches it
+through `uExposure` (which H6 wires; until then it is pinned to the
+naked-eye base epoch and the slider does not move the band).
 
-`uMaxAppMag` and `uSizeSpan` are passed by-reference from the star
-pipeline's shared uniforms map, so any `setFilter` change propagates
-without duplicate bookkeeping.
+### Calibration
 
-`uGlowMagOffset` (default 15.0) calibrates volumetric "density × pc"
-units to the star magnitude scale. `setGlowMagOffset(x)` — lower lifts
-the layer through the gate sooner; higher demands a brighter slider.
+`GLOW_MAG_OFFSET = 31.3` is **provisional**. It is anchored so the
+Galactic-centre sightline (l = 0, b = 0), whose luminance-weighted
+column integrates to `GC_SIGHTLINE_COLUMN = 2.85e4` at the shipped
+densities and 0.45 dust strength, lands on S ≈ 20.2 mag/arcsec² — the
+band-pixel reference in `docs/science-hdr-pipeline.md` § 1. The same
+constant puts the anticentre plane near 22.8 and the NGP near 25.3,
+i.e. the model's latitude gradient is steeper than the real sky's.
+H7 re-derives it per sightline against published V photometry and tunes
+`DR_MAG` (`../hdr/README.md` § Operator), which is the lever that lifts
+the band and the star field **together**.
 
-The Local Group emission layer (`../local-group/README.md` § Emission
-layer) reuses this exact gate + tone-map scheme per instance.
+At strict physicality the band is faint: the GC sightline resolves to
+~0.035 of full scale at the base epoch and a 50° / 900 px viewport,
+against 0.15 for a threshold star. That is the design gate's predicted
+"real suburban-sky band", not a regression.
+
+The Local Group emission layer keeps the old gate + `1 − exp(−x)` scheme
+until it is unshelved (`../local-group/README.md` § Emission layer).
 
 ## Coordinate handling
 
@@ -142,6 +160,13 @@ false` (the local bounding sphere is at origin but world position is
 `GALACTIC_CENTRE_PC - worldOffset`). `renderOrder = -3` for both
 meshes.
 
+Both meshes draw into the HDR target, and both apply the operator
+themselves when it isn't bound (`uHdrTarget = 0` — the shipped path while
+the ship gate is false, `../hdr/README.md` § Fallback). They use the
+**undithered** variant: the two components overlap on every band pixel
+and the dither is a function of `fragCoord` alone, so it would land
+twice.
+
 The meshes are NOT camera-anchored — they sit at the galactic centre.
 `update()` rebases each mesh's position to
 `GALACTIC_CENTRE_PC - worldOffset` per frame so under the floating-
@@ -149,15 +174,6 @@ origin recentering both project correctly into the renderer-local
 frame. The `vWorldPos - cameraPosition` subtraction in the shader is
 float-stable for the same reason the star pipeline is: both operands
 are renderer-local with small magnitudes.
-
-## Brightness baseline
-
-`DEFAULT_BRIGHTNESS = 5.35e-6`. The volumetric integration produces
-large `colorAccum` values (~10⁴–10⁵ along the GC sightline), so
-brightness needs to be small to keep the tone-map curve in a useful
-range. Calibrated empirically alongside `GLOW_MAG_OFFSET` — the two
-settings cooperate, so retune them together if the visual feel
-changes.
 
 ## Chart mode + warp
 
@@ -179,16 +195,15 @@ No FPS gate. Toggle via the panel checkbox or `mw=0` URL.
 ## Dev levers
 
 `milkyway-tuning.ts` registers the Milky Way section of the debug
-panel: log-scale brightness slider + linear sliders for
-`glowMagOffset` / `discDensity` / `bulgeDensity` / `extinctionStrength`
-+ colour pickers for disc + bulge palette + three linear sliders for
-the reddening RGB multipliers.
+panel: linear sliders for `glowMagOffset` / `discDensity` /
+`bulgeDensity` / `extinctionStrength` + colour pickers for disc + bulge
+palette + three linear sliders for the reddening RGB multipliers.
 
 The same setters are individually callable under
 `stellata.milkywayLayer.*`:
 
-- `setBrightness(x)` — global gain in the tone-map exponent
-- `setGlowMagOffset(x)` — magnitude calibration (raise → dimmer)
+- `setGlowMagOffset(x)` — surface-brightness anchor, mag/arcsec²
+  (raise → dimmer). A calibration constant, not a user knob
 - `setDiscDensity(x)` / `setBulgeDensity(x)` — per-component emission
 - `setDiscColor(r,g,b)` / `setBulgeColor(r,g,b)` — pre-extinction
   palette

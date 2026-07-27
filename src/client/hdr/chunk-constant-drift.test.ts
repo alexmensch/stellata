@@ -60,4 +60,13 @@ describe('include guards', () => {
       expect(closes).toBe(opens);
     }
   });
+
+  // Keeps the guards' reason alive: the Milky Way fragment stage really
+  // does take both, because it derives a per-pixel magnitude from its
+  // column integral AND applies the operator inline off-target.
+  it('has a live consumer including both chunks in one stage', () => {
+    const mwFrag = read('../milkyway/milkyway.frag.glsl');
+    expect(mwFrag).toContain('#include <stellata_hdr_emission>');
+    expect(mwFrag).toContain('#include <stellata_tonemap>');
+  });
 });

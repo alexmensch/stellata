@@ -125,9 +125,13 @@ and gates against the star pipeline's shared `uMaxAppMag` /
 `uSizeSpan`; displayed intensity is `1 − exp(−color · brightness ·
 gate)` — the gate alone, never linear column flux, drives the pixel.
 The bulge-to-disc-edge column range spans ~7 mag ≈ 1000× linear; a
-linear tone map (the MW volume's convention, fine for the narrow
+linear-in-column map (the MW volume's convention — and since its HDR
+conversion, literally a single scalar gain, fine for the narrow
 in-galaxy column range) renders that as a blown core on a black disc
-from every external viewpoint. docs/science-local-group.md § Local Group luminosity
+from every external viewpoint. **This layer has not been converted to
+the HDR unit** — it keeps the gate + `1 − exp(−x)` squash while it stays
+shelved; `docs/science-hdr-pipeline.md` § 4 maps it identically to the
+MW when it is unshelved. docs/science-local-group.md § Local Group luminosity
 model carries the display-transform rationale. **Do not scale
 density0 per object**: per-object flux ratios are physical, solved by
 the build; `setBrightness` (gain, seed 3.0) / `setGlowMagOffset`
